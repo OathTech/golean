@@ -207,11 +207,29 @@ owners in "Re-homed obligations" above, fidelity decision 6.)
       record yet: residual (b) at BUG-080 — the detector folds only
       SUCCESSFUL steps, so a sync op whose apply is FATAL never has its
       entry access checked (machine `fatal` where gc reports the race
-      first, then dies); closing it needs a pre-step check in
-      `execProgLoop` + its four mirrors + the MultiStreams theorems (S,
-      trust-surface). Residual (a) — TSan-invisible go_mem-racy shapes
-      (RWMutex copy, WaitGroup Done) followed to the oracle — is an
-      [AGENT] alignment choice for the audit to ratify or reverse.
+      first, then dies). THIS ITEM IS THE AUTHORITATIVE SCOPE (audit G2
+      F5; BUGS.md BUG-080 and Race.lean's sync-words section cite it):
+      the sync ENTRY access (`syncEntryKinds`) must be checked BEFORE the
+      apply — or on the fatal path — at EVERY site that folds
+      `raceUpdate` after `stepMulti`, which is the full call-site list
+      (line numbers as of the G2 fix round): the detecting loop
+      `GoLean/GoCore/Multi.lean` `execProgLoop` (:1681, :1691); the
+      enumerator drivers `GoLean/EnumDedup.lean:267`,
+      `GoLean/GoCore/EnumDedupCheck.lean:163`,
+      `GoLean/ChoiceTrace.lean:533`, `GoLean/CLI.lean` (:811, :825,
+      :1363); and the theorem-side mirrors whose statements unfold the
+      loop — `GoLean/GoCore/MultiStreams.lean` (`execProgLoop_unfold`,
+      `stepAllBranchesOk_sound`, `execProgLoop_ok_of_allStreamsOkPool`,
+      `execProgLoop_mono`, `execProgLoop_le`, `stepAllBranchesOk_mono`,
+      `allStreamsOkPool_mono`) and `GoLean/GoCore/EnumDedupSound.lean`
+      (:826, :844). Size S–M (the check is S; re-proving the mirrors
+      makes it M); TRUST-SURFACE (detector + every driver). Residual (a)
+      — TSan-invisible go_mem-racy shapes (a plain access beside
+      `RUnlock`/RWMutex `Unlock`/WaitGroup `Add`/`Done`, or an
+      overwrite beside `Wait` at 0; NOT a copy beside `RLock`/`Lock`)
+      followed to the oracle — is POSED to the [USER] as Q-U4RESIDUAL
+      (`docs/2026-08-31_qrow-rulings.md` row 9, OPEN); its fix, if
+      ruled, is its own S slice after the ruling.
 
 - [ ] BUG-078 residual (1): the LINEAR normalize. `normalizeListWith`
       (GoLean/GoCore/Ops.lean) is non-tail-recursive over the element
