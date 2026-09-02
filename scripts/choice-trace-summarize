@@ -1,0 +1,233 @@
+#!/usr/bin/env python3
+"""choice-trace-summarize — aggregate `golean choice-trace --batch` TSVs.
+
+LANE TOOLING (membership-depth lane, 2026-09-01), not a gate. Reads one
+or more results TSVs written by `choice-trace --batch` plus the
+normalized coverage manifest (for the lane column) and prints the
+tables the lane report is built from:
+
+  * strict-lane depth exposure: consumption distribution under the
+    default stream, exhaustion of the three adversarial streams
+    (exhaustedAt set AND at least one bound>=2 consumption after it),
+    the list of exhausted rows;
+  * observation variance across streams per row (a strict/confluent
+    row whose observation hash varies across streams is a routing
+    finding);
+  * validator totals: menu-invariant violations, self-check alarms,
+    driver-agreement mismatches, ERROR rows, fuel-out rows.
+
+usage: scripts/choice-trace-summarize --manifest <manifest.tsv> <results.tsv>...
+       [--adversarial "9,8,7,6,5,4,3,2,1,0;1,3,5,7,9,2,4,6,8,0;5,5,5,5,5,5,5,5"]
+       [--list-exhausted] [--tsv-out <dir>]
+"""
+import argparse
+import collections
+import csv
+import os
+import sys
+
+ADVERSARIAL = ["9,8,7,6,5,4,3,2,1,0", "1,3,5,7,9,2,4,6,8,0", "5,5,5,5,5,5,5,5"]
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--manifest", required=True)
+    ap.add_argument("results", nargs="+")
+    ap.add_argument("--adversarial", default=";".join(ADVERSARIAL))
+    ap.add_argument("--list-exhausted", action="store_true")
+    ap.add_argument("--tsv-out", default=None)
+    ap.add_argument("--baseline", default="baselines/native-full.tsv",
+                    help="tracked differential baseline (result/id/stage) for cross-reference")
+    a = ap.parse_args()
+    adversarial = [s for s in a.adversarial.split(";") if s]
+
+    lane = {}
+    expected = {}
+    with open(a.manifest) as f:
+        for row in csv.reader(f, delimiter="\t"):
+            if len(row) >= 8:
+                lane[row[0]] = row[7]
+                expected[row[0]] = row[4]
+
+    rows = []
+    for path in a.results:
+        with open(path) as f:
+            rd = csv.DictReader(f, delimiter="\t")
+            for r in rd:
+                rows.append(r)
+    if not rows:
+        print("no rows", file=sys.stderr)
+        return 2
+
+    # Later files supersede earlier ones per (id, stream); an id counts as
+    # ERROR only if no file traced it successfully.
+    by_id = collections.defaultdict(dict)
+    err_by_id = {}
+    for r in rows:
+        if r["status"] == "ERROR":
+            err_by_id.setdefault(r["id"], r)
+            continue
+        by_id[r["id"]][r["stream"]] = r
+    errors = [r for i, r in sorted(err_by_id.items()) if i not in by_id]
+    rows = [r for r in rows if r["status"] != "ERROR" and by_id[r["id"]][r["stream"]] is r]
+    baseline = {}
+    if a.baseline and os.path.exists(a.baseline):
+        with open(a.baseline) as f:
+            for row in csv.reader(f, delimiter="\t"):
+                if len(row) >= 3 and row[0] in ("PASS", "FAIL"):
+                    baseline[row[1]] = (row[0], row[2])
+    # A machine REFUSAL is a terminal status the differential cannot match
+    # against Go: unsupported/stuck/internal/error always; `fatal` only when
+    # the row does not EXPECT a Go fatal (sync-misuse rows expect `fatal` and
+    # the differential compares it like any other status).
+    REFUSALS = ("unsupported", "stuck", "internal", "error")
+
+    def is_refusal(r):
+        st = r["status"]
+        return st in REFUSALS or (st == "fatal" and expected.get(r["id"]) != "fatal")
+
+    ids = sorted(by_id)
+    print(f"rows traced: {len(ids)} ids, {len(rows)} (id,stream) lines; {len(errors)} id(s) the tracer could not run (ERROR)")
+    lane_counts = collections.Counter(lane.get(i, "?") for i in ids)
+    print("  by lane: " + ", ".join(f"{k}={v}" for k, v in sorted(lane_counts.items())))
+
+    def nat(x):
+        return int(x) if x not in ("-", "") else None
+
+    # ---- validator totals ----
+    viol = sum(int(r["violations"]) for r in rows if r["status"] != "ERROR")
+    alarms = sum(int(r["alarms"]) for r in rows if r["status"] != "ERROR")
+    mism = [r for r in rows if r["status"] != "ERROR" and r["driverAgreement"] != "ok"]
+    fuel = [r for r in rows if r["status"] == "fuel-out"]
+    consumptions = sum(int(r["consumed"]) for r in rows if r["status"] != "ERROR")
+    print()
+    print("VALIDATOR")
+    print(f"  consumptions checked: {consumptions}")
+    print(f"  menu-invariant violations: {viol}")
+    print(f"  self-check alarms (mirror/accountant, sentinel, pick-record): {alarms}")
+    print(f"  driver-agreement mismatches: {len(mism)}")
+    print(f"  fuel-out (id,stream) lines: {len(fuel)}")
+    for r in rows:
+        if r["status"] != "ERROR" and int(r["violations"]) > 0:
+            print(f"    VIOLATION {r['id']} [{r['stream']}]: {r['firstViolation']}")
+        if r["status"] != "ERROR" and int(r["alarms"]) > 0:
+            print(f"    ALARM {r['id']} [{r['stream']}]: {r['firstAlarm']}")
+    for r in mism:
+        print(f"    MISMATCH {r['id']} [{r['stream']}]: {r['driverAgreement']}")
+    for r in errors:
+        print(f"    ERROR {r['id']} (baseline: {baseline.get(r['id'], ('?','?'))[0]}/{baseline.get(r['id'], ('?','?'))[1]}): {r['firstViolation'][:160]}")
+    # machine refusals traced to their refusal point (status = the
+    # machine's own diagnostic class) — cross-referenced with the baseline
+    refusal_ids = sorted({r["id"] for r in rows if is_refusal(r)})
+    if refusal_ids:
+        agree = sum(1 for i in refusal_ids if baseline.get(i, ("?",))[0] == "FAIL")
+        print(f"  ids with a machine refusal under some traced stream ({'/'.join(REFUSALS)}, or an unexpected fatal): {len(refusal_ids)}; of these {agree} are non-PASS in the tracked baseline")
+        for i in refusal_ids:
+            if baseline.get(i, ("?",))[0] == "PASS":
+                print(f"    REFUSAL-BUT-BASELINE-PASS {i}: {by_id[i].get('default', {}).get('status')}")
+    fuel_ids = sorted({r["id"] for r in fuel})
+    if fuel_ids:
+        print("  fuel-out ids: " + ", ".join(f"{i}({lane.get(i,'?')})" for i in fuel_ids))
+
+    # per-site totals
+    site_tot = collections.Counter()
+    for r in rows:
+        if r["status"] == "ERROR" or r["perSite"] == "-":
+            continue
+        for part in r["perSite"].split(";"):
+            s, n = part.split("=")
+            site_tot[s] += int(n)
+    print("  consumptions per site (all streams): " + ", ".join(f"{k}={v}" for k, v in sorted(site_tot.items(), key=lambda kv: -kv[1])))
+
+    # ---- strict-lane depth exposure ----
+    print()
+    print("STRICT-LANE DEPTH EXPOSURE (lane=strict rows; confluent rows shown separately)")
+    for L in ("strict", "confluent"):
+        sel = [i for i in ids if lane.get(i) == L]
+        dflt = [by_id[i].get("default") for i in sel]
+        dflt = [r for r in dflt if r]
+        hist = collections.Counter()
+        widehist = collections.Counter()
+        for r in dflt:
+            c = int(r["consumed"])
+            w = int(r["wide"])
+            b = "0" if c == 0 else "1-8" if c <= 8 else "9-10" if c <= 10 else "11-32" if c <= 32 else "33-128" if c <= 128 else ">128"
+            hist[b] += 1
+            bw = "0" if w == 0 else "1-8" if w <= 8 else "9-10" if w <= 10 else "11-32" if w <= 32 else "33-128" if w <= 128 else ">128"
+            widehist[bw] += 1
+        order = ["0", "1-8", "9-10", "11-32", "33-128", ">128"]
+        print(f"  {L}: {len(sel)} rows; consumptions under the default stream:")
+        print("    all consumptions:      " + ", ".join(f"{b}: {hist.get(b,0)}" for b in order))
+        print("    bound>=2 consumptions: " + ", ".join(f"{b}: {widehist.get(b,0)}" for b in order))
+        exhausted = []
+        any_exh = []
+        for i in sel:
+            flags = []
+            for s in adversarial:
+                r = by_id[i].get(s)
+                if not r or r["status"] == "ERROR":
+                    continue
+                ex = nat(r["exhaustedAt"])
+                wa = int(r["wideAfterExhaustion"])
+                if ex is not None:
+                    any_exh.append((i, s))
+                if ex is not None and wa > 0:
+                    flags.append((s, int(r["consumed"]), int(r["wide"]), ex, wa))
+            if flags:
+                exhausted.append((i, flags))
+        print(f"    rows with >=1 adversarial stream exhausted (any consumption past the prefix): {len({i for i,_ in any_exh})}")
+        print(f"    rows with a bound>=2 consumption PAST the prefix on >=1 adversarial stream (invisible order-sensitivity): {len(exhausted)}")
+        SCHED = {"l1Sched", "postOp", "backEdge", "l5ExitWindow", "l4Waiter", "l2Entry", "l2Arrival"}
+        fam = collections.Counter()
+        for i, _ in exhausted:
+            d = by_id[i].get("default")
+            sites = set() if not d or d["perSite"] == "-" else {p.split("=")[0] for p in d["perSite"].split(";")}
+            fam["scheduling/select/waiter sites reached" if sites & SCHED else
+                "appendSpill and/or mapIter only (capacity / map-order latitude, no scheduling site)"] += 1
+        for k, v in sorted(fam.items()):
+            print(f"      of which {k}: {v}")
+        if a.list_exhausted or L == "strict":
+            for i, flags in exhausted:
+                worst = max(flags, key=lambda t: t[4])
+                print(f"      {i}: worst stream [{worst[0]}] consumed={worst[1]} wide={worst[2]} exhaustedAt={worst[3]} wideAfterExhaustion={worst[4]}; all streams: " + "; ".join(f"[{s}] {c}/{w}/{e}/{wa}" for s, c, w, e, wa in flags))
+        # observation variance across streams
+        var = []
+        for i in sel:
+            hs = {r["obsHash"] for r in by_id[i].values() if r["status"] != "ERROR"}
+            if len(hs) > 1:
+                var.append(i)
+        print(f"    rows whose observation VARIES across the traced streams (default, 3 adversarial, 2 random-4096): {len(var)}")
+        for i in var:
+            print(f"      VARIES {i}: " + "; ".join(f"[{s}] {r['status']} h={r['obsHash'][:8]}" for s, r in sorted(by_id[i].items())))
+        # random-stream depth: how many rows consume beyond 10 under rand streams
+        deep = 0
+        for i in sel:
+            for s in by_id[i]:
+                if s.startswith("rand:") and int(by_id[i][s]["wide"]) > 10:
+                    deep += 1
+                    break
+        print(f"    rows with >10 bound>=2 consumptions under a random-4096 stream: {deep}")
+        if a.tsv_out:
+            os.makedirs(a.tsv_out, exist_ok=True)
+            with open(os.path.join(a.tsv_out, f"exhausted-{L}.tsv"), "w") as f:
+                f.write("id\tstream\tconsumed\twide\texhaustedAt\twideAfterExhaustion\n")
+                for i, flags in exhausted:
+                    for s, c, w, e, wa in flags:
+                        f.write(f"{i}\t{s}\t{c}\t{w}\t{e}\t{wa}\n")
+
+    # ---- membership / racy rows: variance is expected; report depth ----
+    print()
+    print("ENUMERATING LANES (membership/racy): depth under the traced streams")
+    for L in ("membership", "racy"):
+        sel = [i for i in ids if lane.get(i) == L]
+        for i in sel:
+            rs = by_id[i]
+            mx = max(int(r["consumed"]) for r in rs.values())
+            mxw = max(int(r["wide"]) for r in rs.values())
+            hs = len({r["obsHash"] for r in rs.values()})
+            print(f"  {L} {i}: max consumed={mx} max wide={mxw} distinct observations across 6 streams={hs}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
