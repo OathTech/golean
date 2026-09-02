@@ -27,7 +27,10 @@ review D5; A1-07 / A2-Q3). Convention: `docs/evidence/README.md`.
 - `corpus.summary.txt`, `corpus.matrix.tsv`, `corpus.meta.tsv` — the
   in-scope corpus matrix (every racy/membership/confluent-lane row +
   every strict-lane row whose feature tags touch goroutines/channels/
-  sync/select/deadlock/race/atomics), post-fix machine.
+  sync/select/deadlock/race/atomics; 362 rows), post-fix machine.
+- `corpus-deep.*` — the 11 budget-limited rows re-enumerated under
+  `width=8,sites=96,cap=1024,work=30000000,backedge=1`, 900 s budget
+  (2 certified, 9 still uncertified — recorded as such).
 - Raw per-run TSan transcripts, harness dirs, wire dumps, enumerator
   observations and stats live under the run's `artifacts/detector-
   soundness/<run>/rows/<id>/` (gitignored; regenerate with the commands
@@ -40,7 +43,13 @@ review D5; A1-07 / A2-Q3). Convention: `docs/evidence/README.md`.
       --manifest docs/evidence/2026-09-02_detector-soundness/probes.tsv \
       --out artifacts/detector-soundness/probes-post --jobs 8
     scripts/detector-soundness --out artifacts/detector-soundness/corpus --jobs 8
+    # the deep re-run: the 11 budget-limited ids with params replaced by
+    # width=8,sites=96,cap=1024,work=30000000,backedge=1 (see the report §2.1)
+    ENUM_TIMEOUT=900 scripts/detector-soundness --manifest <deep-manifest> \
+      --out artifacts/detector-soundness/corpus-deep --jobs 6 \
+      --strict-enum width=8,sites=96,cap=1024,work=30000000,backedge=1
     # copies: cp artifacts/detector-soundness/<run>/{summary.txt,matrix.tsv,meta.tsv} here
+    #         (absolute worktree paths scrubbed to repo-relative with sed)
 
 Defaults: `--runs 5 --procs 1,8` (10 `-race` executions of the SAME
 `tools/coverageharness` binary the gate runs, per row); strict-lane

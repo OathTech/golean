@@ -163,7 +163,10 @@ write a bare "#6"/"#7".
    at a pinned version; no cross-implementation lane exists yet.
 4. **SC-only interleaving within DRF** (reworded 2026-08-31 per the
    [USER] fidelity ruling, decision 1, and phase-2 findings
-   A1-06/A1-07): correct per the memory model's DRF-SC promise for
+   A1-06/A1-07; MEASURED 2026-09-02 by the detector-soundness
+   differential, `docs/2026-09-02_detector-soundness.md` — decision
+   1's named owner for detector completeness, closing A2-Q3's circular
+   delegation): correct per the memory model's DRF-SC promise for
    the programs we accept (mem#model states it formally with the
    Boehm–Adve proof pointer; mem#overview informally — anchors added
    at the P2 retrofit). Racy EXECUTIONS refuse fail-closed, and the
@@ -173,7 +176,44 @@ write a bare "#6"/"#7".
    program-level refusal holds exactly as far as the corpus
    apparatus's enumeration reaches and the granularity reduction
    (register #5's NPDRF obligation) holds — the machine computes no
-   per-program acceptance judgment. SCOPE ([USER] 2026-08-31): the
+   per-program acceptance judgment. THE HONEST STATE OF "racy →
+   refused", as measured (numbers derivation-anchored in the report's
+   evidence dir): **DETECTED** — HB-based (the FastTrack skeleton over
+   TSan's realized edge set), the refusal fires on every run in which
+   both conflicting accesses execute, whatever the interleaving; on
+   the in-scope corpus (362 rows — every racy/membership/confluent row
+   plus every concurrency-tagged strict row — 10 `-race` runs each at
+   GOMAXPROCS 1 and 8 vs the schedule enumerator) the third cell (gc
+   red, machine DRF) is **0/362**: all 23 gc-red rows are machine-
+   refused on EVERY enumerated path, all 276 doubly-certified rows
+   agree DRF, the 1 over-refusal is the recorded O1 residual. **NOT
+   DETECTED**, three classes: (i) the sync primitives' OWN state
+   words (U4 → **BUG-080**, born-FAIL pinned): a plain copy/overwrite
+   of a primitive another goroutine is operating on is racy by
+   mem#restrictions and TSan-red 10/10, and the machine runs it to a
+   value — the probe leg's third cell is exactly this class (2/45
+   value-run + 3 uncertified-by-fatal, all U4); misuse-only, fix = the
+   atomic access KIND that is the atomics arc's detector deliverable;
+   (ii) schedule-dependent races on paths the enumeration never
+   realizes — the enumerator is fuel/site/width-bounded and the strict
+   lane runs one default stream plus three variants, so a race whose
+   accesses co-execute only on an unexplored path passes with SC
+   semantics on the explored ones; 62/362 corpus rows are UNCERTIFIED
+   by the enumerator (20 deadlock members, 7 fatal members, 24
+   frontier refusals, 11 budget — all gc-green in 10 runs, but
+   "uncertified" is the honest label, never DRF), and the probe leg
+   showed the converse (two races the 10-run TSan sampler never
+   realized, refused by the enumerator); (iii) U5 — TSan's overwrite-
+   Release reports a go_mem-DRF owner-free-unlock program (7/10 runs)
+   that the machine's memory-model merge orders: an ORACLE-vs-spec
+   divergence, not SC-given-to-a-racy-program, posed as ruling Q-U5
+   (report §3.3). U2 is CONFIRMED benign on the pin (7/7 probes agree
+   both ways). WHAT THE PER-RUN WORDING PROMISES, exactly: every run
+   on which a conflicting pair co-executes refuses; program-level
+   refusal is certified where the enumerator certifies it (the racy
+   lane's every-path claim on 23 rows; the confluent/membership lanes'
+   full enumerations) and is otherwise only as good as the sampled
+   streams plus the NPDRF conjecture. SCOPE ([USER] 2026-08-31): the
    upper-bound claims — C3 and every "believed MAXIMAL" — are scoped
    to **DRF programs**; the racy limited-outcomes envelope is
    declared OUT of product scope. The ground for that exclusion is

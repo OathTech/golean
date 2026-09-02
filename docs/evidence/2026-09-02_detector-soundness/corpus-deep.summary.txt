@@ -1,0 +1,28 @@
+detector-soundness summary — 2026-09-02T00:57:53+00:00
+rows: 11   runs/proc: 5   procs: 1,8
+
+cells:
+  agree-DRF      2
+  uncertified    9
+
+by lane × cell:
+  confluent	uncertified	1
+  strict	agree-DRF	2
+  strict	uncertified	8
+
+HOLE rows (gc RACE, machine DRF — STOP-and-report; diagnose each):
+
+over-refusal rows (machine RACE-*, gc DRF-in-N — three-way investigation):
+
+uncertified rows (machine ENUM-FAIL):
+  channels/select-select/beside-loop	gc=DRF-in-N	single=ok	ENUM-FAIL:alias-guard probe [0, 1, 5] failed: the probed member's run errored — unsupported: select-with-select rendezvous (unmo
+  goroutines/pipeline/two-stage	gc=DRF-in-N	single=ok	ENUM-FAIL:timeout-900s
+  goroutines/pipeline/buffered-stage	gc=DRF-in-N	single=ok	ENUM-FAIL:timeout-900s
+  goroutines/worker-pool/sum	gc=DRF-in-N	single=ok	ENUM-FAIL:timeout-900s
+  goroutines/worker-pool/shared-feed	gc=DRF-in-N	single=ok	ENUM-FAIL:timeout-900s
+  imported-goose/channel/parallel-search-replace/search-replace	gc=DRF-in-N	single=ok	ENUM-FAIL:site bound 9 exceeds the case's width 8 — the width assertion is REFUTED (mechanically, at pick position 21); raise th
+  spec-examples-stmt/prime-sieve/five	gc=DRF-in-N	single=ok	ENUM-FAIL:run consumes more than --max-sites 96 choice site(s) — raise the case's sites bound (never truncated silently)
+  spec-examples-stmt/prime-sieve/eight	gc=DRF-in-N	single=ok	ENUM-FAIL:run consumes more than --max-sites 96 choice site(s) — raise the case's sites bound (never truncated silently)
+  sync/waitgroup-workers-join/workers-join	gc=DRF-in-N	single=ok	ENUM-FAIL:timeout-900s
+
+gc-infra rows:
