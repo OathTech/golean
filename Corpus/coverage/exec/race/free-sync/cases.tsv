@@ -21,3 +21,9 @@ rw-writers	freeSyncRwWriters	-	ok	-	sync,rwmutex,waitgroup,goroutines,globals,ra
 # ruling's check (i) — locPrefix is per-path). go run -race green.
 mutex-siblings	freeSyncMutexSiblings	-	ok	-	sync,mutex,goroutines,channels,structs,race	confluent	BUG-080 check (i): sibling fields written under the lock from two goroutines — the Locks' atomic writes at .field mu are disjoint from .field a/.field b	width=4,sites=32
 disjoint-prims	freeSyncDisjointPrims	-	ok	-	sync,mutex,goroutines,channels,structs,race	confluent	BUG-080 check (i): two primitives in one struct, each guarding its own field — distinct paths, nothing overlaps	width=4,sites=32
+# Q-U4RESIDUAL (A) guards (2026-09-02): a plain copy beside an RWMutex LOCK op
+# alone is two read-likes (mem#model) — the child holds the lock across main's
+# copy and unlocks only after main's ack, so the copy is unordered with the
+# lock op only. gc -race green; a write-like keying of the lock would refuse.
+rw-copy-beside-rlock	freeSyncRwCopyBesideRLock	-	ok	-	sync,rwmutex,goroutines,channels,structs,race	confluent	Q-U4RESIDUAL (A): copy unordered with RLock ONLY (RUnlock is HB-after the copy via the ack) — lock is read-like (.atomicRead @readerCount), read/read, no conflict; the refused class is the copy beside the UNLOCK (race/gomem-only)	width=4,sites=32
+rw-copy-beside-lock	freeSyncRwCopyBesideLock	-	ok	-	sync,rwmutex,goroutines,channels,structs,race	confluent	Q-U4RESIDUAL (A): copy unordered with the write-Lock ONLY (Unlock is HB-after the copy via the ack) — lock is read-like, no conflict	width=4,sites=32

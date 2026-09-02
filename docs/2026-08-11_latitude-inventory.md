@@ -1847,6 +1847,41 @@ memory)" for the doctrine's.
     the NPDRF obligation (registry-point path set) is its structural
     half, owned by register #5.
 
+    **Q-U4RESIDUAL — RULED [USER] 2026-09-02, option (A): where go_mem
+    and TSan DISAGREE on what a race IS, go_mem wins** (ruling sheet
+    `docs/2026-08-31_qrow-rulings.md` row 9 + appendix record; the
+    quotes reached the recording worker by [AGENT]-coordinator relay,
+    citation not firsthand). The HB EDGE SET stays TSan's realized set
+    (the paragraph above is unchanged); the ACCESS KINDS a sync op puts
+    on its primitive's own words are now mem#model's read-like/write-
+    like operation kinds RECORDED BESIDE what TSan realizes (Race.lean
+    `syncEntryKinds`/`syncReleaseTailKinds`, each access at its gc
+    word), so a plain access beside `RUnlock`/`Unlock`/`Add`/`Done` —
+    racy by mem#model's definitions, invisible to TSan under
+    `race.Disable` — REFUSES. Three things this ruling fixes in the
+    doctrine: (i) go_mem's semantics for racy programs is BOUNDED, not
+    C-style undefined behaviour — mem#restrictions: an implementation
+    may "report the race and halt execution", or else a word-sized racy
+    read observes some actually-written value (no out-of-thin-air) and
+    multiword values may tear; the machine's refusal IS the permitted
+    report-and-terminate branch, taken on detection; (ii) the bounded-
+    VALUE branch for racy programs is deliberately UNMODELED — register
+    #4's existing scoping ("the racy limited-outcomes envelope is
+    declared OUT of product scope"), now explicitly recorded here with
+    the ruling as its ground: the machine is the substrate for a
+    verification tool, refusal-freedom is the proof obligation
+    (DRF-guarantee shape), over-refusal costs completeness and never
+    soundness, under-refusal would be unsound ([USER]: "we're 'failing
+    more' which means we can only verify code that is correct"); (iii)
+    a refusal NEVER counts as a pass — the racy lane's three-way rule
+    (our refusal + `-race` green) files the go_mem-racy/TSan-green rows
+    as an investigation whose ruled outcome is "racy by go_mem, TSan
+    incomplete"; they are pinned born-FAIL against gc's `ok`
+    (`race/gomem-only/*`, BUGS.md BUG-083's Cases line — the record of
+    the designed divergence) so the cost stays visible. Removing:
+    nothing — a doctrine decision, not latitude; the U-ledger's U4 is
+    CLOSED (BUG-080) with residual (a) closed by this ruling.
+
 **Correction owed to the draft's seeded #2** (flag, not a new entry):
 "Sequential evaluation-order latitude is pinned ... to gc's
 realization" is accurate only for the call-vs-operand axis (BUG-052).

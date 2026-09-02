@@ -1,0 +1,26 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# go_mem-RACY / TSan-GREEN — the DESIGNED divergence from the -race oracle
+# (Q-U4RESIDUAL RULED [USER] 2026-09-02 option (A); BUG-083). expected_status
+# is gc's observation (ok — go run -race green 20/20 at GOMAXPROCS 1 and 8,
+# docs/evidence/2026-09-02_q-u4-gomem/); the machine refuses `race` on every
+# path (mem#model: one write-like operand, one non-synchronizing), so every
+# row is RED BY DESIGN at lean-observation and never counts as a pass. Rows
+# sit on BUG-083's Cases line (Pinned-by:none red-by-design pin). Shapes with
+# a schedule-dependent gc outcome (overwrite beside Done) are probes only.
+# Per-row derivation (strict rows keep `why` as `-`; the main.go header has
+# the long form): rw-copy-vs-{runlock,unlock} — copy (read-like, plain)
+# beside RUnlock/Unlock (mem#model: mutex unlock is write-like); TSan sees
+# only the plain race.Read(&rw.w), read/read. wg-copy-vs-add-from-0 — copy
+# beside Add(1) from 0 (the counter RMW is write-like); TSan realizes only
+# the plain wg.sema READ. wg-copy-vs-done — copy beside Done (write-like:
+# Done synchronizes-before the Wait it unblocks); Done's state Add is under
+# race.Disable. wg-overwrite-vs-add-nonzero — overwrite beside Add(1) from a
+# nonzero counter (write-like beside a plain write; nothing Waits, so gc's
+# outcome is a deterministic ok). wg-overwrite-vs-wait-at-0 — overwrite
+# beside a Wait returning at 0 (the counter read is read-like).
+rw-copy-vs-runlock	gomemRwCopyVsRUnlock	-	ok	-	sync,rwmutex,goroutines,channels,structs,race	strict	-	-
+rw-copy-vs-unlock	gomemRwCopyVsUnlock	-	ok	-	sync,rwmutex,goroutines,channels,structs,race	strict	-	-
+wg-copy-vs-add-from-0	gomemWgCopyVsAddFrom0	-	ok	-	sync,waitgroup,goroutines,channels,structs,race	strict	-	-
+wg-copy-vs-done	gomemWgCopyVsDone	-	ok	-	sync,waitgroup,goroutines,channels,structs,race	strict	-	-
+wg-overwrite-vs-add-nonzero	gomemWgOverwriteVsAddNonzero	-	ok	-	sync,waitgroup,goroutines,channels,structs,race	strict	-	-
+wg-overwrite-vs-wait-at-0	gomemWgOverwriteVsWaitAt0	-	ok	-	sync,waitgroup,goroutines,channels,structs,race	strict	-	-

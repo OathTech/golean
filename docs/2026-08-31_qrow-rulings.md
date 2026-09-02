@@ -27,8 +27,9 @@ appendix; the quote was received by the [AGENT] coordinator
 in-session and RELAYED to the recording worker — citation, not
 firsthand, per the U0-incident convention). Rows 1–8 are ruled (reds
 total 20). Row 9 (Q-U4RESIDUAL, 0 reds — a detector-alignment
-question) is OPEN, posed 2026-09-02 by the bug080-atomic-kind audit
-fix round (G2 F10); it awaits the [USER].
+question), posed 2026-09-02 by the bug080-atomic-kind audit fix round
+(G2 F10), was RULED [USER] the same day — option (A), implemented on
+the `q-u4-gomem` lane (see the row and the appendix record).
 
 | # | row (reds) | status | ruling / state |
 |---|---|---|---|
@@ -40,7 +41,7 @@ fix round (G2 F10); it awaits the [USER].
 | 6 | **Q-SYNCVAL** (5) | **RULED [USER] 2026-08-31 — implement** | Identity principle ratified (indirection consumes the same C8 site or refuses — never variant semantics) and P-S2-6 green-lit (real stub bodies over EXISTING sync machine ops; frontend-only; flips all 5 reds). D-002 FREEZE INTERACTION — [AGENT] interpretation, CONFIRMED [USER] 2026-09-01 ("the 4 confirmations all seem like reasonable interpretations… agree on all of the above"): this lift is NOT shim injection — it adds no hand-modeled stdlib semantics; it plumbs values to already-modeled machine ops, and the identity principle is precisely the anti-variant-semantics rule the freeze exists to enforce. Any deviation from that shape during implementation is a STOP-and-ask. |
 | 7 | **Q-SYNCLIT** (2) | **RULED [USER] 2026-08-31 — implement** | The S lowering as recommended (spec forces empty-literal-only cross-package ≡ zero value ≡ var/new; copy question already answered by sync design §3/p10) — rider on the Q-SYNCVAL slice. |
 | 8 | **Q-COND** (3) | **RULED [USER] 2026-08-31 via the killable-set approval; per-row CONFIRMED [USER] 2026-09-01 ("the 4 confirmations all seem like reasonable interpretations… agree on all of the above")** (auditor D3-2 resolved) | Deferred WITH the envelope pre-ruled from the docs text, as recommended: NO spurious wakeups (documented upper bound), Signal = any-waiter, Broadcast = forced-all folding into C8, TSan-realized HB, copy = detected panic. Zero demand; pure frontier. |
-| 9 | **Q-U4RESIDUAL** (0 reds; detector alignment) | **OPEN — [USER] ruling pending** (posed 2026-09-02 [AGENT], the bug080-atomic-kind audit fix round G2 F10; the slice's [AGENT] choice stands until ruled) | THE QUESTION: for the sync ops gc's `-race` build performs under `race.Disable` — RWMutex `RUnlock`/`Unlock`'s counter RMWs, WaitGroup `Add`/`Done`'s state RMW, `Wait`'s counter read — should the detector record the go_mem-faithful access kinds (making a plain access beside them a REFUSAL) or stay aligned with TSan's realized set (record nothing; RUN them)? The BUG-080 slice chose alignment ([AGENT], residual (a), inside a brief that said "no new over-refusal rows"). THE RESIDUAL PRECISELY (G2 F10 corrected the first statement): a plain access beside a WRITE-LIKE op (`RUnlock`, RWMutex `Unlock`, WaitGroup `Add`/`Done`) or a plain OVERWRITE beside `Wait` at counter 0. NOT the residual: a plain COPY beside `RLock`/`Lock` — mem#model lists mutex lock as read-like and a copy is read-like, so no write-like operand and no race; `rw-copy-vs-{rlock,lock}` agree-DRF is the correct verdict. THE AUDITOR'S PROPOSED TABLE: `RLock`/`Lock` → `atomicRead`; `RUnlock`/`Unlock` → `atomicWrite`; WaitGroup `Add`/`Done` → + `atomicWrite` (beside the realized `wg.sema` pair); `Wait` → + `atomicRead`; both RWMutex halves move together (each RWMutex op keeps its realized plain `race.Read(&rw.w)` and adds its counter RMW's go_mem kind). FOR: the register of record is go_mem, not TSan — by mem#model's read-write/write-write definitions a plain write beside `RUnlock` IS a data race, and a racy program has no defined value semantics, so running it to a value is a fail-OPEN cell against the doctrine's own upper bound; no race-free program's verdict moves (vet's `copylocks` flags every shape); the table derives from mem#model's read-like/write-like lists without per-primitive source archaeology. AGAINST: the racy lane's oracle is `-race` (register #13) — each refusal is a NEW over-refusal row (machine RACE, gc DRF-in-N: the three-way rule's investigation cell) on `wg-copy-vs-done`, `wg-overwrite-vs-done`, `wg-overwrite-vs-wait-at-0` (+ a copy beside `RUnlock`/`Unlock`, UNPROBED — the family has no such subject); the differential's lower bound (observed ∈ modeled) is untouched either way (misuse-only), so this is a DOCTRINE question — which register wins where go_mem and TSan disagree — not an evidence question; and recording more than gc realizes departs from the primitive-by-primitive derivation-from-source discipline the slice's check (ii) was ruled on. AUDITOR'S RECOMMENDATION: rule first, then take the table in ITS OWN S slice (`syncEntryKinds`/`syncReleaseTailKinds` + the u4kind family's expected cells + BUGS.md/doctrine text + probes for the unprobed copy-beside-RUnlock/Unlock shapes), never inside the BUG-080 slice, whose correctness the audit confirmed under its brief. DECISION SHAPE: (A) adopt the table — go_mem register wins, the over-refusal rows appear classified BY DESIGN; (B) keep alignment — TSan register wins, residual (a) becomes a recorded [USER] doctrine decision rather than an [AGENT] choice; (C) split — adopt only the write-like halves (`RUnlock`/`Unlock`/`Add`/`Done` → `atomicWrite`, `Wait` → `atomicRead`), the minimal set that closes the fail-open cell. |
+| 9 | **Q-U4RESIDUAL** (0 reds; detector alignment) | **RULED [USER] 2026-09-02 — option (A): the race detector follows go_mem exactly** (posed 2026-09-02 [AGENT], the bug080-atomic-kind audit fix round G2 F10; ruled the same day — verbatim quotes in the appendix record below, RELAYED to the recording worker by the [AGENT] coordinator, citation not firsthand; IMPLEMENTED 2026-09-02 [AGENT] on lane `q-u4-gomem`: `Race.lean` `syncEntryKinds`/`syncReleaseTailKinds` record TSan's realized set ∪ go_mem's operation kind, each at its gc WORD (`syncWord`) — RLock/Lock → `.atomicRead @readerCount`, RUnlock/Unlock → `.atomicWrite @readerCount` (each keeping its realized `.read @w`), WaitGroup Add/Done → `.atomicWrite @state`, Wait → `.atomicRead @state` (the realized `wg.sema` pair kept at its own word), Mutex Lock's CAS `.atomicWrite` stays (mem#model: a CAS is both read-like and write-like, subsuming the read-like lock), Mutex Unlock's tail stays (it covers the write-like unlock); the over-refusal rows appear classified BY DESIGN — born-FAIL corpus pins `race/gomem-only/*` on BUG-083's Cases line, probe cells `over-refusal` in `docs/evidence/2026-09-02_q-u4-gomem/` (six u4kind subjects move, the four WaitGroup ones AND `rw-copy-vs-{rlock,lock}`, whose shapes pair the lock with its unlock unordered with the copy and refuse THROUGH the write-like unlock; the row's "a copy beside RLock/Lock is NOT a race" holds for the lock OP — isolated by `probes/u4gomem/rw-copy-vs-{rlock,lock}-only` and the born-PASS guards `race/free-sync/rw-copy-beside-{rlock,lock}`); BUG-080 residual (a) CLOSED by this ruling). RATIONALE, as ruled: the machine is the substrate for a verification tool — refusal-freedom is the proof obligation (the DRF-guarantee shape: a program proved refusal-free on every path is go_mem-DRF, hence SC), so over-refusal costs COMPLETENESS (correct programs that are racy-by-go_mem-but-TSan-green cannot be verified — vet's `copylocks` flags every such shape) and never SOUNDNESS, while under-refusal (running a go_mem-racy program to a value) would be unsound. go_mem's racy semantics is BOUNDED, not C-style UB (mem#restrictions: report-and-terminate always permitted; else word-sized racy reads observe an actually-written value, multiword values may tear, no out-of-thin-air) — the machine's refusal is the permitted report-and-terminate branch; the bounded-VALUE branch stays deliberately unmodeled (register #4's existing scoping, now explicitly recorded with this ruling at register #13). | THE QUESTION (as posed): for the sync ops gc's `-race` build performs under `race.Disable` — RWMutex `RUnlock`/`Unlock`'s counter RMWs, WaitGroup `Add`/`Done`'s state RMW, `Wait`'s counter read — should the detector record the go_mem-faithful access kinds (making a plain access beside them a REFUSAL) or stay aligned with TSan's realized set (record nothing; RUN them)? The BUG-080 slice chose alignment ([AGENT], residual (a), inside a brief that said "no new over-refusal rows"). THE RESIDUAL PRECISELY (G2 F10 corrected the first statement): a plain access beside a WRITE-LIKE op (`RUnlock`, RWMutex `Unlock`, WaitGroup `Add`/`Done`) or a plain OVERWRITE beside `Wait` at counter 0. NOT the residual: a plain COPY beside `RLock`/`Lock` — mem#model lists mutex lock as read-like and a copy is read-like, so no write-like operand and no race; `rw-copy-vs-{rlock,lock}` agree-DRF is the correct verdict. THE AUDITOR'S PROPOSED TABLE: `RLock`/`Lock` → `atomicRead`; `RUnlock`/`Unlock` → `atomicWrite`; WaitGroup `Add`/`Done` → + `atomicWrite` (beside the realized `wg.sema` pair); `Wait` → + `atomicRead`; both RWMutex halves move together (each RWMutex op keeps its realized plain `race.Read(&rw.w)` and adds its counter RMW's go_mem kind). FOR: the register of record is go_mem, not TSan — by mem#model's read-write/write-write definitions a plain write beside `RUnlock` IS a data race, and a racy program has no defined value semantics, so running it to a value is a fail-OPEN cell against the doctrine's own upper bound; no race-free program's verdict moves (vet's `copylocks` flags every shape); the table derives from mem#model's read-like/write-like lists without per-primitive source archaeology. AGAINST: the racy lane's oracle is `-race` (register #13) — each refusal is a NEW over-refusal row (machine RACE, gc DRF-in-N: the three-way rule's investigation cell) on `wg-copy-vs-done`, `wg-overwrite-vs-done`, `wg-overwrite-vs-wait-at-0` (+ a copy beside `RUnlock`/`Unlock`, UNPROBED — the family has no such subject); the differential's lower bound (observed ∈ modeled) is untouched either way (misuse-only), so this is a DOCTRINE question — which register wins where go_mem and TSan disagree — not an evidence question; and recording more than gc realizes departs from the primitive-by-primitive derivation-from-source discipline the slice's check (ii) was ruled on. AUDITOR'S RECOMMENDATION: rule first, then take the table in ITS OWN S slice (`syncEntryKinds`/`syncReleaseTailKinds` + the u4kind family's expected cells + BUGS.md/doctrine text + probes for the unprobed copy-beside-RUnlock/Unlock shapes), never inside the BUG-080 slice, whose correctness the audit confirmed under its brief. DECISION SHAPE: (A) adopt the table — go_mem register wins, the over-refusal rows appear classified BY DESIGN; (B) keep alignment — TSan register wins, residual (a) becomes a recorded [USER] doctrine decision rather than an [AGENT] choice; (C) split — adopt only the write-like halves (`RUnlock`/`Unlock`/`Add`/`Done` → `atomicWrite`, `Wait` → `atomicRead`), the minimal set that closes the fail-open cell. |
 
 ## Execution
 
@@ -65,8 +66,8 @@ fix round (G2 F10); it awaits the [USER].
   RETURNED via the owner proposal (2026-09-01/02) and RULED [USER]
   2026-09-02 — see the row; its vehicles are the two TODO.md items
   (the BUG-080 detector-kind slice first, then the atomics arc).**
-  Row 9 (Q-U4RESIDUAL, added 2026-09-02) awaits the [USER]; nothing
-  else on this sheet does.
+  Row 9 (Q-U4RESIDUAL, added 2026-09-02) RULED [USER] the same day
+  (option (A)) — nothing on this sheet awaits the [USER].
 
 ## Appendix — the coordinator's row-by-row currency table
 
@@ -132,3 +133,42 @@ produced the fairness doctrine ruling (verbatim in the doctrine's
 `docs/2026-08-11_essence-of-go-doctrine.md`), which is why FairStream's
 exclusion from the arc is a doctrine consequence, not merely a scoping
 choice.
+
+### The row-9 ruling record (2026-09-02) — the tracked record behind option (A)
+
+[AGENT] record. Provenance chain: the [USER] quotes below were
+received by the [AGENT] coordinator in-session and RELAYED to the
+recording worker (the `q-u4-gomem` lane) in its brief; the worker did
+not receive them firsthand (citation, never bare assertion — the
+U0-incident convention). The question presented was the row's
+decision shape (A)/(B)/(C) with the auditor's table. The user ruled,
+verbatim as relayed:
+
+«Right, we want to follow go_mem exactly I think. It's a weird
+situation, but maybe this is analogous to UB in C, where the compiler
+can do anything it wants when there are races?»
+
+The coordinator then explained that go_mem gives racy programs a
+BOUNDED semantics rather than C-style UB — report-and-terminate is
+always permitted (mem#restrictions); otherwise word-sized reads observe
+some actually-written value, multiword values may tear, no
+out-of-thin-air — so a refusal is a permitted implementation behaviour,
+and over-refusal costs completeness, never soundness. The user
+replied:
+
+«That's okay if we imagine this as the substrate for a verification
+tool right? We're 'failing more' which means we can only verify code
+that is correct»
+
+and, closing:
+
+«Indeed. All good with me, go ahead».
+
+So the ruling is option (A) — the go_mem register wins where go_mem
+and TSan disagree — with the verification-substrate rationale recorded
+in the row: refusal-freedom is the proof obligation (DRF-guarantee
+shape); over-refusal = incompleteness, under-refusal = unsoundness.
+The C-UB analogy the first quote floated is NOT part of the ruling's
+grounds — the second exchange replaces it with go_mem's bounded racy
+semantics, and register #13 (`docs/2026-08-11_latitude-inventory.md`)
+records that distinction.

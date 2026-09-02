@@ -253,9 +253,19 @@ write a bare "#6"/"#7".
    access beside a WRITE-LIKE op — `RUnlock`, RWMutex `Unlock`,
    WaitGroup `Add`/`Done` — or an overwrite beside a `Wait` at 0; NOT a
    copy beside `RLock`/`Lock`, which is two read-likes and no race) are
-   go_mem-racy but TSan-invisible and the machine follows the oracle
-   (register #13) — [AGENT], posed to the [USER] as Q-U4RESIDUAL
-   (qrow-rulings row 9); and an overwrite that unlocks a held lock
+   go_mem-racy but TSan-invisible; the slice followed the oracle
+   ([AGENT]) and posed Q-U4RESIDUAL — **RULED [USER] 2026-09-02, option
+   (A): follow go_mem exactly** (qrow-rulings row 9; the record with
+   the relayed quotes is its appendix; the doctrine paragraph is
+   register #13 of the latitude inventory). Since the `q-u4-gomem`
+   lane the detector records mem#model's operation kinds beside TSan's
+   realized set, so this class REFUSES — a DESIGNED divergence from the
+   `-race` oracle, pinned born-FAIL against gc's `ok` at
+   `race/gomem-only/*` (BUGS.md BUG-083) and never counted as a pass;
+   refusal is go_mem's permitted report-and-terminate branch, and the
+   verification-substrate rationale (over-refusal = incompleteness,
+   under-refusal = unsoundness) is the ruling's ground; and an
+   overwrite that unlocks a held lock
    before another goroutine's Unlock ends `fatal` here where gc reports
    the race first (both abort: the machine's is an asserted program
    outcome, `GoError.fatal`; gc's is the race report then the same

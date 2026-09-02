@@ -1,5 +1,40 @@
 # GoLean native-frontend full-corpus differential baseline
-# re-pinned: 2026-09-02 (bug082-maphint AUDIT FIX ROUND M1/L1/L2 —
+# re-pinned: 2026-09-02 (q-u4-gomem lane — Q-U4RESIDUAL RULED [USER]
+#   2026-09-02 option (A) "follow go_mem exactly" (ruling sheet
+#   docs/2026-08-31_qrow-rulings.md row 9 + appendix record; the quotes
+#   reached the recording worker by [AGENT]-coordinator relay);
+#   [AGENT]-executed inside that ruling. FULL ci --diff at this tip
+#   (this lane's scratch ci-diff.log; 2567 rows run; drift = exactly the
+#   8 NEW rows below; NO other row moved in result or stage; NO
+#   PASS->non-PASS flips). Machine change [TRUST-ADJACENT: Race.lean
+#   tables]: `syncEntryKinds` / `syncReleaseTailKinds` record TSan's
+#   realized set UNION go_mem's operation kind (mem#model read-like /
+#   write-like), each at its gc WORD (`syncWord`): RWMutex RLock/Lock
+#   + .atomicRead @readerCount, RUnlock/Unlock + .atomicWrite
+#   @readerCount (the realized .read @w kept); WaitGroup Add/Done
+#   .atomicWrite @state, Wait .atomicRead @state (the realized wg.sema
+#   pair kept at its own word); Mutex and Once kinds unchanged. The
+#   refusal is go_mem's permitted report-and-terminate (mem#restrictions);
+#   over-refusal vs the -race oracle costs completeness, never soundness.
+#   NEW rows born FAIL BY DESIGN (6), on BUG-083's Cases line (the
+#     designed-divergence record; a Pinned-by:none red-by-design pin,
+#     the BUG-070/078 precedent): race/gomem-only/{rw-copy-vs-runlock,
+#     rw-copy-vs-unlock,wg-copy-vs-add-from-0,wg-copy-vs-done,
+#     wg-overwrite-vs-add-nonzero,wg-overwrite-vs-wait-at-0}
+#     FAIL/lean-observation — gc `ok` (go run -race GREEN 20/20 at
+#     GOMAXPROCS 1 and 8: docs/evidence/2026-09-02_q-u4-gomem/) vs the
+#     machine's `race`: a plain copy/overwrite of a primitive beside a
+#     sync op mem#model kinds write-like (RUnlock/Unlock/Add/Done), or a
+#     plain overwrite beside a read-like Wait, that gc runs under
+#     race.Disable. Never expected to flip PASS; a PASS here would mean
+#     the detector stopped refusing a go_mem-racy shape.
+#   NEW rows born PASS (2): race/free-sync/rw-copy-beside-{rlock,lock}
+#     PASS/confluent — the ruling's NOT-in-class guards (a copy beside
+#     the LOCK op ALONE is two read-likes: the child unlocks only after
+#     main's ack, so the copy is unordered with the lock op only); a
+#     write-like keying of the lock would refuse them.
+#   Everything else: 2559 rows unchanged in result and stage.
+# previous re-pin: 2026-09-02 (bug082-maphint AUDIT FIX ROUND M1/L1/L2 —
 #   [AGENT]-executed, records + ONE red-by-design row, no code change.
 #   FULL ci --diff at this tip (docs/evidence/2026-09-02_bug082-maphint/
 #   README.md, gate tail "fix round"): drift vs the previous pin =
@@ -418,7 +453,13 @@
 #     The remaining FAIL rows are the standing frontend/feature gaps
 #     of the 2026-08-22 record (docs/2026-08-22_launch-audit-synthesis.md),
 #     none moved by this re-pin.
-# cases: 2573 (2401 PASS / 172 FAIL)
+# cases: 2581 (2403 PASS / 178 FAIL)
+#   [re-derived from the data rows at the round-5 merge-train rebase 2026-09-03 ([AGENT], q-u4-gomem replayed over main@bd849494 = bug082-maphint 2573 (2401 PASS / 172 FAIL); the two lanes' new rows are disjoint by id, no main row moved): + this commit's 6 born-FAIL-by-design + 2 born-PASS.]
+#   [re-derived by count from this file's data rows at the 2026-09-02
+#   q-u4-gomem re-pin: 2559 (2387 PASS / 172 FAIL) + 6 born-FAIL-by-design
+#   (race/gomem-only/*, BUG-083) + 2 born-PASS (race/free-sync/rw-copy-
+#   beside-{rlock,lock}) = 2567 (2389 PASS / 178 FAIL); reconciler C1H
+#   green at the commit.]
 #   [re-derived by count from this file's data rows at the 2026-09-02
 #   bug082-maphint AUDIT FIX ROUND re-pin ([AGENT]): 2572 (2401 PASS /
 #   171 FAIL) + 1 born-FAIL = 2573 (2401 PASS / 172 FAIL).]
@@ -2292,6 +2333,14 @@ PASS	race/free-sync/once-edge	confluent
 PASS	race/free-sync/rw-writers	confluent
 PASS	race/free-sync/mutex-siblings	confluent
 PASS	race/free-sync/disjoint-prims	confluent
+PASS	race/free-sync/rw-copy-beside-rlock	confluent
+PASS	race/free-sync/rw-copy-beside-lock	confluent
+FAIL	race/gomem-only/rw-copy-vs-runlock	lean-observation
+FAIL	race/gomem-only/rw-copy-vs-unlock	lean-observation
+FAIL	race/gomem-only/wg-copy-vs-add-from-0	lean-observation
+FAIL	race/gomem-only/wg-copy-vs-done	lean-observation
+FAIL	race/gomem-only/wg-overwrite-vs-add-nonzero	lean-observation
+FAIL	race/gomem-only/wg-overwrite-vs-wait-at-0	lean-observation
 PASS	race/litmus/mp-sync	confluent
 PASS	race/litmus/mp-racy	racy
 PASS	race/litmus/lb-racy	racy

@@ -1438,7 +1438,8 @@ panic checks, so a recovered negative-counter Done still released).
 The sema-READ half of the misuse pair (an Add taking the counter off 0
 upward, waitgroup.go:111-115) is no longer here: since BUG-080 it is
 the `syncEntryKinds` row the sync arm records in the DATA shadow at the
-primitive's path, ahead of this event. -/
+primitive's `sema` word, ahead of this event — beside the state RMW's
+go_mem kind (`.atomicWrite @state`, Q-U4RESIDUAL (A)). -/
 def raceWgAddEvent (r : RaceState) (i : Nat) (loc : Loc) (delta : Int) :
     Except GoError RaceState :=
   if delta < 0 then return (r.syncRelease i loc) else return r
@@ -1713,16 +1714,18 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (ev : StepEvent)
               -- clocks per the package-doc HB sentences (quoted at
               -- `SyncClocks`). Fatal outcomes never reach here (the
               -- pool step errored); parked outcomes carry no edge (the
-              -- wake does, above). AND ITS THIRD (BUG-080): the
-              -- accesses `-race` realizes on the primitive's OWN words
-              -- — `syncEntryKinds` under the pre-op clock BEFORE the
-              -- hook (gc's instruction order: the state CAS / the
-              -- `race.Read(&rw.w)` / the `wg.sema` pair precede the
-              -- acquire/release), `syncReleaseTailKinds` AFTER the
-              -- release on a committed op (Unlock's state Add follows
-              -- `race.Release`) — recorded in the DATA shadow at the
-              -- sync cell's path, where a plain copy/overwrite of the
-              -- primitive (or its enclosing struct) overlaps them.
+              -- wake does, above). AND ITS THIRD (BUG-080; Q-U4RESIDUAL
+              -- (A)): the accesses on the primitive's OWN words —
+              -- TSan's realized set ∪ go_mem's operation kind, each at
+              -- its gc word (Race.lean `syncWord`) — `syncEntryKinds`
+              -- under the pre-op clock BEFORE the hook (gc's instruction
+              -- order: the state CAS / the `race.Read(&rw.w)` / the
+              -- `wg.sema` pair precede the acquire/release; the go_mem
+              -- kind of the op sits with them), `syncReleaseTailKinds`
+              -- AFTER the release on a committed op (Unlock's state Add
+              -- follows `race.Release`) — recorded in the DATA shadow
+              -- under the sync cell's path, where a plain copy/overwrite
+              -- of the primitive (or its enclosing struct) overlaps them.
               match (v :: done).reverse.head? with
               | some (.addr loc) =>
                   match syncCell sPre loc with
@@ -1738,7 +1741,7 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (ev : StepEvent)
                     | .wgAdd, none =>
                         throw (.internal "sync arm: wgAdd committed without its delta operand")
                     | _, _ => pure 0
-                  let r ← r.accesses i ((syncEntryKinds op pre delta).map ((·, loc)))
+                  let r ← r.accesses i (syncEntryKinds op pre delta loc)
                   let r ← (match op with
                   | .lock | .rlock =>
                       (match m'.threads[i]? with
@@ -1767,12 +1770,14 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (ev : StepEvent)
                       -- still released — probed ordering, design note
                       -- §4). The sema READ of the misuse pair (counter
                       -- departing 0 upward; it too precedes the panics)
-                      -- was recorded above by `syncEntryKinds`.
+                      -- and the state RMW's write-like go_mem kind were
+                      -- recorded above by `syncEntryKinds`.
                       raceWgAddEvent r i loc delta
                   | .wgWait =>
                       -- The first-waiter sema WRITE (waitgroup.go:184-190,
                       -- pre-park waiter count 0 — concurrent Waits must
-                      -- not race each other) was recorded above by
+                      -- not race each other) and the counter read's
+                      -- read-like go_mem kind were recorded above by
                       -- `syncEntryKinds`; a park carries no edge.
                       (match m'.threads[i]? with
                       | some (.opDone _ _) => return (r.syncAcquire i loc)
@@ -1791,10 +1796,11 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (ev : StepEvent)
                       | _ => return r))
                   -- BUG-080: the state-word RMW that FOLLOWS the release
                   -- (Unlock's Add; Once's deferred Unlock), on a
-                  -- committed op only.
+                  -- committed op only — it also carries go_mem's
+                  -- write-like unlock (Race.lean, the Mutex row).
                   match m'.threads[i]? with
                   | some (.opDone _ _) =>
-                      r.accesses i ((syncReleaseTailKinds op).map ((·, loc)))
+                      r.accesses i (syncReleaseTailKinds op pre loc)
                   | _ => return r
               | _ => return r  -- nil/garbage receiver: the apply panicked
           | _ =>

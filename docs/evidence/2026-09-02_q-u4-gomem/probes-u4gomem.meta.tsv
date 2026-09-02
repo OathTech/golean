@@ -1,0 +1,11 @@
+tool	scripts/detector-soundness
+commit	fa4fce581afd66b412371805989152ae03622878+dirty
+go	go1.26.5
+golean	/home/dev/projects/golean/.claude/worktrees/q-u4-gomem/.lake/build/bin/golean
+runs	20
+procs	1,8
+strict_enum	width=4,sites=32,cap=512,work=4000000,backedge=1
+rows	6
+host	Linux 7.0.0-30-generic x86_64
+started	2026-09-02T21:45:05+00:00
+finished	2026-09-02T21:45:46+00:00

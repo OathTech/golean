@@ -106,8 +106,12 @@ see the R15 entry below.
       the data shadow; both pins flipped, +4 born-PASS rows, corpus HOLE
       cell 2 → 0, probe family u4kind 28 subjects; two residuals recorded
       at BUG-080 (TSan-invisible RWMutex-copy / WaitGroup-Done shapes
-      followed to the oracle; fatal-before-race on an overwrite-then-
-      cross-goroutine-Unlock). ([USER]-ruled
+      followed to the oracle — residual (a), since RULED [USER]
+      2026-09-02 Q-U4RESIDUAL option (A) and implemented on lane
+      `q-u4-gomem`: go_mem's kinds recorded, the class refuses, BUG-083
+      is the designed-divergence record; fatal-before-race on an
+      overwrite-then-cross-goroutine-Unlock — residual (b), still owed
+      below). ([USER]-ruled
       2026-09-02, `docs/2026-08-31_qrow-rulings.md` row 2; was: rides
       the arc's detector wave by [AGENT] sequencing, audit fix S4):
       the atomic access KIND in `GoLean/GoCore/Race.lean` —

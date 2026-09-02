@@ -150,6 +150,57 @@ func freeSyncDisjointPrims() int {
 	return s.a + s.b
 }
 
+// Q-U4RESIDUAL (A) guards (2026-09-02): a plain COPY beside an RWMutex
+// LOCK op ALONE is NOT a data race — mem#model lists mutex lock as
+// read-like and a copy is read-like, so there is no write-like operand
+// (the ruling's own statement of what is NOT in the refused class). The
+// shape isolates the lock op: the child locks, then WAITS for main's ack
+// before unlocking, so main's copy is HB-before the (write-like) unlock
+// and unordered only with the lock. gc -race green (TSan: read/read on
+// rw.w); the machine records `.atomicRead` for the lock (Race.lean
+// `syncEntryKinds`) — read-like beside the copy's plain read, no
+// conflict — and the unlock's `.atomicWrite` is HB-after the copy.
+// A detector that keyed the lock op write-like would refuse here.
+
+type freeSyncRwBox struct {
+	rw sync.RWMutex
+	n  int
+}
+
+var freeSyncRwSink freeSyncRwBox
+
+func freeSyncRwCopyBesideRLock() int {
+	var r freeSyncRwBox
+	ack := make(chan int)
+	done := make(chan int)
+	go func() {
+		r.rw.RLock()
+		<-ack
+		r.rw.RUnlock()
+		done <- 0
+	}()
+	freeSyncRwSink = r
+	ack <- 0
+	<-done
+	return freeSyncRwSink.n
+}
+
+func freeSyncRwCopyBesideLock() int {
+	var r freeSyncRwBox
+	ack := make(chan int)
+	done := make(chan int)
+	go func() {
+		r.rw.Lock()
+		<-ack
+		r.rw.Unlock()
+		done <- 0
+	}()
+	freeSyncRwSink = r
+	ack <- 0
+	<-done
+	return freeSyncRwSink.n
+}
+
 func main() {
 	freeSyncMutex()
 	freeSyncWgEdge()
@@ -157,4 +208,6 @@ func main() {
 	freeSyncRwWriters()
 	freeSyncMutexSiblings()
 	freeSyncDisjointPrims()
+	freeSyncRwCopyBesideRLock()
+	freeSyncRwCopyBesideLock()
 }

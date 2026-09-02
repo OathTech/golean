@@ -1,0 +1,26 @@
+detector-soundness summary — 2026-09-02T21:45:46+00:00
+rows: 6   runs/proc: 20   procs: 1,8   worker-pool exit: 0
+
+cells:
+  agree-DRF      4
+  over-refusal   2
+
+by lane × cell:
+  probe	agree-DRF	4
+  probe	over-refusal	2
+
+HOLE rows (gc RACE, machine DRF — exit-bearing; a HOLE not on a BUGS.md Cases: line is a STOP):
+
+possible-HOLE rows (gc RACE, machine ENUM-FAIL — exit-bearing; certify or diagnose each):
+
+over-refusal rows (machine RACE-*, gc DRF-in-N — three-way investigation):
+  probe/u4gomem/rw-copy-vs-runlock	p1:race=0,clean=20,exit=0,abnormal=0,timeout=0;p8:race=0,clean=20,exit=0,abnormal=0,timeout=0;	RACE-ALL (1/1 members)
+  probe/u4gomem/rw-copy-vs-unlock	p1:race=0,clean=20,exit=0,abnormal=0,timeout=0;p8:race=0,clean=20,exit=0,abnormal=0,timeout=0;	RACE-ALL (1/1 members)
+
+uncertified rows (machine ENUM-FAIL, gc not red):
+
+gc-no-verdict rows (gc produced no completed run; machine certified):
+
+refused rows (params omit width=/sites= — declare them in cases.tsv):
+
+gc-infra / unclassified rows (the matrix is INCOMPLETE):

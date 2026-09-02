@@ -1,0 +1,8 @@
+# scripts/detector-soundness rows — see meta.tsv; columns:
+# id	lane	features	expected_status	gc_runs(per GOMAXPROCS)	gc_verdict	machine_members	machine_race_members	machine_verdict	machine_single_run	cell	detail
+probe/u4gomem/rw-copy-vs-runlock	probe	sync,rwmutex,goroutines,channels,structs,race	ok	p1:race=0,clean=20,exit=0,abnormal=0,timeout=0;p8:race=0,clean=20,exit=0,abnormal=0,timeout=0;	DRF-in-N	1	1	RACE-ALL	race	over-refusal	-
+probe/u4gomem/rw-copy-vs-unlock	probe	sync,rwmutex,goroutines,channels,structs,race	ok	p1:race=0,clean=20,exit=0,abnormal=0,timeout=0;p8:race=0,clean=20,exit=0,abnormal=0,timeout=0;	DRF-in-N	1	1	RACE-ALL	race	over-refusal	-
+probe/u4gomem/wg-canonical-then-copy	probe	sync,waitgroup,goroutines,channels,structs,race	ok	p1:race=0,clean=20,exit=0,abnormal=0,timeout=0;p8:race=0,clean=20,exit=0,abnormal=0,timeout=0;	DRF-in-N	1	0	DRF	ok	agree-DRF	-
+probe/u4gomem/rw-contend-then-copy	probe	sync,rwmutex,goroutines,channels,structs,race	ok	p1:race=0,clean=20,exit=0,abnormal=0,timeout=0;p8:race=0,clean=20,exit=0,abnormal=0,timeout=0;	DRF-in-N	1	0	DRF	ok	agree-DRF	-
+probe/u4gomem/rw-copy-vs-rlock-only	probe	sync,rwmutex,goroutines,channels,structs,race	ok	p1:race=0,clean=20,exit=0,abnormal=0,timeout=0;p8:race=0,clean=20,exit=0,abnormal=0,timeout=0;	DRF-in-N	1	0	DRF	ok	agree-DRF	-
+probe/u4gomem/rw-copy-vs-lock-only	probe	sync,rwmutex,goroutines,channels,structs,race	ok	p1:race=0,clean=20,exit=0,abnormal=0,timeout=0;p8:race=0,clean=20,exit=0,abnormal=0,timeout=0;	DRF-in-N	1	0	DRF	ok	agree-DRF	-

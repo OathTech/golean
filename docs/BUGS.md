@@ -4037,15 +4037,21 @@ kill, never a wrong answer, lifted by (1).
   OVERWRITE beside a `Wait` at counter 0. NOT in the class: a plain COPY
   beside RWMutex `RLock`/`Lock` — lock is read-like, a copy is read-like,
   no write-like operand, no race by mem#model; `rw-copy-vs-{rlock,lock}`
-  agree-DRF is the CORRECT verdict (not a bug to fix). The machine
-  follows the -race oracle (register #13) and runs the class (probes
-  `wg-copy-vs-done`, `wg-overwrite-vs-done`, `wg-overwrite-vs-wait-at-0`:
-  agree-DRF; a copy beside RUnlock/Unlock is unprobed); recording the
-  go_mem kinds instead (the auditor's table — RLock/Lock→atomicRead,
-  RUnlock/Unlock→atomicWrite, Add/Done→+atomicWrite, Wait→+atomicRead)
-  would refuse them at the cost of over-refusal rows against the oracle —
-  the brief said none; POSED to the [USER] as Q-U4RESIDUAL,
-  `docs/2026-08-31_qrow-rulings.md` row 9 (OPEN); (b) an
+  agree-DRF is the CORRECT verdict (not a bug to fix). At the slice the
+  machine followed the -race oracle (register #13) and RAN the class
+  (probes `wg-copy-vs-add-from-0`, `wg-copy-vs-done`,
+  `wg-overwrite-vs-done`, `wg-overwrite-vs-wait-at-0`: agree-DRF; a copy
+  beside RUnlock/Unlock unprobed) — an [AGENT] choice inside a brief
+  that said "no new over-refusal rows"; POSED to the [USER] as
+  Q-U4RESIDUAL, `docs/2026-08-31_qrow-rulings.md` row 9. **CLOSED
+  2026-09-02 — RULED [USER] option (A), the go_mem register wins
+  (quotes relayed via the [AGENT] coordinator, recorded in the ruling
+  sheet's appendix), IMPLEMENTED on lane `q-u4-gomem`:** the tables
+  record TSan's realized set ∪ go_mem's operation kind, each at its gc
+  word (`syncWord`), so the class REFUSES; the over-refusal rows are
+  classified BY DESIGN and pinned born-FAIL at `race/gomem-only/*` on
+  **BUG-083**'s Cases line (that entry is the record of the designed
+  divergence); the unprobed shapes are probed (`probes/u4gomem`). (b) an
   overwrite that unlocks a held Mutex/RWMutex and is FOLLOWED by another
   goroutine's Unlock/RUnlock: gc's `race.Read`/Add precedes its misuse
   check so TSan reports the race and THEN the fatal fires; the machine's
@@ -4342,3 +4348,121 @@ linearization BUG-032 records as unbuilt lands, or the A6 guard is
 extended to `emitMake` (which would REFUSE — and newly refuse the
 pre-existing slice/chan shapes; a separate arc, [AGENT] not done in
 the records-only fix round).
+
+## BUG-083 — DESIGNED divergence from the `-race` oracle: a plain access to a sync primitive beside an op gc runs under `race.Disable` (RWMutex `RUnlock`/`Unlock`, WaitGroup `Add`/`Done`, an overwrite beside `Wait` at 0) is REFUSED here and RUN by gc's `-race` build — go_mem calls it a data race, TSan cannot see it [TRUST-ADJACENT: Race.lean tables; refusal-only]
+
+- Status: fixed (2026-09-02, the `q-u4-gomem` lane — this is NOT a
+  machine defect but the RECORD of a ruled divergence, filed in the
+  bug index because that is where a red row's explanation must live for
+  `scripts/check-bugs.sh` (the BUG-070/078 precedent: a Pinned-by:none
+  entry carries its FAIL-by-design rows on its Cases line, so they are
+  explained, never untriaged, and can never be laundered into a pass by
+  a re-pin). "fixed" here means: the ruling is IMPLEMENTED and the rows
+  are red exactly as designed; they are not expected to flip PASS, and
+  a PASS on any of them would mean the detector stopped refusing a
+  go_mem-racy shape — the guard direction is stated in prose because
+  check-bugs verifies existence only for none-entries.)
+- Pinned-by: none (the rows FAIL at `lean-observation` — gc's `ok`
+  value vs the machine's `race` refusal — by DESIGN; a differential pin
+  would assert the wrong direction. The re-pin guard still reads this
+  Cases line: any of these ids flipping PASS→non-PASS or appearing as a
+  born-FAIL row is explained here.)
+- Cases: race/gomem-only/rw-copy-vs-runlock, race/gomem-only/rw-copy-vs-unlock, race/gomem-only/wg-copy-vs-add-from-0, race/gomem-only/wg-copy-vs-done, race/gomem-only/wg-overwrite-vs-add-nonzero, race/gomem-only/wg-overwrite-vs-wait-at-0
+- Discovered: 2026-09-02 as BUG-080's residual (a) — the go_mem-racy-
+  but-TSan-invisible class the BUG-080 slice chose to RUN (aligned with
+  the oracle, [AGENT], inside a brief that said "no new over-refusal
+  rows"); posed to the [USER] as Q-U4RESIDUAL
+  (`docs/2026-08-31_qrow-rulings.md` row 9) by the bug080-atomic-kind
+  audit fix round (G2 F10), which also corrected the class's statement
+  (a copy beside `RLock`/`Lock` is two read-likes — NOT in the class).
+- The ruling ([USER] 2026-09-02, option (A) — the quotes were relayed
+  to the recording worker by the [AGENT] coordinator; the verbatim
+  record and provenance chain are in the ruling sheet's appendix, "The
+  row-9 ruling record"): follow go_mem exactly. The register of record
+  for what a race IS is mem#model's read-like/write-like definition —
+  "A read-write data race on memory location x consists of a read-like
+  memory operation r on x and a write-like memory operation w on x, at
+  least one of which is non-synchronizing, which are unordered by
+  happens before" (and the write-write twin) — and mem#model names
+  mutex unlock write-like and mutex lock read-like (mem#locks: both
+  `sync.Mutex` and `sync.RWMutex`); WaitGroup/Once are deferred to
+  their package docs by mem#more (`Done` "synchronizes before" the
+  `Wait` it unblocks, the release/acquire shape → Add/Done write-like,
+  Wait read-like). A plain copy of a WaitGroup beside another
+  goroutine's `Done` is therefore a data race whether or not gc's
+  `-race` build, which runs the state RMW under `race.Disable`,
+  instruments it. mem#restrictions licenses the refusal ("Any
+  implementation can, upon detecting a data race, report the race and
+  halt execution of the program"). RATIONALE, as ruled: the machine is
+  the substrate for a verification tool; refusal-freedom is the proof
+  obligation (a program shown refusal-free on every path is go_mem-DRF
+  and hence SC — the DRF-guarantee shape), so over-refusal costs
+  COMPLETENESS (a correct-by-gc program that copies a live primitive
+  cannot be verified — every such shape is a vet `copylocks` finding)
+  and never SOUNDNESS; under-refusal would be unsound. go_mem's racy
+  semantics is BOUNDED, not C-style undefined behaviour: the
+  report-and-terminate branch the machine takes, or else word-sized
+  racy reads observe an actually-written value, multiword values may
+  tear, no out-of-thin-air — the bounded-VALUE branch is deliberately
+  unmodeled (register #4's scoping; recorded with this ruling at
+  register #13).
+- What changed (`GoLean/GoCore/Race.lean` `syncEntryKinds` /
+  `syncReleaseTailKinds`, consumed by `raceUpdate`'s sync arm in
+  Multi.lean — the section docstring "The sync primitives' OWN state
+  words" carries the per-entry derivation): each op records TSan's
+  realized set ∪ go_mem's operation kind, EACH AT ITS gc WORD
+  (`syncWord loc kind word` = `.field loc ⟨"sync.<Kind>"⟩ word`).
+  RWMutex `RLock`/`Lock` → `.read @w` (realized, kept) + `.atomicRead
+  @readerCount` (lock read-like); `RUnlock`/`Unlock` → `.read @w` +
+  `.atomicWrite @readerCount` (unlock write-like). WaitGroup `Add`/`Done`
+  → `.atomicWrite @state` (+ the realized `.read @sema` when the counter
+  leaves 0 upward); `Wait` → `.atomicRead @state` (+ the realized `.write
+  @sema` for the first blocking waiter). Mutex `Lock` → `.atomicWrite
+  @state` UNCHANGED (mem#model: a CAS "is both read-like and write-like",
+  so TSan's realized kind subsumes the read-like lock); Mutex `Unlock`'s
+  release-tail `.atomicWrite @state` UNCHANGED (an access unordered with
+  the unlock op is unordered with its tail, so the tail covers go_mem's
+  write-like unlock and additionally TSan's acquirer-then-read verdict).
+  Once → `.atomicRead @done` / `.atomicWrite @m` / `.atomicWrite @done` +
+  tail `@m`, kinds unchanged. WHY THE WORDS (an [AGENT] design necessity
+  inside the ruling, not a deviation from it): the realized `wg.sema`
+  pair and `race.Read(&rw.w)` are PLAIN kinds; recorded at ONE path with
+  the go_mem atomic kinds they would make a legal `Done` (atomic write)
+  conflict with a legal first `Wait` (plain sema write), and a
+  contending `RLock` (plain `rw.w` read) with an `Unlock` (atomic write)
+  — refusing the canonical WaitGroup and RWMutex idioms. On gc's own
+  struct layout these are DISTINCT words that never meet under TSan
+  either; keying by word keeps every whole-primitive copy/overwrite
+  overlapping all of them (`locPrefix`) while sibling fields and
+  sibling words stay disjoint (check (i)'s guards
+  `race/free-sync/{mutex-siblings,disjoint-prims}` stay green).
+- What the rows pin: gc `-race` GREEN 20/20 at GOMAXPROCS 1 and 8 for
+  every shape (`docs/evidence/2026-09-02_q-u4-gomem/`, families
+  `u4gomem` — the formerly UNPROBED copy-beside-`RUnlock`/`Unlock` — and
+  the BUG-080 family `u4kind` re-run: SIX rows move agree-DRF →
+  `over-refusal` — `wg-copy-vs-add-from-0`, `wg-copy-vs-done`,
+  `wg-overwrite-vs-done`, `wg-overwrite-vs-wait-at-0`, AND
+  `rw-copy-vs-{rlock,lock}`, whose subjects pair the lock with its
+  UNLOCK unordered with the copy and so refuse THROUGH the write-like
+  unlock (the shape never isolated the lock op); every other u4kind
+  cell unchanged. The ruling's "a copy beside `RLock`/`Lock` is NOT a
+  race" is about the lock OP and holds: the isolated shapes
+  `probes/u4gomem/rw-copy-vs-{rlock,lock}-only` (the child unlocks only
+  after main's ack) are agree-DRF, and the corpus guards
+  `race/free-sync/rw-copy-beside-{rlock,lock}` are born PASS/confluent
+  — a write-like keying of the lock would refuse them). The racy
+  lane's three-way rule files our-refusal +
+  `-race`-green as an INVESTIGATION, never a pass; its outcome here is
+  the fourth, ruled one — the program IS racy by go_mem, TSan's
+  realized set is the incomplete side. The corpus rows carry gc's `ok`
+  as expected_status and FAIL at lean-observation on the machine's
+  `race`; the shape `wg-overwrite-vs-done` is a probe only (its gc
+  outcome is schedule-dependent: the reset counter makes the Done a
+  negative-counter panic on some schedules), replaced in the corpus by
+  the deterministic `wg-overwrite-vs-add-nonzero`.
+- Scope: MISUSE ONLY — every shape is a whole-primitive copy or
+  overwrite while another goroutine operates on it (vet `copylocks`);
+  no race-free program's verdict moves (full `ci --diff`: no
+  pre-existing row changed result or stage). Over-refusal vs the oracle
+  in this class is the designed, recorded cost; the differential's
+  lower bound (observed ∈ modeled) is untouched.

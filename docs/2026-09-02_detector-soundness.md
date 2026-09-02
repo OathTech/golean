@@ -289,9 +289,22 @@ both sides.
 > go_mem-racy shapes (a plain access beside a write-like op — `RUnlock`,
 > RWMutex `Unlock`, WaitGroup `Add`/`Done` — or an overwrite beside
 > `Wait` at 0; a copy beside `RLock`/`Lock` is two read-likes and NOT a
-> race) are followed to the oracle and run — recording
-> `.atomicWrite` there would refuse them at the cost of over-refusal
-> rows.
+> race) were followed to the oracle and run at the slice. **RULED
+> [USER] 2026-09-02 option (A) and IMPLEMENTED (lane `q-u4-gomem`):**
+> the detector now records mem#model's operation kinds beside TSan's
+> realized set, each at its gc word, so these shapes REFUSE — the
+> u4kind family re-run reads 20 agree + 6 `over-refusal` BY DESIGN
+> (`wg-copy-vs-add-from-0`, `wg-copy-vs-done`, `wg-overwrite-vs-done`,
+> `wg-overwrite-vs-wait-at-0`, and `rw-copy-vs-{rlock,lock}` — whose
+> shapes pair the lock with its unlock unordered with the copy and
+> refuse THROUGH the write-like unlock; the lock op alone stays green:
+> `probes/u4gomem/rw-copy-vs-{rlock,lock}-only`, corpus guards
+> `race/free-sync/rw-copy-beside-{rlock,lock}`) + the 2 residual-(b)
+> possible-HOLEs; the
+> formerly unprobed copy-beside-`RUnlock`/`Unlock` shapes are probed
+> (`over-refusal`, gc green 20/20 at both GOMAXPROCS) and pinned
+> born-FAIL at `race/gomem-only/*` (BUG-083, the designed-divergence
+> record; evidence `docs/evidence/2026-09-02_q-u4-gomem/`).
 
 Five U4 probes are TSan-red 10/10 at both GOMAXPROCS values:
 `struct-overwrite-vs-lock`, `wg-overwrite-vs-add`,

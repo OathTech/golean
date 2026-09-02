@@ -244,7 +244,9 @@ SYNCHRONIZATION (the registry's ops — HB updates, never data):
   is recorded by that same arm from the per-op table
   `syncEntryKinds`/`syncReleaseTailKinds` (BUG-080, U4 CLOSED —
   the section "The sync primitives' OWN state words" below), keyed to
-  the OP like the chan-object pair, at the sync cell's path.
+  the OP like the chan-object pair, at the primitive's gc words under
+  the sync cell's path — together with the op's go_mem kind
+  (Q-U4RESIDUAL (A), 2026-09-02).
 
 * **U5 — cross-goroutine unlock without handoff HB: TSan-red /
   ours-green** (audit fix round 2026-08-10, F2). `syncRelease` is a
@@ -291,10 +293,14 @@ SYNCHRONIZATION (the registry's ops — HB updates, never data):
   `race/free-sync/{mutex-siblings,disjoint-prims}` and the probe
   controls); (ii) the per-primitive instrumentation differences —
   measured both directions by `probes/u4kind` (28 subjects, evidence
-  dir). RESIDUAL recorded in the section docstring: the copy-beside-
-  RWMutex-op and plain-beside-WaitGroup-`Done` shapes are go_mem-racy
-  but TSan-invisible (`race.Disable`); the machine follows the oracle
-  (register #13) and runs them — [AGENT], flagged for the audit.
+  dir). The slice's residual (a) — shapes go_mem calls racy but TSan
+  cannot see (`race.Disable`) — was posed as Q-U4RESIDUAL and RULED
+  [USER] 2026-09-02, option (A): the detector records go_mem's
+  operation kind BESIDE TSan's realized set, each at its gc word
+  (`syncWord`), so those shapes REFUSE where the `-race` build runs —
+  a designed divergence from the oracle, pinned born-FAIL at
+  `race/gomem-only/*` on BUG-083's Cases line (never counted as a
+  pass). The section docstring below carries the derivation.
 
 FRESH ALLOCATION / DRIVER (excluded — the malloc convention):
 - `ExecState.alloc`, `allocDecls`, `bindParams`, `bindIterVars`,
@@ -370,9 +376,10 @@ concurrently with another read or write to that same location, unless
 all the accesses involved are atomic data accesses" — is mem#overview,
 the same relation in words.) It is also TSan's shadow rule (two
 accesses race unless both are reads or both are atomic). The plain pair is the data footprint's (`stepAccesses`);
-the atomic pair is the sync primitives' own state-word traffic as
-`-race` realizes it (BUG-080 — `syncEntryKinds` below, recorded by
-`raceUpdate`'s sync arm). The atomics arc (Q-ATOMIC,
+the atomic pair is the sync primitives' own state-word traffic — as
+`-race` realizes it AND as mem#model kinds the op (BUG-080 +
+Q-U4RESIDUAL (A) — `syncEntryKinds` below, recorded by `raceUpdate`'s
+sync arm). The atomics arc (Q-ATOMIC,
 `docs/2026-09-01_qatomic-owner-proposal.md` §4) records `sync/atomic`
 ops with the same two atomic kinds. -/
 inductive AccessKind where
@@ -1007,74 +1014,136 @@ def RaceState.syncAcquire (r : RaceState) (t : Nat) (loc : Loc)
   let joined := (r.vcOf t).join sc.semA
   r.setVC t (if alsoB then joined.join sc.semB else joined)
 
-/-! ## The sync primitives' OWN state words (BUG-080 — U4 CLOSED)
+/-! ## The sync primitives' OWN state words (BUG-080 — U4 CLOSED; Q-U4RESIDUAL RULED (A))
 
-What gc's `-race` build realizes on a Mutex/RWMutex/WaitGroup/Once's
-own words when an op runs, read PRIMITIVE BY PRIMITIVE from the pinned
-toolchain's sources (go1.26.5). `sync`, `internal/sync` and
-`sync/atomic` are `noRaceFuncPkgs` (cmd/internal/objabi/pkgspecial.go),
-and under `-race` the SSA builder skips memory instrumentation for
-every function of such a package (cmd/compile/internal/ssagen/
-ssa.go:340-342) — so their own plain loads/stores (e.g. `lockSlow`'s
-`old := m.state`) are invisible and the packages annotate by hand.
-Exactly three things reach TSan: `race.Read/Write` annotations,
-`race.Acquire/Release*` hooks, and `sync/atomic` calls — which the
--race build routes to TSan's atomic hooks (runtime/race_amd64.s
-`racecallatomic`) UNLESS `race.Disable()` is active, in which case
-Go's TSan glue performs them un-instrumented (measured: the
-`race.Disable`d WaitGroup/RWMutex atomics never conflict with a plain
-copy — `probes/u4kind/{wg-copy-vs-done,rw-copy-vs-rlock}`). The probe
-family
-`docs/evidence/2026-09-02_detector-soundness/probes/u4kind` measures
-every row below in both directions (a plain copy = read, a plain
-overwrite = write; plain access in main beside the op in a child, and
-the roles swapped) against `go build -race` and the enumerator.
+Two registers say what a sync op does to its primitive's own words,
+and since the [USER] ruling of 2026-09-02 (Q-U4RESIDUAL, option (A) —
+`docs/2026-08-31_qrow-rulings.md` row 9: "we want to follow go_mem
+exactly") the detector records the UNION of both:
 
-* **Mutex** (`internal/sync/mutex.go`): `Lock` opens with the state
-  CAS (:63) — an ATOMIC WRITE whether it wins or falls into
-  `lockSlow`'s CAS loop; `Unlock` is `race.Release` (:190) THEN the
-  state Add (:194) — an atomic write AFTER the release
-  (`syncReleaseTailKinds`). The `_ = m.state` at :189 is a plain load
-  in a `noRaceFuncPkgs` package — nothing TSan sees (a contended Lock
-  beside it is TSan-green: `race/free-sync/mutex`, `probes/u4kind/
-  mu-contend`).
-* **RWMutex** (`sync/rwmutex.go`): EVERY op opens with
-  `race.Read(unsafe.Pointer(&rw.w))` (:69/:116/:146/:203) — a PLAIN
-  READ — then `race.Disable()`, under which the reader counters and
-  the embedded Mutex's CAS/Add are invisible. TSan's realized set is
-  ONE PLAIN READ per op: an overwrite beside it is red, a COPY beside
-  it is green (read/read) — the machine follows the oracle (register
-  #13) and records `.read`; see the residual note below.
-* **WaitGroup** (`sync/waitgroup.go`): the state word's atomics run
-  under `race.Disable()` (:83/:162); the ONLY realized accesses are the
-  misuse pair on `wg.sema` — a plain READ when an Add takes the counter
-  off 0 upward (:111-115), a plain WRITE when the FIRST waiter
-  registers before parking (:184-190). `Done`, an Add from a nonzero
-  counter, and a Wait that returns at counter 0 touch nothing TSan
-  sees. (This pair was the pre-BUG-080 `wgSemaAccess` carve-out, kept
-  in a private exact-loc shadow; it now lives in the DATA shadow at
-  the primitive's path, where a copy/overwrite of the enclosing struct
-  overlaps it — the wg-overwrite pin's flip. Add↔Wait misuse detection
-  is unchanged: same pair, same check.)
-* **Once** (`sync/once.go`, no `race.Disable`): `Do` opens with the
-  atomic LOAD of `o.done` (:67); a Do that observes completion is that
-  ATOMIC READ alone (a copy beside it is green, an overwrite red);
-  every other Do takes `doSlow`, whose `o.m.Lock()` CAS is an ATOMIC
-  WRITE (the winner's and the parked contender's alike). The winner's
-  completion (`onceComplete`) is the deferred `o.done.Store(true)` —
-  an atomic write BEFORE the deferred `o.m.Unlock()` (LIFO) — then the
-  Unlock's release and its trailing state Add.
+1. **go_mem's operation kind** (mem#model, verbatim: "Some memory
+   operations are read-like, including read, atomic read, mutex lock,
+   and channel receive. Other memory operations are write-like,
+   including write, atomic write, mutex unlock, channel send, and
+   channel close. Some, such as atomic compare-and-swap, are both
+   read-like and write-like."). Every sync op is a SYNCHRONIZING
+   operation on its primitive, so its kind is recorded as an ATOMIC
+   kind — `.atomicRead` for a read-like op, `.atomicWrite` for a
+   write-like one: by mem#model's read-write/write-write definitions
+   ("at least one of which is non-synchronizing") two sync ops never
+   race each other, while a plain access beside a write-like op — or a
+   plain write beside a read-like one — IS a data race, TSan or no
+   TSan. mem#locks names the ops for BOTH `sync.Mutex` and
+   `sync.RWMutex` ("The sync package implements two lock data types"):
+   `RLock`/`Lock` are mutex lock = read-like, `RUnlock`/`Unlock` are
+   mutex unlock = write-like. mem#more defers WaitGroup and Once to
+   their package docs: `Done` "synchronizes before" the return of the
+   `Wait` it unblocks (waitgroup.go), the release/acquire shape of
+   unlock/lock and send/receive — so `Add`/`Done` (the counter RMW) are
+   write-like and `Wait` read-like; `Once.Do`'s completion
+   "synchronizes before" every return (mem#once), so the first `Do` is
+   write-like and a `Do` observing completion read-like.
+2. **What gc's `-race` build realizes** on the words, read PRIMITIVE BY
+   PRIMITIVE from the pinned sources (go1.26.5) — the oracle's register
+   (#13). `sync`, `internal/sync` and `sync/atomic` are
+   `noRaceFuncPkgs` (cmd/internal/objabi/pkgspecial.go), and under
+   `-race` the SSA builder skips memory instrumentation for every
+   function of such a package (cmd/compile/internal/ssagen/
+   ssa.go:340-342) — so their own plain loads/stores (e.g. `lockSlow`'s
+   `old := m.state`) are invisible and the packages annotate by hand.
+   Exactly three things reach TSan: `race.Read/Write` annotations,
+   `race.Acquire/Release*` hooks, and `sync/atomic` calls — which the
+   -race build routes to TSan's atomic hooks (runtime/race_amd64.s
+   `racecallatomic`) UNLESS `race.Disable()` is active, in which case
+   Go's TSan glue performs them un-instrumented (measured:
+   `probes/u4kind/{wg-copy-vs-done,rw-copy-vs-rlock}` gc-green).
 
-Where the access lands: the sync cell's `Loc` — the primitive's own
-path (`.field b tid "mu"` for a field, the cell for a local). The
-path-overlap relation does the rest (check (i) of the ruling): a
-whole-struct copy/overwrite at the enclosing path OVERLAPS it and
-conflicts; a SIBLING field's plain access does not (`locPrefix` is
-per-path, not per-cell) — `probes/u4kind/mu-siblings-under-lock`,
+Why the union, and why it is sound: mem#restrictions licenses ANY
+implementation to "report the race and halt execution" on detecting a
+data race, so a refusal the oracle would not issue costs completeness
+(a go_mem-racy program the `-race` build happens to run) never
+soundness; and every access TSan realizes is kept, so nothing the
+oracle refuses is run here (no HOLE cell opens). Where the two
+registers name different kinds for one op the union is the stricter
+one: Mutex `Lock` is read-like by mem#model but realized as a CAS —
+"both read-like and write-like" — so `.atomicWrite` stands (the
+read-like half adds no conflict an atomic write does not already
+have). Where TSan realizes NOTHING (`race.Disable`) the go_mem kind
+alone is recorded — the former residual (a), now closed BY DESIGN.
+
+WHERE each access lands — the gc WORD, a sub-path of the sync cell's
+`Loc` (`syncWord`: `.field <primitive path> ⟨"sync.<Kind>"⟩ <word>`,
+the field names of the pinned struct definitions). A whole-struct
+copy/overwrite at the primitive's or an enclosing path overlaps every
+word (`locPrefix`); a SIBLING field's plain access overlaps none (check
+(i) of the BUG-080 ruling — `probes/u4kind/mu-siblings-under-lock`,
 `mu-disjoint-prims`, `mu-sibling-beside-lock` and the corpus rows
-`race/free-sync/{mutex-siblings,disjoint-prims}` are the green guards.
+`race/free-sync/{mutex-siblings,disjoint-prims}` are the green guards).
+The words being DISTINCT is load-bearing: the `wg.sema` misuse pair
+and RWMutex's `race.Read(&rw.w)` are PLAIN accesses in TSan's
+realization, and had they shared one path with the go_mem atomic
+kinds, a legal `Done` (atomic write) would conflict with a legal first
+`Wait` (plain sema write), and a contending `RLock` (plain `rw.w`
+read) with an `Unlock` (atomic write). On gc's own layout they are
+different words and never meet — exactly as they never meet under
+TSan.
+
+THE TABLE (entry = before the op's acquire/release hook, under the
+pre-op clock, commit or park alike — `syncEntryKinds`; tail = after a
+committed op's release, at the bumped epoch — `syncReleaseTailKinds`):
+
+* **Mutex** (`internal/sync/mutex.go`): `Lock` → `.atomicWrite @state`
+  (the CAS, :63, whether it wins or falls into `lockSlow`'s CAS loop —
+  TSan "Write … CompareAndSwapInt32"; go_mem's read-like lock is
+  subsumed); `Unlock` → entry nothing, tail `.atomicWrite @state` (the
+  Add at :194 follows `race.Release` :190). go_mem's write-like unlock
+  is covered by the tail alone: an access unordered with the op is
+  unordered with the tail (the release joins nothing INTO the
+  unlocker's clock), and the tail additionally catches the acquirer's
+  own later plain read — TSan's verdict. The `_ = m.state` at :189 is
+  an uninstrumented load in a `noRaceFuncPkgs` package — nothing
+  (`race/free-sync/mutex`, `probes/u4kind/mu-contend` stay green).
+* **RWMutex** (`sync/rwmutex.go`): every op opens with
+  `race.Read(unsafe.Pointer(&rw.w))` (:69/:116/:146/:203) → `.read @w`
+  (realized, kept), then under `race.Disable()` performs its counter
+  RMW → the go_mem kind `@readerCount`: `RLock`/`Lock` → `.atomicRead`
+  (lock is read-like: a copy beside the LOCK OP ALONE is read-like
+  beside read-like, NO race — the ruling's own statement of what is
+  NOT in the class; isolated by `probes/u4gomem/rw-copy-vs-{rlock,
+  lock}-only` and the corpus guards `race/free-sync/rw-copy-beside-
+  {rlock,lock}`, agree-DRF/green), `RUnlock`/`Unlock` → `.atomicWrite`
+  (unlock is write-like: a copy beside them REFUSES where TSan is
+  green — by design; `probes/u4gomem/rw-copy-vs-{runlock,unlock}`).
+  NOTE the BUG-080 probe shapes `probes/u4kind/rw-copy-vs-{rlock,lock}`
+  pair the lock with its UNLOCK, both unordered with the copy, so under
+  this table they refuse THROUGH the unlock — over-refusal by design,
+  not a contradiction of the lock-is-read-like row.
+* **WaitGroup** (`sync/waitgroup.go`): the state RMW runs under
+  `race.Disable()` (:83, :162) → go_mem kind `@state`: `Add`/`Done` →
+  `.atomicWrite` (a copy or overwrite beside them refuses — TSan sees
+  neither), `Wait` → `.atomicRead` (an overwrite beside a `Wait` at
+  counter 0 refuses; a copy beside any `Wait` that is not the first
+  blocking waiter does not). Realized and kept, `@sema`: the misuse
+  pair — a plain READ when an Add takes the counter off 0 upward
+  (:111-115), a plain WRITE when the FIRST waiter registers before
+  parking (:184-190); Add↔Wait misuse detection is unchanged (same
+  pair, same check, at its own word), and the first waiter's plain
+  write is why a copy beside a first blocking `Wait` stays red
+  (`probes/u4kind/wg-copy-vs-first-wait`, TSan-red 10/10).
+* **Once** (`sync/once.go`, no `race.Disable`): `Do` opens with the
+  atomic LOAD of `o.done` (:67) — a Do observing completion is that
+  `.atomicRead @done` alone (read-like: a copy beside it is green, an
+  overwrite red); every other Do takes `doSlow`, whose `o.m.Lock()` CAS
+  is `.atomicWrite @m` (the winner's and the parked contender's
+  alike). The winner's completion (`onceComplete`) is the deferred
+  `o.done.Store(true)` → `.atomicWrite @done` BEFORE the deferred
+  `o.m.Unlock()` (LIFO) — then the Unlock's release and its trailing
+  Add → tail `.atomicWrite @m`. go_mem and TSan agree on every Once
+  row.
+
 Atomic↔atomic never conflicts, so contending ops on one primitive stay
-green (`race/free-sync/mutex`, `probes/u4kind/{mu,rw,once}-contend`).
+green (`race/free-sync/{mutex,rw-writers,wg-edge,once-edge}`,
+`probes/u4kind/{mu,rw,once}-contend`).
 
 Wakes record nothing: a parked goroutine released nothing after its
 entry, so no other goroutine can be HB-after the entry without being
@@ -1082,33 +1151,27 @@ HB-after the wake — every conflict a wake-time access would find, the
 entry access already found (gc's woken `lockSlow` CAS is thus
 detection-redundant here).
 
-RESIDUAL (a), recorded honestly (fail-OPEN vs mem#model, fail-ALIGNED
-vs the `-race` oracle) — stated PRECISELY, because the first statement
-over-counted (audit G2 F10): the class is a plain access beside a
-WRITE-LIKE sync op gc performs under `race.Disable` — `RUnlock`,
-RWMutex `Unlock` (mem#model: unlock is write-like), WaitGroup
-`Add`/`Done` (the state RMW) — or a plain OVERWRITE beside a `Wait` at
-counter 0 (the counter read is read-like; the `wg.sema` pair is
-realized only on a BLOCKING Wait). These are racy by mem#model's
-read-write/write-write definitions (one write-like operand, at least
-one non-synchronizing) but TSan cannot see them. NOT in the class: a
-plain COPY beside RWMutex `RLock`/`Lock` — mutex lock is READ-LIKE and
-a copy is read-like, so there is no write-like operand and no race by
-mem#model; `probes/u4kind/rw-copy-vs-{rlock,lock}` agree-DRF is the
-CORRECT verdict, not a deviation — do not "fix" it. The racy lane's
-oracle is `-race` (register #13: TSan's realized set), so the machine
-records what TSan records and RUNS the class (vet's `copylocks` flags
-every shape; no race-free program is affected). Recording the go_mem
-kinds instead — the auditor's table: RLock/Lock → `.atomicRead`,
-RUnlock/Unlock → `.atomicWrite`, Add/Done → + `.atomicWrite`, Wait →
-+ `.atomicRead`, both RWMutex halves moving together — would refuse
-the class at the cost of over-refusal rows against the oracle; an
-[AGENT] choice made inside the BUG-080 slice's brief ("no new
-over-refusal rows"), now posed to the [USER] as Q-U4RESIDUAL
-(`docs/2026-08-31_qrow-rulings.md` row 9, OPEN). Measured exhibits
-(agree-DRF): `probes/u4kind/{wg-copy-vs-done,wg-overwrite-vs-done,
-wg-overwrite-vs-wait-at-0}`; a copy beside RUnlock/Unlock is UNPROBED
-(the family has no such subject).
+THE DESIGNED DIVERGENCE FROM THE `-race` ORACLE (was residual (a);
+[USER]-ruled 2026-09-02 — recorded at BUGS.md BUG-083 and the ruling
+sheet's row 9, provenance chain there): a plain access beside a
+write-like op gc runs under `race.Disable` — `RUnlock`, RWMutex
+`Unlock`, WaitGroup `Add`/`Done` — or a plain OVERWRITE beside `Wait`
+at counter 0, is REFUSED here and RUN by gc's `-race` build. The racy
+lane's three-way rule (our refusal + `-race` green on every sample)
+files such a row as an investigation, never a pass; these rows are
+classified BY DESIGN as go_mem-racy (one write-like operand, one
+non-synchronizing — mem#model). The corpus pins them as born-FAIL rows
+against gc's `ok` observation (`race/gomem-only/*`, BUG-083's Cases
+line) so the divergence stays visible and never counts as a pass; the
+probe family `probes/u4kind` re-run under this table
+(`docs/evidence/2026-09-02_q-u4-gomem/`) shows them as `over-refusal`
+cells, and the formerly UNPROBED copy-beside-`RUnlock`/`Unlock` shapes
+are probed there (family `u4gomem`). NOT in the class, and unchanged:
+a copy beside `RLock`/`Lock` ALONE (two read-likes — the isolated
+shapes `probes/u4gomem/rw-copy-vs-{rlock,lock}-only` and the corpus
+guards `race/free-sync/rw-copy-beside-{rlock,lock}` stay green), and
+every race-free program (vet's `copylocks` flags every shape in the
+class).
 
 RESIDUAL (b), an outcome-CLASS deviation — both sides ABORT, but the
 machine's abort is an asserted program outcome (`GoError.fatal`,
@@ -1126,35 +1189,69 @@ runner's definition, diagnosed at BUG-080). The owed fix's scope and
 its call-site list are AUTHORITATIVE at TODO.md's BUG-080 follow-up
 item (S–M, trust-surface) — cited, not restated here. -/
 
-/-- The accesses `-race` realizes on the primitive's own words at a
-sync op's ENTRY — before the op's release/acquire hook — from the op
-and the PRE-step cell (`delta` is `wgAdd`'s operand, 0 for every other
-op). Recorded at the sync cell's `Loc` under the goroutine's current
-clock by `raceUpdate`'s sync arm, commit or park alike (the table in
-the section docstring above is the derivation). -/
-def syncEntryKinds (op : SyncOp) (pre : SyncPrim) (delta : Int) : List AccessKind :=
+/-- The gc WORD of a sync primitive an access lands on, as a sub-path
+of the primitive's own `Loc`: `.field loc ⟨"sync.<Kind>"⟩ word`, `word`
+a field name of the pinned struct (`state`/`sema` for Mutex and
+WaitGroup, `w`/`readerCount` for RWMutex, `done`/`m` for Once — the
+section docstring's table). A shadow KEY only — the detector never
+resolves it against a value; the path shape is what makes a
+copy/overwrite of the primitive (or its enclosing struct) overlap the
+word while sibling fields and sibling words stay disjoint. -/
+def syncWord (loc : Loc) (kind : SyncKind) (word : String) : Loc :=
+  .field loc ⟨"sync." ++ kind.name⟩ word
+
+/-- The accesses recorded on the primitive's own words at a sync op's
+ENTRY — before the op's release/acquire hook — from the op and the
+PRE-step cell (`delta` is `wgAdd`'s operand, 0 for every other op):
+TSan's realized set ∪ go_mem's operation kind, each at its gc word
+(the section docstring's table is the derivation; Q-U4RESIDUAL (A)).
+Recorded under the goroutine's current clock by `raceUpdate`'s sync
+arm, commit or park alike. -/
+def syncEntryKinds (op : SyncOp) (pre : SyncPrim) (delta : Int) (loc : Loc) :
+    List RaceAccess :=
+  let at_ := syncWord loc pre.kind
   match op, pre with
-  | .lock, _ => [.atomicWrite]
-  | .unlock, _ => []  -- the state Add follows the release: `syncReleaseTailKinds`
-  | .rlock, _ | .runlock, _ | .wlock, _ | .wunlock, _ => [.read]
-  | .wgAdd, .waitGroup counter _ => if delta > 0 && counter == 0 then [.read] else []
-  | .wgAdd, _ => []
+  -- Mutex: the state CAS (TSan: atomic write; go_mem's read-like lock
+  -- is subsumed by it).
+  | .lock, _ => [(.atomicWrite, at_ "state")]
+  -- Mutex Unlock: the state Add FOLLOWS the release (`syncReleaseTailKinds`).
+  | .unlock, _ => []
+  -- RWMutex: the realized `race.Read(&rw.w)` + the counter RMW's go_mem
+  -- kind (lock read-like, unlock write-like).
+  | .rlock, _ | .wlock, _ => [(.read, at_ "w"), (.atomicRead, at_ "readerCount")]
+  | .runlock, _ | .wunlock, _ => [(.read, at_ "w"), (.atomicWrite, at_ "readerCount")]
+  -- WaitGroup Add/Done: the state RMW is write-like (go_mem); the
+  -- realized sema READ when the counter leaves 0 upward.
+  | .wgAdd, .waitGroup counter _ =>
+      (if delta > 0 && counter == 0 then [(.read, at_ "sema")] else [])
+        ++ [(.atomicWrite, at_ "state")]
+  | .wgAdd, _ => [(.atomicWrite, at_ "state")]
+  -- WaitGroup Wait: the counter read is read-like (go_mem); the
+  -- realized sema WRITE for the FIRST blocking waiter.
   | .wgWait, .waitGroup counter waiters =>
-      if counter != 0 && waiters == 0 then [.write] else []
-  | .wgWait, _ => []
-  | .onceBegin _, .once true true => [.atomicRead]
-  | .onceBegin _, _ => [.atomicWrite]
-  | .onceComplete, _ => [.atomicWrite]
+      (if counter != 0 && waiters == 0 then [(.write, at_ "sema")] else [])
+        ++ [(.atomicRead, at_ "state")]
+  | .wgWait, _ => [(.atomicRead, at_ "state")]
+  -- Once: a Do observing completion is the atomic load of `o.done`;
+  -- every other Do is `doSlow`'s `o.m.Lock()` CAS; completion is the
+  -- `o.done.Store(true)` (its Unlock's Add is the tail).
+  | .onceBegin _, .once true true => [(.atomicRead, at_ "done")]
+  | .onceBegin _, _ => [(.atomicWrite, at_ "m")]
+  | .onceComplete, _ => [(.atomicWrite, at_ "done")]
 
 /-- The accesses `-race` realizes AFTER a sync op's release hook:
 `Mutex.Unlock`'s state Add follows `race.Release` (mutex.go:188-194),
 and so does the Add inside Once's deferred `o.m.Unlock()`. Recorded
 after `syncRelease` (at the bumped epoch), so a goroutine that ACQUIRES
 this very release and then plainly reads the primitive still conflicts
-— TSan's verdict exactly. -/
-def syncReleaseTailKinds : SyncOp → List AccessKind
-  | .unlock | .onceComplete => [.atomicWrite]
-  -- Every other head's realized set lies entirely at ENTRY
+— TSan's verdict exactly; it also covers go_mem's write-like unlock
+(section docstring, Mutex row). -/
+def syncReleaseTailKinds (op : SyncOp) (pre : SyncPrim) (loc : Loc) : List RaceAccess :=
+  let at_ := syncWord loc pre.kind
+  match op with
+  | .unlock => [(.atomicWrite, at_ "state")]
+  | .onceComplete => [(.atomicWrite, at_ "m")]
+  -- Every other head's recorded set lies entirely at ENTRY
   -- (`syncEntryKinds`). Enumerated, never `_`-absorbed, so a new
   -- constructor is a compile error here as in every other sync arm.
   | .lock => []

@@ -1,0 +1,36 @@
+detector-soundness summary — 2026-09-02T21:48:30+00:00
+rows: 28   runs/proc: 20   procs: 1,8   worker-pool exit: 0
+
+cells:
+  agree-DRF      7
+  agree-race     13
+  over-refusal   6
+  possible-HOLE  2
+
+by lane × cell:
+  probe	agree-DRF	7
+  probe	agree-race	13
+  probe	over-refusal	6
+  probe	possible-HOLE	2
+
+HOLE rows (gc RACE, machine DRF — exit-bearing; a HOLE not on a BUGS.md Cases: line is a STOP):
+
+possible-HOLE rows (gc RACE, machine ENUM-FAIL — exit-bearing; certify or diagnose each):
+  probe/u4kind/rw-overwrite-vs-runlock	p1:race=20,clean=0,exit=0,abnormal=0,timeout=0;p8:race=20,clean=0,exit=0,abnormal=0,timeout=0;	single=fatal	ENUM-FAIL:alias-guard probe [2] failed: the probed member's run errored — fatal: sync: RUnlock of unlocked RWMutex. Under a corr
+  probe/u4kind/rw-overwrite-vs-unlock	p1:race=20,clean=0,exit=0,abnormal=0,timeout=0;p8:race=20,clean=0,exit=0,abnormal=0,timeout=0;	single=fatal	ENUM-FAIL:alias-guard probe [2] failed: the probed member's run errored — fatal: sync: Unlock of unlocked RWMutex. Under a corre
+
+over-refusal rows (machine RACE-*, gc DRF-in-N — three-way investigation):
+  probe/u4kind/rw-copy-vs-rlock	p1:race=0,clean=20,exit=0,abnormal=0,timeout=0;p8:race=0,clean=20,exit=0,abnormal=0,timeout=0;	RACE-ALL (1/1 members)
+  probe/u4kind/rw-copy-vs-lock	p1:race=0,clean=20,exit=0,abnormal=0,timeout=0;p8:race=0,clean=20,exit=0,abnormal=0,timeout=0;	RACE-ALL (1/1 members)
+  probe/u4kind/wg-copy-vs-add-from-0	p1:race=0,clean=20,exit=0,abnormal=0,timeout=0;p8:race=0,clean=20,exit=0,abnormal=0,timeout=0;	RACE-ALL (1/1 members)
+  probe/u4kind/wg-copy-vs-done	p1:race=0,clean=20,exit=0,abnormal=0,timeout=0;p8:race=0,clean=20,exit=0,abnormal=0,timeout=0;	RACE-ALL (1/1 members)
+  probe/u4kind/wg-overwrite-vs-done	p1:race=0,clean=0,exit=20,abnormal=0,timeout=0;p8:race=0,clean=0,exit=20,abnormal=0,timeout=0;	RACE-ALL (1/1 members)
+  probe/u4kind/wg-overwrite-vs-wait-at-0	p1:race=0,clean=20,exit=0,abnormal=0,timeout=0;p8:race=0,clean=20,exit=0,abnormal=0,timeout=0;	RACE-ALL (1/1 members)
+
+uncertified rows (machine ENUM-FAIL, gc not red):
+
+gc-no-verdict rows (gc produced no completed run; machine certified):
+
+refused rows (params omit width=/sites= — declare them in cases.tsv):
+
+gc-infra / unclassified rows (the matrix is INCOMPLETE):

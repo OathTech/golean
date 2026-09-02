@@ -284,17 +284,17 @@ C10 is the doctrine's home.
 | advice | out-of-language | advisory prose ("don't be clever"); the operative content is the DRF doctrine, held at mem#model below. |
 | overview | out-of-language | the doc's own "informal overview, not a formal definition"; the formal row is mem#model. |
 | model | latitude(C10) | the machine holds the DRF-SC FRAGMENT: race-free executions are SC by construction (interleaving semantics, L1 envelope); racy programs refuse (racy-red) rather than exhibit weak behaviors — mem#restrictions expressly permits "report the race and exit". The weak-memory latitude beyond DRF-SC is deliberately unmodeled; witness: `race/litmus/sb-chan` certified {1,10,11} with the SC-forbidden 00 excluded (members=3 cardinality pin). |
-| restrictions | covered(B) | `race/` lane (5 pkg families, 41 rows: free / negative / litmus); the detector's fail-closed direction (over-refusal only) with its one over-approximation → Q-RACEPATH (BUG-041): constant-index half IMPLEMENTED 2026-09-02 (`race/free/array-read-write` flipped green; +2 chain-form green guards, +2 must-stay-racy guards), dynamic-index residual red-pinned (`race/free/array-dyn-index-read-write`, 1 red, born-FAIL). Detector-soundness measurement of the whole lane against `go run -race` (both directions, per-run): `docs/2026-09-02_detector-soundness.md`. |
+| restrictions | covered(B) | `race/` lane (6 dirs, 51 rows: free / free-sync / negative / negative-sync / litmus / gomem-only); the detector's fail-closed direction (over-refusal only) with its one over-approximation → Q-RACEPATH (BUG-041): constant-index half IMPLEMENTED 2026-09-02 (`race/free/array-read-write` flipped green; +2 chain-form green guards, +2 must-stay-racy guards), dynamic-index residual red-pinned (`race/free/array-dyn-index-read-write`, 1 red, born-FAIL). Detector-soundness measurement of the whole lane against `go run -race` (both directions, per-run): `docs/2026-09-02_detector-soundness.md`. The "report the race and exit" license is exercised BEYOND TSan's realized set since Q-U4RESIDUAL (RULED [USER] 2026-09-02, option (A)): a plain access to a sync primitive beside an op mem#model kinds write-like (or a plain write beside a read-like one) refuses even where gc's `-race` build runs it under `race.Disable` — the DESIGNED divergence from the oracle, 6 born-FAIL rows `race/gomem-only/*` against gc's `ok` (BUG-083's Cases line; never a pass). |
 | synchronization | covered(D) | preamble; children below. |
 | init | covered(B) | init happens-before main: `init/` (19 pkgs) + `multipkg/init-order*`; the order latitude inside it is the spec-side C1/C2 story (§2 Package_initialization). |
 | go | covered(B) | go-statement happens-before: spawn suites, arg-eval-at-spawn pins, child-effect visibility through channels. |
 | goexit | frontier(Q-GOEXIT) | marker red `goroutines/goexit-marker/child` ("selector call Goexit is not a method value"); goroutine destruction is the Q-GOEXIT scheduler-architecture question (formerly the F4 arc's; re-homed 2026-08-31, fidelity decision 6 → this repo's TODO.md backlog). |
 | chan | covered(B) | channel happens-before: send/receive/close suites + the sb-chan litmus; NAMED GAP → T-6 (the buffered-capacity clause — k-th receive hb (k+C)-th send — has no dedicated litmus row). |
-| locks | covered(B) | mutex/rwmutex suites (order, misuse fatals, protected-data race rows) + L:C8 (acquisition-order envelope via L1, zero new sites); Cond → Q-COND. |
+| locks | covered(B) | mutex/rwmutex suites (order, misuse fatals, protected-data race rows) + L:C8 (acquisition-order envelope via L1, zero new sites); Cond → Q-COND. The lock/unlock operation KINDS mem#model assigns (lock read-like, unlock write-like — for `sync.Mutex` AND `sync.RWMutex`, this section's two types) are what the detector records on the primitive's own words since Q-U4RESIDUAL (A) (Race.lean `syncEntryKinds`; BUG-080/BUG-083). |
 | once | covered(B) | `sync/once-{basic,nested-do}`. |
 | atomic | frontier(Q-ATOMIC) | the slice-6 suite `sync/atomic-frontier/` (5 rows: core op classes + the SC mp-litmus with admitted {0,1,11}); L:U-6 (the seq_cst clause, verbatim). |
 | finalizer | out-of-language | runtime.SetFinalizer: firing is a GC-reachability event; the machine models no collector, and the event is unobservable in-language without one. No honest case exists to write — recorded as the boundary. |
-| more | covered(D) | normative deferral ("each … documents its guarantees"): Mutex/RWMutex/WaitGroup/Once modeled (rows above); Cond → Q-COND; sync.Map/Pool are unmodeled stdlib surface → FR-14 family. |
+| more | covered(D) | normative deferral ("each … documents its guarantees"): Mutex/RWMutex/WaitGroup/Once modeled (rows above); Cond → Q-COND; sync.Map/Pool are unmodeled stdlib surface → FR-14 family. The deferral is what grounds WaitGroup's operation kinds in the detector (Q-U4RESIDUAL (A)): waitgroup.go's "a call to Done 'synchronizes before' the return of any Wait call that it unblocks" gives Add/Done the release (write-like) role and Wait the acquire (read-like) role — Race.lean `syncEntryKinds`, BUG-083. |
 | badsync | covered(B) | incorrect-sync programs are RACY → refused (the `race/negative/` class); NAMED GAP → T-7 (the doc's own three exhibits — double-checked locking, busy-wait flag, the reordered-print example — deserve verbatim racy-red ports). |
 | badcompiler | covered(B) | constraints on IMPLEMENTATIONS (no invented writes, single-valued reads/writes): the machine performs no program transformation, and the frontend's ANF hoists name intermediate reads, never invent writes; the known residual in this class is expression-step granularity → Q-ATOMICITY (BUG-002, latent, 0 reds). |
 | conclusion | out-of-language | document meta. |
@@ -471,9 +471,19 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (2573 cases, 2401 PASS /
-172 FAIL; `baselines/native-full.tsv`, re-pinned 2026-09-02 on the
-bug082-maphint lane at its AUDIT FIX ROUND — full ci --diff at that
+All numbers at the current tracked baseline (2581 cases, 2403 PASS /
+178 FAIL — the round-5 merge-train UNION 2026-09-03 of the q-u4-gomem
+re-pin over main = bug082-maphint's 2573 / 2401 / 172, the two lanes'
+new rows disjoint by id; `baselines/native-full.tsv`, re-pinned 2026-09-02 on the
+q-u4-gomem lane — full ci --diff at that tip: Q-U4RESIDUAL RULED
+[USER] option (A), the detector records go_mem's operation kinds
+beside TSan's realized set; +6 born-FAIL-BY-DESIGN rows
+`race/gomem-only/*` (BUG-083's Cases line — the designed divergence
+from the `-race` oracle: gc `ok`, machine `race`; post-vintage
+bucket) and +2 born-PASS confluent guards
+`race/free-sync/rw-copy-beside-{rlock,lock}`; red-count movement
+172 → 178, mapped below; no other row moved. Prior re-pin the same day on the bug082-maphint lane at its AUDIT FIX
+ROUND (2573 / 2401 / 172) — full ci --diff at that
 tip: +1 born-FAIL-by-design row
 `builtins/len-vs-call-order/hint-panicky-between` (BUG-083, the open
 instance ledger of BUG-032's unordered-panic hoist class — the map-hint
@@ -563,8 +573,9 @@ the historical record; the method is §8b's, re-run).
 frontier 2 (atomic → Q-ATOMIC, goexit → Q-GOEXIT), latitude 1 (model →
 C10), out-of-language 5. Zero unclassified.
 
-**The 172 baseline reds, every one on a named row (re-derived
-mechanically 2026-09-02 — zero unmapped, zero double-mapped; +1 at
+**The 178 baseline reds, every one on a named row (re-derived
+mechanically 2026-09-02 — zero unmapped, zero double-mapped; +6 at
+the q-u4-gomem re-pin, BUG-083's designed-divergence pins; +1 at
 the t5-maxalloc re-pin, BUG-082, −1 at the BUG-082 fix re-pin the
 same day, and +1 at that fix's audit fix round, BUG-083; +2 at the
 detector-soundness re-pin,
@@ -577,8 +588,8 @@ bucket's BUG-041 red changed ROW, not count):**
 | design questions Q-* (§6) | 14 |
 | (c) profound-reason pins (triage §4 + the unsafe marker) | 9 + 1 |
 | (a)-queued fixes (triage §3.2: A3 5, A4 1, A5 1, A7 1) | 8 |
-| post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) + the gotest-fixes BUG-078 budget refusal pin (`arrays/materialization-budget/over-budget`, on BUG-078's Cases line since the audit fix round) + the bug082-maphint audit-round BUG-083 hoist-order pin (`builtins/len-vs-call-order/hint-panicky-between`, 2026-09-02) | 57 |
-| **total** | **172** |
+| post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) + the gotest-fixes BUG-078 budget refusal pin (`arrays/materialization-budget/over-budget`, on BUG-078's Cases line since the audit fix round) + the bug082-maphint audit-round BUG-083 hoist-order pin (`builtins/len-vs-call-order/hint-panicky-between`, 2026-09-02) + the q-u4-gomem BUG-083 designed-divergence pins (`race/gomem-only/*`, 6 rows: go_mem-racy / TSan-green shapes REFUSED by [USER] ruling Q-U4RESIDUAL (A), 2026-09-02) | 63 |
+| **total** | **178** |
 
 *(Movement at the 2026-09-02 BUG-082 audit fix round re-pin:
 post-vintage 56 → 57 — BUG-083's born-red pin
