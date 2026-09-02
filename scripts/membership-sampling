@@ -67,7 +67,19 @@ if [[ ! -x "$GOLEAN_BIN" ]]; then
 fi
 command -v go >/dev/null || { echo "membership-sampling: go not on PATH" >&2; exit 2; }
 GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
-mkdir -p "$OUT" "$GO_BUILD_CACHE"
+if ! mkdir -p "$OUT" "$GO_BUILD_CACHE" 2>/dev/null; then
+  echo "membership-sampling: --out directory is not writable: $OUT" >&2; exit 2
+fi
+# One writer per out-dir: summary.tsv is append-only and per-row dirs are
+# rewritten in place, so two concurrent runs into the same --out would
+# interleave silently. Take an atomic lock (mkdir) and refuse a busy dir.
+LOCK="$OUT/.lock"
+if ! mkdir "$LOCK" 2>/dev/null; then
+  echo "membership-sampling: --out directory is busy: $OUT (lock $LOCK held by pid $(cat "$LOCK/pid" 2>/dev/null || echo '?'); if that run is gone, remove the lock dir)" >&2
+  exit 2
+fi
+echo "$$" > "$LOCK/pid"
+trap 'rm -rf "$LOCK"' EXIT
 
 manifest_args=()
 for id in ${IDS[@]+"${IDS[@]}"}; do manifest_args+=(--id "$id"); done

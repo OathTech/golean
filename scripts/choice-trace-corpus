@@ -73,7 +73,13 @@ if ! "$GOLEAN_BIN" choice-trace --help >/dev/null 2>&1; then
 fi
 command -v go >/dev/null || { echo "choice-trace-corpus: go not on PATH" >&2; exit 2; }
 GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
-mkdir -p "$OUT/wire" "$GO_BUILD_CACHE"
+# --out must be writable before any work starts (the run is minutes long;
+# a late "permission denied" on results-*.tsv would waste it and leave a
+# half-written artifact dir). Fail up front, naming the directory.
+if ! mkdir -p "$OUT/wire" "$GO_BUILD_CACHE" 2>/dev/null || ! : > "$OUT/.write-probe" 2>/dev/null; then
+  echo "choice-trace-corpus: --out directory is not writable: $OUT" >&2; exit 2
+fi
+rm -f "$OUT/.write-probe"
 
 manifest_args=()
 for id in ${IDS[@]+"${IDS[@]}"}; do manifest_args+=(--id "$id"); done

@@ -24,10 +24,10 @@ All decisions below are [AGENT] unless marked [USER].
 |---|---|
 | Does the instrumentation change machine behavior? | **No.** `GoLean/GoCore/`, `NativeToIR.lean`, `CLI.lean`, `tools/`, `Corpus/`, `baselines/`, `scripts/ci`, `scripts/diff-coverage` are byte-identical to main (`git diff 7cf19198..HEAD --stat` over those paths is empty). The tracer is a separate `golean choice-trace` subcommand dispatched in `Main.lean`; the default path is untouched (§1). |
 | Strict rows whose "adversarial" streams are exhausted before a bound-≥-2 consumption (the pick-0 default takes over, invisibly) | **23 of 2,373 traced strict rows** (all 23 baseline PASS): 15 reach only `appendSpill`/`mapIter` (capacity / map-order latitude), **8 reach scheduling sites** (17–521 scheduling picks vs an 8–10-entry stream). List in §2.3. |
-| Menu-invariant validator over the full corpus | **62,048 consumptions, 0 violations, 0 self-check alarms, 0 driver-agreement mismatches** across 2,478 rows × 6 streams. First mechanical modeled ⊆ permitted evidence at the site level; what it does NOT witness is in §3.3. |
-| Membership sampling today | 228 `go run` draws per full run (22 rows × 10, 4 rows × 2). With the gate's budget and draw order, **9 of the 22 ten-draw rows exhibit only 1 distinct observation** where 80 draws exhibit 2 (or more); saturation of the two-member scheduling rows takes up to 52–66 alternating draws. Proposal (§4.3): alternate plain/`-race`, stop at the `members=` pin, cap K=32 in `--diff` (measured worst case +6.5 min), K=80 under `--slow`. |
-| Routing rule | §5: a strict row is 3-stream-certified only if its default-stream bound-≥-2 consumption count is ≤ 8 (the shortest stream). Otherwise the strict PASS must be earned by a stream the accountant sizes (or by the confluent enumerator), never by the default trajectory dressed as three. Fail-closed shape given. |
-| Gate | No behavior-bearing file changed, so only the plain `scripts/ci` was owed; this fresh worktree had no recorded differential/negative run for the plain gate's diff steps to judge, so the FULL `scripts/ci --diff` was run at the tip instead (strictly stronger) and the plain gate re-run after it — both tails in §8. Differential spot-check across all four lanes PASS (§1.3). |
+| Menu-invariant validator over the full corpus | **62,048 consumptions, 0 violations, 0 self-check alarms, 0 driver-agreement mismatches** across 2,478 rows × 6 streams. First mechanical **modeled ⊆ census-declared** evidence at the site level (the check is against the widths the latitude census DECLARES, not against Go — §3.3); what it does NOT witness is in §3.3. |
+| Membership sampling today | 228 `go run` draws per full run (22 rows × 10, 4 rows × 2). Two 80-draw runs; both statistics below are "in at least one run" (max over the two runs — the between-run variance is itself large). With the gate's budget and draw order, **6 of the 22 ten-draw rows are a point-mass at the gate budget** (1 distinct in the first 10 draws where the same run's 80 draws exhibit ≥2: `len-handoff`, `select-default-handshake`, `select-wake-multi`, `added-entry-count`, `sb-chan`, `mp-litmus`), and **8 rows under-report at 10 draws** (distinct@10 < distinct@80: those 6 plus `google-search` and `jitter-draw`, which show ≥2 at the gate budget but not their full support). In the other run, `len-handoff` and `select-wake-multi` stayed at 1 distinct through all 80 draws. Saturation of the two-member scheduling rows takes up to 52–66 alternating draws when it happens. Proposal (§4.3): alternate plain/`-race`, stop at the `members=` pin, cap K=32 in `--diff` (measured worst case +6.5 min), K=80 under `--slow`. |
+| Routing rule | §5: a strict row is 3-stream-certified only if **every adversarial stream run reports `wideAfterExhaustion = 0`** — the tracer's exact observable (no bound-≥-2 consumption drawn after the stream ran out). Otherwise the strict PASS must be earned by a stream the accountant sizes (declared `depth=`, sized from the measured wide count) or by the confluent enumerator, never by the default trajectory dressed as three. A default-stream `w ≤ 8` threshold is NOT the rule: adversarial runs draw up to 3 more wide picks than the default run (16 rows), and two rows draw 10 by default but 6 adversarially — the threshold both leaks and over-refuses (latent today). Fail-closed shape given. |
+| Gate | No behavior-bearing file changed, so only the plain `scripts/ci` was owed; this fresh worktree had no recorded differential/negative run for the plain gate's diff steps to judge, so the FULL `scripts/ci --diff` was run at the pre-rebase tip instead (strictly stronger) and the plain gate re-run after it — both tails in §8. After the rebase onto main `e7d07b26`, `scripts/ci --diff` was re-run at `d7ed0683`: **PASS, 2526/2526 differential + 390/390 negative, no regression** (§8, post-rebase re-gate). Differential spot-check across all four lanes PASS (§1.3). |
 
 ---
 
@@ -269,9 +269,12 @@ those two; the membership lane's certified trees exercise them far more
 (C5's 336 width-2 L4 sites in first-come's tree) but without this check.
 
 This is the first mechanical evidence, at the site level, of the
-modeled ⊆ permitted direction: every choice the machine offered on these
-~62k occasions had the width the census declares and satisfied the
-declared slot structure. Before this, E-D8's observation stood: the width
+modeled ⊆ census-declared direction: every choice the machine offered on
+these ~62k occasions had the width the census declares and satisfied the
+declared slot structure. It is NOT modeled ⊆ permitted (spec) evidence —
+the census declaration is itself the thing under argument (§3.3, R2 in
+particular); what this closes is the gap between the declaration and the
+machine. Before this, E-D8's observation stood: the width
 at every enveloped row was an unaudited design assertion.
 
 ### 3.3 What it does NOT witness (stated so the claim is not over-read)
@@ -333,16 +336,34 @@ exhibited in 80 draws (E-D8 measured 45 of 441 under the gate budget).
 The gap is R2 by construction: the four `slices/*` rows enumerate 29–300
 capacities and gc realizes 1–2.
 
-**Where the 10-draw budget is a point-mass.** Under the gate's draw order
-(5 plain, then 5 race), 9 of the 22 ten-draw rows exhibit only 1 distinct
-observation in at least one run while 80 draws exhibit 2 (or more):
-`goroutines/sched-dependent/len-handoff` (2nd member at draw 51),
-`goroutines/sched-dependent/select-default-handshake` (48),
-`goroutines/select-wake-multi` (66), `race/litmus/sb-chan` (48; 2 of 3
-members), `maps/added-entry-count` (12), `imported-goose/channel/google-search`
-(2 of 6 at gate; 5–6 of 6 by draw 50–56), `maps/jitter-draw` (3–4 of 5 at
-gate; 5 of 5 by 22–52), `sync/atomic-frontier/mp-litmus` (62),
-(`goroutines/sched-dependent/first-come` is NOT among them: both members
+**Where the 10-draw budget is a point-mass.** Two statistics, kept apart
+because they count different things; both are "in at least one of the two
+80-draw runs" (i.e. max over runs), and the between-run variance is large
+enough that neither should be read as a per-row constant. All counts are
+read off `summary.tsv` (`distinctAtGate`, `distinctHere`) of the two runs.
+
+* **Point-mass at the gate budget** — `distinctAtGate = 1` while the same
+  run's `distinctHere ≥ 2` (the gate's 10 draws, in the gate's order of
+  5 plain then 5 race, would have captioned `exhibited=1` for a row the
+  oracle demonstrably moves on): **6 of the 22 ten-draw rows** —
+  `goroutines/sched-dependent/len-handoff` (2nd member at draw 51),
+  `goroutines/sched-dependent/select-default-handshake` (48),
+  `goroutines/select-wake-multi` (66), `race/litmus/sb-chan` (48; 2 of 3
+  members), `maps/added-entry-count` (12), `sync/atomic-frontier/mp-litmus`
+  (62; baseline FAIL, no enumerated set).
+* **Under-reporting at the gate budget** — `distinctAtGate < distinctHere`:
+  **8 rows** — the 6 above plus `imported-goose/channel/google-search`
+  (2 or 5 of 6 at gate; 5–6 of 6 by draw 50–56) and `maps/jitter-draw`
+  (3–4 of 5 at gate; 5 of 5 by 22–52), which DO show ≥2 at the gate budget
+  but not their full support.
+* **Variance.** Three of the six point-mass rows are point-mass in one run
+  only: in the other run `len-handoff` and `select-wake-multi` stayed at 1
+  distinct through all 80 draws (so 80 draws are not a saturation guarantee
+  either), and `select-default-handshake` was 1/80 in the fresh run but
+  2/80 in the first worker's. `added-entry-count` and `sb-chan` reached 2
+  by draw 3–6 in one run and 12–48 in the other.
+
+(`goroutines/sched-dependent/first-come` is in neither list: both members
 by draw 6–7 in both runs.) On the scheduling rows every late member came
 from a `-race` draw: plain `go run` is a point-mass there (distinctPlain = 1
 on 13 of the 22 ten-draw rows) and `-race` is the only perturbation source
@@ -413,40 +434,71 @@ so K) / 28 s (pin 3 not reached: 2 of 3).
 invariance check, whose streams are 10/10/8 entries; `Choices.consume`
 defaults to slot 0 on exhaustion. §2 measures exactly which rows outrun it:
 23 of 2,373 (8 at scheduling sites). The remaining 2,350 strict rows are
-fully covered — 2,118 draw nothing at bound ≥ 2, 232 draw ≤ 8 wide picks.
+fully covered — 2,118 draw nothing at bound ≥ 2, 230 draw 1–8 wide picks
+under the default stream, and 2 (`fmt/sprintf-verbs/d-int`, `d-uint`) draw
+10 under the default stream but only 6 under each adversarial stream and
+never exhaust one (the picks change the string-building path).
+
+**Why the rule is keyed to exhaustion, not to a count.** The tempting
+rule — "default-stream wide count `w ≤ 8` (the shortest stream) ⇒
+covered" — is wrong in both directions on this corpus. The adversarial
+picks change the trajectory and with it the consumption count: 16 strict
+rows draw MORE wide picks under an adversarial stream than under the
+default (excess 1–3; e.g. `spec-examples-stmt/go-statements/named-call`
+3 → 6, `goroutines/pipeline/buffered-stage` 29 → 31), so a default-count
+threshold can pass a row whose adversarial run outruns the stream (no
+`w ≤ 8` row is exhausted today — the leak is latent, not observed); and
+`d-int`/`d-uint` would be refused at `w = 10` although every adversarial
+run is fully covered (over-refusal). The tracer's `wideAfterExhaustion`
+column is the exact observable — a bound-≥-2 consumption served by the
+exhaustion default — and it is what the rule below reads.
 
 **Rule (fail-closed shape).** A strict PASS is a two-part claim — Go
 equality on the default trajectory AND invariance across the adversarial
 streams — and the second part is only made when the streams cover every
 bound-≥-2 consumption. So:
 
-1. Measure the row's default-stream bound-≥-2 consumption count `w` (the
-   accountant already computes it; the tracer reports it as `wide`).
-2. If `w ≤ 8` (the shortest fixed stream), the existing check stands as is.
-3. If `w > 8`, the fixed streams do NOT certify invariance; the strict PASS
-   is **refused with the cause named** ("strict row draws `w` wide picks;
-   the 3-stream invariance check covers 8 — route to `confluent`, or
-   declare depth") unless the row carries one of:
+1. For each of the three adversarial stream runs, the accountant records
+   whether any bound-≥-2 consumption was served AFTER the stream was
+   exhausted (the tracer's `wideAfterExhaustion`; the machine already
+   knows the moment of exhaustion — `Choices.consume` yielding the default
+   — so this is a counter, not a new analysis). Record the default-stream
+   bound-≥-2 count `w` alongside (the tracer's `wide`), for sizing only.
+2. If `wideAfterExhaustion = 0` on every adversarial stream run, the
+   existing check stands as is — every wide pick was actually drawn from
+   the stream.
+3. Otherwise the fixed streams do NOT certify invariance; the strict PASS
+   is **refused with the cause named** ("strict row: `k` wide pick(s)
+   served after stream `<s>` was exhausted at consumption `n` — the
+   3-stream invariance check did not cover this row; route to `confluent`,
+   or declare depth") unless the row carries one of:
    * `lane=confluent` — the enumerator certifies |set|=1 over all schedules
      (the honest home for the 8 scheduling-family rows; cost is the
      enumeration — `prime-sieve/eight` at 521 picks may not fit the fail-loud
      caps, in which case it should not be in a lane that claims invariance);
-   * an explicit per-row `depth=N` with `N ≥ w`, under which the gate
-     derives invariance streams of length `N` from a seeded generator
-     (e.g. `rand:<seed>:N`, seeds recorded in run meta) instead of the
-     fixed prefix — the (S) fix B4 asks for, made honest by tying N to the
-     measured `w` rather than to a guess.
+   * an explicit per-row `depth=N`, sized from the measured `w` (the
+     tracer's default-stream wide count is the natural starting size; the
+     declared streams must then themselves report `wideAfterExhaustion = 0`,
+     which is the real check — `w` only sizes the declaration), under which
+     the gate derives invariance streams of length `N` from a seeded
+     generator (e.g. `rand:<seed>:N`, seeds recorded in run meta) instead
+     of the fixed prefix — the (S) fix B4 asks for, made honest by tying N
+     to a measurement rather than to a guess.
 4. The variant runs' exit status is checked (D-10 item 2): a refusal under
    a variant stream is reported as a refusal, not as `nondet`.
 
-Fail-closed properties: no default — a row over the covered depth with no
-declaration is red, not strict-green; the declared `depth=` must dominate
-the measured `w` (a row that grows past its declaration goes red at the
-next run, naming the numbers); `--diff` output records `wide=` and
-`depth=` per strict row so the number is derivation-anchored.
+Fail-closed properties: no default — a row whose adversarial run outran
+its stream with no declaration is red, not strict-green; a declared
+`depth=` stream that is itself exhausted before a wide pick goes red at
+the next run, naming the numbers (so a row that grows past its declaration
+cannot stay green); `--diff` output records `wide=`, `exhausted=` and
+`depth=` per strict row so the numbers are derivation-anchored.
 
-**Immediate consequence for the 8 rows if the rule were adopted:** they
-would go red until routed. That is the rule working — a hand-classified
+**Immediate consequence if the rule were adopted:** exactly the 23
+exhausted rows of §2.3 go red until routed (the 8 scheduling rows to
+`confluent` or `depth=`; the 15 capacity rows most simply to `depth=`);
+`d-int`/`d-uint` stay green because they are covered. (A `w > 8`
+threshold would instead have hit 25 rows — the 23 plus those two.) That is the rule working — a hand-classified
 concurrent program with 17–521 scheduling picks was never
 invariance-certified past pick 8–10.
 
@@ -460,8 +512,8 @@ mode stays invisible.
 
 | # | change | evidence | cost | status |
 |---|---|---|---|---|
-| P1 | Strict-lane depth guard (§5): refuse strict PASS when `wide > 8` without `confluent`/`depth=`; seeded streams of declared length | §2.3: 23 rows (8 scheduling) outrun the fixed streams | gate change (diff-coverage) + 8–23 manifest rows to route/declare | PROPOSED — [USER] gate decision |
-| P2 | Membership sampling rule (§4.3): alternate plain/race, stop at `members=`, K=32 (`--diff`) / K=80 (`--slow`), print `draws=` | §4.2: 9 of 22 rows point-mass at 10 draws in gate order; saturation up to 52–66 | +6.5 min on `--diff`; membership-lane code only | PROPOSED — [USER] gate decision |
+| P1 | Strict-lane depth guard (§5): refuse strict PASS when any adversarial stream run reports `wideAfterExhaustion > 0` without `confluent`/`depth=`; seeded streams of declared length | §2.3: 23 rows (8 scheduling, 15 capacity) outrun the fixed streams; blast radius under this rule = those 23 (a `wide > 8` threshold would hit 25, incl. two covered rows — §5) | gate change (diff-coverage) + 23 manifest rows to route/declare | PROPOSED — [USER] gate decision |
+| P2 | Membership sampling rule (§4.3): alternate plain/race, stop at `members=`, K=32 (`--diff`) / K=80 (`--slow`), print `draws=` | §4.2: 6 of 22 ten-draw rows point-mass at the gate budget in at least one of two runs (8 under-report); saturation up to 52–66 when reached, and two rows never moved in one run's 80 draws | +6.5 min on `--diff`; membership-lane code only | PROPOSED — [USER] gate decision |
 | P3 | Pin `members=` on the 10 unpinned membership rows (B13) | needed for P2's early stop; 4 `slices/*` rows should pin the enumerated width, `maps/*` their certified sets | manifest rows only | PROPOSED |
 | P4 | Run `scripts/choice-trace-corpus` as a periodic (non-gate) audit; keep zero violations/alarms as the standing expectation | §3.2 | ~12 min wall at `--jobs 6` | landed as tooling; scheduling is a [USER] call |
 | P5 | Report the variant run's status in the strict invariance check (D-10 item 2) | §2.4 the one VARIES row is a refusal labelled `nondet` | one-line gate change | PROPOSED |
@@ -482,8 +534,11 @@ mode stays invisible.
   (§4.3).
 * This report.
 
-Nothing under `GoLean/GoCore/`, `tools/`, `Corpus/`, `baselines/`,
-`scripts/ci`, `scripts/diff-coverage` changed.
+Full diff scope against main (`git diff e7d07b26..HEAD --stat`, 8 files):
+`GoLean.lean` (+1 import line, `GoLean.ChoiceTrace`), `GoLean/ChoiceTrace.lean`
+(new), `Main.lean` (the subcommand dispatch), the four scripts above, and
+this report. Nothing under `GoLean/GoCore/`, `tools/`, `Corpus/`,
+`baselines/`, `scripts/ci`, `scripts/diff-coverage` changed.
 
 Artifacts (gitignored, this worktree): `artifacts/membership-depth/resume/`
 — `full/` (results-0..6.tsv, summary.txt, exhausted-strict.tsv,
@@ -514,8 +569,11 @@ as "6 case(s) run … match"). Rather than record just the negative run, the
 full `scripts/ci --diff` was run at the tip (records both), then the plain
 gate again.
 
-`scripts/capped scripts/ci --diff` at `a367ed8a` (the three tooling
-commits; the only uncommitted file during the run was this report, hence
+**Pre-rebase run.** `scripts/capped scripts/ci --diff` at `a367ed8a` (the
+three tooling commits as they stood BEFORE the rebase onto main
+`e7d07b26`; `a367ed8a` is no longer an ancestor of this branch — the
+rebased commits are `9c9254bb`/`fb0c984f`/`d7ed0683`. The only uncommitted
+file during the run was this report, hence
 the gate's honest "DIRTY tree" note — it certifies the worktree state,
 which differs from `a367ed8a` by this untracked docs file alone). Full run:
 2,506/2,506 differential rows and 390/390 negative rows match the tracked
@@ -577,3 +635,67 @@ no regression: 2506 case(s) run in latest.tsv match baselines/native-full.tsv
   note reconciler: 2 finding(s), 0 HIGH — report-only (details: tools/reconcile-records)
 RESULT: PASS
 ```
+
+**Post-rebase re-gate** ([AGENT], run by the coordinator after the rebase
+onto main `e7d07b26`; log at `artifacts/ci-regate.log` in this worktree).
+`scripts/capped scripts/ci --diff` at `d7ed0683` (clean tree — no DIRTY
+note): main had grown to 2,526 differential rows and 146 eval tests in
+the meantime; all match.
+
+```
+no regression: 390 case(s) run in negative-latest.tsv match baselines/negative-full.tsv
+no regression: 2526 case(s) run in latest.tsv match baselines/native-full.tsv
+  note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   core build (warning-free)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   eval tests (146 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  ok   negative baseline diff (no regression)
+  ok   baseline diff FULL (2526/2526, no regression)
+  note reconciler: 3 finding(s), 0 HIGH — report-only (details: tools/reconcile-records)
+RESULT: PASS
+```
+
+---
+
+## 9. Audit fix round (2026-09-02, docs + lane-script edits only)
+
+Findings from the pre-merge audit, all [AGENT]-applied, no number
+re-measured — every correction is read off the artifacts already cited:
+
+* M-1 — the §0/§4.2/§6 "9 of 22" claim was a conflation of two statistics
+  (point-mass at gate: 6; under-reporting at gate: 8), with the "9" itself
+  matching neither; both are now stated separately with the max-over-runs
+  qualifier and the between-run variance (two rows at 1 distinct even at
+  80 draws in one run).
+* M-2 — §5's rule was keyed to a default-stream `w ≤ 8` threshold; it is
+  now keyed to the tracer's exact observable (`wideAfterExhaustion = 0`
+  on every stream run), with the 16-row excess / `d-int`,`d-uint`
+  counter-examples that show the threshold leaks and over-refuses; `w`
+  is kept only to size `depth=`.
+* M-3 — §8's original gate tail was at pre-rebase `a367ed8a`; marked as
+  such and the post-rebase re-gate at `d7ed0683` added.
+* M-4 — §5 "232 draw ≤ 8" → 230 (+2 covered rows at 10); §6 P1 blast
+  radius restated under the M-2 rule (23; 25 under the threshold form).
+* M-5 — "modeled ⊆ permitted" → "modeled ⊆ census-declared" in §0 and
+  §3.2 (what §3.3 already said).
+* M-6 — §7's diff scope now lists `GoLean.lean` (+1 import line).
+* M-7 — `scripts/choice-trace-corpus` checks `--out` writability up front
+  and names the directory; `scripts/membership-sampling` takes an
+  out-dir lock (`$OUT/.lock`, pid recorded) and refuses a busy dir.
