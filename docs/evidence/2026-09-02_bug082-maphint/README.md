@@ -182,3 +182,83 @@ findings, pre-existing); `scripts/check-spec-anchors` ok (590 spec# +
 164 mem# resolve at pin c19862e5f). [AGENT] No source file was
 edited after the gate started; the commit that adds this directory
 is the gated tree.
+
+## M1 — the unordered-panic hoist class (audit fix round, 2026-09-02)
+
+[AGENT] The pre-merge audit's M1 finding, reproduced. `make(...)` always
+hoists, without the A6 guard `len`/`cap` carry
+(`residualPanicFreeOperand` × `sweepPanickyInlineBefore`, emit.go);
+lowering the hint puts the hint's panics on that hoist. Probes: the
+auditor's `p4`/`p5` bodies, copied verbatim to `m1-probes/`. Columns:
+gc = `go run` (go1.26.5), fixed = this branch's frontend + golean,
+main = the pre-fix frontend (`emit.go` at `fa4fce58`) + the same golean.
+Panic texts abbreviated: IDX5 = `runtime error: index out of range [5]
+with length 2` (the hint's), IDX9 = `… [9] with length 1` (the left
+index), CONV = `interface conversion: interface {} is string, not int`,
+DIV = `runtime error: integer divide by zero`, NIL = `… nil pointer
+dereference`, BOOM = `boom-call`.
+
+| probe | shape | gc | fixed | main |
+| --- | --- | --- | --- | --- |
+| p4 fLeftIndexVsHintIndex | `s[i] + len(make(map, t[k]))` | IDX5 | IDX5 ✓ | IDX9 ✗ |
+| p4 fLeftDivVsHintIndex | `1/z + len(make(map, t[k]))` | IDX5 | IDX5 ✓ | DIV ✗ |
+| p4 fLeftAssertVsHintIndex | `iv.(int) + len(make(map, t[k]))` | CONV | IDX5 ✗ **NEW** | CONV ✓ (accident) |
+| p4 fHintIndexVsRightIndex | `len(make(map, t[k])) + s[i]` | IDX5 | IDX5 ✓ | IDX9 ✗ |
+| p4 fLeftNilDerefVsHintIndex | `*p + len(make(map, t[k]))` | IDX5 | IDX5 ✓ | NIL ✗ |
+| p4 fLeftIndexHintCallPanic | `s[i] + len(make(map, boom()))` | BOOM | BOOM ✓ | IDX9 ✗ |
+| p5 gAssertVsPlainCall | `iv.(int) + boom()` | CONV | BOOM ✗ | BOOM ✗ (pre-existing) |
+| p5 gAssertVsHintCall | `iv.(int) + len(make(map, boom()))` | CONV | BOOM ✗ **NEW** | CONV ✓ (accident) |
+| p5 gAssertVsSliceMakeLen | `iv.(int) + len(make([]int, t[k]))` | CONV | IDX5 ✗ | IDX5 ✗ (pre-existing) |
+| p5 gAssertVsChanMakeCap | `iv.(int) + cap(make(chan int, t[k]))` | CONV | IDX5 ✗ | IDX5 ✗ (pre-existing) |
+| p5 gAssertVsNewCall | `iv.(int) + *new(int) + zero()` | CONV | CONV ✓ | CONV ✓ |
+| p5 gAssertVsMapIndexHint | `iv.(int) + len(make(map, nm[1]))` | CONV | CONV ✓ | CONV ✓ |
+| p5 gAssertVsHintPlainVar | `iv.(int) + len(make(map, n))` | CONV | CONV ✓ | CONV ✓ |
+
+Reading: the fix made FIVE shapes right (main dropped the hint, so it
+realized the left operand's panic where gc — which hoists the `make`
+too — realizes the hint's) and TWO wrong: exactly the shapes whose LEFT
+operand is an interface conversion, the one left-operand class gc
+orders ahead of a hoisted make/call. Three sibling divergences are
+pre-existing on main (plain call, slice len, chan cap) and unchanged.
+Both points are spec-legal (spec#Order_of_evaluation orders only
+calls, receives and binary logical operations); gc's is compiler-
+internal; the shared unbuilt fix is BUG-032's full-statement
+linearization. Disposition [AGENT], per the coordinator's verdict: no
+code change (extending the A6 guard to `emitMake` would newly refuse
+the pre-existing slice/chan shapes — a separate arc); recorded on
+BUG-032 (M1 amendment) and BUG-082; pinned red-by-design at stage
+differential by `builtins/len-vs-call-order/hint-panicky-between` on
+the Cases line of the NEW open entry BUG-083 — the coordinator asked
+for BUG-032's Cases line, but `scripts/check-bugs.sh` check (3) fails a
+FAIL row on a `fixed` differential entry, so the row lives on an open
+instance-ledger entry that names BUG-032 as owner (deviation flagged in
+the round's report). Focused run: `m1-focused-diff-one.tsv`
+(`hint-panicky-between` FAIL/differential with both texts;
+`panicky-between` FAIL/frontend-export, the A6 refusal, unchanged).
+
+Reproduction (repo root):
+```
+export GO111MODULE=off GOCACHE="$PWD/artifacts/go-build-cache"; E=docs/evidence/2026-09-02_bug082-maphint
+for p in p4 p5; do D=$(mktemp -d "$TMPDIR/m1-$p.XXXXXX"); cp $E/m1-probes/$p-body.go $D/body.go; printf 'package main\n\nfunc main() {}\n' > $D/main.go
+  fns=$(grep -oE "^func [a-zA-Z]+\(\) int" $D/body.go | awk '{print $2}' | sed 's/()//' | grep -v "^boom$\|^zero$")
+  { echo 'package main'; echo 'import ("fmt";"testing")'; echo 'func TestDrive(t *testing.T){'; for f in $fns; do echo "  func(){ defer func(){ fmt.Printf(\"%s|gc|%v\\n\", \"$f\", recover()) }(); $f() }()"; done; echo '}'; } > $D/driver_test.go
+  (cd $D && go test -count=1 -v -run TestDrive . | grep "|gc|")
+  go run ./tools/nativefrontend --dir $D --out $D/fixed.wire.json          # main column: the fa4fce58 emit.go build from the first Reproduction block
+  for f in $fns; do echo "$f|machine|$(.lake/build/bin/golean native-json-run --input $D/fixed.wire.json --function $f)"; done; done
+scripts/capped scripts/diff-one builtins/len-vs-call-order/hint-panicky-between builtins/len-vs-call-order/panicky-between
+```
+
+## Gate — fix round (appended after the re-run)
+
+`scripts/capped scripts/ci --diff` on this worktree at `8c3aa6ae` + the
+fix round's records, uncommitted (`git_dirty=true`; summary in
+`gate-tail-fix-round.txt`): **RESULT: PASS** — differential FULL
+2573/2573, no regression against the re-pinned `native-full.tsv`
+(drift vs the slice's pin = exactly the one born-FAIL row
+`builtins/len-vs-call-order/hint-panicky-between` FAIL/differential,
+verified by `diff` of the data rows); negative 394/394; re-pin guard
+0 PASS→non-PASS flips; frontend pins ok (both unchanged this round);
+`tools/reconcile-records` 0 HIGH (3 report-only findings, unchanged);
+`scripts/check-spec-anchors` ok (593 spec# + 164 mem#). [AGENT] No
+code changed this round; the commit that adds this section is the
+gated tree.

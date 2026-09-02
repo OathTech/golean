@@ -1,0 +1,16 @@
+key	value
+frontend	native
+manifest	/home/dev/projects/golean/.tmp/golean-coverage.NrpYqc
+manifest_sha256	3aff8d85c1c5e67af4372ca82e58fa8c91c1f5051505291bbcdf37a1e53c7d74
+manifest_cases	2
+total_corpus_cases	2573
+full_run	false
+filters	--id builtins/len-vs-call-order/hint-panicky-between --id builtins/len-vs-call-order/panicky-between
+git_commit	8c3aa6ae2be6113bf6da00010338d4dd75b74010
+git_dirty	true
+go_toolchain	go1.26.5
+go_drift_allowed	0
+go_drift_actual	false
+jobs	32
+fanout_find_exit	0
+fanout_pool_exit	0

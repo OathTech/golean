@@ -1,5 +1,25 @@
 # GoLean native-frontend full-corpus differential baseline
-# re-pinned: 2026-09-02 (bug082-maphint lane — BUG-082 FIX: the native
+# re-pinned: 2026-09-02 (bug082-maphint AUDIT FIX ROUND M1/L1/L2 —
+#   [AGENT]-executed, records + ONE red-by-design row, no code change.
+#   FULL ci --diff at this tip (docs/evidence/2026-09-02_bug082-maphint/
+#   README.md, gate tail "fix round"): drift vs the previous pin =
+#   exactly the 1 NEW row below; NO other row moved in result or stage;
+#   NO PASS->non-PASS flips.
+#   NEW row born FAIL BY DESIGN (1), on BUG-083's Cases line (the open
+#   instance ledger of BUG-032's unordered-panic hoist class):
+#     builtins/len-vs-call-order/hint-panicky-between FAIL/differential
+#       — `iv.(int) + len(make(map[int]int, t[k]))`: gc realizes
+#       "interface conversion: interface {} is string, not int", the
+#       machine the hoisted hint's "index out of range [5] with length
+#       2". Both spec-legal, gc's point outside the modeled set; the
+#       `make` hoist has no A6 guard (pre-existing for make([]T,n) /
+#       make(chan T,n) / plain calls; BUG-082's fix ADDED the map-hint
+#       instance while correcting five sibling shapes — table in the
+#       evidence README §M1). Fix = full-statement linearization
+#       (BUG-032, unbuilt) — NOT a guard extension here, which would
+#       newly refuse the pre-existing shapes.
+#   Everything else: 2572 rows unchanged in result and stage.
+# previous re-pin: 2026-09-02 (bug082-maphint lane — BUG-082 FIX: the native
 #   frontend now lowers the `make(map[K]V, hint)` HINT. [USER] Mike,
 #   2026-09-02, relayed by the [AGENT] coordinator (not firsthand):
 #   «Issue (2) sounds like a clear win, it's a bug fix right? do it» —
@@ -398,7 +418,10 @@
 #     The remaining FAIL rows are the standing frontend/feature gaps
 #     of the 2026-08-22 record (docs/2026-08-22_launch-audit-synthesis.md),
 #     none moved by this re-pin.
-# cases: 2572 (2401 PASS / 171 FAIL)
+# cases: 2573 (2401 PASS / 172 FAIL)
+#   [re-derived by count from this file's data rows at the 2026-09-02
+#   bug082-maphint AUDIT FIX ROUND re-pin ([AGENT]): 2572 (2401 PASS /
+#   171 FAIL) + 1 born-FAIL = 2573 (2401 PASS / 172 FAIL).]
 #   [re-derived by count from this file's data rows at the 2026-09-02
 #   bug082-maphint re-pin ([AGENT]): 2559 (2387 PASS / 172 FAIL) + 13
 #   born-PASS + 1 FAIL->PASS flip = 2572 (2401 PASS / 171 FAIL).]
@@ -536,6 +559,7 @@ PASS	builtins/len-vs-call-order/short-circuit	-
 PASS	builtins/len-vs-call-order/short-circuit-skipped	-
 PASS	builtins/len-vs-call-order/panicky-before-call	-
 FAIL	builtins/len-vs-call-order/panicky-between	frontend-export
+FAIL	builtins/len-vs-call-order/hint-panicky-between	differential
 PASS	builtins/make-channel-len-cap	-
 PASS	builtins/make-map-hint	-
 PASS	builtins/make-map-hint-eval/panic-map-never-created	-

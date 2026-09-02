@@ -107,6 +107,27 @@ func lenPanickyBetween(j int) (r int) {
 	return iv.(int) + len(b[j]) + wit3(5) // gc: 0 (assertion panics first)
 }
 
+// BUG-082 audit fix round M1 (2026-09-02): the make-hint lowering joins
+// the same unordered-panic hoist class. `make(...)` ALWAYS hoists (a
+// statement-level allocation), and since BUG-082's fix its hint operand
+// hoists with it — so a panicky hint is evaluated ahead of a spec-
+// UNORDERED panicky operand to its left. Both points are spec-legal
+// (spec#Order_of_evaluation orders only calls/receives/binary-logical);
+// gc realizes the interface-conversion panic ("interface conversion:
+// interface {} is string, not int"), the machine the hint's index
+// panic ("index out of range [5] with length 2"). The A6 guard
+// (residualPanicFreeOperand x sweepPanickyInlineBefore) is not wired
+// into emitMake — extending it would newly refuse the pre-existing
+// make([]T, n) / make(chan T, n) shapes, a separate arc — so this row
+// is RED BY DESIGN at stage differential, on BUG-083's Cases line
+// (BUG-032 owns the class). NOT called from main: it panics.
+func hintPanickyBetween() int {
+	var iv interface{} = "s"
+	t := []int{1, 2}
+	k := 5
+	return iv.(int) + len(make(map[int]int, t[k]))
+}
+
 func main() {
 	lenVsCallChan()
 	lenVsCallSlice()

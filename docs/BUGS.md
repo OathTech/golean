@@ -1380,6 +1380,34 @@ alongside every `e.lifted` rollback (both paths).
   visible refusals on one rare composition in receive-free functions,
   in exchange for retiring a spec-FORCED silent wrong answer; the
   four flipped Cases rows measure the retirement side only.
+- M1 AMENDMENT (2026-09-02, bug082-maphint audit fix round, [AGENT]):
+  the class gained INSTANCES, not a mechanism. `make(...)` ALWAYS
+  hoists (a statement-level allocation) with no A6 guard
+  (`residualPanicFreeOperand` × `sweepPanickyInlineBefore` is wired
+  into `len`/`cap` only, not `emitMake`), so a panicky size/hint
+  operand is evaluated ahead of a spec-UNORDERED panicky operand to
+  its left. Pre-existing on main for `make([]T, t[k])`, `make(chan T,
+  t[k])` and for PLAIN CALLS (`iv.(int) + boom()`: gc realizes the
+  interface-conversion panic, the machine `boom-call`); BUG-082's fix
+  ADDED the map-hint instances `iv.(int) + len(make(map[int]int,
+  t[k]))` and `iv.(int) + len(make(map[int]int, boom()))` — main was
+  right on exactly those two only because it dropped the hint, while
+  it was WRONG on five sibling shapes the fix made right (a left index
+  / division / nil-deref panic vs a hint index panic, where gc too
+  realizes the hint's panic first — gc hoists the `make`). The full
+  gc-vs-machine table: docs/evidence/2026-09-02_bug082-maphint/README.md
+  §M1. gc's realization is compiler-internal (the interface-conversion
+  panic on the left is the ONE left-operand class gc orders ahead of a
+  hoisted make/call); both points spec-legal; the shared fix is the
+  full-statement linearization this entry records as deliberately not
+  built. Extending the A6 guard to `emitMake` would newly REFUSE the
+  pre-existing slice/chan shapes — a separate arc, NOT done in the
+  records-only fix round. Pinned red-by-design at stage differential
+  (a wrong answer, not a refusal) by
+  builtins/len-vs-call-order/hint-panicky-between, which lives on the
+  Cases line of BUG-083 (open) because check-bugs (3) forbids a FAIL
+  row on a fixed differential entry — BUG-083 is this class's open
+  instance ledger; this entry stays its owner.
 - Status: fixed (2026-08-06, convergence response: the hoist is
   restricted to syntactically PANIC-FREE operands — identifiers,
   literals, pointer-free selector chains (`panicFreeOperand`); a
@@ -4273,3 +4301,44 @@ produces), dead only because of (1). The two gc-truth rows
 `map-hint-over` / `map-hint-negative` (PASS on both binaries) pin that
 gc does not panic there; they did not exercise the machine arm until
 (1) landed (they do now, and sit on this Cases line for that reason).
+
+AUDIT FIX ROUND M1 (2026-09-02): lowering the hint puts it on the
+`make` hoist, which has no A6 unordered-panic guard — so the fix joins
+BUG-032's class with two NEW instances (`iv.(int) + len(make(map[int]
+int, t[k]))`, `… boom()`: gc realizes the interface-conversion panic,
+the machine the hint's) while correcting five sibling shapes main got
+wrong by dropping the hint. Recorded on BUG-032 (M1 amendment) and
+pinned red-by-design on BUG-083's Cases line
+(builtins/len-vs-call-order/hint-panicky-between); the table is in
+this entry's evidence dir, §M1.
+
+## BUG-083 — the `make` hoist has no unordered-panic guard: a panicky size/hint operand is evaluated ahead of a spec-unordered panicky operand to its left (BUG-032's class; the open-instance ledger for the make shapes)
+
+- Status: open
+- Pinned-by: differential
+- Cases: builtins/len-vs-call-order/hint-panicky-between
+- Discovered: 2026-09-02 (bug082-maphint pre-merge audit, M1; the
+  auditor's probes `.tmp/audit-bug082/p4`, `p5`, reproduced in
+  docs/evidence/2026-09-02_bug082-maphint/README.md §M1)
+
+The mechanism and its history are BUG-032's (M1 amendment there):
+`emitMake` hoists `make(...)` unconditionally, and since BUG-082's fix
+the map hint hoists with the slice len/cap and chan cap it always
+carried — none of them behind the A6 guard `len`/`cap` have. On
+`iv.(int) + len(make(map[int]int, t[k]))` (k out of range) gc realizes
+`interface conversion: interface {} is string, not int` and the machine
+`runtime error: index out of range [5] with length 2`; on `… boom()`
+gc the conversion panic, the machine `boom-call`. Both spec-legal
+(spec#Order_of_evaluation orders only calls, receives and binary
+logical operations), gc's point compiler-internal, but observed ∉
+modeled: a wrong answer in a documented class, hence an OPEN
+differential pin rather than a refusal. The same hole is pre-existing
+for `make([]T, t[k])`, `make(chan T, t[k])` and plain `iv.(int) +
+boom()` (table, evidence §M1); the shapes where a left INDEX /
+DIVISION / NIL-DEREF panic meets a hint panic MATCH gc (gc hoists the
+make too). This entry exists because check-bugs (3) cannot hold a FAIL
+row on the fixed BUG-032; it closes when either the full-statement
+linearization BUG-032 records as unbuilt lands, or the A6 guard is
+extended to `emitMake` (which would REFUSE — and newly refuse the
+pre-existing slice/chan shapes; a separate arc, [AGENT] not done in
+the records-only fix round).

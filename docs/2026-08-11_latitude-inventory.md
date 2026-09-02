@@ -1532,7 +1532,8 @@ runtime observable. OPEN QUESTION as stated.
   2026-09-02 on the `bug082-maphint` lane: `emit.go` emits the hint as
   the make-map node's optional `hint` field, NativeToIR decodes it into
   `initialSpace`, and this arm evaluates it and ignores its value; the
-  twin-wire pin moved with it, [USER]-authorized — BUGS.md BUG-082).
+  twin-wire pin moved with it, [USER]-authorized — BUGS.md BUG-082;
+  evidence docs/evidence/2026-09-02_bug082-maphint/).
 - THE PIN — three facts from one implementation: (i) the bound, 2^48
   bytes (heapAddrBits 48; STRICT — a request of exactly 2^48 passes
   the check and then fails to ALLOCATE, behavior 1 below); (ii) the

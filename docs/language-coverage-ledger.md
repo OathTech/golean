@@ -240,7 +240,7 @@ rows covering all 158 anchors.
 | Complex_numbers | frontier(FR-15) | `builtins/real-imag` + `complex/*` — the complex family's builtin surface, all red. |
 | Deletion_of_map_elements | covered(A) | delete suites incl. during-range forced points, alias visibility, NaN keys. |
 | Length_and_capacity | covered(B) | len/cap across all container suites + `len-cap-array-pointer`, `make-channel-len-cap`; BUG-062 FIXED (A6 landed 2026-08-31; rows PASS, one fail-closed refusal residual — see Order_of_evaluation); L:R3 (cap of conversions). |
-| Making_slices_maps_and_channels | covered(A) | disposition + `make-edge` panic matrix + `make-map-hint`, `make-directional`; `builtins/make-maxalloc` (15 rows, 2026-09-02: 14 born PASS + 1 born red, flipped PASS by the BUG-082 fix the same day): gc's allocation-LIMIT panic class — slice len/cap over 2^48 bytes (variable, constant, int64, padded-struct element), len-before-cap blame order, chan size over `2^48 - 112` (the header boundary pinned), zero-size-element control at 1<<62, map hint over/negative (gc clamps, no panic) and `map-hint-eval-order` (BUG-082: the frontend dropped the hint's evaluation; FIXED 2026-09-02, `bug082-maphint` — the hint is lowered as the make-map node's `hint` field), recover ×2; `builtins/make-map-hint-eval` (13 rows, 2026-09-02, all PASS): a panicking hint — a call and a call-free index — with the map never created, evaluated exactly once, negative-from-call (clamped), zero, named / uint8 / untyped-const / typed-const hint types, order vs neighbouring calls and inside one expression; `negative/compile/maps/make-map-{float,string,negative-const,overflow-const}-hint` (4 rows): non-integer / non-representable constant hints are compile errors; L:R16 (pinned gc-amd64 bound + layout; just-under controls and `append` growth NOT expressible — fatal OOM / eager materialization / needs unsafe). |
+| Making_slices_maps_and_channels | covered(A) | disposition + `make-edge` panic matrix + `make-map-hint`, `make-directional`; `builtins/make-maxalloc` (15 rows, 2026-09-02: 14 born PASS + 1 born red, flipped PASS by the BUG-082 fix the same day): gc's allocation-LIMIT panic class — slice len/cap over 2^48 bytes (variable, constant, int64, padded-struct element), len-before-cap blame order, chan size over `2^48 - 112` (the header boundary pinned), zero-size-element control at 1<<62, map hint over/negative (gc clamps, no panic) and `map-hint-eval-order` (BUG-082: the frontend dropped the hint's evaluation; FIXED 2026-09-02, `bug082-maphint` — the hint is lowered as the make-map node's `hint` field; evidence `docs/evidence/2026-09-02_bug082-maphint/`), recover ×2; `builtins/make-map-hint-eval` (13 rows, 2026-09-02, all PASS): a panicking hint — a call and a call-free index — with the map never created, evaluated exactly once, negative-from-call (clamped), zero, named / uint8 / untyped-const / typed-const hint types, order vs neighbouring calls and inside one expression; `negative/compile/maps/make-map-{float,string,negative-const,overflow-const}-hint` (4 rows): non-integer / non-representable constant hints are compile errors; L:R16 (pinned gc-amd64 bound + layout; just-under controls and `append` growth NOT expressible — fatal OOM / eager materialization / needs unsafe). |
 | Min_and_max | covered(A) | the spec's own special-case table pinned (19-red family 3: NaN propagation, ±0 ties, ±Inf) + `min-max-{ints,strings,edge}`. Realization point (2026-09-01 audit fix round): min/max args hoist CALL-FIRST — the E12/E13 ANF family — with the assert-axis divergence census'd at L:E13 (min/max evidence rows there; no pin may be taken). |
 | Allocation | covered(B) | `new/` (7 pkgs); `new-expr/untyped-defaults` red → FR-15 (complex member). |
 | Handling_panics | covered(B) | `panic-recover/` (35 pkgs: nested, repanic, recover positions, defer interaction) + A1's recover-statement rows; abort-RENDERING edges = (c)-pin C4 (4 reds, L:R10) — message channel, not semantics. |
@@ -471,9 +471,15 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (2572 cases, 2401 PASS /
-171 FAIL; `baselines/native-full.tsv`, re-pinned 2026-09-02 on the
-bug082-maphint lane — full ci --diff at that tip: BUG-082 FIXED (the
+All numbers at the current tracked baseline (2573 cases, 2401 PASS /
+172 FAIL; `baselines/native-full.tsv`, re-pinned 2026-09-02 on the
+bug082-maphint lane at its AUDIT FIX ROUND — full ci --diff at that
+tip: +1 born-FAIL-by-design row
+`builtins/len-vs-call-order/hint-panicky-between` (BUG-083, the open
+instance ledger of BUG-032's unordered-panic hoist class — the map-hint
+instance the fix added; post-vintage bucket); red-count movement 171 →
+172, mapped below; no other row moved. The slice's own re-pin the same
+day (2572 / 2401 / 171) — full ci --diff at that tip: BUG-082 FIXED (the
 frontend lowers the `make(map…, hint)` hint), the born-red row
 `builtins/make-maxalloc/map-hint-eval-order` flipped PASS and +13
 born-PASS rows `builtins/make-map-hint-eval/*` (all on BUG-082's Cases
@@ -557,10 +563,11 @@ the historical record; the method is §8b's, re-run).
 frontier 2 (atomic → Q-ATOMIC, goexit → Q-GOEXIT), latitude 1 (model →
 C10), out-of-language 5. Zero unclassified.
 
-**The 171 baseline reds, every one on a named row (re-derived
+**The 172 baseline reds, every one on a named row (re-derived
 mechanically 2026-09-02 — zero unmapped, zero double-mapped; +1 at
-the t5-maxalloc re-pin, BUG-082, and −1 at the BUG-082 fix re-pin the
-same day; +2 at the detector-soundness re-pin,
+the t5-maxalloc re-pin, BUG-082, −1 at the BUG-082 fix re-pin the
+same day, and +1 at that fix's audit fix round, BUG-083; +2 at the
+detector-soundness re-pin,
 both BUG-080, and −2 at the BUG-080 fix re-pin the same day; the Q-*
 bucket's BUG-041 red changed ROW, not count):**
 
@@ -570,10 +577,13 @@ bucket's BUG-041 red changed ROW, not count):**
 | design questions Q-* (§6) | 14 |
 | (c) profound-reason pins (triage §4 + the unsafe marker) | 9 + 1 |
 | (a)-queued fixes (triage §3.2: A3 5, A4 1, A5 1, A7 1) | 8 |
-| post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) + the gotest-fixes BUG-078 budget refusal pin (`arrays/materialization-budget/over-budget`, on BUG-078's Cases line since the audit fix round) | 56 |
-| **total** | **171** |
+| post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) + the gotest-fixes BUG-078 budget refusal pin (`arrays/materialization-budget/over-budget`, on BUG-078's Cases line since the audit fix round) + the bug082-maphint audit-round BUG-083 hoist-order pin (`builtins/len-vs-call-order/hint-panicky-between`, 2026-09-02) | 57 |
+| **total** | **172** |
 
-*(Movement at the 2026-09-02 BUG-082 fix re-pin: post-vintage 57 → 56
+*(Movement at the 2026-09-02 BUG-082 audit fix round re-pin:
+post-vintage 56 → 57 — BUG-083's born-red pin
+`builtins/len-vs-call-order/hint-panicky-between` enters with its
+entry (the `make`-hoist instance of BUG-032's class). Movement at the 2026-09-02 BUG-082 fix re-pin: post-vintage 57 → 56
 — BUG-082's born-red pin `builtins/make-maxalloc/map-hint-eval-order`
 flipped green when the frontend learned to lower the map hint (the
 fix's 13 new rows are born PASS and appear in no bucket). Movement at

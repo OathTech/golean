@@ -180,6 +180,9 @@ done
    hint — but red-first showed that arm was DEAD end-to-end: the native
    frontend does not lower the hint, dropping its evaluation (BUG-082,
    open; red-first row `map-hint-eval-order`, gc 31 vs machine 11).
+   [[AGENT] SUPERSEDED 2026-09-02 — fixed on bug082-maphint, see
+   docs/evidence/2026-09-02_bug082-maphint/; the text above is left as
+   the record of what was true at this probe run.]
 4. Zero-size elements never trip the limit (`mem = 0`); gc realizes
    `make([]struct{}, 1<<62)` and `make(chan struct{}, 1<<62)`. The
    channel form is a feasible corpus control (the machine's buffer is a
@@ -221,7 +224,9 @@ t5-maxalloc binary, on the frontend's wire for the fixture
 
 The map rows' pre-slice result is what exposed BUG-082's real shape:
 the machine arm's negative-hint panic could not have fired, because
-the frontend never lowers the hint. Raw log: this lane's scratch
+the frontend never lowers the hint. [[AGENT] SUPERSEDED 2026-09-02 —
+fixed on bug082-maphint, see docs/evidence/2026-09-02_bug082-maphint/;
+the frontend lowers the hint since that fix.] Raw log: this lane's scratch
 `red-first.txt` (gitignored; the table is the record).
 
 ## F1 fuel-cliff probe (audit fix round, 2026-09-02)

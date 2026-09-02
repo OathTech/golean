@@ -15,6 +15,11 @@
 # A6 was not a pure narrowing; the new refusal is the price of
 # retiring BUG-062's silent wrong answer there (trade in BUG-032's
 # A6 amendment).
+# hint-panicky-between (BUG-082 audit fix round M1, 2026-09-02): the
+# make-HINT instance of the same class, RED BY DESIGN at stage
+# differential (a wrong answer, not a refusal): gc realizes the left
+# interface-conversion panic, the machine the hoisted hint's index panic
+# "index out of range [5] with length 2". On BUG-083's Cases line.
 chan	lenVsCallChan	-	ok	-	channels,len,evaluation_order,calls
 slice	lenVsCallSlice	-	ok	-	slices,len,evaluation_order,calls,append
 recv-bearing	lenVsCallRecvBearing	-	ok	-	channels,len,evaluation_order,calls
@@ -22,3 +27,4 @@ short-circuit	lenVsCallShortCircuit	1	ok	-	channels,len,evaluation_order,calls,b
 short-circuit-skipped	lenVsCallShortCircuit	0	ok	-	channels,len,evaluation_order,calls,bools
 panicky-before-call	lenPanickyBeforeCall	3	ok	-	slices,len,evaluation_order,calls,panic,recover,indexing
 panicky-between	lenPanickyBetween	2	ok	-	slices,len,evaluation_order,calls,panic,recover,indexing,interfaces,type_assertions
+hint-panicky-between	hintPanickyBetween	-	panic	interface conversion	maps,make,len,evaluation_order,panic,indexing,interfaces,type_assertions

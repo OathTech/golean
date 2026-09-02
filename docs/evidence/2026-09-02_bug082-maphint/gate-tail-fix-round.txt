@@ -1,0 +1,41 @@
+# producer: scripts/capped scripts/ci --diff on the bug082-maphint worktree, AUDIT FIX ROUND (tree 8c3aa6ae + the round's records, uncommitted at run time; log .tmp/bug082-ci-diff-2.log, summary verbatim)
+  ok:146  fail:0  exit:0
+  ok: lake-build failure exits 2, no readable results (G1)
+  ok: lake-build timeout exits 2, no readable results (G2)
+  ok: manifest-not-found exits 2, no readable results (G3)
+  ok: empty manifest exits 2 without publishing (G4)
+  ok: harness re-validation rejects samples=0 (F4)
+  ok: membership under non-native frontend fails closed (F6)
+  ok: members= cardinality pin refuses a wrong pin (B3)
+  ok: confluent lane refuses a non-singleton set (B4)
+  ok: racy lane fails loud on a refuted width (B5)
+  ok: fan-out that ran no worker exits 2 without publishing (G5)
+  ok: G5 named both causes (global fan-out refusal + empty-row guard), no stray .out
+  note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   core build (warning-free)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   eval tests (146 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  note negative baseline diff matched (394 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  note baseline diff FULL (2573/2573, no regression) but recorded on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  ok   re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)
+  ok   re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)
+  note reconciler: 3 finding(s), 0 HIGH — report-only (details: tools/reconcile-records)
+[1mRESULT: PASS[0m
+CI-EXIT=0
