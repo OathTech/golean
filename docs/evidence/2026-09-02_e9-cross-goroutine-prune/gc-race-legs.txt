@@ -1,0 +1,10 @@
+# producer: docs/evidence/2026-09-02_e9-cross-goroutine-prune/probe/run-matrix.sh (-race legs: DRF shapes must be green, the racy control red)
+go version go1.26.5 linux/amd64
+mode=drf GOMAXPROCS=8 size=3 fresh=3 trials=200 -> n=-1:0 n=3:200 n=4:0 other:0
+drf -race exit=0
+mode=grow GOMAXPROCS=8 size=3 fresh=1 trials=200 -> n=1:16 n=2:184 other:0
+grow(1 insert) -race exit=0
+WARNING: DATA RACE
+mode=racy GOMAXPROCS=8 size=3 fresh=3 trials=20 -> n=-1:0 n=3:20 n=4:0 other:0
+Found 1 data race(s)
+racy -race exit=66

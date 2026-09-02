@@ -1,0 +1,7 @@
+# producer: go build in a scratch module from docs/evidence/2026-09-02_e9-cross-goroutine-prune/probe-sameg/main.go; for f in 0 1 2 3 8; do ./probe 20000 3 $f; done (GOMAXPROCS=8)
+go version go1.26.5 linux/amd64
+same-goroutine GOMAXPROCS=8 size=3 fresh=0 trials=20000 -> n=1:20000 n=2:0 other:0
+same-goroutine GOMAXPROCS=8 size=3 fresh=1 trials=20000 -> n=1:2486 n=2:17514 other:0
+same-goroutine GOMAXPROCS=8 size=3 fresh=2 trials=20000 -> n=1:4981 n=2:15019 other:0
+same-goroutine GOMAXPROCS=8 size=3 fresh=3 trials=20000 -> n=1:7398 n=2:12602 other:0
+same-goroutine GOMAXPROCS=8 size=3 fresh=8 trials=20000 -> n=1:20000 n=2:0 other:0

@@ -165,13 +165,14 @@ machine and every statement carrier stay on registry-point
 `StepM`/`stepMulti`. -/
 inductive StepMFine : MultiConfig → MultiConfig → Prop where
   | thread {m : MultiConfig} {i : Nat} {c : Config} {c' : Config} {σ' : ExecState}
-      {efs : List Config} :
+      {efs : List Config} {ts' : Array Config} :
       schedPickFine m i →
       m.threads[i]? = some c →
       isBlockedConfig c = false →
       arrivalCases m.shared m.threads i c = .ok .cellPath →
       StepE c m.shared c' σ' efs →
-      StepMFine m ⟨(m.threads.setIfInBounds i c') ++ efs.toArray, σ', i⟩
+      pruneForeign σ' i c c' ((m.threads.setIfInBounds i c') ++ efs.toArray) = .ok ts' →
+      StepMFine m ⟨ts', σ', i⟩
   | pair {m : MultiConfig} {i : Nat} {c bc : Config} {σ'' : ExecState}
       {cs : List (Nat × PairTarget)} {idx : Nat} {ts' : Array Config} :
       schedPickFine m i →
@@ -270,8 +271,8 @@ registry-point pool step is a fine pool step. -/
 theorem stepM_le_stepMFine {m m' : MultiConfig} (h : StepM m m') :
     StepMFine m m' := by
   cases h with
-  | thread hs hti hbl hplan hstep =>
-      exact StepMFine.thread (schedPick_le_fine hs) hti hbl hplan hstep
+  | thread hs hti hbl hplan hstep hprune =>
+      exact StepMFine.thread (schedPick_le_fine hs) hti hbl hplan hstep hprune
   | pair hs hti hbl hsp hplan hidx hap =>
       exact StepMFine.pair (schedPick_le_fine hs) hti hbl hsp hplan hidx hap
   | pickPair hs hti hbl hsp hplan hget hidx hap =>

@@ -2395,7 +2395,11 @@ the re-pin guard. The guard treats an untyped-nil source as exact
   inventory E9 + `Cont.mapIterK`'s docstring: delete-prune rewrites
   only same-goroutine frames — cross-goroutine delete-during-range is
   racy-red via the new footprint, and the prune widening is owed at
-  the first non-racy cross-goroutine shape. Kit obligations recorded
+  the first non-racy cross-goroutine shape. [CLOSED 2026-09-02: the
+  "racy-red" dismissal was wrong for the handshake-synchronized (DRF)
+  shape (fidelity finding A1-20); the pool-level `pruneForeign`
+  (Multi.lean) now prunes every goroutine's in-flight frames — rows
+  `maps/cross-goroutine-delete-readd/{drf,insert,racy}`; inventory E9.] Kit obligations recorded
   in the arc log: the termination theorem "body stores no key into
   the ranged map ⇒ range terminates" (record, not prove);
   stop-admitting/mutating-range WP laws land with the first walk that

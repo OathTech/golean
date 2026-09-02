@@ -1057,6 +1057,94 @@ theorem runnableIdxs_lt {s : ExecState} {ts : Array Config} {i : Nat}
   exact List.mem_range.mp (List.mem_filter.mp h).1
 
 set_option maxHeartbeats 1600000 in
+/-! ### The cross-goroutine delete-prune (E9 closure) preserves the carrier -/
+
+/-- A continuation rewrite that never grows a loc sup lifts to
+configurations through `Config.mapContM`. -/
+theorem Config.mapContM_locSup {f : Cont → Except GoError Cont}
+    (hf : ∀ {k k' : Cont}, f k = .ok k' → Cont.locSup k' ≤ Cont.locSup k) :
+    ∀ {c c' : Config}, Config.mapContM f c = .ok c' →
+      Config.locSup c' ≤ Config.locSup c := by
+  intro c
+  induction c <;> intro c' h <;>
+    simp only [Config.mapContM, bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
+  case panicked msg =>
+    subst h
+    exact Nat.le_refl _
+  case opDone sched inner ih =>
+    obtain ⟨inner', hi, rfl⟩ := h
+    simpa [Config.locSup] using ih hi
+  all_goals
+    (obtain ⟨k', hk', rfl⟩ := h
+     have := hf hk'
+     simp only [Config.locSup]
+     omega)
+
+/-- The foreign walk keeps every configuration loc-bounded and the
+list length. -/
+theorem pruneForeignList_wf {s : ExecState} {op : StmtOp} {vs : List GoValue}
+    {i b : Nat} :
+    ∀ {j : Nat} {l l' : List Config}, pruneForeignList s op vs i j l = .ok l' →
+      (∀ c ∈ l, ConfigWf b c) → l'.length = l.length ∧ ∀ c' ∈ l', ConfigWf b c' := by
+  intro j l
+  induction l generalizing j with
+  | nil =>
+    intro l' h hl
+    simp only [pruneForeignList, pure_eq_ok, Except.ok.injEq] at h
+    subst h
+    exact ⟨rfl, by simp⟩
+  | cons c rest ih =>
+    intro l' h hl
+    simp only [pruneForeignList, bind_eq_ok] at h
+    obtain ⟨c', hc', rest', hrest', h⟩ := h
+    simp only [pure_eq_ok, Except.ok.injEq] at h
+    subst h
+    have hcw : ConfigWf b c' := by
+      unfold pruneForeignOne at hc'
+      split at hc'
+      · simp only [pure_eq_ok, Except.ok.injEq] at hc'
+        subst hc'
+        exact hl c (by simp)
+      · exact Nat.le_trans
+          (Config.mapContM_locSup (fun h => contAfterStmtOp_locSup h) hc')
+          (hl c (by simp))
+    obtain ⟨hlen, hall⟩ := ih hrest' (fun x hx => hl x (by simp [hx]))
+    refine ⟨by simp [hlen], ?_⟩
+    intro x hx
+    rcases List.mem_cons.mp hx with rfl | hx
+    · exact hcw
+    · exact hall x hx
+
+/-- `pruneForeign` keeps the pool's size and every goroutine's
+loc-boundedness. -/
+theorem pruneForeign_wf {s : ExecState} {i : Nat} {c c' : Config}
+    {ts ts' : Array Config} {b : Nat}
+    (h : pruneForeign s i c c' ts = .ok ts')
+    (hts : ∀ t (ht : t < ts.size), ConfigWf b ts[t]) :
+    ts'.size = ts.size ∧ ∀ t (ht : t < ts'.size), ConfigWf b ts'[t] := by
+  have hmem : ∀ x ∈ ts.toList, ConfigWf b x := by
+    intro x hx
+    obtain ⟨t, ht, hxt⟩ := List.mem_iff_getElem.mp hx
+    have ht' : t < ts.size := by simpa using ht
+    have := hts t ht'
+    simpa [← hxt] using this
+  unfold pruneForeign at h
+  split at h
+  · simp only [pure_eq_ok, Except.ok.injEq] at h
+    subst h
+    exact ⟨rfl, hts⟩
+  · split at h
+    · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
+      obtain ⟨l', hl', rfl⟩ := h
+      obtain ⟨hlen, hall⟩ := pruneForeignList_wf hl' hmem
+      refine ⟨by simp [hlen], ?_⟩
+      intro t ht
+      exact hall _ (List.mem_toArray.mp (Array.getElem_mem ht))
+    · simp only [pure_eq_ok, Except.ok.injEq] at h
+      subst h
+      exact ⟨rfl, hts⟩
+    · simp [throw, throwThe, MonadExceptOf.throw] at h
+
 /-- `stepThread` preservation: one goroutine-step of the pool keeps the
 shared state wf (allocator monotone, types unchanged), never shrinks
 the pool, and leaves every slot bounded and iteration-typed. -/
@@ -1135,12 +1223,19 @@ theorem stepThread_wf {s : ExecState} {threads : Array Config} {i : Nat}
                 dsimp only at h
                 simp only [bind_eq_ok] at h
                 obtain ⟨⟨c₂, s₂, ch₂⟩, hstep, h⟩ := h
+                -- E9 closure: the cross-goroutine prune's outcome.
+                simp only [bind_eq_ok] at h
+                obtain ⟨ts₂, hpr, h⟩ := h
                 simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
                 obtain ⟨rfl, rfl, rfl, rfl⟩ := h
                 have hstepr := stepFn_sound hstep
                 obtain ⟨q1, q2, q3, q4⟩ := step_preserves_wf_loc hstepr hw hc
                 have q5 := step_preserves_iters hstepr hic
-                exact ⟨q1, q3, q4, by simp, pool_set1_wf q4 hts q2 q5⟩
+                have hpool := pool_set1_wf (i := i) q4 hts q2 q5
+                obtain ⟨hsz, hwf⟩ := pruneForeign_wf hpr (fun t ht => (hpool t ht).1)
+                refine ⟨q1, q3, q4, ?_, fun t ht => ⟨hwf t ht, Config.itersNormalized_true _ _⟩⟩
+                rw [hsz]
+                simp
               | some p =>
                 obtain ⟨v, clauses, default?, done, env, k'⟩ := p
                 obtain rfl := selectApplyPlan_shape hselp

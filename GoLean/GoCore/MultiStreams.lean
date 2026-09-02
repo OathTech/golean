@@ -338,6 +338,9 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
               dsimp only at h
               simp only [bind_eq_ok] at h
               obtain ⟨⟨c₂, s₂, ch₂⟩, hstep, h⟩ := h
+              -- E9 closure: the cross-goroutine prune consumes no stream.
+              simp only [bind_eq_ok] at h
+              obtain ⟨ts₂, hpr, h⟩ := h
               simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
               obtain ⟨rfl, rfl, rfl, rfl⟩ := h
               obtain ⟨rfl, hall⟩ := stepFn_oblivious
@@ -350,6 +353,8 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
               rw [hselp]
               dsimp only
               rw [hall ch]
+              dsimp only
+              rw [hpr]
               rfl
             | single bc cands =>
               rw [harr] at hobl

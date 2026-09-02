@@ -1,5 +1,38 @@
 # GoLean native-frontend full-corpus differential baseline
-# re-pinned: 2026-09-02 (bug080-atomic-kind lane — BUG-080 FIXED: the race
+# re-pinned: 2026-09-02 (t5-e9-prune lane — Tier-5 slice: the E9
+#   cross-goroutine delete-prune (fidelity finding A1-20, inventory E9
+#   REOPEN -> CLOSED); [AGENT]-executed inside the Tier-5 mandate under
+#   the standing [USER] ruling of 2026-08-19 (full literal map-range
+#   envelope, I-1/L-012 — unchanged). FULL ci --diff at this tip
+#   (docs/evidence/2026-09-02_e9-cross-goroutine-prune/gate-tail.txt):
+#   2537 cases run, drift = exactly the 4 NEW rows below; NO other row
+#   moved in result or stage; NO PASS->non-PASS flips. Machine change:
+#   ONE, pool-level — GoLean/GoCore/Multi.lean `pruneForeign`: at a
+#   mapDelete/clearMap apply that proceeded, the SAME `contAfterStmtOp`
+#   prune now also walks every OTHER goroutine's continuation (the
+#   deleter's own was already pruned inside stepFn); `StepM.thread` /
+#   `StepMFine.thread` carry it as a premise, and the soundness,
+#   completeness, one-thread-equivalence, MultiWf and obliviousness
+#   proofs are extended arm-for-arm (no sorry). Every single-goroutine
+#   row is unaffected by construction (`stepThread_single`) and by the
+#   run (2533 rows unchanged).
+#   NEW rows born PASS (4):
+#     maps/cross-goroutine-delete-readd/drf PASS/membership — the A1-20
+#       witness: handshake-ordered cross-goroutine delete+re-create of
+#       the first-produced key; admitted {3,4}, gc samples 3 (gc never
+#       re-produces in the plain shape: 160,600 probe trials).
+#     maps/cross-goroutine-delete-readd/insert PASS/membership — same,
+#       with ONE fresh insert between the delete and the re-create;
+#       admitted {1,2}, gc exhibits BOTH (~87% re-produced at the
+#       probe) — before the prune this row was observed-outside-modeled.
+#     maps/cross-goroutine-delete-readd/racy PASS/racy — the
+#       unsynchronized control: every enumerated path refuses, -race red.
+#     maps/delete-insert-readd-during-range PASS/membership — the
+#       same-goroutine oracle-exhibited twin of delete-readd-during-range
+#       (L-012 addendum: gc DOES produce a key twice in one range when a
+#       small insert intervenes); admitted {1,2}.
+#   Everything else: 2533 rows unchanged in result and stage.
+# previous re-pin: 2026-09-02 (bug080-atomic-kind lane — BUG-080 FIXED: the race
 #   detector's access KIND; the slice is [USER]-ruled (qrow-rulings row 2,
 #   "pull forward as its own S–M slice, sequenced BEFORE the Q-ATOMIC arc"),
 #   [AGENT]-executed. FULL ci --diff at this tip (artifacts/bug080/
@@ -272,7 +305,8 @@
 #     The remaining FAIL rows are the standing frontend/feature gaps
 #     of the 2026-08-22 record (docs/2026-08-22_launch-audit-synthesis.md),
 #     none moved by this re-pin.
-# cases: 2537 (2366 PASS / 171 FAIL)
+# cases: 2541 (2370 PASS / 171 FAIL)
+#   [re-derived from the data rows at the round-4 merge-train rebase 2026-09-02 ([AGENT], union of both sides): 2537 (2366 PASS / 171 FAIL) on main after bug080-atomic-kind + 4 born-PASS E9 rows = 2541 (2370 PASS / 171 FAIL)]
 #   [re-derived by count from this file's data rows at the 2026-09-02
 #   bug080-atomic-kind re-pin: 2533 (2360 PASS / 173 FAIL) + 4 born-PASS
 #   + 2 FAIL->PASS flips = 2537 (2366 PASS / 171 FAIL). The re-pin had
@@ -1748,12 +1782,16 @@ PASS	maps/array-value-copy	-
 PASS	maps/channel-key	-
 PASS	maps/clear-during-range	-
 PASS	maps/compound-assign-eval-once	-
+PASS	maps/cross-goroutine-delete-readd/drf	membership
+PASS	maps/cross-goroutine-delete-readd/insert	membership
+PASS	maps/cross-goroutine-delete-readd/racy	racy
 PASS	maps/deep-incomparable-insert	-
 PASS	maps/defined-map-value	-
 PASS	maps/delete-alias-visible	-
 PASS	maps/delete-during-range	-
 PASS	maps/delete-eval-order	-
 PASS	maps/delete-existing	-
+PASS	maps/delete-insert-readd-during-range	membership
 PASS	maps/delete-interface-dynamic-key	-
 PASS	maps/delete-interface-key-panic	-
 PASS	maps/delete-missing	-

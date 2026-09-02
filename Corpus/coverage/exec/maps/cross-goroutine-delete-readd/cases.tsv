@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# E9 cross-goroutine delete-prune witness (2026-09-02, fidelity finding
+# A1-20 → inventory E9 CLOSED). The DRF rows are MEMBERSHIP rows over
+# the [USER]-ruled full literal envelope (I-1 / L-012: a deleted-then-
+# re-created key is a NEW entry, may be produced or skipped); the
+# foreign prune (`pruneForeign`, Multi.lean) is what makes the
+# re-production member realizable. Born GREEN with the prune; before
+# it the machine's sets were the singletons {3} / {1} — the membership
+# lint's singleton refusal is the honest red this row would show if
+# the cross-goroutine prune regressed.
+drf	crossGoroutineDeleteReAdd	-	ok	-	maps,delete,range,goroutines,channels,nondet	membership	the handshake-ordered cross-goroutine delete+re-create of the first-produced key makes it a NEW entry: admitted set {3 (skipped), 4 (produced again)} (members=2); consumption sites are the map pick-next (bound live candidates + stop <= 4) and the L1/postOp scheduler picks (|runnable| <= 2) — width 4 covers both; gc's plain-shape sample is 3 (never 4 in 160k trials), the insert row is where gc exhibits the re-production member	width=4,sites=32,members=2,backedge=full,work=2000000
+insert	crossGoroutineDeleteReAddInsert	-	ok	-	maps,delete,range,goroutines,channels,nondet	membership	same handshake shape with ONE fresh insert (a created entry, may be produced or skipped) between the delete and the re-create; the observable counts productions of the handed-over key only: admitted set {1 (skipped), 2 (produced again)} (members=2) — gc exhibits BOTH (~87% n=2 at size 3, one insert); pick-next bound <= 4 live candidates + stop = 5, scheduler bound 2 — width 8 >= 5	width=8,sites=48,members=2,backedge=full,work=8000000
+racy	crossGoroutineDeleteReAddRacy	-	race	-	maps,delete,range,goroutines,channels,race	racy	-	width=4,sites=32,backedge=full

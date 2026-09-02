@@ -1,0 +1,24 @@
+# producer: docs/evidence/2026-09-02_e9-cross-goroutine-prune/probe/run-matrix.sh (intervening fresh-insert sweep, size 3 and size 8)
+go version go1.26.5 linux/amd64
+mode=grow GOMAXPROCS=1 size=3 fresh=0 trials=20000 -> n=1:20000 n=2:0 other:0
+mode=grow GOMAXPROCS=1 size=3 fresh=1 trials=20000 -> n=1:2555 n=2:17445 other:0
+mode=grow GOMAXPROCS=1 size=3 fresh=2 trials=20000 -> n=1:5012 n=2:14988 other:0
+mode=grow GOMAXPROCS=1 size=3 fresh=3 trials=20000 -> n=1:7395 n=2:12605 other:0
+mode=grow GOMAXPROCS=1 size=3 fresh=4 trials=20000 -> n=1:10035 n=2:9965 other:0
+mode=grow GOMAXPROCS=1 size=3 fresh=5 trials=20000 -> n=1:12663 n=2:7337 other:0
+mode=grow GOMAXPROCS=1 size=3 fresh=8 trials=20000 -> n=1:20000 n=2:0 other:0
+mode=grow GOMAXPROCS=8 size=3 fresh=0 trials=20000 -> n=1:20000 n=2:0 other:0
+mode=grow GOMAXPROCS=8 size=3 fresh=1 trials=20000 -> n=1:2493 n=2:17507 other:0
+mode=grow GOMAXPROCS=8 size=3 fresh=2 trials=20000 -> n=1:4903 n=2:15097 other:0
+mode=grow GOMAXPROCS=8 size=3 fresh=3 trials=20000 -> n=1:7539 n=2:12461 other:0
+mode=grow GOMAXPROCS=8 size=3 fresh=4 trials=20000 -> n=1:9949 n=2:10051 other:0
+mode=grow GOMAXPROCS=8 size=3 fresh=5 trials=20000 -> n=1:12524 n=2:7476 other:0
+mode=grow GOMAXPROCS=8 size=3 fresh=8 trials=20000 -> n=1:20000 n=2:0 other:0
+mode=grow GOMAXPROCS=1 size=8 fresh=0 trials=20000 -> n=1:20000 n=2:0 other:0
+mode=grow GOMAXPROCS=1 size=8 fresh=1 trials=20000 -> n=1:20000 n=2:0 other:0
+mode=grow GOMAXPROCS=1 size=8 fresh=3 trials=20000 -> n=1:20000 n=2:0 other:0
+mode=grow GOMAXPROCS=1 size=8 fresh=8 trials=20000 -> n=1:20000 n=2:0 other:0
+mode=grow GOMAXPROCS=8 size=8 fresh=0 trials=20000 -> n=1:20000 n=2:0 other:0
+mode=grow GOMAXPROCS=8 size=8 fresh=1 trials=20000 -> n=1:20000 n=2:0 other:0
+mode=grow GOMAXPROCS=8 size=8 fresh=3 trials=20000 -> n=1:20000 n=2:0 other:0
+mode=grow GOMAXPROCS=8 size=8 fresh=8 trials=20000 -> n=1:20000 n=2:0 other:0

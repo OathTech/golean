@@ -51,6 +51,15 @@ Rules of the file:
   closed on self-inserting loops (genuinely unbounded traces under
   this reading); the kit obligation "body stores no key into the
   ranged map ⇒ range terminates".
+- Oracle exhibition (added 2026-09-02, E9 cross-goroutine slice): the
+  "may be produced again" member is gc-OBSERVED, not only permitted —
+  with ONE fresh insert between the delete and the re-create gc
+  re-produces the re-created key in ~87% of runs (size 3), same- and
+  cross-goroutine alike; rows `maps/delete-insert-readd-during-range`
+  ({1,2}, both exhibited) and `maps/cross-goroutine-delete-readd/{drf,
+  insert}` ({3,4} / {1,2}); the reading's cross-goroutine realization
+  needed the pool-level prune `pruneForeign` (Multi.lean) — inventory
+  E9, evidence dir `docs/evidence/2026-09-02_e9-cross-goroutine-prune/`.
 
 ### I-2. "not specified" evaluation order is UNSEQUENCED, not either-order — backed by L-013
 

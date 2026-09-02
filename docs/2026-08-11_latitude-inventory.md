@@ -903,7 +903,7 @@ gc's early store a deviation, L-016, 2026-09-02).
   realization + record: this row's disposition per the Tier-1 fix
   round; the register-side restatement rides Tier 2.
 
-### E9. Map iteration order — (a) ENVELOPED (full literal envelope over the LIVE map) — RE-ENVELOPED 2026-08-19 (BUG-005 (L) surgery, user-ruled)
+### E9. Map iteration order — (a) ENVELOPED (full literal envelope over the LIVE map) — RE-ENVELOPED 2026-08-19 (BUG-005 (L) surgery, user-ruled); cross-goroutine prune CLOSED 2026-09-02
 
 - WHERE: spec#For_range (tightened from the parent section per the
   P2 audit): "The iteration order over maps is not
@@ -917,9 +917,12 @@ gc's early store a deviation, L-016, 2026-09-02).
   slot (width `candidates + 1`, stop LAST) is legal exactly when no
   MANDATORY candidate remains (`mapIterMandatoryRemains` — a candidate
   whose key is a never-removed start key must still be produced);
-  `mapDelete`/`clearMap` prune deleted keys out of same-goroutine
-  `mapIterK` frames via `contAfterStmtOp` (delete-prune), which is
-  what makes "removed before being reached ⇒ not produced" exact.
+  `mapDelete`/`clearMap` prune deleted keys out of EVERY goroutine's
+  in-flight `mapIterK` frames over the same map — the deleter's own via
+  `contAfterStmtOp` inside `stepFn`, every other goroutine's via the
+  pool step's `pruneForeign` (Multi.lean, 2026-09-02) — which is what
+  makes "removed before being reached ⇒ not produced" exact and a
+  re-created key a candidate again in whichever goroutine ranges.
 - ENVELOPE: the FULL literal envelope of the spec's production table,
   user-ruled 2026-08-19 ("any latitude in the Go spec should be
   supported" — no narrowings): all orders of surviving entries;
@@ -935,29 +938,52 @@ gc's early store a deviation, L-016, 2026-09-02).
   formerly red live-mutation pins (delete/clear/update/
   delete-unreached-during-range) are green post-surgery, and the
   created-entry latitude rows are MEMBERSHIP rows
-  (maps/delete-readd-during-range, maps/added-entry-count).
-- RESIDUAL NARROWING — **REOPEN (2026-08-31, corrected per the
-  code-wins rule; fidelity finding A1-20)**: delete-prune rewrites
-  only the SAME-GOROUTINE continuation. This row previously disposed
-  of the cross-goroutine case as "already a data race by the race
-  footprint's pick-time read" — FALSE against the machine's own site
-  record: `Cont.mapIterK`'s envelope statement scopes the unpruned
-  case to a **DRF cross-goroutine delete (synchronized mid-range)**,
-  which no refusal touches (a channel handshake HB-orders the delete
-  against every pick; `-race` and C10 stay green). So the narrowing
-  is NOT unobservable-by-refusal: a spec-permitted member of this
-  row's [USER]-ruled FULL literal envelope — re-production of a
-  cross-goroutine deleted-then-re-created key, a NEW entry under
-  I-1 — is unrealizable: **permitted ∉ modeled on a DRF program**,
-  standing, in the census's own exemplar row. The old re-envelope
-  trigger ("widen or justify at the first cross-goroutine-range case
-  that is not already racy-red") has FIRED by construction — the DRF
-  shape exists and the code names it. The machine-side fix
-  (cross-goroutine prune, or a [USER] re-scope of the 2026-08-19
-  full-envelope ruling to same-goroutine mutation) is Tier-5 work,
-  explicitly NOT closed by this record correction; a corpus witness
-  (handshake-synchronized delete-and-recreate during another
-  goroutine's range) is owed so the hole is red rather than prose.
+  (maps/delete-readd-during-range, maps/added-entry-count;
+  2026-09-02: maps/delete-insert-readd-during-range — the
+  oracle-EXHIBITED twin: with ONE intervening insert gc re-produces
+  the re-created key in ~87% of runs at size 3, so BOTH members of the
+  I-1 envelope are now gc-observed, same-goroutine; and the
+  cross-goroutine rows below).
+- CROSS-GOROUTINE MUTATION — **CLOSED 2026-09-02 [AGENT, Tier-5 slice
+  t5-e9-prune; the [USER] ruling applied is the 2026-08-19 full
+  literal envelope, unchanged]**. History: this row disposed of the
+  cross-goroutine case as "already a data race" (FALSE against the
+  code — fidelity finding A1-20, REOPENED 2026-08-31): the delete-prune
+  walked only the DELETING goroutine's continuation, so a DRF
+  cross-goroutine delete-then-re-create (goroutine B deletes and
+  re-inserts key k mid-range, handshake-ordered against ranging
+  goroutine A's picks — `-race` green 200/200) left A's produced/start
+  sets unpruned and re-production of the re-created key was
+  unrealizable: permitted ∉ modeled on a DRF program. MECHANISM: the
+  pool step (`stepThread`, Multi.lean) now applies the SAME
+  `contAfterStmtOp` prune to every OTHER goroutine's continuation at a
+  `mapDelete`/`clearMap` apply that proceeded (`pruneForeign` over
+  `Config.mapContM`; no new state, no new frame shape, no per-map
+  registry; fail-closed: `Except`-monadic walk, every configuration
+  constructor enumerated, an unexpected apply successor is an
+  `.internal` refusal). The pool relation `StepM.thread` (and NPDRF's
+  `StepMFine.thread`) carries the prune as a premise; soundness,
+  completeness, `stepThread_single` (one-thread pool ≡ `stepFn`),
+  `MultiWf` preservation and stream-obliviousness were extended
+  arm-for-arm (`pruneForeign_wf`, `Config.mapContM_locSup`,
+  `stepFn_stmtOpApply_shape`; no sorry). EVIDENCE: gc probe (evidence
+  dir `docs/evidence/2026-09-02_e9-cross-goroutine-prune/`) — the
+  plain shape NEVER re-produces in gc (160,000 in-process trials over
+  GOMAXPROCS ∈ {1,8} × sizes {3,8,100,1000} + 600 fresh-process runs),
+  but with ONE intervening fresh insert between the delete and the
+  re-create gc re-produces the key in ~87% of runs (size 3; sweep
+  1→87%, 2→75%, 3→63%, 4→50%, 5→37%, 8→0%; size 8 never — a
+  single-group slot-placement effect of gc's swiss map), so the
+  formerly unrealizable member is gc-EXHIBITED: before the prune that
+  shape was observed ∉ modeled (a differential mismatch), not merely
+  permitted ∉ modeled. CORPUS: membership rows
+  `maps/cross-goroutine-delete-readd/drf` (admitted {3,4}; gc samples
+  3) and `.../insert` (admitted {1,2}; gc exhibits both), plus the
+  racy control `.../racy` (no handshake — every enumerated path
+  refuses, `-race` red exit 66), which shows the DRF/racy line the
+  detector draws; the singleton-set membership lint is the honest red
+  these rows show if the foreign prune regresses. The old re-envelope
+  trigger is discharged; no residual narrowing remains on this row.
 
 ### E10. Which `==`-equal map key is retained on overwrite — (b) PINNED (always-replace)
 
@@ -1578,8 +1604,9 @@ concurrency-relevance (the charter: concurrency matters most),
    §5c-fallback ruling / the reduction lane).
 2. **E9/BUG-005 — live map iteration.** DONE 2026-08-19 (the (L)
    surgery): live-cell candidates, delete-prune, per-pick footprint
-   (U1 closed), full literal envelope user-ruled — see E9's entry for
-   the residual cross-goroutine-prune narrowing and its obligation.
+   (U1 closed), full literal envelope user-ruled; the residual
+   cross-goroutine-prune narrowing CLOSED 2026-09-02 (pool-level
+   `pruneForeign` — see E9's entry).
 3. **E7 — hidden-dep init order.** Oracle-red today (standing
    deviation record), the only pin KNOWN to sit beside the oracle's
    realization on the SEQUENTIAL side, soundness-direction
@@ -1671,8 +1698,8 @@ memory)" for the doctrine's.
     BUG-005 (L) surgery made iteration live (per-pick candidates,
     delete-prune, per-pick read footprint closing U1, created-entry
     latitude enveloped); the obliviousness and wf analyses were
-    replayed. Residual: the cross-goroutine delete-prune narrowing
-    recorded at E9.
+    replayed. The residual cross-goroutine delete-prune narrowing
+    recorded at E9 was CLOSED 2026-09-02 (pool-level `pruneForeign`).
 12. **A woken select head-commits; only entry-time selects draw L2.**
     A deliberate wake-path narrowing. RE-ARGUED 2026-09-01 [AGENT]
     (post-B1/B2; the old gc-commit-at-wake argument is SUPERSEDED —
@@ -1852,9 +1879,9 @@ Nothing in this block is a class member by virtue of being named here.
   founding commit `b44fb7b0` and it sat in no enumeration. The reading
   and the two rejected alternatives are recorded in the R7 row itself.
   E9's created-entries sub-point was LIFTED to the full envelope
-  2026-08-19; its residual is the cross-goroutine delete-prune
-  narrowing recorded in E9 — E9 is an **(a)** row and was named in the
-  (b-n) list only for that aside.
+  2026-08-19; its residual cross-goroutine delete-prune narrowing
+  (recorded in E9) was CLOSED 2026-09-02 — E9 is an **(a)** row and
+  was named in the (b-n) list only for that aside.
 - **Heading tags completed 2026-08-22.** Three rows carried no class
   tag at all, so their class was readable only from the body — which
   is what let the enumerations drift unnoticed. Assigned from the

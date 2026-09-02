@@ -1,0 +1,37 @@
+# scripts/ci --diff on the FINAL t5-e9-prune slice tree (dirty, pre-commit; baseline re-pinned in the same tree), 2026-09-02 — the run's non-ok lines from the differential step on. An earlier identical run on the pre-re-pin tree showed exactly the 4 NEW ids as DRIFT (all PASS) and nothing else.
+[1m── re-run full native differential corpus (--diff: tier=slow rows verified against their cached certified records)[0m
+differential coverage summary: cases=2537 pass=2364 fail=173 export_status=0
+results: artifacts/coverage/latest.tsv
+metadata: artifacts/coverage/latest.meta.tsv
+
+[1m── membership-lane gate self-test, go-dependent half (--with-go: F4 param re-validation, F6 frontend guard, B3-B5 slice-4 lane gates, G5 fan-out-never-ran no-publish; G1-G4 run in the fast half since audit F19)[0m
+  test-lane-validation: ok
+
+[1m── re-run negative corpus (--diff)[0m
+results: artifacts/coverage/negative-latest.tsv
+meta: artifacts/coverage/negative-latest.meta.tsv
+
+[1m── derived oracle artifacts re-derived (Tests/FloatVectors.lean + tools/nativefrontend/inittask-std.tsv)[0m
+
+[1m── negative baseline diff[0m
+no regression: 390 case(s) run in negative-latest.tsv match baselines/negative-full.tsv
+
+[1m── differential baseline diff (scripts/coverage-baseline-diff)[0m
+no regression: 2537 case(s) run in latest.tsv match baselines/native-full.tsv
+
+[1m── baseline re-pin guard (worktree-vs-HEAD; flips must be on a BUGS.md Cases: line)[0m
+
+[1m── cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)[0m
+  [01] C4  HIGH    the language-coverage ledger §8 arithmetic is computed over a STALE baseline: §8 says 2533 cases / 2360 PASS / 173 FAIL; the tracked baseline at this tip is 2537 / 2364 / 173 (delta: 4 cases, 0 reds). §8 claims 'every one on a named row' — that claim is not re-derivable at this tip.
+  [02] C13  MEDIUM  78 doc site(s) across 9 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
+  [03] C5  MEDIUM  1 frontier-table case citation(s) do not resolve against the baseline
+  [04] C9  MEDIUM  the wire schema moved after the certification date 2026-09-01 (4 commit(s) to wire.go/NativeToIR.lean) — the certified set's wire sha is only current if `scripts/ci --slow` has re-enumerated since
+
+[1m══ scripts/ci summary ══[0m
+  note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
+  note negative baseline diff matched (390 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  note baseline diff FULL (2537/2537, no regression) but recorded on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  note reconciler: 4 finding(s), 1 HIGH — report-only (details: tools/reconcile-records)
+
+[1mRESULT: PASS[0m
+ci exit=0

@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+-	mapDeleteInsertReAddDuringRange	-	ok	-	maps,delete,range,evaluation_order,nondet	membership	same-goroutine delete + ONE fresh insert + re-add of the first-produced key (I-1 / L-012: the re-created key is a NEW entry): admitted set {1 (skipped), 2 (produced again)} (members=2) — gc exhibits BOTH (~87% n=2 at the probe), the oracle-exhibited twin of delete-readd-during-range; the only consumption site is the pick-next, bound <= 4 live candidates + stop = 5 — width 8 >= 5	width=8,sites=16,members=2

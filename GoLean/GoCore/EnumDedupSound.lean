@@ -218,6 +218,11 @@ theorem stepThread_append_oblivious {s : ExecState} {ts : Array Config}
   have hsel : selectApplyPlan
       (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) = none := rfl
   clear hsel
+  -- E9 closure: an appendSlice apply is not a pruning op, so the
+  -- cross-goroutine prune is the identity here.
+  have hpn : ∀ (s' : ExecState) (c' : Config) (ts' : Array Config),
+      pruneForeign s' i (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) c' ts'
+        = .ok ts' := fun _ _ _ => pruneForeign_of_plan_none rfl
   unfold stepThread at h
   rw [hti] at h
   simp only [isBlockedConfig, opDoneInner, spawnPlan, Bool.false_eq_true,
@@ -237,8 +242,10 @@ theorem stepThread_append_oblivious {s : ExecState} {ts : Array Config}
   | ok p =>
     obtain ⟨cB, sB, chB⟩ := p
     rw [hbase] at h
-    dsimp only at h
-    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    simp only [except_bind_ok] at h
+    try dsimp only at h
+    rw [hpn] at h
+    simp only [except_bind_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl, rfl⟩ := h
     refine ⟨rfl, fun ch => ?_⟩
     unfold stepThread
@@ -251,6 +258,9 @@ theorem stepThread_append_oblivious {s : ExecState} {ts : Array Config}
     simp only [selectApplyPlan]
     try dsimp only
     rw [stepFn_append_nospill hns ch, hbase]
+    simp only [except_bind_ok]
+    try dsimp only
+    rw [hpn]
     rfl
 
 /-- Inner total coverage: at a certified target whose explicit

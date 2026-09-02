@@ -333,6 +333,19 @@ Discipline notes, recorded up front:
   CONSISTENT WITH BOTH readings, since may-skip is always conforming
   under (i). The oracle cannot discriminate the readings; only the
   upper-bound argument can.
+  ADDENDUM 2026-09-02 [AGENT, E9 cross-goroutine slice]: the memo's
+  probes did not try SMALL intervening inserts. With ONE fresh key
+  inserted between the delete and the re-create (size-3 map), gc
+  re-produces the re-created key in ~87% of runs (17,514/20,000
+  same-goroutine; 17,445–17,507/20,000 cross-goroutine; sweep 1→87%,
+  2→75%, 3→63%, 4→50%, 5→37%, 8→0%; size 8: never — a single-group
+  slot-placement effect of the swiss map, not growth). This REFUTES
+  reading (ii) as a description of gc — gc produces a key twice in one
+  range — so the adopted reading (i) is now also the only one
+  consistent with the oracle, and the (i)-envelope's re-production
+  member is gc-exhibited (rows `maps/delete-insert-readd-during-range`,
+  `maps/cross-goroutine-delete-readd/insert`; evidence dir
+  `docs/evidence/2026-09-02_e9-cross-goroutine-prune/`).
 - Stance — OUR READING (adopted, Mike's ruling 2026-08-19): **(i) —
   a deleted-then-recreated key is a NEW entry (created-during-
   iteration latitude), not the old entry resurrected.** Deletion

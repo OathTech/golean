@@ -202,7 +202,9 @@ differential (-race legs at sampling scale).
 queue burn-down (E3/E5 guards then re-envelopes) · sentence-level
 latitude sweep of the pinned spec + memory model (census
 completeness) · E9 cross-goroutine prune (or [USER] re-scope of
-the envelope ruling) · frontend-obligation discharge start ·
+the envelope ruling) — DONE 2026-09-02, pool-level `pruneForeign`,
+inventory E9 CLOSED (branch t5-e9-prune) · frontend-obligation
+discharge start ·
 NPDRF per decision 1.
 
 ## 6. Grade the assessment would give itself

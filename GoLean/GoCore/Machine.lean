@@ -1756,9 +1756,11 @@ inductive Cont where
   legal only when no candidate key remains in `start` (a surviving
   never-removed start key is MANDATORY — spec-forced traversal). A
   `mapDelete`/`clearMap` step prunes the deleted key(s) from `produced`
-  AND `start` in every in-flight frame over the same base
-  (`contAfterStmtOp`): a deleted-then-re-created key is a NEW entry —
-  the adopted reading, `docs/spec-interpretations.md` I-1 /
+  AND `start` in every in-flight frame over the same base — in the
+  deleting goroutine via `contAfterStmtOp` inside `stepFn`, and in
+  every OTHER goroutine via the pool-level `pruneForeign` (Multi.lean;
+  the E9 closure, 2026-09-02): a deleted-then-re-created key is a NEW
+  entry — the adopted reading, `docs/spec-interpretations.md` I-1 /
   ledger L-012. `break` finishes the range, `continue` proceeds,
   `return` unwinds. The per-iteration scope is the entered body's
   environment; this frame carries the *original* `env` for subsequent
@@ -1786,13 +1788,24 @@ inductive Cont where
   stop ordered LAST), so mutation-free ranges keep the
   first-remaining-in-insertion-order pick sequence and self-inserting
   loops fuel-out VISIBLY on the strict lane — correct behavior.
-  Residual narrowing, recorded: the delete-prune walks the DELETING
-  goroutine's own continuation, so a DRF cross-goroutine delete
-  (synchronized mid-range) does not prune other goroutines' in-flight
-  produced/start sets — re-production of a cross-goroutine
-  deleted-then-re-created key is not realized. Recorded at inventory
-  E9 with a re-envelope obligation; every same-goroutine shape (all
-  probes, all pinned cases) is exact. -/
+  Cross-goroutine mutation (E9 closure, 2026-09-02; fidelity finding
+  A1-20): the delete-prune reaches EVERY goroutine's in-flight frames
+  over the deleted map — the deleter's own through `stepFn`, all
+  others through the pool step (`pruneForeign`, Multi.lean) — so a
+  DRF cross-goroutine delete-then-re-create (handshake-ordered
+  against the ranging goroutine's picks) makes the re-created key a
+  candidate again and non-mandatory, exactly as a same-goroutine one
+  does. The former residual narrowing ("walks the DELETING
+  goroutine's own continuation") is retired: its unrealizable member
+  — re-production of a cross-goroutine deleted-then-re-created key —
+  is gc-EXHIBITED (~87% of runs on a 3-key map when one fresh insert
+  sits between the delete and the re-create; evidence dir
+  `docs/evidence/2026-09-02_e9-cross-goroutine-prune/`) and is now
+  modeled (membership rows `maps/cross-goroutine-delete-readd/{drf,
+  grow}`, admitted sets {3,4} / {1,2}). UNSYNCHRONIZED cross-goroutine
+  mutation is refused by the detector (pick-time load vs the delete's
+  write, HB-unordered; row `.../racy`), so no narrowing hides behind a
+  refusal either. -/
   | mapIterK (keyVar valVar : Option String) (keyTy valTy : Ty) (body : Stmt)
       (base : Option Loc) (produced : Array GoValue)
       (start : Array GoValue) (env : LocalEnv) (k : Cont)
@@ -2108,8 +2121,10 @@ forever. Key comparison is Go map-key equality at the FRAME's own
 key type (the same `valueEq` the map ops use), so the walk is
 `Except`-monadic and fails closed on an ill-formed comparison. The
 walk crosses every frame (a range body may delete through a call);
-it covers the DELETING goroutine's continuation — the cross-goroutine
-residual is recorded at inventory E9. -/
+`stepFn` applies it to the DELETING goroutine's continuation
+(`contAfterStmtOp`) and the pool step applies the same function to
+every OTHER goroutine's continuation (`pruneForeign`, Multi.lean —
+the E9 closure, 2026-09-02). -/
 def pruneIterFramesKey (s : ExecState) (delBase : Loc) (key : GoValue) :
     Cont → Except GoError Cont
   | .stop => return .stop
@@ -2204,7 +2219,10 @@ corrected at the audit fix round, reviewer A nit: it used to claim
 the nullary rule shares this function, under a rule name —
 `stmtOpStart` — that does not exist). The state argument is the
 POST-apply state (key comparison consults `types` only, which no wide
-op mutates). -/
+op mutates). The pool step re-applies this SAME function to every
+other goroutine's continuation at a pruning-op apply that proceeded
+(`pruneForeign`, Multi.lean — the E9 closure), so one definition
+carries both the same-goroutine and the cross-goroutine prune. -/
 def contAfterStmtOp (s : ExecState) (op : StmtOp) (vs : List GoValue)
     (k : Cont) : Except GoError Cont :=
   match op with

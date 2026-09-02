@@ -471,11 +471,17 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (2537 cases, 2366 PASS /
+All numbers at the current tracked baseline (2541 cases, 2370 PASS /
 171 FAIL; `baselines/native-full.tsv`, re-pinned 2026-09-02 on the
-bug080-atomic-kind lane — full ci --diff at that tip: BUG-080's 2
-FAIL→PASS flips `race/negative-sync/{wg-overwrite,mutex-copy}` (the
-detector's access KIND landed), +4 born-PASS rows
+t5-e9-prune lane — full ci --diff at that tip: +4 born-PASS rows, the
+E9 cross-goroutine delete-prune witnesses
+`maps/cross-goroutine-delete-readd/{drf,insert,racy}` and the L-012
+oracle-exhibited twin `maps/delete-insert-readd-during-range`, NO
+other row moved; the previous re-pin the same day on the
+bug080-atomic-kind lane (2537 / 2366 / 171) — full ci --diff at that
+tip: BUG-080's 2 FAIL→PASS flips
+`race/negative-sync/{wg-overwrite,mutex-copy}` (the detector's access
+KIND landed), +4 born-PASS rows
 `race/negative-sync/{rw-overwrite,once-copy}` (racy pins, one per
 remaining primitive) + `race/free-sync/{mutex-siblings,disjoint-prims}`
 (check (i) guards); red-count movement 173 → 171, mapped below. Prior
@@ -719,7 +725,10 @@ the Q-RACEPATH guards — born PASS; and the 2026-09-02 BUG-080 fix
 re-pin flipped TWO of those 18 post-vintage reds green
 (`race/negative-sync/{wg-overwrite,mutex-copy}`): 16 new since the
 vintage still red, 14 vintage reds gone green; 169 − 14 + 16 = 171 ✓;
-case count 2533 → 2537, the 4 new rows all born PASS. The 14 that
+case count 2533 → 2537, the 4 new rows all born PASS; and the
+2026-09-02 E9 cross-goroutine-prune re-pin (t5-e9-prune, rebased over
+the BUG-080 fix at the round-4 merge train) added NO red: 4 rows born
+PASS (169 − 14 + 16 = 171 ✓; case count 2537 → 2541). The 14 that
 went green are unchanged since.
 
 Q-SYNCVAL's misuse-identity pins and the other 8 rows this slice added

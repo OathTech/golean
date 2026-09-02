@@ -241,6 +241,15 @@ range) as a membership case so the hole is red rather than prose;
 row currently contains a live permitted-∉-modeled member.
 | C3 (and C1 for the missing witness case).
 
+*Closure note (2026-09-02 [AGENT], Tier-5 slice t5-e9-prune): the (M)
+option was taken — the pool step now applies the delete-prune to every
+goroutine's in-flight frames (`pruneForeign`, Multi.lean), the corpus
+witnesses landed (`maps/cross-goroutine-delete-readd/{drf,insert,racy}`),
+and the gc probe showed the "unrealizable" member is gc-EXHIBITED with
+one intervening insert (~87%), so the hole was observed ∉ modeled, not
+only permitted ∉ modeled. Inventory E9 REOPEN → CLOSED; evidence dir
+`docs/evidence/2026-09-02_e9-cross-goroutine-prune/`.*
+
 ### A1-21 — E10, `==`-equal map-key retention pinned always-replace → REOPEN
 
 **The KEEP's fresh argument**: "a genuine two-member latitude with the
