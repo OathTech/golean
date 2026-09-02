@@ -181,27 +181,37 @@ write a bare "#6"/"#7".
    evidence dir): **DETECTED** — HB-based (the FastTrack skeleton over
    TSan's realized edge set), the refusal fires on every run in which
    both conflicting accesses execute, whatever the interleaving; on
-   the in-scope corpus (362 rows — every racy/membership/confluent row
-   plus every concurrency-tagged strict row — 10 `-race` runs each at
-   GOMAXPROCS 1 and 8 vs the schedule enumerator) the third cell (gc
-   red, machine DRF) is **0/362**: all 23 gc-red rows are machine-
-   refused on EVERY enumerated path, all 276 doubly-certified rows
-   agree DRF, the 1 over-refusal is the recorded O1 residual. **NOT
+   the in-scope corpus at the branch tip (364 rows — every racy/
+   membership/confluent row plus every concurrency-tagged strict row
+   — 10 `-race` runs each at GOMAXPROCS 1 and 8 vs the schedule
+   enumerator; the audit fix round's re-run with the hardened runner,
+   `corpus-tip.*`) the third cell (gc red, machine DRF) is **2/364 —
+   exactly BUG-080's two pins** (the first draft's "0/362" was a
+   362-row snapshot that pre-dated the pins, and the first runner had
+   filed them "uncertified" behind an undeclared site bound — audit
+   B2); the other 23 gc-red rows are machine-refused on EVERY
+   enumerated path, 275 doubly-certified rows agree DRF (277 after
+   the deep re-run), the 1 over-refusal is the recorded O1 residual,
+   63 rows (61 after) are uncertified — none of them gc-red. **NOT
    DETECTED**, three classes: (i) the sync primitives' OWN state
    words (U4 → **BUG-080**, born-FAIL pinned): a plain copy/overwrite
    of a primitive another goroutine is operating on is racy by
    mem#restrictions and TSan-red 10/10, and the machine runs it to a
    value — the probe leg's third cell is exactly this class (2/45
-   value-run + 3 uncertified-by-fatal, all U4); misuse-only, fix = the
-   atomic access KIND that is the atomics arc's detector deliverable;
+   value-run + 3 uncertifiable-by-fatal-members — `possible-HOLE`
+   under the hardened runner — all U4); misuse-only, fix = the atomic
+   access KIND, sequenced onto the atomics arc by [AGENT] judgment
+   (separable; report §3.2);
    (ii) schedule-dependent races on paths the enumeration never
    realizes — the enumerator is fuel/site/width-bounded and the strict
    lane runs one default stream plus three variants, so a race whose
    accesses co-execute only on an unexplored path passes with SC
-   semantics on the explored ones; 62/362 corpus rows are UNCERTIFIED
-   by the enumerator (20 deadlock members, 7 fatal members, 24
-   frontier refusals, 11 budget — all gc-green in 10 runs, but
-   "uncertified" is the honest label, never DRF), and the probe leg
+   semantics on the explored ones; 63/364 corpus rows are UNCERTIFIED
+   by the enumerator (20 deadlock members — for which gc under `-race`
+   gives NO verdict either, every run timing out — 7 fatal members,
+   24 frontier refusals, 11 budget (9 after the deep re-run: 61/364),
+   1 truncated enumeration; none gc-red, but "uncertified" is the
+   honest label, never DRF), and the probe leg
    showed the converse (two races the 10-run TSan sampler never
    realized, refused by the enumerator); (iii) U5 — the merge-vs-
    overwrite Release modelling difference (Race.lean U5) stands as

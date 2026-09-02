@@ -1,0 +1,100 @@
+detector-soundness summary — 2026-09-02T03:23:47+00:00
+rows: 364   runs/proc: 5   procs: 1,8   worker-pool exit: 0
+
+cells:
+  agree-DRF      275
+  agree-race     23
+  HOLE           2
+  over-refusal   1
+  uncertified    63
+
+by lane × cell:
+  confluent	agree-DRF	60
+  confluent	uncertified	1
+  membership	agree-DRF	24
+  membership	uncertified	2
+  racy	agree-race	23
+  racy	HOLE	2
+  strict	agree-DRF	191
+  strict	over-refusal	1
+  strict	uncertified	60
+
+HOLE rows (gc RACE, machine DRF — exit-bearing; a HOLE not on a BUGS.md Cases: line is a STOP):
+  race/negative-sync/wg-overwrite	p1:race=5,clean=0,exit=0,abnormal=0,timeout=0;p8:race=5,clean=0,exit=0,abnormal=0,timeout=0;	DRF
+  race/negative-sync/mutex-copy	p1:race=5,clean=0,exit=0,abnormal=0,timeout=0;p8:race=5,clean=0,exit=0,abnormal=0,timeout=0;	DRF
+
+possible-HOLE rows (gc RACE, machine ENUM-FAIL — exit-bearing; certify or diagnose each):
+
+over-refusal rows (machine RACE-*, gc DRF-in-N — three-way investigation):
+  race/free/array-dyn-index-read-write	p1:race=0,clean=5,exit=0,abnormal=0,timeout=0;p8:race=0,clean=5,exit=0,abnormal=0,timeout=0;	RACE-ALL (1/1 members)
+
+uncertified rows (machine ENUM-FAIL, gc not red):
+  channels/deadlock/send-nil	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  channels/deadlock/recv-nil	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  channels/deadlock/select-empty	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  channels/deadlock/select-all-nil	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  channels/deadlock/send-unbuffered	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  channels/deadlock/recv-empty-open	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  channels/deadlock/send-full	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  channels/deadlock/range-open-drained	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  channels/recv-edge/bad-target-blocks	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  channels/recv-short-circuit/and-rhs	gc=DRF-in-N	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  channels/recv-short-circuit/or-rhs	gc=DRF-in-N	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  channels/recv-short-circuit/and-rhs-skipped	gc=DRF-in-N	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  channels/select-select/core	gc=DRF-in-N	single=unsupported	ENUM-FAIL:alias-guard probe [2] failed: the probed member's run errored — unsupported: select-with-select rendezvous (unmodeled 
+  channels/select-select/beside-loop	gc=DRF-in-N	single=ok	ENUM-FAIL:run consumes more than --max-sites 32 choice site(s) — raise the case's sites bound (never truncated silently)
+  generics/chan-type-arg/first	gc=DRF-in-N	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  goroutines/deadlock/mutual	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:alias-guard probe [2] failed: the probed member's run errored — deadlock: all goroutines are asleep - deadlock!. Under
+  goroutines/deadlock/chain	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:alias-guard probe [2] failed: the probed member's run errored — deadlock: all goroutines are asleep - deadlock!. Under
+  goroutines/deadlock/after-progress	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:alias-guard probe [2] failed: the probed member's run errored — deadlock: all goroutines are asleep - deadlock!. Under
+  goroutines/deadlock/with-select	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:alias-guard probe [2] failed: the probed member's run errored — deadlock: all goroutines are asleep - deadlock!. Under
+  goroutines/go-builtin/close	gc=DRF-in-N	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  goroutines/go-builtin/delete	gc=DRF-in-N	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  goroutines/go-builtin/copy	gc=DRF-in-N	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  goroutines/go-builtin/recover	gc=DRF-in-N	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  goroutines/go-builtin/panic	gc=DRF-in-N	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  goroutines/goexit-marker/child	gc=DRF-in-N	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  goroutines/pipeline/two-stage	gc=DRF-in-N	single=ok	ENUM-FAIL:run consumes more than --max-sites 32 choice site(s) — raise the case's sites bound (never truncated silently)
+  goroutines/pipeline/buffered-stage	gc=DRF-in-N	single=ok	ENUM-FAIL:run consumes more than --max-sites 32 choice site(s) — raise the case's sites bound (never truncated silently)
+  goroutines/send-then-spin	gc=DRF-in-N	single=fuel-out	ENUM-FAIL:truncated(nonterm=200,backedgeCapped=0)
+  goroutines/spawn-edge/nil-func-fatal	gc=DRF-in-N	single=fatal	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: fatal: go of nil func value
+  goroutines/spawn-in-init/in-init	gc=DRF-in-N	single=unsupported	ENUM-FAIL:package init failed under []: unsupported: package init: go spawn outside the thread pool (goroutine spawn is a pool ste
+  goroutines/worker-pool/sum	gc=DRF-in-N	single=ok	ENUM-FAIL:backEdge scheduling site of bound 2 under pick assignment [0] — the row must DECLARE its back-edge tree: backedge=<k> 
+  goroutines/worker-pool/shared-feed	gc=DRF-in-N	single=ok	ENUM-FAIL:run consumes more than --max-sites 32 choice site(s) — raise the case's sites bound (never truncated silently)
+  imported-goose/channel/parallel-search-replace/search-replace	gc=DRF-in-N	single=ok	ENUM-FAIL:site bound 5 exceeds the case's width 4 — the width assertion is REFUTED (mechanically, at pick position 9); raise the
+  imported-goose/unittest/spawn/simple-spawn	gc=DRF-in-N	single=ok	ENUM-FAIL:run consumes more than --max-sites 32 choice site(s) — raise the case's sites bound (never truncated silently)
+  spec-examples-decl/select-forms/block-forever	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  spec-examples-decl/var-comma-ok-matrix/recv-typed-iface	gc=DRF-in-N	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  spec-examples-stmt/go-statements/func-literal	gc=DRF-in-N	single=ok	ENUM-FAIL:run consumes more than --max-sites 32 choice site(s) — raise the case's sites bound (never truncated silently)
+  spec-examples-stmt/operator-precedence/mixed-chan	gc=DRF-in-N	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  spec-examples-stmt/prime-sieve/five	gc=DRF-in-N	single=ok	ENUM-FAIL:run consumes more than --max-sites 32 choice site(s) — raise the case's sites bound (never truncated silently)
+  spec-examples-stmt/prime-sieve/eight	gc=DRF-in-N	single=ok	ENUM-FAIL:run consumes more than --max-sites 32 choice site(s) — raise the case's sites bound (never truncated silently)
+  sync/atomic-frontier/add-load-store	gc=DRF-in-N	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  sync/atomic-frontier/cas	gc=DRF-in-N	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  sync/atomic-frontier/swap	gc=DRF-in-N	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  sync/atomic-frontier/value	gc=DRF-in-N	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: default value for impo
+  sync/atomic-frontier/mp-litmus	gc=DRF-in-N	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  sync/iface-dispatch/locker-double-lock	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  sync/mutex-double-lock/double-lock	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  sync/mutex-unlock-fatal/unlock-of-unlocked	gc=DRF-in-N	single=fatal	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: fatal: sync: unlock of unlocked mut
+  sync/mutex-unlock-fatal/unlock-recover-attempt	gc=DRF-in-N	single=fatal	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: fatal: sync: unlock of unlocked mut
+  sync/mutex-unlock-fatal/during-panic-unwind	gc=DRF-in-N	single=fatal	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: fatal: sync: unlock of unlocked mut
+  sync/once-nested-do/nested-do	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  sync/out-of-scope-cond/cond-signal-no-waiter	gc=DRF-in-N	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  sync/out-of-scope-cond/cond-wait-signal	gc=DRF-in-N	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  sync/out-of-scope-cond/cond-broadcast	gc=DRF-in-N	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  sync/out-of-scope-trylock/trylock-uncontended	gc=DRF-in-N	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  sync/promoted-mutex/trylock-expr	gc=DRF-in-N	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  sync/rwmutex-misuse-fatal/wunlock-of-unlocked	gc=DRF-in-N	single=fatal	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: fatal: sync: Unlock of unlocked RWM
+  sync/rwmutex-misuse-fatal/runlock-of-unlocked	gc=DRF-in-N	single=fatal	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: fatal: sync: RUnlock of unlocked RW
+  sync/rwmutex-misuse-fatal/runlock-while-write-locked	gc=DRF-in-N	single=fatal	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: fatal: sync: RUnlock of unlocked RW
+  sync/rwmutex-rlock-then-lock/rlock-then-lock	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  sync/waitgroup-negative-after-recover/negative-after-recover	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:alias-guard probe [2] failed: the probed member's run errored — deadlock: all goroutines are asleep - deadlock!. Under
+  sync/waitgroup-wait-deadlock/wait-deadlock	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  sync/waitgroup-workers-join/workers-join	gc=DRF-in-N	single=ok	ENUM-FAIL:run consumes more than --max-sites 32 choice site(s) — raise the case's sites bound (never truncated silently)
+
+gc-no-verdict rows (gc produced no completed run; machine certified):
+
+refused rows (params omit width=/sites= — declare them in cases.tsv):
+
+gc-infra / unclassified rows (the matrix is INCOMPLETE):

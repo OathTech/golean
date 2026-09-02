@@ -527,12 +527,16 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   differential, `scripts/detector-soundness`;
   `docs/2026-09-02_detector-soundness.md`; evidence
   `docs/evidence/2026-09-02_detector-soundness/`): the two oracles
-  crossed in BOTH directions on 362 in-scope corpus rows (10 `-race`
-  runs each at GOMAXPROCS 1 and 8 vs the schedule enumerator) and 45
-  novel footprint-gap probes. Corpus: agree-race 23 / agree-DRF 276 /
-  third cell (gc red, machine DRF) **0** / over-refusal 1 (the O1
-  residual, by design) / uncertified 62 (all gc-green; enumerator
-  refuses deadlock/fatal members and frontier rows, or budget).
+  crossed in BOTH directions on the 364 in-scope corpus rows at the
+  branch tip (10 `-race` runs each at GOMAXPROCS 1 and 8 vs the
+  schedule enumerator; the audit fix round's re-run, `corpus-tip.*` —
+  the first run covered 362 of the 364, missing the two BUG-080 pins)
+  and 45 novel footprint-gap probes. Corpus: agree-race 23 / agree-DRF
+  275 (277 after the §2.1 deep re-run) / third cell (gc red, machine
+  DRF) **2 — exactly BUG-080's pins** / over-refusal 1 (the O1
+  residual, by design) / uncertified 63 (61 after; none gc-red: 20
+  deadlock members with no gc verdict either, 7 fatal members, 24
+  frontier refusals, 11/9 budget, 1 truncated).
   Probes (45): agree-race 24 / agree-DRF 12 / third cell 2 + 3
   uncertified-by-fatal — ALL the recorded U4 class (sync-object state
   words → **BUG-080**, born-FAIL pins `race/negative-sync/{wg-

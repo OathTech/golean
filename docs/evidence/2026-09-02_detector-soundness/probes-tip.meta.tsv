@@ -1,0 +1,11 @@
+tool	scripts/detector-soundness
+commit	42473bfc07d13baeabbc63884ea3c3796c8f6544+dirty
+go	go1.26.5
+golean	.lake/build/bin/golean
+runs	5
+procs	1,8
+strict_enum	width=4,sites=32,cap=512,work=4000000,backedge=1
+rows	45
+host	Linux 7.0.0-30-generic x86_64
+started	2026-09-02T03:23:47+00:00
+finished	2026-09-02T03:25:06+00:00

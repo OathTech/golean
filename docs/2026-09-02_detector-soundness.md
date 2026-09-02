@@ -154,6 +154,55 @@ agree-DRF.) The corrected, complete matrix at the tip is §2.2.
 
 ---
 
+### 2.2 The corrected matrix — the audit fix round's re-run at the tip
+
+Run: `corpus-tip.summary.txt` / `corpus-tip.matrix.tsv` /
+`corpus-tip.meta.tsv` (2026-09-02T03:08–03:23Z; commit 42473bfc +
+this round's uncommitted records edits; the hardened runner; ALL 364
+in-scope rows, `sites=` declared on every enumerating-lane row — the
+two BUG-080 pins at 32, the rest at the manifest's default 8, so
+their enumeration is the gate's). Same sampling as §2.0. Runner exit
+**1** — by design: the two HOLE rows are exactly BUG-080's Cases:
+line.
+
+| cell | rows | by lane |
+|---|---|---|
+| agree-race | **23** | racy 23 — TSan red **10/10** at both GOMAXPROCS values on every one; machine RACE-ALL on every one |
+| agree-DRF | **275** | strict 191 · confluent 60 · membership 24 |
+| **HOLE** (gc red, machine DRF) | **2** | racy 2: `race/negative-sync/{wg-overwrite,mutex-copy}` — BUG-080 (§3.2), TSan red 10/10, machine DRF (1 and 2 members, single run `ok`). The one class where SC semantics IS given to a racy program; on the books, born-FAIL in the baseline. |
+| possible-HOLE (gc red, machine ENUM-FAIL) | **0** | — |
+| over-refusal | **1** | strict 1: `race/free/array-dyn-index-read-write` — the O1 residual, by design (§4) |
+| uncertified | **63** | strict 60 · confluent 1 · membership 2 — none gc-red |
+| gc-no-verdict · refused · gc-infra · unclassified | **0** each | the matrix is complete |
+
+The 63 uncertified rows, by cause (single-run status in brackets):
+20 deadlock members [deadlock] — these are also the 20 rows whose gc
+side is now honestly `NO-VERDICT` (all 200 `-race` runs timed out at
+15 s: the `-race` runtime suppresses the deadlock detector), so
+neither oracle says anything about them; 7 fatal members [fatal]; 24
+frontier refusals [unsupported]; 11 enumeration budget [ok] (the
+§2.1 set — after the deep re-run 2 of them are certified agree-DRF,
+so the tip totals AFTER §2.1 are agree-DRF **277** / uncertified
+**61**); 1 truncated enumeration [fuel-out] (`goroutines/send-then-
+spin`, nonterm=200 — audit S1).
+
+Probe leg under the same runner (`probes-tip.*`, 45 rows): agree-race
+24 · agree-DRF 12 · **HOLE 2** (`u4/{wg-overwrite-vs-add,struct-
+copy-vs-lock}`) · over-refusal 3 · **possible-HOLE 4** — the three
+U4 rows whose overwrite makes a later Unlock/RUnlock/onceComplete a
+fatal member (`u4/{struct-overwrite-vs-lock,rw-overwrite-vs-rlock,
+once-overwrite-vs-do}`; diagnosis: the U4 class, §3.2 — BUG-080's
+territory, uncertifiable by the bare enumerator because of the fatal
+members) and `u5/cross-unlock-publish` (gc red 7/10; diagnosis §3.3:
+a racy program whose racy paths the machine refuses on forced tapes,
+uncertifiable by the bare enumerator because of its fatal members —
+no hole). No probe is `uncertified` any more: every gc-red row the
+enumerator cannot certify is now loud. Compared with `probes-post`
+the only movers are these four cell RENAMES (uncertified →
+possible-HOLE); the machine is unchanged.
+
+---
+
 ## 3. The footprint-gap probes (45 subjects; `probes/`, `probes.tsv`)
 
 Families: **U2** (7 — `len`/`cap` on channels and the other `len`
@@ -220,10 +269,12 @@ CompareAndSwapInt32` (Lock's CAS on `m.state`) vs the copy's read;
 machine records NO access for a sync op (Race.lean classifies the sync
 cell's traffic as SYNCHRONIZATION), so the plain copy/overwrite has
 nothing to conflict with: two probes ran to a value (machine DRF — the
-HOLE cell), three are UNCERTIFIED only because their overwrite makes a
-later Unlock/RUnlock/onceComplete a FATAL member and the bare
+HOLE cell), three are uncertifiable only because their overwrite makes
+a later Unlock/RUnlock/onceComplete a FATAL member and the bare
 enumerator refuses runs that end in a fatal (their single default-
-stream runs are `ok`; gc red regardless).
+stream runs are `ok`; gc red regardless) — `uncertified` in the first
+runner's matrix, `possible-HOLE` under the hardened one (§2.2), same
+diagnosis.
 
 Honest classification: by mem#restrictions a non-atomic access beside
 an atomic one IS a data race, so these programs are racy by the spec
@@ -409,8 +460,9 @@ the goroutine's current vector clock, so if two conflicting accesses
 by different goroutines execute in a run and no realized HB edge
 orders them, the run refuses — regardless of how adversely they were
 interleaved (the FastTrack epoch subsumption makes the check
-interleaving-insensitive within a run). Measured: 23/23 gc-red corpus
-rows refuse on every enumerated path; 24/24 gc-red plain-data probes
+interleaving-insensitive within a run). Measured (§2.2): 23 of the 25
+gc-red corpus rows refuse on every enumerated path — the other 2 are
+BUG-080's HOLEs, class 1 below; 24/24 gc-red plain-data probes
 refuse on every path; the receive-target stores, method-value copies,
 defer-time reads, select operands, range copies, `copy`/`append`
 traffic and nested paths all footprint where gc reads/writes.
@@ -428,9 +480,12 @@ traffic and nested paths all footprint where gc reads/writes.
    enumerator's reach. Where the enumerator certifies (racy lane's
    every-path claim, confluent/membership full enumerations, and now
    the strict concurrency rows this lane enumerated) the claim is
-   mechanical; where it cannot (62 corpus rows: deadlock/fatal
-   members, frontier refusals, budget) the row is UNCERTIFIED and the
-   strict gate's one-default-stream run is all that grades it. The
+   mechanical; where it cannot (63 of the 364 tip rows before the
+   §2.1 deep re-run, 61 after: 20 deadlock members — with NO gc
+   verdict either — 7 fatal members, 24 frontier refusals, 11/9
+   budget, 1 truncated) the row is UNCERTIFIED and the strict gate's
+   one default stream plus three variant streams are all that grade
+   it. The
    probes show the sampler side of the same coin: two racy programs
    TSan never caught in 10 runs. Neither instrument is a per-program
    oracle; the enumerator is the stronger one where it runs.
