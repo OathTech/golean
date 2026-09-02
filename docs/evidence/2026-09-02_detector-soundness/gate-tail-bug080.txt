@@ -65,3 +65,49 @@ EXIT=1
 
 RESULT: PASS
 EXIT=0
+
+=== audit fix round G2 (F1-F10), tip 9d325363 — `scripts/capped scripts/ci --diff` tail (clean tree; --diff: tier=slow rows verified against their cached certified records) ===
+  note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   core build (warning-free)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   eval tests (146 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  ok   negative baseline diff (no regression)
+  ok   baseline diff FULL (2537/2537, no regression)
+  note reconciler: 3 finding(s), 0 HIGH — report-only (details: tools/reconcile-records)
+
+[1mRESULT: PASS[0m
+CI-EXIT 0
+
+=== G2 racy-slice detector-soundness re-run at the F1/F8 tree (49 rows = every racy-lane row + race/free* + race/litmus; must equal the audited tip: 27 agree-race / 21 agree-DRF / 1 over-refusal) ===
+detector-soundness summary — 2026-09-02T06:37:39+00:00
+rows: 49   runs/proc: 5   procs: 1,8   worker-pool exit: 0
+
+cells:
+  agree-DRF      21
+  agree-race     27
+  over-refusal   1
+
+by lane × cell:
+  confluent	agree-DRF	20
+  membership	agree-DRF	1
+  racy	agree-race	27
+  strict	over-refusal	1
+
+  race/free/array-dyn-index-read-write	RACE-ALL (1/1 members)
