@@ -1,0 +1,5 @@
+package main
+
+func main() {
+	_ = make(map[int]int, 1 << 64)
+}

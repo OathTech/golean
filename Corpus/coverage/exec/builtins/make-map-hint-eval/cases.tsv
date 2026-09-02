@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+panic-map-never-created	mapHintPanicMapNeverCreated	-	ok	-	maps,make,panic,recover,defer,evaluation_order
+panic-uncaught	mapHintPanicUncaught	-	panic	map hint	maps,make,panic,evaluation_order
+index-panic-map-never-created	mapHintIndexPanicMapNeverCreated	-	ok	-	maps,make,panic,recover,defer,indexing,evaluation_order
+index-panic-uncaught	mapHintIndexPanicUncaught	-	panic	index out of range [5]	maps,make,panic,indexing,evaluation_order
+evaluated-once	mapHintEvaluatedOnce	-	ok	-	maps,make,evaluation_order
+negative-from-call	mapHintNegativeFromCall	-	ok	-	maps,make,evaluation_order
+zero	mapHintZero	-	ok	-	maps,make
+named-int-type	mapHintNamedIntType	-	ok	-	maps,make
+uint8-var	mapHintUint8Var	-	ok	-	maps,make
+untyped-const	mapHintUntypedConst	-	ok	-	maps,make,constants
+typed-const	mapHintTypedConst	-	ok	-	maps,make,constants
+eval-order-with-neighbors	mapHintEvalOrderWithNeighbors	-	ok	-	maps,make,evaluation_order
+eval-order-in-expression	mapHintInExpression	-	ok	-	maps,make,evaluation_order

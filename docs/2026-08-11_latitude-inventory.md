@@ -1528,9 +1528,11 @@ runtime observable. OPEN QUESTION as stated.
   of `applyStmtOp` (Machine.lean), each BEFORE materialization; the
   `makeMap` arm's pre-slice negative-hint panic (an older gc string
   the pinned oracle never produces) REMOVED — dead code in fact, since
-  the native frontend does not lower the hint at all (BUG-082, OPEN:
-  the hint's evaluation is dropped; fix = frontend + decoder + a
-  twin-wire pin move, outside this lane).
+  the native frontend did not lower the hint at all (BUG-082 — FIXED
+  2026-09-02 on the `bug082-maphint` lane: `emit.go` emits the hint as
+  the make-map node's optional `hint` field, NativeToIR decodes it into
+  `initialSpace`, and this arm evaluates it and ignores its value; the
+  twin-wire pin moved with it, [USER]-authorized — BUGS.md BUG-082).
 - THE PIN — three facts from one implementation: (i) the bound, 2^48
   bytes (heapAddrBits 48; STRICT — a request of exactly 2^48 passes
   the check and then fails to ALLOCATE, behavior 1 below); (ii) the
@@ -1593,9 +1595,12 @@ runtime observable. OPEN QUESTION as stated.
   variable / constant / int64 / padded struct, cap, len-and-cap blame
   order, chan byte / header boundary / int64, the chan zero-size-
   element control at 1<<62, recover ×2, and the two gc-truth map-hint
-  rows over / negative (no panic; they do not reach the machine arm,
-  BUG-082) — plus `map-hint-eval-order` born RED on BUG-082's Cases
-  line; red-first measured against the pre-slice golean binary: chan
+  rows over / negative (no panic; they reach the machine arm since the
+  BUG-082 fix) — plus `map-hint-eval-order`, born RED on BUG-082's
+  Cases line and flipped PASS by its fix the same day, with the 13
+  `builtins/make-map-hint-eval/*` rows pinning the hint's side effects,
+  panics, once-ness, types and order (docs/evidence/2026-09-02_bug082-
+  maphint/); red-first measured against the pre-slice golean binary: chan
   rows `ok`, slice rows cgroup-killed materializing, recover-chan 0). NOT corpus-expressible: the just-under controls (gc: fatal OOM;
   machine: eager backing materialization grinds to the wall clock —
   BUG-078 residual (2)), `make([]struct{}, huge)` (same materialization),

@@ -837,12 +837,16 @@ def applyStmtOpCore (s : ExecState) (op : StmtOp) (_nt : Nat)
           -- this arm panicked `makemap: size out of range` on a
           -- negative hint — an older gc string the pinned oracle never
           -- produces — but the arm was DEAD CODE end-to-end: the native
-          -- frontend does not lower the hint (the `make-map` wire node
-          -- has no hint field; NativeToIR passes `none`), which also
-          -- drops the hint expression's EVALUATION. That is BUG-082
-          -- (open; red-first row builtins/make-maxalloc/map-hint-eval-
-          -- order); when the hint is lowered it lands here, and this
-          -- arm's realized behavior is gc's.
+          -- frontend did not lower the hint (the `make-map` wire node
+          -- had no hint field; NativeToIR passed `none`), which also
+          -- dropped the hint expression's EVALUATION. That was BUG-082
+          -- (FIXED 2026-09-02, bug082-maphint: the frontend emits the
+          -- optional `hint` field, NativeToIR decodes it into
+          -- `initialSpace`, and it lands here — its calls already
+          -- hoisted by the frontend in operand order, the residual
+          -- expression evaluated as this op's operand; corpus
+          -- builtins/make-map-hint-eval/*). This arm's realized
+          -- behavior is gc's.
           let _ ← valueAsInt spaceV
       let (base, s₁) := s.alloc (.mapData #[])
       let loc ← valueAsLoc tv

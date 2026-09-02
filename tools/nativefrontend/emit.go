@@ -8962,7 +8962,28 @@ func (e *emitter) emitMake(c *ast.CallExpr) (any, bool, error) {
 		if err != nil {
 			return nil, false, err
 		}
-		e.hoisted = append(e.hoisted, map[string]any{"stmt": "make-map", "target": target, "keyType": keyTy, "valueType": valTy})
+		node := map[string]any{"stmt": "make-map", "target": target, "keyType": keyTy, "valueType": valTy}
+		// make(map[K]V, hint): the hint is an ORDINARY OPERAND
+		// (spec#Making_slices_maps_and_channels lists it with the
+		// size arguments; spec#Order_of_evaluation orders its calls
+		// and panics with the surrounding operands), so it is emitted
+		// — EXACTLY when the source has a second argument — as the
+		// optional "hint" field and evaluated by the machine's makeMap
+		// arm, which then ignores its VALUE (gc clamps a negative or
+		// over-limit hint to 0 and never panics, runtime/map.go
+		// makemap; latitude R16). Its type is go/types' business: a
+		// non-integer or non-representable constant hint is a compile
+		// error and never reaches this arm (BUG-082, 2026-09-02 — the
+		// arm used to skip c.Args[1] entirely, dropping the hint's
+		// evaluation and its side effects).
+		if len(c.Args) >= 2 {
+			hintArg, err := e.emitExpr(c.Args[1])
+			if err != nil {
+				return nil, false, err
+			}
+			node["hint"] = hintArg
+		}
+		e.hoisted = append(e.hoisted, node)
 		return ref, false, nil
 	case *types.Chan:
 		// make(chan T[, n]) (channels arc slice 1). A negative runtime n

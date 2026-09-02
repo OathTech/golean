@@ -1,0 +1,11 @@
+# producer: .lake/build/bin/golean native-json-run --input docs/evidence/2026-09-02_bug082-maphint/probe.wire.json --function <name>, per line
+probeBump	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":31}]}
+
+probeBumpTwice	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":50}]}
+
+probeNegBump	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":-677}]}
+
+probeHintPanic	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+
+probeOrder	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":12341}]}
+

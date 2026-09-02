@@ -373,8 +373,9 @@ write a bare "#6"/"#7".
    layout `tySizeAlignFuel`; the `makeSlice`/`makeChan`/`appendSlice`
    arms panic with gc's texts BEFORE materializing; BUG-081 filed
    with the probe matrix as witness, BUG-082 for the un-lowered map
-   hint the probe exposed — open, frontend-side; corpus
-   `builtins/make-maxalloc`, 14 rows PASS + 1 red-first).
+   hint the probe exposed — frontend-side, FIXED the same day on the
+   `bug082-maphint` lane; corpus `builtins/make-maxalloc`, 15 rows
+   PASS since that fix, + `builtins/make-map-hint-eval`, 13 rows).
    THE RIDER NOW SCOPES BEHAVIOR 1 — true OOM: an allocation that
    passes the limit check and fails to allocate. SEPARATELY RECORDED,
    not under the rider: R16's `append` band — gc's `growslice` check is

@@ -1,0 +1,16 @@
+key	value
+frontend	native
+manifest	/home/dev/projects/golean/.tmp/golean-coverage.ZPJIbi
+manifest_sha256	2d23471d8c3553a675bafd207d5e9939125198e9bbaa8d1fec1268313ce67bc3
+manifest_cases	2
+total_corpus_cases	2572
+full_run	false
+filters	--id builtins/make-map-hint-eval/index-panic-map-never-created --id builtins/make-map-hint-eval/index-panic-uncaught
+git_commit	fa4fce581afd66b412371805989152ae03622878
+git_dirty	true
+go_toolchain	go1.26.5
+go_drift_allowed	0
+go_drift_actual	false
+jobs	32
+fanout_find_exit	0
+fanout_pool_exit	0

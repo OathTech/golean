@@ -135,7 +135,7 @@ private def stmtAllowedKeys : String → Option (List String)
   | "expr" => some ["stmt", "expr"]
   | "new" => some ["stmt", "target", "value", "elemType"]
   | "make-slice" => some ["stmt", "target", "elem", "len", "cap"]
-  | "make-map" => some ["stmt", "target", "keyType", "valueType"]
+  | "make-map" => some ["stmt", "target", "keyType", "valueType", "hint"]
   | "make-chan" => some ["stmt", "target", "elem", "cap"]
   | "chan-send" => some ["stmt", "ch", "value", "elem"]
   | "chan-recv" => some ["stmt", "targets", "ch", "elem"]
@@ -871,7 +871,17 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
       let keyTy ← decodeTy s!"{path}.keyType" (← StrictJson.field path obj "keyType")
       let valTy ← decodeTy s!"{path}.valueType" (← StrictJson.field path obj "valueType")
-      pure (.seqn ((← declaresOf #[t]).push (.makeMap t.assignee keyTy valTy none)))
+      -- `hint` is present EXACTLY when the Go source has a second `make`
+      -- argument (emit.go `emitMake`, BUG-082 fix 2026-09-02); it decodes
+      -- into `Stmt.makeMap`'s `initialSpace`, the operand the makeMap arm
+      -- EVALUATES (spec#Order_of_evaluation) and then ignores (gc clamps).
+      -- The two shapes are the only ones accepted: the strict key list
+      -- refuses any other field, and a present-but-malformed hint fails
+      -- in `decodeExpr` naming its path.
+      let hintE ← (match obj.get? "hint" with
+        | some h => do pure (some (← decodeExpr s!"{path}.hint" h))
+        | none => pure none)
+      pure (.seqn ((← declaresOf #[t]).push (.makeMap t.assignee keyTy valTy hintE)))
   -- Channel statements (channels arc slice 1). All decode arms fail
   -- closed on malformed shapes (target counts, clause kinds, directions).
   | "make-chan" =>

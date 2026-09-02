@@ -1,0 +1,2 @@
+# expected_substring	features
+must not be negative	maps,make,constants,compile_error

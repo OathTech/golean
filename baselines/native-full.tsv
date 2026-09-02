@@ -1,5 +1,42 @@
 # GoLean native-frontend full-corpus differential baseline
-# re-pinned: 2026-09-02 (t5-maxalloc lane — fidelity decision 5(b)
+# re-pinned: 2026-09-02 (bug082-maphint lane — BUG-082 FIX: the native
+#   frontend now lowers the `make(map[K]V, hint)` HINT. [USER] Mike,
+#   2026-09-02, relayed by the [AGENT] coordinator (not firsthand):
+#   «Issue (2) sounds like a clear win, it's a bug fix right? do it» —
+#   issue (2) being "BUG-082 frontend fix: authorizes moving the
+#   twin-wire pin"; [AGENT]-executed inside that mandate. FULL ci --diff
+#   at this tip (docs/evidence/2026-09-02_bug082-maphint/README.md,
+#   gate tail): drift vs the previous pin = exactly the 14 rows below;
+#   NO other row moved in result or stage; NO PASS->non-PASS flips.
+#   Change [TRUST-ADJACENT: frontend lowering + decoder key list]:
+#   tools/nativefrontend/emit.go `emitMake` emits the hint expression
+#   as the make-map node's `hint` field EXACTLY when the source has a
+#   second argument; GoLean/NativeToIR.lean's strict key list for
+#   "make-map" gains `hint` and the decoder passes it as
+#   `Stmt.makeMap`'s `initialSpace` (NO GoCore change: the makeMap arm
+#   already evaluated an optional hint operand and ignored its value,
+#   gc's clamp). Twin-wire frontend pin re-pinned b4ef84e433c1… ->
+#   eef32142627a… (the two raftsubject make-map sites gain `hint`;
+#   structural diff in the evidence dir); deviation pin unchanged.
+#   FLIP FAIL->PASS (1), the born-red witness, on BUG-082's Cases
+#   line (closed this commit):
+#     builtins/make-maxalloc/map-hint-eval-order FAIL/differential ->
+#       PASS/- (gc 31 = machine 31: the hint's bump() now runs).
+#   NEW rows born PASS (13), all on BUG-082's Cases line,
+#   builtins/make-map-hint-eval/{panic-map-never-created,
+#     panic-uncaught,index-panic-map-never-created,index-panic-uncaught,
+#     evaluated-once,negative-from-call,zero,named-int-type,uint8-var,
+#     untyped-const,typed-const,eval-order-with-neighbors,
+#     eval-order-in-expression}: a panicking hint (a call, and a
+#     call-free index — the machine-side operand evaluation) with the
+#     map never created; evaluated exactly once; negative-from-call
+#     (clamped); zero; named / uint8 / untyped-const / typed-const hint
+#     types; order vs neighbouring calls and inside one expression.
+#     Red-first: the pre-fix frontend through the fixed decoder gives
+#     11 / 10 / -877 / 11 / 1341 on the evidence probe family where gc
+#     gives 31 / 50 / -677 / 1 / 12341.
+#   Everything else: 2558 rows unchanged in result and stage.
+# previous re-pin: 2026-09-02 (t5-maxalloc lane — fidelity decision 5(b)
 #   [USER] 2026-08-31 "the deterministic maxAlloc panic class modeled";
 #   [AGENT]-executed inside that mandate. FULL ci --diff at this tip
 #   (this lane's scratch ci-diff-2.log; 2548 rows run; drift = exactly
@@ -361,7 +398,10 @@
 #     The remaining FAIL rows are the standing frontend/feature gaps
 #     of the 2026-08-22 record (docs/2026-08-22_launch-audit-synthesis.md),
 #     none moved by this re-pin.
-# cases: 2559 (2387 PASS / 172 FAIL)
+# cases: 2572 (2401 PASS / 171 FAIL)
+#   [re-derived by count from this file's data rows at the 2026-09-02
+#   bug082-maphint re-pin ([AGENT]): 2559 (2387 PASS / 172 FAIL) + 13
+#   born-PASS + 1 FAIL->PASS flip = 2572 (2401 PASS / 171 FAIL).]
 #   [re-derived from the data rows at the round-4 merge-train rebase 2026-09-02 ([AGENT], union of all three lanes over main@0f3c05ff 2533 (2360 PASS / 173 FAIL)): bug080-atomic-kind +4 born-PASS, 2 FAIL->PASS flips = 2537 (2366 / 171); t5-e9-prune +4 +3 born-PASS = 2544 (2373 / 171); t5-maxalloc +14 born-PASS +1 born-FAIL = 2559 (2387 PASS / 172 FAIL).]
 #   [re-derived by count from this file's data rows at the 2026-09-02
 #   bug080-atomic-kind re-pin: 2533 (2360 PASS / 173 FAIL) + 4 born-PASS
@@ -498,6 +538,19 @@ PASS	builtins/len-vs-call-order/panicky-before-call	-
 FAIL	builtins/len-vs-call-order/panicky-between	frontend-export
 PASS	builtins/make-channel-len-cap	-
 PASS	builtins/make-map-hint	-
+PASS	builtins/make-map-hint-eval/panic-map-never-created	-
+PASS	builtins/make-map-hint-eval/panic-uncaught	-
+PASS	builtins/make-map-hint-eval/index-panic-map-never-created	-
+PASS	builtins/make-map-hint-eval/index-panic-uncaught	-
+PASS	builtins/make-map-hint-eval/evaluated-once	-
+PASS	builtins/make-map-hint-eval/negative-from-call	-
+PASS	builtins/make-map-hint-eval/zero	-
+PASS	builtins/make-map-hint-eval/named-int-type	-
+PASS	builtins/make-map-hint-eval/uint8-var	-
+PASS	builtins/make-map-hint-eval/untyped-const	-
+PASS	builtins/make-map-hint-eval/typed-const	-
+PASS	builtins/make-map-hint-eval/eval-order-with-neighbors	-
+PASS	builtins/make-map-hint-eval/eval-order-in-expression	-
 PASS	builtins/make-maxalloc/slice-len-over-byte	-
 PASS	builtins/make-maxalloc/slice-len-over-const	-
 PASS	builtins/make-maxalloc/slice-len-over-int64	-
@@ -510,7 +563,7 @@ PASS	builtins/make-maxalloc/chan-size-over-int64	-
 PASS	builtins/make-maxalloc/chan-zero-size-elem-huge	-
 PASS	builtins/make-maxalloc/map-hint-over	-
 PASS	builtins/make-maxalloc/map-hint-negative	-
-FAIL	builtins/make-maxalloc/map-hint-eval-order	differential
+PASS	builtins/make-maxalloc/map-hint-eval-order	-
 PASS	builtins/make-maxalloc/recover-slice-len-over	-
 PASS	builtins/make-maxalloc/recover-chan-size-over	-
 PASS	builtins/min-max-edge/one-arg	-

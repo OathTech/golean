@@ -1,0 +1,6 @@
+# producer: go run ./docs/evidence/2026-09-02_bug082-maphint/probe (GO111MODULE=off; go version go1.26.5 linux/amd64)
+probeBump 31
+probeBumpTwice 50
+probeNegBump -677
+probeHintPanic 1
+probeOrder 12341

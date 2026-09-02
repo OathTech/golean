@@ -4204,9 +4204,39 @@ refuses); the gc probe append-growth-over-unsafe is its evidence.
 
 ## BUG-082 — the `make(map[K]V, hint)` HINT is not lowered: the native frontend emits `make-map` without it, so the hint expression's evaluation (its side effects) is dropped — and the machine arm's `makemap: size out of range` panic on a negative hint (a string gc no longer realizes) was dead code behind it
 
-- Status: open
+- Status: fixed (2026-09-02, the `bug082-maphint` lane — [USER] Mike,
+  2026-09-02, relayed by the [AGENT] coordinator, NOT firsthand: «Issue
+  (2) sounds like a clear win, it's a bug fix right? do it», issue (2)
+  being the coordinator's "BUG-082 frontend fix: authorizes moving the
+  twin-wire pin"; [AGENT]-executed inside that mandate. THE FIX
+  [TRUST-ADJACENT: frontend lowering + decoder key list]:
+  `tools/nativefrontend/emit.go` `emitMake`'s `*types.Map` arm visits
+  `c.Args[1]` and emits it as the `make-map` node's `hint` field —
+  present EXACTLY when the source has a second argument, absent
+  otherwise; `GoLean/NativeToIR.lean`'s strict key list for `make-map`
+  gains `hint` (the only widening; any other key still refuses) and the
+  decoder passes it as `Stmt.makeMap`'s `initialSpace`. NO GoCore
+  change: the `makeMap` arm of `applyStmtOpCore` already evaluated an
+  optional hint operand (type, order) and ignored its value. WHERE THE
+  HINT IS EVALUATED: its calls are hoisted by the frontend into `$c`
+  temps in operand order BEFORE the `make-map` statement (the same
+  path every effectful operand takes — spec#Order_of_evaluation), and
+  the residual expression is evaluated by the machine arm as the
+  operand after the target address (a call-free panicking hint, e.g.
+  an out-of-range index, panics THERE, before the map exists). Twin-
+  wire frontend pin re-pinned `b4ef84e433c1…` → `eef32142627a…`
+  ([USER]-authorized as above; the delta is exactly the two
+  raftsubject `make(map…, n)` sites gaining `hint`, structural diff in
+  the evidence dir); deviation pin unchanged. Evidence:
+  docs/evidence/2026-09-02_bug082-maphint/ — gc vs machine on the
+  side-effect probe family (gc 31 / 50 / -677 / 1 / 12341 = fixed
+  machine; the PRE-FIX frontend through the fixed decoder gives 11 /
+  10 / -877 / 11 / 1341, the red-first), and the frontend's go/types
+  refusal of a non-integer / non-representable constant hint, pinned
+  by the negative rows `maps/make-map-{float,string,negative-const,
+  overflow-const}-hint`.)
 - Pinned-by: differential
-- Cases: builtins/make-maxalloc/map-hint-eval-order
+- Cases: builtins/make-maxalloc/map-hint-eval-order, builtins/make-maxalloc/map-hint-over, builtins/make-maxalloc/map-hint-negative, builtins/make-map-hint-eval/panic-map-never-created, builtins/make-map-hint-eval/panic-uncaught, builtins/make-map-hint-eval/index-panic-map-never-created, builtins/make-map-hint-eval/index-panic-uncaught, builtins/make-map-hint-eval/evaluated-once, builtins/make-map-hint-eval/negative-from-call, builtins/make-map-hint-eval/zero, builtins/make-map-hint-eval/named-int-type, builtins/make-map-hint-eval/uint8-var, builtins/make-map-hint-eval/untyped-const, builtins/make-map-hint-eval/typed-const, builtins/make-map-hint-eval/eval-order-with-neighbors, builtins/make-map-hint-eval/eval-order-in-expression
 - Discovered: 2026-09-02 (t5-maxalloc probe matrix, probes map-hint-neg
   / map-hint-over: gc runs `make(map[int]int, -1)` and `make(map[int]
   int, 1<<48+1)` — NO PANIC, len 1 after one insert — where the
@@ -4220,7 +4250,8 @@ refuses); the gc probe append-growth-over-unsafe is its evidence.
   `builtins/make-map-hint` with a constant hint 8, which cannot see
   either half.)
 
-Two halves, one site. (1) FIDELITY, open: spec §Making slices, maps
+Two halves, one site. (1) FIDELITY, FIXED the same day on the
+`bug082-maphint` lane (Status above): spec §Making slices, maps
 and channels lists the hint among the ordinary operands of a `make`
 call (§Order_of_evaluation: operands evaluated left to right), and gc
 evaluates it — `make(map[int]int, bump(&n))` bumps `n`; the machine
@@ -4240,5 +4271,5 @@ negative or over-`maxAlloc` hint to 0 — the old negative-hint panic
 was an R9 violation in waiting (a text the pinned oracle never
 produces), dead only because of (1). The two gc-truth rows
 `map-hint-over` / `map-hint-negative` (PASS on both binaries) pin that
-gc does not panic there; they do not exercise the machine arm until
-(1) lands, and say so in their fixture comment.
+gc does not panic there; they did not exercise the machine arm until
+(1) landed (they do now, and sit on this Cases line for that reason).

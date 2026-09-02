@@ -1,0 +1,20 @@
+# structural diff: old twin pin (HEAD = fa4fce58, sha b4ef84e433c1…) vs re-pinned twin-chdriver.wire.json (sha eef32142627a…)
+# producer: docs/evidence/2026-09-02_bug082-maphint/README.md Reproduction block
+method keys only-in-old: []
+method keys only-in-new: []
+funcs only-in-old: []
+funcs only-in-new: []
+===== changed func tracker.Config.Clone$lit0
+  make-map nodes old/new: 1 1
+  make-map at .body.body[1]
+    old keys: ['keyType', 'stmt', 'target', 'valueType']
+    new keys: ['hint', 'keyType', 'stmt', 'target', 'valueType']
+    new hint: {"expr": "builtin-len", "operand": {"expr": "ident", "name": "m", "type": {"key": {"int": "uint64", "kind": "int"}, "kind": "map", "value": {"kind": "named", "name": "struct{}"}}}, "operandType": {"key": {"int": "uint64", "kind": "int"}, "kind": "map", "value": {"kind": "named", "name": "struct{}"}}, "type": {"int": "int", "kind": "int"}}
+  identical once hint fields are removed: True
+===== changed method ('raft.lockedRand', 'Intn')
+  make-map nodes old/new: 1 1
+  make-map at .body.body[2]
+    old keys: ['keyType', 'stmt', 'target', 'valueType']
+    new keys: ['hint', 'keyType', 'stmt', 'target', 'valueType']
+    new hint: {"expr": "ident", "name": "n", "type": {"int": "int", "kind": "int"}}
+  identical once hint fields are removed: True

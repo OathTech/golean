@@ -1,0 +1,11 @@
+# producer: the PRE-FIX frontend (tools/nativefrontend with emit.go at fa4fce58 = HEAD, built from a scratch copy; README Reproduction block) emitting probe.wire.prefix-frontend.json, run through the FIXED golean: .lake/build/bin/golean native-json-run --input docs/evidence/2026-09-02_bug082-maphint/probe.wire.prefix-frontend.json --function <name>, per line
+probeBump	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":11}]}
+
+probeBumpTwice	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":10}]}
+
+probeNegBump	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":-877}]}
+
+probeHintPanic	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":11}]}
+
+probeOrder	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1341}]}
+

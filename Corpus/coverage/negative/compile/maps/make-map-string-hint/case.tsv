@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot convert "8" (untyped string constant) to type int	maps,make,strings,compile_error

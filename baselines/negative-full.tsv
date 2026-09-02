@@ -1,10 +1,19 @@
 # GoLean negative-corpus (compile-rejection) baseline
 # recorded: 2026-08-18  commit: f68a4d86+ (spec-truth P3 slice 2)  oracle: go build (rejection)  [header corrected 2026-08-31: the old "+ frontend fail-closed" conjunct claimed a check that does not exist — scripts/coverage-negative invokes no GoLean tool (p2-fact claim 5)]
-# manifest_cases: 390  pass: 390  fail: 0
+# manifest_cases: 394  pass: 394  fail: 0
 # Columns: result<TAB>id<TAB>stage (sorted by id); detail omitted (churns).
 # Regression = any flip/stage change vs this file (scripts/coverage-baseline-diff
 # --baseline baselines/negative-full.tsv artifacts/coverage/negative-latest.tsv).
-# Re-pin reason: 79 NEW ids, no other change — the spec-examples negative
+# Re-pin reason (2026-09-02, bug082-maphint lane, [AGENT] inside the BUG-082 fix
+# mandate): 4 NEW ids, no other change — maps/make-map-{float,string,
+# negative-const,overflow-const}-hint pin that a non-integer or non-
+# representable constant map HINT is a COMPILE error (spec#Making_slices_maps_and_channels:
+# "must be of integer type ... or be untyped constants"; a constant "must be
+# non-negative and representable by a value of type int"), each
+# expected_substring from actual go build stderr; the native frontend refuses
+# the same four at its go/types type-check (evidence dir README). Every
+# pre-existing id keeps its result and stage; all 394 PASS.
+# Previous re-pin reason (2026-08-18): 79 NEW ids, no other change — the spec-examples negative
 # tranche (P3, mechanism 4.2): all 35 contains-illegal spec blocks converted
 # (76 cases, worker-built, every expected_substring from actual go build
 # stderr) + 3 integration handovers (two goto negatives the classifier had
@@ -212,6 +221,10 @@ PASS	maps/duplicate-key	-
 PASS	maps/duplicate-string-key	-
 PASS	maps/duplicate-typed-const-key	-
 PASS	maps/func-key	-
+PASS	maps/make-map-float-hint	-
+PASS	maps/make-map-negative-const-hint	-
+PASS	maps/make-map-overflow-const-hint	-
+PASS	maps/make-map-string-hint	-
 PASS	maps/make-map-too-many-args	-
 PASS	maps/map-array-element-assign	-
 PASS	maps/map-compare	-

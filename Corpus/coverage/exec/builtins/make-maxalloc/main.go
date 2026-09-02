@@ -7,7 +7,7 @@ package main
 // check is `elemSize*n > 1<<48` (len blamed before cap, issue 4085), the
 // channel check sits 112 bytes lower (`hchanSize`), the map hint is
 // silently clamped (never a panic — and, BUG-082, not lowered by the
-// native frontend at all), and a zero-size element never trips
+// native frontend at all until its 2026-09-02 fix), and a zero-size element never trips
 // the limit. Every threshold below is JUST OVER: the just-under requests
 // pass gc's check and then fail to ALLOCATE (fatal "out of memory"), the
 // true-OOM class this corpus deliberately does not model (doctrine
@@ -88,9 +88,11 @@ func makeMaxAllocMapHintNegative() int {
 }
 
 // The hint is an ordinary operand: gc evaluates it (its side effects
-// happen) and then ignores its value. BUG-082: the native frontend does
-// not lower the hint at all, so the bump below never runs in the machine
-// (gc 31, machine 11 — red-first, on BUG-082's Cases line).
+// happen) and then ignores its value. BUG-082 (born red here, gc 31 vs
+// machine 11): the native frontend did not lower the hint at all, so the
+// bump below never ran in the machine. FIXED 2026-09-02 (bug082-maphint):
+// the hint is lowered and evaluated; the wider family is
+// builtins/make-map-hint-eval.
 func makeMaxAllocMapHintEvalOrder() int {
 	n := 1
 	m := make(map[int]int, makeMaxAllocBump(&n))

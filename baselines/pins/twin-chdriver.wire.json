@@ -50084,6 +50084,39 @@
       }
      },
      {
+      "hint": {
+       "expr": "builtin-len",
+       "operand": {
+        "expr": "ident",
+        "name": "m",
+        "type": {
+         "key": {
+          "int": "uint64",
+          "kind": "int"
+         },
+         "kind": "map",
+         "value": {
+          "kind": "named",
+          "name": "struct{}"
+         }
+        }
+       },
+       "operandType": {
+        "key": {
+         "int": "uint64",
+         "kind": "int"
+        },
+        "kind": "map",
+        "value": {
+         "kind": "named",
+         "name": "struct{}"
+        }
+       },
+       "type": {
+        "int": "int",
+        "kind": "int"
+       }
+      },
       "keyType": {
        "int": "uint64",
        "kind": "int"
@@ -311705,6 +311738,14 @@
       "stmt": "sync-op"
      },
      {
+      "hint": {
+       "expr": "ident",
+       "name": "n",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       }
+      },
       "keyType": {
        "int": "int",
        "kind": "int"

@@ -1,0 +1,16 @@
+key	value
+frontend	native
+manifest	/home/dev/projects/golean/.tmp/golean-coverage.E4IC9c
+manifest_sha256	494b5780f6c9c03f3c4d881bc3f245539f8319e883348b9c4e21258fd0c8acd2
+manifest_cases	15
+total_corpus_cases	2570
+full_run	false
+filters	--id builtins/make-map-hint-eval/panic-map-never-created --id builtins/make-map-hint-eval/panic-uncaught --id builtins/make-map-hint-eval/evaluated-once --id builtins/make-map-hint-eval/negative-from-call --id builtins/make-map-hint-eval/zero --id builtins/make-map-hint-eval/named-int-type --id builtins/make-map-hint-eval/uint8-var --id builtins/make-map-hint-eval/untyped-const --id builtins/make-map-hint-eval/typed-const --id builtins/make-map-hint-eval/eval-order-with-neighbors --id builtins/make-map-hint-eval/eval-order-in-expression --id builtins/make-maxalloc/map-hint-eval-order --id builtins/make-maxalloc/map-hint-over --id builtins/make-maxalloc/map-hint-negative --id builtins/make-map-hint
+git_commit	fa4fce581afd66b412371805989152ae03622878
+git_dirty	true
+go_toolchain	go1.26.5
+go_drift_allowed	0
+go_drift_actual	false
+jobs	32
+fanout_find_exit	0
+fanout_pool_exit	0

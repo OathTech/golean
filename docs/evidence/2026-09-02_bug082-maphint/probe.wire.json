@@ -1,0 +1,2043 @@
+{
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "expr": "ident",
+         "name": "p",
+         "type": {
+          "elem": {
+           "int": "int",
+           "kind": "int"
+          },
+          "kind": "pointer"
+         }
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "deref",
+         "ptr": {
+          "expr": "ident",
+          "name": "p",
+          "type": {
+           "elem": {
+            "int": "int",
+            "kind": "int"
+           },
+           "kind": "pointer"
+          }
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "2"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "p",
+         "type": {
+          "elem": {
+           "int": "int",
+           "kind": "int"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "bump",
+   "params": [
+    {
+     "id": "p",
+     "type": {
+      "elem": {
+       "int": "int",
+       "kind": "int"
+      },
+      "kind": "pointer"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "n",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "1"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c1",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "expr": "ref",
+          "id": "n",
+          "type": {
+           "elem": {
+            "int": "int",
+            "kind": "int"
+           },
+           "kind": "pointer"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "bump",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "hint": {
+       "expr": "ident",
+       "name": "$c1",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       }
+      },
+      "keyType": {
+       "int": "int",
+       "kind": "int"
+      },
+      "stmt": "make-map",
+      "target": {
+       "id": "$c0",
+       "target": "declare",
+       "type": {
+        "key": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "map",
+        "value": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      },
+      "valueType": {
+       "int": "int",
+       "kind": "int"
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "m",
+        "target": "declare",
+        "type": {
+         "key": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "map",
+         "value": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "$c0",
+        "type": {
+         "key": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "map",
+         "value": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "base": {
+       "expr": "ident",
+       "name": "m",
+       "type": {
+        "key": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "map",
+        "value": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      },
+      "index": {
+       "expr": "int",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "value": "1"
+      },
+      "keyType": {
+       "int": "int",
+       "kind": "int"
+      },
+      "stmt": "map-assign",
+      "value": {
+       "expr": "int",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "value": "2"
+      },
+      "valueType": {
+       "int": "int",
+       "kind": "int"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "binary",
+         "op": "*",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "n",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "y": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "10"
+         }
+        },
+        "y": {
+         "expr": "builtin-len",
+         "operand": {
+          "expr": "ident",
+          "name": "m",
+          "type": {
+           "key": {
+            "int": "int",
+            "kind": "int"
+           },
+           "kind": "map",
+           "value": {
+            "int": "int",
+            "kind": "int"
+           }
+          }
+         },
+         "operandType": {
+          "key": {
+           "int": "int",
+           "kind": "int"
+          },
+          "kind": "map",
+          "value": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "probeBump",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "n",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "1"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c3",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "expr": "ref",
+          "id": "n",
+          "type": {
+           "elem": {
+            "int": "int",
+            "kind": "int"
+           },
+           "kind": "pointer"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "bump",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c4",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "expr": "ref",
+          "id": "n",
+          "type": {
+           "elem": {
+            "int": "int",
+            "kind": "int"
+           },
+           "kind": "pointer"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "bump",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "hint": {
+       "expr": "binary",
+       "op": "+",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "x": {
+        "expr": "ident",
+        "name": "$c3",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       "y": {
+        "expr": "ident",
+        "name": "$c4",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      },
+      "keyType": {
+       "int": "int",
+       "kind": "int"
+      },
+      "stmt": "make-map",
+      "target": {
+       "id": "$c2",
+       "target": "declare",
+       "type": {
+        "key": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "map",
+        "value": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      },
+      "valueType": {
+       "int": "int",
+       "kind": "int"
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "m",
+        "target": "declare",
+        "type": {
+         "key": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "map",
+         "value": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "$c2",
+        "type": {
+         "key": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "map",
+         "value": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "binary",
+         "op": "*",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "n",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "y": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "10"
+         }
+        },
+        "y": {
+         "expr": "builtin-len",
+         "operand": {
+          "expr": "ident",
+          "name": "m",
+          "type": {
+           "key": {
+            "int": "int",
+            "kind": "int"
+           },
+           "kind": "map",
+           "value": {
+            "int": "int",
+            "kind": "int"
+           }
+          }
+         },
+         "operandType": {
+          "key": {
+           "int": "int",
+           "kind": "int"
+          },
+          "kind": "map",
+          "value": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "probeBumpTwice",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "n",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "-9"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c6",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "expr": "ref",
+          "id": "n",
+          "type": {
+           "elem": {
+            "int": "int",
+            "kind": "int"
+           },
+           "kind": "pointer"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "bump",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "hint": {
+       "expr": "ident",
+       "name": "$c6",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       }
+      },
+      "keyType": {
+       "int": "int",
+       "kind": "int"
+      },
+      "stmt": "make-map",
+      "target": {
+       "id": "$c5",
+       "target": "declare",
+       "type": {
+        "key": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "map",
+        "value": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      },
+      "valueType": {
+       "int": "int",
+       "kind": "int"
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "m",
+        "target": "declare",
+        "type": {
+         "key": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "map",
+         "value": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "$c5",
+        "type": {
+         "key": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "map",
+         "value": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "base": {
+       "expr": "ident",
+       "name": "m",
+       "type": {
+        "key": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "map",
+        "value": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      },
+      "index": {
+       "expr": "int",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "value": "1"
+      },
+      "keyType": {
+       "int": "int",
+       "kind": "int"
+      },
+      "stmt": "map-assign",
+      "value": {
+       "expr": "int",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "value": "2"
+      },
+      "valueType": {
+       "int": "int",
+       "kind": "int"
+      }
+     },
+     {
+      "base": {
+       "expr": "ident",
+       "name": "m",
+       "type": {
+        "key": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "map",
+        "value": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      },
+      "index": {
+       "expr": "int",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "value": "2"
+      },
+      "keyType": {
+       "int": "int",
+       "kind": "int"
+      },
+      "stmt": "map-assign",
+      "value": {
+       "expr": "int",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "value": "3"
+      },
+      "valueType": {
+       "int": "int",
+       "kind": "int"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "binary",
+         "op": "+",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "binary",
+          "op": "*",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "x": {
+           "expr": "ident",
+           "name": "n",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           }
+          },
+          "y": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "100"
+          }
+         },
+         "y": {
+          "expr": "binary",
+          "op": "*",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "x": {
+           "expr": "builtin-len",
+           "operand": {
+            "expr": "ident",
+            "name": "m",
+            "type": {
+             "key": {
+              "int": "int",
+              "kind": "int"
+             },
+             "kind": "map",
+             "value": {
+              "int": "int",
+              "kind": "int"
+             }
+            }
+           },
+           "operandType": {
+            "key": {
+             "int": "int",
+             "kind": "int"
+            },
+            "kind": "map",
+            "value": {
+             "int": "int",
+             "kind": "int"
+            }
+           },
+           "type": {
+            "int": "int",
+            "kind": "int"
+           }
+          },
+          "y": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "10"
+          }
+         }
+        },
+        "y": {
+         "base": {
+          "expr": "ident",
+          "name": "m",
+          "type": {
+           "key": {
+            "int": "int",
+            "kind": "int"
+           },
+           "kind": "map",
+           "value": {
+            "int": "int",
+            "kind": "int"
+           }
+          }
+         },
+         "expr": "map-get",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "2"
+         },
+         "keyType": {
+          "int": "int",
+          "kind": "int"
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "valueType": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "probeNegBump",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c7",
+        "target": "declare",
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "recover",
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cond": {
+       "expr": "binary",
+       "op": "!=",
+       "operandType": {
+        "kind": "interface",
+        "name": "any"
+       },
+       "type": {
+        "kind": "bool"
+       },
+       "x": {
+        "expr": "ident",
+        "name": "$c7",
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       },
+       "y": {
+        "expr": "nil"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "define": false,
+         "lhs": [
+          {
+           "expr": {
+            "expr": "ident",
+            "name": "result$cap"
+           },
+           "target": "addr"
+          }
+         ],
+         "rhs": [
+          {
+           "expr": "binary",
+           "op": "+",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "x": {
+            "expr": "binary",
+            "op": "*",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "x": {
+             "expr": "deref",
+             "ptr": {
+              "expr": "ident",
+              "name": "created$cap"
+             },
+             "type": {
+              "int": "int",
+              "kind": "int"
+             }
+            },
+            "y": {
+             "expr": "int",
+             "type": {
+              "int": "int",
+              "kind": "int"
+             },
+             "value": "10"
+            }
+           },
+           "y": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "1"
+           }
+          }
+         ],
+         "stmt": "assign"
+        }
+       ],
+       "stmt": "block"
+      }
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "probeHintPanic$lit0",
+   "params": [
+    {
+     "id": "result$cap",
+     "type": {
+      "elem": {
+       "int": "int",
+       "kind": "int"
+      },
+      "kind": "pointer"
+     }
+    },
+    {
+     "id": "created$cap",
+     "type": {
+      "elem": {
+       "int": "int",
+       "kind": "int"
+      },
+      "kind": "pointer"
+     }
+    }
+   ],
+   "results": [],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "created",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "0"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "args": [],
+      "callee": {
+       "captured": [
+        {
+         "expr": "ref",
+         "id": "result"
+        },
+        {
+         "expr": "ref",
+         "id": "created"
+        }
+       ],
+       "expr": "func-value",
+       "func": "probeHintPanic$lit0",
+       "type": {
+        "kind": "func",
+        "params": [],
+        "results": [],
+        "variadic": false
+       }
+      },
+      "stmt": "defer"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c9",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [],
+        "expr": "call",
+        "func": "panicHint",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "hint": {
+       "expr": "ident",
+       "name": "$c9",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       }
+      },
+      "keyType": {
+       "int": "int",
+       "kind": "int"
+      },
+      "stmt": "make-map",
+      "target": {
+       "id": "$c8",
+       "target": "declare",
+       "type": {
+        "key": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "map",
+        "value": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      },
+      "valueType": {
+       "int": "int",
+       "kind": "int"
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "m",
+        "target": "declare",
+        "type": {
+         "key": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "map",
+         "value": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "$c8",
+        "type": {
+         "key": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "map",
+         "value": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "id": "created",
+        "target": "var"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "1"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "base": {
+       "expr": "ident",
+       "name": "m",
+       "type": {
+        "key": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "map",
+        "value": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      },
+      "index": {
+       "expr": "int",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "value": "1"
+      },
+      "keyType": {
+       "int": "int",
+       "kind": "int"
+      },
+      "stmt": "map-assign",
+      "value": {
+       "expr": "int",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "value": "2"
+      },
+      "valueType": {
+       "int": "int",
+       "kind": "int"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "binary",
+         "op": "*",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "created",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "y": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "10"
+         }
+        },
+        "y": {
+         "expr": "builtin-len",
+         "operand": {
+          "expr": "ident",
+          "name": "m",
+          "type": {
+           "key": {
+            "int": "int",
+            "kind": "int"
+           },
+           "kind": "map",
+           "value": {
+            "int": "int",
+            "kind": "int"
+           }
+          }
+         },
+         "operandType": {
+          "key": {
+           "int": "int",
+           "kind": "int"
+          },
+          "kind": "map",
+          "value": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "probeHintPanic",
+   "params": [],
+   "results": [
+    {
+     "id": "result",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "stmt": "panic",
+      "value": {
+       "bytes": [
+        104,
+        105,
+        110,
+        116
+       ],
+       "expr": "string",
+       "type": {
+        "kind": "string"
+       }
+      },
+      "wrap": {
+       "kind": "string"
+      }
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "panicHint",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "log",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "0"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "expr": {
+       "args": [
+        {
+         "expr": "ref",
+         "id": "log",
+         "type": {
+          "elem": {
+           "int": "int",
+           "kind": "int"
+          },
+          "kind": "pointer"
+         }
+        },
+        {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "1"
+        }
+       ],
+       "expr": "call",
+       "func": "logd",
+       "resultTypes": [
+        {
+         "int": "int",
+         "kind": "int"
+        }
+       ]
+      },
+      "stmt": "expr"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c11",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "expr": "ref",
+          "id": "log",
+          "type": {
+           "elem": {
+            "int": "int",
+            "kind": "int"
+           },
+           "kind": "pointer"
+          }
+         },
+         {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "2"
+         }
+        ],
+        "expr": "call",
+        "func": "logd",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "hint": {
+       "expr": "ident",
+       "name": "$c11",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       }
+      },
+      "keyType": {
+       "int": "int",
+       "kind": "int"
+      },
+      "stmt": "make-map",
+      "target": {
+       "id": "$c10",
+       "target": "declare",
+       "type": {
+        "key": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "map",
+        "value": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      },
+      "valueType": {
+       "int": "int",
+       "kind": "int"
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "m",
+        "target": "declare",
+        "type": {
+         "key": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "map",
+         "value": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "$c10",
+        "type": {
+         "key": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "map",
+         "value": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c12",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "expr": "ref",
+          "id": "log",
+          "type": {
+           "elem": {
+            "int": "int",
+            "kind": "int"
+           },
+           "kind": "pointer"
+          }
+         },
+         {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "3"
+         }
+        ],
+        "expr": "call",
+        "func": "logd",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c13",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "expr": "ref",
+          "id": "log",
+          "type": {
+           "elem": {
+            "int": "int",
+            "kind": "int"
+           },
+           "kind": "pointer"
+          }
+         },
+         {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "4"
+         }
+        ],
+        "expr": "call",
+        "func": "logd",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "base": {
+       "expr": "ident",
+       "name": "m",
+       "type": {
+        "key": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "map",
+        "value": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      },
+      "index": {
+       "expr": "ident",
+       "name": "$c12",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       }
+      },
+      "keyType": {
+       "int": "int",
+       "kind": "int"
+      },
+      "stmt": "map-assign",
+      "value": {
+       "expr": "ident",
+       "name": "$c13",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       }
+      },
+      "valueType": {
+       "int": "int",
+       "kind": "int"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "binary",
+         "op": "*",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "log",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "y": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "10"
+         }
+        },
+        "y": {
+         "expr": "builtin-len",
+         "operand": {
+          "expr": "ident",
+          "name": "m",
+          "type": {
+           "key": {
+            "int": "int",
+            "kind": "int"
+           },
+           "kind": "map",
+           "value": {
+            "int": "int",
+            "kind": "int"
+           }
+          }
+         },
+         "operandType": {
+          "key": {
+           "int": "int",
+           "kind": "int"
+          },
+          "kind": "map",
+          "value": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "probeOrder",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "expr": "ident",
+         "name": "p",
+         "type": {
+          "elem": {
+           "int": "int",
+           "kind": "int"
+          },
+          "kind": "pointer"
+         }
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "binary",
+         "op": "*",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "deref",
+          "ptr": {
+           "expr": "ident",
+           "name": "p",
+           "type": {
+            "elem": {
+             "int": "int",
+             "kind": "int"
+            },
+            "kind": "pointer"
+           }
+          },
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "y": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "10"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "d",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "ident",
+        "name": "d",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "logd",
+   "params": [
+    {
+     "id": "p",
+     "type": {
+      "elem": {
+       "int": "int",
+       "kind": "int"
+      },
+      "kind": "pointer"
+     }
+    },
+    {
+     "id": "d",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  }
+ ],
+ "methodSets": [],
+ "methods": [],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": []
+}
