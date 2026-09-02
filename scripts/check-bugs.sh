@@ -8,7 +8,15 @@
 #       baseline AND is currently FAIL (a PASSing pinned case = fixed-not-closed);
 #       every `- Cases:` id of a Pinned-by:none bug EXISTS in the baseline
 #       (existence only — none-entries mix red-by-design pins with flip-record
-#       rows, so no direction is derivable; audit fix round 2026-09-01);
+#       rows, so no direction is derivable; audit fix round 2026-09-01) —
+#       UNLESS the entry carries an optional `- Expect: FAIL` line (q-u4-gomem
+#       audit fix F4, 2026-09-02): then every listed id must ALSO be FAIL, so a
+#       red-by-design pin that silently turns PASS (a refusal that stopped
+#       firing) trips the gate instead of laundering through the existence check.
+#       `Expect:` accepts only FAIL; any other token fails closed (0).
+#   Paths are overridable for fixture tests ONLY (scripts/test-lane-validation
+#   Part A3): CHECK_BUGS_BUGS / CHECK_BUGS_BASELINE / CHECK_BUGS_IDS /
+#   CHECK_BUGS_CEIL. Unset = the tracked files.
 #   (2) every open Pinned-by:differential bug lists >=1 case;
 #   (3) SYMMETRIC: every `Status: fixed` differential bug's cases must now PASS
 #       (marking a bug fixed while its cases still fail is laundering);
@@ -28,8 +36,8 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 LIST=0; [ "${1:-}" = "--list" ] && LIST=1
 
-BUGS=docs/BUGS.md
-BASELINE=baselines/native-full.tsv
+BUGS=${CHECK_BUGS_BUGS:-docs/BUGS.md}
+BASELINE=${CHECK_BUGS_BASELINE:-baselines/native-full.tsv}
 [ -f "$BUGS" ]     || { echo "check-bugs: no $BUGS" >&2; exit 2; }
 [ -f "$BASELINE" ] || { echo "check-bugs: no $BASELINE" >&2; exit 2; }
 fail=0
@@ -38,20 +46,25 @@ fail=0
 blk() { awk -F'\t' -v id="$1" '!/^#/ && $2==id {print $1"/"$3; found=1} END{exit !found}' "$BASELINE"; }
 
 # Parse BUGS.md into: per open+differential bug, its id and Cases line.
-# Emit "BUG-NNN|status|pinned|case,case,..." per bug.
+# Emit "BUG-NNN|status|pinned|expect|case,case,..." per bug.
 bugs="$(awk '
-  /^## BUG-/       { if (id) print id"|"st"|"pb"|"cs; id=$2; st=""; pb=""; cs="" }
+  /^## BUG-/       { if (id) print id"|"st"|"pb"|"ex"|"cs; id=$2; st=""; pb=""; ex=""; cs="" }
   /^- Status:/     { st=$3 }
   /^- Pinned-by:/  { pb=$3 }
+  /^- Expect:/     { ex=$3 }
   /^- Cases:/      { sub(/^- Cases:[ ]*/,""); gsub(/[ ]/,""); cs=$0 }
-  END { if (id) print id"|"st"|"pb"|"cs }
+  END { if (id) print id"|"st"|"pb"|"ex"|"cs }
 ' "$BUGS")"
 
 declared_cases=""   # accumulate all cases named by any bug (for the ratchet)
 nbugs=0
-while IFS='|' read -r id st pb cs; do
+while IFS='|' read -r id st pb ex cs; do
   [ -z "${id:-}" ] && continue
   nbugs=$((nbugs+1))
+  # Optional `- Expect:` (audit fix F4): FAIL is the only recognized value.
+  if [ -n "$ex" ] && [ "$ex" != FAIL ]; then
+    echo "FAIL (0): $id has unrecognized 'Expect: $ex' (must be FAIL, or omit the line)"; fail=1; continue
+  fi
   # Fail closed on an unparseable status: a token this parser does not
   # recognize silently exempts the bug from every check below (the 2026-07-25
   # pre-merge audit caught exactly that — BUG-001 closed as '**CLOSED ...**'
@@ -81,8 +94,10 @@ while IFS='|' read -r id st pb cs; do
     for c in "${arr[@]}"; do
       [ -z "$c" ] && continue
       declared_cases="$declared_cases $c"
-      if ! blk "$c" >/dev/null; then
+      if ! res="$(blk "$c")"; then
         echo "FAIL (1): $id case '$c' not found in $BASELINE (Pinned-by:none Cases ids must name live rows — record removals in prose, not on the Cases line)"; fail=1
+      elif [ "$ex" = FAIL ] && [ "${res%%/*}" != FAIL ]; then
+        echo "FAIL (5): $id declares 'Expect: FAIL' but case '$c' is $res in baseline — a red-by-design pin turned green: the refusal stopped firing, or the row no longer pins it"; fail=1
       fi
     done
     continue
@@ -173,8 +188,8 @@ fi
 # total — the split may never lose a row.
 # ---------------------------------------------------------------------------
 DISPOSITIONS='coverage latitude wrong-answer'
-IDS_FILE=baselines/untriaged-ids
-CEIL_FILE=baselines/untriaged-count
+IDS_FILE=${CHECK_BUGS_IDS:-baselines/untriaged-ids}
+CEIL_FILE=${CHECK_BUGS_CEIL:-baselines/untriaged-count}
 
 current_ids="$(printf '%s\n' "$unexplained" | cut -f1 | grep . | sort || true)"
 tracked_ids=""      # first field of every non-comment line (the 4b set)

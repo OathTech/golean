@@ -65,3 +65,38 @@ exit=0
 
 RESULT: PASS
 exit=0
+
+# ---- audit fix round F1-F4 (worktree state that became the fix-round commit; git_dirty=true at run time): the same gate ----
+no regression: 2566 case(s) run in latest.tsv match baselines/native-full.tsv
+
+── baseline re-pin guard (worktree-vs-HEAD; flips must be on a BUGS.md Cases: line)
+  re-pin note: DELETED	race/gomem-only/wg-overwrite-vs-add-nonzero	(was FAIL)
+...
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   core build (warning-free)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   eval tests (146 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  note negative baseline diff matched (390 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  note baseline diff FULL (2566/2566, no regression) but recorded on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  ok   re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)
+  note re-pin baselines/native-full.tsv: 0 non-PASS→PASS flip(s), 1 deleted row(s); case count DECREASED 2567 → 2566 — report-only; verify the re-pin's written reason covers them
+  note reconciler: 3 finding(s), 0 HIGH — report-only (details: tools/reconcile-records)
+
+RESULT: PASS
+exit=0

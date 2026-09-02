@@ -1877,7 +1877,7 @@ memory)" for the doctrine's.
     (our refusal + `-race` green) files the go_mem-racy/TSan-green rows
     as an investigation whose ruled outcome is "racy by go_mem, TSan
     incomplete"; they are pinned born-FAIL against gc's `ok`
-    (`race/gomem-only/*`, BUGS.md BUG-083's Cases line — the record of
+    (`race/gomem-only/*`, BUGS.md BUG-084's Cases line — the record of
     the designed divergence) so the cost stays visible. Removing:
     nothing — a doctrine decision, not latitude; the U-ledger's U4 is
     CLOSED (BUG-080) with residual (a) closed by this ruling.

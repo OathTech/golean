@@ -5,7 +5,7 @@ import "sync"
 // go_mem-RACY, TSan-GREEN shapes — the DESIGNED divergence from the
 // `-race` oracle (Q-U4RESIDUAL, RULED [USER] 2026-09-02 option (A):
 // "follow go_mem exactly"; docs/2026-08-31_qrow-rulings.md row 9;
-// docs/BUGS.md BUG-083). Every subject performs a PLAIN access (a
+// docs/BUGS.md BUG-084). Every subject performs a PLAIN access (a
 // whole-struct copy = read, a whole-struct overwrite = write) to a
 // primitive beside a sync op that gc's -race build runs under
 // `race.Disable` — so TSan sees nothing and gc runs to a value — but
@@ -19,14 +19,21 @@ import "sync"
 // THESE ROWS ARE RED BY DESIGN and never count as a pass: expected_status
 // is gc's observation (`ok`, the value) and the machine refuses with
 // `race` on every path, so each row FAILs at lean-observation. They sit
-// on BUG-083's Cases line (a Pinned-by:none red-by-design pin, the
+// on BUG-084's Cases line (a Pinned-by:none red-by-design pin, the
 // BUG-070/078 precedent) so the divergence stays visible and can never
 // be laundered into a pass by a baseline re-pin. Every shape is a vet
 // `copylocks` violation; no race-free program is affected. Shapes whose
 // gc outcome is schedule-dependent (an overwrite beside Done, whose
 // reset counter makes the Done a negative-counter panic on some
 // schedules) are probed, not pinned here: probes/u4kind
-// `wg-overwrite-vs-done` (docs/evidence/2026-09-02_q-u4-gomem/).
+// `wg-overwrite-vs-done` (docs/evidence/2026-09-02_q-u4-gomem/). So is an
+// overwrite beside an Add from a NONZERO counter (audit fix F1): when the
+// racing overwrite lands first the counter is reset to 0, the Add IS the
+// counter-off-0 case and gc executes `race.Read(&wg.sema)` (waitgroup.go:
+// 111-115) — TSan-red on those schedules, green when the Add lands first;
+// refused on every path here. Corpus-pinnable in no lane (a green -race
+// sample fails a racy row, a red one an ok row): probes/u4gomem
+// `wg-overwrite-vs-add-nonzero`.
 //
 // Every copy lands in a package-level sink so the compiler cannot narrow
 // the struct read to one field.
@@ -112,24 +119,6 @@ func gomemWgCopyVsDone() int {
 	return gomemWgSink.n
 }
 
-// Overwrite beside an Add(1) from a NONZERO counter (main Adds first,
-// so the child's Add is not the counter-off-0 case and realizes no
-// sema read; nothing ever Waits, so the reset counter cannot panic).
-// mem#model: write-like beside a plain write → write-write race. TSan:
-// nothing instrumented → green, deterministic `ok`.
-func gomemWgOverwriteVsAddNonzero() int {
-	var w gomemWgBox
-	done := make(chan int)
-	w.wg.Add(1)
-	go func() {
-		w.wg.Add(1)
-		done <- 0
-	}()
-	w = gomemWgBox{}
-	<-done
-	return w.n
-}
-
 // Overwrite beside a Wait that returns at counter 0. mem#model: the
 // counter read is read-like, the overwrite a plain write → read-write
 // race. TSan: a Wait at 0 registers no waiter and touches nothing it
@@ -148,5 +137,5 @@ func gomemWgOverwriteVsWaitAt0() int {
 
 func main() {
 	println(gomemRwCopyVsRUnlock(), gomemRwCopyVsUnlock(), gomemWgCopyVsAddFrom0(),
-		gomemWgCopyVsDone(), gomemWgOverwriteVsAddNonzero(), gomemWgOverwriteVsWaitAt0())
+		gomemWgCopyVsDone(), gomemWgOverwriteVsWaitAt0())
 }

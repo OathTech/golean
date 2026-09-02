@@ -261,7 +261,7 @@ write a bare "#6"/"#7".
    lane the detector records mem#model's operation kinds beside TSan's
    realized set, so this class REFUSES — a DESIGNED divergence from the
    `-race` oracle, pinned born-FAIL against gc's `ok` at
-   `race/gomem-only/*` (BUGS.md BUG-083) and never counted as a pass;
+   `race/gomem-only/*` (BUGS.md BUG-084) and never counted as a pass;
    refusal is go_mem's permitted report-and-terminate branch, and the
    verification-substrate rationale (over-refusal = incompleteness,
    under-refusal = unsoundness) is the ruling's ground; and an

@@ -143,7 +143,59 @@ func gRwCopyVsLockOnly() int {
 	return gRwSink.n
 }
 
+type gMuBox struct {
+	mu sync.Mutex
+	n  int
+}
+
+var gMuSink gMuBox
+
+// G-7 (audit fix F1) overwrite beside an Add from a NONZERO counter (main
+// Added 1 before the spawn). The slice filed this as TSan-green; it is
+// NOT: on the schedules where the overwrite lands first the counter is
+// reset to 0, the child's Add IS the counter-off-0 case and gc executes
+// race.Read(&wg.sema) (waitgroup.go:111-115) -> gc RED. Machine: the
+// Add's .atomicWrite @state vs the overwrite on every path -> RACE-ALL.
+// Expected: agree-race (pinned as race/negative-sync/wg-overwrite-vs-add-
+// nonzero).
+func gWgOverwriteVsAddNonzero() int {
+	var w gWgBox
+	done := make(chan int)
+	w.wg.Add(1)
+	go func() {
+		w.wg.Add(1)
+		done <- 0
+	}()
+	w = gWgBox{}
+	<-done
+	return w.n
+}
+
+// G-8 (audit fix F3 measurement) copy beside sync.Mutex.Lock ALONE: the
+// child Locks, waits for main's ack, then Unlocks — the copy is unordered
+// with the Lock op only. go_mem's operation-level list makes the lock
+// read-like (a copy beside it would NOT be a race); gc's -race build
+// realizes the Lock as a CAS on m.state, a TSan Write -> gc RED. The
+// machine keeps the realized .atomicWrite @state -> RACE. Expected:
+// agree-race — the [AGENT] union rule's departure from literal go_mem,
+// measured for the [USER]'s countersign.
+func gMuCopyVsLockOnly() int {
+	var b gMuBox
+	ack := make(chan int)
+	done := make(chan int)
+	go func() {
+		b.mu.Lock()
+		<-ack
+		b.mu.Unlock()
+		done <- 0
+	}()
+	gMuSink = b
+	ack <- 0
+	<-done
+	return gMuSink.n
+}
+
 func main() {
 	println(gRwCopyVsRUnlock(), gRwCopyVsUnlock(), gWgCanonicalThenCopy(), gRwContendThenCopy(),
-		gRwCopyVsRLockOnly(), gRwCopyVsLockOnly())
+		gRwCopyVsRLockOnly(), gRwCopyVsLockOnly(), gWgOverwriteVsAddNonzero(), gMuCopyVsLockOnly())
 }

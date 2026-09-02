@@ -27,6 +27,10 @@ are exempt from (1)/(2) — but still listed, so they cannot disappear.
 **Entry format (keep parseable):** a `## BUG-NNN — <title>` heading, then
 `- Status: open|fixed`, `- Pinned-by: differential|none (<reason>)`, and (for
 differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
+A `Pinned-by: none` entry whose Cases are RED-BY-DESIGN pins may add
+`- Expect: FAIL` (before its Cases line): check-bugs then requires every
+listed id to be FAIL, so a designed refusal that stops firing trips the gate
+(q-u4-gomem audit fix F4, 2026-09-02; the only accepted value is FAIL).
 
 ---
 
@@ -4050,7 +4054,7 @@ kill, never a wrong answer, lifted by (1).
   record TSan's realized set ∪ go_mem's operation kind, each at its gc
   word (`syncWord`), so the class REFUSES; the over-refusal rows are
   classified BY DESIGN and pinned born-FAIL at `race/gomem-only/*` on
-  **BUG-083**'s Cases line (that entry is the record of the designed
+  **BUG-084**'s Cases line (that entry is the record of the designed
   divergence); the unprobed shapes are probed (`probes/u4gomem`). (b) an
   overwrite that unlocks a held Mutex/RWMutex and is FOLLOWED by another
   goroutine's Unlock/RUnlock: gc's `race.Read`/Add precedes its misuse
@@ -4349,7 +4353,7 @@ extended to `emitMake` (which would REFUSE — and newly refuse the
 pre-existing slice/chan shapes; a separate arc, [AGENT] not done in
 the records-only fix round).
 
-## BUG-083 — DESIGNED divergence from the `-race` oracle: a plain access to a sync primitive beside an op gc runs under `race.Disable` (RWMutex `RUnlock`/`Unlock`, WaitGroup `Add`/`Done`, an overwrite beside `Wait` at 0) is REFUSED here and RUN by gc's `-race` build — go_mem calls it a data race, TSan cannot see it [TRUST-ADJACENT: Race.lean tables; refusal-only]
+## BUG-084 — DESIGNED divergence from the `-race` oracle: a plain access to a sync primitive beside an op gc runs under `race.Disable` (RWMutex `RUnlock`/`Unlock`, WaitGroup `Add`/`Done`, an overwrite beside `Wait` at 0) is REFUSED here and RUN by gc's `-race` build — go_mem calls it a data race, TSan cannot see it [TRUST-ADJACENT: Race.lean tables; refusal-only]
 
 - Status: fixed (2026-09-02, the `q-u4-gomem` lane — this is NOT a
   machine defect but the RECORD of a ruled divergence, filed in the
@@ -4367,7 +4371,8 @@ the records-only fix round).
   would assert the wrong direction. The re-pin guard still reads this
   Cases line: any of these ids flipping PASS→non-PASS or appearing as a
   born-FAIL row is explained here.)
-- Cases: race/gomem-only/rw-copy-vs-runlock, race/gomem-only/rw-copy-vs-unlock, race/gomem-only/wg-copy-vs-add-from-0, race/gomem-only/wg-copy-vs-done, race/gomem-only/wg-overwrite-vs-add-nonzero, race/gomem-only/wg-overwrite-vs-wait-at-0
+- Expect: FAIL
+- Cases: race/gomem-only/rw-copy-vs-runlock, race/gomem-only/rw-copy-vs-unlock, race/gomem-only/wg-copy-vs-add-from-0, race/gomem-only/wg-copy-vs-done, race/gomem-only/wg-overwrite-vs-wait-at-0
 - Discovered: 2026-09-02 as BUG-080's residual (a) — the go_mem-racy-
   but-TSan-invisible class the BUG-080 slice chose to RUN (aligned with
   the oracle, [AGENT], inside a brief that said "no new over-refusal
@@ -4410,7 +4415,27 @@ the records-only fix round).
   `syncReleaseTailKinds`, consumed by `raceUpdate`'s sync arm in
   Multi.lean — the section docstring "The sync primitives' OWN state
   words" carries the per-entry derivation): each op records TSan's
-  realized set ∪ go_mem's operation kind, EACH AT ITS gc WORD
+  realized set ∪ go_mem's operation kind — THE UNION RULE, an [AGENT]
+  READING inside the ruling (audit fix F3), not the ruling's words: the
+  [USER] said "follow go_mem exactly", and go_mem's operation-level
+  list makes EVERY mutex lock read-like, `sync.Mutex.Lock` included.
+  Literal go_mem would therefore RUN a lone copy beside `Mutex.Lock`;
+  gc's `-race` build REFUSES it (the Lock is a CAS on `m.state`, which
+  TSan reports as a Write — measured: probe
+  `u4gomem/mu-copy-vs-lock-only`, the copy unordered with the Lock op
+  alone, gc RACE 20/20 at GOMAXPROCS 1 and 8, machine RACE — agree-race,
+  and the BUG-080 pin `race/negative-sync/mutex-copy`). Dropping the
+  realized atomicWrite would open a HOLE cell against the oracle (gc
+  red, machine DRF), so the [AGENT] kept it, grounded in mem#model's own
+  sentence that a compare-and-swap "is both read-like and write-like":
+  the union never runs what the oracle refuses and never runs what go_mem
+  calls racy. CONSEQUENCE, stated plainly: a lone copy beside
+  `sync.Mutex.Lock` REFUSES (TSan realizes the CAS) while a lone copy
+  beside `sync.RWMutex.Lock`/`RLock` RUNS (its counter RMW is under
+  `race.Disable`, so only go_mem's read-like lock kind applies —
+  `race/free-sync/rw-copy-beside-{rlock,lock}`). The asymmetry is the
+  oracle's, inherited on purpose; the [USER] may countersign or overrule
+  it at the merge-ask. EACH AT ITS gc WORD
   (`syncWord loc kind word` = `.field loc ⟨"sync.<Kind>"⟩ word`).
   RWMutex `RLock`/`Lock` → `.read @w` (realized, kept) + `.atomicRead
   @readerCount` (lock read-like); `RUnlock`/`Unlock` → `.read @w` +
@@ -4437,7 +4462,7 @@ the records-only fix round).
   sibling words stay disjoint (check (i)'s guards
   `race/free-sync/{mutex-siblings,disjoint-prims}` stay green).
 - What the rows pin: gc `-race` GREEN 20/20 at GOMAXPROCS 1 and 8 for
-  every shape (`docs/evidence/2026-09-02_q-u4-gomem/`, families
+  each of the FIVE pinned shapes (`docs/evidence/2026-09-02_q-u4-gomem/`, families
   `u4gomem` — the formerly UNPROBED copy-beside-`RUnlock`/`Unlock` — and
   the BUG-080 family `u4kind` re-run: SIX rows move agree-DRF →
   `over-refusal` — `wg-copy-vs-add-from-0`, `wg-copy-vs-done`,
@@ -4458,8 +4483,26 @@ the records-only fix round).
   as expected_status and FAIL at lean-observation on the machine's
   `race`; the shape `wg-overwrite-vs-done` is a probe only (its gc
   outcome is schedule-dependent: the reset counter makes the Done a
-  negative-counter panic on some schedules), replaced in the corpus by
-  the deterministic `wg-overwrite-vs-add-nonzero`.
+  negative-counter panic on some schedules). AUDIT FIX F1 (2026-09-02):
+  the slice had ALSO pinned `wg-overwrite-vs-add-nonzero` here as a
+  go_mem-only shape — WRONG: gc `-race` is RED 20/20 at both GOMAXPROCS
+  values (auditor's isolates; reproduced by the lane, probe
+  `u4gomem/wg-overwrite-vs-add-nonzero` agree-race), because the racing
+  overwrite resets the counter to 0 and the child's Add then IS the
+  counter-off-0 case that executes `race.Read(&wg.sema)`
+  (waitgroup.go:111-115). It is NOT reliably red either: when the Add
+  lands first the counter goes 1→2 and TSan sees nothing — the fix
+  round's first attempt re-homed the row in the racy lane and the full
+  gate's single `-race` sample came back GREEN
+  (`docs/evidence/2026-09-02_q-u4-gomem/f1-gc-green-sample.txt`). The
+  gc side is schedule-dependent (red or green by schedule), the machine
+  refuses on every path (the Add's write-like RMW is unordered with the
+  overwrite on every schedule) — the same disposition as
+  `wg-overwrite-vs-done`: not corpus-pinnable in any lane (a green
+  sample fails a racy row, a red one an `ok` row), PROBE ONLY
+  (`u4gomem/wg-overwrite-vs-add-nonzero`, agree-race under the
+  runner's any-red-run definition, 20/20 red in the sampler). The
+  corpus row was removed and left this Cases line.
 - Scope: MISUSE ONLY — every shape is a whole-primitive copy or
   overwrite while another goroutine operates on it (vet `copylocks`);
   no race-free program's verdict moves (full `ci --diff`: no

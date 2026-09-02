@@ -108,7 +108,7 @@ see the R15 entry below.
       at BUG-080 (TSan-invisible RWMutex-copy / WaitGroup-Done shapes
       followed to the oracle — residual (a), since RULED [USER]
       2026-09-02 Q-U4RESIDUAL option (A) and implemented on lane
-      `q-u4-gomem`: go_mem's kinds recorded, the class refuses, BUG-083
+      `q-u4-gomem`: go_mem's kinds recorded, the class refuses, BUG-084
       is the designed-divergence record; fatal-before-race on an
       overwrite-then-cross-goroutine-Unlock — residual (b), still owed
       below). ([USER]-ruled

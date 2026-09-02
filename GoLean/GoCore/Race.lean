@@ -299,7 +299,7 @@ SYNCHRONIZATION (the registry's ops — HB updates, never data):
   operation kind BESIDE TSan's realized set, each at its gc word
   (`syncWord`), so those shapes REFUSE where the `-race` build runs —
   a designed divergence from the oracle, pinned born-FAIL at
-  `race/gomem-only/*` on BUG-083's Cases line (never counted as a
+  `race/gomem-only/*` on BUG-084's Cases line (never counted as a
   pass). The section docstring below carries the derivation.
 
 FRESH ALLOCATION / DRIVER (excluded — the malloc convention):
@@ -1019,7 +1019,10 @@ def RaceState.syncAcquire (r : RaceState) (t : Nat) (loc : Loc)
 Two registers say what a sync op does to its primitive's own words,
 and since the [USER] ruling of 2026-09-02 (Q-U4RESIDUAL, option (A) —
 `docs/2026-08-31_qrow-rulings.md` row 9: "we want to follow go_mem
-exactly") the detector records the UNION of both:
+exactly") the detector records the UNION of both — the UNION itself
+being an [AGENT] READING of the ruling (audit fix F3; the paragraph
+"Why the union" below says where it departs from the literal words and
+why, for the [USER] to countersign or overrule):
 
 1. **go_mem's operation kind** (mem#model, verbatim: "Some memory
    operations are read-like, including read, atomic read, mutex lock,
@@ -1058,18 +1061,31 @@ exactly") the detector records the UNION of both:
    Go's TSan glue performs them un-instrumented (measured:
    `probes/u4kind/{wg-copy-vs-done,rw-copy-vs-rlock}` gc-green).
 
-Why the union, and why it is sound: mem#restrictions licenses ANY
-implementation to "report the race and halt execution" on detecting a
-data race, so a refusal the oracle would not issue costs completeness
-(a go_mem-racy program the `-race` build happens to run) never
-soundness; and every access TSan realizes is kept, so nothing the
-oracle refuses is run here (no HOLE cell opens). Where the two
-registers name different kinds for one op the union is the stricter
-one: Mutex `Lock` is read-like by mem#model but realized as a CAS —
-"both read-like and write-like" — so `.atomicWrite` stands (the
-read-like half adds no conflict an atomic write does not already
-have). Where TSan realizes NOTHING (`race.Disable`) the go_mem kind
-alone is recorded — the former residual (a), now closed BY DESIGN.
+Why the union ([AGENT] reading), and why it is sound: mem#restrictions
+licenses ANY implementation to "report the race and halt execution" on
+detecting a data race, so a refusal the oracle would not issue costs
+completeness (a go_mem-racy program the `-race` build happens to run)
+never soundness; and every access TSan realizes is kept, so nothing
+the oracle refuses is run here (no HOLE cell opens). WHERE THIS
+DEPARTS FROM LITERAL go_mem: mem#model's operation-level list makes
+EVERY mutex lock read-like, `sync.Mutex.Lock` included, so "follow
+go_mem exactly" read literally would RUN a lone copy beside
+`Mutex.Lock`. gc's `-race` build REFUSES it — the Lock is a CAS on
+`m.state`, reported by TSan as a Write (measured: `probes/u4gomem/
+mu-copy-vs-lock-only`, the copy unordered with the Lock op ALONE, gc
+RACE 20/20 at GOMAXPROCS 1 and 8, machine RACE — agree-race; and the
+BUG-080 pin `race/negative-sync/mutex-copy`). Dropping the realized
+`.atomicWrite` would open a HOLE cell against the oracle, so the
+[AGENT] kept it, grounded in mem#model's own sentence that a
+compare-and-swap "is both read-like and write-like" (the read-like
+half adds no conflict an atomic write lacks). THE CONSEQUENCE, plainly:
+a lone copy beside `sync.Mutex.Lock` REFUSES, a lone copy beside
+`sync.RWMutex.Lock`/`RLock` RUNS (`race/free-sync/rw-copy-beside-
+{rlock,lock}`) — because TSan realizes Mutex's CAS but runs RWMutex's
+counter RMW under `race.Disable`, leaving only go_mem's read-like lock
+kind to apply. The asymmetry is the oracle's, inherited on purpose.
+Where TSan realizes NOTHING (`race.Disable`) the go_mem kind alone is
+recorded — the former residual (a), now closed BY DESIGN.
 
 WHERE each access lands — the gc WORD, a sub-path of the sync cell's
 `Loc` (`syncWord`: `.field <primitive path> ⟨"sync.<Kind>"⟩ <word>`,
@@ -1152,7 +1168,7 @@ entry access already found (gc's woken `lockSlow` CAS is thus
 detection-redundant here).
 
 THE DESIGNED DIVERGENCE FROM THE `-race` ORACLE (was residual (a);
-[USER]-ruled 2026-09-02 — recorded at BUGS.md BUG-083 and the ruling
+[USER]-ruled 2026-09-02 — recorded at BUGS.md BUG-084 and the ruling
 sheet's row 9, provenance chain there): a plain access beside a
 write-like op gc runs under `race.Disable` — `RUnlock`, RWMutex
 `Unlock`, WaitGroup `Add`/`Done` — or a plain OVERWRITE beside `Wait`
@@ -1161,7 +1177,7 @@ lane's three-way rule (our refusal + `-race` green on every sample)
 files such a row as an investigation, never a pass; these rows are
 classified BY DESIGN as go_mem-racy (one write-like operand, one
 non-synchronizing — mem#model). The corpus pins them as born-FAIL rows
-against gc's `ok` observation (`race/gomem-only/*`, BUG-083's Cases
+against gc's `ok` observation (`race/gomem-only/*`, BUG-084's Cases
 line) so the divergence stays visible and never counts as a pass; the
 probe family `probes/u4kind` re-run under this table
 (`docs/evidence/2026-09-02_q-u4-gomem/`) shows them as `over-refusal`

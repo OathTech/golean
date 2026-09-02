@@ -1,0 +1,9 @@
+# The gc-side schedule dependence of wg-overwrite-vs-add-nonzero, caught by the full gate (audit fix round, 2026-09-02).
+# scripts/ci --diff's single 'go run -race' sample for the racy-lane row went GREEN under full-corpus load, while the
+# detector-soundness sampler had been red 20/20 at GOMAXPROCS 1 and 8. Mechanism: when the child's Add(1) lands BEFORE the
+# overwrite the counter goes 1->2 (v != delta: no race.Read(&wg.sema), waitgroup.go:111-115) and TSan sees nothing; when the
+# overwrite lands first the counter is reset and the Add realizes the sema read -> red. The machine refuses on EVERY path.
+# Row as recorded in artifacts/coverage/latest.tsv of that run (columns: result id features stage detail), then its meta:
+FAIL	race/negative-sync/wg-overwrite-vs-add-nonzero	sync,waitgroup,goroutines,channels,structs,race	go-observation	expected a -race report, but go run -race exited green: {"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]} (three-way investigation: too-eager check / schedule-hidden race / misclassified case)
+git_commit	cc7aeeae1dc4f0fc94661594eee8015159267c1e
+git_dirty	true

@@ -1,12 +1,14 @@
-detector-soundness summary — 2026-09-02T21:45:46+00:00
-rows: 6   runs/proc: 20   procs: 1,8   worker-pool exit: 0
+detector-soundness summary — 2026-09-02T22:37:16+00:00
+rows: 8   runs/proc: 20   procs: 1,8   worker-pool exit: 0
 
 cells:
   agree-DRF      4
+  agree-race     2
   over-refusal   2
 
 by lane × cell:
   probe	agree-DRF	4
+  probe	agree-race	2
   probe	over-refusal	2
 
 HOLE rows (gc RACE, machine DRF — exit-bearing; a HOLE not on a BUGS.md Cases: line is a STOP):

@@ -303,7 +303,7 @@ both sides.
 > possible-HOLEs; the
 > formerly unprobed copy-beside-`RUnlock`/`Unlock` shapes are probed
 > (`over-refusal`, gc green 20/20 at both GOMAXPROCS) and pinned
-> born-FAIL at `race/gomem-only/*` (BUG-083, the designed-divergence
+> born-FAIL at `race/gomem-only/*` (BUG-084, the designed-divergence
 > record; evidence `docs/evidence/2026-09-02_q-u4-gomem/`).
 
 Five U4 probes are TSan-red 10/10 at both GOMAXPROCS values:

@@ -173,6 +173,32 @@ expect_reject "statuses duplicate entry" \
 expect_accept "membership row with a status-diverse envelope" \
   '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16,statuses=ok+panic'
 
+# ---- Part A3 (always; pure shell): scripts/check-bugs.sh's `Expect: FAIL`
+# assertion for Pinned-by:none red-by-design pins (q-u4-gomem audit fix F4,
+# 2026-09-02). Red-first: a none-entry declaring Expect: FAIL whose case is
+# PASS in the baseline must FAIL the check (5); the same entry with the case
+# FAIL must pass; an unrecognized Expect token must fail closed (0).
+CB="$TMP/check-bugs"; mkdir -p "$CB"
+printf '# t\n' > "$CB/ids"
+printf 'coverage 0\nlatitude 0\nwrong-answer 0\n' > "$CB/ceil"
+cb_bugs() {  # $1 = Expect line (or empty), $2 = case result
+  printf '## BUG-900 — fixture\n\n- Status: fixed\n- Pinned-by: none (fixture)\n%s- Cases: fx/red-by-design\n' "$1" > "$CB/bugs.md"
+  printf 'result\tid\tstage\n%s\tfx/red-by-design\tlean-observation\n' "$2" > "$CB/baseline.tsv"
+}
+cb_run() { CHECK_BUGS_BUGS="$CB/bugs.md" CHECK_BUGS_BASELINE="$CB/baseline.tsv" CHECK_BUGS_IDS="$CB/ids" CHECK_BUGS_CEIL="$CB/ceil" scripts/check-bugs.sh 2>&1; }
+cb_bugs $'- Expect: FAIL\n' FAIL
+if out="$(cb_run)"; then echo "ok: check-bugs Expect: FAIL with a FAIL row passes"; else echo "FAIL: check-bugs rejected a correct Expect: FAIL entry: $out"; fail=1; fi
+cb_bugs $'- Expect: FAIL\n' PASS
+if out="$(cb_run)"; then echo "FAIL: check-bugs ACCEPTED an Expect: FAIL entry whose case is PASS (the F4 guard is quiet)"; fail=1
+elif [[ "$out" != *"FAIL (5)"* ]]; then echo "FAIL: check-bugs rejected, but not via (5): $out"; fail=1
+else echo "ok: check-bugs Expect: FAIL with a PASS row fails (5)"; fi
+cb_bugs "" PASS
+if out="$(cb_run)"; then echo "ok: check-bugs none-entry without Expect stays existence-only"; else echo "FAIL: check-bugs changed the none-entry existence-only rule: $out"; fail=1; fi
+cb_bugs $'- Expect: PASS\n' PASS
+if out="$(cb_run)"; then echo "FAIL: check-bugs ACCEPTED 'Expect: PASS' (must fail closed)"; fail=1
+elif [[ "$out" != *"FAIL (0)"* ]]; then echo "FAIL: check-bugs rejected Expect: PASS, but not via (0): $out"; fail=1
+else echo "ok: check-bugs unrecognized Expect token fails closed (0)"; fi
+
 # ---- Part A2 (always): gate-integrity no-publish fixtures (grossmith
 # findings §2, docs/2026-08-07_grossmith-findings.md; extended at the
 # maint-check M2 fix; hoisted into the fast gate at the channels-arc

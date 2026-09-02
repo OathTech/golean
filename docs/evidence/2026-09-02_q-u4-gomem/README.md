@@ -5,7 +5,7 @@ implementation of the [USER] ruling on `docs/2026-08-31_qrow-rulings.md`
 row 9 (Q-U4RESIDUAL, option (A), ruled 2026-09-02; the verbatim quotes
 and their provenance chain — relayed to this lane by the [AGENT]
 coordinator, not received firsthand — are the sheet's appendix record
-"The row-9 ruling record"). Consuming docs: `docs/BUGS.md` BUG-083 (the
+"The row-9 ruling record"). Consuming docs: `docs/BUGS.md` BUG-084 (the
 designed-divergence record) and BUG-080 (residual (a) closed);
 `GoLean/GoCore/Race.lean` section "The sync primitives' OWN state
 words" (the per-entry derivation); `docs/2026-08-11_latitude-inventory.md`
@@ -35,26 +35,46 @@ contention followed by a copy, and the ISOLATED copy-beside-`RLock` /
 copy-beside-`Lock` shapes (the child unlocks only after main's ack) —
 agree-DRF, confirming the ruling's own "NOT in the class" statement
 (mem#model: mutex lock is read-like, a copy is read-like). The corpus
-pins the class as 6 born-FAIL rows `race/gomem-only/*` (gc `ok`,
-machine `race`, BUG-083's Cases line — never a pass) and the isolation
+pins the class as 5 born-FAIL rows `race/gomem-only/*` (gc `ok`,
+machine `race`, BUG-084's Cases line — never a pass) and the isolation
 as 2 born-PASS confluent guards `race/free-sync/rw-copy-beside-{rlock,
-lock}`; the full gate showed no other row moving.
+lock}`; the full gate showed no other row moving. AUDIT FIX F1: the
+slice had pinned a SIXTH gomem-only row, `wg-overwrite-vs-add-nonzero`,
+as TSan-green — false: gc `-race` is RED 20/20 at both GOMAXPROCS values
+(the racing overwrite resets the counter to 0, so the child's Add IS the
+counter-off-0 case and executes `race.Read(&wg.sema)`, waitgroup.go:
+111-115). Reproduced here (`probes-u4gomem` row `wg-overwrite-vs-add-
+nonzero`, agree-race, 20/20 red in the sampler). The fix round first
+re-homed it in the racy lane — and the full gate's single `-race`
+sample came back GREEN (`f1-gc-green-sample.txt`): when the Add lands
+first the counter goes 1→2 and TSan realizes nothing. The gc side is
+schedule-dependent, the machine refuses every path; corpus-pinnable in
+no lane, so the row was DELETED and the shape is probe-only (like
+`wg-overwrite-vs-done`). F3's measurement is also here: `mu-copy-vs-lock-only` (a
+copy unordered with `sync.Mutex.Lock` ALONE) is gc RACE 20/20, machine
+RACE — agree-race, so the kept `.atomicWrite` for Mutex Lock is the
+oracle's verdict, not an over-refusal.
 
 ## What is here
 
-- `probes/u4gomem/main.go` + `probes-u4gomem.tsv` — the 6-subject
+- `probes/u4gomem/main.go` + `probes-u4gomem.tsv` — the 8-subject
   family: G-1/G-2 the two unprobed shapes (copy beside `RUnlock` /
   `Unlock` only; main locks before the spawn, the child unlocks), G-3
   the canonical WaitGroup idiom then a copy, G-4 reader/writer
   contention then a copy, G-5/G-6 the ISOLATED copy-beside-lock-op
-  shapes (an `ack` channel makes the unlock HB-after the copy). Each
+  shapes (an `ack` channel makes the unlock HB-after the copy), G-7
+  the F1 shape (overwrite beside Add from a nonzero counter — expect
+  agree-race), G-8 the F3 measurement (copy beside `sync.Mutex.Lock`
+  alone — expect agree-race). Each
   header states its expected cell. Manifest in `scripts/coverage-
   manifest`'s 10-column format for `scripts/detector-soundness
   --manifest`.
 - `probes-u4gomem.{matrix.tsv,meta.tsv,summary.txt}` — that family's
   run: 20 gc `-race` runs at each of GOMAXPROCS 1 and 8 per subject +
   the enumerator (`width=4,sites=32,cap=64,work=2000000`). 2
-  over-refusal (G-1, G-2), 4 agree-DRF (G-3..G-6). Exit 0.
+  over-refusal (G-1, G-2), 4 agree-DRF (G-3..G-6), 2 agree-race (G-7,
+  G-8). Exit 0. (The audit fix round re-ran the whole family with G-7/
+  G-8 added; the files here are that re-run.)
 - `probes-u4kind-ruled.tsv` — the BUG-080 family's manifest re-issued
   for this run: rows IDENTICAL to `docs/evidence/2026-09-02_detector-
   soundness/probes-u4kind.tsv` (same `go_dir` — the tracked
@@ -146,9 +166,20 @@ is the run's tail, ANSI-stripped. CLEAN-TIP RE-RUN: the same
 `scripts/capped scripts/ci --diff` on the committed tree at `f68e1360`
 (`latest.meta.tsv`: `git_dirty false`) — **RESULT: PASS**, baseline diff
 FULL 2567/2567 no regression, re-pin guard HEAD-vs-HEAD~1 clean,
-reconciler 0 HIGH; its tail is appended to `gate-tail.txt`. Sliced runs before the gate:
-`scripts/coverage run --prefix race/` (51 rows: the 6 gomem-only rows
-FAIL/lean-observation `expected status ok, got {"status":"race"}`, the
-2 free-sync guards PASS/confluent, every other race row as in the
-baseline) and `--prefix sync/` (77 rows, the same 10 pre-existing FAILs
+reconciler 0 HIGH; its tail is appended to `gate-tail.txt`. AUDIT FIX
+ROUND F1-F4 (same day): `scripts/capped scripts/ci --diff` on the fixed
+tree — **RESULT: PASS**, baseline diff FULL 2566/2566 no regression
+(one row DELETED vs the previous tip: `race/gomem-only/wg-overwrite-vs-
+add-nonzero`, reported by the re-pin guard's deleted-row note and
+explained in the baseline header; 0 PASS→non-PASS flips), reconciler
+0 HIGH, `scripts/test-lane-validation` Part A3 (the F4 `Expect: FAIL`
+fixtures) green; tail appended to `gate-tail.txt`. The intermediate
+attempt that re-homed the row in the racy lane FAILED the gate on the
+gc-side green sample (`f1-gc-green-sample.txt`) — that failing run is
+what decided the deletion. Sliced runs before the gate:
+`scripts/coverage run --prefix race/` (52 rows after F1's deletion:
+the 5 gomem-only rows FAIL/lean-observation `expected status ok, got
+{"status":"race"}`, the 2 free-sync guards PASS/confluent, every other
+race row as in the baseline; the slice's first report said 51 — audit
+fix F2 — a count that predated the two guards) and `--prefix sync/` (77 rows, the same 10 pre-existing FAILs
 as the baseline).
