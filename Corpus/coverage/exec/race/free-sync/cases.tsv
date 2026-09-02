@@ -15,3 +15,9 @@ mutex	freeSyncMutex	-	ok	-	sync,mutex,goroutines,channels,globals,race	confluent
 wg-edge	freeSyncWgEdge	-	ok	-	sync,waitgroup,goroutines,globals,race	confluent	the Done-to-Wait edge orders the bare-looking write/read pair on every schedule	width=4,sites=8
 once-edge	freeSyncOnceEdge	-	ok	-	sync,once,goroutines,channels,globals,race,closures	confluent	the Once completion edge orders the single write before both Do returns on every schedule	width=4,sites=20
 rw-writers	freeSyncRwWriters	-	ok	-	sync,rwmutex,waitgroup,goroutines,globals,race	confluent	write-unlock to write-lock (semA) orders the two increments whichever order the schedule realizes — the green twin of negative-sync/rlock-serialized	width=4,sites=40,work=1000000,engine=dedup
+# BUG-080 controls (2026-09-02, the atomic access-kind slice): the sync
+# ops' accesses on the primitive's OWN path must not spill over the
+# enclosing struct's sibling fields or onto other primitives (the
+# ruling's check (i) — locPrefix is per-path). go run -race green.
+mutex-siblings	freeSyncMutexSiblings	-	ok	-	sync,mutex,goroutines,channels,structs,race	confluent	BUG-080 check (i): sibling fields written under the lock from two goroutines — the Locks' atomic writes at .field mu are disjoint from .field a/.field b	width=4,sites=32
+disjoint-prims	freeSyncDisjointPrims	-	ok	-	sync,mutex,goroutines,channels,structs,race	confluent	BUG-080 check (i): two primitives in one struct, each guarding its own field — distinct paths, nothing overlaps	width=4,sites=32

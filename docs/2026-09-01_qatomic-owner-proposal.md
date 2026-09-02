@@ -156,6 +156,12 @@ Wave 1 — **integer core + mp-litmus** (the 4 non-Value reds):
   (`scripts/detector-soundness`) is the ready-made check that the
   new edges match `-race` in both directions.
   Effort S–M.
+  [SUPERSEDED by the ruling header — and LANDED 2026-09-02 on
+  `bug080-atomic-kind`: `AccessKind ∈ {read, write, atomicRead,
+  atomicWrite}` + `syncEntryKinds`/`syncReleaseTailKinds` in Race.lean;
+  this wave CONSUMES the kind (record `sync/atomic` loads as
+  `.atomicRead`, stores/RMWs as `.atomicWrite`) and adds only the
+  per-address clocks. The paragraph below is the memo as presented.]
   BUG-080 rides HERE by [AGENT] SEQUENCING judgment (audit fix round
   2026-09-02, S4), not by dependency: the atomic access KIND
   (`RaceAccess := Kind × Loc`, atomic↔atomic non-conflicting,

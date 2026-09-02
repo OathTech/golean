@@ -471,9 +471,16 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (2533 cases, 2360 PASS /
-173 FAIL; `baselines/native-full.tsv`, re-pinned 2026-09-02 on the
-t4-detector-soundness lane — full ci --diff at that tip: Q-RACEPATH's
+All numbers at the current tracked baseline (2537 cases, 2366 PASS /
+171 FAIL; `baselines/native-full.tsv`, re-pinned 2026-09-02 on the
+bug080-atomic-kind lane — full ci --diff at that tip: BUG-080's 2
+FAIL→PASS flips `race/negative-sync/{wg-overwrite,mutex-copy}` (the
+detector's access KIND landed), +4 born-PASS rows
+`race/negative-sync/{rw-overwrite,once-copy}` (racy pins, one per
+remaining primitive) + `race/free-sync/{mutex-siblings,disjoint-prims}`
+(check (i) guards); red-count movement 173 → 171, mapped below. Prior
+re-pin 2026-09-02 on the t4-detector-soundness lane (2533 / 2360 /
+173) — full ci --diff at that tip: Q-RACEPATH's
 1 FAIL→PASS flip `race/free/array-read-write`, +4 born-PASS guards
 `race/free/{array-const-index-field,field-array-const-index}` +
 `race/negative/array-const-index-{same-elem,whole-write}`, +3
@@ -527,10 +534,11 @@ the historical record; the method is §8b's, re-run).
 frontier 2 (atomic → Q-ATOMIC, goexit → Q-GOEXIT), latitude 1 (model →
 C10), out-of-language 5. Zero unclassified.
 
-**The 173 baseline reds, every one on a named row (re-derived
+**The 171 baseline reds, every one on a named row (re-derived
 mechanically 2026-09-02 — zero unmapped, zero double-mapped; +2 at
-the detector-soundness re-pin, both BUG-080; the Q-* bucket's
-BUG-041 red changed ROW, not count):**
+the detector-soundness re-pin, both BUG-080, and −2 at the BUG-080
+fix re-pin the same day; the Q-* bucket's BUG-041 red changed ROW,
+not count):**
 
 | bucket | reds |
 | --- | --- |
@@ -538,10 +546,14 @@ BUG-041 red changed ROW, not count):**
 | design questions Q-* (§6) | 14 |
 | (c) profound-reason pins (triage §4 + the unsafe marker) | 9 + 1 |
 | (a)-queued fixes (triage §3.2: A3 5, A4 1, A5 1, A7 1) | 8 |
-| post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) + the gotest-fixes BUG-078 budget refusal pin (`arrays/materialization-budget/over-budget`, on BUG-078's Cases line since the audit fix round) + the detector-soundness BUG-080 U4 pins (`race/negative-sync/{wg-overwrite,mutex-copy}`, 2026-09-02) | 58 |
-| **total** | **173** |
+| post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) + the gotest-fixes BUG-078 budget refusal pin (`arrays/materialization-budget/over-budget`, on BUG-078's Cases line since the audit fix round) | 56 |
+| **total** | **171** |
 
-*(Movement at the 2026-09-02 re-pin: Q-* 14 → 14 — Q-RACEPATH's red
+*(Movement at the 2026-09-02 BUG-080 fix re-pin: post-vintage 58 → 56
+— BUG-080's two U4 pins `race/negative-sync/{wg-overwrite,mutex-copy}`
+flipped green with the access KIND (the fix's 4 new rows are born
+PASS and appear in no bucket). Movement at the earlier 2026-09-02
+re-pin: Q-* 14 → 14 — Q-RACEPATH's red
 row is now `race/free/array-dyn-index-read-write` (the residual pin)
 in place of the flipped `race/free/array-read-write`; post-vintage
 56 → 58 — BUG-080's two born-FAIL U4 pins enter with their entry.
@@ -703,8 +715,12 @@ detector-soundness re-pin added THREE born-FAIL pins while flipping
 ONE vintage red green (`race/free/array-read-write`, Q-RACEPATH):
 18 new since the vintage, 14 vintage reds gone green;
 169 − 14 + 18 = 173 ✓; case count 2526 → 2533, the other 4 rows —
-the Q-RACEPATH guards — born PASS. The 14 that went green are
-unchanged since.
+the Q-RACEPATH guards — born PASS; and the 2026-09-02 BUG-080 fix
+re-pin flipped TWO of those 18 post-vintage reds green
+(`race/negative-sync/{wg-overwrite,mutex-copy}`): 16 new since the
+vintage still red, 14 vintage reds gone green; 169 − 14 + 16 = 171 ✓;
+case count 2533 → 2537, the 4 new rows all born PASS. The 14 that
+went green are unchanged since.
 
 Q-SYNCVAL's misuse-identity pins and the other 8 rows this slice added
 are born-PASS and appear in no red bucket; the out-of-scope sync reds

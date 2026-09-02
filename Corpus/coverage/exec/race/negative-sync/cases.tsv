@@ -5,10 +5,15 @@
 one-side	raceSyncOneSide	-	race	-	sync,mutex,goroutines,channels,globals,race	racy	-	width=4,sites=8
 rlock-serialized	raceSyncRlockSerialized	-	race	-	sync,rwmutex,waitgroup,goroutines,globals,race	racy	the two-clock discriminator (probe p14): RUnlock releases only toward the next WRITE lock, so serialized readers stay HB-unordered — a single-clock model would admit a value leaf	width=4,sites=30,work=20000000
 wg-no-edge	raceSyncWgNoEdge	-	race	-	sync,waitgroup,goroutines,channels,globals,race	racy	Wait at counter 0 acquires no release: the wg is present but orders nothing	width=4,sites=8
-# BUG-080 (U4) BORN-FAIL PINS (2026-09-02, detector-soundness differential
-# third cell): sync-object state-word accesses are unmodeled, so these
-# TSan-red misuse programs (copy / overwrite of an in-use primitive) run
-# to a value — the racy lane's refusal claim does not hold for them.
-# Red until the atomic access kind lands (Q-ATOMIC owner proposal §4).
-wg-overwrite	raceSyncWgOverwrite	-	race	-	sync,waitgroup,goroutines,channels,structs,race	racy	U4: WaitGroup.Add's state-word read vs the whole-struct overwrite — TSan-red 10/10, unmodeled here	width=4,sites=32
-mutex-copy	raceSyncMutexCopy	-	race	-	sync,mutex,goroutines,channels,structs,race	racy	U4: Lock's state CAS vs the struct copy's read — TSan-red 10/10, unmodeled here	width=4,sites=32
+# BUG-080 (U4) pins (born FAIL 2026-09-02 at the detector-soundness
+# differential's third cell; FIXED the same day — the atomic access-kind
+# slice): a plain copy / overwrite of a primitive another goroutine is
+# operating on. gc -race red 10/10 at GOMAXPROCS 1 and 8; the machine
+# records TSan's realized per-op set on the primitive's own path with a
+# KIND (Race.lean AccessKind) and refuses on every path. One row per
+# primitive; the two-direction probe family is
+# docs/evidence/2026-09-02_detector-soundness/probes/u4kind.
+wg-overwrite	raceSyncWgOverwrite	-	race	-	sync,waitgroup,goroutines,channels,structs,race	racy	BUG-080: Add-from-0's plain wg.sema read vs the whole-struct overwrite — TSan-red 10/10; the read is recorded at the wg's path, the overwrite overlaps it	width=4,sites=32
+mutex-copy	raceSyncMutexCopy	-	race	-	sync,mutex,goroutines,channels,structs,race	racy	BUG-080: Lock's state CAS (atomic write) vs the struct copy's plain read — TSan-red 10/10; atomic↔plain conflicts	width=4,sites=32
+rw-overwrite	raceSyncRwOverwrite	-	race	-	sync,rwmutex,goroutines,channels,structs,race	racy	BUG-080: RLock's race.Read(&rw.w) plain read vs the whole-struct overwrite — TSan-red 10/10 (a COPY beside it is read/read green: probes/u4kind rw-copy rows)	width=4,sites=32
+once-copy	raceSyncOnceCopy	-	race	-	sync,once,goroutines,channels,structs,closures,race	racy	BUG-080: the first Do's o.m.Lock CAS / done Store (atomic writes) vs the struct copy's plain read — TSan-red 10/10 (a Do after completion is an atomic READ, green beside a copy)	width=4,sites=32

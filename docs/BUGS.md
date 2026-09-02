@@ -3963,9 +3963,54 @@ kill, never a wrong answer, lifted by (1).
 
 ## BUG-080 — race detector U4: the sync primitives' OWN state-word accesses are unmodeled, so a plain access to a primitive in use by another goroutine (copy / overwrite) runs to a value where gc's -race build refuses
 
-- Status: open
+- Status: fixed (2026-09-02, the `bug080-atomic-kind` slice — [USER]-ruled
+  the same day as its own S–M slice ahead of the Q-ATOMIC arc,
+  `docs/2026-08-31_qrow-rulings.md` row 2; [AGENT]-executed. THE FIX:
+  `GoLean/GoCore/Race.lean` `RaceAccess := AccessKind × Loc`, `AccessKind ∈
+  {read, write, atomicRead, atomicWrite}`, conflict ⇔ at least one write ∧
+  not both atomic (mem#restrictions verbatim; TSan's shadow rule); the
+  per-op set gc's -race build realizes on the primitive's own words —
+  `syncEntryKinds` (before the op's hook) / `syncReleaseTailKinds` (Unlock's
+  state Add after `race.Release`) — derived PRIMITIVE BY PRIMITIVE from
+  go1.26.5's sources and recorded by `raceUpdate`'s sync arm (Multi.lean)
+  at the sync cell's path, in the DATA shadow: Mutex Lock/Unlock atomic
+  writes; RWMutex ops ONE PLAIN READ (`race.Read(&rw.w)`; the counters run
+  under `race.Disable`); the WaitGroup `wg.sema` misuse pair (the former
+  `wgSemaAccess` private-shadow carve-out, retired — same pair, same
+  check, now overlapping a copy/overwrite of the enclosing struct); Once's
+  atomic read (a Do observing completion) / atomic writes (the slow path,
+  the completion Store + Unlock). THE TWO RULED CHECKS: (i) one `syncData`
+  cell vs `locPrefix` — the access sits at the primitive's own PATH, so
+  sibling fields and other primitives in the same struct are disjoint
+  (green guards born PASS: `race/free-sync/{mutex-siblings,
+  disjoint-prims}` + probe controls; the wgSema pair composes by
+  RETIREMENT, not double-recording); (ii) per-primitive instrumentation —
+  the 28-subject probe family `probes/u4kind` (both directions per
+  primitive: copy and overwrite, plain access in main and in the child)
+  went 7 HOLE + 7 possible-HOLE + 14 agree-DRF → 0 HOLE, 26 agree, 2
+  possible-HOLE (residual (b) below); the in-scope corpus matrix's HOLE
+  cell went 2 → 0. RESIDUALS, recorded in Race.lean's sync-words section
+  and flagged for the audit: (a) [AGENT] the copy-beside-RWMutex-op and
+  plain-beside-WaitGroup-`Done`/Add-from-nonzero/Wait-at-0 shapes are racy
+  by mem#restrictions but TSan-INVISIBLE (gc runs those RMWs under
+  `race.Disable`) — the machine follows the -race oracle (register #13)
+  and runs them (probes `rw-copy-vs-{rlock,lock}`, `wg-copy-vs-done`,
+  `wg-overwrite-vs-done`, `wg-overwrite-vs-wait-at-0`: agree-DRF);
+  recording `.atomicWrite` there instead would refuse them at the cost of
+  over-refusal rows against the oracle — the brief said none; (b) an
+  overwrite that unlocks a held Mutex/RWMutex and is FOLLOWED by another
+  goroutine's Unlock/RUnlock: gc's `race.Read`/Add precedes its misuse
+  check so TSan reports the race and THEN the fatal fires; the machine's
+  fatal fires in the apply step and the detector — which folds only
+  successful steps — never sees the entry access: machine `fatal` where
+  gc is race+fatal, both refusals, outcome CLASS differs (probes
+  `rw-overwrite-vs-{runlock,unlock}`, possible-HOLE by the runner's
+  definition, diagnosed; a fix needs a pre-step check in `execProgLoop`
+  and its four mirrors + the MultiStreams theorems — out of this slice's
+  size). Evidence: `docs/evidence/2026-09-02_detector-soundness/
+  probes-u4kind-{pre,post}.*`, `corpus-bug080.*`.)
 - Pinned-by: differential
-- Cases: race/negative-sync/wg-overwrite, race/negative-sync/mutex-copy
+- Cases: race/negative-sync/wg-overwrite, race/negative-sync/mutex-copy, race/negative-sync/rw-overwrite, race/negative-sync/once-copy
 - Discovered: 2026-09-02 (the Tier-4 detector-soundness differential,
   `scripts/detector-soundness`, probe family U4 —
   `docs/evidence/2026-09-02_detector-soundness/probes/u4/`; report

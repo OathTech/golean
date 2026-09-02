@@ -1194,20 +1194,16 @@ branch) while the pool holds one goroutine — a single goroutine cannot
 race with itself — which keeps sequential conservation literal and
 the sequential corpus at zero detector overhead. -/
 
-/-- Clock/misuse event of one `wgAdd` apply (spec-parity slice 2):
+/-- Clock event of one `wgAdd` apply (spec-parity slice 2):
 release-merge on a negative delta (gc waitgroup.go:81 — BEFORE the
-panic checks, so a recovered negative-counter Done still released),
-the sema-READ half of the misuse pair when the counter departs 0
-upward (waitgroup.go:111-116). Factored out of `raceUpdate` for clean
-elaboration. -/
-def raceWgAddEvent (r : RaceState) (i : Nat) (loc : Loc) (delta : Int)
-    (preCounter : Option Int) : Except GoError RaceState :=
-  if delta < 0 then
-    return (r.syncRelease i loc)
-  else if delta > 0 ∧ preCounter = some 0 then
-    r.wgSemaAccess i loc false
-  else
-    return r
+panic checks, so a recovered negative-counter Done still released).
+The sema-READ half of the misuse pair (an Add taking the counter off 0
+upward, waitgroup.go:111-115) is no longer here: since BUG-080 it is
+the `syncEntryKinds` row the sync arm records in the DATA shadow at the
+primitive's path, ahead of this event. -/
+def raceWgAddEvent (r : RaceState) (i : Nat) (loc : Loc) (delta : Int) :
+    Except GoError RaceState :=
+  if delta < 0 then return (r.syncRelease i loc) else return r
 
 -- `wokenPartner` DELETED (stage B, audit O-2): the pairing partner
 -- arrives in the step event (`StepAction.paired`) — emitted by the
@@ -1289,7 +1285,11 @@ def raceWakeEvent (s : ExecState) (i : Nat) (r : RaceState) :
   -- its unblocked return ("a call to Done 'synchronizes before' the
   -- return of any Wait call that it unblocks"), a woken Do at its
   -- completion-observing return. `wlock` acquires BOTH clocks
-  -- (rwmutex.go:159-160). No release happens at a wake.
+  -- (rwmutex.go:159-160). No release happens at a wake, and no
+  -- state-word access is recorded at one (BUG-080): the parked
+  -- goroutine released nothing after its entry, so every conflict a
+  -- wake-time access could find, the entry access (`syncEntryKinds`)
+  -- already found — Race.lean's sync-words section.
   | .blockedSync op loc _ _ =>
       match op with
       | .lock => return (r.syncAcquire i loc)
@@ -1471,10 +1471,30 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (ev : StepEvent)
               -- clocks per the package-doc HB sentences (quoted at
               -- `SyncClocks`). Fatal outcomes never reach here (the
               -- pool step errored); parked outcomes carry no edge (the
-              -- wake does, above).
+              -- wake does, above). AND ITS THIRD (BUG-080): the
+              -- accesses `-race` realizes on the primitive's OWN words
+              -- — `syncEntryKinds` under the pre-op clock BEFORE the
+              -- hook (gc's instruction order: the state CAS / the
+              -- `race.Read(&rw.w)` / the `wg.sema` pair precede the
+              -- acquire/release), `syncReleaseTailKinds` AFTER the
+              -- release on a committed op (Unlock's state Add follows
+              -- `race.Release`) — recorded in the DATA shadow at the
+              -- sync cell's path, where a plain copy/overwrite of the
+              -- primitive (or its enclosing struct) overlaps them.
               match (v :: done).reverse.head? with
               | some (.addr loc) =>
-                  (match op with
+                  match syncCell sPre loc with
+                  | .error _ => return r  -- non-sync cell: the apply was stuck, never here
+                  | .ok pre => do
+                  let delta : Int :=
+                    match op, (v :: done).reverse[1]? with
+                    | .wgAdd, some dv =>
+                        (match valueAsInt dv with
+                        | .ok d => d
+                        | .error _ => 0)
+                    | _, _ => 0
+                  let r ← r.accesses i ((syncEntryKinds op pre delta).map ((·, loc)))
+                  let r ← (match op with
                   | .lock | .rlock =>
                       (match m'.threads[i]? with
                       | some (.opDone _ _) => return (r.syncAcquire i loc)
@@ -1496,34 +1516,21 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (ev : StepEvent)
                       | some (.opDone _ _) => return (r.syncRelease i loc (toB := true))
                       | _ => return r)
                   | .wgAdd =>
-                      -- gc's Add (waitgroup.go): ReleaseMerge FIRST when
-                      -- delta < 0 (so a Done whose negative-counter panic
-                      -- is later recovered still released — probed
-                      -- ordering, design note §4), then the sema READ
-                      -- when the counter departs 0 upward (the misuse
-                      -- pair's Add half; it too precedes the panics) —
-                      -- `raceWgAddEvent`.
-                      raceWgAddEvent r i loc
-                        (match (v :: done).reverse[1]? with
-                          | some dv =>
-                              (match valueAsInt dv with
-                              | .ok d => d
-                              | .error _ => 0)
-                          | none => 0)
-                        (match syncCell sPre loc with
-                          | .ok (.waitGroup c _) => some c
-                          | _ => none)
+                      -- gc's Add (waitgroup.go): ReleaseMerge when
+                      -- delta < 0 (BEFORE the panic checks, so a Done
+                      -- whose negative-counter panic is later recovered
+                      -- still released — probed ordering, design note
+                      -- §4). The sema READ of the misuse pair (counter
+                      -- departing 0 upward; it too precedes the panics)
+                      -- was recorded above by `syncEntryKinds`.
+                      raceWgAddEvent r i loc delta
                   | .wgWait =>
+                      -- The first-waiter sema WRITE (waitgroup.go:184-190,
+                      -- pre-park waiter count 0 — concurrent Waits must
+                      -- not race each other) was recorded above by
+                      -- `syncEntryKinds`; a park carries no edge.
                       (match m'.threads[i]? with
                       | some (.opDone _ _) => return (r.syncAcquire i loc)
-                      | some (.blockedSync _ _ _ _) =>
-                          -- First-waiter registration writes the sema slot
-                          -- (waitgroup.go:185-190: only when the pre-park
-                          -- waiter count was 0 — concurrent Waits must not
-                          -- race each other).
-                          (match syncCell sPre loc with
-                          | .ok (.waitGroup _ 0) => r.wgSemaAccess i loc true
-                          | _ => return r)
                       | _ => return r)
                   | .onceBegin _ =>
                       -- Acquire only when the apply OBSERVED completion
@@ -1537,6 +1544,13 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (ev : StepEvent)
                       (match m'.threads[i]? with
                       | some (.opDone _ _) => return (r.syncRelease i loc)
                       | _ => return r))
+                  -- BUG-080: the state-word RMW that FOLLOWS the release
+                  -- (Unlock's Add; Once's deferred Unlock), on a
+                  -- committed op only.
+                  match m'.threads[i]? with
+                  | some (.opDone _ _) =>
+                      r.accesses i ((syncReleaseTailKinds op).map ((·, loc)))
+                  | _ => return r
               | _ => return r  -- nil/garbage receiver: the apply panicked
           | _ =>
               match m'.threads[i]? with

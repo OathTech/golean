@@ -235,13 +235,16 @@ SYNCHRONIZATION (the registry's ops — HB updates, never data):
   `raceUpdate`'s chan-op arm, not by the footprint table: it is
   keyed to the OP, not to a machine-step memory access).
 - `syncCell` loads and `syncData` stores in `applySyncOp`,
-  `wakeReady`, `resumeThread` (spec-parity slice 2): the sync
-  primitives' own state words — gc runs their accesses under
-  `race.Disable` (waitgroup.go:83) or as untracked atomics, so they
-  are never data accesses; the HB edges they carry are the sync-clock
-  updates in `raceUpdate`'s sync arm, and the one misuse-detection
-  data pair gc layers on top (`wg.sema`: waitgroup.go:115/190) is
-  modeled by `wgSemaAccess` below, U4's carve-out.
+  `wakeReady`, `resumeThread` (spec-parity slice 2): the machine's
+  cell traffic is the primitive's STATE TRANSITION, never a
+  footprint-table access; the HB edges are the sync-clock updates in
+  `raceUpdate`'s sync arm. What gc's `-race` build DOES realize on the
+  primitive's own words — the state CAS/Add atomics, RWMutex's
+  `race.Read(&rw.w)` plain read, WaitGroup's `wg.sema` misuse pair —
+  is recorded by that same arm from the per-op table
+  `syncEntryKinds`/`syncReleaseTailKinds` (BUG-080, U4 CLOSED —
+  the section "The sync primitives' OWN state words" below), keyed to
+  the OP like the chan-object pair, at the sync cell's path.
 
 * **U5 — cross-goroutine unlock without handoff HB: TSan-red /
   ours-green** (audit fix round 2026-08-10, F2). `syncRelease` is a
@@ -260,41 +263,38 @@ SYNCHRONIZATION (the registry's ops — HB updates, never data):
   cross-unlock publication pin); un-lane-able as a corpus row (the
   mixed oracle class: plain gc green, race-instrumented gc red — the
   three-way rule's investigation shape, resolved here by this record).
-* **U4 — sync-OBJECT data accesses inside ops are not modeled**
-  (spec-parity slice 2, design note §8): gc's `-race` build performs
-  `race.Read(&rw.w)` on every RWMutex op and reads `m.state` in
-  Mutex.Unlock — plain instrumented reads that catch races between a
-  sync op and a WRITE to the sync variable itself (an overwritten or
-  copied-over in-use mutex). We record no such access, so that
-  copy-class misuse can be TSan-red / ours-green. Misuse-only (also
-  vet-red); joins U1-U2 in the racy lane's scope caption.
-  MEASURED AND PINNED 2026-09-02 (the detector-soundness differential,
-  `docs/2026-09-02_detector-soundness.md` §3): five U4 probes TSan-red
-  10/10 at GOMAXPROCS 1 and 8, machine value-run — the matrix's
-  third cell, honestly classified as a soundness-direction gap
-  (a program racy by mem#restrictions given SC value semantics),
-  narrow and misuse-only. **BUG-080**, born-FAIL racy pins
-  `race/negative-sync/{wg-overwrite,mutex-copy}`. The fix is NOT a
-  table entry: recording sync ops as plain writes would make two
-  legal contending Locks conflict; gc realizes a third access KIND
-  (atomic — conflicts with plain accesses only, never with another
-  atomic): `RaceAccess := Kind × Loc`, one atomic access recorded at
-  the sync cell's path from `raceUpdate`'s sync arm. That kind is
-  SEPARABLE from the sync/atomic LOWERING (the atomics arc, S–M) and
-  could land alone; deferring it to ride that arc is an [AGENT]
-  SEQUENCING judgment (audit fix round 2026-09-02, S4), not a forced
-  dependency, for two stated reasons: (i) each primitive is ONE
-  `syncData` cell, so an atomic access at the cell's path has to be
-  checked against the `locPrefix` over-refusal (a plain access to a
-  SIBLING field of a struct holding the primitive must stay green —
-  the `disjoint-field-vs-lock` control) and reconciled with the
-  `wgSemaAccess` carve-out, which already records one PLAIN pair on
-  the same cell; (ii) gc's per-primitive instrumentation differs
-  (WaitGroup runs its state accesses under `race.Disable` and exposes
-  the `wg.sema` pair; Mutex exposes the state CAS as an atomic), so
-  the per-op recorded set must be derived from `-race`'s realized set
-  primitive by primitive — the owner proposal's detector wave
-  (Q-ATOMIC owner proposal §4) is where that derivation is scoped.
+* **U4 — CLOSED (BUG-080, 2026-09-02): the sync primitives' OWN
+  state-word accesses are modeled as `-race` realizes them.** Before:
+  a sync op recorded NO access on its primitive's cell, so a plain
+  copy/overwrite of a Mutex/WaitGroup/RWMutex/Once another goroutine
+  was operating on — racy by mem#restrictions, TSan-red 10/10 — ran to
+  a value (the detector-soundness differential's third cell,
+  `docs/2026-09-02_detector-soundness.md` §3.2; born-FAIL pins
+  `race/negative-sync/{wg-overwrite,mutex-copy}`). The fix is NOT a
+  footprint-table entry (recording sync ops as plain writes would make
+  two legal contending Locks conflict) but a third-and-fourth access
+  KIND: `RaceAccess := AccessKind × Loc` with `AccessKind ∈ {read,
+  write, atomicRead, atomicWrite}` — atomic↔atomic never conflicts,
+  atomic↔plain conflicts unless both are reads (`AccessKind.conflicts`
+  is the memory-model sentence verbatim). `raceUpdate`'s sync arm
+  records, at the sync cell's path, the per-op set TSan realizes
+  (`syncEntryKinds`/`syncReleaseTailKinds`, derived primitive by
+  primitive from go1.26.5's sources — the section docstring below has
+  the table): Mutex Lock/Unlock atomic writes; RWMutex ops a PLAIN read
+  (`race.Read(&rw.w)`; the counters run under `race.Disable`); the
+  WaitGroup `wg.sema` misuse pair (formerly the `wgSemaAccess`
+  carve-out in a private shadow, now in the data shadow at the
+  primitive's path so a copy/overwrite overlaps it); Once's atomic
+  read/writes. The ruling's two checks: (i) the single `syncData`
+  cell vs `locPrefix` — the access sits at the primitive's own PATH,
+  so sibling-field plain accesses are disjoint (green guards
+  `race/free-sync/{mutex-siblings,disjoint-prims}` and the probe
+  controls); (ii) the per-primitive instrumentation differences —
+  measured both directions by `probes/u4kind` (28 subjects, evidence
+  dir). RESIDUAL recorded in the section docstring: the copy-beside-
+  RWMutex-op and plain-beside-WaitGroup-`Done` shapes are go_mem-racy
+  but TSan-invisible (`race.Disable`); the machine follows the oracle
+  (register #13) and runs them — [AGENT], flagged for the audit.
 
 FRESH ALLOCATION / DRIVER (excluded — the malloc convention):
 - `ExecState.alloc`, `allocDecls`, `bindParams`, `bindIterVars`,
@@ -355,15 +355,54 @@ def locPrefix (l : Loc) : Loc → Bool
 /-- Path overlap: the conflict relation on recorded accesses. -/
 def locOverlap (a b : Loc) : Bool := locPrefix a b || locPrefix b a
 
-/-! ## The per-location shadow (TSan/FastTrack skeleton) -/
+/-! ## Access kinds and the per-location shadow (TSan/FastTrack skeleton) -/
+
+/-- The KIND of one recorded access — mem#restrictions' two axes ("a
+data race is defined as a write to a memory location happening
+concurrently with another read or write to that same location, unless
+all the accesses involved are atomic data accesses"), which is also
+TSan's shadow rule (two accesses race unless both are reads or both
+are atomic). The plain pair is the data footprint's (`stepAccesses`);
+the atomic pair is the sync primitives' own state-word traffic as
+`-race` realizes it (BUG-080 — `syncEntryKinds` below, recorded by
+`raceUpdate`'s sync arm). The atomics arc (Q-ATOMIC,
+`docs/2026-09-01_qatomic-owner-proposal.md` §4) records `sync/atomic`
+ops with the same two atomic kinds. -/
+inductive AccessKind where
+  | read
+  | write
+  | atomicRead
+  | atomicWrite
+  deriving Repr, BEq, DecidableEq
+
+def AccessKind.isWrite : AccessKind → Bool
+  | .write | .atomicWrite => true
+  | .read | .atomicRead => false
+
+def AccessKind.isAtomic : AccessKind → Bool
+  | .atomicRead | .atomicWrite => true
+  | .read | .write => false
+
+/-- Do two HB-unordered accesses of these kinds (different goroutines,
+overlapping paths) constitute a data race? At least one write, and not
+both atomic — the memory-model sentence verbatim, and TSan's
+`both_read_or_atomic` exclusion. Symmetric. -/
+def AccessKind.conflicts (a b : AccessKind) : Bool :=
+  (a.isWrite || b.isWrite) && !(a.isAtomic && b.isAtomic)
+
 
 /-- Last-access epochs at one `Loc` path: at most one entry `(t, e)`
-per goroutine per kind (same-goroutine accesses are totally ordered by
+per goroutine per KIND (same-goroutine accesses are totally ordered by
 sequenced-before, so the LATEST epoch subsumes older ones for every
-future HB test). -/
+future HB test). Four kinds since BUG-080 (`AccessKind`, defined
+below): the plain pair the data footprint records and the atomic pair
+the sync ops record on their primitive's own path; the chan-object
+shadow uses the plain pair only. -/
 structure ShadowCell where
   reads : List (Nat × Nat) := []
   writes : List (Nat × Nat) := []
+  atomicReads : List (Nat × Nat) := []
+  atomicWrites : List (Nat × Nat) := []
   deriving Repr, BEq
 
 /-- Replace-or-insert goroutine `t`'s entry. -/
@@ -374,6 +413,21 @@ def ShadowCell.upsert (entries : List (Nat × Nat)) (t : Nat) (e : Nat) :
   | (u, e') :: rest =>
       if u == t then (t, e) :: rest else (u, e') :: ShadowCell.upsert rest t e
 
+/-- The entries of one kind. -/
+def ShadowCell.entries (cell : ShadowCell) : AccessKind → List (Nat × Nat)
+  | .read => cell.reads
+  | .write => cell.writes
+  | .atomicRead => cell.atomicReads
+  | .atomicWrite => cell.atomicWrites
+
+/-- Record goroutine `t`'s access of kind `k` at epoch `e`. -/
+def ShadowCell.record (cell : ShadowCell) (k : AccessKind) (t e : Nat) : ShadowCell :=
+  match k with
+  | .read => { cell with reads := ShadowCell.upsert cell.reads t e }
+  | .write => { cell with writes := ShadowCell.upsert cell.writes t e }
+  | .atomicRead => { cell with atomicReads := ShadowCell.upsert cell.atomicReads t e }
+  | .atomicWrite => { cell with atomicWrites := ShadowCell.upsert cell.atomicWrites t e }
+
 /-- Does some entry `(u, e)` with `u ≠ t` satisfy `e > vt[u]` — i.e. is
 some prior access by another goroutine NOT happens-before goroutine
 `t`'s current point? (Prior access at epoch `e` by `u` is ordered
@@ -382,10 +436,18 @@ def ShadowCell.someConcurrent (entries : List (Nat × Nat)) (t : Nat)
     (vt : VClock) : Bool :=
   entries.any fun (u, e) => u != t && e > vt.get u
 
+/-- Does the cell hold, under some kind that CONFLICTS with `k`
+(`AccessKind.conflicts`), an access by another goroutine that is not
+happens-before goroutine `t`'s current point? -/
+def ShadowCell.conflicts (cell : ShadowCell) (k : AccessKind) (t : Nat)
+    (vt : VClock) : Bool :=
+  [AccessKind.read, .write, .atomicRead, .atomicWrite].any fun k' =>
+    k.conflicts k' && ShadowCell.someConcurrent (cell.entries k') t vt
+
 /-! ## The access footprint of one private step -/
 
-/-- `(isWrite, loc)` — one recorded access. -/
-abbrev RaceAccess := Bool × Loc
+/-- `(kind, loc)` — one recorded access. -/
+abbrev RaceAccess := AccessKind × Loc
 
 /-- The element paths a slice's visible range names. -/
 def sliceElemLocs (slice : SliceValue) (count : Nat) : List Loc :=
@@ -398,10 +460,10 @@ def sliceElemLocs (slice : SliceValue) (count : Nat) : List Loc :=
 purposes — gc/TSan's classification of "concurrent map read and map
 write"). A nil map contributes nothing (the op returns zeros or
 panics; no memory named). -/
-def mapAccess (isWrite : Bool) : GoValue → List RaceAccess
+def mapAccess (kind : AccessKind) : GoValue → List RaceAccess
   | .map m =>
       match m.base with
-      | some l => [(isWrite, l)]
+      | some l => [(kind, l)]
       | none => []
   | _ => []
 
@@ -409,7 +471,7 @@ def mapAccess (isWrite : Bool) : GoValue → List RaceAccess
 address is malformed/nil (the step itself panics — no store happens). -/
 def targetWrite (tv : GoValue) : List RaceAccess :=
   match valueAsLoc tv with
-  | .ok l => [(true, l)]
+  | .ok l => [(.write, l)]
   | .error _ => []
 
 /-- Footprint of a strict-operator application (the operands are
@@ -432,7 +494,7 @@ def strictOpAccesses (op : StrictOp) (vs : List GoValue) : List RaceAccess :=
           match valueAsInt i with
           | .ok idx =>
               match sliceIndexLoc slice idx with
-              | .ok l => [(false, l)]
+              | .ok l => [(.read, l)]
               | .error _ => []
           | .error _ => []
       -- Pointer-to-array read `p[i]` (triage L5): gc compiles a single
@@ -442,18 +504,18 @@ def strictOpAccesses (op : StrictOp) (vs : List GoValue) : List RaceAccess :=
       -- panics before any access.
       | .addr baseLoc =>
           match valueAsInt i with
-          | .ok idx => [(false, .index baseLoc idx)]
+          | .ok idx => [(.read, .index baseLoc idx)]
           | .error _ => []
       | _ => []  -- array/string VALUES are in hand (read recorded at their producer)
-  | .mapGet _ _, [b, _] => mapAccess false b
-  | .lengthOf _, [v] => mapAccess false v
+  | .mapGet _ _, [b, _] => mapAccess .read b
+  | .lengthOf _, [v] => mapAccess .read v
   | .stringFromByteSlice, [v] =>
       match valueAsSlice v with
-      | .ok slice => (sliceElemLocs slice slice.len).map ((false, ·))
+      | .ok slice => (sliceElemLocs slice slice.len).map ((.read, ·))
       | .error _ => []
   | .stringFromRuneSlice, [v] =>
       match valueAsSlice v with
-      | .ok slice => (sliceElemLocs slice slice.len).map ((false, ·))
+      | .ok slice => (sliceElemLocs slice slice.len).map ((.read, ·))
       | .error _ => []
   | _, _ => []
 
@@ -593,13 +655,13 @@ def dispatchAccesses (s : ExecState) (fid : FuncId) (args : List GoValue) :
                                       match wrapperForwardArg target.body
                                           >>= recvFieldChain recvParam.id with
                                       | some hops =>
-                                          [(false, hops.foldl
+                                          [(.read, hops.foldl
                                             (fun l (h : TypeId × String) =>
                                               Loc.field l h.1 h.2) loc)]
-                                      | none => [(false, loc)]
-                                  | none => [(false, loc)]
-                                else [(false, loc)]
-                            | none => [(false, loc)])
+                                      | none => [(.read, loc)]
+                                  | none => [(.read, loc)]
+                                else [(.read, loc)]
+                            | none => [(.read, loc)])
                         | _ => []  -- nil box: the entry panics, no read
                       else []
                   | none => []
@@ -622,41 +684,41 @@ def stmtOpAccesses (op : StmtOp) (vs : List GoValue) : List RaceAccess :=
   | .makeSlice _ _, tv :: _ => targetWrite tv
   | .makeMap _, tv :: _ => targetWrite tv
   | .makeChan _, tv :: _ => targetWrite tv
-  | .mapAssign _ _, [bv, _, _] => mapAccess true bv
+  | .mapAssign _ _, [bv, _, _] => mapAccess .write bv
   | .appendSlice _, [tv, sliceV, elemsV] =>
       (match valueAsSlice sliceV, valueAsSlice elemsV with
        | .ok slice, .ok elems =>
            let newLen := slice.len + elems.len
-           let srcReads := (sliceElemLocs elems elems.len).map ((false, ·))
+           let srcReads := (sliceElemLocs elems elems.len).map ((.read, ·))
            if newLen ≤ slice.cap then
              -- in place: writes the cells [len, newLen) of the backing
              (match slice.base with
               | some b =>
                   srcReads ++ ((List.range elems.len).map fun i =>
-                    (true, Loc.index b (Int.ofNat (slice.offset + slice.len + i))))
+                    (.write, Loc.index b (Int.ofNat (slice.offset + slice.len + i))))
               | none => srcReads)
            else
              -- spill: reads the old elements out; the new backing is fresh
-             srcReads ++ (sliceElemLocs slice slice.len).map ((false, ·))
+             srcReads ++ (sliceElemLocs slice slice.len).map ((.read, ·))
        | _, _ => []) ++ targetWrite tv
   | .copySlice, [tv, dstV, srcV] =>
       (match valueAsSlice dstV, valueAsSlice srcV with
        | .ok dst, .ok src =>
            let count := Nat.min dst.len src.len
-           (sliceElemLocs src count).map ((false, ·))
-             ++ (sliceElemLocs dst count).map ((true, ·))
+           (sliceElemLocs src count).map ((.read, ·))
+             ++ (sliceElemLocs dst count).map ((.write, ·))
        | _, _ => []) ++ targetWrite tv
-  | .mapDelete _, [bv, _] => mapAccess true bv
-  | .clearMap, [bv] => mapAccess true bv
+  | .mapDelete _, [bv, _] => mapAccess .write bv
+  | .clearMap, [bv] => mapAccess .write bv
   | .clearSlice _, [bv] =>
       match valueAsSlice bv with
-      | .ok slice => (sliceElemLocs slice slice.len).map ((true, ·))
+      | .ok slice => (sliceElemLocs slice slice.len).map ((.write, ·))
       | .error _ => []
   | .sortSlice _, [bv] =>
       match valueAsSlice bv with
       | .ok slice =>
-          (sliceElemLocs slice slice.len).map ((false, ·))
-            ++ (sliceElemLocs slice slice.len).map ((true, ·))
+          (sliceElemLocs slice slice.len).map ((.read, ·))
+            ++ (sliceElemLocs slice slice.len).map ((.write, ·))
       | .error _ => []
   | _, _ => []
 
@@ -784,12 +846,6 @@ structure RaceState where
   chanObj : List (Loc × ShadowCell) := []
   /-- Per-sync-cell clock pairs (spec-parity slice 2, `SyncClocks`). -/
   syncs : List (Loc × SyncClocks) := []
-  /-- The WaitGroup misuse-detection shadow — gc's `wg.sema` data pair
-  (waitgroup.go:111-116/185-190): the first counter increment from 0 is
-  a READ, the first waiter's registration a WRITE, both real
-  instrumented accesses whose race is exactly "Add called concurrently
-  with Wait". `chanObj`'s mold (exact-loc keying, check-then-record). -/
-  wgSema : List (Loc × ShadowCell) := []
   deriving Repr, BEq
 
 def RaceState.vcOf (r : RaceState) (t : Nat) : VClock :=
@@ -869,25 +925,20 @@ def RaceState.spawn (r : RaceState) (parent child : Nat) : RaceState :=
 
 /-- Check ONE access against the shadow, then record it. A conflict —
 some overlapping path holds an access by another goroutine that is not
-happens-before this goroutine's current point, with at least one side
-a write — is the terminal `raceDetected` (fail closed per run; the
+happens-before this goroutine's current point, of a kind that CONFLICTS
+with this one (`AccessKind.conflicts`: at least one write, not both
+atomic) — is the terminal `raceDetected` (fail closed per run; the
 message is fixed so the refusal is choice-invariant per stream). -/
 def RaceState.access (r : RaceState) (t : Nat) (a : RaceAccess) :
     Except GoError RaceState :=
-  let (isWrite, loc) := a
+  let (kind, loc) := a
   let vt := r.vcOf t
   let conflict := r.shadow.any fun (l, cell) =>
-    locOverlap loc l &&
-      (ShadowCell.someConcurrent cell.writes t vt
-        || (isWrite && ShadowCell.someConcurrent cell.reads t vt))
+    locOverlap loc l && cell.conflicts kind t vt
   if conflict then throw .raceDetected
   else
     let cell := ((r.shadow.find? (·.1 == loc)).map (·.2)).getD {}
-    let myE := vt.get t
-    let cell' :=
-      if isWrite then { cell with writes := ShadowCell.upsert cell.writes t myE }
-      else { cell with reads := ShadowCell.upsert cell.reads t myE }
-    return { r with shadow := assocSet r.shadow loc cell' }
+    return { r with shadow := assocSet r.shadow loc (cell.record kind t (vt.get t)) }
 
 def RaceState.accesses (r : RaceState) (t : Nat) :
     List RaceAccess → Except GoError RaceState
@@ -915,17 +966,11 @@ unlike the data shadow's path overlap. -/
 def RaceState.chanObjAccess (r : RaceState) (t : Nat) (loc : Loc)
     (isWrite : Bool) : Except GoError RaceState :=
   let vt := r.vcOf t
+  let kind : AccessKind := if isWrite then .write else .read
   let cell := ((r.chanObj.find? (·.1 == loc)).map (·.2)).getD {}
-  let conflict :=
-    ShadowCell.someConcurrent cell.writes t vt
-      || (isWrite && ShadowCell.someConcurrent cell.reads t vt)
-  if conflict then throw .raceDetected
+  if cell.conflicts kind t vt then throw .raceDetected
   else
-    let myE := vt.get t
-    let cell' :=
-      if isWrite then { cell with writes := ShadowCell.upsert cell.writes t myE }
-      else { cell with reads := ShadowCell.upsert cell.reads t myE }
-    return { r with chanObj := assocSet r.chanObj loc cell' }
+    return { r with chanObj := assocSet r.chanObj loc (cell.record kind t (vt.get t)) }
 
 def RaceState.syncOf (r : RaceState) (loc : Loc) : SyncClocks :=
   match r.syncs.find? (·.1 == loc) with
@@ -955,25 +1000,139 @@ def RaceState.syncAcquire (r : RaceState) (t : Nat) (loc : Loc)
   let joined := (r.vcOf t).join sc.semA
   r.setVC t (if alsoB then joined.join sc.semB else joined)
 
-/-- **The WaitGroup misuse pair** (`wgSema` — see the field docstring):
-check-then-record one access on the wg cell's sema shadow under the
-goroutine's current clock. An HB-unordered read↔write or write↔write is
-the terminal `raceDetected`, exactly gc's "Add called concurrently with
-Wait" TSan report class. -/
-def RaceState.wgSemaAccess (r : RaceState) (t : Nat) (loc : Loc)
-    (isWrite : Bool) : Except GoError RaceState :=
-  let vt := r.vcOf t
-  let cell := ((r.wgSema.find? (·.1 == loc)).map (·.2)).getD {}
-  let conflict :=
-    ShadowCell.someConcurrent cell.writes t vt
-      || (isWrite && ShadowCell.someConcurrent cell.reads t vt)
-  if conflict then throw .raceDetected
-  else
-    let myE := vt.get t
-    let cell' :=
-      if isWrite then { cell with writes := ShadowCell.upsert cell.writes t myE }
-      else { cell with reads := ShadowCell.upsert cell.reads t myE }
-    return { r with wgSema := assocSet r.wgSema loc cell' }
+/-! ## The sync primitives' OWN state words (BUG-080 — U4 CLOSED)
+
+What gc's `-race` build realizes on a Mutex/RWMutex/WaitGroup/Once's
+own words when an op runs, read PRIMITIVE BY PRIMITIVE from the pinned
+toolchain's sources (go1.26.5). `sync`, `internal/sync` and
+`sync/atomic` are `noRaceFuncPkgs` (cmd/internal/objabi/pkgspecial.go),
+and under `-race` the SSA builder skips memory instrumentation for
+every function of such a package (cmd/compile/internal/ssagen/
+ssa.go:340-342) — so their own plain loads/stores (e.g. `lockSlow`'s
+`old := m.state`) are invisible and the packages annotate by hand.
+Exactly three things reach TSan: `race.Read/Write` annotations,
+`race.Acquire/Release*` hooks, and `sync/atomic` calls — which the
+-race build routes to TSan's atomic hooks (runtime/race_amd64.s
+`racecallatomic`) UNLESS `race.Disable()` is active, in which case
+Go's TSan glue performs them un-instrumented (measured: the
+`race.Disable`d WaitGroup/RWMutex atomics never conflict with a plain
+copy — `probes/u4kind/{wg-copy-vs-done,rw-copy-vs-rlock}`). The probe
+family
+`docs/evidence/2026-09-02_detector-soundness/probes/u4kind` measures
+every row below in both directions (a plain copy = read, a plain
+overwrite = write; plain access in main beside the op in a child, and
+the roles swapped) against `go build -race` and the enumerator.
+
+* **Mutex** (`internal/sync/mutex.go`): `Lock` opens with the state
+  CAS (:63) — an ATOMIC WRITE whether it wins or falls into
+  `lockSlow`'s CAS loop; `Unlock` is `race.Release` (:190) THEN the
+  state Add (:194) — an atomic write AFTER the release
+  (`syncReleaseTailKinds`). The `_ = m.state` at :189 is a plain load
+  in a `noRaceFuncPkgs` package — nothing TSan sees (a contended Lock
+  beside it is TSan-green: `race/free-sync/mutex`, `probes/u4kind/
+  mu-contend`).
+* **RWMutex** (`sync/rwmutex.go`): EVERY op opens with
+  `race.Read(unsafe.Pointer(&rw.w))` (:69/:116/:146/:203) — a PLAIN
+  READ — then `race.Disable()`, under which the reader counters and
+  the embedded Mutex's CAS/Add are invisible. TSan's realized set is
+  ONE PLAIN READ per op: an overwrite beside it is red, a COPY beside
+  it is green (read/read) — the machine follows the oracle (register
+  #13) and records `.read`; see the residual note below.
+* **WaitGroup** (`sync/waitgroup.go`): the state word's atomics run
+  under `race.Disable()` (:83/:162); the ONLY realized accesses are the
+  misuse pair on `wg.sema` — a plain READ when an Add takes the counter
+  off 0 upward (:111-115), a plain WRITE when the FIRST waiter
+  registers before parking (:184-190). `Done`, an Add from a nonzero
+  counter, and a Wait that returns at counter 0 touch nothing TSan
+  sees. (This pair was the pre-BUG-080 `wgSemaAccess` carve-out, kept
+  in a private exact-loc shadow; it now lives in the DATA shadow at
+  the primitive's path, where a copy/overwrite of the enclosing struct
+  overlaps it — the wg-overwrite pin's flip. Add↔Wait misuse detection
+  is unchanged: same pair, same check.)
+* **Once** (`sync/once.go`, no `race.Disable`): `Do` opens with the
+  atomic LOAD of `o.done` (:67); a Do that observes completion is that
+  ATOMIC READ alone (a copy beside it is green, an overwrite red);
+  every other Do takes `doSlow`, whose `o.m.Lock()` CAS is an ATOMIC
+  WRITE (the winner's and the parked contender's alike). The winner's
+  completion (`onceComplete`) is the deferred `o.done.Store(true)` —
+  an atomic write BEFORE the deferred `o.m.Unlock()` (LIFO) — then the
+  Unlock's release and its trailing state Add.
+
+Where the access lands: the sync cell's `Loc` — the primitive's own
+path (`.field b tid "mu"` for a field, the cell for a local). The
+path-overlap relation does the rest (check (i) of the ruling): a
+whole-struct copy/overwrite at the enclosing path OVERLAPS it and
+conflicts; a SIBLING field's plain access does not (`locPrefix` is
+per-path, not per-cell) — `probes/u4kind/mu-siblings-under-lock`,
+`mu-disjoint-prims`, `mu-sibling-beside-lock` and the corpus rows
+`race/free-sync/{mutex-siblings,disjoint-prims}` are the green guards.
+Atomic↔atomic never conflicts, so contending ops on one primitive stay
+green (`race/free-sync/mutex`, `probes/u4kind/{mu,rw,once}-contend`).
+
+Wakes record nothing: a parked goroutine released nothing after its
+entry, so no other goroutine can be HB-after the entry without being
+HB-after the wake — every conflict a wake-time access would find, the
+entry access already found (gc's woken `lockSlow` CAS is thus
+detection-redundant here).
+
+RESIDUAL, recorded honestly (fail-OPEN vs mem#restrictions, fail-
+ALIGNED vs the `-race` oracle): a plain COPY beside an RWMutex op, and
+a plain OVERWRITE/COPY beside a WaitGroup `Done` (or an Add from a
+nonzero counter, or a Wait at 0), are racy by the memory model (a
+non-atomic access beside an atomic RMW on the same word) but TSan
+cannot see them — gc performs those RMWs under `race.Disable`. The
+racy lane's oracle is `-race` (register #13: TSan's realized set), so
+the machine records what TSan records and RUNS these misuse shapes
+(vet's `copylocks` flags every one; no race-free program is affected).
+Recording `.atomicWrite` for them instead would refuse them at the
+cost of over-refusal rows against the oracle — an [AGENT] choice made
+inside the BUG-080 slice's brief ("no new over-refusal rows"),
+flagged for the audit; `probes/u4kind/{rw-copy-vs-rlock,
+rw-copy-vs-lock,wg-copy-vs-done,wg-overwrite-vs-done,
+wg-overwrite-vs-wait-at-0}` are its measured exhibits (agree-DRF).
+
+RESIDUAL (b), an outcome-CLASS deviation, both sides refusing: the
+detector folds SUCCESSFUL pool steps only (`execProgLoop` runs
+`raceUpdate` after `stepMulti` returns), so a sync op whose apply is
+FATAL — an `Unlock`/`RUnlock` after a concurrent plain overwrite reset
+the primitive to unlocked — ends the run `fatal` before its entry
+access is ever checked, where gc's `race.Read`/state Add precede the
+misuse check and TSan reports the race first, then the fatal fires.
+Reachable only by an overwrite-then-cross-goroutine-unlock shape
+(`probes/u4kind/rw-overwrite-vs-{runlock,unlock}`, possible-HOLE by the
+runner's definition, diagnosed at BUG-080). Closing it needs a
+pre-step entry check in the detecting loop and its mirrors — owed at
+TODO.md, out of this slice's size. -/
+
+/-- The accesses `-race` realizes on the primitive's own words at a
+sync op's ENTRY — before the op's release/acquire hook — from the op
+and the PRE-step cell (`delta` is `wgAdd`'s operand, 0 for every other
+op). Recorded at the sync cell's `Loc` under the goroutine's current
+clock by `raceUpdate`'s sync arm, commit or park alike (the table in
+the section docstring above is the derivation). -/
+def syncEntryKinds (op : SyncOp) (pre : SyncPrim) (delta : Int) : List AccessKind :=
+  match op, pre with
+  | .lock, _ => [.atomicWrite]
+  | .unlock, _ => []  -- the state Add follows the release: `syncReleaseTailKinds`
+  | .rlock, _ | .runlock, _ | .wlock, _ | .wunlock, _ => [.read]
+  | .wgAdd, .waitGroup counter _ => if delta > 0 && counter == 0 then [.read] else []
+  | .wgAdd, _ => []
+  | .wgWait, .waitGroup counter waiters =>
+      if counter != 0 && waiters == 0 then [.write] else []
+  | .wgWait, _ => []
+  | .onceBegin _, .once true true => [.atomicRead]
+  | .onceBegin _, _ => [.atomicWrite]
+  | .onceComplete, _ => [.atomicWrite]
+
+/-- The accesses `-race` realizes AFTER a sync op's release hook:
+`Mutex.Unlock`'s state Add follows `race.Release` (mutex.go:188-194),
+and so does the Add inside Once's deferred `o.m.Unlock()`. Recorded
+after `syncRelease` (at the bumped epoch), so a goroutine that ACQUIRES
+this very release and then plainly reads the primitive still conflicts
+— TSan's verdict exactly. -/
+def syncReleaseTailKinds : SyncOp → List AccessKind
+  | .unlock | .onceComplete => [.atomicWrite]
+  | _ => []
 
 /-- The write of one phase-2 store step (`storeK`): the resolved
 target path. Chain resolution itself reads no user memory (address
@@ -985,7 +1144,7 @@ def storeTargetAccess (s : ExecState) (r : TargetRef) : List RaceAccess :=
       match resolveChain s anchor steps idxs with
       | .ok v => targetWrite v
       | .error _ => []
-  | .mapElem b _ _ _ => mapAccess true b
+  | .mapElem b _ _ _ => mapAccess .write b
 
 /-- **The footprint of one PRIVATE machine step**, from its pre-step
 configuration: which user-memory paths the step reads/writes. Every
@@ -999,14 +1158,14 @@ def stepAccesses (s : ExecState) (c : Config) : List RaceAccess :=
   match c with
   | .evalE (.var id) env k =>
       match LocalEnv.lookup env id with
-      | some loc => [(false, projChainTarget s k loc)]
+      | some loc => [(.read, projChainTarget s k loc)]
       | none => []
   | .retV v (.strictK (.deref _) [] [] _ k') =>
       -- Handled here (not in strictOpAccesses) so the continuation can
       -- narrow the pointee read through an immediate projection chain
       -- (fieldGet / constant-index indexGet).
       (match valueAsLoc v with
-       | .ok l => [(false, projChainTarget s k' l)]
+       | .ok l => [(.read, projChainTarget s k' l)]
        | .error _ => [])
   | .retV v (.strictK op done [] _ _) =>
       strictOpAccesses op ((v :: done).reverse)
@@ -1020,16 +1179,16 @@ def stepAccesses (s : ExecState) (c : Config) : List RaceAccess :=
   -- like every other spine-riding assignment.
   | .retV v (.rhsK rop _ done [] _ _ _) =>
       (match rop, (v :: done).reverse with
-       | .mapLookup _ _, [bv, _] => mapAccess false bv
+       | .mapLookup _ _, [bv, _] => mapAccess .read bv
        | _, _ => [])
-  | .retV v (.mapRangeK _ _ _ _ _ _ _) => mapAccess false v
+  | .retV v (.mapRangeK _ _ _ _ _ _ _) => mapAccess .read v
   -- BUG-005 (L) surgery: EVERY mapIterK pick step — including the
   -- final done-check — loads the live map cell (gc's exhausted
   -- mapIterNext still reads; this is the arm that closed U1). Nil-map
   -- ranges (base none) read nothing.
   | .next (.mapIterK _ _ _ _ _ base _ _ _ _) =>
       (match base with
-       | some l => [(false, l)]
+       | some l => [(.read, l)]
        | none => [])
   -- Frame ENTRIES with a possible interface-dispatch receiver deref
   -- (S3 audit major: dynamicDispatch?'s needsDeref read): the ordinary
@@ -1054,9 +1213,9 @@ def stepAccesses (s : ExecState) (c : Config) : List RaceAccess :=
   -- per-target `storeK` steps (the `storeTargetAccess` arm above),
   -- exactly like every other phase-2 store.
   | .next (.frame _ _ results [] _ _) =>
-      results.map ((false, ·))
+      results.map ((.read, ·))
   | .returning (.frame _ _ results [] _ _) =>
-      results.map ((false, ·))
+      results.map ((.read, ·))
   | _ => []
 
 end GoLean.GoCore.Machine

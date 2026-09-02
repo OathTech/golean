@@ -80,6 +80,10 @@ private def nodeHash (nd : DedupNode) : UInt64 :=
         h * 31 + UInt64.ofNat e.1 * 7 + UInt64.ofNat e.2) 3
       + sc.writes.foldl (fun (h : UInt64) e =>
           h * 37 + UInt64.ofNat e.1 * 11 + UInt64.ofNat e.2) 5
+      + sc.atomicReads.foldl (fun (h : UInt64) e =>
+          h * 41 + UInt64.ofNat e.1 * 13 + UInt64.ofNat e.2) 7
+      + sc.atomicWrites.foldl (fun (h : UInt64) e =>
+          h * 43 + UInt64.ofNat e.1 * 17 + UInt64.ofNat e.2) 11
   let hClocks := nd.r.clocks.foldl
     (fun (h : UInt64) vc =>
       vc.foldl (fun (h : UInt64) n => h * 1000003 + UInt64.ofNat n) (h * 31))

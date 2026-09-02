@@ -558,8 +558,13 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   Probes (45): agree-race 24 / agree-DRF 12 / third cell 2 + 3
   uncertified-by-fatal — ALL the recorded U4 class (sync-object state
   words → **BUG-080**, born-FAIL pins `race/negative-sync/{wg-
-  overwrite,mutex-copy}`; fix = the atomic access kind, sequenced
-  onto the atomics arc by [AGENT] judgment, not a table entry) /
+  overwrite,mutex-copy}`; fix = the atomic access kind, not a table
+  entry — LANDED 2026-09-02 as its own [USER]-ruled slice: `AccessKind
+  ∈ {read, write, atomicRead, atomicWrite}`, TSan's realized per-
+  primitive set recorded at the primitive's path; corpus HOLE cell
+  2 → 0 (`corpus-bug080.*`), the two pins + `rw-overwrite`/`once-copy`
+  PASS/racy, the 28-subject two-direction family `probes/u4kind` 26
+  agree + 2 diagnosed possible-HOLE, residuals at BUG-080) /
   over-refusal 3 (O1 residual + two schedule-dependent races the
   10-run sampler never realized but the enumerator did) / 1 more
   uncertified: `probe/u5/cross-unlock-publish` (gc red 7/10; under the

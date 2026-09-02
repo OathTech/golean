@@ -1,0 +1,11 @@
+tool	scripts/detector-soundness
+commit	0f3c05ffd59d8973d71f5e9c24a4e73c56c8ebff+dirty
+go	go1.26.5
+golean	/home/dev/projects/golean/.claude/worktrees/bug080-kind/.lake/build/bin/golean
+runs	5
+procs	1,8
+strict_enum	width=4,sites=32,cap=512,work=4000000,backedge=1
+rows	28
+host	Linux 7.0.0-30-generic x86_64
+started	2026-09-02T05:09:12+00:00
+finished	2026-09-02T05:10:08+00:00

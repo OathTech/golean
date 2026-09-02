@@ -95,8 +95,19 @@ see the R15 entry below.
       section below); Q-ATOMIC RULED 2026-09-02 — A′, THIS repo as
       owner, BUG-080's detector-kind slice pulled forward (the two
       items directly below). All eight rows ruled.
-- [ ] **BUG-080 detector atomic-access-kind slice (S–M, PULLED
-      FORWARD — sequence BEFORE the atomics arc)** ([USER]-ruled
+- [x] **BUG-080 detector atomic-access-kind slice (S–M, PULLED
+      FORWARD — sequence BEFORE the atomics arc)** — LANDED on branch
+      `bug080-atomic-kind` 2026-09-02 (merge pending audit + sign-off):
+      `AccessKind ∈ {read, write, atomicRead, atomicWrite}` (the ruling's
+      3-kind sketch refined to 4 — an atomic READ beside a plain read is
+      not a race by mem#restrictions nor to TSan, measured on Once's
+      done-Do and WaitGroup's Wait-at-0), `syncEntryKinds`/
+      `syncReleaseTailKinds` per primitive, wgSema carve-out RETIRED into
+      the data shadow; both pins flipped, +4 born-PASS rows, corpus HOLE
+      cell 2 → 0, probe family u4kind 28 subjects; two residuals recorded
+      at BUG-080 (TSan-invisible RWMutex-copy / WaitGroup-Done shapes
+      followed to the oracle; fatal-before-race on an overwrite-then-
+      cross-goroutine-Unlock). ([USER]-ruled
       2026-09-02, `docs/2026-08-31_qrow-rulings.md` row 2; was: rides
       the arc's detector wave by [AGENT] sequencing, audit fix S4):
       the atomic access KIND in `GoLean/GoCore/Race.lean` —
@@ -190,10 +201,17 @@ owners in "Re-homed obligations" above, fidelity decision 6.)
 
 ## Owed core fixes (BUGS.md carries the marker; this backlog the owner)
 
-- [ ] BUG-080 (race detector U4 — the atomic access KIND): scheduled
-      as its OWN S–M slice ahead of the atomics arc ([USER]
-      2026-09-02) — the item "BUG-080 detector atomic-access-kind
-      slice" in the re-homed section above is the owner entry.
+- [x] BUG-080 (race detector U4 — the atomic access KIND): FIXED
+      2026-09-02 on `bug080-atomic-kind` (the item "BUG-080 detector
+      atomic-access-kind slice" above). Follow-up owed, NOT a bug of
+      record yet: residual (b) at BUG-080 — the detector folds only
+      SUCCESSFUL steps, so a sync op whose apply is FATAL never has its
+      entry access checked (machine `fatal` where gc reports the race
+      first, then dies); closing it needs a pre-step check in
+      `execProgLoop` + its four mirrors + the MultiStreams theorems (S,
+      trust-surface). Residual (a) — TSan-invisible go_mem-racy shapes
+      (RWMutex copy, WaitGroup Done) followed to the oracle — is an
+      [AGENT] alignment choice for the audit to ratify or reverse.
 
 - [ ] BUG-078 residual (1): the LINEAR normalize. `normalizeListWith`
       (GoLean/GoCore/Ops.lean) is non-tail-recursive over the element

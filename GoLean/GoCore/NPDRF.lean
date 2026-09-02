@@ -339,10 +339,12 @@ def ReachesMFine (m₀ : MultiConfig) (res : PoolResult) : Prop :=
 
 /-! ## The fine-semantics race -/
 
-/-- Two footprints conflict: some overlapping access pair with at
-least one write. -/
+/-- Two footprints conflict: some overlapping access pair whose kinds
+conflict (`AccessKind.conflicts` — at least one write, not both
+atomic; private-step footprints carry only the plain kinds, so here it
+is "at least one write"). -/
 def footprintsConflict (as bs : List RaceAccess) : Prop :=
-  ∃ a ∈ as, ∃ b ∈ bs, locOverlap a.2 b.2 = true ∧ (a.1 = true ∨ b.1 = true)
+  ∃ a ∈ as, ∃ b ∈ bs, locOverlap a.2 b.2 = true ∧ a.1.conflicts b.1 = true
 
 /-- The fine-semantics data race: some fine-reachable pool holds two
 DISTINCT runnable goroutines whose next steps carry conflicting

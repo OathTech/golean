@@ -49,6 +49,21 @@ review D5; A1-07 / A2-Q3). Convention: `docs/evidence/README.md`.
   post-Q-RACEPATH machine is unchanged; the movers vs `probes-post`
   are cell renames only — gc-red uncertified → `possible-HOLE`).
 - `gate-tail.txt` — the `scripts/ci --diff` tail at the branch tip.
+- **BUG-080 fix slice (2026-09-02, `bug080-atomic-kind`)**:
+  `probes/u4kind/main.go` + `probes-u4kind.tsv` — the 28-subject
+  family probing each primitive's OWN words in both directions (copy =
+  plain read, overwrite = plain write; plain access in main beside the
+  op in a child, and roles swapped) plus the negative controls
+  (contending ops, sibling fields under the lock, disjoint primitives).
+  `probes-u4kind-pre.*` — on the 0f3c05ff machine (main's binary, the
+  worktree dirty only with the probe files): 7 HOLE, 7 possible-HOLE,
+  14 agree-DRF. `probes-u4kind-post.*` — on the fixed machine (the
+  slice's Race.lean/Multi.lean, tree at 0f3c05ff+dirty = the slice's
+  diff): 0 HOLE, 26 agree, 2 possible-HOLE (`rw-overwrite-vs-{runlock,
+  unlock}` — machine `fatal` where gc reports the race then dies;
+  BUG-080 residual (b)). `corpus-bug080.*` — the in-scope corpus matrix
+  re-run at the slice's tip: HOLE 2 → 0, no new over-refusal rows.
+  `gate-tail-bug080.txt` — the slice's `ci --diff` tail.
 - Raw per-run TSan transcripts, harness dirs, wire dumps, enumerator
   observations and stats live under the run's `artifacts/detector-
   soundness/<run>/rows/<id>/` (gitignored; regenerate with the commands

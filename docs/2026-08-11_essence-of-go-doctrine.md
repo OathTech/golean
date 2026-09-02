@@ -236,14 +236,25 @@ write a bare "#6"/"#7".
    the deep re-run), the 1 over-refusal is the recorded O1 residual,
    63 rows (61 after) are uncertified — none of them gc-red. **NOT
    DETECTED**, three classes: (i) the sync primitives' OWN state
-   words (U4 → **BUG-080**, born-FAIL pinned): a plain copy/overwrite
-   of a primitive another goroutine is operating on is racy by
-   mem#restrictions and TSan-red 10/10, and the machine runs it to a
-   value — the probe leg's third cell is exactly this class (2/45
-   value-run + 3 uncertifiable-by-fatal-members — `possible-HOLE`
-   under the hardened runner — all U4); misuse-only, fix = the atomic
-   access KIND, sequenced onto the atomics arc by [AGENT] judgment
-   (separable; report §3.2);
+   words (U4 → **BUG-080**, born-FAIL pinned 2026-09-02 and FIXED the
+   same day by the access-KIND slice, [USER]-ruled ahead of the
+   atomics arc): a plain copy/overwrite of a primitive another
+   goroutine is operating on is racy by mem#restrictions and TSan-red
+   10/10; the machine USED to run it to a value (the probe leg's third
+   cell was exactly this class — 2/45 value-run + 3 uncertifiable-by-
+   fatal-members, all U4). Since the fix `RaceAccess := AccessKind ×
+   Loc` (read/write/atomicRead/atomicWrite; conflict = at least one
+   write ∧ not both atomic — the register's own sentence) and the sync
+   arm records TSan's realized per-primitive set at the primitive's
+   path: the corpus HOLE cell is 0/364 (`corpus-bug080.*`), the
+   28-subject two-direction family `probes/u4kind` is 26 agree + 2
+   diagnosed possible-HOLE. What remains of the class, recorded at
+   BUG-080 and Race.lean: shapes gc runs under `race.Disable` (a copy
+   beside an RWMutex op, a plain access beside WaitGroup `Done`) are
+   go_mem-racy but TSan-invisible and the machine follows the oracle
+   (register #13) — [AGENT], for the audit; and an overwrite that
+   unlocks a held lock before another goroutine's Unlock ends `fatal`
+   here where gc reports the race first (both refuse);
    (ii) schedule-dependent races on paths the enumeration never
    realizes — the enumerator is fuel/site/width-bounded and the strict
    lane runs one default stream plus three variants, so a race whose

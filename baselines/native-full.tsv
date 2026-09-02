@@ -1,5 +1,31 @@
 # GoLean native-frontend full-corpus differential baseline
-# re-pinned: 2026-09-02 (t4-detector-soundness lane — Q-RACEPATH
+# re-pinned: 2026-09-02 (bug080-atomic-kind lane — BUG-080 FIXED: the race
+#   detector's access KIND; the slice is [USER]-ruled (qrow-rulings row 2,
+#   "pull forward as its own S–M slice, sequenced BEFORE the Q-ATOMIC arc"),
+#   [AGENT]-executed. FULL ci --diff at this tip (artifacts/bug080/
+#   ci-diff-1.log in the lane worktree; drift = exactly the 6 rows below;
+#   NO other row moved; NO PASS->non-PASS flips). Machine change:
+#   GoLean/GoCore/Race.lean `RaceAccess := AccessKind × Loc` with
+#   AccessKind ∈ {read, write, atomicRead, atomicWrite} (conflict = at
+#   least one write ∧ not both atomic — mem#restrictions verbatim, TSan's
+#   shadow rule) + `syncEntryKinds`/`syncReleaseTailKinds`, the set gc's
+#   -race build realizes on a sync primitive's OWN words derived primitive
+#   by primitive (Mutex Lock/Unlock atomic writes; RWMutex ops a plain
+#   race.Read(&rw.w); WaitGroup's wg.sema misuse pair — moved from its
+#   private wgSema shadow into the data shadow; Once's atomic read/writes),
+#   recorded by raceUpdate's sync arm (Multi.lean) at the sync cell's path,
+#   before the op's hook (Unlock's trailing state Add after the release).
+#   FLIP FAIL->PASS (2): race/negative-sync/{wg-overwrite,mutex-copy} —
+#     BUG-080's born-FAIL pins (status ok where `go run -race` is red
+#     10/10) now PASS/racy: every enumerated path refuses.
+#   NEW rows born PASS (4): race/negative-sync/{rw-overwrite,once-copy}
+#     (PASS/racy — one racy pin per remaining primitive; -race red 10/10,
+#     probes/u4kind); race/free-sync/{mutex-siblings,disjoint-prims}
+#     (PASS/confluent, |set|=1 — the ruling's check (i) green guards:
+#     sibling-field and other-primitive accesses stay disjoint from the
+#     primitive's own path).
+#   Everything else: 2531 rows unchanged in result and stage.
+# previous re-pin: 2026-09-02 (t4-detector-soundness lane — Q-RACEPATH
 #   implemented (RULED [USER] 2026-08-31, docs/2026-08-31_qrow-rulings.md
 #   row 4) + BUG-080 pins; [AGENT]-executed inside the [USER]-approved
 #   Tier-4 mandate. FULL ci --diff at this tip (artifacts/t4-detector/
@@ -2069,6 +2095,8 @@ PASS	race/free-sync/mutex	confluent
 PASS	race/free-sync/wg-edge	confluent
 PASS	race/free-sync/once-edge	confluent
 PASS	race/free-sync/rw-writers	confluent
+PASS	race/free-sync/mutex-siblings	confluent
+PASS	race/free-sync/disjoint-prims	confluent
 PASS	race/litmus/mp-sync	confluent
 PASS	race/litmus/mp-racy	racy
 PASS	race/litmus/lb-racy	racy
@@ -2092,8 +2120,10 @@ PASS	race/negative/array-const-index-whole-write	racy
 PASS	race/negative-sync/one-side	racy
 PASS	race/negative-sync/rlock-serialized	racy
 PASS	race/negative-sync/wg-no-edge	racy
-FAIL	race/negative-sync/wg-overwrite	lean-observation
-FAIL	race/negative-sync/mutex-copy	lean-observation
+PASS	race/negative-sync/wg-overwrite	racy
+PASS	race/negative-sync/mutex-copy	racy
+PASS	race/negative-sync/rw-overwrite	racy
+PASS	race/negative-sync/once-copy	racy
 PASS	range/assign-form-interface-target/slice-value	-
 PASS	range/assign-form-interface-target/map-key	-
 PASS	range/assign-form-interface-target/index	-

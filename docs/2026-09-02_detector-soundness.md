@@ -258,6 +258,33 @@ both sides.
 
 ### 3.2 The third cell is exactly U4 — now BUG-080, born-FAIL pinned
 
+> **POSTSCRIPT (2026-09-02, the `bug080-atomic-kind` slice — [USER]-ruled
+> the same day as its own S–M slice ahead of the atomics arc, superseding
+> the sequencing paragraph below).** FIXED. `RaceAccess := AccessKind ×
+> Loc` with `AccessKind ∈ {read, write, atomicRead, atomicWrite}` — the
+> sketch's three kinds refined to four because an atomic READ beside a
+> plain read is not a race (mem#restrictions; TSan) and gc realizes
+> read-only ops (a Do observing completion, a Wait at counter 0). The
+> per-op set was derived PRIMITIVE BY PRIMITIVE from go1.26.5 and
+> measured both directions by the 28-subject family
+> `probes/u4kind` (`probes-u4kind-{pre,post}.*`): Mutex Lock/Unlock are
+> atomic writes; EVERY RWMutex op is one PLAIN READ (`race.Read(&rw.w)`,
+> its counters under `race.Disable`) — so an overwrite is red but a copy
+> is green; WaitGroup exposes only the `wg.sema` misuse pair (Done is
+> invisible); Once's done-Do is an atomic read, its slow path atomic
+> writes. Pre → post: 7 HOLE + 7 possible-HOLE + 14 agree-DRF → 0 HOLE,
+> 26 agree, 2 possible-HOLE (residual (b) at BUG-080: an overwrite that
+> unlocks a held lock before another goroutine's Unlock ends `fatal`
+> here where gc reports the race first — both refuse). Corpus in-scope
+> matrix HOLE cell 2 → 0 (`corpus-bug080.*`); the two pins plus
+> `race/negative-sync/{rw-overwrite,once-copy}` PASS/racy; check (i)'s
+> green guards `race/free-sync/{mutex-siblings,disjoint-prims}` born
+> PASS/confluent. Residual (a), [AGENT] for the audit: the TSan-invisible
+> go_mem-racy shapes (copy beside an RWMutex op; plain access beside
+> WaitGroup `Done`) are followed to the oracle and run — recording
+> `.atomicWrite` there would refuse them at the cost of over-refusal
+> rows.
+
 Five U4 probes are TSan-red 10/10 at both GOMAXPROCS values:
 `struct-overwrite-vs-lock`, `wg-overwrite-vs-add`,
 `rw-overwrite-vs-rlock`, `once-overwrite-vs-do`, `struct-copy-vs-lock`;
@@ -471,10 +498,14 @@ traffic and nested paths all footprint where gc reads/writes.
 
 1. *The sync primitives' own state words* (U4 → BUG-080). Racy by
    mem#restrictions (non-atomic beside atomic), TSan-red 10/10, run
-   to a value here. Misuse-only (vet copylocks); pinned born-FAIL;
-   fix = the atomic access kind (atomics arc). This is the ONE class
-   where "SC semantics given to a racy program" is literally true
-   today, and it is now on the books as such.
+   to a value here AT THE TIME OF WRITING — FIXED 2026-09-02 by the
+   access-kind slice (§3.2 postscript): the class is now detected on
+   every path for every shape TSan sees; what remains is the TSan-
+   invisible sub-class gc runs under `race.Disable` (followed to the
+   oracle, [AGENT], BUG-080 residual (a)) and the fatal-before-race
+   ordering on an overwrite-then-cross-goroutine-Unlock (residual
+   (b)) — both recorded at BUG-080, neither a value run of a TSan-red
+   program.
 2. *Schedule-dependent races the enumeration never realizes.* The
    refusal is per-RUN; the program-level claim is exactly the
    enumerator's reach. Where the enumerator certifies (racy lane's

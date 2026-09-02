@@ -89,9 +89,72 @@ func freeSyncRwWriters() int {
 	return freeSyncX
 }
 
+// BUG-080 CONTROLS (the atomic access-kind slice, 2026-09-02): the
+// detector now records each sync op's access on the primitive's OWN
+// path (Race.lean `syncEntryKinds`), so the ruling's check (i) — one
+// syncData cell per primitive vs the path-overlap relation — needs green
+// guards: plain accesses to SIBLING fields of the struct holding the
+// primitive, and to other primitives in the same struct, must stay
+// disjoint from it. go run -race green (probes/u4kind mu-siblings-under-
+// lock / mu-disjoint-prims, 5/5 at GOMAXPROCS 1 and 8).
+
+type freeSyncSiblingBox struct {
+	mu sync.Mutex
+	a  int
+	b  int
+}
+
+// Sibling fields written under the lock from two goroutines: the two
+// Locks' atomic writes land at `.field mu` (atomic↔atomic never
+// conflicts); the field writes at `.field a` / `.field b` are disjoint
+// from the mutex path and from each other.
+func freeSyncMutexSiblings() int {
+	var s freeSyncSiblingBox
+	done := make(chan int)
+	go func() {
+		s.mu.Lock()
+		s.a = 1
+		s.mu.Unlock()
+		done <- 0
+	}()
+	s.mu.Lock()
+	s.b = 2
+	s.mu.Unlock()
+	<-done
+	return s.a + s.b
+}
+
+type freeSyncPairBox struct {
+	mu1 sync.Mutex
+	mu2 sync.Mutex
+	a   int
+	b   int
+}
+
+// Two DISJOINT primitives in one struct, each guarding its own field:
+// the ops' accesses sit at `.field mu1` / `.field mu2` — distinct paths
+// — and nothing overlaps.
+func freeSyncDisjointPrims() int {
+	var s freeSyncPairBox
+	done := make(chan int)
+	go func() {
+		s.mu1.Lock()
+		s.a = 1
+		s.mu1.Unlock()
+		done <- 0
+	}()
+	s.mu2.Lock()
+	s.b = 2
+	s.mu2.Unlock()
+	<-done
+	return s.a + s.b
+}
+
 func main() {
 	freeSyncMutex()
 	freeSyncWgEdge()
 	freeSyncOnceEdge()
 	freeSyncRwWriters()
+	freeSyncMutexSiblings()
+	freeSyncDisjointPrims()
 }
