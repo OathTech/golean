@@ -365,6 +365,20 @@ write a bare "#6"/"#7".
    reasoning) is **discrepancy D-001** in
    `docs/discrepancy-backlog.md` (file lands with the
    fidelity-assessment branch; the id is stable).
+   **5(b) DISCHARGED 2026-09-02 (t5-maxalloc, [AGENT] inside the
+   [USER] mandate): behavior 2 — the deterministic `maxAlloc` panic
+   class — is MODELED.** Latitude inventory R16 pins gc linux/amd64's
+   realization (`maxAllocBytes` 2^48, `chanHeaderBytes` 112, the gc
+   layout `tySizeAlignFuel`; the `makeSlice`/`makeChan`/`appendSlice`
+   arms panic with gc's texts BEFORE materializing; BUG-081 filed
+   with the probe matrix as witness, BUG-082 for the un-lowered map
+   hint the probe exposed — open, frontend-side; corpus
+   `builtins/make-maxalloc`, 14 rows PASS + 1 red-first).
+   THE RIDER NOW SCOPES TRUE OOM ONLY (behavior 1): an allocation that
+   passes the limit check and fails to allocate, and R16's recorded
+   append band (gc panics on the grown cap where the machine's
+   newLen-based check allocates). D-001's target state is unchanged by
+   this; the rider stands until it lands.
 
 ## Why (the mission)
 

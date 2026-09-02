@@ -712,8 +712,11 @@ inductive StmtOp where
   /-- `make(chan T[, n])` (channels arc slice 1): allocate an empty
   `chanData` cell (the `makeMap` shape; the cell is untyped, like
   `mapData`). Negative capacity ⇒ the recoverable run-time panic
-  `makechan: size out of range` (probe p21). -/
-  | makeChan (hasCap : Bool)
+  `makechan: size out of range` (probe p21); so does a buffer whose
+  byte size (`elem`'s R16 size × n) exceeds `maxAllocBytes -
+  chanHeaderBytes` (t5-maxalloc, 2026-09-02) — which is why the op
+  carries `elem` since that slice. -/
+  | makeChan (elem : Ty) (hasCap : Bool)
   | mapAssign (keyTy valueTy : Ty)
   | appendSlice (elem : Ty)
   | copySlice
@@ -741,9 +744,9 @@ def stmtPlan : Stmt → Option (StmtOp × Nat × List Expr)
   | .makeMap target _ _ space => do
       let te ← assigneeExpr target
       return (.makeMap space.isSome, 1, [te] ++ space.toList)
-  | .makeChan target _ capacity => do
+  | .makeChan target elem capacity => do
       let te ← assigneeExpr target
-      return (.makeChan capacity.isSome, 1, [te] ++ capacity.toList)
+      return (.makeChan elem capacity.isSome, 1, [te] ++ capacity.toList)
   | .mapAssign base index value keyTy valueTy =>
       return (.mapAssign keyTy valueTy, 0, [base, index, value])
   | .appendSlice target elem slice elems => do
@@ -790,10 +793,28 @@ def applyStmtOpCore (s : ExecState) (op : StmtOp) (_nt : Nat)
         match capV? with
         | none => pure lenValue
         | some capV => valueAsInt capV
-      let len ← natFromNonnegativeInt "runtime error: makeslice: len out of range" lenValue
-      let cap ← natFromNonnegativeInt "runtime error: makeslice: cap out of range" capValue
-      if cap < len then
-        panic "runtime error: makeslice: cap out of range"
+      -- gc's `makeslice` check, verbatim in structure (runtime/slice.go:
+      -- 102–115; R16 pin, t5-maxalloc 2026-09-02): the CAP request is
+      -- bad when negative, when its byte size exceeds `maxAllocBytes`,
+      -- or when len > cap; a bad cap request reports `len out of range`
+      -- when the LEN alone is already bad (negative or over the byte
+      -- limit — golang.org/issue/4085: `make([]T, huge)` blames len)
+      -- and `cap out of range` otherwise. The byte size is `elemSize ×
+      -- n` under the gc-amd64 layout (`tySizeBytes`); the check
+      -- precedes materialization, so an over-limit request never
+      -- builds its backing (probe matrix: docs/evidence/
+      -- 2026-09-02_t5-maxalloc-probes/). Exactly-at-limit requests
+      -- pass (gc then fails to ALLOCATE — the true-OOM class, register
+      -- #7 rider / D-001, not modeled).
+      let elemSize ← tySizeBytes s.types elem
+      if capValue < 0 || capValue * elemSize > maxAllocBytes
+          || lenValue < 0 || lenValue > capValue then
+        if lenValue < 0 || lenValue * elemSize > maxAllocBytes then
+          panic "runtime error: makeslice: len out of range"
+        else
+          panic "runtime error: makeslice: cap out of range"
+      let len := lenValue.toNat
+      let cap := capValue.toNat
       let backing ← buildDefaultArrayValue s cap elem
       let (base, s₁) := s.alloc backing (some (.array cap elem))
       let loc ← valueAsLoc tv
@@ -807,12 +828,26 @@ def applyStmtOpCore (s : ExecState) (op : StmtOp) (_nt : Nat)
       match spaceV? with
       | none => pure ()
       | some spaceV => do
-          let size ← valueAsInt spaceV
-          let _ ← natFromNonnegativeInt "makemap: size out of range" size
+          -- The hint is EVALUATED (operand order, type) and otherwise
+          -- ignored: spec §Making slices, maps and channels makes the
+          -- hint's effect "implementation-dependent", and gc (go1.26.5,
+          -- runtime/map.go:60–67) silently CLAMPS a negative or over-
+          -- `maxAlloc` hint to 0 — it never panics (probes map-hint-neg
+          -- / map-hint-over, t5-maxalloc 2026-09-02). Until that slice
+          -- this arm panicked `makemap: size out of range` on a
+          -- negative hint — an older gc string the pinned oracle never
+          -- produces — but the arm was DEAD CODE end-to-end: the native
+          -- frontend does not lower the hint (the `make-map` wire node
+          -- has no hint field; NativeToIR passes `none`), which also
+          -- drops the hint expression's EVALUATION. That is BUG-082
+          -- (open; red-first row builtins/make-maxalloc/map-hint-eval-
+          -- order); when the hint is lowered it lands here, and this
+          -- arm's realized behavior is gc's.
+          let _ ← valueAsInt spaceV
       let (base, s₁) := s.alloc (.mapData #[])
       let loc ← valueAsLoc tv
       return ((← storeLoc s₁ loc (.map { base := some base })))
-  | .makeChan hasCap => do
+  | .makeChan elem hasCap => do
       let (tv, capV?) ←
         match vs, hasCap with
         | [tv], false => pure (tv, none)
@@ -826,8 +861,19 @@ def applyStmtOpCore (s : ExecState) (op : StmtOp) (_nt : Nat)
             -- Negative ⇒ run-time panic; the message is gc's realized
             -- string (probe p21) — spec pins only THAT a panic occurs
             -- (runtime error values are unspecified), matching the
-            -- repo's existing makemap/makeslice narrowing.
-            natFromNonnegativeInt "makechan: size out of range" size
+            -- repo's existing makeslice narrowing. The same panic when
+            -- the BUFFER's byte size exceeds `maxAllocBytes -
+            -- chanHeaderBytes` (gc makechan, runtime/chan.go:86–89; R16
+            -- pin, t5-maxalloc 2026-09-02): the threshold sits 112
+            -- bytes below the slice one, and a zero-size element
+            -- (`chan struct{}`) never trips it at any n — gc realizes
+            -- `make(chan struct{}, 1<<62)` (probe chan-struct0-huge),
+            -- and so does this arm (the buffer is a capacity NUMBER
+            -- here, never materialized).
+            let elemSize ← tySizeBytes s.types elem
+            if size < 0 || size * elemSize > maxAllocBytes - chanHeaderBytes then
+              panic "makechan: size out of range"
+            pure size.toNat
       let (base, s₁) := s.alloc (.chanData #[] capacity false)
       let loc ← valueAsLoc tv
       return ((← storeLoc s₁ loc (.chan { base := some base })))
@@ -958,6 +1004,25 @@ def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (nt : Nat)
               | none => stuck s!"cannot append {elemValues.size} element(s) into nil slice in place"
             return ((← storeLoc current tloc (.slice { slice with len := newLen })), choices)
           else
+            -- gc's `growslice` refusals (runtime/slice.go:191–252; R16
+            -- pin, t5-maxalloc 2026-09-02): the new length overflowing
+            -- `int`, or the grown backing's byte size exceeding
+            -- `maxAllocBytes`, is the recoverable panic `growslice: len
+            -- out of range`. Decided on the NEW LENGTH's byte size, NOT
+            -- on the chosen capacity: `applyStmtOp_appendSlice_congr`
+            -- (MachineSound) states that the outcome CLASS of a spill is
+            -- stream-independent, and a cap-based check would make it
+            -- false. Consequence, recorded on R16: gc panics on a
+            -- SUPERSET — whenever newLen's bytes fit but its grown cap's
+            -- (≈1.25×) do not, gc panics where this arm allocates; that
+            -- band is an allocation-failure case of the register #7
+            -- rider (D-001), unreachable by the corpus (it needs an
+            -- existing >2^47-byte slice or `unsafe.Slice`; gc probe
+            -- append-growth-over-unsafe is the witness), and the in-
+            -- place path is never checked (gc calls no growslice there).
+            let elemSize ← tySizeBytes s.types elem
+            if newLen ≥ intExclusiveUpperBound || newLen * elemSize > maxAllocBytes then
+              panic "runtime error: growslice: len out of range"
             let oldValues ← sliceVisibleValues s slice
             -- The capacity ENVELOPE is [newLen, appendSpillUpper] (the
             -- statement and containment argument live on

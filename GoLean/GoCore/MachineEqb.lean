@@ -201,7 +201,7 @@ def StmtOp.eqb : StmtOp → StmtOp → Bool
   | .newValue t1, .newValue t2 => eqbOptionP Ty.eqb t1 t2
   | .makeSlice e1 c1, .makeSlice e2 c2 => Ty.eqb e1 e2 && c1 == c2
   | .makeMap s1, .makeMap s2 => s1 == s2
-  | .makeChan c1, .makeChan c2 => c1 == c2
+  | .makeChan e1 c1, .makeChan e2 c2 => Ty.eqb e1 e2 && c1 == c2
   | .mapAssign k1 v1, .mapAssign k2 v2 => Ty.eqb k1 k2 && Ty.eqb v1 v2
   | .appendSlice e1, .appendSlice e2 => Ty.eqb e1 e2
   | .copySlice, .copySlice => true
@@ -221,8 +221,9 @@ theorem StmtOp.eqb_sound : ∀ (a b : StmtOp), StmtOp.eqb a b = true → a = b :
     cases Ty.eqb_sound h1; cases eq_of_beq h2; rfl
   case makeMap.makeMap s1 s2 =>
     cases eq_of_beq (show (s1 == s2) = true from h); rfl
-  case makeChan.makeChan c1 c2 =>
-    cases eq_of_beq (show (c1 == c2) = true from h); rfl
+  case makeChan.makeChan e1 c1 e2 c2 =>
+    obtain ⟨h1, h2⟩ := andSplit2 h
+    cases Ty.eqb_sound h1; cases eq_of_beq h2; rfl
   case mapAssign.mapAssign k1 v1 k2 v2 =>
     obtain ⟨h1, h2⟩ := andSplit2 h
     cases Ty.eqb_sound h1; cases Ty.eqb_sound h2; rfl

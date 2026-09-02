@@ -240,7 +240,7 @@ rows covering all 158 anchors.
 | Complex_numbers | frontier(FR-15) | `builtins/real-imag` + `complex/*` — the complex family's builtin surface, all red. |
 | Deletion_of_map_elements | covered(A) | delete suites incl. during-range forced points, alias visibility, NaN keys. |
 | Length_and_capacity | covered(B) | len/cap across all container suites + `len-cap-array-pointer`, `make-channel-len-cap`; BUG-062 FIXED (A6 landed 2026-08-31; rows PASS, one fail-closed refusal residual — see Order_of_evaluation); L:R3 (cap of conversions). |
-| Making_slices_maps_and_channels | covered(A) | disposition + `make-edge` panic matrix + `make-map-hint`, `make-directional`. |
+| Making_slices_maps_and_channels | covered(A) | disposition + `make-edge` panic matrix + `make-map-hint`, `make-directional`; `builtins/make-maxalloc` (14 rows, 2026-09-02): gc's allocation-LIMIT panic class — slice len/cap over 2^48 bytes (variable, constant, int64, padded-struct element), len-before-cap blame order, chan size over `2^48 - 112` (the header boundary pinned), zero-size-element control at 1<<62, map hint over/negative (gc clamps, no panic; the hint is NOT lowered by the frontend — BUG-082 open, red-first `map-hint-eval-order`), recover ×2; L:R16 (pinned gc-amd64 bound + layout; just-under controls and `append` growth NOT expressible — fatal OOM / eager materialization / needs unsafe). |
 | Min_and_max | covered(A) | the spec's own special-case table pinned (19-red family 3: NaN propagation, ±0 ties, ±Inf) + `min-max-{ints,strings,edge}`. Realization point (2026-09-01 audit fix round): min/max args hoist CALL-FIRST — the E12/E13 ANF family — with the assert-axis divergence census'd at L:E13 (min/max evidence rows there; no pin may be taken). |
 | Allocation | covered(B) | `new/` (7 pkgs); `new-expr/untyped-defaults` red → FR-15 (complex member). |
 | Handling_panics | covered(B) | `panic-recover/` (35 pkgs: nested, repanic, recover positions, defer interaction) + A1's recover-statement rows; abort-RENDERING edges = (c)-pin C4 (4 reds, L:R10) — message channel, not semantics. |
@@ -261,7 +261,7 @@ rows covering all 158 anchors.
 | Program_initialization | covered(B) | thin normative text (points at Package_initialization); covered by the same suites. |
 | Program_execution | covered(B) | main-termination semantics + L:C4 (main-exit window ENVELOPED, `goroutines/` exit rows). |
 | Errors | covered(B) | `interfaces/{error-interface,error-idioms,assert-error-satisfaction}` + 2 COMPILE-ONLY pins (universe shadowing; error-last convention). |
-| Run_time_panics | covered(B) | panic classes exercised across every suite (bounds, nil-deref, map, conversion, division); L:R9 (panic VALUES/messages pinned to gc's realized strings); runtime.Error's interface shape is stdlib-internal (P3 SKIPPED row records why it has no direct case). |
+| Run_time_panics | covered(B) | panic classes exercised across every suite (bounds, nil-deref, map, conversion, division; the allocation-limit class `makeslice`/`makechan` out of range via `builtins/make-maxalloc`, L:R16); L:R9 (panic VALUES/messages pinned to gc's realized strings); runtime.Error's interface shape is stdlib-internal (P3 SKIPPED row records why it has no direct case). |
 | System_considerations | out-of-language | chapter preamble for the two rows below. |
 | Package_unsafe | out-of-language | justification: the spec's own guard (implementation-specific, type-safety escape, "may be non-portable"); modeling its observables = modeling gc's layout (the doctrine's anti-goal); the type-safety escape defeats the machine's memory model. Boundary is a MECHANISM since 2026-08-31 (BUG-070, t1-fidelity-fixes): unsafe.Sizeof/Offsetof/Alignof refuse the export unconditionally (`checkUnsafeLayoutOps` — pre-fix they constant-folded gc's layout into the wire silently); unsafe.Pointer refuses as a wire TYPE. Marker reds: `unsafe/layout-ops/{sizeof-fixed,layout-struct}` + `unsafe/boundary/pointer-roundtrip` (each mechanism separately attested). |
 | Size_and_alignment_guarantees | out-of-language | LAYOUT is observable only through unsafe/reflect (both outside) — but the section has TWO in-language-observable consequences, not one (row corrected at the audit fix round, reviewer C F1): `int`/`uint` width, held as L:R1 (pinned 64-bit, wrap-suite witnessed), and the zero-size address-identity latitude ("Two distinct zero-size variables may have the same address in memory" — observable by plain pointer equality), held as L:R15 and case-pinned both ways (`pointers/zero-size-address/{stack-distinct,escaped-same}`: gc probed NON-single-valued — stack distinct, heap/escaped equal via runtime.zerobase; the machine is the conforming never-same singleton, so escaped-same is a version-tracked latitude red — re-envelope obligation re-homed 2026-08-31 from the parked W3.2 arc to this repo's TODO.md backlog — [AGENT] extension of fidelity decision 6's orphan class; R15 fits the class; confirmed [USER] 2026-09-01). |
@@ -471,10 +471,18 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (2544 cases, 2373 PASS /
-171 FAIL; `baselines/native-full.tsv`, re-pinned 2026-09-02 on the
-t5-e9-prune lane at its AUDIT FIX ROUND — full ci --diff at that tip:
-+3 born-PASS confluent rows, the E9 OVER-prune guards
+All numbers at the current tracked baseline (2559 cases, 2387 PASS /
+172 FAIL; `baselines/native-full.tsv`, re-pinned 2026-09-02 on the
+t5-maxalloc lane — full ci --diff at that tip: the R16 maxAlloc panic
+class (fidelity decision 5(b)), +14 born-PASS rows
+`builtins/make-maxalloc/*` (12 on BUG-081's Cases line, 2 gc-truth
+map-hint rows) and +1 born-FAIL-by-design row
+`builtins/make-maxalloc/map-hint-eval-order` (BUG-082, the un-lowered
+map hint; post-vintage bucket); red-count movement 171 → 172, mapped
+below; no other row moved. Prior re-pin the same day on the
+t5-e9-prune lane at its AUDIT FIX ROUND (2544 / 2373 / 171) — full ci
+--diff at that tip: +3 born-PASS confluent rows, the E9 OVER-prune
+guards
 `maps/cross-goroutine-delete-noreadd/{delete,clear,other-map}`, NO
 other row moved; the slice's own re-pin the same day (2541 / 2370 /
 171) — full ci --diff at that tip: +4 born-PASS rows, the
@@ -544,11 +552,11 @@ the historical record; the method is §8b's, re-run).
 frontier 2 (atomic → Q-ATOMIC, goexit → Q-GOEXIT), latitude 1 (model →
 C10), out-of-language 5. Zero unclassified.
 
-**The 171 baseline reds, every one on a named row (re-derived
-mechanically 2026-09-02 — zero unmapped, zero double-mapped; +2 at
-the detector-soundness re-pin, both BUG-080, and −2 at the BUG-080
-fix re-pin the same day; the Q-* bucket's BUG-041 red changed ROW,
-not count):**
+**The 172 baseline reds, every one on a named row (re-derived
+mechanically 2026-09-02 — zero unmapped, zero double-mapped; +1 at
+the t5-maxalloc re-pin, BUG-082; +2 at the detector-soundness re-pin,
+both BUG-080, and −2 at the BUG-080 fix re-pin the same day; the Q-*
+bucket's BUG-041 red changed ROW, not count):**
 
 | bucket | reds |
 | --- | --- |
@@ -556,8 +564,8 @@ not count):**
 | design questions Q-* (§6) | 14 |
 | (c) profound-reason pins (triage §4 + the unsafe marker) | 9 + 1 |
 | (a)-queued fixes (triage §3.2: A3 5, A4 1, A5 1, A7 1) | 8 |
-| post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) + the gotest-fixes BUG-078 budget refusal pin (`arrays/materialization-budget/over-budget`, on BUG-078's Cases line since the audit fix round) | 56 |
-| **total** | **171** |
+| post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) + the gotest-fixes BUG-078 budget refusal pin (`arrays/materialization-budget/over-budget`, on BUG-078's Cases line since the audit fix round) + the t5-maxalloc BUG-082 un-lowered-map-hint pin (`builtins/make-maxalloc/map-hint-eval-order`, 2026-09-02) | 57 |
+| **total** | **172** |
 
 *(Movement at the 2026-09-02 BUG-080 fix re-pin: post-vintage 58 → 56
 — BUG-080's two U4 pins `race/negative-sync/{wg-overwrite,mutex-copy}`

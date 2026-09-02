@@ -208,6 +208,134 @@ def natFromNonnegativeInt (context : String) (value : Int) : Except GoError Nat 
     panic context
   return value.toNat
 
+/-! ## The maximum allocatable size — a PINNED machine parameter (inventory R16)
+
+Fidelity decision 5(b) ([USER] 2026-08-31): "the deterministic maxAlloc
+panic class modeled". gc panics DETERMINISTICALLY — a recoverable
+run-time panic, not an OOM abort — when ONE allocation request exceeds
+the runtime's maximum allocatable size: `make([]T, n)` / `make(chan T,
+n)` / a spilling `append` whose byte size exceeds the limit. The spec
+sanctions only THAT a panic may occur ("For slices and channels, if n is
+negative or larger than m at run time, a run-time panic occurs";
+§Run-time panics: error values unspecified) and says nothing about a size
+limit — the limit and its value are the IMPLEMENTATION's, so this is
+latitude, pinned here to the oracle's realization exactly as R1 pins the
+`int` width. Probe matrix (go1.26.5 linux/amd64, 2026-09-02):
+`docs/evidence/2026-09-02_t5-maxalloc-probes/`. -/
+
+/-- PINNED LATITUDE — the maximum allocatable size in BYTES (inventory
+R16). gc: `runtime.maxAlloc = 1 << heapAddrBits` (malloc.go:220),
+heapAddrBits = 48 on linux/amd64, so 2^48 = 256 TiB; the check is
+STRICT (`mem > maxAlloc`): a request of exactly 2^48 bytes passes the
+check and then fails to ALLOCATE (fatal "out of memory" — behavior 1,
+the true-OOM class, which stays under the doctrine register #7 rider /
+discrepancy D-001, NOT modeled here). Plausible envelope: any positive
+bound (32-bit gc realizes `2^32 - 1`, tied to R1's width parameter: the
+two must move together — on 32-bit, `int` cannot even express a byte
+count ≥ 2^31, so the panic is live there only for element sizes ≥ 2).
+TRANSFER CAVEAT: a claim that a given `make` panics (or does not)
+transfers only to 64-bit gc-layout targets; the rider on allocation-
+succeeding runs (register #7) still carries every allocation that
+passes this check. -/
+def maxAllocBytes : Nat := 2 ^ 48
+
+/-- gc's channel header size (`hchanSize`, runtime/chan.go:30 — the
+`hchan` struct, 112 bytes on amd64: 7 words + elemsize/closed + 2 waitq
++ bubble + lock). `makechan` checks the BUFFER against `maxAlloc -
+hchanSize` (chan.go:87), so the channel threshold sits 112 bytes below
+the slice threshold. Probe: `make(chan byte, 1<<48-111)` panics,
+`make(chan byte, 1<<48-112)` attempts the allocation. Part of the R16
+pin (a gc-internal layout fact with a 112-byte observable). -/
+def chanHeaderBytes : Nat := 112
+
+/-- The exclusive upper bound of `int` (R1's 64-bit pin: 2^63). gc's
+`growslice` panics `len out of range` when the new length overflows
+`int` (slice.go:191) — the same message as the byte-size check. -/
+def intExclusiveUpperBound : Nat := 2 ^ 63
+
+/-- Round `offset` up to a multiple of `align` (`align ≥ 1`). -/
+def alignUpTo (offset align : Nat) : Nat :=
+  if align == 0 then offset else (offset + align - 1) / align * align
+
+mutual
+
+/-- Size and alignment of a type in BYTES under gc's linux/amd64 layout
+(go/types `gcSizes` with WordSize 8, MaxAlign 8 — `deps/go/src/go/types/
+gcsizes.go`, transcribed arm for arm; the `sync` primitives are gc's
+struct sizes, `unsafe.Sizeof`-probed). The R16 pin's second half: the
+byte-size threshold is `elemSize × n`, so element LAYOUT is what places
+the boundary (make([]byte, n) panics from 2^48+1; []int64 from 2^45+1;
+[]struct{int64; byte} — 16 bytes with padding — from 2^44+1). Fuel-
+bounded structural recursion (`typeResolutionFuel`), FAIL-CLOSED: an
+`.unsupported` type, an unknown defined type, an untyped integer kind or
+exhausted fuel is a cause-naming refusal, never a guessed size. -/
+def tySizeAlignFuel : Nat → TypeEnv → Ty → Except GoError (Nat × Nat)
+  | 0, _, _ => unsupported "allocation-size computation: type nesting too deep"
+  | fuel + 1, types, ty =>
+    match ty with
+    | .bool => pure (1, 1)
+    | .int kind =>
+        match kind.bits? with
+        | some bits => pure (bits / 8, bits / 8)
+        | none => unsupported s!"allocation-size computation: untyped integer kind {kind.name}"
+    | .float kind => pure (kind.bits / 8, kind.bits / 8)
+    | .string => pure (16, 8)
+    | .array n elem => do
+        let (size, align) ← tySizeAlignFuel fuel types elem
+        pure (n * size, align)
+    | .slice _ => pure (24, 8)
+    | .map _ _ => pure (8, 8)
+    | .chan _ _ => pure (8, 8)
+    | .pointer _ => pure (8, 8)
+    | .funcType _ _ _ => pure (8, 8)
+    | .interface _ => pure (16, 8)
+    | .defined id =>
+        match TypeEnv.lookup types id with
+        | some (.struct fields) =>
+            if fields.isEmpty then pure (0, 1)
+            else structSizeAlignFuel fuel types fields.toList 0 1 0 0
+        | some (.alias target) => tySizeAlignFuel fuel types target
+        | some (.defined underlying) => tySizeAlignFuel fuel types underlying
+        | some (.interfaceDef _) => pure (16, 8)
+        | some (.unsupported feature) =>
+            unsupported s!"allocation-size computation: {feature}"
+        | none => unsupported s!"allocation-size computation: unknown defined type {id.key}"
+    | .unsupported feature => unsupported s!"allocation-size computation: {feature}"
+    | .sync .mutex => pure (8, 4)
+    | .sync .rwmutex => pure (24, 4)
+    | .sync .waitGroup => pure (16, 8)
+    | .sync .once => pure (12, 4)
+
+/-- gc's struct layout (`gcSizes.Offsetsof` + `Sizeof`'s struct arm):
+fields in order, each at its alignment; the struct's alignment is the
+max field alignment; a ZERO-SIZE final field at a non-zero offset
+occupies one byte (`if offs > 0 && size == 0 { size = 1 }`, so
+`struct{a int64; z struct{}}` is 16 bytes, not 8); the total is rounded
+up to the struct's alignment. Accumulators: end offset of the fields
+laid so far, max alignment so far, and the LAST field's offset and size
+(the final-field rule needs both). Non-empty field lists only (the
+caller handles `struct{}` = (0, 1)). -/
+def structSizeAlignFuel : Nat → TypeEnv → List FieldDef → Nat → Nat → Nat → Nat →
+    Except GoError (Nat × Nat)
+  | _, _, [], _, maxAlign, lastOffset, lastSize =>
+      let lastSize := if lastOffset > 0 && lastSize == 0 then 1 else lastSize
+      pure (alignUpTo (lastOffset + lastSize) maxAlign, maxAlign)
+  | 0, _, _ :: _, _, _, _, _ =>
+      unsupported "allocation-size computation: struct nesting too deep"
+  | fuel + 1, types, field :: rest, offset, maxAlign, _, _ => do
+      let (size, align) ← tySizeAlignFuel fuel types field.typ
+      let fieldOffset := alignUpTo offset align
+      structSizeAlignFuel fuel types rest (fieldOffset + size) (max maxAlign align)
+        fieldOffset size
+
+end
+
+/-- The byte size of a type under the R16 pin (`tySizeAlignFuel` at the
+standard fuel). -/
+def tySizeBytes (types : TypeEnv) (ty : Ty) : Except GoError Nat := do
+  let (size, _) ← tySizeAlignFuel typeResolutionFuel types ty
+  pure size
+
 /-- Go's TWO-index slice-expression bounds check, with the runtime's exact
 messages and check ORDER (oracle-pinned 2026-07-25, arc
 `wrong-answers-builtins`): the HIGH bound first — negative renders `[:h]`

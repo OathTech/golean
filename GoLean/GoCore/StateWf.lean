@@ -3901,14 +3901,16 @@ theorem applyStmtOpCore_wf {σ : ExecState} {op : StmtOp} {nt : Nat}
       simp only [goValueListSup] at hvs
       simp only [pure_bind] at h
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-      obtain ⟨lenValue, hlenV, len, hlen, cap, hcap, h⟩ := h
+      obtain ⟨lenValue, hlenV, elemSize, hsz, h⟩ := h
+      -- The R16 refusal (makeslice len/cap out of range) precedes the
+      -- allocation: both panic branches are errors, never `.ok`.
       split at h
-      · simp [Bind.bind, Except.bind] at h
+      · split at h <;> simp [Bind.bind, Except.bind] at h
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
         obtain ⟨backing, hbacking, loc, hloc, h⟩ := h
         have hb0 := buildDefaultArrayValue_locSup hbacking
         have hlocb := valueAsLoc_locSup hloc
-        cases halloc : σ.alloc backing (some (Ty.array cap elem)) with
+        cases halloc : σ.alloc backing (some (Ty.array lenValue.toNat elem)) with
         | mk base σa =>
           rw [halloc] at h
           dsimp only at h
@@ -3923,14 +3925,14 @@ theorem applyStmtOpCore_wf {σ : ExecState} {op : StmtOp} {nt : Nat}
       simp only [goValueListSup] at hvs
       simp only [pure_bind] at h
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-      obtain ⟨lenValue, hlenV, capValue, hcapV, len, hlen, cap, hcap, h⟩ := h
+      obtain ⟨lenValue, hlenV, capValue, hcapV, elemSize, hsz, h⟩ := h
       split at h
-      · simp [Bind.bind, Except.bind] at h
+      · split at h <;> simp [Bind.bind, Except.bind] at h
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
         obtain ⟨backing, hbacking, loc, hloc, h⟩ := h
         have hb0 := buildDefaultArrayValue_locSup hbacking
         have hlocb := valueAsLoc_locSup hloc
-        cases halloc : σ.alloc backing (some (Ty.array cap elem)) with
+        cases halloc : σ.alloc backing (some (Ty.array capValue.toNat elem)) with
         | mk base σa =>
           rw [halloc] at h
           dsimp only at h
@@ -3965,7 +3967,7 @@ theorem applyStmtOpCore_wf {σ : ExecState} {op : StmtOp} {nt : Nat}
       simp only [goValueListSup] at hvs
       simp only [pure_bind] at h
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-      obtain ⟨sz, hsz, _, _, loc, hloc, h⟩ := h
+      obtain ⟨sz, hsz, loc, hloc, h⟩ := h
       have hlocb := valueAsLoc_locSup hloc
       obtain ⟨w1, w2, w3, w4⟩ := alloc_wf hw
         (by simp [GoValue.locSup, goValueEntriesSup]) halloc
@@ -3975,7 +3977,7 @@ theorem applyStmtOpCore_wf {σ : ExecState} {op : StmtOp} {nt : Nat}
       show optLocSup (some base) ≤ s₁.nextAddr
       exact w2
   · -- makeChan
-    rename_i hasCap
+    rename_i elem hasCap
     split at h
     · -- no cap: capacity 0
       rename_i tv
@@ -4000,19 +4002,25 @@ theorem applyStmtOpCore_wf {σ : ExecState} {op : StmtOp} {nt : Nat}
       simp only [goValueListSup] at hvs
       simp only [pure_bind] at h
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-      obtain ⟨size, hsize, capacity, hcapacity, loc, hloc, h⟩ := h
-      have hlocb := valueAsLoc_locSup hloc
-      cases halloc : σ.alloc (.chanData #[] capacity false) with
-      | mk base σa =>
-        rw [halloc] at h
-        dsimp only at h
-        obtain ⟨w1, w2, w3, w4⟩ := alloc_wf hw
-          (by simp [GoValue.locSup, goValueListSup]) halloc
-        obtain ⟨d1, d2, d3, d4, d5, _⟩ := alloc_shape halloc
-        refine StmtOpPres.trans ⟨w1, by omega, w4, d3, d5⟩ ?_
-        refine storeLoc_pres w1 (by omega) ?_ h
-        show optLocSup (some base) ≤ σa.nextAddr
-        exact w2
+      obtain ⟨size, hsize, elemSize, hsz, h⟩ := h
+      -- The R16 refusal (makechan size out of range) precedes the
+      -- allocation; the surviving branch stores capacity `size.toNat`.
+      split at h
+      · simp [Bind.bind, Except.bind] at h
+      · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
+        obtain ⟨loc, hloc, h⟩ := h
+        have hlocb := valueAsLoc_locSup hloc
+        cases halloc : σ.alloc (.chanData #[] size.toNat false) with
+        | mk base σa =>
+          rw [halloc] at h
+          dsimp only at h
+          obtain ⟨w1, w2, w3, w4⟩ := alloc_wf hw
+            (by simp [GoValue.locSup, goValueListSup]) halloc
+          obtain ⟨d1, d2, d3, d4, d5, _⟩ := alloc_shape halloc
+          refine StmtOpPres.trans ⟨w1, by omega, w4, d3, d5⟩ ?_
+          refine storeLoc_pres w1 (by omega) ?_ h
+          show optLocSup (some base) ≤ σa.nextAddr
+          exact w2
     · simp [Bind.bind, Except.bind] at h
   · -- mapAssign
     rename_i keyTy valueTy
@@ -4238,6 +4246,13 @@ theorem applyStmtOp_wf {σ : ExecState} {ch : Choices} {op : StmtOp} {nt : Nat}
         · show optLocSup slice.base ≤ st.1.nextAddr
           omega
       · -- spill path
+        simp only [Choices.consumeAt_appendSpill, bind_eq_ok, pure_eq_ok,
+          Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨elemSize, hsz, h⟩ := h
+        -- The R16 growslice refusal precedes the choice consumption and
+        -- the allocation (decided on newLen — choice-free).
+        split at h
+        · simp [Bind.bind, Except.bind] at h
         simp only [Choices.consumeAt_appendSpill, bind_eq_ok, pure_eq_ok,
           Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨oldValues, holdValues, backing, hbacking, σ₂, h, hσ, hch⟩ := h

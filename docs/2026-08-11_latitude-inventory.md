@@ -1506,6 +1506,87 @@ runtime observable. OPEN QUESTION as stated.
   the deviation record into an inclusion check. Until then the red is
   the honest version-tracked pin, never a fidelity bug.
 
+### R16. Maximum allocatable size — the deterministic allocation-limit panic — (b) PINNED to gc linux/amd64 (`maxAlloc` 2^48, `hchanSize` 112, gc layout sizes) (added 2026-09-02, t5-maxalloc; fidelity decision 5(b) [USER])
+
+- WHERE: spec §Making slices, maps and channels: "For slices and
+  channels, if n is negative or larger than m at run time, a run-time
+  panic occurs" — and NOTHING about an allocation limit; the map
+  hint's effect is "implementation-dependent"; §Run-time panics leaves
+  the error values unspecified. gc's RUNTIME adds a limit of its own:
+  one request whose byte size exceeds `maxAlloc` panics
+  deterministically (a recoverable `runtime.Error`, not an OOM abort) —
+  `makeslice: len out of range` / `cap out of range` (slice.go:102–115,
+  len blamed first, golang.org/issue/4085), `makechan: size out of
+  range` (chan.go:86–89, threshold `maxAlloc - hchanSize`, a
+  `plainError` with no `runtime error:` prefix), `growslice: len out of
+  range` (slice.go:191–252, on the GROWN cap, or an `int` overflow of
+  the new length); `makemap` CLAMPS an over-limit or negative hint to 0
+  (map.go:60–67) and never panics. Machine: `maxAllocBytes`,
+  `chanHeaderBytes`, `intExclusiveUpperBound`, `tySizeAlignFuel`
+  (Ops.lean, the R16 docstrings), consumed at the `makeSlice` /
+  `makeChan` arms of `applyStmtOpCore` and the `appendSlice` spill path
+  of `applyStmtOp` (Machine.lean), each BEFORE materialization; the
+  `makeMap` arm's pre-slice negative-hint panic (an older gc string
+  the pinned oracle never produces) REMOVED — dead code in fact, since
+  the native frontend does not lower the hint at all (BUG-082, OPEN:
+  the hint's evaluation is dropped; fix = frontend + decoder + a
+  twin-wire pin move, outside this lane).
+- THE PIN — three facts from one implementation: (i) the bound, 2^48
+  bytes (heapAddrBits 48; STRICT — a request of exactly 2^48 passes
+  the check and then fails to ALLOCATE, behavior 1 below); (ii) the
+  channel header, 112 bytes (a gc-internal struct size with a 112-byte
+  observable: `make(chan byte, 1<<48-111)` panics, `1<<48-112`
+  allocates); (iii) the ELEMENT LAYOUT (go/types `gcSizes`, WordSize 8
+  / MaxAlign 8, padding included — `[]struct{int64; byte}` panics from
+  2^44+1 elements because the element is 16 bytes, not 9):
+  `tySizeAlignFuel` transcribes `gcsizes.go` arm for arm, the `sync`
+  primitives are `unsafe.Sizeof`-probed (8/24/16/12), and it FAILS
+  CLOSED on an unsupported or unknown type. The layout realization is
+  what the frontend's go/types Sizes config already assumes (R1's
+  entanglement), now visible machine-side.
+- PLAUSIBLE ENVELOPE: any positive bound, with the panic-vs-clamp
+  choice free per request class (a negative map hint has panicked in
+  other gc runtimes; go1.26.5 clamps); on 32-bit gc the bound is
+  2^32-1 and moves WITH R1's width (an `int` cannot express a byte
+  count ≥ 2^31 there, so the slice panic is live only for element
+  sizes ≥ 2). A machine parameter `{maxAlloc, headerBytes, layout}` is
+  the honest shape; this row pins the gc linux/amd64 point, as R1 pins
+  the width.
+- TWO BEHAVIORS, ONE LIMIT (fidelity decision 5 [USER] 2026-08-31):
+  behavior 2 — the request EXCEEDS the limit → deterministic panic — is
+  MODELED here (5(b)); behavior 1 — the request passes the check and
+  the allocation FAILS (fatal "out of memory", unrecoverable) — is NOT,
+  and stays under doctrine register #7's rider (allocation-succeeding
+  runs) toward discrepancy D-001's bounded-very-large memory model.
+  KNOWN-OUTSIDE BAND, recorded: `append`'s check is decided on the NEW
+  LENGTH's byte size — choice-free, because `applyStmtOp_appendSlice_
+  congr` (MachineSound) states the spill outcome CLASS is stream-
+  independent and a cap-based check would falsify it — while gc's is
+  on the grown cap (≈1.25×): where newLen fits and the grown cap does
+  not, gc panics and the machine allocates. An allocation-failure case
+  of the rider, corpus-unreachable (it needs an existing >2^47-byte
+  slice or `unsafe.Slice`; gc witness: probe append-growth-over-unsafe).
+- EVIDENCE: GC — the probe matrix `docs/evidence/2026-09-02_t5-maxalloc-
+  probes/` (go1.26.5 linux/amd64; both sides of every boundary probed);
+  corpus `builtins/make-maxalloc/*` (14 rows born PASS — slice len by
+  variable / constant / int64 / padded struct, cap, len-and-cap blame
+  order, chan byte / header boundary / int64, the chan zero-size-
+  element control at 1<<62, recover ×2, and the two gc-truth map-hint
+  rows over / negative (no panic; they do not reach the machine arm,
+  BUG-082) — plus `map-hint-eval-order` born RED on BUG-082's Cases
+  line; red-first measured against the pre-slice golean binary: chan
+  rows `ok`, slice rows cgroup-killed materializing, recover-chan 0). NOT corpus-expressible: the just-under controls (gc: fatal OOM;
+  machine: eager backing materialization grinds to the wall clock —
+  BUG-078 residual (2)), `make([]struct{}, huge)` (same materialization),
+  and any `append` past the limit. XIMPL (32-bit gc, gccgo, tinygo
+  bounds) is the evidence class that would size the envelope.
+- RE-ENVELOPE OBLIGATION + COST: parameterize `{maxAllocBytes,
+  chanHeaderBytes, tySizeAlignFuel}` TOGETHER with R1's width (one
+  layout/memory-model structure threaded to the three arms) — LOW-
+  MODERATE, mechanical; worthless until a second oracle exists. The
+  D-001 model (an allocation-failure outcome for behavior 1, a budget
+  in every statement) is the larger owed change and is NOT this row's.
+
 ---
 
 ## 4. Forced points — the compact list (class (c))
@@ -1643,7 +1724,8 @@ concurrency-relevance (the charter: concurrency matters most),
    the spec.
 
 Below the line (recorded, deliberately not queued): R1 int width
-(waits on any 32-bit oracle lane — XIMPL evidence class), C7 select
+(waits on any 32-bit oracle lane — XIMPL evidence class; R16's
+allocation bound and layout move WITH it, 2026-09-02), C7 select
 wake-path narrowing (coverage argument stands; re-argue on wake-path
 changes), R2's upper end and R4/R5 float narrowings (tripwired /
 platform-scoped), E10/E11/R8/R9/R10/R11 permanent-pin candidates
@@ -1835,9 +1917,9 @@ mention, so the mentions moved out. Keep it that way: put prose in the
 history block, never in a membership line.
 
 - (a) ENVELOPED: 9 sites / 9 entries — C1, C2, C3, C4, C5, C6, C8, E9, R2.
-- (b) PINNED: **16 entries** — concurrency: C9; sequential order: E2,
+- (b) PINNED: **17 entries** — concurrency: C9; sequential order: E2,
   E3, E4, E7, E10, E11, E12, E13; representation/runtime: R1, R8,
-  R9, R10, R11, R12, R15.
+  R9, R10, R11, R12, R15, R16.
 - (b-n) NARROWED with recorded caveat: 7 — C7, E8, R3, R4, R5, R7, R13.
 - (c) FORCED: the §4 list (machine follows; BUG-005's mandated
   point — removed-before-reached never produced — CLOSED 2026-08-19
@@ -1860,6 +1942,13 @@ history block, never in a membership line.
 ### 10.1 Movement and history (NOT membership)
 
 Nothing in this block is a class member by virtue of being named here.
+
+- **(b), 16 → 17 (2026-09-02).** **R16 ADDED** (t5-maxalloc; fidelity
+  decision 5(b) [USER] 2026-08-31): the maximum allocatable size — gc's
+  deterministic allocation-limit panic class — pinned to gc linux/amd64
+  (bound 2^48, channel header 112, gc layout sizes), the R1 mold. A new
+  row, not a movement; its 32-bit point rides R1's. Recording agent
+  [AGENT]; the modeling decision is the [USER]'s.
 
 - **(a), the 9 entries.** C6 owns two sites (L2 entry + arrival) and
   C8 rides C1's site, so 9 sites / 9 entries is not a coincidence of

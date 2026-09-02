@@ -2119,6 +2119,15 @@ theorem applyStmtOp_appendSlice_congr {σ : ExecState} {elem : Ty} {nt : Nat}
       subst hs
       exact trivial
     · -- spill
+      -- The R16 growslice refusal (t5-maxalloc, 2026-09-02) is decided
+      -- on newLen's byte size — a choice-FREE condition, so both streams
+      -- take the same branch; the panic branch is the same error on
+      -- both sides.
+      refine exceptCong.bind_congr (R := Eq) (exceptCong.self fun _ => rfl)
+        fun elemSize elemSize' hs => ?_
+      subst hs
+      refine exceptCong.ite_congr (fun _ => ?_) (fun _ => ?_)
+      · exact rfl
       refine exceptCong.bind_congr
         (exceptCong.self_post (P := fun o : Array GoValue => o.size = slice.len)
           (fun o ho => sliceVisibleValues_size ho))

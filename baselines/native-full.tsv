@@ -1,5 +1,36 @@
 # GoLean native-frontend full-corpus differential baseline
-# re-pinned: 2026-09-02 (t5-e9-prune lane, AUDIT FIX ROUND F1-F10 —
+# re-pinned: 2026-09-02 (t5-maxalloc lane — fidelity decision 5(b)
+#   [USER] 2026-08-31 "the deterministic maxAlloc panic class modeled";
+#   [AGENT]-executed inside that mandate. FULL ci --diff at this tip
+#   (this lane's scratch ci-diff-2.log; 2548 rows run; drift = exactly
+#   the 15 NEW rows below; NO other row moved in result or stage; NO
+#   PASS->non-PASS flips). Machine change [TRUST-ADJACENT: GoCore
+#   make/append arms]: latitude R16 — `maxAllocBytes` 2^48,
+#   `chanHeaderBytes` 112, the gc-amd64 layout `tySizeAlignFuel`
+#   (Ops.lean); gc's makeslice / makechan / growslice out-of-range
+#   panics at the makeSlice / makeChan / appendSlice arms BEFORE
+#   materialization; `StmtOp.makeChan` carries the element type; the
+#   makeMap arm's negative-hint panic removed (dead code, BUG-082).
+#   NEW rows born PASS (14), all on BUG-081's Cases line except the two
+#     gc-truth map rows: builtins/make-maxalloc/{slice-len-over-byte,
+#     slice-len-over-const,slice-len-over-int64,slice-len-over-padded-
+#     struct,slice-cap-over-byte,slice-len-and-cap-over,chan-size-over-
+#     byte,chan-size-header-boundary,chan-size-over-int64,chan-zero-
+#     size-elem-huge,recover-slice-len-over,recover-chan-size-over}
+#     (red-first against the pre-slice binary: chan rows `ok`, slice
+#     rows cgroup-killed materializing, recover-chan 0 —
+#     docs/evidence/2026-09-02_t5-maxalloc-probes/README.md) and
+#     builtins/make-maxalloc/{map-hint-over,map-hint-negative} (gc
+#     clamps the hint, no panic; PASS on both binaries — the hint never
+#     reaches the machine, see BUG-082).
+#   NEW row born FAIL BY DESIGN (1), on BUG-082's Cases line:
+#     builtins/make-maxalloc/map-hint-eval-order FAIL/differential
+#     (gc 31, machine 11): the native frontend does not lower the map
+#     hint, so its expression's side effects are dropped. Fix =
+#     frontend emit + decoder + a twin-wire frontend-pin move — a
+#     deliberate pin change outside this GoCore lane's mandate; open.
+#   Everything else: 2533 rows unchanged in result and stage.
+# previous re-pin: 2026-09-02 (t5-e9-prune lane, AUDIT FIX ROUND F1-F10 —
 #   [AGENT]-executed inside the slice's written boundary; no machine
 #   semantics moved: the round's only runtime change is the refusal
 #   NAMING of a foreign-frame prune error (Multi.lean `pruneForeignOne`,
@@ -330,8 +361,8 @@
 #     The remaining FAIL rows are the standing frontend/feature gaps
 #     of the 2026-08-22 record (docs/2026-08-22_launch-audit-synthesis.md),
 #     none moved by this re-pin.
-# cases: 2544 (2373 PASS / 171 FAIL)
-#   [re-derived from the data rows at the round-4 merge-train rebase 2026-09-02 ([AGENT], union of both sides): 2537 (2366 PASS / 171 FAIL) on main after bug080-atomic-kind + 4 born-PASS E9 rows + 3 born-PASS E9 over-prune guards = 2544 (2373 PASS / 171 FAIL)]
+# cases: 2559 (2387 PASS / 172 FAIL)
+#   [re-derived from the data rows at the round-4 merge-train rebase 2026-09-02 ([AGENT], union of all three lanes over main@0f3c05ff 2533 (2360 PASS / 173 FAIL)): bug080-atomic-kind +4 born-PASS, 2 FAIL->PASS flips = 2537 (2366 / 171); t5-e9-prune +4 +3 born-PASS = 2544 (2373 / 171); t5-maxalloc +14 born-PASS +1 born-FAIL = 2559 (2387 PASS / 172 FAIL).]
 #   [re-derived by count from this file's data rows at the 2026-09-02
 #   bug080-atomic-kind re-pin: 2533 (2360 PASS / 173 FAIL) + 4 born-PASS
 #   + 2 FAIL->PASS flips = 2537 (2366 PASS / 171 FAIL). The re-pin had
@@ -467,6 +498,21 @@ PASS	builtins/len-vs-call-order/panicky-before-call	-
 FAIL	builtins/len-vs-call-order/panicky-between	frontend-export
 PASS	builtins/make-channel-len-cap	-
 PASS	builtins/make-map-hint	-
+PASS	builtins/make-maxalloc/slice-len-over-byte	-
+PASS	builtins/make-maxalloc/slice-len-over-const	-
+PASS	builtins/make-maxalloc/slice-len-over-int64	-
+PASS	builtins/make-maxalloc/slice-len-over-padded-struct	-
+PASS	builtins/make-maxalloc/slice-cap-over-byte	-
+PASS	builtins/make-maxalloc/slice-len-and-cap-over	-
+PASS	builtins/make-maxalloc/chan-size-over-byte	-
+PASS	builtins/make-maxalloc/chan-size-header-boundary	-
+PASS	builtins/make-maxalloc/chan-size-over-int64	-
+PASS	builtins/make-maxalloc/chan-zero-size-elem-huge	-
+PASS	builtins/make-maxalloc/map-hint-over	-
+PASS	builtins/make-maxalloc/map-hint-negative	-
+FAIL	builtins/make-maxalloc/map-hint-eval-order	differential
+PASS	builtins/make-maxalloc/recover-slice-len-over	-
+PASS	builtins/make-maxalloc/recover-chan-size-over	-
 PASS	builtins/min-max-edge/one-arg	-
 PASS	builtins/min-max-edge/eval-order	-
 PASS	builtins/min-max-edge/defined-int	-

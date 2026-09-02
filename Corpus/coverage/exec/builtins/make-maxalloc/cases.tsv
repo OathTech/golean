@@ -1,0 +1,16 @@
+# id	subject	args	expected_status	expected_reason	features
+slice-len-over-byte	makeMaxAllocSliceLenOverByte	-	panic	makeslice: len out of range	slices,make,panic
+slice-len-over-const	makeMaxAllocSliceLenOverConst	-	panic	makeslice: len out of range	slices,make,panic
+slice-len-over-int64	makeMaxAllocSliceLenOverInt64	-	panic	makeslice: len out of range	slices,make,panic
+slice-len-over-padded-struct	makeMaxAllocSliceLenOverPaddedStruct	-	panic	makeslice: len out of range	slices,make,panic,structs
+slice-cap-over-byte	makeMaxAllocSliceCapOverByte	-	panic	makeslice: cap out of range	slices,make,panic
+slice-len-and-cap-over	makeMaxAllocSliceLenAndCapOver	-	panic	makeslice: len out of range	slices,make,panic
+chan-size-over-byte	makeMaxAllocChanSizeOverByte	-	panic	makechan: size out of range	channels,make,panic
+chan-size-header-boundary	makeMaxAllocChanSizeHeaderBoundary	-	panic	makechan: size out of range	channels,make,panic
+chan-size-over-int64	makeMaxAllocChanSizeOverInt64	-	panic	makechan: size out of range	channels,make,panic
+chan-zero-size-elem-huge	makeMaxAllocChanZeroSizeElemHuge	-	ok	-	channels,make,cap
+map-hint-over	makeMaxAllocMapHintOver	-	ok	-	maps,make
+map-hint-negative	makeMaxAllocMapHintNegative	-	ok	-	maps,make
+map-hint-eval-order	makeMaxAllocMapHintEvalOrder	-	ok	-	maps,make,evaluation_order
+recover-slice-len-over	makeMaxAllocRecoverSliceLen	-	ok	-	slices,make,panic,recover,defer
+recover-chan-size-over	makeMaxAllocRecoverChanSize	-	ok	-	channels,make,panic,recover,defer

@@ -690,7 +690,7 @@ def stmtOpAccesses (op : StmtOp) (vs : List GoValue) : List RaceAccess :=
   | .newValue _, [tv, _] => targetWrite tv
   | .makeSlice _ _, tv :: _ => targetWrite tv
   | .makeMap _, tv :: _ => targetWrite tv
-  | .makeChan _, tv :: _ => targetWrite tv
+  | .makeChan _ _, tv :: _ => targetWrite tv
   | .mapAssign _ _, [bv, _, _] => mapAccess .write bv
   | .appendSlice _, [tv, sliceV, elemsV] =>
       (match valueAsSlice sliceV, valueAsSlice elemsV with

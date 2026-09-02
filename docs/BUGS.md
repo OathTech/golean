@@ -4143,3 +4143,99 @@ program that never compares the cell would have run on an unboxed
 interface value. With the guard both rows refuse at frontend-export
 by name. Frontend only, fail-closed-strengthening.
 
+
+## BUG-081 — `make` past gc's maximum allocatable size ran on (materializing its backing toward the wall clock) where gc panics deterministically `makeslice: len/cap out of range` / `makechan: size out of range`: the allocation-limit panic class was unmodeled (observed ∉ modeled) [TRUST-ADJACENT: GoCore make/append arms]
+
+- Status: fixed (2026-09-02, t5-maxalloc — fidelity decision 5(b)
+  [USER] 2026-08-31 "the deterministic maxAlloc panic class modeled",
+  landed as PINNED latitude R16: `maxAllocBytes` 2^48, `chanHeaderBytes`
+  112, the gc linux/amd64 layout `tySizeAlignFuel` (GoLean/GoCore/
+  Ops.lean, R16 docstrings); gc's check ORDER and message texts at the
+  `makeSlice` / `makeChan` arms of `applyStmtOpCore` and the
+  `appendSlice` spill path of `applyStmtOp` (GoLean/GoCore/Machine.lean),
+  each BEFORE the backing is materialized; `StmtOp.makeChan` now carries
+  the element type the threshold needs)
+- Pinned-by: differential
+- Cases: builtins/make-maxalloc/slice-len-over-byte, builtins/make-maxalloc/slice-len-over-const, builtins/make-maxalloc/slice-len-over-int64, builtins/make-maxalloc/slice-len-over-padded-struct, builtins/make-maxalloc/slice-cap-over-byte, builtins/make-maxalloc/slice-len-and-cap-over, builtins/make-maxalloc/chan-size-over-byte, builtins/make-maxalloc/chan-size-header-boundary, builtins/make-maxalloc/chan-size-over-int64, builtins/make-maxalloc/chan-zero-size-elem-huge, builtins/make-maxalloc/recover-slice-len-over, builtins/make-maxalloc/recover-chan-size-over
+- Discovered: 2026-09-02 (the t5-maxalloc gc probe matrix,
+  docs/evidence/2026-09-02_t5-maxalloc-probes/ — filed with the probe as
+  witness. The CLASS was on the books unpinned since 2026-08-14:
+  doctrine register #7 recorded "allocation never fails" as a standing
+  idealization, and fidelity decision 5 split it into behavior 1 (true
+  OOM, still under the rider) and behavior 2 (this entry))
+
+Mechanism: the spec sanctions a run-time panic for a negative or
+len>cap `make` and says nothing about a size limit; gc's runtime adds
+one — `maxAlloc = 1<<48` on amd64 (malloc.go:220) — and refuses ONE
+request whose byte size exceeds it with a recoverable `runtime.Error`
+(`makeslice`, slice.go:102–115: cap's bytes over the limit, or len<0,
+or len>cap, blaming LEN when the len alone is bad — issue 4085;
+`makechan`, chan.go:86–89: buffer bytes over `maxAlloc - hchanSize`,
+hchanSize = 112; `growslice`, slice.go:191–252: the grown cap's bytes,
+or `int` overflow of the new length). The machine had only the
+negative and len>cap arms: `make([]byte, 1<<48+1)` passed them and
+went to `buildDefaultArrayValue`, i.e. an eager 2^48-element backing —
+a grind to the 30 s wall (an honest kill, never a wrong value, but
+observed ∉ modeled: gc's panic is a behavior no machine stream
+produced). Probed both sides of every boundary (go1.26.5: 2^48+1 bytes
+panics, exactly 2^48 attempts the allocation and dies of true OOM;
+chan 2^48-111 panics, 2^48-112 allocates; int64 and padded-struct
+elements scale the threshold by gc's LAYOUT size — 16 bytes for
+`struct{int64; byte}`, padding included). The fix reifies the limit as
+a declared machine parameter (R1's mold: pinned to the oracle host,
+envelope and 32-bit interaction recorded on R16) with a gc-layout size
+function transcribed from go/types `gcsizes.go`, failing closed on
+unsupported types. What is deliberately NOT modeled, and why, is on
+R16: behavior 1 (allocation failure of a request that passes the
+check — the D-001 residual), and the append band where gc's grown-cap
+check panics but the machine's newLen-based one allocates (the
+newLen decision is forced by `applyStmtOp_appendSlice_congr`, which
+states spill outcome class is choice-independent). Corpus rows are
+all just-over (gc panics); the just-under controls are fatal OOM in
+gc and eager-materialization grinds in the machine (BUG-078 residual
+(2)) — the one feasible control is `make(chan struct{}, 1<<62)`, whose
+zero-size element never trips the limit and whose machine buffer is a
+capacity NUMBER. The `append` class has no corpus witness (it needs an
+existing >2^47-byte slice or `unsafe.Slice`, which the frontend
+refuses); the gc probe append-growth-over-unsafe is its evidence.
+
+## BUG-082 — the `make(map[K]V, hint)` HINT is not lowered: the native frontend emits `make-map` without it, so the hint expression's evaluation (its side effects) is dropped — and the machine arm's `makemap: size out of range` panic on a negative hint (a string gc no longer realizes) was dead code behind it
+
+- Status: open
+- Pinned-by: differential
+- Cases: builtins/make-maxalloc/map-hint-eval-order
+- Discovered: 2026-09-02 (t5-maxalloc probe matrix, probes map-hint-neg
+  / map-hint-over: gc runs `make(map[int]int, -1)` and `make(map[int]
+  int, 1<<48+1)` — NO PANIC, len 1 after one insert — where the
+  machine's `makeMap` arm panicked on a negative hint. Filing the wrong
+  answer, the red-first check against the pre-slice golean binary
+  showed the rows PASS on BOTH binaries: the panic never fired because
+  the hint never reaches the machine. `tools/nativefrontend/emit.go`'s
+  `*types.Map` make arm emits `{"stmt":"make-map", target, keyType,
+  valueType}` — `c.Args[1]` is never visited — and NativeToIR's
+  `"make-map"` decoder passes `none` for the hint. The corpus had
+  `builtins/make-map-hint` with a constant hint 8, which cannot see
+  either half.)
+
+Two halves, one site. (1) FIDELITY, open: spec §Making slices, maps
+and channels lists the hint among the ordinary operands of a `make`
+call (§Order_of_evaluation: operands evaluated left to right), and gc
+evaluates it — `make(map[int]int, bump(&n))` bumps `n`; the machine
+never runs `bump`. Observed side effect ∉ modeled: the red-first row
+`map-hint-eval-order` (gc 31, machine 11). The FIX is a frontend +
+decoder change — emit the hint as an optional `"hint"` field, decode
+it into `Stmt.makeMap`'s `initialSpace` — which MOVES the twin-wire
+frontend pin (`scripts/check-frontend-pins`: `raftsubject` uses
+`make(map[uint64]struct{}, len(m))` and `make(map[int]struct{}, n)`),
+so it is a deliberate pin re-pin with its reason and was NOT done
+inside the t5-maxalloc lane ([AGENT] fail-closed call: frontend-pin
+moves are not within a GoCore slice's mandate; the row stays red on
+this line until the fix lands). (2) The machine arm, fixed in the
+same slice as a by-product: it evaluates the hint operand (type,
+order) and IGNORES its value, as gc's runtime/map.go:60–67 clamps a
+negative or over-`maxAlloc` hint to 0 — the old negative-hint panic
+was an R9 violation in waiting (a text the pinned oracle never
+produces), dead only because of (1). The two gc-truth rows
+`map-hint-over` / `map-hint-negative` (PASS on both binaries) pin that
+gc does not panic there; they do not exercise the machine arm until
+(1) lands, and say so in their fixture comment.
