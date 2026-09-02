@@ -284,7 +284,7 @@ C10 is the doctrine's home.
 | advice | out-of-language | advisory prose ("don't be clever"); the operative content is the DRF doctrine, held at mem#model below. |
 | overview | out-of-language | the doc's own "informal overview, not a formal definition"; the formal row is mem#model. |
 | model | latitude(C10) | the machine holds the DRF-SC FRAGMENT: race-free executions are SC by construction (interleaving semantics, L1 envelope); racy programs refuse (racy-red) rather than exhibit weak behaviors — mem#restrictions expressly permits "report the race and exit". The weak-memory latitude beyond DRF-SC is deliberately unmodeled; witness: `race/litmus/sb-chan` certified {1,10,11} with the SC-forbidden 00 excluded (members=3 cardinality pin). |
-| restrictions | covered(B) | `race/` lane (5 pkg families, 34 rows: free / negative / litmus); the detector's fail-closed direction (over-refusal only) with its one over-approximation → Q-RACEPATH (BUG-041, 1 red). |
+| restrictions | covered(B) | `race/` lane (5 pkg families, 41 rows: free / negative / litmus); the detector's fail-closed direction (over-refusal only) with its one over-approximation → Q-RACEPATH (BUG-041): constant-index half IMPLEMENTED 2026-09-02 (`race/free/array-read-write` flipped green; +2 chain-form green guards, +2 must-stay-racy guards), dynamic-index residual red-pinned (`race/free/array-dyn-index-read-write`, 1 red, born-FAIL). Detector-soundness measurement of the whole lane against `go run -race` (both directions, per-run): `docs/2026-09-02_detector-soundness.md`. |
 | synchronization | covered(D) | preamble; children below. |
 | init | covered(B) | init happens-before main: `init/` (19 pkgs) + `multipkg/init-order*`; the order latitude inside it is the spec-side C1/C2 story (§2 Package_initialization). |
 | go | covered(B) | go-statement happens-before: spawn suites, arg-eval-at-spawn pins, child-effect visibility through channels. |
@@ -448,7 +448,7 @@ cells are kept as historical routing.**
 | Q-COND | sync.Cond: the wakeup envelope — Signal's waiter choice, Broadcast ordering, whether spurious wakeups are admitted (the loop-recheck idiom absorbs them; Wait's re-acquisition ordering is the observable seam). wire.go:385. | 3 (`sync/out-of-scope-cond/*` — the two new rows normalize wakeup order away, deterministic across any conforming envelope) | W3.2 |
 | Q-TRYLOCK | TryLock: spin-wait termination is fairness-dependent — the FairStream certification class question. | 1 (`sync/out-of-scope-trylock/trylock-uncontended`) | W3.2 |
 | Q-INITSPAWN | `go` during `$pkginit`: what envelope init-spawned children get relative to remaining init work and main's start (spec: init runs sequentially in ONE goroutine; children are ordinary goroutines). StepFn.lean:513-514/:520-521. | 1 (`goroutines/spawn-in-init/in-init`) | W3.2 |
-| Q-RACEPATH | BUG-041: race-footprint granularity for value-path composite reads (provenance-carrying array values vs address-based element reads); today fail-closed (over-refusal, never a missed race). | 1 (`race/free/array-read-write`) | W3.2 |
+| Q-RACEPATH | BUG-041: race-footprint granularity for value-path composite reads. **RULED [USER] 2026-08-31 + IMPLEMENTED 2026-09-02** (`docs/2026-08-31_qrow-rulings.md` row 4; the Tier-4 detector-soundness lane): the CONSTANT-index narrowing — `projChainTarget` (Race.lean) extends the shipped `fieldGet`-chain narrowing to `indexGet` frames whose index is a constant literal over an ARRAY cell, in either chain order; the dynamic-index RESIDUAL stays in O1 with its re-open trigger (memo §4 option (B) — deferred-footprint recording — only if a real target needs dynamic-index disjointness on a value-path array; raft indexes slices, already precise). Fail-closed throughout (over-refusal, never a missed race). | 1 (the residual pin `race/free/array-dyn-index-read-write`, born-FAIL 2026-09-02; `race/free/array-read-write` flipped green + 4 guards) | RESOLVED for the ruled scope (residual recorded; was W3.2) |
 | Q-GOEXIT | runtime.Goexit / goroutine destruction: self-termination with defers, and mem#goexit's no-synchronization clause. | 1 (`goroutines/goexit-marker/child`) | F4 arc |
 
 ## 7. Sufficiency-gap TODO rows (graded, judgment logged)
@@ -471,9 +471,18 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (2526 cases, 2355 PASS /
-171 FAIL; `baselines/native-full.tsv`, re-pinned 2026-09-01 at the
-gotest-fixes slice's AUDIT FIX ROUND: +3 born-PASS NOTE-15 rows
+All numbers at the current tracked baseline (2533 cases, 2360 PASS /
+173 FAIL; `baselines/native-full.tsv`, re-pinned 2026-09-02 on the
+t4-detector-soundness lane — full ci --diff at that tip: Q-RACEPATH's
+1 FAIL→PASS flip `race/free/array-read-write`, +4 born-PASS guards
+`race/free/{array-const-index-field,field-array-const-index}` +
+`race/negative/array-const-index-{same-elem,whole-write}`, +3
+born-FAIL-by-design pins — `race/free/array-dyn-index-read-write`
+(BUG-041's residual, replacing the flipped row in the Q-* bucket) and
+`race/negative-sync/{wg-overwrite,mutex-copy}` (BUG-080, post-vintage
+bucket); red-count movement 171 → 173, mapped below. Prior re-pin
+2026-09-01 at the gotest-fixes slice's AUDIT FIX ROUND (2526 / 2355 /
+171): +3 born-PASS NOTE-15 rows
 `range/range-not-evaluated/{conversion-no-var,conversion-two-vars-panic,
 const-len-index-key-only}`, +2 born-FAIL-by-design FR-7 refusal pins
 `interfaces/comma-ok-into-interface/{global-form,local-assign-form}`
@@ -518,9 +527,10 @@ the historical record; the method is §8b's, re-run).
 frontier 2 (atomic → Q-ATOMIC, goexit → Q-GOEXIT), latitude 1 (model →
 C10), out-of-language 5. Zero unclassified.
 
-**The 171 baseline reds, every one on a named row (re-derived
-mechanically 2026-09-01 — zero unmapped, zero double-mapped; +2 at
-the audit fix round, both FR-7):**
+**The 173 baseline reds, every one on a named row (re-derived
+mechanically 2026-09-02 — zero unmapped, zero double-mapped; +2 at
+the detector-soundness re-pin, both BUG-080; the Q-* bucket's
+BUG-041 red changed ROW, not count):**
 
 | bucket | reds |
 | --- | --- |
@@ -528,10 +538,14 @@ the audit fix round, both FR-7):**
 | design questions Q-* (§6) | 14 |
 | (c) profound-reason pins (triage §4 + the unsafe marker) | 9 + 1 |
 | (a)-queued fixes (triage §3.2: A3 5, A4 1, A5 1, A7 1) | 8 |
-| post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) + the gotest-fixes BUG-078 budget refusal pin (`arrays/materialization-budget/over-budget`, on BUG-078's Cases line since the audit fix round) | 56 |
-| **total** | **171** |
+| post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) + the gotest-fixes BUG-078 budget refusal pin (`arrays/materialization-budget/over-budget`, on BUG-078's Cases line since the audit fix round) + the detector-soundness BUG-080 U4 pins (`race/negative-sync/{wg-overwrite,mutex-copy}`, 2026-09-02) | 58 |
+| **total** | **173** |
 
-*(Movements at the 2026-09-01 re-derivation, each derived in §8c:
+*(Movement at the 2026-09-02 re-pin: Q-* 14 → 14 — Q-RACEPATH's red
+row is now `race/free/array-dyn-index-read-write` (the residual pin)
+in place of the flipped `race/free/array-read-write`; post-vintage
+56 → 58 — BUG-080's two born-FAIL U4 pins enter with their entry.
+Movements at the 2026-09-01 re-derivation, each derived in §8c:
 Q-* 21 → 14 — the Q-SYNCVAL slice flipped its 7 ruled reds;
 (a)-queued 14 → 8 — Tier-1's A6 landing flipped its 4 over-refusal
 rows and BUG-062's 2 vintage reds (min-max's 3 were born post-vintage
@@ -684,8 +698,13 @@ case count 2506 → 2521, the other 14 rows born PASS) — and the audit
 fix round added TWO more, `interfaces/comma-ok-into-interface/
 {global-form,local-assign-form}`, BUG-079's FR-7 pins (15 new since
 the vintage; 169 − 13 + 15 = 171 ✓; case count 2521 → 2526, the other
-3 rows — NOTE-15's range pins — born PASS). The 13 that went green are
-unchanged.
+3 rows — NOTE-15's range pins — born PASS); and the 2026-09-02
+detector-soundness re-pin added THREE born-FAIL pins while flipping
+ONE vintage red green (`race/free/array-read-write`, Q-RACEPATH):
+18 new since the vintage, 14 vintage reds gone green;
+169 − 14 + 18 = 173 ✓; case count 2526 → 2533, the other 4 rows —
+the Q-RACEPATH guards — born PASS. The 14 that went green are
+unchanged since.
 
 Q-SYNCVAL's misuse-identity pins and the other 8 rows this slice added
 are born-PASS and appear in no red bucket; the out-of-scope sync reds

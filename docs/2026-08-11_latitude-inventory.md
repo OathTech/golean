@@ -507,12 +507,47 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   accesses unmodeled — misuse-only), U5 (release merge-vs-overwrite:
   ours is memory-model-exact merge, TSan over-reports — TSan-red/
   ours-green, un-lane-able), O1 (whole-cell composite-read
-  over-approximation, BUG-041). Race.lean:12–15: the detector consumes
-  no choices; refusal is choice-invariant per stream.
+  over-approximation, BUG-041 — NARROWED 2026-09-02 by the Q-RACEPATH
+  ruling, RULED [USER] 2026-08-31 `docs/2026-08-31_qrow-rulings.md`
+  row 4: the constant-index narrowing — `projChainTarget` extends the
+  shipped `fieldGet`-chain narrowing to `indexGet` frames with a
+  CONSTANT literal index over an ARRAY cell, in either chain order
+  (`a[1]`, `a[1].x`, `s.arr[1]`), the faithful footprint under
+  mem#restrictions' per-sub-value license quoted above; the
+  DYNAMIC-index residual (`a[i]`) stays whole-cell, red-pinned by
+  `race/free/array-dyn-index-read-write`, with its re-open trigger
+  recorded in O1 — memo §4 option (B) only if a real target needs
+  dynamic-index disjointness on a value-path array). Race.lean:12–15:
+  the detector consumes no choices; refusal is choice-invariant per
+  stream.
 - EVIDENCE: GC (`go run -race` as second oracle; TSan one-red-is-proof);
   the enumerator's every-path refusal at registry granularity. The
   registry-point-vs-full-interleaving gap is the NPDRF obligation —
-  C2/C3's territory.
+  C2/C3's territory. MEASURED 2026-09-02 (the detector-soundness
+  differential, `scripts/detector-soundness`;
+  `docs/2026-09-02_detector-soundness.md`; evidence
+  `docs/evidence/2026-09-02_detector-soundness/`): the two oracles
+  crossed in BOTH directions on 362 in-scope corpus rows (10 `-race`
+  runs each at GOMAXPROCS 1 and 8 vs the schedule enumerator) and 45
+  novel footprint-gap probes. Corpus: agree-race 23 / agree-DRF 276 /
+  third cell (gc red, machine DRF) **0** / over-refusal 1 (the O1
+  residual, by design) / uncertified 62 (all gc-green; enumerator
+  refuses deadlock/fatal members and frontier rows, or budget).
+  Probes: agree-race 24 / agree-DRF 12 / third cell 2 + 3 uncertified-
+  by-fatal — ALL the recorded U4 class (sync-object state words →
+  **BUG-080**, born-FAIL pins `race/negative-sync/{wg-overwrite,
+  mutex-copy}`; fix = the atomics arc's atomic access kind, not a
+  table entry) / over-refusal 3 (O1 residual + two schedule-dependent
+  races the 10-run sampler never realized but the enumerator did).
+  Scope-ledger consequences: U2 CONFIRMED benign on go1.26.5 (7/7
+  probes agree both ways); U4 is now PINNED and classified as the
+  detector's one soundness-direction gap (misuse-only); U5 re-measured
+  (TSan red 7/10 on the eval-pin shape as Go source; go_mem-DRF; the
+  machine follows the memory-model sentence) and posed as ruling
+  **Q-U5** — keep the merge (current, recommended) or align to TSan's
+  overwrite (S) — the one point where register #13's "TSan's realized
+  edge set" is not literally what the detector implements. Register
+  #4 carries the same measured state in its own words.
 
 ### C11. Tie-breaks that look like latitude but are unreachable/unobservable — (c) FORCED
 

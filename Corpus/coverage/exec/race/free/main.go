@@ -200,12 +200,73 @@ func freeAddrDerefNoRead() int {
 	return same*100 + *q
 }
 
+// Q-RACEPATH (RULED [USER] 2026-08-31; implemented 2026-09-02): the
+// CONSTANT-index narrowing's chain forms. index THEN field — `a[1].x`
+// read beside an `a[0].x` write; gc reads one element field.
+type freeArrElem struct {
+	x int
+}
+
+func freeArrayConstIndexField() int {
+	var a [2]freeArrElem
+	a[1].x = 9
+	done := make(chan int)
+	go func() {
+		a[0].x = 3
+		done <- 0
+	}()
+	r := a[1].x
+	<-done
+	return r*10 + a[0].x
+}
+
+// field THEN constant index — `s.arr[1]` read beside an `s.arr[0]`
+// write (fieldGet→indexGet chain).
+type freeArrBox struct {
+	arr [2]int
+	n   int
+}
+
+func freeFieldArrayConstIndex() int {
+	var s freeArrBox
+	s.arr[1] = 9
+	done := make(chan int)
+	go func() {
+		s.arr[0] = 3
+		done <- 0
+	}()
+	r := s.arr[1]
+	<-done
+	return r*10 + s.arr[0]
+}
+
+// RED PIN (BUG-041 residual, O1): a DYNAMIC-index value-path array read
+// `a[i]` (called with i = 1) beside a disjoint-element write — go/types
+// cannot fold the index, so the base read stays whole-cell and the
+// race-free program is refused. Over-refusal (fail-closed), recorded;
+// the re-open trigger is in Race.lean's O1 entry.
+func freeArrayDynIndexReadWrite(i int) int {
+	var a [2]int
+	a[1] = 9
+	done := make(chan int)
+	go func() {
+		a[0] = 3
+		done <- 0
+	}()
+	r := a[i]
+	<-done
+	return r*10 + a[0]
+}
+
 func main() {
 	println(freeSliceDisjoint())
 	println(freeFieldDisjoint())
 	println(freeFieldReadWrite())
 	println(freePtrFieldReadWrite())
 	println(freeArrayReadWrite())
+	println(freeArrayConstIndexField())
+	println(freeFieldArrayConstIndex())
+	println(freeArrayDynIndexReadWrite(1))
 	println(freePromotedPtrBox())
 	println(freeMethodValueOrder())
 	println(freeSpawnDispatch())

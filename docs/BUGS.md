@@ -938,9 +938,23 @@ verbatim, gc realization version-tracked).
 
 ## BUG-041 — race-detector footprint over-approximation: value-path composite reads are whole-cell (array elements; non-fieldGet uses), refusing race-free programs
 
-- Status: open
+- Status: open — NARROWED 2026-09-02 (Q-RACEPATH, RULED [USER]
+  2026-08-31 `docs/2026-08-31_qrow-rulings.md` row 4; implemented on
+  the Tier-4 detector-soundness lane): the CONSTANT-index half is
+  FIXED — `projChainTarget` (Race.lean, the generalization of the
+  shipped `fieldChainTarget`) narrows a whole-cell read through
+  `indexGet` frames whose pending index is an `intLit` over an ARRAY
+  cell, composing with the `fieldGet` chain in either order (`a[1]`,
+  `a[1].x`, `s.arr[1]`); the former red pin `race/free/array-read-write`
+  flipped FAIL→PASS (confluent, |set|=1 certified) with two chain-form
+  green guards (`race/free/{array-const-index-field,
+  field-array-const-index}`) and two must-stay-racy guards
+  (`race/negative/{array-const-index-same-elem,
+  array-const-index-whole-write}`: the narrowed element read still
+  conflicts with a same-element write and with a whole-array write).
+  What REMAINS OPEN is the DYNAMIC-index residual below.
 - Pinned-by: differential
-- Cases: race/free/array-read-write
+- Cases: race/free/array-dyn-index-read-write
 - Discovered: 2026-08-07 (S3 pre-merge audit, major finding 3 — the
   original record named only `evalVar` and shipped write/write-only
   free-lane guards, so the read/write direction that actually trips
@@ -960,10 +974,22 @@ verbatim, gc realization version-tracked).
   fieldGet chain. Over-refusal is the FAIL-CLOSED direction (a
   refusal, never a wrong value), recorded as O1 in
   `GoLean/GoCore/Race.lean`'s inventory.
-- Fix shape: path-precise element reads need either provenance-carrying
-  array values or frontend address-based element reads
-  (indexAddr+deref, which the deref arm then narrows) — a frontend/
-  machine movement with its own guardrails, not a detector patch.
+- RESIDUAL (the open half, born-FAIL pin 2026-09-02
+  `race/free/array-dyn-index-read-write`: `a[i]` with i = 1 beside an
+  `a[0]` write — race-free Go refused): when go/types cannot fold the
+  index to a literal, the element path is undetermined at the base
+  read and the read stays whole-cell. Fail-closed (over-refusal, never
+  a missed race). Fix shape for the residual — memo §4 option (B),
+  deferred-footprint recording (delay the composite read's footprint
+  until the projection applies, with the EVALUATED index; the panic
+  window between base read and projection needs its own footprint
+  argument; fail-closed on every unrecognized shape) — effort M,
+  touching the `stepAccesses` architecture. RE-OPEN TRIGGER (ruled
+  with the narrowing): a real target exhibiting dynamic-index
+  DISJOINTNESS on a value-path ARRAY; raft's hot indexing is on
+  SLICES, whose element reads are address-based and already precise.
+  (The pre-fix "Fix shape" — provenance-carrying array values or
+  frontend address-based element reads — is superseded by the ruling.)
 - S3 convergence addendum: the class gained a FRAME-ENTRY member and
   its narrowing — a needsDeref dispatch to a synthesized promotion
   wrapper is narrowed to the wrapper's hop path
@@ -3896,6 +3922,59 @@ values — one element store into an admitted `[1024][1024][128]byte`
 measured 46 s (the store re-normalizes through the nesting), so an
 oversized nested value can still reach the wall clock: an honest
 kill, never a wrong answer, lifted by (1).
+## BUG-080 — race detector U4: the sync primitives' OWN state-word accesses are unmodeled, so a plain access to a primitive in use by another goroutine (copy / overwrite) runs to a value where gc's -race build refuses
+
+- Status: open
+- Pinned-by: differential
+- Cases: race/negative-sync/wg-overwrite, race/negative-sync/mutex-copy
+- Discovered: 2026-09-02 (the Tier-4 detector-soundness differential,
+  `scripts/detector-soundness`, probe family U4 —
+  `docs/evidence/2026-09-02_detector-soundness/probes/u4/`; report
+  `docs/2026-09-02_detector-soundness.md` §3). The class was RECORDED
+  as under-approximation U4 in `GoLean/GoCore/Race.lean`'s inventory
+  since spec-parity slice 2 ("misuse-only") but never pinned; this
+  entry pins it and classifies it honestly as the third cell of the
+  soundness matrix (gc `-race` RED, machine DRF): a program that is
+  racy by mem#restrictions is given SC value semantics.
+- What: gc's `-race` build performs real instrumented accesses on the
+  primitive's own words — `Mutex.Lock` is an atomic CAS on `m.state`
+  (TSan: "Write … sync/atomic.CompareAndSwapInt32", race_amd64.s),
+  `WaitGroup.Add` reads its state word (`runtime.raceread`),
+  `RWMutex` ops `race.Read(&rw.w)`, `Once.Do` likewise — so a PLAIN
+  read (a struct copy) or write (a whole-struct overwrite) of a
+  primitive another goroutine is operating on is a data race
+  (mem#restrictions: a non-atomic access beside an atomic one), TSan-
+  red 10/10 at GOMAXPROCS 1 and 8 on the pinned toolchain. The machine
+  records NO access for a sync op (the sync cell's `syncCell`/
+  `syncData` traffic is classified SYNCHRONIZATION in the footprint
+  inventory), so the copy/overwrite's plain access has nothing to
+  conflict with: the run completes (copy carries state gc-faithfully,
+  sync design §3; an overwrite of a held mutex makes the later Unlock
+  a fatal "unlock of unlocked mutex" member) and the racy lane's
+  every-path-refuses claim FAILS on the pinned rows. Scope: MISUSE
+  ONLY (vet's copylocks flags every shape; no race-free program is
+  affected) — but under the DRF-SC doctrine (register #4) a racy
+  program must refuse, so this is a soundness-direction gap, narrow
+  and now pinned.
+- Probe evidence (10/10 TSan-red each, machine DRF or uncertified by
+  fatal members): `probe/u4/{struct-overwrite-vs-lock,
+  wg-overwrite-vs-add, rw-overwrite-vs-rlock, once-overwrite-vs-do,
+  struct-copy-vs-lock}`; the control `probe/u4/disjoint-field-vs-lock`
+  (a sibling-field write beside the lock) is agree-DRF, so the class
+  is exactly the primitive's own words.
+- Fix shape: NOT a missing footprint-table entry. Recording sync ops as
+  plain WRITES on the primitive's cell would make two legal contending
+  `Lock`s conflict (atomic-vs-atomic is not a race); what gc realizes
+  is a third access KIND — atomic — that conflicts with plain accesses
+  only. That kind is the atomics arc's detector deliverable
+  (`docs/2026-09-01_qatomic-owner-proposal.md` §4; Q-ATOMIC row 2 of
+  the ruling sheet, OPEN): once it exists, every sync op records one
+  atomic access on its cell (Lock/Unlock/RLock/RUnlock/Add/Done/Wait/
+  Do — TSan's realized set, per register #13) and these rows flip
+  without further design. Recorded against decision 1's deferred
+  investment as the mandate directs; until then the rows stay red and
+  Race.lean's U4 text points here.
+
 ## BUG-079 — comma-ok type assertion ASSIGNED into interface-typed targets stored the component RAW: the package-level `var a, b any = any(nil).(bool)` and local `a, b = x.(T)` forms bypassed the multi-value boxing guard (refused downstream at interface equality — the wrong site)
 
 - Status: fixed (2026-09-01, gotest-fixes audit fix round — emitAssign's

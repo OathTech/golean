@@ -14,11 +14,20 @@ field-disjoint	freeFieldDisjoint	-	ok	-	goroutines,channels,structs,race	conflue
 # via the fieldGet-chain narrowing.
 field-read-write	freeFieldReadWrite	-	ok	-	goroutines,channels,structs,race	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4
 ptr-field-read-write	freePtrFieldReadWrite	-	ok	-	goroutines,channels,structs,pointers,race	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4
-# RED PIN (BUG-041): value-path array-element read (`a[1]` loads the
-# whole cell before indexing) vs a disjoint-element write — race-free
-# Go refused by the recorded whole-cell over-approximation; red until
-# value-path element reads become path-precise.
-array-read-write	freeArrayReadWrite	-	ok	-	goroutines,channels,arrays,race
+# Q-RACEPATH (RULED [USER] 2026-08-31, implemented 2026-09-02, Tier-4
+# detector-soundness lane): CONSTANT-index value-path array reads are
+# narrowed to the element path (`projChainTarget`, Race.lean O1), so the
+# former BUG-041 red pin is GREEN and joins the confluent guards; the two
+# chain forms (index-then-field, field-then-index) guard the composition.
+array-read-write	freeArrayReadWrite	-	ok	-	goroutines,channels,arrays,race	confluent	join-ordered readout; the constant-index read a[1] is narrowed to its element path — a whole-cell read would break the certified singleton on some schedule	width=4
+array-const-index-field	freeArrayConstIndexField	-	ok	-	goroutines,channels,arrays,structs,race	confluent	join-ordered readout; indexGet-then-fieldGet chain narrowed to a[1].x	width=4
+field-array-const-index	freeFieldArrayConstIndex	-	ok	-	goroutines,channels,arrays,structs,race	confluent	join-ordered readout; fieldGet-then-indexGet chain narrowed to s.arr[1]	width=4
+# RED PIN (BUG-041 RESIDUAL, O1): a DYNAMIC-index value-path array read
+# (`a[i]`, i = 1) beside a disjoint-element write — go/types cannot fold
+# the index, the base read stays whole-cell, and the race-free program is
+# refused (fail-closed over-refusal). Born-FAIL 2026-09-02; the re-open
+# trigger (memo §4 option (B)) is recorded in Race.lean's O1 entry.
+array-dyn-index-read-write	freeArrayDynIndexReadWrite	1	ok	-	goroutines,channels,arrays,race
 # S3 convergence response: the promotion narrowing's GREEN direction
 # (gc's synthesized wrapper loads only the embedded field — a write to
 # a non-embedded outer field is race-free) plus the free directions of

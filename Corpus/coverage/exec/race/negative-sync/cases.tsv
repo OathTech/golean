@@ -5,3 +5,10 @@
 one-side	raceSyncOneSide	-	race	-	sync,mutex,goroutines,channels,globals,race	racy	-	width=4
 rlock-serialized	raceSyncRlockSerialized	-	race	-	sync,rwmutex,waitgroup,goroutines,globals,race	racy	the two-clock discriminator (probe p14): RUnlock releases only toward the next WRITE lock, so serialized readers stay HB-unordered — a single-clock model would admit a value leaf	width=4,sites=30,work=20000000
 wg-no-edge	raceSyncWgNoEdge	-	race	-	sync,waitgroup,goroutines,channels,globals,race	racy	Wait at counter 0 acquires no release: the wg is present but orders nothing	width=4
+# BUG-080 (U4) BORN-FAIL PINS (2026-09-02, detector-soundness differential
+# third cell): sync-object state-word accesses are unmodeled, so these
+# TSan-red misuse programs (copy / overwrite of an in-use primitive) run
+# to a value — the racy lane's refusal claim does not hold for them.
+# Red until the atomic access kind lands (Q-ATOMIC owner proposal §4).
+wg-overwrite	raceSyncWgOverwrite	-	race	-	sync,waitgroup,goroutines,channels,structs,race	racy	U4: WaitGroup.Add's state-word read vs the whole-struct overwrite — TSan-red 10/10, unmodeled here	width=4
+mutex-copy	raceSyncMutexCopy	-	race	-	sync,mutex,goroutines,channels,structs,race	racy	U4: Lock's state CAS vs the struct copy's read — TSan-red 10/10, unmodeled here	width=4

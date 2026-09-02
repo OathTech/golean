@@ -246,6 +246,35 @@ func raceMapRangeIter() int {
 	return s + len(m)
 }
 
+// Q-RACEPATH's must-stay-racy direction (implemented 2026-09-02): the
+// constant-index narrowing records `a[1]` at its ELEMENT path, so a
+// concurrent write to the SAME element still conflicts (equal paths) …
+func raceArrayConstIndexSameElem() int {
+	var a [2]int
+	done := make(chan int)
+	go func() {
+		a[1] = 4
+		done <- 0
+	}()
+	r := a[1]
+	<-done
+	return r
+}
+
+// … and a concurrent WHOLE-array write still conflicts (the array's
+// path is a prefix of the element's).
+func raceArrayConstIndexWholeWrite() int {
+	var a [2]int
+	done := make(chan int)
+	go func() {
+		a = [2]int{7, 8}
+		done <- 0
+	}()
+	r := a[1]
+	<-done
+	return r
+}
+
 func main() {
 	println(raceWriteWrite())
 	println(raceReadWrite())
@@ -259,4 +288,6 @@ func main() {
 	println(raceDeferDispatch())
 	println(raceSpawnDispatch())
 	println(racePromotedDispatch())
+	println(raceArrayConstIndexSameElem())
+	println(raceArrayConstIndexWholeWrite())
 }

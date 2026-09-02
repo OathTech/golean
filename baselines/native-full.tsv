@@ -1,5 +1,40 @@
 # GoLean native-frontend full-corpus differential baseline
-# re-pinned: 2026-09-01 (gotest-fixes AUDIT FIX ROUND — [AGENT]-executed
+# re-pinned: 2026-09-02 (t4-detector-soundness lane — Q-RACEPATH
+#   implemented (RULED [USER] 2026-08-31, docs/2026-08-31_qrow-rulings.md
+#   row 4) + BUG-080 pins; [AGENT]-executed inside the [USER]-approved
+#   Tier-4 mandate. FULL ci --diff at this tip (artifacts/t4-detector/
+#   ci-diff-1.log in the lane worktree; drift = exactly the 8 rows below;
+#   NO other row moved; NO PASS->non-PASS flips). Machine change: ONE —
+#   GoLean/GoCore/Race.lean `fieldChainTarget` -> `projChainTarget`, the
+#   race footprint's read-narrowing chain now passes through indexGet
+#   frames with a CONSTANT literal index over an ARRAY cell (the ruling's
+#   constant-index narrowing; fail-closed everywhere else — slice/string
+#   headers and dynamic indices stay whole-cell).
+#   FLIP FAIL->PASS (1): race/free/array-read-write — the BUG-041 red pin
+#     (a[1] read beside an a[0] write, race-free Go formerly refused) now
+#     PASS/confluent, |set|=1 certified over all schedules; lane columns
+#     added (confluent, width=4) like its field-read-write mold.
+#   NEW rows born PASS (4), the narrowing's guards:
+#     race/free/{array-const-index-field,field-array-const-index}
+#     (PASS/confluent — the indexGet->fieldGet and fieldGet->indexGet
+#     chain forms narrow to the element path);
+#     race/negative/{array-const-index-same-elem,array-const-index-
+#     whole-write} (PASS/racy — the narrowed element read still
+#     conflicts with a same-element write and a whole-array write).
+#   NEW rows born FAIL BY DESIGN (3), each on a BUGS.md Cases: line:
+#     race/free/array-dyn-index-read-write FAIL/lean-observation
+#     (status race where gc is green) — BUG-041's RESIDUAL: a DYNAMIC
+#     index (a[i]) is not foldable, the base read stays whole-cell;
+#     over-refusal, the ruling's recorded residual with its trigger.
+#     race/negative-sync/{wg-overwrite,mutex-copy} FAIL/lean-observation
+#     (status ok where `go run -race` is red 10/10) — BUG-080: the sync
+#     primitives' OWN state words are unmodeled (Race.lean U4), so a
+#     copy/overwrite of an in-use primitive runs to a value; the
+#     detector-soundness differential's third-cell finding
+#     (docs/2026-09-02_detector-soundness.md §3.2), misuse-only, fix =
+#     the atomics arc's atomic access kind.
+#   Everything else: 2525 rows unchanged in result and stage.
+# previous re-pin: 2026-09-01 (gotest-fixes AUDIT FIX ROUND — [AGENT]-executed
 #   on the auditor's findings; +5 NEW rows, NO existing row moved, NO
 #   PASS->non-PASS flips expected. CERTIFICATION STATUS, stated honestly:
 #   the 5 rows were derived per-case at this tip through the SAME
@@ -211,7 +246,10 @@
 #     The remaining FAIL rows are the standing frontend/feature gaps
 #     of the 2026-08-22 record (docs/2026-08-22_launch-audit-synthesis.md),
 #     none moved by this re-pin.
-# cases: 2521 (2352 PASS / 169 FAIL)
+# cases: 2533 (2360 PASS / 173 FAIL)
+#   [re-derived by count from this file's data rows at the 2026-09-02
+#   detector-soundness re-pin: 2526 (2355 PASS / 171 FAIL) + 4 born-PASS
+#   + 3 born-FAIL + 1 FAIL->PASS flip = 2533 (2360 PASS / 173 FAIL).]
 #   [re-derived by count from this file's data rows at the 2026-09-01
 #   gotest-fixes re-pin: 2506 (2338 PASS / 168 FAIL) + 14 born-PASS
 #   + 1 born-FAIL-by-design = 2521 (2352 PASS / 169 FAIL).]
@@ -2019,7 +2057,10 @@ PASS	race/free/slice-disjoint	confluent
 PASS	race/free/field-disjoint	confluent
 PASS	race/free/field-read-write	confluent
 PASS	race/free/ptr-field-read-write	confluent
-FAIL	race/free/array-read-write	lean-observation
+PASS	race/free/array-read-write	confluent
+PASS	race/free/array-const-index-field	confluent
+PASS	race/free/field-array-const-index	confluent
+FAIL	race/free/array-dyn-index-read-write	lean-observation
 PASS	race/free/promoted-ptr-box	confluent
 PASS	race/free/addr-deref-no-read	confluent
 PASS	race/free/method-value-order	confluent
@@ -2046,9 +2087,13 @@ PASS	race/negative/defer-dispatch	racy
 PASS	race/negative/spawn-dispatch	racy
 PASS	race/negative/promoted-dispatch	racy
 PASS	race/negative/map-range-iter	racy
+PASS	race/negative/array-const-index-same-elem	racy
+PASS	race/negative/array-const-index-whole-write	racy
 PASS	race/negative-sync/one-side	racy
 PASS	race/negative-sync/rlock-serialized	racy
 PASS	race/negative-sync/wg-no-edge	racy
+FAIL	race/negative-sync/wg-overwrite	lean-observation
+FAIL	race/negative-sync/mutex-copy	lean-observation
 PASS	range/assign-form-interface-target/slice-value	-
 PASS	range/assign-form-interface-target/map-key	-
 PASS	range/assign-form-interface-target/index	-

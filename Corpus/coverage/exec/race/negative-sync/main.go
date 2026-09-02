@@ -72,8 +72,68 @@ func raceSyncWgNoEdge() int {
 	return r
 }
 
+// BUG-080 (U4, born-FAIL pins 2026-09-02 — the detector-soundness
+// differential's third-cell finding): gc's -race build instruments the
+// sync primitive's OWN state words — Mutex.Lock's CAS on m.state is an
+// atomic write, WaitGroup.Add reads its state word (`runtime.raceread`)
+// — so a plain access to a primitive IN USE by another goroutine is a
+// data race by mem#restrictions (non-atomic beside atomic) and TSan-red
+// (10/10 runs at GOMAXPROCS 1 and 8). The machine records NO access for
+// a sync op (Race.lean U4), so these racy programs run to a value: the
+// racy lane's every-path-refuses claim FAILS here until the atomic
+// access kind lands (Q-ATOMIC owner proposal §4 — the fix is that kind,
+// not a table entry: recording sync ops as plain writes would make two
+// legal contending Locks conflict).
+
+type raceSyncWgBox struct {
+	wg sync.WaitGroup
+	n  int
+}
+
+// Whole-struct overwrite of a struct holding a WaitGroup while the
+// child Adds/Dones on it: TSan "Read … runtime.raceread" (Add) vs the
+// overwrite. Members the machine sees: ok, or the negative-counter
+// panic when the overwrite lands between Add and Done — never race.
+func raceSyncWgOverwrite() int {
+	var w raceSyncWgBox
+	done := make(chan int)
+	go func() {
+		w.wg.Add(1)
+		w.wg.Done()
+		done <- 0
+	}()
+	w = raceSyncWgBox{}
+	<-done
+	return w.n
+}
+
+type raceSyncMuBox struct {
+	mu sync.Mutex
+	x  int
+}
+
+// Copy of a struct holding a Mutex while the child locks it: TSan
+// "Write … sync/atomic.CompareAndSwapInt32" (Lock) vs the copy's read.
+// The machine's copy carries state gc-faithfully (sync design §3) and
+// records a plain read of the struct cell only — no conflicting access
+// is recorded for the Lock, so the run completes with a value.
+func raceSyncMutexCopy() int {
+	var b raceSyncMuBox
+	done := make(chan int)
+	go func() {
+		b.mu.Lock()
+		b.mu.Unlock()
+		done <- 0
+	}()
+	c := b
+	<-done
+	return c.x
+}
+
 func main() {
 	raceSyncOneSide()
 	raceSyncRlockSerialized()
 	raceSyncWgNoEdge()
+	raceSyncWgOverwrite()
+	raceSyncMutexCopy()
 }

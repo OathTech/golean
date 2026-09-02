@@ -35,3 +35,9 @@ promoted-dispatch	racePromotedDispatch	-	race	-	goroutines,channels,interfaces,m
 # silent value run — carried by BUG-005 until the live-iteration
 # surgery lands (its footprint arm falls out of that fix).
 map-range-iter	raceMapRangeIter	-	race	-	goroutines,channels,maps,range,race	racy	-	width=4,sites=16,backedge=full
+# Q-RACEPATH (implemented 2026-09-02): the constant-index narrowing's
+# must-stay-racy direction — the narrowed element read still conflicts
+# with a same-element write (equal paths) and a whole-array write
+# (prefix overlap). A value member here means the narrowing over-reached.
+array-const-index-same-elem	raceArrayConstIndexSameElem	-	race	-	goroutines,channels,arrays,race	racy	-	width=4
+array-const-index-whole-write	raceArrayConstIndexWholeWrite	-	race	-	goroutines,channels,arrays,race	racy	-	width=4
