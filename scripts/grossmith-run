@@ -27,7 +27,7 @@
 #       (12 cases end-to-end through gengo -> diff-coverage -> verdicts;
 #       refuses on any harness-error / clone-infra)  ->  the leg, as K
 #       contiguous-seed CHUNKS each a published gengo batch (<label>/part-NN),
-#       each passed through the LEG GUARD (worker deaths, >50% infra,
+#       each passed through the LEG GUARD (worker deaths, infra at or above the pre-registered 1%,
 #       runner failures in the harness log => the leg FAILS LOUD, nothing
 #       triaged)  ->  the gc-386 control  ->  triage. One leg per
 #       invocation, so every leg's parameters are recorded verbatim in its
@@ -298,6 +298,8 @@ for k, v in sorted(c.items()):
     print(k or "(unjudged)", v)
 print("refRan", ran)
 print("total", tot)
+infra = sum(c[k] for k in ("clone-infra-failure", "harness-error", "reference-infra-failure", "both-infra-failure", ""))
+print("infraRate %d/%d = %.3f%%" % (infra, tot, (100.0 * infra / tot) if tot else 0.0))
 PY
 }
 
@@ -314,6 +316,7 @@ record_params() { # <prefix> <argv...>: verbatim provenance beside the batch(es)
     echo "  cwd for gengo:   $ROOT"
     echo "  TMPDIR/GOCACHE:  $TMPDIR / $GOCACHE"
     echo "  generator cfg:   gen.DefaultConfig(seed) {Vars:4 Stmts:14 Depth:2 ExprFuel:3 LoopCap:6 Swarm:true} + golean.Profile (NoObserve slice,map; Exclude observe_point,defer,recover) — recorded per case in case.json 'config'"
+    echo "  leg guard:       infra abort threshold ${INFRA_ABORT_PCT}% of the chunk (PRE-REGISTERED; clone-infra + harness-error + reference-infra + both-infra + unjudged); any worker-death row or runner-failure log text aborts regardless"
     echo "  gengo argv:      $*"
   } > "$prefix.params.txt"
 }
@@ -332,6 +335,12 @@ ARG_MAX_BYTES="$(getconf ARG_MAX 2>/dev/null || echo 131072)"
 # Half of ARG_MAX: the environment and pointer table count against it too.
 MAX_ROWS_PER_INVOCATION=$(( ARG_MAX_BYTES / 2 / ROWDIR_PATH_BYTES ))
 CHUNK_CEILING=4000
+# PRE-REGISTERED infra abort threshold (per cent of a chunk's cases that
+# are clone-infra / harness-error / reference-infra / both-infra /
+# unjudged). Recorded in every .params.txt BEFORE the chunk runs; the
+# rate itself is reported unconditionally. Campaign 3 ran under an
+# earlier 50 % form (report decision 0.8); its worst chunk was 0.025 %.
+INFRA_ABORT_PCT=1
 
 # leg_guard <batch-dir>: a published chunk whose verdicts are the RUNNER
 # failing, not the machine, must fail the leg LOUD and untriaged — a
@@ -346,12 +355,30 @@ leg_guard() {
   else
     echo "  LEG GUARD: no golean-work/diff-coverage.log in $b — the clone harness never ran" >&2; bad=1
   fi
-  local n dead infra
-  n="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]+"/batch.json"))["total"])' "$b")"
+  # batch.json is read, ASSIGNED, and only then checked: `local n="$(python3 …)"`
+  # masks python's exit status with local's, so a missing or malformed
+  # batch.json used to give n="" / infra="" and a guard that passed on
+  # nothing (audit fix G-2, 2026-09-02). Any parse failure fails the guard
+  # by name; the infra rate is printed and recorded UNCONDITIONALLY.
+  local n dead infra counts c_clone c_harness c_ref c_both c_unj rate_line
+  if ! n="$(python3 -c 'import json,sys; print(int(json.load(open(sys.argv[1]+"/batch.json"))["total"]))' "$b" 2>&1 | tail -n 1)" || [[ ! "$n" =~ ^[0-9]+$ ]]; then
+    echo "  LEG GUARD: cannot read $b/batch.json (total): ${n:-<empty>} — an unreadable batch is a runner failure, not a pass" >&2
+    return 1
+  fi
+  if ! counts="$(python3 -c 'import json,sys,collections; c=collections.Counter(x.get("verdict","") for x in json.load(open(sys.argv[1]+"/batch.json"))["cases"]); print(c["clone-infra-failure"], c["harness-error"], c["reference-infra-failure"], c["both-infra-failure"], c[""])' "$b" 2>&1 | tail -n 1)" || [[ ! "$counts" =~ ^[0-9]+(\ [0-9]+){4}$ ]]; then
+    echo "  LEG GUARD: cannot read $b/batch.json (verdicts): ${counts:-<empty>} — an unreadable batch is a runner failure, not a pass" >&2
+    return 1
+  fi
+  read -r c_clone c_harness c_ref c_both c_unj <<<"$counts"
+  infra=$(( c_clone + c_harness + c_ref + c_both + c_unj ))
   dead="$( [[ -f "$res" ]] && awk -F'\t' '$4=="harness" && $5 ~ /worker produced no result/' "$res" | wc -l || echo 0)"
-  infra="$(python3 -c 'import json,sys,collections; c=collections.Counter(x.get("verdict","") for x in json.load(open(sys.argv[1]+"/batch.json"))["cases"]); print(c["clone-infra-failure"]+c["harness-error"]+c[""])' "$b")"
+  rate_line="$(awk -v i="$infra" -v n="$n" -v p="$INFRA_ABORT_PCT" -v a="$c_clone" -v h="$c_harness" -v r="$c_ref" -v bo="$c_both" -v u="$c_unj" \
+    'BEGIN { printf "infra rate %d/%d = %.3f%% (clone-infra %d, harness-error %d, reference-infra %d, both-infra %d, unjudged %d); abort threshold %d%%", i, n, (n > 0 ? 100 * i / n : 0), a, h, r, bo, u, p }')"
+  echo "  LEG GUARD: $rate_line" >&2
+  [[ -f "$b.params.txt" ]] && echo "  leg guard:       $rate_line" >> "$b.params.txt"
+  if [[ "$n" -eq 0 ]]; then echo "  LEG GUARD: batch has 0 cases — nothing was judged" >&2; bad=1; fi
   if [[ "$dead" -gt 0 ]]; then echo "  LEG GUARD: $dead/$n rows are worker deaths ('worker produced no result') — the pool did not run them" >&2; bad=1; fi
-  if [[ "$n" -gt 0 && $(( infra * 2 )) -gt "$n" ]]; then echo "  LEG GUARD: $infra/$n cases are clone-infra/harness-error/unjudged (>50%) — mass infrastructure failure (starvation, timeouts, a dead binary), not a semantic result" >&2; bad=1; fi
+  if [[ "$n" -gt 0 && $(( infra * 100 )) -ge $(( n * INFRA_ABORT_PCT )) ]]; then echo "  LEG GUARD: $infra/$n cases are infra/unjudged — at or above the pre-registered ${INFRA_ABORT_PCT}% abort threshold: infrastructure failure (starvation, timeouts, a dead binary, a broken reference toolchain), not a semantic result" >&2; bad=1; fi
   return "$bad"
 }
 

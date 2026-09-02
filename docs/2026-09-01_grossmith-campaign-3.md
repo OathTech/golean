@@ -52,10 +52,10 @@ assessment (§7) and the cadence recommendation (§8) close the mandate.
 | 0.5 | Campaign 3 parameters pre-registered BEFORE any result existed (§3, committed at `3e3cca00`); the runs in §4 use exactly those seeds and sizes. | [AGENT] |
 | 0.6 | `deps/` populated in the lane worktree by `scripts/setup-deps --from <main checkout> --only go,goose,raft,grossmith` (local clones, gitignored); `.lake/` seeded from the main checkout's build tree (identical sources at `7cf19198`), then rebuilt by the capped `lake build` inside every `diff-coverage` run. | [AGENT] |
 | 0.7 | A leg runs as K contiguous-seed CHUNKS of at most 4,000 cases, each a separately published, `gengo -verify`-able batch (`<label>/part-NN`), because `diff-coverage` fans rows out through one argv (§4.1). The chunk bound is computed from the actual TMPDIR path length and ARG_MAX (C9) and refused when exceeded. | [AGENT] — response to the first m3a run |
-| 0.8 | LEG GUARD: a published chunk with any worker-death rows, more than 50 % clone-infra/harness-error/unjudged, or runner-failure text in the harness log ("Argument list too long", "worker pool exited nonzero", "lake build failed", "no results published") FAILS the leg with exit 2 and is NOT triaged. The smoke gets the same guard. | [AGENT] — a runner that returns 20,000 empty results is an infrastructure failure, not a campaign result |
+| 0.8 | LEG GUARD: a published chunk with any worker-death rows, more than 50 % clone-infra/harness-error/unjudged, or runner-failure text in the harness log ("Argument list too long", "worker pool exited nonzero", "lake build failed", "no results published") FAILS the leg with exit 2 and is NOT triaged. The smoke gets the same guard. **Revised 2026-09-02 (audit fix G-2; campaign 3 RAN under the 50 % form above):** the infra rate now also counts `reference-infra-failure` and `both-infra-failure`; the abort threshold is a PRE-REGISTERED **1 %** of the chunk (`INFRA_ABORT_PCT=1`, written into every `.params.txt` before the chunk runs); the rate is reported UNCONDITIONALLY — in the guard's output, each chunk's `.params.txt`, and the leg's `verdicts.txt` (`infraRate` line); and an unreadable or malformed `batch.json` FAILS the guard by name (the first cut's `local n="$(python3 …)"` masked python's exit status with `local`'s, so a broken `batch.json` gave `n=""`, empty `infra`, and a guard that passed on nothing). Campaign 3's ten valid chunks re-checked under the revised guard: all pass, max infra rate 1/4,000 = 0.025 % (`m3a-rerun/part-03`, the L-015 reference refusal); the failed first `m3a` still fails on every criterion. | [AGENT] — a runner that returns 20,000 empty results is an infrastructure failure, not a campaign result |
 | 0.9 | Campaign 3's legs all live under `artifacts/grossmith/2026-09-01/` (the campaign date) — the `m3pairs` leg started after midnight and was pointed there explicitly with `GOLEAN_GROSSMITH_ARTIFACTS`; the tool's default tree is date-keyed per invocation. | [AGENT] |
 | 0.10 | The runner refuses to start a leg while the documented box-wide build lock (`artifacts/build-lock.d`, `docs/operational-lessons.md`) exists in this worktree or the primary checkout. Note: no script implements that lock today — the check is a courtesy against the convention, not a mechanism. | [AGENT] — coordinator's request; the first m3a failure was NOT load (§4.1) |
-| 0.11 | Triage auto-class `machine-bug-candidate` for case_03110 (§5) is re-classified by hand to LATITUDE (recorded E5). The rule stays as written: a wrong-answer candidate with a self-stable oracle defaults to OURS until a human clears it against the record. | [AGENT] |
+| 0.11 | Triage auto-class `machine-bug-candidate` is overridden by hand to LATITUDE (recorded E5) for BOTH campaign-3 witnesses: `m3a-rerun/part-04/case_03110` (§5.2) AND `m3pairs/part-01/case_03079` (§5.0 — `artifacts/grossmith-m3pairs.log` ends with the pairs leg's `machine-bug-candidate 1`, and that row is case_03079). The first cut of this row logged only case_03110 (audit fix G-3). The rule stays as written: a wrong-answer candidate with a self-stable oracle defaults to OURS until a human clears it against the record; both overrides stand only as far as the E5 classification itself does — see the caveat at the head of §5. | [AGENT] |
 
 ---
 
@@ -265,6 +265,24 @@ Wall clocks were measured under a box load of 70–100 (other lanes'
 gates running concurrently); campaign 2's 18 min per 20k was on an
 idle box.
 
+**Base of the measurement (audit fix G-5).** The 39,800-judged /
+39,796-match measurement was taken against the machine at base
+`7cf19198` (the `golean:` line of every `part-NN.params.txt`); it has
+NOT been re-run at the rebased tip `e7d07b26`. Whether the intervening
+main commits reach grossmith's fragment is not assessed here — the
+number is a statement about `7cf19198`.
+
+**The 3,999-vs-4,000 row asymmetry in `m3a-rerun/part-03` (audit fix
+G-6).** `part-03/golean-work/results.tsv` has 3,999 rows for a
+4,000-case chunk. The missing row is `case_03428` (§5.1): its
+reference build failed, so gengo recorded `reference-infra-failure`
+as the verdict and never submitted the case to the clone harness —
+no results row exists for it BY DESIGN (there is no reference
+observation to compare against). `batch.json` is the complete
+record: 4,000 cases, `refRan` 3,999, 3,999 `match` + 1
+`reference-infra-failure`; the leg guard and the §4 table read
+`batch.json`, not `results.tsv`, for exactly this reason.
+
 Every case regenerates from `(e68867d6, seed)`; every chunk is a
 published gengo batch with `complete.json`, re-checkable offline with
 `gengo -verify <chunk>`. Records: `artifacts/grossmith/2026-09-01/
@@ -356,6 +374,36 @@ human re-class and disposition follow). Controls: every metamorphic
 statement below is the runner's `-N -l` re-run of the case's own
 `driver.go` compared to the recorded default-flags document; hand
 derivations were checked against the recorded observation values.
+
+**Classification caveat (audit fix G-3; [AGENT] note — the doctrine
+question is escalated to the [USER] by the coordinator, and NOTHING is
+re-labelled here).** The LATITUDE dispositions below inherit their
+classification from `docs/2026-08-11_latitude-inventory.md` as it
+stands, and that inheritance is UNDER REVIEW on two points. (i) **E5.**
+The inventory reads gc's early store (an earlier target written before
+a later right-hand operand panics) as a spec-legal member of a two-point
+latitude. The verifier observed that this sits against BUG-075's
+treatment of the SAME two-phase sentence (spec#Assignment_statements,
+applied to `return` through spec#Return_statements "like an
+assignment"): there the machine's own early store of result 1 before
+operand 2's panic was filed and fixed as a wrong-answer BUG — a forced
+point — while here gc's identical shape on an assignment is recorded as
+permitted. Both readings cannot hold of one sentence unless the
+assignment/return distinction is doing the work; until the [USER] rules,
+§5.0 and §5.2 are "latitude per the inventory as it stands", not
+settled, and the two decision-0.11 overrides carry the same caveat.
+(ii) **E13.** The inventory entry scopes itself to type assertions and
+index expressions ("a type assertion is none of these, and neither is
+an index expression") and does not name slice expressions, so §5.3's
+E13 classification of `case_01848` is a RECOMMENDED annotation (a new
+axis for the entry), not an application of it. One fact wants a probe
+row BEFORE annotating: on E13's own `bare-index` probe (`s[i], wit()`)
+gc ran the sibling call FIRST — the machine's order — whereas on
+`case_01848`'s string SLICE gc panicked BEFORE the sibling calls. Index
+and slice thus fall on opposite sides in gc; that is either more of
+E13's "the axes fall on opposite sides" evidence or a hint that slicing
+is a distinct point. A `"ab"[i:], wit(…)` probe beside `bare-index`
+decides which, and belongs in the annotation's evidence table.
 
 ### 5.0 `m3pairs/part-01/case_03079` (seed 6,003,079; forced pair `early_return+defined_types`) — observation-mismatch, `q5` (`v9 uint64`): machine 53, gc 34 → [machine-bug-candidate] → **re-classified LATITUDE: E5 again (second witness of the same point, the other leg)**
 
@@ -606,6 +654,12 @@ covered; its find was a shape the corpus never had). Recommendation,
 - `gengo -verify` on `m3a-rerun/part-04` and `m3pairs/part-01`: every
   case-input digest intact and bound to the manifest; report bound;
   report self-consistent; clone tree bound (4 of 4 claims, both chunks).
+  The in-campaign run behind this sentence left NO artifact (audit fix
+  G-4); it was re-run post-campaign on 2026-09-02 with the same
+  `2026-09-01/bin/gengo`, output saved at
+  `artifacts/grossmith/2026-09-01/verify-m3a-rerun-part-04.txt` and
+  `…/verify-m3pairs-part-01.txt` — 4,000 and 3,960 cases, exit 0, all
+  four claims printed.
 - `triage`: real batches (the failed `m3a`; the ten campaign-3 chunks;
   the 300-case 386 control); synthetic 2-case batch exercising both
   outcomes of the metamorphic attribution.
@@ -623,9 +677,57 @@ covered; its find was a shape the corpus never had). Recommendation,
   tracked baselines, no regression — and the plain `scripts/ci` then
   replayed it at the committed tree: PASS.
 
+**Failures during the lane, reported with output (audit fix G-4).**
+
+- **`scripts/grossmith-run` CRASHED during the live `m3a-rerun`**, after
+  all five chunks had been judged by gengo and each chunk's own
+  `triage.tsv`/`triage-groups.tsv` had been written, at the CROSS-CHUNK
+  triage merge. `artifacts/grossmith-m3a-rerun.log` ends:
+
+  ```
+  Traceback (most recent call last):
+    File "<stdin>", line 10, in <module>
+  ValueError: not enough values to unpack (expected 7, got 3)
+  EXIT=1
+  ```
+
+  Cause: `part-03.triage-groups.tsv`'s normalized-detail cell carried
+  gc's assembler message verbatim, including a literal newline and tab
+  (`… # grossmith-cases/case_ID⏎<autogenerated>:N: offset too large in
+  …`), so the merge's line-based 7-field split met a 3-field line. Fix
+  (in `7061c5c7`): `norm()` collapses `[\t\r\n]+` to one space, so dedup
+  keys and TSV cells are single-line (newline-safe keys); the triage was
+  then regenerated in ONE pass (`scripts/grossmith-run triage part-01 …
+  part-05`), producing the `triage-all.tsv`/`triage-groups-all.tsv` §5
+  cites. The §4 verdict counts come from `batch.json` (written by gengo
+  before any triage) and are unaffected; the crash cost the first-pass
+  leg merge, not a judgement. `m3pairs` ran after the fix to completion
+  (its log's `EXIT=1` is the documented "divergences found" code).
+- **`check-spec-anchors` FAILED on this report's own citation** in the
+  first plain `scripts/ci` at the tip — `artifacts/ci-plain.log` lines
+  26–28 (the offending anchor is spelled out in words here rather than
+  quoted verbatim, because the checker scans this report too and a
+  verbatim quote re-trips it — which it did, on the first draft of this
+  very bullet):
+
+  ```
+  UNRESOLVED docs/2026-09-01_grossmith-campaign-3.md:401: spec# + "Assignments" — no id="Assignments" in the pinned go_spec.html
+  UNRESOLVED docs/2026-09-01_grossmith-campaign-3.md:611: (the same anchor)
+  check-spec-anchors: FAIL — unresolved citations above (pin c19862e5f)
+  ```
+
+  The anchor had been written from memory as the bare section title;
+  the pinned spec's id is `Assignment_statements`. Corrected in the
+  committed report; the `--diff`
+  run and the second plain run (`artifacts/ci-diff.log`,
+  `artifacts/ci-plain2.log`) resolve every citation. That first log's
+  two baseline-diff FAILs are the fresh-worktree "no recorded run"
+  refusals the previous bullet describes, not regressions.
+
 Artifacts (gitignored): `artifacts/grossmith/2026-09-01/{bin/gengo,
 m3a/ (failed run, kept), m3a-rerun/, m3pairs/, *-smoke/,
-selftest-control386/, selftest-synthetic/, census-m3a-3000/}` and the
+selftest-control386/, selftest-synthetic/, census-m3a-3000/,
+verify-*.txt}` and the
 runner logs `artifacts/grossmith-m3a*.log`, `artifacts/grossmith-m3pairs.log`.
 Operational notes for the next operator: the tool's default artifacts
 tree is date-keyed per invocation (pin it with
