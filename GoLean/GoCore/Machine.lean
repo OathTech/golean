@@ -1013,13 +1013,19 @@ def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (nt : Nat)
             -- (MachineSound) states that the outcome CLASS of a spill is
             -- stream-independent, and a cap-based check would make it
             -- false. Consequence, recorded on R16: gc panics on a
-            -- SUPERSET — whenever newLen's bytes fit but its grown cap's
-            -- (≈1.25×) do not, gc panics where this arm allocates; that
-            -- band is an allocation-failure case of the register #7
-            -- rider (D-001), unreachable by the corpus (it needs an
-            -- existing >2^47-byte slice or `unsafe.Slice`; gc probe
-            -- append-growth-over-unsafe is the witness), and the in-
-            -- place path is never checked (gc calls no growslice there).
+            -- SUPERSET — gc panics iff capmem > maxAlloc with capmem =
+            -- roundupsize(nextslicecap(newLen, oldCap)·esize) ≥
+            -- newLen·esize, this arm iff newLen ≥ 2^63 ∨ newLen·esize >
+            -- 2^48 — so wherever newLen's bytes fit but the grown cap's
+            -- (≈1.25×) do not, gc raises a recoverable `runtime.Error`
+            -- where this arm allocates. That band is a DETERMINISTIC-
+            -- PANIC RESIDUAL of fidelity decision 5(b) (observed ∉
+            -- modeled; gc never reaches the allocator there, so it is
+            -- NOT an allocation failure and NOT under the register #7
+            -- rider), unreachable by the corpus (it needs an existing
+            -- >2^47-byte slice or `unsafe.Slice`; gc probe append-
+            -- growth-over-unsafe is the witness); the in-place path is
+            -- never checked (gc calls no growslice there).
             let elemSize ← tySizeBytes s.types elem
             if newLen ≥ intExclusiveUpperBound || newLen * elemSize > maxAllocBytes then
               panic "runtime error: growslice: len out of range"

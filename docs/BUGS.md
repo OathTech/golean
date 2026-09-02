@@ -4187,10 +4187,13 @@ envelope and 32-bit interaction recorded on R16) with a gc-layout size
 function transcribed from go/types `gcsizes.go`, failing closed on
 unsupported types. What is deliberately NOT modeled, and why, is on
 R16: behavior 1 (allocation failure of a request that passes the
-check — the D-001 residual), and the append band where gc's grown-cap
-check panics but the machine's newLen-based one allocates (the
-newLen decision is forced by `applyStmtOp_appendSlice_congr`, which
-states spill outcome class is choice-independent). Corpus rows are
+check — the D-001 residual, under the register #7 rider), and the
+append band where gc's grown-cap check raises a recoverable
+`runtime.Error` but the machine's newLen-based one allocates — a
+deterministic-panic residual of 5(b) itself, NOT an allocation failure
+and NOT a rider case (the newLen decision is forced by
+`applyStmtOp_appendSlice_congr`, which states spill outcome class is
+choice-independent; machine-panics ⊊ gc-panics there). Corpus rows are
 all just-over (gc panics); the just-under controls are fatal OOM in
 gc and eager-materialization grinds in the machine (BUG-078 residual
 (2)) — the one feasible control is `make(chan struct{}, 1<<62)`, whose

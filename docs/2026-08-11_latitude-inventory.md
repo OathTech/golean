@@ -1541,31 +1541,52 @@ runtime observable. OPEN QUESTION as stated.
   2^44+1 elements because the element is 16 bytes, not 9):
   `tySizeAlignFuel` transcribes `gcsizes.go` arm for arm, the `sync`
   primitives are `unsafe.Sizeof`-probed (8/24/16/12), and it FAILS
-  CLOSED on an unsupported or unknown type. The layout realization is
+  CLOSED on an unsupported or unknown type. Its fuel
+  (`typeResolutionFuel`, 1024) bounds type-nesting DEPTH only — one
+  unit per array element / defined-type indirection / struct level;
+  a struct's field list is walked by `structSizeAlignWith` at the
+  already-decremented fuel, so field COUNT is free (audit fix round F1,
+  2026-09-02: the first cut spent fuel once per FIELD and refused flat
+  structs of ≥1023 fields as "type nesting too deep" — downgrading,
+  for `make([]W, -1)`, gc's `makeslice: len out of range` panic to a
+  refusal; probe `fuelcliff` in the evidence dir, 1023- and 5000-field
+  structs, all four request shapes match gc post-fix). The layout realization is
   what the frontend's go/types Sizes config already assumes (R1's
   entanglement), now visible machine-side.
 - PLAUSIBLE ENVELOPE: any positive bound, with the panic-vs-clamp
   choice free per request class (a negative map hint has panicked in
   other gc runtimes; go1.26.5 clamps); on 32-bit gc the bound is
-  2^32-1 and moves WITH R1's width (an `int` cannot express a byte
-  count ≥ 2^31 there, so the slice panic is live only for element
-  sizes ≥ 2). A machine parameter `{maxAlloc, headerBytes, layout}` is
-  the honest shape; this row pins the gc linux/amd64 point, as R1 pins
-  the width.
+  2^32-1 and moves WITH R1's width (an `int` cannot express a length
+  ≥ 2^31 there, so the slice panic is live only for element sizes ≥ 3:
+  elemSize 2 gives at most 2·(2^31−1) = 2^32−2, not > 2^32−1; elemSize
+  3 first exceeds it — audit fix round F2 corrected "≥ 2"), and the
+  channel header is 64 bytes on 386 (4-byte words, rounded to maxAlign
+  8), not 112, so the channel threshold `maxAlloc − hchanSize` moves
+  too. A machine parameter `{maxAlloc, headerBytes, layout}` is the
+  honest shape; this row pins the gc linux/amd64 point, as R1 pins the
+  width.
 - TWO BEHAVIORS, ONE LIMIT (fidelity decision 5 [USER] 2026-08-31):
   behavior 2 — the request EXCEEDS the limit → deterministic panic — is
   MODELED here (5(b)); behavior 1 — the request passes the check and
   the allocation FAILS (fatal "out of memory", unrecoverable) — is NOT,
   and stays under doctrine register #7's rider (allocation-succeeding
   runs) toward discrepancy D-001's bounded-very-large memory model.
-  KNOWN-OUTSIDE BAND, recorded: `append`'s check is decided on the NEW
+  KNOWN-OUTSIDE BAND, recorded — a DETERMINISTIC-PANIC RESIDUAL of
+  5(b), NOT a rider case: `append`'s check is decided on the NEW
   LENGTH's byte size — choice-free, because `applyStmtOp_appendSlice_
   congr` (MachineSound) states the spill outcome CLASS is stream-
   independent and a cap-based check would falsify it — while gc's is
-  on the grown cap (≈1.25×): where newLen fits and the grown cap does
-  not, gc panics and the machine allocates. An allocation-failure case
-  of the rider, corpus-unreachable (it needs an existing >2^47-byte
-  slice or `unsafe.Slice`; gc witness: probe append-growth-over-unsafe).
+  on the grown cap: gc panics iff `capmem > maxAlloc` with `capmem =
+  roundupsize(nextslicecap(newLen, oldCap)·esize) ≥ newLen·esize`; the
+  machine panics iff `newLen ≥ 2^63 ∨ newLen·esize > 2^48`. So machine-
+  panics ⊊ gc-panics: where newLen fits and the grown cap (≈1.25×) does
+  not, gc raises a recoverable `runtime.Error` and the machine
+  allocates (observed ∉ modeled). gc never reaches the allocator there,
+  so the band is not an allocation failure and does not sit under
+  register #7's rider; it is the residual that scopes "behavior 2
+  MODELED" to "modeled except this band". Corpus-unreachable (it needs
+  an existing >2^47-byte slice or `unsafe.Slice`; gc witness: probe
+  append-growth-over-unsafe).
 - EVIDENCE: GC — the probe matrix `docs/evidence/2026-09-02_t5-maxalloc-
   probes/` (go1.26.5 linux/amd64; both sides of every boundary probed);
   corpus `builtins/make-maxalloc/*` (14 rows born PASS — slice len by
@@ -1948,7 +1969,15 @@ Nothing in this block is a class member by virtue of being named here.
   deterministic allocation-limit panic class — pinned to gc linux/amd64
   (bound 2^48, channel header 112, gc layout sizes), the R1 mold. A new
   row, not a movement; its 32-bit point rides R1's. Recording agent
-  [AGENT]; the modeling decision is the [USER]'s.
+  [AGENT]; the modeling decision is the [USER]'s. **Audit fix round
+  (2026-09-02, [AGENT]), body corrections only, no class movement:**
+  F1 — the size function's fuel now bounds nesting DEPTH only (the
+  first cut spent it per struct field; cliff at ≥1023 flat fields,
+  probe `fuelcliff`); F2 — the 32-bit slice panic is live from element
+  size 3, not 2, and 386's channel header is 64, not 112; F3 — the
+  `append` band re-classified from "an allocation-failure case of the
+  rider" to a deterministic-panic residual of 5(b) (gc raises a
+  recoverable `runtime.Error` there; it never reaches the allocator).
 
 - **(a), the 9 entries.** C6 owns two sites (L2 entry + arrival) and
   C8 rides C1's site, so 9 sites / 9 entries is not a coincidence of

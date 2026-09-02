@@ -231,8 +231,13 @@ check and then fails to ALLOCATE (fatal "out of memory" — behavior 1,
 the true-OOM class, which stays under the doctrine register #7 rider /
 discrepancy D-001, NOT modeled here). Plausible envelope: any positive
 bound (32-bit gc realizes `2^32 - 1`, tied to R1's width parameter: the
-two must move together — on 32-bit, `int` cannot even express a byte
-count ≥ 2^31, so the panic is live there only for element sizes ≥ 2).
+two must move together — on 32-bit, `int` cannot express a length
+≥ 2^31, so the slice panic is live there only for element sizes ≥ 3:
+elemSize 2 gives at most 2·(2^31−1) = 2^32−2, which is NOT > 2^32−1;
+elemSize 3 gives 3·(2^31−1) > 2^32−1. The channel header differs too —
+`hchanSize` is 64 on 386 (4-byte words, rounded to maxAlign 8), not
+112 — so the channel threshold is another parameter the R16 re-envelope
+must move with the width).
 TRANSFER CAVEAT: a claim that a given `make` panics (or does not)
 transfers only to 64-bit gc-layout targets; the rider on allocation-
 succeeding runs (register #7) still carries every allocation that
@@ -257,7 +262,31 @@ def intExclusiveUpperBound : Nat := 2 ^ 63
 def alignUpTo (offset align : Nat) : Nat :=
   if align == 0 then offset else (offset + align - 1) / align * align
 
-mutual
+/-- gc's struct layout (`gcSizes.Offsetsof` + `Sizeof`'s struct arm):
+fields in order, each at its alignment; the struct's alignment is the
+max field alignment; a ZERO-SIZE final field at a non-zero offset
+occupies one byte (`if offs > 0 && size == 0 { size = 1 }`, so
+`struct{a int64; z struct{}}` is 16 bytes, not 8); the total is rounded
+up to the struct's alignment. `fieldSize` is the size/alignment oracle
+for a field's TYPE — the caller passes `tySizeAlignFuel fuel types`
+with the fuel already decremented ONCE for the struct's nesting level
+(the `defaultFieldsWith` recipe), so this loop is structural on the
+field list and the field COUNT never consumes fuel (audit fix round F1,
+2026-09-02: the previous shared-fuel loop refused flat structs of ≥1023
+fields as "nesting too deep"). Accumulators: end offset of the fields
+laid so far, max alignment so far, and the LAST field's offset and size
+(the final-field rule needs both). Non-empty field lists only (the
+caller handles `struct{}` = (0, 1)). -/
+def structSizeAlignWith (fieldSize : Ty → Except GoError (Nat × Nat)) :
+    List FieldDef → Nat → Nat → Nat → Nat → Except GoError (Nat × Nat)
+  | [], _, maxAlign, lastOffset, lastSize =>
+      let lastSize := if lastOffset > 0 && lastSize == 0 then 1 else lastSize
+      pure (alignUpTo (lastOffset + lastSize) maxAlign, maxAlign)
+  | field :: rest, offset, maxAlign, _, _ => do
+      let (size, align) ← fieldSize field.typ
+      let fieldOffset := alignUpTo offset align
+      structSizeAlignWith fieldSize rest (fieldOffset + size) (max maxAlign align)
+        fieldOffset size
 
 /-- Size and alignment of a type in BYTES under gc's linux/amd64 layout
 (go/types `gcSizes` with WordSize 8, MaxAlign 8 — `deps/go/src/go/types/
@@ -266,9 +295,14 @@ struct sizes, `unsafe.Sizeof`-probed). The R16 pin's second half: the
 byte-size threshold is `elemSize × n`, so element LAYOUT is what places
 the boundary (make([]byte, n) panics from 2^48+1; []int64 from 2^45+1;
 []struct{int64; byte} — 16 bytes with padding — from 2^44+1). Fuel-
-bounded structural recursion (`typeResolutionFuel`), FAIL-CLOSED: an
-`.unsupported` type, an unknown defined type, an untyped integer kind or
-exhausted fuel is a cause-naming refusal, never a guessed size. -/
+bounded STRUCTURALLY on the fuel (`typeResolutionFuel`), and the fuel
+bounds type-nesting DEPTH only — one unit per array element / defined-
+type indirection / struct level; a struct's field list is walked by
+`structSizeAlignWith` at the already-decremented fuel, so field COUNT is
+free (no real Go type nests 1024 deep, and a 1024-field struct is
+ordinary). FAIL-CLOSED: an `.unsupported` type, an unknown defined
+type, an untyped integer kind or exhausted depth fuel is a cause-naming
+refusal, never a guessed size. -/
 def tySizeAlignFuel : Nat → TypeEnv → Ty → Except GoError (Nat × Nat)
   | 0, _, _ => unsupported "allocation-size computation: type nesting too deep"
   | fuel + 1, types, ty =>
@@ -293,7 +327,7 @@ def tySizeAlignFuel : Nat → TypeEnv → Ty → Except GoError (Nat × Nat)
         match TypeEnv.lookup types id with
         | some (.struct fields) =>
             if fields.isEmpty then pure (0, 1)
-            else structSizeAlignFuel fuel types fields.toList 0 1 0 0
+            else structSizeAlignWith (tySizeAlignFuel fuel types) fields.toList 0 1 0 0
         | some (.alias target) => tySizeAlignFuel fuel types target
         | some (.defined underlying) => tySizeAlignFuel fuel types underlying
         | some (.interfaceDef _) => pure (16, 8)
@@ -305,30 +339,6 @@ def tySizeAlignFuel : Nat → TypeEnv → Ty → Except GoError (Nat × Nat)
     | .sync .rwmutex => pure (24, 4)
     | .sync .waitGroup => pure (16, 8)
     | .sync .once => pure (12, 4)
-
-/-- gc's struct layout (`gcSizes.Offsetsof` + `Sizeof`'s struct arm):
-fields in order, each at its alignment; the struct's alignment is the
-max field alignment; a ZERO-SIZE final field at a non-zero offset
-occupies one byte (`if offs > 0 && size == 0 { size = 1 }`, so
-`struct{a int64; z struct{}}` is 16 bytes, not 8); the total is rounded
-up to the struct's alignment. Accumulators: end offset of the fields
-laid so far, max alignment so far, and the LAST field's offset and size
-(the final-field rule needs both). Non-empty field lists only (the
-caller handles `struct{}` = (0, 1)). -/
-def structSizeAlignFuel : Nat → TypeEnv → List FieldDef → Nat → Nat → Nat → Nat →
-    Except GoError (Nat × Nat)
-  | _, _, [], _, maxAlign, lastOffset, lastSize =>
-      let lastSize := if lastOffset > 0 && lastSize == 0 then 1 else lastSize
-      pure (alignUpTo (lastOffset + lastSize) maxAlign, maxAlign)
-  | 0, _, _ :: _, _, _, _, _ =>
-      unsupported "allocation-size computation: struct nesting too deep"
-  | fuel + 1, types, field :: rest, offset, maxAlign, _, _ => do
-      let (size, align) ← tySizeAlignFuel fuel types field.typ
-      let fieldOffset := alignUpTo offset align
-      structSizeAlignFuel fuel types rest (fieldOffset + size) (max maxAlign align)
-        fieldOffset size
-
-end
 
 /-- The byte size of a type under the R16 pin (`tySizeAlignFuel` at the
 standard fuel). -/

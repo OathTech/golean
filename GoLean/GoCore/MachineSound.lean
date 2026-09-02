@@ -2128,38 +2128,38 @@ theorem applyStmtOp_appendSlice_congr {σ : ExecState} {elem : Ty} {nt : Nat}
       subst hs
       refine exceptCong.ite_congr (fun _ => ?_) (fun _ => ?_)
       · exact rfl
-      refine exceptCong.bind_congr
-        (exceptCong.self_post (P := fun o : Array GoValue => o.size = slice.len)
-          (fun o ho => sliceVisibleValues_size ho))
-        fun oldValues oldValues' ho => ?_
-      obtain ⟨heq, holdsz⟩ := ho
-      subst heq
-      rcases hc1 : Choices.consume ch₁ 8 with ⟨e₁, r₁⟩
-      rcases hc2 : Choices.consume ch₂ 8 with ⟨e₂, r₂⟩
-      have hgrow : slice.len + elemValues.size
-          ≤ appendGrowthCap slice.cap (slice.len + elemValues.size) :=
-        appendGrowthCap_ge (by omega)
-      have hne : elemValues.size ≠ 0 := by omega
-      refine exceptCong.bind_congr
-        (buildAppendBackingValue_congr (by omega) (by omega) hne)
-        fun b₁ b₂ _ => ?_
-      have hkey : (Loc.base ⟨σ.nextAddr⟩ : Loc) ≠ Loc.rootLoc tloc := by
-        intro hkeq
-        have hroot := congrArg Loc.rootBase hkeq
-        simp only [Loc.rootBase, Loc.rootLoc] at hroot
-        simp only [Loc.locSup] at htloc
-        omega
-      refine exceptCong.bind_congr
-        (storeLoc_congr ?_ (l := tloc) ?_ ?_)
-        fun _ _ _ => ?_
-      · exact rfl
-      · show Heap.lookup (Heap.set σ.heap (.base ⟨σ.nextAddr⟩) _)
-            (Loc.rootLoc tloc)
-          = Heap.lookup (Heap.set σ.heap (.base ⟨σ.nextAddr⟩) _)
-            (Loc.rootLoc tloc)
-        rw [Heap.lookup_set_ne hkey, Heap.lookup_set_ne hkey]
-      · exact ⟨rfl, rfl, rfl⟩
-      · exact trivial
+      · refine exceptCong.bind_congr
+          (exceptCong.self_post (P := fun o : Array GoValue => o.size = slice.len)
+            (fun o ho => sliceVisibleValues_size ho))
+          fun oldValues oldValues' ho => ?_
+        obtain ⟨heq, holdsz⟩ := ho
+        subst heq
+        rcases hc1 : Choices.consume ch₁ 8 with ⟨e₁, r₁⟩
+        rcases hc2 : Choices.consume ch₂ 8 with ⟨e₂, r₂⟩
+        have hgrow : slice.len + elemValues.size
+            ≤ appendGrowthCap slice.cap (slice.len + elemValues.size) :=
+          appendGrowthCap_ge (by omega)
+        have hne : elemValues.size ≠ 0 := by omega
+        refine exceptCong.bind_congr
+          (buildAppendBackingValue_congr (by omega) (by omega) hne)
+          fun b₁ b₂ _ => ?_
+        have hkey : (Loc.base ⟨σ.nextAddr⟩ : Loc) ≠ Loc.rootLoc tloc := by
+          intro hkeq
+          have hroot := congrArg Loc.rootBase hkeq
+          simp only [Loc.rootBase, Loc.rootLoc] at hroot
+          simp only [Loc.locSup] at htloc
+          omega
+        refine exceptCong.bind_congr
+          (storeLoc_congr ?_ (l := tloc) ?_ ?_)
+          fun _ _ _ => ?_
+        · exact rfl
+        · show Heap.lookup (Heap.set σ.heap (.base ⟨σ.nextAddr⟩) _)
+              (Loc.rootLoc tloc)
+            = Heap.lookup (Heap.set σ.heap (.base ⟨σ.nextAddr⟩) _)
+              (Loc.rootLoc tloc)
+          rw [Heap.lookup_set_ne hkey, Heap.lookup_set_ne hkey]
+        · exact ⟨rfl, rfl, rfl⟩
+        · exact trivial
 
 /-- The full wide-op table's outcome class is choice-independent given
 bounded operands: everything but appendSlice is choices-free by

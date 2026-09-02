@@ -8,6 +8,31 @@ doctrine register #7 (`docs/2026-08-11_essence-of-go-doctrine.md`),
 BUG-081 / BUG-082 (`docs/BUGS.md`), corpus package
 `Corpus/coverage/exec/builtins/make-maxalloc/`.
 
+## Toolchain, tree and host (`docs/evidence/README.md` rules 3–5)
+
+- Oracle: `go version` → `go version go1.26.5 linux/amd64`, equal to the
+  pin in `baselines/go-oracle-pin` (`go1.26.5`). Machine tier: Lean
+  toolchain per `lean-toolchain` (`leanprover/lean4:v4.32.2`), golean
+  binary `.lake/build/bin/golean` built by `scripts/capped lake build`
+  from the trees named below.
+- Tree (rule 4): the gc probe matrix is oracle-only and does not depend
+  on repo state. The machine-side runs (Red-first below, and the
+  differential run behind the 15 corpus rows) were made on the
+  t5-maxalloc worktree BEFORE its commit — `git_commit` 0f3c05ff (the
+  branch base) with `git_dirty=true` in
+  `artifacts/coverage/latest.meta.tsv`, i.e. the slice's changes were
+  uncommitted at run time; they were committed unchanged as 73a26475
+  (branch tip at the pre-merge audit). The F1 fuel-cliff probe below
+  ran on the audit fix-round tree: 73a26475 plus the fix round's edits,
+  uncommitted at run time (dirty tree), committed as the commit that
+  adds that section (`git log -1 --format=%H -- <this README>`); the
+  gate `scripts/capped scripts/ci --diff` on the same tree: RESULT:
+  PASS, 2548 rows, 0 PASS→non-PASS.
+- Host (rule 5): linux/amd64, `vm.overcommit_memory=0`; every probe
+  under `scripts/capped` with `GOLEAN_MEM_MAX=4G` (the just-under
+  probes attempt a 256 TiB allocation). Nothing here is timing-
+  sensitive.
+
 ## The question
 
 gc panics DETERMINISTICALLY (a recoverable `runtime.Error`, not an OOM
@@ -56,10 +81,54 @@ process), selected by `os.Args[1]`; `report` recovers and prints the
 `runtime.Error` check, message and dynamic type. `unsafe.Slice` is used
 ONLY in the two append probes, to obtain a huge-length slice header
 without materializing memory (gc-only subject; the frontend refuses
-`unsafe`). Build: `go build -o <scratch>/probe probe/main.go`; run each
-under `GOLEAN_MEM_MAX=4G scripts/capped <scratch>/probe <name>` (the
-just-under probes attempt a 256 TiB allocation; the cap is the blast
-radius).
+`unsafe`). Commands: the Reproduction block below.
+
+## Reproduction (repo root; `docs/evidence/README.md` rule 2)
+
+```sh
+# scratch dir (docs/agent-sandbox.md); GOCACHE stays repo-local
+scratch="$(mktemp -d "${TMPDIR:-/tmp}/golean-maxalloc.XXXXXX")"
+export GO111MODULE=off GOCACHE="$PWD/artifacts/go-build-cache"
+
+# 1. gc probe matrix (the Results table)
+go build -o "$scratch/probe" docs/evidence/2026-09-02_t5-maxalloc-probes/probe/main.go
+for p in slice-len-over-var slice-len-over-const slice-len-eq-maxalloc \
+    slice-int64-over slice-int64-eq slice-int32-over slice-3byte-over slice-3byte-eq \
+    slice-cap-over slice-len-and-cap-over slice-len-gt-cap slice-len-neg slice-cap-neg \
+    slice-struct0-huge chan-byte-over chan-int64-over chan-struct0-huge chan-neg \
+    map-hint-over map-hint-neg append-growth-over-unsafe append-int64-over-unsafe \
+    append-newlen-overflow recover-error-iface uncaught sizes; do
+  GOLEAN_MEM_MAX=4G scripts/capped "$scratch/probe" "$p"
+done
+for off in 111 112 113; do GOLEAN_MEM_MAX=4G scripts/capped "$scratch/probe" chan-byte-n "$off"; done
+
+# 2. machine side of the corpus rows (the Red-first table): the frontend's
+#    wire for the fixture, run function by function
+scripts/capped lake build golean
+go run ./tools/nativefrontend --dir Corpus/coverage/exec/builtins/make-maxalloc --out "$scratch/wire.json"
+for fn in makeMaxAllocChanSizeOverByte makeMaxAllocChanSizeHeaderBoundary makeMaxAllocRecoverChanSize \
+    makeMaxAllocSliceLenOverByte makeMaxAllocSliceLenOverInt64 makeMaxAllocMapHintNegative \
+    makeMaxAllocMapHintOver makeMaxAllocChanZeroSizeElemHuge; do
+  GOLEAN_MEM_MAX=4G scripts/capped .lake/build/bin/golean native-json-run --input "$scratch/wire.json" --function "$fn"
+done
+#    (the "pre-slice binary" column used a golean built at 0f3c05ff the same way)
+
+# 3. the differential rows themselves
+scripts/coverage run --tag make   # or: scripts/diff-one builtins/make-maxalloc/<row>
+
+# 4. F1 fuel-cliff probe (the section below): generate, gc, machine
+docs/evidence/2026-09-02_t5-maxalloc-probes/probe/fuelcliff/gen.sh "$scratch/fuelcliff"
+go run ./tools/nativefrontend --dir "$scratch/fuelcliff" --out "$scratch/fuelcliff/wire.json"
+for fn in cliff1023MakeStore cliff1023MakeZero cliff1023MakeNeg cliff1023Append \
+    cliff5000MakeStore cliff5000MakeZero cliff5000MakeNeg cliff5000Append; do
+  st=ok; case "$fn" in *MakeNeg) st=panic;; esac
+  go run ./tools/coverageharness --input "$scratch/fuelcliff/main.go" --out "$scratch/fuelcliff/gorun-$fn" \
+    --subject "$fn" --expected-status "$st"
+  ( cd "$scratch/fuelcliff/gorun-$fn" && go run . )                     # gc column
+  GOLEAN_MEM_MAX=8G scripts/capped .lake/build/bin/golean native-json-run \
+    --input "$scratch/fuelcliff/wire.json" --function "$fn"              # machine column
+done
+```
 
 ## Results (go1.26.5 linux/amd64, 2026-09-02, overcommit_memory=0)
 
@@ -121,8 +190,10 @@ radius).
    corpus row. The machine's check is decided on the new length's byte
    size (the stream-independence theorem `applyStmtOp_appendSlice_congr`
    forbids a cap-based decision); gc's threshold is on the grown cap
-   (≈1.25×) — the band between is recorded on R16 as gc-panics/machine-
-   allocates, an allocation-failure case of the rider.
+   (≈1.25×) — the band between is recorded on R16 as gc-panics
+   (a recoverable `runtime.Error`) / machine-allocates: a deterministic-
+   panic residual of 5(b), not an allocation failure (gc never reaches
+   the allocator there) and so not a register #7 rider case.
 6. Layout matters: the threshold divides by gc's element size WITH
    padding (`struct{int64; byte}` is 16 bytes, so `make([]T, 1<<44+1)`
    panics; a 9-byte count would put the threshold at 1<<44·16/9). The
@@ -152,3 +223,41 @@ The map rows' pre-slice result is what exposed BUG-082's real shape:
 the machine arm's negative-hint panic could not have fired, because
 the frontend never lowers the hint. Raw log: this lane's scratch
 `red-first.txt` (gitignored; the table is the record).
+
+## F1 fuel-cliff probe (audit fix round, 2026-09-02)
+
+[AGENT] The pre-merge audit (finding F1, MEDIUM) found that the first
+cut of `tySizeAlignFuel`/`structSizeAlignFuel` spent the shared 1024
+`typeResolutionFuel` once per struct FIELD, not per nesting level, so a
+flat struct of ≥1023 byte fields made every `make([]W, n)` / spilling
+`append` refuse "allocation-size computation: type nesting too deep" —
+including `make([]W, -1)`, where gc's `makeslice: len out of range`
+panic was downgraded to a refusal (observed ∉ modeled; the pre-slice
+machine at 0f3c05ff matched gc on all four shapes). Fix: the field
+loop is `structSizeAlignWith`, structural on the field list at the
+already-decremented fuel (the `defaultFieldsWith` recipe), so the fuel
+bounds nesting DEPTH only. Subject: `probe/fuelcliff/gen.sh` (the
+generated `main.go` is not tracked; the script is its producer of
+record) — `W1023` / `W5000`, structs of that many `byte` fields, four
+request shapes each. Machine columns: golean built from 73a26475
+("pre-fix", the audited tip) and from 73a26475 + this fix round
+("post-fix"); gc via `tools/coverageharness` + `go run` exactly as the
+differential runner does (Reproduction step 4).
+
+| subject | request | gc (go1.26.5) | pre-fix machine (73a26475) | post-fix machine |
+|---|---|---|---|---|
+| cliff1023MakeStore | `make([]W1023, 2)`, `s[1].f0 = 7` | ok 27 | unsupported "type nesting too deep" | ok 27 |
+| cliff1023MakeZero | `make([]W1023, 0)` | ok 0 | unsupported (same) | ok 0 |
+| cliff1023MakeNeg | `n := -1; make([]W1023, n)` | PANIC `runtime error: makeslice: len out of range` | unsupported (same) — a gc panic DOWNGRADED to a refusal | panic `runtime error: makeslice: len out of range` |
+| cliff1023Append | `append(nil []W1023, W1023{})` | ok 1 | unsupported (same) | ok 1 |
+| cliff5000MakeStore | `make([]W5000, 2)`, `s[1].f0 = 7` | ok 27 | unsupported (same) | ok 27 |
+| cliff5000MakeZero | `make([]W5000, 0)` | ok 0 | unsupported (same) | ok 0 |
+| cliff5000MakeNeg | `n := -1; make([]W5000, n)` | PANIC `makeslice: len out of range` | unsupported (same) | panic `runtime error: makeslice: len out of range` |
+| cliff5000Append | `append(nil []W5000, W5000{})` | ok 1 | unsupported (same) | ok 1 |
+
+Conclusion: post-fix, all eight shapes match gc; field count no longer
+consumes fuel; the depth refusal stays cause-naming ("type nesting too
+deep") and is now accurate. No corpus row moved (the corpus has no
+≥1023-field struct — the differential re-run in the fix round is the
+check, `scripts/capped scripts/ci --diff`, RESULT: PASS at 2548 rows).
+
