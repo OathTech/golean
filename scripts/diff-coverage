@@ -340,7 +340,22 @@ report_fail() {
 # previously the file was created empty up front and a dead worker's
 # case vanished from the TSV silently.
 run_case() {
-  local rowfile="$1"
+  local rowfile="${1:-}"
+  # Refuse an empty or non-file row path BY NAME (grossmith ARG_MAX
+  # finding, 2026-09-02, docs/evidence/2026-09-02_diffcov-argmax/):
+  # when the old `ls "$ROWDIR"/*.in | xargs` fan-out died E2BIG, GNU
+  # xargs (no -r) still ran the command ONCE on its empty stdin, so this
+  # function ran as run_case "" — CASE_OUT became ".out.tmp" in the CWD
+  # (the repo root), the read of "" failed, a manifest-error row for
+  # id "" was FABRICATED and mv'd to a stray `.out` beside the sources.
+  # A row path that is not a readable file is a fan-out defect, never a
+  # case result: write nothing, return nonzero so the pool's exit
+  # status carries it (the assembler then refuses to publish a
+  # result-less run).
+  if [[ -z "$rowfile" || ! -f "$rowfile" ]]; then
+    echo "diff-coverage: run_case invoked with ${rowfile:+a non-file row path '$rowfile'}${rowfile:-an EMPTY row path} — refusing (fan-out defect, not a case result; no row written)" >&2
+    return 2
+  fi
   CASE_OUT="${rowfile%.in}.out.tmp"
   : > "$CASE_OUT"
   run_case_rows "$rowfile"
@@ -1362,13 +1377,63 @@ export -f run_case run_case_rows run_with_timeout lean json_string_literal \
 # timeout drift was indistinguishable from a real one after the fact).
 printf 'jobs\t%s\n' "$GOLEAN_COVERAGE_JOBS" >> "$META_TMP"
 
+# Fan-out exit statuses are CAPTURED, not discarded (grossmith ARG_MAX
+# finding, 2026-09-02, docs/evidence/2026-09-02_diffcov-argmax/). The
+# previous shape, `ls "$ROWDIR"/*.in | xargs -P N -n 1 …`, expanded the
+# glob inside bash but handed it to `ls` as ONE execve argument vector:
+# past ARG_MAX (2 MiB here) execve failed E2BIG — `ls: Argument list too
+# long` — at 11,817 rows under a 130-byte TMPDIR (168-byte per-file
+# paths; measured by bisection, docs/evidence/2026-09-02_diffcov-argmax/
+# mechanism.log) and ≈24k at this box's 68-byte per-file paths (derived
+# from ARG_MAX/(path+1+8)); the cliff moves with TMPDIR length and
+# nothing checked it. xargs then saw EMPTY stdin and, lacking -r, ran the
+# command once as run_case "" (see the guard there); `|| echo WARNING`
+# absorbed the nonzero pool exit; the assembler wrote case_count
+# per-row `worker produced no result` FAILs and PUBLISHED them — one
+# global failure misattributed row-for-row as N independent worker
+# deaths. `find -print0` streams the names (no argv bound at all);
+# `xargs -0 -r` runs nothing on empty input; the statuses are recorded
+# in the meta and the assembler below distinguishes "no results at all"
+# (infrastructure, exit 2, nothing published) from scattered deaths
+# (per-row fail-closed, as before). The serial path (bash for-loop, no
+# execve of the list) was never exposed; it records its statuses too.
+enum_status=0
+pool_status=0
 if [[ "$GOLEAN_COVERAGE_JOBS" -le 1 ]]; then
   for f in "$ROWDIR"/*.in; do
-    run_case "$f"
+    run_case "$f" || pool_status=$?
   done
 else
-  ls "$ROWDIR"/*.in | xargs -P "$GOLEAN_COVERAGE_JOBS" -n 1 bash -c 'run_case "$1"' _ \
-    || echo "diff-coverage: WARNING — worker pool exited nonzero; unclassified cases fail closed below" >&2
+  find "$ROWDIR" -maxdepth 1 -name '*.in' -print0 \
+    | xargs -0 -r -P "$GOLEAN_COVERAGE_JOBS" -n 1 bash -c 'run_case "$1"' _
+  _ps=("${PIPESTATUS[@]}")
+  enum_status="${_ps[0]}"
+  pool_status="${_ps[1]}"
+  unset _ps
+fi
+if [[ "$enum_status" -ne 0 || "$pool_status" -ne 0 ]]; then
+  echo "diff-coverage: WARNING — row fan-out exited nonzero (find=$enum_status xargs=$pool_status; xargs 123 = a worker exited 1-125, 125 = a worker was killed by a signal, 1 = xargs itself failed); rows without a result fail closed below, and a run with NO results at all refuses to publish" >&2
+fi
+printf 'fanout_find_exit\t%s\nfanout_pool_exit\t%s\n' "$enum_status" "$pool_status" >> "$META_TMP"
+
+# Global-vs-scattered (same finding): NO row with a result while the
+# manifest had rows is ONE failure of the fan-out (enumerator or pool
+# never ran a worker), not case_count independent worker deaths — the
+# old assembler published it as case_count per-row `worker produced no
+# result` FAILs, row-for-row indistinguishable from real scattered
+# deaths. Zero results is an INFRASTRUCTURE state: exit 2 before
+# publish, keeping "exit >= 2 => nothing published". Scattered deaths
+# (some rows have results) keep the per-row fail-closed rows below.
+result_count=0
+for f in "$ROWDIR"/*.in; do
+  if [[ -s "${f%.in}.out" ]]; then
+    result_count=$((result_count + 1))
+  fi
+done
+if [[ "$case_count" -gt 0 && "$result_count" -eq 0 ]]; then
+  echo "diff-coverage: fan-out produced NO results for any of $case_count manifest rows (find=$enum_status xargs=$pool_status jobs=$GOLEAN_COVERAGE_JOBS) — a single global fan-out failure, not $case_count worker deaths; nothing published" >&2
+  rm -rf "$ROWDIR"
+  exit 2
 fi
 
 pass_count=0

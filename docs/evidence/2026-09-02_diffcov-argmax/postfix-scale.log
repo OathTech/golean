@@ -1,0 +1,23 @@
+# postfix-scale.log — produced by docs/evidence/2026-09-02_diffcov-argmax/repro.sh postfix
+# host: Linux x86_64; ARG_MAX=2097152; go version go1.26.5 linux/amd64; commit e7d07b26 (dirty tree:  M scripts/diff-coverage  M scripts/test-lane-validation )
+# TMPDIR used for the runner: 130 bytes
+
+runner: scripts/diff-coverage (working tree); same 19999-row manifest, TMPDIR=artifacts/argmax-scratch/taaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa (130 bytes), GOLEAN_COVERAGE_JOBS=8
+
+exit code: 1   (1 expected: every row is a REAL per-row manifest-stage FAIL by construction)
+--- stderr:
+--- stray .out in repo root:
+  ls: cannot access '.out': No such file or directory
+--- published results at artifacts/argmax-scratch/art-postfix:
+  rows total (excl. header): 19999
+  rows 'worker produced no result': 0
+  rows 'too many tab-separated fields' (the constructed per-row fail): 19999
+  distinct ids: 19999
+  first 2 + last row:
+    FAIL	argmax-000001	maps,range,keys,loops,nondet	manifest	too many tab-separated fields
+    FAIL	argmax-000002	maps,range,keys,loops,nondet	manifest	too many tab-separated fields
+    FAIL	argmax-019999	maps,range,keys,loops,nondet	manifest	too many tab-separated fields
+  meta fan-out keys:
+    jobs	8
+    fanout_find_exit	0
+    fanout_pool_exit	0

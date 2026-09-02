@@ -195,28 +195,29 @@ expect_accept "membership row with a status-diverse envelope" \
 # results row and then exited 2. A missing go FAILS here, never
 # skips: diff-coverage's own go check sits below the up-front rm, so
 # without go all four fixtures would pass vacuously.
+# Shared by Part A2 (G1-G4) and Part B (G5).
+seed_stale_results() {
+  mkdir -p "$1"
+  printf 'result\tid\tfeatures\tstage\tdetail\nPASS\tstale/one\tx\t-\t-\n' > "$1/latest.tsv"
+  printf 'key\tvalue\nmanifest_sha256\tdeadbeef\n' > "$1/latest.meta.tsv"
+}
+check_no_publish() {
+  local name="$1" rc="$2" art="$3"
+  if [ "$rc" -ne 2 ]; then
+    echo "FAIL: $name: no-publish infra failure exited $rc, want 2"
+    fail=1
+  elif [ -e "$art/latest.tsv" ] || [ -e "$art/latest.meta.tsv" ]; then
+    echo "FAIL: $name: dead run left readable results/meta in $art"
+    fail=1
+  else
+    echo "ok: $name"
+  fi
+}
 if ! command -v go >/dev/null 2>&1; then
   echo "FAIL: gate-integrity fixtures G1-G4 need go on PATH (without it they would pass vacuously at diff-coverage's own go check — failing closed instead of skipping)"
   fail=1
 else
   G_DIR="Corpus/coverage/exec/maps/range-first-key"
-  seed_stale_results() {
-    mkdir -p "$1"
-    printf 'result\tid\tfeatures\tstage\tdetail\nPASS\tstale/one\tx\t-\t-\n' > "$1/latest.tsv"
-    printf 'key\tvalue\nmanifest_sha256\tdeadbeef\n' > "$1/latest.meta.tsv"
-  }
-  check_no_publish() {
-    local name="$1" rc="$2" art="$3"
-    if [ "$rc" -ne 2 ]; then
-      echo "FAIL: $name: no-publish infra failure exited $rc, want 2"
-      fail=1
-    elif [ -e "$art/latest.tsv" ] || [ -e "$art/latest.meta.tsv" ]; then
-      echo "FAIL: $name: dead run left readable results/meta in $art"
-      fail=1
-    else
-      echo "ok: $name"
-    fi
-  }
   FAKEBIN="$TMP/fakebin-fail"
   mkdir -p "$FAKEBIN"
   printf '#!/bin/sh\necho "fake lake: refusing to build" >&2\nexit 1\n' > "$FAKEBIN/lake"
@@ -328,6 +329,74 @@ if [ "$WITH_GO" -eq 1 ]; then
     else
       echo "FAIL: racy lane with width=1 did not fail at the site-bound check; row: ${row:-<none>}"
       fail=1
+    fi
+
+    # G5 (grossmith ARG_MAX finding, 2026-09-02; red-first record in
+    # docs/evidence/2026-09-02_diffcov-argmax/): "fan-out never ran =>
+    # nothing published". The old fan-out, `ls "$ROWDIR"/*.in | xargs`,
+    # died E2BIG past ARG_MAX (measured: 11,817 rows under a 130-byte
+    # TMPDIR; main's 2,526 rows were safe by accident), fed
+    # xargs EMPTY stdin, and GNU xargs without -r ran the worker ONCE
+    # with no argument: run_case "" fabricated a manifest-error row and
+    # left a stray `.out` in the repo root; the assembler then PUBLISHED
+    # case_count per-row `worker produced no result` FAILs (exit 1) —
+    # one global failure misattributed as N worker deaths. The fake
+    # xargs here reproduces exactly that xargs behaviour (drain stdin,
+    # strip the option words, exec the command once with no argument)
+    # independently of how the row list is enumerated, so the fixture
+    # bites on the assembler's global-vs-scattered check AND on
+    # run_case's empty-argument guard. Required: exit 2, nothing
+    # published, no stray `.out` in the repo root, and BOTH named
+    # causes on stderr — exit 2 + no publish alone is what every
+    # earlier infra exit also produces, so without the message check
+    # this would pass vacuously (e.g. at the missing-binary exit).
+    # Placed in Part B, not A2, for the same reason: it must get PAST
+    # the build and binary check, and the fast-gate lane step runs
+    # before the core build.
+    FAKEBIN_G5="$TMP/fakebin-xargs-no-r"
+    mkdir -p "$FAKEBIN_G5"
+    cat > "$FAKEBIN_G5/xargs" <<'EOF'
+#!/bin/bash
+# fake xargs: GNU xargs WITHOUT -r on empty stdin — run the command
+# once with no argument (test-lane-validation G5). MUST be bash, not
+# sh: dash drops the BASH_FUNC_* exported functions from the
+# environment on exec, and the worker would then die 127
+# (run_case: command not found) before reaching the guard under test.
+cat >/dev/null
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -0|-r) shift ;;
+    -P|-n) shift 2 ;;
+    *) break ;;
+  esac
+done
+exec "$@"
+EOF
+    chmod +x "$FAKEBIN_G5/xargs"
+    ART_G5="$TMP/artifacts-g5"
+    seed_stale_results "$ART_G5"
+    printf 'lane-g5a\t%s\trangeFirstKey\t-\tok\tmaps,range,keys,loops,nondet\t-\tmembership\twhy\twidth=16\nlane-g5b\t%s\trangeFirstKey\t-\tok\tmaps,range,keys,loops,nondet\t-\tmembership\twhy\twidth=16\n' "$GO_DIR" "$GO_DIR" > "$TMP/manifest-g5.tsv"
+    if [ -e "$ROOT/.out" ]; then
+      echo "FAIL: G5 precondition: a stray $ROOT/.out already exists (run_case \"\" fabrication residue?) — remove it and re-run"
+      fail=1
+    fi
+    PATH="$FAKEBIN_G5:$PATH" GOLEAN_COVERAGE_JOBS=2 GOLEAN_COVERAGE_ARTIFACTS="$ART_G5" \
+      scripts/diff-coverage "$TMP/manifest-g5.tsv" >/dev/null 2>"$TMP/g5.stderr"
+    rc=$?
+    check_no_publish "fan-out that ran no worker exits 2 without publishing (G5)" $rc "$ART_G5"
+    if ! grep -q "fan-out produced NO results for any of 2 manifest rows" "$TMP/g5.stderr"; then
+      echo "FAIL: G5: the global fan-out refusal did not name its cause on stderr; stderr was:"
+      sed 's/^/    /' "$TMP/g5.stderr"
+      fail=1
+    elif ! grep -q "run_case invoked with an EMPTY row path" "$TMP/g5.stderr"; then
+      echo "FAIL: G5: run_case accepted an empty row path (no refusal on stderr)"
+      fail=1
+    elif [ -e "$ROOT/.out" ]; then
+      echo "FAIL: G5: run_case \"\" left a stray $ROOT/.out (fabricated row)"
+      rm -f "$ROOT/.out"
+      fail=1
+    else
+      echo "ok: G5 named both causes (global fan-out refusal + empty-row guard), no stray .out"
     fi
 
   fi

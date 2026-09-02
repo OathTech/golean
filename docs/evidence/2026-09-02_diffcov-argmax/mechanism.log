@@ -1,0 +1,24 @@
+# mechanism.log — produced by docs/evidence/2026-09-02_diffcov-argmax/repro.sh mechanism
+# host: Linux x86_64; ARG_MAX=2097152; go version go1.26.5 linux/amd64; commit e7d07b26 (dirty tree:  M scripts/diff-coverage  M scripts/test-lane-validation )
+# TMPDIR used for the runner: 130 bytes
+
+fake ROWDIR: artifacts/argmax-scratch/taaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/golean-coverage-rows.MECHXX
+per-file path length: 168 bytes; files: 19999
+argv estimate: N * (path + NUL + 8-byte pointer) = 3539823 bytes vs ARG_MAX 2097152
+
+--- (1) the old enumerator, bash: ls "$ROWDIR"/*.in | wc -l
+docs/evidence/2026-09-02_diffcov-argmax/repro.sh: line 66: /usr/bin/ls: Argument list too long
+0
+--- (2) the old fan-out shape: ls ... | xargs -P 4 -n 1 sh -c 'echo INVOKED arg=<$1>' _
+docs/evidence/2026-09-02_diffcov-argmax/repro.sh: line 68: /usr/bin/ls: Argument list too long
+INVOKED arg=<>
+pipeline statuses (ls xargs): 126 0
+--- (3) same with xargs -r: invocations =
+docs/evidence/2026-09-02_diffcov-argmax/repro.sh: line 71: /usr/bin/ls: Argument list too long
+0
+--- (4) the new fan-out shape: find -print0 | xargs -0 -r -P 4 -n 1 … invocations =
+19999
+
+--- (5) measured cliff at this path length (bisection on the largest k for which 'ls <k paths>' execs):
+path length 168 bytes: ls succeeds at k=11817, fails (E2BIG) at k=11818
+predicted from ARG_MAX/(path+1+8) = 11848 (environment bytes also count against ARG_MAX)

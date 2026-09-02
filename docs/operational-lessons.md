@@ -194,3 +194,35 @@ recorded residual, honest wall-clock kill, lifted with the owed
 linear normalize. Lesson: a budget's docstring states WHICH path
 each number was measured on; a number without its path is not a
 derivation.
+
+## ARG_MAX is a cliff whose height is set by TMPDIR length; one dead fan-out must not look like N dead workers
+
+`scripts/diff-coverage` fanned rows out as `ls "$ROWDIR"/*.in | xargs
+-P N …`: the glob expanded inside bash but reached `ls` as ONE execve
+argument vector. Linux bounds that vector by ARG_MAX (2 MiB here,
+`getconf ARG_MAX`; strings + NUL + an 8-byte pointer each, environment
+included), so the runner had a hidden row ceiling that MOVED WITH THE
+LENGTH OF TMPDIR: 19,999 rows under a 130-byte TMPDIR is ~3.5 MB of
+argv and died `ls: Argument list too long` (grossmith campaign,
+2026-09-02, verified by its auditor; red-first record
+`docs/evidence/2026-09-02_diffcov-argmax/`); main's 2,526 rows at this
+box's 68-byte per-file paths were ~220 KB — safe by accident: the
+cliff is 11,817 rows at a 130-byte TMPDIR (168-byte per-file paths;
+bisection, the evidence dir's mechanism.log) and ≈24k at 68 bytes
+(ARG_MAX/(path+1+8), derived not measured), and nothing checked either
+number. Three fail-open behaviours composed on top: GNU xargs
+without `-r` runs its command ONCE on empty stdin, so `run_case ""`
+FABRICATED a manifest-error row for id "" and mv'd a stray `.out` into
+the repo root; `|| echo WARNING` absorbed the pool's exit; and the
+assembler wrote `FAIL <id> … worker produced no result` for every row
+and PUBLISHED them — a single global failure attributed per case,
+row-for-row indistinguishable from 19,999 independent worker deaths.
+Remedies: never pass a file list through execve — `find -print0 |
+xargs -0 -r` streams it; capture every pipeline status (`PIPESTATUS`)
+and record it in the meta rather than discarding it; and make the
+assembler tell "NO row has a result" (one infrastructure failure: exit
+2, nothing published) from "SOME rows have none" (per-row fail-closed
+rows). Lesson: a per-case fail-closed row is only honest when the
+failure was per-case; a global failure rendered as N local ones is a
+misattribution, and an `xargs` without `-r` is a fabrication waiting
+for an empty pipe. Fixture: `scripts/test-lane-validation` G5.

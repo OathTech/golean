@@ -1,0 +1,17 @@
+# postfix-emptypool.log — produced by docs/evidence/2026-09-02_diffcov-argmax/repro.sh postfix
+# host: Linux x86_64; ARG_MAX=2097152; go version go1.26.5 linux/amd64; commit e7d07b26 (dirty tree:  M scripts/ci  M scripts/diff-coverage  M scripts/test-lane-validation )
+# TMPDIR used for the runner: 130 bytes
+
+runner: scripts/diff-coverage (working tree); 2 valid rows; PATH-shadowed xargs = 'GNU xargs without -r on empty stdin' (run the command once, no argument); stale results pre-seeded
+
+exit code: 2   (2 expected: infrastructure, nothing published)
+--- stderr:
+  diff-coverage: run_case invoked with an EMPTY row path — refusing (fan-out defect, not a case result; no row written)
+  diff-coverage: WARNING — row fan-out exited nonzero (find=0 xargs=2; xargs 123 = a worker exited 1-125, 125 = a worker was killed by a signal, 1 = xargs itself failed); rows without a result fail closed below, and a run with NO results at all refuses to publish
+  diff-coverage: fan-out produced NO results for any of 2 manifest rows (find=0 xargs=2 jobs=2) — a single global fan-out failure, not 2 worker deaths; nothing published
+--- stray .out in repo root:
+  ls: cannot access '.out': No such file or directory
+--- artifacts dir after the run (stale pair must be GONE):
+  total 8
+  drwxrwxr-x 2 1000 1000 4096 Sep  2 02:39 .
+  drwxrwxr-x 8 1000 1000 4096 Sep  2 02:39 ..

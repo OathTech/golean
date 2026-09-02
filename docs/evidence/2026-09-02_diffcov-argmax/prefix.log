@@ -1,0 +1,49 @@
+# prefix.log — produced by docs/evidence/2026-09-02_diffcov-argmax/repro.sh prefix
+# host: Linux x86_64; ARG_MAX=2097152; go version go1.26.5 linux/amd64; commit e7d07b26 (dirty tree:  M scripts/diff-coverage  M scripts/test-lane-validation ?? scripts/.diff-coverage-prefix )
+# TMPDIR used for the runner: 130 bytes
+
+runner: scripts/diff-coverage as of e7d07b26 (git show, materialised at scripts/.diff-coverage-prefix)
+manifest: 19999 rows; TMPDIR=artifacts/argmax-scratch/taaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa (130 bytes); GOLEAN_COVERAGE_JOBS=8
+
+exit code: 1   (1 = 'FAIL rows exist, published results ARE authoritative')
+--- stderr:
+  scripts/.diff-coverage-prefix: line 1370: /usr/bin/ls: Argument list too long
+  environment: line 2: : No such file or directory
+  diff-coverage: WARNING — worker pool exited nonzero; unclassified cases fail closed below
+--- stdout (first 12 lines):
+  building Lean executable...
+  Build completed successfully (58 jobs).
+  native frontend: per-case type-check + emit (no batch export)
+  FAIL		unknown	stage=manifest	detail=expected 10 tab-separated fields
+  
+  differential coverage summary: cases=19999 pass=0 fail=19999 export_status=0
+  results: artifacts/argmax-scratch/art-prefix/latest.tsv
+  metadata: artifacts/argmax-scratch/art-prefix/latest.meta.tsv
+--- (i) stray file in the repo root (run_case "" → CASE_OUT=.out.tmp → mv .out):
+  -rw-rw-r-- 1 1000 1000 56 Sep  2 02:38 .out
+  content: FAIL^I^Iunknown^Imanifest^Iexpected 10 tab-separated fields$
+--- (iii) published results at artifacts/argmax-scratch/art-prefix:
+  latest.meta.tsv
+  latest.tsv
+  rows total (excl. header): 19999
+  rows 'worker produced no result': 19999
+  first 3 + last row:
+    FAIL	argmax-000001	unknown	harness	worker produced no result
+    FAIL	argmax-000002	unknown	harness	worker produced no result
+    FAIL	argmax-000003	unknown	harness	worker produced no result
+    FAIL	argmax-019999	unknown	harness	worker produced no result
+  meta:
+    key	value
+    frontend	native
+    manifest	artifacts/argmax-scratch/manifest-argmax.tsv
+    manifest_sha256	28d10c47825a41eb461649c65281363c16635add40539da60e9eeae06df16945
+    manifest_cases	19999
+    total_corpus_cases	unknown
+    full_run	unknown
+    filters	unknown
+    git_commit	e7d07b266516d161d5060d9d6e537ced8b697697
+    git_dirty	true
+    go_toolchain	go1.26.5
+    go_drift_allowed	0
+    go_drift_actual	false
+    jobs	8
