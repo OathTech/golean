@@ -203,11 +203,16 @@ write a bare "#6"/"#7".
    frontier refusals, 11 budget — all gc-green in 10 runs, but
    "uncertified" is the honest label, never DRF), and the probe leg
    showed the converse (two races the 10-run TSan sampler never
-   realized, refused by the enumerator); (iii) U5 — TSan's overwrite-
-   Release reports a go_mem-DRF owner-free-unlock program (7/10 runs)
-   that the machine's memory-model merge orders: an ORACLE-vs-spec
-   divergence, not SC-given-to-a-racy-program, posed as ruling Q-U5
-   (report §3.3). U2 is CONFIRMED benign on the pin (7/7 probes agree
+   realized, refused by the enumerator); (iii) U5 — the merge-vs-
+   overwrite Release modelling difference (Race.lean U5) stands as
+   RECORDED, NOT MEASURED: the probe meant to exhibit it is racy under
+   go_mem (per-execution Unlock/Lock numbering — the machine refuses
+   its racy paths on forced tapes) and the ruling Q-U5 the first
+   report draft posed on it was WITHDRAWN at the pre-merge audit
+   ([USER] ruling, "posed on a refuted premise; withdrawn at audit
+   B1"; report §3.3 — the class's true exhibit needs a third lock-
+   holding goroutine and cannot be made deterministic, which is why
+   it is un-lane-able). U2 is CONFIRMED benign on the pin (7/7 probes agree
    both ways). WHAT THE PER-RUN WORDING PROMISES, exactly: every run
    on which a conflicting pair co-executes refuses; program-level
    refusal is certified where the enumerator certifies it (the racy

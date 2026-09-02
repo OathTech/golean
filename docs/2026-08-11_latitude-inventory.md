@@ -533,21 +533,28 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   third cell (gc red, machine DRF) **0** / over-refusal 1 (the O1
   residual, by design) / uncertified 62 (all gc-green; enumerator
   refuses deadlock/fatal members and frontier rows, or budget).
-  Probes: agree-race 24 / agree-DRF 12 / third cell 2 + 3 uncertified-
-  by-fatal — ALL the recorded U4 class (sync-object state words →
-  **BUG-080**, born-FAIL pins `race/negative-sync/{wg-overwrite,
-  mutex-copy}`; fix = the atomics arc's atomic access kind, not a
-  table entry) / over-refusal 3 (O1 residual + two schedule-dependent
-  races the 10-run sampler never realized but the enumerator did).
+  Probes (45): agree-race 24 / agree-DRF 12 / third cell 2 + 3
+  uncertified-by-fatal — ALL the recorded U4 class (sync-object state
+  words → **BUG-080**, born-FAIL pins `race/negative-sync/{wg-
+  overwrite,mutex-copy}`; fix = the atomic access kind, sequenced
+  onto the atomics arc by [AGENT] judgment, not a table entry) /
+  over-refusal 3 (O1 residual + two schedule-dependent races the
+  10-run sampler never realized but the enumerator did) / 1 more
+  uncertified: `probe/u5/cross-unlock-publish` (gc red 7/10; under the
+  fix round's runner a `possible-HOLE`, diagnosed below).
   Scope-ledger consequences: U2 CONFIRMED benign on go1.26.5 (7/7
   probes agree both ways); U4 is now PINNED and classified as the
-  detector's one soundness-direction gap (misuse-only); U5 re-measured
-  (TSan red 7/10 on the eval-pin shape as Go source; go_mem-DRF; the
-  machine follows the memory-model sentence) and posed as ruling
-  **Q-U5** — keep the merge (current, recommended) or align to TSan's
-  overwrite (S) — the one point where register #13's "TSan's realized
-  edge set" is not literally what the detector implements. Register
-  #4 carries the same measured state in its own words.
+  detector's one soundness-direction gap (misuse-only); U5 NOT
+  measured — the probe meant to exhibit it is RACY under go_mem
+  (per-execution Unlock/Lock numbering; the machine refuses its racy
+  paths on forced tapes), so the ruling **Q-U5** the first report
+  draft posed on it was WITHDRAWN at the pre-merge audit ([USER]
+  ruling: "posed on a refuted premise; withdrawn at audit B1", report
+  §3.3); the merge-vs-overwrite Release difference stands exactly as
+  the U5 entry above records it — its true exhibit needs a third
+  lock-holding goroutine and cannot be made deterministic, hence
+  un-lane-able. Register #4 carries the same measured state in its
+  own words.
 
 ### C11. Tie-breaks that look like latitude but are unreachable/unobservable — (c) FORCED
 
