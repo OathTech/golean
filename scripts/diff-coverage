@@ -1384,7 +1384,7 @@ printf 'jobs\t%s\n' "$GOLEAN_COVERAGE_JOBS" >> "$META_TMP"
 # past ARG_MAX (2 MiB here) execve failed E2BIG — `ls: Argument list too
 # long` — at 11,817 rows under a 130-byte TMPDIR (168-byte per-file
 # paths; measured by bisection, docs/evidence/2026-09-02_diffcov-argmax/
-# mechanism.log) and ≈24k at this box's 68-byte per-file paths (derived
+# mechanism.log) and ≈27k (derived 27,235 = ARG_MAX/77; measured 27,166 at audit) at this box's 68-byte per-file paths (derived
 # from ARG_MAX/(path+1+8)); the cliff moves with TMPDIR length and
 # nothing checked it. xargs then saw EMPTY stdin and, lacking -r, ran the
 # command once as run_case "" (see the guard there); `|| echo WARNING`

@@ -206,10 +206,10 @@ LENGTH OF TMPDIR: 19,999 rows under a 130-byte TMPDIR is ~3.5 MB of
 argv and died `ls: Argument list too long` (grossmith campaign,
 2026-09-02, verified by its auditor; red-first record
 `docs/evidence/2026-09-02_diffcov-argmax/`); main's 2,526 rows at this
-box's 68-byte per-file paths were ~220 KB — safe by accident: the
+box's 68-byte per-file paths were ~190 KB (2526 × 77 B) — safe by accident: the
 cliff is 11,817 rows at a 130-byte TMPDIR (168-byte per-file paths;
-bisection, the evidence dir's mechanism.log) and ≈24k at 68 bytes
-(ARG_MAX/(path+1+8), derived not measured), and nothing checked either
+bisection, the evidence dir's mechanism.log) and ≈27k at 68 bytes
+(27,235 by ARG_MAX/(path+1+8); 27,166 measured at the audit), and nothing checked either
 number. Three fail-open behaviours composed on top: GNU xargs
 without `-r` runs its command ONCE on empty stdin, so `run_case ""`
 FABRICATED a manifest-error row for id "" and mv'd a stray `.out` into
