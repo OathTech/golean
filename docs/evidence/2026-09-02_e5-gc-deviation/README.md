@@ -34,8 +34,9 @@ right-hand operand panics?
   probe, each returning the recovered value of `v`; `main()` prints
   all six for the gc-side run. VERBATIM copy of the campaign's
   `probe-e5/case/main.go` except ONE comment token: the original wrote
-  `spec#Assignments`, an anchor that does not exist in the pinned spec
-  (the section id is `Assignment_statements`); the token is corrected
+  the bare section title (Assignments) as a spec anchor — an id that does
+  not exist in the pinned spec (the section id is `Assignment_statements`);
+  the token is corrected
   so `scripts/check-spec-anchors` resolves it. No code changed.
 - `gc-output-default.txt`, `gc-output-noopt.txt` — gc at default
   flags and at `-gcflags=all='-N -l'`, re-run fresh for this dir at
