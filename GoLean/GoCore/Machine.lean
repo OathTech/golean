@@ -1802,7 +1802,9 @@ inductive Cont where
   sits between the delete and the re-create; evidence dir
   `docs/evidence/2026-09-02_e9-cross-goroutine-prune/`) and is now
   modeled (membership rows `maps/cross-goroutine-delete-readd/{drf,
-  grow}`, admitted sets {3,4} / {1,2}). UNSYNCHRONIZED cross-goroutine
+  insert}`, admitted sets {3,4} / {1,2}; the over-prune guards are the
+  confluent rows `maps/cross-goroutine-delete-noreadd/{delete,clear,
+  other-map}`). UNSYNCHRONIZED cross-goroutine
   mutation is refused by the detector (pick-time load vs the delete's
   write, HB-unordered; row `.../racy`), so no narrowing hides behind a
   refusal either. -/

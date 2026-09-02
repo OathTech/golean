@@ -471,9 +471,13 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (2541 cases, 2370 PASS /
+All numbers at the current tracked baseline (2544 cases, 2373 PASS /
 171 FAIL; `baselines/native-full.tsv`, re-pinned 2026-09-02 on the
-t5-e9-prune lane — full ci --diff at that tip: +4 born-PASS rows, the
+t5-e9-prune lane at its AUDIT FIX ROUND — full ci --diff at that tip:
++3 born-PASS confluent rows, the E9 OVER-prune guards
+`maps/cross-goroutine-delete-noreadd/{delete,clear,other-map}`, NO
+other row moved; the slice's own re-pin the same day (2541 / 2370 /
+171) — full ci --diff at that tip: +4 born-PASS rows, the
 E9 cross-goroutine delete-prune witnesses
 `maps/cross-goroutine-delete-readd/{drf,insert,racy}` and the L-012
 oracle-exhibited twin `maps/delete-insert-readd-during-range`, NO
@@ -728,7 +732,9 @@ vintage still red, 14 vintage reds gone green; 169 − 14 + 16 = 171 ✓;
 case count 2533 → 2537, the 4 new rows all born PASS; and the
 2026-09-02 E9 cross-goroutine-prune re-pin (t5-e9-prune, rebased over
 the BUG-080 fix at the round-4 merge train) added NO red: 4 rows born
-PASS (169 − 14 + 16 = 171 ✓; case count 2537 → 2541). The 14 that
+PASS (169 − 14 + 16 = 171 ✓; case count 2537 → 2541), and its audit
+fix round added NO red either: 3 confluent over-prune guards born PASS
+(169 − 14 + 16 = 171 ✓; case count 2541 → 2544). The 14 that
 went green are unchanged since.
 
 Q-SYNCVAL's misuse-identity pins and the other 8 rows this slice added

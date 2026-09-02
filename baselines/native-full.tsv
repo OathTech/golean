@@ -1,5 +1,30 @@
 # GoLean native-frontend full-corpus differential baseline
-# re-pinned: 2026-09-02 (t5-e9-prune lane — Tier-5 slice: the E9
+# re-pinned: 2026-09-02 (t5-e9-prune lane, AUDIT FIX ROUND F1-F10 —
+#   [AGENT]-executed inside the slice's written boundary; no machine
+#   semantics moved: the round's only runtime change is the refusal
+#   NAMING of a foreign-frame prune error (Multi.lean `pruneForeignOne`,
+#   same GoError constructor, F7) plus docstring/record edits. FULL ci
+#   --diff at the committed tip (docs/evidence/
+#   2026-09-02_e9-cross-goroutine-prune/README.md, "F10 clean-tip
+#   gate"): 2540 cases run, drift = exactly the 3 NEW rows below; NO
+#   other row moved in result or stage; NO PASS->non-PASS flips.
+#   NEW rows born PASS (3) — the E9 OVER-prune guards (the readd
+#   sibling's membership rows catch under-pruning only; audit finding
+#   F5). Each is schedule-CONFLUENT (|set|=1 certified over all
+#   registry-point schedules), DRF by the req/ack handshake, gc 20/20
+#   plain + 5/5 -race exit 0; red-first shown against an over-pruning
+#   stub (README "F5 red-first"):
+#     maps/cross-goroutine-delete-noreadd/delete PASS/confluent —
+#       foreign delete of the already-produced first key, no re-add:
+#       3006 (n*1000+sum); an emptied start set would legalize an
+#       early stop and widen the set.
+#     maps/cross-goroutine-delete-noreadd/clear PASS/confluent —
+#       foreign clear(m) after the first production: 1.
+#     maps/cross-goroutine-delete-noreadd/other-map PASS/confluent —
+#       ranging m1 while the foreign delete hits m2 (same key set):
+#       3006; an identity-blind prune would re-produce the key.
+#   Everything else: 2537 rows unchanged in result and stage.
+# previous re-pin: 2026-09-02 (t5-e9-prune lane — Tier-5 slice: the E9
 #   cross-goroutine delete-prune (fidelity finding A1-20, inventory E9
 #   REOPEN -> CLOSED); [AGENT]-executed inside the Tier-5 mandate under
 #   the standing [USER] ruling of 2026-08-19 (full literal map-range
@@ -305,8 +330,8 @@
 #     The remaining FAIL rows are the standing frontend/feature gaps
 #     of the 2026-08-22 record (docs/2026-08-22_launch-audit-synthesis.md),
 #     none moved by this re-pin.
-# cases: 2541 (2370 PASS / 171 FAIL)
-#   [re-derived from the data rows at the round-4 merge-train rebase 2026-09-02 ([AGENT], union of both sides): 2537 (2366 PASS / 171 FAIL) on main after bug080-atomic-kind + 4 born-PASS E9 rows = 2541 (2370 PASS / 171 FAIL)]
+# cases: 2544 (2373 PASS / 171 FAIL)
+#   [re-derived from the data rows at the round-4 merge-train rebase 2026-09-02 ([AGENT], union of both sides): 2537 (2366 PASS / 171 FAIL) on main after bug080-atomic-kind + 4 born-PASS E9 rows + 3 born-PASS E9 over-prune guards = 2544 (2373 PASS / 171 FAIL)]
 #   [re-derived by count from this file's data rows at the 2026-09-02
 #   bug080-atomic-kind re-pin: 2533 (2360 PASS / 173 FAIL) + 4 born-PASS
 #   + 2 FAIL->PASS flips = 2537 (2366 PASS / 171 FAIL). The re-pin had
@@ -1782,6 +1807,9 @@ PASS	maps/array-value-copy	-
 PASS	maps/channel-key	-
 PASS	maps/clear-during-range	-
 PASS	maps/compound-assign-eval-once	-
+PASS	maps/cross-goroutine-delete-noreadd/delete	confluent
+PASS	maps/cross-goroutine-delete-noreadd/clear	confluent
+PASS	maps/cross-goroutine-delete-noreadd/other-map	confluent
 PASS	maps/cross-goroutine-delete-readd/drf	membership
 PASS	maps/cross-goroutine-delete-readd/insert	membership
 PASS	maps/cross-goroutine-delete-readd/racy	racy

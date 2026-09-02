@@ -362,8 +362,12 @@ Discipline notes, recorded up front:
   choice stream (stop ordered LAST), so on those loops the executable
   interpreter fuel-outs VISIBLY — correct behavior, not a bug.
 - Bound affected: upper (reading (ii) would exclude a conforming
-  implementation that re-produces; none observed — the XIMPL lane
-  would bear here when it exists).
+  implementation that re-produces). gc DOES re-produce — the 2026-09-02
+  ADDENDUM above (one small intervening insert, ~87% at size 3), so the
+  bound is now ORACLE-ANCHORED, not argument-only: (ii) would exclude
+  the pinned oracle itself. [Corrected 2026-09-02, E9-prune audit fix
+  round F1 [AGENT]: this bullet had kept the pre-addendum "none
+  observed — the XIMPL lane would bear here" wording.]
 - Status: adopted; indexed as `docs/spec-interpretations.md` I-1;
   LANDED 2026-08-19 by the BUG-005 (L) surgery (this arc; guardrail
   rows landed first and flipped green at the surgery:

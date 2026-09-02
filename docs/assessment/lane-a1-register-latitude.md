@@ -473,6 +473,15 @@ C11(q)→A1-09; C2/C3 granularity→A1-03; B3→A1-01).
   but note it leans on A1-07's refusal completeness for its
   unobservability, one more consumer of that chain | VERDICT: KEEP
   (conditional on A1-07's chain; the trigger condition stands) | C3.
+  [2026-09-02 [AGENT] annotation — frozen artifact, text above left as
+  written: the phase-2 re-derivation (`p2-keeps-a1.md` A1-20) REFUTED
+  this KEEP's premise — the unpruned case is a DRF (handshake-ordered)
+  cross-goroutine delete, which the detector never refuses — and the
+  Tier-5 slice `t5-e9-prune` CLOSED it by the pool-level
+  `pruneForeign` (Multi.lean); the "unrealizable" member is
+  gc-exhibited (~87% with one intervening insert). Inventory E9 REOPEN
+  → CLOSED; evidence dir
+  `docs/evidence/2026-09-02_e9-cross-goroutine-prune/`.]
 
 - **A1-21** | E10 — `==`-equal map-key retention pinned always-replace
   | L:683–698 | ORIGINAL: spec-silent; matches gc where pinned;
@@ -775,6 +784,11 @@ C11(q)→A1-09; C2/C3 granularity→A1-03; B3→A1-01).
   membership rows for the created-entry latitude. This is what every
   REOPEN above should converge to. (Residual: A1-20.) | VERDICT:
   (counted under A1-20's KEEP; listed for the record) | C3.
+  [2026-09-02 [AGENT] annotation — frozen artifact: the A1-20 residual
+  was REOPENED at phase 2 (`p2-keeps-a1.md`; A1-47's positive-model
+  status was made conditional on it) and CLOSED 2026-09-02 by the
+  `t5-e9-prune` slice (pool-level `pruneForeign`); the conditional is
+  discharged — see the discharge note under A1-20 in `p2-keeps-a1.md`.]
 
 ---
 

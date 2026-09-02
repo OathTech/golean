@@ -581,12 +581,43 @@ registry — the deleting goroutine's own continuation is pruned inside
 `stepFn` exactly as before (`stepThread_single` still equates the
 one-thread pool with `stepFn`). Fail-closed: the walk is
 `Except`-monadic (an ill-formed key comparison in a FOREIGN frame
-refuses the step, naming its cause, like the same-goroutine prune),
+refuses the step, naming its cause AND its foreignness —
+`foreignPruneError` prefixes the refusal with the goroutine index, so
+it is never mistaken for the deleter's own prune refusing; same
+constructor in, same constructor out, audit fix round F7),
 `Config.mapContM` enumerates every configuration constructor (no
 wildcard), and an apply successor of unexpected shape is an
 `.internal` refusal, never a silent skip. Racy variants (no handshake)
 are still refused by the detector (the pick-time load vs the delete's
 write, HB-unordered) — the prune touches no memory and emits no event.
+
+THREAD-LOCALITY (the argument NPDRF.lean's obstruction 7 cites): with
+this walk a `thread` step is no longer thread-local — it rewrites every
+other goroutine's continuation, and that rewrite appears in no
+`stepAccesses` footprint (the prune reads and writes no heap cell). The
+saving argument: the rewrite only changes a foreign `mapIterK` frame's
+`produced`/`start` sets, which are consulted ONLY at that frame's next
+pick — and every pick (including the final done-check) loads the live
+map cell (`Race.lean`, the `.next (.mapIterK …)` arm of `stepAccesses`),
+while the pruning op WRITES that cell. So any foreign step that could
+observe the prune conflicts with the pruning step at the cell and is
+either HB-ordered after it (the observation is then order-independent:
+the prune is a function of the post-apply state and the frame, applied
+before the frame's next pick on every schedule) or HB-unordered — a
+data race, refused. On race-free programs the reordering window in
+which the prune's timing could be observed is therefore empty; the
+mover route must carry this as a side condition rather than read it
+off the footprint table.
+
+COST (recorded at the audit, F8; no before/after measurement taken): a
+pruning-op apply is O(threads × continuation depth) — `Config.mapContM`
+walks every other goroutine's whole continuation on every
+`mapDelete`/`clearMap` apply that proceeded, pruning or not. A
+2-goroutine TWO-ranger shape (both goroutines ranging while one
+deletes) did not enumerate at `backedge=full` within 10 min at the
+audit (it completes at `backedge=0` in ~1 min); the corpus rows are
+single-ranger shapes. Whether the walk or the enumeration tree itself
+is the cost is unmeasured.
 -/
 
 /-- The PRUNING-op apply shape: a `mapDelete`/`clearMap` statement op
@@ -624,12 +655,37 @@ def Config.mapContM (f : Cont → Except GoError Cont) : Config → Except GoErr
   | .opDone sched inner => do return .opDone sched (← Config.mapContM f inner)
   | .blockedSync op loc env k => do return .blockedSync op loc env (← f k)
 
+/-- Name a foreign-frame refusal's provenance (audit fix round F7). The
+deleter's own prune inside `stepFn` and the foreign walk share
+`contAfterStmtOp`, so without this a refusal raised while pruning
+goroutine `j`'s frame would read exactly like one raised by the
+deleter's own. Only the REFUSAL classes are prefixed (`.internal` /
+`.stuck` / `.unsupported` — their message is diagnostic text); every
+other constructor passes through UNCHANGED: a `.panic` message is
+PROGRAM output (Go's `panic:` line) and is never rewritten, `.fatal`
+likewise carries Go's own text, and the nullary classes have no message
+to name. Same constructor in, same constructor out — no outcome
+classification moves. Every constructor is enumerated (no wildcard). -/
+def foreignPruneError (j : Nat) : GoError → GoError
+  | .internal m => .internal (s!"foreign delete-prune: goroutine {j}'s frame refused: {m}")
+  | .stuck m => .stuck (s!"foreign delete-prune: goroutine {j}'s frame refused: {m}")
+  | .unsupported f => .unsupported (s!"foreign delete-prune: goroutine {j}'s frame refused: {f}")
+  | .panic m => .panic m
+  | .fatal m => .fatal m
+  | .fuelOut => .fuelOut
+  | .deadlock => .deadlock
+  | .raceDetected => .raceDetected
+
 /-- One thread of the foreign walk: thread `j` is left alone when it is
 the deleter `i` (its own continuation was pruned inside `stepFn`),
-otherwise its continuation is pruned. -/
+otherwise its continuation is pruned; a refusal raised by `j`'s frame
+is re-thrown naming `j` (`foreignPruneError`). -/
 def pruneForeignOne (s : ExecState) (op : StmtOp) (vs : List GoValue) (i j : Nat)
     (c : Config) : Except GoError Config :=
-  if j = i then pure c else Config.mapContM (contAfterStmtOp s op vs) c
+  if j = i then pure c else
+    match Config.mapContM (contAfterStmtOp s op vs) c with
+    | .ok c' => .ok c'
+    | .error e => .error (foreignPruneError j e)
 
 /-- The foreign walk over a thread list; `j` is the index of the list
 head. -/

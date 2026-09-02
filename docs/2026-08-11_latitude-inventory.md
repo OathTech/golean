@@ -982,8 +982,22 @@ gc's early store a deviation, L-016, 2026-09-02).
   racy control `.../racy` (no handshake — every enumerated path
   refuses, `-race` red exit 66), which shows the DRF/racy line the
   detector draws; the singleton-set membership lint is the honest red
-  these rows show if the foreign prune regresses. The old re-envelope
-  trigger is discharged; no residual narrowing remains on this row.
+  these rows show if the foreign prune regresses. OVER-prune guards
+  (audit fix round 2026-09-02 [AGENT], F5): the confluent rows
+  `maps/cross-goroutine-delete-noreadd/{delete,clear,other-map}`
+  (singletons 3006 / 1 / 3006) go red if the prune reaches too far —
+  a start set emptied on a plain delete (early stop legal) or map
+  identity ignored (a produced key re-enters a range over ANOTHER map);
+  red-first shown against an over-pruning stub (evidence README, "F5
+  red-first"). COST (recorded at the audit, F8; no before/after
+  measurement taken): a pruning-op apply now walks every other
+  goroutine's whole continuation — O(threads × continuation depth) per
+  `mapDelete`/`clearMap` apply — and a 2-goroutine TWO-ranger shape
+  (both goroutines ranging while one deletes) did not enumerate at
+  `backedge=full` within 10 min at the audit (it completes at
+  `backedge=0` in ~1 min); the corpus rows here are single-ranger
+  shapes. The old re-envelope trigger is discharged; no residual
+  narrowing remains on this row.
 
 ### E10. Which `==`-equal map key is retained on overwrite — (b) PINNED (always-replace)
 

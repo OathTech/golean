@@ -38,7 +38,9 @@ against the inventory's own known-≠-oracle list (A1-04).
    unpruned case is a **DRF (synchronized) cross-goroutine delete** —
    so C10's refusal never fires, and a spec-permitted member of the
    [USER]-ruled FULL map envelope is unrealizable. Also drags A1-47
-   (the census's "positive model" row) with it.
+   (the census's "positive model" row) with it. [CLOSED 2026-09-02 —
+   see the A1-20 closure and discharge notes below; A1-47's
+   conditional is discharged.]
 2. **A1-18 (E8 file order)** — `go run zz.go aa.go` and
    `go run aa.go zz.go` give different initialization orders from the
    SAME go command. The claim that this is "latitude over BUILD
@@ -249,6 +251,16 @@ and the gc probe showed the "unrealizable" member is gc-EXHIBITED with
 one intervening insert (~87%), so the hole was observed ∉ modeled, not
 only permitted ∉ modeled. Inventory E9 REOPEN → CLOSED; evidence dir
 `docs/evidence/2026-09-02_e9-cross-goroutine-prune/`.*
+
+*Discharge note (2026-09-02 [AGENT], E9-prune audit fix round F9): the
+conditional above — "A1-47's positive-model status is conditional on
+this" (and the same dependency in the ranked list, item 1: "drags A1-47
+with it") — is DISCHARGED with the (M) closure: the census's exemplar row
+no longer contains a permitted-∉-modeled member (both I-1 members are
+realizable, the re-production member gc-exhibited), so A1-47's KEEP
+stands unconditionally. Over-prune guards landed at the same fix round:
+`maps/cross-goroutine-delete-noreadd/{delete,clear,other-map}`
+(confluent, singletons 3006 / 1 / 3006).*
 
 ### A1-21 — E10, `==`-equal map-key retention pinned always-replace → REOPEN
 

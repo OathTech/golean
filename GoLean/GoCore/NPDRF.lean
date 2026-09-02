@@ -123,6 +123,31 @@ starts honest):
    `StructFields.set`/array update — and store/store commutation is
    unproved in any form. The proved pair covers the cross-root half
    (different variables/cells) only.
+7. **The `thread` rule is no longer thread-local (E9 closure,
+   2026-09-02; recorded at the slice's audit fix round, F4).** At a
+   `mapDelete`/`clearMap` apply that proceeded, `pruneForeign`
+   (Multi.lean) rewrites EVERY other goroutine's continuation — the
+   `produced`/`start` sets of its in-flight `mapIterK` frames over the
+   deleted map — and this modification appears in NO `stepAccesses`
+   footprint (the prune touches no heap cell). Read off the footprint
+   table alone, plan step (i)'s "disjoint footprints commute" would
+   swap a pruning step past a foreign ranger's pick and change that
+   pick's candidate set; and it is one more access the table does not
+   record (obstruction 5's axis). The SAVING ARGUMENT (written in
+   Multi.lean's delete-prune section docstring, "THREAD-LOCALITY"): the
+   only foreign step that can observe the prune is the pruned frame's
+   next pick, and every `mapIterK` pick — including the final
+   done-check — LOADS the live map cell (`Race.lean`'s
+   `.next (.mapIterK …)` arm), which the pruning op WRITES; so the
+   observing step conflicts with the pruning step and is either
+   HB-ordered (the prune is a function of the post-apply state, applied
+   before the next pick on every schedule — no ordering-dependent
+   observation) or a data race, refused. On race-free programs the
+   reordering window is empty. The mover route must therefore treat the
+   prune as a side condition riding on the map-cell conflict, not as a
+   footprint-recorded access — or extend `stepAccesses` with a
+   continuation-level pseudo-access for it (the honest alternative;
+   undecided, no proof effort yet).
 
 ## The decomposition plan (the mover route, ICTAC 2018's shape)
 

@@ -54,6 +54,21 @@ So the fix's obligations split exactly:
 | D | probe C + forced mid-iteration growth and shrink (64 inserts/deletes inside the loop) | n=8 (start size) in 400/400 — the no-re-production member survives rehash pressure |
 | E | 2 equal-valued keys; body updates both | second value always 99 (`[10 99]`:351, `[20 99]`:49 — both orders exhibited, update always visible) — the forced live-value read |
 
+*Addendum 2026-09-02 [AGENT, E9-prune slice audit fix round F2]: probes
+C/D's bold claim — gc never re-produces a re-created already-produced
+key — is REFUTED. Those probes had no SMALL intervening insert (D's 64
+inserts force a growth that relocates everything). With ONE fresh key
+inserted between the delete and the re-create on a 3-key map, gc
+go1.26.5 re-produces the re-created key in ~87% of runs (sweep 1→87%,
+2→75%, 3→63%, 4→50%, 5→37%, 8→0%; size 8 never; same- and
+cross-goroutine alike). Record: `docs/spec-divergence-ledger.md` L-012's
+2026-09-02 ADDENDUM; evidence dir
+`docs/evidence/2026-09-02_e9-cross-goroutine-prune/` (`gc-insert-sweep.txt`,
+`gc-same-goroutine-insert.txt`); rows `maps/delete-insert-readd-during-range`,
+`maps/cross-goroutine-delete-readd/insert`. The at-most-once-per-key
+narrowing this section motivated was already REJECTED at the 2026-08-19
+[USER] ruling; the addendum shows it was also false of gc.*
+
 The race probe is not re-run here: BUG-005's entry records it (gc
 `-race` flags a concurrent map write against an ACTIVE range as
 "Previous read ... runtime.mapIterNext()", exit 66), and

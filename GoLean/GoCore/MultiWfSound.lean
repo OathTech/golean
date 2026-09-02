@@ -1056,7 +1056,6 @@ theorem runnableIdxs_lt {s : ExecState} {ts : Array Config} {i : Nat}
   unfold runnableIdxs at h
   exact List.mem_range.mp (List.mem_filter.mp h).1
 
-set_option maxHeartbeats 1600000 in
 /-! ### The cross-goroutine delete-prune (E9 closure) preserves the carrier -/
 
 /-- A continuation rewrite that never grows a loc sup lifts to
@@ -1105,9 +1104,16 @@ theorem pruneForeignList_wf {s : ExecState} {op : StmtOp} {vs : List GoValue}
       · simp only [pure_eq_ok, Except.ok.injEq] at hc'
         subst hc'
         exact hl c (by simp)
-      · exact Nat.le_trans
-          (Config.mapContM_locSup (fun h => contAfterStmtOp_locSup h) hc')
-          (hl c (by simp))
+      · -- the foreign-provenance re-throw (`foreignPruneError`) is
+        -- transparent on the `.ok` path
+        split at hc'
+        · rename_i c'' heq
+          simp only [Except.ok.injEq] at hc'
+          subst hc'
+          exact Nat.le_trans
+            (Config.mapContM_locSup (fun h => contAfterStmtOp_locSup h) heq)
+            (hl c (by simp))
+        · cases hc'
     obtain ⟨hlen, hall⟩ := ih hrest' (fun x hx => hl x (by simp [hx]))
     refine ⟨by simp [hlen], ?_⟩
     intro x hx

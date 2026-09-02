@@ -112,3 +112,46 @@ The L-012 oracle datum "gc never re-produces (incl. forced growth)" is
 corrected by the addendum: gc DOES produce a key twice in one range
 when a small insert intervenes, which refutes the rejected
 key-identity reading as a description of gc.
+
+## Audit fix round F1-F10 (2026-09-02 [AGENT]) — the over-prune guards and their red-first
+
+The pre-merge audit (verdict MERGE-READY, should-fix list F1-F10)
+observed that the four rows above catch UNDER-pruning only (a foreign
+prune that fails to reach the ranging goroutine leaves the membership
+sets singletons) and nothing catches OVER-pruning. F5 added three
+schedule-confluent rows, `Corpus/coverage/exec/maps/cross-goroutine-delete-noreadd/`:
+
+| row | shape | expected (unique) | gc go1.26.5 (20 plain / 5 `-race`) |
+|---|---|---|---|
+| `.../noreadd/delete` | foreign delete of the already-produced first key, NO re-add; observable `n*1000+sum` | 3006 | 3006 ×20; `-race` 5/5 exit 0 |
+| `.../noreadd/clear` | foreign `clear(m)` after the first production | 1 | 1 ×20; `-race` 5/5 exit 0 |
+| `.../noreadd/other-map` | A ranges `m1`; the foreign delete removes the same key from `m2` | 3006 | 3006 ×20; `-race` 5/5 exit 0 |
+
+All three DRF by the req/ack handshake (the `drf` row's shape). gc side:
+`.tmp/e9fix-noreadd` scratch module (gitignored), `go build` /
+`go build -race` of the corpus `main.go`, 20 and 5 runs.
+
+### F5 red-first (temporary local stubs, each built, run on the 7 E9 rows by `scripts/capped scripts/diff-one`, then RESTORED by `git checkout`; nothing from either experiment is committed)
+
+| stub | what it did | `noreadd/delete` | `noreadd/clear` | `noreadd/other-map` | `readd/drf` | `readd/insert` | `readd/racy` | `delete-insert-readd-during-range` |
+|---|---|---|---|---|---|---|---|---|
+| (none — the committed machine) | — | {3006} PASS/confluent | {1} PASS/confluent | {3006} PASS/confluent | {3,4} PASS | {1,2} PASS | refuses PASS | {1,2} PASS |
+| E1 UNDER-prune: `pruneForeignOne` made the identity (`if j = i ∨ True then pure c`, Multi.lean only) | the foreign walk never prunes | {3006} PASS | {1} PASS | {3006} PASS | **{3} FAIL** (singleton — lint) | **{1} FAIL** (singleton — lint) | refuses PASS | {1,2} PASS |
+| E2 OVER-prune: `pruneIterFramesKey`'s `mapIterK` arm made identity-blind (`base == some delBase \|\| true`) AND start-emptying (`removeKeyList … []`), Machine.lean (+ one `simp` lemma in StateWf.lean's locSup proof so the build stayed sorry-free) | every in-flight range over EVERY map loses the key from `produced` and its whole `start` set | **{1001,1002,1003,2003,2004,2005,3006} — 7 members, FAIL** (early stop legalized) | {1} PASS (nothing left to produce under any prune) | **16 members {1001…4009} FAIL** (the produced key re-enters `m1`'s range) | **{1,2,3,4} FAIL** (members=2 pin moved) | {1,2} PASS | refuses PASS | {1,2} PASS |
+
+Reading: E1 is caught by the readd rows and NOT by the new ones (as the
+audit said — under-pruning leaves the noreadd observables fixed); E2 is
+caught by `noreadd/delete` and `noreadd/other-map` (and, as a widening,
+by `readd/drf`'s members= pin) and NOT by the readd rows' set-membership
+alone (gc's samples still lie inside the widened sets). The `clear` row
+is invariant under both stubs — it pins that a foreign clear neither
+refuses nor produces a stale entry, not the prune's reach. Logs of the
+runs: `.tmp/e9fix-logs/` in the lane worktree (gitignored; the result
+lines are reproduced above verbatim in substance).
+
+The E2 stub is deliberately a compound over-prune (identity-blind AND
+start-emptying); the two new red rows separate its halves by
+construction — `other-map` can only widen through identity-blindness
+(its ranged map is never mutated), `delete` only through the emptied
+start set (its deleted key is not live, so identity-blindness alone
+changes nothing there).

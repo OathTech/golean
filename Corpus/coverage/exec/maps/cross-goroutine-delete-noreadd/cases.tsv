@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# E9 cross-goroutine delete-prune OVER-PRUNE guards (E9-prune audit fix
+# round F5, 2026-09-02 [AGENT]). The readd sibling catches under-pruning
+# (singleton sets); these confluent rows catch a prune that reaches too
+# far (start set emptied on a plain delete; map identity ignored) — the
+# certified singleton widens. DRF by the req/ack handshake (the drf
+# row's shape). Red-first: with `pruneForeign` stubbed to over-prune the
+# delete and other-map rows widen (evidence README, "F5 red-first").
+delete	crossGoroutineDeleteNoReAdd	-	ok	-	maps,delete,range,goroutines,channels	confluent	handshake-ordered foreign delete of the ALREADY-produced first key with no re-create: the deleted key is not live (never a candidate again) and the other two start keys stay mandatory, so every schedule and every pick order yields 3 productions summing to 6 -> 3006; an over-prune that emptied the start set would make an early stop legal and widen the set	width=4,sites=32,backedge=full,work=2000000
+clear	crossGoroutineClearMidRange	-	ok	-	maps,clear,range,goroutines,channels	confluent	handshake-ordered foreign clear(m) after the first production: no live entry remains and none is created, so the range ends at exactly 1 production on every schedule	width=4,sites=32,backedge=full,work=2000000
+other-map	crossGoroutineDeleteOtherMap	-	ok	-	maps,delete,range,goroutines,channels	confluent	the ranged map m1 is never mutated; the foreign delete hits m2 (same key set); an identity-blind prune would drop the produced key from m1's frame and re-produce it — with identity honored every schedule yields 3 productions summing to 6 -> 3006	width=4,sites=32,backedge=full,work=2000000
