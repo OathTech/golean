@@ -22,11 +22,16 @@
 #       holds; 1 = DRIFT (every violated clause printed); 2 = refusal.
 #
 #   scripts/capped scripts/grossmith-run campaign --seed S [--n N | --pairs P]
-#                        [--control386 N] [--label L] [--workers J]
-#       contract  ->  dynamic smoke (12 cases end-to-end through
-#       gengo -> diff-coverage -> verdicts; refuses on any harness-error)
-#       ->  the leg  ->  triage. One leg per invocation, so every leg's
-#       parameters are recorded verbatim in its own directory. Must run
+#                        [--control386 N] [--label L] [--workers J] [--chunks K]
+#       contract  ->  C9 (the row-glob bound, below)  ->  dynamic smoke
+#       (12 cases end-to-end through gengo -> diff-coverage -> verdicts;
+#       refuses on any harness-error / clone-infra)  ->  the leg, as K
+#       contiguous-seed CHUNKS each a published gengo batch (<label>/part-NN),
+#       each passed through the LEG GUARD (worker deaths, >50% infra,
+#       runner failures in the harness log => the leg FAILS LOUD, nothing
+#       triaged)  ->  the gc-386 control  ->  triage. One leg per
+#       invocation, so every leg's parameters are recorded verbatim in its
+#       own directory. Must run
 #       under scripts/capped: diff-coverage runs `lake build` and the
 #       reference pass compiles thousands of programs — this script
 #       SELF-WRAPS like scripts/ci and refuses when the cap cannot be
@@ -34,7 +39,9 @@
 #
 #   scripts/grossmith-run triage <batch-dir> [<batch-dir>...]
 #       Post-process published batches: every non-`match` verdict gets a
-#       row in <batch>/triage.tsv with a DEDUP GROUP (verdict, stage,
+#       row in <batch>.triage.tsv (BESIDE the batch — a gengo batch is
+#       digest-bound and `gengo -verify` refuses undeclared files inside
+#       it) with a DEDUP GROUP (verdict, stage,
 #       normalized detail) and a triage CLASS from the closed set
 #         machine-bug-candidate | gc-bug-candidate |
 #         latitude-candidate   | harness-artifact
@@ -279,20 +286,23 @@ contract() {
 # Campaign helpers.
 gengo() { "$OUT/bin/gengo" "$@"; }
 
-verdict_counts() { # <batch-dir> -> "verdict count" lines from batch.json
-  python3 - "$1" <<'PY'
+verdict_counts() { # <batch-dir>... -> aggregated "verdict count" lines from batch.json(s)
+  python3 - "$@" <<'PY'
 import json, sys, collections
-rep = json.load(open(sys.argv[1] + "/batch.json"))
-c = collections.Counter(cr.get("verdict", "") for cr in rep["cases"])
+c, ran, tot = collections.Counter(), 0, 0
+for b in sys.argv[1:]:
+    rep = json.load(open(b + "/batch.json"))
+    c.update(cr.get("verdict", "") for cr in rep["cases"])
+    ran += rep.get("refRan", 0); tot += rep.get("total", 0)
 for k, v in sorted(c.items()):
     print(k or "(unjudged)", v)
-print("refRan", rep.get("refRan"))
-print("total", rep.get("total"))
+print("refRan", ran)
+print("total", tot)
 PY
 }
 
-record_params() { # <leg-dir> <argv...>: verbatim provenance beside the batch
-  local dir="$1"; shift
+record_params() { # <prefix> <argv...>: verbatim provenance beside the batch(es)
+  local prefix="$1"; shift
   {
     echo "grossmith-run campaign parameters (verbatim)"
     echo "  date_utc:        $(date -u -Is)"
@@ -300,11 +310,49 @@ record_params() { # <leg-dir> <argv...>: verbatim provenance beside the batch
     echo "  grossmith:       $(git -C "$GROSSMITH" rev-parse HEAD) ($GROSSMITH)"
     echo "  go:              $("$GO_BIN" version) at $GO_BIN"
     echo "  memory cap:      GOLEAN_MEM_MAX=${GOLEAN_MEM_MAX:-64G (default)} GOLEAN_CAPPED=${GOLEAN_CAPPED:-}"
+    echo "  load at start:   $(uptime | sed 's/.*load average/load average/')  nproc=$(nproc)"
     echo "  cwd for gengo:   $ROOT"
     echo "  TMPDIR/GOCACHE:  $TMPDIR / $GOCACHE"
     echo "  generator cfg:   gen.DefaultConfig(seed) {Vars:4 Stmts:14 Depth:2 ExprFuel:3 LoopCap:6 Swarm:true} + golean.Profile (NoObserve slice,map; Exclude observe_point,defer,recover) — recorded per case in case.json 'config'"
     echo "  gengo argv:      $*"
-  } > "$dir.params.txt"
+  } > "$prefix.params.txt"
+}
+
+# THE ROW-GLOB BOUND (campaign 3's first m3a run, 2026-09-01): diff-coverage
+# fans its rows out with `ls "$ROWDIR"/*.in | xargs`, one absolute path per
+# row. 20,000 rows under this tree's TMPDIR (129 bytes a path) is 2.6 MB
+# of argv — over ARG_MAX (2 MB): `ls: Argument list too long`, xargs ran
+# ONE empty worker, and every row failed closed as "worker produced no
+# result" while gengo exited 0. Campaign 2 never saw it because /tmp paths
+# are 45 bytes. diff-coverage is trusted surface (not changed here); the
+# runner keeps every chunk under the bound and refuses otherwise.
+ROWDIR_SUFFIX="/golean-coverage-rows.XXXXXX/000000.in"
+ROWDIR_PATH_BYTES=$(( ${#TMPDIR} + ${#ROWDIR_SUFFIX} + 1 ))
+ARG_MAX_BYTES="$(getconf ARG_MAX 2>/dev/null || echo 131072)"
+# Half of ARG_MAX: the environment and pointer table count against it too.
+MAX_ROWS_PER_INVOCATION=$(( ARG_MAX_BYTES / 2 / ROWDIR_PATH_BYTES ))
+CHUNK_CEILING=4000
+
+# leg_guard <batch-dir>: a published chunk whose verdicts are the RUNNER
+# failing, not the machine, must fail the leg LOUD and untriaged — a
+# runner that returns thousands of empty results is an infrastructure
+# failure dressed as a campaign result.
+leg_guard() {
+  local b="$1" log="$1/golean-work/diff-coverage.log" res="$1/golean-work/results.tsv" bad=0
+  if [[ -f "$log" ]]; then
+    local hits
+    hits="$(grep -nE 'Argument list too long|worker pool exited nonzero|lake build failed|No such file or directory|no results published' "$log" | head -5)"
+    if [[ -n "$hits" ]]; then echo "  LEG GUARD: diff-coverage log shows runner infrastructure failure:" >&2; sed 's/^/    /' <<<"$hits" >&2; bad=1; fi
+  else
+    echo "  LEG GUARD: no golean-work/diff-coverage.log in $b — the clone harness never ran" >&2; bad=1
+  fi
+  local n dead infra
+  n="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]+"/batch.json"))["total"])' "$b")"
+  dead="$( [[ -f "$res" ]] && awk -F'\t' '$4=="harness" && $5 ~ /worker produced no result/' "$res" | wc -l || echo 0)"
+  infra="$(python3 -c 'import json,sys,collections; c=collections.Counter(x.get("verdict","") for x in json.load(open(sys.argv[1]+"/batch.json"))["cases"]); print(c["clone-infra-failure"]+c["harness-error"]+c[""])' "$b")"
+  if [[ "$dead" -gt 0 ]]; then echo "  LEG GUARD: $dead/$n rows are worker deaths ('worker produced no result') — the pool did not run them" >&2; bad=1; fi
+  if [[ "$n" -gt 0 && $(( infra * 2 )) -gt "$n" ]]; then echo "  LEG GUARD: $infra/$n cases are clone-infra/harness-error/unjudged (>50%) — mass infrastructure failure (starvation, timeouts, a dead binary), not a semantic result" >&2; bad=1; fi
+  return "$bad"
 }
 
 campaign() {
@@ -314,7 +362,7 @@ campaign() {
     verified|none) ;;
     *) exec "$ROOT/scripts/capped" "$ROOT/scripts/grossmith-run" campaign "$@" ;;
   esac
-  local N=20000 SEED="" PAIRS=0 CTRL=300 LABEL="" WORKERS="" TIMEOUT="10s" SMOKE_N=12 SMOKE_SEED=424242
+  local N=20000 SEED="" PAIRS=0 CTRL=300 LABEL="" WORKERS="" TIMEOUT="10s" SMOKE_N=12 SMOKE_SEED=424242 CHUNKS=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --n) N="${2:-}"; shift 2 ;;
@@ -324,22 +372,56 @@ campaign() {
       --label) LABEL="${2:-}"; shift 2 ;;
       --workers) WORKERS="${2:-}"; shift 2 ;;
       --timeout) TIMEOUT="${2:-}"; shift 2 ;;
+      --chunks) CHUNKS="${2:-}"; shift 2 ;;
       *) echo "grossmith-run campaign: unknown option '$1'" >&2; exit 2 ;;
     esac
   done
   [[ "$SEED" =~ ^[0-9]+$ ]] || { echo "grossmith-run campaign: --seed S is required (a campaign of record names its seed; nothing is defaulted)" >&2; exit 2; }
   for v in N PAIRS CTRL; do [[ "${!v}" =~ ^[0-9]+$ ]] || { echo "grossmith-run campaign: --${v,,} must be a non-negative integer" >&2; exit 2; }; done
   [[ -z "$WORKERS" || "$WORKERS" =~ ^[1-9][0-9]*$ ]] || { echo "grossmith-run campaign: --workers must be a positive integer" >&2; exit 2; }
+  [[ -z "$CHUNKS" || "$CHUNKS" =~ ^[1-9][0-9]*$ ]] || { echo "grossmith-run campaign: --chunks must be a positive integer" >&2; exit 2; }
   [[ -n "$LABEL" ]] || LABEL="$( [[ "$PAIRS" -gt 0 ]] && echo "pairs${PAIRS}-seed${SEED}" || echo "swarm${N}-seed${SEED}" )"
   [[ "$LABEL" =~ ^[A-Za-z0-9_.-]+$ ]] || { echo "grossmith-run campaign: --label must be a plain path component" >&2; exit 2; }
   local leg="$OUT/$LABEL"
   [[ -e "$leg" ]] && { echo "grossmith-run campaign: $leg exists — a leg is immutable; pick another --label" >&2; exit 2; }
+  # The documented box-wide build lock (docs/operational-lessons.md): a
+  # full gate's Lean build in another worktree starves a 32-worker leg.
+  for lock in "$ROOT/artifacts/build-lock.d" "$(git -C "$ROOT" rev-parse --git-common-dir 2>/dev/null)/../artifacts/build-lock.d"; do
+    [[ -d "$lock" ]] && { echo "grossmith-run campaign: build lock held at $lock — refusing to start a leg under a full build (owner: $(cat "$lock"/* 2>/dev/null | head -1))" >&2; exit 2; }
+  done
 
   contract || exit 1
+
+  # Chunking against the row-glob bound (see ROWDIR_PATH_BYTES above).
+  # Swarm chunks are contiguous seed blocks of n_i cases; pairs chunks are
+  # `-pairs P/K` each over contiguous seed blocks of pairs_universe*(P/K)
+  # cases, so a leg's seed range is exactly the pre-registered one.
+  local total per_chunk pairs_universe=0 optional excluded
+  if [[ "$PAIRS" -gt 0 ]]; then
+    optional="$(awk '/^func Optional\(\)/{f=1} f&&/^}/{exit} f' "$GROSSMITH/gen/constructs.go" | grep -oE '"[a-z_]+"' | wc -l)"
+    excluded="$(awk '/^func Profile\(/{f=1} f&&/^}/{exit} f' "$GROSSMITH/golean/golean.go" | grep -oE 'unionTags\(cfg.Exclude, [^)]*\)' | grep -oE '"[a-z_]+"' | wc -l)"
+    pairs_universe=$(( (optional - excluded) * (optional - excluded - 1) / 2 ))
+    total=$(( pairs_universe * PAIRS ))
+    echo "grossmith-run: pairs universe: $optional optional tags - $excluded profile-excluded = $((optional - excluded)) -> $pairs_universe pairs x $PAIRS = $total cases"
+    [[ "$pairs_universe" -gt 100 ]] || { echo "grossmith-run campaign: implausible pairs universe ($pairs_universe) — the tag extractor lost the source shape; refusing" >&2; exit 2; }
+    if [[ -z "$CHUNKS" ]]; then CHUNKS=1; while [[ $(( total / CHUNKS )) -gt "$CHUNK_CEILING" || $(( total / CHUNKS )) -gt "$MAX_ROWS_PER_INVOCATION" ]]; do CHUNKS=$((CHUNKS + 1)); done; fi
+    [[ $(( PAIRS % CHUNKS )) -eq 0 ]] || { echo "grossmith-run campaign: --pairs $PAIRS is not divisible by --chunks $CHUNKS (each chunk forces every pair P/K times)" >&2; exit 2; }
+    per_chunk=$(( pairs_universe * PAIRS / CHUNKS ))
+  else
+    total="$N"
+    if [[ -z "$CHUNKS" ]]; then CHUNKS=1; while [[ $(( (total + CHUNKS - 1) / CHUNKS )) -gt "$CHUNK_CEILING" || $(( (total + CHUNKS - 1) / CHUNKS )) -gt "$MAX_ROWS_PER_INVOCATION" ]]; do CHUNKS=$((CHUNKS + 1)); done; fi
+    per_chunk=$(( (total + CHUNKS - 1) / CHUNKS ))
+  fi
+  echo
+  echo "grossmith-run: C9 row-glob bound: ROWDIR path $ROWDIR_PATH_BYTES bytes, ARG_MAX $ARG_MAX_BYTES -> at most $MAX_ROWS_PER_INVOCATION rows per diff-coverage invocation; leg = $total cases in $CHUNKS chunk(s) of <= $per_chunk"
+  if [[ "$per_chunk" -gt "$MAX_ROWS_PER_INVOCATION" ]]; then
+    echo "grossmith-run campaign: C9 DRIFT — a chunk of $per_chunk rows exceeds the row-glob bound ($MAX_ROWS_PER_INVOCATION); raise --chunks" >&2; exit 1
+  fi
   local wflag=(); [[ -n "$WORKERS" ]] && wflag=(-workers "$WORKERS")
 
   # DYNAMIC SMOKE: the adapter actually talks to today's harness. Small,
-  # fixed seed, must reach a semantic verdict on every case.
+  # fixed seed, must reach a semantic verdict on every case. (It cannot
+  # see the row-glob bound — C9 above is the static check for that.)
   echo
   echo "grossmith-run: SMOKE — $SMOKE_N cases end-to-end (seed $SMOKE_SEED)"
   local smoke="$OUT/$LABEL-smoke"
@@ -351,30 +433,48 @@ campaign() {
   fi
   local sm; sm="$(verdict_counts "$smoke")"
   echo "$sm" | sed 's/^/  /'
-  if grep -qE '^(harness-error|\(unjudged\)) ' <<<"$sm" || [[ "$(awk '$1=="refRan"{print $2}' <<<"$sm")" != "$SMOKE_N" ]]; then
-    echo "grossmith-run: SMOKE FAILED — harness-error / unjudged / reference did not run on every case (the adapter does not fit today's harness; see $smoke/batch.json and $smoke/golean-work/diff-coverage.log)" >&2
+  if grep -qE '^(harness-error|\(unjudged\)|clone-infra-failure) ' <<<"$sm" || [[ "$(awk '$1=="refRan"{print $2}' <<<"$sm")" != "$SMOKE_N" ]] || ! leg_guard "$smoke"; then
+    echo "grossmith-run: SMOKE FAILED — harness-error / clone-infra / unjudged / reference did not run on every case (the adapter does not fit today's harness, or the runner's infrastructure is failing; see $smoke/batch.json and $smoke/golean-work/diff-coverage.log)" >&2
     exit 2
   fi
   echo "grossmith-run: smoke ok"
 
-  # THE LEG.
-  echo
-  local argv=()
-  if [[ "$PAIRS" -gt 0 ]]; then argv=(-pairs "$PAIRS"); else argv=(-n "$N"); fi
-  argv+=(-seed "$SEED" -go "$GO_BIN" -timeout "$TIMEOUT" "${wflag[@]}" -out "$leg" -clone "golean:$ROOT")
-  echo "grossmith-run: LEG $LABEL — gengo ${argv[*]}"
-  record_params "$leg" "${argv[@]}"
-  local t0 t1; t0="$(date +%s)"
-  local rc=0
-  gengo "${argv[@]}" > "$leg.log" 2>&1 || rc=$?
+  # THE LEG, chunk by chunk. A chunk that trips the guard ends the leg
+  # loud; nothing is triaged.
+  mkdir -p "$leg"
+  local i chunk_seed chunk_dir parts=() argv t0 t1 rc remaining
+  t0="$(date +%s)"
+  {
+    echo "leg $LABEL: total $total cases, $CHUNKS chunk(s), seeds $SEED..$((SEED + total - 1)) contiguous"
+  } > "$leg.chunks.txt"
+  for (( i = 0; i < CHUNKS; i++ )); do
+    chunk_seed=$(( SEED + i * per_chunk ))
+    chunk_dir="$leg/part-$(printf '%02d' $((i + 1)))"
+    if [[ "$PAIRS" -gt 0 ]]; then argv=(-pairs $(( PAIRS / CHUNKS ))); else remaining=$(( total - i * per_chunk )); argv=(-n $(( remaining < per_chunk ? remaining : per_chunk ))); fi
+    argv+=(-seed "$chunk_seed" -go "$GO_BIN" -timeout "$TIMEOUT" "${wflag[@]}" -out "$chunk_dir" -clone "golean:$ROOT")
+    echo
+    echo "grossmith-run: LEG $LABEL chunk $((i + 1))/$CHUNKS — gengo ${argv[*]}"
+    record_params "$chunk_dir" "${argv[@]}"
+    echo "part-$(printf '%02d' $((i + 1))) seed $chunk_seed argv: ${argv[*]}" >> "$leg.chunks.txt"
+    rc=0
+    gengo "${argv[@]}" > "$chunk_dir.log" 2>&1 || rc=$?
+    if [[ "$rc" -ne 0 || ! -f "$chunk_dir/batch.json" ]]; then
+      echo "grossmith-run: LEG FAILED at chunk $((i + 1)) (gengo exit $rc) — nothing triaged; tail of $chunk_dir.log:" >&2
+      tail -20 "$chunk_dir.log" >&2
+      exit 2
+    fi
+    verdict_counts "$chunk_dir" | sed 's/^/  /' | tee -a "$chunk_dir.params.txt"
+    if ! leg_guard "$chunk_dir"; then
+      echo "grossmith-run: LEG FAILED at chunk $((i + 1)) — RUNNER INFRASTRUCTURE FAILURE, not a campaign result; nothing triaged (batch kept for diagnosis at $chunk_dir)" >&2
+      exit 2
+    fi
+    parts+=("$chunk_dir")
+  done
   t1="$(date +%s)"
-  echo "  wall: $((t1 - t0)) s; gengo exit $rc" | tee -a "$leg.params.txt"
-  if [[ "$rc" -ne 0 || ! -f "$leg/batch.json" ]]; then
-    echo "grossmith-run: LEG FAILED (exit $rc) — nothing to triage; tail of $leg.log:" >&2
-    tail -20 "$leg.log" >&2
-    exit 2
-  fi
-  verdict_counts "$leg" | sed 's/^/  /' | tee -a "$leg.params.txt"
+  {
+    echo "leg $LABEL wall: $((t1 - t0)) s over $CHUNKS chunk(s)"
+    verdict_counts "${parts[@]}"
+  } | tee "$leg/verdicts.txt" | sed 's/^/  /'
 
   # THE DISCRIMINATION CONTROL: gc@386 vs gc@amd64 through the same
   # generator (no golean). Divergences must all fall inside the
@@ -386,15 +486,16 @@ campaign() {
     echo "grossmith-run: CONTROL — $CTRL cases gc-386 (seed $SEED)"
     record_params "$ctrl" -n "$CTRL" -seed "$SEED" -go "$GO_BIN" -timeout "$TIMEOUT" "${wflag[@]}" -out "$ctrl" -clone gc-386
     if gengo -n "$CTRL" -seed "$SEED" -go "$GO_BIN" -timeout "$TIMEOUT" "${wflag[@]}" -out "$ctrl" -clone gc-386 > "$ctrl.log" 2>&1; then
-      grep -E "cross-arch discrimination|width_dependent yield|observation-mismatch|^  match" "$ctrl.log" | sed 's/^/  /' | tee -a "$ctrl.params.txt"
+      grep -E "cross-arch discrimination|width_dependent yield|observation-mismatch|^  match|INCOMPLETE" "$ctrl.log" | sed 's/^/  /' | tee -a "$ctrl.params.txt"
       if grep -qE "off-tag [1-9]" "$ctrl.log"; then echo "grossmith-run: CONTROL — OFF-TAG cross-arch divergence (a generator tagging defect; see $ctrl.log)" >&2; fi
+      if grep -q "INCOMPLETE CAMPAIGN" "$ctrl.log"; then echo "grossmith-run: CONTROL INCOMPLETE — the 386 clone did not reach verdicts (this box aborts 386 binaries with SIGTRAP; the control is NOT a measurement here)" >&2; fi
     else
       echo "grossmith-run: CONTROL FAILED (see $ctrl.log) — the leg stands, the discrimination control does not" >&2
     fi
   fi
 
   echo
-  triage "$leg"
+  triage "${parts[@]}"
 }
 
 # ---------------------------------------------------------------------
@@ -424,6 +525,7 @@ with open(os.path.join(batch, "manifest.tsv")) as f:
 def norm(s):
     # Dedup key: collapse the case-specific noise (numbers, hex, paths,
     # quoted strings, case ids) so two hits of one mechanism share a group.
+    s = re.sub(r"[\t\r\n]+", " ", s)
     s = re.sub(r"case_\d+", "case_ID", s)
     s = re.sub(r"(?:^|(?<=[\s(=:'\"]))/[^\s'\"]+", "/PATH", s)   # absolute paths only, not a/b words
     s = re.sub(r"\"[^\"]*\"", '"STR"', s)
@@ -528,7 +630,21 @@ for cr in rep["cases"]:
     else:
         klass, evidence = "harness-artifact", "unknown verdict %r" % v
 
-    key = (v, stage, norm(detail))
+    # Differential mismatches carry two JSON documents; normalizing them
+    # to STR/N would merge unrelated mismatches. Key those by the SHAPE
+    # of the disagreement instead: statuses + the differing value slots.
+    if v == "observation-mismatch" and stage == "differential":
+        mm = re.match(r"Lean=(\{.*?\}) Go=(\{.*?\})( .*)?$", detail, re.S)
+        try:
+            L, G = json.loads(mm.group(1)), json.loads(mm.group(2))
+            slots = ["q%d:%s" % (i, a.get("kind", a.get("tag"))) for i, (a, b) in enumerate(zip(L.get("values", []), G.get("values", []))) if a != b]
+            if len(L.get("values", [])) != len(G.get("values", [])): slots.append("arity")
+            nd = "differential status Lean=%s Go=%s; differing slots %s" % (L.get("status"), G.get("status"), ",".join(slots) or "(none)")
+        except Exception:
+            nd = norm(detail)
+        key = (v, stage, nd)
+    else:
+        key = (v, stage, norm(detail))
     if key not in groups:
         groups[key] = {"n": 0, "rep": cid, "class": klass}
     groups[key]["n"] += 1
@@ -537,17 +653,20 @@ for cr in rep["cases"]:
                  ",".join(sorted(t for t in tags if t in ("order_witness", "recover_wrapper", "width_dependent", "panic_risk"))),
                  detail.replace("\t", " ").replace("\n", "\\n")[:400]])
 
-with open(os.path.join(batch, "triage.tsv"), "w") as f:
+# Outputs go BESIDE the batch, never inside it: a gengo batch is a
+# digest-bound immutable artifact and `gengo -verify` refuses a tree
+# with undeclared files (found the hard way in campaign 3).
+with open(batch.rstrip("/") + ".triage.tsv", "w") as f:
     f.write("id\tseed\tverdict\tstage\tclass\tdedup_group\tneeds_human\tevidence\tinstrument_tags\tdetail\n")
     for r in rows:
         f.write("\t".join(r) + "\n")
-with open(os.path.join(batch, "triage-groups.tsv"), "w") as f:
+with open(batch.rstrip("/") + ".triage-groups.tsv", "w") as f:
     f.write("group\tcount\tverdict\tstage\tclass\trepresentative\tnormalized_detail\n")
     for i, (k, g) in enumerate(groups.items(), 1):
         f.write("G%d\t%d\t%s\t%s\t%s\t%s\t%s\n" % (i, g["n"], k[0], k[1], g["class"], g["rep"], k[2]))
 
 total = rep.get("total", len(rep["cases"]))
-print("  cases %d, non-match %d, dedup groups %d -> %s" % (total, len(rows), len(groups), os.path.join(batch, "triage.tsv")))
+print("  cases %d, non-match %d, dedup groups %d -> %s" % (total, len(rows), len(groups), batch.rstrip("/") + ".triage.tsv"))
 byclass = collections.Counter(r[4] for r in rows)
 for k, n in sorted(byclass.items()):
     print("    %-24s %d" % (k, n))
@@ -556,6 +675,44 @@ for i, (k, g) in enumerate(groups.items(), 1):
 sys.exit(1 if rows else 0)
 PY
   done
+  # Several batches (a chunked leg): merge into the common parent as
+  # triage-all.tsv / triage-groups-all.tsv, re-deduplicated across chunks.
+  if [[ $# -gt 1 ]]; then
+    python3 - "$@" <<'PY2'
+import os, sys, collections
+parts = sys.argv[1:]
+parent = os.path.dirname(os.path.abspath(parts[0]))
+rows, groups = [], collections.OrderedDict()
+for b in parts:
+    gnorm = {}
+    with open(b.rstrip("/") + ".triage-groups.tsv") as f:
+        next(f)
+        for line in f:
+            g, n, v, st, k, rep, nd = line.rstrip("\n").split("\t")
+            gnorm[g] = (v, st, k, nd)
+    with open(b.rstrip("/") + ".triage.tsv") as f:
+        next(f)
+        for line in f:
+            r = line.rstrip("\n").split("\t")
+            v, st, k, nd = gnorm[r[5]]
+            key = (v, st, nd)
+            if key not in groups:
+                groups[key] = {"n": 0, "rep": os.path.basename(b) + "/" + r[0], "class": k}
+            groups[key]["n"] += 1
+            r[5] = "G%d" % (list(groups).index(key) + 1)
+            r[0] = os.path.basename(b) + "/" + r[0]
+            rows.append(r)
+with open(os.path.join(parent, "triage-all.tsv"), "w") as f:
+    f.write("id\tseed\tverdict\tstage\tclass\tdedup_group\tneeds_human\tevidence\tinstrument_tags\tdetail\n")
+    for r in rows: f.write("\t".join(r) + "\n")
+with open(os.path.join(parent, "triage-groups-all.tsv"), "w") as f:
+    f.write("group\tcount\tverdict\tstage\tclass\trepresentative\tnormalized_detail\n")
+    for i, (k, g) in enumerate(groups.items(), 1):
+        f.write("G%d\t%d\t%s\t%s\t%s\t%s\t%s\n" % (i, g["n"], k[0], k[1], g["class"], g["rep"], k[2]))
+print("  LEG TOTAL: %d non-match rows in %d dedup groups -> %s" % (len(rows), len(groups), os.path.join(parent, "triage-all.tsv")))
+for k, n in sorted(collections.Counter(r[4] for r in rows).items()): print("    %-24s %d" % (k, n))
+PY2
+  fi
   if [[ "$any" -eq 0 ]]; then echo "grossmith-run: triage — no divergences in the given batch(es)"; fi
   return "$any"
 }

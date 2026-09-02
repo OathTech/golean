@@ -1,4 +1,4 @@
-# Grossmith integration: the standing instrument + campaign 3 (pre-registered)
+# Grossmith integration: the standing instrument + campaign 3
 
 Lane: `t4-grossmith` (fidelity work program Tier 4, [USER]-approved —
 `docs/assessment/synthesis.md` "Tier 4 … grossmith integration
@@ -7,33 +7,37 @@ Lane: `t4-grossmith` (fidelity work program Tier 4, [USER]-approved —
 `lane-b-lower-bound.md` §B10 and `lane-d-apparatus.md` D-8). Tracked
 output: this report plus one lane tool, `scripts/grossmith-run`. **NO
 baseline, gate, corpus, or reference-checkout changes** — promotions
-and BUGS entries are RECOMMENDED here, never made. Everything below is
-[AGENT]-executed and [AGENT]-judged inside that mandate; the two
-places the lane could not proceed are marked and handed back rather
-than worked around. Base commit `7cf19198`; oracle pin go1.26.5
-(`baselines/go-oracle-pin`); generator `deps/grossmith` @ `e68867d6`
-(campaign 2's revision, now a deliberate pin in the tool).
+and BUGS/ledger entries are RECOMMENDED here, never made. Everything
+below is [AGENT]-executed and [AGENT]-judged inside that mandate. Base
+commit `7cf19198` (+ `864d1bdc`, the bus-free `scripts/capped`
+cherry-picked from main so the cap could be proven from the agent's
+process); oracle pin go1.26.5 (`baselines/go-oracle-pin`); generator
+`deps/grossmith` @ `e68867d6` (campaign 2's revision, now a deliberate
+pin in the tool).
 
 **One-paragraph status.** The instrument is built and its contract
-test is GREEN against today's harness (C1–C8, §1): the adapter that
-the assessment presumed interface-dead is not — the 7-vs-10-field
-manifest and stage-vocabulary drift belong to the RETIRED `side/gofuzz`
+test is GREEN against today's harness (C1–C9, §1): the adapter the
+assessment presumed interface-dead is not — the 7-vs-10-field manifest
+and stage-vocabulary drift belong to the RETIRED `side/gofuzz`
 prototype, and `deps/grossmith`'s adapter already speaks today's
 10-column manifest and 5-column results file; what was missing was
 anything that would TELL us when that stops being true, which now
 exists. The soundness kit (dedup, four-class triage under the
-pinned-oracle rule, §2) is built and self-tested on real and synthetic
-batches. **Campaign 3 is PRE-REGISTERED (§3) but NOT EXECUTED in this
-lane**: every `lake build` and every campaign must run inside a proven
-memory cap (`scripts/capped`), and the agent's process cannot reach
-the systemd user bus (`Failed to connect to bus: Permission denied` /
-`Operation not permitted`, sandboxed and unsandboxed alike — the
-zellij snap confinement, `NoNewPrivs=1`). The cap wrapper refuses
-fail-closed, the sandbox rule is ask-don't-hack, so §4 is a placeholder
-with the exact two commands the operator (or a process with bus
-access) runs; the tool then fills §4/§5 mechanically (`triage.tsv`).
-The widening-cost assessment (§7) and the cadence recommendation (§8)
-do not depend on the run and are complete.
+pinned-oracle rule, §2) is built and exercised on real divergences.
+**Campaign 3 ran** (§4): the first `m3a` attempt was a RUNNER
+infrastructure failure (19,999 of 20,000 rows "worker produced no
+result" — root cause `ls "$ROWDIR"/*.in` exceeding ARG_MAX at 20,000
+rows under this tree's long TMPDIR, §4.1; it is now a static contract
+clause C9 plus a leg guard that fails LOUD instead of triaging
+artifacts), and the re-run plus the pairwise leg judged
+39,800 programs: 39,796 match, 3
+observation-mismatches, 1 reference-infra failures,
+zero clone-infra, zero harness-error. Every divergence is triaged in
+§5: one reference refusal = L-015's assembler bug (third witness); two mismatches = E5 (gc stores a multi-target assignment's earlier right-hand value before a later operand's division panic — both legs); one mismatch = E13 on a new axis (string slicing vs sibling calls). **No new machine bug**; the machine's two
+disagreements with gc land on two latitude points already in the
+inventory (E5, E13), with gc on the exotic member both times, and the
+reference refusals are L-015's assembler bug again. The widening-cost
+assessment (§7) and the cadence recommendation (§8) close the mandate.
 
 ---
 
@@ -42,11 +46,16 @@ do not depend on the run and are complete.
 | # | decision | provenance |
 |---|---|---|
 | 0.1 | Generator revision pinned at `e68867d6…` in `scripts/grossmith-run` (`GROSSMITH_PIN`); a mismatch is contract DRIFT (C1), moved only by editing the constant with a written reason in a campaign report. | [AGENT] — applies the oracle-pin discipline to the second external witness |
-| 0.2 | Machine statuses `fatal`, `fuel-out` are ACKNOWLEDGED-unknown to the adapter (its fallthrough is `harness-error` with the status preserved: fail-closed, visible, only infra-vs-semantic-undecided); any OTHER unknown status is DRIFT (C5). | [AGENT] — see §1 C5 for why acknowledging beats failing |
+| 0.2 | Machine statuses `fatal`, `fuel-out` are ACKNOWLEDGED-unknown to the adapter (its fallthrough is `harness-error` with the status preserved: fail-closed, visible, only infra-vs-semantic-undecided); any OTHER unknown status is DRIFT (C5). | [AGENT] — see §1 C5 |
 | 0.3 | Lane-only stages `membership`/`confluent`/`racy` are accepted as unmapped ONLY while the adapter provably pins `lane=strict` (asserted, C2/C4). | [AGENT] |
-| 0.4 | No shrink/reducer step: grossmith has none (`-replay` reproduces, nothing minimizes; campaign 2 minimized by hand) and building one is outside an integration lane. Stated, not hidden. | [AGENT] |
-| 0.5 | Campaign 3 parameters pre-registered BEFORE any result exists (§3) — seeds, sizes, budget. Not run by this lane (§4). | [AGENT]; the run itself is handed to the operator |
-| 0.6 | `deps/` populated in the lane worktree by `scripts/setup-deps --from <main checkout> --only go,goose,raft,grossmith` (local clones, gitignored). The worktree `.lake/` was seeded by copying the main checkout's build tree (identical sources at `7cf19198`; the binary post-dates the last `GoLean/` source commit `dd93725f`) — a repo-local convenience, NOT a substitute for the capped `lake build` the operator's run performs. | [AGENT] |
+| 0.4 | No shrink/reducer step: grossmith has none (`-replay` reproduces, nothing minimizes) and building one is outside an integration lane. Stated, not hidden. | [AGENT] |
+| 0.5 | Campaign 3 parameters pre-registered BEFORE any result existed (§3, committed at `3e3cca00`); the runs in §4 use exactly those seeds and sizes. | [AGENT] |
+| 0.6 | `deps/` populated in the lane worktree by `scripts/setup-deps --from <main checkout> --only go,goose,raft,grossmith` (local clones, gitignored); `.lake/` seeded from the main checkout's build tree (identical sources at `7cf19198`), then rebuilt by the capped `lake build` inside every `diff-coverage` run. | [AGENT] |
+| 0.7 | A leg runs as K contiguous-seed CHUNKS of at most 4,000 cases, each a separately published, `gengo -verify`-able batch (`<label>/part-NN`), because `diff-coverage` fans rows out through one argv (§4.1). The chunk bound is computed from the actual TMPDIR path length and ARG_MAX (C9) and refused when exceeded. | [AGENT] — response to the first m3a run |
+| 0.8 | LEG GUARD: a published chunk with any worker-death rows, more than 50 % clone-infra/harness-error/unjudged, or runner-failure text in the harness log ("Argument list too long", "worker pool exited nonzero", "lake build failed", "no results published") FAILS the leg with exit 2 and is NOT triaged. The smoke gets the same guard. | [AGENT] — a runner that returns 20,000 empty results is an infrastructure failure, not a campaign result |
+| 0.9 | Campaign 3's legs all live under `artifacts/grossmith/2026-09-01/` (the campaign date) — the `m3pairs` leg started after midnight and was pointed there explicitly with `GOLEAN_GROSSMITH_ARTIFACTS`; the tool's default tree is date-keyed per invocation. | [AGENT] |
+| 0.10 | The runner refuses to start a leg while the documented box-wide build lock (`artifacts/build-lock.d`, `docs/operational-lessons.md`) exists in this worktree or the primary checkout. Note: no script implements that lock today — the check is a courtesy against the convention, not a mechanism. | [AGENT] — coordinator's request; the first m3a failure was NOT load (§4.1) |
+| 0.11 | Triage auto-class `machine-bug-candidate` for case_03110 (§5) is re-classified by hand to LATITUDE (recorded E5). The rule stays as written: a wrong-answer candidate with a self-stable oracle defaults to OURS until a human clears it against the record. | [AGENT] |
 
 ---
 
@@ -73,8 +82,15 @@ something.
 | C6 | `golean.Profile`'s excluded tags all exist in `gen.Optional()` | ok — {observe_point defer recover} ⊂ 48 optional tags |
 | C7 | `go` on PATH == `baselines/go-oracle-pin` (gengo `-go` pins this exact binary for the reference pass AND the nested oracle) | ok — go1.26.5 at /usr/local/go/bin/go |
 | C8 | `gengo` compiles (into `artifacts/grossmith/…/bin`, repo-local GOCACHE) and compiling left the reference checkout clean | ok |
+| C9 | (campaign mode) the ROW-GLOB BOUND: `(len(TMPDIR) + len("/golean-coverage-rows.XXXXXX/000000.in") + 1) × rows-per-chunk ≤ ARG_MAX/2`; chunks are sized to satisfy it and a chunk that cannot is refused before anything runs | ok — path 130 B, ARG_MAX 2,097,152 → ≤ 8,065 rows per invocation; legs chunked at ≤ 4,000 |
 
 **Findings from building it (record corrections, no code change):**
+
+- **C9 exists because the first `m3a` run found a contract gap the
+  smoke cannot see** (§4.1): a 12-case smoke passes and a 20,000-row
+  manifest fails at the harness's row fan-out, with gengo exiting 0
+  and every verdict `clone-infra-failure`. The static bound is the
+  honest check; the leg guard (decision 0.8) is the backstop.
 
 - **The "adapter interface-dead (7-field vs 10-field manifest,
   stage-vocab drift)" claim in `lane-d-apparatus.md` D-8 describes
@@ -125,15 +141,24 @@ own row files reports every case as a worker death.
 ## 2. The soundness kit — dedup and triage
 
 `scripts/grossmith-run triage <batch>` post-processes a published
-gengo batch (`batch.json` + `manifest.tsv`) into `<batch>/triage.tsv`
-(one row per non-`match` case) and `<batch>/triage-groups.tsv`.
+gengo batch (`batch.json` + `manifest.tsv`) into `<batch>.triage.tsv`
+(one row per non-`match` case) and `<batch>.triage-groups.tsv` — BESIDE
+the batch, because a gengo batch is a digest-bound immutable tree and
+`gengo -verify` refuses undeclared files inside it (the first cut wrote
+into the batch and broke `-verify`; fixed, verified on two chunks).
 
 **Dedup.** Key = (verdict, stage, normalized detail), where
 normalization collapses case ids, absolute paths, quoted strings, hex
-and decimal literals. Two hits of one mechanism share a group; the
-group file carries count + representative. (Self-test on a real
-300-case batch: 300 clone-infra rows → 2 groups, split only by
-"(core dumped)" presence — honest, not over-merged.)
+and decimal literals. For `differential` mismatches the two JSON
+documents in the detail would normalize to the same skeleton, so those
+are keyed by the SHAPE of the disagreement instead — both statuses plus
+the differing value slots (`q6:uint64`) — a merge the first cut got
+wrong (the two campaign-3 mismatches landed in one group until the key
+was fixed). Two hits of one mechanism share a group; the group file
+carries count + representative; a chunked leg is merged into
+`<leg>/triage-all.tsv` + `triage-groups-all.tsv`, re-deduplicated
+across chunks. (Self-test on a real 300-case batch: 300 clone-infra
+rows → 2 groups, split only by "(core dumped)" presence.)
 
 **Classes** (closed set; every row is a CANDIDATE with `needs_human=yes`
 and an `evidence` column — nothing here promotes, pins, or files):
@@ -155,7 +180,10 @@ is self-unstable. This is campaign 2's "cheaper, higher-yield shape for
 next time" (§5) — metamorphic attribution over the whole divergence
 population rather than metamorphic sampling.
 
-**Self-tests run.** (i) A synthetic batch with two `observation-mismatch`
+**Self-tests run.** (0) The failed first `m3a` run: 19,999 worker-death
+rows → 1 group, 1 reference refusal → 1 group (`gc-bug-candidate`,
+compiles at `-N -l`), and — after decision 0.8 — the leg guard refuses
+that batch on all three of its criteria. (i) A synthetic batch with two `observation-mismatch`
 cases: one with its genuine recorded document → `machine-bug-candidate`
 ("gc self-stable"); one with the recorded document doctored →
 `gc-bug-candidate` ("gc default != -N -l"). The first cut of the
@@ -173,7 +201,7 @@ minimization stays the human's job, as in both prior campaigns.
 
 ---
 
-## 3. Campaign 3 — pre-registered parameters
+## 3. Campaign 3 — pre-registered parameters (as committed at `3e3cca00`, before any result)
 
 Stated before any result exists. Budget target: **~40 min wall for
 ~40,000 programs** (campaign 2 measured ~1,100 programs/min at 32
@@ -195,10 +223,16 @@ equivalence = GoLean's harness (expected status + exact panic
 message). Seed ranges are fresh (campaign 1 used 4242…/100000…/559…/
 42000…/777000…/31337…/900000…; campaign 2 used 1M–4M).
 
-The `campaign` mode's sequence: contract (§1) → smoke (12 cases, seed
-424242, end-to-end through gengo → diff-coverage → verdicts; refuses on
-any `harness-error`, unjudged case, or reference that did not run) →
-the leg → the gc-386 discrimination control (`m3a` only) → `triage`.
+The `campaign` mode's sequence: contract (§1) → C9 → smoke (12 cases,
+seed 424242, end-to-end through gengo → diff-coverage → verdicts;
+refuses on any `harness-error`/`clone-infra`, unjudged case, or
+reference that did not run) → the leg in contiguous-seed chunks
+(decision 0.7: `m3a` = 5 × `-n 4000`, seeds 5,000,000 + 4,000·i;
+`m3pairs` = 5 × `-pairs 4`, seeds 6,000,000 + 3,960·i — every pair still
+forced 20 times, the leg's seed range exactly the pre-registered one)
+→ the gc-386 control → `triage`. The control was run with
+`--control386 0` on both legs: this box aborts 386 binaries (§4.2), so
+it is not a measurement here.
 
 **Exclusion census of the pre-registered population** (3,000 programs
 of the `m3a` range generated locally, 264,388 subject lines, scanned
@@ -213,107 +247,265 @@ NOT in the campaign; the absent-surface zeros hold regardless.
 
 ---
 
-## 4. Results — NOT RUN IN THIS LANE (operator hand-off)
-
-**Why.** `scripts/capped` (mandatory for `lake build`, which
-`diff-coverage` performs, and for a 32-worker reference pass) creates a
-transient `systemd-run --user --scope`; from this agent's process the
-user bus is unreachable — sandboxed: `Failed to connect to bus:
-Permission denied`; with the tool sandbox disabled: `Operation not
-permitted` (`/run/user/1000` itself is unreadable; AppArmor profile
-`snap.zellij.zellij`, `NoNewPrivs=1`). The wrapper refuses (exit 4)
-exactly as designed; the lane did not run `lake` or the campaign
-uncapped (`GOLEAN_MEM_MAX=none` exists as a loud opt-out — declining
-it is the point: a shared 125 G box with other agents' builds is the
-scenario the cap exists for), and did not bypass the bus (sandbox
-rule: ask, don't hack). `scripts/grossmith-run campaign` self-wraps and
-inherits this refusal; `contract` and `triage` need no cap and ran.
-
-**What the operator runs** (two commands, §3's table, ~40 min total,
-from `/home/dev/projects/golean/.claude/worktrees/t4-grossmith`; the
-worktree already has `deps/` and a seeded `.lake/`, and the first
-`diff-coverage` inside the smoke performs the real capped `lake
-build`):
-
-```sh
-GOLEAN_MEM_MAX=32G scripts/capped scripts/grossmith-run campaign --seed 5000000 --n 20000 --control386 2000 --label m3a
-GOLEAN_MEM_MAX=32G scripts/capped scripts/grossmith-run campaign --seed 6000000 --pairs 20 --control386 0 --label m3pairs
-```
-
-Each leg ends by printing verdict counts and the triage summary; the
-record is `artifacts/grossmith/<date>/{m3a,m3pairs}/{batch.json,
-triage.tsv,triage-groups.tsv}` plus `<label>.params.txt` /
-`<label>.log`. `gengo -verify <leg>` re-checks the batch offline. This
-lane, on resume, fills the table below from those files and writes §5.
+## 4. Results
 
 | leg | cases | ref-ran | match | observation-mismatch | reference-infra | clone-infra | harness-error | wall |
 |---|---|---|---|---|---|---|---|---|
-| m3a | — | — | — | — | — | — | — | — |
-| m3pairs | — | — | — | — | — | — | — | — |
-| m3a-control386 | — | — | — | (in-tag / off-tag: — / —) | | | | |
+| `m3a` (first run) | 20,000 | 19,999 | 0 | 0 | 1 | **19,999** (worker deaths) | 0 | 509 s | 
+| `m3a-rerun` | 20,000 | 19,999 | **19,997** | **2** | **1** | 0 | 0 | 1,767 s (5 chunks) |
+| `m3pairs` | 19,800 | 19,800 | **19,799** | **1** | **0** | 0 | 0 | 1,512 s (5 chunks) |
+| **campaign 3 (valid legs)** | **39,800** | 39,799 | **39,796** | **3** | **1** | 0 | 0 | — |
 
-### 4.1 What DID run here, and what it showed
+The first `m3a` row is NOT a campaign result (§4.1) and is excluded
+from the campaign total; it is kept (`artifacts/grossmith/2026-09-01/m3a/`)
+as the diagnosis record. Its one reference refusal is the same
+program, at the same seed, as `m3a-rerun`'s (`case_11428` ≡
+`part-03/case_03428`, seed 5,011,428) — deterministic, counted once.
+Wall clocks were measured under a box load of 70–100 (other lanes'
+gates running concurrently); campaign 2's 18 min per 20k was on an
+idle box.
 
-- **Contract**: C1–C8 green (§1).
-- **`gengo -clone gc-386`, 300 cases, seed 5,000,000** (no lake
-  needed): the reference pass ran 300/300 (53 panic paths, 23
-  wrapper-caught), but **every 386 clone binary died with SIGTRAP (exit
-  133)** — 300 `clone-infra-failure`, "INCOMPLETE CAMPAIGN — 0 of 300
-  cases reached a semantic verdict" printed by grossmith itself (its
-  generated-vs-judged guard doing its job). Reproduced with a 3-line
-  `GOARCH=386` hello world, sandboxed and unsandboxed alike. This is
-  the box limitation `docs/2026-09-01_oracle-legs.md` Leg 2 already
-  recorded ("386 binaries abort in this sandbox — exit 133 / SIGTRAP …
-  carried to the operator, not worked around"); campaign 2 ran the
-  same control fine on 2026-08-20, so it is environmental. Consequence
-  for campaign 3: the `--control386` leg will show the same until the
-  host capability call is made; the operator may pass `--control386 0`
-  and the report must then say the discrimination control was NOT run
-  (the width-tag yield from campaign 2 §6, 870/3,493 with 0 off-tag,
-  stays the last measurement). The tool prints the control's outcome
-  and never counts it toward the leg.
-- **Triage self-tests** (§2): behave as specified.
+Every case regenerates from `(e68867d6, seed)`; every chunk is a
+published gengo batch with `complete.json`, re-checkable offline with
+`gengo -verify <chunk>`. Records: `artifacts/grossmith/2026-09-01/
+{m3a-rerun,m3pairs}/{part-01..05/batch.json, part-NN.triage.tsv,
+verdicts.txt, triage-all.tsv, triage-groups-all.tsv}`, `<label>.chunks.txt`,
+`part-NN.params.txt` (verbatim argv, identities, load at start), the
+runner logs `artifacts/grossmith-m3a-rerun.log`,
+`artifacts/grossmith-m3pairs.log`.
+
+### 4.1 The first `m3a` run: a runner infrastructure failure, root-caused
+
+**Symptom.** 20,000 cases, gengo exit 0, smoke 12/12 match, leg
+verdicts `clone-infra-failure` 19,999 (every one `stage harness: worker
+produced no result`) + 1 `reference-infra-failure`. The first cut of
+the runner then TRIAGED the 19,999 as harness-artifacts and exited 1 —
+exactly the shape the coordinator named as unacceptable.
+
+**Root cause (from the harness log, not inferred).**
+`m3a/golean-work/diff-coverage.log`:
+
+```
+scripts/diff-coverage: line 1370: /usr/bin/ls: Argument list too long
+environment: line 2: : No such file or directory
+diff-coverage: WARNING — worker pool exited nonzero; unclassified cases fail closed below
+differential coverage summary: cases=19999 pass=0 fail=19999 export_status=0
+```
+
+`diff-coverage` fans its rows out as
+`ls "$ROWDIR"/*.in | xargs -P $JOBS -n 1 bash -c 'run_case "$1"' _`
+(line 1370): one absolute path per row, all in ONE argv. Under this
+tree the row path is 129 bytes
+(`…/t4-grossmith/artifacts/grossmith/2026-09-01/tmp/golean-coverage-rows.XXXXXX/000001.in`);
+19,999 of them are 2.58 MB; `ARG_MAX` is 2,097,152. `ls` refused,
+`xargs` received EMPTY input and — GNU xargs without `-r` — ran the
+command ONCE with no argument: `run_case ""` wrote a manifest-error row
+to `.out` in the repo root (the stray untracked file
+`FAIL\t\tunknown\tmanifest\texpected 10 tab-separated fields`, removed),
+which is the `environment: line 2` message. No row was ever run; the
+assembler's fail-closed fallback wrote "worker produced no result" for
+every row, as designed. Campaign 2 never saw this because it used
+`/tmp` (45-byte paths → ~900 KB for 20,000 rows); this lane forces
+TMPDIR inside the artifacts tree because `/tmp` is write-only under
+the agent sandbox.
+
+**Not the cause: load.** The coordinator's hypothesis (a concurrent
+`ci --diff` starving 10 s per-case timeouts) does not fit the
+evidence: timeouts land as stage `go-run`/`lean-run` rows with the
+timeout text, never as `harness` worker deaths; the log names the real
+failure; and the per-case clone step is the prebuilt `golean` binary
+(`diff-coverage` runs `lake build` once up front — the smoke did that,
+under the cap — and never per case). Load DID show in the rerun's wall
+clock (29.5 min vs 18 min), not in its verdicts (0 timeouts).
+
+**Fix (runner side; `diff-coverage` is trusted surface and was not
+touched).** Decision 0.7 (chunking under the C9 bound), 0.8 (leg
+guard), 0.10 (build-lock courtesy check). Verified: the guard refuses
+the failed batch on all three criteria; the rerun's five chunks all
+passed it.
+
+**Owed to the apparatus (recommendation, not done — a trusted-surface
+change needs its own gate + audit):** the fan-out at
+`diff-coverage:1370` is a latent bound on corpus size × TMPDIR length —
+`find "$ROWDIR" -name '*.in' -print0 | xargs -0 -r …` removes both the
+ARG_MAX ceiling and the empty-input worker (`-r`). Today's full corpus
+(2,506 rows under `/tmp`) is ~110 KB, far from the limit; the limit
+becomes real at ~23,000 rows under `/tmp` or ~8,000 under a 130-byte
+TMPDIR.
+
+### 4.2 The 386 discrimination control
+
+Not run in campaign 3: `gengo -clone gc-386` (300 cases, seed
+5,000,000, run while diagnosing) had the reference pass 300/300 and
+EVERY 386 clone binary die with SIGTRAP (exit 133) — reproduced with a
+3-line `GOARCH=386` hello world, sandboxed and unsandboxed. grossmith's
+own guard printed "INCOMPLETE CAMPAIGN — 0 of 300 cases reached a
+semantic verdict". This is the box limitation
+`docs/2026-09-01_oracle-legs.md` Leg 2 already recorded; campaign 2
+ran the same control fine on 2026-08-20, so it is environmental. The
+runner prints the control's outcome and never counts it toward the
+leg; the last valid discrimination measurement remains campaign 2 §6
+(870/3,493 in-tag, 0 off-tag).
 
 ---
 
 ## 5. Every divergence, triaged
 
-Pending §4. The mechanical output is `triage.tsv` per leg; this
-section's format, fixed now: one row per dedup GROUP —
-`Gn × count | verdict/stage | class | representative id, seed |
-evidence | proposed disposition` — then per-group prose with the
-minimal repro where the class is `machine-bug-candidate` or
-`gc-bug-candidate`, following campaign 2's conventions (controls on the
-same path, hypothesis stated, disposition proposed).
+From `triage-all.tsv` of both legs (mechanical class in brackets; the
+human re-class and disposition follow). Controls: every metamorphic
+statement below is the runner's `-N -l` re-run of the case's own
+`driver.go` compared to the recorded default-flags document; hand
+derivations were checked against the recorded observation values.
 
-Two environment artifacts are already known and pre-classified
-`harness-artifact`, not divergences: the 386 SIGTRAP (§4.1) and any
-`fatal`/`fuel-out` status landing as `harness-error` (§1 C5).
+### 5.0 `m3pairs/part-01/case_03079` (seed 6,003,079; forced pair `early_return+defined_types`) — observation-mismatch, `q5` (`v9 uint64`): machine 53, gc 34 → [machine-bug-candidate] → **re-classified LATITUDE: E5 again (second witness of the same point, the other leg)**
+
+Both sides recovered at `psite = 13`; gc self-stable. Inside the loop:
+
+```go
+v9, v5, _ = max((v19-v19), (v19%uint64(60))), ((v5 << 1) << 1), ((v0 % v0) + (v0 | v0))   // v0 == 0
+```
+
+`v0` is 0 by psite 10 (`((v0 % v0) & max(v0, -10)) % -2147483648` with
+`v0 = -8` gives 0), so the third right-hand operand divides by zero on
+the first iteration. The machine holds every store (`v9` stays 53);
+gc has already stored `max(0, 34) = 34` into `v9`. Same mechanism as
+§5.2 with a COMPUTED first operand (a `max` call over a variable) —
+E5's early store is not about constants at all. **Disposition:** the
+same E5 annotation as §5.2 (two campaign-3 witnesses, one per leg; rate
+2 in 39,800 — the shape needs a multi-target assignment whose later
+operand panics by division, which the generator's `panic_risk` arm
+supplies at ~5 % of statements); NO corpus row; no BUGS entry.
+
+### 5.1 `m3a-rerun/part-03/case_03428` (seed 5,011,428) — reference-infra → [gc-bug-candidate] → **L-015, third witness**
+
+```
+<autogenerated>:1: offset too large in 00166 (…/case_03428/subject.go:55)	MOVB	AL, main.v13+2147483664(SP)(CX*1)
+```
+
+gc at default flags refuses to assemble the program; at
+`-gcflags=all=-N -l` it compiles AND runs. Same class, same message
+shape, same 2^31+ stack displacement as the two campaign-2 cases
+(`docs/spec-divergence-ledger.md` L-015, kind `gc-bug`,
+reference-infra class): a legal program whose defined behavior is a
+runtime index panic (`spec#Run_time_panics`) fails at assembly time.
+Rate is now 3 in ~100k generated programs. The machine never saw the
+case (the harness refused it before the clone) — nothing to attribute.
+**Disposition:** annotate L-015 with the third case; no corpus row.
+
+### 5.2 `m3a-rerun/part-04/case_03110` (seed 5,015,110) — observation-mismatch, `q6` (`v9 uint64`): machine 318047311615681922, gc 29 → [machine-bug-candidate] → **re-classified LATITUDE: E5, the machine on the spec-literal point**
+
+Both sides recovered a panic at the same site (`q13 = psite = 12`);
+gc is self-stable (`-N -l` byte-identical). The site is
+
+```go
+v7, v9, v2 = ((-v7) + v7), uint64(29), (min(w3, w3) / w3)   // w3 == 0
+```
+
+The third right-hand operand divides by zero. `spec#Assignment_statements`: "the
+assignment proceeds in two phases. First, the operands of index
+expressions and pointer indirections on the left and the expressions
+on the right are all evaluated in the usual order. Second, the
+assignments are carried out in left-to-right order." Read literally, a
+phase-1 panic precedes every phase-2 store, so `v9` keeps its earlier
+value `((-v9) - v9) / v9` with `v9 = 58` = `(2^64 - 116) / 58` =
+318047311615681922 — the machine's answer. gc stored `29` into `v9`
+before evaluating the panicking operand.
+
+This is exactly `docs/2026-08-11_latitude-inventory.md` **E5 "Early
+store across the phase boundary — PINNED to the spec-literal point; gc
+elsewhere"** (`x, a[i].f = 1, 7/z`), including its note that "here the
+machine's point is the SPEC-shaped one and gc's is the exotic one".
+Reduced probes (`artifacts/grossmith/2026-09-01/probe-e5/case/main.go`),
+both sides:
+
+| probe | shape | gc (default = `-N -l`) | machine | spec-literal | harness |
+|---|---|---|---|---|---|
+| p1 | `a, v, b = -a+a, 29, z/z` | 29 (early store) | 58 | 58 | FAIL differential |
+| p2 | `a, v, b = -a+a, w, z/z` (non-constant middle RHS) | 29 (early store) | 58 | 58 | FAIL differential |
+| p3 | `b, v = z/z, 29` (panic FIRST) | 58 | 58 | 58 | PASS |
+| p4 | `v, b = 29, s[i]` (INDEX panic instead of division) | **58** (store held back) | 58 | 58 | PASS |
+| p5 | `v, b = 29, z/z` (two targets, as generated) | 29 (early store) | 58 | 58 | FAIL differential |
+| p6 | control: `v = 29; b = z/z` | 29 | 29 | 29 | PASS |
+
+(gc column: `go run` at default flags and at `-gcflags=all=-N -l`,
+identical; machine column: the same file run through
+`scripts/diff-coverage` under the cap with a six-row hand manifest,
+`artifacts/grossmith/2026-09-01/probe-e5/`. The machine realizes the
+spec-literal point on every row.)
+
+New facts for E5's record: gc's early store is not a constant-folding
+artifact (p2: a variable read is stored early too) and it is
+OPERATION-SPECIFIC — an index bounds panic holds the store back (p4),
+a division panic does not (p1/p5). That is a compiler-internal
+realization, unpinnable, which confirms E5's disposition ("a future pin
+must use the membership treatment"). The generated case adds the
+uint64/multi-target/third-operand shape as a second witnessed point.
+**Disposition:** annotate E5 with this case and the p1–p6 matrix; NO
+corpus row (a strict pin of either member is forbidden by E5); no BUGS
+entry. The triage rule's default to "ours" was right to fire and right
+to be overridden by the record.
+
+### 5.3 `m3a-rerun/part-05/case_01848` (seed 5,017,848) — observation-mismatch, `q15` (`wOrd`): machine 1026, gc 1 → [latitude-candidate] → **LATITUDE: E13, string-SLICE axis (new witnessed shape)**
+
+Both sides recovered at `psite = 9`; gc self-stable. The site is
+
+```go
+v11, _ = "ab"[v0:], wit(min(wit(int(v5), 2), (v0/57)), 3)   // v0 == -52
+```
+
+after `v1 = h0(wit(v0, 1))` at psite 8. The slice bound is negative, so
+`"ab"[v0:]` panics (slice bounds out of range). The machine ran both
+remaining `wit` calls first — `wOrd = ((0·31+1)·31+2)·31+3 = 1026` —
+and then panicked; gc panicked at the slice expression with only
+`wit(…, 1)` recorded (`wOrd = 1`). `spec#Order_of_evaluation` orders
+"function calls, method calls, receive operations, and binary logical
+operations"; a slice expression is none of these, and it is a SIBLING
+operand of the calls, not their argument, so nothing lexically forces
+it before them. This is
+`docs/2026-08-11_latitude-inventory.md` **E13 "Non-call panicking
+operations (type assertion, indexing) vs SIBLING calls — PINNED,
+structural: calls first"**, reading I-2/L-013 (UNSEQ), now witnessed on
+a third axis: string SLICING (E13 lists type assertion and index). gc
+realizes the other member, as it did in campaign 2 §4.
+**Disposition:** annotate E13 with the string-slice axis and this
+case; NO corpus row (E13's pin is structural and "no strict row should
+pin it"); no BUGS entry.
+
+### 5.4 Not divergences: environment artifacts
+
+The 386 SIGTRAP (§4.2) and the first-run worker deaths (§4.1) are
+runner/box artifacts, classified `harness-artifact` by the tool and
+excluded from the campaign total. No `harness-error` occurred in any
+valid chunk: the adapter fit today's harness on every judged case
+(including the acknowledged `fatal`/`fuel-out` statuses — neither
+appeared).
 
 ---
 
 ## 6. Promotion recommendations (none made; all RECOMMENDED)
 
-- **From campaign 3:** pending §4/§5. Rule to apply: every
-  `machine-bug-candidate` confirmed by hand becomes a corpus row +
-  BUGS entry (red pin); every confirmed `gc-bug-candidate` becomes a
-  `spec-divergence-ledger` `gc-bug` entry with the `-N -l` matrix (as
-  L-014/L-015); every confirmed `latitude-candidate` becomes a
-  latitude-inventory row (never a strict corpus row, as E13).
-- **Campaign 2's offers are all disposed** — verified at this tip, so
-  campaign 3 is regression evidence rather than a re-offer: BUG-062
-  fixed 2026-08-31 with the five `builtins/min-max-vs-call-order/*` and
-  `len-vs-call-order/*` rows on its Cases line (F-1/F-2); L-014 and
-  L-015 in the divergence ledger (F-4); E13 in the latitude inventory
-  (F-3). `min`/`max` are generated in ~4,200 lines per 3,000 programs
-  (§3 census), so campaign 3 exercises the fix at scale by
-  construction.
-- **Grossmith-side notes to hand back (external project, not patched
-  here):** (a) add `fatal` and `fuel-out` to the adapter's status sets
-  (§1 C5); (b) campaign 2's F-5 (the STRICT lane can land on
-  unsequenced points via `order_witness`) still stands; (c) a
-  `-profile golean` flag that applies `golean.Profile` WITHOUT judging
-  would make the §3 census exact.
+- **Corpus rows: none.** Both machine/gc disagreements are recorded
+  latitude points whose inventory entries forbid a strict pin (E5,
+  E13); the reference refusal never reached the machine.
+- **BUGS.md entries: none.** No forced-point wrong answer was found in
+  39,800 judged programs — this is the campaign's headline,
+  stated as a lower bound: observed ∈ modeled on every judged program
+  in grossmith's fragment at `7cf19198`.
+- **Three annotations owed** (record-side, not fixes): L-015 (+1
+  witness, seed 5,011,428, rate 3/~100k); E5 (+ the campaign-3 shape
+  and the p1–p6 matrix: early store is variable-too and
+  operation-specific); E13 (+ string-slice axis).
+- **Regression evidence delivered by construction:** BUG-062 (fixed
+  2026-08-31; `min`/`max` vs call order) — `min`/`max` appear in ~4,200
+  lines per 3,000 programs (§3 census) and produced zero mismatches;
+  BUG-042/043 (defined-type incdec / range-over-int) — `defined_types`
+  is a swarm arm, zero mismatches. Campaign 2's F-1…F-4 are all
+  disposed at tip (BUG-062 Cases line; L-014/L-015; E13).
+- **To the apparatus (ours, future slice, trusted surface):** the
+  `diff-coverage:1370` row fan-out hardening (§4.1). **To grossmith
+  (external, not patched here):** add `fatal`/`fuel-out` to the
+  adapter's status sets (§1 C5); campaign 2's F-5 stands; a
+  `-profile golean` generate-only flag would make the §3 census exact.
 
 ---
 
@@ -369,8 +561,8 @@ covered; its find was a shape the corpus never had). Recommendation,
 [AGENT], for the [USER] to set:
 
 1. **Weekly, not nightly** — one `m3a`-shaped leg (20k swarm, seeds
-   advancing by 10^6 per run, recorded in the report series) at ~20
-   min. Nightly would spend ~10 h/week of box time re-sampling a
+   advancing by 10^6 per run, recorded in the report series): measured
+   29.5 min on a loaded box (§4), ~18 min idle. Nightly would spend ~10 h/week of box time re-sampling a
    fragment whose divergence rate is ~1 in 40k; weekly keeps the
    regression signal (min/max, defined-type incdec, BUG-042/062 at
    scale) at a tenth of the cost.
@@ -400,24 +592,43 @@ covered; its find was a shape the corpus never had). Recommendation,
 
 ## 9. Verification performed in this lane
 
-- `scripts/grossmith-run contract`: exit 0, C1–C8 ok (output in §1).
+- `scripts/grossmith-run contract`: exit 0, C1–C8 ok (§1); C9 evaluated
+  and printed at both legs' start (≤ 8,065 rows/invocation; chunks of
+  4,000 / 3,960).
 - Refusal self-tests: 7 protected-root spellings (incl. symlink) exit 2;
   unknown mode exit 2; `campaign` without a proven cap: exit 4 from
-  `scripts/capped` with its diagnostic (the fail-closed path, §4).
-- `triage`: real 300-case batch (300 rows → 2 groups, all
-  `harness-artifact`); synthetic 2-case batch (one `machine-bug-candidate`
-  with "gc self-stable", one `gc-bug-candidate` with "gc default != -N -l").
-- `gengo`: builds from the pinned checkout into the artifacts tree
-  (repo-local GOCACHE); the reference checkout stayed clean
-  (`git status --porcelain` empty before and after).
-- Static gate steps that need no build, run by hand at tip:
-  `check-spec-anchors` ok (this report's `spec#Order_of_evaluation`
-  resolves), `check-bugs.sh` ok, `check-coverage` ok, `bash -n` on the
-  tool. **`scripts/ci` itself (self-wrapped in `scripts/capped`) could
-  not run from this process for the §4 reason** — it is owed at tip by
-  the operator's run: `scripts/ci` (plain; this lane touched no runtime
-  code, so no `--diff`).
+  `scripts/capped`; `campaign` with an implausible pairs universe
+  (a mis-extracted tag count during development) exit 2 before any
+  case was generated.
+- Leg guard: refuses the failed first `m3a` batch on all three
+  criteria (log text, 19,999 worker deaths, >50 % infra); passes all
+  ten valid chunks.
+- `gengo -verify` on `m3a-rerun/part-04` and `m3pairs/part-01`: every
+  case-input digest intact and bound to the manifest; report bound;
+  report self-consistent; clone tree bound (4 of 4 claims, both chunks).
+- `triage`: real batches (the failed `m3a`; the ten campaign-3 chunks;
+  the 300-case 386 control); synthetic 2-case batch exercising both
+  outcomes of the metamorphic attribution.
+- Campaign 3: `m3a-rerun` and `m3pairs` under
+  `GOLEAN_MEM_MAX=32G scripts/capped` (cap proven: `GOLEAN_CAPPED=verified`
+  readback), §4; every mismatch hand-derived and matched to the record
+  (§5).
+- Static gate steps at tip: `check-spec-anchors` ok (this report's
+  `spec#Assignment_statements`, `spec#Order_of_evaluation`, `spec#Run_time_panics`
+  resolve), `check-bugs.sh` ok, `check-coverage` ok, `bash -n` on the
+  tool. `scripts/ci` (plain; no runtime code touched): a fresh worktree carries no
+  recorded differential run (the plain gate FAILS closed on that,
+  correctly), so `scripts/ci --diff` was run once under the cap — PASS,
+  full native corpus + negative corpus re-run and judged against the
+  tracked baselines, no regression — and the plain `scripts/ci` then
+  replayed it at the committed tree: PASS.
 
 Artifacts (gitignored): `artifacts/grossmith/2026-09-01/{bin/gengo,
-selftest-control386/, selftest-synthetic/, census-m3a-3000/, tmp/,
-go-build-cache/}`.
+m3a/ (failed run, kept), m3a-rerun/, m3pairs/, *-smoke/,
+selftest-control386/, selftest-synthetic/, census-m3a-3000/}` and the
+runner logs `artifacts/grossmith-m3a*.log`, `artifacts/grossmith-m3pairs.log`.
+Operational notes for the next operator: the tool's default artifacts
+tree is date-keyed per invocation (pin it with
+`GOLEAN_GROSSMITH_ARTIFACTS` for a campaign that crosses midnight); a
+`pkill -f` whose pattern matches the caller's own command line kills
+the caller (it did, once, here — kill by PID).
