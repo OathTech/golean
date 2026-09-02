@@ -3968,7 +3968,10 @@ kill, never a wrong answer, lifted by (1).
   `docs/2026-08-31_qrow-rulings.md` row 2; [AGENT]-executed. THE FIX:
   `GoLean/GoCore/Race.lean` `RaceAccess := AccessKind × Loc`, `AccessKind ∈
   {read, write, atomicRead, atomicWrite}`, conflict ⇔ at least one write ∧
-  not both atomic (mem#restrictions verbatim; TSan's shadow rule); the
+  not both atomic (mem#model's read-write/write-write data-race
+  definitions — read-like/write-like operations "at least one of which is
+  non-synchronizing"; the one-sentence informal form is mem#overview;
+  TSan's shadow rule); the
   per-op set gc's -race build realizes on the primitive's own words —
   `syncEntryKinds` (before the op's hook) / `syncReleaseTailKinds` (Unlock's
   state Add after `race.Release`) — derived PRIMITIVE BY PRIMITIVE from
@@ -4003,11 +4006,13 @@ kill, never a wrong answer, lifted by (1).
   check so TSan reports the race and THEN the fatal fires; the machine's
   fatal fires in the apply step and the detector — which folds only
   successful steps — never sees the entry access: machine `fatal` where
-  gc is race+fatal, both refusals, outcome CLASS differs (probes
+  gc is race+fatal — both abort; the machine's is an asserted program
+  outcome (`GoError.fatal`, Value.lean:207-217), gc's is the race report
+  then the same abort — outcome CLASS differs (probes
   `rw-overwrite-vs-{runlock,unlock}`, possible-HOLE by the runner's
-  definition, diagnosed; a fix needs a pre-step check in `execProgLoop`
-  and its four mirrors + the MultiStreams theorems — out of this slice's
-  size). Evidence: `docs/evidence/2026-09-02_detector-soundness/
+  definition, diagnosed; the owed fix's scope and call-site list are
+  AUTHORITATIVE at TODO.md's BUG-080 follow-up item — S–M,
+  trust-surface). Evidence: `docs/evidence/2026-09-02_detector-soundness/
   probes-u4kind-{pre,post}.*`, `corpus-bug080.*`.)
 - Pinned-by: differential
 - Cases: race/negative-sync/wg-overwrite, race/negative-sync/mutex-copy, race/negative-sync/rw-overwrite, race/negative-sync/once-copy

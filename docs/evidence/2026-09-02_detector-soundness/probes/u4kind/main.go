@@ -376,7 +376,7 @@ func kWgCopyVsDone() int {
 
 // WG-4 overwrite vs Done ONLY (main Adds before the spawn) -> GREEN in gc:
 // Done performs NO instrumented access (its state Add is under
-// race.Disable). The program is racy by mem#restrictions (a non-atomic
+// race.Disable). The program is racy by mem#model (a non-atomic
 // write beside an atomic RMW) but TSan — the racy lane's oracle — does not
 // see it; recorded as the WaitGroup alignment fact, not a pin.
 func kWgOverwriteVsDone() int {

@@ -239,22 +239,27 @@ write a bare "#6"/"#7".
    words (U4 → **BUG-080**, born-FAIL pinned 2026-09-02 and FIXED the
    same day by the access-KIND slice, [USER]-ruled ahead of the
    atomics arc): a plain copy/overwrite of a primitive another
-   goroutine is operating on is racy by mem#restrictions and TSan-red
+   goroutine is operating on is racy by mem#model and TSan-red
    10/10; the machine USED to run it to a value (the probe leg's third
    cell was exactly this class — 2/45 value-run + 3 uncertifiable-by-
    fatal-members, all U4). Since the fix `RaceAccess := AccessKind ×
    Loc` (read/write/atomicRead/atomicWrite; conflict = at least one
    write ∧ not both atomic — the register's own sentence) and the sync
    arm records TSan's realized per-primitive set at the primitive's
-   path: the corpus HOLE cell is 0/364 (`corpus-bug080.*`), the
+   path: the corpus HOLE cell is 0/368 (`corpus-bug080.*`, 368 rows), the
    28-subject two-direction family `probes/u4kind` is 26 agree + 2
    diagnosed possible-HOLE. What remains of the class, recorded at
-   BUG-080 and Race.lean: shapes gc runs under `race.Disable` (a copy
-   beside an RWMutex op, a plain access beside WaitGroup `Done`) are
+   BUG-080 and Race.lean: shapes gc runs under `race.Disable` (a plain
+   access beside a WRITE-LIKE op — `RUnlock`, RWMutex `Unlock`,
+   WaitGroup `Add`/`Done` — or an overwrite beside a `Wait` at 0; NOT a
+   copy beside `RLock`/`Lock`, which is two read-likes and no race) are
    go_mem-racy but TSan-invisible and the machine follows the oracle
-   (register #13) — [AGENT], for the audit; and an overwrite that
-   unlocks a held lock before another goroutine's Unlock ends `fatal`
-   here where gc reports the race first (both refuse);
+   (register #13) — [AGENT], posed to the [USER] as Q-U4RESIDUAL
+   (qrow-rulings row 9); and an overwrite that unlocks a held lock
+   before another goroutine's Unlock ends `fatal` here where gc reports
+   the race first (both abort: the machine's is an asserted program
+   outcome, `GoError.fatal`; gc's is the race report then the same
+   abort);
    (ii) schedule-dependent races on paths the enumeration never
    realizes — the enumerator is fuel/site/width-bounded and the strict
    lane runs one default stream plus three variants, so a race whose

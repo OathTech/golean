@@ -267,7 +267,7 @@ SYNCHRONIZATION (the registry's ops — HB updates, never data):
   state-word accesses are modeled as `-race` realizes them.** Before:
   a sync op recorded NO access on its primitive's cell, so a plain
   copy/overwrite of a Mutex/WaitGroup/RWMutex/Once another goroutine
-  was operating on — racy by mem#restrictions, TSan-red 10/10 — ran to
+  was operating on — racy by mem#model, TSan-red 10/10 — ran to
   a value (the detector-soundness differential's third cell,
   `docs/2026-09-02_detector-soundness.md` §3.2; born-FAIL pins
   `race/negative-sync/{wg-overwrite,mutex-copy}`). The fix is NOT a
@@ -357,12 +357,19 @@ def locOverlap (a b : Loc) : Bool := locPrefix a b || locPrefix b a
 
 /-! ## Access kinds and the per-location shadow (TSan/FastTrack skeleton) -/
 
-/-- The KIND of one recorded access — mem#restrictions' two axes ("a
-data race is defined as a write to a memory location happening
+/-- The KIND of one recorded access — the two axes of mem#model's data-
+race definitions, quoted verbatim: "A read-write data race on memory
+location x consists of a read-like memory operation r on x and a
+write-like memory operation w on x, at least one of which is
+non-synchronizing, which are unordered by happens before"; "A
+write-write data race on memory location x consists of two write-like
+memory operations w and w' on x, at least one of which is
+non-synchronizing, which are unordered by happens before". (The
+informal one-liner — "a write to a memory location happening
 concurrently with another read or write to that same location, unless
-all the accesses involved are atomic data accesses"), which is also
-TSan's shadow rule (two accesses race unless both are reads or both
-are atomic). The plain pair is the data footprint's (`stepAccesses`);
+all the accesses involved are atomic data accesses" — is mem#overview,
+the same relation in words.) It is also TSan's shadow rule (two
+accesses race unless both are reads or both are atomic). The plain pair is the data footprint's (`stepAccesses`);
 the atomic pair is the sync primitives' own state-word traffic as
 `-race` realizes it (BUG-080 — `syncEntryKinds` below, recorded by
 `raceUpdate`'s sync arm). The atomics arc (Q-ATOMIC,
@@ -1075,23 +1082,38 @@ HB-after the wake — every conflict a wake-time access would find, the
 entry access already found (gc's woken `lockSlow` CAS is thus
 detection-redundant here).
 
-RESIDUAL, recorded honestly (fail-OPEN vs mem#restrictions, fail-
-ALIGNED vs the `-race` oracle): a plain COPY beside an RWMutex op, and
-a plain OVERWRITE/COPY beside a WaitGroup `Done` (or an Add from a
-nonzero counter, or a Wait at 0), are racy by the memory model (a
-non-atomic access beside an atomic RMW on the same word) but TSan
-cannot see them — gc performs those RMWs under `race.Disable`. The
-racy lane's oracle is `-race` (register #13: TSan's realized set), so
-the machine records what TSan records and RUNS these misuse shapes
-(vet's `copylocks` flags every one; no race-free program is affected).
-Recording `.atomicWrite` for them instead would refuse them at the
-cost of over-refusal rows against the oracle — an [AGENT] choice made
-inside the BUG-080 slice's brief ("no new over-refusal rows"),
-flagged for the audit; `probes/u4kind/{rw-copy-vs-rlock,
-rw-copy-vs-lock,wg-copy-vs-done,wg-overwrite-vs-done,
-wg-overwrite-vs-wait-at-0}` are its measured exhibits (agree-DRF).
+RESIDUAL (a), recorded honestly (fail-OPEN vs mem#model, fail-ALIGNED
+vs the `-race` oracle) — stated PRECISELY, because the first statement
+over-counted (audit G2 F10): the class is a plain access beside a
+WRITE-LIKE sync op gc performs under `race.Disable` — `RUnlock`,
+RWMutex `Unlock` (mem#model: unlock is write-like), WaitGroup
+`Add`/`Done` (the state RMW) — or a plain OVERWRITE beside a `Wait` at
+counter 0 (the counter read is read-like; the `wg.sema` pair is
+realized only on a BLOCKING Wait). These are racy by mem#model's
+read-write/write-write definitions (one write-like operand, at least
+one non-synchronizing) but TSan cannot see them. NOT in the class: a
+plain COPY beside RWMutex `RLock`/`Lock` — mutex lock is READ-LIKE and
+a copy is read-like, so there is no write-like operand and no race by
+mem#model; `probes/u4kind/rw-copy-vs-{rlock,lock}` agree-DRF is the
+CORRECT verdict, not a deviation — do not "fix" it. The racy lane's
+oracle is `-race` (register #13: TSan's realized set), so the machine
+records what TSan records and RUNS the class (vet's `copylocks` flags
+every shape; no race-free program is affected). Recording the go_mem
+kinds instead — the auditor's table: RLock/Lock → `.atomicRead`,
+RUnlock/Unlock → `.atomicWrite`, Add/Done → + `.atomicWrite`, Wait →
++ `.atomicRead`, both RWMutex halves moving together — would refuse
+the class at the cost of over-refusal rows against the oracle; an
+[AGENT] choice made inside the BUG-080 slice's brief ("no new
+over-refusal rows"), now posed to the [USER] as Q-U4RESIDUAL
+(`docs/2026-08-31_qrow-rulings.md` row 9, OPEN). Measured exhibits
+(agree-DRF): `probes/u4kind/{wg-copy-vs-done,wg-overwrite-vs-done,
+wg-overwrite-vs-wait-at-0}`; a copy beside RUnlock/Unlock is UNPROBED
+(the family has no such subject).
 
-RESIDUAL (b), an outcome-CLASS deviation, both sides refusing: the
+RESIDUAL (b), an outcome-CLASS deviation — both sides ABORT, but the
+machine's abort is an asserted program outcome (`GoError.fatal`,
+Value.lean:207-217) where gc's is the race report then the same abort:
+the
 detector folds SUCCESSFUL pool steps only (`execProgLoop` runs
 `raceUpdate` after `stepMulti` returns), so a sync op whose apply is
 FATAL — an `Unlock`/`RUnlock` after a concurrent plain overwrite reset
@@ -1100,9 +1122,9 @@ access is ever checked, where gc's `race.Read`/state Add precede the
 misuse check and TSan reports the race first, then the fatal fires.
 Reachable only by an overwrite-then-cross-goroutine-unlock shape
 (`probes/u4kind/rw-overwrite-vs-{runlock,unlock}`, possible-HOLE by the
-runner's definition, diagnosed at BUG-080). Closing it needs a
-pre-step entry check in the detecting loop and its mirrors — owed at
-TODO.md, out of this slice's size. -/
+runner's definition, diagnosed at BUG-080). The owed fix's scope and
+its call-site list are AUTHORITATIVE at TODO.md's BUG-080 follow-up
+item (S–M, trust-surface) — cited, not restated here. -/
 
 /-- The accesses `-race` realizes on the primitive's own words at a
 sync op's ENTRY — before the op's release/acquire hook — from the op

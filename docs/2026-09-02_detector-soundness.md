@@ -263,7 +263,7 @@ both sides.
 > the sequencing paragraph below).** FIXED. `RaceAccess := AccessKind ×
 > Loc` with `AccessKind ∈ {read, write, atomicRead, atomicWrite}` — the
 > sketch's three kinds refined to four because an atomic READ beside a
-> plain read is not a race (mem#restrictions; TSan) and gc realizes
+> plain read is not a race (mem#model: two read-likes; TSan) and gc realizes
 > read-only ops (a Do observing completion, a Wait at counter 0). The
 > per-op set was derived PRIMITIVE BY PRIMITIVE from go1.26.5 and
 > measured both directions by the 28-subject family
@@ -279,9 +279,12 @@ both sides.
 > matrix HOLE cell 2 → 0 (`corpus-bug080.*`); the two pins plus
 > `race/negative-sync/{rw-overwrite,once-copy}` PASS/racy; check (i)'s
 > green guards `race/free-sync/{mutex-siblings,disjoint-prims}` born
-> PASS/confluent. Residual (a), [AGENT] for the audit: the TSan-invisible
-> go_mem-racy shapes (copy beside an RWMutex op; plain access beside
-> WaitGroup `Done`) are followed to the oracle and run — recording
+> PASS/confluent. Residual (a), [AGENT] for the audit (posed to the
+> [USER] as Q-U4RESIDUAL, qrow-rulings row 9): the TSan-invisible
+> go_mem-racy shapes (a plain access beside a write-like op — `RUnlock`,
+> RWMutex `Unlock`, WaitGroup `Add`/`Done` — or an overwrite beside
+> `Wait` at 0; a copy beside `RLock`/`Lock` is two read-likes and NOT a
+> race) are followed to the oracle and run — recording
 > `.atomicWrite` there would refuse them at the cost of over-refusal
 > rows.
 
@@ -303,7 +306,7 @@ stream runs are `ok`; gc red regardless) — `uncertified` in the first
 runner's matrix, `possible-HOLE` under the hardened one (§2.2), same
 diagnosis.
 
-Honest classification: by mem#restrictions a non-atomic access beside
+Honest classification: by mem#model a non-atomic access beside
 an atomic one IS a data race, so these programs are racy by the spec
 and the machine gives them SC value semantics — the DRF-SC premise does
 not cover them. It is the misuse class only (vet's `copylocks` flags
@@ -497,10 +500,11 @@ traffic and nested paths all footprint where gc reads/writes.
 **What is NOT detected — three classes, each with its evidence.**
 
 1. *The sync primitives' own state words* (U4 → BUG-080). Racy by
-   mem#restrictions (non-atomic beside atomic), TSan-red 10/10, run
+   mem#model (non-atomic beside atomic), TSan-red 10/10, run
    to a value here AT THE TIME OF WRITING — FIXED 2026-09-02 by the
    access-kind slice (§3.2 postscript): the class is now detected on
-   every path for every shape TSan sees; what remains is the TSan-
+   every path for every shape TSan sees at a non-fatal step; what
+   remains is the TSan-
    invisible sub-class gc runs under `race.Disable` (followed to the
    oracle, [AGENT], BUG-080 residual (a)) and the fatal-before-race
    ordering on an overwrite-then-cross-goroutine-Unlock (residual

@@ -79,7 +79,7 @@ func raceSyncWgNoEdge() int {
 // write, WaitGroup.Add's first increment reads wg.sema (a plain read),
 // every RWMutex op reads rw.w (`race.Read`), Once.Do's slow path takes
 // the atomic CAS — so a plain access to a primitive IN USE by another
-// goroutine is a data race by mem#restrictions (non-atomic beside
+// goroutine is a data race by mem#model (non-atomic beside
 // atomic) and TSan-red (10/10 runs at GOMAXPROCS 1 and 8). The machine
 // used to record NO access for a sync op, so these programs ran to a
 // value; since the fix `raceUpdate`'s sync arm records TSan's realized
