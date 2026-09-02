@@ -1,0 +1,146 @@
+#!/usr/bin/env python3
+"""membership-sampling-sweep — the budget-rule instrument over
+`scripts/membership-sampling` artifacts.
+
+LANE TOOLING (membership-depth lane, 2026-09-01), not a gate. Reads one
+or more membership-sampling artifact dirs (each `<dir>/<id>/draws.txt`
+is the per-row draw log: `plain|race \\t observation`, in run order —
+`samples` plain, `samples` race, then the remaining plain, then the
+remaining race) and prints, per (row, run):
+
+  * enumerated set size (the row's `observations.txt`), the `members=`
+    pin from the manifest (or `-`),
+  * distinct observations over all draws, the 1-based draw index at
+    which the LAST new distinct observation appeared ("saturation"),
+    under two draw orders — the gate's order (all plain then all race
+    for the first 2*samples) and the ALTERNATING order (plain, race,
+    plain, race, ...), which is the order the proposed rule would use,
+  * distinct observations among the first 10 alternating draws (today's
+    default gate budget is 2*5 = 10).
+
+Then a K-sweep of the proposed rule — alternate plain/race draws; stop
+early when the distinct count reaches the row's TARGET (the `members=`
+pin when present; a row without a pin has no early stop and always
+draws K) — reporting, for each K, how many (row, run) samples reach
+their target within K and the mean/total draw cost. Every run dir is
+treated as an independent sample of the oracle.
+
+usage: scripts/membership-sampling-sweep --manifest <manifest.tsv> <sampling-dir>...
+       [--ks 2,10,16,24,32,48,64,80] [--gate-samples 5]
+"""
+import argparse
+import os
+import sys
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--manifest", required=True)
+    ap.add_argument("dirs", nargs="+")
+    ap.add_argument("--ks", default="2,10,16,24,32,48,64,80")
+    ap.add_argument("--gate-samples", type=int, default=5,
+                    help="the samples= default the gate-order reconstruction uses when a row has no samples= param")
+    a = ap.parse_args()
+    ks = [int(k) for k in a.ks.split(",") if k]
+
+    members, samples_param = {}, {}
+    with open(a.manifest) as f:
+        for line in f:
+            fs = line.rstrip("\n").split("\t")
+            if len(fs) >= 10 and fs[7] == "membership":
+                m, s = None, a.gate_samples
+                for kv in fs[9].split(","):
+                    if kv.startswith("members="):
+                        m = int(kv[8:])
+                    if kv.startswith("samples="):
+                        s = int(kv[8:])
+                members[fs[0]] = m
+                samples_param[fs[0]] = s
+    if not members:
+        print("membership-sampling-sweep: no membership rows in the manifest", file=sys.stderr)
+        return 2
+
+    def load(d, rid):
+        p = os.path.join(d, rid.replace("/", "__"), "draws.txt")
+        if not os.path.exists(p):
+            return None
+        plain, race, failed = [], [], 0
+        with open(p) as f:
+            for l in f:
+                mode, _, obs = l.rstrip("\n").partition("\t")
+                if obs.startswith("FAIL"):
+                    failed += 1
+                    continue
+                (plain if mode == "plain" else race).append(obs)
+        return plain, race, failed
+
+    def enumerated(d, rid):
+        p = os.path.join(d, rid.replace("/", "__"), "observations.txt")
+        if not os.path.exists(p):
+            return None
+        with open(p) as f:
+            return sum(1 for l in f if l.strip())
+
+    def saturation(seq):
+        seen, last = set(), 0
+        for i, o in enumerate(seq, 1):
+            if o not in seen:
+                seen.add(o)
+                last = i
+        return last, len(seen)
+
+    samples = []  # (rid, run, alt, enumerated, distinct)
+    print("\t".join(["id", "run", "enumerated", "members", "draws", "failedDraws", "distinct",
+                     "saturation(alt)", "saturation(gate-order)", "distinct@10(alt)"]))
+    for rid in sorted(members):
+        for d in a.dirs:
+            r = load(d, rid)
+            if r is None:
+                continue
+            plain, race, failed = r
+            s = samples_param[rid]
+            alt = [x for pair in zip(plain, race) for x in pair]
+            gate_order = plain[:s] + race[:s] + plain[s:] + race[s:]
+            e = enumerated(d, rid)
+            sa, dist = saturation(alt)
+            sg, _ = saturation(gate_order)
+            d10 = len(set(alt[:10]))
+            run = os.path.basename(os.path.normpath(d))
+            print("\t".join(map(str, [rid, run, "-" if e is None else e,
+                                      "-" if members[rid] is None else members[rid],
+                                      len(plain) + len(race), failed, dist, sa, sg, d10])))
+            samples.append((rid, run, alt, e, dist))
+
+    print()
+    print("K-sweep — rule: alternate plain/race; stop when distinct == members= pin, else draw K "
+          f"({len(samples)} (row,run) samples over {len(a.dirs)} run dir(s)):")
+    print("\t".join(["K", "pinnedSamples", "pinReachedWithinK", "pinNeverReachedInRun",
+                     "meanDraws/row(all rows)", "totalDraws(26-row lane)"]))
+    pinned = [(rid, alt, dist) for rid, _, alt, _, dist in samples if members[rid] is not None]
+    never = sum(1 for rid, alt, dist in pinned if dist < members[rid])
+    nrows = len(members)
+    for K in ks:
+        reached, cost = 0, 0
+        for rid, run, alt, e, dist in samples:
+            target = members[rid]
+            stop = None
+            if target is not None:
+                seen = set()
+                for i, o in enumerate(alt[:K], 1):
+                    seen.add(o)
+                    if len(seen) >= target:
+                        stop = i
+                        break
+            if stop is not None:
+                reached += 1
+                cost += stop
+            else:
+                cost += min(K, len(alt))
+        mean = cost / len(samples) if samples else 0
+        print("\t".join(map(str, [K, len(pinned), f"{reached}/{len(pinned)}", f"{never}/{len(pinned)}",
+                                  f"{mean:.1f}", int(mean * nrows)])))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

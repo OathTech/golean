@@ -1,0 +1,207 @@
+#!/usr/bin/env bash
+# membership-sampling — the oracle-sample budget instrument for the
+# membership lane (membership-depth lane, 2026-09-01; assessment E-D8 /
+# D-10: "2 draws yielding 1 distinct value at the flagship row").
+#
+# LANE TOOLING, NOT A GATE. Read-only with respect to the corpus, the
+# manifests and the baselines: it draws EXTRA go-run samples for
+# membership rows and reports how many DISTINCT observations the oracle
+# exhibits as the draw count grows, against the row's enumerated set —
+# the evidence a sampling-budget rule has to be argued from. It never
+# edits cases.tsv budgets (that is a proposal in the lane report).
+#
+#   scripts/membership-sampling [--draws K] [--out DIR] [--golean BIN] [<id> ...]
+#
+#   --draws K     plain draws AND -race draws per row (default 40 each)
+#   --out DIR     artifact dir (default artifacts/membership-sampling)
+#   --golean BIN  the golean binary used for the enumeration side
+#                 (default .lake/build/bin/golean; MUST come from a
+#                 capped build of the current tree — the script records
+#                 the path and its mtime, it does not verify provenance)
+#   <id> ...      membership-lane ids to sample (default: every
+#                 lane=membership row of the manifest)
+#
+# Per row it writes $OUT/<id>/{samples-plain.txt,samples-race.txt,
+# observations.txt,summary.tsv} and appends one line to
+# $OUT/summary.tsv:
+#   id  enumerated  samplesParam  drawsAtGate  distinctAtGate  drawsHere
+#   distinctHere  distinctPlain  distinctRace  firstDrawOfLastNew
+#   secPerDraw  enumSource  note
+# where drawsAtGate = 2*samplesParam (plain + race, the gate's budget),
+# distinctAtGate = distinct observations among the FIRST drawsAtGate draws
+# taken here (samplesParam plain then samplesParam race — the gate's own
+# order), firstDrawOfLastNew = the 1-based draw index at which the last
+# new distinct observation appeared (the saturation point of THIS run).
+#
+# Oracle invocation mirrors scripts/diff-coverage's go_run_oracle
+# (GO111MODULE=off, GODEBUG=panicnil=0, repo-local GOCACHE, run from the
+# harness dir, -race for the race mode); sample classification mirrors
+# membership_go_observation for the ok/panic statuses. The enumerated set
+# is the row's certified record when one exists (tier=slow), else a
+# fresh `coverage-observations` run under the row's params — the same
+# call run_membership_case_rows makes.
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+
+DRAWS=40
+OUT="artifacts/membership-sampling"
+GOLEAN_BIN="$ROOT/.lake/build/bin/golean"
+IDS=()
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    --draws) DRAWS="$2"; shift 2 ;;
+    --out) OUT="$2"; shift 2 ;;
+    --golean) GOLEAN_BIN="$2"; shift 2 ;;
+    -h|--help) sed -n '2,40p' "$0"; exit 0 ;;
+    --*) echo "membership-sampling: unknown option $1" >&2; exit 2 ;;
+    *) IDS+=("$1"); shift ;;
+  esac
+done
+if [[ ! "$DRAWS" =~ ^[1-9][0-9]*$ ]]; then
+  echo "membership-sampling: --draws must be a positive integer" >&2; exit 2
+fi
+if [[ ! -x "$GOLEAN_BIN" ]]; then
+  echo "membership-sampling: golean binary not executable: $GOLEAN_BIN" >&2; exit 2
+fi
+command -v go >/dev/null || { echo "membership-sampling: go not on PATH" >&2; exit 2; }
+GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
+mkdir -p "$OUT" "$GO_BUILD_CACHE"
+
+manifest_args=()
+for id in ${IDS[@]+"${IDS[@]}"}; do manifest_args+=(--id "$id"); done
+MANIFEST="$OUT/manifest.tsv"
+if ! scripts/coverage-manifest ${manifest_args[@]+"${manifest_args[@]}"} > "$MANIFEST"; then
+  echo "membership-sampling: coverage-manifest failed" >&2; exit 2
+fi
+
+SUMMARY="$OUT/summary.tsv"
+if [[ ! -f "$SUMMARY" ]]; then
+  printf 'id\tenumerated\tsamplesParam\tdrawsAtGate\tdistinctAtGate\tdrawsHere\tdistinctHere\tdistinctPlain\tdistinctRace\tfirstDrawOfLastNew\tsecPerDraw\tenumSource\tnote\n' > "$SUMMARY"
+fi
+printf '# golean: %s (mtime %s)  go: %s  draws: %s  date: %s\n' "$GOLEAN_BIN" "$(date -r "$GOLEAN_BIN" -Iseconds)" "$(go version | awk '{print $3}')" "$DRAWS" "$(date -Iseconds)" >> "$OUT/provenance.txt"
+
+# One oracle run; prints the canonical observation (ok or panic) or
+# returns nonzero with the raw output.
+oracle() {  # $1 = harness dir, $2 = "" | race
+  local dir="$1" mode="$2" out rc=0
+  local race=()
+  [[ "$mode" == "race" ]] && race=(-race)
+  # Multi-package cases (raft W1.1): the harness assembled the case's local
+  # packages under <dir>/gopath — hand that tree to Go's resolution exactly
+  # as scripts/diff-coverage's go_run_oracle does (ABSOLUTE path).
+  local gopath_env=()
+  if [[ -d "$dir/gopath" ]]; then
+    gopath_env=(GOPATH="$(cd "$dir/gopath" && pwd -P)")
+  fi
+  out="$(cd "$dir" && env GO111MODULE=off GODEBUG=panicnil=0 GOCACHE="$GO_BUILD_CACHE" ${gopath_env[@]+"${gopath_env[@]}"} go run ${race[@]+"${race[@]}"} . 2>&1)" || rc=$?
+  if [[ "$rc" -eq 0 ]]; then
+    if [[ "$out" == *'"status":"ok"'* ]]; then printf '%s' "$out"; return 0; fi
+    printf 'UNCLASSIFIED: %s' "$out"; return 1
+  fi
+  if [[ "$out" == *"panic:"* ]]; then
+    local msg
+    msg="$(printf '%s\n' "$out" | awk '/^panic: /{sub(/^panic: /,""); print; exit}')"
+    msg="${msg//\\/\\\\}"; msg="${msg//\"/\\\"}"
+    printf '{"message":"%s","schema":"golean-observation-v1","status":"panic"}' "$msg"
+    return 0
+  fi
+  printf 'UNCLASSIFIED: %s' "$out"; return 1
+}
+
+total_rows=0
+while IFS=$'\t' read -r id go_dir fn args status features reason lane why params; do
+  [[ "$lane" == "membership" ]] || continue
+  total_rows=$((total_rows + 1))
+  row_dir="$OUT/${id//\//__}"
+  mkdir -p "$row_dir"
+  note=""
+  # --- lane params (subset needed here) ---
+  width="" sites=8 obs_cap=64 samples=5 work=200000 statuses="$status" tier="" backedge="" nonterm="" engine="" members=""
+  if [[ "$params" != "-" ]]; then
+    IFS=',' read -r -a kvs <<< "$params"
+    for kv in "${kvs[@]}"; do
+      key="${kv%%=*}"; value="${kv#*=}"
+      case "$key" in
+        width) width="$value" ;; sites) sites="$value" ;; cap) obs_cap="$value" ;;
+        samples) samples="$value" ;; work) work="$value" ;; members) members="$value" ;;
+        statuses) statuses="$value" ;; tier) tier="$value" ;; backedge) backedge="$value" ;;
+        nonterm) nonterm="$value" ;; engine) engine="$value" ;;
+      esac
+    done
+  fi
+  # --- harness build ---
+  if ! hout="$(GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/coverageharness --input "$go_dir/main.go" --out "$row_dir/harness" --subject "$fn" --expected-status "$status" --args "$args" 2>&1)"; then
+    printf '%s\t-\t%s\t-\t-\t-\t-\t-\t-\t-\t-\t-\tHARNESS FAILED: %s\n' "$id" "$samples" "$(echo "$hout" | head -1)" >> "$SUMMARY"
+    continue
+  fi
+  # --- enumerated set ---
+  enum_source=""
+  cert_file="baselines/certified/${id//\//__}.certified.tsv"
+  if [[ "$tier" == "slow" && -f "$cert_file" ]]; then
+    grep -v '^#' "$cert_file" | grep . > "$row_dir/observations.txt"
+    enum_source="certified-record"
+  else
+    wire="$row_dir/wire.json"
+    fe_flags=()
+    [[ "$id" == "init/hidden-dep-order" ]] && fe_flags+=(--allow-hidden-dep-init-order)
+    if ! GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/nativefrontend ${fe_flags[@]+"${fe_flags[@]}"} --dir "$go_dir" --out "$wire" >/dev/null 2>&1; then
+      printf '%s\t-\t%s\t-\t-\t-\t-\t-\t-\t-\t-\t-\tFRONTEND EXPORT FAILED\n' "$id" "$samples" >> "$SUMMARY"
+      continue
+    fi
+    enum_args=(coverage-observations --input "$wire" --function "$fn" --max-width "$width" --max-sites "$sites" --cap "$obs_cap" --work-cap "$work" --expect-status "${statuses//+/,}")
+    [[ -n "$backedge" ]] && enum_args+=(--backedge "$backedge")
+    [[ -n "$engine" ]] && enum_args+=(--engine "$engine")
+    [[ -n "$nonterm" ]] && enum_args+=(--allow-nonterm "$nonterm")
+    if [[ "$args" != "-" ]]; then
+      IFS=',' read -r -a ints <<< "$args"
+      for v in "${ints[@]}"; do enum_args+=(--arg-int "$v"); done
+    fi
+    if ! "$GOLEAN_BIN" "${enum_args[@]}" > "$row_dir/observations.txt" 2> "$row_dir/enum-stats.txt"; then
+      note="ENUMERATION FAILED: $(head -c 200 "$row_dir/enum-stats.txt")"
+      : > "$row_dir/observations.txt"
+    fi
+    enum_source="fresh-enumeration"
+  fi
+  enumerated="$(grep -c . "$row_dir/observations.txt" || true)"
+  # --- draws: samples plain, samples race (the gate's order), then the rest ---
+  : > "$row_dir/samples-plain.txt"; : > "$row_dir/samples-race.txt"; : > "$row_dir/draws.txt"
+  t0=$(date +%s.%N)
+  draw_one() {  # $1 mode
+    local s
+    if s="$(oracle "$row_dir/harness" "$1")"; then
+      printf '%s\n' "$s" >> "$row_dir/samples-$([[ "$1" == race ]] && echo race || echo plain).txt"
+      printf '%s\t%s\n' "$1" "$s" >> "$row_dir/draws.txt"
+    else
+      printf '%s\tFAIL %s\n' "$1" "$s" >> "$row_dir/draws.txt"
+    fi
+  }
+  for ((i = 1; i <= samples; i++)); do draw_one plain; done
+  for ((i = 1; i <= samples; i++)); do draw_one race; done
+  for ((i = samples + 1; i <= DRAWS; i++)); do draw_one plain; done
+  for ((i = samples + 1; i <= DRAWS; i++)); do draw_one race; done
+  t1=$(date +%s.%N)
+  draws_here=$(( 2 * (DRAWS > samples ? DRAWS : samples) ))
+  sec_per_draw="$(awk -v a="$t0" -v b="$t1" -v n="$draws_here" 'BEGIN{printf "%.2f", (b-a)/n}')"
+  draws_at_gate=$((2 * samples))
+  # distinct counts (observations compared as canonical JSON text — the
+  # harness emits canonical JSON; the gate's observation-eq is structural,
+  # so this is a conservative over-count only if key order ever varied)
+  distinct_at_gate="$(head -n "$draws_at_gate" "$row_dir/draws.txt" | grep -v $'\tFAIL ' | cut -f2 | sort -u | wc -l)"
+  distinct_here="$(grep -v $'\tFAIL ' "$row_dir/draws.txt" | cut -f2 | sort -u | wc -l)"
+  distinct_plain="$(sort -u "$row_dir/samples-plain.txt" | grep -c . || true)"
+  distinct_race="$(sort -u "$row_dir/samples-race.txt" | grep -c . || true)"
+  last_new="$(grep -v $'\tFAIL ' "$row_dir/draws.txt" | cut -f2 | awk '{ if (!($0 in seen)) { seen[$0]=1; last=NR } } END { print last }')"
+  fails="$(grep -c $'\tFAIL ' "$row_dir/draws.txt" || true)"
+  [[ "$fails" -gt 0 ]] && note="${note:+$note; }$fails draw(s) failed classification"
+  # every sample must be a member (the lane's own check, re-applied here)
+  nonmember=0
+  while IFS= read -r s; do
+    grep -qxF -- "$s" "$row_dir/observations.txt" || nonmember=$((nonmember + 1))
+  done < <(grep -v $'\tFAIL ' "$row_dir/draws.txt" | cut -f2 | sort -u)
+  [[ "$nonmember" -gt 0 ]] && note="${note:+$note; }$nonmember distinct sample(s) NOT in the enumerated set (textual compare)"
+  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$id" "$enumerated" "$samples" "$draws_at_gate" "$distinct_at_gate" "$draws_here" "$distinct_here" "$distinct_plain" "$distinct_race" "$last_new" "$sec_per_draw" "$enum_source" "${note:--}" >> "$SUMMARY"
+  echo "membership-sampling: $id enumerated=$enumerated gate=$distinct_at_gate/$draws_at_gate here=$distinct_here/$draws_here ${note:+($note)}" >&2
+done < "$MANIFEST"
+echo "membership-sampling: $total_rows membership row(s); summary at $SUMMARY" >&2
