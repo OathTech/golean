@@ -1,4 +1,4 @@
-# scripts/capped scripts/ci --diff — tail of this lane's gate run (the worktree state that became the lane's first commit; latest.meta.tsv: git_commit fa4fce581afd66b412371805989152ae03622878, git_dirty true).
+# scripts/capped scripts/ci --diff — tail of this lane's gate run (the worktree state that became the lane's first commit 3b60b6efc8b400905f7b340a297a9da4e9b42ef5; latest.meta.tsv: git_commit fa4fce581afd66b412371805989152ae03622878, git_dirty true).
 # The differential step's verdict line, then the final summary block:
 ── differential baseline diff (scripts/coverage-baseline-diff)
 no regression: 2567 case(s) run in latest.tsv match baselines/native-full.tsv

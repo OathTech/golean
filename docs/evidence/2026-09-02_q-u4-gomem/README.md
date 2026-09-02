@@ -85,7 +85,7 @@ lock}`; the full gate showed no other row moving.
   q-u4-gomem/.lake/build/bin/golean`, a dead path once the worktree is
   removed) — disclosed rather than rewritten, as the detector-soundness
   dir did. The committed tip these bytes correspond to is the lane's
-  first commit (the `git log` of branch `q-u4-gomem`); the Race.lean
+  first commit `3b60b6efc8b400905f7b340a297a9da4e9b42ef5`; the Race.lean
   table did not change between the runs and the commit (only docstring
   text did, after the u4kind re-run showed the rw-copy shapes moving —
   see "Reproduction").
@@ -132,8 +132,8 @@ runs.
 `scripts/capped scripts/ci --diff` on the worktree state that became
 the lane's first commit (`latest.meta.tsv`: `git_commit fa4fce58…`,
 `git_dirty true` — the differential certifies that worktree state; the
-committed tree is byte-identical in every gate-relevant file, and the
-SHA is recorded in the follow-up commit that adds it here):
+committed tree is byte-identical in every gate-relevant file; that
+commit is `3b60b6efc8b400905f7b340a297a9da4e9b42ef5`, recorded here by the follow-up commit):
 **RESULT: PASS** — differential baseline diff FULL, "no regression: 2567
 case(s) run in latest.tsv match baselines/native-full.tsv" (the table
 in the baseline is byte-identical, order included, to the run's
