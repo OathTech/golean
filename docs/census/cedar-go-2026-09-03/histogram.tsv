@@ -1,0 +1,8 @@
+class	key	decls	packages
+stdlib-call	time.Date	19	19
+stdlib-call	flag.Parse	1	1
+stdlib-call	fmt.Sprintf verb %x @rune	1	1
+stdlib-call	strings.TrimPrefix	1	1
+stdlib-call	unicode.Is	1	1
+stdlib-call	utf8.DecodeRune	1	1
+stdlib-call	utf8.ValidRune	1	1

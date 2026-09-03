@@ -1,0 +1,38 @@
+package	kind	name	status	cause	class	key	case
+cedargo	package	cedargo	export-refused	nativefrontend: native frontend unsupported: package-selector call time.Date (package "time" surface not modeled)	stdlib-call	time.Date	pkg-root
+cedargo/ast	package	cedargo/ast	export-refused	nativefrontend: native frontend unsupported: package-selector call time.Date (package "time" surface not modeled)	stdlib-call	time.Date	pkg-ast
+cedargo/internal/consts	func	cedargo/internal/consts.$init0	lowered	-	-	-	pkg-internal__consts
+cedargo/internal/eval	package	cedargo/internal/eval	export-refused	nativefrontend: native frontend unsupported: package-selector call time.Date (package "time" surface not modeled)	stdlib-call	time.Date	pkg-internal__eval
+cedargo/internal/extensions	package	cedargo/internal/extensions	export-refused	nativefrontend: native frontend unsupported: package-selector call time.Date (package "time" surface not modeled)	stdlib-call	time.Date	pkg-internal__extensions
+cedargo/internal/json	package	cedargo/internal/json	export-refused	nativefrontend: native frontend unsupported: package-selector call time.Date (package "time" surface not modeled)	stdlib-call	time.Date	pkg-internal__json
+cedargo/internal/parser	package	cedargo/internal/parser	export-refused	nativefrontend: native frontend unsupported: package-selector call time.Date (package "time" surface not modeled)	stdlib-call	time.Date	pkg-internal__parser
+cedargo/internal/rust	func	cedargo/internal/rust.isGraphemeExtended	quarantined	package-selector call unicode.Is (package "unicode" surface not modeled)	stdlib-call	unicode.Is	pkg-internal__rust
+cedargo/internal/rust	func	cedargo/internal/rust.isPrintable	lowered	-	-	-	pkg-internal__rust
+cedargo/internal/rust	func	cedargo/internal/rust.check	lowered	-	-	-	pkg-internal__rust
+cedargo/internal/rust	func	cedargo/internal/rust.nextRune	quarantined	package-selector call utf8.DecodeRune (package "unicode/utf8" surface not modeled)	stdlib-call	utf8.DecodeRune	pkg-internal__rust
+cedargo/internal/rust	func	cedargo/internal/rust.parseHexEscape	lowered	-	-	-	pkg-internal__rust
+cedargo/internal/rust	func	cedargo/internal/rust.parseUnicodeEscape	quarantined	package-selector call utf8.ValidRune (package "unicode/utf8" surface not modeled)	stdlib-call	utf8.ValidRune	pkg-internal__rust
+cedargo/internal/rust	func	cedargo/internal/rust.unquote	quarantined	strings.TrimPrefix is outside the modeled subset (modeled strings direct-call members: Fields, Join, Repeat, Split, TrimSpace — widen with a differential pin first)	stdlib-call	strings.TrimPrefix	pkg-internal__rust
+cedargo/internal/rust	func	cedargo/internal/rust.Unquote	lowered	-	-	-	pkg-internal__rust
+cedargo/internal/rust	func	cedargo/internal/rust.IsHexadecimal	lowered	-	-	-	pkg-internal__rust
+cedargo/internal/rust	func	cedargo/internal/rust.lower	lowered	-	-	-	pkg-internal__rust
+cedargo/internal/rust	func	cedargo/internal/rust.IsDecimal	lowered	-	-	-	pkg-internal__rust
+cedargo/internal/rust	func	cedargo/internal/rust.digitVal	lowered	-	-	-	pkg-internal__rust
+cedargo/internal/rust	func	cedargo/internal/rust.escapeRune	quarantined	fmt.Sprintf verb %x over an argument of type rune is outside the modeled verb/kind matrix (format "\\u{%x}"; fail closed — widen with a differential pin first)	stdlib-call	fmt.Sprintf verb %x @rune	pkg-internal__rust
+cedargo/internal/rust	func	cedargo/internal/rust.EscapeString	lowered	-	-	-	pkg-internal__rust
+cedargo/internal/rust	func	cedargo/internal/rust.EscapeCharAll	lowered	-	-	-	pkg-internal__rust
+cedargo/types	package	cedargo/types	export-refused	nativefrontend: native frontend unsupported: package-selector call time.Date (package "time" surface not modeled)	stdlib-call	time.Date	pkg-types
+cedargo/x/exp/ast	package	cedargo/x/exp/ast	export-refused	nativefrontend: native frontend unsupported: package-selector call time.Date (package "time" surface not modeled)	stdlib-call	time.Date	pkg-x__exp__ast
+cedargo/x/exp/batch	package	cedargo/x/exp/batch	export-refused	nativefrontend: native frontend unsupported: package-selector call time.Date (package "time" surface not modeled)	stdlib-call	time.Date	pkg-x__exp__batch
+cedargo/x/exp/dot	package	cedargo/x/exp/dot	export-refused	nativefrontend: native frontend unsupported: package-selector call time.Date (package "time" surface not modeled)	stdlib-call	time.Date	pkg-x__exp__dot
+cedargo/x/exp/eval	package	cedargo/x/exp/eval	export-refused	nativefrontend: native frontend unsupported: package-selector call time.Date (package "time" surface not modeled)	stdlib-call	time.Date	pkg-x__exp__eval
+cedargo/x/exp/schema	package	cedargo/x/exp/schema	export-refused	nativefrontend: native frontend unsupported: package-selector call time.Date (package "time" surface not modeled)	stdlib-call	time.Date	pkg-x__exp__schema
+cedargo/x/exp/schema/ast	package	cedargo/x/exp/schema/ast	export-refused	nativefrontend: native frontend unsupported: package-selector call time.Date (package "time" surface not modeled)	stdlib-call	time.Date	pkg-x__exp__schema__ast
+cedargo/x/exp/schema/internal/json	package	cedargo/x/exp/schema/internal/json	export-refused	nativefrontend: native frontend unsupported: package-selector call time.Date (package "time" surface not modeled)	stdlib-call	time.Date	pkg-x__exp__schema__internal__json
+cedargo/x/exp/schema/internal/parser	package	cedargo/x/exp/schema/internal/parser	export-refused	nativefrontend: native frontend unsupported: package-selector call time.Date (package "time" surface not modeled)	stdlib-call	time.Date	pkg-x__exp__schema__internal__parser
+cedargo/x/exp/schema/resolved	package	cedargo/x/exp/schema/resolved	export-refused	nativefrontend: native frontend unsupported: package-selector call time.Date (package "time" surface not modeled)	stdlib-call	time.Date	pkg-x__exp__schema__resolved
+cedargo/x/exp/schema/validate	package	cedargo/x/exp/schema/validate	export-refused	nativefrontend: native frontend unsupported: package-selector call time.Date (package "time" surface not modeled)	stdlib-call	time.Date	pkg-x__exp__schema__validate
+cedargo/x/exp/types	package	cedargo/x/exp/types	export-refused	nativefrontend: native frontend unsupported: package-selector call time.Date (package "time" surface not modeled)	stdlib-call	time.Date	pkg-x__exp__types
+cedark8s/cmd/schema-formatter	func	cedark8s/cmd/schema-formatter.intOrZero	lowered	-	-	-	k8s-cmd__schema-formatter
+cedark8s/cmd/schema-formatter	func	cedark8s/cmd/schema-formatter.main	quarantined	package-selector call flag.Parse (package "flag" surface not modeled)	stdlib-call	flag.Parse	k8s-cmd__schema-formatter
+cedark8s/internal/schema	package	cedark8s/internal/schema	export-refused	nativefrontend: native frontend unsupported: package-selector call time.Date (package "time" surface not modeled)	stdlib-call	time.Date	k8s-internal__schema

@@ -1,0 +1,10 @@
+key	value
+git_commit	6a1636811935cf237413a0cba3befd6c29282cff
+cedar_go	deps/cedar-go@cda92d0d9345fce26b36366288afd3c909fc7bd8
+cedar_k8s	deps/cedar-access-control-for-k8s@660c6374dff9e6c47647f1c7a17f728d75296324
+go_toolchain	go1.26.5
+golean_bin	/home/dev/projects/golean/.claude/worktrees/cedar-census/.lake/build/bin/golean
+pass	B (RELAX patches applied to the census copy: types-datetime.sed )
+date	2026-09-03T23:04:43Z
+go_timeout_s	60
+lean_timeout_s	120

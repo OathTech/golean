@@ -91,6 +91,9 @@ refuse_if_populated() { # $1 = dest, $2 = label
 # campaign's pin index — go's SHA is tag go1.26.5, the language-version
 # pin; covmap is internal, --from only); grossmith = community-truth
 # correspondence materials, --from only.
+# cedar-go / cedar-access-control-for-k8s = verification-target census
+# checkouts (docs/2026-09-03_cedar-go-coverage-census.md; opt-in, read-only
+# subjects of scripts/cedar-census — never lowered from deps/ in place).
 PINS=$(cat <<'TABLE'
 goose            3be88bbb4982f58e5813b6f0344302d5582c8e8a  https://github.com/goose-lang/goose.git      default
 raft             -                                         https://github.com/etcd-io/raft.git          default
@@ -103,6 +106,8 @@ esmeta           7d237fd1680f473e674320cc97932702d950fa98  https://github.com/es
 gofrontend       -                                         https://github.com/golang/gofrontend.git     named
 tinygo           -                                         https://github.com/tinygo-org/tinygo.git     named
 proposal         0be13090fdb0cbae0d71641bb676d924bc1c94de  https://github.com/golang/proposal.git       named
+cedar-go         cda92d0d9345fce26b36366288afd3c909fc7bd8  https://github.com/cedar-policy/cedar-go.git named
+cedar-access-control-for-k8s 660c6374dff9e6c47647f1c7a17f728d75296324 https://github.com/awslabs/cedar-access-control-for-k8s.git named
 TABLE
 )
 

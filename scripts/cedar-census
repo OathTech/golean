@@ -1,0 +1,422 @@
+#!/usr/bin/env bash
+# scripts/cedar-census — the cedar-go coverage census runner.
+#
+# LANE TOOLING, NOT A GATE (docs/2026-09-03_cedar-go-coverage-census.md).
+# Measures whether the GoLean semantics covers github.com/cedar-policy/
+# cedar-go TODAY: it assembles a dot-free copy of the library, drives the
+# SAME two pipelines the differential gate trusts (`go run` on the pinned
+# oracle vs nativefrontend -> golean native-json-run) over census drivers,
+# and classifies every refusal fail-closed with the $GOROOT/test triage's
+# cause taxonomy (scripts/gotest-triage; docs/2026-09-01_gotest-triage.md).
+# Writes ONLY under artifacts/cedar/ (gitignored). Wired into no gate, no
+# baseline, no corpus; scripts/ci does not call it. NEVER touches deps/.
+#
+# What it does, in order (`run`):
+#   assemble   copy deps/cedar-go (non-test .go, test-support packages
+#              excluded) to artifacts/cedar/src/cedargo/ with the import
+#              path rewritten github.com/cedar-policy/cedar-go -> cedargo
+#              (the frontend's TypeId grammar refuses dotted local paths:
+#              tools/nativefrontend/load.go) and golang.org/x/exp/
+#              constraints -> xexp/constraints (stand-in, see
+#              Corpus/challenges/cedar-go/standin/). The SAME copy feeds
+#              both pipelines, so the rewrite cannot skew one side.
+#              Likewise the cedar-go-only subset of deps/cedar-access-
+#              control-for-k8s -> cedark8s/.
+#   inventory  per-package TSVs (tools/cedarcensus inventory).
+#   cases      one case dir per (a) library package: a synthesized
+#              blank-import driver (frontend export census only), (b)
+#              tracked functional driver under Corpus/challenges/cedar-go/
+#              drivers/ (frontend + machine + go run, self-checking).
+#   drive      frontend -> wire; per-decl census of the wire; machine run;
+#              go run; comparison — the gotest-triage categories:
+#              FRONTEND-REFUSED / MACHINE-REFUSED / MATCH / MISMATCH / INFRA.
+#   demand     STATIC per-function demand census (tools/cedarcensus demand)
+#              — the per-function picture behind the whole-export kills.
+#   report     census.tsv (per declaration), results.tsv (per case),
+#              histogram.tsv (per cause class / key), meta.
+#
+# Usage:
+#   scripts/cedar-census run            everything
+#   scripts/cedar-census assemble|inventory|cases|drive|demand|report
+#
+# Preconditions (fail-closed, never auto-built here):
+#   * .lake/build/bin/golean exists (or GOLEAN_BIN points at one) — build
+#     via `scripts/capped lake build golean`; this script never runs lake.
+#   * live `go` == baselines/go-oracle-pin (GOLEAN_ALLOW_GO_DRIFT=1 probes
+#     loudly, and the meta says so).
+#   * CEDAR_GO_DIR (default deps/cedar-go) and CEDAR_K8S_DIR (default
+#     deps/cedar-access-control-for-k8s) are git checkouts; their SHAs are
+#     recorded in the meta.
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+
+OUT="${CEDAR_CENSUS_ARTIFACTS:-artifacts/cedar}"
+ART_ABS="$(realpath -m -- "$ROOT/artifacts")"
+OUT_ABS="$(realpath -m -- "$OUT")"
+if [[ "$OUT_ABS" != "$ART_ABS" && "$OUT_ABS" != "$ART_ABS"/* ]]; then
+  echo "cedar-census: refusing output root outside $ROOT/artifacts/ ($OUT)" >&2; exit 2
+fi
+mkdir -p "$OUT"
+OUT="$(realpath -e -- "$OUT")"
+
+CEDAR_GO_DIR="${CEDAR_GO_DIR:-deps/cedar-go}"
+CEDAR_K8S_DIR="${CEDAR_K8S_DIR:-deps/cedar-access-control-for-k8s}"
+CEDAR_GO_MOD="github.com/cedar-policy/cedar-go"
+CEDAR_K8S_MOD="github.com/awslabs/cedar-access-control-for-k8s"
+DRIVERS="Corpus/challenges/cedar-go/drivers"
+STANDIN="Corpus/challenges/cedar-go/standin"
+RELAX="Corpus/challenges/cedar-go/relax"
+GOLEAN_BIN="${GOLEAN_BIN:-$ROOT/.lake/build/bin/golean}"
+GO_BUILD_CACHE="$OUT/go-build-cache"
+GO_TIMEOUT="${CEDAR_CENSUS_GO_TIMEOUT:-60}"
+LEAN_TIMEOUT="${CEDAR_CENSUS_LEAN_TIMEOUT:-120}"
+SRC="$OUT/src"
+CASES="$OUT/cases"
+# Test-support packages (import "testing"): not part of the library proper.
+EXCLUDE_PKGS=("internal/testutil" "internal/testvalidate")
+
+die() { echo "cedar-census: $*" >&2; exit 2; }
+
+preflight() {
+  command -v go >/dev/null 2>&1 || die "go not found on PATH"
+  local pin_file="$ROOT/baselines/go-oracle-pin" go_pin go_live
+  [[ -f "$pin_file" ]] || die "baselines/go-oracle-pin missing — the oracle pin is unverifiable; refusing"
+  go_pin="$(head -1 "$pin_file" | tr -d '[:space:]')"
+  go_live="$(go version | awk '{print $3}')"
+  if [[ "$go_live" != "$go_pin" ]]; then
+    if [[ "${GOLEAN_ALLOW_GO_DRIFT:-0}" = 1 ]]; then
+      echo "WARNING: live toolchain $go_live != pinned oracle $go_pin (GOLEAN_ALLOW_GO_DRIFT=1 — NOT the oracle of record)" >&2
+    else
+      die "live toolchain $go_live != pinned oracle $go_pin; refusing (GOLEAN_ALLOW_GO_DRIFT=1 to probe loudly)"
+    fi
+  fi
+  [[ -d "$CEDAR_GO_DIR/.git" || -f "$CEDAR_GO_DIR/.git" ]] || die "$CEDAR_GO_DIR is not a git checkout (scripts/setup-deps --only cedar-go)"
+  [[ -d "$CEDAR_K8S_DIR/.git" || -f "$CEDAR_K8S_DIR/.git" ]] || die "$CEDAR_K8S_DIR is not a git checkout (scripts/setup-deps --only cedar-access-control-for-k8s)"
+  mkdir -p "$GO_BUILD_CACHE"
+  env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go build -o "$OUT/cedarcensus" ./tools/cedarcensus || die "tools/cedarcensus does not build"
+  env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go build -o /dev/null ./tools/nativefrontend || die "tools/nativefrontend does not build"
+}
+
+preflight_machine() {
+  [[ -x "$GOLEAN_BIN" ]] || die "no golean binary at $GOLEAN_BIN — build it first: scripts/capped lake build golean"
+}
+
+# Copy one module's non-test .go files under $SRC/<alias>/, rewriting the
+# module path to the alias. $1 = source root, $2 = module path, $3 = alias,
+# $4.. = relative package dirs to copy (empty = all non-test dirs).
+copy_module() {
+  local src="$1" mod="$2" alias="$3"; shift 3
+  local dirs=("$@")
+  if [[ ${#dirs[@]} -eq 0 ]]; then
+    mapfile -t dirs < <(cd "$src" && find . -name '*.go' ! -name '*_test.go' -printf '%h\n' | sed 's#^\./##' | sort -u)
+  fi
+  local d f dst
+  for d in "${dirs[@]}"; do
+    dst="$SRC/$alias"; [[ "$d" != "." ]] && dst="$SRC/$alias/$d"
+    mkdir -p "$dst"
+    for f in "$src/$d"/*.go; do
+      [[ -e "$f" ]] || continue
+      [[ "$f" == *_test.go ]] && continue
+      # Every copy rewrites BOTH module paths (the k8s subset imports
+      # cedar-go by its public path) and the x/exp stand-in.
+      sed -e "s#\"$mod#\"$alias#g" -e "s#\"$CEDAR_GO_MOD#\"cedargo#g" \
+          -e 's#"golang.org/x/exp/constraints"#"xexp/constraints"#g' "$f" > "$dst/$(basename "$f")"
+    done
+  done
+}
+
+assemble() {
+  rm -rf "$SRC"; mkdir -p "$SRC"
+  # cedar-go: every non-test package except the test-support ones.
+  local all=() d skip
+  mapfile -t all < <(cd "$CEDAR_GO_DIR" && find . -name '*.go' ! -name '*_test.go' -printf '%h\n' | sed 's#^\./##' | sort -u)
+  local keep=()
+  for d in "${all[@]}"; do
+    skip=0; for x in "${EXCLUDE_PKGS[@]}"; do [[ "$d" == "$x" ]] && skip=1; done
+    [[ $skip -eq 0 ]] && keep+=("$d")
+  done
+  copy_module "$CEDAR_GO_DIR" "$CEDAR_GO_MOD" cedargo "${keep[@]}"
+  printf '%s\n' "${keep[@]}" > "$OUT/cedargo-packages.txt"
+  # PASS B — the RELAX patches (CEDAR_CENSUS_RELAX=1): tracked sed scripts
+  # under Corpus/challenges/cedar-go/relax/, one per whole-export kill
+  # point, applied to the census COPY only. Each file's header argues
+  # semantic identity under go run; the report labels pass-B numbers as
+  # counterfactual ("if the kill points were function-granular"), never
+  # as today's coverage. Fail closed if a patch does not change its file.
+  if [[ "${CEDAR_CENSUS_RELAX:-0}" = 1 ]]; then
+    local sedf target before after
+    for sedf in "$RELAX"/*.sed; do
+      [[ -e "$sedf" ]] || die "CEDAR_CENSUS_RELAX=1 but no patches under $RELAX"
+      target="$(basename "$sedf" .sed)"; target="$SRC/cedargo/${target//-//}.go"
+      [[ -f "$target" ]] || die "relax patch $sedf names a missing file $target"
+      before="$(sha256sum "$target" | cut -c1-16)"
+      sed -i -f "$sedf" "$target"
+      after="$(sha256sum "$target" | cut -c1-16)"
+      [[ "$before" != "$after" ]] || die "relax patch $sedf changed nothing in $target (stale patch — refusing)"
+      echo "assemble: RELAX applied $sedf -> $target" >&2
+    done
+    echo "relaxed" > "$OUT/PASS-B-RELAXED"
+  fi
+  # The x/exp/constraints stand-in.
+  mkdir -p "$SRC/xexp/constraints"
+  cp "$STANDIN/xexp/constraints/constraints.go" "$SRC/xexp/constraints/"
+  # cedar-access-control-for-k8s: ONLY the packages whose non-test imports
+  # are stdlib + cedar-go (+ own module) — the k8s.io tree is never lowered.
+  "$OUT/cedarcensus" inventory "$CEDAR_K8S_DIR" "$CEDAR_K8S_MOD" > "$OUT/k8s-inventory.tsv" || die "k8s inventory failed"
+  local k8s_keep=()
+  while IFS=$'\t' read -r dir pkg files loc funcs methods std internal external; do
+    [[ "$dir" == "dir" ]] && continue
+    # external column: cedar-go only (or none) qualifies.
+    local ext_ok=1 e
+    if [[ "$external" != "-" ]]; then
+      IFS=',' read -ra exts <<< "$external"
+      for e in "${exts[@]}"; do [[ "$e" == "$CEDAR_GO_MOD" || "$e" == "$CEDAR_GO_MOD"/* ]] || ext_ok=0; done
+    fi
+    if [[ $ext_ok -eq 1 ]]; then
+      printf '%s\t%s\tcedar-go+stdlib\t%s\n' "$dir" "$pkg" "$external" >> "$OUT/k8s-classes.tsv.tmp"
+      k8s_keep+=("$dir")
+    else
+      printf '%s\t%s\tk8s/external\t%s\n' "$dir" "$pkg" "$external" >> "$OUT/k8s-classes.tsv.tmp"
+    fi
+  done < "$OUT/k8s-inventory.tsv"
+  { printf 'dir\tpackage\tclass\texternal_imports\n'; sort "$OUT/k8s-classes.tsv.tmp"; } > "$OUT/k8s-classes.tsv"
+  rm -f "$OUT/k8s-classes.tsv.tmp"
+  # The k8s subset may transitively import a same-module package that is
+  # itself k8s-class; the frontend will then refuse it by name (unknown
+  # import) — that refusal is a finding, not an error here.
+  if [[ ${#k8s_keep[@]} -gt 0 ]]; then
+    copy_module "$CEDAR_K8S_DIR" "$CEDAR_K8S_MOD" cedark8s "${k8s_keep[@]}"
+  fi
+  printf '%s\n' "${k8s_keep[@]}" > "$OUT/cedark8s-packages.txt"
+  echo "assemble: cedargo $(wc -l < "$OUT/cedargo-packages.txt") pkgs, cedark8s $(wc -l < "$OUT/cedark8s-packages.txt") pkgs -> $SRC" >&2
+}
+
+inventory() {
+  "$OUT/cedarcensus" inventory "$CEDAR_GO_DIR" "$CEDAR_GO_MOD" > "$OUT/cedar-go-inventory.tsv" || die "cedar-go inventory failed"
+  echo "inventory: $(($(wc -l < "$OUT/cedar-go-inventory.tsv") - 1)) cedar-go package dirs -> $OUT/cedar-go-inventory.tsv" >&2
+}
+
+slug_of() { local s="$1"; s="${s//\//__}"; [[ "$s" == "." ]] && s="root"; printf '%s' "$s"; }
+
+# Materialize one case dir: main.go + the assembled source trees + a GOPATH
+# view (symlinks into the same trees — one copy, two pipelines).
+make_case() {
+  local name="$1" main_src="$2"
+  local dir="$CASES/$name"
+  rm -rf "$dir"; mkdir -p "$dir/gopath/src"
+  cp "$main_src" "$dir/main.go"
+  local t
+  for t in cedargo xexp cedark8s; do
+    [[ -d "$SRC/$t" ]] || continue
+    cp -r "$SRC/$t" "$dir/$t"
+    ln -s "../../$t" "$dir/gopath/src/$t"
+  done
+}
+
+cases() {
+  rm -rf "$CASES"; mkdir -p "$CASES" "$OUT/gen"
+  : > "$OUT/case-index.tsv"
+  local d slug gen
+  # (a) per-package blank-import drivers — frontend export census.
+  while IFS= read -r d; do
+    slug="$(slug_of "$d")"
+    gen="$OUT/gen/pkg-$slug.go"
+    { echo "// synthesized by scripts/cedar-census: per-package export census driver"
+      echo "package main"; echo
+      if [[ "$d" == "." ]]; then echo 'import _ "cedargo"'; else echo "import _ \"cedargo/$d\""; fi
+      echo; echo "func censusMain() {}"; echo; echo "func main() { censusMain() }"; } > "$gen"
+    make_case "pkg-$slug" "$gen"
+    if [[ "$d" == "." ]]; then printf 'pkg-%s\tpackage\tcedargo\n' "$slug"; else printf 'pkg-%s\tpackage\tcedargo/%s\n' "$slug" "$d"; fi >> "$OUT/case-index.tsv"
+  done < "$OUT/cedargo-packages.txt"
+  # (a') whole-library driver.
+  gen="$OUT/gen/all.go"
+  { echo "// synthesized by scripts/cedar-census: whole-library export census driver"
+    echo "package main"; echo; echo "import ("
+    while IFS= read -r d; do
+      if [[ "$d" == "." ]]; then echo '	_ "cedargo"'; else echo "	_ \"cedargo/$d\""; fi
+    done < "$OUT/cedargo-packages.txt"
+    echo ")"; echo; echo "func censusMain() {}"; echo; echo "func main() { censusMain() }"; } > "$gen"
+  make_case "all" "$gen"
+  printf 'all\tpackage\tcedargo/...\n' >> "$OUT/case-index.tsv"
+  # (a'') k8s cedar-go-only subset, per package.
+  while IFS= read -r d; do
+    [[ -n "$d" ]] || continue
+    slug="$(slug_of "$d")"
+    gen="$OUT/gen/k8s-$slug.go"
+    { echo "// synthesized by scripts/cedar-census: k8s cedar-go-only subset export census driver"
+      echo "package main"; echo; echo "import _ \"cedark8s/$d\""; echo; echo "func censusMain() {}"; echo; echo "func main() { censusMain() }"; } > "$gen"
+    make_case "k8s-$slug" "$gen"
+    printf 'k8s-%s\tpackage\tcedark8s/%s\n' "$slug" "$d" >> "$OUT/case-index.tsv"
+  done < "$OUT/cedark8s-packages.txt"
+  # (b) tracked functional drivers.
+  for d in "$DRIVERS"/*/; do
+    d="${d%/}"; slug="$(basename "$d")"
+    [[ -f "$d/main.go" ]] || die "driver $d has no main.go"
+    make_case "drv-$slug" "$d/main.go"
+    printf 'drv-%s\tdriver\t%s\n' "$slug" "$d/main.go" >> "$OUT/case-index.tsv"
+  done
+  echo "cases: $(wc -l < "$OUT/case-index.tsv") case dirs -> $CASES" >&2
+}
+
+one_line() { local v="$1"; v="${v//$'\t'/ }"; v="${v//$'\r'/\\r}"; v="${v//$'\n'/\\n}"; printf '%s' "$v"; }
+json_string_literal() {
+  local v="$1"; v="${v//\\/\\\\}"; v="${v//\"/\\\"}"; v="${v//$'\n'/\\n}"; v="${v//$'\r'/\\r}"; v="${v//$'\t'/\\t}"; printf '"%s"' "$v"
+}
+normalize_cause() { head -1 | sed -E 's#(/[^ :]+/)?([A-Za-z0-9_]+\.go):[0-9]+(:[0-9]+)?: ?#\2: #g' | cut -c1-240; }
+
+# Drive one case. Emits one results row: category \t case \t kind \t detail.
+drive_one() {
+  local name="$1" kind="$2"
+  local dir="$CASES/$name" wire="$CASES/$name/wire.json" fe_out fe_rc
+  fe_out="$(timeout "$GO_TIMEOUT" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/nativefrontend --dir "$dir" --out "$wire" 2>&1)"
+  fe_rc=$?
+  if [[ "$fe_rc" -eq 124 ]]; then
+    printf 'INFRA\t%s\t%s\t%s\n' "$name" "$kind" "frontend timed out after ${GO_TIMEOUT}s"; return
+  fi
+  if [[ "$fe_rc" -ne 0 ]]; then
+    printf '%s\n' "$fe_out" > "$dir/frontend.err"
+    printf 'FRONTEND-REFUSED\t%s\t%s\t%s\n' "$name" "$kind" "$(one_line "$(printf '%s\n' "$fe_out" | normalize_cause)")"; return
+  fi
+  # Per-declaration census of the wire (every case, package drivers included).
+  "$OUT/cedarcensus" wire "$wire" > "$dir/decls.tsv" || { printf 'INFRA\t%s\t%s\t%s\n' "$name" "$kind" "wire census failed"; return; }
+  local total quar
+  total=$(($(wc -l < "$dir/decls.tsv") - 1)); quar=$(awk -F'\t' 'NR>1 && $4=="quarantined"' "$dir/decls.tsv" | wc -l)
+  if [[ "$kind" == "package" ]]; then
+    printf 'EXPORT-OK\t%s\t%s\t%s\n' "$name" "$kind" "decls=$total quarantined=$quar"; return
+  fi
+  # --- Go oracle (functional drivers only) ------------------------------
+  local go_out go_rc go_status go_obs go_msg
+  go_out="$(cd "$dir" && timeout "$GO_TIMEOUT" env GO111MODULE=off GODEBUG=panicnil=0 GOCACHE="$GO_BUILD_CACHE" GOPATH="$dir/gopath" go run . 2>&1)"
+  go_rc=$?
+  printf '%s\n' "$go_out" > "$dir/go.out"
+  if [[ "$go_rc" -eq 124 ]]; then
+    printf 'INFRA\t%s\t%s\t%s\n' "$name" "$kind" "go run timed out after ${GO_TIMEOUT}s"; return
+  elif [[ "$go_rc" -eq 0 ]]; then
+    go_status="ok"; go_obs='{"schema":"golean-observation-v1","status":"ok","values":[]}'
+    [[ -n "$go_out" ]] && { printf 'INFRA\t%s\t%s\t%s\n' "$name" "$kind" "driver printed on success (drivers must be silent): $(one_line "${go_out:0:200}")"; return; }
+  elif [[ "$go_out" == *"fatal error: all goroutines are asleep - deadlock!"* ]]; then
+    go_status="deadlock"; go_obs='{"message":"all goroutines are asleep - deadlock!","schema":"golean-observation-v1","status":"deadlock"}'
+  elif [[ "$go_out" == *"panic:"* ]]; then
+    go_status="panic"; go_msg="$(printf '%s\n' "$go_out" | awk '/^panic: /{ sub(/^panic: /, ""); print; exit }')"
+    go_obs="{\"message\":$(json_string_literal "$go_msg"),\"schema\":\"golean-observation-v1\",\"status\":\"panic\"}"
+  else
+    printf 'INFRA\t%s\t%s\t%s\n' "$name" "$kind" "go run exited $go_rc without panic: $(one_line "${go_out:0:240}")"; return
+  fi
+  # --- Machine -----------------------------------------------------------
+  local lean_out lean_rc lean_status
+  lean_out="$(timeout "$LEAN_TIMEOUT" "$GOLEAN_BIN" native-json-run --input "$wire" --function censusMain 2>&1)"
+  lean_rc=$?
+  printf '%s\n' "$lean_out" > "$dir/lean.out"
+  if [[ "$lean_rc" -eq 124 ]]; then
+    printf 'MACHINE-REFUSED\t%s\t%s\t%s\n' "$name" "$kind" "wall-clock timeout after ${LEAN_TIMEOUT}s (go: $go_status; quarantined=$quar/$total)"; return
+  fi
+  lean_status="$(printf '%s' "$lean_out" | sed -n 's/.*"status":"\([a-z-]*\)".*/\1/p' | head -1)"
+  if [[ -z "$lean_status" ]]; then
+    printf 'INFRA\t%s\t%s\t%s\n' "$name" "$kind" "no observation from native-json-run (exit $lean_rc): $(one_line "${lean_out:0:200}")"; return
+  fi
+  if [[ "$lean_status" == "unsupported" && "$lean_out" == *"frontend-quarantined: "* ]]; then
+    printf 'FRONTEND-REFUSED\t%s\t%s\t%s\n' "$name" "$kind" "at run: $(one_line "$(printf '%s' "$lean_out" | sed -n 's/.*frontend-quarantined: \([^"]*\)".*/\1/p' | head -1 | cut -c1-240)") (go: $go_status; quarantined=$quar/$total)"; return
+  fi
+  case "$lean_status" in
+    unsupported|stuck|fuel-out)
+      printf 'MACHINE-REFUSED\t%s\t%s\t%s\n' "$name" "$kind" "$(one_line "${lean_out:0:300}") (go: $go_status)"; return ;;
+    error)
+      printf 'FRONTEND-REFUSED\t%s\t%s\t%s\n' "$name" "$kind" "wire-decode: $(one_line "${lean_out:0:300}")"; return ;;
+  esac
+  if [[ "$lean_status" != "$go_status" ]]; then
+    printf 'MISMATCH\t%s\t%s\t%s\n' "$name" "$kind" "status: go=$go_status lean=$lean_status; go_out=$(one_line "${go_out:0:200}") lean_obs=$(one_line "${lean_out:0:300}")"; return
+  fi
+  if "$GOLEAN_BIN" observation-eq --left "$lean_out" --right "$go_obs" >/dev/null 2>&1; then
+    printf 'MATCH\t%s\t%s\t%s\n' "$name" "$kind" "status=$go_status (quarantined=$quar/$total decls in the wire)"
+  else
+    printf 'MISMATCH\t%s\t%s\t%s\n' "$name" "$kind" "message (status=$go_status): go=$(one_line "$go_obs") lean=$(one_line "${lean_out:0:300}")"
+  fi
+}
+
+drive() {
+  preflight_machine
+  { printf 'category\tcase\tkind\tdetail\n'
+    while IFS=$'\t' read -r name kind target; do
+      drive_one "$name" "$kind"
+    done < "$OUT/case-index.tsv"; } > "$OUT/results.tsv"
+  echo "drive: $(($(wc -l < "$OUT/results.tsv") - 1)) cases -> $OUT/results.tsv" >&2
+}
+
+demand() {
+  # STATIC per-function demand census over the assembled copy (tools/
+  # cedarcensus demand) — the per-function picture the frontend's whole-
+  # export kill points hide. Judged against the supply table; static.
+  local pk
+  pk="$({ sed 's#^\.$#cedargo#; s#^#cedargo/#; s#cedargo/cedargo#cedargo#' "$OUT/cedargo-packages.txt"
+          sed 's#^#cedark8s/#' "$OUT/cedark8s-packages.txt" | grep -v '^cedark8s/cmd/'; } | tr '\n' ' ')"
+  # shellcheck disable=SC2086
+  env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" "$OUT/cedarcensus" demand "$SRC" $pk > "$OUT/demand.tsv" || die "static demand census failed"
+  # Histogram: functions demanding each refused key; "sole" = functions
+  # where that key is the ONLY refusal (the direct unblock count).
+  { printf 'key\tfunctions\tsole_blocker_functions\tpackages\n'
+    awk -F'\t' 'NR>1 && ($5!="-" || $7!="-") {
+        n=0; delete ks
+        if ($5!="-") { m=split($5,a,","); for(i=1;i<=m;i++) ks[a[i]]=1 }
+        if ($7!="-") { m=split($7,b,","); for(i=1;i<=m;i++) ks[b[i]]=1 }
+        for (k in ks) n++
+        for (k in ks) { c[k]++; p[k SUBSEP $1]=1; if (n==1) sole[k]++ }
+      } END { for (k in c) { pc=0; for (x in p) { split(x,q,SUBSEP); if (q[1]==k) pc++ } print k "\t" c[k] "\t" sole[k]+0 "\t" pc } }' "$OUT/demand.tsv" | sort -t$'\t' -k2,2nr -k1,1; } > "$OUT/demand-histogram.tsv"
+  { printf 'package\tfunctions\tlowers_static\trefused_static\tshare_lowers\n'
+    awk -F'\t' 'NR>1 { t[$1]++; if ($9 ~ /^lowers/) l[$1]++ } END { for (p in t) printf "%s\t%d\t%d\t%d\t%.1f%%\n", p, t[p], l[p]+0, t[p]-l[p], 100*(l[p]+0)/t[p] }' "$OUT/demand.tsv" | sort; } > "$OUT/demand-per-package.tsv"
+  echo "demand: $(($(wc -l < "$OUT/demand.tsv") - 1)) functions -> $OUT/demand.tsv" >&2
+}
+
+report() {
+  # census.tsv: one row per library declaration, taken from the package's
+  # OWN per-package case (exact attribution; a package whose export refused
+  # contributes one EXPORT-REFUSED row carrying the cause).
+  { printf 'package\tkind\tname\tstatus\tcause\tclass\tkey\tcase\n'
+    while IFS=$'\t' read -r name kind target; do
+      [[ "$kind" == "package" && "$name" != "all" ]] || continue
+      local_pkg="$target"
+      if [[ -f "$CASES/$name/decls.tsv" ]]; then
+        # Injected shim helpers (goleanShim*) are frontend artifacts, not library declarations.
+        awk -F'\t' -v pkg="$local_pkg" -v c="$name" 'NR>1 && $1==pkg && $3 !~ /goleanShim/ { print $0 "\t" c }' "$CASES/$name/decls.tsv"
+      else
+        cause="$(awk -F'\t' -v c="$name" '$2==c { print $4 }' "$OUT/results.tsv")"
+        class_key="$(printf '%s\n' "$cause" | "$OUT/cedarcensus" classify 2>/dev/null || true)"
+        printf '%s\tpackage\t%s\texport-refused\t%s\t%s\t%s\t%s\n' "$local_pkg" "$local_pkg" "$cause" "${class_key%%$'\t'*}" "${class_key#*$'\t'}" "$name"
+      fi
+    done < "$OUT/case-index.tsv"; } > "$OUT/census.tsv"
+  # Histogram over quarantined library declarations (funcs+methods+types).
+  { printf 'class\tkey\tdecls\tpackages\n'
+    awk -F'\t' 'NR>1 && $4!="lowered" { k=$6 "\t" $7; n[k]++; p[k, $1]=1 } END { for (k in n) { c=0; for (x in p) { split(x, a, SUBSEP); if (a[1]==k) c++ } print k "\t" n[k] "\t" c } }' "$OUT/census.tsv" | sort -t$'\t' -k3,3nr -k1,1; } > "$OUT/histogram.tsv"
+  { printf 'package\tdecls\tlowered\tquarantined\tshare_lowered\n'
+    awk -F'\t' 'NR>1 { t[$1]++; if ($4=="lowered") l[$1]++ } END { for (p in t) printf "%s\t%d\t%d\t%d\t%.1f%%\n", p, t[p], l[p]+0, t[p]-l[p], 100*(l[p]+0)/t[p] }' "$OUT/census.tsv" | sort; } > "$OUT/per-package.tsv"
+  { printf 'key\tvalue\n'
+    printf 'git_commit\t%s\n' "$(git rev-parse HEAD 2>/dev/null || echo unknown)"
+    printf 'cedar_go\t%s@%s\n' "$CEDAR_GO_DIR" "$(git -C "$CEDAR_GO_DIR" rev-parse HEAD)"
+    printf 'cedar_k8s\t%s@%s\n' "$CEDAR_K8S_DIR" "$(git -C "$CEDAR_K8S_DIR" rev-parse HEAD)"
+    printf 'go_toolchain\t%s\n' "$(go version | awk '{print $3}')"
+    printf 'golean_bin\t%s\n' "$GOLEAN_BIN"
+    printf 'pass\t%s\n' "$([[ -f "$OUT/PASS-B-RELAXED" ]] && echo "B (RELAX patches applied to the census copy: $(ls "$RELAX"/*.sed | xargs -n1 basename | tr '\n' ' '))" || echo "A (unpatched copy — today's coverage)")"
+    printf 'date\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    printf 'go_timeout_s\t%s\nlean_timeout_s\t%s\n' "$GO_TIMEOUT" "$LEAN_TIMEOUT"
+  } > "$OUT/meta.tsv"
+  echo "== results by category"; awk -F'\t' 'NR>1 { n[$1]++ } END { for (c in n) print c "\t" n[c] }' "$OUT/results.tsv" | sort
+  echo "== library declarations"; awk -F'\t' 'NR>1 { t++; if ($4=="lowered") l++ } END { printf "total=%d lowered=%d quarantined/refused=%d (%.1f%% lowered)\n", t, l, t-l, 100*l/t }' "$OUT/census.tsv"
+  echo "== histogram (top 15)"; head -16 "$OUT/histogram.tsv"
+  if [[ -f "$OUT/demand.tsv" ]]; then
+    echo "== STATIC demand census"; awk -F'\t' 'NR>1 { t++; if ($9 ~ /^lowers/) l++ } END { printf "functions=%d lowers(static)=%d refused(static)=%d (%.1f%% lowers)\n", t, l, t-l, 100*l/t }' "$OUT/demand.tsv"
+    echo "== static demand histogram (top 15)"; head -16 "$OUT/demand-histogram.tsv"
+  fi
+}
+
+cmd="${1:-}"; shift || true
+case "$cmd" in
+  assemble)  preflight; assemble ;;
+  inventory) preflight; inventory ;;
+  cases)     preflight; cases ;;
+  drive)     preflight; drive ;;
+  demand)    preflight; demand ;;
+  report)    report ;;
+  run)       preflight; preflight_machine; assemble; inventory; cases; drive; demand; report ;;
+  *) die "usage: scripts/cedar-census run|assemble|inventory|cases|drive|demand|report" ;;
+esac
