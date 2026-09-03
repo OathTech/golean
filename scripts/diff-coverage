@@ -100,11 +100,19 @@ lean() {
 }
 
 # Observation equality under the Lean budget, with a TIMEOUT kept
-# DISTINCT from inequality: 0 = equal, 124 = the comparator was killed
-# (it decided NOTHING), any other nonzero = not equal. Callers test 124
-# first and name it; the old `if ! lean observation-eq …` shape read a
-# killed comparator as "differs" and mis-attributed it (nondet variance,
-# coupling drift, the soundness alarm).
+# DISTINCT from inequality: 0 = equal; 124 = the comparator was killed by
+# the wall clock (it decided NOTHING); 1 = not equal; 2/137/143/other =
+# the comparator did NOT decide either (2 = runObservationEq's
+# undecodable-observation refusal, GoLean/CLI.lean; 137/143 = a
+# SIGKILL/SIGTERM — cgroup or OOM kill — via the wrapper's 128+signal)
+# — currently reported as "not equal" by every caller, and the
+# `>/dev/null 2>&1` below discards exit 2's decode message: an OWED
+# residual (audit F1, docs/operational-lessons.md "A killed command has
+# decided nothing"), not changed in the cause-naming slice because it is
+# a criterion change. Callers test 124 first and name it; the old
+# `if ! lean observation-eq …` shape read a killed comparator as
+# "differs" and mis-attributed it (nondet variance, coupling drift, the
+# soundness alarm).
 obs_eq() {
   lean observation-eq --left "$1" --right "$2" >/dev/null 2>&1
 }

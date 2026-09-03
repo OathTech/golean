@@ -1,4 +1,4 @@
-# scripts/test-lane-validation --with-go against MAIN's runner (b5abacc1 scripts/diff-coverage) + the T1-T4 fixtures — RED expected
+# scripts/test-lane-validation --with-go against MAIN's runner (b5abacc1 scripts/diff-coverage) + the COMMITTED T1-T4 fixtures (4b0d087d) — RED expected. Re-captured at the audit follow-up (F3): the first capture quoted a pre-commit fixture revision's forbid string.
 ok: membership without why
 ok: nondet tag on a strict row
 ok: strict row with why text
@@ -46,9 +46,9 @@ ok: confluent lane refuses a non-singleton set (B4)
 ok: racy lane fails loud on a refuted width (B5)
 ok: fan-out that ran no worker exits 2 without publishing (G5)
 ok: G5 named both causes (global fan-out refusal + empty-row guard), no stray .out
-FAIL: T1-strict-lean-run: the timeout was not named (want stage lean-observation + 'Lean run TIMED OUT after 1s', never 'expected status ok, got $'); row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	lean-observation	expected status ok, got 
+FAIL: T1-strict-lean-run: the timeout was not named (want stage lean-observation + 'Lean run TIMED OUT after 1s', never 'expected status ok, got'); row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	lean-observation	expected status ok, got 
 FAIL: T2-nondet-rerun: the timeout was not named (want stage nondet + 're-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s', never 'varies with iteration order'); row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	nondet	observation varies with iteration order (oracle [9,8,7,6,5,4,3,2,1,0]): default={"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1233}]} variant=
 FAIL: T3-coupling-pin: the timeout was not named (want stage membership + 'driver-coupling pin: native-json-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s', never 'copied-driver drift, or'); row: FAIL	lane-t3	maps,range,keys,loops,nondet	membership	driver-coupling pin: native-json-run observation under stream [9,8,7,6,5,4,3,2,1,0] is NOT in the enumerated set (copied-driver drift, or a behavior the enumeration missed): 
-FAIL: T4-sample-loop: the timeout was not named (want stage membership + 'observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing a Go sample against member #1', never 'NOT in the machine's enumerated set'); row: FAIL	lane-t3	maps,range,keys,loops,nondet	membership	Go observation is NOT in the machine's enumerated set (the too-narrow soundness alarm): {"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":3}]} enumerated=3
+FAIL: T4-sample-loop: the timeout was not named (want stage membership + 'observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing a Go sample against member #1', never 'NOT in the machine's enumerated set'); row: FAIL	lane-t3	maps,range,keys,loops,nondet	membership	Go observation is NOT in the machine's enumerated set (the too-narrow soundness alarm): {"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]} enumerated=3
 test-lane-validation: FAIL
 EXIT=1

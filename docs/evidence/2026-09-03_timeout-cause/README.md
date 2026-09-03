@@ -43,6 +43,18 @@ timeouts out of the untriaged-fidelity surface (a gate weakening).
 `run_with_timeout` additionally announces the kill on stderr, so any
 future `2>&1` consumer carries the cause even if it forgets the test.
 
+## Files changed (4b0d087d + the audit follow-up)
+
+- `scripts/diff-coverage` — the cause-naming fix (`run_with_timeout`
+  stderr announcement, `obs_eq`, every consumer's 124 test).
+- `scripts/test-lane-validation` — fixtures T1-T4 (Part B, `--with-go`).
+- `scripts/ci:501-504` — the `--with-go` lane step's label names T1-T4
+  and its success-path grep filter shows the `T[0-9]-` lines (display
+  only; not named in 4b0d087d's message — audit F2).
+- `docs/operational-lessons.md` (new entry + the owed 2/137/143
+  residual), `docs/coverage-suite-structure.md` (Reports convention),
+  this directory.
+
 ## Red-first fixtures
 
 `scripts/test-lane-validation --with-go` T1-T4 build a FAKE ROOT (a

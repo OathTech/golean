@@ -258,3 +258,14 @@ checking. Test it by forcing the kill: `scripts/test-lane-validation
 --with-go` T1-T4 run the real runner from a fake root whose `golean`
 shim `exec sleep`s on exactly one targeted call under a 1 s budget
 (red-first record: `docs/evidence/2026-09-03_timeout-cause/`).
+OWED (audit F1 on the fix, 2026-09-03; recorded, not changed — it is a
+criterion change): only 124 is named. Three other non-verdict exit
+codes are still read as verdicts — `observation-eq` exit 2
+(runObservationEq's undecodable-observation refusal, GoLean/CLI.lean)
+is read as "not equal" by every `obs_eq` caller, and `obs_eq`'s
+`>/dev/null 2>&1` discards the decode message; 137/143 (SIGKILL/SIGTERM
+through the wrapper's `128 + signal` — a cgroup or OOM kill) are read as
+"not equal" by `obs_eq`, fall through the strict Lean-run path to
+`expected status ok, got …`, and fall through `go_run_oracle` to
+"expected Go panic, got: …". The fix shape is the same as 124's: test
+the code before reading the capture, name it, never a pass.
