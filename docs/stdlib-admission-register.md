@@ -65,6 +65,43 @@ G7 primitive route. This is NOT "unmodeled means effect-free" (the
 refuted H-11 reasoning, audit F1 2026-08-20): it is a census fact about
 nine named packages, re-checked at every re-pin by the purity census.
 
+### Caps — where they are enforced today (owed before slice 2)
+
+The overlay (12) and primitive (2) caps are enforced INSIDE the
+frontend's `--stdlib-register` dump (`stdlibregister.go`: an over-cap
+table refuses to render, so `scripts/check-stdlib-register` fails) and
+nowhere else: the caps bind the register's machine block, not the
+emitter's behaviour at lowering time. Both tables are empty in slice 1,
+so nothing is exposed; a ci-side assertion that the EMITTED wire carries
+no overlay/primitive outside the register is OWED before slice 2 lands
+its first overlay ([AGENT], audit fix round F12 — recorded, not deferred
+silently).
+
+### Residual channels (recorded)
+
+- **Host export data.** The library units' unmodeled imports
+  (`internal/cpu`, `internal/abi`, `internal/reflectlite`, `io`, `sync`,
+  `iter`) are type-checked from the HOST toolchain's export data
+  (`importer.Default()`), not from the pinned checkout's text. The
+  frontend refuses unless `runtime.Version()` equals the oracle pin
+  (`stdlibsource.go` `checkHostToolchainPinned`, audit fix round F4),
+  which closes the rev half; the content half — export data is the
+  compiled host's view — remains a channel. The one place a host-layout
+  fact could enter the model through it, `internal/bytealg/bytealg.go`'s
+  `unsafe.Offsetof(cpu.X86…)` constants, is unreached (and would refuse
+  the export through the reached-decl unsafe scan if it were).
+- **The bytealg substitution changes init.** Dropping `index_amd64.go`
+  drops its `init()` (MaxLen from CPU features); `index_generic.go`
+  declares none, so `internal/bytealg.MaxLen` stays 0 — this is what
+  makes the placeholder `panic("unimplemented")` bodies of the generic
+  twin unreachable (`stdlib-substitutions.tsv` rows 2–3 state the
+  argument; `emit.go` `isUnimplementedPanicBody` quarantines any such
+  body by name should a call ever reach one).
+- **Library initializers that do not lower** (`errors.errorType =
+  reflectlite.TypeOf(...)`, reached through errors.Is/As) are quarantined
+  per declaration — the var poisoned, its readers H-3 stubs — under the
+  same init-pure argument; never a whole-export refusal.
+
 ## Slice log
 
 - **2026-09-03 `stdlib-source-1`** ([AGENT], within G9 as ruled):
@@ -79,7 +116,13 @@ nine named packages, re-checked at every re-pin by the purity census.
   `internal/stringslite.Clone`'s `unsafe.String`, a site the memo's
   census did not list — the overlay mechanism (slice 2) is the remedy;
   frontier row `stdlib-source/frontier/atoi-error-path-clone`. Overlay
-  0/12, primitive 0/2.
+  0/12, primitive 0/2. Audit fix round (same day): the other reached-
+  library refusal classes rowed — `stdlib-source/frontier/{index-rune-goto,
+  format-float-unsafe}`, `stdlib-source/errors-wrap/{is,as}` (ledger
+  FR-21) — so the register claims exactly what lowers: every reached
+  member of the nine packages that is free of `unsafe`, linkname pulls,
+  placeholder bodies, `internal/reflectlite`, and FR-11's goto shape.
+  Evidence: `docs/evidence/2026-09-03_stdlib-source-1/`.
 
 ## The machine block
 
@@ -107,8 +150,8 @@ source-through	strings	slice-1 target (Fields, TrimSpace, Split retired from shi
 source-through	unicode	unicode.IsSpace and its White_Space RangeTable (strings.Fields/TrimSpace's non-ASCII path); pure tables, reached ones only
 source-through	unicode/utf8	rune decoding used by strings' non-ASCII paths and explode; pure
 substitution	internal/bytealg/indexbyte_native.go -> indexbyte_generic.go	IndexByte/IndexByteString are assembly on amd64 (indexbyte_amd64.s); the generic twin is the same package's portable implementation
-substitution	internal/bytealg/index_native.go -> index_generic.go	Index/IndexString are assembly on amd64 (index_amd64.s); the generic twin is the same package's portable implementation (MaxBruteForce=0, Cutover)
-substitution	internal/bytealg/index_amd64.go -> index_generic.go	the amd64 init() sets MaxLen from CPU features (internal/cpu, AVX2) — machine-specific; the generic twin's init() sets the portable MaxLen=0 (the Rabin-Karp path)
+substitution	internal/bytealg/index_native.go -> index_generic.go	Index/IndexString are assembly on amd64 (index_amd64.s). The generic twin's Index/IndexString/Cutover bodies are `panic("unimplemented")` placeholders (NOT implementations — the frontend quarantines such bodies by name, emit.go isUnimplementedPanicBody) and it declares `const MaxBruteForce = 0`; together with MaxLen == 0 (next row) every call site is DEAD: internal/stringslite/strings.go:42 (`n <= bytealg.MaxLen` false for n >= 2) and strings/strings.go:128,167,177 (same guard) never reach them, so strings.Index/Count/Split run the pure IndexByte + Rabin-Karp paths — the exact code gc compiles for the arches without an assembly Index
+substitution	internal/bytealg/index_amd64.go -> index_generic.go	the amd64 file's init() sets MaxLen from CPU features (internal/cpu, AVX2: 63 or 31) — a machine-specific value. Dropping it leaves `var MaxLen int` (bytealg.go) at its ZERO value — index_generic.go declares NO init() — which is what makes the previous row's placeholder bodies unreachable and selects the portable brute-force/Rabin-Karp search path; the substitution does not add an init, it removes one (the register records this init difference)
 substitution	internal/bytealg/count_native.go -> count_generic.go	Count/CountString are assembly on amd64 (count_amd64.s); the generic twin is the same package's portable implementation
 substitution	internal/bytealg/compare_native.go -> compare_generic.go	Compare is assembly on amd64 (compare_amd64.s) and CompareString pulls runtime.cmpstring by linkname; the generic twin is pure Go (its own runtime_cmpstring linkname push is a body-less-free definition)
 shim	bytes.Equal	direct-call shim (stdlibshim.go)

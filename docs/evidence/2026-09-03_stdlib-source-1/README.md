@@ -4,7 +4,7 @@
 `docs/2026-09-03_stdlib-boundary-design.md` §6, the first implementation
 slice). Consuming docs (rule 8): the memo §6 DONE marker,
 `docs/discrepancy-backlog.md` D-002, `docs/stdlib-admission-register.md`
-(slice log), `docs/language-coverage-ledger.md` FR-14/FR-16,
+(slice log), `docs/language-coverage-ledger.md` FR-14/FR-21,
 `docs/coverage-ledger.md` (Standard library semantics row),
 `docs/2026-08-11_latitude-inventory.md` §3 (library realization note),
 `docs/spec-sources.md` (the library-docs pin), `docs/BUGS.md` BUG-072,
@@ -24,6 +24,18 @@ must change when their shims are replaced by real source). Every other
 decision here is [AGENT]; the two departures from §6 as written (the
 retained ParseUint shim; the dropped-initializer rule) are argued in the
 memo's DONE marker and the register.
+
+**D-002 countersign ask (carried for the coordinator to pose):** the
+re-bodied `strconv.ParseUint` shim is a BODY CHANGE under the D-002
+freeze, forced by a fail-closed STOP (retiring it would have flipped the
+green error-path rows red). It DELETES two hand-written pieces
+(`goleanShimStrconvQuote`, the carrier type `goleanShimStrconvError`)
+but ADDS `stdlibShimImports` (`tools/nativefrontend/stdlibshim.go`) — a
+new coupling from an injected shim to a LIBRARY type (`&strconv.NumError{…}`
+with the library's `ErrSyntax`/`ErrRange`). Validation: the 600k fuzz
+below + `stdlib-source/strconv-parseuint/*`. The [USER] is asked to
+countersign the coupling; the freeze itself permits a validated body
+change.
 
 ## Toolchain, tree, host (rules 3–5)
 
@@ -88,7 +100,7 @@ the same binary: `interpreter-cost.tsv` column `obs_equal` = yes for all
 New rows (`Corpus/coverage/exec/stdlib-source/`): `strings-fields` 9/9,
 `strings-trimspace` 10/10, `strings-split` 11/11, `strconv-format` 8/8,
 `strconv-parseuint` 6/6 PASS; `frontier` 0/2 (born red by design — see
-FR-16); `fields-fuzz` 10/10 (below).
+FR-21); `fields-fuzz` 10/10 (below).
 
 ### The library-vs-oracle fuzz (memo §6) — 500 inputs, 0 mismatches
 
@@ -113,7 +125,10 @@ multibyte rune, plus the extremes), bases 2..36 (5% base 0), bitSize
 {0,8,16,32,64,3,7,63,65}. `transcript.txt`: seed 20260903 — 100,000
 trials, 0 mismatches (3,464 ok-path, 81,157 error-path, 15,379 refused
 at the recorded bounds base 0 / bitSize 65); seed 7 — 100,000 trials, 0
-mismatches. Corpus rows `stdlib-source/strconv-parseuint/*` pin the type
+mismatches; and the Fields-standard run (memo §2.2.3 → g2.md's 600k
+pattern): seed 20260903 — **600,000 trials, 0 mismatches** (20,654
+ok-path, 486,325 error-path, 93,021 refused at the recorded bounds).
+The standard is the [USER]'s to relax; it is met, not restated. Corpus rows `stdlib-source/strconv-parseuint/*` pin the type
 assertion `err.(*strconv.NumError)` (true, as gc), the sentinel identity
 through `Unwrap`, and the rendered texts incl. non-ASCII quoting.
 
@@ -148,12 +163,16 @@ The twin wire grew 9.32 MB → 10.20 MB for the same reason.
 `eef32142627a37ce04632c6ae8ab4d953a6ea620394acfe657d3d73ca9a0ac70` →
 `b341dc3b74ff6d6452feb5c4a8b1de6de978ef9819026ff031318a83a1fed3ef`.
 `twin-structural-diff.txt` (producer `twin-structural-diff.py`) shows the
-delta after two semantically inert normalizations — the 15 new library
+delta after two semantically inert normalizations — WHAT IT CHECKS, stated
+exactly: funcs/methods compared as canonicalized JSON per declaration
+(gid shift + temporary renaming), types/globals/methodSets compared BY
+NAME only (not content), `fileOrder` compared per package list (not per
+file), `$pkginit` reported as changed without a statement-level diff — the 15 new library
 globals initialize first, so every user `gid` shifts by +15; the
 frontend's program-wide temporary counters (`$cN`, `$swiN`, …) renumber
 — is EXACTLY: funcs removed = the 5 retired shim bodies (+ their lifted
-literals and the deleted `goleanShimStrconvQuote`); funcs added = the 52
-reached library functions; funcs changed = `$pkginit` (library inits),
+literals and the deleted `goleanShimStrconvQuote`); funcs added = the 51
+reached library functions (`twin-structural-diff.txt`); funcs changed = `$pkginit` (library inits),
 `raftpb.ConfChangesFromString` (real Split/TrimSpace calls),
 `raftpb.goleanShimStrconvParseUint` (real `*NumError`); methods changed =
 `quorum.Index.String`, `quorum.VoteResult.String` (real FormatUint/
@@ -172,7 +191,7 @@ and a missing row — both refuse naming the path; `check-frontend-pins
 [stdlib-pin]` regenerates and byte-compares. Also red-first at landing:
 `scripts/check-stdlib-register` failed on a one-character mutation of the
 register's `count overlay` line (diff shown, exit 1), then passed
-restored; `tools/godocanchors` reported `godoc:strings.Nope@go1.26.5`
+restored; `tools/godocanchors` reported a `godoc:<strings>.<Nope>@go1.26.5` probe (a non-existent declaration)
 and a wrong rev as UNRESOLVED (exit 1).
 
 ### The gotest standing lane (trigger: a frontend fragment widening)
@@ -197,12 +216,17 @@ materialization budget on a 100,000-element array; it imports no
 scripts/coverage run --prefix stdlib-source                       # the new suites
 scripts/coverage run --prefix strings/fields-conformance          # (and the other 7 suites)
 GO111MODULE=off go run ./tools/stdlibfuzz/fieldsgen -n 500 -seed 20260903 -group 50 -out Corpus/coverage/exec/stdlib-source/fields-fuzz
-docs/evidence/2026-09-03_stdlib-source-1/parseuint-fuzz/gen.sh 100000 20260903 ; …/gen.sh 100000 7
+docs/evidence/2026-09-03_stdlib-source-1/parseuint-fuzz/gen.sh 100000 20260903
+docs/evidence/2026-09-03_stdlib-source-1/parseuint-fuzz/gen.sh 100000 7
+docs/evidence/2026-09-03_stdlib-source-1/parseuint-fuzz/gen.sh 600000 20260903   # the Fields-standard 600k run
 GO111MODULE=off go run ./tools/nativefrontend --stdlib-pin-manifest | diff - baselines/stdlib-pin.tsv
 GO111MODULE=off go run ./tools/nativefrontend --stdlib-register        # the register's machine block
 scripts/check-frontend-pins ; scripts/check-stdlib-register ; scripts/check-spec-anchors
 python3 docs/evidence/2026-09-03_stdlib-source-1/twin-structural-diff.py <(git show 345ef090:baselines/pins/twin-chdriver.wire.json) baselines/pins/twin-chdriver.wire.json
 scripts/gotest-triage run --jobs 8 ; scripts/gotest-triage report
+# gotest-delta.txt = the awk joins of this README's 'gotest standing lane' section over
+#   <t4-gotest worktree>/artifacts/gotest/results.tsv (OLD, @670d3351) and artifacts/gotest/results.tsv (NEW):
+#   category counts, the strings./strconv./utf8./unicode. refusal join, the MATCH-set delta; paths written <repo>-relative
 # interpreter cost: emit each case with the main-@345ef090 frontend and this one, then
 .lake/build/bin/golean native-json-run --input <wire> --function <subject>   # timed, avg of 3
 scripts/capped scripts/ci --diff                                   # the gate (result below)
@@ -234,7 +258,7 @@ See the final section, appended after the gate run.
   certified set — predate this lane). `gate-final-summary.txt` is that
   run's step summary. The ONE tool change outside the slice:
   `tools/reconcile-records`' frontier-row regex accepts `FR-1…FR-N`
-  (the table gained FR-16), and the reconciler's C1H/C4 checks were
+  (the table gained FR-21), and the reconciler's C1H/C4 checks were
   satisfied by re-deriving the baseline header and ledger §8 from the
   rows.
 - Conclusion (one paragraph): the machine executing the pinned GOROOT
@@ -242,7 +266,7 @@ See the final section, appended after the gate run.
   FormatInt}` agrees with `go run` on every prior shim row, on 44 new
   documented-edge rows and on 500 fuzzed Fields inputs; six shim-surface
   refusals are moot and flipped green; two library sites the slice
-  cannot lower refuse by name (FR-16) with the overlay as the recorded
+  cannot lower refuse by name (FR-21) with the overlay as the recorded
   remedy; the twin wire's delta is exactly the shim→source replacement
   plus the library units; interpreter cost is +2–5 ms on the strings rows
   and +340 ms per subject wherever `strconv.Quote`'s tables reach the

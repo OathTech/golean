@@ -1717,7 +1717,7 @@ gc's realized string (R9's class), now forced by lowering gc's body.
 Future source-through packages with doc-latitude vocabulary ("not
 guaranteed", "may", "implementation-specific" — `slices.SortFunc`'s tie
 order, `strings.Builder.Cap`, `math`'s asm-vs-Go last ulp) land their
-R-rows here at admission (register rule).
+R-rows here at admission (register rule). Evidence for the slice-1 census: `docs/evidence/2026-09-03_stdlib-source-1/`.
 
 ## 4. Forced points — the compact list (class (c))
 

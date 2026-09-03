@@ -24,7 +24,7 @@
 #   strings-trimspace 10, strings-split 11, strconv-format 8,
 #   strconv-parseuint 6, fields-fuzz 10 — the 500-input library-vs-oracle
 #   fuzz; 2 born FAIL/frontend-export BY DESIGN: stdlib-source/frontier/
-#   {atoi-error-path-clone,div64-overflow-value}, ledger FR-16). NO other row
+#   {atoi-error-path-clone,div64-overflow-value}, ledger FR-21). NO other row
 #   moved in result or stage; NO PASS->non-PASS flips. 3061 PASS / 190 FAIL.
 #   Twin-wire pin MOVED ([USER]-authorized by G9, relayed): eef32142… ->
 #   b341dc3b… (structural diff in the evidence dir); deviation pin unmoved;

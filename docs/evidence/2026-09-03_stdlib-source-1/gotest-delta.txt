@@ -40,4 +40,4 @@ now MATCH: typeparam/issue42758.go (was MACHINE-REFUSED)
 now MATCH: typeparam/stringable.go (was FRONTEND-REFUSED)
 now MATCH: utf.go (was FRONTEND-REFUSED)
 ## the lost match, diagnosed
-FRONTEND-REFUSED	fixedbugs/issue4353.go	wire-decode: {"message":"/home/dev/projects/golean/.claude/worktrees/stdlib-source-1/artifacts/gotest/cases/fixedbugs__issue4353/wire.json: native lowering: array type of 100000 elements exceeds the interpreter's materialization budget (65536 elements; BUG-078
+FRONTEND-REFUSED	fixedbugs/issue4353.go	wire-decode: {"message":"<repo>/artifacts/gotest/cases/fixedbugs__issue4353/wire.json: native lowering: array type of 100000 elements exceeds the interpreter's materialization budget (65536 elements; BUG-078

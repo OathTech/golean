@@ -150,6 +150,14 @@ while IFS= read -r -d '' f && IFS= read -r rest; do
 ' "$f:${rest%%:*}" "$tok" >> "$tmp/godoc-tokens"
 done < "$tmp/godoc-hits"
 n_godoc="$(wc -l < "$tmp/godoc-tokens" | tr -d ' ')"
+# Degenerate-scan guard (audit fix round F11, the :121-124 rule for this
+# leg): the repo has carried godoc: citations since stdlib-source-1 landed
+# (spec-sources.md's library-docs row alone is one), so zero found means
+# the scan broke, never that there is nothing to check.
+if [[ "$n_godoc" -eq 0 ]]; then
+  echo "check-spec-anchors: FAIL — zero godoc: citations found; the godoc scan is degenerate (docs/spec-sources.md carries at least one — if that ever legitimately changes, update this guard with the reason)" >&2
+  exit 1
+fi
 if [[ "$n_godoc" -gt 0 ]]; then
   if ! out="$(cut -f2 "$tmp/godoc-tokens" | GO111MODULE=off go run ./tools/godocanchors 2>&1)"; then
     echo "$out" | sed 's/^/  /'

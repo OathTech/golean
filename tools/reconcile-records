@@ -432,6 +432,23 @@ def check_frontier_rows(bl):
             }
         )
     total_claimed = sum(r["claimed"] or 0 for r in rows)
+    # Duplicate-FR detection (audit fix round F10, stdlib-source-1: two
+    # lanes minted FR-16 concurrently). Every FR id must appear once, and
+    # the §8 bucket label `frontier FR-1…FR-N (§4)` must name the highest
+    # row id — a label that lags the table hides a new row from §8.
+    seen_ids = {}
+    for r in rows:
+        seen_ids.setdefault(r["id"], []).append(r["line"])
+    dups = {k: v for k, v in seen_ids.items() if len(v) > 1}
+    if dups:
+        finding("C5", "high", f"{len(dups)} frontier row id(s) declared more than once in §4 (a merge-train collision): "
+                + ", ".join(f"{k} at lines {v}" for k, v in sorted(dups.items())))
+    max_id = max((int(r["id"].split("-")[1]) for r in rows), default=0)
+    for ln in txt:
+        lm = re.search(r"frontier FR-1…FR-(\d+) \(§4\)", ln)
+        if lm and int(lm.group(1)) != max_id:
+            finding("C4", "high", f"§8's frontier bucket label says FR-1…FR-{lm.group(1)} but the highest §4 row id is FR-{max_id} — the label lags the table (re-derive)")
+            break
     # cited id tokens inside the reds cell (backticked). The ledger cites
     # SUFFIXES of baseline ids (`slice-to-array/ok-forms` for
     # `spec-examples-decl/slice-to-array/ok-forms`), so resolve exact ->

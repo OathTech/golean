@@ -24,9 +24,20 @@ package main
 //    mapping the two values onto the machine's own division/overflow
 //    panics (they ARE the language's panics — memo §1.3 Finding 1).
 
+// 3. strings.IndexRune's body uses a `goto next` whose target label is
+//    lowered by the frontend's goto restructuring — the reached shape
+//    hits FR-11's fresh-cell-per-execution refusal (`goto target label
+//    next…`), so IndexRune quarantines by name. Remedy: FR-11's goto
+//    lowering (a LANGUAGE frontier, not a library one).
+// 4. internal/strconv's float path (`ftoa.go`, `atof.go`) reaches the
+//    four `unsafe.Pointer` float-bits casts in deps.go — strconv.
+//    FormatFloat/ParseFloat/AppendFloat quarantine by name. Remedy: the
+//    slice-2 overlay onto the machine's FloatBits (memo §2.3.2).
+
 import (
 	"math/bits"
 	"strconv"
+	"strings"
 )
 
 // gc: -1 (Atoi("x") fails with *NumError); machine: refuses in
@@ -47,7 +58,17 @@ func div64OverflowValue() uint64 {
 	return q
 }
 
+// gc: 3 (the byte offset of the rune); machine: refuses in strings.IndexRune
+// (goto shape, FR-11).
+func indexRuneGoto() int { return strings.IndexRune("ab\u00e9d", 'd') }
+
+// gc: "1.5"; machine: refuses on internal/strconv's float-bits casts
+// (unsafe.Pointer, deps.go).
+func formatFloatUnsafe() string { return strconv.FormatFloat(1.5, 'g', -1, 64) }
+
 func main() {
 	println(atoiErrorPathClone())
 	println(div64OverflowValue())
+	println(indexRuneGoto())
+	println(formatFloatUnsafe())
 }

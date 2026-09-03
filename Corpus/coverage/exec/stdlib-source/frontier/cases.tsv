@@ -2,3 +2,5 @@
 # BORN-RED frontier rows of stdlib-source-1 (2026-09-03): library sites the slice refuses by name.
 atoi-error-path-clone	atoiErrorPathClone	-	ok	-	stdlib,strings,ints,unsafe
 div64-overflow-value	div64OverflowValue	-	panic	runtime error: integer overflow	stdlib,ints,overflow,panic
+index-rune-goto	indexRuneGoto	-	ok	-	stdlib,strings,goto,runes
+format-float-unsafe	formatFloatUnsafe	-	ok	-	stdlib,strings,floats,unsafe

@@ -58,6 +58,7 @@ import (
 	"go/parser"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 )
@@ -144,6 +145,23 @@ func checkStdlibSrcRev() error {
 	first := strings.TrimSpace(strings.SplitN(string(data), "\n", 2)[0])
 	if first != want {
 		return unsup("stdlib source root %q is at %q, the oracle pin is %q (%s vs inittask-std.tsv header) — rev drift is resolved by hand, never floated (fail closed)", stdlibSrcRoot, first, want, versionFile)
+	}
+	return checkHostToolchainPinned(runtime.Version(), want)
+}
+
+// checkHostToolchainPinned refuses unless the frontend's OWN toolchain is
+// the pinned one (audit fix round F4). The library units are type-checked
+// against the HOST's export data for the packages outside the allowed
+// list (`importer.Default()` in load.go: internal/cpu, internal/abi,
+// internal/reflectlite, io, sync, iter) — a content channel the source
+// pin does not cover. Pinning the host toolchain closes the rev half of
+// it; the residual — that export data is the host's compiled view, not
+// the checkout's text — is recorded in the admission register
+// (internal/bytealg.go's `unsafe.Offsetof(cpu.X86…)` constants are the
+// one place a host-layout fact could enter, and they are unreached).
+func checkHostToolchainPinned(host, want string) error {
+	if host != want {
+		return unsup("the frontend runs on toolchain %q but the oracle pin is %q: the library units would be type-checked against the HOST's export data for their unmodeled imports (internal/cpu, internal/abi, internal/reflectlite, io, sync, iter) — a different toolchain is a different library; fail closed (run the frontend with the pinned go)", host, want)
 	}
 	return nil
 }
@@ -288,6 +306,38 @@ func checkLibraryFilesPinned(path string, files []string, pin map[string]string)
 	return nil
 }
 
+// checkPinnedFilesSelected is the OTHER direction of the pin (audit fix
+// round F3: `selected ⊆ pinned` alone let a deleted, unreached-but-import-
+// bearing pinned file — strings/reader.go — change the wire with exit 0):
+// every pin row under the package's directory must be among the files
+// selected for lowering. A pinned file that vanished, or that go/build no
+// longer selects, means the lowered package is not the pinned package.
+func checkPinnedFilesSelected(path string, files []string, pin map[string]string) error {
+	selected := map[string]bool{}
+	for _, f := range files {
+		key, err := libraryPinKey(f)
+		if err != nil {
+			return err
+		}
+		selected[key] = true
+	}
+	prefix := path + "/"
+	missing := []string{}
+	for key := range pin {
+		if !strings.HasPrefix(key, prefix) || strings.Contains(key[len(prefix):], "/") {
+			continue // another package (or a sub-package)
+		}
+		if !selected[key] {
+			missing = append(missing, key)
+		}
+	}
+	if len(missing) > 0 {
+		sort.Strings(missing)
+		return unsup("stdlib source package %q: pinned file(s) %v are NOT among the files selected for lowering (deleted, renamed, or dropped by the build context) — the lowered package is not the pinned package (fail closed; %s)", path, missing, stdlibPinPath)
+	}
+	return nil
+}
+
 // stdlibPinManifest renders the pin file for the CURRENT source root:
 // every selected file of every allowed package with its sha256, sorted,
 // under a header naming the rev. This is what baselines/stdlib-pin.tsv
@@ -361,6 +411,9 @@ func (l *loader) parseLibrary(path string, pin map[string]string) (*sourcePkg, e
 		return nil, err
 	}
 	if err := checkLibraryFilesPinned(path, files, pin); err != nil {
+		return nil, err
+	}
+	if err := checkPinnedFilesSelected(path, files, pin); err != nil {
 		return nil, err
 	}
 	unit := &sourcePkg{path: path, library: true, libFiles: files, linknamed: map[string]string{}}

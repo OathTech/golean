@@ -626,7 +626,7 @@ are refused today) — deleting `goleanShimFmtUint/Int/Hex/Bool/Quote*`
 and the `%q` non-ASCII bound at a stroke, and shrinking the hand-written
 remainder to the rules that ARE `fmt`'s own (`handleMethods`
 precedence, `%!verb(...)` error shapes, padding, composite layout),
-each cited to `fmt/print.go` at the pin and to `godoc:fmt.Sprintf@go1.26.5` (and the sibling anchors of the functions it lowers). Dynamic
+each cited to `fmt/print.go` at the pin and — once `fmt` is a source-through package with a library-pin row — to `godoc:<fmt>.<Sprintf>@go1.26.5`-shaped anchors (the resolver refuses anchors into unpinned packages). Dynamic
 sites (`[]any` spreads) keep the runtime type switch over basic kinds
 and named-type Stringers; the reflective remainder (a struct or map
 reaching a dynamic `%v`, `%T`, `%p`) REFUSES by name, as today. The
@@ -1204,7 +1204,7 @@ verified against the tree):
 ## Appendix D — the stdlib doc anchor scheme (proposal for G3)
 
 - Anchor: `godoc:<import path>.<Ident>[.<Method>]@<rev>` — e.g.
-  `godoc:strings.Fields@go1.26.5`, `godoc:sync.WaitGroup.Add@go1.26.5`.
+  `godoc:strings.Fields@go1.26.5`, `godoc:strconv.NumError.Error@go1.26.5` (a method); an anchor into a package the machine does not lower from the pin — `godoc:<sync>.<WaitGroup>.<Add>@go1.26.5` — is REFUSED by the resolver: only source-through packages (rows in `baselines/stdlib-pin.tsv`) are citable evidence.
 - Resolution: the doc comment attached to the declaration in
   `deps/go/src/<import path>/*.go` at the pinned rev (via `go/doc` or
   `go/parser` + `ast.CommentGroup`); a resolver script

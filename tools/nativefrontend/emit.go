@@ -228,6 +228,13 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 					// still fail the whole export.
 					var u unsupported
 					if errors.As(err, &u) {
+						// A LIBRARY unit's quarantine reason names its
+						// SITE (audit fix round F5): `goto target label…`
+						// or `basic type unsafe.Pointer` alone does not
+						// say which upstream declaration refused.
+						if unit.library {
+							u = unsupported{what: e.libraryDeclLabel(unit, d) + ": " + u.what}
+						}
 						e.lifted = nil
 						e.deferNoopEmitted = deferNoopMark
 						// Drop any local type defs the quarantined body
@@ -1007,12 +1014,23 @@ func (e *emitter) quarantineUnlowerableGlobals() error {
 			if !errors.As(err, &uerr) {
 				return err
 			}
-			if !e.initializerEffectIsolated(ini.Rhs) {
+			if !e.initializerEffectIsolated(ini.Rhs) && !u.library {
 				// Not isolatable: the failing initializer has lowerable
 				// parts with potential modeled effects. Whole-export
 				// refusal, exactly as before H-11.
 				return err
 			}
+			// A LIBRARY unit's initializer that does not lower (audit fix
+			// round B2: `errors.errorType = reflectlite.TypeOf(...)`,
+			// reached through errors.As/Is) is quarantined WITHOUT the
+			// effect-isolation test: the register's init-pure-at-the-pin
+			// argument (docs/stdlib-admission-register.md) is exactly
+			// that these packages' initializers have no effect beyond
+			// their own cells, so skipping one is unobservable except
+			// through the poisoned cell — every reader refuses by name
+			// (errors.As lands as an H-3 stub), never the whole export.
+			// On main these programs exported with the user's caller
+			// quarantined; this keeps that per-declaration shape.
 			for _, v := range ini.Lhs {
 				if v.Name() != "_" {
 					e.quarantinedGlobals[v] = uerr.what
@@ -1765,6 +1783,16 @@ func (e *emitter) emitFuncDecl(d *ast.FuncDecl) (map[string]any, error) {
 		fn["recvType"] = name
 	}
 
+	if e.curUnit != nil && e.curUnit.library && d.Body != nil && isUnimplementedPanicBody(d.Body) {
+		// A library body that is SOLELY `panic("unimplemented")` is not an
+		// implementation — it is the portable twin's placeholder for an
+		// arch the Go project never ships it on (internal/bytealg's
+		// index_generic.go: Index/IndexString/Cutover; audit fix round
+		// F7). Emitting it would MODEL a panic where Go returns a value
+		// (observed ∉ modeled) if a future reached call ever took it.
+		// Quarantine by name instead.
+		return nil, unsup("stdlib source-through: %s.%s's body is solely panic(\"unimplemented\") — a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)", e.curUnit.path, d.Name.Name)
+	}
 	if d.Body == nil {
 		if e.curUnit != nil && e.curUnit.library {
 			// Stdlib source-through: a body-less library declaration is

@@ -16,7 +16,9 @@ package main
 //   roots — every declaration of every NON-library unit (they are emitted
 //           whole, as before), plus, per library unit, its `init()`
 //           functions (gc runs them whenever the package is linked in;
-//           internal/bytealg's generic init() sets MaxLen);
+//           under the substitution table internal/bytealg has NONE —
+//           index_generic.go declares no init(), so MaxLen stays at its
+//           zero value, see stdlib-substitutions.tsv);
 //   edges — for every identifier in a reached declaration, the object it
 //           USES (info.Uses): a library FUNCTION marks its declaration; a
 //           library METHOD marks its receiver TYPE; a package-level
@@ -314,12 +316,24 @@ func computeLibraryReach(units []*sourcePkg) error {
 		switch o := obj.(type) {
 		case *types.Func:
 			o = o.Origin()
-			if tn, isMethod := recvTypeName(o); isMethod {
-				return markType(lu, tn)
+			if sig, isSig := o.Type().(*types.Signature); isSig && sig.Recv() != nil {
+				if tn, named := recvTypeName(o); named {
+					return markType(lu, tn)
+				}
+				// A method of an UNNAMED interface type (`err.(interface{
+				// Unwrap() error })` in errors/wrap.go, `x.Is(target)`): it
+				// has no declaration of its own — the dispatch lands on
+				// whichever concrete method the value carries, which the
+				// walk reaches through that type. Nothing to mark. (Audit
+				// fix round B2: this used to fall through to the package-
+				// level lookup and refuse the WHOLE export as "no
+				// declaration site" — a regression vs main, where errors.Is
+				// quarantined per declaration.)
+				return nil
 			}
 			fd := indexes[lu].funcDecl[o]
 			if fd == nil {
-				return unsup("stdlib source package %q: function %s has no declaration site (fail closed)", lu.path, o.Name())
+				return unsup("internal: stdlib source package %q: package-level function %s is not indexed to a declaration (a reachability-index invariant broke — fail closed)", lu.path, o.Name())
 			}
 			markFuncDecl(lu, fd)
 			return markTypeOf(o.Type(), 0)
@@ -501,4 +515,47 @@ func (e *emitter) checkUnsafeLayoutOpsLibrary(u *sourcePkg) error {
 		}
 	}
 	return nil
+}
+
+// libraryDeclLabel is the `<path>.<Decl>` / `<path>.<Type>.<Method>`
+// prefix of a library unit's quarantine reasons (audit fix round F5).
+func (e *emitter) libraryDeclLabel(u *sourcePkg, d *ast.FuncDecl) string {
+	if d.Recv != nil && len(d.Recv.List) > 0 {
+		rt := d.Recv.List[0].Type
+		if star, ok := rt.(*ast.StarExpr); ok {
+			rt = star.X
+		}
+		if ix, ok := rt.(*ast.IndexExpr); ok {
+			rt = ix.X
+		}
+		if il, ok := rt.(*ast.IndexListExpr); ok {
+			rt = il.X
+		}
+		if id, ok := rt.(*ast.Ident); ok {
+			return u.path + "." + id.Name + "." + d.Name.Name
+		}
+	}
+	return u.path + "." + d.Name.Name
+}
+
+// isUnimplementedPanicBody reports whether a body is exactly
+// `panic("unimplemented")` (audit fix round F7).
+func isUnimplementedPanicBody(b *ast.BlockStmt) bool {
+	if b == nil || len(b.List) != 1 {
+		return false
+	}
+	es, ok := b.List[0].(*ast.ExprStmt)
+	if !ok {
+		return false
+	}
+	call, ok := es.X.(*ast.CallExpr)
+	if !ok || len(call.Args) != 1 {
+		return false
+	}
+	fn, ok := call.Fun.(*ast.Ident)
+	if !ok || fn.Name != "panic" {
+		return false
+	}
+	lit, ok := call.Args[0].(*ast.BasicLit)
+	return ok && lit.Value == `"unimplemented"`
 }

@@ -15,8 +15,8 @@
 // method of that name whose receiver is Ident. Like check-spec-anchors this
 // checks RESOLUTION only, never quote fidelity.
 //
-// Usage: godocanchors [--src deps/go/src] [--pin baselines/go-oracle-pin] < anchors
-// (one `godoc:...` token per line; exit 1 listing every unresolved one;
+// Usage: godocanchors [--src deps/go/src] [--pin baselines/go-oracle-pin] [--stdlib-pin baselines/stdlib-pin.tsv] < anchors
+// (one `godoc:<path>.<Ident>@<rev>` token per line; exit 1 listing every unresolved one;
 // exit 2 on a harness failure — a resolver that cannot run FAILS, never
 // skips). Stdlib only, GO111MODULE=off.
 package main
@@ -39,7 +39,32 @@ var anchorRE = regexp.MustCompile(`^godoc:([A-Za-z0-9_/]+)\.([A-Za-z_][A-Za-z0-9
 func main() {
 	src := flag.String("src", "deps/go/src", "pinned GOROOT source root")
 	pin := flag.String("pin", "baselines/go-oracle-pin", "oracle toolchain pin file")
+	libPin := flag.String("stdlib-pin", "baselines/stdlib-pin.tsv", "library pin (path<TAB>sha256 per lowered file) — only packages with a row are citable evidence")
 	flag.Parse()
+	// Audit fix round F11: a godoc anchor is EVIDENCE only for a package
+	// the machine actually lowers from the pinned text — i.e. one with a
+	// row in the library pin. An anchor into an unpinned package resolves
+	// to doc text nothing here executes; refuse it rather than lend it the
+	// pin's authority.
+	pinnedPkgs := map[string]bool{}
+	lpData, err := os.ReadFile(*libPin)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "godocanchors: cannot read %s: %v (fail closed)\n", *libPin, err)
+		os.Exit(2)
+	}
+	for _, ln := range strings.Split(string(lpData), "\n") {
+		if ln == "" || strings.HasPrefix(ln, "#") {
+			continue
+		}
+		cols := strings.Split(ln, "\t")
+		if i := strings.LastIndex(cols[0], "/"); i > 0 {
+			pinnedPkgs[cols[0][:i]] = true
+		}
+	}
+	if len(pinnedPkgs) == 0 {
+		fmt.Fprintf(os.Stderr, "godocanchors: %s names no packages — cannot judge anchors (fail closed)\n", *libPin)
+		os.Exit(2)
+	}
 	pinData, err := os.ReadFile(*pin)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "godocanchors: cannot read %s: %v (fail closed)\n", *pin, err)
@@ -145,6 +170,11 @@ func main() {
 			continue
 		}
 		path, ident, method, rev := m[1], m[2], m[3], m[4]
+		if !pinnedPkgs[path] {
+			fmt.Printf("  UNRESOLVED %s — package %s is not in the library pin (%s): only source-through packages are citable evidence\n", tok, path, *libPin)
+			bad++
+			continue
+		}
 		if rev != pinned {
 			fmt.Printf("  UNRESOLVED %s — rev %s is not the oracle pin %s\n", tok, rev, pinned)
 			bad++

@@ -47,7 +47,9 @@ checkout: the docs ARE the doc comments in `deps/go/src` at `go1.26.5`.
   "implementation-specific") is a version-tracked (b)-pin in
   `docs/2026-08-11_latitude-inventory.md` (G4 ruled (a)); the six slice-1
   functions are exact (no latitude clause in their docs — inventory §3
-  "Library realization" note).
+  "Library realization" note). Only packages with a library-pin row are
+  citable (the resolver refuses anchors into unpinned packages). Landing
+  evidence: `docs/evidence/2026-09-03_stdlib-source-1/`.
 
 ## Repo pins (rows in `scripts/setup-deps`, tier `named`)
 

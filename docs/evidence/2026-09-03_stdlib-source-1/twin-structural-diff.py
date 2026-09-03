@@ -6,7 +6,10 @@
 # initialize first, so every user gid moves by that constant); (2) the
 # frontend's program-wide temporary counters ($cN, $swiN, $litN-free names,
 # ...) are renamed canonically per declaration in order of first
-# appearance. What remains is the semantic delta. Run from the repo root:
+# appearance. WHAT IT CHECKS (audit fix round F13): funcs/methods as canonicalized
+# JSON per declaration; types/globals/methodSets BY NAME only; fileOrder per
+# package list; $pkginit reported as changed, not diffed statement by statement.
+# What remains after the normalizations is the semantic delta. Run from the repo root:
 #   python3 docs/evidence/2026-09-03_stdlib-source-1/twin-structural-diff.py <old.json> <new.json>
 import json, re, sys
 old = json.load(open(sys.argv[1])); new = json.load(open(sys.argv[2]))

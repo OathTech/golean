@@ -25,6 +25,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"go/types"
 	"os"
 	"path/filepath"
 	"strings"
@@ -363,4 +364,222 @@ func keysOf(m map[string]map[string]any) []string {
 		out = append(out, k)
 	}
 	return out
+}
+
+// ---- audit fix round (2026-09-03): B2, F3, F4, F5, F7 ----
+
+// B2: a program calling errors.Is/As/Unwrap (whose bodies dispatch on
+// UNNAMED interface types: `err.(interface{ Unwrap() error })`) must
+// EXPORT — the interface method's *types.Func has no declaration site and
+// must not be mistaken for a package-level function (the regression the
+// audit found: the whole export died "no declaration site").
+func TestStdlibSourceErrorsWrapExports(t *testing.T) {
+	withStdlibRoots(t)
+	dir := writeMain(t, `package main
+
+import (
+	"errors"
+	"strconv"
+)
+
+type wrapped struct{ inner error }
+
+func (w wrapped) Error() string { return "w:" + w.inner.Error() }
+func (w wrapped) Unwrap() error { return w.inner }
+
+func subject() (bool, bool, bool) {
+	_, err := strconv.ParseUint("x", 10, 64)
+	w := wrapped{err}
+	var ne *strconv.NumError
+	return errors.Is(w, strconv.ErrSyntax), errors.As(w, &ne), errors.Unwrap(w) == err
+}
+
+func main() { subject() }
+`)
+	program, err := lowerProgramDir(t, dir)
+	if err != nil {
+		t.Fatalf("a program calling errors.Is/As/Unwrap must export (per-decl quarantine at most): %v", err)
+	}
+	fns := funcNames(program)
+	for _, want := range []string{"errors.Is", "errors.As", "errors.Unwrap", "errors.is", "errors.as"} {
+		if _, ok := fns[want]; !ok {
+			t.Fatalf("%s not on the wire (bodied or stubbed); have %d funcs", want, len(fns))
+		}
+	}
+}
+
+// F3: the pin is BIDIRECTIONAL — a pinned file that is not selected for
+// its package refuses (a deleted/renamed upstream file must not silently
+// change the lowered package).
+func TestStdlibPinnedFileNotSelectedRefuses(t *testing.T) {
+	withStdlibRoots(t)
+	files, err := selectLibraryFiles("strings")
+	if err != nil {
+		t.Fatal(err)
+	}
+	pin, err := loadStdlibPin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := checkPinnedFilesSelected("strings", files, pin); err != nil {
+		t.Fatalf("the tracked pin's strings rows must all be selected: %v", err)
+	}
+	// Drop strings/reader.go from the selection (the audit's probe:
+	// deleting the unreached, import-bearing file left exit 0).
+	kept := []string{}
+	for _, f := range files {
+		if !strings.HasSuffix(f, "/strings/reader.go") {
+			kept = append(kept, f)
+		}
+	}
+	if len(kept) == len(files) {
+		t.Fatalf("probe setup: strings/reader.go not among the selected files")
+	}
+	err = checkPinnedFilesSelected("strings", kept, pin)
+	if err == nil || !strings.Contains(err.Error(), "strings/reader.go") || !strings.Contains(err.Error(), "NOT among the files selected") {
+		t.Fatalf("a pinned-but-unselected file must refuse naming it; got %v", err)
+	}
+	// A row of ANOTHER package (or a sub-package) is not this package's.
+	if err := checkPinnedFilesSelected("unicode", mustSelect(t, "unicode"), pin); err != nil {
+		t.Fatalf("unicode must not be charged with unicode/utf8's rows: %v", err)
+	}
+}
+
+func mustSelect(t *testing.T, path string) []string {
+	t.Helper()
+	files, err := selectLibraryFiles(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return files
+}
+
+// F4: the host toolchain must be the pinned one.
+func TestStdlibHostToolchainPinned(t *testing.T) {
+	if err := checkHostToolchainPinned("go1.26.5", "go1.26.5"); err != nil {
+		t.Fatal(err)
+	}
+	err := checkHostToolchainPinned("go1.26.6", "go1.26.5")
+	if err == nil || !strings.Contains(err.Error(), `"go1.26.6"`) || !strings.Contains(err.Error(), `"go1.26.5"`) {
+		t.Fatalf("a host toolchain off the pin must refuse naming both; got %v", err)
+	}
+}
+
+// F5: a library unit's quarantine reason names its declaration.
+func TestStdlibQuarantineReasonNamesSite(t *testing.T) {
+	withStdlibRoots(t)
+	dir := writeMain(t, `package main
+
+import "strconv"
+
+func subject() string { return strconv.FormatFloat(1.5, 'g', -1, 64) }
+
+func main() { subject() }
+`)
+	program, err := lowerProgramDir(t, dir)
+	if err != nil {
+		t.Fatalf("lower: %v", err)
+	}
+	fns := funcNames(program)
+	found := false
+	for name, f := range fns {
+		reason, quarantined := f["unsupported"].(string)
+		if !quarantined || !strings.HasPrefix(name, "internal/strconv.") {
+			continue
+		}
+		found = true
+		if !strings.HasPrefix(reason, name+": ") && !strings.HasPrefix(reason, "stdlib source-through: "+name) {
+			t.Fatalf("library quarantine reason for %s does not name its site: %q", name, reason)
+		}
+	}
+	if !found {
+		t.Fatalf("expected at least one quarantined internal/strconv declaration on the float path")
+	}
+}
+
+// F7: a body that is solely panic("unimplemented") is recognized (and
+// quarantined by emitFuncDecl for library units), and only that shape.
+func TestUnimplementedPanicBodyShape(t *testing.T) {
+	parse := func(src string) *ast.FuncDecl {
+		f, err := parser.ParseFile(token.NewFileSet(), "x.go", "package p\n"+src, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return f.Decls[0].(*ast.FuncDecl)
+	}
+	if !isUnimplementedPanicBody(parse(`func Index(a, b []byte) int { panic("unimplemented") }`).Body) {
+		t.Fatalf("index_generic.go's placeholder shape must be recognized")
+	}
+	for _, src := range []string{
+		`func f() int { panic("boom") }`,
+		`func f() int { x := 1; panic("unimplemented") }`,
+		`func f() int { return 0 }`,
+		`func f() { panic(msg) }`,
+	} {
+		if isUnimplementedPanicBody(parse(src).Body) {
+			t.Fatalf("misrecognized as an unimplemented placeholder: %s", src)
+		}
+	}
+}
+
+// F7 end-to-end: reaching a placeholder body through the library must
+// land as a NAMED quarantine stub, never as a modeled panic. The only way
+// to reach one at the pin is a direct user call into internal/bytealg —
+// which the import rules forbid for user code — so the check runs the
+// emitter's own arm over the real declaration via a library unit that
+// declares it: internal/bytealg is loaded when strings is.
+func TestUnimplementedPlaceholderQuarantinesByName(t *testing.T) {
+	withStdlibRoots(t)
+	units, idx, err := loadLibraryUnitForTest(t, "internal/bytealg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := &emitter{fset: idx.fset, info: units.info, pkg: units.pkg}
+	e.setUnits([]*sourcePkg{units})
+	e.setUnit(units)
+	var cutover *ast.FuncDecl
+	for _, f := range units.files {
+		for _, d := range f.Decls {
+			if fd, ok := d.(*ast.FuncDecl); ok && fd.Name.Name == "Cutover" {
+				cutover = fd
+			}
+		}
+	}
+	if cutover == nil {
+		t.Fatalf("index_generic.go's Cutover not in the selected files")
+	}
+	_, err = e.emitFuncDecl(cutover)
+	if err == nil || !strings.Contains(err.Error(), "internal/bytealg.Cutover") || !strings.Contains(err.Error(), `panic("unimplemented")`) {
+		t.Fatalf("a placeholder body must refuse by name; got %v", err)
+	}
+}
+
+type libTestIdx struct{ fset *token.FileSet }
+
+// loadLibraryUnitForTest parses + type-checks one allowed library package
+// standing alone (its imports from export data), for emitter-arm tests.
+func loadLibraryUnitForTest(t *testing.T, path string) (*sourcePkg, libTestIdx, error) {
+	t.Helper()
+	fset := token.NewFileSet()
+	l := newLoader(fset, t.TempDir())
+	pin, err := loadStdlibPin()
+	if err != nil {
+		return nil, libTestIdx{}, err
+	}
+	unit, err := l.parseLibrary(path, pin)
+	if err != nil {
+		return nil, libTestIdx{}, err
+	}
+	lang, err := pinnedLangVersion()
+	if err != nil {
+		return nil, libTestIdx{}, err
+	}
+	unit.info = newTypesInfo()
+	conf := types.Config{Importer: l.stdlib, GoVersion: lang}
+	pkg, err := conf.Check(unit.path, fset, unit.files, unit.info)
+	if err != nil {
+		return nil, libTestIdx{}, err
+	}
+	unit.pkg = pkg
+	return unit, libTestIdx{fset: fset}, nil
 }

@@ -1,2 +1,3 @@
 trials=100000 ok-path=3464 error-path=81157 refused(recorded bounds: base 0 / bitSize>64)=15379 mismatches=0
 trials=100000 ok-path=3407 error-path=80978 refused(recorded bounds: base 0 / bitSize>64)=15615 mismatches=0
+trials=600000 ok-path=20654 error-path=486325 refused(recorded bounds: base 0 / bitSize>64)=93021 mismatches=0

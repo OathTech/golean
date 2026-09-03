@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+# errors.{Unwrap,Is,As} through the real library source (stdlib-source-1 audit fix round B2, 2026-09-03).
+unwrap	errorsUnwrap	-	ok	-	stdlib,strings,interfaces,methods
+is	errorsIs	-	ok	-	stdlib,strings,interfaces,methods,type_assertions
+as	errorsAs	-	ok	-	stdlib,strings,interfaces,methods,type_assertions

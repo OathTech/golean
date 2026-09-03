@@ -3750,7 +3750,7 @@ uniformly.
   strings.Fields` and `f := strings.Contains` call the lowered upstream
   bodies. The boundary this bug was about (an honest cause for a refusal)
   is moot for source-through packages; it still holds, unchanged, for
-  every package NOT on the allowed-library list.)
+  every package NOT on the allowed-library list. Evidence: `docs/evidence/2026-09-03_stdlib-source-1/`.)
 - Cases: strings/shim-value-refused/shimmed-value, strings/shim-value-refused/unmodeled-value
 - Discovered: 2026-08-31 (fidelity assessment phase 2,
   p2-keeps-a2a3bcd §1.3 instance 1 — severity: charter conformance,
