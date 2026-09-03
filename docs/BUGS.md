@@ -4781,8 +4781,8 @@ address or nil pointer dereference")`) — between the two texts, routed
 to the membership lane like every other R-row envelope; the three rows
 then move to `lane=membership` with `members=2`.
 
-**[USER] 2026-09-03: fix shape (a) demonic choice at the nil arm — slice
-pending.** Ruling relayed by the [AGENT] coordinator («(2) panic-text,
+**[USER] 2026-09-03: fix shape item (4) — the demonic choice at the nil arm
+— slice pending.** Ruling relayed by the [AGENT] coordinator («(2) panic-text,
 agree, demonic choice so both are admitted» — full quote and provenance
 chain in `docs/2026-08-31_qrow-rulings.md`, 2026-09-03 ruling record):
 the re-envelope is item (4) above — one demonic choice between the two

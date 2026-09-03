@@ -724,7 +724,13 @@ if [ -f artifacts/coverage/latest.tsv ]; then
   if [ "$meta_ok" -eq 0 ]; then
     :
   elif [ "$ran" -ge "$total" ] && [ "$total" -gt 0 ]; then
-    if ./scripts/coverage-baseline-diff --full; then
+    # Exit code captured, not truth-tested (audit fix 6): 0 = no drift,
+    # 1 = drift, >= 2 = REFUSED / could not judge — a refusal is not a
+    # drift verdict and must be named as what it is.
+    cbd_rc=0; ./scripts/coverage-baseline-diff --full || cbd_rc=$?
+    if [ "$cbd_rc" -ge 2 ]; then
+      bad "baseline diff (REFUSED / could not judge, exit $cbd_rc — see above; NOT a drift verdict)"
+    elif [ "$cbd_rc" -eq 0 ]; then
       if [ "$rec_dirty" = "true" ]; then
         # The partial-run pattern (D-4): matched, but a dirty-tree record
         # certifies the worktree state it ran in, not a commit — say so
@@ -739,12 +745,17 @@ if [ -f artifacts/coverage/latest.tsv ]; then
   else
     if [ "$RUN_DIFF" -eq 1 ]; then
       bad "baseline diff (--diff demanded a full run but results are PARTIAL: $ran/$total)"
-    elif ./scripts/coverage-baseline-diff; then
-      dirty_note=""
-      [ "$rec_dirty" = "true" ] && dirty_note=" [recorded on a DIRTY tree]"
-      RESULTS+=("  note baseline diff PARTIAL ($ran/$total run, no drift among them — NOT a full certification; use --diff)$stale$dirty_note")
     else
-      bad "baseline diff (DRIFT among the $ran cases run — see above)"
+      cbd_rc=0; ./scripts/coverage-baseline-diff || cbd_rc=$?
+      if [ "$cbd_rc" -ge 2 ]; then
+        bad "baseline diff (REFUSED / could not judge, exit $cbd_rc — see above; NOT a drift verdict)"
+      elif [ "$cbd_rc" -eq 0 ]; then
+        dirty_note=""
+        [ "$rec_dirty" = "true" ] && dirty_note=" [recorded on a DIRTY tree]"
+        RESULTS+=("  note baseline diff PARTIAL ($ran/$total run, no drift among them — NOT a full certification; use --diff)$stale$dirty_note")
+      else
+        bad "baseline diff (DRIFT among the $ran cases run — see above)"
+      fi
     fi
   fi
 else
@@ -894,6 +905,21 @@ if [ -n "$PIN_MODE" ]; then
     fi
     if [ -n "$rev_notes" ]; then
       RESULTS+=("  note re-pin $GUARD_BASE: $rev_notes — report-only; verify the re-pin's written reason covers them")
+    fi
+    # STAGE-ALTERNATION SURVIVAL (audit fix 4, guard-stage-alt round 1;
+    # blocking): neither guard above reads column 3, so a re-pin
+    # regenerated from latest.tsv would silently drop an alternation
+    # row's `|` set and its `# reason:` block, putting the exact-match
+    # flake back. Every alternation row of the OLD baseline must still be
+    # an alternation in the NEW one, unless a NEW header comment names
+    # its removal (`# alternation removed: <id> — <why>`).
+    if [ -n "$PIN_NEW_FILE" ]; then surv_new="$PIN_NEW_FILE"; else surv_new="git:HEAD:$GUARD_BASE"; fi
+    surv_rc=0; surv_out="$(./scripts/check-alternation-survival "git:$PIN_OLD:$GUARD_BASE" "$surv_new" 2>&1)" || surv_rc=$?
+    if [ "$surv_rc" -eq 0 ]; then
+      [ -n "$surv_out" ] && printf '%s\n' "$surv_out" | sed 's/^/  /'
+    else
+      printf '%s\n' "$surv_out" | sed 's/^/  /'
+      bad "re-pin guard ($GUARD_BASE: stage alternation(s) of $PIN_OLD dropped without a named removal, or the check could not run — exit $surv_rc)"
     fi
     fi
     fi

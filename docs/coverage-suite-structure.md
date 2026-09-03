@@ -267,7 +267,10 @@ failure is understood.
 one `result<TAB>id<TAB>stage` row per case; `scripts/coverage-baseline-diff`
 requires every case a run actually ran to reproduce its row exactly
 ("same set = no regression"). ONE relaxation exists, per row and
-[USER]-ruled per row (ruling (a), 2026-09-03): the stage column may be a
+[USER]-ruled per row (ruling (a), 2026-09-03 — «(1) the guard - agree
+with the redommendation, do (a)», relayed by the [AGENT] coordinator;
+primary record `docs/assessment/decisions-2026-08-31.md`, 2026-09-03
+addendum): the stage column may be a
 `|`-separated ALTERNATION such as `nondet|differential`, and the observed
 stage then matches iff it is a member of that set. The result column is
 never relaxed. The form is reserved for a red whose STAGE depends on the
@@ -284,7 +287,11 @@ comment block immediately above the row carries a `# reason:` line naming
 the oracle mechanism. The other consumers of the stage column treat an
 alternation as fidelity-bearing iff EVERY member is a fidelity stage
 (`scripts/check-bugs.sh` (6) and `tools/reconcile-records` C1 flag a mix
-loudly; the row never drops out of a count). Fixtures:
+loudly; the row never drops out of a count). Durability: a `# reason:`
+block over a non-alternation row is REFUSED, and `scripts/ci`'s re-pin
+guard runs `scripts/check-alternation-survival` — every alternation row
+of the previous baseline must still be one, unless a header comment
+`# alternation removed: <id> — <why>` names its removal. Fixtures:
 `scripts/test-lane-validation` Part A4.
 
 Non-verdict exits of a comparator, oracle, driver or enumerator run are

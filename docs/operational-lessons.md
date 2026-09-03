@@ -310,12 +310,16 @@ streams hit the refusal) while gc=90 gives `FAIL/differential` (Lean=5,
 Go=90). The pinned row said `nondet`; a full `ci --diff` therefore drifted
 on that one row on whichever runs gc sampled 90 — a red that was FAIL
 either way, reported as a regression. Remedy ([USER] ruling (a),
-2026-09-03, a gate change): the row's stage column carries the set
+2026-09-03, a gate change — quote relayed by the [AGENT] coordinator,
+primary record `docs/assessment/decisions-2026-08-31.md` 2026-09-03
+addendum): the row's stage column carries the set
 `nondet|differential`, matched by membership, RESULT still exact, with a
 `# reason:` comment naming the mechanism; the form is refused (exit 2)
 on a PASS row, on an unknown stage word, or without the reason line, and
 every other stage-column consumer either handles the set or fails loudly
-(`check-bugs.sh` (6), `reconcile-records` C1). Two lessons from the fix
+(`check-bugs.sh` (6), `reconcile-records` C1); the re-pin guard checks
+the alternation SURVIVES a regeneration (`scripts/check-alternation-survival`),
+because no column-3 reader existed among the guards. Two lessons from the fix
 itself: (a) gawk exits 2 on its OWN fatals (an unreadable input), so a
 script that means "exit 2 = refused" must give the awk refusal a distinct
 code (3) or an I/O failure reads as a record refusal; (b) under

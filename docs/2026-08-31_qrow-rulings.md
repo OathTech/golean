@@ -217,16 +217,26 @@ stdlib-boundary gates G1–G9 as `docs/2026-09-03_stdlib-boundary-design.md`
 TryLock only), AND the typed-wrapper shadow model CONFIRMED not shim
 injection under D-002; (5) the noodler gaps; (6) the strict-lane routing
 rule (`docs/2026-09-01_membership-depth.md` §5), the eight scheduling
-rows routed in the same slice; others = K=32 membership default, the
-periodic legs, P5 filing. The user replied, verbatim as relayed:
+rows routed in the same slice; others = the periodic legs and the P5
+filing (the membership sampling budget, P2, was ruled SEPARATELY the same
+day — see below). The user replied, verbatim as relayed:
 
 «Re decisions on deck (1) the guard - agree with the redommendation, do (a); (2) panic-text, agree, demonic choice so both are admitted; (3) agree, go ahead with the plan; (4) Atomics - agree; (5) noodler gaps - already addressed; (6) strict-lane, agree; others: lower priority for now?»
 
 So: (1) (a) adopted — gate change, [USER]-ruled; (2) demonic choice,
-both texts admitted (BUG-087 fix shape (a), separate lane); (3) G1–G9
+both texts admitted (BUG-087 fix shape item (4), separate lane); (3) G1–G9
 each as recommended (slice 1 by a separate lane); (4) TryLock own slice
 + D-002 confirmation, recorded on row 5 above and in the atomics memo
 §6; (5) already addressed; (6) routing rule ADOPTED, routing slice
-pending (separate lane); the "others" are LOWER PRIORITY for now — K=32
-stays the default, periodic legs and P5 filing deferred (record:
+pending (separate lane); the "others" are LOWER PRIORITY for now —
+periodic legs and P5 filing deferred (record:
 `docs/assessment/decisions-2026-08-31.md`, 2026-09-03 addendum).
+Membership sampling budget (membership-depth §6 P2): NOT among the
+"others" — ruled ADOPTED the same day in a separate exchange, relayed
+by the [AGENT] coordinator as «yeah, agree on the sampling budget, go
+ahead as you propose» (alternate plain/race, early stop at `members=`,
+K=32 `--diff` / K=80 `--slow`; the budget BEFORE this ruling is the
+implicit 10 draws; implementing lane `sampling-budget`). An earlier
+version of this paragraph said "K=32 stays the default" — false on both
+counts (K=32 never was the default; P2 was adopted, not deferred);
+corrected at the lane's audit fix round.

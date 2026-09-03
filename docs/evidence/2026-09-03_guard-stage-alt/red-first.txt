@@ -1,29 +1,94 @@
 # Red-first evidence: the Part A4 fixtures of scripts/test-lane-validation, run against
 # main@345ef090's scripts/coverage-baseline-diff and scripts/check-bugs.sh (extracted via git show),
-# then against this lane's versions. Generated 2026-09-03 in worktree guard-stage-alt.
-# Expected under the ruling: (i) exit 0; (ii) exit 1; (iii) exit 1; (iv) exit 2 REFUSED; (v) exit 2 REFUSED;
-# (vi) exit 2 REFUSED; (vii) exit 1; check-bugs: (4) naming fx/alt; (6) for a mixed alternation.
+# then against this lane's versions. Full captured output per fixture (audit nit 10: no truncation).
+# Generated 2026-09-03 in worktree guard-stage-alt (audit fix round 1). Wanted exits:
+# (i) 0; (ii) 1; (iii) 1; (iv) 2 REFUSED; (v) 2 REFUSED; (vi) 2 REFUSED; (vii) 1; (viii) 2 REFUSED;
+# check-bugs: (4) naming fx/alt; (6) mixed alternation; (6) EMPTY stage. scripts/check-alternation-survival
+# has no main counterpart (the check did not exist): shown on the lane only.
 
-== main@345ef090 (RED expected: alternation unknown to the guard; check-bugs drops the row)
-  (i) member differential [want 0]: exit 1 :: DRIFT vs /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv (1 case(s) run): fx/alt	baseline[FAIL/nonde
-  (i) member nondet [want 0]: exit 1 :: DRIFT vs /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv (1 case(s) run): fx/alt	baseline[FAIL/nonde
-  (ii) non-member [want 1]: exit 1 :: DRIFT vs /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv (1 case(s) run): fx/alt	baseline[FAIL/nonde
-  (iii) PASS [want 1]: exit 1 :: DRIFT vs /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv (1 case(s) run): fx/alt	baseline[FAIL/nonde
-  (iv) PASS-row alternation [want 2 REFUSED]: exit 1 :: DRIFT vs /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv (1 case(s) run): fx/alt	baseline[PASS/confl
-  (v) unknown word [want 2 REFUSED]: exit 1 :: DRIFT vs /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv (1 case(s) run): fx/alt	baseline[FAIL/nonde
-  (vi) no reason line [want 2 REFUSED]: exit 1 :: DRIFT vs /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv (1 case(s) run): fx/alt	baseline[FAIL/nonde
-  (vii) plain exact [want 1]: exit 1 :: DRIFT vs /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv (1 case(s) run): fx/plain	baseline[FAIL/non
-  check-bugs untracked alternation row [want exit 1, FAIL (4) naming fx/alt]: exit 0 :: 0 line(s) name fx/alt; 
-  check-bugs MIXED alternation [want exit 1, FAIL (6)]: exit 0 :: 
+== main@345ef090 (RED expected)
+-- (i) member differential [want 0]: exit 1
+     DRIFT vs <scratch>/bd/baseline.tsv (1 case(s) run):
+     fx/alt	baseline[FAIL/nondet|differential] -> now[FAIL/differential]
+-- (i) member nondet [want 0]: exit 1
+     DRIFT vs <scratch>/bd/baseline.tsv (1 case(s) run):
+     fx/alt	baseline[FAIL/nondet|differential] -> now[FAIL/nondet]
+-- (ii) non-member [want 1]: exit 1
+     DRIFT vs <scratch>/bd/baseline.tsv (1 case(s) run):
+     fx/alt	baseline[FAIL/nondet|differential] -> now[FAIL/frontend-export]
+-- (iii) PASS [want 1]: exit 1
+     DRIFT vs <scratch>/bd/baseline.tsv (1 case(s) run):
+     fx/alt	baseline[FAIL/nondet|differential] -> now[PASS/-]
+-- (iv) PASS-row alternation [want 2 REFUSED]: exit 1
+     DRIFT vs <scratch>/bd/baseline.tsv (1 case(s) run):
+     fx/alt	baseline[PASS/confluent|membership] -> now[PASS/confluent]
+-- (v) unknown word [want 2 REFUSED]: exit 1
+     DRIFT vs <scratch>/bd/baseline.tsv (1 case(s) run):
+     fx/alt	baseline[FAIL/nondet|bogus-stage] -> now[FAIL/nondet]
+-- (vi) no reason line [want 2 REFUSED]: exit 1
+     DRIFT vs <scratch>/bd/baseline.tsv (1 case(s) run):
+     fx/alt	baseline[FAIL/nondet|differential] -> now[FAIL/nondet]
+-- (vii) plain exact [want 1]: exit 1
+     DRIFT vs <scratch>/bd/baseline.tsv (1 case(s) run):
+     fx/plain	baseline[FAIL/nondet] -> now[FAIL/differential]
+-- (viii) orphaned reason block [want 2 REFUSED]: exit 0
+     no regression: 1 case(s) run in results.tsv match <scratch>/bd/baseline.tsv
+-- check-bugs untracked alternation row [want exit 1, FAIL (4) naming fx/alt]: exit 0 (0 line(s) name an fx/ id)
+     check-bugs: ok (1 bug(s); pinned cases behave as claimed)
+-- check-bugs MIXED alternation [want exit 1, FAIL (6)]: exit 0 (0 line(s) name an fx/ id)
+     check-bugs: ok (1 bug(s); pinned cases behave as claimed)
+-- check-bugs EMPTY stage FAIL row [want exit 1, FAIL (6) naming fx/empty]: exit 0 (0 line(s) name an fx/ id)
+     check-bugs: ok (1 bug(s); pinned cases behave as claimed)
 
 == guard-stage-alt lane (GREEN expected)
-  (i) member differential [want 0]: exit 0 :: no regression: 1 case(s) run in results.tsv match /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv 
-  (i) member nondet [want 0]: exit 0 :: no regression: 1 case(s) run in results.tsv match /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv 
-  (ii) non-member [want 1]: exit 1 :: DRIFT vs /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv (1 case(s) run): fx/alt	baseline[FAIL/nonde
-  (iii) PASS [want 1]: exit 1 :: DRIFT vs /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv (1 case(s) run): fx/alt	baseline[FAIL/nonde
-  (iv) PASS-row alternation [want 2 REFUSED]: exit 2 :: REFUSED: /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv carries a malformed stage alternation — c
-  (v) unknown word [want 2 REFUSED]: exit 2 :: REFUSED: /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv carries a malformed stage alternation — c
-  (vi) no reason line [want 2 REFUSED]: exit 2 :: REFUSED: /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv carries a malformed stage alternation — c
-  (vii) plain exact [want 1]: exit 1 :: DRIFT vs /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv (1 case(s) run): fx/plain	baseline[FAIL/non
-  check-bugs untracked alternation row [want exit 1, FAIL (4) naming fx/alt]: exit 1 :: 2 line(s) name fx/alt; FAIL (4): 1 unexplained fidelity failure(s) carry no valid disposition in /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/cb/i
-  check-bugs MIXED alternation [want exit 1, FAIL (6)]: exit 1 :: FAIL (6): baseline row(s) whose stage alternation MIXES fidelity and non-fidelity stages — no honest bucket; split the row's record or fix the alternation:
+-- (i) member differential [want 0]: exit 0
+     no regression: 1 case(s) run in results.tsv match <scratch>/bd/baseline.tsv
+-- (i) member nondet [want 0]: exit 0
+     no regression: 1 case(s) run in results.tsv match <scratch>/bd/baseline.tsv
+-- (ii) non-member [want 1]: exit 1
+     DRIFT vs <scratch>/bd/baseline.tsv (1 case(s) run):
+     fx/alt	baseline[FAIL/nondet|differential] -> now[FAIL/frontend-export]
+-- (iii) PASS [want 1]: exit 1
+     DRIFT vs <scratch>/bd/baseline.tsv (1 case(s) run):
+     fx/alt	baseline[FAIL/nondet|differential] -> now[PASS/-]
+-- (iv) PASS-row alternation [want 2 REFUSED]: exit 2
+     REFUSED: <scratch>/bd/baseline.tsv carries a malformed stage alternation — cannot judge results.tsv against it (fix the record; this is NOT a no-drift result):
+       fx/alt	stage alternation on a PASS row [PASS/confluent|membership] — alternation is for non-PASS rows only; a PASS is never absorbed
+-- (v) unknown word [want 2 REFUSED]: exit 2
+     REFUSED: <scratch>/bd/baseline.tsv carries a malformed stage alternation — cannot judge results.tsv against it (fix the record; this is NOT a no-drift result):
+       fx/alt	stage alternation [nondet|bogus-stage] names an unknown stage word 'bogus-stage' (not one scripts/diff-coverage emits; vocabulary: manifest go-source go-harness go-run go-observation frontend-export lean-observation lean-run differential confluent membership racy nondet litmus-contract)
+-- (vi) no reason line [want 2 REFUSED]: exit 2
+     REFUSED: <scratch>/bd/baseline.tsv carries a malformed stage alternation — cannot judge results.tsv against it (fix the record; this is NOT a no-drift result):
+       fx/alt	stage alternation [nondet|differential] without a `# reason:` line in the comment block immediately above it (the oracle mechanism must be named; the alternation is [USER]-ruled per row)
+-- (vii) plain exact [want 1]: exit 1
+     DRIFT vs <scratch>/bd/baseline.tsv (1 case(s) run):
+     fx/plain	baseline[FAIL/nondet] -> now[FAIL/differential]
+-- (viii) orphaned reason block [want 2 REFUSED]: exit 2
+     REFUSED: <scratch>/bd/baseline.tsv carries a malformed stage alternation — cannot judge results.tsv against it (fix the record; this is NOT a no-drift result):
+       fx/plain	a `# reason:` block sits above this row but its stage [FAIL/nondet] is not an alternation (orphaned reason — the alternation was dropped, or the row was regenerated plain)
+-- check-bugs untracked alternation row [want exit 1, FAIL (4) naming fx/alt]: exit 1 (2 line(s) name an fx/ id)
+     FAIL (4): 1 unexplained fidelity failure(s) carry no valid disposition in <scratch>/cb/ids — classify each as one of: coverage latitude wrong-answer (fail closed; an unclassified row is never counted as harmless):
+       fx/alt
+     FAIL (4b): NEW untriaged fidelity failure(s) not in <scratch>/cb/ids:
+       fx/alt
+     check-bugs: FAIL
+-- check-bugs MIXED alternation [want exit 1, FAIL (6)]: exit 1 (1 line(s) name an fx/ id)
+     FAIL (6): baseline row(s) whose stage alternation MIXES fidelity and non-fidelity stages — no honest bucket; split the row's record or fix the alternation:
+       fx/alt	nondet|frontend-export
+     check-bugs: FAIL
+-- check-bugs EMPTY stage FAIL row [want exit 1, FAIL (6) naming fx/empty]: exit 1 (1 line(s) name an fx/ id)
+     FAIL (6): FAIL row(s) with an EMPTY stage column — a red with no stage has no bucket (malformed record, never counted as harmless):
+       fx/empty	(empty stage column)
+     check-bugs: FAIL
+
+== scripts/check-alternation-survival (lane only)
+-- (ix) regenerated plain [want 1]: exit 1
+     DROPPED	fx/alt	alternation [FAIL/nondet|differential] is not an alternation in the new baseline and no `# alternation removed: fx/alt` header names the removal
+     check-alternation-survival: FAIL — stage alternation(s) dropped without a named removal (add `# alternation removed: <id> — <why>` to the new baseline header, or restore the row's alternation and its # reason: block)
+-- (ix) row dropped [want 1]: exit 1
+     DROPPED	fx/alt	alternation [FAIL/nondet|differential] is not an alternation in the new baseline and no `# alternation removed: fx/alt` header names the removal
+     check-alternation-survival: FAIL — stage alternation(s) dropped without a named removal (add `# alternation removed: <id> — <why>` to the new baseline header, or restore the row's alternation and its # reason: block)
+-- (ix) removal named [want 0 + NOTE]: exit 0
+     NOTE	fx/alt	alternation [FAIL/nondet|differential] removed, named by the header: # alternation removed: fx/alt — fixture: mechanism gone
+-- (ix) survives [want 0]: exit 0
+     

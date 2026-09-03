@@ -210,10 +210,13 @@ else echo "ok: check-bugs unrecognized Expect token fails closed (0)"; fi
 # (i) a member stage matches; (ii) a non-member stage drifts; (iii) a PASS
 # is never absorbed; (iv) an alternation on a PASS row is REFUSED (exit 2,
 # never "no drift"); (v) an unknown stage word is REFUSED; (vi) a missing
-# `# reason:` line is REFUSED; (vii) plain rows still compare exactly. Then
+# `# reason:` line is REFUSED; (vii) plain rows still compare exactly;
+# (viii) a `# reason:` block over a plain row is REFUSED; (ix)
+# scripts/check-alternation-survival (ci re-pin guard): a re-pin that
+# drops an alternation FAILS unless the header names the removal. Then
 # scripts/check-bugs.sh: an alternation row must stay VISIBLE to the
 # fidelity filter (an untracked one fails (4) BY NAME, not by vanishing),
-# and a fidelity/non-fidelity MIX fails (6).
+# and a fidelity/non-fidelity MIX fails (6), as does an EMPTY stage.
 BD="$TMP/baseline-diff"; mkdir -p "$BD"
 bd_base() { printf 'result\tid\tstage\n%s\n' "$1" > "$BD/baseline.tsv"; }
 bd_res()  { printf 'result\tid\tfeatures\tstage\n%s\n' "$1" > "$BD/results.tsv"; }
@@ -245,6 +248,30 @@ bd_expect "(vi) alternation without a # reason: line -> REFUSED" 2 'without a `#
 bd_base $'FAIL\tfx/plain\tnondet'
 bd_res $'FAIL\tfx/plain\tx\tdifferential'
 bd_expect "(vii) plain row stays exact -> drift" 1 $'fx/plain\tbaseline[FAIL/nondet] -> now[FAIL/differential]'
+bd_base $'# reason: fixture\nFAIL\tfx/plain\tnondet'
+bd_res $'FAIL\tfx/plain\tx\tnondet'
+bd_expect "(viii) # reason: block over a NON-alternation row (regenerated plain) -> REFUSED" 2 "orphaned reason"
+# Alternation SURVIVAL across a re-pin (audit fix 4): the ci re-pin guard
+# calls scripts/check-alternation-survival OLD NEW.
+SV="$TMP/survival"; mkdir -p "$SV"
+printf 'result\tid\tstage\n# reason: fixture\nFAIL\tfx/alt\tnondet|differential\nPASS\tfx/p\t-\n' > "$SV/old.tsv"
+sv_expect() {  # $1 name, $2 expected exit, $3 required text
+  local name="$1" want="$2" needle="$3" out rc=0
+  out="$(scripts/check-alternation-survival "$SV/old.tsv" "$SV/new.tsv" 2>&1)" || rc=$?
+  if [ "$rc" -ne "$want" ]; then echo "FAIL: alternation-survival $name: exit $rc, expected $want: $out"; fail=1
+  elif [[ "$out" != *"$needle"* ]]; then echo "FAIL: alternation-survival $name: exit $want but without the expected text ($needle): $out"; fail=1
+  else echo "ok: alternation-survival $name"; fi
+}
+printf 'result\tid\tstage\nFAIL\tfx/alt\tnondet\nPASS\tfx/p\t-\n' > "$SV/new.tsv"
+sv_expect "(ix) re-pin regenerated the row plain -> FAIL" 1 $'DROPPED\tfx/alt'
+printf 'result\tid\tstage\nPASS\tfx/p\t-\n' > "$SV/new.tsv"
+sv_expect "(ix) re-pin dropped the row -> FAIL" 1 $'DROPPED\tfx/alt'
+printf '# alternation removed: fx/alt — fixture: mechanism gone\nresult\tid\tstage\nFAIL\tfx/alt\tnondet\nPASS\tfx/p\t-\n' > "$SV/new.tsv"
+sv_expect "(ix) removal named in the header -> ok with a note" 0 $'NOTE\tfx/alt'
+printf 'result\tid\tstage\n# reason: fixture\nFAIL\tfx/alt\tdifferential|nondet\nPASS\tfx/p\t-\n' > "$SV/new.tsv"
+sv_expect "(ix) alternation survives -> ok" 0 ""
+rc=0; out="$(scripts/check-alternation-survival "$SV/old.tsv" "$SV/absent.tsv" 2>&1)" || rc=$?
+if [ "$rc" -eq 2 ]; then echo "ok: alternation-survival unreadable input -> exit 2"; else echo "FAIL: alternation-survival unreadable input exited $rc, expected 2: $out"; fail=1; fi
 # check-bugs: the alternation row is counted, by name.
 printf '## BUG-901 — fixture\n\n- Status: fixed\n- Pinned-by: none (fixture)\n- Cases: fx/other\n' > "$CB/bugs.md"
 printf 'result\tid\tstage\nFAIL\tfx/other\tlean-observation\nFAIL\tfx/alt\tnondet|differential\n' > "$CB/baseline.tsv"
@@ -255,6 +282,10 @@ printf 'result\tid\tstage\nFAIL\tfx/other\tlean-observation\nFAIL\tfx/alt\tnonde
 if out="$(cb_run)"; then echo "FAIL: check-bugs ACCEPTED a fidelity/non-fidelity MIXED alternation"; fail=1
 elif [[ "$out" != *"FAIL (6)"* ]]; then echo "FAIL: check-bugs rejected a mixed alternation, but not via (6): $out"; fail=1
 else echo "ok: check-bugs mixed alternation fails (6)"; fi
+printf 'result\tid\tstage\nFAIL\tfx/other\tlean-observation\nFAIL\tfx/empty\t\n' > "$CB/baseline.tsv"
+if out="$(cb_run)"; then echo "FAIL: check-bugs ACCEPTED a FAIL row with an EMPTY stage column (audit fix 1: split(\"\")=0 made it vacuously fidelity)"; fail=1
+elif [[ "$out" != *"FAIL (6)"* || "$out" != *"fx/empty"* || "$out" != *"EMPTY stage"* ]]; then echo "FAIL: check-bugs rejected the empty-stage row, but not via (6) naming fx/empty as EMPTY stage: $out"; fail=1
+else echo "ok: check-bugs empty-stage FAIL row fails (6) by name"; fi
 
 # ---- Part A2 (always): gate-integrity no-publish fixtures (grossmith
 # findings §2, docs/2026-08-07_grossmith-findings.md; extended at the

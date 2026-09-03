@@ -33,7 +33,10 @@
 #     (the vocabulary below; an unknown word is a typo or a new stage that
 #     must be added here deliberately), at least two distinct members;
 #   * the comment block immediately above the row contains a `# reason:`
-#     line naming the oracle mechanism — the alternation is [USER]-ruled per row and the record
+#     line naming the oracle mechanism, and every `# reason:` block sits
+#     over an alternation row (an orphaned reason block = the alternation
+#     was dropped by a regeneration — REFUSED; the re-pin guard's
+#     scripts/check-alternation-survival covers the row-disappears case) — the alternation is [USER]-ruled per row and the record
 #     says why on the line above it.
 # Rows without `|` compare exactly, as before.
 set -euo pipefail
@@ -84,6 +87,12 @@ raw="$(awk -F'\t' -v BASE="$BASELINE" -v FULL="$FULL" -v VOCAB="$STAGE_VOCAB" '
       if (line ~ /^#/) continue
       n = split(line, f, "\t")
       if (f[1] == "result" || n < 2) { prev_reason = 0; continue }
+      # Durability (audit fix 4): a `# reason:` block must sit over an
+      # alternation row — a regeneration that rewrote the row plain
+      # (or dropped it) would otherwise leave the reason orphaned and
+      # the exact-match flake silently back.
+      if (prev_reason && index(f[3], "|") == 0)
+        refuse(f[2], "a `# reason:` block sits above this row but its stage [" f[1] "/" f[3] "] is not an alternation (orphaned reason — the alternation was dropped, or the row was regenerated plain)")
       # Well-formedness of the RECORD itself (S2 audit response: the
       # re-pinned baseline carried a silently-tolerated duplicated row —
       # id-keyed consumers resolved it last-wins; a duplicate with
@@ -108,6 +117,7 @@ raw="$(awk -F'\t' -v BASE="$BASELINE" -v FULL="$FULL" -v VOCAB="$STAGE_VOCAB" '
       }
       prev_reason = 0
     }
+    if (prev_reason) refuse("(end of baseline)", "a trailing `# reason:` block has no row under it")
     if (refused) exit 3
   }
   /^#/ { next }
@@ -130,13 +140,16 @@ raw="$(awk -F'\t' -v BASE="$BASELINE" -v FULL="$FULL" -v VOCAB="$STAGE_VOCAB" '
   }
 ' "$RESULTS")" || awk_rc=$?
 
+# The exit code is the verdict; an unwritable stdout/stderr must not turn
+# a refusal (2) into a write failure (1) — hence every report line is
+# inside `{ …; } || true` (audit fix 5).
 if [ "$awk_rc" -eq 3 ]; then
-  echo "REFUSED: $BASELINE carries a malformed stage alternation — cannot judge $(basename "$RESULTS") against it (fix the record; this is NOT a no-drift result):"
-  { printf '%s\n' "$raw" | grep '^REFUSED' | LC_ALL=C sort | sed 's/^REFUSED\t/  /'; } || true
+  { echo "REFUSED: $BASELINE carries a malformed stage alternation — cannot judge $(basename "$RESULTS") against it (fix the record; this is NOT a no-drift result):"
+    printf '%s\n' "$raw" | grep '^REFUSED' | LC_ALL=C sort | sed 's/^REFUSED\t/  /'; } || true
   exit 2
 elif [ "$awk_rc" -ne 0 ]; then
-  echo "coverage-baseline-diff: internal comparison error (awk rc=$awk_rc; partial output follows) — refusing to judge" >&2
-  { printf '%s\n' "$raw" | grep . | sed 's/^/  /' >&2; } || true
+  { echo "coverage-baseline-diff: internal comparison error (awk rc=$awk_rc; partial output follows) — refusing to judge" >&2
+    printf '%s\n' "$raw" | grep . | sed 's/^/  /' >&2; } || true
   exit 2
 fi
 drift="$(printf '%s\n' "$raw" | grep . | LC_ALL=C sort || true)"

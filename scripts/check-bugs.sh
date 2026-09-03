@@ -156,15 +156,24 @@ unexplained="$(awk -F'\t' -v DC="$declared_cases" '
   !/^#/ && $1=="FAIL" && !($2 in named) {
     m = split($3, alt, "|"); nf = 0
     for (k = 1; k <= m; k++) if (alt[k] in fid) nf++
-    if (nf == m) print $2"\t"$3
+    # m == 0 is an EMPTY stage column (gawk split("") = 0): never a
+    # fidelity row by vacuity — audit fix 1 (guard-stage-alt round 1).
+    if (m == 0 || $3 == "") print "EMPTY-STAGE\t"$2"\t(empty stage column)"
+    else if (nf == m) print $2"\t"$3
     else if (nf > 0) print "MIXED-ALTERNATION\t"$2"\t"$3
   }
 ' "$BASELINE" | sort)"
 mixed="$(printf '%s\n' "$unexplained" | grep '^MIXED-ALTERNATION' || true)"
-unexplained="$(printf '%s\n' "$unexplained" | grep -v '^MIXED-ALTERNATION' | grep . || true)"
+empty="$(printf '%s\n' "$unexplained" | grep '^EMPTY-STAGE' || true)"
+unexplained="$(printf '%s\n' "$unexplained" | grep -v '^MIXED-ALTERNATION\|^EMPTY-STAGE' | grep . || true)"
 if [ -n "$mixed" ]; then
   echo "FAIL (6): baseline row(s) whose stage alternation MIXES fidelity and non-fidelity stages — no honest bucket; split the row's record or fix the alternation:"
   printf '%s\n' "$mixed" | cut -f2- | sed 's/^/  /'
+  fail=1
+fi
+if [ -n "$empty" ]; then
+  echo "FAIL (6): FAIL row(s) with an EMPTY stage column — a red with no stage has no bucket (malformed record, never counted as harmless):"
+  printf '%s\n' "$empty" | cut -f2- | sed 's/^/  /'
   fail=1
 fi
 nun="$(printf '%s' "$unexplained" | grep -c . || true)"
