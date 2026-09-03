@@ -1,4 +1,30 @@
 # GoLean native-frontend full-corpus differential baseline
+# re-pinned: 2026-09-03 (q-trylock lane — Q-TRYLOCK, RULED [USER] 2026-08-31
+#   (docs/2026-08-31_qrow-rulings.md row 5; envelope pre-ruled), own-slice
+#   sequencing [USER] 2026-09-03 («(4) Atomics - agree», relayed), twin-pin
+#   move [USER] 2026-09-03 («we should break things», relayed); [AGENT]-
+#   executed inside that brief. TryLock/TryRLock modeled with mem#locks'
+#   spurious-failure member as the width-2 `ChoiceSite.tryLock`
+#   (success-edge-only detector; frontend lowering for every spelling).
+#   FULL ci --diff at main c22e367a + this lane's working tree (dirty: the
+#   slice and these records, committed together; log tail in
+#   docs/evidence/2026-09-03_q-trylock/gate-tail-run1-dirty-prepin.txt):
+#   3216 rows run; drift vs the previous pin = EXACTLY the slice's rows —
+#   +17 born-PASS rows (sync/trylock/* x12: 4 strict, 8 membership over
+#   {acquired, spurious false} incl. spin-until-trylock under nonterm=;
+#   race/negative-sync/{overwrite-vs-trylock,failed-trylock-no-edge} racy;
+#   race/free-sync/{trylock-publish,rw-trylock-publish} confluent +
+#   rw-tryrlock-acquire membership) and 2 FAIL->PASS flips, REASON: the
+#   frontier reds sync/out-of-scope-trylock/trylock-uncontended and
+#   sync/promoted-mutex/trylock-expr were the TryLock refusal markers
+#   (frontend-export); the op is now modeled, and both rows became
+#   MEMBERSHIP rows over {1 (acquired), 0 (spurious)} — a strict pin is
+#   impossible (the width-2 draw fails strict's stream invariance); gc
+#   exhibits only the success member (unexhibited-but-permitted by the
+#   mem#locks text). NO other row moved in result or stage; NO
+#   PASS->non-PASS flips; the [USER]-ruled alternation row
+#   channels/select-select/beside-loop kept verbatim. 3216 rows;
+#   3024 PASS / 192 FAIL.
 # re-pinned: 2026-09-03 (bug087-paniktext AUDIT FIX ROUND F1-F3 — [AGENT]; FIX-FIRST
 #   verdict. F1: the go-statement frame-entry twin (spawnStep, Multi.lean) now draws
 #   the nilValueMethodText pick (the first landing held member 0 only there — a live
@@ -715,6 +741,8 @@
 #     removed row is named in prose, never left dangling on the line).
 #     NEW rows: unsafe/layout-ops/{sizeof-fixed,layout-struct}
 #     FAIL/frontend-export BY DESIGN. unsafe/boundary/pointer-roundtrip
+# cases: 3281 (3084 PASS / 197 FAIL)
+#   [PROVISIONAL at the round-9 rebase of q-trylock onto main 312a4458 (bug087-paniktext merged) 2026-09-04 [AGENT]: bug087's 3264 (3065 PASS / 199 FAIL) + the slice's 17 born-PASS rows + 2 FAIL->PASS flips; tallied from the data rows; re-derived at the q-trylock audit-fix-round re-pin below]
 # cases: 3264 (3065 PASS / 199 FAIL)
 #   [re-derived from the data rows at the bug087-paniktext audit fix round F1-F3 2026-09-03 ([AGENT]: the rebased fix's 3260 (3061 PASS / 199 FAIL) + FOUR born-PASS membership rows noodler/ifaces/{spawn-iface-value-nil,spawn-iface-value-nil-devirt,spawn-helper-value-nil} + multipkg/nil-value-method-text; no other row moved): 3264 (3065 PASS / 199 FAIL)]
 #   [the rebased fix figure, kept as history:] # cases: 3260 (3061 PASS / 199 FAIL)
@@ -851,45 +879,45 @@ PASS	assign-order/target-check-vs-rhs/index-target	-
 PASS	assign-order/target-check-vs-rhs/nil-field-target	-
 PASS	assign-order/target-check-vs-rhs/nil-deref-target	-
 PASS	atomics/counter/add	confluent
-PASS	atomics/counter/cas-loop	confluent
-PASS	atomics/counter/plain-read-after-join	confluent
-PASS	atomics/counter/swap-claim	confluent
 PASS	atomics/counter/typed	confluent
-PASS	atomics/ops/add-int32-wrap	-
-PASS	atomics/ops/add-int64	-
-PASS	atomics/ops/add-uint32-decrement	-
-PASS	atomics/ops/add-uint64	-
-PASS	atomics/ops/add-uintptr	-
-PASS	atomics/ops/cas-int64	-
-PASS	atomics/ops/cas-uint32-fail	-
-PASS	atomics/ops/cas-uint64	-
-PASS	atomics/ops/cas-uintptr	-
-PASS	atomics/ops/defined-underlying	-
-PASS	atomics/ops/discarded-result	-
-PASS	atomics/ops/in-expression	-
+PASS	atomics/counter/cas-loop	confluent
+PASS	atomics/counter/swap-claim	confluent
+PASS	atomics/counter/plain-read-after-join	confluent
 PASS	atomics/ops/load-store-int32	-
 PASS	atomics/ops/load-store-int64	-
 PASS	atomics/ops/load-store-uint32	-
 PASS	atomics/ops/load-store-uint64	-
 PASS	atomics/ops/load-store-uintptr	-
-PASS	atomics/ops/nil-address	-
-PASS	atomics/ops/nil-address-recovered	-
-PASS	atomics/ops/operand-order	-
+PASS	atomics/ops/add-int32-wrap	-
+PASS	atomics/ops/add-int64	-
+PASS	atomics/ops/add-uint32-decrement	-
+PASS	atomics/ops/add-uint64	-
 PASS	atomics/ops/swap-int32	-
+PASS	atomics/ops/swap-uint64	-
+PASS	atomics/ops/cas-int64	-
+PASS	atomics/ops/cas-uint32-fail	-
+PASS	atomics/ops/add-uintptr	-
+PASS	atomics/ops/swap-uintptr	-
 PASS	atomics/ops/swap-int64	-
 PASS	atomics/ops/swap-uint32	-
-PASS	atomics/ops/swap-uint64	-
-PASS	atomics/ops/swap-uintptr	-
+PASS	atomics/ops/cas-uint64	-
+PASS	atomics/ops/cas-uintptr	-
+PASS	atomics/ops/discarded-result	-
+PASS	atomics/ops/in-expression	-
+PASS	atomics/ops/operand-order	-
+PASS	atomics/ops/defined-underlying	-
+PASS	atomics/ops/nil-address	-
+PASS	atomics/ops/nil-address-recovered	-
 PASS	atomics/spin/flag-wait	membership
-PASS	atomics/typed/empty-literal	-
-PASS	atomics/typed/int32-wrap	-
 PASS	atomics/typed/int64	-
-PASS	atomics/typed/nil-receiver	-
-PASS	atomics/typed/struct-field	-
+PASS	atomics/typed/int32-wrap	-
 PASS	atomics/typed/uint32	-
 PASS	atomics/typed/uint64	-
 PASS	atomics/typed/uintptr	-
 PASS	atomics/typed/zero-and-copy	-
+PASS	atomics/typed/empty-literal	-
+PASS	atomics/typed/struct-field	-
+PASS	atomics/typed/nil-receiver	-
 PASS	binary/little-endian/roundtrip	-
 PASS	binary/little-endian/golden	-
 PASS	binary/little-endian/heartbeat-ctx-shape	-
@@ -2434,10 +2462,10 @@ PASS	maps/named-nil-flows/literal-elem	-
 PASS	maps/named-nil-flows/arg	-
 PASS	maps/named-nil-flows/slice	-
 PASS	maps/nan-key-clear	-
-PASS	maps/nan-key-range	-
 PASS	maps/nan-key-range-aggregate/array	-
 PASS	maps/nan-key-range-aggregate/struct	-
 PASS	maps/nan-key-range-aggregate/interface	-
+PASS	maps/nan-key-range	-
 PASS	maps/nil-assign-eval-before-panic	-
 PASS	maps/nil-channel-key	-
 PASS	maps/nil-literal-values/func-element	-
@@ -3282,17 +3310,17 @@ PASS	quorum/vote-result-small-n/n2-won	-
 PASS	quorum/vote-result-small-n/n2-one-yes-lost	-
 PASS	quorum/vote-result-small-n/n2-one-missing-pending	-
 PASS	race/atomics-free/atomic-vs-atomic	confluent
-PASS	race/atomics-free/cas-failure-acquires	membership
 PASS	race/atomics-free/plain-read-vs-load	confluent
 PASS	race/atomics-free/publish-acquire	membership
 PASS	race/atomics-free/rmw-acquire	membership
+PASS	race/atomics-free/cas-failure-acquires	membership
 PASS	race/atomics-free/sibling-words	confluent
 PASS	race/atomics-free/typed-sibling-field	confluent
-PASS	race/atomics-misuse/plain-read-vs-failed-cas	racy
-PASS	race/atomics-misuse/plain-read-vs-store	racy
-PASS	race/atomics-misuse/plain-read-vs-swap	racy
 PASS	race/atomics-misuse/plain-write-vs-add	racy
+PASS	race/atomics-misuse/plain-read-vs-store	racy
+PASS	race/atomics-misuse/plain-read-vs-failed-cas	racy
 PASS	race/atomics-misuse/struct-copy-vs-typed-add	racy
+PASS	race/atomics-misuse/plain-read-vs-swap	racy
 PASS	race/free/slice-disjoint	confluent
 PASS	race/free/field-disjoint	confluent
 PASS	race/free/field-read-write	confluent
@@ -3313,6 +3341,9 @@ PASS	race/free-sync/mutex-siblings	confluent
 PASS	race/free-sync/disjoint-prims	confluent
 PASS	race/free-sync/rw-copy-beside-rlock	confluent
 PASS	race/free-sync/rw-copy-beside-lock	confluent
+PASS	race/free-sync/trylock-publish	confluent
+PASS	race/free-sync/rw-trylock-publish	confluent
+PASS	race/free-sync/rw-tryrlock-acquire	membership
 FAIL	race/gomem-only/rw-copy-vs-runlock	lean-observation
 FAIL	race/gomem-only/rw-copy-vs-unlock	lean-observation
 FAIL	race/gomem-only/wg-copy-vs-add-from-0	lean-observation
@@ -3345,6 +3376,8 @@ PASS	race/negative-sync/wg-overwrite	racy
 PASS	race/negative-sync/mutex-copy	racy
 PASS	race/negative-sync/rw-overwrite	racy
 PASS	race/negative-sync/once-copy	racy
+PASS	race/negative-sync/overwrite-vs-trylock	racy
+PASS	race/negative-sync/failed-trylock-no-edge	racy
 PASS	range/assign-form-interface-target/slice-value	-
 PASS	range/assign-form-interface-target/map-key	-
 PASS	range/assign-form-interface-target/index	-
@@ -4049,12 +4082,12 @@ PASS	sync/once-nested-do/nested-do	-
 FAIL	sync/out-of-scope-cond/cond-signal-no-waiter	frontend-export
 FAIL	sync/out-of-scope-cond/cond-wait-signal	frontend-export
 FAIL	sync/out-of-scope-cond/cond-broadcast	frontend-export
-FAIL	sync/out-of-scope-trylock/trylock-uncontended	frontend-export
+PASS	sync/out-of-scope-trylock/trylock-uncontended	membership
 PASS	sync/promoted-mutex/stmt	-
 PASS	sync/promoted-mutex/defer-unlock	-
 PASS	sync/promoted-mutex/value-var	-
 PASS	sync/promoted-mutex/counter	confluent
-FAIL	sync/promoted-mutex/trylock-expr	frontend-export
+PASS	sync/promoted-mutex/trylock-expr	membership
 PASS	sync/rwmutex-basic/rlock-twice	-
 PASS	sync/rwmutex-basic/write-then-read-ordered	confluent
 PASS	sync/rwmutex-misuse-fatal/wunlock-of-unlocked	-
@@ -4072,6 +4105,18 @@ PASS	sync/satisfaction/assert-ok-once	-
 PASS	sync/satisfaction/trylock-sig-satisfies	-
 PASS	sync/satisfaction-locker-sig/assert-ok-rwmutex	-
 PASS	sync/stub-satisfaction/satisfies	-
+PASS	sync/trylock/unlocked-acquire	membership
+PASS	sync/trylock/locked-false	-
+PASS	sync/trylock/unlock-after-trylock-success	membership
+PASS	sync/trylock/trylock-false-then-lock	-
+PASS	sync/trylock/discarded-acquires	membership
+PASS	sync/trylock/rw-trylock-unlocked	membership
+PASS	sync/trylock/rw-tryrlock-unlocked	membership
+PASS	sync/trylock/rw-tryrlock-reader-held	membership
+PASS	sync/trylock/rw-trylock-reader-held	-
+PASS	sync/trylock/rw-try-writer-held	-
+PASS	sync/trylock/rw-tryrlock-pending-writer	membership
+PASS	sync/trylock/spin-until-trylock	membership
 PASS	sync/waitgroup-basic/add-done-wait	confluent
 PASS	sync/waitgroup-basic/batch-done	-
 PASS	sync/waitgroup-basic/recovered-negative-continue	-

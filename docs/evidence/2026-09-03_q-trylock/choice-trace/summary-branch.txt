@@ -1,0 +1,62 @@
+rows traced: 179 ids, 1074 (id,stream) lines; 0 id(s) the tracer could not run (ERROR)
+  by lane: confluent=24, membership=7, racy=12, strict=136
+
+VALIDATOR
+  consumptions checked: 6942
+  menu-invariant violations: 0
+  self-check alarms (mirror/accountant, sentinel, pick-record): 0
+  driver-agreement mismatches: 0
+  fuel-out (id,stream) lines: 0
+  ids with a machine refusal under some traced stream (unsupported/stuck/internal/error, or an unexpected fatal): 4; of these 4 are non-PASS in the tracked baseline
+  consumptions per site (all streams): l1Sched=3747, postOp=2345, backEdge=738, l5ExitWindow=81, l4Waiter=19, tryLock=12
+
+STRICT-LANE DEPTH EXPOSURE (lane=strict rows; confluent rows shown separately)
+  strict: 136 rows; consumptions under the default stream:
+    all consumptions:      0: 112, 1-8: 13, 9-10: 0, 11-32: 3, 33-128: 7, >128: 1
+    bound>=2 consumptions: 0: 112, 1-8: 13, 9-10: 0, 11-32: 3, 33-128: 7, >128: 1
+    rows with >=1 adversarial stream exhausted (any consumption past the prefix): 12
+    rows with a bound>=2 consumption PAST the prefix on >=1 adversarial stream (invisible order-sensitivity): 12
+      of which scheduling/select/waiter sites reached: 12
+      imported-goose/channel/parallel-search-replace/search-replace: worst stream [9,8,7,6,5,4,3,2,1,0] consumed=43 wide=43 exhaustedAt=10 wideAfterExhaustion=33; all streams: [9,8,7,6,5,4,3,2,1,0] 43/43/10/33; [1,3,5,7,9,2,4,6,8,0] 41/41/10/31; [5,5,5,5,5,5,5,5] 37/37/8/29
+      noodler/closures/goroutines-loopvar: worst stream [1,3,5,7,9,2,4,6,8,0] consumed=40 wide=40 exhaustedAt=10 wideAfterExhaustion=30; all streams: [9,8,7,6,5,4,3,2,1,0] 36/36/10/26; [1,3,5,7,9,2,4,6,8,0] 40/40/10/30; [5,5,5,5,5,5,5,5] 37/37/8/29
+      noodler/goroutines/close-broadcast: worst stream [9,8,7,6,5,4,3,2,1,0] consumed=30 wide=30 exhaustedAt=10 wideAfterExhaustion=20; all streams: [9,8,7,6,5,4,3,2,1,0] 30/30/10/20; [1,3,5,7,9,2,4,6,8,0] 27/27/10/17; [5,5,5,5,5,5,5,5] 25/25/8/17
+      noodler/goroutines/mutex-counter: worst stream [5,5,5,5,5,5,5,5] consumed=262 wide=262 exhaustedAt=8 wideAfterExhaustion=254; all streams: [9,8,7,6,5,4,3,2,1,0] 262/262/10/252; [1,3,5,7,9,2,4,6,8,0] 262/262/10/252; [5,5,5,5,5,5,5,5] 262/262/8/254
+      noodler/goroutines/once-across-goroutines: worst stream [5,5,5,5,5,5,5,5] consumed=50 wide=50 exhaustedAt=8 wideAfterExhaustion=42; all streams: [9,8,7,6,5,4,3,2,1,0] 50/50/10/40; [1,3,5,7,9,2,4,6,8,0] 50/50/10/40; [5,5,5,5,5,5,5,5] 50/50/8/42
+      noodler/goroutines/rwmutex-readers: worst stream [5,5,5,5,5,5,5,5] consumed=44 wide=44 exhaustedAt=8 wideAfterExhaustion=36; all streams: [9,8,7,6,5,4,3,2,1,0] 44/44/10/34; [1,3,5,7,9,2,4,6,8,0] 44/44/10/34; [5,5,5,5,5,5,5,5] 44/44/8/36
+      noodler/goroutines/semaphore-total: worst stream [5,5,5,5,5,5,5,5] consumed=84 wide=84 exhaustedAt=8 wideAfterExhaustion=76; all streams: [9,8,7,6,5,4,3,2,1,0] 84/84/10/74; [1,3,5,7,9,2,4,6,8,0] 84/84/10/74; [5,5,5,5,5,5,5,5] 84/84/8/76
+      noodler/goroutines/worker-pool-sum: worst stream [9,8,7,6,5,4,3,2,1,0] consumed=93 wide=93 exhaustedAt=10 wideAfterExhaustion=83; all streams: [9,8,7,6,5,4,3,2,1,0] 93/93/10/83; [1,3,5,7,9,2,4,6,8,0] 90/90/10/80; [5,5,5,5,5,5,5,5] 85/85/8/77
+      noodler/gostmt/pointer-method: worst stream [5,5,5,5,5,5,5,5] consumed=21 wide=21 exhaustedAt=8 wideAfterExhaustion=13; all streams: [9,8,7,6,5,4,3,2,1,0] 20/20/10/10; [1,3,5,7,9,2,4,6,8,0] 21/21/10/11; [5,5,5,5,5,5,5,5] 21/21/8/13
+      noodler/syncmisuse/unlock-from-other-goroutine: worst stream [1,3,5,7,9,2,4,6,8,0] consumed=11 wide=11 exhaustedAt=10 wideAfterExhaustion=1; all streams: [1,3,5,7,9,2,4,6,8,0] 11/11/10/1
+      noodler/syncmisuse/waitgroup-reuse: worst stream [5,5,5,5,5,5,5,5] consumed=23 wide=23 exhaustedAt=8 wideAfterExhaustion=15; all streams: [9,8,7,6,5,4,3,2,1,0] 22/22/10/12; [1,3,5,7,9,2,4,6,8,0] 19/19/10/9; [5,5,5,5,5,5,5,5] 23/23/8/15
+      sync/waitgroup-workers-join/workers-join: worst stream [1,3,5,7,9,2,4,6,8,0] consumed=28 wide=28 exhaustedAt=10 wideAfterExhaustion=18; all streams: [9,8,7,6,5,4,3,2,1,0] 24/24/10/14; [1,3,5,7,9,2,4,6,8,0] 28/28/10/18; [5,5,5,5,5,5,5,5] 25/25/8/17
+    rows whose observation VARIES across the traced streams (default, 3 adversarial, 2 random-4096): 0
+    rows with >10 bound>=2 consumptions under a random-4096 stream: 11
+  confluent: 24 rows; consumptions under the default stream:
+    all consumptions:      0: 0, 1-8: 17, 9-10: 3, 11-32: 4, 33-128: 0, >128: 0
+    bound>=2 consumptions: 0: 0, 1-8: 17, 9-10: 3, 11-32: 4, 33-128: 0, >128: 0
+    rows with >=1 adversarial stream exhausted (any consumption past the prefix): 17
+    rows with a bound>=2 consumption PAST the prefix on >=1 adversarial stream (invisible order-sensitivity): 17
+      of which scheduling/select/waiter sites reached: 17
+    rows whose observation VARIES across the traced streams (default, 3 adversarial, 2 random-4096): 0
+    rows with >10 bound>=2 consumptions under a random-4096 stream: 14
+
+ENUMERATING LANES (membership/racy): depth under the traced streams
+  membership race/atomics-free/publish-acquire: max consumed=5 max wide=5 distinct observations across 6 streams=2
+  membership race/atomics-free/rmw-acquire: max consumed=5 max wide=5 distinct observations across 6 streams=2
+  membership sync/atomic-frontier/mp-litmus: max consumed=10 max wide=10 distinct observations across 6 streams=2
+  membership sync/mutex-order/acquisition-order: max consumed=13 max wide=13 distinct observations across 6 streams=2
+  membership sync/out-of-scope-trylock/trylock-uncontended: max consumed=1 max wide=1 distinct observations across 6 streams=2
+  membership sync/promoted-mutex/trylock-expr: max consumed=1 max wide=1 distinct observations across 6 streams=2
+  membership sync/rwmutex-order/acquisition: max consumed=19 max wide=19 distinct observations across 6 streams=1
+  racy race/atomics-misuse/plain-read-vs-failed-cas: max consumed=3 max wide=3 distinct observations across 6 streams=1
+  racy race/atomics-misuse/plain-read-vs-store: max consumed=3 max wide=3 distinct observations across 6 streams=1
+  racy race/atomics-misuse/plain-read-vs-swap: max consumed=3 max wide=3 distinct observations across 6 streams=1
+  racy race/atomics-misuse/plain-write-vs-add: max consumed=3 max wide=3 distinct observations across 6 streams=1
+  racy race/atomics-misuse/struct-copy-vs-typed-add: max consumed=3 max wide=3 distinct observations across 6 streams=1
+  racy race/negative-sync/mutex-copy: max consumed=3 max wide=3 distinct observations across 6 streams=1
+  racy race/negative-sync/once-copy: max consumed=3 max wide=3 distinct observations across 6 streams=1
+  racy race/negative-sync/one-side: max consumed=4 max wide=4 distinct observations across 6 streams=1
+  racy race/negative-sync/rlock-serialized: max consumed=12 max wide=12 distinct observations across 6 streams=1
+  racy race/negative-sync/rw-overwrite: max consumed=3 max wide=3 distinct observations across 6 streams=1
+  racy race/negative-sync/wg-no-edge: max consumed=4 max wide=4 distinct observations across 6 streams=1
+  racy race/negative-sync/wg-overwrite: max consumed=3 max wide=3 distinct observations across 6 streams=1

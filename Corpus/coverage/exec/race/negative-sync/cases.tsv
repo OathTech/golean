@@ -17,3 +17,9 @@ wg-overwrite	raceSyncWgOverwrite	-	race	-	sync,waitgroup,goroutines,channels,str
 mutex-copy	raceSyncMutexCopy	-	race	-	sync,mutex,goroutines,channels,structs,race	racy	BUG-080: Lock's state CAS (atomic write) vs the struct copy's plain read — TSan-red 10/10; atomic↔plain conflicts	width=4,sites=32
 rw-overwrite	raceSyncRwOverwrite	-	race	-	sync,rwmutex,goroutines,channels,structs,race	racy	BUG-080: RLock's race.Read(&rw.w) plain read vs the whole-struct overwrite — TSan-red 10/10 (a COPY beside the RLock op ALONE is read/read green — race/free-sync/rw-copy-beside-rlock; a copy beside the RUnlock refuses by design since Q-U4RESIDUAL (A), race/gomem-only)	width=4,sites=32
 once-copy	raceSyncOnceCopy	-	race	-	sync,once,goroutines,channels,structs,closures,race	racy	BUG-080: the first Do's o.m.Lock CAS / done Store (atomic writes) vs the struct copy's plain read — TSan-red 10/10 (a Do after completion is an atomic READ, green beside a copy)	width=4,sites=32
+# Q-TRYLOCK (2026-09-03, lane q-trylock; docs/2026-08-31_qrow-rulings.md
+# row 5): the try heads' detector half — the state CAS on an acquirable
+# Mutex on BOTH envelope members; a failed call acquires nothing. gc -race
+# red 20/20 each at GOMAXPROCS 1 and 8 (docs/evidence/2026-09-03_q-trylock/).
+overwrite-vs-trylock	raceSyncOverwriteVsTryLock	-	race	-	sync,mutex,goroutines,channels,structs,race	racy	Q-TRYLOCK: the TryLock's state CAS (.atomicWrite @state, recorded on the acquire AND the spurious member — gc's lost CAS) vs the whole-struct overwrite's plain write — refuses on every path	width=4,sites=32
+failed-trylock-no-edge	raceSyncFailedTryLockNoEdge	-	race	-	sync,mutex,goroutines,channels,globals,race	racy	Q-TRYLOCK success-edge-only detector: the forced-false TryLock (held cell, bound 1) records nothing and acquires nothing, so main's read and the worker's post-release write stay HB-unordered — a failed call that acquired would admit a value leaf	width=4,sites=32

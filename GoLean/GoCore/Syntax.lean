@@ -220,7 +220,17 @@ exactly the `chanPlan`/`ChanStOp` split. `Once.Do(f)` is a FRONTEND
 desugar over `onceBegin`/`onceComplete` (design note §3: the begin
 blocks while f runs elsewhere and reports whether to run f; the
 complete rides the existing defer machinery so a panicking f still
-completes — probe p05). -/
+completes — probe p05).
+
+The TRY heads (Q-TRYLOCK, RULED [USER] 2026-08-31 — `docs/2026-08-31_
+qrow-rulings.md` row 5 — implemented 2026-09-03): `tryLock` =
+`sync.Mutex.TryLock`, `tryRLock` = `sync.RWMutex.TryRLock`, `tryWLock`
+= `sync.RWMutex.TryLock` (the `lock`/`rlock`/`wlock` naming). They are
+the VALUE-RETURNING sync ops: `targets` carries the Bool result target
+(at most one; a bare `m.TryLock()` statement discards it but still
+acquires). Their machine semantics — mem#locks' spurious-failure member
+as the width-2 `ChoiceSite.tryLock` — is `applySyncOp`'s
+(Machine.lean). -/
 inductive SyncStmtOp where
   | lock
   | unlock
@@ -232,6 +242,9 @@ inductive SyncStmtOp where
   | wgWait
   | onceBegin
   | onceComplete
+  | tryLock
+  | tryRLock
+  | tryWLock
   deriving Repr, BEq, Inhabited, DecidableEq
 
 /-- The `sync/atomic` integer-op HEADS (the atomics arc, wave 1 —

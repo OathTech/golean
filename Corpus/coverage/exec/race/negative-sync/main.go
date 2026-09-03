@@ -187,6 +187,53 @@ func raceSyncOnceCopy() int {
 	return c.n
 }
 
+// Q-TRYLOCK (2026-09-03): a plain overwrite of an UNLOCKED Mutex
+// unordered with a TryLock on it. gc -race: the TryLock's state CAS is an
+// atomic write against the plain overwrite — RACE 20/20 at GOMAXPROCS 1
+// and 8 (docs/evidence/2026-09-03_q-trylock/, probe muOverwriteVsTryLock).
+// The machine records `.atomicWrite @state` on BOTH envelope members
+// (the lost CAS is gc's realization of the spurious false), so every path
+// refuses. Both accesses execute on every complete path.
+func raceSyncOverwriteVsTryLock() int {
+	var m sync.Mutex
+	c1, c2 := make(chan int), make(chan int)
+	go func() { _ = m.TryLock(); c1 <- 1 }()
+	go func() { m = sync.Mutex{}; c2 <- 1 }()
+	return <-c1 + <-c2
+}
+
+// Q-TRYLOCK (2026-09-03): "An unsuccessful call has no synchronizing
+// effect at all" (mem#locks). The worker holds the lock across main's
+// TryLock (channel-ordered), so the TryLock is FORCED false (bound 1, no
+// pick, nothing recorded, NO acquire); main's plain read of negSyncX is
+// then unordered with the worker's write after `release` — the join is
+// AFTER the read. gc -race RACE 20/20 (probe muFailedTryLockNoEdge); a
+// detector that let the failed call acquire would run this to a value.
+func raceSyncFailedTryLockNoEdge() int {
+	negSyncX = 0
+	var m sync.Mutex
+	held := make(chan int)
+	release := make(chan int)
+	done := make(chan int)
+	go func() {
+		m.Lock()
+		held <- 1
+		<-release
+		negSyncX = 9
+		m.Unlock()
+		done <- 1
+	}()
+	<-held
+	ok := m.TryLock()
+	release <- 1
+	v := negSyncX
+	<-done
+	if ok {
+		return -1
+	}
+	return v
+}
+
 func main() {
 	raceSyncOneSide()
 	raceSyncRlockSerialized()

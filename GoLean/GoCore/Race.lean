@@ -1340,6 +1340,35 @@ committed op's release, at the bumped epoch — `syncReleaseTailKinds`):
   Add → tail `.atomicWrite @m`. go_mem and TSan agree on every Once
   row.
 
+* **TryLock / TryRLock** (Q-TRYLOCK, RULED [USER] 2026-08-31 row 5;
+  implemented 2026-09-03; probes in `docs/evidence/2026-09-03_q-trylock/`,
+  20 runs each at GOMAXPROCS 1 and 8): `Mutex.TryLock`
+  (`internal/sync/mutex.go:76-93`) on an UNLOCKED cell → `.atomicWrite
+  @state` on BOTH envelope members — the CAS at :85 is realized by TSan
+  whether it wins (the acquire, `race.Acquire` :90 follows) or loses
+  (gc's realization of mem#locks' spurious false; a CAS records an
+  atomic write regardless of outcome, as the atomics section's
+  `cas`-failure row already relies on) — and on a HELD cell → NOTHING:
+  the early return at :77-79 is a plain load in a noRaceFuncPkgs
+  package (probes `muOverwriteLockedVsFailedTryLock`,
+  `muCopyVsFailedTryLock`: gc green 20/20 against a plain overwrite /
+  copy). go_mem adds nothing to a failed call ("An unsuccessful call has
+  no synchronizing effect at all" — not a synchronizing operation, so no
+  kind). `RWMutex.TryRLock`/`TryLock` (`sync/rwmutex.go:87-112,169-198`):
+  the realized `race.Read(&rw.w)` (:89/:171) precedes `race.Disable` on
+  EVERY outcome → `.read @w` always (probe `rwOverwriteVsFailedTryRLock`:
+  gc RACE 20/20 on an overwrite beside a FAILED TryRLock); the counter
+  CAS runs under `race.Disable`, so only go_mem's kind applies and only
+  to a SUCCESSFUL call ("equivalent to a call to l.RLock/l.Lock" — lock
+  is read-like) → `.atomicRead @readerCount` when acquired, the
+  `rlock`/`wlock` row exactly. HB: the acquire edge on success only
+  (`raceUpdate`; probe `muFailedTryLockNoEdge`: gc RACE 20/20 on a plain
+  read after a failed TryLock — agree-race). One gc shape is
+  schedule-dependent and pinnable in NO lane: an overwrite that RESETS a
+  held Mutex to unlocked beside a TryLock (RACE 10/20 — when the reset
+  lands first the TryLock succeeds and its CAS races; probe
+  `muOverwriteVsFailedTryLock`, probe only).
+
 Atomic↔atomic never conflicts, so contending ops on one primitive stay
 green (`race/free-sync/{mutex,rw-writers,wg-edge,once-edge}`,
 `probes/u4kind/{mu,rw,once}-contend`).
@@ -1405,9 +1434,13 @@ PRE-step cell (`delta` is `wgAdd`'s operand, 0 for every other op):
 TSan's realized set ∪ go_mem's operation kind, each at its gc word
 (the section docstring's table is the derivation; Q-U4RESIDUAL (A)).
 Recorded under the goroutine's current clock by `raceUpdate`'s sync
-arm, commit or park alike. -/
-def syncEntryKinds (op : SyncOp) (pre : SyncPrim) (delta : Int) (loc : Loc) :
-    List RaceAccess :=
+arm, commit or park alike. `acquired` is the TRY heads' outcome
+(`tryLockAcquired`, re-derived by `raceUpdate` from the pre/post cells)
+— it selects the success-only go_mem lock kind of RWMutex `TryLock`/
+`TryRLock`; every other head's row ignores it (their kinds are
+outcome-independent — commit or park alike). -/
+def syncEntryKinds (op : SyncOp) (pre : SyncPrim) (delta : Int) (acquired : Bool)
+    (loc : Loc) : List RaceAccess :=
   let at_ := syncWord loc pre.kind
   match op, pre with
   -- Mutex: the state CAS (TSan: atomic write; go_mem's read-like lock
@@ -1437,6 +1470,23 @@ def syncEntryKinds (op : SyncOp) (pre : SyncPrim) (delta : Int) (loc : Loc) :
   | .onceBegin _, .once true true => [(.atomicRead, at_ "done")]
   | .onceBegin _, _ => [(.atomicWrite, at_ "m")]
   | .onceComplete, _ => [(.atomicWrite, at_ "done")]
+  -- Q-TRYLOCK (the section docstring's TryLock rows). Mutex TryLock on
+  -- an UNLOCKED cell: the state CAS (:85), realized by TSan whether it
+  -- wins (the acquire) or loses (gc's realization of the spurious
+  -- member) — `.atomicWrite @state` on BOTH members; on a HELD cell:
+  -- the plain early return (:77-79) in a noRaceFuncPkgs package —
+  -- nothing realized, and go_mem gives an unsuccessful call no kind
+  -- ("no synchronizing effect at all").
+  | .tryLock _, .mutex locked => if locked then [] else [(.atomicWrite, at_ "state")]
+  | .tryLock _, _ => []
+  -- RWMutex TryRLock/TryLock: the realized `race.Read(&rw.w)` opens
+  -- every outcome (:89/:171, BEFORE `race.Disable`); the counter CAS is
+  -- under `race.Disable` (nothing realized), so only go_mem's kind
+  -- applies, and only to a SUCCESSFUL call ("equivalent to a call to
+  -- l.RLock/l.Lock" — lock is read-like → `.atomicRead @readerCount`,
+  -- the `rlock`/`wlock` row); a failed call has no go_mem kind.
+  | .tryRLock _, _ | .tryWLock _, _ =>
+      (.read, at_ "w") :: (if acquired then [(.atomicRead, at_ "readerCount")] else [])
 
 /-- The accesses `-race` realizes AFTER a sync op's release hook:
 `Mutex.Unlock`'s state Add follows `race.Release` (mutex.go:188-194),
@@ -1461,6 +1511,9 @@ def syncReleaseTailKinds (op : SyncOp) (pre : SyncPrim) (loc : Loc) : List RaceA
   | .wgAdd => []
   | .wgWait => []
   | .onceBegin _ => []
+  | .tryLock _ => []
+  | .tryRLock _ => []
+  | .tryWLock _ => []
 
 /-- The write of one phase-2 store step (`storeK`): the resolved
 target path. Chain resolution itself reads no user memory (address

@@ -27,7 +27,8 @@ Design (mirroring the sequential checker's discipline,
   AND its `applySelectCore` is `.done`, i.e. default/park/singleton
   commit — the spec-parity slice-4 refinement, `selectApplyDone`; a
   multi-ready or partnered select still refuses), `appendSlice`
-  applies, `mapIterK` picks, and multi-candidate waiter pairings (L4
+  applies, `mapIterK` picks, TRY-head sync applies (the `tryLock`
+  site, Q-TRYLOCK), and multi-candidate waiter pairings (L4
   width > 1). A program that needs a refused shape turns the checker
   false, visibly. The slice-4 CLI enumerator remains the full-width
   engine — this checker is deliberately the KERNEL-REDUCIBLE core.
@@ -96,6 +97,10 @@ def poolThreadOblivious (s : ExecState) (ts : Array Config) (i : Nat) : Bool :=
        | .ok .cellPath => selectApplyDone s c
        | _ => false)
     else if consumesAppendSlice c then false
+    -- Q-TRYLOCK: a TRY head's sync apply draws the `tryLock` site; the
+    -- checker refuses it (fail closed, even at the held cell's bound 1)
+    -- — the CLI enumerator's `stepNeeds` carries such rows.
+    else if consumesTryLock c then false
     else if isMapIterNext c then false
     else if consumesNilValueMethod s c then false
     else
@@ -327,6 +332,11 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
           | false =>
           rw [hnapp] at hobl
           simp only [Bool.false_eq_true, reduceIte] at hobl
+          cases hntl : consumesTryLock c with
+          | true => rw [hntl] at hobl; simp at hobl
+          | false =>
+          rw [hntl] at hobl
+          simp only [Bool.false_eq_true, reduceIte] at hobl
           cases hnmi : isMapIterNext c with
           | true => rw [hnmi] at hobl; simp at hobl
           | false =>
@@ -359,7 +369,7 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
               simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
               obtain ⟨rfl, rfl, rfl, rfl⟩ := h
               obtain ⟨rfl, hall⟩ := stepFn_oblivious
-                (isMapIterNext_false_elim hnmi) hnapp hnsel hnnv hstep
+                (isMapIterNext_false_elim hnmi) hnapp hnsel hnnv hntl hstep
               refine ⟨rfl, fun ch => ?_⟩
               unfold stepThread
               rw [hti]

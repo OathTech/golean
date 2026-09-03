@@ -1,0 +1,21 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# Q-TRYLOCK (RULED [USER] 2026-08-31, docs/2026-08-31_qrow-rulings.md row 5;
+# implemented 2026-09-03, lane q-trylock): TryLock/TryRLock with mem#locks'
+# spurious-failure member as the width-2 `tryLock` choice site. Rows at an
+# ACQUIRABLE state are MEMBERSHIP rows over {acquired, spurious false} — gc
+# exhibits only the success member (docs/evidence/2026-09-03_q-trylock/:
+# 20/20 at GOMAXPROCS 1 and 8), the other is UNEXHIBITED-BUT-PERMITTED by
+# the text ("may be considered to be able to return false even when the
+# mutex l is unlocked"); rows at a HELD state are strict (bound 1, no pick).
+unlocked-acquire	tryLockUnlocked	-	ok	-	sync,mutex,nondet	membership	mem#locks grants {true, false} at an unlocked Mutex — the tryLock site (width 2): slot 0 acquires (1), slot 1 is the spurious false (0); gc realizes only 1 (unexhibited member permitted by the text, never a strict pin)	width=2,members=2
+locked-false	tryLockLocked	-	ok	-	sync,mutex	strict	-	-
+unlock-after-trylock-success	unlockAfterTryLockSuccess	-	ok	-	sync,mutex,nondet	membership	a successful TryLock is a real acquisition (Unlock legal, a later Lock proceeds) — 1; the spurious member returns 0 before any Unlock	width=2,members=2
+trylock-false-then-lock	tryLockFalseThenLock	-	ok	-	sync,mutex,goroutines,channels	strict	-	-
+discarded-acquires	tryLockDiscarded	-	ok	-	sync,mutex,nondet	membership	a bare TryLock statement acquires: two picks — {0 (first acquired, second forced false; or both spurious), 1 (first spurious, second acquired)}; gc 0	width=2,members=2
+rw-trylock-unlocked	rwTryLockUnlocked	-	ok	-	sync,rwmutex,nondet	membership	RWMutex TryLock at an unlocked cell: {1, 0} — the wlock acquire or the spurious false	width=2,members=2
+rw-tryrlock-unlocked	rwTryRLockUnlocked	-	ok	-	sync,rwmutex,nondet	membership	RWMutex TryRLock at an unlocked cell: {1, 0}	width=2,members=2
+rw-tryrlock-reader-held	rwTryRLockReaderHeld	-	ok	-	sync,rwmutex,nondet	membership	readers share: TryRLock beside a held RLock is acquirable — {1, 0}	width=2,members=2
+rw-trylock-reader-held	rwTryLockReaderHeld	-	ok	-	sync,rwmutex	strict	-	-
+rw-try-writer-held	rwTryWriterHeld	-	ok	-	sync,rwmutex	strict	-	-
+rw-tryrlock-pending-writer	rwTryRLockPendingWriter	-	ok	-	sync,rwmutex,goroutines,channels,nondet	membership	rwmutex.go: a blocked Lock excludes new readers — whether the writer has PARKED before main's TryRLock is L1 latitude: parked first → forced false (0); TryRLock first → the width-2 pick {1, 0}; set {0, 1}, gc shows 0 in practice	width=4,sites=40,work=20000000,members=2
+spin-until-trylock	spinUntilTryLock	-	ok	-	sync,mutex,goroutines,channels,loops,nondet	membership	the fairness-claim class (row 5): the child spins `for !m.TryLock() {}` on the mutex main holds and releases unordered with the spin; every TERMINATING schedule yields 42; the child-first-and-starved / always-spurious schedules are nonterm branches under the declared accounting — NO termination claim (the Fair-quantified class is reasoning-side future work)	width=4,sites=200,members=1,nonterm=200,backedge=1

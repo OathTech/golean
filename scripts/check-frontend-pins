@@ -26,6 +26,15 @@
 #      packages (the Lean-side consumer of these bytes is parked).
 #      Re-pin deliberately with the reason on any frontend/subject
 #      change.
+#      Re-pin history: 2026-09-03 (lane q-trylock) eef32142… → c824f9e4…
+#      — Q-TRYLOCK: the twin's `sync.Mutex` stub method set entry
+#      [515] `TryLock` gained its bodied stub (the same `sync-op
+#      tryLock` node the direct forms emit — identity principle); the
+#      SOLE structural change (enumerated by a JSON diff, evidence dir
+#      docs/evidence/2026-09-03_q-trylock/). Raft never calls TryLock;
+#      the move is the stub policy's, [USER]-ruled (A) 2026-09-03 —
+#      «we should break things rather than preserve incorrect behavior»
+#      (relayed by the [AGENT] coordinator).
 #
 # Fail-closed throughout: missing baseline, failed build, failed emit,
 # failed run, or any byte drift exits 1 naming the failing pin.

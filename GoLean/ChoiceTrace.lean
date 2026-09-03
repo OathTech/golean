@@ -72,15 +72,16 @@ def siteName : ChoiceSite → String
   | .postOp => "postOp"
   | .backEdge => "backEdge"
   | .nilValueMethodText => "nilValueMethodText"
+  | .tryLock => "tryLock"
 
 def allSites : List ChoiceSite :=
   [.mapIter, .appendSpill, .l2Entry, .l2Arrival, .l4Waiter, .l1Sched,
-   .l5ExitWindow, .postOp, .backEdge, .nilValueMethodText]
+   .l5ExitWindow, .postOp, .backEdge, .nilValueMethodText, .tryLock]
 
 /-- Pool-layer sites: the ones whose consumption the machine records in
 `StepEvent.picks` (`Choices.consumeAtE`); the sequential-machine sites
-(`mapIter`, `appendSpill`, `l2Entry`) and the driver's `l5ExitWindow`
-consume through `Choices.consumeAt` and emit no record. -/
+(`mapIter`, `appendSpill`, `l2Entry`, `tryLock`) and the driver's
+`l5ExitWindow` consume through `Choices.consumeAt` and emit no record. -/
 def isPoolRecorded : ChoiceSite → Bool
   | .l1Sched | .postOp | .backEdge | .l2Arrival | .l4Waiter => true
   | _ => false
@@ -377,6 +378,37 @@ def nilTextFacts (s : ExecState) (fid : FuncId) (args : List GoValue) : MenuFact
             ("target is not a synthesized promotion wrapper", notWrapper) ]
         pickCheck := fun p => if p < 2 then [] else [s!"pick {p} outside the two texts"] }
 
+/-- TryLock facts (Q-TRYLOCK, `ChoiceSite.tryLock`): the width is
+recomputed through the machine's own `tryLockWidth` over the receiver
+cell (2 iff `tryAcquire` says acquirable, else 1 — and a width-1 consult
+pops nothing, so the mirror only reports a site at width 2). -/
+def tryLockFacts (s : ExecState) (c : Config) : MenuFacts :=
+  let bad := fun (why : String) =>
+    ({ specWidth := none, invariants := [(why, false)], pickCheck := fun _ => [] } : MenuFacts)
+  match c with
+  | .retV v (.syncStK op done [] _ _) =>
+      match op.tryTargets?, (v :: done).reverse with
+      | some _, [av] =>
+          match valueAsLoc av with
+          | .error _ => bad "try-lock receiver is an address"
+          | .ok loc =>
+              match syncCell s loc with
+              | .error _ => bad "try-lock receiver cell is a sync primitive"
+              | .ok pre =>
+                  let w := tryLockWidth op pre
+                  let acquirable := match tryAcquire op pre with
+                    | .ok (some _) => true
+                    | _ => false
+                  { specWidth := some w
+                    invariants :=
+                      [ ("width ∈ {1, 2}", w == 1 || w == 2),
+                        ("width 2 iff the cell is acquirable (tryAcquire)", (w == 2) == acquirable) ]
+                    pickCheck := fun p =>
+                      (if p ≥ w then [s!"pick {p} outside the width {w}"] else []) ++
+                      (if w == 1 && p != 0 then ["a held cell forces slot 0 (false)"] else []) }
+      | _, _ => bad "try-lock apply shape recognized"
+  | _ => bad "try-lock apply shape recognized"
+
 /-! ## The site-tagged consumption mirror -/
 
 /-- The sequential-machine sites at a `stepFn` position (the mirror of
@@ -407,6 +439,21 @@ def seqSite (σ : ExecState) (c : Config) :
               else some (.appendSpill, appendSpillWidth slice.cap newLen, spillFacts σ c)
           | _, _ => none
       | _ => none
+  | .retV v (.syncStK op done [] _ _) =>
+      -- The TRY heads' `tryLock` site (Q-TRYLOCK): the bound is the
+      -- machine's own `tryLockWidth` over the receiver cell; width 1
+      -- pops nothing (`consumeAtOne := false`), so no site is reported.
+      match op.tryTargets?, (v :: done).reverse with
+      | some _, [av] =>
+          match valueAsLoc av with
+          | .error _ => none
+          | .ok loc =>
+              match syncCell σ loc with
+              | .error _ => none
+              | .ok pre =>
+                  let w := tryLockWidth op pre
+                  if w ≤ 1 then none else some (.tryLock, w, tryLockFacts σ c)
+      | _, _ => none
   | c =>
       -- The frame-entry panic-text site (BUG-087): the mirror of
       -- `CLI.stepNeedsSeq`'s arm, tagged.

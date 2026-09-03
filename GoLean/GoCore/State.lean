@@ -217,6 +217,15 @@ The sites and their consuming definitions:
                    `enterFrameDeferPanicking` (StepFn.lean) and in the
                    `go`-statement entry `spawnStep` (Multi.lean) — the
                    three frame-entry funnels with the stream in hand.
+* `tryLock`      — TryLock/TryRLock's spurious-failure member
+                   (Q-TRYLOCK, RULED [USER] 2026-08-31 row 5, implemented
+                   2026-09-03): `applySyncOp`'s try-head arm, Machine.lean
+                   — the envelope statement lives at `applyTryLock`.
+                   Width 2 at an ACQUIRABLE cell (slot 0 = acquire, slot
+                   1 = mem#locks' "may be considered to be able to
+                   return false even when the mutex l is unlocked"),
+                   bound 1 (no pop) at a held cell. A DATA pick, not a
+                   scheduling pick.
 
 The scheduling sites — what a future `Fair : Choices → Prop`
 quantifies over — are exactly
@@ -228,6 +237,7 @@ inductive ChoiceSite where
   | postOp
   | backEdge
   | nilValueMethodText
+  | tryLock
   deriving Repr, DecidableEq
 
 /-- Per-site consumption policy — ONE table (audit C-1: the per-site
@@ -270,6 +280,8 @@ def ChoiceSite.policy : ChoiceSite → SitePolicy
       "exit now (0 = teardown at main's terminal; bound is constant 2, so the flag is inert)"⟩
   | .postOp => ⟨false,
       "the ISSUER continues (slot 0 = the goroutine that completed the op — the old machine's schedule, so the empty/default stream reproduces it exactly; slots 1.. = the other runnables in goroutine order; a sole-runnable issuer consults at bound 1 without a pop — sequential conservation's hinge, as at l1Sched)"⟩
+  | .tryLock => ⟨false,
+      "ACQUIRE (slot 0 = the success member — gc's realized point, so the empty/default stream reproduces gc's always-succeeds behavior and the strict lane's uncontended TryLock matches the oracle; slot 1 = mem#locks' spurious false: no state change, no HB edge); a HELD cell consults at bound 1 without a pop (the failure is forced, not chosen — a data site, not a scheduling one)"⟩
   | .backEdge => ⟨false,
       "the CURRENT goroutine continues (slot 0 = the looping goroutine — the old machine's schedule; slots 1.. = the other runnables in goroutine order; sole-runnable loops consult at bound 1 without a pop). THE FAIRNESS-EXPRESSIBILITY NOTE (boundary-set note §4, G1): this site is what makes a future Fair : stream → Prop NON-VACUOUS — a registry-free monopolist now OFFERS a scheduling pick at every iteration, so 'every goroutine runnable at infinitely many scheduling picks is picked at infinitely many' genuinely forces the partner to run; without it the liveness tier's fairness hypothesis would be unsatisfiable on exactly the spinner shapes it exists for"⟩
   | .nilValueMethodText => ⟨false,

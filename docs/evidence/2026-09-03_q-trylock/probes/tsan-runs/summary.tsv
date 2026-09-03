@@ -1,0 +1,73 @@
+subject	build	procs	runs	race	green	other	distinct_outputs
+muUncontended	plain	1	20	0	20	0	true;
+muUncontended	plain	8	20	0	20	0	true;
+muUncontended	race	1	20	0	20	0	true;
+muUncontended	race	8	20	0	20	0	true;
+muLocked	plain	1	20	0	20	0	false;
+muLocked	plain	8	20	0	20	0	false;
+muLocked	race	1	20	0	20	0	false;
+muLocked	race	8	20	0	20	0	false;
+muUnlockAfterTryLock	plain	1	20	0	20	0	true 1;
+muUnlockAfterTryLock	plain	8	20	0	20	0	true 1;
+muUnlockAfterTryLock	race	1	20	0	20	0	true 1;
+muUnlockAfterTryLock	race	8	20	0	20	0	true 1;
+muFalseThenLock	plain	1	20	0	20	0	false 7;
+muFalseThenLock	plain	8	20	0	20	0	false 7;
+muFalseThenLock	race	1	20	0	20	0	false 7;
+muFalseThenLock	race	8	20	0	20	0	false 7;
+muSpinUntilTryLock	plain	1	20	0	20	0	42;
+muSpinUntilTryLock	plain	8	20	0	20	0	42;
+muSpinUntilTryLock	race	1	20	0	20	0	42;
+muSpinUntilTryLock	race	8	20	0	20	0	42;
+muOverwriteVsTryLock	plain	1	20	0	20	0	done;
+muOverwriteVsTryLock	plain	8	20	0	20	0	done;
+muOverwriteVsTryLock	race	1	20	20	0	0	
+muOverwriteVsTryLock	race	8	20	20	0	0	
+muOverwriteVsFailedTryLock	plain	1	20	0	20	0	done true;
+muOverwriteVsFailedTryLock	plain	8	20	0	20	0	done true;
+muOverwriteVsFailedTryLock	race	1	20	9	11	0	done false;
+muOverwriteVsFailedTryLock	race	8	20	9	11	0	done false;
+muOverwriteLockedVsFailedTryLock	plain	1	20	0	20	0	done false;
+muOverwriteLockedVsFailedTryLock	plain	8	20	0	20	0	done false;
+muOverwriteLockedVsFailedTryLock	race	1	20	0	20	0	done false;
+muOverwriteLockedVsFailedTryLock	race	8	20	0	20	0	done false;
+muCopyVsFailedTryLock	plain	1	20	0	20	0	done false;
+muCopyVsFailedTryLock	plain	8	20	0	20	0	done false;
+muCopyVsFailedTryLock	race	1	20	0	20	0	done false;
+muCopyVsFailedTryLock	race	8	20	0	20	0	done false;
+muDrfTryLockPublish	plain	1	20	0	20	0	5;true;
+muDrfTryLockPublish	plain	8	20	0	20	0	5;true;
+muDrfTryLockPublish	race	1	20	0	20	0	5;true;
+muDrfTryLockPublish	race	8	20	0	20	0	5;true;
+muRacyTryLockNoAcquire	plain	1	20	0	20	0	5;
+muRacyTryLockNoAcquire	plain	8	20	0	20	0	5;
+muRacyTryLockNoAcquire	race	1	20	20	0	0	
+muRacyTryLockNoAcquire	race	8	20	20	0	0	
+muFailedTryLockNoEdge	plain	1	20	0	20	0	false 9;
+muFailedTryLockNoEdge	plain	8	20	0	20	0	false 9;
+muFailedTryLockNoEdge	race	1	20	20	0	0	
+muFailedTryLockNoEdge	race	8	20	20	0	0	
+rwMatrix	plain	1	20	0	20	0	true true | true false | false false;
+rwMatrix	plain	8	20	0	20	0	true true | true false | false false;
+rwMatrix	race	1	20	0	20	0	true true | true false | false false;
+rwMatrix	race	8	20	0	20	0	true true | true false | false false;
+rwTryRLockPendingWriter	plain	1	20	0	20	0	false;
+rwTryRLockPendingWriter	plain	8	20	0	20	0	false;
+rwTryRLockPendingWriter	race	1	20	0	20	0	false;
+rwTryRLockPendingWriter	race	8	20	0	20	0	false;
+rwOverwriteVsTryRLock	plain	1	20	0	20	0	done;
+rwOverwriteVsTryRLock	plain	8	20	0	20	0	done;
+rwOverwriteVsTryRLock	race	1	20	20	0	0	
+rwOverwriteVsTryRLock	race	8	20	20	0	0	
+rwOverwriteVsFailedTryRLock	plain	1	20	0	20	0	done;
+rwOverwriteVsFailedTryRLock	plain	8	20	0	20	0	done;
+rwOverwriteVsFailedTryRLock	race	1	20	20	0	0	
+rwOverwriteVsFailedTryRLock	race	8	20	20	0	0	
+rwDrfTryLockPublish	plain	1	20	0	20	0	6;true;
+rwDrfTryLockPublish	plain	8	20	0	20	0	6;true;
+rwDrfTryLockPublish	race	1	20	0	20	0	6;true;
+rwDrfTryLockPublish	race	8	20	0	20	0	6;true;
+rwDrfTryRLockAcquire	plain	1	20	0	20	0	8;
+rwDrfTryRLockAcquire	plain	8	20	0	20	0	8;
+rwDrfTryRLockAcquire	race	1	20	0	20	0	8;
+rwDrfTryRLockAcquire	race	8	20	0	20	0	8;

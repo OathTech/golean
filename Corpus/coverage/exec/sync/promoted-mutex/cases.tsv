@@ -1,11 +1,13 @@
 # id	subject	args	expected_status	expected_reason	features	lane	why	params
 # H-12 guardrails (raft W4.1 item 5): promoted/embedded sync.Mutex ops
 # in statement/defer position (the MemoryStorage shape). Red at
-# frontend-export until the promoted recognition lands; green after —
-# EXCEPT trylock-expr, which stays red BY DESIGN (expression-position
-# sync ops keep failing closed).
+# frontend-export until the promoted recognition lands; green after.
+# trylock-expr stayed red BY DESIGN (expression-position sync ops failed
+# closed) until Q-TRYLOCK landed 2026-09-03: the promoted TryLock in a
+# condition now lowers through the hops-adjusted receiver to the same
+# tryLock site — a membership row over {1 (acquired), 0 (spurious)}.
 stmt	promotedStmt	-	ok	-	sync,mutex,embedding,methods
 defer-unlock	promotedDefer	-	ok	-	sync,mutex,embedding,methods,defer
 value-var	promotedValueVar	-	ok	-	sync,mutex,embedding,addressability
 counter	promotedCounter	-	ok	-	sync,mutex,embedding,goroutines,channels	confluent	mutual exclusion through the PROMOTED lock (the hops-adjusted receiver reaches the same embedded mutex cell) makes the two increments commute; the channel join closes the run: every schedule yields 2	width=4,sites=40,work=20000000
-trylock-expr	promotedTryLockExpr	-	ok	-	sync,mutex,embedding
+trylock-expr	promotedTryLockExpr	-	ok	-	sync,mutex,embedding,nondet	membership	Q-TRYLOCK through the PROMOTED receiver (s.TryLock on the embedded mutex): the same width-2 tryLock site as the direct form — 1 = acquire, 0 = the spurious false; gc realizes 1	width=2,members=2

@@ -1463,8 +1463,10 @@ THE REGISTRY ENTRY (the channels-arc D2+D3 growth contract exercised as
 designed — one registration, nothing revises): each sync op's APPLY
 position is (a) a SCHEDULING POINT — it joins `Config.atBoundary`, so
 the EXISTING L1 scheduler site is consulted there (consumed only at
-|runnable| > 1; sync adds ZERO new `Choices` sites — see the envelope
-statement at `applySyncOp`) — and (b) an HB EDGE SOURCE — `raceUpdate`
+|runnable| > 1; the sync ops add ZERO new `Choices` sites — see the
+envelope statement at `applySyncOpCore` — EXCEPT the [USER]-ruled
+`tryLock` site of the TRY heads, Q-TRYLOCK row 5: the envelope
+statement at `applyTryLock`) — and (b) an HB EDGE SOURCE — `raceUpdate`
 (Multi.lean) classifies sync applies/wakes and advances the per-cell
 sync clocks (`RaceState.syncAcquire`/`syncRelease`, Race.lean; the
 package-doc sentences quoted there). Blocked ops are the ONE new
@@ -1474,7 +1476,9 @@ arrival intercept, no pairing step, and no L4-analogue waiter pick,
 because nothing transfers between goroutines except through the cell. -/
 
 /-- Machine-level sync operation: the `SyncStmtOp` head with the
-`onceBegin` target payload validated in (the `ChanStOp.recv` shape). -/
+`onceBegin` target payload validated in (the `ChanStOp.recv` shape).
+The TRY heads (Q-TRYLOCK) carry their Bool result target the same way
+— a list of length ≤ 1 (empty = the result is discarded). -/
 inductive SyncOp where
   | lock
   | unlock
@@ -1486,13 +1490,25 @@ inductive SyncOp where
   | wgWait
   | onceBegin (targets : List Assignee)
   | onceComplete
+  | tryLock (targets : List Assignee)
+  | tryRLock (targets : List Assignee)
+  | tryWLock (targets : List Assignee)
   deriving Repr, BEq
+
+/-- The TRY heads' result targets — `some` exactly for the three heads
+that draw the `tryLock` site (`applySyncOp` dispatches on this; the
+consumption predicates `consumesTryLock`/`stepNeeds` mirror it). -/
+def SyncOp.tryTargets? : SyncOp → Option (List Assignee)
+  | .tryLock ts | .tryRLock ts | .tryWLock ts => some ts
+  | .lock | .unlock | .rlock | .runlock | .wlock | .wunlock
+  | .wgAdd | .wgWait | .onceBegin _ | .onceComplete => none
 
 /-- Classify a sync statement: op head plus the operands evaluated
 before the apply — the receiver ADDRESS expression, plus the delta for
 `wgAdd`. Fails closed (`none`) on arity drift, on targets anywhere but
-`onceBegin`, on a target count ≠ 1 for `onceBegin`, and on unsupported
-target assignees (the `chanPlan` discipline). -/
+`onceBegin` and the TRY heads, on a target count ≠ 1 for `onceBegin`,
+on a target count > 1 for a TRY head (0 = discarded result), and on
+unsupported target assignees (the `chanPlan` discipline). -/
 def syncPlan : Stmt → Option (SyncOp × List Expr)
   | .syncStmt .lock args targets =>
       if targets.isEmpty && args.size == 1 then some (.lock, args.toList) else none
@@ -1518,7 +1534,24 @@ def syncPlan : Stmt → Option (SyncOp × List Expr)
         | some _ => some (.onceBegin targets.toList, args.toList)
         | none => none
       else none
+  | .syncStmt .tryLock args targets => tryPlan .tryLock args targets
+  | .syncStmt .tryRLock args targets => tryPlan .tryRLock args targets
+  | .syncStmt .tryWLock args targets => tryPlan .tryWLock args targets
   | _ => none
+where
+  /-- A TRY head's plan: one receiver operand; zero targets (discarded
+  result) or one plannable target. -/
+  tryPlan (mk : List Assignee → SyncOp) (args : Array Expr)
+      (targets : Array Assignee) : Option (SyncOp × List Expr) :=
+    if args.size == 1 then
+      match targets.toList with
+      | [] => some (mk [], args.toList)
+      | [t] =>
+          match targetsPlan [t] with
+          | some _ => some (mk [t], args.toList)
+          | none => none
+      | _ :: _ :: _ => none
+    else none
 
 /-- Sync statements and wide statements classify DISJOINT statements
 (the `stmtPlan_of_chanPlan` twin, for `step_det`'s rule-disjointness
@@ -2671,9 +2704,13 @@ Outcomes, per primitive (design note §4):
   `.internal` (only the desugar emits it).
 
 A nil receiver address panics recoverably via `valueAsLoc` (gc: the
-nil-pointer deref inside the method). Shared verbatim by rule
-`Step.syncStApply` and `stepFn`'s `syncStK` apply arm. -/
-def applySyncOp (s : ExecState) (op : SyncOp) (vs : List GoValue)
+nil-pointer deref inside the method). This is the CHOICES-FREE core
+(the `applyStmtOpCore` mold): the TRY heads — the one sync op family
+that draws a pick — apply through `applySyncOp` below, which threads
+the stream and dispatches everything else here unchanged. Shared
+verbatim (through `applySyncOp`) by rule `Step.syncStApply` and
+`stepFn`'s `syncStK` apply arm. -/
+def applySyncOpCore (s : ExecState) (op : SyncOp) (vs : List GoValue)
     (env : LocalEnv) (k : Cont) : Except GoError (Config × ExecState) := do
   match op, vs with
   | .lock, [av] => do
@@ -2827,7 +2864,167 @@ def applySyncOp (s : ExecState) (op : SyncOp) (vs : List GoValue)
             return (.opDone .postOp (.next k), s')
           else throw (.internal "onceComplete without a matching onceBegin")
       | other => stuck s!"Once.Do complete on a non-Once sync cell: {repr other}"
+  -- The TRY heads never reach the core: `applySyncOp` draws their pick
+  -- and applies `applyTryLock`. Named, not absorbed by the catch-all.
+  | .tryLock _, _ | .tryRLock _, _ | .tryWLock _, _ =>
+      throw (.internal "try-lock heads apply through applySyncOp (the choice-taking entry), never the core")
   | op, vs => stuck s!"malformed sync-operator application: {repr op} on {vs.length} operand(s)"
+
+/-- The cell a TRY head would leave behind if it ACQUIRED — `.ok (some _)`
+exactly when the op could acquire (the `tryLockWidth` = 2 condition; ONE
+derivation for the apply, the width and the accountants): `TryLock` on
+an unlocked Mutex → locked; `TryRLock` when no writer holds or is
+pending → one more reader (the `rlock` acquire); RWMutex `TryLock` when
+no writer and no reader holds → the writer bit (the `wlock` immediate
+acquire). `.ok none` on a held cell; a kind-mismatched cell or a
+non-try head is a `stuck`/`internal` ERROR (fail closed, before any pick
+matters). -/
+def tryAcquire (op : SyncOp) (pre : SyncPrim) : Except GoError (Option SyncPrim) :=
+  match op, pre with
+  | .tryLock _, .mutex locked => pure (if locked then none else some (.mutex true))
+  | .tryRLock _, .rwmutex writer readers pendingW =>
+      pure (if writer || pendingW > 0 then none else some (.rwmutex writer (readers + 1) pendingW))
+  | .tryWLock _, .rwmutex writer readers pendingW =>
+      pure (if writer || readers > 0 then none else some (.rwmutex true 0 pendingW))
+  | .tryLock _, other => stuck s!"TryLock on a non-mutex sync cell: {repr other}"
+  | .tryRLock _, other => stuck s!"TryRLock on a non-RWMutex sync cell: {repr other}"
+  | .tryWLock _, other => stuck s!"RWMutex TryLock on a non-RWMutex sync cell: {repr other}"
+  | op, _ => throw (.internal s!"tryAcquire on a non-try head: {repr op}")
+
+/-- The width of the `tryLock` site at a TRY head's apply, from the
+PRE-step cell: 2 when the op could acquire — `TryLock` on an unlocked
+Mutex; `TryRLock` when no writer holds and none is pending (rwmutex.go:
+"a blocked Lock call excludes new readers", the `rlock` park condition);
+RWMutex `TryLock` when no writer holds and no reader does (the `wlock`
+immediate-acquire condition) — else 1 (the failure is forced; the site's
+`consumeAtOne := false` policy pops nothing). A kind-mismatched cell is
+width 1 too (the apply is `stuck` there, before any pick matters). The
+accountants (`CLI.stepNeeds`, `ChoiceTrace.seqSite`) recompute the bound
+through THIS function. -/
+def tryLockWidth (op : SyncOp) (pre : SyncPrim) : Nat :=
+  match tryAcquire op pre with
+  | .ok (some _) => 2
+  | _ => 1
+
+/-- Did a TRY head's apply ACQUIRE, read off the pre/post cells (the
+pick is not in the pool's `StepEvent`, so `raceUpdate` re-derives the
+outcome the way the atomic arm re-derives a CAS's): `TryLock` — the
+Mutex went unlocked → locked; `TryRLock` — the reader count rose;
+RWMutex `TryLock` — the writer bit rose. A forced or spurious failure
+leaves the cell unchanged, so every other pre/post pair is `false`. -/
+def tryLockAcquired (op : SyncOp) (pre post : SyncPrim) : Bool :=
+  match op, pre, post with
+  | .tryLock _, .mutex false, .mutex true => true
+  | .tryRLock _, .rwmutex _ r _, .rwmutex _ r' _ => r' == r + 1
+  | .tryWLock _, .rwmutex false _ _, .rwmutex true _ _ => true
+  | _, _, _ => false
+
+/-- A TRY head's result delivery: through `enterRecvTargets` when a target
+exists (the `onceBegin` shape), else the plain continuation — success
+depends on the TARGET LIST alone (`tryDeliver_ok_any`), never on the
+state or the value. Every outcome carries `.opDone .postOp` (B1). -/
+def tryDeliver (b : Bool) (s : ExecState) (targets : List Assignee)
+    (env : LocalEnv) (k : Cont) : Except GoError (Config × ExecState) :=
+  match targets with
+  | [] => return (.opDone .postOp (.next k), s)
+  | _ :: _ => do
+      let (c', s') ← enterRecvTargets s targets [.bool b] (.seqn #[]) env k
+      return (.opDone .postOp c', s')
+
+/-- **The TRY heads' apply — THE ENVELOPE STATEMENT of
+`ChoiceSite.tryLock`** (Q-TRYLOCK, RULED [USER] 2026-08-31 —
+`docs/2026-08-31_qrow-rulings.md` row 5, per-row CONFIRMED [USER]
+2026-09-01; the twin-pin re-pin and the "own slice" sequencing RULED
+[USER] 2026-09-03, both relayed by the [AGENT] coordinator; memo
+`docs/2026-08-21_w32-qrow-memos.md` §5; implemented 2026-09-03).
+
+THE TEXT (mem#locks, verbatim): "A successful call to l.TryLock (or
+l.TryRLock) is equivalent to a call to l.Lock (or l.RLock). An
+unsuccessful call has no synchronizing effect at all. As far as the
+memory model is concerned, l.TryLock (or l.TryRLock) may be considered
+to be able to return false even when the mutex l is unlocked." This is
+spec-DECLARED latitude, not silence: at an acquirable cell the
+return-value envelope is {true, false}. The always-succeeds pin (the
+memo's option (B)) is OFF THE MENU PERMANENTLY by the ruling — it would
+narrow a latitude the text grants by name, and gc itself realizes a
+false-when-momentarily-free under contention (a lost CAS on `m.state`,
+internal/sync/mutex.go:85; the starvation-mode early return, :78).
+
+THE ENVELOPE, per head, from the pre-step cell:
+* acquirable (`tryLockWidth` = 2) → ONE demonic pick at
+  `ChoiceSite.tryLock`: slot 0 = ACQUIRE — the SAME state transition
+  as `Lock`/`RLock`/write-`Lock`'s immediate acquire (`applySyncOpCore`)
+  and, in `raceUpdate`, the same acquire edge ("equivalent to a call to
+  l.Lock"); slot 1 = SPURIOUS FAILURE — deliver `false`, NO state
+  change, NO HB edge ("no synchronizing effect at all"). gc exhibits
+  only slot 0 in isolation (probe `muUncontended`, 20/20 at GOMAXPROCS 1
+  and 8 — `docs/evidence/2026-09-03_q-trylock/`), so the spurious member
+  is UNEXHIBITED-BUT-PERMITTED: the membership rows over {1, 0} carry
+  it (`sync/trylock/*`), never a strict row.
+* held (`tryLockWidth` = 1) → `false`, deterministically, and the site
+  is consulted at bound 1 WITHOUT a pop (`consumeAtOne := false`), so a
+  TryLock on a held lock is stream-transparent (probes `muLocked`,
+  `rwMatrix`, `rwTryRLockPendingWriter`: false 20/20). RWMutex `TryRLock`
+  fails while a writer is PENDING — gc's `readerCount` went negative at
+  the writer's `Lock` entry (rwmutex.go:150) — the `rlock` park
+  condition (`pendingW > 0`); RWMutex `TryLock` fails while readers hold
+  (`readers > 0`, gc's `readerCount.CompareAndSwap(0, …)` :180) and
+  succeeds otherwise — the `wlock` immediate-acquire condition, pendingW
+  notwithstanding (gc holds `rw.w` for a pending writer and so fails a
+  new `TryLock` in that transient window — a realized point INSIDE this
+  envelope: the sync docs say nothing about a pending writer's priority
+  over a TryLock, and the window closes at the writer's wake).
+
+THE DETECTOR HALF is Race.lean's (`syncEntryKinds` with the `acquired`
+flag; `raceUpdate`'s sync arm derives it through `tryLockAcquired`).
+The result is delivered through `enterRecvTargets` when a target exists
+(the `onceBegin` shape — a plain write of the target AFTER the op);
+with no target the value is dropped and the op still took effect (a
+bare `m.TryLock()` statement acquires, gc-exact). Every proceeding
+outcome carries `.opDone .postOp` (B1); a TRY head never parks.
+
+FAIRNESS / TERMINATION: a `for !m.TryLock() {}` spinner is runnable
+forever under the spurious member (and under unfair schedules) —
+∀-stream termination is honestly FALSE; such rows ride the membership
+lane under `nonterm=` accounting with NO termination claim (row 2's
+precedent, `atomics/spin`); the `Fair`-quantified claim class is
+reasoning-side future work TO BE BUILT (proposal §2). -/
+def applyTryLock (s : ExecState) (op : SyncOp) (loc : Loc) (pre : SyncPrim)
+    (spurious : Bool) (targets : List Assignee) (env : LocalEnv) (k : Cont) :
+    Except GoError (Config × ExecState) := do
+  match ← tryAcquire op pre with
+  | none => tryDeliver false s targets env k
+  | some post => do
+      -- THE PRE-COMMIT DISCIPLINE (`applySelectCore`'s, for the ∀-streams
+      -- kit): the acquired cell is stored BEFORE the pick is applied, so
+      -- both members share every failure mode and apply-success is
+      -- pick-independent (`applyTryLock_ok_any`); the spurious member
+      -- then returns the PRE-store state — no state change, as the text
+      -- demands.
+      let sAcq ← storeLoc s loc (.syncData post)
+      if spurious then tryDeliver false s targets env k
+      else tryDeliver true sAcq targets env k
+
+/-- **Apply a sync statement's head to its evaluated operands, with the
+choice stream** — the sync registry entry (the `applyStmtOp` mold over
+`applySyncOpCore`): the TRY heads resolve the receiver, read the cell,
+draw the `tryLock` site at `tryLockWidth` (bound 1 = no pop), and apply
+`applyTryLock`; every other head is `applySyncOpCore` with the stream
+passed through untouched (`applySyncOp_eq_core`). Shared verbatim by
+rule `Step.syncStApply` and `stepFn`'s `syncStK` apply arm. -/
+def applySyncOp (s : ExecState) (ch : Choices) (op : SyncOp) (vs : List GoValue)
+    (env : LocalEnv) (k : Cont) : Except GoError (Config × ExecState × Choices) := do
+  match op.tryTargets?, vs with
+  | some targets, [av] => do
+      let loc ← valueAsLoc av
+      let pre ← syncCell s loc
+      let (pick, ch') := Choices.consumeAt .tryLock (tryLockWidth op pre) ch
+      let (c', s') ← applyTryLock s op loc pre (pick == 1) targets env k
+      return (c', s', ch')
+  | some _, vs => stuck s!"malformed try-lock application: {repr op} on {vs.length} operand(s)"
+  | none, _ => do
+      let (c', s') ← applySyncOpCore s op vs env k
+      return (c', s', ch)
 
 /-- The optional store of an atomic op (`atomicCompute`'s `new?`): the
 normalized integer at the op's kind, or no store at all (`load`, a
@@ -3834,19 +4031,21 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   -- RELATION-SILENT, like the diagnostic errors — an unrecoverable
   -- abort has no successor configuration. The blocked shape
   -- `.blockedSync` has no outgoing per-goroutine rule (the pool wakes
-  -- it); the apply consumes NO choices (the envelope statement at
-  -- `applySyncOp`).
+  -- it). The apply QUANTIFIES THE CHOICE STREAM (the `stmtOpApply`
+  -- idiom): only the TRY heads draw from it (`ChoiceSite.tryLock`, the
+  -- envelope statement at `applyTryLock`); every other head passes it
+  -- through untouched (`applySyncOpCore`'s envelope statement).
   | syncStFirst {stmt op e rest env k s} :
       syncPlan stmt = some (op, e :: rest) →
       Step (.exec stmt env k) s (.evalE e env (.syncStK op [] rest env k)) s
   | syncStShift {op done v e rest env k s} :
       Step (.retV v (.syncStK op done (e :: rest) env k)) s
         (.evalE e env (.syncStK op (v :: done) rest env k)) s
-  | syncStApply {op done v c' env k s s'} :
-      applySyncOp s op (v :: done).reverse env k = .ok (c', s') →
+  | syncStApply {op done v c' env k s s' ch ch'} :
+      applySyncOp s ch op (v :: done).reverse env k = .ok (c', s', ch') →
       Step (.retV v (.syncStK op done [] env k)) s c' s'
-  | syncStApplyPanic {op done v msg env k s} :
-      applySyncOp s op (v :: done).reverse env k = .error (.panic msg) →
+  | syncStApplyPanic {op done v msg env k s ch} :
+      applySyncOp s ch op (v :: done).reverse env k = .error (.panic msg) →
       Step (.retV v (.syncStK op done [] env k)) s
         (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
   /-- The registry-op completion marker's strip (W3.2 slice 1 stage C,

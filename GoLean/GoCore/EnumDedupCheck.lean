@@ -116,6 +116,9 @@ def innerVecs (s : ExecState) (ts : Array Config) (i : Nat) :
              if appendApplyNoSpill s ((v :: done).reverse) then some [[]]
              else none
          | _ => none)
+      -- Q-TRYLOCK: the TRY heads' `tryLock` pick is outside the certified
+      -- fragment (fail closed; the CLI enumerator carries such rows).
+      else if consumesTryLock c then none
       else if isMapIterNext c then none
       else if consumesNilValueMethod s c then none
       else

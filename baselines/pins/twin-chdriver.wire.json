@@ -451860,6 +451860,47 @@
    "variadic": false
   },
   {
+   "body": {
+    "body": [
+     {
+      "args": [
+       {
+        "expr": "ident",
+        "name": "$recv",
+        "type": {
+         "elem": {
+          "kind": "sync",
+          "sync": "Mutex"
+         },
+         "kind": "pointer"
+        }
+       }
+      ],
+      "op": "tryLock",
+      "stmt": "sync-op",
+      "target": {
+       "id": "$tryOk",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "ident",
+        "name": "$tryOk",
+        "type": {
+         "kind": "bool"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
    "name": "TryLock",
    "params": [],
    "recv": {
@@ -451881,7 +451922,6 @@
      }
     }
    ],
-   "unsupported": "sync-primitive method sync.Mutex.TryLock (declaration-only stub: satisfaction answers, calls fail closed — the member is outside the modeled sync surface; the modeled ops lower through values via their bodied stubs, P-S2-6)",
    "variadic": false
   },
   {

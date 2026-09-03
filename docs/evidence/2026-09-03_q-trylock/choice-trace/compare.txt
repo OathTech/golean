@@ -1,0 +1,45 @@
+# choice-trace consumption-invariance comparison (2026-09-03, lane q-trylock)
+# columns: id stream status consumed wide perSite maxBound violations alarms obsHash driverAgreement
+# main tree = detached scratch worktree at c22e367a (own frontend + golean); branch = q-trylock working tree
+# ids: the 179 sync-tagged rows shared by both trees (minus the two spinners), 6 streams each
+rows main: 1074  rows branch: 1074
+diff (main vs branch):
+877,882c877,882
+< sync/out-of-scope-trylock/trylock-uncontended	1,3,5,7,9,2,4,6,8,0	unsupported	0	0	-	0	0	0	11580258836034030603	ok
+< sync/out-of-scope-trylock/trylock-uncontended	5,5,5,5,5,5,5,5	unsupported	0	0	-	0	0	0	11580258836034030603	ok
+< sync/out-of-scope-trylock/trylock-uncontended	9,8,7,6,5,4,3,2,1,0	unsupported	0	0	-	0	0	0	11580258836034030603	ok
+< sync/out-of-scope-trylock/trylock-uncontended	default	unsupported	0	0	-	0	0	0	11580258836034030603	ok
+< sync/out-of-scope-trylock/trylock-uncontended	rand:1:4096	unsupported	0	0	-	0	0	0	11580258836034030603	ok
+< sync/out-of-scope-trylock/trylock-uncontended	rand:2:4096	unsupported	0	0	-	0	0	0	11580258836034030603	ok
+---
+> sync/out-of-scope-trylock/trylock-uncontended	1,3,5,7,9,2,4,6,8,0	ok	1	1	tryLock=1	2	0	0	13191274251163326272	ok
+> sync/out-of-scope-trylock/trylock-uncontended	5,5,5,5,5,5,5,5	ok	1	1	tryLock=1	2	0	0	13191274251163326272	ok
+> sync/out-of-scope-trylock/trylock-uncontended	9,8,7,6,5,4,3,2,1,0	ok	1	1	tryLock=1	2	0	0	13191274251163326272	ok
+> sync/out-of-scope-trylock/trylock-uncontended	default	ok	1	1	tryLock=1	2	0	0	12001011276398221595	ok
+> sync/out-of-scope-trylock/trylock-uncontended	rand:1:4096	ok	1	1	tryLock=1	2	0	0	12001011276398221595	ok
+> sync/out-of-scope-trylock/trylock-uncontended	rand:2:4096	ok	1	1	tryLock=1	2	0	0	12001011276398221595	ok
+901,906c901,906
+< sync/promoted-mutex/trylock-expr	1,3,5,7,9,2,4,6,8,0	unsupported	0	0	-	0	0	0	11580258836034030603	ok
+< sync/promoted-mutex/trylock-expr	5,5,5,5,5,5,5,5	unsupported	0	0	-	0	0	0	11580258836034030603	ok
+< sync/promoted-mutex/trylock-expr	9,8,7,6,5,4,3,2,1,0	unsupported	0	0	-	0	0	0	11580258836034030603	ok
+< sync/promoted-mutex/trylock-expr	default	unsupported	0	0	-	0	0	0	11580258836034030603	ok
+< sync/promoted-mutex/trylock-expr	rand:1:4096	unsupported	0	0	-	0	0	0	11580258836034030603	ok
+< sync/promoted-mutex/trylock-expr	rand:2:4096	unsupported	0	0	-	0	0	0	11580258836034030603	ok
+---
+> sync/promoted-mutex/trylock-expr	1,3,5,7,9,2,4,6,8,0	ok	1	1	tryLock=1	2	0	0	13191274251163326272	ok
+> sync/promoted-mutex/trylock-expr	5,5,5,5,5,5,5,5	ok	1	1	tryLock=1	2	0	0	13191274251163326272	ok
+> sync/promoted-mutex/trylock-expr	9,8,7,6,5,4,3,2,1,0	ok	1	1	tryLock=1	2	0	0	13191274251163326272	ok
+> sync/promoted-mutex/trylock-expr	default	ok	1	1	tryLock=1	2	0	0	12001011276398221595	ok
+> sync/promoted-mutex/trylock-expr	rand:1:4096	ok	1	1	tryLock=1	2	0	0	12001011276398221595	ok
+> sync/promoted-mutex/trylock-expr	rand:2:4096	ok	1	1	tryLock=1	2	0	0	12001011276398221595	ok
+
+# INTERPRETATION ([AGENT]): the diff is confined to the two rows this slice
+# FLIPS — sync/out-of-scope-trylock/trylock-uncontended and
+# sync/promoted-mutex/trylock-expr — which on main REFUSED (the tracer's
+# `unsupported` status lines: the pre-slice decoder/machine refuse the
+# TryLock call, consuming nothing) and on
+# the branch consume exactly one `tryLock` pick per stream (12 consumptions
+# = 2 rows × 6 streams, the summary's `tryLock=12`). EVERY OTHER (id,
+# stream) line — 177 ids × 6 streams — is byte-identical in status,
+# consumption count, per-site tally, max bound, observation hash and driver
+# agreement: no pre-existing row's consumption changed.

@@ -531,6 +531,16 @@ theorem step_complete {c : Config} {s : ExecState} {c' : Config} {s' : ExecState
     rename_i ch₀ happly
     simp only [List.reverse_cons] at happly
     exact ⟨ch₀, ch₀, by simp [stepFn, happly]⟩
+  -- The sync apply rules carry their own stream (the TRY heads' pick,
+  -- Q-TRYLOCK): realize under exactly it — the select recipe.
+  case syncStApply =>
+    rename_i ch₀ ch₀' happly
+    simp only [List.reverse_cons] at happly
+    exact ⟨ch₀, ch₀', by simp [stepFn, happly]⟩
+  case syncStApplyPanic =>
+    rename_i ch₀ happly
+    simp only [List.reverse_cons] at happly
+    exact ⟨ch₀, ch₀, by simp [stepFn, happly]⟩
   -- Sync statements (spec-parity slice 2): entry holds the statement
   -- abstract behind its plan — the chanStFirst recipe.
   case syncStFirst =>
@@ -2271,6 +2281,197 @@ theorem applyStmtOp_panic_any_ch_wf {σ : ExecState} {ch₀ : Choices}
 
 /-! ### Completeness at EVERY stream, under `MachineWf` -/
 
+/-! ### The TRY heads' half of the ∀-choices kit (Q-TRYLOCK, 2026-09-03)
+
+`applySyncOp` threads the stream only for the TRY heads, whose apply is
+pick-independent in outcome CLASS by the pre-commit discipline
+(`applyTryLock`: the acquired cell is stored BEFORE the pick applies, and
+`tryDeliver`'s success depends on the target list alone). -/
+
+/-- `tryDeliver`'s outcome is the same `Except` shape for every value and
+state: success and the stuck error both depend on `targets` alone. -/
+theorem tryDeliver_ok_any {b : Bool} {σ : ExecState} {targets : List Assignee}
+    {env : LocalEnv} {k : Cont} {r : Config × ExecState}
+    (h : tryDeliver b σ targets env k = .ok r) (b₂ : Bool) (σ₂ : ExecState) :
+    ∃ r₂, tryDeliver b₂ σ₂ targets env k = .ok r₂ := by
+  cases targets with
+  | nil => exact ⟨_, rfl⟩
+  | cons t ts =>
+    simp only [tryDeliver, enterRecvTargets] at h ⊢
+    rcases htp : targetsPlan (t :: ts) with _ | ⟨_ | ⟨⟨sh, _ | ⟨e, ops⟩⟩, rest⟩⟩ <;>
+      simp_all [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
+
+theorem tryDeliver_error_any {b : Bool} {σ : ExecState} {targets : List Assignee}
+    {env : LocalEnv} {k : Cont} {e : GoError}
+    (h : tryDeliver b σ targets env k = .error e) (b₂ : Bool) (σ₂ : ExecState) :
+    tryDeliver b₂ σ₂ targets env k = .error e := by
+  cases targets with
+  | nil => simp [tryDeliver] at h
+  | cons t ts =>
+    simp only [tryDeliver, enterRecvTargets] at h ⊢
+    rcases htp : targetsPlan (t :: ts) with _ | ⟨_ | ⟨⟨sh, _ | ⟨e, ops⟩⟩, rest⟩⟩ <;>
+      simp_all [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
+
+/-- `applyTryLock`'s apply-SUCCESS is pick-independent (the pre-commit
+discipline): `.ok` under one `spurious` flag ⇒ `.ok` under the other. -/
+theorem applyTryLock_ok_any {σ : ExecState} {op : SyncOp} {loc : Loc}
+    {pre : SyncPrim} {b₀ : Bool} {targets : List Assignee} {env : LocalEnv}
+    {k : Cont} {r : Config × ExecState}
+    (h : applyTryLock σ op loc pre b₀ targets env k = .ok r) (b : Bool) :
+    ∃ r₂, applyTryLock σ op loc pre b targets env k = .ok r₂ := by
+  rw [applyTryLock.eq_def] at h ⊢
+  simp only [bind_eq_ok] at h
+  obtain ⟨acq, hacq, h⟩ := h
+  simp only [Bind.bind, Except.bind, hacq]
+  cases acq with
+  | none => exact ⟨_, h⟩
+  | some post =>
+    simp only [bind_eq_ok] at h
+    obtain ⟨σA, hst, h⟩ := h
+    simp only [hst]
+    cases b₀ <;> cases b <;> simp only [Bool.false_eq_true, ↓reduceIte] at h ⊢
+    all_goals first
+      | exact ⟨_, h⟩
+      | exact tryDeliver_ok_any h _ _
+
+/-- `applyTryLock`'s ERROR is pick-independent too: every error fires
+before the pick applies (`tryAcquire`, the pre-committed `storeLoc`) or
+in `tryDeliver`, whose error is the same for both flags. -/
+theorem applyTryLock_error_any {σ : ExecState} {op : SyncOp} {loc : Loc}
+    {pre : SyncPrim} {b₀ : Bool} {targets : List Assignee} {env : LocalEnv}
+    {k : Cont} {e : GoError}
+    (h : applyTryLock σ op loc pre b₀ targets env k = .error e) (b : Bool) :
+    applyTryLock σ op loc pre b targets env k = .error e := by
+  rw [applyTryLock.eq_def] at h ⊢
+  simp only [Bind.bind, Except.bind] at h ⊢
+  cases hacq : tryAcquire op pre with
+  | error e' => rw [hacq] at h; simpa using h
+  | ok acq =>
+    rw [hacq] at h
+    cases acq with
+    | none => exact h
+    | some post =>
+      simp only [] at h ⊢
+      cases hst : storeLoc σ loc (.syncData post) with
+      | error e' => rw [hst] at h; simpa using h
+      | ok σA =>
+        rw [hst] at h
+        cases b₀ <;> cases b <;> simp only [Bool.false_eq_true, ↓reduceIte] at h ⊢
+        all_goals first
+          | exact h
+          | exact tryDeliver_error_any h _ _
+
+/-- Is this configuration a TRY head's sync-apply position (the one sync
+apply that draws the `tryLock` site — Q-TRYLOCK)? Conservative, like
+`consumesSelect`: flags the held-cell apply too (bound 1, which pops
+nothing) — the checkers fail closed there rather than reasoning about
+acquirability; the membership enumerator's `stepNeeds` computes the
+exact width. -/
+def consumesTryLock : Config → Bool
+  | .retV _ (.syncStK op _ [] _ _) => op.tryTargets?.isSome
+  | _ => false
+
+/-- `consumesTryLock`'s negation names the head: a non-TRY head. -/
+theorem consumesTryLock_none {v : GoValue} {op : SyncOp} {done : List GoValue}
+    {env : LocalEnv} {k : Cont}
+    (h : consumesTryLock (.retV v (.syncStK op done [] env k)) = false) :
+    op.tryTargets? = none := by
+  simp only [consumesTryLock, Option.isSome_eq_false_iff, Option.isNone_iff_eq_none] at h
+  exact h
+
+/-- A non-TRY head's apply passes the stream through untouched, on
+success — the `applyStmtOp_eq_core` twin. -/
+theorem applySyncOp_core_ok {σ : ExecState} {ch₀ : Choices} {op : SyncOp}
+    {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
+    {σ' : ExecState} {ch' : Choices} (hop : op.tryTargets? = none)
+    (h : applySyncOp σ ch₀ op vs env k = .ok (c', σ', ch')) :
+    ch' = ch₀ ∧ ∀ ch : Choices, applySyncOp σ ch op vs env k = .ok (c', σ', ch) := by
+  rw [applySyncOp.eq_def] at h
+  rw [hop] at h
+  simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+  obtain ⟨⟨c₀, σ₀⟩, hcore, rfl, rfl, rfl⟩ := h
+  refine ⟨rfl, fun ch => ?_⟩
+  rw [applySyncOp.eq_def, hop]
+  simp [hcore, Bind.bind, Except.bind]
+
+/-- … and on error. -/
+theorem applySyncOp_core_error {σ : ExecState} {ch₀ : Choices} {op : SyncOp}
+    {vs : List GoValue} {env : LocalEnv} {k : Cont} {e : GoError}
+    (hop : op.tryTargets? = none)
+    (h : applySyncOp σ ch₀ op vs env k = .error e) :
+    ∀ ch : Choices, applySyncOp σ ch op vs env k = .error e := by
+  intro ch
+  rw [applySyncOp.eq_def] at h ⊢
+  rw [hop] at h ⊢
+  simp only [Bind.bind, Except.bind] at h ⊢
+  cases hcore : applySyncOpCore σ op vs env k with
+  | error e' => rw [hcore] at h; simpa using h
+  | ok r => rw [hcore] at h; cases h
+
+/-- `applySyncOp`'s apply-SUCCESS is stream-independent: the non-TRY heads
+never see the stream, the TRY heads by `applyTryLock_ok_any`. -/
+theorem applySyncOp_ok_any_ch {σ : ExecState} {ch₀ : Choices} {op : SyncOp}
+    {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
+    {σ' : ExecState} {ch₁ : Choices}
+    (h : applySyncOp σ ch₀ op vs env k = .ok (c', σ', ch₁)) (ch : Choices) :
+    ∃ (c₂ : Config) (σ₂ : ExecState) (ch₂ : Choices),
+      applySyncOp σ ch op vs env k = .ok (c₂, σ₂, ch₂) := by
+  cases hop : op.tryTargets? with
+  | none =>
+    obtain ⟨-, hall⟩ := applySyncOp_core_ok hop h
+    exact ⟨c', σ', ch, hall ch⟩
+  | some targets =>
+    rw [applySyncOp.eq_def] at h ⊢
+    rw [hop] at h ⊢
+    split at h
+    · rename_i av
+      simp only [bind_eq_ok] at h
+      obtain ⟨loc, hloc, pre, hcell, ⟨c₀, σ₀⟩, happ, -⟩ := h
+      obtain ⟨⟨c₂, σ₂⟩, happ₂⟩ := applyTryLock_ok_any happ
+        ((Choices.consumeAt .tryLock (tryLockWidth op pre) ch).1 == 1)
+      refine ⟨c₂, σ₂, (Choices.consumeAt .tryLock (tryLockWidth op pre) ch).2, ?_⟩
+      simp [hloc, hcell, happ₂, Bind.bind, Except.bind]
+    · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+    · rename_i heq
+      cases heq
+
+/-- `applySyncOp`'s PANIC is stream-independent: every panic fires before
+the pick (`valueAsLoc`; `applyTryLock_error_any` covers the rest). -/
+theorem applySyncOp_panic_any_ch {σ : ExecState} {ch₀ : Choices} {op : SyncOp}
+    {vs : List GoValue} {env : LocalEnv} {k : Cont} {msg : String}
+    (h : applySyncOp σ ch₀ op vs env k = .error (.panic msg)) (ch : Choices) :
+    applySyncOp σ ch op vs env k = .error (.panic msg) := by
+  cases hop : op.tryTargets? with
+  | none => exact applySyncOp_core_error hop h ch
+  | some targets =>
+    rw [applySyncOp.eq_def] at h ⊢
+    rw [hop] at h ⊢
+    split at h
+    · rename_i targets' av heq
+      cases heq
+      simp only [Bind.bind, Except.bind] at h ⊢
+      cases hloc : valueAsLoc av with
+      | error e' => rw [hloc] at h; simpa using h
+      | ok loc =>
+        rw [hloc] at h
+        dsimp only at h ⊢
+        cases hcell : syncCell σ loc with
+        | error e' => rw [hcell] at h; simpa using h
+        | ok pre =>
+          rw [hcell] at h
+          dsimp only at h ⊢
+          cases happ : applyTryLock σ op loc pre
+              ((Choices.consumeAt .tryLock (tryLockWidth op pre) ch₀).1 == 1) targets env k with
+          | error e' =>
+            rw [happ] at h
+            simp only [Except.error.injEq] at h
+            subst h
+            rw [applyTryLock_error_any happ]
+          | ok r => rw [happ] at h; cases h
+    · simp at h
+    · rename_i heq
+      cases heq
+
 /-- Under the wf typing component, a snapshot entry's variables always
 bind: the keys/values are self-normalized, so `bindIterVars`' per-pick
 normalization succeeds (returning them unchanged) at every pick. -/
@@ -2583,6 +2784,16 @@ theorem step_complete_any_wf_aux {c : Config} {σ : ExecState} {c' : Config}
       first
         | (simp_all [stepFn, atomicPlan]; done)
         | (simp only [stepFn]; rw [hplan]; exact ⟨_, rfl⟩)
+  -- The sync apply is pick-independent in apply-SUCCESS and in its panic
+  -- (Q-TRYLOCK; `applySyncOp_ok_any_ch`/`applySyncOp_panic_any_ch`).
+  case syncStApply op done v env k ch₀ ch₁ happly =>
+    obtain ⟨c₂, σ₂, ch₂, hap⟩ := applySyncOp_ok_any_ch happly ch
+    simp only [List.reverse_cons] at hap
+    exact ⟨(c₂, σ₂, ch₂), by simp [stepFn, hap]⟩
+  case syncStApplyPanic op done v msg env k ch₀ happly =>
+    have hap := applySyncOp_panic_any_ch happly ch
+    simp only [List.reverse_cons] at hap
+    exact ⟨(.panicking [⟨runtimeErrorValue msg, false⟩] k, σ, ch), by simp [stepFn, hap]⟩
   -- The select apply is pick-independent in apply-SUCCESS (slice 4;
   -- `applySelect_ok_or_panic_any_ch`): under any stream it lands `.ok`
   -- or a panic, and `stepFn` maps both to `.ok` configurations.
@@ -2770,6 +2981,7 @@ def consumesSelect : Config → Bool
   | .retV _ (.selectOpsK _ _ _ [] _ _) => true
   | _ => false
 
+
 /-- The kernel-evaluable ∀-streams run explorer (docstring above). At a
 nonempty `mapIterK` it checks EVERY pick; elsewhere it probes one step
 at the canonical stream `[0]` and relies on `stepFn_oblivious`. `false`
@@ -2809,7 +3021,7 @@ def allStreamsOk : Nat → ExecState → Config → Bool
                   | .ok (c', σ', _) => allStreamsOk fuel σ' c'
                   | .error _ => false
       | c =>
-          if consumesAppendSlice c || consumesSelect c || consumesNilValueMethod σ c then false
+          if consumesAppendSlice c || consumesSelect c || consumesNilValueMethod σ c || consumesTryLock c then false
           else
             match stepFn σ c [0] with
             | .ok (c', σ', _) => allStreamsOk fuel σ' c'
@@ -2854,12 +3066,13 @@ theorem stepFn_exec_plan_nullary {σ : ExecState} {stmt : Stmt}
 set_option maxHeartbeats 1600000 in
 set_option linter.unusedSimpArgs false in
 /-- **Stream obliviousness of the non-consuming arms**: away from the
-three consuming shapes (a `mapIterK` at the `.next` position — excluded
-by `hmi` — an `appendSlice` apply position — excluded by `hnc` — and a
+four consuming shapes (a `mapIterK` at the `.next` position — excluded
+by `hmi` — an `appendSlice` apply position — excluded by `hnc` — a
 select apply position, whose `applySelect` may draw the L2 clause pick
-— excluded by `hns`, slice 4 — and a frame entry in BUG-087's wrapper
+— excluded by `hns`, slice 4 — a frame entry in BUG-087's wrapper
 family, whose `enterFrameStep` draws the `nilValueMethodText` pick —
-excluded by `hnv`), a step
+excluded by `hnv` — and a TRY head's sync apply, which draws the
+`tryLock` site — excluded by `hnt`, Q-TRYLOCK), a step
 that succeeds under one stream succeeds under EVERY stream, with the SAME
 successor and the stream returned untouched. Sweep over `stepFn`'s case
 tree; a newly added stream-consuming arm breaks this proof loudly rather
@@ -2873,6 +3086,7 @@ theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
     (hnc : consumesAppendSlice c = false)
     (hns : consumesSelect c = false)
     (hnv : consumesNilValueMethod σ c = false)
+    (hnt : consumesTryLock c = false)
     (h : stepFn σ c ch₀ = .ok (c', σ', ch₀')) :
     ch₀' = ch₀ ∧ ∀ ch : Choices, stepFn σ c ch = .ok (c', σ', ch) := by
   fun_cases stepFn σ c ch₀
@@ -2940,8 +3154,32 @@ theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
     rw [hplan, if_neg hgt] at h
     simp [throw, throwThe, MonadExceptOf.throw] at h
   -- Sync statements (spec-parity slice 2): the chan recipes — entry is
-  -- stream-transparent (the apply consumes nothing, applySyncOp's
-  -- envelope statement).
+  -- stream-transparent; the APPLY is stream-transparent for every
+  -- non-TRY head (`hnt` excludes the TRY heads — Q-TRYLOCK's
+  -- `tryLock` site; `applySyncOp_core_ok`/`_error`).
+  case case146 =>
+    rename_i happly
+    have hnone := consumesTryLock_none hnt
+    simp only [stepFn] at h
+    rw [happly] at h
+    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    obtain ⟨rfl, hall⟩ := applySyncOp_core_ok hnone happly
+    refine ⟨rfl, fun ch => ?_⟩
+    simp only [stepFn]
+    rw [hall ch]
+    rfl
+  case case147 =>
+    rename_i happly
+    have hnone := consumesTryLock_none hnt
+    simp only [stepFn] at h
+    rw [happly] at h
+    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    refine ⟨rfl, fun ch => ?_⟩
+    simp only [stepFn]
+    rw [applySyncOp_core_error hnone happly ch]
+    rfl
   case case60 =>
     rename_i hplan
     simp only [stepFn] at h
@@ -3476,22 +3714,23 @@ theorem execStmtLoop_ok_of_allStreamsOk :
           exact hrun
     · -- the oblivious catch-all
       rename_i hx1 hx2 hx3 hx4 hx5
-      cases hnc : (consumesAppendSlice c || consumesSelect c || consumesNilValueMethod σ c) with
+      cases hnc : (consumesAppendSlice c || consumesSelect c || consumesNilValueMethod σ c || consumesTryLock c) with
       | true =>
         rw [hnc] at hall
         simp at hall
       | false =>
         rw [hnc] at hall
         simp only [Bool.false_eq_true, if_false] at hall
-        obtain ⟨⟨hnc1, hnc2⟩, hnc3⟩ : (consumesAppendSlice c = false
-            ∧ consumesSelect c = false) ∧ consumesNilValueMethod σ c = false := by
+        obtain ⟨⟨⟨hnc1, hnc2⟩, hnc3⟩, hnc4⟩ : ((consumesAppendSlice c = false
+            ∧ consumesSelect c = false) ∧ consumesNilValueMethod σ c = false)
+            ∧ consumesTryLock c = false := by
           simpa using hnc
         split at hall
         · rename_i c₁ σ₁ ch₁ hprobe
           obtain ⟨-, hobl⟩ := stepFn_oblivious
             (fun kv vv kt vt b bs pr st e kk heq =>
               hx5 kv vv kt vt b bs pr st e kk heq)
-            hnc1 hnc2 hnc3 hprobe
+            hnc1 hnc2 hnc3 hnc4 hprobe
           obtain ⟨out, ch', hrun⟩ := ih hall ch
           exact ⟨out, ch', by rw [execStmtLoop_step (hobl ch)]; exact hrun⟩
         · exact absurd hall (by simp)

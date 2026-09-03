@@ -117,6 +117,7 @@ private def exprAllowedKeys : String → Option (List String)
   | "call" => some ["expr", "func", "args", "resultTypes"]
   | "call-value" => some ["expr", "callee", "args", "resultTypes"]
   | "atomic-op" => some ["expr", "op", "kind", "args", "resultTypes"]
+  | "sync-op" => some ["expr", "op", "args", "resultTypes"]
   | _ => none
 
 /-- Allowed key sets for statement nodes, by `stmt` tag. `for` and
@@ -540,6 +541,7 @@ partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
       pure (.typeAssert operand target source)
   | "call" => fail "call in expression position is not modeled (calls are statements)"
   | "atomic-op" => fail "atomic op in expression position is not modeled (sync/atomic ops are statements, like calls)"
+  | "sync-op" => fail "sync op in expression position is not modeled (TryLock/TryRLock are statements, like calls)"
   | other => fail s!"unsupported expression {other} at {path}"
 where
   decodeBinary (path : String) (obj : StrictJson.Obj) (op : String) (x y : Expr) : LowerM Expr := do
@@ -711,6 +713,32 @@ private def asAtomicOp? (json : Json) : LowerM (Option (AtomicStmtOp × IntKind 
       if args.size != arity then
         fail s!"atomic op {opName} expects {arity} operand(s), got {args.size}"
       pure (some (op, kind, args))
+  | _ => pure none
+
+/-- Recognize the value-returning sync ops' EXPRESSION node (Q-TRYLOCK):
+`{"expr":"sync-op","op":<tryLock|tryRLock|tryWLock>,"args":[recv],
+"resultTypes":[bool]}` — the frontend emits it for `m.TryLock()` /
+`rw.TryRLock()` / `rw.TryLock()` and hoists it exactly like a call, so
+it is admitted ONLY where `atomic-op` is (an expression statement; the
+single RHS of an assignment) and lowers to `Stmt.syncStmt` with the
+result target. Same wire op names as the statement form (one op
+identity — the Q-SYNCVAL identity principle); any other op name here
+is a forged wire. -/
+private def asSyncValueOp? (json : Json) : LowerM (Option (SyncStmtOp × Array Json)) := do
+  match json.getObjVal? "expr" with
+  | .ok (.str "sync-op") =>
+      let obj ← StrictJson.obj "sync-op" json
+      checkAllowedKeys "sync-op" obj ["expr", "op", "args", "resultTypes"]
+      let opName ← StrictJson.string "sync-op.op" (← StrictJson.field "sync-op" obj "op")
+      let op : SyncStmtOp ← match opName with
+        | "tryLock" => pure .tryLock
+        | "tryRLock" => pure .tryRLock
+        | "tryWLock" => pure .tryWLock
+        | other => fail s!"unsupported value sync op {other} (only TryLock/TryRLock return a value)"
+      let args ← StrictJson.array "sync-op.args" (← StrictJson.field "sync-op" obj "args")
+      if args.size != 1 then
+        fail s!"value sync op {opName} expects 1 operand (the receiver address), got {args.size}"
+      pure (some (op, args))
   | _ => pure none
 
 /-- Recognize a call through a func VALUE (a closure or func-typed
@@ -896,6 +924,14 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
               | some (op, kind, args) =>
                   let argsE ← args.mapIdxM (fun i a => decodeExpr s!"{path}.expr.args[{i}]" a)
                   pure (.atomicStmt op kind argsE #[])
+              | none =>
+              -- A bare `m.TryLock()` statement DISCARDS its result but
+              -- still acquires (Q-TRYLOCK): no target — `syncPlan`
+              -- admits the empty target list for the TRY heads.
+              match ← asSyncValueOp? e with
+              | some (op, args) =>
+                  let argsE ← args.mapIdxM (fun i a => decodeExpr s!"{path}.expr.args[{i}]" a)
+                  pure (.syncStmt op argsE #[])
               | none => fail s!"expression statement is not a call at {path} (calls are the only effectful expressions modeled)"
   | "range" =>
       decodeRange results path obj
@@ -965,8 +1001,23 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
         if args.size != arity then
           fail s!"sync op {opName} expects {arity} operand(s), got {args.size} at {path}"
         pure (.syncStmt op args #[])
+      let tryStmt (op : SyncStmtOp) : LowerM Stmt := do
+        if args.size != 1 then
+          fail s!"sync op {opName} expects 1 operand, got {args.size} at {path}"
+        match obj.get? "target" with
+        | none => pure (.syncStmt op args #[])
+        | some tj => do
+            let t ← decodeTarget s!"{path}.target" tj
+            pure (.seqn ((← declaresOf #[t]).push (.syncStmt op args #[t.assignee])))
       match opName with
       | "lock" => plain .lock 1
+      -- The TRY heads in STATEMENT position: with a `target` (the bodied
+      -- stub's declared Bool temp — the onceBegin shape) or without (a
+      -- bare `m.TryLock()` discards the result; the hoisted valued form
+      -- arrives as the `sync-op` EXPRESSION node instead).
+      | "tryLock" => tryStmt .tryLock
+      | "tryRLock" => tryStmt .tryRLock
+      | "tryWLock" => tryStmt .tryWLock
       | "unlock" => plain .unlock 1
       | "rlock" => plain .rlock 1
       | "runlock" => plain .runlock 1
@@ -1393,6 +1444,23 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
           assignee := t.assignee
         let argsE ← args.mapIdxM (fun i a => decodeExpr s!"{path}.rhs[0].args[{i}]" a)
         return .seqn (decls.push (.atomicStmt op kind argsE #[assignee]))
+    | none => pure ()
+  -- A value-returning sync op on the RHS (Q-TRYLOCK): exactly ONE
+  -- target (the Bool result); a blank target drops the result — the op
+  -- still takes effect (the empty target list, `syncPlan`).
+  if rhs.size == 1 then
+    match ← asSyncValueOp? rhs[0]! with
+    | some (op, args) =>
+        if lhs.size != 1 then
+          fail s!"value sync op assigned to {lhs.size} targets at {path} (TryLock/TryRLock have exactly one result)"
+        let lj := lhs[0]!
+        let argsE ← args.mapIdxM (fun i a => decodeExpr s!"{path}.rhs[0].args[{i}]" a)
+        if targetIsBlank lj then
+          return .syncStmt op argsE #[]
+        else
+          let t ← decodeTarget s!"{path}.lhs[0]" lj
+          let decls ← declaresOf #[t]
+          return .seqn (decls.push (.syncStmt op argsE #[t.assignee]))
     | none => pure ()
   -- Same for a call through a func value.
   if rhs.size == 1 then

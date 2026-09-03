@@ -1,0 +1,20 @@
+DRIFT vs baselines/native-full.tsv (3216 case(s) run):
+race/free-sync/rw-trylock-publish	NEW id (not in baseline) -> PASS/confluent
+race/free-sync/rw-tryrlock-acquire	NEW id (not in baseline) -> PASS/membership
+race/free-sync/trylock-publish	NEW id (not in baseline) -> PASS/confluent
+race/negative-sync/failed-trylock-no-edge	NEW id (not in baseline) -> PASS/racy
+race/negative-sync/overwrite-vs-trylock	NEW id (not in baseline) -> PASS/racy
+sync/out-of-scope-trylock/trylock-uncontended	baseline[FAIL/frontend-export] -> now[PASS/membership]
+sync/promoted-mutex/trylock-expr	baseline[FAIL/frontend-export] -> now[PASS/membership]
+sync/trylock/discarded-acquires	NEW id (not in baseline) -> PASS/membership
+sync/trylock/locked-false	NEW id (not in baseline) -> PASS/-
+sync/trylock/rw-try-writer-held	NEW id (not in baseline) -> PASS/-
+sync/trylock/rw-trylock-reader-held	NEW id (not in baseline) -> PASS/-
+sync/trylock/rw-trylock-unlocked	NEW id (not in baseline) -> PASS/membership
+sync/trylock/rw-tryrlock-pending-writer	NEW id (not in baseline) -> PASS/membership
+sync/trylock/rw-tryrlock-reader-held	NEW id (not in baseline) -> PASS/membership
+sync/trylock/rw-tryrlock-unlocked	NEW id (not in baseline) -> PASS/membership
+sync/trylock/spin-until-trylock	NEW id (not in baseline) -> PASS/membership
+sync/trylock/trylock-false-then-lock	NEW id (not in baseline) -> PASS/-
+sync/trylock/unlock-after-trylock-success	NEW id (not in baseline) -> PASS/membership
+sync/trylock/unlocked-acquire	NEW id (not in baseline) -> PASS/membership

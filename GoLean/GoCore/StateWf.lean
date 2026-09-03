@@ -314,10 +314,11 @@ def chanStOpSup : ChanStOp → Nat
   | .recv targets _ => assigneeListSup targets
   | .close => 0
 
-/-- A sync op head's loc positions: only `onceBegin`'s delivery targets
-(spec-parity slice 2). -/
+/-- A sync op head's loc positions: `onceBegin`'s delivery targets
+(spec-parity slice 2) and the TRY heads' result targets (Q-TRYLOCK). -/
 def syncOpSup : SyncOp → Nat
   | .onceBegin targets => assigneeListSup targets
+  | .tryLock targets | .tryRLock targets | .tryWLock targets => assigneeListSup targets
   | _ => 0
 
 /-- An atomic op's loc positions: its result target (atomics arc wave 1;
@@ -5079,7 +5080,7 @@ theorem syncPlan_locSup {stmt : Stmt} {op : SyncOp}
     | (simp [syncPlan] at h; done)
     | skip
   case syncStmt sop args targets =>
-    cases sop <;> simp only [syncPlan] at h <;> repeat' split at h
+    cases sop <;> simp only [syncPlan, syncPlan.tryPlan] at h <;> repeat' split at h
     all_goals try (simp at h; done)
     all_goals
       simp only [Option.some.injEq, Prod.mk.injEq] at h
@@ -5092,6 +5093,10 @@ theorem syncPlan_locSup {stmt : Stmt} {op : SyncOp}
         first
         | exact Nat.zero_le _
         | exact Nat.le_max_right _ _
+        | (simp only [assigneeListSup]; exact Nat.zero_le _)
+        -- The TRY heads' one-target plan: `targets.toList = [t]` is the
+        -- split's equation; the target list's sup IS the statement's.
+        | (rename_i ht _ _ _; rw [ht]; exact Nat.le_max_right _ _)
 
 /-- The lock/counter cells store LOC-FREE values, so a sync cell store
 never raises any sup. -/
@@ -5142,23 +5147,23 @@ theorem atomicCompute_locSup {head : AtomicStmtOp} {kind : IntKind} {cur : Int}
     | (cases h)
 
 set_option maxHeartbeats 1600000 in
-/-- `applySyncOp` preservation (spec-parity slice 2, the
+/-- `applySyncOpCore` preservation (spec-parity slice 2, the
 `applyChanOp_wf` twin): wf state out, bounded successor configuration,
 types unchanged, allocator monotone. Sync stores are loc-free
 (`syncData_locSup`), so every arm is either state-invariant or a
 `storeLoc_pres` of a loc-free value. -/
-theorem applySyncOp_wf {σ : ExecState} {op : SyncOp}
+theorem applySyncOpCore_wf {σ : ExecState} {op : SyncOp}
     {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
     {σ' : ExecState}
     (hw : StateWf σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
     (hop : syncOpSup op ≤ σ.nextAddr)
     (henv : LocalEnv.locSup env ≤ σ.nextAddr)
     (hk : Cont.locSup k ≤ σ.nextAddr)
-    (h : applySyncOp σ op vs env k = .ok (c', σ')) :
+    (h : applySyncOpCore σ op vs env k = .ok (c', σ')) :
     StateWf σ' ∧ Config.locSup c' ≤ σ'.nextAddr ∧ σ'.types = σ.types
       ∧ σ.nextAddr ≤ σ'.nextAddr := by
   -- Closers shared by every arm's outcomes.
-  rw [applySyncOp.eq_def] at h
+  rw [applySyncOpCore.eq_def] at h
   split at h
   case _ av =>  -- lock
     simp only [goValueListSup, Nat.max_le] at hvs
@@ -5379,8 +5384,101 @@ theorem applySyncOp_wf {σ : ExecState} {op : SyncOp}
         omega
       · simp [throw, throwThe, MonadExceptOf.throw] at h
     · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
-  case _ =>  -- malformed arity: stuck
-    simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+  -- The TRY heads (`.internal` — they apply through `applySyncOp`) and
+  -- the malformed-arity catch-all (`stuck`): no successor.
+  all_goals simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+
+/-- `tryDeliver` preservation: the plain continuation is state-invariant;
+the target entry is `enterRecvTargets_wf` over a loc-free Bool. -/
+theorem tryDeliver_wf {σ : ExecState} {b : Bool} {targets : List Assignee}
+    {env : LocalEnv} {k : Cont} {c' : Config} {σ' : ExecState}
+    (hw : StateWf σ) (ht : assigneeListSup targets ≤ σ.nextAddr)
+    (henv : LocalEnv.locSup env ≤ σ.nextAddr)
+    (hk : Cont.locSup k ≤ σ.nextAddr)
+    (h : tryDeliver b σ targets env k = .ok (c', σ')) :
+    StateWf σ' ∧ Config.locSup c' ≤ σ'.nextAddr ∧ σ'.types = σ.types
+      ∧ σ.nextAddr ≤ σ'.nextAddr := by
+  unfold tryDeliver at h
+  split at h
+  · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    refine ⟨hw, ?_, rfl, Nat.le_refl _⟩
+    simp only [Config.locSup]
+    omega
+  · simp only [bind_eq_ok] at h
+    obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
+    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨q1, q2, q3, q4⟩ := enterRecvTargets_wf hw
+      (by omega) (by simp [goValueListSup, GoValue.locSup])
+      (by simp [Stmt.locSup, stmtListSup]) (by omega) (by omega) hent
+    exact ⟨q1, by simpa using q2, q3, q4⟩
+
+/-- `applyTryLock` preservation (Q-TRYLOCK): the pre-committed acquire
+is a `storeLoc_pres` of a loc-free sync value; the delivery is
+`tryDeliver_wf` at either state. -/
+theorem applyTryLock_wf {σ : ExecState} {op : SyncOp} {loc : Loc}
+    {pre : SyncPrim} {spurious : Bool} {targets : List Assignee}
+    {env : LocalEnv} {k : Cont} {c' : Config} {σ' : ExecState}
+    (hw : StateWf σ) (hloc : Loc.locSup loc ≤ σ.nextAddr)
+    (ht : assigneeListSup targets ≤ σ.nextAddr)
+    (henv : LocalEnv.locSup env ≤ σ.nextAddr)
+    (hk : Cont.locSup k ≤ σ.nextAddr)
+    (h : applyTryLock σ op loc pre spurious targets env k = .ok (c', σ')) :
+    StateWf σ' ∧ Config.locSup c' ≤ σ'.nextAddr ∧ σ'.types = σ.types
+      ∧ σ.nextAddr ≤ σ'.nextAddr := by
+  rw [applyTryLock.eq_def] at h
+  simp only [bind_eq_ok] at h
+  obtain ⟨acq, hacq, h⟩ := h
+  split at h
+  · exact tryDeliver_wf hw ht henv hk h
+  · simp only [bind_eq_ok] at h
+    obtain ⟨σ₂, hst, h⟩ := h
+    obtain ⟨w1, w2, w3, w4, w5⟩ := storeLoc_pres hw hloc
+      (by simp [syncData_locSup]) hst
+    split at h
+    · exact tryDeliver_wf hw ht henv hk h
+    · obtain ⟨q1, q2, q3, q4⟩ := tryDeliver_wf w1 (by omega) (by omega) (by omega) h
+      exact ⟨q1, q2, q3.trans w4, Nat.le_trans w2 q4⟩
+
+/-- A TRY head's result-target sup is its `syncOpSup`. -/
+theorem syncOpSup_of_tryTargets {op : SyncOp} {ts : List Assignee}
+    (h : op.tryTargets? = some ts) : syncOpSup op = assigneeListSup ts := by
+  cases op <;> simp_all [SyncOp.tryTargets?, syncOpSup]
+
+/-- `applySyncOp` preservation (the choice-taking entry): the TRY heads
+through `applyTryLock_wf`, everything else through
+`applySyncOpCore_wf`. The stream plays no part in the state claims. -/
+theorem applySyncOp_wf {σ : ExecState} {ch : Choices} {op : SyncOp}
+    {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
+    {σ' : ExecState} {ch' : Choices}
+    (hw : StateWf σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
+    (hop : syncOpSup op ≤ σ.nextAddr)
+    (henv : LocalEnv.locSup env ≤ σ.nextAddr)
+    (hk : Cont.locSup k ≤ σ.nextAddr)
+    (h : applySyncOp σ ch op vs env k = .ok (c', σ', ch')) :
+    StateWf σ' ∧ Config.locSup c' ≤ σ'.nextAddr ∧ σ'.types = σ.types
+      ∧ σ.nextAddr ≤ σ'.nextAddr := by
+  rw [applySyncOp.eq_def] at h
+  split at h
+  · rename_i targets av htry
+    simp only [goValueListSup, Nat.max_le] at hvs
+    simp only [bind_eq_ok] at h
+    obtain ⟨loc, hloc, h⟩ := h
+    have hlocb : Loc.locSup loc ≤ σ.nextAddr :=
+      Nat.le_trans (valueAsLoc_locSup hloc) (by omega)
+    obtain ⟨pre, hcell, h⟩ := h
+    obtain ⟨⟨c₀, σ₀⟩, happ, h⟩ := h
+    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    rw [syncOpSup_of_tryTargets htry] at hop
+    exact applyTryLock_wf hw hlocb hop henv hk happ
+  · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+  · simp only [bind_eq_ok] at h
+    obtain ⟨⟨c₀, σ₀⟩, hcore, h⟩ := h
+    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    exact applySyncOpCore_wf hw hvs hop henv hk hcore
 
 set_option maxHeartbeats 1600000 in
 /-- Extract the source element behind one `mapM` output position (the
@@ -5536,10 +5634,10 @@ theorem applyChanOp_itersNormalized {σ : ExecState} {op : ChanStOp}
   exact Config.itersNormalized_true types c'
 
 @[inherit_doc applySyncOp_wf]
-theorem applySyncOp_itersNormalized {σ : ExecState} {op : SyncOp}
+theorem applySyncOp_itersNormalized {σ : ExecState} {ch : Choices} {op : SyncOp}
     {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
-    {σ' : ExecState} {types : TypeEnv}
-    (h : applySyncOp σ op vs env k = .ok (c', σ'))
+    {σ' : ExecState} {ch' : Choices} {types : TypeEnv}
+    (h : applySyncOp σ ch op vs env k = .ok (c', σ', ch'))
     (hk : Cont.itersNormalized types k = true) :
     Config.itersNormalized types c' = true := by
   -- Vacuously by the retained-component lemma (BUG-005 (L)
@@ -6282,7 +6380,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
       Nat.max_le] at hc h1 h2 ⊢
     omega
-  case syncStApply op done v env k happly =>
+  case syncStApply op done v env k ch ch' happly =>
     have hop : goValueListSup (v :: done).reverse ≤ σ.nextAddr
         ∧ syncOpSup op ≤ σ.nextAddr
         ∧ LocalEnv.locSup env ≤ σ.nextAddr

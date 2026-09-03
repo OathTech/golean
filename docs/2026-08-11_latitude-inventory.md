@@ -109,6 +109,7 @@ between sweeps (the reconciler's C12 checks row COUNT, not lines).
 | Post-op boundary pick (`postOp`, W3.2 stage C) | Multi.lean:1153 (via `Config.boundarySite`, :1100) | \|runnable\| (issuer-first menu, `schedSlots` :1122) | at an `.opDone .postOp` marker, only width > 1 | slot 0 = the ISSUER continues (the pre-widening schedule, literally) |
 | Loop back-edge pick (`backEdge`, W3.2 stage D) | Multi.lean:1153 (via `Config.boundarySite`, :1101–1103) | \|runnable\| (current-first menu, `schedSlots` :1123) | at a loop re-entry shape (`.loop`, `.mapIterK`), only width > 1 | slot 0 = the CURRENT goroutine continues |
 | Frame-entry panic TEXT pick (`nilValueMethodText`, BUG-087 / R9a, 2026-09-03) | StepFn.lean `enterFrameStep` + `enterFrameDeferPanicking`, Multi.lean `spawnStep` (envelope statement `nilValueMethodText?`, Ops.lean, beside `dynamicDispatch?`'s nil arm) | `nilValueMethodWidth` — 2 on the wrapper family, 1 elsewhere | at a frame entry in the family (value-receiver method dispatched through an interface holding a nil `*T`, target not a promotion wrapper), only width > 1 | slot 0 = the nil-dereference text (the pre-BUG-087 machine's only member) |
+| TryLock spurious failure (`tryLock`, Q-TRYLOCK 2026-09-03) | Machine.lean `applySyncOp` (the TRY-head arm; envelope statement at `applyTryLock`) | `tryLockWidth op pre` — 2 at an acquirable cell (`tryAcquire`), 1 at a held one | only width 2 (an acquirable cell; the held cell's bound-1 consult pops nothing — `consumeAtOne := false`) | slot 0 = ACQUIRE (gc's realized point); slot 1 = the spurious false |
 
 The race detector consumes NOTHING and replays nothing (stage B, Q2:
 `raceUpdate` folds the step's emitted `StepEvent` — the old
@@ -436,7 +437,9 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   and says nothing about which contender acquires (the absence half);
   its TryLock sentence ("may be considered to be able to return false
   even when the mutex l is unlocked") is an explicit spec-granted
-  spurious-failure envelope member to model if TryLock ever lands.
+  spurious-failure envelope member — MODELED 2026-09-03 as its own site,
+  row C12 below (Q-TRYLOCK; the "zero new sites" of this row's heading
+  is about the ACQUISITION-ORDER latitude, which still rides L1).
   mem#once carries the once.Do edge quoted at the arm; the DOCS
   citations at the arms rest on mem#more's delegation — verbatim: "The
   documentation for each of these specifies the guarantees it makes
@@ -632,6 +635,93 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   already correct) — forced by the memory model.
 
 ---
+
+### C12. TryLock / TryRLock spurious failure — (a) ENVELOPED (own site `tryLock`; Q-TRYLOCK, RULED [USER] 2026-08-31, implemented 2026-09-03)
+
+- WHERE: mem#locks, verbatim: "A successful call to l.TryLock (or
+  l.TryRLock) is equivalent to a call to l.Lock (or l.RLock). An
+  unsuccessful call has no synchronizing effect at all. As far as the
+  memory model is concerned, l.TryLock (or l.TryRLock) may be
+  considered to be able to return false even when the mutex l is
+  unlocked." Spec-DECLARED latitude, not silence: at an acquirable
+  cell the return-value envelope is {true, false}. Ruling of record:
+  `docs/2026-08-31_qrow-rulings.md` row 5 (envelope pre-ruled
+  2026-08-31, per-row confirmed 2026-09-01, own-slice sequencing and
+  the twin-pin move 2026-09-03 — all relayed by the [AGENT]
+  coordinator, cited there); memo `docs/2026-08-21_w32-qrow-memos.md`
+  §5. Machine: `applySyncOp`'s TRY-head arm draws `ChoiceSite.tryLock`
+  at `tryLockWidth op pre` (Machine.lean; the envelope statement at
+  `applyTryLock`; `tryAcquire` is the one derivation of "acquirable"
+  shared by the apply, the width and the accountants).
+- ENVELOPE (members, per head, from the pre-step cell): ACQUIRABLE
+  (`Mutex.TryLock` on an unlocked cell; `RWMutex.TryRLock` with no
+  writer holding or pending — rwmutex.go's documented exclusion, the
+  `rlock` park condition; `RWMutex.TryLock` with no writer and no
+  reader — the `wlock` immediate-acquire condition) → width 2: slot 0
+  = ACQUIRE (the same state transition as Lock/RLock/write-Lock, the
+  same acquire edge), slot 1 = SPURIOUS FAILURE (deliver `false`, no
+  state change, no HB edge). HELD → `false` deterministically, bound
+  1, NO pop (`consumeAtOne := false`) — a forced failure is not a
+  choice. The empty stream realizes slot 0, so the strict lane's
+  uncontended TryLock matches gc. Result-observing rows are MEMBERSHIP
+  rows over {acquired, spurious} — a strict pin is impossible (the
+  width-2 draw fails strict's stream invariance), and the
+  always-succeeds pin is OFF THE MENU PERMANENTLY (the memo's option
+  (B); the ruling). Realized point INSIDE the envelope, recorded: gc
+  holds `rw.w` for a PENDING writer and so fails a new RWMutex
+  `TryLock` in the transient readers-drained window where the machine
+  offers the pick — the sync docs say nothing about a pending writer's
+  priority over a TryLock.
+- ORACLE: gc exhibits ONLY the success member in isolation (`muUncontended`
+  true 20/20 at GOMAXPROCS 1 and 8, plain and `-race`;
+  `docs/evidence/2026-09-03_q-trylock/`) — the spurious member is
+  UNEXHIBITED-BUT-PERMITTED (the membership lane's honest caption:
+  "does NOT show unexhibited members are Go-realizable"); gc's own
+  realizations of a false-when-momentarily-free are a lost CAS on
+  `m.state` under contention (internal/sync/mutex.go:85) and the
+  starvation-mode early return (:78), neither isolable as a corpus row.
+  Held-state falses are gc-exact (`muLocked`, `rwMatrix`,
+  `rwTryRLockPendingWriter`: false 20/20).
+- DETECTOR (Race.lean `syncEntryKinds`, the `acquired` flag; TSan's
+  realized set ∪ go_mem's kind per gc word, the Q-U4RESIDUAL (A)
+  discipline): Mutex TryLock on an unlocked cell → `.atomicWrite
+  @state` on BOTH members (the CAS TSan realizes whether it wins or
+  loses; recording it on the spurious member is an [AGENT] reading in
+  the ruled refusal-permitted direction — gc's lost CAS is that
+  member's realization); on a held cell → NOTHING (the plain early
+  return in a `noRaceFuncPkgs` package; go_mem gives an unsuccessful
+  call no kind — probes `muOverwriteLockedVsFailedTryLock`,
+  `muCopyVsFailedTryLock` green 20/20). RWMutex TryRLock/TryLock →
+  `.read @w` on EVERY outcome (`race.Read(&rw.w)` precedes
+  `race.Disable`; `rwOverwriteVsFailedTryRLock` RACE 20/20) +
+  `.atomicRead @readerCount` on success only. HB: the acquire edge on
+  SUCCESS only ("no synchronizing effect at all" —
+  `muFailedTryLockNoEdge` RACE 20/20; corpus
+  `race/negative-sync/failed-trylock-no-edge` RACE-ALL). One gc shape
+  is schedule-dependent and pinnable in no lane: an overwrite that
+  RESETS a held Mutex beside a TryLock (RACE 10/20 — the reset makes
+  the TryLock succeed; probe only, the `wg-overwrite-vs-add-nonzero`
+  precedent).
+- FAIRNESS / TERMINATION: a TryLock spin loop is runnable forever
+  under the spurious member — ∀-stream termination is honestly FALSE;
+  such rows ride the membership lane under `nonterm=` accounting with
+  NO termination claim (`sync/trylock/spin-until-trylock`, nonterm
+  branches counted, members {42}); the `Fair`-quantified class is
+  reasoning-side future work TO BE BUILT (proposal §2). Kernel-checked
+  ∀-streams certification (`allStreamsOk`, the dedup engine) REFUSES a
+  TRY-head apply position outright (`consumesTryLock`, fail closed);
+  the CLI enumerator (`stepNeeds`) carries such rows.
+- EVIDENCE: GC — 18 probe subjects, 20 runs each, plain and `-race`,
+  GOMAXPROCS 1 and 8 (`docs/evidence/2026-09-03_q-trylock/probes/`);
+  membership certification of 9 width-2 rows (each `enumerated=2
+  exhibited=1 unexhibited=1`); racy/DRF rows agree-race / agree-DRF.
+- INDIRECTION PRESERVES THE SITE (the Q-SYNCVAL identity principle):
+  the statement discard, the hoisted expression value, method values,
+  interface dispatch and the promoted receiver all lower through one
+  `syncValueOpFor` table to the same `sync-op` node (emit.go), or
+  refuse; `sync/promoted-mutex/trylock-expr` and the bodied
+  `sync.Mutex.TryLock` stub (the twin pin's one moved entry) are the
+  guards.
 
 ## 2. Sequential evaluation order
 
@@ -2180,7 +2270,7 @@ had LEFT the class — C2/C3 inside the (b) list and E9 inside the
 mention, so the mentions moved out. Keep it that way: put prose in the
 history block, never in a membership line.
 
-- (a) ENVELOPED: 9 sites / 9 entries — C1, C2, C3, C4, C5, C6, C8, E9, R2.
+- (a) ENVELOPED: 10 sites / 10 entries — C1, C2, C3, C4, C5, C6, C8, C12, E9, R2.
 - (b) PINNED: **17 entries** — concurrency: C9; sequential order: E2,
   E3, E4, E7, E10, E11, E12, E13; representation/runtime: R1, R8,
   R9, R10, R11, R12, R15, R16.
@@ -2206,6 +2296,16 @@ history block, never in a membership line.
 ### 10.1 Movement and history (NOT membership)
 
 Nothing in this block is a class member by virtue of being named here.
+
+- **(a), 9 → 10 (2026-09-03).** **C12 ADDED** (Q-TRYLOCK, RULED [USER]
+  2026-08-31 row 5, own-slice sequencing [USER] 2026-09-03, lane
+  `q-trylock`): TryLock/TryRLock's spurious-failure member as the new
+  `ChoiceSite.tryLock` — the first site added since the census became
+  code (W3.2 stage A); the §0 mirror table gained its row in the same
+  commit (the 2026-08-22 lesson: the exhaustiveness check protects the
+  code, this table is what a reader consults). A new row, not a
+  movement; C8's "zero new sites" stays true of the acquisition-ORDER
+  latitude. Recording agent [AGENT]; the envelope is the [USER]'s.
 
 - **(b), 16 → 17 (2026-09-02).** **R16 ADDED** (t5-maxalloc; fidelity
   decision 5(b) [USER] 2026-08-31): the maximum allocatable size — gc's

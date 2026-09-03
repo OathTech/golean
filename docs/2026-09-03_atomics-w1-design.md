@@ -243,6 +243,11 @@ GOMAXPROCS {1, 8}; schedule-dependent subjects reported as ranges).
    census gains `tryLock` (A′'s "zero new sites" read as "zero new
    sites FOR THE ATOMICS"; one S slice, ~`applySyncOp` arm + site +
    membership rows), or (b) the rider moves off A′ to its own item.
+   **RESOLVED [USER] 2026-09-03** («(4) Atomics - agree», relayed — the
+   rulings sheet's 2026-09-03 sitting record): (a)+(b) together — its
+   own slice adding the `tryLock` site, the A′ sentence amended for
+   TryLock only; LANDED on lane `q-trylock` the same day (rulings row
+   5's implementation record).
    **RULED [USER] 2026-09-03 (relayed by the [AGENT] coordinator; not
    firsthand): TryLock is its OWN small slice adding the `tryLock`
    ChoiceSite — the A′ zero-new-sites sentence is amended for TryLock

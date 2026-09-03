@@ -333,6 +333,9 @@ def SyncOp.eqbF (f : Nat) : SyncOp → SyncOp → Bool
   | .wgWait, .wgWait => true
   | .onceBegin t1, .onceBegin t2 => eqbListP (Assignee.eqbF f) t1 t2
   | .onceComplete, .onceComplete => true
+  | .tryLock t1, .tryLock t2 => eqbListP (Assignee.eqbF f) t1 t2
+  | .tryRLock t1, .tryRLock t2 => eqbListP (Assignee.eqbF f) t1 t2
+  | .tryWLock t1, .tryWLock t2 => eqbListP (Assignee.eqbF f) t1 t2
   | _, _ => false
 
 theorem SyncOp.eqbF_sound :
@@ -340,6 +343,12 @@ theorem SyncOp.eqbF_sound :
   intro f a b h
   cases a <;> cases b <;> (try (first | rfl | exact Bool.noConfusion h))
   case onceBegin.onceBegin t1 t2 =>
+    cases eqbListP_sound (Assignee.eqbF_sound f) h; rfl
+  case tryLock.tryLock t1 t2 =>
+    cases eqbListP_sound (Assignee.eqbF_sound f) h; rfl
+  case tryRLock.tryRLock t1 t2 =>
+    cases eqbListP_sound (Assignee.eqbF_sound f) h; rfl
+  case tryWLock.tryWLock t1 t2 =>
     cases eqbListP_sound (Assignee.eqbF_sound f) h; rfl
 
 /-- `AtomicOp` (atomics arc wave 1): head and kind are field-free enums

@@ -304,7 +304,11 @@ RUNNABLE forever on unfair schedules, ∀-stream termination is honestly
 FALSE for it, and the additive `FairStream` quantifier that would
 cover it is parked to the atomics arc as decided (D5). `TryLock`
 itself is out of scope (§9) precisely so this class boundary stays
-clean this slice.
+clean this slice. (LANDED 2026-09-03 — Q-TRYLOCK, rulings row 5, lane
+`q-trylock`: TryLock/TryRLock modeled with mem#locks' spurious-failure
+member as the width-2 `ChoiceSite.tryLock`; the class boundary holds
+as stated — spin rows ride the membership lane under `nonterm=`
+accounting with NO termination claim.)
 
 ## 7. Frontend surface
 
@@ -402,11 +406,15 @@ unsupported shapes fail closed, never approximate.
 
 ## 9. Out of scope, recorded (not silently dropped)
 
-Per D4: `sync/atomic` (own arc — FairStream's gate), `sync.Map`,
+Per D4: `sync/atomic` (own arc — FairStream's gate; wave 1 LANDED
+2026-09-03), `sync.Map`,
 `sync.Cond` (blocks `unittest/condvar.go` + `unittest/locks.go` of the
 phase-2 files), `sync.Pool`. Additionally recorded here: `TryLock`/
 `TryRLock` as CALLS (§6's class-boundary reason; their method-set
-PRESENCE answers satisfaction since the arc-end fix round), `RLocker`
+PRESENCE answers satisfaction since the arc-end fix round) — LANDED
+2026-09-03 (Q-TRYLOCK, own slice; every spelling — statement discard,
+expression value, method value, interface dispatch, promoted receiver —
+reaches the one `tryLock` site or refuses), `RLocker`
 as a CALL, sync method CALLS through interface dispatch (user-defined
 or `sync.Locker`; satisfaction/boxing answer — the call refuses
 per-stub; markers `sync/iface-dispatch`; the lift is real stub bodies

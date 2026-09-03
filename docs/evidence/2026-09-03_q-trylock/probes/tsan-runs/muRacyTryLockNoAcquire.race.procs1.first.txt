@@ -1,0 +1,20 @@
+==================
+WARNING: DATA RACE
+Read at 0x00c0000181b0 by goroutine 7:
+  main.muRacyTryLockNoAcquire.func1()
+      /home/dev/projects/golean/.claude/worktrees/q-trylock/docs/evidence/2026-09-03_q-trylock/probes/tsan/main.go:142 +0x3d
+
+Previous write at 0x00c0000181b0 by main goroutine:
+  main.muRacyTryLockNoAcquire()
+      /home/dev/projects/golean/.claude/worktrees/q-trylock/docs/evidence/2026-09-03_q-trylock/probes/tsan/main.go:146 +0x130
+  main.main()
+      /home/dev/projects/golean/.claude/worktrees/q-trylock/docs/evidence/2026-09-03_q-trylock/probes/tsan/main.go:354 +0x311
+
+Goroutine 7 (running) created at:
+  main.muRacyTryLockNoAcquire()
+      /home/dev/projects/golean/.claude/worktrees/q-trylock/docs/evidence/2026-09-03_q-trylock/probes/tsan/main.go:141 +0x11c
+  main.main()
+      /home/dev/projects/golean/.claude/worktrees/q-trylock/docs/evidence/2026-09-03_q-trylock/probes/tsan/main.go:354 +0x311
+==================
+5
+Found 1 data race(s)

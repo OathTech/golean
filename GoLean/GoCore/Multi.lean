@@ -220,9 +220,11 @@ def wakeReady (s : ExecState) : Config → Bool
               match p with
               | .once _ done => done
               | .mutex .. | .rwmutex .. | .waitGroup .. => false
-          -- The releasing heads are never parked (`applySyncOp` constructs
-          -- `.blockedSync` only for the five above).
+          -- The releasing heads are never parked (`applySyncOpCore`
+          -- constructs `.blockedSync` only for the five above), nor are
+          -- the TRY heads (`applyTryLock` fails instead of parking).
           | .unlock | .runlock | .wunlock | .wgAdd | .onceComplete => false
+          | .tryLock _ | .tryRLock _ | .tryWLock _ => false
       -- ABSORBING DEFAULT, named: a load failure or a non-`syncData` cell
       -- at a parked sync op's `loc` reads "not ready" — the goroutine
       -- stays parked and the pool ends `.deadlock` if nothing else runs.
@@ -1401,11 +1403,12 @@ def raceWakeEvent (s : ExecState) (i : Nat) (r : RaceState) :
       | .wlock => return (r.syncAcquire i loc (alsoB := true))
       | .wgWait => return (r.syncAcquire i loc)
       | .onceBegin _ => return (r.syncAcquire i loc)
-      -- The five heads above are the ONLY ones `applySyncOp` parks
+      -- The five heads above are the ONLY ones `applySyncOpCore` parks
       -- (`.blockedSync` construction sites, Machine.lean); the releasing
-      -- heads never sit in a parked Config. Enumerated so a new head is a
-      -- compile error, not a silently edge-less wake.
+      -- heads and the TRY heads never sit in a parked Config. Enumerated
+      -- so a new head is a compile error, not a silently edge-less wake.
       | .unlock | .runlock | .wunlock | .wgAdd | .onceComplete => return r
+      | .tryLock _ | .tryRLock _ | .tryWLock _ => return r
   | _ => return r
 
 /-- Clock update for a PAIRING step (arriving goroutine `i`, woken
@@ -1606,7 +1609,20 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (ev : StepEvent)
                     | .wgAdd, none =>
                         throw (.internal "sync arm: wgAdd committed without its delta operand")
                     | _, _ => pure 0
-                  let r ← r.accesses i (syncEntryKinds op pre delta loc)
+                  -- Q-TRYLOCK: a TRY head's OUTCOME is re-derived from the
+                  -- pre/post cells (`tryLockAcquired` — the pick is not in
+                  -- the event, exactly as the atomic arm re-derives a CAS);
+                  -- it selects the success-only go_mem lock kind
+                  -- (`syncEntryKinds`'s `acquired`) and the acquire edge
+                  -- below. For every other head the flag is inert.
+                  let acquired : Bool ←
+                    match op.tryTargets? with
+                    | none => pure false
+                    | some _ =>
+                        match syncCell m'.shared loc with
+                        | .error e => throw e  -- the apply just wrote this cell; propagate, never absorb
+                        | .ok post => pure (tryLockAcquired op pre post)
+                  let r ← r.accesses i (syncEntryKinds op pre delta acquired loc)
                   let r ← (match op with
                   | .lock | .rlock =>
                       (match m'.threads[i]? with
@@ -1658,7 +1674,20 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (ev : StepEvent)
                   | .onceComplete =>
                       (match m'.threads[i]? with
                       | some (.opDone _ _) => return (r.syncRelease i loc)
-                      | _ => return r))
+                      | _ => return r)
+                  -- Q-TRYLOCK: "A successful call to l.TryLock (or
+                  -- l.TryRLock) is equivalent to a call to l.Lock (or
+                  -- l.RLock). An unsuccessful call has no synchronizing
+                  -- effect at all." (mem#locks) — the acquire edge on
+                  -- SUCCESS only (the success-edge-only detector, row 5);
+                  -- a forced or spurious failure moves no clock (probe
+                  -- `muFailedTryLockNoEdge`: gc -race RACE 20/20 on the
+                  -- plain read after a failed TryLock — the machine
+                  -- refuses it too).
+                  | .tryLock _ | .tryRLock _ =>
+                      return (if acquired then r.syncAcquire i loc else r)
+                  | .tryWLock _ =>
+                      return (if acquired then r.syncAcquire i loc (alsoB := true) else r))
                   -- BUG-080: the state-word RMW that FOLLOWS the release
                   -- (Unlock's Add; Once's deferred Unlock), on a
                   -- committed op only — it also carries go_mem's

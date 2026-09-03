@@ -319,6 +319,12 @@ theorem stepThread_total_covered {s : ExecState} {ts : Array Config}
               | false =>
                 rw [hnapp] at hiv
                 simp only [Bool.false_eq_true, reduceIte] at hiv
+                -- Q-TRYLOCK: the TRY heads' apply is refused (`none`).
+                cases hntl : consumesTryLock c with
+                | true => rw [hntl] at hiv; simp at hiv
+                | false =>
+                rw [hntl] at hiv
+                simp only [Bool.false_eq_true, reduceIte] at hiv
                 cases hnmi : isMapIterNext c with
                 | true => rw [hnmi] at hiv; simp at hiv
                 | false =>

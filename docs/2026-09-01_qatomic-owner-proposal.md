@@ -238,13 +238,20 @@ are honest refusals).
 ## 6. The ruling options
 
 - **Ratify A′ with this owner** — the atomics arc as scoped in §4
-  (fused SC steps, zero new sites, TSan-realized edges + atomic
-  access kind, integer core → mp-litmus → `atomic.Value`), owned by
-  a semantics-repo lane dispatched per §5; spin-wait rows carried
-  under `nonterm=` membership accounting with NO termination claim;
-  the Fair-quantified claim class recorded as reasoning-side future
-  work TO BE BUILT (not bundled, not cited as existing). Q-TRYLOCK
-  rides as a wave-1 rider per its pre-ruled envelope. *Recommended.*
+  (fused SC steps, zero new sites — EXCEPT the [USER]-ruled `tryLock`
+  site, 2026-09-03 («(4) Atomics - agree», relayed by the [AGENT]
+  coordinator; the 2026-09-03 sitting record in
+  `docs/2026-08-31_qrow-rulings.md`): Q-TRYLOCK became its OWN slice
+  adding that one site, so the atomics' own ops stay at zero —
+  TSan-realized edges + atomic access kind, integer core → mp-litmus →
+  `atomic.Value`), owned by a semantics-repo lane dispatched per §5;
+  spin-wait rows carried under `nonterm=` membership accounting with NO
+  termination claim; the Fair-quantified claim class recorded as
+  reasoning-side future work TO BE BUILT (not bundled, not cited as
+  existing). ~~Q-TRYLOCK rides as a wave-1 rider per its pre-ruled
+  envelope~~ (superseded 2026-09-03 as above — the wave-1 lane had
+  flagged this sentence's internal conflict, its design note §6; the
+  slice LANDED on lane `q-trylock` the same day). *Recommended.*
 - **Defer the family (C)** — the five reds stand as honest refusals;
   Q-TRYLOCK's implementation and the liveness story inherit the wait;
   the U-6 forced point stays recorded. Legitimate if raft-path items

@@ -581,17 +581,23 @@ The semantic core's consume sites and their accountant arms:
 6. `applySelect`'s L2 select pick (Machine.lean, `commits.length` at
    a `.picks` core outcome) → the `.selectOpsK` apply arm of both
    accountants (via the same `applySelectCore`).
+7. `applySyncOp`'s TRY-head pick (Machine.lean, `ChoiceSite.tryLock`,
+   Q-TRYLOCK RULED [USER] 2026-08-31 row 5, implemented 2026-09-03:
+   `tryLockWidth op pre` — 2 at an acquirable cell, 1 = no pop at a
+   held one) → the `.syncStK` apply arm of both accountants (via the
+   same `syncCell`/`tryLockWidth`).
 Non-consuming by signature (no arm needed): `resumeThread`,
 `spawnStep`, `commitClause`, `applyPairing`, the `.opDone` strip,
 `raceUpdate` (stage B: it folds the step's emitted `StepEvent` and
 takes NO stream at all — the old consumption replication is deleted),
 and —
-spec-parity slice 2 — `applySyncOp` and the sync wake path: the sync
-registry entry adds NEW BOUNDARIES to `Config.atBoundary` (row 1's
-L1 bound reuses the machine's `runnableIdxs`/`atBoundary` directly,
-so the accountant tracks them with no new arm) but ZERO new consume
-sites (the envelope statement at `applySyncOp`: acquisition order
-among contenders is entirely L1 latitude).
+spec-parity slice 2 — the non-TRY sync heads (`applySyncOpCore`) and
+the sync wake path: the sync registry entry adds NEW BOUNDARIES to
+`Config.atBoundary` (row 1's L1 bound reuses the machine's
+`runnableIdxs`/`atBoundary` directly, so the accountant tracks them
+with no new arm) but no consume sites of its own (the envelope
+statement at `applySyncOpCore`: acquisition order among contenders is
+entirely L1 latitude) — the TRY heads' site is row 7.
 
 Machine-side status discipline (audit F1; CORRECTED at the arc-final
 audit F8, 2026-08-08): a member whose status is outside the case's
@@ -1098,6 +1104,25 @@ def stepNeeds (m : GoCore.Machine.MultiConfig) (picks : GoCore.Choices) :
                                 | _ :: _ => none
                           | _, _ => none)
                       | _ => none)
+                  | .retV v (.syncStK op done [] _ _) =>
+                      -- The TRY heads' `tryLock` site (Q-TRYLOCK): the
+                      -- bound mirrors `applySyncOp` verbatim — the
+                      -- machine's own `syncCell` read and `tryLockWidth`;
+                      -- width 1 pops nothing (`consumeAtOne := false`).
+                      (match op.tryTargets?, (v :: done).reverse with
+                      | some _, [av] =>
+                          (match GoCore.valueAsLoc av with
+                          | .error _ => none
+                          | .ok loc =>
+                              match GoCore.Machine.syncCell m.shared loc with
+                              | .error _ => none
+                              | .ok pre =>
+                                  let w := GoCore.Machine.tryLockWidth op pre
+                                  if w ≤ 1 then none
+                                  else match ch with
+                                    | [] => some w
+                                    | _ :: _ => none)
+                      | _, _ => none)
                   | c =>
                       -- The frame-entry panic-text site (BUG-087,
                       -- `nilValueMethodText`): bound 2 exactly on the
@@ -1141,6 +1166,18 @@ def stepNeedsSeq (σ : GoCore.ExecState) (c : GoCore.Machine.Config) :
               else some (GoCore.appendSpillWidth slice.cap newLen)
           | _, _ => none)
       | _ => none)
+  | .retV v (.syncStK op done [] _ _) =>
+      (match op.tryTargets?, (v :: done).reverse with
+      | some _, [av] =>
+          (match GoCore.valueAsLoc av with
+          | .error _ => none
+          | .ok loc =>
+              match GoCore.Machine.syncCell σ loc with
+              | .error _ => none
+              | .ok pre =>
+                  let w := GoCore.Machine.tryLockWidth op pre
+                  if w ≤ 1 then none else some w)
+      | _, _ => none)
   | c =>
       -- The frame-entry panic-text site (BUG-087): see `stepNeeds`.
       match GoCore.Machine.entryCallSite? c with

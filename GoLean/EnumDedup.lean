@@ -125,6 +125,7 @@ private def refusalReason (s : ExecState) (ts : Array Config) (i : Nat) :
       | .ok (.multi _) => s!"goroutine {i}: multi-ready select arrival (L2 .multi)"
       | .error e => s!"goroutine {i}: select arrival analysis error: {e.message}"
     else if consumesAppendSlice c then s!"goroutine {i}: append spill capacity pick"
+    else if consumesTryLock c then s!"goroutine {i}: TryLock/TryRLock apply (the tryLock spurious-failure site — outside the dedup checker's certified fragment; use the default enumerator)"
     else if isMapIterNext c then s!"goroutine {i}: mapIterK iteration pick"
     else if consumesNilValueMethod s c then s!"goroutine {i}: frame-entry panic-text pick (nilValueMethodText, BUG-087)"
     else

@@ -559,13 +559,17 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           | e :: rest =>
               return (.evalE e env (.syncStK op (v :: done) rest env k'), s, choices)
           | [] =>
-              -- The sync apply (spec-parity slice 2): consumes NO
-              -- choices (the envelope statement at `applySyncOp` — the
-              -- acquisition-order latitude is entirely the existing L1
-              -- site's). `.fatal` propagates as the unrecoverable
-              -- terminal it is; recoverable panics become `.panicking`.
-              match applySyncOp s op (v :: done).reverse env k' with
-              | .ok (c', s') => return (c', s', choices)
+              -- The sync apply (spec-parity slice 2): the stream is
+              -- threaded through `applySyncOp` — only the TRY heads draw
+              -- from it (`ChoiceSite.tryLock`, Q-TRYLOCK; the envelope
+              -- statement at `applyTryLock`); every other head passes it
+              -- through untouched (the acquisition-order latitude is
+              -- entirely the existing L1 site's — `applySyncOpCore`'s
+              -- envelope statement). `.fatal` propagates as the
+              -- unrecoverable terminal it is; recoverable panics become
+              -- `.panicking`.
+              match applySyncOp s choices op (v :: done).reverse env k' with
+              | .ok (c', s', choices') => return (c', s', choices')
               | .error (.panic msg) =>
                   return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
               | .error err => throw err

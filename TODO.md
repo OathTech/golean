@@ -172,8 +172,36 @@ see the R15 entry below.
       family's vehicle (unsafe policy). Q-TRYLOCK's rider was NOT taken
       in wave 1: its pre-ruled envelope is a NEW `ChoiceSite` and the
       wave-1 brief said "zero new choice sites" — rule conflict posed to
-      the [USER] (design note §6). D-002 not-shim-injection reading
-      stated in the design note §2 — [USER] confirmation still owed.
+      the [USER] (design note §6) — RESOLVED [USER] 2026-09-03 («(4)
+      Atomics - agree»): Q-TRYLOCK as its OWN slice, LANDED on lane
+      `q-trylock` 2026-09-03 (the item directly below). D-002
+      not-shim-injection reading stated in the design note §2 — [USER]
+      confirmation still owed.
+- [x] **Q-TRYLOCK slice (S–M; own slice, [USER] 2026-09-03)** — LANDED
+      on lane `q-trylock` 2026-09-03 (merge pending audit + sign-off):
+      `sync.Mutex.TryLock` / `RWMutex.TryLock` / `RWMutex.TryRLock`
+      modeled with mem#locks' spurious-failure member as the width-2
+      `ChoiceSite.tryLock` (`consumeAtOne := false`; slot 0 = acquire,
+      gc's realized point; slot 1 = the spurious false; bound 1 = no pop
+      at a held cell), success-edge-only detector per the derived
+      per-word table (Race.lean), frontend lowering for every spelling
+      through one `syncValueOpFor` table (identity principle), 12
+      `sync/trylock/*` rows + 2 racy + 3 DRF rows, the two frontier reds
+      flipped to membership rows over {acquired, spurious} (spurious
+      unexhibited by gc — permitted by the text), spin rows under
+      `nonterm=` with NO termination claim; the twin wire re-pinned
+      (ONE entry: `sync.Mutex.TryLock`'s stub bodied — [USER]-ruled
+      (A) 2026-09-03). Records: rulings row 5 (+ the twin-pin appendix
+      record), proposal §6 amended, latitude inventory C12 + the site
+      table, ledger rows, `docs/evidence/2026-09-03_q-trylock/`.
+      KNOWN COST, recorded: a `for !m.TryLock() {}` spinner as the SOLE
+      runnable under a constant spurious stream is non-terminating BY
+      DESIGN (the fairness class); a fuel-out run of it is QUADRATIC in
+      the machine because the frontend re-declares the loop-condition's
+      hoisted temp each iteration (a pre-existing frontend/machine cost,
+      not this slice's; measured 0.28 s at fuel 100k vs 47 s at 1M), so
+      such rows are shaped with the spinner as the child and main
+      blocked (the `atomics/spin` shape) — recorded at the row.
       Original item text follows.
       ([USER]-ruled 2026-09-02, `docs/2026-08-31_qrow-rulings.md` row
       2; charter = `docs/2026-09-01_qatomic-owner-proposal.md` §4 +

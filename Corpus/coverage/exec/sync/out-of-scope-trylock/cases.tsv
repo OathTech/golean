@@ -1,4 +1,10 @@
-# id	subject	args	expected_status	expected_reason	features
-# PERMANENT-until-lifted refusal marker (design note §9: TryLock OUT —
-# the spin-wait enabler is the atomics arc's FairStream territory).
-trylock-uncontended	tryLockUncontended	-	ok	-	sync,mutex
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# WAS the PERMANENT-until-lifted refusal marker (design note §9: TryLock
+# OUT). LIFTED 2026-09-03 (Q-TRYLOCK, RULED [USER] 2026-08-31 row 5,
+# lane q-trylock): TryLock is modeled with mem#locks' spurious-failure
+# member as the width-2 `tryLock` choice site, so the row is a MEMBERSHIP
+# row over {1 (acquired), 0 (spurious false)} — gc exhibits only 1; the
+# other member is text-granted ("may be considered to be able to return
+# false even when the mutex l is unlocked"). The directory name is kept
+# as the record of the former refusal.
+trylock-uncontended	tryLockUncontended	-	ok	-	sync,mutex,nondet	membership	the memo's own note: a real TryLock model owes a result-observing case that cannot be a strict pin — the tryLock site at an unlocked Mutex is width 2: 1 = acquire (gc's realized point), 0 = the spurious false mem#locks grants by name	width=2,members=2

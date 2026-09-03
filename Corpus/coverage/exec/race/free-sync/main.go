@@ -201,6 +201,77 @@ func freeSyncRwCopyBesideLock() int {
 	return freeSyncRwSink.n
 }
 
+// Q-TRYLOCK (2026-09-03): a write under a SUCCESSFUL TryLock, read under
+// Lock elsewhere after the Unlock — "A successful call to l.TryLock is
+// equivalent to a call to l.Lock" (mem#locks): the Unlock→Lock edge
+// orders the pair. The spurious member falls back to Lock, so the
+// critical section runs on every schedule: singleton {5}. gc -race green
+// 20/20 (probe muDrfTryLockPublish).
+func freeSyncTryLockPublish() int {
+	freeSyncX = 0
+	var m sync.Mutex
+	done := make(chan int)
+	if !m.TryLock() {
+		m.Lock()
+	}
+	freeSyncX = 5
+	m.Unlock()
+	go func() {
+		m.Lock()
+		v := freeSyncX
+		m.Unlock()
+		done <- v
+	}()
+	return <-done
+}
+
+// Q-TRYLOCK (2026-09-03), RWMutex: the writer's TryLock (fallback Lock)
+// publishes; the reader acquires under RLock after the Unlock. Singleton
+// {6}; gc -race green 20/20 (probe rwDrfTryLockPublish).
+func freeSyncRwTryLockPublish() int {
+	freeSyncX = 0
+	var rw sync.RWMutex
+	done := make(chan int)
+	if !rw.TryLock() {
+		rw.Lock()
+	}
+	freeSyncX = 6
+	rw.Unlock()
+	go func() {
+		rw.RLock()
+		v := freeSyncX
+		rw.RUnlock()
+		done <- v
+	}()
+	return <-done
+}
+
+// Q-TRYLOCK (2026-09-03), RWMutex TryRLock as the ACQUIRING side: the
+// writer goroutine writes under Lock; main reads under TryRLock (fallback
+// RLock while the writer holds). Either order is DRF — reader first:
+// RUnlock synchronizes before the writer's Lock return (mem#locks' RLock
+// rule); writer first: Unlock synchronizes before the TryRLock/RLock
+// return — so the value is schedule latitude {0, 8} and no path refuses.
+// gc -race green 20/20 (probe rwDrfTryRLockAcquire's edge).
+func freeSyncRwTryRLockAcquire() int {
+	freeSyncX = 0
+	var rw sync.RWMutex
+	done := make(chan int)
+	go func() {
+		rw.Lock()
+		freeSyncX = 8
+		rw.Unlock()
+		done <- 1
+	}()
+	if !rw.TryRLock() {
+		rw.RLock()
+	}
+	v := freeSyncX
+	rw.RUnlock()
+	<-done
+	return v
+}
+
 func main() {
 	freeSyncMutex()
 	freeSyncWgEdge()

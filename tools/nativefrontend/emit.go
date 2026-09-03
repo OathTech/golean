@@ -5702,7 +5702,7 @@ func (e *emitter) importedMethodStubs(qname string, named *types.Named) ([]any, 
 // `sync-op` wire nodes, so the machine path from the op boundary on
 // is literally shared.
 func syncValueOpModeled(prim, method string) bool {
-	if syncOpFor(prim, method) != "" {
+	if syncOpFor(prim, method) != "" || syncValueOpFor(prim, method) != "" {
 		return true
 	}
 	switch {
@@ -5749,9 +5749,11 @@ func syncOnceDoneFunc() map[string]any {
 // machine op / same C8 choice site as the direct form: the Q-SYNCVAL
 // identity principle, indirection preserves op identity or refuses.
 // The extra stub frame adds PRIVATE steps only — no new boundaries at
-// registry granularity (memo §6). Everything else (TryLock, TryRLock,
-// RLocker, WaitGroup.Go, and any member a future toolchain adds) stays
-// a declaration-only stub: satisfaction answers, a CALL refuses with
+// registry granularity (memo §6). The VALUE-RETURNING modeled members
+// (TryLock/TryRLock, Q-TRYLOCK 2026-09-03) carry bodies too — the same
+// `sync-op` node into a declared Bool temp, returned (`syncValueOpFor`).
+// Everything else (RLocker, WaitGroup.Go, and any member a future
+// toolchain adds) stays a declaration-only stub: satisfaction answers, a CALL refuses with
 // the reason — the allowlist fails closed by construction. The second
 // result is the program-level synthetic functions the bodies need
 // (`$syncOnceDone` when Once reached the wire).
@@ -5907,6 +5909,25 @@ func (e *emitter) syncStubBody(prim, method string, recvTy any, recvIsPtr bool, 
 		return block(map[string]any{"stmt": "sync-op", "op": op,
 			"args": []any{recvIdent}}), false, nil
 	}
+	// The TRY heads (Q-TRYLOCK): `return m.TryLock()` in the stub's own
+	// frame — the same `sync-op` node the direct forms emit, its Bool
+	// delivered to a declared temp and returned. Pinned signature shape:
+	// zero params, one bool result (mutex.go / rwmutex.go); anything else
+	// means the stdlib moved under the pin — refuse the body.
+	if op := syncValueOpFor(prim, method); op != "" {
+		if sig.Params().Len() != 0 || sig.Results().Len() != 1 {
+			return nil, false, nil
+		}
+		if b, isBasic := sig.Results().At(0).Type().Underlying().(*types.Basic); !isBasic || b.Kind() != types.Bool {
+			return nil, false, nil
+		}
+		return block(
+			map[string]any{"stmt": "sync-op", "op": op, "args": []any{recvIdent},
+				"target": map[string]any{"target": "declare", "id": "$tryOk", "type": syncBoolType()}},
+			map[string]any{"stmt": "return", "results": []any{
+				map[string]any{"expr": "ident", "name": "$tryOk", "type": syncBoolType()}}},
+		), false, nil
+	}
 	switch {
 	case prim == "WaitGroup" && method == "Done":
 		if sig.Params().Len() != 0 {
@@ -6037,7 +6058,8 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 	// func-value over a NONEXISTENT `sync.X.Y` id and landed as runtime
 	// `stuck`; today the id exists, so this refusal is the
 	// statically-knowable-beats-runtime half): method values of
-	// unmodeled members (TryLock, RLocker, WaitGroup.Go, …) and sync
+	// unmodeled members (RLocker, WaitGroup.Go, …; TryLock/TryRLock are
+	// MODELED since Q-TRYLOCK 2026-09-03 and lower here) and sync
 	// METHOD EXPRESSIONS (`(*sync.Mutex).Lock` — outside this slice's
 	// ruled scope) refuse per-decl.
 	if seln, ok := e.info.Selections[sel]; ok && seln.Kind() != types.FieldVal {
@@ -8076,8 +8098,10 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 	// intercepted upstream, and every MODELED op returns no results —
 	// legal Go cannot put one in expression position — so anything
 	// arriving here is an expression-position use of a value-returning
-	// UNMODELED member (TryLock in a condition, RLocker as an operand)
-	// and fails closed with a per-decl quarantine (a visible
+	// member — the MODELED TryLock/TryRLock (Q-TRYLOCK 2026-09-03: the
+	// `sync-op` expression node below, hoisted like a call) or an
+	// UNMODELED one (RLocker as an operand), which fails closed with a
+	// per-decl quarantine (a visible
 	// frontend-export refusal, never a dangling `sync.Mutex.Lock` call
 	// that lands as runtime `stuck`). The check keys on the resolved
 	// method's own receiver (`syncMethodPrim`), which covers the
@@ -8093,6 +8117,27 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 	// calls, and never reach here.
 	if seln := e.info.Selections[sel]; seln != nil && seln.Kind() == types.MethodVal {
 		if prim := e.syncMethodPrim(seln); prim != "" {
+			// The VALUE-RETURNING sync ops (Q-TRYLOCK): `m.TryLock()` in
+			// expression position — a condition, an assignment RHS, an
+			// operand — emits the `sync-op` EXPRESSION node, effectful, so
+			// the caller hoists it into a fresh temp exactly like a call
+			// (the atomics' `atomic-op` shape); the decoder admits it only
+			// where it admits `call`. Same op name as the statement form.
+			if op := syncValueOpFor(prim, sel.Sel.Name); op != "" {
+				if len(c.Args) != 0 {
+					return nil, false, unsup("sync.%s.%s with %d arguments", prim, sel.Sel.Name, len(c.Args))
+				}
+				_, hops, ok := e.syncSelectionPrim(sel, seln)
+				if !ok {
+					return nil, false, unsup("sync.%s.%s: receiver shape not recognized (fail closed)", prim, sel.Sel.Name)
+				}
+				recvW, err := e.syncSelectionRecvAddr(sel, hops)
+				if err != nil {
+					return nil, false, err
+				}
+				return map[string]any{"expr": "sync-op", "op": op, "args": []any{recvW},
+					"resultTypes": []any{syncBoolType()}}, true, nil
+			}
 			return nil, false, unsup("sync.%s.%s outside a statement/defer position (the member is outside the modeled sync surface; modeled ops lower at statement/defer sites and through values — P-S2-6)", prim, sel.Sel.Name)
 		}
 	}
@@ -8772,6 +8817,36 @@ func syncOpFor(prim, method string) string {
 	return ""
 }
 
+// syncValueOpFor maps a primitive+method pair to its wire sync-op name
+// for the VALUE-RETURNING zero-argument ops (Q-TRYLOCK, RULED [USER]
+// 2026-08-31 — docs/2026-08-31_qrow-rulings.md row 5 — implemented
+// 2026-09-03): Mutex.TryLock → tryLock, RWMutex.TryRLock → tryRLock,
+// RWMutex.TryLock → tryWLock (the lock/rlock/wlock naming). ONE table
+// for every spelling — the statement-position discard, the
+// expression-position value (hoisted like a call), the bodied stub
+// behind method values / interface dispatch — so every spelling reaches
+// the same machine op and the same `tryLock` choice site (the Q-SYNCVAL
+// identity principle), or refuses. "" = not a value-returning modeled op.
+func syncValueOpFor(prim, method string) string {
+	switch prim {
+	case "Mutex":
+		if method == "TryLock" {
+			return "tryLock"
+		}
+	case "RWMutex":
+		switch method {
+		case "TryLock":
+			return "tryWLock"
+		case "TryRLock":
+			return "tryRLock"
+		}
+	}
+	return ""
+}
+
+// syncBoolType is the wire type of the TRY heads' result.
+func syncBoolType() map[string]any { return map[string]any{"kind": "bool"} }
+
 func syncNegOne() map[string]any {
 	return map[string]any{"expr": "int", "value": "-1", "type": intType("int")}
 }
@@ -8781,9 +8856,10 @@ func syncNegOne() map[string]any {
 // Lock/Unlock (Mutex), Lock/Unlock/RLock/RUnlock (RWMutex),
 // Add/Done/Wait (WaitGroup — Done lowers to wgAdd(-1), gc waitgroup.go
 // line 156's own definition), Do (Once — the onceBegin/onceComplete
-// desugar, design note §3). handled=false when the call is not a
-// sync-primitive method at all; every recognized-but-out-of-scope
-// member (TryLock, WaitGroup.Go, ...) fails closed.
+// desugar, design note §3), and the bare-statement TryLock/TryRLock
+// (result discarded; Q-TRYLOCK 2026-09-03). handled=false when the call
+// is not a sync-primitive method at all; every recognized-but-out-of-
+// scope member (RLocker, WaitGroup.Go, ...) fails closed.
 func (e *emitter) emitSyncOpStmt(call *ast.CallExpr) (any, bool, error) {
 	sel, ok := call.Fun.(*ast.SelectorExpr)
 	if !ok {
@@ -8803,6 +8879,14 @@ func (e *emitter) emitSyncOpStmt(call *ast.CallExpr) (any, bool, error) {
 	}
 	m := sel.Sel.Name
 	if op := syncOpFor(prim, m); op != "" {
+		return map[string]any{"stmt": "sync-op", "op": op, "args": []any{recvW}}, true, nil
+	}
+	// A bare `m.TryLock()` statement DISCARDS the Bool but still acquires
+	// (Q-TRYLOCK): the statement form of the same op, no target.
+	if op := syncValueOpFor(prim, m); op != "" {
+		if len(call.Args) != 0 {
+			return nil, true, unsup("sync.%s.%s with %d arguments", prim, m, len(call.Args))
+		}
 		return map[string]any{"stmt": "sync-op", "op": op, "args": []any{recvW}}, true, nil
 	}
 	switch {

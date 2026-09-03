@@ -27,3 +27,9 @@ disjoint-prims	freeSyncDisjointPrims	-	ok	-	sync,mutex,goroutines,channels,struc
 # lock op only. gc -race green; a write-like keying of the lock would refuse.
 rw-copy-beside-rlock	freeSyncRwCopyBesideRLock	-	ok	-	sync,rwmutex,goroutines,channels,structs,race	confluent	Q-U4RESIDUAL (A): copy unordered with RLock ONLY (RUnlock is HB-after the copy via the ack) — lock is read-like (.atomicRead @readerCount), read/read, no conflict; the refused class is the copy beside the UNLOCK (race/gomem-only)	width=4,sites=32
 rw-copy-beside-lock	freeSyncRwCopyBesideLock	-	ok	-	sync,rwmutex,goroutines,channels,structs,race	confluent	Q-U4RESIDUAL (A): copy unordered with the write-Lock ONLY (Unlock is HB-after the copy via the ack) — lock is read-like, no conflict	width=4,sites=32
+# Q-TRYLOCK (2026-09-03, lane q-trylock): the try heads' HB half — a
+# successful TryLock/TryRLock IS a Lock/RLock acquire (mem#locks). gc -race
+# green 20/20 each (docs/evidence/2026-09-03_q-trylock/).
+trylock-publish	freeSyncTryLockPublish	-	ok	-	sync,mutex,goroutines,channels,globals,race	confluent	Q-TRYLOCK: the successful TryLock's critical section (fallback Lock on the spurious member) is ordered before the reader's Lock by the Unlock edge on every schedule — singleton 5	width=4,sites=32
+rw-trylock-publish	freeSyncRwTryLockPublish	-	ok	-	sync,rwmutex,goroutines,channels,globals,race	confluent	Q-TRYLOCK: the RWMutex TryLock (fallback Lock) publishes; the reader's RLock acquires the Unlock — singleton 6	width=4,sites=32
+rw-tryrlock-acquire	freeSyncRwTryRLockAcquire	-	ok	-	sync,rwmutex,goroutines,channels,globals,race,nondet	membership	Q-TRYLOCK, TryRLock as the acquiring side: reader-first (RUnlock → the writer's Lock) gives 0, writer-first (Unlock → the TryRLock/RLock acquire) gives 8 — both DRF by mem#locks' two rules, the ORDER is L1 latitude; certified set {0, 8}, members=2; no path refuses	width=4,sites=40,members=2
