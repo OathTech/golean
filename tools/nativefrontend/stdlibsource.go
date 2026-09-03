@@ -70,19 +70,261 @@ import (
 // (docs/stdlib-admission-register.md; scripts/check-stdlib-register
 // compares this table to the register).
 var stdlibSourceAllowed = map[string]string{
-	"strings":              "slice-1 target (Fields, TrimSpace, Split retired from shims); pure Go at function granularity given the bytealg substitution — Builder stays the E5-T shadow model until slice 2's overlay",
-	"strconv":              "slice-1 target (FormatUint, FormatInt, ParseUint retired from shims); thin wrappers over internal/strconv; every Parse* ERROR path reaches internal/stringslite.Clone's unsafe.String and refuses by name (BUG-089 designed reds; overlay pending, slice 2 — the re-bodied-shim alternative was a D-002 exception DENIED by the [USER] 2026-09-03)",
-	"internal/strconv":     "strconv's implementation package; pure Go except deps.go's four float-bits casts (unreached by the integer paths; quarantine by name if reached)",
-	"internal/stringslite": "strings/strconv's shared Index/Cut/Clone helpers; Clone uses unsafe.String (quarantines by name when reached)",
-	"internal/bytealg":     "the byte-search leaves strings.Index/Count/Split reach; assembly on amd64, swapped for the package's own *_generic.go twins by stdlib-substitutions.tsv",
+	"strings":              "slice-1 target (Fields, TrimSpace, Split retired from shims); slice 2: Join, Repeat and the Builder TYPE retired from shim/shadow model — Builder's three unsafe sites (String, copyCheck's NoEscape, grow's MakeNoZero) are OVERLAID (stdlib-overlay.tsv); pure Go at function granularity given the bytealg substitution",
+	"strconv":              "slice-1 target (FormatUint, FormatInt, ParseUint retired from shims); thin wrappers over internal/strconv; the Parse* ERROR paths reach internal/stringslite.Clone, OVERLAID in slice 2 (BUG-089's nine designed reds closed)",
+	"internal/strconv":     "strconv's implementation package; pure Go except deps.go's four float-bits casts — a bit reinterpretation the language has no operation for and the machine has no op for (a PRIMITIVE admission, [USER]-gated; NOT overlaid in slice 2): FormatFloat/ParseFloat/AppendFloat quarantine by name (FR-21 row stdlib-source/frontier/format-float-unsafe)",
+	"internal/stringslite": "strings/strconv's shared Index/Cut/Clone helpers; Clone's unsafe.String is OVERLAID to string(b) (slice 2, byte-checked)",
+	"internal/bytealg":     "the byte-search leaves strings.Index/Count/Split reach; assembly on amd64, swapped for the package's own *_generic.go twins by stdlib-substitutions.tsv; MakeNoZero (body-less) is overlaid away at its one strings caller",
 	"unicode":              "unicode.IsSpace and its White_Space RangeTable (strings.Fields/TrimSpace's non-ASCII path); pure tables, reached ones only",
 	"unicode/utf8":         "rune decoding used by strings' non-ASCII paths and explode; pure",
-	"math/bits":            "internal/strconv's formatBits uses bits.TrailingZeros; pure except the two runtime-linknamed error VALUES (poisoned by the linkname rule)",
-	"errors":               "errors.New for strconv's ErrRange/ErrSyntax package variables (pure); the user-facing errors.New SHIM is not retired this slice",
+	"math/bits":            "internal/strconv's formatBits uses bits.TrailingZeros, strings.Repeat uses bits.Mul, slices uses bits.Len; pure except the two runtime-linknamed error VALUES (poisoned by the linkname rule)",
+	"errors":               "errors.New (slice 2: the user-facing SHIM retired — every errors.New is the real *errors.errorString), Join (its unsafe.String OVERLAID), Unwrap; Is/As reach internal/reflectlite and refuse by name (FR-21 → G6)",
+	"bytes":                "slice-2 target (Equal retired from shim; Buffer retired from the E5-T shadow model — pure Go, its growth idiom `append([]byte(nil), make([]byte, c)...)` is the overlay's model); ReadFrom/WriteTo reach `io` (export data only) and quarantine by name; init-pure: three errors.New sentinels + the asciiSpace table",
+	"slices":               "slice-2 target (SortFunc retired from the generic desugar — pdqsortCmpFunc stenciled per element type by mono.go, gc's exact member incl. tie order); Sort stays the sortSlice MACHINE OP at integer kinds until memo §3 row M (frontendInterceptedLibraryMembers); Insert/Replace reach `overlaps` (unsafe.Sizeof/pointer arithmetic) and refuse by name — REFUSED, not overlaid (FR-21 row stdlib-source/frontier/slices-overlaps); iter-typed members are unreached unless called; init-pure: no package-level initializers",
+	"cmp":                  "slice-2 target (Compare retired from the kind-dispatch desugar — the real generic body, NaN arm included, so floats lower too); pure, no imports; init-pure: no package-level state",
+	"encoding/binary":      "slice-2 target (LittleEndian.Uint64/PutUint64 retired from the package-variable method desugar — the exported vars and their unexported receiver types lower as ordinary library declarations); Read/Write/Size are reflect and refuse by name (export data); init-pure: two errors.New sentinels, zero-valued ByteOrder vars, an unreached sync.Map",
 }
 
 //go:embed stdlib-substitutions.tsv
 var stdlibSubstitutionsTSV string
+
+// ---- the OVERLAY table (stdlib source-through slice 2, 2026-09-03) ----
+//
+// An overlay substitutes ONE pure-Go expression for ONE unsafe (or
+// runtime-implemented) expression at ONE named site of the pinned source
+// (memo §2.3.2 item 3). It is the only hand-written library text the
+// frontend carries — governed by the admission register's cap (12 `expr`
+// rows, stdlibregister.go) and BYTE-CHECKED at every load: the recorded
+// line of the pinned file must carry the `old` bytes exactly once, or the
+// unit refuses by name. The library pin hashes the UPSTREAM bytes; the
+// overlay is applied to the in-memory copy AFTER the pin check, so a
+// re-pin that moves an overlaid line fails both. The table is the SINGLE
+// source for the applied substitutions and for the register's overlay
+// rows (audit fix round F12's owed assertion: nothing the emitter applies
+// can be outside the register, because both read this file; and
+// `--stdlib-overlay-check` re-verifies every row against the checkout so
+// scripts/check-stdlib-register catches a stale row without a program).
+
+//go:embed stdlib-overlay.tsv
+var stdlibOverlayTSV string
+
+// stdlibOverlayRow is one row of stdlib-overlay.tsv.
+type stdlibOverlayRow struct {
+	pkg, file string
+	line      int
+	kind      string // "expr" (counted) | "import" (consequential, uncounted)
+	old, new  string
+	reason    string
+}
+
+// site renders "<pkg>/<file>:<line>" — the register's entry column and
+// every refusal's name for the row.
+func (r stdlibOverlayRow) site() string {
+	return r.pkg + "/" + r.file + ":" + itoa(r.line)
+}
+
+// parseStdlibOverlay parses the embedded table. Every malformation, and
+// every rule the header states, refuses at first use — never a skipped
+// line, never a row applied outside the rules.
+func parseStdlibOverlay(tsv string) ([]stdlibOverlayRow, error) {
+	var rows []stdlibOverlayRow
+	exprFiles := map[string]bool{}
+	seen := map[string]bool{}
+	for n, line := range strings.Split(tsv, "\n") {
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		cols := strings.Split(line, "\t")
+		if len(cols) != 7 {
+			return nil, unsup("stdlib-overlay.tsv line %d is malformed (want package<TAB>file<TAB>line<TAB>kind<TAB>old<TAB>new<TAB>reason, 7 columns; got %d): %q", n+1, len(cols), line)
+		}
+		for i, c := range cols {
+			if c == "" {
+				return nil, unsup("stdlib-overlay.tsv line %d: column %d is empty (every column is mandatory)", n+1, i+1)
+			}
+		}
+		ln := 0
+		for _, ch := range cols[2] {
+			if ch < '0' || ch > '9' {
+				return nil, unsup("stdlib-overlay.tsv line %d: line column %q is not a positive integer", n+1, cols[2])
+			}
+			ln = ln*10 + int(ch-'0')
+		}
+		if ln == 0 {
+			return nil, unsup("stdlib-overlay.tsv line %d: line column must be >= 1", n+1)
+		}
+		r := stdlibOverlayRow{pkg: cols[0], file: cols[1], line: ln, kind: cols[3], old: cols[4], new: cols[5], reason: cols[6]}
+		if _, allowed := stdlibSourceAllowed[r.pkg]; !allowed {
+			return nil, unsup("stdlib-overlay.tsv line %d: package %q is not on the allowed-library list — an overlay into a package that is not source-through is meaningless (fail closed)", n+1, r.pkg)
+		}
+		if strings.Contains(r.file, "/") || filepath.Ext(r.file) != ".go" {
+			return nil, unsup("stdlib-overlay.tsv line %d: file %q must be a bare .go file name inside the package directory", n+1, r.file)
+		}
+		switch r.kind {
+		case "expr":
+			for _, banned := range []string{"unsafe", "abi.", "bytealg."} {
+				if strings.Contains(r.new, banned) {
+					return nil, unsup("stdlib-overlay.tsv line %d (%s): the substitute %q mentions %q — an overlay may not reintroduce what it removes (fail closed)", n+1, r.site(), r.new, banned)
+				}
+			}
+			exprFiles[r.pkg+"/"+r.file] = true
+		case "import":
+			if !strings.HasPrefix(r.old, `"`) || !strings.HasSuffix(r.old, `"`) || r.new != "_ "+r.old {
+				return nil, unsup("stdlib-overlay.tsv line %d (%s): an import row must neutralize exactly one import spec (old %q -> new `_ %s`); got new %q", n+1, r.site(), r.old, r.old, r.new)
+			}
+		default:
+			return nil, unsup("stdlib-overlay.tsv line %d (%s): kind %q is not one of expr, import", n+1, r.site(), r.kind)
+		}
+		if r.old == r.new {
+			return nil, unsup("stdlib-overlay.tsv line %d (%s): old and new are identical — not a substitution", n+1, r.site())
+		}
+		if seen[r.site()] {
+			return nil, unsup("stdlib-overlay.tsv line %d: duplicate site %s (one row per line)", n+1, r.site())
+		}
+		seen[r.site()] = true
+		rows = append(rows, r)
+	}
+	for _, r := range rows {
+		if r.kind == "import" && !exprFiles[r.pkg+"/"+r.file] {
+			return nil, unsup("stdlib-overlay.tsv: import row %s neutralizes an import in a file with no expr row — an import neutralization is admitted only as the consequence of a site in the same file (fail closed)", r.site())
+		}
+	}
+	return rows, nil
+}
+
+// stdlibOverlayCount is the number of rows counted against the cap
+// (`expr`) and the number of consequential `import` rows.
+func stdlibOverlayCount(rows []stdlibOverlayRow) (expr, imports int) {
+	for _, r := range rows {
+		if r.kind == "expr" {
+			expr++
+		} else {
+			imports++
+		}
+	}
+	return
+}
+
+// applyStdlibOverlay applies every row of the table that names this
+// library file (pkg + bare file name) to src, returning the overlaid
+// bytes and the sites applied. Each row's line must contain `old`
+// EXACTLY ONCE (zero: the text moved or the pin changed; more than one:
+// the row is ambiguous) — both refuse by site. Substitutions are line-
+// local, so line numbers stay upstream's for every later row and for
+// every position the frontend reports.
+func applyStdlibOverlay(rows []stdlibOverlayRow, pkg, file string, src []byte) ([]byte, []string, error) {
+	base := filepath.Base(file)
+	var lines [][]byte
+	split := false
+	applied := []string{}
+	for _, r := range rows {
+		if r.pkg != pkg || r.file != base {
+			continue
+		}
+		if !split {
+			lines = strings_SplitLinesKeepEnds(src)
+			split = true
+		}
+		if r.line > len(lines) {
+			return nil, nil, unsup("stdlib overlay %s: the pinned file has only %d line(s) — the recorded site does not exist in this text (fail closed; the overlay table is stale for this pin)", r.site(), len(lines))
+		}
+		cur := lines[r.line-1]
+		switch n := strings.Count(string(cur), r.old); n {
+		case 1:
+		case 0:
+			return nil, nil, unsup("stdlib overlay %s: the recorded bytes %q are NOT on that line of the pinned file (have %q) — the text under the overlay moved; refusing rather than substituting elsewhere (fail closed; re-derive the row deliberately)", r.site(), r.old, strings.TrimRight(string(cur), "\n"))
+		default:
+			return nil, nil, unsup("stdlib overlay %s: the recorded bytes %q occur %d times on that line — the row is ambiguous (fail closed)", r.site(), r.old, n)
+		}
+		lines[r.line-1] = []byte(strings.Replace(string(cur), r.old, r.new, 1))
+		applied = append(applied, r.site())
+	}
+	if !split {
+		return src, nil, nil
+	}
+	out := make([]byte, 0, len(src))
+	for _, l := range lines {
+		out = append(out, l...)
+	}
+	return out, applied, nil
+}
+
+// strings_SplitLinesKeepEnds splits src after every '\n', keeping the
+// terminator on each piece, so joining the pieces reproduces src byte
+// for byte.
+func strings_SplitLinesKeepEnds(src []byte) [][]byte {
+	var lines [][]byte
+	start := 0
+	for i, c := range src {
+		if c == '\n' {
+			lines = append(lines, src[start:i+1])
+			start = i + 1
+		}
+	}
+	if start < len(src) {
+		lines = append(lines, src[start:])
+	}
+	return lines
+}
+
+// stdlibOverlayCheck verifies EVERY row of the overlay table against the
+// pinned checkout with no program in hand (`--stdlib-overlay-check`, run
+// by scripts/check-stdlib-register): the row's file must be among the
+// files selected for its package, pinned, and carry the recorded bytes
+// exactly once at the recorded line. Returns the applied-site report.
+func stdlibOverlayCheck() (string, error) {
+	if err := checkStdlibSrcRev(); err != nil {
+		return "", err
+	}
+	rows, err := parseStdlibOverlay(stdlibOverlayTSV)
+	if err != nil {
+		return "", err
+	}
+	pin, err := loadStdlibPin()
+	if err != nil {
+		return "", err
+	}
+	var b strings.Builder
+	byPkg := map[string][]string{}
+	for _, r := range rows {
+		byPkg[r.pkg] = append(byPkg[r.pkg], r.file)
+	}
+	for _, pkg := range sortedStringKeys(byPkg) {
+		files, err := selectLibraryFiles(pkg)
+		if err != nil {
+			return "", err
+		}
+		if err := checkLibraryFilesPinned(pkg, files, pin); err != nil {
+			return "", err
+		}
+		selected := map[string]string{}
+		for _, f := range files {
+			selected[filepath.Base(f)] = f
+		}
+		for _, r := range rows {
+			if r.pkg != pkg {
+				continue
+			}
+			f, ok := selected[r.file]
+			if !ok {
+				return "", unsup("stdlib overlay %s: %s is not among the files selected for package %q under the oracle context — the row names text the frontend never lowers (fail closed)", r.site(), r.file, pkg)
+			}
+			src, err := os.ReadFile(f)
+			if err != nil {
+				return "", unsup("stdlib overlay %s: cannot read %s (%v)", r.site(), f, err)
+			}
+			if _, applied, err := applyStdlibOverlay([]stdlibOverlayRow{r}, pkg, f, src); err != nil {
+				return "", err
+			} else if len(applied) != 1 {
+				return "", unsup("internal: stdlib overlay %s did not apply exactly once (%d)", r.site(), len(applied))
+			}
+			b.WriteString(r.kind + "\t" + r.site() + "\t" + r.old + " -> " + r.new + "\n")
+		}
+	}
+	expr, imports := stdlibOverlayCount(rows)
+	b.WriteString(fmt.Sprintf("# %d expr row(s) (cap %d), %d import row(s): every row's bytes verified at the pinned checkout\n", expr, stdlibOverlayCap, imports))
+	return b.String(), nil
+}
 
 // stdlibSubstitution is one row of the substitution table.
 type stdlibSubstitution struct {
@@ -416,10 +658,29 @@ func (l *loader) parseLibrary(path string, pin map[string]string) (*sourcePkg, e
 	if err := checkPinnedFilesSelected(path, files, pin); err != nil {
 		return nil, err
 	}
+	overlay, err := parseStdlibOverlay(stdlibOverlayTSV)
+	if err != nil {
+		return nil, err
+	}
 	unit := &sourcePkg{path: path, library: true, libFiles: files, linknamed: map[string]string{}}
 	pkgName := ""
 	for _, f := range files {
-		af, err := parser.ParseFile(l.fset, f, nil, parser.ParseComments)
+		// The OVERLAY (stdlib-overlay.tsv) is applied to the in-memory
+		// copy AFTER the pin check above hashed the upstream bytes: each
+		// row's line must carry its recorded bytes exactly once, or the
+		// unit refuses by site. The parser sees the overlaid text under
+		// the upstream file name, so every position it reports is the
+		// upstream line.
+		src, err := os.ReadFile(f)
+		if err != nil {
+			return nil, unsup("stdlib source package %q: cannot read %s (%v) — fail closed", path, f, err)
+		}
+		src, applied, err := applyStdlibOverlay(overlay, path, f, src)
+		if err != nil {
+			return nil, err
+		}
+		unit.overlaid = append(unit.overlaid, applied...)
+		af, err := parser.ParseFile(l.fset, f, src, parser.ParseComments)
 		if err != nil {
 			return nil, fmt.Errorf("stdlib source package %q: %w", path, err)
 		}

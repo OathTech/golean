@@ -1451,6 +1451,22 @@ row so the axis stops being invisible, nothing more.
   allocator lands on other members (cap-zero → 1) — live validation.
   XIMPL (gccgo/tinygo allocators) would stress the upper end.
 
+**`strings.Builder.grow` rides this envelope (added 2026-09-03,
+`stdlib-source-2`).** Upstream's `bytealg.MakeNoZero(2*cap+n)` — a
+runtime leaf documented as "length n and capacity of AT LEAST n" (gc
+realizes size-class rounding: Grow(10) on an empty Builder → Cap 16,
+Grow(100) → 112, probe-verified go1.26.5) — is OVERLAID by the frontend
+as `append([]byte(nil), make([]byte, 2*cap+n)...)`
+(`tools/nativefrontend/stdlib-overlay.tsv`, register
+`docs/stdlib-admission-register.md`), i.e. MakeNoZero's documented
+latitude is realized as THIS site's choice. The envelope contains gc's
+point for every n (size-class rounding ≤ 2·n above 32 bytes, ≤ 32 below).
+Membership rows `stdlib-source/builder-cap/{grow-empty,grow-hundred,
+grow-after-write,grow-then-write}` version-track gc's point against it
+(`Builder.Cap()` was a declaration-only stub under the retired shadow
+model; it is a real observable now). No new latitude row: the site is an
+instance of R2.
+
 ### R3. `[]byte(s)` conversion capacity — (b-n) PINNED singleton, **gc known outside** (escaping path)
 
 - WHERE: spec §Conversions: "The capacity of the resulting slice is
@@ -1723,6 +1739,17 @@ member of the unstable-sort envelope for comparator sorts, where ties
 ARE observable (distinct structs comparing equal). Declared latitude,
 comparator lane; relocating `slices.Sort` onto the shim (the parked
 D8-F1 arc) relabels this row rather than retiring it.
+
+**`slices.SortFunc` is source-through since 2026-09-03 (`stdlib-source-2`):**
+the injected insertion sort is RETIRED; the machine executes gc's own
+`pdqsortCmpFunc` (deps/go @ go1.26.5 `slices/zsortanyfunc.go`, stenciled
+per element type), so the realized tie order is gc's member EXACTLY — a
+version-tracked (b)-pin under G4(a) (memo §5), not a machine choice.
+Rows: `stdlib-source/slices-sortfunc/sortfunc-ties-projected`
+(tie-insensitive — the doc contract) and `sortfunc-ties-realized` (the
+exact order; a toolchain that changes pdqsort moves this row, which is
+the pin's purpose). The `sortSlice` op's row above is unchanged
+(`slices.Sort` at integer kinds; memo §3 row M retires it in slice 4).
 
 ### R14. Constant arithmetic precision — (d) UNKNOWN (delegated)
 

@@ -39,5 +39,19 @@ if ! cmp -s "$WORK/code.tsv" "$WORK/doc.tsv"; then
   diff "$WORK/doc.tsv" "$WORK/code.tsv" | head -20 >&2
   exit 1
 fi
-counts="$(awk -F'\t' '$1=="count"{printf "%s=%s ", $2, $3}' "$WORK/code.tsv")"
-echo "check-stdlib-register: ok — register machine block = frontend tables (${counts% })"
+# The OVERLAY rows (slice 2, tools/nativefrontend/stdlib-overlay.tsv) are
+# re-verified against the pinned checkout with no program in hand: every
+# row's file must be selected and pinned, and its line must carry the
+# recorded bytes exactly once (audit fix round F12's owed ci-side
+# assertion — the table is the single source for what the emitter applies
+# AND for the register's rows, so a row that does not verify here is a
+# register claiming text the frontend cannot lower).
+if ! GO111MODULE=off GOCACHE="${GOCACHE:-$ROOT/artifacts/go-build-cache}" go run ./tools/nativefrontend --stdlib-overlay-check > "$WORK/overlay.tsv" 2>"$WORK/err"; then
+  cat "$WORK/err" >&2
+  echo "check-stdlib-register: FAIL — an overlay row does not verify against the pinned GOROOT source (see above; the site's bytes moved, or the file is not selected/pinned)" >&2
+  exit 1
+fi
+counts="$(awk -F'\t' '$1=="count"{printf "%s=%s; ", $2, $3}' "$WORK/code.tsv")"
+overlay_note="$(grep '^#' "$WORK/overlay.tsv" | sed 's/^# //')"
+echo "check-stdlib-register: ok — register machine block = frontend tables (${counts%; })"
+echo "check-stdlib-register: ok — overlay table verified at the pin: ${overlay_note}"

@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+# encoding/binary through the REAL package (slice 2; the LittleEndian var-method desugar RETIRED).
+le-roundtrip-64	leRoundTrip64	-	ok	-	stdlib,bytes,slices,bitwise,globals
+be-roundtrip	beRoundTrip	-	ok	-	stdlib,bytes,slices,bitwise,slicing
+append-orders	appendOrders	-	ok	-	stdlib,bytes,slices,bitwise,append,nil
+byteorder-interface	byteOrderInterface	-	ok	-	stdlib,bytes,interfaces,methods,globals
+put-short-panics	putShortPanics	-	panic	index out of range	stdlib,bytes,slices,panic

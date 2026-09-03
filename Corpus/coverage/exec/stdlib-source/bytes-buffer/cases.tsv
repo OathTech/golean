@@ -1,0 +1,12 @@
+# id	subject	args	expected_status	expected_reason	features
+# bytes.Buffer through the REAL body (slice 2; shadow model RETIRED) + other pure bytes members.
+write-side	bufWriteSide	-	ok	-	stdlib,bytes,methods,runes,unicode
+next-bytes-truncate	bufNextBytesTruncate	-	ok	-	stdlib,bytes,methods,slicing
+unread-byte-error	bufUnreadByteError	-	ok	-	stdlib,bytes,methods,interfaces
+grow-contract	bufGrowContract	-	ok	-	stdlib,bytes,methods,cap,loops
+grow-negative	bufGrowNegative	-	panic	bytes.Buffer.Grow: negative count	stdlib,bytes,methods,panic
+truncate-out-of-range	bufTruncateOutOfRange	-	panic	bytes.Buffer: truncation out of range	stdlib,bytes,methods,panic
+reset-reuse	bufResetReuse	-	ok	-	stdlib,bytes,methods,cap
+nil-receiver-string	bufNilReceiverString	-	ok	-	stdlib,bytes,methods,nil,pointers
+available-buffer	bufAvailableBuffer	-	ok	-	stdlib,bytes,methods,append,cap
+bytes-others	bytesOthers	-	ok	-	stdlib,bytes,equality,unicode,nil

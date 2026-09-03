@@ -68,7 +68,16 @@ func run() error {
 	flag.StringVar(&stdlibPinPath, "stdlib-pin", stdlibPinPath, "tracked library pin (path<TAB>sha256 per lowered stdlib source file)")
 	pinManifest := flag.Bool("stdlib-pin-manifest", false, "print the library pin manifest for the current source root and exit")
 	registerDump := flag.Bool("stdlib-register", false, "print the code's stdlib admission tables (register machine block) and exit")
+	overlayCheck := flag.Bool("stdlib-overlay-check", false, "verify every stdlib-overlay.tsv row against the pinned GOROOT source (bytes at the recorded site, file selected and pinned), print the site report and exit")
 	flag.Parse()
+	if *overlayCheck {
+		out, err := stdlibOverlayCheck()
+		if err != nil {
+			return err
+		}
+		_, err = os.Stdout.WriteString(out)
+		return err
+	}
 	if *pinManifest {
 		out, err := stdlibPinManifest()
 		if err != nil {

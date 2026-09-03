@@ -1110,6 +1110,39 @@ substitution with zero hand-written library text).
 **Size:** M (3–4 sessions), one worker; the loader/pruning work is the
 bulk, the rest is deletion and rows.
 
+> **SLICE 2 DONE 2026-09-03 ([AGENT], lane `stdlib-source-2`, within G1/G8/G9
+> as ruled and the ParseUint ruling (a); evidence
+> `docs/evidence/2026-09-03_stdlib-source-2/`).** The overlay mechanism
+> landed as §2.3.2 item 3 describes, with one departure and two findings.
+> Landed: `tools/nativefrontend/stdlib-overlay.tsv` — 5 `expr` rows of the
+> cap of 12 (`internal/stringslite.Clone`, `errors.joinError.Error`,
+> `strings.Builder.{String,copyCheck,grow}`) + 5 consequential import
+> neutralizations, each row byte-checked against the pinned file at every
+> load and re-verified by ci with no program in hand; BUG-089's nine reds
+> GREEN; `bytes`/`slices`/`cmp`/`encoding/binary` source-through; shims
+> RETIRED per §3 rows 2, 5, 6, 7, 11, 12, 13, T1, T2. **Departure:** the
+> four `internal/strconv` float-bits casts are NOT overlaid — this memo
+> called them "one overlay function each onto `math.Float64bits`-shaped
+> machine ops that `FloatBits.lean` already implements", but the machine
+> has no such op reachable from the wire (`FloatBits.lean` is the softfloat
+> kernel; `Syntax.lean` has no bit-reinterpretation node; `math.Float64bits`
+> does not lower): realizing them is a PRIMITIVE admission (cap 2), which
+> no ruling covers — posed to the [USER], not self-admitted; `FormatFloat`/
+> `ParseFloat` stay red on FR-21. **Finding 1 (STOP rule):** retiring
+> `cmp.Compare`'s kind-dispatch desugar flipped the GREEN row
+> `slices/sortfunc-cmp/cmp-compare-kinds` red — the real generic at a
+> FUNCTION-LOCAL defined type hits mono.go's local-type naming refusal
+> (audit response M3), a frontend generality gap; the desugar is RETAINED
+> (`cmpshim.go`) and the decision posed. **Finding 2 (cost):** the
+> interpreter's in-place `append` into spare capacity costs O(cap) per
+> call (4,096 one-byte appends > 60 s; a 1 KB Builder ≈ 1.5 s), so
+> Builder/Buffer workloads beyond ~1 KB exceed the 30 s row budget —
+> §3 row 5's "honest budget refusal" branch is what `repeat-bound-refused`
+> became (BUG-073), and the Builder fuzz is 10 × 300 operations, not 100k.
+> `Builder.grow`'s substitute realizes MakeNoZero's documented "at least
+> n" capacity as the R2 append-spill envelope (membership rows
+> `stdlib-source/builder-cap/*`, gc's size-class point inside).
+
 **Slice 2 (pre-announced, not scoped here):** the overlay mechanism
 (`Builder` ×3, `errors.Join`, `internal/strconv` casts) + `Join`/
 `Repeat`/`Builder`/`Buffer`/`errors.New`/`bytes.Equal`/`binary`/

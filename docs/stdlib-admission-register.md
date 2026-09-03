@@ -30,10 +30,11 @@ column of the block made the check fail naming the line
 |---|---|---|---|
 | source-through | a standard-library package loaded from the pinned GOROOT source (`deps/go/src` @ go1.26.5) as a source unit, emitted reachability-pruned; NO text of ours | uncapped | admission = a row here with its reason and an **init-pure at the pin** argument (see below) |
 | substitution | one UPSTREAM file swapped for another UPSTREAM file of the same package (`*_native.go` + `.s` → `*_generic.go`); no text of ours | uncapped | every row names its upstream twin (`tools/nativefrontend/stdlib-substitutions.tsv`) |
-| overlay | OUR text at a library path, expressed as a diff against upstream at the pin (slice 2's mechanism — `strings.Builder.String`, `errors.Join`, `internal/strconv`'s float-bits casts, `internal/stringslite.Clone`) | **12** | [USER] re-ratification |
+| overlay | OUR text at a library path: ONE pure-Go expression substituted for ONE unsafe (or runtime-implemented) expression at ONE named site, recorded in `tools/nativefrontend/stdlib-overlay.tsv` (package, file, line, the upstream bytes, the substitute, the semantic argument + its verified premise) and BYTE-CHECKED at every load — the recorded line must carry the recorded bytes exactly once or the unit refuses by site (slice 2, 2026-09-03: `internal/stringslite.Clone`, `errors.joinError.Error`, `strings.Builder.{String,copyCheck,grow}`). `internal/strconv`'s float-bits casts are NOT overlaid (see the slice log: a primitive admission, [USER]-gated) | **12** `expr` rows | [USER] re-ratification |
+| overlay-import | the consequential neutralization of an import a file no longer uses once its `expr` rows apply (`"unsafe"` -> `_ "unsafe"`); no semantics; admitted only for a file that has an `expr` row (parser-enforced); listed so every edited line is visible | not counted ([AGENT] decision, slice 2 — the [USER] may re-rule) | n/a |
 | primitive | a machine op of LIBRARY origin (`print`/`println` when G2's slice lands; `sync` and `sortSlice` are language/memory-model and are listed elsewhere, not counted) | **2** | [USER] re-ratification |
-| shim | a RETAINED user-package injection (`stdlibshim.go` and the fmt/generic/var-method desugars) — frozen under D-002, retired row by row per memo §3 | frozen | n/a — shrinks only |
-| shadow-type | an E5-T shadow model (`importedmodel.go`); `strings.Builder`/`bytes.Buffer` retire onto source-through + overlay in slice 2; the `sync/atomic` wrappers are the atomics arc's intrinsics | frozen | n/a |
+| shim | a RETAINED user-package injection (`stdlibshim.go` and the fmt desugar; since slice 2 also the cmp.Compare kind-dispatch desugar, `cmpshim.go`, retained by the slice's STOP rule) — frozen under D-002, retired row by row per memo §3 | frozen | n/a — shrinks only |
+| shadow-type | an E5-T shadow model (`importedmodel.go`); since slice 2 only the `sync/atomic` wrappers (the atomics arc's intrinsics) — `strings.Builder`/`bytes.Buffer` RETIRED onto source-through + overlay | frozen | n/a |
 
 Every source-through and substitution row owes **Fields-standard
 validation** in the differential: behaviour-class rows in the corpus
@@ -65,17 +66,31 @@ G7 primitive route. This is NOT "unmodeled means effect-free" (the
 refuted H-11 reasoning, audit F1 2026-08-20): it is a census fact about
 nine named packages, re-checked at every re-pin by the purity census.
 
-### Caps — where they are enforced today (owed before slice 2)
+### Caps — where they are enforced (slice 2 closed the F12 owed item)
 
-The overlay (12) and primitive (2) caps are enforced INSIDE the
-frontend's `--stdlib-register` dump (`stdlibregister.go`: an over-cap
-table refuses to render, so `scripts/check-stdlib-register` fails) and
-nowhere else: the caps bind the register's machine block, not the
-emitter's behaviour at lowering time. Both tables are empty in slice 1,
-so nothing is exposed; a ci-side assertion that the EMITTED wire carries
-no overlay/primitive outside the register is OWED before slice 2 lands
-its first overlay ([AGENT], audit fix round F12 — recorded, not deferred
-silently).
+The overlay (12 `expr` rows) and primitive (2) caps are enforced INSIDE
+the frontend's `--stdlib-register` dump (`stdlibregister.go`: an
+over-cap table refuses to render, so `scripts/check-stdlib-register`
+fails; red-first test `TestStdlibRegisterDumpCaps`). Slice 1 recorded
+an OWED ci-side assertion that the EMITTED wire carries no overlay
+outside the register (audit fix round F12). Slice 2 closes it
+structurally and mechanically: (i) the overlay table
+`tools/nativefrontend/stdlib-overlay.tsv` is the SINGLE SOURCE both for
+what the loader applies (`applyStdlibOverlay`, at parse time, after the
+pin check hashed the upstream bytes) and for the register's overlay rows
+(the dump renders the same table), so a substitution the register does
+not list cannot be applied; (ii) `scripts/check-stdlib-register` also
+runs `nativefrontend --stdlib-overlay-check`, which re-verifies EVERY
+row against the pinned checkout with no program in hand (file selected
+under the oracle context and pinned; the recorded bytes present exactly
+once at the recorded line), so a stale or fabricated row fails the gate
+even if no corpus program reaches it; (iii) any `unsafe` site the table
+does not cover keeps the by-name H-3 quarantine (`emit.go`, the
+library-body `unsafe.` arm), so a row that failed to apply could never
+present as a lowered body. Red-first at landing: `TestStdlibOverlayMovedBytesRefuseByName`
+(a mutated Builder.String row refuses naming `strings/builder.go:47`),
+`TestStdlibOverlayTableRules` (one probe per parser rule).
+The primitive table is still empty (print/println is slice 3).
 
 ### Residual channels (recorded)
 
@@ -131,6 +146,60 @@ silently).
   `internal/reflectlite`, and FR-11's goto shape. Overlay 0/12, primitive
   0/2. Evidence: `docs/evidence/2026-09-03_stdlib-source-1/`.
 
+- **2026-09-03 `stdlib-source-2`** ([AGENT], within G1/G8/G9 as ruled
+  and the 2026-09-03 ParseUint ruling — [USER] Mike, relayed by the
+  [AGENT] coordinator, cited as relayed: «(a) we're not running Raft
+  right now, I think going red is simpler and safer, and lets us do a
+  clean retirement»). **The OVERLAY mechanism landed**: `stdlib-overlay.tsv`,
+  5 `expr` rows (of the cap of 12) + 5 consequential `import` rows,
+  byte-checked at every load: `internal/stringslite.Clone` (`string(b)`
+  — closes BUG-089's nine designed reds, FAIL→PASS), `errors.joinError.Error`
+  (`string(b)`), `strings.Builder.String` (`string(b.buf)`),
+  `strings.Builder.copyCheck` (`b` for `abi.NoEscape(unsafe.Pointer(b))`),
+  `strings.Builder.grow` (`append([]byte(nil), make([]byte, 2*cap(b.buf)+n)...)`
+  for `bytealg.MakeNoZero(…)` — MakeNoZero's documented "capacity of at
+  least n" realized as the language's own append-spill latitude, the
+  machine's R2 envelope, which contains gc's size-class point; membership
+  rows `stdlib-source/builder-cap/*`). Every row's semantic argument and
+  its premise (verified over the callers at the pin) is in the table and
+  rendered below. **NOT overlaid, refused by name**: `internal/strconv/deps.go`'s
+  four float-bits casts — the memo (§2.3.2) planned them "onto the
+  machine's FloatBits", but the machine has NO float-bits op reachable
+  from the wire (FloatBits.lean is the softfloat kernel; `Syntax.lean`
+  has no bit-reinterpretation node and `math.Float64bits` does not
+  lower): realizing them is a PRIMITIVE admission (cap 2, [USER]-gated),
+  which the rulings so far did not cover — posed in the slice-2 evidence
+  README, not self-admitted; `stdlib-source/frontier/format-float-unsafe`
+  stays red on FR-21. `slices.overlaps` (unsafe.Sizeof + pointer
+  arithmetic) REFUSED as the memo says (row `stdlib-source/frontier/slices-overlaps`).
+  **Source-through admitted**: `bytes`, `slices`, `cmp`, `encoding/binary`
+  (init-pure arguments in each row below; `slices.Sort` stays the
+  `sortSlice` machine op via `frontendInterceptedLibraryMembers` until
+  memo §3 row M). **Shims RETIRED**: `strings.Join`, `strings.Repeat`,
+  `errors.New` (user-facing), `bytes.Equal`, `slices.SortFunc`,
+  `binary.LittleEndian.{Uint64,PutUint64}` (the package-variable method
+  desugar mechanism deleted), and the two E5-T shadow types
+  `strings.Builder`/`bytes.Buffer` (memo §3 rows 2, 5, 6, 7, 11, 12, 13,
+  T1, T2). **Shims RETAINED — 7**: the fmt desugar's six (G5, slice 4; its
+  bundle keeps `goleanShimErrorsNew` as `fmt.Errorf`'s constructor only —
+  a recorded delta, `*main.goleanShimErrorString` vs `*errors.errorString`,
+  unobservable without errors.Is/As), and `cmp.Compare`'s kind-dispatch
+  desugar (`cmpshim.go`) by the slice's STOP rule: retiring it flipped the
+  GREEN row `slices/sortfunc-cmp/cmp-compare-kinds` red — the real generic
+  instantiated at a FUNCTION-LOCAL defined type hits mono.go's naming
+  refusal (audit response M3: "refused rather than guessed"), the same gap
+  that already reds `slices/sortfunc-cmp/sortfunc-local-type`; a frontend
+  generality gap, not a cmp gap — posed to the [USER] (README). The
+  strings.Repeat shim's golean-invented 1<<24 output bound went with it:
+  `strings/trimspace-repeat/repeat-bound-refused` (16 MiB) is now a
+  RUNNER-BUDGET red (the machine cannot materialize 16 MiB of bytes in
+  30 s; the runner names the timeout) — BUG-073 updated. Overlay 5/12,
+  overlay-import 5, primitive 0/2, shim 7, shadow-type 5. Pins moved:
+  `baselines/stdlib-pin.tsv` 48 → 61 files (the four new packages);
+  twin wire `45cd882a…` → `6a9ef8bb…` ([USER]-authorized G9 + ruling (a),
+  relayed; structural diff in the evidence dir). Evidence:
+  `docs/evidence/2026-09-03_stdlib-source-2/`.
+
 ## The machine block
 
 Rendered by `GO111MODULE=off go run ./tools/nativefrontend --stdlib-register`
@@ -141,19 +210,24 @@ with the reason in the slice log above.
 <!-- register:begin -->
 ```
 class	entry	detail
-count	source-through	9 (uncapped)
+count	source-through	13 (uncapped)
 count	substitution	5 (uncapped; each names its upstream twin)
-count	overlay	0 / cap 12
+count	overlay	5 / cap 12 (expr sites, stdlib-overlay.tsv; byte-checked at every load)
+count	overlay-import	5 (consequential import neutralizations of overlaid files; no semantics; not counted against the cap)
 count	primitive	0 / cap 2
-count	shim	14 (frozen, D-002; retired by rows of memo §3)
-count	shadow-type	7
-source-through	errors	errors.New for strconv's ErrRange/ErrSyntax package variables (pure); the user-facing errors.New SHIM is not retired this slice
-source-through	internal/bytealg	the byte-search leaves strings.Index/Count/Split reach; assembly on amd64, swapped for the package's own *_generic.go twins by stdlib-substitutions.tsv
-source-through	internal/strconv	strconv's implementation package; pure Go except deps.go's four float-bits casts (unreached by the integer paths; quarantine by name if reached)
-source-through	internal/stringslite	strings/strconv's shared Index/Cut/Clone helpers; Clone uses unsafe.String (quarantines by name when reached)
-source-through	math/bits	internal/strconv's formatBits uses bits.TrailingZeros; pure except the two runtime-linknamed error VALUES (poisoned by the linkname rule)
-source-through	strconv	slice-1 target (FormatUint, FormatInt, ParseUint retired from shims); thin wrappers over internal/strconv; every Parse* ERROR path reaches internal/stringslite.Clone's unsafe.String and refuses by name (BUG-089 designed reds; overlay pending, slice 2 — the re-bodied-shim alternative was a D-002 exception DENIED by the [USER] 2026-09-03)
-source-through	strings	slice-1 target (Fields, TrimSpace, Split retired from shims); pure Go at function granularity given the bytealg substitution — Builder stays the E5-T shadow model until slice 2's overlay
+count	shim	7 (frozen, D-002; retired by rows of memo §3)
+count	shadow-type	5
+source-through	bytes	slice-2 target (Equal retired from shim; Buffer retired from the E5-T shadow model — pure Go, its growth idiom `append([]byte(nil), make([]byte, c)...)` is the overlay's model); ReadFrom/WriteTo reach `io` (export data only) and quarantine by name; init-pure: three errors.New sentinels + the asciiSpace table
+source-through	cmp	slice-2 target (Compare retired from the kind-dispatch desugar — the real generic body, NaN arm included, so floats lower too); pure, no imports; init-pure: no package-level state
+source-through	encoding/binary	slice-2 target (LittleEndian.Uint64/PutUint64 retired from the package-variable method desugar — the exported vars and their unexported receiver types lower as ordinary library declarations); Read/Write/Size are reflect and refuse by name (export data); init-pure: two errors.New sentinels, zero-valued ByteOrder vars, an unreached sync.Map
+source-through	errors	errors.New (slice 2: the user-facing SHIM retired — every errors.New is the real *errors.errorString), Join (its unsafe.String OVERLAID), Unwrap; Is/As reach internal/reflectlite and refuse by name (FR-21 → G6)
+source-through	internal/bytealg	the byte-search leaves strings.Index/Count/Split reach; assembly on amd64, swapped for the package's own *_generic.go twins by stdlib-substitutions.tsv; MakeNoZero (body-less) is overlaid away at its one strings caller
+source-through	internal/strconv	strconv's implementation package; pure Go except deps.go's four float-bits casts — a bit reinterpretation the language has no operation for and the machine has no op for (a PRIMITIVE admission, [USER]-gated; NOT overlaid in slice 2): FormatFloat/ParseFloat/AppendFloat quarantine by name (FR-21 row stdlib-source/frontier/format-float-unsafe)
+source-through	internal/stringslite	strings/strconv's shared Index/Cut/Clone helpers; Clone's unsafe.String is OVERLAID to string(b) (slice 2, byte-checked)
+source-through	math/bits	internal/strconv's formatBits uses bits.TrailingZeros, strings.Repeat uses bits.Mul, slices uses bits.Len; pure except the two runtime-linknamed error VALUES (poisoned by the linkname rule)
+source-through	slices	slice-2 target (SortFunc retired from the generic desugar — pdqsortCmpFunc stenciled per element type by mono.go, gc's exact member incl. tie order); Sort stays the sortSlice MACHINE OP at integer kinds until memo §3 row M (frontendInterceptedLibraryMembers); Insert/Replace reach `overlaps` (unsafe.Sizeof/pointer arithmetic) and refuse by name — REFUSED, not overlaid (FR-21 row stdlib-source/frontier/slices-overlaps); iter-typed members are unreached unless called; init-pure: no package-level initializers
+source-through	strconv	slice-1 target (FormatUint, FormatInt, ParseUint retired from shims); thin wrappers over internal/strconv; the Parse* ERROR paths reach internal/stringslite.Clone, OVERLAID in slice 2 (BUG-089's nine designed reds closed)
+source-through	strings	slice-1 target (Fields, TrimSpace, Split retired from shims); slice 2: Join, Repeat and the Builder TYPE retired from shim/shadow model — Builder's three unsafe sites (String, copyCheck's NoEscape, grow's MakeNoZero) are OVERLAID (stdlib-overlay.tsv); pure Go at function granularity given the bytealg substitution
 source-through	unicode	unicode.IsSpace and its White_Space RangeTable (strings.Fields/TrimSpace's non-ASCII path); pure tables, reached ones only
 source-through	unicode/utf8	rune decoding used by strings' non-ASCII paths and explode; pure
 substitution	internal/bytealg/indexbyte_native.go -> indexbyte_generic.go	IndexByte/IndexByteString are assembly on amd64 (indexbyte_amd64.s); the generic twin is the same package's portable implementation
@@ -161,22 +235,23 @@ substitution	internal/bytealg/index_native.go -> index_generic.go	Index/IndexStr
 substitution	internal/bytealg/index_amd64.go -> index_generic.go	the amd64 file's init() sets MaxLen from CPU features (internal/cpu, AVX2: 63 or 31) — a machine-specific value. Dropping it leaves `var MaxLen int` (bytealg.go) at its ZERO value — index_generic.go declares NO init() — which is what makes the previous row's placeholder bodies unreachable and selects the portable brute-force/Rabin-Karp search path; the substitution does not add an init, it removes one (the register records this init difference)
 substitution	internal/bytealg/count_native.go -> count_generic.go	Count/CountString are assembly on amd64 (count_amd64.s); the generic twin is the same package's portable implementation
 substitution	internal/bytealg/compare_native.go -> compare_generic.go	Compare is assembly on amd64 (compare_amd64.s) and CompareString pulls runtime.cmpstring by linkname; the generic twin is pure Go (its own runtime_cmpstring linkname push is a body-less-free definition)
-shim	bytes.Equal	direct-call shim (stdlibshim.go)
-shim	cmp.Compare	generic desugar (genericshim.go)
-shim	encoding/binary.LittleEndian.PutUint64	package-variable method desugar (fmtdesugar.go)
-shim	encoding/binary.LittleEndian.Uint64	package-variable method desugar (fmtdesugar.go)
-shim	errors.New	direct-call shim (stdlibshim.go)
-shim	fmt.Errorf	fmt desugar (fmtdesugar.go)
-shim	fmt.Fprint	fmt desugar (fmtdesugar.go)
-shim	fmt.Fprintf	fmt desugar (fmtdesugar.go)
-shim	fmt.Sprint	fmt desugar (fmtdesugar.go)
-shim	fmt.Sprintf	fmt desugar (fmtdesugar.go)
-shim	fmt.Sprintln	fmt desugar (fmtdesugar.go)
-shim	slices.SortFunc	generic desugar (genericshim.go)
-shim	strings.Join	direct-call shim (stdlibshim.go)
-shim	strings.Repeat	direct-call shim (stdlibshim.go)
-shadow-type	bytes.Buffer	E5-T shadow model (importedmodel.go); source-through + overlay pending (memo §3 rows T1/T2, slice 2)
-shadow-type	strings.Builder	E5-T shadow model (importedmodel.go); source-through + overlay pending (memo §3 rows T1/T2, slice 2)
+overlay	internal/stringslite/strings.go:149	`unsafe.String(&b[0], len(b))` -> `string(b)` — Clone: `b` is a fresh local `make([]byte, len(s))` filled by `copy` and RETURNED through this expression — nothing holds `b` afterwards (the only later reference is this return), so the aliasing `unsafe.String` avoids one copy and nothing else; `string(b)` yields the identical bytes. `len(s) == 0` is handled above the site, so `&b[0]` never indexes an empty slice. Reached by every strconv Parse* error path (syntaxError/rangeError/baseError/bitSizeError) — closes BUG-089's nine designed reds. godoc:strings.Clone@go1.26.5 is the idiom's exported twin.
+overlay	errors/join.go:58	`unsafe.String(&b[0], len(b))` -> `string(b)` — joinError.Error: `b` is a local `[]byte` built by `append`s from the elements' Error() texts and RETURNED through this expression; no later reference exists, so the aliasing is unobservable and `string(b)` is byte-identical. `len(e.errs) >= 2` on this path (the single-element case returns above), so `b` has at least one byte ('\n') — `&b[0]` is in range, as the upstream comment on the preceding line states.
+overlay	strings/builder.go:47	`unsafe.String(unsafe.SliceData(b.buf), len(b.buf))` -> `string(b.buf)` — Builder.String: upstream ALIASES buf's backing array as the returned string; `string(b.buf)` copies the same len(b.buf) bytes. The alias is observable only if a byte in [0, len(b.buf)) is later overwritten — and no Builder method ever writes below the current len: Write/WriteByte/WriteRune/WriteString only `append` (writes at index >= len at that moment, possibly into spare capacity the returned string does not cover), grow copies into a NEW array, Reset drops buf; `buf` is unexported, so no user code reaches it. Hence every string String() ever returned keeps its bytes under both bodies. nil buf: unsafe.String(nil, 0) == "" == string([]byte(nil)). Premise (no write below len) verified over every method of builder.go at the pin.
+overlay	strings/builder.go:39	`(*Builder)(abi.NoEscape(unsafe.Pointer(b)))` -> `b` — Builder.copyCheck: abi.NoEscape is the IDENTITY on the pointer value (internal/abi/escape.go: `unsafe.Pointer(uintptr(p) ^ 0)`) whose only purpose is to hide `b` from gc's escape analysis (issue 23382); escape analysis has no semantics in the machine (no stack/heap distinction is observable), so `b.addr = b` is the same store. The copy check that follows (`b.addr != b` panics) compares the stored pointer, which is identical.
+overlay	strings/builder.go:67	`bytealg.MakeNoZero(2*cap(b.buf) + n)` -> `append([]byte(nil), make([]byte, 2*cap(b.buf)+n)...)` — Builder.grow: MakeNoZero(n) is a runtime-implemented leaf (body-less; runtime/slice.go bytealg_MakeNoZero) whose DOCUMENTED contract is "a slice of length n and capacity of AT LEAST n bytes" with unspecified contents. The substitute is the same contract in the language: `make` gives len n zeroed, and the spilling `append` gives a capacity the spec leaves to the implementation ("sufficiently large", spec#Appending_and_copying_slices) — the machine's R2 append-spill CHOICE envelope [newLen, max(32, 2*growth)], which contains gc's size-class rounding for every n (latitude inventory R2; membership rows strings/builder-cap/*). Contents: the result is immediately resliced to [:len(b.buf)] and `copy` fills exactly that prefix; bytes beyond len are written by a later `append` before any method can read them (String/Len read only [0,len)), so zeroed-vs-uninitialized is unobservable. The same idiom is upstream's own in bytes/buffer.go growSlice (`append([]byte(nil), make([]byte, c)...)`).
+overlay-import	internal/stringslite/strings.go:13	`"unsafe"` -> `_ "unsafe"` — consequential: the file's only `unsafe.` use is the line-149 site; go/types refuses an unused import.
+overlay-import	errors/join.go:8	`"unsafe"` -> `_ "unsafe"` — consequential: the file's only `unsafe.` use is the line-58 site.
+overlay-import	strings/builder.go:8	`"internal/abi"` -> `_ "internal/abi"` — consequential: the file's only `abi.` use is the line-39 site.
+overlay-import	strings/builder.go:9	`"internal/bytealg"` -> `_ "internal/bytealg"` — consequential: the file's only `bytealg.` use is the line-67 site.
+overlay-import	strings/builder.go:11	`"unsafe"` -> `_ "unsafe"` — consequential: the file's `unsafe.` uses are the line-39 and line-47 sites.
+shim	cmp.Compare	generic kind-dispatch desugar (cmpshim.go) — RETAINED by slice 2's STOP rule: its retirement flips slices/sortfunc-cmp/cmp-compare-kinds red on mono.go's function-local-type instantiation naming refusal; posed to the [USER] (evidence README); floats fall through to the real generic
+shim	fmt.Errorf	fmt desugar (fmtdesugar.go; memo §2.3.3 / G5 — slice 4 re-homes it; its bundle keeps goleanShimErrorsNew as Errorf's error constructor only)
+shim	fmt.Fprint	fmt desugar (fmtdesugar.go; memo §2.3.3 / G5 — slice 4 re-homes it; its bundle keeps goleanShimErrorsNew as Errorf's error constructor only)
+shim	fmt.Fprintf	fmt desugar (fmtdesugar.go; memo §2.3.3 / G5 — slice 4 re-homes it; its bundle keeps goleanShimErrorsNew as Errorf's error constructor only)
+shim	fmt.Sprint	fmt desugar (fmtdesugar.go; memo §2.3.3 / G5 — slice 4 re-homes it; its bundle keeps goleanShimErrorsNew as Errorf's error constructor only)
+shim	fmt.Sprintf	fmt desugar (fmtdesugar.go; memo §2.3.3 / G5 — slice 4 re-homes it; its bundle keeps goleanShimErrorsNew as Errorf's error constructor only)
+shim	fmt.Sprintln	fmt desugar (fmtdesugar.go; memo §2.3.3 / G5 — slice 4 re-homes it; its bundle keeps goleanShimErrorsNew as Errorf's error constructor only)
 shadow-type	sync/atomic.Int32	E5-T shadow model whose methods lower to machine atomic-op intrinsics (atomics arc wave 1, atomics.go; sync/atomic is memory-model-owned, memo §2.3.4 — listed, not a source-through concern)
 shadow-type	sync/atomic.Int64	E5-T shadow model whose methods lower to machine atomic-op intrinsics (atomics arc wave 1, atomics.go; sync/atomic is memory-model-owned, memo §2.3.4 — listed, not a source-through concern)
 shadow-type	sync/atomic.Uint32	E5-T shadow model whose methods lower to machine atomic-op intrinsics (atomics arc wave 1, atomics.go; sync/atomic is memory-model-owned, memo §2.3.4 — listed, not a source-through concern)

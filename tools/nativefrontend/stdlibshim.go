@@ -69,6 +69,27 @@ import (
 // DENIED by the [USER] (Mike, 2026-09-03, relayed: «we're not running
 // Raft right now, I think going red is simpler and safer, and lets us do
 // a clean retirement»). The freeze is intact: no shim body changed.
+//
+// RETIRED SHIMS (stdlib source-through slice 2 `stdlib-source-2`,
+// 2026-09-03; memo §3 rows 2, 5, 6, 7, 11–14, T1, T2): strings.Join,
+// strings.Repeat, errors.New (the USER-FACING call), bytes.Equal,
+// binary.LittleEndian.{Uint64,PutUint64} (the package-variable method
+// desugar, fmtdesugar.go), slices.SortFunc (the generic desugar,
+// genericshim.go — file deleted), and the two E5-T shadow types
+// strings.Builder / bytes.Buffer (importedmodel.go) lower from the pinned
+// GOROOT text — `strings`, `bytes`, `slices`, `cmp`, `encoding/binary`
+// are source-through units; the `unsafe` idioms inside strings.Builder,
+// errors.Join and internal/stringslite.Clone are OVERLAID (stdlib-
+// overlay.tsv, byte-checked, cap 12). cmp.Compare's kind-dispatch
+// desugar is RETAINED by the slice's STOP rule (cmpshim.go's header:
+// retiring it flipped slices/sortfunc-cmp/cmp-compare-kinds red on
+// mono.go's function-local-type naming refusal — posed to the [USER]).
+// What else remains here is the fmt DESUGAR bundle (memo §2.3.3 / G5 —
+// slice 4 re-homes it) and, inside it, goleanShimErrorsNew as fmt.Errorf's error constructor ONLY: a user
+// `errors.New(...)` is the real library function now; Errorf's constructed
+// error keeps the injected type until slice 4 routes Errorf onto the real
+// errors.New (recorded delta: `*main.goleanShimErrorString` vs
+// `*errors.errorString`, unobservable without errors.Is/As — G6).
 
 // errorsNewShimName / errorsNewShimTypeName are the reserved
 // declaration names of the errors.New shim (raft W4.0, G-2/H-10). The
@@ -98,34 +119,6 @@ const fmtShimBundleKey = "goleanShimFmtUint"
 // rows below co-inject both bundles.
 const fmtDynShimKey = "goleanShimFmtSprintfDyn"
 
-// The W4.1 item-4 smalls (docs/raft-w41-log.md item 4): strings.Join
-// (H-17) and bytes.Equal (H-13) as ordinary E5 direct-call shims, and
-// binary.LittleEndian.{Uint64,PutUint64} (H-14) as PACKAGE-VARIABLE
-// METHOD desugars (the callee is a method on the exported var
-// `binary.LittleEndian` of an unexported type, so the plain selector
-// path cannot name it; fmtdesugar.go's emitBinaryVarMethodCall
-// rewrites the two modeled methods to the shims below and every other
-// member keeps failing closed).
-const stringsJoinShimName = "goleanShimStringsJoin"
-const bytesEqualShimName = "goleanShimBytesEqual"
-const binaryLEUint64ShimName = "goleanShimLEUint64"
-const binaryLEPutUint64ShimName = "goleanShimLEPutUint64"
-
-// The W4.3 landing-B shims (docs/raft-w43-log.md item 1): strconv's
-// Format/Parse trio (general bases 2..36; ParseUint's error TEXTS
-// verbatim — the dynamic error TYPE is a recorded delta, upstream's
-// *strconv.NumError vs the shim's string carrier, unobservable without
-// asserting to the unexported upstream type), strings.Split (byte scan
-// — upstream's own semantics for every non-empty separator; the empty
-// separator's rune explode fails closed), strings.TrimSpace (the
-// Fields byte-pattern table at both ends), strings.Repeat (loop concat
-// + upstream's negative-count panic), slices.SortFunc (a GENERIC
-// insertion-sort shim stenciled at the call's element type — emit.go's
-// emitSortFuncCall; tie order is recorded latitude, upstream is "not
-// guaranteed to be stable"), and cmp.Compare's kind shims (emit-time
-// dispatch by static kind with explicit converts — floats excluded,
-// NaN ordering is cmp.Compare-specific and unneeded).
-
 // shimUnsupportedName (audit R4-C-3): the one helper every golean
 // RUNTIME refusal routes through. Its DECLARATION is force-quarantined
 // by the emitter (emitFuncDecl special-cases the name), so a call to
@@ -141,40 +134,26 @@ const binaryLEPutUint64ShimName = "goleanShimLEPutUint64"
 // catch them. Injected whenever any shim is (it costs one dead decl).
 const shimUnsupportedName = "goleanShimUnsupported"
 
-// stringsRepeatBoundName (t1-fidelity-fixes 2026-08-31): the
-// strings.Repeat shim's CAUSE-NAMED runtime refusal helper. The
-// generic goleanShimUnsupported throw surfaces the callee's
-// quarantine reason, not its msg argument — fine for bounds whose
-// case context names them, but assessment A3-S5's condition is that
-// the Repeat output-bound stop NAME ITS CAUSE in the observation
-// itself. A dedicated force-quarantined helper carries the specific
-// reason (shimRuntimeRefusalReasons); same unrecoverable R4-C-3
-// mechanism.
-const stringsRepeatBoundName = "goleanShimStringsRepeatBound"
-
-const stringsRepeatShimName = "goleanShimStringsRepeat"
-const slicesSortFuncShimName = "goleanShimSlicesSortFunc"
+// The cmp.Compare kind shims (cmpshim.go — the one generic desugar
+// RETAINED after slice 2 by the STOP rule; see that file's header).
 const cmpCompareUintShimName = "goleanShimCmpCompareUint"
 const cmpCompareIntShimName = "goleanShimCmpCompareInt"
 const cmpCompareStringShimName = "goleanShimCmpCompareString"
 
 // stdlibShimAllowlist: package import path -> selector name -> shim
-// declaration name (the KEY declaration; a shim may inject more, see
-// stdlibShimDeclNames).
-var stdlibShimAllowlist = map[string]map[string]string{
-	"strings": {"Join": stringsJoinShimName, "Repeat": stringsRepeatShimName},
-	"errors":  {"New": errorsNewShimName},
-	"bytes":   {"Equal": bytesEqualShimName},
-}
+// declaration name for DIRECT-CALL shims. EMPTY since slice 2 (every
+// direct-call shim is retired onto source-through); kept as the table
+// the emitter (emitStdlibShimCall), the reach walk and the register
+// consult, so a future entry has exactly one place to land — and lands
+// against the register's frozen count.
+var stdlibShimAllowlist = map[string]map[string]string{}
 
 // stdlibGenericDesugarInject: packages whose GENERIC members desugar at
-// emit time (emit.go: emitSortFuncCall / emitCmpCompareCall) — the
-// injection scan must plant their shims on call presence, like
-// stdlibDesugarInject, but they are not direct-call rewrites (the
-// callee is generic: SortFunc stencils the injected generic shim at
-// the element type; Compare dispatches to a kind shim with converts).
+// emit time (cmpshim.go emitCmpCompareCall) — the injection scan plants
+// their shims on call presence, like stdlibDesugarInject, but the call
+// is not a direct-call rewrite (Compare dispatches to a kind shim with
+// converts). Since slice 2: cmp.Compare only (slices.SortFunc retired).
 var stdlibGenericDesugarInject = map[string]map[string][]string{
-	"slices": {"SortFunc": {slicesSortFuncShimName}},
 	"cmp": {"Compare": {cmpCompareUintShimName, cmpCompareIntShimName,
 		cmpCompareStringShimName}},
 }
@@ -195,19 +174,6 @@ var stdlibDesugarInject = map[string]map[string][]string{
 	},
 }
 
-// stdlibVarMethodInject: package import path -> exported package
-// VARIABLE -> method -> shims to inject when the two-level call shape
-// `pkg.Var.Method(args)` occurs (fmtdesugar.go,
-// emitBinaryVarMethodCall).
-var stdlibVarMethodInject = map[string]map[string]map[string][]string{
-	"encoding/binary": {
-		"LittleEndian": {
-			"Uint64":    {binaryLEUint64ShimName},
-			"PutUint64": {binaryLEPutUint64ShimName},
-		},
-	},
-}
-
 // stdlibShimDeclNames: every RESERVED top-level name a shim injects,
 // keyed by the shim's key declaration name. The collision check ranges
 // over all of them — a user declaration matching ANY injected name
@@ -225,16 +191,10 @@ var stdlibShimDeclNames = map[string][]string{
 	fmtDynShimKey: {fmtDynShimKey, "goleanShimStringer",
 		"goleanShimFmtDynVerb", "goleanShimFmtDynInt", "goleanShimFmtDynUint",
 		"goleanShimFmtSprintDyn", "goleanShimFmtSprintlnDyn"},
-	stringsJoinShimName:       {stringsJoinShimName},
-	bytesEqualShimName:        {bytesEqualShimName},
-	binaryLEUint64ShimName:    {binaryLEUint64ShimName},
-	binaryLEPutUint64ShimName: {binaryLEPutUint64ShimName},
-	stringsRepeatShimName:     {stringsRepeatShimName, stringsRepeatBoundName},
-	slicesSortFuncShimName:    {slicesSortFuncShimName},
-	cmpCompareUintShimName:    {cmpCompareUintShimName},
-	cmpCompareIntShimName:     {cmpCompareIntShimName},
-	cmpCompareStringShimName:  {cmpCompareStringShimName},
-	shimUnsupportedName:       {shimUnsupportedName},
+	cmpCompareUintShimName:   {cmpCompareUintShimName},
+	cmpCompareIntShimName:    {cmpCompareIntShimName},
+	cmpCompareStringShimName: {cmpCompareStringShimName},
+	shimUnsupportedName:      {shimUnsupportedName},
 }
 
 // stdlibShimDeps: shim key -> the OTHER shim keys whose sources its
@@ -282,13 +242,13 @@ func closeShimDeps(needed map[string]bool) error {
 // shimRuntimeRefusalReasons: reserved helper name -> the quarantine
 // reason its FORCE-QUARANTINED wire declaration carries (emit.go,
 // emitFuncDecl). Calling one throws GoError.unsupported with exactly
-// this text — the unrecoverable R4-C-3 stop — so a CAUSE-SPECIFIC
-// helper makes the observation itself name the bound it hit
-// (t1-fidelity-fixes 2026-08-31; the generic goleanShimUnsupported
-// stays for the bounds whose shim call sites carry the text).
+// this text — the unrecoverable R4-C-3 stop. (The cause-named
+// strings.Repeat bound helper of t1-fidelity-fixes left with the Repeat
+// shim in slice 2: the real strings.Repeat has no golean bound — an
+// output the machine cannot materialize refuses through the BUG-078
+// allocation budget, by name.)
 var shimRuntimeRefusalReasons = map[string]string{
-	shimUnsupportedName:    "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time — the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers",
-	stringsRepeatBoundName: "golean strings.Repeat shim RUNTIME refusal (fail closed): output length exceeds the modeled bound (1<<24 bytes) — the loop-concatenation shim cannot realize it within machine resources; upstream go allocates it fine (recorded honest-refusal delta, t1-fidelity-fixes 2026-08-31). Unrecoverable BY DESIGN (audit R4-C-3)",
+	shimUnsupportedName: "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time — the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers",
 }
 
 // stdlibShimSources: shim declaration name -> Go source of the
@@ -838,154 +798,6 @@ func goleanShimFmtSprintlnDyn(args []any) string {
 }
 `,
 
-	// strings.Join: "concatenates the elements of its first argument to
-	// create a single string. The separator string sep is placed between
-	// elements in the resulting string." Plain concatenation is
-	// byte-identical to upstream's Builder-based body (same elements,
-	// same separators, in order); the conformance rows
-	// (strings/join-conformance) pin it against the real one.
-	stringsJoinShimName: `
-// goleanShimStringsJoin is the native frontend's strings.Join shim
-// (extension E5, raft W4.1 item 4). Injected declaration — not user
-// code.
-func goleanShimStringsJoin(elems []string, sep string) string {
-	if len(elems) == 0 {
-		return ""
-	}
-	out := elems[0]
-	for i := 1; i < len(elems); i++ {
-		out += sep
-		out += elems[i]
-	}
-	return out
-}
-`,
-
-	// bytes.Equal: "reports whether a and b are the same length and
-	// contain the same bytes. A nil argument is equivalent to an empty
-	// slice." Length-then-bytes gives exactly that (nil and empty both
-	// have length 0); bytes/equal-conformance pins nil==empty TRUE.
-	bytesEqualShimName: `
-// goleanShimBytesEqual is the native frontend's bytes.Equal shim
-// (extension E5, raft W4.1 item 4). Injected declaration — not user
-// code.
-func goleanShimBytesEqual(a, b []byte) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := 0; i < len(a); i++ {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
-}
-`,
-
-	// binary.LittleEndian.Uint64/PutUint64: encoding/binary's own
-	// bodies modulo names, including the leading bounds check whose
-	// early out-of-range panic is part of the contract
-	// (binary/little-endian/short-read pins it).
-	binaryLEUint64ShimName: `
-// goleanShimLEUint64 is the native frontend's
-// binary.LittleEndian.Uint64 shim (raft W4.1 item 4). Injected
-// declaration — not user code.
-func goleanShimLEUint64(b []byte) uint64 {
-	_ = b[7] // bounds check (upstream's early panic shape)
-	return uint64(b[0]) | uint64(b[1])<<8 | uint64(b[2])<<16 | uint64(b[3])<<24 |
-		uint64(b[4])<<32 | uint64(b[5])<<40 | uint64(b[6])<<48 | uint64(b[7])<<56
-}
-`,
-
-	binaryLEPutUint64ShimName: `
-// goleanShimLEPutUint64 is the native frontend's
-// binary.LittleEndian.PutUint64 shim (raft W4.1 item 4). Injected
-// declaration — not user code.
-func goleanShimLEPutUint64(b []byte, v uint64) {
-	_ = b[7] // bounds check (upstream's early panic shape)
-	b[0] = byte(v)
-	b[1] = byte(v >> 8)
-	b[2] = byte(v >> 16)
-	b[3] = byte(v >> 24)
-	b[4] = byte(v >> 32)
-	b[5] = byte(v >> 40)
-	b[6] = byte(v >> 48)
-	b[7] = byte(v >> 56)
-}
-`,
-
-	// strings.Repeat: loop concatenation; upstream's negative-count
-	// panic verbatim (gc-probed artifacts/w43/probe-b R1). Upstream's
-	// output-length OVERFLOW panic is modeled verbatim since
-	// 2026-08-31 (t1-fidelity-fixes; assessment A3-S5's cause-naming
-	// condition): the pinned oracle (deps/go @ go1.26.5,
-	// strings.Repeat) panics "strings: Repeat output length overflow"
-	// exactly when len(s)*count > maxInt — an ordinary RECOVERABLE
-	// panic per the header split (upstream-faithful panics stay
-	// panics). Below overflow, outputs past the golean bound (1<<24
-	// bytes) refuse BY NAME through goleanShimUnsupported instead of
-	// grinding into a fuel/memory stop that names no cause (the
-	// quadratic loop concatenation could never realize them within
-	// machine resources anyway — pre-fix that region presented as
-	// fuel-out or capped-OOM infra death; a recorded honest-refusal
-	// delta: upstream allocates such outputs fine).
-	stringsRepeatShimName: `
-// goleanShimStringsRepeat is the native frontend's strings.Repeat shim
-// (W4.3 item 1 landing B; overflow + bound arms t1-fidelity-fixes
-// 2026-08-31). Injected declaration — not user code.
-func goleanShimStringsRepeat(s string, count int) string {
-	if count < 0 {
-		panic("strings: negative Repeat count")
-	}
-	if count > 1 && len(s) > 0 {
-		// Upstream-faithful (go1.26.5 strings.Repeat): the output
-		// length may not exceed maxInt. len(s) > maxInt/count is
-		// exactly len(s)*count > maxInt (both operands positive).
-		if len(s) > 9223372036854775807/count {
-			panic("strings: Repeat output length overflow")
-		}
-		// golean bound (NOT upstream): refuse BY NAME what the loop
-		// below could never finish within machine resources. The
-		// helper is force-quarantined with the cause-naming reason
-		// (shimRuntimeRefusalReasons), so the observation itself says
-		// which bound fired.
-		if len(s)*count > 1<<24 {
-			goleanShimStringsRepeatBound()
-		}
-	}
-	out := ""
-	for i := 0; i < count; i++ {
-		out += s
-	}
-	return out
-}
-
-// goleanShimStringsRepeatBound is the Repeat shim's cause-named
-// runtime refusal (see shimRuntimeRefusalReasons). The Go body exists
-// for type-checking only — the wire declaration is a force-quarantined
-// stub and a call to it is the unrecoverable R4-C-3 throw.
-func goleanShimStringsRepeatBound() {
-	panic("golean strings.Repeat shim: output length exceeds the modeled bound (1<<24 bytes)")
-}
-`,
-
-	// slices.SortFunc: a GENERIC insertion sort, stenciled at the call
-	// site's element type through the ordinary mono pipeline
-	// (emit.go, emitSortFuncCall). Insertion sort is cmp-consistent —
-	// the whole contract; upstream's "not guaranteed to be stable"
-	// makes tie order LATITUDE (our member is stable; recorded, pinned
-	// tie-insensitively by slices/sortfunc-cmp/sort-ties-projected).
-	slicesSortFuncShimName: `
-// goleanShimSlicesSortFunc is the native frontend's slices.SortFunc
-// shim (W4.3 item 1 landing B). Injected declaration — not user code.
-func goleanShimSlicesSortFunc[E any](x []E, cmp func(a, b E) int) {
-	for i := 1; i < len(x); i++ {
-		for j := i; j > 0 && cmp(x[j], x[j-1]) < 0; j-- {
-			x[j], x[j-1] = x[j-1], x[j]
-		}
-	}
-}
-`,
 
 	// cmp.Compare kind shims (emit-time dispatch with explicit
 	// converts, emit.go's emitCmpCompareCall). For integer and string
@@ -1003,22 +815,6 @@ func goleanShimCmpCompareUint(a, b uint64) int {
 		return 1
 	}
 	return 0
-}
-`,
-
-	shimUnsupportedName: `
-// goleanShimUnsupported raises an UNRECOVERABLE machine stop (audit
-// R4-C-3): the emitter force-quarantines this declaration
-// (emitFuncDecl), so a CALL to it throws GoError.unsupported at the
-// interpreter level — user recover() cannot catch it. Every
-// golean-bound runtime refusal in the shim bodies routes through it;
-// as plain panics they were catchable and recover() turned refusals
-// into silent wrong answers. The Go body below exists for
-// type-checking only — it is never lowered. Call sites follow it
-// with panic("unreachable...") so Go's termination analysis is
-// unchanged; that panic is dead (the throw fires first).
-func goleanShimUnsupported(msg string) {
-	panic(msg)
 }
 `,
 
@@ -1051,6 +847,21 @@ func goleanShimCmpCompareString(a, b string) int {
 	return 0
 }
 `,
+	shimUnsupportedName: `
+// goleanShimUnsupported raises an UNRECOVERABLE machine stop (audit
+// R4-C-3): the emitter force-quarantines this declaration
+// (emitFuncDecl), so a CALL to it throws GoError.unsupported at the
+// interpreter level — user recover() cannot catch it. Every
+// golean-bound runtime refusal in the shim bodies routes through it;
+// as plain panics they were catchable and recover() turned refusals
+// into silent wrong answers. The Go body below exists for
+// type-checking only — it is never lowered. Call sites follow it
+// with panic("unreachable...") so Go's termination analysis is
+// unchanged; that panic is dead (the throw fires first).
+func goleanShimUnsupported(msg string) {
+	panic(msg)
+}
+`,
 }
 
 // injectStdlibShims scans the parsed (pre-type-check) files for
@@ -1068,14 +879,12 @@ func injectStdlibShims(fset *token.FileSet, files []*ast.File) (*ast.File, error
 		local := map[string]map[string]string{}
 		localDesugar := map[string]map[string][]string{}
 		localGeneric := map[string]map[string][]string{}
-		localVarMethods := map[string]map[string]map[string][]string{}
 		for _, imp := range f.Imports {
 			path := importPathOf(imp)
 			fns, isShim := stdlibShimAllowlist[path]
 			desugar, isDesugar := stdlibDesugarInject[path]
 			generic, isGeneric := stdlibGenericDesugarInject[path]
-			varMethods, isVarMethod := stdlibVarMethodInject[path]
-			if !isShim && !isDesugar && !isVarMethod && !isGeneric {
+			if !isShim && !isDesugar && !isGeneric {
 				continue
 			}
 			// The default local name is the path's LAST SEGMENT (the
@@ -1105,12 +914,8 @@ func injectStdlibShims(fset *token.FileSet, files []*ast.File) (*ast.File, error
 			if isGeneric {
 				localGeneric[name] = generic
 			}
-			if isVarMethod {
-				localVarMethods[name] = varMethods
-			}
 		}
-		if len(local) == 0 && len(localDesugar) == 0 &&
-			len(localGeneric) == 0 && len(localVarMethods) == 0 {
+		if len(local) == 0 && len(localDesugar) == 0 && len(localGeneric) == 0 {
 			continue
 		}
 		ast.Inspect(f, func(n ast.Node) bool {
@@ -1140,39 +945,6 @@ func injectStdlibShims(fset *token.FileSet, files []*ast.File) (*ast.File, error
 				for _, shim := range generic[sel.Sel.Name] {
 					needed[shim] = true
 				}
-			}
-			return true
-		})
-		// The two-level package-VARIABLE method shape
-		// (`binary.LittleEndian.Uint64(x)`): the callee's base is
-		// itself a selector, so the ident scan above cannot see it.
-		ast.Inspect(f, func(n ast.Node) bool {
-			call, ok := n.(*ast.CallExpr)
-			if !ok {
-				return true
-			}
-			sel, ok := call.Fun.(*ast.SelectorExpr)
-			if !ok {
-				return true
-			}
-			sel2, ok := sel.X.(*ast.SelectorExpr)
-			if !ok {
-				return true
-			}
-			x2, ok := sel2.X.(*ast.Ident)
-			if !ok {
-				return true
-			}
-			vars, ok := localVarMethods[x2.Name]
-			if !ok {
-				return true
-			}
-			methods, ok := vars[sel2.Sel.Name]
-			if !ok {
-				return true
-			}
-			for _, shim := range methods[sel.Sel.Name] {
-				needed[shim] = true
 			}
 			return true
 		})

@@ -15,11 +15,17 @@ package main
 //                    each with its reason (stdlibSourceAllowed)
 //   substitution     upstream-file-for-upstream-file swaps — uncapped,
 //                    each naming the twin (stdlib-substitutions.tsv)
-//   overlay          OUR text at a library path — CAP 12; slice 1 has 0
+//   overlay          OUR text at a library path — CAP 12 `expr` rows
+//                    (stdlib-overlay.tsv; slice 2 lands the first);
+//                    `import` rows are the consequential import
+//                    neutralizations, listed as `overlay-import`, not
+//                    counted (see the table's header)
 //   primitive        machine ops of library origin — CAP 2 (print,
-//                    println when G2's slice lands); slice 1 has 0
-//   shim             the RETAINED user-package injections (frozen, D-002)
-//   shadow-type      the E5-T shadow models (importedmodel.go)
+//                    println when G2's slice lands); 0 so far
+//   shim             the RETAINED user-package injections (frozen, D-002;
+//                    since slice 2 only the fmt desugar's 6 members)
+//   shadow-type      the E5-T shadow models (importedmodel.go; since
+//                    slice 2 only the sync/atomic wrappers)
 
 import (
 	"sort"
@@ -31,11 +37,10 @@ const (
 	stdlibPrimitiveCap = 2
 )
 
-// The overlay and primitive tables are EMPTY in slice 1 by design (the
-// memo's §6: "zero hand-written library text"; print/println is slice
-// 3). They exist so the register's counts are derived from code, not
-// asserted, and so a future entry has exactly one place to land.
-var stdlibOverlays = map[string]string{}   // "<path>.<Ident>" -> reason
+// The overlay table lives in stdlib-overlay.tsv (stdlibsource.go parses
+// and APPLIES it — one source for the substitutions and for the rows
+// below). The primitive table is EMPTY (print/println is slice 3). Both
+// exist so the register's counts are derived from code, not asserted.
 var stdlibPrimitives = map[string]string{} // "<builtin>" -> reason
 
 func stdlibRegisterDump() (string, error) {
@@ -43,8 +48,13 @@ func stdlibRegisterDump() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if len(stdlibOverlays) > stdlibOverlayCap {
-		return "", unsup("stdlib admission register: %d overlay functions exceed the cap of %d ([USER] re-ratification required)", len(stdlibOverlays), stdlibOverlayCap)
+	overlays, err := parseStdlibOverlay(stdlibOverlayTSV)
+	if err != nil {
+		return "", err
+	}
+	overlayExpr, overlayImports := stdlibOverlayCount(overlays)
+	if overlayExpr > stdlibOverlayCap {
+		return "", unsup("stdlib admission register: %d overlay sites exceed the cap of %d ([USER] re-ratification required)", overlayExpr, stdlibOverlayCap)
 	}
 	if len(stdlibPrimitives) > stdlibPrimitiveCap {
 		return "", unsup("stdlib admission register: %d library-origin primitives exceed the cap of %d ([USER] re-ratification required)", len(stdlibPrimitives), stdlibPrimitiveCap)
@@ -54,22 +64,18 @@ func stdlibRegisterDump() (string, error) {
 	line("class", "entry", "detail")
 	line("count", "source-through", itoa(len(stdlibSourceAllowed))+" (uncapped)")
 	line("count", "substitution", itoa(len(subs))+" (uncapped; each names its upstream twin)")
-	line("count", "overlay", itoa(len(stdlibOverlays))+" / cap "+itoa(stdlibOverlayCap))
+	line("count", "overlay", itoa(overlayExpr)+" / cap "+itoa(stdlibOverlayCap)+" (expr sites, stdlib-overlay.tsv; byte-checked at every load)")
+	line("count", "overlay-import", itoa(overlayImports)+" (consequential import neutralizations of overlaid files; no semantics; not counted against the cap)")
 	line("count", "primitive", itoa(len(stdlibPrimitives))+" / cap "+itoa(stdlibPrimitiveCap))
 	shims := 0
 	for _, fns := range stdlibShimAllowlist {
 		shims += len(fns)
 	}
-	for _, fns := range stdlibGenericDesugarInject {
-		shims += len(fns)
-	}
 	for _, fns := range stdlibDesugarInject {
 		shims += len(fns)
 	}
-	for _, vars := range stdlibVarMethodInject {
-		for _, methods := range vars {
-			shims += len(methods)
-		}
+	for _, fns := range stdlibGenericDesugarInject {
+		shims += len(fns)
 	}
 	line("count", "shim", itoa(shims)+" (frozen, D-002; retired by rows of memo §3)")
 	line("count", "shadow-type", itoa(len(modeledImportedTypes)))
@@ -81,8 +87,15 @@ func stdlibRegisterDump() (string, error) {
 	for _, s := range subs {
 		line("substitution", s.pkg+"/"+s.drop+" -> "+s.add, s.reason)
 	}
-	for _, k := range sortedStringKeys(stdlibOverlays) {
-		line("overlay", k, stdlibOverlays[k])
+	for _, r := range overlays {
+		if r.kind == "expr" {
+			line("overlay", r.site(), "`"+r.old+"` -> `"+r.new+"` — "+r.reason)
+		}
+	}
+	for _, r := range overlays {
+		if r.kind == "import" {
+			line("overlay-import", r.site(), "`"+r.old+"` -> `"+r.new+"` — "+r.reason)
+		}
 	}
 	for _, k := range sortedStringKeys(stdlibPrimitives) {
 		line("primitive", k, stdlibPrimitives[k])
@@ -93,21 +106,14 @@ func stdlibRegisterDump() (string, error) {
 			shimRows = append(shimRows, path+"."+sel+"\tdirect-call shim (stdlibshim.go)")
 		}
 	}
-	for path, fns := range stdlibGenericDesugarInject {
-		for sel := range fns {
-			shimRows = append(shimRows, path+"."+sel+"\tgeneric desugar (genericshim.go)")
-		}
-	}
 	for path, fns := range stdlibDesugarInject {
 		for sel := range fns {
-			shimRows = append(shimRows, path+"."+sel+"\tfmt desugar (fmtdesugar.go)")
+			shimRows = append(shimRows, path+"."+sel+"\tfmt desugar (fmtdesugar.go; memo §2.3.3 / G5 — slice 4 re-homes it; its bundle keeps goleanShimErrorsNew as Errorf's error constructor only)")
 		}
 	}
-	for path, vars := range stdlibVarMethodInject {
-		for v, methods := range vars {
-			for m := range methods {
-				shimRows = append(shimRows, path+"."+v+"."+m+"\tpackage-variable method desugar (fmtdesugar.go)")
-			}
+	for path, fns := range stdlibGenericDesugarInject {
+		for sel := range fns {
+			shimRows = append(shimRows, path+"."+sel+"\tgeneric kind-dispatch desugar (cmpshim.go) — RETAINED by slice 2's STOP rule: its retirement flips slices/sortfunc-cmp/cmp-compare-kinds red on mono.go's function-local-type instantiation naming refusal; posed to the [USER] (evidence README); floats fall through to the real generic")
 		}
 	}
 	sort.Strings(shimRows)
@@ -115,7 +121,7 @@ func stdlibRegisterDump() (string, error) {
 		line("shim", r)
 	}
 	for _, k := range sortedStringKeys(modeledImportedTypes) {
-		detail := "E5-T shadow model (importedmodel.go); source-through + overlay pending (memo §3 rows T1/T2, slice 2)"
+		detail := "E5-T shadow model (importedmodel.go) — NOT admitted: strings.Builder/bytes.Buffer retired onto source-through + overlay in slice 2; a new non-intrinsic entry here is a register widening"
 		if modeledImportedTypes[k].intrinsic {
 			detail = "E5-T shadow model whose methods lower to machine atomic-op intrinsics (atomics arc wave 1, atomics.go; sync/atomic is memory-model-owned, memo §2.3.4 — listed, not a source-through concern)"
 		}

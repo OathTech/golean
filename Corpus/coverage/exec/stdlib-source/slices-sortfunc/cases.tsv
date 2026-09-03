@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+# slices through the REAL source-through package (slice 2): pdqsortCmpFunc stenciled per element type; the other pure members.
+sortfunc-large	sortFuncLarge	-	ok	-	stdlib,sort,slices,generics,closures,loops
+sortfunc-reversed-input	sortFuncReversedInput	-	ok	-	stdlib,sort,slices,generics,closures
+sortfunc-named-slice	sortFuncNamedSlice	-	ok	-	stdlib,sort,slices,generics,defined_type
+sortfunc-strings-by-len	sortFuncStringsByLen	-	ok	-	stdlib,sort,slices,generics,strings,len
+sortfunc-ties-projected	sortFuncTiesProjected	-	ok	-	stdlib,sort,slices,generics,structs,closures
+sortfunc-ties-realized	sortFuncTiesRealized	-	ok	-	stdlib,sort,slices,generics,structs
+sort-stable-func	sortStableFunc	-	ok	-	stdlib,sort,slices,generics,structs
+others	slicesOthers	-	ok	-	stdlib,slices,generics,comma_ok,max,min

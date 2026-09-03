@@ -34,8 +34,25 @@ package main
 //    FormatFloat/ParseFloat/AppendFloat quarantine by name. Remedy: the
 //    slice-2 overlay onto the machine's FloatBits (memo §2.3.2).
 
+// 5. (slice 2) slices.Insert/Replace reach `overlaps` — unsafe.Sizeof +
+//    unsafe.Pointer arithmetic on element addresses (memo §1.3): REFUSED,
+//    not overlaid (the machine has no address arithmetic to substitute);
+//    the reached function quarantines by name through the unsafe scan.
+// 6. (slice 2) bytes.Buffer's READ side that reports io.EOF (Read,
+//    ReadByte, ReadRune, ReadBytes, ReadString) references the `io`
+//    package, which is export-data only (not source-through) — those
+//    methods quarantine by name; Next/Bytes/Truncate/UnreadByte are real.
+//
+// Rows 1 (Clone) turned GREEN in slice 2 (the overlay); rows 2–4 stay red
+// (linkname VALUES; FR-11's goto; the float-bits casts — a bit
+// reinterpretation the language has no operation for and the machine no
+// op for: a PRIMITIVE admission the memo's rulings did not cover, posed to
+// the [USER] in the slice-2 evidence README, NOT self-admitted).
+
 import (
+	"bytes"
 	"math/bits"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -66,7 +83,33 @@ func indexRuneGoto() int { return strings.IndexRune("ab\u00e9d", 'd') }
 // (unsafe.Pointer, deps.go).
 func formatFloatUnsafe() string { return strconv.FormatFloat(1.5, 'g', -1, 64) }
 
+// gc: 3; machine: refuses in slices.overlaps (unsafe.Sizeof) reached
+// from slices.Insert.
+func slicesOverlaps() int { return len(slices.Insert([]int{1, 2}, 1, 9)) }
+
+// gc: 97 ('a'); machine: refuses in bytes.Buffer.ReadByte (io.EOF —
+// package io is export-data only).
+func bufferReadByteIO() int {
+	var b bytes.Buffer
+	b.WriteString("abc")
+	c, err := b.ReadByte()
+	if err != nil {
+		return -1
+	}
+	return int(c)
+}
+
+// gc: "ABC"; machine: refuses in bytes.ToUpper — bytealg.MakeNoZero
+// (body-less runtime leaf) at bytes/bytes.go:705; NOT overlaid (the
+// overlay covers its one strings caller, Builder.grow; bytes' four
+// sites — Join, Repeat, ToUpper, ToLower — are rowed here, cap-budgeted
+// for a later slice).
+func bytesToUpperMakeNoZero() string { return string(bytes.ToUpper([]byte("abc"))) }
+
 func main() {
+	println(bytesToUpperMakeNoZero())
+	println(slicesOverlaps())
+	println(bufferReadByteIO())
 	println(atoiErrorPathClone())
 	println(div64OverflowValue())
 	println(indexRuneGoto())

@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+# errors.Join through the REAL body + the join.go:58 overlay; errors.New is the real constructor (shim RETIRED; slice 2, 2026-09-03).
+all-nil	joinAllNil	-	ok	-	stdlib,interfaces,nil,variadic
+one	joinOne	-	ok	-	stdlib,interfaces,type_assertions,identity,slices
+many	joinMany	-	ok	-	stdlib,interfaces,strings,concat
+unwrap-identity	joinUnwrapIdentity	-	ok	-	stdlib,interfaces,type_assertions,identity,range
+nested	joinNested	-	ok	-	stdlib,interfaces,strings
+empty-texts	joinEmptyTexts	-	ok	-	stdlib,interfaces,strings,empty
+distinct	joinDistinct	-	ok	-	stdlib,interfaces,equality,identity
+new-is-fresh	newIsFresh	-	ok	-	stdlib,interfaces,equality,identity

@@ -31,11 +31,11 @@ package main
 //           boxed `*strconv.NumError` must land on a bodied method, never
 //           a stub); generic declarations are marked like any other (the
 //           body is walked for its own edges; mono.go stencils them).
-//   stops — the E5-T shadow-modeled types (importedmodel.go:
-//           `strings.Builder`, `bytes.Buffer`) are NOT marked: the shadow
-//           model stays the declaration of record until slice 2's
-//           overlay retires it (their methods route to the harvested
-//           model / its declaration-only stubs exactly as before).
+//   stops — an E5-T shadow-modeled type (importedmodel.go) would not be
+//           marked (the model would be the declaration of record); since
+//           slice 2 retired the `strings.Builder`/`bytes.Buffer` models
+//           only the sync/atomic wrappers remain, and `sync/atomic` is not
+//           a library unit, so the stop is inert — kept as the invariant.
 //
 // INITIALIZERS — the memo's rule ("package-level vars are lowered ONLY
 // when reached", §2.1.1) and its soundness argument, stated once. An
@@ -387,19 +387,27 @@ func computeLibraryReach(units []*sourcePkg) error {
 			if walkErr != nil {
 				return false
 			}
-			// A direct CALL of a RETAINED shim member from a NON-library
-			// unit (`strconv.ParseUint(s, 10, 64)`, `strings.Join(..)`)
-			// lowers to the injected shim, not to the library function
-			// (emitStdlibShimCall takes precedence): the callee is not
-			// reached — only its arguments are walked. The VALUE shape
-			// (`f := strings.Join`) and every library-internal call
-			// reach the real declaration.
+			// A direct CALL of a FRONTEND-INTERCEPTED library member from
+			// a NON-library unit — a retained direct-call shim
+			// (stdlibShimAllowlist; empty since slice 2) or a machine-op
+			// member (frontendInterceptedLibraryMembers: `slices.Sort`,
+			// the quorum-pilot `sortSlice` op) — never lowers to the
+			// library function: the callee is not reached, only its
+			// arguments are walked. The VALUE shape (`f := slices.Sort`)
+			// and every library-internal call reach the real declaration
+			// (and lower, or refuse, as ordinary library text).
 			if c, isCall := n.(*ast.CallExpr); isCall && !it.unit.library {
 				if sel, isSel := c.Fun.(*ast.SelectorExpr); isSel {
 					if x, isIdent := sel.X.(*ast.Ident); isIdent {
 						if pn, isPkg := it.unit.info.Uses[x].(*types.PkgName); isPkg {
-							if fns, shimmed := stdlibShimAllowlist[pn.Imported().Path()]; shimmed {
-								if _, member := fns[sel.Sel.Name]; member {
+							path := pn.Imported().Path()
+							intercepted := frontendInterceptedLibraryMembers[path][sel.Sel.Name]
+							if fns, shimmed := stdlibShimAllowlist[path]; shimmed {
+								_, intercepted2 := fns[sel.Sel.Name]
+								intercepted = intercepted || intercepted2
+							}
+							if intercepted {
+								{
 									for _, a := range c.Args {
 										ast.Inspect(a, func(m ast.Node) bool {
 											if walkErr != nil {
@@ -434,6 +442,18 @@ func computeLibraryReach(units []*sourcePkg) error {
 		}
 	}
 	return nil
+}
+
+// frontendInterceptedLibraryMembers: members of source-through library
+// packages whose DIRECT CALL the emitter lowers to a machine op or a
+// frontend desugar INSTEAD of the library body — so the reach walk must
+// not mark the body reached (it would drag the real declaration and its
+// closure onto the wire for nothing, or refuse where the interception
+// succeeds). One entry today: `slices.Sort` is the `sortSlice` machine
+// op at integer element kinds (emit.go's statement handler; memo §3 row
+// M retires the op in slice 4, when this entry goes with it).
+var frontendInterceptedLibraryMembers = map[string]map[string]bool{
+	"slices": {"Sort": true},
 }
 
 func objKind(obj types.Object) string {

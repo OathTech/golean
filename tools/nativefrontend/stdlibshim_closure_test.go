@@ -59,21 +59,14 @@ func allShimProbes() []shimProbe {
 			add(path, localOf(path), sel)
 		}
 	}
-	for path, fns := range stdlibGenericDesugarInject {
-		for sel := range fns {
-			add(path, localOf(path), sel)
-		}
-	}
 	for path, fns := range stdlibDesugarInject {
 		for sel := range fns {
 			add(path, localOf(path), sel)
 		}
 	}
-	for path, vars := range stdlibVarMethodInject {
-		for v, methods := range vars {
-			for m := range methods {
-				add(path, localOf(path), v+"."+m)
-			}
+	for path, fns := range stdlibGenericDesugarInject {
+		for sel := range fns {
+			add(path, localOf(path), sel)
 		}
 	}
 	sort.Slice(probes, func(i, j int) bool { return probes[i].label < probes[j].label })
@@ -340,8 +333,8 @@ func TestStdlibShimEachKeyClosedAlone(t *testing.T) {
 func TestCloseShimDepsRefusesUnknownDep(t *testing.T) {
 	saved := stdlibShimDeps
 	defer func() { stdlibShimDeps = saved }()
-	stdlibShimDeps = map[string][]string{stringsJoinShimName: {"goleanShimDoesNotExist"}}
-	needed := map[string]bool{stringsJoinShimName: true}
+	stdlibShimDeps = map[string][]string{fmtDynShimKey: {"goleanShimDoesNotExist"}}
+	needed := map[string]bool{fmtDynShimKey: true}
 	if err := closeShimDeps(needed); err == nil {
 		t.Fatal("closeShimDeps accepted a dep with no shim source")
 	}

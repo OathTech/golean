@@ -2612,27 +2612,19 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 				}
 			}
 			// slices.Sort at an integer element kind: the quorum-pilot
-			// extern (docs/2026-07-30_quorum-extern-policy.md).
-			// slices.SortFunc (W4.3, genericshim.go): the injected
-			// generic shim, stenciled at the element type — routed to
-			// the shared hook so statement and expression positions
-			// agree. Any other slices.*/sort.* member refuses here.
+			// extern (docs/2026-07-30_quorum-extern-policy.md) — the
+			// `sortSlice` MACHINE OP, intercepted ahead of the library
+			// (memo §3 row M retires it in slice 4; the reach walk's
+			// frontendInterceptedLibraryMembers keeps the real
+			// slices.Sort off the wire meanwhile). Every OTHER `slices`
+			// member lowers from the source-through unit through the
+			// ordinary call path below (slice 2: slices.SortFunc's
+			// generic desugar retired; `overlaps`-reaching members
+			// refuse by name through the unsafe scan).
 			if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
 				if pkgIdent, ok := sel.X.(*ast.Ident); ok {
 					if pkgName, ok := e.info.Uses[pkgIdent].(*types.PkgName); ok &&
-						pkgName.Imported().Path() == "slices" {
-						if sel.Sel.Name == "SortFunc" {
-							node, handled, err := e.emitSortFuncCall(call, sel)
-							if err != nil {
-								return nil, err
-							}
-							if handled {
-								return map[string]any{"stmt": "expr", "expr": node}, nil
-							}
-						}
-						if sel.Sel.Name != "Sort" {
-							return nil, unsup("slices.%s (only slices.Sort at integer elements and slices.SortFunc are modeled)", sel.Sel.Name)
-						}
+						pkgName.Imported().Path() == "slices" && sel.Sel.Name == "Sort" {
 						return e.emitSortStmt(call)
 					}
 				}
@@ -7510,18 +7502,13 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 		if node, handled, err := e.emitFmtCall(c, sel); handled || err != nil {
 			return node, handled, err
 		}
-		// The H-14 package-variable method desugar (fmtdesugar.go):
-		// binary.LittleEndian.{Uint64,PutUint64} to their shims;
-		// unmodeled members of a listed variable refuse in-hook.
-		if node, handled, err := e.emitBinaryVarMethodCall(c, sel); handled || err != nil {
-			return node, handled, err
-		}
-		// The generic-stdlib desugars (genericshim.go, W4.3):
-		// slices.SortFunc stencils the injected generic shim at the
-		// call's element type; cmp.Compare dispatches to a kind shim.
-		if node, handled, err := e.emitSortFuncCall(c, sel); handled || err != nil {
-			return node, handled, err
-		}
+		// (The H-14 package-variable method desugar and the W4.3
+		// slices.SortFunc generic desugar — RETIRED in stdlib
+		// source-through slice 2: those members lower from their
+		// library units through the qualified/method call paths below.)
+		// cmp.Compare's kind dispatch (cmpshim.go) is RETAINED by the
+		// slice's STOP rule; a float call site falls through to the
+		// real generic.
 		if node, handled, err := e.emitCmpCompareCall(c, sel); handled || err != nil {
 			return node, handled, err
 		}

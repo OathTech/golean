@@ -1325,77 +1325,9 @@ func (e *emitter) fmtShimWireName(name string) string {
 	return name
 }
 
-// ---- package-variable method desugars (H-14, raft W4.1 item 4) ----
-
-// binaryVarMethodShims: import path -> exported package VARIABLE ->
-// method -> injected shim name. The call `binary.LittleEndian.Uint64(x)`
-// is a METHOD on a package variable of an UNEXPORTED type, which the
-// plain E5 selector path cannot name; the desugar rewrites exactly the
-// modeled members to their shims, and every other member of a LISTED
-// variable refuses HERE with a message naming the member (never the
-// old anonymous-type resolution error).
-var binaryVarMethodShims = map[string]map[string]map[string]string{
-	"encoding/binary": {
-		"LittleEndian": {
-			"Uint64":    binaryLEUint64ShimName,
-			"PutUint64": binaryLEPutUint64ShimName,
-		},
-	},
-}
-
-// emitBinaryVarMethodCall is the H-14 hook: handled=true exactly for
-// modeled `pkg.Var.Method(args)` shapes; a LISTED variable's unmodeled
-// member refuses; everything else falls through untouched.
-func (e *emitter) emitBinaryVarMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, bool, error) {
-	sel2, ok := sel.X.(*ast.SelectorExpr)
-	if !ok {
-		return nil, false, nil
-	}
-	x2, ok := sel2.X.(*ast.Ident)
-	if !ok {
-		return nil, false, nil
-	}
-	pkgName, ok := e.info.Uses[x2].(*types.PkgName)
-	if !ok {
-		return nil, false, nil
-	}
-	vars, ok := binaryVarMethodShims[pkgName.Imported().Path()]
-	if !ok {
-		return nil, false, nil
-	}
-	methods, ok := vars[sel2.Sel.Name]
-	if !ok {
-		return nil, false, nil
-	}
-	shimName, ok := methods[sel.Sel.Name]
-	if !ok {
-		return nil, false, unsup("%s.%s.%s is outside the modeled subset (modeled members: Uint64, PutUint64 — widen with a differential pin first)",
-			pkgName.Imported().Path(), sel2.Sel.Name, sel.Sel.Name)
-	}
-	fn, ok := e.info.Uses[sel.Sel].(*types.Func)
-	if !ok {
-		return nil, false, unsup("%s.%s.%s did not resolve to a method",
-			pkgName.Imported().Path(), sel2.Sel.Name, sel.Sel.Name)
-	}
-	sig, ok := fn.Type().(*types.Signature)
-	if !ok {
-		return nil, false, unsup("%s.%s.%s has no signature",
-			pkgName.Imported().Path(), sel2.Sel.Name, sel.Sel.Name)
-	}
-	shimObj := e.pkg.Scope().Lookup(shimName)
-	shimFn, ok := shimObj.(*types.Func)
-	if !ok {
-		return nil, false, unsup("shim %s not injected for %s.%s.%s",
-			shimName, pkgName.Imported().Path(), sel2.Sel.Name, sel.Sel.Name)
-	}
-	args, err := e.emitCallArgs(sig, c)
-	if err != nil {
-		return nil, false, err
-	}
-	resultTypes, err := e.emitResultTypes(sig)
-	if err != nil {
-		return nil, false, err
-	}
-	return map[string]any{"expr": "call", "func": e.funcWireName(shimFn),
-		"args": args, "resultTypes": resultTypes}, true, nil
-}
+// The H-14 package-variable method desugar (binary.LittleEndian.{Uint64,
+// PutUint64} -> injected shims, raft W4.1 item 4) RETIRED in stdlib
+// source-through slice 2 (2026-09-03): `encoding/binary` is a library
+// unit, so `binary.LittleEndian.Uint64(b)` lowers as an ordinary method
+// call on the library's package-level variable (its unexported receiver
+// type `littleEndian` reaches the wire with its full method set).

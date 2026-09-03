@@ -1,0 +1,46 @@
+# GoLean stdlib source-through — the OVERLAY table
+# (docs/2026-09-03_stdlib-boundary-design.md §2.3.2 item 3, §2.2 admission
+# rule; second slice stdlib-source-2, 2026-09-03 [AGENT]; gates G1/G8 ruled AS
+# RECOMMENDED by the [USER], relayed: «(3) agree, go ahead with the plan»).
+#
+# An overlay substitutes ONE pure-Go expression for ONE unsafe (or runtime-
+# implemented) expression at ONE named site of the pinned GOROOT source. It is
+# the only hand-written library text the frontend carries, and it is governed
+# accordingly: every `expr` row counts against the register's cap (12,
+# stdlibregister.go; a [USER] re-ratification raises it), and every row is
+# BYTE-CHECKED at load time — the recorded line of the pinned file must carry
+# the `old` bytes exactly once, or the frontend REFUSES BY NAME (never applies
+# a substitution to text that moved). The library pin (baselines/stdlib-pin.tsv)
+# is the sha256 of the UPSTREAM bytes; the overlay is applied to the in-memory
+# copy after the pin check, so a re-pin that changes an overlaid line fails
+# both checks rather than silently diverging.
+#
+# Kinds:
+#   expr    the substitution proper (counted against the cap). `new` must not
+#           mention `unsafe`, `abi.` or `bytealg.` (no overlay may reintroduce
+#           what it removes).
+#   import  the CONSEQUENTIAL neutralization of an import the file no longer
+#           uses once its `expr` rows apply (`"unsafe"` -> `_ "unsafe"`; go/types
+#           refuses an unused import). Carries no semantics; admitted only for a
+#           file that has an `expr` row (enforced), listed in the register
+#           under `overlay-import`, NOT counted against the cap ([AGENT]
+#           decision, this slice; the [USER] may re-rule).
+#
+# Every `expr` row's reason states the semantic argument for identity AND the
+# premise it rests on, verified by reading the callers at the pin.
+#
+# Columns: package<TAB>file<TAB>line<TAB>kind<TAB>old<TAB>new<TAB>reason
+# Consumed by tools/nativefrontend/stdlibsource.go (go:embed; applyStdlibOverlay);
+# mirrored by docs/stdlib-admission-register.md (scripts/check-stdlib-register
+# compares byte-for-byte via `nativefrontend --stdlib-register` and re-verifies
+# every row against the pinned checkout via `--stdlib-overlay-check`).
+internal/stringslite	strings.go	149	expr	unsafe.String(&b[0], len(b))	string(b)	Clone: `b` is a fresh local `make([]byte, len(s))` filled by `copy` and RETURNED through this expression — nothing holds `b` afterwards (the only later reference is this return), so the aliasing `unsafe.String` avoids one copy and nothing else; `string(b)` yields the identical bytes. `len(s) == 0` is handled above the site, so `&b[0]` never indexes an empty slice. Reached by every strconv Parse* error path (syntaxError/rangeError/baseError/bitSizeError) — closes BUG-089's nine designed reds. godoc:strings.Clone@go1.26.5 is the idiom's exported twin.
+internal/stringslite	strings.go	13	import	"unsafe"	_ "unsafe"	consequential: the file's only `unsafe.` use is the line-149 site; go/types refuses an unused import.
+errors	join.go	58	expr	unsafe.String(&b[0], len(b))	string(b)	joinError.Error: `b` is a local `[]byte` built by `append`s from the elements' Error() texts and RETURNED through this expression; no later reference exists, so the aliasing is unobservable and `string(b)` is byte-identical. `len(e.errs) >= 2` on this path (the single-element case returns above), so `b` has at least one byte ('\n') — `&b[0]` is in range, as the upstream comment on the preceding line states.
+errors	join.go	8	import	"unsafe"	_ "unsafe"	consequential: the file's only `unsafe.` use is the line-58 site.
+strings	builder.go	47	expr	unsafe.String(unsafe.SliceData(b.buf), len(b.buf))	string(b.buf)	Builder.String: upstream ALIASES buf's backing array as the returned string; `string(b.buf)` copies the same len(b.buf) bytes. The alias is observable only if a byte in [0, len(b.buf)) is later overwritten — and no Builder method ever writes below the current len: Write/WriteByte/WriteRune/WriteString only `append` (writes at index >= len at that moment, possibly into spare capacity the returned string does not cover), grow copies into a NEW array, Reset drops buf; `buf` is unexported, so no user code reaches it. Hence every string String() ever returned keeps its bytes under both bodies. nil buf: unsafe.String(nil, 0) == "" == string([]byte(nil)). Premise (no write below len) verified over every method of builder.go at the pin.
+strings	builder.go	39	expr	(*Builder)(abi.NoEscape(unsafe.Pointer(b)))	b	Builder.copyCheck: abi.NoEscape is the IDENTITY on the pointer value (internal/abi/escape.go: `unsafe.Pointer(uintptr(p) ^ 0)`) whose only purpose is to hide `b` from gc's escape analysis (issue 23382); escape analysis has no semantics in the machine (no stack/heap distinction is observable), so `b.addr = b` is the same store. The copy check that follows (`b.addr != b` panics) compares the stored pointer, which is identical.
+strings	builder.go	67	expr	bytealg.MakeNoZero(2*cap(b.buf) + n)	append([]byte(nil), make([]byte, 2*cap(b.buf)+n)...)	Builder.grow: MakeNoZero(n) is a runtime-implemented leaf (body-less; runtime/slice.go bytealg_MakeNoZero) whose DOCUMENTED contract is "a slice of length n and capacity of AT LEAST n bytes" with unspecified contents. The substitute is the same contract in the language: `make` gives len n zeroed, and the spilling `append` gives a capacity the spec leaves to the implementation ("sufficiently large", spec#Appending_and_copying_slices) — the machine's R2 append-spill CHOICE envelope [newLen, max(32, 2*growth)], which contains gc's size-class rounding for every n (latitude inventory R2; membership rows strings/builder-cap/*). Contents: the result is immediately resliced to [:len(b.buf)] and `copy` fills exactly that prefix; bytes beyond len are written by a later `append` before any method can read them (String/Len read only [0,len)), so zeroed-vs-uninitialized is unobservable. The same idiom is upstream's own in bytes/buffer.go growSlice (`append([]byte(nil), make([]byte, c)...)`).
+strings	builder.go	8	import	"internal/abi"	_ "internal/abi"	consequential: the file's only `abi.` use is the line-39 site.
+strings	builder.go	9	import	"internal/bytealg"	_ "internal/bytealg"	consequential: the file's only `bytealg.` use is the line-67 site.
+strings	builder.go	11	import	"unsafe"	_ "unsafe"	consequential: the file's `unsafe.` uses are the line-39 and line-47 sites.

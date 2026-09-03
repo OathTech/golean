@@ -53,128 +53,16 @@ import (
 	"sort"
 )
 
-// stringsBuilderModelSrc is the pinned shadow model for strings.Builder.
-const stringsBuilderModelSrc = `package strings
-
-// The strings.Builder shadow model (E5-T). Mirrors go/src/strings/
-// builder.go's semantics over plain Go; see importedmodel.go for the
-// fidelity argument and the modeled-method contract.
-type Builder struct {
-	addr *Builder
-	buf  []byte
-}
-
-func (b *Builder) copyCheck() {
-	if b.addr == nil {
-		b.addr = b
-	} else if b.addr != b {
-		panic("strings: illegal use of non-zero Builder copied by value")
-	}
-}
-
-func (b *Builder) String() string {
-	return string(b.buf)
-}
-
-func (b *Builder) Len() int { return len(b.buf) }
-
-func (b *Builder) Reset() {
-	b.addr = nil
-	b.buf = nil
-}
-
-func (b *Builder) Write(p []byte) (int, error) {
-	b.copyCheck()
-	b.buf = append(b.buf, p...)
-	return len(p), nil
-}
-
-func (b *Builder) WriteByte(c byte) error {
-	b.copyCheck()
-	b.buf = append(b.buf, c)
-	return nil
-}
-
-func (b *Builder) WriteString(s string) (int, error) {
-	b.copyCheck()
-	b.buf = append(b.buf, s...)
-	return len(s), nil
-}
-`
-
-// bytesBufferModelSrc is the pinned shadow model for bytes.Buffer
-// (W4.3 item 1 landing B — the describeMessageWithIndent /
-// DescribeEntries writer). THE REAL BOUNDARY IS SIX MEMBERS EXACTLY —
-// Write/WriteString/WriteByte/String/Len/Reset — not "the write
-// side": WriteRune, Truncate and Grow are write-side too and are
-// declaration-only stubs like the read-side methods (Read, Next,
-// Bytes, ...). [Wording corrected by audit R4-M-4 — the first version
-// said "WRITE-side surface only", overclaiming the three unmodeled
-// write-side members; probe r4-p7 exercises exactly those.] Every
-// non-modeled method staying a declaration-only stub is what keeps
-// the `off` read cursor provably 0 through every modeled path — it is
-// KEPT in the struct so String()/Len() carry upstream's
-// unread-portion contract rather than a simplification of it. The field TYPES mirror upstream exactly
-// (incl. the defined `readOp` for lastRead): a user-side composite
-// literal `&bytes.Buffer{}` is emitted from the REAL package's type
-// info, so the shadow TypeDef must declare the same field types or the
-// zero value refuses (witnessed by buffer-model/pointer-use pre-fix).
-// Fidelity notes vs go/src/bytes/buffer.go:
-// upstream's tryGrowByReslice/grow capacity machinery is elided —
-// append's growth is the machine's own (allocator latitude, same
-// argument as the Builder model's Grow elision); the lastRead
-// bookkeeping is read-side and elided with it; String() on a NIL
-// receiver returns "<nil>" (upstream's special case, pinned by
-// bytes/buffer-model/nil-receiver-string); Reset keeps the array
-// (buf[:0], upstream's shape) — unobservable through modeled methods
-// but kept to stay textually parallel.
-const bytesBufferModelSrc = `package bytes
-
-// The bytes.Buffer shadow model (E5-T, W4.3). Mirrors go/src/bytes/
-// buffer.go's write-side semantics over plain Go; see importedmodel.go
-// for the fidelity argument and the modeled-method contract.
-type readOp int8
-
-type Buffer struct {
-	buf      []byte
-	off      int
-	lastRead readOp
-}
-
-func (b *Buffer) String() string {
-	if b == nil {
-		// Special case, useful in debugging.
-		return "<nil>"
-	}
-	return string(b.buf[b.off:])
-}
-
-func (b *Buffer) Len() int { return len(b.buf) - b.off }
-
-func (b *Buffer) Reset() {
-	b.buf = b.buf[:0]
-	b.off = 0
-	b.lastRead = 0
-}
-
-func (b *Buffer) Write(p []byte) (int, error) {
-	b.lastRead = 0
-	b.buf = append(b.buf, p...)
-	return len(p), nil
-}
-
-func (b *Buffer) WriteString(s string) (int, error) {
-	b.lastRead = 0
-	b.buf = append(b.buf, s...)
-	return len(s), nil
-}
-
-func (b *Buffer) WriteByte(c byte) error {
-	b.lastRead = 0
-	b.buf = append(b.buf, c)
-	return nil
-}
-`
+// The strings.Builder and bytes.Buffer shadow models (raft W4.1 item 2 /
+// W4.3) were RETIRED in stdlib source-through slice 2 (2026-09-03, memo
+// §3 rows T1/T2): both types lower from the pinned GOROOT text as
+// members of the `strings` / `bytes` library units, Builder's three
+// `unsafe` sites through the byte-checked overlay (stdlib-overlay.tsv).
+// Their conformance rows (strings/builder-model/*, bytes/buffer-model/*,
+// fmt/fprint-writers/*, fmt/fprintf-builder/*) now exercise the REAL
+// bodies; Cap/Grow/WriteRune and the Buffer read side, stubs under the
+// models, are real too (strings/builder-cap/* pins Cap under the R2
+// append-spill envelope as membership rows).
 
 // importedTypeModel describes one modeled imported type.
 type importedTypeModel struct {
@@ -193,27 +81,12 @@ type importedTypeModel struct {
 	intrinsic bool
 }
 
-// modeledImportedTypes: qualified type name -> shadow model.
-var modeledImportedTypes = map[string]*importedTypeModel{
-	"strings.Builder": {
-		pkgPath: "strings",
-		pkgName: "strings",
-		src:     stringsBuilderModelSrc,
-		modeled: map[string]bool{
-			"copyCheck": true, "String": true, "Len": true, "Reset": true,
-			"Write": true, "WriteByte": true, "WriteString": true,
-		},
-	},
-	"bytes.Buffer": {
-		pkgPath: "bytes",
-		pkgName: "bytes",
-		src:     bytesBufferModelSrc,
-		modeled: map[string]bool{
-			"String": true, "Len": true, "Reset": true,
-			"Write": true, "WriteByte": true, "WriteString": true,
-		},
-	},
-}
+// modeledImportedTypes: qualified type name -> shadow model. Since slice
+// 2 the only entries are the sync/atomic typed wrappers (atomics.go
+// registers them at init — memory-model-owned intrinsics, not library
+// text); the table stays the single place a shadow model can land, and
+// the register (stdlibregister.go) counts it.
+var modeledImportedTypes = map[string]*importedTypeModel{}
 
 // harvestImportedModels lowers the shadow model of every TRIGGERED
 // modeled imported type (identity reached the wire — e.importedNamed)

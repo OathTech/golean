@@ -3782,11 +3782,19 @@ named in refusals") failed on exactly the row it cited.
   the unrecoverable R4-C-3 stop whose observation text itself names
   the Repeat bound.)
 - Pinned-by: differential (repeat-overflow, both sides panic with the
-  identical message). repeat-bound-refused is the red-by-design
-  refusal pin demonstrating the cause-named message — deliberately
-  FAIL/frontend-export forever, so it lives OFF the Cases line
-  (Cases carries the bug-pinning rows a fixed status must turn
-  green; a standing refusal pin is not one — check-bugs rule 3).
+  identical message — since 2026-09-03 (`stdlib-source-2`) from the REAL
+  `strings.Repeat` body, the shim and its two arms being RETIRED).
+  repeat-bound-refused WAS the red-by-design refusal pin demonstrating
+  the shim's cause-named 1<<24 bound; with the shim gone there is no
+  golean bound in Repeat at all — the row (a 16 MiB output gc allocates
+  fine) is now a RUNNER-BUDGET red: the machine cannot materialize it
+  within the 30 s row budget (`lean-observation`, "TIMED OUT after 30s
+  (LEAN_TIMEOUT_SECONDS)" — the runner names the cause; the cost is the
+  interpreter's O(cap) in-place `append`, measured in the slice-2
+  evidence README), deliberately FAIL forever, so it stays OFF the
+  Cases line (check-bugs rule 3). The memo (§3 row 5) pre-announced
+  exactly this outcome: "else stays an honest budget refusal
+  (re-expected with reason)".
 - Cases: strings/trimspace-repeat/repeat-overflow
 - Discovered: 2026-08-31 (fidelity assessment phase 2, A3-S5: the
   Repeat output-length delta was argued "a visible stop, never a
@@ -4906,7 +4914,21 @@ necessary.
 
 ## BUG-089 — `strconv.ParseUint` retired pending the slice-2 overlay (D-002 exception denied [USER] 2026-09-03): every ParseUint ERROR path refuses by name at `internal/stringslite.Clone` (`unsafe.String`) — [USER]-DIRECTED designed reds [frontend; stdlib source-through slice 1]
 
-- Status: open
+- Status: fixed (2026-09-03, lane `stdlib-source-2` — the OVERLAY
+  mechanism landed exactly as this entry's Plan says: `tools/nativefrontend/
+  stdlib-overlay.tsv` row `internal/stringslite/strings.go:149`
+  substitutes `string(b)` for `unsafe.String(&b[0], len(b))`, byte-checked
+  against the pinned file at every load (the line must carry the recorded
+  bytes exactly once, else the unit refuses by site) and counted against
+  the register's cap (5 of 12 sites used). All nine Cases rows flipped
+  FAIL→PASS with the REAL `*strconv.NumError` values, texts and sentinels
+  now coming from upstream text end to end (`strconv/format-parse/parse-uint-*`,
+  `noodler/strings/parse-uint-edges`, `stdlib-source/strconv-parseuint/*`);
+  `stdlib-source/frontier/atoi-error-path-clone` flipped too. No shim,
+  no compensating body: the [USER]'s "clean retirement" is complete for
+  ParseUint. Evidence: `docs/evidence/2026-09-03_stdlib-source-2/`;
+  register `docs/stdlib-admission-register.md` (slice log 2026-09-03
+  `stdlib-source-2`).)
 - Pinned-by: differential
 - Cases: noodler/strings/parse-uint-edges, stdlib-source/strconv-parseuint/bitsize-saturation, stdlib-source/strconv-parseuint/error-quoting, stdlib-source/strconv-parseuint/error-texts, stdlib-source/strconv-parseuint/numerror-type, stdlib-source/strconv-parseuint/range-sentinel, strconv/format-parse/parse-uint-bitsize, strconv/format-parse/parse-uint-errors, strconv/format-parse/parse-uint-range-value
 - Discovered: 2026-09-03, lane `stdlib-source-1` — stdlib source-through

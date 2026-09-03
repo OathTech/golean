@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features
+# strings.Builder through the REAL body + the three overlaid sites (stdlib source-through slice 2, 2026-09-03).
+string-after-writes	builderStringAfterWrites	-	ok	-	stdlib,strings,methods,unicode,runes,bytes
+string-stable-in-place	builderStringStableInPlace	-	ok	-	stdlib,strings,methods,aliasing,cap
+grow-contract	builderGrowContract	-	ok	-	stdlib,strings,methods,cap,loops
+grow-noop	builderGrowNoop	-	ok	-	stdlib,strings,methods,cap
+grow-negative	builderGrowNegative	-	panic	strings.Builder.Grow: negative count	stdlib,strings,methods,panic
+copy-panics-after-grow	builderCopyPanicsAfterGrow	-	panic	illegal use of non-zero Builder	stdlib,strings,methods,copy_semantics,panic
+reset-reuse	builderResetReuse	-	ok	-	stdlib,strings,methods
+write-rune-invalid	builderWriteRuneInvalid	-	ok	-	stdlib,strings,methods,runes,unicode,invalid_utf8
+join-large	joinLarge	-	ok	-	stdlib,strings,slices,append,loops
+repeat-doubling-loop	repeatDoublingLoop	-	ok	-	stdlib,strings,loops,concat
+repeat-1k	repeat1K	-	ok	-	stdlib,strings,shifts

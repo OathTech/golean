@@ -22,6 +22,7 @@ package main
 // (check-frontend-pins, check-spec-anchors) already fail closed on that.
 
 import (
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -152,7 +153,11 @@ func main() { subject() }
 	}
 }
 
-func TestStdlibSourceRetainedShimCallDoesNotReachRealDecl(t *testing.T) {
+// TestStdlibSourceJoinLowersThroughOverlaidBuilder (slice 2): a direct
+// strings.Join call reaches the REAL library function, whose Builder use
+// lowers with BODIES at the three overlaid sites — no shim, no shadow
+// model, no `unsafe` quarantine stub on the wire.
+func TestStdlibSourceJoinLowersThroughOverlaidBuilder(t *testing.T) {
 	withStdlibRoots(t)
 	dir := writeMain(t, `package main
 
@@ -167,11 +172,59 @@ func main() { subject() }
 		t.Fatalf("lower: %v", err)
 	}
 	fns := funcNames(program)
-	if _, shim := fns["goleanShimStringsJoin"]; !shim {
-		t.Fatalf("retained shim goleanShimStringsJoin not injected for a direct Join call")
+	if _, shim := fns["goleanShimStringsJoin"]; shim {
+		t.Fatalf("the retired strings.Join shim was injected")
 	}
-	if _, real := fns["strings.Join"]; real {
-		t.Fatalf("the REAL strings.Join was reached from a shimmed direct call (its Builder use would drag the shadow-model stubs onto the wire for nothing)")
+	if _, real := fns["strings.Join"]; !real {
+		t.Fatalf("the REAL strings.Join was not reached from a direct call; funcs: %v", keysOf(fns))
+	}
+	methods, _ := program["methods"].([]any)
+	seen := map[string]map[string]any{}
+	for _, mm := range methods {
+		m, _ := mm.(map[string]any)
+		seen[fmt.Sprint(m["recvType"])+"."+fmt.Sprint(m["name"])] = m
+	}
+	for _, want := range []string{"String", "copyCheck", "grow", "Grow", "WriteString"} {
+		m, ok := seen["strings.Builder."+want]
+		if !ok {
+			t.Fatalf("strings.Builder.%s is not on the wire; methods: %v", want, keysOf(seen))
+		}
+		if reason, quarantined := m["unsupported"]; quarantined {
+			t.Fatalf("strings.Builder.%s is a quarantine stub (%v) — the overlay did not apply", want, reason)
+		}
+	}
+	// Nothing on the wire mentions the retired shadow model or an unsafe
+	// refusal at an overlaid site.
+	for name, m := range seen {
+		if reason, quarantined := m["unsupported"]; quarantined && strings.Contains(fmt.Sprint(reason), "needs unsafe.") && strings.HasPrefix(name, "strings.Builder.") {
+			t.Fatalf("overlaid site still refuses: %s: %v", name, reason)
+		}
+	}
+}
+
+// TestStdlibOverlayMovedBytesRefuseByName (slice 2, red-first): when the
+// pinned line no longer carries the recorded bytes, the unit refuses
+// naming the site — never a silent non-application (which would leave
+// the H-3 unsafe stub in place) and never a substitution elsewhere.
+func TestStdlibOverlayMovedBytesRefuseByName(t *testing.T) {
+	withStdlibRoots(t)
+	saved := stdlibOverlayTSV
+	defer func() { stdlibOverlayTSV = saved }()
+	stdlibOverlayTSV = strings.Replace(saved, "unsafe.String(unsafe.SliceData(b.buf), len(b.buf))\tstring(b.buf)", "unsafe.String(unsafe.SliceData(b.buf), len(b.buf)+0)\tstring(b.buf)", 1)
+	if stdlibOverlayTSV == saved {
+		t.Fatal("probe did not mutate the Builder.String row")
+	}
+	dir := writeMain(t, `package main
+
+import "strings"
+
+func subject() string { var b strings.Builder; b.WriteString("x"); return b.String() }
+
+func main() { subject() }
+`)
+	_, err := lowerProgramDir(t, dir)
+	if err == nil || !strings.Contains(err.Error(), "stdlib overlay strings/builder.go:47") || !strings.Contains(err.Error(), "NOT on that line") {
+		t.Fatalf("a moved overlay site must refuse by name; got %v", err)
 	}
 }
 
@@ -196,16 +249,17 @@ func main() { subject() }
 		t.Fatalf("lower: %v", err)
 	}
 	fns := funcNames(program)
+	// Slice 2: Clone is OVERLAID (stdlib-overlay.tsv row
+	// internal/stringslite/strings.go:149) and lowers with a BODY — the
+	// error path that BUG-089 pinned red is green.
 	clone, ok := fns["internal/stringslite.Clone"]
 	if !ok {
 		t.Fatalf("internal/stringslite.Clone (reached through Atoi's error path) not on the wire")
 	}
-	reason, _ := clone["unsupported"].(string)
-	if !strings.Contains(reason, "unsafe.String") || !strings.Contains(reason, "internal/stringslite.Clone") || !strings.Contains(reason, "ParseUint") {
-		t.Fatalf("Clone must be an H-3 stub naming unsafe.String and the site; got %q", reason)
+	if reason, q := clone["unsupported"]; q {
+		t.Fatalf("Clone is still an H-3 stub (%v) — the overlay did not apply", reason)
 	}
-	// The happy path (real Atoi → internal/strconv.Atoi) is bodied.
-	for _, want := range []string{"strconv.Atoi", "internal/strconv.Atoi", "internal/strconv.ParseInt", "internal/strconv.ParseUint"} {
+	for _, want := range []string{"strconv.Atoi", "internal/strconv.Atoi", "internal/strconv.ParseInt", "internal/strconv.ParseUint", "strconv.syntaxError"} {
 		f, ok := fns[want]
 		if !ok {
 			t.Fatalf("%s not on the wire", want)
@@ -213,6 +267,35 @@ func main() { subject() }
 		if _, q := f["unsupported"]; q {
 			t.Fatalf("%s quarantined: %v", want, f["unsupported"])
 		}
+	}
+	// An unsafe site the overlay does NOT cover keeps the by-name H-3
+	// quarantine: slices.Insert reaches `overlaps` (unsafe.Sizeof +
+	// pointer arithmetic — REFUSED, not overlaid; memo §1.3).
+	dir = writeMain(t, `package main
+
+import "slices"
+
+func subject() int { return len(slices.Insert([]int{1, 2}, 1, 9)) }
+
+func main() { subject() }
+`)
+	program, err = lowerProgramDir(t, dir)
+	if err != nil {
+		t.Fatalf("lower (slices.Insert): %v", err)
+	}
+	fns = funcNames(program)
+	var overlaps map[string]any
+	for name, f := range fns {
+		if strings.HasPrefix(name, "slices.overlaps") {
+			overlaps = f
+		}
+	}
+	if overlaps == nil {
+		t.Fatalf("slices.overlaps (reached through Insert) not on the wire; funcs: %v", keysOf(fns))
+	}
+	reason, _ := overlaps["unsupported"].(string)
+	if !strings.Contains(reason, "unsafe.Sizeof") || !strings.Contains(reason, "slices.overlaps") {
+		t.Fatalf("slices.overlaps must be an H-3 stub naming unsafe.Sizeof and the site; got %q", reason)
 	}
 }
 
@@ -335,26 +418,88 @@ func TestStdlibRegisterDumpCaps(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"count\toverlay\t0 / cap 12", "count\tprimitive\t0 / cap 2", "source-through\tstrings\t", "substitution\tinternal/bytealg/indexbyte_native.go -> indexbyte_generic.go\t", "shim\tstrings.Join\t"} {
+	for _, want := range []string{"count\toverlay\t5 / cap 12", "count\toverlay-import\t5 ", "count\tprimitive\t0 / cap 2", "source-through\tstrings\t", "substitution\tinternal/bytealg/indexbyte_native.go -> indexbyte_generic.go\t", "count\tshim\t7 ", "count\tshadow-type\t5", "source-through\tbytes\t", "source-through\tslices\t", "source-through\tcmp\t", "source-through\tencoding/binary\t", "shim\tfmt.Sprintf\t", "shim\tcmp.Compare\tgeneric kind-dispatch desugar (cmpshim.go)", "overlay\tinternal/stringslite/strings.go:149\t`unsafe.String(&b[0], len(b))` -> `string(b)`", "overlay\tstrings/builder.go:47\t", "overlay-import\tstrings/builder.go:11\t`\"unsafe\"` -> `_ \"unsafe\"`"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("register dump lacks %q:\n%s", want, out)
 		}
 	}
-	for _, retired := range []string{"shim\tstrings.Fields\t", "shim\tstrings.Split\t", "shim\tstrings.TrimSpace\t", "shim\tstrconv.FormatUint\t", "shim\tstrconv.FormatInt\t", "shim\tstrconv.ParseUint\t"} {
+	for _, retired := range []string{"shim\tstrings.Fields\t", "shim\tstrings.Split\t", "shim\tstrings.TrimSpace\t", "shim\tstrconv.FormatUint\t", "shim\tstrconv.FormatInt\t", "shim\tstrconv.ParseUint\t",
+		"shim\tstrings.Join\t", "shim\tstrings.Repeat\t", "shim\terrors.New\t", "shim\tbytes.Equal\t", "shim\tslices.SortFunc\t", "shim\tencoding/binary.LittleEndian.Uint64\t", "shim\tencoding/binary.LittleEndian.PutUint64\t", "shadow-type\tstrings.Builder\t", "shadow-type\tbytes.Buffer\t"} {
 		if strings.Contains(out, retired) {
 			t.Fatalf("register dump still lists a retired shim %q", retired)
 		}
 	}
-	// The cap is enforced by the dump itself (red-first: overfill it).
-	saved := stdlibOverlays
-	stdlibOverlays = map[string]string{}
+	// The cap is enforced by the dump itself (red-first: overfill the
+	// overlay table with cap+1 well-formed expr rows).
+	saved := stdlibOverlayTSV
+	over := ""
 	for i := 0; i <= stdlibOverlayCap; i++ {
-		stdlibOverlays["x."+itoa(i)] = "probe"
+		over += "strings\tstrings.go\t" + itoa(i+1) + "\texpr\told" + itoa(i) + "\tnew" + itoa(i) + "\tprobe\n"
 	}
+	stdlibOverlayTSV = over
 	_, err = stdlibRegisterDump()
-	stdlibOverlays = saved
+	stdlibOverlayTSV = saved
 	if err == nil || !strings.Contains(err.Error(), "exceed the cap") {
 		t.Fatalf("an over-cap overlay table must refuse; got %v", err)
+	}
+	// Exactly cap rows render (the cap is inclusive).
+	stdlibOverlayTSV = strings.Join(strings.Split(strings.TrimRight(over, "\n"), "\n")[:stdlibOverlayCap], "\n") + "\n"
+	_, err = stdlibRegisterDump()
+	stdlibOverlayTSV = saved
+	if err != nil {
+		t.Fatalf("a table at the cap must render; got %v", err)
+	}
+}
+
+// TestStdlibOverlayTableRules: the table parser's fail-closed rules
+// (red-first, one probe per rule).
+func TestStdlibOverlayTableRules(t *testing.T) {
+	row := func(pkg, file, line, kind, old, new string) string {
+		return pkg + "\t" + file + "\t" + line + "\t" + kind + "\t" + old + "\t" + new + "\treason\n"
+	}
+	good := row("strings", "builder.go", "47", "expr", "unsafe.String(x)", "string(x)")
+	if _, err := parseStdlibOverlay(good); err != nil {
+		t.Fatalf("well-formed row refused: %v", err)
+	}
+	for name, tsv := range map[string]string{
+		"6 columns":              "strings\tbuilder.go\t47\texpr\told\tnew\n",
+		"empty column":           row("strings", "builder.go", "47", "expr", "", "new"),
+		"non-numeric line":       row("strings", "builder.go", "x", "expr", "old", "new"),
+		"line 0":                 row("strings", "builder.go", "0", "expr", "old", "new"),
+		"unallowed package":      row("fmt", "print.go", "1", "expr", "old", "new"),
+		"nested file":            row("strings", "sub/x.go", "1", "expr", "old", "new"),
+		"unknown kind":           row("strings", "builder.go", "1", "patch", "old", "new"),
+		"substitute uses unsafe": row("strings", "builder.go", "1", "expr", "old", "unsafe.Slice(p, 1)"),
+		"substitute uses abi":    row("strings", "builder.go", "1", "expr", "old", "abi.NoEscape(p)"),
+		"identical old/new":      row("strings", "builder.go", "1", "expr", "same", "same"),
+		"duplicate site":         good + good,
+		"import not `_ `":        good + row("strings", "builder.go", "11", "import", `"unsafe"`, `"unsafe2"`),
+		"import without site":    row("strings", "builder.go", "11", "import", `"unsafe"`, `_ "unsafe"`),
+	} {
+		if _, err := parseStdlibOverlay(tsv); err == nil {
+			t.Fatalf("%s: must refuse", name)
+		}
+	}
+	// applyStdlibOverlay: exactly-once byte check, line-local.
+	rows, _ := parseStdlibOverlay(row("strings", "builder.go", "2", "expr", "unsafe.String(p)", "string(p)"))
+	src := []byte("package strings\n\treturn unsafe.String(p)\nlast\n")
+	out, applied, err := applyStdlibOverlay(rows, "strings", "/x/strings/builder.go", src)
+	if err != nil || len(applied) != 1 || string(out) != "package strings\n\treturn string(p)\nlast\n" {
+		t.Fatalf("apply: %v %v %q", err, applied, out)
+	}
+	if _, _, err := applyStdlibOverlay(rows, "strings", "/x/strings/builder.go", []byte("package strings\n\treturn other(p)\nlast\n")); err == nil || !strings.Contains(err.Error(), "NOT on that line") {
+		t.Fatalf("moved bytes must refuse by site; got %v", err)
+	}
+	if _, _, err := applyStdlibOverlay(rows, "strings", "/x/strings/builder.go", []byte("package strings\n\tunsafe.String(p) + unsafe.String(p)\n")); err == nil || !strings.Contains(err.Error(), "ambiguous") {
+		t.Fatalf("two occurrences must refuse; got %v", err)
+	}
+	if _, _, err := applyStdlibOverlay(rows, "strings", "/x/strings/builder.go", []byte("one line only\n")); err == nil || !strings.Contains(err.Error(), "only 1 line") {
+		t.Fatalf("a missing line must refuse; got %v", err)
+	}
+	// A file the table does not name passes through byte-identical.
+	same, applied, err := applyStdlibOverlay(rows, "strings", "/x/strings/other.go", src)
+	if err != nil || len(applied) != 0 || string(same) != string(src) {
+		t.Fatalf("untouched file changed: %v %v", err, applied)
 	}
 }
 

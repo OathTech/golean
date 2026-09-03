@@ -4,3 +4,7 @@ atoi-error-path-clone	atoiErrorPathClone	-	ok	-	stdlib,strings,ints,unsafe
 div64-overflow-value	div64OverflowValue	-	panic	runtime error: integer overflow	stdlib,ints,overflow,panic
 index-rune-goto	indexRuneGoto	-	ok	-	stdlib,strings,goto,runes
 format-float-unsafe	formatFloatUnsafe	-	ok	-	stdlib,strings,floats,unsafe
+# BORN-RED frontier rows of stdlib-source-2 (2026-09-03): sites slice 2 refuses by name (memo §1.3 `overlaps`; the io-reporting Buffer read side).
+slices-overlaps	slicesOverlaps	-	ok	-	stdlib,slices,generics,unsafe
+buffer-readbyte-io	bufferReadByteIO	-	ok	-	stdlib,bytes,methods,imports
+bytes-toupper-makenozero	bytesToUpperMakeNoZero	-	ok	-	stdlib,bytes,unicode

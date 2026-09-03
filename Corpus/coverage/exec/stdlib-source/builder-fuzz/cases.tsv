@@ -1,0 +1,12 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# strings.Builder library-vs-oracle fuzz (slice 2): 10 x 300 in-program pseudo-random operations, FNV-hashed String()/Len() observations. Strict rows with depth=4096: thousands of append spills per subject (Builder growth) are wide picks the observation does not depend on — the six seeded invariance streams check that.
+seed-0	fuzz0	-	ok	-	stdlib,strings,methods,loops,switch,bitwise,unicode	strict	-	depth=4096
+seed-1	fuzz1	-	ok	-	stdlib,strings,methods,loops,switch,bitwise,unicode	strict	-	depth=4096
+seed-2	fuzz2	-	ok	-	stdlib,strings,methods,loops,switch,bitwise,unicode	strict	-	depth=4096
+seed-3	fuzz3	-	ok	-	stdlib,strings,methods,loops,switch,bitwise,unicode	strict	-	depth=4096
+seed-4	fuzz4	-	ok	-	stdlib,strings,methods,loops,switch,bitwise,unicode	strict	-	depth=4096
+seed-5	fuzz5	-	ok	-	stdlib,strings,methods,loops,switch,bitwise,unicode	strict	-	depth=4096
+seed-6	fuzz6	-	ok	-	stdlib,strings,methods,loops,switch,bitwise,unicode	strict	-	depth=4096
+seed-7	fuzz7	-	ok	-	stdlib,strings,methods,loops,switch,bitwise,unicode	strict	-	depth=4096
+seed-8	fuzz8	-	ok	-	stdlib,strings,methods,loops,switch,bitwise,unicode	strict	-	depth=4096
+seed-9	fuzz9	-	ok	-	stdlib,strings,methods,loops,switch,bitwise,unicode	strict	-	depth=4096

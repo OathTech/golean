@@ -71,6 +71,10 @@ type sourcePkg struct {
 	libFiles  []string
 	linknamed map[string]string
 	reached   *reachSet
+	// overlaid: the overlay sites (stdlib-overlay.tsv, "<pkg>/<file>:<line>")
+	// applied to this unit's text, in table order — the record of what
+	// hand-written text the lowered unit carries (slice 2).
+	overlaid []string
 }
 
 // newTypesInfo builds the per-package types.Info with every map the
