@@ -274,11 +274,6 @@ func TestStdlibShimDepsExact(t *testing.T) {
 			t.Errorf("%s: source declares top-level names %v but stdlibShimDeclNames lists %v (the collision scan sees only the row)", key, d, r)
 		}
 	}
-	for key := range stdlibShimImports {
-		if _, ok := stdlibShimSources[key]; !ok {
-			t.Errorf("stdlibShimImports row %s names no shim source", key)
-		}
-	}
 	for key, deps := range stdlibShimDeps {
 		if _, ok := stdlibShimSources[key]; !ok {
 			t.Errorf("stdlibShimDeps row %s names no shim source", key)
@@ -325,19 +320,6 @@ func TestStdlibShimEachKeyClosedAlone(t *testing.T) {
 		}
 		needed[shimUnsupportedName] = true
 		src := "package main\n"
-		// The synthetic file's own imports (stdlibShimImports) — the
-		// ParseUint shim names strconv.NumError since stdlib-source-1.
-		// An import listed here but unused by the bundle is a type
-		// error below, so the table cannot over-declare silently.
-		imports := map[string]bool{}
-		for name := range needed {
-			for _, imp := range stdlibShimImports[name] {
-				imports[imp] = true
-			}
-		}
-		for _, imp := range sortedKeys(imports) {
-			src += "import \"" + imp + "\"\n"
-		}
 		for _, name := range sortedKeys(needed) {
 			src += stdlibShimSources[name]
 		}

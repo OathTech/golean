@@ -996,7 +996,7 @@ surface — the right order is mechanism first, observable second. RULED [USER] 
 > **DONE 2026-09-03 ([AGENT], within G9 as ruled; landing SHA in the
 > lane's commit — see `docs/evidence/2026-09-03_stdlib-source-1/`).**
 > Mechanisms 1–7 landed as described below, with two recorded
-> departures: (i) **shim 10, `strconv.ParseUint`, was NOT retired** —
+> departures: (i) **shim 10, `strconv.ParseUint`, was first RETAINED, then RETIRED by [USER] ruling** —
 > upstream's error path (`syntaxError`/`rangeError`) routes through
 > `internal/stringslite.Clone`, whose body is
 > `unsafe.String(&b[0], len(b))`: a reached `unsafe` site the impurity
@@ -1004,11 +1004,16 @@ surface — the right order is mechanism first, observable second. RULED [USER] 
 > `errors/join.go`, `internal/strconv/deps.go`, `slices.overlaps`).
 > Retiring it before the overlay mechanism (slice 2) would have turned
 > the green error-path rows into refusals (a PASS→non-PASS flip the
-> gate forbids), so the shim stays, re-bodied to construct the REAL
-> `*strconv.NumError` (the delta this memo called "unobservable" was
-> observable: `*strconv.NumError` is exported). Frontier row:
-> `stdlib-source/frontier/atoi-error-path-clone`; register:
-> `docs/stdlib-admission-register.md`. (ii) The predicted flip of the
+> gate forbids), so the lane first kept the shim re-bodied to construct
+> the REAL `*strconv.NumError` (the delta this memo called "unobservable"
+> was observable: `*strconv.NumError` is exported) and posed that as a
+> D-002 exception. DENIED — [USER] Mike, 2026-09-03, relayed: «we're not
+> running Raft right now, I think going red is simpler and safer, and
+> lets us do a clean retirement». ParseUint is therefore source-through
+> like the rest; its error-path rows are designed reds on BUG-089 pending
+> the slice-2 overlay for `Clone`. Frontier rows:
+> `stdlib-source/frontier/atoi-error-path-clone` and BUG-089's Cases;
+> register: `docs/stdlib-admission-register.md`. (ii) The predicted flip of the
 > "ParseUint-delta row" was the L-3 row `strconv/format-parse/
 > unmodeled-member` (`strconv.Atoi("42")`) — it flipped because Atoi
 > now lowers, not because of the error type. Unpredicted FAIL→PASS:

@@ -55,17 +55,20 @@ import (
 )
 
 // RETIRED SHIMS (stdlib source-through slice 1, 2026-09-03; memo
-// docs/2026-09-03_stdlib-boundary-design.md §3 rows 1, 3, 4, 8, 9 —
+// docs/2026-09-03_stdlib-boundary-design.md §3 rows 1, 3, 4, 8, 9, 10 —
 // G9 ruled AS RECOMMENDED by the [USER], relayed): strings.Fields,
-// strings.Split, strings.TrimSpace, strconv.FormatUint and
-// strconv.FormatInt no longer have injected sources; their calls lower
-// as qualified calls into the REAL library units loaded from the pinned
-// GOROOT (stdlibsource.go). strconv.ParseUint (row 10) is RETAINED this
-// slice: upstream's error path reaches internal/stringslite.Clone's
-// `unsafe.String`, a site the memo's impurity census (§1.3) did not
-// list — retiring it before the overlay mechanism (slice 2) would turn
-// its green error-path rows into refusals (a PASS→non-PASS flip the
-// gate forbids). Recorded in the slice log and the admission register.
+// strings.Split, strings.TrimSpace, strconv.FormatUint, strconv.FormatInt
+// AND strconv.ParseUint no longer have injected sources; their calls
+// lower as qualified calls into the REAL library units loaded from the
+// pinned GOROOT (stdlibsource.go). ParseUint's upstream error path
+// reaches internal/stringslite.Clone's `unsafe.String` (a site the
+// memo's §1.3 census did not list), so its error-path rows are DESIGNED
+// REDS pending the slice-2 overlay — BUG-089; the alternative (a
+// re-bodied shim constructing the real *strconv.NumError, which needed
+// a shim→library import coupling) was posed as a D-002 exception and
+// DENIED by the [USER] (Mike, 2026-09-03, relayed: «we're not running
+// Raft right now, I think going red is simpler and safer, and lets us do
+// a clean retirement»). The freeze is intact: no shim body changed.
 
 // errorsNewShimName / errorsNewShimTypeName are the reserved
 // declaration names of the errors.New shim (raft W4.0, G-2/H-10). The
@@ -149,7 +152,6 @@ const shimUnsupportedName = "goleanShimUnsupported"
 // mechanism.
 const stringsRepeatBoundName = "goleanShimStringsRepeatBound"
 
-const strconvParseUintShimName = "goleanShimStrconvParseUint"
 const stringsRepeatShimName = "goleanShimStringsRepeat"
 const slicesSortFuncShimName = "goleanShimSlicesSortFunc"
 const cmpCompareUintShimName = "goleanShimCmpCompareUint"
@@ -163,7 +165,6 @@ var stdlibShimAllowlist = map[string]map[string]string{
 	"strings": {"Join": stringsJoinShimName, "Repeat": stringsRepeatShimName},
 	"errors":  {"New": errorsNewShimName},
 	"bytes":   {"Equal": bytesEqualShimName},
-	"strconv": {"ParseUint": strconvParseUintShimName},
 }
 
 // stdlibGenericDesugarInject: packages whose GENERIC members desugar at
@@ -228,7 +229,6 @@ var stdlibShimDeclNames = map[string][]string{
 	bytesEqualShimName:        {bytesEqualShimName},
 	binaryLEUint64ShimName:    {binaryLEUint64ShimName},
 	binaryLEPutUint64ShimName: {binaryLEPutUint64ShimName},
-	strconvParseUintShimName:  {strconvParseUintShimName},
 	stringsRepeatShimName:     {stringsRepeatShimName, stringsRepeatBoundName},
 	slicesSortFuncShimName:    {slicesSortFuncShimName},
 	cmpCompareUintShimName:    {cmpCompareUintShimName},
@@ -252,14 +252,6 @@ var stdlibShimDeclNames = map[string][]string{
 // D-002: plumbing only — no shim, no body, no allowlist row changes.
 var stdlibShimDeps = map[string][]string{
 	fmtDynShimKey: {fmtShimBundleKey},
-}
-
-// stdlibShimImports: shim key -> the import paths its SOURCE names
-// (declared once, checked against the sources by the closure tests like
-// stdlibShimDeps). Only the ParseUint shim imports anything: it builds
-// the real *strconv.NumError (stdlib source-through slice 1).
-var stdlibShimImports = map[string][]string{
-	strconvParseUintShimName: {"strconv"},
 }
 
 // closeShimDeps adds to needed, transitively, every shim a needed
@@ -922,95 +914,6 @@ func goleanShimLEPutUint64(b []byte, v uint64) {
 }
 `,
 
-	// strconv.ParseUint over explicit bases 2..36 and bitSize 0..64
-	// (gc-probed artifacts/w43/probe-b P1-P5, P7; underscores are
-	// invalid outside base 0, which matches the digit loop for free).
-	// RECORDED BOUNDS, fail closed: base 0 (prefix detection) and bitSize
-	// outside 0..64 stop visibly where the real strconv would parse; no
-	// subject site passes either.
-	//
-	// THE ERROR VALUE IS THE REAL `*strconv.NumError` (stdlib source-
-	// through slice 1, 2026-09-03 [AGENT], Fields-standard validated:
-	// rows stdlib-source/strconv-parseuint/*, strconv/format-parse/*,
-	// and the 100k-trial shim-vs-strconv fuzz in
-	// docs/evidence/2026-09-03_stdlib-source-1/). Before this slice the
-	// shim returned its own string-carrier type (`goleanShimStrconvError`)
-	// and the E5 delta was recorded as "unobservable without asserting to
-	// the upstream type" — which was wrong: `*strconv.NumError` is
-	// EXPORTED, and `err.(*strconv.NumError)` / `errors.As` are idiomatic.
-	// With `strconv` now a source-through LIBRARY UNIT the real type is on
-	// the wire whenever the program names it, so a shim-made error of
-	// another type would have made that assertion answer a silent FALSE
-	// where gc answers true. The shim therefore constructs upstream's own
-	// value — `&strconv.NumError{Func, Num, Err}` with the library's
-	// `ErrSyntax`/`ErrRange` sentinels, rendered by the library's own
-	// `NumError.Error` and `Quote` — and keeps ONLY the digit loop as
-	// hand-written text (upstream's `syntaxError`/`rangeError` are not
-	// called because they route through `internal/stringslite.Clone`'s
-	// `unsafe.String`; the clone is an allocation-avoidance idiom, and
-	// `Num: s` is an equal string). Why the shim is RETAINED at all this
-	// slice: the whole real body's error path is that Clone (memo §1.3's
-	// census missed the site); the overlay mechanism that remedies it is
-	// slice 2. The Quote helper and the carrier type are DELETED.
-	strconvParseUintShimName: `
-// goleanShimStrconvParseUint is the native frontend's strconv.ParseUint
-// shim (W4.3 item 1 landing B; error value = the real *strconv.NumError
-// since stdlib-source-1). Injected declaration — not user code.
-func goleanShimStrconvParseUint(s string, base int, bitSize int) (uint64, error) {
-	if base < 2 || base > 36 {
-		goleanShimUnsupported("golean strconv shim: ParseUint base outside 2..36 (base-0 prefix detection is outside the modeled subset; fail closed)")
-		panic("unreachable: the machine stopped in goleanShimUnsupported above")
-	}
-	if bitSize == 0 {
-		bitSize = 64
-	}
-	if bitSize < 0 || bitSize > 64 {
-		goleanShimUnsupported("golean strconv shim: ParseUint bitSize outside 0..64 (fail closed)")
-		panic("unreachable: the machine stopped in goleanShimUnsupported above")
-	}
-	if len(s) == 0 {
-		return 0, &strconv.NumError{Func: "ParseUint", Num: s, Err: strconv.ErrSyntax}
-	}
-	var max uint64 = 1<<uint(bitSize) - 1
-	if bitSize == 64 {
-		max = 18446744073709551615
-	}
-	// On a range error upstream returns THE SATURATED MAX for the
-	// bitSize alongside ErrRange ("the returned value is the maximum
-	// magnitude integer of the appropriate bitSize"), never 0 — the
-	// first version of this shim returned 0, a silent value divergence
-	// on the error path (audit R1-F3; gc-probed
-	// .tmp/fixround-probes/f3; row strconv/format-parse/
-	// parse-uint-range-value). Syntax errors return 0, as upstream.
-	var v uint64
-	for i := 0; i < len(s); i++ {
-		c := s[i]
-		var d uint64
-		switch {
-		case c >= '0' && c <= '9':
-			d = uint64(c - '0')
-		case c >= 'a' && c <= 'z':
-			d = uint64(c-'a') + 10
-		case c >= 'A' && c <= 'Z':
-			d = uint64(c-'A') + 10
-		default:
-			return 0, &strconv.NumError{Func: "ParseUint", Num: s, Err: strconv.ErrSyntax}
-		}
-		if d >= uint64(base) {
-			return 0, &strconv.NumError{Func: "ParseUint", Num: s, Err: strconv.ErrSyntax}
-		}
-		if v > (18446744073709551615-d)/uint64(base) {
-			return max, &strconv.NumError{Func: "ParseUint", Num: s, Err: strconv.ErrRange}
-		}
-		v = v*uint64(base) + d
-		if v > max {
-			return max, &strconv.NumError{Func: "ParseUint", Num: s, Err: strconv.ErrRange}
-		}
-	}
-	return v, nil
-}
-`,
-
 	// strings.Repeat: loop concatenation; upstream's negative-count
 	// panic verbatim (gc-probed artifacts/w43/probe-b R1). Upstream's
 	// output-length OVERFLOW panic is modeled verbatim since
@@ -1331,25 +1234,10 @@ func injectStdlibShims(fset *token.FileSet, files []*ast.File) (*ast.File, error
 	}
 	sort.Strings(names)
 	src := "package " + files[0].Name.Name + "\n"
-	// Shim sources that name LIBRARY declarations (stdlib source-through:
-	// the ParseUint shim constructs the real *strconv.NumError) import
-	// their package in the synthetic file — the file is its own
-	// compilation unit; the user's import (aliased or not) does not
-	// serve it. Sorted for a deterministic file.
-	imports := map[string]bool{}
-	for _, name := range names {
-		for _, imp := range stdlibShimImports[name] {
-			imports[imp] = true
-		}
-	}
-	importPaths := make([]string, 0, len(imports))
-	for imp := range imports {
-		importPaths = append(importPaths, imp)
-	}
-	sort.Strings(importPaths)
-	for _, imp := range importPaths {
-		src += "import \"" + imp + "\"\n"
-	}
+	// The synthetic file has NO imports by construction: a shim names no
+	// library declaration (a shim that did would couple injected text to
+	// a library type — the `stdlibShimImports` coupling proposed and
+	// DENIED at the D-002 exception, [USER] 2026-09-03, relayed).
 	for _, name := range names {
 		src += stdlibShimSources[name]
 	}

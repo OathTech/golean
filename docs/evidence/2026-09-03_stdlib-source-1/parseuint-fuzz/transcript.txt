@@ -1,3 +1,4 @@
 trials=100000 ok-path=3464 error-path=81157 refused(recorded bounds: base 0 / bitSize>64)=15379 mismatches=0
 trials=100000 ok-path=3407 error-path=80978 refused(recorded bounds: base 0 / bitSize>64)=15615 mismatches=0
 trials=600000 ok-path=20654 error-path=486325 refused(recorded bounds: base 0 / bitSize>64)=93021 mismatches=0
+# 2026-09-03: shim RETIRED by [USER] ruling (D-002 exception denied, relayed); the fuzzed body no longer exists in tools/nativefrontend — gen.sh's awk extraction will find nothing at HEAD (run it at 6dfe55b9..fec6a57b to reproduce); transcript retained as the record of what WAS validated.

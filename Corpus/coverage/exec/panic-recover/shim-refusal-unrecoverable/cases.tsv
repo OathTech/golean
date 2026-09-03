@@ -6,7 +6,10 @@
 # strings.Split lowers from the pinned GOROOT source and the empty-
 # separator refusal they recovered around no longer exists (the real
 # explode runs; gc's n=3 / "a-b" are the machine's too). parse-recover
-# still pins the contract (ParseUint base 0 is a retained shim bound).
+# PASSES too since the ParseUint shim was RETIRED by [USER] ruling (D-002
+# exception denied, 2026-09-03): base 0 is the real library body. The
+# R4-C-3 contract itself is now exercised only by the remaining shims'
+# bound sites (strings.Repeat's 1<<24 row, repeat-bound-refused).
 parse-recover	parseRecover	-	ok	-	stdlib,strings,panic,recover,defer
 split-recover	splitRecover	-	ok	-	stdlib,strings,panic,recover,defer
 render-recover	renderRecover	-	ok	-	stdlib,strings,methods,defined_type

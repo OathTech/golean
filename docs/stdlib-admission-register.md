@@ -109,20 +109,27 @@ silently).
   `internal/bytealg`, `unicode`, `unicode/utf8`, `math/bits`, `errors`
   admitted as source-through; 5 substitution rows (all
   `internal/bytealg`); shims RETIRED: `strings.Fields`, `strings.Split`,
-  `strings.TrimSpace`, `strconv.FormatUint`, `strconv.FormatInt` (memo
-  §3 rows 1, 3, 4, 8, 9). `strconv.ParseUint` (row 10) RETAINED with a
-  body change — its error value is now the real `*strconv.NumError`
-  (see `stdlibshim.go`); reason: upstream's error path reaches
-  `internal/stringslite.Clone`'s `unsafe.String`, a site the memo's
-  census did not list — the overlay mechanism (slice 2) is the remedy;
-  frontier row `stdlib-source/frontier/atoi-error-path-clone`. Overlay
-  0/12, primitive 0/2. Audit fix round (same day): the other reached-
-  library refusal classes rowed — `stdlib-source/frontier/{index-rune-goto,
-  format-float-unsafe}`, `stdlib-source/errors-wrap/{is,as}` (ledger
-  FR-21) — so the register claims exactly what lowers: every reached
-  member of the nine packages that is free of `unsafe`, linkname pulls,
-  placeholder bodies, `internal/reflectlite`, and FR-11's goto shape.
-  Evidence: `docs/evidence/2026-09-03_stdlib-source-1/`.
+  `strings.TrimSpace`, `strconv.FormatUint`, `strconv.FormatInt`,
+  `strconv.ParseUint` (memo §3 rows 1, 3, 4, 8, 9, 10) — 14 shims remain.
+  ParseUint: upstream's error path reaches `internal/stringslite.Clone`'s
+  `unsafe.String` (a site the memo's census did not list); the lane first
+  RETAINED the shim re-bodied to construct the real `*strconv.NumError`
+  (a body change under the D-002 freeze plus a new shim→library import
+  coupling, `stdlibShimImports`) and posed it as a D-002 exception. **The
+  exception was DENIED** — [USER] Mike, 2026-09-03, relayed by the [AGENT]
+  coordinator (cited as relayed): «(a) we're not running Raft right now, I
+  think going red is simpler and safer, and lets us do a clean
+  retirement». ParseUint therefore lowers from source like the rest; its
+  ERROR-path rows are [USER]-directed designed reds on BUG-089's Cases
+  line pending the slice-2 overlay for `Clone`; `stdlibShimImports` is
+  GONE; the freeze is intact — no shim body changed. Other reached-
+  library refusal classes rowed at the audit fix round —
+  `stdlib-source/frontier/{index-rune-goto,format-float-unsafe}`,
+  `stdlib-source/errors-wrap/{is,as}` (ledger FR-21) — so the register
+  claims exactly what lowers: every reached member of the nine packages
+  that is free of `unsafe`, linkname pulls, placeholder bodies,
+  `internal/reflectlite`, and FR-11's goto shape. Overlay 0/12, primitive
+  0/2. Evidence: `docs/evidence/2026-09-03_stdlib-source-1/`.
 
 ## The machine block
 
@@ -138,14 +145,14 @@ count	source-through	9 (uncapped)
 count	substitution	5 (uncapped; each names its upstream twin)
 count	overlay	0 / cap 12
 count	primitive	0 / cap 2
-count	shim	15 (frozen, D-002; retired by rows of memo §3)
+count	shim	14 (frozen, D-002; retired by rows of memo §3)
 count	shadow-type	7
 source-through	errors	errors.New for strconv's ErrRange/ErrSyntax package variables (pure); the user-facing errors.New SHIM is not retired this slice
 source-through	internal/bytealg	the byte-search leaves strings.Index/Count/Split reach; assembly on amd64, swapped for the package's own *_generic.go twins by stdlib-substitutions.tsv
 source-through	internal/strconv	strconv's implementation package; pure Go except deps.go's four float-bits casts (unreached by the integer paths; quarantine by name if reached)
 source-through	internal/stringslite	strings/strconv's shared Index/Cut/Clone helpers; Clone uses unsafe.String (quarantines by name when reached)
 source-through	math/bits	internal/strconv's formatBits uses bits.TrailingZeros; pure except the two runtime-linknamed error VALUES (poisoned by the linkname rule)
-source-through	strconv	slice-1 target (FormatUint, FormatInt retired from shims); thin wrappers over internal/strconv; ParseUint's shim is RETAINED (its error path reaches internal/stringslite.Clone's unsafe.String — overlay pending, slice 2)
+source-through	strconv	slice-1 target (FormatUint, FormatInt, ParseUint retired from shims); thin wrappers over internal/strconv; every Parse* ERROR path reaches internal/stringslite.Clone's unsafe.String and refuses by name (BUG-089 designed reds; overlay pending, slice 2 — the re-bodied-shim alternative was a D-002 exception DENIED by the [USER] 2026-09-03)
 source-through	strings	slice-1 target (Fields, TrimSpace, Split retired from shims); pure Go at function granularity given the bytealg substitution — Builder stays the E5-T shadow model until slice 2's overlay
 source-through	unicode	unicode.IsSpace and its White_Space RangeTable (strings.Fields/TrimSpace's non-ASCII path); pure tables, reached ones only
 source-through	unicode/utf8	rune decoding used by strings' non-ASCII paths and explode; pure
@@ -166,7 +173,6 @@ shim	fmt.Sprint	fmt desugar (fmtdesugar.go)
 shim	fmt.Sprintf	fmt desugar (fmtdesugar.go)
 shim	fmt.Sprintln	fmt desugar (fmtdesugar.go)
 shim	slices.SortFunc	generic desugar (genericshim.go)
-shim	strconv.ParseUint	direct-call shim (stdlibshim.go)
 shim	strings.Join	direct-call shim (stdlibshim.go)
 shim	strings.Repeat	direct-call shim (stdlibshim.go)
 shadow-type	bytes.Buffer	E5-T shadow model (importedmodel.go); source-through + overlay pending (memo §3 rows T1/T2, slice 2)

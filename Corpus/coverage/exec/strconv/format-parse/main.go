@@ -4,8 +4,11 @@ package main
 // landing B; docs/raft-w43-log.md). SINCE 2026-09-03 (stdlib source-through
 // slice 1, docs/2026-09-03_stdlib-boundary-design.md §6): FormatUint and
 // FormatInt are the REAL library bodies lowered from the pinned GOROOT
-// source (no shim); ParseUint is the retained shim whose error value is
-// the real *strconv.NumError; `unmodeledMember` (strconv.Atoi) LOWERS
+// source (no shim); ParseUint too — its ERROR path refuses by name at
+// internal/stringslite.Clone (unsafe.String), so parse-uint-errors /
+// parse-uint-range-value / parse-uint-bitsize are DESIGNED REDS on
+// BUG-089 ([USER] ruling 2026-09-03: D-002 exception denied) pending the
+// slice-2 overlay; parse-uint-happy stays green; `unmodeledMember` (strconv.Atoi) LOWERS
 // now — the L-3 refusal it pinned is moot for source-through packages
 // (the row flipped FAIL->PASS at the slice-1 re-pin). The historical
 // comment below is kept for the record. The subject sites:

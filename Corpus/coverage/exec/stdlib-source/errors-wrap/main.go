@@ -1,6 +1,9 @@
 package main
 
 // errors.{Is,As,Unwrap} through the REAL library source (stdlib source-
+// through slice 1; the wrapped error is a *strconv.NumError CONSTRUCTED
+// directly — ParseUint's own error path is a designed red, BUG-089).
+// (stdlib source-
 // through slice 1, audit fix round B2, 2026-09-03). `errors` is a
 // source-through library unit; its wrap.go bodies dispatch on UNNAMED
 // interface types (`err.(interface{ Unwrap() error })`) and, for
@@ -25,14 +28,14 @@ func (w wrapped) Error() string { return "w:" + w.inner.Error() }
 func (w wrapped) Unwrap() error { return w.inner }
 
 func errorsUnwrap() (bool, bool, string) {
-	_, err := strconv.ParseUint("x", 10, 64)
+	err := &strconv.NumError{Func: "ParseUint", Num: "x", Err: strconv.ErrSyntax}
 	w := wrapped{err}
 	return errors.Unwrap(w) == err, errors.Unwrap(err) == strconv.ErrSyntax, errors.Unwrap(w).Error()
 }
 
 // errors.Is walks Unwrap and compares against a comparable target.
 func errorsIs() (bool, bool, bool, bool) {
-	_, err := strconv.ParseUint("x", 10, 64)
+	err := &strconv.NumError{Func: "ParseUint", Num: "x", Err: strconv.ErrSyntax}
 	w := wrapped{wrapped{err}}
 	return errors.Is(w, strconv.ErrSyntax), errors.Is(w, strconv.ErrRange),
 		errors.Is(err, strconv.ErrSyntax), errors.Is(nil, strconv.ErrSyntax)
@@ -41,7 +44,7 @@ func errorsIs() (bool, bool, bool, bool) {
 // errors.As: gc finds the *NumError two wraps down; the machine reaches
 // reflectlite.TypeOf in errors.As and refuses by name (frontier).
 func errorsAs() (bool, string) {
-	_, err := strconv.ParseUint("x", 10, 64)
+	err := &strconv.NumError{Func: "ParseUint", Num: "x", Err: strconv.ErrSyntax}
 	w := wrapped{wrapped{err}}
 	var ne *strconv.NumError
 	if errors.As(w, &ne) {

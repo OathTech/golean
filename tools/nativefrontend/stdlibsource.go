@@ -71,7 +71,7 @@ import (
 // compares this table to the register).
 var stdlibSourceAllowed = map[string]string{
 	"strings":              "slice-1 target (Fields, TrimSpace, Split retired from shims); pure Go at function granularity given the bytealg substitution — Builder stays the E5-T shadow model until slice 2's overlay",
-	"strconv":              "slice-1 target (FormatUint, FormatInt retired from shims); thin wrappers over internal/strconv; ParseUint's shim is RETAINED (its error path reaches internal/stringslite.Clone's unsafe.String — overlay pending, slice 2)",
+	"strconv":              "slice-1 target (FormatUint, FormatInt, ParseUint retired from shims); thin wrappers over internal/strconv; every Parse* ERROR path reaches internal/stringslite.Clone's unsafe.String and refuses by name (BUG-089 designed reds; overlay pending, slice 2 — the re-bodied-shim alternative was a D-002 exception DENIED by the [USER] 2026-09-03)",
 	"internal/strconv":     "strconv's implementation package; pure Go except deps.go's four float-bits casts (unreached by the integer paths; quarantine by name if reached)",
 	"internal/stringslite": "strings/strconv's shared Index/Cut/Clone helpers; Clone uses unsafe.String (quarantines by name when reached)",
 	"internal/bytealg":     "the byte-search leaves strings.Index/Count/Split reach; assembly on amd64, swapped for the package's own *_generic.go twins by stdlib-substitutions.tsv",

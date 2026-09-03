@@ -1,4 +1,28 @@
 # GoLean native-frontend full-corpus differential baseline
+# re-pinned: 2026-09-03 (stdlib-source-1 — [USER] RULING: the D-002 exception for a
+#   re-bodied ParseUint shim is DENIED (Mike, 2026-09-03, relayed by the [AGENT]
+#   coordinator, cited as relayed: «(a) we're not running Raft right now, I think
+#   going red is simpler and safer, and lets us do a clean retirement»).
+#   strconv.ParseUint RETIRED (source-through like the rest; stdlibShimImports
+#   removed; 15 shims remain; no shim body changed). FULL ci --diff at the ruling
+#   commit (clean tree; log tail in docs/evidence/2026-09-03_stdlib-source-1/
+#   gate-tail-ruling.txt): 3256 rows; drift vs the fix-round pin = EXACTLY the 9
+#   PASS -> FAIL/frontend-export flips on BUG-089's Cases line ([USER]-directed
+#   designed reds: every ParseUint ERROR path refuses by name at internal/
+#   stringslite.Clone's unsafe.String pending the slice-2 overlay) —
+#   strconv/format-parse/parse-uint-{errors,range-value,bitsize},
+#   noodler/strings/parse-uint-edges, stdlib-source/strconv-parseuint/{numerror-
+#   type,range-sentinel,error-texts,error-quoting,bitsize-saturation} — plus ONE
+#   FAIL -> PASS flip, panic-recover/shim-refusal-unrecoverable/parse-recover
+#   (base-0 ParseUint is the real body). The ok-path rows stay green:
+#   strconv/format-parse/parse-uint-happy, stdlib-source/strconv-parseuint/
+#   happy-bases. NO other row moved; no new rows. 3054 PASS / 202 FAIL.
+#   Twin-wire pin MOVED ([USER]-authorized by G9 + this ruling, both relayed):
+#   98abdced… -> 45cd882a… — raftpb.goleanShimStrconvParseUint out, the real
+#   strconv.ParseUint closure + the internal/stringslite.Clone stub in
+#   (structural diff twin-structural-diff-ruling.txt). Deviation + stdlib pins unmoved.
+#   [the audit-fix-round figure, kept as history:] # cases: 3256 (3062 PASS / 194 FAIL)
+#   [re-derived from the data rows at the audit fix round: 3251 (3061/190) + 5 born rows (1 PASS + 4 FAIL) = 3256 (3062/194)]
 # re-pinned: 2026-09-03 (stdlib-source-1 AUDIT FIX ROUND B1-B2/F3-F14 — [AGENT];
 #   FULL ci --diff at the fix-round commit 6dfe55b9 (clean tree; log tail in
 #   docs/evidence/2026-09-03_stdlib-source-1/gate-tail-fixround.txt): 3256 rows
@@ -656,7 +680,8 @@
 #     removed row is named in prose, never left dangling on the line).
 #     NEW rows: unsafe/layout-ops/{sizeof-fixed,layout-struct}
 #     FAIL/frontend-export BY DESIGN. unsafe/boundary/pointer-roundtrip
-# cases: 3260 (3066 PASS / 194 FAIL)
+# cases: 3260 (3058 PASS / 202 FAIL)
+#   [re-derived from the data rows at the round-8b merge-train rebase 2026-09-03 ([AGENT]: stdlib-source-1 [USER]-ruling re-pin (ParseUint RETIRED, D-002 exception denied) replayed over the round-8b union: BUG-089's designed reds — 4 pre-existing rows PASS→FAIL + 5 born FAIL stdlib-source/strconv-parseuint/*, all on BUG-089's Cases line — and panic-recover/shim-refusal-unrecoverable/parse-recover FAIL→PASS; no other row moved)]
 #   [re-derived from the data rows at the round-8b merge-train rebase 2026-09-03 ([AGENT]: stdlib-source-1 audit-fix-round re-pin replayed over the round-8b union: +5 born stdlib-source/ rows (errors-wrap/unwrap PASS; errors-wrap/{is,as} + frontier/{index-rune-goto,format-float-unsafe} FAIL by design on FR-21); no other row moved)]
 #   [re-derived from the data rows at the round-8b merge-train rebase 2026-09-03 ([AGENT]: stdlib-source-1 slice-1 commit replayed over main 6a163681 (post-round-8a + sampling-budget): main's 3199 / 3005 / 194 + the lane's row delta vs its 3195 base — born stdlib-source/ rows and the shim-surface FAIL→PASS flips; ids disjoint, no main row otherwise moved)]
 #   [re-derived from the data rows at the round-8a merge-train rebase 2026-09-03 ([AGENT]: strict-routing replayed over main = hygiene-b1-stamps' 3199 (3005 PASS / 194 FAIL); the strict-routing lane's 9 STAGE-ONLY moves carried — 8 PASS/- -> PASS/confluent (goroutines/pipeline/{two-stage,buffered-stage}, spec-examples-stmt/go-statements/func-literal, noodler/goroutines/{directional-params,fifo-one-sender,lockstep-transcript}, noodler/select/ping-pong, noodler/syncmisuse/unlock-from-other-goroutine) and channels/select-select/beside-loop FAIL nondet|differential -> FAIL lean-observation|differential (the guard-stage-alt alternation KEPT, its nondet member replaced by lean-observation per the strict-routing audit's TRAIN NOTE, docs/evidence/2026-09-03_strict-routing/README.md); no result flip, no born row, no PASS->non-PASS flips; `awk -F'\t' '!/^#/{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3005 / FAIL 194)]
@@ -3047,7 +3072,7 @@ PASS	noodler/strings/fields-unicode-spaces	-
 PASS	noodler/strings/trimspace-unicode	-
 PASS	noodler/strings/split-edges	-
 PASS	noodler/strings/join-repeat-edges	-
-PASS	noodler/strings/parse-uint-edges	-
+FAIL	noodler/strings/parse-uint-edges	frontend-export
 PASS	noodler/strings/sprint-spacing	-
 PASS	noodler/strings/sprintf-verbs	-
 PASS	noodler/strings/sprintln-basics	-
@@ -3136,7 +3161,7 @@ FAIL	panic-recover/repanic-same-value-abort	lean-observation
 PASS	panic-recover/repanic-same-value-abort/forced-half	-
 PASS	panic-recover/return-expression-panic-recovered	-
 PASS	panic-recover/self-recovered-defer-panic	-
-FAIL	panic-recover/shim-refusal-unrecoverable/parse-recover	frontend-export
+PASS	panic-recover/shim-refusal-unrecoverable/parse-recover	-
 PASS	panic-recover/shim-refusal-unrecoverable/split-recover	-
 PASS	panic-recover/shim-refusal-unrecoverable/render-recover	-
 PASS	panic-recover/unnamed-recover-zero-return	-
@@ -3747,12 +3772,12 @@ PASS	stdlib-source/strconv-format/power-of-two-bases	-
 PASS	stdlib-source/strconv-format/siblings	-
 PASS	stdlib-source/strconv-format/small-boundary	-
 PASS	stdlib-source/strconv-format/uint-all-bases	-
-PASS	stdlib-source/strconv-parseuint/bitsize-saturation	-
-PASS	stdlib-source/strconv-parseuint/error-quoting	-
-PASS	stdlib-source/strconv-parseuint/error-texts	-
+FAIL	stdlib-source/strconv-parseuint/bitsize-saturation	frontend-export
+FAIL	stdlib-source/strconv-parseuint/error-quoting	frontend-export
+FAIL	stdlib-source/strconv-parseuint/error-texts	frontend-export
 PASS	stdlib-source/strconv-parseuint/happy-bases	-
-PASS	stdlib-source/strconv-parseuint/numerror-type	-
-PASS	stdlib-source/strconv-parseuint/range-sentinel	-
+FAIL	stdlib-source/strconv-parseuint/numerror-type	frontend-export
+FAIL	stdlib-source/strconv-parseuint/range-sentinel	frontend-export
 PASS	stdlib-source/strings-fields/all-unicode-space	-
 PASS	stdlib-source/strings-fields/ascii-table	-
 PASS	stdlib-source/strings-fields/empty	-
@@ -3787,9 +3812,9 @@ PASS	strconv/format-parse/format-uint-bases	-
 PASS	strconv/format-parse/format-int-vals	-
 PASS	strconv/format-parse/format-illegal-base	-
 PASS	strconv/format-parse/parse-uint-happy	-
-PASS	strconv/format-parse/parse-uint-errors	-
-PASS	strconv/format-parse/parse-uint-range-value	-
-PASS	strconv/format-parse/parse-uint-bitsize	-
+FAIL	strconv/format-parse/parse-uint-errors	frontend-export
+FAIL	strconv/format-parse/parse-uint-range-value	frontend-export
+FAIL	strconv/format-parse/parse-uint-bitsize	frontend-export
 PASS	strconv/format-parse/unmodeled-member	-
 PASS	strings/builder-model/write-string	-
 PASS	strings/builder-model/write-bytes	-

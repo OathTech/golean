@@ -25,17 +25,19 @@ decision here is [AGENT]; the two departures from §6 as written (the
 retained ParseUint shim; the dropped-initializer rule) are argued in the
 memo's DONE marker and the register.
 
-**D-002 countersign ask (carried for the coordinator to pose):** the
-re-bodied `strconv.ParseUint` shim is a BODY CHANGE under the D-002
-freeze, forced by a fail-closed STOP (retiring it would have flipped the
-green error-path rows red). It DELETES two hand-written pieces
-(`goleanShimStrconvQuote`, the carrier type `goleanShimStrconvError`)
-but ADDS `stdlibShimImports` (`tools/nativefrontend/stdlibshim.go`) — a
-new coupling from an injected shim to a LIBRARY type (`&strconv.NumError{…}`
-with the library's `ErrSyntax`/`ErrRange`). Validation: the 600k fuzz
-below + `stdlib-source/strconv-parseuint/*`. The [USER] is asked to
-countersign the coupling; the freeze itself permits a validated body
-change.
+**D-002 exception DENIED** — [USER] Mike, 2026-09-03, relayed by the
+[AGENT] coordinator (cited as relayed): «(a) we're not running Raft right
+now, I think going red is simpler and safer, and lets us do a clean
+retirement». The exception posed was the re-bodied `strconv.ParseUint`
+shim (a body change under the freeze + the `stdlibShimImports`
+shim→library coupling). Outcome, executed the same day: the ParseUint
+shim is RETIRED — `strconv.ParseUint` lowers from the pinned source like
+the rest, its error path refuses BY NAME at `internal/stringslite.Clone`
+(`unsafe.String`) pending the slice-2 overlay; the rows that flip
+PASS→non-PASS are [USER]-directed designed reds on **BUG-089**'s Cases
+line; `stdlibShimImports` is GONE; 15 shims remain; the freeze is intact
+(no shim body changed). The 600k fuzz transcript below stays as the
+record of what WAS validated (annotated "shim retired by [USER] ruling").
 
 ## Toolchain, tree, host (rules 3–5)
 
@@ -114,7 +116,7 @@ all 500; `go run` ran the real one; all 10 subjects (50 inputs each)
 PASS — the first fuzz that targets the machine's execution of library
 text rather than a Go-vs-Go mock check.
 
-### The retained ParseUint shim, Fields-standard validated
+### The (since retired) ParseUint shim — what WAS validated, kept as record
 
 `parseuint-fuzz/gen.sh` extracts the shim SOURCE verbatim from
 `stdlibshim.go` and runs it side by side with `strconv.ParseUint` under
@@ -276,6 +278,28 @@ gotest lane for errors.*: NO in-scope (or any) `$GOROOT/test` file calls
 `errors.Is/As/Unwrap` (grep over deps/go/test: 0); the 10 in-scope files
 importing `errors` re-ran unchanged (3 MATCH, the rest refused on their
 pre-existing `fmt`/`complex64`/timeout causes).
+
+## [USER] ruling: ParseUint retired (2026-09-03, after the fix round)
+
+Rows flipped PASS→FAIL/frontend-export by design (all on BUG-089's Cases
+line; cause `internal/stringslite.Clone: … needs unsafe.String … reached
+by every strconv Parse* error path … pending the slice-2 overlay`):
+`strconv/format-parse/parse-uint-{errors,range-value,bitsize}`,
+`noodler/strings/parse-uint-edges`, `stdlib-source/strconv-parseuint/{numerror-type,range-sentinel,error-texts,error-quoting,bitsize-saturation}`.
+Rows that STAY GREEN (ok-path only — the quarantine is per declaration
+and `Clone` sits only on the error path): `strconv/format-parse/parse-uint-happy`,
+`stdlib-source/strconv-parseuint/happy-bases`; and ONE flips FAIL→PASS:
+`panic-recover/shim-refusal-unrecoverable/parse-recover` (base-0 parsing
+is the real body now). Raft: no corpus row reaches `quorum`/`raftpb`'s
+ParseUint; the twin WIRE does — pin `98abdced9d15f3df5f37ac9d4950f28d26cf725ed7c4c07078d178dc54ea0fcd`
+→ `45cd882a6e09c8942fbc5f2f774480af26b6703bbc4ad246d4b609f123c5deda`
+([USER]-authorized by G9 + this ruling, both relayed;
+`twin-structural-diff-ruling.txt`: `raftpb.goleanShimStrconvParseUint`
+out; `strconv.ParseUint`, `internal/strconv.ParseUint`, `strconv.
+{toError,syntaxError,rangeError,baseError,bitSizeError}`, `internal/
+stringslite.Clone` (stub) and `internal/strconv.Error` in; only
+`raftpb.ConfChangesFromString` changed). `errors-wrap` rows now construct
+the `*strconv.NumError` directly so they test `errors.*`, not ParseUint.
 
 ## Gate result (rule 6) — appended after the runs
 

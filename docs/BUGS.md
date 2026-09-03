@@ -4851,3 +4851,55 @@ the re-envelope is item (4) above — one demonic choice between the two
 texts at `Ops.lean`'s nil arm, routed to the membership lane; the three
 Cases rows stay red on this line until that slice lands (a separate
 lane implements it).
+
+## BUG-089 — `strconv.ParseUint` retired pending the slice-2 overlay (D-002 exception denied [USER] 2026-09-03): every ParseUint ERROR path refuses by name at `internal/stringslite.Clone` (`unsafe.String`) — [USER]-DIRECTED designed reds [frontend; stdlib source-through slice 1]
+
+- Status: open
+- Pinned-by: differential
+- Cases: noodler/strings/parse-uint-edges, stdlib-source/strconv-parseuint/bitsize-saturation, stdlib-source/strconv-parseuint/error-quoting, stdlib-source/strconv-parseuint/error-texts, stdlib-source/strconv-parseuint/numerror-type, stdlib-source/strconv-parseuint/range-sentinel, strconv/format-parse/parse-uint-bitsize, strconv/format-parse/parse-uint-errors, strconv/format-parse/parse-uint-range-value
+- Discovered: 2026-09-03, lane `stdlib-source-1` — stdlib source-through
+  slice 1 (docs/2026-09-03_stdlib-boundary-design.md §6; register
+  docs/stdlib-admission-register.md; evidence `docs/evidence/2026-09-03_stdlib-source-1/`).
+
+NOT A WRONG ANSWER: every case refuses at `frontend-export` with the cause
+named at the site — `internal/stringslite.Clone: stdlib source-through:
+internal/stringslite.Clone needs unsafe.String (… reached by every strconv
+Parse* error path … pending the slice-2 overlay for stringslite.Clone)`.
+Listed here because these nine rows were GREEN under the hand-written
+ParseUint shim and are RED by [USER] direction now, and the re-pin guard
+requires every PASS→non-PASS flip to sit on a Cases line.
+
+**Mechanism.** `strconv.ParseUint` lowers from the pinned GOROOT source
+(`deps/go/src/strconv/number.go`) like the other retired shims. Its
+happy path is pure and PASSes (`strconv/format-parse/parse-uint-happy`,
+`stdlib-source/strconv-parseuint/happy-bases`,
+`panic-recover/shim-refusal-unrecoverable/parse-recover` — base 0 now
+works, that row flipped FAIL→PASS). Its error path — `toError` →
+`syntaxError`/`rangeError`/`baseError`/`bitSizeError` — copies the input
+through `internal/stringslite.Clone`, whose body is
+`unsafe.String(&b[0], len(b))`: an `unsafe` idiom in otherwise pure
+library text (memo §2.3.2's overlay class) that the memo's §1.3 impurity
+census did not list. The frontend quarantines `Clone` per declaration
+(H-3), so any ParseUint call that takes the error path stops there, by
+name.
+
+**Why red rather than a shim.** The lane first kept a re-bodied ParseUint
+shim constructing the real `*strconv.NumError` (a body change under the
+D-002 freeze plus a new shim→library import coupling, `stdlibShimImports`)
+and posed it as a D-002 exception. DENIED — [USER] Mike, 2026-09-03,
+relayed by the [AGENT] coordinator (cited as relayed): «(a) we're not
+running Raft right now, I think going red is simpler and safer, and lets
+us do a clean retirement». The shim and its plumbing are gone; the
+freeze is intact (no shim body changed); 15 shims remain.
+
+**Plan (closes this entry).** Slice 2's OVERLAY mechanism (memo §2.3.2,
+register cap 12): `internal/stringslite.Clone` = `string(b)` — the
+`unsafe.String` is an allocation-avoidance idiom, the bytes are equal —
+byte-checked against upstream at the pin and Fields-standard validated;
+the same slice owes `strings.Builder`'s three sites, `errors.Join`, and
+`internal/strconv/deps.go`'s float-bits casts. When it lands, these nine
+rows flip FAIL→PASS (free) and this entry closes. Ledger row FR-21
+carries the same shape. Raft: the twin subject's `raftpb.
+ConfChangesFromString` calls ParseUint; the twin WIRE carries the real
+body + the `Clone` stub (pin moved, structural diff in the evidence dir);
+no corpus row exercises that path at this tip.

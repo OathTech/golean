@@ -1,0 +1,16 @@
+# producer: docs/evidence/2026-09-03_stdlib-source-1/twin-structural-diff.py
+new library globals: 0 | user global order preserved: True | library globals precede user globals: True
+globals only-in-old: []
+globals only-in-new: []
+funcs only-in-old: ['raftpb.goleanShimStrconvParseUint']
+funcs only-in-new: ['internal/strconv.Itoa', 'internal/strconv.ParseUint', 'internal/strconv.lower', 'internal/strconv.underscoreOK', 'internal/stringslite.Clone', 'strconv.Itoa', 'strconv.ParseUint', 'strconv.baseError', 'strconv.bitSizeError', 'strconv.rangeError', 'strconv.syntaxError', 'strconv.toError']
+funcs changed (after normalization): ['raftpb.ConfChangesFromString']
+methods only-in-old: []
+methods only-in-new: [('internal/strconv.Error', 'Error')]
+methods changed (after normalization): []
+types only-in-old: []
+types only-in-new: ['internal/strconv.Error']
+methodSets only-in-old: []
+methodSets only-in-new: [('internal/strconv.Error', 'full')]
+fileOrder old: ['unicode/utf8', 'math/bits', 'internal/strconv', 'internal/bytealg', 'internal/stringslite', 'errors', 'strconv', 'unicode', 'strings', 'quorum', 'raftpb', 'proto', 'tracker', 'confchange', 'raft', 'main']
+fileOrder new: ['unicode/utf8', 'math/bits', 'internal/strconv', 'internal/bytealg', 'internal/stringslite', 'errors', 'strconv', 'unicode', 'strings', 'quorum', 'raftpb', 'proto', 'tracker', 'confchange', 'raft', 'main']

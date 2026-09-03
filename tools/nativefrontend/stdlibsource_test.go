@@ -156,9 +156,9 @@ func TestStdlibSourceRetainedShimCallDoesNotReachRealDecl(t *testing.T) {
 	withStdlibRoots(t)
 	dir := writeMain(t, `package main
 
-import "strconv"
+import "strings"
 
-func subject() (uint64, error) { return strconv.ParseUint("7", 10, 64) }
+func subject() string { return strings.Join([]string{"a", "b"}, ",") }
 
 func main() { subject() }
 `)
@@ -167,11 +167,11 @@ func main() { subject() }
 		t.Fatalf("lower: %v", err)
 	}
 	fns := funcNames(program)
-	if _, shim := fns["goleanShimStrconvParseUint"]; !shim {
-		t.Fatalf("retained shim goleanShimStrconvParseUint not injected for a direct ParseUint call")
+	if _, shim := fns["goleanShimStringsJoin"]; !shim {
+		t.Fatalf("retained shim goleanShimStringsJoin not injected for a direct Join call")
 	}
-	if _, real := fns["strconv.ParseUint"]; real {
-		t.Fatalf("the REAL strconv.ParseUint was reached from a shimmed direct call (its error path would drag Quote's tables onto the wire for nothing)")
+	if _, real := fns["strings.Join"]; real {
+		t.Fatalf("the REAL strings.Join was reached from a shimmed direct call (its Builder use would drag the shadow-model stubs onto the wire for nothing)")
 	}
 }
 
@@ -201,7 +201,7 @@ func main() { subject() }
 		t.Fatalf("internal/stringslite.Clone (reached through Atoi's error path) not on the wire")
 	}
 	reason, _ := clone["unsupported"].(string)
-	if !strings.Contains(reason, "unsafe.String") || !strings.Contains(reason, "internal/stringslite.Clone") {
+	if !strings.Contains(reason, "unsafe.String") || !strings.Contains(reason, "internal/stringslite.Clone") || !strings.Contains(reason, "ParseUint") {
 		t.Fatalf("Clone must be an H-3 stub naming unsafe.String and the site; got %q", reason)
 	}
 	// The happy path (real Atoi → internal/strconv.Atoi) is bodied.
@@ -335,12 +335,12 @@ func TestStdlibRegisterDumpCaps(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"count\toverlay\t0 / cap 12", "count\tprimitive\t0 / cap 2", "source-through\tstrings\t", "substitution\tinternal/bytealg/indexbyte_native.go -> indexbyte_generic.go\t", "shim\tstrconv.ParseUint\t"} {
+	for _, want := range []string{"count\toverlay\t0 / cap 12", "count\tprimitive\t0 / cap 2", "source-through\tstrings\t", "substitution\tinternal/bytealg/indexbyte_native.go -> indexbyte_generic.go\t", "shim\tstrings.Join\t"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("register dump lacks %q:\n%s", want, out)
 		}
 	}
-	for _, retired := range []string{"shim\tstrings.Fields\t", "shim\tstrings.Split\t", "shim\tstrings.TrimSpace\t", "shim\tstrconv.FormatUint\t", "shim\tstrconv.FormatInt\t"} {
+	for _, retired := range []string{"shim\tstrings.Fields\t", "shim\tstrings.Split\t", "shim\tstrings.TrimSpace\t", "shim\tstrconv.FormatUint\t", "shim\tstrconv.FormatInt\t", "shim\tstrconv.ParseUint\t"} {
 		if strings.Contains(out, retired) {
 			t.Fatalf("register dump still lists a retired shim %q", retired)
 		}
@@ -388,7 +388,7 @@ func (w wrapped) Error() string { return "w:" + w.inner.Error() }
 func (w wrapped) Unwrap() error { return w.inner }
 
 func subject() (bool, bool, bool) {
-	_, err := strconv.ParseUint("x", 10, 64)
+	err := &strconv.NumError{Func: "ParseUint", Num: "x", Err: strconv.ErrSyntax}
 	w := wrapped{err}
 	var ne *strconv.NumError
 	return errors.Is(w, strconv.ErrSyntax), errors.As(w, &ne), errors.Unwrap(w) == err

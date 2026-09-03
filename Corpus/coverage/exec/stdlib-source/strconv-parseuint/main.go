@@ -1,11 +1,14 @@
 package main
 
-// strconv.ParseUint — the RETAINED shim with the REAL *strconv.NumError
-// (stdlib source-through slice 1, 2026-09-03; stdlibshim.go's ParseUint
-// block has the argument). The digit loop is the shim's; the error VALUE
-// is the library's own `&strconv.NumError{Func, Num, Err}` with the
-// library's ErrSyntax/ErrRange sentinels, rendered by the library's own
-// NumError.Error and Quote (source-through). godoc:strconv.ParseUint@go1.26.5
+// strconv.ParseUint through the REAL library source (stdlib source-through
+// slice 1, 2026-09-03). The shim that briefly stood here (re-bodied to
+// construct the real *strconv.NumError) was RETIRED by [USER] ruling
+// (D-002 exception denied, relayed): every ERROR-path row below refuses
+// BY NAME at internal/stringslite.Clone (unsafe.String, reached through
+// syntaxError/rangeError) and is a DESIGNED RED on BUG-089's Cases line
+// pending the slice-2 overlay; the ok-path row (happy-bases) stays green.
+// The rows are kept exactly as written: they are the acceptance test of
+// the overlay. godoc:strconv.ParseUint@go1.26.5
 // / godoc:strconv.ParseInt@go1.26.5: "The errors that ParseInt returns
 // have concrete type *NumError and include err.Num = s. If s is empty or
 // contains invalid digits, err.Err = ErrSyntax and the returned value is

@@ -8164,8 +8164,12 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 					// unsafe idiom is the library's, and the gap is the
 					// memo's overlay class (slice 2) — name it as such
 					// so the quarantine stub's reason says what is owed.
-					return nil, false, unsup("stdlib source-through: %s needs unsafe.%s (out of language — ledger row Package_unsafe; a library overlay is the planned remedy, memo §2.3.2 — slice 2)",
-						e.curFuncName, sel.Sel.Name)
+					hint := ""
+					if e.curFuncName == "internal/stringslite.Clone" {
+						hint = " — reached by every strconv Parse* error path (strconv.ParseUint/ParseInt/Atoi via syntaxError/rangeError): the ParseUint shim was RETIRED by [USER] ruling (D-002 exception denied, 2026-09-03; BUG-089), so these error paths refuse here pending the slice-2 overlay for stringslite.Clone"
+					}
+					return nil, false, unsup("stdlib source-through: %s needs unsafe.%s (out of language — ledger row Package_unsafe; a library overlay is the planned remedy, memo §2.3.2 — slice 2)%s",
+						e.curFuncName, sel.Sel.Name, hint)
 				}
 				return nil, false, unsup("package-selector call %s.%s (package %q surface not modeled)",
 					id.Name, sel.Sel.Name, pn.Imported().Path())
