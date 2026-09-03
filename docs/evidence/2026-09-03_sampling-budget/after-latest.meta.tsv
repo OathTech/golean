@@ -1,0 +1,17 @@
+key	value
+frontend	native
+manifest	<worktree>/artifacts/sampling-budget/membership-after.tsv
+manifest_sha256	fdb93343337834eee18e79f3126f4c15e6d200ef029028755e1dab5d84c485d9
+manifest_cases	37
+total_corpus_cases	unknown
+full_run	unknown
+filters	unknown
+git_commit	345ef0901aabf99381e484e5810796b40d71b136
+git_dirty	true
+go_toolchain	go1.26.5
+go_drift_allowed	0
+go_drift_actual	false
+membership_draws	32
+jobs	32
+fanout_find_exit	0
+fanout_pool_exit	0

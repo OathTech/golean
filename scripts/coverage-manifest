@@ -243,10 +243,14 @@ validate_path_id() {
 #             consumption-site bound in the case, argued in why)
 #   sites   = D, max consumption sites per run (default 8)
 #   cap     = N, max distinct observations (default 64)
-#   samples = Go-side go-run sample count (default 5; 1 = version-tracking
-#             for features Go decides deterministically per toolchain).
-#             Since slice 4 each sample count runs BOTH plain and -race
-#             builds (the doctrine's -race default sample source).
+#   samples = RETIRED (2026-09-03, [USER]-ruled sampling rule — docs/
+#             2026-09-01_membership-depth.md §4.3 / P2): the Go-side draw
+#             budget is set by RUN MODE in scripts/diff-coverage
+#             (MEMBERSHIP_DRAWS: K=32 on the gate path, K=80 under
+#             --slow; draws alternate plain/-race and stop early at the
+#             members= pin). A row carrying samples= is REFUSED here and
+#             again by the harness — a per-row count the budget no
+#             longer reads would be a silent no-op.
 #   work    = enumerator work cap (default 200000; since the slice-4
 #             stepwise engine the unit is machine STEPS + probe runs
 #             over the shared-prefix exploration tree, not whole runs)
@@ -278,11 +282,15 @@ validate_lane_params() {
     key="${kv%%=*}"
     value="${kv#*=}"
     case "$key" in
-      width|sites|cap|samples|work|members|statuses|tier|backedge|nonterm|engine) ;;
+      width|sites|cap|work|members|statuses|tier|backedge|nonterm|engine) ;;
       depth)
         # depth=N is the STRICT lane's declaration (memo P1); the
         # enumerating lanes certify the whole tree — a category error.
         echo "coverage-manifest: $cases_file: depth= is a strict-lane param (the enumerating lanes certify the whole tree): $kv (lane=$lane_ctx)" >&2
+        return 1
+        ;;
+      samples)
+        echo "coverage-manifest: $cases_file: samples= is RETIRED (2026-09-03 sampling rule: the membership draw budget is K by run mode — 32 on the gate path, 80 under --slow — alternating plain/-race with early stop at the members= pin; a per-row sample count is no longer read): remove $kv" >&2
         return 1
         ;;
       *)
@@ -614,8 +622,8 @@ while IFS= read -r cases_file; do
           continue
         fi
         case ",$params," in
-          *,members=*|*,samples=*)
-            echo "coverage-manifest: $cases_file: confluent-lane rows take no members/samples params (|set|=1 is the lane's claim; the strict oracle is one go run)" >&2
+          *,members=*)
+            echo "coverage-manifest: $cases_file: confluent-lane rows take no members param (|set|=1 is the lane's claim; the strict oracle is one go run)" >&2
             bad=1
             continue
             ;;
@@ -644,8 +652,8 @@ while IFS= read -r cases_file; do
           continue
         fi
         case ",$params," in
-          *,members=*|*,samples=*)
-            echo "coverage-manifest: $cases_file: racy-lane rows take no members/samples params (the refusal set is the singleton claim; the oracle is one -race red)" >&2
+          *,members=*)
+            echo "coverage-manifest: $cases_file: racy-lane rows take no members param (the refusal set is the singleton claim; the oracle is one -race red)" >&2
             bad=1
             continue
             ;;

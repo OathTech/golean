@@ -1,0 +1,5 @@
+load-before:  19:38:04 up 11 days,  5:08,  ? user,  load average: 21.25, 19.03, 13.96
+before-exit=0 wall=41s
+load-mid:  19:38:45 up 11 days,  5:09,  ? user,  load average: 15.02, 17.78, 13.76
+after-exit=0 wall=123s
+load-after:  19:40:48 up 11 days,  5:11,  ? user,  load average: 9.43, 15.10, 13.31

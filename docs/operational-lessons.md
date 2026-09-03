@@ -328,3 +328,37 @@ the script at exit 1 before the intended `exit 2` — the refusal path
 itself needs `|| true`. Both were caught by running the fixtures, not by
 reading the code. Red-first record: `docs/evidence/2026-09-03_guard-stage-alt/red-first.txt`;
 fixtures `scripts/test-lane-validation` Part A4.
+## A sampling budget is a claim about the caption, not the verdict: make it a recorded number and put the perturbation first
+
+The membership lane's Go-side budget was an implicit 10 (`samples=5`,
+drawn as 5 plain `go run` then 5 under `-race`) and the PASS caption
+said `exhibited=E` as if that were the oracle's support. Two 80-draw
+runs (`docs/2026-09-01_membership-depth.md` §4.2) showed the order was
+the worst possible for a small budget: on the scheduling rows plain
+`go run` is a point-mass and every late member came from `-race`, which
+the gate order reached only at draw 6 — 6 of 22 ten-draw rows captioned
+`exhibited=1` for a row the oracle demonstrably moves on, and saturation
+of two-member rows took up to 52–66 alternating draws when it came at
+all. Remedy ([USER]-ruled 2026-09-03, memo §4.3 / P2, implemented on
+`sampling-budget`): alternate plain/`-race`; stop early when the
+distinct observations reach the row's `members=` pin; otherwise stop at
+K, with K set by RUN MODE (32 on the gate path, 80 under `--slow`) and
+printed in the run header + `latest.meta.tsv`; report `draws=` beside
+`exhibited=` so the budget spent is a recorded number, never an implicit
+default. Distinctness is decided by the comparator, and an undecided
+comparison (timeout/kill/exit 2) fails the row as "saturation NOT
+decided" — the cause-naming discipline of the entry above applies to
+the stopping rule too, or a killed comparator would read as "new
+observation" (an early stop that never fires) or as "repeat" (a
+saturation the oracle did not show). Two lessons. (1) A budget that
+lives only in a per-row default is invisible to the reader of the
+result; make the spent budget part of the caption and the cap part of
+the run's provenance. (2) When a per-row param stops being read by the
+code (`samples=` here), REFUSE it by name in both the manifest and the
+harness rather than accept-and-ignore: an author who writes
+`samples=20` expecting more draws would otherwise get a green row and
+nothing. The rule cannot flip a RESULT — membership PASS/FAIL is "every
+draw ∈ the enumerated set" and the baseline stores result/id/stage
+only — which is what made it a caption-honesty change rather than a
+baseline re-pin; measured cost and the before/after exhibition table:
+`docs/evidence/2026-09-03_sampling-budget/`.

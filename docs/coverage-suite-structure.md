@@ -128,9 +128,44 @@ Optional lane columns (membership lane, arc slice 3,
   the bound argued in `why`; the enumerator's alias-guard ladder is a
   heuristic cross-check of the assertion, not a proof), `sites` (max
   consumption depth, default 8), `cap` (max distinct observations,
-  default 64), `samples` (Go-side sample count, default 5; `samples=1` is
-  the version-tracking mode for features Go decides deterministically per
-  toolchain), `work` (enumerator work cap, default 200000).
+  default 64), `work` (enumerator work cap, default 200000), `members`
+  (the certified set's exact cardinality — a mechanical pin; also the
+  sampling rule's early-stop target, below). `samples=` is RETIRED
+  (2026-09-03): both `scripts/coverage-manifest` and the harness refuse
+  it by name — the Go-side draw budget is no longer a per-row count.
+- **Membership sampling rule** ([USER]-ruled gate change, Mike
+  2026-09-03, relayed by the coordinator: "yeah, agree on the sampling
+  budget, go ahead as you propose" — adopting
+  `docs/2026-09-01_membership-depth.md` §4.3 / P2; implemented in
+  `scripts/diff-coverage` `run_membership_case_rows`, budget constant
+  `MEMBERSHIP_DRAWS`). Per membership row the oracle draws ALTERNATE
+  plain and `-race` (`plain, race, plain, race, …` — the `-race` runtime
+  is the only scheduling perturbation on the scheduling rows, so it comes
+  second, not sixth as under the old "5 plain then 5 race" order); the
+  row STOPS EARLY once the distinct observations drawn reach its
+  `members=` pin, otherwise at the budget K; K is set by RUN MODE, not a
+  knob — **K=32 on the gate path** (`scripts/ci --diff` / a default
+  `scripts/diff-coverage` run) and **K=80 under `scripts/ci --slow`**
+  (`GOLEAN_SLOW=1`) — and is printed in the run header and recorded as
+  `membership_draws` in `latest.meta.tsv`. Rows WITHOUT a `members=` pin
+  have no early stop and draw the full K (the run log names the row as
+  unpinned). The PASS detail reports the budget spent beside the
+  exhibition count: `exhibited=E draws=D (K=32; stopped at the
+  members=N pin | pin members=N NOT reached — d distinct drawn | no
+  members= pin — no early stop) unexhibited=U`. The rule never decides a
+  row's RESULT: membership PASS/FAIL is "every draw ∈ the enumerated
+  set" (plus the enumeration/cardinality/coupling guards) and NEVER the
+  exhibition or draw count; the baseline stores result/id/stage only, so
+  the changed caption is not drift. Fail-closed as before: a draw that
+  times out or is killed is NOT an observation — the row fails at
+  `membership` naming the cause and the draw index (`draw i/K (mode) …
+  did not decide`), never counting toward saturation; an undecided
+  distinctness comparison (comparator timeout/kill/exit 2) fails the row
+  with "saturation NOT decided"; a draw outside the set is the too-narrow
+  soundness alarm exactly as before, checked on EVERY draw. Fixtures:
+  `scripts/test-lane-validation --with-go` S1-S4 (red-first record and
+  the before/after exhibition table:
+  `docs/evidence/2026-09-03_sampling-budget/`).
 - Fail-closed both ways: `lane=membership` requires the `nondet` feature
   tag and a `why`; a `nondet`-tagged case requires `lane=membership`; a
   membership case whose enumerated set is a singleton fails ("belongs in

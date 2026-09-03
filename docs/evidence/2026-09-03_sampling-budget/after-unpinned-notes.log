@@ -1,0 +1,12 @@
+membership: slices/append-spill-stack-buffer has NO members= pin — no early stop; drawing the full budget K=32
+membership: maps/jitter-draw has NO members= pin — no early stop; drawing the full budget K=32
+membership: multipkg/mini-raft-twin/choice-order has NO members= pin — no early stop; drawing the full budget K=32
+membership: sync/atomic-frontier/mp-litmus has NO members= pin — no early stop; drawing the full budget K=32
+membership: maps/range-first-key has NO members= pin — no early stop; drawing the full budget K=32
+membership: slices/append-spill-size-class has NO members= pin — no early stop; drawing the full budget K=32
+membership: race/atomics-free/publish-acquire has NO members= pin — no early stop; drawing the full budget K=32
+membership: maps/delete-readd-during-range has NO members= pin — no early stop; drawing the full budget K=32
+membership: maps/added-entry-count has NO members= pin — no early stop; drawing the full budget K=32
+membership: slices/append-spill-below-formula has NO members= pin — no early stop; drawing the full budget K=32
+membership: slices/full-slice-cap-zero has NO members= pin — no early stop; drawing the full budget K=32
+membership: race/atomics-free/rmw-acquire has NO members= pin — no early stop; drawing the full budget K=32

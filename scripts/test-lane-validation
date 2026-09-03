@@ -24,8 +24,9 @@
 #   handling of an alternation row (counted by name, never dropped).
 #   Part B (--with-go only; needs go + the built golean binary, so ci runs
 #   it under --diff): scripts/diff-coverage's IN-HARNESS lane checks — the
-#   param re-validation (F4: a samples=0 row that somehow bypasses the
-#   manifest must fail loud, never a zero-oracle pass) and the non-native
+#   param re-validation (F4: a sites=0 row that somehow bypasses the
+#   manifest must fail loud, never a zero-oracle pass; F4b: a retired
+#   samples= that bypasses the manifest is refused by name) and the non-native
 #   frontend guard (F6: membership under GOLEAN_FRONTEND != native fails
 #   closed at frontend-export, no native frontend shelled) — plus the
 #   B3-B5 slice-4 lane gates.
@@ -93,8 +94,15 @@ expect_reject "invalid lane value" \
   '-\trangeFirstKey\t-\tok\t-\tmaps\tfuzzy\t-\t-' \
   "invalid lane"
 expect_reject "duplicate param key" \
-  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16,samples=1,samples=2' \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16,sites=8,sites=9' \
   "duplicate lane param key"
+# samples= is RETIRED by the 2026-09-03 sampling rule ([USER]-ruled; the
+# draw budget is K by run mode in scripts/diff-coverage): a row still
+# carrying it is refused BY NAME, not as an unknown key — the refusal
+# says what replaced it.
+expect_reject "retired samples= param (2026-09-03 sampling rule)" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16,samples=1' \
+  "samples= is RETIRED"
 expect_reject "non-positive param value" \
   '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=0' \
   "must be a positive integer"
@@ -117,7 +125,7 @@ expect_reject "invalid tier value" \
   '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=4,tier=fast' \
   "tier must be 'slow'"
 expect_reject "membership without explicit width (F2a)" \
-  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\tsamples=5' \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\tsites=8' \
   "explicit width"
 expect_accept "bare 6-column strict row" \
   '-\trangeFirstKey\t-\tok\t-\tmaps'
@@ -137,7 +145,7 @@ expect_reject "confluent without width" \
   "explicit width"
 expect_reject "confluent with a members param" \
   '-\trangeFirstKey\t-\tok\t-\tmaps\tconfluent\twhy text\twidth=4,members=1' \
-  "no members/samples params"
+  "no members param"
 expect_reject "racy on a non-race expectation" \
   '-\trangeFirstKey\t-\tok\t-\tmaps\tracy\t-\twidth=4' \
   "requires expected_status race"
@@ -402,13 +410,25 @@ if [ "$WITH_GO" -eq 1 ]; then
 
     # F4: a samples=0 manifest row (hand-built — the manifest generator
     # rejects it, so this exercises the harness's own re-validation).
-    printf 'lane-f4\t%s\trangeFirstKey\t-\tok\tmaps,range,keys,loops,nondet\t-\tmembership\twhy\twidth=16,samples=0\n' "$GO_DIR" > "$TMP/manifest-f4.tsv"
+    printf 'lane-f4\t%s\trangeFirstKey\t-\tok\tmaps,range,keys,loops,nondet\t-\tmembership\twhy\twidth=16,sites=0\n' "$GO_DIR" > "$TMP/manifest-f4.tsv"
     GOLEAN_COVERAGE_ARTIFACTS="$ART" scripts/diff-coverage "$TMP/manifest-f4.tsv" >/dev/null 2>&1
     row="$(tail -1 "$ART/latest.tsv" 2>/dev/null || true)"
     if [[ "$row" == FAIL*positive\ integer* ]]; then
-      echo "ok: harness re-validation rejects samples=0 (F4)"
+      echo "ok: harness re-validation rejects sites=0 (F4)"
     else
-      echo "FAIL: harness re-validation did not reject samples=0 (F4); row: ${row:-<none>}"
+      echo "FAIL: harness re-validation did not reject sites=0 (F4); row: ${row:-<none>}"
+      fail=1
+    fi
+    # F4b: the retired samples= param bypassing the manifest is refused by
+    # the harness BY NAME (2026-09-03 sampling rule) — never read as a
+    # budget, never an unknown-key shrug.
+    printf 'lane-f4b\t%s\trangeFirstKey\t-\tok\tmaps,range,keys,loops,nondet\t-\tmembership\twhy\twidth=16,samples=1\n' "$GO_DIR" > "$TMP/manifest-f4b.tsv"
+    GOLEAN_COVERAGE_ARTIFACTS="$ART" scripts/diff-coverage "$TMP/manifest-f4b.tsv" >/dev/null 2>&1
+    row="$(tail -1 "$ART/latest.tsv" 2>/dev/null || true)"
+    if [[ "$row" == FAIL*"	manifest	"*"samples= is RETIRED"* ]]; then
+      echo "ok: harness refuses the retired samples= param by name (F4b)"
+    else
+      echo "FAIL: harness did not refuse samples= as retired (F4b); row: ${row:-<none>}"
       fail=1
     fi
 
@@ -431,7 +451,7 @@ if [ "$WITH_GO" -eq 1 ]; then
     RACY_DIR="Corpus/coverage/exec/race/negative"
 
     # B3: the members= cardinality pin must refuse a wrong pin.
-    printf 'lane-b3\t%s\tchannelSelectMultiReadyObservable\t-\tok\tchannels,select,make,len,nondet\t-\tmembership\twhy\twidth=2,members=99,samples=1\n' "$OBS_DIR" > "$TMP/manifest-b3.tsv"
+    printf 'lane-b3\t%s\tchannelSelectMultiReadyObservable\t-\tok\tchannels,select,make,len,nondet\t-\tmembership\twhy\twidth=2,members=99\n' "$OBS_DIR" > "$TMP/manifest-b3.tsv"
     GOLEAN_COVERAGE_ARTIFACTS="$ART" scripts/diff-coverage "$TMP/manifest-b3.tsv" >/dev/null 2>&1
     row="$(tail -1 "$ART/latest.tsv" 2>/dev/null || true)"
     if [[ "$row" == FAIL*membership*"pins members=99"* ]]; then
@@ -716,7 +736,7 @@ EOF
         "Lean run TIMED OUT after 1s" "expected status ok, got"
       run_t T2-nondet-rerun run-choices "$TMP/manifest-t-strict.tsv" nondet \
         "re-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s" "varies with iteration order"
-      printf 'lane-t3\t%s\trangeFirstKey\t-\tok\tmaps,range,keys,loops,nondet\t-\tmembership\twhy\twidth=16,sites=8,samples=1\n' "$GO_DIR" > "$TMP/manifest-t-member.tsv"
+      printf 'lane-t3\t%s\trangeFirstKey\t-\tok\tmaps,range,keys,loops,nondet\t-\tmembership\twhy\twidth=16,sites=8\n' "$GO_DIR" > "$TMP/manifest-t-member.tsv"
       run_t T3-coupling-pin run-choices "$TMP/manifest-t-member.tsv" membership \
         "driver-coupling pin: native-json-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s" "copied-driver drift, or"
       run_t T4-sample-loop eq-sample "$TMP/manifest-t-member.tsv" membership \
@@ -762,6 +782,79 @@ EOF
         "traced as the DEFAULT stream (empty stream — harness defect)" "wide="
       run_t D7c-trace-three trace-three "$TMP/manifest-t-strict.tsv" nondet \
         "expected 4 stream reports from choice-trace, got 3" "wide="
+
+      # ---- S1-S4: the membership sampling rule ([USER]-ruled 2026-09-03,
+      # docs/2026-09-01_membership-depth.md §4.3 / P2; red-first record:
+      # docs/evidence/2026-09-03_sampling-budget/). Same fake root, no
+      # golean shim mode (the real binary enumerates the real set); the
+      # ORACLE is a fake `go` that answers `go run [-race] .` itself
+      # (harness generation and the native export reach the real go) and
+      # logs one line per draw — "plain" or "race" — so the fixture can
+      # assert the draw ORDER and COUNT, not just the caption. Subject:
+      # channels/select-multi-ready/observable, certified set {101, 210}
+      # (members=2); the fake yields 101 on plain draws and 210 on -race
+      # draws (FAKE_GO_MODE=ab), 999 — outside the set — on -race
+      # (ab-outside), or SIGKILLs itself on the first -race draw
+      # (ab-kill-race). Red on main's runner: S1 (10 draws, 5 plain then 5
+      # race, no draws=) and S2 (10 draws; no unpinned note); S3/S4 are
+      # the regression guards the rule must preserve (green on main too).
+      FAKEBIN_GO_AB="$TMP/fakebin-go-ab"
+      mkdir -p "$FAKEBIN_GO_AB"
+      cat > "$FAKEBIN_GO_AB/go" <<EOF
+#!/bin/bash
+# fake go oracle (test-lane-validation S1-S4): answers the membership
+# lane's draws deterministically by build mode; everything else is real go.
+if [ "\${1:-}" = run ] && [ "\${@: -1}" = "." ]; then
+  m=plain; case " \$* " in *" -race "*) m=race ;; esac
+  echo "\$m" >> "\$FAKE_GO_LOG"
+  A='{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":101}]}'
+  B='{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":210}]}'
+  X='{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":999}]}'
+  case "\${FAKE_GO_MODE:-ab}:\$m" in
+    ab:plain|ab-outside:plain|ab-kill-race:plain) echo "\$A"; exit 0 ;;
+    ab:race) echo "\$B"; exit 0 ;;
+    ab-outside:race) echo "\$X"; exit 0 ;;
+    ab-kill-race:race) kill -9 \$\$; sleep 5; exit 137 ;;
+  esac
+  echo "fake go: unhandled mode \$FAKE_GO_MODE" >&2; exit 3
+fi
+exec "$(command -v go)" "\$@"
+EOF
+      chmod +x "$FAKEBIN_GO_AB/go"
+      IFS=$'\t' read -r _ obs_subj obs_args obs_status obs_reason obs_feats _ obs_why _ < <(grep -v '^#' "$ROOT/$OBS_DIR/cases.tsv" | head -1)
+      run_s() {  # $1 name, $2 FAKE_GO_MODE, $3 params, $4 expected result, $5 must-contain (row), $6 must-NOT-contain (row), $7 expected draw log (newline-joined) or "", $8 must-contain (stdout) or ""
+        local name="$1" mode="$2" params="$3" want="$4" need="$5" forbid="$6" wantlog="$7" needout="$8" art log row out
+        art="$TMP/artifacts-$name"; log="$TMP/drawlog-$name"; : > "$log"
+        printf 'lane-%s\t%s\t%s\t%s\t%s\t%s\t%s\tmembership\t%s\t%s\n' "$name" "$OBS_DIR" "$obs_subj" "$obs_args" "$obs_status" "$obs_feats" "$obs_reason" "$obs_why" "$params" > "$TMP/manifest-$name.tsv"
+        out="$(PATH="$FAKEBIN_GO_AB:$FAKEBIN_T:$PATH" FAKE_GO_MODE="$mode" FAKE_GO_LOG="$log" FAKE_GOLEAN_REAL="$REAL_GOLEAN" FAKE_GOLEAN_STATE="$TMP/state-$name" FAKE_GOLEAN_MODE="" \
+          GOLEAN_COVERAGE_JOBS=1 GOLEAN_COVERAGE_ARTIFACTS="$art" \
+          "$FR/scripts/diff-coverage" "$TMP/manifest-$name.tsv" 2>&1)"
+        row="$(tail -1 "$art/latest.tsv" 2>/dev/null || true)"
+        if [[ "$row" != "$want"*"	membership	"*"$need"* || "$row" == *"$forbid"* ]]; then
+          echo "FAIL: $name: want $want at stage membership containing '$need', never '$forbid'; row: ${row:-<none>}"
+          fail=1
+        elif [[ -n "$wantlog" && "$(cat "$log")" != "$wantlog" ]]; then
+          echo "FAIL: $name: draw order/count wrong — want [$(printf '%s' "$wantlog" | tr '\n' ' ')], got [$(tr '\n' ' ' < "$log")]"
+          fail=1
+        elif [[ -n "$needout" && "$out" != *"$needout"* ]]; then
+          echo "FAIL: $name: runner output lacks '$needout'"
+          fail=1
+        else
+          echo "ok: $name: $want ($need); draws logged: $(tr '\n' ' ' < "$log")"
+          echo "    row: $row"
+        fi
+      }
+      alt32="$(for ((k = 1; k <= 32; k++)); do if (( k % 2 )); then echo plain; else echo race; fi; done)"
+      run_s S1-pin-early-stop ab "width=2,members=2,sites=8" PASS \
+        "exhibited=2 draws=2 (K=32; stopped at the members=2 pin)" "samples=" $'plain\nrace' \
+        "membership sampling budget K=32"
+      run_s S2-unpinned-full-K ab "width=2,sites=8" PASS \
+        "exhibited=2 draws=32 (K=32; no members= pin — no early stop)" "samples=" "$alt32" \
+        "has NO members= pin — no early stop; drawing the full budget K=32"
+      run_s S3-race-draw-outside-set ab-outside "width=2,members=2,sites=8" FAIL \
+        "NOT in the machine's enumerated set" "exhibited=" $'plain\nrace' ""
+      run_s S4-killed-draw-is-no-observation ab-kill-race "width=2,members=2,sites=8" FAIL \
+        "draw 2/32 (race) -race go sample: go run oracle KILLED (exit 137" "exhibited=" $'plain\nrace' ""
     fi
 
   fi

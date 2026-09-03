@@ -1,0 +1,40 @@
+# producer: the two membership-only diff-coverage runs in this dir's README (Reproduction); columns joined by id
+id	result_before	result_after	enumerated	members_pin	exhibited_before	draws_before	exhibited_after	draws_after	stop_after	memo_distinct_at_80
+atomics/spin/flag-wait	PASS	PASS	1	1	1	10	1	1	pin	n/a
+channels/select-multi-ready/observable	PASS	PASS	2	2	2	10	2	3	pin	2
+goroutines/sched-dependent/first-come	PASS	PASS	2	2	2	10	2	6	pin	2
+goroutines/sched-dependent/select-default-handshake	PASS	PASS	2	2	1	10	2	12	pin	1
+goroutines/sched-dependent/len-handoff	PASS	PASS	2	2	1	10	1	32	cap(pin not reached)	2
+goroutines/sched-dependent/waiter-pick	PASS	PASS	2	2	2	10	2	6	pin	2
+goroutines/select-arrival-multi	PASS	PASS	2	2	2	10	2	2	pin	2
+goroutines/select-wake-close-selsel	PASS	PASS	2	2	2	10	2	3	pin	2
+goroutines/select-wake-multi	PASS	PASS	2	2	1	10	1	32	cap(pin not reached)	2
+goroutines/send-then-spin	PASS	PASS	1	1	1	10	1	1	pin	1
+goroutines/wake-then-abort	PASS	PASS	2	2	1	10	1	32	cap(pin not reached)	1
+goroutines/wake-window/buffered-send	PASS	PASS	2	2	2	10	2	2	pin	2
+goroutines/wake-window/close-recv	PASS	PASS	2	2	2	10	2	2	pin	2
+imported-goose/channel/google-search	PASS	PASS	6	6	3	10	5	32	cap(pin not reached)	5
+maps/added-entry-count	PASS	PASS	2	-	2	10	2	32	cap(unpinned)	2
+maps/cross-goroutine-delete-readd/drf	PASS	PASS	2	2	1	10	1	32	cap(pin not reached)	n/a
+maps/cross-goroutine-delete-readd/insert	PASS	PASS	2	2	2	10	2	14	pin	n/a
+maps/delete-insert-readd-during-range	PASS	PASS	2	2	2	10	2	2	pin	n/a
+maps/delete-readd-during-range	PASS	PASS	3	-	1	10	1	32	cap(unpinned)	1
+maps/jitter-draw	PASS	PASS	5	-	4	10	5	32	cap(unpinned)	5
+maps/range-first-key	PASS	PASS	3	-	2	10	3	32	cap(unpinned)	3
+multipkg/mini-raft-twin/choice-order	PASS	PASS	2	-	1	10	2	32	cap(unpinned)	2
+noodler/membership/two-senders-buffered	PASS	PASS	2	2	2	10	2	2	pin	n/a
+noodler/membership/three-key-map-order	PASS	PASS	6	6	3	10	3	32	cap(pin not reached)	n/a
+noodler/membership/select-two-ready	PASS	PASS	2	2	2	10	2	2	pin	n/a
+noodler/membership/insert-then-delete-during-range	PASS	PASS	2	2	1	10	1	32	cap(pin not reached)	n/a
+race/atomics-free/publish-acquire	PASS	PASS	2	-	1	10	1	32	cap(unpinned)	n/a
+race/atomics-free/rmw-acquire	PASS	PASS	2	-	1	10	1	32	cap(unpinned)	n/a
+race/atomics-free/cas-failure-acquires	PASS	PASS	1	1	1	10	1	1	pin	n/a
+race/litmus/sb-chan	PASS	PASS	3	3	2	10	3	20	pin	2
+slices/append-spill-below-formula	PASS	PASS	31	-	1	2	1	32	cap(unpinned)	1
+slices/append-spill-size-class	PASS	PASS	300	-	1	2	1	32	cap(unpinned)	1
+slices/append-spill-stack-buffer	PASS	PASS	29	-	2	2	2	32	cap(unpinned)	2
+slices/full-slice-cap-zero	PASS	PASS	32	-	2	2	2	32	cap(unpinned)	2
+sync/atomic-frontier/mp-litmus	PASS	PASS	3	-	1	10	1	32	cap(unpinned)	2
+sync/mutex-order/acquisition-order	PASS	PASS	2	2	1	10	1	32	cap(pin not reached)	1
+sync/rwmutex-order/acquisition	PASS	PASS	2	2	2	10	2	2	pin	2
+# TOTAL exhibited: before=61 after=68

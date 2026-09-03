@@ -1,0 +1,64 @@
+id	run	enumerated	members	draws	failedDraws	distinct	saturation(alt)	saturation(gate-order)	distinct@10(alt)
+channels/select-multi-ready/observable	sampling	2	2	80	0	2	4	3	2
+channels/select-multi-ready/observable	sampling	2	2	80	0	2	3	2	2
+goroutines/sched-dependent/first-come	sampling	2	2	80	0	2	4	7	2
+goroutines/sched-dependent/first-come	sampling	2	2	80	0	2	2	6	2
+goroutines/sched-dependent/len-handoff	sampling	2	2	80	0	2	22	51	1
+goroutines/sched-dependent/len-handoff	sampling	2	2	80	0	1	1	1	1
+goroutines/sched-dependent/select-default-handshake	sampling	2	2	80	0	1	1	1	1
+goroutines/sched-dependent/select-default-handshake	sampling	2	2	80	0	2	16	48	1
+goroutines/sched-dependent/waiter-pick	sampling	2	2	80	0	2	6	8	2
+goroutines/sched-dependent/waiter-pick	sampling	2	2	80	0	2	2	6	2
+goroutines/select-arrival-multi	sampling	2	2	80	0	2	2	6	2
+goroutines/select-arrival-multi	sampling	2	2	80	0	2	10	10	2
+goroutines/select-wake-close-selsel	sampling	2	2	80	0	2	3	2	2
+goroutines/select-wake-close-selsel	sampling	2	2	80	0	2	2	2	2
+goroutines/select-wake-multi	sampling	2	2	80	0	2	52	66	1
+goroutines/select-wake-multi	sampling	2	2	80	0	1	1	1	1
+goroutines/send-then-spin	sampling	1	1	80	0	1	1	1	1
+goroutines/send-then-spin	sampling	1	1	80	0	1	1	1	1
+goroutines/wake-then-abort	sampling	2	2	80	0	1	1	1	1
+goroutines/wake-then-abort	sampling	2	2	80	0	1	1	1	1
+goroutines/wake-window/buffered-send	sampling	2	2	80	0	2	2	4	2
+goroutines/wake-window/buffered-send	sampling	2	2	80	0	2	3	2	2
+goroutines/wake-window/close-recv	sampling	2	2	80	0	2	2	3	2
+goroutines/wake-window/close-recv	sampling	2	2	80	0	2	2	2	2
+imported-goose/channel/google-search	sampling	6	6	80	0	5	20	50	2
+imported-goose/channel/google-search	sampling	6	6	80	0	6	32	56	5
+maps/added-entry-count	sampling	2	-	80	0	2	13	12	1
+maps/added-entry-count	sampling	2	-	80	0	2	5	3	2
+maps/delete-readd-during-range	sampling	3	-	80	0	1	1	1	1
+maps/delete-readd-during-range	sampling	3	-	80	0	1	1	1	1
+maps/jitter-draw	sampling	5	-	80	0	5	24	52	4
+maps/jitter-draw	sampling	5	-	80	0	5	19	22	3
+maps/range-first-key	sampling	3	-	80	0	3	8	5	3
+maps/range-first-key	sampling	3	-	80	0	3	5	3	3
+multipkg/mini-raft-twin/choice-order	sampling	2	-	80	0	2	4	7	2
+multipkg/mini-raft-twin/choice-order	sampling	2	-	80	0	2	2	2	2
+race/litmus/sb-chan	sampling	3	3	80	0	2	16	48	1
+race/litmus/sb-chan	sampling	3	3	80	0	2	2	6	2
+slices/append-spill-below-formula	sampling	31	-	80	0	1	1	1	1
+slices/append-spill-below-formula	sampling	31	-	80	0	1	1	1	1
+slices/append-spill-size-class	sampling	300	-	80	0	1	1	1	1
+slices/append-spill-size-class	sampling	300	-	80	0	1	1	1	1
+slices/append-spill-stack-buffer	sampling	29	-	80	0	2	2	2	2
+slices/append-spill-stack-buffer	sampling	29	-	80	0	2	2	2	2
+slices/full-slice-cap-zero	sampling	32	-	80	0	2	2	2	2
+slices/full-slice-cap-zero	sampling	32	-	80	0	2	2	2	2
+sync/atomic-frontier/mp-litmus	sampling	0	-	80	0	2	44	62	1
+sync/atomic-frontier/mp-litmus	sampling	0	-	80	0	1	1	1	1
+sync/mutex-order/acquisition-order	sampling	2	2	80	0	1	1	1	1
+sync/mutex-order/acquisition-order	sampling	2	2	80	0	1	1	1	1
+sync/rwmutex-order/acquisition	sampling	2	2	80	0	2	2	6	2
+sync/rwmutex-order/acquisition	sampling	2	2	80	0	2	4	7	2
+
+K-sweep — rule: alternate plain/race; stop when distinct == members= pin, else draw K (52 (row,run) samples over 2 run dir(s)):
+K	pinnedSamples	pinReachedWithinK	pinNeverReachedInRun	meanDraws/row(all rows)	totalDraws(26-row lane)
+2	32	10/32	10/32	2.0	51
+10	32	18/32	10/32	7.6	197
+16	32	19/32	10/32	11.5	299
+24	32	20/32	10/32	16.6	430
+32	32	21/32	10/32	21.5	558
+48	32	21/32	10/32	31.0	806
+64	32	22/32	10/32	40.3	1048
+80	32	22/32	10/32	49.6	1288

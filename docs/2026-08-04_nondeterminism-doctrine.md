@@ -537,6 +537,9 @@ EPISTEMIC CAPTION, recorded per the per-lane discipline:
 - **`-race` is a DEFAULT membership sample source** (the recorded
   measurement above, operationalized): every membership case samples
   the oracle `samples` times plain AND `samples` times under `-race`
+  *(since 2026-09-03: K draws ALTERNATING plain/`-race`, early stop at
+  the `members=` pin, K=32 gate / 80 `--slow` — the [USER]-ruled
+  sampling rule, `docs/coverage-suite-structure.md`; `samples=` retired)*
   — the -race runtime's scheduling perturbation reaches orderings the
   point-mass plain runs never exhibit (first-come exhibits both
   members only under -race), and its allocator differences exercise

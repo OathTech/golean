@@ -81,6 +81,32 @@ seeded_stream() {
   done
   printf '%s' "$out"
 }
+# The membership lane's oracle-draw budget K ([USER]-ruled gate change,
+# Mike 2026-09-03, relayed by the coordinator: "yeah, agree on the
+# sampling budget, go ahead as you propose" — adopting
+# docs/2026-09-01_membership-depth.md §4.3 / P2). Per membership row the
+# lane draws `go run` observations ALTERNATING plain and -race (plain,
+# race, plain, race, …), stops early once the distinct observations
+# reach the row's members= pin, else stops at K; rows without a pin
+# draw the full K. K is set by the RUN MODE, not a knob: 32 on the gate
+# path (scripts/ci --diff / default) and 80 under scripts/ci --slow
+# (GOLEAN_SLOW=1 — the same mode variable that selects tier=slow
+# re-certification). Measured basis (memo §4.2-§4.3, two 80-draw runs):
+# the old "5 plain then 5 race" order was a point-mass at the gate
+# budget on 6 of 22 ten-draw rows (the second member almost always
+# comes from -race, which that order reached only at draw 6);
+# alternating + K=32 reaches 21 of the 22 reachable pinned samples at
+# +6.5 min measured. The rule never decides PASS/FAIL — membership is
+# still every draw ∈ enumerated set — it bounds how far the
+# `exhibited=` caption may under-report, and records the budget spent
+# as `draws=`. The per-row `samples=` param is RETIRED by this rule
+# (parse_lane_params refuses it: a param the budget no longer reads
+# would be a silent no-op).
+if [[ "${GOLEAN_SLOW:-0}" == "1" ]]; then
+  MEMBERSHIP_DRAWS=80
+else
+  MEMBERSHIP_DRAWS=32
+fi
 
 # GATE INTEGRITY (grossmith findings §2,
 # docs/2026-08-07_grossmith-findings.md; hoisted ABOVE every infra exit
@@ -381,7 +407,11 @@ fi
   printf 'depth_seeds\t%s\n' "${DEPTH_GUARD_SEEDS// /,}"
   printf 'depth_generator\t%s\n' "lcg31(1103515245,12345) bits16..31"
   printf 'depth_trace_timeout_seconds\t%s\n' "$LEAN_TRACE_TIMEOUT_SECONDS"
+  # The membership draw budget the run used (the sampling rule above):
+  # the `draws=` captions in the results are read against it.
+  printf 'membership_draws\t%s\n' "$MEMBERSHIP_DRAWS"
 } > "$META_TMP"
+echo "diff-coverage: membership sampling budget K=$MEMBERSHIP_DRAWS (mode: $([[ "${GOLEAN_SLOW:-0}" == "1" ]] && echo --slow || echo gate); alternate plain/-race, early stop at members=)"
 
 cleanup() {
   rm -f "$RESULTS_TMP" "$META_TMP"
@@ -844,7 +874,7 @@ run_case_rows() {
   confluent_member=""
   confluent_detail=""
   if [[ "$lane" == "confluent" ]]; then
-    local width sites obs_cap samples work members statuses tier backedge nonterm engine
+    local width sites obs_cap work members statuses tier backedge nonterm engine
     parse_lane_params || return 0
     local conf_dir="$OUT/membership/$id"
     mkdir -p "$conf_dir"
@@ -1019,7 +1049,7 @@ run_case_rows() {
   # approximation (the old adversarial-stream loop is subsumed: every
   # stream's path is in the enumerated tree).
   if [[ "$lane" == "racy" ]]; then
-    local width sites obs_cap samples work members statuses tier backedge nonterm engine
+    local width sites obs_cap work members statuses tier backedge nonterm engine
     parse_lane_params || return 0
     local racy_dir="$OUT/membership/$id"
     mkdir -p "$racy_dir"
@@ -1370,14 +1400,17 @@ membership_go_observation() {
 # (|enumerated|, |exhibited|, the unexhibited members) is recorded as
 # metadata in the PASS detail and under $OUT/membership/<id>/ — never a
 # pass criterion. Runs inside run_case_rows' scope (uses its locals).
-# Parse the lane params into width/sites/obs_cap/samples/work/members.
+# Parse the lane params into width/sites/obs_cap/work/members.
 # Validated by coverage-manifest AND re-validated here (audit F4: a value
-# that reaches the harness malformed — e.g. samples=0 — must fail loud,
+# that reaches the harness malformed — e.g. sites=0 — must fail loud,
 # never degrade to a zero-oracle pass). Width has NO default (audit F2a),
 # and since slice 4 the assertion is checked MECHANICALLY per site by the
-# enumerator. Returns nonzero after reporting on a bad shape.
+# enumerator. `samples=` is RETIRED (the 2026-09-03 sampling rule sets
+# the draw budget by run mode — see MEMBERSHIP_DRAWS) and refused here
+# by name, so a row that still carries it cannot pass with a budget it
+# did not get. Returns nonzero after reporting on a bad shape.
 parse_lane_params() {
-  width="" sites=8 obs_cap=64 samples=5 work=200000 members="" statuses="$expected_status" tier="" backedge="" nonterm="" engine=""
+  width="" sites=8 obs_cap=64 work=200000 members="" statuses="$expected_status" tier="" backedge="" nonterm="" engine=""
   if [[ "$params" != "-" ]]; then
     local kv key value
     IFS=',' read -r -a kvs <<< "$params"
@@ -1499,6 +1532,10 @@ parse_lane_params() {
         engine="$value"
         continue
       fi
+      if [[ "$key" == "samples" ]]; then
+        report_fail "$id" "$features" "manifest" "samples= is RETIRED (2026-09-03 sampling rule: the membership draw budget is K=$MEMBERSHIP_DRAWS by run mode — 32 on the gate path, 80 under --slow — alternating plain/-race with early stop at the members= pin; a per-row sample count is no longer read): remove $kv"
+        return 1
+      fi
       if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then
         report_fail "$id" "$features" "manifest" "lane param $key must be a positive integer: $kv"
         return 1
@@ -1507,7 +1544,6 @@ parse_lane_params() {
         width) width="$value" ;;
         sites) sites="$value" ;;
         cap) obs_cap="$value" ;;
-        samples) samples="$value" ;;
         work) work="$value" ;;
         members) members="$value" ;;
         *)
@@ -1531,32 +1567,72 @@ member_status_allowed() {
 }
 
 run_membership_case_rows() {
-  local width sites obs_cap samples work members statuses tier backedge nonterm engine
+  local width sites obs_cap work members statuses tier backedge nonterm engine
   parse_lane_params || return 0
 
   local mem_dir="$OUT/membership/$id"
   mkdir -p "$mem_dir"
 
-  # Go side: R samples PLAIN plus R samples under -race (slice-4 doctrine
-  # update: the -race runtime perturbs goroutine scheduling, so it is a
-  # default membership sample source — plain go run is a point-mass on
-  # schedule-dependent shapes; samples=1 stays the version-tracking mode).
-  local i sample mode
+  # Go side — the sampling rule (MEMBERSHIP_DRAWS, [USER]-ruled
+  # 2026-09-03): draws ALTERNATE plain and -race (odd draws plain, even
+  # draws -race; the -race runtime perturbs goroutine scheduling and is
+  # the only perturbation source on the scheduling rows, so it comes
+  # second, not sixth), and STOP EARLY once the distinct observations
+  # reach the row's members= pin, else at K. Distinctness is decided by
+  # the comparator (obs_eq) against the representatives drawn so far —
+  # byte-identical text short-circuits (obs_eq is reflexive: the sample's
+  # own self-comparison validated it) — and an undecided comparison
+  # (timeout/kill/exit 2) fails the row: saturation is NOT decided.
+  # Every draw is recorded whether or not the row stops early; the
+  # membership (soundness) check below runs on EVERY recorded draw. A
+  # draw that did not decide (timeout, kill, non-verdict exit) fails the
+  # row on the spot — it is not an observation and never counts toward
+  # saturation. Rows without a members= pin have no early stop and draw
+  # the full K (noted in the progress log and the PASS detail).
+  local i sample mode draws=0 distinct=0 rep new_obs eq_rc eq_undecided
+  local -a reps=()
   : > "$mem_dir/samples.txt"
-  for mode in "" "race"; do
-    for ((i = 1; i <= samples; i++)); do
-      if ! sample="$(membership_go_observation "$mode")"; then
-        report_fail "$id" "$features" "membership" "${mode:+-race }$sample"
-        return 0
+  : > "$mem_dir/draws.txt"
+  if [[ -z "$members" ]]; then
+    echo "membership: $id has NO members= pin — no early stop; drawing the full budget K=$MEMBERSHIP_DRAWS"
+  fi
+  for ((i = 1; i <= MEMBERSHIP_DRAWS; i++)); do
+    if (( i % 2 == 1 )); then mode=""; else mode="race"; fi
+    if ! sample="$(membership_go_observation "$mode")"; then
+      report_fail "$id" "$features" "membership" "draw $i/$MEMBERSHIP_DRAWS (${mode:-plain}) ${mode:+-race }$sample"
+      return 0
+    fi
+    draws="$i"
+    printf '%s\n' "$sample" >> "$mem_dir/samples.txt"
+    printf '%s\t%s\n' "${mode:-plain}" "$sample" >> "$mem_dir/draws.txt"
+    new_obs=1
+    for rep in ${reps[@]+"${reps[@]}"}; do
+      if [[ "$rep" == "$sample" ]]; then
+        new_obs=0
+        break
       fi
-      printf '%s\n' "$sample" >> "$mem_dir/samples.txt"
+      obs_eq "$rep" "$sample"; eq_rc=$?
+      if eq_undecided="$(obs_eq_cause "$eq_rc")"; then
+        report_fail "$id" "$features" "membership" "sampling rule: $eq_undecided comparing draw $i/$MEMBERSHIP_DRAWS against an earlier distinct draw — saturation NOT decided (a killed comparator is neither a new observation nor a repeat): draw=$sample earlier=$rep"
+        return 0
+      elif [[ "$eq_rc" -eq 0 ]]; then
+        new_obs=0
+        break
+      fi
     done
+    if [[ "$new_obs" -eq 1 ]]; then
+      reps+=("$sample")
+      distinct=$((distinct + 1))
+    fi
+    if [[ -n "$members" && "$distinct" -ge "$members" ]]; then
+      break
+    fi
   done
   # Audit F4: never pass with zero oracle — however the loop above was
   # reached, an empty samples file means no Go observation constrains the
   # machine set, and the case must fail loud, not report a lane PASS.
   if ! grep -q . "$mem_dir/samples.txt"; then
-    report_fail "$id" "$features" "membership" "no Go samples produced (samples=$samples) — refusing to pass with zero oracle"
+    report_fail "$id" "$features" "membership" "no Go samples produced (draws=$draws of K=$MEMBERSHIP_DRAWS) — refusing to pass with zero oracle"
     return 0
   fi
 
@@ -1811,12 +1887,25 @@ run_membership_case_rows() {
   done < "$mem_dir/observations.txt"
   unexhibited_count="$(grep -c . "$mem_dir/unexhibited.txt" || true)"
 
+  # Caption metadata (never a pass criterion): draws= is the budget SPENT
+  # under the sampling rule beside the K it was allowed and, for a pinned
+  # row, whether the stop was the pin or the cap; an unpinned row says so.
+  local budget_note
+  if [[ -n "$members" ]]; then
+    if [[ "$distinct" -ge "$members" ]]; then
+      budget_note="draws=$draws (K=$MEMBERSHIP_DRAWS; stopped at the members=$members pin)"
+    else
+      budget_note="draws=$draws (K=$MEMBERSHIP_DRAWS; pin members=$members NOT reached — $distinct distinct drawn)"
+    fi
+  else
+    budget_note="draws=$draws (K=$MEMBERSHIP_DRAWS; no members= pin — no early stop)"
+  fi
   if [[ "$cached" -eq 1 ]]; then
     report_pass_lane "$id" "$features" "membership" \
-      "CERTIFIED-CACHED (certified $cert_stamp; samples + driver-coupling checked against the tracked set; full re-certification via scripts/ci --slow): members=$member_count exhibited=$exhibited_count unexhibited=$unexhibited_count samples=$samples"
+      "CERTIFIED-CACHED (certified $cert_stamp; samples + driver-coupling checked against the tracked set; full re-certification via scripts/ci --slow): members=$member_count exhibited=$exhibited_count $budget_note unexhibited=$unexhibited_count"
   else
     report_pass_lane "$id" "$features" "membership" \
-      "enumerated=$member_count exhibited=$exhibited_count unexhibited=$unexhibited_count samples=$samples (members in $mem_dir)"
+      "enumerated=$member_count exhibited=$exhibited_count $budget_note unexhibited=$unexhibited_count (members in $mem_dir)"
   fi
 }
 
@@ -1840,7 +1929,7 @@ case_count="$row_i"
 
 export CASE_OUT ROOT OUT FRONTEND GO_BUILD_CACHE GOLEAN_BIN LEAN_TRACE_TIMEOUT_SECONDS \
   GO_TIMEOUT_SECONDS LEAN_TIMEOUT_SECONDS LEAN_ENUM_TIMEOUT_SECONDS \
-  LEAN_ENUM_SLOW_TIMEOUT_SECONDS
+  LEAN_ENUM_SLOW_TIMEOUT_SECONDS MEMBERSHIP_DRAWS
 export -f run_case run_case_rows run_with_timeout lean obs_eq obs_eq_cause undecided_cause signal_cause json_string_literal \
   panic_message fatal_message report_pass report_pass_lane report_fail one_line \
   membership_go_observation run_membership_case_rows go_run_oracle \

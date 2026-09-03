@@ -116,3 +116,26 @@ sampling today"); K=32 exists only inside P2. Implementing lane
 `sampling-budget`. (An earlier version of this addendum said "the K=32
 default STANDS; P2 is not raised" — wrong on both counts; corrected at
 the guard-stage-alt audit fix round.)
+
+Implementation record for that ruling, from lane `sampling-budget`
+(folded into this single 2026-09-03 addendum at the round-8b merge
+train, [AGENT]; the lane's own wording follows):
+
+* **Membership sampling budget — APPROVED [USER]** (Mike, relayed by the
+  coordinator; cited as relayed): «yeah, agree on the sampling budget,
+  go ahead as you propose.» Adopts `docs/2026-09-01_membership-depth.md`
+  §4.3 / P2: alternate plain and `-race` draws, stop early at the
+  `members=` pin, else at K; K=32 on the gate path (`--diff`), K=80
+  under `--slow`; `draws=` reported beside `exhibited=`. Gate change,
+  implemented on branch `sampling-budget` (`scripts/diff-coverage`,
+  `MEMBERSHIP_DRAWS`). [AGENT] follow-through inside the ruling:
+  `samples=` retired and refused by name. **Effect on the assessment's
+  figure** (synthesis: "441 enumerated / 45 exhibited" at the 2026-08-31
+  gate budget — frozen, not edited): the lane is now 37 rows; under the
+  new rule a `--diff`-budget run exhibits **68 of 470** (before, on the
+  same 37 rows and the old budget/order: 61 of 470); 17 of 25 pinned
+  rows reach their pin within K=32. The residual is the memo's
+  gc-immobile set plus the `slices/*` capacity envelopes (R2). Record:
+  `docs/evidence/2026-09-03_sampling-budget/`. Finding flagged, not
+  self-adjudicated: `members=1` rows now take exactly one (plain) draw
+  under the rule as ruled.

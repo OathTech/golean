@@ -124,6 +124,11 @@ this slice; it goes to the arc-final audit as a candidate.
 
 - Features where Go itself randomizes (map order): sample `go run` R
   times (per-case `samples`, default 5). Every sample must be a member.
+  *(Superseded 2026-09-03 by the [USER]-ruled sampling rule: the budget
+  is K by run mode — 32 gate / 80 `--slow` — drawn alternating
+  plain/`-race` with early stop at the `members=` pin; `samples=` is
+  retired. `docs/coverage-suite-structure.md`, membership sampling
+  rule.)*
 - Features where Go is deterministic per version (append cap): one
   sample per run; membership is then effectively VERSION-TRACKING — a
   toolchain bump that leaves the envelope turns the case red, which is
