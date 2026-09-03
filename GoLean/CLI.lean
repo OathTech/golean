@@ -1089,7 +1089,19 @@ def stepNeeds (m : GoCore.Machine.MultiConfig) (picks : GoCore.Choices) :
                                 | _ :: _ => none
                           | _, _ => none)
                       | _ => none)
-                  | _ => none
+                  | c =>
+                      -- The frame-entry panic-text site (BUG-087,
+                      -- `nilValueMethodText`): bound 2 exactly on the
+                      -- wrapper family, from the machine's own analysis
+                      -- (`nilValueMethodWidth`; a width-1 shape draws
+                      -- nothing — the site's consumeAtOne=false policy).
+                      match GoCore.Machine.entryCallSite? c with
+                      | some (fid, args) =>
+                          if GoCore.Machine.nilValueMethodWidth m.shared fid args ≤ 1 then none
+                          else match ch with
+                            | [] => some (GoCore.Machine.nilValueMethodWidth m.shared fid args)
+                            | _ :: _ => none
+                      | none => none
 
 /-- The SEQUENTIAL accountant for the `$pkginit` phase (one `stepFn`
 step consumes at most one pick): `some b` iff this configuration's next
@@ -1120,7 +1132,13 @@ def stepNeedsSeq (σ : GoCore.ExecState) (c : GoCore.Machine.Config) :
               else some (GoCore.appendSpillWidth slice.cap newLen)
           | _, _ => none)
       | _ => none)
-  | _ => none
+  | c =>
+      -- The frame-entry panic-text site (BUG-087): see `stepNeeds`.
+      match GoCore.Machine.entryCallSite? c with
+      | some (fid, args) =>
+          if GoCore.Machine.nilValueMethodWidth σ fid args ≤ 1 then none
+          else some (GoCore.Machine.nilValueMethodWidth σ fid args)
+      | none => none
 
 /-- Exploration context (invariant across the tree). -/
 structure ExpCtx where

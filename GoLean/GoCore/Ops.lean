@@ -2147,6 +2147,80 @@ def buildAppendBackingValue (state : ExecState) (elem : Ty)
     values := values.push (← defaultValue state elem)
   return .array values
 
+/-- gc's `panicwrap` text (runtime/error.go `panicwrap`, go1.26.5),
+rendered from the method's receiver TypeId key and the method name:
+`value method <pkg>.<T>.<M> called using nil *<T> pointer`. gc derives
+`pkg` and `T` from the wrapper's SYMBOL name `<pkgpath>.(*T).M`, so the
+qualifier is the import PATH (probe at the pin: `probe087/sub.T.Val …
+nil *T pointer`; `main.Inner.Val … nil *Inner pointer` for the command
+package) — exactly the frontend's path-qualified `TypeId.key`
+(`qualifiedTypeName`, `pkgQualifier`), so this text is NOT in BUG-059's
+name-vs-path class. A generic receiver's type arguments print as
+`[...]` (`funcNamePiecesForPrint`, traceback.go: the wrapper symbol's
+`[…]` span collapses; probe: `main.Box[...].Val … nil *Box[...]
+pointer`), so the key's bracket span collapses the same way. Evidence:
+`docs/evidence/2026-09-03_bug087-paniktext/`. -/
+def panicwrapText (recvKey methodName : String) : String :=
+  let (base, generic) :=
+    match recvKey.splitOn "[" with
+    | b :: _ :: _ => (b, true)
+    | _ => (recvKey, false)
+  let suffix := if generic then "[...]" else ""
+  let typ := (base.splitOn ".").getLastD base
+  s!"value method {base}{suffix}.{methodName} called using nil *{typ}{suffix} pointer"
+
+/-- **The BUG-087 envelope statement** (latitude inventory R9a; [USER]
+ruling 2026-09-03 «demonic choice so both are admitted», relayed —
+record in `docs/2026-08-31_qrow-rulings.md`): `some text` exactly when
+a frame entry `fid args` would reach `dynamicDispatch?`'s `.nil` arm
+below through gc's "simple `*T` wrapper around a `T` method" family
+(`cmd/compile/internal/noder/reader.go` `methodWrapper`: `wrapper.IsPtr()
+&& types.Identical(wrapper.Elem(), wrappee)`, `wrappee := method.Type.
+Recv().Type`) — the anchor `fid` is an interface-receiver method, the
+receiver argument is an interface box holding a NIL pointer, the
+dispatch resolves with `needsDeref = true` (a value-receiver method
+whose receiver type is EXACTLY the pointee — `concreteMethodForDynamic?`'s
+pointer arm), and the target is a user-declared method, NOT a
+synthesized promotion wrapper (`Func.wrapper` — a promoted method's
+wrappee is the EMBEDDED type, never identical to the pointee, so gc
+dereferences and gives the ordinary nil-dereference text; probed at the
+pin for value-embedding, pointer-embedding and the value box: all
+nil-deref). The text is member 1 of the two-member set the machine
+admits at `ChoiceSite.nilValueMethodText`; member 0 is the nil-deref
+text the arm below raises. Everything the predicate mirrors is checked
+in the same order `enterFrame`/`dynamicDispatch?` check it (function
+found, arity, anchor, box, resolution, target found), so `some` implies
+the entry panics with the nil-deref text and `none` implies the entry
+is not in the family — a `none` shape consumes nothing at the site.
+Owed residual (recorded, not hidden): the `go`-statement twin of the
+entry (`spawnStep`, Multi.lean) has no stream in hand and holds member
+0 only. -/
+def nilValueMethodText? (state : ExecState) (fid : FuncId) (args : List GoValue) :
+    Option String :=
+  match findFunctionIn? state.functions fid with
+  | none => none
+  | some func =>
+    if func.args.size != args.length then none
+    else
+      match methodInfoByFuncId? state func.id with
+      | none => none
+      | some method =>
+          match methodRecvInterfaceName? state method with
+          | none => none
+          | some _ =>
+              match args.head? with
+              | some (GoValue.interface dynTy .nil) =>
+                  match concreteMethodForDynamic? state dynTy method.name with
+                  | some (concrete, true) =>
+                      match findFunctionIn? state.functions concrete.funcId with
+                      | some target =>
+                          if target.wrapper then none
+                          else some (panicwrapText
+                            (goTypeNameForMessage state concrete.recv) concrete.name)
+                      | none => none
+                  | _ => none
+              | _ => none
+
 def dynamicDispatch? (state : ExecState) (func : Func) (argValues : Array GoValue) :
     Except GoError (Option (Func × Array GoValue)) := do
   match methodInfoByFuncId? state func.id with
@@ -2165,7 +2239,14 @@ def dynamicDispatch? (state : ExecState) (func : Func) (argValues : Array GoValu
                     | none => stuck s!"GoCore dynamic method target not found: {concrete.funcId.key}"
                   -- A pointer box dispatching to a value-receiver method
                   -- auto-dereferences the receiver (Go's *T ⊇ T method
-                  -- set; nil pointer panics as a nil dereference).
+                  -- set; nil pointer panics as a nil dereference). The
+                  -- TEXT raised here is member 0 of BUG-087's two-member
+                  -- set; on the wrapper family (`nilValueMethodText?`
+                  -- above — the envelope statement) the frame-entry
+                  -- funnels (`enterFrameStep`, StepFn.lean) draw the
+                  -- `nilValueMethodText` pick and may substitute member
+                  -- 1, gc's `panicwrap` text. This arm itself stays
+                  -- stream-free (no `Choices` reach `Except`-land).
                   let recvValue ←
                     if needsDeref then
                       match inner with

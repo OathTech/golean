@@ -1,0 +1,17 @@
+# the five family rows' generated harnesses (artifacts/coverage/go-run/, from scripts/diff-one at commit c22e367a with uncommitted lane edits — the harness is the corpus source + the runner's main), go version go1.26.5, 2026-09-03T22:22:51+00:00
+# GO111MODULE=off GODEBUG=panicnil=0 go run <flags> .   (first panic line)
+mv-iface-nil-call          <default>        -> panic: value method main.Inner.Val called using nil *Inner pointer
+mv-iface-nil-call          -gcflags=-l      -> panic: value method main.Inner.Val called using nil *Inner pointer
+mv-iface-nil-call          -gcflags=-l=4    -> panic: value method main.Inner.Val called using nil *Inner pointer
+iface-dispatch-value-nil   <default>        -> panic: runtime error: invalid memory address or nil pointer dereference
+iface-dispatch-value-nil   -gcflags=-l      -> panic: runtime error: invalid memory address or nil pointer dereference
+iface-dispatch-value-nil   -gcflags=-l=4    -> panic: runtime error: invalid memory address or nil pointer dereference
+iface-param-value-nil      <default>        -> panic: value method main.Inner.Val called using nil *Inner pointer
+iface-param-value-nil      -gcflags=-l      -> panic: value method main.Inner.Val called using nil *Inner pointer
+iface-param-value-nil      -gcflags=-l=4    -> panic: value method main.Inner.Val called using nil *Inner pointer
+global-iface-value-nil     <default>        -> panic: value method main.Inner.Val called using nil *Inner pointer
+global-iface-value-nil     -gcflags=-l      -> panic: value method main.Inner.Val called using nil *Inner pointer
+global-iface-value-nil     -gcflags=-l=4    -> panic: value method main.Inner.Val called using nil *Inner pointer
+mk-helper-value-nil        <default>        -> panic: runtime error: invalid memory address or nil pointer dereference
+mk-helper-value-nil        -gcflags=-l      -> panic: value method main.Inner.Val called using nil *Inner pointer
+mk-helper-value-nil        -gcflags=-l=4    -> panic: runtime error: invalid memory address or nil pointer dereference

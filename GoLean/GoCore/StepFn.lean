@@ -51,13 +51,29 @@ proofs' case numbering is positional). The NORMAL-drain deferred-call
 entries reuse it too (audit F1+F5, 2026-08-05: the entry panic is the
 deferred invocation's panic and starts unwinding at the draining frame
 — pass `k := .frame targets results ds k'`); the PANIC-PATH drain uses
-`enterFrameDeferPanicking` below (chain join). -/
+`enterFrameDeferPanicking` below (chain join).
+
+THE ENTRY-PANIC TEXT PICK (BUG-087, `ChoiceSite.nilValueMethodText`;
+[USER] ruling 2026-09-03 «demonic choice so both are admitted», relayed
+— `docs/2026-08-31_qrow-rulings.md`): the panic branch consults the
+site at bound `nilValueMethodWidth s fid args` — 2 exactly on the
+wrapper family (`nilValueMethodText?`, Ops.lean, the envelope
+statement), where slot 0 keeps the nil-dereference text `enterFrame`
+raised and slot 1 substitutes gc's `panicwrap` text; 1 elsewhere, where
+the site's `consumeAtOne := false` policy makes the consult a no-op
+(`Choices.consumeAt_nilValueMethodText_one`) — so every non-family
+entry consumes exactly as before. This is the ONLY place the stream
+meets a frame entry (the `Except`-land `enterFrame`/`dynamicDispatch?`
+stay stream-free), which is why the pick lives in the funnel and not at
+the arm; the relation's entry-panic rules quantify the pick. -/
 def enterFrameStep (s : ExecState) (fid : FuncId) (args : List GoValue)
     (mk : Func → LocalEnv → List Loc → Config) (k : Cont)
     (choices : Choices) : Except GoError (Config × ExecState × Choices) :=
   match enterFrame s fid args with
   | .ok (func, frameEnv, resultLocs, s') => .ok (mk func frameEnv resultLocs, s', choices)
-  | .error (.panic msg) => .ok (.panicking [⟨runtimeErrorValue msg, false⟩] k, s, choices)
+  | .error (.panic msg) =>
+      let r := Choices.consumeAt .nilValueMethodText (nilValueMethodWidth s fid args) choices
+      .ok (.panicking [⟨runtimeErrorValue (entryPanicText s fid args msg r.1), false⟩] k, s, r.2)
   | .error err => .error err
 
 /-- DEFERRED-call frame entry ON THE PANIC PATH (audit F1+F5,
@@ -73,7 +89,10 @@ def enterFrameDeferPanicking (s : ExecState) (fid : FuncId) (args : List GoValue
   match enterFrame s fid args with
   | .ok (func, frameEnv, _resultLocs, s') => .ok (mk func frameEnv, s', choices)
   | .error (.panic msg) =>
-      .ok (.panicking (chain ++ [⟨runtimeErrorValue msg, false⟩]) krest, s, choices)
+      -- The same `nilValueMethodText` pick as `enterFrameStep` (BUG-087).
+      let r := Choices.consumeAt .nilValueMethodText (nilValueMethodWidth s fid args) choices
+      .ok (.panicking (chain ++ [⟨runtimeErrorValue (entryPanicText s fid args msg r.1), false⟩])
+        krest, s, r.2)
   | .error err => .error err
 
 /-- One machine step. `.ok` is a step the relation permits (including

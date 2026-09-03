@@ -547,6 +547,44 @@ theorem step_complete {c : Config} {s : ExecState} {c' : Config} {s' : ExecState
       first
         | (simp_all [stepFn, atomicPlan]; done)
         | (simp only [stepFn]; rw [hplan]; rfl)
+  -- The frame-entry PANIC rules (BUG-087): the relation's `pick` is
+  -- realized by `entryPanicStream pick` (slot 0 by the empty stream,
+  -- slot 1 by `[1]`); the tail is whatever the consult leaves.
+  case callImmediatePanic =>
+    rename_i pick env k hplan hargs hd
+    exact ⟨entryPanicStream pick, _, by
+      simp only [stepFn, hplan, hargs, enterFrameStep, hd, entryPanicText_entryPanicStream]
+      (try rfl)⟩
+  case callArgsDoneEnterPanic =>
+    rename_i pick env k hd
+    exact ⟨entryPanicStream pick, _, by
+      simp only [stepFn, enterFrameStep, hd, entryPanicText_entryPanicStream]
+      (try rfl)⟩
+  case callValCalleeEnterPanic =>
+    rename_i pick env k hd
+    exact ⟨entryPanicStream pick, _, by
+      simp only [stepFn, enterFrameStep, hd, entryPanicText_entryPanicStream]
+      (try rfl)⟩
+  case callValArgsEnterPanic =>
+    rename_i pick env k hd
+    exact ⟨entryPanicStream pick, _, by
+      simp only [stepFn, enterFrameStep, hd, entryPanicText_entryPanicStream]
+      (try rfl)⟩
+  case frameDeferFallEnterPanic =>
+    rename_i pick hd
+    exact ⟨entryPanicStream pick, _, by
+      simp only [stepFn, enterFrameStep, hd, entryPanicText_entryPanicStream]
+      (try rfl)⟩
+  case frameDeferReturnEnterPanic =>
+    rename_i pick hd
+    exact ⟨entryPanicStream pick, _, by
+      simp only [stepFn, enterFrameStep, hd, entryPanicText_entryPanicStream]
+      (try rfl)⟩
+  case panicFrameDeferEnterPanic =>
+    rename_i pick hd
+    exact ⟨entryPanicStream pick, _, by
+      simp only [stepFn, enterFrameDeferPanicking, hd, entryPanicText_entryPanicStream]
+      (try rfl)⟩
   all_goals
     exact ⟨[], [], by simp_all [stepFn, enterFrameStep, enterFrameDeferPanicking, Bind.bind, Except.bind, valueAsBool]⟩
 
@@ -2771,7 +2809,7 @@ def allStreamsOk : Nat → ExecState → Config → Bool
                   | .ok (c', σ', _) => allStreamsOk fuel σ' c'
                   | .error _ => false
       | c =>
-          if consumesAppendSlice c || consumesSelect c then false
+          if consumesAppendSlice c || consumesSelect c || consumesNilValueMethod σ c then false
           else
             match stepFn σ c [0] with
             | .ok (c', σ', _) => allStreamsOk fuel σ' c'
@@ -2819,7 +2857,9 @@ set_option linter.unusedSimpArgs false in
 three consuming shapes (a `mapIterK` at the `.next` position — excluded
 by `hmi` — an `appendSlice` apply position — excluded by `hnc` — and a
 select apply position, whose `applySelect` may draw the L2 clause pick
-— excluded by `hns`, slice 4), a step
+— excluded by `hns`, slice 4 — and a frame entry in BUG-087's wrapper
+family, whose `enterFrameStep` draws the `nilValueMethodText` pick —
+excluded by `hnv`), a step
 that succeeds under one stream succeeds under EVERY stream, with the SAME
 successor and the stream returned untouched. Sweep over `stepFn`'s case
 tree; a newly added stream-consuming arm breaks this proof loudly rather
@@ -2832,6 +2872,7 @@ theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
       c ≠ .next (.mapIterK kv vv kt vt body base produced start env k))
     (hnc : consumesAppendSlice c = false)
     (hns : consumesSelect c = false)
+    (hnv : consumesNilValueMethod σ c = false)
     (h : stepFn σ c ch₀ = .ok (c', σ', ch₀')) :
     ch₀' = ch₀ ∧ ∀ ch : Choices, stepFn σ c ch = .ok (c', σ', ch) := by
   fun_cases stepFn σ c ch₀
@@ -2847,7 +2888,7 @@ theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
   -- equation, invert its bind, replay the same bind at the arbitrary
   -- stream (the helpers never see the stream).
   case case3 =>
-    simp_all only [stepFn, enterFrameDeferPanicking]
+    simp_all only [stepFn, enterFrameDeferPanicking, consumesNilValueMethod, entryCallSite?]
     split at h
     · rename_i func frameEnv resultLocs s₂ hd
       simp only [Except.ok.injEq, Prod.mk.injEq] at h
@@ -2857,8 +2898,12 @@ theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
     · rename_i msg hd
       simp only [Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl⟩ := h
-      refine ⟨rfl, fun ch => ?_⟩
-      simp only [stepFn, enterFrameDeferPanicking, hd]
+      -- BUG-087: outside the family (`hnv`) the site's consult is inert.
+      refine ⟨?_, fun ch => ?_⟩
+      · simp only [nilValueMethodWidth_of_isSome_false hnv,
+          Choices.consumeAt_nilValueMethodText_one]
+      · simp only [stepFn, enterFrameDeferPanicking, hd, nilValueMethodWidth_of_isSome_false hnv,
+          Choices.consumeAt_nilValueMethodText_one, entryPanicText_of_isSome_false hnv]
     · simp at h
   case case13 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
@@ -2946,7 +2991,7 @@ theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
     exact ⟨h3.symm, v, hd, h1, h2⟩
 
   case case36 =>
-    simp_all only [stepFn, enterFrameStep]
+    simp_all only [stepFn, enterFrameStep, consumesNilValueMethod, entryCallSite?]
     split at h
     · rename_i func frameEnv resultLocs s₂ hd
       simp only [Except.ok.injEq, Prod.mk.injEq] at h
@@ -2956,8 +3001,12 @@ theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
     · rename_i msg hd
       simp only [Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl⟩ := h
-      refine ⟨rfl, fun ch => ?_⟩
-      simp only [stepFn, enterFrameStep, hd]
+      -- BUG-087: outside the family (`hnv`) the site's consult is inert.
+      refine ⟨?_, fun ch => ?_⟩
+      · simp only [nilValueMethodWidth_of_isSome_false hnv,
+          Choices.consumeAt_nilValueMethodText_one]
+      · simp only [stepFn, enterFrameStep, hd, nilValueMethodWidth_of_isSome_false hnv,
+          Choices.consumeAt_nilValueMethodText_one, entryPanicText_of_isSome_false hnv]
     · simp at h
   case case67 =>
     rename_i op nt hplan
@@ -3025,7 +3074,7 @@ theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
        refine ⟨by simp, fun ch => ?_⟩
        simp [stepFn, valueAsBool, Bind.bind, Except.bind])
   case case96 =>
-    simp_all only [stepFn, enterFrameStep]
+    simp_all only [stepFn, enterFrameStep, consumesNilValueMethod, entryCallSite?]
     split at h
     · rename_i func frameEnv resultLocs s₂ hd
       simp only [Except.ok.injEq, Prod.mk.injEq] at h
@@ -3035,8 +3084,12 @@ theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
     · rename_i msg hd
       simp only [Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl⟩ := h
-      refine ⟨rfl, fun ch => ?_⟩
-      simp only [stepFn, enterFrameStep, hd]
+      -- BUG-087: outside the family (`hnv`) the site's consult is inert.
+      refine ⟨?_, fun ch => ?_⟩
+      · simp only [nilValueMethodWidth_of_isSome_false hnv,
+          Choices.consumeAt_nilValueMethodText_one]
+      · simp only [stepFn, enterFrameStep, hd, nilValueMethodWidth_of_isSome_false hnv,
+          Choices.consumeAt_nilValueMethodText_one, entryPanicText_of_isSome_false hnv]
     · simp at h
   case case100 =>
     rename_i hlt
@@ -3071,7 +3124,7 @@ theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
     rw [applyStmtOp_eq_core hop, happly]
     rfl
   case case104 =>
-    simp_all only [stepFn, enterFrameStep]
+    simp_all only [stepFn, enterFrameStep, consumesNilValueMethod, entryCallSite?]
     split at h
     · rename_i func frameEnv resultLocs s₂ hd
       simp only [Except.ok.injEq, Prod.mk.injEq] at h
@@ -3081,11 +3134,15 @@ theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
     · rename_i msg hd
       simp only [Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl⟩ := h
-      refine ⟨rfl, fun ch => ?_⟩
-      simp only [stepFn, enterFrameStep, hd]
+      -- BUG-087: outside the family (`hnv`) the site's consult is inert.
+      refine ⟨?_, fun ch => ?_⟩
+      · simp only [nilValueMethodWidth_of_isSome_false hnv,
+          Choices.consumeAt_nilValueMethodText_one]
+      · simp only [stepFn, enterFrameStep, hd, nilValueMethodWidth_of_isSome_false hnv,
+          Choices.consumeAt_nilValueMethodText_one, entryPanicText_of_isSome_false hnv]
     · simp at h
   case case110 =>
-    simp_all only [stepFn, enterFrameStep]
+    simp_all only [stepFn, enterFrameStep, consumesNilValueMethod, entryCallSite?]
     split at h
     · rename_i func frameEnv resultLocs s₂ hd
       simp only [Except.ok.injEq, Prod.mk.injEq] at h
@@ -3095,8 +3152,12 @@ theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
     · rename_i msg hd
       simp only [Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl⟩ := h
-      refine ⟨rfl, fun ch => ?_⟩
-      simp only [stepFn, enterFrameStep, hd]
+      -- BUG-087: outside the family (`hnv`) the site's consult is inert.
+      refine ⟨?_, fun ch => ?_⟩
+      · simp only [nilValueMethodWidth_of_isSome_false hnv,
+          Choices.consumeAt_nilValueMethodText_one]
+      · simp only [stepFn, enterFrameStep, hd, nilValueMethodWidth_of_isSome_false hnv,
+          Choices.consumeAt_nilValueMethodText_one, entryPanicText_of_isSome_false hnv]
     · simp at h
   case case120 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
@@ -3117,7 +3178,7 @@ theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
     refine ⟨vs, hload, ?_⟩
     simp
   case case163 =>
-    simp_all only [stepFn, enterFrameStep]
+    simp_all only [stepFn, enterFrameStep, consumesNilValueMethod, entryCallSite?]
     split at h
     · rename_i func frameEnv resultLocs s₂ hd
       simp only [Except.ok.injEq, Prod.mk.injEq] at h
@@ -3127,8 +3188,12 @@ theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
     · rename_i msg hd
       simp only [Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl⟩ := h
-      refine ⟨rfl, fun ch => ?_⟩
-      simp only [stepFn, enterFrameStep, hd]
+      -- BUG-087: outside the family (`hnv`) the site's consult is inert.
+      refine ⟨?_, fun ch => ?_⟩
+      · simp only [nilValueMethodWidth_of_isSome_false hnv,
+          Choices.consumeAt_nilValueMethodText_one]
+      · simp only [stepFn, enterFrameStep, hd, nilValueMethodWidth_of_isSome_false hnv,
+          Choices.consumeAt_nilValueMethodText_one, entryPanicText_of_isSome_false hnv]
     · simp at h
   case case199 =>
     simp only [stepFn, bind_eq_ok] at h
@@ -3142,7 +3207,7 @@ theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
     refine ⟨vs, hload, ?_⟩
     simp
   case case202 =>
-    simp_all only [stepFn, enterFrameStep]
+    simp_all only [stepFn, enterFrameStep, consumesNilValueMethod, entryCallSite?]
     split at h
     · rename_i func frameEnv resultLocs s₂ hd
       simp only [Except.ok.injEq, Prod.mk.injEq] at h
@@ -3152,8 +3217,12 @@ theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
     · rename_i msg hd
       simp only [Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl⟩ := h
-      refine ⟨rfl, fun ch => ?_⟩
-      simp only [stepFn, enterFrameStep, hd]
+      -- BUG-087: outside the family (`hnv`) the site's consult is inert.
+      refine ⟨?_, fun ch => ?_⟩
+      · simp only [nilValueMethodWidth_of_isSome_false hnv,
+          Choices.consumeAt_nilValueMethodText_one]
+      · simp only [stepFn, enterFrameStep, hd, nilValueMethodWidth_of_isSome_false hnv,
+          Choices.consumeAt_nilValueMethodText_one, entryPanicText_of_isSome_false hnv]
     · simp at h
 
 /-- The done-check `mapIterK` step is oblivious: with no candidate
@@ -3407,22 +3476,22 @@ theorem execStmtLoop_ok_of_allStreamsOk :
           exact hrun
     · -- the oblivious catch-all
       rename_i hx1 hx2 hx3 hx4 hx5
-      cases hnc : (consumesAppendSlice c || consumesSelect c) with
+      cases hnc : (consumesAppendSlice c || consumesSelect c || consumesNilValueMethod σ c) with
       | true =>
         rw [hnc] at hall
         simp at hall
       | false =>
         rw [hnc] at hall
         simp only [Bool.false_eq_true, if_false] at hall
-        obtain ⟨hnc1, hnc2⟩ : consumesAppendSlice c = false
-            ∧ consumesSelect c = false := by
+        obtain ⟨⟨hnc1, hnc2⟩, hnc3⟩ : (consumesAppendSlice c = false
+            ∧ consumesSelect c = false) ∧ consumesNilValueMethod σ c = false := by
           simpa using hnc
         split at hall
         · rename_i c₁ σ₁ ch₁ hprobe
           obtain ⟨-, hobl⟩ := stepFn_oblivious
             (fun kv vv kt vt b bs pr st e kk heq =>
               hx5 kv vv kt vt b bs pr st e kk heq)
-            hnc1 hnc2 hprobe
+            hnc1 hnc2 hnc3 hprobe
           obtain ⟨out, ch', hrun⟩ := ih hall ch
           exact ⟨out, ch', by rw [execStmtLoop_step (hobl ch)]; exact hrun⟩
         · exact absurd hall (by simp)

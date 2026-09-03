@@ -224,7 +224,7 @@ day — see below). The user replied, verbatim as relayed:
 «Re decisions on deck (1) the guard - agree with the redommendation, do (a); (2) panic-text, agree, demonic choice so both are admitted; (3) agree, go ahead with the plan; (4) Atomics - agree; (5) noodler gaps - already addressed; (6) strict-lane, agree; others: lower priority for now?»
 
 So: (1) (a) adopted — gate change, [USER]-ruled; (2) demonic choice,
-both texts admitted (BUG-087 fix shape item (4), separate lane); (3) G1–G9
+both texts admitted (BUG-087 fix shape item (4), separate lane — LANDED as lane `bug087-paniktext` commit d8fea185, 2026-09-03: `ChoiceSite.nilValueMethodText`, latitude inventory R9a, five membership rows; evidence `docs/evidence/2026-09-03_bug087-paniktext/`); (3) G1–G9
 each as recommended (slice 1 by a separate lane); (4) TryLock own slice
 + D-002 confirmation, recorded on row 5 above and in the atomics memo
 §6; (5) already addressed; (6) routing rule ADOPTED, routing slice

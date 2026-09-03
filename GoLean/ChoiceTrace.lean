@@ -71,10 +71,11 @@ def siteName : ChoiceSite → String
   | .l5ExitWindow => "l5ExitWindow"
   | .postOp => "postOp"
   | .backEdge => "backEdge"
+  | .nilValueMethodText => "nilValueMethodText"
 
 def allSites : List ChoiceSite :=
   [.mapIter, .appendSpill, .l2Entry, .l2Arrival, .l4Waiter, .l1Sched,
-   .l5ExitWindow, .postOp, .backEdge]
+   .l5ExitWindow, .postOp, .backEdge, .nilValueMethodText]
 
 /-- Pool-layer sites: the ones whose consumption the machine records in
 `StepEvent.picks` (`Choices.consumeAtE`); the sequential-machine sites
@@ -339,6 +340,43 @@ def spillFacts (s : ExecState) (c : Config) : MenuFacts :=
       | _ => bad "append operand arity"
   | _ => bad "append apply shape recognized"
 
+/-- Frame-entry panic-text facts (BUG-087, R9a): the DECLARED width is
+2 on the wrapper family and the site is consulted only there; the
+structural invariants recompute the family's shape from the pre-state by
+a second, simpler derivation — the receiver argument is an interface box
+holding a nil POINTER, the anchor is an interface-receiver method, and
+the resolved target is a value-receiver method of exactly the pointee
+that is not a synthesized promotion wrapper. -/
+def nilTextFacts (s : ExecState) (fid : FuncId) (args : List GoValue) : MenuFacts :=
+  let bad := fun (why : String) =>
+    ({ specWidth := none, invariants := [(why, false)], pickCheck := fun _ => [] } : MenuFacts)
+  match findFunctionIn? s.functions fid with
+  | none => bad "entry function found"
+  | some func =>
+    match methodInfoByFuncId? s func.id with
+    | none => bad "entry anchor is a method"
+    | some method =>
+      let anchorIsIface := (methodRecvInterfaceName? s method).isSome
+      let nilPtrBox := match args.head? with
+        | some (.interface (.pointer _) .nil) => true
+        | _ => false
+      let pointee : Option Ty := match args.head? with
+        | some (.interface (.pointer elem) _) => some elem
+        | _ => none
+      let target := s.methods.find? fun m =>
+        m.name == method.name && (pointee.map fun e => methodRecvDynamicTy? s m == some e).getD false
+      let valueRecvOfPointee := target.isSome
+      let notWrapper := match target >>= fun m => findFunctionIn? s.functions m.funcId with
+        | some f => !f.wrapper
+        | none => false
+      { specWidth := some 2
+        invariants :=
+          [ ("anchor is an interface-receiver method", anchorIsIface),
+            ("receiver argument is an interface box holding a nil pointer", nilPtrBox),
+            ("target is a value-receiver method of exactly the pointee", valueRecvOfPointee),
+            ("target is not a synthesized promotion wrapper", notWrapper) ]
+        pickCheck := fun p => if p < 2 then [] else [s!"pick {p} outside the two texts"] }
+
 /-! ## The site-tagged consumption mirror -/
 
 /-- The sequential-machine sites at a `stepFn` position (the mirror of
@@ -369,7 +407,14 @@ def seqSite (σ : ExecState) (c : Config) :
               else some (.appendSpill, appendSpillWidth slice.cap newLen, spillFacts σ c)
           | _, _ => none
       | _ => none
-  | _ => none
+  | c =>
+      -- The frame-entry panic-text site (BUG-087): the mirror of
+      -- `CLI.stepNeedsSeq`'s arm, tagged.
+      match entryCallSite? c with
+      | some (fid, args) =>
+          if nilValueMethodWidth σ fid args ≤ 1 then none
+          else some (.nilValueMethodText, nilValueMethodWidth σ fid args, nilTextFacts σ fid args)
+      | none => none
 
 /-- The pool-step mirror of `CLI.stepNeeds`, tagged: given the picks
 already supplied for the CURRENT pool step, the next consumption's site,

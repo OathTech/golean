@@ -117,6 +117,7 @@ def innerVecs (s : ExecState) (ts : Array Config) (i : Nat) :
              else none
          | _ => none)
       else if isMapIterNext c then none
+      else if consumesNilValueMethod s c then none
       else
         match arrivalCases s ts i c with
         | .ok (.single _ cs) =>

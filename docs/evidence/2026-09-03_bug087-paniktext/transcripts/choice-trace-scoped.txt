@@ -1,0 +1,35 @@
+# scripts/choice-trace-corpus --jobs 2 --out artifacts/choice-trace-scoped <the noodler/ifaces promoted/embedded/dispatch/value-nil rows + interfaces/recover-nil-dispatch/{nil-pointer-box,nil-interface} + defer/deferred-dispatch-entry-panic/during-panic + noodler/membership/three-key-map-order> — lane tree at c22e367a + the lane edits (pre-commit), golean built by scripts/capped lake build golean, 2026-09-03
+rows traced: 17 ids, 102 (id,stream) lines; 0 id(s) the tracer could not run (ERROR)
+  by lane: membership=6, strict=11
+
+VALIDATOR
+  consumptions checked: 66
+  menu-invariant violations: 0
+  self-check alarms (mirror/accountant, sentinel, pick-record): 0
+  driver-agreement mismatches: 0
+  fuel-out (id,stream) lines: 0
+  consumptions per site (all streams): nilValueMethodText=48, mapIter=18
+
+STRICT-LANE DEPTH EXPOSURE (lane=strict rows; confluent rows shown separately)
+  strict: 11 rows; consumptions under the default stream:
+    all consumptions:      0: 8, 1-8: 3, 9-10: 0, 11-32: 0, 33-128: 0, >128: 0
+    bound>=2 consumptions: 0: 8, 1-8: 3, 9-10: 0, 11-32: 0, 33-128: 0, >128: 0
+    rows with >=1 adversarial stream exhausted (any consumption past the prefix): 0
+    rows with a bound>=2 consumption PAST the prefix on >=1 adversarial stream (invisible order-sensitivity): 0
+    rows whose observation VARIES across the traced streams (default, 3 adversarial, 2 random-4096): 0
+    rows with >10 bound>=2 consumptions under a random-4096 stream: 0
+  confluent: 0 rows; consumptions under the default stream:
+    all consumptions:      0: 0, 1-8: 0, 9-10: 0, 11-32: 0, 33-128: 0, >128: 0
+    bound>=2 consumptions: 0: 0, 1-8: 0, 9-10: 0, 11-32: 0, 33-128: 0, >128: 0
+    rows with >=1 adversarial stream exhausted (any consumption past the prefix): 0
+    rows with a bound>=2 consumption PAST the prefix on >=1 adversarial stream (invisible order-sensitivity): 0
+    rows whose observation VARIES across the traced streams (default, 3 adversarial, 2 random-4096): 0
+    rows with >10 bound>=2 consumptions under a random-4096 stream: 0
+
+ENUMERATING LANES (membership/racy): depth under the traced streams
+  membership noodler/ifaces/global-iface-value-nil: max consumed=1 max wide=1 distinct observations across 6 streams=2
+  membership noodler/ifaces/iface-dispatch-value-nil: max consumed=1 max wide=1 distinct observations across 6 streams=2
+  membership noodler/ifaces/iface-param-value-nil: max consumed=1 max wide=1 distinct observations across 6 streams=2
+  membership noodler/ifaces/mk-helper-value-nil: max consumed=1 max wide=1 distinct observations across 6 streams=2
+  membership noodler/ifaces/mv-iface-nil-call: max consumed=1 max wide=1 distinct observations across 6 streams=2
+  membership noodler/membership/three-key-map-order: max consumed=3 max wide=2 distinct observations across 6 streams=4

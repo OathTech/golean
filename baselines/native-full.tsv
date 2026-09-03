@@ -1,4 +1,26 @@
 # GoLean native-frontend full-corpus differential baseline
+# re-pinned: 2026-09-03 (bug087-paniktext lane — BUG-087 fix: the frame-entry
+#   panic TEXT on a value-receiver method dispatched through an interface
+#   holding a nil *T is a width-2 DEMONIC choice, ChoiceSite.nilValueMethodText
+#   (State.lean; drawn in StepFn.lean's enterFrameStep/enterFrameDeferPanicking;
+#   envelope statement nilValueMethodText?, Ops.lean). [USER] ruling 2026-09-03
+#   «(2) panic-text, agree, demonic choice so both are admitted» — received by
+#   the [AGENT] coordinator and relayed to the lane (docs/2026-08-31_qrow-rulings.md,
+#   2026-09-03 record); latitude inventory R9a. FULL ci --diff at the lane tree
+#   (drift-run tail docs/evidence/2026-09-03_bug087-paniktext/transcripts/
+#   gate-tail-1-drift.txt; the clean-tip tail is recorded in the same dir at the
+#   landing-records commit): EXACTLY five rows moved, all under noodler/ifaces/ —
+#   mv-iface-nil-call, iface-param-value-nil, global-iface-value-nil
+#   FAIL/differential -> PASS/membership (BUG-087's Cases rows: the two-member set
+#   {nil-deref text, panicwrap text}, members=2, samples=1 version-tracking);
+#   iface-dispatch-value-nil, mk-helper-value-nil PASS/- -> PASS/membership
+#   (the same family — strict PASS on member 0 would have failed the strict
+#   lane's adversarial-stream invariance once the site existed). NO PASS->non-PASS
+#   flips; NO other row moved (choice-trace: the only additional rows drawing the
+#   site are three recover-only strict rows whose observation is stream-invariant).
+#   At the pre-rebase tree (main c22e367a + the lane): 3199 rows; 3008 PASS / 191 FAIL.
+#   REBASED onto main 221d8964 (round-8b union: 3260 rows, 3058 PASS / 202 FAIL): the same five
+#   row moves replayed — 3260 rows; 3061 PASS / 199 FAIL (re-derived below).
 # re-pinned: 2026-09-03 (stdlib-source-1 — [USER] RULING: the D-002 exception for a
 #   re-bodied ParseUint shim is DENIED (Mike, 2026-09-03, relayed by the [AGENT]
 #   coordinator, cited as relayed: «(a) we're not running Raft right now, I think
@@ -680,7 +702,9 @@
 #     removed row is named in prose, never left dangling on the line).
 #     NEW rows: unsafe/layout-ops/{sizeof-fixed,layout-struct}
 #     FAIL/frontend-export BY DESIGN. unsafe/boundary/pointer-roundtrip
-# cases: 3260 (3058 PASS / 202 FAIL)
+# cases: 3260 (3061 PASS / 199 FAIL)
+#   [re-derived from the data rows at the bug087-paniktext rebase onto 221d8964 2026-09-03 ([AGENT]: the round-8b union's 3260 (3058 PASS / 202 FAIL) with BUG-087's three Cases rows noodler/ifaces/{mv-iface-nil-call,iface-param-value-nil,global-iface-value-nil} flipped FAIL/differential -> PASS/membership and two strict PASS rows noodler/ifaces/{iface-dispatch-value-nil,mk-helper-value-nil} re-laned PASS/- -> PASS/membership; no born rows, no other row moved): 3260 (3061 PASS / 199 FAIL)]
+#   [the round-8b union figure, kept as history:] # cases: 3260 (3058 PASS / 202 FAIL)
 #   [re-derived from the data rows at the round-8b merge-train rebase 2026-09-03 ([AGENT]: stdlib-source-1 [USER]-ruling re-pin (ParseUint RETIRED, D-002 exception denied) replayed over the round-8b union: BUG-089's designed reds — 4 pre-existing rows PASS→FAIL + 5 born FAIL stdlib-source/strconv-parseuint/*, all on BUG-089's Cases line — and panic-recover/shim-refusal-unrecoverable/parse-recover FAIL→PASS; no other row moved)]
 #   [re-derived from the data rows at the round-8b merge-train rebase 2026-09-03 ([AGENT]: stdlib-source-1 audit-fix-round re-pin replayed over the round-8b union: +5 born stdlib-source/ rows (errors-wrap/unwrap PASS; errors-wrap/{is,as} + frontier/{index-rune-goto,format-float-unsafe} FAIL by design on FR-21); no other row moved)]
 #   [re-derived from the data rows at the round-8b merge-train rebase 2026-09-03 ([AGENT]: stdlib-source-1 slice-1 commit replayed over main 6a163681 (post-round-8a + sampling-budget): main's 3199 / 3005 / 194 + the lane's row delta vs its 3195 base — born stdlib-source/ rows and the shim-surface FAIL→PASS flips; ids disjoint, no main row otherwise moved)]
@@ -2843,12 +2867,12 @@ PASS	noodler/ifaces/promoted-pointer-nil-ok	-
 PASS	noodler/ifaces/promoted-pointer-nil-read	-
 PASS	noodler/ifaces/promoted-satisfies	-
 PASS	noodler/ifaces/mv-iface-nil-create	-
-FAIL	noodler/ifaces/mv-iface-nil-call	differential
-PASS	noodler/ifaces/iface-dispatch-value-nil	-
+PASS	noodler/ifaces/mv-iface-nil-call	membership
+PASS	noodler/ifaces/iface-dispatch-value-nil	membership
 PASS	noodler/ifaces/iface-dispatch-value-nil-recovered	-
-FAIL	noodler/ifaces/iface-param-value-nil	differential
-FAIL	noodler/ifaces/global-iface-value-nil	differential
-PASS	noodler/ifaces/mk-helper-value-nil	-
+PASS	noodler/ifaces/iface-param-value-nil	membership
+PASS	noodler/ifaces/global-iface-value-nil	membership
+PASS	noodler/ifaces/mk-helper-value-nil	membership
 PASS	noodler/ifaces/mv-nil-direct	-
 PASS	noodler/ifaces/embedded-iface-nil	-
 PASS	noodler/ifaces/embedded-iface-call	-

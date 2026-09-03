@@ -97,6 +97,7 @@ def poolThreadOblivious (s : ExecState) (ts : Array Config) (i : Nat) : Bool :=
        | _ => false)
     else if consumesAppendSlice c then false
     else if isMapIterNext c then false
+    else if consumesNilValueMethod s c then false
     else
       match arrivalCases s ts i c with
       | .ok .cellPath => true
@@ -319,6 +320,11 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
           | false =>
           rw [hnmi] at hobl
           simp only [Bool.false_eq_true, reduceIte] at hobl
+          cases hnnv : consumesNilValueMethod s c with
+          | true => rw [hnnv] at hobl; simp at hobl
+          | false =>
+          rw [hnnv] at hobl
+          simp only [Bool.false_eq_true, reduceIte] at hobl
           simp only [bind_eq_ok] at h
           obtain ⟨⟨plan, ch₁, ps₁⟩, hplan, h⟩ := h
           cases harr : arrivalCases s ts i c with
@@ -341,7 +347,7 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
               simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
               obtain ⟨rfl, rfl, rfl, rfl⟩ := h
               obtain ⟨rfl, hall⟩ := stepFn_oblivious
-                (isMapIterNext_false_elim hnmi) hnapp hnsel hstep
+                (isMapIterNext_false_elim hnmi) hnapp hnsel hnnv hstep
               refine ⟨rfl, fun ch => ?_⟩
               unfold stepThread
               rw [hti]

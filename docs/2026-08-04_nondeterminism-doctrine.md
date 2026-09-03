@@ -82,7 +82,12 @@ exhaustiveness; the list below is a READER'S MIRROR of that datatype
   `.opDone` completion marker, slot 0 = the issuer continues);
 - loop back-edge pick (`backEdge`, W3.2 stage D — same combinator, at
   the loop re-entry shapes, slot 0 = the current goroutine continues;
-  this is the site that makes a future `Fair` predicate non-vacuous).
+  this is the site that makes a future `Fair` predicate non-vacuous);
+- frame-entry panic-text pick (`nilValueMethodText`, BUG-087 / latitude
+  inventory R9a, 2026-09-03 — `enterFrameStep`/`enterFrameDeferPanicking`,
+  `StepFn.lean`; width 2 exactly when a value-receiver method is
+  dispatched through an interface holding a nil `*T` outside promotion,
+  slot 0 = the nil-dereference text, slot 1 = gc's `panicwrap` text).
 
 **Mirror re-synced 2026-08-22** (settlement branch,
 `reconcile-records` C12): the last two entries were missing — the

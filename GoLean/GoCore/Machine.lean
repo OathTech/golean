@@ -707,6 +707,79 @@ def enterFrame (s : ExecState) (fid : FuncId) (argVals : List GoValue) :
   let resultLocs ← pinResultLocs frameEnv func.results.toList
   return (func, frameEnv, resultLocs, s₂)
 
+/-- The `nilValueMethodText` site's stream bound at a frame entry
+(BUG-087): 2 on the wrapper family (`nilValueMethodText?` — the
+envelope statement, Ops.lean), 1 everywhere else. With the site's
+`consumeAtOne := false` policy a bound-1 consult pops nothing, so every
+entry outside the family consumes exactly what it consumed before the
+site existed. -/
+def nilValueMethodWidth (s : ExecState) (fid : FuncId) (args : List GoValue) : Nat :=
+  if (nilValueMethodText? s fid args).isSome then 2 else 1
+
+/-- The frame-entry panic TEXT under the `nilValueMethodText` pick:
+`msg` (the text `enterFrame` raised — the nil-dereference text on the
+family) at slot 0, gc's `panicwrap` text at any other slot; outside the
+family the pick is inert and `msg` stands. The relation's entry-panic
+rules quantify `pick` freely (a `∃ pick`), which is exactly the
+two-member set — every `pick ≠ 0` names the same member. -/
+def entryPanicText (s : ExecState) (fid : FuncId) (args : List GoValue)
+    (msg : String) (pick : Nat) : String :=
+  match nilValueMethodText? s fid args with
+  | some alt => if pick = 0 then msg else alt
+  | none => msg
+
+theorem nilValueMethodWidth_of_none {s : ExecState} {fid : FuncId} {args : List GoValue}
+    (h : nilValueMethodText? s fid args = none) :
+    nilValueMethodWidth s fid args = 1 := by
+  simp [nilValueMethodWidth, h]
+
+theorem entryPanicText_of_none {s : ExecState} {fid : FuncId} {args : List GoValue}
+    {msg : String} {pick : Nat} (h : nilValueMethodText? s fid args = none) :
+    entryPanicText s fid args msg pick = msg := by
+  simp [entryPanicText, h]
+
+/-- The site's bound-1 consult (outside the family) is inert — the
+declared `consumeAtOne := false` policy, specialized. -/
+@[simp] theorem Choices.consumeAt_nilValueMethodText_one {ch : Choices} :
+    Choices.consumeAt .nilValueMethodText 1 ch = (0, ch) :=
+  Choices.consumeAt_le_one (Nat.le_refl 1) rfl
+
+/-- The `isSome = false` spellings of the two `_of_none` facts (the shape
+`simp` leaves a `consumesNilValueMethod … = false` hypothesis in). -/
+theorem nilValueMethodWidth_of_isSome_false {s : ExecState} {fid : FuncId}
+    {args : List GoValue} (h : (nilValueMethodText? s fid args).isSome = false) :
+    nilValueMethodWidth s fid args = 1 := by
+  simp [nilValueMethodWidth, h]
+
+theorem entryPanicText_of_isSome_false {s : ExecState} {fid : FuncId}
+    {args : List GoValue} {msg : String} {pick : Nat}
+    (h : (nilValueMethodText? s fid args).isSome = false) :
+    entryPanicText s fid args msg pick = msg := by
+  cases hn : nilValueMethodText? s fid args with
+  | none => simp [entryPanicText, hn]
+  | some alt => rw [hn] at h; simp at h
+
+/-- The witness stream realizing an entry-panic `pick` (the completeness
+direction): `[]` draws slot 0 on any width; `[1]` draws slot 1 on the
+family's width 2 and nothing on width 1 (where the text is `msg` for
+every pick anyway). -/
+def entryPanicStream (pick : Nat) : Choices := if pick = 0 then [] else [1]
+
+theorem entryPanicText_entryPanicStream {s : ExecState} {fid : FuncId}
+    {args : List GoValue} {msg : String} {pick : Nat} :
+    entryPanicText s fid args msg
+      (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth s fid args)
+        (entryPanicStream pick)).1
+      = entryPanicText s fid args msg pick := by
+  cases hn : nilValueMethodText? s fid args with
+  | none => simp [entryPanicText, hn]
+  | some alt =>
+    simp only [nilValueMethodWidth, hn, Option.isSome_some, if_true, entryPanicText,
+      entryPanicStream]
+    by_cases hp : pick = 0
+    · simp [hp, Choices.consumeAt, Choices.consume]
+    · simp [hp, Choices.consumeAt, Choices.consume]
+
 /-! ## Wide statements: the statement-op table -/
 
 /-- Head of a wide statement: evaluate the operand plan (targets first, as
@@ -2391,6 +2464,44 @@ inductive Config where
   stable. -/
   | blockedSync (op : SyncOp) (loc : Loc) (env : LocalEnv) (k : Cont)
 
+/-- The frame-ENTRY shapes and the `(fid, args)` their next step hands
+to `enterFrame` — the seven `stepFn` positions that route through
+`enterFrameStep`/`enterFrameDeferPanicking` (the ordinary call with
+no arguments, the last-argument arrival, the value-call callee/last-
+argument arrivals, and the three deferred-call drains: normal, return,
+panic-path). ONE table, consumed by the `nilValueMethodText` mirrors
+(`consumesNilValueMethod` here; `CLI.stepNeeds`/`stepNeedsSeq`; the
+tracer's `seqSite`) so the accountant derives the site's bound from the
+machine's own analysis (`nilValueMethodWidth`) rather than a
+hand-copied shape list. `none` = the step is not a frame entry. -/
+def entryCallSite? : Config → Option (FuncId × List GoValue)
+  | .exec (.call _ fid args) _ _ =>
+      match args.toList with
+      | [] => some (fid, [])
+      | _ :: _ => none
+  | .retV v (.callArgsK fid _ vals [] _ _) => some (fid, vals ++ [v])
+  | .retV (.funcVal fid captured) (.callValCalleeK _ [] _ _) => some (fid, captured)
+  | .retV v (.callValArgsK (.funcVal fid captured) _ vals [] _ _) =>
+      some (fid, captured ++ vals ++ [v])
+  | .next (.frame _ _ _ ((.funcVal fid captured, args) :: _) _ _) =>
+      some (fid, captured ++ args)
+  | .returning (.frame _ _ _ ((.funcVal fid captured, args) :: _) _ _) =>
+      some (fid, captured ++ args)
+  | .panicking _ (.frame _ _ _ ((.funcVal fid captured, args) :: _) _ _) =>
+      some (fid, captured ++ args)
+  | _ => none
+
+/-- Does this configuration's next step draw the `nilValueMethodText`
+pick (BUG-087)? `true` exactly at a frame entry in the wrapper family
+(`nilValueMethodText?` = some — bound 2); every other shape consumes
+nothing at the site. The stream-obliviousness checkers exclude exactly
+this (`stepFn_oblivious`' `hnv`, `poolThreadOblivious`, `innerVecs`,
+`allStreamsOk`) — a fail-closed flag like `consumesAppendSlice`. -/
+def consumesNilValueMethod (s : ExecState) (c : Config) : Bool :=
+  match entryCallSite? c with
+  | some (fid, args) => (nilValueMethodText? s fid args).isSome
+  | none => false
+
 /-- Enter a receive's TARGET phase (nonempty targets; convergence
 round, BUG-029): resolve the target plan and start phase 1 on the
 first target's first operand. Shared verbatim by `applyChanOp` (both
@@ -3504,24 +3615,24 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   their numbering. DEFERRED-call entry has its own twins further below
   (`frameDeferFallEnterPanic` and friends — audit F1+F5, 2026-08-05;
   the original narrowing here was scoped too widely). -/
-  | callImmediatePanic {targets fid args plans msg env k s} :
+  | callImmediatePanic {targets fid args plans msg pick env k s} :
       targetsPlan targets.toList = some plans →
       args.toList = [] →
       enterFrame s fid [] = .error (.panic msg) →
       Step (.exec (.call targets fid args) env k) s
-        (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
-  | callArgsDoneEnterPanic {v fid plans vals msg env k s} :
+        (.panicking [⟨runtimeErrorValue (entryPanicText s fid [] msg pick), false⟩] k) s
+  | callArgsDoneEnterPanic {v fid plans vals msg pick env k s} :
       enterFrame s fid (vals ++ [v]) = .error (.panic msg) →
       Step (.retV v (.callArgsK fid plans vals [] env k)) s
-        (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
-  | callValCalleeEnterPanic {fid captured plans msg env k s} :
+        (.panicking [⟨runtimeErrorValue (entryPanicText s fid (vals ++ [v]) msg pick), false⟩] k) s
+  | callValCalleeEnterPanic {fid captured plans msg pick env k s} :
       enterFrame s fid captured = .error (.panic msg) →
       Step (.retV (.funcVal fid captured) (.callValCalleeK plans [] env k)) s
-        (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
-  | callValArgsEnterPanic {v fid captured plans vals msg env k s} :
+        (.panicking [⟨runtimeErrorValue (entryPanicText s fid captured msg pick), false⟩] k) s
+  | callValArgsEnterPanic {v fid captured plans vals msg pick env k s} :
       enterFrame s fid (captured ++ vals ++ [v]) = .error (.panic msg) →
       Step (.retV v (.callValArgsK (.funcVal fid captured) plans vals [] env k)) s
-        (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
+        (.panicking [⟨runtimeErrorValue (entryPanicText s fid (captured ++ vals ++ [v]) msg pick), false⟩] k) s
   /-- DEFERRED-call frame-ENTRY panics (audit F1+F5, 2026-08-05): a
   dispatch panic entering a deferred call is a panic of the deferred
   INVOCATION — exactly the class the `.nil`-callee drain rules already
@@ -3534,19 +3645,28 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   `recover` answers the newest entry, which `chainNewestRecovered`
   implements; the `during-panic` pin discriminates newest-vs-original by
   asserting the recovered value). Appended at the END of the inductive
-  so the correspondence proofs' positional case tags stay stable. -/
-  | frameDeferFallEnterPanic {targets tenv results fid captured args ds k w s msg} :
+  so the correspondence proofs' positional case tags stay stable.
+
+  THE ENTRY-PANIC TEXT (BUG-087, all seven entry-panic rules): the
+  payload text is `entryPanicText s fid args msg pick` with `pick`
+  quantified freely — on the wrapper family (`nilValueMethodText?`) that
+  is the two-member set {nil-dereference text, gc's `panicwrap` text}
+  the `nilValueMethodText` site draws from; elsewhere it is `msg`
+  alone. -/
+  | frameDeferFallEnterPanic {targets tenv results fid captured args ds k w s msg pick} :
       enterFrame s fid (captured ++ args) = .error (.panic msg) →
       Step (.next (.frame targets tenv results ((.funcVal fid captured, args) :: ds) k w)) s
-        (.panicking [⟨runtimeErrorValue msg, false⟩] (.frame targets tenv results ds k w)) s
-  | frameDeferReturnEnterPanic {targets tenv results fid captured args ds k w s msg} :
+        (.panicking [⟨runtimeErrorValue (entryPanicText s fid (captured ++ args) msg pick), false⟩]
+          (.frame targets tenv results ds k w)) s
+  | frameDeferReturnEnterPanic {targets tenv results fid captured args ds k w s msg pick} :
       enterFrame s fid (captured ++ args) = .error (.panic msg) →
       Step (.returning (.frame targets tenv results ((.funcVal fid captured, args) :: ds) k w)) s
-        (.panicking [⟨runtimeErrorValue msg, false⟩] (.frame targets tenv results ds k w)) s
-  | panicFrameDeferEnterPanic {chain targets tenv results fid captured args ds k w s msg} :
+        (.panicking [⟨runtimeErrorValue (entryPanicText s fid (captured ++ args) msg pick), false⟩]
+          (.frame targets tenv results ds k w)) s
+  | panicFrameDeferEnterPanic {chain targets tenv results fid captured args ds k w s msg pick} :
       enterFrame s fid (captured ++ args) = .error (.panic msg) →
       Step (.panicking chain (.frame targets tenv results ((.funcVal fid captured, args) :: ds) k w)) s
-        (.panicking (chain ++ [⟨runtimeErrorValue msg, false⟩])
+        (.panicking (chain ++ [⟨runtimeErrorValue (entryPanicText s fid (captured ++ args) msg pick), false⟩])
           (.frame targets tenv results ds k w)) s
   /-- Channel statements (channels arc slice 1; receive reordered at the
   audit response, BUG-022): pre-communication operand entry, plain
