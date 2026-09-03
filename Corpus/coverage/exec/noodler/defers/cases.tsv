@@ -1,0 +1,19 @@
+# id	subject	args	expected_status	expected_reason	features
+deferred-method-recovers	deferredMethodRecovers	-	ok	-	defer,recover,methods,panic
+deferred-method-value-recovers	deferredMethodValueRecovers	-	ok	-	defer,recover,methods,panic
+recover-via-func-value	recoverViaFuncValueIndirect	-	panic	indirect-value	defer,recover,closures,panic
+recover-via-immediate-literal	recoverViaImmediateLiteral	-	panic	immediate	defer,recover,closures,panic
+panic-struct-payload	panicStructPayload	-	ok	-	panic,recover,structs,type_assertions
+panic-pointer-payload	panicPointerPayload	-	ok	-	panic,recover,pointers,aliasing
+panic-custom-error	panicCustomErrorPayload	-	ok	-	panic,recover,interfaces,methods
+deferred-close	deferredClose	-	ok	-	defer,builtins,close,channels
+deferred-delete	deferredDelete	-	ok	-	defer,builtins,delete,maps
+goroutine-panic-aborts	goroutinePanicAborts	-	panic	child-boom	goroutines,panic,channels
+goroutine-recovers-own	goroutineRecoversOwnPanic	-	ok	-	goroutines,panic,recover,channels
+panic-not-cross-goroutine	panicNotCrossGoroutine	-	panic	main-boom	goroutines,panic,recover,channels
+nested-recover-levels	nestedRecoverLevels	-	ok	-	panic,recover,nested
+second-defer-sees-nil	secondDeferSeesNil	-	ok	-	panic,recover,defer
+defer-args-vs-closure	deferArgsVsClosure	-	ok	-	defer,closures,evaluation_order
+panic-nil-recovered	panicNilRecovered	-	ok	-	panic,recover,nil
+panic-inside-deferred-defer	panicInsideDeferredDefer	-	ok	-	panic,recover,defer,nested
+recover-in-loop	recoverInLoopContinues	-	ok	-	panic,recover,loops

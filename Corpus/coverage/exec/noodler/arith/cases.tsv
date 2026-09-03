@@ -1,0 +1,20 @@
+# id	subject	args	expected_status	expected_reason	features
+minint-div-neg-one	minIntDivNegOne	-	ok	-	ints,division,overflow
+truncated-division	truncatedDivisionSigns	-	ok	-	ints,division,modulo
+arith-shift-negative	arithmeticShiftNegative	-	ok	-	ints,shifts
+shift-past-width	shiftPastWidth	-	ok	-	ints,shifts,widths
+untyped-one-shift	untypedOneShiftContext	-	ok	-	ints,shifts,untyped,constants
+signed-shift-count	signedShiftCount	-	ok	-	ints,shifts
+incdec-wraps	incDecWraps	-	ok	-	ints,overflow,widths
+mul-overflow	mulOverflowWrap	-	ok	-	ints,overflow
+unary-unsigned	unaryOnUnsigned	-	ok	-	ints,bitwise,overflow
+bit-clear	bitClearOps	-	ok	-	ints,bitwise,literals
+masked-shift	maskedShiftCount	-	ok	-	ints,shifts,bitwise
+compound-index-order	compoundIndexAssignOrder	-	ok	-	evaluation_order,assignment,slices,calls
+modulo-by-zero	moduloByZero	3	panic	integer divide by zero	ints,modulo,division,panic
+minint16-div	minInt16DivNegOne	-	ok	-	ints,division,overflow,widths
+overflow-then-divide	overflowThenDivide	-	ok	-	ints,overflow,division
+signed-unsigned-compare	signedUnsignedCompare	-	ok	-	ints,comparisons,conversions
+unsigned-sub-wrap	unsignedSubWrap	-	ok	-	ints,overflow
+shift-negative-left	shiftNegativeLeft	-	ok	-	ints,shifts
+int8-counter-wrap	int8CounterWrapTerminates	-	ok	-	ints,overflow,loops

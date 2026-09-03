@@ -1,0 +1,16 @@
+# id	subject	args	expected_status	expected_reason	features
+shadow-len	shadowLen	-	ok	-	shadowing,builtins,scoping
+shadow-true	shadowTrue	-	ok	-	shadowing,bools,scoping
+shadow-nil	shadowNil	-	ok	-	shadowing,nil,scoping
+shadow-type-names	shadowTypeNames	-	ok	-	shadowing,scoping
+shadow-iota	shadowIota	-	ok	-	shadowing,iota,constants
+shadow-builtin-funcs	shadowBuiltinFuncs	-	ok	-	shadowing,builtins,closures
+package-cap-var	packageLevelCapVar	-	ok	-	shadowing,globals,builtins
+label-vs-variable	labelVsVariable	-	ok	-	labels,scoping,break
+unicode-identifiers	unicodeIdentifiers	-	ok	-	scoping,unicode
+local-type-switch	localTypeInTypeSwitch	-	ok	-	defined_type,type_switch,scoping
+blank-names	blankNames	-	ok	-	methods,scoping
+shadow-func-name	shadowFuncName	-	ok	-	shadowing,scoping
+method-named-builtin	methodNamedLikeBuiltin	-	ok	-	methods,builtins,shadowing
+short-redeclare	shortRedeclare	-	ok	-	short_decl,scoping
+if-init-shadow	ifInitShadow	-	ok	-	shadowing,if,scoping

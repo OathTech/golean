@@ -1,0 +1,25 @@
+# id	subject	args	expected_status	expected_reason	features
+all-nil-default	selectAllNilDefault	-	ok	-	select,channels,nil,default
+nil-beside-ready	selectNilBesideReady	-	ok	-	select,channels,nil
+closed-receive	selectClosedReceive	-	ok	-	select,channels,close,comma_ok
+send-closed	selectSendClosed	-	panic	send on closed channel	select,channels,close,panic
+all-nil-deadlock	selectAllNilDeadlock	-	deadlock	-	select,channels,nil,deadlock
+drain-closed-buffered	drainClosedBuffered	-	ok	-	channels,close,comma_ok
+range-closed-buffered	rangeClosedBufferedSum	-	ok	-	channels,close,range
+break-in-select-in-for	breakInSelectInFor	-	ok	-	select,break,loops
+labeled-break-select-loop	labeledBreakSelectLoop	-	ok	-	select,labels,break,loops
+channel-of-channels	channelOfChannels	-	ok	-	channels,nested
+channel-of-funcs	channelOfFuncs	-	ok	-	channels,functions,higher_order
+nil-directional-len-cap	nilAndDirectionalLenCap	-	ok	-	channels,len,cap,nil
+close-wakes-receiver	closeWakesReceiver	-	ok	-	channels,close,goroutines,comma_ok
+switch-nan-tag	switchNaNTag	-	ok	-	switch,floats
+switch-array-tag	switchArrayTag	-	ok	-	switch,arrays,equality
+switch-struct-tag	switchStructTag	-	ok	-	switch,structs,interfaces,equality
+switch-duplicate-runtime	switchDuplicateRuntimeCases	-	ok	-	switch
+default-only	selectDefaultOnly	-	ok	-	select,default
+self-send-recv-default	selectSelfSendRecvDefault	-	ok	-	select,channels,default
+closed-struct-zero	closedStructChannelZero	-	ok	-	channels,close,structs,zero_values
+ping-pong	pingPong	-	ok	-	channels,goroutines,range,close
+fallthrough-middle-default-1	fallthroughIntoMiddleDefault	1	ok	-	switch,fallthrough,default
+fallthrough-middle-default-2	fallthroughIntoMiddleDefault	2	ok	-	switch,fallthrough,default
+fallthrough-middle-default-9	fallthroughIntoMiddleDefault	9	ok	-	switch,fallthrough,default

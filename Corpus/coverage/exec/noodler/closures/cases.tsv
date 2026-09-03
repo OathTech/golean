@@ -1,0 +1,21 @@
+# id	subject	args	expected_status	expected_reason	features
+three-clause-body-mod	threeClauseBodyModification	-	ok	-	closures,loops,scoping
+closure-modifies-own	closureModifiesOwnIteration	-	ok	-	closures,loops,range,scoping
+defers-per-iteration	defersCapturePerIteration	-	ok	-	closures,defer,loops,named-results
+defer-modifies-loopvar	deferModifiesLoopVar	-	ok	-	closures,defer,loops,named-results
+goroutines-loopvar	goroutinesCaptureLoopVar	-	ok	-	closures,goroutines,sync,waitgroup,mutex,loops
+range-int-body-assign	rangeIntBodyAssign	-	ok	-	range,loops,scoping
+three-clause-body-count	threeClauseBodyAssignCount	-	ok	-	loops,scoping
+closure-named-result-return	closureWritesNamedResultInReturn	-	ok	-	closures,named-results,returns
+recursive-closure	recursiveClosure	-	ok	-	closures,recursion
+independent-generators	independentGenerators	-	ok	-	closures,higher_order
+capture-by-reference	captureByReference	-	ok	-	closures,structs
+immediate-invocation	immediateInvocation	-	ok	-	closures,calls
+range-once-append	rangeEvaluatedOnceAppend	-	ok	-	range,append,slices,evaluation_order
+condition-closure	conditionClosure	-	ok	-	closures,loops
+closure-switch-clause	closureInSwitchClause	4	ok	-	closures,switch,scoping
+closure-if-init	closureCapturesIfInit	-	ok	-	closures,if,scoping
+variadic-closure	variadicClosure	-	ok	-	closures,variadic
+continue-per-iteration	continueWithPerIteration	-	ok	-	closures,loops,continue
+range-string-capture	rangeStringCapture	-	ok	-	closures,range,strings,runes
+shared-outer-variable	sharedOuterVariable	-	ok	-	closures,loops

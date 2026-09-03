@@ -1,0 +1,21 @@
+# id	subject	args	expected_status	expected_reason	features
+slice-high-past-cap	sliceHighPastCap	4	panic	slice bounds out of range [:4] with capacity 3	slices,slicing,panic
+slice-low-past-high	sliceLowPastHigh	3	panic	slice bounds out of range [3:2]	slices,slicing,panic
+slice-low-past-len	sliceLowPastLen	4	panic	slice bounds out of range [4:3]	slices,slicing,panic
+three-index-max-past-cap	threeIndexMaxPastCap	5	panic	slice bounds out of range [::5] with capacity 4	slices,slicing,full_slice,panic
+three-index-high-past-max	threeIndexHighPastMax	4	panic	slice bounds out of range [:4:3]	slices,slicing,full_slice,panic
+three-index-low-past-high	threeIndexLowPastHigh	3	panic	slice bounds out of range [3:2:]	slices,slicing,full_slice,panic
+string-slice-high-past-len	stringSliceHighPastLen	5	panic	slice bounds out of range [:5] with length 3	strings,slicing,panic
+string-slice-low-past-high	stringSliceLowPastHigh	4	panic	slice bounds out of range [4:2]	strings,slicing,panic
+string-index-past-len	stringIndexPastLen	3	panic	index out of range [3] with length 3	strings,indexing,panic
+array-slice-high-past-len	arraySliceHighPastLen	4	panic	slice bounds out of range [:4] with length 3	arrays,slicing,panic
+array-pointer-slice-high	arrayPointerSliceHigh	4	panic	slice bounds out of range [:4] with length 3	arrays,pointers,slicing,panic
+array-pointer-index	arrayPointerIndex	3	panic	index out of range [3] with length 3	arrays,pointers,indexing,panic
+index-negative	indexNegativeViaVar	-1	panic	index out of range [-1]	slices,indexing,panic
+slice-within-cap	sliceWithinCap	-	ok	-	slices,slicing,cap
+index-after-reslice	indexAfterReslice	-	ok	-	slices,slicing,indexing
+nil-slice-slicing	nilSliceSlicing	-	ok	-	slices,slicing,nil
+nested-index-panic	nestedIndexPanic	2	panic	index out of range [2] with length 2	slices,indexing,nested,panic
+string-index-uint-kind	stringIndexUintKind	200	panic	index out of range [200] with length 5	strings,indexing,widths,panic
+make-negative-len	makeNegativeLen	-1	panic	makeslice: len out of range	slices,make,panic
+slice-at-end	sliceAtEnd	-	ok	-	slices,slicing

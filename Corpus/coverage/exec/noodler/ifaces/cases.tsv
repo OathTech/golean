@@ -1,0 +1,27 @@
+# id	subject	args	expected_status	expected_reason	features
+switch-typed-constant	switchInterfaceTypedConstant	-	ok	-	interfaces,switch,constants,untyped
+switch-nil	switchInterfaceNil	-	ok	-	interfaces,switch,nil,pointers
+nan-in-interface	nanInInterface	-	ok	-	interfaces,floats,equality
+array-of-slice-compare	arrayOfSliceCompare	-	panic	comparing uncomparable type [1][]int	interfaces,arrays,slices,equality,panic
+struct-with-map-compare	structWithMapCompare	-	panic	comparing uncomparable type main.S	interfaces,structs,maps,equality,panic
+promoted-value-nil	promotedValueMethodThroughNil	-	panic	invalid memory address or nil pointer dereference	embedding,methods,pointers,nil,panic
+promoted-pointer-nil-ok	promotedPointerMethodThroughNilOK	-	ok	-	embedding,methods,pointers,nil
+promoted-pointer-nil-read	promotedPointerMethodThroughNilRead	-	panic	invalid memory address or nil pointer dereference	embedding,methods,pointers,nil,panic
+promoted-satisfies	promotedSatisfiesInterface	-	ok	-	embedding,methods,interfaces
+mv-iface-nil-create	methodValueFromInterfaceNilPtrCreate	-	ok	-	interfaces,methods,nil,pointers
+mv-iface-nil-call	methodValueFromInterfaceNilPtrCall	-	panic	value method main.Inner.Val called using nil *Inner pointer	interfaces,methods,nil,pointers,panic
+iface-dispatch-value-nil	ifaceDispatchValueMethodNilPtr	-	panic	invalid memory address or nil pointer dereference	interfaces,methods,nil,pointers,panic
+iface-dispatch-value-nil-recovered	ifaceDispatchValueMethodNilPtrRecovered	-	ok	-	interfaces,methods,nil,pointers,recover
+iface-param-value-nil	ifaceParamValueMethodNilPtr	-	panic	value method main.Inner.Val called using nil *Inner pointer	interfaces,methods,nil,pointers,calls,panic
+global-iface-value-nil	globalIfaceValueMethodNilPtr	-	panic	value method main.Inner.Val called using nil *Inner pointer	interfaces,methods,nil,pointers,globals,panic
+mv-nil-direct	methodValueNilPtrDirect	-	panic	invalid memory address or nil pointer dereference	methods,nil,pointers,panic
+embedded-iface-nil	embeddedInterfaceNilCall	-	panic	invalid memory address or nil pointer dereference	embedding,interfaces,nil,panic
+embedded-iface-call	embeddedInterfaceCall	-	ok	-	embedding,interfaces,methods
+struct-in-iface-eq	structInInterfaceEquality	-	ok	-	interfaces,structs,pointers,equality
+assert-concrete-mismatch	assertConcreteMismatch	-	panic	interface conversion: interface {} is string, not int	interfaces,type_assertions,panic
+assert-nil-interface	assertNilInterface	-	panic	interface conversion: interface {} is nil, not int	interfaces,type_assertions,nil,panic
+assert-missing-method	assertMissingMethod	-	panic	interface conversion: main.Inner is not main.Sizer: missing method Size	interfaces,type_assertions,panic
+assert-named-iface-nil	assertNamedInterfaceNil	-	panic	interface conversion: main.Valuer is nil, not main.Inner	interfaces,type_assertions,nil,panic
+assert-typed-nil	assertTypedNilToInterface	-	ok	-	interfaces,type_assertions,nil,comma_ok
+func-in-iface-compare	funcInInterfaceCompare	-	panic	comparing uncomparable type func()	interfaces,functions,equality,panic
+chan-in-iface-compare	chanInInterfaceCompare	-	ok	-	interfaces,channels,equality

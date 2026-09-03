@@ -1,0 +1,23 @@
+# id	subject	args	expected_status	expected_reason	features
+slice-literal	sliceLiteralOrder	-	ok	-	evaluation_order,slices,literals,calls
+map-literal	mapLiteralOrder	-	ok	-	evaluation_order,maps,literals,calls
+struct-literal-reverse-keys	structLiteralReverseKeys	-	ok	-	evaluation_order,structs,literals,calls
+func-value-before-args	funcValueBeforeArgs	-	ok	-	evaluation_order,calls,higher_order
+receiver-before-args	receiverBeforeArgs	-	ok	-	evaluation_order,calls,methods
+binary-operator-calls	binaryOperatorCalls	-	ok	-	evaluation_order,calls
+tuple-assign-return	tupleAssignAndReturn	-	ok	-	evaluation_order,multi_assign,returns,calls
+defer-args	deferArgsOrder	-	ok	-	evaluation_order,defer,calls
+index-before-rhs	indexBeforeRHS	-	ok	-	evaluation_order,assignment,indexing,calls
+deref-call-before-rhs	derefCallBeforeRHS	-	ok	-	evaluation_order,assignment,pointers,calls
+map-index-before-rhs	mapIndexBeforeRHS	-	ok	-	evaluation_order,assignment,maps,calls
+receive-before-call	receiveBeforeCall	-	ok	-	evaluation_order,channels,calls,multi_assign
+send-operand-order	sendOperandOrder	-	ok	-	evaluation_order,channels,calls
+append-args	appendArgsOrder	-	ok	-	evaluation_order,append,calls
+conversion-comparison	conversionAndComparison	-	ok	-	evaluation_order,conversions,comparisons,calls
+string-concat	stringConcatOrder	-	ok	-	evaluation_order,strings,concat,calls
+method-value-receiver-once	methodValueReceiverOnce	-	ok	-	evaluation_order,methods,calls
+range-call-once	rangeCallOnce	-	ok	-	evaluation_order,range,calls
+nested-calls	nestedCalls	-	ok	-	evaluation_order,calls,nested
+logical-short-circuit	logicalShortCircuit	-	ok	-	evaluation_order,bools,calls
+switch-tag-cases	switchTagAndCases	-	ok	-	evaluation_order,switch,calls
+elided-pointer-literal	elidedPointerLiteralOrder	-	ok	-	evaluation_order,literals,pointers,calls

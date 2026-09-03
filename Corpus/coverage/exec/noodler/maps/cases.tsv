@@ -1,0 +1,25 @@
+# id	subject	args	expected_status	expected_reason	features
+compound-call-mutates	mapCompoundCallMutates	-	ok	-	maps,assignment,evaluation_order,calls
+slice-compound-call-mutates	sliceCompoundCallMutates	-	ok	-	slices,assignment,evaluation_order,calls
+compound-call-deletes	mapCompoundCallDeletes	-	ok	-	maps,assignment,evaluation_order,delete
+array-key-nan	arrayKeyWithNaN	-	ok	-	maps,arrays,floats,keys
+struct-key-nan	structKeyWithNaN	-	ok	-	maps,structs,floats,keys
+delete-nan-key	deleteNaNKey	-	ok	-	maps,floats,delete
+zero-size-keys	zeroSizeKeys	-	ok	-	maps,arrays,structs,keys
+nil-inner-map-read	nilInnerMapRead	-	ok	-	maps,nil,comma_ok,nested
+nil-inner-map-write	nilInnerMapWrite	-	panic	assignment to entry in nil map	maps,nil,nested,panic
+nil-map-incdec	nilMapIncDec	-	panic	assignment to entry in nil map	maps,nil,panic
+map-of-funcs	mapOfFuncs	-	ok	-	maps,functions,higher_order
+map-of-funcs-missing	mapOfFuncsMissingKeyCall	-	panic	invalid memory address or nil pointer dereference	maps,functions,nil,panic
+method-on-element	methodOnMapElement	-	ok	-	maps,methods,structs
+invalid-byte-keys	invalidByteStringKeys	-	ok	-	maps,strings,invalid_utf8,keys
+string-key-from-bytes	stringKeyFromBytesIndependent	-	ok	-	maps,strings,bytes,conversions
+element-copy	mapElementCopy	-	ok	-	maps,structs,value_copy
+swap-with-missing	swapWithMissing	-	ok	-	maps,multi_assign,zero_values
+tuple-two-map-targets	tupleAssignTwoMapTargets	-	ok	-	maps,multi_assign
+tuple-map-and-var	tupleAssignMapAndVar	-	ok	-	maps,multi_assign
+map-of-slices-append	mapOfSlicesAppend	-	ok	-	maps,slices,append
+extreme-int-keys	extremeIntKeys	-	ok	-	maps,ints,keys
+single-entry-range	singleEntryRange	-	ok	-	maps,range
+interface-key-nan	interfaceKeyNaN	-	ok	-	maps,interfaces,floats,keys
+map-of-arrays	mapOfArrays	-	ok	-	maps,arrays,value_copy

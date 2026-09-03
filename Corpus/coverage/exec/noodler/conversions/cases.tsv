@@ -1,0 +1,23 @@
+# id	subject	args	expected_status	expected_reason	features
+bad-runes-len	stringFromBadRunes	-	ok	-	conversions,runes,strings,unicode
+bad-rune-bytes	stringFromBadRunesBytes	-	ok	-	conversions,runes,strings,unicode
+runes-invalid-utf8	runesFromInvalidUTF8	-	ok	-	conversions,runes,invalid_utf8
+runes-truncated	runesFromTruncatedSequence	-	ok	-	conversions,runes,invalid_utf8
+runes-overlong-surrogate	runesFromOverlongAndSurrogateBytes	-	ok	-	conversions,runes,invalid_utf8
+runeslice-surrogate	stringFromRuneSliceWithSurrogate	-	ok	-	conversions,runes,strings,unicode
+range-invalid-width	rangeInvalidByteWidths	-	ok	-	range,strings,invalid_utf8
+empty-string-nonnil	emptyStringToBytesIsNonNil	-	ok	-	conversions,bytes,runes,nil
+nil-slices-string	nilSlicesToString	-	ok	-	conversions,bytes,runes,nil
+string-of-int-kinds	stringOfIntKinds	-	ok	-	conversions,runes,strings
+float-to-int-trunc	floatToIntTruncation	-	ok	-	conversions,floats,ints
+int-to-float-round	intToFloatRounding	-	ok	-	conversions,floats,ints
+float32-vs-const	float32VsConstantArithmetic	-	ok	-	conversions,floats,constants
+narrowing-wraps	narrowingWraps	-	ok	-	conversions,ints,overflow,widths
+float-to-unsigned	floatToUnsignedInRange	-	ok	-	conversions,floats,ints
+string-compare-bytes	stringCompareInvalidBytes	-	ok	-	strings,comparisons,invalid_utf8
+defined-string-bytes	definedStringByteConversions	-	ok	-	conversions,defined_type,strings,bytes
+nil-slice-zero-array	nilSliceToZeroArray	-	ok	-	conversions,slices,arrays,nil
+rune-arith-string	runeArithmeticToString	-	ok	-	conversions,runes,strings
+float-narrow-roundtrip	floatNarrowRoundTrip	-	ok	-	conversions,floats
+big-unsigned-float32	bigUnsignedToFloat32	-	ok	-	conversions,floats,ints
+ties-to-even	tiesToEven	-	ok	-	conversions,floats,ints
