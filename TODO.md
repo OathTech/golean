@@ -16,6 +16,24 @@ milestone, 2026-08-09 follow-ups) are completed/superseded records —
 consult them on the park branch, not here. If an item in those
 sections turns out to be live, carry it forward with a note.
 
+## Design-hygiene arc ([USER]-ratified 2026-09-03)
+
+Plan of record: `docs/2026-09-03_design-hygiene-arc.md` (source:
+`docs/2026-09-03_grumpy-professor-review.md`). Sequence: (i) B1 map
+entry-identity stamps [in progress, `hygiene-b1-stamps`] → (ii) the
+A-series A1–A10 as small full-differential-gated commits → (iii) the
+B2+B3+B8 re-proof wave (A1 folded in) → (iv) B4–B7 in any order →
+(v) C1–C5 each by its own [USER] design gate. Every slice:
+semantics-preserving, zero baseline drift, pre-merge audit, no gate
+weakening. The "not this arc's to decide" list (semantics decisions
+for the [USER]) is in the plan.
+
+- [ ] (i) B1 stamps
+- [ ] (ii) A1–A10
+- [ ] (iii) B2+B3+B8 wave
+- [ ] (iv) B4/B5/B6/B7
+- [ ] (v) C1–C5 — each a [USER] design gate when reached
+
 ## Owed from the split (tracked in the split plan)
 
 - GoCore relational-module extraction slice → the reasoning side
