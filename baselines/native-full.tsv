@@ -36,8 +36,12 @@
 #     atomics/counter/* (5, confluent), atomics/spin/flag-wait
 #     (membership under nonterm= accounting, NO termination claim),
 #     race/atomics-free/* (7: 4 confluent + 3 membership),
-#     race/atomics-misuse/* (5, racy — gc -race red 20/20).
-#   Totals: 2580 (2403 PASS / 177 FAIL) -> 2626 (2453 PASS / 173 FAIL).
+#     race/atomics-misuse/* (5, racy — each row's probe twin gc -race
+#     red 20/20 at GOMAXPROCS 1 and 8, evidence dir probes/tsan).
+#   Totals: 2580 (2403 PASS / 177 FAIL) -> 2626 (2453 PASS / 173 FAIL);
+#   the audit fix round (H4) then added 6 born-PASS strict rows
+#   (atomics/ops/{add-uintptr,swap-uintptr,swap-int64,swap-uint32,
+#   cas-uint64,cas-uintptr}) -> 2632 (2459 PASS / 173 FAIL).
 # previous re-pin: 2026-09-02 (q-u4-gomem lane — Q-U4RESIDUAL RULED [USER]
 #   2026-09-02 option (A) "follow go_mem exactly" (ruling sheet
 #   docs/2026-08-31_qrow-rulings.md row 9 + appendix record; the quotes
@@ -502,7 +506,14 @@
 #     The remaining FAIL rows are the standing frontend/feature gaps
 #     of the 2026-08-22 record (docs/2026-08-22_launch-audit-synthesis.md),
 #     none moved by this re-pin.
-# cases: 2626 (2453 PASS / 173 FAIL)
+# cases: 2632 (2459 PASS / 173 FAIL)
+#   [re-derived by count from this file's data rows at the 2026-09-03
+#   atomics-w1 AUDIT FIX ROUND (H4): 2626 (2453 PASS / 173 FAIL) + 6
+#   born-PASS strict rows completing the op x kind matrix
+#   (atomics/ops/{add-uintptr,swap-uintptr,swap-int64,swap-uint32,
+#   cas-uint64,cas-uintptr}, each run focused PASS before the re-pin;
+#   the full ci --diff at the clean tip is the check) = 2632 (2459 PASS
+#   / 173 FAIL); NO other row moved.]
 #   [re-derived by count from this file's data rows at the 2026-09-03
 #   atomics-w1 re-pin: 2580 (2403 PASS / 177 FAIL) + 46 born-PASS
 #   (atomics/*, race/atomics-{free,misuse}/*) + 4 FAIL->PASS flips
@@ -574,8 +585,11 @@ PASS	atomics/ops/add-int32-wrap	-
 PASS	atomics/ops/add-int64	-
 PASS	atomics/ops/add-uint32-decrement	-
 PASS	atomics/ops/add-uint64	-
+PASS	atomics/ops/add-uintptr	-
 PASS	atomics/ops/cas-int64	-
 PASS	atomics/ops/cas-uint32-fail	-
+PASS	atomics/ops/cas-uint64	-
+PASS	atomics/ops/cas-uintptr	-
 PASS	atomics/ops/defined-underlying	-
 PASS	atomics/ops/discarded-result	-
 PASS	atomics/ops/in-expression	-
@@ -588,7 +602,10 @@ PASS	atomics/ops/nil-address	-
 PASS	atomics/ops/nil-address-recovered	-
 PASS	atomics/ops/operand-order	-
 PASS	atomics/ops/swap-int32	-
+PASS	atomics/ops/swap-int64	-
+PASS	atomics/ops/swap-uint32	-
 PASS	atomics/ops/swap-uint64	-
+PASS	atomics/ops/swap-uintptr	-
 PASS	atomics/spin/flag-wait	membership
 PASS	atomics/typed/empty-literal	-
 PASS	atomics/typed/int32-wrap	-

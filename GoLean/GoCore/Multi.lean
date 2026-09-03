@@ -1851,7 +1851,15 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (ev : StepEvent)
                       match new? with
                       | some _ => return (r.atomicReleaseAcquire i loc)
                       | none => return (r.atomicAcquire i loc))
-              | _, _ => return r  -- panicked (nil address) or a malformed shape the apply refused
+              -- A COMMITTED op whose head operand is not an address cannot
+              -- arise today (`valueAsLoc` yields `.ok` only on `.addr`), but
+              -- an absorbing `return r` here would silently drop the access
+              -- and the clock move if a future operand family (wave 2's
+              -- unsafe.Pointer) made it reachable — propagate, never absorb
+              -- (audit fix L1, 2026-09-03; parity with the CAS sub-arm).
+              | some (.opDone _ _), _ =>
+                  throw (.internal "atomic arm: committed op with a non-address head operand")
+              | _, _ => return r  -- panicked (nil address): the op never happened, nothing to record
           | _ =>
               match m'.threads[i]? with
               | some (.panicking _ _) =>

@@ -1,7 +1,9 @@
 # id	subject	args	expected_status	expected_reason	features	lane	why	params
 # MIXED ATOMIC/PLAIN MISUSE (atomics arc wave 1, 2026-09-03): racy
-# lane — every enumerated path refuses; go run -race red on every
-# sample (docs/evidence/2026-09-03_atomics-w1/probes). The atomic op
+# lane — every enumerated path refuses; each row has a probe twin in
+# docs/evidence/2026-09-03_atomics-w1/probes/tsan (go build -race, red
+# 20/20 at GOMAXPROCS 1 and 8 — the lane's own -race sample is the
+# per-row oracle). The atomic op
 # is recorded at the addressed cell with its atomic kind; a plain
 # access to the same word (or a copy of the enclosing struct) conflicts.
 plain-write-vs-add	plainWriteVsAdd	-	race	-	sync,atomics,ints,goroutines,channels,closures,race	racy	a plain write beside an atomic RMW on one word, unordered — write/atomic-write conflicts (mem#model; TSan)	width=4,sites=32

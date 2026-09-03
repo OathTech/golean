@@ -1064,20 +1064,28 @@ assembly stubs of `runtime/race_amd64.s` (the block "Atomic operations
 for sync/atomic package": `sync∕atomic·LoadInt32/LoadInt64/StoreInt32/
 StoreInt64/SwapInt32/SwapInt64/AddInt32/AddInt64/CompareAndSwapInt32/
 CompareAndSwapInt64`, each `MOVQ $__tsan_go_atomic{32,64}_<op>(SB), AX;
-CALL racecallatomic<>(SB)`; the `Uint*`/`Uintptr`/`Pointer` names `JMP`
-to their same-width `Int*` twin — so the FIVE integer kinds of one
-width are ONE realized op). `racecallatomic` first touches the address
-(`MOVBLZX (R12), R13` — "Trigger SIGSEGV early": a nil address faults
-BEFORE any TSan call, so a nil-address op records nothing and moves no
-clock — the machine's `valueAsLoc` panic likewise precedes everything),
-then calls the TSan hook with the goroutine's race context. The hooks
-are TSan's Go glue (LLVM compiler-rt `tsan_go.cpp`, the source of the
-linked `race_linux_amd64.syso` — cited by name, not vendored; the
-realized behavior is what the probe family measures):
-`__tsan_go_atomic{32,64}_load` = `AtomicLoad(… mo_acquire)`,
-`_store` = `AtomicStore(… mo_release)`, `_exchange` and `_fetch_add` =
-`AtomicRMW(… mo_acq_rel)`, `_compare_exchange` = `AtomicCAS(…
-mo_acq_rel, mo_acquire)`. In `tsan_interface_atomic.cpp` those are:
+CALL racecallatomic<>(SB)`; the `Uint32`/`Uint64`/`Uintptr` names of
+every op `JMP` to their same-width `Int*` twin — so the FIVE integer
+kinds of one width are ONE realized op — and of the pointer family only
+`LoadPointer` is a `JMP` (to `LoadInt64`); `Store/Swap/CompareAndSwap-
+Pointer` have no stub in that block and are outside this wave anyway).
+`racecallatomic` first touches the address (`MOVBLZX (R12), R13` —
+"Trigger SIGSEGV early": a nil address faults BEFORE any TSan call, so a
+nil-address op records nothing and moves no clock — the machine's
+`valueAsLoc` panic likewise precedes everything), then calls the TSan
+hook with the goroutine's race context. The hooks' semantics below is
+DERIVED from LLVM compiler-rt's TSan sources — NOT vendored in `deps/`
+(the linked `race_linux_amd64.syso` is a binary): the Go entry points
+`__tsan_go_atomic{32,64}_{load,store,exchange,fetch_add,
+compare_exchange}` are the Go block at the end of
+`compiler-rt/lib/tsan/rtl/tsan_interface_atomic.cpp` (guarded
+`#if SANITIZER_GO`), which call the same `AtomicLoad`/`AtomicStore`/
+`AtomicRMW`/`AtomicCAS` templates as the C++ interface with the orders
+`mo_acquire` (load), `mo_release` (store), `mo_acq_rel` (exchange,
+fetch_add), `(mo_acq_rel, mo_acquire)` (compare_exchange). The
+realized behavior is what the probe family MEASURES
+(`docs/evidence/2026-09-03_atomics-w1/probes`); the source citation is
+the derivation, the measurement the check. In those templates:
 
 * **Load** (acquire): `thr->clock.Acquire(s->clock)` for the address's
   sync object, THEN `MemoryAccess(… kAccessRead | kAccessAtomic)`.
@@ -1107,16 +1115,18 @@ mo_acq_rel, mo_acquire)`. In `tsan_interface_atomic.cpp` those are:
 
 The RECORD-then-ACQUIRE order of the RMW/CAS/store rows is TSan's, kept
 deliberately (the union rule: nothing the oracle refuses is run here).
-Its ONE consequence beyond literal go_mem, recorded and MEASURED:
-goroutine A `x = 1` (plain) then `atomic.StoreInt64(&x, 2)`; goroutine
-B ONE `atomic.AddInt64(&x, 0)` that lands AFTER A's store (in the
-probe, after a real-time sleep — no HB) — go_mem orders A's plain
-write before B's Add (the store is synchronized before the RMW that
-observes it), TSan records B's atomic write BEFORE acquiring and
-reports a race with A's plain write: probe `plainThenStoreVsLateAdd`,
-gc RACE 20/20 at GOMAXPROCS 1 and 8; its Load twin
-`plainThenStoreVsLateLoad` (acquire THEN record) green 20/20. The
-machine refuses those schedules too — an over-refusal against literal
+Its ONE consequence beyond literal go_mem, recorded and MEASURED for
+EVERY write-recording head: goroutine A `x = 1` (plain) then
+`atomic.StoreInt64(&x, 2)`; goroutine B ONE atomic op on `x` that lands
+AFTER A's store (in the probes, after a real-time sleep — no HB) —
+go_mem orders A's plain write before B's op (the store is synchronized
+before the op that observes it), TSan records B's atomic WRITE before
+acquiring and reports a race with A's plain write: probes
+`plainThenStoreVsLate{Add,Swap,CasSuccess,CasFail}`, gc RACE 20/20 each
+at GOMAXPROCS 1 and 8 (the failed CAS included — its write record
+precedes its failure-acquire); the Load twin `plainThenStoreVsLateLoad`
+(acquire THEN record) green 20/20. The machine refuses those schedules
+too — an over-refusal against literal
 go_mem in the fail-closed direction, aligned with the oracle
 (`docs/evidence/2026-09-03_atomics-w1/`). (The spin-loop forms of the
 same shape are go_mem-racy on their own — a spin RMW or LOAD landing

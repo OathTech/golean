@@ -5539,15 +5539,19 @@ func (e *emitter) importedMethodStubs(qname string, named *types.Named) ([]any, 
 		if err != nil {
 			return nil, false
 		}
+		refusal := "imported method " + qname + "." + mfn.Name() +
+			" (declaration-only stub: satisfaction answers, calls fail closed)"
+		if cause, named := atomicStubRefusal(qname, mfn.Name()); named {
+			refusal = cause
+		}
 		out = append(out, map[string]any{
-			"name":     mfn.Name(),
-			"recvType": qname,
-			"recv":     map[string]any{"id": "$recv", "type": recvTy},
-			"params":   params,
-			"results":  results,
-			"variadic": sig.Variadic(),
-			"unsupported": "imported method " + qname + "." + mfn.Name() +
-				" (declaration-only stub: satisfaction answers, calls fail closed)",
+			"name":        mfn.Name(),
+			"recvType":    qname,
+			"recv":        map[string]any{"id": "$recv", "type": recvTy},
+			"params":      params,
+			"results":     results,
+			"variadic":    sig.Variadic(),
+			"unsupported": refusal,
 		})
 	}
 	return out, true

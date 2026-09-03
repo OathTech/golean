@@ -169,9 +169,11 @@ coincide row by row:
 Every access is at the cell's own `Loc`, so the path-overlap relation
 gives mem#restrictions' mixed rule for free: a plain access to the same
 variable, or a whole-struct copy/overwrite of a struct holding the
-atomic, conflicts (`race/atomics-misuse/*`, gc `-race` red 20/20 at
-GOMAXPROCS 1 and 8); a sibling field's plain access does not; two
-atomics never conflict (`race/atomics-free/*`, gc green 20/20). Store's
+atomic, conflicts (`race/atomics-misuse/*` — each of the 5 rows has a
+probe twin, gc `-race` red 20/20 at GOMAXPROCS 1 and 8); a sibling
+field's plain access does not; two atomics never conflict
+(`race/atomics-free/*` — each of the 7 rows has a probe twin, gc green
+20/20; the membership rows through their spin-form twins). Store's
 OVERWRITE (not the sync ops' merge) is both TSan's and go_mem's
 realization (C++'s "a store breaks the release sequence"); the probe
 `storeOverwrite` is the discriminator (evidence README).
@@ -184,15 +186,17 @@ plain write before B's Add (the store is synchronized before the RMW
 that observes it); TSan records B's atomic write BEFORE acquiring and
 reports a race with A's plain write — and so does the machine on those
 schedules. An over-refusal against literal go_mem in the fail-closed
-direction, aligned with the oracle: probe `plainThenStoreVsLateAdd`, gc
-RACE 20/20 at GOMAXPROCS 1 and 8; its Load twin
+direction, aligned with the oracle — for EVERY write-recording head:
+probes `plainThenStoreVsLate{Add,Swap,CasSuccess,CasFail}`, gc RACE
+20/20 each at GOMAXPROCS 1 and 8 (the failed CAS included: its atomic
+write is recorded before its failure-acquire); the Load twin
 `plainThenStoreVsLateLoad` (acquire THEN record) green 20/20
-(`summary-late.tsv`). The spin-loop forms first written for this claim
+(`summary.tsv`). The spin-loop forms first written for this claim
 (`plainThenStoreVs{Add,Load}`) do NOT isolate it — a spin RMW or load
 landing between the plain write and the store is itself an unordered
 atomic beside a plain write, racy by go_mem — and their measurement
-(RACE 20/20 at GOMAXPROCS 8 for BOTH twins) corrected the first
-prediction; the probe headers and the evidence README record the
+(schedule-dependent — RACE 19–20/20 at GOMAXPROCS 8 for BOTH twins
+across runs, 0–2/20 at GOMAXPROCS 1) corrected the first prediction; the probe headers and the evidence README record the
 correction rather than hiding it.
 
 `racecallatomic`'s ignore path (an address outside the Go heap arena /
@@ -202,8 +206,10 @@ goroutine cannot race with itself).
 
 ## 5. Corpus and evidence
 
-New packages (row counts): `atomics/ops` (19; strict — every op × kind,
-wrap arithmetic, discarded result, expression position, operand order,
+New packages (row counts): `atomics/ops` (25; strict — every op × kind
+cell of the 5 × 5 matrix pinned, counting the three frontier rows for
+SwapInt32 / CompareAndSwapInt32 / Load-Store-Add Int32+Int64 — the
+audit fix round H4 added the six the first cut missed; wrap arithmetic, discarded result, expression position, operand order,
 `(*int64)(&definedT)`, nil address ×2), `atomics/typed` (9; strict —
 the five wrappers, zero value + copy semantics, empty literal, struct
 field, nil receiver), `atomics/counter` (5; confluent — two-goroutine
@@ -216,20 +222,40 @@ read/read, the publish/RMW/failed-CAS acquires, sibling words/fields),
 Swap/failed CAS, struct copy beside a typed Add). Frontier flips:
 `sync/atomic-frontier/{add-load-store,cas,swap}` FAIL→PASS strict,
 `mp-litmus` FAIL→PASS membership; `value` FAIL stays (stage moves).
-Probe family: `docs/evidence/2026-09-03_atomics-w1/probes/tsan` (15
-subjects, `run-tsan.sh`, 20 runs × GOMAXPROCS {1, 8}).
+Probe family: `docs/evidence/2026-09-03_atomics-w1/probes/tsan` (22
+subjects — a twin for every race-lane row — `run-tsan.sh`, 20 runs ×
+GOMAXPROCS {1, 8}; schedule-dependent subjects reported as ranges).
 
 ## 6. Questions NOT decided here (posed, not self-adjudicated)
 
-1. **Q-TRYLOCK's rider.** The proposal (§4/§6) has TryLock "ride
-   wave 1" — but its pre-ruled envelope (row 5) is a NEW width-2
-   `ChoiceSite` (mem#locks' spurious-failure member), while the
-   dispatching brief's hard rule is "NO new ChoiceSite (A′: zero new
-   choice sites)". A rule conflict — raised, per CLAUDE.md, rather
-   than resolved by the lane: TryLock is NOT implemented in this wave.
-   Its implementation is one S slice once the [USER] says which rule
-   yields (the census gains `tryLock`, or the rider moves off A′).
+1. **Q-TRYLOCK's rider — a conflict INSIDE the [USER]-ratified A′
+   text itself.** `docs/2026-09-01_qatomic-owner-proposal.md` §6's
+   ratified option reads, in one sentence, "fused SC steps, **zero new
+   sites**, TSan-realized edges … Q-TRYLOCK rides as a wave-1 rider
+   per its pre-ruled envelope" — and that envelope (`docs/2026-08-31_
+   qrow-rulings.md` row 5; memo §5) IS a new width-2 `ChoiceSite`
+   (mem#locks' spurious-failure member; "the first op that needs a NEW
+   ChoiceSite"). The two clauses cannot both hold; the dispatching
+   brief inherited the "zero new sites" clause as a hard rule. This is
+   the [USER]'s own text to break, one way or the other — not a
+   brief-vs-proposal drift — so the lane implemented NEITHER reading:
+   TryLock is not in wave 1. The two resolutions on the table: (a) the
+   census gains `tryLock` (A′'s "zero new sites" read as "zero new
+   sites FOR THE ATOMICS"; one S slice, ~`applySyncOp` arm + site +
+   membership rows), or (b) the rider moves off A′ to its own item.
 2. **D-002 confirmation** (§2) — owed at dispatch, posed in the report.
+   The audit's concurrence, recorded with its caveat: the E5-T shadow
+   model is NOT shim injection *precisely because* the method bodies
+   are gc's own definitions transcribed, not a re-implementation of
+   library behavior — which is why the transcription PIN
+   (`tools/nativefrontend/atomics_test.go`
+   `TestAtomicShadowModelTranscribesUpstream`: every one of the 25
+   modeled method bodies parsed out of the pinned
+   `deps/go/src/sync/atomic/type.go` and compared go/printer-normalized
+   against `atomicModelSrc`; run by `scripts/ci`'s frontend-unit-tests
+   step, red-first tested) is what makes the argument HOLD rather than
+   merely be asserted. A pin drift or a model edit that departs from
+   upstream turns the argument red.
 3. **Wave 2** (recorded in TODO.md): `atomic.Value` (interface slot;
    gc's nil-store and inconsistent-type panics probed red-first),
    `atomic.Bool`, `And*`/`Or*` (+ the wrappers' `And`/`Or`), and the

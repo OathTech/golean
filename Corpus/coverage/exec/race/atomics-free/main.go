@@ -81,24 +81,28 @@ func rmwAcquire() int {
 
 // A FAILED CompareAndSwap still acquires (TSan: mo_acquire on failure;
 // mem#atomic: the failed CAS observed the current value, so its writer
-// is synchronized before it). Race-free on every path; observation
-// {0, 1}.
+// is synchronized before it). THE ISOLATING SHAPE (audit fix H5,
+// 2026-09-03 — the first cut's `!CAS(&f,5,6) && Load(&f)==1` let the
+// Load acquire and tested nothing): the reader spins on
+// `CompareAndSwap(&flag, 0, 0)`, which SUCCEEDS while flag==0 and FAILS
+// exactly on observing the store — the loop's exit is the failing CAS,
+// and the only acquire between the writer's plain write and the
+// reader's plain read is that failure's. Main is the writer and the
+// spinner a child reporting through a channel (the spin row's shape),
+// so the canonical schedule terminates; anti-progress schedules are
+// nonterm branches. Race-free on every path; members {5}.
 func casFailureAcquires() int {
 	var data int64
 	var flag int32
+	out := make(chan int64)
 	go func() {
-		data = 9
-		atomic.StoreInt32(&flag, 1)
+		for atomic.CompareAndSwapInt32(&flag, 0, 0) {
+		}
+		out <- data
 	}()
-	// Expect 5: fails whenever the store landed (flag is 1) or not (0).
-	if !atomic.CompareAndSwapInt32(&flag, 5, 6) && atomic.LoadInt32(&flag) == 1 {
-		// The Load re-observes the store; but the ordering this row pins
-		// is the failed CAS's own acquire — the data read is reachable
-		// only after BOTH observed the store, so it is ordered either way;
-		// the machine-side check is that no path refuses.
-		return int(data) - 8 // 1
-	}
-	return 0
+	data = 5
+	atomic.StoreInt32(&flag, 1)
+	return int(<-out) // 5 on every terminating path
 }
 
 // Atomics under a WaitGroup join beside a PLAIN read of a DIFFERENT word:

@@ -138,7 +138,7 @@ see the R15 entry below.
       direct calls + the typed wrappers via the E5-T shadow model) as
       fused SC registry ops, zero new choice sites, TSan-realized
       per-address clocks + the atomic access kind; `mp-litmus` green
-      with exactly {0,1,11}; +46 corpus rows, 4 frontier flips.
+      with exactly {0,1,11}; +52 corpus rows (46 + the audit fix round's 6 op × kind cells), 4 frontier flips.
       REMAINING (wave 2, owed): `atomic.Value` (interface slot; nil-
       store / inconsistent-type panics red-first), `atomic.Bool`,
       `And*`/`Or*` (+ the wrappers' `And`/`Or`), the `Pointer`

@@ -7,6 +7,14 @@ package main
 // selector refusal, never an admission.
 
 import (
+	"bytes"
+	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/printer"
+	"go/token"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -114,5 +122,110 @@ func TestAtomicShadowModelLowers(t *testing.T) {
 	}
 	if got["And"] != 0 || got["Or"] != 0 {
 		t.Fatal("And/Or must not be bodied in wave 1")
+	}
+}
+
+// TestAtomicShadowModelTranscribesUpstream is the TRANSCRIPTION PIN
+// (audit fix L2, 2026-09-03): the shadow model's method bodies must be
+// gc's own — every modeled method of the five typed wrappers is parsed
+// out of the PINNED `deps/go/src/sync/atomic/type.go` (the go1.26.5
+// checkout `scripts/check-spec-anchors` also requires) and compared,
+// go/printer-normalized, against the same method in `atomicModelSrc`.
+// This is what makes the E5-T-not-shim-injection argument hold: the
+// bodies are gc's definitions, not a re-implementation. The check lives
+// here as a `go test` pin rather than a third `scripts/check-frontend-
+// pins` pin because the comparison is AST-shaped (a byte hash of the
+// upstream file would fire on every comment change); `scripts/ci`'s
+// "frontend unit tests" step runs it. FAIL CLOSED: a missing `deps/go`
+// is a failure, not a skip.
+func TestAtomicShadowModelTranscribesUpstream(t *testing.T) {
+	root, err := repoRootForTest()
+	if err != nil {
+		t.Fatal(err)
+	}
+	upstreamPath := filepath.Join(root, "deps", "go", "src", "sync", "atomic", "type.go")
+	if _, err := os.Stat(upstreamPath); err != nil {
+		t.Fatalf("pinned upstream missing at %s — run `scripts/setup-deps --only go` (fail closed by design): %v", upstreamPath, err)
+	}
+	upstream := methodBodiesOf(t, upstreamPath, "")
+	model := methodBodiesOf(t, "", atomicModelSrc)
+	checked := 0
+	for typ := range atomicTypedWrappers {
+		for method := range atomicModelMethods {
+			key := typ + "." + method
+			up, okUp := upstream[key]
+			mo, okMo := model[key]
+			if !okUp {
+				t.Fatalf("%s: not declared in the pinned upstream type.go (pin drift?)", key)
+			}
+			if !okMo {
+				t.Fatalf("%s: not declared in the shadow model", key)
+			}
+			if up != mo {
+				t.Fatalf("%s: shadow model body differs from upstream\n upstream: %s\n model:    %s", key, up, mo)
+			}
+			checked++
+		}
+	}
+	if checked != 25 {
+		t.Fatalf("expected 25 transcribed methods, checked %d", checked)
+	}
+}
+
+// methodBodiesOf parses a Go file (by path, or from src when path is
+// "") and returns "Type.Method" -> the go/printer rendering of the
+// method's signature+body with the receiver name normalized away.
+func methodBodiesOf(t *testing.T, path, src string) map[string]string {
+	t.Helper()
+	fset := token.NewFileSet()
+	var f *ast.File
+	var err error
+	if path != "" {
+		f, err = parser.ParseFile(fset, path, nil, 0)
+	} else {
+		f, err = parser.ParseFile(fset, "model.go", src, 0)
+	}
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	out := map[string]string{}
+	for _, d := range f.Decls {
+		fd, ok := d.(*ast.FuncDecl)
+		if !ok || fd.Recv == nil || len(fd.Recv.List) != 1 {
+			continue
+		}
+		star, ok := fd.Recv.List[0].Type.(*ast.StarExpr)
+		if !ok {
+			continue
+		}
+		id, ok := star.X.(*ast.Ident)
+		if !ok {
+			continue
+		}
+		var buf bytes.Buffer
+		if err := printer.Fprint(&buf, fset, &ast.FuncDecl{Type: fd.Type, Body: fd.Body, Name: fd.Name}); err != nil {
+			t.Fatalf("print: %v", err)
+		}
+		out[id.Name+"."+fd.Name.Name] = buf.String()
+	}
+	return out
+}
+
+// repoRootForTest walks up from the test's working directory to the
+// checkout root (the directory holding lakefile.toml).
+func repoRootForTest() (string, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "lakefile.toml")); err == nil {
+			return dir, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", fmt.Errorf("repo root (lakefile.toml) not found above %s", dir)
+		}
+		dir = parent
 	}
 }

@@ -8,15 +8,15 @@ Write at 0x00c0000181b8 by goroutine 7:
 
 Previous write at 0x00c0000181b8 by main goroutine:
   main.plainWriteVsAdd()
-      /home/dev/projects/golean/.claude/worktrees/atomics-w1/docs/evidence/2026-09-03_atomics-w1/probes/tsan/main.go:35 +0x104
+      /home/dev/projects/golean/.claude/worktrees/atomics-w1/docs/evidence/2026-09-03_atomics-w1/probes/tsan/main.go:40 +0x104
   main.main()
-      /home/dev/projects/golean/.claude/worktrees/atomics-w1/docs/evidence/2026-09-03_atomics-w1/probes/tsan/main.go:235 +0x687
+      /home/dev/projects/golean/.claude/worktrees/atomics-w1/docs/evidence/2026-09-03_atomics-w1/probes/tsan/main.go:376 +0x987
 
 Goroutine 7 (running) created at:
   main.plainWriteVsAdd()
-      /home/dev/projects/golean/.claude/worktrees/atomics-w1/docs/evidence/2026-09-03_atomics-w1/probes/tsan/main.go:34 +0xf9
+      /home/dev/projects/golean/.claude/worktrees/atomics-w1/docs/evidence/2026-09-03_atomics-w1/probes/tsan/main.go:39 +0xf9
   main.main()
-      /home/dev/projects/golean/.claude/worktrees/atomics-w1/docs/evidence/2026-09-03_atomics-w1/probes/tsan/main.go:235 +0x687
+      /home/dev/projects/golean/.claude/worktrees/atomics-w1/docs/evidence/2026-09-03_atomics-w1/probes/tsan/main.go:376 +0x987
 ==================
 6
 Found 1 data race(s)

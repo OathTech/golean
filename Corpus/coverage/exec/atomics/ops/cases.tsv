@@ -16,6 +16,17 @@ swap-int32	swapInt32	-	ok	-	sync,atomics,ints
 swap-uint64	swapUint64	-	ok	-	sync,atomics,ints
 cas-int64	casInt64	-	ok	-	sync,atomics,ints
 cas-uint32-fail	casUint32Fail	-	ok	-	sync,atomics,ints
+# Audit fix H4 (2026-09-03): the op × kind matrix completed — the six
+# cells the first cut left unpinned (the auditor named four; SwapInt64
+# and SwapUint32 were also uncovered once the frontier rows are counted:
+# frontier/swap pins SwapInt32, frontier/cas CompareAndSwapInt32,
+# frontier/add-load-store Store/Add/Load Int32+Int64).
+add-uintptr	addUintptr	-	ok	-	sync,atomics,ints,overflow
+swap-uintptr	swapUintptr	-	ok	-	sync,atomics,ints
+swap-int64	swapInt64	-	ok	-	sync,atomics,ints
+swap-uint32	swapUint32	-	ok	-	sync,atomics,ints
+cas-uint64	casUint64	-	ok	-	sync,atomics,ints
+cas-uintptr	casUintptr	-	ok	-	sync,atomics,ints
 discarded-result	discardedResult	-	ok	-	sync,atomics,ints
 in-expression	inExpression	-	ok	-	sync,atomics,ints
 operand-order	operandOrder	-	ok	-	sync,atomics,ints,closures,evaluation_order

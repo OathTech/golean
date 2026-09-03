@@ -137,6 +137,17 @@ func (e *emitter) emitAtomicCall(c *ast.CallExpr, fn *types.Func) (any, bool, er
 	if sig == nil {
 		return nil, true, unsup("sync/atomic.%s has no signature (fail closed)", fn.Name())
 	}
+	// A tuple-splat argument list `atomic.AddInt64(pair())` is legal Go
+	// (spec#Calls: a multi-valued call as the sole argument) but outside
+	// wave 1 — refuse naming THAT cause, not an arity mismatch (audit
+	// fix L3a, 2026-09-03).
+	if len(c.Args) == 1 {
+		if inner, isCall := c.Args[0].(*ast.CallExpr); isCall {
+			if _, isTup := e.goTypeOf(inner).(*types.Tuple); isTup {
+				return nil, true, unsup("sync/atomic.%s with a tuple-splat argument list (a multi-valued call as the sole argument): atomics WAVE 2", fn.Name())
+			}
+		}
+	}
 	// The pinned signatures: addr first, then the value operands
 	// (store/add/swap: one; cas: two; load: none). Anything else means
 	// the toolchain's sync/atomic differs from the pin — refuse.
@@ -325,4 +336,19 @@ func atomicIntrinsicDecl(d *ast.FuncDecl) bool {
 	}
 	_, _, err := atomicFuncOp(d.Name.Name)
 	return err == nil
+}
+
+// atomicStubRefusal names the refusal a declaration-only stub of a typed
+// wrapper's UNMODELED method carries (`And`/`Or` — the bitwise RMW
+// family): the wave-2 cause the design note §1 claims, not the generic
+// imported-method text (audit fix L3b, 2026-09-03). ok=false for any
+// other type/method (the generic text applies).
+func atomicStubRefusal(qname, method string) (string, bool) {
+	if !strings.HasPrefix(qname, atomicPkgPath+".") || !atomicTypedWrappers[qname[len(atomicPkgPath)+1:]] {
+		return "", false
+	}
+	if method == "And" || method == "Or" {
+		return qname + "." + method + " (the bitwise And/Or RMW family is atomics WAVE 2 — not modeled yet; declaration-only stub: satisfaction answers, calls fail closed)", true
+	}
+	return "", false
 }

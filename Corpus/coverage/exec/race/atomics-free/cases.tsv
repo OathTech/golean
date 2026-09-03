@@ -1,13 +1,15 @@
 # id	subject	args	expected_status	expected_reason	features	lane	why	params
 # RACE-FREE ATOMIC SHAPES (atomics arc wave 1, 2026-09-03): the
-# detector's false-positive guards for sync/atomic — go run -race
-# green (docs/evidence/2026-09-03_atomics-w1/probes); every enumerated
+# detector's false-positive guards for sync/atomic — each row has a
+# probe twin in docs/evidence/2026-09-03_atomics-w1/probes/tsan (green
+# 20/20 at GOMAXPROCS 1 and 8; the membership rows through spin-form
+# twins); every enumerated
 # path must be race-free. Confluent where the observation is
 # schedule-independent, membership where it is not.
 atomic-vs-atomic	atomicVsAtomic	-	ok	-	sync,atomics,ints,goroutines,channels,race	confluent	two atomic Adds on one word never conflict (both atomic — mem#model / TSan's both_read_or_atomic); the channel join orders the final Load	width=4,sites=32,work=4000000,engine=dedup
 plain-read-vs-load	plainReadVsLoad	-	ok	-	sync,atomics,ints,goroutines,channels,closures,race	confluent	a plain read beside an atomic read is read/read — no write-like operand, no race by mem#model; nothing writes so the value is fixed	width=4,sites=64
 publish-acquire	publishAcquire	-	ok	-	sync,atomics,ints,goroutines,closures,race,nondet	membership	the store-release/load-acquire pair: on the path where the flag is seen the plain data read is HB-after the plain write (mem#atomic's synchronized-before), on the other path no data read happens — race-free on every path; the SC-excluded stale-data member 100 is absent; admitted {0, 1}	width=4,sites=32
 rmw-acquire	rmwAcquire	-	ok	-	sync,atomics,ints,goroutines,closures,race,nondet	membership	an RMW (Add 0) observing the store inherits the storer's clock (TSan mo_acq_rel; mem#atomic) — the conditional plain read is ordered; admitted {0, 1}	width=4,sites=32
-cas-failure-acquires	casFailureAcquires	-	ok	-	sync,atomics,ints,goroutines,closures,race,nondet	membership	a FAILED CompareAndSwap acquires (TSan: failure order mo_acquire; mem#atomic: it observed the current value) — no path refuses; admitted {0, 1}	width=4,sites=32
+cas-failure-acquires	casFailureAcquires	-	ok	-	sync,atomics,ints,goroutines,channels,loops,closures,race,nondet	membership	the isolating shape (audit fix H5): the reader spins on CompareAndSwap(&flag,0,0) — success while 0, FAILURE on observing the store — so the loop exit is the failing CAS and its acquire (TSan mo_acquire on failure; mem#atomic: the failed CAS observed the store) is the ONLY edge ordering the plain data read after the plain write; no path refuses; members {5}, the always-spin schedules are nonterm branches (no termination claim)	width=4,sites=200,members=1,nonterm=200,backedge=1
 sibling-words	siblingWords	-	ok	-	sync,atomics,ints,goroutines,waitgroup,closures,race	confluent	the atomic op lands on exactly its cell; a plain read of a sibling variable is a disjoint path	width=4,sites=64
 typed-sibling-field	typedSiblingField	-	ok	-	sync,atomics,ints,goroutines,waitgroup,methods,structs,closures,race	confluent	the typed wrapper's op lands on its `v` word under the field path; the sibling field's plain read is disjoint (locPrefix is per-path)	width=4,sites=64

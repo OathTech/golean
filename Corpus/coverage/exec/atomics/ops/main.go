@@ -98,6 +98,55 @@ func casInt64() int {
 	return v + int(atomic.LoadInt64(&n)) // 109
 }
 
+func addUintptr() int {
+	var n uintptr = 4096
+	got := atomic.AddUintptr(&n, 16)
+	return int(got) + int(atomic.AddUintptr(&n, ^uintptr(15))) // 4112 + 4096 = 8208
+}
+
+func swapUintptr() int {
+	var n uintptr = 8
+	old := atomic.SwapUintptr(&n, 1<<20)
+	return int(old)*10 + int(atomic.LoadUintptr(&n)>>19) // 80 + 2 = 82
+}
+
+func swapInt64() int {
+	var n int64 = -3
+	old := atomic.SwapInt64(&n, 1<<40)
+	return int(old)*10 + int(atomic.LoadInt64(&n)>>39) // -30 + 2 = -28
+}
+
+func swapUint32() int {
+	var n uint32 = 1
+	old := atomic.SwapUint32(&n, 0xFFFFFFFF)
+	return int(old)*100 + int(atomic.LoadUint32(&n)>>28) // 100 + 15 = 115
+}
+
+func casUint64() int {
+	var n uint64 = 1 << 63
+	ok1 := atomic.CompareAndSwapUint64(&n, 1<<63, 3) // succeeds
+	ok2 := atomic.CompareAndSwapUint64(&n, 1<<63, 4) // fails: n is 3
+	v := 0
+	if ok1 {
+		v += 100
+	}
+	if ok2 {
+		v += 10
+	}
+	return v + int(atomic.LoadUint64(&n)) // 103
+}
+
+func casUintptr() int {
+	var n uintptr = 7
+	if !atomic.CompareAndSwapUintptr(&n, 7, 9) {
+		return -1
+	}
+	if atomic.CompareAndSwapUintptr(&n, 7, 11) {
+		return -2
+	}
+	return int(atomic.LoadUintptr(&n)) // 9
+}
+
 func casUint32Fail() int {
 	var n uint32 = 1
 	if atomic.CompareAndSwapUint32(&n, 2, 3) {
@@ -182,6 +231,12 @@ func main() {
 	swapInt32()
 	swapUint64()
 	casInt64()
+	addUintptr()
+	swapUintptr()
+	swapInt64()
+	swapUint32()
+	casUint64()
+	casUintptr()
 	casUint32Fail()
 	discardedResult()
 	inExpression()

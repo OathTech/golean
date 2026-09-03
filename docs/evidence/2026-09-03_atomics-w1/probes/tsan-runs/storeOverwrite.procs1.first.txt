@@ -1,1 +1,20 @@
+==================
+WARNING: DATA RACE
+Read at 0x00c0000181b0 by main goroutine:
+  main.storeOverwrite()
+      /home/dev/projects/golean/.claude/worktrees/atomics-w1/docs/evidence/2026-09-03_atomics-w1/probes/tsan/main.go:197 +0x29b
+  main.main()
+      /home/dev/projects/golean/.claude/worktrees/atomics-w1/docs/evidence/2026-09-03_atomics-w1/probes/tsan/main.go:376 +0x987
 
+Previous write at 0x00c0000181b0 by goroutine 7:
+  main.storeOverwrite.func1()
+      /home/dev/projects/golean/.claude/worktrees/atomics-w1/docs/evidence/2026-09-03_atomics-w1/probes/tsan/main.go:193 +0x3c
+
+Goroutine 7 (finished) created at:
+  main.storeOverwrite()
+      /home/dev/projects/golean/.claude/worktrees/atomics-w1/docs/evidence/2026-09-03_atomics-w1/probes/tsan/main.go:193 +0x19c
+  main.main()
+      /home/dev/projects/golean/.claude/worktrees/atomics-w1/docs/evidence/2026-09-03_atomics-w1/probes/tsan/main.go:376 +0x987
+==================
+1
+Found 1 data race(s)

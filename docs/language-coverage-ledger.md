@@ -292,7 +292,7 @@ C10 is the doctrine's home.
 | chan | covered(B) | channel happens-before: send/receive/close suites + the sb-chan litmus; NAMED GAP → T-6 (the buffered-capacity clause — k-th receive hb (k+C)-th send — has no dedicated litmus row). |
 | locks | covered(B) | mutex/rwmutex suites (order, misuse fatals, protected-data race rows) + L:C8 (acquisition-order envelope via L1, zero new sites); Cond → Q-COND. The lock/unlock operation KINDS mem#model assigns (lock read-like, unlock write-like — for `sync.Mutex` AND `sync.RWMutex`, this section's two types) are what the detector records on the primitive's own words since Q-U4RESIDUAL (A) (Race.lean `syncEntryKinds`; BUG-080/BUG-084). |
 | once | covered(B) | `sync/once-{basic,nested-do}`. |
-| atomic | covered(B) | MODELED 2026-09-03 (the atomics arc, wave 1 — Q-ATOMIC RULED [USER] 2026-09-02 A′; `docs/2026-09-03_atomics-w1-design.md`): the integer core as fused SC registry steps (`applyAtomicOp`) — the slice-6 frontier rows `sync/atomic-frontier/{add-load-store,cas,swap}` green strict and `mp-litmus` green MEMBERSHIP with exactly {0,1,11} (the SC-excluded 10 absent — the executable check of mem#atomic's clause); + `atomics/{ops,typed,counter,spin}` (34 rows: op × kind, wrap arithmetic, typed wrappers via the E5-T shadow model, confluent counters, the spin-wait under `nonterm=` accounting with NO termination claim) + `race/atomics-{free,misuse}` (12 rows: the detector's atomic access kind and per-address clocks against `-race`). L:U-6 (MODELED). RESIDUAL red: `sync/atomic-frontier/value` — `atomic.Value` is wave 2 (refused by name at the frontend; frontier(Q-ATOMIC-W2)). |
+| atomic | covered(B) | MODELED 2026-09-03 (the atomics arc, wave 1 — Q-ATOMIC RULED [USER] 2026-09-02 A′; `docs/2026-09-03_atomics-w1-design.md`): the integer core as fused SC registry steps (`applyAtomicOp`) — the slice-6 frontier rows `sync/atomic-frontier/{add-load-store,cas,swap}` green strict and `mp-litmus` green MEMBERSHIP with exactly {0,1,11} (the SC-excluded 10 absent — the executable check of mem#atomic's clause); + `atomics/{ops,typed,counter,spin}` (40 rows: the full op × kind matrix, wrap arithmetic, typed wrappers via the E5-T shadow model, confluent counters, the spin-wait under `nonterm=` accounting with NO termination claim) + `race/atomics-{free,misuse}` (12 rows: the detector's atomic access kind and per-address clocks against `-race`). L:U-6 (MODELED). RESIDUAL red: `sync/atomic-frontier/value` — `atomic.Value` is wave 2 (refused by name at the frontend; frontier(Q-ATOMIC-W2)). |
 | finalizer | out-of-language | runtime.SetFinalizer: firing is a GC-reachability event; the machine models no collector, and the event is unobservable in-language without one. No honest case exists to write — recorded as the boundary. |
 | more | covered(D) | normative deferral ("each … documents its guarantees"): Mutex/RWMutex/WaitGroup/Once modeled (rows above); Cond → Q-COND; sync.Map/Pool are unmodeled stdlib surface → FR-14 family. The deferral is what grounds WaitGroup's operation kinds in the detector (Q-U4RESIDUAL (A)): waitgroup.go's "a call to Done 'synchronizes before' the return of any Wait call that it unblocks" gives Add/Done the release (write-like) role and Wait the acquire (read-like) role — Race.lean `syncEntryKinds`, BUG-084. |
 | badsync | covered(B) | incorrect-sync programs are RACY → refused (the `race/negative/` class); NAMED GAP → T-7 (the doc's own three exhibits — double-checked locking, busy-wait flag, the reordered-print example — deserve verbatim racy-red ports). |
@@ -471,10 +471,11 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (2626 cases, 2453 PASS /
+All numbers at the current tracked baseline (2632 cases, 2459 PASS /
 173 FAIL — the atomics arc's wave-1 re-pin 2026-09-03 [AGENT] on lane
 `atomics-w1`, §8d: 2580 / 2403 / 177 + 46 born-PASS + 4 FAIL→PASS
-flips + 1 FAIL stage move; the 2580 / 2403 / 177 it moved from was
+flips + 1 FAIL stage move = 2626 / 2453 / 173, then its audit fix
+round's 6 born-PASS op × kind rows (H4) = 2632 / 2459 / 173; the 2580 / 2403 / 177 it moved from was
 the round-5 merge-train UNION 2026-09-03 [AGENT] of the
 q-u4-gomem re-pin over main = bug082-maphint's 2573 / 2401 / 172, the
 two lanes' new rows disjoint by id, no main row moved; `baselines/native-full.tsv`, re-pinned 2026-09-02 on the
@@ -738,7 +739,10 @@ strict PASS) and `sync/atomic-frontier/mp-litmus` (membership FAIL →
 PASS, exactly {0, 1, 11}); 1 FAIL-stays-FAIL stage move —
 `sync/atomic-frontier/value` lean-observation → frontend-export (a
 named wave-2 refusal replacing the D5-stub refusal); NO PASS→non-PASS
-flip. After: 2626 rows (2403 + 46 + 4 = 2453 PASS / 177 − 4 = 173 FAIL ✓). The
+flip. After: 2626 rows (2403 + 46 + 4 = 2453 PASS / 177 − 4 = 173 FAIL ✓);
+the audit fix round (H4) added 6 born-PASS strict rows completing the
+op × kind matrix (`atomics/ops/{add-uintptr,swap-uintptr,swap-int64,
+swap-uint32,cas-uint64,cas-uintptr}`): 2632 (2459 PASS / 173 FAIL ✓). The
 untriaged `coverage` class drops 11 → 9 (`mp-litmus` retired green;
 `value` left the fidelity stages — `baselines/untriaged-count`, dated
 row). The red buckets: frontier −1 (the `atomic` memory-model row moved

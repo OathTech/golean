@@ -11,16 +11,17 @@ OUT="${OUT:-$DIR/tsan-runs}"
 mkdir -p "$OUT"
 export GOCACHE="${GOCACHE:-${TMPDIR:-/tmp}/atomics-w1-gocache}"
 export GO111MODULE=off
-go build -race -o "$OUT/probe.race" "./$DIR/tsan" || { echo "build -race failed" >&2; exit 1; }
+BIN="${TMPDIR:-/tmp}/atomics-w1-probe.race"   # the binary lives OUTSIDE the evidence dir (audit fix L3d)
+go build -race -o "$BIN" "./$DIR/tsan" || { echo "build -race failed" >&2; exit 1; }
 go version | tee "$OUT/go-version.txt"
-subjects="${SUBJECTS:-contend plainWriteVsAdd plainReadVsLoad plainReadVsFailedCas publish casSpinPublish rmwPublish storeOverwrite plainThenStoreVsAdd plainThenStoreVsLoad plainThenStoreVsLateAdd plainThenStoreVsLateLoad nilAddress structCopyVsTypedAdd typedSiblingField}"
+subjects="${SUBJECTS:-contend plainWriteVsAdd plainReadVsStore plainReadVsSwap plainReadVsLoad plainReadVsFailedCas publish casSpinPublish casFailureAcquireIsolated rmwPublish siblingWords storeOverwrite plainThenStoreVsAdd plainThenStoreVsLoad plainThenStoreVsLateAdd plainThenStoreVsLateSwap plainThenStoreVsLateCasSuccess plainThenStoreVsLateCasFail plainThenStoreVsLateLoad nilAddress structCopyVsTypedAdd typedSiblingField}"
 SUMMARY="${SUMMARY:-$OUT/summary.tsv}"
 printf 'subject\tprocs\truns\trace\tgreen\tother\n' | tee "$SUMMARY"
 for s in $subjects; do
   for procs in 1 8; do
     race=0; green=0; other=0
     for i in $(seq 1 "$N"); do
-      out="$(GOMAXPROCS=$procs timeout 20 "$OUT/probe.race" "$s" 2>&1)"; rc=$?
+      out="$(GOMAXPROCS=$procs timeout 20 "$BIN" "$s" 2>&1)"; rc=$?
       if grep -q "WARNING: DATA RACE" <<<"$out"; then race=$((race+1))
       elif [ $rc -eq 0 ] || grep -q "^recovered: true" <<<"$out"; then green=$((green+1))
       else other=$((other+1)); fi

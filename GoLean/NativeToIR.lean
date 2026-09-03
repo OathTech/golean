@@ -1368,6 +1368,8 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
   if rhs.size == 1 then
     match ← asAtomicOp? rhs[0]! with
     | some (op, kind, args) =>
+        if op == .store then
+          fail s!"atomic store assigned to a target at {path} (a sync/atomic Store returns nothing — a forged wire; go/types rejects the source form)"
         if lhs.size != 1 then
           fail s!"atomic op assigned to {lhs.size} targets at {path} (an atomic op has exactly one result)"
         let opObj ← StrictJson.obj s!"{path}.rhs[0]" rhs[0]!

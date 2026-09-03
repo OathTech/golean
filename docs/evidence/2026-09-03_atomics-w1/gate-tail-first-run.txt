@@ -1,4 +1,4 @@
-# scripts/ci --diff tail (full differential run; worktree atomics-w1, pre-repin tree state, 2026-09-03T01:38Z)
+# scripts/ci --diff tail — the FIRST full run: DIRTY working tree at base main b5abacc1 (artifacts/coverage/latest.meta.tsv: git_commit=b5abacc1, git_dirty=true), before the wave-1 commit; reconciler line here is from an intermediate tree (see README, H2)
   [04] C9  MEDIUM  the wire schema moved after the certification date 2026-09-01 (7 commit(s) to wire.go/NativeToIR.lean) — the certified set's wire sha is only current if `scripts/ci --slow` has re-enumerated since
 
 ══ scripts/ci summary ══
