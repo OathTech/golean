@@ -211,6 +211,30 @@ Each is a `frontend-export` refusal (outside the fidelity filter; born-FAIL rows
 | FG-4 | forward `goto` to a label inside the same nested block (a for body) | `goto target label skip not at function body top level` (emit.go:1743/:2069) | `noodler/frontier/goto-forward-in-block` | control-flow design doc's "outside the envelope" list; FR-11's string covers backward-goto hoists only |
 | FG-5 | inner-scope `x := f(x)` (the call reads the outer `x`) | `self-shadowing define with call RHS` (emit.go:3057) | `noodler/frontier/self-shadow-define` | W7 desugar inventory A-9 ("one arm still fail-closed"); NOT in ledger §4 |
 
+**Logged 2026-09-03 [USER]-directed** (Mike, relayed by the [AGENT]
+coordinator — citation, not firsthand: «Yes, these should be logged as
+gaps where we have a plan for fixing them. In general, any such detected
+gaps should be logged for later fixes. Go ahead on this»; recorded as
+the ledger's §0 direction 3, lane `fg-gaps`, records only). FR ids are
+assigned in queue order (smallest-diagnosed first), not FG order:
+
+- FG-1 — logged as FR-19 on 2026-09-03 [USER]-directed (queue 19, M).
+- FG-2 — logged as FR-16 on 2026-09-03 [USER]-directed (queue 16, S).
+- FG-3 — logged as FR-18 on 2026-09-03 [USER]-directed (queue 18, M);
+  the table's emit.go line numbers above were this lane's tip; the
+  ledger row re-measured them at 345ef090 (:8966/:8211/:6597/:6651/
+  :2330,:2355/:6035).
+- FG-4 — logged as FR-20 on 2026-09-03 [USER]-directed (queue 20, M);
+  legality re-checked first: gc go1.26.5 accepts the program (the
+  label's block encloses the goto; no declaration skipped).
+- FG-5 — logged as FR-17 on 2026-09-03 [USER]-directed (queue 17, S).
+
+Standing rule from the same direction (no tracked noodler persona brief
+exists — the brief lives only in this report's header and the evidence
+README, so it is noted here): a noodler that finds a refusal on legal
+Go with no ledger row proposes the FR row WITH a fix plan in its report,
+so the rowing slice is a transcription, not a re-diagnosis.
+
 Also re-hit, already recorded as red-by-design: BUG-068's `range-clause`
 / `ts-guard` refusals (`noodler/frontier/named-result-shadow-{range,typeswitch}`),
 FR-3 (`noodler/frontier/promoted-method-expression-ptr`), triage F6 /
@@ -222,7 +246,7 @@ mini-slice A3 (`noodler/maps/{swap-with-missing,tuple-two-map-targets,tuple-map-
 | --- | --- | --- |
 | slice→array VALUE conversion (succeeding form) | `conversions/nil-slice-zero-array` | ledger §4 FR-10; the "value-copy form rides the same frontier row" sentence is the arm's comment at `Ops.lean:1364-1367` (triage L2b covers the array-pointer form only) |
 | `$runtime.Error` has no MethodSetRecord → `.(error)` on a recovered runtime error refuses | (row rewritten to observe `recover() != nil` only) | BUG-009/BUG-053 class; BUG-059 KIND clause |
-| duplicate local TypeId | `local-types/{distinct,shadow}` | control-flow design doc rider (→ FG-1: not in the ledger table) |
+| duplicate local TypeId | `local-types/{distinct,shadow}` | control-flow design doc rider (→ FG-1: not in the ledger table at the time; logged as FR-19 on 2026-09-03 [USER]-directed) |
 | map elements as multi-assignment targets | `maps/{swap-with-missing,tuple-two-map-targets,tuple-map-and-var}` | triage F6 / mini-slice A3 QUEUED; 5 baseline reds already |
 | `(*T).M` method expression over a value-receiver method (via promotion) | `frontier/promoted-method-expression-ptr` | FR-3 |
 | named-result shadow outside the rename set (range clause, type-switch guard) | `frontier/named-result-shadow-{range,typeswitch}` | BUG-068 red-by-design rows |

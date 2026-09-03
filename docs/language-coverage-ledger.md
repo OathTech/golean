@@ -15,7 +15,16 @@ BUILD QUEUE of §5 (smallest-diagnosed first, complex last as the one
 large arc); concurrency-entangled rows get a NAMED DESIGN QUESTION each
 (§6), never a queue slot. The burden of proof is flipped: a sequential
 feature NOT queued needs a written profound reason (§5.1 lists all of
-them).
+them). **(3) [USER] 2026-09-03 (Mike, relayed by the [AGENT]
+coordinator — citation, not firsthand): «Re 5, these are areas where we
+don't cover real go, or our semantics is wrong? Yes, these should be
+logged as gaps where we have a plan for fixing them. In general, any
+such detected gaps should be logged for later fixes. Go ahead on
+this».** Standing rule derived from it: every detected COVERAGE gap on
+legal Go (a fail-closed refusal, not a wrong answer) is logged as a §4
+frontier row WITH a fix plan and a §5 queue slot AT THE TIME OF
+DETECTION — never left as an unrowed red in the post-vintage bucket.
+First application: the noodler lane's FG-1..FG-5 → FR-16..FR-20 (§8e).
 
 ## 0. Denominator, instruments, maintenance
 
@@ -143,7 +152,7 @@ rows covering all 158 anchors.
 | Representability | covered(B) | disposition case + `constants/` representability rows + neg rows (overflowing conversions); D-caveat applies (go/constant). |
 | Method_sets | covered(B) | `interfaces/method-set-*` (3 mismatch pkgs), `methods/quarantine-pointer-receiver/{value-not-satisfies,pointer-satisfies}` (the asymmetry pin, H-3), promotion suites. |
 | Blocks | covered(B) | `scoping/` (11 pkgs) + the slice-1 BUG-058 fix pins the if-statement implicit block (spec#Blocks cited at the fix site). |
-| Declarations_and_scope | covered(B) | `scoping/` + shadow matrices (`var-comma-ok-matrix/shadow-capture` red → mini-slice A5, an (a)-queued fix, not frontier). |
+| Declarations_and_scope | covered(B) | `scoping/` + shadow matrices (`var-comma-ok-matrix/shadow-capture` red → mini-slice A5, an (a)-queued fix, not frontier); inner-scope `x := f(x)` red → FR-17; same-named local types across functions / shadowing a package type → FR-19 (whole-export refusal). |
 | Label_scopes | covered(B) | `control-flow/labeled-*` (12 pkgs) + neg:`control-flow/{duplicate-label,unused-label,goto-undefined-label}`. |
 | Blank_identifier | covered(B) | blank positions enumerated inside the comma-ok matrix (blank-value/blank-ok × 3 sources), range blanks, assign blanks; no dedicated suite (acceptable: the matrices own the observable positions). |
 | Predeclared_identifiers | covered(B) | universe shadowing pinned (Errors-1 disposition: package-level `error` redeclaration accepted); predeclared functions graded under Built-in_functions. |
@@ -153,12 +162,12 @@ rows covering all 158 anchors.
 | Iota | covered(B) | 2 dispositions + iota-tagged rows; D-caveat. |
 | Type_declarations | covered(D) | preamble; children below. |
 | Alias_declarations | covered(B) | 3 dispositions incl. the Go 1.24 generic alias (version-pinned witness); `generics/type-aliases` (its struct-literal row → FR-13, an anonymous-struct blocker, not an alias gap). |
-| Type_definitions | covered(B) | 6 dispositions + `defined_type` suites everywhere; `type-definitions-distinct` red → FR-13 (anonymous struct member, same family). |
+| Type_definitions | covered(B) | 6 dispositions + `defined_type` suites everywhere; `type-definitions-distinct` red → FR-13 (anonymous struct member, same family); duplicate local TypeId reds → FR-19. |
 | Type_parameter_declarations | covered(B) | `generics/` (43 pkgs, 68 rows). |
 | Type_constraints | covered(B) | constraint suites (`type-set-constraint`, `method-and-type-set-constraint`, `recursive-constraints`, `comparable-constraint` + runtime edge). |
 | Satisfying_a_type_constraint | covered(B) | satisfaction paths exec-witnessed; the spec's own `struct{f any}`-satisfies-`comparable` block → FR-13 (red: anonymous struct as type argument), witnessed by `generics/anon-struct-type-argument` — the compile-only aggregator that used to carry it went green when H-11 began skipping its blank package-level row (audit F3, 2026-08-20), so the witness moved into a function body where the quarantine cannot mask it. |
 | Variable_declarations | covered(A) | the BUG-057 arc: `spec-examples-decl/var-comma-ok-matrix/` (51 rows, all three comma-ok sources × typed/untyped × blank positions × scope, value and ok as separate observables) + grouped/goto/closure integration rows; residual typed-iface reds → FR-7. |
-| Short_variable_declarations | covered(B) | `short_decl` rows + `scoping/short-decl-mixing` (redeclaration semantics). |
+| Short_variable_declarations | covered(B) | `short_decl` rows + `scoping/short-decl-mixing` (redeclaration semantics); self-shadowing define with a call RHS red → FR-17. |
 | Function_declarations | covered(B) | `functions/` + 2 dispositions; body-less (externally-implemented) functions: out-of-language NOTE inline (assembly linkage — not representable in the one-file corpus, recorded by the P3 SKIPPED row). |
 | Method_declarations | covered(B) | `methods/` (31 pkgs) + 3 dispositions; promoted/pointer-receiver semantics; H-3 quarantine suite (per-declaration stubs). |
 
@@ -191,7 +200,7 @@ rows covering all 158 anchors.
 | Floating_point_operators | covered(B) | `floats/` specials/rounding/fma-shape; L:R4 (fusion NARROWED to per-op rounding, platform-scoped), L:R5 (float division by zero: no-panic narrowing). |
 | String_concatenation | covered(B) | disposition + `concat` rows + append-string forms. |
 | Comparison_operators | covered(B) | equality/order rows spread across arrays/structs/interfaces/floats (NaN, ±0) + interface-compare panic family; map-key hashability red → FR-9; the section's own zero-size-pointer sentence ("may or may not be equal") → L:R15 (`pointers/zero-size-address/`, latitude-pinned both members); complex equality → FR-15; NAMED GAP → T-2 (no single ordered enumeration of all comparable kinds). |
-| Logical_operators | covered(A) | `bools/` short-circuit matrices (funclit variants, both operand positions) + `channels/recv-short-circuit/` controls; RHS-receive red → FR-2. |
+| Logical_operators | covered(A) | `bools/` short-circuit matrices (funclit variants, both operand positions) + `channels/recv-short-circuit/` controls; RHS-receive red → FR-2; RHS allocation/splat/method-value reds → FR-18. |
 | Address_operators | covered(A) | the BUG-056 arc: 10-row `addr-deref-nil-matrix` + `address-op-nil-indirection` + the no-load race acceptance pin (`race/free/addr-deref-no-read`); addressability rejections neg:`pointers`. |
 | Receive_operator | covered(A) | `channels/recv-*` (edge, stmt, map-elem, order) + comma-ok matrix + closed/nil semantics; BUG-023/026/057 arcs all landed here; SHORT-CIRCUIT-RHS receives → FR-2, frontier-owned (pinned red: `channels/recv-short-circuit/{and-rhs,or-rhs,and-rhs-skipped}` refusals; the BUG-032 over-refusal family was RETIRED by mini-slice A6, t1-fidelity-fixes 2026-08-31 — A6's scope ended there, so FR-2's remaining reds revert to the FR queue proper; the A claim stays scoped outside that position, carve-out per reviewer C F2). |
 | Conversions | covered(B) | conversion matrices (`ints/conversion-width-matrix`, defined-type routing, string↔bytes↔runes — 19-red slice families 1-2); struct-tag conversions → FR-13; slice→array ok-forms → FR-10; float→int out-of-range = (c)-pin C5 (L:R6, REFUSED latitude); complex conversions → FR-15. |
@@ -225,9 +234,9 @@ rows covering all 158 anchors.
 | Return_statements | covered(A) | `returns/` (18 pkgs) + named-results/defer interaction rows + 5 dispositions. |
 | Break_statements | covered(A) | break family incl. labeled, in-select, in-switch-in-loop matrices. |
 | Continue_statements | covered(A) | continue family incl. labeled, post-execution pins. |
-| Goto_statements | covered(B) | forward/backward/out-of-block suites + decl-interaction rows; neg:`goto-into-block`, `goto-over-declaration` (the spec's own illegal exhibits); observable-cell backward-goto shapes → FR-11 (5 reds — our hoisting lowering's honesty check, jumps legal in Go). |
+| Goto_statements | covered(B) | forward/backward/out-of-block suites + decl-interaction rows; neg:`goto-into-block`, `goto-over-declaration` (the spec's own illegal exhibits); observable-cell backward-goto shapes → FR-11 (5 reds — our hoisting lowering's honesty check, jumps legal in Go); forward goto to a label inside an enclosing nested block → FR-20 (1 red, legal — gc-checked). |
 | Fallthrough_statements | covered(B) | `switch-fallthrough{,-chain,-declaring-clause}` + neg placement rows. |
-| Defer_statements | covered(A) | `defer/` (17 pkgs) + panic-recover integration + arg-eval-at-defer-time pins + loop defers. |
+| Defer_statements | covered(A) | `defer/` (17 pkgs) + panic-recover integration + arg-eval-at-defer-time pins + loop defers; `defer` of a builtin other than recover/close red → FR-16. |
 
 ### Built-in functions
 
@@ -330,6 +339,11 @@ to an FR/Q row here, a (c)-pin (triage §4), or an (a)-queued fix
 | FR-13 | structural TypeIds: anonymous non-empty struct types (incl. as type arguments) | wire.go:508 — `unsup("anonymous non-empty struct type %s", ty)`; mono.go:965 — `unsup("anonymous non-empty struct as a type argument (%s)")` | spec#Struct_types, spec#Satisfying_a_type_constraint, spec#Conversions | 8 — the triage F3 family 7 (`generics/type-aliases/struct-literal`, `spec-examples-decl/struct-tag-conversion`, `spec-examples-decl/type-definitions-distinct`, `spec-examples-stmt/struct-tags`, `spec-examples-stmt/type-unify-struct-array`, `structs/tag-nested-conversion`, `structs/tag-unnamed-conversion`) + the F21 type-argument sub-row (`generics/anon-struct-type-argument`) | identity design: structural TypeIds beside nominal ones — frontend + GoCore | seq → queue 13 |
 | FR-14 | stdlib package surface (`fmt`, `math`, `strings`, `errors`, `slices`, `math/rand`; + `slices.Sort` beyond integers) | emit.go:6567 — `unsup("selector call %s is not a method value")` (the misattributing string — triage §3 honesty note); emit.go:6909 — `unsup("slices.Sort at non-integer element type %s")` | spec#Qualified_identifiers (construct fine; the gap is extern surface) | 7 (`spec-examples-decl/timezone-stringer`, `spec-examples-lexical/qualified-identifier`, `methods/quarantine-embedded/promoted-call`, `methods/quarantine-interface/dispatch-quarantined`, `methods/quarantine-pointer-receiver/pointer-call`, `methods/quarantine-sibling/quarantined-call`, `slices/slices-sort-non-integer-refusal`) | extern-model design (quorum extern policy is the precedent) | seq → queue 14 — raft-path IN AGGREGATE; pull-forward option 14a = minimal `fmt.Sprintf` verb subset |
 | FR-15 | complex numbers (types, literals, constants, `real`/`imag`/`complex`) | wire.go:545 — `unsup("basic type %s", b)` | spec#Numeric_types, spec#Imaginary_literals, spec#Complex_numbers, spec#Constants | 27 (`complex/*` 20 + 7 satellites: `builtins/real-imag`, `constants/{default-types,typed-complex-binary,untyped-complex-context}`, `new/new-expr/untyped-defaults`, `spec-examples-decl/const-complex/untyped`, `spec-examples-lexical/imaginary-literals` — split corrected 21+6 → 20+7 at the audit fix round, total unchanged) | GoCore arithmetic kernel (softfloat pairs) + frontend + constants | seq → queue 15, LAST — the one large arc (user direction), not raft-path (zero `complex` in `deps/raft`) |
+| FR-16 | `defer` of a builtin other than `recover`/`close` (`defer delete(m, k)`; the same arm refuses `defer panic(v)`, `defer print…`) — noodler FG-2 | emit.go:2591 — `unsup("defer of builtin %s", id.Name)` (measured at 345ef090; only `recover` and `close` lower — `emitDeferClose` is the close special case) | spec#Defer_statements, spec#Built-in_functions | 1 (`noodler/defers/deferred-delete`) | frontend-only: FR-1's thunk desugar on the `defer` side — synthesize a one-shot closure over the NOW-evaluated operands and defer it (the `emitDeferClose` shape generalized; gc's own `deferwrap1` is the precedent, as `gowrap1` is FR-1's) | seq → queue 16 (S) — logged 2026-09-03, [USER] direction 3 (§0) |
+| FR-17 | inner-scope self-shadowing define with a call RHS (`x := f(x)` where the call reads the OUTER `x`) — noodler FG-5 | emit.go:3057 — `unsup("self-shadowing define with call RHS")` (the W7 A-9 shadow-capture pre-binding's one fail-closed arm, `docs/2026-08-21_w7-desugar-inventory.md` A-9) | spec#Short_variable_declarations, spec#Declarations_and_scope | 1 (`noodler/frontier/self-shadow-define`) | frontend-only: extend A-9's pre-binding to the call's ARGUMENTS — every argument that reads a shadowed name pre-binds to a hoisted temp evaluated in the outer scope before the fresh cells are declared (the non-call arm's `containsVarUse` mechanism, applied per argument) | seq → queue 17 (S) — logged 2026-09-03, [USER] direction 3 |
+| FR-18 | allocation, tuple-splat or interface method value DIRECTLY in a short-circuit RIGHT operand (`&&` and the or-operator): `make`, `new`, slice literal, map literal, `f(g())`, `(i.M)()` — noodler FG-3; FR-2 carries the receive case | emit.go:7104 sets `hoistForbidden = "short-circuit operand"`; the standing sites refuse per-declaration — :8966 `unsup("make in %s", e.hoistForbidden)`, :8211 `unsup("new in %s", …)`, :6597 `unsup("slice literal in %s", …)`, :6651 `unsup("map literal in %s", …)`, :2330/:2355 `unsup("call/allocation in %s (would change evaluation order)", …)`, :6035 `unsup("interface method value in %s", …)` (lines at 345ef090; the report's were measured at its lane tip); the same guard covers `append`/`copy`/`&composite` (:8871/:8936/:6321/:6394), not yet pinned | spec#Logical_operators, spec#Order_of_evaluation | 6 (`noodler/frontier/short-circuit-{alloc-make,alloc-new,slice-literal,map-literal,splat-call,iface-method-value}`) | frontend-only: extend FR-2's mechanism — the E3 conditional normalization (`scHoistOK` hoisting of the RHS's effects into the guarded branch) — to these operand kinds; these six rows ARE the guardrails the E3 BUILT record owes (`docs/gallery-campaign-log/g2.md:504-535`: "widening any of them later owes its own guardrail rows first"), so the arc's flips are pre-declared; add `append`/`copy`/`&composite` pins first | seq → queue 18 (M) — logged 2026-09-03, [USER] direction 3; pairs with queue 2 |
+| FR-19 | duplicate local TypeId — two functions each declaring `type T int`, or a function-local type shadowing a package-level type of the same name: a WHOLE-EXPORT kill (the noodler tripped it three times by accident) — noodler FG-1 | emit.go:554 — `unsup("duplicate TypeId %s (a function-local type collides with another declaration)", n)` (the `seenTypeIds` gate over the flattened `typeDefs`; the control-flow design doc's "fail-closed rider", `docs/2026-08-04_control-flow-design.md`) | spec#Type_definitions, spec#Declarations_and_scope, spec#Type_identity | 2 (`noodler/local-types/{distinct,shadow}`) | frontend: per-declaration TypeId disambiguation — scope-qualify the identity KEY (enclosing function + declaration position) while the RENDERED name keeps gc's spelling (gc prints `main.T` for both types; distinctness is observable through identity, assertion and comparison, never through the name), collision-checked at the one boundary. BUG-018's fix (`qualifiedTypeName` parameterizing function-local TypeIds by the enclosing instantiation's type arguments) is the precedent for a key that carries scope the name does not. §5.1 item 1 (C6: a local type as a type ARGUMENT names a compiler counter) stays an impossibility row — unaffected | seq → queue 19 (M) — logged 2026-09-03, [USER] direction 3 |
+| FR-20 | forward `goto` to a label inside an enclosing nested block (a for body), the goto nested deeper than its label — noodler FG-4 | emit.go:1743/:2069 — `unsup("goto target label %s not at function body top level", name)` (the goto envelope restructures segments at the function body's top level only; the control-flow design doc's "outside the envelope" list) | spec#Goto_statements, spec#Labeled_statements, spec#Blocks | 1 (`noodler/frontier/goto-forward-in-block`) | LEGALITY CHECKED 2026-09-03: gc go1.26.5 (`go vet` + `go build`) accepts the case — the label's block ENCLOSES the goto and no declaration is skipped, so neither spec#Goto_statements prohibition applies; a genuine coverage gap, not a mis-filed negative case. Fix: frontend — apply the segment restructuring (`emitGotoBody`) at the label's ENCLOSING block rather than only the function body (the block containing the label is the segmentation unit; forward-only jumps out of nested statements into it need no fresh-cell story — FR-11 is the backward class) | seq → queue 20 (M) — logged 2026-09-03, [USER] direction 3 |
 
 ## 5. The build queue (2026-08-19) — ordered sequential-frontier arcs
 
@@ -359,6 +373,15 @@ WITHOUT renumbering the rows below (numbers stay stable as ids):
 - The middle of the queue (3–13) is otherwise unchanged pending the
   Q-row [USER] sitting (decision 3's second half; see §6 and
   TODO.md "Re-homed obligations").
+- ADDED 2026-09-03 ([USER] direction 3, §0; the noodler lane's FG-1..
+  FG-5, `docs/2026-09-03_noodler-report.md` §4): rows 16–20, numbered
+  in smallest-diagnosed order and slotted INTO the existing size
+  classes rather than appended — the S items (16 defer-of-builtin, 17
+  self-shadowing define) rank with FR-1/FR-2 in the S class; the M
+  items (18 short-circuit widening — pairs with 2 and shares its
+  mechanism; 19 duplicate local TypeId; 20 forward goto into a block)
+  rank in the middle. FR-15 stays LAST. All 11 reds are already pinned
+  born-FAIL (guardrails-first is satisfied before any arc starts).
 
 **Stage 0 (this arc's open obligations, triage table §6):** mini-slices
 A3 (map multi-assign targets), A4 (chan type args), A5
@@ -384,6 +407,11 @@ user's C4 split, triage §7/L12b)**; the (c)-list ratification —
 | 12 | range-over-func | FR-12 | 9 | 2–4 days |
 | 13 | structural TypeIds | FR-13 | 8 | small arc |
 | 14 | stdlib extern surface (14a: minimal fmt verbs, pull-forward candidate) — raft-path aggregate | FR-14 | 7 | arc |
+| 16 | defer-of-builtin thunk desugar (FR-1's mechanism, `defer` side) | FR-16 | 1 | ~½ day |
+| 17 | self-shadowing define with call RHS (A-9 argument pre-binding) | FR-17 | 1 | ~½ day |
+| 18 | short-circuit RHS widening — allocation/splat/method value (E3 / FR-2 mechanism; add append/copy/&composite pins first) | FR-18 | 6 | ½–1 day |
+| 19 | duplicate local TypeId (scope-qualified identity keys, gc-spelled names) | FR-19 | 2 | ~1 day |
+| 20 | forward goto into an enclosing block (block-level segmentation) | FR-20 | 1 | 1–2 days |
 | 15 | **complex numbers — last, the one large arc** | FR-15 | 27 | arc |
 
 Queue discipline: each arc consumes its FR row guardrails-first (the
@@ -498,7 +526,9 @@ the report's FG-1..FG-5 frontier candidates, 1 `coverage` entrant in
 untriaged-ids beside FR-10's own pin; `docs/2026-09-03_noodler-report.md`);
 no main row moved; the §2/§4 per-section arithmetic below is NOT
 re-derived for the noodler rows — they are guards on already-graded
-sections, and the FG candidates await the [USER]'s §4 decision. The
+sections, and the FG candidates awaited the [USER]'s §4 decision —
+DECIDED 2026-09-03 ([USER] direction 3, §0): rows FR-16..FR-20, the 11
+pins moved post-vintage → frontier bucket, §8e. The
 2580 / 2403 / 177 both lanes moved from was
 the round-5 merge-train UNION 2026-09-03 [AGENT] of the
 q-u4-gomem re-pin over main = bug082-maphint's 2573 / 2401 / 172, the
@@ -623,14 +653,14 @@ bucket's BUG-041 red changed ROW, not count):**
 
 | bucket | reds |
 | --- | --- |
-| frontier FR-1…FR-15 (§4) | 83 |
+| frontier FR-1…FR-15 (§4) | 94 |
 | design questions Q-* (§6) | 10 |
 | (c) profound-reason pins (triage §4 + the unsafe marker) | 9 + 1 |
 | (a)-queued fixes (triage §3.2: A3 5, A4 1, A5 1, A7 1) | 8 |
-| post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) + the gotest-fixes BUG-078 budget refusal pin (`arrays/materialization-budget/over-budget`, on BUG-078's Cases line since the audit fix round) + the bug082-maphint audit-round BUG-083 hoist-order pin (`builtins/len-vs-call-order/hint-panicky-between`, 2026-09-02) + the q-u4-gomem BUG-084 designed-divergence pins (`race/gomem-only/*`, 5 rows: go_mem-racy / TSan-green shapes REFUSED by [USER] ruling Q-U4RESIDUAL (A), 2026-09-02) + the noodler lane's 23 born-FAIL probe rows (2026-09-03, `docs/2026-09-03_noodler-report.md`: 3 on BUG-087's Cases line, 2 on BUG-086's (RETIRED 2026-09-03 by the `bug086-shim-closure` fix — both PASS, not counted here), 6 short-circuit-operand refusals + goto-forward-in-block + self-shadow-define + `defer delete` + 2 duplicate-local-TypeId = the report's FG-1..FG-5 frontier candidates (11), 2 BUG-068 red-by-design re-hits, 1 FR-3 re-hit, 3 triage-F6/A3 re-hits, 1 FR-10 value-copy witness in untriaged-ids) | 83 |
+| post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) + the gotest-fixes BUG-078 budget refusal pin (`arrays/materialization-budget/over-budget`, on BUG-078's Cases line since the audit fix round) + the bug082-maphint audit-round BUG-083 hoist-order pin (`builtins/len-vs-call-order/hint-panicky-between`, 2026-09-02) + the q-u4-gomem BUG-084 designed-divergence pins (`race/gomem-only/*`, 5 rows: go_mem-racy / TSan-green shapes REFUSED by [USER] ruling Q-U4RESIDUAL (A), 2026-09-02) + the noodler lane's 23 born-FAIL probe rows (2026-09-03, `docs/2026-09-03_noodler-report.md`: 3 on BUG-087's Cases line, 2 on BUG-086's (RETIRED 2026-09-03 by the `bug086-shim-closure` fix — both PASS, not counted here), 11 FG-1..FG-5 frontier candidates (MOVED OUT 2026-09-03 to their own rows FR-16..FR-20 — counted in the frontier bucket above, §8e), 2 BUG-068 red-by-design re-hits, 1 FR-3 re-hit, 3 triage-F6/A3 re-hits, 1 FR-10 value-copy witness in untriaged-ids — 10 noodler reds remain in this bucket) | 72 |
 | **total** | **194** |
 
-*(Movement at the 2026-09-03 BUG-086 fix re-pin (lane `bug086-shim-closure`): post-vintage 85 → 83 — BUG-086's two born-red pins `noodler/strconv-formatint/{edges,positive}` flipped green when shim injection became dependency-closed (frontend plumbing only; no new rows; 3195 rows = 3001 PASS / 194 FAIL). Movement at the 2026-09-02 q-u4-gomem re-pin (union taken at the
+*(Movement at the 2026-09-03 FG rowing (lane `fg-gaps`, RECORDS ONLY — no baseline row moved, 3195 = 3001 / 194): frontier 83 → 94, post-vintage 83 → 72 — the noodler lane's 11 FG-1..FG-5 pins moved to their own rows FR-16..FR-20 (§8e). The frontier bucket's LABEL still reads `FR-1…FR-15` because `tools/reconcile-records` C4 matches that label literally (a tooling slice owes the re-label; this records slice does not touch code) — the bucket COVERS FR-1…FR-20. Movement at the 2026-09-03 BUG-086 fix re-pin (lane `bug086-shim-closure`): post-vintage 85 → 83 — BUG-086's two born-red pins `noodler/strconv-formatint/{edges,positive}` flipped green when shim injection became dependency-closed (frontend plumbing only; no new rows; 3195 rows = 3001 PASS / 194 FAIL). Movement at the 2026-09-02 q-u4-gomem re-pin (union taken at the
 round-5 merge train 2026-09-03): post-vintage 57 → 62 — BUG-084's five
 designed-divergence pins `race/gomem-only/*` enter with their entry.
 Movement at the 2026-09-02 BUG-082 audit fix round re-pin:
@@ -663,9 +693,11 @@ FR/Q suite, §8b, or §8c is `unsafe/boundary/pointer-roundtrip` — the
 out-of-language boundary marker, argued as a (c)-class justified pin
 (triage postscript 3) and put to the user with the (c) list.
 
-**Sequential-frontier queue mass:** 14 live arcs (FR-8 retired), 83
-reds (FR-7 6 → 8 at the audit fix round, BUG-079's two pins); the top four retire 12 reds in ~2-3 days of small arcs; FR-15
-(complex) alone is 27. **Design-question mass:** 9 questions of which
+**Sequential-frontier queue mass:** 19 live arcs (FR-8 retired;
+FR-16..FR-20 added 2026-09-03, §8e), 94 reds (FR-7 6 → 8 at the audit
+fix round, BUG-079's two pins; +11 at the FG rowing); the top four
+retire 12 reds in ~2-3 days of small arcs and the two new S rows (FR-16,
+FR-17) retire 2 more in ~1 day; FR-15 (complex) alone is 27. **Design-question mass:** 9 questions of which
 2 RESOLVED (Q-SYNCVAL + Q-SYNCLIT, ruled and implemented 2026-09-01)
 and 7 open, 14 reds, every one with its cases in hand.
 
@@ -772,6 +804,34 @@ untriaged `coverage` class drops 11 → 9 (`mp-litmus` retired green;
 row). The red buckets: frontier −1 (the `atomic` memory-model row moved
 to covered(B), §3/§8's memory-model count re-stated at 9/2/1/1/5);
 `value` stays a named refusal on the Q-ATOMIC row (wave 2).
+
+### 8e. Movement at the FG rowing (2026-09-03, lane `fg-gaps`, records only)
+
+[USER] direction 3 (§0; Mike 2026-09-03, relayed by the [AGENT]
+coordinator, citation not firsthand) applied to the noodler lane's five
+frontier candidates (`docs/2026-09-03_noodler-report.md` §4). No
+baseline row moved: 3195 rows, 3001 PASS / 194 FAIL, the
+`bug086-shim-closure` re-pin stands (the fast `ci` re-ran; no runtime
+change, so the cached full record is the certification). The 11 reds
+changed BUCKET, not color:
+
+```
+FG-2 → FR-16  noodler/defers/deferred-delete                                   1
+FG-5 → FR-17  noodler/frontier/self-shadow-define                              1
+FG-3 → FR-18  noodler/frontier/short-circuit-{alloc-make,alloc-new,
+              slice-literal,map-literal,splat-call,iface-method-value}         6
+FG-1 → FR-19  noodler/local-types/{distinct,shadow}                            2
+FG-4 → FR-20  noodler/frontier/goto-forward-in-block                           1
+                                                                              11
+```
+
+frontier 83 + 11 = 94; post-vintage 83 − 11 = 72; 94 + 10 + 10 + 8 + 72
+= 194 ✓ (= the baseline's FAIL count). FR ids are numbered in queue
+order (smallest-diagnosed first, §0 direction 2), so the FG→FR map is
+not the identity on indices — the report's §4 pointer lines carry it.
+Legality of FG-4 was re-checked before rowing (gc go1.26.5 accepts the
+program; see FR-20). Each new row's refusal site was re-measured at
+345ef090 (the report's FG-3 line numbers were its lane tip's).
 
 ### 8c. The re-derivation, 2026-08-22 vintage → the 2026-09-01 tip
 

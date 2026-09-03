@@ -1,2 +1,3 @@
 # id	subject	args	expected_status	expected_reason	features
 -	localTypesDistinct	-	ok	-	defined_type,identity,interfaces,scoping
+# Born-FAIL frontend-export: FR-19 (ledger §4; noodler FG-1). Legal Go: the refusal is "duplicate TypeId main.T (a function-local type collides with another declaration)", a whole-export kill. Flips at queue 19. Rowed 2026-09-03, [USER] direction 3.

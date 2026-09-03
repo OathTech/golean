@@ -1,2 +1,3 @@
 # id	subject	args	expected_status	expected_reason	features
 -	gotoForwardInBlock	-	ok	-	goto,labels,loops
+# Born-FAIL frontend-export: FR-20 (ledger §4; noodler FG-4). Legal Go (gc go1.26.5 accepts it, checked 2026-09-03): the refusal is "goto target label skip not at function body top level". Flips at queue 20. Rowed 2026-09-03, [USER] direction 3.

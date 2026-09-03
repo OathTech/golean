@@ -20,6 +20,12 @@ and avoid a central manifest becoming a second source of truth.
   semantic stuckness, and differential mismatches stay red in the default
   report. Known-gap annotations may categorize work, but they must not make the
   main conformance lane green.
+- Every detected coverage gap on legal Go is ROWED at detection: a born-FAIL
+  case whose red is a fail-closed refusal (not a wrong answer) gets a frontier
+  row in `docs/language-coverage-ledger.md` §4 WITH a fix plan and a §5 queue
+  slot in the same change — never left as an unrowed red in the post-vintage
+  bucket ([USER] direction 3, 2026-09-03, recorded in the ledger §0; relayed
+  by the coordinator, not firsthand).
 
 ## Directory Layout
 

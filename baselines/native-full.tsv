@@ -46,12 +46,13 @@
 #         type-check; spurious refusal inside the frozen allowlist);
 #       noodler/frontier/short-circuit-{alloc-make,alloc-new,slice-literal,
 #         map-literal,splat-call,iface-method-value} — report FG-3 (only
-#         the receive case is recorded, FR-2/F24);
-#       noodler/frontier/goto-forward-in-block — FG-4;
-#       noodler/frontier/self-shadow-define — FG-5;
-#       noodler/defers/deferred-delete — FG-2;
+#         the receive case is recorded, FR-2/F24) — ledger FR-18 since
+#         2026-09-03 ([USER] direction 3, lane fg-gaps; comment-only edit);
+#       noodler/frontier/goto-forward-in-block — FG-4 — ledger FR-20;
+#       noodler/frontier/self-shadow-define — FG-5 — ledger FR-17;
+#       noodler/defers/deferred-delete — FG-2 — ledger FR-16;
 #       noodler/local-types/{distinct,shadow} — FG-1 (the duplicate-TypeId
-#         rider, recorded only in the control-flow design doc);
+#         rider, recorded only in the control-flow design doc) — ledger FR-19;
 #       noodler/frontier/named-result-shadow-{range,typeswitch} — BUG-068's
 #         red-by-design class re-hit;
 #       noodler/frontier/promoted-method-expression-ptr — FR-3 re-hit;

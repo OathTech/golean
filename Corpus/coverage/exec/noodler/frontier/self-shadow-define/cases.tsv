@@ -1,2 +1,3 @@
 # id	subject	args	expected_status	expected_reason	features
 -	selfShadowDefine	-	ok	-	short_decl,shadowing,scoping,calls
+# Born-FAIL frontend-export: FR-17 (ledger §4; noodler FG-5). Legal Go: the refusal is "self-shadowing define with call RHS" (A-9's fail-closed arm). Flips at queue 17. Rowed 2026-09-03, [USER] direction 3.

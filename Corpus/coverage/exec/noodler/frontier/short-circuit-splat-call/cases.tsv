@@ -1,2 +1,3 @@
 # id	subject	args	expected_status	expected_reason	features
 -	shortCircuitSplatCall	1	ok	-	bools,calls,multi_result,evaluation_order
+# Born-FAIL frontend-export: FR-18 (ledger §4; noodler FG-3 — the E3 BUILT record's owed guardrail, g2.md:504-535). Legal Go; the refusal is the hoistForbidden="short-circuit operand" guard. Flips at queue 18. Rowed 2026-09-03, [USER] direction 3.
