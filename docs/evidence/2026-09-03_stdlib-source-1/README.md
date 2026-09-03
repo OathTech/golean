@@ -337,11 +337,20 @@ the `*strconv.NumError` directly so they test `errors.*`, not ParseUint.
   reconciler 3 findings / 0 HIGH (the same three pre-existing MEDIUMs);
   `gate-final-fixround.txt` is that run's step summary, committed by the
   last (records-only) commit of the lane.
+- [USER] ruling (ParseUint retired): `scripts/capped scripts/ci --diff`
+  at the ruling commit `2bf7b5a3` (clean tree): **RESULT: PASS** — baseline
+  diff FULL 3256/3256 no regression (3054 PASS / 202 FAIL), re-pin guard
+  "9 PASS→non-PASS flip(s), all listed in BUGS.md Cases" (BUG-089), 1
+  FAIL→PASS (parse-recover), all three frontend pins ok (twin `45cd882a…`),
+  spec-anchors 25 godoc:, register ok (14 shims), frontend unit tests ok,
+  reconciler 3 / 0 HIGH (the same pre-existing MEDIUMs);
+  `gate-tail-ruling.txt` is that run's step summary.
 - Conclusion (one paragraph): the machine executing the pinned GOROOT
   bodies of `strings.{Fields,TrimSpace,Split}` and `strconv.{FormatUint,
-  FormatInt}` agrees with `go run` on every prior shim row, on 44 new
-  documented-edge rows and on 500 fuzzed Fields inputs; six shim-surface
-  refusals are moot and flipped green; two library sites the slice
+  FormatInt}` agrees with `go run` on every prior shim row it still runs, on the new
+  documented-edge rows and on 500 fuzzed Fields inputs; seven shim-surface
+  refusals are moot and flipped green; ParseUint's nine error-path rows are
+  [USER]-directed designed reds (BUG-089) pending the slice-2 overlay; two library sites the slice
   cannot lower refuse by name (FR-21) with the overlay as the recorded
   remedy; the twin wire's delta is exactly the shim→source replacement
   plus the library units; interpreter cost is +2–5 ms on the strings rows
