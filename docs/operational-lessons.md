@@ -298,3 +298,29 @@ caught red by T7 during the fix: a classifier's exit status must be
 the classification and nothing else — `[[ -n "$stderr" ]] && printf`
 as the LAST line of the namer returned 1 on an empty capture, and a
 SIGTERM (which leaves no stderr) read as a verdict again.
+
+## An exact-match guard on a two-valued oracle is a coin-flip gate
+
+`scripts/coverage-baseline-diff` compares `RESULT/stage` per row exactly,
+and one red row's STAGE is decided by gc, not by the machine:
+`channels/select-select/beside-loop` returns 5 or 90 in gc; the strict
+lane's differential check runs before the oracle-invariance re-run and
+returns early, so gc=5 gives equality then `FAIL/nondet` (the adversarial
+streams hit the refusal) while gc=90 gives `FAIL/differential` (Lean=5,
+Go=90). The pinned row said `nondet`; a full `ci --diff` therefore drifted
+on that one row on whichever runs gc sampled 90 — a red that was FAIL
+either way, reported as a regression. Remedy ([USER] ruling (a),
+2026-09-03, a gate change): the row's stage column carries the set
+`nondet|differential`, matched by membership, RESULT still exact, with a
+`# reason:` comment naming the mechanism; the form is refused (exit 2)
+on a PASS row, on an unknown stage word, or without the reason line, and
+every other stage-column consumer either handles the set or fails loudly
+(`check-bugs.sh` (6), `reconcile-records` C1). Two lessons from the fix
+itself: (a) gawk exits 2 on its OWN fatals (an unreadable input), so a
+script that means "exit 2 = refused" must give the awk refusal a distinct
+code (3) or an I/O failure reads as a record refusal; (b) under
+`set -euo pipefail`, `printf | grep '^REFUSED' | sort` with no match kills
+the script at exit 1 before the intended `exit 2` — the refusal path
+itself needs `|| true`. Both were caught by running the fixtures, not by
+reading the code. Red-first record: `docs/evidence/2026-09-03_guard-stage-alt/red-first.txt`;
+fixtures `scripts/test-lane-validation` Part A4.

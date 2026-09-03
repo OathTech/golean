@@ -950,7 +950,15 @@ PASS	channels/select-recv-edge/field-second-target-stores-first	-
 PASS	channels/select-recv-edge/chain-field-over-index	-
 PASS	channels/select-recv-edge/fallback-call-index	-
 FAIL	channels/select-select/core	lean-observation
-FAIL	channels/select-select/beside-loop	nondet
+# reason: channels/select-select/beside-loop — stage alternation ([USER] ruling (a) 2026-09-03):
+#   gc samples 5 or 90 (the subject's "5 or 90 in gc"); the machine's default stream
+#   commits 5. scripts/diff-coverage runs the strict-lane differential check BEFORE
+#   the oracle-invariance re-run and returns early, so the red's stage is
+#   oracle-schedule-dependent: gc=5 -> equality holds, the adversarial streams hit
+#   the refusal -> FAIL/nondet; gc=90 -> Lean=5 != Go=90 -> FAIL/differential.
+#   Result FAIL either way; the row stays the F10 over-broad-trigger marker
+#   (baselines/untriaged-ids, disposition coverage).
+FAIL	channels/select-select/beside-loop	nondet|differential
 PASS	channels/send-closed-panic	-
 PASS	comparisons/short-circuit/array-skips-interface-panic	-
 PASS	comparisons/short-circuit/array-reaches-interface-panic	-

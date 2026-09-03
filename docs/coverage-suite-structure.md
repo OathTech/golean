@@ -261,6 +261,32 @@ The default executable lane is a conformance signal, not an expected-failure
 test suite. A case that does not match Go remains a failure even when the
 failure is understood.
 
+### The tracked baseline and its stage column
+
+`baselines/native-full.tsv` (and `baselines/negative-full.tsv`) record
+one `result<TAB>id<TAB>stage` row per case; `scripts/coverage-baseline-diff`
+requires every case a run actually ran to reproduce its row exactly
+("same set = no regression"). ONE relaxation exists, per row and
+[USER]-ruled per row (ruling (a), 2026-09-03): the stage column may be a
+`|`-separated ALTERNATION such as `nondet|differential`, and the observed
+stage then matches iff it is a member of that set. The result column is
+never relaxed. The form is reserved for a red whose STAGE depends on the
+oracle's schedule rather than on the machine: gc samples one of several
+values, and because `scripts/diff-coverage` runs the strict-lane
+differential check before its oracle-invariance re-run and returns early,
+the same red lands at `differential` on one gc sample and at `nondet` on
+another (`channels/select-select/beside-loop`, "5 or 90 in gc" — the only
+row today). The rules are fail-closed at exit 2 (REFUSED, never "no
+drift"): non-PASS rows only — a PASS is never absorbed by an alternation
+and a PASS/FAIL flip in either direction is drift; every member is a
+stage word `scripts/diff-coverage` emits, at least two distinct; the
+comment block immediately above the row carries a `# reason:` line naming
+the oracle mechanism. The other consumers of the stage column treat an
+alternation as fidelity-bearing iff EVERY member is a fidelity stage
+(`scripts/check-bugs.sh` (6) and `tools/reconcile-records` C1 flag a mix
+loudly; the row never drops out of a count). Fixtures:
+`scripts/test-lane-validation` Part A4.
+
 Non-verdict exits of a comparator, oracle, driver or enumerator run are
 reported at the stage of the CHECK that could not complete — the stage
 vocabulary is unchanged — with a detail that names the cause and what

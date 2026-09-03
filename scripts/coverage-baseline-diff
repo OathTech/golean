@@ -13,6 +13,29 @@
 #   with artifacts/coverage/negative-latest.tsv for the negative lane (same
 #   column discipline in both lanes).
 # Exit 0 = no regression among cases run. Exit 1 = drift (ids printed).
+# Exit 2 = could not judge (missing input, or a MALFORMED baseline record —
+#   named per row; never read as "no drift").
+#
+# STAGE ALTERNATION ([USER] ruling (a), 2026-09-03 — a gate change, the
+# [USER]'s call): a baseline row's stage column may carry a `|`-separated
+# set, e.g. `FAIL <id> nondet|differential`, and the observed stage then
+# matches iff it is a MEMBER of that set. The RESULT column stays exact.
+# The form exists for exactly one mechanism — a red whose stage depends on
+# the ORACLE'S schedule, not on the machine: gc samples one of several
+# values, and because scripts/diff-coverage's strict-lane differential
+# check runs BEFORE its oracle-invariance re-run and returns early, the
+# same red lands at `differential` on one gc sample and at `nondet` on
+# another (channels/select-select/beside-loop, "5 or 90 in gc"). Rules,
+# every one fail-closed at exit 2 with the row named:
+#   * non-PASS rows only — a PASS is never absorbed by an alternation
+#     (a PASS/FAIL flip in either direction is drift, alternation or not);
+#   * every member must be a stage word scripts/diff-coverage can emit
+#     (the vocabulary below; an unknown word is a typo or a new stage that
+#     must be added here deliberately), at least two distinct members;
+#   * the comment block immediately above the row contains a `# reason:`
+#     line naming the oracle mechanism — the alternation is [USER]-ruled per row and the record
+#     says why on the line above it.
+# Rows without `|` compare exactly, as before.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
@@ -32,36 +55,91 @@ RESULTS="${1:-artifacts/coverage/latest.tsv}"
 [ -f "$BASELINE" ] || { echo "no baseline at $BASELINE" >&2; exit 2; }
 [ -f "$RESULTS" ]  || { echo "no results at $RESULTS" >&2; exit 2; }
 
+# The stage words scripts/diff-coverage's report_fail/report_pass_lane
+# emit (grep 'report_fail "$id" "$features" "' scripts/diff-coverage).
+# Only alternation MEMBERS are checked against it; plain rows compare
+# exactly and need no vocabulary. `-` (the PASS stage) is deliberately
+# absent: an alternation is non-PASS by rule.
+STAGE_VOCAB="manifest go-source go-harness go-run go-observation frontend-export lean-observation lean-run differential confluent membership racy nondet litmus-contract"
+
 # Baseline columns: result,id,stage. Results columns: result,id,features,stage.
 # Single awk pass, no temp files (sandbox-safe): load baseline (result/stage keyed
 # by id), then compare each result row; emit drift and one-sided ids. A baseline
 # id ABSENT from the results is "not run" (skipped) unless --full is set.
-drift="$(awk -F'\t' -v BASE="$BASELINE" -v FULL="$FULL" '
+# awk exit 3 = the baseline record is malformed (REFUSED lines name the rows;
+# 3, not 2, because gawk itself exits 2 on a fatal such as an unreadable
+# input — that must surface as an internal error, never as a refusal);
+# captured EXPLICITLY below — under `set -e` a bare $(...) would have died
+# silently, and under a `| sort` pipe the status would have been the sort's.
+awk_rc=0
+raw="$(awk -F'\t' -v BASE="$BASELINE" -v FULL="$FULL" -v VOCAB="$STAGE_VOCAB" '
+  function refuse(id, why) { print "REFUSED\t" id "\t" why; refused = 1 }
   BEGIN {
+    nv = split(VOCAB, vv, " "); for (i = 1; i <= nv; i++) vocab[vv[i]] = 1
+    prev_reason = 0
     while ((getline line < BASE) > 0) {
+      # `prev_reason` = the comment block immediately above the current
+      # row contains a `# reason:` line; any data row resets it.
+      if (line ~ /^# reason:/) { prev_reason = 1; continue }
       if (line ~ /^#/) continue
       n = split(line, f, "\t")
-      if (f[1] == "result" || n < 2) continue
+      if (f[1] == "result" || n < 2) { prev_reason = 0; continue }
       # Well-formedness of the RECORD itself (S2 audit response: the
       # re-pinned baseline carried a silently-tolerated duplicated row —
       # id-keyed consumers resolved it last-wins; a duplicate with
       # CONFLICTING results would have been laundered the same way).
       if (f[2] in bseen) { print f[2] "\tDUPLICATE id in baseline (record integrity)"; }
-      bkey[f[2]] = f[1] "/" f[3]; bseen[f[2]] = 1
+      bseen[f[2]] = 1; bres[f[2]] = f[1]; bstage[f[2]] = f[3]
+      if (index(f[3], "|") > 0) {
+        # A stage ALTERNATION: validated here, fail-closed, before any
+        # comparison reads it.
+        if (f[1] == "PASS")
+          refuse(f[2], "stage alternation on a PASS row [" f[1] "/" f[3] "] — alternation is for non-PASS rows only; a PASS is never absorbed")
+        m = split(f[3], alt, "|")
+        if (m < 2) refuse(f[2], "stage alternation [" f[3] "] has fewer than two members")
+        for (k = 1; k <= m; k++) {
+          if (alt[k] == "")            refuse(f[2], "stage alternation [" f[3] "] has an empty member")
+          else if (!(alt[k] in vocab)) refuse(f[2], "stage alternation [" f[3] "] names an unknown stage word \047" alt[k] "\047 (not one scripts/diff-coverage emits; vocabulary: " VOCAB ")")
+          else if ((f[2], alt[k]) in balt) refuse(f[2], "stage alternation [" f[3] "] repeats the member \047" alt[k] "\047")
+          balt[f[2], alt[k]] = 1
+        }
+        if (!prev_reason) refuse(f[2], "stage alternation [" f[3] "] without a `# reason:` line in the comment block immediately above it (the oracle mechanism must be named; the alternation is [USER]-ruled per row)")
+        balts[f[2]] = 1
+      }
+      prev_reason = 0
     }
+    if (refused) exit 3
   }
   /^#/ { next }
   $1 == "result" { next }
   NF >= 2 {
     id = $2; now = $1 "/" $4; rseen[id] = 1
-    if (!(id in bkey))      { print id "\tNEW id (not in baseline) -> " now; next }
-    if (bkey[id] != now)      print id "\tbaseline[" bkey[id] "] -> now[" now "]"
+    if (!(id in bseen))      { print id "\tNEW id (not in baseline) -> " now; next }
+    if (id in balts) {
+      # Result exact (and non-PASS by construction); stage a member of the set.
+      if ($1 == bres[id] && $1 != "PASS" && ((id, $4) in balt)) next
+      print id "\tbaseline[" bres[id] "/" bstage[id] "] -> now[" now "]"
+      next
+    }
+    if (bres[id] "/" bstage[id] != now) print id "\tbaseline[" bres[id] "/" bstage[id] "] -> now[" now "]"
   }
   END {
+    if (refused) exit 3
     if (FULL == 1)
       for (id in bseen) if (!(id in rseen)) print id "\tMISSING (in baseline, not run — --full)"
   }
-' "$RESULTS" | LC_ALL=C sort)"
+' "$RESULTS")" || awk_rc=$?
+
+if [ "$awk_rc" -eq 3 ]; then
+  echo "REFUSED: $BASELINE carries a malformed stage alternation — cannot judge $(basename "$RESULTS") against it (fix the record; this is NOT a no-drift result):"
+  { printf '%s\n' "$raw" | grep '^REFUSED' | LC_ALL=C sort | sed 's/^REFUSED\t/  /'; } || true
+  exit 2
+elif [ "$awk_rc" -ne 0 ]; then
+  echo "coverage-baseline-diff: internal comparison error (awk rc=$awk_rc; partial output follows) — refusing to judge" >&2
+  { printf '%s\n' "$raw" | grep . | sed 's/^/  /' >&2; } || true
+  exit 2
+fi
+drift="$(printf '%s\n' "$raw" | grep . | LC_ALL=C sort || true)"
 
 ran="$(awk -F'\t' '!/^#/ && $1!="result" && NF>=2' "$RESULTS" | wc -l | tr -d ' ')"
 if [ -z "$drift" ]; then

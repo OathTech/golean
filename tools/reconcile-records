@@ -64,6 +64,22 @@ FIDELITY_STAGES = {
     "nondet",
 }
 
+
+def stage_fidelity(stage):
+    """True if the row's stage is fidelity-bearing, False if not, None if the
+    stage is a `|` ALTERNATION (scripts/coverage-baseline-diff, [USER] ruling
+    (a) 2026-09-03 — oracle-schedule-dependent reds) that MIXES fidelity and
+    non-fidelity members: such a row has no honest bucket and is reported as
+    malformed (C1), never silently dropped from a count."""
+    members = stage.split("|")
+    n = sum(1 for m in members if m in FIDELITY_STAGES)
+    if n == len(members):
+        return True
+    if n == 0:
+        return False
+    return None
+
+
 FINDINGS: list[dict] = []
 
 
@@ -178,6 +194,20 @@ def check_baseline(bl):
             "medium",
             f"{other} baseline row(s) carry a result that is neither PASS nor FAIL",
         )
+    # Stage alternations: non-PASS only, and never mixing fidelity with
+    # non-fidelity members (the guard refuses the first at exit 2; the
+    # second is this reconciler's bucket rule — check-bugs (6) is the gate).
+    bad_alt = []
+    for cid, (r, s) in sorted(bl.items()):
+        if "|" not in s:
+            continue
+        if r == "PASS":
+            bad_alt.append(f"{cid}: PASS/{s} — a stage alternation on a PASS row")
+        elif stage_fidelity(s) is None:
+            bad_alt.append(f"{cid}: {r}/{s} — alternation mixes fidelity and non-fidelity stages")
+    if bad_alt:
+        finding("C1", "high", f"{len(bad_alt)} baseline row(s) carry a malformed stage alternation", bad_alt)
+    info["alternations"] = sum(1 for (_, s) in bl.values() if "|" in s)
     return info
 
 
@@ -646,7 +676,9 @@ def check_untriaged(bl, bugs):
             bad.append(f"{cid}: not in the baseline at all")
         elif bl[cid][0] != "FAIL":
             bad.append(f"{cid}: baseline says {bl[cid][0]}/{bl[cid][1]} — a tracked untriaged id that is not red")
-        elif bl[cid][1] not in FIDELITY_STAGES:
+        elif stage_fidelity(bl[cid][1]) is None:
+            bad.append(f"{cid}: FAIL at stage alternation {bl[cid][1]}, which MIXES fidelity and non-fidelity stages (malformed; see C1)")
+        elif stage_fidelity(bl[cid][1]) is False:
             bad.append(f"{cid}: FAIL at stage {bl[cid][1]}, which is outside the fidelity filter")
     if bad:
         finding("C8", "high", f"{len(bad)} tracked untriaged id(s) are not baseline reds at a fidelity stage", bad)
@@ -655,7 +687,7 @@ def check_untriaged(bl, bugs):
     unexplained = sorted(
         cid
         for cid, (res, stage) in bl.items()
-        if res == "FAIL" and stage in FIDELITY_STAGES and cid not in named
+        if res == "FAIL" and stage_fidelity(stage) is True and cid not in named
     )
     extra = sorted(set(unexplained) - set(tracked))
     stale = sorted(set(tracked) - set(unexplained))

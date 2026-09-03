@@ -143,10 +143,30 @@ done <<< "$bugs"
 #     fidelity-bearing as confluent's machine-only alarm; the F5 fix had
 #     left it out while the same diff parked the first-ever permanent
 #     nondet FAIL (channels/select-select/beside-loop).
+#     STAGE ALTERNATION (scripts/coverage-baseline-diff, [USER] ruling (a)
+#     2026-09-03): a stage column `a|b` is a set of stages the row may land
+#     at (oracle-schedule-dependent reds). The row is a fidelity red iff
+#     EVERY member is a fidelity stage; a set mixing fidelity and
+#     non-fidelity members has no honest bucket and FAILS this check (6)
+#     — it must never fall out of the count as "unknown stage".
 unexplained="$(awk -F'\t' -v DC="$declared_cases" '
-  BEGIN { n=split(DC,a," "); for(i=1;i<=n;i++) named[a[i]]=1 }
-  !/^#/ && $1=="FAIL" && ($3=="lean-observation" || $3=="differential" || $3=="membership" || $3=="confluent" || $3=="racy" || $3=="nondet") && !($2 in named) { print $2"\t"$3 }
+  BEGIN { n=split(DC,a," "); for(i=1;i<=n;i++) named[a[i]]=1
+          fid["lean-observation"]=1; fid["differential"]=1; fid["membership"]=1
+          fid["confluent"]=1; fid["racy"]=1; fid["nondet"]=1 }
+  !/^#/ && $1=="FAIL" && !($2 in named) {
+    m = split($3, alt, "|"); nf = 0
+    for (k = 1; k <= m; k++) if (alt[k] in fid) nf++
+    if (nf == m) print $2"\t"$3
+    else if (nf > 0) print "MIXED-ALTERNATION\t"$2"\t"$3
+  }
 ' "$BASELINE" | sort)"
+mixed="$(printf '%s\n' "$unexplained" | grep '^MIXED-ALTERNATION' || true)"
+unexplained="$(printf '%s\n' "$unexplained" | grep -v '^MIXED-ALTERNATION' | grep . || true)"
+if [ -n "$mixed" ]; then
+  echo "FAIL (6): baseline row(s) whose stage alternation MIXES fidelity and non-fidelity stages — no honest bucket; split the row's record or fix the alternation:"
+  printf '%s\n' "$mixed" | cut -f2- | sed 's/^/  /'
+  fail=1
+fi
 nun="$(printf '%s' "$unexplained" | grep -c . || true)"
 
 if [ "$LIST" -eq 1 ]; then

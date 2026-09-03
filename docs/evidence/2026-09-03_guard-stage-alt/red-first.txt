@@ -1,0 +1,29 @@
+# Red-first evidence: the Part A4 fixtures of scripts/test-lane-validation, run against
+# main@345ef090's scripts/coverage-baseline-diff and scripts/check-bugs.sh (extracted via git show),
+# then against this lane's versions. Generated 2026-09-03 in worktree guard-stage-alt.
+# Expected under the ruling: (i) exit 0; (ii) exit 1; (iii) exit 1; (iv) exit 2 REFUSED; (v) exit 2 REFUSED;
+# (vi) exit 2 REFUSED; (vii) exit 1; check-bugs: (4) naming fx/alt; (6) for a mixed alternation.
+
+== main@345ef090 (RED expected: alternation unknown to the guard; check-bugs drops the row)
+  (i) member differential [want 0]: exit 1 :: DRIFT vs /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv (1 case(s) run): fx/alt	baseline[FAIL/nonde
+  (i) member nondet [want 0]: exit 1 :: DRIFT vs /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv (1 case(s) run): fx/alt	baseline[FAIL/nonde
+  (ii) non-member [want 1]: exit 1 :: DRIFT vs /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv (1 case(s) run): fx/alt	baseline[FAIL/nonde
+  (iii) PASS [want 1]: exit 1 :: DRIFT vs /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv (1 case(s) run): fx/alt	baseline[FAIL/nonde
+  (iv) PASS-row alternation [want 2 REFUSED]: exit 1 :: DRIFT vs /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv (1 case(s) run): fx/alt	baseline[PASS/confl
+  (v) unknown word [want 2 REFUSED]: exit 1 :: DRIFT vs /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv (1 case(s) run): fx/alt	baseline[FAIL/nonde
+  (vi) no reason line [want 2 REFUSED]: exit 1 :: DRIFT vs /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv (1 case(s) run): fx/alt	baseline[FAIL/nonde
+  (vii) plain exact [want 1]: exit 1 :: DRIFT vs /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv (1 case(s) run): fx/plain	baseline[FAIL/non
+  check-bugs untracked alternation row [want exit 1, FAIL (4) naming fx/alt]: exit 0 :: 0 line(s) name fx/alt; 
+  check-bugs MIXED alternation [want exit 1, FAIL (6)]: exit 0 :: 
+
+== guard-stage-alt lane (GREEN expected)
+  (i) member differential [want 0]: exit 0 :: no regression: 1 case(s) run in results.tsv match /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv 
+  (i) member nondet [want 0]: exit 0 :: no regression: 1 case(s) run in results.tsv match /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv 
+  (ii) non-member [want 1]: exit 1 :: DRIFT vs /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv (1 case(s) run): fx/alt	baseline[FAIL/nonde
+  (iii) PASS [want 1]: exit 1 :: DRIFT vs /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv (1 case(s) run): fx/alt	baseline[FAIL/nonde
+  (iv) PASS-row alternation [want 2 REFUSED]: exit 2 :: REFUSED: /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv carries a malformed stage alternation — c
+  (v) unknown word [want 2 REFUSED]: exit 2 :: REFUSED: /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv carries a malformed stage alternation — c
+  (vi) no reason line [want 2 REFUSED]: exit 2 :: REFUSED: /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv carries a malformed stage alternation — c
+  (vii) plain exact [want 1]: exit 1 :: DRIFT vs /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/bd/baseline.tsv (1 case(s) run): fx/plain	baseline[FAIL/non
+  check-bugs untracked alternation row [want exit 1, FAIL (4) naming fx/alt]: exit 1 :: 2 line(s) name fx/alt; FAIL (4): 1 unexplained fidelity failure(s) carry no valid disposition in /home/dev/projects/golean/.claude/worktrees/guard-stage-alt/artifacts/scratch-cbd/cb/i
+  check-bugs MIXED alternation [want exit 1, FAIL (6)]: exit 1 :: FAIL (6): baseline row(s) whose stage alternation MIXES fidelity and non-fidelity stages — no honest bucket; split the row's record or fix the alternation:

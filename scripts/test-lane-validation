@@ -19,6 +19,9 @@
 #   missing go FAILS this part rather than skipping it: diff-coverage's
 #   own go check sits BELOW its up-front rm, so without go every fixture
 #   would pass VACUOUSLY (dying at the go check, not the path under test).
+#   Part A4 (always; pure shell): scripts/coverage-baseline-diff's per-row
+#   stage ALTERNATION rules ([USER] ruling (a) 2026-09-03) + check-bugs's
+#   handling of an alternation row (counted by name, never dropped).
 #   Part B (--with-go only; needs go + the built golean binary, so ci runs
 #   it under --diff): scripts/diff-coverage's IN-HARNESS lane checks — the
 #   param re-validation (F4: a samples=0 row that somehow bypasses the
@@ -198,6 +201,60 @@ cb_bugs $'- Expect: PASS\n' PASS
 if out="$(cb_run)"; then echo "FAIL: check-bugs ACCEPTED 'Expect: PASS' (must fail closed)"; fail=1
 elif [[ "$out" != *"FAIL (0)"* ]]; then echo "FAIL: check-bugs rejected Expect: PASS, but not via (0): $out"; fail=1
 else echo "ok: check-bugs unrecognized Expect token fails closed (0)"; fi
+
+# ---- Part A4 (always; pure shell): scripts/coverage-baseline-diff's per-row
+# STAGE ALTERNATION ([USER] ruling (a), 2026-09-03 — the guard fix for the
+# oracle-schedule-dependent red channels/select-select/beside-loop, whose
+# stage is `nondet` or `differential` by gc's sample). Red-first on main's
+# script (evidence: docs/evidence/2026-09-03_guard-stage-alt/red-first.txt):
+# (i) a member stage matches; (ii) a non-member stage drifts; (iii) a PASS
+# is never absorbed; (iv) an alternation on a PASS row is REFUSED (exit 2,
+# never "no drift"); (v) an unknown stage word is REFUSED; (vi) a missing
+# `# reason:` line is REFUSED; (vii) plain rows still compare exactly. Then
+# scripts/check-bugs.sh: an alternation row must stay VISIBLE to the
+# fidelity filter (an untracked one fails (4) BY NAME, not by vanishing),
+# and a fidelity/non-fidelity MIX fails (6).
+BD="$TMP/baseline-diff"; mkdir -p "$BD"
+bd_base() { printf 'result\tid\tstage\n%s\n' "$1" > "$BD/baseline.tsv"; }
+bd_res()  { printf 'result\tid\tfeatures\tstage\n%s\n' "$1" > "$BD/results.tsv"; }
+bd_expect() {  # $1 name, $2 expected exit, $3 required output text
+  local name="$1" want="$2" needle="$3" out rc=0
+  out="$(scripts/coverage-baseline-diff --baseline "$BD/baseline.tsv" "$BD/results.tsv" 2>&1)" || rc=$?
+  if [ "$rc" -ne "$want" ]; then echo "FAIL: baseline-diff $name: exit $rc, expected $want: $out"; fail=1
+  elif [[ "$out" != *"$needle"* ]]; then echo "FAIL: baseline-diff $name: exit $want but without the expected text ($needle): $out"; fail=1
+  else echo "ok: baseline-diff $name"; fi
+}
+bd_base $'# reason: fixture — oracle-schedule-dependent stage\nFAIL\tfx/alt\tnondet|differential'
+bd_res $'FAIL\tfx/alt\tx\tdifferential'
+bd_expect "(i) member stage differential -> no drift" 0 "no regression"
+bd_res $'FAIL\tfx/alt\tx\tnondet'
+bd_expect "(i) member stage nondet -> no drift" 0 "no regression"
+bd_res $'FAIL\tfx/alt\tx\tfrontend-export'
+bd_expect "(ii) non-member stage -> drift" 1 $'fx/alt\tbaseline[FAIL/nondet|differential] -> now[FAIL/frontend-export]'
+bd_res $'PASS\tfx/alt\tx\t-'
+bd_expect "(iii) PASS never absorbed -> drift" 1 $'fx/alt\tbaseline[FAIL/nondet|differential] -> now[PASS/-]'
+bd_base $'# reason: fixture\nPASS\tfx/alt\tconfluent|membership'
+bd_res $'PASS\tfx/alt\tx\tconfluent'
+bd_expect "(iv) alternation on a PASS row -> REFUSED" 2 "alternation is for non-PASS rows only"
+bd_base $'# reason: fixture\nFAIL\tfx/alt\tnondet|bogus-stage'
+bd_res $'FAIL\tfx/alt\tx\tnondet'
+bd_expect "(v) unknown stage word -> REFUSED" 2 "unknown stage word 'bogus-stage'"
+bd_base $'FAIL\tfx/alt\tnondet|differential'
+bd_res $'FAIL\tfx/alt\tx\tnondet'
+bd_expect "(vi) alternation without a # reason: line -> REFUSED" 2 'without a `# reason:` line'
+bd_base $'FAIL\tfx/plain\tnondet'
+bd_res $'FAIL\tfx/plain\tx\tdifferential'
+bd_expect "(vii) plain row stays exact -> drift" 1 $'fx/plain\tbaseline[FAIL/nondet] -> now[FAIL/differential]'
+# check-bugs: the alternation row is counted, by name.
+printf '## BUG-901 — fixture\n\n- Status: fixed\n- Pinned-by: none (fixture)\n- Cases: fx/other\n' > "$CB/bugs.md"
+printf 'result\tid\tstage\nFAIL\tfx/other\tlean-observation\nFAIL\tfx/alt\tnondet|differential\n' > "$CB/baseline.tsv"
+if out="$(cb_run)"; then echo "FAIL: check-bugs ACCEPTED an untracked fidelity red with an alternation stage (the row fell out of the filter)"; fail=1
+elif [[ "$out" != *"FAIL (4)"* || "$out" != *"fx/alt"* ]]; then echo "FAIL: check-bugs rejected, but not via (4) naming fx/alt: $out"; fail=1
+else echo "ok: check-bugs alternation row stays in the fidelity filter (unclassified fx/alt fails (4) by name)"; fi
+printf 'result\tid\tstage\nFAIL\tfx/other\tlean-observation\nFAIL\tfx/alt\tnondet|frontend-export\n' > "$CB/baseline.tsv"
+if out="$(cb_run)"; then echo "FAIL: check-bugs ACCEPTED a fidelity/non-fidelity MIXED alternation"; fail=1
+elif [[ "$out" != *"FAIL (6)"* ]]; then echo "FAIL: check-bugs rejected a mixed alternation, but not via (6): $out"; fail=1
+else echo "ok: check-bugs mixed alternation fails (6)"; fi
 
 # ---- Part A2 (always): gate-integrity no-publish fixtures (grossmith
 # findings §2, docs/2026-08-07_grossmith-findings.md; extended at the
