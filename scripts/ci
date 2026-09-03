@@ -498,10 +498,10 @@ if [ "$RUN_DIFF" -eq 1 ]; then
   esac
 fi
 if [ "$RUN_DIFF" -eq 1 ]; then
-  step "membership-lane gate self-test, go-dependent half (--with-go: F4 param re-validation, F6 frontend guard, B3-B5 slice-4 lane gates, G5 fan-out-never-ran no-publish; G1-G4 run in the fast half since audit F19)"
+  step "membership-lane gate self-test, go-dependent half (--with-go: F4 param re-validation, F6 frontend guard, B3-B5 slice-4 lane gates, G5 fan-out-never-ran no-publish, T1-T4 timeouts name their cause; G1-G4 run in the fast half since audit F19)"
   if laneout="$(./scripts/test-lane-validation --with-go 2>&1)"; then
-    echo "$laneout" | grep -E "F4|F6|B[0-9]|G[0-9]|^test-lane" | sed 's/^/  /'
-    ok "lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5)"
+    echo "$laneout" | grep -E "F4|F6|B[0-9]|G[0-9]|T[0-9]-|^test-lane" | sed 's/^/  /'
+    ok "lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T4)"
   else
     echo "$laneout"
     bad "lane-validation fixtures, harness half (a lane gate went quiet — see above)"

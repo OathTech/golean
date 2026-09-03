@@ -1,0 +1,58 @@
+# scripts/test-lane-validation --with-go against the FIXED runner (this branch) — GREEN expected
+ok: membership without why
+ok: nondet tag on a strict row
+ok: strict row with why text
+ok: unknown param key
+ok: invalid lane value
+ok: duplicate param key
+ok: non-positive param value
+ok: membership without the nondet tag
+ok: tier on a racy row
+ok: tier on a confluent row (W3.2 stage C widening)
+ok: invalid tier value
+ok: membership without explicit width (F2a)
+ok: bare 6-column strict row
+ok: explicit strict row
+ok: well-formed membership row
+ok: confluent without why
+ok: confluent with the nondet tag
+ok: confluent without width
+ok: confluent with a members param
+ok: racy on a non-race expectation
+ok: racy without width
+ok: race expectation left on the strict lane
+ok: race expectation on the membership lane
+ok: well-formed confluent row
+ok: well-formed racy row
+ok: membership row with a members pin
+ok: statuses on a non-membership lane
+ok: statuses malformed entry
+ok: statuses singleton
+ok: statuses missing expected_status
+ok: statuses duplicate entry
+ok: membership row with a status-diverse envelope
+ok: check-bugs Expect: FAIL with a FAIL row passes
+ok: check-bugs Expect: FAIL with a PASS row fails (5)
+ok: check-bugs none-entry without Expect stays existence-only
+ok: check-bugs unrecognized Expect token fails closed (0)
+ok: lake-build failure exits 2, no readable results (G1)
+ok: lake-build timeout exits 2, no readable results (G2)
+ok: manifest-not-found exits 2, no readable results (G3)
+ok: empty manifest exits 2 without publishing (G4)
+ok: harness re-validation rejects samples=0 (F4)
+ok: membership under non-native frontend fails closed (F6)
+ok: members= cardinality pin refuses a wrong pin (B3)
+ok: confluent lane refuses a non-singleton set (B4)
+ok: racy lane fails loud on a refuted width (B5)
+ok: fan-out that ran no worker exits 2 without publishing (G5)
+ok: G5 named both causes (global fan-out refusal + empty-row guard), no stray .out
+ok: T1-strict-lean-run: timeout named at stage lean-observation (Lean run TIMED OUT after 1s)
+    row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	lean-observation	Lean run TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) — no observation produced (expected status ok); captured output: run_with_timeout: TIMED OUT after 1s — killing: /home/dev/projects/golean/.tmp/golean-lane-validation.ZiAwAJ/fakeroot/.lake/build/bin/golean native-json-run --input /home/dev/projects/golean/.tmp/golean-lane-validation.ZiAwAJ/artifacts-T1-strict-lean-run/native/lane-t1/wire.json --function forConditionEval
+ok: T2-nondet-rerun: timeout named at stage nondet (re-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s)
+    row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	nondet	oracle-invariance re-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) — invariance NOT certified (a killed run is not an observed variance); captured output: run_with_timeout: TIMED OUT after 1s — killing: /home/dev/projects/golean/.tmp/golean-lane-validation.ZiAwAJ/fakeroot/.lake/build/bin/golean native-json-run --input /home/dev/projects/golean/.tmp/golean-lane-validation.ZiAwAJ/artifacts-T2-nondet-rerun/native/lane-t1/wire.json --function forConditionEval --choices 9,8,7,6,5,4,3,2,1,0
+ok: T3-coupling-pin: timeout named at stage membership (driver-coupling pin: native-json-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s)
+    row: FAIL	lane-t3	maps,range,keys,loops,nondet	membership	driver-coupling pin: native-json-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) — coupling NOT certified (a killed run is not copied-driver drift); captured output: run_with_timeout: TIMED OUT after 1s — killing: /home/dev/projects/golean/.tmp/golean-lane-validation.ZiAwAJ/fakeroot/.lake/build/bin/golean native-json-run --input /home/dev/projects/golean/.tmp/golean-lane-validation.ZiAwAJ/artifacts-T3-coupling-pin/native/lane-t3/wire.json --function rangeFirstKey --choices 9,8,7,6,5,4,3,2,1,0
+ok: T4-sample-loop: timeout named at stage membership (observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing a Go sample against member #1)
+    row: FAIL	lane-t3	maps,range,keys,loops,nondet	membership	membership check: observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing a Go sample against member #1 — membership NOT decided (a killed comparator is not the too-narrow soundness alarm): sample={"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]} member={"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+test-lane-validation: ok
+EXIT=0

@@ -226,3 +226,35 @@ rows). Lesson: a per-case fail-closed row is only honest when the
 failure was per-case; a global failure rendered as N local ones is a
 misattribution, and an `xargs` without `-r` is a fabrication waiting
 for an empty pipe. Fixture: `scripts/test-lane-validation` G5.
+
+## A killed command has decided nothing: timeouts must name themselves
+
+`run_with_timeout` in `scripts/diff-coverage` exits 124 silently, and
+four of its consumers read the killed command's EMPTY capture as a
+verdict (noodler-lane finding, confirmed by its auditor, fixed
+2026-09-03): the strict-lane Lean run reported `lean-observation:
+expected status ok, got ` (nothing after "got"); the oracle-invariance
+re-run reported "observation varies with iteration order" with
+`variant=` empty; the membership driver-coupling pin reported
+"copied-driver drift"; and the Go-sample membership loop raised the
+too-narrow soundness alarm — one cause-blind, three cause-WRONG, all
+of them fail-closed (a timeout never passed) and therefore invisible
+as defects until someone read a detail column. The three enumerator
+paths already did it right ("enumerator TIMED OUT after Ns …"), which
+is how the rest were caught. Remedy: every consumer tests exit 124
+BEFORE it reads the capture, and reports at the stage of the check
+that could not complete with `… TIMED OUT after Ns (<KNOB>) — <what
+was NOT established>` (stage words unchanged — the strict run stays
+at `lean-observation` because `tools/reconcile-records` and
+`scripts/check-bugs.sh` count that stage as fidelity-bearing and
+`lean-run` would have left the ratchet); `lean observation-eq` moved
+behind `obs_eq`, whose 124 is distinct from "not equal"; and the alarm
+handler announces itself on stderr so a `2>&1` capture carries the
+cause even in a consumer that forgets the test. Lesson: a fail-closed
+path can still lie about WHY; a wrapper that returns a bare exit code
+delegates the naming to every caller, and every caller that reads
+"$output" before "$?" will attribute the silence to whatever it was
+checking. Test it by forcing the kill: `scripts/test-lane-validation
+--with-go` T1-T4 run the real runner from a fake root whose `golean`
+shim `exec sleep`s on exactly one targeted call under a 1 s budget
+(red-first record: `docs/evidence/2026-09-03_timeout-cause/`).

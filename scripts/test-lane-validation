@@ -425,6 +425,105 @@ EOF
       echo "ok: G5 named both causes (global fan-out refusal + empty-row guard), no stray .out"
     fi
 
+    # ---- T1-T4: timeouts NAME THEIR CAUSE (noodler-lane finding, fixed
+    # 2026-09-03). run_with_timeout exits 124 silently, and four consumers
+    # read the killed command's EMPTY capture as a verdict: the strict
+    # Lean run reported `expected status ok, got ` (T1, cause-blind); the
+    # oracle-invariance re-run reported "observation varies with iteration
+    # order" (T2); the membership driver-coupling pin reported
+    # "copied-driver drift" (T3); and the Go-sample membership loop raised
+    # the too-narrow soundness alarm (T4) — the last three cause-WRONG.
+    # Red-first: on the pre-fix runner every T fixture fails with exactly
+    # those texts (recorded in docs/evidence/2026-09-03_timeout-cause/).
+    #
+    # Mechanism: a FAKE ROOT — a temp dir whose scripts/diff-coverage is a
+    # symlink to the runner under test, whose tools/, Corpus/, baselines/
+    # and go-build-cache are symlinks to the real ones, and whose
+    # .lake/build/bin/golean is a bash shim that delegates every call to
+    # the REAL built binary except the ONE call the fixture targets, which
+    # `exec sleep`s past LEAN_TIMEOUT_SECONDS=1 so run_with_timeout kills
+    # it (exit 124). The runner is untouched — no binary-override knob is
+    # added to the trusted apparatus; the shim is reached only through the
+    # runner's own ROOT derivation. `exec sleep`, not `sleep`: the TERM
+    # must reach the sleeper itself, or a bash parent dies and orphans it
+    # holding the capture pipe open. The budget is the real knob at its
+    # minimum legal value (positive integer); no budget in the runner is
+    # changed.
+    REAL_GOLEAN="$ROOT/.lake/build/bin/golean"
+    if [ ! -x "$REAL_GOLEAN" ]; then
+      echo "FAIL: T1-T4 need the built golean binary at $REAL_GOLEAN (failing closed, not skipping)"
+      fail=1
+    else
+      FR="$TMP/fakeroot"
+      mkdir -p "$FR/scripts" "$FR/.lake/build/bin" "$FR/artifacts"
+      ln -s "$ROOT/scripts/diff-coverage" "$FR/scripts/diff-coverage"
+      for _d in tools Corpus baselines; do ln -s "$ROOT/$_d" "$FR/$_d"; done
+      ln -s "$ROOT/artifacts/go-build-cache" "$FR/artifacts/go-build-cache"
+      cat > "$FR/.lake/build/bin/golean" <<'EOF'
+#!/bin/bash
+# fake golean (test-lane-validation T1-T4): delegate to the real binary,
+# except the one call FAKE_GOLEAN_SLOW selects, which sleeps past the
+# 1s Lean budget so run_with_timeout kills it (exit 124).
+REAL="$FAKE_GOLEAN_REAL"; ST="$FAKE_GOLEAN_STATE"; sub="${1:-}"
+has_choices=0; case " $* " in *" --choices "*) has_choices=1 ;; esac
+case "${FAKE_GOLEAN_SLOW:-}" in
+  run-default)  # T1: the strict lane's single default-stream run
+    [ "$sub" = native-json-run ] && [ "$has_choices" -eq 0 ] && exec sleep 30 ;;
+  run-choices)  # T2 (strict nondet re-run) / T3 (membership coupling stream)
+    [ "$sub" = native-json-run ] && [ "$has_choices" -eq 1 ] && exec sleep 30 ;;
+  eq-sample)    # T4: the first Go-sample comparison of the membership loop.
+    # After the enumerator, every native-json-run answers member #1, so
+    # each of the 4 coupling streams needs exactly ONE observation-eq
+    # (member #1 vs itself, decided by the real binary). The observation-eq
+    # after the 4th stream's single check is the first sample comparison.
+    case "$sub" in
+      coverage-observations) "$REAL" "$@" | tee "$ST/members"; exit "${PIPESTATUS[0]}" ;;
+      native-json-run) echo $(( $(cat "$ST/runs" 2>/dev/null || echo 0) + 1 )) > "$ST/runs"; head -1 "$ST/members"; exit 0 ;;
+      observation-eq)
+        if [ "$(cat "$ST/runs" 2>/dev/null || echo 0)" -ge 4 ]; then
+          eqs=$(( $(cat "$ST/eqs" 2>/dev/null || echo 0) + 1 )); echo "$eqs" > "$ST/eqs"
+          [ "$eqs" -ge 2 ] && exec sleep 30
+        fi ;;
+    esac ;;
+esac
+exec "$REAL" "$@"
+EOF
+      chmod +x "$FR/.lake/build/bin/golean"
+      FAKEBIN_T="$TMP/fakebin-lake-noop"   # the fake root has no lakefile; the binary is prebuilt
+      mkdir -p "$FAKEBIN_T"
+      printf '#!/bin/sh\nexit 0\n' > "$FAKEBIN_T/lake"
+      chmod +x "$FAKEBIN_T/lake"
+      # Strict subject: a small baseline-PASS strict case (row fields read
+      # from its cases.tsv so a corpus edit cannot silently desync the row).
+      STRICT_DIR="Corpus/coverage/exec/control-flow/for-condition-eval"
+      IFS=$'\t' read -r _ strict_subj strict_args strict_status strict_reason strict_feats < <(grep -v '^#' "$ROOT/$STRICT_DIR/cases.tsv" | head -1)
+      run_t() {  # $1 name, $2 mode, $3 manifest, $4 stage, $5 must-contain, $6 must-NOT-contain
+        local name="$1" mode="$2" manifest="$3" stage="$4" need="$5" forbid="$6" art st row
+        art="$TMP/artifacts-$name"; st="$TMP/state-$name"; mkdir -p "$st"
+        PATH="$FAKEBIN_T:$PATH" FAKE_GOLEAN_REAL="$REAL_GOLEAN" FAKE_GOLEAN_STATE="$st" FAKE_GOLEAN_SLOW="$mode" \
+          LEAN_TIMEOUT_SECONDS=1 GOLEAN_COVERAGE_JOBS=1 GOLEAN_COVERAGE_ARTIFACTS="$art" \
+          "$FR/scripts/diff-coverage" "$manifest" >/dev/null 2>&1
+        row="$(tail -1 "$art/latest.tsv" 2>/dev/null || true)"
+        if [[ "$row" == FAIL*"	$stage	"*"$need"* && "$row" != *"$forbid"* ]]; then
+          echo "ok: $name: timeout named at stage $stage ($need)"
+          echo "    row: $row"
+        else
+          echo "FAIL: $name: the timeout was not named (want stage $stage + '$need', never '$forbid'); row: ${row:-<none>}"
+          fail=1
+        fi
+      }
+      printf 'lane-t1\t%s\t%s\t%s\t%s\t%s\t%s\tstrict\t-\t-\n' "$STRICT_DIR" "$strict_subj" "$strict_args" "$strict_status" "$strict_feats" "$strict_reason" > "$TMP/manifest-t-strict.tsv"
+      run_t T1-strict-lean-run run-default "$TMP/manifest-t-strict.tsv" lean-observation \
+        "Lean run TIMED OUT after 1s" "expected status ok, got"
+      run_t T2-nondet-rerun run-choices "$TMP/manifest-t-strict.tsv" nondet \
+        "re-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s" "varies with iteration order"
+      printf 'lane-t3\t%s\trangeFirstKey\t-\tok\tmaps,range,keys,loops,nondet\t-\tmembership\twhy\twidth=16,sites=8,samples=1\n' "$GO_DIR" > "$TMP/manifest-t-member.tsv"
+      run_t T3-coupling-pin run-choices "$TMP/manifest-t-member.tsv" membership \
+        "driver-coupling pin: native-json-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s" "copied-driver drift, or"
+      run_t T4-sample-loop eq-sample "$TMP/manifest-t-member.tsv" membership \
+        "observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing a Go sample against member #1" "NOT in the machine's enumerated set"
+    fi
+
   fi
 fi
 

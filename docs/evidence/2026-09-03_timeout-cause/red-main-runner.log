@@ -1,0 +1,54 @@
+# scripts/test-lane-validation --with-go against MAIN's runner (b5abacc1 scripts/diff-coverage) + the T1-T4 fixtures — RED expected
+ok: membership without why
+ok: nondet tag on a strict row
+ok: strict row with why text
+ok: unknown param key
+ok: invalid lane value
+ok: duplicate param key
+ok: non-positive param value
+ok: membership without the nondet tag
+ok: tier on a racy row
+ok: tier on a confluent row (W3.2 stage C widening)
+ok: invalid tier value
+ok: membership without explicit width (F2a)
+ok: bare 6-column strict row
+ok: explicit strict row
+ok: well-formed membership row
+ok: confluent without why
+ok: confluent with the nondet tag
+ok: confluent without width
+ok: confluent with a members param
+ok: racy on a non-race expectation
+ok: racy without width
+ok: race expectation left on the strict lane
+ok: race expectation on the membership lane
+ok: well-formed confluent row
+ok: well-formed racy row
+ok: membership row with a members pin
+ok: statuses on a non-membership lane
+ok: statuses malformed entry
+ok: statuses singleton
+ok: statuses missing expected_status
+ok: statuses duplicate entry
+ok: membership row with a status-diverse envelope
+ok: check-bugs Expect: FAIL with a FAIL row passes
+ok: check-bugs Expect: FAIL with a PASS row fails (5)
+ok: check-bugs none-entry without Expect stays existence-only
+ok: check-bugs unrecognized Expect token fails closed (0)
+ok: lake-build failure exits 2, no readable results (G1)
+ok: lake-build timeout exits 2, no readable results (G2)
+ok: manifest-not-found exits 2, no readable results (G3)
+ok: empty manifest exits 2 without publishing (G4)
+ok: harness re-validation rejects samples=0 (F4)
+ok: membership under non-native frontend fails closed (F6)
+ok: members= cardinality pin refuses a wrong pin (B3)
+ok: confluent lane refuses a non-singleton set (B4)
+ok: racy lane fails loud on a refuted width (B5)
+ok: fan-out that ran no worker exits 2 without publishing (G5)
+ok: G5 named both causes (global fan-out refusal + empty-row guard), no stray .out
+FAIL: T1-strict-lean-run: the timeout was not named (want stage lean-observation + 'Lean run TIMED OUT after 1s', never 'expected status ok, got $'); row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	lean-observation	expected status ok, got 
+FAIL: T2-nondet-rerun: the timeout was not named (want stage nondet + 're-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s', never 'varies with iteration order'); row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	nondet	observation varies with iteration order (oracle [9,8,7,6,5,4,3,2,1,0]): default={"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1233}]} variant=
+FAIL: T3-coupling-pin: the timeout was not named (want stage membership + 'driver-coupling pin: native-json-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s', never 'copied-driver drift, or'); row: FAIL	lane-t3	maps,range,keys,loops,nondet	membership	driver-coupling pin: native-json-run observation under stream [9,8,7,6,5,4,3,2,1,0] is NOT in the enumerated set (copied-driver drift, or a behavior the enumeration missed): 
+FAIL: T4-sample-loop: the timeout was not named (want stage membership + 'observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing a Go sample against member #1', never 'NOT in the machine's enumerated set'); row: FAIL	lane-t3	maps,range,keys,loops,nondet	membership	Go observation is NOT in the machine's enumerated set (the too-narrow soundness alarm): {"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":3}]} enumerated=3
+test-lane-validation: FAIL
+EXIT=1

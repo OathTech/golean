@@ -255,6 +255,19 @@ The default executable lane is a conformance signal, not an expected-failure
 test suite. A case that does not match Go remains a failure even when the
 failure is understood.
 
+Wall-clock kills (the runner's `*_TIMEOUT_SECONDS` budgets; exit 124 from
+`run_with_timeout`) are reported at the stage of the CHECK that could not
+complete — the stage vocabulary is unchanged — with a detail that names
+the cause: `… TIMED OUT after <N>s (<KNOB>) — <what was NOT established>`
+(e.g. `lean-observation: Lean run TIMED OUT after 30s
+(LEAN_TIMEOUT_SECONDS) — no observation produced`; `nondet: … re-run under
+stream [...] TIMED OUT … — invariance NOT certified`; `membership:
+enumerator TIMED OUT … (coverage not certified)`). A timeout is never a
+pass and is never rendered as a differential mismatch, an iteration-order
+variance, driver drift, or the membership soundness alarm — a killed
+command has decided nothing (`scripts/test-lane-validation` T1-T4;
+`docs/evidence/2026-09-03_timeout-cause/`).
+
 ## Migration Plan
 
 1. Add JSON output next to `artifacts/coverage/latest.tsv`.
