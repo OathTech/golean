@@ -2,7 +2,7 @@
 
 Consuming docs: `docs/coverage-suite-structure.md` ("Lane assignment:
 the strict-lane routing rule"), `docs/2026-09-01_membership-depth.md`
-(§5 rule, §6 P1 status), `docs/language-coverage-ledger.md` §8e,
+(§5 rule, §6 P1 status), `docs/language-coverage-ledger.md` §8f (§8e on the lane; re-lettered at the round-8a merge train — `fg-gaps` had landed a §8e first),
 `docs/coverage-ledger.md` (Goroutines and scheduling row), the four
 routed/annotated `cases.tsv` files, `baselines/native-full.tsv` header.
 

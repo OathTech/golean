@@ -880,6 +880,20 @@ confluence certificate. Every strict PASS row's detail now carries
 `wide=<w> exhausted=none depth=<fixed|N>` (metadata; the baseline
 records result + stage only).
 
+*(Round-8a merge train, 2026-09-03 [AGENT] — replay note. This section
+was written at the lane's own base (the `bug086-shim-closure` pin, 3195 =
+3001 / 194) and is kept as recorded; its title was `8e` on the lane and is
+re-lettered `8f` here because `fg-gaps` had already landed a `§8e` on main.
+Replayed over `hygiene-b1-stamps` (3199 = 3005 PASS / 194 FAIL) the same
+9 stage-only moves carry unchanged — data-row diff of the rebased baseline
+vs the stamps tip = exactly those 9 rows, 0 result flips — and the by-lane
+PASS split becomes strict 2850 (2846 + the 4 born-PASS stamps rows, stage
+`-`), confluent 85, membership 37, racy 33 (= 3005). `beside-loop`'s move
+composes with `guard-stage-alt`'s [USER]-ruled (a) alternation, landed
+between: `nondet|differential` → `lean-observation|differential`, the
+`# reason:` block re-stated (the lane's audit TRAIN NOTE,
+`docs/evidence/2026-09-03_strict-routing/README.md`).)*
+
 ### 8c. The re-derivation, 2026-08-22 vintage → the 2026-09-01 tip
 
 Method: §8b's, re-run against this tip's baseline (re-pinned
