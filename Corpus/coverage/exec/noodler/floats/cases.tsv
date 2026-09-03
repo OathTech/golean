@@ -1,0 +1,16 @@
+# id	subject	args	expected_status	expected_reason	features
+float32-per-op-rounding	float32PerOpRounding	-	ok	-	floats,widths,representability
+infinity-arithmetic	infinityArithmetic	-	ok	-	floats,division
+nan-comparisons	nanComparisons	-	ok	-	floats,comparisons
+signed-zero	signedZeroBehaviour	-	ok	-	floats,division
+denormal-edges	denormalEdges	-	ok	-	floats,representability
+float32-overflow	float32Overflow	-	ok	-	floats,overflow,conversions
+float-to-int-boundaries	floatToIntBoundaries	-	ok	-	floats,conversions,ints,widths
+tenths-accumulate	tenthsAccumulate	-	ok	-	floats,loops
+float-compound-ops	floatCompoundOps	-	ok	-	floats,assignment
+float32-div-mul-roundtrip	float32DivMulRoundTrip	-	ok	-	floats,division
+widen-float32-compare	widenFloat32Compare	-	ok	-	floats,conversions,comparisons
+nan-conversions	nanConversions	-	ok	-	floats,conversions
+float-integer-boundary	floatIntegerBoundary	-	ok	-	floats,conversions,ints,representability
+cancellation	cancellation	-	ok	-	floats
+negative-zero-key-switch	negativeZeroKeyAfterArithmetic	-	ok	-	floats,maps,switch,keys

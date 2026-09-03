@@ -1,0 +1,15 @@
+# id	subject	args	expected_status	expected_reason	features
+assert-pointer-to-value	assertPointerToValue	-	panic	interface conversion: interface {} is *main.T, not main.T	interfaces,type_assertions,pointers,panic
+assert-value-to-pointer	assertValueToPointer	-	panic	interface conversion: interface {} is main.T, not *main.T	interfaces,type_assertions,pointers,panic
+assert-value-missing-ptr-method	assertValueMissingPointerMethod	-	panic	interface conversion: main.T is not main.PI: missing method PM	interfaces,type_assertions,methods,panic
+assert-pointer-has-both	assertPointerHasBoth	-	ok	-	interfaces,type_assertions,methods,pointers
+assert-named-iface-mismatch	assertNamedInterfaceMismatch	-	panic	interface conversion: main.I is main.T, not *main.T	interfaces,type_assertions,pointers,panic
+assert-nil-named-to-iface	assertNilNamedToInterface	-	panic	interface conversion: interface is nil, not main.Other	interfaces,type_assertions,nil,panic
+assert-nil-any-to-iface	assertNilAnyToInterface	-	panic	interface conversion: interface is nil, not main.I	interfaces,type_assertions,nil,panic
+assert-defined-int-mismatch	assertDefinedIntMismatch	-	panic	interface conversion: interface {} is main.Code, not int	interfaces,type_assertions,defined_type,panic
+assert-slice-mismatch	assertSliceMismatch	-	panic	interface conversion: interface {} is []int, not int	interfaces,type_assertions,slices,panic
+assert-func-mismatch	assertFuncMismatch	-	panic	interface conversion: interface {} is func(), not int	interfaces,type_assertions,functions,panic
+assert-map-to-iface	assertMapToInterface	-	panic	interface conversion: map[string]int is not main.I: missing method M	interfaces,type_assertions,maps,panic
+assert-pointer-defined-int	assertPointerDefinedInt	-	panic	interface conversion: interface {} is *main.Code, not int	interfaces,type_assertions,pointers,defined_type,panic
+comma-ok-matrix	commaOkMatrix	-	ok	-	interfaces,type_assertions,comma_ok
+type-switch-matrix	typeSwitchMatrix	-	ok	-	interfaces,type_switch,nil

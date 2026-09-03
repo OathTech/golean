@@ -1,0 +1,15 @@
+# id	subject	args	expected_status	expected_reason	features
+assign-form-identifiers	assignFormIdentifiers	-	ok	-	range,assignment,slices
+assign-form-string-map	assignFormStringAndMap	-	ok	-	range,assignment,strings,maps
+array-value-copy-during-range	arrayValueCopyDuringRange	-	ok	-	range,arrays,value_copy
+array-pointer-sees-writes	arrayPointerSeesWrites	-	ok	-	range,arrays,pointers,aliasing
+slice-sees-writes	sliceSeesWrites	-	ok	-	range,slices,aliasing
+array-of-structs-copies	arrayOfStructsCopies	-	ok	-	range,structs,slices,value_copy
+range-int-evaluated-once	rangeIntEvaluatedOnce	-	ok	-	range,evaluation_order
+range-empty-and-index-only	rangeEmptyAndIndexOnly	-	ok	-	range,arrays,zero_len
+slice-reassigned-in-body	sliceReassignedInBody	-	ok	-	range,slices,evaluation_order
+nil-array-pointer-index-only	nilArrayPointerIndexOnly	-	ok	-	range,arrays,pointers,nil
+nil-array-pointer-value	nilArrayPointerValue	-	panic	invalid memory address or nil pointer dereference	range,arrays,pointers,nil,panic
+labeled-continue-range-chan	labeledContinueRangeChan	-	ok	-	range,channels,labels,continue
+string-rune-byte-sums	stringRuneAndByteSums	-	ok	-	range,strings,runes,bytes
+range-typed-int-var	rangeTypedIntVar	-	ok	-	range,ints,widths

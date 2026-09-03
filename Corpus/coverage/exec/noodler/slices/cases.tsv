@@ -1,0 +1,17 @@
+# id	subject	args	expected_status	expected_reason	features
+append-reallocates-at-cap	appendReallocatesAtCap	-	ok	-	slices,append,aliasing,cap
+append-shares-within-cap	appendSharesWithinCap	-	ok	-	slices,append,aliasing,cap
+append-to-prefix-overwrites	appendToPrefixOverwrites	-	ok	-	slices,append,aliasing
+append-into-array-storage	appendIntoArrayStorage	-	ok	-	slices,append,arrays,aliasing
+full-slice-forces-realloc	fullSliceForcesRealloc	-	ok	-	slices,append,full_slice,aliasing
+reslice-zero-then-append	resliceZeroThenAppend	-	ok	-	slices,append,slicing,aliasing
+callee-append-within-cap	calleeAppendWithinCap	-	ok	-	slices,append,calls,aliasing
+delete-idiom-tail	deleteIdiomTail	-	ok	-	slices,append,variadic,aliasing
+append-self-doubles	appendSelfDoubles	-	ok	-	slices,append,variadic
+byte-slice-sub-alias	byteSliceSubAlias	-	ok	-	slices,bytes,strings,aliasing
+reslice-beyond-len-sees-append	resliceBeyondLenSeesAppend	-	ok	-	slices,append,slicing,cap
+nested-reslice-shares	nestedResliceShares	-	ok	-	slices,slicing,aliasing,cap
+chained-appends-within-cap	chainedAppendsWithinCap	-	ok	-	slices,append,aliasing
+header-copy-independence	headerCopyIndependence	-	ok	-	slices,append,aliasing,value_copy
+nil-vs-empty-append	nilVsEmptyAppend	-	ok	-	slices,append,nil,make
+array-pointer-slice-shares	arrayPointerSliceShares	-	ok	-	slices,arrays,pointers,aliasing
