@@ -261,7 +261,7 @@ this is the ONLY twin-wire delta of the fix round (`twin-structural-diff-fixroun
 `internal/bytealg.{IndexString,Cutover}` bodies → named stubs; pin
 `b341dc3b…` → `98abdced9d15f3df5f37ac9d4950f28d26cf725ed7c4c07078d178dc54ea0fcd`,
 [USER]-authorized by G9, relayed). F8 the 600,000-trial run (above). F9
-D-002 wording. F10 FR-16 → FR-21 everywhere; reconciler duplicate-FR +
+D-002 wording. F10 the colliding frontier id (16, minted concurrently by branch fg-gaps) renumbered to FR-21 everywhere; reconciler duplicate-FR +
 label-max detection. F11 godoc degenerate-scan guard; anchors only into
 pinned packages (the memo's `fmt`/`sync` example anchors became
 placeholders). F12 register: caps enforced in the dump only; ci-side
@@ -307,8 +307,12 @@ pre-existing `fmt`/`complex64`/timeout causes).
   0 PASS→non-PASS (`gate-tail-fixround.txt`); baseline re-pinned to 3256
   rows (3062 PASS / 194 FAIL) and the twin wire to `98abdced…` with the
   reasons in their headers; the final clean-tip `scripts/capped scripts/ci
-  --diff` line is in `gate-final-fixround.txt`, committed by the last
-  (records-only) commit of the lane.
+  --diff` at `fec6a57b` (clean tree): **RESULT: PASS** — baseline diff
+  FULL 3256/3256 no regression, 0 PASS→non-PASS, all three frontend pins
+  ok, spec-anchors ok (25 godoc:), register ok, frontend unit tests ok,
+  reconciler 3 findings / 0 HIGH (the same three pre-existing MEDIUMs);
+  `gate-final-fixround.txt` is that run's step summary, committed by the
+  last (records-only) commit of the lane.
 - Conclusion (one paragraph): the machine executing the pinned GOROOT
   bodies of `strings.{Fields,TrimSpace,Split}` and `strconv.{FormatUint,
   FormatInt}` agrees with `go run` on every prior shim row, on 44 new
