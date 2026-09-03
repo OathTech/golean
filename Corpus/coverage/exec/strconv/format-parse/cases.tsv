@@ -8,9 +8,9 @@
 # trace23.tsv) show wide picks served AFTER exhaustion, so the fixed
 # streams never certified invariance past pick 8-10. Each declares
 # depth=N = the smallest power of two >= 4*w (w = default-stream wide
-# count), min 64 [AGENT sizing]; the gate replaces the fixed streams by
-# three seeded streams of length N and refuses unless every one reports
-# wideAfterExhaustion=0. Measured (default w / worst fixed-stream wide-
+# count), min 64 [AGENT sizing]; the gate ADDS three seeded (uniform-
+# random) streams of length N to the fixed three and refuses unless
+# every seeded one reports wideAfterExhaustion=0. Measured (default w / worst fixed-stream wide-
 # after-exhaustion):
 #   format-int-vals: w=22, 14 of 22 -> depth=128
 #   format-uint-bases: w=29, 21 of 29 -> depth=128

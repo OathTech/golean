@@ -137,6 +137,31 @@ Optional lane columns (membership lane, arc slice 3,
   the strict lane"); a strict case that varies across the adversarial
   choice streams keeps failing at stage `nondet`.
 
+Rules:
+
+- `id` is `-` for a one-case package, otherwise a kebab-case suffix.
+- `subject` is the source-level Go function Lean should run.
+- `args` is `-` or comma-separated integer arguments.
+- `expected_status` is one of `ok` or `panic`.
+- `expected_reason` is `-` for `ok`; it is required for `panic`.
+- Frontend export failures, Lean `unsupported`, Lean `stuck`, Lean `error`, and
+  differential mismatches are reported as red cases. They are not encoded as
+  expected statuses in executable metadata.
+- `features` is a comma-separated list of canonical feature tags.
+- `ok` subjects must return at least one observable value. Use a checksum or
+  deterministic summary for mutation-heavy tests.
+
+Derived fields:
+
+- `go_dir` is the directory containing `cases.tsv`.
+- Frontend artifact paths are adapter-owned. For the current Gobra adapter this
+  is `artifacts/coverage/work/<full-id>/main.go.internal.json`, but the
+  normalized manifest does not store that path.
+- Result logs are under `artifacts/coverage/results/<full-id>/`.
+
+This removes manifest duplication where ids, source directories, and
+frontend-specific artifact paths can drift independently.
+
 ### Lane assignment: the strict-lane depth guard (memo P1, [USER]-ruled 2026-09-03)
 
 Origin: the membership-depth lane's routing-rule proposal
@@ -175,14 +200,26 @@ stream is compared with its own default trajectory):
    redundant with the certificate and the guard does not run) or, when
    the enumerated set has ≥ 2 members, `lane=membership` with
    `members=`; or an explicit strict-lane `depth=N`, under which the
-   gate runs three SEEDED invariance streams of length N (seeds `1 2 3`,
-   generator `lcg31(1103515245,12345) bits16..31`, both in the run
-   meta as `depth_seeds`/`depth_generator`; the same explicit list goes
-   to `native-json-run --choices` and to the tracer, so nothing depends
-   on a shared generator) which must themselves report
+   gate runs SIX invariance streams: the three fixed adversarial
+   streams (kept — they are skewed prefix probes that catch corners a
+   uniform draw rarely does: memo §2.4's `beside-loop` is ok under the
+   default and both long random streams yet refuses under all three
+   fixed ones; on a depth row their coverage is recorded in the PASS
+   detail as `fixed-probes-after=`, not required to be 0) PLUS three
+   SEEDED streams of length N (seeds `1 2 3`, generator
+   `lcg31(1103515245,12345) bits16..31`, both in the run meta as
+   `depth_seeds`/`depth_generator`; the same explicit list goes to
+   `native-json-run --choices` and to the tracer, so nothing depends on
+   a shared generator). The seeded streams are UNIFORM RANDOM over
+   0..65535, reduced mod the site's bound by `Choices.consume` — not
+   demonic, not adversarial; the word "adversarial" belongs to the
+   three fixed streams only. The seeded streams must themselves report
    `wideAfterExhaustion = 0` — else "strict row: k wide pick(s) served
    after the declared depth=N stream <seeded:seed:N> was exhausted at
-   consumption n — … raise depth". No default: a strict row whose
+   consumption n — … raise depth". The gate refuses a stream set that
+   is not exactly 3 (no depth) or 6 (depth) streams, an empty stream,
+   a tracer report labelled "default" past the first, or a report count
+   other than streams + 1 — each by name. No default: a strict row whose
    streams were outrun with no declaration is red, never strict-green.
 4. A REFUSAL under a variant stream (status ≠ the default run's) is
    reported at stage `lean-observation` — "a refusal under a variant
@@ -251,7 +288,8 @@ covered by the fixed streams):
   waitgroup-reuse` (128), `noodler/strconv-formatint/edges` (256,
   `appendSpill`). `mutex-counter` is the row that shows why the guard
   verifies the declared streams: a 256-entry seeded stream is itself
-  exhausted there (67-123 wide picks after), 1024 covers.
+  exhausted there (67-123 wide picks after); 1024 covers, 2048 declared
+  (the 4·w rule).
 - The tracer's wall budget: `LEAN_TRACE_TIMEOUT_SECONDS` (default 8 ×
   `LEAN_TIMEOUT_SECONDS` = 240 s; the tracer makes eight interpreter
   passes where `native-json-run` makes one). The guard's first full
@@ -262,7 +300,9 @@ covered by the fixed streams):
   recorded in the run meta.
 
 Fixtures: `scripts/test-lane-validation` — six manifest shapes (Part
-A) and D1-D6 (Part B, `--with-go`): the exhausted strict row refused
+A) and D1-D7 (Part B, `--with-go`; D7a-c pin the harness-defect
+refusals: empty stream, tracer labels every stream "default", too few
+tracer reports): the exhausted strict row refused
 with the named cause; the same row confluent → certified; `depth=128`
 → PASS with `wide=`/`depth=`; `depth=4` → refused naming the seeded
 stream; the variant-stream refusal reported at `lean-observation`;

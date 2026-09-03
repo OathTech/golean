@@ -8,11 +8,17 @@
 #   per-row wideAfterExhaustion refusal via `golean choice-trace`, depth=N
 #   seeded streams, variant-stream refusals reported as refusals, a named
 #   tracer wall budget LEAN_TRACE_TIMEOUT_SECONDS) with red-first fixtures
-#   (scripts/test-lane-validation D1-D6 + 6 manifest shapes); corpus lane
+#   (scripts/test-lane-validation D1-D7 + 6 manifest shapes); corpus lane
 #   declarations on 39 rows; no GoLean/, tools/ change.
-#   FULL ci --diff at main 345ef090 + this lane's working tree (dirty: the
-#   lane edits, committed together as the lane's commit; log tail in
-#   docs/evidence/2026-09-03_strict-routing/gate-tail.txt):
+#   AUDIT FIX ROUND 1-7 (2026-09-03, [AGENT]): depth=N rows now run SIX
+#   invariance streams — the three fixed adversarial ones (kept as prefix
+#   probes; their after-exhaustion counts recorded as fixed-probes-after=)
+#   PLUS the three seeded uniform-random ones (required to report 0); the
+#   first shape had REPLACED the fixed streams (a weakening). All 31 depth
+#   rows re-run PASS under six streams (no new red). Certifying run: FULL
+#   ci --diff on the CLEAN tree at the fix-round commit (the run before it
+#   was at main 345ef090 + a dirty working tree; both tails in
+#   docs/evidence/2026-09-03_strict-routing/, gate-tail.txt = the clean run):
 #   3195 rows run; drift vs the previous pin = EXACTLY 9 STAGE-ONLY moves:
 #   8 PASS/- -> PASS/confluent — the memo's goroutines/pipeline/two-stage,
 #   goroutines/pipeline/buffered-stage,

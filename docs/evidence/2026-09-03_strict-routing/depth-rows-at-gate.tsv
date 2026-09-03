@@ -1,31 +1,31 @@
-PASS	fmt/fprintf-builder/describe-shape	-	wide=10 exhausted=none depth=64
-PASS	fmt/fprint-writers/fprintf-buffer-shape	-	wide=12 exhausted=none depth=64
-PASS	fmt/sprintf-dyn/logger-shape	-	wide=14 exhausted=none depth=64
-PASS	fmt/sprintf-dyn/verb-kinds	-	wide=13 exhausted=none depth=64
-PASS	fmt/sprintf-dyn/sprint-space-rule	-	wide=14 exhausted=none depth=64
-PASS	fmt/sprintf-verbs/d-width	-	wide=12 exhausted=none depth=64
-PASS	goroutines/worker-pool/shared-feed	-	wide=32 exhausted=none depth=128
-PASS	imported-goose/channel/parallel-search-replace/search-replace	-	wide=42 exhausted=none depth=256
-PASS	multipkg/mini-raft-twin/elect-propose-commit	-	wide=32 exhausted=none depth=128
-PASS	multipkg/mini-raft-twin/perturb-rev	-	wide=23 exhausted=none depth=128
-PASS	multipkg/mini-raft-twin/perturb-picks	-	wide=18 exhausted=none depth=128
-PASS	multipkg/mini-raft-twin/starve-node	-	wide=23 exhausted=none depth=128
-PASS	multipkg/mini-raft-twin/duel	-	wide=11 exhausted=none depth=64
-PASS	noodler/closures/goroutines-loopvar	-	wide=40 exhausted=none depth=256
-PASS	noodler/goroutines/close-broadcast	-	wide=34 exhausted=none depth=256
-PASS	noodler/goroutines/worker-pool-sum	-	wide=98 exhausted=none depth=512
-PASS	noodler/goroutines/once-across-goroutines	-	wide=50 exhausted=none depth=256
-PASS	noodler/goroutines/mutex-counter	-	wide=262 exhausted=none depth=2048
-PASS	noodler/goroutines/rwmutex-readers	-	wide=39 exhausted=none depth=256
-PASS	noodler/goroutines/pipeline-three-stages	-	wide=57 exhausted=none depth=256
-PASS	noodler/goroutines/semaphore-total	-	wide=84 exhausted=none depth=512
-PASS	noodler/gostmt/pointer-method	-	wide=21 exhausted=none depth=128
-PASS	noodler/strconv-formatint/edges	-	wide=64 exhausted=none depth=256
-PASS	noodler/syncmisuse/waitgroup-reuse	-	wide=20 exhausted=none depth=128
-PASS	spec-examples-stmt/prime-sieve/five	-	wide=187 exhausted=none depth=1024
-PASS	spec-examples-stmt/prime-sieve/eight	-	wide=521 exhausted=none depth=4096
-PASS	strconv/format-parse/format-uint-bases	-	wide=29 exhausted=none depth=128
-PASS	strconv/format-parse/format-int-vals	-	wide=22 exhausted=none depth=128
-PASS	strconv/format-parse/parse-uint-errors	-	wide=33 exhausted=none depth=256
-PASS	strconv/format-parse/parse-uint-range-value	-	wide=66 exhausted=none depth=512
-PASS	sync/waitgroup-workers-join/workers-join	-	wide=28 exhausted=none depth=128
+PASS	fmt/fprintf-builder/describe-shape	-	wide=10 exhausted=none depth=64 fixed-probes-after=0,0,1
+PASS	fmt/fprint-writers/fprintf-buffer-shape	-	wide=12 exhausted=none depth=64 fixed-probes-after=2,2,4
+PASS	fmt/sprintf-dyn/logger-shape	-	wide=14 exhausted=none depth=64 fixed-probes-after=4,4,6
+PASS	fmt/sprintf-dyn/verb-kinds	-	wide=13 exhausted=none depth=64 fixed-probes-after=2,1,3
+PASS	fmt/sprintf-dyn/sprint-space-rule	-	wide=14 exhausted=none depth=64 fixed-probes-after=4,4,6
+PASS	fmt/sprintf-verbs/d-width	-	wide=12 exhausted=none depth=64 fixed-probes-after=0,0,2
+PASS	goroutines/worker-pool/shared-feed	-	wide=32 exhausted=none depth=128 fixed-probes-after=23,23,24
+PASS	imported-goose/channel/parallel-search-replace/search-replace	-	wide=42 exhausted=none depth=256 fixed-probes-after=33,31,29
+PASS	multipkg/mini-raft-twin/elect-propose-commit	-	wide=32 exhausted=none depth=128 fixed-probes-after=18,19,22
+PASS	multipkg/mini-raft-twin/perturb-rev	-	wide=23 exhausted=none depth=128 fixed-probes-after=11,11,13
+PASS	multipkg/mini-raft-twin/perturb-picks	-	wide=18 exhausted=none depth=128 fixed-probes-after=4,4,6
+PASS	multipkg/mini-raft-twin/starve-node	-	wide=23 exhausted=none depth=128 fixed-probes-after=11,11,13
+PASS	multipkg/mini-raft-twin/duel	-	wide=11 exhausted=none depth=64 fixed-probes-after=0,0,1
+PASS	noodler/closures/goroutines-loopvar	-	wide=40 exhausted=none depth=256 fixed-probes-after=26,30,29
+PASS	noodler/goroutines/close-broadcast	-	wide=34 exhausted=none depth=256 fixed-probes-after=20,17,17
+PASS	noodler/goroutines/worker-pool-sum	-	wide=98 exhausted=none depth=512 fixed-probes-after=83,80,77
+PASS	noodler/goroutines/once-across-goroutines	-	wide=50 exhausted=none depth=256 fixed-probes-after=40,40,42
+PASS	noodler/goroutines/mutex-counter	-	wide=262 exhausted=none depth=2048 fixed-probes-after=252,252,254
+PASS	noodler/goroutines/rwmutex-readers	-	wide=39 exhausted=none depth=256 fixed-probes-after=34,34,36
+PASS	noodler/goroutines/pipeline-three-stages	-	wide=57 exhausted=none depth=256 fixed-probes-after=47,46,47
+PASS	noodler/goroutines/semaphore-total	-	wide=84 exhausted=none depth=512 fixed-probes-after=74,74,76
+PASS	noodler/gostmt/pointer-method	-	wide=21 exhausted=none depth=128 fixed-probes-after=10,11,13
+PASS	noodler/strconv-formatint/edges	-	wide=64 exhausted=none depth=256 fixed-probes-after=54,54,56
+PASS	noodler/syncmisuse/waitgroup-reuse	-	wide=20 exhausted=none depth=128 fixed-probes-after=12,9,15
+PASS	spec-examples-stmt/prime-sieve/five	-	wide=187 exhausted=none depth=1024 fixed-probes-after=178,177,180
+PASS	spec-examples-stmt/prime-sieve/eight	-	wide=521 exhausted=none depth=4096 fixed-probes-after=512,511,514
+PASS	strconv/format-parse/format-uint-bases	-	wide=29 exhausted=none depth=128 fixed-probes-after=19,19,21
+PASS	strconv/format-parse/format-int-vals	-	wide=22 exhausted=none depth=128 fixed-probes-after=12,12,14
+PASS	strconv/format-parse/parse-uint-errors	-	wide=33 exhausted=none depth=256 fixed-probes-after=18,19,21
+PASS	strconv/format-parse/parse-uint-range-value	-	wide=66 exhausted=none depth=512 fixed-probes-after=47,48,50
+PASS	sync/waitgroup-workers-join/workers-join	-	wide=28 exhausted=none depth=128 fixed-probes-after=14,18,17

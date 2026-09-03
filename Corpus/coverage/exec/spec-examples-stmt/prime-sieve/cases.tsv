@@ -20,7 +20,8 @@
 # sized from w=187/521) — declared per row below. The spec's comment
 # above ("schedule-independent") is an argument, not a certificate.
 # five: declared depth=1024 (= smallest power of two >= 4*w, w=187 [AGENT
-# sizing]): the gate runs three SEEDED invariance streams of that length
+# sizing]): the gate adds three SEEDED (uniform-random) streams of that length
+# to the fixed three
 # (memo §5 item 3) and refuses unless each reports wideAfterExhaustion=0
 # — the re-trace at seeded length 1024 drew every wide pick from the
 # stream. This is the strict lane's spot check made honest (N tied to
@@ -28,7 +29,8 @@
 # confluent-lane attempt above fails loud, and that stands as a FINDING.
 five	primeSieveFirst	5	ok	-	goroutines,channels,range,loops,modulo	strict	-	depth=1024
 # eight: declared depth=4096 (= smallest power of two >= 4*w, w=521 [AGENT
-# sizing]): the gate runs three SEEDED invariance streams of that length
+# sizing]): the gate adds three SEEDED (uniform-random) streams of that length
+# to the fixed three
 # (memo §5 item 3) and refuses unless each reports wideAfterExhaustion=0
 # — the re-trace at seeded length 4096 drew every wide pick from the
 # stream. This is the strict lane's spot check made honest (N tied to

@@ -726,15 +726,15 @@ once per strict row (default + the three streams that ran), reads
 `wideAfterExhaustion` per stream, refuses at stage `nondet` with §5's
 wording when any is > 0, records `wide=<w> exhausted=none
 depth=<fixed|N>` in the PASS detail, and — for a row declaring the new
-strict-lane param `depth=N` — replaces the fixed streams by three seeded
-streams of length N (seeds/generator in the run meta) that must
+strict-lane param `depth=N` — ADDS three seeded streams of length N to
+the fixed three (six streams; audit fix 1 — the first shape replaced them) (seeds/generator in the run meta) that must
 themselves report 0. A variant-stream refusal is reported as a refusal
 (`lean-observation`), never as `nondet` (item 4 / P5). The guard failing
 to run is a named `nondet` FAIL. The first smoke of the guard PASSED
 every fixture: bash arrays are invisible to the per-case `bash -c`
 workers, so the streams were empty (= default) — fixed by exporting
 scalars and parsing the tracer's reports positionally; the fixtures
-D1-D6 are the red-first record. Cost: one tracer call per strict row
+D1-D7 are the red-first record. Cost: one tracer call per strict row
 (~0.03-0.5 s).
 
 The 23 rows (re-traced at this tip, `trace23.tsv` in the evidence dir —

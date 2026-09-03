@@ -8,9 +8,9 @@
 # trace23.tsv) show wide picks served AFTER exhaustion, so the fixed
 # streams never certified invariance past pick 8-10. Each declares
 # depth=N = the smallest power of two >= 4*w (w = default-stream wide
-# count), min 64 [AGENT sizing]; the gate replaces the fixed streams by
-# three seeded streams of length N and refuses unless every one reports
-# wideAfterExhaustion=0. Measured (default w / worst fixed-stream wide-
+# count), min 64 [AGENT sizing]; the gate ADDS three seeded (uniform-
+# random) streams of length N to the fixed three and refuses unless
+# every seeded one reports wideAfterExhaustion=0. Measured (default w / worst fixed-stream wide-
 # after-exhaustion):
 #   duel: w=11, 1 of 9 -> depth=64
 #   elect-propose-commit: w=32, 22 of 30 -> depth=128

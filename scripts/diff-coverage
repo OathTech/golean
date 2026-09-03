@@ -1065,24 +1065,45 @@ run_case_rows() {
   if [[ "$FRONTEND" == "native" ]]; then
     nondet=0
     local variant_rc eq_rc variant_cause eq_cause variant_status
-    # The invariance streams: the three fixed adversarial streams, or —
-    # for a strict row declaring depth=N — three seeded streams of
-    # length N (depth guard, memo P1; seeds DEPTH_GUARD_SEEDS, generator
-    # seeded_stream, both recorded in the run meta). The tracer below
-    # checks that whichever set ran actually covered every wide pick.
-    local -a inv_streams=() inv_labels=()
+    # The invariance streams: ALWAYS the three fixed adversarial
+    # streams (skewed prefixes — they probe corners a uniform draw
+    # rarely hits: memo §2.4's beside-loop is ok under the default and
+    # both long random streams yet refuses under all three fixed ones),
+    # PLUS — for a strict row declaring depth=N — three SEEDED streams
+    # of length N (depth guard, memo P1; seeds DEPTH_GUARD_SEEDS,
+    # generator seeded_stream, both in the run meta; UNIFORM RANDOM
+    # over 0..65535, reduced mod the bound by the machine — not
+    # adversarial). depth= ADDS the seeded streams, it never replaces
+    # the fixed ones (audit fix 1, 2026-09-03: the first shape replaced
+    # them — a weakening). The tracer below then checks coverage: the
+    # seeded streams must report wideAfterExhaustion=0; the fixed ones
+    # on a depth row are prefix probes and are not required to.
+    local -a inv_streams=() inv_labels=() inv_kinds=()
     read -r -a inv_streams <<< "$DEPTH_FIXED_STREAMS"
     read -r -a inv_labels <<< "$DEPTH_FIXED_STREAMS"
+    inv_kinds=(fixed fixed fixed)
     if [[ -n "$depth" ]]; then
-      inv_streams=(); inv_labels=()
       local dseed
       for dseed in $DEPTH_GUARD_SEEDS; do
         inv_streams+=("$(seeded_stream "$dseed" "$depth")")
         inv_labels+=("seeded:$dseed:$depth")
+        inv_kinds+=(seeded)
       done
     fi
+    if [[ "${GOLEAN_LANE_FIXTURE:-}" == "empty-streams" ]]; then
+      # Fixture hook (scripts/test-lane-validation D7): can only REMOVE
+      # streams, i.e. only turn a PASS into the refusal below — never
+      # the other way. Any other value is ignored.
+      inv_streams=("" "" ""); inv_labels=("" "" "")
+    fi
+    local inv_want=3
+    [[ -n "$depth" ]] && inv_want=6
+    if [[ "${#inv_streams[@]}" -ne "$inv_want" ]]; then
+      report_fail "$id" "$features" "nondet" "invariance stream set has ${#inv_streams[@]} stream(s), want exactly $inv_want (3 fixed${depth:++ 3 seeded for depth=$depth}) — harness defect; invariance NOT certified"
+      return 0
+    fi
     local si oracle olabel
-    for si in 0 1 2; do
+    for ((si = 0; si < inv_want; si++)); do
       oracle="${inv_streams[$si]:-}"; olabel="${inv_labels[$si]:-}"
       if [[ -z "$oracle" ]]; then
         # Fail closed on a harness defect: an empty stream IS the default
@@ -1148,7 +1169,7 @@ run_case_rows() {
       done
     fi
     trace_args+=(--stream default)
-    for si in 0 1 2; do
+    for ((si = 0; si < inv_want; si++)); do
       trace_args+=(--stream "${inv_streams[$si]}")
     done
     local trace_rc=0 trace_out trace_cause
@@ -1167,7 +1188,7 @@ run_case_rows() {
     fi
     # TSV: id stream status consumed wide exhaustedAt wideAfterExhaustion ...
     local w_default="" line stream_col wide_col exh_col wae_col nlines=0
-    local guard_refusal=""
+    local guard_refusal="" fixed_probe=""
     # Reports come back in --stream order: #1 the default stream (its
     # `wide` is w), #2-#4 the three invariance streams that just ran.
     # Positional, NOT keyed on the tracer's stream label: an empty
@@ -1192,10 +1213,17 @@ run_case_rows() {
         guard_refusal="depth guard: could not read wideAfterExhaustion for stream #$nlines from choice-trace ('$wae_col') — stream coverage NOT established"
         break
       fi
+      # Label the stream the way the row declared it.
+      local sidx=$((nlines - 2)) slabel skind
+      slabel="${inv_labels[$sidx]:-$stream_col}"; skind="${inv_kinds[$sidx]:-?}"
+      if [[ -n "$depth" && "$skind" == "fixed" ]]; then
+        # On a depth row the fixed streams are prefix probes (they ran
+        # and were compared above); their coverage is recorded, not
+        # required — the declared seeded streams carry the coverage.
+        fixed_probe="$fixed_probe${fixed_probe:+,}$wae_col"
+        continue
+      fi
       if [[ "$wae_col" -gt 0 ]]; then
-        # Label the stream the way the row declared it.
-        local sidx=$((nlines - 2)) slabel
-        slabel="${inv_labels[$sidx]:-$stream_col}"
         if [[ -n "$depth" ]]; then
           guard_refusal="strict row: $wae_col wide pick(s) served after the declared depth=$depth stream [$slabel] was exhausted at consumption $exh_col — the seeded invariance streams did not cover this row; raise depth (default-stream wide count w=$w_default)"
         else
@@ -1204,14 +1232,14 @@ run_case_rows() {
         break
       fi
     done <<< "$trace_out"
-    if [[ -z "$guard_refusal" && "$nlines" -ne 4 ]]; then
-      guard_refusal="depth guard: expected 4 stream reports from choice-trace, got $nlines — stream coverage NOT established: $(one_line "$trace_out")"
+    if [[ -z "$guard_refusal" && "$nlines" -ne $((inv_want + 1)) ]]; then
+      guard_refusal="depth guard: expected $((inv_want + 1)) stream reports from choice-trace, got $nlines — stream coverage NOT established: $(one_line "$trace_out")"
     fi
     if [[ -n "$guard_refusal" ]]; then
       report_fail "$id" "$features" "nondet" "$guard_refusal"
       return 0
     fi
-    guard_detail="wide=${w_default:-?} exhausted=none depth=${depth:-fixed}"
+    guard_detail="wide=${w_default:-?} exhausted=none depth=${depth:-fixed}${depth:+ fixed-probes-after=$fixed_probe}"
   fi
 
   if [[ "$lane" == "confluent" ]]; then

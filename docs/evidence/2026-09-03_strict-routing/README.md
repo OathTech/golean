@@ -1,4 +1,4 @@
-# Strict-lane routing rule adopted — the eight scheduling rows routed or dispositioned (2026-09-03)
+# Strict-lane depth guard (memo P1) — the 39 rows it reaches, routed or declared (2026-09-03)
 
 Consuming docs: `docs/coverage-suite-structure.md` ("Lane assignment:
 the strict-lane routing rule"), `docs/2026-09-01_membership-depth.md`
@@ -16,8 +16,9 @@ routed/annotated `cases.tsv` files, `baselines/native-full.tsv` header.
 - Everything below is [AGENT]-executed inside that brief as corrected:
   a GATE CHANGE (guard-strengthening only) in `scripts/diff-coverage`
   and `scripts/coverage-manifest`, red-first fixtures in
-  `scripts/test-lane-validation`, corpus lane declarations on 23 rows,
-  and records. No `GoLean/` or `tools/` change: the tracer the guard
+  `scripts/test-lane-validation`, corpus lane declarations on 39 rows
+  (8 `lane=confluent`, 31 `depth=N`: the memo's 23 plus 16 rows born
+  after its trace), and records. No `GoLean/` or `tools/` change: the tracer the guard
   calls (`golean choice-trace`, `GoLean/ChoiceTrace.lean`) was already
   on main from the membership-depth lane, unchanged here.
 - Commit: worktree `strict-routing` branched from main `345ef090`;
@@ -57,7 +58,7 @@ is mechanized with red-first fixtures; `beside-loop` moves stage.
 
 The guard is in the gate (`scripts/diff-coverage` + `scripts/coverage-
 manifest`; fixtures `scripts/test-lane-validation` Part A depth shapes
-and Part B D1-D6 — all green, log here). Of the 23 rows the memo's trace
+and Part B D1-D7 — all green, log here). Of the 23 rows the memo's trace
 showed outrunning the fixed streams (re-traced here, `trace23.tsv`;
 numbers match memo §2.3; controls `d-int`/`d-uint`/`named-call`
 covered): 3 scheduling rows are CONFLUENT (|set| = 1 by `engine=dedup`,
@@ -91,7 +92,7 @@ to diff-coverage's per-case `bash -c` workers, so the invariance streams
 were EMPTY (= the default stream) and the tracer saw four default runs.
 Fixed by exporting scalars and parsing the tracer's reports positionally;
 `smoke/latest.tsv` is the post-fix run (2 refusals with the §5 wording,
-1 variant-refusal at lean-observation, 3 passes), and D1-D6 pin it.
+1 variant-refusal at lean-observation, 3 passes), and D1-D7 pin it.
 
 ## Per-row table
 
@@ -108,6 +109,58 @@ Fixed by exporting scalars and parsing the tracer's reports positionally;
 | 15 capacity rows (`fmt/*` 6, `multipkg/mini-raft-twin/*` 5, `strconv/format-parse/*` 4) | strict | `trace23.tsv` (w 10-66; worst after-exhaustion 1-50) | not attempted (capacity latitude; the memo's `depth=` home) | — | **strict, depth=64-512** (memo §10 table) | — |
 | `noodler/goroutines/{fifo-one-sender,lockstep-transcript,directional-params}`, `noodler/select/ping-pong`, `noodler/syncmisuse/unlock-from-other-goroutine` (post-trace) | strict | `trace-new16.tsv` | `engine=dedup backedge=full`: 4,955 / 2,018 / 5,718 / 18,694 / 600 edges, < 1 s each | {1234} {206} {15} {12} {3} | **confluent** | 20/20 members each, 1 distinct |
 | 11 post-trace rows (`noodler/goroutines/*` 7, `closures/goroutines-loopvar`, `gostmt/pointer-method`, `syncmisuse/waitgroup-reuse`, `strconv-formatint/edges`) | strict | `trace-new16.tsv` (w 20-262) | dedup: work budget 20M exceeded at ~9.0-9.2M nodes or KILLED at 24 GB (`rows/*/enum-*cap24G.stats`); `edges` not attempted (capacity) | not certified | **strict, depth=128-2048** (memo §10.1) | — |
+
+## The 16 post-trace rows (all noodler, born 2026-09-03 after the memo's 2026-09-01 trace)
+
+Worst `wideAfterExhaustion` on a fixed stream (`trace-new16.tsv`), then
+the disposition:
+
+| row | worst fixed-stream wide-after-exhaustion | disposition |
+|---|---|---|
+| `noodler/goroutines/fifo-one-sender` | 13 | confluent |
+| `noodler/goroutines/lockstep-transcript` | 2 | confluent |
+| `noodler/goroutines/directional-params` | 18 | confluent |
+| `noodler/select/ping-pong` | 20 | confluent |
+| `noodler/syncmisuse/unlock-from-other-goroutine` | 1 | confluent |
+| `noodler/goroutines/close-broadcast` | 20 | depth=256 |
+| `noodler/goroutines/once-across-goroutines` | 42 | depth=256 |
+| `noodler/goroutines/pipeline-three-stages` | 47 | depth=256 |
+| `noodler/goroutines/rwmutex-readers` | 36 | depth=256 |
+| `noodler/goroutines/semaphore-total` | 76 | depth=512 |
+| `noodler/goroutines/worker-pool-sum` | 83 | depth=512 |
+| `noodler/goroutines/mutex-counter` | 254 | depth=2048 |
+| `noodler/closures/goroutines-loopvar` | 30 | depth=256 |
+| `noodler/gostmt/pointer-method` | 13 | depth=128 |
+| `noodler/syncmisuse/waitgroup-reuse` | 15 | depth=128 |
+| `noodler/strconv-formatint/edges` | 56 (`appendSpill`) | depth=256 |
+
+## What the seeded streams are (audit fix 4)
+
+The `depth=N` streams are UNIFORM RANDOM over 0..65535 (`seeded_stream`:
+a 31-bit LCG, bits 16..31 of each state; `Choices.consume` reduces each
+value mod the site's bound) — not demonic, not adversarial. They are
+long enough to be drawn from at every wide pick, which is all the guard
+certifies about them. The three FIXED streams (`9,8,…,0` / `1,3,5,…,0` /
+`5,5,…`) are the adversarial ones — skewed prefixes that hit corners a
+uniform draw rarely does (memo §2.4: `beside-loop` refuses under all
+three fixed streams and under none of the default/random ones) — and
+since audit fix 1 a `depth=N` row runs BOTH sets (six streams): the
+fixed three as prefix probes (their after-exhaustion counts recorded in
+the PASS detail as `fixed-probes-after=`), the seeded three required to
+report 0. The first shape of the guard REPLACED the fixed streams on
+depth rows; that was a weakening and is the reason for the fix round.
+
+## TRAIN NOTE (for the merge train; not applied here)
+
+After rebasing onto `guard-stage-alt`, `channels/select-select/
+beside-loop` must be pinned `FAIL … lean-observation|differential`
+(gc draw 90 → differential still; draw 5 → the variant-stream
+`unsupported` now lands at `lean-observation`, not `nondet`) and the
+`# reason:` block above it must name lean-observation, not nondet.
+Conflict set with the `sampling-budget` lane: `scripts/diff-coverage`'s
+membership loop, and `scripts/coverage-manifest`'s
+`parse_lane_params`/`validate_lane_params` — the `depth` arm added
+here must survive the merge.
 
 ## Lint (item 4 of the first brief): SUPERSEDED by the mechanized guard
 
@@ -133,7 +186,7 @@ row, which is what P1 asked for. [AGENT]
 docs/evidence/2026-09-03_strict-routing/gc-draws.sh artifacts/coverage/go-run/<id-with-__> rows/<id>/certified-set.txt <out-dir>
 # the routed rows through the gate's own confluent path:
 scripts/diff-one spec-examples-stmt/go-statements/func-literal goroutines/pipeline/two-stage goroutines/pipeline/buffered-stage
-# the guard's fixtures (Part A: manifest shapes; --with-go: D1-D6 through the harness):
+# the guard's fixtures (Part A: manifest shapes; --with-go: D1-D7 through the harness):
 scripts/test-lane-validation && scripts/test-lane-validation --with-go
 # the full gate:
 scripts/capped scripts/ci --diff

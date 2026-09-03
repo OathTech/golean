@@ -1,0 +1,38 @@
+building Lean executable...
+Build completed successfully (60 jobs).
+native frontend: per-case type-check + emit (no batch export)
+PASS	noodler/goroutines/rwmutex-readers	goroutines,sync,rwmutex,waitgroup,mutex,channels
+PASS	goroutines/worker-pool/shared-feed	goroutines,channels,range,close
+PASS	noodler/goroutines/pipeline-three-stages	goroutines,channels,close,range,closures
+PASS	noodler/syncmisuse/waitgroup-reuse	sync,waitgroup,goroutines,channels
+PASS	sync/waitgroup-workers-join/workers-join	sync,waitgroup,mutex,goroutines,globals,loops
+PASS	noodler/closures/goroutines-loopvar	closures,goroutines,sync,waitgroup,mutex,loops
+PASS	noodler/goroutines/close-broadcast	goroutines,channels,close,sync,waitgroup,mutex
+PASS	noodler/goroutines/semaphore-total	goroutines,channels,sync,waitgroup,mutex
+PASS	imported-goose/channel/parallel-search-replace/search-replace	imported_goose,sync,waitgroup,goroutines,channels
+PASS	noodler/goroutines/worker-pool-sum	goroutines,channels,sync,waitgroup,range
+PASS	noodler/goroutines/once-across-goroutines	goroutines,sync,once,waitgroup,mutex
+PASS	noodler/gostmt/pointer-method	goroutines,methods,pointers,sync,mutex,waitgroup
+PASS	strconv/format-parse/format-uint-bases	stdlib,strings,ints
+PASS	strconv/format-parse/format-int-vals	stdlib,strings,ints,overflow
+PASS	spec-examples-stmt/prime-sieve/five	goroutines,channels,range,loops,modulo
+PASS	fmt/fprint-writers/fprintf-buffer-shape	stdlib,strings,bytes,ints
+PASS	fmt/sprintf-verbs/d-width	stdlib,strings,ints,widths
+PASS	noodler/strconv-formatint/edges	strings,stdlib,ints
+PASS	fmt/sprintf-dyn/sprint-space-rule	stdlib,strings,variadic
+PASS	fmt/sprintf-dyn/verb-kinds	stdlib,strings,variadic,ints,bools
+PASS	noodler/goroutines/mutex-counter	goroutines,sync,mutex,waitgroup
+PASS	fmt/sprintf-dyn/logger-shape	stdlib,strings,variadic,interfaces,methods
+PASS	fmt/fprintf-builder/describe-shape	stdlib,strings,methods,interfaces,panic,recover,range
+PASS	strconv/format-parse/parse-uint-errors	stdlib,strings,ints,range,concat
+PASS	multipkg/mini-raft-twin/duel	multipackage,structs,maps,slices,methods,loops
+PASS	multipkg/mini-raft-twin/perturb-picks	multipackage,structs,maps,slices,methods,loops
+PASS	spec-examples-stmt/prime-sieve/eight	goroutines,channels,range,loops,modulo
+PASS	strconv/format-parse/parse-uint-range-value	stdlib,strings,ints,range,widths
+PASS	multipkg/mini-raft-twin/perturb-rev	multipackage,structs,maps,slices,methods,loops
+PASS	multipkg/mini-raft-twin/starve-node	multipackage,structs,maps,slices,methods,loops
+PASS	multipkg/mini-raft-twin/elect-propose-commit	multipackage,structs,maps,slices,methods,loops
+
+differential coverage summary: cases=31 pass=31 fail=0 export_status=0
+results: artifacts/coverage/latest.tsv
+metadata: artifacts/coverage/latest.meta.tsv

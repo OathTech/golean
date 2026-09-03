@@ -31,7 +31,8 @@
 # w=32) — declared on the row below.
 sum	workerPoolSum	-	ok	-	goroutines,channels,closures	confluent	the summed contributions commute and the result channel joins all workers before the readout, so every schedule yields the one member	width=4,sites=18,work=15000000
 # shared-feed: declared depth=128 (= smallest power of two >= 4*w, w=32 [AGENT
-# sizing]): the gate runs three SEEDED invariance streams of that length
+# sizing]): the gate adds three SEEDED (uniform-random) streams of that length
+# to the fixed three
 # (memo §5 item 3) and refuses unless each reports wideAfterExhaustion=0
 # — the re-trace at seeded length 128 drew every wide pick from the
 # stream. This is the strict lane's spot check made honest (N tied to

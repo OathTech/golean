@@ -517,7 +517,7 @@ if [ "$WITH_GO" -eq 1 ]; then
       "PASS*wide=*exhausted=none depth=128*" \
       "the same row with a sufficient depth=N passes, recording wide=/depth="
     run_d D4 "$(printf 'lane-d4\t%s\tpipelineBufferedStage\t-\tok\t%s\t-\tstrict\t-\tdepth=4' "$PIPE_DIR" "$PIPE_FEATS")" \
-      "FAIL*nondet*strict row: *wide pick(s) served after the declared depth=4 stream*raise depth*" \
+      "FAIL*nondet*strict row: *wide pick(s) served after the declared depth=4 stream \[seeded:1:4\]*raise depth*" \
       "an insufficient depth=N is refused, naming the exhausted seeded stream"
     # D5: a refusal under a variant stream is a refusal, not a variance
     # (P1 item 4 / P5, D-10 item 2). Subject: channels/select-select's
@@ -653,6 +653,10 @@ case "${FAKE_GOLEAN_MODE:-}" in
     [ "$sub" = observation-eq ] && [ "$(bump eqs)" -ge 2 ] && { kill -TERM $$; sleep 5; exit 143; } ;;
   run-default)  # T1: the strict lane's single default-stream run
     [ "$sub" = native-json-run ] && [ "$has_choices" -eq 0 ] && exec sleep 30 ;;
+  trace-default-only)  # D7b: the depth guard's tracer reports every stream as "default" (an empty-stream shape)
+    [ "$sub" = choice-trace ] && { "$REAL" "$@" | awk -F'\t' 'BEGIN{OFS="\t"} NR>1{$2="default"} {print}'; exit "${PIPESTATUS[0]}"; } ;;
+  trace-three)         # D7c: the tracer returns one report too few
+    [ "$sub" = choice-trace ] && { "$REAL" "$@" | head -n -1; exit "${PIPESTATUS[0]}"; } ;;
   run-choices)  # T2 (strict nondet re-run) / T3 (membership coupling stream)
     [ "$sub" = native-json-run ] && [ "$has_choices" -eq 1 ] && exec sleep 30 ;;
   eq-sample)    # T4: the first Go-sample comparison of the membership loop.
@@ -739,6 +743,25 @@ EOF
       printf 'lane-t8\t%s\t%s\t%s\t%s\t%s\t%s\tstrict\t-\t-\n' "$PANIC_DIR" "$panic_subj" "$panic_args" "$panic_status" "$panic_feats" "$panic_reason" > "$TMP/manifest-t-panic.tsv"
       run_t T8-go-oracle-sigkill "" "$TMP/manifest-t-panic.tsv" go-run \
         "go run oracle KILLED (exit 137" "expected Go panic, got" "$FAKEBIN_GO"
+      # D7 (strict-routing audit fix 7): the depth guard's own harness-
+      # defect refusals are pinned — an EMPTY invariance stream (the
+      # fixture hook GOLEAN_LANE_FIXTURE=empty-streams, which can only
+      # remove streams), a tracer that labels every stream "default",
+      # and a tracer returning too few reports. Each is a named nondet
+      # FAIL, never a PASS (the guard's first smoke passed on exactly the
+      # first shape).
+      art7="$TMP/artifacts-d7a"
+      GOLEAN_LANE_FIXTURE=empty-streams GOLEAN_COVERAGE_JOBS=1 GOLEAN_COVERAGE_ARTIFACTS="$art7" scripts/diff-coverage "$TMP/manifest-t-strict.tsv" >/dev/null 2>&1
+      row="$(tail -1 "$art7/latest.tsv" 2>/dev/null || true)"
+      if [[ "$row" == FAIL*"	nondet	"*"invariance stream #1 is EMPTY (harness defect"* ]]; then
+        echo "ok: D7a-empty-stream: an empty invariance stream is refused by name (nondet)"
+      else
+        echo "FAIL: D7a-empty-stream: row: ${row:-<none>}"; fail=1
+      fi
+      run_t D7b-trace-default-only trace-default-only "$TMP/manifest-t-strict.tsv" nondet \
+        "traced as the DEFAULT stream (empty stream — harness defect)" "wide="
+      run_t D7c-trace-three trace-three "$TMP/manifest-t-strict.tsv" nondet \
+        "expected 4 stream reports from choice-trace, got 3" "wide="
     fi
 
   fi

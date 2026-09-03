@@ -90,6 +90,15 @@ obligation:
       NOT in question — the fuel-out on self-inserting loops is the
       ruled behavior, not this item.
 
+- [ ] Close the 16 `depth=N` concurrent rows (ledger §7 T-8, strict-routing
+      lane 2026-09-03 [AGENT] on [USER] direction 3): `engine=dedup` does not
+      close their state graphs within 40 GB / 20-60M work — prime-sieve,
+      shared-feed, workers-join, parallel-search-replace and 11 noodler
+      rows sit at `depth=N` (a spot check, not a confluence certificate).
+      Home: the mover/reduction layer above (BUG-065's lane); the
+      BOTH-EXPLORERS gate applies. Success = each row re-lanes to
+      `confluent` (|set|=1) and its `depth=` is deleted.
+
 ## Re-homed obligations (re-homed 2026-08-31, fidelity decision 6 [USER]; R15 by [AGENT] extension — see its entry)
 
 The W3.2 and F4 arcs these obligations routed to are parked whole on

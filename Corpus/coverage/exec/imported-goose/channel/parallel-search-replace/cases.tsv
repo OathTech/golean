@@ -14,7 +14,8 @@
 # w=42) — declared on the row below. (Upstream body verbatim; this is a
 # corpus caption, not an edit to the imported code.)
 # search-replace: declared depth=256 (= smallest power of two >= 4*w, w=42 [AGENT
-# sizing]): the gate runs three SEEDED invariance streams of that length
+# sizing]): the gate adds three SEEDED (uniform-random) streams of that length
+# to the fixed three
 # (memo §5 item 3) and refuses unless each reports wideAfterExhaustion=0
 # — the re-trace at seeded length 256 drew every wide pick from the
 # stream. This is the strict lane's spot check made honest (N tied to
