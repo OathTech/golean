@@ -1022,7 +1022,11 @@ and since the [USER] ruling of 2026-09-02 (Q-U4RESIDUAL, option (A) —
 exactly") the detector records the UNION of both — the UNION itself
 being an [AGENT] READING of the ruling (audit fix F3; the paragraph
 "Why the union" below says where it departs from the literal words and
-why, for the [USER] to countersign or overrule):
+why) — both the union and the per-gc-word keying were COUNTERSIGNED
+[USER] 2026-09-03 at the round-5 merge sign-off («sounds good merge
+it», relayed to the recording worker by the [AGENT] coordinator, not
+firsthand; record: `docs/2026-08-31_qrow-rulings.md`, row-9 appendix,
+"Countersign of the two [AGENT] readings"):
 
 1. **go_mem's operation kind** (mem#model, verbatim: "Some memory
    operations are read-like, including read, atomic read, mutex lock,
@@ -1083,7 +1087,8 @@ a lone copy beside `sync.Mutex.Lock` REFUSES, a lone copy beside
 `sync.RWMutex.Lock`/`RLock` RUNS (`race/free-sync/rw-copy-beside-
 {rlock,lock}`) — because TSan realizes Mutex's CAS but runs RWMutex's
 counter RMW under `race.Disable`, leaving only go_mem's read-like lock
-kind to apply. The asymmetry is the oracle's, inherited on purpose.
+kind to apply. The asymmetry is the oracle's, inherited on purpose,
+and [USER]-countersigned 2026-09-03 (above).
 Where TSan realizes NOTHING (`race.Disable`) the go_mem kind alone is
 recorded — the former residual (a), now closed BY DESIGN.
 

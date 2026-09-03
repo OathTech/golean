@@ -4434,8 +4434,12 @@ the records-only fix round).
   beside `sync.RWMutex.Lock`/`RLock` RUNS (its counter RMW is under
   `race.Disable`, so only go_mem's read-like lock kind applies —
   `race/free-sync/rw-copy-beside-{rlock,lock}`). The asymmetry is the
-  oracle's, inherited on purpose; the [USER] may countersign or overrule
-  it at the merge-ask. EACH AT ITS gc WORD
+  oracle's, inherited on purpose; COUNTERSIGNED [USER] 2026-09-03 at the
+  round-5 merge sign-off («sounds good merge it», relayed to the
+  recording worker by the [AGENT] coordinator, not firsthand — record:
+  `docs/2026-08-31_qrow-rulings.md` row-9 appendix, "Countersign of
+  the two [AGENT] readings"; per-gc-word keying countersigned by the
+  same quote). EACH AT ITS gc WORD
   (`syncWord loc kind word` = `.field loc ⟨"sync.<Kind>"⟩ word`).
   RWMutex `RLock`/`Lock` → `.read @w` (realized, kept) + `.atomicRead
   @readerCount` (lock read-like); `RUnlock`/`Unlock` → `.read @w` +
