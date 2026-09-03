@@ -240,3 +240,21 @@ implicit 10 draws; implementing lane `sampling-budget`). An earlier
 version of this paragraph said "K=32 stays the default" — false on both
 counts (K=32 never was the default; P2 was adopted, not deferred);
 corrected at the lane's audit fix round.
+
+### The E9 irreflexive-key ruling record (2026-09-03) — the tracked record behind "(b) … approved"
+
+RATIFIED [USER] 2026-09-03. Question posed by the [AGENT] coordinator
+at the `hygiene-b1-stamps` merge-ask (design-hygiene arc slice 1, B1
+entry-identity stamps): the stamps narrow E9's envelope on IRREFLEXIVE
+keys (NaN, or an aggregate/interface holding one) by construction —
+each entry produced exactly once, where the retired key-set frame
+admitted any number of productions and an immediate stop — against the
+2026-08-19 E9 ruling that rejected narrowings (BUG-088; rows
+`maps/nan-key-range`, `maps/nan-key-range-aggregate/{array,struct,
+interface}`, gc-matching, fuel-out on main). The user replied,
+verbatim as relayed to the recording worker by the coordinator (not
+firsthand — citation, never bare assertion): «(b) it sounds like this breaks an old ruling but ends up more accurate to real go - approved». Effect: the
+2026-08-19 no-narrowing ruling is SUPERSEDED for irreflexive keys only;
+the rest of the E9 envelope stands. Consuming records: latitude
+inventory §E9 (IRREFLEXIVE KEYS bullet), `docs/BUGS.md` BUG-088,
+`docs/2026-09-03_hygiene-b1-stamps-design.md` §4, the arc plan (i).

@@ -4709,8 +4709,12 @@ lane, 2026-09-03 — see Status.)
   `docs/evidence/2026-09-03_hygiene-b1-stamps/transcripts/nan-key-range-red-first.txt`)
 - Pinned-by: differential
 - Cases: maps/nan-key-range, maps/nan-key-range-aggregate/array, maps/nan-key-range-aggregate/struct, maps/nan-key-range-aggregate/interface
-- [USER] ratification of the E9 narrowing on irreflexive keys: PENDING
-  at merge (audit fix round F1, 2026-09-03 — the fix shrinks the
+- [USER] ratification of the E9 narrowing on irreflexive keys: RATIFIED
+  [USER] 2026-09-03 (relayed quote — Mike, via the [AGENT] coordinator,
+  not firsthand: «(b) it sounds like this breaks an old ruling but ends up more accurate to real go - approved»; ruling record
+  `docs/2026-08-31_qrow-rulings.md`, "The E9 irreflexive-key ruling
+  record (2026-09-03)"). History of the referral (audit fix round F1,
+  2026-09-03 — the fix shrinks the
   modeled set on this class from "any number ≥ 1 of productions of a
   NaN entry, or an immediate stop" to "each entry once"; E9's envelope
   is the [USER]'s 2026-08-19 ruling, so the narrowing is disclosed and

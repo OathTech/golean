@@ -59,12 +59,14 @@ cost and touches the fewest positional `fun_cases` proofs.
     construction). Design note: `docs/2026-09-03_hygiene-b1-stamps-design.md`.
     Status: DONE on branch `hygiene-b1-stamps` (2026-09-03) — gate
     green, audit verdict MERGE-READY (records amendments applied),
-    merge on [USER] sign-off (see the landing record). CARRIES ONE
+    merge on [USER] sign-off (see the landing record). CARRIED ONE
     [USER] DECISION to the sign-off: the slice narrowed the E9
     envelope on irreflexive (NaN) keys by construction (BUG-088 —
     the old model admitted spec-illegal repeat productions; the new
     one produces each entry once); E9's envelope is a [USER] ruling,
-    so the narrowing is disclosed and referred, not self-adjudicated.
+    so the narrowing was disclosed and referred, not self-adjudicated
+    — and RATIFIED [USER] 2026-09-03 (relayed): «(b) it sounds like this breaks an old ruling but ends up more accurate to real go - approved». It supersedes the
+    2026-08-19 E9 no-narrowing ruling for irreflexive keys only.
 
 (ii) **The cheap A-series, A1–A10**, as small commits each gated by
      the full differential (`scripts/capped scripts/ci --diff`):
@@ -172,4 +174,4 @@ change the semantics or its accounting, and none is scheduled here
 
 | Slice | Item | Branch | Landed | Notes |
 |---|---|---|---|---|
-| 1 | B1 stamps | `hygiene-b1-stamps` | branch-complete 2026-09-03, landing commit `f6152a6c`; audit verdict MERGE-READY, fix round `a4cf54e4` (clean-tree ci --diff PASS, 3199/3199); [USER] sign-off pending (carries the E9 irreflexive-key narrowing for ratification); not merged | design note `docs/2026-09-03_hygiene-b1-stamps-design.md`; evidence `docs/evidence/2026-09-03_hygiene-b1-stamps/`; 14 defs + 14 theorems + 3 rule premises deleted, −649 lines; zero drift on 3195 rows; +4 rows `maps/nan-key-range`, `maps/nan-key-range-aggregate/{array,struct,interface}` (BUG-088, found by the bisimulation argument, fixed by construction — an E9 narrowing on irreflexive keys, DISCLOSED, [USER] ratification pending at merge) |
+| 1 | B1 stamps | `hygiene-b1-stamps` | branch-complete 2026-09-03, landing commit `f6152a6c`; audit verdict MERGE-READY, fix round `a4cf54e4` (clean-tree ci --diff PASS, 3199/3199); E9 irreflexive-key narrowing RATIFIED [USER] 2026-09-03 (relayed; record in docs/2026-08-31_qrow-rulings.md); merge sign-off pending; not merged | design note `docs/2026-09-03_hygiene-b1-stamps-design.md`; evidence `docs/evidence/2026-09-03_hygiene-b1-stamps/`; 14 defs + 14 theorems + 3 rule premises deleted, −649 lines; zero drift on 3195 rows; +4 rows `maps/nan-key-range`, `maps/nan-key-range-aggregate/{array,struct,interface}` (BUG-088, found by the bisimulation argument, fixed by construction — an E9 narrowing on irreflexive keys, DISCLOSED, [USER] ratification pending at merge) |

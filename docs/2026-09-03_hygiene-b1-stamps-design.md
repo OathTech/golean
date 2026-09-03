@@ -214,8 +214,11 @@ exactly one production. Every member the old set lost is spec-illegal
 whether that shrinkage is a bug fix or a re-envelope is the [USER]'s,
 not this slice's. Status: [AGENT]-made by construction, DISCLOSED
 (here, inventory §E9, arc plan, BUG-088), REFERRED TO THE [USER] for
-ratification at the merge sign-off; the coordinator poses it with the
-audit-ask. If declined, the slice does not merge as is.
+ratification at the merge sign-off — and **RATIFIED [USER] 2026-09-03**
+(Mike, relayed by the [AGENT] coordinator, not firsthand): «(b) it sounds like this breaks an old ruling but ends up more accurate to real go - approved». The
+narrowing on irreflexive keys therefore supersedes the 2026-08-19 E9
+no-narrowing ruling for irreflexive keys only; the rest of the E9
+envelope is unchanged. Ruling record: `docs/2026-08-31_qrow-rulings.md`.
 
 ## 5. Proof deltas (arm for arm)
 

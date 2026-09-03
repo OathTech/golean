@@ -1044,10 +1044,14 @@ gc's early store a deviation, L-016, 2026-09-02).
   E9's envelope is a [USER] ruling (2026-08-19) that explicitly
   rejected narrowings. The narrowing was [AGENT]-made BY CONSTRUCTION
   (the stamps have no way to express the old behaviour), is DISCLOSED
-  here, in the design note §4, the arc plan and BUG-088, and is
-  REFERRED TO THE [USER] FOR RATIFICATION at the merge sign-off (the
-  coordinator poses it). Not self-adjudicated: if the [USER] declines,
-  the slice does not merge.
+  here, in the design note §4, the arc plan and BUG-088, and was
+  REFERRED TO THE [USER] FOR RATIFICATION at the merge sign-off.
+  **RATIFIED [USER] 2026-09-03** (Mike, relayed by the [AGENT]
+  coordinator — cite as relayed): «(b) it sounds like this breaks an old ruling but ends up more accurate to real go - approved». Effect: for IRREFLEXIVE KEYS
+  ONLY, this supersedes the 2026-08-19 E9 no-narrowing ruling — each
+  entry is produced exactly once; every other point of the E9 envelope
+  stands as ruled on 2026-08-19. Ruling record:
+  `docs/2026-08-31_qrow-rulings.md`.
 
 ### E10. Which `==`-equal map key is retained on overwrite — (b) PINNED (always-replace)
 
