@@ -26,7 +26,7 @@ All decisions below are [AGENT] unless marked [USER].
 | Strict rows whose "adversarial" streams are exhausted before a bound-≥-2 consumption (the pick-0 default takes over, invisibly) | **23 of 2,373 traced strict rows** (all 23 baseline PASS): 15 reach only `appendSpill`/`mapIter` (capacity / map-order latitude), **8 reach scheduling sites** (17–521 scheduling picks vs an 8–10-entry stream). List in §2.3. |
 | Menu-invariant validator over the full corpus | **62,048 consumptions, 0 violations, 0 self-check alarms, 0 driver-agreement mismatches** across 2,478 rows × 6 streams. First mechanical **modeled ⊆ census-declared** evidence at the site level (the check is against the widths the latitude census DECLARES, not against Go — §3.3); what it does NOT witness is in §3.3. |
 | Membership sampling today | 228 `go run` draws per full run (22 rows × 10, 4 rows × 2). Two 80-draw runs; both statistics below are "in at least one run" (max over the two runs — the between-run variance is itself large). With the gate's budget and draw order, **6 of the 22 ten-draw rows are a point-mass at the gate budget** (1 distinct in the first 10 draws where the same run's 80 draws exhibit ≥2: `len-handoff`, `select-default-handshake`, `select-wake-multi`, `added-entry-count`, `sb-chan`, `mp-litmus`), and **8 rows under-report at 10 draws** (distinct@10 < distinct@80: those 6 plus `google-search` and `jitter-draw`, which show ≥2 at the gate budget but not their full support). In the other run, `len-handoff` and `select-wake-multi` stayed at 1 distinct through all 80 draws. Saturation of the two-member scheduling rows takes up to 52–66 alternating draws when it happens. Proposal (§4.3): alternate plain/`-race`, stop at the `members=` pin, cap K=32 in `--diff` (measured worst case +6.5 min), K=80 under `--slow`. |
-| Routing rule | §5: a strict row is 3-stream-certified only if **every adversarial stream run reports `wideAfterExhaustion = 0`** — the tracer's exact observable (no bound-≥-2 consumption drawn after the stream ran out). Otherwise the strict PASS must be earned by a stream the accountant sizes (declared `depth=`, sized from the measured wide count) or by the confluent enumerator, never by the default trajectory dressed as three. A default-stream `w ≤ 8` threshold is NOT the rule: adversarial runs draw up to 3 more wide picks than the default run (16 rows), and two rows draw 10 by default but 6 adversarially — the threshold both leaks and over-refuses (latent today). Fail-closed shape given. |
+| Routing rule | ADOPTED [USER] 2026-09-03 (routing slice pending). §5: a strict row is 3-stream-certified only if **every adversarial stream run reports `wideAfterExhaustion = 0`** — the tracer's exact observable (no bound-≥-2 consumption drawn after the stream ran out). Otherwise the strict PASS must be earned by a stream the accountant sizes (declared `depth=`, sized from the measured wide count) or by the confluent enumerator, never by the default trajectory dressed as three. A default-stream `w ≤ 8` threshold is NOT the rule: adversarial runs draw up to 3 more wide picks than the default run (16 rows), and two rows draw 10 by default but 6 adversarially — the threshold both leaks and over-refuses (latent today). Fail-closed shape given. |
 | Gate | No behavior-bearing file changed, so only the plain `scripts/ci` was owed; this fresh worktree had no recorded differential/negative run for the plain gate's diff steps to judge, so the FULL `scripts/ci --diff` was run at the pre-rebase tip instead (strictly stronger) and the plain gate re-run after it — both tails in §8. After the rebase onto main `e7d07b26`, `scripts/ci --diff` was re-run at `d7ed0683`: **PASS, 2526/2526 differential + 390/390 negative, no regression** (§8, post-rebase re-gate). Differential spot-check across all four lanes PASS (§1.3). |
 
 ---
@@ -430,6 +430,12 @@ so K) / 28 s (pin 3 not reached: 2 of 3).
 
 ## 5. Routing rule proposal (mandate item 5)
 
+**ADOPTED [USER] 2026-09-03; routing slice pending.** («(6) strict-lane,
+agree» — relayed by the [AGENT] coordinator, not firsthand; full quote
+and provenance chain in `docs/2026-08-31_qrow-rulings.md`, 2026-09-03
+ruling record.) The eight scheduling rows are routed in the same slice,
+by a separate lane. The rule text below is the adopted rule.
+
 **The data.** The strict lane's nondeterminism tripwire is the 3-stream
 invariance check, whose streams are 10/10/8 entries; `Choices.consume`
 defaults to slot 0 on exhaustion. §2 measures exactly which rows outrun it:
@@ -512,11 +518,11 @@ mode stays invisible.
 
 | # | change | evidence | cost | status |
 |---|---|---|---|---|
-| P1 | Strict-lane depth guard (§5): refuse strict PASS when any adversarial stream run reports `wideAfterExhaustion > 0` without `confluent`/`depth=`; seeded streams of declared length | §2.3: 23 rows (8 scheduling, 15 capacity) outrun the fixed streams; blast radius under this rule = those 23 (a `wide > 8` threshold would hit 25, incl. two covered rows — §5) | gate change (diff-coverage) + 23 manifest rows to route/declare | PROPOSED — [USER] gate decision |
-| P2 | Membership sampling rule (§4.3): alternate plain/race, stop at `members=`, K=32 (`--diff`) / K=80 (`--slow`), print `draws=` | §4.2: 6 of 22 ten-draw rows point-mass at the gate budget in at least one of two runs (8 under-report); saturation up to 52–66 when reached, and two rows never moved in one run's 80 draws | +6.5 min on `--diff`; membership-lane code only | PROPOSED — [USER] gate decision |
+| P1 | Strict-lane depth guard (§5): refuse strict PASS when any adversarial stream run reports `wideAfterExhaustion > 0` without `confluent`/`depth=`; seeded streams of declared length | §2.3: 23 rows (8 scheduling, 15 capacity) outrun the fixed streams; blast radius under this rule = those 23 (a `wide > 8` threshold would hit 25, incl. two covered rows — §5) | gate change (diff-coverage) + 23 manifest rows to route/declare | ADOPTED [USER] 2026-09-03; routing slice pending (separate lane) |
+| P2 | Membership sampling rule (§4.3): alternate plain/race, stop at `members=`, K=32 (`--diff`) / K=80 (`--slow`), print `draws=` | §4.2: 6 of 22 ten-draw rows point-mass at the gate budget in at least one of two runs (8 under-report); saturation up to 52–66 when reached, and two rows never moved in one run's 80 draws | +6.5 min on `--diff`; membership-lane code only | K=32 default STANDS ([USER] 2026-09-03: "others: lower priority for now") |
 | P3 | Pin `members=` on the 10 unpinned membership rows (B13) | needed for P2's early stop; 4 `slices/*` rows should pin the enumerated width, `maps/*` their certified sets | manifest rows only | PROPOSED |
-| P4 | Run `scripts/choice-trace-corpus` as a periodic (non-gate) audit; keep zero violations/alarms as the standing expectation | §3.2 | ~12 min wall at `--jobs 6` | landed as tooling; scheduling is a [USER] call |
-| P5 | Report the variant run's status in the strict invariance check (D-10 item 2) | §2.4 the one VARIES row is a refusal labelled `nondet` | one-line gate change | PROPOSED |
+| P4 | Run `scripts/choice-trace-corpus` as a periodic (non-gate) audit; keep zero violations/alarms as the standing expectation | §3.2 | ~12 min wall at `--jobs 6` | landed as tooling; periodic scheduling DEFERRED — lower priority ([USER] 2026-09-03) |
+| P5 | Report the variant run's status in the strict invariance check (D-10 item 2) | §2.4 the one VARIES row is a refusal labelled `nondet` | one-line gate change | filing DEFERRED — lower priority ([USER] 2026-09-03) |
 
 ---
 

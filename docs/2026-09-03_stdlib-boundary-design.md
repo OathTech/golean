@@ -889,7 +889,15 @@ lane's.
 ## 5. Decision gates for the [USER]
 
 Numbered, each with options, the [AGENT] recommendation, and its
-grounds. None is decided here.
+grounds. None was decided at writing.
+
+**RULED [USER] 2026-09-03 — G1–G9 each as recommended.** The quote,
+relayed by the [AGENT] coordinator to the recording worker (citation,
+not firsthand; full text and provenance chain in
+`docs/2026-08-31_qrow-rulings.md`, 2026-09-03 ruling record): «(3)
+agree, go ahead with the plan». Each gate below carries the ruling
+line; the first implementation slice (§6) is implemented by a separate
+lane.
 
 **G1 — The retirement design.** Options: (A) source-through only, (B)
 primitives only, (C) hybrid as shaped in §0/§2.3, (D) status quo plus.
@@ -897,7 +905,7 @@ Recommendation: **(C)**. Grounds: it is the only option that shrinks
 the hand-written surface to an enumerated, capped set (9 overlay sites
 + 2 language primitives) while keeping library semantics OUT of the
 trusted core; it unblocks the largest measured slice; Cerberus took the
-same shape.
+same shape. RULED [USER] 2026-09-03 — as recommended.
 
 **G2 — `print`/`println` as machine built-ins with a stderr
 observable.** Options: (a) admit, with gc's pinned format for
@@ -909,7 +917,7 @@ stands). Recommendation: **(a)**. Grounds: 195 gotest files, 169 of
 them simple-kind; the (b)-pin class already exists (R9/R10); (b) makes
 no differential claim about output and would be a permanent
 `output-uncompared` asterisk on 195 rows. The observable bump is the
-real cost and is why this is a gate.
+real cost and is why this is a gate. RULED [USER] 2026-09-03 — as recommended.
 
 **G3 — The stdlib source and its doc comments become a pinned truth
 source.** Options: (a) add a "library docs at the pin" row to
@@ -918,7 +926,7 @@ and grade library rows in the coverage ledger under the existing DOCS
 class; (b) keep library docs unpinned (cite ad hoc, as the sync design
 did). Recommendation: **(a)**. Grounds: the checkout is already pinned
 (`go` row); only the anchor discipline is new; A3-P2/P5 already flag
-unmechanized quotes as a C3/C4 debt.
+unmechanized quotes as a C3/C4 debt. RULED [USER] 2026-09-03 — as recommended.
 
 **G4 — Library latitude posture under source-through.** Options: (a)
 record gc's realized member as a version-tracked (b)-pin per
@@ -927,7 +935,7 @@ consumer demand; (b) reify every doc-latitude point as a choice site
 up front (sort ties as an L-class choice; Builder capacity; float ulp).
 Recommendation: **(a)**. Grounds: (b) is the doctrine's pure form but
 each reification is a machine change with membership rows, and no
-consumer has asked; (a) keeps the record honest and the door open.
+consumer has asked; (a) keeps the record honest and the door open. RULED [USER] 2026-09-03 — as recommended.
 
 **G5 — `fmt`'s home.** Options: (i) machine `format` op; (ii) real
 `fmt` over a modeled `reflect` subset; (iii) frontend specialization
@@ -936,7 +944,7 @@ at dynamic sites, reflective remainder refused. Recommendation:
 **(iii) now**, with (ii) posed separately as G6. Grounds: (i) violates
 the TCB constraint and (N); (ii) is a large design of its own; (iii)
 deletes the hand-written renderers and their bounds while changing no
-trusted surface.
+trusted surface. RULED [USER] 2026-09-03 — as recommended.
 
 **G6 — A modeled, layout-free `reflect` subset as a machine facility
 (future arc, not this memo's ask).** Options: (a) commission a design
@@ -947,7 +955,7 @@ reflective `fmt` remainder indirectly); (b) declare `reflect`
 permanently out of scope like `unsafe`. Recommendation: **(a), after
 the first two slices land** — it is the next frontier behind `print`,
 and the machine already has the dynamic-type facts; but it must not
-ride this decision.
+ride this decision. RULED [USER] 2026-09-03 — as recommended.
 
 **G7 — The three-entry `os`/`runtime` primitive list.** Options: (a)
 admit `os.Exit(n)` (termination status = exit code, an observable R12
@@ -962,7 +970,7 @@ admit none. Recommendation: **(b)**, `runtime` deferred: `os.Exit` and
 the two streams map onto observables the machine will have and are
 demanded (11 + 53 gotest rows, 2 + 1 raft sites); `runtime.GC` as a
 no-op is defensible but is the first entry of a list that has no
-natural end (`SetFinalizer` is next and is NOT a no-op).
+natural end (`SetFinalizer` is next and is NOT a no-op). RULED [USER] 2026-09-03 — as recommended.
 
 **G8 — The admission rule and caps (§2.2).** Options: (a) adopt the
 register + caps (primitives 2 language + G7's list if ruled, overlay
@@ -970,14 +978,14 @@ register + caps (primitives 2 language + G7's list if ruled, overlay
 against register; (b) adopt the register without caps; (c) keep the
 freeze as the only rule. Recommendation: **(a)**. Grounds: the
 2026-08-16 rule failed for want of a place the count was visible and a
-mechanical check; a cap without a check is that rule again.
+mechanical check; a cap without a check is that rule again. RULED [USER] 2026-09-03 — as recommended.
 
 **G9 — The first slice (§6).** Options: (a) `strings`+`strconv`
 source-through as proposed; (b) `print`/`println` first; (c) the
 `fmt` re-homing first. Recommendation: **(a)**. Grounds: it is a real
 instance of every mechanism in (C) except the observable, it deletes
 six shims, its regression suite exists, and it touches no trusted
-surface — the right order is mechanism first, observable second.
+surface — the right order is mechanism first, observable second. RULED [USER] 2026-09-03 — as recommended.
 
 ---
 

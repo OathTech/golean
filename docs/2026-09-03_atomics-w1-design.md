@@ -243,6 +243,11 @@ GOMAXPROCS {1, 8}; schedule-dependent subjects reported as ranges).
    census gains `tryLock` (A′'s "zero new sites" read as "zero new
    sites FOR THE ATOMICS"; one S slice, ~`applySyncOp` arm + site +
    membership rows), or (b) the rider moves off A′ to its own item.
+   **RULED [USER] 2026-09-03 (relayed by the [AGENT] coordinator; not
+   firsthand): TryLock is its OWN small slice adding the `tryLock`
+   ChoiceSite — the A′ zero-new-sites sentence is amended for TryLock
+   only** (record: `docs/2026-08-31_qrow-rulings.md` row 5 + its
+   2026-09-03 appendix record).
 2. **D-002 confirmation** (§2) — owed at dispatch, posed in the report.
    The audit's concurrence, recorded with its caveat: the E5-T shadow
    model is NOT shim injection *precisely because* the method bodies
@@ -256,6 +261,10 @@ GOMAXPROCS {1, 8}; schedule-dependent subjects reported as ranges).
    step, red-first tested) is what makes the argument HOLD rather than
    merely be asserted. A pin drift or a model edit that departs from
    upstream turns the argument red.
+   **CONFIRMED [USER] 2026-09-03: the typed-wrapper shadow model is NOT
+   shim injection under D-002** («(4) Atomics - agree», relayed by the
+   [AGENT] coordinator; D-002's row in `docs/discrepancy-backlog.md`
+   carries the same note).
 3. **Wave 2** (recorded in TODO.md): `atomic.Value` (interface slot;
    gc's nil-store and inconsistent-type panics probed red-first),
    `atomic.Bool`, `And*`/`Or*` (+ the wrappers' `And`/`Or`), and the

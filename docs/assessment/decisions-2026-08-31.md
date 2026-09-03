@@ -65,3 +65,34 @@ program's tiers.
 Launch scope under these rulings: Tiers 1-3 now ("deal with all
 the smaller things"); Tier 4 sequenced after; Tier 5 (incl. 5(b))
 sized after 1-4.
+
+## Addendum 2026-09-03 — the "decisions on deck" sitting
+
+[AGENT] record; the [USER] quote was received by the [AGENT]
+coordinator and RELAYED to the recording worker (lane
+`guard-stage-alt`), so it is cited as relayed, not firsthand. The
+coordinator's list: (1) the `coverage-baseline-diff` guard fix for the
+oracle-schedule-dependent red, option (a) per-row stage alternation;
+(2) BUG-087 panic-text latitude, demonic choice at the nil arm; (3)
+stdlib gates G1–G9 as recommended; (4) atomics — TryLock own slice +
+D-002 confirmation of the typed-wrapper shadow model; (5) noodler gaps;
+(6) the strict-lane routing rule; others = K=32 membership sampling
+default, the periodic (non-gate) legs, the P5 filing. The reply,
+verbatim as relayed:
+
+«Re decisions on deck (1) the guard - agree with the redommendation, do (a); (2) panic-text, agree, demonic choice so both are admitted; (3) agree, go ahead with the plan; (4) Atomics - agree; (5) noodler gaps - already addressed; (6) strict-lane, agree; others: lower priority for now?»
+
+Where each ruling is recorded: (1) `scripts/coverage-baseline-diff` +
+`docs/coverage-suite-structure.md` (this lane); (2) BUGS.md BUG-087;
+(3) `docs/2026-09-03_stdlib-boundary-design.md` §5; (4)
+`docs/2026-08-31_qrow-rulings.md` row 5 + `docs/2026-09-03_atomics-w1-design.md`
+§6 + D-002 in `docs/discrepancy-backlog.md`; (6)
+`docs/2026-09-01_membership-depth.md` §5/§6.
+
+**"Others: lower priority for now" — [USER] 2026-09-03.** The K=32
+membership sampling default STANDS (membership-depth §6 P2 is not
+raised); the periodic non-gate legs (`scripts/choice-trace-corpus` P4,
+the oracle-matrix periodic legs) and the P5 filing (variant-run status
+in the strict invariance check) are DEFERRED as lower priority — not
+rejected; no schedule is set. Re-raise when the routing slice and the
+stdlib slice 1 have landed.
