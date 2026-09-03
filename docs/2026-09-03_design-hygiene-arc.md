@@ -58,8 +58,13 @@ cost and touches the fewest positional `fun_cases` proofs.
     step is thread-local again (NPDRF obstruction 7 closes by
     construction). Design note: `docs/2026-09-03_hygiene-b1-stamps-design.md`.
     Status: DONE on branch `hygiene-b1-stamps` (2026-09-03) — gate
-    green, audit-ask posed by the coordinator, merge on [USER]
-    sign-off (see the landing record).
+    green, audit verdict MERGE-READY (records amendments applied),
+    merge on [USER] sign-off (see the landing record). CARRIES ONE
+    [USER] DECISION to the sign-off: the slice narrowed the E9
+    envelope on irreflexive (NaN) keys by construction (BUG-088 —
+    the old model admitted spec-illegal repeat productions; the new
+    one produces each entry once); E9's envelope is a [USER] ruling,
+    so the narrowing is disclosed and referred, not self-adjudicated.
 
 (ii) **The cheap A-series, A1–A10**, as small commits each gated by
      the full differential (`scripts/capped scripts/ci --diff`):
@@ -128,11 +133,18 @@ change the semantics or its accounting, and none is scheduled here
 
 ## Invariants of every slice
 
-1. **Semantics-preserving.** Every corpus row's result unchanged; the
-   choice tape consumed identically (same sites, same bounds, same
-   order) — unless a bijection on streams is argued in the slice's
-   design note AND the [USER] signs the resulting re-pin. Where a
-   proposal preserves behaviour only up to heap isomorphism or fuel
+1. **Semantics-preserving on the MACHINE — or a disclosed fix.**
+   Every corpus row's result unchanged; the choice tape consumed
+   identically (same sites, same bounds, same order) — unless a
+   bijection on streams is argued in the slice's design note AND the
+   [USER] signs the resulting re-pin. Where a refactor is found to
+   CHANGE a behaviour (a class the old representation got wrong), the
+   change is not absorbed as "preservation": it is filed as a BUG with
+   a red-first pin row (old binary vs new vs gc), disclosed in the
+   design note, the inventory and the plan, and REFERRED TO THE [USER]
+   as a semantics decision at the sign-off — an envelope, once ruled,
+   is the [USER]'s to move (B1's BUG-088 is the first instance). Where
+   a proposal preserves behaviour only up to heap isomorphism or fuel
    accounting (C4, C5) the slice SAYS so, up front, and stops at the
    [USER] gate.
 2. **Full `scripts/capped scripts/ci --diff` as the regression, ZERO
@@ -160,4 +172,4 @@ change the semantics or its accounting, and none is scheduled here
 
 | Slice | Item | Branch | Landed | Notes |
 |---|---|---|---|---|
-| 1 | B1 stamps | `hygiene-b1-stamps` | branch-complete 2026-09-03, landing commit `f6152a6c` (this SHA recorded by the docs-only follow-up commit); audit-ask pending; not merged | design note `docs/2026-09-03_hygiene-b1-stamps-design.md`; evidence `docs/evidence/2026-09-03_hygiene-b1-stamps/`; 14 defs + 14 theorems + 3 rule premises deleted, −649 lines; zero drift on 3195 rows; +1 row `maps/nan-key-range` (BUG-088, found by the bisimulation argument, fixed by construction) |
+| 1 | B1 stamps | `hygiene-b1-stamps` | branch-complete 2026-09-03, landing commit `f6152a6c` (this SHA recorded by the docs-only follow-up commit); audit-ask pending; not merged | design note `docs/2026-09-03_hygiene-b1-stamps-design.md`; evidence `docs/evidence/2026-09-03_hygiene-b1-stamps/`; 14 defs + 14 theorems + 3 rule premises deleted, −649 lines; zero drift on 3195 rows; +4 rows `maps/nan-key-range`, `maps/nan-key-range-aggregate/{array,struct,interface}` (BUG-088, found by the bisimulation argument, fixed by construction — an E9 narrowing on irreflexive keys, DISCLOSED, [USER] ratification pending at merge) |

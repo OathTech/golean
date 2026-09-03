@@ -214,6 +214,12 @@ are RELATION-SILENT"), which is why `Obs` (EnumSpec.lean) cannot say
 
 ### U2. Map iteration is implemented by rewriting other goroutines' continuations
 
+*[LANDED / RETIRED 2026-09-03 — B1 (§3) landed on branch
+`hygiene-b1-stamps` @ `f6152a6c`: every definition named in this
+section is DELETED and the `mapIterK` frame carries entry-id sets. The
+twelve `file:line` cites below are HISTORICAL (tree `b5abacc1`); they
+no longer resolve.]*
+
 **Where.** `pruneIterFramesKey` (Machine.lean:2205), `pruneIterFramesAll`
 (:2248), `contAfterStmtOp` (:2303), `removeKeyList` (:2181),
 `keyInKeyList`/`keyInKeys` (:1088/:1098), `mandatoryInList` (:1167);

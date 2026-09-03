@@ -1031,10 +1031,23 @@ gc's early store a deviation, L-016, 2026-09-02).
   its first NaN entry forever at the zero stream (fuel-out; the
   modeled set admitted any number of productions). With stamps each
   entry is produced exactly once — the spec's production table —
-  pinned by `maps/nan-key-range` (gc 32, machine 32, confluent). This
+  pinned by `maps/nan-key-range` (gc 32, machine 32, confluent) and,
+  for the aggregate members of the class,
+  `maps/nan-key-range-aggregate/{array,struct,interface}` (gc 32 / 73 /
+  32 = machine; all four fuel-out on main @ 345ef090 — red-first
+  transcripts in `docs/evidence/2026-09-03_hygiene-b1-stamps/`). This
   is the ONE behaviour the slice changed, on a class no earlier row
-  exercised; it is a narrowing of an over-wide model to the spec, not
-  an envelope move.
+  exercised. GOVERNANCE (audit fix round F1, 2026-09-03): this IS an
+  E9 ENVELOPE NARROWING on irreflexive keys — the set the machine
+  admitted there (≥2 productions of one NaN entry, or an immediate
+  stop, all spec-illegal) genuinely shrank to "each entry once" — and
+  E9's envelope is a [USER] ruling (2026-08-19) that explicitly
+  rejected narrowings. The narrowing was [AGENT]-made BY CONSTRUCTION
+  (the stamps have no way to express the old behaviour), is DISCLOSED
+  here, in the design note §4, the arc plan and BUG-088, and is
+  REFERRED TO THE [USER] FOR RATIFICATION at the merge sign-off (the
+  coordinator poses it). Not self-adjudicated: if the [USER] declines,
+  the slice does not merge.
 
 ### E10. Which `==`-equal map key is retained on overwrite — (b) PINNED (always-replace)
 

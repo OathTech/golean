@@ -1,4 +1,11 @@
 # GoLean native-frontend full-corpus differential baseline
+# re-pinned: 2026-09-03 (hygiene-b1-stamps AUDIT FIX ROUND F2 — [AGENT]: three
+#   born-PASS rows maps/nan-key-range-aggregate/{array,struct,interface}, the
+#   aggregate members of BUG-088's irreflexive-key class (all fuel-out on main
+#   @ 345ef090; gc 32 / 73 / 32 = the branch; red-first transcript in
+#   docs/evidence/2026-09-03_hygiene-b1-stamps/). CLEAN-tree ci --diff at the
+#   fix-round tip recorded in that dir's gate-tail-fixround.txt. NO other row
+#   moved; NO PASS->non-PASS flips. 3199 rows; 3005 PASS / 194 FAIL.
 # re-pinned: 2026-09-03 (hygiene-b1-stamps lane — design-hygiene arc slice 1,
 #   B1 map entry-identity stamps; [AGENT]-executed inside the [USER]-ratified
 #   arc, docs/2026-09-03_design-hygiene-arc.md. GoCore map-iteration
@@ -541,7 +548,9 @@
 #     removed row is named in prose, never left dangling on the line).
 #     NEW rows: unsafe/layout-ops/{sizeof-fixed,layout-struct}
 #     FAIL/frontend-export BY DESIGN. unsafe/boundary/pointer-roundtrip
-# cases: 3196 (3002 PASS / 194 FAIL)
+# cases: 3199 (3005 PASS / 194 FAIL)
+#   [re-derived from the data rows at the hygiene-b1-stamps audit fix round F2 2026-09-03 ([AGENT]: 3196 (3002 PASS / 194 FAIL) + THREE born-PASS rows maps/nan-key-range-aggregate/{array,struct,interface}; no other row moved; `awk -F'\t' '!/^#/{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3005 / FAIL 194)]
+#   [the slice's landing figure, kept as history:] # cases: 3196 (3002 PASS / 194 FAIL)
 #   [re-derived from the data rows at the hygiene-b1-stamps re-pin 2026-09-03 ([AGENT]: the bug086-shim-closure pin's 3195 (3001 PASS / 194 FAIL) + ONE born-PASS row maps/nan-key-range (BUG-088's pin; design-hygiene arc slice 1, B1 entry-identity stamps — a GoCore map-iteration REPRESENTATION change with zero drift on every pre-existing row, docs/2026-09-03_hygiene-b1-stamps-design.md §6); `awk -F'\t' '!/^#/{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3002 / FAIL 194)]
 #   [the bug086-shim-closure figure, kept as history:] # cases: 3195 (3001 PASS / 194 FAIL)
 #   [re-derived from the data rows at the bug086-shim-closure re-pin 2026-09-03 ([AGENT]: the round-6 union's 3195 (2999 PASS / 196 FAIL) with BUG-086's two Cases rows noodler/strconv-formatint/{edges,positive} flipped FAIL/frontend-export -> PASS; no other row moved; `awk -F'\t' '!/^#/{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3001 / FAIL 194)]
@@ -2247,6 +2256,9 @@ PASS	maps/named-nil-flows/arg	-
 PASS	maps/named-nil-flows/slice	-
 PASS	maps/nan-key-clear	-
 PASS	maps/nan-key-range	-
+PASS	maps/nan-key-range-aggregate/array	-
+PASS	maps/nan-key-range-aggregate/struct	-
+PASS	maps/nan-key-range-aggregate/interface	-
 PASS	maps/nil-assign-eval-before-panic	-
 PASS	maps/nil-channel-key	-
 PASS	maps/nil-literal-values/func-element	-

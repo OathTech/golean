@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+array	nanArrayKeyRange	-	ok	-	maps,range,floats,arrays,keys
+struct	nanStructKeyRange	-	ok	-	maps,range,floats,structs,keys
+interface	nanInterfaceKeyRange	-	ok	-	maps,range,floats,interfaces,keys

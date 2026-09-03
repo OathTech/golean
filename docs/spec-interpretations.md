@@ -40,6 +40,11 @@ Rules of the file:
   iteration, so the may-produce-may-skip clause applies and it MAY BE
   PRODUCED AGAIN; deletion removes the key from the iteration's
   produced-set and from its mandatory (never-removed start keys) set.
+  [mechanism superseded 2026-09-03: entry ids — the frame's sets are
+  entry IDS and a re-created key is a fresh entry with a fresh id, so
+  nothing is removed from any set (design-hygiene arc slice 1, B1,
+  `docs/2026-09-03_hygiene-b1-stamps-design.md`); the READING is
+  unchanged.]
 - REJECTED: key-identity ("a key already produced is never produced
   again, even across delete + re-create") — no spec sentence keys
   "reached" by key, and it narrows the machine below the literal text

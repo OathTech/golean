@@ -42,6 +42,13 @@ envelope — and on the one class where the two machines differ
   in progress), same layout.
 - `transcripts/nan-key-range-red-first.txt` — main's binary vs this
   slice's binary vs `go run` on the new row's wire (BUG-088).
+- `transcripts/nan-key-range-aggregate-red-first.txt` — the same for
+  the aggregate-key rows `maps/nan-key-range-aggregate/{array,struct,
+  interface}` (audit fix round F2): main fuel-out ×3; branch 32 / 73 /
+  32 = gc.
+- `transcripts/gate-tail-fixround.txt` — CLEAN-tree `scripts/capped
+  scripts/ci --diff` at the audit-fix-round tip (F7; the slice's own
+  --diff run was on a dirty tree).
 - `transcripts/gate-tail.txt` — the `scripts/capped scripts/ci --diff`
   summary block at the slice tree (see "Gate" below).
 - `transcripts/gate-tail-clean-tip.txt` — the fast `scripts/capped

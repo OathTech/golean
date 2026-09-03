@@ -1,0 +1,30 @@
+# Red-first: maps/nan-key-range-aggregate/{array,struct,interface} on main @ 345ef090 (key-set frames) vs the B1 tip (entry-identity stamps) vs go run — 2026-09-03, audit fix round F2
+# Producer (slice worktree root): GO111MODULE=off GOCACHE=$PWD/artifacts/coverage/go-build-cache go run ./tools/nativefrontend --dir Corpus/coverage/exec/maps/nan-key-range-aggregate --out .tmp/nan2/wire.json
+#   OLD: timeout 120 /home/dev/projects/golean/.lake/build/bin/golean native-json-run --input .tmp/nan2/wire.json --function <fn> --fuel 200000   (main's binary, 345ef090)
+#   NEW: timeout 120 .lake/build/bin/golean native-json-run --input .tmp/nan2/wire.json --function <fn> --fuel 200000
+#   go:  scratch module (main.go + 'module nanprobe / go 1.26'), go run . ; go version
+
+== nanArrayKeyRange OLD (main @ 345ef090):
+{"message":"GoCore execution fuel exhausted","schema":"golean-observation-v1","status":"fuel-out"}
+exit=1
+== nanArrayKeyRange NEW (B1 tip):
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":32}]}
+exit=0
+
+== nanStructKeyRange OLD (main @ 345ef090):
+{"message":"GoCore execution fuel exhausted","schema":"golean-observation-v1","status":"fuel-out"}
+exit=1
+== nanStructKeyRange NEW (B1 tip):
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":73}]}
+exit=0
+
+== nanInterfaceKeyRange OLD (main @ 345ef090):
+{"message":"GoCore execution fuel exhausted","schema":"golean-observation-v1","status":"fuel-out"}
+exit=1
+== nanInterfaceKeyRange NEW (B1 tip):
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":32}]}
+exit=0
+
+== go run (prints array struct interface):
+32 73 32
+go version go1.26.5 linux/amd64

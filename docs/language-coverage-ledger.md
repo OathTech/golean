@@ -499,12 +499,15 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (3196 cases, 3002 PASS /
-194 FAIL — the `hygiene-b1-stamps` re-pin 2026-09-03 [AGENT]: the
-`bug086-shim-closure` pin's 3195 / 3001 / 194 + ONE born-PASS row
-`maps/nan-key-range` (BUG-088's pin, design-hygiene arc slice 1; no
-other row moved — `docs/2026-09-03_hygiene-b1-stamps-design.md` §6),
-re-derived from the data rows. That pin — 3195 / 3001 / 194 — was the
+All numbers at the current tracked baseline (3199 cases, 3005 PASS /
+194 FAIL — the `hygiene-b1-stamps` audit-fix-round re-pin 2026-09-03
+[AGENT]: the slice's 3196 / 3002 / 194 + THREE born-PASS rows
+`maps/nan-key-range-aggregate/{array,struct,interface}` (BUG-088's
+aggregate pins), re-derived from the data rows. That figure — 3196 /
+3002 / 194 — was the slice's own re-pin: the `bug086-shim-closure`
+pin's 3195 / 3001 / 194 + ONE born-PASS row `maps/nan-key-range`
+(BUG-088's pin, design-hygiene arc slice 1; no other row moved —
+`docs/2026-09-03_hygiene-b1-stamps-design.md` §6). That pin — 3195 / 3001 / 194 — was the
 `bug086-shim-closure` re-pin 2026-09-03 [AGENT]: the
 round-6 union's 3195 / 2999 / 196 with BUG-086's two Cases rows
 `noodler/strconv-formatint/{edges,positive}` flipped FAIL → PASS by the

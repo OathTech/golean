@@ -197,6 +197,25 @@ green, differential + confluent). No pre-existing corpus row ranged
 over an irreflexive-keyed map (the noodler NaN rows insert/delete/len
 only), so this is the ONE behaviour the slice changed, on a class
 with zero prior coverage — reported as such, not buried in the drift.
+The aggregate members of the class — `[1]float64{NaN}`, a struct
+field holding NaN, an `any` box holding NaN — behave identically
+(audit fix round F2: all three fuel-out on main, all three match gc on
+the branch; rows `maps/nan-key-range-aggregate/{array,struct,interface}`,
+gc 32 / 73 / 32).
+
+**Governance (audit fix round F1).** Calling this "a narrowing to the
+spec, not an envelope move" was wrong in kind: E9's envelope is the
+[USER]'s 2026-08-19 ruling ("any latitude in the Go spec should be
+supported" — narrowings rejected), and on irreflexive keys the modeled
+set DID shrink — the old machine admitted, for a NaN entry, any
+number ≥ 1 of productions and an immediate stop; the new one admits
+exactly one production. Every member the old set lost is spec-illegal
+(the production table is over entries, once each), but the decision
+whether that shrinkage is a bug fix or a re-envelope is the [USER]'s,
+not this slice's. Status: [AGENT]-made by construction, DISCLOSED
+(here, inventory §E9, arc plan, BUG-088), REFERRED TO THE [USER] for
+ratification at the merge sign-off; the coordinator poses it with the
+audit-ask. If declined, the slice does not merge as is.
 
 ## 5. Proof deltas (arm for arm)
 
@@ -242,9 +261,12 @@ with zero prior coverage — reported as such, not buried in the drift.
 
 ## 6. Set equality (before = main @ 345ef090 build; after = this slice)
 
-`scripts/capped scripts/diff-one …` on the same 19 rows (+ 3 added
-after-only: the two non-map noodler membership rows and the new NaN
-row). Every machine-enumerated observation set EQUAL; every result and
+`scripts/capped scripts/diff-one …` on 19 of the 23 enumerating map
+rows (+ 3 added after-only: the two non-map noodler membership rows
+and the new NaN row); the other 4 — `maps/jitter-draw`,
+`maps/range-first-key`, `race/negative/map-rw`,
+`race/negative/len-map` — were verified identical (set, result, stage)
+by the pre-merge audit. Every machine-enumerated observation set EQUAL; every result and
 stage EQUAL; every enumerator statistics string EQUAL. Full table and
 files: the evidence dir's `sets/{before,after}/`.
 
@@ -289,3 +311,38 @@ Side effects worth knowing: `GoValue.eqb`/`==` on `mapData` (and so on
 which is sound for the dedup engine's use (equality → same behaviour)
 and can only merge fewer states; `repr` of a `mapData` (refusal
 diagnostics only) shows the stamps.
+
+## 8. Audit fix round notes (informational; 2026-09-03)
+
+- **F5 — fail-closed surfaces retired, and why.** Gone with the prune:
+  `keyInKeyList`/`removeKeyList`'s `Except`-monadic refusals (an
+  ill-formed `valueEq` comparison inside a frame's key set),
+  `foreignPruneError`'s goroutine-naming prefix on a refusal raised in
+  a FOREIGN frame, and `pruneForeign`'s `.internal` arm for a
+  pruning-op apply with an unexpected successor shape. None of these
+  had a counterpart to keep: id membership is total (`Nat` equality),
+  no frame is ever rewritten from outside, and the apply arm has no
+  post-apply step to check. The fail-closed surfaces of map iteration
+  that REMAIN are unchanged: the per-pick self-normalization
+  validation (`mapIterCandidates` → `.stuck`), the `expected map data`
+  refusals on a malformed cell, and `mapAssignValue`'s new
+  `missing map entry at index` arm (unreachable when `mapEntryIndex?`
+  returns an in-range index; kept as a named refusal rather than a
+  `set!` no-op).
+- **F6 — dedup strictness.** `GoValue.eqb`/`ExecState ==` on `mapData`
+  now compare ids and `nextId` too, so the `--engine dedup` state
+  equality is stricter (sound: it merges fewer states, never more).
+  The audit measured the effect on the dedup-engine rows: nil — node
+  counts identical up to 7.9M nodes. Recorded as the audit's
+  measurement, not this note's.
+- **F8 — id freshness is not yet a `StateWf` carrier.** The invariant
+  the argument in §3 leans on — (I-fresh): the live ids of a cell are
+  pairwise distinct and `< nextId` — holds by construction of the
+  three writers (`makeMap` `#[] 0`, push-and-bump, erase/clear leave
+  the counter) but is not stated in `StateWf`; no current proof needs
+  it (the wf carriers are loc-boundedness and candidate
+  normalization). Candidate lemma for a later slice (natural home: the
+  A2/A3 memory-representation slice, where the cell payload becomes
+  its own type): `MapCellWf : ids.Nodup ∧ ∀ id ∈ ids, id < nextId`,
+  preserved by `applyStmtOpCore`'s map arms and `storeTarget`'s map
+  half.

@@ -4708,7 +4708,17 @@ lane, 2026-09-03 — see Status.)
   born green under the stamps, RED-FIRST shown against main's binary:
   `docs/evidence/2026-09-03_hygiene-b1-stamps/transcripts/nan-key-range-red-first.txt`)
 - Pinned-by: differential
-- Cases: maps/nan-key-range
+- Cases: maps/nan-key-range, maps/nan-key-range-aggregate/array, maps/nan-key-range-aggregate/struct, maps/nan-key-range-aggregate/interface
+- [USER] ratification of the E9 narrowing on irreflexive keys: PENDING
+  at merge (audit fix round F1, 2026-09-03 — the fix shrinks the
+  modeled set on this class from "any number ≥ 1 of productions of a
+  NaN entry, or an immediate stop" to "each entry once"; E9's envelope
+  is the [USER]'s 2026-08-19 ruling, so the narrowing is disclosed and
+  referred, not self-adjudicated; the coordinator poses it at the
+  sign-off). The aggregate rows (F2): `[1]float64{NaN}`, a struct
+  field NaN, an `any` box NaN — all fuel-out on main @ 345ef090, gc
+  32 / 73 / 32 = the branch; red-first transcript
+  `docs/evidence/2026-09-03_hygiene-b1-stamps/transcripts/nan-key-range-aggregate-red-first.txt`.
 - Discovered: 2026-09-03 (found while writing the B1 bisimulation
   argument — `docs/2026-09-03_hygiene-b1-stamps-design.md` §4: the
   key-set/id-set relation needs `valueEq` reflexive on the live keys,
