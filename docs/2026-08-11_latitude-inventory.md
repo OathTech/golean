@@ -655,8 +655,15 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   shared by the apply, the width and the accountants).
 - ENVELOPE (members, per head, from the pre-step cell): ACQUIRABLE
   (`Mutex.TryLock` on an unlocked cell; `RWMutex.TryRLock` with no
-  writer holding or pending — rwmutex.go's documented exclusion, the
-  `rlock` park condition; `RWMutex.TryLock` with no writer and no
+  writer HOLDING — a PENDING writer does not force the failure: audit
+  fix round F1, the sync design's R1 made VALUE-observable — gc forces
+  false only once the writer has passed `readerCount.Add(-max)`
+  (rwmutex.go:152), and a writer merely QUEUED behind `rw.w` (:150)
+  leaves gc's TryRLock TRUE (`rwTryRLockQueuedWriter` 40/40 plain at
+  GOMAXPROCS 1 and 8); the model's `pendingW` is one flag for both
+  phases, so acquirability is `!writer` and the pick is offered in both
+  — machine ⊇ gc, an [AGENT] widening in the safe direction, RATIFIED [USER] 2026-09-03 («TryRLock decision sounds fine», relayed by the [AGENT] coordinator); the blocking
+  `rlock` keeps R1's exclusion; `RWMutex.TryLock` with no writer and no
   reader — the `wlock` immediate-acquire condition) → width 2: slot 0
   = ACQUIRE (the same state transition as Lock/RLock/write-Lock, the
   same acquire edge), slot 1 = SPURIOUS FAILURE (deliver `false`, no
@@ -680,8 +687,12 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   realizations of a false-when-momentarily-free are a lost CAS on
   `m.state` under contention (internal/sync/mutex.go:85) and the
   starvation-mode early return (:78), neither isolable as a corpus row.
-  Held-state falses are gc-exact (`muLocked`, `rwMatrix`,
-  `rwTryRLockPendingWriter`: false 20/20).
+  Held-state falses are gc-exact (`muLocked`, `rwMatrix`: false 20/20);
+  a writer past :152 forces false (`rwTryRLockPendingWriter` 20/20)
+  while a writer queued behind `rw.w` does not (`rwTryRLockQueuedWriter`
+  TRUE 40/40 plain, 39/40 under `-race` at GOMAXPROCS 8) — both inside
+  the widened envelope; per-program the sets coincide ({0, 1} at the
+  `rw-tryrlock-pending-writer` row before and after the widening).
 - DETECTOR (Race.lean `syncEntryKinds`, the `acquired` flag; TSan's
   realized set ∪ go_mem's kind per gc word, the Q-U4RESIDUAL (A)
   discipline): Mutex TryLock on an unlocked cell → `.atomicWrite
@@ -711,13 +722,19 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   ∀-streams certification (`allStreamsOk`, the dedup engine) REFUSES a
   TRY-head apply position outright (`consumesTryLock`, fail closed);
   the CLI enumerator (`stepNeeds`) carries such rows.
-- EVIDENCE: GC — 18 probe subjects, 20 runs each, plain and `-race`,
-  GOMAXPROCS 1 and 8 (`docs/evidence/2026-09-03_q-trylock/probes/`);
-  membership certification of 9 width-2 rows (each `enumerated=2
-  exhibited=1 unexhibited=1`); racy/DRF rows agree-race / agree-DRF.
+- EVIDENCE: GC — 20 probe subjects, 20 runs each (40 for the two F1
+  queued-writer shapes), plain and `-race`, GOMAXPROCS 1 and 8
+  (`docs/evidence/2026-09-03_q-trylock/probes/`); membership
+  certification of 11 width-2 rows (each `enumerated=2 exhibited=1
+  unexhibited=1` — gc exhibits one member at the gate budget: the
+  success member for the TryLock rows, one ORDER for
+  `race/free-sync/rw-tryrlock-acquire`'s {0, 8}); racy/DRF rows
+  agree-race / agree-DRF.
 - INDIRECTION PRESERVES THE SITE (the Q-SYNCVAL identity principle):
   the statement discard, the hoisted expression value, method values,
-  interface dispatch and the promoted receiver all lower through one
+  interface dispatch, the promoted receiver and `defer m.TryLock()`
+  (the deferred wrapper, result discarded at frame exit — audit fix
+  round F2, `sync/trylock/defer-trylock`) all lower through one
   `syncValueOpFor` table to the same `sync-op` node (emit.go), or
   refuse; `sync/promoted-mutex/trylock-expr` and the bodied
   `sync.Mutex.TryLock` stub (the twin pin's one moved entry) are the

@@ -723,7 +723,9 @@ it is admitted ONLY where `atomic-op` is (an expression statement; the
 single RHS of an assignment) and lowers to `Stmt.syncStmt` with the
 result target. Same wire op names as the statement form (one op
 identity — the Q-SYNCVAL identity principle); any other op name here
-is a forged wire. -/
+is a forged wire. OWED (audit fix round F5, TODO.md): `resultTypes` is
+accepted-but-unchecked here exactly as in `asAtomicOp?` — an absent key
+still lowers; tightening both is one decoder-hardening item. -/
 private def asSyncValueOp? (json : Json) : LowerM (Option (SyncStmtOp × Array Json)) := do
   match json.getObjVal? "expr" with
   | .ok (.str "sync-op") =>

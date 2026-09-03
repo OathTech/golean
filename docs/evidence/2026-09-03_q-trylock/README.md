@@ -16,7 +16,12 @@ sync-words table cites the probe subjects by name);
 
 ## What is here
 
-- `probes/tsan/main.go` — 18 probe subjects, one per claim of the model:
+- `probes/tsan/main.go` — 20 probe subjects (18 + the audit fix round's
+  two F1 shapes: `rwTryRLockQueuedWriter` — TryRLock while a writer is
+  QUEUED behind `rw.w`, not yet past `readerCount.Add(-max)`; and control
+  D `rwRLockQueuedWriter` — the blocking RLock in the same state; their
+  40-run cells are `probes/tsan-runs/summary-f1-queued-writer.tsv`), one
+  per claim of the model:
   the return-value envelope at unlocked / held cells (`muUncontended`,
   `muLocked`, `rwMatrix`, `rwTryRLockPendingWriter`), the acquisition
   identity (`muUnlockAfterTryLock`, `muFalseThenLock`), the spin shape
@@ -40,11 +45,11 @@ sync-words table cites the probe subjects by name);
   structural diff of the pinned raft twin wire before/after this slice
   ([USER] ruling (A): enumerate exactly which entries change).
 - `baseline-drift.txt` — `scripts/coverage-baseline-diff --full` after the
-  re-pin (no regression, 3216 rows); `gate-tail-run1-dirty-prepin.txt` —
-  the first full `ci --diff` summary (every step ok; the ONLY FAIL was the
-  expected baseline drift before the re-pin, its drift list = exactly this
-  slice's 19 rows); `gate-tail.txt` — the final `ci --diff` after the
-  re-pin.
+  re-pin (no regression, 3278 rows); `gate-tail-run3-dirty-prepin.txt` —
+  the post-rebase dirty-tree `ci --diff` summary (every step ok; the ONLY
+  FAIL was the expected baseline drift before the re-pin — the drift list
+  vs main 221d8964's pin = exactly this slice's 20 rows); `gate-tail.txt`
+  — the CLEAN-tip `ci --diff` after the fix-round commit.
 - `choice-trace/` — the consumption-invariance comparison: the labeled
   consumption tracer (`scripts/choice-trace-corpus`) over the 179 `sync`-
   tagged rows shared by main and this branch, run on main's tree (a
@@ -113,13 +118,29 @@ sync-words table cites the probe subjects by name);
    publish,rw-trylock-publish}` confluent, `rw-tryrlock-acquire`
    membership {0, 8}).
 5. **Twin pin.** Exactly ONE entry of the pinned twin wire changed:
-   `methods[515] sync.Mutex.TryLock` (declaration-only stub → bodied
-   stub; `unsupported` removed); no RWMutex entry exists in the twin's
-   method set. `eef32142627a…` → `c824f9e4d27f…` (`twin-pin/hashes.txt`).
-6. **Gate.** Full `ci --diff` on the dirty tree: every step ok; the drift
-   vs the previous pin = exactly +17 born-PASS rows and 2 FAIL→PASS flips
-   (the two TryLock frontier reds), NO PASS→non-PASS, no other movement;
-   re-pinned to 3216 rows (3024 PASS / 192 FAIL). See the gate tails.
+   `sync.Mutex.TryLock` (declaration-only stub → bodied stub;
+   `unsupported` removed) — `methods[515]` against c22e367a before the
+   rebase, `methods[518]` against main 221d8964 after it (main's
+   stdlib-source-1 rows shifted the index; same entry); no RWMutex entry
+   exists in the twin's method set. Pin `45cd882a6e09…` → `f2309df29148…`
+   (the pre-rebase pair `eef32142627a…` → `c824f9e4d27f…` kept as
+   history; `twin-pin/hashes.txt`, `diff.txt` regenerated against
+   221d8964).
+8. **F1 (audit fix round): TryRLock vs a QUEUED writer.** At the model
+   state (writer = false, readers = 0, pendingW > 0) gc's TryRLock is
+   TRUE when the pending writer is queued behind `rw.w` — 40/40 plain at
+   GOMAXPROCS 1 and 8, 40/40 `-race` at 1, 39/40 at 8 — and FALSE when
+   it is past `readerCount.Add(-max)` (`rwTryRLockPendingWriter`, 20/20).
+   Control D: gc's blocking RLock also returns before the queued writer
+   acquires — 40/40 plain at both GOMAXPROCS, 17/40 and 20/40 under
+   `-race`. Consequence: TryRLock's acquirability widened to `!writer`
+   (machine ⊇ gc on both phases; sync design §8 R1's value-observable
+   half; an [AGENT] widening in the safe direction, RATIFIED [USER] 2026-09-03 («TryRLock decision sounds fine», relayed by the [AGENT] coordinator)); the per-program sets are unchanged.
+6. **Gate.** Full `ci --diff` on the rebased dirty tree: every step ok; the
+   drift vs main 221d8964's pin = exactly +18 born-PASS rows and 2
+   FAIL→PASS flips (the two TryLock frontier reds), NO PASS→non-PASS, no
+   other movement; re-pinned to 3278 rows (3078 PASS / 200 FAIL). The
+   clean-tip run is `gate-tail.txt`. (Pre-rebase: 3199 → 3216, 17 rows.)
 7. **Consumption invariance.** See `choice-trace/compare.txt` (filled at
    the end of the run): no pre-existing row's consumption changed.
 

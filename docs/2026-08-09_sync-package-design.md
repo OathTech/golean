@@ -360,6 +360,31 @@ unsupported shapes fail closed, never approximate.
   (members {10, 20}, BOTH gc-witnessed — plain sampling is 10-dominant
   with rare 20s, -race sampling near-even; delta-review round 2
   corrected the earlier "gc's realized 10" phrasing).
+  **R1's VALUE-observable half (Q-TRYLOCK audit fix round F1,
+  2026-09-03):** the same one-flag approximation — `pendingW` counts
+  every parked writer, gc's exclusion belongs only to the `rw.w` owner
+  who has passed `readerCount.Add(-rwmutexMaxReaders)` (rwmutex.go:152;
+  a writer queued behind `rw.w.Lock()` at :150 has not touched
+  `readerCount`) — becomes a RETURN VALUE with `TryRLock`: at the model
+  state (writer = false, readers = 0, pendingW > 0) gc's TryRLock is
+  TRUE when the pending writer is queued behind `rw.w`
+  (`docs/evidence/2026-09-03_q-trylock/probes/` `rwTryRLockQueuedWriter`:
+  true 40/40 plain at GOMAXPROCS 1 and 8, 40/40 `-race` at 1, 39/40 at
+  8 — the woken writer occasionally reaches :152 first) and FALSE when
+  it is past :152 waiting for readers (`rwTryRLockPendingWriter`: false
+  20/20). A TryRLock forced false on `pendingW > 0` would therefore
+  have been NARROWER than gc at the state level (masked per program:
+  {0, 1} ⊇ {1}); the slice widened `tryAcquire`'s acquirability to
+  `!writer` (machine ⊇ gc on both phases; an [AGENT] widening in the
+  safe direction, RATIFIED [USER] 2026-09-03 («TryRLock decision sounds fine», relayed by the [AGENT] coordinator)). The BLOCKING `RLock` keeps this entry's exclusion (it
+  parks on `pendingW > 0`) — and control D shows gc's blocking RLock does
+  not honor it either for a queued writer (`rwRLockQueuedWriter`: main's
+  RLock returned before the queued writer acquired 40/40 plain at both
+  GOMAXPROCS; 17/40 and 20/40 under `-race`, whose scheduler lets the
+  woken writer win the race to :152 about half the time) — fresh
+  evidence for this entry's ORDER half: the acquisition-order envelope
+  still contains both (the reader-first member via the direct-order
+  schedules), no new row moves.
 - **U5 (audit fix round, F2 — TSan release overwrite-vs-merge):** see
   Race.lean's inventory entry; the merge model is memory-model-exact
   and TSan over-reports on owner-free cross-goroutine unlocks without

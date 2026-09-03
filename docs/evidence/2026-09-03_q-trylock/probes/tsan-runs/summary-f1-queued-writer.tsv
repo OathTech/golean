@@ -1,0 +1,9 @@
+subject	build	procs	runs	race	green	other	distinct_outputs
+rwTryRLockQueuedWriter	plain	1	40	0	40	0	true;
+rwTryRLockQueuedWriter	plain	8	40	0	40	0	true;
+rwTryRLockQueuedWriter	race	1	40	0	40	0	true;
+rwTryRLockQueuedWriter	race	8	40	0	40	0	false;true;
+rwRLockQueuedWriter	plain	1	40	0	40	0	0;
+rwRLockQueuedWriter	plain	8	40	0	40	0	0;
+rwRLockQueuedWriter	race	1	40	0	40	0	0;1;
+rwRLockQueuedWriter	race	8	40	0	40	0	0;1;

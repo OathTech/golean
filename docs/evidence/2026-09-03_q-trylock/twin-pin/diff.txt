@@ -1,5 +1,5 @@
 top-level keys equal: True
-CHANGED methods[515]: recvType=sync.Mutex name=TryLock
+CHANGED methods[518]: recvType=sync.Mutex name=TryLock
    key body: old=null | new={"body": [{"args": [{"expr": "ident", "name": "$recv", "type": {"elem": {"kind": "sync", "sync": "Mutex"}, "kind": "pointer"}}], "op": "tryLock", "stmt": "sync-op", "target": {"id": "$tryOk", "target": "declare", "type": {"kind": "bool"}}}, {"results": [{"expr": "ident", "name": "$tryOk", "type": {"kind": "bool"}}], "stmt": "return"}], "stmt": "block"}
    key unsupported: old="sync-primitive method sync.Mutex.TryLock (declaration-only stub: satisfaction answers, calls fail closed \u2014 the member is outside the modeled sync surface; the modeled ops lower through values vi | new=null
 changed entries: 1

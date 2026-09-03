@@ -1,17 +1,25 @@
 # GoLean native-frontend full-corpus differential baseline
-# re-pinned: 2026-09-03 (q-trylock lane — Q-TRYLOCK, RULED [USER] 2026-08-31
+# re-pinned: 2026-09-03 (q-trylock lane, as amended at its AUDIT FIX ROUND
+#   F1-F6 and REBASED onto main 221d8964 — Q-TRYLOCK, RULED [USER] 2026-08-31
 #   (docs/2026-08-31_qrow-rulings.md row 5; envelope pre-ruled), own-slice
 #   sequencing [USER] 2026-09-03 («(4) Atomics - agree», relayed), twin-pin
 #   move [USER] 2026-09-03 («we should break things», relayed); [AGENT]-
 #   executed inside that brief. TryLock/TryRLock modeled with mem#locks'
 #   spurious-failure member as the width-2 `ChoiceSite.tryLock`
-#   (success-edge-only detector; frontend lowering for every spelling).
-#   FULL ci --diff at main c22e367a + this lane's working tree (dirty: the
-#   slice and these records, committed together; log tail in
-#   docs/evidence/2026-09-03_q-trylock/gate-tail-run1-dirty-prepin.txt):
-#   3216 rows run; drift vs the previous pin = EXACTLY the slice's rows —
-#   +17 born-PASS rows (sync/trylock/* x12: 4 strict, 8 membership over
-#   {acquired, spurious false} incl. spin-until-trylock under nonterm=;
+#   (success-edge-only detector; frontend lowering for every spelling incl.
+#   `defer m.TryLock()`; F1: TryRLock acquirability widened to `!writer` —
+#   sync design §8 R1's value-observable half; an [AGENT] widening in the
+#   safe direction, RATIFIED [USER] 2026-09-03 («TryRLock decision sounds
+#   fine», relayed by the [AGENT] coordinator)).
+#   FULL ci --diff at main 221d8964 + this lane's working tree (dirty: the
+#   slice + the fix round + these records, committed together; log tail in
+#   docs/evidence/2026-09-03_q-trylock/gate-tail-run3-dirty-prepin.txt;
+#   the CLEAN-tip tail follows in gate-tail.txt): 3278 rows run; drift vs
+#   main's pin (3260 / 3058 / 202) = EXACTLY the slice's rows — +18
+#   born-PASS rows (sync/trylock/* x13: 3 strict, 1 confluent
+#   [trylock-false-then-lock, a two-goroutine scheduling row routed per
+#   main's strict-lane depth guard], 9 membership over {acquired, spurious
+#   false} incl. defer-trylock and spin-until-trylock under nonterm=;
 #   race/negative-sync/{overwrite-vs-trylock,failed-trylock-no-edge} racy;
 #   race/free-sync/{trylock-publish,rw-trylock-publish} confluent +
 #   rw-tryrlock-acquire membership) and 2 FAIL->PASS flips, REASON: the
@@ -22,9 +30,9 @@
 #   impossible (the width-2 draw fails strict's stream invariance); gc
 #   exhibits only the success member (unexhibited-but-permitted by the
 #   mem#locks text). NO other row moved in result or stage; NO
-#   PASS->non-PASS flips; the [USER]-ruled alternation row
-#   channels/select-select/beside-loop kept verbatim. 3216 rows;
-#   3024 PASS / 192 FAIL.
+#   PASS->non-PASS flips; the [USER]-ruled alternation rows kept verbatim.
+#   3278 rows; 3078 PASS / 200 FAIL. (Pre-rebase figure, history: 3216 /
+#   3024 / 192 over hygiene-b1-stamps' 3199 / 3005 / 194.)
 # re-pinned: 2026-09-03 (bug087-paniktext AUDIT FIX ROUND F1-F3 — [AGENT]; FIX-FIRST
 #   verdict. F1: the go-statement frame-entry twin (spawnStep, Multi.lean) now draws
 #   the nilValueMethodText pick (the first landing held member 0 only there — a live
@@ -741,9 +749,11 @@
 #     removed row is named in prose, never left dangling on the line).
 #     NEW rows: unsafe/layout-ops/{sizeof-fixed,layout-struct}
 #     FAIL/frontend-export BY DESIGN. unsafe/boundary/pointer-roundtrip
-# cases: 3281 (3084 PASS / 197 FAIL)
-#   [PROVISIONAL at the round-9 rebase of q-trylock onto main 312a4458 (bug087-paniktext merged) 2026-09-04 [AGENT]: bug087's 3264 (3065 PASS / 199 FAIL) + the slice's 17 born-PASS rows + 2 FAIL->PASS flips; tallied from the data rows; re-derived at the q-trylock audit-fix-round re-pin below]
-# cases: 3264 (3065 PASS / 199 FAIL)
+# cases: 3282 (3085 PASS / 197 FAIL)
+#   [re-derived from the data rows at the round-9 merge-train rebase of q-trylock (at its audit fix round F1-F6) onto main 312a4458 (= 221d8964 + bug087-paniktext) 2026-09-04 ([AGENT], under the [USER] merge sign-off «go ahead and merge» 2026-09-04: bug087-paniktext's 3264 (3065 PASS / 199 FAIL) + this slice's 18 born-PASS rows + its 2 FAIL->PASS flips = 3282 (3085 PASS / 197 FAIL); the two lanes' row sets are disjoint and no row moved in the replay; tallied by row, not summed by hand)]
+#   [the q-trylock-over-221d8964 figure, kept as history:] # cases: 3278 (3078 PASS / 200 FAIL)
+#   [re-derived from the data rows at the q-trylock audit-fix-round re-pin 2026-09-03 ([AGENT]: main 221d8964's round-8b union 3260 (3058 PASS / 202 FAIL) + 18 born-PASS rows + 2 FAIL->PASS flips = 3278 (3078 PASS / 200 FAIL)); re-derived from the data rows, not summed by hand]
+#   [the bug087-paniktext figure, kept as history:] # cases: 3264 (3065 PASS / 199 FAIL)
 #   [re-derived from the data rows at the bug087-paniktext audit fix round F1-F3 2026-09-03 ([AGENT]: the rebased fix's 3260 (3061 PASS / 199 FAIL) + FOUR born-PASS membership rows noodler/ifaces/{spawn-iface-value-nil,spawn-iface-value-nil-devirt,spawn-helper-value-nil} + multipkg/nil-value-method-text; no other row moved): 3264 (3065 PASS / 199 FAIL)]
 #   [the rebased fix figure, kept as history:] # cases: 3260 (3061 PASS / 199 FAIL)
 #   [re-derived from the data rows at the bug087-paniktext rebase onto 221d8964 2026-09-03 ([AGENT]: the round-8b union's 3260 (3058 PASS / 202 FAIL) with BUG-087's three Cases rows noodler/ifaces/{mv-iface-nil-call,iface-param-value-nil,global-iface-value-nil} flipped FAIL/differential -> PASS/membership and two strict PASS rows noodler/ifaces/{iface-dispatch-value-nil,mk-helper-value-nil} re-laned PASS/- -> PASS/membership; no born rows, no other row moved): 3260 (3061 PASS / 199 FAIL)]
@@ -3823,9 +3833,9 @@ PASS	spec-examples-stmt/type-switch-equiv-if/agree-string	-
 PASS	spec-examples-stmt/type-switch-equiv-if/agree-default	-
 FAIL	spec-examples-stmt/type-unify-struct-array	frontend-export
 PASS	spec-examples-stmt/variadic-slice-passthrough	-
-FAIL	stdlib-source/errors-wrap/as	frontend-export
-FAIL	stdlib-source/errors-wrap/is	frontend-export
 PASS	stdlib-source/errors-wrap/unwrap	-
+FAIL	stdlib-source/errors-wrap/is	frontend-export
+FAIL	stdlib-source/errors-wrap/as	frontend-export
 PASS	stdlib-source/fields-fuzz/group-00	-
 PASS	stdlib-source/fields-fuzz/group-01	-
 PASS	stdlib-source/fields-fuzz/group-02	-
@@ -3838,52 +3848,52 @@ PASS	stdlib-source/fields-fuzz/group-08	-
 PASS	stdlib-source/fields-fuzz/group-09	-
 FAIL	stdlib-source/frontier/atoi-error-path-clone	frontend-export
 FAIL	stdlib-source/frontier/div64-overflow-value	frontend-export
-FAIL	stdlib-source/frontier/format-float-unsafe	frontend-export
 FAIL	stdlib-source/frontier/index-rune-goto	frontend-export
+FAIL	stdlib-source/frontier/format-float-unsafe	frontend-export
+PASS	stdlib-source/strconv-format/uint-all-bases	-
+PASS	stdlib-source/strconv-format/int-all-bases	-
 PASS	stdlib-source/strconv-format/extremes	-
+PASS	stdlib-source/strconv-format/small-boundary	-
+PASS	stdlib-source/strconv-format/power-of-two-bases	-
 PASS	stdlib-source/strconv-format/illegal-base-one	-
 PASS	stdlib-source/strconv-format/illegal-base-zero	-
-PASS	stdlib-source/strconv-format/int-all-bases	-
-PASS	stdlib-source/strconv-format/power-of-two-bases	-
 PASS	stdlib-source/strconv-format/siblings	-
-PASS	stdlib-source/strconv-format/small-boundary	-
-PASS	stdlib-source/strconv-format/uint-all-bases	-
-FAIL	stdlib-source/strconv-parseuint/bitsize-saturation	frontend-export
-FAIL	stdlib-source/strconv-parseuint/error-quoting	frontend-export
-FAIL	stdlib-source/strconv-parseuint/error-texts	frontend-export
-PASS	stdlib-source/strconv-parseuint/happy-bases	-
 FAIL	stdlib-source/strconv-parseuint/numerror-type	frontend-export
 FAIL	stdlib-source/strconv-parseuint/range-sentinel	frontend-export
-PASS	stdlib-source/strings-fields/all-unicode-space	-
-PASS	stdlib-source/strings-fields/ascii-table	-
+FAIL	stdlib-source/strconv-parseuint/error-texts	frontend-export
+FAIL	stdlib-source/strconv-parseuint/error-quoting	frontend-export
+PASS	stdlib-source/strconv-parseuint/happy-bases	-
+FAIL	stdlib-source/strconv-parseuint/bitsize-saturation	frontend-export
 PASS	stdlib-source/strings-fields/empty	-
-PASS	stdlib-source/strings-fields/func-direct	-
-PASS	stdlib-source/strings-fields/func-value	-
-PASS	stdlib-source/strings-fields/high-bit-no-space	-
-PASS	stdlib-source/strings-fields/mixed-runs	-
+PASS	stdlib-source/strings-fields/all-unicode-space	-
 PASS	stdlib-source/strings-fields/mixed-unicode	-
 PASS	stdlib-source/strings-fields/non-space-runes	-
+PASS	stdlib-source/strings-fields/high-bit-no-space	-
+PASS	stdlib-source/strings-fields/mixed-runs	-
+PASS	stdlib-source/strings-fields/func-value	-
+PASS	stdlib-source/strings-fields/func-direct	-
+PASS	stdlib-source/strings-fields/ascii-table	-
+PASS	stdlib-source/strings-split/empty-sep-multibyte	-
+PASS	stdlib-source/strings-split/empty-sep-invalid-utf8	-
 PASS	stdlib-source/strings-split/both-empty	-
 PASS	stdlib-source/strings-split/empty-s	-
-PASS	stdlib-source/strings-split/empty-sep-invalid-utf8	-
-PASS	stdlib-source/strings-split/empty-sep-multibyte	-
-PASS	stdlib-source/strings-split/rabin-karp-path	-
-PASS	stdlib-source/strings-split/sep-equals-s	-
 PASS	stdlib-source/strings-split/sep-longer-than-s	-
-PASS	stdlib-source/strings-split/single-byte-many	-
-PASS	stdlib-source/strings-split/splitn-and-after	-
+PASS	stdlib-source/strings-split/sep-equals-s	-
 PASS	stdlib-source/strings-split/trailing-and-consecutive	-
 PASS	stdlib-source/strings-split/unicode-sep	-
-PASS	stdlib-source/strings-trimspace/all-unicode-space	-
-PASS	stdlib-source/strings-trimspace/ascii-table	-
+PASS	stdlib-source/strings-split/rabin-karp-path	-
+PASS	stdlib-source/strings-split/single-byte-many	-
+PASS	stdlib-source/strings-split/splitn-and-after	-
 PASS	stdlib-source/strings-trimspace/both-unicode	-
-PASS	stdlib-source/strings-trimspace/empty-and-single	-
-PASS	stdlib-source/strings-trimspace/inner-preserved	-
-PASS	stdlib-source/strings-trimspace/invalid-utf8-ends	-
 PASS	stdlib-source/strings-trimspace/left-unicode-only	-
-PASS	stdlib-source/strings-trimspace/near-miss-ends	-
-PASS	stdlib-source/strings-trimspace/non-space-ends	-
 PASS	stdlib-source/strings-trimspace/right-unicode-only	-
+PASS	stdlib-source/strings-trimspace/inner-preserved	-
+PASS	stdlib-source/strings-trimspace/all-unicode-space	-
+PASS	stdlib-source/strings-trimspace/non-space-ends	-
+PASS	stdlib-source/strings-trimspace/near-miss-ends	-
+PASS	stdlib-source/strings-trimspace/invalid-utf8-ends	-
+PASS	stdlib-source/strings-trimspace/ascii-table	-
+PASS	stdlib-source/strings-trimspace/empty-and-single	-
 PASS	strconv/format-parse/format-uint-bases	-
 PASS	strconv/format-parse/format-int-vals	-
 PASS	strconv/format-parse/format-illegal-base	-
@@ -4108,7 +4118,7 @@ PASS	sync/stub-satisfaction/satisfies	-
 PASS	sync/trylock/unlocked-acquire	membership
 PASS	sync/trylock/locked-false	-
 PASS	sync/trylock/unlock-after-trylock-success	membership
-PASS	sync/trylock/trylock-false-then-lock	-
+PASS	sync/trylock/trylock-false-then-lock	confluent
 PASS	sync/trylock/discarded-acquires	membership
 PASS	sync/trylock/rw-trylock-unlocked	membership
 PASS	sync/trylock/rw-tryrlock-unlocked	membership
@@ -4116,6 +4126,7 @@ PASS	sync/trylock/rw-tryrlock-reader-held	membership
 PASS	sync/trylock/rw-trylock-reader-held	-
 PASS	sync/trylock/rw-try-writer-held	-
 PASS	sync/trylock/rw-tryrlock-pending-writer	membership
+PASS	sync/trylock/defer-trylock	membership
 PASS	sync/trylock/spin-until-trylock	membership
 PASS	sync/waitgroup-basic/add-done-wait	confluent
 PASS	sync/waitgroup-basic/batch-done	-

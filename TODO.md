@@ -185,8 +185,9 @@ see the R15 entry below.
       gc's realized point; slot 1 = the spurious false; bound 1 = no pop
       at a held cell), success-edge-only detector per the derived
       per-word table (Race.lean), frontend lowering for every spelling
-      through one `syncValueOpFor` table (identity principle), 12
-      `sync/trylock/*` rows + 2 racy + 3 DRF rows, the two frontier reds
+      through one `syncValueOpFor` table (identity principle), 13
+      `sync/trylock/*` rows (incl. `defer-trylock`, audit fix round F2)
+      + 2 racy + 3 DRF rows, the two frontier reds
       flipped to membership rows over {acquired, spurious} (spurious
       unexhibited by gc — permitted by the text), spin rows under
       `nonterm=` with NO termination claim; the twin wire re-pinned
@@ -202,6 +203,16 @@ see the R15 entry below.
       not this slice's; measured 0.28 s at fuel 100k vs 47 s at 1M), so
       such rows are shaped with the spinner as the child and main
       blocked (the `atomics/spin` shape) — recorded at the row.
+      AUDIT FIX ROUND F1–F6 (2026-09-03): TryRLock acquirability
+      widened to `!writer` (R1's value-observable half; an [AGENT]
+      widening in the safe direction, RATIFIED [USER] 2026-09-03 («TryRLock decision sounds fine», relayed by the [AGENT] coordinator); sync design §8 R1); `defer m.TryLock()`
+      lowered; detector table without absorbing arm; rebased onto
+      221d8964 (twin pin 45cd882a… → f2309df2…, one entry). OWED (F5,
+      decoder): the `sync-op` and `atomic-op` EXPRESSION nodes accept an
+      ABSENT `resultTypes` key (the allowed-keys check permits it, the
+      decoders never read it) — a forged wire without it still lowers;
+      tighten both together (require the key, check its arity) in a
+      decoder-hardening slice.
       Original item text follows.
       ([USER]-ruled 2026-09-02, `docs/2026-08-31_qrow-rulings.md` row
       2; charter = `docs/2026-09-01_qatomic-owner-proposal.md` §4 +

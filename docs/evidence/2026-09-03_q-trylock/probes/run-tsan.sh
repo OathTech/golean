@@ -17,7 +17,7 @@ BIN="${TMPDIR:-/tmp}/q-trylock-probe"
 go build -o "$BIN" "./$DIR/tsan" || { echo "build failed" >&2; exit 1; }
 go build -race -o "$BIN.race" "./$DIR/tsan" || { echo "build -race failed" >&2; exit 1; }
 go version | tee "$OUT/go-version.txt"
-subjects="${SUBJECTS:-muUncontended muLocked muUnlockAfterTryLock muFalseThenLock muSpinUntilTryLock muOverwriteVsTryLock muOverwriteVsFailedTryLock muOverwriteLockedVsFailedTryLock muCopyVsFailedTryLock muDrfTryLockPublish muRacyTryLockNoAcquire muFailedTryLockNoEdge rwMatrix rwTryRLockPendingWriter rwOverwriteVsTryRLock rwOverwriteVsFailedTryRLock rwDrfTryLockPublish rwDrfTryRLockAcquire}"
+subjects="${SUBJECTS:-muUncontended muLocked muUnlockAfterTryLock muFalseThenLock muSpinUntilTryLock muOverwriteVsTryLock muOverwriteVsFailedTryLock muOverwriteLockedVsFailedTryLock muCopyVsFailedTryLock muDrfTryLockPublish muRacyTryLockNoAcquire muFailedTryLockNoEdge rwMatrix rwTryRLockPendingWriter rwTryRLockQueuedWriter rwRLockQueuedWriter rwOverwriteVsTryRLock rwOverwriteVsFailedTryRLock rwDrfTryLockPublish rwDrfTryRLockAcquire}"
 SUMMARY="${SUMMARY:-$OUT/summary.tsv}"
 printf 'subject\tbuild\tprocs\truns\trace\tgreen\tother\tdistinct_outputs\n' | tee "$SUMMARY"
 for s in $subjects; do

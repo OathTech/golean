@@ -8990,7 +8990,8 @@ func (e *emitter) emitOnceDo(call *ast.CallExpr, recvW any) (any, bool, error) {
 }
 
 // emitDeferSyncOp lowers `defer <syncop>()` for the ZERO-ARGUMENT sync
-// ops plus Done (spec-parity slice 2): a synthetic one-parameter
+// ops plus Done (spec-parity slice 2) and the value-returning TryLock/
+// TryRLock (result discarded at frame exit; Q-TRYLOCK): a synthetic one-parameter
 // wrapper through the existing defer machinery — the receiver address
 // evaluates at defer time, the op (and any misuse fatal/panic) fires
 // at frame exit as the deferred invocation's. The arg-taking MODELED
@@ -9017,6 +9018,13 @@ func (e *emitter) emitDeferSyncOp(call *ast.CallExpr) (any, bool, error) {
 	}
 	m := sel.Sel.Name
 	op := syncOpFor(prim, m)
+	if op == "" {
+		// `defer m.TryLock()` (Q-TRYLOCK, audit fix round F2): the
+		// deferred call runs at frame exit and DISCARDS its Bool (Go's
+		// rule for a deferred call's results) — the no-target statement
+		// form of the same op, inside the same `$deferSync` wrapper.
+		op = syncValueOpFor(prim, m)
+	}
 	var extraArgs []any
 	if op == "" {
 		switch {

@@ -150,12 +150,14 @@ func rwTryWriterHeld() int {
 	return r
 }
 
-// RWMutex: TryRLock with a writer PENDING (rwmutex.go: "a blocked Lock
-// call excludes new readers") — the writer parks behind main's RLock;
-// whether it has parked before main's TryRLock is L1 latitude, so the
-// set is {0 (writer parked first: forced false), 1 (TryRLock first:
-// acquired), 0 (TryRLock first: spurious)} = {0, 1}; gc (no sleep) may
-// show either.
+// RWMutex: TryRLock with a writer PENDING behind main's RLock. gc: the
+// writer past readerCount.Add(-max) (rwmutex.go:152) forces false; a
+// writer merely QUEUED behind rw.w (:150) leaves readerCount >= 0 and the
+// TryRLock succeeds. The model's pendingW is one flag for both phases
+// (sync design §8 R1), so the pick is OFFERED whenever no writer HOLDS
+// (audit fix round F1): whether the writer has parked before main's
+// TryRLock is L1 latitude and the pick is width 2 either way — set
+// {0, 1}; gc (no sleep) shows 0 (the writer is past :152).
 func rwTryRLockPendingWriter() int {
 	var rw sync.RWMutex
 	rw.RLock()
@@ -176,6 +178,24 @@ func rwTryRLockPendingWriter() int {
 	rw.RUnlock()
 	<-done
 	return r
+}
+
+// `defer m.TryLock()` (audit fix round F2): the deferred call runs at
+// deferTryLock's exit and its Bool is DISCARDED (Go's rule for deferred
+// results) — it still acquires. The caller's TryLock then sees a held
+// mutex: {0 (deferred acquired, second forced false; or both spurious),
+// 1 (deferred spurious, second acquired)}; gc: 0.
+func deferTryLock(m *sync.Mutex) {
+	defer m.TryLock()
+}
+
+func deferTryLockDiscarded() int {
+	var m sync.Mutex
+	deferTryLock(&m)
+	if m.TryLock() {
+		return 1
+	}
+	return 0
 }
 
 // spin until TryLock succeeds (the fairness-claim class, row 5): the
@@ -202,5 +222,6 @@ func main() {
 	println(tryLockUnlocked(), tryLockLocked(), unlockAfterTryLockSuccess(),
 		tryLockFalseThenLock(), tryLockDiscarded(), rwTryLockUnlocked(),
 		rwTryRLockUnlocked(), rwTryRLockReaderHeld(), rwTryLockReaderHeld(),
-		rwTryWriterHeld(), rwTryRLockPendingWriter(), spinUntilTryLock())
+		rwTryWriterHeld(), rwTryRLockPendingWriter(), spinUntilTryLock(),
+		deferTryLockDiscarded())
 }

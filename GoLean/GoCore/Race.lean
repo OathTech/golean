@@ -1478,15 +1478,27 @@ def syncEntryKinds (op : SyncOp) (pre : SyncPrim) (delta : Int) (acquired : Bool
   -- nothing realized, and go_mem gives an unsuccessful call no kind
   -- ("no synchronizing effect at all").
   | .tryLock _, .mutex locked => if locked then [] else [(.atomicWrite, at_ "state")]
-  | .tryLock _, _ => []
   -- RWMutex TryRLock/TryLock: the realized `race.Read(&rw.w)` opens
   -- every outcome (:89/:171, BEFORE `race.Disable`); the counter CAS is
   -- under `race.Disable` (nothing realized), so only go_mem's kind
   -- applies, and only to a SUCCESSFUL call ("equivalent to a call to
   -- l.RLock/l.Lock" — lock is read-like → `.atomicRead @readerCount`,
   -- the `rlock`/`wlock` row); a failed call has no go_mem kind.
-  | .tryRLock _, _ | .tryWLock _, _ =>
+  | .tryRLock _, .rwmutex .. | .tryWLock _, .rwmutex .. =>
       (.read, at_ "w") :: (if acquired then [(.atomicRead, at_ "readerCount")] else [])
+  -- KIND MISMATCH — UNREACHABLE BY NAME (audit fix round F4; the
+  -- `wakeReady` discipline): `tryAcquire` is `stuck` on a TRY head over
+  -- the wrong primitive before any state change, and `raceUpdate` folds
+  -- SUCCESSFUL pool steps only, so no such (op, cell) pair reaches this
+  -- table. Enumerated per kind, never `_`-absorbed, so a new primitive or
+  -- a new head is a compile error here; the empty list is the honest
+  -- value for a step that cannot have happened (an access on a
+  -- fabricated word would be the fail-OPEN mistake — `at_` keys words by
+  -- `pre.kind`, so a Mutex-word access under a TryRLock would be a
+  -- fiction).
+  | .tryLock _, .rwmutex .. | .tryLock _, .waitGroup .. | .tryLock _, .once .. => []
+  | .tryRLock _, .mutex .. | .tryRLock _, .waitGroup .. | .tryRLock _, .once .. => []
+  | .tryWLock _, .mutex .. | .tryWLock _, .waitGroup .. | .tryWLock _, .once .. => []
 
 /-- The accesses `-race` realizes AFTER a sync op's release hook:
 `Mutex.Unlock`'s state Add follows `race.Release` (mutex.go:188-194),

@@ -2873,17 +2873,19 @@ def applySyncOpCore (s : ExecState) (op : SyncOp) (vs : List GoValue)
 /-- The cell a TRY head would leave behind if it ACQUIRED — `.ok (some _)`
 exactly when the op could acquire (the `tryLockWidth` = 2 condition; ONE
 derivation for the apply, the width and the accountants): `TryLock` on
-an unlocked Mutex → locked; `TryRLock` when no writer holds or is
-pending → one more reader (the `rlock` acquire); RWMutex `TryLock` when
-no writer and no reader holds → the writer bit (the `wlock` immediate
-acquire). `.ok none` on a held cell; a kind-mismatched cell or a
+an unlocked Mutex → locked; `TryRLock` when no writer HOLDS → one more
+reader (the `rlock` acquire — a PENDING writer does NOT force a failure,
+see the envelope statement at `applyTryLock`: audit fix round F1, the R1
+value-observable half); RWMutex `TryLock` when no writer and no reader
+holds → the writer bit (the `wlock` immediate acquire). `.ok none` on a
+held cell; a kind-mismatched cell or a
 non-try head is a `stuck`/`internal` ERROR (fail closed, before any pick
 matters). -/
 def tryAcquire (op : SyncOp) (pre : SyncPrim) : Except GoError (Option SyncPrim) :=
   match op, pre with
   | .tryLock _, .mutex locked => pure (if locked then none else some (.mutex true))
   | .tryRLock _, .rwmutex writer readers pendingW =>
-      pure (if writer || pendingW > 0 then none else some (.rwmutex writer (readers + 1) pendingW))
+      pure (if writer then none else some (.rwmutex writer (readers + 1) pendingW))
   | .tryWLock _, .rwmutex writer readers pendingW =>
       pure (if writer || readers > 0 then none else some (.rwmutex true 0 pendingW))
   | .tryLock _, other => stuck s!"TryLock on a non-mutex sync cell: {repr other}"
@@ -2893,10 +2895,10 @@ def tryAcquire (op : SyncOp) (pre : SyncPrim) : Except GoError (Option SyncPrim)
 
 /-- The width of the `tryLock` site at a TRY head's apply, from the
 PRE-step cell: 2 when the op could acquire — `TryLock` on an unlocked
-Mutex; `TryRLock` when no writer holds and none is pending (rwmutex.go:
-"a blocked Lock call excludes new readers", the `rlock` park condition);
-RWMutex `TryLock` when no writer holds and no reader does (the `wlock`
-immediate-acquire condition) — else 1 (the failure is forced; the site's
+Mutex; `TryRLock` when no writer HOLDS (a pending writer does not force
+the failure — the R1 note at `applyTryLock`); RWMutex `TryLock` when no
+writer holds and no reader does (the `wlock` immediate-acquire
+condition) — else 1 (the failure is forced; the site's
 `consumeAtOne := false` policy pops nothing). A kind-mismatched cell is
 width 1 too (the apply is `stuck` there, before any pick matters). The
 accountants (`CLI.stepNeeds`, `ChoiceTrace.seqSite`) recompute the bound
@@ -2964,10 +2966,24 @@ THE ENVELOPE, per head, from the pre-step cell:
 * held (`tryLockWidth` = 1) → `false`, deterministically, and the site
   is consulted at bound 1 WITHOUT a pop (`consumeAtOne := false`), so a
   TryLock on a held lock is stream-transparent (probes `muLocked`,
-  `rwMatrix`, `rwTryRLockPendingWriter`: false 20/20). RWMutex `TryRLock`
-  fails while a writer is PENDING — gc's `readerCount` went negative at
-  the writer's `Lock` entry (rwmutex.go:150) — the `rlock` park
-  condition (`pendingW > 0`); RWMutex `TryLock` fails while readers hold
+  `rwMatrix`: false 20/20). RWMutex `TryRLock` is FORCED false only while
+  a writer HOLDS (`writer = true`): gc's `readerCount` goes negative at
+  `readerCount.Add(-rwmutexMaxReaders)` (rwmutex.go:152), which a writer
+  reaches only after `rw.w.Lock()` (:150) — a writer QUEUED behind
+  `rw.w` leaves `readerCount ≥ 0`, and gc's TryRLock returns TRUE there
+  (audit fix round F1: the auditor's probe 40/40, our
+  `rwTryRLockQueuedWriter`), while a writer past :152 waiting for readers
+  forces false (`rwTryRLockPendingWriter`: false 20/20). The model's
+  `pendingW` is ONE flag for both phases (sync design §8 R1: the
+  exclusion attaches to every PARKED writer, gc's only to the `rw.w`
+  owner), so at (`writer = false`, `pendingW > 0`) the machine cannot
+  tell them apart — the pick is therefore OFFERED there (acquirability =
+  `!writer`, symmetric with RWMutex `TryLock`'s "pendingW
+  notwithstanding" below): machine ⊇ gc on both phases — an [AGENT]
+  widening in the safe direction, RATIFIED [USER] 2026-09-03 («TryRLock decision sounds fine», relayed by the [AGENT] coordinator); the blocking `rlock` keeps R1's exclusion (it parks
+  on `pendingW > 0`), which control D shows gc's blocking RLock does not
+  honor either (`rwRLockQueuedWriter`) — R1's pre-existing half, fresh
+  evidence recorded there. RWMutex `TryLock` fails while readers hold
   (`readers > 0`, gc's `readerCount.CompareAndSwap(0, …)` :180) and
   succeeds otherwise — the `wlock` immediate-acquire condition, pendingW
   notwithstanding (gc holds `rw.w` for a pending writer and so fails a

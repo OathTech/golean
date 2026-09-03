@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -262,6 +263,85 @@ func rwTryRLockPendingWriter() {
 	fmt.Println(ok)
 }
 
+// F1 (audit fix round): TryRLock while a writer W2 is QUEUED behind rw.w
+// (rwmutex.go:150) but not yet past readerCount.Add(-max) (:152). Shape:
+// reader R holds; W1 takes rw.w and goes past :152 (waits for R); W2
+// queues at :150 behind W1's rw.w; R releases -> W1 acquires; W1 unlocks
+// (readerCount back to 0, rw.w released -> W2 wakes toward :152); main's
+// TryRLock in that window. gc: readerCount == 0 -> TRUE (the auditor's
+// 40/40). The model's pendingW (one flag for both phases — sync design §8
+// R1) would have FORCED false here before the widening to `!writer`.
+func rwTryRLockQueuedWriter() {
+	var rw sync.RWMutex
+	rw.RLock()
+	w1Acquired := make(chan struct{})
+	w1Release := make(chan struct{})
+	w1Done := make(chan struct{})
+	w2Done := make(chan struct{})
+	go func() {
+		rw.Lock()
+		close(w1Acquired)
+		<-w1Release
+		rw.Unlock()
+		close(w1Done)
+	}()
+	time.Sleep(2 * time.Millisecond) // W1 past :152, waiting for R
+	go func() {
+		rw.Lock()
+		rw.Unlock()
+		close(w2Done)
+	}()
+	time.Sleep(2 * time.Millisecond) // W2 queued at :150 behind W1's rw.w
+	rw.RUnlock()
+	<-w1Acquired
+	close(w1Release)
+	<-w1Done
+	ok := rw.TryRLock()
+	if ok {
+		rw.RUnlock()
+	}
+	<-w2Done
+	fmt.Println(ok)
+}
+
+// F1 control D: the same state, main's BLOCKING RLock instead of TryRLock —
+// does it also jump the queued writer? v = 0 means main's RLock returned
+// before W2 acquired (the auditor's 40/40); fresh evidence for R1's
+// pre-existing RLock half (the model parks the RLock behind pendingW).
+func rwRLockQueuedWriter() {
+	var rw sync.RWMutex
+	rw.RLock()
+	w1Acquired := make(chan struct{})
+	w1Release := make(chan struct{})
+	w1Done := make(chan struct{})
+	w2Done := make(chan struct{})
+	var w2Got int32
+	go func() {
+		rw.Lock()
+		close(w1Acquired)
+		<-w1Release
+		rw.Unlock()
+		close(w1Done)
+	}()
+	time.Sleep(2 * time.Millisecond)
+	go func() {
+		rw.Lock()
+		atomic.StoreInt32(&w2Got, 1)
+		rw.Unlock()
+		close(w2Done)
+	}()
+	time.Sleep(2 * time.Millisecond)
+	rw.RUnlock()
+	<-w1Acquired
+	close(w1Release)
+	<-w1Done
+	rw.RLock()
+	v := atomic.LoadInt32(&w2Got)
+	rw.RUnlock()
+	<-w2Done
+	fmt.Println(v)
+}
+
 // RACY: plain overwrite of the RWMutex beside a TryRLock (any outcome):
 // every RWMutex op opens with race.Read(&rw.w) → plain read vs plain
 // write. Expected -race: RACE.
@@ -362,6 +442,10 @@ func main() {
 		rwMatrix()
 	case "rwTryRLockPendingWriter":
 		rwTryRLockPendingWriter()
+	case "rwTryRLockQueuedWriter":
+		rwTryRLockQueuedWriter()
+	case "rwRLockQueuedWriter":
+		rwRLockQueuedWriter()
 	case "rwOverwriteVsTryRLock":
 		rwOverwriteVsTryRLock()
 	case "rwOverwriteVsFailedTryRLock":
