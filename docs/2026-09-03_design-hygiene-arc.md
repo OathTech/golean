@@ -160,4 +160,4 @@ change the semantics or its accounting, and none is scheduled here
 
 | Slice | Item | Branch | Landed | Notes |
 |---|---|---|---|---|
-| 1 | B1 stamps | `hygiene-b1-stamps` | branch-complete 2026-09-03, landing commit: see the follow-up line below; audit-ask pending; not merged | design note `docs/2026-09-03_hygiene-b1-stamps-design.md`; evidence `docs/evidence/2026-09-03_hygiene-b1-stamps/`; 14 defs + 14 theorems + 3 rule premises deleted, −649 lines; zero drift on 3195 rows; +1 row `maps/nan-key-range` (BUG-088, found by the bisimulation argument, fixed by construction) |
+| 1 | B1 stamps | `hygiene-b1-stamps` | branch-complete 2026-09-03, landing commit `f6152a6c` (this SHA recorded by the docs-only follow-up commit); audit-ask pending; not merged | design note `docs/2026-09-03_hygiene-b1-stamps-design.md`; evidence `docs/evidence/2026-09-03_hygiene-b1-stamps/`; 14 defs + 14 theorems + 3 rule premises deleted, −649 lines; zero drift on 3195 rows; +1 row `maps/nan-key-range` (BUG-088, found by the bisimulation argument, fixed by construction) |

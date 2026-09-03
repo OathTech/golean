@@ -10,7 +10,9 @@ bullet), `docs/BUGS.md` BUG-088 and BUG-005's residual text,
 
 Provenance: produced 2026-09-03 [AGENT] (design-hygiene arc slice 1,
 worktree `hygiene-b1-stamps` off `main` @ `345ef090`; arc plan commit
-`8d225e82` is the branch's first commit). The ratification the arc
+`8d225e82` is the branch's first commit, `f6152a6c` the landing
+commit; this README's SHA lines and the clean-tip gate tail were added
+by the docs-only follow-up commit). The ratification the arc
 rests on is [USER] (Mike, 2026-09-03, relayed by the coordinator —
 quoted in the arc plan). No decision in this directory is a new one:
 the envelope is the 2026-08-19 [USER] ruling, unchanged; the
@@ -42,6 +44,11 @@ envelope — and on the one class where the two machines differ
   slice's binary vs `go run` on the new row's wire (BUG-088).
 - `transcripts/gate-tail.txt` — the `scripts/capped scripts/ci --diff`
   summary block at the slice tree (see "Gate" below).
+- `transcripts/gate-tail-clean-tip.txt` — the fast `scripts/capped
+  scripts/ci` (no `--diff`: escape-hatch scans, build, eval tests, and
+  the baseline diff of the LAST recorded differential run) on the
+  committed clean tip `f6152a6c`, so the certified content is a commit
+  and not only a worktree state.
 
 ## Set equality (the comparison, verbatim method)
 
@@ -106,10 +113,20 @@ invariant 2 ("a slice may ADD rows … reports them as additions").
 
 `scripts/capped scripts/ci --diff` at the slice tree — `transcripts/
 gate-tail.txt` (the summary block verbatim; the tree state at launch is
-noted at its head). Expected and required: `RESULT: PASS`, baseline
-diff FULL with drift = exactly the one NEW row `maps/nan-key-range`
-(PASS/-), zero pre-existing rows moved, zero PASS→non-PASS flips; the
-baseline is re-pinned in the same tree with that reason in its header.
+noted at its head). RESULT: PASS. `differential coverage summary:
+cases=3196 pass=3002 fail=194`; baseline diff FULL (3196/3196, no
+regression — the baseline already carried the one NEW row
+`maps/nan-key-range` PASS/-, re-pinned in the same tree with its
+reason in the header); re-pin guard 0 PASS→non-PASS flips; eval tests
+148/148; check-bugs ok (BUG-088's case PASS as claimed);
+check-spec-anchors ok; check-coverage ok. The run's reconciler line
+showed 1 HIGH (C1H: the baseline's `# cases:` derivation line still
+said 3195/3001/194); that line was corrected before the commit and
+`tools/reconcile-records` re-run: 3 findings, 0 HIGH (the three
+pre-existing MEDIUMs C13/C5/C9). Then `scripts/capped scripts/ci`
+(fast) on the committed clean tip `f6152a6c`:
+`transcripts/gate-tail-clean-tip.txt` — RESULT: PASS, baseline diff
+FULL 3196/3196, re-pin guard 0 flips, reconciler 3 findings 0 HIGH.
 
 ## Toolchain / host
 

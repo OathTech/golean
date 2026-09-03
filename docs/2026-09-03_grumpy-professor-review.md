@@ -833,7 +833,7 @@ series as A1–A9 so the moved prose is re-read once.
 **B1. Entry-identity stamps for maps (the queue's Q11) — delete the
 prune.**
 LANDED 2026-09-03 — design-hygiene arc slice 1, branch
-`hygiene-b1-stamps` (landing commit recorded in
+`hygiene-b1-stamps`, landing commit `f6152a6c` (also recorded in
 `docs/2026-09-03_design-hygiene-arc.md`'s landing table; design note
 `docs/2026-09-03_hygiene-b1-stamps-design.md`). As proposed, with two
 recorded deviations: the id counter is PER MAP (kept `StateWf`
