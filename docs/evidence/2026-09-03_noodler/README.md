@@ -32,7 +32,9 @@ differential test, PASS rows are guards).
   9911bcd2 … eeb78dfd; records commit = the commit adding this README,
   `git log -1 --format=%H -- docs/evidence/2026-09-03_noodler/README.md`).
   The full gate (`scripts/capped scripts/ci --diff`) ran at the records
-  tip; its tail is in `transcripts/gate-tail.txt`. No GoLean/, tools/,
+  tip; its tails are in `transcripts/gate-tail-1-prepin.txt` (the drift run
+  at eeb78dfd) and `transcripts/gate-tail-2-records.txt` (RESULT: PASS at
+  the records commit 67629805). No GoLean/, tools/,
   scripts/ file was modified on this lane.
 - Host (rule 5): linux/amd64, shared build box with several agents'
   lanes running concurrently. The only timing-sensitive numbers here are
@@ -108,6 +110,7 @@ you launched (the retry used `nohup … & echo $! > ci.pid`).
 - `transcripts/gc-wrapper-text.txt` — its output at default flags and `-N -l`.
 - `probes/formatint-bisect/fi-{a..e,both}.go.txt` — the F2 bisect programs.
 - `transcripts/formatint-bisect.txt` — the native frontend's verdict per program.
-- `transcripts/gate-tail.txt` — the final `scripts/capped scripts/ci --diff` tail (added at the re-pin commit).
+- `transcripts/gate-tail-1-prepin.txt` — the pre-pin `scripts/capped scripts/ci --diff` tail (drift = the 562 new ids).
+- `transcripts/gate-tail-2-records.txt` — the final `scripts/capped scripts/ci --diff` tail (RESULT: PASS).
 - `per-area-table.tsv` — package → rows / PASS / FAIL / born-FAIL ids (generated from the gate's `artifacts/coverage/latest-full.tsv`; producer named in its header).
 - `scratch-notes.md` — the running triage notes: known seams re-hit (with the record found for each), findings, could-not-probe items, budget cliff measurements.

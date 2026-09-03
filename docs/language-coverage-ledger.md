@@ -599,7 +599,7 @@ moved frontier(Q-ATOMIC) → covered(B) at the atomics arc's wave 1 —
 §3's row; its `value` residual is a named wave-2 refusal, not a
 frontier row.)
 
-**The 173 baseline reds, every one on a named row (re-derived
+**The 196 baseline reds, every one on a named row (173 + the noodler lane's 23 born-FAIL probe rows at the round-6 merge-train union 2026-09-03 [AGENT], each on the post-vintage row below; the 173 re-derived
 mechanically 2026-09-02 at 177, then −4 at the 2026-09-03 atomics
 wave-1 re-pin — the Q-ATOMIC row's `sync/atomic-frontier/{add-load-
 store,cas,swap,mp-litmus}` flipped green, its `value` red stays (stage
@@ -620,8 +620,8 @@ bucket's BUG-041 red changed ROW, not count):**
 | design questions Q-* (§6) | 10 |
 | (c) profound-reason pins (triage §4 + the unsafe marker) | 9 + 1 |
 | (a)-queued fixes (triage §3.2: A3 5, A4 1, A5 1, A7 1) | 8 |
-| post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) + the gotest-fixes BUG-078 budget refusal pin (`arrays/materialization-budget/over-budget`, on BUG-078's Cases line since the audit fix round) + the bug082-maphint audit-round BUG-083 hoist-order pin (`builtins/len-vs-call-order/hint-panicky-between`, 2026-09-02) + the q-u4-gomem BUG-084 designed-divergence pins (`race/gomem-only/*`, 5 rows: go_mem-racy / TSan-green shapes REFUSED by [USER] ruling Q-U4RESIDUAL (A), 2026-09-02) | 62 |
-| **total** | **173** |
+| post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) + the gotest-fixes BUG-078 budget refusal pin (`arrays/materialization-budget/over-budget`, on BUG-078's Cases line since the audit fix round) + the bug082-maphint audit-round BUG-083 hoist-order pin (`builtins/len-vs-call-order/hint-panicky-between`, 2026-09-02) + the q-u4-gomem BUG-084 designed-divergence pins (`race/gomem-only/*`, 5 rows: go_mem-racy / TSan-green shapes REFUSED by [USER] ruling Q-U4RESIDUAL (A), 2026-09-02) + the noodler lane's 23 born-FAIL probe rows (2026-09-03, `docs/2026-09-03_noodler-report.md`: 3 on BUG-085's Cases line, 2 on BUG-086's, 6 short-circuit-operand refusals + goto-forward-in-block + self-shadow-define + `defer delete` + 2 duplicate-local-TypeId = the report's FG-1..FG-5 frontier candidates (11), 2 BUG-068 red-by-design re-hits, 1 FR-3 re-hit, 3 triage-F6/A3 re-hits, 1 FR-10 value-copy witness in untriaged-ids) | 85 |
+| **total** | **196** |
 
 *(Movement at the 2026-09-02 q-u4-gomem re-pin (union taken at the
 round-5 merge train 2026-09-03): post-vintage 57 → 62 — BUG-084's five

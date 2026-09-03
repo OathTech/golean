@@ -550,7 +550,14 @@
 #     The remaining FAIL rows are the standing frontend/feature gaps
 #     of the 2026-08-22 record (docs/2026-08-22_launch-audit-synthesis.md),
 #     none moved by this re-pin.
-# cases: 2632 (2459 PASS / 173 FAIL)
+# cases: 3194 (2998 PASS / 196 FAIL)
+#   [re-derived from the data rows at the round-6 merge-train rebase 2026-09-03 ([AGENT]: noodler replayed over main@103dc74e = atomics-w1's 2632 (2459 PASS / 173 FAIL); the two lanes' new rows are disjoint by id and no row of either lane moved in the union): + 539 born-PASS + 23 born-FAIL (noodler/*) = 3194 (2998 PASS / 196 FAIL).]
+#   [the noodler lane's own figure, kept as history:] # cases: 3142 (2942 PASS / 200 FAIL)
+#   [re-derived by count from this file's data rows at the 2026-09-03 noodler
+#   re-pin: 2580 (2403 PASS / 177 FAIL) + 539 born-PASS + 23 born-FAIL
+#   = 3142 (2942 PASS / 200 FAIL); no pre-existing row moved.]
+#   [previous figure, kept as history:] # cases: 2580 (2403 PASS / 177 FAIL)
+#   [the atomics-w1 lane's own figure, kept as history:] # cases: 2632 (2459 PASS / 173 FAIL)
 #   [re-derived by count from this file's data rows at the 2026-09-03
 #   atomics-w1 AUDIT FIX ROUND (H4): 2626 (2453 PASS / 173 FAIL) + 6
 #   born-PASS strict rows completing the op x kind matrix

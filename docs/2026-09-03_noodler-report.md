@@ -192,7 +192,39 @@ recorded its own PID and killed only that.
 
 ## 8. Gate, re-pin, reconcile
 
-<<GATE>>
+- Pre-pin full gate (`scripts/capped scripts/ci --diff` at eeb78dfd, dirty
+  — records in progress): RESULT: FAIL as expected — drift = exactly the
+  562 NEW noodler ids, zero other rows moved; the spec-anchor step
+  caught two anchor typos in probe comments (`Run-time_panics`,
+  `Floating-point_operators`), fixed in the records commit.
+  Transcript: `docs/evidence/2026-09-03_noodler/transcripts/gate-tail-1-prepin.txt`.
+- Re-pin ([AGENT], born rows only): `baselines/native-full.tsv` 2580
+  (2403 PASS / 177 FAIL) → 3142 (2942 / 200) = +539 born-PASS + 23
+  born-FAIL; verified by id that no pre-existing row changed result or
+  stage. Every born-FAIL is on a BUGS Cases line (BUG-085 ×3, BUG-086
+  ×2), a known frontier/red-by-design row, a §4 frontier candidate, or
+  the one `coverage` entrant in `baselines/untriaged-ids`
+  (`noodler/conversions/nil-slice-zero-array`, FR-10's value-copy
+  witness; ceiling 11 → 12, justified in `baselines/untriaged-count`).
+- Final full gate (`scripts/capped scripts/ci --diff` at the records
+  commit 67629805, clean tree): **RESULT: PASS** — `baseline diff FULL
+  (3142/3142, no regression)`, `re-pin guard (0 PASS→non-PASS flip(s),
+  all listed in BUGS.md Cases)`, check-bugs `ok (86 bug(s))`,
+  spec anchors `685 spec# + 203 mem# citations all resolve`. Transcript:
+  `docs/evidence/2026-09-03_noodler/transcripts/gate-tail-2-records.txt`.
+- Reconcile-records: the full gate reported 3 HIGH (C1H stale `# cases:`
+  header line; C4 §8 bucket total 177 ≠ 200 ×2) — all three were this
+  lane's own stale records, fixed in the closing commit (the `# cases:`
+  line re-derived; the §8 post-vintage bucket row absorbs the 23
+  noodler reds, total 200). After the fix: `3 finding(s), 0 HIGH` — the
+  three MEDIUMs (C13 doc Go-version mentions, C5 the FR-7 `=` citation,
+  C9 wire-schema movement since the certification date) pre-date this
+  lane. Fast gate (`scripts/capped scripts/ci`) on the fixed tree:
+  RESULT: PASS.
+- Provenance: every decision in this lane is [AGENT] inside the relayed
+  [USER] brief; nothing merged, nothing pushed; `GoLean/`, `tools/`,
+  `scripts/` untouched (`git diff --stat main..noodler -- GoLean tools
+  scripts` is empty).
 
 ## 9. What I would probe next
 

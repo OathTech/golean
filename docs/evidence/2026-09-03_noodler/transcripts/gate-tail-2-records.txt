@@ -1,0 +1,52 @@
+# tail of artifacts/noodler-probes/ci-diff-2.log — scripts/capped scripts/ci --diff at 67629805 (the records commit; clean tree), 2026-09-03
+56:differential coverage summary: cases=3142 pass=2942 fail=200 export_status=0
+86:[1m── baseline re-pin guard (HEAD-vs-HEAD~1; flips must be on a BUGS.md Cases: line)[0m
+119:  ok   baseline diff FULL (3142/3142, no regression)
+120:  ok   re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)
+123:[1mRESULT: PASS[0m
+
+
+[1m── negative baseline diff[0m
+no regression: 394 case(s) run in negative-latest.tsv match baselines/negative-full.tsv
+
+[1m── differential baseline diff (scripts/coverage-baseline-diff)[0m
+no regression: 3142 case(s) run in latest.tsv match baselines/native-full.tsv
+
+[1m── baseline re-pin guard (HEAD-vs-HEAD~1; flips must be on a BUGS.md Cases: line)[0m
+
+[1m── cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)[0m
+  [01] C1H  HIGH    baselines/native-full.tsv:510 header says 2580 cases (2403 PASS / 177 FAIL) but the data rows count 3142 (2942 PASS / 200 FAIL) — stale header; re-derive it from the rows (and add the derivation line)
+  [02] C4  HIGH    §8's bucket total 177 != §8's own claimed FAIL count 200
+  [03] C4  HIGH    §8's red buckets account for 177 reds; the baseline at this tip has 200 — 23 red(s) are NOT on a named row at the current tip (the §8 invariant 'zero unmapped' does not hold as written)
+  [04] C13  MEDIUM  78 doc site(s) across 9 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
+  [05] C5  MEDIUM  1 frontier-table case citation(s) do not resolve against the baseline
+  [06] C9  MEDIUM  the wire schema moved after the certification date 2026-09-01 (7 commit(s) to wire.go/NativeToIR.lean) — the certified set's wire sha is only current if `scripts/ci --slow` has re-enumerated since
+
+[1m══ scripts/ci summary ══[0m
+  note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   core build (warning-free)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   eval tests (146 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  ok   negative baseline diff (no regression)
+  ok   baseline diff FULL (3142/3142, no regression)
+  ok   re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)
+  note reconciler: 6 finding(s), 3 HIGH — report-only (details: tools/reconcile-records)
+
+[1mRESULT: PASS[0m
