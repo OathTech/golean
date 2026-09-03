@@ -54,11 +54,18 @@ import (
 	"sort"
 )
 
-// stringsFieldsShimName is the reserved declaration name of the
-// strings.Fields shim ($-mangling is not available here: the injected
-// file must parse as Go source, so the name is spellable and therefore
-// collision-checked at injection instead).
-const stringsFieldsShimName = "goleanShimStringsFields"
+// RETIRED SHIMS (stdlib source-through slice 1, 2026-09-03; memo
+// docs/2026-09-03_stdlib-boundary-design.md §3 rows 1, 3, 4, 8, 9 —
+// G9 ruled AS RECOMMENDED by the [USER], relayed): strings.Fields,
+// strings.Split, strings.TrimSpace, strconv.FormatUint and
+// strconv.FormatInt no longer have injected sources; their calls lower
+// as qualified calls into the REAL library units loaded from the pinned
+// GOROOT (stdlibsource.go). strconv.ParseUint (row 10) is RETAINED this
+// slice: upstream's error path reaches internal/stringslite.Clone's
+// `unsafe.String`, a site the memo's impurity census (§1.3) did not
+// list — retiring it before the overlay mechanism (slice 2) would turn
+// its green error-path rows into refusals (a PASS→non-PASS flip the
+// gate forbids). Recorded in the slice log and the admission register.
 
 // errorsNewShimName / errorsNewShimTypeName are the reserved
 // declaration names of the errors.New shim (raft W4.0, G-2/H-10). The
@@ -142,11 +149,7 @@ const shimUnsupportedName = "goleanShimUnsupported"
 // mechanism.
 const stringsRepeatBoundName = "goleanShimStringsRepeatBound"
 
-const strconvFormatUintShimName = "goleanShimStrconvFormatUint"
-const strconvFormatIntShimName = "goleanShimStrconvFormatInt"
 const strconvParseUintShimName = "goleanShimStrconvParseUint"
-const stringsSplitShimName = "goleanShimStringsSplit"
-const stringsTrimSpaceShimName = "goleanShimStringsTrimSpace"
 const stringsRepeatShimName = "goleanShimStringsRepeat"
 const slicesSortFuncShimName = "goleanShimSlicesSortFunc"
 const cmpCompareUintShimName = "goleanShimCmpCompareUint"
@@ -157,14 +160,10 @@ const cmpCompareStringShimName = "goleanShimCmpCompareString"
 // declaration name (the KEY declaration; a shim may inject more, see
 // stdlibShimDeclNames).
 var stdlibShimAllowlist = map[string]map[string]string{
-	"strings": {"Fields": stringsFieldsShimName, "Join": stringsJoinShimName,
-		"Split": stringsSplitShimName, "TrimSpace": stringsTrimSpaceShimName,
-		"Repeat": stringsRepeatShimName},
-	"errors": {"New": errorsNewShimName},
-	"bytes":  {"Equal": bytesEqualShimName},
-	"strconv": {"FormatUint": strconvFormatUintShimName,
-		"FormatInt": strconvFormatIntShimName,
-		"ParseUint": strconvParseUintShimName},
+	"strings": {"Join": stringsJoinShimName, "Repeat": stringsRepeatShimName},
+	"errors":  {"New": errorsNewShimName},
+	"bytes":   {"Equal": bytesEqualShimName},
+	"strconv": {"ParseUint": strconvParseUintShimName},
 }
 
 // stdlibGenericDesugarInject: packages whose GENERIC members desugar at
@@ -215,8 +214,7 @@ var stdlibVarMethodInject = map[string]map[string]map[string][]string{
 // types need no row: declaring one requires naming the receiver type,
 // which is itself reserved here.
 var stdlibShimDeclNames = map[string][]string{
-	stringsFieldsShimName: {stringsFieldsShimName},
-	errorsNewShimName:     {errorsNewShimName, errorsNewShimTypeName},
+	errorsNewShimName: {errorsNewShimName, errorsNewShimTypeName},
 	fmtShimBundleKey: {fmtShimBundleKey, "goleanShimFmtInt", "goleanShimFmtHex",
 		"goleanShimFmtBool", "goleanShimFmtQuoteBytes", "goleanShimFmtQuoteString",
 		"goleanShimFmtStringVerb", "goleanShimFmtHexString", "goleanShimFmtRender",
@@ -230,18 +228,13 @@ var stdlibShimDeclNames = map[string][]string{
 	bytesEqualShimName:        {bytesEqualShimName},
 	binaryLEUint64ShimName:    {binaryLEUint64ShimName},
 	binaryLEPutUint64ShimName: {binaryLEPutUint64ShimName},
-	strconvFormatUintShimName: {strconvFormatUintShimName},
-	strconvFormatIntShimName:  {strconvFormatIntShimName},
-	strconvParseUintShimName: {strconvParseUintShimName,
-		"goleanShimStrconvQuote", "goleanShimStrconvError"},
-	stringsSplitShimName:     {stringsSplitShimName},
-	stringsTrimSpaceShimName: {stringsTrimSpaceShimName},
-	stringsRepeatShimName:    {stringsRepeatShimName, stringsRepeatBoundName},
-	slicesSortFuncShimName:   {slicesSortFuncShimName},
-	cmpCompareUintShimName:   {cmpCompareUintShimName},
-	cmpCompareIntShimName:    {cmpCompareIntShimName},
-	cmpCompareStringShimName: {cmpCompareStringShimName},
-	shimUnsupportedName:      {shimUnsupportedName},
+	strconvParseUintShimName:  {strconvParseUintShimName},
+	stringsRepeatShimName:     {stringsRepeatShimName, stringsRepeatBoundName},
+	slicesSortFuncShimName:    {slicesSortFuncShimName},
+	cmpCompareUintShimName:    {cmpCompareUintShimName},
+	cmpCompareIntShimName:     {cmpCompareIntShimName},
+	cmpCompareStringShimName:  {cmpCompareStringShimName},
+	shimUnsupportedName:       {shimUnsupportedName},
 }
 
 // stdlibShimDeps: shim key -> the OTHER shim keys whose sources its
@@ -258,8 +251,15 @@ var stdlibShimDeclNames = map[string][]string{
 // listed: it rides along with every bundle (injectStdlibShims).
 // D-002: plumbing only — no shim, no body, no allowlist row changes.
 var stdlibShimDeps = map[string][]string{
-	strconvFormatIntShimName: {strconvFormatUintShimName},
-	fmtDynShimKey:            {fmtShimBundleKey},
+	fmtDynShimKey: {fmtShimBundleKey},
+}
+
+// stdlibShimImports: shim key -> the import paths its SOURCE names
+// (declared once, checked against the sources by the closure tests like
+// stdlibShimDeps). Only the ParseUint shim imports anything: it builds
+// the real *strconv.NumError (stdlib source-through slice 1).
+var stdlibShimImports = map[string][]string{
+	strconvParseUintShimName: {"strconv"},
 }
 
 // closeShimDeps adds to needed, transitively, every shim a needed
@@ -295,7 +295,7 @@ func closeShimDeps(needed map[string]bool) error {
 // (t1-fidelity-fixes 2026-08-31; the generic goleanShimUnsupported
 // stays for the bounds whose shim call sites carry the text).
 var shimRuntimeRefusalReasons = map[string]string{
-	shimUnsupportedName: "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time — the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers",
+	shimUnsupportedName:    "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time — the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers",
 	stringsRepeatBoundName: "golean strings.Repeat shim RUNTIME refusal (fail closed): output length exceeds the modeled bound (1<<24 bytes) — the loop-concatenation shim cannot realize it within machine resources; upstream go allocates it fine (recorded honest-refusal delta, t1-fidelity-fixes 2026-08-31). Unrecoverable BY DESIGN (audit R4-C-3)",
 }
 
@@ -308,72 +308,6 @@ var shimRuntimeRefusalReasons = map[string]string{
 // the g2.md E5 section; the conformance rows pin it differentially
 // forever after.
 var stdlibShimSources = map[string]string{
-	// strings.Fields: "splits the string s around each instance of one
-	// or more consecutive white space characters, as defined by
-	// unicode.IsSpace, returning a slice of the substrings of s or an
-	// empty slice if s contains only white space."
-	//
-	// The body is a BYTE scan over the FULL White_Space class —
-	// unicode.IsSpace is a small closed set whose UTF-8 encodings are
-	// finitely enumerable, so no rune decoding is needed:
-	//   1 byte : 09 0A 0B 0C 0D 20
-	//   2 bytes: C2 85 (U+0085 NEL), C2 A0 (U+00A0 NBSP)
-	//   3 bytes: E1 9A 80 (U+1680); E2 80 80..8A (U+2000-200A);
-	//            E2 80 A8, E2 80 A9 (U+2028/2029); E2 80 AF (U+202F);
-	//            E2 81 9F (U+205F); E3 80 80 (U+3000)
-	// No pattern starts with a UTF-8 continuation byte, so a pattern
-	// can never fire from inside a preceding valid rune; on invalid
-	// UTF-8 both sides treat undecodable bytes as field content
-	// (RuneError is not white space). The separator-width computation
-	// is INLINED (no helper function) so consumers' machine runs carry
-	// no extra call frames.
-	stringsFieldsShimName: `
-// goleanShimStringsFields is the native frontend's strings.Fields shim
-// (extension E5). Injected declaration — not user code. See
-// tools/nativefrontend/stdlibshim.go for the contract and
-// docs/gallery-campaign-log/g2.md for the fidelity argument.
-func goleanShimStringsFields(s string) []string {
-	out := []string{}
-	i := 0
-	start := 0
-	inField := false
-	for i < len(s) {
-		w := 0
-		c := s[i]
-		if c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r' {
-			w = 1
-		} else if c == 0xC2 && i+1 < len(s) && (s[i+1] == 0x85 || s[i+1] == 0xA0) {
-			w = 2
-		} else if i+2 < len(s) {
-			c1 := s[i+1]
-			c2 := s[i+2]
-			if (c == 0xE1 && c1 == 0x9A && c2 == 0x80) ||
-				(c == 0xE2 && c1 == 0x80 && ((c2 >= 0x80 && c2 <= 0x8A) || c2 == 0xA8 || c2 == 0xA9 || c2 == 0xAF)) ||
-				(c == 0xE2 && c1 == 0x81 && c2 == 0x9F) ||
-				(c == 0xE3 && c1 == 0x80 && c2 == 0x80) {
-				w = 3
-			}
-		}
-		if w > 0 {
-			if inField {
-				out = append(out, s[start:i])
-				inField = false
-			}
-			i += w
-		} else {
-			if !inField {
-				start = i
-				inField = true
-			}
-			i++
-		}
-	}
-	if inField {
-		out = append(out, s[start:])
-	}
-	return out
-}
-`,
 
 	// errors.New: "returns an error that formats as the given text.
 	// Each call to New returns a distinct error value even if the text
@@ -988,92 +922,40 @@ func goleanShimLEPutUint64(b []byte, v uint64) {
 }
 `,
 
-	// strconv.FormatUint/FormatInt: digit loops over bases 2..36
-	// (lowercase digits, upstream's alphabet), with upstream's exact
-	// illegal-base panic (shared by both, from AppendInt/FormatInt —
-	// gc-probed artifacts/w43/probe-b P6).
-	strconvFormatUintShimName: `
-// goleanShimStrconvFormatUint is the native frontend's
-// strconv.FormatUint shim (W4.3 item 1 landing B). Injected
-// declaration — not user code.
-func goleanShimStrconvFormatUint(v uint64, base int) string {
-	if base < 2 || base > 36 {
-		panic("strconv: illegal AppendInt/FormatInt base")
-	}
-	digits := "0123456789abcdefghijklmnopqrstuvwxyz"
-	if v == 0 {
-		return "0"
-	}
-	out := []byte{}
-	for v > 0 {
-		out = append([]byte{digits[v%uint64(base)]}, out...)
-		v /= uint64(base)
-	}
-	return string(out)
-}
-`,
-
-	strconvFormatIntShimName: `
-// goleanShimStrconvFormatInt is the native frontend's
-// strconv.FormatInt shim (W4.3 item 1 landing B). Injected
-// declaration — not user code.
-func goleanShimStrconvFormatInt(v int64, base int) string {
-	if base < 2 || base > 36 {
-		panic("strconv: illegal AppendInt/FormatInt base")
-	}
-	if v < 0 {
-		return "-" + goleanShimStrconvFormatUint(^uint64(v)+1, base)
-	}
-	return goleanShimStrconvFormatUint(uint64(v), base)
-}
-`,
-
-	// strconv.ParseUint over explicit bases 2..36 and bitSize 0..64,
-	// with upstream's two error TEXTS verbatim ("invalid syntax" /
-	// "value out of range", the input quoted — gc-probed
-	// artifacts/w43/probe-b P1-P5, P7; underscores are invalid outside
-	// base 0, which matches the digit loop for free). RECORDED BOUNDS,
-	// fail closed: base 0 (prefix detection) and bitSize outside 0..64
-	// panic — the machine stops visibly where the real strconv would
-	// parse; no subject site passes either. The error's dynamic TYPE is
-	// the E5 delta (see the landing-B block comment).
+	// strconv.ParseUint over explicit bases 2..36 and bitSize 0..64
+	// (gc-probed artifacts/w43/probe-b P1-P5, P7; underscores are
+	// invalid outside base 0, which matches the digit loop for free).
+	// RECORDED BOUNDS, fail closed: base 0 (prefix detection) and bitSize
+	// outside 0..64 stop visibly where the real strconv would parse; no
+	// subject site passes either.
+	//
+	// THE ERROR VALUE IS THE REAL `*strconv.NumError` (stdlib source-
+	// through slice 1, 2026-09-03 [AGENT], Fields-standard validated:
+	// rows stdlib-source/strconv-parseuint/*, strconv/format-parse/*,
+	// and the 100k-trial shim-vs-strconv fuzz in
+	// docs/evidence/2026-09-03_stdlib-source-1/). Before this slice the
+	// shim returned its own string-carrier type (`goleanShimStrconvError`)
+	// and the E5 delta was recorded as "unobservable without asserting to
+	// the upstream type" — which was wrong: `*strconv.NumError` is
+	// EXPORTED, and `err.(*strconv.NumError)` / `errors.As` are idiomatic.
+	// With `strconv` now a source-through LIBRARY UNIT the real type is on
+	// the wire whenever the program names it, so a shim-made error of
+	// another type would have made that assertion answer a silent FALSE
+	// where gc answers true. The shim therefore constructs upstream's own
+	// value — `&strconv.NumError{Func, Num, Err}` with the library's
+	// `ErrSyntax`/`ErrRange` sentinels, rendered by the library's own
+	// `NumError.Error` and `Quote` — and keeps ONLY the digit loop as
+	// hand-written text (upstream's `syntaxError`/`rangeError` are not
+	// called because they route through `internal/stringslite.Clone`'s
+	// `unsafe.String`; the clone is an allocation-avoidance idiom, and
+	// `Num: s` is an equal string). Why the shim is RETAINED at all this
+	// slice: the whole real body's error path is that Clone (memo §1.3's
+	// census missed the site); the overlay mechanism that remedies it is
+	// slice 2. The Quote helper and the carrier type are DELETED.
 	strconvParseUintShimName: `
-// goleanShimStrconvParseUint and friends are the native frontend's
-// strconv.ParseUint shim (W4.3 item 1 landing B). Injected
-// declarations — not user code.
-type goleanShimStrconvError struct{ s string }
-
-func (e *goleanShimStrconvError) Error() string { return e.s }
-
-func goleanShimStrconvQuote(s string) string {
-	hexits := "0123456789abcdef"
-	out := []byte{'"'}
-	for i := 0; i < len(s); i++ {
-		c := s[i]
-		switch {
-		case c == '"':
-			out = append(out, '\\', '"')
-		case c == '\\':
-			out = append(out, '\\', '\\')
-		case c >= 0x20 && c < 0x7f:
-			out = append(out, c)
-		case c == '\n':
-			out = append(out, '\\', 'n')
-		case c == '\t':
-			out = append(out, '\\', 't')
-		case c == '\r':
-			out = append(out, '\\', 'r')
-		case c < 0x80:
-			out = append(out, '\\', 'x', hexits[c>>4], hexits[c&0xf])
-		default:
-			goleanShimUnsupported("golean strconv shim: quoting a non-ASCII input is outside the modeled subset (fail closed)")
-			panic("unreachable: the machine stopped in goleanShimUnsupported above")
-		}
-	}
-	out = append(out, '"')
-	return string(out)
-}
-
+// goleanShimStrconvParseUint is the native frontend's strconv.ParseUint
+// shim (W4.3 item 1 landing B; error value = the real *strconv.NumError
+// since stdlib-source-1). Injected declaration — not user code.
 func goleanShimStrconvParseUint(s string, base int, bitSize int) (uint64, error) {
 	if base < 2 || base > 36 {
 		goleanShimUnsupported("golean strconv shim: ParseUint base outside 2..36 (base-0 prefix detection is outside the modeled subset; fail closed)")
@@ -1086,11 +968,8 @@ func goleanShimStrconvParseUint(s string, base int, bitSize int) (uint64, error)
 		goleanShimUnsupported("golean strconv shim: ParseUint bitSize outside 0..64 (fail closed)")
 		panic("unreachable: the machine stopped in goleanShimUnsupported above")
 	}
-	syntaxErr := func() (uint64, error) {
-		return 0, &goleanShimStrconvError{s: "strconv.ParseUint: parsing " + goleanShimStrconvQuote(s) + ": invalid syntax"}
-	}
 	if len(s) == 0 {
-		return syntaxErr()
+		return 0, &strconv.NumError{Func: "ParseUint", Num: s, Err: strconv.ErrSyntax}
 	}
 	var max uint64 = 1<<uint(bitSize) - 1
 	if bitSize == 64 {
@@ -1103,9 +982,6 @@ func goleanShimStrconvParseUint(s string, base int, bitSize int) (uint64, error)
 	// on the error path (audit R1-F3; gc-probed
 	// .tmp/fixround-probes/f3; row strconv/format-parse/
 	// parse-uint-range-value). Syntax errors return 0, as upstream.
-	rangeErr := func() (uint64, error) {
-		return max, &goleanShimStrconvError{s: "strconv.ParseUint: parsing " + goleanShimStrconvQuote(s) + ": value out of range"}
-	}
 	var v uint64
 	for i := 0; i < len(s); i++ {
 		c := s[i]
@@ -1118,109 +994,20 @@ func goleanShimStrconvParseUint(s string, base int, bitSize int) (uint64, error)
 		case c >= 'A' && c <= 'Z':
 			d = uint64(c-'A') + 10
 		default:
-			return syntaxErr()
+			return 0, &strconv.NumError{Func: "ParseUint", Num: s, Err: strconv.ErrSyntax}
 		}
 		if d >= uint64(base) {
-			return syntaxErr()
+			return 0, &strconv.NumError{Func: "ParseUint", Num: s, Err: strconv.ErrSyntax}
 		}
 		if v > (18446744073709551615-d)/uint64(base) {
-			return rangeErr()
+			return max, &strconv.NumError{Func: "ParseUint", Num: s, Err: strconv.ErrRange}
 		}
 		v = v*uint64(base) + d
 		if v > max {
-			return rangeErr()
+			return max, &strconv.NumError{Func: "ParseUint", Num: s, Err: strconv.ErrRange}
 		}
 	}
 	return v, nil
-}
-`,
-
-	// strings.Split: byte scan, upstream's own semantics (genSplit is
-	// strings.Index-based) for every NON-EMPTY separator; the empty
-	// separator's per-rune explode fails closed (gc-probed
-	// artifacts/w43/probe-b I1-I5, incl. the non-overlapping left scan).
-	stringsSplitShimName: `
-// goleanShimStringsSplit is the native frontend's strings.Split shim
-// (W4.3 item 1 landing B). Injected declaration — not user code.
-func goleanShimStringsSplit(s, sep string) []string {
-	if len(sep) == 0 {
-		goleanShimUnsupported("golean strings shim: Split with an empty separator (per-rune explode) is outside the modeled subset (fail closed)")
-		panic("unreachable: the machine stopped in goleanShimUnsupported above")
-	}
-	out := []string{}
-	start := 0
-	i := 0
-	for i+len(sep) <= len(s) {
-		match := true
-		for j := 0; j < len(sep); j++ {
-			if s[i+j] != sep[j] {
-				match = false
-				break
-			}
-		}
-		if match {
-			out = append(out, s[start:i])
-			i += len(sep)
-			start = i
-		} else {
-			i++
-		}
-	}
-	out = append(out, s[start:])
-	return out
-}
-`,
-
-	// strings.TrimSpace: both-ends trim of the full unicode White_Space
-	// class via the SAME finite byte-pattern table as the Fields shim
-	// (no pattern starts with a UTF-8 continuation byte, and the
-	// multi-byte pattern leads C2/E1/E2/E3 cannot occur inside another
-	// rune, so a pattern can never fire from inside a preceding rune —
-	// the Fields shim's argument, unchanged). One forward pass records
-	// the first non-space start and the byte after the last non-space.
-	stringsTrimSpaceShimName: `
-// goleanShimStringsTrimSpace is the native frontend's strings.TrimSpace
-// shim (W4.3 item 1 landing B). Injected declaration — not user code.
-func goleanShimStringsTrimSpace(s string) string {
-	spaceW := func(i int) int {
-		c := s[i]
-		if c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r' {
-			return 1
-		}
-		if c == 0xC2 && i+1 < len(s) && (s[i+1] == 0x85 || s[i+1] == 0xA0) {
-			return 2
-		}
-		if i+2 < len(s) {
-			c1 := s[i+1]
-			c2 := s[i+2]
-			if (c == 0xE1 && c1 == 0x9A && c2 == 0x80) ||
-				(c == 0xE2 && c1 == 0x80 && ((c2 >= 0x80 && c2 <= 0x8A) || c2 == 0xA8 || c2 == 0xA9 || c2 == 0xAF)) ||
-				(c == 0xE2 && c1 == 0x81 && c2 == 0x9F) ||
-				(c == 0xE3 && c1 == 0x80 && c2 == 0x80) {
-				return 3
-			}
-		}
-		return 0
-	}
-	first := -1
-	last := 0
-	i := 0
-	for i < len(s) {
-		w := spaceW(i)
-		if w > 0 {
-			i += w
-		} else {
-			if first < 0 {
-				first = i
-			}
-			i++
-			last = i
-		}
-	}
-	if first < 0 {
-		return ""
-	}
-	return s[first:last]
 }
 `,
 
@@ -1544,6 +1331,25 @@ func injectStdlibShims(fset *token.FileSet, files []*ast.File) (*ast.File, error
 	}
 	sort.Strings(names)
 	src := "package " + files[0].Name.Name + "\n"
+	// Shim sources that name LIBRARY declarations (stdlib source-through:
+	// the ParseUint shim constructs the real *strconv.NumError) import
+	// their package in the synthetic file — the file is its own
+	// compilation unit; the user's import (aliased or not) does not
+	// serve it. Sorted for a deterministic file.
+	imports := map[string]bool{}
+	for _, name := range names {
+		for _, imp := range stdlibShimImports[name] {
+			imports[imp] = true
+		}
+	}
+	importPaths := make([]string, 0, len(imports))
+	for imp := range imports {
+		importPaths = append(importPaths, imp)
+	}
+	sort.Strings(importPaths)
+	for _, imp := range importPaths {
+		src += "import \"" + imp + "\"\n"
+	}
 	for _, name := range names {
 		src += stdlibShimSources[name]
 	}

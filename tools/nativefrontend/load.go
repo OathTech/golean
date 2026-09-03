@@ -59,6 +59,18 @@ type sourcePkg struct {
 	// TYPE-CHECK dependency edges. NOT the initialization-order edges:
 	// those range over the whole program (specInitOrder).
 	localImports []string
+
+	// LIBRARY units (stdlib source-through, stdlibsource.go): a standard
+	// library package loaded from the pinned GOROOT source. library
+	// flags the unit; libFiles are the selected source files (the pin
+	// manifest's rows); linknamed maps a `//go:linkname`d local name to
+	// its directive (body-less pulls quarantine/poison by name); reached
+	// is the reachability-pruned declaration set (stdlibreach.go) — nil
+	// for non-library units, which are emitted whole.
+	library   bool
+	libFiles  []string
+	linknamed map[string]string
+	reached   *reachSet
 }
 
 // newTypesInfo builds the per-package types.Info with every map the
@@ -85,6 +97,10 @@ type loader struct {
 	// stdlib importer + probe cache (nil entry = not importable).
 	stdlib      types.Importer
 	stdlibProbe map[string]bool
+	// The library pin (baselines/stdlib-pin.tsv), loaded on the FIRST
+	// allowed-library import and reused; nil until then. The rev check
+	// of the source root runs at the same moment (stdlibsource.go).
+	libPin map[string]string
 }
 
 func newLoader(fset *token.FileSet, rootDir string) *loader {
@@ -147,6 +163,35 @@ func (l *loader) discover(importerPath string, files []*ast.File) error {
 			}
 			dir, isLocal := l.localDirFor(p)
 			if !isLocal {
+				// An ALLOWED LIBRARY package (stdlibsource.go) loads as a
+				// source unit from the pinned GOROOT — once per program,
+				// its own imports discovered recursively (allowed ones
+				// become units too; everything else resolves to export
+				// data for type-checking only, bodies absent).
+				if _, allowed := stdlibSourceAllowed[p]; allowed {
+					if _, seen := l.locals[p]; seen {
+						continue
+					}
+					if l.libPin == nil {
+						if err := checkStdlibSrcRev(); err != nil {
+							return err
+						}
+						pin, err := loadStdlibPin()
+						if err != nil {
+							return err
+						}
+						l.libPin = pin
+					}
+					unit, err := l.parseLibrary(p, l.libPin)
+					if err != nil {
+						return err
+					}
+					l.locals[p] = unit
+					if err := l.discover(p, unit.files); err != nil {
+						return err
+					}
+					continue
+				}
 				// Not a case-local package: the stdlib importer is the
 				// only other resolver, and IT reports unknown paths at
 				// type-check (fail closed there, as before).
@@ -488,7 +533,25 @@ func (l *loader) buildInitGraph(units []*sourcePkg, mainUnit *sourcePkg) (*initG
 		// cmd/compile emits main's record unconditionally, whether or
 		// not it has any work of its own (MakeTask's pruning test
 		// exempts `main` and `runtime` by name).
-		g.work[prefix] = u == mainUnit || sourceHasInitWork(u)
+		//
+		// A LIBRARY unit (stdlib source-through) takes its node fact
+		// from the generated table — gc's OWN answer for that package,
+		// read from the compiled archive — not from the syntactic
+		// approximation: the package occupies exactly the schedule
+		// position it had as an ordering-only placeholder (memo §6
+		// mechanism 6; BUG-060/BUG-061 territory), and now its real
+		// `$init` runs there. Its edges are its import declarations,
+		// like every other source unit; non-node imports drain in pass 1
+		// so the two edge sets agree on the walk.
+		if u.library {
+			entry, err := stdInitLookup(prefix, u.path)
+			if err != nil {
+				return nil, err
+			}
+			g.work[prefix] = entry.node
+		} else {
+			g.work[prefix] = u == mainUnit || sourceHasInitWork(u)
+		}
 	}
 	// Close over the non-source packages, taking their node facts and
 	// their edges from the generated table — gc's own answers, read
@@ -663,6 +726,15 @@ func loadProgram(fset *token.FileSet, rootDir string, mainFiles []*ast.File) ([]
 			return nil, fmt.Errorf("type-check: %w", err)
 		}
 		unit.pkg = pkg
+	}
+
+	// Reachability pruning of the LIBRARY units (stdlibreach.go): from
+	// the program's roots (every declaration of every non-library unit,
+	// plus the library units' own init() functions and effectful
+	// package-variable initializers), the set of library declarations
+	// that lower. Computed once, over the type-checked program.
+	if err := computeLibraryReach(order); err != nil {
+		return nil, err
 	}
 
 	// gc's schedule, over the PRUNED node set (inittask.go).

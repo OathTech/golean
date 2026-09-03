@@ -1,0 +1,43 @@
+# producer: docs/evidence/2026-09-03_stdlib-source-1/README.md (gotest lane); OLD = t4-gotest artifacts/gotest/results.tsv @ 670d3351 (2026-09-01), NEW = this lane's scripts/gotest-triage run @ 345ef090 + slice (2026-09-03)
+## category counts OLD
+    641 FRONTEND-REFUSED
+     22 INFRA
+     15 MACHINE-REFUSED
+    331 MATCH
+      4 MISMATCH
+## category counts NEW
+    637 FRONTEND-REFUSED
+     21 INFRA
+     11 MACHINE-REFUSED
+    344 MATCH
+## files whose OLD refusal named strings./strconv./utf8./unicode. -> NEW category
+devirtualization_nil_panics.go	FRONTEND-REFUSED -> FRONTEND-REFUSED	OLD: strings.Contains is outside the modeled subset (modeled strings direct-call members: Fields, Join, R	NEW: fmt.Sprintf verb %s over an argument of type interface{} is outside the modeled verb/kind matrix (fo
+fixedbugs/bug120.go	FRONTEND-REFUSED -> FRONTEND-REFUSED	OLD: strconv.FormatFloat is outside the modeled subset (modeled strconv direct-call members: FormatInt, F	NEW: builtin println in statement position
+fixedbugs/bug303.go	FRONTEND-REFUSED -> FRONTEND-REFUSED	OLD: strings.NewReader is outside the modeled subset (modeled strings direct-call members: Fields, Join, 	NEW: package-selector call io.ReadFull (package \
+fixedbugs/issue77613.go	FRONTEND-REFUSED -> MATCH	OLD: strings.HasSuffix is outside the modeled subset (modeled strings direct-call members: Fields, Join, 	NEW: status=ok
+map.go	FRONTEND-REFUSED -> FRONTEND-REFUSED	OLD: strconv.Itoa is outside the modeled subset (modeled strconv direct-call members: FormatInt, FormatUi	NEW: fmt.Sprintf format \
+stringrange.go	FRONTEND-REFUSED -> FRONTEND-REFUSED	OLD: package-selector call utf8.DecodeRuneInString (package \	NEW: package-selector call fmt.Printf (package \
+typeparam/issue48016.go	FRONTEND-REFUSED -> FRONTEND-REFUSED	OLD: strconv.Atoi is outside the modeled subset (modeled strconv direct-call members: FormatInt, FormatUi	NEW: fmt.Sprintf format \
+typeparam/issue51521.go	FRONTEND-REFUSED -> FRONTEND-REFUSED	OLD: strings.Contains is outside the modeled subset (modeled strings direct-call members: Fields, Join, R	NEW: package-selector call fmt.Println (package \
+typeparam/map.go	FRONTEND-REFUSED -> FRONTEND-REFUSED	OLD: stdlib-qualified selector strconv.Itoa in value position: only allowlisted DIRECT CALLS of modeled s	NEW: package-selector call reflect.DeepEqual (package \
+typeparam/mdempsky/16.go	FRONTEND-REFUSED -> FRONTEND-REFUSED	OLD: strings.Contains is outside the modeled subset (modeled strings direct-call members: Fields, Join, R	NEW: package-selector call fmt.Printf (package \
+typeparam/stringable.go	FRONTEND-REFUSED -> MATCH	OLD: method main.myint.String (strconv.Itoa is outside the modeled subset (modeled strconv direct-call me	NEW: status=ok
+utf.go	FRONTEND-REFUSED -> MATCH	OLD: package-selector call utf8.DecodeRuneInString (package \	NEW: status=ok
+## MATCH-set delta
+LOST MATCH: fixedbugs/issue4353.go (now FRONTEND-REFUSED)
+now MATCH: fixedbugs/bug512.go (was FRONTEND-REFUSED)
+now MATCH: fixedbugs/issue16948.go (was FRONTEND-REFUSED)
+now MATCH: fixedbugs/issue16985.go (was FRONTEND-REFUSED)
+now MATCH: fixedbugs/issue19911.go (was MACHINE-REFUSED)
+now MATCH: fixedbugs/issue24449.go (was FRONTEND-REFUSED)
+now MATCH: fixedbugs/issue43111.go (was MISMATCH)
+now MATCH: fixedbugs/issue4313.go (was MISMATCH)
+now MATCH: fixedbugs/issue43835.go (was MISMATCH)
+now MATCH: fixedbugs/issue72844.go (was MISMATCH)
+now MATCH: fixedbugs/issue77613.go (was FRONTEND-REFUSED)
+now MATCH: fixedbugs/issue8336.go (was FRONTEND-REFUSED)
+now MATCH: typeparam/issue42758.go (was MACHINE-REFUSED)
+now MATCH: typeparam/stringable.go (was FRONTEND-REFUSED)
+now MATCH: utf.go (was FRONTEND-REFUSED)
+## the lost match, diagnosed
+FRONTEND-REFUSED	fixedbugs/issue4353.go	wire-decode: {"message":"/home/dev/projects/golean/.claude/worktrees/stdlib-source-1/artifacts/gotest/cases/fixedbugs__issue4353/wire.json: native lowering: array type of 100000 elements exceeds the interpreter's materialization budget (65536 elements; BUG-078

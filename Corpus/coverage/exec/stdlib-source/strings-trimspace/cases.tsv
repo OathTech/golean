@@ -1,0 +1,12 @@
+# id	subject	args	expected_status	expected_reason	features
+# strings.TrimSpace through the real library source (stdlib-source-1, 2026-09-03).
+both-unicode	trimBothUnicode	-	ok	-	stdlib,strings,unicode
+left-unicode-only	trimLeftUnicodeOnly	-	ok	-	stdlib,strings,unicode
+right-unicode-only	trimRightUnicodeOnly	-	ok	-	stdlib,strings,unicode
+inner-preserved	trimInnerPreserved	-	ok	-	stdlib,strings,unicode
+all-unicode-space	trimAllUnicodeSpace	-	ok	-	stdlib,strings,unicode,empty
+non-space-ends	trimNonSpaceEnds	-	ok	-	stdlib,strings,unicode
+near-miss-ends	trimNearMissEnds	-	ok	-	stdlib,strings,unicode
+invalid-utf8-ends	trimInvalidUTF8Ends	-	ok	-	stdlib,strings,invalid_utf8
+ascii-table	trimAsciiTable	-	ok	-	stdlib,strings
+empty-and-single	trimEmptyAndSingle	-	ok	-	stdlib,strings,empty

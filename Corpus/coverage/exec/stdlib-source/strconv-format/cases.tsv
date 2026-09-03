@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+# strconv.FormatUint/FormatInt through the real library source (stdlib-source-1, 2026-09-03).
+uint-all-bases	formatUintAllBases	-	ok	-	stdlib,strings,ints,loops
+int-all-bases	formatIntAllBases	-	ok	-	stdlib,strings,ints,loops
+extremes	formatExtremes	-	ok	-	stdlib,strings,ints,overflow
+small-boundary	formatSmallBoundary	-	ok	-	stdlib,strings,ints
+power-of-two-bases	formatPowerOfTwoBases	-	ok	-	stdlib,strings,ints,shifts
+illegal-base-one	formatIllegalBaseOne	-	panic	strconv: illegal AppendInt/FormatInt base	stdlib,strings,ints,panic
+illegal-base-zero	formatIllegalBaseZero	-	panic	strconv: illegal AppendInt/FormatInt base	stdlib,strings,ints,panic
+siblings	formatSiblings	-	ok	-	stdlib,strings,ints,bytes

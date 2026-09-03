@@ -1,0 +1,60 @@
+stdlib-source/strings-split/empty-sep-invalid-utf8	NEW id (not in baseline) -> PASS/-
+stdlib-source/strings-split/empty-sep-multibyte	NEW id (not in baseline) -> PASS/-
+stdlib-source/strings-split/rabin-karp-path	NEW id (not in baseline) -> PASS/-
+stdlib-source/strings-split/sep-equals-s	NEW id (not in baseline) -> PASS/-
+stdlib-source/strings-split/sep-longer-than-s	NEW id (not in baseline) -> PASS/-
+stdlib-source/strings-split/single-byte-many	NEW id (not in baseline) -> PASS/-
+stdlib-source/strings-split/splitn-and-after	NEW id (not in baseline) -> PASS/-
+stdlib-source/strings-split/trailing-and-consecutive	NEW id (not in baseline) -> PASS/-
+stdlib-source/strings-split/unicode-sep	NEW id (not in baseline) -> PASS/-
+stdlib-source/strings-trimspace/all-unicode-space	NEW id (not in baseline) -> PASS/-
+stdlib-source/strings-trimspace/ascii-table	NEW id (not in baseline) -> PASS/-
+stdlib-source/strings-trimspace/both-unicode	NEW id (not in baseline) -> PASS/-
+stdlib-source/strings-trimspace/empty-and-single	NEW id (not in baseline) -> PASS/-
+stdlib-source/strings-trimspace/inner-preserved	NEW id (not in baseline) -> PASS/-
+stdlib-source/strings-trimspace/invalid-utf8-ends	NEW id (not in baseline) -> PASS/-
+stdlib-source/strings-trimspace/left-unicode-only	NEW id (not in baseline) -> PASS/-
+stdlib-source/strings-trimspace/near-miss-ends	NEW id (not in baseline) -> PASS/-
+stdlib-source/strings-trimspace/non-space-ends	NEW id (not in baseline) -> PASS/-
+stdlib-source/strings-trimspace/right-unicode-only	NEW id (not in baseline) -> PASS/-
+strconv/format-parse/unmodeled-member	baseline[FAIL/frontend-export] -> now[PASS/-]
+strings/shim-value-refused/shimmed-value	baseline[FAIL/frontend-export] -> now[PASS/-]
+strings/shim-value-refused/unmodeled-value	baseline[FAIL/frontend-export] -> now[PASS/-]
+strings/split-conformance/empty-sep	baseline[FAIL/frontend-export] -> now[PASS/-]
+
+── cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)
+  [01] C3  HIGH    56 corpus manifest id(s) absent from the tracked baseline (unrecorded cases)
+  [02] C5  HIGH    1 frontier row(s) have NO red left: every case they cite now PASSes, so the feature appears to have LANDED without its row retiring. §4 is 'the authority for every red case in the baseline' and these counts feed §8's 84.
+  [03] C13  MEDIUM  78 doc site(s) across 9 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
+  [04] C5  MEDIUM  3 frontier-table case citation(s) do not resolve against the baseline
+  [05] C5  MEDIUM  1 frontier row(s) claim a red count that is not mechanically re-derivable from their citations. Some of this is citation SHORTHAND (a prose family like 'F3 family 7', an ellipsis inside a glob, or a '+ adjacency' the count deliberately excludes) rather than drift — each needs a read, which is exactly why the count should not be re-derived from prose.
+  [06] C9  MEDIUM  the wire schema moved after the certification date 2026-09-01 (7 commit(s) to wire.go/NativeToIR.lean) — the certified set's wire sha is only current if `scripts/ci --slow` has re-enumerated since
+
+══ scripts/ci summary ══
+  note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   core build (warning-free)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   eval tests (148 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  note negative baseline diff matched (394 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  FAIL baseline diff (DRIFT — see above)
+  note reconciler: 6 finding(s), 2 HIGH — report-only (details: tools/reconcile-records)
+
+RESULT: FAIL

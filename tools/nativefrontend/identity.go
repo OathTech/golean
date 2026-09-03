@@ -32,6 +32,19 @@ func (e *emitter) setUnits(units []*sourcePkg) {
 func (e *emitter) setUnit(u *sourcePkg) {
 	e.pkg = u.pkg
 	e.info = u.info
+	e.curUnit = u
+}
+
+// isLibraryPackage: the package is a stdlib source-through LIBRARY unit
+// (stdlibsource.go) — a source package (isSourcePackage is true of it
+// too) whose declarations are emitted reachability-pruned and whose
+// calls never route through the user-package shims.
+func (e *emitter) isLibraryPackage(pkg *types.Package) bool {
+	if pkg == nil || e.units == nil {
+		return false
+	}
+	u := e.srcPkgSet[pkg]
+	return u != nil && u.library
 }
 
 // isSourcePackage: the package is part of the program under lowering

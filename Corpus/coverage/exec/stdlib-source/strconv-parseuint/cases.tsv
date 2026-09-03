@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+# strconv.ParseUint: retained shim, REAL *strconv.NumError error value (stdlib-source-1, 2026-09-03).
+numerror-type	parseUintNumErrorType	-	ok	-	stdlib,strings,ints,type_assertions,interfaces
+range-sentinel	parseUintRangeSentinel	-	ok	-	stdlib,strings,ints,range,type_assertions
+error-texts	parseUintErrorTexts	-	ok	-	stdlib,strings,ints,loops,concat
+error-quoting	parseUintErrorQuoting	-	ok	-	stdlib,strings,ints,unicode,invalid_utf8
+happy-bases	parseUintHappyBases	-	ok	-	stdlib,strings,ints,multi_result
+bitsize-saturation	parseUintBitSizeSaturation	-	ok	-	stdlib,strings,ints,widths

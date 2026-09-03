@@ -1,0 +1,27 @@
+# GoLean stdlib source-through — the PORTABLE-SUBSTITUTION table
+# (docs/2026-09-03_stdlib-boundary-design.md §2.3.2, §6 mechanism 4;
+# first slice stdlib-source-1, 2026-09-03 [AGENT]).
+#
+# A substitution swaps one UPSTREAM file of a library package for another
+# UPSTREAM file of the SAME package, at the pin. No text here is ours: the
+# Go project maintains both files as implementations of one contract, and
+# the excluded file is the assembly-backed one (`*_native.go` body-less
+# declarations + the `.s` twin, or an arch-specific `*_amd64.go`) while the
+# included file is the package's own portable Go body (`*_generic.go`),
+# normally selected only under a build context other than the oracle's
+# GOOS=linux GOARCH=amd64. The frontend's file selection is: go/build's
+# selection under the oracle's context, MINUS every `drop` file of the
+# package, PLUS every `add` file — and it FAILS CLOSED if a `drop` file was
+# not selected or an `add` file does not exist (a re-pin that renames or
+# removes a twin must surface here, never silently lower a body-less
+# declaration).
+#
+# Columns: package<TAB>drop<TAB>add<TAB>reason
+# Consumed by tools/nativefrontend/stdlibsource.go (go:embed); mirrored by
+# docs/stdlib-admission-register.md (scripts/check-stdlib-register compares
+# the two byte-for-byte via `nativefrontend --stdlib-register`).
+internal/bytealg	indexbyte_native.go	indexbyte_generic.go	IndexByte/IndexByteString are assembly on amd64 (indexbyte_amd64.s); the generic twin is the same package's portable implementation
+internal/bytealg	index_native.go	index_generic.go	Index/IndexString are assembly on amd64 (index_amd64.s); the generic twin is the same package's portable implementation (MaxBruteForce=0, Cutover)
+internal/bytealg	index_amd64.go	index_generic.go	the amd64 init() sets MaxLen from CPU features (internal/cpu, AVX2) — machine-specific; the generic twin's init() sets the portable MaxLen=0 (the Rabin-Karp path)
+internal/bytealg	count_native.go	count_generic.go	Count/CountString are assembly on amd64 (count_amd64.s); the generic twin is the same package's portable implementation
+internal/bytealg	compare_native.go	compare_generic.go	Compare is assembly on amd64 (compare_amd64.s) and CompareString pulls runtime.cmpstring by linkname; the generic twin is pure Go (its own runtime_cmpstring linkname push is a body-less-free definition)

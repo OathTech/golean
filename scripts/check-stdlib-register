@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# check-stdlib-register — the stdlib ADMISSION REGISTER's machine block must
+# equal the frontend's own tables (memo docs/2026-09-03_stdlib-boundary-
+# design.md §2.2 "the second shim, done right"; gate G8 ruled AS
+# RECOMMENDED 2026-09-03 [USER, relayed]). The 2026-08-16 retirement rule
+# failed for want of a place the count was visible and a mechanical check:
+# this is the check. `nativefrontend --stdlib-register` dumps the code's
+# tables (source-through packages, substitution rows, overlay and primitive
+# entries with their CAPS, retained shims, shadow types) as TSV;
+# docs/stdlib-admission-register.md carries the same TSV inside a fenced
+# block marked `<!-- register:begin -->` / `<!-- register:end -->`. Any byte
+# of difference fails: a table widened in code without the register, or a
+# register claiming what the code does not do. The caps themselves are
+# enforced by the dump (an over-cap table refuses to render).
+#
+# Fail closed: missing register, missing markers, dump failure -> exit 1.
+set -uo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+REG="docs/stdlib-admission-register.md"
+[ -f "$REG" ] || { echo "check-stdlib-register: FAIL — no register at $REG" >&2; exit 1; }
+WORK="$(mktemp -d "${TMPDIR:-/tmp}/check-stdlib-register.XXXXXX")"
+trap 'rm -rf "$WORK"' EXIT
+if ! GO111MODULE=off GOCACHE="${GOCACHE:-$ROOT/artifacts/go-build-cache}" go run ./tools/nativefrontend --stdlib-register > "$WORK/code.tsv" 2>"$WORK/err"; then
+  cat "$WORK/err" >&2
+  echo "check-stdlib-register: FAIL — the frontend could not render its admission tables (a cap exceeded, or a malformed table; see above)" >&2
+  exit 1
+fi
+if ! awk '/<!-- register:begin -->/{f=1;next} /<!-- register:end -->/{f=0} f' "$REG" | sed '1{/^```/d}' | sed '${/^```/d}' > "$WORK/doc.tsv"; then
+  echo "check-stdlib-register: FAIL — could not extract the machine block from $REG" >&2
+  exit 1
+fi
+if [ ! -s "$WORK/doc.tsv" ]; then
+  echo "check-stdlib-register: FAIL — $REG has no machine block between the register:begin/end markers (fail closed)" >&2
+  exit 1
+fi
+if ! cmp -s "$WORK/code.tsv" "$WORK/doc.tsv"; then
+  echo "check-stdlib-register: FAIL — the register's machine block differs from the frontend's tables (widen/shrink BOTH in one change, with the reason):" >&2
+  diff "$WORK/doc.tsv" "$WORK/code.tsv" | head -20 >&2
+  exit 1
+fi
+counts="$(awk -F'\t' '$1=="count"{printf "%s=%s ", $2, $3}' "$WORK/code.tsv")"
+echo "check-stdlib-register: ok — register machine block = frontend tables (${counts% })"

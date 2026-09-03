@@ -362,7 +362,7 @@ def check_lang_ledger_arithmetic(bl, info):
     # the red-bucket table
     buckets = {}
     for name, pat in (
-        ("frontier", r"\|\s*frontier FR-1…FR-15 \(§4\)\s*\|\s*(\d+)\s*\|"),
+        ("frontier", r"\|\s*frontier FR-1…FR-\d+ \(§4\)\s*\|\s*(\d+)\s*\|"),
         ("design_questions", r"\|\s*design questions Q-\* \(§6\)\s*\|\s*(\d+)\s*\|"),
         ("c_pins", r"\|\s*\(c\) profound-reason pins[^|]*\|\s*(\d+) \+ (\d+)\s*\|"),
         ("a_queued", r"\|\s*\(a\)-queued fixes[^|]*\|\s*(\d+)\s*\|"),

@@ -39,8 +39,10 @@ func parseRecover() string {
 	return fmt.Sprintf("v=%d ok=%t", v, ok) // gc: v=42 ok=true
 }
 
-// strings.Split with an empty separator (per-rune explode) is a
-// recorded shim bound; same recover shape.
+// strings.Split with an empty separator (per-rune explode) WAS a
+// recorded shim bound; since stdlib-source-1 (2026-09-03) Split is the
+// real library body and the explode runs — this row and renderRecover
+// now PASS (the recover shape stays, exercising nothing).
 func safeChars(s string) (n int) {
 	defer func() { _ = recover() }()
 	return len(strings.Split(s, ""))

@@ -1,7 +1,12 @@
 # id	subject	args	expected_status	expected_reason	features
 # R4-C-3 (audit fix round): shim refusals are UNRECOVERABLE stops.
-# All three rows RED BY DESIGN at frontend-export post-fix; pre-fix
+# All three rows were RED BY DESIGN at frontend-export post-fix; pre-fix
 # they were SILENT WRONG ANSWERS through recover() (see main.go).
+# 2026-09-03 (stdlib-source-1): split-recover and render-recover PASS —
+# strings.Split lowers from the pinned GOROOT source and the empty-
+# separator refusal they recovered around no longer exists (the real
+# explode runs; gc's n=3 / "a-b" are the machine's too). parse-recover
+# still pins the contract (ParseUint base 0 is a retained shim bound).
 parse-recover	parseRecover	-	ok	-	stdlib,strings,panic,recover,defer
 split-recover	splitRecover	-	ok	-	stdlib,strings,panic,recover,defer
 render-recover	renderRecover	-	ok	-	stdlib,strings,methods,defined_type

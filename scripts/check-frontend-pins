@@ -82,3 +82,28 @@ if ! cmp -s "$TWIN_BASE" "$WORK/twin.wire.json"; then
   exit 1
 fi
 echo "check-frontend-pins: ok [twin-wire] — fresh emit = pinned wire ($(sha256sum "$TWIN_BASE" | cut -c1-12)…)"
+
+# ---- 3. Stdlib library pin (stdlib source-through, slice 1 — 2026-09-03) ----
+# baselines/stdlib-pin.tsv is the sha256 of every GOROOT source file the
+# frontend SELECTS for an allowed library package (oracle build context +
+# tools/nativefrontend/stdlib-substitutions.tsv). The frontend itself
+# refuses at every emit whose selected file differs from the pin; THIS
+# check catches the other direction — a stale pin (a row for a file no
+# longer selected, a selected file with no row) — by regenerating the
+# manifest from the pinned checkout and comparing byte-for-byte. Re-pin
+# only with an oracle re-pin, a full differential, and a written reason
+# (docs/2026-09-03_stdlib-boundary-design.md §2.1.3; G3/G9 ruled).
+STDLIB_PIN="baselines/stdlib-pin.tsv"
+[ -f "$STDLIB_PIN" ] || { echo "check-frontend-pins: FAIL — no library pin at $STDLIB_PIN" >&2; exit 1; }
+if ! GO111MODULE=off go run ./tools/nativefrontend --stdlib-pin-manifest > "$WORK/stdlib-pin.fresh" 2>"$WORK/stdlib-pin.err"; then
+  cat "$WORK/stdlib-pin.err" >&2
+  echo "check-frontend-pins: FAIL [stdlib-pin] — the pin manifest could not be regenerated (deps/go missing or off the pin; fail closed)" >&2
+  exit 1
+fi
+if ! cmp -s "$STDLIB_PIN" "$WORK/stdlib-pin.fresh"; then
+  echo "check-frontend-pins: FAIL [stdlib-pin] — $STDLIB_PIN differs from a fresh manifest of the pinned GOROOT source (stale pin, moved checkout, or edited library text; re-pin deliberately with the reason):" >&2
+  diff "$STDLIB_PIN" "$WORK/stdlib-pin.fresh" | head -10 >&2
+  exit 1
+fi
+rows="$(grep -vc '^#' "$STDLIB_PIN")"
+echo "check-frontend-pins: ok [stdlib-pin] — $rows lowered stdlib source files match the pinned sha256 manifest"

@@ -58,6 +58,21 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	// curation convention (the unsafe/boundary marker rows pin it red
 	// by design; ledger row Package_unsafe).
 	for _, unit := range e.units {
+		if unit.library {
+			// A LIBRARY unit (stdlib source-through) is scanned over its
+			// REACHED declarations only, and a hit inside a reached
+			// function quarantines THAT declaration (H-3 stub carrying
+			// the cause) rather than refusing the export: the unreached
+			// `unsafe.Offsetof` constants internal/bytealg keeps for its
+			// assembly are not in the wire at all, and a reached one
+			// must not take every other subject down with it. A hit in
+			// a reached var/const/type spec still refuses the export
+			// (a folded layout constant would launder into every use).
+			if err := e.checkUnsafeLayoutOpsLibrary(unit); err != nil {
+				return nil, err
+			}
+			continue
+		}
 		if err := checkUnsafeLayoutOps(e.fset, unit); err != nil {
 			return nil, err
 		}
@@ -141,6 +156,12 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 					funcs = append(funcs, fn)
 					continue
 				}
+				// Stdlib source-through pruning (stdlibreach.go): a
+				// library declaration the program does not reach is not
+				// on the wire (init() was handled above — always emitted).
+				if unit.reached != nil && !unit.reached.funcs[d] {
+					continue
+				}
 				// Generic declarations are never emitted uninstantiated
 				// (spec: a generic function/type must be instantiated
 				// before use — no runtime artifact exists for the
@@ -186,7 +207,15 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 				// `defer recover()`s referencing a never-emitted function).
 				deferNoopMark := e.deferNoopEmitted
 				monoMark := e.markMono()
-				fn, err := e.emitFuncDecl(d)
+				var fn map[string]any
+				var err error
+				if reason, forced := e.forcedQuarantine[d]; forced {
+					// Condemned by the library unsafe-layout pre-scan
+					// (checkUnsafeLayoutOpsLibrary): stub, never emit.
+					err = unsup("%s", reason)
+				} else {
+					fn, err = e.emitFuncDecl(d)
+				}
 				if err != nil {
 					// Per-decl quarantine: an UNSUPPORTED declaration
 					// becomes a stub that fails closed when CALLED, so one
@@ -257,7 +286,25 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 					funcs = append(funcs, fn)
 				}
 			case *ast.GenDecl:
-				tds, ims, err := e.emitGenDeclTypes(d)
+				gd := d
+				if unit.reached != nil && d.Tok == token.TYPE {
+					// Stdlib source-through pruning: only the REACHED type
+					// specs of a library unit declare (a shallow copy of
+					// the GenDecl with the spec list filtered).
+					kept := make([]ast.Spec, 0, len(d.Specs))
+					for _, spec := range d.Specs {
+						if ts, isType := spec.(*ast.TypeSpec); isType && unit.reached.types[ts] {
+							kept = append(kept, spec)
+						}
+					}
+					if len(kept) == 0 {
+						continue
+					}
+					copied := *d
+					copied.Specs = kept
+					gd = &copied
+				}
+				tds, ims, err := e.emitGenDeclTypes(gd)
 				if err != nil {
 					return nil, err
 				}
@@ -720,6 +767,19 @@ func (e *emitter) collectGlobals(files []*ast.File) error {
 				if !ok {
 					continue
 				}
+				// Stdlib source-through pruning (stdlibreach.go): an
+				// UNREACHED library var spec allocates no cell and its
+				// initializer is dropped from the H-11 dry run and from
+				// $pkginit (prunedInits) — nothing can read it.
+				if e.curUnit != nil && e.curUnit.reached != nil && !e.curUnit.reached.values[vs] {
+					if e.prunedInits == nil {
+						e.prunedInits = map[ast.Expr]bool{}
+					}
+					for _, v := range vs.Values {
+						e.prunedInits[v] = true
+					}
+					continue
+				}
 				for i, name := range vs.Names {
 					if name.Name != "_" {
 						obj, isVar := e.info.Defs[name].(*types.Var)
@@ -845,15 +905,40 @@ func (e *emitter) registerGenericDecls() {
 func (e *emitter) quarantineUnlowerableGlobals() error {
 	e.quarantinedGlobals = map[*types.Var]string{}
 	e.quarantinedInits = map[ast.Expr]bool{}
+	// Stdlib source-through: a `//go:linkname`d library VARIABLE is a
+	// pull from the runtime (math/bits' `overflowError`/`divideError`
+	// are runtime.overflowError/divideError — the language's own panic
+	// VALUES, with no initializer in this package). Its cell would be
+	// zero-seeded, so a read would yield a nil error where gc yields the
+	// runtime's value — a silent wrong answer. Poison it like an H-11
+	// quarantined global: every reference refuses, naming the directive.
+	for _, u := range e.units {
+		if !u.library || len(u.linknamed) == 0 {
+			continue
+		}
+		for v := range e.globalVars {
+			if v.Pkg() != u.pkg {
+				continue
+			}
+			if directive, linked := u.linknamed[v.Name()]; linked {
+				e.quarantinedGlobals[v] = "stdlib source-through: package-level variable " + u.path + "." + v.Name() +
+					" is a `" + directive + "` pull whose value lives in the runtime, not in this package's source (no portable substitution; fail closed)"
+			}
+		}
+	}
 	savedPkg, savedInfo := e.pkg, e.info
+	savedUnit := e.curUnit
 	savedFn, savedSeq, savedResults := e.curFuncName, e.liftSeq, e.curResults
 	defer func() {
-		e.pkg, e.info = savedPkg, savedInfo
+		e.pkg, e.info, e.curUnit = savedPkg, savedInfo, savedUnit
 		e.curFuncName, e.liftSeq, e.curResults = savedFn, savedSeq, savedResults
 	}()
 	for _, u := range e.units {
 		e.setUnit(u)
 		for _, ini := range u.info.InitOrder {
+			if e.prunedInits[ini.Rhs] {
+				continue // unreached library initializer (stdlibreach.go)
+			}
 			as, ok := e.globalInitStmt[ini.Rhs]
 			if !ok {
 				return unsup("package-level initializer with no declaration site")
@@ -1377,8 +1462,10 @@ func (e *emitter) synthesizePkgInit() (map[string]any, error) {
 			// H-11: a quarantined initializer is SKIPPED — its vars'
 			// cells stay zero-seeded and poisoned (globalAddr), so
 			// $pkginit must not attempt the emission that already
-			// failed the dry-run.
-			if e.quarantinedInits[ini.Rhs] {
+			// failed the dry-run. An UNREACHED library initializer
+			// (stdlibreach.go, prunedInits) is skipped too: no cell,
+			// no reader, call-free by construction.
+			if e.quarantinedInits[ini.Rhs] || e.prunedInits[ini.Rhs] {
 				continue
 			}
 			as, ok := e.globalInitStmt[ini.Rhs]
@@ -1679,6 +1766,18 @@ func (e *emitter) emitFuncDecl(d *ast.FuncDecl) (map[string]any, error) {
 	}
 
 	if d.Body == nil {
+		if e.curUnit != nil && e.curUnit.library {
+			// Stdlib source-through: a body-less library declaration is
+			// an assembly leaf or a `//go:linkname` pull. Name the cause
+			// and the remedy table (stdlib-substitutions.tsv) so the
+			// H-3 stub's refusal says what is owed.
+			directive := ""
+			if dir, linked := e.curUnit.linknamed[d.Name.Name]; linked {
+				directive = " (`" + dir + "`)"
+			}
+			return nil, unsup("stdlib source-through: %s.%s is a body-less declaration%s — assembly or runtime linkname, no portable substitution row in tools/nativefrontend/stdlib-substitutions.tsv (fail closed)",
+				e.curUnit.path, d.Name.Name, directive)
+		}
 		return nil, unsup("bodyless function %s", d.Name.Name)
 	}
 	savedBranch, savedGoto := e.branchLabels, e.gotoLabels
@@ -7743,12 +7842,28 @@ func (e *emitter) emitStdlibShimCall(c *ast.CallExpr, sel *ast.SelectorExpr) (an
 	if !ok {
 		return nil, false, nil
 	}
+	// Stdlib source-through (stdlibsource.go): a call FROM a library
+	// unit never routes through the user-package shims — a library body
+	// calling `errors.New` reaches the real library function through the
+	// qualified-call path like every other library-to-library call.
+	if e.curUnit != nil && e.curUnit.library {
+		return nil, false, nil
+	}
 	fns, ok := stdlibShimAllowlist[pkgName.Imported().Path()]
 	if !ok {
 		return nil, false, nil
 	}
 	shimName, ok := fns[sel.Sel.Name]
 	if !ok {
+		// A member of a SOURCE-THROUGH library package that is not one
+		// of its retained shims (`strconv.FormatUint` after slice 1,
+		// `strings.Index`, …) lowers as a qualified call into the loaded
+		// library unit (emitQualifiedCall): fall through. The shims that
+		// remain (`strconv.ParseUint`, `strings.Join/Repeat`, `errors.New`)
+		// keep taking the shim path above.
+		if e.isLibraryPackage(pkgName.Imported()) {
+			return nil, false, nil
+		}
 		// An UNMODELED member of a PARTIALLY modeled package (audit
 		// L-3): falling through used to land on the generic
 		// package-selector refusal ("package \"strconv\" surface not
@@ -8016,6 +8131,14 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 		// round F-B4.
 		if id, isIdent := sel.X.(*ast.Ident); isIdent {
 			if pn, isPkg := e.info.Uses[id].(*types.PkgName); isPkg {
+				if pn.Imported().Path() == "unsafe" && e.curUnit != nil && e.curUnit.library {
+					// Inside a LIBRARY body (stdlib source-through): the
+					// unsafe idiom is the library's, and the gap is the
+					// memo's overlay class (slice 2) — name it as such
+					// so the quarantine stub's reason says what is owed.
+					return nil, false, unsup("stdlib source-through: %s needs unsafe.%s (out of language — ledger row Package_unsafe; a library overlay is the planned remedy, memo §2.3.2 — slice 2)",
+						e.curFuncName, sel.Sel.Name)
+				}
 				return nil, false, unsup("package-selector call %s.%s (package %q surface not modeled)",
 					id.Name, sel.Sel.Name, pn.Imported().Path())
 			}

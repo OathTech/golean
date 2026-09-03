@@ -1,0 +1,8 @@
+key	value
+scope	full in-scope slice
+cases	1013
+go_toolchain	go1.26.5
+git_commit	345ef0901aabf99381e484e5810796b40d71b136
+date	2026-09-03T19:55:10Z
+go_timeout_s	30
+lean_timeout_s	30

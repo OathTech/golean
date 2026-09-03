@@ -1691,6 +1691,34 @@ runtime observable. OPEN QUESTION as stated.
 
 ---
 
+### Library realization under stdlib source-through — the (b)-pin posture, stated once (added 2026-09-03, stdlib-source-1; G4 ruled (a) [USER, relayed])
+
+Since `stdlib-source-1` the machine executes the PINNED GOROOT text of
+`strings`, `strconv` and their pure closure (`docs/2026-09-03_stdlib-boundary-design.md`
+§2.1.2, §6; `docs/stdlib-admission-register.md`). Source-through
+realizes gc's member of every library-DOC envelope because it lowers
+gc's implementation; the ruling (G4 (a)) is to RECORD each doc-latitude
+point as a version-tracked (b)-pin here, reified as a choice site only
+on consumer demand. The census of the six slice-1 functions' doc
+comments at the pin: **no latitude clause** —
+`godoc:strings.Fields@go1.26.5` ("as defined by unicode.IsSpace" — a
+closed table), `godoc:strings.TrimSpace@go1.26.5` ("as defined by
+Unicode"), `godoc:strings.Split@go1.26.5` (all four edge cases
+specified), `godoc:strconv.FormatUint@go1.26.5` /
+`godoc:strconv.FormatInt@go1.26.5` (exact digit alphabet),
+`godoc:strconv.ParseUint@go1.26.5` (error type, value and sentinels
+specified). They are class (c) FORCED by the docs; the differential rows
+`stdlib-source/*` pin the class. Two REALIZATION facts are recorded
+rather than latitude: (1) `internal/bytealg`'s portable twins replace
+the amd64 assembly (the substitution table) — the same contract, no
+observable difference by the Go project's own tests; (2) the
+illegal-base panic text `strconv: illegal AppendInt/FormatInt base` is
+gc's realized string (R9's class), now forced by lowering gc's body.
+Future source-through packages with doc-latitude vocabulary ("not
+guaranteed", "may", "implementation-specific" — `slices.SortFunc`'s tie
+order, `strings.Builder.Cap`, `math`'s asm-vs-Go last ulp) land their
+R-rows here at admission (register rule).
+
 ## 4. Forced points — the compact list (class (c))
 
 For completeness, the main spec-mandated points the machine implements

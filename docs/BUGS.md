@@ -3742,8 +3742,15 @@ uniformly.
   refuses naming the modeled-surface boundary. The BOUNDARY is
   unchanged — those shapes always quarantined — only the refusal's
   cause is honest now.)
-- Pinned-by: none (refusals at `frontend-export`; the rows below pin
-  the two messages, red by design)
+- Pinned-by: none (the rows below pinned the two refusal messages, red
+  by design, until 2026-09-03; under stdlib source-through slice 1
+  (`stdlib-source-1`, docs/2026-09-03_stdlib-boundary-design.md §6) the
+  VALUE shape of a `strings` member is a real function value — the
+  library unit is on the wire — so both rows now PASS: `f :=
+  strings.Fields` and `f := strings.Contains` call the lowered upstream
+  bodies. The boundary this bug was about (an honest cause for a refusal)
+  is moot for source-through packages; it still holds, unchanged, for
+  every package NOT on the allowed-library list.)
 - Cases: strings/shim-value-refused/shimmed-value, strings/shim-value-refused/unmodeled-value
 - Discovered: 2026-08-31 (fidelity assessment phase 2,
   p2-keeps-a2a3bcd §1.3 instance 1 — severity: charter conformance,

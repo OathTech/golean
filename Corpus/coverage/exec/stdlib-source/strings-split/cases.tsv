@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features
+# strings.Split through the real library source (stdlib-source-1, 2026-09-03).
+empty-sep-multibyte	splitEmptySepMultibyte	-	ok	-	stdlib,strings,slices,runes,unicode
+empty-sep-invalid-utf8	splitEmptySepInvalidUTF8	-	ok	-	stdlib,strings,slices,runes,invalid_utf8
+both-empty	splitBothEmpty	-	ok	-	stdlib,strings,slices,empty
+empty-s	splitEmptyS	-	ok	-	stdlib,strings,slices,empty
+sep-longer-than-s	splitSepLongerThanS	-	ok	-	stdlib,strings,slices
+sep-equals-s	splitSepEqualsS	-	ok	-	stdlib,strings,slices
+trailing-and-consecutive	splitTrailingAndConsecutive	-	ok	-	stdlib,strings,slices
+unicode-sep	splitUnicodeSep	-	ok	-	stdlib,strings,slices,unicode
+rabin-karp-path	splitRabinKarpPath	-	ok	-	stdlib,strings,slices,loops
+single-byte-many	splitSingleByteMany	-	ok	-	stdlib,strings,slices
+splitn-and-after	splitNAndAfter	-	ok	-	stdlib,strings,slices

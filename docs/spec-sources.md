@@ -24,6 +24,31 @@ NOT YET EXISTING per the pre-landing audit: the corpus has no
 today — the agreement preflight gains that leg when P3/P4 give the
 corpus one; until then the check is spec-pin ⟷ oracle only.)
 
+## The library-docs pin (G3, ruled 2026-09-03)
+
+**The standard library's SOURCE and DOC COMMENTS at the `go` row are a
+pinned truth source** (design memo `docs/2026-09-03_stdlib-boundary-design.md`
+§2.1.3 / Appendix D; gate **G3 ruled AS RECOMMENDED** — [USER] Mike,
+2026-09-03, relayed by the [AGENT] coordinator, cited as relayed). No new
+checkout: the docs ARE the doc comments in `deps/go/src` at `go1.26.5`.
+
+- Anchor scheme: `godoc:<import path>.<Ident>[.<Method>]@go1.26.5`
+  (e.g. `godoc:strings.Fields@go1.26.5`, `godoc:strconv.NumError.Error@go1.26.5`).
+  Resolution = the rev equals `baselines/go-oracle-pin` AND the package
+  declares the identifier (and method) at the pin — checked by
+  `scripts/check-spec-anchors` via `tools/godocanchors` (fail closed on an
+  unresolvable anchor, a rev off the pin, or a malformed token). Like the
+  spec#/mem# grammars this checks RESOLUTION, never quote fidelity.
+- What the machine lowers from that source is pinned separately, byte
+  for byte: `baselines/stdlib-pin.tsv` (sha256 per lowered file;
+  `scripts/check-frontend-pins [stdlib-pin]`; the frontend refuses to
+  lower a file whose hash differs). Both move only with the `go` row.
+- Library latitude found in doc text ("not guaranteed", "may",
+  "implementation-specific") is a version-tracked (b)-pin in
+  `docs/2026-08-11_latitude-inventory.md` (G4 ruled (a)); the six slice-1
+  functions are exact (no latitude clause in their docs — inventory §3
+  "Library realization" note).
+
 ## Repo pins (rows in `scripts/setup-deps`, tier `named`)
 
 | name | rev | role |

@@ -1,0 +1,10 @@
+# producer: docs/evidence/2026-09-03_stdlib-source-1/README.md (Reproduction, suite wall times); columns: suite, wall_s
+# BEFORE = main @ 345ef090 frontend (primary checkout, artifacts redirected), AFTER = this lane
+examples/wordfreq	before=14.3	after=14.2
+noodler/strconv-formatint	before=14.3	after=13.8
+noodler/strings	before=16.1	after=14.6
+strconv/format-parse	before=13.8	after=15.4
+strings/fields-conformance	before=14.9	after=14.6
+strings/shim-value-refused	before=13.4	after=14.2
+strings/split-conformance	before=13.8	after=14.0
+strings/trimspace-repeat	before=13.5	after=13.7

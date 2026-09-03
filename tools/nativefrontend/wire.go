@@ -262,6 +262,18 @@ type emitter struct {
 	// function body is emitted.
 	quarantinedGlobals map[*types.Var]string
 	quarantinedInits   map[ast.Expr]bool
+
+	// Stdlib source-through (stdlibsource.go / stdlibreach.go). curUnit
+	// is the unit whose declarations are being emitted (setUnit); a
+	// library unit's reachSet prunes its declaration passes. prunedInits
+	// collects the initializer RHS expressions of UNREACHED library var
+	// specs (skipped by the H-11 dry run and by $pkginit — their cells
+	// are never allocated either). forcedQuarantine carries reached
+	// library FuncDecls the pre-emission unsafe-layout scan condemned:
+	// the FuncDecl loop stubs them (H-3) instead of emitting.
+	curUnit          *sourcePkg
+	prunedInits      map[ast.Expr]bool
+	forcedQuarantine map[*ast.FuncDecl]string
 }
 
 // noteInterface records an interface type for the `interface` TypeDef pass.
@@ -445,11 +457,18 @@ func (e *emitter) emitType(t types.Type) (any, error) {
 			return map[string]any{"kind": "interface", "name": name}, nil
 		}
 		qname := e.qualifiedTypeName(obj)
-		if obj.Pkg() != nil && !e.isSourcePackage(obj.Pkg()) {
+		if obj.Pkg() != nil && (!e.isSourcePackage(obj.Pkg()) || (e.isLibraryPackage(obj.Pkg()) && modeledImportedTypes[qname] != nil)) {
 			// An imported concrete named type OUTSIDE the source
 			// program (stdlib): record it for the method-set stub pass
 			// (D5). Source-package types get REAL TypeDefs from their
-			// own unit's declaration pass (multi-package, W1.1).
+			// own unit's declaration pass (multi-package, W1.1) — EXCEPT
+			// the E5-T shadow-modeled types (importedmodel.go): when
+			// their package is loaded as a stdlib source-through
+			// LIBRARY unit (stdlibsource.go), the shadow model stays the
+			// declaration of record until slice 2's overlay (the real
+			// `strings.Builder` needs unsafe.String), so they register
+			// here exactly as before and the library unit's declaration
+			// pass never reaches them (stdlibreach.go stops at them).
 			if e.importedNamed == nil {
 				e.importedNamed = map[string]*types.Named{}
 			}

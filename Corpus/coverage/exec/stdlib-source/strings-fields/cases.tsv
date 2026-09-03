@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+# strings.Fields through the real library source (stdlib-source-1, 2026-09-03).
+empty	fieldsEmpty	-	ok	-	stdlib,strings,slices,empty
+all-unicode-space	fieldsAllUnicodeSpace	-	ok	-	stdlib,strings,slices,unicode,empty
+mixed-unicode	fieldsMixedUnicode	-	ok	-	stdlib,strings,slices,unicode
+non-space-runes	fieldsNonSpaceRunes	-	ok	-	stdlib,strings,slices,unicode
+high-bit-no-space	fieldsHighBitNoSpace	-	ok	-	stdlib,strings,slices,unicode
+mixed-runs	fieldsMixedRuns	-	ok	-	stdlib,strings,slices,unicode
+func-value	fieldsFuncValue	-	ok	-	stdlib,strings,slices,closures
+func-direct	fieldsFuncDirect	-	ok	-	stdlib,strings,slices,closures,unicode
+ascii-table	fieldsAsciiTable	-	ok	-	stdlib,strings,slices

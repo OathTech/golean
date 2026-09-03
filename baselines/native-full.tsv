@@ -1,4 +1,36 @@
 # GoLean native-frontend full-corpus differential baseline
+# re-pinned: 2026-09-03 (stdlib-source-1 lane — stdlib source-through slice 1,
+#   docs/2026-09-03_stdlib-boundary-design.md §6; gates G1/G3/G4/G8/G9 ruled AS
+#   RECOMMENDED by the [USER] (Mike, 2026-09-03, relayed by the [AGENT]
+#   coordinator — cited as relayed); [AGENT]-executed. FRONTEND change (trusted
+#   lowering): strings/strconv + their pure closure lowered from the pinned
+#   GOROOT source (tools/nativefrontend/stdlibsource.go, stdlibreach.go);
+#   shims RETIRED: strings.{Fields,Split,TrimSpace}, strconv.{FormatUint,
+#   FormatInt}; strconv.ParseUint retained with the real *strconv.NumError.
+#   FULL ci --diff at main 345ef090 + this lane's working tree (dirty: the
+#   slice and these records, committed together; log tail in
+#   docs/evidence/2026-09-03_stdlib-source-1/gate-tail.txt): 3251 rows run;
+#   drift vs the previous pin = 6 FAIL/frontend-export -> PASS flips, all
+#   the shim-surface refusals the real source makes moot:
+#     strings/split-conformance/empty-sep (real explode — predicted, memo §6),
+#     strings/shim-value-refused/{shimmed-value,unmodeled-value} (a strings
+#       member in value position is a real function value; Contains lowers),
+#     strconv/format-parse/unmodeled-member (strconv.Atoi lowers — the memo's
+#       "ParseUint-delta row"),
+#     panic-recover/shim-refusal-unrecoverable/{split-recover,render-recover}
+#       (the Split empty-sep refusal they recovered around no longer exists;
+#       parse-recover still pins the R4-C-3 unrecoverable-refusal contract);
+#   + 56 NEW rows under stdlib-source/ (54 born PASS: strings-fields 9,
+#   strings-trimspace 10, strings-split 11, strconv-format 8,
+#   strconv-parseuint 6, fields-fuzz 10 — the 500-input library-vs-oracle
+#   fuzz; 2 born FAIL/frontend-export BY DESIGN: stdlib-source/frontier/
+#   {atoi-error-path-clone,div64-overflow-value}, ledger FR-16). NO other row
+#   moved in result or stage; NO PASS->non-PASS flips. 3061 PASS / 190 FAIL.
+#   Twin-wire pin MOVED ([USER]-authorized by G9, relayed): eef32142… ->
+#   b341dc3b… (structural diff in the evidence dir); deviation pin unmoved;
+#   NEW library pin baselines/stdlib-pin.tsv (48 files).
+#   [the bug086-shim-closure figure, kept as history:] # cases: 3195 (3001 PASS / 194 FAIL)
+#   [re-derived from the data rows at the bug086-shim-closure re-pin 2026-09-03 ([AGENT]: the round-6 union's 3195 (2999 PASS / 196 FAIL) with BUG-086's two Cases rows noodler/strconv-formatint/{edges,positive} flipped FAIL/frontend-export -> PASS; no other row moved; `awk -F'\t' '!/^#/{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3001 / FAIL 194)]
 # re-pinned: 2026-09-03 (strict-routing lane — THE STRICT-LANE DEPTH GUARD,
 #   membership-depth memo P1 §5, [USER]-ruled 2026-09-03 («(6) strict-lane,
 #   agree», relayed by the [AGENT] coordinator — cited as relayed; scope
@@ -605,7 +637,8 @@
 #     removed row is named in prose, never left dangling on the line).
 #     NEW rows: unsafe/layout-ops/{sizeof-fixed,layout-struct}
 #     FAIL/frontend-export BY DESIGN. unsafe/boundary/pointer-roundtrip
-# cases: 3199 (3005 PASS / 194 FAIL)
+# cases: 3255 (3065 PASS / 190 FAIL)
+#   [re-derived from the data rows at the round-8b merge-train rebase 2026-09-03 ([AGENT]: stdlib-source-1 slice-1 commit replayed over main 6a163681 (post-round-8a + sampling-budget): main's 3199 / 3005 / 194 + the lane's row delta vs its 3195 base — born stdlib-source/ rows and the shim-surface FAIL→PASS flips; ids disjoint, no main row otherwise moved)]
 #   [re-derived from the data rows at the round-8a merge-train rebase 2026-09-03 ([AGENT]: strict-routing replayed over main = hygiene-b1-stamps' 3199 (3005 PASS / 194 FAIL); the strict-routing lane's 9 STAGE-ONLY moves carried — 8 PASS/- -> PASS/confluent (goroutines/pipeline/{two-stage,buffered-stage}, spec-examples-stmt/go-statements/func-literal, noodler/goroutines/{directional-params,fifo-one-sender,lockstep-transcript}, noodler/select/ping-pong, noodler/syncmisuse/unlock-from-other-goroutine) and channels/select-select/beside-loop FAIL nondet|differential -> FAIL lean-observation|differential (the guard-stage-alt alternation KEPT, its nondet member replaced by lean-observation per the strict-routing audit's TRAIN NOTE, docs/evidence/2026-09-03_strict-routing/README.md); no result flip, no born row, no PASS->non-PASS flips; `awk -F'\t' '!/^#/{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3005 / FAIL 194)]
 #   [re-derived from the data rows at the hygiene-b1-stamps audit fix round F2 2026-09-03 ([AGENT]: 3196 (3002 PASS / 194 FAIL) + THREE born-PASS rows maps/nan-key-range-aggregate/{array,struct,interface}; no other row moved; `awk -F'\t' '!/^#/{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3005 / FAIL 194)]
 #   [the slice's landing figure, kept as history:] # cases: 3196 (3002 PASS / 194 FAIL)
@@ -3084,8 +3117,8 @@ PASS	panic-recover/repanic-same-value-abort/forced-half	-
 PASS	panic-recover/return-expression-panic-recovered	-
 PASS	panic-recover/self-recovered-defer-panic	-
 FAIL	panic-recover/shim-refusal-unrecoverable/parse-recover	frontend-export
-FAIL	panic-recover/shim-refusal-unrecoverable/split-recover	frontend-export
-FAIL	panic-recover/shim-refusal-unrecoverable/render-recover	frontend-export
+PASS	panic-recover/shim-refusal-unrecoverable/split-recover	-
+PASS	panic-recover/shim-refusal-unrecoverable/render-recover	-
 PASS	panic-recover/unnamed-recover-zero-return	-
 PASS	pointers/address-array-index	-
 PASS	pointers/address-field	-
@@ -3669,6 +3702,62 @@ PASS	spec-examples-stmt/type-switch-equiv-if/agree-string	-
 PASS	spec-examples-stmt/type-switch-equiv-if/agree-default	-
 FAIL	spec-examples-stmt/type-unify-struct-array	frontend-export
 PASS	spec-examples-stmt/variadic-slice-passthrough	-
+PASS	stdlib-source/fields-fuzz/group-00	-
+PASS	stdlib-source/fields-fuzz/group-01	-
+PASS	stdlib-source/fields-fuzz/group-02	-
+PASS	stdlib-source/fields-fuzz/group-03	-
+PASS	stdlib-source/fields-fuzz/group-04	-
+PASS	stdlib-source/fields-fuzz/group-05	-
+PASS	stdlib-source/fields-fuzz/group-06	-
+PASS	stdlib-source/fields-fuzz/group-07	-
+PASS	stdlib-source/fields-fuzz/group-08	-
+PASS	stdlib-source/fields-fuzz/group-09	-
+FAIL	stdlib-source/frontier/atoi-error-path-clone	frontend-export
+FAIL	stdlib-source/frontier/div64-overflow-value	frontend-export
+PASS	stdlib-source/strconv-format/extremes	-
+PASS	stdlib-source/strconv-format/illegal-base-one	-
+PASS	stdlib-source/strconv-format/illegal-base-zero	-
+PASS	stdlib-source/strconv-format/int-all-bases	-
+PASS	stdlib-source/strconv-format/power-of-two-bases	-
+PASS	stdlib-source/strconv-format/siblings	-
+PASS	stdlib-source/strconv-format/small-boundary	-
+PASS	stdlib-source/strconv-format/uint-all-bases	-
+PASS	stdlib-source/strconv-parseuint/bitsize-saturation	-
+PASS	stdlib-source/strconv-parseuint/error-quoting	-
+PASS	stdlib-source/strconv-parseuint/error-texts	-
+PASS	stdlib-source/strconv-parseuint/happy-bases	-
+PASS	stdlib-source/strconv-parseuint/numerror-type	-
+PASS	stdlib-source/strconv-parseuint/range-sentinel	-
+PASS	stdlib-source/strings-fields/all-unicode-space	-
+PASS	stdlib-source/strings-fields/ascii-table	-
+PASS	stdlib-source/strings-fields/empty	-
+PASS	stdlib-source/strings-fields/func-direct	-
+PASS	stdlib-source/strings-fields/func-value	-
+PASS	stdlib-source/strings-fields/high-bit-no-space	-
+PASS	stdlib-source/strings-fields/mixed-runs	-
+PASS	stdlib-source/strings-fields/mixed-unicode	-
+PASS	stdlib-source/strings-fields/non-space-runes	-
+PASS	stdlib-source/strings-split/both-empty	-
+PASS	stdlib-source/strings-split/empty-s	-
+PASS	stdlib-source/strings-split/empty-sep-invalid-utf8	-
+PASS	stdlib-source/strings-split/empty-sep-multibyte	-
+PASS	stdlib-source/strings-split/rabin-karp-path	-
+PASS	stdlib-source/strings-split/sep-equals-s	-
+PASS	stdlib-source/strings-split/sep-longer-than-s	-
+PASS	stdlib-source/strings-split/single-byte-many	-
+PASS	stdlib-source/strings-split/splitn-and-after	-
+PASS	stdlib-source/strings-split/trailing-and-consecutive	-
+PASS	stdlib-source/strings-split/unicode-sep	-
+PASS	stdlib-source/strings-trimspace/all-unicode-space	-
+PASS	stdlib-source/strings-trimspace/ascii-table	-
+PASS	stdlib-source/strings-trimspace/both-unicode	-
+PASS	stdlib-source/strings-trimspace/empty-and-single	-
+PASS	stdlib-source/strings-trimspace/inner-preserved	-
+PASS	stdlib-source/strings-trimspace/invalid-utf8-ends	-
+PASS	stdlib-source/strings-trimspace/left-unicode-only	-
+PASS	stdlib-source/strings-trimspace/near-miss-ends	-
+PASS	stdlib-source/strings-trimspace/non-space-ends	-
+PASS	stdlib-source/strings-trimspace/right-unicode-only	-
 PASS	strconv/format-parse/format-uint-bases	-
 PASS	strconv/format-parse/format-int-vals	-
 PASS	strconv/format-parse/format-illegal-base	-
@@ -3676,7 +3765,7 @@ PASS	strconv/format-parse/parse-uint-happy	-
 PASS	strconv/format-parse/parse-uint-errors	-
 PASS	strconv/format-parse/parse-uint-range-value	-
 PASS	strconv/format-parse/parse-uint-bitsize	-
-FAIL	strconv/format-parse/unmodeled-member	frontend-export
+PASS	strconv/format-parse/unmodeled-member	-
 PASS	strings/builder-model/write-string	-
 PASS	strings/builder-model/write-bytes	-
 PASS	strings/builder-model/len-reset	-
@@ -3721,8 +3810,8 @@ PASS	strings/rune-literal-values	-
 PASS	strings/rune-slice-conversion	-
 PASS	strings/rune-slice-to-string-copy	-
 PASS	strings/rune-string-conversion	-
-FAIL	strings/shim-value-refused/shimmed-value	frontend-export
-FAIL	strings/shim-value-refused/unmodeled-value	frontend-export
+PASS	strings/shim-value-refused/shimmed-value	-
+PASS	strings/shim-value-refused/unmodeled-value	-
 PASS	strings/slice-eval-order	-
 PASS	strings/slice-eval-order-elided-high	-
 PASS	strings/split-conformance/basic	-
@@ -3732,7 +3821,7 @@ PASS	strings/split-conformance/single-byte-sep	-
 PASS	strings/split-conformance/overlap	-
 PASS	strings/split-conformance/multi-byte-sep	-
 PASS	strings/split-conformance/confchange-shape	-
-FAIL	strings/split-conformance/empty-sep	frontend-export
+PASS	strings/split-conformance/empty-sep	-
 PASS	strings/string-basic	-
 PASS	strings/string-byte-conversion	-
 PASS	strings/string-byte-len	-

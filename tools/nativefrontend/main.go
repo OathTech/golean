@@ -57,7 +57,34 @@ func run() error {
 	// every allowed run.
 	flag.BoolVar(&allowHiddenDepInitOrder, "allow-hidden-dep-init-order", false,
 		"apparatus-only: allow the recorded E7 hidden-dep init-order deviation case to lower (finding still printed as a WARNING)")
+	// Stdlib source-through (stdlibsource.go): the pinned GOROOT source
+	// root and the library pin, both repo-relative by default (every
+	// driver script runs the frontend from the repo root); two MODES
+	// that emit no program — the pin manifest (what
+	// baselines/stdlib-pin.tsv must equal) and the admission-register
+	// dump (what docs/stdlib-admission-register.md's machine block must
+	// equal; scripts/check-stdlib-register).
+	flag.StringVar(&stdlibSrcRoot, "stdlib-src", stdlibSrcRoot, "pinned GOROOT source root for stdlib source-through (rev-checked against the oracle pin)")
+	flag.StringVar(&stdlibPinPath, "stdlib-pin", stdlibPinPath, "tracked library pin (path<TAB>sha256 per lowered stdlib source file)")
+	pinManifest := flag.Bool("stdlib-pin-manifest", false, "print the library pin manifest for the current source root and exit")
+	registerDump := flag.Bool("stdlib-register", false, "print the code's stdlib admission tables (register machine block) and exit")
 	flag.Parse()
+	if *pinManifest {
+		out, err := stdlibPinManifest()
+		if err != nil {
+			return err
+		}
+		_, err = os.Stdout.WriteString(out)
+		return err
+	}
+	if *registerDump {
+		out, err := stdlibRegisterDump()
+		if err != nil {
+			return err
+		}
+		_, err = os.Stdout.WriteString(out)
+		return err
+	}
 	if *dir == "" {
 		return fmt.Errorf("--dir is required")
 	}

@@ -1,5 +1,13 @@
 package main
 
+// SINCE 2026-09-03 (stdlib source-through slice 1, docs/2026-09-03_
+// stdlib-boundary-design.md §6) BOTH ROWS PASS: `strings` is a library
+// unit lowered from the pinned GOROOT source, so a `strings` member in
+// VALUE position is a real function value and calling it runs the
+// upstream body. The refusals these rows pinned are moot for
+// source-through packages and unchanged for every other package. The
+// original record follows.
+//
 // STDLIB FUNCTION-VALUE REFUSAL PINS (t1-fidelity-fixes, 2026-08-31;
 // assessment p2-keeps-a2a3bcd §1.3 instance 1 / A3-S7 claim (iv)).
 // The E5 stdlib-shim policy admits only the direct CALL shape
@@ -26,12 +34,12 @@ package main
 import "strings"
 
 func shimmedValue() int {
-	f := strings.Fields // allowlisted member, VALUE shape: refused by name
+	f := strings.Fields // VALUE shape: a REAL function value since stdlib-source-1 (2026-09-03); was refused by name under the E5 shim
 	return len(f("a b c")) // gc: 3
 }
 
 func unmodeledValue() bool {
-	f := strings.Contains // unmodeled member, VALUE shape: refused by name
+	f := strings.Contains // VALUE shape of a non-shim member: lowers from the pinned source since stdlib-source-1; was refused by name
 	return f("ab", "a") // gc: true
 }
 

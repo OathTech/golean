@@ -1,0 +1,9 @@
+case	subject	old_bytes	new_bytes	old_ms(avg3)	new_ms(avg3)	obs_equal
+strings_fields-conformance	fcUnicodeSpace	65449	158143	24	26	yes
+strings_fields-conformance	fcConsecMixed	65449	158143	23	24	yes
+strings_split-conformance	splitMultiByteSep	77066	406210	23	28	yes
+strings_split-conformance	splitConfChangeShape	77066	406210	25	27	yes
+strings_trimspace-repeat	trimSpaceUnicode	69576	275148	23	26	yes
+strconv_format-parse	formatUintBases	190123	1081001	24	360	yes
+strconv_format-parse	parseUintErrors	190123	1081001	38	376	yes
+strconv_format-parse	parseUintRangeValue	190123	1081001	60	384	yes

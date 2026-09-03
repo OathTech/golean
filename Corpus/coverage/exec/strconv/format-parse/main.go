@@ -1,7 +1,14 @@
 package main
 
-// strconv.{FormatUint,FormatInt,ParseUint} E5-shim conformance (W4.3
-// item 1 landing B; docs/raft-w43-log.md). The subject sites:
+// strconv.{FormatUint,FormatInt,ParseUint} conformance (W4.3 item 1
+// landing B; docs/raft-w43-log.md). SINCE 2026-09-03 (stdlib source-through
+// slice 1, docs/2026-09-03_stdlib-boundary-design.md §6): FormatUint and
+// FormatInt are the REAL library bodies lowered from the pinned GOROOT
+// source (no shim); ParseUint is the retained shim whose error value is
+// the real *strconv.NumError; `unmodeledMember` (strconv.Atoi) LOWERS
+// now — the L-3 refusal it pinned is moot for source-through packages
+// (the row flipped FAIL->PASS at the slice-1 re-pin). The historical
+// comment below is kept for the record. The subject sites:
 // quorum.Index.String (FormatUint base 10), VoteResult.String
 // (FormatInt base 10), raftpb.ConfChangesFromString (ParseUint base 10
 // bitSize 64). The shims model general bases 2..36 (gc-probed:

@@ -309,6 +309,15 @@ if covout="$(./scripts/check-coverage 2>&1)"; then echo "$covout" | tail -2 | se
 step "spec-anchor citations (scripts/check-spec-anchors)"
 if anchout="$(./scripts/check-spec-anchors 2>&1)"; then echo "$anchout" | sed 's/^/  /'; ok "spec-anchor citations resolve at the pin"; else echo "$anchout" | sed 's/^/  /'; bad "spec-anchor citations (see above)"; fi
 
+# 1f. Stdlib admission register (stdlib source-through slice 1, 2026-09-03;
+# memo §2.2, G8 ruled): the register's machine block must equal the
+# frontend's own admission tables (source-through packages, substitution
+# rows, overlay/primitive entries under their caps, retained shims,
+# shadow types). A table widened in code without the register — or the
+# reverse — fails here; the caps refuse inside the dump itself.
+step "stdlib admission register (scripts/check-stdlib-register)"
+if regout="$(./scripts/check-stdlib-register 2>&1)"; then echo "$regout" | sed 's/^/  /'; ok "stdlib admission register = frontend tables"; else echo "$regout" | sed 's/^/  /'; bad "stdlib admission register (see above)"; fi
+
 # 1c2. Membership-lane gate self-test (delta-review T2, 2026-08-05): the
 # lane's shell gates (manifest lane validation incl. the explicit-width
 # requirement) exercised against the recorded bad-shape fixtures, PLUS —

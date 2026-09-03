@@ -122,4 +122,40 @@ if [[ $((n_spec + n_mem)) -eq 0 ]]; then
   echo "check-spec-anchors: FAIL — zero citations found; the scan is degenerate (a repo with the retrofit landed always has citations — if that ever legitimately changes, update this guard with the reason)" >&2
   exit 1
 fi
-echo "check-spec-anchors: ok — ${n_spec} spec# + ${n_mem} mem# citations all resolve at pin ${pin:0:9}"
+
+# ---- godoc: anchors (stdlib source-through slice 1, 2026-09-03; G3) ----
+# Third citation grammar: godoc:<import path>.<Ident>[.<Method>]@<rev>
+# resolves to a package-level declaration in the PINNED GOROOT source
+# (deps/go/src at the `go` row) with <rev> = the oracle pin. Resolver:
+# tools/godocanchors (go/parser over the package's non-test files). The
+# grep is deliberately LOOSE (anything after `godoc:` up to whitespace/
+# quote/backtick/bracket) so a malformed token is judged UNPARSED by the
+# resolver and FAILS, never silently skipped (the F1.2 rule). Prose
+# placeholders use angle brackets (godoc:<path>.<Ident>@…), which the
+# resolver's grammar rejects — so placeholders must stay in angle
+# brackets or inside backticks with a `<`.
+set +e
+xargs -0 sh -c 'grep --null -nHoE "godoc:[A-Za-z0-9_/.@-]+" -- "$@" || [ "$?" -eq 1 ]' scan < "$tmp/files" > "$tmp/godoc-hits"
+rc=$?
+set -e
+if [[ "$rc" -gt 1 ]]; then
+  echo "check-spec-anchors: FAIL — godoc: citation scan died (grep/xargs exit $rc; fail closed)" >&2
+  exit 1
+fi
+: > "$tmp/godoc-tokens"
+while IFS= read -r -d '' f && IFS= read -r rest; do
+  tok="${rest#*:}"
+  tok="$(printf '%s' "$tok" | sed 's/[.-]*$//')"   # trailing prose punctuation
+  printf '%s	%s
+' "$f:${rest%%:*}" "$tok" >> "$tmp/godoc-tokens"
+done < "$tmp/godoc-hits"
+n_godoc="$(wc -l < "$tmp/godoc-tokens" | tr -d ' ')"
+if [[ "$n_godoc" -gt 0 ]]; then
+  if ! out="$(cut -f2 "$tmp/godoc-tokens" | GO111MODULE=off go run ./tools/godocanchors 2>&1)"; then
+    echo "$out" | sed 's/^/  /'
+    echo "  (citing sites: $(cut -f1 "$tmp/godoc-tokens" | sort -u | tr '\n' ' '))"
+    echo "check-spec-anchors: FAIL — unresolved godoc: citations above (pin ${pin:0:9})" >&2
+    exit 1
+  fi
+fi
+echo "check-spec-anchors: ok — ${n_spec} spec# + ${n_mem} mem# + ${n_godoc} godoc: citations all resolve at pin ${pin:0:9}"

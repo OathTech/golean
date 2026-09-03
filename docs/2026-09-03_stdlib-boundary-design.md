@@ -626,7 +626,7 @@ are refused today) — deleting `goleanShimFmtUint/Int/Hex/Bool/Quote*`
 and the `%q` non-ASCII bound at a stroke, and shrinking the hand-written
 remainder to the rules that ARE `fmt`'s own (`handleMethods`
 precedence, `%!verb(...)` error shapes, padding, composite layout),
-each cited to `fmt/print.go` at the pin and to `godoc:fmt`. Dynamic
+each cited to `fmt/print.go` at the pin and to `godoc:fmt.Sprintf@go1.26.5` (and the sibling anchors of the functions it lowers). Dynamic
 sites (`[]any` spreads) keep the runtime type switch over basic kinds
 and named-type Stringers; the reflective remainder (a struct or map
 reaching a dynamic `%v`, `%T`, `%p`) REFUSES by name, as today. The
@@ -992,6 +992,31 @@ surface — the right order is mechanism first, observable second. RULED [USER] 
 ## 6. The first implementation slice
 
 **Name:** `stdlib-source-1` (worktree lane off `main`).
+
+> **DONE 2026-09-03 ([AGENT], within G9 as ruled; landing SHA in the
+> lane's commit — see `docs/evidence/2026-09-03_stdlib-source-1/`).**
+> Mechanisms 1–7 landed as described below, with two recorded
+> departures: (i) **shim 10, `strconv.ParseUint`, was NOT retired** —
+> upstream's error path (`syntaxError`/`rangeError`) routes through
+> `internal/stringslite.Clone`, whose body is
+> `unsafe.String(&b[0], len(b))`: a reached `unsafe` site the impurity
+> census in §1.3 did not list (it names `strings/builder.go`,
+> `errors/join.go`, `internal/strconv/deps.go`, `slices.overlaps`).
+> Retiring it before the overlay mechanism (slice 2) would have turned
+> the green error-path rows into refusals (a PASS→non-PASS flip the
+> gate forbids), so the shim stays, re-bodied to construct the REAL
+> `*strconv.NumError` (the delta this memo called "unobservable" was
+> observable: `*strconv.NumError` is exported). Frontier row:
+> `stdlib-source/frontier/atoi-error-path-clone`; register:
+> `docs/stdlib-admission-register.md`. (ii) The predicted flip of the
+> "ParseUint-delta row" was the L-3 row `strconv/format-parse/
+> unmodeled-member` (`strconv.Atoi("42")`) — it flipped because Atoi
+> now lowers, not because of the error type. Unpredicted FAIL→PASS:
+> `strings/shim-value-refused/unmodeled-value` (`strings.Contains` as a
+> value lowers). Cost finding: a program reaching `strconv.Quote`
+> (through `NumError.Error`) pays ~340 ms of `$pkginit` for the isPrint
+> tables — a 15× per-subject slowdown on `strconv/format-parse` (24 →
+> 360 ms), well inside the budget, recorded not re-budgeted.
 
 **Scope.** Source-through for `strings.{Fields,TrimSpace,Split}` and
 `strconv.{FormatUint,FormatInt,ParseUint}` from `deps/go/src` at the
