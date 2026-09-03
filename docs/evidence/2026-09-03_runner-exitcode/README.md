@@ -33,10 +33,15 @@ not changed). Three helpers classify the code BEFORE the capture is
 read: `undecided_cause` (0/1 = verdict, the caller interprets; 124 =
 `TIMED OUT after Ns (KNOB)`; 137/143/any 128+n = `KILLED (exit N — …;
 did not decide)`; else `failed with exit N (did not decide)`),
-`signal_cause` (the 128+n subset, for tools whose own refusal contract
-uses codes above 1: the harness exits 2, the enumerator names its
-code), and `obs_eq_cause` (adds exit 2 = `could not decode the
+`signal_cause` (the 128+n subset, n in 1..64, for the `go run
+./tools/…` sites — `go run` collapses every child exit to 1, so 2..128
+there is a tool refusal, not a kill — and the enumerator, which names
+its code), and `obs_eq_cause` (adds exit 2 = `could not decode the
 observation (exit 2 — did not decide; comparator said: <message>)`).
+Exception (audit F1): at the two SELF-comparison sites exit 2 IS the
+decision, so `Go output is not a valid observation` stays, now with
+`(comparator said: <message>)`; T5 asserts that text (red on main,
+which had the verdict without the message).
 `obs_eq` now keeps the comparator's stderr in `OBS_EQ_STDERR` and the
 differential stage goes through it. Every did-not-decide stays
 `report_fail` at the same stage as before — never a pass, never a skip.
@@ -56,7 +61,8 @@ differential stage goes through it. Every did-not-decide stays
 `scripts/test-lane-validation --with-go` T5-T8 reuse T1-T4's fake root
 and `golean` shim: T5 forwards the comparator call to the REAL binary
 with an undecodable status (a genuine exit 2 with its genuine decode
-message, `left.status: unknown observation status "weird"`); T6
+message, `left.status: unknown observation status "weird"`, asserted
+with the accurate validity wording); T6
 `kill -9`s the shim on the strict default-stream run (137); T7
 `kill -TERM`s it on the differential-stage comparison (143); T8 adds a
 fake `go` that `kill -9`s itself on the oracle's `go run … .` shape

@@ -120,18 +120,22 @@ undecided_cause() {
     *)   signal_cause "$rc" "$what" || printf '%s failed with exit %s (did not decide)' "$what" "$rc" ;;
   esac
 }
-# The signal-death subset alone (for tools whose OWN refusal contract
-# uses codes above 1 — the coverage harness exits 2 on a refusal, the
-# enumerator names its exit code itself): 137 and 143 spelled out because
+# The signal-death subset alone, for the `go run ./tools/…` invocations
+# and the enumerator, whose non-signal codes are their own business: `go
+# run` collapses every child exit (a panic, the harness's os.Exit(2), any
+# os.Exit(n)) to 1 and reports the child's code as a trailing "exit
+# status N" line — only a `go` tool usage error yields 2 — so codes 2..128
+# from those sites are a tool refusal with its message, not a kill; the
+# enumerator names its exit code itself. 137 and 143 spelled out because
 # they are the ones a cgroup/OOM kill or scripts/capped's kill produce;
-# any other 128+n is a crash that decided nothing either. Prints nothing
-# and returns 1 below 129.
+# any other 128+n (n in 1..64, the real signal range) is a crash that
+# decided nothing either. Prints nothing and returns 1 otherwise.
 signal_cause() {
   local rc="$1" what="$2"
   case "$rc" in
     137) printf '%s KILLED (exit 137 — SIGKILL: cgroup/OOM or an external kill; did not decide)' "$what" ;;
     143) printf '%s KILLED (exit 143 — SIGTERM: an external kill; did not decide)' "$what" ;;
-    *)   if (( rc > 128 && rc < 256 )); then
+    *)   if (( rc > 128 && rc <= 192 )); then
            printf '%s KILLED (exit %s — died on signal %s; did not decide)' "$what" "$rc" "$((rc - 128))"
          else
            return 1
@@ -623,7 +627,16 @@ run_case_rows() {
       failed=1
     else
       obs_eq "$go_observation" "$go_observation"; go_valid_rc=$?
-      if go_valid_cause="$(obs_eq_cause "$go_valid_rc")"; then
+      # SELF-comparison (audit F1 on the exit-code slice): here exit 2 IS
+      # the decision — runObservationEq could not decode the one
+      # observation it was handed, i.e. Go's output is not a valid
+      # observation (CLI.lean; the arg parser cannot fire on this fixed
+      # flag pair). Accurate wording kept, the decode message added;
+      # 124/137/143/other are still the undecided codes.
+      if [[ "$go_valid_rc" -eq 2 ]]; then
+        report_fail "$id" "$features" "go-observation" "Go output is not a valid observation (comparator said: $(one_line "$OBS_EQ_STDERR")): $go_observation"
+        failed=1
+      elif go_valid_cause="$(obs_eq_cause "$go_valid_rc")"; then
         report_fail "$id" "$features" "go-observation" "$go_valid_cause validating the Go observation — validity NOT decided: $go_observation"
         failed=1
       elif [[ "$go_valid_rc" -ne 0 ]]; then
@@ -1085,7 +1098,12 @@ membership_go_observation() {
       return 1
     fi
     obs_eq "$out" "$out"; valid_rc=$?
-    if valid_cause="$(obs_eq_cause "$valid_rc")"; then
+    # Self-comparison: exit 2 IS the decision (see the strict lane's
+    # validity check) — accurate wording + the decode message.
+    if [[ "$valid_rc" -eq 2 ]]; then
+      printf 'go sample is not a valid observation (comparator said: %s): %s' "$(one_line "$OBS_EQ_STDERR")" "$out"
+      return 1
+    elif valid_cause="$(obs_eq_cause "$valid_rc")"; then
       printf 'go sample: %s validating the sample — validity NOT decided: %s' "$valid_cause" "$out"
       return 1
     elif [[ "$valid_rc" -ne 0 ]]; then

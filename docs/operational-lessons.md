@@ -275,13 +275,20 @@ observation; go run green/red), 124 is the wall clock, 137/143 and any
 other 128+n are `KILLED (exit N — …; did not decide)`, exit 2 from the
 comparator is `could not decode the observation (exit 2 — did not
 decide; comparator said: <decode message>)` (obs_eq now keeps the
-comparator's stderr in `OBS_EQ_STDERR`), and any other code is `failed
-with exit N (did not decide)`. Stage words, budgets, criteria and the
+comparator's stderr in `OBS_EQ_STDERR`) — except at the two SELF-
+comparison sites (`obs_eq "$go_observation" "$go_observation"`), where
+exit 2 IS the decision and the accurate `Go output is not a valid
+observation` wording stays, now with `(comparator said: <message>)`
+(audit F1 on this slice) — and any other code is `failed with exit N
+(did not decide)`. Stage words, budgets, criteria and the
 baseline are unchanged (ci --diff: 3195/3195 rows, zero drift — so no
 real did-not-decide had been hiding under a labelled failure). The
 three enumerator sites, lake build, harness generation and both native
-exports name 137/143 too (`signal_cause` only — the harness's own
-refusal contract is exit 2). runObservationEq's codes are documented,
+exports name 137/143 too (`signal_cause` only: `go run` collapses every
+child exit — a panic, the harness's os.Exit(2) — to 1 with a trailing
+"exit status N" line, and only a `go` tool usage error yields 2, so
+codes 2..128 there are a tool's refusal with its message, not a kill;
+audit F2 corrected the first draft's "the harness exits 2" claim). runObservationEq's codes are documented,
 not changed. Fixtures T5-T8 (`scripts/test-lane-validation --with-go`;
 red-first record `docs/evidence/2026-09-03_runner-exitcode/`): a
 genuine exit 2 from the real comparator, a `kill -9` on the strict

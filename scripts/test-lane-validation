@@ -455,7 +455,9 @@ EOF
     # run_with_timeout maps a signal death to 128+signal, and
     # runObservationEq (GoLean/CLI.lean) exits 2 on an observation it
     # cannot decode; before the fix every `obs_eq` caller read 2/137/143
-    # as "not equal" (and discarded exit 2's decode message), the strict
+    # as "not equal" (and discarded exit 2's decode message — at the two
+    # SELF-comparison sites exit 2 is the accurate "not a valid
+    # observation" verdict, which now carries that message), the strict
     # Lean run fell through to `expected status ok, got …`, and
     # go_run_oracle fell through to "expected Go panic, got: …". Same
     # shim, three more modes: T5 forwards the comparator call to the
@@ -562,13 +564,17 @@ EOF
         "driver-coupling pin: native-json-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s" "copied-driver drift, or"
       run_t T4-sample-loop eq-sample "$TMP/manifest-t-member.tsv" membership \
         "observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing a Go sample against member #1" "NOT in the machine's enumerated set"
-      # T5-T8 (exit 2 / 137 / 143 / oracle 137). T5's need string pins the
-      # REAL decode message (runObservationEq's `left.status: unknown
-      # observation status …`), so the reason must carry the comparator's
-      # stderr, not just the code. T7's forbid is the OLD mismatch shape
-      # (detail beginning `Lean=`) at the differential stage.
+      # T5-T8 (exit 2 / 137 / 143 / oracle 137). T5 targets the Go-
+      # observation SELF-comparison, where exit 2 IS the decision (Go's
+      # output is not a valid observation — audit F1): the accurate
+      # wording stays and the reason must now carry the comparator's REAL
+      # decode message (`left.status: unknown observation status …`) —
+      # red on main, whose text had the verdict but not the message; and
+      # it must never read as an undecided comparison. T7's forbid is the
+      # OLD mismatch shape (detail beginning `Lean=`) at the differential
+      # stage.
       run_t T5-comparator-undecodable eq-undecodable "$TMP/manifest-t-strict.tsv" go-observation \
-        'observation-eq could not decode the observation (exit 2 — did not decide; comparator said: left.status: unknown observation status' "is not a valid observation"
+        'Go output is not a valid observation (comparator said: left.status: unknown observation status' "NOT decided"
       run_t T6-lean-run-sigkill run-kill9 "$TMP/manifest-t-strict.tsv" lean-observation \
         "Lean run KILLED (exit 137" "expected status ok, got"
       run_t T7-differential-sigterm eq-diff-term "$TMP/manifest-t-strict.tsv" differential \
