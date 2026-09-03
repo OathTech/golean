@@ -294,7 +294,7 @@ clean-tip gate ran to completion after it; no re-run is owed.
 - Audit fix round (F-A..F-I; the coordinator's verdict FIX-FIRST, corpus
   sound, records wrong in three load-bearing places): BUG-086 mechanism
   rewritten to the `injectStdlibShims` plumbing the auditor traced;
-  BUG-085 → BUG-087, reclassified `latitude` with the same-source `mk`
+  the F1 entry renumbered 085 → BUG-087, reclassified `latitude` with the same-source `mk`
   witness; incident §7 corrected; E12 census extended; A1 extended with
   the three cause-blind timeout siblings; FG rows re-cited; the three
   trivial-green observables sharpened (`slices/delete-idiom-tail`,
