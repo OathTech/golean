@@ -4524,15 +4524,23 @@ the records-only fix round).
   `storeLoc_root_frame` (NPDRF.lean), `storeLoc_congr` (MachineSound.lean).
   No other semantics changed.)
 - Pinned-by: none (LATENT fail-open — no corpus row can reach the arm,
-  so a red-first differential row is impossible without breaking
-  `StateWf`. WHY unreachable: every heap cell is created by
-  `ExecState.alloc`, the SOLE caller of `ExecState.freshLoc`, and it
-  writes the cell with `Heap.set` in the same step that mints the
-  address, so no store can name an address before its cell exists;
-  `nextAddr` advances only there; and `StateWf` bounds every address a
-  value carries (`Heap.locSup ≤ nextAddr`), seeded at
-  `runProgramSetupM` and kept by `Step.preserves_wf`. The pin is
-  therefore a Lean-level executable guard in `Tests/GoCoreEval.lean`
+  so a red-first differential row is impossible without breaking the
+  allocation discipline. WHY unreachable: HEAP DENSITY — every address
+  below `nextAddr` has a cell. Density is an audited CALL-GRAPH
+  INVARIANT, not a `StateWf` consequence and not a theorem: `StateWf`
+  (StateWf.lean:567) is only the bound `locSup σ ≤ nextAddr`, so it
+  says every address a value carries is below `nextAddr`, NOT that
+  such an address is populated. The audit (2026-09-03, [AGENT],
+  corrected at the merge audit F1): `nextAddr` advances only in
+  `ExecState.freshLoc` (State.lean:363), whose SOLE caller
+  `ExecState.alloc` writes the cell with `Heap.set` in the same step;
+  the only non-proof `Heap.set` sites are `alloc` and `storeLoc`'s hit
+  arm; nothing erases a cell; the only non-proof `Loc.base`
+  constructions are `freshLoc` (State.lean:362) and the decoder's
+  bound-checked `globaladdr` (NativeToIR.lean:437, gid < the
+  driver-seeded global count). Density is a candidate lemma for the
+  review's A2 dense-heap proposal, which would make it true by type.
+  The pin is therefore a Lean-level executable guard in `Tests/GoCoreEval.lean`
   (`gocore-eval-tests`, run by `scripts/ci`): `storeLoc {} (.base ⟨0⟩)
   (.int 7)` must be `.error (.internal _)` — shown FAIL against main's
   definition before the fix ("condition is false"), ok after — beside

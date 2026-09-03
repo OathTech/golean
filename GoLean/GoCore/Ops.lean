@@ -1241,11 +1241,18 @@ callees (normalizeValueForTy, coerceStoredValue) are themselves total.
 The premise of `wp_store`.
 
 FAIL CLOSED at the root: a store to a `.base` address with NO heap cell
-REFUSES. Cells come into existence ONLY through `ExecState.alloc` (the
-sole caller of `freshLoc`), which writes the cell before any store can
-name it; on a `StateWf` state every address a value can carry is below
-`nextAddr` and therefore allocated. So the `none` arm is unreachable on
-well-formed states, and reaching it means an invariant breach (a dangling
+REFUSES. The `none` arm is unreachable by HEAP DENSITY — every address
+below `nextAddr` has a cell — which is an audited call-graph invariant,
+NOT a `StateWf` consequence (`StateWf` is only the bound `locSup σ ≤
+nextAddr`; it says nothing about which addresses are populated) and not
+a theorem: `nextAddr` advances only in `ExecState.freshLoc`, whose sole
+caller `ExecState.alloc` writes the cell in the same step; the only
+non-proof `Heap.set` sites are `alloc` and this function's hit arm;
+nothing erases a cell; the only non-proof `Loc.base` constructions are
+`freshLoc` and the decoder's bound-checked `globaladdr`. (The grumpy
+review's A2 dense-heap proposal would make density true by type; until
+then it is a candidate lemma, stated here as the premise it is.)
+Reaching the arm therefore means an invariant breach (a dangling
 `.addr`, a decoder gid past its bound) — the arm used to MATERIALIZE an
 untyped phantom cell there (BUG-085, grumpy-professor review U5/A2), an
 absorbing fallback on the trusted surface that would have silently
