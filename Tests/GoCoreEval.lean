@@ -2169,6 +2169,25 @@ def main : IO UInt32 := do
   passed := passed && (← expectIntResult "GoCore struct field update" (GoCore.Machine.runFunctionWithTypesM 100000 coreCellTypes coreStructFunction #[]) 17)
   passed := passed && (← expectIntResult "GoCore shared-heap function call"
     (GoCore.Machine.runFunctionWithContextM 100000 coreCellTypes #[coreSetCellFunction, coreCallFunction] coreCallFunction #[]) 9)
+  -- BUG-085 guard (fail-closed heap store; grumpy-professor review §2 U5 /
+  -- §3 A2): a store to a `.base` address with NO heap cell must REFUSE,
+  -- never materialize a phantom untyped cell. No corpus row can reach this
+  -- arm (allocation goes through `ExecState.alloc`, which creates the cell
+  -- before any store; `StateWf` bounds every address), so the guard lives
+  -- here at the Lean level. Positive control first: the same store to an
+  -- ALLOCATED cell succeeds, so the refusal below is not "refuses everything".
+  passed := passed && (← expectTrue "GoCore storeLoc to an ALLOCATED .base cell succeeds (positive control for the BUG-085 guard)"
+    (let (loc, s) := (({} : GoCore.ExecState).alloc (.int 0) (some .int))
+     match GoCore.storeLoc s loc (.int 7) with
+     | .ok s' =>
+         match GoCore.loadLoc s' loc with
+         | .ok (.int 7 _) => true
+         | _ => false
+     | .error _ => false))
+  passed := passed && (← expectTrue "GoCore storeLoc to an UNALLOCATED .base address REFUSES `.internal` (BUG-085: no phantom cell, fail closed)"
+    (match GoCore.storeLoc ({} : GoCore.ExecState) (.base ⟨0⟩) (.int 7) with
+     | .error (.internal _) => true
+     | _ => false))
   passed := passed && (← expectIntResult "GoCore scalar operators" (GoCore.Machine.runFunctionM 100000 coreScalarFunction #[.int 10, .int 3]) 7)
   passed := passed && (← expectIntResult "GoCore int8 wrap" (GoCore.Machine.runFunctionM 100000 coreInt8WrapFunction #[]) (-128))
   passed := passed && (← expectIntResult "GoCore byte conversion wrap" (GoCore.Machine.runFunctionM 100000 coreByteConversionFunction #[]) 44)

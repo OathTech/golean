@@ -1682,7 +1682,7 @@ theorem storeLoc_congr {σ₁ σ₂ : ExecState} (htypes : σ₂.types = σ₁.t
     simp only [storeLoc]
     rw [hl']
     cases hlook : Heap.lookup σ₁.heap (.base a) with
-    | none => exact trivial
+    | none => exact rfl  -- both sides refuse `.internal` (BUG-085): same class
     | some cell =>
       dsimp only
       cases hdt : cell.declaredTy with

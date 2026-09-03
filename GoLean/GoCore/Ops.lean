@@ -1235,9 +1235,24 @@ def loadLoc (state : ExecState) : Loc → Except GoError GoValue
       | .array values => arrayGet values index
       | other => stuck s!"expected array base for index load, got {repr other}"
 
--- Total: structural recursion on the `Loc` argument (field/index bases are
--- strict subterms); its non-structural callees (normalizeValueForTy,
--- coerceStoredValue) are now themselves total. The premise of `wp_store`.
+/-- Store through a location. Total: structural recursion on the `Loc`
+argument (field/index bases are strict subterms); its non-structural
+callees (normalizeValueForTy, coerceStoredValue) are themselves total.
+The premise of `wp_store`.
+
+FAIL CLOSED at the root: a store to a `.base` address with NO heap cell
+REFUSES. Cells come into existence ONLY through `ExecState.alloc` (the
+sole caller of `freshLoc`), which writes the cell before any store can
+name it; on a `StateWf` state every address a value can carry is below
+`nextAddr` and therefore allocated. So the `none` arm is unreachable on
+well-formed states, and reaching it means an invariant breach (a dangling
+`.addr`, a decoder gid past its bound) — the arm used to MATERIALIZE an
+untyped phantom cell there (BUG-085, grumpy-professor review U5/A2), an
+absorbing fallback on the trusted surface that would have silently
+aliased whatever later allocation landed on that address. The refusal is
+`.internal`, the constructor the core already uses for "cannot happen on
+a well-formed state" (Multi.lean's hchan-invariant and resume-on-unready
+breaches), as opposed to `.stuck` for an ill-shaped program operand. -/
 def storeLoc (state : ExecState) : Loc → GoValue → Except GoError ExecState
     | loc@(.base _), value => do
         match Heap.lookup state.heap loc with
@@ -1248,7 +1263,7 @@ def storeLoc (state : ExecState) : Loc → GoValue → Except GoError ExecState
               | none => coerceStoredValue cell.value value
             return { state with heap := Heap.set state.heap loc { cell with value } }
         | none =>
-            return { state with heap := Heap.set state.heap loc { value } }
+            throw (.internal s!"store to unallocated address {repr loc}: no heap cell (allocation goes through ExecState.alloc only)")
     | .field base typeId fieldName, value => do
         match ← loadLoc state base with
         | .struct actualType fields =>

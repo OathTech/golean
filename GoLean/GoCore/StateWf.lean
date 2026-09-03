@@ -1911,12 +1911,8 @@ theorem storeLoc_shape {σ : ExecState} :
         have hc : HeapCell.locSup { cell with value := v' }
             = GoValue.locSup v' := rfl
         omega
-    · simp only [pure_eq_ok, Except.ok.injEq] at h
-      subst h
-      refine ⟨rfl, rfl, rfl, rfl, ?_⟩
-      refine Nat.le_trans Heap.set_locSup ?_
-      have hc : HeapCell.locSup { value := v } = GoValue.locSup v := rfl
-      omega
+    · -- unallocated root: the store REFUSES (BUG-085), nothing to show
+      simp [throw, throwThe, MonadExceptOf.throw] at h
   | field b tid fname ih =>
     intro v σ' h
     unfold storeLoc at h

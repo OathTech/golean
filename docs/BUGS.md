@@ -4513,3 +4513,80 @@ the records-only fix round).
   pre-existing row changed result or stage). Over-refusal vs the oracle
   in this class is the designed, recorded cost; the differential's
   lower bound (observed ∈ modeled) is untouched.
+
+## BUG-085 — `storeLoc` at an UNALLOCATED `.base` address MATERIALIZED an untyped phantom cell instead of refusing: a fail-open fallback on the trusted surface, LATENT (unreachable on well-formed states) [TRUST-ADJACENT: GoCore Ops.lean; zero baseline drift]
+
+- Status: fixed (2026-09-03, the `storeloc-failclosed` lane — the
+  `none` arm of `storeLoc`'s `.base` case now refuses:
+  `throw (.internal "store to unallocated address …: no heap cell
+  (allocation goes through ExecState.alloc only)")`. Three proofs that
+  had unfolded the arm lose a case: `storeLoc_shape` (StateWf.lean),
+  `storeLoc_root_frame` (NPDRF.lean), `storeLoc_congr` (MachineSound.lean).
+  No other semantics changed.)
+- Pinned-by: none (LATENT fail-open — no corpus row can reach the arm,
+  so a red-first differential row is impossible without breaking
+  `StateWf`. WHY unreachable: every heap cell is created by
+  `ExecState.alloc`, the SOLE caller of `ExecState.freshLoc`, and it
+  writes the cell with `Heap.set` in the same step that mints the
+  address, so no store can name an address before its cell exists;
+  `nextAddr` advances only there; and `StateWf` bounds every address a
+  value carries (`Heap.locSup ≤ nextAddr`), seeded at
+  `runProgramSetupM` and kept by `Step.preserves_wf`. The pin is
+  therefore a Lean-level executable guard in `Tests/GoCoreEval.lean`
+  (`gocore-eval-tests`, run by `scripts/ci`): `storeLoc {} (.base ⟨0⟩)
+  (.int 7)` must be `.error (.internal _)` — shown FAIL against main's
+  definition before the fix ("condition is false"), ok after — beside
+  a positive control that the same store to an `alloc`'d cell succeeds
+  and reads back. Cases: none — no baseline row is named, by design.)
+- Discovered: 2026-09-03 by the grumpy-professor review
+  (`docs/2026-09-03_grumpy-professor-review.md`, §2 U5 "The memory
+  model is not a module" and §3 A2 "Dense heap"), which named the arm
+  as "the fail-open aliasing the decoder's `globaladdr` bound check and
+  the driver's `StateWf` assert exist to prevent".
+
+Pre-fix (Ops.lean, `storeLoc`'s root case): `| none => return { state
+with heap := Heap.set state.heap loc { value } }` — a lookup miss at
+a `.base` address APPENDED a fresh cell with no `declaredTy` and
+returned success. Under the charter's doctrine ("never a silent
+default, never an absorbing fallback") that is a defect regardless of
+reachability: had a dangling `.addr` ever reached it (a decoder gid
+escaping its bound, a future allocator that forgot to write its cell),
+the store would have silently succeeded and the phantom cell would
+have ALIASED whatever later `alloc` landed on that address (alloc's
+`Heap.set` overwrites an existing key), with no red anywhere. The two
+external nets the review names — the decoder's `globaladdr` bound
+check (NativeToIR.lean) and the driver's `StateWf` assert
+(StepFn.lean `runProgramSetupM`) — are defense in depth, not a reason
+to keep the fallback; the trusted surface must refuse on its own.
+
+Refusal constructor ([AGENT] choice, inside the brief's suggestion):
+`.internal`, not `.stuck`. The review's U12 notes the taxonomy rule is
+unstated; the existing analogous sites are the rule this slice
+follows — Multi.lean uses `.internal` for "cannot happen on a
+well-formed state" (hchan-invariant breaches in `applyPairing`,
+`resume on an unready blocked …`), and `.stuck` for an ill-shaped
+program operand (`expected struct base for field store`). A store to
+an unallocated address is the former. The READ side, `loadLoc`'s
+`| none => stuck "unbound GoCore heap location"`, already refuses and
+is left untouched: reclassifying it to `.internal` would change an
+observable status string (`stuck` → `error`) for a taxonomy tidy-up
+outside this slice — recorded here as a U12 instance, not fixed.
+
+The same audit over every `Heap.lookup … | none =>` in the semantic
+core (Ops.lean, Machine.lean, Multi.lean, StepFn.lean, Race.lean):
+there are exactly TWO such sites — `loadLoc` (already refuses) and
+`storeLoc` (fixed here). Every other heap access flows through those
+two (Race.lean's call-site inventory says so and the grep confirms
+it; the only direct `Heap.set` outside `storeLoc`'s hit arm is
+`ExecState.alloc`). The other `| none => return …` arms in those files
+are `Option` results of map/method/record lookups whose absence is a
+modeled Go outcome (a missing map key reads the zero value; a nil map
+delete is a no-op; a method-set miss is a `false` satisfaction
+answer), not heap misses — legitimately optional.
+
+What this slice does NOT do: the review's A2 proposal (dense heap,
+`Heap := Array HeapCell`, addresses are indices) would make the arm
+UNREPRESENTABLE by type; that is a representation change with its
+own proof churn and belongs to its own arc. This entry is the minimal
+fail-closed guard until then. Gate: full `ci --diff` with ZERO
+baseline drift — the arm was indeed unreachable on every corpus row.

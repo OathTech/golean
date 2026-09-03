@@ -449,9 +449,8 @@ theorem storeLoc_root_frame :
           obtain ⟨v', _, hσ⟩ := h
           subst hσ
           exact Heap.lookup_set_ne hkey
-      · simp only [pure_eq_ok, Except.ok.injEq] at h
-        subst h
-        exact Heap.lookup_set_ne hkey
+      · -- unallocated root: the store REFUSES (BUG-085), nothing to show
+        simp [throw, throwThe, MonadExceptOf.throw] at h
   | field b tid fname ih =>
       intro s s' v h m hne
       unfold storeLoc at h

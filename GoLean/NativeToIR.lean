@@ -33,11 +33,13 @@ package-level-variable count (audit response 2026-08-05, C1): every
 `globaladdr` gid must be strictly below it, checked AT THE DECODE
 BOUNDARY — the one-boundary-constructor collision-check rule. Without
 the check a malformed wire's dangling gid did NOT go stuck as
-originally claimed: `Heap.set` materializes cells for unseeded
-locations, so an out-of-range gid aliased onto whatever the allocator
-handed out next (e.g. the subject's result cell) and produced a silent
-wrong answer. The driver-level `StateWf` assert after seeding
-(`runProgramM`/`enumSetup`) is the defense-in-depth second net. -/
+originally claimed: `storeLoc` at an unseeded location used to
+MATERIALIZE a cell, so an out-of-range gid aliased onto whatever the
+allocator handed out next (e.g. the subject's result cell) and
+produced a silent wrong answer. Since BUG-085 (2026-09-03) `storeLoc`
+refuses `.internal` there, so the core now fails closed on its own;
+this check and the driver-level `StateWf` assert after seeding
+(`runProgramM`/`enumSetup`) remain as the earlier, louder nets. -/
 private abbrev LowerM := ReaderT Nat (Except String)
 
 private def fail {α} (msg : String) : LowerM α :=
@@ -425,9 +427,10 @@ partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
       -- assignment is the emitter's single collection loop (dense by
       -- construction), and the BOUND CHECK here is the decode-boundary
       -- collision check (audit response 2026-08-05, C1): a dangling gid
-      -- does NOT go stuck at runtime — `Heap.set` materializes cells for
-      -- unseeded locations, so it would alias the next allocation — a
-      -- malformed wire refuses loud here instead.
+      -- used NOT to go stuck at runtime — `storeLoc` materialized cells
+      -- for unseeded locations, so it would alias the next allocation
+      -- (closed core-side by BUG-085: the store now refuses `.internal`);
+      -- a malformed wire still refuses loud here, at the boundary.
       let gid ← StrictJson.nat s!"{path}.gid" (← StrictJson.field path obj "gid")
       let nGlobals ← read
       if gid < nGlobals then
