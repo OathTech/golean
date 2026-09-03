@@ -175,8 +175,10 @@ scripts/test-lane-validation --with-go
   paragraph is docs-only (evidence + this wording), on top of that tip.
 
 * Two-draw floor: CLEAN-tree `scripts/capped scripts/ci --diff` at the
-  floor commit — see `ci-diff-clean-floor.log` (recorded by the docs-only
-  follow-up commit).
+  floor commit **`c818c775`** (0 dirty files; `ci-diff-clean-floor.log`):
+  RESULT: PASS, baseline diff FULL 3195/3195 no regression, negative 394
+  match, both test-lane-validation halves ok (S1-S6), reconciler 3 / 0
+  HIGH, 387 s wall. This paragraph's commit is docs-only on top of it.
 
 ## Toolchain, commit, host
 
