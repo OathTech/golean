@@ -138,6 +138,8 @@ gate) and is withdrawn.
 
 ### F2 — BUG-086 (spurious refusal, whole-program, inside the frozen stdlib allowlist)
 
+[FIXED 2026-09-03, lane bug086-shim-closure — see docs/BUGS.md BUG-086 Status; line citations below are pre-fix, at main 787837ed.]
+
 Program: any program calling `strconv.FormatInt` without also calling
 `strconv.FormatUint`. Frontend: `nativefrontend: type-check:
 golean-stdlib-shims.go:11:16: undefined: goleanShimStrconvFormatUint`.

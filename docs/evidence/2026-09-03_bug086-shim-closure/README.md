@@ -53,6 +53,11 @@ code planted).
   `raftsubject/quorum` calls FormatInt (`voteresult_string.go`) AND
   FormatUint (`quorum.go`) in one unit, so its bundle was already
   closed; the closure adds nothing there.
+- `transcripts/red-first-declnames-exact.txt` — audit follow-up F2: the
+  `stdlibShimDeclNames` rows asserted EQUAL to each source's top-level
+  declared names (and no var/const anywhere); red-first by locally
+  dropping `stringsRepeatBoundName` from its row (fails naming the
+  missing name), restored, green.
 - `transcripts/gate-tail.txt` — the tail of the full
   `scripts/capped scripts/ci --diff` run on the lane's tree.
 
@@ -98,7 +103,7 @@ The injection plumbing is now dependency-closed and the closure is
 mechanized: FormatInt was the only unclosed entry, its two rows flip
 FAIL → PASS with no other row moving, pins do not move, D-002's surface
 is unchanged in size and meaning. GATE: see `transcripts/gate-tail.txt`
-(recorded when the run finished — the line below is copied from it).
+(recorded when the run finished — the line below is synthesized from it: a composite of its result, baseline-diff, re-pin-guard, pins and reconciler lines).
 
 GATE RESULT: `scripts/capped scripts/ci --diff` RESULT: PASS — differential
 3195/3195 no regression (3001 PASS / 194 FAIL), negative 394/394, re-pin

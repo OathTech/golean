@@ -186,6 +186,58 @@ func shimSourceRefs(t *testing.T, key string, owner map[string]string) map[strin
 	return refs
 }
 
+// shimSourceDecls returns every top-level name a shim source declares:
+// funcs, types, and methods by their receiver's base type (which must
+// itself be declared in the same source). A shim source must declare
+// NO package-level var or const: an injected declaration can never add
+// a package-initialization entry to the user's program.
+func shimSourceDecls(t *testing.T, key string) map[string]bool {
+	t.Helper()
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, key+".go", "package main\n"+stdlibShimSources[key], 0)
+	if err != nil {
+		t.Fatalf("%s: shim source failed to parse: %v", key, err)
+	}
+	names := map[string]bool{}
+	var methodOwners []string
+	for _, decl := range f.Decls {
+		switch d := decl.(type) {
+		case *ast.FuncDecl:
+			if d.Recv == nil {
+				names[d.Name.Name] = true
+				continue
+			}
+			rt := d.Recv.List[0].Type
+			if star, ok := rt.(*ast.StarExpr); ok {
+				rt = star.X
+			}
+			id, ok := rt.(*ast.Ident)
+			if !ok {
+				t.Errorf("%s: method %s has a non-identifier receiver type", key, d.Name.Name)
+				continue
+			}
+			methodOwners = append(methodOwners, id.Name)
+		case *ast.GenDecl:
+			for _, spec := range d.Specs {
+				switch s := spec.(type) {
+				case *ast.TypeSpec:
+					names[s.Name.Name] = true
+				case *ast.ValueSpec:
+					for _, id := range s.Names {
+						t.Errorf("%s: declares package-level var/const %s — an injected shim must add no init entry", key, id.Name)
+					}
+				}
+			}
+		}
+	}
+	for _, o := range methodOwners {
+		if !names[o] {
+			t.Errorf("%s: method receiver type %s is not declared in the same shim source", key, o)
+		}
+	}
+	return names
+}
+
 func sortedKeys(m map[string]bool) []string {
 	out := make([]string, 0, len(m))
 	for k := range m {
@@ -207,8 +259,19 @@ func sortedKeys(m map[string]bool) []string {
 func TestStdlibShimDepsExact(t *testing.T) {
 	owner := shimNameOwner(t)
 	for key := range stdlibShimSources {
-		if _, ok := stdlibShimDeclNames[key]; !ok {
+		row, ok := stdlibShimDeclNames[key]
+		if !ok {
 			t.Errorf("%s: shim source has no stdlibShimDeclNames row", key)
+			continue
+		}
+		rowSet := map[string]bool{}
+		for _, n := range row {
+			rowSet[n] = true
+		}
+		declared := shimSourceDecls(t, key)
+		d, r := sortedKeys(declared), sortedKeys(rowSet)
+		if strings.Join(d, ",") != strings.Join(r, ",") {
+			t.Errorf("%s: source declares top-level names %v but stdlibShimDeclNames lists %v (the collision scan sees only the row)", key, d, r)
 		}
 	}
 	for key, deps := range stdlibShimDeps {

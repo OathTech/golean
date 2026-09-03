@@ -1,0 +1,15 @@
+# producer: GO111MODULE=off GOCACHE=$PWD/artifacts/go-build-cache go test ./tools/nativefrontend -run TestStdlibShimDepsExact -v
+# tree: 118fa18c + the F2 test hardening, with stdlibShimDeclNames[stringsRepeatShimName] LOCALLY MUTATED to drop stringsRepeatBoundName (red-first); then restored and re-run (green)
+# go: go version go1.26.5 linux/amd64
+## RED (mutated row)
+=== RUN   TestStdlibShimDepsExact
+    stdlibshim_closure_test.go:274: goleanShimStringsRepeat: source declares top-level names [goleanShimStringsRepeat goleanShimStringsRepeatBound] but stdlibShimDeclNames lists [goleanShimStringsRepeat] (the collision scan sees only the row)
+--- FAIL: TestStdlibShimDepsExact (0.00s)
+FAIL
+FAIL	_/home/dev/projects/golean/.claude/worktrees/bug086-shim-closure/tools/nativefrontend	0.004s
+FAIL
+## GREEN (row restored)
+=== RUN   TestStdlibShimDepsExact
+--- PASS: TestStdlibShimDepsExact (0.00s)
+PASS
+ok  	_/home/dev/projects/golean/.claude/worktrees/bug086-shim-closure/tools/nativefrontend	0.004s
