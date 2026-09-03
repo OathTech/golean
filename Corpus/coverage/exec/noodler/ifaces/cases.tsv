@@ -14,6 +14,7 @@ iface-dispatch-value-nil	ifaceDispatchValueMethodNilPtr	-	panic	invalid memory a
 iface-dispatch-value-nil-recovered	ifaceDispatchValueMethodNilPtrRecovered	-	ok	-	interfaces,methods,nil,pointers,recover
 iface-param-value-nil	ifaceParamValueMethodNilPtr	-	panic	value method main.Inner.Val called using nil *Inner pointer	interfaces,methods,nil,pointers,calls,panic
 global-iface-value-nil	globalIfaceValueMethodNilPtr	-	panic	value method main.Inner.Val called using nil *Inner pointer	interfaces,methods,nil,pointers,globals,panic
+mk-helper-value-nil	mkHelperValueMethodNilPtr	-	panic	invalid memory address or nil pointer dereference	interfaces,methods,nil,pointers,calls,panic
 mv-nil-direct	methodValueNilPtrDirect	-	panic	invalid memory address or nil pointer dereference	methods,nil,pointers,panic
 embedded-iface-nil	embeddedInterfaceNilCall	-	panic	invalid memory address or nil pointer dereference	embedding,interfaces,nil,panic
 embedded-iface-call	embeddedInterfaceCall	-	ok	-	embedding,interfaces,methods

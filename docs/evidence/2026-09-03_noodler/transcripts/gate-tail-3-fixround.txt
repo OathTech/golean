@@ -1,0 +1,40 @@
+# tail of artifacts/noodler-probes/ci-diff-3.log — scripts/capped scripts/ci --diff at the audit-fix-round tree (dirty: the fix-round edits, base 41d8ca0d), 2026-09-03
+# (expected FAIL: drift = the one new witness row + the confluent promotion vs the records pin; re-pinned in the fix-round commit)
+84:DRIFT vs baselines/native-full.tsv (3143 case(s) run):
+85-noodler/ifaces/mk-helper-value-nil	NEW id (not in baseline) -> PASS/-
+86-noodler/membership/delete-other-key-during-range	baseline[PASS/-] -> now[PASS/confluent]
+87-
+88-[1m── baseline re-pin guard (worktree-vs-HEAD; flips must be on a BUGS.md Cases: line)[0m
+
+  [04] C5  MEDIUM  1 frontier-table case citation(s) do not resolve against the baseline
+  [05] C6  MEDIUM  2 dangling `BUG` cross-reference(s) in docs/ (the id has no definition)
+  [06] C9  MEDIUM  the wire schema moved after the certification date 2026-09-01 (7 commit(s) to wire.go/NativeToIR.lean) — the certified set's wire sha is only current if `scripts/ci --slow` has re-enumerated since
+
+[1m══ scripts/ci summary ══[0m
+  note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   core build (warning-free)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   eval tests (146 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  note negative baseline diff matched (394 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  FAIL baseline diff (DRIFT — see above)
+  ok   re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)
+  note reconciler: 6 finding(s), 2 HIGH — report-only (details: tools/reconcile-records)
+
+[1mRESULT: FAIL[0m

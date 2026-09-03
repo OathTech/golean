@@ -67,7 +67,8 @@ func deleteIdiomTail() (int, int, int) {
 	s := []int{1, 2, 3, 4}
 	orig := s[:4]
 	s = append(s[:1], s[2:]...)
-	return len(s), s[1]*10 + s[2], orig[3]
+	// orig shares the backing array: [1 3 4 4] after the shift.
+	return len(s), s[1]*10 + s[2], orig[1]*100 + orig[2]*10 + orig[3]
 }
 
 // Appending a slice to itself doubles it.

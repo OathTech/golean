@@ -45,13 +45,14 @@ func shiftPastWidth() (uint8, int8, int8, uint64, int64) {
 // without the shift (spec#Operators: "the shift expression ... is
 // converted to the type it would assume if the shift were replaced by
 // its left operand alone").
-func untypedOneShiftContext() (int8, int32, uint8, int64) {
+func untypedOneShiftContext() (int8, int32, uint8, int64, int8) {
 	s := 7
 	var a int8 = 1 << s         // int8(1) << 7 = -128
 	var b int32 = 1 << s        // 128
 	var c uint8 = 1 << (s + 1)  // uint8(1) << 8 = 0
 	var d int64 = 1 << (s + 56) // 1<<63 = MinInt64
-	return a, b, c, d
+	var e int8 = 1 << s >> s    // (int8(1) << 7) >> 7 = -128 >> 7 = -1, not 1
+	return a, b, c, d, e
 }
 
 // A shift with a signed count that is non-negative is fine (Go 1.13).

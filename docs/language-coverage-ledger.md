@@ -471,11 +471,11 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (3194 cases, 2998 PASS /
+All numbers at the current tracked baseline (3195 cases, 2999 PASS /
 196 FAIL — the round-6 merge-train UNION 2026-09-03 [AGENT] of the
 noodler lane's re-pin replayed over the atomics-w1 re-pin on main:
-atomics-w1's 2632 / 2459 / 173 + the noodler's 562 born rows (539 PASS /
-23 FAIL) = 3194 / 2998 / 196; the two lanes' new rows are disjoint by
+atomics-w1's 2632 / 2459 / 173 + the noodler's 563 born rows (540 PASS /
+23 FAIL) = 3195 / 2999 / 196; the two lanes' new rows are disjoint by
 id and no row of either lane moved in the union — re-derived from the
 union baseline's data rows, not summed by hand. The two lanes' own
 records, in merge order: (i) the atomics-w1 re-pin — 2632 cases, 2459 PASS /
@@ -483,9 +483,12 @@ records, in merge order: (i) the atomics-w1 re-pin — 2632 cases, 2459 PASS /
 `atomics-w1`, §8d: 2580 / 2403 / 177 + 46 born-PASS + 4 FAIL→PASS
 flips + 1 FAIL stage move = 2626 / 2453 / 173, then its audit fix
 round's 6 born-PASS op × kind rows (H4) = 2632 / 2459 / 173; (ii) the
-noodler re-pin — 3142 cases, 2942 PASS / 200 FAIL over main = 2580 /
-2403 / 177: +562 born rows under `noodler/` (539 PASS + 23 FAIL, every
-FAIL triaged in the baseline header — 3 on BUG-085's Cases line, 2 on
+noodler re-pin — 3143 cases, 2943 PASS / 200 FAIL over main = 2580 /
+2403 / 177, as amended at the lane's audit fix round (+1 born-PASS
+witness row `noodler/ifaces/mk-helper-value-nil`, one strict→confluent
+stage promotion `noodler/membership/delete-other-key-during-range`, 3
+observables sharpened in place): +563 born rows under `noodler/` (540 PASS + 23 FAIL, every
+FAIL triaged in the baseline header — 3 on BUG-087's Cases line (latitude, not wrong-answer), 2 on
 BUG-086's, 17 frontend-export refusals that are either known seams or
 the report's FG-1..FG-5 frontier candidates, 1 `coverage` entrant in
 untriaged-ids beside FR-10's own pin; `docs/2026-09-03_noodler-report.md`);
@@ -620,7 +623,7 @@ bucket's BUG-041 red changed ROW, not count):**
 | design questions Q-* (§6) | 10 |
 | (c) profound-reason pins (triage §4 + the unsafe marker) | 9 + 1 |
 | (a)-queued fixes (triage §3.2: A3 5, A4 1, A5 1, A7 1) | 8 |
-| post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) + the gotest-fixes BUG-078 budget refusal pin (`arrays/materialization-budget/over-budget`, on BUG-078's Cases line since the audit fix round) + the bug082-maphint audit-round BUG-083 hoist-order pin (`builtins/len-vs-call-order/hint-panicky-between`, 2026-09-02) + the q-u4-gomem BUG-084 designed-divergence pins (`race/gomem-only/*`, 5 rows: go_mem-racy / TSan-green shapes REFUSED by [USER] ruling Q-U4RESIDUAL (A), 2026-09-02) + the noodler lane's 23 born-FAIL probe rows (2026-09-03, `docs/2026-09-03_noodler-report.md`: 3 on BUG-085's Cases line, 2 on BUG-086's, 6 short-circuit-operand refusals + goto-forward-in-block + self-shadow-define + `defer delete` + 2 duplicate-local-TypeId = the report's FG-1..FG-5 frontier candidates (11), 2 BUG-068 red-by-design re-hits, 1 FR-3 re-hit, 3 triage-F6/A3 re-hits, 1 FR-10 value-copy witness in untriaged-ids) | 85 |
+| post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) + the gotest-fixes BUG-078 budget refusal pin (`arrays/materialization-budget/over-budget`, on BUG-078's Cases line since the audit fix round) + the bug082-maphint audit-round BUG-083 hoist-order pin (`builtins/len-vs-call-order/hint-panicky-between`, 2026-09-02) + the q-u4-gomem BUG-084 designed-divergence pins (`race/gomem-only/*`, 5 rows: go_mem-racy / TSan-green shapes REFUSED by [USER] ruling Q-U4RESIDUAL (A), 2026-09-02) + the noodler lane's 23 born-FAIL probe rows (2026-09-03, `docs/2026-09-03_noodler-report.md`: 3 on BUG-087's Cases line, 2 on BUG-086's, 6 short-circuit-operand refusals + goto-forward-in-block + self-shadow-define + `defer delete` + 2 duplicate-local-TypeId = the report's FG-1..FG-5 frontier candidates (11), 2 BUG-068 red-by-design re-hits, 1 FR-3 re-hit, 3 triage-F6/A3 re-hits, 1 FR-10 value-copy witness in untriaged-ids) | 85 |
 | **total** | **196** |
 
 *(Movement at the 2026-09-02 q-u4-gomem re-pin (union taken at the

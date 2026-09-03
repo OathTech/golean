@@ -329,12 +329,14 @@ wrong-answer 0
 #   nil-slice-zero-array ENTERS as `coverage` — the slice->array VALUE
 #   conversion's succeeding form (`[0]int(nilSlice)`), refused at
 #   GoCore/Ops.lean:1372 "slice-to-array value conversion (succeeding
-#   form; triage L2b frontier)". The SAME frontier row as the standing
-#   entry spec-examples-decl/slice-to-array/ok-forms (ledger §4 FR-10;
-#   triage L2b: "the value-copy form rides the same frontier row") —
+#   form; triage L2b frontier)". Triage L2b itself covers only the
+#   ARRAY-POINTER form; the value-copy form rides FR-10's row by the
+#   arm's own comment, Ops.lean:1364-1367 ("the value-copy form rides
+#   the same frontier row (spec-examples-decl/slice-to-array/ok-forms
+#   pins both red)") — the standing entry is that row's other pin —
 #   a second witness of one recorded refusal, rolled in because the
 #   [USER] brief asks for every probe row to land. Retires with FR-10.
-#   wrong-answer stays 0: the noodler's two fidelity finds (BUG-085 the
+#   wrong-answer stays 0: the noodler's two fidelity finds (BUG-087 the
 #   panic-text divergence, BUG-086 the FormatInt shim refusal) pin on
 #   their own Cases lines.
 # 9 / 12 -> 10 (2026-09-03, round-6 merge-train UNION, [AGENT]): the two

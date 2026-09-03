@@ -1,4 +1,4 @@
-# producer: the python one-off in the noodler records commit (docs/evidence/2026-09-03_noodler/README.md, Reproduction), reading artifacts/coverage/latest.tsv from the full `scripts/capped scripts/ci --diff` at eeb78dfd (dirty)
+# producer: python3 docs/evidence/2026-09-03_noodler/per-area-table.py, reading artifacts/coverage/latest.tsv of the full `scripts/capped scripts/ci --diff` named in README.md
 package	rows	pass	fail	born_fail_ids(stage)
 noodler/arith	19	19	0	-
 noodler/bounds	20	20	0	-
@@ -15,7 +15,7 @@ noodler/generics	19	19	0	-
 noodler/goroutines	16	16	0	-
 noodler/gostmt	8	8	0	-
 noodler/gotchas	16	16	0	-
-noodler/ifaces	26	23	3	noodler/ifaces/mv-iface-nil-call(differential) noodler/ifaces/iface-param-value-nil(differential) noodler/ifaces/global-iface-value-nil(differential)
+noodler/ifaces	27	24	3	noodler/ifaces/mv-iface-nil-call(differential) noodler/ifaces/iface-param-value-nil(differential) noodler/ifaces/global-iface-value-nil(differential)
 noodler/indexkinds	9	9	0	-
 noodler/init	5	5	0	-
 noodler/initpanic	4	4	0	-

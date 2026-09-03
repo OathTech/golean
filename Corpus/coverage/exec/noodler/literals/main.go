@@ -33,14 +33,22 @@ func bigConstantShift() (int, float64) {
 	return back, float64(huge) / float64(1<<99)
 }
 
-// Typed float32 constants round at the type, then arithmetic is exact
-// on the rounded values.
-func typedFloat32Constants() (bool, bool) {
+// TYPED float32 constant arithmetic rounds to float32 after every
+// operation (spec#Constant_expressions: typed constant values "must
+// always be accurately representable by values of the constant type"),
+// so a typed chain equals the runtime chain; an UNTYPED chain is exact
+// and rounds once at the conversion, which differs (gc-probed:
+// artifacts p3 — true false false true).
+func typedFloat32Constants() (bool, bool, bool, bool) {
 	const c float32 = 0.1
-	const d = c * 3
 	var v float32 = 0.1
-	w := v * 3
-	return d == w, float64(d) == 0.3
+	const typed7 = c * c * c * c * c * c * c
+	const untyped7 = 0.1 * 0.1 * 0.1 * 0.1 * 0.1 * 0.1 * 0.1
+	w7 := v * v * v * v * v * v * v
+	f := float32(untyped7)
+	var g float32 = 0.1 * 10
+	t := v + v + v + v + v + v + v + v + v + v
+	return typed7 == w7, f == w7, g == t, g == 1
 }
 
 // len of constant strings and arrays is a constant.

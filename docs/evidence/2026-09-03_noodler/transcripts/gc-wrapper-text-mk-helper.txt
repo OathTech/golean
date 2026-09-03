@@ -1,0 +1,5 @@
+# the same-source witness (audit fix round F-B): one program, four flag sets, go1.26.5 linux/amd64
+go run <default>   mk-helper -> runtime error: invalid memory address or nil pointer dereference
+go run -gcflags=-l mk-helper -> value method main.Inner.Val called using nil *Inner pointer
+go run -gcflags=-l=4 mk-helper -> runtime error: invalid memory address or nil pointer dereference
+go run -gcflags=-N -l mk-helper -> value method main.Inner.Val called using nil *Inner pointer

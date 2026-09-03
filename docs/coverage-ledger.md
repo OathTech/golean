@@ -69,7 +69,7 @@ suite grows. Representative cases are examples, not an exhaustive manifest.
 | Map iteration order | deferred-nondet | - | Needs set/permutation observation or relation-style oracle. |
 | Unsafe and layout | deferred-unsafe | - | Needs explicit unsafe policy. |
 | Standard library semantics | deferred-stdlib | - | Track separately from language semantics; reduce only language-relevant parts into active cases. |
-| Noodler edge probes (2026-09-03) | active | `noodler/ifaces/*` (nil-receiver dispatch texts, BUG-085), `noodler/latitude/*` (spec-unordered operand-vs-call census), `noodler/membership/*` (spec-bounded admitted sets), `noodler/frontier/*` + `noodler/frontier2/*` (one-case probes of the frontend's own refusal strings), `noodler/{conversions,arith,bounds,closures,defers,maps,evalorder,select,generics,structs,methods,literals,builtins,goroutines,init,initpanic,strings,misc,floats,panics,slices,ranges,syncmisuse,gostmt,typeswitch,indexkinds,gotchas,budget,names,local-types,strconv-formatint}` — 562 rows / 90 packages | Findings and the frontier candidates FG-1..FG-5 in `docs/2026-09-03_noodler-report.md`; wall-clock cliffs (recursion depth, slice size) recorded there §6, rows sized under the runner's timeout. |
+| Noodler edge probes (2026-09-03) | active | `noodler/ifaces/*` (nil-receiver dispatch texts, BUG-087), `noodler/latitude/*` (spec-unordered operand-vs-call census), `noodler/membership/*` (spec-bounded admitted sets), `noodler/frontier/*` + `noodler/frontier2/*` (one-case probes of the frontend's own refusal strings), `noodler/{conversions,arith,bounds,closures,defers,maps,evalorder,select,generics,structs,methods,literals,builtins,goroutines,init,initpanic,strings,misc,floats,panics,slices,ranges,syncmisuse,gostmt,typeswitch,indexkinds,gotchas,budget,names,local-types,strconv-formatint}` — 563 rows / 90 packages | Findings and the frontier candidates FG-1..FG-5 in `docs/2026-09-03_noodler-report.md`; wall-clock cliffs (recursion depth, slice size) recorded there §6, rows sized under the runner's timeout. |
 | Go version-specific features | partial | `panic-recover/panic-nil-recover` records Go 1.21+ behavior; `builtins/clear-map`, `builtins/clear-slice`, `builtins/min-max-ints`, and `builtins/min-max-strings` use Go 1.21+ builtins; `range/range-int`, `range/range-int-zero`, `range/range-int-negative`, `range/range-int-typed`, and `range/range-loop-var-capture` record Go 1.22+ range/loop-variable behavior; `range/range-func-basic` and `range/range-func-break` record Go 1.23+ iterator-function range behavior; `generics/type-aliases` records generic type alias behavior supported by the installed Go 1.26.5 toolchain; current active cases otherwise use baseline installed Go 1.26.5 | Add future version notes when syntax or semantics changes across Go releases. |
 
 ## Core Coverage Spike Notes
@@ -134,5 +134,6 @@ suite grows. Representative cases are examples, not an exhaustive manifest.
   machine's admitted set equalled the spec-bounded set on every shape
   probed (two-sender buffer order, 3-key map order, two-ready select,
   insert-then-delete during range) and the strict guard
-  `noodler/membership/delete-other-key-during-range` pins that deleting
-  an unreached key yields exactly one iteration.
+  `noodler/membership/delete-other-key-during-range` (`lane=confluent`,
+  enumerator certificate `|set|=1` over all schedules) pins that
+  deleting an unreached key yields exactly one iteration.

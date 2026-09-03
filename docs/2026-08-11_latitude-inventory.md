@@ -1083,7 +1083,23 @@ subexpressions of one binary operator).
   (pure observables: the call mutates the state the left operand
   reads, so call-first yields a defined value and operand-first
   panics; no printing needed). All three PASS: the machine's
-  realization matches gc's. XIMPL/ARCH would bear on whether any
+  realization matches gc's. CENSUS EXTENSION (noodler lane, 2026-09-03,
+  [AGENT] — `docs/2026-09-03_noodler-report.md` §2 "latitude"): the
+  twelve `noodler/latitude/*` rows put a non-call operand (index read,
+  variable read, VALUE-RECEIVER copy, deref) beside a call that mutates
+  what it reads, in every position the follow-ons below named and more
+  — slice-literal element (`[]int{a[0], f()}`), keyed struct literal,
+  MAP-LITERAL key-vs-value (`map[int]int{a[0]: f()}`), value receiver
+  vs argument call (`v.Plus(f())`, E14's row), call-argument list,
+  string concat, conversion operand, deref-vs-call, index/call/index,
+  `return` list, send channel-vs-value, a define RHS list — plus the
+  three `noodler/maps/{compound-call-mutates,slice-compound-call-mutates,
+  compound-call-deletes}` rows (`m[k] op= f()` / `a[i] op= f()` with f
+  mutating or deleting the element: the element is read AFTER the
+  call). All fifteen PASS with gc realizing call-first; they ride THIS
+  entry's (b)-pin and its re-envelope obligation (the three maps rows
+  carry no latitude label in their features — recorded here instead).
+  XIMPL/ARCH would bear on whether any
   implementation realizes operand-first (none known; same open
   question as E2).
 - RE-ENVELOPE OBLIGATION + COST: rides E2's re-envelope (same
@@ -1092,11 +1108,16 @@ subexpressions of one binary operator).
   entry's observables too). Until E2 opens, no new machine arms;
   widening then requires either frontend order-variants or a GoCore
   operand-order choice site. MODERATE, sequential-only observable.
-  RECORDED CENSUS FOLLOW-ONS (P2 audit): the same spec section names
-  further unspecified orders not yet censused — composite-literal
-  element order vs a call among the elements (`[]int{a, f()}`),
-  duplicate-map-key evaluation order, and map-literal key-vs-value
-  order; E12 covers binary operators only.
+  RECORDED CENSUS FOLLOW-ONS (P2 audit) — CENSUSED 2026-09-03 (noodler
+  lane; rows in the EVIDENCE paragraph above): composite-literal
+  element order vs a call among the elements (`[]int{a, f()}` →
+  `noodler/latitude/slice-literal-index-vs-call`, `struct-literal-var-
+  vs-call`) and map-literal key-vs-value order (`noodler/latitude/
+  map-literal-key-vs-call`) — gc realizes call-first on both, matching
+  the machine; duplicate-map-key evaluation order was already pinned by
+  `maps/map-literal-duplicate-eval-order`. E12 was written for binary
+  operators only; the census now covers these sibling positions under
+  the same pin.
 
 ### E13. Non-call panicking operations (type assertion, indexing) vs SIBLING calls — (b) PINNED, structural (the same frontend ANF hoist): calls first
 
