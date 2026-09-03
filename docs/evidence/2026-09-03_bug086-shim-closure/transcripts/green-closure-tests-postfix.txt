@@ -1,0 +1,11 @@
+# producer: GO111MODULE=off GOCACHE=$PWD/artifacts/go-build-cache go test ./tools/nativefrontend -run 'TestStdlibShim|TestCloseShimDeps' -v ; then the whole package
+# tree: as above (POST-FIX)
+# go: go version go1.26.5 linux/amd64
+    stdlibshim_closure_test.go:134: 20 call-shape-table entries enumerated
+--- PASS: TestStdlibShimInjectionClosedPerEntry (0.01s)
+--- PASS: TestStdlibShimDepsExact (0.00s)
+--- PASS: TestStdlibShimEachKeyClosedAlone (0.00s)
+--- PASS: TestCloseShimDepsRefusesUnknownDep (0.00s)
+PASS
+ok  	_/home/dev/projects/golean/.claude/worktrees/bug086-shim-closure/tools/nativefrontend	0.010s
+ok  	_/home/dev/projects/golean/.claude/worktrees/bug086-shim-closure/tools/nativefrontend	0.179s

@@ -1,0 +1,5 @@
+# producer: scripts/check-frontend-pins (tree as above)
+nativefrontend: WARNING (E7 allow active): native frontend unsupported: package-level initializer of [hiddenX] reaches a method call through an interface (.ab), and a same-package method ab reads the initialized package variable hiddenA: a HIDDEN data dependency — spec#Package_initialization leaves the initialization order unspecified there, and the realized go/types InitOrder is KNOWN to differ from gc's on this shape (latitude E7; deviation record init/hidden-dep-order) — fail closed
+check-frontend-pins: ok [hidden-dep-order] — realized deviation order matches the recorded pin
+check-frontend-pins: ok [twin-wire] — fresh emit = pinned wire (eef32142627a…)
+exit=0

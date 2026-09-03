@@ -244,6 +244,49 @@ var stdlibShimDeclNames = map[string][]string{
 	shimUnsupportedName:      {shimUnsupportedName},
 }
 
+// stdlibShimDeps: shim key -> the OTHER shim keys whose sources its
+// own source calls. The injection scan marks the shims the program's
+// call sites map to; closeShimDeps then adds these transitively, so a
+// planted bundle is always closed under its own references (BUG-086:
+// a FormatInt-only program planted FormatInt's source, which calls
+// goleanShimStrconvFormatUint, without the FormatUint shim — and the
+// export died in the type-checker). This table is a property of the
+// shim SOURCES, not of any call-site row, so it is declared once here
+// and CHECKED against the sources by stdlibshim_closure_test.go in
+// both directions (a reference with no row here, or a row with no
+// reference, fails the build's tests). shimUnsupportedName is never
+// listed: it rides along with every bundle (injectStdlibShims).
+// D-002: plumbing only — no shim, no body, no allowlist row changes.
+var stdlibShimDeps = map[string][]string{
+	strconvFormatIntShimName: {strconvFormatUintShimName},
+	fmtDynShimKey:            {fmtShimBundleKey},
+}
+
+// closeShimDeps adds to needed, transitively, every shim a needed
+// shim's source depends on (stdlibShimDeps). Fails closed on a
+// dependency that names no shim source: a typo in the table must
+// refuse the export, never plant an empty string.
+func closeShimDeps(needed map[string]bool) error {
+	work := make([]string, 0, len(needed))
+	for shim := range needed {
+		work = append(work, shim)
+	}
+	for len(work) > 0 {
+		shim := work[len(work)-1]
+		work = work[:len(work)-1]
+		for _, dep := range stdlibShimDeps[shim] {
+			if _, ok := stdlibShimSources[dep]; !ok {
+				return fmt.Errorf("internal: stdlib shim %s depends on %s, which has no shim source (stdlibShimDeps)", shim, dep)
+			}
+			if !needed[dep] {
+				needed[dep] = true
+				work = append(work, dep)
+			}
+		}
+	}
+	return nil
+}
+
 // shimRuntimeRefusalReasons: reserved helper name -> the quarantine
 // reason its FORCE-QUARANTINED wire declaration carries (emit.go,
 // emitFuncDecl). Calling one throws GoError.unsupported with exactly
@@ -1446,6 +1489,13 @@ func injectStdlibShims(fset *token.FileSet, files []*ast.File) (*ast.File, error
 	}
 	if len(needed) == 0 {
 		return nil, nil
+	}
+	// Dependency closure (stdlibShimDeps, BUG-086): a shim whose SOURCE
+	// calls another shim plants that shim too, transitively — BEFORE the
+	// reserved-name scan, so every co-injected name is collision-checked
+	// like the ones the program's calls named directly.
+	if err := closeShimDeps(needed); err != nil {
+		return nil, err
 	}
 	// Every shim bundle may route a runtime refusal through the
 	// unsupported helper (R4-C-3), so it rides along whenever ANY shim

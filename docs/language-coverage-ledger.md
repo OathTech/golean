@@ -471,8 +471,12 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (3195 cases, 2999 PASS /
-196 FAIL — the round-6 merge-train UNION 2026-09-03 [AGENT] of the
+All numbers at the current tracked baseline (3195 cases, 3001 PASS /
+194 FAIL — the `bug086-shim-closure` re-pin 2026-09-03 [AGENT]: the
+round-6 union's 3195 / 2999 / 196 with BUG-086's two Cases rows
+`noodler/strconv-formatint/{edges,positive}` flipped FAIL → PASS by the
+shim-injection closure fix, no other row moved, re-derived from the data
+rows. That union — 3195 / 2999 / 196 — was the round-6 merge-train UNION 2026-09-03 [AGENT] of the
 noodler lane's re-pin replayed over the atomics-w1 re-pin on main:
 atomics-w1's 2632 / 2459 / 173 + the noodler's 563 born rows (540 PASS /
 23 FAIL) = 3195 / 2999 / 196; the two lanes' new rows are disjoint by
@@ -489,7 +493,7 @@ witness row `noodler/ifaces/mk-helper-value-nil`, one strict→confluent
 stage promotion `noodler/membership/delete-other-key-during-range`, 3
 observables sharpened in place): +563 born rows under `noodler/` (540 PASS + 23 FAIL, every
 FAIL triaged in the baseline header — 3 on BUG-087's Cases line (latitude, not wrong-answer), 2 on
-BUG-086's, 17 frontend-export refusals that are either known seams or
+BUG-086's (both flipped PASS at the 2026-09-03 `bug086-shim-closure` fix re-pin: 3195 rows = 3001 / 194), 17 frontend-export refusals that are either known seams or
 the report's FG-1..FG-5 frontier candidates, 1 `coverage` entrant in
 untriaged-ids beside FR-10's own pin; `docs/2026-09-03_noodler-report.md`);
 no main row moved; the §2/§4 per-section arithmetic below is NOT
@@ -623,10 +627,10 @@ bucket's BUG-041 red changed ROW, not count):**
 | design questions Q-* (§6) | 10 |
 | (c) profound-reason pins (triage §4 + the unsafe marker) | 9 + 1 |
 | (a)-queued fixes (triage §3.2: A3 5, A4 1, A5 1, A7 1) | 8 |
-| post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) + the gotest-fixes BUG-078 budget refusal pin (`arrays/materialization-budget/over-budget`, on BUG-078's Cases line since the audit fix round) + the bug082-maphint audit-round BUG-083 hoist-order pin (`builtins/len-vs-call-order/hint-panicky-between`, 2026-09-02) + the q-u4-gomem BUG-084 designed-divergence pins (`race/gomem-only/*`, 5 rows: go_mem-racy / TSan-green shapes REFUSED by [USER] ruling Q-U4RESIDUAL (A), 2026-09-02) + the noodler lane's 23 born-FAIL probe rows (2026-09-03, `docs/2026-09-03_noodler-report.md`: 3 on BUG-087's Cases line, 2 on BUG-086's, 6 short-circuit-operand refusals + goto-forward-in-block + self-shadow-define + `defer delete` + 2 duplicate-local-TypeId = the report's FG-1..FG-5 frontier candidates (11), 2 BUG-068 red-by-design re-hits, 1 FR-3 re-hit, 3 triage-F6/A3 re-hits, 1 FR-10 value-copy witness in untriaged-ids) | 85 |
-| **total** | **196** |
+| post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) + the gotest-fixes BUG-078 budget refusal pin (`arrays/materialization-budget/over-budget`, on BUG-078's Cases line since the audit fix round) + the bug082-maphint audit-round BUG-083 hoist-order pin (`builtins/len-vs-call-order/hint-panicky-between`, 2026-09-02) + the q-u4-gomem BUG-084 designed-divergence pins (`race/gomem-only/*`, 5 rows: go_mem-racy / TSan-green shapes REFUSED by [USER] ruling Q-U4RESIDUAL (A), 2026-09-02) + the noodler lane's 23 born-FAIL probe rows (2026-09-03, `docs/2026-09-03_noodler-report.md`: 3 on BUG-087's Cases line, 2 on BUG-086's (RETIRED 2026-09-03 by the `bug086-shim-closure` fix — both PASS, not counted here), 6 short-circuit-operand refusals + goto-forward-in-block + self-shadow-define + `defer delete` + 2 duplicate-local-TypeId = the report's FG-1..FG-5 frontier candidates (11), 2 BUG-068 red-by-design re-hits, 1 FR-3 re-hit, 3 triage-F6/A3 re-hits, 1 FR-10 value-copy witness in untriaged-ids) | 83 |
+| **total** | **194** |
 
-*(Movement at the 2026-09-02 q-u4-gomem re-pin (union taken at the
+*(Movement at the 2026-09-03 BUG-086 fix re-pin (lane `bug086-shim-closure`): post-vintage 85 → 83 — BUG-086's two born-red pins `noodler/strconv-formatint/{edges,positive}` flipped green when shim injection became dependency-closed (frontend plumbing only; no new rows; 3195 rows = 3001 PASS / 194 FAIL). Movement at the 2026-09-02 q-u4-gomem re-pin (union taken at the
 round-5 merge train 2026-09-03): post-vintage 57 → 62 — BUG-084's five
 designed-divergence pins `race/gomem-only/*` enter with their entry.
 Movement at the 2026-09-02 BUG-082 audit fix round re-pin:

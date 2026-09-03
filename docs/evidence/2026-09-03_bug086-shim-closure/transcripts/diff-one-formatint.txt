@@ -1,0 +1,15 @@
+# producer: scripts/capped scripts/diff-one noodler/strconv-formatint/edges noodler/strconv-formatint/positive strconv/format-parse/format-int-vals strconv/format-parse/format-uint-bases
+# tree: bug086-shim-closure worktree at main 787837ed + the lane's uncommitted fix (stdlibshim.go deps table/closure + closure tests); Lean built via scripts/capped lake build
+# go: go version go1.26.5 linux/amd64
+building Lean executable...
+Build completed successfully (60 jobs).
+native frontend: per-case type-check + emit (no batch export)
+PASS	strconv/format-parse/format-int-vals	stdlib,strings,ints,overflow
+PASS	noodler/strconv-formatint/positive	strings,stdlib,ints
+PASS	noodler/strconv-formatint/edges	strings,stdlib,ints
+PASS	strconv/format-parse/format-uint-bases	stdlib,strings,ints
+
+differential coverage summary: cases=4 pass=4 fail=0 export_status=0
+results: artifacts/coverage/latest.tsv
+metadata: artifacts/coverage/latest.meta.tsv
+# exit code not captured (zsh pipeline); the summary line above (cases=4 pass=4 fail=0) is the result

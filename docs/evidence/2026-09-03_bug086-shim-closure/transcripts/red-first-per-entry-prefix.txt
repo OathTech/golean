@@ -1,0 +1,13 @@
+# producer: GO111MODULE=off GOCACHE=$PWD/artifacts/go-build-cache go test ./tools/nativefrontend -run TestStdlibShimInjectionClosedPerEntry -v
+# tree: tools/nativefrontend/stdlibshim.go at main 787837ed (PRE-FIX plumbing); test file stdlibshim_closure_test.go (per-entry test only) added
+# go: go version go1.26.5 linux/amd64
+=== RUN   TestStdlibShimInjectionClosedPerEntry
+    stdlibshim_closure_test.go:134: 20 call-shape-table entries enumerated
+    stdlibshim_closure_test.go:140: strconv.FormatInt: injected shim bundle does NOT type-check alone (2 error(s)):
+          golean-stdlib-shims.go:11:16: undefined: goleanShimStrconvFormatUint
+          golean-stdlib-shims.go:13:9: undefined: goleanShimStrconvFormatUint
+    stdlibshim_closure_test.go:145: unclosed entries: [strconv.FormatInt] (of 20)
+--- FAIL: TestStdlibShimInjectionClosedPerEntry (0.01s)
+FAIL
+FAIL	_/home/dev/projects/golean/.claude/worktrees/bug086-shim-closure/tools/nativefrontend	0.018s
+FAIL
