@@ -138,6 +138,12 @@ train, [AGENT]; the lane's own wording follows):
   (The `guard-stage-alt` lane appends its own 2026-09-03 P1 block here;
   the merge train unifies the two.) The residual is the memo's
   gc-immobile set plus the `slices/*` capacity envelopes (R2). Record:
-  `docs/evidence/2026-09-03_sampling-budget/`. Finding flagged, not
-  self-adjudicated: `members=1` rows now take exactly one (plain) draw
-  under the rule as ruled.
+  `docs/evidence/2026-09-03_sampling-budget/`. The flagged `members=1`
+  finding (rows took exactly one plain draw under the rule as first
+  ruled) was ruled the same day — **two-draw floor, APPROVED [USER]**
+  (Mike, relayed by the coordinator; cited as relayed): «(d) this is a
+  'spirit of the ruling' vs. 'letter of the ruling' case - we should do
+  option A which seems like the spirit of the ruling» — option A: the
+  early stop fires only after one plain AND one `-race` draw; the three
+  `members=1` rows re-run under it take exactly two draws, both in the
+  set (caption `draws=2 (floor; …)`).

@@ -821,6 +821,7 @@ if [ "\${1:-}" = run ] && [ "\${@: -1}" = "." ]; then
     ab:race) echo "\$B"; exit 0 ;;
     ab-outside:race) echo "\$X"; exit 0 ;;
     ab-kill-race:race) kill -9 \$\$; sleep 5; exit 137 ;;
+    single42:*) echo '{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}'; exit 0 ;;
   esac
   echo "fake go: unhandled mode \$FAKE_GO_MODE" >&2; exit 3
 fi
@@ -828,10 +829,14 @@ exec "$(command -v go)" "\$@"
 EOF
       chmod +x "$FAKEBIN_GO_AB/go"
       IFS=$'\t' read -r _ obs_subj obs_args obs_status obs_reason obs_feats _ obs_why _ < <(grep -v '^#' "$ROOT/$OBS_DIR/cases.tsv" | head -1)
-      run_s() {  # $1 name, $2 FAKE_GO_MODE, $3 params, $4 expected result, $5 must-contain (row), $6 must-NOT-contain (row), $7 expected draw log (newline-joined) or "", $8 must-contain (stdout) or "", [$9 FAKE_GOLEAN_MODE — set ⇒ LEAN_TIMEOUT_SECONDS=1]
-        local name="$1" mode="$2" params="$3" want="$4" need="$5" forbid="$6" wantlog="$7" needout="$8" gmode="${9:-}" art log row out
+      run_s() {  # $1 name, $2 FAKE_GO_MODE, $3 params, $4 expected result, $5 must-contain (row), $6 must-NOT-contain (row), $7 expected draw log (newline-joined) or "", $8 must-contain (stdout) or "", [$9 FAKE_GOLEAN_MODE — set ⇒ LEAN_TIMEOUT_SECONDS=1], [$10 case dir, $11 row id within its cases.tsv — default: the observable row]
+        local name="$1" mode="$2" params="$3" want="$4" need="$5" forbid="$6" wantlog="$7" needout="$8" gmode="${9:-}" cdir="${10:-$OBS_DIR}" cid="${11:--}" art log row out
+        local s_subj="$obs_subj" s_args="$obs_args" s_status="$obs_status" s_reason="$obs_reason" s_feats="$obs_feats" s_why="$obs_why"
+        if [ "$cdir" != "$OBS_DIR" ]; then
+          IFS=$'\t' read -r _ s_subj s_args s_status s_reason s_feats _ s_why _ < <(grep -v '^#' "$ROOT/$cdir/cases.tsv" | awk -F'\t' -v id="$cid" '$1==id' | head -1)
+        fi
         art="$TMP/artifacts-$name"; log="$TMP/drawlog-$name"; : > "$log"
-        printf 'lane-%s\t%s\t%s\t%s\t%s\t%s\t%s\tmembership\t%s\t%s\n' "$name" "$OBS_DIR" "$obs_subj" "$obs_args" "$obs_status" "$obs_feats" "$obs_reason" "$obs_why" "$params" > "$TMP/manifest-$name.tsv"
+        printf 'lane-%s\t%s\t%s\t%s\t%s\t%s\t%s\tmembership\t%s\t%s\n' "$name" "$cdir" "$s_subj" "$s_args" "$s_status" "$s_feats" "$s_reason" "$s_why" "$params" > "$TMP/manifest-$name.tsv"
         # `env` carries the optional 1s Lean budget: a ${gmode:+VAR=val}
         # word is not an assignment prefix to bash once expanded.
         out="$(PATH="$FAKEBIN_GO_AB:$FAKEBIN_T:$PATH" FAKE_GO_MODE="$mode" FAKE_GO_LOG="$log" FAKE_GOLEAN_REAL="$REAL_GOLEAN" FAKE_GOLEAN_STATE="$TMP/state-$name" FAKE_GOLEAN_MODE="$gmode" \
@@ -873,6 +878,17 @@ EOF
       # coupling pin: observation-eq TIMED OUT … coupling NOT decided").
       run_s S5-saturation-undecided ab "width=2,members=2,sites=8" FAIL \
         "sampling rule: observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing draw 2/32 against an earlier distinct draw — saturation NOT decided" "NOT in the machine's enumerated set" $'plain\nrace' "" eq-distinct
+      # S6 ([USER] ruling 2026-09-03, relayed: «this is a 'spirit of the
+      # ruling' vs. 'letter of the ruling' case - we should do option A
+      # which seems like the spirit of the ruling» — option A = a floor of
+      # two draws, one plain + one -race, before the early stop may fire):
+      # a members=1 row (atomics/spin/flag-wait, singleton terminating set
+      # {42}) with a fake oracle answering 42 in both modes must take
+      # EXACTLY two draws, plain then race, and caption the floor. Red on
+      # the pre-floor branch (it stopped at draw 1: `draws=1`).
+      run_s S6-two-draw-floor single42 "width=4,sites=200,members=1,nonterm=200,backedge=1" PASS \
+        "exhibited=1 draws=2 (floor; K=32; stopped at the members=1 pin after the two-draw floor — one plain + one -race)" "draws=1 " $'plain\nrace' "" \
+        "" "Corpus/coverage/exec/atomics/spin" "flag-wait"
     fi
 
   fi

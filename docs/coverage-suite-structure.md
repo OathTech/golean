@@ -143,7 +143,10 @@ Optional lane columns (membership lane, arc slice 3,
   is the only scheduling perturbation on the scheduling rows, so it comes
   second, not sixth as under the old "5 plain then 5 race" order); the
   row STOPS EARLY once the distinct observations drawn reach its
-  `members=` pin, otherwise at the budget K; K is set by RUN MODE, not a
+  `members=` pin — but never before TWO draws (one plain, one `-race`)
+  have been taken ([USER] ruling 2026-09-03, relayed: «(d) this is a 'spirit of the ruling' vs. 'letter of the ruling' case - we should do option A which seems like the spirit of the ruling» —
+  option A, the two-draw floor; such rows caption `draws=2 (floor; …)`),
+  otherwise at the budget K; K is set by RUN MODE, not a
   knob — **K=32 on the gate path** (`scripts/ci --diff` / a default
   `scripts/diff-coverage` run) and **K=80 under `scripts/ci --slow`**
   (`GOLEAN_SLOW=1`) — and is printed in the run header and recorded as

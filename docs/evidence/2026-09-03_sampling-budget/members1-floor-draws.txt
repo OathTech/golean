@@ -1,0 +1,24 @@
+# producer: GOLEAN_COVERAGE_ARTIFACTS=<art> scripts/diff-coverage <members1 manifest> on the floor branch; per row: draws.txt (mode<TAB>observation) then the enumerated set
+== atomics/spin/flag-wait
+-- draws:
+plain	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+race	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+-- enumerated set:
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+== goroutines/send-then-spin
+-- draws:
+plain	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+race	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+-- enumerated set:
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+== race/atomics-free/cas-failure-acquires
+-- draws:
+plain	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5}]}
+race	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5}]}
+-- enumerated set:
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5}]}
+== results
+result	id	stage	detail
+PASS	atomics/spin/flag-wait	membership	enumerated=1 exhibited=1 draws=2 (floor; K=32; stopped at the members=1 pin after the two-draw floor — one plain + one -race) unexhibited=0 (members in <art>/members1-floor/membership/atomics/spin/flag-wait)
+PASS	goroutines/send-then-spin	membership	enumerated=1 exhibited=1 draws=2 (floor; K=32; stopped at the members=1 pin after the two-draw floor — one plain + one -race) unexhibited=0 (members in <art>/members1-floor/membership/goroutines/send-then-spin)
+PASS	race/atomics-free/cas-failure-acquires	membership	enumerated=1 exhibited=1 draws=2 (floor; K=32; stopped at the members=1 pin after the two-draw floor — one plain + one -race) unexhibited=0 (members in <art>/members1-floor/membership/race/atomics-free/cas-failure-acquires)

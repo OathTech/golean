@@ -1,0 +1,80 @@
+ok: membership without why
+ok: nondet tag on a strict row
+ok: strict row with why text
+ok: unknown param key
+ok: invalid lane value
+ok: duplicate param key
+ok: retired samples= param (2026-09-03 sampling rule)
+ok: non-positive param value
+ok: membership without the nondet tag
+ok: tier on a racy row
+ok: tier on a confluent row (W3.2 stage C widening)
+ok: invalid tier value
+ok: membership without explicit width (F2a)
+ok: bare 6-column strict row
+ok: explicit strict row
+ok: well-formed membership row
+ok: confluent without why
+ok: confluent with the nondet tag
+ok: confluent without width
+ok: confluent with a members param
+ok: racy on a non-race expectation
+ok: racy without width
+ok: race expectation left on the strict lane
+ok: race expectation on the membership lane
+ok: well-formed confluent row
+ok: well-formed racy row
+ok: membership row with a members pin
+ok: statuses on a non-membership lane
+ok: statuses malformed entry
+ok: statuses singleton
+ok: statuses missing expected_status
+ok: statuses duplicate entry
+ok: membership row with a status-diverse envelope
+ok: check-bugs Expect: FAIL with a FAIL row passes
+ok: check-bugs Expect: FAIL with a PASS row fails (5)
+ok: check-bugs none-entry without Expect stays existence-only
+ok: check-bugs unrecognized Expect token fails closed (0)
+ok: lake-build failure exits 2, no readable results (G1)
+ok: lake-build timeout exits 2, no readable results (G2)
+ok: manifest-not-found exits 2, no readable results (G3)
+ok: empty manifest exits 2 without publishing (G4)
+ok: harness re-validation rejects sites=0 (F4)
+ok: harness refuses the retired samples= param by name (F4b)
+ok: membership under non-native frontend fails closed (F6)
+ok: members= cardinality pin refuses a wrong pin (B3)
+ok: confluent lane refuses a non-singleton set (B4)
+ok: racy lane fails loud on a refuted width (B5)
+ok: fan-out that ran no worker exits 2 without publishing (G5)
+ok: G5 named both causes (global fan-out refusal + empty-row guard), no stray .out
+ok: T1-strict-lean-run: cause named at stage lean-observation (Lean run TIMED OUT after 1s)
+    row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	lean-observation	Lean run TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) — no observation produced (expected status ok); captured output: run_with_timeout: TIMED OUT after 1s — killing: <tmp>/fakeroot/.lake/build/bin/golean native-json-run --input <tmp>/artifacts-T1-strict-lean-run/native/lane-t1/wire.json --function forConditionEval
+ok: T2-nondet-rerun: cause named at stage nondet (re-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s)
+    row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	nondet	oracle-invariance re-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) — invariance NOT certified (a killed run is not an observed variance); captured output: run_with_timeout: TIMED OUT after 1s — killing: <tmp>/fakeroot/.lake/build/bin/golean native-json-run --input <tmp>/artifacts-T2-nondet-rerun/native/lane-t1/wire.json --function forConditionEval --choices 9,8,7,6,5,4,3,2,1,0
+ok: T3-coupling-pin: cause named at stage membership (driver-coupling pin: native-json-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s)
+    row: FAIL	lane-t3	maps,range,keys,loops,nondet	membership	driver-coupling pin: native-json-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) — coupling NOT certified (a killed run is not copied-driver drift); captured output: run_with_timeout: TIMED OUT after 1s — killing: <tmp>/fakeroot/.lake/build/bin/golean native-json-run --input <tmp>/artifacts-T3-coupling-pin/native/lane-t3/wire.json --function rangeFirstKey --choices 9,8,7,6,5,4,3,2,1,0
+ok: T4-sample-loop: cause named at stage membership (observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing a Go sample against member #1)
+    row: FAIL	lane-t3	maps,range,keys,loops,nondet	membership	membership check: observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing a Go sample against member #1 — membership NOT decided (a killed comparator is not the too-narrow soundness alarm): sample={"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]} member={"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+ok: T5-comparator-undecodable: cause named at stage go-observation (Go output is not a valid observation (comparator said: left.status: unknown observation status)
+    row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	go-observation	Go output is not a valid observation (comparator said: left.status: unknown observation status "weird"): {"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1233}]}
+ok: T6-lean-run-sigkill: cause named at stage lean-observation (Lean run KILLED (exit 137)
+    row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	lean-observation	Lean run KILLED (exit 137 — SIGKILL: cgroup/OOM or an external kill; did not decide) — no observation produced (expected status ok); captured output: 
+ok: T7-differential-sigterm: cause named at stage differential (observation-eq KILLED (exit 143)
+    row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	differential	observation-eq KILLED (exit 143 — SIGTERM: an external kill; did not decide) — Lean/Go equality NOT decided (not a mismatch): Lean={"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1233}]} Go={"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1233}]}
+ok: T8-go-oracle-sigkill: cause named at stage go-run (go run oracle KILLED (exit 137)
+    row: FAIL	lane-t8	panic,recover,defer,returns,named-results	go-run	go run oracle KILLED (exit 137 — SIGKILL: cgroup/OOM or an external kill; did not decide) — no Go observation produced (not a panic verdict); captured output: 
+ok: S1-pin-early-stop: PASS (exhibited=2 draws=2 (K=32; stopped at the members=2 pin)); draws logged: plain race 
+    row: PASS	lane-S1-pin-early-stop	channels,select,make,len,nondet	membership	enumerated=2 exhibited=2 draws=2 (K=32; stopped at the members=2 pin) unexhibited=0 (members in <tmp>/artifacts-S1-pin-early-stop/membership/lane-S1-pin-early-stop)
+ok: S2-unpinned-full-K: PASS (exhibited=2 draws=32 (K=32; no members= pin — no early stop)); draws logged: plain race plain race plain race plain race plain race plain race plain race plain race plain race plain race plain race plain race plain race plain race plain race plain race 
+    row: PASS	lane-S2-unpinned-full-K	channels,select,make,len,nondet	membership	enumerated=2 exhibited=2 draws=32 (K=32; no members= pin — no early stop) unexhibited=0 (members in <tmp>/artifacts-S2-unpinned-full-K/membership/lane-S2-unpinned-full-K)
+ok: S3-race-draw-outside-set: FAIL (NOT in the machine's enumerated set); draws logged: plain race 
+    row: FAIL	lane-S3-race-draw-outside-set	channels,select,make,len,nondet	membership	Go observation is NOT in the machine's enumerated set (the too-narrow soundness alarm): {"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":999}]} enumerated=2
+ok: S4-killed-draw-is-no-observation: FAIL (draw 2/32 (race) -race go sample: go run oracle KILLED (exit 137); draws logged: plain race 
+    row: FAIL	lane-S4-killed-draw-is-no-observation	channels,select,make,len,nondet	membership	draw 2/32 (race) -race go sample: go run oracle KILLED (exit 137 — SIGKILL: cgroup/OOM or an external kill; did not decide) — no sample produced (not a status verdict); captured output: 
+ok: S5-saturation-undecided: FAIL (sampling rule: observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing draw 2/32 against an earlier distinct draw — saturation NOT decided); draws logged: plain race 
+    row: FAIL	lane-S5-saturation-undecided	channels,select,make,len,nondet	membership	sampling rule: observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing draw 2/32 against an earlier distinct draw — saturation NOT decided (a killed comparator is neither a new observation nor a repeat): draw={"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":210}]} earlier={"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":101}]}
+ok: S6-two-draw-floor: PASS (exhibited=1 draws=2 (floor; K=32; stopped at the members=1 pin after the two-draw floor — one plain + one -race)); draws logged: plain race 
+    row: PASS	lane-S6-two-draw-floor	sync,atomics,ints,goroutines,channels,loops,closures,race,nondet	membership	enumerated=1 exhibited=1 draws=2 (floor; K=32; stopped at the members=1 pin after the two-draw floor — one plain + one -race) unexhibited=0 (members in <tmp>/artifacts-S6-two-draw-floor/membership/lane-S6-two-draw-floor)
+test-lane-validation: ok
+scripts/test-lane-validation --with-go  26.15s user 13.27s system 48% cpu 1:20.82 total
+EXIT=0

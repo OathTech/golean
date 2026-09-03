@@ -1589,7 +1589,15 @@ run_membership_case_rows() {
   # row on the spot — it is not an observation and never counts toward
   # saturation. Rows without a members= pin have no early stop and draw
   # the full K (noted in the progress log and the PASS detail).
-  local i sample mode draws=0 distinct=0 rep new_obs eq_rc eq_undecided
+  # TWO-DRAW FLOOR ([USER] ruling, Mike 2026-09-03, relayed by the
+  # coordinator: «this is a 'spirit of the ruling' vs. 'letter of the
+  # ruling' case - we should do option A which seems like the spirit of
+  # the ruling» — option A = a floor of two draws, one plain + one -race,
+  # before the early stop may fire): a members=1 row otherwise stopped at
+  # draw 1 and never saw a -race draw at all. The early stop needs
+  # draws >= 2 AND distinct >= members; K is unchanged; a row whose pin
+  # was reached before the floor captions `draws=2 (floor; …)`.
+  local i sample mode draws=0 distinct=0 rep new_obs eq_rc eq_undecided floor_stop=0
   local -a reps=()
   : > "$mem_dir/samples.txt"
   : > "$mem_dir/draws.txt"
@@ -1625,7 +1633,10 @@ run_membership_case_rows() {
       distinct=$((distinct + 1))
     fi
     if [[ -n "$members" && "$distinct" -ge "$members" ]]; then
-      break
+      if [[ "$draws" -ge 2 ]]; then
+        break
+      fi
+      floor_stop=1
     fi
   done
   # Audit F4: never pass with zero oracle — however the loop above was
@@ -1911,7 +1922,9 @@ run_membership_case_rows() {
   # row, whether the stop was the pin or the cap; an unpinned row says so.
   local budget_note
   if [[ -n "$members" ]]; then
-    if [[ "$distinct" -ge "$members" ]]; then
+    if [[ "$distinct" -ge "$members" && "$floor_stop" -eq 1 ]]; then
+      budget_note="draws=$draws (floor; K=$MEMBERSHIP_DRAWS; stopped at the members=$members pin after the two-draw floor — one plain + one -race)"
+    elif [[ "$distinct" -ge "$members" ]]; then
       budget_note="draws=$draws (K=$MEMBERSHIP_DRAWS; stopped at the members=$members pin)"
     else
       budget_note="draws=$draws (K=$MEMBERSHIP_DRAWS; pin members=$members NOT reached — $distinct distinct drawn)"

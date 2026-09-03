@@ -46,13 +46,19 @@ captioned **71 exhibited, 18 pinned rows at their pin** on the same 37
 rows — run-to-run variance of the scheduling rows, as the memo warned;
 the honest statement is "68–71 of 470 at K=32 across two runs".
 
-**Members=1 rows draw exactly ONE (plain) draw** under the rule as ruled
-(`atomics/spin/flag-wait`, `goroutines/send-then-spin`,
-`race/atomics-free/cas-failure-acquires`: distinct reaches the pin at
-draw 1, so no `-race` draw is ever taken; before, they had 10). That is
-the ruled rule applied literally; it is flagged in the lane report as a
-finding (a 2-draw floor — one plain, one `-race` — would be a
-strengthening not in the ruling and is NOT implemented here).
+**Members=1 rows — the two-draw floor.** Under the rule as first ruled,
+`atomics/spin/flag-wait`, `goroutines/send-then-spin` and
+`race/atomics-free/cas-failure-acquires` stopped at draw 1 (the pin is
+reached at once) and never took a `-race` draw; flagged, not
+self-adjudicated. [USER] ruling (Mike, 2026-09-03, relayed by the
+coordinator — cited as relayed): «(d) this is a 'spirit of the ruling' vs. 'letter of the ruling' case - we should do option A which seems like the spirit of the ruling» — option A = a floor of two
+draws (one plain, one `-race`) before the early stop may fire. Implemented
+(`scripts/diff-coverage`: early stop needs `draws >= 2 AND distinct >=
+members`; K unchanged; caption `draws=2 (floor; …)`). Re-run of the three
+rows (`members1-floor-draws.txt`): each takes exactly two draws, plain
+then `-race`, both observations `42` = the singleton set; all three PASS.
+Fixture S6 (`fixtures-r3-red-prefloor.log` red on the pre-floor branch
+with `draws=1`; `fixtures-r3-green-floor.log` green).
 
 **Cost (corrected at the audit fix round, F1).** Membership-only
 manifests (37 rows), `GOLEAN_COVERAGE_JOBS` default (32 on this box),
@@ -167,6 +173,10 @@ scripts/test-lane-validation --with-go
   394 match, both test-lane-validation halves ok (S1-S5 included),
   reconciler 3 findings / 0 HIGH, 312 s wall. The commit carrying this
   paragraph is docs-only (evidence + this wording), on top of that tip.
+
+* Two-draw floor: CLEAN-tree `scripts/capped scripts/ci --diff` at the
+  floor commit — see `ci-diff-clean-floor.log` (recorded by the docs-only
+  follow-up commit).
 
 ## Toolchain, commit, host
 
