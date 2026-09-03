@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+call	arrayOfFuncsIndexedCall	-	ok	-	arrays,functions,higher_order
+nil-slot	arrayOfFuncsNilSlot	-	panic	invalid memory address or nil pointer dereference	arrays,functions,nil,panic

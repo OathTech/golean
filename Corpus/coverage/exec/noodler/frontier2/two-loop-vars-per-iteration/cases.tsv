@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	twoLoopVarsPerIteration	-	ok	-	closures,loops,multi_assign,scoping

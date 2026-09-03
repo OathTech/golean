@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+write	embeddedPointerFieldPromotion	-	ok	-	embedding,pointers,fields,assignment
+nil-write	embeddedPointerFieldNilWrite	-	panic	invalid memory address or nil pointer dereference	embedding,pointers,fields,nil,panic

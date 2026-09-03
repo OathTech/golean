@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	nilFuncFieldCall	-	panic	invalid memory address or nil pointer dereference	functions,structs,nil,panic
