@@ -47,8 +47,11 @@ envelope — and on the one class where the two machines differ
   interface}` (audit fix round F2): main fuel-out ×3; branch 32 / 73 /
   32 = gc.
 - `transcripts/gate-tail-fixround.txt` — CLEAN-tree `scripts/capped
-  scripts/ci --diff` at the audit-fix-round tip (F7; the slice's own
-  --diff run was on a dirty tree).
+  scripts/ci --diff` at the audit-fix-round tip `a4cf54e4` (F7; the
+  slice's own --diff run was on a dirty tree): RESULT: PASS,
+  `cases=3199 pass=3005 fail=194`, baseline diff FULL 3199/3199 (no
+  regression, no dirty-tree note), re-pin guard 0 flips, reconciler 3
+  pre-existing MEDIUM / 0 HIGH.
 - `transcripts/gate-tail.txt` — the `scripts/capped scripts/ci --diff`
   summary block at the slice tree (see "Gate" below).
 - `transcripts/gate-tail-clean-tip.txt` — the fast `scripts/capped
