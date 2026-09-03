@@ -361,4 +361,13 @@ nothing. The rule cannot flip a RESULT — membership PASS/FAIL is "every
 draw ∈ the enumerated set" and the baseline stores result/id/stage
 only — which is what made it a caption-honesty change rather than a
 baseline re-pin; measured cost and the before/after exhibition table:
-`docs/evidence/2026-09-03_sampling-budget/`.
+`docs/evidence/2026-09-03_sampling-budget/`. Audit follow-up (F1, same
+day): the first cost reading blamed the draws; the real critical path
+was a per-(draw, member) comparator spawn in the membership check with
+no memo — a 300-member row whose gc observation is member #124 went
+from ~248 to ~3,968 `observation-eq` processes (1:57 for one row), and
+the retired `samples=1` turned out to have been an unstated cost cap on
+exactly that loop. Lesson: when a budget rises by 3× and the wall
+rises by 3×, check what ELSE scales with the budget before attributing
+the cost to the budgeted thing; and a per-row knob that "happens" to
+keep one row cheap is a hidden cost cap — name it or remove it.

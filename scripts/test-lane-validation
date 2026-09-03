@@ -669,6 +669,12 @@ case "${FAKE_GOLEAN_MODE:-}" in
       --left '{"schema":"golean-observation-v1","status":"weird"}' --right '{"schema":"golean-observation-v1","status":"weird"}' ;;
   run-kill9)       # T6: the strict lane's single default-stream run, SIGKILLed (exit 137)
     [ "$sub" = native-json-run ] && [ "$has_choices" -eq 0 ] && { kill -9 $$; sleep 5; exit 137; } ;;
+  eq-distinct)     # S5: the sampling rule's DISTINCTNESS comparison — the first observation-eq whose two sides differ
+    # (every earlier observation-eq is a sample's self-comparison, left == right); sleeps past the 1s budget (exit 124)
+    if [ "$sub" = observation-eq ]; then
+      l=""; r=""; while [ $# -gt 0 ]; do case "$1" in --left) l="$2"; shift 2 ;; --right) r="$2"; shift 2 ;; *) shift ;; esac; done
+      [ "$l" != "$r" ] && exec sleep 30
+    fi ;;
   eq-diff-term)    # T7: the strict lane's SECOND observation-eq (the differential stage), SIGTERMed (exit 143)
     [ "$sub" = observation-eq ] && [ "$(bump eqs)" -ge 2 ] && { kill -TERM $$; sleep 5; exit 143; } ;;
   run-default)  # T1: the strict lane's single default-stream run
@@ -822,13 +828,15 @@ exec "$(command -v go)" "\$@"
 EOF
       chmod +x "$FAKEBIN_GO_AB/go"
       IFS=$'\t' read -r _ obs_subj obs_args obs_status obs_reason obs_feats _ obs_why _ < <(grep -v '^#' "$ROOT/$OBS_DIR/cases.tsv" | head -1)
-      run_s() {  # $1 name, $2 FAKE_GO_MODE, $3 params, $4 expected result, $5 must-contain (row), $6 must-NOT-contain (row), $7 expected draw log (newline-joined) or "", $8 must-contain (stdout) or ""
-        local name="$1" mode="$2" params="$3" want="$4" need="$5" forbid="$6" wantlog="$7" needout="$8" art log row out
+      run_s() {  # $1 name, $2 FAKE_GO_MODE, $3 params, $4 expected result, $5 must-contain (row), $6 must-NOT-contain (row), $7 expected draw log (newline-joined) or "", $8 must-contain (stdout) or "", [$9 FAKE_GOLEAN_MODE — set ⇒ LEAN_TIMEOUT_SECONDS=1]
+        local name="$1" mode="$2" params="$3" want="$4" need="$5" forbid="$6" wantlog="$7" needout="$8" gmode="${9:-}" art log row out
         art="$TMP/artifacts-$name"; log="$TMP/drawlog-$name"; : > "$log"
         printf 'lane-%s\t%s\t%s\t%s\t%s\t%s\t%s\tmembership\t%s\t%s\n' "$name" "$OBS_DIR" "$obs_subj" "$obs_args" "$obs_status" "$obs_feats" "$obs_reason" "$obs_why" "$params" > "$TMP/manifest-$name.tsv"
-        out="$(PATH="$FAKEBIN_GO_AB:$FAKEBIN_T:$PATH" FAKE_GO_MODE="$mode" FAKE_GO_LOG="$log" FAKE_GOLEAN_REAL="$REAL_GOLEAN" FAKE_GOLEAN_STATE="$TMP/state-$name" FAKE_GOLEAN_MODE="" \
+        # `env` carries the optional 1s Lean budget: a ${gmode:+VAR=val}
+        # word is not an assignment prefix to bash once expanded.
+        out="$(PATH="$FAKEBIN_GO_AB:$FAKEBIN_T:$PATH" FAKE_GO_MODE="$mode" FAKE_GO_LOG="$log" FAKE_GOLEAN_REAL="$REAL_GOLEAN" FAKE_GOLEAN_STATE="$TMP/state-$name" FAKE_GOLEAN_MODE="$gmode" \
           GOLEAN_COVERAGE_JOBS=1 GOLEAN_COVERAGE_ARTIFACTS="$art" \
-          "$FR/scripts/diff-coverage" "$TMP/manifest-$name.tsv" 2>&1)"
+          env ${gmode:+LEAN_TIMEOUT_SECONDS=1} "$FR/scripts/diff-coverage" "$TMP/manifest-$name.tsv" 2>&1)"
         row="$(tail -1 "$art/latest.tsv" 2>/dev/null || true)"
         if [[ "$row" != "$want"*"	membership	"*"$need"* || "$row" == *"$forbid"* ]]; then
           echo "FAIL: $name: want $want at stage membership containing '$need', never '$forbid'; row: ${row:-<none>}"
@@ -855,6 +863,16 @@ EOF
         "NOT in the machine's enumerated set" "exhibited=" $'plain\nrace' ""
       run_s S4-killed-draw-is-no-observation ab-kill-race "width=2,members=2,sites=8" FAIL \
         "draw 2/32 (race) -race go sample: go run oracle KILLED (exit 137" "exhibited=" $'plain\nrace' ""
+      # S5 (audit fix F3): the distinctness comparison itself undecided —
+      # the golean shim sleeps past the 1s budget on the first
+      # observation-eq whose sides differ (draw 2 = 210 vs draw 1 = 101);
+      # the row must fail naming the sampling rule, never read the kill as
+      # "new observation" (an early stop that never fires) or as a repeat.
+      # Red on main: no distinctness loop exists there, so main's first
+      # differing observation-eq is the post-enumeration membership check
+      # ("membership check: … comparing a Go sample against member #1").
+      run_s S5-saturation-undecided ab "width=2,members=2,sites=8" FAIL \
+        "sampling rule: observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing draw 2/32 against an earlier distinct draw — saturation NOT decided" "NOT in the machine's enumerated set" $'plain\nrace' "" eq-distinct
     fi
 
   fi

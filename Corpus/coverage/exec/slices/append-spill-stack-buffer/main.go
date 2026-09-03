@@ -6,7 +6,7 @@ package main
 // (formula 6 for oldCap 3 -> newLen 4). Probe-verified go1.26.5:
 // cap = 32. This point sat OUTSIDE the modeled envelope
 // (growth + [0,8)) — the arc-final audit's F2 too-narrow finding.
-// Membership, samples=1: version-tracks gc's realized point against
+// Membership (version-tracking; samples= retired 2026-09-03): tracks gc's realized point against
 // the widened envelope [newLen, max(32, 2*growth)].
 func appendSpillStackBuffer() int {
 	b := make([]byte, 0, 3)

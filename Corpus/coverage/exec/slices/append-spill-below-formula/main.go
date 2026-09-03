@@ -5,7 +5,7 @@ package main
 // exactly newLen (cap 2), under the formula's max(4, newLen) = 4.
 // Probe-verified go1.26.5. The spec's only floor is "sufficiently
 // large" (>= newLen), so the envelope's lower end must be newLen, not
-// the formula. Membership, samples=1 (arc-final audit F2).
+// the formula. Membership, version-tracking (arc-final audit F2; samples= retired 2026-09-03).
 func appendSpillBelowFormula() int {
 	var s []string
 	s = append(s, "a", "b")

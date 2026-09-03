@@ -54,17 +54,26 @@ the ruled rule applied literally; it is flagged in the lane report as a
 finding (a 2-draw floor — one plain, one `-race` — would be a
 strengthening not in the ruling and is NOT implemented here).
 
-**Cost.** Membership-only manifests (37 rows), `GOLEAN_COVERAGE_JOBS`
-default (32 on this box), run back-to-back on the same box under load
-average ~15–21 (other agents' builds running): **before 41 s, after
-123 s** wall (`timing.txt`). The lane's wall is bounded by its slowest
-rows, which now draw 32 × ~0.7–0.9 s ≈ 25–30 s each plus enumeration.
-No draw hit the 30 s `GO_TIMEOUT_SECONDS`; no row exceeded any budget
-(there is no per-row wall budget in the runner — the per-draw one is
-the only clock). The memo's +6.5 min estimate assumed serial draws; the
-pool runs rows in parallel, so the full `--diff` grows by about the
-lane's slowest row, not by the draw sum (see the ci wall in the lane
-report).
+**Cost (corrected at the audit fix round, F1).** Membership-only
+manifests (37 rows), `GOLEAN_COVERAGE_JOBS` default (32 on this box),
+run back-to-back on the same loaded box: **before 41 s, after 123 s**
+wall (`timing.txt`). The first-round README blamed the draws (32 ×
+~0.7-0.9 s); that was the WRONG cause. The critical path was the
+post-enumeration membership check, which spawned one `golean
+observation-eq` per (draw, member) up to the matching member with no
+memo: on `slices/append-spill-size-class` gc's single observation is
+member #124 of 300, so the row went from 2 draws × 124 ≈ 248 spawns to
+32 × 124 ≈ 3,968 spawns — about 1:57 for that one row, i.e. the whole
+41→123 s (and ≈ 4-5 min at K=80). The old `samples=1` on that row had
+been an unstated cost cap on exactly this loop. Fix: the check memoizes
+the decided member index per byte-identical sample (`member_of` assoc
+array; a repeat sample is the SAME decision, not a new spawn) — the
+verdict is unchanged (see below). Re-measured (`timing-f1.txt`,
+`after-f1-latest.tsv`, `size-class-f1-row.tsv`): **the 37-row lane
+37 s** (vs 41 s before the rule, 123 s pre-memo), **the 300-member row
+31 s alone** (vs ~1:57) — 32 draws ≈ 25 s plus the enumeration and one
+124-member scan. No draw hit the 30 s `GO_TIMEOUT_SECONDS`; the runner
+has no per-row wall budget, so none was exceeded.
 
 ## No result flip (the argument, with lines)
 
@@ -81,7 +90,13 @@ sampling loop (:1372-1402) are read only by the early-stop test (:1400)
 and the caption (:1663-1675). A draw that did not decide fails the row
 at the draw (:1374-1377) exactly as before. Therefore more or fewer
 draws can only add soundness checks (each an existing FAIL condition)
-or change caption text; the baseline (`baselines/native-full.tsv`,
+or change caption text. The F1 memo does not weaken the check: a
+sample byte-identical to an already-decided sample reuses that
+decision (`obs_eq` is a function of its two argument strings, so the
+comparator would return the same member); an undecided comparison is
+never memoized — it fails the row before the memo line — and a
+not-found sample fails before any memo is written, so every draw is
+still checked against the set; the baseline (`baselines/native-full.tsv`,
 compared by `scripts/coverage-baseline-diff` on result/id/stage —
 columns documented at its :35) never sees the detail column.
 
@@ -107,6 +122,15 @@ columns documented at its :35) never sees the detail column.
   fixtures (Part A, F4b) red; the confluent-arm needle red on wording.
 * `fixtures-green-on-branch.log` — the same script on this branch: all
   ok (`test-lane-validation: ok`), 1:43 wall.
+* `fixtures-r2-red-on-main.log` / `fixtures-r2-green-on-branch.log` —
+  the audit fix round's S5 (`saturation NOT decided`: the golean shim
+  sleeps past a 1 s budget on the first `observation-eq` whose sides
+  differ, i.e. the sampling rule's distinctness comparison of draw 2
+  against draw 1). Red on main: no distinctness loop exists there, so
+  main's first differing comparison is the post-enumeration membership
+  check and its wording ("membership check: … member #1"). Green here.
+* `timing-f1.txt` / `after-f1-latest.tsv` / `size-class-f1-row.tsv` —
+  the post-memo re-measurement (F1).
 * `ci-diff-membership-rows.tsv` / `ci-diff-summary.log` — the gate
   run's 37 membership captions and the `scripts/ci --diff` summary
   (RESULT: PASS, 3195/3195 no regression, 477 s wall under load 27–73).
@@ -130,6 +154,14 @@ time GOLEAN_COVERAGE_ARTIFACTS=/tmp/after scripts/diff-coverage /tmp/membership-
 scripts/test-lane-validation --with-go
 # fixtures, red on main: copy scripts/test-lane-validation into /tmp/sb-main/scripts/ and run it there with --with-go
 ```
+
+## Gate tail
+
+* Round 1: `scripts/capped scripts/ci --diff` on the DIRTY tree at
+  `345ef090` (`ci-diff-summary.log`): RESULT: PASS, 3195/3195, 477 s.
+* Audit fix round (F6): a CLEAN-tree `scripts/capped scripts/ci --diff`
+  at the branch tip — see `ci-diff-clean-tip.log` (SHA recorded there
+  and in the line below once run).
 
 ## Toolchain, commit, host
 

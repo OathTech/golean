@@ -1841,8 +1841,26 @@ run_membership_case_rows() {
 
   # Membership check: every Go sample must be a member. Track which members
   # Go exhibited (by member line number) for the width signal.
+  # Memoized per byte-identical sample (audit fix F1, 2026-09-03): the
+  # sampling rule raised draws from 10 to K, and this loop spawned one
+  # `observation-eq` per (draw, member) up to the matching member — on
+  # slices/append-spill-size-class (gc's observation is member #124 of
+  # 300) ~248 → ~3,968 spawns, 1:57 for the row; the old samples=1 had
+  # been an unstated cost cap on exactly that row. A sample whose bytes
+  # equal an already-DECIDED sample has the same member (obs_eq is a
+  # function of its two arguments; the earlier decision was reached by
+  # the comparator on identical bytes), so its member index is reused
+  # and nothing is re-spawned. The verdict is unchanged: every draw is
+  # still checked against the set — the check for a repeat IS the
+  # decision recorded for its first occurrence; an undecided comparison
+  # is never memoized (it fails the row on the spot), and a not-found
+  # sample fails before any memo is written.
   local exhibited="" n member found
+  local -A member_of=()
   while IFS= read -r sample; do
+    if [[ -n "${member_of[$sample]:-}" ]]; then
+      continue
+    fi
     found=0
     n=0
     eq_undecided=""
@@ -1872,6 +1890,7 @@ run_membership_case_rows() {
       report_fail "$id" "$features" "membership" "Go observation is NOT in the machine's enumerated set (the too-narrow soundness alarm): $sample enumerated=$member_count"
       return 0
     fi
+    member_of["$sample"]="$n"
   done < "$mem_dir/samples.txt"
 
   local exhibited_count unexhibited_count

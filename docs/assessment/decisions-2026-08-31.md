@@ -132,9 +132,11 @@ train, [AGENT]; the lane's own wording follows):
   `samples=` retired and refused by name. **Effect on the assessment's
   figure** (synthesis: "441 enumerated / 45 exhibited" at the 2026-08-31
   gate budget — frozen, not edited): the lane is now 37 rows; under the
-  new rule a `--diff`-budget run exhibits **68 of 470** (before, on the
-  same 37 rows and the old budget/order: 61 of 470); 17 of 25 pinned
-  rows reach their pin within K=32. The residual is the memo's
+  new rule a `--diff`-budget run exhibits **68 (branch run) / 71 (gate
+  run) of 470** (before, on the same 37 rows and the old budget/order:
+  61 of 470); 17-18 of 25 pinned rows reach their pin within K=32.
+  (The `guard-stage-alt` lane appends its own 2026-09-03 P1 block here;
+  the merge train unifies the two.) The residual is the memo's
   gc-immobile set plus the `slices/*` capacity envelopes (R2). Record:
   `docs/evidence/2026-09-03_sampling-budget/`. Finding flagged, not
   self-adjudicated: `members=1` rows now take exactly one (plain) draw

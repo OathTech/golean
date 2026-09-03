@@ -1,0 +1,1 @@
+PASS	slices/append-spill-size-class	slices,append,cap,nondet	membership	enumerated=300 exhibited=1 draws=32 (K=32; no members= pin — no early stop) unexhibited=299 (members in <worktree>/artifacts/sampling-budget/size-class-f1/membership/slices/append-spill-size-class)

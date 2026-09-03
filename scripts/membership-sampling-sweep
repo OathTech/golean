@@ -39,7 +39,8 @@ def main():
     ap.add_argument("dirs", nargs="+")
     ap.add_argument("--ks", default="2,10,16,24,32,48,64,80")
     ap.add_argument("--gate-samples", type=int, default=5,
-                    help="the samples= default the gate-order reconstruction uses when a row has no samples= param")
+                    help="the per-row count of the RETIRED pre-2026-09-03 gate order (5 plain then 5 race) that the "
+                         "gate-order reconstruction replays; a manifest row still carrying samples= is refused")
     a = ap.parse_args()
     ks = [int(k) for k in a.ks.split(",") if k]
 
@@ -53,7 +54,8 @@ def main():
                     if kv.startswith("members="):
                         m = int(kv[8:])
                     if kv.startswith("samples="):
-                        s = int(kv[8:])
+                        sys.exit(f"membership-sampling-sweep: {fs[0]}: samples= is RETIRED (2026-09-03 sampling rule; "
+                                 f"the gate budget is K by run mode) — remove {kv} from the row")
                 members[fs[0]] = m
                 samples_param[fs[0]] = s
     if not members:

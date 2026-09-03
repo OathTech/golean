@@ -130,6 +130,11 @@ while IFS=$'\t' read -r id go_dir fn args status features reason lane why params
   mkdir -p "$row_dir"
   note=""
   # --- lane params (subset needed here) ---
+  # samples=5 here is NOT a row param any more (samples= is RETIRED,
+  # 2026-09-03 sampling rule): it is the per-mode count of the RETIRED
+  # pre-rule gate order (5 plain then 5 race) that this instrument
+  # replays for the drawsAtGate/distinctAtGate columns, so the memo's
+  # "at the old gate budget" statistic stays reproducible.
   width="" sites=8 obs_cap=64 samples=5 work=200000 statuses="$status" tier="" backedge="" nonterm="" engine="" members=""
   if [[ "$params" != "-" ]]; then
     IFS=',' read -r -a kvs <<< "$params"
@@ -137,7 +142,8 @@ while IFS=$'\t' read -r id go_dir fn args status features reason lane why params
       key="${kv%%=*}"; value="${kv#*=}"
       case "$key" in
         width) width="$value" ;; sites) sites="$value" ;; cap) obs_cap="$value" ;;
-        samples) samples="$value" ;; work) work="$value" ;; members) members="$value" ;;
+        samples) echo "membership-sampling: $id: samples= is RETIRED (2026-09-03 sampling rule — the gate's budget is K by run mode, scripts/diff-coverage MEMBERSHIP_DRAWS); this instrument has its own --draws; remove $kv from the row" >&2; exit 2 ;;
+        work) work="$value" ;; members) members="$value" ;;
         statuses) statuses="$value" ;; tier) tier="$value" ;; backedge) backedge="$value" ;;
         nonterm) nonterm="$value" ;; engine) engine="$value" ;;
       esac

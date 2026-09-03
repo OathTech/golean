@@ -1,0 +1,4 @@
+load-before:  20:15:04 up 11 days,  5:45,  ? user,  load average: 51.02, 29.86, 26.03
+after-f1-exit=0 wall=37s
+size-class-f1-exit=0 wall=31s
+load-after:  20:16:12 up 11 days,  5:46,  ? user,  load average: 21.50, 25.44, 24.77
