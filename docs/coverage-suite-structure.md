@@ -255,18 +255,29 @@ The default executable lane is a conformance signal, not an expected-failure
 test suite. A case that does not match Go remains a failure even when the
 failure is understood.
 
-Wall-clock kills (the runner's `*_TIMEOUT_SECONDS` budgets; exit 124 from
-`run_with_timeout`) are reported at the stage of the CHECK that could not
-complete — the stage vocabulary is unchanged — with a detail that names
-the cause: `… TIMED OUT after <N>s (<KNOB>) — <what was NOT established>`
-(e.g. `lean-observation: Lean run TIMED OUT after 30s
+Non-verdict exits of a comparator, oracle, driver or enumerator run are
+reported at the stage of the CHECK that could not complete — the stage
+vocabulary is unchanged — with a detail that names the cause and what
+was NOT established. Only exit 0 and exit 1 are verdicts (equal / not
+equal; ok / error observation; go run green / red). Wall-clock kills
+(the runner's `*_TIMEOUT_SECONDS` budgets; exit 124 from
+`run_with_timeout`) read `… TIMED OUT after <N>s (<KNOB>) — <what was
+NOT established>` (e.g. `lean-observation: Lean run TIMED OUT after 30s
 (LEAN_TIMEOUT_SECONDS) — no observation produced`; `nondet: … re-run under
 stream [...] TIMED OUT … — invariance NOT certified`; `membership:
-enumerator TIMED OUT … (coverage not certified)`). A timeout is never a
-pass and is never rendered as a differential mismatch, an iteration-order
-variance, driver drift, or the membership soundness alarm — a killed
-command has decided nothing (`scripts/test-lane-validation` T1-T4;
-`docs/evidence/2026-09-03_timeout-cause/`).
+enumerator TIMED OUT … (coverage not certified)`). Signal deaths (the
+wrapper's 128+signal: 137 SIGKILL — a cgroup/OOM kill or scripts/capped's
+— 143 SIGTERM, any other 128+n) read `… KILLED (exit N — …; did not
+decide)`; the comparator's undecodable-observation refusal reads
+`observation-eq could not decode the observation (exit 2 — did not
+decide; comparator said: <decode message>)`; any other code reads
+`… failed with exit N (did not decide)`. None of these is ever a pass,
+and none is ever rendered as a differential mismatch, an iteration-order
+variance, driver drift, an invalid Go observation, or the membership
+soundness alarm — a killed command has decided nothing
+(`scripts/test-lane-validation` T1-T8;
+`docs/evidence/2026-09-03_timeout-cause/`,
+`docs/evidence/2026-09-03_runner-exitcode/`).
 
 ## Migration Plan
 

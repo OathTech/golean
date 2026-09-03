@@ -258,14 +258,36 @@ checking. Test it by forcing the kill: `scripts/test-lane-validation
 --with-go` T1-T4 run the real runner from a fake root whose `golean`
 shim `exec sleep`s on exactly one targeted call under a 1 s budget
 (red-first record: `docs/evidence/2026-09-03_timeout-cause/`).
-OWED (audit F1 on the fix, 2026-09-03; recorded, not changed — it is a
-criterion change): only 124 is named. Three other non-verdict exit
-codes are still read as verdicts — `observation-eq` exit 2
-(runObservationEq's undecodable-observation refusal, GoLean/CLI.lean)
-is read as "not equal" by every `obs_eq` caller, and `obs_eq`'s
-`>/dev/null 2>&1` discards the decode message; 137/143 (SIGKILL/SIGTERM
-through the wrapper's `128 + signal` — a cgroup or OOM kill) are read as
-"not equal" by `obs_eq`, fall through the strict Lean-run path to
-`expected status ok, got …`, and fall through `go_run_oracle` to
-"expected Go panic, got: …". The fix shape is the same as 124's: test
-the code before reading the capture, name it, never a pass.
+RESIDUAL (audit F1 on the fix, 2026-09-03; DISCHARGED the same day on
+branch `runner-exitcode`): the first slice named only 124. Three other
+non-verdict exit codes were still read as verdicts — `observation-eq`
+exit 2 (runObservationEq's undecodable-observation refusal,
+GoLean/CLI.lean) as "not equal" by every `obs_eq` caller, with
+`obs_eq`'s `>/dev/null 2>&1` discarding the decode message; 137/143
+(SIGKILL/SIGTERM through the wrapper's `128 + signal` — a cgroup/OOM
+kill, or scripts/capped's) as "not equal" by `obs_eq`, as `expected
+status ok, got ` (empty) on the strict Lean-run path, and as "expected
+Go panic, got: " (empty) through `go_run_oracle`. Same fix shape as
+124's: `undecided_cause` / `signal_cause` / `obs_eq_cause` in
+`scripts/diff-coverage` classify the code BEFORE the capture is read —
+0 and 1 are the only verdict codes (equal/not-equal; ok/error
+observation; go run green/red), 124 is the wall clock, 137/143 and any
+other 128+n are `KILLED (exit N — …; did not decide)`, exit 2 from the
+comparator is `could not decode the observation (exit 2 — did not
+decide; comparator said: <decode message>)` (obs_eq now keeps the
+comparator's stderr in `OBS_EQ_STDERR`), and any other code is `failed
+with exit N (did not decide)`. Stage words, budgets, criteria and the
+baseline are unchanged (ci --diff: 3195/3195 rows, zero drift — so no
+real did-not-decide had been hiding under a labelled failure). The
+three enumerator sites, lake build, harness generation and both native
+exports name 137/143 too (`signal_cause` only — the harness's own
+refusal contract is exit 2). runObservationEq's codes are documented,
+not changed. Fixtures T5-T8 (`scripts/test-lane-validation --with-go`;
+red-first record `docs/evidence/2026-09-03_runner-exitcode/`): a
+genuine exit 2 from the real comparator, a `kill -9` on the strict
+Lean run, a `kill -TERM` on the differential-stage comparison, and a
+fake `go` that `kill -9`s itself on the oracle call. Second lesson,
+caught red by T7 during the fix: a classifier's exit status must be
+the classification and nothing else — `[[ -n "$stderr" ]] && printf`
+as the LAST line of the namer returned 1 on an empty capture, and a
+SIGTERM (which leaves no stderr) read as a verdict again.

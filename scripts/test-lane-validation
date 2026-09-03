@@ -449,9 +449,27 @@ EOF
     # holding the capture pipe open. The budget is the real knob at its
     # minimum legal value (positive integer); no budget in the runner is
     # changed.
+    #
+    # ---- T5-T8: the OTHER non-verdict exit codes name themselves (the
+    # residual owed by the T1-T4 slice's audit F1, discharged 2026-09-03).
+    # run_with_timeout maps a signal death to 128+signal, and
+    # runObservationEq (GoLean/CLI.lean) exits 2 on an observation it
+    # cannot decode; before the fix every `obs_eq` caller read 2/137/143
+    # as "not equal" (and discarded exit 2's decode message), the strict
+    # Lean run fell through to `expected status ok, got …`, and
+    # go_run_oracle fell through to "expected Go panic, got: …". Same
+    # shim, three more modes: T5 forwards the comparator call to the
+    # REAL binary with an undecodable status (a genuine exit 2 with its
+    # genuine decode message); T6 `kill -9`s the shim on the strict
+    # default-stream run (exit 137); T7 `kill -TERM`s it on the
+    # differential-stage comparison (exit 143). T8 uses a second shim,
+    # a fake `go` that `kill -9`s itself on the oracle's `go run … .`
+    # shape only (harness generation and the native export still reach
+    # the real go). Red-first record: docs/evidence/2026-09-03_runner-
+    # exitcode/. Stage words unchanged; nothing in the runner is tuned.
     REAL_GOLEAN="$ROOT/.lake/build/bin/golean"
     if [ ! -x "$REAL_GOLEAN" ]; then
-      echo "FAIL: T1-T4 need the built golean binary at $REAL_GOLEAN (failing closed, not skipping)"
+      echo "FAIL: T1-T8 need the built golean binary at $REAL_GOLEAN (failing closed, not skipping)"
       fail=1
     else
       FR="$TMP/fakeroot"
@@ -461,12 +479,23 @@ EOF
       ln -s "$ROOT/artifacts/go-build-cache" "$FR/artifacts/go-build-cache"
       cat > "$FR/.lake/build/bin/golean" <<'EOF'
 #!/bin/bash
-# fake golean (test-lane-validation T1-T4): delegate to the real binary,
-# except the one call FAKE_GOLEAN_SLOW selects, which sleeps past the
-# 1s Lean budget so run_with_timeout kills it (exit 124).
+# fake golean (test-lane-validation T1-T8): delegate to the real binary,
+# except the one call FAKE_GOLEAN_MODE selects, which (T1-T4) sleeps past
+# the 1s Lean budget so run_with_timeout kills it (exit 124), or (T5-T7)
+# exits with one of the other non-verdict codes: a real exit 2 from the
+# real comparator on an undecodable observation, a SIGKILL (137), a
+# SIGTERM (143).
 REAL="$FAKE_GOLEAN_REAL"; ST="$FAKE_GOLEAN_STATE"; sub="${1:-}"
 has_choices=0; case " $* " in *" --choices "*) has_choices=1 ;; esac
-case "${FAKE_GOLEAN_SLOW:-}" in
+bump() { local n; n=$(( $(cat "$ST/$1" 2>/dev/null || echo 0) + 1 )); echo "$n" > "$ST/$1"; echo "$n"; }
+case "${FAKE_GOLEAN_MODE:-}" in
+  eq-undecodable)  # T5: the strict lane's FIRST observation-eq (the Go-observation validity check) — a GENUINE exit 2
+    [ "$sub" = observation-eq ] && exec "$REAL" observation-eq \
+      --left '{"schema":"golean-observation-v1","status":"weird"}' --right '{"schema":"golean-observation-v1","status":"weird"}' ;;
+  run-kill9)       # T6: the strict lane's single default-stream run, SIGKILLed (exit 137)
+    [ "$sub" = native-json-run ] && [ "$has_choices" -eq 0 ] && { kill -9 $$; sleep 5; exit 137; } ;;
+  eq-diff-term)    # T7: the strict lane's SECOND observation-eq (the differential stage), SIGTERMed (exit 143)
+    [ "$sub" = observation-eq ] && [ "$(bump eqs)" -ge 2 ] && { kill -TERM $$; sleep 5; exit 143; } ;;
   run-default)  # T1: the strict lane's single default-stream run
     [ "$sub" = native-json-run ] && [ "$has_choices" -eq 0 ] && exec sleep 30 ;;
   run-choices)  # T2 (strict nondet re-run) / T3 (membership coupling stream)
@@ -493,22 +522,33 @@ EOF
       mkdir -p "$FAKEBIN_T"
       printf '#!/bin/sh\nexit 0\n' > "$FAKEBIN_T/lake"
       chmod +x "$FAKEBIN_T/lake"
+      # T8's fake go: SIGKILLs itself on the ORACLE's call shape only
+      # (`go run [-race] .` — last arg "."); harness generation and the
+      # native export (`go run ./tools/…`) reach the real go untouched.
+      FAKEBIN_GO="$TMP/fakebin-go-kill9"
+      mkdir -p "$FAKEBIN_GO"
+      cat > "$FAKEBIN_GO/go" <<EOF
+#!/bin/bash
+if [ "\${1:-}" = run ] && [ "\${@: -1}" = "." ]; then kill -9 \$\$; sleep 5; exit 137; fi
+exec "$(command -v go)" "\$@"
+EOF
+      chmod +x "$FAKEBIN_GO/go"
       # Strict subject: a small baseline-PASS strict case (row fields read
       # from its cases.tsv so a corpus edit cannot silently desync the row).
       STRICT_DIR="Corpus/coverage/exec/control-flow/for-condition-eval"
       IFS=$'\t' read -r _ strict_subj strict_args strict_status strict_reason strict_feats < <(grep -v '^#' "$ROOT/$STRICT_DIR/cases.tsv" | head -1)
-      run_t() {  # $1 name, $2 mode, $3 manifest, $4 stage, $5 must-contain, $6 must-NOT-contain
-        local name="$1" mode="$2" manifest="$3" stage="$4" need="$5" forbid="$6" art st row
+      run_t() {  # $1 name, $2 mode, $3 manifest, $4 stage, $5 must-contain, $6 must-NOT-contain, [$7 extra PATH dir]
+        local name="$1" mode="$2" manifest="$3" stage="$4" need="$5" forbid="$6" extra_bin="${7:-}" art st row
         art="$TMP/artifacts-$name"; st="$TMP/state-$name"; mkdir -p "$st"
-        PATH="$FAKEBIN_T:$PATH" FAKE_GOLEAN_REAL="$REAL_GOLEAN" FAKE_GOLEAN_STATE="$st" FAKE_GOLEAN_SLOW="$mode" \
+        PATH="${extra_bin:+$extra_bin:}$FAKEBIN_T:$PATH" FAKE_GOLEAN_REAL="$REAL_GOLEAN" FAKE_GOLEAN_STATE="$st" FAKE_GOLEAN_MODE="$mode" \
           LEAN_TIMEOUT_SECONDS=1 GOLEAN_COVERAGE_JOBS=1 GOLEAN_COVERAGE_ARTIFACTS="$art" \
           "$FR/scripts/diff-coverage" "$manifest" >/dev/null 2>&1
         row="$(tail -1 "$art/latest.tsv" 2>/dev/null || true)"
         if [[ "$row" == FAIL*"	$stage	"*"$need"* && "$row" != *"$forbid"* ]]; then
-          echo "ok: $name: timeout named at stage $stage ($need)"
+          echo "ok: $name: cause named at stage $stage ($need)"
           echo "    row: $row"
         else
-          echo "FAIL: $name: the timeout was not named (want stage $stage + '$need', never '$forbid'); row: ${row:-<none>}"
+          echo "FAIL: $name: the cause was not named (want stage $stage + '$need', never '$forbid'); row: ${row:-<none>}"
           fail=1
         fi
       }
@@ -522,6 +562,24 @@ EOF
         "driver-coupling pin: native-json-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s" "copied-driver drift, or"
       run_t T4-sample-loop eq-sample "$TMP/manifest-t-member.tsv" membership \
         "observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing a Go sample against member #1" "NOT in the machine's enumerated set"
+      # T5-T8 (exit 2 / 137 / 143 / oracle 137). T5's need string pins the
+      # REAL decode message (runObservationEq's `left.status: unknown
+      # observation status …`), so the reason must carry the comparator's
+      # stderr, not just the code. T7's forbid is the OLD mismatch shape
+      # (detail beginning `Lean=`) at the differential stage.
+      run_t T5-comparator-undecodable eq-undecodable "$TMP/manifest-t-strict.tsv" go-observation \
+        'observation-eq could not decode the observation (exit 2 — did not decide; comparator said: left.status: unknown observation status' "is not a valid observation"
+      run_t T6-lean-run-sigkill run-kill9 "$TMP/manifest-t-strict.tsv" lean-observation \
+        "Lean run KILLED (exit 137" "expected status ok, got"
+      run_t T7-differential-sigterm eq-diff-term "$TMP/manifest-t-strict.tsv" differential \
+        "observation-eq KILLED (exit 143" $'\tdifferential\tLean='
+      # T8 subject: a small baseline-PASS PANIC case, so the pre-fix
+      # misreading is the cause-WRONG "expected Go panic, got: " (empty).
+      PANIC_DIR="Corpus/coverage/exec/panic-recover/defer-recover-builtin"
+      IFS=$'\t' read -r _ panic_subj panic_args panic_status panic_reason panic_feats < <(grep -v '^#' "$ROOT/$PANIC_DIR/cases.tsv" | head -1)
+      printf 'lane-t8\t%s\t%s\t%s\t%s\t%s\t%s\tstrict\t-\t-\n' "$PANIC_DIR" "$panic_subj" "$panic_args" "$panic_status" "$panic_feats" "$panic_reason" > "$TMP/manifest-t-panic.tsv"
+      run_t T8-go-oracle-sigkill "" "$TMP/manifest-t-panic.tsv" go-run \
+        "go run oracle KILLED (exit 137" "expected Go panic, got" "$FAKEBIN_GO"
     fi
 
   fi

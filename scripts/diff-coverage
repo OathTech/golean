@@ -99,22 +99,84 @@ lean() {
   run_with_timeout "$LEAN_TIMEOUT_SECONDS" "$GOLEAN_BIN" "$@"
 }
 
-# Observation equality under the Lean budget, with a TIMEOUT kept
-# DISTINCT from inequality: 0 = equal; 124 = the comparator was killed by
-# the wall clock (it decided NOTHING); 1 = not equal; 2/137/143/other =
-# the comparator did NOT decide either (2 = runObservationEq's
-# undecodable-observation refusal, GoLean/CLI.lean; 137/143 = a
-# SIGKILL/SIGTERM — cgroup or OOM kill — via the wrapper's 128+signal)
-# — currently reported as "not equal" by every caller, and the
-# `>/dev/null 2>&1` below discards exit 2's decode message: an OWED
-# residual (audit F1, docs/operational-lessons.md "A killed command has
-# decided nothing"), not changed in the cause-naming slice because it is
-# a criterion change. Callers test 124 first and name it; the old
-# `if ! lean observation-eq …` shape read a killed comparator as
+# A NON-VERDICT exit code names itself (cause-naming slice 2, 2026-09-03,
+# discharging the residual owed at the first slice's audit F1 —
+# docs/operational-lessons.md "A killed command has decided nothing").
+# Prints a cause phrase and returns 0 for every code that decided
+# NOTHING: 124 (the wall clock — the wrapper's own code), 137/143 (a
+# SIGKILL/SIGTERM through the wrapper's 128+signal: a cgroup/OOM kill or
+# an external kill), any other 128+signal death, and any other code the
+# caller does not own. Prints nothing and returns 1 for the VERDICT codes
+# 0 and 1, which the CALLER interprets (equal / not equal; ok / error
+# observation; go run green / red). $1 = rc, $2 = what ran, $3 = its
+# budget in seconds, $4 = the budget's knob. Callers test this BEFORE
+# reading the capture and report at the stage of the check that could
+# not complete — never a pass, never a skip, never a mis-attribution.
+undecided_cause() {
+  local rc="$1" what="$2" seconds="$3" knob="$4"
+  case "$rc" in
+    0|1) return 1 ;;
+    124) printf '%s TIMED OUT after %ss (%s)' "$what" "$seconds" "$knob" ;;
+    *)   signal_cause "$rc" "$what" || printf '%s failed with exit %s (did not decide)' "$what" "$rc" ;;
+  esac
+}
+# The signal-death subset alone (for tools whose OWN refusal contract
+# uses codes above 1 — the coverage harness exits 2 on a refusal, the
+# enumerator names its exit code itself): 137 and 143 spelled out because
+# they are the ones a cgroup/OOM kill or scripts/capped's kill produce;
+# any other 128+n is a crash that decided nothing either. Prints nothing
+# and returns 1 below 129.
+signal_cause() {
+  local rc="$1" what="$2"
+  case "$rc" in
+    137) printf '%s KILLED (exit 137 — SIGKILL: cgroup/OOM or an external kill; did not decide)' "$what" ;;
+    143) printf '%s KILLED (exit 143 — SIGTERM: an external kill; did not decide)' "$what" ;;
+    *)   if (( rc > 128 && rc < 256 )); then
+           printf '%s KILLED (exit %s — died on signal %s; did not decide)' "$what" "$rc" "$((rc - 128))"
+         else
+           return 1
+         fi ;;
+  esac
+}
+
+# Observation equality under the Lean budget. Exit codes: 0 = equal;
+# 1 = not equal (runObservationEq's contract, GoLean/CLI.lean — the
+# codes are documented there and NOT changed here); everything else
+# decided NOTHING — 124 = killed by the wall clock, 2 = runObservationEq's
+# undecodable-observation refusal (its decode message on stderr),
+# 137/143 = SIGKILL/SIGTERM via the wrapper's 128+signal. The
+# comparator's stderr is KEPT in OBS_EQ_STDERR (the first slice's
+# `>/dev/null 2>&1` discarded exit 2's decode message — the cause) and
+# stdout dropped; callers pass the code to obs_eq_cause and report the
+# phrase it names BEFORE interpreting 1 as "not equal". The old
+# `if ! lean observation-eq …` shape read every one of these as
 # "differs" and mis-attributed it (nondet variance, coupling drift, the
 # soundness alarm).
+OBS_EQ_STDERR=""
 obs_eq() {
-  lean observation-eq --left "$1" --right "$2" >/dev/null 2>&1
+  local rc=0
+  OBS_EQ_STDERR="$(lean observation-eq --left "$1" --right "$2" 2>&1 >/dev/null)" || rc=$?
+  return "$rc"
+}
+# Names obs_eq's non-verdict codes (returns 1, prints nothing, for 0/1).
+# Exit 2 is named as what it is — the comparator could not decode an
+# observation — with the decode message; the other codes carry the
+# captured stderr when there is any (124 does not: the wrapper's own
+# announcement is the phrase itself).
+obs_eq_cause() {
+  local rc="$1" said
+  said="$(one_line "$OBS_EQ_STDERR")"
+  case "$rc" in
+    0|1) return 1 ;;
+    2)   printf 'observation-eq could not decode the observation (exit 2 — did not decide; comparator said: %s)' "$said" ;;
+    124) undecided_cause 124 observation-eq "$LEAN_TIMEOUT_SECONDS" LEAN_TIMEOUT_SECONDS ;;
+    *)   undecided_cause "$rc" observation-eq "$LEAN_TIMEOUT_SECONDS" LEAN_TIMEOUT_SECONDS
+         if [[ -n "$said" ]]; then printf ' (comparator said: %s)' "$said"; fi ;;
+  esac
+  # The status is the CLASSIFICATION, never the last printf's: a SIGKILL
+  # leaves an empty stderr, and `[[ -n … ]] && printf` as the last
+  # command returned 1 — the kill read as a verdict (caught red by T7).
+  return 0
 }
 
 json_string_literal() {
@@ -301,6 +363,9 @@ build_rc=0
 run_with_timeout "$LAKE_BUILD_TIMEOUT_SECONDS" lake build || build_rc=$?
 if [[ "$build_rc" -eq 124 ]]; then
   echo "lake build TIMED OUT after ${LAKE_BUILD_TIMEOUT_SECONDS}s (LAKE_BUILD_TIMEOUT_SECONDS; no results published)" >&2
+  exit 2
+elif build_cause="$(signal_cause "$build_rc" "lake build")"; then
+  echo "$build_cause — no results published" >&2
   exit 2
 elif [[ "$build_rc" -ne 0 ]]; then
   echo "lake build failed (exit $build_rc; no results published)" >&2
@@ -509,7 +574,7 @@ run_case_rows() {
   # vs generics/generic-closure/shared-capture, 2026-08-05 — a spurious
   # go-run FAIL). Flattening removes the hazard class.
   go_run_dir="$OUT/go-run/${id//\//__}"
-  local harness_rc=0
+  local harness_rc=0 harness_cause
   harness_output="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/coverageharness \
       --input "$go_file" \
       --out "$go_run_dir" \
@@ -518,6 +583,9 @@ run_case_rows() {
       --args "$arg_ints" 2>&1)" || harness_rc=$?
   if [[ "$harness_rc" -eq 124 ]]; then
     report_fail "$id" "$features" "go-harness" "harness generation TIMED OUT after ${GO_TIMEOUT_SECONDS}s (GO_TIMEOUT_SECONDS) — no harness produced; captured output: $harness_output"
+    return 0
+  elif harness_cause="$(signal_cause "$harness_rc" "harness generation")"; then
+    report_fail "$id" "$features" "go-harness" "$harness_cause — no harness produced; captured output: $harness_output"
     return 0
   elif [[ "$harness_rc" -ne 0 ]]; then
     report_fail "$id" "$features" "go-harness" "$harness_output"
@@ -545,7 +613,7 @@ run_case_rows() {
     return 0
   fi
 
-  local go_rc=0 go_valid_rc=0
+  local go_rc=0 go_valid_rc=0 go_cause go_valid_cause
   if go_observation="$(go_run_oracle 2>&1)"; then
     if [[ "$expected_status" == "race" ]]; then
       report_fail "$id" "$features" "go-observation" "expected a -race report, but go run -race exited green: $go_observation (three-way investigation: too-eager check / schedule-hidden race / misclassified case)"
@@ -555,8 +623,8 @@ run_case_rows() {
       failed=1
     else
       obs_eq "$go_observation" "$go_observation"; go_valid_rc=$?
-      if [[ "$go_valid_rc" -eq 124 ]]; then
-        report_fail "$id" "$features" "go-observation" "observation-eq TIMED OUT after ${LEAN_TIMEOUT_SECONDS}s (LEAN_TIMEOUT_SECONDS) validating the Go observation — validity NOT decided: $go_observation"
+      if go_valid_cause="$(obs_eq_cause "$go_valid_rc")"; then
+        report_fail "$id" "$features" "go-observation" "$go_valid_cause validating the Go observation — validity NOT decided: $go_observation"
         failed=1
       elif [[ "$go_valid_rc" -ne 0 ]]; then
         report_fail "$id" "$features" "go-observation" "Go output is not a valid observation: $go_observation"
@@ -568,11 +636,13 @@ run_case_rows() {
     fi
   else
     go_rc=$?
-    if [[ "$go_rc" -eq 124 ]]; then
-      # Named BEFORE the status-specific branches: a killed oracle has
-      # produced no verdict, and its partial output used to be read as
-      # "expected Go panic, got: …" / a bare go-run detail.
-      report_fail "$id" "$features" "go-run" "go run oracle TIMED OUT after ${GO_TIMEOUT_SECONDS}s (GO_TIMEOUT_SECONDS) — no Go observation produced (not a $expected_status verdict); captured output: $go_observation"
+    if go_cause="$(undecided_cause "$go_rc" "go run oracle" "$GO_TIMEOUT_SECONDS" GO_TIMEOUT_SECONDS)"; then
+      # Named BEFORE the status-specific branches: a killed oracle (wall
+      # clock, SIGKILL/SIGTERM, any non-verdict code — `go run` itself
+      # reports a red program as exit 1) has produced no verdict, and
+      # its partial output used to be read as "expected Go panic, got: …"
+      # / a bare go-run detail.
+      report_fail "$id" "$features" "go-run" "$go_cause — no Go observation produced (not a $expected_status verdict); captured output: $go_observation"
       failed=1
     elif [[ "$expected_status" == "deadlock" ]]; then
       # The detector's message is FIXED; the observation both sides
@@ -662,10 +732,13 @@ run_case_rows() {
   if [[ "$id" == "init/hidden-dep-order" ]]; then
     fe_flags+=(--allow-hidden-dep-init-order)
   fi
-  local native_rc=0
+  local native_rc=0 native_cause
   native_export="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/nativefrontend ${fe_flags[@]+"${fe_flags[@]}"} --dir "$go_dir" --out "$wire_json" 2>&1)" || native_rc=$?
   if [[ "$native_rc" -eq 124 ]]; then
     report_fail "$id" "$features" "frontend-export" "native frontend TIMED OUT after ${GO_TIMEOUT_SECONDS}s (GO_TIMEOUT_SECONDS) — no wire produced; captured output: $native_export"
+    return 0
+  elif native_cause="$(signal_cause "$native_rc" "native frontend")"; then
+    report_fail "$id" "$features" "frontend-export" "$native_cause — no wire produced; captured output: $native_export"
     return 0
   elif [[ "$native_rc" -ne 0 ]]; then
     report_fail "$id" "$features" "frontend-export" "native frontend: $native_export"
@@ -733,7 +806,7 @@ run_case_rows() {
         conf_args+=(--arg-int "$v2")
       done
     fi
-    local conf_rc=0 conf_timeout="$LEAN_ENUM_TIMEOUT_SECONDS"
+    local conf_rc=0 conf_timeout="$LEAN_ENUM_TIMEOUT_SECONDS" conf_what_sig
     if [[ "$tier" == "slow" ]]; then
       conf_timeout="$LEAN_ENUM_SLOW_TIMEOUT_SECONDS"
     fi
@@ -747,6 +820,8 @@ run_case_rows() {
       local conf_what="enumerator failed (exit $conf_rc; schedule-confluence not certified)"
       if [[ "$conf_rc" -eq 124 ]]; then
         conf_what="enumerator TIMED OUT after ${conf_timeout}s (schedule-confluence not certified)"
+      elif conf_what_sig="$(signal_cause "$conf_rc" enumerator)"; then
+        conf_what="$conf_what_sig (schedule-confluence not certified)"
       fi
       report_fail "$id" "$features" "confluent" "$conf_what: $(cat "$conf_dir/enum-stats.txt")"
       return 0
@@ -799,15 +874,19 @@ run_case_rows() {
   else
     lean_status=$?
   fi
-  # The wall-clock kill is NAMED before the observation is read (cause-
-  # naming fix 2026-09-03): the killed run's captured output is empty or
-  # partial, so the status check below reported `expected status ok, got `
-  # — fail-closed, cause-blind. Stage stays lean-observation on purpose:
-  # a Lean run that cannot finish inside the budget is a machine-side
-  # fidelity failure (scripts/check-bugs.sh and tools/reconcile-records
-  # count that stage; lean-run is outside their fidelity set).
-  if [[ "$lean_status" -eq 124 ]]; then
-    report_fail "$id" "$features" "lean-observation" "Lean run TIMED OUT after ${LEAN_TIMEOUT_SECONDS}s (LEAN_TIMEOUT_SECONDS) — no observation produced (expected status $expected_status); captured output: $lean_observation"
+  # A NON-VERDICT exit is NAMED before the observation is read (cause-
+  # naming fixes 2026-09-03: 124 first, then 137/143 and the rest): the
+  # killed run's captured output is empty or partial, so the status
+  # check below reported `expected status ok, got ` — fail-closed,
+  # cause-blind. native-json-run's verdict codes are 0 (ok observation)
+  # and 1 (error observation, JSON on stdout); anything else produced no
+  # observation. Stage stays lean-observation on purpose: a Lean run
+  # that cannot finish is a machine-side fidelity failure
+  # (scripts/check-bugs.sh and tools/reconcile-records count that stage;
+  # lean-run is outside their fidelity set).
+  local lean_cause
+  if lean_cause="$(undecided_cause "$lean_status" "Lean run" "$LEAN_TIMEOUT_SECONDS" LEAN_TIMEOUT_SECONDS)"; then
+    report_fail "$id" "$features" "lean-observation" "$lean_cause — no observation produced (expected status $expected_status); captured output: $lean_observation"
     return 0
   fi
   if [[ "$lean_observation" != *"\"status\":\"$expected_status\""* ]]; then
@@ -827,10 +906,11 @@ run_case_rows() {
     return 0
   fi
 
-  local diff_rc=0 conf_eq_rc=0
-  observation_diff="$(lean observation-eq --left "$lean_observation" --right "$go_observation" 2>&1)" || diff_rc=$?
-  if [[ "$diff_rc" -eq 124 ]]; then
-    report_fail "$id" "$features" "differential" "observation-eq TIMED OUT after ${LEAN_TIMEOUT_SECONDS}s (LEAN_TIMEOUT_SECONDS) — Lean/Go equality NOT decided (not a mismatch): Lean=$lean_observation Go=$go_observation $observation_diff"
+  local diff_rc=0 conf_eq_rc=0 diff_cause conf_eq_cause
+  obs_eq "$lean_observation" "$go_observation"; diff_rc=$?
+  observation_diff="$OBS_EQ_STDERR"
+  if diff_cause="$(obs_eq_cause "$diff_rc")"; then
+    report_fail "$id" "$features" "differential" "$diff_cause — Lean/Go equality NOT decided (not a mismatch): Lean=$lean_observation Go=$go_observation"
     return 0
   elif [[ "$diff_rc" -ne 0 ]]; then
     report_fail "$id" "$features" "differential" "Lean=$lean_observation Go=$go_observation $observation_diff"
@@ -838,8 +918,8 @@ run_case_rows() {
   fi
   if [[ "$lane" == "confluent" ]]; then
     obs_eq "$confluent_member" "$lean_observation"; conf_eq_rc=$?
-    if [[ "$conf_eq_rc" -eq 124 ]]; then
-      report_fail "$id" "$features" "confluent" "observation-eq TIMED OUT after ${LEAN_TIMEOUT_SECONDS}s (LEAN_TIMEOUT_SECONDS) — certified member vs driver observation NOT decided (not enumerator/driver drift): member=$confluent_member driver=$lean_observation"
+    if conf_eq_cause="$(obs_eq_cause "$conf_eq_rc")"; then
+      report_fail "$id" "$features" "confluent" "$conf_eq_cause — certified member vs driver observation NOT decided (not enumerator/driver drift): member=$confluent_member driver=$lean_observation"
       return 0
     elif [[ "$conf_eq_rc" -ne 0 ]]; then
       report_fail "$id" "$features" "confluent" "the certified singleton member differs from the driver's observation (enumerator/driver drift): member=$confluent_member driver=$lean_observation"
@@ -877,9 +957,11 @@ run_case_rows() {
     run_with_timeout "$LEAN_ENUM_TIMEOUT_SECONDS" "$GOLEAN_BIN" "${racy_args[@]}" \
         > "$racy_dir/observations.txt" 2> "$racy_dir/enum-stats.txt" || racy_rc=$?
     if [[ "$racy_rc" -ne 0 ]]; then
-      local racy_what="enumerator failed (exit $racy_rc) — 'every enumerated path refuses' not certified"
+      local racy_what="enumerator failed (exit $racy_rc) — 'every enumerated path refuses' not certified" racy_what_sig
       if [[ "$racy_rc" -eq 124 ]]; then
         racy_what="enumerator TIMED OUT after ${LEAN_ENUM_TIMEOUT_SECONDS}s — 'every enumerated path refuses' not certified"
+      elif racy_what_sig="$(signal_cause "$racy_rc" enumerator)"; then
+        racy_what="$racy_what_sig — 'every enumerated path refuses' not certified"
       fi
       report_fail "$id" "$features" "racy" "$racy_what: $(cat "$racy_dir/enum-stats.txt")"
       return 0
@@ -896,7 +978,7 @@ run_case_rows() {
   # native path threads choices today.
   if [[ "$FRONTEND" == "native" ]]; then
     nondet=0
-    local variant_rc eq_rc
+    local variant_rc eq_rc variant_cause eq_cause
     for oracle in "9,8,7,6,5,4,3,2,1,0" "1,3,5,7,9,2,4,6,8,0" "5,5,5,5,5,5,5,5"; do
       # A killed re-run is NOT an observed variance (cause-naming fix
       # 2026-09-03): the old shape compared the empty capture against
@@ -905,14 +987,14 @@ run_case_rows() {
       # certified — with the wall clock named as the cause.
       variant_rc=0
       variant_obs="$(lean "${lean_args[@]}" --choices "$oracle" 2>&1)" || variant_rc=$?
-      if [[ "$variant_rc" -eq 124 ]]; then
-        report_fail "$id" "$features" "nondet" "oracle-invariance re-run under stream [$oracle] TIMED OUT after ${LEAN_TIMEOUT_SECONDS}s (LEAN_TIMEOUT_SECONDS) — invariance NOT certified (a killed run is not an observed variance); captured output: $variant_obs"
+      if variant_cause="$(undecided_cause "$variant_rc" "oracle-invariance re-run under stream [$oracle]" "$LEAN_TIMEOUT_SECONDS" LEAN_TIMEOUT_SECONDS)"; then
+        report_fail "$id" "$features" "nondet" "$variant_cause — invariance NOT certified (a killed run is not an observed variance); captured output: $variant_obs"
         nondet=1
         break
       fi
       obs_eq "$lean_observation" "$variant_obs"; eq_rc=$?
-      if [[ "$eq_rc" -eq 124 ]]; then
-        report_fail "$id" "$features" "nondet" "observation-eq TIMED OUT after ${LEAN_TIMEOUT_SECONDS}s (LEAN_TIMEOUT_SECONDS) comparing the default observation against stream [$oracle] — invariance NOT decided: default=$lean_observation variant=$variant_obs"
+      if eq_cause="$(obs_eq_cause "$eq_rc")"; then
+        report_fail "$id" "$features" "nondet" "$eq_cause comparing the default observation against stream [$oracle] — invariance NOT decided: default=$lean_observation variant=$variant_obs"
         nondet=1
         break
       elif [[ "$eq_rc" -ne 0 ]]; then
@@ -987,13 +1069,14 @@ go_run_oracle() {
 # run_membership_case_rows' locals (go_run_dir, expected_status,
 # expected_reason, statuses).
 membership_go_observation() {
-  local out rc=0 valid_rc=0
+  local out rc=0 valid_rc=0 go_cause valid_cause
   out="$(go_run_oracle "${1:-}" 2>&1)" || rc=$?
-  if [[ "$rc" -eq 124 ]]; then
-    # Named before any status reading: a killed oracle is no sample, and
-    # its partial output used to surface as "status outside the declared
+  if go_cause="$(undecided_cause "$rc" "go run oracle" "$GO_TIMEOUT_SECONDS" GO_TIMEOUT_SECONDS)"; then
+    # Named before any status reading: a killed oracle (wall clock,
+    # SIGKILL/SIGTERM, any non-verdict code) is no sample, and its
+    # partial output used to surface as "status outside the declared
     # set" / "expected Go panic, got: …".
-    printf 'go sample: go run oracle TIMED OUT after %ss (GO_TIMEOUT_SECONDS) — no sample produced (not a status verdict); captured output: %s' "$GO_TIMEOUT_SECONDS" "$out"
+    printf 'go sample: %s — no sample produced (not a status verdict); captured output: %s' "$go_cause" "$out"
     return 1
   fi
   if [[ "$rc" -eq 0 ]]; then
@@ -1002,8 +1085,8 @@ membership_go_observation() {
       return 1
     fi
     obs_eq "$out" "$out"; valid_rc=$?
-    if [[ "$valid_rc" -eq 124 ]]; then
-      printf 'go sample: observation-eq TIMED OUT after %ss (LEAN_TIMEOUT_SECONDS) validating the sample — validity NOT decided: %s' "$LEAN_TIMEOUT_SECONDS" "$out"
+    if valid_cause="$(obs_eq_cause "$valid_rc")"; then
+      printf 'go sample: %s validating the sample — validity NOT decided: %s' "$valid_cause" "$out"
       return 1
     elif [[ "$valid_rc" -ne 0 ]]; then
       printf 'go sample is not a valid observation: %s' "$out"
@@ -1240,10 +1323,13 @@ run_membership_case_rows() {
   if [[ "$id" == "init/hidden-dep-order" ]]; then
     mem_fe_flags+=(--allow-hidden-dep-init-order)
   fi
-  local mem_native_rc=0
+  local mem_native_rc=0 mem_native_cause
   native_export="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/nativefrontend ${mem_fe_flags[@]+"${mem_fe_flags[@]}"} --dir "$go_dir" --out "$wire_json" 2>&1)" || mem_native_rc=$?
   if [[ "$mem_native_rc" -eq 124 ]]; then
     report_fail "$id" "$features" "frontend-export" "native frontend TIMED OUT after ${GO_TIMEOUT_SECONDS}s (GO_TIMEOUT_SECONDS) — no wire produced; captured output: $native_export"
+    return 0
+  elif mem_native_cause="$(signal_cause "$mem_native_rc" "native frontend")"; then
+    report_fail "$id" "$features" "frontend-export" "$mem_native_cause — no wire produced; captured output: $native_export"
     return 0
   elif [[ "$mem_native_rc" -ne 0 ]]; then
     report_fail "$id" "$features" "frontend-export" "native frontend: $native_export"
@@ -1325,7 +1411,7 @@ run_membership_case_rows() {
     # the 2026-08-13 nightly flake was undiagnosable from CI logs because
     # the generic "enumerator failed" detail (with an empty stats file)
     # never said the guard that fired was wall-clock.
-    local enum_timeout="$LEAN_ENUM_TIMEOUT_SECONDS" enum_rc=0
+    local enum_timeout="$LEAN_ENUM_TIMEOUT_SECONDS" enum_rc=0 enum_what_sig
     if [[ "$tier" == "slow" ]]; then
       enum_timeout="$LEAN_ENUM_SLOW_TIMEOUT_SECONDS"
     fi
@@ -1335,6 +1421,8 @@ run_membership_case_rows() {
       local enum_what="enumerator failed (exit $enum_rc; coverage not certified)"
       if [[ "$enum_rc" -eq 124 ]]; then
         enum_what="enumerator TIMED OUT after ${enum_timeout}s (coverage not certified)"
+      elif enum_what_sig="$(signal_cause "$enum_rc" enumerator)"; then
+        enum_what="$enum_what_sig (coverage not certified)"
       fi
       report_fail "$id" "$features" "membership" "$enum_what: $(cat "$mem_dir/enum-stats.txt")"
       return 0
@@ -1384,7 +1472,7 @@ run_membership_case_rows() {
   # observation under the default and the three adversarial streams must
   # be a member of the enumerated set. A miss is copied-driver drift (or a
   # width the enumeration missed) — fail loud either way.
-  local cs coupling_obs member m_found coupling_rc eq_rc eq_timeout
+  local cs coupling_obs member m_found coupling_rc eq_rc eq_undecided coupling_cause
   for cs in "" "9,8,7,6,5,4,3,2,1,0" "1,3,5,7,9,2,4,6,8,0" "5,5,5,5,5,5,5,5"; do
     local run_args=(native-json-run --input "$wire_json" --function "$function_name" ${int_flags+"${int_flags[@]}"})
     if [[ -n "$cs" ]]; then
@@ -1396,8 +1484,8 @@ run_membership_case_rows() {
     # clock is the cause.
     coupling_rc=0
     coupling_obs="$(lean "${run_args[@]}" 2>&1)" || coupling_rc=$?
-    if [[ "$coupling_rc" -eq 124 ]]; then
-      report_fail "$id" "$features" "membership" "driver-coupling pin: native-json-run under stream [$cs] TIMED OUT after ${LEAN_TIMEOUT_SECONDS}s (LEAN_TIMEOUT_SECONDS) — coupling NOT certified (a killed run is not copied-driver drift); captured output: $coupling_obs"
+    if coupling_cause="$(undecided_cause "$coupling_rc" "driver-coupling pin: native-json-run under stream [$cs]" "$LEAN_TIMEOUT_SECONDS" LEAN_TIMEOUT_SECONDS)"; then
+      report_fail "$id" "$features" "membership" "$coupling_cause — coupling NOT certified (a killed run is not copied-driver drift); captured output: $coupling_obs"
       return 0
     fi
     if [[ -n "$nonterm" && "$coupling_obs" == *'"status":"fuel-out"'* ]]; then
@@ -1409,19 +1497,18 @@ run_membership_case_rows() {
       continue
     fi
     m_found=0
-    eq_timeout=0
+    eq_undecided=""
     while IFS= read -r member; do
       obs_eq "$member" "$coupling_obs"; eq_rc=$?
-      if [[ "$eq_rc" -eq 124 ]]; then
-        eq_timeout=1
+      if eq_undecided="$(obs_eq_cause "$eq_rc")"; then
         break
       elif [[ "$eq_rc" -eq 0 ]]; then
         m_found=1
         break
       fi
     done < "$mem_dir/observations.txt"
-    if [[ "$eq_timeout" -eq 1 ]]; then
-      report_fail "$id" "$features" "membership" "driver-coupling pin: observation-eq TIMED OUT after ${LEAN_TIMEOUT_SECONDS}s (LEAN_TIMEOUT_SECONDS) comparing the stream [$cs] observation against member $member — coupling NOT decided (not copied-driver drift): $coupling_obs"
+    if [[ -n "$eq_undecided" ]]; then
+      report_fail "$id" "$features" "membership" "driver-coupling pin: $eq_undecided comparing the stream [$cs] observation against member $member — coupling NOT decided (not copied-driver drift): $coupling_obs"
       return 0
     fi
     if [[ "$m_found" -ne 1 ]]; then
@@ -1436,12 +1523,11 @@ run_membership_case_rows() {
   while IFS= read -r sample; do
     found=0
     n=0
-    eq_timeout=0
+    eq_undecided=""
     while IFS= read -r member; do
       n=$((n + 1))
       obs_eq "$member" "$sample"; eq_rc=$?
-      if [[ "$eq_rc" -eq 124 ]]; then
-        eq_timeout=1
+      if eq_undecided="$(obs_eq_cause "$eq_rc")"; then
         break
       elif [[ "$eq_rc" -eq 0 ]]; then
         found=1
@@ -1452,11 +1538,12 @@ run_membership_case_rows() {
         break
       fi
     done < "$mem_dir/observations.txt"
-    # A killed comparator is NOT the too-narrow soundness alarm (cause-
-    # naming fix 2026-09-03): the old loop read exit 124 as "not this
-    # member" and, having matched nothing, raised the alarm.
-    if [[ "$eq_timeout" -eq 1 ]]; then
-      report_fail "$id" "$features" "membership" "membership check: observation-eq TIMED OUT after ${LEAN_TIMEOUT_SECONDS}s (LEAN_TIMEOUT_SECONDS) comparing a Go sample against member #$n — membership NOT decided (a killed comparator is not the too-narrow soundness alarm): sample=$sample member=$member"
+    # A killed (or refusing) comparator is NOT the too-narrow soundness
+    # alarm (cause-naming fixes 2026-09-03): the old loop read exit 124
+    # — and then 2/137/143 — as "not this member" and, having matched
+    # nothing, raised the alarm.
+    if [[ -n "$eq_undecided" ]]; then
+      report_fail "$id" "$features" "membership" "membership check: $eq_undecided comparing a Go sample against member #$n — membership NOT decided (a killed comparator is not the too-narrow soundness alarm): sample=$sample member=$member"
       return 0
     fi
     if [[ "$found" -ne 1 ]]; then
@@ -1508,7 +1595,7 @@ case_count="$row_i"
 export CASE_OUT ROOT OUT FRONTEND GO_BUILD_CACHE GOLEAN_BIN \
   GO_TIMEOUT_SECONDS LEAN_TIMEOUT_SECONDS LEAN_ENUM_TIMEOUT_SECONDS \
   LEAN_ENUM_SLOW_TIMEOUT_SECONDS
-export -f run_case run_case_rows run_with_timeout lean obs_eq json_string_literal \
+export -f run_case run_case_rows run_with_timeout lean obs_eq obs_eq_cause undecided_cause signal_cause json_string_literal \
   panic_message fatal_message report_pass report_pass_lane report_fail one_line \
   membership_go_observation run_membership_case_rows go_run_oracle \
   parse_lane_params member_status_allowed
