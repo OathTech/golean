@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+edges	formatIntEdges	-	ok	-	strings,stdlib,ints
+positive	formatIntPositive	-	ok	-	strings,stdlib,ints

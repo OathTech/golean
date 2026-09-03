@@ -1,0 +1,20 @@
+# id	subject	args	expected_status	expected_reason	features
+infer-mixed-untyped	inferMixedUntypedConstants	-	ok	-	generics,inference,untyped,constants,floats
+infer-rune-int	inferRuneAndInt	-	ok	-	generics,inference,untyped,runes
+zero-of-type-params	zeroOfTypeParams	-	ok	-	generics,zero_values,new
+zero-nil-kinds	zeroNilKinds	-	ok	-	generics,zero_values,nil
+instantiate-with-interface	instantiateWithInterface	-	ok	-	generics,interfaces,comparability
+tilde-defined-type	tildeConstraintDefinedType	-	ok	-	generics,constraints,defined_type,type_sets
+generic-stack	genericStackOps	-	ok	-	generics,methods,structs,zero_values
+generic-func-value	genericFuncValue	-	ok	-	generics,functions,higher_order
+conversion-in-body	conversionInGenericBody	-	ok	-	generics,conversions,floats
+type-switch-in-generic	typeSwitchInGeneric	-	ok	-	generics,type_switch,interfaces
+embedded-generic-promotion	embeddedGenericPromotion	-	ok	-	generics,embedding,methods
+generic-alias	genericAlias	-	ok	-	generics,aliases,maps
+min-defined-string	minDefinedString	-	ok	-	generics,defined_type,strings,comparisons
+method-constraint-call	methodConstraintCall	-	ok	-	generics,constraints,methods
+type-param-map-key-value	typeParamMapKeyValue	-	ok	-	generics,maps,range
+generic-recursion	genericRecursion	-	ok	-	generics,recursion,slices
+comparable-array-of-iface	comparableArrayOfIface	-	panic	comparing uncomparable type []int	generics,comparability,interfaces,arrays,panic
+generic-swap	genericSwap	-	ok	-	generics,multi_result
+core-type-string	coreTypeString	-	ok	-	generics,strings,type_sets,indexing

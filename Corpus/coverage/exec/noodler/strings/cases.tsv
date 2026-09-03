@@ -1,0 +1,20 @@
+# id	subject	args	expected_status	expected_reason	features
+range-indices-multibyte	rangeIndicesMultibyte	-	ok	-	strings,range,unicode
+byte-inside-rune	byteInsideRune	-	ok	-	strings,indexing,bytes,unicode
+string-from-bytes-copies	stringFromBytesCopies	-	ok	-	strings,bytes,conversions,aliasing
+string-ordering	stringOrdering	-	ok	-	strings,comparisons
+concat-loop	concatLoop	-	ok	-	strings,concat,loops
+rune-count-vs-len	runeCountVsLen	-	ok	-	strings,range,unicode,len
+fields-unicode-spaces	fieldsUnicodeSpaces	-	ok	-	strings,stdlib,unicode
+trimspace-unicode	trimSpaceUnicode	-	ok	-	strings,stdlib,unicode
+split-edges	splitEdges	-	ok	-	strings,stdlib
+join-repeat-edges	joinRepeatEdges	-	ok	-	strings,stdlib,nil
+parse-uint-edges	parseUintEdges	-	ok	-	strings,stdlib,ints
+sprint-spacing	sprintSpacing	-	ok	-	strings,stdlib
+sprintf-verbs	sprintfVerbs	-	ok	-	strings,stdlib
+sprintln-basics	sprintlnBasics	-	ok	-	strings,stdlib
+errors-new-errorf	errorsNewAndErrorf	-	ok	-	stdlib,equality,interfaces
+stringer-rendering	stringerRendering	-	ok	-	strings,stdlib,methods,defined_type
+byte-equal-strings	byteEqualStrings	-	ok	-	strings,bytes,runes,conversions,equality
+substring-then-bytes	substringThenBytes	-	ok	-	strings,slicing,bytes,conversions
+invalid-bytes-preserved	invalidBytesPreserved	-	ok	-	strings,invalid_utf8,concat,slicing

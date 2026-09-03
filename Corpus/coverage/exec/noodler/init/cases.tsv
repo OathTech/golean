@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+var-values	varValues	-	ok	-	init,globals,evaluation_order
+init-func-order	initFuncOrder	-	ok	-	init,globals
+trace-recorded	traceRecorded	-	ok	-	init,globals,evaluation_order
+composite-globals	compositeGlobals	-	ok	-	init,globals,maps,slices,literals
+package-method-value	packageMethodValue	-	ok	-	init,globals,methods,value_copy

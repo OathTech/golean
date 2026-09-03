@@ -1,0 +1,17 @@
+# id	subject	args	expected_status	expected_reason	features
+handoff-write-before-send	handoffWriteBeforeSend	-	ok	-	goroutines,channels
+fifo-one-sender	fifoFromOneSender	-	ok	-	goroutines,channels,range,close
+close-broadcast	closeBroadcast	-	ok	-	goroutines,channels,close,sync,waitgroup,mutex
+worker-pool-sum	workerPoolSum	-	ok	-	goroutines,channels,sync,waitgroup,range
+once-across-goroutines	onceAcrossGoroutines	-	ok	-	goroutines,sync,once,waitgroup,mutex
+mutex-counter	mutexCounter	-	ok	-	goroutines,sync,mutex,waitgroup
+rwmutex-readers	rwMutexReaders	-	ok	-	goroutines,sync,rwmutex,waitgroup,mutex,channels
+waitgroup-deadlock	waitGroupDeadlock	-	deadlock	-	sync,waitgroup,deadlock
+mutex-double-lock-deadlock	mutexDoubleLockDeadlock	-	deadlock	-	sync,mutex,deadlock
+leaked-goroutine	leakedGoroutineOnReturn	-	ok	-	goroutines,channels
+directional-params	directionalParams	-	ok	-	goroutines,channels,close,range
+pipeline-three-stages	pipelineThreeStages	-	ok	-	goroutines,channels,close,range,closures
+semaphore-total	semaphoreTotal	-	ok	-	goroutines,channels,sync,waitgroup,mutex
+lockstep-transcript	lockstepTranscript	-	ok	-	goroutines,channels
+goroutine-panic-under-wait	goroutinePanicUnderWait	-	panic	under-wait	goroutines,sync,waitgroup,panic
+child-blocked-nil-channel	childBlockedOnNilChannel	-	ok	-	goroutines,channels,nil

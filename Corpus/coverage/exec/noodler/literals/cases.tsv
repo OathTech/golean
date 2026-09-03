@@ -1,0 +1,18 @@
+# id	subject	args	expected_status	expected_reason	features
+integer-literal-forms	integerLiteralForms	-	ok	-	literals,ints
+float-literal-forms	floatLiteralForms	-	ok	-	literals,floats
+rune-literal-escapes	runeLiteralEscapes	-	ok	-	literals,runes,unicode
+constant-exactness	constantExactness	-	ok	-	constants,untyped,floats
+big-constant-shift	bigConstantShift	-	ok	-	constants,shifts,representability
+typed-float32-constants	typedFloat32Constants	-	ok	-	constants,typed,floats
+len-constants	lenConstants	-	ok	-	constants,len,strings,arrays
+rune-constant-arith	runeConstantArithmetic	-	ok	-	constants,runes,strings,untyped
+constant-division	constantDivision	-	ok	-	constants,division,untyped
+iota-patterns	iotaPatterns	-	ok	-	constants,iota
+typed-constant-boundaries	typedConstantBoundaries	-	ok	-	constants,typed,widths
+string-literal-forms	stringLiteralForms	-	ok	-	literals,strings
+float-constant-to-int	floatConstantToInt	-	ok	-	constants,conversions,floats
+boolean-constants	booleanConstants	-	ok	-	constants,bools
+default-types-interface	defaultTypesIntoInterface	-	ok	-	constants,untyped,interfaces
+constant-mixed-variable	constantMixedWithVariable	-	ok	-	constants,untyped,ints,floats
+constant-shift-constant	constantShiftByConstant	-	ok	-	constants,shifts

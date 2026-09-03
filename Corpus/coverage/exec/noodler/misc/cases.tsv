@@ -1,0 +1,22 @@
+# id	subject	args	expected_status	expected_reason	features
+range-int-no-var	rangeIntNoVar	-	ok	-	range,loops
+range-chan-no-var	rangeChanNoVar	-	ok	-	range,channels,close
+goto-forward-nested-if	gotoForwardOutOfNestedIf	7	ok	-	goto,labels,if,loops
+labeled-continue-nested	labeledContinueNested	-	ok	-	labels,continue,range,maps,slices
+curried-add	curriedAdd	-	ok	-	closures,higher_order
+array-of-channels	arrayOfChannels	-	ok	-	arrays,channels
+convert-named-func-types	convertNamedFuncTypes	-	ok	-	conversions,functions,defined_type
+embedded-interface-shadowed	embeddedInterfaceShadowed	-	ok	-	embedding,interfaces,methods,shadowing
+switch-init-no-tag	switchInitNoTag	3	ok	-	switch,scoping
+recursive-slice-struct	recursiveSliceStruct	-	ok	-	structs,slices,recursion,closures
+unary-operators	unaryOperators	-	ok	-	ints,floats
+iota-flag-masks	iotaFlagMasks	-	ok	-	constants,iota,bitwise,defined_type
+copy-into-array-view	copyIntoArrayView	-	ok	-	copy,arrays,slices
+indexed-array-literal	indexedArrayLiteral	-	ok	-	arrays,literals
+switch-true-tag	switchTrueTag	0	ok	-	switch,bools
+else-if-chain	elseIfChain	3	ok	-	if,scoping
+pointer-method-counter	pointerMethodCounter	-	ok	-	methods,pointers
+shadow-package-var	shadowPackageVar	-	ok	-	shadowing,globals,scoping
+slice-of-slices-sharing	sliceOfSlicesSharing	-	ok	-	slices,aliasing,nested
+struct-in-array-modify	structInArrayModify	-	ok	-	arrays,structs,fields
+labeled-break-switch-select	labeledBreakThroughSwitchSelect	-	ok	-	labels,break,switch,select,loops

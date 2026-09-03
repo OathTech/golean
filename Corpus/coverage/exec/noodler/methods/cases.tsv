@@ -1,0 +1,19 @@
+# id	subject	args	expected_status	expected_reason	features
+method-on-func-type	methodOnFuncType	-	ok	-	methods,functions,defined_type
+methods-on-array-type	methodsOnArrayType	-	ok	-	methods,arrays,defined_type,value_copy
+methods-on-slice-type	methodsOnSliceType	-	ok	-	methods,slices,defined_type,append,aliasing
+method-on-channel-type	methodOnChannelType	-	ok	-	methods,channels,defined_type
+methods-on-string-bool	methodsOnStringAndBool	-	ok	-	methods,strings,bools,defined_type
+method-value-binding	methodValueBindingTime	-	ok	-	methods,pointers,value_copy
+method-expressions	methodExpressions	-	ok	-	methods,pointers
+method-on-map-type	methodOnMapType	-	ok	-	methods,maps,defined_type
+func-type-satisfies	funcTypeSatisfiesInterface	-	ok	-	methods,functions,interfaces
+pointer-receiver-elements	pointerReceiverThroughElements	-	ok	-	methods,pointers,arrays,slices,addressability
+value-receiver-map-element	valueReceiverThroughMapElement	-	ok	-	methods,maps
+methods-on-literals	methodsOnLiterals	-	ok	-	methods,literals,pointers
+promoted-non-struct	promotedFromNonStructEmbedded	-	ok	-	methods,embedding,defined_type
+outer-shadows-promoted	outerMethodShadowsPromoted	-	ok	-	methods,embedding,shadowing
+explicit-path-ambiguity	explicitPathAvoidsAmbiguity	-	ok	-	methods,embedding
+shallower-wins	shallowerMethodWins	-	ok	-	methods,embedding,nested
+method-value-from-iface	methodValueFromInterface	-	ok	-	methods,interfaces,functions
+nil-receiver-recursion	nilReceiverRecursion	-	ok	-	methods,pointers,nil,recursion

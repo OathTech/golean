@@ -1,0 +1,20 @@
+# id	subject	args	expected_status	expected_reason	features
+min-max-float-specials	minMaxFloatSpecials	-	ok	-	builtins,min,max,floats
+min-max-strings-ints	minMaxStringsInts	-	ok	-	builtins,min,max,strings,ints
+min-max-single-defined	minMaxSingleDefined	-	ok	-	builtins,min,max,defined_type
+clear-slice-kinds	clearSliceKinds	-	ok	-	builtins,clear,slices,strings,structs
+clear-nils	clearNils	-	ok	-	builtins,clear,nil,maps,slices
+clear-subslice	clearSubslice	-	ok	-	builtins,clear,slices,slicing
+copy-string-to-bytes	copyStringToBytes	-	ok	-	builtins,copy,strings,bytes
+copy-overlap-both-ways	copyOverlapBothWays	-	ok	-	builtins,copy,overlap,slices
+append-nil-cases	appendNilCases	-	ok	-	builtins,append,nil,slices
+append-aliasing-within-cap	appendAliasingWithinCap	-	ok	-	builtins,append,aliasing,slices,cap
+append-string-spread	appendStringSpread	-	ok	-	builtins,append,strings,bytes
+len-cap-zero-values	lenCapZeroValues	-	ok	-	builtins,len,cap,nil,zero_values
+new-kinds	newKinds	-	ok	-	builtins,new,structs,slices,maps,nil
+append-growth-len	appendGrowthLen	-	ok	-	builtins,append,slices,len
+copy-min-length	copyMinLength	-	ok	-	builtins,copy,slices
+min-max-untyped-float	minMaxUntypedWithFloat	-	ok	-	builtins,min,max,untyped,floats
+delete-noops	deleteNoops	-	ok	-	builtins,delete,maps,nil
+cap-after-slicing	capAfterSlicing	-	ok	-	builtins,cap,slices,slicing,full_slice
+min-max-integer-boundaries	minMaxIntegerBoundaries	-	ok	-	builtins,min,max,ints,widths

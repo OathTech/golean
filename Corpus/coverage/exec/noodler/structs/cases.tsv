@@ -1,0 +1,22 @@
+# id	subject	args	expected_status	expected_reason	features
+array-nan-self-eq	arrayWithNaNSelfEquality	-	ok	-	arrays,floats,equality
+struct-nan-field	structWithNaNField	-	ok	-	structs,floats,equality
+struct-eq-all-fields	structEqualityAllFields	-	ok	-	structs,equality
+pointer-equality	pointerEquality	-	ok	-	pointers,equality,structs,slices
+pointer-to-copies	pointerToCopies	-	ok	-	pointers,equality,structs
+array-value-semantics	arrayValueSemantics	-	ok	-	arrays,value_copy,calls
+zero-length-array-eq	zeroLengthArrayEquality	-	ok	-	arrays,equality,zero_len
+nested-struct-eq	nestedStructEquality	-	ok	-	structs,arrays,pointers,equality,nested
+func-nil-comparison	funcNilComparison	-	ok	-	functions,nil,equality
+channel-equality	channelEquality	-	ok	-	channels,equality,nil
+struct-blank-field	structWithBlankField	-	ok	-	structs,equality
+struct-copy-deep	structCopyDeep	-	ok	-	structs,arrays,slices,value_copy,aliasing
+address-of-literal	addressOfCompositeLiteral	-	ok	-	pointers,literals,structs,identity
+interface-pointer-identity	interfacePointerIdentity	-	ok	-	interfaces,pointers,equality,identity
+embedded-struct-eq	embeddedStructEquality	-	ok	-	structs,embedding,equality
+array-of-structs	arrayOfStructs	-	ok	-	arrays,structs,value_copy,equality
+multi-dim-arrays	multiDimArrays	-	ok	-	arrays,nested,value_copy
+slice-of-arrays	sliceOfArrays	-	ok	-	slices,arrays,value_copy
+pointer-to-array-alias	pointerToArrayAlias	-	ok	-	pointers,arrays,range,aliasing
+linked-list-sum	linkedListSum	-	ok	-	structs,pointers,recursion
+struct-func-field	structFuncField	-	ok	-	structs,functions,higher_order
