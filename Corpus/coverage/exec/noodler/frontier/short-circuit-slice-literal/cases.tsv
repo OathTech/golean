@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	shortCircuitSliceLiteral	1	ok	-	bools,slices,literals,evaluation_order

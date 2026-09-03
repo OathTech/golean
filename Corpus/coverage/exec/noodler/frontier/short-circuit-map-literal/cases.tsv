@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	shortCircuitMapLiteral	1	ok	-	bools,maps,literals,evaluation_order

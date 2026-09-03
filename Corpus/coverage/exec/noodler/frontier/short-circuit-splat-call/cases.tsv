@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	shortCircuitSplatCall	1	ok	-	bools,calls,multi_result,evaluation_order

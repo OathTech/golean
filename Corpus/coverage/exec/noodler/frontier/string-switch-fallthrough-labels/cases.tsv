@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	stringSwitchFallthroughLabels	-	ok	-	switch,fallthrough,labels,continue,strings
