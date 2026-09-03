@@ -24,7 +24,16 @@ membership rows' `why`).
   in this worktree (build cache seeded by copying the primary
   checkout's `.lake`, then rebuilt by lake against this tree).
 - Tree (rule 4): branch `bug087-paniktext` off main @ c22e367a (after
-  the B1 stamps landing, as the brief required). The gc probes under
+  the B1 stamps landing, as the brief required); the implementation
+  commit d8fea185 and the landing-records commit d9cd25f3 named below
+  are the PRE-REBASE SHAs of the trees the recorded runs certified. At
+  the audit fix round the lane was rebased onto main 221d8964 (the
+  round-8b union) and those two commits were squashed into one base
+  commit dc0ffe0b (content-identical apart from conflict resolution in
+  the records: baseline header stack, ledger §8 union arithmetic,
+  BUGS.md ordering); the fix-round commit sits on top, and its own gate
+  and trace tails (`gate-tail-3-fixround.txt`, `choice-trace-fixround.txt`)
+  name the rebased tip. The gc probes under
   `probes/` are oracle-only and do not depend on repo state. The
   machine-tier records (the trace run, the gate tail) were produced at
   the commit named in each transcript's header line.
@@ -78,9 +87,38 @@ flag sets — the shapes were chosen so each is pinned to one side):
 | `named-nonstruct-noinline` (`type MyInt int`) | `value method main.MyInt.Val called using nil *MyInt pointer` | in the family (any defined non-pointer non-interface `T`) |
 | `generic-noinline` (`Box[int]`) | `value method main.Box[...].Val called using nil *Box[...] pointer` | in the family; the type-argument span prints as `[...]` (`funcNamePiecesForPrint`, traceback.go) — `panicwrapText` collapses the key's bracket span the same way |
 | `methodvalue-iface` (`f := v.Val; f()`) | member 1 | in the family (a method value binds the itab entry — the wrapper) |
-| `spawn` (`go func(){ v.Val() }()`, recovered in the child) | member 0 | the closure devirtualizes; NOT a probe of the bare `go v.Val()` entry — the machine's `spawnStep` twin of the frame entry holds member 0 only (owed residual, R9a) |
+| `spawn` (`go func(){ v.Val() }()`, recovered in the child) | member 0 | the closure with the concrete type visible devirtualizes; NOT a probe of the bare `go v.Val()` entry — see `probes/spawn/` below (audit fix F1) |
 
-### `transcripts/rows-gcflags.txt` — the five corpus rows' other member
+### `probes/spawn/` — the go-statement entry (audit fix F1)
+
+The first landing held member 0 only at `spawnStep` (recorded as a
+residual). The audit found this a LIVE observed-∉-modeled. Six spawn
+shapes on a nil `*Inner` box, three flag sets (`transcripts/spawn-shapes.txt`;
+reproduction: `GO111MODULE=off go run <flags> docs/evidence/2026-09-03_bug087-paniktext/probes/spawn/main.go <shape>`):
+
+| shape | gc (default / `-l` / `-N -l`) | machine before F1 | machine after F1 |
+| --- | --- | --- | --- |
+| `same-fn` (`var v Valuer = p; go v.Val()`) | member 0 ×3 (gc devirtualizes ACROSS the spawn) | {member 0} | {0, 1} |
+| `opaque` (`v := mk(p)` with `//go:noinline mk; go v.Val()`) | **member 1 ×3** | {member 0} — observed ∉ modeled | {0, 1} |
+| `global` (`global = p; go global.Val()`) | member 1 ×3 | {member 0} — observed ∉ modeled | {0, 1} |
+| `param` (`go v.Val()` inside a noinline `func(v Valuer)`) | member 1 ×3 | {member 0} — observed ∉ modeled | {0, 1} |
+| `methodvalue` (`f := v.Val; go f()`) | member 1 ×3 | (funnel path) {0, 1} | {0, 1} |
+| `closure` (`go func(){ v.Val() }()`, opaque v) | member 1 ×3 | (funnel path) {0, 1} | {0, 1} |
+
+Fix: the pick is threaded through `spawnStep` (Multi.lean) — the same
+`nilValueMethodText` consult at `nilValueMethodWidth` — with `StepE.spawn`
+quantifying the stream, `spawnStep_oblivious` / `entryCallSite?_of_spawnPlan`
+feeding `stepThread_oblivious`, `poolThreadOblivious` treating a spawn
+as oblivious only outside the family, `innerVecs` refusing a consuming
+spawn, and the CLI accountant / tracer mirroring the spawn positions
+through the shared `entryCallSite?` table. Rows:
+`noodler/ifaces/spawn-iface-value-nil` (the `opaque` shape — gc member
+1), `spawn-iface-value-nil-devirt` (the `same-fn` shape — gc member 0),
+`spawn-helper-value-nil` (the control `go spawnHelper(v)` with a noinline
+helper — an ordinary entry inside the child, gc member 1); all three
+enumerate exactly the two texts.
+
+### `transcripts/rows-gcflags.txt` — the corpus rows' gc draws under flags (five original rows; the audit-fix rows appended)
 
 The membership lane's oracle is `go run` only (no oracle-flag axis), so
 the gate samples one member per row (gc's default-build text). This
@@ -109,7 +147,30 @@ done
 ```
 
 (The `artifacts/` tree is gitignored; the transcript's header names the
-commit whose gate generated the harnesses.)
+commit whose gate generated the harnesses.) Audit fix rows appended at
+the F1–F3 round: `spawn-iface-value-nil` member 1 ×3, `spawn-iface-value-
+nil-devirt` member 0 ×3, `spawn-helper-value-nil` member 1 ×3,
+`multipkg/nil-value-method-text` `value method pkgs/valuer.T.Val called
+using nil *T pointer` ×3 — the multi-package row (F3) is the differential
+observation behind the "path qualifier = TypeId.key" claim: gc prints
+the import PATH `pkgs/valuer`, not the package NAME, and the machine's
+rendering matched it in the gate.
+
+### The audit's re-laning finding (F2) and the retired `samples=`
+
+The two strict PASS rows re-laned to membership at the first landing
+(`iface-dispatch-value-nil`, `mk-helper-value-nil`) FAIL the pre-existing
+strict-lane invariance check once the site exists — stage `nondet`,
+default stream = {nil-deref text}, adversarial variant = {panicwrap text}
+— so the re-laning was necessary on its own terms; the later
+depth-routing guard is not load-bearing there. `samples=` was RETIRED on
+main in the sampling-budget slice (the manifest refuses it by name); the
+rows now run under the K=32 alternating plain/`-race` rule with the
+`members=2` early-stop pin. Because gc's text per row is deterministic
+per toolchain and unchanged by `-race`, each row exhibits ONE member and
+draws to the budget (`pin members=2 NOT reached — 1 distinct drawn`), as
+the rows' `why` says; the other member is gc's own text on sibling
+shapes / under `-l` (this transcript).
 
 ### `transcripts/choice-trace-scoped.txt` and `transcripts/choice-trace.txt` — consumption invariance
 
@@ -177,6 +238,7 @@ docs-only landing-records commit that follows re-runs the fast `ci`.
   `mk-helper-value-nil` (strict PASS rows in the same family) to the
   membership lane, `samples=1` (version-tracking) for the five rows,
   `expected_reason` = `pointer` (the substring both texts share — the
-  sample pre-filter; the exact texts are the certified set), and
-  recording the `spawnStep` twin as an owed residual rather than
-  widening it in this slice.
+  sample pre-filter; the exact texts are the certified set). The first
+  landing recorded the `spawnStep` twin as an owed residual; the audit
+  (FIX-FIRST, F1) found it live, and the fix round threaded the pick
+  through `spawnStep` (this README's `probes/spawn/` section).

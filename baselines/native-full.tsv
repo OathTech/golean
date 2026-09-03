@@ -1,4 +1,17 @@
 # GoLean native-frontend full-corpus differential baseline
+# re-pinned: 2026-09-03 (bug087-paniktext AUDIT FIX ROUND F1-F3 — [AGENT]; FIX-FIRST
+#   verdict. F1: the go-statement frame-entry twin (spawnStep, Multi.lean) now draws
+#   the nilValueMethodText pick (the first landing held member 0 only there — a live
+#   observed-not-in-modeled: gc gives the panicwrap text for `go v.Val()` when it
+#   cannot see the box's concrete type). F2: `samples=` dropped from every row (retired
+#   on main). F3: a multi-package rendering row. FOUR born-PASS membership rows:
+#   noodler/ifaces/{spawn-iface-value-nil (gc member 1), spawn-iface-value-nil-devirt
+#   (gc member 0 — devirtualized across the spawn), spawn-helper-value-nil (control,
+#   gc member 1)} and multipkg/nil-value-method-text (gc `value method pkgs/valuer.T.Val
+#   called using nil *T pointer` — the PATH qualifier as a differential observation).
+#   NO existing row moved; NO PASS->non-PASS flips. FULL ci --diff at the fix-round
+#   commit (clean tree; tail docs/evidence/2026-09-03_bug087-paniktext/transcripts/
+#   gate-tail-3-fixround.txt). 3264 rows; 3065 PASS / 199 FAIL.
 # re-pinned: 2026-09-03 (bug087-paniktext lane — BUG-087 fix: the frame-entry
 #   panic TEXT on a value-receiver method dispatched through an interface
 #   holding a nil *T is a width-2 DEMONIC choice, ChoiceSite.nilValueMethodText
@@ -702,7 +715,9 @@
 #     removed row is named in prose, never left dangling on the line).
 #     NEW rows: unsafe/layout-ops/{sizeof-fixed,layout-struct}
 #     FAIL/frontend-export BY DESIGN. unsafe/boundary/pointer-roundtrip
-# cases: 3260 (3061 PASS / 199 FAIL)
+# cases: 3264 (3065 PASS / 199 FAIL)
+#   [re-derived from the data rows at the bug087-paniktext audit fix round F1-F3 2026-09-03 ([AGENT]: the rebased fix's 3260 (3061 PASS / 199 FAIL) + FOUR born-PASS membership rows noodler/ifaces/{spawn-iface-value-nil,spawn-iface-value-nil-devirt,spawn-helper-value-nil} + multipkg/nil-value-method-text; no other row moved): 3264 (3065 PASS / 199 FAIL)]
+#   [the rebased fix figure, kept as history:] # cases: 3260 (3061 PASS / 199 FAIL)
 #   [re-derived from the data rows at the bug087-paniktext rebase onto 221d8964 2026-09-03 ([AGENT]: the round-8b union's 3260 (3058 PASS / 202 FAIL) with BUG-087's three Cases rows noodler/ifaces/{mv-iface-nil-call,iface-param-value-nil,global-iface-value-nil} flipped FAIL/differential -> PASS/membership and two strict PASS rows noodler/ifaces/{iface-dispatch-value-nil,mk-helper-value-nil} re-laned PASS/- -> PASS/membership; no born rows, no other row moved): 3260 (3061 PASS / 199 FAIL)]
 #   [the round-8b union figure, kept as history:] # cases: 3260 (3058 PASS / 202 FAIL)
 #   [re-derived from the data rows at the round-8b merge-train rebase 2026-09-03 ([AGENT]: stdlib-source-1 [USER]-ruling re-pin (ParseUint RETIRED, D-002 exception denied) replayed over the round-8b union: BUG-089's designed reds — 4 pre-existing rows PASS→FAIL + 5 born FAIL stdlib-source/strconv-parseuint/*, all on BUG-089's Cases line — and panic-recover/shim-refusal-unrecoverable/parse-recover FAIL→PASS; no other row moved)]
@@ -2568,6 +2583,7 @@ PASS	multipkg/wire-codec/size	-
 PASS	multipkg/wire-codec/golden	-
 PASS	multipkg/wire-codec/unknown-skip	-
 PASS	multipkg/wire-codec/malformed	-
+PASS	multipkg/nil-value-method-text	membership
 PASS	native-smoke/arith	-
 PASS	native-smoke/maprange	-
 PASS	native-smoke/method	-
@@ -2872,6 +2888,9 @@ PASS	noodler/ifaces/iface-dispatch-value-nil	membership
 PASS	noodler/ifaces/iface-dispatch-value-nil-recovered	-
 PASS	noodler/ifaces/iface-param-value-nil	membership
 PASS	noodler/ifaces/global-iface-value-nil	membership
+PASS	noodler/ifaces/spawn-iface-value-nil	membership
+PASS	noodler/ifaces/spawn-iface-value-nil-devirt	membership
+PASS	noodler/ifaces/spawn-helper-value-nil	membership
 PASS	noodler/ifaces/mk-helper-value-nil	membership
 PASS	noodler/ifaces/mv-nil-direct	-
 PASS	noodler/ifaces/embedded-iface-nil	-

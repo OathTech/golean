@@ -1,0 +1,20 @@
+# BUG-087 audit fix F1 — gc's text for six go-statement spawn shapes on a nil *Inner box; go version go1.26.5 linux/amd64, 2026-09-03T23:22:48+00:00
+# GO111MODULE=off go run <flags> docs/evidence/2026-09-03_bug087-paniktext/probes/spawn/main.go <shape>
+same-fn      <default>        -> panic: runtime error: invalid memory address or nil pointer dereference
+same-fn      -gcflags=-l      -> panic: runtime error: invalid memory address or nil pointer dereference
+same-fn      -gcflags=-N -l   -> panic: runtime error: invalid memory address or nil pointer dereference
+opaque       <default>        -> panic: value method main.Inner.Val called using nil *Inner pointer
+opaque       -gcflags=-l      -> panic: value method main.Inner.Val called using nil *Inner pointer
+opaque       -gcflags=-N -l   -> panic: value method main.Inner.Val called using nil *Inner pointer
+global       <default>        -> panic: value method main.Inner.Val called using nil *Inner pointer
+global       -gcflags=-l      -> panic: value method main.Inner.Val called using nil *Inner pointer
+global       -gcflags=-N -l   -> panic: value method main.Inner.Val called using nil *Inner pointer
+param        <default>        -> panic: value method main.Inner.Val called using nil *Inner pointer
+param        -gcflags=-l      -> panic: value method main.Inner.Val called using nil *Inner pointer
+param        -gcflags=-N -l   -> panic: value method main.Inner.Val called using nil *Inner pointer
+methodvalue  <default>        -> panic: value method main.Inner.Val called using nil *Inner pointer
+methodvalue  -gcflags=-l      -> panic: value method main.Inner.Val called using nil *Inner pointer
+methodvalue  -gcflags=-N -l   -> panic: value method main.Inner.Val called using nil *Inner pointer
+closure      <default>        -> panic: value method main.Inner.Val called using nil *Inner pointer
+closure      -gcflags=-l      -> panic: value method main.Inner.Val called using nil *Inner pointer
+closure      -gcflags=-N -l   -> panic: value method main.Inner.Val called using nil *Inner pointer

@@ -1025,7 +1025,16 @@ def stepNeeds (m : GoCore.Machine.MultiConfig) (picks : GoCore.Choices) :
           else if (GoCore.Machine.opDoneInner c).isSome then none
           else
             match GoCore.Machine.spawnPlan c with
-            | some _ => none
+            | some _ =>
+                -- The spawn's child-entry panic-text pick (BUG-087 audit
+                -- fix F1): the same shared entry table and bound.
+                match GoCore.Machine.entryCallSite? c with
+                | some (fid, args) =>
+                    if GoCore.Machine.nilValueMethodWidth m.shared fid args ≤ 1 then none
+                    else match ch with
+                      | [] => some (GoCore.Machine.nilValueMethodWidth m.shared fid args)
+                      | _ :: _ => none
+                | none => none
             | none =>
               match GoCore.Machine.arrivalCases m.shared m.threads i c with
               | .error _ => none

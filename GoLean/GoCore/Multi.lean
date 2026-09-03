@@ -349,8 +349,8 @@ upstream (recorded hazard, S2 audit response). A nil callee is gc's
 "go of nil func value" runtime FATAL at the spawn (probed 2026-08-07,
 refuting the older child-panic analysis): modeled as `GoError.fatal`
 (triage L10). -/
-def spawnStep (s : ExecState) (cv : GoValue) (args : List GoValue) (k : Cont) :
-    Except GoError (Config × Config × ExecState) := do
+def spawnStep (s : ExecState) (cv : GoValue) (args : List GoValue) (k : Cont)
+    (ch : Choices) : Except GoError (Config × Config × ExecState × Choices) := do
   match cv with
   | .funcVal fid captured =>
       match enterFrame s fid (captured ++ args) with
@@ -364,10 +364,16 @@ def spawnStep (s : ExecState) (cv : GoValue) (args : List GoValue) (k : Cont) :
           -- default (slot 0 = lowest-index runnable), NOT the postOp
           -- issuer-continues convention.
           return (.opDone .l1Sched (.next k),
-            .exec func.body frameEnv (.frame [] [] [] [] .stop func.wrapper), s')
+            .exec func.body frameEnv (.frame [] [] [] [] .stop func.wrapper), s', ch)
       | .error (.panic msg) =>
+          -- The child's entry panic draws the `nilValueMethodText` pick
+          -- exactly like `enterFrameStep` (BUG-087 audit fix F1): on the
+          -- wrapper family `go v.M()` may abort with gc's panicwrap text.
+          let r := Choices.consumeAt .nilValueMethodText
+            (nilValueMethodWidth s fid (captured ++ args)) ch
           return (.opDone .l1Sched (.next k),
-            .panicking [⟨runtimeErrorValue msg, false⟩] .stop, s)
+            .panicking [⟨runtimeErrorValue
+              (entryPanicText s fid (captured ++ args) msg r.1), false⟩] .stop, s, r.2)
       | .error e => throw e
   -- A nil callee is gc's "go of nil func value" runtime FATAL, raised
   -- AT THE SPAWN in the spawning goroutine (probed 2026-08-07;
@@ -378,6 +384,49 @@ def spawnStep (s : ExecState) (cv : GoValue) (args : List GoValue) (k : Cont) :
   -- slice") expired when the class landed at spec-parity slice 2.
   | .nil => throw (.fatal "go of nil func value")
   | other => throw (.stuck s!"go callee is not a function value: {repr other}")
+
+/-- A spawn position's `(fid, args)` in `entryCallSite?`'s table is what
+`spawnStep` hands to `enterFrame` (the `nilValueMethodText` mirrors'
+bridge from `spawnPlan` to the shared entry table). -/
+theorem entryCallSite?_of_spawnPlan {c : Config} {cv : GoValue} {args : List GoValue}
+    {k : Cont} {fid : FuncId} {captured : List GoValue}
+    (hsp : spawnPlan c = some (cv, args, k)) (hcv : cv = .funcVal fid captured) :
+    entryCallSite? c = some (fid, captured ++ args) := by
+  subst hcv
+  match c, hsp with
+  | .retV cv' (.goCalleeK [] env k'), hsp =>
+      simp only [spawnPlan, Option.some.injEq, Prod.mk.injEq] at hsp
+      obtain ⟨rfl, rfl, rfl⟩ := hsp
+      rfl
+  | .retV v' (.goArgsK cv' vals [] env k'), hsp =>
+      simp only [spawnPlan, Option.some.injEq, Prod.mk.injEq] at hsp
+      obtain ⟨rfl, rfl, rfl⟩ := hsp
+      rfl
+
+/-- Outside the wrapper family a spawn is stream-oblivious: the entry
+panic's `nilValueMethodText` consult is at bound 1 and pops nothing. -/
+theorem spawnStep_oblivious {s : ExecState} {cv : GoValue} {args : List GoValue}
+    {k : Cont} {ch₀ : Choices} {p c : Config} {s' : ExecState} {ch₀' : Choices}
+    (hn : ∀ fid captured, cv = .funcVal fid captured →
+      nilValueMethodText? s fid (captured ++ args) = none)
+    (h : spawnStep s cv args k ch₀ = .ok (p, c, s', ch₀')) :
+    ch₀' = ch₀ ∧ ∀ ch : Choices, spawnStep s cv args k ch = .ok (p, c, s', ch) := by
+  unfold spawnStep at h ⊢
+  cases cv with
+  | funcVal fid captured =>
+    have hn' := hn fid captured rfl
+    simp only [nilValueMethodWidth_of_none hn', Choices.consumeAt_nilValueMethodText_one,
+      entryPanicText_of_none hn'] at h ⊢
+    split at h
+    · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+      exact ⟨rfl, fun ch => by simp_all⟩
+    · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+      exact ⟨rfl, fun ch => by simp_all⟩
+    · simp [throw, throwThe, MonadExceptOf.throw] at h
+  | nil => simp [throw, throwThe, MonadExceptOf.throw] at h
+  | _ => simp [throw, throwThe, MonadExceptOf.throw] at h
 
 /-- Deliver a received value to a chan-recv STATEMENT's parked targets:
 the zero-target form completes to `.next k`; targeted forms enter the
@@ -1077,8 +1126,8 @@ def stepThread (s : ExecState) (threads : Array Config) (i : Nat)
       | none =>
       match spawnPlan c with
       | some (cv, args, k) => do
-          let (parent', child, s') ← spawnStep s cv args k
-          return ((threads.setIfInBounds i parent').push child, s', ch,
+          let (parent', child, s', ch') ← spawnStep s cv args k ch
+          return ((threads.setIfInBounds i parent').push child, s', ch',
             ⟨i, .spawned threads.size, []⟩)
       | none => do
           match ← arrivalPlan s threads i c ch with
@@ -1817,9 +1866,9 @@ lifts with no forked goroutines; the completed spawn positions (where
 `Step`/`Steps`). -/
 inductive StepE : Config → ExecState → Config → ExecState → List Config → Prop where
   | lift {c σ c' σ'} : Step c σ c' σ' → StepE c σ c' σ' []
-  | spawn {c σ cv args k parent' child σ'} :
+  | spawn {c σ cv args k parent' child σ' ch ch'} :
       spawnPlan c = some (cv, args, k) →
-      spawnStep σ cv args k = .ok (parent', child, σ') →
+      spawnStep σ cv args k ch = .ok (parent', child, σ', ch') →
       StepE c σ parent' σ' [child]
 
 /-- Legal scheduler picks (D2a): between boundaries only the running

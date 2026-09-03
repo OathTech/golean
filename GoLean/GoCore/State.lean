@@ -214,8 +214,9 @@ The sites and their consuming definitions:
                    the envelope statement, beside the nil arm of
                    `dynamicDispatch?`) — else a bound-1 consult that
                    pops nothing; consumed in `enterFrameStep` /
-                   `enterFrameDeferPanicking` (StepFn.lean), the only
-                   frame-entry funnels with the stream in hand.
+                   `enterFrameDeferPanicking` (StepFn.lean) and in the
+                   `go`-statement entry `spawnStep` (Multi.lean) — the
+                   three frame-entry funnels with the stream in hand.
 
 The scheduling sites — what a future `Fair : Choices → Prop`
 quantifies over — are exactly

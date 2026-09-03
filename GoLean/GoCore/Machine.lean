@@ -2469,7 +2469,8 @@ to `enterFrame` — the seven `stepFn` positions that route through
 `enterFrameStep`/`enterFrameDeferPanicking` (the ordinary call with
 no arguments, the last-argument arrival, the value-call callee/last-
 argument arrivals, and the three deferred-call drains: normal, return,
-panic-path). ONE table, consumed by the `nilValueMethodText` mirrors
+panic-path) plus the two `go`-statement spawn positions (`spawnStep`,
+Multi.lean). ONE table, consumed by the `nilValueMethodText` mirrors
 (`consumesNilValueMethod` here; `CLI.stepNeeds`/`stepNeedsSeq`; the
 tracer's `seqSite`) so the accountant derives the site's bound from the
 machine's own analysis (`nilValueMethodWidth`) rather than a
@@ -2489,6 +2490,14 @@ def entryCallSite? : Config → Option (FuncId × List GoValue)
       some (fid, captured ++ args)
   | .panicking _ (.frame _ _ _ ((.funcVal fid captured, args) :: _) _ _) =>
       some (fid, captured ++ args)
+  -- The `go`-statement entry (`spawnPlan` shapes, Multi.lean — the
+  -- callee arrives, or its last argument arrives): `spawnStep` enters the
+  -- callee's frame in the child, and its entry panic draws the same pick
+  -- (audit fix F1, 2026-09-03: `go v.M()` on a nil `*T` box is in the
+  -- family — gc gives the panicwrap text there).
+  | .retV (.funcVal fid captured) (.goCalleeK [] _ _) => some (fid, captured ++ [])
+  | .retV v (.goArgsK (.funcVal fid captured) vals [] _ _) =>
+      some (fid, captured ++ (vals ++ [v]))
   | _ => none
 
 /-- Does this configuration's next step draw the `nilValueMethodText`

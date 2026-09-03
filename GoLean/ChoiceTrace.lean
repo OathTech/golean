@@ -452,7 +452,15 @@ def poolSite (m : MultiConfig) (picks : List Nat) :
           else if (opDoneInner c).isSome then none
           else
             match spawnPlan c with
-            | some _ => none
+            | some _ =>
+                match entryCallSite? c with
+                | some (fid, args) =>
+                    if nilValueMethodWidth m.shared fid args ≤ 1 then none
+                    else match ch with
+                      | [] => some (.nilValueMethodText, nilValueMethodWidth m.shared fid args,
+                          nilTextFacts m.shared fid args)
+                      | _ :: _ => none
+                | none => none
             | none =>
               match arrivalCases m.shared m.threads i c with
               | .error _ => none

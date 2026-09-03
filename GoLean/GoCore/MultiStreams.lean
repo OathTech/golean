@@ -90,7 +90,7 @@ def poolThreadOblivious (s : ExecState) (ts : Array Config) (i : Nat) : Bool :=
   | some c =>
     if isBlockedConfig c then true
     else if (opDoneInner c).isSome then true
-    else if (spawnPlan c).isSome then true
+    else if (spawnPlan c).isSome then !consumesNilValueMethod s c
     else if consumesSelect c then
       (match arrivalCases s ts i c with
        | .ok .cellPath => selectApplyDone s c
@@ -242,15 +242,27 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
         cases hsp : spawnPlan c with
         | some p =>
           obtain ⟨cv, args, k⟩ := p
-          rw [hsp] at h
+          rw [hsp] at h hobl
+          simp only [Option.isSome_some, reduceIte, Bool.not_eq_true'] at hobl
+          -- BUG-087 audit fix F1: a spawn is oblivious only outside the
+          -- wrapper family (`hobl` now says so); the pick is inert there.
+          have hn : ∀ fid captured, cv = .funcVal fid captured →
+              nilValueMethodText? s fid (captured ++ args) = none := by
+            intro fid captured hcv
+            have hsite := entryCallSite?_of_spawnPlan hsp hcv
+            cases hx : nilValueMethodText? s fid (captured ++ args) with
+            | none => rfl
+            | some alt =>
+              simp [consumesNilValueMethod, hsite, hx] at hobl
           simp only [bind_eq_ok] at h
-          obtain ⟨⟨parent', child, s₂⟩, hspawn, h⟩ := h
+          obtain ⟨⟨parent', child, s₂, ch₂⟩, hspawn, h⟩ := h
           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+          obtain ⟨rfl, hall⟩ := spawnStep_oblivious hn hspawn
           refine ⟨rfl, fun ch => ?_⟩
           unfold stepThread
           rw [hti]
-          simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp, hspawn,
+          simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp, hall ch,
             Bind.bind, Except.bind]
           rfl
         | none =>

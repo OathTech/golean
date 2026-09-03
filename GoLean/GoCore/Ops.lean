@@ -2192,9 +2192,9 @@ in the same order `enterFrame`/`dynamicDispatch?` check it (function
 found, arity, anchor, box, resolution, target found), so `some` implies
 the entry panics with the nil-deref text and `none` implies the entry
 is not in the family — a `none` shape consumes nothing at the site.
-Owed residual (recorded, not hidden): the `go`-statement twin of the
-entry (`spawnStep`, Multi.lean) has no stream in hand and holds member
-0 only. -/
+The `go`-statement twin of the entry (`spawnStep`, Multi.lean) draws the
+same pick (audit fix F1, 2026-09-03: `go v.M()` on a nil `*T` box gives
+gc's panicwrap text under default/`-l`/`-N -l`). -/
 def nilValueMethodText? (state : ExecState) (fid : FuncId) (args : List GoValue) :
     Option String :=
   match findFunctionIn? state.functions fid with

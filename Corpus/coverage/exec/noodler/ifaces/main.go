@@ -186,6 +186,53 @@ func globalIfaceValueMethodNilPtr() int {
 	return globalValuer.Val()
 }
 
+// The go-statement twin of the frame entry (BUG-087 audit fix F1): the
+// bare `go v.Val()` on a nil *Inner box panics in the CHILD goroutine
+// at its frame entry, and the machine admits both texts there too
+// (spawnStep draws the nilValueMethodText pick). Two gc shapes, both
+// flag-stable at the pin (default, -l, -N -l): with the box built by an
+// opaque (noinline) helper gc cannot devirtualize, the spawn goes
+// through the (*Inner).Val wrapper and the child aborts with the
+// panicwrap text; with the concrete type visible in the same function
+// gc devirtualizes ACROSS the spawn and the child aborts with the
+// nil-deref text. main blocks on the channel, so the child's abort is
+// the program's abort.
+//
+//go:noinline
+func mkValuerOpaque(p *Inner) Valuer { return p }
+
+func spawnIfaceValueMethodNilPtr() int {
+	var p *Inner
+	v := mkValuerOpaque(p)
+	done := make(chan int)
+	go v.Val()
+	return <-done
+}
+
+func spawnIfaceValueMethodNilPtrDevirt() int {
+	var p *Inner
+	var v Valuer = p
+	done := make(chan int)
+	go v.Val()
+	return <-done
+}
+
+// The control: the spawned function is an ordinary helper whose body
+// dispatches; the dispatch is a plain frame entry inside the child (the
+// funnel path, not the spawn arm). gc: the noinline helper cannot
+// devirtualize, so the wrapper text.
+//
+//go:noinline
+func spawnHelper(v Valuer) { v.Val() }
+
+func spawnHelperValueMethodNilPtr() int {
+	var p *Inner
+	var v Valuer = p
+	done := make(chan int)
+	go spawnHelper(v)
+	return <-done
+}
+
 // Method value from a nil *Inner directly with a value receiver: panics
 // at evaluation of the method value.
 func methodValueNilPtrDirect() int {

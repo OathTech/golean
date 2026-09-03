@@ -594,8 +594,8 @@ marker `.opDone .l1Sched (.next k)` (BUG-040: the fork's completion is
 a registry op; stage C: the `l1Sched` tag preserves the spawn
 boundary's shipped default; the marker strips at the next step). -/
 theorem spawnStep_shape {s : ExecState} {cv : GoValue} {args : List GoValue}
-    {k : Cont} {p c : Config} {s' : ExecState}
-    (h : spawnStep s cv args k = .ok (p, c, s')) :
+    {k : Cont} {ch : Choices} {p c : Config} {s' : ExecState} {ch' : Choices}
+    (h : spawnStep s cv args k ch = .ok (p, c, s', ch')) :
     p = .opDone .l1Sched (.next k) := by
   unfold spawnStep at h
   cases cv <;>
@@ -725,10 +725,10 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
           obtain ⟨cv, args, k⟩ := p
           rw [hsp] at hst
           simp only [Bind.bind, Except.bind] at hst
-          cases hspawn : spawnStep m.shared cv args k with
+          cases hspawn : spawnStep m.shared cv args k ch with
           | error e => rw [hspawn] at hst; cases hst
           | ok r₂ =>
-            obtain ⟨parent', child, s₂⟩ := r₂
+            obtain ⟨parent', child, s₂, ch₂⟩ := r₂
             rw [hspawn] at hst
             simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
             obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
@@ -1150,9 +1150,11 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
           obtain ⟨evI, hinner⟩ := hinner
           exact stepMulti_of_inner hsched hinner
     | spawn hplan' hspawn =>
-      rename_i cv args k child
-      have hinner : ∃ evI, stepThread m.shared m.threads i []
-          = .ok ((m.threads.setIfInBounds i c').push child, σ', [], evI) :=
+      -- The relation's own stream is the witness (BUG-087 audit fix F1:
+      -- the spawn's entry panic draws the nilValueMethodText pick).
+      rename_i cv args k child chs chs'
+      have hinner : ∃ evI, stepThread m.shared m.threads i chs
+          = .ok ((m.threads.setIfInBounds i c').push child, σ', chs', evI) :=
         ⟨_, by
           unfold stepThread
           rw [hti]

@@ -4759,7 +4759,7 @@ member the strict lane compares — was wrong.
 
 - Status: fixed
 - Pinned-by: differential
-- Cases: noodler/ifaces/mv-iface-nil-call, noodler/ifaces/iface-param-value-nil, noodler/ifaces/global-iface-value-nil, noodler/ifaces/mk-helper-value-nil, noodler/ifaces/iface-dispatch-value-nil
+- Cases: noodler/ifaces/mv-iface-nil-call, noodler/ifaces/iface-param-value-nil, noodler/ifaces/global-iface-value-nil, noodler/ifaces/mk-helper-value-nil, noodler/ifaces/iface-dispatch-value-nil, noodler/ifaces/spawn-iface-value-nil, noodler/ifaces/spawn-iface-value-nil-devirt, noodler/ifaces/spawn-helper-value-nil, multipkg/nil-value-method-text
 - Discovered: 2026-09-03 (the noodler lane — `docs/2026-09-03_noodler-report.md`
   finding F1; probe records `docs/evidence/2026-09-03_noodler/probes/
   gc-wrapper-text/` (seven call shapes) and, the decisive one,
@@ -4888,9 +4888,21 @@ the site existed) — move to `lane=membership`, `members=2`, `samples=1`
 (gc decides the text per toolchain — the version-tracking mode), with
 the `-gcflags=-l` draws of the other member recorded as evidence
 (`transcripts/rows-gcflags.txt`; the lane's oracle is `go run` only).
-Owed residual, recorded not hidden: the `go`-statement entry twin
-(`spawnStep`, Multi.lean) has no stream in hand and holds member 0
-only (R9a).
+Audit fix round F1–F3 (2026-09-03): the `go`-statement entry twin
+(`spawnStep`, Multi.lean) — first landed as a recorded member-0-only
+residual — was a LIVE observed-∉-modeled (`go v.Val()` on a nil `*T` box
+whose concrete type gc cannot see: panicwrap text under default/`-l`/
+`-N -l`), so the pick is now threaded through `spawnStep` (`StepE.spawn`
+quantifies it; the obliviousness layers exclude consuming spawns) with
+rows `noodler/ifaces/{spawn-iface-value-nil,spawn-iface-value-nil-devirt,
+spawn-helper-value-nil}` (gc: member 1 / member 0 — it devirtualizes
+across the spawn when the type is visible / member 1); the
+multi-package rendering row `multipkg/nil-value-method-text` makes the
+path-qualifier claim a differential observation; `samples=` (retired on
+main) dropped from every row. Audit finding recorded: the two re-laned
+strict rows fail the pre-existing strict invariance check (stage
+`nondet`, default = {nil-deref}, variant = {panicwrap}), so re-laning was
+necessary.
 
 ## BUG-089 — `strconv.ParseUint` retired pending the slice-2 overlay (D-002 exception denied [USER] 2026-09-03): every ParseUint ERROR path refuses by name at `internal/stringslite.Clone` (`unsafe.String`) — [USER]-DIRECTED designed reds [frontend; stdlib source-through slice 1]
 

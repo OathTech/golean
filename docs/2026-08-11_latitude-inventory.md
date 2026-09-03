@@ -108,7 +108,7 @@ between sweeps (the reconciler's C12 checks row COUNT, not lines).
 | L5 main-exit window (`l5ExitWindow`) | Multi.lean:1628 | 2 | main terminal ∧ others runnable | 0 = exit now |
 | Post-op boundary pick (`postOp`, W3.2 stage C) | Multi.lean:1153 (via `Config.boundarySite`, :1100) | \|runnable\| (issuer-first menu, `schedSlots` :1122) | at an `.opDone .postOp` marker, only width > 1 | slot 0 = the ISSUER continues (the pre-widening schedule, literally) |
 | Loop back-edge pick (`backEdge`, W3.2 stage D) | Multi.lean:1153 (via `Config.boundarySite`, :1101–1103) | \|runnable\| (current-first menu, `schedSlots` :1123) | at a loop re-entry shape (`.loop`, `.mapIterK`), only width > 1 | slot 0 = the CURRENT goroutine continues |
-| Frame-entry panic TEXT pick (`nilValueMethodText`, BUG-087 / R9a, 2026-09-03) | StepFn.lean `enterFrameStep` + `enterFrameDeferPanicking` (envelope statement `nilValueMethodText?`, Ops.lean, beside `dynamicDispatch?`'s nil arm) | `nilValueMethodWidth` — 2 on the wrapper family, 1 elsewhere | at a frame entry in the family (value-receiver method dispatched through an interface holding a nil `*T`, target not a promotion wrapper), only width > 1 | slot 0 = the nil-dereference text (the pre-BUG-087 machine's only member) |
+| Frame-entry panic TEXT pick (`nilValueMethodText`, BUG-087 / R9a, 2026-09-03) | StepFn.lean `enterFrameStep` + `enterFrameDeferPanicking`, Multi.lean `spawnStep` (envelope statement `nilValueMethodText?`, Ops.lean, beside `dynamicDispatch?`'s nil arm) | `nilValueMethodWidth` — 2 on the wrapper family, 1 elsewhere | at a frame entry in the family (value-receiver method dispatched through an interface holding a nil `*T`, target not a promotion wrapper), only width > 1 | slot 0 = the nil-dereference text (the pre-BUG-087 machine's only member) |
 
 The race detector consumes NOTHING and replays nothing (stage B, Q2:
 `raceUpdate` folds the step's emitted `StepEvent` — the old
@@ -1526,14 +1526,34 @@ row so the axis stops being invisible, nothing more.
   value box) are OUTSIDE the family and keep member 0 alone — gc probed
   nil-deref on all three (`transcripts/shapes.txt`).
 - ROWS: `noodler/ifaces/{mv-iface-nil-call, iface-param-value-nil,
-  global-iface-value-nil, mk-helper-value-nil, iface-dispatch-value-nil}`
-  — `lane=membership`, `members=2`, `samples=1` (gc decides per
-  toolchain: the version-tracking mode); gc's default-build draw is
-  member 1 on the first three and member 0 on the last two.
-- OWED RESIDUAL (recorded, not hidden): the `go`-statement frame-entry
-  twin (`spawnStep`, Multi.lean) has no stream in hand and holds member
-  0 only; gc's own `go v.M()` text follows the same optimizer rule. A
-  future slice threads the pick through `stepThread`'s spawn arm.
+  global-iface-value-nil, mk-helper-value-nil, iface-dispatch-value-nil,
+  spawn-iface-value-nil, spawn-iface-value-nil-devirt,
+  spawn-helper-value-nil}` and `multipkg/nil-value-method-text` —
+  `lane=membership`, `members=2`; gc decides the text per toolchain (and
+  `-race` does not change it), so the K=32 alternating plain/`-race`
+  draws exhibit one member per row: member 0 on `iface-dispatch-value-nil`,
+  `mk-helper-value-nil`, `spawn-iface-value-nil-devirt`; member 1 on the
+  rest.
+- THE SPAWN TWIN (audit fix F1, 2026-09-03): the `go`-statement
+  frame-entry twin (`spawnStep`, Multi.lean) draws the same pick — the
+  first landing held member 0 only there, a LIVE observed-∉-modeled
+  (audit): `go v.Val()` on a nil `*T` box whose concrete type gc cannot
+  see gives the panicwrap text (default, `-l`, `-N -l` alike). Rows
+  `noodler/ifaces/spawn-iface-value-nil` (box from an opaque helper —
+  gc member 1), `spawn-iface-value-nil-devirt` (concrete type visible —
+  gc devirtualizes ACROSS the spawn, member 0) and
+  `spawn-helper-value-nil` (the control `go helper(v)`, an ordinary
+  entry inside the child — gc member 1).
+- MULTI-PACKAGE RENDERING (audit fix F3): `multipkg/nil-value-method-text`
+  — the receiver type in package `pkgs/valuer`; gc: `value method
+  pkgs/valuer.T.Val called using nil *T pointer` — the PATH qualifier as
+  a differential observation, not a key convention.
+- RE-LANING NECESSITY (audit finding, F2): the two strict PASS rows moved
+  to membership (`iface-dispatch-value-nil`, `mk-helper-value-nil`) fail
+  the PRE-EXISTING strict invariance check once the site exists — stage
+  `nondet`, default stream = {nil-deref text}, adversarial variant =
+  {panicwrap text} — so the re-laning is necessary and the (later)
+  depth-routing guard is not load-bearing there.
 - Ruling record: `docs/2026-08-31_qrow-rulings.md` (2026-09-03 record,
   «(2) panic-text, agree, demonic choice so both are admitted» —
   received by the [AGENT] coordinator and relayed to the implementing

@@ -62,10 +62,12 @@ statement), where slot 0 keeps the nil-dereference text `enterFrame`
 raised and slot 1 substitutes gc's `panicwrap` text; 1 elsewhere, where
 the site's `consumeAtOne := false` policy makes the consult a no-op
 (`Choices.consumeAt_nilValueMethodText_one`) — so every non-family
-entry consumes exactly as before. This is the ONLY place the stream
-meets a frame entry (the `Except`-land `enterFrame`/`dynamicDispatch?`
-stay stream-free), which is why the pick lives in the funnel and not at
-the arm; the relation's entry-panic rules quantify the pick. -/
+entry consumes exactly as before. The stream meets a frame entry only
+here, in `enterFrameDeferPanicking` below, and in the `go`-statement
+entry `spawnStep` (Multi.lean — the same pick; audit fix F1) — the
+`Except`-land `enterFrame`/`dynamicDispatch?` stay stream-free — which is
+why the pick lives in the funnels and not at the arm; the relation's
+entry-panic rules (and `StepE.spawn`) quantify the pick. -/
 def enterFrameStep (s : ExecState) (fid : FuncId) (args : List GoValue)
     (mk : Func → LocalEnv → List Loc → Config) (k : Cont)
     (choices : Choices) : Except GoError (Config × ExecState × Choices) :=

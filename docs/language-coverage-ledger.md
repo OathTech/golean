@@ -501,8 +501,15 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (3260 cases, 3061 PASS /
-199 FAIL — the `bug087-paniktext` re-pin REBASED onto the round-8b union
+All numbers at the current tracked baseline (3264 cases, 3065 PASS /
+199 FAIL — the `bug087-paniktext` AUDIT FIX ROUND F1–F3 2026-09-03 [AGENT]:
+the rebased fix's 3260 / 3061 / 199 + FOUR born-PASS membership rows
+`noodler/ifaces/{spawn-iface-value-nil,spawn-iface-value-nil-devirt,
+spawn-helper-value-nil}` (F1: the go-statement entry twin threaded) and
+`multipkg/nil-value-method-text` (F3: the path-qualified rendering as a
+differential observation); no red moved, so the bucket table below is
+unchanged at 199; re-derived from the data rows. That figure — 3260 /
+3061 / 199 — was the `bug087-paniktext` re-pin REBASED onto the round-8b union
 2026-09-03 [AGENT]: the union's 3260 / 3058 / 202 with BUG-087's three Cases
 rows `noodler/ifaces/{mv-iface-nil-call,iface-param-value-nil,global-iface-value-nil}`
 flipped FAIL/differential → PASS/membership (the R9a two-member panic-text
@@ -559,7 +566,7 @@ noodler re-pin — 3143 cases, 2943 PASS / 200 FAIL over main = 2580 /
 witness row `noodler/ifaces/mk-helper-value-nil`, one strict→confluent
 stage promotion `noodler/membership/delete-other-key-during-range`, 3
 observables sharpened in place): +563 born rows under `noodler/` (540 PASS + 23 FAIL, every
-FAIL triaged in the baseline header — 3 on BUG-087's Cases line (latitude, not wrong-answer; all three flipped PASS/membership at the 2026-09-03 `bug087-paniktext` fix re-pin — the R9a envelope: 3199 rows = 3008 / 191), 2 on
+FAIL triaged in the baseline header — 3 on BUG-087's Cases line (latitude, not wrong-answer; all three flipped PASS/membership at the 2026-09-03 `bug087-paniktext` fix re-pin — the R9a envelope: 3199 rows = 3008 / 191 at the lane's pre-rebase tree; 3260 = 3061 / 199 rebased onto the round-8b union; 3264 = 3065 / 199 with the audit-fix rows), 2 on
 BUG-086's (both flipped PASS at the 2026-09-03 `bug086-shim-closure` fix re-pin: 3195 rows = 3001 / 194), 17 frontend-export refusals that are either known seams or
 the report's FG-1..FG-5 frontier candidates, 1 `coverage` entrant in
 untriaged-ids beside FR-10's own pin; `docs/2026-09-03_noodler-report.md`);

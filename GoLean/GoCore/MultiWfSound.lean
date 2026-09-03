@@ -74,12 +74,13 @@ theorem spawnPlan_iters {types : TypeEnv} {c : Config} {cv : GoValue}
 configurations bounded and iteration-typed, types unchanged, allocator
 monotone. -/
 theorem spawnStep_wf {s : ExecState} {cv : GoValue} {args : List GoValue}
-    {k : Cont} {p child : Config} {s' : ExecState} {types : TypeEnv}
+    {k : Cont} {ch : Choices} {p child : Config} {s' : ExecState} {ch' : Choices}
+    {types : TypeEnv}
     (hw : StateWf s) (hcv : GoValue.locSup cv ≤ s.nextAddr)
     (hargs : goValueListSup args ≤ s.nextAddr)
     (hk : Cont.locSup k ≤ s.nextAddr)
     (hik : Cont.itersNormalized types k = true)
-    (h : spawnStep s cv args k = .ok (p, child, s')) :
+    (h : spawnStep s cv args k ch = .ok (p, child, s', ch')) :
     StateWf s' ∧ Config.locSup p ≤ s'.nextAddr
       ∧ Config.locSup child ≤ s'.nextAddr
       ∧ s'.types = s.types ∧ s.nextAddr ≤ s'.nextAddr
@@ -91,7 +92,7 @@ theorem spawnStep_wf {s : ExecState} {cv : GoValue} {args : List GoValue}
     split at h
     · rename_i func frameEnv resultLocs s₂ henter
       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
       have hcap : goValueListSup captured ≤ s.nextAddr := by
         simpa [GoValue.locSup] using hcv
       obtain ⟨w1, w2, w3, w4, w5, w6, w7, w8⟩ := enterFrame_wf hw
@@ -105,7 +106,7 @@ theorem spawnStep_wf {s : ExecState} {cv : GoValue} {args : List GoValue}
       · simp [Config.itersNormalized, Cont.itersNormalized]
     · rename_i msg henter
       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
       refine ⟨hw, ?_, ?_, rfl, Nat.le_refl _, ?_, ?_⟩
       · simpa [Config.locSup] using hk
       · simp [Config.locSup, panicChainSup, runtimeErrorValue_locSup,
@@ -1101,7 +1102,7 @@ theorem stepThread_wf {s : ExecState} {threads : Array Config} {i : Nat}
           obtain ⟨cv, args, k⟩ := p
           rw [hsp] at h
           simp only [bind_eq_ok] at h
-          obtain ⟨⟨parent', child, s₂⟩, hspawn, h⟩ := h
+          obtain ⟨⟨parent', child, s₂, ch₂⟩, hspawn, h⟩ := h
           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl, rfl, rfl⟩ := h
           obtain ⟨hcvb, hargsb, hkb⟩ := spawnPlan_locSup hsp
