@@ -1,0 +1,45 @@
+67:  ok: members= cardinality pin refuses a wrong pin (B3)
+68:  ok: confluent lane refuses a non-singleton set (B4)
+69:  ok: racy lane fails loud on a refuted width (B5)
+70:  ok: fan-out that ran no worker exits 2 without publishing (G5)
+71:  ok: G5 named both causes (global fan-out refusal + empty-row guard), no stray .out
+72:  ok: T1-strict-lean-run: cause named at stage lean-observation (Lean run TIMED OUT after 1s)
+74:  ok: T2-nondet-rerun: cause named at stage nondet (re-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s)
+76:  ok: T3-coupling-pin: cause named at stage membership (driver-coupling pin: native-json-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s)
+78:  ok: T4-sample-loop: cause named at stage membership (observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing a Go sample against member #1)
+79:  ok: T5-comparator-undecodable: cause named at stage go-observation (Go output is not a valid observation (comparator said: left.status: unknown observation status)
+80:  ok: T6-lean-run-sigkill: cause named at stage lean-observation (Lean run KILLED (exit 137)
+81:  ok: T7-differential-sigterm: cause named at stage differential (observation-eq KILLED (exit 143)
+82:  ok: T8-go-oracle-sigkill: cause named at stage go-run (go run oracle KILLED (exit 137)
+85:── re-run negative corpus (--diff)
+89:── derived oracle artifacts re-derived (Tests/FloatVectors.lean + tools/nativefrontend/inittask-std.tsv)
+91:── negative baseline diff
+94:── differential baseline diff (scripts/coverage-baseline-diff)
+97:── baseline re-pin guard (worktree-vs-HEAD; flips must be on a BUGS.md Cases: line)
+99:── cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)
+105:  note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
+106:  ok   oracle toolchain (go1.26.5 = pin)
+107:  ok   escape-hatch preflight
+108:  ok   meta-layer escape hatches (allowlist empty since the repo split)
+109:  ok   escape-hatch addendum (no decide +native / native-config spellings)
+110:  ok   bug-index cross-check
+111:  ok   feature-coverage (no dead tags)
+112:  ok   spec-anchor citations resolve at the pin
+113:  ok   lane-validation fixtures (manifest gates reject bad shapes)
+114:  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+115:  ok   engine-isolation (core ↛ EnumDedup)
+116:  ok   core build (warning-free)
+117:  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+118:  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+119:  ok   frontend unit tests
+120:  ok   eval tests (148 ok)
+121:  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+122:  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8)
+123:  ok   negative run completed (exit 0; set judged by baseline diff)
+124:  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+125:  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+126:  note negative baseline diff matched (394 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+127:  note baseline diff FULL (3195/3195, no regression) but recorded on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+128:  ok   re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)
+129:  note reconciler: 3 finding(s), 0 HIGH — report-only (details: tools/reconcile-records)
+131:RESULT: PASS

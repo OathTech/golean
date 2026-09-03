@@ -26,10 +26,24 @@ routed/annotated `cases.tsv` files, `baselines/native-full.tsv` header.
   uncommitted edits (`git_commit 345ef090`, `git_dirty true` in both
   gate runs' `latest.meta.tsv`, as the gate tail's dirty-tree notes
   say); the lane's own commit is the one that adds this directory
-  (`git log -- docs/evidence/2026-09-03_strict-routing`). Two full
-  `ci --diff` runs: the first (guard as first written) FAILED on
-  exactly the 20 post-trace rows described below — that log's verdict
-  lines are `gate-tail-run1-FAIL.txt`; the second PASSED (`gate-tail.txt`).
+  (`git log -- docs/evidence/2026-09-03_strict-routing`). Three full
+  `ci --diff` runs: run 1 (guard as first written, dirty tree at
+  345ef090) FAILED on exactly the 20 post-trace rows described below
+  (`gate-tail-run1-FAIL.txt`); run 2 (dirty tree at 345ef090) PASSED
+  (`gate-tail-run2-dirty-345ef090.txt`); run 3 — the certifying one —
+  on the CLEAN tree at the audit-fix-round commit `42573a68`
+  (`git_dirty false`, `gate-run3-latest.meta.tsv`) PASSED
+  (`gate-tail.txt`, `baseline-drift.txt`: no regression, 3001/194,
+  0 PASS→non-PASS, the 9 declared stage moves). The commit that adds
+  run 3's tail is evidence-only (this directory); the gated tree is
+  `42573a68`.
+- Two nits left for the train, both display/wording, neither a check:
+  `scripts/ci`'s fixture printout filter matches `(D[0-9])` so D7a-c's
+  `ok:` lines (formatted `D7a-…:`) are not echoed into the gate log
+  (they ran — the step passes only if every fixture passed); and the
+  run meta's `depth_guard` value still reads "wideAfterExhaustion=0 on
+  every invariance stream" where, since fix 1, a depth row's three
+  fixed probes are recorded, not required (the seeded three are).
 - Toolchain: `go version go1.26.5 linux/amd64` (= `baselines/go-oracle-pin`);
   Lean `leanprover/lean4:v4.32.2`; `golean` from `scripts/capped lake
   build golean` of this worktree (the exploratory enumerations in
