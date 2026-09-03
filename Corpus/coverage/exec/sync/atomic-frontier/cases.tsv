@@ -1,6 +1,8 @@
 # id	subject	args	expected_status	expected_reason	features	lane	why	params
-# FRONTIER SUITE (slice 6): sync/atomic — all RED at frontend-export by
-# design until an atomics arc lands (ledger design question Q-ATOMIC;
+# FRONTIER SUITE (slice 6): sync/atomic — RED at frontend-export by
+# design until an atomics arc landed; WAVE 1 (2026-09-03, design note
+# docs/2026-09-03_atomics-w1-design.md) flipped the four integer rows
+# green; `value` stays red (atomic.Value is wave 2, refused by name) (ledger design question Q-ATOMIC;
 # mem#atomic pins the model to seq_cst, latitude inventory U-6). Core op
 # classes enumerated (load/store/add/swap/cas/Value); typed variants
 # ride the same lowering (judgment logged in the ledger + main.go).
@@ -11,4 +13,4 @@ add-load-store	atomicAddLoadStore	-	ok	-	sync,atomics,ints	strict	-	-
 cas	atomicCas	-	ok	-	sync,atomics,ints	strict	-	-
 swap	atomicSwap	-	ok	-	sync,atomics,ints	strict	-	-
 value	atomicValue	-	ok	-	sync,atomics,interfaces,type_assertions	strict	-	-
-mp-litmus	atomicMpLitmus	-	ok	-	sync,atomics,goroutines,nondet	membership	message-passing litmus under mem#atomic's seq_cst clause: writer stores data then flag, reader loads flag then data — admitted set {0, 1, 11}; the SC-excluded member is 10 (flag seen, data missed). One member oracle-witnessed (0, 400/400 at the pin); the set is argued from the mem text, which is exactly the membership lane's job	width=8,sites=8
+mp-litmus	atomicMpLitmus	-	ok	-	sync,atomics,goroutines,nondet	membership	message-passing litmus under mem#atomic's seq_cst clause: writer stores data then flag, reader loads flag then data — admitted set {0, 1, 11}; the SC-excluded member is 10 (flag seen, data missed). One member oracle-witnessed (0, 400/400 at the pin); the set is argued from the mem text, which is exactly the membership lane's job — FLIPPED GREEN 2026-09-03 (atomics arc wave 1): the fused single-step ops realize the set {0, 1, 11} exactly and 10 is mechanically absent; sites raised 8→32 at the flip (every atomic apply and its postOp completion is a scheduling consult)	width=8,sites=32

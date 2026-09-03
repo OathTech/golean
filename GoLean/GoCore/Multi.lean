@@ -282,6 +282,12 @@ def Config.atBoundary : Config → Bool
   -- nothing (`applySyncOp`'s envelope statement).
   | .retV _ (.syncStK _ _ [] _ _) => true
   | .blockedSync _ _ _ _ => true
+  -- sync/atomic ops (atomics arc wave 1): the apply position is a
+  -- registry boundary like the sync ops' — the fused step runs at a
+  -- scheduling point and its completion carries `.opDone .postOp`, so
+  -- the SC order of the atomics IS the L1 order of their steps; the op
+  -- consumes nothing (`applyAtomicOp`'s envelope statement).
+  | .retV _ (.atomicStK _ _ [] _ _) => true
   -- Loop BACK-EDGES (W3.2 stage D, B2 — G1 ruling 2026-08-20; THE
   -- ENVELOPE STATEMENT of `ChoiceSite.backEdge`): the loop re-entry
   -- shapes are scheduling points, so a goroutine inside a
@@ -1803,6 +1809,49 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (ev : StepEvent)
                       r.accesses i (syncReleaseTailKinds op pre loc)
                   | _ => return r
               | _ => return r  -- nil/garbage receiver: the apply panicked
+          | .retV v (.atomicStK op done [] _ _) => do
+              -- THE ATOMIC REGISTRY ENTRY'S SECOND DUTY (atomics arc
+              -- wave 1; Race.lean, section "sync/atomic — the
+              -- per-address clocks"): on a COMMITTED op (outcome
+              -- `.opDone`; a nil-address panic records nothing — gc's
+              -- `racecallatomic` faults on the address before any TSan
+              -- call), record the op's atomic access kind at the
+              -- addressed cell and move the per-address clock, in
+              -- TSan's instruction order: Load = acquire THEN record
+              -- `.atomicRead`; Store = record `.atomicWrite` THEN
+              -- release-store (overwrite); Add/Swap = record THEN
+              -- release-acquire; CompareAndSwap = record, then
+              -- release-acquire on success / acquire on failure — the
+              -- outcome re-derived from the PRE-state through the very
+              -- `atomicCompute` the apply ran.
+              match m'.threads[i]?, (v :: done).reverse with
+              | some (.opDone _ _), .addr loc :: operands =>
+                  (match op.head with
+                  | .load => do
+                      let r := r.atomicAcquire i loc
+                      r.accesses i [(.atomicRead, loc)]
+                  | .store => do
+                      let r ← r.accesses i [(.atomicWrite, loc)]
+                      return (r.atomicReleaseStore i loc)
+                  | .add | .swap => do
+                      let r ← r.accesses i [(.atomicWrite, loc)]
+                      return (r.atomicReleaseAcquire i loc)
+                  | .cas => do
+                      let r ← r.accesses i [(.atomicWrite, loc)]
+                      -- Re-derive the outcome from the pre-state cell;
+                      -- a shape the apply accepted cannot fail here
+                      -- (it committed), so an error PROPAGATES rather
+                      -- than being absorbed into "acquire only".
+                      let cur ← (match loadLoc sPre loc with
+                        | .ok (.int cur _) => pure cur
+                        | .ok other =>
+                            throw (.internal s!"atomic arm: committed CAS on a non-integer pre-cell {repr other}")
+                        | .error e => throw e)
+                      let (new?, _) ← atomicCompute .cas op.kind cur operands
+                      match new? with
+                      | some _ => return (r.atomicReleaseAcquire i loc)
+                      | none => return (r.atomicAcquire i loc))
+              | _, _ => return r  -- panicked (nil address) or a malformed shape the apply refused
           | _ =>
               match m'.threads[i]? with
               | some (.panicking _ _) =>

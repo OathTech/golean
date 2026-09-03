@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# THE ATOMIC SPIN-WAIT (atomics arc wave 1, 2026-09-03): membership lane
+# under the stage-D §5d `nonterm=` accounting (the send-then-spin
+# precedent): the always-spin schedules are COUNTED as nonterm branches,
+# never members; membership = oracle ∈ TERMINATING set {42}; NO
+# ∀-stream termination claim is made (the Fair-quantified class is
+# reasoning-side future work — proposal §2, [USER] A′). backedge=1
+# explores the canonical slot + one anti-progress slot at every loop
+# back-edge (exhaustive at this program's bound-2 menus).
+flag-wait	spinOnFlag	-	ok	-	sync,atomics,ints,goroutines,channels,loops,closures,race,nondet	membership	the child's load-acquire on the flag orders its plain data read after main's plain write on every terminating path (mem#atomic), so the set is the singleton {42}; the spin's non-terminating schedules are nonterm branches by the declared accounting — no termination is claimed	width=4,sites=200,members=1,nonterm=200,backedge=1

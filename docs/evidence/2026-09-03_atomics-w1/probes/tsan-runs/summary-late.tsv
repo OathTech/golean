@@ -1,0 +1,5 @@
+subject	procs	runs	race	green	other
+plainThenStoreVsLateAdd	1	20	20	0	0
+plainThenStoreVsLateAdd	8	20	20	0	0
+plainThenStoreVsLateLoad	1	20	0	20	0
+plainThenStoreVsLateLoad	8	20	0	20	0

@@ -1692,14 +1692,31 @@ achievement.
   (synthesis doc, deferred list). Sub-registry granularity
   generally is C2/C3 + NPDRF territory, but these named arms are the
   known coarse spots INSIDE segments.
-- **U-6 Future atomics**: mem#atomic pins sync/atomic to SC — verbatim:
-  "The preceding definition has the same semantics as C++’s
-  sequentially consistent atomics and Java’s volatile variables"
-  (quote corrected at the P2 audit) — a considered design commitment
-  with recorded rationale (gomm: a conforming implementation may NOT
-  weaken these to acquire/release) — forced when modeled;
-  the latitude to analyze at that arc is the surrounding-plain-access
-  envelope, not the atomics themselves.
+- **U-6 Atomics — MODELED (wave 1, 2026-09-03; was "Future atomics")**:
+  mem#atomic pins sync/atomic to SC — verbatim: "The preceding
+  definition has the same semantics as C++’s sequentially consistent
+  atomics and Java’s volatile variables" (quote corrected at the P2
+  audit) — a considered design commitment with recorded rationale
+  (gomm: a conforming implementation may NOT weaken these to
+  acquire/release) — FORCED, and realized as forced: the atomics arc's
+  wave 1 (Q-ATOMIC RULED [USER] 2026-09-02 option A′; design note
+  `docs/2026-09-03_atomics-w1-design.md`) models the integer core
+  (`Load/Store/Add/Swap/CompareAndSwap` × `Int32/Int64/Uint32/Uint64/
+  Uintptr`, direct calls and the typed wrappers) as ONE fused registry
+  step each (`applyAtomicOp`, Machine.lean — the envelope statement is
+  there), so SC is the L1 interleaving of indivisible steps with ZERO
+  new choice sites (the census is unchanged); the executable check
+  that the realization is neither wide nor narrow is
+  `sync/atomic-frontier/mp-litmus` (membership exactly {0, 1, 11}, the
+  SC-excluded 10 absent). The surrounding-plain-access envelope is
+  C10's (mem#restrictions), realized by the atomic ACCESS KIND at the
+  addressed cell (`atomicOpKind`, Race.lean — TSan's realized access
+  and mem#model's operation kind coincide for atomics) with the
+  per-address atomic clock carrying mem#atomic's synchronized-before
+  (Load acquires; Store release-STORES — an overwrite, gc's/C++'s
+  realization; RMWs release-acquire; a failed CAS acquires). Refused
+  by name for wave 2: `atomic.Value`/`Bool`/`Pointer[T]`, `And*`/`Or*`,
+  the `unsafe.Pointer` family.
 - **U-7 gc version drift as an evidence problem**: every pinned
   realized point (R2's formula center, R3, E2, E10, R8, R9, R11) is
   version-tracked at go1.26.x per the CI pin; the inventory assumes the

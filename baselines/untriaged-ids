@@ -202,5 +202,9 @@ pointers/nil-array-ptr-slice-elided-high/zero-length-array	coverage
 pointers/nil-array-ptr-slice/slice-expr-nil	coverage
 pointers/zero-size-address/escaped-same	latitude
 spec-examples-decl/slice-to-array/ok-forms	coverage
-sync/atomic-frontier/mp-litmus	coverage
-sync/atomic-frontier/value	coverage
+# 2026-09-03 (atomics arc wave 1): sync/atomic-frontier/mp-litmus
+#   RETIRED — flipped PASS (membership exactly {0, 1, 11});
+#   sync/atomic-frontier/value DEPARTED the fidelity stages — it is now
+#   a NAMED frontend-export refusal (atomic.Value = wave 2), outside
+#   this ledger's filter; the two rows are the record of what was
+#   tracked. coverage 11 -> 9 (baselines/untriaged-count).

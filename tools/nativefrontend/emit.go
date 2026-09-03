@@ -6480,6 +6480,27 @@ func (e *emitter) emitStructLit(cl *ast.CompositeLit, t types.Type, st *types.St
 		}
 		return nil, unsup("non-empty composite-literal construction of sync.%s (spec#Composite_literals: elements for non-exported fields are illegal cross-package, so only the empty literal — the zero value — lowers)", prim)
 	}
+	// The typed sync/atomic wrappers (atomics arc wave 1, atomics.go):
+	// the same spec argument — all fields non-exported, so the EMPTY
+	// literal is the whole legal cross-package surface and IS the zero
+	// value ("The zero value is zero", type.go). Lowered to the default
+	// of the (shadow-model) type rather than field by field, because
+	// the REAL struct's blank `noCopy`/`align64` fields would otherwise
+	// reach emitType and refuse (the model omits them — file header of
+	// atomics.go). A non-empty literal is unreachable cross-package and
+	// keeps failing closed by name.
+	if named, isNamed := types.Unalias(e.applySubst(t)).(*types.Named); isNamed {
+		if o := named.Obj(); o.Pkg() != nil && o.Pkg().Path() == atomicPkgPath && atomicTypedWrappers[o.Name()] {
+			if len(cl.Elts) == 0 {
+				tyW, err := e.emitType(t)
+				if err != nil {
+					return nil, err
+				}
+				return map[string]any{"expr": "default", "type": tyW}, nil
+			}
+			return nil, unsup("non-empty composite-literal construction of sync/atomic.%s (spec#Composite_literals: elements for non-exported fields are illegal cross-package, so only the empty literal — the zero value — lowers)", o.Name())
+		}
+	}
 	target, err := e.emitType(t)
 	if err != nil {
 		return nil, err
@@ -7316,6 +7337,15 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 	// to the injected shim; every other selector call falls through to
 	// the method machinery and its standing refusals, byte-identical.
 	if sel, ok := c.Fun.(*ast.SelectorExpr); ok {
+		// sync/atomic (atomics arc wave 1, atomics.go): a direct call of
+		// a package-level atomic function is ONE fused machine op —
+		// the `atomic-op` node; out-of-scope members refuse in-hook by
+		// name and wave. Resolved through the *types.Func so this and
+		// the bare-ident spelling (the shadow model's method bodies)
+		// meet at one site.
+		if fn, isAtomic := isAtomicFunc(e.info.Uses[sel.Sel]); isAtomic {
+			return e.emitAtomicCall(c, fn)
+		}
 		if node, handled, err := e.emitStdlibShimCall(c, sel); handled || err != nil {
 			return node, handled, err
 		}
@@ -7421,6 +7451,13 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 	var calleeName string
 	switch obj := e.info.Uses[fnID].(type) {
 	case *types.Func:
+		// A bare-ident call of a sync/atomic function: reachable only
+		// inside the typed-wrapper shadow model (atomics.go), whose
+		// method bodies call the package's own functions unqualified —
+		// the same `atomic-op` node as the qualified spelling.
+		if fn, isAtomic := isAtomicFunc(obj); isAtomic {
+			return e.emitAtomicCall(c, fn)
+		}
 		sig, _ = obj.Type().(*types.Signature)
 		// Wire FuncId via the identity boundary (W1.1): same-package
 		// calls inside a non-main unit must target the QUALIFIED id.

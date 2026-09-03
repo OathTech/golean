@@ -1,5 +1,44 @@
 # GoLean native-frontend full-corpus differential baseline
-# re-pinned: 2026-09-02 (q-u4-gomem lane — Q-U4RESIDUAL RULED [USER]
+# re-pinned: 2026-09-03 (atomics-w1 lane — THE ATOMICS ARC, WAVE 1:
+#   Q-ATOMIC RULED [USER] 2026-09-02 option A′ with this repo as owner
+#   (docs/2026-08-31_qrow-rulings.md row 2; Mike: "I agree with this
+#   approach", relayed by the [AGENT] coordinator, citation not
+#   firsthand); [AGENT]-executed inside that ruling per the dispatching
+#   brief. Design note docs/2026-09-03_atomics-w1-design.md; evidence
+#   docs/evidence/2026-09-03_atomics-w1/ (baseline-drift.txt = this
+#   list, gate-tail.txt). FULL ci --diff at this tip: 2626 rows run;
+#   drift vs the previous pin = EXACTLY the 51 rows below; NO other row
+#   moved in result or stage; NO PASS->non-PASS flips.
+#   Machine change [TRUST-ADJACENT: GoCore atomics ops + frontend
+#   lowering]: Stmt.atomicStmt / Cont.atomicStK / applyAtomicOp — the
+#   sync/atomic integer core (Load/Store/Add/Swap/CompareAndSwap x
+#   Int32/Int64/Uint32/Uint64/Uintptr) as ONE fused registry step each,
+#   SC by construction (mem#atomic), ZERO new choice sites; Race.lean
+#   per-address atomic clocks + the atomic access kind at the cell;
+#   frontend `atomic-op` node + the typed wrappers' E5-T shadow model.
+#   FAIL->PASS flips (4), each a former frontier refusal now modeled:
+#     sync/atomic-frontier/add-load-store  frontend-export -> PASS
+#     sync/atomic-frontier/cas             frontend-export -> PASS
+#     sync/atomic-frontier/swap            frontend-export -> PASS
+#     sync/atomic-frontier/mp-litmus       FAIL/membership -> PASS/membership
+#       (the SC litmus: enumerated set exactly {0, 1, 11}; the
+#       SC-excluded 10 mechanically absent — sites 8 -> 32 at the flip)
+#   FAIL stays FAIL, STAGE MOVE (1):
+#     sync/atomic-frontier/value  lean-observation -> frontend-export
+#       (atomic.Value is wave 2: the frontend now refuses it BY NAME
+#       where the D5 imported-type stub used to refuse at run time —
+#       a named refusal replacing an unnamed one; leaves the
+#       untriaged `coverage` class, see baselines/untriaged-count)
+#   NEW rows, ALL born PASS (46): atomics/ops/* (19: op x kind, wrap
+#     arithmetic, discarded result, expression position, operand order,
+#     defined-underlying, nil address x2), atomics/typed/* (9: the five
+#     wrappers, zero+copy, empty literal, struct field, nil receiver),
+#     atomics/counter/* (5, confluent), atomics/spin/flag-wait
+#     (membership under nonterm= accounting, NO termination claim),
+#     race/atomics-free/* (7: 4 confluent + 3 membership),
+#     race/atomics-misuse/* (5, racy — gc -race red 20/20).
+#   Totals: 2580 (2403 PASS / 177 FAIL) -> 2626 (2453 PASS / 173 FAIL).
+# previous re-pin: 2026-09-02 (q-u4-gomem lane — Q-U4RESIDUAL RULED [USER]
 #   2026-09-02 option (A) "follow go_mem exactly" (ruling sheet
 #   docs/2026-08-31_qrow-rulings.md row 9 + appendix record; the quotes
 #   reached the recording worker by [AGENT]-coordinator relay);
@@ -463,7 +502,15 @@
 #     The remaining FAIL rows are the standing frontend/feature gaps
 #     of the 2026-08-22 record (docs/2026-08-22_launch-audit-synthesis.md),
 #     none moved by this re-pin.
-# cases: 2580 (2403 PASS / 177 FAIL)
+# cases: 2626 (2453 PASS / 173 FAIL)
+#   [re-derived by count from this file's data rows at the 2026-09-03
+#   atomics-w1 re-pin: 2580 (2403 PASS / 177 FAIL) + 46 born-PASS
+#   (atomics/*, race/atomics-{free,misuse}/*) + 4 FAIL->PASS flips
+#   (sync/atomic-frontier/{add-load-store,cas,swap,mp-litmus}) + 1
+#   FAIL stage move (sync/atomic-frontier/value) = 2626 (2453 PASS /
+#   173 FAIL); asserted by the re-pin script against the run's
+#   latest.tsv; reconciler C1H green at the commit.]
+#   [previous header: 2580 (2403 PASS / 177 FAIL)]
 #   [re-derived from the data rows at the round-5 merge-train rebase 2026-09-03 ([AGENT]: q-u4-gomem replayed over main@bd849494 = bug082-maphint's 2573 (2401 PASS / 172 FAIL); the two lanes' new rows are disjoint by id and no main row moved): + 5 born-FAIL-by-design (race/gomem-only/*, BUG-084) + 2 born-PASS (race/free-sync/rw-copy-beside-{rlock,lock}) = 2580 (2403 PASS / 177 FAIL).]
 #   [re-derived by count from this file's data rows at the 2026-09-02
 #   q-u4-gomem re-pin + its audit fix round F1: 2559 (2387 PASS / 172
@@ -518,6 +565,40 @@ PASS	assign-order/conversion-call-eval-once/assign	-
 PASS	assign-order/target-check-vs-rhs/index-target	-
 PASS	assign-order/target-check-vs-rhs/nil-field-target	-
 PASS	assign-order/target-check-vs-rhs/nil-deref-target	-
+PASS	atomics/counter/add	confluent
+PASS	atomics/counter/cas-loop	confluent
+PASS	atomics/counter/plain-read-after-join	confluent
+PASS	atomics/counter/swap-claim	confluent
+PASS	atomics/counter/typed	confluent
+PASS	atomics/ops/add-int32-wrap	-
+PASS	atomics/ops/add-int64	-
+PASS	atomics/ops/add-uint32-decrement	-
+PASS	atomics/ops/add-uint64	-
+PASS	atomics/ops/cas-int64	-
+PASS	atomics/ops/cas-uint32-fail	-
+PASS	atomics/ops/defined-underlying	-
+PASS	atomics/ops/discarded-result	-
+PASS	atomics/ops/in-expression	-
+PASS	atomics/ops/load-store-int32	-
+PASS	atomics/ops/load-store-int64	-
+PASS	atomics/ops/load-store-uint32	-
+PASS	atomics/ops/load-store-uint64	-
+PASS	atomics/ops/load-store-uintptr	-
+PASS	atomics/ops/nil-address	-
+PASS	atomics/ops/nil-address-recovered	-
+PASS	atomics/ops/operand-order	-
+PASS	atomics/ops/swap-int32	-
+PASS	atomics/ops/swap-uint64	-
+PASS	atomics/spin/flag-wait	membership
+PASS	atomics/typed/empty-literal	-
+PASS	atomics/typed/int32-wrap	-
+PASS	atomics/typed/int64	-
+PASS	atomics/typed/nil-receiver	-
+PASS	atomics/typed/struct-field	-
+PASS	atomics/typed/uint32	-
+PASS	atomics/typed/uint64	-
+PASS	atomics/typed/uintptr	-
+PASS	atomics/typed/zero-and-copy	-
 PASS	binary/little-endian/roundtrip	-
 PASS	binary/little-endian/golden	-
 PASS	binary/little-endian/heartbeat-ctx-shape	-
@@ -2326,6 +2407,18 @@ PASS	quorum/vote-result-small-n/n1-pending	-
 PASS	quorum/vote-result-small-n/n2-won	-
 PASS	quorum/vote-result-small-n/n2-one-yes-lost	-
 PASS	quorum/vote-result-small-n/n2-one-missing-pending	-
+PASS	race/atomics-free/atomic-vs-atomic	confluent
+PASS	race/atomics-free/cas-failure-acquires	membership
+PASS	race/atomics-free/plain-read-vs-load	confluent
+PASS	race/atomics-free/publish-acquire	membership
+PASS	race/atomics-free/rmw-acquire	membership
+PASS	race/atomics-free/sibling-words	confluent
+PASS	race/atomics-free/typed-sibling-field	confluent
+PASS	race/atomics-misuse/plain-read-vs-failed-cas	racy
+PASS	race/atomics-misuse/plain-read-vs-store	racy
+PASS	race/atomics-misuse/plain-read-vs-swap	racy
+PASS	race/atomics-misuse/plain-write-vs-add	racy
+PASS	race/atomics-misuse/struct-copy-vs-typed-add	racy
 PASS	race/free/slice-disjoint	confluent
 PASS	race/free/field-disjoint	confluent
 PASS	race/free/field-read-write	confluent
@@ -2977,11 +3070,11 @@ PASS	structs/unnamed-conversion-targets/func-from-defined	-
 PASS	structs/unnamed-conversion-targets/slice-nil	-
 PASS	structs/unnamed-conversion-targets/map-nil	-
 PASS	structs/zero-value	-
-FAIL	sync/atomic-frontier/add-load-store	frontend-export
-FAIL	sync/atomic-frontier/cas	frontend-export
-FAIL	sync/atomic-frontier/swap	frontend-export
-FAIL	sync/atomic-frontier/value	lean-observation
-FAIL	sync/atomic-frontier/mp-litmus	membership
+PASS	sync/atomic-frontier/add-load-store	-
+PASS	sync/atomic-frontier/cas	-
+PASS	sync/atomic-frontier/swap	-
+FAIL	sync/atomic-frontier/value	frontend-export
+PASS	sync/atomic-frontier/mp-litmus	membership
 PASS	sync/composite-literal/mutex-addr-lit	-
 PASS	sync/composite-literal/waitgroup-value-lit	-
 PASS	sync/composite-literal/rwmutex-addr-lit	-

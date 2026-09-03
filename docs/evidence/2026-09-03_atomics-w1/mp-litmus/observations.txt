@@ -1,0 +1,3 @@
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":11}]}
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}

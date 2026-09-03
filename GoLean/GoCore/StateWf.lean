@@ -256,6 +256,10 @@ def Stmt.locSup : Stmt → Nat
   -- Sync statements (spec-parity slice 2): heads are loc-free.
   | .syncStmt _ args targets =>
       max (exprListSup args.toList) (assigneeListSup targets.toList)
+  -- sync/atomic statements (atomics arc wave 1): heads and kinds are
+  -- loc-free.
+  | .atomicStmt _ _ args targets =>
+      max (exprListSup args.toList) (assigneeListSup targets.toList)
 
 def stmtListSup : List Stmt → Nat
   | [] => 0
@@ -313,6 +317,10 @@ def chanStOpSup : ChanStOp → Nat
 def syncOpSup : SyncOp → Nat
   | .onceBegin targets => assigneeListSup targets
   | _ => 0
+
+/-- An atomic op's loc positions: its result target (atomics arc wave 1;
+head and kind are loc-free). -/
+def atomicOpSup (op : AtomicOp) : Nat := assigneeListSup op.targets
 
 /-- A phase-1-resolved target's loc positions (its operand VALUES;
 `TargetStep`s are loc-free). -/
@@ -420,6 +428,10 @@ def Cont.locSup : Cont → Nat
       max (max (syncOpSup op) (goValueListSup done))
         (max (exprListSup pending)
           (max (LocalEnv.locSup env) (Cont.locSup k)))
+  | .atomicStK op done pending env k =>
+      max (max (atomicOpSup op) (goValueListSup done))
+        (max (exprListSup pending)
+          (max (LocalEnv.locSup env) (Cont.locSup k)))
 
 /-- One evaluated select clause's sup (`.blockedSelect` payloads). -/
 def evClauseSup : EvClause → Nat
@@ -516,6 +528,7 @@ def Cont.itersNormalized (types : TypeEnv) : Cont → Bool
   | .goCalleeK _ _ k => Cont.itersNormalized types k
   | .goArgsK _ _ _ _ k => Cont.itersNormalized types k
   | .syncStK _ _ _ _ k => Cont.itersNormalized types k
+  | .atomicStK _ _ _ _ k => Cont.itersNormalized types k
 
 @[inherit_doc Cont.itersNormalized]
 def Config.itersNormalized (types : TypeEnv) : Config → Bool
@@ -5222,6 +5235,50 @@ theorem syncPlan_locSup {stmt : Stmt} {op : SyncOp}
 never raises any sup. -/
 theorem syncData_locSup (p : SyncPrim) : GoValue.locSup (.syncData p) = 0 := rfl
 
+/-- `atomicPlan` extraction is loc-bounded by the statement (the
+`syncPlan_locSup` twin, atomics arc wave 1). -/
+theorem atomicPlan_locSup {stmt : Stmt} {op : AtomicOp}
+    {es : List Expr} (h : atomicPlan stmt = some (op, es)) :
+    exprListSup es ≤ Stmt.locSup stmt
+      ∧ atomicOpSup op ≤ Stmt.locSup stmt := by
+  cases stmt <;>
+    first
+    | (simp [atomicPlan] at h; done)
+    | skip
+  case atomicStmt aop kind args targets =>
+    simp only [atomicPlan] at h
+    split at h
+    · simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      simp only [Stmt.locSup, atomicOpSup]
+      exact ⟨Nat.le_max_left _ _, Nat.le_max_right _ _⟩
+    · simp at h
+
+/-- `atomicCompute`'s result value is LOC-FREE (an integer, a bool, or
+unit), so a delivery never raises any sup. -/
+theorem atomicCompute_locSup {head : AtomicStmtOp} {kind : IntKind} {cur : Int}
+    {ops : List GoValue} {new? : Option Int} {r : GoValue}
+    (h : atomicCompute head kind cur ops = .ok (new?, r)) :
+    GoValue.locSup r = 0 := by
+  unfold atomicCompute at h
+  split at h
+  all_goals
+    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq,
+      stuck, throw, throwThe, MonadExceptOf.throw] at h
+  all_goals
+    first
+    | (obtain ⟨rfl, rfl⟩ := h; rfl)
+    | (obtain ⟨_, _, rfl, rfl⟩ := h; rfl)
+    | (obtain ⟨_, _, h⟩ := h
+       split at h
+       all_goals
+         simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+       all_goals
+         first
+         | (obtain ⟨rfl, rfl⟩ := h; rfl)
+         | (obtain ⟨_, _, rfl, rfl⟩ := h; rfl))
+    | (cases h)
+
 set_option maxHeartbeats 1600000 in
 /-- `applySyncOp` preservation (spec-parity slice 2, the
 `applyChanOp_wf` twin): wf state out, bounded successor configuration,
@@ -5627,6 +5684,85 @@ theorem applySyncOp_itersNormalized {σ : ExecState} {op : SyncOp}
   -- surgery: the component is constantly true); the old per-arm
   -- walk broke on stage C's `.opDone` wrap shapes and carried no
   -- information the vacuity lemma does not.
+  exact Config.itersNormalized_true types c'
+
+set_option maxHeartbeats 1600000 in
+/-- `applyAtomicOp` preservation (atomics arc wave 1, the
+`applySyncOp_wf` twin): wf state out, bounded successor configuration,
+types unchanged, allocator monotone. The op stores a LOC-FREE integer
+(`GoValue.locSup (.int _ _) = 0`) and delivers a loc-free result
+(`atomicCompute_locSup`), so every arm is state-invariant, a
+`storeLoc_pres`, and/or an `enterRecvTargets_wf`. -/
+theorem applyAtomicOp_wf {σ : ExecState} {op : AtomicOp}
+    {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
+    {σ' : ExecState}
+    (hw : StateWf σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
+    (hop : atomicOpSup op ≤ σ.nextAddr)
+    (henv : LocalEnv.locSup env ≤ σ.nextAddr)
+    (hk : Cont.locSup k ≤ σ.nextAddr)
+    (h : applyAtomicOp σ op vs env k = .ok (c', σ')) :
+    StateWf σ' ∧ Config.locSup c' ≤ σ'.nextAddr ∧ σ'.types = σ.types
+      ∧ σ.nextAddr ≤ σ'.nextAddr := by
+  obtain ⟨head, kind, targets⟩ := op
+  simp only [atomicOpSup] at hop
+  rw [applyAtomicOp.eq_def] at h
+  split at h
+  · rename_i av operands
+    simp only [goValueListSup, Nat.max_le] at hvs
+    simp only [bind_eq_ok] at h
+    obtain ⟨loc, hloc, h⟩ := h
+    have hlocb : Loc.locSup loc ≤ σ.nextAddr :=
+      Nat.le_trans (valueAsLoc_locSup hloc) (by omega)
+    obtain ⟨cur, hcell, h⟩ := h
+    split at h
+    · rename_i curv ck
+      split at h
+      · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+      · simp only [bind_eq_ok] at h
+        obtain ⟨p, hcomp, h⟩ := h
+        obtain ⟨new?, result⟩ := p
+        dsimp only at h
+        obtain ⟨σ₂, hst, h⟩ := h
+        have hres : GoValue.locSup result = 0 := atomicCompute_locSup hcomp
+        -- The optional store: a loc-free value, or no store at all.
+        have hσ₂ : StateWf σ₂ ∧ σ.nextAddr ≤ σ₂.nextAddr ∧ σ₂.types = σ.types := by
+          cases new? with
+          | some nv =>
+              simp only [atomicStore] at hst
+              obtain ⟨w1, w2, w3, w4, w5⟩ := storeLoc_pres hw hlocb
+                (by simp [GoValue.locSup]) hst
+              exact ⟨w1, w2, w4⟩
+          | none =>
+              simp only [atomicStore, pure_eq_ok, Except.ok.injEq] at hst
+              subst hst
+              exact ⟨hw, Nat.le_refl _, rfl⟩
+        obtain ⟨w1, w2, w4⟩ := hσ₂
+        split at h
+        · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          refine ⟨w1, ?_, w4, w2⟩
+          simp only [Config.locSup, Nat.max_le]
+          omega
+        · simp only [bind_eq_ok] at h
+          obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
+          simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨q1, q2, q3, q4⟩ := enterRecvTargets_wf w1
+            (by omega)
+            (by simp [goValueListSup, hres])
+            (by simp [Stmt.locSup, stmtListSup]) (by omega) (by omega) hent
+          exact ⟨q1, by simpa using q2, q3.trans w4, Nat.le_trans w2 q4⟩
+    · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+  · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+
+@[inherit_doc applyAtomicOp_wf]
+theorem applyAtomicOp_itersNormalized {σ : ExecState} {op : AtomicOp}
+    {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
+    {σ' : ExecState} {types : TypeEnv}
+    (h : applyAtomicOp σ op vs env k = .ok (c', σ'))
+    (hk : Cont.itersNormalized types k = true) :
+    Config.itersNormalized types c' = true := by
+  -- Vacuously by the retained-component lemma (BUG-005 (L) surgery).
   exact Config.itersNormalized_true types c'
 
 /-- Iteration-typing transparency of `commitClause`. -/
@@ -6302,6 +6438,27 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       omega
     obtain ⟨h1, h2, h3, h4⟩ := hop
     exact applySyncOp_wf hs h1 h2 h3 h4 happly
+  case atomicStFirst stmt op e rest env k hplan =>
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
+    obtain ⟨h1, h2⟩ := atomicPlan_locSup hplan
+    simp only [exprListSup] at h1
+    simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
+      GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
+      stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
+      Nat.max_le] at hc h1 h2 ⊢
+    omega
+  case atomicStApply op done v env k happly =>
+    have hop : goValueListSup (v :: done).reverse ≤ σ.nextAddr
+        ∧ atomicOpSup op ≤ σ.nextAddr
+        ∧ LocalEnv.locSup env ≤ σ.nextAddr
+        ∧ Cont.locSup k ≤ σ.nextAddr := by
+      rw [goValueListSup_reverse]
+      simp only [ConfigWf, Config.locSup, Cont.locSup, goValueListSup,
+        exprListSup, Nat.max_le] at hc
+      simp only [goValueListSup]
+      omega
+    obtain ⟨h1, h2, h3, h4⟩ := hop
+    exact applyAtomicOp_wf hs h1 h2 h3 h4 happly
   case selectFirst clauses default? e rest env k hplan =>
     refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     have h1 : exprListSup (e :: rest) ≤ selectClausesSup clauses.toList := by

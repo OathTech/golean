@@ -184,6 +184,13 @@ type importedTypeModel struct {
 	// methods with REAL bodies in the model (unexported helpers
 	// included); the type's other exported methods stay stubs.
 	modeled map[string]bool
+	// intrinsic: the model's package-level functions are BODYLESS
+	// declarations lowered at their CALL sites by a dedicated emitter
+	// arm (sync/atomic — atomics.go); `lowerShadowModel` drops the
+	// declarations before emission, admitting the bodyless shape only
+	// for names `atomicIntrinsicDecl` recognizes. Models without this
+	// flag refuse any bodyless declaration (the standing rule).
+	intrinsic bool
 }
 
 // modeledImportedTypes: qualified type name -> shadow model.
@@ -288,8 +295,36 @@ func lowerShadowModel(model *importedTypeModel) ([]any, []any, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("internal: imported-type model %s failed to type-check: %w", model.pkgPath, err)
 	}
+	// The model's INTRINSIC surface (atomics.go): bodyless package-level
+	// declarations exist only for go/types to resolve the method
+	// bodies' calls; they are dropped here — the emitter's atomic-call
+	// arm lowers every call site — and any OTHER bodyless declaration
+	// refuses (the general emitter would refuse it too, "bodyless
+	// function", but naming the model here keeps the cause legible).
+	emitFile := file
+	if model.intrinsic {
+		kept := make([]ast.Decl, 0, len(file.Decls))
+		for _, decl := range file.Decls {
+			if fd, isFunc := decl.(*ast.FuncDecl); isFunc && fd.Body == nil {
+				if !atomicIntrinsicDecl(fd) {
+					return nil, nil, unsup("imported-type model %s: bodyless declaration %s is not an admitted intrinsic (fail closed)", model.pkgPath, fd.Name.Name)
+				}
+				continue
+			}
+			kept = append(kept, decl)
+		}
+		copied := *file
+		copied.Decls = kept
+		emitFile = &copied
+	} else {
+		for _, decl := range file.Decls {
+			if fd, isFunc := decl.(*ast.FuncDecl); isFunc && fd.Body == nil {
+				return nil, nil, unsup("imported-type model %s: bodyless declaration %s (only intrinsic models admit the shape — fail closed)", model.pkgPath, fd.Name.Name)
+			}
+		}
+	}
 	shadow := &emitter{fset: fset, info: info, pkg: pkg}
-	program, err := shadow.emitProgram([]*ast.File{file})
+	program, err := shadow.emitProgram([]*ast.File{emitFile})
 	if err != nil {
 		return nil, nil, fmt.Errorf("imported-type model %s failed to lower: %w", model.pkgPath, err)
 	}

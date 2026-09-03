@@ -1484,6 +1484,117 @@ def syncCell (s : ExecState) (loc : Loc) : Except GoError SyncPrim := do
   | .syncData p => return p
   | other => stuck s!"expected sync primitive data, got {repr other}"
 
+/-! ## `sync/atomic` integer ops (the atomics arc, wave 1 —
+Q-ATOMIC RULED [USER] 2026-09-02 option A′; design note
+`docs/2026-09-03_atomics-w1-design.md`)
+
+THE REGISTRY ENTRY, in the sync mold (the channels-arc D2+D3 growth
+contract, one registration): each atomic op's APPLY position is (a) a
+SCHEDULING POINT — it joins `Config.atBoundary`, its proceeding outcome
+carries `.opDone .postOp` (B1), and the EXISTING L1 site is consulted
+there; the op itself consumes ZERO choices (the envelope statement at
+`applyAtomicOp`) — and (b) an HB EDGE SOURCE — `raceUpdate` (Multi.lean)
+records the op's access kind and advances the per-ADDRESS atomic clock
+(`RaceState.atomicAcquire`/`atomicReleaseStore`/`atomicReleaseAcquire`,
+Race.lean — TSan's realized edges, mem#atomic's "synchronized before"
+quoted there). No blocked shape: atomics never park. -/
+
+/-- Machine-level atomic operation: the `AtomicStmtOp` head, the
+addressed cell's integer kind, and the validated result target (the
+`SyncOp.onceBegin` payload shape — a `List Assignee` of length ≤ 1;
+always `[]` for `store`). -/
+structure AtomicOp where
+  head : AtomicStmtOp
+  kind : IntKind
+  targets : List Assignee
+  deriving Repr, BEq
+
+/-- Operand count of an atomic head: the address, then the value
+operands (`store`/`add`/`swap`: one; `cas`: old, new). -/
+def atomicArity : AtomicStmtOp → Nat
+  | .load => 1
+  | .store => 2
+  | .add => 2
+  | .swap => 2
+  | .cas => 3
+
+/-- The integer kinds the wave-1 op family is defined over — exactly
+the `sync/atomic` integer functions' operand types (`uintptr` arrives
+as `uint64` from the frontend, the R1 pin). Any other kind is a
+malformed statement (fail closed at the plan). -/
+def atomicKindOk : IntKind → Bool
+  | .int32 | .int64 | .uint32 | .uint64 => true
+  | _ => false
+
+/-- Classify an atomic statement (`atomicPlan`): op + kind + result
+target, plus the operands evaluated before the apply (address first).
+Fails closed (`none`) on arity drift, on an unsupported kind, and on a
+target list `atomicTargetsOk` rejects — any target for `store`, more
+than one target, or an unsupported target assignee (the
+`syncPlan`/`chanPlan` discipline). -/
+def atomicTargetsOk : AtomicStmtOp → List Assignee → Bool
+  | .store, ts => ts.isEmpty
+  | _, [] => true
+  | _, [t] => (targetsPlan [t]).isSome
+  | _, _ :: _ :: _ => false
+
+@[inherit_doc atomicTargetsOk]
+def atomicPlan : Stmt → Option (AtomicOp × List Expr)
+  | .atomicStmt op kind args targets =>
+      if args.size == atomicArity op && atomicKindOk kind
+          && atomicTargetsOk op targets.toList then
+        some (⟨op, kind, targets.toList⟩, args.toList)
+      else none
+  | _ => none
+
+/-- Atomic statements and wide statements classify DISJOINT statements
+(the `stmtPlan_of_syncPlan` twin). -/
+theorem stmtPlan_of_atomicPlan {stmt : Stmt} {p : AtomicOp × List Expr}
+    (h : atomicPlan stmt = some p) : stmtPlan stmt = none := by
+  cases stmt <;> simp_all [atomicPlan, stmtPlan]
+
+/-- Atomic statements and channel statements classify disjoint
+statements. -/
+theorem chanPlan_of_atomicPlan {stmt : Stmt} {p : AtomicOp × List Expr}
+    (h : atomicPlan stmt = some p) : chanPlan stmt = none := by
+  cases stmt <;> simp_all [atomicPlan, chanPlan]
+
+/-- Atomic statements and sync statements classify disjoint
+statements. -/
+theorem syncPlan_of_atomicPlan {stmt : Stmt} {p : AtomicOp × List Expr}
+    (h : atomicPlan stmt = some p) : syncPlan stmt = none := by
+  cases stmt <;> simp_all [atomicPlan, syncPlan]
+
+/-- The VALUE semantics of one atomic op on the cell's current value
+`cur` (already at `kind`) and the evaluated value operands:
+`(new?, result)` — the value to store (`none` = the cell is untouched)
+and the value delivered to the result target. Every value operand is
+normalized at `kind` (the cell's own kind; the frontend types every
+operand at it — `IntKind.normalize` is the two's-complement wrap of
+spec#Integer_overflow, which is what `Add` realizes: "AddInt32 …
+atomically adds delta to *addr" with the ordinary wrapping
+arithmetic — `AddUint32(&x, ^uint32(c-1))` is the documented
+decrement idiom). `cas`: swapped iff `cur == old` at `kind`. Pure
+(the state update and the delivery are `applyAtomicOp`'s), shared
+with `raceUpdate`'s atomic arm, which re-derives a CAS's outcome from
+the pre-state to pick the release/acquire shape. -/
+def atomicCompute (head : AtomicStmtOp) (kind : IntKind) (cur : Int)
+    (operands : List GoValue) : Except GoError (Option Int × GoValue) :=
+  match head, operands with
+  | .load, [] => return (none, .int cur kind)
+  | .store, [v] => do return (some (kind.normalize (← valueAsInt v)), .unit)
+  | .add, [d] => do
+      let n := kind.normalize (cur + (← valueAsInt d))
+      return (some n, .int n kind)
+  | .swap, [v] => do return (some (kind.normalize (← valueAsInt v)), .int cur kind)
+  | .cas, [o, n] => do
+      if cur == kind.normalize (← valueAsInt o) then
+        return (some (kind.normalize (← valueAsInt n)), .bool true)
+      else
+        return (none, .bool false)
+  | head, vs =>
+      stuck s!"malformed atomic-operator application: {repr head} on {vs.length} value operand(s)"
+
 /-- One `select` clause with its entry-time operands EVALUATED (spec
 §Select statements, step 1): the channel value (and send value) are
 pinned; receive targets stay as their assignee expressions — evaluated
@@ -1970,6 +2081,13 @@ inductive Cont where
   positional case tags stay stable. -/
   | syncStK (op : SyncOp) (done : List GoValue)
       (pending : List Expr) (env : LocalEnv) (k : Cont)
+  /-- Atomic-statement operand evaluation (atomics arc wave 1): the
+  address (arg 0) then the value operands, ending in ONE
+  `applyAtomicOp` step whose outcome is next / a result delivery entry
+  / panicking (nil address). Appended at the END of the inductive so
+  positional case tags stay stable. -/
+  | atomicStK (op : AtomicOp) (done : List GoValue)
+      (pending : List Expr) (env : LocalEnv) (k : Cont)
 
 /-- The continuation for entering a `.seqn`: under a same-env governing
 sequence, SPLICE the statements into it (D1) — Go statement lists splice
@@ -2042,6 +2160,7 @@ def panicPassthrough : Cont → Option Cont
   | .goCalleeK _ _ k => some k
   | .goArgsK _ _ _ _ k => some k
   | .syncStK _ _ _ _ k => some k
+  | .atomicStK _ _ _ _ k => some k
   | .frame _ _ _ _ _ _ => none
   | .panicResumeK _ _ => none
   | .stop => none
@@ -2108,6 +2227,8 @@ def recoverThroughWrappers : Cont → Option (GoValue × Cont)
       (recoverThroughWrappers k).map (fun (v, k') => (v, .goArgsK a b c d k'))
   | .syncStK a b c d k =>
       (recoverThroughWrappers k).map (fun (v, k') => (v, .syncStK a b c d k'))
+  | .atomicStK a b c d k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .atomicStK a b c d k'))
 
 /-- The `recover()` builtin (arc doc §A1; wrapper transparency added at
 the arc-final audit F1/BUG-015, 2026-08-06): walk the continuation to the
@@ -2175,6 +2296,8 @@ def recoverResult : Cont → GoValue × Cont
       let (v, k') := recoverResult k; (v, .goArgsK a b c d k')
   | .syncStK a b c d k =>
       let (v, k') := recoverResult k; (v, .syncStK a b c d k')
+  | .atomicStK a b c d k =>
+      let (v, k') := recoverResult k; (v, .atomicStK a b c d k')
 
 /-- Remove every occurrence of `key` (Go map-key equality at `keyTy`)
 from a key list — the delete-prune's set subtraction. Structural. -/
@@ -2241,6 +2364,7 @@ def pruneIterFramesKey (s : ExecState) (delBase : Loc) (key : GoValue) :
   | .goCalleeK a b k => do return .goCalleeK a b (← pruneIterFramesKey s delBase key k)
   | .goArgsK a b c d k => do return .goArgsK a b c d (← pruneIterFramesKey s delBase key k)
   | .syncStK a b c d k => do return .syncStK a b c d (← pruneIterFramesKey s delBase key k)
+  | .atomicStK a b c d k => do return .atomicStK a b c d (← pruneIterFramesKey s delBase key k)
 
 /-- `clear(m)`'s prune: EVERY key of every in-flight `mapIterK` frame
 over `delBase` leaves both sets (all entries were deleted). Pure — no
@@ -2282,6 +2406,7 @@ def pruneIterFramesAll (delBase : Loc) : Cont → Cont
   | .goCalleeK a b k => .goCalleeK a b (pruneIterFramesAll delBase k)
   | .goArgsK a b c d k => .goArgsK a b c d (pruneIterFramesAll delBase k)
   | .syncStK a b c d k => .syncStK a b c d (pruneIterFramesAll delBase k)
+  | .atomicStK a b c d k => .atomicStK a b c d (pruneIterFramesAll delBase k)
 
 /-- The continuation AFTER a wide-statement apply (BUG-005 (L)
 surgery): `mapDelete` prunes the deleted key from every in-flight
@@ -2741,6 +2866,81 @@ def applySyncOp (s : ExecState) (op : SyncOp) (vs : List GoValue)
           else throw (.internal "onceComplete without a matching onceBegin")
       | other => stuck s!"Once.Do complete on a non-Once sync cell: {repr other}"
   | op, vs => stuck s!"malformed sync-operator application: {repr op} on {vs.length} operand(s)"
+
+/-- The optional store of an atomic op (`atomicCompute`'s `new?`): the
+normalized integer at the op's kind, or no store at all (`load`, a
+failed `cas`). -/
+def atomicStore (s : ExecState) (loc : Loc) (kind : IntKind) :
+    Option Int → Except GoError ExecState
+  | some nv => storeLoc s loc (.int nv kind)
+  | none => pure s
+
+/-- **Apply an atomic statement's head to its evaluated operands — the
+atomic registry entry's op semantics AND its envelope statement**
+(atomics arc wave 1; design note `docs/2026-09-03_atomics-w1-design.md`).
+
+THE FORCED POINT (not latitude): mem#atomic — "The APIs in the
+sync/atomic package are collectively 'atomic operations' that can be
+used to synchronize the execution of different goroutines. If the
+effect of an atomic operation A is observed by atomic operation B, then
+A is synchronized before B. All the atomic operations executed in a
+program behave as though executed in some sequentially consistent
+order." and "The preceding definition has the same semantics as C++'s
+sequentially consistent atomics and Java's volatile variables." A
+conforming implementation may NOT weaken these (inventory U-6), so the
+machine owes EXACTLY SC — one of the rare direct upper bounds from the
+text.
+
+THE ENVELOPE STATEMENT (nondeterminism doctrine requirement 1): the op
+is ONE indivisible pool step — read, modify, write, and the result
+delivery entry all in this apply, at a registry boundary — so an
+execution IS an interleaving of atomic steps, and that interleaving IS
+"some sequentially consistent order": ⊇ SC because any SC order of the
+ops is realized by the L1 schedule that runs their steps in that order
+(C1's width, `l1Sched`/`postOp`); ⊆ SC because no non-SC mixing is
+expressible when every op is a single step. WHICH SC order occurs is
+C1's existing scheduling latitude — this apply consumes NOTHING from
+the choice stream, ever: the atomics add ZERO new consumption sites
+(the census `ChoiceSite` is unchanged), and single-goroutine atomic
+programs are stream-transparent (sequential conservation untouched).
+The executable check that the realization is neither wide nor narrow
+is the message-passing litmus `sync/atomic-frontier/mp-litmus`
+(membership {0, 1, 11}; the SC-excluded 10 mechanically absent).
+
+Outcomes: the cell's current value must be an integer AT THE OP'S KIND
+(the frontend types the address `*intN`; a `.defined`-over-intN cell
+carries the underlying kind — anything else is `stuck`, fail closed);
+`atomicCompute` gives the store (if any) and the result; a result
+target receives it through `enterRecvTargets` (the `onceBegin` delivery
+shape: the phase-2 store is an ordinary plain write of the target, AFTER
+the op); every proceeding outcome is wrapped in `.opDone .postOp` (B1).
+A nil address is gc's recoverable "invalid memory address or nil
+pointer dereference" (`valueAsLoc`; probed: the intrinsic faults at
+the address before any effect — no store, no HB edge, nothing recorded
+by `-race`, whose `racecallatomic` touches the address first). No
+alignment panic: the pinned oracle is linux/amd64, where 64-bit atomics
+need no alignment; the 32-bit `unaligned 64-bit atomic operation` fatal
+is outside this pin (R1's transfer caveat applies). Shared verbatim by
+rule `Step.atomicStApply` and `stepFn`'s `atomicStK` apply arm. -/
+def applyAtomicOp (s : ExecState) (op : AtomicOp) (vs : List GoValue)
+    (env : LocalEnv) (k : Cont) : Except GoError (Config × ExecState) := do
+  match vs with
+  | av :: operands => do
+      let loc ← valueAsLoc av
+      match ← loadLoc s loc with
+      | .int cur ck =>
+          if ck != op.kind then
+            stuck s!"atomic {repr op.head} at a {ck.name} cell (the op is typed {op.kind.name})"
+          else do
+            let (new?, result) ← atomicCompute op.head op.kind cur operands
+            let s' ← atomicStore s loc op.kind new?
+            match op.targets with
+            | [] => return (.opDone .postOp (.next k), s')
+            | _ :: _ => do
+                let (c', s'') ← enterRecvTargets s' op.targets [result] (.seqn #[]) env k
+                return (.opDone .postOp c', s'')
+      | other => stuck s!"atomic {repr op.head} on a non-integer cell: {repr other}"
+  | [] => stuck "malformed atomic-operator application: no address operand"
 
 /-- Commit the ONE ready clause of a `select` (spec step 3): perform its
 communication, then enter the body — for a receive with targets, via
@@ -3689,6 +3889,26 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   so the correspondence proofs' positional case tags stay stable. -/
   | opDoneStrip {sc c s} :
       Step (.opDone sc c) s c s
+  -- sync/atomic statements (atomics arc wave 1): the `syncStK` shape
+  -- verbatim — operand entry/shift, then ONE apply step
+  -- (`applyAtomicOp`: next / a result delivery entry / panicking on a
+  -- nil address). Diagnostic outcomes are relation-silent like every
+  -- other apply's; the apply consumes NO choices (its envelope
+  -- statement). Appended at the END so positional case tags stay
+  -- stable.
+  | atomicStFirst {stmt op e rest env k s} :
+      atomicPlan stmt = some (op, e :: rest) →
+      Step (.exec stmt env k) s (.evalE e env (.atomicStK op [] rest env k)) s
+  | atomicStShift {op done v e rest env k s} :
+      Step (.retV v (.atomicStK op done (e :: rest) env k)) s
+        (.evalE e env (.atomicStK op (v :: done) rest env k)) s
+  | atomicStApply {op done v c' env k s s'} :
+      applyAtomicOp s op (v :: done).reverse env k = .ok (c', s') →
+      Step (.retV v (.atomicStK op done [] env k)) s c' s'
+  | atomicStApplyPanic {op done v msg env k s} :
+      applyAtomicOp s op (v :: done).reverse env k = .error (.panic msg) →
+      Step (.retV v (.atomicStK op done [] env k)) s
+        (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
 
 /-- Reflexive-transitive closure of `Step`. -/
 inductive Steps : Config → ExecState → Config → ExecState → Prop where

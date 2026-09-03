@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+# TYPED ATOMICS (atomics arc wave 1, 2026-09-03; design note
+# docs/2026-09-03_atomics-w1-design.md): atomic.Int32/Int64/Uint32/
+# Uint64/Uintptr through the E5-T shadow model (gc's own type.go
+# bodies) — same atomic-op node as the direct call. Single-goroutine.
+int64	typedInt64	-	ok	-	sync,atomics,ints,methods
+int32-wrap	typedInt32Wrap	-	ok	-	sync,atomics,ints,methods,overflow
+uint32	typedUint32	-	ok	-	sync,atomics,ints,methods,overflow
+uint64	typedUint64	-	ok	-	sync,atomics,ints,methods
+uintptr	typedUintptr	-	ok	-	sync,atomics,ints,methods
+zero-and-copy	typedZeroAndCopy	-	ok	-	sync,atomics,ints,methods,structs
+empty-literal	typedEmptyLiteral	-	ok	-	sync,atomics,ints,methods,structs,pointers
+struct-field	typedStructField	-	ok	-	sync,atomics,ints,methods,structs,pointers
+nil-receiver	typedNilReceiver	-	panic	invalid memory address or nil pointer dereference	sync,atomics,ints,methods,nil,panic

@@ -1,0 +1,52 @@
+DRIFT vs baselines/native-full.tsv (2626 case(s) run):
+atomics/counter/add	NEW id (not in baseline) -> PASS/confluent
+atomics/counter/cas-loop	NEW id (not in baseline) -> PASS/confluent
+atomics/counter/plain-read-after-join	NEW id (not in baseline) -> PASS/confluent
+atomics/counter/swap-claim	NEW id (not in baseline) -> PASS/confluent
+atomics/counter/typed	NEW id (not in baseline) -> PASS/confluent
+atomics/ops/add-int32-wrap	NEW id (not in baseline) -> PASS/-
+atomics/ops/add-int64	NEW id (not in baseline) -> PASS/-
+atomics/ops/add-uint32-decrement	NEW id (not in baseline) -> PASS/-
+atomics/ops/add-uint64	NEW id (not in baseline) -> PASS/-
+atomics/ops/cas-int64	NEW id (not in baseline) -> PASS/-
+atomics/ops/cas-uint32-fail	NEW id (not in baseline) -> PASS/-
+atomics/ops/defined-underlying	NEW id (not in baseline) -> PASS/-
+atomics/ops/discarded-result	NEW id (not in baseline) -> PASS/-
+atomics/ops/in-expression	NEW id (not in baseline) -> PASS/-
+atomics/ops/load-store-int32	NEW id (not in baseline) -> PASS/-
+atomics/ops/load-store-int64	NEW id (not in baseline) -> PASS/-
+atomics/ops/load-store-uint32	NEW id (not in baseline) -> PASS/-
+atomics/ops/load-store-uint64	NEW id (not in baseline) -> PASS/-
+atomics/ops/load-store-uintptr	NEW id (not in baseline) -> PASS/-
+atomics/ops/nil-address	NEW id (not in baseline) -> PASS/-
+atomics/ops/nil-address-recovered	NEW id (not in baseline) -> PASS/-
+atomics/ops/operand-order	NEW id (not in baseline) -> PASS/-
+atomics/ops/swap-int32	NEW id (not in baseline) -> PASS/-
+atomics/ops/swap-uint64	NEW id (not in baseline) -> PASS/-
+atomics/spin/flag-wait	NEW id (not in baseline) -> PASS/membership
+atomics/typed/empty-literal	NEW id (not in baseline) -> PASS/-
+atomics/typed/int32-wrap	NEW id (not in baseline) -> PASS/-
+atomics/typed/int64	NEW id (not in baseline) -> PASS/-
+atomics/typed/nil-receiver	NEW id (not in baseline) -> PASS/-
+atomics/typed/struct-field	NEW id (not in baseline) -> PASS/-
+atomics/typed/uint32	NEW id (not in baseline) -> PASS/-
+atomics/typed/uint64	NEW id (not in baseline) -> PASS/-
+atomics/typed/uintptr	NEW id (not in baseline) -> PASS/-
+atomics/typed/zero-and-copy	NEW id (not in baseline) -> PASS/-
+race/atomics-free/atomic-vs-atomic	NEW id (not in baseline) -> PASS/confluent
+race/atomics-free/cas-failure-acquires	NEW id (not in baseline) -> PASS/membership
+race/atomics-free/plain-read-vs-load	NEW id (not in baseline) -> PASS/confluent
+race/atomics-free/publish-acquire	NEW id (not in baseline) -> PASS/membership
+race/atomics-free/rmw-acquire	NEW id (not in baseline) -> PASS/membership
+race/atomics-free/sibling-words	NEW id (not in baseline) -> PASS/confluent
+race/atomics-free/typed-sibling-field	NEW id (not in baseline) -> PASS/confluent
+race/atomics-misuse/plain-read-vs-failed-cas	NEW id (not in baseline) -> PASS/racy
+race/atomics-misuse/plain-read-vs-store	NEW id (not in baseline) -> PASS/racy
+race/atomics-misuse/plain-read-vs-swap	NEW id (not in baseline) -> PASS/racy
+race/atomics-misuse/plain-write-vs-add	NEW id (not in baseline) -> PASS/racy
+race/atomics-misuse/struct-copy-vs-typed-add	NEW id (not in baseline) -> PASS/racy
+sync/atomic-frontier/add-load-store	baseline[FAIL/frontend-export] -> now[PASS/-]
+sync/atomic-frontier/cas	baseline[FAIL/frontend-export] -> now[PASS/-]
+sync/atomic-frontier/mp-litmus	baseline[FAIL/membership] -> now[PASS/membership]
+sync/atomic-frontier/swap	baseline[FAIL/frontend-export] -> now[PASS/-]
+sync/atomic-frontier/value	baseline[FAIL/lean-observation] -> now[FAIL/frontend-export]

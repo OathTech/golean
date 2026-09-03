@@ -234,6 +234,27 @@ inductive SyncStmtOp where
   | onceComplete
   deriving Repr, BEq, Inhabited, DecidableEq
 
+/-- The `sync/atomic` integer-op HEADS (the atomics arc, wave 1 —
+Q-ATOMIC RULED [USER] 2026-09-02 option A′,
+`docs/2026-08-31_qrow-rulings.md` row 2; charter
+`docs/2026-09-01_qatomic-owner-proposal.md` §4; design note
+`docs/2026-09-03_atomics-w1-design.md`). Surface-level heads only; the
+machine-level `AtomicOp` (head + the cell's integer kind + the
+validated result target) is derived by `atomicPlan`, exactly the
+`syncPlan`/`SyncOp` split. `Load`/`Store`/`Add`/`Swap`/
+`CompareAndSwap` over the integer kinds the frontend admits
+(`int32`/`int64`/`uint32`/`uint64`; `uintptr` arrives as `uint64`, the
+R1 pin). `And`/`Or`, the `unsafe.Pointer` family, and
+`atomic.Value`/`Bool`/`Pointer` are wave 2 and refuse at the frontend
+by name. -/
+inductive AtomicStmtOp where
+  | load
+  | store
+  | add
+  | swap
+  | cas
+  deriving Repr, BEq, Inhabited, DecidableEq
+
 inductive Stmt where
   | seqn (stmts : Array Stmt)
   | block (decls : Array Param) (stmts : Array Stmt)
@@ -384,6 +405,27 @@ inductive Stmt where
   shape and fails closed on drift. Appended at the END of the inductive
   so positional case tags stay stable. -/
   | syncStmt (op : SyncStmtOp) (args : Array Expr) (targets : Array Assignee)
+  /-- A `sync/atomic` integer operation (the atomics arc, wave 1 —
+  design note `docs/2026-09-03_atomics-w1-design.md`): ONE fused
+  registry op — the read-modify-write of the addressed cell happens in
+  a SINGLE machine step at a scheduling boundary, so mem#atomic's
+  mandate ("All the atomic operations executed in a program behave as
+  though executed in some sequentially consistent order") falls out of
+  the L1 interleaving of indivisible steps with ZERO new choice sites
+  (the envelope statement is at `applyAtomicOp`). `kind` is the
+  integer kind of the addressed cell (the op's own type); `args` is
+  the ADDRESS expression followed by the value operands — `store`/
+  `add`/`swap`: one; `cas`: old, new; `load`: none — evaluated left to
+  right like a call's arguments (spec#Order_of_evaluation; the ANF
+  hoist statement-anchors the call, so no expression-position atomic
+  step exists for a future expression-machine reshape to split — the
+  F4 non-foreclosure argument, memo §2). `targets` receives the result
+  (`load` → the value, `add` → the NEW value, `swap` → the OLD value,
+  `cas` → the swapped bool): empty when the result is discarded, and
+  always empty for `store`. `atomicPlan` validates the shape and fails
+  closed on drift. Appended at the END of the inductive so positional
+  case tags stay stable. -/
+  | atomicStmt (op : AtomicStmtOp) (kind : IntKind) (args : Array Expr) (targets : Array Assignee)
   deriving Repr, BEq, Inhabited
 
 structure Func where

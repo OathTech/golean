@@ -342,6 +342,22 @@ theorem SyncOp.eqbF_sound :
   case onceBegin.onceBegin t1 t2 =>
     cases eqbListP_sound (Assignee.eqbF_sound f) h; rfl
 
+/-- `AtomicOp` (atomics arc wave 1): head and kind are field-free enums
+(`AtomicStmtOp.beq_sound`, `IntKind.beq_sound`); the result target
+list carries `Assignee` payloads ⇒ fuel. -/
+def AtomicOp.eqbF (f : Nat) (a b : AtomicOp) : Bool :=
+  a.head == b.head && a.kind == b.kind && eqbListP (Assignee.eqbF f) a.targets b.targets
+
+theorem AtomicOp.eqbF_sound :
+    ∀ f (a b : AtomicOp), AtomicOp.eqbF f a b = true → a = b := by
+  intro f a b h
+  obtain ⟨h1, h2, h3⟩ := andSplit3 h
+  cases a; cases b
+  simp only at h1 h2 h3
+  cases AtomicStmtOp.beq_sound h1
+  cases IntKind.beq_sound h2
+  cases eqbListP_sound (Assignee.eqbF_sound f) h3; rfl
+
 /-! ## `EvClause` and `PanicEntry` -/
 
 def EvClause.eqbF (f : Nat) : EvClause → EvClause → Bool
@@ -485,6 +501,9 @@ def Cont.eqbF : Nat → Cont → Cont → Bool
           && eqbListP (Expr.eqbF f) p1 p2 && e1 == e2 && Cont.eqbF f k1 k2
     | .syncStK o1 d1 p1 e1 k1, .syncStK o2 d2 p2 e2 k2 =>
         SyncOp.eqbF f o1 o2 && eqbListP GoValue.eqb d1 d2
+          && eqbListP (Expr.eqbF f) p1 p2 && e1 == e2 && Cont.eqbF f k1 k2
+    | .atomicStK o1 d1 p1 e1 k1, .atomicStK o2 d2 p2 e2 k2 =>
+        AtomicOp.eqbF f o1 o2 && eqbListP GoValue.eqb d1 d2
           && eqbListP (Expr.eqbF f) p1 p2 && e1 == e2 && Cont.eqbF f k1 k2
     | _, _ => false
 
@@ -650,6 +669,10 @@ theorem Cont.eqbF_sound : ∀ f (a b : Cont), Cont.eqbF f a b = true → a = b :
     case syncStK.syncStK o1 d1 p1 e1 k1 o2 d2 p2 e2 k2 =>
       obtain ⟨h1, h2, h3, h4, h5⟩ := andSplit5 h
       cases SyncOp.eqbF_sound _ _ _ h1; cases goValues_sound h2
+      cases exprs_sound f h3; cases eq_of_beq h4; cases ih _ _ h5; rfl
+    case atomicStK.atomicStK o1 d1 p1 e1 k1 o2 d2 p2 e2 k2 =>
+      obtain ⟨h1, h2, h3, h4, h5⟩ := andSplit5 h
+      cases AtomicOp.eqbF_sound _ _ _ h1; cases goValues_sound h2
       cases exprs_sound f h3; cases eq_of_beq h4; cases ih _ _ h5; rfl
 
 /-! ## `Config` — the control configuration (16 constructors)

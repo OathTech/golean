@@ -1,0 +1,24 @@
+# id	subject	args	expected_status	expected_reason	features
+# sync/atomic INTEGER CORE (atomics arc wave 1, 2026-09-03; design note
+# docs/2026-09-03_atomics-w1-design.md): value semantics of each op ×
+# kind, single-goroutine (strict). Born-PASS rows unless stated; the
+# nil-address rows pin gc's recoverable runtime error.
+load-store-int32	loadStoreInt32	-	ok	-	sync,atomics,ints
+load-store-int64	loadStoreInt64	-	ok	-	sync,atomics,ints
+load-store-uint32	loadStoreUint32	-	ok	-	sync,atomics,ints
+load-store-uint64	loadStoreUint64	-	ok	-	sync,atomics,ints
+load-store-uintptr	loadStoreUintptr	-	ok	-	sync,atomics,ints
+add-int32-wrap	addInt32Wrap	-	ok	-	sync,atomics,ints,overflow
+add-int64	addInt64	-	ok	-	sync,atomics,ints
+add-uint32-decrement	addUint32Decrement	-	ok	-	sync,atomics,ints,overflow
+add-uint64	addUint64	-	ok	-	sync,atomics,ints
+swap-int32	swapInt32	-	ok	-	sync,atomics,ints
+swap-uint64	swapUint64	-	ok	-	sync,atomics,ints
+cas-int64	casInt64	-	ok	-	sync,atomics,ints
+cas-uint32-fail	casUint32Fail	-	ok	-	sync,atomics,ints
+discarded-result	discardedResult	-	ok	-	sync,atomics,ints
+in-expression	inExpression	-	ok	-	sync,atomics,ints
+operand-order	operandOrder	-	ok	-	sync,atomics,ints,closures,evaluation_order
+defined-underlying	definedUnderlying	-	ok	-	sync,atomics,ints,defined_type,pointers
+nil-address	nilAddress	-	panic	invalid memory address or nil pointer dereference	sync,atomics,ints,nil,panic
+nil-address-recovered	nilAddressRecovered	-	ok	-	sync,atomics,ints,nil,panic,recover,defer,closures

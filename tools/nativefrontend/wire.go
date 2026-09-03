@@ -389,6 +389,23 @@ func (e *emitter) emitType(t types.Type) (any, error) {
 		// per-decl quarantine trigger for generic declarations).
 		return nil, unsup("type parameter %s outside an instantiation", ty)
 	case *types.Named:
+		// sync/atomic types (atomics arc wave 1, atomics.go): the five
+		// typed INTEGER wrappers ride the E5-T shadow model through the
+		// ordinary imported-named path below (their identity is
+		// recorded in importedNamed and the model's real TypeDef +
+		// method bodies are harvested in emitProgram); Value/Bool/
+		// Pointer[T] REFUSE here with their wave-2 cause, so the red
+		// lands at frontend-export by name, never as a dangling stub
+		// whose call refuses downstream. The check runs BEFORE the
+		// instantiated-named arm because Pointer[T] is generic.
+		if o := ty.Obj(); o.Pkg() != nil && o.Pkg().Path() == atomicPkgPath && !e.isSourcePackage(o.Pkg()) {
+			if cause, wave2 := atomicWave2Types[o.Name()]; wave2 {
+				return nil, unsup("sync/atomic.%s: %s", o.Name(), cause)
+			}
+			if !atomicTypedWrappers[o.Name()] {
+				return nil, unsup("sync/atomic.%s (outside the modeled sync/atomic surface — wave 1 models the typed integer wrappers Int32/Int64/Uint32/Uint64/Uintptr)", o.Name())
+			}
+		}
 		if ty.TypeArgs().Len() > 0 {
 			return e.emitInstantiatedNamed(ty)
 		}

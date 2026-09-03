@@ -269,6 +269,15 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               return (.evalE e env (.syncStK sop [] rest env k), s, choices)
           | some (_, []) => throw (.internal "empty sync-statement operand plan")
           | none => throw (.unsupported "malformed sync-statement shape (arity/targets)")
+      | .atomicStmt op kind args targets =>
+          -- sync/atomic statements (atomics arc wave 1): operand-plan
+          -- entry mirroring the sync arm. Named scrutinee for the
+          -- correspondence proofs' fun_cases rewrites.
+          match _hplan : atomicPlan (.atomicStmt op kind args targets) with
+          | some (aop, e :: rest) =>
+              return (.evalE e env (.atomicStK aop [] rest env k), s, choices)
+          | some (_, []) => throw (.internal "empty atomic-statement operand plan")
+          | none => throw (.unsupported "malformed atomic-statement shape (arity/kind/targets)")
       | wide =>
           -- newValue / makeSlice / makeMap / mapAssign / mapLookup /
           -- typeAssert / appendSlice / copySlice
@@ -540,6 +549,22 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               -- site's). `.fatal` propagates as the unrecoverable
               -- terminal it is; recoverable panics become `.panicking`.
               match applySyncOp s op (v :: done).reverse env k' with
+              | .ok (c', s') => return (c', s', choices)
+              | .error (.panic msg) =>
+                  return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
+              | .error err => throw err
+      | .atomicStK op done pending env k' =>
+          match pending with
+          | e :: rest =>
+              return (.evalE e env (.atomicStK op (v :: done) rest env k'), s, choices)
+          | [] =>
+              -- The atomic apply (atomics arc wave 1): ONE fused step,
+              -- consuming NO choices (the envelope statement at
+              -- `applyAtomicOp` — SC is the L1 interleaving of these
+              -- indivisible steps). The nil-address panic is the
+              -- recoverable runtime error gc realizes (SIGSEGV →
+              -- `runtime.Error`); everything else propagates.
+              match applyAtomicOp s op (v :: done).reverse env k' with
               | .ok (c', s') => return (c', s', choices)
               | .error (.panic msg) =>
                   return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)

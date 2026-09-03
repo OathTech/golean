@@ -116,6 +116,7 @@ private def exprAllowedKeys : String → Option (List String)
   | "type-assert" => some ["expr", "operand", "target", "source", "type"]
   | "call" => some ["expr", "func", "args", "resultTypes"]
   | "call-value" => some ["expr", "callee", "args", "resultTypes"]
+  | "atomic-op" => some ["expr", "op", "kind", "args", "resultTypes"]
   | _ => none
 
 /-- Allowed key sets for statement nodes, by `stmt` tag. `for` and
@@ -538,6 +539,7 @@ partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
         | none => pure none
       pure (.typeAssert operand target source)
   | "call" => fail "call in expression position is not modeled (calls are statements)"
+  | "atomic-op" => fail "atomic op in expression position is not modeled (sync/atomic ops are statements, like calls)"
   | other => fail s!"unsupported expression {other} at {path}"
 where
   decodeBinary (path : String) (obj : StrictJson.Obj) (op : String) (x y : Expr) : LowerM Expr := do
@@ -677,6 +679,38 @@ private def asCall? (json : Json) : LowerM (Option (String × Array Json)) := do
       let name ← StrictJson.string "call.func" (← StrictJson.field "call" obj "func")
       let args ← StrictJson.array "call.args" (← StrictJson.field "call" obj "args")
       pure (some (name, args))
+  | _ => pure none
+
+/-- Recognize a `sync/atomic` op node (the atomics arc, wave 1 —
+tools/nativefrontend/atomics.go) in a CALL position: the head, the
+addressed cell's integer kind (one of the four wave-1 kinds — `uintptr`
+already arrives as uint64 from the type table; anything else refuses by
+name), and the operand array (address first). Strict keys; arity is
+checked here AND again by `atomicPlan` (fail closed twice, the sync-op
+discipline). -/
+private def asAtomicOp? (json : Json) : LowerM (Option (AtomicStmtOp × IntKind × Array Json)) := do
+  match json.getObjVal? "expr" with
+  | .ok (.str "atomic-op") =>
+      let obj ← StrictJson.obj "atomic-op" json
+      checkAllowedKeys "atomic-op" obj ["expr", "op", "kind", "args", "resultTypes"]
+      let opName ← StrictJson.string "atomic-op.op" (← StrictJson.field "atomic-op" obj "op")
+      let op : AtomicStmtOp ← match opName with
+        | "load" => pure .load
+        | "store" => pure .store
+        | "add" => pure .add
+        | "swap" => pure .swap
+        | "cas" => pure .cas
+        | other => fail s!"unsupported atomic op {other} (wave 1 lowers load/store/add/swap/cas)"
+      let kindTy ← decodeTy "atomic-op.kind" (← StrictJson.field "atomic-op" obj "kind")
+      let kind ← match kindTy with
+        | .int k@.int32 | .int k@.int64 | .int k@.uint32 | .int k@.uint64 => pure k
+        | other => fail s!"unsupported atomic operand kind {repr other} (wave 1 models int32/int64/uint32/uint64; uintptr arrives as uint64)"
+      let args ← StrictJson.array "atomic-op.args" (← StrictJson.field "atomic-op" obj "args")
+      let arity := match op with
+        | .load => 1 | .store => 2 | .add => 2 | .swap => 2 | .cas => 3
+      if args.size != arity then
+        fail s!"atomic op {opName} expects {arity} operand(s), got {args.size}"
+      pure (some (op, kind, args))
   | _ => pure none
 
 /-- Recognize a call through a func VALUE (a closure or func-typed
@@ -853,7 +887,16 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
                 pure (.callValue #[] calleeE argsE)
               else
                 pure (.seqn (decls.push (.callValue assignees calleeE argsE)))
-          | none => fail s!"expression statement is not a call at {path} (calls are the only effectful expressions modeled)"
+          | none =>
+              -- A bare-statement `sync/atomic` op DISCARDS its result
+              -- (atomics arc wave 1): no target — `atomicPlan` admits
+              -- the empty target list for every head, and the machine
+              -- drops the result value.
+              match ← asAtomicOp? e with
+              | some (op, kind, args) =>
+                  let argsE ← args.mapIdxM (fun i a => decodeExpr s!"{path}.expr.args[{i}]" a)
+                  pure (.atomicStmt op kind argsE #[])
+              | none => fail s!"expression statement is not a call at {path} (calls are the only effectful expressions modeled)"
   | "range" =>
       decodeRange results path obj
   | "new" =>
@@ -1317,6 +1360,37 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
             decls := decls ++ (← declaresOf #[t])
             assignees := assignees.push t.assignee
         return .seqn (decls.push (.call assignees ⟨name⟩ (← args.mapIdxM (fun i a => decodeExpr s!"{path}.args[{i}]" a))))
+    | none => pure ()
+  -- A `sync/atomic` op on the RHS (atomics arc wave 1): exactly ONE
+  -- target (the single result — `store` has none and never reaches
+  -- an assignment: go/types rejects it); a blank target routes to a
+  -- typed discard temp like a call's.
+  if rhs.size == 1 then
+    match ← asAtomicOp? rhs[0]! with
+    | some (op, kind, args) =>
+        if lhs.size != 1 then
+          fail s!"atomic op assigned to {lhs.size} targets at {path} (an atomic op has exactly one result)"
+        let opObj ← StrictJson.obj s!"{path}.rhs[0]" rhs[0]!
+        let resultTypes ← (match opObj.get? "resultTypes" with
+          | some rt => do
+              let arr ← StrictJson.array s!"{path}.rhs[0].resultTypes" rt
+              arr.mapIdxM (fun i t => decodeTy s!"{path}.rhs[0].resultTypes[{i}]" t)
+          | none => pure #[])
+        let lj := lhs[0]!
+        let mut decls : Array Stmt := #[]
+        let mut assignee : Assignee := .unsupported "atomic-op target"
+        if targetIsBlank lj then
+          match resultTypes[0]? with
+          | some ty =>
+              decls := decls.push (.initialization { id := "$ca0", typ := ty })
+              assignee := .var "$ca0"
+          | none => fail s!"blank atomic-op target without a result type at {path} (fail closed)"
+        else
+          let t ← decodeTarget s!"{path}.lhs[0]" lj
+          decls := decls ++ (← declaresOf #[t])
+          assignee := t.assignee
+        let argsE ← args.mapIdxM (fun i a => decodeExpr s!"{path}.rhs[0].args[{i}]" a)
+        return .seqn (decls.push (.atomicStmt op kind argsE #[assignee]))
     | none => pure ()
   -- Same for a call through a func value.
   if rhs.size == 1 then

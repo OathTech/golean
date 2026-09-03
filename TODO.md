@@ -130,6 +130,24 @@ see the R15 entry below.
       BUG-080's Cases line; Race.lean's U4 inventory text updated;
       full `ci --diff`; audit ask.
 - [ ] **Q-ATOMIC arc (A′, this repo owner; Tier 5; ~3–5 sessions)**
+      — **WAVE 1 LANDED on branch `atomics-w1` 2026-09-03** (merge
+      pending audit + sign-off; design note
+      `docs/2026-09-03_atomics-w1-design.md`, evidence
+      `docs/evidence/2026-09-03_atomics-w1/`): the integer core
+      (Load/Store/Add/Swap/CAS × Int32/Int64/Uint32/Uint64/Uintptr,
+      direct calls + the typed wrappers via the E5-T shadow model) as
+      fused SC registry ops, zero new choice sites, TSan-realized
+      per-address clocks + the atomic access kind; `mp-litmus` green
+      with exactly {0,1,11}; +46 corpus rows, 4 frontier flips.
+      REMAINING (wave 2, owed): `atomic.Value` (interface slot; nil-
+      store / inconsistent-type panics red-first), `atomic.Bool`,
+      `And*`/`Or*` (+ the wrappers' `And`/`Or`), the `Pointer`
+      family's vehicle (unsafe policy). Q-TRYLOCK's rider was NOT taken
+      in wave 1: its pre-ruled envelope is a NEW `ChoiceSite` and the
+      wave-1 brief said "zero new choice sites" — rule conflict posed to
+      the [USER] (design note §6). D-002 not-shim-injection reading
+      stated in the design note §2 — [USER] confirmation still owed.
+      Original item text follows.
       ([USER]-ruled 2026-09-02, `docs/2026-08-31_qrow-rulings.md` row
       2; charter = `docs/2026-09-01_qatomic-owner-proposal.md` §4 +
       `docs/2026-08-21_w32-qrow-memos.md` §2): a named worktree lane

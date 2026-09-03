@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# CONCURRENT COUNTER IDIOMS (atomics arc wave 1, 2026-09-03): confluent
+# rows — the Adds commute and the Done→Wait edge orders the final read,
+# so every enumerated schedule yields ONE value and refuses nowhere.
+# Spawns are unrolled (a spawn loop's back-edges are scheduling consults
+# — stage D §5d) and two goroutines contend (three exceeded the dedup
+# budget at 1.8M nodes even unrolled); the CAS retry loop declares
+# backedge=full (exhaustive) beside a single contending Add. engine=dedup (POR — the commuting Adds collapse). Params
+# measured at the flip (evidence dir docs/evidence/2026-09-03_atomics-w1/).
+add	counterAdd	-	ok	-	sync,atomics,ints,goroutines,waitgroup	confluent	two Adds on one word commute under mem#atomic's SC (each is one indivisible machine step / one LOCK-prefixed gc instruction) and Done→Wait orders the Load — the certified singleton is the no-lost-update theorem made executable	width=4,sites=48,work=4000000,engine=dedup
+typed	counterTyped	-	ok	-	sync,atomics,ints,goroutines,waitgroup,methods,closures	confluent	the typed wrapper's Add lowers through the same atomic-op node (identity principle); same argument as `add`	width=4,sites=48,work=4000000,engine=dedup
+cas-loop	casLoopIncrement	-	ok	-	sync,atomics,ints,goroutines,waitgroup,loops,closures	confluent	a CAS retry loop beside one Add is bounded on every schedule (a failed CAS witnesses the Add's landing) — no spin-wait, no nonterm branch; both increments land exactly once	width=4,sites=64,work=4000000,engine=dedup,backedge=full
+swap-claim	swapClaim	-	ok	-	sync,atomics,ints,goroutines,waitgroup,closures	confluent	Swap's SC atomicity admits exactly one claimant whichever goroutine reaches the word first; the claim count is schedule-independent	width=4,sites=48,work=4000000,engine=dedup
+plain-read-after-join	plainReadAfterJoin	-	ok	-	sync,atomics,ints,goroutines,waitgroup,race	confluent	the plain read of the atomically-written word is HB-after both Adds through Done→Wait — race-free on every path, value 30 on every path	width=4,sites=24,work=2000000,engine=dedup

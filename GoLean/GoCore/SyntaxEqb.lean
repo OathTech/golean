@@ -66,6 +66,12 @@ theorem SyncStmtOp.beq_sound {a b : SyncStmtOp} (h : (a == b) = true) :
     | rfl
     | exact Bool.noConfusion h
 
+theorem AtomicStmtOp.beq_sound {a b : AtomicStmtOp} (h : (a == b) = true) :
+    a = b := by
+  cases a <;> cases b <;> first
+    | rfl
+    | exact Bool.noConfusion h
+
 theorem MethodSetCoverage.beq_sound {a b : MethodSetCoverage}
     (h : (a == b) = true) : a = b := by
   cases a <;> cases b <;> first
@@ -526,6 +532,9 @@ def Stmt.eqbF : Nat → Stmt → Stmt → Bool
     | .syncStmt o1 a1 t1, .syncStmt o2 a2 t2 =>
         o1 == o2 && eqbArrayP (Expr.eqbF f) a1 a2
           && eqbArrayP (Assignee.eqbF f) t1 t2
+    | .atomicStmt o1 k1 a1 t1, .atomicStmt o2 k2 a2 t2 =>
+        o1 == o2 && k1 == k2 && eqbArrayP (Expr.eqbF f) a1 a2
+          && eqbArrayP (Assignee.eqbF f) t1 t2
     | _, _ => false
 
 set_option maxHeartbeats 1600000 in
@@ -668,6 +677,12 @@ theorem Stmt.eqbF_sound : ∀ f (a b : Stmt), Stmt.eqbF f a b = true → a = b :
       cases SyncStmtOp.beq_sound h1
       cases eqbArrayP_sound (Expr.eqbF_sound f) h2
       cases eqbArrayP_sound (Assignee.eqbF_sound f) h3; rfl
+    case atomicStmt.atomicStmt o1 k1 a1 t1 o2 k2 a2 t2 =>
+      obtain ⟨h1, h2, h3, h4⟩ := andSplit4 h
+      cases AtomicStmtOp.beq_sound h1
+      cases IntKind.beq_sound h2
+      cases eqbArrayP_sound (Expr.eqbF_sound f) h3
+      cases eqbArrayP_sound (Assignee.eqbF_sound f) h4; rfl
 
 /-! ## `Func` -/
 

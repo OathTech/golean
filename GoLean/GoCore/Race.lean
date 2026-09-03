@@ -247,6 +247,18 @@ SYNCHRONIZATION (the registry's ops — HB updates, never data):
   the OP like the chan-object pair, at the primitive's gc words under
   the sync cell's path — together with the op's go_mem kind
   (Q-U4RESIDUAL (A), 2026-09-02).
+- `loadLoc`/`storeLoc` in `applyAtomicOp` (the atomics arc, wave 1):
+  the `sync/atomic` op's own read-modify-write of an ORDINARY integer
+  cell — never a footprint-table access (the step is one indivisible
+  registry op); `raceUpdate`'s atomic arm records it at the cell's own
+  `Loc` with the op's ATOMIC kind (`atomicOpKind`: Load `.atomicRead`,
+  the rest `.atomicWrite` — TSan's `kAccessAtomic` access AND
+  mem#model's operation kind, which coincide here) and moves the
+  per-address atomic clock (the section "sync/atomic — the per-address
+  clocks" below). Because the cell is user memory, a plain access to
+  the same variable anywhere else conflicts through path overlap —
+  mem#restrictions' mixed atomic/plain rule, and exactly what `-race`
+  reports.
 
 * **U5 — cross-goroutine unlock without handoff HB: TSan-red /
   ours-green** (audit fix round 2026-08-10, F2). `syncRelease` is a
@@ -379,9 +391,10 @@ accesses race unless both are reads or both are atomic). The plain pair is the d
 the atomic pair is the sync primitives' own state-word traffic — as
 `-race` realizes it AND as mem#model kinds the op (BUG-080 +
 Q-U4RESIDUAL (A) — `syncEntryKinds` below, recorded by `raceUpdate`'s
-sync arm). The atomics arc (Q-ATOMIC,
-`docs/2026-09-01_qatomic-owner-proposal.md` §4) records `sync/atomic`
-ops with the same two atomic kinds. -/
+sync arm); and the `sync/atomic` ops' own accesses at the addressed
+cell (the atomics arc wave 1 — `atomicOpKind`, recorded by
+`raceUpdate`'s atomic arm; section "sync/atomic — the per-address
+clocks" below). -/
 inductive AccessKind where
   | read
   | write
@@ -860,6 +873,11 @@ structure RaceState where
   chanObj : List (Loc × ShadowCell) := []
   /-- Per-sync-cell clock pairs (spec-parity slice 2, `SyncClocks`). -/
   syncs : List (Loc × SyncClocks) := []
+  /-- Per-ADDRESS atomic clocks (the atomics arc, wave 1 — the section
+  "sync/atomic — the per-address clocks" below): one `VClock` per
+  `Loc` a `sync/atomic` op has released into, keyed EXACTLY by the
+  addressed cell's path (TSan's `SyncVar` per atomic address). -/
+  atomics : List (Loc × VClock) := []
   deriving Repr, BEq
 
 def RaceState.vcOf (r : RaceState) (t : Nat) : VClock :=
@@ -1013,6 +1031,156 @@ def RaceState.syncAcquire (r : RaceState) (t : Nat) (loc : Loc)
   let sc := r.syncOf loc
   let joined := (r.vcOf t).join sc.semA
   r.setVC t (if alsoB then joined.join sc.semB else joined)
+
+/-! ## sync/atomic — the per-address clocks and access kinds (the atomics arc, wave 1)
+
+Q-ATOMIC RULED [USER] 2026-09-02 option A′ (`docs/2026-08-31_qrow-rulings.md`
+row 2; design note `docs/2026-09-03_atomics-w1-design.md`). The machine
+op is `applyAtomicOp` (Machine.lean — SC by construction, the envelope
+statement there); THIS section is the detector half: what `raceUpdate`'s
+atomic arm records and which clocks it moves, derived from the two
+registers the Q-U4RESIDUAL (A) ruling made the standard (TSan's realized
+set ∪ go_mem's operation kind — for atomics the two COINCIDE, row by
+row):
+
+THE TEXT. mem#atomic: "If the effect of an atomic operation A is
+observed by atomic operation B, then A is synchronized before B. All
+the atomic operations executed in a program behave as though executed
+in some sequentially consistent order." mem#model kinds them: "atomic
+read" is read-like, "atomic write" write-like, "atomic
+compare-and-swap is both read-like and write-like" — and every
+`sync/atomic` op is a SYNCHRONIZING operation, so by mem#model's
+data-race definitions ("at least one of which is non-synchronizing")
+two atomics never race each other while an atomic beside a PLAIN
+access races exactly when one of them is write-like: `AccessKind.
+conflicts` verbatim, with the op recorded as `.atomicRead` (Load) or
+`.atomicWrite` (Store, Add, Swap, CompareAndSwap — the CAS's read-like
+half adds no conflict an atomic write lacks, so one kind carries it,
+succeed or fail).
+
+WHAT gc's `-race` BUILD REALIZES (go1.26.5). `sync/atomic` is a
+`noRaceFuncPkgs` package; under `-race` its entry points are the
+assembly stubs of `runtime/race_amd64.s` (the block "Atomic operations
+for sync/atomic package": `sync∕atomic·LoadInt32/LoadInt64/StoreInt32/
+StoreInt64/SwapInt32/SwapInt64/AddInt32/AddInt64/CompareAndSwapInt32/
+CompareAndSwapInt64`, each `MOVQ $__tsan_go_atomic{32,64}_<op>(SB), AX;
+CALL racecallatomic<>(SB)`; the `Uint*`/`Uintptr`/`Pointer` names `JMP`
+to their same-width `Int*` twin — so the FIVE integer kinds of one
+width are ONE realized op). `racecallatomic` first touches the address
+(`MOVBLZX (R12), R13` — "Trigger SIGSEGV early": a nil address faults
+BEFORE any TSan call, so a nil-address op records nothing and moves no
+clock — the machine's `valueAsLoc` panic likewise precedes everything),
+then calls the TSan hook with the goroutine's race context. The hooks
+are TSan's Go glue (LLVM compiler-rt `tsan_go.cpp`, the source of the
+linked `race_linux_amd64.syso` — cited by name, not vendored; the
+realized behavior is what the probe family measures):
+`__tsan_go_atomic{32,64}_load` = `AtomicLoad(… mo_acquire)`,
+`_store` = `AtomicStore(… mo_release)`, `_exchange` and `_fetch_add` =
+`AtomicRMW(… mo_acq_rel)`, `_compare_exchange` = `AtomicCAS(…
+mo_acq_rel, mo_acquire)`. In `tsan_interface_atomic.cpp` those are:
+
+* **Load** (acquire): `thr->clock.Acquire(s->clock)` for the address's
+  sync object, THEN `MemoryAccess(… kAccessRead | kAccessAtomic)`.
+  Machine: `atomicAcquire` then record `.atomicRead` — acquire FIRST, so
+  a plain write the releasing store published is ordered before the
+  read's record (`raceUpdate`'s atomic arm keeps this order).
+* **Store** (release): `MemoryAccess(… kAccessWrite | kAccessAtomic)`,
+  then `thr->clock.ReleaseStore(&s->clock)` — an OVERWRITE of the
+  address's clock by the storer's (not a merge: a store observes
+  nothing, so by mem#atomic's sentence only its OWN predecessors are
+  synchronized before a later observer — C++'s "a store breaks the
+  release sequence"), then the epoch increment. Machine: record
+  `.atomicWrite`, then `atomicReleaseStore` (clock := vt; bump).
+* **Add / Swap** (acq_rel RMW): `MemoryAccess(… kAccessWrite |
+  kAccessAtomic)`, then `thr->clock.ReleaseAcquire(&s->clock)` — the
+  address clock and the goroutine's clock both become their join (the
+  RMW observes the previous value, so its writer is synchronized before
+  it; and it publishes) — then the epoch increment. Machine: record
+  `.atomicWrite`, then `atomicReleaseAcquire`.
+* **CompareAndSwap**: `MemoryAccess(… kAccessWrite | kAccessAtomic)`
+  regardless of outcome; on SUCCESS `ReleaseAcquire` + increment (an
+  RMW); on FAILURE `Acquire` only (the failed CAS observed the current
+  value — mem#atomic gives its writer's edge — and published nothing).
+  Machine: record `.atomicWrite`; success → `atomicReleaseAcquire`,
+  failure → `atomicAcquire` (the outcome re-derived from the pre-state
+  by `atomicCompute`, the same function the apply ran).
+
+The RECORD-then-ACQUIRE order of the RMW/CAS/store rows is TSan's, kept
+deliberately (the union rule: nothing the oracle refuses is run here).
+Its ONE consequence beyond literal go_mem, recorded and MEASURED:
+goroutine A `x = 1` (plain) then `atomic.StoreInt64(&x, 2)`; goroutine
+B ONE `atomic.AddInt64(&x, 0)` that lands AFTER A's store (in the
+probe, after a real-time sleep — no HB) — go_mem orders A's plain
+write before B's Add (the store is synchronized before the RMW that
+observes it), TSan records B's atomic write BEFORE acquiring and
+reports a race with A's plain write: probe `plainThenStoreVsLateAdd`,
+gc RACE 20/20 at GOMAXPROCS 1 and 8; its Load twin
+`plainThenStoreVsLateLoad` (acquire THEN record) green 20/20. The
+machine refuses those schedules too — an over-refusal against literal
+go_mem in the fail-closed direction, aligned with the oracle
+(`docs/evidence/2026-09-03_atomics-w1/`). (The spin-loop forms of the
+same shape are go_mem-racy on their own — a spin RMW or LOAD landing
+between the plain write and the store is an unordered atomic beside a
+plain write — and do not isolate the order; their probe headers say
+so.) Every other row is identical under both registers.
+
+`racecallatomic`'s other branch — an address OUTSIDE the Go heap arena
+and data segments (a non-escaping stack variable) runs the op under
+`__tsan_go_ignore_sync_begin/end`: the MemoryAccess still records, the
+sync effect is dropped. Unobservable here: a variable shared across
+goroutines escapes to the heap in gc, and a single goroutine cannot
+race with itself; the machine keys clocks by `Loc` uniformly.
+
+WHERE the access lands: the addressed cell's own `Loc` — the integer
+cell IS the word (no `syncWord` sub-path: a `sync/atomic` op on `&x`
+touches exactly `x`; on a typed wrapper `atomic.Int64` it touches the
+`v` field, `.field loc ⟨"sync/atomic.Int64"⟩ "v"`, which the shadow
+model's method bodies address). The path-overlap relation does the
+rest: a plain read/write of the same variable, or a whole-struct
+copy/overwrite of a struct holding the atomic, overlaps it and
+conflicts (`race/atomics-misuse/*`); a sibling field's plain access
+does not; two atomics never conflict (`race/atomics-free/*`). -/
+
+/-- The per-address atomic clock (absent = never released into: the
+empty clock, so a load before any store acquires nothing). -/
+def RaceState.atomicOf (r : RaceState) (loc : Loc) : VClock :=
+  match r.atomics.find? (·.1 == loc) with
+  | some (_, vc) => vc
+  | none => #[]
+
+def RaceState.setAtomic (r : RaceState) (loc : Loc) (vc : VClock) : RaceState :=
+  { r with atomics := assocSet r.atomics loc vc }
+
+/-- ACQUIRE from an address's atomic clock (TSan `Acquire`: the Load, and
+the failed CAS): the goroutine's clock joins the address clock. -/
+def RaceState.atomicAcquire (r : RaceState) (t : Nat) (loc : Loc) : RaceState :=
+  r.setVC t ((r.vcOf t).join (r.atomicOf loc))
+
+/-- RELEASE-STORE into an address's atomic clock (TSan `ReleaseStore`:
+the Store): the address clock BECOMES the storer's clock — an
+overwrite, not a merge (a store observes nothing: mem#atomic gives a
+later observer only the storer's own predecessors) — then the storer's
+own epoch bumps (FastTrack: accesses after the release are visibly
+unordered with the ones it published). -/
+def RaceState.atomicReleaseStore (r : RaceState) (t : Nat) (loc : Loc) : RaceState :=
+  let vt := r.vcOf t
+  (r.setVC t (vt.bump t)).setAtomic loc vt
+
+/-- RELEASE-ACQUIRE on an address's atomic clock (TSan `ReleaseAcquire`:
+Add, Swap, a SUCCESSFUL CompareAndSwap): the address clock and the
+goroutine's clock both become their join — the RMW observed the
+previous value (its writer is synchronized before it) and publishes —
+then the goroutine's own epoch bumps. -/
+def RaceState.atomicReleaseAcquire (r : RaceState) (t : Nat) (loc : Loc) : RaceState :=
+  let joined := (r.vcOf t).join (r.atomicOf loc)
+  (r.setVC t (joined.bump t)).setAtomic loc joined
+
+/-- The access KIND a `sync/atomic` op records at the addressed cell —
+both registers agree (section docstring): a Load is an atomic read;
+Store, Add, Swap and CompareAndSwap (succeed or fail) atomic writes. -/
+def atomicOpKind : AtomicStmtOp → AccessKind
+  | .load => .atomicRead
+  | .store | .add | .swap | .cas => .atomicWrite
 
 /-! ## The sync primitives' OWN state words (BUG-080 — U4 CLOSED; Q-U4RESIDUAL RULED (A))
 

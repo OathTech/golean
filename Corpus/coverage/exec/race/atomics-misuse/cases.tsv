@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# MIXED ATOMIC/PLAIN MISUSE (atomics arc wave 1, 2026-09-03): racy
+# lane — every enumerated path refuses; go run -race red on every
+# sample (docs/evidence/2026-09-03_atomics-w1/probes). The atomic op
+# is recorded at the addressed cell with its atomic kind; a plain
+# access to the same word (or a copy of the enclosing struct) conflicts.
+plain-write-vs-add	plainWriteVsAdd	-	race	-	sync,atomics,ints,goroutines,channels,closures,race	racy	a plain write beside an atomic RMW on one word, unordered — write/atomic-write conflicts (mem#model; TSan)	width=4,sites=32
+plain-read-vs-store	plainReadVsStore	-	race	-	sync,atomics,ints,goroutines,channels,closures,race	racy	a plain read beside an atomic Store — read/atomic-write conflicts	width=4,sites=32
+plain-read-vs-failed-cas	plainReadVsFailedCas	-	race	-	sync,atomics,ints,goroutines,channels,closures,race	racy	a FAILED CompareAndSwap is still an atomic WRITE (TSan records kAccessWrite on both outcomes; mem#model: a CAS is write-like) — the plain read conflicts	width=4,sites=32
+struct-copy-vs-typed-add	structCopyVsTypedAdd	-	race	-	sync,atomics,ints,goroutines,channels,methods,structs,closures,race	racy	the whole-struct copy reads every field incl. the wrapper's `v` word, overlapping the concurrent typed Add's atomic write	width=4,sites=32
+plain-read-vs-swap	plainReadVsSwap	-	race	-	sync,atomics,ints,goroutines,channels,closures,race	racy	a plain read beside an atomic Swap — read/atomic-write conflicts	width=4,sites=32
