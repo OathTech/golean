@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features
+runlock-of-unlocked	rUnlockOfUnlocked	-	fatal	sync: RUnlock of unlocked RWMutex	sync,rwmutex,fatal
+unlock-of-unlocked-rw	unlockOfUnlockedRW	-	fatal	sync: Unlock of unlocked RWMutex	sync,rwmutex,fatal
+once-nested-deadlock	onceNestedDeadlock	-	deadlock	-	sync,once,deadlock
+mutex-copy-carries-state	mutexCopyCarriesState	-	deadlock	-	sync,mutex,value_copy,deadlock
+mutex-copy-independent	mutexCopyIndependent	-	ok	-	sync,mutex,value_copy
+unlock-from-other-goroutine	unlockFromOtherGoroutine	-	ok	-	sync,mutex,goroutines,channels
+waitgroup-reuse	waitGroupReuse	-	ok	-	sync,waitgroup,goroutines,channels
+wait-on-zero-counter	waitOnZeroCounter	-	ok	-	sync,waitgroup
+recursive-read-lock	recursiveReadLock	-	ok	-	sync,rwmutex
+rlock-while-write-locked	rlockWhileWriteLocked	-	deadlock	-	sync,rwmutex,deadlock
+once-different-funcs	onceDifferentFuncs	-	ok	-	sync,once
+defer-unlock-during-panic	deferUnlockDuringPanic	-	ok	-	sync,mutex,defer,panic,recover

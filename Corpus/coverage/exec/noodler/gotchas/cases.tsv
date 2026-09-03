@@ -1,0 +1,17 @@
+# id	subject	args	expected_status	expected_reason	features
+goto-over-defer	gotoOverDefer	1	ok	-	goto,defer,named-results
+goto-over-defer-taken	gotoOverDefer	0	ok	-	goto,defer,named-results
+return-inside-deferred-closure	returnInsideDeferredClosure	-	ok	-	defer,closures,returns,named-results
+once-panicking-counts-as-done	oncePanickingCountsAsDone	-	ok	-	sync,once,panic,recover
+array-through-channel-copies	arrayThroughChannelCopies	-	ok	-	channels,arrays,value_copy
+array-in-interface-copies	arrayInInterfaceCopies	-	ok	-	interfaces,arrays,value_copy
+byte-arithmetic-wraps	byteArithmeticWraps	-	ok	-	strings,bytes,overflow
+rune-arithmetic-wraps	runeArithmeticWraps	-	ok	-	runes,overflow,conversions
+struct-array-in-interface	structArrayInInterface	-	ok	-	interfaces,structs,arrays,value_copy
+method-value-from-field-path	methodValueFromFieldPath	-	ok	-	methods,pointers,fields,value_copy
+defer-in-loop-with-break	deferInLoopWithBreak	-	ok	-	defer,loops,break,named-results
+defer-after-recover-path	deferAfterRecoverPath	-	ok	-	defer,recover,panic,named-results
+closure-sees-reassignment	closureSeesReassignment	-	ok	-	closures
+nil-checks-after-make	nilChecksAfterMake	-	ok	-	make,nil,slices,maps,channels
+shared-pointer-via-map	sharedPointerViaMap	-	ok	-	maps,pointers,structs,aliasing
+shadowed-inner-define	shadowedInnerDefine	-	ok	-	shadowing,scoping,multi_assign

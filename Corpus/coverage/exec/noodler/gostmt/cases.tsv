@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+args-evaluated-at-spawn	goArgsEvaluatedAtSpawn	-	ok	-	goroutines,evaluation_order,sync,waitgroup,channels
+method-receiver-at-spawn	goMethodReceiverAtSpawn	-	ok	-	goroutines,methods,evaluation_order,channels
+func-value-at-spawn	goFuncValueAtSpawn	-	ok	-	goroutines,functions,evaluation_order,channels
+closure-reads-after-sync	goClosureReadsAfterSync	-	ok	-	goroutines,closures,channels
+pointer-method	goPointerMethod	-	ok	-	goroutines,methods,pointers,sync,mutex,waitgroup
+splat-args	goSplatArgs	-	ok	-	goroutines,multi_result,calls,sync,waitgroup
+from-map	goFromMap	-	ok	-	goroutines,maps,functions,channels
+arg-panics-in-parent	goArgPanicsInParent	-	ok	-	goroutines,panic,recover,evaluation_order

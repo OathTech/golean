@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	afterInit	-	panic	index out of range [5] with length 2	init,globals,panic

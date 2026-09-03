@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+first-interface-case-wins	firstInterfaceCaseWins	-	ok	-	type_switch,interfaces,methods
+interface-before-concrete	interfaceBeforeConcrete	-	ok	-	type_switch,interfaces
+case-any-vs-nil	caseAnyVsNil	-	ok	-	type_switch,interfaces,nil
+multi-type-case-binding	multiTypeCaseBinding	-	ok	-	type_switch,interfaces,type_assertions,widths
+typed-nil-pointer-case	typedNilPointerCase	-	ok	-	type_switch,pointers,nil
+default-in-middle	defaultInMiddle	-	ok	-	type_switch,default
+switch-on-named-interface	switchOnNamedInterface	-	ok	-	type_switch,interfaces,methods
+switch-on-generic-instance	switchOnGenericInstance	-	ok	-	type_switch,generics,structs

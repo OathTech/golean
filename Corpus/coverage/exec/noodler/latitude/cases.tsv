@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features
+slice-literal-index-vs-call	sliceLiteralIndexVsCall	-	ok	-	evaluation_order,literals,slices,calls
+struct-literal-var-vs-call	structLiteralVarVsCall	-	ok	-	evaluation_order,literals,structs,calls
+map-literal-key-vs-call	mapLiteralKeyVsCall	-	ok	-	evaluation_order,literals,maps,calls
+receiver-vs-arg-call	receiverVsArgCall	-	ok	-	evaluation_order,methods,calls
+args-index-vs-call	argsIndexVsCall	-	ok	-	evaluation_order,calls,indexing
+concat-var-vs-call	concatVarVsCall	-	ok	-	evaluation_order,strings,concat,calls
+conversion-index-vs-call	conversionIndexVsCall	-	ok	-	evaluation_order,conversions,calls
+deref-vs-call	derefVsCall	-	ok	-	evaluation_order,pointers,calls
+index-call-index	indexCallIndex	-	ok	-	evaluation_order,indexing,calls
+return-operands	returnOperands	-	ok	-	evaluation_order,returns,calls
+send-value-vs-channel-call	sendValueVsChannelCall	-	ok	-	evaluation_order,channels,calls
+rhs-list-index-call-index	rhsListIndexCallIndex	-	ok	-	evaluation_order,multi_assign,indexing,calls

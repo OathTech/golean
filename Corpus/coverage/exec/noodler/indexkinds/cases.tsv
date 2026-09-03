@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+index-integer-kinds	indexWithIntegerKinds	-	ok	-	indexing,slices,widths
+index-string-kinds	indexStringWithKinds	-	ok	-	indexing,strings,widths
+array-index-kinds	arrayIndexWithKinds	-	ok	-	indexing,arrays,widths
+map-key-kinds-distinct	mapKeyKindsDistinct	-	ok	-	maps,interfaces,keys,widths
+slice-bounds-kinds	sliceBoundsWithKinds	-	ok	-	slicing,full_slice,widths
+index-out-of-range-unsigned	indexOutOfRangeUnsignedKind	7	panic	index out of range [7] with length 2	indexing,widths,panic
+index-negative-int8	indexNegativeInt8Kind	-3	panic	index out of range [-3]	indexing,widths,panic
+make-with-kinds	makeWithKinds	-	ok	-	make,slices,widths
+shift-counts-of-kinds	shiftCountsOfKinds	-	ok	-	shifts,widths

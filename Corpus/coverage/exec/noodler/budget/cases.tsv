@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+recursion-1k	recursionDepth	1000	ok	-	recursion,calls
+recursion-5k	recursionDepth	5000	ok	-	recursion,calls
+loop-100k	loopIterations	100000	ok	-	loops,ints
+slice-1k	bigSliceSum	1000	ok	-	slices,make,range
+map-20k	mapInsertions	20000	ok	-	maps,loops
+string-build-5k	stringBuild	5000	ok	-	strings,concat,loops
