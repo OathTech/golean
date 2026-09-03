@@ -1,0 +1,7 @@
+package main
+
+import "strconv"
+
+func f() string { return strconv.FormatInt(35, 36) }
+
+func main() {}

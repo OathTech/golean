@@ -1,5 +1,5 @@
 // noodler probes — type-assertion panic texts across the static/dynamic
-// type matrix (spec#Type_assertions, spec#Run-time_panics; R9 pins gc's
+// type matrix (spec#Type_assertions, spec#Run_time_panics; R9 pins gc's
 // realized strings).
 package main
 

@@ -1,0 +1,38 @@
+# producer: the python one-off in the noodler records commit (docs/evidence/2026-09-03_noodler/README.md, Reproduction), reading artifacts/coverage/latest.tsv from the full `scripts/capped scripts/ci --diff` at eeb78dfd (dirty)
+package	rows	pass	fail	born_fail_ids(stage)
+noodler/arith	19	19	0	-
+noodler/bounds	20	20	0	-
+noodler/budget	6	6	0	-
+noodler/builtins	19	19	0	-
+noodler/closures	20	20	0	-
+noodler/conversions	22	21	1	noodler/conversions/nil-slice-zero-array(lean-observation)
+noodler/defers	18	17	1	noodler/defers/deferred-delete(frontend-export)
+noodler/evalorder	22	22	0	-
+noodler/floats	15	15	0	-
+noodler/frontier	32	21	11	noodler/frontier/goto-forward-in-block(frontend-export) noodler/frontier/named-result-shadow-range(frontend-export) noodler/frontier/named-result-shadow-typeswitch(frontend-export) noodler/frontier/promoted-method-expression-ptr(frontend-export) noodler/frontier/self-shadow-define(frontend-export) noodler/frontier/short-circuit-alloc-make(frontend-export) noodler/frontier/short-circuit-alloc-new(frontend-export) noodler/frontier/short-circuit-iface-method-value(frontend-export) noodler/frontier/short-circuit-map-literal(frontend-export) noodler/frontier/short-circuit-slice-literal(frontend-export) noodler/frontier/short-circuit-splat-call(frontend-export)
+noodler/frontier2	22	22	0	-
+noodler/generics	19	19	0	-
+noodler/goroutines	16	16	0	-
+noodler/gostmt	8	8	0	-
+noodler/gotchas	16	16	0	-
+noodler/ifaces	26	23	3	noodler/ifaces/mv-iface-nil-call(differential) noodler/ifaces/iface-param-value-nil(differential) noodler/ifaces/global-iface-value-nil(differential)
+noodler/indexkinds	9	9	0	-
+noodler/init	5	5	0	-
+noodler/initpanic	4	4	0	-
+noodler/latitude	12	12	0	-
+noodler/literals	17	17	0	-
+noodler/local-types	2	0	2	noodler/local-types/distinct(frontend-export) noodler/local-types/shadow(frontend-export)
+noodler/maps	24	21	3	noodler/maps/swap-with-missing(frontend-export) noodler/maps/tuple-two-map-targets(frontend-export) noodler/maps/tuple-map-and-var(frontend-export)
+noodler/membership	5	5	0	-
+noodler/methods	18	18	0	-
+noodler/misc	21	21	0	-
+noodler/names	15	15	0	-
+noodler/panics	14	14	0	-
+noodler/ranges	14	14	0	-
+noodler/select	24	24	0	-
+noodler/slices	16	16	0	-
+noodler/strconv-formatint	2	0	2	noodler/strconv-formatint/edges(frontend-export) noodler/strconv-formatint/positive(frontend-export)
+noodler/strings	19	19	0	-
+noodler/structs	21	21	0	-
+noodler/syncmisuse	12	12	0	-
+noodler/typeswitch	8	8	0	-

@@ -1,0 +1,9 @@
+# for v in a b c d e: cp probes/formatint-bisect/fi-$v.go.txt <scratch>/fi-$v/main.go && go run ./tools/nativefrontend --dir <scratch>/fi-$v --out /dev/null
+fi-a: nativefrontend: type-check: golean-stdlib-shims.go:11:16: undefined: goleanShimStrconvFormatUint
+fi-b: nativefrontend: type-check: golean-stdlib-shims.go:11:16: undefined: goleanShimStrconvFormatUint
+fi-c: nativefrontend: type-check: golean-stdlib-shims.go:11:16: undefined: goleanShimStrconvFormatUint
+fi-d: nativefrontend: type-check: golean-stdlib-shims.go:11:16: undefined: goleanShimStrconvFormatUint
+fi-e: nativefrontend: type-check: golean-stdlib-shims.go:11:16: undefined: goleanShimStrconvFormatUint
+
+# control: a program using BOTH strconv.FormatUint and strconv.FormatInt (the shape of the existing pin strconv/format-parse)
+fi-both: (empty line above = export succeeded)

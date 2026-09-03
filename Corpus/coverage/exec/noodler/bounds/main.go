@@ -1,6 +1,6 @@
 // noodler probes — the runtime's bounds-check panic texts across every
 // slice/index shape (spec#Index_expressions, spec#Slice_expressions,
-// spec#Run-time_panics: the messages are gc's realized strings, R9).
+// spec#Run_time_panics: the messages are gc's realized strings, R9).
 package main
 
 func sliceHighPastCap(n int) int {

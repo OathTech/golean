@@ -1,0 +1,17 @@
+# go run docs/evidence/2026-09-03_noodler/probes/gc-wrapper-text/main.go  (go1.26.5 linux/amd64, default flags)
+direct -> runtime error: invalid memory address or nil pointer dereference
+methodvalue -> value method main.Inner.Val called using nil *Inner pointer
+noinline-param -> value method main.Inner.Val called using nil *Inner pointer
+global-iface -> value method main.Inner.Val called using nil *Inner pointer
+direct-ptr-methodvalue -> runtime error: invalid memory address or nil pointer dereference
+methodexpr -> value method main.Inner.Val called using nil *Inner pointer
+ptr-call -> runtime error: invalid memory address or nil pointer dereference
+
+# go run -gcflags='-N -l' docs/evidence/2026-09-03_noodler/probes/gc-wrapper-text/main.go
+direct -> runtime error: invalid memory address or nil pointer dereference
+methodvalue -> value method main.Inner.Val called using nil *Inner pointer
+noinline-param -> value method main.Inner.Val called using nil *Inner pointer
+global-iface -> value method main.Inner.Val called using nil *Inner pointer
+direct-ptr-methodvalue -> runtime error: invalid memory address or nil pointer dereference
+methodexpr -> value method main.Inner.Val called using nil *Inner pointer
+ptr-call -> runtime error: invalid memory address or nil pointer dereference

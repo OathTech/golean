@@ -1,0 +1,22 @@
+# noodler scratch notes
+## known seams re-hit
+- noodler/conversions/nil-slice-zero-array: `[0]int(nilSlice)` value-form slice->array conversion refused "slice-to-array value conversion (succeeding form; triage L2b frontier)" -> FR-10 (ledger §4; triage L2b says the value-copy form rides the same row). KNOWN.
+- noodler/ifaces/iface-dispatch-value-nil-recovered: asserting a recovered runtime error to `error` refuses ("$runtime.Error ... NO record on the wire", BUG-009/BUG-053 class; BUG-059's KIND clause records it BLOCKED). KNOWN.
+- noodler/local-types/{distinct,shadow}: duplicate TypeId refusal for same-named local types across functions / local type shadowing package-level type — recorded only in docs/2026-08-04_control-flow-design.md ("fail-closed rider"), NOT in ledger §4 frontier table -> frontier-gap candidate FG-1 (whole-export kill).
+## findings
+- F1: value-receiver method through interface holding nil *T via METHOD VALUE: gc `value method main.Inner.Val called using nil *Inner pointer` (panicwrap), machine `runtime error: invalid memory address or nil pointer dereference`. Direct dispatch v.Val() in gc: SIGSEGV nil deref (devirtualized). gc text is optimization-dependent -> probe.
+- noodler/maps/{swap-with-missing,tuple-two-map-targets,tuple-map-and-var}: "map element as assignment target outside a single assignment" -> triage F6 / mini-slice A3 (QUEUED in triage table). Check whether A3 landed (baseline rows).
+- noodler/defers/deferred-delete: "defer of builtin delete" refusal (emit.go:2591 — only recover/close are lowered). No frontier row, no BUGS entry -> frontier-gap candidate FG-2 (legal Go; spec#Defer_statements: "built-in functions ... cannot be deferred" lists only some: actually the spec says calls of built-in functions are restricted as for expression statements -> delete/close/panic/print/recover ARE deferrable).
+- F2 (spurious refusal, frontend shim injection): ANY program calling strconv.FormatInt WITHOUT also calling strconv.FormatUint is refused at export: `type-check: golean-stdlib-shims.go:N: undefined: goleanShimStrconvFormatUint` (stdlibshim.go:234 — the FormatInt shim's decl-name set omits its FormatUint dependency; :982/:984 call it). Existing pin strconv/format-parse uses both so the hole is hidden. Whole-package kill. Bisect: artifacts/noodler-probes/strbisect/fi-{a..e} all refused.
+- could-not-probe: membership row "mutex-append-order" (two goroutines append under a Mutex, {12,21}) — the enumerator exceeded work=20M and then TIMED OUT at 300s even after unrolling the spawn loop and dropping the WaitGroup; dropped (strict mutex-forced shapes are in noodler/goroutines instead).
+## frontier hunt (noodler/frontier, one-case packages) — refusals on legal Go
+- short-circuit-{alloc-make,alloc-new,slice-literal,map-literal,splat-call,iface-method-value}: "<X> in short-circuit operand" (emit.go hoistForbidden="short-circuit operand"; FR-2 records only the RECEIVE case) -> FG-3 family (6 rows).
+- named-result-shadow-{range,typeswitch}: resultshadow.go "outside the rename set" refusals -> check records.
+- goto-forward-in-block: "goto target label skip not at function body top level" — control-flow design doc lists it as outside-envelope; FR-11 string covers backward hoists only -> FG-4.
+- self-shadow-define: "self-shadowing define with call RHS" (emit.go:3057) -> check records.
+- promoted-method-expression-ptr: (*Out).Get over promoted value method -> FR-3 KNOWN.
+## budget / apparatus (not fidelity)
+- fuel: 1e6-iteration loop (`s += i & 1`) exhausts the 10M-step fuel -> status fuel-out (honest, cause-named). 100k passes. No corpus precedent for a fuel-out pin (baseline has 0) -> row dropped, measurement recorded.
+- recursion depth time: 5000 -> 5.1s, 10000 -> 22.6s, 20000 -> 122.8s (super-linear in depth; the runner's LEAN_TIMEOUT_SECONDS=30 kills 20k).
+- slice fill+sum time: 3000 elements -> 33.0s; 10000 -> >150s (timeout). Quadratic in slice length (BUG-078 residual (3) class: stores re-normalize). Row sized to 1000.
+- A1 (apparatus): a strict-lane Lean TIMEOUT is reported as `stage=lean-observation detail=expected status ok, got ` (EMPTY observation) — the membership/confluent/racy paths say "TIMED OUT after Ns" but the plain path does not name its cause (scripts/diff-coverage lean() path). Not a fidelity bug; scripts are out of my scope -> report only.

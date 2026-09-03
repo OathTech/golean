@@ -1,0 +1,7 @@
+package main
+
+import "strconv"
+
+func f() string { x := int64(-1 << 63); return strconv.FormatInt(x, 2) }
+
+func main() {}

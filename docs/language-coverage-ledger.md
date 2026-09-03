@@ -471,11 +471,28 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (2632 cases, 2459 PASS /
+All numbers at the current tracked baseline (3194 cases, 2998 PASS /
+196 FAIL — the round-6 merge-train UNION 2026-09-03 [AGENT] of the
+noodler lane's re-pin replayed over the atomics-w1 re-pin on main:
+atomics-w1's 2632 / 2459 / 173 + the noodler's 562 born rows (539 PASS /
+23 FAIL) = 3194 / 2998 / 196; the two lanes' new rows are disjoint by
+id and no row of either lane moved in the union — re-derived from the
+union baseline's data rows, not summed by hand. The two lanes' own
+records, in merge order: (i) the atomics-w1 re-pin — 2632 cases, 2459 PASS /
 173 FAIL — the atomics arc's wave-1 re-pin 2026-09-03 [AGENT] on lane
 `atomics-w1`, §8d: 2580 / 2403 / 177 + 46 born-PASS + 4 FAIL→PASS
 flips + 1 FAIL stage move = 2626 / 2453 / 173, then its audit fix
-round's 6 born-PASS op × kind rows (H4) = 2632 / 2459 / 173; the 2580 / 2403 / 177 it moved from was
+round's 6 born-PASS op × kind rows (H4) = 2632 / 2459 / 173; (ii) the
+noodler re-pin — 3142 cases, 2942 PASS / 200 FAIL over main = 2580 /
+2403 / 177: +562 born rows under `noodler/` (539 PASS + 23 FAIL, every
+FAIL triaged in the baseline header — 3 on BUG-085's Cases line, 2 on
+BUG-086's, 17 frontend-export refusals that are either known seams or
+the report's FG-1..FG-5 frontier candidates, 1 `coverage` entrant in
+untriaged-ids beside FR-10's own pin; `docs/2026-09-03_noodler-report.md`);
+no main row moved; the §2/§4 per-section arithmetic below is NOT
+re-derived for the noodler rows — they are guards on already-graded
+sections, and the FG candidates await the [USER]'s §4 decision. The
+2580 / 2403 / 177 both lanes moved from was
 the round-5 merge-train UNION 2026-09-03 [AGENT] of the
 q-u4-gomem re-pin over main = bug082-maphint's 2573 / 2401 / 172, the
 two lanes' new rows disjoint by id, no main row moved; `baselines/native-full.tsv`, re-pinned 2026-09-02 on the

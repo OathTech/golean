@@ -208,3 +208,8 @@ spec-examples-decl/slice-to-array/ok-forms	coverage
 #   a NAMED frontend-export refusal (atomic.Value = wave 2), outside
 #   this ledger's filter; the two rows are the record of what was
 #   tracked. coverage 11 -> 9 (baselines/untriaged-count).
+# [noodler/conversions/nil-slice-zero-array: ENTERED as `coverage` 2026-09-03
+#   (noodler lane, [AGENT]) — the value-form slice->array conversion's
+#   succeeding form, FR-10's value-copy rider (triage L2b); second witness
+#   beside spec-examples-decl/slice-to-array/ok-forms. Retires with FR-10.]
+noodler/conversions/nil-slice-zero-array	coverage

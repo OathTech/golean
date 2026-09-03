@@ -1,5 +1,5 @@
 // noodler probes — IEEE-754 edges under Go's per-operation rounding
-// (spec#Floating-point_operators, spec#Numeric_types; latitude R4/R5/R7).
+// (spec#Floating_point_operators, spec#Numeric_types; latitude R4/R5/R7).
 package main
 
 // float32 addition rounds per operation: 2^24 + 1 == 2^24.

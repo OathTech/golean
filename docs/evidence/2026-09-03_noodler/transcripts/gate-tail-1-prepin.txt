@@ -1,0 +1,41 @@
+# tail of artifacts/noodler-probes/ci-diff-1.log — scripts/capped scripts/ci --diff at eeb78dfd (dirty: records in progress), 2026-09-03 ~02:41-02:46
+# (expected FAIL: 562 NEW rows vs the previous pin; the spec-anchor step failed on two anchor typos in probe comments, fixed before the records commit)
+[1m── differential baseline diff (scripts/coverage-baseline-diff)[0m
+DRIFT vs baselines/native-full.tsv (3142 case(s) run):
+noodler/arith/arith-shift-negative	NEW id (not in baseline) -> PASS/-
+... (562 'NEW id (not in baseline)' lines; zero other drift lines) ...
+[1m── cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)[0m
+  [01] C2  HIGH    scripts/check-bugs.sh FAILS at this tip (the gate's own BUGS<->baseline invariant)
+  [02] C3  HIGH    5 BUGS.md case id(s) absent from the baseline
+  [03] C3  HIGH    562 corpus manifest id(s) absent from the tracked baseline (unrecorded cases)
+  [04] C13  MEDIUM  78 doc site(s) across 9 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
+  [05] C5  MEDIUM  1 frontier-table case citation(s) do not resolve against the baseline
+  [06] C9  MEDIUM  the wire schema moved after the certification date 2026-09-01 (7 commit(s) to wire.go/NativeToIR.lean) — the certified set's wire sha is only current if `scripts/ci --slow` has re-enumerated since
+
+[1m══ scripts/ci summary ══[0m
+  note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  FAIL spec-anchor citations (see above)
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   core build (warning-free)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   eval tests (146 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  note negative baseline diff matched (394 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  FAIL baseline diff (DRIFT — see above)
+  note reconciler: 6 finding(s), 3 HIGH — report-only (details: tools/reconcile-records)
+
+[1mRESULT: FAIL[0m

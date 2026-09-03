@@ -1,0 +1,7 @@
+package main
+
+import "strconv"
+
+func f() string { return strconv.FormatInt(-1, 10) + strconv.FormatUint(1, 10) }
+
+func main() {}
