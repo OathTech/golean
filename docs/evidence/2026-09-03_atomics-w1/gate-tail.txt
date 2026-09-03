@@ -1,0 +1,33 @@
+# scripts/ci --diff tail — CLEAN committed tip 54990db4 (atomics-w1 audit fix round; artifacts/coverage/latest.meta.tsv: git_commit=54990db4…, git_dirty=false), 2026-09-03T02:50Z, full corpus 2632 rows
+  [02] C5  MEDIUM  1 frontier-table case citation(s) do not resolve against the baseline
+  [03] C9  MEDIUM  the wire schema moved after the certification date 2026-09-01 (9 commit(s) to wire.go/NativeToIR.lean) — the certified set's wire sha is only current if `scripts/ci --slow` has re-enumerated since
+
+══ scripts/ci summary ══
+  note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   core build (warning-free)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   eval tests (146 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  ok   negative baseline diff (no regression)
+  ok   baseline diff FULL (2632/2632, no regression)
+  ok   re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)
+  note reconciler: 3 finding(s), 0 HIGH — report-only (details: tools/reconcile-records)
+
+RESULT: PASS
+exit=0
