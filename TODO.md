@@ -28,7 +28,7 @@ semantics-preserving, zero baseline drift, pre-merge audit, no gate
 weakening. The "not this arc's to decide" list (semantics decisions
 for the [USER]) is in the plan.
 
-- [ ] (i) B1 stamps
+- [x] (i) B1 stamps — branch-complete 2026-09-03 (`hygiene-b1-stamps`), merge pending audit + sign-off
 - [ ] (ii) A1–A10
 - [ ] (iii) B2+B3+B8 wave
 - [ ] (iv) B4/B5/B6/B7

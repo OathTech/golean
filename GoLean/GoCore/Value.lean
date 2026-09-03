@@ -628,7 +628,24 @@ inductive GoValue where
   | array (values : Array GoValue)
   | slice (value : SliceValue)
   | map (value : MapValue)
-  | mapData (entries : Array (GoValue × GoValue))
+  /-- A map's heap-cell payload (a value no expression may produce): the
+  live entries in CELL ORDER, each stamped with an ENTRY IDENTITY `id`
+  (design-hygiene arc slice 1, B1 / the second audit's Q11, 2026-09-03),
+  plus the per-map counter `nextId` the next created entry takes. An
+  entry's id is allotted once, at creation (`mapAssignValue` on an absent
+  key), kept across value updates of the same key (E10 always-replace
+  keeps the id), and NEVER reused — deletion and `clear` erase entries
+  but leave `nextId` where it is, so a deleted-then-re-created key is a
+  NEW entry with a fresh id (the adopted reading of the range clause's
+  created-entries sentence, `docs/spec-interpretations.md` I-1 / ledger
+  L-012). Ids are the `mapIterK` frame's iteration state (which entries
+  it has produced; which were live when the range began) — pure `Nat`
+  membership, so a delete is a heap write and nothing else. Ids are
+  runtime-internal identity: never observable, never on any wire (the
+  observation JSON projects them away). The counter is PER MAP (not a
+  global `ExecState` field) so the map representation change touches no
+  state field and `StateWf` sees only the entry payloads. -/
+  | mapData (entries : Array (Nat × GoValue × GoValue)) (nextId : Nat)
   /-- A channel reference (channels arc slice 1; the `map` precedent). -/
   | chan (value : ChanValue)
   /-- A channel's heap-cell payload (the `mapData` precedent — a value no
@@ -683,12 +700,12 @@ def GoValue.eqbListWith (f : GoValue → GoValue → Bool) :
   | a :: as, b :: bs => f a b && GoValue.eqbListWith f as bs
   | _, _ => false
 
-/-- Pairwise equality over entry pairs. -/
-def GoValue.eqbPairsWith (f : GoValue → GoValue → Bool) :
-    List (GoValue × GoValue) → List (GoValue × GoValue) → Bool
+/-- Pairwise equality over stamped map entries (id, key, value). -/
+def GoValue.eqbTriplesWith (f : GoValue → GoValue → Bool) :
+    List (Nat × GoValue × GoValue) → List (Nat × GoValue × GoValue) → Bool
   | [], [] => true
-  | (k₁, v₁) :: as, (k₂, v₂) :: bs =>
-      f k₁ k₂ && f v₁ v₂ && GoValue.eqbPairsWith f as bs
+  | (i₁, k₁, v₁) :: as, (i₂, k₂, v₂) :: bs =>
+      i₁ == i₂ && f k₁ k₂ && f v₁ v₂ && GoValue.eqbTriplesWith f as bs
   | _, _ => false
 
 /-- Pairwise equality over named fields. -/
@@ -717,8 +734,8 @@ def GoValue.eqbFuel : Nat → GoValue → GoValue → Bool
       GoValue.eqbListWith (GoValue.eqbFuel f) a.toList b.toList
   | _, .slice a, .slice b => a == b
   | _, .map a, .map b => a == b
-  | f + 1, .mapData a, .mapData b =>
-      GoValue.eqbPairsWith (GoValue.eqbFuel f) a.toList b.toList
+  | f + 1, .mapData a n₁, .mapData b n₂ =>
+      n₁ == n₂ && GoValue.eqbTriplesWith (GoValue.eqbFuel f) a.toList b.toList
   | _, .chan a, .chan b => a == b
   | f + 1, .chanData b₁ c₁ k₁, .chanData b₂ c₂ k₂ =>
       c₁ == c₂ && k₁ == k₂ && GoValue.eqbListWith (GoValue.eqbFuel f) b₁.toList b₂.toList

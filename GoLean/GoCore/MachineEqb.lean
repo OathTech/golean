@@ -463,8 +463,8 @@ def Cont.eqbF : Nat → Cont → Cont → Bool
         eqbOptionP (· == ·) kv1 kv2 && eqbOptionP (· == ·) vv1 vv2
           && Ty.eqb kt1 kt2 && Ty.eqb vt1 vt2 && Stmt.eqbF f b1 b2
           && eqbOptionP (· == ·) ba1 ba2
-          && eqbArrayP GoValue.eqb pr1 pr2
-          && eqbArrayP GoValue.eqb st1 st2
+          && eqbArrayP (· == ·) pr1 pr2
+          && eqbArrayP (· == ·) st1 st2
           && e1 == e2 && Cont.eqbF f k1 k2
     | .panicArgK k1, .panicArgK k2 => Cont.eqbF f k1 k2
     | .panicResumeK c1 k1, .panicResumeK c2 k2 =>
@@ -617,8 +617,8 @@ theorem Cont.eqbF_sound : ∀ f (a b : Cont), Cont.eqbF f a b = true → a = b :
       cases Ty.eqb_sound h3; cases Ty.eqb_sound h4
       cases Stmt.eqbF_sound _ _ _ h5
       cases eqbOptionP_sound (fun _ _ hh => eq_of_beq hh) h6
-      cases eqbArrayP_sound (fun _ _ hh => GoValue.eqb_sound hh) h7
-      cases eqbArrayP_sound (fun _ _ hh => GoValue.eqb_sound hh) h8
+      cases eqbArrayP_sound (fun _ _ hh => eq_of_beq hh) h7
+      cases eqbArrayP_sound (fun _ _ hh => eq_of_beq hh) h8
       cases eq_of_beq h9; cases ih _ _ h10; rfl
     case panicArgK.panicArgK k1 k2 => cases ih _ _ h; rfl
     case panicResumeK.panicResumeK c1 k1 c2 k2 =>

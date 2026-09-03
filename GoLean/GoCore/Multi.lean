@@ -562,214 +562,28 @@ def selectApplyPlan : Config →
       some (v, clauses, default?, done, env, k)
   | _ => none
 
-/-! ## The cross-goroutine delete-prune (E9 closure, 2026-09-02)
+/-! ## Thread-locality of the `thread` step (E9; restored by the B1 stamps, 2026-09-03)
 
-`mapDelete`/`clearMap` prune the deleted key(s) out of every in-flight
-`mapIterK` frame over the same map (`contAfterStmtOp`, BUG-005 (L)) —
-but `stepFn` sees ONE goroutine's continuation, so until this slice the
-prune reached only the DELETING goroutine's frames. A DRF
-cross-goroutine delete (goroutine B deletes-then-re-creates key `k`
-mid-range, handshake-ordered against ranging goroutine A's picks) left
-A's `produced`/`start` sets unpruned, so the spec-permitted
-re-production of the re-created key (a NEW entry under I-1 / L-012) was
-unrealizable: permitted ∉ modeled on a DRF program (fidelity finding
-A1-20; inventory E9 REOPEN → CLOSED here). gc EXHIBITS the member:
-with ONE fresh insert between the delete and the re-create, the
-re-created key is produced twice in ~87% of runs on a 3-key map (a
-slot-placement effect of gc's swiss map; evidence dir
-`docs/evidence/2026-09-02_e9-cross-goroutine-prune/`).
-
-The pool-level extension: at a `mapDelete`/`clearMap` APPLY that
-PROCEEDS (successor `.next _`), `pruneForeign` walks every OTHER
-goroutine's configuration and applies the same `contAfterStmtOp` prune
-to its continuation. No new state, no new frame shape, no per-map
-registry — the deleting goroutine's own continuation is pruned inside
-`stepFn` exactly as before (`stepThread_single` still equates the
-one-thread pool with `stepFn`). Fail-closed: the walk is
-`Except`-monadic (an ill-formed key comparison in a FOREIGN frame
-refuses the step, naming its cause AND its foreignness —
-`foreignPruneError` prefixes the refusal with the goroutine index, so
-it is never mistaken for the deleter's own prune refusing; same
-constructor in, same constructor out, audit fix round F7),
-`Config.mapContM` enumerates every configuration constructor (no
-wildcard), and an apply successor of unexpected shape is an
-`.internal` refusal, never a silent skip. Racy variants (no handshake)
-are still refused by the detector (the pick-time load vs the delete's
-write, HB-unordered) — the prune touches no memory and emits no event.
-
-THREAD-LOCALITY (the argument NPDRF.lean's obstruction 7 cites): with
-this walk a `thread` step is no longer thread-local — it rewrites every
-other goroutine's continuation, and that rewrite appears in no
-`stepAccesses` footprint (the prune reads and writes no heap cell). The
-saving argument: the rewrite only changes a foreign `mapIterK` frame's
-`produced`/`start` sets, which are consulted ONLY at that frame's next
-pick — and every pick (including the final done-check) loads the live
-map cell (`Race.lean`, the `.next (.mapIterK …)` arm of `stepAccesses`),
-while the pruning op WRITES that cell. So any foreign step that could
-observe the prune conflicts with the pruning step at the cell and is
-either HB-ordered after it (the observation is then order-independent:
-the prune is a function of the post-apply state and the frame, applied
-before the frame's next pick on every schedule) or HB-unordered — a
-data race, refused. On race-free programs the reordering window in
-which the prune's timing could be observed is therefore empty; the
-mover route must carry this as a side condition rather than read it
-off the footprint table.
-
-COST (recorded at the audit, F8; no before/after measurement taken): a
-pruning-op apply is O(threads × continuation depth) — `Config.mapContM`
-walks every other goroutine's whole continuation on every
-`mapDelete`/`clearMap` apply that proceeded, pruning or not. A
-2-goroutine TWO-ranger shape (both goroutines ranging while one
-deletes) did not enumerate at `backedge=full` within 10 min at the
-audit (it completes at `backedge=0` in ~1 min); the corpus rows are
-single-ranger shapes. Whether the walk or the enumeration tree itself
-is the cost is unmeasured.
+A partnerless goroutine step touches ONE goroutine's configuration and
+the shared state, and nothing else. Between 2026-09-02 and this slice
+that was false: the E9 closure made a `mapDelete`/`clearMap` apply walk
+every OTHER goroutine's continuation (`pruneForeign` over
+`Config.mapContM`, applying the key-set prune `contAfterStmtOp` to each
+in-flight `mapIterK` frame over the deleted map), which put a side
+condition on every commutation lemma over `StepM.thread` (NPDRF.lean's
+former obstruction 7) and cost O(threads × continuation depth) per
+delete. Entry-identity stamps (`GoValue.mapData`, `Cont.mapIterK`,
+Machine.lean; design note `docs/2026-09-03_hygiene-b1-stamps-design.md`)
+make the walk unnecessary: a frame's `produced`/`start` sets are entry
+IDS, a delete erases the entry from the cell and never reissues its id,
+and the frame observes the absence at its next pick THROUGH THE CELL
+LOAD it performs anyway (`Race.lean`, the `.next (.mapIterK …)` arm) —
+so the cross-goroutine delete-then-re-create rows
+(`maps/cross-goroutine-delete-readd/*`, `.../noreadd/*`) certify to the
+SAME sets with no pool-level machinery (set-equality transcripts in
+`docs/evidence/2026-09-03_hygiene-b1-stamps/`). The whole prune family
+is deleted; `stepThread`'s partnerless arm is `stepFn` and nothing else.
 -/
-
-/-- The PRUNING-op apply shape: a `mapDelete`/`clearMap` statement op
-with its last operand arriving (`pending = []`). Returns the op and
-the operand list `stepFn`'s apply arm hands `applyStmtOp` and
-`contAfterStmtOp`. Every other shape — including every other op's
-apply — is `none`, so the foreign walk runs ONLY at pruning ops. -/
-def mapPrunePlan : Config → Option (StmtOp × List GoValue)
-  | .retV v (.stmtOpK op _ done [] _ _) =>
-      match op with
-      | .mapDelete keyTy => some (.mapDelete keyTy, (v :: done).reverse)
-      | .clearMap => some (.clearMap, (v :: done).reverse)
-      | _ => none
-  | _ => none
-
-/-- Apply a continuation rewrite to a configuration's continuation(s).
-Every constructor is enumerated (a new `Config` shape must be placed
-here explicitly); `.panicked` carries no continuation; `.opDone`
-recurses into its inner configuration. -/
-def Config.mapContM (f : Cont → Except GoError Cont) : Config → Except GoError Config
-  | .exec stmt env k => do return .exec stmt env (← f k)
-  | .evalE e env k => do return .evalE e env (← f k)
-  | .retV v k => do return .retV v (← f k)
-  | .next k => do return .next (← f k)
-  | .breaking k => do return .breaking (← f k)
-  | .continuing k => do return .continuing (← f k)
-  | .returning k => do return .returning (← f k)
-  | .breakingTo label k => do return .breakingTo label (← f k)
-  | .continuingTo label k => do return .continuingTo label (← f k)
-  | .panicking chain k => do return .panicking chain (← f k)
-  | .panicked msg => return .panicked msg
-  | .blockedSend ch v k => do return .blockedSend ch v (← f k)
-  | .blockedRecv ch targets elem env k => do return .blockedRecv ch targets elem env (← f k)
-  | .blockedSelect clauses env k => do return .blockedSelect clauses env (← f k)
-  | .opDone sched inner => do return .opDone sched (← Config.mapContM f inner)
-  | .blockedSync op loc env k => do return .blockedSync op loc env (← f k)
-
-/-- Name a foreign-frame refusal's provenance (audit fix round F7). The
-deleter's own prune inside `stepFn` and the foreign walk share
-`contAfterStmtOp`, so without this a refusal raised while pruning
-goroutine `j`'s frame would read exactly like one raised by the
-deleter's own. Only the REFUSAL classes are prefixed (`.internal` /
-`.stuck` / `.unsupported` — their message is diagnostic text); every
-other constructor passes through UNCHANGED: a `.panic` message is
-PROGRAM output (Go's `panic:` line) and is never rewritten, `.fatal`
-likewise carries Go's own text, and the nullary classes have no message
-to name. Same constructor in, same constructor out — no outcome
-classification moves. Every constructor is enumerated (no wildcard). -/
-def foreignPruneError (j : Nat) : GoError → GoError
-  | .internal m => .internal (s!"foreign delete-prune: goroutine {j}'s frame refused: {m}")
-  | .stuck m => .stuck (s!"foreign delete-prune: goroutine {j}'s frame refused: {m}")
-  | .unsupported f => .unsupported (s!"foreign delete-prune: goroutine {j}'s frame refused: {f}")
-  | .panic m => .panic m
-  | .fatal m => .fatal m
-  | .fuelOut => .fuelOut
-  | .deadlock => .deadlock
-  | .raceDetected => .raceDetected
-
-/-- One thread of the foreign walk: thread `j` is left alone when it is
-the deleter `i` (its own continuation was pruned inside `stepFn`),
-otherwise its continuation is pruned; a refusal raised by `j`'s frame
-is re-thrown naming `j` (`foreignPruneError`). -/
-def pruneForeignOne (s : ExecState) (op : StmtOp) (vs : List GoValue) (i j : Nat)
-    (c : Config) : Except GoError Config :=
-  if j = i then pure c else
-    match Config.mapContM (contAfterStmtOp s op vs) c with
-    | .ok c' => .ok c'
-    | .error e => .error (foreignPruneError j e)
-
-/-- The foreign walk over a thread list; `j` is the index of the list
-head. -/
-def pruneForeignList (s : ExecState) (op : StmtOp) (vs : List GoValue) (i : Nat) :
-    Nat → List Config → Except GoError (List Config)
-  | _, [] => return []
-  | j, c :: rest => do
-      let c' ← pruneForeignOne s op vs i j c
-      let rest' ← pruneForeignList s op vs i (j + 1) rest
-      return c' :: rest'
-
-/-- The cross-goroutine prune at one pool step: `c` is goroutine `i`'s
-PRE-step configuration, `c'` its successor, `ts` the pool after `i`'s
-own update. At a pruning-op apply that PROCEEDED (`.next _`) every
-other goroutine's continuation is pruned with the POST-apply state `s`
-(key comparison consults `types` only). A pruning-op apply that did
-not proceed (`.panicking` — the delete never happened; e.g. an
-unhashable interface key) leaves the pool untouched; any other
-successor shape at a pruning-op apply is impossible by `stepFn`'s arm
-and REFUSES (`.internal`) rather than silently skipping. Every
-non-pruning shape is the identity. -/
-def pruneForeign (s : ExecState) (i : Nat) (c c' : Config) (ts : Array Config) :
-    Except GoError (Array Config) :=
-  match mapPrunePlan c with
-  | none => return ts
-  | some (op, vs) =>
-      match c' with
-      | .next _ => do return (← pruneForeignList s op vs i 0 ts.toList).toArray
-      | .panicking _ _ => return ts
-      | _ => throw (.internal "foreign delete-prune: pruning-op apply with an unexpected successor shape")
-
-/-- The foreign prune is the identity at every non-pruning shape. -/
-theorem pruneForeign_of_plan_none {s : ExecState} {i : Nat} {c c' : Config}
-    {ts : Array Config} (h : mapPrunePlan c = none) :
-    pruneForeign s i c c' ts = .ok ts := by
-  unfold pruneForeign
-  rw [h]
-  rfl
-
-/-- A pruning-op apply shape, inverted. -/
-theorem mapPrunePlan_some_shape {c : Config} {op : StmtOp} {vs : List GoValue}
-    (h : mapPrunePlan c = some (op, vs)) :
-    ∃ v nt done env k, c = .retV v (.stmtOpK op nt done [] env k)
-      ∧ vs = (v :: done).reverse := by
-  unfold mapPrunePlan at h
-  split at h
-  · rename_i v op₀ nt done env k
-    split at h
-    · simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
-      exact ⟨v, nt, done, env, k, rfl, rfl⟩
-    · simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
-      exact ⟨v, nt, done, env, k, rfl, rfl⟩
-    · cases h
-  · cases h
-
-/-- A spawn position is never a pruning-op apply. -/
-theorem mapPrunePlan_of_spawnPlan {c : Config} {p : GoValue × List GoValue × Cont}
-    (h : spawnPlan c = some p) : mapPrunePlan c = none := by
-  unfold spawnPlan at h
-  split at h <;> first | rfl | cases h
-
-/-- The foreign walk over a ONE-thread pool is the identity (the only
-thread is the deleter, skipped), provided the successor is one of the
-two shapes `stepFn`'s apply arm produces. -/
-theorem pruneForeign_singleton {s : ExecState} {c c' x : Config}
-    (hc' : ∀ op vs, mapPrunePlan c = some (op, vs) →
-      (∃ k, c' = .next k) ∨ (∃ chain k, c' = .panicking chain k)) :
-    pruneForeign s 0 c c' #[x] = .ok #[x] := by
-  unfold pruneForeign
-  cases hmp : mapPrunePlan c with
-  | none => rfl
-  | some p =>
-    obtain ⟨op, vs⟩ := p
-    rcases hc' op vs hmp with ⟨k, rfl⟩ | ⟨chain, k, rfl⟩
-    · simp [pruneForeignList, pruneForeignOne] <;> rfl
-    · rfl
 
 /-! ## The step-event channel (W3.2 slice 1 stage B — audit Q2)
 
@@ -1316,12 +1130,8 @@ def stepThread (s : ExecState) (threads : Array Config) (i : Nat)
                   | .error err => throw err
               | none => do
                   let (c', s', ch₂) ← stepFn s c ch₁
-                  -- E9 closure: a mapDelete/clearMap apply that
-                  -- proceeded prunes every OTHER goroutine's in-flight
-                  -- map iterations too (`pruneForeign`; identity at
-                  -- every non-pruning shape).
-                  let ts' ← pruneForeign s' i c c' (threads.setIfInBounds i c')
-                  return (ts', s', ch₂, ⟨i, .privateStep, ps₁⟩)
+                  return (threads.setIfInBounds i c', s', ch₂,
+                    ⟨i, .privateStep, ps₁⟩)
 
 /-- `stepThread` lifted back into a `MultiConfig` (the stepped goroutine
 becomes the running one). -/
@@ -2027,9 +1837,11 @@ park, or the completion-marker strip via `Step.opDoneStrip`: the
 arrival analysis found no waiter involvement, so a blocked outcome
 simply parks; stage C retired the dedicated `spawned` rule into this
 one — the marker strip is an ordinary lifted step now that the
-sequential relation has its rule; since the E9 closure the rule
-carries the cross-goroutine delete-prune `pruneForeign` of the
-resulting pool — the identity at every non-pruning shape), the
+sequential relation has its rule; the rule is THREAD-LOCAL: it
+rewrites goroutine `i`'s configuration and the shared state, and
+appends the spawned children — nothing else; the 2026-09-02
+cross-goroutine delete-prune premise was retired by the B1 stamps,
+2026-09-03), the
 singleton arrival pairing
 (`pair` — gc's waiter-queue priority; the L4 waiter pick is the rule's
 `idx`), the multi-ready select arrival's two L2-picked shapes
@@ -2040,16 +1852,13 @@ relation-SILENT (no rule from an all-asleep pool), mirroring the
 sequential machine's silent blocked configs. -/
 inductive StepM : MultiConfig → MultiConfig → Prop where
   | thread {m : MultiConfig} {i : Nat} {c : Config} {c' : Config} {σ' : ExecState}
-      {efs : List Config} {ts' : Array Config} :
+      {efs : List Config} :
       schedPick m i →
       m.threads[i]? = some c →
       isBlockedConfig c = false →
       arrivalCases m.shared m.threads i c = .ok .cellPath →
       StepE c m.shared c' σ' efs →
-      -- E9 closure: the cross-goroutine delete-prune (identity unless
-      -- `c` is a pruning-op apply that proceeded).
-      pruneForeign σ' i c c' ((m.threads.setIfInBounds i c') ++ efs.toArray) = .ok ts' →
-      StepM m ⟨ts', σ', i⟩
+      StepM m ⟨(m.threads.setIfInBounds i c') ++ efs.toArray, σ', i⟩
   | pair {m : MultiConfig} {i : Nat} {c bc : Config} {σ'' : ExecState}
       {cs : List (Nat × PairTarget)} {idx : Nat} {ts' : Array Config} :
       schedPick m i →

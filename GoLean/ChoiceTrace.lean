@@ -281,35 +281,25 @@ def entryFacts (s : ExecState) (c : Config) (commits : Nat) : MenuFacts :=
         pickCheck := fun p => if p < commits then [] else [s!"pick {p} outside {commits} commits"] }
   | _ => { specWidth := none, invariants := [("select apply shape recognized", false)], pickCheck := fun _ => [] }
 
-/-- Map-iteration facts (E9): candidates = live entries not yet produced;
-the stop slot is offered exactly when no never-removed start key remains
-unproduced. -/
-def mapIterFacts (s : ExecState) (keyTy : Ty) (base : Option Loc)
-    (produced start : Array GoValue) : MenuFacts :=
+/-- Map-iteration facts (E9): candidates = live entries whose id is not
+yet produced; the stop slot is offered exactly when no never-removed
+start entry (an id in `start`) remains unproduced. Pure `Nat`
+membership since the B1 entry-identity stamps (2026-09-03). -/
+def mapIterFacts (s : ExecState) (base : Option Loc)
+    (produced start : Array Nat) : MenuFacts :=
   match mapIterLiveEntries s base with
   | .error _ => { specWidth := none, invariants := [("live map cell readable", false)], pickCheck := fun _ => [] }
   | .ok live =>
-      let classify := live.toList.foldl (init := (some (0, false) : Option (Nat × Bool))) fun acc (k, _) =>
-        match acc with
-        | none => none
-        | some (cands, mand) =>
-          match keyInKeys s keyTy produced k with
-          | .error _ => none
-          | .ok true => some (cands, mand)
-          | .ok false =>
-              match keyInKeys s keyTy start k with
-              | .error _ => none
-              | .ok isStart => some (cands + 1, mand || isStart)
-      match classify with
-      | none => { specWidth := none, invariants := [("key equality total on live entries", false)], pickCheck := fun _ => [] }
-      | some (cands, mand) =>
-          { specWidth := some (cands + (if mand then 0 else 1))
-            invariants :=
-              [ ("candidates ≤ live entries", cands ≤ live.size),
-                ("stop slot offered iff no mandatory entry remains", true) ]
-            pickCheck := fun p =>
-              (if p > cands then [s!"pick {p} beyond the stop slot {cands}"] else []) ++
-              (if p == cands && mand then ["stop slot taken while a mandatory entry remains"] else []) }
+      let (cands, mand) := live.toList.foldl (init := ((0 : Nat), false)) fun (cands, mand) e =>
+        if produced.contains e.1 then (cands, mand)
+        else (cands + 1, mand || start.contains e.1)
+      { specWidth := some (cands + (if mand then 0 else 1))
+        invariants :=
+          [ ("candidates ≤ live entries", cands ≤ live.size),
+            ("stop slot offered iff no mandatory entry remains", true) ]
+        pickCheck := fun p =>
+          (if p > cands then [s!"pick {p} beyond the stop slot {cands}"] else []) ++
+          (if p == cands && mand then ["stop slot taken while a mandatory entry remains"] else []) }
 
 /-- Append-spill facts (R2): the DECLARED envelope [newLen, upper] with
 upper = `appendSpillUpper`; every slot realizes a capacity ≥ newLen (the
@@ -361,10 +351,10 @@ def seqSite (σ : ExecState) (c : Config) :
       | .error _ => none
       | .ok cands =>
           if cands.isEmpty then none
-          else match mapIterMandatoryRemains σ keyTy cands start with
-            | .error _ => none
-            | .ok mand => some (.mapIter, cands.size + (if mand then 0 else 1),
-                mapIterFacts σ keyTy base produced start)
+          else
+            let mand := mapIterMandatoryRemains cands start
+            some (.mapIter, cands.size + (if mand then 0 else 1),
+                mapIterFacts σ base produced start)
   | .retV v (.selectOpsK clauses default? done [] env k) =>
       match applySelectCore σ clauses default? ((v :: done).reverse) env k with
       | .ok (.picks commits) => some (.l2Entry, commits.length, entryFacts σ c commits.length)

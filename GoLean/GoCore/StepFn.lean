@@ -378,12 +378,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
                 return (.evalE e env (.stmtOpK op nt (v :: done) rest env k'), s, choices)
           | [] =>
               match applyStmtOp s choices op nt (v :: done).reverse with
-              | .ok (s', choices') =>
-                  -- BUG-005 (L): mapDelete/clearMap prune the deleted
-                  -- key(s) from in-flight iterations over the same map
-                  -- (contAfterStmtOp — identity for every other op).
-                  let k'' ← contAfterStmtOp s' op ((v :: done).reverse) k'
-                  return (.next k'', s', choices')
+              | .ok (s', choices') => return (.next k', s', choices')
               | .error (.panic msg) =>
                   return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
               | .error err => throw err
@@ -440,7 +435,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               | some k'' => return (.next k'', s, choices)
               | none => throw (.stuck "defer outside a call frame")
       | .mapRangeK keyVar valVar keyTy valTy body env k' => do
-          -- BUG-005 (L): record the base cell and the START-KEY set;
+          -- BUG-005 (L): record the base cell and the START-ID set;
           -- no snapshot, no validation here (per-pick, live).
           let bs ← mapRangeStartSets s v
           return (.next (.mapIterK keyVar valVar keyTy valTy body bs.1 #[] bs.2 env k'), s, choices)
@@ -630,7 +625,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .mapIterK keyVar valVar keyTy valTy body base produced start env k' => do
           -- BUG-005 (L): LOAD the live cell (the U1-closing footprint
           -- read — every pick, including this done-check), filter by
-          -- the produced-key set, validate (fail closed), then consume
+          -- the produced-ID set (B1 stamps), validate (fail closed), then consume
           -- ONE choice of width candidates + stop, stop LAST — the
           -- zero stream IS the canonical member by definition (memo §5
           -- ruling Q3): first candidate in cell order, never stop
@@ -641,7 +636,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           if cands.isEmpty then
             return (.next k', s, choices)
           else do
-            let mandatory ← mapIterMandatoryRemains s keyTy cands start
+            let mandatory := mapIterMandatoryRemains cands start
             let width := cands.size + (if mandatory then 0 else 1)
             let (idx, choices') := Choices.consumeAt .mapIter width choices
             match cands[idx]? with
@@ -650,12 +645,12 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
                 -- no mandatory start key remains — width excludes it
                 -- otherwise).
                 return (.next k', s, choices')
-            | some (key, value) => do
+            | some (id, key, value) => do
                 let (env', s') ← bindIterVars env.pushScope s
                   keyVar valVar keyTy valTy key value
                 return (.exec body env'
                   (.mapIterK keyVar valVar keyTy valTy body
-                    base (produced.push key) start env k'), s', choices')
+                    base (produced.push id) start env k'), s', choices')
       | .storeK refs vals body env k' =>
           -- Delivery PHASE 2 (convergence round, BUG-029): one store
           -- per step, LEFT-TO-RIGHT; a store-time panic (nil address,

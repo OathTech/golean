@@ -265,26 +265,6 @@ theorem stepFn_selectApply_inv {σ : ExecState} {v : GoValue}
         obtain ⟨rfl, rfl, rfl⟩ := h
         exact .inr ⟨msg, rfl, rfl, rfl, rfl⟩
 
-/-- `stepFn`'s statement-op APPLY arm has exactly two successor shapes:
-`.next` (the op applied) or `.panicking` (the op's runtime panic). The
-E9 cross-goroutine prune's fail-closed successor check
-(`pruneForeign`) rests on this. -/
-theorem stepFn_stmtOpApply_shape {σ : ExecState} {v : GoValue} {op : StmtOp}
-    {nt : Nat} {done : List GoValue} {env : LocalEnv} {k : Cont} {ch : Choices}
-    {c' : Config} {σ' : ExecState} {ch' : Choices}
-    (h : stepFn σ (.retV v (.stmtOpK op nt done [] env k)) ch = .ok (c', σ', ch')) :
-    (∃ k', c' = .next k') ∨ (∃ chain k', c' = .panicking chain k') := by
-  unfold stepFn at h
-  dsimp only at h
-  split at h
-  · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨k'', -, rfl, -, -⟩ := h
-    exact .inl ⟨k'', rfl⟩
-  · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, -, -⟩ := h
-    exact .inr ⟨_, _, rfl⟩
-  · simp [throw, throwThe, MonadExceptOf.throw] at h
-
 /-- The one-thread `stepThread` is `stepFn`, results re-wrapped with a
 step event attached (the arrival plan is a pure no-op with no other
 goroutines — `arrivalPlan_singleton`; the completion marker's pool
@@ -318,14 +298,7 @@ theorem stepThread_single {σ : ExecState} {c : Config} {ch : Choices}
       | error e => rfl
       | ok r =>
           obtain ⟨c', s', ch₁⟩ := r
-          -- E9 closure: the foreign prune over a one-thread pool is the
-          -- identity (the only thread is the deleter).
-          have hpr : pruneForeign s' 0 c c' #[c'] = .ok #[c'] := by
-            apply pruneForeign_singleton
-            intro op vs hmp
-            obtain ⟨v, nt, done, env, k, rfl, rfl⟩ := mapPrunePlan_some_shape hmp
-            exact stepFn_stmtOpApply_shape hstep
-          simp [Functor.map, Except.map, hpr]
+          simp [Functor.map, Except.map]
   | some p =>
       obtain ⟨v, clauses, default?, done, env, k'⟩ := p
       obtain rfl := selectApplyPlan_shape hselp
@@ -744,8 +717,7 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
               = (m.threads.setIfInBounds i inner) ++ ([] : List Config).toArray := by
             simp
           rw [hts]
-          exact StepM.thread hsched hti hbl rfl
-            (StepE.lift Step.opDoneStrip) (pruneForeign_of_plan_none rfl)
+          exact StepM.thread hsched hti hbl rfl (StepE.lift Step.opDoneStrip)
         | none =>
         rw [hsc] at hst
         cases hsp : spawnPlan c with
@@ -770,7 +742,6 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
               rw [Array.push_eq_append]
             rw [hts]
             exact StepM.thread hsched hti hbl hplanNone (StepE.spawn hsp hspawn)
-              (pruneForeign_of_plan_none (mapPrunePlan_of_spawnPlan hsp))
         | none =>
           rw [hsp] at hst
           simp only [Bind.bind, Except.bind] at hst
@@ -793,18 +764,13 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
                   obtain ⟨c', s₂, ch₂⟩ := r₂
                   rw [hstep] at hst
                   dsimp only at hst
-                  -- E9 closure: the cross-goroutine prune's outcome.
-                  cases hpr : pruneForeign s₂ i c c' (m.threads.setIfInBounds i c') with
-                  | error e => rw [hpr] at hst; cases hst
-                  | ok ts₂ =>
-                    rw [hpr] at hst
-                    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
-                    obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
-                    have hpr' : pruneForeign s₂ i c c'
-                        ((m.threads.setIfInBounds i c') ++ ([] : List Config).toArray)
-                        = .ok ts₂ := by simpa using hpr
-                    exact StepM.thread hsched hti hbl hac
-                      (StepE.lift (stepFn_sound hstep)) hpr'
+                  simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
+                  obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
+                  have hts : m.threads.setIfInBounds i c'
+                      = (m.threads.setIfInBounds i c') ++ ([] : List Config).toArray := by
+                    simp
+                  rw [hts]
+                  exact StepM.thread hsched hti hbl hac (StepE.lift (stepFn_sound hstep))
               | some p =>
                 -- THE SELECT INTERCEPTION (Q2): the pool ran
                 -- `applySelect` itself; the relation's own select rules
@@ -825,7 +791,7 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
                     simp
                   rw [hts]
                   exact StepM.thread hsched hti hbl hac
-                    (StepE.lift (Step.selectApply happly)) (pruneForeign_of_plan_none rfl)
+                    (StepE.lift (Step.selectApply happly))
                 | error e =>
                   rw [happly] at hst
                   cases e <;>
@@ -841,7 +807,7 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
                     simp
                   rw [hts]
                   exact StepM.thread hsched hti hbl hac
-                    (StepE.lift (Step.selectApplyPanic happly)) (pruneForeign_of_plan_none rfl)
+                    (StepE.lift (Step.selectApplyPanic happly))
             | single bc cs =>
               rw [arrivalPlan_of_single hac] at hst
               simp only [Bind.bind, Except.bind] at hst
@@ -1093,8 +1059,8 @@ the sequential kit's `step_complete`; the pairing path never touches
 theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
     ∃ ch ch' ev, stepMulti m ch = .ok (m', ch', ev) := by
   cases h with
-  | thread hsched hti hblc hplan hstepE hprune =>
-    rename_i i c c' σ' efs ts'
+  | thread hsched hti hblc hplan hstepE =>
+    rename_i i c c' σ' efs
     cases hstepE with
     | lift hstep =>
       have hsp : spawnPlan c = none := by
@@ -1104,7 +1070,7 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
       have heq : (m.threads.setIfInBounds i c') ++ ([] : List Config).toArray
           = m.threads.setIfInBounds i c' := by
         rw [show (([] : List Config)).toArray = #[] from rfl, Array.append_empty]
-      rw [heq] at hprune
+      rw [heq]
       cases hsc : opDoneInner c with
       | some inner =>
           -- The marker strip (stage C): `Step.opDoneStrip` is the only
@@ -1113,9 +1079,6 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
           obtain ⟨sc, hcfg⟩ := opDoneInner_shape hsc
           subst hcfg
           obtain ⟨hc', rfl⟩ := step_opDone_inv hstep
-          rw [pruneForeign_of_plan_none rfl] at hprune
-          simp only [Except.ok.injEq] at hprune
-          subst hprune
           rw [hc']
           have hinner : ∃ evI, stepThread m.shared m.threads i []
               = .ok (m.threads.setIfInBounds i inner, m.shared, [], evI) :=
@@ -1130,7 +1093,7 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
       cases hselp : selectApplyPlan c with
       | none =>
         have hinner : ∃ evI, stepThread m.shared m.threads i ch₀
-            = .ok (ts', σ', ch₀', evI) :=
+            = .ok (m.threads.setIfInBounds i c', σ', ch₀', evI) :=
           ⟨_, by
             unfold stepThread
             rw [hti]
@@ -1141,8 +1104,6 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
             rw [hselp]
             dsimp only
             rw [hfn]
-            dsimp only
-            rw [hprune]
             rfl⟩
         obtain ⟨evI, hinner⟩ := hinner
         exact stepMulti_of_inner hsched hinner
@@ -1152,9 +1113,6 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
         obtain ⟨v, clauses, default?, done, env, k'⟩ := p
         have hshape := selectApplyPlan_shape hselp
         subst hshape
-        rw [pruneForeign_of_plan_none rfl] at hprune
-        simp only [Except.ok.injEq] at hprune
-        subst hprune
         rcases stepFn_selectApply_inv hfn with ⟨cl?, happly⟩
           | ⟨msg, happly, rfl, rfl, -⟩
         · have hinner : ∃ evI, stepThread m.shared m.threads i ch₀
@@ -1193,9 +1151,6 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
           exact stepMulti_of_inner hsched hinner
     | spawn hplan' hspawn =>
       rename_i cv args k child
-      rw [pruneForeign_of_plan_none (mapPrunePlan_of_spawnPlan hplan')] at hprune
-      simp only [Except.ok.injEq] at hprune
-      subst hprune
       have hinner : ∃ evI, stepThread m.shared m.threads i []
           = .ok ((m.threads.setIfInBounds i c').push child, σ', [], evI) :=
         ⟨_, by

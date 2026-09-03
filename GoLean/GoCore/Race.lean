@@ -185,7 +185,7 @@ FOOTPRINT ARMS (recorded accesses):
   the caller-target WRITES are per-target `storeK` steps since the
   BUG-025 spine migration (`storeTargetAccess`, phase 2 — `storeMany`
   is retired from the frame exit).
-- `mapRangeStartSets` range-start load (base + start keys) →
+- `mapRangeStartSets` range-start load (base + start entry ids) →
   `stepAccesses` mapRangeK arm.
 - `mapIterLiveEntries` per-pick live load (BUG-005 (L): every pick
   incl. the done-check) → `stepAccesses` mapIterK arm (closed U1).
@@ -1513,7 +1513,19 @@ def stepAccesses (s : ExecState) (c : Config) : List RaceAccess :=
   -- BUG-005 (L) surgery: EVERY mapIterK pick step — including the
   -- final done-check — loads the live map cell (gc's exhausted
   -- mapIterNext still reads; this is the arm that closed U1). Nil-map
-  -- ranges (base none) read nothing.
+  -- ranges (base none) read nothing. SOUNDNESS OF THIS FOOTPRINT under
+  -- the B1 entry-identity stamps (2026-09-03): the pick's only inputs
+  -- besides the frame are the cell's live entries (ids, keys, values),
+  -- read here; the frame's `produced`/`start` ID sets are thread-private
+  -- data written only by this goroutine's own picks and range start,
+  -- and every id in them was read off THIS cell by such a load. A
+  -- foreign `mapDelete`/`clearMap`/`mapAssign` changes what the pick
+  -- computes only by writing this cell — an access `stmtOpAccesses`
+  -- records — so a pick whose candidate set another goroutine could
+  -- have changed conflicts with that write at this location (HB-ordered
+  -- or refused). No goroutine step rewrites another's frame (the
+  -- pool-level prune is gone), so nothing the pick depends on lies
+  -- outside this one read.
   | .next (.mapIterK _ _ _ _ _ base _ _ _ _) =>
       (match base with
        | some l => [(.read, l)]

@@ -57,7 +57,9 @@ cost and touches the fewest positional `fun_cases` proofs.
     `pruneForeign` premise on `StepM.thread`) is deleted. A `thread`
     step is thread-local again (NPDRF obstruction 7 closes by
     construction). Design note: `docs/2026-09-03_hygiene-b1-stamps-design.md`.
-    Status: IN PROGRESS (worktree `hygiene-b1-stamps`).
+    Status: DONE on branch `hygiene-b1-stamps` (2026-09-03) — gate
+    green, audit-ask posed by the coordinator, merge on [USER]
+    sign-off (see the landing record).
 
 (ii) **The cheap A-series, A1–A10**, as small commits each gated by
      the full differential (`scripts/capped scripts/ci --diff`):
@@ -158,4 +160,4 @@ change the semantics or its accounting, and none is scheduled here
 
 | Slice | Item | Branch | Landed | Notes |
 |---|---|---|---|---|
-| 1 | B1 stamps | `hygiene-b1-stamps` | (pending) | design note `docs/2026-09-03_hygiene-b1-stamps-design.md` |
+| 1 | B1 stamps | `hygiene-b1-stamps` | branch-complete 2026-09-03, landing commit: see the follow-up line below; audit-ask pending; not merged | design note `docs/2026-09-03_hygiene-b1-stamps-design.md`; evidence `docs/evidence/2026-09-03_hygiene-b1-stamps/`; 14 defs + 14 theorems + 3 rule premises deleted, −649 lines; zero drift on 3195 rows; +1 row `maps/nan-key-range` (BUG-088, found by the bisimulation argument, fixed by construction) |

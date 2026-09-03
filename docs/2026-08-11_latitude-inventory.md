@@ -903,7 +903,28 @@ gc's early store a deviation, L-016, 2026-09-02).
   realization + record: this row's disposition per the Tier-1 fix
   round; the register-side restatement rides Tier 2.
 
-### E9. Map iteration order — (a) ENVELOPED (full literal envelope over the LIVE map) — RE-ENVELOPED 2026-08-19 (BUG-005 (L) surgery, user-ruled); cross-goroutine prune CLOSED 2026-09-02
+### E9. Map iteration order — (a) ENVELOPED (full literal envelope over the LIVE map) — RE-ENVELOPED 2026-08-19 (BUG-005 (L) surgery, user-ruled); cross-goroutine prune CLOSED 2026-09-02; MECHANISM = entry-identity stamps since 2026-09-03 (B1)
+
+- MECHANISM OF RECORD (design-hygiene arc slice 1, B1 — the second
+  audit's Q11; [AGENT] execution inside the [USER]-ratified arc,
+  `docs/2026-09-03_design-hygiene-arc.md`; design note
+  `docs/2026-09-03_hygiene-b1-stamps-design.md`): every map entry
+  carries a fresh per-map `Nat` id (`GoValue.mapData entries nextId`,
+  never reused — deletion and `clear` erase entries and leave the
+  counter); `Cont.mapIterK` carries the `produced` and `start` sets as
+  ID sets; candidates = live entries whose id ∉ produced, in cell
+  order; the stop slot is legal iff no candidate id ∈ start. A
+  `mapDelete`/`clearMap` is a heap write and nothing else: the
+  delete-prune family (`pruneIterFramesKey`/`All`, `contAfterStmtOp`,
+  `removeKeyList`, `keyInKeys`, `Config.mapContM`, `pruneForeign*`,
+  `foreignPruneError`, the `pruneForeign` premise on `StepM.thread`)
+  is DELETED; the pool step is thread-local again (NPDRF obstruction 7
+  discharged). The envelope below is UNCHANGED — the stamped machine
+  certifies to the identical sets on every E9 row (set-equality
+  transcripts, `docs/evidence/2026-09-03_hygiene-b1-stamps/`), and the
+  choice tape is consumed identically. The paragraphs that follow
+  describe the retired key-set mechanism where they say "prune"; they
+  are kept as the history of how the envelope was reached.
 
 - WHERE: spec#For_range (tightened from the parent section per the
   P2 audit): "The iteration order over maps is not
@@ -923,6 +944,9 @@ gc's early store a deviation, L-016, 2026-09-02).
   pool step's `pruneForeign` (Multi.lean, 2026-09-02) — which is what
   makes "removed before being reached ⇒ not produced" exact and a
   re-created key a candidate again in whichever goroutine ranges.
+  [2026-09-03: the prune is RETIRED — the sets are entry-id sets and a
+  deleted entry is simply absent at the next pick; see the MECHANISM OF
+  RECORD bullet above.]
 - ENVELOPE: the FULL literal envelope of the spec's production table,
   user-ruled 2026-08-19 ("any latitude in the Go spec should be
   supported" — no narrowings): all orders of surviving entries;
@@ -996,8 +1020,21 @@ gc's early store a deviation, L-016, 2026-09-02).
   (both goroutines ranging while one deletes) did not enumerate at
   `backedge=full` within 10 min at the audit (it completes at
   `backedge=0` in ~1 min); the corpus rows here are single-ranger
-  shapes. The old re-envelope trigger is discharged; no residual
-  narrowing remains on this row.
+  shapes. [2026-09-03: the O(threads × depth) walk is gone with the
+  prune (B1 stamps); a delete is O(1) beyond the cell write.] The old
+  re-envelope trigger is discharged; no residual narrowing remains on
+  this row.
+- IRREFLEXIVE KEYS (found and fixed by B1, 2026-09-03 — BUG-088): a
+  key whose Go `==` is irreflexive (NaN, or an array/struct/interface
+  holding one) could never be marked produced by the key-set frame
+  (membership was `valueEq`), so a range over such a map re-produced
+  its first NaN entry forever at the zero stream (fuel-out; the
+  modeled set admitted any number of productions). With stamps each
+  entry is produced exactly once — the spec's production table —
+  pinned by `maps/nan-key-range` (gc 32, machine 32, confluent). This
+  is the ONE behaviour the slice changed, on a class no earlier row
+  exercised; it is a narrowing of an over-wide model to the spec, not
+  an envelope move.
 
 ### E10. Which `==`-equal map key is retained on overwrite — (b) PINNED (always-replace)
 

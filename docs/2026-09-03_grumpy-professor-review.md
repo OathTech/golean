@@ -832,6 +832,16 @@ series as A1–A9 so the moved prose is re-read once.
 
 **B1. Entry-identity stamps for maps (the queue's Q11) — delete the
 prune.**
+LANDED 2026-09-03 — design-hygiene arc slice 1, branch
+`hygiene-b1-stamps` (landing commit recorded in
+`docs/2026-09-03_design-hygiene-arc.md`'s landing table; design note
+`docs/2026-09-03_hygiene-b1-stamps-design.md`). As proposed, with two
+recorded deviations: the id counter is PER MAP (kept `StateWf`
+field-free), and the `mandatoryRemains` test became pure `Bool` (so
+`Step.mapIterNext` lost its success premise). The bisimulation's
+"subtlety to prove" pointed at ±0; the other direction — NaN, where
+`valueEq` is IRREFLEXIVE — is where the key-set frame was actually
+wrong (BUG-088, fixed by construction; `maps/nan-key-range`).
 Change: `mapPayload` (or `GoValue.mapData` if A3 is not taken) becomes
 `entries : Array (Nat × GoValue × GoValue)` plus `nextId : Nat`.
 `mapAssignValue` on an ABSENT key pushes `(nextId, k, v)` and bumps;

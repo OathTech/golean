@@ -1,0 +1,23 @@
+result	id	features	stage	detail
+PASS	maps/added-entries-bound	maps,range,evaluation_order	-	-
+PASS	maps/added-entry-count	maps,range,evaluation_order,nondet	membership	enumerated=2 exhibited=2 unexhibited=0 samples=5 (members in artifacts/coverage/membership/maps/added-entry-count)
+PASS	maps/clear-during-range	maps,clear,range,evaluation_order	-	-
+PASS	maps/cross-goroutine-delete-noreadd/delete	maps,delete,range,goroutines,channels	confluent	|set|=1 certified over all schedules; coverage-observations: observations=1 steps=137326 probes=12399 sites=4133 leaves=2700 maxdepth=17 width=4 backedge=full
+PASS	maps/cross-goroutine-delete-noreadd/clear	maps,clear,range,goroutines,channels	confluent	|set|=1 certified over all schedules; coverage-observations: observations=1 steps=13917 probes=2949 sites=983 leaves=990 maxdepth=13 width=4 backedge=full
+PASS	maps/cross-goroutine-delete-noreadd/other-map	maps,delete,range,goroutines,channels	confluent	|set|=1 certified over all schedules; coverage-observations: observations=1 steps=137371 probes=12399 sites=4133 leaves=2700 maxdepth=17 width=4 backedge=full
+PASS	maps/cross-goroutine-delete-readd/drf	maps,delete,range,goroutines,channels,nondet	membership	enumerated=2 exhibited=1 unexhibited=1 samples=5 (members in artifacts/coverage/membership/maps/cross-goroutine-delete-readd/drf)
+PASS	maps/cross-goroutine-delete-readd/insert	maps,delete,range,goroutines,channels,nondet	membership	enumerated=2 exhibited=1 unexhibited=1 samples=5 (members in artifacts/coverage/membership/maps/cross-goroutine-delete-readd/insert)
+PASS	maps/cross-goroutine-delete-readd/racy	maps,delete,range,goroutines,channels,race	racy	every enumerated path refuses: coverage-observations: observations=1 steps=690 probes=102 sites=34 leaves=30 maxdepth=9 width=4 backedge=full
+PASS	maps/delete-during-range	maps,delete,range,evaluation_order	-	-
+PASS	maps/delete-insert-readd-during-range	maps,delete,range,evaluation_order,nondet	membership	enumerated=2 exhibited=1 unexhibited=1 samples=5 (members in artifacts/coverage/membership/maps/delete-insert-readd-during-range)
+PASS	maps/delete-readd-during-range	maps,delete,range,evaluation_order,nondet	membership	enumerated=3 exhibited=1 unexhibited=2 samples=5 (members in artifacts/coverage/membership/maps/delete-readd-during-range)
+PASS	maps/delete-unreached-during-range	maps,delete,range,evaluation_order	-	-
+PASS	maps/nan-key-range	maps,range,floats,keys	-	-
+PASS	maps/update-during-range	maps,range,loops,assignment,keys	-	-
+PASS	noodler/maps/single-entry-range	maps,range	-	-
+PASS	noodler/membership/two-senders-buffered	goroutines,channels,nondet	membership	enumerated=2 exhibited=2 unexhibited=0 samples=5 (members in artifacts/coverage/membership/noodler/membership/two-senders-buffered)
+PASS	noodler/membership/three-key-map-order	maps,range,nondet	membership	enumerated=6 exhibited=3 unexhibited=3 samples=5 (members in artifacts/coverage/membership/noodler/membership/three-key-map-order)
+PASS	noodler/membership/select-two-ready	channels,select,nondet	membership	enumerated=2 exhibited=2 unexhibited=0 samples=5 (members in artifacts/coverage/membership/noodler/membership/select-two-ready)
+PASS	noodler/membership/delete-other-key-during-range	maps,range,delete	confluent	|set|=1 certified over all schedules; coverage-observations: observations=1 steps=139 probes=3 sites=1 leaves=2 maxdepth=1 width=4
+PASS	noodler/membership/insert-then-delete-during-range	maps,range,delete,nondet	membership	enumerated=2 exhibited=1 unexhibited=1 samples=5 (members in artifacts/coverage/membership/noodler/membership/insert-then-delete-during-range)
+PASS	race/negative/map-range-iter	goroutines,channels,maps,range,race	racy	every enumerated path refuses: coverage-observations: observations=1 steps=2909 probes=777 sites=259 leaves=240 maxdepth=9 width=4 backedge=full

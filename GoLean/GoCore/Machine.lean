@@ -262,12 +262,19 @@ def mapAssignValue (s : ExecState) (keyTy valueTy : Ty)
   let value ← normalizeValueForTy s valueTy valueV
   match ← mapEntries s map with
   | none => panic "assignment to entry in nil map"
-  | some (baseLoc, entries) =>
-      let entries ←
+  | some (baseLoc, entries, nextId) =>
+      -- Entry-identity stamps (B1): a PRESENT key keeps its entry's id
+      -- (the E10 always-replace pin unchanged — new key, new value, same
+      -- identity); an ABSENT key creates a NEW entry stamped `nextId`,
+      -- and the counter moves on. Ids are never reused.
+      let (entries, nextId) ←
         match ← mapEntryIndex? s keyTy entries key (isInsert := true) with
-        | some i => pure (entries.set! i (key, value))
-        | none => pure (entries.push (key, value))
-      storeLoc s baseLoc (.mapData entries)
+        | some i =>
+            match entries[i]? with
+            | some (id, _, _) => pure (entries.set! i (id, key, value), nextId)
+            | none => stuck s!"missing map entry at index {i}"
+        | none => pure (entries.push (nextId, key, value), nextId + 1)
+      storeLoc s baseLoc (.mapData entries nextId)
 
 /-- Apply a strict operator to its (already evaluated, in evaluation order)
 operand values. The single op table shared by the relation (as a rule
@@ -458,11 +465,11 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
           return ((← defaultValue s valueTy), s)
       | some baseLoc =>
           match ← loadLoc s baseLoc with
-          | .mapData entries =>
+          | .mapData entries _ =>
               match ← mapEntryIndex? s keyTy entries key with
               | some idx =>
                   match entries[idx]? with
-                  | some (_, value) => return (value, s)
+                  | some (_, _, value) => return (value, s)
                   | none => stuck s!"missing map entry at index {idx}"
               | none => return ((← defaultValue s valueTy), s)
           | other => stuck s!"expected map data, got {repr other}"
@@ -488,7 +495,7 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
               | none => return (.int 0, s)
               | some baseLoc =>
                   match ← loadLoc s baseLoc with
-                  | .mapData entries => return (.int entries.size, s)
+                  | .mapData entries _ => return (.int entries.size, s)
                   | other => stuck s!"expected map data, got {repr other}"
           -- len(ch) = elements queued in the buffer; nil channel = 0
           -- (spec §Length and capacity). Never panics, never blocks.
@@ -848,7 +855,7 @@ def applyStmtOpCore (s : ExecState) (op : StmtOp) (_nt : Nat)
           -- builtins/make-map-hint-eval/*). This arm's realized
           -- behavior is gc's.
           let _ ← valueAsInt spaceV
-      let (base, s₁) := s.alloc (.mapData #[])
+      let (base, s₁) := s.alloc (.mapData #[] 0)
       let loc ← valueAsLoc tv
       return ((← storeLoc s₁ loc (.map { base := some base })))
   | .makeChan elem hasCap => do
@@ -896,10 +903,14 @@ def applyStmtOpCore (s : ExecState) (op : StmtOp) (_nt : Nat)
           | none => do
               checkKeyHashable s key (isInsert := false) (nonEmpty := false)
               return (s)
-          | some (baseLoc, entries) =>
+          | some (baseLoc, entries, nextId) =>
               match ← mapEntryIndex? s keyTy entries key with
               | some i =>
-                  return ((← storeLoc s baseLoc (.mapData (entries.eraseIdx! i))))
+                  -- A delete is a heap write and nothing else (B1): the
+                  -- entry leaves the cell, its id is never reissued
+                  -- (`nextId` unchanged), and every in-flight range
+                  -- sees the absence at its next pick.
+                  return ((← storeLoc s baseLoc (.mapData (entries.eraseIdx! i) nextId)))
               | none => return (s)
       | _ => stuck "malformed mapDelete operands"
   | .clearMap =>
@@ -908,8 +919,9 @@ def applyStmtOpCore (s : ExecState) (op : StmtOp) (_nt : Nat)
           let map ← valueAsMap baseV
           match ← mapEntries s map with
           | none => return (s) -- nil map: no-op
-          | some (baseLoc, _) =>
-              return ((← storeLoc s baseLoc (.mapData #[])))
+          | some (baseLoc, _, nextId) =>
+              -- `clear` empties the cell; the id counter stays (B1).
+              return ((← storeLoc s baseLoc (.mapData #[] nextId)))
       | _ => stuck "malformed clearMap operands"
   | .clearSlice elem =>
       -- Multi-cell in one apply step, like copySlice: a granularity-ledger
@@ -1054,50 +1066,34 @@ def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (nt : Nat)
   | op => do return ((← applyStmtOpCore s op nt vs), choices)
 
 /-- Range START (BUG-005 (L) surgery, replacing the retired snapshot):
-the ranged map's base cell and its START-KEY set — the keys present
-when the range begins (keys only, never values: values are read LIVE
-at production, the spec's forced production-table clause). Shared
-verbatim by rule `Step.mapRangeStart` and `stepFn`'s `mapRangeK` arm.
-The load here is a real heap read (the footprint's `mapRangeK` arm). -/
+the ranged map's base cell and its START-ID set — the entry ids live
+when the range begins (ids only, never keys or values: keys and values
+are read LIVE at production, the spec's forced production-table
+clause; entry-identity stamps, B1). Shared verbatim by rule
+`Step.mapRangeStart` and `stepFn`'s `mapRangeK` arm. The load here is
+a real heap read (the footprint's `mapRangeK` arm). -/
 def mapRangeStartSets (s : ExecState) (v : GoValue) :
-    Except GoError (Option Loc × Array GoValue) := do
+    Except GoError (Option Loc × Array Nat) := do
   let map ← valueAsMap v
   match map.base with
   | none => return (none, #[])
   | some base =>
       match ← loadLoc s base with
-      | .mapData es => return (some base, es.map (·.1))
+      | .mapData es _ => return (some base, es.map (·.1))
       | other => stuck s!"expected map data for range, got {repr other}"
 
 /-- The LIVE entries of an in-flight range's map cell (`none` base =
-nil map = no entries). Every `mapIterNext` pick — including the final
-done-check — performs this read (gc's exhausted `mapIterNext` still
-reads; the U1-closing footprint arm records it). -/
+nil map = no entries), ids included. Every `mapIterNext` pick —
+including the final done-check — performs this read (gc's exhausted
+`mapIterNext` still reads; the U1-closing footprint arm records it). -/
 def mapIterLiveEntries (s : ExecState) (base : Option Loc) :
-    Except GoError (Array (GoValue × GoValue)) := do
+    Except GoError (Array (Nat × GoValue × GoValue)) := do
   match base with
   | none => return #[]
   | some l =>
       match ← loadLoc s l with
-      | .mapData es => return es
+      | .mapData es _ => return es
       | other => stuck s!"expected map data for range, got {repr other}"
-
-/-- Is `key` a member of `keys` under Go map-key equality at `keyTy`
-(the same `valueEq` the map ops use)? Structural on the list — the
-de-WF recipe, so the candidate/mandatory lemmas induct cleanly. -/
-def keyInKeyList (s : ExecState) (keyTy : Ty) (key : GoValue) :
-    List GoValue → Except GoError Bool
-  | [] => return false
-  | p :: rest => do
-      if ← valueEq s keyTy p key then
-        return true
-      else
-        keyInKeyList s keyTy key rest
-
-@[inherit_doc keyInKeyList]
-def keyInKeys (s : ExecState) (keyTy : Ty) (keys : Array GoValue)
-    (key : GoValue) : Except GoError Bool :=
-  keyInKeyList s keyTy key keys.toList
 
 /-- Are all entries of a `mapRange` snapshot self-normalized at the range
 key/value types — keys at `keyTy`, values at `valTy`? The pick-free
@@ -1113,71 +1109,58 @@ obstruction one constructor over — `bindIterVars` normalizes the VALUE
 at `valTy` whenever a value variable is bound, so key-only validation
 leaves iteration success pick-dependent through the values. -/
 def snapshotEntriesSelfNormalizedList (types : TypeEnv) (keyTy valTy : Ty) :
-    List (GoValue × GoValue) → Bool
+    List (Nat × GoValue × GoValue) → Bool
   | [] => true
-  | (k, v) :: rest =>
+  | (_, k, v) :: rest =>
       isNormalForTy types keyTy k && isNormalForTy types valTy v
         && snapshotEntriesSelfNormalizedList types keyTy valTy rest
 
 @[inherit_doc snapshotEntriesSelfNormalizedList]
 def snapshotEntriesSelfNormalized (types : TypeEnv) (keyTy valTy : Ty)
-    (entries : Array (GoValue × GoValue)) : Bool :=
+    (entries : Array (Nat × GoValue × GoValue)) : Bool :=
   snapshotEntriesSelfNormalizedList types keyTy valTy entries.toList
 
-/-- The PICK-TIME candidates (BUG-005 (L) surgery): the live entries
-whose key is not yet in `produced`, VALIDATED self-normalized at the
-range key/value types — fail closed otherwise. The validation is the
-sem-adequacy obstruction's guard, moved from the retired snapshot step
-to the pick: an ill-typed live entry would make `bindIterVars` succeed
-at one pick and fail at another, so it is rejected BEFORE any choice
-is consumed, keeping pick success choices-independent
-(`step_complete_any_wf`'s mapIterNext case rests on exactly this).
-Shared VERBATIM by the `Step.mapIter*` rules and `stepFn`. -/
-def filterCandidateList (s : ExecState) (keyTy : Ty)
-    (produced : Array GoValue) :
-    List (GoValue × GoValue) → Except GoError (List (GoValue × GoValue))
-  | [] => return []
-  | (k, v) :: rest => do
-      let inProduced ← keyInKeys s keyTy produced k
-      let tail ← filterCandidateList s keyTy produced rest
-      if inProduced then
-        return tail
-      else
-        return (k, v) :: tail
+/-- The PICK-TIME candidate list (BUG-005 (L) surgery; entry-identity
+stamps, B1): the live entries, in cell order, whose id is not yet in
+`produced`. Pure `Nat` membership — no key comparison, no `Except`, no
+fuel: a removed entry is simply absent from the cell, a re-created key
+is a new entry with a fresh id and so a candidate again. -/
+def filterCandidateList (produced : Array Nat)
+    (es : List (Nat × GoValue × GoValue)) : List (Nat × GoValue × GoValue) :=
+  es.filter (fun e => !produced.contains e.1)
 
-/-- The PICK-TIME candidates (docstring above `filterCandidateList`'s
-block comment — see the surgery note there). -/
+/-- The PICK-TIME candidates: `filterCandidateList` over the live cell,
+VALIDATED self-normalized at the range key/value types — fail closed
+otherwise. The validation is the sem-adequacy obstruction's guard,
+moved from the retired snapshot step to the pick: an ill-typed live
+entry would make `bindIterVars` succeed at one pick and fail at
+another, so it is rejected BEFORE any choice is consumed, keeping pick
+success choices-independent (`step_complete_any_wf`'s mapIterNext
+case rests on exactly this). Shared VERBATIM by the `Step.mapIter*`
+rules and `stepFn`. -/
 def mapIterCandidates (s : ExecState) (keyTy valTy : Ty)
-    (base : Option Loc) (produced : Array GoValue) :
-    Except GoError (Array (GoValue × GoValue)) := do
+    (base : Option Loc) (produced : Array Nat) :
+    Except GoError (Array (Nat × GoValue × GoValue)) := do
   let entries ← mapIterLiveEntries s base
-  let out := (← filterCandidateList s keyTy produced entries.toList).toArray
+  let out := (filterCandidateList produced entries.toList).toArray
   if snapshotEntriesSelfNormalized s.types keyTy valTy out then
     return out
   else
     throw (.stuck s!"map range live entry not self-normalized at range \
 key/value types ({repr keyTy}, {repr valTy})")
 
-/-- Does a MANDATORY candidate remain — a candidate whose key is a
-never-removed start key? While `true`, the STOP slot is illegal: the
-spec's production table traverses every surviving entry ("For each
-iteration, iteration values are produced …"), so an entry neither
-removed nor created must be produced before iteration may end. Shared
-verbatim by rule `Step.mapIterStop` and `stepFn`. -/
-def mandatoryInList (s : ExecState) (keyTy : Ty) (start : Array GoValue) :
-    List (GoValue × GoValue) → Except GoError Bool
-  | [] => return false
-  | (k, _) :: rest => do
-      if ← keyInKeys s keyTy start k then
-        return true
-      else
-        mandatoryInList s keyTy start rest
-
-@[inherit_doc mandatoryInList]
-def mapIterMandatoryRemains (s : ExecState) (keyTy : Ty)
-    (candidates : Array (GoValue × GoValue)) (start : Array GoValue) :
-    Except GoError Bool :=
-  mandatoryInList s keyTy start candidates.toList
+/-- Does a MANDATORY candidate remain — a candidate whose id is in the
+START-ID set (an entry live when the range began and never removed
+since; a deleted-then-re-created key carries a NEW id, so its mandatory
+status is gone with the old entry)? While `true`, the STOP slot is
+illegal: the spec's production table traverses every surviving entry
+("For each iteration, iteration values are produced …"), so an entry
+neither removed nor created must be produced before iteration may
+end. Pure (B1). Shared verbatim by rule `Step.mapIterStop` and
+`stepFn`. -/
+def mapIterMandatoryRemains (candidates : Array (Nat × GoValue × GoValue))
+    (start : Array Nat) : Bool :=
+  candidates.any (fun e => start.contains e.1)
 
 /-- Declare a `mapRange` iteration's key/value variables in a fresh scope
 (normalized at the range types), mirroring the interpreter's per-iteration
@@ -1930,27 +1913,30 @@ inductive Cont where
   | mapRangeK (keyVar valVar : Option String) (keyTy valTy : Ty)
       (body : Stmt) (env : LocalEnv) (k : Cont)
   /-- `mapRange` iteration context — LIVE iteration (BUG-005 (L)
-  surgery, ruled 2026-08-19; the snapshot design is retired). The frame
-  carries the ranged map's `base` cell (`none` = nil map), the
-  `produced` KEY set (keys already bound, in production order) and the
-  `start` KEY set (keys present when the range began). Each pick-next
-  step LOADS the live cell (the U1-closing race footprint), takes
-  `candidates` = live entries whose key ∉ produced (removed entries
-  drop out by absence — the spec's forced removal clause; values come
-  live — the forced production-table clause), and consumes ONE choice
-  of width `candidates.size + stop`, where the trailing STOP slot is
-  legal only when no candidate key remains in `start` (a surviving
-  never-removed start key is MANDATORY — spec-forced traversal). A
-  `mapDelete`/`clearMap` step prunes the deleted key(s) from `produced`
-  AND `start` in every in-flight frame over the same base — in the
-  deleting goroutine via `contAfterStmtOp` inside `stepFn`, and in
-  every OTHER goroutine via the pool-level `pruneForeign` (Multi.lean;
-  the E9 closure, 2026-09-02): a deleted-then-re-created key is a NEW
-  entry — the adopted reading, `docs/spec-interpretations.md` I-1 /
-  ledger L-012. `break` finishes the range, `continue` proceeds,
-  `return` unwinds. The per-iteration scope is the entered body's
-  environment; this frame carries the *original* `env` for subsequent
-  iterations (scope exit by discard, as everywhere in the CEK design).
+  surgery, ruled 2026-08-19; the snapshot design is retired) over
+  ENTRY-IDENTITY STAMPS (design-hygiene arc slice 1, B1 — the second
+  audit's Q11, 2026-09-03; the key-set frames and their delete-prune
+  are retired). The frame carries the ranged map's `base` cell
+  (`none` = nil map), the `produced` ID set (ids of the entries already
+  bound, in production order) and the `start` ID set (ids of the
+  entries live when the range began). Each pick-next step LOADS the
+  live cell (the U1-closing race footprint), takes `candidates` = live
+  entries whose id ∉ produced, in cell order (removed entries drop out
+  by absence — the spec's forced removal clause; a re-created key is a
+  NEW entry with a fresh id and so a candidate again — the adopted
+  reading, `docs/spec-interpretations.md` I-1 / ledger L-012; keys and
+  values come live — the forced production-table clause), and
+  consumes ONE choice of width `candidates.size + stop`, where the
+  trailing STOP slot is legal only when no candidate id remains in
+  `start` (a surviving never-removed start entry is MANDATORY —
+  spec-forced traversal). No step ever rewrites this frame's sets
+  except its own pick (`produced.push id`): a `mapDelete`/`clearMap`
+  is a heap write and nothing else, in any goroutine — the frame
+  observes it at its next pick, through the cell load. `break`
+  finishes the range, `continue` proceeds, `return` unwinds. The
+  per-iteration scope is the entered body's environment; this frame
+  carries the *original* `env` for subsequent iterations (scope exit
+  by discard, as everywhere in the CEK design).
 
   ENVELOPE STATEMENT (doctrine requirement 1, SPEC class —
   spec#For_statements, range clause, maps): "The iteration order over
@@ -1960,43 +1946,47 @@ inductive Cont where
   iteration, that entry may be produced during the iteration or may be
   skipped. The choice may vary for each entry created and from one
   iteration to the next." The realized set: any interleaved
-  production order over live entries; removal exact (absent at pick
-  time ⇒ not a candidate; checked live, so a re-created key is a
-  candidate again); values live at production; created entries — any
-  subset produced, each at any interleaved position, re-creations
-  re-producible (the FULL literal envelope: the 2026-08-19 ruling
-  REJECTED the at-most-once-per-key and re-created-start-keys-
-  mandatory narrowings). Consequences carried deliberately:
-  self-inserting loops have genuinely unbounded trace sets
-  (∀-streams certification fails closed on them — membership lane
-  territory), and the CANONICAL member is BY DEFINITION the machine at
-  the zero choice stream (index 0 = first candidate in cell order,
-  stop ordered LAST), so mutation-free ranges keep the
-  first-remaining-in-insertion-order pick sequence and self-inserting
-  loops fuel-out VISIBLY on the strict lane — correct behavior.
-  Cross-goroutine mutation (E9 closure, 2026-09-02; fidelity finding
-  A1-20): the delete-prune reaches EVERY goroutine's in-flight frames
-  over the deleted map — the deleter's own through `stepFn`, all
-  others through the pool step (`pruneForeign`, Multi.lean) — so a
-  DRF cross-goroutine delete-then-re-create (handshake-ordered
-  against the ranging goroutine's picks) makes the re-created key a
-  candidate again and non-mandatory, exactly as a same-goroutine one
-  does. The former residual narrowing ("walks the DELETING
-  goroutine's own continuation") is retired: its unrealizable member
-  — re-production of a cross-goroutine deleted-then-re-created key —
-  is gc-EXHIBITED (~87% of runs on a 3-key map when one fresh insert
-  sits between the delete and the re-create; evidence dir
-  `docs/evidence/2026-09-02_e9-cross-goroutine-prune/`) and is now
-  modeled (membership rows `maps/cross-goroutine-delete-readd/{drf,
-  insert}`, admitted sets {3,4} / {1,2}; the over-prune guards are the
-  confluent rows `maps/cross-goroutine-delete-noreadd/{delete,clear,
-  other-map}`). UNSYNCHRONIZED cross-goroutine
-  mutation is refused by the detector (pick-time load vs the delete's
-  write, HB-unordered; row `.../racy`), so no narrowing hides behind a
-  refusal either. -/
+  production order over live entries; each live entry produced AT
+  MOST ONCE (its id enters `produced`); removal exact (absent at pick
+  time ⇒ not a candidate); values live at production; created entries
+  — any subset produced, each at any interleaved position,
+  re-creations re-producible as the new entries they are (the FULL
+  literal envelope: the 2026-08-19 ruling REJECTED the
+  at-most-once-per-KEY and re-created-start-keys-mandatory
+  narrowings). Consequences carried deliberately: self-inserting loops
+  have genuinely unbounded trace sets (∀-streams certification fails
+  closed on them — membership lane territory), and the CANONICAL
+  member is BY DEFINITION the machine at the zero choice stream (index
+  0 = first candidate in cell order, stop ordered LAST), so
+  mutation-free ranges keep the first-remaining-in-insertion-order
+  pick sequence and self-inserting loops fuel-out VISIBLY on the
+  strict lane — correct behavior. Cross-goroutine mutation (E9,
+  closed 2026-09-02 by the now-retired pool-level prune, carried
+  identically by the stamps): a DRF cross-goroutine
+  delete-then-re-create (handshake-ordered against the ranging
+  goroutine's picks) makes the re-created key a fresh candidate and
+  non-mandatory exactly as a same-goroutine one does, because the
+  frame reads identity off the cell it loads — no goroutine's
+  continuation is ever rewritten by another's step (the thread-locality
+  NPDRF's obstruction 7 asked for). gc EXHIBITS the re-production
+  member (~87% of runs on a 3-key map when one fresh insert sits
+  between the delete and the re-create; evidence dir
+  `docs/evidence/2026-09-02_e9-cross-goroutine-prune/`); the pins are
+  the membership rows `maps/cross-goroutine-delete-readd/{drf,insert}`
+  (admitted sets {3,4} / {1,2}) and the confluent guards
+  `maps/cross-goroutine-delete-noreadd/{delete,clear,other-map}`;
+  set-equality of the stamped machine with the pruned one on every
+  such row is recorded in `docs/evidence/2026-09-03_hygiene-b1-stamps/`.
+  UNSYNCHRONIZED cross-goroutine mutation is refused by the detector
+  (pick-time load vs the delete's write, HB-unordered; row
+  `.../racy`), so no narrowing hides behind a refusal either.
+  Keys whose Go `==` is irreflexive (NaN, and aggregates/interfaces
+  holding one) are ordinary stamped entries here — each produced once
+  — where the retired key-set frame could never mark them produced
+  (`maps/nan-key-range`, BUG-088). -/
   | mapIterK (keyVar valVar : Option String) (keyTy valTy : Ty) (body : Stmt)
-      (base : Option Loc) (produced : Array GoValue)
-      (start : Array GoValue) (env : LocalEnv) (k : Cont)
+      (base : Option Loc) (produced : Array Nat)
+      (start : Array Nat) (env : LocalEnv) (k : Cont)
   /-- Awaiting a `panic` payload value. -/
   | panicArgK (k : Cont)
   /-- The suspended panic chain while a panic-path deferred call runs
@@ -2298,154 +2288,6 @@ def recoverResult : Cont → GoValue × Cont
       let (v, k') := recoverResult k; (v, .syncStK a b c d k')
   | .atomicStK a b c d k =>
       let (v, k') := recoverResult k; (v, .atomicStK a b c d k')
-
-/-- Remove every occurrence of `key` (Go map-key equality at `keyTy`)
-from a key list — the delete-prune's set subtraction. Structural. -/
-def removeKeyList (s : ExecState) (keyTy : Ty) (key : GoValue) :
-    List GoValue → Except GoError (List GoValue)
-  | [] => return []
-  | p :: rest => do
-      let tail ← removeKeyList s keyTy key rest
-      if ← valueEq s keyTy p key then
-        return tail
-      else
-        return (p :: tail)
-
-/-- Prune one DELETED key out of every in-flight `mapIterK` frame over
-`delBase` (BUG-005 (L) surgery): the key leaves the frame's
-`produced` set AND its mandatory `start` set — a
-deleted-then-re-created key is a NEW entry (adopted reading,
-`docs/spec-interpretations.md` I-1 / ledger L-012), so it must be a
-candidate again if re-created, and its mandatory status is gone
-forever. Key comparison is Go map-key equality at the FRAME's own
-key type (the same `valueEq` the map ops use), so the walk is
-`Except`-monadic and fails closed on an ill-formed comparison. The
-walk crosses every frame (a range body may delete through a call);
-`stepFn` applies it to the DELETING goroutine's continuation
-(`contAfterStmtOp`) and the pool step applies the same function to
-every OTHER goroutine's continuation (`pruneForeign`, Multi.lean —
-the E9 closure, 2026-09-02). -/
-def pruneIterFramesKey (s : ExecState) (delBase : Loc) (key : GoValue) :
-    Cont → Except GoError Cont
-  | .stop => return .stop
-  | .seq a b k => do return .seq a b (← pruneIterFramesKey s delBase key k)
-  | .loop a b c k => do return .loop a b c (← pruneIterFramesKey s delBase key k)
-  | .frame a b c d k w => do return .frame a b c d (← pruneIterFramesKey s delBase key k) w
-  | .deferCalleeK a b k => do return .deferCalleeK a b (← pruneIterFramesKey s delBase key k)
-  | .deferArgsK a b c d k => do return .deferArgsK a b c d (← pruneIterFramesKey s delBase key k)
-  | .breakableK k => do return .breakableK (← pruneIterFramesKey s delBase key k)
-  | .labelK a k => do return .labelK a (← pruneIterFramesKey s delBase key k)
-  | .callValCalleeK a b c k => do return .callValCalleeK a b c (← pruneIterFramesKey s delBase key k)
-  | .callValArgsK a b c d e k => do return .callValArgsK a b c d e (← pruneIterFramesKey s delBase key k)
-  | .strictK a b c d k => do return .strictK a b c d (← pruneIterFramesKey s delBase key k)
-  | .andK a b k => do return .andK a b (← pruneIterFramesKey s delBase key k)
-  | .orK a b k => do return .orK a b (← pruneIterFramesKey s delBase key k)
-  | .boolK k => do return .boolK (← pruneIterFramesKey s delBase key k)
-  | .ifK a b c k => do return .ifK a b c (← pruneIterFramesKey s delBase key k)
-  | .whileK a b c k => do return .whileK a b c (← pruneIterFramesKey s delBase key k)
-  | .callArgsK a b c d e k => do return .callArgsK a b c d e (← pruneIterFramesKey s delBase key k)
-  | .stmtOpK a b c d e k => do return .stmtOpK a b c d e (← pruneIterFramesKey s delBase key k)
-  | .mapRangeK a b c d e f k => do return .mapRangeK a b c d e f (← pruneIterFramesKey s delBase key k)
-  | .mapIterK kv vv keyTy valTy body base produced start env k => do
-      let k' ← pruneIterFramesKey s delBase key k
-      if base == some delBase then
-        let produced' := (← removeKeyList s keyTy key produced.toList).toArray
-        let start' := (← removeKeyList s keyTy key start.toList).toArray
-        return .mapIterK kv vv keyTy valTy body base produced' start' env k'
-      else
-        return .mapIterK kv vv keyTy valTy body base produced start env k'
-  | .panicArgK k => do return .panicArgK (← pruneIterFramesKey s delBase key k)
-  | .panicResumeK a k => do return .panicResumeK a (← pruneIterFramesKey s delBase key k)
-  | .chanStK a b c d k => do return .chanStK a b c d (← pruneIterFramesKey s delBase key k)
-  | .selectOpsK a b c d e k => do return .selectOpsK a b c d e (← pruneIterFramesKey s delBase key k)
-  | .tgtOpK a b c d e f g h i j k => do return .tgtOpK a b c d e f g h i j (← pruneIterFramesKey s delBase key k)
-  | .rhsK a b c d e f k => do return .rhsK a b c d e f (← pruneIterFramesKey s delBase key k)
-  | .storeK a b c d k => do return .storeK a b c d (← pruneIterFramesKey s delBase key k)
-  | .goCalleeK a b k => do return .goCalleeK a b (← pruneIterFramesKey s delBase key k)
-  | .goArgsK a b c d k => do return .goArgsK a b c d (← pruneIterFramesKey s delBase key k)
-  | .syncStK a b c d k => do return .syncStK a b c d (← pruneIterFramesKey s delBase key k)
-  | .atomicStK a b c d k => do return .atomicStK a b c d (← pruneIterFramesKey s delBase key k)
-
-/-- `clear(m)`'s prune: EVERY key of every in-flight `mapIterK` frame
-over `delBase` leaves both sets (all entries were deleted). Pure — no
-key comparison is needed to empty a set. -/
-def pruneIterFramesAll (delBase : Loc) : Cont → Cont
-  | .stop => .stop
-  | .seq a b k => .seq a b (pruneIterFramesAll delBase k)
-  | .loop a b c k => .loop a b c (pruneIterFramesAll delBase k)
-  | .frame a b c d k w => .frame a b c d (pruneIterFramesAll delBase k) w
-  | .deferCalleeK a b k => .deferCalleeK a b (pruneIterFramesAll delBase k)
-  | .deferArgsK a b c d k => .deferArgsK a b c d (pruneIterFramesAll delBase k)
-  | .breakableK k => .breakableK (pruneIterFramesAll delBase k)
-  | .labelK a k => .labelK a (pruneIterFramesAll delBase k)
-  | .callValCalleeK a b c k => .callValCalleeK a b c (pruneIterFramesAll delBase k)
-  | .callValArgsK a b c d e k => .callValArgsK a b c d e (pruneIterFramesAll delBase k)
-  | .strictK a b c d k => .strictK a b c d (pruneIterFramesAll delBase k)
-  | .andK a b k => .andK a b (pruneIterFramesAll delBase k)
-  | .orK a b k => .orK a b (pruneIterFramesAll delBase k)
-  | .boolK k => .boolK (pruneIterFramesAll delBase k)
-  | .ifK a b c k => .ifK a b c (pruneIterFramesAll delBase k)
-  | .whileK a b c k => .whileK a b c (pruneIterFramesAll delBase k)
-  | .callArgsK a b c d e k => .callArgsK a b c d e (pruneIterFramesAll delBase k)
-  | .stmtOpK a b c d e k => .stmtOpK a b c d e (pruneIterFramesAll delBase k)
-  | .mapRangeK a b c d e f k => .mapRangeK a b c d e f (pruneIterFramesAll delBase k)
-  | .mapIterK kv vv keyTy valTy body base produced start env k =>
-      if base == some delBase then
-        .mapIterK kv vv keyTy valTy body base #[] #[] env
-          (pruneIterFramesAll delBase k)
-      else
-        .mapIterK kv vv keyTy valTy body base produced start env
-          (pruneIterFramesAll delBase k)
-  | .panicArgK k => .panicArgK (pruneIterFramesAll delBase k)
-  | .panicResumeK a k => .panicResumeK a (pruneIterFramesAll delBase k)
-  | .chanStK a b c d k => .chanStK a b c d (pruneIterFramesAll delBase k)
-  | .selectOpsK a b c d e k => .selectOpsK a b c d e (pruneIterFramesAll delBase k)
-  | .tgtOpK a b c d e f g h i j k => .tgtOpK a b c d e f g h i j (pruneIterFramesAll delBase k)
-  | .rhsK a b c d e f k => .rhsK a b c d e f (pruneIterFramesAll delBase k)
-  | .storeK a b c d k => .storeK a b c d (pruneIterFramesAll delBase k)
-  | .goCalleeK a b k => .goCalleeK a b (pruneIterFramesAll delBase k)
-  | .goArgsK a b c d k => .goArgsK a b c d (pruneIterFramesAll delBase k)
-  | .syncStK a b c d k => .syncStK a b c d (pruneIterFramesAll delBase k)
-  | .atomicStK a b c d k => .atomicStK a b c d (pruneIterFramesAll delBase k)
-
-/-- The continuation AFTER a wide-statement apply (BUG-005 (L)
-surgery): `mapDelete` prunes the deleted key from every in-flight
-iteration over the same map; `clearMap` prunes everything; every other
-op leaves the continuation untouched (`.ok k` by `rfl` per op — the
-existing wide-statement laws keep their shape at any concrete op).
-Shared VERBATIM by rule `stmtOpApply` and `stepFn`'s apply arm. The
-nullary rule (`stmtOpNullary`) deliberately does NOT thread it: no
-nullary op is a pruning op — `mapDelete` carries two operands and
-`clearMap` one — so it would be the identity there (docstring
-corrected at the audit fix round, reviewer A nit: it used to claim
-the nullary rule shares this function, under a rule name —
-`stmtOpStart` — that does not exist). The state argument is the
-POST-apply state (key comparison consults `types` only, which no wide
-op mutates). The pool step re-applies this SAME function to every
-other goroutine's continuation at a pruning-op apply that proceeded
-(`pruneForeign`, Multi.lean — the E9 closure), so one definition
-carries both the same-goroutine and the cross-goroutine prune. -/
-def contAfterStmtOp (s : ExecState) (op : StmtOp) (vs : List GoValue)
-    (k : Cont) : Except GoError Cont :=
-  match op with
-  | .mapDelete keyTy =>
-      match vs with
-      | [baseV, keyV] => do
-          let map ← valueAsMap baseV
-          match map.base with
-          | none => return k
-          | some l =>
-              pruneIterFramesKey s l (← normalizeValueForTy s keyTy keyV) k
-      | _ => return k
-  | .clearMap =>
-      match vs with
-      | [baseV] => do
-          let map ← valueAsMap baseV
-          match map.base with
-          | none => return k
-          | some l => return pruneIterFramesAll l k
-      | _ => return k
-  | _ => return k
 
 /-- Control configurations (the Iris `Expr` projection; the `ExecState` is
 the paired `Step` component, as before). New over the old relation:
@@ -3421,21 +3263,21 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       valueAsLoc v = .error (.panic msg) →
       Step (.retV v (.stmtOpK op nt done (e :: rest) env k)) s
         (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
-  | stmtOpApply {op nt done v env k k' s s' ch ch'} :
+  | stmtOpApply {op nt done v env k s s' ch ch'} :
       applyStmtOp s ch op nt (v :: done).reverse = .ok (s', ch') →
-      contAfterStmtOp s' op (v :: done).reverse k = .ok k' →
-      Step (.retV v (.stmtOpK op nt done [] env k)) s (.next k') s'
+      Step (.retV v (.stmtOpK op nt done [] env k)) s (.next k) s'
   | stmtOpApplyPanic {op nt done v msg env k s ch} :
       applyStmtOp s ch op nt (v :: done).reverse = .error (.panic msg) →
       Step (.retV v (.stmtOpK op nt done [] env k)) s
         (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
   -- Map iteration — LIVE (BUG-005 (L) surgery, ruled 2026-08-19; the
-  -- snapshot rules are retired): start records the base cell and the
-  -- START-KEY set; each pick LOADS the live cell, filters candidates
-  -- by the produced-key set, and either picks ANY candidate (the
-  -- nondeterministic order latitude + the created-entries latitude) or
-  -- STOPS, the stop legal only when no never-removed start key remains
-  -- a candidate (the spec-forced traversal clause). The envelope
+  -- snapshot rules are retired) over entry-identity stamps (B1): start
+  -- records the base cell and the START-ID set; each pick LOADS the
+  -- live cell, filters candidates by the produced-ID set, and either
+  -- picks ANY candidate (the nondeterministic order latitude + the
+  -- created-entries latitude) or STOPS, the stop legal only when no
+  -- never-removed start entry remains a candidate (the spec-forced
+  -- traversal clause; `mapIterMandatoryRemains` is pure). The envelope
   -- statement lives on `Cont.mapIterK`'s docstring; the executable
   -- consumes one choice of width `candidates + stop`, stop LAST — the
   -- zero stream IS the canonical member, by definition.
@@ -3450,23 +3292,20 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       mapIterCandidates s keyTy valTy base produced = .ok #[] →
       Step (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k)) s
         (.next k) s
-  | mapIterNext {keyVar valVar keyTy valTy body base produced start cands mand idx env env' k s s'}
+  | mapIterNext {keyVar valVar keyTy valTy body base produced start cands idx env env' k s s'}
       (hidx : idx < cands.size) :
       mapIterCandidates s keyTy valTy base produced = .ok cands →
-      -- The mandatory computation must SUCCEED (its value is free): the
-      -- executable computes the pick width from it on every nonempty
-      -- pick, so completeness (`step_complete`) needs its success as a
-      -- rule premise — an error there is a stuck step on both sides.
-      mapIterMandatoryRemains s keyTy cands start = .ok mand →
+      -- (The mandatory test is pure since B1, so it needs no success
+      -- premise here: the pick width is a total function of `cands`.)
       bindIterVars env.pushScope s keyVar valVar keyTy valTy
-        cands[idx].1 cands[idx].2 = .ok (env', s') →
+        cands[idx].2.1 cands[idx].2.2 = .ok (env', s') →
       Step (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k)) s
         (.exec body env' (.mapIterK keyVar valVar keyTy valTy body
           base (produced.push cands[idx].1) start env k)) s'
   | mapIterStop {keyVar valVar keyTy valTy body base produced start cands env k s} :
       mapIterCandidates s keyTy valTy base produced = .ok cands →
       cands.size ≠ 0 →
-      mapIterMandatoryRemains s keyTy cands start = .ok false →
+      mapIterMandatoryRemains cands start = false →
       Step (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k)) s
         (.next k) s
   | mapIterContinue {keyVar valVar keyTy valTy body base produced start env k s} :

@@ -234,25 +234,25 @@ theorem GoValue.eqbListWith_sound {f : GoValue → GoValue → Bool}
       simp only [GoValue.eqbListWith, Bool.and_eq_true] at h
       cases hf _ _ h.1; cases ih h.2; rfl
 
-theorem GoValue.eqbPairsWith_sound {f : GoValue → GoValue → Bool}
+theorem GoValue.eqbTriplesWith_sound {f : GoValue → GoValue → Bool}
     (hf : ∀ a b, f a b = true → a = b) :
-    ∀ {as bs : List (GoValue × GoValue)},
-      GoValue.eqbPairsWith f as bs = true → as = bs := by
+    ∀ {as bs : List (Nat × GoValue × GoValue)},
+      GoValue.eqbTriplesWith f as bs = true → as = bs := by
   intro as
   induction as with
   | nil => intro bs h; cases bs with
     | nil => rfl
-    | cons b bs => simp [GoValue.eqbPairsWith] at h
+    | cons b bs => simp [GoValue.eqbTriplesWith] at h
   | cons a as ih =>
     intro bs h
-    obtain ⟨k₁, v₁⟩ := a
+    obtain ⟨i₁, k₁, v₁⟩ := a
     cases bs with
-    | nil => simp [GoValue.eqbPairsWith] at h
+    | nil => simp [GoValue.eqbTriplesWith] at h
     | cons b bs =>
-      obtain ⟨k₂, v₂⟩ := b
-      simp only [GoValue.eqbPairsWith, Bool.and_eq_true] at h
-      obtain ⟨⟨h1, h2⟩, h3⟩ := h
-      cases hf _ _ h1; cases hf _ _ h2
+      obtain ⟨i₂, k₂, v₂⟩ := b
+      simp only [GoValue.eqbTriplesWith, Bool.and_eq_true] at h
+      obtain ⟨⟨⟨h0, h1⟩, h2⟩, h3⟩ := h
+      cases eq_of_beq h0; cases hf _ _ h1; cases hf _ _ h2
       exact congrArg _ (ih h3)
 
 theorem GoValue.eqbFieldsWith_sound {f : GoValue → GoValue → Bool}
@@ -355,10 +355,14 @@ theorem GoValue.eqbFuel_sound :
       cases array_toList_inj (GoValue.eqbListWith_sound ih
         (show GoValue.eqbListWith (GoValue.eqbFuel f) x.toList y.toList = true
           from h)); rfl
-    case mapData.mapData x y =>
-      cases array_toList_inj (GoValue.eqbPairsWith_sound ih
-        (show GoValue.eqbPairsWith (GoValue.eqbFuel f) x.toList y.toList = true
-          from h)); rfl
+    case mapData.mapData x n₁ y n₂ =>
+      have hxx : _ = true := (show (n₁ == n₂
+          && GoValue.eqbTriplesWith (GoValue.eqbFuel f) x.toList y.toList)
+          = true from h)
+      simp only [Bool.and_eq_true] at hxx
+      obtain ⟨h1, h2⟩ := hxx
+      cases eq_of_beq h1
+      cases array_toList_inj (GoValue.eqbTriplesWith_sound ih h2); rfl
     case chanData.chanData b₁ c₁ k₁ b₂ c₂ k₂ =>
       have hxx : _ = true := (show ((c₁ == c₂ && k₁ == k₂)
           && GoValue.eqbListWith (GoValue.eqbFuel f) b₁.toList b₂.toList)

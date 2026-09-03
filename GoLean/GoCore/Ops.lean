@@ -1911,11 +1911,12 @@ def checkKeyHashable (state : ExecState) (key : GoValue)
 -- `mapAssignValue`'s always-replace `entries.set!` — the E10 pinned
 -- latitude; the site caveat (envelope, observable key kinds, transfer
 -- limit) lives at `mapAssignValue` (Machine.lean).
-def mapEntryIndex? (state : ExecState) (keyTy : Ty) (entries : Array (GoValue × GoValue))
+def mapEntryIndex? (state : ExecState) (keyTy : Ty)
+    (entries : Array (Nat × GoValue × GoValue))
     (key : GoValue) (isInsert : Bool := false) : Except GoError (Option Nat) := do
   checkKeyHashable state key isInsert (!entries.isEmpty)
   let mut i := 0
-  for (entryKey, _) in entries do
+  for (_, entryKey, _) in entries do
     if ← valueEq state keyTy entryKey key then
       return some i
     i := i + 1
@@ -2053,13 +2054,16 @@ def sliceVisibleValues (state : ExecState) (slice : SliceValue) :
 cluster (reshape S2 motion, 2026-07-23) for sharing with `Machine`/`stepFn`.
 Pure motion — no behavior change. -/
 
+/-- The ranged/indexed map's cell contents: base cell, stamped entries
+`(id, key, value)` in cell order, and the map's `nextId` counter
+(entry-identity stamps, B1); `none` for a nil map. -/
 def mapEntries (state : ExecState) (map : MapValue) :
-    Except GoError (Option (Loc × Array (GoValue × GoValue))) := do
+    Except GoError (Option (Loc × Array (Nat × GoValue × GoValue) × Nat)) := do
   match map.base with
   | none => return none
   | some baseLoc =>
       match ← loadLoc state baseLoc with
-      | .mapData entries => return some (baseLoc, entries)
+      | .mapData entries nextId => return some (baseLoc, entries, nextId)
       | other => stuck s!"expected map data, got {repr other}"
 
 def mapLookupValue (state : ExecState) (map : MapValue) (key : GoValue)
@@ -2071,11 +2075,11 @@ def mapLookupValue (state : ExecState) (map : MapValue) (key : GoValue)
   | none => do
       checkKeyHashable state key (isInsert := false) (nonEmpty := false)
       return (← defaultValue state valueTy, false)
-  | some (_, entries) =>
+  | some (_, entries, _) =>
       match ← mapEntryIndex? state keyTy entries key with
       | some i =>
           match entries[i]? with
-          | some (_, value) => return (value, true)
+          | some (_, _, value) => return (value, true)
           | none => stuck s!"missing map entry at index {i}"
       | none => return (← defaultValue state valueTy, false)
 

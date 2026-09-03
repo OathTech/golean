@@ -1,0 +1,27 @@
+building Lean executable...
+Build completed successfully (60 jobs).
+native frontend: per-case type-check + emit (no batch export)
+PASS	maps/delete-unreached-during-range	maps,delete,range,evaluation_order
+PASS	maps/clear-during-range	maps,clear,range,evaluation_order
+PASS	maps/delete-during-range	maps,delete,range,evaluation_order
+PASS	maps/added-entries-bound	maps,range,evaluation_order
+PASS	maps/update-during-range	maps,range,loops,assignment,keys
+PASS	noodler/membership/delete-other-key-during-range	maps,range,delete	stage=confluent	detail=|set|=1 certified over all schedules; coverage-observations: observations=1 steps=139 probes=3 sites=1 leaves=2 maxdepth=1 width=4
+PASS	noodler/maps/single-entry-range	maps,range
+PASS	maps/cross-goroutine-delete-noreadd/clear	maps,clear,range,goroutines,channels	stage=confluent	detail=|set|=1 certified over all schedules; coverage-observations: observations=1 steps=13917 probes=2949 sites=983 leaves=990 maxdepth=13 width=4 backedge=full
+PASS	maps/cross-goroutine-delete-noreadd/delete	maps,delete,range,goroutines,channels	stage=confluent	detail=|set|=1 certified over all schedules; coverage-observations: observations=1 steps=137326 probes=12399 sites=4133 leaves=2700 maxdepth=17 width=4 backedge=full
+PASS	maps/cross-goroutine-delete-noreadd/other-map	maps,delete,range,goroutines,channels	stage=confluent	detail=|set|=1 certified over all schedules; coverage-observations: observations=1 steps=137371 probes=12399 sites=4133 leaves=2700 maxdepth=17 width=4 backedge=full
+PASS	race/negative/map-range-iter	goroutines,channels,maps,range,race	stage=racy	detail=every enumerated path refuses: coverage-observations: observations=1 steps=2909 probes=777 sites=259 leaves=240 maxdepth=9 width=4 backedge=full
+PASS	maps/cross-goroutine-delete-readd/racy	maps,delete,range,goroutines,channels,race	stage=racy	detail=every enumerated path refuses: coverage-observations: observations=1 steps=690 probes=102 sites=34 leaves=30 maxdepth=9 width=4 backedge=full
+PASS	noodler/membership/insert-then-delete-during-range	maps,range,delete,nondet	stage=membership	detail=enumerated=2 exhibited=1 unexhibited=1 samples=5 (members in artifacts/coverage/membership/noodler/membership/insert-then-delete-during-range)
+PASS	maps/added-entry-count	maps,range,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=2 unexhibited=0 samples=5 (members in artifacts/coverage/membership/maps/added-entry-count)
+PASS	maps/delete-readd-during-range	maps,delete,range,evaluation_order,nondet	stage=membership	detail=enumerated=3 exhibited=1 unexhibited=2 samples=5 (members in artifacts/coverage/membership/maps/delete-readd-during-range)
+PASS	noodler/membership/three-key-map-order	maps,range,nondet	stage=membership	detail=enumerated=6 exhibited=2 unexhibited=4 samples=5 (members in artifacts/coverage/membership/noodler/membership/three-key-map-order)
+PASS	maps/delete-insert-readd-during-range	maps,delete,range,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 unexhibited=1 samples=5 (members in artifacts/coverage/membership/maps/delete-insert-readd-during-range)
+PASS	maps/cross-goroutine-delete-readd/drf	maps,delete,range,goroutines,channels,nondet	stage=membership	detail=enumerated=2 exhibited=1 unexhibited=1 samples=5 (members in artifacts/coverage/membership/maps/cross-goroutine-delete-readd/drf)
+PASS	maps/cross-goroutine-delete-readd/insert	maps,delete,range,goroutines,channels,nondet	stage=membership	detail=enumerated=2 exhibited=1 unexhibited=1 samples=5 (members in artifacts/coverage/membership/maps/cross-goroutine-delete-readd/insert)
+
+differential coverage summary: cases=19 pass=19 fail=0 export_status=0
+results: artifacts/coverage/latest.tsv
+metadata: artifacts/coverage/latest.meta.tsv
+EXIT=0

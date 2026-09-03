@@ -99,7 +99,7 @@ def GoValue.locSup : GoValue → Nat
   | .array values => goValueListSup values.toList
   | .slice s => optLocSup s.base
   | .map m => optLocSup m.base
-  | .mapData entries => goValueEntriesSup entries.toList
+  | .mapData entries _ => goValueEntriesSup entries.toList
   | .chan c => optLocSup c.base
   | .chanData buf _ _ => goValueListSup buf.toList
   | .funcVal _ captured => goValueListSup captured
@@ -115,9 +115,11 @@ def goValueFieldsSup : List (String × GoValue) → Nat
   | [] => 0
   | (_, v) :: vs => max (GoValue.locSup v) (goValueFieldsSup vs)
 
-def goValueEntriesSup : List (GoValue × GoValue) → Nat
+/-- Stamped map entries `(id, key, value)`: the id is a bare `Nat`
+(entry identity, B1) and contributes nothing. -/
+def goValueEntriesSup : List (Nat × GoValue × GoValue) → Nat
   | [] => 0
-  | (k, v) :: vs =>
+  | (_, k, v) :: vs =>
       max (max (GoValue.locSup k) (GoValue.locSup v)) (goValueEntriesSup vs)
 
 end
@@ -388,10 +390,9 @@ def Cont.locSup : Cont → Nat
         (max (LocalEnv.locSup env) (Cont.locSup k))
   | .mapRangeK _ _ _ _ body env k =>
       max (max (Stmt.locSup body) (LocalEnv.locSup env)) (Cont.locSup k)
-  | .mapIterK _ _ _ _ body base produced start env k =>
-      max (max (Stmt.locSup body)
-          (max (optLocSup base)
-            (max (goValueListSup produced.toList) (goValueListSup start.toList))))
+  -- The `produced`/`start` ID sets are bare `Nat`s (B1 stamps): loc-free.
+  | .mapIterK _ _ _ _ body base _ _ env k =>
+      max (max (Stmt.locSup body) (optLocSup base))
         (max (LocalEnv.locSup env) (Cont.locSup k))
   | .panicArgK k => Cont.locSup k
   | .panicResumeK chain k => max (panicChainSup chain) (Cont.locSup k)
@@ -657,9 +658,9 @@ theorem goValueFieldsSup_eq :
 
 theorem goValueEntriesSup_eq :
     ∀ l, goValueEntriesSup l
-      = supBy (fun p => max (GoValue.locSup p.1) (GoValue.locSup p.2)) l
+      = supBy (fun p => max (GoValue.locSup p.2.1) (GoValue.locSup p.2.2)) l
   | [] => rfl
-  | (_, _) :: vs => by simp [goValueEntriesSup, supBy, goValueEntriesSup_eq vs]
+  | (_, _, _) :: vs => by simp [goValueEntriesSup, supBy, goValueEntriesSup_eq vs]
 
 theorem heapLocSup_eq :
     ∀ h : Heap, Heap.locSup h
@@ -1782,34 +1783,34 @@ theorem goValueFieldsSup_push {arr : Array (String × GoValue)}
       = max (goValueFieldsSup arr.toList) (GoValue.locSup p.2) := by
   simp [goValueFieldsSup_eq, Array.toList_push, supBy_append, supBy]
 
-theorem goValueEntriesSup_push {arr : Array (GoValue × GoValue)}
-    {p : GoValue × GoValue} :
+theorem goValueEntriesSup_push {arr : Array (Nat × GoValue × GoValue)}
+    {p : Nat × GoValue × GoValue} :
     goValueEntriesSup (arr.push p).toList
       = max (goValueEntriesSup arr.toList)
-          (max (GoValue.locSup p.1) (GoValue.locSup p.2)) := by
+          (max (GoValue.locSup p.2.1) (GoValue.locSup p.2.2)) := by
   simp [goValueEntriesSup_eq, Array.toList_push, supBy_append, supBy]
 
-theorem goValueEntriesSup_mem {arr : List (GoValue × GoValue)}
-    {p : GoValue × GoValue} (h : p ∈ arr) :
-    max (GoValue.locSup p.1) (GoValue.locSup p.2) ≤ goValueEntriesSup arr := by
+theorem goValueEntriesSup_mem {arr : List (Nat × GoValue × GoValue)}
+    {p : Nat × GoValue × GoValue} (h : p ∈ arr) :
+    max (GoValue.locSup p.2.1) (GoValue.locSup p.2.2) ≤ goValueEntriesSup arr := by
   rw [goValueEntriesSup_eq]
-  exact supBy_mem (f := fun p => max (GoValue.locSup p.1) (GoValue.locSup p.2)) h
+  exact supBy_mem (f := fun p => max (GoValue.locSup p.2.1) (GoValue.locSup p.2.2)) h
 
-theorem goValueEntriesSup_setIfInBounds {arr : Array (GoValue × GoValue)} {i : Nat}
-    {p : GoValue × GoValue} :
+theorem goValueEntriesSup_setIfInBounds {arr : Array (Nat × GoValue × GoValue)} {i : Nat}
+    {p : Nat × GoValue × GoValue} :
     goValueEntriesSup (arr.setIfInBounds i p).toList
       ≤ max (goValueEntriesSup arr.toList)
-          (max (GoValue.locSup p.1) (GoValue.locSup p.2)) := by
+          (max (GoValue.locSup p.2.1) (GoValue.locSup p.2.2)) := by
   simp only [goValueEntriesSup_eq]
   rw [Array.toList_setIfInBounds]
   refine supBy_le_iff.mpr fun a ha => ?_
   rcases List.mem_or_eq_of_mem_set ha with hmem | rfl
   · exact Nat.le_trans
-      (supBy_mem (f := fun p => max (GoValue.locSup p.1) (GoValue.locSup p.2)) hmem)
+      (supBy_mem (f := fun p => max (GoValue.locSup p.2.1) (GoValue.locSup p.2.2)) hmem)
       (Nat.le_max_left _ _)
   · exact Nat.le_max_right _ _
 
-theorem goValueEntriesSup_eraseIdx! {arr : Array (GoValue × GoValue)} {i : Nat} :
+theorem goValueEntriesSup_eraseIdx! {arr : Array (Nat × GoValue × GoValue)} {i : Nat} :
     goValueEntriesSup (arr.eraseIdx! i).toList
       ≤ goValueEntriesSup arr.toList := by
   simp only [goValueEntriesSup_eq]
@@ -1819,10 +1820,10 @@ theorem goValueEntriesSup_eraseIdx! {arr : Array (GoValue × GoValue)} {i : Nat}
     exact supBy_le_of_subset fun a ha => List.mem_of_mem_eraseIdx ha
   · -- out of range: `panic!` computes to `default = #[]`
     rw [show (panicWithPosWithDecl "Init.Data.Array.Basic" "Array.eraseIdx!" 1820 47
-        "invalid index" : Array (GoValue × GoValue)) = #[] from rfl]
+        "invalid index" : Array (Nat × GoValue × GoValue)) = #[] from rfl]
     simp [supBy]
 
-theorem goValueEntriesSup_eraseIdx {arr : Array (GoValue × GoValue)} {i : Nat}
+theorem goValueEntriesSup_eraseIdx {arr : Array (Nat × GoValue × GoValue)} {i : Nat}
     {h : i < arr.size} :
     goValueEntriesSup ((arr.eraseIdx i h).toList)
       ≤ goValueEntriesSup arr.toList := by
@@ -1842,11 +1843,11 @@ theorem goValueListSup_setIfInBounds {arr : Array GoValue} {i : Nat} {x : GoValu
 
 /-! ## `StructFields.set` (the store path through a struct) -/
 
-theorem goValueEntriesSup_set! {arr : Array (GoValue × GoValue)} {i : Nat}
-    {p : GoValue × GoValue} :
+theorem goValueEntriesSup_set! {arr : Array (Nat × GoValue × GoValue)} {i : Nat}
+    {p : Nat × GoValue × GoValue} :
     goValueEntriesSup (arr.set! i p).toList
       ≤ max (goValueEntriesSup arr.toList)
-          (max (GoValue.locSup p.1) (GoValue.locSup p.2)) := by
+          (max (GoValue.locSup p.2.1) (GoValue.locSup p.2.2)) := by
   rw [Array.set!]
   exact goValueEntriesSup_setIfInBounds
 
@@ -2169,12 +2170,12 @@ theorem bindParams_wf :
 /-! ## Map/assert helpers -/
 
 theorem mapEntries_locSup {σ : ExecState} {m : MapValue}
-    {out : Option (Loc × Array (GoValue × GoValue))}
+    {out : Option (Loc × Array (Nat × GoValue × GoValue) × Nat)}
     (h : mapEntries σ m = .ok out) :
-    ∀ {baseLoc entries}, out = some (baseLoc, entries) →
+    ∀ {baseLoc entries nextId}, out = some (baseLoc, entries, nextId) →
       Loc.locSup baseLoc ≤ optLocSup m.base
         ∧ goValueEntriesSup entries.toList ≤ Heap.locSup σ.heap := by
-  intro baseLoc entries hout
+  intro baseLoc entries nextId hout
   subst hout
   unfold mapEntries at h
   split at h
@@ -2183,9 +2184,9 @@ theorem mapEntries_locSup {σ : ExecState} {m : MapValue}
     simp only [bind_eq_ok] at h
     obtain ⟨bv, hbv, h⟩ := h
     split at h
-    · rename_i es
+    · rename_i es n
       simp only [pure_eq_ok, Except.ok.injEq, Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl⟩ := h
       constructor
       · rw [heq]; exact Nat.le_refl _
       · have := loadLoc_locSup hbv
@@ -2193,7 +2194,7 @@ theorem mapEntries_locSup {σ : ExecState} {m : MapValue}
     · simp at h
 
 theorem mapEntryIndex?_ok_entries {σ : ExecState} {kt : Ty}
-    {entries : Array (GoValue × GoValue)} {key : GoValue} {i : Nat}
+    {entries : Array (Nat × GoValue × GoValue)} {key : GoValue} {i : Nat}
     {isInsert : Bool}
     (h : mapEntryIndex? σ kt entries key isInsert = .ok (some i)) :
     True := trivial
@@ -2210,16 +2211,16 @@ theorem mapLookupValue_locSup {σ : ExecState} {m : MapValue} {key : GoValue}
     obtain ⟨_, _, d, hd, rfl, rfl⟩ := h
     rw [defaultValue_locSup hd]
     exact Nat.zero_le _
-  · rename_i baseLoc entries
+  · rename_i baseLoc entries nextId
     simp only [bind_eq_ok] at h
     obtain ⟨idx, hidx, h⟩ := h
     split at h
     · rename_i i
       split at h
-      · rename_i k' v' hp
+      · rename_i id' k' v' hp
         simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
-        have hmem : (k', v') ∈ entries.toList :=
+        have hmem : (id', k', v') ∈ entries.toList :=
           List.mem_of_getElem? (by rw [Array.getElem?_toList]; exact hp)
         have h2 := (mapEntries_locSup hes rfl).2
         have h3 := goValueEntriesSup_mem hmem
@@ -2498,26 +2499,13 @@ theorem bindIterVars_wf {env : LocalEnv} {σ : ExecState}
       obtain ⟨rfl, rfl⟩ := h
       exact ⟨hw, Nat.le_refl _, rfl, rfl, rfl, henv⟩
 
-/-- Keys are bounded by their entries. -/
-theorem goValueListSup_map_fst_le :
-    ∀ (l : List (GoValue × GoValue)),
-      goValueListSup (l.map (·.1)) ≤ goValueEntriesSup l := by
-  intro l
-  induction l with
-  | nil => simp [goValueListSup, goValueEntriesSup]
-  | cons e rest ih =>
-      obtain ⟨k, v⟩ := e
-      simp only [List.map_cons, goValueListSup, goValueEntriesSup]
-      omega
-
-/-- Range-start bounds (BUG-005 (L) surgery): the recorded base loc is
-bounded by the ranged map VALUE's sup, and the start keys by the
-heap's (they come out of a loaded cell). -/
+/-- Range-start bound (BUG-005 (L) surgery; B1 stamps): the recorded
+base loc is bounded by the ranged map VALUE's sup (the start set is a
+set of entry IDS — loc-free, nothing to bound). -/
 theorem mapRangeStartSets_locSup {σ : ExecState} {v : GoValue}
-    {base : Option Loc} {start : Array GoValue}
+    {base : Option Loc} {start : Array Nat}
     (h : mapRangeStartSets σ v = .ok (base, start)) :
-    optLocSup base ≤ GoValue.locSup v
-      ∧ goValueListSup start.toList ≤ Heap.locSup σ.heap := by
+    optLocSup base ≤ GoValue.locSup v := by
   unfold mapRangeStartSets at h
   simp only [bind_eq_ok] at h
   obtain ⟨m, hm, h⟩ := h
@@ -2528,55 +2516,35 @@ theorem mapRangeStartSets_locSup {σ : ExecState} {v : GoValue}
   · rename_i hbase
     simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    simp [optLocSup, goValueListSup]
+    simp [optLocSup]
   · rename_i base' hbase
     simp only [bind_eq_ok] at h
     obtain ⟨bv, hbv, h⟩ := h
     split at h
-    · rename_i es
+    · rename_i es n
       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      refine ⟨by simpa [hbase] using hmv, ?_⟩
-      have hload := loadLoc_locSup hbv
-      simp only [GoValue.locSup] at hload
-      rw [Array.toList_map]
-      exact Nat.le_trans (goValueListSup_map_fst_le es.toList) hload
+      simpa [hbase] using hmv
     · simp at h
 
-/-- The pick-time filter only drops entries. -/
-theorem filterCandidateList_sup {σ : ExecState} {keyTy : Ty}
-    {produced : Array GoValue} :
-    ∀ {es out : List (GoValue × GoValue)},
-      filterCandidateList σ keyTy produced es = .ok out →
-      goValueEntriesSup out ≤ goValueEntriesSup es := by
-  intro es
-  induction es with
-  | nil =>
-      intro out h
-      simp only [filterCandidateList, pure_eq_ok, Except.ok.injEq] at h
-      subst h
-      exact Nat.le_refl _
-  | cons e rest ih =>
-      intro out h
-      obtain ⟨k, v⟩ := e
-      simp only [filterCandidateList, bind_eq_ok] at h
-      obtain ⟨inp, hinp, tail, htail, h⟩ := h
-      have := ih htail
-      split at h <;>
-        (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
-         simp only [goValueEntriesSup] at *; omega)
+/-- The pick-time filter only drops entries (it is a `List.filter`). -/
+theorem filterCandidateList_sup {produced : Array Nat}
+    {es : List (Nat × GoValue × GoValue)} :
+    goValueEntriesSup (filterCandidateList produced es) ≤ goValueEntriesSup es := by
+  simp only [goValueEntriesSup_eq, filterCandidateList]
+  exact supBy_le_of_subset fun a ha => (List.mem_filter.mp ha).1
 
 /-- Every candidate list is drawn from the live cell: the pick-time
 candidates are heap-bounded (BUG-005 (L) surgery — the mapIterNext wf
 case's bound, replacing the retired snapshot bound). -/
 theorem mapIterCandidates_locSup {σ : ExecState} {keyTy valTy : Ty}
-    {base : Option Loc} {produced : Array GoValue}
-    {cands : Array (GoValue × GoValue)}
+    {base : Option Loc} {produced : Array Nat}
+    {cands : Array (Nat × GoValue × GoValue)}
     (h : mapIterCandidates σ keyTy valTy base produced = .ok cands) :
     goValueEntriesSup cands.toList ≤ Heap.locSup σ.heap := by
   unfold mapIterCandidates at h
   simp only [bind_eq_ok] at h
-  obtain ⟨es, hes, fl, hfl, h⟩ := h
+  obtain ⟨es, hes, h⟩ := h
   have hlive : goValueEntriesSup es.toList ≤ Heap.locSup σ.heap := by
     cases base with
     | none =>
@@ -2592,122 +2560,12 @@ theorem mapIterCandidates_locSup {σ : ExecState} {keyTy valTy : Ty}
           have := loadLoc_locSup hbv
           simpa [GoValue.locSup] using this
         · simp at hes
-  have hfil := filterCandidateList_sup hfl
   split at h
   · simp only [pure_eq_ok, Except.ok.injEq] at h
     subst h
     simp only [List.toList_toArray]
-    exact Nat.le_trans hfil hlive
+    exact Nat.le_trans filterCandidateList_sup hlive
   · simp [throw, throwThe, MonadExceptOf.throw] at h
-
-/-- The delete-prune's set subtraction only removes elements. -/
-theorem removeKeyList_sup {σ : ExecState} {keyTy : Ty} {key : GoValue} :
-    ∀ {ks out : List GoValue},
-      removeKeyList σ keyTy key ks = .ok out →
-      goValueListSup out ≤ goValueListSup ks := by
-  intro ks
-  induction ks with
-  | nil =>
-      intro out h
-      simp only [removeKeyList, pure_eq_ok, Except.ok.injEq] at h
-      subst h
-      exact Nat.le_refl _
-  | cons p rest ih =>
-      intro out h
-      simp only [removeKeyList, bind_eq_ok] at h
-      obtain ⟨tail, htail, eq, heq, h⟩ := h
-      have := ih htail
-      split at h <;>
-        (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
-         simp only [goValueListSup] at *; omega)
-
-/-- The delete-prune never grows a continuation's loc sup: it only
-removes keys from `mapIterK` frames' produced/start sets. -/
-theorem pruneIterFramesKey_locSup {σ : ExecState} {delBase : Loc}
-    {key : GoValue} :
-    ∀ (k : Cont) {k' : Cont},
-      pruneIterFramesKey σ delBase key k = .ok k' →
-      Cont.locSup k' ≤ Cont.locSup k := by
-  intro k
-  induction k <;> intro k' h <;>
-    simp only [pruneIterFramesKey, pure_eq_ok, Except.ok.injEq,
-      bind_eq_ok] at h
-  case stop =>
-    subst h
-    exact Nat.le_refl _
-  case mapIterK kv vv keyTy valTy body base produced start env k ih =>
-    obtain ⟨k'', hk'', h⟩ := h
-    have hk := ih hk''
-    split at h
-    · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-      obtain ⟨p', hp', s', hs', h⟩ := h
-      subst h
-      have h1 := removeKeyList_sup hp'
-      have h2 := removeKeyList_sup hs'
-      simp only [Cont.locSup, List.toList_toArray] at *
-      omega
-    · simp only [pure_eq_ok, Except.ok.injEq] at h
-      subst h
-      simp only [Cont.locSup] at *
-      omega
-  all_goals
-    (obtain ⟨k'', hk'', h⟩ := h
-     subst h
-     rename_i ih
-     have := ih hk''
-     simp only [Cont.locSup] at *
-     omega)
-
-/-- `clear`'s prune never grows a continuation's loc sup. -/
-theorem pruneIterFramesAll_locSup {delBase : Loc} :
-    ∀ (k : Cont), Cont.locSup (pruneIterFramesAll delBase k) ≤ Cont.locSup k := by
-  intro k
-  induction k <;> simp only [pruneIterFramesAll, Cont.locSup] <;>
-    first
-    | exact Nat.le_refl _
-    | (rename_i ih
-       split <;>
-         simp only [Cont.locSup, goValueListSup,
-           List.toList_toArray] <;>
-         omega)
-    | (rename_i ih; omega)
-
-/-- `contAfterStmtOp` never grows a continuation's loc sup (identity
-for every op but the two prunes). -/
-theorem contAfterStmtOp_locSup {σ : ExecState} {op : StmtOp}
-    {vs : List GoValue} {k k' : Cont}
-    (h : contAfterStmtOp σ op vs k = .ok k') :
-    Cont.locSup k' ≤ Cont.locSup k := by
-  unfold contAfterStmtOp at h
-  split at h <;>
-    first
-    | -- identity arms (every other op; delete/clear with malformed vs)
-      (split at h <;>
-        first
-        | (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
-           exact Nat.le_refl _)
-        | -- mapDelete, well-formed operands
-          (simp only [bind_eq_ok] at h
-           obtain ⟨m, hm, h⟩ := h
-           split at h
-           · simp only [pure_eq_ok, Except.ok.injEq] at h
-             subst h
-             exact Nat.le_refl _
-           · simp only [bind_eq_ok] at h
-             obtain ⟨nk, hnk, h⟩ := h
-             exact pruneIterFramesKey_locSup k h)
-        | -- clearMap, well-formed operand
-          (simp only [bind_eq_ok] at h
-           obtain ⟨m, hm, h⟩ := h
-           split at h
-           · simp only [pure_eq_ok, Except.ok.injEq] at h
-             subst h
-             exact Nat.le_refl _
-           · simp only [pure_eq_ok, Except.ok.injEq] at h
-             subst h
-             exact pruneIterFramesAll_locSup k))
-    | (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
-       exact Nat.le_refl _)
 
 /-! ## Literal/aggregate builders -/
 
@@ -3378,15 +3236,15 @@ theorem applyStrictOp_wf {σ : ExecState} {op : StrictOp} {vs : List GoValue}
       simp only [bind_eq_ok] at h
       obtain ⟨bv, hbv, h⟩ := h
       split at h
-      · rename_i entries
+      · rename_i entries nextId
         simp only [bind_eq_ok] at h
         obtain ⟨idx, hidx, h⟩ := h
         split at h
         · split at h
-          · rename_i k' v' hp
+          · rename_i id' k' v' hp
             simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
             obtain ⟨rfl, rfl⟩ := h
-            have hmem : (k', v') ∈ entries.toList :=
+            have hmem : (id', k', v') ∈ entries.toList :=
               List.mem_of_getElem? (by rw [Array.getElem?_toList]; exact hp)
             have h2 := loadLoc_locSup hbv
             have h3 := goValueEntriesSup_mem hmem
@@ -3753,7 +3611,7 @@ theorem mapAssignValue_pres {σ : ExecState} {keyTy valueTy : Ty}
   obtain ⟨entriesOut, hentries, h⟩ := h
   split at h
   · simp [Bind.bind, Except.bind, throw, throwThe, MonadExceptOf.throw] at h
-  · rename_i baseLoc entries
+  · rename_i baseLoc entries nextId
     obtain ⟨hbl, hent⟩ := mapEntries_locSup hentries rfl
     have hblb : Loc.locSup baseLoc ≤ σ.nextAddr := by
       have := valueAsMap_locSup hm
@@ -3762,19 +3620,23 @@ theorem mapAssignValue_pres {σ : ExecState} {keyTy valueTy : Ty}
     obtain ⟨idx, hidx, h⟩ := h
     split at h
     · rename_i i
-      simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-      obtain ⟨y, hy, h⟩ := h
-      subst hy
+      -- present key: same id, new key/value (E10 always-replace). The
+      -- do-block's `let (entries, nextId) ← match …` lifts the
+      -- continuation into the match arms, so split first.
+      split at h
+      · rename_i id k₀ v₀ hget
+        simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
+        obtain ⟨y, hy, h⟩ := h
+        subst hy
+        refine storeLoc_pres hw hblb ?_ h
+        show goValueEntriesSup (entries.set! i (id, key, value)).toList ≤ σ.nextAddr
+        refine Nat.le_trans goValueEntriesSup_set! ?_
+        simp only at *
+        omega
+      · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw] at h
+    · -- absent key: a fresh stamped entry
       refine storeLoc_pres hw hblb ?_ h
-      show goValueEntriesSup (entries.set! i (key, value)).toList ≤ σ.nextAddr
-      refine Nat.le_trans goValueEntriesSup_set! ?_
-      simp only at *
-      omega
-    · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-      obtain ⟨y, hy, h⟩ := h
-      subst hy
-      refine storeLoc_pres hw hblb ?_ h
-      show goValueEntriesSup (entries.push (key, value)).toList ≤ σ.nextAddr
+      show goValueEntriesSup (entries.push (nextId, key, value)).toList ≤ σ.nextAddr
       rw [goValueEntriesSup_push]
       simp only at *
       omega
@@ -4050,7 +3912,7 @@ theorem applyStmtOpCore_wf {σ : ExecState} {op : StmtOp} {nt : Nat}
         obtain ⟨_, _, h⟩ := h
         subst h
         exact stmtOpPres_refl hw
-      · rename_i baseLoc entries
+      · rename_i baseLoc entries nextId
         obtain ⟨hbl, hent⟩ := mapEntries_locSup hes rfl
         have hblb : Loc.locSup baseLoc ≤ σ.nextAddr := by
           have := valueAsMap_locSup hm
@@ -4076,13 +3938,13 @@ theorem applyStmtOpCore_wf {σ : ExecState} {op : StmtOp} {nt : Nat}
       · simp only [pure_eq_ok, Except.ok.injEq] at h
         subst h
         exact stmtOpPres_refl hw
-      · rename_i baseLoc entries
+      · rename_i baseLoc entries nextId
         obtain ⟨hbl, hent⟩ := mapEntries_locSup hes rfl
         have hblb : Loc.locSup baseLoc ≤ σ.nextAddr := by
           have := valueAsMap_locSup hm
           omega
         refine storeLoc_pres hw hblb ?_ h
-        show goValueEntriesSup (#[] : Array (GoValue × GoValue)).toList ≤ σ.nextAddr
+        show goValueEntriesSup (#[] : Array (Nat × GoValue × GoValue)).toList ≤ σ.nextAddr
         simp [goValueEntriesSup]
     · simp at h
   · -- clearSlice
@@ -4710,7 +4572,7 @@ theorem goValueListSup_reverse {a : List GoValue} :
     goValueListSup a.reverse = goValueListSup a := by
   simp [goValueListSup_eq, supBy_reverse]
 
-theorem goValueEntriesSup_eraseIdxA {arr : Array (GoValue × GoValue)} {i : Nat}
+theorem goValueEntriesSup_eraseIdxA {arr : Array (Nat × GoValue × GoValue)} {i : Nat}
     {hlt : i < arr.size} :
     goValueEntriesSup ((arr.eraseIdx i hlt).toList) ≤ goValueEntriesSup arr.toList :=
   goValueEntriesSup_eraseIdx
@@ -6100,7 +5962,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
-  case stmtOpApply op nt done v env k k' ch ch' hprune happly =>
+  case stmtOpApply op nt done v env k ch ch' happly =>
     have hop : goValueListSup (v :: done).reverse ≤ σ.nextAddr := by
       rw [goValueListSup_reverse]
       simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
@@ -6115,7 +5977,6 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       simp only [goValueListSup]
       omega
     obtain ⟨w1, w2, w3, w4, w5⟩ := applyStmtOp_wf hs hop happly
-    have hkp := contAfterStmtOp_locSup hprune
     refine ⟨w1, ?_, w4, w2⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
@@ -6129,7 +5990,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
     omega
   case mapRangeStart v base start keyVar valVar keyTy valTy body env k hstart =>
     refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
-    obtain ⟨hb, hst⟩ := mapRangeStartSets_locSup hstart
+    have hb := mapRangeStartSets_locSup hstart
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -6141,12 +6002,12 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       List.toList_toArray,
       Nat.max_le] at hc hb ⊢
     omega
-  case mapIterNext keyVar valVar keyTy valTy body base produced start cands mand idx env env' k 
- hidx hcands hmand hbind =>
+  case mapIterNext keyVar valVar keyTy valTy body base produced start cands idx env env' k
+ hidx hcands hbind =>
     have hentb : goValueEntriesSup cands.toList ≤ σ.nextAddr :=
       Nat.le_trans (mapIterCandidates_locSup hcands) hheap
-    have hkb : max (GoValue.locSup cands[idx].1)
-        (GoValue.locSup cands[idx].2) ≤ σ.nextAddr := by
+    have hkb : max (GoValue.locSup cands[idx].2.1)
+        (GoValue.locSup cands[idx].2.2) ≤ σ.nextAddr := by
       refine Nat.le_trans (goValueEntriesSup_mem ?_) hentb
       exact List.mem_of_getElem? (by
         rw [Array.getElem?_toList]
@@ -6162,11 +6023,6 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc; omega)
       (by omega) (by omega) hbind
-    have hpush : goValueListSup (produced.push cands[idx].1).toList
-        ≤ max (goValueListSup produced.toList) (GoValue.locSup cands[idx].1) := by
-      rw [Array.toList_push, goValueListSup_append]
-      simp only [goValueListSup]
-      omega
     refine ⟨w1, ?_, w4, w2⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
@@ -6574,40 +6430,40 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
 /-! ## Preservation of the map-iteration typing component -/
 
 theorem snapshotEntriesSelfNormalizedList_mem {types : TypeEnv} {kt vt : Ty} :
-    ∀ {l : List (GoValue × GoValue)},
+    ∀ {l : List (Nat × GoValue × GoValue)},
       snapshotEntriesSelfNormalizedList types kt vt l = true →
-      ∀ {e : GoValue × GoValue}, e ∈ l →
-        isNormalForTy types kt e.1 = true ∧ isNormalForTy types vt e.2 = true := by
+      ∀ {e : Nat × GoValue × GoValue}, e ∈ l →
+        isNormalForTy types kt e.2.1 = true ∧ isNormalForTy types vt e.2.2 = true := by
   intro l
   induction l with
   | nil => intro _ e he; cases he
   | cons p rest ih =>
     intro h e he
-    obtain ⟨k, v⟩ := p
+    obtain ⟨i, k, v⟩ := p
     simp only [snapshotEntriesSelfNormalizedList, Bool.and_eq_true] at h
     cases he with
     | head => exact ⟨h.1.1, h.1.2⟩
     | tail _ ht => exact ih h.2 ht
 
 theorem snapshotEntriesSelfNormalizedList_of_mem {types : TypeEnv} {kt vt : Ty} :
-    ∀ {l : List (GoValue × GoValue)},
-      (∀ e ∈ l, isNormalForTy types kt e.1 = true
-        ∧ isNormalForTy types vt e.2 = true) →
+    ∀ {l : List (Nat × GoValue × GoValue)},
+      (∀ e ∈ l, isNormalForTy types kt e.2.1 = true
+        ∧ isNormalForTy types vt e.2.2 = true) →
       snapshotEntriesSelfNormalizedList types kt vt l = true := by
   intro l
   induction l with
   | nil => intro _; rfl
   | cons p rest ih =>
     intro h
-    obtain ⟨k, v⟩ := p
-    have hp := h (k, v) List.mem_cons_self
+    obtain ⟨i, k, v⟩ := p
+    have hp := h (i, k, v) List.mem_cons_self
     simp only [snapshotEntriesSelfNormalizedList, Bool.and_eq_true]
     exact ⟨⟨hp.1, hp.2⟩, ih fun e he => h e (List.mem_cons_of_mem _ he)⟩
 
 /-- Snapshot shrinkage preserves the typing check (`mapIterNext`'s
 `eraseIdx` keeps a sub-multiset of the entries). -/
 theorem snapshotEntriesSelfNormalized_eraseIdx {types : TypeEnv} {kt vt : Ty}
-    {arr : Array (GoValue × GoValue)} {i : Nat} {h : i < arr.size}
+    {arr : Array (Nat × GoValue × GoValue)} {i : Nat} {h : i < arr.size}
     (hall : snapshotEntriesSelfNormalized types kt vt arr = true) :
     snapshotEntriesSelfNormalized types kt vt (arr.eraseIdx i h) = true := by
   unfold snapshotEntriesSelfNormalized at hall ⊢

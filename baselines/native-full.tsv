@@ -1,4 +1,15 @@
 # GoLean native-frontend full-corpus differential baseline
+# re-pinned: 2026-09-03 (hygiene-b1-stamps lane — design-hygiene arc slice 1,
+#   B1 map entry-identity stamps; [AGENT]-executed inside the [USER]-ratified
+#   arc, docs/2026-09-03_design-hygiene-arc.md. GoCore map-iteration
+#   REPRESENTATION change, semantics-preserving by the design note's argument
+#   (docs/2026-09-03_hygiene-b1-stamps-design.md §3): FULL ci --diff at the
+#   slice tree (log tail docs/evidence/2026-09-03_hygiene-b1-stamps/
+#   transcripts/gate-tail.txt). Drift vs the previous pin = EXACTLY ONE NEW
+#   row, maps/nan-key-range PASS/- (BUG-088's pin: a range over a NaN-keyed
+#   map, fuel-out on the retired key-set frame, 32 = gc under the stamps);
+#   NO pre-existing row moved in result or stage; NO PASS->non-PASS flips.
+#   3196 rows; 3002 PASS / 194 FAIL.
 # re-pinned: 2026-09-03 (bug086-shim-closure lane — [AGENT]-executed BUG-086
 #   fix inside the coordinator's brief: frontend shim-injection PLUMBING only
 #   (stdlibShimDeps + closeShimDeps in tools/nativefrontend/stdlibshim.go;
@@ -530,7 +541,9 @@
 #     removed row is named in prose, never left dangling on the line).
 #     NEW rows: unsafe/layout-ops/{sizeof-fixed,layout-struct}
 #     FAIL/frontend-export BY DESIGN. unsafe/boundary/pointer-roundtrip
-# cases: 3195 (3001 PASS / 194 FAIL)
+# cases: 3196 (3002 PASS / 194 FAIL)
+#   [re-derived from the data rows at the hygiene-b1-stamps re-pin 2026-09-03 ([AGENT]: the bug086-shim-closure pin's 3195 (3001 PASS / 194 FAIL) + ONE born-PASS row maps/nan-key-range (BUG-088's pin; design-hygiene arc slice 1, B1 entry-identity stamps — a GoCore map-iteration REPRESENTATION change with zero drift on every pre-existing row, docs/2026-09-03_hygiene-b1-stamps-design.md §6); `awk -F'\t' '!/^#/{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3002 / FAIL 194)]
+#   [the bug086-shim-closure figure, kept as history:] # cases: 3195 (3001 PASS / 194 FAIL)
 #   [re-derived from the data rows at the bug086-shim-closure re-pin 2026-09-03 ([AGENT]: the round-6 union's 3195 (2999 PASS / 196 FAIL) with BUG-086's two Cases rows noodler/strconv-formatint/{edges,positive} flipped FAIL/frontend-export -> PASS; no other row moved; `awk -F'\t' '!/^#/{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3001 / FAIL 194)]
 #   [the round-6 merge-train figure, kept as history:] # cases: 3195 (2999 PASS / 196 FAIL)
 #   [re-derived from the data rows at the round-6 merge-train rebase 2026-09-03 ([AGENT]: noodler replayed over main@103dc74e = atomics-w1's 2632 (2459 PASS / 173 FAIL); the two lanes' new rows are disjoint by id and no row of either lane moved in the union): + 540 born-PASS + 23 born-FAIL (noodler/*, as amended at the lane's audit fix round) = 3195 (2999 PASS / 196 FAIL).]
@@ -2233,6 +2246,7 @@ PASS	maps/named-nil-flows/literal-elem	-
 PASS	maps/named-nil-flows/arg	-
 PASS	maps/named-nil-flows/slice	-
 PASS	maps/nan-key-clear	-
+PASS	maps/nan-key-range	-
 PASS	maps/nil-assign-eval-before-panic	-
 PASS	maps/nil-channel-key	-
 PASS	maps/nil-literal-values/func-element	-

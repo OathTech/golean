@@ -198,10 +198,13 @@ private partial def goValueJson : GoValue → Json
           | some loc => locJson loc
           | none => Json.null)
       ]
-  | .mapData entries =>
+  -- Entry-identity stamps (B1) are runtime-internal identity and are
+  -- projected AWAY here: the observation shape is the entry list as
+  -- before (no wire change).
+  | .mapData entries _ =>
       Json.mkObj [
         ("tag", Json.str "mapData"),
-        ("entries", Json.arr (entries.map (fun (key, value) =>
+        ("entries", Json.arr (entries.map (fun (_, key, value) =>
           Json.mkObj [
             ("key", goValueJson key),
             ("value", goValueJson value)
@@ -1055,14 +1058,13 @@ def stepNeeds (m : GoCore.Machine.MultiConfig) (picks : GoCore.Choices) :
                       | .error _ => none
                       | .ok cands =>
                           if cands.isEmpty then none
-                          else match GoCore.Machine.mapIterMandatoryRemains
-                              m.shared keyTy cands start with
-                            | .error _ => none
-                            | .ok mand =>
-                                match ch with
-                                | [] => some (cands.size
-                                    + (if mand then 0 else 1))
-                                | _ :: _ => none)
+                          else
+                            let mand := GoCore.Machine.mapIterMandatoryRemains
+                              cands start
+                            match ch with
+                            | [] => some (cands.size
+                                + (if mand then 0 else 1))
+                            | _ :: _ => none)
                   | .retV v (.selectOpsK clauses default? done [] env k) =>
                       (match GoCore.Machine.applySelectCore m.shared clauses
                           default? ((v :: done).reverse) env k with
@@ -1100,10 +1102,9 @@ def stepNeedsSeq (σ : GoCore.ExecState) (c : GoCore.Machine.Config) :
       | .error _ => none
       | .ok cands =>
           if cands.isEmpty then none
-          else match GoCore.Machine.mapIterMandatoryRemains
-              σ keyTy cands start with
-            | .error _ => none
-            | .ok mand => some (cands.size + (if mand then 0 else 1)))
+          else
+            let mand := GoCore.Machine.mapIterMandatoryRemains cands start
+            some (cands.size + (if mand then 0 else 1)))
   | .retV v (.selectOpsK clauses default? done [] env k) =>
       (match GoCore.Machine.applySelectCore σ clauses default?
           ((v :: done).reverse) env k with
