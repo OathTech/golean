@@ -236,6 +236,47 @@ scripts/capped scripts/ci --diff                                   # the gate (r
 
 See the final section, appended after the gate run.
 
+## Audit fix round (2026-09-03, same day) — what changed and its evidence
+
+Verdict FIX-FIRST (2 blockers + 12 findings; no wrong answer found).
+Fixes, by item: B1 the two bare `godoc:` probe tokens rewritten as
+angle-bracket placeholders (README, `tools/godocanchors/main.go`); B2
+`stdlibreach.go` markObject — an interface method's `*types.Func` is
+inert (was: "no declaration site" killed the export for any program
+calling errors.Is/As/Unwrap), plus `emit.go` quarantines a LIBRARY
+initializer that does not lower per declaration (`errors.errorType` via
+reflectlite) instead of refusing the export; rows
+`stdlib-source/errors-wrap/{unwrap,is,as}` — **unwrap PASS; is/as born
+red by name** (`errors.Is: package-selector call reflectlite.TypeOf`,
+`errors.As: … reflectlite.ValueOf`) on FR-21. F3 `checkPinnedFilesSelected`
+(pin is bidirectional; red-first test on strings/reader.go). F4
+`checkHostToolchainPinned` (runtime.Version() = pin; residual recorded in
+the register). F5 library quarantine reasons prefixed `<path>.<Decl>:`
+(test). F6 rows `stdlib-source/frontier/{index-rune-goto,format-float-unsafe}`
+(born red, FR-21). F7 `stdlib-substitutions.tsv` rows 2–3 state the true
+argument (MaxLen == 0 + MaxBruteForce == 0 make the placeholder bodies
+dead); `isUnimplementedPanicBody` quarantines any `panic("unimplemented")`
+body by name (unit + end-to-end test on `internal/bytealg.Cutover`) —
+this is the ONLY twin-wire delta of the fix round (`twin-structural-diff-fixround.txt`:
+`internal/bytealg.{IndexString,Cutover}` bodies → named stubs; pin
+`b341dc3b…` → `98abdced9d15f3df5f37ac9d4950f28d26cf725ed7c4c07078d178dc54ea0fcd`,
+[USER]-authorized by G9, relayed). F8 the 600,000-trial run (above). F9
+D-002 wording. F10 FR-16 → FR-21 everywhere; reconciler duplicate-FR +
+label-max detection. F11 godoc degenerate-scan guard; anchors only into
+pinned packages (the memo's `fmt`/`sync` example anchors became
+placeholders). F12 register: caps enforced in the dump only; ci-side
+assertion owed before slice 2. F13 this README (51 funcs; repro lines;
+`gotest-delta.txt` producer + repo-relative paths; the structural-diff
+script's claims narrowed to what it checks; rule-8 back-citations added
+to D-002, the register, FR-21, coverage-ledger, latitude §3,
+spec-sources, BUG-072). F14 ledger :171 pointer and FR-14's
+`slices.Sort` mechanism cell restored.
+
+gotest lane for errors.*: NO in-scope (or any) `$GOROOT/test` file calls
+`errors.Is/As/Unwrap` (grep over deps/go/test: 0); the 10 in-scope files
+importing `errors` re-ran unchanged (3 MATCH, the rest refused on their
+pre-existing `fmt`/`complex64`/timeout causes).
+
 ## Gate result (rule 6) — appended after the runs
 
 - `scripts/capped scripts/ci --diff` on the slice tree (before the
@@ -261,6 +302,13 @@ See the final section, appended after the gate run.
   (the table gained FR-21), and the reconciler's C1H/C4 checks were
   satisfied by re-deriving the baseline header and ledger §8 from the
   rows.
+- Audit fix round: `scripts/capped scripts/ci --diff` at the fix-round
+  commit `6dfe55b9` (clean tree): drift = exactly the 5 new rows above,
+  0 PASS→non-PASS (`gate-tail-fixround.txt`); baseline re-pinned to 3256
+  rows (3062 PASS / 194 FAIL) and the twin wire to `98abdced…` with the
+  reasons in their headers; the final clean-tip `scripts/capped scripts/ci
+  --diff` line is in `gate-final-fixround.txt`, committed by the last
+  (records-only) commit of the lane.
 - Conclusion (one paragraph): the machine executing the pinned GOROOT
   bodies of `strings.{Fields,TrimSpace,Split}` and `strconv.{FormatUint,
   FormatInt}` agrees with `go run` on every prior shim row, on 44 new

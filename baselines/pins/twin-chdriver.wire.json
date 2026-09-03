@@ -11491,117 +11491,14 @@
    "variadic": false
   },
   {
-   "body": {
-    "body": [
-     {
-      "stmt": "panic",
-      "value": {
-       "bytes": [
-        117,
-        110,
-        105,
-        109,
-        112,
-        108,
-        101,
-        109,
-        101,
-        110,
-        116,
-        101,
-        100
-       ],
-       "expr": "string",
-       "type": {
-        "kind": "string"
-       }
-      },
-      "wrap": {
-       "kind": "string"
-      }
-     }
-    ],
-    "stmt": "block"
-   },
+   "arity": 2,
    "name": "internal/bytealg.IndexString",
-   "params": [
-    {
-     "id": "a",
-     "type": {
-      "kind": "string"
-     }
-    },
-    {
-     "id": "b",
-     "type": {
-      "kind": "string"
-     }
-    }
-   ],
-   "results": [
-    {
-     "id": "$res0",
-     "type": {
-      "int": "int",
-      "kind": "int"
-     }
-    }
-   ],
-   "variadic": false
+   "unsupported": "internal/bytealg.IndexString: stdlib source-through: internal/bytealg.IndexString's body is solely panic(\"unimplemented\") — a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
   },
   {
-   "body": {
-    "body": [
-     {
-      "stmt": "panic",
-      "value": {
-       "bytes": [
-        117,
-        110,
-        105,
-        109,
-        112,
-        108,
-        101,
-        109,
-        101,
-        110,
-        116,
-        101,
-        100
-       ],
-       "expr": "string",
-       "type": {
-        "kind": "string"
-       }
-      },
-      "wrap": {
-       "kind": "string"
-      }
-     }
-    ],
-    "stmt": "block"
-   },
+   "arity": 1,
    "name": "internal/bytealg.Cutover",
-   "params": [
-    {
-     "id": "n",
-     "type": {
-      "int": "int",
-      "kind": "int"
-     }
-    }
-   ],
-   "results": [
-    {
-     "id": "$res0",
-     "type": {
-      "int": "int",
-      "kind": "int"
-     }
-    }
-   ],
-   "variadic": false
+   "unsupported": "internal/bytealg.Cutover: stdlib source-through: internal/bytealg.Cutover's body is solely panic(\"unimplemented\") — a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
   },
   {
    "body": {

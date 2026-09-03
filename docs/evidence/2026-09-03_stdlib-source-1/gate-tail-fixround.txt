@@ -1,0 +1,60 @@
+  ok: T8-go-oracle-sigkill: cause named at stage go-run (go run oracle KILLED (exit 137)
+  test-lane-validation: ok
+
+── re-run negative corpus (--diff)
+results: artifacts/coverage/negative-latest.tsv
+meta: artifacts/coverage/negative-latest.meta.tsv
+
+── derived oracle artifacts re-derived (Tests/FloatVectors.lean + tools/nativefrontend/inittask-std.tsv)
+
+── negative baseline diff
+no regression: 394 case(s) run in negative-latest.tsv match baselines/negative-full.tsv
+
+── differential baseline diff (scripts/coverage-baseline-diff)
+DRIFT vs baselines/native-full.tsv (3256 case(s) run):
+stdlib-source/errors-wrap/as	NEW id (not in baseline) -> FAIL/frontend-export
+stdlib-source/errors-wrap/is	NEW id (not in baseline) -> FAIL/frontend-export
+stdlib-source/errors-wrap/unwrap	NEW id (not in baseline) -> PASS/-
+stdlib-source/frontier/format-float-unsafe	NEW id (not in baseline) -> FAIL/frontend-export
+stdlib-source/frontier/index-rune-goto	NEW id (not in baseline) -> FAIL/frontend-export
+
+── baseline re-pin guard (HEAD-vs-HEAD~1; flips must be on a BUGS.md Cases: line)
+
+── cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)
+  [01] C3  HIGH    5 corpus manifest id(s) absent from the tracked baseline (unrecorded cases)
+  [02] C4  HIGH    the language-coverage ledger §8 arithmetic is computed over a STALE baseline: §8 says 3256 cases / 3062 PASS / 194 FAIL; the tracked baseline at this tip is 3251 / 3061 / 190 (delta: -5 cases, -4 reds). §8 claims 'every one on a named row' — that claim is not re-derivable at this tip.
+  [03] C4  HIGH    §8's red buckets account for 194 reds; the baseline at this tip has 190 — -4 red(s) are NOT on a named row at the current tip (the §8 invariant 'zero unmapped' does not hold as written)
+  [04] C13  MEDIUM  78 doc site(s) across 9 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
+  [05] C5  MEDIUM  7 frontier-table case citation(s) do not resolve against the baseline
+  [06] C5  MEDIUM  1 frontier row(s) claim a red count that is not mechanically re-derivable from their citations. Some of this is citation SHORTHAND (a prose family like 'F3 family 7', an ellipsis inside a glob, or a '+ adjacency' the count deliberately excludes) rather than drift — each needs a read, which is exactly why the count should not be re-derived from prose.
+  [07] C9  MEDIUM  the wire schema moved after the certification date 2026-09-01 (8 commit(s) to wire.go/NativeToIR.lean) — the certified set's wire sha is only current if `scripts/ci --slow` has re-enumerated since
+
+══ scripts/ci summary ══
+  note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   core build (warning-free)
+  FAIL frontend pins DRIFTED or broken (see above — re-pin deliberately with the reason)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   eval tests (148 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  ok   negative baseline diff (no regression)
+  FAIL baseline diff (DRIFT — see above)
+  ok   re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)
+  note reconciler: 7 finding(s), 3 HIGH — report-only (details: tools/reconcile-records)
+
+RESULT: FAIL

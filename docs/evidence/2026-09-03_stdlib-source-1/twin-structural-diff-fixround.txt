@@ -1,0 +1,16 @@
+# producer: docs/evidence/2026-09-03_stdlib-source-1/twin-structural-diff.py
+new library globals: 0 | user global order preserved: True | library globals precede user globals: True
+globals only-in-old: []
+globals only-in-new: []
+funcs only-in-old: []
+funcs only-in-new: []
+funcs changed (after normalization): ['internal/bytealg.Cutover', 'internal/bytealg.IndexString']
+methods only-in-old: []
+methods only-in-new: []
+methods changed (after normalization): []
+types only-in-old: []
+types only-in-new: []
+methodSets only-in-old: []
+methodSets only-in-new: []
+fileOrder old: ['unicode/utf8', 'math/bits', 'internal/strconv', 'internal/bytealg', 'internal/stringslite', 'errors', 'strconv', 'unicode', 'strings', 'quorum', 'raftpb', 'proto', 'tracker', 'confchange', 'raft', 'main']
+fileOrder new: ['unicode/utf8', 'math/bits', 'internal/strconv', 'internal/bytealg', 'internal/stringslite', 'errors', 'strconv', 'unicode', 'strings', 'quorum', 'raftpb', 'proto', 'tracker', 'confchange', 'raft', 'main']
