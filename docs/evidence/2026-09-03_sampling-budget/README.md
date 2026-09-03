@@ -127,8 +127,10 @@ columns documented at its :35) never sees the detail column.
   sleeps past a 1 s budget on the first `observation-eq` whose sides
   differ, i.e. the sampling rule's distinctness comparison of draw 2
   against draw 1). Red on main: no distinctness loop exists there, so
-  main's first differing comparison is the post-enumeration membership
-  check and its wording ("membership check: … member #1"). Green here.
+  main's first differing comparison is the driver-coupling pin (stream
+  observation vs member) and the row fails with THAT wording
+  ("driver-coupling pin: observation-eq TIMED OUT … coupling NOT
+  decided"), not the sampling rule's. Green here.
 * `timing-f1.txt` / `after-f1-latest.tsv` / `size-class-f1-row.tsv` —
   the post-memo re-measurement (F1).
 * `ci-diff-membership-rows.tsv` / `ci-diff-summary.log` — the gate
@@ -159,9 +161,12 @@ scripts/test-lane-validation --with-go
 
 * Round 1: `scripts/capped scripts/ci --diff` on the DIRTY tree at
   `345ef090` (`ci-diff-summary.log`): RESULT: PASS, 3195/3195, 477 s.
-* Audit fix round (F6): a CLEAN-tree `scripts/capped scripts/ci --diff`
-  at the branch tip — see `ci-diff-clean-tip.log` (SHA recorded there
-  and in the line below once run).
+* Audit fix round (F6): CLEAN-tree `scripts/capped scripts/ci --diff`
+  at branch tip **`2313d399`** (0 dirty files; `ci-diff-clean-tip.log`):
+  RESULT: PASS, baseline diff FULL 3195/3195 no regression, negative
+  394 match, both test-lane-validation halves ok (S1-S5 included),
+  reconciler 3 findings / 0 HIGH, 312 s wall. The commit carrying this
+  paragraph is docs-only (evidence + this wording), on top of that tip.
 
 ## Toolchain, commit, host
 

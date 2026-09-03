@@ -1,0 +1,32 @@
+tip: 2313d399c719a486e3c6d15f905f89e4cd89b6b5 dirty-files: 0
+[1m══ scripts/ci summary ══[0m
+  note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   core build (warning-free)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   eval tests (148 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  ok   negative baseline diff (no regression)
+  ok   baseline diff FULL (3195/3195, no regression)
+  note reconciler: 3 finding(s), 0 HIGH — report-only (details: tools/reconcile-records)
+
+[1mRESULT: PASS[0m
+CI_EXIT=0 wall=312s
+end: 2026-09-03T20:26:28+00:00 load:  20:26:28 up 11 days,  5:57,  ? user,  load average: 16.62, 22.04, 22.50
+start: 2026-09-03T20:21:16+00:00 load:  20:21:16 up 11 days,  5:51,  ? user,  load average: 3.29, 12.31, 19.34
+end: 2026-09-03T20:26:28+00:00 load:  20:26:28 up 11 days,  5:57,  ? user,  load average: 16.62, 22.04, 22.50

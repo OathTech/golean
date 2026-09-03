@@ -869,8 +869,8 @@ EOF
       # the row must fail naming the sampling rule, never read the kill as
       # "new observation" (an early stop that never fires) or as a repeat.
       # Red on main: no distinctness loop exists there, so main's first
-      # differing observation-eq is the post-enumeration membership check
-      # ("membership check: … comparing a Go sample against member #1").
+      # differing observation-eq is the driver-coupling pin's ("driver-
+      # coupling pin: observation-eq TIMED OUT … coupling NOT decided").
       run_s S5-saturation-undecided ab "width=2,members=2,sites=8" FAIL \
         "sampling rule: observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing draw 2/32 against an earlier distinct draw — saturation NOT decided" "NOT in the machine's enumerated set" $'plain\nrace' "" eq-distinct
     fi
