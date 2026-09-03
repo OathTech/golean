@@ -25,6 +25,8 @@ legal Go (a fail-closed refusal, not a wrong answer) is logged as a §4
 frontier row WITH a fix plan and a §5 queue slot AT THE TIME OF
 DETECTION — never left as an unrowed red in the post-vintage bucket.
 First application: the noodler lane's FG-1..FG-5 → FR-16..FR-20 (§8e).
+Second application: the cedar-go coverage census's two whole-export
+kill points → FR-22/FR-23 (§8h; `docs/2026-09-03_cedar-go-coverage-census.md`).
 
 ## 0. Denominator, instruments, maintenance
 
@@ -189,7 +191,7 @@ rows covering all 158 anchors.
 | Type_assertions | covered(B) | assertion suites (`interfaces/type-assert*`, assert matrices); comma-ok forms graded A under Variable_declarations; interface-typed targets red → FR-7. |
 | Calls | covered(B) | ubiquitous + 2 dispositions (+1 SKIPPED: spec exhibit with unasserted nil-deref, recorded); method/interface dispatch suites; argument-order pins (E1/E2/E12 forced-and-pinned refs). |
 | Passing_arguments_to_..._parameters | covered(B) | `variadic/` (15 pkgs) + 2 dispositions (spread, empty, nil-slice forms). |
-| Instantiations | covered(B) | `generics/` instantiation suites (derived, nested, higher-order); unnamed-chan type args red → mini-slice A4 ((a)-queued fix); function-local defined type args = (c)-pin C6 (impossibility — gc's observable name is a compiler-internal counter; NOT queued, profound reason C6, user ratification at the arc gate). |
+| Instantiations | covered(B) | `generics/` instantiation suites (derived, nested, higher-order); unnamed-chan type args red → mini-slice A4 ((a)-queued fix); function-local defined type args = (c)-pin C6 (impossibility — gc's observable name is a compiler-internal counter; NOT queued, profound reason C6, user ratification at the arc gate); an IMPORTED generic type instantiated in a method/func SIGNATURE (`iter.Seq[T]` results) is unstubbable → FR-23 (1 red, a WHOLE-EXPORT kill — cedar-go census 2026-09-03). |
 | Type_inference | covered(D) | inference is go/types' (both sides consume its output); exec witnesses `generics/{inference,higher-order-inference}`. |
 | Type_unification | covered(D) | same delegation; `type-unify-struct-array` red is an FR-13 member (anonymous struct), not an inference gap. |
 | Operators | covered(B) | disposition + `binop-order/` + operand-order pins; L:E12 (call-vs-non-call operand order PINNED structural). |
@@ -266,7 +268,7 @@ rows covering all 158 anchors.
 | An_example_package | covered(B) | the spec's concurrent prime sieve pinned (`spec-examples-stmt/prime-sieve/{five,eight}`). |
 | Program_initialization_and_execution | covered(D) | chapter preamble. |
 | The_zero_value | covered(A) | 3 dispositions + `zero_values` rows in every container/type suite + generics zero-composite; COMPLEX zero values → FR-15 (pinned red: `complex/zero-value`, `complex/generic-type-set/zero-value`; carve-out added at the audit fix round). |
-| Package_initialization | covered(B) | `init/` (19 pkgs) + `multipkg/init-order*`; the section's two spec-open points are the RATIFIED (c)-pins (C1–C8 ratified/discharged 2026-08-20 — §5.1 and the triage table; this cell still said "ratification-pending" until 2026-08-22, launch audit D7 MEDIUM-3; note the C-numbers here are the TRIAGE (c)-pin register, not the latitude inventory's C-rows): hidden-dep order C1 (L:E7, 1 red) and staticinit pruning C2 (L-011, 1 red); init-spawned goroutines → Q-INITSPAWN. |
+| Package_initialization | covered(B) | `init/` (19 pkgs) + `multipkg/init-order*`; the section's two spec-open points are the RATIFIED (c)-pins (C1–C8 ratified/discharged 2026-08-20 — §5.1 and the triage table; this cell still said "ratification-pending" until 2026-08-22, launch audit D7 MEDIUM-3; note the C-numbers here are the TRIAGE (c)-pin register, not the latitude inventory's C-rows): hidden-dep order C1 (L:E7, 1 red) and staticinit pruning C2 (L-011, 1 red); init-spawned goroutines → Q-INITSPAWN; a package-level initializer calling a stdlib function outside H-11's `pureUnmodeledCallees` allowlist → FR-22 (1 red, a WHOLE-EXPORT kill — cedar-go census 2026-09-03: `time.Date` in `types/datetime.go:16,19` took down 18/22 packages). |
 | Program_initialization | covered(B) | thin normative text (points at Package_initialization); covered by the same suites. |
 | Program_execution | covered(B) | main-termination semantics + L:C4 (main-exit window ENVELOPED, `goroutines/` exit rows). |
 | Errors | covered(B) | `interfaces/{error-interface,error-idioms,assert-error-satisfaction}` + 2 COMPILE-ONLY pins (universe shadowing; error-last convention). |
@@ -335,7 +337,7 @@ to an FR/Q row here, a (c)-pin (triage §4), or an (a)-queued fix
 | FR-9 | declarations for imported named types (BUG-008) | GoCore/Ops.lean `tyUncomparable` `none` arm — `unsupported "map key hashability for unknown defined type sort.IntSlice"` | spec#Comparison_operators | 1 (`maps/imported-named-key-unhashable`) — plus the D5-stub adjacency at sync/atomic-frontier/value, deliberately NOT counted here because it is already counted under Q-ATOMIC's 5 (id left un-backticked so the count stays mechanically re-derivable) | frontend feature (TypeDef emission for imported types; the interface mechanism exists) | seq → queue 9 — raft-path |
 | FR-10 | array-pointer VIEWS over slice storage (L2b) | GoCore conversion arms — succeeding `(*[N]T)(s)` forms refused (`Loc` has no subarray-view constructor) | spec#Conversions_from_slice_to_array_or_array_pointer | 1 (`slice-to-array/ok-forms`) | GoCore: a subarray-view `Loc` constructor + aliasing story | seq → queue 10 |
 | FR-11 | fresh-cell-per-execution `goto` lowering | emit.go:1459/:1474/:1476/:1478 — `unsup("goto function hoists …")` | spec#Goto_statements | 5 (`control-flow/goto-backward-*`) | frontend: per-execution cell identity for hoisted declarations (the jumps are LEGAL; the refusal is our lowering's honesty check) | seq → queue 11 |
-| FR-12 | range-over-func iterators (Go 1.23) | emit.go:3209 — `unsup("range over %s", e.goTypeOf(rs.X))` | spec#For_range | 9 (`range/range-func-*`) | frontend desugar + the yield/loop-exit protocol (break/defer/panic paths — the edge suite already pins them) | seq → queue 12 |
+| FR-12 | range-over-func iterators (Go 1.23) | emit.go:3209 — `unsup("range over %s", e.goTypeOf(rs.X))` | spec#For_range | 9 (`range/range-func-*`) | frontend desugar + the yield/loop-exit protocol (break/defer/panic paths — the edge suite already pins them). **Priority evidence: cedar-go's `Authorize` main loop and public iteration API are range-over-func (census 2026-09-03 — 21 declarations in 8 packages, `authorize.go:38`; pairs with FR-23).** | seq → queue 12 |
 | FR-13 | structural TypeIds: anonymous non-empty struct types (incl. as type arguments) | wire.go:508 — `unsup("anonymous non-empty struct type %s", ty)`; mono.go:965 — `unsup("anonymous non-empty struct as a type argument (%s)")` | spec#Struct_types, spec#Satisfying_a_type_constraint, spec#Conversions | 8 — the triage F3 family 7 (`generics/type-aliases/struct-literal`, `spec-examples-decl/struct-tag-conversion`, `spec-examples-decl/type-definitions-distinct`, `spec-examples-stmt/struct-tags`, `spec-examples-stmt/type-unify-struct-array`, `structs/tag-nested-conversion`, `structs/tag-unnamed-conversion`) + the F21 type-argument sub-row (`generics/anon-struct-type-argument`) | identity design: structural TypeIds beside nominal ones — frontend + GoCore | seq → queue 13 |
 | FR-14 | stdlib package surface (`fmt`, `math`, `errors`, `slices`, `math/rand`; + `slices.Sort` beyond integers). **NARROWED 2026-09-03 (stdlib-source-1):** `strings`, `strconv`, `unicode`, `unicode/utf8`, `math/bits`, `errors`(package only), `internal/{strconv,stringslite,bytealg}` are SOURCE-THROUGH library units (docs/2026-09-03_stdlib-boundary-design.md §6; `docs/stdlib-admission-register.md`) — every pure function of theirs lowers from the pinned GOROOT text (`strings.Fields/Split/TrimSpace`, `strconv.FormatUint/FormatInt` moved from shim to source-through; `strings.Index/Contains/SplitN/…`, `strconv.Atoi/Itoa/…` newly lower); what they cannot lower is FR-21 | emit.go — `unsup("package-selector call %s.%s (package %q surface not modeled)")` for packages outside the allowed list; `emitStdlibShimCall`'s member refusal for partially-shimmed non-library packages; emit.go — `unsup("slices.Sort at non-integer element type %s")` (the `sortSlice` op's kind bound, memo §3 row M) | spec#Qualified_identifiers (construct fine; the gap is extern surface) | 7 (`spec-examples-decl/timezone-stringer`, `spec-examples-lexical/qualified-identifier`, `methods/quarantine-embedded/promoted-call`, `methods/quarantine-interface/dispatch-quarantined`, `methods/quarantine-pointer-receiver/pointer-call`, `methods/quarantine-sibling/quarantined-call`, `slices/slices-sort-non-integer-refusal` — unchanged by slice 1, whose six FAIL→PASS flips were shim-surface rows outside this table: the two shim-value-refused rows, the split-conformance empty-sep row, the format-parse unmodeled-member row, and the two shim-refusal-unrecoverable rows that recovered around the retired Split refusal) | the memo's option (C): source-through per package under the admission register; `fmt` re-homing (G5), print/println (G2), `os` trio (G7) are the next slices | seq → memo §6 slices 2–4 |
 | FR-21 | stdlib source-through GAPS — library sites the loader refuses BY NAME: `unsafe` idioms inside otherwise-pure bodies (`internal/stringslite.Clone`'s `unsafe.String`, reached by every `strconv` Parse* error path — the memo §1.3 census missed it; `strings.Builder` ×3, `errors.Join`, `internal/strconv/deps.go` ×4 as listed), `//go:linkname` pulls (`math/bits.overflowError/divideError` = the runtime's panic values), body-less assembly leaves without a substitution row, `panic("unimplemented")` placeholder bodies (index_generic.go), library initializers that do not lower (`errors.errorType` via reflectlite — poisoned per declaration), and LANGUAGE frontiers met inside library text (FR-11's goto shape in strings.IndexRune; internal/reflectlite in errors.Is/As → G6) | emit.go — `unsup("stdlib source-through: %s needs unsafe.%s …")`, `unsup("stdlib source-through: %s.%s is a body-less declaration …")`, the linkname poison in `quarantineUnlowerableGlobals` | godoc:strconv.ParseUint@go1.26.5 (error contract), godoc:strings.Clone@go1.26.5 (the idiom's home) | 6 (`stdlib-source/frontier/atoi-error-path-clone`, `stdlib-source/frontier/div64-overflow-value`, `stdlib-source/frontier/index-rune-goto` (strings.IndexRune's goto-next label — FR-11's shape inside library text), `stdlib-source/frontier/format-float-unsafe` (internal/strconv's float-bits casts), `stdlib-source/errors-wrap/is`, `stdlib-source/errors-wrap/as` (errors.Is/As reach internal/reflectlite — the G6 reflect-subset frontier); PLUS the nine ParseUint error-path reds on BUG-089's Cases line (the format-parse parse-uint error/range/bitsize rows, the noodler parse-uint-edges row, and the five strconv-parseuint error rows — the same Clone site, counted on the bug, not here); evidence dir docs/evidence/2026-09-03_stdlib-source-1) | the OVERLAY mechanism (memo §2.3.2; cap 12 in the register) — slice 2: `Clone` = `string(b)` (closes BUG-089's nine ParseUint error-path reds; the re-bodied-shim alternative was a D-002 exception DENIED by the [USER] 2026-09-03), Builder's three sites, the float-bits casts onto `FloatBits`; the two runtime error values onto the machine's own division/overflow panics | seq → memo §6 slice 2 |
@@ -345,6 +347,8 @@ to an FR/Q row here, a (c)-pin (triage §4), or an (a)-queued fix
 | FR-18 | allocation, tuple-splat or interface method value DIRECTLY in a short-circuit RIGHT operand (`&&` and the or-operator): `make`, `new`, slice literal, map literal, `f(g())`, `(i.M)()` — noodler FG-3; FR-2 carries the receive case | emit.go:7104 sets `hoistForbidden = "short-circuit operand"`; the standing sites refuse per-declaration — :8966 `unsup("make in %s", e.hoistForbidden)`, :8211 `unsup("new in %s", …)`, :6597 `unsup("slice literal in %s", …)`, :6651 `unsup("map literal in %s", …)`, :2330/:2355 `unsup("call/allocation in %s (would change evaluation order)", …)`, :6035 `unsup("interface method value in %s", …)` (lines at 345ef090; the report's were measured at its lane tip); the same guard covers `append`/`copy`/`&composite` (:8871/:8936/:6321/:6394), not yet pinned | spec#Logical_operators, spec#Order_of_evaluation | 6 (`noodler/frontier/short-circuit-{alloc-make,alloc-new,slice-literal,map-literal,splat-call,iface-method-value}`) | frontend-only: extend FR-2's mechanism — the E3 conditional normalization (`scHoistOK` hoisting of the RHS's effects into the guarded branch) — to these operand kinds; these six rows ARE the guardrails the E3 BUILT record owes (`docs/gallery-campaign-log/g2.md:504-535`: "widening any of them later owes its own guardrail rows first"), so the arc's flips are pre-declared; add `append`/`copy`/`&composite` pins first | seq → queue 18 (M) — logged 2026-09-03, [USER] direction 3; pairs with queue 2 |
 | FR-19 | duplicate local TypeId — two functions each declaring `type T int`, or a function-local type shadowing a package-level type of the same name: a WHOLE-EXPORT kill (the noodler tripped it three times by accident) — noodler FG-1 | emit.go:554 — `unsup("duplicate TypeId %s (a function-local type collides with another declaration)", n)` (the `seenTypeIds` gate over the flattened `typeDefs`; the control-flow design doc's "fail-closed rider", `docs/2026-08-04_control-flow-design.md`) | spec#Type_definitions, spec#Declarations_and_scope, spec#Type_identity | 2 (`noodler/local-types/{distinct,shadow}`) | frontend: per-declaration TypeId disambiguation — scope-qualify the identity KEY (enclosing function + declaration position) while the RENDERED name keeps gc's spelling (gc prints `main.T` for both types; distinctness is observable through identity, assertion and comparison, never through the name), collision-checked at the one boundary. BUG-018's fix (`qualifiedTypeName` parameterizing function-local TypeIds by the enclosing instantiation's type arguments) is the precedent for a key that carries scope the name does not. §5.1 item 1 (C6: a local type as a type ARGUMENT names a compiler counter) stays an impossibility row — unaffected | seq → queue 19 (M) — logged 2026-09-03, [USER] direction 3 |
 | FR-20 | forward `goto` to a label inside an enclosing nested block (a for body), the goto nested deeper than its label — noodler FG-4 | emit.go:1743/:2069 — `unsup("goto target label %s not at function body top level", name)` (the goto envelope restructures segments at the function body's top level only; the control-flow design doc's "outside the envelope" list) | spec#Goto_statements, spec#Labeled_statements, spec#Blocks | 1 (`noodler/frontier/goto-forward-in-block`) | LEGALITY CHECKED 2026-09-03: gc go1.26.5 (`go vet` + `go build`) accepts the case — the label's block ENCLOSES the goto and no declaration is skipped, so neither spec#Goto_statements prohibition applies; a genuine coverage gap, not a mis-filed negative case. Fix: frontend — apply the segment restructuring (`emitGotoBody`) at the label's ENCLOSING block rather than only the function body (the block containing the label is the segmentation unit; forward-only jumps out of nested statements into it need no fresh-cell story — FR-11 is the backward class) | seq → queue 20 (M) — logged 2026-09-03, [USER] direction 3 |
+| FR-22 | a package-level `var` initializer that CALLS a stdlib function outside H-11's `pureUnmodeledCallees` allowlist (today `os.Getenv`/`os.LookupEnv` only) — the frontend refuses the WHOLE EXPORT, not the declaration. Witness: `deps/cedar-go/types/datetime.go:16,19` (`var maxDatetime = time.Date(…)`, pure and deterministic) kills 18/22 packages, 94% of the library's LOC (`docs/2026-09-03_cedar-go-coverage-census.md` §3.2). (id 21 is taken on the unmerged `stdlib-source-1` branch @ 221d8964; ids 22/23 are reserved past it by the coordinator.) | emit.go `quarantineUnlowerableGlobals` — `initializerEffectIsolated` returns false for any callee not in `pureUnmodeledCallees`, so the dry-run's `unsupported` is re-raised whole ("Not isolatable … Whole-export refusal, exactly as before H-11"); measured at 0700bc3f: `native frontend unsupported: package-selector call time.Date (package "time" surface not modeled)` | spec#Package_initialization (initialization is dependency-ordered and the variable is simply a value; the ORDER interaction is the E7/BUG-061 record — a poisoned var must still occupy its slot in the realized init order, `multipkg/init-order*`) | 1 (`init/stdlib-initializer-call`) | frontend: (i) per-declaration quarantine of the INITIALIZED VAR instead of whole-export — poison the var (the H-11 `quarantinedGlobals` mechanism, extended past the effect-isolation predicate for callees whose only effect is their result) and refuse BY NAME on any read, exactly the library-initializer poisoning `stdlib-source-1` added in `quarantineUnlowerableGlobals`; the init-order schedule keeps the slot (E7/BUG-061); (ii) where the stdlib package is pinned for source-through, route the initializer call through that path instead of poisoning. Size S–M | seq → queue 22 (S–M, after FR-18) — logged 2026-09-03, [USER] direction 3 (coordinator relay) |
+| FR-23 | an IMPORTED generic type instantiated in a method or func SIGNATURE (`iter.Seq[T]`, `iter.Seq2[K,V]` result types — the Go 1.23 iteration-API idiom) is UNSTUBBABLE: the per-declaration quarantine needs a signature-carrying stub, the signature itself refuses, so the WHOLE EXPORT refuses. Witness: cedar-go `types.Record.All/Keys/Values`, `Set.All`, `PolicyMap.All`, `PolicySet.All` (10 signatures) and `Authorize`'s `for id, po := range policies.All()` (census §3.3, pass B). | emit.go `quarantinedMethodStub` — the `sigRefusal` arm: `method %s.%s is unsupported (%s) and its own SIGNATURE does not lower either (%v): no signature-carrying stub exists, so the export refuses rather than record an incomplete method set`; the inner cause is wire.go's `instantiation of imported generic type iter.Seq[int]`; measured at 0700bc3f | spec#Instantiations, spec#Method_declarations, spec#For_range (the calls, once stubbable, are FR-12's) | 1 (`generics/imported-generic-in-signature`) | frontend: make signature-level imported generic instantiations stubbable PER DECLARATION, D5-style — emit the stub with the instantiated type as an opaque imported named type (`iter.Seq[int]` as a TypeDef of kind unsupported, the `importedNamed` marker), so satisfaction still answers and a CALL refuses by name; the kill becomes per-declaration and FR-12 then unblocks the calls (`maps.All`/`slices.Collect` bodies ride the stdlib surface, FR-14). Size M | seq → queue 23 (M, beside FR-12) — logged 2026-09-03, [USER] direction 3 (coordinator relay) |
 
 ## 5. The build queue (2026-08-19) — ordered sequential-frontier arcs
 
@@ -406,11 +410,13 @@ user's C4 split, triage §7/L12b)**; the (c)-list ratification —
 | 10 | array-pointer views over slice storage | FR-10 | 1 | ~2 days |
 | 11 | fresh-cell goto lowering | FR-11 | 5 | 1–2 days |
 | 12 | range-over-func | FR-12 | 9 | 2–4 days |
+| 23 | imported generic instantiation in a SIGNATURE — per-declaration D5-style stub (unblocks FR-12's iteration-API calls; cedar-go `Authorize`) | FR-23 | 1 | M (2–3 days) |
 | 13 | structural TypeIds | FR-13 | 8 | small arc |
 | 14 | stdlib extern surface (14a: minimal fmt verbs, pull-forward candidate) — raft-path aggregate | FR-14 | 7 | arc |
 | 16 | defer-of-builtin thunk desugar (FR-1's mechanism, `defer` side) | FR-16 | 1 | ~½ day |
 | 17 | self-shadowing define with call RHS (A-9 argument pre-binding) | FR-17 | 1 | ~½ day |
 | 18 | short-circuit RHS widening — allocation/splat/method value (E3 / FR-2 mechanism; add append/copy/&composite pins first) | FR-18 | 6 | ½–1 day |
+| 22 | stdlib call in a package-level initializer — per-declaration var poisoning instead of whole-export (H-11 allowlist kill; cedar-go `types/datetime.go`) | FR-22 | 1 | S–M (1–2 days) |
 | 19 | duplicate local TypeId (scope-qualified identity keys, gc-spelled names) | FR-19 | 2 | ~1 day |
 | 20 | forward goto into an enclosing block (block-level segmentation) | FR-20 | 1 | 1–2 days |
 | 15 | **complex numbers — last, the one large arc** | FR-15 | 27 | arc |
@@ -501,7 +507,22 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (3282 cases, 3085 PASS /
+All numbers at the current tracked baseline (3284 cases, 3085 PASS /
+199 FAIL — the round-9 merge-train UNION, step 3, 2026-09-04 [AGENT], under
+the [USER] merge sign-off «go ahead and merge» 2026-09-04: `cedar-census`
+(records + 2 witness rows, §8h) replayed over main 8de57f64 = 312a4458 +
+`q-trylock`): the step-2 union's 3282 / 3085 / 197 + TWO born-FAIL witness
+rows `init/stdlib-initializer-call` (FR-22) and
+`generics/imported-generic-in-signature` (FR-23), both `frontend-export`,
+no other row moved; re-derived from the data rows, not summed by hand. The
+paragraphs below are the previous figures, kept as history:
+
+The `cedar-census` figure over main 6a163681, kept as history: 3201 cases,
+3005 PASS / 196 FAIL — the `cedar-census` re-pin 2026-09-03 [AGENT]: the
+round-8a tip's 3199 / 3005 / 194 + the same TWO born-FAIL witness rows,
+no other row moved, re-derived from the data rows (§8h).
+
+The round-9 step-2 figure, kept as history: 3282 cases, 3085 PASS /
 197 FAIL — the round-9 merge-train UNION 2026-09-04 [AGENT], under the
 [USER] merge sign-off «go ahead and merge» 2026-09-04: `q-trylock` (as
 amended at its audit fix round, §8g) replayed over main 312a4458 =
@@ -716,12 +737,16 @@ bucket's BUG-041 red changed ROW, not count):**
 
 | bucket | reds |
 | --- | --- |
-| frontier FR-1…FR-21 (§4) | 99 |
+| frontier FR-1…FR-23 (§4) | 101 |
 | design questions Q-* (§6) | 9 |
 | (c) profound-reason pins (triage §4 + the unsafe marker) | 9 + 1 |
 | (a)-queued fixes (triage §3.2: A3 5, A4 1, A5 1, A7 1) | 8 |
 | post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) + the gotest-fixes BUG-078 budget refusal pin (`arrays/materialization-budget/over-budget`, on BUG-078's Cases line since the audit fix round) + the bug082-maphint audit-round BUG-083 hoist-order pin (`builtins/len-vs-call-order/hint-panicky-between`, 2026-09-02) + the q-u4-gomem BUG-084 designed-divergence pins (`race/gomem-only/*`, 5 rows: go_mem-racy / TSan-green shapes REFUSED by [USER] ruling Q-U4RESIDUAL (A), 2026-09-02) + the noodler lane's 23 born-FAIL probe rows (2026-09-03, `docs/2026-09-03_noodler-report.md`: 3 on BUG-087's Cases line (RETIRED 2026-09-03 by the `bug087-paniktext` fix — all three PASS/membership under the R9a two-member envelope, not counted here), 2 on BUG-086's (RETIRED 2026-09-03 by the `bug086-shim-closure` fix — both PASS, not counted here), 11 FG-1..FG-5 frontier candidates (MOVED OUT 2026-09-03 to their own rows FR-16..FR-20 — counted in the frontier bucket above, §8e), 2 BUG-068 red-by-design re-hits, 1 FR-3 re-hit, 3 triage-F6/A3 re-hits, 1 FR-10 value-copy witness in untriaged-ids — 7 noodler reds remain in this bucket) − the shim-surface refusal pins flipped green by `stdlib-source-1` (7, 2026-09-03; movement below) + BUG-089's designed ParseUint error-path reds (4 pre-existing rows flipped + 5 born; Cases line) | 71 |
-| **total** | **197** |
+| **total** | **199** |
+
+*(Movement at the round-9 merge-train union, step 3, 2026-09-04 ([AGENT]: `cedar-census` replayed over main 8de57f64 = 312a4458 + `q-trylock`): frontier 99 → 101 — FR-22/FR-23's two born-FAIL witness rows `init/stdlib-initializer-call`, `generics/imported-generic-in-signature` (§8h); no other bucket moved. 101 + 9 + 10 + 8 + 71 = 199 ✓ (= the baseline's FAIL count; 3284 = 3085 / 199).)*
+
+*(Movement at the 2026-09-03 cedar-go census follow-up (lane `cedar-census`, §8h; its own figure over main 6a163681): frontier 94 → 96 — two born-FAIL witness rows for the census's two whole-export kill points, FR-22 and FR-23; 3201 rows = 3005 / 196; the bucket COVERS FR-1…FR-23.)*
 
 *(Movement at the round-9 merge-train union 2026-09-04 ([AGENT]: `q-trylock` replayed over main 312a4458 = `bug087-paniktext` merged): the two lanes' movements compose on disjoint buckets — frontier 100 → 99 and Q-* 10 → 9 (Q-TRYLOCK, next paragraph), post-vintage 74 → 71 (BUG-087, the paragraph after); no row moved in the replay. 99 + 9 + 10 + 8 + 71 = 197 ✓ (= the baseline's FAIL count; 3282 = 3085 / 197).)*
 
@@ -941,6 +966,31 @@ not the identity on indices — the report's §4 pointer lines carry it.
 Legality of FG-4 was re-checked before rowing (gc go1.26.5 accepts the
 program; see FR-20). Each new row's refusal site was re-measured at
 345ef090 (the report's FG-3 line numbers were its lane tip's).
+
+### 8h. Movement at the cedar-go census follow-up (2026-09-03, lane `cedar-census`; lettered §8g on the lane, re-lettered §8h at the round-9 replay 2026-09-04 because `q-trylock`'s §8g landed first)
+
+[USER] direction 3 (§0; relayed by the [AGENT] coordinator, citation
+not firsthand) applied to the two WHOLE-EXPORT kill points the cedar-go
+coverage census measured (`docs/2026-09-03_cedar-go-coverage-census.md`
+§3.2/§3.3): each is rowed (FR-22, FR-23), queued (§5 slots 22 after
+FR-18, 23 beside FR-12), and pinned by ONE minimal born-FAIL witness
+under `Corpus/coverage/exec/` — a program whose SUBJECT never touches
+the offending declaration, so the row pins the kill's blast radius
+(whole export) and not merely the refusal:
+
+```
+FR-22  init/stdlib-initializer-call             1  (gc PASS; frontend-export FAIL — package-selector call time.Date)
+FR-23  generics/imported-generic-in-signature   1  (gc PASS; frontend-export FAIL — sigRefusal on iter.Seq[int])
+                                                2
+```
+
+3199 / 3005 / 194 + 2 born-FAIL = 3201 / 3005 / 196; frontier 94 + 2 =
+96; 96 + 10 + 10 + 8 + 72 = 196 ✓ (= the baseline's FAIL count). No
+PASS→non-PASS flip (born rows are not flips; the re-pin guard has
+nothing to launder). FR-12's row gains the census's priority evidence.
+Id 21 is the `stdlib-source-1` branch's (unmerged at this rowing); the
+ids here are reserved past it so the two branches merge without a
+renumber.
 
 ### 8f. Movement at the strict-lane depth guard (2026-09-03, lane `strict-routing`)
 

@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+-	unrelatedToTheIterators	-	ok	-	generics,methods,structs,stdlib
+# Born-FAIL frontend-export: FR-23 (ledger §4; cedar-go census 2026-09-03). Legal Go: the refusal is quarantinedMethodStub's sigRefusal arm — "instantiation of imported generic type iter.Seq[int] … its own SIGNATURE does not lower either" — a whole-export kill. Flips at queue 23 (then FR-12 unblocks the calls). Rowed 2026-09-03, [USER] direction 3 (coordinator relay).

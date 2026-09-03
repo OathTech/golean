@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+-	unrelatedToTheInitializer	-	ok	-	init,globals,stdlib
+# Born-FAIL frontend-export: FR-22 (ledger §4; cedar-go census 2026-09-03). Legal Go: the refusal is the H-11 whole-export kill "package-selector call time.Date (package "time" surface not modeled)" raised from a package-level initializer. Flips at queue 22. Rowed 2026-09-03, [USER] direction 3 (coordinator relay).

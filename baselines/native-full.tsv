@@ -1,4 +1,22 @@
 # GoLean native-frontend full-corpus differential baseline
+# re-pinned: 2026-09-03 (cedar-census lane — the cedar-go coverage census's
+#   follow-up under [USER] direction 3 (Mike 2026-09-03, relayed by the
+#   [AGENT] coordinator — cited as relayed, not firsthand): the two
+#   WHOLE-EXPORT kill points the census measured in cedar-go are rowed as
+#   ledger FR-22 (stdlib call in a package-level initializer outside H-11's
+#   pureUnmodeledCallees allowlist) and FR-23 (imported generic instantiation
+#   in a method/func SIGNATURE is unstubbable), each pinned by ONE minimal
+#   born-FAIL witness whose subject never touches the offending declaration:
+#     init/stdlib-initializer-call              FAIL/frontend-export  — FR-22
+#     generics/imported-generic-in-signature    FAIL/frontend-export  — FR-23
+#   No other row moved; no PASS->non-PASS flip (born rows are not flips).
+#   Records: docs/2026-09-03_cedar-go-coverage-census.md, ledger §4/§5/§8h (re-lettered from §8g at the round-9 replay: q-trylock's §8g landed first).
+#   [AGENT]-executed; corpus rows + baseline + records only — no GoLean/,
+#   tools/nativefrontend or gate change.
+#   REPLAYED at the ROUND-9 MERGE TRAIN 2026-09-04 ([AGENT], under the [USER] merge sign-off
+#   «go ahead and merge» 2026-09-04) over main 8de57f64 = 312a4458 + q-trylock: the two
+#   witness rows are born FAIL on FR-22/FR-23's Cases lines; no other row moved; no
+#   PASS->non-PASS flip. 3284 rows; 3085 PASS / 199 FAIL (re-derived from the data rows below).
 # re-pinned: 2026-09-04 (ROUND-9 MERGE TRAIN — [AGENT], under the [USER] merge sign-off
 #   «go ahead and merge» 2026-09-04 naming bug087-paniktext -> q-trylock -> cedar-census in
 #   that order): q-trylock (as amended at its audit fix round F1-F6, next entry) REBASED
@@ -763,7 +781,11 @@
 #     removed row is named in prose, never left dangling on the line).
 #     NEW rows: unsafe/layout-ops/{sizeof-fixed,layout-struct}
 #     FAIL/frontend-export BY DESIGN. unsafe/boundary/pointer-roundtrip
-# cases: 3282 (3085 PASS / 197 FAIL)
+# cases: 3284 (3085 PASS / 199 FAIL)
+#   [re-derived from the data rows at the round-9 merge-train rebase of cedar-census onto main 8de57f64 (= 312a4458 + q-trylock) 2026-09-04 ([AGENT], under the [USER] merge sign-off «go ahead and merge» 2026-09-04: the step-2 union's 3282 (3085 PASS / 197 FAIL) + TWO born-FAIL witness rows init/stdlib-initializer-call (FR-22) and generics/imported-generic-in-signature (FR-23) = 3284 (3085 PASS / 199 FAIL); no other row moved; tallied by row, not summed by hand)]
+#   [the cedar-census-over-6a163681 figure, kept as history:] # cases: 3201 (3005 PASS / 196 FAIL)
+#   [re-derived from the data rows at the cedar-census re-pin 2026-09-03 ([AGENT]: the round-8a tip's 3199 (3005 PASS / 194 FAIL) + TWO born-FAIL rows init/stdlib-initializer-call and generics/imported-generic-in-signature (FR-22/FR-23 witnesses, both frontend-export); no other row moved; `awk -F'\t' '!/^#/{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3005 / FAIL 196)]
+#   [the round-9 step-2 (q-trylock over 312a4458) union figure, kept as history:] # cases: 3282 (3085 PASS / 197 FAIL)
 #   [re-derived from the data rows at the round-9 merge-train rebase of q-trylock (at its audit fix round F1-F6) onto main 312a4458 (= 221d8964 + bug087-paniktext) 2026-09-04 ([AGENT], under the [USER] merge sign-off «go ahead and merge» 2026-09-04: bug087-paniktext's 3264 (3065 PASS / 199 FAIL) + this slice's 18 born-PASS rows + its 2 FAIL->PASS flips = 3282 (3085 PASS / 197 FAIL); the two lanes' row sets are disjoint and no row moved in the replay; tallied by row, not summed by hand)]
 #   [the q-trylock-over-221d8964 figure, kept as history:] # cases: 3278 (3078 PASS / 200 FAIL)
 #   [re-derived from the data rows at the q-trylock audit-fix-round re-pin 2026-09-03 ([AGENT]: main 221d8964's round-8b union 3260 (3058 PASS / 202 FAIL) + 18 born-PASS rows + 2 FAIL->PASS flips = 3278 (3078 PASS / 200 FAIL)); re-derived from the data rows, not summed by hand]
@@ -1956,6 +1978,7 @@ PASS	generics/type-set-constraint	-
 PASS	generics/unused-generic-helper	-
 PASS	generics/zero-composite	-
 PASS	generics/zero-values	-
+FAIL	generics/imported-generic-in-signature	frontend-export
 PASS	goroutines/buffered-wake/fifo	confluent
 PASS	goroutines/buffered-wake/cap-one	confluent
 PASS	goroutines/buffered-wake/len-after-join	confluent
@@ -2231,6 +2254,7 @@ FAIL	init/quarantined-var-syscall/sibling	frontend-export
 FAIL	init/quarantined-var-writer/read	frontend-export
 PASS	init/spec-dependency-example	-
 PASS	init/var-init-sequence	-
+FAIL	init/stdlib-initializer-call	frontend-export
 PASS	interfaces/acked-indexer/hit	-
 PASS	interfaces/acked-indexer/miss	-
 PASS	interfaces/anonymous-alias-dispatch	-

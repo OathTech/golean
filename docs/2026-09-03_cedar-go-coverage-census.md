@@ -209,11 +209,12 @@ each package-level initializer; on an `unsupported` it consults
 2026-08-20). The 18 dependent packages inherit the refusal through
 `cedargo/types`. This is the first real-code exhibit of the H-11
 allowlist's cost: a pure, deterministic constant initializer in a
-leaf package taking down a 18k-LOC library. Recorded as a FINDING for
-the stdlib-boundary design (`time.Date` is a candidate for the
-"specified primitives" table, or the initializer-purity predicate
-could admit calls whose result type is an imported opaque value only
-ever compared/converted) — not fixed here.
+leaf package taking down a 18k-LOC library. Rowed as **FR-22** (ledger §4,
+queue 22; follow-up under [USER] direction 3) — the fix plan is
+per-declaration poisoning of the initialized var rather than a
+whole-export refusal; `time.Date` itself stays a stdlib-boundary
+question for the design memo (specified primitive or source-through).
+Not fixed here.
 
 ### 3.3 Pass B (counterfactual: the datetime initializers relaxed)
 
@@ -232,7 +233,8 @@ Ten signatures carry `iter.Seq`/`iter.Seq2` (`Record.All/Keys/Values`,
 `PolicyIterator.All`, `mapset.MapSet.All`, `dot`): they are the
 library's public iteration API, so no census-side relaxation is
 honest. Per-function frontend census beyond this point is therefore
-unavailable; §3.4 is the static substitute.
+unavailable; §3.4 is the static substitute. Rowed as **FR-23** (ledger
+§4, queue 23, beside FR-12; follow-up under [USER] direction 3).
 
 ### 3.4 Static demand census (`demand.tsv`, 1,085 cedar-go decls)
 
@@ -351,11 +353,22 @@ The single most valuable NON-stdlib item for this target is FR-12 with
 its `iter.Seq` signature companion: without it the authorizer's loop
 and the evaluator's set operators cannot lower even after every stdlib
 slice, and the unstubbable-signature arm turns every `All()` method
-into a whole-export kill. Recommendation (not an obligation): treat
-"imported generic instantiation in a METHOD SIGNATURE" as stubbable
-(declaration-only stub with an opaque `unsupported` parameter type,
-the D5 pattern) so the kill becomes per-declaration — that alone
-would let pass B proceed to a real per-function frontend census.
+into a whole-export kill.
+
+**Rowed under [USER] direction 3 (follow-up, coordinator relay,
+2026-09-03):** the two whole-export kill points are now frontier rows
+in `docs/language-coverage-ledger.md` §4 with fix plans and §5 queue
+slots — **FR-22** (stdlib call in a package-level initializer outside
+H-11's allowlist → per-declaration var poisoning instead of whole-
+export; queue 22, after FR-18; witness `Corpus/coverage/exec/init/
+stdlib-initializer-call`) and **FR-23** (imported generic instantiation
+in a SIGNATURE unstubbable → D5-style per-declaration stub; queue 23,
+beside FR-12; witness `Corpus/coverage/exec/generics/imported-generic-
+in-signature`), both born-FAIL rows re-pinned into
+`baselines/native-full.tsv` (ledger §8h — lettered §8g on the lane, re-lettered at the round-9 replay). FR-12's row carries this
+census as priority evidence. Once FR-22 and FR-23 land, pass B becomes
+unnecessary and the per-function FRONTEND census (§3.4's static
+substitute) can be measured directly.
 
 ## 5. Refinement entry points (for the reasoning question)
 
