@@ -527,7 +527,12 @@ directive. Decisions made DURING the build, recorded here:
   {10, 20} with members=2, go sampling plain + -race.
   `waitgroup-workers-join` stays STRICT, recorded: the 3-worker tree
   exceeds the 40M work cap with subtrees unexplored (measured; the
-  pipeline/two-stage DPOR-deferral precedent).
+  pipeline/two-stage DPOR-deferral precedent). [2026-09-03: re-measured
+  under the POR `engine=dedup` — the state graph does not close either
+  (27.1M nodes at the 60M work budget, 39.7 GB); declares `depth=128`
+  under the strict-lane depth guard (memo P1) — three seeded 128-entry
+  invariance streams verified to cover every wide pick; not an
+  invariance certificate — `docs/evidence/2026-09-03_strict-routing/`.]
 - **Sequential conservation held with zero effort**: the sync apply
   consumes nothing and single-thread pools never consult the stream
   (|runnable| = 1 at every new boundary), so

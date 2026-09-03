@@ -1,0 +1,4 @@
+imported-goose/unittest/replicated-disk rc=0 secs=50
+noodler/budget/loop-100k rc=0 secs=20
+noodler/budget/map-20k rc=0 secs=35
+noodler/budget/recursion-5k rc=0 secs=64

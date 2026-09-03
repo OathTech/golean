@@ -85,7 +85,7 @@ expect_reject "nondet tag on a strict row" \
   "must declare lane=membership"
 expect_reject "strict row with why text" \
   '-\trangeFirstKey\t-\tok\t-\tmaps\tstrict\tsome text\t-' \
-  "must leave why/params as -"
+  "must leave why as -"
 expect_reject "unknown param key" \
   '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\tbogus=3' \
   "unknown lane param key"
@@ -175,6 +175,26 @@ expect_reject "statuses duplicate entry" \
   "duplicate entry"
 expect_accept "membership row with a status-diverse envelope" \
   '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16,statuses=ok+panic'
+# depth= (strict-lane depth guard, membership-depth memo P1, [USER]-ruled
+# 2026-09-03): the ONLY strict-lane param, a positive integer; a category
+# error on the enumerating lanes.
+expect_accept "strict row declaring depth=N (P1)" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tstrict\t-\tdepth=64'
+expect_reject "strict row with depth=0" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tstrict\t-\tdepth=0' \
+  "may only declare depth="
+expect_reject "strict row with an enumerator param" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tstrict\t-\twidth=4' \
+  "may only declare depth="
+expect_reject "strict row with a why" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tstrict\twhy text\t-' \
+  "must leave why as -"
+expect_reject "depth= on a membership row" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16,depth=64' \
+  "strict-lane param"
+expect_reject "depth= on a confluent row" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tconfluent\twhy text\twidth=4,depth=64' \
+  "strict-lane param"
 
 # ---- Part A3 (always; pure shell): scripts/check-bugs.sh's `Expect: FAIL`
 # assertion for Pinned-by:none red-by-design pins (q-u4-gomem audit fix F4,
@@ -467,6 +487,51 @@ if [ "$WITH_GO" -eq 1 ]; then
     # Placed in Part B, not A2, for the same reason: it must get PAST
     # the build and binary check, and the fast-gate lane step runs
     # before the core build.
+    # ---- P1: the strict-lane DEPTH GUARD (membership-depth memo §5,
+    # [USER]-ruled 2026-09-03; red-first — D1 and D4 PASSED on the
+    # pre-guard harness, which is the leak the guard closes). Fixture
+    # subject: goroutines/pipeline's buffered-stage — 29 wide picks under
+    # the default stream, 21 served after the 8-entry stream is exhausted
+    # (memo §2.3), state graph closes under engine=dedup in ~4 s.
+    PIPE_DIR="Corpus/coverage/exec/goroutines/pipeline"
+    PIPE_FEATS="goroutines,channels,range,close"
+    run_d() {  # name manifest-row expected-glob description
+      local name="$1" rowtxt="$2" want="$3" what="$4"
+      printf '%s\n' "$rowtxt" > "$TMP/manifest-$name.tsv"
+      GOLEAN_COVERAGE_ARTIFACTS="$ART" scripts/diff-coverage "$TMP/manifest-$name.tsv" >/dev/null 2>&1
+      row="$(tail -1 "$ART/latest.tsv" 2>/dev/null || true)"
+      if [[ "$row" == $want ]]; then
+        echo "ok: $what ($name)"
+      else
+        echo "FAIL: $what ($name); row: ${row:-<none>}"
+        fail=1
+      fi
+    }
+    run_d D1 "$(printf 'lane-d1\t%s\tpipelineBufferedStage\t-\tok\t%s\t-\tstrict\t-\t-' "$PIPE_DIR" "$PIPE_FEATS")" \
+      "FAIL*nondet*strict row: *wide pick(s) served after stream*was exhausted at consumption*route to confluent, or declare depth*" \
+      "depth guard refuses a strict row whose adversarial streams are exhausted, naming the cause"
+    run_d D2 "$(printf 'lane-d2\t%s\tpipelineBufferedStage\t-\tok\t%s\t-\tconfluent\twhy\twidth=4,sites=64,work=500000,engine=dedup,backedge=full' "$PIPE_DIR" "$PIPE_FEATS")" \
+      "PASS*confluent*|set|=1 certified*" \
+      "the same row routed to confluent is certified (|set|=1)"
+    run_d D3 "$(printf 'lane-d3\t%s\tpipelineBufferedStage\t-\tok\t%s\t-\tstrict\t-\tdepth=128' "$PIPE_DIR" "$PIPE_FEATS")" \
+      "PASS*wide=*exhausted=none depth=128*" \
+      "the same row with a sufficient depth=N passes, recording wide=/depth="
+    run_d D4 "$(printf 'lane-d4\t%s\tpipelineBufferedStage\t-\tok\t%s\t-\tstrict\t-\tdepth=4' "$PIPE_DIR" "$PIPE_FEATS")" \
+      "FAIL*nondet*strict row: *wide pick(s) served after the declared depth=4 stream*raise depth*" \
+      "an insufficient depth=N is refused, naming the exhausted seeded stream"
+    # D5: a refusal under a variant stream is a refusal, not a variance
+    # (P1 item 4 / P5, D-10 item 2). Subject: channels/select-select's
+    # beside-loop — ok under the default stream, `unsupported` under
+    # every adversarial stream (the tracked baseline row).
+    run_d D5 "$(printf 'lane-d5\tCorpus/coverage/exec/channels/select-select\tselectBesideSelectLoop\t-\tok\tchannels,select,goroutines\t-\tstrict\t-\t-')" \
+      "FAIL*lean-observation*variant stream*produced status 'unsupported'*a refusal under a variant stream is a refusal, not a variance*" \
+      "a variant-stream refusal is reported as a refusal (lean-observation), not as nondet"
+    # D6: depth= re-validated in the harness (F4 discipline) — a row that
+    # bypasses the manifest with a malformed depth fails loud.
+    run_d D6 "$(printf 'lane-d6\t%s\tpipelineBufferedStage\t-\tok\t%s\t-\tstrict\t-\tdepth=0' "$PIPE_DIR" "$PIPE_FEATS")" \
+      "FAIL*manifest*may only declare depth=*" \
+      "harness re-validation refuses depth=0"
+
     FAKEBIN_G5="$TMP/fakebin-xargs-no-r"
     mkdir -p "$FAKEBIN_G5"
     cat > "$FAKEBIN_G5/xargs" <<'EOF'

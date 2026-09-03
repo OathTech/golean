@@ -1,0 +1,6 @@
+Command terminated by signal 9
+maxrss_kb=41913144 wall_s=718.26
+==============================================================
+scripts/capped: KILLED (exit 137 — cgroup/OOM or signal; NOT a pass)
+==============================================================
+rc=137 secs=719

@@ -114,8 +114,10 @@ Optional lane columns (membership lane, arc slice 3,
 ...<TAB>lane<TAB>why<TAB>params
 ```
 
-- `lane` is `strict` (the default when the columns are absent or `-`) or
-  `membership`. Membership cases are oracled by SET MEMBERSHIP — every
+- `lane` is `strict` (the default when the columns are absent or `-`),
+  `membership`, `confluent`, or `racy` (the last two: channels arc slice 4,
+  `docs/2026-08-04_nondeterminism-doctrine.md` "Per-lane epistemic
+  captions"). Membership cases are oracled by SET MEMBERSHIP — every
   `go run` sample must lie in the machine-enumerated observation set
   (`golean coverage-observations`) — instead of equality against one run.
 - `why` is mandatory free text for `membership` (which observable depends
@@ -135,30 +137,136 @@ Optional lane columns (membership lane, arc slice 3,
   the strict lane"); a strict case that varies across the adversarial
   choice streams keeps failing at stage `nondet`.
 
-Rules:
+### Lane assignment: the strict-lane depth guard (memo P1, [USER]-ruled 2026-09-03)
 
-- `id` is `-` for a one-case package, otherwise a kebab-case suffix.
-- `subject` is the source-level Go function Lean should run.
-- `args` is `-` or comma-separated integer arguments.
-- `expected_status` is one of `ok` or `panic`.
-- `expected_reason` is `-` for `ok`; it is required for `panic`.
-- Frontend export failures, Lean `unsupported`, Lean `stuck`, Lean `error`, and
-  differential mismatches are reported as red cases. They are not encoded as
-  expected statuses in executable metadata.
-- `features` is a comma-separated list of canonical feature tags.
-- `ok` subjects must return at least one observable value. Use a checksum or
-  deterministic summary for mutation-heavy tests.
+Origin: the membership-depth lane's routing-rule proposal
+(`docs/2026-09-01_membership-depth.md` §5, P1 in §6). Ruling: [USER]
+(Mike, 2026-09-03) «(6) strict-lane, agree» to the coordinator's item
+"Strict-lane routing rule: adopting it turns eight scheduling rows red
+until routed. Recommendation: adopt, and route them in the same slice
+so nothing sits red" — relayed by the [AGENT] coordinator, cited here
+as relayed, not firsthand; the coordinator then corrected the scope
+to "implement P1 as written in §5". Implemented on lane
+`strict-routing` (`docs/evidence/2026-09-03_strict-routing/`).
 
-Derived fields:
+**The rule (as the record proposed it; mechanized in
+`scripts/diff-coverage`).** A strict PASS is a two-part claim — Go
+equality on the default trajectory AND invariance across three
+adversarial choice streams — and the second part is only made when
+the streams cover every bound-≥-2 consumption (`Choices.consume`
+yields slot 0 once a stream is exhausted, so a row that outruns its
+stream is compared with its own default trajectory):
 
-- `go_dir` is the directory containing `cases.tsv`.
-- Frontend artifact paths are adapter-owned. For the current Gobra adapter this
-  is `artifacts/coverage/work/<full-id>/main.go.internal.json`, but the
-  normalized manifest does not store that path.
-- Result logs are under `artifacts/coverage/results/<full-id>/`.
+1. After the invariance re-runs, one `golean choice-trace` call
+   replays the default stream and the three streams that ran, in
+   lockstep with the consumption accountant, and reports per stream
+   `wideAfterExhaustion` — bound-≥-2 consumptions served AFTER the
+   stream ran out — plus the default-stream wide count `w` (recorded
+   in the PASS detail as `wide=`, for sizing only; a `w ≤ 8` threshold
+   is NOT the rule — it both leaks and over-refuses, memo §5).
+2. `wideAfterExhaustion = 0` on every invariance stream ⇒ the check
+   stands; the row PASSes with `wide=<w> exhausted=none depth=fixed`.
+3. Otherwise the strict PASS is REFUSED at stage `nondet` with the
+   cause named — "strict row: k wide pick(s) served after stream <s>
+   was exhausted at consumption n — the 3-stream invariance check did
+   not cover this row; route to confluent, or declare depth" — unless
+   the row carries `lane=confluent` (the enumerator certifies |set| = 1
+   over all registry-point schedules; the 3-stream check is then
+   redundant with the certificate and the guard does not run) or, when
+   the enumerated set has ≥ 2 members, `lane=membership` with
+   `members=`; or an explicit strict-lane `depth=N`, under which the
+   gate runs three SEEDED invariance streams of length N (seeds `1 2 3`,
+   generator `lcg31(1103515245,12345) bits16..31`, both in the run
+   meta as `depth_seeds`/`depth_generator`; the same explicit list goes
+   to `native-json-run --choices` and to the tracer, so nothing depends
+   on a shared generator) which must themselves report
+   `wideAfterExhaustion = 0` — else "strict row: k wide pick(s) served
+   after the declared depth=N stream <seeded:seed:N> was exhausted at
+   consumption n — … raise depth". No default: a strict row whose
+   streams were outrun with no declaration is red, never strict-green.
+4. A REFUSAL under a variant stream (status ≠ the default run's) is
+   reported at stage `lean-observation` — "a refusal under a variant
+   stream is a refusal, not a variance" — never as `nondet`
+   (assessment D-10 item 2 / memo P5; the one corpus row this moves is
+   `channels/select-select/beside-loop`, FAIL either way).
+5. The guard itself failing to run (timeout, kill, a tracer
+   violation/alarm/driver disagreement, an empty stream in a worker,
+   fewer than four reports) is a `nondet` FAIL naming that cause —
+   never a pass.
 
-This removes manifest duplication where ids, source directories, and
-frontend-specific artifact paths can drift independently.
+`depth=N` is the strict lane's ONLY param (`why` stays `-`); on the
+enumerating lanes it is refused as a category error. Sizing
+convention [AGENT]: N = the smallest power of two ≥ 4·w, min 64, where
+w is the default-stream wide count at the row's trace; the guard, not
+the convention, is the check. `depth=` is the strict lane's spot check
+made honest (N tied to a measurement), NOT a schedule-confluence
+certificate. Lengthening the three fixed streams is NOT a remedy (it
+moves the horizon without tying it to the row).
+
+**Standing consequence — the 23 rows the guard reaches at the memo's
+trace, plus 20 the first full gate run found** (memo §2.3; re-traced in the evidence dir's
+`trace23.tsv`, with the three memo controls `fmt/sprintf-verbs/{d-int,
+d-uint}` and `spec-examples-stmt/go-statements/named-call` confirmed
+covered by the fixed streams):
+
+- Scheduling rows routed to `lane=confluent` (3):
+  `goroutines/pipeline/{two-stage,buffered-stage}`,
+  `spec-examples-stmt/go-statements/func-literal` — `engine=dedup`,
+  `backedge=full`, |set| = 1 checker-accepted; 20 gc draws each
+  (plain/-race alternating) inside the singleton.
+- Scheduling rows declaring `depth=N` (5) — FINDING: their state
+  graphs do NOT close under `engine=dedup` within the fail-loud caps
+  (40 GB cgroup kill or the 60M dedup work budget; per-row numbers in
+  their `cases.tsv`), so they cannot honestly sit in a lane claiming
+  invariance over all schedules: `spec-examples-stmt/prime-sieve/five`
+  (w=187, depth=1024), `…/eight` (w=521, depth=4096),
+  `goroutines/worker-pool/shared-feed` (w=32, depth=128),
+  `sync/waitgroup-workers-join/workers-join` (w=28, depth=128),
+  `imported-goose/channel/parallel-search-replace/search-replace`
+  (w=42, depth=256).
+- Capacity rows declaring `depth=N` (15; `appendSpill` only — the
+  latitude is capacity, observable through `cap()`, which none reads):
+  `fmt/fprintf-builder/describe-shape`, `fmt/fprint-writers/
+  fprintf-buffer-shape`, `fmt/sprintf-dyn/{logger-shape,
+  sprint-space-rule,verb-kinds}`, `fmt/sprintf-verbs/d-width` (64 each);
+  `multipkg/mini-raft-twin/duel` (64), `…/{elect-propose-commit,
+  perturb-picks,perturb-rev,starve-node}` (128); `strconv/format-parse/
+  {format-int-vals,format-uint-bases}` (128), `…/parse-uint-errors`
+  (256), `…/parse-uint-range-value` (512).
+
+- Rows that landed AFTER the memo's 2026-09-01 trace (the noodler
+  lane, 2026-09-03) and which the guard's first full run caught —
+  the rule working on rows no one had classified by hand
+  (`trace-new16.tsv` in the evidence dir): 5 → `lane=confluent`
+  (`noodler/goroutines/{directional-params,fifo-one-sender,
+  lockstep-transcript}`, `noodler/select/ping-pong`,
+  `noodler/syncmisuse/unlock-from-other-goroutine`; `engine=dedup`
+  closes each in < 1 s; 20 gc draws each inside the singleton) and 11
+  → `depth=N` because `engine=dedup` does not close them within a 20M
+  work budget / 24 GB (a FINDING each): `noodler/goroutines/
+  {close-broadcast 256, once-across-goroutines 256, pipeline-three-stages
+  256, rwmutex-readers 256, semaphore-total 512, worker-pool-sum 512,
+  mutex-counter 2048}`, `noodler/closures/goroutines-loopvar` (256),
+  `noodler/gostmt/pointer-method` (128), `noodler/syncmisuse/
+  waitgroup-reuse` (128), `noodler/strconv-formatint/edges` (256,
+  `appendSpill`). `mutex-counter` is the row that shows why the guard
+  verifies the declared streams: a 256-entry seeded stream is itself
+  exhausted there (67-123 wide picks after), 1024 covers.
+- The tracer's wall budget: `LEAN_TRACE_TIMEOUT_SECONDS` (default 8 ×
+  `LEAN_TIMEOUT_SECONDS` = 240 s; the tracer makes eight interpreter
+  passes where `native-json-run` makes one). The guard's first full
+  run under the 30 s single-run budget timed out on four heavy
+  zero-consumption rows (`imported-goose/unittest/replicated-disk`,
+  `noodler/budget/{loop-100k,map-20k,recursion-5k}`: 20-64 s
+  unloaded) — a named `nondet` FAIL, as designed; the knob is
+  recorded in the run meta.
+
+Fixtures: `scripts/test-lane-validation` — six manifest shapes (Part
+A) and D1-D6 (Part B, `--with-go`): the exhausted strict row refused
+with the named cause; the same row confluent → certified; `depth=128`
+→ PASS with `wide=`/`depth=`; `depth=4` → refused naming the seeded
+stream; the variant-stream refusal reported at `lean-observation`;
+`depth=0` refused by the harness's own re-validation.
 
 ## Go Source Contract
 

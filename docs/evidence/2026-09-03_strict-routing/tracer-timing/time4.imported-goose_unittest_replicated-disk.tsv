@@ -1,0 +1,5 @@
+id	stream	status	consumed	wide	exhaustedAt	wideAfterExhaustion	perSite	maxBound	violations	firstViolation	alarms	firstAlarm	obsHash	driverAgreement
+artifacts/coverage/native/imported-goose/unittest/replicated-disk/wire.json	default	ok	0	0	-	0	-	0	0	-	0	-	12001011276398221595	ok
+artifacts/coverage/native/imported-goose/unittest/replicated-disk/wire.json	9,8,7,6,5,4,3,2,1,0	ok	0	0	-	0	-	0	0	-	0	-	12001011276398221595	ok
+artifacts/coverage/native/imported-goose/unittest/replicated-disk/wire.json	1,3,5,7,9,2,4,6,8,0	ok	0	0	-	0	-	0	0	-	0	-	12001011276398221595	ok
+artifacts/coverage/native/imported-goose/unittest/replicated-disk/wire.json	5,5,5,5,5,5,5,5	ok	0	0	-	0	-	0	0	-	0	-	12001011276398221595	ok

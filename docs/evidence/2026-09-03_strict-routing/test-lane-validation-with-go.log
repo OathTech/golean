@@ -1,0 +1,76 @@
+ok: membership without why
+ok: nondet tag on a strict row
+ok: strict row with why text
+ok: unknown param key
+ok: invalid lane value
+ok: duplicate param key
+ok: non-positive param value
+ok: membership without the nondet tag
+ok: tier on a racy row
+ok: tier on a confluent row (W3.2 stage C widening)
+ok: invalid tier value
+ok: membership without explicit width (F2a)
+ok: bare 6-column strict row
+ok: explicit strict row
+ok: well-formed membership row
+ok: confluent without why
+ok: confluent with the nondet tag
+ok: confluent without width
+ok: confluent with a members param
+ok: racy on a non-race expectation
+ok: racy without width
+ok: race expectation left on the strict lane
+ok: race expectation on the membership lane
+ok: well-formed confluent row
+ok: well-formed racy row
+ok: membership row with a members pin
+ok: statuses on a non-membership lane
+ok: statuses malformed entry
+ok: statuses singleton
+ok: statuses missing expected_status
+ok: statuses duplicate entry
+ok: membership row with a status-diverse envelope
+ok: strict row declaring depth=N (P1)
+ok: strict row with depth=0
+ok: strict row with an enumerator param
+ok: strict row with a why
+ok: depth= on a membership row
+ok: depth= on a confluent row
+ok: check-bugs Expect: FAIL with a FAIL row passes
+ok: check-bugs Expect: FAIL with a PASS row fails (5)
+ok: check-bugs none-entry without Expect stays existence-only
+ok: check-bugs unrecognized Expect token fails closed (0)
+ok: lake-build failure exits 2, no readable results (G1)
+ok: lake-build timeout exits 2, no readable results (G2)
+ok: manifest-not-found exits 2, no readable results (G3)
+ok: empty manifest exits 2 without publishing (G4)
+ok: harness re-validation rejects samples=0 (F4)
+ok: membership under non-native frontend fails closed (F6)
+ok: members= cardinality pin refuses a wrong pin (B3)
+ok: confluent lane refuses a non-singleton set (B4)
+ok: racy lane fails loud on a refuted width (B5)
+ok: depth guard refuses a strict row whose adversarial streams are exhausted, naming the cause (D1)
+ok: the same row routed to confluent is certified (|set|=1) (D2)
+ok: the same row with a sufficient depth=N passes, recording wide=/depth= (D3)
+ok: an insufficient depth=N is refused, naming the exhausted seeded stream (D4)
+ok: a variant-stream refusal is reported as a refusal (lean-observation), not as nondet (D5)
+ok: harness re-validation refuses depth=0 (D6)
+ok: fan-out that ran no worker exits 2 without publishing (G5)
+ok: G5 named both causes (global fan-out refusal + empty-row guard), no stray .out
+ok: T1-strict-lean-run: cause named at stage lean-observation (Lean run TIMED OUT after 1s)
+    row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	lean-observation	Lean run TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) — no observation produced (expected status ok); captured output: run_with_timeout: TIMED OUT after 1s — killing: /home/dev/projects/golean/.tmp/golean-lane-validation.TBrv9j/fakeroot/.lake/build/bin/golean native-json-run --input /home/dev/projects/golean/.tmp/golean-lane-validation.TBrv9j/artifacts-T1-strict-lean-run/native/lane-t1/wire.json --function forConditionEval
+ok: T2-nondet-rerun: cause named at stage nondet (re-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s)
+    row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	nondet	oracle-invariance re-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) — invariance NOT certified (a killed run is not an observed variance); captured output: run_with_timeout: TIMED OUT after 1s — killing: /home/dev/projects/golean/.tmp/golean-lane-validation.TBrv9j/fakeroot/.lake/build/bin/golean native-json-run --input /home/dev/projects/golean/.tmp/golean-lane-validation.TBrv9j/artifacts-T2-nondet-rerun/native/lane-t1/wire.json --function forConditionEval --choices 9,8,7,6,5,4,3,2,1,0
+ok: T3-coupling-pin: cause named at stage membership (driver-coupling pin: native-json-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s)
+    row: FAIL	lane-t3	maps,range,keys,loops,nondet	membership	driver-coupling pin: native-json-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) — coupling NOT certified (a killed run is not copied-driver drift); captured output: run_with_timeout: TIMED OUT after 1s — killing: /home/dev/projects/golean/.tmp/golean-lane-validation.TBrv9j/fakeroot/.lake/build/bin/golean native-json-run --input /home/dev/projects/golean/.tmp/golean-lane-validation.TBrv9j/artifacts-T3-coupling-pin/native/lane-t3/wire.json --function rangeFirstKey --choices 9,8,7,6,5,4,3,2,1,0
+ok: T4-sample-loop: cause named at stage membership (observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing a Go sample against member #1)
+    row: FAIL	lane-t3	maps,range,keys,loops,nondet	membership	membership check: observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing a Go sample against member #1 — membership NOT decided (a killed comparator is not the too-narrow soundness alarm): sample={"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]} member={"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+ok: T5-comparator-undecodable: cause named at stage go-observation (Go output is not a valid observation (comparator said: left.status: unknown observation status)
+    row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	go-observation	Go output is not a valid observation (comparator said: left.status: unknown observation status "weird"): {"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1233}]}
+ok: T6-lean-run-sigkill: cause named at stage lean-observation (Lean run KILLED (exit 137)
+    row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	lean-observation	Lean run KILLED (exit 137 — SIGKILL: cgroup/OOM or an external kill; did not decide) — no observation produced (expected status ok); captured output: 
+ok: T7-differential-sigterm: cause named at stage differential (observation-eq KILLED (exit 143)
+    row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	differential	observation-eq KILLED (exit 143 — SIGTERM: an external kill; did not decide) — Lean/Go equality NOT decided (not a mismatch): Lean={"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1233}]} Go={"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1233}]}
+ok: T8-go-oracle-sigkill: cause named at stage go-run (go run oracle KILLED (exit 137)
+    row: FAIL	lane-t8	panic,recover,defer,returns,named-results	go-run	go run oracle KILLED (exit 137 — SIGKILL: cgroup/OOM or an external kill; did not decide) — no Go observation produced (not a panic verdict); captured output: 
+test-lane-validation: ok

@@ -260,7 +260,12 @@ These stay deferred until the membership/confluent/racy lanes hit a
 tractability wall the work caps cannot absorb (pipeline/{two-stage,
 buffered-stage} and worker-pool/shared-feed — today's
 beyond-tractable-caps strict-lane residents — are the natural first
-customers).
+customers). [2026-09-03: the POR `engine=dedup` took the first two
+to CONFLUENT; shared-feed, sync/waitgroup-workers-join/workers-join,
+spec-examples-stmt/prime-sieve/{five,eight} remain beyond the caps and
+declare `depth=N` under the strict-lane depth guard (memo P1: seeded
+invariance streams verified to cover every wide pick) —
+`docs/evidence/2026-09-03_strict-routing/`.]
 
 ## Slice-4 addendum (2026-08-07, channels arc): the stepwise pool engine
 

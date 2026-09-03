@@ -1,9 +1,17 @@
-# id	subject	args	expected_status	expected_reason	features
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
 three-clause-body-mod	threeClauseBodyModification	-	ok	-	closures,loops,scoping
 closure-modifies-own	closureModifiesOwnIteration	-	ok	-	closures,loops,range,scoping
 defers-per-iteration	defersCapturePerIteration	-	ok	-	closures,defer,loops,named-results
 defer-modifies-loopvar	deferModifiesLoopVar	-	ok	-	closures,defer,loops,named-results
-goroutines-loopvar	goroutinesCaptureLoopVar	-	ok	-	closures,goroutines,sync,waitgroup,mutex,loops
+# goroutines-loopvar: depth=256 under the STRICT-LANE DEPTH GUARD (memo P1,
+# [USER]-ruled 2026-09-03; docs/coverage-suite-structure.md "Lane
+# assignment"): the guard's first full run found 26-30 of its ~40 wide
+# scheduling picks served AFTER the fixed adversarial streams were
+# exhausted; engine=dedup does NOT close (work budget 20M exceeded at
+# 9,137,824 nodes, 137 s, cap 24 GB) — a FINDING, so depth=256 (w=40;
+# seeded 256: 42/43/47 wide, 0 after) keeps it strict honestly, not
+# confluent-certified. docs/evidence/2026-09-03_strict-routing/.
+goroutines-loopvar	goroutinesCaptureLoopVar	-	ok	-	closures,goroutines,sync,waitgroup,mutex,loops	strict	-	depth=256
 range-int-body-assign	rangeIntBodyAssign	-	ok	-	range,loops,scoping
 three-clause-body-count	threeClauseBodyAssignCount	-	ok	-	loops,scoping
 closure-named-result-return	closureWritesNamedResultInReturn	-	ok	-	closures,named-results,returns

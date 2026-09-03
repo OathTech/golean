@@ -6,4 +6,26 @@
 # schedule-independence claim for this shape rides the mutex/wg edges
 # argued at applySyncOp, not a certified singleton — until the DPOR
 # additive layer (the recorded enumerator-optimization backlog).
-workers-join	workersJoin	-	ok	-	sync,waitgroup,mutex,goroutines,globals,loops	strict	-	-
+# STRICT-LANE DEPTH GUARD — DECLARED depth= (2026-09-03, [AGENT] on the
+# [USER]-adopted rule; docs/coverage-suite-structure.md "Lane assignment",
+# docs/evidence/2026-09-03_strict-routing/). The membership-depth trace
+# (memo §2.3): 28 wide picks under the default stream (l1Sched 16,
+# postOp 9, backEdge 3), 18 of 28 served after exhaustion on the worst
+# adversarial stream — the strict PASS certifies invariance only over the
+# stream prefix (+ default + two random-4096 trajectories). Routing to
+# the confluent lane was ATTEMPTED with the POR state-graph engine and
+# FAILS LOUD: engine=dedup, width 4, scripts/capped 40G — backedge=full
+# at work 30M: "dedup work budget exceeded (13,556,568 nodes, 16,443,434
+# edges)" at 59 s; backedge=0 at work 60M: budget exceeded at 27,119,587
+# nodes / 32,880,417 edges, maxrss 39.7 GB, 123 s (the worker-pool/sum
+# precedent: the 3-worker mutex+WaitGroup graph does not close under
+# dedup either). The rule's home for this shape is a declared depth=
+# (memo §5 item 3, w=28) — declared on the row below.
+# workers-join: declared depth=128 (= smallest power of two >= 4*w, w=28 [AGENT
+# sizing]): the gate runs three SEEDED invariance streams of that length
+# (memo §5 item 3) and refuses unless each reports wideAfterExhaustion=0
+# — the re-trace at seeded length 128 drew every wide pick from the
+# stream. This is the strict lane's spot check made honest (N tied to
+# the measurement), NOT a schedule-confluence certificate: the
+# confluent-lane attempt above fails loud, and that stands as a FINDING.
+workers-join	workersJoin	-	ok	-	sync,waitgroup,mutex,goroutines,globals,loops	strict	-	depth=128

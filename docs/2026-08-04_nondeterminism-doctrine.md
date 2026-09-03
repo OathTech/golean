@@ -552,7 +552,14 @@ EPISTEMIC CAPTION, recorded per the per-lane discipline:
   fail-loud caps at tractable budgets stay strict, RECORDED in their
   cases.tsv (pipeline/two-stage, pipeline/buffered-stage,
   worker-pool/shared-feed — DPOR is the recorded later-additive
-  layer).
+  layer). [2026-09-03 update, strict-routing lane: the POR
+  `engine=dedup` closes pipeline/{two-stage,buffered-stage} (now
+  CONFLUENT); worker-pool/shared-feed still does not close (40 GB cgroup
+  kill) and declares `depth=128` under the strict-lane depth guard
+  (memo P1, [USER] 2026-09-03; `docs/coverage-suite-structure.md` "Lane
+  assignment") — three seeded 128-entry invariance streams, each
+  verified to cover every wide pick; a spot check made honest, NOT an
+  invariance certificate.]
 
 ## Per-lane epistemic captions (channels arc slice 6, 2026-08-07)
 

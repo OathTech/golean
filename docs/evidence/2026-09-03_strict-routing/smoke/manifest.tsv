@@ -1,0 +1,6 @@
+sm-covered	Corpus/coverage/exec/fmt/sprintf-verbs	sprintfDInt	-	ok	stdlib,strings,ints	-	strict	-	-
+sm-exhausted	Corpus/coverage/exec/goroutines/pipeline	pipelineBufferedStage	-	ok	goroutines,channels,range,close	-	strict	-	-
+sm-depth-ok	Corpus/coverage/exec/goroutines/pipeline	pipelineBufferedStage	-	ok	goroutines,channels,range,close	-	strict	-	depth=128
+sm-depth-short	Corpus/coverage/exec/goroutines/pipeline	pipelineBufferedStage	-	ok	goroutines,channels,range,close	-	strict	-	depth=4
+sm-variant-refusal	Corpus/coverage/exec/channels/select-select	selectBesideSelectLoop	-	ok	channels,select,goroutines	-	strict	-	-
+sm-confluent	Corpus/coverage/exec/goroutines/pipeline	pipelineBufferedStage	-	ok	goroutines,channels,range,close	-	confluent	why	width=4,sites=64,work=500000,engine=dedup,backedge=full

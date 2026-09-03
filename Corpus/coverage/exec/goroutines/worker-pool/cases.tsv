@@ -15,5 +15,26 @@
 # the range-over-channel drain multiplies interleavings). The strict
 # lane's 3-stream invariance still covers it; revisit with DPOR (the
 # recorded later-additive layer, D9(c)).
+# STRICT-LANE DEPTH GUARD — DECLARED depth= (2026-09-03, [AGENT] on the
+# [USER]-adopted rule; docs/coverage-suite-structure.md "Lane assignment",
+# docs/evidence/2026-09-03_strict-routing/). The "3-stream invariance
+# still covers it" sentence above is WITHDRAWN: the membership-depth
+# trace (memo §2.3) shows shared-feed draws 32 wide picks (l1Sched 15,
+# postOp 9, backEdge 8), 24 of 32 served AFTER the worst adversarial
+# stream was exhausted — the strict PASS certifies invariance only over
+# the stream prefix (+ default + two random-4096 trajectories). Routing
+# to the confluent lane was ATTEMPTED with engine=dedup (width 4, work
+# 60M, scripts/capped 40G) and FAILS LOUD: backedge=full KILLED (cgroup,
+# 161 s, >40 GB), backedge=0 KILLED (148 s) — the two range-over-channel
+# drainers over a 6-item buffer do not close (the sum precedent above).
+# The rule's home for this shape is a declared depth= (memo §5 item 3,
+# w=32) — declared on the row below.
 sum	workerPoolSum	-	ok	-	goroutines,channels,closures	confluent	the summed contributions commute and the result channel joins all workers before the readout, so every schedule yields the one member	width=4,sites=18,work=15000000
-shared-feed	workerPoolSharedFeed	-	ok	-	goroutines,channels,range,close
+# shared-feed: declared depth=128 (= smallest power of two >= 4*w, w=32 [AGENT
+# sizing]): the gate runs three SEEDED invariance streams of that length
+# (memo §5 item 3) and refuses unless each reports wideAfterExhaustion=0
+# — the re-trace at seeded length 128 drew every wide pick from the
+# stream. This is the strict lane's spot check made honest (N tied to
+# the measurement), NOT a schedule-confluence certificate: the
+# confluent-lane attempt above fails loud, and that stands as a FINDING.
+shared-feed	workerPoolSharedFeed	-	ok	-	goroutines,channels,range,close	strict	-	depth=128

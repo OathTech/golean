@@ -1,0 +1,4 @@
+coverage-observations: dedup engine: dedup work budget exceeded (9043049 nodes, 10956952 edges, 1913904 hits, 6032569 hashes, maxBucket 12) — raise the row's work cap
+Command exited with non-zero status 1
+maxrss_kb=19056636 wall_s=124.32
+rc=1 secs=124

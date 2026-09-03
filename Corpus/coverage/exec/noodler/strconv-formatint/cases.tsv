@@ -1,3 +1,8 @@
-# id	subject	args	expected_status	expected_reason	features
-edges	formatIntEdges	-	ok	-	strings,stdlib,ints
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# edges: depth=256 under the STRICT-LANE DEPTH GUARD (memo P1, [USER]-ruled
+# 2026-09-03; docs/coverage-suite-structure.md "Lane assignment"): 64
+# appendSpill picks (capacity latitude inside the shim's string building,
+# not observed), 54-56 served after the fixed streams were exhausted;
+# seeded 256 covers (64 wide, 0 after). docs/evidence/2026-09-03_strict-routing/.
+edges	formatIntEdges	-	ok	-	strings,stdlib,ints	strict	-	depth=256
 positive	formatIntPositive	-	ok	-	strings,stdlib,ints

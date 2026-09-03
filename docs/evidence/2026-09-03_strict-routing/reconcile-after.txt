@@ -1,0 +1,33 @@
+========================================================================
+reconcile-records — cross-ledger reconciliation (READ-ONLY)
+========================================================================
+baseline            3195 cases  3001 PASS  194 FAIL
+baseline header     [3195, 3001, 194]  matches the rows
+bugs                87 entries  9 open  78 fixed
+untriaged           14 tracked  {'coverage': 10, 'latitude': 4}  ceilings {'coverage': 10, 'latitude': 4, 'wrong-answer': 0}
+ledgers             16 L-entries  7 I-rows  15 FR-rows  10 Q-rows  41 latitude rows
+
+[01] C13  MEDIUM  78 doc site(s) across 9 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
+        docs/2026-08-20_go-scheduling-semantics-dossier.md: 60 site(s)
+        docs/2026-09-01_oracle-legs.md: 5 site(s)
+        docs/2026-07-25_unwinding-arc.md: 4 site(s)
+        docs/assessment/lane-b-lower-bound.md: 4 site(s)
+        docs/2026-08-17_spec-and-community-truth-campaign.md: 1 site(s)
+        docs/2026-09-01_grossmith-campaign-3.md: 1 site(s)
+        docs/spec-divergence-ledger.md: 1 site(s)
+        docs/assessment/lane-a3-shims-spectruth.md: 1 site(s)
+        docs/assessment/lane-e-outsider-review.md: 1 site(s)
+
+[02] C5  MEDIUM  1 frontier-table case citation(s) do not resolve against the baseline
+        FR-7 (/home/dev/projects/golean/.claude/worktrees/strict-routing/docs/language-coverage-ledger.md:324) cites `=` — resolves to no baseline id
+
+[03] C9  MEDIUM  the wire schema moved after the certification date 2026-09-01 (7 commit(s) to wire.go/NativeToIR.lean) — the certified set's wire sha is only current if `scripts/ci --slow` has re-enumerated since
+        201b6145 atomics-w1 audit fix round H1-H6, L1-L8 [records + fail-closed atomic arm + transcription pin; baseline +6 born-PASS rows]
+        1b3796c6 Atomics arc wave 1: the sync/atomic integer core as fused SC registry ops — Load/Store/Add/Swap/CompareAndSwap × Int32/Int64/Uint32/Uint64/Uintptr (direct calls + the typed wrappers via an E5-T shadow model), zero new choice sites, TSan-realized per-address clocks + the atomic access kind [TRUST-ADJACENT: GoCore atomics ops + frontend lowering; baseline re-pin +46 born-PASS, 4 FAIL→PASS flips, 1 FAIL stage move, no PASS→non-PASS]
+        df6bcc8f storeLoc: refuse stores to unallocated addresses (fail-closed; arm unreachable on wf states) [TRUST-ADJACENT: GoCore Ops.lean; zero baseline drift]
+        8c3aa6ae BUG-082 fix: the native frontend lowers the make(map[K]V, hint) hint — emitted as the make-map node's optional `hint`, decoded into Stmt.makeMap's initialSpace, evaluated then ignored (gc's clamp) [TRUST-ADJACENT: frontend lowering + decoder key list; twin-wire pin moved, [USER]-authorized]
+        20521459 Audit fix SHOULD-FIX 2 + RECORDS 8/9/11/12: BUG-078's budget re-derived on the path the bug names — 1<<20 -> 1<<16 [TRUST-ADJACENT: wire decoder; refusal-only]
+        47d4c935 Audit fix BLOCKER 1: decodeReturn's n=1 fast path ran before the arity check — a one-operand return at a >=2-result function zero-filled results [TRUST-ADJACENT: wire decoder; refusal-strengthening only]
+        fa589f62 Gotest-harvest fix slice: BUG-074..078 — the four GOROOT/test mismatches fixed, the two suspicious refusals resolved
+
+3 finding(s).

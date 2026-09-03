@@ -1,0 +1,7 @@
+result	id	features	stage	detail
+PASS	sm-covered	stdlib,strings,ints	-	wide=10 exhausted=none depth=fixed
+FAIL	sm-exhausted	goroutines,channels,range,close	nondet	strict row: 20 wide pick(s) served after stream [9,8,7,6,5,4,3,2,1,0] was exhausted at consumption 10 — the 3-stream invariance check did not cover this row; route to confluent, or declare depth (default-stream wide count w=29)
+PASS	sm-depth-ok	goroutines,channels,range,close	-	wide=29 exhausted=none depth=128
+FAIL	sm-depth-short	goroutines,channels,range,close	nondet	strict row: 25 wide pick(s) served after the declared depth=4 stream [seeded:1:4] was exhausted at consumption 4 — the seeded invariance streams did not cover this row; raise depth (default-stream wide count w=29)
+FAIL	sm-variant-refusal	channels,select,goroutines	lean-observation	variant stream [9,8,7,6,5,4,3,2,1,0]: the machine produced status 'unsupported' where the default run produced 'ok' — a refusal under a variant stream is a refusal, not a variance (invariance NOT certified): {"message":"select-with-select rendezvous (unmodeled this slice)","schema":"golean-observation-v1","status":"unsupported"}
+PASS	sm-confluent	goroutines,channels,range,close	confluent	|set|=1 certified over all schedules; coverage-observations: observations=1 steps=207482 probes=0 sites=187497 leaves=0 maxdepth=0 width=4 engine=dedup nodes=187497 edges=207482 dedupHits=19986 certified=checkCert

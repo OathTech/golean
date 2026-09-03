@@ -1,2 +1,23 @@
-# id	subject	args	expected_status	expected_reason	features
-search-replace	goleanSearchReplace	-	ok	-	imported_goose,sync,waitgroup,goroutines,channels
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# STRICT-LANE DEPTH GUARD — DECLARED depth= (2026-09-03, [AGENT] on the
+# [USER]-adopted rule; docs/coverage-suite-structure.md "Lane assignment",
+# docs/evidence/2026-09-03_strict-routing/). The membership-depth trace
+# (memo §2.3): 42 wide picks under the default stream (l1Sched 22, postOp
+# 5, backEdge 14, exit 1), 33 of 43 served after exhaustion on the worst
+# adversarial stream — the strict PASS certifies invariance only over the
+# stream prefix (+ default + two random-4096 trajectories). Routing to
+# the confluent lane was ATTEMPTED with engine=dedup (width 4, work 60M,
+# scripts/capped 40G) and FAILS LOUD: backedge=0 KILLED (cgroup, 719 s,
+# maxrss 41.9 GB); backedge=full KILLED (cgroup, 849 s, maxrss 41.9 GB) — eight
+# workers looping on a cap-4 feed do not close at registry granularity.
+# The rule's home for this shape is a declared depth= (memo §5 item 3,
+# w=42) — declared on the row below. (Upstream body verbatim; this is a
+# corpus caption, not an edit to the imported code.)
+# search-replace: declared depth=256 (= smallest power of two >= 4*w, w=42 [AGENT
+# sizing]): the gate runs three SEEDED invariance streams of that length
+# (memo §5 item 3) and refuses unless each reports wideAfterExhaustion=0
+# — the re-trace at seeded length 256 drew every wide pick from the
+# stream. This is the strict lane's spot check made honest (N tied to
+# the measurement), NOT a schedule-confluence certificate: the
+# confluent-lane attempt above fails loud, and that stands as a FINDING.
+search-replace	goleanSearchReplace	-	ok	-	imported_goose,sync,waitgroup,goroutines,channels	strict	-	depth=256

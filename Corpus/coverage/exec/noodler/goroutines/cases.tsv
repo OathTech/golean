@@ -1,17 +1,61 @@
-# id	subject	args	expected_status	expected_reason	features
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# STRICT-LANE DEPTH GUARD (membership-depth memo P1, [USER]-ruled 2026-09-03;
+# docs/coverage-suite-structure.md "Lane assignment"; docs/evidence/
+# 2026-09-03_strict-routing/trace-new16.tsv): these rows landed (noodler
+# lane, 2026-09-03) AFTER the memo's 2026-09-01 trace, and the guard's
+# first full run found them outrunning the three fixed adversarial
+# streams at scheduling sites (wide picks served after exhaustion, worst
+# stream: fifo-one-sender 13 of 23, lockstep-transcript 2 of 10,
+# directional-params 18 of 28, close-broadcast 20 of 30, mutex-counter
+# 254 of 262, once-across-goroutines 42 of 50, pipeline-three-stages 47
+# of 57, rwmutex-readers 36 of 44, semaphore-total 76 of 84,
+# worker-pool-sum 83 of 93). Disposition per row below: CONFLUENT where
+# the POR engine=dedup state graph closes (|set|=1, checker-accepted,
+# backedge=full; 20 gc draws plain/-race alternating inside the
+# singleton), else depth=N (= smallest power of two >= 4*w, min 64 [AGENT
+# sizing]) — three seeded invariance streams of length N, each verified
+# at the gate to cover every wide pick (wideAfterExhaustion=0); the
+# strict spot check made honest, NOT a schedule-confluence certificate.
 handoff-write-before-send	handoffWriteBeforeSend	-	ok	-	goroutines,channels
-fifo-one-sender	fifoFromOneSender	-	ok	-	goroutines,channels,range,close
-close-broadcast	closeBroadcast	-	ok	-	goroutines,channels,close,sync,waitgroup,mutex
-worker-pool-sum	workerPoolSum	-	ok	-	goroutines,channels,sync,waitgroup,range
-once-across-goroutines	onceAcrossGoroutines	-	ok	-	goroutines,sync,once,waitgroup,mutex
-mutex-counter	mutexCounter	-	ok	-	goroutines,sync,mutex,waitgroup
-rwmutex-readers	rwMutexReaders	-	ok	-	goroutines,sync,rwmutex,waitgroup,mutex,channels
+# fifo-one-sender: CONFLUENT — dedup closes in 4,955 edges (<1 s).
+fifo-one-sender	fifoFromOneSender	-	ok	-	goroutines,channels,range,close	confluent	one sender, one receiver on an unbuffered channel: the FIFO stream 1..4 and its digit-fold are fixed on every schedule (spec: channels are FIFO queues); close ends the range; width 4 covers the 2-runnable scheduler and back-edge bounds	width=4,sites=64,work=200000,engine=dedup,backedge=full
+# close-broadcast: depth=256 (w=34) — dedup does NOT close: work budget 20M
+# exceeded at 9,195,596 nodes (120 s, cap 24 GB); 3 receivers + mutex +
+# WaitGroup. A FINDING (not confluent-certified); seeded 256: 34/34/37
+# wide, 0 after exhaustion.
+close-broadcast	closeBroadcast	-	ok	-	goroutines,channels,close,sync,waitgroup,mutex	strict	-	depth=256
+# worker-pool-sum: depth=512 (w=98) — dedup KILLED at the 24 GB cap (57 s);
+# 3 workers over a 9-job buffer (the goroutines/worker-pool/shared-feed
+# precedent). A FINDING; seeded 256: 98/98/97 wide, 0 after exhaustion.
+worker-pool-sum	workerPoolSum	-	ok	-	goroutines,channels,sync,waitgroup,range	strict	-	depth=512
+# once-across-goroutines: depth=256 (w=50) — dedup does NOT close: work
+# budget 20M exceeded at 9,173,222 nodes (146 s, cap 24 GB); 5 goroutines
+# racing a sync.Once + mutex + WaitGroup. A FINDING; seeded 256: 48/53/51
+# wide, 0 after exhaustion.
+once-across-goroutines	onceAcrossGoroutines	-	ok	-	goroutines,sync,once,waitgroup,mutex	strict	-	depth=256
+# mutex-counter: depth=2048 (w=262) — dedup KILLED at the 24 GB cap in 17 s;
+# seeded 256 was itself EXHAUSTED (123/112/67 wide after), seeded 1024
+# covers (482/482/466 wide, 0 after) — hence 2048. A FINDING.
+mutex-counter	mutexCounter	-	ok	-	goroutines,sync,mutex,waitgroup	strict	-	depth=2048
+# rwmutex-readers: depth=256 (w=39) — dedup does NOT close: work budget
+# 20M exceeded at 9,043,049 nodes (124 s, cap 24 GB). A FINDING; seeded
+# 256: 46/50/50 wide, 0 after exhaustion.
+rwmutex-readers	rwMutexReaders	-	ok	-	goroutines,sync,rwmutex,waitgroup,mutex,channels	strict	-	depth=256
 waitgroup-deadlock	waitGroupDeadlock	-	deadlock	-	sync,waitgroup,deadlock
 mutex-double-lock-deadlock	mutexDoubleLockDeadlock	-	deadlock	-	sync,mutex,deadlock
 leaked-goroutine	leakedGoroutineOnReturn	-	ok	-	goroutines,channels
-directional-params	directionalParams	-	ok	-	goroutines,channels,close,range
-pipeline-three-stages	pipelineThreeStages	-	ok	-	goroutines,channels,close,range,closures
-semaphore-total	semaphoreTotal	-	ok	-	goroutines,channels,sync,waitgroup,mutex
-lockstep-transcript	lockstepTranscript	-	ok	-	goroutines,channels
+# directional-params: CONFLUENT — dedup closes in 5,718 edges (<1 s).
+directional-params	directionalParams	-	ok	-	goroutines,channels,close,range	confluent	one producer sends 1..5 on an unbuffered channel and closes, one consumer sums the range: the sum commutes and the close ends the range on every schedule; width 4 covers the 2-runnable scheduler and back-edge bounds	width=4,sites=64,work=200000,engine=dedup,backedge=full
+# pipeline-three-stages: depth=256 (w=57) — dedup does NOT close: work
+# budget 20M exceeded at 9,088,975 nodes (129 s, cap 24 GB); three
+# unbuffered stages (the goroutines/pipeline/two-stage shape plus one
+# stage: 866k nodes there, >9M here). A FINDING; seeded 256: 62/63/62
+# wide, 0 after exhaustion.
+pipeline-three-stages	pipelineThreeStages	-	ok	-	goroutines,channels,close,range,closures	strict	-	depth=256
+# semaphore-total: depth=512 (w=84) — dedup KILLED at the 24 GB cap (71 s).
+# A FINDING; seeded 256: 95/89/94 wide, 0 after exhaustion.
+semaphore-total	semaphoreTotal	-	ok	-	goroutines,channels,sync,waitgroup,mutex	strict	-	depth=512
+# lockstep-transcript: CONFLUENT — dedup closes in 2,018 edges (<1 s).
+lockstep-transcript	lockstepTranscript	-	ok	-	goroutines,channels	confluent	two unbuffered channels in strict request/reply lockstep: each send rendezvouses with its receive before the next, so the transcript 2,6 folded is the one member on every schedule; width 4 covers the 2-runnable bounds	width=4,sites=64,work=200000,engine=dedup,backedge=full
 goroutine-panic-under-wait	goroutinePanicUnderWait	-	panic	under-wait	goroutines,sync,waitgroup,panic
 child-blocked-nil-channel	childBlockedOnNilChannel	-	ok	-	goroutines,channels,nil

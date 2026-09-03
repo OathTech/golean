@@ -1,3 +1,37 @@
-# id	subject	args	expected_status	expected_reason	features
-five	primeSieveFirst	5	ok	-	goroutines,channels,range,loops,modulo
-eight	primeSieveFirst	8	ok	-	goroutines,channels,range,loops,modulo
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# STRICT-LANE DEPTH GUARD — DECLARED depth= (2026-09-03, [AGENT] on the
+# [USER]-adopted rule; docs/coverage-suite-structure.md "Lane assignment",
+# docs/evidence/2026-09-03_strict-routing/). The membership-depth trace
+# (docs/2026-09-01_membership-depth.md §2.3) shows both rows outrun the
+# three adversarial streams at scheduling sites: five draws 187 wide
+# picks (l1Sched 105, postOp 33, backEdge 48, exit 1), 180 of 188 served
+# after exhaustion on the worst stream; eight draws 521 (l1Sched 294,
+# postOp 95, backEdge 131, exit 1), 514 of 522. Under the rule their
+# strict PASS certifies invariance only over the stream prefix (picks
+# 1-8/10) plus the default and two random-4096 trajectories — NOT over
+# all schedules. Enumerating-lane routing was ATTEMPTED and FAILS LOUD:
+# engine=dedup at width 4, work cap 60M, under scripts/capped 40G —
+# five: backedge=full KILLED (cgroup, 66 s), backedge=0 KILLED (81 s),
+# backedge=1 KILLED (81 s); eight: backedge=full KILLED (41 s),
+# backedge=0 KILLED (31 s). The daisy-chained filter goroutines (k+1
+# runnable at the tail) make the registry-point state graph exceed 40 GB
+# before closure; the DFS is loop-length-exponential at 187/521 picks.
+# The rule's home for this shape is a declared depth= (memo §5 item 3,
+# sized from w=187/521) — declared per row below. The spec's comment
+# above ("schedule-independent") is an argument, not a certificate.
+# five: declared depth=1024 (= smallest power of two >= 4*w, w=187 [AGENT
+# sizing]): the gate runs three SEEDED invariance streams of that length
+# (memo §5 item 3) and refuses unless each reports wideAfterExhaustion=0
+# — the re-trace at seeded length 1024 drew every wide pick from the
+# stream. This is the strict lane's spot check made honest (N tied to
+# the measurement), NOT a schedule-confluence certificate: the
+# confluent-lane attempt above fails loud, and that stands as a FINDING.
+five	primeSieveFirst	5	ok	-	goroutines,channels,range,loops,modulo	strict	-	depth=1024
+# eight: declared depth=4096 (= smallest power of two >= 4*w, w=521 [AGENT
+# sizing]): the gate runs three SEEDED invariance streams of that length
+# (memo §5 item 3) and refuses unless each reports wideAfterExhaustion=0
+# — the re-trace at seeded length 4096 drew every wide pick from the
+# stream. This is the strict lane's spot check made honest (N tied to
+# the measurement), NOT a schedule-confluence certificate: the
+# confluent-lane attempt above fails loud, and that stands as a FINDING.
+eight	primeSieveFirst	8	ok	-	goroutines,channels,range,loops,modulo	strict	-	depth=4096

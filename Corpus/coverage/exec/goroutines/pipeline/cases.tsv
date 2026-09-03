@@ -9,11 +9,19 @@
 # unless stated). Record: docs/w32-log.md stage C.
 # request-reply: CONFLUENT (slice 4) — certified singleton over ~4.4k
 # leaves (probe: depth 15, ~275k steps+probes).
-# two-stage / buffered-stage: left STRICT, recorded — their schedule
-# trees exceed the fail-loud caps at tractable budgets (probe: >60M
-# steps / >400 s; multi-stage pipelines multiply interleavings). The
-# strict lane's 3-stream invariance still covers them; revisit with
-# DPOR (the recorded later-additive layer, D9(c)).
-two-stage	pipelineTwoStage	-	ok	-	goroutines,channels,range,close
-buffered-stage	pipelineBufferedStage	-	ok	-	goroutines,channels,range,close
+# two-stage / buffered-stage: were left STRICT, recorded (2026-08-20:
+# DFS trees >60M steps / >400 s). ROUTED TO CONFLUENT 2026-09-03 under
+# the strict-lane routing rule ([USER] 2026-09-03, relayed;
+# docs/coverage-suite-structure.md "Lane assignment"): the membership-
+# depth trace showed both outrun the 3 adversarial streams at
+# scheduling sites (two-stage 35 of 45 wide picks served after
+# exhaustion, buffered-stage 21 of 31), so the strict PASS never
+# certified invariance past pick 8-10. engine=dedup closes both state
+# graphs (two-stage 866,780 nodes / 954,907 edges ~27 s; buffered-stage
+# 187,497 nodes / 207,482 edges ~4 s), |set|=1 each, checker-accepted;
+# backedge=full (the range/for back-edges are exhaustively enumerated,
+# no capped occurrence). 20 gc draws each (plain/-race alternating)
+# all equal the singleton. Evidence: docs/evidence/2026-09-03_strict-routing/.
+two-stage	pipelineTwoStage	-	ok	-	goroutines,channels,range,close	confluent	single sender per channel: gen and doubled are each FIFO-pinned by one producer and one consumer, so the digit-fold over doubled is the same on every schedule; width 4 covers the up-to-3-runnable scheduler bound	width=4,sites=64,work=2000000,engine=dedup,backedge=full
+buffered-stage	pipelineBufferedStage	-	ok	-	goroutines,channels,range,close	confluent	one producer fills the cap-2 buffer and closes, one consumer drains it and sends one total; the sum commutes over the drain order and the readout waits on the single send, so every schedule yields the one member; width 4 covers the up-to-3-runnable scheduler bound	width=4,sites=64,work=500000,engine=dedup,backedge=full
 request-reply	pipelineRequestReply	-	ok	-	goroutines,channels,range,close	confluent	each request's reply is received before the next request is sent, serializing the exchange on every schedule	width=4,sites=64,work=1200000,engine=dedup

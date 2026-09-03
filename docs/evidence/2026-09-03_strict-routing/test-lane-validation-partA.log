@@ -1,0 +1,47 @@
+ok: membership without why
+ok: nondet tag on a strict row
+ok: strict row with why text
+ok: unknown param key
+ok: invalid lane value
+ok: duplicate param key
+ok: non-positive param value
+ok: membership without the nondet tag
+ok: tier on a racy row
+ok: tier on a confluent row (W3.2 stage C widening)
+ok: invalid tier value
+ok: membership without explicit width (F2a)
+ok: bare 6-column strict row
+ok: explicit strict row
+ok: well-formed membership row
+ok: confluent without why
+ok: confluent with the nondet tag
+ok: confluent without width
+ok: confluent with a members param
+ok: racy on a non-race expectation
+ok: racy without width
+ok: race expectation left on the strict lane
+ok: race expectation on the membership lane
+ok: well-formed confluent row
+ok: well-formed racy row
+ok: membership row with a members pin
+ok: statuses on a non-membership lane
+ok: statuses malformed entry
+ok: statuses singleton
+ok: statuses missing expected_status
+ok: statuses duplicate entry
+ok: membership row with a status-diverse envelope
+ok: strict row declaring depth=N (P1)
+ok: strict row with depth=0
+ok: strict row with an enumerator param
+ok: strict row with a why
+ok: depth= on a membership row
+ok: depth= on a confluent row
+ok: check-bugs Expect: FAIL with a FAIL row passes
+ok: check-bugs Expect: FAIL with a PASS row fails (5)
+ok: check-bugs none-entry without Expect stays existence-only
+ok: check-bugs unrecognized Expect token fails closed (0)
+ok: lake-build failure exits 2, no readable results (G1)
+ok: lake-build timeout exits 2, no readable results (G2)
+ok: manifest-not-found exits 2, no readable results (G3)
+ok: empty manifest exits 2 without publishing (G4)
+test-lane-validation: ok

@@ -841,6 +841,44 @@ Legality of FG-4 was re-checked before rowing (gc go1.26.5 accepts the
 program; see FR-20). Each new row's refusal site was re-measured at
 345ef090 (the report's FG-3 line numbers were its lane tip's).
 
+### 8f. Movement at the strict-lane depth guard (2026-09-03, lane `strict-routing`)
+
+Baseline before: 3195 rows (3001 PASS / 194 FAIL, the
+`bug086-shim-closure` re-pin). The strict-lane depth guard
+(membership-depth memo P1 §5, [USER]-ruled 2026-09-03, relayed;
+`docs/coverage-suite-structure.md` "Lane assignment") is a GATE
+CHANGE: `scripts/diff-coverage` refuses a strict PASS whose
+invariance streams were outrun (tracer `wideAfterExhaustion > 0`)
+unless the row is `lane=confluent` or declares `depth=N`. This
+slice's full `ci --diff` (evidence dir
+`docs/evidence/2026-09-03_strict-routing/`, `baseline-drift.txt`):
+**9 stage-only moves** — 8 PASS/- → PASS/confluent
+(`goroutines/pipeline/{two-stage,buffered-stage}`,
+`spec-examples-stmt/go-statements/func-literal`, and five rows born
+after the memo's trace that the guard's first full run caught:
+`noodler/goroutines/{directional-params,fifo-one-sender,
+lockstep-transcript}`, `noodler/select/ping-pong`,
+`noodler/syncmisuse/unlock-from-other-goroutine` — POR `engine=dedup`
+singletons, checker-accepted) and 1 FAIL/nondet → FAIL/lean-observation
+(`channels/select-select/beside-loop`: P1 item 4 — a refusal under a
+variant stream is reported as a refusal; still the untriaged
+`coverage` entry); NO result flip, NO born row, NO PASS→non-PASS.
+After: 3195 rows (3001 PASS / 194 FAIL, unchanged); by lane among the
+PASS rows: strict 2846 (−8), confluent 85 (+8), membership 37, racy 33.
+31 further rows the guard reaches declare `depth=N` (strict lane, stage
+unchanged): the memo's 15 `appendSpill` capacity rows (`fmt/*`,
+`multipkg/mini-raft-twin/*`, `strconv/format-parse/*`; N = 64-512), the
+5 scheduling rows whose state graphs do not close under `engine=dedup`
+within the fail-loud caps — `spec-examples-stmt/prime-sieve/{five,eight}`
+(1024/4096), `goroutines/worker-pool/shared-feed` (128),
+`sync/waitgroup-workers-join/workers-join` (128),
+`imported-goose/channel/parallel-search-replace/search-replace` (256)
+— and 11 post-trace noodler rows (memo §10.1; 128-2048) — a recorded
+FINDING each: `depth=` is the strict spot check made honest, not a
+confluence certificate. Every strict PASS row's detail now carries
+`wide=<w> exhausted=none depth=<fixed|N>` (metadata; the baseline
+records result + stage only).
+
 ### 8c. The re-derivation, 2026-08-22 vintage → the 2026-09-01 tip
 
 Method: §8b's, re-run against this tip's baseline (re-pinned

@@ -1314,7 +1314,10 @@ sets BEFORE any machinery. Decisions and findings DURING the build:
   13 racy = 60 ids); 3 recorded stay-strict ids
   whose trees exceed tractable caps (pipeline/{two-stage,
   buffered-stage} >60M steps / >400 s, worker-pool/shared-feed —
-  DPOR is the recorded later-additive layer, D9(c)).
+  DPOR is the recorded later-additive layer, D9(c)). [2026-09-03:
+  two-stage/buffered-stage routed CONFLUENT via `engine=dedup`;
+  shared-feed declares `depth=128` under the strict-lane depth guard
+  (memo P1) — `docs/evidence/2026-09-03_strict-routing/`.]
 - **Un-red**: channels/select-multi-ready (strict, the slice-1 refusal
   pin) + the six schedule pins — sched-dependent/{first-come,
   select-default-handshake,len-handoff} ({12,21}/{7,99}/{100,110},

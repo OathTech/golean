@@ -1,4 +1,22 @@
 # id	subject	args	expected_status	expected_reason	features	lane	why	params
+# depth= (STRICT-LANE DEPTH GUARD, membership-depth memo P1, [USER]-ruled
+# 2026-09-03; docs/coverage-suite-structure.md "Lane assignment"): the
+# rows below outrun the three fixed adversarial streams at appendSpill
+# (capacity latitude inside string-building shims, observable only
+# through cap(), which none of them reads) — the memo's trace (§2.3(b))
+# and this lane's re-trace (docs/evidence/2026-09-03_strict-routing/
+# trace23.tsv) show wide picks served AFTER exhaustion, so the fixed
+# streams never certified invariance past pick 8-10. Each declares
+# depth=N = the smallest power of two >= 4*w (w = default-stream wide
+# count), min 64 [AGENT sizing]; the gate replaces the fixed streams by
+# three seeded streams of length N and refuses unless every one reports
+# wideAfterExhaustion=0. Measured (default w / worst fixed-stream wide-
+# after-exhaustion):
+#   duel: w=11, 1 of 9 -> depth=64
+#   elect-propose-commit: w=32, 22 of 30 -> depth=128
+#   perturb-picks: w=18, 6 of 14 -> depth=128
+#   perturb-rev: w=23, 13 of 21 -> depth=128
+#   starve-node: w=23, 13 of 21 -> depth=128
 # W4.3 item 4 (docs/raft-w43-log.md): the twin as a corpus family —
 # the W4.2 owed rows "the corpus gains its first raft-shaped case" +
 # "the perturbation schedules as corpus rows". A self-contained
@@ -9,9 +27,9 @@
 # — this family pins the language-shape COMPOSITION in the gated
 # corpus. Deterministic under both oracles (no map ranging on any
 # observable path except choice-order's deliberate pick).
-elect-propose-commit	twinElectProposeCommit	-	ok	-	multipackage,structs,maps,slices,methods,loops
-perturb-rev	twinPerturbRev	-	ok	-	multipackage,structs,maps,slices,methods,loops
-perturb-picks	twinPerturbPicks	-	ok	-	multipackage,structs,maps,slices,methods,loops
-starve-node	twinStarveNode	-	ok	-	multipackage,structs,maps,slices,methods,loops
-duel	twinDuel	-	ok	-	multipackage,structs,maps,slices,methods,loops
+elect-propose-commit	twinElectProposeCommit	-	ok	-	multipackage,structs,maps,slices,methods,loops	strict	-	depth=128
+perturb-rev	twinPerturbRev	-	ok	-	multipackage,structs,maps,slices,methods,loops	strict	-	depth=128
+perturb-picks	twinPerturbPicks	-	ok	-	multipackage,structs,maps,slices,methods,loops	strict	-	depth=128
+starve-node	twinStarveNode	-	ok	-	multipackage,structs,maps,slices,methods,loops	strict	-	depth=128
+duel	twinDuel	-	ok	-	multipackage,structs,maps,slices,methods,loops	strict	-	depth=64
 choice-order	twinChoiceOrder	-	ok	-	multipackage,structs,maps,slices,nondet	membership	the delivery-order draw over a fresh campaign's two vote requests realizes the network-reordering envelope on the twin kernel: admitted set {21, 31} (members=2) — either request may be delivered first and its receiver grants; the only consumption site is the map pick-next over the fresh 2-key pick map (the D-11 idiom); the enumerator's mechanical bound at the pick is 32 — width 40 >= 32	width=40,work=1000000,sites=8

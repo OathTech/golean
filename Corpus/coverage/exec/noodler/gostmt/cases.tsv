@@ -1,9 +1,17 @@
-# id	subject	args	expected_status	expected_reason	features
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
 args-evaluated-at-spawn	goArgsEvaluatedAtSpawn	-	ok	-	goroutines,evaluation_order,sync,waitgroup,channels
 method-receiver-at-spawn	goMethodReceiverAtSpawn	-	ok	-	goroutines,methods,evaluation_order,channels
 func-value-at-spawn	goFuncValueAtSpawn	-	ok	-	goroutines,functions,evaluation_order,channels
 closure-reads-after-sync	goClosureReadsAfterSync	-	ok	-	goroutines,closures,channels
-pointer-method	goPointerMethod	-	ok	-	goroutines,methods,pointers,sync,mutex,waitgroup
+# pointer-method: depth=128 under the STRICT-LANE DEPTH GUARD (memo P1,
+# [USER]-ruled 2026-09-03; docs/coverage-suite-structure.md "Lane
+# assignment"): the guard's first full run found 10-13 of its ~21 wide
+# scheduling picks served AFTER the fixed adversarial streams were
+# exhausted; engine=dedup does NOT close (work budget 20M exceeded at
+# 9,050,582 nodes, 62 s, cap 24 GB) — a FINDING, so depth=128 (w=21;
+# seeded 256: 26/28/26 wide, 0 after) keeps it strict honestly, not
+# confluent-certified. docs/evidence/2026-09-03_strict-routing/.
+pointer-method	goPointerMethod	-	ok	-	goroutines,methods,pointers,sync,mutex,waitgroup	strict	-	depth=128
 splat-args	goSplatArgs	-	ok	-	goroutines,multi_result,calls,sync,waitgroup
 from-map	goFromMap	-	ok	-	goroutines,maps,functions,channels
 arg-panics-in-parent	goArgPanicsInParent	-	ok	-	goroutines,panic,recover,evaluation_order

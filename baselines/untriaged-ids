@@ -99,10 +99,12 @@
 #   rendezvous refused fail-closed at the machine boundary
 #   (lean-observation is the nearest stage); not a fidelity bug.
 # channels/select-select/beside-loop: the same marker's over-broad-
-#   trigger sibling (F10), at stage nondet (default stream commits the
-#   cell-ready clause; adversarial streams hit the refusal). Entered
+#   trigger sibling (F10) — default stream commits the cell-ready
+#   clause; adversarial streams hit the refusal. Entered at stage nondet
 #   when the ledger filter gained nondet (convergence response,
-#   2026-08-08); not a fidelity bug.
+#   2026-08-08); at stage lean-observation since 2026-09-03 (depth guard
+#   P1 item 4: a refusal under a variant stream is reported as a
+#   refusal, not as a variance). Not a fidelity bug.
 # (2026-08-09, spec-parity slice 2 flip commit: the 34 transient sync
 #   guardrail entries retired — 33 flipped PASS, out-of-scope-trylock
 #   moved to its honest frontend-export refusal stage, leaving the

@@ -1,0 +1,10 @@
+building Lean executable...
+Build completed successfully (60 jobs).
+native frontend: per-case type-check + emit (no batch export)
+PASS	spec-examples-stmt/go-statements/func-literal	goroutines,channels,closures,loops,bools	stage=confluent	detail=|set|=1 certified over all schedules; coverage-observations: observations=1 steps=3440 probes=0 sites=3343 leaves=0 maxdepth=0 width=4 engine=dedup nodes=3343 edges=3440 dedupHits=98 certified=checkCert
+PASS	goroutines/pipeline/buffered-stage	goroutines,channels,range,close	stage=confluent	detail=|set|=1 certified over all schedules; coverage-observations: observations=1 steps=207482 probes=0 sites=187497 leaves=0 maxdepth=0 width=4 engine=dedup nodes=187497 edges=207482 dedupHits=19986 certified=checkCert
+PASS	goroutines/pipeline/two-stage	goroutines,channels,range,close	stage=confluent	detail=|set|=1 certified over all schedules; coverage-observations: observations=1 steps=954907 probes=0 sites=866780 leaves=0 maxdepth=0 width=4 engine=dedup nodes=866780 edges=954907 dedupHits=88128 certified=checkCert
+
+differential coverage summary: cases=3 pass=3 fail=0 export_status=0
+results: artifacts/coverage/latest.tsv
+metadata: artifacts/coverage/latest.meta.tsv

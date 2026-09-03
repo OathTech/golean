@@ -1,5 +1,19 @@
-# id	subject	args	expected_status	expected_reason	features
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# depth= (STRICT-LANE DEPTH GUARD, membership-depth memo P1, [USER]-ruled
+# 2026-09-03; docs/coverage-suite-structure.md "Lane assignment"): the
+# rows below outrun the three fixed adversarial streams at appendSpill
+# (capacity latitude inside string-building shims, observable only
+# through cap(), which none of them reads) — the memo's trace (§2.3(b))
+# and this lane's re-trace (docs/evidence/2026-09-03_strict-routing/
+# trace23.tsv) show wide picks served AFTER exhaustion, so the fixed
+# streams never certified invariance past pick 8-10. Each declares
+# depth=N = the smallest power of two >= 4*w (w = default-stream wide
+# count), min 64 [AGENT sizing]; the gate replaces the fixed streams by
+# three seeded streams of length N and refuses unless every one reports
+# wideAfterExhaustion=0. Measured (default w / worst fixed-stream wide-
+# after-exhaustion):
+#   describe-shape: w=10, 1 of 9 (8-entry stream) -> depth=64
 # H-6/H-18 Fprintf-into-Builder guardrails (raft W4.1 item 2). Red at
 # frontend-export until the desugar + the Builder model land.
-describe-shape	fprintfDescribeShape	-	ok	-	stdlib,strings,methods,interfaces,panic,recover,range
+describe-shape	fprintfDescribeShape	-	ok	-	stdlib,strings,methods,interfaces,panic,recover,range	strict	-	depth=64
 returns	fprintfReturns	-	ok	-	stdlib,strings,methods,returns

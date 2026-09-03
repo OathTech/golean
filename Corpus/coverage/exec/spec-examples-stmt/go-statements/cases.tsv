@@ -1,4 +1,16 @@
-# id	subject	args	expected_status	expected_reason	features
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# func-literal: ROUTED strict -> CONFLUENT 2026-09-03 under the strict-lane
+# routing rule ([USER] 2026-09-03, relayed; docs/coverage-suite-structure.md
+# "Lane assignment"): the membership-depth trace showed 7 of its 17 wide
+# picks served after the adversarial streams were exhausted (l1Sched 7,
+# postOp 3, backEdge 6, exit 1), so the strict PASS never certified
+# invariance past the stream prefix. engine=dedup closes the state graph
+# (3,343 nodes / 3,440 edges, <1 s; the DFS with backedge=full agrees:
+# 217,200 leaves, depth 43, 1 observation), |set|=1, checker-accepted;
+# backedge=full. 20 gc draws (plain/-race alternating) all equal the
+# singleton. named-call / params-at-go stay strict: the trace shows their
+# wide picks fully covered (named-call 3 default / 6 adversarial, no
+# exhaustion). Evidence: docs/evidence/2026-09-03_strict-routing/.
 named-call	goStatementNamedCall	-	ok	-	goroutines,channels,make
-func-literal	goStatementFuncLiteral	-	ok	-	goroutines,channels,closures,loops,bools
+func-literal	goStatementFuncLiteral	-	ok	-	goroutines,channels,closures,loops,bools	confluent	the unbuffered rendezvous fixes each of the three receives to the literal's next send (true every time), the count is 3 on every schedule, and the sender's unending loop only ever parks on its next send (leaked at return; the exit-window pick does not reach the observable); width 4 covers the 2-runnable scheduler and back-edge bounds	width=4,sites=64,work=200000,engine=dedup,backedge=full
 params-at-go	goStatementParamsEvaluatedAtGo	-	ok	-	goroutines,channels,evaluation_order,closures

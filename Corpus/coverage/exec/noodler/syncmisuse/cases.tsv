@@ -1,11 +1,25 @@
-# id	subject	args	expected_status	expected_reason	features
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
 runlock-of-unlocked	rUnlockOfUnlocked	-	fatal	sync: RUnlock of unlocked RWMutex	sync,rwmutex,fatal
 unlock-of-unlocked-rw	unlockOfUnlockedRW	-	fatal	sync: Unlock of unlocked RWMutex	sync,rwmutex,fatal
 once-nested-deadlock	onceNestedDeadlock	-	deadlock	-	sync,once,deadlock
 mutex-copy-carries-state	mutexCopyCarriesState	-	deadlock	-	sync,mutex,value_copy,deadlock
 mutex-copy-independent	mutexCopyIndependent	-	ok	-	sync,mutex,value_copy
-unlock-from-other-goroutine	unlockFromOtherGoroutine	-	ok	-	sync,mutex,goroutines,channels
-waitgroup-reuse	waitGroupReuse	-	ok	-	sync,waitgroup,goroutines,channels
+# unlock-from-other-goroutine: CONFLUENT under the STRICT-LANE DEPTH GUARD
+# (memo P1, [USER]-ruled 2026-09-03; docs/coverage-suite-structure.md
+# "Lane assignment"): the guard's first full run found 1 wide pick served
+# AFTER the 1,3,5,... stream was exhausted (11 wide there); engine=dedup
+# closes the state graph in 600 edges (<1 s), |set|=1 checker-accepted,
+# backedge=full; 20 gc draws (plain/-race alternating) inside the
+# singleton. docs/evidence/2026-09-03_strict-routing/.
+unlock-from-other-goroutine	unlockFromOtherGoroutine	-	ok	-	sync,mutex,goroutines,channels	confluent	the lock is handed across goroutines legally (a Mutex is not owner-bound): the child unlocks then signals on an unbuffered channel, main receives and re-locks — the rendezvous orders every step, so 3 is the one member on every schedule; width 4 covers the 2-runnable bounds	width=4,sites=64,work=200000,engine=dedup,backedge=full
+# waitgroup-reuse: depth=128 under the STRICT-LANE DEPTH GUARD (memo P1,
+# [USER]-ruled 2026-09-03): the guard's first full run found 9-15 of its
+# ~20 wide scheduling picks served AFTER the fixed adversarial streams
+# were exhausted; engine=dedup does NOT close (work budget 20M exceeded,
+# 94 s, 18.3 GB) — a FINDING, so depth=128 (w=20; seeded 256: 32/24/25
+# wide, 0 after) keeps it strict honestly, not confluent-certified.
+# docs/evidence/2026-09-03_strict-routing/.
+waitgroup-reuse	waitGroupReuse	-	ok	-	sync,waitgroup,goroutines,channels	strict	-	depth=128
 wait-on-zero-counter	waitOnZeroCounter	-	ok	-	sync,waitgroup
 recursive-read-lock	recursiveReadLock	-	ok	-	sync,rwmutex
 rlock-while-write-locked	rlockWhileWriteLocked	-	deadlock	-	sync,rwmutex,deadlock

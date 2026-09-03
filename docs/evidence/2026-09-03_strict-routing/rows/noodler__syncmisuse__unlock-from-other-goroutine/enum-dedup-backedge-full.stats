@@ -1,0 +1,3 @@
+coverage-observations: observations=1 steps=600 probes=0 sites=554 leaves=0 maxdepth=0 width=4 engine=dedup nodes=554 edges=600 dedupHits=47 certified=checkCert
+maxrss_kb=64872 wall_s=0.03
+rc=0 secs=1

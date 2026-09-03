@@ -1,0 +1,5 @@
+scripts/capped: line 161: 2411575 Killed                  env GOLEAN_CAPPED=1 "$0" "$@"
+==============================================================
+scripts/capped: KILLED (exit 137 — cgroup/OOM or signal; NOT a pass)
+==============================================================
+rc=137 secs=41

@@ -1,4 +1,4 @@
-# id	subject	args	expected_status	expected_reason	features
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
 all-nil-default	selectAllNilDefault	-	ok	-	select,channels,nil,default
 nil-beside-ready	selectNilBesideReady	-	ok	-	select,channels,nil
 closed-receive	selectClosedReceive	-	ok	-	select,channels,close,comma_ok
@@ -19,7 +19,14 @@ switch-duplicate-runtime	switchDuplicateRuntimeCases	-	ok	-	switch
 default-only	selectDefaultOnly	-	ok	-	select,default
 self-send-recv-default	selectSelfSendRecvDefault	-	ok	-	select,channels,default
 closed-struct-zero	closedStructChannelZero	-	ok	-	channels,close,structs,zero_values
-ping-pong	pingPong	-	ok	-	channels,goroutines,range,close
+# ping-pong: CONFLUENT under the STRICT-LANE DEPTH GUARD (memo P1, [USER]-
+# ruled 2026-09-03; docs/coverage-suite-structure.md "Lane assignment"):
+# the guard's first full run found 18-20 of its ~29 wide scheduling picks
+# served AFTER the fixed adversarial streams were exhausted; engine=dedup
+# closes the state graph in 18,694 edges (<1 s), |set|=1 checker-
+# accepted, backedge=full; 20 gc draws (plain/-race alternating) inside
+# the singleton. docs/evidence/2026-09-03_strict-routing/.
+ping-pong	pingPong	-	ok	-	channels,goroutines,range,close	confluent	strict request/reply lockstep on two unbuffered channels: each ping rendezvouses before its pong is received, the range/close ends the worker, and the final receive on the closed pong is fixed (!ok) — one member on every schedule; width 4 covers the 2-runnable scheduler and back-edge bounds	width=4,sites=64,work=200000,engine=dedup,backedge=full
 fallthrough-middle-default-1	fallthroughIntoMiddleDefault	1	ok	-	switch,fallthrough,default
 fallthrough-middle-default-2	fallthroughIntoMiddleDefault	2	ok	-	switch,fallthrough,default
 fallthrough-middle-default-9	fallthroughIntoMiddleDefault	9	ok	-	switch,fallthrough,default

@@ -279,6 +279,12 @@ validate_lane_params() {
     value="${kv#*=}"
     case "$key" in
       width|sites|cap|samples|work|members|statuses|tier|backedge|nonterm|engine) ;;
+      depth)
+        # depth=N is the STRICT lane's declaration (memo P1); the
+        # enumerating lanes certify the whole tree — a category error.
+        echo "coverage-manifest: $cases_file: depth= is a strict-lane param (the enumerating lanes certify the whole tree): $kv (lane=$lane_ctx)" >&2
+        return 1
+        ;;
       *)
         echo "coverage-manifest: $cases_file: unknown lane param key: $kv" >&2
         return 1
@@ -517,8 +523,20 @@ while IFS= read -r cases_file; do
     fi
     case "$lane" in
       strict)
-        if [[ "$why" != "-" || "$params" != "-" ]]; then
-          echo "coverage-manifest: $cases_file: strict-lane rows must leave why/params as -" >&2
+        # Strict-lane params (depth guard, membership-depth memo P1,
+        # [USER]-ruled 2026-09-03): '-' or exactly depth=<N> — the
+        # length of the three SEEDED invariance streams the gate runs
+        # instead of the fixed 10/10/8-entry ones, for a row whose
+        # bound->=2 consumptions outrun the fixed streams
+        # (docs/coverage-suite-structure.md "Lane assignment"). Nothing
+        # else: a strict row has no why and no enumerator params.
+        if [[ "$why" != "-" ]]; then
+          echo "coverage-manifest: $cases_file: strict-lane rows must leave why as -" >&2
+          bad=1
+          continue
+        fi
+        if [[ "$params" != "-" && ! "$params" =~ ^depth=[1-9][0-9]*$ ]]; then
+          echo "coverage-manifest: $cases_file: strict-lane params may only declare depth=<N> (the depth guard's seeded-stream length; N a positive integer): $params" >&2
           bad=1
           continue
         fi

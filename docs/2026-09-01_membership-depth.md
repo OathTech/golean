@@ -527,11 +527,11 @@ mode stays invisible.
 
 | # | change | evidence | cost | status |
 |---|---|---|---|---|
-| P1 | Strict-lane depth guard (§5): refuse strict PASS when any adversarial stream run reports `wideAfterExhaustion > 0` without `confluent`/`depth=`; seeded streams of declared length | §2.3: 23 rows (8 scheduling, 15 capacity) outrun the fixed streams; blast radius under this rule = those 23 (a `wide > 8` threshold would hit 25, incl. two covered rows — §5) | gate change (diff-coverage) + 23 manifest rows to route/declare | ADOPTED [USER] 2026-09-03 («(6) strict-lane, agree», relayed by the [AGENT] coordinator — provenance and the 23-row scope note in §5); implementing lane `strict-routing` |
+| P1 | Strict-lane depth guard (§5): refuse strict PASS when any adversarial stream run reports `wideAfterExhaustion > 0` without `confluent`/`depth=`; seeded streams of declared length | §2.3: 23 rows (8 scheduling, 15 capacity) outrun the fixed streams; blast radius under this rule = those 23 (a `wide > 8` threshold would hit 25, incl. two covered rows — §5) | gate change (diff-coverage) + 23 manifest rows to route/declare | ADOPTED [USER] 2026-09-03 («(6) strict-lane, agree», relayed by the [AGENT] coordinator — provenance and the 23-row scope note in §5); **IMPLEMENTED 2026-09-03** by the implementing lane `strict-routing` (scope corrected mid-lane by the coordinator from "re-lane eight rows" to "P1 as written"): the guard is in `scripts/diff-coverage` (tracer-backed `wideAfterExhaustion` refusal, `depth=N` seeded streams, variant-stream refusals reported as refusals) with red-first fixtures in `scripts/test-lane-validation`; the 23 rows dispositioned — §10 below; SHA in the lane's commit / `docs/evidence/2026-09-03_strict-routing/` |
 | P2 | Membership sampling rule (§4.3): alternate plain/race, stop at `members=`, K=32 (`--diff`) / K=80 (`--slow`), print `draws=` | §4.2: 6 of 22 ten-draw rows point-mass at the gate budget in at least one of two runs (8 under-report); saturation up to 52–66 when reached, and two rows never moved in one run's 80 draws | +6.5 min on `--diff`; membership-lane code only | ADOPTED [USER] 2026-09-03 («yeah, agree on the sampling budget, go ahead as you propose», relayed by the [AGENT] coordinator, not firsthand); prior budget = the implicit 10 draws; implementing lane `sampling-budget` |
 | P3 | Pin `members=` on the 10 unpinned membership rows (B13) | needed for P2's early stop; 4 `slices/*` rows should pin the enumerated width, `maps/*` their certified sets | manifest rows only | PROPOSED |
 | P4 | Run `scripts/choice-trace-corpus` as a periodic (non-gate) audit; keep zero violations/alarms as the standing expectation | §3.2 | ~12 min wall at `--jobs 6` | landed as tooling; periodic scheduling DEFERRED — lower priority ([USER] 2026-09-03 «others: lower priority for now?», relayed by the [AGENT] coordinator; record: `docs/assessment/decisions-2026-08-31.md` 2026-09-03 addendum) |
-| P5 | Report the variant run's status in the strict invariance check (D-10 item 2) | §2.4 the one VARIES row is a refusal labelled `nondet` | one-line gate change | filing DEFERRED — lower priority ([USER] 2026-09-03 «others: lower priority for now?», relayed by the [AGENT] coordinator; same record) |
+| P5 | Report the variant run's status in the strict invariance check (D-10 item 2) | §2.4 the one VARIES row is a refusal labelled `nondet` | one-line gate change | IMPLEMENTED 2026-09-03 with P1 (item 4, lane `strict-routing`): `beside-loop`'s variant-stream refusal now lands at FAIL/lean-observation (the row's [USER]-ruled (a) stage alternation with `differential` for the gc=90 draw stands — `lean-observation|differential`, `# reason:` block in the baseline), detail names the refusing stream. The SEPARATE filing had been marked lower priority ([USER] 2026-09-03 «others: lower priority for now?», relayed by the [AGENT] coordinator; record: `docs/assessment/decisions-2026-08-31.md` 2026-09-03 addendum) — moot, landed inside P1 (round-8a merge train, [AGENT] union of the two lanes' rows) |
 
 ---
 
@@ -714,3 +714,101 @@ re-measured — every correction is read off the artifacts already cited:
 * M-7 — `scripts/choice-trace-corpus` checks `--out` writability up front
   and names the directory; `scripts/membership-sampling` takes an
   out-dir lock (`$OUT/.lock`, pid recorded) and refuses a busy dir.
+
+---
+
+## 10. Implementation record (2026-09-03, lane `strict-routing`; [AGENT] on the [USER] ruling)
+
+P1 is mechanized as §5 specifies (rule text now the record in
+`docs/coverage-suite-structure.md` "Lane assignment"): after the three
+invariance re-runs, `scripts/diff-coverage` calls `golean choice-trace`
+once per strict row (default + the three streams that ran), reads
+`wideAfterExhaustion` per stream, refuses at stage `nondet` with §5's
+wording when any is > 0, records `wide=<w> exhausted=none
+depth=<fixed|N>` in the PASS detail, and — for a row declaring the new
+strict-lane param `depth=N` — replaces the fixed streams by three seeded
+streams of length N (seeds/generator in the run meta) that must
+themselves report 0. A variant-stream refusal is reported as a refusal
+(`lean-observation`), never as `nondet` (item 4 / P5). The guard failing
+to run is a named `nondet` FAIL. The first smoke of the guard PASSED
+every fixture: bash arrays are invisible to the per-case `bash -c`
+workers, so the streams were empty (= default) — fixed by exporting
+scalars and parsing the tracer's reports positionally; the fixtures
+D1-D6 are the red-first record. Cost: one tracer call per strict row
+(~0.03-0.5 s).
+
+The 23 rows (re-traced at this tip, `trace23.tsv` in the evidence dir —
+the numbers match §2.3; the controls `d-int`/`d-uint`/`named-call` are
+covered by the fixed streams as §5 predicted):
+
+| row | w (default wide) | worst fixed stream: wide after exhaustion | disposition |
+|---|---|---|---|
+| `goroutines/pipeline/two-stage` | 44 | 35 of 45 | **confluent** (`engine=dedup`, 866,780 nodes, 27 s; 20/20 gc draws in) |
+| `goroutines/pipeline/buffered-stage` | 29 | 21 of 31 | **confluent** (187,497 nodes, 4 s; 20/20) |
+| `spec-examples-stmt/go-statements/func-literal` | 17 | 7 of 17 | **confluent** (3,343 nodes, <1 s; DFS agrees; 20/20) |
+| `spec-examples-stmt/prime-sieve/five` | 187 | 180 of 188 | **depth=1024** — dedup KILLED at 40 GB (backedge full/0/1); seeded 1024: 145/140/147 wide, 0 after |
+| `spec-examples-stmt/prime-sieve/eight` | 521 | 514 of 522 | **depth=4096** — dedup KILLED at 40 GB (full/0); seeded 2048 trace: 312/305/295 wide, 0 after |
+| `goroutines/worker-pool/shared-feed` | 32 | 24 of 32 | **depth=128** — dedup KILLED at 40 GB (full/0); seeded 256: 35/36/36, 0 after |
+| `sync/waitgroup-workers-join/workers-join` | 28 | 18 of 28 | **depth=128** — dedup work budget exceeded (27.1M nodes, 39.7 GB); seeded 256: 30/29/30, 0 after |
+| `imported-goose/channel/parallel-search-replace/search-replace` | 42 | 33 of 43 | **depth=256** — dedup KILLED at 40 GB (backedge 0, 719 s; full likewise); seeded 256: 41/39/50, 0 after |
+| `fmt/fprintf-builder/describe-shape` | 10 | 1 of 9 (8-entry stream) | depth=64 |
+| `fmt/fprint-writers/fprintf-buffer-shape` | 12 | 4 of 12 | depth=64 |
+| `fmt/sprintf-dyn/logger-shape` | 14 | 6 of 14 | depth=64 |
+| `fmt/sprintf-dyn/sprint-space-rule` | 14 | 6 of 14 | depth=64 |
+| `fmt/sprintf-dyn/verb-kinds` | 13 | 3 of 11 | depth=64 |
+| `fmt/sprintf-verbs/d-width` | 12 | 2 of 10 | depth=64 |
+| `multipkg/mini-raft-twin/duel` | 11 | 1 of 9 | depth=64 |
+| `multipkg/mini-raft-twin/elect-propose-commit` | 32 | 22 of 30 | depth=128 |
+| `multipkg/mini-raft-twin/perturb-picks` | 18 | 6 of 14 | depth=128 |
+| `multipkg/mini-raft-twin/perturb-rev` | 23 | 13 of 21 | depth=128 |
+| `multipkg/mini-raft-twin/starve-node` | 23 | 13 of 21 | depth=128 |
+| `strconv/format-parse/format-int-vals` | 22 | 14 of 22 | depth=128 |
+| `strconv/format-parse/format-uint-bases` | 29 | 21 of 29 | depth=128 |
+| `strconv/format-parse/parse-uint-errors` | 33 | 21 of 29 | depth=256 |
+| `strconv/format-parse/parse-uint-range-value` | 66 | 50 of 58 | depth=512 |
+
+Sizing [AGENT]: depth = smallest power of two ≥ 4·w, min 64; every
+declared stream reports `wideAfterExhaustion = 0` at the gate (the check,
+not the convention, is what certifies). The five `depth=` scheduling rows
+are a FINDING: the memo's "honest home" (confluent) is out of reach for
+them at registry granularity without a reduction-powered enumerator
+(BUG-065's mover/reduction lane is the recorded path); `depth=` keeps
+them strict with an honest caption, not confluent-certified. No
+observed-∉-modeled finding: every gc draw on the three routed rows is the
+singleton. Gate (with §10.1's post-trace rows): 0 PASS→non-PASS; 9
+stage-only moves (8 → confluent, `beside-loop` nondet → lean-observation).
+
+### 10.1 What the first full gate run added (rows born after the 2026-09-01 trace)
+
+The guard's first `ci --diff` reached 20 rows beyond the 23: 16 noodler
+rows (landed 2026-09-03) outrunning the fixed streams at scheduling
+sites (one at `appendSpill`), and 4 heavy zero-consumption rows on
+which the tracer itself exceeded the 30 s single-run budget
+(`imported-goose/unittest/replicated-disk`, `noodler/budget/
+{loop-100k,map-20k,recursion-5k}`: 50/20/35/64 s unloaded for the
+eight passes) — fixed by giving the tracer its own named budget
+(`LEAN_TRACE_TIMEOUT_SECONDS`, default 8 × 30 s). The 16, traced under
+the fixed + seeded streams (`trace-new16.tsv`):
+
+| row | w | worst fixed stream: after exhaustion | `engine=dedup` (work 20M, cap 24 GB) | disposition |
+|---|---|---|---|---|
+| `noodler/goroutines/fifo-one-sender` | 23 | 13 of 23 | closes: 4,955 edges | **confluent** (20/20 draws) |
+| `noodler/goroutines/lockstep-transcript` | 12 | 2 of 10 | closes: 2,018 edges | **confluent** (20/20) |
+| `noodler/goroutines/directional-params` | 28 | 18 of 28 | closes: 5,718 edges | **confluent** (20/20) |
+| `noodler/select/ping-pong` | 29 | 20 of 30 | closes: 18,694 edges | **confluent** (20/20) |
+| `noodler/syncmisuse/unlock-from-other-goroutine` | 3 | 1 of 11 | closes: 600 edges | **confluent** (20/20) |
+| `noodler/goroutines/close-broadcast` | 34 | 20 of 30 | budget exceeded, 9.2M nodes | depth=256 |
+| `noodler/goroutines/once-across-goroutines` | 50 | 42 of 50 | budget exceeded, 9.2M nodes | depth=256 |
+| `noodler/goroutines/pipeline-three-stages` | 57 | 47 of 57 | budget exceeded, 9.1M nodes | depth=256 |
+| `noodler/goroutines/rwmutex-readers` | 39 | 36 of 44 | budget exceeded, 9.0M nodes | depth=256 |
+| `noodler/goroutines/semaphore-total` | 84 | 76 of 84 | KILLED at 24 GB | depth=512 |
+| `noodler/goroutines/worker-pool-sum` | 98 | 83 of 93 | KILLED at 24 GB | depth=512 |
+| `noodler/goroutines/mutex-counter` | 262 | 254 of 262 | KILLED at 24 GB | depth=2048 (seeded 256 itself exhausted: 67-123 after; 1024 covers) |
+| `noodler/closures/goroutines-loopvar` | 40 | 30 of 40 | budget exceeded, 9.1M nodes | depth=256 |
+| `noodler/gostmt/pointer-method` | 21 | 13 of 21 | budget exceeded, 9.1M nodes | depth=128 |
+| `noodler/syncmisuse/waitgroup-reuse` | 20 | 15 of 23 | budget exceeded, 9.0M nodes | depth=128 |
+| `noodler/strconv-formatint/edges` | 64 | 56 of 64 (`appendSpill`) | not attempted (capacity) | depth=256 |
+
+Totals at the gate: 39 rows carry a lane declaration under the guard
+(8 confluent + 31 `depth=`); 9 stage-only baseline moves (8 → confluent,
+`beside-loop` → lean-observation); 0 result flips.

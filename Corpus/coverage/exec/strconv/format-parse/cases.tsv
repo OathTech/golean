@@ -1,12 +1,29 @@
-# id	subject	args	expected_status	expected_reason	features
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# depth= (STRICT-LANE DEPTH GUARD, membership-depth memo P1, [USER]-ruled
+# 2026-09-03; docs/coverage-suite-structure.md "Lane assignment"): the
+# rows below outrun the three fixed adversarial streams at appendSpill
+# (capacity latitude inside string-building shims, observable only
+# through cap(), which none of them reads) — the memo's trace (§2.3(b))
+# and this lane's re-trace (docs/evidence/2026-09-03_strict-routing/
+# trace23.tsv) show wide picks served AFTER exhaustion, so the fixed
+# streams never certified invariance past pick 8-10. Each declares
+# depth=N = the smallest power of two >= 4*w (w = default-stream wide
+# count), min 64 [AGENT sizing]; the gate replaces the fixed streams by
+# three seeded streams of length N and refuses unless every one reports
+# wideAfterExhaustion=0. Measured (default w / worst fixed-stream wide-
+# after-exhaustion):
+#   format-int-vals: w=22, 14 of 22 -> depth=128
+#   format-uint-bases: w=29, 21 of 29 -> depth=128
+#   parse-uint-errors: w=33, 21 of 29 -> depth=256
+#   parse-uint-range-value: w=66, 50 of 58 -> depth=512
 # W4.3 item 1 landing B: strconv shims. Red at frontend-export until
 # they land. format-illegal-base is an expected-panic row (the shim
 # panics with upstream's exact message).
-format-uint-bases	formatUintBases	-	ok	-	stdlib,strings,ints
-format-int-vals	formatIntVals	-	ok	-	stdlib,strings,ints,overflow
+format-uint-bases	formatUintBases	-	ok	-	stdlib,strings,ints	strict	-	depth=128
+format-int-vals	formatIntVals	-	ok	-	stdlib,strings,ints,overflow	strict	-	depth=128
 format-illegal-base	formatIllegalBase	-	panic	strconv: illegal AppendInt/FormatInt base	stdlib,strings,ints,panic
 parse-uint-happy	parseUintHappy	-	ok	-	stdlib,strings,ints,multi_result
-parse-uint-errors	parseUintErrors	-	ok	-	stdlib,strings,ints,range,concat
-parse-uint-range-value	parseUintRangeValue	-	ok	-	stdlib,strings,ints,range,widths
+parse-uint-errors	parseUintErrors	-	ok	-	stdlib,strings,ints,range,concat	strict	-	depth=256
+parse-uint-range-value	parseUintRangeValue	-	ok	-	stdlib,strings,ints,range,widths	strict	-	depth=512
 parse-uint-bitsize	parseUintBitSize	-	ok	-	stdlib,strings,ints,widths
 unmodeled-member	unmodeledMember	-	ok	-	stdlib,strings,ints

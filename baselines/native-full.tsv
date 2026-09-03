@@ -1,4 +1,55 @@
 # GoLean native-frontend full-corpus differential baseline
+# re-pinned: 2026-09-03 (strict-routing lane — THE STRICT-LANE DEPTH GUARD,
+#   membership-depth memo P1 §5, [USER]-ruled 2026-09-03 («(6) strict-lane,
+#   agree», relayed by the [AGENT] coordinator — cited as relayed; scope
+#   corrected by the coordinator mid-lane from "re-lane eight rows" to
+#   "implement P1 as written"). [AGENT]-executed: GATE CHANGE in
+#   scripts/diff-coverage + scripts/coverage-manifest (guard-strengthening:
+#   per-row wideAfterExhaustion refusal via `golean choice-trace`, depth=N
+#   seeded streams, variant-stream refusals reported as refusals, a named
+#   tracer wall budget LEAN_TRACE_TIMEOUT_SECONDS) with red-first fixtures
+#   (scripts/test-lane-validation D1-D6 + 6 manifest shapes); corpus lane
+#   declarations on 39 rows; no GoLean/, tools/ change.
+#   FULL ci --diff at main 345ef090 + this lane's working tree (dirty: the
+#   lane edits, committed together as the lane's commit; log tail in
+#   docs/evidence/2026-09-03_strict-routing/gate-tail.txt):
+#   3195 rows run; drift vs the previous pin = EXACTLY 9 STAGE-ONLY moves:
+#   8 PASS/- -> PASS/confluent — the memo's goroutines/pipeline/two-stage,
+#   goroutines/pipeline/buffered-stage,
+#   spec-examples-stmt/go-statements/func-literal, plus five rows that
+#   landed after the memo's 2026-09-01 trace and which the guard's first
+#   full run caught outrunning the fixed streams: noodler/goroutines/
+#   {directional-params,fifo-one-sender,lockstep-transcript},
+#   noodler/select/ping-pong, noodler/syncmisuse/unlock-from-other-goroutine
+#   (all: POR engine=dedup certifies |set|=1, checker-accepted,
+#   backedge=full; 20 gc draws each inside the singleton);
+#   1 FAIL/nondet -> FAIL/lean-observation — channels/select-select/
+#   beside-loop (P1 item 4: its adversarial-stream `unsupported` refusal is
+#   now reported as a refusal, not as "varies with iteration order";
+#   baselines/untriaged-ids entry unchanged, class coverage). NO result
+#   flip, NO born row, NO PASS->non-PASS flips. 3001 PASS / 194 FAIL,
+#   unchanged. 31 further rows the guard reaches declare depth=N (strict
+#   lane, stage `-` unchanged) and PASS under three seeded streams of
+#   length N with wideAfterExhaustion=0 on each: the memo's 15 appendSpill
+#   capacity rows (fmt/*, multipkg/mini-raft-twin/*, strconv/format-parse/*)
+#   and 5 scheduling rows whose state graphs do not close under
+#   engine=dedup (spec-examples-stmt/prime-sieve/{five,eight},
+#   goroutines/worker-pool/shared-feed, sync/waitgroup-workers-join/
+#   workers-join, imported-goose/channel/parallel-search-replace/
+#   search-replace), plus 11 post-trace rows (noodler/goroutines/
+#   {close-broadcast,mutex-counter,once-across-goroutines,
+#   pipeline-three-stages,rwmutex-readers,semaphore-total,worker-pool-sum},
+#   noodler/closures/goroutines-loopvar, noodler/gostmt/pointer-method,
+#   noodler/syncmisuse/waitgroup-reuse, noodler/strconv-formatint/edges).
+#   Every other strict PASS row's detail now records wide=/exhausted=none/
+#   depth=fixed (metadata, not a stage). The guard's first full run also
+#   timed the tracer out at 30 s on 4 heavy zero-consumption rows
+#   (imported-goose/unittest/replicated-disk, noodler/budget/{loop-100k,
+#   map-20k,recursion-5k}) — the tracer makes 8 interpreter passes, so it
+#   now has its own 8x budget (LEAN_TRACE_TIMEOUT_SECONDS, default 240 s).
+#   [re-derived by count from this file's data rows at this re-pin:
+#   3195 = 3001 PASS (2846 strict-stage `-`, 85 confluent, 37 membership,
+#   33 racy) / 194 FAIL.]
 # re-pinned: 2026-09-03 (hygiene-b1-stamps AUDIT FIX ROUND F2 — [AGENT]: three
 #   born-PASS rows maps/nan-key-range-aggregate/{array,struct,interface}, the
 #   aggregate members of BUG-088's irreflexive-key class (all fuel-out on main
@@ -549,6 +600,7 @@
 #     NEW rows: unsafe/layout-ops/{sizeof-fixed,layout-struct}
 #     FAIL/frontend-export BY DESIGN. unsafe/boundary/pointer-roundtrip
 # cases: 3199 (3005 PASS / 194 FAIL)
+#   [re-derived from the data rows at the round-8a merge-train rebase 2026-09-03 ([AGENT]: strict-routing replayed over main = hygiene-b1-stamps' 3199 (3005 PASS / 194 FAIL); the strict-routing lane's 9 STAGE-ONLY moves carried — 8 PASS/- -> PASS/confluent (goroutines/pipeline/{two-stage,buffered-stage}, spec-examples-stmt/go-statements/func-literal, noodler/goroutines/{directional-params,fifo-one-sender,lockstep-transcript}, noodler/select/ping-pong, noodler/syncmisuse/unlock-from-other-goroutine) and channels/select-select/beside-loop FAIL nondet|differential -> FAIL lean-observation|differential (the guard-stage-alt alternation KEPT, its nondet member replaced by lean-observation per the strict-routing audit's TRAIN NOTE, docs/evidence/2026-09-03_strict-routing/README.md); no result flip, no born row, no PASS->non-PASS flips; `awk -F'\t' '!/^#/{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3005 / FAIL 194)]
 #   [re-derived from the data rows at the hygiene-b1-stamps audit fix round F2 2026-09-03 ([AGENT]: 3196 (3002 PASS / 194 FAIL) + THREE born-PASS rows maps/nan-key-range-aggregate/{array,struct,interface}; no other row moved; `awk -F'\t' '!/^#/{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3005 / FAIL 194)]
 #   [the slice's landing figure, kept as history:] # cases: 3196 (3002 PASS / 194 FAIL)
 #   [re-derived from the data rows at the hygiene-b1-stamps re-pin 2026-09-03 ([AGENT]: the bug086-shim-closure pin's 3195 (3001 PASS / 194 FAIL) + ONE born-PASS row maps/nan-key-range (BUG-088's pin; design-hygiene arc slice 1, B1 entry-identity stamps — a GoCore map-iteration REPRESENTATION change with zero drift on every pre-existing row, docs/2026-09-03_hygiene-b1-stamps-design.md §6); `awk -F'\t' '!/^#/{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3002 / FAIL 194)]
@@ -972,15 +1024,19 @@ PASS	channels/select-recv-edge/field-second-target-stores-first	-
 PASS	channels/select-recv-edge/chain-field-over-index	-
 PASS	channels/select-recv-edge/fallback-call-index	-
 FAIL	channels/select-select/core	lean-observation
-# reason: channels/select-select/beside-loop — stage alternation ([USER] ruling (a) 2026-09-03):
+# reason: channels/select-select/beside-loop — stage alternation ([USER] ruling (a) 2026-09-03;
+#   members re-stated at the strict-lane depth guard, round-8a merge train 2026-09-03 [AGENT]):
 #   gc samples 5 or 90 (the subject's "5 or 90 in gc"); the machine's default stream
 #   commits 5. scripts/diff-coverage runs the strict-lane differential check BEFORE
 #   the oracle-invariance re-run and returns early, so the red's stage is
-#   oracle-schedule-dependent: gc=5 -> equality holds, the adversarial streams hit
-#   the refusal -> FAIL/nondet; gc=90 -> Lean=5 != Go=90 -> FAIL/differential.
-#   Result FAIL either way; the row stays the F10 over-broad-trigger marker
+#   oracle-schedule-dependent: gc=90 -> Lean=5 != Go=90 -> FAIL/differential;
+#   gc=5 -> equality holds, then a variant-stream run hits the `unsupported`
+#   refusal, which the strict-lane depth guard (membership-depth memo P1 item 4,
+#   lane strict-routing) reports as a REFUSAL at lean-observation — no longer as
+#   "varies with iteration order" (nondet) -> FAIL/lean-observation. Result FAIL
+#   either way; the row stays the F10 over-broad-trigger marker
 #   (baselines/untriaged-ids, disposition coverage).
-FAIL	channels/select-select/beside-loop	nondet|differential
+FAIL	channels/select-select/beside-loop	lean-observation|differential
 PASS	channels/send-closed-panic	-
 PASS	comparisons/short-circuit/array-skips-interface-panic	-
 PASS	comparisons/short-circuit/array-reaches-interface-panic	-
@@ -1756,8 +1812,8 @@ PASS	goroutines/main-exit/blocked-goroutine	confluent
 PASS	goroutines/main-exit/two-leaked	confluent
 PASS	goroutines/ping-pong/alternate	confluent
 PASS	goroutines/ping-pong/cap-zero	confluent
-PASS	goroutines/pipeline/two-stage	-
-PASS	goroutines/pipeline/buffered-stage	-
+PASS	goroutines/pipeline/two-stage	confluent
+PASS	goroutines/pipeline/buffered-stage	confluent
 PASS	goroutines/pipeline/request-reply	confluent
 PASS	goroutines/rendezvous-hb/send-hb	confluent
 PASS	goroutines/rendezvous-hb/recv-hb	confluent
@@ -2654,7 +2710,7 @@ PASS	noodler/generics/comparable-array-of-iface	-
 PASS	noodler/generics/generic-swap	-
 PASS	noodler/generics/core-type-string	-
 PASS	noodler/goroutines/handoff-write-before-send	-
-PASS	noodler/goroutines/fifo-one-sender	-
+PASS	noodler/goroutines/fifo-one-sender	confluent
 PASS	noodler/goroutines/close-broadcast	-
 PASS	noodler/goroutines/worker-pool-sum	-
 PASS	noodler/goroutines/once-across-goroutines	-
@@ -2663,10 +2719,10 @@ PASS	noodler/goroutines/rwmutex-readers	-
 PASS	noodler/goroutines/waitgroup-deadlock	-
 PASS	noodler/goroutines/mutex-double-lock-deadlock	-
 PASS	noodler/goroutines/leaked-goroutine	-
-PASS	noodler/goroutines/directional-params	-
+PASS	noodler/goroutines/directional-params	confluent
 PASS	noodler/goroutines/pipeline-three-stages	-
 PASS	noodler/goroutines/semaphore-total	-
-PASS	noodler/goroutines/lockstep-transcript	-
+PASS	noodler/goroutines/lockstep-transcript	confluent
 PASS	noodler/goroutines/goroutine-panic-under-wait	-
 PASS	noodler/goroutines/child-blocked-nil-channel	-
 PASS	noodler/gostmt/args-evaluated-at-spawn	-
@@ -2900,7 +2956,7 @@ PASS	noodler/select/switch-duplicate-runtime	-
 PASS	noodler/select/default-only	-
 PASS	noodler/select/self-send-recv-default	-
 PASS	noodler/select/closed-struct-zero	-
-PASS	noodler/select/ping-pong	-
+PASS	noodler/select/ping-pong	confluent
 PASS	noodler/select/fallthrough-middle-default-1	-
 PASS	noodler/select/fallthrough-middle-default-2	-
 PASS	noodler/select/fallthrough-middle-default-9	-
@@ -2967,7 +3023,7 @@ PASS	noodler/syncmisuse/unlock-of-unlocked-rw	-
 PASS	noodler/syncmisuse/once-nested-deadlock	-
 PASS	noodler/syncmisuse/mutex-copy-carries-state	-
 PASS	noodler/syncmisuse/mutex-copy-independent	-
-PASS	noodler/syncmisuse/unlock-from-other-goroutine	-
+PASS	noodler/syncmisuse/unlock-from-other-goroutine	confluent
 PASS	noodler/syncmisuse/waitgroup-reuse	-
 PASS	noodler/syncmisuse/wait-on-zero-counter	-
 PASS	noodler/syncmisuse/recursive-read-lock	-
@@ -3532,7 +3588,7 @@ PASS	spec-examples-stmt/for-condition/boundary	-
 PASS	spec-examples-stmt/for-forms-equiv/cond-pair	-
 PASS	spec-examples-stmt/for-forms-equiv/infinite-pair	-
 PASS	spec-examples-stmt/go-statements/named-call	-
-PASS	spec-examples-stmt/go-statements/func-literal	-
+PASS	spec-examples-stmt/go-statements/func-literal	confluent
 PASS	spec-examples-stmt/go-statements/params-at-go	-
 PASS	spec-examples-stmt/if-init-else-chain/first-branch	-
 PASS	spec-examples-stmt/if-init-else-chain/second-branch	-

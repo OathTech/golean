@@ -13,6 +13,12 @@ GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
 LAKE_BUILD_TIMEOUT_SECONDS="${LAKE_BUILD_TIMEOUT_SECONDS:-120}"
 GO_TIMEOUT_SECONDS="${GO_TIMEOUT_SECONDS:-30}"
 LEAN_TIMEOUT_SECONDS="${LEAN_TIMEOUT_SECONDS:-30}"
+# The depth guard's tracer (`golean choice-trace`, memo P1) replays the
+# default stream and the three invariance streams in lockstep with the
+# accountant AND runs the enumerator driver on each — eight interpreter
+# passes where native-json-run makes one — so its wall budget is 8x the
+# single-run budget by default. Named in the cause when it fires.
+LEAN_TRACE_TIMEOUT_SECONDS="${LEAN_TRACE_TIMEOUT_SECONDS:-$(( LEAN_TIMEOUT_SECONDS * 8 ))}"
 # The membership/confluent/racy-lane enumerator explores the whole
 # schedule tree in one process (up to millions of pool steps on the
 # 3-goroutine litmus shapes), so it gets its own, larger budget.
@@ -41,6 +47,40 @@ LEAN_ENUM_TIMEOUT_SECONDS="${LEAN_ENUM_TIMEOUT_SECONDS:-300}"
 # nightly job timeout must cover the slow rows' sum; see the stage-C
 # log entry for the measured per-row costs.
 LEAN_ENUM_SLOW_TIMEOUT_SECONDS="${LEAN_ENUM_SLOW_TIMEOUT_SECONDS:-3600}"
+
+# STRICT-LANE DEPTH GUARD (membership-depth memo P1, §5 — [USER]-ruled
+# 2026-09-03; docs/coverage-suite-structure.md "Lane assignment").
+# A strict PASS is a two-part claim: Go equality on the default
+# trajectory AND invariance across the adversarial choice streams. The
+# second part is only made when the streams COVER every bound->=2
+# consumption: `Choices.consume` yields slot 0 once a stream is
+# exhausted, so a row that outruns its stream is compared with its own
+# default trajectory. The tracer (`golean choice-trace`, the lockstep
+# accountant) reports per stream `wideAfterExhaustion` — bound->=2
+# consumptions served after exhaustion — and that is the observable the
+# guard reads. `depth=N` (strict-lane param) replaces the three fixed
+# streams by three SEEDED streams of length N (seeds below; generator
+# recorded in the run meta) which must themselves report 0.
+# Scalars, space-separated (NOT arrays): per-case workers are fresh
+# `bash -c` processes that see exported functions and exported scalars
+# only — an array here would be silently EMPTY in every worker (the
+# first smoke of this guard passed every fixture for exactly that
+# reason: empty streams = the default stream, four times).
+export DEPTH_GUARD_SEEDS="1 2 3"
+export DEPTH_FIXED_STREAMS="9,8,7,6,5,4,3,2,1,0 1,3,5,7,9,2,4,6,8,0 5,5,5,5,5,5,5,5"
+# seeded_stream <seed> <N>: a 31-bit LCG (glibc constants
+# 1103515245/12345), value = bits 16..31 (0..65535), printed as the
+# explicit comma list both `--choices` and `--stream` accept — the two
+# tools see byte-identical streams, so nothing depends on a shared
+# generator.
+seeded_stream() {
+  local x="$1" n="$2" i out=""
+  for ((i = 0; i < n; i++)); do
+    x=$(( (x * 1103515245 + 12345) & 0x7fffffff ))
+    out+="${out:+,}$(( (x >> 16) & 0xffff ))"
+  done
+  printf '%s' "$out"
+}
 
 # GATE INTEGRITY (grossmith findings §2,
 # docs/2026-08-07_grossmith-findings.md; hoisted ABOVE every infra exit
@@ -334,6 +374,13 @@ fi
   printf 'go_toolchain\t%s\n' "$(go version 2>/dev/null | awk '{print $3}' || printf 'unknown')"
   printf 'go_drift_allowed\t%s\n' "${GOLEAN_ALLOW_GO_DRIFT:-0}"
   printf 'go_drift_actual\t%s\n' "$go_drift_actual"
+  # Strict-lane depth guard (memo P1): the observable, the seeded-stream
+  # generator and its seeds — so a depth=N row's PASS is reproducible
+  # from this record alone.
+  printf 'depth_guard\t%s\n' "choice-trace wideAfterExhaustion=0 on every invariance stream"
+  printf 'depth_seeds\t%s\n' "${DEPTH_GUARD_SEEDS// /,}"
+  printf 'depth_generator\t%s\n' "lcg31(1103515245,12345) bits16..31"
+  printf 'depth_trace_timeout_seconds\t%s\n' "$LEAN_TRACE_TIMEOUT_SECONDS"
 } > "$META_TMP"
 
 cleanup() {
@@ -392,9 +439,16 @@ fi
 report_pass() {
   local id="$1"
   local features="$2"
+  # Optional detail (strict-lane depth guard, memo P1 2026-09-03): the
+  # stage stays '-'; the detail records the derivation-anchoring numbers
+  # (wide=, exhausted=, depth=) — metadata, never a pass criterion.
+  local detail="${3:--}"
+  local flat_detail
+  flat_detail="$(one_line "$detail")"
   printf 'PASS\t%s\t%s\n' "$id" "$features"
-  printf 'PASS\t%s\t%s\t-\t-\n' "$id" "$features" >> "$CASE_OUT"
+  printf 'PASS\t%s\t%s\t-\t%s\n' "$id" "$features" "$flat_detail" >> "$CASE_OUT"
 }
+
 
 # Membership-lane PASS rows carry stage "membership" (the baseline records
 # result+stage, so the lane classification is part of the regression
@@ -484,6 +538,25 @@ run_case_rows() {
       return 0
       ;;
   esac
+  # Strict-lane params (depth guard, memo P1): '-' or exactly depth=<N>.
+  # Re-validated here like every lane param (F4's discipline: a row that
+  # bypasses the manifest must fail loud, never fall through to the
+  # fixed streams).
+  local depth=""
+  if [[ "$lane" == "strict" ]]; then
+    if [[ "$why" != "-" ]]; then
+      report_fail "$id" "$features" "manifest" "strict-lane rows must leave why as -"
+      return 0
+    fi
+    if [[ "$params" != "-" ]]; then
+      if [[ "$params" =~ ^depth=([1-9][0-9]*)$ ]]; then
+        depth="${BASH_REMATCH[1]}"
+      else
+        report_fail "$id" "$features" "manifest" "strict-lane params may only declare depth=<N> (the depth guard's seeded-stream length): $params"
+        return 0
+      fi
+    fi
+  fi
   # PER-LANE EPISTEMIC CAPTIONS — compact copy; the record is the
   # nondeterminism doctrine's "Per-lane epistemic captions" section
   # (docs/2026-08-04_nondeterminism-doctrine.md; evidence base:
@@ -991,8 +1064,33 @@ run_case_rows() {
   # native path threads choices today.
   if [[ "$FRONTEND" == "native" ]]; then
     nondet=0
-    local variant_rc eq_rc variant_cause eq_cause
-    for oracle in "9,8,7,6,5,4,3,2,1,0" "1,3,5,7,9,2,4,6,8,0" "5,5,5,5,5,5,5,5"; do
+    local variant_rc eq_rc variant_cause eq_cause variant_status
+    # The invariance streams: the three fixed adversarial streams, or —
+    # for a strict row declaring depth=N — three seeded streams of
+    # length N (depth guard, memo P1; seeds DEPTH_GUARD_SEEDS, generator
+    # seeded_stream, both recorded in the run meta). The tracer below
+    # checks that whichever set ran actually covered every wide pick.
+    local -a inv_streams=() inv_labels=()
+    read -r -a inv_streams <<< "$DEPTH_FIXED_STREAMS"
+    read -r -a inv_labels <<< "$DEPTH_FIXED_STREAMS"
+    if [[ -n "$depth" ]]; then
+      inv_streams=(); inv_labels=()
+      local dseed
+      for dseed in $DEPTH_GUARD_SEEDS; do
+        inv_streams+=("$(seeded_stream "$dseed" "$depth")")
+        inv_labels+=("seeded:$dseed:$depth")
+      done
+    fi
+    local si oracle olabel
+    for si in 0 1 2; do
+      oracle="${inv_streams[$si]:-}"; olabel="${inv_labels[$si]:-}"
+      if [[ -z "$oracle" ]]; then
+        # Fail closed on a harness defect: an empty stream IS the default
+        # stream, and a default-vs-default comparison certifies nothing.
+        report_fail "$id" "$features" "nondet" "invariance stream #$((si + 1)) is EMPTY (harness defect: DEPTH_FIXED_STREAMS/seeded_stream unavailable in this worker) — invariance NOT certified"
+        nondet=1
+        break
+      fi
       # A killed re-run is NOT an observed variance (cause-naming fix
       # 2026-09-03): the old shape compared the empty capture against
       # the default observation and reported "varies with iteration
@@ -1000,18 +1098,30 @@ run_case_rows() {
       # certified — with the wall clock named as the cause.
       variant_rc=0
       variant_obs="$(lean "${lean_args[@]}" --choices "$oracle" 2>&1)" || variant_rc=$?
-      if variant_cause="$(undecided_cause "$variant_rc" "oracle-invariance re-run under stream [$oracle]" "$LEAN_TIMEOUT_SECONDS" LEAN_TIMEOUT_SECONDS)"; then
+      if variant_cause="$(undecided_cause "$variant_rc" "oracle-invariance re-run under stream [$olabel]" "$LEAN_TIMEOUT_SECONDS" LEAN_TIMEOUT_SECONDS)"; then
         report_fail "$id" "$features" "nondet" "$variant_cause — invariance NOT certified (a killed run is not an observed variance); captured output: $variant_obs"
+        nondet=1
+        break
+      fi
+      # A REFUSAL under a variant stream is a refusal, not a variance
+      # (memo P1 item 4 / P5, assessment D-10 item 2): the default run
+      # produced the expected status, this stream produced a different
+      # one (unsupported/stuck/error/fatal/panic where ok was expected,
+      # or ok where a panic was) — reported at the refusal's own stage,
+      # never as "varies with iteration order".
+      variant_status="$(printf '%s' "$variant_obs" | sed -n 's/.*"status":"\([^"]*\)".*/\1/p' | head -1)"
+      if [[ "$variant_status" != "$expected_status" ]]; then
+        report_fail "$id" "$features" "lean-observation" "variant stream [$olabel]: the machine produced status '${variant_status:-<none>}' where the default run produced '$expected_status' — a refusal under a variant stream is a refusal, not a variance (invariance NOT certified): $variant_obs"
         nondet=1
         break
       fi
       obs_eq "$lean_observation" "$variant_obs"; eq_rc=$?
       if eq_cause="$(obs_eq_cause "$eq_rc")"; then
-        report_fail "$id" "$features" "nondet" "$eq_cause comparing the default observation against stream [$oracle] — invariance NOT decided: default=$lean_observation variant=$variant_obs"
+        report_fail "$id" "$features" "nondet" "$eq_cause comparing the default observation against stream [$olabel] — invariance NOT decided: default=$lean_observation variant=$variant_obs"
         nondet=1
         break
       elif [[ "$eq_rc" -ne 0 ]]; then
-        report_fail "$id" "$features" "nondet" "observation varies with iteration order (oracle [$oracle]): default=$lean_observation variant=$variant_obs"
+        report_fail "$id" "$features" "nondet" "observation varies with iteration order (oracle [$olabel]): default=$lean_observation variant=$variant_obs"
         nondet=1
         break
       fi
@@ -1021,11 +1131,94 @@ run_case_rows() {
     fi
   fi
 
+  # THE DEPTH GUARD (strict lane only; memo P1 §5 items 1-3). The
+  # confluent lane's certificate is the enumerator's, so the streams'
+  # coverage is not load-bearing there. One tracer call replays the
+  # default stream and the three invariance streams that just ran, in
+  # lockstep with the consumption accountant, and reports per stream
+  # the bound->=2 consumptions served AFTER exhaustion.
+  local guard_detail="-"
+  if [[ "$FRONTEND" == "native" && "$lane" == "strict" ]]; then
+    local trace_args=(choice-trace --input "$wire_json" --function "$function_name")
+    local tv
+    if [[ "$arg_ints" != "-" ]]; then
+      IFS=',' read -r -a ints4 <<< "$arg_ints"
+      for tv in "${ints4[@]}"; do
+        trace_args+=(--arg-int "$tv")
+      done
+    fi
+    trace_args+=(--stream default)
+    for si in 0 1 2; do
+      trace_args+=(--stream "${inv_streams[$si]}")
+    done
+    local trace_rc=0 trace_out trace_cause
+    trace_out="$(run_with_timeout "$LEAN_TRACE_TIMEOUT_SECONDS" "$GOLEAN_BIN" "${trace_args[@]}" 2>&1)" || trace_rc=$?
+    if trace_cause="$(undecided_cause "$trace_rc" "depth guard (choice-trace)" "$LEAN_TRACE_TIMEOUT_SECONDS" LEAN_TRACE_TIMEOUT_SECONDS)"; then
+      report_fail "$id" "$features" "nondet" "$trace_cause — stream coverage NOT established (the strict PASS's invariance half is unproven); captured output: $trace_out"
+      return 0
+    fi
+    if [[ "$trace_rc" -ne 0 ]]; then
+      # Exit 1 = the accountant disagreed with the machine (menu-invariant
+      # violation, alarm, or driver disagreement) or a stream failed to
+      # parse. Fail closed: a consumption the accountant cannot mirror
+      # is exactly the kind of latitude the guard exists to expose.
+      report_fail "$id" "$features" "nondet" "depth guard: choice-trace reported a violation/alarm/driver disagreement (exit 1) — stream coverage NOT established: $(one_line "$trace_out")"
+      return 0
+    fi
+    # TSV: id stream status consumed wide exhaustedAt wideAfterExhaustion ...
+    local w_default="" line stream_col wide_col exh_col wae_col nlines=0
+    local guard_refusal=""
+    # Reports come back in --stream order: #1 the default stream (its
+    # `wide` is w), #2-#4 the three invariance streams that just ran.
+    # Positional, NOT keyed on the tracer's stream label: an empty
+    # stream is labelled "default" too, and keying on the label would
+    # skip it silently (the first smoke's leak).
+    while IFS=$'\t' read -r _tid stream_col _tstatus _tconsumed wide_col exh_col wae_col _rest; do
+      [[ "$_tid" == "id" ]] && continue
+      nlines=$((nlines + 1))
+      if [[ "$nlines" -eq 1 ]]; then
+        if [[ "$stream_col" != "default" ]]; then
+          guard_refusal="depth guard: choice-trace's first report is not the default stream ('$stream_col') — stream coverage NOT established"
+          break
+        fi
+        w_default="$wide_col"
+        continue
+      fi
+      if [[ "$stream_col" == "default" ]]; then
+        guard_refusal="depth guard: invariance stream #$((nlines - 1)) traced as the DEFAULT stream (empty stream — harness defect) — stream coverage NOT established"
+        break
+      fi
+      if [[ ! "$wae_col" =~ ^[0-9]+$ ]]; then
+        guard_refusal="depth guard: could not read wideAfterExhaustion for stream #$nlines from choice-trace ('$wae_col') — stream coverage NOT established"
+        break
+      fi
+      if [[ "$wae_col" -gt 0 ]]; then
+        # Label the stream the way the row declared it.
+        local sidx=$((nlines - 2)) slabel
+        slabel="${inv_labels[$sidx]:-$stream_col}"
+        if [[ -n "$depth" ]]; then
+          guard_refusal="strict row: $wae_col wide pick(s) served after the declared depth=$depth stream [$slabel] was exhausted at consumption $exh_col — the seeded invariance streams did not cover this row; raise depth (default-stream wide count w=$w_default)"
+        else
+          guard_refusal="strict row: $wae_col wide pick(s) served after stream [$slabel] was exhausted at consumption $exh_col — the 3-stream invariance check did not cover this row; route to confluent, or declare depth (default-stream wide count w=$w_default)"
+        fi
+        break
+      fi
+    done <<< "$trace_out"
+    if [[ -z "$guard_refusal" && "$nlines" -ne 4 ]]; then
+      guard_refusal="depth guard: expected 4 stream reports from choice-trace, got $nlines — stream coverage NOT established: $(one_line "$trace_out")"
+    fi
+    if [[ -n "$guard_refusal" ]]; then
+      report_fail "$id" "$features" "nondet" "$guard_refusal"
+      return 0
+    fi
+    guard_detail="wide=${w_default:-?} exhausted=none depth=${depth:-fixed}"
+  fi
+
   if [[ "$lane" == "confluent" ]]; then
     report_pass_lane "$id" "$features" "confluent" \
       "|set|=1 certified over all schedules; $confluent_detail"
   else
-    report_pass "$id" "$features"
+    report_pass "$id" "$features" "$guard_detail"
   fi
 }
 
@@ -1252,6 +1445,13 @@ parse_lane_params() {
         fi
         nonterm="$value"
         continue
+      fi
+      if [[ "$key" == "depth" ]]; then
+        # depth=N is the STRICT lane's declaration (memo P1): the
+        # enumerating lanes certify the whole tree, so a depth there
+        # is a category error — refuse, never ignore.
+        report_fail "$id" "$features" "manifest" "depth= is a strict-lane param (the enumerating lanes certify the whole tree): $kv (lane=$lane)"
+        return 1
       fi
       if [[ "$key" == "engine" ]]; then
         # engine=dedup (POR slice, docs/2026-08-21_w32-por-design.md):
@@ -1610,13 +1810,13 @@ while IFS= read -r line; do
 done < "$MANIFEST"
 case_count="$row_i"
 
-export CASE_OUT ROOT OUT FRONTEND GO_BUILD_CACHE GOLEAN_BIN \
+export CASE_OUT ROOT OUT FRONTEND GO_BUILD_CACHE GOLEAN_BIN LEAN_TRACE_TIMEOUT_SECONDS \
   GO_TIMEOUT_SECONDS LEAN_TIMEOUT_SECONDS LEAN_ENUM_TIMEOUT_SECONDS \
   LEAN_ENUM_SLOW_TIMEOUT_SECONDS
 export -f run_case run_case_rows run_with_timeout lean obs_eq obs_eq_cause undecided_cause signal_cause json_string_literal \
   panic_message fatal_message report_pass report_pass_lane report_fail one_line \
   membership_go_observation run_membership_case_rows go_run_oracle \
-  parse_lane_params member_status_allowed
+  parse_lane_params member_status_allowed seeded_stream
 
 # Record the concurrency the run used (audit finding: a load-induced
 # timeout drift was indistinguishable from a real one after the fact).

@@ -1,0 +1,30 @@
+91:── negative baseline diff
+94:── differential baseline diff (scripts/coverage-baseline-diff)
+117:── baseline re-pin guard (worktree-vs-HEAD; flips must be on a BUGS.md Cases: line)
+119:── cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)
+125:  note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
+126:  ok   oracle toolchain (go1.26.5 = pin)
+127:  ok   escape-hatch preflight
+128:  ok   meta-layer escape hatches (allowlist empty since the repo split)
+129:  ok   escape-hatch addendum (no decide +native / native-config spellings)
+130:  ok   bug-index cross-check
+131:  ok   feature-coverage (no dead tags)
+132:  ok   spec-anchor citations resolve at the pin
+133:  ok   lane-validation fixtures (manifest gates reject bad shapes)
+134:  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+135:  ok   engine-isolation (core ↛ EnumDedup)
+136:  ok   core build (warning-free)
+137:  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+138:  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+139:  ok   frontend unit tests
+140:  ok   eval tests (148 ok)
+141:  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+142:  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8)
+143:  ok   negative run completed (exit 0; set judged by baseline diff)
+144:  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+145:  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+146:  note negative baseline diff matched (394 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+147:  FAIL baseline diff (DRIFT — see above)
+148:  ok   re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)
+149:  note reconciler: 3 finding(s), 0 HIGH — report-only (details: tools/reconcile-records)
+151:RESULT: FAIL

@@ -1,15 +1,31 @@
-# id	subject	args	expected_status	expected_reason	features
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# depth= (STRICT-LANE DEPTH GUARD, membership-depth memo P1, [USER]-ruled
+# 2026-09-03; docs/coverage-suite-structure.md "Lane assignment"): the
+# rows below outrun the three fixed adversarial streams at appendSpill
+# (capacity latitude inside string-building shims, observable only
+# through cap(), which none of them reads) — the memo's trace (§2.3(b))
+# and this lane's re-trace (docs/evidence/2026-09-03_strict-routing/
+# trace23.tsv) show wide picks served AFTER exhaustion, so the fixed
+# streams never certified invariance past pick 8-10. Each declares
+# depth=N = the smallest power of two >= 4*w (w = default-stream wide
+# count), min 64 [AGENT sizing]; the gate replaces the fixed streams by
+# three seeded streams of length N and refuses unless every one reports
+# wideAfterExhaustion=0. Measured (default w / worst fixed-stream wide-
+# after-exhaustion):
+#   logger-shape: w=14, 6 of 14 -> depth=64
+#   sprint-space-rule: w=14, 6 of 14 -> depth=64
+#   verb-kinds: w=13, 3 of 11 -> depth=64
 # W4.3 item 1 landing C (docs/raft-w43-log.md): the DYNAMIC fmt family
 # — Sprintf/Sprint/Sprintln with a spread []any argument (the
 # DefaultLogger / recording-logger shape). Red until the dyn shims
 # land. The last two rows stay RED BY DESIGN: an unmodeled dynamic
 # kind and a verb/argument arity mismatch are fail-closed machine
 # panics where go run renders (visible red, never a wrong answer).
-logger-shape	dynLoggerShape	-	ok	-	stdlib,strings,variadic,interfaces,methods
-verb-kinds	dynVerbKinds	-	ok	-	stdlib,strings,variadic,ints,bools
+logger-shape	dynLoggerShape	-	ok	-	stdlib,strings,variadic,interfaces,methods	strict	-	depth=64
+verb-kinds	dynVerbKinds	-	ok	-	stdlib,strings,variadic,ints,bools	strict	-	depth=64
 stringer-error	dynStringerError	-	ok	-	stdlib,strings,variadic,methods,interfaces,nil
 stringer-panic	dynStringerPanic	-	ok	-	stdlib,strings,variadic,methods,panic,recover
-sprint-space-rule	dynSprintSpaceRule	-	ok	-	stdlib,strings,variadic
+sprint-space-rule	dynSprintSpaceRule	-	ok	-	stdlib,strings,variadic	strict	-	depth=64
 sprintln	dynSprintln	-	ok	-	stdlib,strings,variadic
 sprint-nil	dynSprintNil	-	ok	-	stdlib,strings,variadic,nil
 unmodeled-kind	dynUnmodeledKind	-	ok	-	stdlib,strings,variadic,floats
