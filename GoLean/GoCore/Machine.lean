@@ -2008,11 +2008,9 @@ inductive Cont where
   start-key set — the BUG-005 (L) surgery, ruled 2026-08-19) follows. -/
   | mapRangeK (keyVar valVar : Option String) (keyTy valTy : Ty)
       (body : Stmt) (env : LocalEnv) (k : Cont)
-  /-- `mapRange` iteration context — LIVE iteration (BUG-005 (L)
-  surgery, ruled 2026-08-19; the snapshot design is retired) over
-  ENTRY-IDENTITY STAMPS (design-hygiene arc slice 1, B1 — the second
-  audit's Q11, 2026-09-03; the key-set frames and their delete-prune
-  are retired). The frame carries the ranged map's `base` cell
+  /-- `mapRange` iteration context — LIVE iteration over ENTRY-IDENTITY
+  STAMPS (BUG-005 (L), ruled 2026-08-19; B1, 2026-09-03 — the retired
+  snapshot and key-set designs: ledger [DL-13]). The frame carries the ranged map's `base` cell
   (`none` = nil map), the `produced` ID set (ids of the entries already
   bound, in production order) and the `start` ID set (ids of the
   entries live when the range began). Each pick-next step LOADS the
@@ -2065,15 +2063,8 @@ inductive Cont where
   frame reads identity off the cell it loads — no goroutine's
   continuation is ever rewritten by another's step (the thread-locality
   NPDRF's obstruction 7 asked for). gc EXHIBITS the re-production
-  member (~87% of runs on a 3-key map when one fresh insert sits
-  between the delete and the re-create; evidence dir
-  `docs/evidence/2026-09-02_e9-cross-goroutine-prune/`); the pins are
-  the membership rows `maps/cross-goroutine-delete-readd/{drf,insert}`
-  (admitted sets {3,4} / {1,2}) and the confluent guards
-  `maps/cross-goroutine-delete-noreadd/{delete,clear,other-map}`;
-  set-equality of the stamped machine with the pruned one on every
-  such row is recorded in `docs/evidence/2026-09-03_hygiene-b1-stamps/`.
-  UNSYNCHRONIZED cross-goroutine mutation is refused by the detector
+  member; the pins, measured frequencies and set-equality records:
+  ledger [DL-14]. UNSYNCHRONIZED cross-goroutine mutation is refused by the detector
   (pick-time load vs the delete's write, HB-unordered; row
   `.../racy`), so no narrowing hides behind a refusal either.
   Keys whose Go `==` is irreflexive (NaN, and aggregates/interfaces
@@ -2925,8 +2916,8 @@ def tryDeliver (b : Bool) (s : ExecState) (targets : List Assignee)
 
 /-- **The TRY heads' apply — THE ENVELOPE STATEMENT of
 `ChoiceSite.tryLock`** (Q-TRYLOCK, RULED [USER] 2026-08-31 —
-`docs/2026-08-31_qrow-rulings.md` row 5, per-row CONFIRMED [USER]
-2026-09-01; the twin-pin re-pin and the "own slice" sequencing RULED
+`docs/2026-08-31_qrow-rulings.md` row 5; the ruling/sequencing
+provenance: ledger [DL-12]; the twin-pin re-pin and the "own slice" sequencing RULED
 [USER] 2026-09-03, both relayed by the [AGENT] coordinator; memo
 `docs/2026-08-21_w32-qrow-memos.md` §5; implemented 2026-09-03).
 
