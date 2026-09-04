@@ -1,4 +1,4 @@
-# ci-diff-run1.txt — scripts/capped scripts/ci --diff on the UNCOMMITTED slice tree at 415f959a (+ code, corpus, register doc; BEFORE the baseline re-pin), 2026-09-04; tail -n 70. Expected reds: baseline diff DRIFT (the re-pin consumes it) and the spec-anchor step (godoc:time.Date is not citable — fixed before run 2).
+# ci-diff-run1.txt — scripts/capped scripts/ci --diff on the UNCOMMITTED slice tree at 415f959a (+ code, corpus, register doc; BEFORE the baseline re-pin), 2026-09-04; tail -n 70. Expected reds: baseline diff DRIFT (the re-pin consumes it) and the spec-anchor step (the time.Date doc anchor was written as a godoc citation; `time` is not source-through, so it is not citable — fixed before run 2). NOTE: the two captured anchor tokens below are de-tokenized (`godoc-anchor ` for the `godoc:` prefix) so the citation checker does not re-read this record as a citation; the run printed them with the prefix.
 [1m── re-run negative corpus (--diff)[0m
 results: artifacts/coverage/negative-latest.tsv
 meta: artifacts/coverage/negative-latest.meta.tsv

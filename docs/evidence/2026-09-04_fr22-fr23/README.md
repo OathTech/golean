@@ -5,8 +5,9 @@ rulings cited below — citation, never firsthand). Consuming docs:
 `docs/language-coverage-ledger.md` §4 rows FR-22, FR-23, FR-24, §5, §8i;
 `docs/2026-09-03_cedar-go-coverage-census.md` §9 (addendum);
 `docs/stdlib-admission-register.md` (class `init-callee`, slice log).
-Tree: commit <SHA> on branch `fr22-fr23` (clean; the gate tail below
-names the exact tree it certified). Host: linux/amd64 (shared build box,
+Tree: the slice is commit 1aa49562 on branch `fr22-fr23` (rebased onto
+main e0657d47; clean — `ci-diff.txt` is the gate tail on exactly that
+tree; the records commit that adds the tail follows it). Host: linux/amd64 (shared build box,
 other lanes active — no timing-sensitive numbers here). Toolchain:
 `go version go1.26.5 linux/amd64` = `baselines/go-oracle-pin`; golean
 from `scripts/capped lake build golean` on this tree.
@@ -97,7 +98,7 @@ shape `emit.go` already used at its two other sorted refusal sites.
 
 | file | producer | what |
 |---|---|---|
-| `ci-diff-run1.txt` | `scripts/capped scripts/ci --diff` on the uncommitted slice tree at 415f959a, BEFORE the re-pin | the run the re-pin consumed: 3365 rows, the DRIFT block (below), re-pin guard 0 PASS→non-PASS; its two expected reds (baseline DRIFT; the `godoc:time.Date` anchor, replaced before run 2) |
+| `ci-diff-run1.txt` | `scripts/capped scripts/ci --diff` on the uncommitted slice tree at 415f959a, BEFORE the re-pin | the run the re-pin consumed: 3365 rows, the DRIFT block (below), re-pin guard 0 PASS→non-PASS; its two expected reds (baseline DRIFT; the time.Date doc anchor written as a godoc citation — `time` is not source-through, so not citable; replaced before run 2) |
 | `ci-diff.txt` | `scripts/capped scripts/ci --diff` on the COMMITTED, rebased tip (tail) | the clean-tip gate: RESULT PASS, 3365/3365 no regression, reconciler 0 HIGH |
 | `baseline-drift.txt` | `diff <(git show 415f959a:baselines/native-full.tsv \| grep -v '^#') <(grep -v '^#' baselines/native-full.tsv)` | every row that moved: 2 FAIL→PASS, 15 born, 0 PASS→non-PASS |
 | (in `ci-diff*.txt`) | `scripts/check-frontend-pins` (a ci step) | twin wire 69a538de… + hidden-dep + stdlib pin (61 files): all ok, no pin moved |
