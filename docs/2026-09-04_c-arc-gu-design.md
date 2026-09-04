@@ -170,4 +170,11 @@ audits, the boundary-set note) keep their period wording.
 
 ## 7. Landing record
 
-PENDING_LANDING
+Lane `c-arc-gu` off `main` @ `ac45aedd`; the change is commit
+`9cece4e8` (tagged `[TRUST-ADJACENT: GoCore choice consumption rule;
+stream re-index re-pin, [USER]-ruled G-U]`; this landing line is the
+records-only follow-up). Gate at the lane tree: `scripts/capped
+scripts/ci --diff` PASS, 3402 = 3189/213, FULL, zero drift; no baseline,
+corpus, frontend, decoder or wire change; no new `ChoiceSite`; no
+`sorry`/`axiom`/`native_decide`; no `partial` in GoCore. Branch-complete;
+the audit ask is the coordinator's to pose; merge/push are the [USER]'s.
