@@ -4,7 +4,38 @@
 # driver-coupling pin against THIS set and its wire hash; scripts/ci
 # --slow re-enumerates and must reproduce it exactly. Update
 # deliberately, in its own commit, with the reason — never auto-written.
-# certified: 2026-09-01  commit: T1 fidelity round, dc122857 (E8 fileOrder wire record)
+# certified: 2026-09-04T01:02:30+00:00  commit: slow-recert re-certification at main tip 1b8401c0 (round-9 train landed: bug087-paniktext, q-trylock, cedar-census)
+# re-certification reason (slow-recert, 2026-09-04): the reconciler's
+#   C9 reported "wire schema moved after the certification date
+#   2026-09-01" on every gate since — 13 commits to wire.go /
+#   NativeToIR.lean (exact-key discipline f6f84f31, gotest-harvest
+#   BUG-074..078, BUG-082 make-map hint 8c3aa6ae, storeLoc df6bcc8f,
+#   atomics-w1 atomic-op 1b3796c6/201b6145, stdlib source-through
+#   9acf0f43, q-trylock sync-op 46f86334/4baa53c7). The owed --slow
+#   re-certification ran at the CLEAN tip 1b8401c0 (`scripts/capped
+#   scripts/ci --slow`, RESULT: PASS, 709 s wall, load avg 5.75 at
+#   start / 6.49 at end on the shared 32-core box). Delta class:
+#   NONE. This fixture's wire sha is UNCHANGED (2f1d639f — none of
+#   the moved node kinds occurs in google-search's wire; verified by
+#   a fresh frontend emit at the tip, sha256 bit-identical to the
+#   record), and the fresh GOLEAN_SLOW=1 dedup enumeration reproduced
+#   the set AND the graph bit-for-bit: the same six permutation
+#   members, nodes=6193933 edges=6565663 dedupHits=371731
+#   certified=checkCert. Params unchanged. The header now carries a
+#   full ISO instant, not a bare date: C9's staleness test is `git
+#   log --since <certified>` over the two wire files, and the last
+#   wire commit (4baa53c7, 2026-09-04T00:26:08Z) landed on the same
+#   calendar day as this run, so a bare date would keep C9 firing on
+#   a record that IS current. (A wire-sha cache key cannot see
+#   interpreter-side moves at all — only re-enumeration does; that is
+#   why the re-cert is owed on every wire move even when, as here,
+#   the cached fixture's own sha did not move.) K=80 exhibition (the
+#   first --slow run under the 2026-09-03 sampling rule): 6 of 6
+#   members exhibited, pin reached at draw 40 (K=32 gate runs: 4 of
+#   6 at this tip, 5 of 6 on 2026-09-03). Evidence: docs/evidence/2026-09-04_slow-recert/. [AGENT]
+#   record refresh, delta class DATE/COMMIT-ONLY (set, graph, params,
+#   wire sha all unchanged).
+# previously: certified: 2026-09-01  commit: T1 fidelity round, dc122857 (E8 fileOrder wire record)
 # re-certification reason (T1 round, E8): the wire sha moved
 #   (11aedfa0 -> 2f1d639f) because the program object now carries the
 #   wire-level `fileOrder` record (T1 item 3, commit dc122857; latitude

@@ -1,0 +1,4 @@
+# producer: tools/reconcile-records run in the PRIMARY checkout (/home/dev/projects/golean, main @ 1b8401c0, certified record NOT yet refreshed) — the 'before' reading; 2026-09-04T01:20:59+00:00
+[01] C13  MEDIUM  78 doc site(s) across 9 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
+[02] C5  MEDIUM  1 frontier-table case citation(s) do not resolve against the baseline
+[03] C9  MEDIUM  the wire schema moved after the certification date 2026-09-01 (13 commit(s) to wire.go/NativeToIR.lean) — the certified set's wire sha is only current if `scripts/ci --slow` has re-enumerated since

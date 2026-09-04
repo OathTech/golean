@@ -1,0 +1,60 @@
+# producer: joined by id from slow-membership-rows.tsv (scripts/capped scripts/ci --slow at 1b8401c0, K=80) and diff-k32-membership-rows.tsv (scripts/capped scripts/ci --diff at 1b8401c0 + refreshed record, K=32); pin = members= pin from the caption (blank = unpinned row); stop: pin | no-pin | K-exhausted
+id	result_k80	result_k32	enumerated	members_pin	exhibited_k80	draws_k80	stop_k80	exhibited_k32	draws_k32	stop_k32	delta_exhibited
+atomics/spin/flag-wait	PASS	PASS	1	1	1	2	pin	1	2	pin	+0
+channels/select-multi-ready/observable	PASS	PASS	2	2	2	2	pin	2	2	pin	+0
+goroutines/sched-dependent/first-come	PASS	PASS	2	2	2	2	pin	2	2	pin	+0
+goroutines/sched-dependent/len-handoff	PASS	PASS	2	2	2	10	pin	2	32	pin	+0
+goroutines/sched-dependent/select-default-handshake	PASS	PASS	2	2	1	80	K-exhausted	2	20	pin	-1
+goroutines/sched-dependent/waiter-pick	PASS	PASS	2	2	2	2	pin	2	2	pin	+0
+goroutines/select-arrival-multi	PASS	PASS	2	2	2	2	pin	2	2	pin	+0
+goroutines/select-wake-close-selsel	PASS	PASS	2	2	2	3	pin	2	6	pin	+0
+goroutines/select-wake-multi	PASS	PASS	2	2	1	80	K-exhausted	1	32	K-exhausted	+0
+goroutines/send-then-spin	PASS	PASS	1	1	1	2	pin	1	2	pin	+0
+goroutines/wake-then-abort	PASS	PASS	2	2	1	80	K-exhausted	1	32	K-exhausted	+0
+goroutines/wake-window/buffered-send	PASS	PASS	2	2	2	3	pin	2	2	pin	+0
+goroutines/wake-window/close-recv	PASS	PASS	2	2	2	2	pin	2	2	pin	+0
+imported-goose/channel/google-search	PASS	PASS	6	6	6	40	pin	4	32	K-exhausted	+2
+maps/added-entry-count	PASS	PASS	2		2	80	no-pin	2	32	no-pin	+0
+maps/cross-goroutine-delete-readd/drf	PASS	PASS	2	2	1	80	K-exhausted	1	32	K-exhausted	+0
+maps/cross-goroutine-delete-readd/insert	PASS	PASS	2	2	2	2	pin	2	3	pin	+0
+maps/delete-insert-readd-during-range	PASS	PASS	2	2	2	2	pin	2	2	pin	+0
+maps/delete-readd-during-range	PASS	PASS	3		1	80	no-pin	1	32	no-pin	+0
+maps/jitter-draw	PASS	PASS	5		5	80	no-pin	5	32	no-pin	+0
+maps/range-first-key	PASS	PASS	3		3	80	no-pin	3	32	no-pin	+0
+multipkg/mini-raft-twin/choice-order	PASS	PASS	2		2	80	no-pin	2	32	no-pin	+0
+multipkg/nil-value-method-text	PASS	PASS	2	2	1	80	K-exhausted	1	32	K-exhausted	+0
+noodler/ifaces/global-iface-value-nil	PASS	PASS	2	2	1	80	K-exhausted	1	32	K-exhausted	+0
+noodler/ifaces/iface-dispatch-value-nil	PASS	PASS	2	2	1	80	K-exhausted	1	32	K-exhausted	+0
+noodler/ifaces/iface-param-value-nil	PASS	PASS	2	2	1	80	K-exhausted	1	32	K-exhausted	+0
+noodler/ifaces/mk-helper-value-nil	PASS	PASS	2	2	1	80	K-exhausted	1	32	K-exhausted	+0
+noodler/ifaces/mv-iface-nil-call	PASS	PASS	2	2	1	80	K-exhausted	1	32	K-exhausted	+0
+noodler/ifaces/spawn-helper-value-nil	PASS	PASS	2	2	1	80	K-exhausted	1	32	K-exhausted	+0
+noodler/ifaces/spawn-iface-value-nil	PASS	PASS	2	2	1	80	K-exhausted	1	32	K-exhausted	+0
+noodler/ifaces/spawn-iface-value-nil-devirt	PASS	PASS	2	2	1	80	K-exhausted	1	32	K-exhausted	+0
+noodler/membership/insert-then-delete-during-range	PASS	PASS	2	2	1	80	K-exhausted	1	32	K-exhausted	+0
+noodler/membership/select-two-ready	PASS	PASS	2	2	2	2	pin	2	5	pin	+0
+noodler/membership/three-key-map-order	PASS	PASS	6	6	3	80	K-exhausted	3	32	K-exhausted	+0
+noodler/membership/two-senders-buffered	PASS	PASS	2	2	2	6	pin	2	2	pin	+0
+race/atomics-free/cas-failure-acquires	PASS	PASS	1	1	1	2	pin	1	2	pin	+0
+race/atomics-free/publish-acquire	PASS	PASS	2		2	80	no-pin	1	32	no-pin	+1
+race/atomics-free/rmw-acquire	PASS	PASS	2		2	80	no-pin	1	32	no-pin	+1
+race/free-sync/rw-tryrlock-acquire	PASS	PASS	2	2	1	80	K-exhausted	1	32	K-exhausted	+0
+race/litmus/sb-chan	PASS	PASS	3	3	2	80	K-exhausted	2	32	K-exhausted	+0
+slices/append-spill-below-formula	PASS	PASS	31		1	80	no-pin	1	32	no-pin	+0
+slices/append-spill-size-class	PASS	PASS	300		1	80	no-pin	1	32	no-pin	+0
+slices/append-spill-stack-buffer	PASS	PASS	29		2	80	no-pin	2	32	no-pin	+0
+slices/full-slice-cap-zero	PASS	PASS	32		2	80	no-pin	2	32	no-pin	+0
+sync/atomic-frontier/mp-litmus	PASS	PASS	3		2	80	no-pin	2	32	no-pin	+0
+sync/mutex-order/acquisition-order	PASS	PASS	2	2	1	80	K-exhausted	1	32	K-exhausted	+0
+sync/out-of-scope-trylock/trylock-uncontended	PASS	PASS	2	2	1	80	K-exhausted	1	32	K-exhausted	+0
+sync/promoted-mutex/trylock-expr	PASS	PASS	2	2	1	80	K-exhausted	1	32	K-exhausted	+0
+sync/rwmutex-order/acquisition	PASS	PASS	2	2	2	6	pin	2	6	pin	+0
+sync/trylock/defer-trylock	PASS	PASS	2	2	1	80	K-exhausted	1	32	K-exhausted	+0
+sync/trylock/discarded-acquires	PASS	PASS	2	2	1	80	K-exhausted	1	32	K-exhausted	+0
+sync/trylock/rw-trylock-unlocked	PASS	PASS	2	2	1	80	K-exhausted	1	32	K-exhausted	+0
+sync/trylock/rw-tryrlock-pending-writer	PASS	PASS	2	2	1	80	K-exhausted	1	32	K-exhausted	+0
+sync/trylock/rw-tryrlock-reader-held	PASS	PASS	2	2	1	80	K-exhausted	1	32	K-exhausted	+0
+sync/trylock/rw-tryrlock-unlocked	PASS	PASS	2	2	1	80	K-exhausted	1	32	K-exhausted	+0
+sync/trylock/spin-until-trylock	PASS	PASS	1	1	1	2	pin	1	2	pin	+0
+sync/trylock/unlock-after-trylock-success	PASS	PASS	2	2	1	80	K-exhausted	1	32	K-exhausted	+0
+sync/trylock/unlocked-acquire	PASS	PASS	2	2	1	80	K-exhausted	1	32	K-exhausted	+0

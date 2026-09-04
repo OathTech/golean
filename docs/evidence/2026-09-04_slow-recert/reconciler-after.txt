@@ -1,0 +1,3 @@
+# producer: tools/reconcile-records run in the slow-recert worktree at 1b8401c0 + the refreshed certified record; 2026-09-04T01:20:21+00:00
+[01] C13  MEDIUM  78 doc site(s) across 9 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
+[02] C5  MEDIUM  1 frontier-table case citation(s) do not resolve against the baseline

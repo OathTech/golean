@@ -371,3 +371,42 @@ exactly that loop. Lesson: when a budget rises by 3× and the wall
 rises by 3×, check what ELSE scales with the budget before attributing
 the cost to the budgeted thing; and a per-row knob that "happens" to
 keep one row cheap is a hidden cost cap — name it or remove it.
+
+## A cached certification is owed a re-run the moment the wire schema moves — and the cache key cannot tell you when the machine moved
+
+The one `tier=slow` row (`imported-goose/channel/google-search`,
+`engine=dedup`, members=6) carries CERTIFIED-CACHED standing on the
+gate path: `scripts/ci --diff` replays the tracked record in
+`baselines/certified/` after checking its wire sha and params, and
+only `scripts/ci --slow` re-enumerates. Between 2026-09-01 and
+2026-09-04 thirteen commits moved the wire schema (exact-key
+discipline, make-map `hint`, `atomic-op`, stdlib source-through,
+`sync-op`/TryLock, …) and `tools/reconcile-records` C9 said so on
+every gate ("the wire schema moved after the certification date") —
+three days of a MEDIUM that nobody discharged, while the fast gate
+stayed green because THIS fixture's wire bytes happened not to
+contain any of the moved node kinds (its sha never went STALE). Two
+lessons. (1) **The rule: any wire-schema move ⇒ C9 fires ⇒ run
+`scripts/capped scripts/ci --slow` at the clean tip and refresh the
+record BEFORE the next claim that leans on the cached set.** The
+discharge is cheap — the 2026-09-04 re-cert was 709 s wall for the
+whole `--slow` gate on the loaded shared box (the dedup enumeration
+is ~160 s of that) — so there is no cost argument for letting C9
+stand; the reason it stood was that a report-only MEDIUM reads as
+someone else's problem. It is the slice's problem that moved the
+wire. (2) **The wire sha is a key for the PROGRAM, not for the
+MACHINE.** It detects a frontend change to this fixture's emit and
+nothing else: an interpreter change (a new `GoCore` op, a scheduler
+boundary, a stamp) can move the enumerated set with the sha
+bit-identical, and the fast gate's four driver-coupling runs sample
+that surface, they do not close it. So "the cached row's sha still
+matches" is never an argument against re-certifying; only the fresh
+enumeration is. A same-day subtlety, recorded so the next re-cert
+does not trip on it: C9 tests `git log --since <certified>` over the
+wire files, and `--since` on a bare date means midnight — a re-cert
+run on the same calendar day as the last wire commit would leave C9
+firing on a current record. The header therefore carries the run's
+full ISO instant (`# certified: 2026-09-04T01:02:30+00:00  commit:
+…`), which both the harness (`sed 's/^# certified: //'`) and the
+reconciler (`(\S+)\s+commit:`) already accept. Evidence and the K=80
+exhibition table: `docs/evidence/2026-09-04_slow-recert/`.
