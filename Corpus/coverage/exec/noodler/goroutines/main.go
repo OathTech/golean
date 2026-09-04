@@ -286,6 +286,22 @@ func goroutinePanicUnderWait() int {
 	return 1
 }
 
+// The deterministic twin of goroutinePanicUnderWait: the panicking
+// goroutine has NO deferred Done, so nothing ever wakes main's Wait and
+// the runtime's crash on the unrecovered panic is the only way out — gc
+// panics on every schedule (there is no wake for main to race). Pins the
+// unrecovered-goroutine-panic-aborts-the-program behaviour without the
+// schedule-dependent wake that makes the sibling a membership row.
+func goroutinePanicUnderWaitNoDone() int {
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		panic("under-wait-no-done")
+	}()
+	wg.Wait()
+	return 1
+}
+
 // nil channel send in a child never completes; main still returns.
 func childBlockedOnNilChannel() int {
 	var ch chan int

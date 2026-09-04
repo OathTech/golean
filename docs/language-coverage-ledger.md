@@ -537,7 +537,27 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (3402 cases, 3189 PASS /
+All numbers at the current tracked baseline (3403 cases, 3190 PASS /
+213 FAIL — the flaky-panic-wait re-pin 2026-09-04 [AGENT], lane
+`flaky-panic-wait` rebased onto main ac45aedd at merge train round 14,
+figures reconciled at the rebase [AGENT] from the data rows): main's 3402
+/ 3189 / 213 (the FR-4 / row-M figure, §8n) + 1 born PASS row
+(`noodler/goroutines/goroutine-panic-under-wait-no-done`, the
+deterministic twin) + 0 FAIL→PASS − 0 PASS→FAIL, plus ONE stage-only move
+inside PASS (`noodler/goroutines/goroutine-panic-under-wait` PASS/- →
+PASS/membership: RE-LANED strict → membership because gc's outcome is
+schedule-dependent under a deferred Done in the panicking goroutine — the
+machine's certified set is exactly {panic, ok 1}; evidence
+`docs/evidence/2026-09-04_flaky-panic-wait/`): 3402 + 1 = 3403; 3189 + 1
+= 3190; 213 — re-derived from the baseline's data rows, not summed by
+hand (the baseline header carries the same `awk` tally). The lane's own
+pre-rebase figure was 3383 / 3173 / 210 on main 74ffe35a (checkpoint C's
+3382 + 1); the round-14 rebase reconciliation re-based that derivation on
+main's fr4-rowm figure — no row moved in result or stage beyond the two
+noodler rows. The paragraphs below are the previous figures, kept as
+history:
+
+The FR-4 / row-M figure (3402 cases, 3189 PASS /
 213 FAIL — the FR-4 / row-M re-pin 2026-09-04 [AGENT], lane `fr4-rowm`
 on main 9128e6c0, §8n, incl. its audit fix round A5): checkpoint C's 3382
 / 3172 / 210 + 20 born rows (13 PASS / 7 FAIL/frontend-export, red BY
@@ -546,8 +566,7 @@ FAIL→PASS flips (`generics/stencil-quarantine/sibling`,
 `slices/slices-sort-non-integer-refusal`, `stdlib-source/sort-op-shapes/
 {defer-sort,go-sort}`) − 0 PASS→FAIL: 3382 + 20 = 3402; 3172 + 13 + 4 =
 3189; 210 + 7 − 4 = 213 — re-derived from the baseline's data rows, not
-summed by hand (the baseline header carries the same `awk` tally). The
-paragraphs below are the previous figures, kept as history:
+summed by hand (the baseline header carries the same `awk` tally).
 
 The checkpoint-C figure (3382 cases, 3172 PASS / 210 FAIL — the
 cmp.Compare-retirement checkpoint-C re-pin 2026-09-04 [AGENT] under the

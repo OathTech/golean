@@ -1,4 +1,17 @@
 # GoLean native-frontend full-corpus differential baseline
+# re-pinned: 2026-09-04 (flaky-panic-wait lane [AGENT], corpus + stage re-pin, no code change):
+#   noodler/goroutines/goroutine-panic-under-wait RE-LANED strict -> membership (PASS/- -> PASS/membership,
+#   a STAGE-ONLY move): the deferred wg.Done() in the panicking goroutine wakes main's Wait during the
+#   unwind, so gc's outcome is schedule-dependent (panic on most draws; the exit-0 `ok 1` member seen
+#   once by the round-13 merge train's full gate under load) — a strict row with a schedule-dependent
+#   oracle is a latent gate flake (the beside-loop class). The machine's certified set is exactly
+#   {panic "under-wait", ok 1} (dedup closes at 175 nodes), so observed ∈ modeled; members=2 pinned.
+#   +1 born-PASS: noodler/goroutines/goroutine-panic-under-wait-no-done (the deterministic twin: no
+#   deferred Done; gc 20/20 panic plain + 20/20 -race; machine singleton). 0 PASS->non-PASS flips, no
+#   other row moved in result or stage. Evidence: docs/evidence/2026-09-04_flaky-panic-wait/.
+#   3403 rows: 3190 PASS / 213 FAIL (awk tally re-derived from the data rows after the rebase onto main
+#   ac45aedd at merge train round 14 [AGENT]: main's fr4-rowm 3402 (3189 PASS / 213 FAIL) + the 1 born PASS
+#   + the stage-only move; the lane's pre-rebase figure was 3383 = 3173 / 210 on main 74ffe35a).
 # re-pinned: 2026-09-04 (fr4-rowm lane — FR-4 method-stencil quarantine per declaration + memo §3 row M, the
 #   slices.Sort machine-op intercept RETIRED; [AGENT] worker under the [USER]-ratified frontier queue (FR-4 =
 #   slot 4) and the ruled stdlib plan G1-G9 («(3) agree, go ahead with the plan», relayed by the coordinator,
@@ -948,7 +961,10 @@
 #     removed row is named in prose, never left dangling on the line).
 #     NEW rows: unsafe/layout-ops/{sizeof-fixed,layout-struct}
 #     FAIL/frontend-export BY DESIGN. unsafe/boundary/pointer-roundtrip
-# cases: 3402 (3189 PASS / 213 FAIL)
+# cases: 3403 (3190 PASS / 213 FAIL)
+#   [re-derived from the data rows at the flaky-panic-wait re-pin 2026-09-04, rebased onto main ac45aedd at merge train round 14 ([AGENT] rebase reconciliation): main's fr4-rowm 3402 (3189 PASS / 213 FAIL) + 1 born PASS row (noodler/goroutines/goroutine-panic-under-wait-no-done) + ONE stage-only move inside PASS (noodler/goroutines/goroutine-panic-under-wait PASS/- -> PASS/membership), 0 FAIL -> PASS, 0 PASS -> FAIL; tallied by row: `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3190 / FAIL 213)]
+#   [the fr4-rowm figure, kept as history:] # cases: 3402 (3189 PASS / 213 FAIL)
+#   [the checkpoint-C figure, kept as history:] # cases: 3382 (3172 PASS / 210 FAIL)
 #   [re-derived from the data rows at the fr24 checkpoint-C re-pin 2026-09-04 ([AGENT]: checkpoint B's 3382 (3173 PASS / 209 FAIL) with ONE ruled PASS -> FAIL flip, slices/sortfunc-cmp/cmp-compare-kinds; tallied by row: `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv`)]
 #   [the checkpoint-B figure, kept as history:] # cases: 3382 (3173 PASS / 209 FAIL)
 #   [re-derived from the data rows at the fr24 checkpoint-B re-pin 2026-09-04 ([AGENT]: checkpoint A's 3376 (3168 PASS / 208 FAIL) + 6 born rows (3 PASS / 3 FAIL) with 2 FAIL -> PASS flips; tallied by row: `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv`)]
@@ -3147,7 +3163,8 @@ PASS	noodler/goroutines/directional-params	confluent
 PASS	noodler/goroutines/pipeline-three-stages	-
 PASS	noodler/goroutines/semaphore-total	-
 PASS	noodler/goroutines/lockstep-transcript	confluent
-PASS	noodler/goroutines/goroutine-panic-under-wait	-
+PASS	noodler/goroutines/goroutine-panic-under-wait	membership
+PASS	noodler/goroutines/goroutine-panic-under-wait-no-done	-
 PASS	noodler/goroutines/child-blocked-nil-channel	-
 PASS	noodler/gostmt/args-evaluated-at-spawn	-
 PASS	noodler/gostmt/method-receiver-at-spawn	-

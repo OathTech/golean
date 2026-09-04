@@ -328,6 +328,19 @@ the script at exit 1 before the intended `exit 2` — the refusal path
 itself needs `|| true`. Both were caught by running the fixtures, not by
 reading the code. Red-first record: `docs/evidence/2026-09-03_guard-stage-alt/red-first.txt`;
 fixtures `scripts/test-lane-validation` Part A4.
+
+**Addendum (2026-09-04, lane `flaky-panic-wait` [AGENT]): a deferred
+`Done` (or any wake) in a PANICKING goroutine makes the oracle
+schedule-dependent — membership lane, never strict.** The deferred call
+runs during the unwind and wakes main; main can print and exit 0 before
+the runtime's `exit(2)` lands (gc: printed-then-abort 52/280 under
+`-race`, exit-0 seen once under gate load). The machine already admits
+both members (`l5ExitWindow` + the B1 post-op boundary), so the row, not
+the semantics, was the defect: `noodler/goroutines/goroutine-panic-
+under-wait` re-laned to `membership members=2 statuses=ok+panic` (the
+`goroutines/wake-then-abort` precedent) with a deterministic no-Done
+twin pinning the unconditional panic
+(`docs/evidence/2026-09-04_flaky-panic-wait/`).
 ## A sampling budget is a claim about the caption, not the verdict: make it a recorded number and put the perturbation first
 
 The membership lane's Go-side budget was an implicit 10 (`samples=5`,

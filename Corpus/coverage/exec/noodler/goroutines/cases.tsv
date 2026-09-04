@@ -57,5 +57,36 @@ pipeline-three-stages	pipelineThreeStages	-	ok	-	goroutines,channels,close,range
 semaphore-total	semaphoreTotal	-	ok	-	goroutines,channels,sync,waitgroup,mutex	strict	-	depth=512
 # lockstep-transcript: CONFLUENT — dedup closes in 2,018 edges (<1 s).
 lockstep-transcript	lockstepTranscript	-	ok	-	goroutines,channels	confluent	two unbuffered channels in strict request/reply lockstep: each send rendezvouses with its receive before the next, so the transcript 2,6 folded is the one member on every schedule; width 4 covers the 2-runnable bounds	width=4,sites=64,work=200000,engine=dedup,backedge=full
-goroutine-panic-under-wait	goroutinePanicUnderWait	-	panic	under-wait	goroutines,sync,waitgroup,panic
+# goroutine-panic-under-wait: RE-LANED strict -> membership (lane
+# flaky-panic-wait, 2026-09-04 [AGENT], on the round-13 merge train's
+# diagnosis, accepted by the coordinator [AGENT]): the deferred wg.Done()
+# runs during the panicking goroutine's UNWIND (a live `.panicking`
+# state, B1 post-op boundary), which wakes main's Wait; main can then
+# print its observation and exit 0 BEFORE the runtime finishes crashing
+# the process on the unrecovered panic — the L5 exit-window / B3
+# abort-window class (docs/2026-08-11_latitude-inventory.md C4 + U-1;
+# precedent row goroutines/wake-then-abort). gc measured on this lane
+# (docs/evidence/2026-09-04_flaky-panic-wait/): plain 280 draws — 278
+# panic silent, 2 observation-printed-then-abort (exit 2), 0 exit-0;
+# -race 280 draws — 228 silent, 52 printed-then-abort, 0 exit-0 (idle
+# and under a 48/64-burner CPU load alike); the exit-0 `ok 1` member was
+# exhibited ONCE by the round-13 train's full gate under load, and again
+# by this lane's own full gate (plain draw 17/32; gate-membership-draws.txt
+# in the evidence dir) — both members are gc-exhibited on record. A strict
+# row with a schedule-dependent oracle is a latent gate flake (the
+# channels/select-select/beside-loop class, ruled 2026-09-03), so the
+# lane, not the subject, was wrong. Machine: default stream -> panic
+# "under-wait"; picks [0,0,1,0,0] -> ok 1; coverage-observations
+# --expect-status ok,panic width 4 sites 16 backedge full:
+# observations=2 steps=318 sites=54 leaves=55 maxdepth=11; engine=dedup
+# CLOSES at 175 nodes / 179 edges (certified=checkCert) — the machine's
+# set is exactly {panic "under-wait", ok 1}, so observed ∈ modeled and
+# re-laning suffices (no BUGS entry). The sibling row below pins the
+# unconditional panic.
+goroutine-panic-under-wait	goroutinePanicUnderWait	-	panic	under-wait	goroutines,sync,waitgroup,panic,nondet	membership	the deferred Done runs during the child's panic UNWIND (B1 post-op boundary: `.panicking` is a live, steppable state) and wakes main's Wait; whether main then reaches its terminal and exits (L5 exit-window latitude — spec#Program_execution: main's return does not wait for other goroutines) before the child's abort is delivered is schedule-dependent: certified set {panic "under-wait", 1} (members=2, statuses=ok+panic; default stream = panic). gc exhibits the class as observation-printed-then-abort (52/280 -race, 2/280 plain, exit 2 — classified panic) and, once, as exit-0 `ok 1` (round-13 merge-train full gate under load) — the U-1 / wake-then-abort class at a WaitGroup wake. Consumption sites: l1Sched over at most 2 runnable, the postOp boundary (bound 2) and l5ExitWindow (bound 2) — width 4 >= 2; dedup closes the state graph at 175 nodes	width=4,sites=16,members=2,statuses=ok+panic,backedge=full
+# goroutine-panic-under-wait-no-done: the deterministic twin — no deferred
+# Done, so nothing wakes main and the unrecovered panic is the only exit.
+# gc 20/20 panic plain, 20/20 -race; machine engine=dedup closes at 52
+# nodes with the singleton {panic "under-wait-no-done"} (strict lane).
+goroutine-panic-under-wait-no-done	goroutinePanicUnderWaitNoDone	-	panic	under-wait-no-done	goroutines,sync,waitgroup,panic
 child-blocked-nil-channel	childBlockedOnNilChannel	-	ok	-	goroutines,channels,nil
