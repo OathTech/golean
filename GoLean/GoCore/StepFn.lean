@@ -152,7 +152,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           | .seq rest kenv k' =>
               if kenv = env then do
                 let v ← defaultValue s p.typ
-                let (loc, s') := s.alloc v (some p.typ)
+                let (loc, s') := s.alloc v p.typ
                 return (.next (.seq rest (env.declare p.id loc) k'), s', choices)
               else throw (.internal "initialization under foreign-scope sequence")
           | _ => throw (.stuck "GoCore initialization outside a statement sequence")
@@ -951,7 +951,7 @@ def seedGlobals (state : ExecState) (globals : Array GlobalDef) :
   let mut s := state
   for g in globals, i in [0:globals.size] do
     let v ← defaultValue s g.typ
-    let (loc, s') := s.alloc v (some g.typ)
+    let (loc, s') := s.alloc v g.typ
     if loc != .base ⟨i⟩ then
       throw (.internal s!"global {g.name} seeded at {repr loc}, expected base {i}")
     s := s'

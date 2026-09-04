@@ -168,16 +168,16 @@ readiness is the complete wake condition. Nil-channel blocks
 communication"). A malformed cell yields `false` (the resume step, if
 it were ever reached, fails closed with an explicit error; a parked
 goroutine's cell cannot change shape — only channel ops touch
-`chanData` cells). -/
+`chanPayload` cells). -/
 def wakeReady (s : ExecState) : Config → Bool
   | .blockedSend (some loc) _ _ =>
-      match loadLoc s loc with
-      | .ok (.chanData buf capacity closed) => closed || buf.size < capacity
-      | _ => false
+      match chanPayload? s loc with
+      | .ok (buf, capacity, closed) => closed || buf.size < capacity
+      | .error _ => false
   | .blockedRecv (some loc) _ _ _ _ =>
-      match loadLoc s loc with
-      | .ok (.chanData buf _ closed) => buf.size != 0 || closed
-      | _ => false
+      match chanPayload? s loc with
+      | .ok (buf, _, closed) => buf.size != 0 || closed
+      | .error _ => false
   | .blockedSelect evs _ _ =>
       evs.any fun cl =>
         match clauseReady s cl with
@@ -487,14 +487,14 @@ def resumeThread (s : ExecState) : Config → Except GoError (Config × ExecStat
       if closed then
         return (.panicking [⟨runtimeErrorValue "send on closed channel", false⟩] k, s)
       else if buf.size < capacity then do
-        let s' ← storeLoc s loc (.chanData (buf.push v) capacity closed)
+        let s' ← storeChanPayload s loc (buf.push v) capacity closed
         return (.opDone .postOp (.next k), s')
       else throw (.internal "resume on an unready blocked send")
   | .blockedRecv (some loc) targets elem env k => do
       let (buf, capacity, closed) ← chanCell s loc
       match buf[0]? with
       | some v => do
-          let s₁ ← storeLoc s loc (.chanData (buf.eraseIdx! 0) capacity closed)
+          let s₁ ← storeChanPayload s loc (buf.eraseIdx! 0) capacity closed
           let (c', s₂) ← resumeRecvDelivery s₁ v true targets env k
           return (.opDone .postOp c', s₂)
       | none =>
@@ -623,7 +623,7 @@ every OTHER goroutine's continuation (`pruneForeign` over
 in-flight `mapIterK` frame over the deleted map), which put a side
 condition on every commutation lemma over `StepM.thread` (NPDRF.lean's
 former obstruction 7) and cost O(threads × continuation depth) per
-delete. Entry-identity stamps (`GoValue.mapData`, `Cont.mapIterK`,
+delete. Entry-identity stamps (`HeapCell.mapPayload`, `Cont.mapIterK`,
 Machine.lean; design note `docs/2026-09-03_hygiene-b1-stamps-design.md`)
 make the walk unnecessary: a frame's `produced`/`start` sets are entry
 IDS, a delete erases the entry from the cell and never reissues its id,
@@ -1020,8 +1020,7 @@ def applyPairing (s : ExecState) (threads : Array Config) (i : Nat)
               return ((threads.setIfInBounds i (.opDone .postOp cr)).setIfInBounds j (.next ks), s')
           | some hd => do
               -- gc recv(): head out, parked sender's value in at the tail
-              let s₁ ← storeLoc s loc
-                (.chanData ((buf.eraseIdx! 0).push vs) capacity closed)
+              let s₁ ← storeChanPayload s loc ((buf.eraseIdx! 0).push vs) capacity closed
               let (cr, s') ← resumeRecvDelivery s₁ hd true targets env k
               return ((threads.setIfInBounds i (.opDone .postOp cr)).setIfInBounds j (.next ks), s')
       | _ => throw (.internal "pairing partner shape mismatch")
@@ -1040,8 +1039,7 @@ def applyPairing (s : ExecState) (threads : Array Config) (i : Nat)
                   return ((threads.setIfInBounds i (.opDone .postOp cr)).setIfInBounds j
                     (.exec body envs ks), s')
               | some hd => do
-                  let s₁ ← storeLoc s loc
-                    (.chanData ((buf.eraseIdx! 0).push v') capacity closed)
+                  let s₁ ← storeChanPayload s loc ((buf.eraseIdx! 0).push v') capacity closed
                   let (cr, s') ← resumeRecvDelivery s₁ hd true targets env k
                   return ((threads.setIfInBounds i (.opDone .postOp cr)).setIfInBounds j
                     (.exec body envs ks), s')
@@ -1064,8 +1062,7 @@ def applyPairing (s : ExecState) (threads : Array Config) (i : Nat)
                           return ((threads.setIfInBounds i (.opDone .postOp ci')).setIfInBounds j
                             (.next ks), s')
                       | some hd => do
-                          let s₁ ← storeLoc s loc
-                            (.chanData ((buf.eraseIdx! 0).push vs) capacity closed)
+                          let s₁ ← storeChanPayload s loc ((buf.eraseIdx! 0).push vs) capacity closed
                           let (ci', s') ← selectRecvDelivery s₁ hd true targets body env k
                           return ((threads.setIfInBounds i (.opDone .postOp ci')).setIfInBounds j
                             (.next ks), s')

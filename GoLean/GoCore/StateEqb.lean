@@ -355,22 +355,6 @@ theorem GoValue.eqbFuel_sound :
       cases array_toList_inj (GoValue.eqbListWith_sound ih
         (show GoValue.eqbListWith (GoValue.eqbFuel f) x.toList y.toList = true
           from h)); rfl
-    case mapData.mapData x n₁ y n₂ =>
-      have hxx : _ = true := (show (n₁ == n₂
-          && GoValue.eqbTriplesWith (GoValue.eqbFuel f) x.toList y.toList)
-          = true from h)
-      simp only [Bool.and_eq_true] at hxx
-      obtain ⟨h1, h2⟩ := hxx
-      cases eq_of_beq h1
-      cases array_toList_inj (GoValue.eqbTriplesWith_sound ih h2); rfl
-    case chanData.chanData b₁ c₁ k₁ b₂ c₂ k₂ =>
-      have hxx : _ = true := (show ((c₁ == c₂ && k₁ == k₂)
-          && GoValue.eqbListWith (GoValue.eqbFuel f) b₁.toList b₂.toList)
-          = true from h)
-      simp only [Bool.and_eq_true] at hxx
-      obtain ⟨⟨h1, h2⟩, h3⟩ := hxx
-      cases eq_of_beq h1; cases eq_of_beq h2
-      cases array_toList_inj (GoValue.eqbListWith_sound ih h3); rfl
     case funcVal.funcVal id₁ c₁ id₂ c₂ =>
       have hxx : _ = true := (show (id₁ == id₂
           && GoValue.eqbListWith (GoValue.eqbFuel f) c₁ c₂) = true from h)

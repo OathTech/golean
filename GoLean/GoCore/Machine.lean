@@ -274,7 +274,7 @@ def mapAssignValue (s : ExecState) (keyTy valueTy : Ty)
             | some (id, _, _) => pure (entries.set! i (id, key, value), nextId)
             | none => stuck s!"missing map entry at index {i}"
         | none => pure (entries.push (nextId, key, value), nextId + 1)
-      storeLoc s baseLoc (.mapData entries nextId)
+      storeMapPayload s baseLoc entries nextId
 
 /-- Apply a strict operator to its (already evaluated, in evaluation order)
 operand values. The single op table shared by the relation (as a rule
@@ -363,7 +363,7 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
       match v with
       | .string value =>
           let bytes := value.bytes.map (fun b => GoValue.int (Int.ofNat b.toNat) .uint8)
-          let (base, s') := s.alloc (.array bytes) (some (.array bytes.size (.int .uint8)))
+          let (base, s') := s.alloc (.array bytes) (.array bytes.size (.int .uint8))
           return (.slice { base := some base, offset := 0, len := bytes.size, cap := bytes.size }, s')
       | other => stuck s!"expected string operand for []byte conversion, got {repr other}"
   | .stringFromByteSlice, [v] => do
@@ -464,15 +464,13 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
           checkKeyHashable s key (isInsert := false) (nonEmpty := false)
           return ((← defaultValue s valueTy), s)
       | some baseLoc =>
-          match ← loadLoc s baseLoc with
-          | .mapData entries _ =>
-              match ← mapEntryIndex? s keyTy entries key with
-              | some idx =>
-                  match entries[idx]? with
-                  | some (_, _, value) => return (value, s)
-                  | none => stuck s!"missing map entry at index {idx}"
-              | none => return ((← defaultValue s valueTy), s)
-          | other => stuck s!"expected map data, got {repr other}"
+          let (entries, _) ← mapPayload? s baseLoc
+          match ← mapEntryIndex? s keyTy entries key with
+          | some idx =>
+              match entries[idx]? with
+              | some (_, _, value) => return (value, s)
+              | none => stuck s!"missing map entry at index {idx}"
+          | none => return ((← defaultValue s valueTy), s)
   | .sliceExpr false, [b, lo, hi] => do
       applySlice s b (← valueAsInt lo) (← valueAsInt hi) none
   | .sliceExpr true, [b, lo, hi, m] => do
@@ -494,18 +492,16 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
               match map.base with
               | none => return (.int 0, s)
               | some baseLoc =>
-                  match ← loadLoc s baseLoc with
-                  | .mapData entries _ => return (.int entries.size, s)
-                  | other => stuck s!"expected map data, got {repr other}"
+                  let p ← mapPayload? s baseLoc
+                  return (.int p.1.size, s)
           -- len(ch) = elements queued in the buffer; nil channel = 0
           -- (spec §Length and capacity). Never panics, never blocks.
           | .chan ch =>
               match ch.base with
               | none => return (.int 0, s)
               | some baseLoc =>
-                  match ← loadLoc s baseLoc with
-                  | .chanData buf _ _ => return (.int buf.size, s)
-                  | other => stuck s!"expected channel data, got {repr other}"
+                  let p ← chanPayload? s baseLoc
+                  return (.int p.1.size, s)
           | other => unsupported s!"len for non-array/slice/map value {repr other}"
   | .capacityOf typ, [v] => do
       match typ with
@@ -524,9 +520,8 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
               match ch.base with
               | none => return (.int 0, s)
               | some baseLoc =>
-                  match ← loadLoc s baseLoc with
-                  | .chanData _ capacity _ => return (.int capacity, s)
-                  | other => stuck s!"expected channel data, got {repr other}"
+                  let p ← chanPayload? s baseLoc
+                  return (.int p.2.1, s)
           | other => unsupported s!"cap for non-array/slice value {repr other}"
   | .funcValOf fid, vs => return (.funcVal fid vs, s)
   | .minOf, v :: vs =>
@@ -616,7 +611,7 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
           let runes := (runesOfString value).map
             (fun r => GoValue.int r .int32)
           let (base, s') := s.alloc (.array runes)
-            (some (.array runes.size (.int .int32)))
+            (.array runes.size (.int .int32))
           return (.slice { base := some base, offset := 0,
                            len := runes.size, cap := runes.size }, s')
       | other => stuck s!"expected string operand for []rune conversion, got {repr other}"
@@ -645,7 +640,7 @@ def allocDecls : LocalEnv → ExecState → List Param → Except GoError (Local
   | env, s, [] => return (env, s)
   | env, s, p :: rest => do
       let v ← defaultValue s p.typ
-      let (loc, s₁) := s.alloc v (some p.typ)
+      let (loc, s₁) := s.alloc v p.typ
       allocDecls (env.declare p.id loc) s₁ rest
 
 /-- Bind call parameters into a frame environment, normalized at declared
@@ -655,7 +650,7 @@ def bindParams : LocalEnv → ExecState → List Param → List GoValue → Exce
   | env, s, [], [] => return (env, s)
   | env, s, p :: ps, v :: vs => do
       let v' ← normalizeValueForTy s p.typ v
-      let (loc, s₁) := s.alloc v' (some p.typ)
+      let (loc, s₁) := s.alloc v' p.typ
       bindParams (env.declare p.id loc) s₁ ps vs
   | _, _, [], _ :: _ => stuck "extra argument value"
   | _, _, _ :: _, [] => stuck "missing argument"
@@ -786,12 +781,11 @@ theorem entryPanicText_entryPanicStream {s : ExecState} {fid : FuncId}
 addresses, then the value operands), then perform the state update in one
 `applyStmtOp` step. -/
 inductive StmtOp where
-  | newValue (typ : Option Ty)
+  | newValue (typ : Ty)
   | makeSlice (elem : Ty) (hasCap : Bool)
   | makeMap (hasSpace : Bool)
   /-- `make(chan T[, n])` (channels arc slice 1): allocate an empty
-  `chanData` cell (the `makeMap` shape; the cell is untyped, like
-  `mapData`). Negative capacity ⇒ the recoverable run-time panic
+  `chanPayload` cell (the `makeMap` shape; a payload cell, A3). Negative capacity ⇒ the recoverable run-time panic
   `makechan: size out of range` (probe p21); so does a buffer whose
   byte size (`elem`'s R16 size × n) exceeds `maxAllocBytes -
   chanHeaderBytes` (t5-maxalloc, 2026-09-02) — which is why the op
@@ -896,7 +890,7 @@ def applyStmtOpCore (s : ExecState) (op : StmtOp) (_nt : Nat)
       let len := lenValue.toNat
       let cap := capValue.toNat
       let backing ← buildDefaultArrayValue s cap elem
-      let (base, s₁) := s.alloc backing (some (.array cap elem))
+      let (base, s₁) := s.alloc backing (.array cap elem)
       let loc ← valueAsLoc tv
       return ((← storeLoc s₁ loc (.slice { base := some base, offset := 0, len, cap })))
   | .makeMap hasSpace => do
@@ -928,7 +922,7 @@ def applyStmtOpCore (s : ExecState) (op : StmtOp) (_nt : Nat)
           -- builtins/make-map-hint-eval/*). This arm's realized
           -- behavior is gc's.
           let _ ← valueAsInt spaceV
-      let (base, s₁) := s.alloc (.mapData #[] 0)
+      let (base, s₁) := s.allocCell (.mapPayload #[] 0)
       let loc ← valueAsLoc tv
       return ((← storeLoc s₁ loc (.map { base := some base })))
   | .makeChan elem hasCap => do
@@ -958,7 +952,7 @@ def applyStmtOpCore (s : ExecState) (op : StmtOp) (_nt : Nat)
             if size < 0 || size * elemSize > maxAllocBytes - chanHeaderBytes then
               panic "makechan: size out of range"
             pure size.toNat
-      let (base, s₁) := s.alloc (.chanData #[] capacity false)
+      let (base, s₁) := s.allocCell (.chanPayload #[] capacity false)
       let loc ← valueAsLoc tv
       return ((← storeLoc s₁ loc (.chan { base := some base })))
   | .mapAssign keyTy valueTy =>
@@ -983,7 +977,7 @@ def applyStmtOpCore (s : ExecState) (op : StmtOp) (_nt : Nat)
                   -- entry leaves the cell, its id is never reissued
                   -- (`nextId` unchanged), and every in-flight range
                   -- sees the absence at its next pick.
-                  return ((← storeLoc s baseLoc (.mapData (entries.eraseIdx! i) nextId)))
+                  return ((← storeMapPayload s baseLoc (entries.eraseIdx! i) nextId))
               | none => return (s)
       | _ => stuck "malformed mapDelete operands"
   | .clearMap =>
@@ -994,7 +988,7 @@ def applyStmtOpCore (s : ExecState) (op : StmtOp) (_nt : Nat)
           | none => return (s) -- nil map: no-op
           | some (baseLoc, _, nextId) =>
               -- `clear` empties the cell; the id counter stays (B1).
-              return ((← storeLoc s baseLoc (.mapData #[] nextId)))
+              return ((← storeMapPayload s baseLoc #[] nextId))
       | _ => stuck "malformed clearMap operands"
   | .clearSlice elem =>
       -- Multi-cell in one apply step, like copySlice: a granularity-ledger
@@ -1132,7 +1126,7 @@ def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (nt : Nat)
             let newCap := newLen +
               ((appendGrowthCap slice.cap newLen - newLen + extra) % width)
             let backing ← buildAppendBackingValue s elem oldValues elemValues newCap
-            let (base, current) := s.alloc backing (some (.array newCap elem))
+            let (base, current) := s.alloc backing (.array newCap elem)
             return ((← storeLoc current tloc
               (.slice { base := some base, offset := 0, len := newLen, cap := newCap })), choices)
       | _ => stuck "malformed appendSlice operands"
@@ -1151,9 +1145,8 @@ def mapRangeStartSets (s : ExecState) (v : GoValue) :
   match map.base with
   | none => return (none, #[])
   | some base =>
-      match ← loadLoc s base with
-      | .mapData es _ => return (some base, es.map (·.1))
-      | other => stuck s!"expected map data for range, got {repr other}"
+      let p ← mapPayload? s base
+      return (some base, p.1.map (·.1))
 
 /-- The LIVE entries of an in-flight range's map cell (`none` base =
 nil map = no entries), ids included. Every `mapIterNext` pick —
@@ -1164,9 +1157,8 @@ def mapIterLiveEntries (s : ExecState) (base : Option Loc) :
   match base with
   | none => return #[]
   | some l =>
-      match ← loadLoc s l with
-      | .mapData es _ => return es
-      | other => stuck s!"expected map data for range, got {repr other}"
+      let p ← mapPayload? s l
+      return p.1
 
 /-- Are all entries of a `mapRange` snapshot self-normalized at the range
 key/value types — keys at `keyTy`, values at `valTy`? The pick-free
@@ -1245,13 +1237,13 @@ def bindIterVars (env : LocalEnv) (s : ExecState) (keyVar valVar : Option String
     match keyVar with
     | some name => do
         let kv ← normalizeValueForTy s keyTy key
-        let (loc, s') := s.alloc kv (some keyTy)
+        let (loc, s') := s.alloc kv keyTy
         pure (env.declare name loc, s')
     | none => pure (env, s)
   match valVar with
   | some name => do
       let vv ← normalizeValueForTy s valTy value
-      let (loc, s') := s.alloc vv (some valTy)
+      let (loc, s') := s.alloc vv valTy
       pure (env.declare name loc, s')
   | none => pure (env, s)
 
@@ -1444,10 +1436,8 @@ theorem stmtPlan_of_chanPlan {stmt : Stmt} {p : ChanStOp × List Expr}
 
 /-- Load a channel's data cell: (buffer, capacity, closed). -/
 def chanCell (s : ExecState) (loc : Loc) :
-    Except GoError (Array GoValue × Nat × Bool) := do
-  match ← loadLoc s loc with
-  | .chanData buf capacity closed => return (buf, capacity, closed)
-  | other => stuck s!"expected channel data, got {repr other}"
+    Except GoError (Array GoValue × Nat × Bool) :=
+  chanPayload? s loc
 
 /-- The values a receive delivers to its target list: the received value,
 plus the comma-ok Bool when the form has two targets. -/
@@ -2594,7 +2584,7 @@ def applyChanOp (s : ExecState) (op : ChanStOp) (vs : List GoValue)
           if closed then
             return (.panicking [⟨runtimeErrorValue "send on closed channel", false⟩] k, s)
           else if buf.size < capacity then do
-            let s' ← storeLoc s loc (.chanData (buf.push v') capacity closed)
+            let s' ← storeChanPayload s loc (buf.push v') capacity closed
             return (.opDone .postOp (.next k), s')
           else
             return (.blockedSend (some loc) v' k, s)
@@ -2608,7 +2598,7 @@ def applyChanOp (s : ExecState) (op : ChanStOp) (vs : List GoValue)
           | some v => do
               -- FIFO dequeue; a closed channel drains its buffer
               -- with ok = true before yielding zeros (probe p06).
-              let s₁ ← storeLoc s loc (.chanData (buf.eraseIdx! 0) capacity closed)
+              let s₁ ← storeChanPayload s loc (buf.eraseIdx! 0) capacity closed
               match targets with
               | [] => return (.opDone .postOp (.next k), s₁)
               | _ :: _ => do
@@ -2635,7 +2625,7 @@ def applyChanOp (s : ExecState) (op : ChanStOp) (vs : List GoValue)
           if closed then
             return (.panicking [⟨runtimeErrorValue "close of closed channel", false⟩] k, s)
           else do
-            let s' ← storeLoc s loc (.chanData buf capacity true)
+            let s' ← storeChanPayload s loc buf capacity true
             return (.opDone .postOp (.next k), s')
   | op, vs => stuck s!"malformed channel-operator application: {repr op} on {vs.length} operand(s)"
 
@@ -3143,7 +3133,7 @@ def commitClause (s : ExecState) (env : LocalEnv) (k : Cont) :
             return (.panicking [⟨runtimeErrorValue "send on closed channel", false⟩] k, s)
           else if buf.size < capacity then do
             let v' ← normalizeValueForTy s elem vv
-            let s' ← storeLoc s loc (.chanData (buf.push v') capacity closed)
+            let s' ← storeChanPayload s loc (buf.push v') capacity closed
             return (.opDone .postOp (.exec body env k), s')
           else stuck "select committed an unready send clause"
   | .recvEv chv targets elem body => do
@@ -3155,7 +3145,7 @@ def commitClause (s : ExecState) (env : LocalEnv) (k : Cont) :
           let (v, ok, s₁) ←
             match buf[0]? with
             | some v => do
-                let s₁ ← storeLoc s loc (.chanData (buf.eraseIdx! 0) capacity closed)
+                let s₁ ← storeChanPayload s loc (buf.eraseIdx! 0) capacity closed
                 pure (v, true, s₁)
             | none =>
                 if closed then do
@@ -3395,7 +3385,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       Step (.exec (.block decls ss) env k) s (.next (.seq ss.toList env' k)) s'
   | initialization {p v loc rest env k s s'} :
       defaultValue s p.typ = .ok v →
-      s.alloc v (some p.typ) = (loc, s') →
+      s.alloc v p.typ = (loc, s') →
       Step (.exec (.initialization p) env (.seq rest env k)) s
         (.next (.seq rest (env.declare p.id loc) k)) s'
   -- Assignment (round 4, BUG-037): the SINGLE assignment rides the

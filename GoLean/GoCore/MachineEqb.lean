@@ -198,7 +198,7 @@ theorem StrictOp.eqb_sound :
 /-! ## `StmtOp` — the wide-statement op table (11 ctors) -/
 
 def StmtOp.eqb : StmtOp → StmtOp → Bool
-  | .newValue t1, .newValue t2 => eqbOptionP Ty.eqb t1 t2
+  | .newValue t1, .newValue t2 => Ty.eqb t1 t2
   | .makeSlice e1 c1, .makeSlice e2 c2 => Ty.eqb e1 e2 && c1 == c2
   | .makeMap s1, .makeMap s2 => s1 == s2
   | .makeChan e1 c1, .makeChan e2 c2 => Ty.eqb e1 e2 && c1 == c2
@@ -215,7 +215,7 @@ theorem StmtOp.eqb_sound : ∀ (a b : StmtOp), StmtOp.eqb a b = true → a = b :
   intro a b h
   cases a <;> cases b <;> (try (first | rfl | exact Bool.noConfusion h))
   case newValue.newValue t1 t2 =>
-    cases eqbOptionP_sound (fun _ _ hh => Ty.eqb_sound hh) h; rfl
+    cases Ty.eqb_sound h; rfl
   case makeSlice.makeSlice e1 c1 e2 c2 =>
     obtain ⟨h1, h2⟩ := andSplit2 h
     cases Ty.eqb_sound h1; cases eq_of_beq h2; rfl
@@ -781,16 +781,29 @@ theorem Config.eqbF_sound :
 
 /-! ## The state layer -/
 
-def HeapCell.eqb (a b : HeapCell) : Bool :=
-  GoValue.eqb a.value b.value && eqbOptionP Ty.eqb a.declaredTy b.declaredTy
+def HeapCell.eqb : HeapCell → HeapCell → Bool
+  | .value t₁ v₁, .value t₂ v₂ => GoValue.eqb v₁ v₂ && Ty.eqb t₁ t₂
+  | .mapPayload e₁ n₁, .mapPayload e₂ n₂ =>
+      n₁ == n₂ && GoValue.eqbTriplesWith GoValue.eqb e₁.toList e₂.toList
+  | .chanPayload b₁ c₁ k₁, .chanPayload b₂ c₂ k₂ =>
+      c₁ == c₂ && k₁ == k₂ && eqbArrayP GoValue.eqb b₁ b₂
+  | _, _ => false
 
 theorem HeapCell.eqb_sound (a b : HeapCell) (h : HeapCell.eqb a b = true) :
     a = b := by
-  obtain ⟨t1, v1⟩ := a
-  obtain ⟨t2, v2⟩ := b
-  obtain ⟨h1, h2⟩ := andSplit2 h
-  cases GoValue.eqb_sound h1
-  cases eqbOptionP_sound (fun _ _ hh => Ty.eqb_sound hh) h2; rfl
+  cases a <;> cases b <;> (try exact Bool.noConfusion h)
+  case value.value t₁ v₁ t₂ v₂ =>
+    obtain ⟨h1, h2⟩ := andSplit2 h
+    cases GoValue.eqb_sound h1; cases Ty.eqb_sound h2; rfl
+  case mapPayload.mapPayload e₁ n₁ e₂ n₂ =>
+    obtain ⟨h1, h2⟩ := andSplit2 h
+    cases eq_of_beq h1
+    cases array_toList_inj
+      (GoValue.eqbTriplesWith_sound (fun _ _ hh => GoValue.eqb_sound hh) h2); rfl
+  case chanPayload.chanPayload b₁ c₁ k₁ b₂ c₂ k₂ =>
+    obtain ⟨h1, h2, h3⟩ := andSplit3 h
+    cases eq_of_beq h1; cases eq_of_beq h2
+    cases eqbArrayP_sound (fun _ _ hh => GoValue.eqb_sound hh) h3; rfl
 
 /-- Structural `ExecState` equality. The conjunction is ordered
 CHEAP-MUTABLE-FIRST — `heap`/`nextAddr` are what differs between two

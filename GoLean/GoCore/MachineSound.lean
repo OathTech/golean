@@ -938,6 +938,21 @@ theorem Heap.lookup_set_ne {h : Heap} {i : Nat} {l : Loc} {c : HeapCell}
   | field _ _ _ => rfl
   | index _ _ => rfl
 
+/-- A root-cell update touches no other root cell (A3: the one write path). -/
+theorem ExecState.updateCell_lookup_ne {σ σ' : ExecState} {a : Addr}
+    {f : HeapCell → Except GoError HeapCell} {l : Loc}
+    (h : σ.updateCell a f = .ok σ') (hne : (Loc.base a : Loc) ≠ l) :
+    Heap.lookup σ'.heap l = Heap.lookup σ.heap l := by
+  obtain ⟨i⟩ := a
+  unfold ExecState.updateCell at h
+  split at h
+  · rename_i hi
+    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
+    obtain ⟨cell', _, hσ⟩ := h
+    subst hσ
+    exact Heap.lookup_set_ne (hi := hi) hne
+  · simp [throw, throwThe, MonadExceptOf.throw] at h
+
 /-- The tag-compatibility check reads only the types map (triage L7). -/
 theorem structTagCompatible_congr {σ₁ σ₂ : ExecState}
     (htypes : σ₂.types = σ₁.types) :
@@ -1007,9 +1022,7 @@ theorem GoValue.capCong_refl : ∀ v : GoValue, GoValue.capCong v v
   | .nil => rfl
   | .interface _ _ => rfl
   | .map _ => rfl
-  | .mapData _ _ => rfl
   | .chan _ => rfl
-  | .chanData _ _ _ => rfl
   | .funcVal _ _ => rfl
   | .float _ _ => rfl
   | .syncData _ => rfl
@@ -1480,167 +1493,6 @@ theorem GoValue.capCong_array_right {ws : Array GoValue} {v : GoValue}
     | exact ⟨_, rfl, h⟩
     | exact GoValue.noConfusion h
 
-set_option maxHeartbeats 1600000 in
-/-- Stored-value coercion congruence along `capCong` (the OLD cell value
-is fixed — both runs read the same cell below `nextAddr`). -/
-theorem coerceStoredValue_congr :
-    ∀ (old v : GoValue) {w : GoValue}, GoValue.capCong v w →
-      exceptCong GoValue.capCong (coerceStoredValue old v)
-        (coerceStoredValue old w) := by
-  refine fun old v => coerceStoredValue.induct
-    (motive_1 := fun old v => ∀ {w}, GoValue.capCong v w →
-      exceptCong GoValue.capCong (coerceStoredValue old v)
-        (coerceStoredValue old w))
-    (motive_2 := fun oldFs vFs => ∀ {wFs}, capCongFields vFs wFs →
-      exceptCong (fun a b : Array (String × GoValue) =>
-          capCongFields a.toList b.toList)
-        (coerceStruct oldFs vFs) (coerceStruct oldFs wFs))
-    (motive_3 := fun oldL vL => ∀ {wL}, capCongList vL wL →
-      exceptCong (fun a b : Array GoValue => capCongList a.toList b.toList)
-        (coerceArray oldL vL) (coerceArray oldL wL))
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ old v
-  · -- int / int
-    intro iv k v' k' w hcc
-    obtain rfl := GoValue.capCong_eq hcc rfl
-    exact rfl
-  · -- float / float, kinds equal (capCong on scalars is equality)
-    intro ob kind bits k hk w hcc
-    obtain rfl := GoValue.capCong_eq hcc rfl
-    exact exceptCong.self fun a => GoValue.capCong_refl a
-  · -- float / float, kind mismatch
-    intro ob kind bits k hk w hcc
-    obtain rfl := GoValue.capCong_eq hcc rfl
-    exact exceptCong.self fun a => GoValue.capCong_refl a
-  · -- array / array, size mismatch
-    intro o n hne w hcc
-    obtain ⟨ws, rfl, hl⟩ := GoValue.capCong_array_left hcc
-    have hlen : ws.size = n.size := (capCongList_length hl).symm
-    simp only [coerceStoredValue, hlen]
-    exact exceptCong.ite_congr (fun _ => rfl) fun hno => absurd hne hno
-  · -- array / array, sizes agree
-    intro o n hne ih w hcc
-    obtain ⟨ws, rfl, hl⟩ := GoValue.capCong_array_left hcc
-    have hlen : ws.size = n.size := (capCongList_length hl).symm
-    simp only [coerceStoredValue, hlen]
-    refine exceptCong.ite_congr (fun hyes => absurd hyes hne) fun _ => ?_
-    exact exceptCong.map_congr (ih hl) fun as bs habs => habs
-  · -- struct / struct, type mismatch
-    intro ot ofs nt nfs hne w hcc
-    obtain ⟨gs, rfl, hf⟩ := GoValue.capCong_struct_left hcc
-    simp only [coerceStoredValue]
-    exact exceptCong.ite_congr (fun _ => rfl) fun hno => absurd hne hno
-  · -- struct / struct, field-count mismatch
-    intro ot ofs nt nfs hne hsz w hcc
-    obtain ⟨gs, rfl, hf⟩ := GoValue.capCong_struct_left hcc
-    have hlen : gs.size = nfs.size := (capCongFields_length hf).symm
-    simp only [coerceStoredValue, hlen]
-    refine exceptCong.ite_congr (fun hyes => absurd hyes hne) fun _ => ?_
-    exact exceptCong.ite_congr (fun _ => rfl) fun hno => absurd hsz hno
-  · -- struct / struct, aligned
-    intro ot ofs nt nfs hne hsz ih w hcc
-    obtain ⟨gs, rfl, hf⟩ := GoValue.capCong_struct_left hcc
-    have hlen : gs.size = nfs.size := (capCongFields_length hf).symm
-    simp only [coerceStoredValue, hlen]
-    refine exceptCong.ite_congr (fun hyes => absurd hyes hne) fun _ => ?_
-    refine exceptCong.ite_congr (fun hyes => absurd hyes hsz) fun _ => ?_
-    refine exceptCong.map_congr (ih hf) fun as bs habs => ?_
-    exact ⟨rfl, habs⟩
-  · -- catch-all: the value passes through
-    intro t x hint hfloat harr hstruct w hcc
-    have hx : coerceStoredValue t x = pure x := by
-      rw [coerceStoredValue.eq_def]
-      split
-      · exact (hint _ _ _ _ rfl rfl).elim
-      · exact (hfloat _ _ _ _ rfl rfl).elim
-      · exact (harr _ _ rfl rfl).elim
-      · exact (hstruct _ _ _ _ rfl rfl).elim
-      · rfl
-    have hw : coerceStoredValue t w = pure w := by
-      rw [coerceStoredValue.eq_def]
-      split
-      · obtain rfl := GoValue.capCong_eq_right hcc rfl
-        exact (hint _ _ _ _ rfl rfl).elim
-      · obtain rfl := GoValue.capCong_eq_right hcc rfl
-        exact (hfloat _ _ _ _ rfl rfl).elim
-      · obtain ⟨vs, rfl, _⟩ := GoValue.capCong_array_right hcc
-        exact (harr _ _ rfl rfl).elim
-      · obtain ⟨fs, rfl, _⟩ := GoValue.capCong_struct_right hcc
-        exact (hstruct _ _ _ _ rfl rfl).elim
-      · rfl
-    rw [hx, hw]
-    exact hcc
-  · -- coerceArray cons
-    intro ov orest nv nrest ih1 ih3 wL hl
-    cases wL with
-    | nil => exact hl.elim
-    | cons wv wrest =>
-      obtain ⟨hvw, hrest⟩ := hl
-      simp only [coerceArray]
-      refine exceptCong.bind_congr (ih1 hvw) fun a b hab => ?_
-      refine exceptCong.bind_congr (ih3 hrest) fun as bs habs => ?_
-      show capCongList (#[a] ++ as).toList (#[b] ++ bs).toList
-      rw [Array.toList_append, Array.toList_append]
-      exact ⟨hab, habs⟩
-  · -- coerceArray catch-all
-    intro t x hnc wL hl
-    have hx : coerceArray t x = pure #[] := by
-      rw [coerceArray.eq_def]
-      split
-      · exact (hnc _ _ _ _ rfl rfl).elim
-      · rfl
-    have hw : coerceArray t wL = pure #[] := by
-      rw [coerceArray.eq_def]
-      split
-      · rename_i ov orest nv nrest
-        cases x with
-        | nil => exact hl.elim
-        | cons a as => exact (hnc _ _ _ _ rfl rfl).elim
-      · rfl
-    rw [hx, hw]
-    exact trivial
-  · -- coerceStruct cons, name mismatch
-    intro on ov orest nn nv nrest hname _ih1 _ih2 wFs hf
-    cases wFs with
-    | nil => exact hf.elim
-    | cons q wrest =>
-      obtain ⟨m, wv⟩ := q
-      obtain ⟨rfl, hvw, hrest⟩ := hf
-      simp only [coerceStruct]
-      exact exceptCong.ite_congr (fun _ => rfl) fun hno => absurd hname hno
-  · -- coerceStruct cons, names equal
-    intro on ov orest nn nv nrest hname ih1 ih2 wFs hf
-    cases wFs with
-    | nil => exact hf.elim
-    | cons q wrest =>
-      obtain ⟨m, wv⟩ := q
-      obtain ⟨rfl, hvw, hrest⟩ := hf
-      simp only [coerceStruct]
-      refine exceptCong.ite_congr (fun hyes => absurd hyes hname) fun _ => ?_
-      refine exceptCong.bind_congr (ih1 hvw) fun a b hab => ?_
-      refine exceptCong.bind_congr (ih2 hrest) fun as bs habs => ?_
-      show capCongFields (#[(on, a)] ++ as).toList (#[(on, b)] ++ bs).toList
-      rw [Array.toList_append, Array.toList_append]
-      exact ⟨rfl, hab, habs⟩
-  · -- coerceStruct catch-all
-    intro t x hnc wFs hf
-    have hx : coerceStruct t x = pure #[] := by
-      rw [coerceStruct.eq_def]
-      split
-      · exact (hnc _ _ _ _ _ _ rfl rfl).elim
-      · rfl
-    have hw : coerceStruct t wFs = pure #[] := by
-      rw [coerceStruct.eq_def]
-      split
-      · rename_i on ov orest nn nv nrest
-        cases x with
-        | nil => exact hf.elim
-        | cons a as =>
-          obtain ⟨an, av⟩ := a
-          exact (hnc _ _ _ _ _ _ rfl rfl).elim
-      · rfl
-    rw [hx, hw]
-    exact trivial
-
 /-! #### Store congruence: the final spill store cannot depend on the cap -/
 
 /-- `ForInStep` congruence: same step kind, related payloads. -/
@@ -1747,12 +1599,42 @@ theorem arraySet_congr {values : Array GoValue} {i : Int} {v w : GoValue}
       (indexOutOfRangePanic i values.size)
     exact exceptCong.self fun a => capCongList_refl a.toList
   | some old =>
-    refine exceptCong.bind_congr (coerceStoredValue_congr old v hcc)
-      fun a b hab => ?_
-    show capCongList (values.set! n a).toList (values.set! n b).toList
+    show capCongList (values.set! n v).toList (values.set! n w).toList
     rw [Array.set!, Array.set!, Array.toList_setIfInBounds,
       Array.toList_setIfInBounds]
-    exact capCongList_set hab
+    exact capCongList_set hcc
+
+/-- Root-cell updates agree in outcome CLASS when the two heaps agree at the
+root and the two update functions agree in class on every cell (A3; the
+congruence behind `storeLoc_congr`). -/
+theorem ExecState.updateCell_congr {σ₁ σ₂ : ExecState} {a : Addr}
+    {f₁ f₂ : HeapCell → Except GoError HeapCell}
+    (hl : Heap.lookup σ₂.heap (.base a) = Heap.lookup σ₁.heap (.base a))
+    (hf : ∀ c, exceptCong (fun _ _ : HeapCell => True) (f₁ c) (f₂ c)) :
+    exceptCong (fun _ _ : ExecState => True)
+      (σ₁.updateCell a f₁) (σ₂.updateCell a f₂) := by
+  obtain ⟨i⟩ := a
+  simp only [Heap.lookup] at hl
+  unfold ExecState.updateCell
+  by_cases h1 : i < σ₁.heap.size
+  · have h2 : i < σ₂.heap.size := by
+      have := hl
+      rw [Array.getElem?_eq_getElem h1] at this
+      exact (Array.getElem?_eq_some_iff.mp this).1
+    have hc : σ₂.heap[i] = σ₁.heap[i] := by
+      have := hl
+      rw [Array.getElem?_eq_getElem h1, Array.getElem?_eq_getElem h2] at this
+      exact Option.some.inj this
+    simp only [dif_pos h1, dif_pos h2]
+    rw [hc]
+    exact exceptCong.bind_congr (hf _) fun _ _ _ => trivial
+  · have h2 : ¬ i < σ₂.heap.size := by
+      intro h2
+      have := hl
+      rw [Array.getElem?_eq_getElem h2] at this
+      exact h1 (Array.getElem?_eq_some_iff.mp this.symm).1
+    simp only [dif_neg h1, dif_neg h2]
+    exact rfl
 
 set_option maxHeartbeats 1600000 in
 /-- **Store class-congruence**: two states agreeing on `types` and on the
@@ -1773,53 +1655,16 @@ theorem storeLoc_congr {σ₁ σ₂ : ExecState} (htypes : σ₂.types = σ₁.t
     intro v w hl hcc
     have hl' : Heap.lookup σ₂.heap (.base a) = Heap.lookup σ₁.heap (.base a) := hl
     simp only [storeLoc]
-    -- The root match is DEPENDENT on the dense heap (its `Array.set` carries
-    -- the lookup's bounds proof), so the two lookups are split rather than
-    -- rewritten (`split` visits σ₁'s outer match, σ₁'s `declaredTy` match,
-    -- then σ₂'s outer match); `hl'` identifies the arms.
-    split
-    · rename_i cellA hcellA
-      try dsimp only
-      split
-      · rename_i tyA hdtA
-        split
-        · rename_i cellB hcellB
-          have hAB := hl'
-          rw [hcellA, hcellB] at hAB
-          obtain rfl := Option.some.inj hAB
-          try dsimp only
-          rw [hdtA]
-          try dsimp only
-          refine exceptCong.bind_congr (normalizeValueForTy_congr htypes hcc)
-            fun _ _ _ => ?_
-          exact trivial
-        · rename_i hcellB
-          have hAB := hl'
-          rw [hcellA, hcellB] at hAB
-          simp at hAB
-      · rename_i hdtA
-        split
-        · rename_i cellB hcellB
-          have hAB := hl'
-          rw [hcellA, hcellB] at hAB
-          obtain rfl := Option.some.inj hAB
-          try dsimp only
-          rw [hdtA]
-          try dsimp only
-          refine exceptCong.bind_congr (coerceStoredValue_congr _ _ hcc)
-            fun _ _ _ => ?_
-          exact trivial
-        · rename_i hcellB
-          have hAB := hl'
-          rw [hcellA, hcellB] at hAB
-          simp at hAB
-    · rename_i hcellA
-      split
-      · rename_i cellB hcellB
-        have hAB := hl'
-        rw [hcellA, hcellB] at hAB
-        simp at hAB
-      · exact rfl  -- both sides refuse `.internal` (BUG-085): same class
+    -- ONE root write (A3): the class congruence of `updateCell`, then the
+    -- per-cell update functions agree in class arm by arm.
+    refine ExecState.updateCell_congr hl' fun c => ?_
+    cases c with
+    | value ty v₀ =>
+      refine exceptCong.bind_congr (normalizeValueForTy_congr htypes hcc)
+        fun _ _ _ => ?_
+      exact trivial
+    | mapPayload _ _ => exact rfl
+    | chanPayload _ _ _ => exact rfl
   | field b tid fname ih =>
     intro v w hl hcc
     simp only [storeLoc]
@@ -2531,28 +2376,28 @@ theorem bindIterVars_ok_of_normal {env : LocalEnv} {σ : ExecState}
     | none => exact ⟨env, σ, rfl⟩
     | some nv =>
       refine ⟨env.declare nv (.base ⟨σ.heap.size⟩),
-        { σ with heap := σ.heap.push { declaredTy := some vt, value := value } }, ?_⟩
-      simp [isNormalForTy_sound hv, Bind.bind, Except.bind, ExecState.alloc,
+        { σ with heap := σ.heap.push (.value vt value) }, ?_⟩
+      simp [isNormalForTy_sound hv, Bind.bind, Except.bind, ExecState.alloc, ExecState.allocCell,
         pure, Except.pure]
   | some nk =>
     cases vv with
     | none =>
       refine ⟨env.declare nk (.base ⟨σ.heap.size⟩),
-        { σ with heap := σ.heap.push { declaredTy := some kt, value := key } }, ?_⟩
-      simp [isNormalForTy_sound hk, Bind.bind, Except.bind, ExecState.alloc,
+        { σ with heap := σ.heap.push (.value kt key) }, ?_⟩
+      simp [isNormalForTy_sound hk, Bind.bind, Except.bind, ExecState.alloc, ExecState.allocCell,
         pure, Except.pure]
     | some nv =>
       have hv' : normalizeValueForTy
-          { σ with heap := σ.heap.push { declaredTy := some kt, value := key } }
+          { σ with heap := σ.heap.push (.value kt key) }
           vt value = .ok value :=
         isNormalForTy_sound hv
       refine ⟨(env.declare nk (.base ⟨σ.heap.size⟩)).declare nv
-          (.base ⟨(σ.heap.push { declaredTy := some kt, value := key }).size⟩),
+          (.base ⟨(σ.heap.push (.value kt key)).size⟩),
         { σ with
-          heap := (σ.heap.push { declaredTy := some kt, value := key }).push
-            { declaredTy := some vt, value := value } }, ?_⟩
+          heap := (σ.heap.push (.value kt key)).push
+            (.value vt value) }, ?_⟩
       simp [isNormalForTy_sound hk, hv', Bind.bind, Except.bind,
-        ExecState.alloc, pure, Except.pure]
+        ExecState.alloc, ExecState.allocCell, pure, Except.pure]
 
 /-- `mapM` over `Except` preserves length on success. -/
 theorem mapM_ok_length {α β : Type} {f : α → Except GoError β}

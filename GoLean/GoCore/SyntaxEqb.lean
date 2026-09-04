@@ -464,7 +464,7 @@ def Stmt.eqbF : Nat → Stmt → Stmt → Bool
     | .assignMany l1 r1, .assignMany l2 r2 =>
         eqbArrayP (Assignee.eqbF f) l1 l2 && eqbArrayP (Expr.eqbF f) r1 r2
     | .newValue t1 v1 y1, .newValue t2 v2 y2 =>
-        Assignee.eqbF f t1 t2 && Expr.eqbF f v1 v2 && eqbOptionP Ty.eqb y1 y2
+        Assignee.eqbF f t1 t2 && Expr.eqbF f v1 v2 && Ty.eqb y1 y2
     | .makeSlice t1 e1 l1 c1, .makeSlice t2 e2 l2 c2 =>
         Assignee.eqbF f t1 t2 && Ty.eqb e1 e2 && Expr.eqbF f l1 l2
           && eqbOptionP (Expr.eqbF f) c1 c2
@@ -563,7 +563,7 @@ theorem Stmt.eqbF_sound : ∀ f (a b : Stmt), Stmt.eqbF f a b = true → a = b :
     case newValue.newValue t1 v1 y1 t2 v2 y2 =>
       obtain ⟨h1, h2, h3⟩ := andSplit3 h
       cases Assignee.eqbF_sound _ _ _ h1; cases Expr.eqbF_sound _ _ _ h2
-      cases eqbOptionP_sound (fun _ _ hh => Ty.eqb_sound hh) h3; rfl
+      cases Ty.eqb_sound h3; rfl
     case makeSlice.makeSlice t1 e1 l1 c1 t2 e2 l2 c2 =>
       obtain ⟨h1, h2, h3, h4⟩ := andSplit4 h
       cases Assignee.eqbF_sound _ _ _ h1; cases Ty.eqb_sound h2

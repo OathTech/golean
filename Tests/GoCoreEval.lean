@@ -1375,9 +1375,9 @@ private def coreNewFunction : GoCore.Func := {
       { id := "s", typ := .pointer (.slice .int) }
     ]
     #[
-      .newValue (.var "p") (.defaultValue .int),
+      .newValue (.var "p") (.defaultValue .int) .int,
       .assign (.addr (.var "p")) (.intLit 7),
-      .newValue (.var "s") (.defaultValue (.slice .int)),
+      .newValue (.var "s") (.defaultValue (.slice .int)) (.slice .int),
       .assign (.var "z")
         (.add
           (.mul (.deref (.var "p") .int) (.intLit 10))
@@ -2177,7 +2177,7 @@ def main : IO UInt32 := do
   -- here at the Lean level. Positive control first: the same store to an
   -- ALLOCATED cell succeeds, so the refusal below is not "refuses everything".
   passed := passed && (← expectTrue "GoCore storeLoc to an ALLOCATED .base cell succeeds (positive control for the BUG-085 guard)"
-    (let (loc, s) := (({} : GoCore.ExecState).alloc (.int 0) (some .int))
+    (let (loc, s) := (({} : GoCore.ExecState).alloc (.int 0) .int)
      match GoCore.storeLoc s loc (.int 7) with
      | .ok s' =>
          match GoCore.loadLoc s' loc with

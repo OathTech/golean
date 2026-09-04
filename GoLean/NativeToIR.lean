@@ -942,7 +942,7 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
       let value ← decodeExpr s!"{path}.value" (← StrictJson.field path obj "value")
       let elemTy ← decodeTy s!"{path}.elemType" (← StrictJson.field path obj "elemType")
-      pure (.seqn ((← declaresOf #[t]).push (.newValue t.assignee value (some elemTy))))
+      pure (.seqn ((← declaresOf #[t]).push (.newValue t.assignee value elemTy)))
   | "make-slice" =>
       let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
       let elemTy ← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")

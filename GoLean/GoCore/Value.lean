@@ -624,7 +624,7 @@ structure MapValue where
   deriving Repr, BEq
 
 /-- A channel REFERENCE (channels arc slice 1, the `MapValue` precedent):
-`base` addresses the `GoValue.chanData` heap cell; `none` is the nil
+`base` addresses the `HeapCell.chanPayload` cell; `none` is the nil
 channel. Channel `==` is reference identity (spec: "equal if they were
 created by the same call to `make` or if both have value `nil`") — the
 derived `BEq` (base equality) IS that relation, which is also why
@@ -785,34 +785,8 @@ inductive GoValue where
   | array (values : Array GoValue)
   | slice (value : SliceValue)
   | map (value : MapValue)
-  /-- A map's heap-cell payload (a value no expression may produce): the
-  live entries in CELL ORDER, each stamped with an ENTRY IDENTITY `id`
-  (design-hygiene arc slice 1, B1 / the second audit's Q11, 2026-09-03),
-  plus the per-map counter `nextId` the next created entry takes. An
-  entry's id is allotted once, at creation (`mapAssignValue` on an absent
-  key), kept across value updates of the same key (E10 always-replace
-  keeps the id), and NEVER reused — deletion and `clear` erase entries
-  but leave `nextId` where it is, so a deleted-then-re-created key is a
-  NEW entry with a fresh id (the adopted reading of the range clause's
-  created-entries sentence, `docs/spec-interpretations.md` I-1 / ledger
-  L-012). Ids are the `mapIterK` frame's iteration state (which entries
-  it has produced; which were live when the range began) — pure `Nat`
-  membership, so a delete is a heap write and nothing else. Ids are
-  runtime-internal identity: never observable, never on any wire (the
-  observation JSON projects them away). The counter is PER MAP (not a
-  global `ExecState` field) so the map representation change touches no
-  state field and `StateWf` sees only the entry payloads. -/
-  | mapData (entries : Array (Nat × GoValue × GoValue)) (nextId : Nat)
   /-- A channel reference (channels arc slice 1; the `map` precedent). -/
   | chan (value : ChanValue)
-  /-- A channel's heap-cell payload (the `mapData` precedent — a value no
-  expression may produce): the buffered elements in FIFO order (spec:
-  "Channels act as first-in-first-out queues" — deterministic, strict
-  lane), the buffer capacity (`cap = 0` ⟺ unbuffered — ONE spec rule,
-  not two channel kinds), and the closed flag. NO waiter queues (design
-  of record D7): blocked goroutines are blocked-Config shapes, never
-  channel state. -/
-  | chanData (buf : Array GoValue) (capacity : Nat) (closed : Bool)
   /-- A **function value**: the callee's semantic identity plus the values
   captured at closure-creation time. Closures are lambda-lifted by the
   frontend (`docs/2026-07-24_sequential-coverage-scoping.md` §8), so the
@@ -857,7 +831,8 @@ def GoValue.eqbListWith (f : GoValue → GoValue → Bool) :
   | a :: as, b :: bs => f a b && GoValue.eqbListWith f as bs
   | _, _ => false
 
-/-- Pairwise equality over stamped map entries (id, key, value). -/
+/-- Pairwise equality over stamped map entries (id, key, value) — the
+map payload cell's (`HeapCell.mapPayload`, A3). -/
 def GoValue.eqbTriplesWith (f : GoValue → GoValue → Bool) :
     List (Nat × GoValue × GoValue) → List (Nat × GoValue × GoValue) → Bool
   | [], [] => true
@@ -891,11 +866,7 @@ def GoValue.eqbFuel : Nat → GoValue → GoValue → Bool
       GoValue.eqbListWith (GoValue.eqbFuel f) a.toList b.toList
   | _, .slice a, .slice b => a == b
   | _, .map a, .map b => a == b
-  | f + 1, .mapData a n₁, .mapData b n₂ =>
-      n₁ == n₂ && GoValue.eqbTriplesWith (GoValue.eqbFuel f) a.toList b.toList
   | _, .chan a, .chan b => a == b
-  | f + 1, .chanData b₁ c₁ k₁, .chanData b₂ c₂ k₂ =>
-      c₁ == c₂ && k₁ == k₂ && GoValue.eqbListWith (GoValue.eqbFuel f) b₁.toList b₂.toList
   | f + 1, .funcVal id₁ c₁, .funcVal id₂ c₂ =>
       id₁ == id₂ && GoValue.eqbListWith (GoValue.eqbFuel f) c₁ c₂
   | _, .syncData a, .syncData b => a == b

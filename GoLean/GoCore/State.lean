@@ -15,13 +15,44 @@ scope, so shadowing gets a fresh location instead of reusing the outer one.
 Block execution pushes a scope on entry and pops it on every exit path. -/
 abbrev LocalEnv := List Scope
 
-/-- A heap cell records the value and, when known at allocation, the declared
-type of the allocation. Stores to a typed cell are normalized against the
-declared type; untyped cells (legacy allocation paths, tracked for closure in
-the semantics upgrade) fall back to value-shape coercion. -/
-structure HeapCell where
-  declaredTy : Option Ty := none
-  value : GoValue
+/-- A heap cell (design-hygiene arc A3, 2026-09-04; review §3 A3): either a
+Go VALUE at its declared type, or one of the two runtime PAYLOADS a value
+may only reference — a map's entry table or a channel's buffer. The
+payloads used to be `GoValue` constructors "no expression may produce";
+the cell type now says so: `loadLoc`/`storeLoc` see values only (a payload
+cell refuses there), `mapPayload?`/`storeMapPayload` and
+`chanPayload?`/`storeChanPayload` see payloads only, and every store to a
+value cell is normalized at its declared type (there are no untyped cells
+— `Stmt.newValue` always carries its type). -/
+inductive HeapCell where
+  /-- A Go value at the cell's declared type; stores normalize to it. -/
+  | value (declaredTy : Ty) (v : GoValue)
+  /-- A MAP's payload cell (design-hygiene A3: a cell, never a value — no
+  expression can produce one): the
+  live entries in CELL ORDER, each stamped with an ENTRY IDENTITY `id`
+  (design-hygiene arc slice 1, B1 / the second audit's Q11, 2026-09-03),
+  plus the per-map counter `nextId` the next created entry takes. An
+  entry's id is allotted once, at creation (`mapAssignValue` on an absent
+  key), kept across value updates of the same key (E10 always-replace
+  keeps the id), and NEVER reused — deletion and `clear` erase entries
+  but leave `nextId` where it is, so a deleted-then-re-created key is a
+  NEW entry with a fresh id (the adopted reading of the range clause's
+  created-entries sentence, `docs/spec-interpretations.md` I-1 / ledger
+  L-012). Ids are the `mapIterK` frame's iteration state (which entries
+  it has produced; which were live when the range began) — pure `Nat`
+  membership, so a delete is a heap write and nothing else. Ids are
+  runtime-internal identity: never observable, never on any wire (the
+  observation JSON projects them away). The counter is PER MAP (not a
+  global `ExecState` field) so the map representation change touches no
+  state field and `StateWf` sees only the entry payloads. -/
+  | mapPayload (entries : Array (Nat × GoValue × GoValue)) (nextId : Nat)
+  /-- A CHANNEL's payload cell (the `mapPayload` precedent): the buffered
+  elements in FIFO order (spec: "Channels act as first-in-first-out
+  queues" — deterministic, strict lane), the buffer capacity (`cap = 0` ⟺
+  unbuffered — ONE spec rule, not two channel kinds), and the closed flag.
+  NO waiter queues (design of record D7): blocked goroutines are
+  blocked-Config shapes, never channel state. -/
+  | chanPayload (buf : Array GoValue) (capacity : Nat) (closed : Bool)
   deriving Repr, BEq
 
 /-- The heap: a DENSE array of cells — an address IS an index
@@ -404,10 +435,25 @@ theorem Choices.consumeAtE_of_lt {site : ChoiceSite} {bound : Nat}
 
 /-- Allocate a fresh cell: the new address is the heap's size and the
 cell is pushed (dense heap, A2 — the ONLY way a cell comes to exist). -/
-def ExecState.alloc (state : ExecState) (value : GoValue) (typ : Option Ty := none) :
-    Loc × ExecState :=
-  (.base ⟨state.heap.size⟩,
-    { state with heap := state.heap.push { declaredTy := typ, value } })
+def ExecState.allocCell (state : ExecState) (cell : HeapCell) : Loc × ExecState :=
+  (.base ⟨state.heap.size⟩, { state with heap := state.heap.push cell })
+
+/-- Allocate a VALUE cell at its declared type. -/
+def ExecState.alloc (state : ExecState) (value : GoValue) (typ : Ty) : Loc × ExecState :=
+  state.allocCell (.value typ value)
+
+/-- Overwrite root cell `a` through `f` (which sees the old cell), FAIL
+CLOSED out of range: `.internal` (BUG-085 — an unallocated address is an
+invariant breach, never Go behaviour). The ONE write path for every root
+cell (`storeLoc`, `storeMapPayload`, `storeChanPayload`); `Array.set` under
+`hi` is what makes a phantom cell unrepresentable (A2/A3). -/
+def ExecState.updateCell (state : ExecState) (a : Addr)
+    (f : HeapCell → Except GoError HeapCell) : Except GoError ExecState :=
+  if hi : a.id < state.heap.size then do
+    let cell ← f state.heap[a.id]
+    return { state with heap := state.heap.set a.id cell hi }
+  else
+    throw (.internal s!"store to unallocated address {repr (Loc.base a)}: no heap cell (allocation goes through ExecState.alloc only)")
 
 def unsupported {α : Type} (feature : String) : Except GoError α :=
   throw (.unsupported feature)
@@ -417,6 +463,53 @@ def panic {α : Type} (message : String) : Except GoError α :=
 
 def stuck {α : Type} (message : String) : Except GoError α :=
   throw (.stuck message)
+
+/-! ## Payload cells (A3): the map/channel readers and writers -/
+
+/-- The map payload at a root cell: `(entries, nextId)`. Anything else
+there (a value cell, a channel, no cell) is an ill-shaped program
+operand — refused. -/
+def mapPayload? (state : ExecState) (loc : Loc) :
+    Except GoError (Array (Nat × GoValue × GoValue) × Nat) :=
+  match Heap.lookup state.heap loc with
+  | some (.mapPayload entries nextId) => return (entries, nextId)
+  | some (.value _ v) => stuck s!"expected map data at {repr loc}, got value {repr v}"
+  | some (.chanPayload ..) => stuck s!"expected map data at {repr loc}, got channel data"
+  | none => stuck s!"unbound GoCore heap location: {repr loc}"
+
+/-- The channel payload at a root cell: `(buf, capacity, closed)`. -/
+def chanPayload? (state : ExecState) (loc : Loc) :
+    Except GoError (Array GoValue × Nat × Bool) :=
+  match Heap.lookup state.heap loc with
+  | some (.chanPayload buf capacity closed) => return (buf, capacity, closed)
+  | some (.value _ v) => stuck s!"expected channel data at {repr loc}, got value {repr v}"
+  | some (.mapPayload ..) => stuck s!"expected channel data at {repr loc}, got map data"
+  | none => stuck s!"unbound GoCore heap location: {repr loc}"
+
+/-- Replace a map payload WHOLE (the only way a map cell is written); the
+cell must already be a map payload. -/
+def storeMapPayload (state : ExecState) (loc : Loc)
+    (entries : Array (Nat × GoValue × GoValue)) (nextId : Nat) :
+    Except GoError ExecState :=
+  match loc with
+  | .base a =>
+      state.updateCell a fun
+        | .mapPayload _ _ => pure (.mapPayload entries nextId)
+        | .value _ v => stuck s!"expected map data at {repr loc}, got value {repr v}"
+        | .chanPayload .. => stuck s!"expected map data at {repr loc}, got channel data"
+  | other => stuck s!"map payload store through a non-root path {repr other}"
+
+/-- Replace a channel payload WHOLE; the cell must already be a channel
+payload. -/
+def storeChanPayload (state : ExecState) (loc : Loc) (buf : Array GoValue)
+    (capacity : Nat) (closed : Bool) : Except GoError ExecState :=
+  match loc with
+  | .base a =>
+      state.updateCell a fun
+        | .chanPayload .. => pure (.chanPayload buf capacity closed)
+        | .value _ v => stuck s!"expected channel data at {repr loc}, got value {repr v}"
+        | .mapPayload .. => stuck s!"expected channel data at {repr loc}, got map data"
+  | other => stuck s!"channel payload store through a non-root path {repr other}"
 
 -- `lookupLoc` deleted (reshape S4): name resolution goes through the
 -- control-side `LocalEnv` (`Machine.Config.env`), never the state.

@@ -439,19 +439,7 @@ theorem storeLoc_root_frame :
           have := congrArg Loc.rootBase heq.symm
           simpa [Loc.rootLoc, Loc.rootBase] using this)
       unfold storeLoc at h
-      split at h
-      · rename_i cell hcell
-        split at h
-        · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-          obtain ⟨v', _, hσ⟩ := h
-          subst hσ
-          exact Heap.lookup_set_ne (hi := Heap.lookup_lt hcell) hkey
-        · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-          obtain ⟨v', _, hσ⟩ := h
-          subst hσ
-          exact Heap.lookup_set_ne (hi := Heap.lookup_lt hcell) hkey
-      · -- unallocated root: the store REFUSES (BUG-085), nothing to show
-        simp [throw, throwThe, MonadExceptOf.throw] at h
+      exact ExecState.updateCell_lookup_ne h hkey
   | field b tid fname ih =>
       intro s s' v h m hne
       unfold storeLoc at h

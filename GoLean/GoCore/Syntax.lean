@@ -282,7 +282,7 @@ inductive Stmt where
   | initialization (var : Param)
   | assign (left : Assignee) (right : Expr)
   | assignMany (left : Array Assignee) (right : Array Expr)
-  | newValue (target : Assignee) (value : Expr) (typ : Option Ty := none)
+  | newValue (target : Assignee) (value : Expr) (typ : Ty)
   | makeSlice (target : Assignee) (elem : Ty) (len : Expr) (cap : Option Expr)
   | makeMap (target : Assignee) (key value : Ty) (initialSpace : Option Expr)
   | mapAssign (base index value : Expr) (keyTy valueTy : Ty)
@@ -357,7 +357,7 @@ inductive Stmt where
   -- (`mapRange` is primitive only for its nondeterministic order), and a
   -- channel range is exactly repeated comma-ok receive until closed —
   -- no snapshot, no new iteration frame.
-  /-- `make(chan T, n)`: allocate a `chanData` cell (empty buffer,
+  /-- `make(chan T, n)`: allocate a `chanPayload` cell (empty buffer,
   capacity `n`, open). Negative `n` is the recoverable run-time panic
   `makechan: size out of range` (spec §Making slices, maps and channels;
   probe p21). Routed through the wide-statement (`StmtOp`) machinery like

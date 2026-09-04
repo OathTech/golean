@@ -204,10 +204,8 @@ theorem resumeThread_wf {s : ExecState} {c c' : Config} {s' : ExecState}
     · split at h
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨s₂, hst, rfl, rfl⟩ := h
-        obtain ⟨w1, w2, w3, w4, w5⟩ := storeLoc_pres hw hb.1
-          (by rw [show GoValue.locSup (.chanData (buf.push v) capacity closed)
-                = goValueListSup (buf.push v).toList from rfl,
-              goValueListSup_push]
+        obtain ⟨w1, w2, w3, w4, w5⟩ := storeChanPayload_pres hw hb.1
+          (by rw [goValueListSup_push]
               omega) hst
         refine ⟨w1, ?_, w4, w2, ?_⟩
         · simp only [Config.locSup]
@@ -234,9 +232,8 @@ theorem resumeThread_wf {s : ExecState} {c c' : Config} {s' : ExecState}
         omega
       simp only [bind_eq_ok] at h
       obtain ⟨s₁, hst, h⟩ := h
-      obtain ⟨w1, w2, w3, w4, w5⟩ := storeLoc_pres hw hb.1
-        (by rw [show GoValue.locSup (.chanData (buf.eraseIdx! 0) capacity closed)
-              = goValueListSup (buf.eraseIdx! 0).toList from rfl]
+      obtain ⟨w1, w2, w3, w4, w5⟩ := storeChanPayload_pres hw hb.1
+        (by
             exact Nat.le_trans goValueListSup_eraseIdx! (by omega)) hst
       obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
@@ -776,11 +773,8 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Config} {i : Nat}
                 omega
               simp only [hhd, bind_eq_ok] at h
               obtain ⟨s₁, hst, h⟩ := h
-              obtain ⟨w1, w2, w3, w4, w5⟩ := storeLoc_pres hw hlocb
-                (by rw [show GoValue.locSup
-                      (.chanData ((buf.eraseIdx! 0).push vs) cap closed)
-                      = goValueListSup ((buf.eraseIdx! 0).push vs).toList from rfl,
-                    goValueListSup_push]
+              obtain ⟨w1, w2, w3, w4, w5⟩ := storeChanPayload_pres hw hlocb
+                (by rw [goValueListSup_push]
                     refine Nat.max_le.mpr ⟨Nat.le_trans goValueListSup_eraseIdx!
                       (by omega), hpb.1⟩) hst
               simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq,
@@ -857,12 +851,8 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Config} {i : Nat}
                     omega
                   simp only [hhd, bind_eq_ok] at h
                   obtain ⟨s₁, hst, h⟩ := h
-                  obtain ⟨w1, w2, w3, w4, w5⟩ := storeLoc_pres hw hlocb
-                    (by rw [show GoValue.locSup
-                          (.chanData ((buf.eraseIdx! 0).push v') cap closed)
-                          = goValueListSup
-                              ((buf.eraseIdx! 0).push v').toList from rfl,
-                        goValueListSup_push]
+                  obtain ⟨w1, w2, w3, w4, w5⟩ := storeChanPayload_pres hw hlocb
+                    (by rw [goValueListSup_push]
                         refine Nat.max_le.mpr
                           ⟨Nat.le_trans goValueListSup_eraseIdx! (by omega),
                             hv'b⟩) hst
@@ -943,12 +933,8 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Config} {i : Nat}
                     omega
                   simp only [hhd, bind_eq_ok] at h
                   obtain ⟨s₁, hst, h⟩ := h
-                  obtain ⟨w1, w2, w3, w4, w5⟩ := storeLoc_pres hw hlocb
-                    (by rw [show GoValue.locSup
-                          (.chanData ((buf.eraseIdx! 0).push vs) cap closed)
-                          = goValueListSup
-                              ((buf.eraseIdx! 0).push vs).toList from rfl,
-                        goValueListSup_push]
+                  obtain ⟨w1, w2, w3, w4, w5⟩ := storeChanPayload_pres hw hlocb
+                    (by rw [goValueListSup_push]
                         refine Nat.max_le.mpr
                           ⟨Nat.le_trans goValueListSup_eraseIdx! (by omega),
                             hpb.1⟩) hst

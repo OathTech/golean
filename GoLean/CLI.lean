@@ -198,18 +198,6 @@ private partial def goValueJson : GoValue → Json
           | some loc => locJson loc
           | none => Json.null)
       ]
-  -- Entry-identity stamps (B1) are runtime-internal identity and are
-  -- projected AWAY here: the observation shape is the entry list as
-  -- before (no wire change).
-  | .mapData entries _ =>
-      Json.mkObj [
-        ("tag", Json.str "mapData"),
-        ("entries", Json.arr (entries.map (fun (_, key, value) =>
-          Json.mkObj [
-            ("key", goValueJson key),
-            ("value", goValueJson value)
-          ])))
-      ]
   -- Channel observations mirror the map shape (reference identity). The
   -- Go harness FAILS CLOSED on a channel-typed result (reflect.Chan is
   -- an unsupported observation kind there), so a case whose OUTPUT is a
@@ -221,13 +209,6 @@ private partial def goValueJson : GoValue → Json
         ("base", match value.base with
           | some loc => locJson loc
           | none => Json.null)
-      ]
-  | .chanData buf capacity closed =>
-      Json.mkObj [
-        ("tag", Json.str "chanData"),
-        ("buf", Json.arr (buf.map goValueJson)),
-        ("cap", Lean.toJson capacity),
-        ("closed", Lean.toJson closed)
       ]
   -- Sync primitive state (spec-parity slice 2): a subject RETURNING a
   -- sync struct is copy-class misuse with no Go-side counterpart shape
@@ -382,15 +363,9 @@ private partial def decodeGoValueObservation (path : String) (json : Json) : Exc
   | "map" =>
       StrictJson.requireExactKeys path obj ["base", "tag"]
       decodeOptionalLoc s!"{path}.base" (← StrictJson.field path obj "base")
-  | "mapData" =>
-      StrictJson.requireExactKeys path obj ["entries", "tag"]
-      let entries ← StrictJson.array s!"{path}.entries" (← StrictJson.field path obj "entries")
-      let _ ← StrictJson.mapArrayIdx entries (fun i entryJson => do
-        let entryObj ← StrictJson.obj s!"{path}.entries[{i}]" entryJson
-        StrictJson.requireExactKeys s!"{path}.entries[{i}]" entryObj ["key", "value"]
-        decodeGoValueObservation s!"{path}.entries[{i}].key" (← StrictJson.field s!"{path}.entries[{i}]" entryObj "key")
-        decodeGoValueObservation s!"{path}.entries[{i}].value" (← StrictJson.field s!"{path}.entries[{i}]" entryObj "value"))
-      pure ()
+  -- No `mapData`/`chanData` arms (A3): payloads are heap CELLS, not values;
+  -- neither side of the differential can emit one, so the tags are unknown
+  -- here and refuse below like any other.
   | other =>
       throw s!"{path}.tag: unknown Go observation value tag {repr other}"
 

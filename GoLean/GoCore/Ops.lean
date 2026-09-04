@@ -148,59 +148,13 @@ def arrayGet (values : Array GoValue) (index : Int) : Except GoError GoValue := 
   | some value => return value
   | none => indexOutOfRangePanic index values.size
 
--- Total: structurally recursive on the first `GoValue`. The array/struct
--- cases recurse into children through list helpers (`coerceArray`/
--- `coerceStruct`) rather than a `for`-loop, so Lean can see each recursive
--- call lands on a strict subterm and derives well-founded termination.
-mutual
-  def coerceStoredValue : GoValue → GoValue → Except GoError GoValue
-    | .int _ kind, .int value _ => return .int (kind.normalize value) kind
-    -- Kind-strict on purpose (unlike the int arm): float values always
-    -- arrive typed, so a kind mismatch is a lowering bug and masking the
-    -- bits would be a silent reinterpretation (F2 header note above).
-    | .float _ kind, .float bits k =>
-        if k == kind then return .float (kind.normalizeBits bits) kind
-        else stuck s!"float store kind mismatch: expected {kind.name}, got {k.name}"
-    | .array oldValues, .array newValues =>
-        if oldValues.size != newValues.size then
-          stuck s!"array store length mismatch: {oldValues.size} vs {newValues.size}"
-        else
-          .array <$> coerceArray oldValues.toList newValues.toList
-    | .struct oldType oldFields, .struct newType newFields =>
-        if oldType != newType then
-          stuck s!"struct store type mismatch: {oldType.key} vs {newType.key}"
-        else if oldFields.size != newFields.size then
-          stuck s!"struct store field count mismatch: {oldFields.size} vs {newFields.size}"
-        else
-          .struct oldType <$> coerceStruct oldFields.toList newFields.toList
-    | _, value => return value
-
-  /-- Coerce array elements pairwise; callers guarantee equal lengths. -/
-  def coerceArray : List GoValue → List GoValue → Except GoError (Array GoValue)
-    | oldValue :: oldRest, newValue :: newRest => do
-        let head ← coerceStoredValue oldValue newValue
-        let tail ← coerceArray oldRest newRest
-        return #[head] ++ tail
-    | _, _ => return #[]
-
-  /-- Coerce struct fields pairwise, checking field-name alignment. -/
-  def coerceStruct :
-      List (String × GoValue) → List (String × GoValue) →
-      Except GoError (Array (String × GoValue))
-    | (oldName, oldValue) :: oldRest, (newName, newValue) :: newRest => do
-        if oldName != newName then
-          stuck s!"struct store field mismatch: {oldName} vs {newName}"
-        let head ← coerceStoredValue oldValue newValue
-        let tail ← coerceStruct oldRest newRest
-        return #[(oldName, head)] ++ tail
-    | _, _ => return #[]
-end
-
 def arraySet (values : Array GoValue) (index : Int) (value : GoValue) :
     Except GoError (Array GoValue) := do
   let i ← arrayIndexNat values index
+  -- No per-element coercion (A3): the ROOT store normalizes the whole
+  -- array at the cell's declared type, which is where element typing lives.
   match values[i]? with
-  | some old => return values.set! i (← coerceStoredValue old value)
+  | some _ => return values.set! i value
   | none => indexOutOfRangePanic index values.size
 
 def natFromNonnegativeInt (context : String) (value : Int) : Except GoError Nat := do
@@ -1219,7 +1173,9 @@ def structTagCompatible (state : ExecState) (actual expected : TypeId) : Bool :=
 def loadLoc (state : ExecState) : Loc → Except GoError GoValue
   | loc@(.base _) =>
       match Heap.lookup state.heap loc with
-      | some cell => return cell.value
+      | some (.value _ v) => return v
+      | some (.mapPayload ..) => stuck s!"value load from a map payload cell {repr loc}"
+      | some (.chanPayload ..) => stuck s!"value load from a channel payload cell {repr loc}"
       | none => stuck s!"unbound GoCore heap location: {repr loc}"
   | .field base typeId fieldName => do
       match ← loadLoc state base with
@@ -1237,31 +1193,23 @@ def loadLoc (state : ExecState) : Loc → Except GoError GoValue
 
 /-- Store through a location. Total: structural recursion on the `Loc`
 argument (field/index bases are strict subterms); its non-structural
-callees (normalizeValueForTy, coerceStoredValue) are themselves total.
-The premise of `wp_store`.
+callee (`normalizeValueForTy`) is itself total. The premise of `wp_store`.
 
-FAIL CLOSED at the root: a store to a `.base` address with NO heap cell
-REFUSES `.internal` (BUG-085: the arm used to MATERIALIZE an untyped
-phantom cell — an absorbing fallback on the trusted surface). On the
-dense heap (A2) the hit arm's write is `Array.set` under the bounds proof
-the lookup supplies (`Heap.lookup_lt`), so a store can only ever
-overwrite an existing cell: the phantom arm is unrepresentable by type,
-and the refusal below is reachable only from a dangling `.addr` or a
-decoder gid past the seeded globals — an invariant breach, never Go
-behaviour (`.internal`, the core's "cannot happen on a well-formed state"
-class, as opposed to `.stuck` for an ill-shaped program operand). -/
+ONE store discipline (A3): the root cell is a VALUE cell at a declared
+type and the incoming value is normalized at that type — there are no
+untyped cells and no value-shape coercion any more. A payload cell (map/
+channel) at the root is an ill-shaped operand (`.stuck`); a missing cell
+is BUG-085's `.internal` (through `ExecState.updateCell`, the one root
+write path: `Array.set` under its bound — the phantom-cell arm is
+unrepresentable by type). -/
 def storeLoc (state : ExecState) : Loc → GoValue → Except GoError ExecState
-    | .base a, value => do
-        match hcell : Heap.lookup state.heap (.base a) with
-        | some cell => do
-            let value ←
-              match cell.declaredTy with
-              | some ty => normalizeValueForTy state ty value
-              | none => coerceStoredValue cell.value value
-            return { state with
-              heap := state.heap.set a.id { cell with value } (Heap.lookup_lt hcell) }
-        | none =>
-            throw (.internal s!"store to unallocated address {repr (Loc.base a)}: no heap cell (allocation goes through ExecState.alloc only)")
+    | .base a, value =>
+        state.updateCell a fun
+          | .value ty _ => do
+              let value ← normalizeValueForTy state ty value
+              pure (.value ty value)
+          | .mapPayload .. => stuck s!"value store into a map payload cell {repr (Loc.base a)}"
+          | .chanPayload .. => stuck s!"value store into a channel payload cell {repr (Loc.base a)}"
     | .field base typeId fieldName, value => do
         match ← loadLoc state base with
         | .struct actualType fields =>
@@ -1521,8 +1469,8 @@ def buildStructValue (state : ExecState) (typ : Ty) (args : Array GoValue) :
     Except GoError GoValue :=
   buildStructValueFuel typeResolutionFuel state typ args
 
--- Not recursive: it calls only the now-total defaultValue / normalizeValueForTy
--- / coerceStoredValue, so the for-loops are fine in a plain def.
+-- Not recursive: it calls only the now-total defaultValue / normalizeValueForTy,
+-- so the for-loops are fine in a plain def.
 def buildArrayValue (state : ExecState) (length : Nat) (elem : Ty)
     (args : Array (Int × GoValue)) : Except GoError GoValue := do
   let mut values := #[]
@@ -1536,7 +1484,7 @@ def buildArrayValue (state : ExecState) (length : Nat) (elem : Ty)
     if key < 0 then
       stuck s!"negative GoCore array literal index: {key}"
     match values[key.toNat]? with
-    | some old => values := values.set! key.toNat (← coerceStoredValue old (← normalizeValueForTy state elem value))
+    | some _ => values := values.set! key.toNat (← normalizeValueForTy state elem value)
     | none => stuck s!"GoCore array literal index out of range: {key}"
   return .array values
 
@@ -2053,9 +2001,8 @@ def mapEntries (state : ExecState) (map : MapValue) :
   match map.base with
   | none => return none
   | some baseLoc =>
-      match ← loadLoc state baseLoc with
-      | .mapData entries nextId => return some (baseLoc, entries, nextId)
-      | other => stuck s!"expected map data, got {repr other}"
+      let p ← mapPayload? state baseLoc
+      return some (baseLoc, p.1, p.2)
 
 def mapLookupValue (state : ExecState) (map : MapValue) (key : GoValue)
     (keyTy valueTy : Ty) : Except GoError (GoValue × Bool) := do

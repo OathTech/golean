@@ -185,3 +185,112 @@ No lemma weakened; `Heap.set` and `ExecState.freshLoc` deleted with their
 regression, re-pin guard 0 flips, negative 394/394, eval tests 148/148
 incl. the BUG-085 guard (`transcripts/gate-a2.txt`). Choice-trace delta vs
 the pre-series snapshot: evidence README, A2 row.
+
+## A3 — map/channel payloads out of `GoValue`, into the cell
+
+**What changed.** `HeapCell` is an inductive: `value (declaredTy : Ty)
+(v : GoValue) | mapPayload (entries) (nextId) | chanPayload (buf)
+(capacity) (closed)` (State.lean); `GoValue.mapData`/`.chanData` are
+deleted (Value.lean), with their `eqbFuel` arms, `GoValue.locSup` arms
+(StateWf), `StateEqb` soundness cases, and the CLI's two observation-JSON
+arms and its `"mapData"` parser arm (neither side of the differential can
+emit one; an unknown tag refuses). `declaredTy` is `Ty`, not `Option Ty`:
+there are no untyped cells — `Stmt.newValue`/`StmtOp.newValue` carry `typ
+: Ty` (the frontend always supplied it; the `Option` was dead generality,
+review A8's item, folded in here because A3 needs it), `ExecState.alloc v
+ty` allocates a value cell, `ExecState.allocCell c` any cell.
+`coerceStoredValue`/`coerceArray`/`coerceStruct` are DELETED: the root
+store always normalizes at the declared type; `arraySet` and
+`buildArrayValue` no longer coerce per element. Payload access is by
+kind: `mapPayload?`/`chanPayload?` read, `storeMapPayload`/
+`storeChanPayload` write WHOLE payloads (the only way they were ever
+written — Machine.lean's map ops, the chan send/recv/close arms, Multi's
+pairing/resume arms, `wakeReady`); `chanCell` is `chanPayload?`;
+`mapEntries`, `mapRangeStartSets`, `mapIterLiveEntries`, `len`/`cap`,
+`mapGet` read through `mapPayload?`. `loadLoc`/`storeLoc` at a payload
+cell REFUSE (`.stuck`, an ill-shaped operand). Every constructor is
+enumerated at every match — no `_`-absorbed arm. [AGENT]
+
+**Recorded design choice: ONE root write path.** All three root stores go
+through `ExecState.updateCell a f` (State.lean): bounds-checked `Array.set`
+under `hi : a.id < heap.size`, `.internal` out of range (BUG-085's ruling
+kept), `f` seeing the old cell. Consequences: `updateCell_shape` (StateWf),
+`updateCell_lookup_ne` and `updateCell_congr` (MachineSound) are proved
+ONCE and `storeLoc_shape`, `storeLoc_root_frame` (NPDRF),
+`storeLoc_congr`, `storeMapPayload_pres`, `storeChanPayload_pres` are
+corollaries — the dependent-match awkwardness A2's `storeLoc_congr` had
+(the `Array.set` proof mentioned the lookup) is gone, because the
+dependency is confined to `updateCell`. [AGENT]
+
+**Why nicer.** "A value no expression may produce" is enforced by the
+type; `valueEq`/`normalize`/`eqb`/`locSup`/`isNormal` each lose the two
+phantom arms; one store discipline (normalize at the declared type — no
+second, shape-directed coercion whose agreement with the first had to be
+argued); points-to for maps/channels is a distinct cell constructor by
+construction (`l ↦ₘ entries`), which is what a channel logic wants.
+
+**Preservation.** (i) Payloads: every payload write was a whole-cell
+`storeLoc s l (.mapData …)`/`(.chanData …)` into an UNTYPED cell, where
+`coerceStoredValue`'s catch-all `| _, value => return value` was the
+identity — exactly `storeMapPayload`/`storeChanPayload`'s effect; every
+payload read matched the loaded value's constructor — exactly
+`mapPayload?`/`chanPayload?`. The map/chan cells and value cells are
+disjoint by allocation (`allocCell` vs `alloc`), so the two paths never
+cross on a reachable state. (ii) `coerceStoredValue` on a TYPED root: the
+root normalize follows it, and on a well-formed cell they compose to the
+root normalize alone — `normalizeValueForTy` at `.int kind` ADOPTS the
+incoming kind (`.int (kind.normalize v) kind`), exactly what the coercion's
+int arm did against the (already normalized, hence declared-kind) old
+element; the float arm's kind check is `normalizeValueForTy`'s own
+kind-strict check; array-length / struct-field mismatches refused in both
+(message text differs — diagnostics on ill-typed stores, unreachable from
+go/types-typed programs). The only untyped value cells were `newValue`s
+with `typ = none`, which the frontend never emitted (the two hand-built
+eval-test programs that relied on the default now state their types).
+Refusal messages at payload sites changed text (`expected map data, got
+value …` vs `expected map data, got …`) — diagnostics, unreachable on
+accepted programs. The differential and the trace are the regression.
+
+**Proof deltas** (arm for arm; tombstones). DELETED: `coerceStoredValue`,
+`coerceArray`, `coerceStruct` (Ops, ~45 lines); `coerceStoredValue_congr`
+(MachineSound, 158 lines) and the now-dangling docstring;
+`coerceStoredValue_locSup'`/`coerceStoredValue_locSup` (StateWf, ~125
+lines); `Heap.lookup_lt` stays (used by nothing but kept as the dense
+heap's bound lemma — it is `updateCell`'s `hi` in spirit). NEW:
+`ExecState.updateCell_shape`, `mapPayload?_locSup`, `chanPayload?_locSup`,
+`storeMapPayload_pres`, `storeChanPayload_pres`, `allocCell_shape`,
+`allocCell_wf` (StateWf); `ExecState.updateCell_lookup_ne`,
+`ExecState.updateCell_congr` (MachineSound). RESTATED: `HeapCell.locSup`
+(three arms), `HeapCell.eqb`/`eqb_sound` (three arms), `alloc_shape`
+(`ty : Ty`; a one-line corollary of `allocCell_shape`), `alloc_wf`,
+`storeLoc_shape` (base case via `updateCell_shape`, ~12 lines, was ~30),
+`storeLoc_congr` (base case 10 lines, was 45), `storeLoc_root_frame` (base
+case 2 lines, was 14), `arraySet_locSup`/`arraySet_congr` (no coercion
+step), `mapEntries_locSup`, `mapRangeStartSets_locSup`,
+`mapIterCandidates_locSup`'s live-entries block, `chanCell_locSup` (one
+line), `loadLoc_locSup`'s base arm, `buildArrayValue_locSup`'s loop body,
+the `lengthOf`/`capacityOf`/`mapGet` arms of `applyStrictOp_wf`, the ten
+channel-store sites in StateWf/MultiWfSound (`storeLoc_pres` →
+`storeChanPayload_pres`; the `rw [show GoValue.locSup (.chanData …) = …
+from rfl]` bridges vanish), the four map-store sites (`storeLoc_pres` →
+`storeMapPayload_pres`), and the makeMap/makeChan cases (`allocCell_wf`/
+`allocCell_shape`). MachineSound's `bindIterVars_ok_of_normal` witnesses
+use `.value vt value`. Net: 17 files, −277 lines (531 added, 808 deleted).
+No lemma weakened.
+
+**Gate.** `scripts/capped scripts/ci --diff` on the A3 tree: RESULT PASS,
+`cases=3284 pass=3085 fail=199`, baseline diff FULL 3284/3284 no
+regression, re-pin guard 0 flips, negative 394/394, eval tests 148/148
+(`transcripts/gate-a3.txt`). Choice-trace vs the pre-series snapshot: every
+consumption column identical on all 19489 (id,stream) lines; ONE row's
+`obsHash` column moved (`stdlib-source/frontier/index-rune-goto`, an
+FR-21 frontier-refusal row, 0 consumptions) — diagnosed in
+`choice-trace/a3-summary.txt`: the row's exported WIRE differs between the
+two runs (the frontend's quarantine-reason string names whichever `goto`
+label its walk meets first — `next` vs `fallback`), and the hash is a
+function of the wire alone (main's binary on the before-wire reproduces
+the before hash; both binaries agree on the A3 wire). Machine delta: 0.
+FINDING, not this lane's to fix (no frontend change in the A-series):
+the native frontend's quarantine reason for multi-label goto shapes is
+export-nondeterministic; recorded for the stdlib lane (a reviewability
+nit — the row's status and its lowering refusal class are stable).
