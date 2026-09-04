@@ -141,8 +141,15 @@ sync-words table cites the probe subjects by name);
    FAIL→PASS flips (the two TryLock frontier reds), NO PASS→non-PASS, no
    other movement; re-pinned to 3278 rows (3078 PASS / 200 FAIL). The
    clean-tip run is `gate-tail.txt`. (Pre-rebase: 3199 → 3216, 17 rows.)
-7. **Consumption invariance.** See `choice-trace/compare.txt` (filled at
-   the end of the run): no pre-existing row's consumption changed.
+7. **Consumption invariance.** Pre-rebase: `choice-trace/compare.txt` —
+   main (c22e367a) vs branch over the 179 shared sync-tagged rows × 6
+   streams: only the two flipped rows differ (they consume one `tryLock`
+   pick per stream); every other (id, stream) line identical. Post-rebase,
+   at the fix-round tip d286ebe1: `choice-trace/trylock-consumers-d286ebe1.txt`
+   — 196 sync-tagged rows × 6 streams, 0 violations / alarms /
+   driver-agreement mismatches, `tryLock=90` consumptions, and the ONLY
+   ids consuming the site are this slice's rows (every held-state row
+   consults at bound 1 and pops nothing).
 
 Provenance: the rulings this directory evidences are the [USER]'s
 (relayed); the probe design, the derived detector table and the spurious-

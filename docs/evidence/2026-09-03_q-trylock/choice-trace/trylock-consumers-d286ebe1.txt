@@ -1,0 +1,19 @@
+# choice-trace over the branch's sync-tagged rows at the fix-round tip d286ebe1 (rebased onto main 221d8964): 196 ids x 6 streams
+# (excluded, spin-to-fuel-cap under random streams: atomics/spin/flag-wait, race/atomics-free/cas-failure-acquires, sync/trylock/spin-until-trylock)
+# validator: 7379 consumptions, 0 menu-invariant violations, 0 alarms, 0 driver-agreement mismatches
+# per-site: consumptions per site (all streams): l1Sched=3970, postOp=2473, backEdge=738, tryLock=90, l5ExitWindow=89, l4Waiter=19
+# ids whose consumption includes the tryLock site (ONLY this slice's rows — every held-state row and failed-trylock-no-edge consult at bound 1 and pop nothing):
+race/free-sync/rw-trylock-publish
+race/free-sync/rw-tryrlock-acquire
+race/free-sync/trylock-publish
+race/negative-sync/overwrite-vs-trylock
+sync/out-of-scope-trylock/trylock-uncontended
+sync/promoted-mutex/trylock-expr
+sync/trylock/defer-trylock
+sync/trylock/discarded-acquires
+sync/trylock/rw-trylock-unlocked
+sync/trylock/rw-tryrlock-pending-writer
+sync/trylock/rw-tryrlock-reader-held
+sync/trylock/rw-tryrlock-unlocked
+sync/trylock/unlock-after-trylock-success
+sync/trylock/unlocked-acquire
