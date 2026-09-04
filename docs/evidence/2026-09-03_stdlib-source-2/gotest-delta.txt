@@ -1,0 +1,21 @@
+# producer: docs/evidence/2026-09-03_stdlib-source-2/README.md (gotest lane); OLD = the stdlib-source-1 lane's artifacts/gotest/results.tsv (its worktree, frontend @ f02cf8e0 = main's stdlib-source-1 train, run 2026-09-03 19:55), NEW = this lane's scripts/gotest-triage run --jobs 6 @ 4176f7f1 (2026-09-04 00:04). Paths repo-relative.
+## category counts OLD
+    637 FRONTEND-REFUSED
+     21 INFRA
+     11 MACHINE-REFUSED
+    344 MATCH
+## category counts NEW
+    635 FRONTEND-REFUSED
+     21 INFRA
+     12 MACHINE-REFUSED
+    345 MATCH
+## files whose OLD refusal named a retired shim/shadow member or a slice-2 package (strings.Join/Repeat, errors.New, bytes., slices., cmp., binary., Builder, Buffer) -> NEW category
+fixedbugs/issue19201.go	FRONTEND-REFUSED -> MATCH	OLD: nativefrontend: native frontend unsupported: stdlib-qualified selector binary.BigEndian in value pos	NEW: status=ok
+fixedbugs/issue24419.go	FRONTEND-REFUSED -> MACHINE-REFUSED	OLD: stdlib-qualified selector bytes.Compare in value position: only allowlisted DIRECT CALLS of modeled 	NEW: wall-clock timeout after 30s (go: ok)
+fixedbugs/issue24547.go	FRONTEND-REFUSED -> FRONTEND-REFUSED	OLD: anonymous non-empty struct type struct{main.deep; *bytes.Buffer}	NEW: anonymous non-empty struct type struct{main.deep; *bytes.Buffer}
+typeparam/orderedmap.go	FRONTEND-REFUSED -> FRONTEND-REFUSED	OLD: stdlib-qualified selector bytes.Compare in value position: only allowlisted DIRECT CALLS of modeled 	NEW: fmt.Sprintf format \
+## MATCH-set delta
+now MATCH: fixedbugs/issue19201.go (was FRONTEND-REFUSED)
+## category transitions (OLD -> NEW), counts
+      1 FRONTEND-REFUSED -> MATCH
+      1 FRONTEND-REFUSED -> MACHINE-REFUSED

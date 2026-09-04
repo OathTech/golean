@@ -1,0 +1,1014 @@
+category	test	detail
+FRONTEND-REFUSED	235.go	builtin println in statement position
+FRONTEND-REFUSED	abi/convF_criteria.go	package-selector call fmt.Println (package \
+FRONTEND-REFUSED	abi/convT64_criteria.go	nativefrontend: native frontend unsupported: anonymous non-empty struct type struct{F0 uint32}
+MATCH	abi/defer_aggregate.go	status=ok
+MATCH	abi/defer_recover_results.go	status=ok
+FRONTEND-REFUSED	abi/double_nested_addressed_struct.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/abi__double_nested_addressed_struct/main.go carries build constraint "//go:build !wasm"
+FRONTEND-REFUSED	abi/double_nested_struct.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/abi__double_nested_struct/main.go carries build constraint "//go:build !wasm" using res
+FRONTEND-REFUSED	abi/fibish_closure.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/abi__fibish_closure/main.go carries build constraint "//go:build !wasm" using reserved 
+FRONTEND-REFUSED	abi/fibish.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/abi__fibish/main.go carries build constraint "//go:build !wasm" using reserved tag "was
+FRONTEND-REFUSED	abi/f_ret_z_not.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/abi__f_ret_z_not/main.go carries build constraint "//go:build !wasm" using reserved tag
+FRONTEND-REFUSED	abi/fuzz_trailing_zero_field.go	nativefrontend: native frontend unsupported: constant kind Complex
+FRONTEND-REFUSED	abi/idata.go	package-selector call big.NewRat (package \
+FRONTEND-REFUSED	abi/leaf2.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/abi__leaf2/main.go carries build constraint "//go:build !wasm" using reserved tag "wasm
+FRONTEND-REFUSED	abi/leaf.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/abi__leaf/main.go carries build constraint "//go:build !wasm" using reserved tag "wasm"
+FRONTEND-REFUSED	abi/many_int_input.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/abi__many_int_input/main.go carries build constraint "//go:build !wasm" using reserved 
+FRONTEND-REFUSED	abi/many_intstar_input.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/abi__many_intstar_input/main.go carries build constraint "//go:build !wasm" using reser
+FRONTEND-REFUSED	abi/map.go	package-selector call runtime.SetFinalizer (package \
+MATCH	abi/method_wrapper.go	status=ok
+FRONTEND-REFUSED	abi/more_intstar_input.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/abi__more_intstar_input/main.go carries build constraint "//go:build !wasm" using reser
+FRONTEND-REFUSED	abi/named_results.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/abi__named_results/main.go carries build constraint "//go:build !wasm" using reserved t
+FRONTEND-REFUSED	abi/named_return_stuff.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/abi__named_return_stuff/main.go carries build constraint "//go:build !wasm" using reser
+FRONTEND-REFUSED	abi/open_defer_1.go	method main.T.M (builtin println in statement position; satisfaction answers, calls fail closed)
+FRONTEND-REFUSED	abi/part_live_2.go	basic type unsafe.Pointer
+FRONTEND-REFUSED	abi/part_live.go	basic type unsafe.Pointer
+FRONTEND-REFUSED	abi/reg_not_ssa.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/abi__reg_not_ssa/main.go carries build constraint "//go:build !wasm" using reserved tag
+MATCH	abi/result_regalloc.go	status=ok
+FRONTEND-REFUSED	abi/return_stuff.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/abi__return_stuff/main.go carries build constraint "//go:build !wasm" using reserved ta
+FRONTEND-REFUSED	abi/spills3.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/abi__spills3/main.go carries build constraint "//go:build !wasm" using reserved tag "wa
+FRONTEND-REFUSED	abi/spills4.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/abi__spills4/main.go carries build constraint "//go:build !wasm" using reserved tag "wa
+FRONTEND-REFUSED	abi/s_sif_sif.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/abi__s_sif_sif/main.go carries build constraint "//go:build !wasm" using reserved tag "
+MATCH	abi/store_reg_args.go	status=ok
+FRONTEND-REFUSED	abi/struct_3_string_input.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/abi__struct_3_string_input/main.go carries build constraint "//go:build !wasm" using re
+FRONTEND-REFUSED	abi/struct_lower_1.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/abi__struct_lower_1/main.go carries build constraint "//go:build !wasm" using reserved 
+FRONTEND-REFUSED	abi/too_big_to_ssa.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/abi__too_big_to_ssa/main.go carries build constraint "//go:build !wasm" using reserved 
+FRONTEND-REFUSED	abi/uglyfib.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/abi__uglyfib/main.go carries build constraint "//go:build !wasm" using reserved tag "wa
+FRONTEND-REFUSED	abi/wrapdefer_largetmp.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/abi__wrapdefer_largetmp/main.go carries build constraint "//go:build !wasm" using reser
+MATCH	abi/zombie_struct_select.go	status=ok
+MATCH	alias1.go	status=ok
+MATCH	align.go	status=ok
+FRONTEND-REFUSED	append.go	nativefrontend: native frontend unsupported: anonymous non-empty struct type struct{name string; result interface{}; expected interface{}}
+MATCH	armimm.go	status=ok
+MACHINE-REFUSED	atomicload.go	wall-clock timeout after 30s (go: ok)
+FRONTEND-REFUSED	bigalg.go	builtin println in statement position
+FRONTEND-REFUSED	bigmap.go	builtin println in statement position
+FRONTEND-REFUSED	blank.go	nativefrontend: native frontend unsupported: anonymous non-empty struct type struct{a int; b int; c int}
+FRONTEND-REFUSED	chancap.go	nativefrontend: native frontend unsupported: unsafe.Sizeof at artifactsits folded value is gc's IMPLEMENTATION-SPECIFIC memory layout (spec#Size_and_alignment_g
+FRONTEND-REFUSED	chan/doubleselect.go	nativefrontend: native frontend unsupported: package-selector call flag.Int (package "flag" surface not modeled)
+FRONTEND-REFUSED	chan/fifo.go	builtin print in statement position
+FRONTEND-REFUSED	chan/goroutines.go	stdlib-qualified selector os.Args in value position: only allowlisted DIRECT CALLS of modeled stdlib members lower (E5 shims / fmt desugar); the value shape is 
+FRONTEND-REFUSED	chanlinear.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/chanlinear/main.go carries build constraint "//go:build darwin || linux" using reserved
+FRONTEND-REFUSED	chan/nonblock.go	nativefrontend: native frontend unsupported: package-selector call time.Tick (package "time" surface not modeled)
+FRONTEND-REFUSED	chan/powser1.go	stdlib-qualified selector os.Args in value position: only allowlisted DIRECT CALLS of modeled stdlib members lower (E5 shims / fmt desugar); the value shape is 
+FRONTEND-REFUSED	chan/powser2.go	stdlib-qualified selector os.Args in value position: only allowlisted DIRECT CALLS of modeled stdlib members lower (E5 shims / fmt desugar); the value shape is 
+FRONTEND-REFUSED	chan/select2.go	field address on anonymous struct type invalid type
+FRONTEND-REFUSED	chan/select3.go	builtin println in statement position
+FRONTEND-REFUSED	chan/select4.go	anonymous non-empty struct type struct{a int}
+MATCH	chan/select6.go	status=ok
+FRONTEND-REFUSED	chan/select7.go	package-selector call runtime.Gosched (package \
+MATCH	chan/select8.go	status=ok
+FRONTEND-REFUSED	chan/select.go	builtin println in statement position
+MATCH	chan/sendstmt.go	status=ok
+FRONTEND-REFUSED	chan/sieve1.go	builtin println in statement position
+FRONTEND-REFUSED	chan/sieve2.go	builtin println in statement position
+MATCH	chan/zerosize.go	status=ok
+FRONTEND-REFUSED	char_lit.go	builtin print in statement position
+FRONTEND-REFUSED	clear.go	package-selector call math.NaN (package \
+FRONTEND-REFUSED	closedchan.go	nativefrontend: native frontend unsupported: package initialization reaches quarantined function testasync1 (builtin println in statement position)
+MATCH	closure1.go	status=ok
+FRONTEND-REFUSED	closure2.go	range assignment to non-identifier target (operands evaluate per iteration)
+MATCH	closure4.go	status=ok
+MATCH	closure7.go	status=ok
+FRONTEND-REFUSED	closure.go	package-selector call runtime.GOMAXPROCS (package \
+FRONTEND-REFUSED	cmp.go	package-selector call os.Getenv (package \
+MATCH	complit.go	status=ok
+MATCH	compos.go	status=ok
+FRONTEND-REFUSED	const3.go	builtin println in statement position
+FRONTEND-REFUSED	const4.go	nativefrontend: native frontend unsupported: anonymous non-empty struct type struct{a [10]int}
+FRONTEND-REFUSED	const7.go	package-selector call ioutil.TempDir (package \
+FRONTEND-REFUSED	const8.go	builtin println in statement position
+FRONTEND-REFUSED	const.go	package-selector call os.Getenv (package \
+MACHINE-REFUSED	convert4.go	{"message":"package init: slice-to-array-pointer conversion (aliasing view over slice storage; triage L2b frontier)","schema":"golean-observation-v1","status":"unsupported"} (go: ok)
+FRONTEND-REFUSED	convert.go	builtin println in statement position
+FRONTEND-REFUSED	convT2X.go	nativefrontend: native frontend unsupported: basic type complex128
+FRONTEND-REFUSED	copy.go	package-selector call fmt.Printf (package \
+FRONTEND-REFUSED	ddd.go	builtin println in statement position
+FRONTEND-REFUSED	decl.go	builtin println in statement position
+FRONTEND-REFUSED	deferfin.go	package-selector call runtime.SetFinalizer (package \
+FRONTEND-REFUSED	defer.go	package-selector call fmt.Printf (package \
+MATCH	defernil.go	status=ok
+FRONTEND-REFUSED	deferprint.go	defer of builtin println
+FRONTEND-REFUSED	devirtualization_nil_panics.go	fmt.Sprintf verb %s over an argument of type interface{} is outside the modeled verb/kind matrix (format \
+FRONTEND-REFUSED	divide.go	package-selector call fmt.Printf (package \
+FRONTEND-REFUSED	divmod.go	builtin println in statement position
+MATCH	dwarf/linedirectives.go	status=ok
+FRONTEND-REFUSED	env.go	package-selector call os.Getenv (package \
+MATCH	escape3.go	status=ok
+FRONTEND-REFUSED	escape.go	builtin println in statement position
+FRONTEND-REFUSED	finprofiled.go	nativefrontend: native frontend unsupported: unsafe.Sizeof at artifactsits folded value is gc's IMPLEMENTATION-SPECIFIC memory layout (spec#Size_and_alignment_g
+MATCH	fixedbugs/bug000.go	status=ok
+MATCH	fixedbugs/bug002.go	status=ok
+MATCH	fixedbugs/bug003.go	status=ok
+MATCH	fixedbugs/bug004.go	status=ok
+MATCH	fixedbugs/bug005.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug006.go	builtin print in statement position
+MATCH	fixedbugs/bug007.go	status=ok
+MATCH	fixedbugs/bug008.go	status=ok
+MATCH	fixedbugs/bug009.go	status=ok
+MATCH	fixedbugs/bug010.go	status=ok
+MATCH	fixedbugs/bug011.go	status=ok
+MATCH	fixedbugs/bug012.go	status=ok
+MATCH	fixedbugs/bug013.go	status=ok
+MATCH	fixedbugs/bug017.go	status=ok
+MATCH	fixedbugs/bug021.go	status=ok
+MATCH	fixedbugs/bug023.go	status=ok
+MATCH	fixedbugs/bug024.go	status=ok
+MATCH	fixedbugs/bug026.go	status=ok
+MATCH	fixedbugs/bug027.go	status=ok
+MATCH	fixedbugs/bug028.go	status=ok
+MATCH	fixedbugs/bug031.go	status=ok
+MATCH	fixedbugs/bug045.go	status=ok
+MATCH	fixedbugs/bug047.go	status=ok
+MATCH	fixedbugs/bug048.go	status=ok
+MATCH	fixedbugs/bug052.go	status=ok
+MATCH	fixedbugs/bug053.go	status=ok
+MATCH	fixedbugs/bug054.go	status=ok
+MATCH	fixedbugs/bug055.go	status=ok
+MATCH	fixedbugs/bug056.go	status=ok
+MATCH	fixedbugs/bug058.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug059.go	package-selector call os.Exit (package \
+FRONTEND-REFUSED	fixedbugs/bug060.go	builtin print in statement position
+MATCH	fixedbugs/bug061.go	status=ok
+MATCH	fixedbugs/bug065.go	status=ok
+MATCH	fixedbugs/bug067.go	status=ok
+MATCH	fixedbugs/bug070.go	status=ok
+MATCH	fixedbugs/bug075.go	status=ok
+MATCH	fixedbugs/bug078.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug082.go	builtin println in statement position
+MATCH	fixedbugs/bug084.go	status=ok
+MATCH	fixedbugs/bug092.go	status=ok
+MATCH	fixedbugs/bug093.go	status=ok
+MATCH	fixedbugs/bug097.go	status=ok
+MATCH	fixedbugs/bug099.go	status=ok
+MATCH	fixedbugs/bug101.go	status=ok
+MATCH	fixedbugs/bug102.go	status=ok
+MATCH	fixedbugs/bug111.go	status=ok
+MATCH	fixedbugs/bug113.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug114.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/bug116.go	builtin println in statement position
+MATCH	fixedbugs/bug119.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug120.go	builtin println in statement position
+MATCH	fixedbugs/bug128.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug130.go	package-selector call os.Exit (package \
+FRONTEND-REFUSED	fixedbugs/bug141.go	builtin println in statement position
+MATCH	fixedbugs/bug142.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug147.go	package-selector call time.Sleep (package \
+FRONTEND-REFUSED	fixedbugs/bug148.go	nativefrontend: native frontend unsupported: duplicate TypeId main.T (a function-local type collides with another declaration)
+MATCH	fixedbugs/bug1515.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug152.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/bug154.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/bug159.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/bug168.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/bug177.go	package-selector call reflect.TypeOf (package \
+FRONTEND-REFUSED	fixedbugs/bug178.go	goto target label L1 not at function body top level
+FRONTEND-REFUSED	fixedbugs/bug180.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/bug184.go	fmt.Sprintf with a non-constant format string is outside the modeled subset (the verb/kind pairing is checked at emit time)
+FRONTEND-REFUSED	fixedbugs/bug185.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/bug187.go	builtin println in statement position
+MATCH	fixedbugs/bug19403.go	status=ok
+MATCH	fixedbugs/bug194.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug196.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/bug199.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/bug201.go	builtin println in statement position
+MATCH	fixedbugs/bug202.go	status=ok
+MATCH	fixedbugs/bug203.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug204.go	builtin println in statement position
+MACHINE-REFUSED	fixedbugs/bug206.go	{"message":"default value for imported named type go/token.Pos","schema":"golean-observation-v1","status":"unsupported"} (go: ok)
+FRONTEND-REFUSED	fixedbugs/bug207.go	golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time — the bound's text is at the shim call site. Unrecoverable
+FRONTEND-REFUSED	fixedbugs/bug221.go	builtin println in statement position
+MATCH	fixedbugs/bug225.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug227.go	builtin println in statement position
+MATCH	fixedbugs/bug230.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug234.go	builtin println in statement position
+MATCH	fixedbugs/bug236.go	status=ok
+MATCH	fixedbugs/bug237.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug242.go	builtin println in statement position
+MATCH	fixedbugs/bug243.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug244.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/bug246.go	basic type unsafe.Pointer
+FRONTEND-REFUSED	fixedbugs/bug247.go	builtin println in statement position
+MATCH	fixedbugs/bug253.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug254.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/bug257.go	package-selector call md5.New (package \
+FRONTEND-REFUSED	fixedbugs/bug258.go	builtin println in statement position
+MATCH	fixedbugs/bug259.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug260.go	stdlib-qualified selector os.Args in value position: only allowlisted DIRECT CALLS of modeled stdlib members lower (E5 shims / fmt desugar); the value shape is 
+FRONTEND-REFUSED	fixedbugs/bug261.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/bug262.go	map element as assignment target outside a single assignment
+MATCH	fixedbugs/bug263.go	status=ok
+MATCH	fixedbugs/bug264.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug265.go	package-selector call os.Exit (package \
+MATCH	fixedbugs/bug266.go	status=ok
+MATCH	fixedbugs/bug269.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug271.go	multi-value expression hoisted as a single value ((int, int)) — no tuple type exists on the wire
+FRONTEND-REFUSED	fixedbugs/bug272.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/bug273.go	nativefrontend: native frontend unsupported: unsafe.Sizeof at artifactsits folded value is gc's IMPLEMENTATION-SPECIFIC memory layout (spec#Size_and_alignment_g
+MATCH	fixedbugs/bug276.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug279.go	nativefrontend: native frontend unsupported: unsafe.Sizeof at artifactsits folded value is gc's IMPLEMENTATION-SPECIFIC memory layout (spec#Size_and_alignment_g
+FRONTEND-REFUSED	fixedbugs/bug281.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/bug285.go	anonymous non-empty struct type struct{x int}
+FRONTEND-REFUSED	fixedbugs/bug286.go	builtin println in statement position
+MATCH	fixedbugs/bug290.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug291.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/bug292.go	nativefrontend: native frontend unsupported: unsafe.Offsetof at artifactsits folded value is gc's IMPLEMENTATION-SPECIFIC memory layout (spec#Size_and_alignment
+FRONTEND-REFUSED	fixedbugs/bug293.go	builtin println in statement position
+MATCH	fixedbugs/bug294.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug295.go	nativefrontend: native frontend unsupported: anonymous non-empty struct type struct{n uint64; i uint64; done bool}
+FRONTEND-REFUSED	fixedbugs/bug296.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/bug303.go	package-selector call io.ReadFull (package \
+MATCH	fixedbugs/bug311.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug312.go	builtin println in statement position
+MATCH	fixedbugs/bug314.go	status=ok
+MATCH	fixedbugs/bug317.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug320.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/bug321.go	package-selector call fmt.Println (package \
+MATCH	fixedbugs/bug327.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug328.go	basic type unsafe.Pointer
+FRONTEND-REFUSED	fixedbugs/bug329.go	nativefrontend: native frontend unsupported: basic type complex128
+FRONTEND-REFUSED	fixedbugs/bug331.go	nativefrontend: native frontend unsupported: package initialization reaches quarantined function g (stdlib-qualified selector io.EOF in value position: only all
+MATCH	fixedbugs/bug333.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug336.go	nativefrontend: native frontend unsupported: anonymous non-empty struct type struct{y ***struct{z *struct{Next *main.T11}}}
+FRONTEND-REFUSED	fixedbugs/bug339.go	nativefrontend: native frontend unsupported: unsafe.Sizeof at artifactsits folded value is gc's IMPLEMENTATION-SPECIFIC memory layout (spec#Size_and_alignment_g
+MACHINE-REFUSED	fixedbugs/bug341.go	{"message":"float-to-int conversion out of range/NaN (implementation-dependent in Go)","schema":"golean-observation-v1","status":"unsupported"} (go: ok)
+FRONTEND-REFUSED	fixedbugs/bug343.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/bug346.go	builtin println in statement position
+INFRA	fixedbugs/bug347.go	go output != expected .out on the pinned toolchain: BUG: bug347: cannot find caller
+FRONTEND-REFUSED	fixedbugs/bug348.go	package-selector call runtime.Caller (package \
+FRONTEND-REFUSED	fixedbugs/bug352.go	builtin println in statement position
+MATCH	fixedbugs/bug355.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug356.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/bug364.go	builtin println in statement position
+MATCH	fixedbugs/bug366.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug368.go	builtin println in statement position
+INFRA	fixedbugs/bug369.go	go run exited 1 without panic/fatal: chdir fixedbugs/bug369.dir: no such file or directory\nexit status 1
+FRONTEND-REFUSED	fixedbugs/bug370.go	package-selector call runtime.GOMAXPROCS (package \
+FRONTEND-REFUSED	fixedbugs/bug372.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/bug375.go	builtin println in statement position
+MATCH	fixedbugs/bug378.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug401.go	nativefrontend: native frontend unsupported: method main.T.cplx is unsupported (basic type complex128) and its own SIGNATURE does not lower either (native front
+MATCH	fixedbugs/bug402.go	status=ok
+MATCH	fixedbugs/bug405.go	status=ok
+MATCH	fixedbugs/bug406.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug409.go	builtin println in statement position
+MATCH	fixedbugs/bug423.go	status=ok
+MATCH	fixedbugs/bug428.go	status=ok
+MATCH	fixedbugs/bug433.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug434.go	package-selector call math.Float64bits (package \
+MATCH	fixedbugs/bug436.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug440_32.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/bug440_64.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/bug441.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/bug442.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/bug444.go	package-selector call reflect.TypeOf (package \
+MATCH	fixedbugs/bug446.go	status=ok
+MATCH	fixedbugs/bug450.go	status=ok
+MATCH	fixedbugs/bug452.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug453.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/bug454.go	builtin println in statement position
+MATCH	fixedbugs/bug455.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug456.go	builtin println in statement position
+MATCH	fixedbugs/bug457.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug461.go	nativefrontend: native frontend unsupported: anonymous non-empty struct type struct{int}
+FRONTEND-REFUSED	fixedbugs/bug470.go	fmt.Sprintf format \
+MATCH	fixedbugs/bug473.go	status=ok
+MATCH	fixedbugs/bug474.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug483.go	anonymous non-empty struct type struct{x interface{}; y interface{}}
+FRONTEND-REFUSED	fixedbugs/bug484.go	package-selector call runtime.GC (package \
+MATCH	fixedbugs/bug485.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug491.go	builtin println in statement position
+MATCH	fixedbugs/bug494.go	status=ok
+MATCH	fixedbugs/bug497.go	status=ok
+MATCH	fixedbugs/bug498.go	status=ok
+MATCH	fixedbugs/bug499.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug500.go	nativefrontend: native frontend unsupported: anonymous non-empty struct type struct{str string}
+MATCH	fixedbugs/bug501.go	status=ok
+MATCH	fixedbugs/bug512.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug514.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/fixedbugs__bug514/main.go carries build constraint "//go:build cgo" using reserved tag 
+FRONTEND-REFUSED	fixedbugs/bug517.go	nativefrontend: native frontend unsupported: unsafe.Sizeof at artifactsits folded value is gc's IMPLEMENTATION-SPECIFIC memory layout (spec#Size_and_alignment_g
+MATCH	fixedbugs/gcc61258.go	status=ok
+FRONTEND-REFUSED	fixedbugs/gcc65755.go	method main.S1.Fix (package-selector call reflect.TypeOf (package \
+MATCH	fixedbugs/issue10135.go	status=ok
+MATCH	fixedbugs/issue10253.go	status=ok
+MATCH	fixedbugs/issue10320.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue10332.go	package-selector call reflect.ValueOf (package \
+FRONTEND-REFUSED	fixedbugs/issue10353.go	builtin print in statement position
+FRONTEND-REFUSED	fixedbugs/issue10486.go	package-selector call runtime.Callers (package \
+INFRA	fixedbugs/issue10607.go	go run exited 1 without panic/fatal: BUG: linkmode=internal exit status 1\nstat fixedbugs/issue10607a.go: no such file or directory\n\nexit status 1
+FRONTEND-REFUSED	fixedbugs/issue10925.go	package-selector call fmt.Println (package \
+FRONTEND-REFUSED	fixedbugs/issue11256.go	package-selector call runtime.GOMAXPROCS (package \
+FRONTEND-REFUSED	fixedbugs/issue11286.go	package-selector call runtime.GC (package \
+FRONTEND-REFUSED	fixedbugs/issue11326b.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/fixedbugs__issue11326b/main.go carries build constraint "//go:build !gccgo" using reser
+MATCH	fixedbugs/issue11369.go	status=ok
+INFRA	fixedbugs/issue11771.go	entry-point shim: no single provably-renameable 'func main()' declaration
+FRONTEND-REFUSED	fixedbugs/issue11945.go	nativefrontend: native frontend unsupported: anonymous non-empty struct type struct{code string; got interface{}; want interface{}}
+FRONTEND-REFUSED	fixedbugs/issue11987.go	package-selector call fmt.Printf (package \
+MATCH	fixedbugs/issue12108.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue12133.go	package-selector call fmt.Println (package \
+FRONTEND-REFUSED	fixedbugs/issue12226.go	package-selector call fmt.Println (package \
+FRONTEND-REFUSED	fixedbugs/issue12411.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/fixedbugs__issue12411/main.go carries build constraint "//go:build !386" using reserved
+FRONTEND-REFUSED	fixedbugs/issue12577.go	package-selector call math.Signbit (package \
+FRONTEND-REFUSED	fixedbugs/issue12621.go	package-selector call math.Signbit (package \
+FRONTEND-REFUSED	fixedbugs/issue1304.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue13160.go	package-selector call runtime.NumCPU (package \
+FRONTEND-REFUSED	fixedbugs/issue13162.go	package-selector call fmt.Printf (package \
+MACHINE-REFUSED	fixedbugs/issue13169.go	wall-clock timeout after 30s (go: ok)
+FRONTEND-REFUSED	fixedbugs/issue13171.go	fmt.Sprintf format \
+FRONTEND-REFUSED	fixedbugs/issue13268.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/fixedbugs__issue13268/main.go carries build constraint "//go:build gc" using reserved t
+MATCH	fixedbugs/issue13684.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue14553.go	anonymous non-empty struct type struct{value float32; bits uint32}
+FRONTEND-REFUSED	fixedbugs/issue14591.go	package-selector call fmt.Printf (package \
+FRONTEND-REFUSED	fixedbugs/issue14636.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/fixedbugs__issue14636/main.go carries build constraint "//go:build !nacl && !js && !was
+FRONTEND-REFUSED	fixedbugs/issue14646.go	package-selector call runtime.Caller (package \
+FRONTEND-REFUSED	fixedbugs/issue14651.go	package-selector call math.Float32bits (package \
+MATCH	fixedbugs/issue14725.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue15002.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/fixedbugs__issue15002/main.go carries build constraint "//go:build amd64 && (linux || d
+MATCH	fixedbugs/issue15039.go	status=ok
+MATCH	fixedbugs/issue15042.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue15175.go	package-selector call fmt.Printf (package \
+MATCH	fixedbugs/issue15252.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue15277.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/fixedbugs__issue15277/main.go carries build constraint "//go:build amd64" using reserve
+FRONTEND-REFUSED	fixedbugs/issue15281.go	package-selector call runtime.GC (package \
+FRONTEND-REFUSED	fixedbugs/issue15303.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue15329.go	nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[reflect.StructField]
+FRONTEND-REFUSED	fixedbugs/issue15439.go	anonymous non-empty struct type struct{x int}
+FRONTEND-REFUSED	fixedbugs/issue15528.go	nativefrontend: native frontend unsupported: anonymous non-empty struct type struct{x interface{}; s string}
+FRONTEND-REFUSED	fixedbugs/issue15550.go	nativefrontend: native frontend unsupported: unsafe.Sizeof at artifactsits folded value is gc's IMPLEMENTATION-SPECIFIC memory layout (spec#Size_and_alignment_g
+MATCH	fixedbugs/issue15902.go	status=ok
+MATCH	fixedbugs/issue15975.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue15992.go	copy with 1 arguments
+FRONTEND-REFUSED	fixedbugs/issue16016.go	package-selector call time.Sleep (package \
+INFRA	fixedbugs/issue16037_run.go	entry-point shim: no single provably-renameable 'func main()' declaration
+FRONTEND-REFUSED	fixedbugs/issue16095.go	package-selector call fmt.Printf (package \
+FRONTEND-REFUSED	fixedbugs/issue16130.go	fmt.Sprintf format \
+MACHINE-REFUSED	fixedbugs/issue16249.go	wall-clock timeout after 30s (go: ok)
+FRONTEND-REFUSED	fixedbugs/issue16331.go	nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[reflect.StructField]
+FRONTEND-REFUSED	fixedbugs/issue16515.go	anonymous non-empty struct type struct{a main.T; b [8130]int}
+MATCH	fixedbugs/issue16760.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue16870.go	channel receive into interface-typed target
+MATCH	fixedbugs/issue16948.go	status=ok
+MATCH	fixedbugs/issue16985.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue17039.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue17381.go	nativefrontend: native frontend unsupported: unsafe.Sizeof at artifactsits folded value is gc's IMPLEMENTATION-SPECIFIC memory layout (spec#Size_and_alignment_g
+FRONTEND-REFUSED	fixedbugs/issue17640.go	package-selector call fmt.Printf (package \
+MATCH	fixedbugs/issue17752.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue18149.go	package-selector call runtime.Caller (package \
+MATCH	fixedbugs/issue18410.go	status=ok
+MATCH	fixedbugs/issue18595.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue18636.go	wire-decode: {"message":"/home/dev/projects/golean/.claude/worktrees/stdlib-source-2/artifacts/gotest/cases/fixedbugs__issue18636/wire.json: native lowering: array type of 1048576 elements exceeds the interpreter's materialization budget (65536 elements; BUG-078 idealization boundary) at program.funcs[0].body.bo
+FRONTEND-REFUSED	fixedbugs/issue18661.go	nativefrontend: native frontend unsupported: anonymous non-empty struct type struct{a *int}
+FRONTEND-REFUSED	fixedbugs/issue18725.go	package-selector call os.Exit (package \
+MATCH	fixedbugs/issue18808.go	status=ok
+MATCH	fixedbugs/issue18906.go	status=ok
+MATCH	fixedbugs/issue18994.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue19040.go	package-selector call fmt.Printf (package \
+FRONTEND-REFUSED	fixedbugs/issue19078.go	basic type unsafe.Pointer
+FRONTEND-REFUSED	fixedbugs/issue19113.go	nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[reflect.StructField]
+FRONTEND-REFUSED	fixedbugs/issue19182.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/fixedbugs__issue19182/main.go carries build constraint "//go:build !js && !wasip1" usin
+MATCH	fixedbugs/issue19201.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue19246.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue19275.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue19359.go	fmt.Errorf verb %v over an argument of type interface{} is outside the modeled verb/kind matrix (format \
+INFRA	fixedbugs/issue19658.go	entry-point shim: no single provably-renameable 'func main()' declaration
+FRONTEND-REFUSED	fixedbugs/issue19710.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue19799.go	package-selector call runtime.Callers (package \
+MATCH	fixedbugs/issue19911.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue20029.go	package-selector call runtime.GC (package \
+FRONTEND-REFUSED	fixedbugs/issue20530.go	builtin println in statement position
+MATCH	fixedbugs/issue20811.go	status=ok
+MATCH	fixedbugs/issue21048.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue21221.go	basic type unsafe.Pointer
+INFRA	fixedbugs/issue21317.go	entry-point shim: no single provably-renameable 'func main()' declaration
+INFRA	fixedbugs/issue21576.go	entry-point shim: no single provably-renameable 'func main()' declaration
+FRONTEND-REFUSED	fixedbugs/issue21687.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue21808.go	package-selector call fmt.Println (package \
+INFRA	fixedbugs/issue21879.go	go output != expected .out on the pinned toolchain: main.gotestMain\nmain.gotestMain
+FRONTEND-REFUSED	fixedbugs/issue21887.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue21963.go	package-selector call runtime.GC (package \
+FRONTEND-REFUSED	fixedbugs/issue22083.go	package-selector call debug.Stack (package \
+FRONTEND-REFUSED	fixedbugs/issue22326.go	nativefrontend: native frontend unsupported: package initialization reaches quarantined function f (builtin print in statement position)
+FRONTEND-REFUSED	fixedbugs/issue22605.go	package-selector call reflect.ArrayOf (package \
+FRONTEND-REFUSED	fixedbugs/issue22660.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/fixedbugs__issue22660/main.go carries build constraint "//go:build !js && !wasip1 && gc
+FRONTEND-REFUSED	fixedbugs/issue22662b.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/fixedbugs__issue22662b/main.go carries build constraint "//go:build !js && !wasip1 && g
+FRONTEND-REFUSED	fixedbugs/issue22662.go	package-selector call runtime.Caller (package \
+FRONTEND-REFUSED	fixedbugs/issue22683.go	package-selector call fmt.Println (package \
+FRONTEND-REFUSED	fixedbugs/issue22781.go	package-selector call debug.SetGCPercent (package \
+FRONTEND-REFUSED	fixedbugs/issue22881.go	package-selector call fmt.Printf (package \
+FRONTEND-REFUSED	fixedbugs/issue23017.go	nativefrontend: native frontend unsupported: map element as assignment target outside a single assignment
+MATCH	fixedbugs/issue23188.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue23305.go	builtin println in statement position
+MATCH	fixedbugs/issue23489.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue23522.go	builtin println in statement position
+MATCH	fixedbugs/issue23536.go	status=ok
+MATCH	fixedbugs/issue23545.go	status=ok
+MATCH	fixedbugs/issue23546.go	status=ok
+MATCH	fixedbugs/issue23719.go	status=ok
+MATCH	fixedbugs/issue23734.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue23812.go	fmt.Sprintf verb %x over an argument of type int32 is outside the modeled verb/kind matrix (format \
+MATCH	fixedbugs/issue23814.go	status=ok
+MATCH	fixedbugs/issue23837.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue24187.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/fixedbugs__issue24187/main.go carries build constraint "//go:build amd64p32" using rese
+MACHINE-REFUSED	fixedbugs/issue24419.go	wall-clock timeout after 30s (go: ok)
+MATCH	fixedbugs/issue24449.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue24488.go	method main.Func.Bar (package-selector call runtime.Stack (package \
+FRONTEND-REFUSED	fixedbugs/issue24491a.go	basic type unsafe.Pointer
+FRONTEND-REFUSED	fixedbugs/issue24491b.go	basic type unsafe.Pointer
+MATCH	fixedbugs/issue24503.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue24547.go	anonymous non-empty struct type struct{main.deep; *bytes.Buffer}
+MATCH	fixedbugs/issue24763.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue24799.go	package-selector call fmt.Printf (package \
+FRONTEND-REFUSED	fixedbugs/issue24817.go	package-selector call os.Exit (package \
+MATCH	fixedbugs/issue24937.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue25322.go	package-selector call fmt.Printf (package \
+FRONTEND-REFUSED	fixedbugs/issue25776.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue25897a.go	package-selector call runtime.GOMAXPROCS (package \
+FRONTEND-REFUSED	fixedbugs/issue25897b.go	package-selector call runtime.GOMAXPROCS (package \
+FRONTEND-REFUSED	fixedbugs/issue26094.go	nativefrontend: native frontend unsupported: duplicate TypeId main.T (a function-local type collides with another declaration)
+MATCH	fixedbugs/issue26097.go	status=ok
+MATCH	fixedbugs/issue26116.go	status=ok
+MATCH	fixedbugs/issue26153.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue2615.go	builtin print in statement position
+FRONTEND-REFUSED	fixedbugs/issue26248.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue26335.go	package-selector call reflect.ValueOf (package \
+MATCH	fixedbugs/issue26407.go	status=ok
+INFRA	fixedbugs/issue26411.go	entry-point shim: no single provably-renameable 'func main()' declaration
+MATCH	fixedbugs/issue26426.go	status=ok
+MATCH	fixedbugs/issue26438.go	status=ok
+MATCH	fixedbugs/issue26495.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue27201.go	package-selector call runtime.Stack (package \
+MATCH	fixedbugs/issue27278.go	status=ok
+MATCH	fixedbugs/issue27289.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue27518a.go	package-selector call runtime.GC (package \
+FRONTEND-REFUSED	fixedbugs/issue27518b.go	package-selector call runtime.SetFinalizer (package \
+FRONTEND-REFUSED	fixedbugs/issue27695b.go	nativefrontend: native frontend unsupported: basic type unsafe.Pointer
+FRONTEND-REFUSED	fixedbugs/issue27695c.go	nativefrontend: native frontend unsupported: basic type unsafe.Pointer
+FRONTEND-REFUSED	fixedbugs/issue27695.go	nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[reflect.StructField]
+MATCH	fixedbugs/issue27718.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue27829.go	package-selector call fmt.Printf (package \
+FRONTEND-REFUSED	fixedbugs/issue27961.go	method main.Vec2.D (package-selector call math.Sqrt (package \
+FRONTEND-REFUSED	fixedbugs/issue28390.go	package-selector call fmt.Println (package \
+FRONTEND-REFUSED	fixedbugs/issue28748.go	fmt.Sprintf verb %s over an argument of type interface{} is outside the modeled verb/kind matrix (format \
+FRONTEND-REFUSED	fixedbugs/issue28797.go	package-selector call fmt.Println (package \
+MATCH	fixedbugs/issue29013a.go	status=ok
+MATCH	fixedbugs/issue29013b.go	status=ok
+MACHINE-REFUSED	fixedbugs/issue29190.go	wall-clock timeout after 30s (go: ok)
+FRONTEND-REFUSED	fixedbugs/issue29264.go	package-selector call fmt.Printf (package \
+MATCH	fixedbugs/issue29304.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue29312.go	golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time — the bound's text is at the shim call site. Unrecoverable
+FRONTEND-REFUSED	fixedbugs/issue29362b.go	nativefrontend: native frontend unsupported: basic type unsafe.Pointer
+FRONTEND-REFUSED	fixedbugs/issue29362.go	nativefrontend: native frontend unsupported: basic type unsafe.Pointer
+MATCH	fixedbugs/issue29402.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue29504.go	package-selector call runtime.Callers (package \
+FRONTEND-REFUSED	fixedbugs/issue29735.go	package-selector call runtime.Callers (package \
+MATCH	fixedbugs/issue29943.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue30041.go	nativefrontend: native frontend unsupported: basic type unsafe.Pointer
+FRONTEND-REFUSED	fixedbugs/issue30116.go	package-selector call tabwriter.NewWriter (package \
+FRONTEND-REFUSED	fixedbugs/issue30116u.go	package-selector call tabwriter.NewWriter (package \
+FRONTEND-REFUSED	fixedbugs/issue30243.go	package-selector call fmt.Printf (package \
+FRONTEND-REFUSED	fixedbugs/issue30476.go	package-selector call runtime.SetFinalizer (package \
+MATCH	fixedbugs/issue30566a.go	status=ok
+MATCH	fixedbugs/issue30566b.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue30606b.go	nativefrontend: native frontend unsupported: package-selector call reflect.ArrayOf (package "reflect" surface not modeled)
+FRONTEND-REFUSED	fixedbugs/issue30606.go	nativefrontend: native frontend unsupported: package-selector call reflect.New (package "reflect" surface not modeled)
+FRONTEND-REFUSED	fixedbugs/issue30709.go	nativefrontend: native frontend unsupported: unsafe.Sizeof at artifactsits folded value is gc's IMPLEMENTATION-SPECIFIC memory layout (spec#Size_and_alignment_g
+FRONTEND-REFUSED	fixedbugs/issue30956.go	anonymous non-empty struct type struct{A int}
+FRONTEND-REFUSED	fixedbugs/issue30977.go	package-selector call runtime.GC (package \
+FRONTEND-REFUSED	fixedbugs/issue31419.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue31546.go	nativefrontend: native frontend unsupported: anonymous non-empty struct type struct{a int; _ int; c int}
+FRONTEND-REFUSED	fixedbugs/issue31782.go	builtin println in statement position
+MATCH	fixedbugs/issue31987.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue32175.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue32187.go	anonymous non-empty struct type struct{name string; errStr string; f func()}
+MATCH	fixedbugs/issue32288.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue32477.go	package-selector call runtime.SetFinalizer (package \
+MATCH	fixedbugs/issue32560.go	status=ok
+MATCH	fixedbugs/issue33062.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue33275_run.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/fixedbugs__issue33275_run/main.go carries build constraint "//go:build !nacl && !js && 
+INFRA	fixedbugs/issue33555.go	entry-point shim: no single provably-renameable 'func main()' declaration
+FRONTEND-REFUSED	fixedbugs/issue33724.go	package-selector call debug.Stack (package \
+FRONTEND-REFUSED	fixedbugs/issue34123.go	package-selector call runtime.Callers (package \
+FRONTEND-REFUSED	fixedbugs/issue34395.go	wire-decode: {"message":"/home/dev/projects/golean/.claude/worktrees/stdlib-source-2/artifacts/gotest/cases/fixedbugs__issue34395/wire.json: native lowering: array type of 104857600 elements exceeds the interpreter's materialization budget (65536 elements; BUG-078 idealization boundary) at program.globals[0].typ
+FRONTEND-REFUSED	fixedbugs/issue35576.go	builtin print in statement position
+FRONTEND-REFUSED	fixedbugs/issue36437.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/fixedbugs__issue36437/main.go carries build constraint "//go:build !nacl && !js && !was
+FRONTEND-REFUSED	fixedbugs/issue37716.go	nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[reflect.StructField]
+MATCH	fixedbugs/issue37753.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue37975.go	anonymous non-empty struct type struct{f func(); panicStr string}
+INFRA	fixedbugs/issue38093.go	go run exited 1 without panic/fatal: package command-line-arguments\n imports syscall/js: build constraints exclude all Go files in /usr/local/go/src/syscall/js
+MATCH	fixedbugs/issue38496.go	status=ok
+MATCH	fixedbugs/issue39505b.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue39541.go	nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[reflect.StructField]
+MATCH	fixedbugs/issue39651.go	status=ok
+MATCH	fixedbugs/issue40152.go	status=ok
+MATCH	fixedbugs/issue40367.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue40629.go	package-selector call fmt.Printf (package \
+FRONTEND-REFUSED	fixedbugs/issue4066.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue4085b.go	nativefrontend: native frontend unsupported: unsafe.Sizeof at artifactsits folded value is gc's IMPLEMENTATION-SPECIFIC memory layout (spec#Size_and_alignment_g
+FRONTEND-REFUSED	fixedbugs/issue40954.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/fixedbugs__issue40954/main.go carries build constraint "//go:build cgo" using reserved 
+MATCH	fixedbugs/issue41239.go	status=ok
+MATCH	fixedbugs/issue4167.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue41780.go	builtin println in statement position
+MATCH	fixedbugs/issue41872.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue42032.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/fixedbugs__issue42032/main.go carries build constraint "//go:build cgo" using reserved 
+FRONTEND-REFUSED	fixedbugs/issue42076.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/fixedbugs__issue42076/main.go carries build constraint "//go:build cgo" using reserved 
+MATCH	fixedbugs/issue42703.go	status=ok
+MATCH	fixedbugs/issue42876.go	status=ok
+MATCH	fixedbugs/issue43111.go	status=ok
+MATCH	fixedbugs/issue4313.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue4316.go	builtin println in statement position
+MATCH	fixedbugs/issue43292.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue43444.go	nativefrontend: native frontend unsupported: package initialization reaches quarantined function f (builtin print in statement position)
+MATCH	fixedbugs/issue43480.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue4353.go	wire-decode: {"message":"/home/dev/projects/golean/.claude/worktrees/stdlib-source-2/artifacts/gotest/cases/fixedbugs__issue4353/wire.json: native lowering: array type of 100000 elements exceeds the interpreter's materialization budget (65536 elements; BUG-078 idealization boundary) at program.globals[0].type","
+FRONTEND-REFUSED	fixedbugs/issue43570.go	fmt.Sprintf verb %v over an argument of type main.T is outside the modeled verb/kind matrix (format \
+FRONTEND-REFUSED	fixedbugs/issue43619.go	package-selector call math.NaN (package \
+MATCH	fixedbugs/issue43835.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue43908.go	fmt.Sprintf format \
+FRONTEND-REFUSED	fixedbugs/issue43942.go	defer of builtin panic
+FRONTEND-REFUSED	fixedbugs/issue4396a.go	nativefrontend: native frontend unsupported: anonymous non-empty struct type struct{a uint16; b uint16; c uint16; d uint16; e uint16; f [4096]uint8; g [4096]uin
+MATCH	fixedbugs/issue4396b.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue4448.go	builtin println in statement position
+MATCH	fixedbugs/issue44823.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue44830.go	package-selector call reflect.TypeOf (package \
+FRONTEND-REFUSED	fixedbugs/issue4495.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue45045.go	package-selector call runtime.GC (package \
+MATCH	fixedbugs/issue45175.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue4518.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue45242.go	fmt.Sprintf verb %v over an argument of type [8]byte is outside the modeled verb/kind matrix (format \
+FRONTEND-REFUSED	fixedbugs/issue4562.go	package-selector call fmt.Println (package \
+MATCH	fixedbugs/issue45851.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue4585.go	basic type unsafe.Pointer
+FRONTEND-REFUSED	fixedbugs/issue4618.go	package-selector call testing.AllocsPerRun (package \
+FRONTEND-REFUSED	fixedbugs/issue4620.go	map element as assignment target outside a single assignment
+MATCH	fixedbugs/issue46304.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue4667.go	package-selector call testing.AllocsPerRun (package \
+FRONTEND-REFUSED	fixedbugs/issue46725.go	package-selector call runtime.SetFinalizer (package \
+FRONTEND-REFUSED	fixedbugs/issue46903.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/fixedbugs__issue46903/main.go carries build constraint "//go:build cgo" using reserved 
+MATCH	fixedbugs/issue4748.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue4752.go	builtin println in statement position
+MATCH	fixedbugs/issue47771.go	status=ok
+MATCH	fixedbugs/issue4785.go	status=ok
+MATCH	fixedbugs/issue48289.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue48357.go	nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[reflect.StructField]
+MATCH	fixedbugs/issue48473.go	status=ok
+MATCH	fixedbugs/issue48476.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue48536.go	basic type unsafe.Pointer
+FRONTEND-REFUSED	fixedbugs/issue48898.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue49100b.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue49100.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue49110.go	package-selector call reflect.StructOf (package \
+FRONTEND-REFUSED	fixedbugs/issue49145.go	builtin println in statement position
+MATCH	fixedbugs/issue49512.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue49665.go	package-selector call fmt.Printf (package \
+FRONTEND-REFUSED	fixedbugs/issue50190.go	anonymous non-empty struct type struct{int}
+MATCH	fixedbugs/issue5056.go	status=ok
+MATCH	fixedbugs/issue50671.go	status=ok
+MATCH	fixedbugs/issue50672.go	status=ok
+MATCH	fixedbugs/issue50854.go	status=ok
+MATCH	fixedbugs/issue51101.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue51401.go	package-selector call runtime.Callers (package \
+FRONTEND-REFUSED	fixedbugs/issue51733.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/fixedbugs__issue51733/main.go carries build constraint "//go:build cgo" using reserved 
+MATCH	fixedbugs/issue51913.go	status=ok
+MATCH	fixedbugs/issue52072.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue52127.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/fixedbugs__issue52127/main.go carries build constraint "//go:build !js && !wasip1" usin
+MATCH	fixedbugs/issue52438.go	status=ok
+MATCH	fixedbugs/issue5244.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue52612.go	nativefrontend: native frontend unsupported: basic type unsafe.Pointer
+FRONTEND-REFUSED	fixedbugs/issue52788a.go	nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[reflect.StructField]
+FRONTEND-REFUSED	fixedbugs/issue52788.go	nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[reflect.StructField]
+MATCH	fixedbugs/issue52953.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue53137.go	nativefrontend: native frontend unsupported: unsafe.Offsetof at artifactsits folded value is gc's IMPLEMENTATION-SPECIFIC memory layout (spec#Size_and_alignment
+MATCH	fixedbugs/issue53309.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue53600.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue53619.go	nativefrontend: native frontend unsupported: implicit interface conversion in multi-value assignment (interfaces campaign, deferred)
+MATCH	fixedbugs/issue53635.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue53653.go	builtin println in statement position
+MATCH	fixedbugs/issue53702.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue5373.go	package-selector call fmt.Printf (package \
+FRONTEND-REFUSED	fixedbugs/issue54220.go	nativefrontend: native frontend unsupported: unsafe.Offsetof at artifactsits folded value is gc's IMPLEMENTATION-SPECIFIC memory layout (spec#Size_and_alignment
+FRONTEND-REFUSED	fixedbugs/issue54343.go	nativefrontend: native frontend unsupported: package initialization reaches quarantined function New[int] (package-selector call runtime.SetFinalizer (package "
+MATCH	fixedbugs/issue54348.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue54467.go	package-selector call fmt.Printf (package \
+INFRA	fixedbugs/issue54542.go	entry-point shim: no single provably-renameable 'func main()' declaration
+MATCH	fixedbugs/issue54632.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue5493.go	package-selector call time.Sleep (package \
+MATCH	fixedbugs/issue54959.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue55122b.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue55122.go	builtin println in statement position
+MATCH	fixedbugs/issue5515.go	status=ok
+MATCH	fixedbugs/issue5607.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue56990.go	package-selector call testing.Main (package \
+MATCH	fixedbugs/issue5704.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue57184.go	package-selector call reflect.MakeFunc (package \
+MATCH	fixedbugs/issue57309.go	status=ok
+MATCH	fixedbugs/issue5753.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue57823.go	package-selector call unsafe.SliceData (package \
+FRONTEND-REFUSED	fixedbugs/issue5793.go	basic type complex128
+FRONTEND-REFUSED	fixedbugs/issue5809.go	package-selector call fmt.Println (package \
+MATCH	fixedbugs/issue5820.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue58300b.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue58300.go	builtin println in statement position
+INFRA	fixedbugs/issue5856.go	go run exited 1 without panic/fatal: BUG: defer called from /home/dev/projects/golean/.claude/worktrees/stdlib-source-2/artifacts/gotest/cases/fixedbugs__issue5856/main.go:28, want issue5856.go:28\nexit status 1
+FRONTEND-REFUSED	fixedbugs/issue58671.go	nativefrontend: native frontend unsupported: basic type complex128
+FRONTEND-REFUSED	fixedbugs/issue59293.go	package-selector call unsafe.SliceData (package \
+MATCH	fixedbugs/issue59338.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue59367.go	builtin println in statement position
+MATCH	fixedbugs/issue59404part2.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue59411.go	package-selector call math.NaN (package \
+FRONTEND-REFUSED	fixedbugs/issue59572.go	references quarantined package-level variable list (its initializer does not lower: builtin println in statement position) — the cell is zero-seeded but poiso
+FRONTEND-REFUSED	fixedbugs/issue5963.go	nativefrontend: native frontend unsupported: package-selector call os.Exit (package "os" surface not modeled)
+FRONTEND-REFUSED	fixedbugs/issue59680.go	method main.B.startit (package-selector call time.After (package \
+FRONTEND-REFUSED	fixedbugs/issue6055.go	package-selector call runtime.GC (package \
+FRONTEND-REFUSED	fixedbugs/issue60601.go	nativefrontend: native frontend unsupported: unsafe.Sizeof at artifactsits folded value is gc's IMPLEMENTATION-SPECIFIC memory layout (spec#Size_and_alignment_g
+FRONTEND-REFUSED	fixedbugs/issue62203.go	package-selector call maps.Clone (package \
+FRONTEND-REFUSED	fixedbugs/issue62360.go	package-selector call big.NewInt (package \
+FRONTEND-REFUSED	fixedbugs/issue6269.go	builtin println in statement position
+MATCH	fixedbugs/issue63657.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue64565.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue64715.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue65417.go	nativefrontend: native frontend unsupported: unsafe.Sizeof at artifactsits folded value is gc's IMPLEMENTATION-SPECIFIC memory layout (spec#Size_and_alignment_g
+MATCH	fixedbugs/issue65962.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue66066b.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue66066.go	package-selector call fmt.Printf (package \
+MATCH	fixedbugs/issue66261.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue66575.go	nativefrontend: native frontend unsupported: package initialization reaches quarantined function initv0 (builtin println in statement position)
+MATCH	fixedbugs/issue66585.go	status=ok
+MATCH	fixedbugs/issue67160.go	status=ok
+MATCH	fixedbugs/issue67190.go	status=ok
+MACHINE-REFUSED	fixedbugs/issue67255.go	wall-clock timeout after 30s (go: ok)
+FRONTEND-REFUSED	fixedbugs/issue68227.go	package-selector call fmt.Printf (package \
+FRONTEND-REFUSED	fixedbugs/issue68322.go	package-selector call math.Trunc (package \
+MATCH	fixedbugs/issue6866.go	status=ok
+MATCH	fixedbugs/issue68809.go	status=ok
+MATCH	fixedbugs/issue68816.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue6899.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue6902.go	package-selector call os.Exit (package \
+FRONTEND-REFUSED	fixedbugs/issue69434.go	instantiation of imported generic type iter.Seq[int]
+FRONTEND-REFUSED	fixedbugs/issue69507.go	range over main.Seq[string]
+FRONTEND-REFUSED	fixedbugs/issue70156.go	nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[reflect.StructField]
+MATCH	fixedbugs/issue70189.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue7044.go	package-selector call reflect.DeepEqual (package \
+FRONTEND-REFUSED	fixedbugs/issue70481.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue7050.go	stdlib-qualified selector os.Stdout in value position: only allowlisted DIRECT CALLS of modeled stdlib members lower (E5 shims / fmt desugar); the value shape i
+FRONTEND-REFUSED	fixedbugs/issue7083.go	package-selector call debug.SetGCPercent (package \
+FRONTEND-REFUSED	fixedbugs/issue71675.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue71759.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue71857.go	sync/atomic.Uint64.Or (the bitwise And/Or RMW family is atomics WAVE 2 — not modeled yet; declaration-only stub: satisfaction answers, calls fail closed)
+FRONTEND-REFUSED	fixedbugs/issue71932.go	package-selector call runtime.GC (package \
+FRONTEND-REFUSED	fixedbugs/issue72063.go	call to non-function variable f
+MATCH	fixedbugs/issue72844.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue72860.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue73476.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue73748a.go	package-selector call trace.Start (package \
+FRONTEND-REFUSED	fixedbugs/issue73748b.go	package-selector call trace.Start (package \
+MATCH	fixedbugs/issue73888b.go	status=ok
+MATCH	fixedbugs/issue73888.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue73916b.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue73916.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue73917.go	nativefrontend: native frontend unsupported: package initialization reaches quarantined function callRecover (builtin println in statement position)
+FRONTEND-REFUSED	fixedbugs/issue73920.go	nativefrontend: native frontend unsupported: method expression (*main.S).M over a value-receiver method (deref adapter not modeled)
+FRONTEND-REFUSED	fixedbugs/issue7419.go	package-selector call os.Exit (package \
+FRONTEND-REFUSED	fixedbugs/issue74379b.go	package-selector call fmt.Println (package \
+FRONTEND-REFUSED	fixedbugs/issue74379c.go	package-selector call fmt.Println (package \
+FRONTEND-REFUSED	fixedbugs/issue74379.go	package-selector call fmt.Println (package \
+FRONTEND-REFUSED	fixedbugs/issue74935.go	nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[reflect.StructField]
+FRONTEND-REFUSED	fixedbugs/issue75327.go	fmt.Sprintf verb %s over an argument of type interface{} is outside the modeled verb/kind matrix (format \
+MACHINE-REFUSED	fixedbugs/issue7550.go	wall-clock timeout after 30s (go: ok)
+MATCH	fixedbugs/issue75569.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue76008.go	package-selector call runtime.Caller (package \
+MATCH	fixedbugs/issue76709.go	status=ok
+INFRA	fixedbugs/issue7690.go	go output != expected .out on the pinned toolchain: BUG: cannot find main.main in first trace
+FRONTEND-REFUSED	fixedbugs/issue7740.go	package-selector call math.Inf (package \
+MATCH	fixedbugs/issue77613.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue77779.go	package-selector call reflect.ValueOf (package \
+MATCH	fixedbugs/issue78404.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue7863.go	package-selector call fmt.Println (package \
+MATCH	fixedbugs/issue78641.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue79182.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue79186.go	package-selector call runtime.GOMAXPROCS (package \
+FRONTEND-REFUSED	fixedbugs/issue7944.go	package-selector call runtime.GC (package \
+FRONTEND-REFUSED	fixedbugs/issue7995.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue80004.go	nativefrontend: native frontend unsupported: basic type unsafe.Pointer
+FRONTEND-REFUSED	fixedbugs/issue8004.go	basic type unsafe.Pointer
+FRONTEND-REFUSED	fixedbugs/issue8011.go	builtin println in statement position
+FRONTEND-REFUSED	fixedbugs/issue8036.go	package-selector call runtime.GC (package \
+FRONTEND-REFUSED	fixedbugs/issue8039.go	builtin println in statement position
+MATCH	fixedbugs/issue8047b.go	status=ok
+MATCH	fixedbugs/issue8047.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue8048.go	package-selector call runtime.GC (package \
+FRONTEND-REFUSED	fixedbugs/issue8132.go	package-selector call runtime.GC (package \
+FRONTEND-REFUSED	fixedbugs/issue8139.go	package-selector call fmt.Printf (package \
+FRONTEND-REFUSED	fixedbugs/issue8155.go	package-selector call runtime.GC (package \
+FRONTEND-REFUSED	fixedbugs/issue8158.go	package-selector call time.Sleep (package \
+FRONTEND-REFUSED	fixedbugs/issue8325.go	builtin println in statement position
+MATCH	fixedbugs/issue8336.go	status=ok
+MATCH	fixedbugs/issue8347.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue8606b.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/fixedbugs__issue8606b/main.go carries build constraint "//go:build linux || darwin" usi
+FRONTEND-REFUSED	fixedbugs/issue8606.go	anonymous non-empty struct type struct{panic bool; a interface{}; b interface{}}
+MATCH	fixedbugs/issue8613.go	status=ok
+MATCH	fixedbugs/issue8620.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue8947.go	nativefrontend: native frontend unsupported: duplicate TypeId main.T (a function-local type collides with another declaration)
+FRONTEND-REFUSED	fixedbugs/issue8961.go	builtin println in statement position
+MATCH	fixedbugs/issue9006.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue9110.go	package-selector call runtime.GOMAXPROCS (package \
+FRONTEND-REFUSED	fixedbugs/issue9321.go	package-selector call runtime.GOMAXPROCS (package \
+INFRA	fixedbugs/issue9355.go	go run exited 1 without panic/fatal: BUG: chdir fixedbugs/issue9355.dir: no such file or directory\nexit status 1
+MATCH	fixedbugs/issue9604.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue9691.go	range assignment to non-identifier target (operands evaluate per iteration)
+FRONTEND-REFUSED	fixedbugs/issue9738.go	builtin println in statement position
+INFRA	fixedbugs/issue9862_run.go	go output != expected .out on the pinned toolchain: go run issue9862.go gave unexpected error; want symbol too large:\n stat fixedbugs/issue9862.go: no such file or directory
+FRONTEND-REFUSED	floatcmp.go	nativefrontend: native frontend unsupported: package-selector call math.NaN (package "math" surface not modeled)
+FRONTEND-REFUSED	float_lit2.go	nativefrontend: native frontend unsupported: anonymous non-empty struct type struct{bits uint64; exact interface{}; approx interface{}; text string}
+FRONTEND-REFUSED	float_lit.go	builtin print in statement position
+FRONTEND-REFUSED	for.go	builtin print in statement position
+FRONTEND-REFUSED	func5.go	builtin println in statement position
+MATCH	func6.go	status=ok
+MATCH	func7.go	status=ok
+MATCH	func8.go	status=ok
+FRONTEND-REFUSED	func.go	builtin print in statement position
+MACHINE-REFUSED	gc1.go	wall-clock timeout after 30s (go: ok)
+FRONTEND-REFUSED	gc2.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/gc2/main.go carries build constraint "//go:build !nacl && !js" using reserved tag "nacl
+FRONTEND-REFUSED	gc.go	package-selector call runtime.GC (package \
+FRONTEND-REFUSED	gcgort.go	nativefrontend: native frontend unsupported: basic type complex64
+FRONTEND-REFUSED	gcstring.go	package-selector call runtime.GC (package \
+FRONTEND-REFUSED	goprint.go	package-selector call runtime.NumGoroutine (package \
+FRONTEND-REFUSED	heapsampling.go	field address on anonymous struct type invalid type
+FRONTEND-REFUSED	helloworld.go	builtin print in statement position
+FRONTEND-REFUSED	if.go	builtin print in statement position
+FRONTEND-REFUSED	indirect.go	builtin println in statement position
+FRONTEND-REFUSED	init1.go	nativefrontend: native frontend unsupported: package-selector call runtime.ReadMemStats (package "runtime" surface not modeled)
+FRONTEND-REFUSED	initcomma.go	builtin println in statement position
+FRONTEND-REFUSED	initialize.go	package-selector call reflect.DeepEqual (package \
+FRONTEND-REFUSED	inline_literal.go	package-selector call runtime.FuncForPC (package \
+FRONTEND-REFUSED	intcvt.go	builtin println in statement position
+FRONTEND-REFUSED	interface/bigdata.go	builtin println in statement position
+MATCH	interface/convert1.go	status=ok
+MATCH	interface/convert2.go	status=ok
+FRONTEND-REFUSED	interface/convert.go	builtin println in statement position
+FRONTEND-REFUSED	interface/embed.go	builtin println in statement position
+MATCH	interface/fail.go	status=ok
+FRONTEND-REFUSED	interface/fake.go	nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[reflect.StructField]
+FRONTEND-REFUSED	interface/noeq.go	anonymous non-empty struct type struct{x []int}
+FRONTEND-REFUSED	interface/receiver.go	builtin println in statement position
+FRONTEND-REFUSED	interface/returntype.go	builtin print in statement position
+FRONTEND-REFUSED	interface/struct.go	package-selector call os.Exit (package \
+FRONTEND-REFUSED	int_lit.go	builtin print in statement position
+FRONTEND-REFUSED	iota.go	builtin print in statement position
+FRONTEND-REFUSED	ken/array.go	builtin print in statement position
+FRONTEND-REFUSED	ken/chan1.go	package-selector call runtime.Gosched (package \
+FRONTEND-REFUSED	ken/chan.go	builtin print in statement position
+FRONTEND-REFUSED	ken/complit.go	builtin println in statement position
+FRONTEND-REFUSED	ken/convert.go	builtin println in statement position
+FRONTEND-REFUSED	ken/cplx0.go	builtin println in statement position
+FRONTEND-REFUSED	ken/cplx1.go	builtin println in statement position
+FRONTEND-REFUSED	ken/cplx2.go	basic type complex64
+FRONTEND-REFUSED	ken/cplx3.go	basic type complex128
+FRONTEND-REFUSED	ken/cplx4.go	fmt.Sprintf format \
+FRONTEND-REFUSED	ken/cplx5.go	nativefrontend: native frontend unsupported: basic type complex128
+FRONTEND-REFUSED	ken/divconst.go	package-selector call rand.Uint32 (package \
+FRONTEND-REFUSED	ken/divmod.go	builtin println in statement position
+FRONTEND-REFUSED	ken/embed.go	builtin println in statement position
+MATCH	ken/for.go	status=ok
+FRONTEND-REFUSED	ken/interbasic.go	builtin println in statement position
+MATCH	ken/interfun.go	status=ok
+MATCH	ken/intervar.go	status=ok
+MATCH	ken/label.go	status=ok
+MATCH	ken/litfun.go	status=ok
+MATCH	ken/mfunc.go	status=ok
+FRONTEND-REFUSED	ken/modconst.go	package-selector call rand.Uint32 (package \
+MATCH	ken/ptrfun.go	status=ok
+FRONTEND-REFUSED	ken/ptrvar.go	nativefrontend: native frontend unsupported: anonymous non-empty struct type struct{a int; b int; c int; d main.x2}
+FRONTEND-REFUSED	ken/range.go	builtin println in statement position
+MATCH	ken/rob1.go	status=ok
+FRONTEND-REFUSED	ken/rob2.go	builtin print in statement position
+FRONTEND-REFUSED	ken/robfor.go	builtin print in statement position
+FRONTEND-REFUSED	ken/robfunc.go	builtin print in statement position
+FRONTEND-REFUSED	ken/shift.go	builtin print in statement position
+MATCH	ken/simparray.go	status=ok
+MATCH	ken/simpbool.go	status=ok
+MATCH	ken/simpconv.go	status=ok
+MATCH	ken/simpfun.go	status=ok
+MATCH	ken/simpswitch.go	status=ok
+MATCH	ken/simpvar.go	status=ok
+FRONTEND-REFUSED	ken/slicearray.go	builtin println in statement position
+FRONTEND-REFUSED	ken/sliceslice.go	builtin println in statement position
+FRONTEND-REFUSED	ken/string.go	builtin print in statement position
+FRONTEND-REFUSED	ken/strvar.go	nativefrontend: native frontend unsupported: anonymous non-empty struct type struct{a int; b int; c int; d main.x2}
+INFRA	linkmain_run.go	go run exited 1 without panic/fatal: $ [go tool compile -p=main -importcfg /home/dev/projects/golean/.tmp/2625306780/importcfg -o /home/dev/projects/golean/.tmp/2625306780/linkmain.o helloworld.go]\nopen helloworld.go: no such file or dir
+INFRA	linkobj.go	go run exited 1 without panic/fatal: 2026/09/04 00:03:24 listing stdlib export files: open : no such file or directory\nexit status 1
+INFRA	linkx_run.go	go run exited 1 without panic/fatal: stat linkx.go: no such file or directory\n\n\nexit status 1\nexit status 1
+FRONTEND-REFUSED	literal2.go	constant kind Complex
+FRONTEND-REFUSED	literal.go	builtin print in statement position
+FRONTEND-REFUSED	makeslice.go	nativefrontend: native frontend unsupported: unsafe.Sizeof at artifactsits folded value is gc's IMPLEMENTATION-SPECIFIC memory layout (spec#Size_and_alignment_g
+FRONTEND-REFUSED	mallocfin.go	package-selector call runtime.GOMAXPROCS (package \
+FRONTEND-REFUSED	mapclear.go	package-selector call fmt.Printf (package \
+FRONTEND-REFUSED	map.go	fmt.Sprintf format \
+FRONTEND-REFUSED	maplinear.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/maplinear/main.go carries build constraint "//go:build darwin || linux" using reserved 
+FRONTEND-REFUSED	method3.go	builtin println in statement position
+FRONTEND-REFUSED	method5.go	builtin print in statement position
+FRONTEND-REFUSED	method7.go	anonymous non-empty struct type struct{main.T}
+FRONTEND-REFUSED	method.go	builtin println in statement position
+MATCH	named.go	status=ok
+MATCH	newexpr.go	status=ok
+FRONTEND-REFUSED	nil.go	builtin println in statement position
+FRONTEND-REFUSED	nilptr2.go	nativefrontend: native frontend unsupported: anonymous non-empty struct type struct{name string; fn func()}
+FRONTEND-REFUSED	nilptr_aix.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/nilptr_aix/main.go carries build constraint "//go:build aix" using reserved tag "aix" (
+FRONTEND-REFUSED	nilptr.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/nilptr/main.go carries build constraint "//go:build !aix && (!darwin || !arm64) && (!wi
+FRONTEND-REFUSED	noinit.go	nativefrontend: native frontend unsupported: basic type complex64
+FRONTEND-REFUSED	nosplit.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/nosplit/main.go carries build constraint "//go:build !nacl && !js && !aix && !openbsd &
+FRONTEND-REFUSED	peano.go	nativefrontend: native frontend unsupported: package initialization reaches quarantined function check (builtin print in statement position)
+FRONTEND-REFUSED	printbig.go	builtin print in statement position
+FRONTEND-REFUSED	print.go	builtin println in statement position
+FRONTEND-REFUSED	range3.go	builtin println in statement position
+FRONTEND-REFUSED	range4.go	range over func(yield func() bool)
+FRONTEND-REFUSED	range.go	builtin println in statement position
+FRONTEND-REFUSED	recover1.go	builtin println in statement position
+FRONTEND-REFUSED	recover2.go	builtin println in statement position
+FRONTEND-REFUSED	recover3.go	builtin println in statement position
+FRONTEND-REFUSED	recover4.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/recover4/main.go carries build constraint "//go:build linux || darwin" using reserved t
+FRONTEND-REFUSED	recover.go	nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[reflect.StructField]
+FRONTEND-REFUSED	reflectmethod1.go	package-selector call reflect.TypeOf (package \
+FRONTEND-REFUSED	reflectmethod2.go	package-selector call reflect1.TypeOf (package \
+FRONTEND-REFUSED	reflectmethod3.go	package-selector call reflect.TypeOf (package \
+FRONTEND-REFUSED	reflectmethod4.go	package-selector call reflect.ValueOf (package \
+FRONTEND-REFUSED	reflectmethod5.go	nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[reflect.StructField]
+FRONTEND-REFUSED	reflectmethod6.go	nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[reflect.StructField]
+FRONTEND-REFUSED	reflectmethod7.go	package-selector call reflect.TypeOf (package \
+FRONTEND-REFUSED	rename.go	package-selector call fmt.Println (package \
+FRONTEND-REFUSED	reorder2.go	builtin println in statement position
+FRONTEND-REFUSED	reorder.go	package-selector call fmt.Printf (package \
+FRONTEND-REFUSED	shift3.go	constant kind Complex
+FRONTEND-REFUSED	sigchld.go	nativefrontend: native frontend unsupported: file artifacts/gotest/cases/sigchld/main.go carries build constraint "//go:build !plan9 && !windows && !wasip1" usi
+FRONTEND-REFUSED	simassign.go	builtin print in statement position
+FRONTEND-REFUSED	sizeof.go	nativefrontend: native frontend unsupported: unsafe.Sizeof at artifactsits folded value is gc's IMPLEMENTATION-SPECIFIC memory layout (spec#Size_and_alignment_g
+FRONTEND-REFUSED	slicecap.go	basic type unsafe.Pointer
+FRONTEND-REFUSED	stack.go	builtin println in statement position
+FRONTEND-REFUSED	stackobj2.go	package-selector call runtime.GC (package \
+FRONTEND-REFUSED	stackobj3.go	package-selector call runtime.SetFinalizer (package \
+FRONTEND-REFUSED	stackobj.go	package-selector call runtime.SetFinalizer (package \
+FRONTEND-REFUSED	strcopy.go	basic type unsafe.Pointer
+FRONTEND-REFUSED	string_lit.go	package-selector call os.Exit (package \
+FRONTEND-REFUSED	stringrange.go	package-selector call fmt.Printf (package \
+MATCH	struct0.go	status=ok
+FRONTEND-REFUSED	switch.go	package-selector call os.Exit (package \
+FRONTEND-REFUSED	tinyfin.go	package-selector call runtime.SetFinalizer (package \
+MACHINE-REFUSED	turing.go	wall-clock timeout after 30s (go: ok)
+FRONTEND-REFUSED	typeparam/absdiff2.go	fmt.Sprintf verb %v over an argument of type float64 is outside the modeled verb/kind matrix (format \
+FRONTEND-REFUSED	typeparam/absdiff3.go	fmt.Sprintf verb %v over an argument of type float64 is outside the modeled verb/kind matrix (format \
+MATCH	typeparam/absdiff.go	status=ok
+FRONTEND-REFUSED	typeparam/adder.go	fmt.Sprintf verb %d over an argument of type string is outside the modeled verb/kind matrix (format \
+FRONTEND-REFUSED	typeparam/append.go	type argument outside the mangling surface: *types.Chan (chan<- int)
+FRONTEND-REFUSED	typeparam/boundmethod.go	package-selector call reflect.DeepEqual (package \
+FRONTEND-REFUSED	typeparam/chans.go	package-selector call context.Background (package \
+MATCH	typeparam/combine.go	status=ok
+MATCH	typeparam/cons.go	status=ok
+MATCH	typeparam/devirtualize1.go	status=ok
+MATCH	typeparam/devirtualize2.go	status=ok
+FRONTEND-REFUSED	typeparam/dictionaryCapture.go	builtin println in statement position
+FRONTEND-REFUSED	typeparam/dottype.go	builtin println in statement position
+FRONTEND-REFUSED	typeparam/double.go	package-selector call reflect.DeepEqual (package \
+FRONTEND-REFUSED	typeparam/eface.go	builtin println in statement position
+FRONTEND-REFUSED	typeparam/equal.go	function-local defined type S as a type argument (gc renders these with a compiler-internal unique suffix, e.g. S·1 — refused rather than guessed)
+FRONTEND-REFUSED	typeparam/fact.go	fmt.Sprintf format \
+MATCH	typeparam/genembed2.go	status=ok
+MATCH	typeparam/genembed.go	status=ok
+MATCH	typeparam/graph.go	status=ok
+FRONTEND-REFUSED	typeparam/ifaceconv.go	fmt.Sprintf verb %d over an argument of type interface{} is outside the modeled verb/kind matrix (format \
+MATCH	typeparam/index2.go	status=ok
+MATCH	typeparam/index.go	status=ok
+FRONTEND-REFUSED	typeparam/interfacearg.go	nativefrontend: native frontend unsupported: duplicate TypeId main.S2 (a function-local type collides with another declaration)
+MATCH	typeparam/issue23536.go	status=ok
+MATCH	typeparam/issue376214.go	status=ok
+MATCH	typeparam/issue42758.go	status=ok
+MATCH	typeparam/issue44688.go	status=ok
+FRONTEND-REFUSED	typeparam/issue45722.go	package-selector call log.Fatalln (package \
+MATCH	typeparam/issue45817.go	status=ok
+MATCH	typeparam/issue46472.go	status=ok
+FRONTEND-REFUSED	typeparam/issue46591.go	references quarantined package-level variable m (its initializer does not lower: anonymous non-empty struct as a type argument (struct{int})) — the cell is ze
+FRONTEND-REFUSED	typeparam/issue47258.go	fmt.Sprintf verb %d over an argument of type float64 is outside the modeled verb/kind matrix (format \
+FRONTEND-REFUSED	typeparam/issue47272.go	package-selector call fmt.Println (package \
+MATCH	typeparam/issue47514b.go	status=ok
+MATCH	typeparam/issue47514.go	status=ok
+MATCH	typeparam/issue47676.go	status=ok
+MATCH	typeparam/issue47684b.go	status=ok
+MATCH	typeparam/issue47684c.go	status=ok
+MATCH	typeparam/issue47684.go	status=ok
+MATCH	typeparam/issue47708.go	status=ok
+FRONTEND-REFUSED	typeparam/issue47713.go	nativefrontend: native frontend unsupported: package-selector call fmt.Printf (package "fmt" surface not modeled)
+FRONTEND-REFUSED	typeparam/issue47716.go	nativefrontend: native frontend unsupported: unsafe.Sizeof at artifactsits folded value is gc's IMPLEMENTATION-SPECIFIC memory layout (spec#Size_and_alignment_g
+MATCH	typeparam/issue47723.go	status=ok
+FRONTEND-REFUSED	typeparam/issue47740b.go	nativefrontend: native frontend unsupported: package-selector call reflect.ValueOf (package "reflect" surface not modeled)
+MATCH	typeparam/issue47740.go	status=ok
+MATCH	typeparam/issue47775b.go	status=ok
+MATCH	typeparam/issue47877.go	status=ok
+MATCH	typeparam/issue47901.go	status=ok
+MATCH	typeparam/issue47925b.go	status=ok
+MATCH	typeparam/issue47925c.go	status=ok
+MATCH	typeparam/issue47925d.go	status=ok
+MATCH	typeparam/issue47925.go	status=ok
+FRONTEND-REFUSED	typeparam/issue48013.go	fmt.Sprintf format \
+FRONTEND-REFUSED	typeparam/issue48016.go	fmt.Sprintf format \
+MATCH	typeparam/issue48030.go	status=ok
+FRONTEND-REFUSED	typeparam/issue48042.go	nativefrontend: native frontend unsupported: package-selector call reflect.ValueOf (package "reflect" surface not modeled)
+MATCH	typeparam/issue48047.go	status=ok
+MATCH	typeparam/issue48049.go	status=ok
+FRONTEND-REFUSED	typeparam/issue48137.go	function-local defined type Bar as a type argument (gc renders these with a compiler-internal unique suffix, e.g. Bar·1 — refused rather than guessed)
+FRONTEND-REFUSED	typeparam/issue48225.go	package-selector call reflect.TypeOf (package \
+FRONTEND-REFUSED	typeparam/issue48253.go	nativefrontend: native frontend unsupported: package-selector call reflect.TypeOf (package "reflect" surface not modeled)
+FRONTEND-REFUSED	typeparam/issue48276a.go	package-selector call fmt.Printf (package \
+MATCH	typeparam/issue48276b.go	status=ok
+FRONTEND-REFUSED	typeparam/issue48317.go	package-selector call json.Unmarshal (package \
+FRONTEND-REFUSED	typeparam/issue48318.go	package-selector call xml.Marshal (package \
+MATCH	typeparam/issue48344.go	status=ok
+MATCH	typeparam/issue48424.go	status=ok
+MATCH	typeparam/issue48453.go	status=ok
+MATCH	typeparam/issue48598.go	status=ok
+MATCH	typeparam/issue48602.go	status=ok
+MATCH	typeparam/issue48617.go	status=ok
+FRONTEND-REFUSED	typeparam/issue48645a.go	package-selector call fmt.Println (package \
+MATCH	typeparam/issue48645b.go	status=ok
+MATCH	typeparam/issue48838.go	status=ok
+MATCH	typeparam/issue49049.go	status=ok
+FRONTEND-REFUSED	typeparam/issue49295.go	stdlib-qualified selector io.EOF in value position: only allowlisted DIRECT CALLS of modeled stdlib members lower (E5 shims / fmt desugar); the value shape is o
+MATCH	typeparam/issue49309.go	status=ok
+MATCH	typeparam/issue49421.go	status=ok
+FRONTEND-REFUSED	typeparam/issue49547.go	fmt.Sprintf format \
+MATCH	typeparam/issue49659b.go	status=ok
+FRONTEND-REFUSED	typeparam/issue50002.go	package-selector call fmt.Printf (package \
+MATCH	typeparam/issue50109b.go	status=ok
+FRONTEND-REFUSED	typeparam/issue50109.go	package-selector call fmt.Printf (package \
+FRONTEND-REFUSED	typeparam/issue50193.go	package-selector call fmt.Println (package \
+MATCH	typeparam/issue50264.go	status=ok
+INFRA	typeparam/issue50417b.go	entry-point shim: no single provably-renameable 'func main()' declaration
+MATCH	typeparam/issue50417.go	status=ok
+MATCH	typeparam/issue50419.go	status=ok
+FRONTEND-REFUSED	typeparam/issue50642.go	nativefrontend: native frontend unsupported: channel receive into interface-typed target
+FRONTEND-REFUSED	typeparam/issue50690a.go	package-selector call fmt.Printf (package \
+FRONTEND-REFUSED	typeparam/issue50690b.go	interface with embedded constraints mentioning a type parameter (interface{PrintFn() func(T); ~struct{ID T; PrintFn_ func(T)}})
+FRONTEND-REFUSED	typeparam/issue50690c.go	interface with embedded constraints mentioning a type parameter (interface{PrintFn() func(T); ~struct{ID T; PrintFn_ func(T)}})
+MATCH	typeparam/issue50833.go	status=ok
+MATCH	typeparam/issue51236.go	status=ok
+FRONTEND-REFUSED	typeparam/issue51303.go	package-selector call fmt.Println (package \
+FRONTEND-REFUSED	typeparam/issue51521.go	package-selector call fmt.Println (package \
+FRONTEND-REFUSED	typeparam/issue51522a.go	builtin println in statement position
+FRONTEND-REFUSED	typeparam/issue51522b.go	builtin println in statement position
+MATCH	typeparam/issue51700.go	status=ok
+MATCH	typeparam/issue52026.go	status=ok
+MATCH	typeparam/issue52228.go	status=ok
+FRONTEND-REFUSED	typeparam/issue53087.go	fmt.Sprintf format \
+MATCH	typeparam/issue53419.go	status=ok
+MATCH	typeparam/issue53477.go	status=ok
+MATCH	typeparam/issue54135.go	status=ok
+MATCH	typeparam/issue54225.go	status=ok
+FRONTEND-REFUSED	typeparam/issue54456.go	package-selector call reflect.TypeOf (package \
+MATCH	typeparam/issue54535.go	status=ok
+MATCH	typeparam/issue54537.go	status=ok
+FRONTEND-REFUSED	typeparam/issue58513.go	package-selector call runtime.Caller (package \
+FRONTEND-REFUSED	typeparam/list2.go	fmt.Sprintf format \
+FRONTEND-REFUSED	typeparam/list.go	fmt.Sprintf format \
+MATCH	typeparam/lockable.go	status=ok
+FRONTEND-REFUSED	typeparam/map.go	package-selector call reflect.DeepEqual (package \
+FRONTEND-REFUSED	typeparam/maps.go	package-selector call sort.Ints (package \
+FRONTEND-REFUSED	typeparam/mdempsky/13.go	anonymous non-empty struct type struct{main.Mer}
+FRONTEND-REFUSED	typeparam/mdempsky/14.go	nativefrontend: native frontend unsupported: builtin println in statement position
+FRONTEND-REFUSED	typeparam/mdempsky/16.go	package-selector call fmt.Printf (package \
+FRONTEND-REFUSED	typeparam/mdempsky/17.go	method main.test.match (package-selector call fmt.Printf (package \
+FRONTEND-REFUSED	typeparam/mdempsky/18.go	package-selector call fmt.Printf (package \
+FRONTEND-REFUSED	typeparam/mdempsky/19.go	nativefrontend: native frontend unsupported: duplicate TypeId main.X (a function-local type collides with another declaration)
+FRONTEND-REFUSED	typeparam/mdempsky/20.go	builtin println in statement position
+MATCH	typeparam/mdempsky/21.go	status=ok
+FRONTEND-REFUSED	typeparam/metrics.go	package-selector call sort.Ints (package \
+FRONTEND-REFUSED	typeparam/min.go	fmt.Sprintf verb %d over an argument of type float64 is outside the modeled verb/kind matrix (format \
+FRONTEND-REFUSED	typeparam/nested.go	nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[reflect.StructField]
+FRONTEND-REFUSED	typeparam/ordered.go	nativefrontend: native frontend unsupported: package-selector call math.Inf (package "math" surface not modeled)
+FRONTEND-REFUSED	typeparam/orderedmap.go	fmt.Sprintf format \
+FRONTEND-REFUSED	typeparam/pair.go	nativefrontend: native frontend unsupported: unsafe.Sizeof at artifactsits folded value is gc's IMPLEMENTATION-SPECIFIC memory layout (spec#Size_and_alignment_g
+FRONTEND-REFUSED	typeparam/sets.go	fmt.Sprintf verb %v: composite leaf of type map[int]struct{} is outside the modeled composite subset (fail closed — widen with a differential pin first)
+FRONTEND-REFUSED	typeparam/settable.go	fmt.Sprintf verb %v: composite leaf of type *main.SettableInt is outside the modeled composite subset (fail closed — widen with a differential pin first)
+FRONTEND-REFUSED	typeparam/shape1.go	builtin println in statement position
+FRONTEND-REFUSED	typeparam/slices.go	package-selector call math.NaN (package \
+FRONTEND-REFUSED	typeparam/smallest.go	fmt.Sprintf verb %d over an argument of type float64 is outside the modeled verb/kind matrix (format \
+MATCH	typeparam/stringable.go	status=ok
+FRONTEND-REFUSED	typeparam/stringer.go	package-selector call reflect.DeepEqual (package \
+MATCH	typeparam/struct.go	status=ok
+FRONTEND-REFUSED	typeparam/subdict.go	fmt.Sprintf verb %d over an argument of type string is outside the modeled verb/kind matrix (format \
+FRONTEND-REFUSED	typeparam/sum.go	fmt.Sprintf format \
+FRONTEND-REFUSED	typeparam/typeswitch1.go	anonymous non-empty struct type struct{a float64; b float64}
+FRONTEND-REFUSED	typeparam/typeswitch2.go	anonymous non-empty struct type struct{a float64; b float64}
+FRONTEND-REFUSED	typeparam/typeswitch3.go	builtin println in statement position
+FRONTEND-REFUSED	typeparam/typeswitch4.go	builtin println in statement position
+FRONTEND-REFUSED	typeparam/typeswitch5.go	builtin println in statement position
+FRONTEND-REFUSED	typeparam/typeswitch6.go	anonymous non-empty interface as a type argument (interface{foo()})
+FRONTEND-REFUSED	typeparam/typeswitch7.go	builtin println in statement position
+FRONTEND-REFUSED	typeparam/value.go	fmt.Sprintf verb %d over an argument of type string is outside the modeled verb/kind matrix (format \
+FRONTEND-REFUSED	typeswitch1.go	package-selector call fmt.Println (package \
+FRONTEND-REFUSED	typeswitch.go	builtin println in statement position
+FRONTEND-REFUSED	uintptrescapes3.go	nativefrontend: native frontend unsupported: basic type unsafe.Pointer
+FRONTEND-REFUSED	unsafebuiltins.go	nativefrontend: native frontend unsupported: unsafe.Sizeof at artifactsits folded value is gc's IMPLEMENTATION-SPECIFIC memory layout (spec#Size_and_alignment_g
+FRONTEND-REFUSED	unsafe_slice_data.go	basic type unsafe.Pointer
+FRONTEND-REFUSED	unsafe_string_data.go	basic type unsafe.Pointer
+FRONTEND-REFUSED	unsafe_string.go	package-selector call unsafe.String (package \
+MATCH	utf.go	status=ok
+FRONTEND-REFUSED	varinit.go	builtin print in statement position
+FRONTEND-REFUSED	winbatch.go	package-selector call filepath.Join (package \
+FRONTEND-REFUSED	zerodivide.go	nativefrontend: native frontend unsupported: basic type complex128
+FRONTEND-REFUSED	zerosize.go	builtin print in statement position

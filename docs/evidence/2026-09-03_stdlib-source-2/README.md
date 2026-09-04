@@ -281,9 +281,27 @@ owed as its own arc.
   `fileOrder` gains `cmp`, `slices`, `bytes`, `encoding/binary`. The
   deviation pin (`hidden-dep-order`) did NOT move.
 
-### The gotest standing lane
+### The gotest standing lane (trigger: a frontend fragment widening)
 
-See the section appended after the run.
+`gotest-delta.txt` (+ `gotest-results.tsv`, `gotest-results.meta.tsv`):
+full 1,013-case run (`scripts/gotest-triage run --jobs 6`) at `4176f7f1`
+vs the `stdlib-source-1` lane's record (its worktree's
+`artifacts/gotest/results.tsv`, frontend @ `f02cf8e0` = main's
+stdlib-source-1 train). Categories 344 MATCH / 637 FRONTEND-REFUSED /
+11 MACHINE-REFUSED / 21 INFRA / 0 MISMATCH → **345 / 635 / 12 / 21 / 0**.
+Transitions: `fixedbugs/issue19201.go` FRONTEND-REFUSED → MATCH
+(`binary.BigEndian` as a value — the real `encoding/binary` package);
+`fixedbugs/issue24419.go` FRONTEND-REFUSED → MACHINE-REFUSED
+(its `defer bytes.Compare/Equal/IndexByte(nil, …)` calls inside
+goroutines now lower instead of refusing at the frontend; the machine
+run then hits the 30 s wall-clock timeout on that goroutine/defer/channel
+shape — "did not decide", a cause-named budget stop, not a wrong answer;
+the shape, not the library, is the cost). Of the 4 files whose OLD refusal named a
+retired member or a slice-2 package, 2 stayed FRONTEND-REFUSED on their
+NEXT cause (`fmt.Sprintf`; an anonymous struct embedding `*bytes.Buffer`).
+LOST MATCH: none. MISMATCH: none. Honesty note: the two runs' base
+commits differ only by this lane (the OLD record's frontend is the train
+this branch forks from), so the delta is this slice's.
 
 ## Reproduction (rule 2; from the repo root, deps/go at the pin, golean built)
 
