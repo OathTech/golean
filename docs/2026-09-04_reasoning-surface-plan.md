@@ -1602,49 +1602,75 @@ is scheduled as such.
 
 ### 5.4 The design gates, collected (verbatim, for the [USER])
 
+**Ruling record, 2026-09-04.** [AGENT] record; the [USER] quote was
+received by the [AGENT] coordinator and RELAYED to the recording
+worker, so it is cited as relayed, not firsthand (U0-incident
+convention). Presented with this section's nine gates, each carrying
+a recommendation, Mike replied, verbatim as relayed: «Great, this
+sounds good - let's move ahead with the plan. Our top level goal
+here is (1) to be a highly accurate go semantics, and (2) to support
+reasoning about go using an iris-lean layer (which we won't build,
+that's a customer)» — read by the coordinator as: all nine gates
+(G-U, G-C5, G-C1, G-C2, G-P, G-C3, G-C4, G-OUT, G-PIN) RULED as
+recommended below, plus the two top-level goals stated (carried
+forward into `CLAUDE.md`). Earlier the same day, the standing
+direction that frames the C-arc's move from deferred-in-principle
+to scheduled (`docs/2026-09-03_design-hygiene-arc.md` (v)): «I think
+we should try to do the disruptive thing if it'll result in a more
+useful reasoning surface».
+
 - **G-U.** «Uniform consumption rule (pop iff bound ≥ 2); `consumeAtOne`
   deleted; behaviour sets certified identical by the membership lane;
   realized members under fixed streams re-pinned with the choice-trace
-  bijection as evidence.» Rec: YES, first after wave (iii).
+  bijection as evidence.» Rec: YES, first after wave (iii). RULED
+  [USER] 2026-09-04 — as recommended (relayed).
 - **G-C5.** «`.opDone` becomes a per-thread `boundary` flag; the strip
   stays a POOL step (no baseline fuel shift); the sequential relation
   drops `Step.opDoneStrip`; `execProg_single_eq_execStmt` is restated
-  with the op count.» Rec: YES, with B4.
+  with the op count.» Rec: YES, with B4. RULED [USER] 2026-09-04 — as
+  recommended (relayed).
 - **G-C1.** «Adopt `Mem` with an emitted access trace as THE definition
   of a step's footprint; retire the `stepAccesses` table once
   `accesses_eq_stepAccesses` is proved arm by arm; any arm where the
   theorem fails is filed as a detector BUG (red-first row, referred),
-  never absorbed.» Rec: YES.
+  never absorbed.» Rec: YES. RULED [USER] 2026-09-04 — as recommended
+  (relayed).
 - **G-C2.** «Frontend emits typeDefs in dependency order with aliases
   inlined (twin pin moves); `TypeEnv` becomes index-keyed and
   well-founded by an `Accepted` clause decided at decode; the 14 fuel
   towers, `typeResolutionFuel` and the `irreducible` seal are
-  deleted.» Rec: YES, parallel lane.
+  deleted.» Rec: YES, parallel lane. RULED [USER] 2026-09-04 — as
+  recommended (relayed).
 - **G-P.** «Model embedded-field method promotion natively: the frontend
   stops synthesizing wrappers (D2 contract: method sets record DECLARED
   methods), the core resolves selectors and interface dispatch through
   the embedding chain; `Func.wrapper` and its four consumers are
   deleted; the hop-path footprint is the trace (requires C1); twin pin
   moves; the BUG-087 family test becomes chain-depth ≥ 1 and is pinned
-  by the existing rows.» Rec: YES, after C1.
+  by the existing rows.» Rec: YES, after C1. RULED [USER] 2026-09-04 —
+  as recommended (relayed).
 - **G-C3.** «`Cont := List Frame` with `@[match_pattern]` views for the
   31 constructor names; `Config := Mode × Cont`; `fill` is append; done
-  before the pin, never after.» Rec: YES, after B4 and P.
+  before the pin, never after.» Rec: YES, after B4 and P. RULED [USER]
+  2026-09-04 — as recommended (relayed).
 - **G-C4.** «Block-scoped allocation: `Stmt.initialization` deleted,
   locals allocated at block entry; PRESERVING UP TO HEAP ISOMORPHISM
   ONLY — observations unchanged (gate), `Loc` trajectories and
   therefore dedup certificates and `repr` pins change and are
   re-pinned with this reason; the closure-per-iteration and
   backward-`goto` classes are probed before landing.» Rec: YES, last
-  C-item before the interface module.
+  C-item before the interface module. RULED [USER] 2026-09-04 — as
+  recommended (relayed).
 - **G-OUT.** «Program output is a per-step EVENT (`StepEvent.out`),
   folded by the driver into `Readout`, not a `Store` field;
   `Obs.terminal` carries the stderr prefix.» Rec: event trace; decide
-  before slice 3 lands.
+  before slice 3 lands. RULED [USER] 2026-09-04 — as recommended
+  (relayed): per-step event.
 - **G-PIN.** «The reasoning repo pins a SHA whose `GoLean/Interface.
   lean` matches this document's §1; a refactor preserving §1 is not a
   breaking change; a change to §1 is a pin move with a written
-  reason.» Rec: offer after §5.3's four conditions.
+  reason.» Rec: offer after §5.3's four conditions. RULED [USER]
+  2026-09-04 — as recommended (relayed).
 
 ### 5.5 What the grumpy professor will not pretend
 

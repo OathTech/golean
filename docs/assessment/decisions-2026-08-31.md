@@ -157,3 +157,8 @@ refreshes the certification record, with a changed certified set
 reported as a finding rather than re-pinned away (`CLAUDE.md` merge
 protocol step 5a; `docs/operational-lessons.md` addendum; lane
 `slow-recert-2`).
+
+**Addendum 2026-09-04 — reasoning-surface plan gates, RULED [USER]**
+(relayed): the plan's nine design gates (G-U…G-PIN) RULED as
+recommended, plus the two top-level goals stated (`CLAUDE.md`; full
+record `docs/2026-08-31_qrow-rulings.md` appendix).

@@ -290,3 +290,43 @@ firsthand — citation, never bare assertion): «(b) it sounds like this breaks 
 the rest of the E9 envelope stands. Consuming records: latitude
 inventory §E9 (IRREFLEXIVE KEYS bullet), `docs/BUGS.md` BUG-088,
 `docs/2026-09-03_hygiene-b1-stamps-design.md` §4, the arc plan (i).
+
+### The reasoning-surface gates ruling record (2026-09-04) — G-U … G-PIN, design gates of the same class as this sheet's rows
+
+[AGENT] record. Provenance chain: the [USER] quote was received by
+the [AGENT] coordinator in-session and RELAYED to the recording
+worker, so it is cited as relayed, not firsthand (U0-incident
+convention: citation, never bare assertion). The coordinator
+presented `docs/2026-09-04_reasoning-surface-plan.md` §5.4's nine
+design gates — G-U, G-C5, G-C1, G-C2, G-P, G-C3, G-C4, G-OUT, G-PIN,
+each carrying a recommendation — for the same reason this sheet
+exists: a design gate is a HARD STOP the coordinator does not
+self-adjudicate (CLAUDE.md, autonomous arcs), whether it is a Q-row
+or a plan §5.4 gate. Mike replied, verbatim as relayed:
+
+«Great, this sounds good - let's move ahead with the plan. Our top
+level goal here is (1) to be a highly accurate go semantics, and (2)
+to support reasoning about go using an iris-lean layer (which we
+won't build, that's a customer)»
+
+— read as: all nine gates RULED as recommended, plus the two
+top-level goals stated (now carried in `CLAUDE.md` "What this repo
+is"). Earlier the same day, in a separate exchange, the standing
+direction that frames the C-arc's move from deferred-in-principle
+(2026-09-03 ratification, `docs/2026-09-03_design-hygiene-arc.md`
+(v)) to scheduled:
+
+«I think we should try to do the disruptive thing if it'll result in
+a more useful reasoning surface»
+
+Effect: G-U and G-P — previously on `docs/2026-09-03_design-hygiene-
+arc.md`'s "not this arc's to decide" list (`consumeAtOne`
+uniformization and native method promotion) — are RULED IN and
+scheduled in the C-arc order; the other seven gates (all C1-C5-family
+items plus G-OUT and G-PIN) are RULED as recommended at the point
+each is reached, per the plan's §5.1 order. Consuming records:
+`CLAUDE.md` "What this repo is" (the two top-level goals),
+`docs/2026-09-04_reasoning-surface-plan.md` §5.4 (each gate tagged),
+`docs/2026-09-03_design-hygiene-arc.md` step (v) and its "not this
+arc's to decide" list, `docs/assessment/decisions-2026-08-31.md`
+2026-09-04 addendum, `TODO.md` (the C-arc section).

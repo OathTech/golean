@@ -20,6 +20,15 @@ This repo makes NO verification claims. Do not rebuild proof
 machinery here; reasoning work happens on the parked line and,
 later, in its own repo.
 
+Top-level goals ([USER], Mike, 2026-09-04, verbatim, relayed by the
+[AGENT] coordinator — cite as relayed): «(1) to be a highly accurate
+go semantics, and (2) to support reasoning about go using an
+iris-lean layer (which we won't build, that's a customer)». The
+iris-lean layer is a CUSTOMER, never built here — this repo ships
+the consumer interface it needs
+(`docs/2026-09-04_reasoning-surface-plan.md` §1 →
+`GoLean/Interface.lean` when it exists).
+
 - The semantics is **the weakest machine Go permits, all latitude
   included**. Differential testing is the lower bound (observed ∈
   modeled); spec/docs/corpus argue the upper. Doctrine:

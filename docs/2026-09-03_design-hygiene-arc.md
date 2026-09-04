@@ -110,10 +110,29 @@ cost and touches the fewest positional `fun_cases` proofs.
      `ExecState`.
 
 (v) **The big reshaping C1–C5** — [USER]-ratified IN PRINCIPLE
-    («eventually … the bigger breaking changes as well»), scheduling
-    DEFERRED («later or now»). Each C-item returns to the [USER] as
-    its own design gate when reached — a HARD STOP, never
-    self-adjudicated (CLAUDE.md, autonomous arcs). C1 memory module
+    2026-09-03 («eventually … the bigger breaking changes as well»);
+    scheduling RULED IN SCOPE 2026-09-04 (Mike, relayed by the
+    [AGENT] coordinator — cite as relayed, not firsthand), on
+    presentation of `docs/2026-09-04_reasoning-surface-plan.md` §5.4's
+    nine design gates: «Great, this sounds good - let's move ahead
+    with the plan. Our top level goal here is (1) to be a highly
+    accurate go semantics, and (2) to support reasoning about go
+    using an iris-lean layer (which we won't build, that's a
+    customer)» — all nine gates (G-U, G-C5, G-C1, G-C2, G-P, G-C3,
+    G-C4, G-OUT, G-PIN) RULED as recommended. Earlier the same day,
+    the standing direction that frames this move: «I think we should
+    try to do the disruptive thing if it'll result in a more useful
+    reasoning surface» (full ruling record:
+    `docs/2026-08-31_qrow-rulings.md` appendix). The C-arc now
+    EXECUTES in the plan's §5.1 order, after wave (iii): U
+    (`consumeAtOne`, G-U) → B4 → C5 (G-C5) → B7 → C1 (G-C1) → C2
+    (G-C2, parallel lane) → B6 (parallel lane) → P (G-P) → C3 (G-C3)
+    → C4 (G-C4) → B5 (optional, any time) → I5 (`Interface.lean`) →
+    the assessment re-run → the pin offer (G-PIN). Each C-item still
+    returns to the [USER] as its own design gate when reached — a
+    HARD STOP, never self-adjudicated (CLAUDE.md, autonomous arcs);
+    the 2026-09-04 ruling is a recommendation ADOPTED per gate, not a
+    waiver of the per-item stop. C1 memory module
     with an access trace; C2 well-founded `TypeEnv` (the fuel towers
     become structural); C3 `Cont` as `List Frame` (pre-pin only —
     after the downstream repo pins the `Cont` shape it is a breaking
@@ -134,20 +153,25 @@ cost and touches the fewest positional `fun_cases` proofs.
 ## Not this arc's to decide — SEMANTICS decisions for the [USER]
 
 Recorded so they are not mistaken for hygiene items; each would
-change the semantics or its accounting, and none is scheduled here
-(review §3, "Not mine to propose, but note"):
+change the semantics or its accounting (review §3, "Not mine to
+propose, but note"). Two of the five are RULED IN as of 2026-09-04
+(gates G-U and G-P, `docs/2026-09-04_reasoning-surface-plan.md` §5.4;
+scheduled in the C-arc order above, (v)); the remaining three are
+still not scheduled anywhere:
 
 - `ChoiceSite.policy.consumeAtOne` uniformization (`mapIter` pops at
   width 1, no other site does) — set of behaviours unchanged, stream
-  realization changes, every fixed-stream baseline re-pins.
+  realization changes, every fixed-stream baseline re-pins. RULED IN
+  as G-U, first C-arc item after wave (iii).
 - Native method promotion in the core instead of frontend wrappers —
   changes the frontend contract and the detector's hop-path argument.
+  RULED IN as G-P, after C1 in the C-arc order.
 - Unsequenced operand evaluation (a Cerberus `unseq`) — a semantics
-  WIDENING; the doctrine's business.
+  WIDENING; the doctrine's business. Still out.
 - The range-over-slice desugar's race footprint vs gc's — a fidelity
-  question.
+  question. Still out.
 - Boxing identity for efaces (`renderPanicHead`) — a semantics
-  addition.
+  addition. Still out.
 
 ## Invariants of every slice
 

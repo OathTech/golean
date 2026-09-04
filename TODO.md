@@ -34,6 +34,34 @@ for the [USER]) is in the plan.
 - [ ] (iv) B4/B5/B6/B7
 - [ ] (v) C1–C5 — each a [USER] design gate when reached
 
+### The C-arc, in order (RULED [USER] 2026-09-04, as recommended, relayed)
+
+Plan of record: `docs/2026-09-04_reasoning-surface-plan.md` §5.1 (the
+order and sizes), §5.4 (the nine gates, each now tagged RULED). Full
+ruling record: `docs/2026-08-31_qrow-rulings.md` appendix. Executes
+after wave (iii) above, in this order — each item is still its own
+[USER] design gate when reached (a HARD STOP; the 2026-09-04 ruling
+adopts the recommendation, it does not waive the per-item stop):
+
+- [ ] U — `consumeAtOne` uniformization (G-U), first after wave (iii)
+- [ ] B4 — `Signal` + thread `Status`
+- [ ] C5 — `.opDone` out of `Config`, into `Status` (G-C5)
+- [ ] B7 — `ProgramCtx`/`Store` split
+- [ ] C1 — `Mem` + access trace (G-C1)
+- [ ] C2 — well-founded `TypeEnv` (G-C2, parallel lane)
+- [ ] B6 — `VarId` (parallel lane)
+- [ ] P — native method promotion (G-P), after C1
+- [ ] C3 — `Cont := List Frame` via views (G-C3), after B4 and P
+- [ ] C4 — block-scoped allocation (G-C4), last C-item before I5
+- [ ] B5 — `Chan` module (optional, any time)
+- [ ] I5 — `GoLean/Interface.lean` + bridge theorems
+- [ ] assessment re-run
+- [ ] pin offer (G-PIN)
+- [ ] **G-OUT — decide before stdlib slice 3 lands. RULED: per-step
+  event** (`StepEvent.out`, folded by the driver into `Readout`;
+  `Obs.terminal` carries the stderr prefix) — not otherwise ordered
+  in the table above; §4.1 of the plan.
+
 ## Lowering diagnostic (`scripts/lower-diagnose`, [USER] direction 4, 2026-09-04)
 
 Landed as report-only lane tooling (`docs/2026-09-04_lower-diagnose.md`).
