@@ -269,9 +269,11 @@ configuration the sequential relation gets stuck on; (ii) labelled
 `break`/`continue` and `return`, which are non-local control — kept
 as `Signal` modes that step frame by frame (B4's table), so they DO
 respect `fill` (a signal at `k ++ K` strips `k`'s glue exactly as at
-`k`; cerberus-lean's `Erun` jump that discards its frame, CERB
-`cerberus-heaplang/CerberusHeapLang/Lang.lean:28-35`, is the shape we
-do NOT have and must not acquire — `goto` FR-11/FR-20 must lower to
+`k`; cerberus-lean's `Erun` jump that discards its frame — CERB
+`cerberus-heaplang/CerberusHeapLang/Lang.lean:94-100`, "Deliberately
+ABSENT: a `Language.Context` instance … the engine's `Erun` discards
+the frame (step_ctx's Erun arm, Core_reduction.lean:484)" — is the
+shape we do NOT have and must not acquire — `goto` FR-11/FR-20 must lower to
 signals, never to a frame-discarding jump). Terminal shapes are a
 `Status`, never a pattern over `Cont` (today enumerated at Multi.lean:
 148/259/1770, StepFn.lean:886-889, MachineSound.lean, NPDRF.lean:247).
@@ -521,6 +523,133 @@ refactor that preserves §1 is not a breaking change for the consumer
 even if it moves every line of `Machine.lean`; a change to §1 is a
 pin move with a written reason, like the oracle pin. That is the
 whole point of writing §1 before doing §3.
+
+### 1.14 The customer, concretely: the iris-lean instantiation
+
+iris-lean (`deps/iris-lean` @ `e7a0a438`, the park's pin — PARK
+`proofs/lakefile.toml`) is THE consumer §1 is specified for. Its
+classes, cited so the fit can be checked line by line, and what our
+instance is.
+
+**The classes.**
+- `class Language (Expr) (State Obs Val : outParam) extends PrimStep Expr
+  State (List Obs), ToVal Expr Val where val_stuck : (e, σ) -<obs>-> (e',
+  σ', eₜ) → toVal e = none` — IRIS `Iris/ProgramLogic/Language.lean:
+  109-113`; `PrimStep.primStep : Expr × State → Obs → Expr × State × List
+  Expr → Prop` :67-69 (the `List Expr` is the FORK list; `Language`
+  instantiates the observation slot at `List Obs`, so a step emits a
+  LIST of observations — heaplang uses it for prophecy resolution,
+  `Iris/HeapLang/Semantics.lean:386-391`); `ToVal` :34-41.
+- `class Language.Context (K : Expr → Expr)` — `toVal_eq_none_fill`,
+  `primStep_fill`, `primStep_fill_inv` — :271-280 (the bind law's
+  premise; the park says it is FALSE for us today, PARK `Laws/Bind.lean:
+  22-25`).
+- `class EctxLanguage (Expr) (Ectx State Obs Val : outParam) extends
+  BaseStep, ToVal, EvContext` with `fill_val`, `step_by_val`,
+  `val_stuck`, `base_ctx_step_val` — IRIS `EctxLanguage.lean:150-172`;
+  `EvContext.fill/fill_empty/fill_comp/fill_inj` :40-45; the item
+  version `EctxItemLanguage` with `Ectx := List EctxItem`, `fill K e :=
+  K.foldl (fun x y => fillItem y x) e`, `comp x y := y ++ x` —
+  `EctxiLanguage.lean:19-34, 53, 56-63` (a list of frames IS its
+  evaluation context; C3 makes ours the same type).
+- `class StateInterp (State) (Obs) (GF) where stateInterp : State → Nat →
+  List Obs → Nat → IProp GF` — `WeakestPre.lean:35-40` (state, step
+  count, PRIOR OBSERVATIONS, threads spawned); `class IrisGS_gen …
+  extends StateInterp` with `numLatersPerStep`, `forkPost`,
+  `stateInterp_mono` :45-59; `wp.pre` :73-83 (the `primStep` premise at
+  :80), `wp_unfold` :127-131.
+- `structure adequate (s) (e1) (σ1) (φ : Val → State → Prop)` with
+  `adequate_result` (every thread-pool trace reaching a value satisfies
+  φ) and `adequate_not_stuck` (every reachable thread `NotStuck` when
+  `s = .NotStuck`) — `Adequacy.lean:237-243`; `wp_strong_adequacy_gen`
+  :174-192, `wp_adequacy_gen` :302-311; the total variant `twp_total`
+  (`TotalAdequacy.lean:200-214`).
+- heaplang as the template: `State := {heap : ExtTreeMap Loc (Option
+  Val); usedProphId}` `Semantics.lean:88-90`; `loadS`/`storeS` :355-361;
+  `genHeapInterp`/`pointsTo l dq v := heapName ↪◯MAP[l]{dq} v`
+  `Iris/BI/Lib/GenHeap.lean:79-86`; `HeapLangGS` (NOT an instance, "to
+  avoid diamonds with IrisGS_gen") and `HeapLangState.stateInterp σ _ κs
+  _ := genHeapInterp σ.heap ∗ prophMapInterp κs σ.usedProphId`
+  `PrimitiveLaws.lean:60-70`; `heap_adequacy … : adequate .NotStuck e σ
+  (fun v _ => φ v)` :131-134.
+
+**Our instance (the design the interface must admit).**
+
+```lean
+-- downstream, over GoLean.Interface; nothing here is built in this repo
+inductive Event | pick (r : PickRecord) | access (a : Access) | out (o : OutEvent)   -- ONE observation type
+abbrev Obs := Event
+-- (sequential) Expr := Config, State := Store, Val := Unit
+def primStepSeq : Config × Store → List Event → Config × Store × List Config → Prop :=
+  fun (c, σ) evs (c', σ', efs) => StepE c σ c' σ' efs ∧ evs = eventsOf c σ c'   -- picks/accesses/out of THAT step
+instance : Language Config Store Event Unit   -- val_stuck: no rule from ⟨.next, []⟩ (today PARK Lang.lean:46 proves it by `cases`)
+instance : EctxLanguage Config Cont Store Event Unit   -- C3 + B4: fill K c := ⟨c.mode, c.k ++ K⟩ (§1.7)
+-- (concurrent) the park's LangD shape: a per-thread relation whose pairing/wake rules ∃-quantify the partner
+--   (PARK LangD.lean:25-36, :82); StepM is the refinement target via a simulation (PARK stepM_erasedD :487).
+```
+
+Four consequences the interface is shaped by:
+
+1. **The choice tape is demonic nondeterminism in `primStep`, and the
+   PICKS are observations.** `Step` has several derivations where Go
+   has several behaviours (§1.4); the executable's `PickRecord`s (B8)
+   are emitted as `Event.pick` in the step's observation list. So a
+   thread-pool trace `NSteps n ([c], σ) obs ρ` (IRIS `Language.lean:
+   148-154`) CARRIES the labeled schedule in `obs`, and `Fair` is a
+   predicate on `obs` — `Fair : List Event → Prop` (or on the infinite
+   trace), "every goroutine runnable at infinitely many `pick` events
+   at a `SchedSites` site is the `who` of infinitely many" — an
+   IRIS-LEVEL HYPOTHESIS on the trace, exactly the doctrine's «fairness
+   is a hypothesis on the chosen choice sequence, stated where it is
+   used» ([USER] 2026-09-02, relayed via the doctrine). `sched_pick_menu`
+   (§1.8) is what makes it well-defined (a pick names its goroutine).
+   Partial adequacy (`adequate`) is fairness-free; liveness under `Fair`
+   is a trace-indexed corollary the downstream states over `NSteps`,
+   not something the machine enforces.
+2. **The state interpretation is heap + race shadow, and the shadow is
+   a FOLD OF THE OBSERVATIONS, not ghost state.** `stateInterp σ _ κs _
+   := genHeapInterp (Store.toKeyMap σ) ∗ ⌜RaceState.ofEvents κs = some r⌝`
+   — because `StateInterp` receives the prior observation list (the
+   slot heaplang uses for prophecies), and the detector (§1.2) is
+   definitionally a fold over emitted accesses and picks. `Terminal.
+   raceDetected` is then `RaceState.ofEvents κs = none` — a pure fact
+   about the trace prefix, provable or refutable by computation. This
+   is why C1 must make the footprint an EMISSION: a table beside the
+   semantics cannot be folded from `κs`.
+3. **Points-to is keyed like the detector: `ShadowKey`, not `Loc`.** The
+   ghost heap's key type is `ShadowKey` (Race.lean:336: `data l |
+   syncWord l kind word | chanObj l`, A6 — done) restricted to LEAF
+   paths plus sync words: `Store.toKeyMap σ : ExtTreeMap ShadowKey Cell`
+   decomposes each value cell into its scalar leaves (`data (l.field
+   …)`, `data (l.index …)`), each `sync` value into its words (`syncWord
+   l .mutex .state`, `.sema`, …), each payload cell into `chanObj l` /
+   `data l`. Then `l ↦ v` for a leaf, `l ↦ₘ μ` for a mutex as the
+   conjunction of its word assertions, `own_struct`/`own_slice`/`own_map`
+   as iterated conjunctions (G-REPR route (b), PARK plan `:391-467`),
+   and the frame rule is `ShadowKey.overlap k₁ k₂ = false → keys
+   disjoint` — the SAME overlap table the detector uses (Race.lean:354),
+   so "these two accesses cannot race" and "these two points-to are
+   separate" are one fact. `Mem.load_after_disjoint_store`/
+   `store_store_disjoint` (§1.2) are the semantic input; `genHeap_update`
+   at a leaf key rewrites exactly one leaf of one cell. Per-word sync
+   keying is what lets a `Mutex` inside a struct be owned separately
+   from its neighbouring fields — precisely the case the detector's
+   A6 table was built for (a whole-struct copy covers the words; a
+   sibling field's access overlaps none).
+4. **Adequacy shape.** `go_adequacy : StateWf σ → (∀ [GoGS GF], ⊢ WP c
+   {{ _, ⌜φ⌝ }}) → adequate .NotStuck c σ (fun _ σ' => φ σ')`, then
+   through §1.6 `run_ok_iff_stepsM` to `∀ fuel ch, run P e a fuel ch ∈
+   {.obs (.ok r) | φ r} ∪ {.fuelOut}` (the park's `go_adequacy`, PARK
+   `Adequacy.lean:83`, carried `HeapWf σ` plus three pin equalities
+   `GoCoreGS.prog GF = σ.functions/methods/types` — B7 makes those a
+   single `ProgramCtx` section variable). `NotStuck` under the LangD
+   widening: a parked goroutine is REDUCIBLE (∃ partner), so deadlock
+   is not "stuck" in Iris's sense and deadlock-freedom is a `Fair`-
+   conditioned liveness statement, not adequacy; a `Refusal` IS stuck
+   (no rule) — so `adequate .NotStuck` is exactly `run_refusal_free`
+   (§1.9) for the fragment the WP covers. That is the sentence the
+   interface should be able to state and the downstream should be
+   able to prove.
 
 ---
 
@@ -1202,12 +1331,15 @@ pops iff it has a choice", full stop).
 - **`unseq` (unsequenced operand evaluation).** A semantics WIDENING:
   E12/E13 are pinned as "structural (frontend ANF)" and the core
   cannot state them; admitting a Cerberus-style `unseq` would add
-  behaviours. cerberus-lean's census (CERB `refined-cerberus/docs/
-  2026-08-30_eunseq-census.md`: 98 nodes, no store ever an arm)
-  concluded sequentialisation was unnecessary FOR THEIR fragment;
-  ours is the opposite decision for the opposite reason — Go's spec
-  DOES leave operand order open in places and we have chosen to pin
-  it at the frontend. Reopening that is the doctrine's business (a
+  behaviours. cerberus-lean MEASURED its unsequenced nodes before
+  deciding how to reason about them (CERB `refined-cerberus/docs/
+  2026-08-30_eunseq-census.md:11,109-120`: 98 `Eunseq` nodes in 23
+  files, 201 arms, 94 binary, all inside an `Ebound` at a sequencing
+  head; `:252`: 24 whose join is consumed by a store) — a census, not a
+  ruling; the analogous measurement here would be a latitude-inventory
+  row counting where Go's order is open and our ANF pins it. Go's spec
+  DOES leave operand order open in places and we have chosen to pin it
+  at the frontend. Reopening that is the doctrine's business (a
   latitude-inventory row), not this plan's.
 - **Range-desugar footprint.** `for i, v := range s` lowers to a
   `while` over `$rcoll`/`$ridx`/`$rlen` (NativeToIR.lean:1224-1307);
@@ -1530,11 +1662,62 @@ is scheduled as such.
   ledger; this plan only guarantees that when it does export, the
   proof does not have to fight the representation.
 - cerberus-lean-proj's most useful lesson is the one that costs
-  nothing: their [USER]'s «abstractions should do some work for us …
-  How much does this actually buy us?» (CERB `DECISIONS.md:360-371`)
-  led them to DEFER a parametric memory interface and prove rules
+  nothing: their [USER]'s «I feel like abstractions should do some work for us …
+  How much does this actually buy us?» (CERB `refined-
+  cerberus/docs/DECISIONS.md:372-378`, the 2026-09-02 "PARAMETRIC
+  INTERFACES NOT ADOPTED" ruling; KOI B9) led them to DEFER a parametric memory interface and prove rules
   directly against the step relation. §1.2's `Mem` is not that
   abstraction — it is not a typeclass, has one instance, and exists
   to make the TRACE definitional, not to admit a second memory model.
   If it ever grows a second instance, someone should ask their
   question again.
+
+---
+
+## 6. Lessons from cerberus-lean / refined-cerberus, pitfall by pitfall
+
+Read-only, from `/home/dev/projects/cerberus-lean-proj/` (CERB; nothing
+there was modified). The sibling project instantiated an Iris-style
+separation logic over the Lem→Lean port of Cerberus Core and has been
+audited five times in a week (skeptical re-audit 2026-09-01, audit
+response 2026-09-02, shareable-main review 2026-09-03, Reynolds/O'Hearn
+audit 2026-09-04, fuel-parameter review 2026-09-04). Each row: the
+pitfall as THEY hit it (their cite), our exposure TODAY (our
+file:line), the item here that closes it. "✓" = we already stand on
+the right side; the row is kept so nobody moves us off it.
+
+| # | Pitfall (as they hit it) | Their record (CERB) | Our exposure today (`aceb0dcb`) | Fixing item |
+|---|---|---|---|---|
+| L1 | Fuel exhaustion as an OPAQUE sentinel: no `∀ fuel` statement can classify an out-of-fuel run; a package-defined driver was built, then ruled out — «We should not be writing our own trusted driver code» | `docs/2026-09-02_request-cerberus-lean-fuel-exhaustion-outcome.md:32-58`; `docs/DECISIONS.md:630-645, 649-660, 1787-1800` | ✓ `Stop.fuelOut` is a transparent constructor (Value.lean:240-246); fuel is a parameter of `execProgLoop` (Multi.lean:1819) and `run_mono`-class lemmas exist (`execStmt_mono` MachineSound.lean:750). Exposure: FOUR drivers (StepFn.lean:834/882/903, Multi.lean:1876) | §1.5 one `run`; §1.6 `run_ok_iff_stepsM` |
+| L2 | Fuelled HELPERS whose exhaustion is the return type's `Inhabited` default — the run CONTINUES with a wrong value; their rule: every fuel'd function must be (A) structural, (B) absorbing-typed exhaustion, or (C) gate-checked unreachable | `docs/2026-09-04_review-of-fuel-parameter-design.md:57-100`; `DECISIONS.md:2118-2126`; KOI A5 (61 `panic!` arms read as defaults) | Our 14 fuel towers fail CLOSED (a `Refusal`, never a default — Ops.lean:14-28), i.e. already (B); but `typeResolutionFuel` (Ops.lean:29) is in every unfolding and 31 `set!`/`eraseIdx!` sites (Ops.lean:157,1454,2163; Machine.lean:274,980,2592,3139; Multi.lean:497,1023,1042,1065; …) are kernel-default-on-OOB ops guarded by convention, not by type | C2 (rule A: structural); the `!`-ops → `Array.set` under a bounds proof as A2's `updateCell` does (ride B5/C1); keep the ci escape-hatch scan |
+| L3 | A hand-written MIRROR relation beside the engine (1,943-line `Step`, 4,943-line one-directional `Soundness`): "a certified package projection of a selected Core", not "over Cerberus Core" | `docs/2026-09-01_cerberus-heaplang-skeptical-re-audit.md:298-322` (R-03); ARCHITECTURE glossary "the mirror … a proof device with no semantic authority" | ✓ two-sided: `stepFn_sound` (MachineSound.lean:44) AND `step_complete` (:393), `stepMulti_sound`/`stepM_complete` (MultiSound.lean:884/1059). Exposure: the relation is INTERLEAVED with the executable (review U14) and carries the 17 twins | B2 (twins); keep BOTH directions in §1.4; extraction after B2/B4, never before |
+| L4 | `Language.Context` is FALSE because a jump discards its frame (`Erun`): no `EctxLanguage`, bind proved by hand | `cerberus-heaplang/CerberusHeapLang/Lang.lean:94-100`; `DECISIONS.md:360-371` (parametric spike: "control mixin not an `EctxLanguage` instance because `Erun` discards its context") | Same disease, different cause: the two-step panic abort makes `primStep_fill` false, hence the park's `hdrain` premise (PARK `Laws/Bind.lean:22-34`); `goto` (FR-11/FR-20) could ADD their cause if lowered as a frame-discarding jump | B4 `Status` (panicked is a thread status) + C3 (`fill` is append); §4.2: `goto` lowers to `Signal` |
+| L5 | `toVal` is CONTROL-dependent: "a value at a non-empty stack is a RETURN redex (`toValRt = none` at `κ ≠ []`)"; congruence guards `toVal e1 = none` on every sequencing lift | `DECISIONS.md:1277-1284, 1326-1330` | ✓ `toVal ⟨.next, []⟩ = some ()`, `retV` never at the empty stack (PARK `Lang.lean:20-25`); exposure: terminal shapes are enumerated at six sites (§2 G2) | B4 `Status.done`; §1.7 keeps `Val := Unit` |
+| L6 | The memory invariant lives INSIDE the state interpretation (`MemWF`, ten engine-cited fields, a field of `CohG`; `Coh` = per-cell coherence + pairwise disjointness) and every op has its preservation theorem | `cerberus-heaplang/ARCHITECTURE.md:411-430`; `Heap.lean:386-389` | ✓ one predicate `StateWf` (StateWf.lean:595) preserved by `step_preserves_wf` (:6658); the park put `HeapWf` in `stateInterp` (PARK `Adequacy.lean:105-108`). Exposure: two VACUOUS conjuncts still threaded (`itersNormalized` 113+103 mentions; function-body `locSup`) | §1.9; B3/B7 delete the conjuncts |
+| L7 | Points-to granularity chosen for the logic, not the machine: a typed VIEW = metadata + byte range (`pointsToView`), fractional/split laws proved with NO client (R-06) | `Heap.lean:2714-2720`; re-audit `:399-410` | The park's ghost heap was WHOLE-CELL, dropping field/index keys (PARK `HeapBridge.lean:33-47`) — no per-field frame at all (G-REPR open) | C1 + §1.14(3): keys = `ShadowKey` leaves + sync words, the detector's own overlap table; build split laws only when a corpus member needs them |
+| L8 | The allocation rule unreachable from adequacy; allocating examples proved by concrete traces that BYPASS the logic (R-01/R-02, both Critical) | re-audit `:170-297` | Park: alloc laws hardcoded per cell count (`wp_alloc_step₂/₃/₄`, PARK `Lifting.lean:170-312`); every example discharged `funcListSup … ≤ 0` by `decide` (PARK `Examples/BinSearch.lean:1478`) | C1 `Mem.alloc` (one rule); A4-owed `locSup` deletion (B7); §1.6 so examples exit through `run`, not a replay |
+| L9 | The capability manifest validates DECLARATIONS, not use; broad constructors hide NO-RULE variants (15 of them: locking store, union-member pointer, zero-size create, `free(NULL)`, …) | R/O'H audit `:133-145` (Finding 1); ARCHITECTURE §6 NO-RULE table | Our NO-RULE variants are the five `unsupported` IR constructors (§2 G18) and every `.stuck` arm; nothing states which `Accepted` programs the relation is total on | I1 (no refusal markers in the IR); §1.9 `Accepted` + `run_refusal_free` as the NAMED target; the downstream's statement-TCB deletion test (PARK `Audit.lean:130-560`) as the enforcement |
+| L10 | The client abstraction boundary is not ENFORCED (readouts cross it; the boundary check is text-based and per-module allowlisted) | R/O'H audit `:205-215` (Finding 2); KOI C11-C12 | The park's veneer ban / A-TRIP was a lint over a scope file (revival guide: "the scope config is young") | §1.13: `GoLean/Interface.lean` is the boundary and the kernel-level deletion test is the check — a constant outside the interface in a designated statement's closure is a build failure |
+| L11 | Judgments fixed to one profile/mask (`SemTriple` at `spikeCtx`; statement logic hard-wired to `⊤`) — less general than the prose | R/O'H audit `:263-272` (Finding 3); re-audit `:452-465` (R-09) | Park adequacy pinned `functions/methods/types` by THREE equalities (PARK `Adequacy.lean:83`); theorems stated at `platform` not `∀ p` (A-series §A5) | B7: `ProgramCtx` (incl. `Platform`) as ONE section variable |
+| L12 | Two separately proved bridges for the same engine round feed adequacy and the rule layer — "not a soundness hole" but duplication and drift risk | R/O'H audit `:303-330`; KOI B12 | Several bridges: `stepFn_sound`/`step_complete`, `execProg_single_eq_execStmt` (MultiSound.lean:583), `execProgLoop_ok_of_allStreamsOkPool` (MultiStreams.lean:801), `checkCert_slowObs` (EnumDedupSound) | §1.6: ONE `run_ok_iff_stepsM` derived from the pool bridges; enumeration soundness stays engine-side, off the interface (§1.12) |
+| L13 | Parametric semantics interfaces DEFERRED — «abstractions should do some work for us … How much does this actually buy us?»; rules proved directly against `Step` and the memory state | `DECISIONS.md:372-378`; KOI B9; ARCHITECTURE §6 | `Mem` (§1.2) is not a typeclass and has one instance; it exists for the TRACE, not for a second memory model | §5.5's standing question: a second `Mem` instance needs a customer first |
+| L14 | «NO BORING LOGIC; A PROJECTION THEOREM ONLY» — a semantic separation logic beside Iris was REJECTED as a second logic; the semantics exports "just memory + pure properties" | `DECISIONS.md:446-454` | ✓ this repo makes no verification claims (CLAUDE.md); the interface exports definitions and bridge theorems, never proof rules | §1 by construction; I5 SKETCHES the `EctxLanguage` laws, does not build the instance |
+| L15 | Re-pin drift: the pinned semantics fell ≥ 34 commits behind its mainline; the re-pin is a 2.5-4 worker-day arc with exported-text changes | KOI A4, A6; `docs/2026-09-03_repin-scout*.md` | We are the pinned side; the park already drifted (§0 item 1: `Heap.set`, `coerceStoredValue`, `typeResolutionFuel`) | §1.13: pin the DOCUMENT; a §1-preserving refactor is not a pin move |
+
+Two things they did RIGHT that §1 copies without apology: every
+exported statement carries a `file:line` into the pinned semantics and
+"a disagreement between any definition here and the engine is a defect
+here" (ARCHITECTURE §1 — our version: a disagreement between §1 and
+`Interface.lean` is a defect in the tree, not the document); and the
+trust base is stated as a LIST (kernel + trio; iris-lean as definitions
+only; the pinned semantics as a policy sampled by differential
+validation — ARCHITECTURE §3 `:432-440`), which is CLAUDE.md's "trusted
+surface" paragraph in another dialect.
+
+Provenance note on this section: the CERB citations in §1.3, §1.5, §3.X
+and §5.5 were written before the delegated cerberus survey returned and
+were VERIFIED against the files afterwards; three were corrected in the
+follow-up commit (the `Erun` cite `Lang.lean:28-35` → `:94-100`; the
+`Eunseq` census claim "no store ever an arm" → the measured `:252`
+figure; the "abstractions should do some work" ruling `:360-371` →
+`:372-378`). [AGENT]
