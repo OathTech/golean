@@ -94,13 +94,16 @@ packages; the `slices-sort-kind` cause (9 decls) left the table.
 
 FLIPPED FAIL→PASS (4): `generics/stencil-quarantine/sibling` (the FR-4
 witness), `slices/slices-sort-non-integer-refusal`,
-`stdlib-source/sort-op-shapes/{defer-sort,go-sort}`. BORN (18): 
+`stdlib-source/sort-op-shapes/{defer-sort,go-sort}`. BORN (18 at the slice
++ 2 residual pins at the audit fix round A5 = 20): 
 `generics/stencil-quarantine/{stencil-call-refuses,iface-satisfied,
 iface-dispatch,transitive-lowers,transitive-call,dedup-second-body,
 local-type-c6}` (7: 3 PASS / 4 FAIL by design), `generics/stencil-quarantine-iterseq/
 {sibling,satisfies,call}` (3: 2 PASS / 1 FAIL by design),
 `slices/slices-sort-kinds/{string,named-string,float-nan-first,
-float-signed-zero,float32,named-float,string-large,init-sort}` (8 PASS).
+float-signed-zero,float32,named-float,string-large,init-sort}` (8 PASS),
+`generics/stencil-residual-{sig-anon-struct/sibling,field-iterseq/healthy}`
+(2 FAIL by design, whole-export kills — the FR-4 residual).
 Every existing `slices.Sort` row (`slices/slices-sort*`, `quorum/
 committed-index-real/*`, `stdlib-source/slices-sortfunc/others`) stays
 PASS through the real generic. 0 PASS→non-PASS. Figures: see the Gate
@@ -122,11 +125,61 @@ admission register = frontend tables; `go test ./tools/nativefrontend`
 integrity, determinism) and `go test ./tools/lowerdiag` (causes.tsv vs
 ledger, calibration vs wire, vocabulary) ok; check-spec-anchors,
 check-bugs, check-coverage ok; eval tests 148 ok; reconciler 3 findings,
-**0 HIGH** (the three MEDIUMs pre-date this lane: C13 historical Go
-versions, C14 one backlog decay date, C5 FR-7's `=` citation). The
+**0 HIGH** (C13 historical Go versions and C5 FR-7's `=` citation pre-date
+this lane; **C14 did NOT** — this lane's D-002 note had been appended to
+the `review by` cell, making `2026-10-31` unparseable; pristine main shows
+2 findings. Corrected at the audit fix round A1: the note moved to the
+description cell, the date restored, C14 gone). The
 drift run BEFORE the re-pin (same tree content, dirty) is
 `ci-diff-1-drift-run.txt`: its baseline diff lists exactly the 18 born
 rows and 4 FAIL→PASS flips, nothing else.
+
+## Audit fix round A1–A10 (2026-09-04, verdict FIX-FIRST)
+
+- A1 D-002 `review by` cell restored (`2026-10-31`), note moved to the
+  description; the gate paragraph above corrected (C14 was this lane's).
+- A2 `tools/lowerdiag`: the retired whole-export stencil text is a TRIPWIRE
+  row again (`stencil-kill-tripwire`, FR-4 export, before
+  `imported-generic-inst`); `classifyText` strips `at run: `,
+  `frontend-quarantined: `, the stub's closing clause and the FR-4 wrapper
+  before matching, so anchored rows match inside a stencil stub (the
+  `drv-eval-operators` text now classifies FR-27, not generics-corner);
+  `TestStencilTripwireAndWrapperStripping`.
+- A3 `NativeToIR.lean`: the `sort-slice` decoder arm and its key list are
+  GONE — the node is refused by name (`unsupported statement sort-slice`);
+  eval tests pin the refusal and that `clear-slice` of the same shape still
+  decodes. A wire-schema move (C9 fires; the train re-certs). The GoCore op
+  stays — hygiene arc item **A11** (dated OWED) rows its deletion.
+- A4 `after/` regenerated at the tip (59-row causes table): FR-27 ×3, FR-28
+  ×2 replace the unrowed generics-corner/expression-shape hits; census §11.2
+  says so.
+- A5 two FR-4 RESIDUAL pins, red by design on FR-4's line:
+  `generics/stencil-residual-sig-anon-struct/sibling` (stencil signature
+  unlowerable even opaque → `sigRefusal` whole-export kill) and
+  `generics/stencil-residual-field-iterseq/healthy` (instantiated type with
+  an `iter.Seq[T]` field reached from a zero-valued local → the TypeDef
+  stencil kill; a composite literal in the body quarantines per declaration
+  instead — measured, and the row says why the local is zero-valued).
+- A6 `interceptedLibraryCall` fails CLOSED: the empty table is an explicit
+  early return; a member LISTED without an arm (`interceptedMemberArm`) is a
+  NAMED refusal at the reach walk and in defer/go position;
+  `TestInterceptedLibraryCallFailsClosedOnListedMemberWithoutArm`.
+- A7 records: latitude inventory §R13 (mechanism = the real pdqsort
+  stencils; row M done), dossier-r13 note, ledger FR-14 (deleted refusal
+  text), memo §3 row M / register slice log "10 sites" → 9 (progress.go's
+  call is inside an H-3 stub), Machine.lean:1016 comment (dead since
+  2026-09-04; A11).
+- A8 `anonymousTypeRefusal` re-raises via `instTypeIdForWire` (both the C6
+  key refusal and enqueueTypeInst's FR-23); no emission path reaches the
+  anonymous-type text before the type refuses, so the helper is pinned
+  directly (`TestAnonymousTypeRefusalNamesEnqueueCause`).
+- A9 rowed on FR-26: the TypeDef-stencil kill names the LAST-emitted
+  function (`curFuncName` leak) — not this lane's fix.
+- A10 `generics/stencil-quarantine-iterseq/call` counted on FR-23's line
+  only (FR-23 4 → 5 reds, FR-4 3 + 2 residual); lowerdiag emits
+  repo-relative keys (`relativizeKey`); the census `results.tsv` detail
+  column still carries the frontend's absolute position text — stripped
+  in the evidence copy by `sed "s|$PWD/||"` (recorded here).
 
 ## Files
 

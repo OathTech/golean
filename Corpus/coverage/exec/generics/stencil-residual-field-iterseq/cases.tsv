@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+# FR-4 RESIDUAL pin (audit fix round A5): an instantiated generic type with
+# an iter.Seq[T] FIELD reached from a healthy body kills the WHOLE export in
+# the TypeDef stencil (FR-26's neighbourhood; cause text FR-23's). Red BY
+# DESIGN; on FR-4's line (residual).
+healthy	healthy	-	ok	-	generics,methods,structs,stdlib,len

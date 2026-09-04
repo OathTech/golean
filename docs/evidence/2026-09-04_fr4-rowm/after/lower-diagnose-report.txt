@@ -1,12 +1,12 @@
 DIAGNOSTIC — NOT A LOWERING. tools/lowerdiag report: no wire is written; nothing in this file is a gate input.
 target: artifacts/cedar/cases/all
-commit: 9128e6c0019adb46c9b7533965c3d716c4ccc0a8+dirty   go: go1.26.5   tables: 39aada262102 (causes.tsv + machine-surface.tsv + library-refusals.tsv)
-register: docs/stdlib-admission-register.md (42 rows)   causes table: 55 rows
+commit: 6d02f848df9f7e34c8c9d8eef32eeacec8b15da5+dirty   go: go1.26.5   tables: 844eefb264bf (causes.tsv + machine-surface.tsv + library-refusals.tsv)
+register: docs/stdlib-admission-register.md (42 rows)   causes table: 59 rows
 
 == first refusal (what the frontend says today)
   frontend: EXPORT OK (rc 0) — the export lowers; the probe wire carries 557 quarantined non-shim declaration(s):
     func cedargo.Authorize: FR-23/imported-generic-inst iter.Seq2[cedargo/types.PolicyID,*cedargo.Policy]
-    func cedargo.NewEntityUIDSet: unrowed/generics-corner generics-corner
+    func cedargo.NewEntityUIDSet: FR-27/explicit-instantiation-call artifacts/cedar/cases/all/cedargo/types.go:117:9
     func cedargo/internal/eval.PartialPolicy: FR-14/fmt-verb-matrix fmt-verb-matrix
     func cedargo/internal/eval.ToEval: FR-14/fmt-verb-matrix fmt-verb-matrix
     func cedargo/internal/eval.ValueToBool: FR-14/fmt-verb-matrix fmt-verb-matrix
@@ -19,7 +19,7 @@ register: docs/stdlib-admission-register.md (42 rows)   causes table: 55 rows
     func cedargo/internal/eval.ValueToRecord: FR-14/fmt-verb-matrix fmt-verb-matrix
     func cedargo/internal/eval.ValueToSet: FR-14/fmt-verb-matrix fmt-verb-matrix
     func cedargo/internal/eval.ValueToString: FR-14/fmt-verb-matrix fmt-verb-matrix
-    func cedargo/internal/eval.doInEval: unrowed/generics-corner generics-corner
+    func cedargo/internal/eval.doInEval: FR-27/explicit-instantiation-call artifacts/cedar/cases/all/cedargo/internal/eval/evalers.go:1010:12
     func cedargo/internal/eval.entityInOne: FR-23/imported-generic-inst iter.Seq[cedargo/types.EntityUID]
     func cedargo/internal/eval.entityInSet: FR-23/imported-generic-inst iter.Seq[cedargo/types.EntityUID]
     func cedargo/internal/eval.evalComparableValue: FR-14/fmt-verb-matrix fmt-verb-matrix
@@ -133,11 +133,15 @@ register: docs/stdlib-admission-register.md (42 rows)   causes table: 55 rows
   cause                      fr                decls  what
   labeled-shape              unrowed               -  statement/expression corner shapes the emitter refuses by arm — not modeled statically
   basic-type-opaque-sig      FR-25                 -  not modeled statically
+  stencil-kill-tripwire      FR-4                  -  not modeled statically
   global-type-poisoned       FR-24                 -  not modeled statically
   stencil-whole-export       FR-4                 92  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
   local-type-type-argument   c-pin                92  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
   imported-type-marker       by-design           111  declarations touching an imported named type — the D5 marker itself lowers; only its uncalled-method stubs appear quarantined in a wire
   generic-template           by-design            92  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
+  explicit-instantiation-call FR-27                 -  not modeled statically
+  len-hoist-panic-order      FR-28                 -  not modeled statically
+  imported-type-zero-value   FR-14                 -  not modeled statically
   generics-corner            unrowed              92  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
   cmp-compare-shape          FR-14                 3  declarations calling cmp.Compare — the real generic since the kind desugar retired (2026-09-04); a function-local type argument is a stencil-time C6 refusal
   init-schedule              unrowed               -  load-time / initialization-schedule shapes — the dynamic pass (first refusal) is the check

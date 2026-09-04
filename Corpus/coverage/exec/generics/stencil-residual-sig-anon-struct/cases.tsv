@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+# FR-4 RESIDUAL pin (audit fix round A5): a quarantined stencil whose
+# SIGNATURE does not lower even opaque (anonymous-struct param, FR-13) is
+# still a WHOLE-EXPORT kill (sigRefusal). Red BY DESIGN; on FR-4's line
+# (residual), cause text FR-13's.
+sibling	sibling	-	ok	-	generics,methods,structs,stdlib

@@ -858,3 +858,36 @@ func loadLibraryUnitForTest(t *testing.T, path string) (*sourcePkg, libTestIdx, 
 	unit.pkg = pkg
 	return unit, libTestIdx{fset: fset}, nil
 }
+
+// fr4-rowm audit fix round A6: interceptedLibraryCall FAILS CLOSED on a
+// table/dispatch disagreement — a member LISTED in
+// frontendInterceptedLibraryMembers with no arm in interceptedMemberArm is a
+// named refusal (the register would count it intercepted while nothing
+// intercepts it), never "not intercepted"; the empty table is explicit.
+func TestInterceptedLibraryCallFailsClosedOnListedMemberWithoutArm(t *testing.T) {
+	withStdlibRoots(t)
+	if len(frontendInterceptedLibraryMembers) != 0 {
+		t.Fatalf("precondition: the table is empty since row M, got %v", frontendInterceptedLibraryMembers)
+	}
+	saved := frontendInterceptedLibraryMembers
+	defer func() { frontendInterceptedLibraryMembers = saved }()
+	frontendInterceptedLibraryMembers = map[string]map[string]string{"slices": {"Sort": "probe: listed without an arm"}}
+	if _, _, ok, err := interceptedMemberArm("slices", "Sort"); ok || err == nil || !strings.Contains(err.Error(), "slices.Sort is listed in frontendInterceptedLibraryMembers") || !strings.Contains(err.Error(), "no arm") {
+		t.Fatalf("listed-without-arm must be a named refusal, got ok=%v err=%v", ok, err)
+	}
+	dir := writeMain(t, `package main
+
+import "slices"
+
+func subject() int { s := []int{3, 1, 2}; slices.Sort(s); return s[0] }
+
+func main() { subject() }
+`)
+	if _, err := lowerProgramDir(t, dir); err == nil || !strings.Contains(err.Error(), "table and dispatch disagree") {
+		t.Fatalf("a program calling a listed-without-arm member must refuse by name at the reach walk, got %v", err)
+	}
+	frontendInterceptedLibraryMembers = saved
+	if _, err := lowerProgramDir(t, dir); err != nil {
+		t.Fatalf("with the empty table the same program lowers: %v", err)
+	}
+}

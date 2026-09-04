@@ -5,19 +5,21 @@
 #   cited as relayed). drift vs the previous pin = EXACTLY (a) 4 FAIL -> PASS flips: generics/stencil-quarantine/
 #   sibling (the FR-4 witness), slices/slices-sort-non-integer-refusal (the refusal no longer exists),
 #   stdlib-source/sort-op-shapes/{defer-sort,go-sort} (nothing is intercepted; go-sort declares strict depth=64);
-#   (b) 18 born rows — 13 PASS (generics/stencil-quarantine/{iface-satisfied,transitive-lowers,dedup-second-body},
+#   (b) 20 born rows (18 at the slice + 2 at its audit fix round A5) — 13 PASS (generics/stencil-quarantine/{iface-satisfied,transitive-lowers,dedup-second-body},
 #   generics/stencil-quarantine-iterseq/{sibling,satisfies}, slices/slices-sort-kinds/{string,named-string,
-#   float-nan-first,float-signed-zero,float32,named-float,string-large,init-sort}) and 5 FAIL/frontend-export red
+#   float-nan-first,float-signed-zero,float32,named-float,string-large,init-sort}) and 7 FAIL/frontend-export red
 #   BY DESIGN (generics/stencil-quarantine/{stencil-call-refuses,iface-dispatch,transitive-call} — the stub
 #   refuses by name, FR-4's line; generics/stencil-quarantine-iterseq/call — FR-23 by name; generics/
-#   stencil-quarantine/local-type-c6 — the (c)-pin C6, per declaration); 0 PASS -> non-PASS. Every other
+#   stencil-quarantine/local-type-c6 — the (c)-pin C6, per declaration; audit fix round A5: generics/
+#   stencil-residual-sig-anon-struct/sibling and generics/stencil-residual-field-iterseq/healthy — FR-4's two
+#   RESIDUAL whole-export kills pinned red on FR-4's line); 0 PASS -> non-PASS. Every other
 #   slices.Sort row (slices/slices-sort*, quorum/committed-index-real/*, stdlib-source/slices-sortfunc/*) stays
 #   PASS through the real generic. Twin wire pin MOVED as row M's ruled consequence (raft's nine slices.Sort
 #   sites: sort-slice nodes -> slices.Sort[[]uint64,uint64] static calls + 16 stencils; 0 removed):
 #   b4458244c259 -> 4ee39f732d51, structural diff in docs/evidence/2026-09-04_fr4-rowm/twin-repin/. Stdlib pin
 #   unchanged. FULL ci --diff tail: docs/evidence/2026-09-04_fr4-rowm/ci-diff.txt.
-#   [re-derived from the data rows at this re-pin ([AGENT]): checkpoint C's 3382 (3172 PASS / 210 FAIL) + 18
-#   born (13 PASS / 5 FAIL) + 4 FAIL->PASS = 3400 (3189 PASS / 211 FAIL); tallied by row:
+#   [re-derived from the data rows at this re-pin ([AGENT]): checkpoint C's 3382 (3172 PASS / 210 FAIL) + 20
+#   born (13 PASS / 7 FAIL) + 4 FAIL->PASS = 3402 (3189 PASS / 213 FAIL); tallied by row:
 #   `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv`]
 # re-pinned: 2026-09-04 (fr24 lane, checkpoint C — the cmp.Compare kind-dispatch desugar RETIRED:
 #   [USER] Mike 2026-09-04, relayed by the [AGENT] coordinator (cited as relayed): «(2) given we have
@@ -946,7 +948,7 @@
 #     removed row is named in prose, never left dangling on the line).
 #     NEW rows: unsafe/layout-ops/{sizeof-fixed,layout-struct}
 #     FAIL/frontend-export BY DESIGN. unsafe/boundary/pointer-roundtrip
-# cases: 3400 (3189 PASS / 211 FAIL)
+# cases: 3402 (3189 PASS / 213 FAIL)
 #   [re-derived from the data rows at the fr24 checkpoint-C re-pin 2026-09-04 ([AGENT]: checkpoint B's 3382 (3173 PASS / 209 FAIL) with ONE ruled PASS -> FAIL flip, slices/sortfunc-cmp/cmp-compare-kinds; tallied by row: `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv`)]
 #   [the checkpoint-B figure, kept as history:] # cases: 3382 (3173 PASS / 209 FAIL)
 #   [re-derived from the data rows at the fr24 checkpoint-B re-pin 2026-09-04 ([AGENT]: checkpoint A's 3376 (3168 PASS / 208 FAIL) + 6 born rows (3 PASS / 3 FAIL) with 2 FAIL -> PASS flips; tallied by row: `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv`)]
@@ -2158,6 +2160,8 @@ FAIL	generics/stencil-quarantine/local-type-c6	frontend-export
 PASS	generics/stencil-quarantine-iterseq/sibling	-
 PASS	generics/stencil-quarantine-iterseq/satisfies	-
 FAIL	generics/stencil-quarantine-iterseq/call	frontend-export
+FAIL	generics/stencil-residual-field-iterseq/healthy	frontend-export
+FAIL	generics/stencil-residual-sig-anon-struct/sibling	frontend-export
 PASS	generics/structural-transparency	-
 PASS	generics/type-aliases/slice-same-type	-
 PASS	generics/type-aliases/map-literal	-

@@ -442,3 +442,28 @@ func main() { println(healthy() + local()) }
 		}
 	}
 }
+
+// fr4-rowm audit fix round A8: anonymousTypeRefusal re-raises BOTH failure
+// modes namedTypeName swallows — the C6 key refusal AND enqueueTypeInst's
+// (an imported generic instantiation, FR-23) — via instTypeIdForWire, the
+// same call namedTypeName made. No emission path reaches the anonymous-type
+// text before the type itself refuses (a `unique.Handle[int]` value refuses
+// at its declaration), so the helper is pinned directly.
+func TestAnonymousTypeRefusalNamesEnqueueCause(t *testing.T) {
+	e, pkg := checkSource(t, `package main
+
+import "unique"
+
+var h unique.Handle[int]
+
+func main() { _ = h }
+`)
+	ty := pkg.Scope().Lookup("h").Type()
+	err := e.anonymousTypeRefusal("method", ty)
+	if err == nil || !strings.Contains(err.Error(), "FR-23") || !strings.Contains(err.Error(), "unique.Handle[int]") {
+		t.Fatalf("an imported generic instantiation must re-raise enqueueTypeInst's FR-23 refusal, got %v", err)
+	}
+	if strings.Contains(err.Error(), "anonymous type") {
+		t.Fatalf("the FR-23 cause must not be hidden behind the anonymous-type text: %v", err)
+	}
+}

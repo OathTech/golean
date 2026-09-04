@@ -1012,9 +1012,11 @@ def applyStmtOpCore (s : ExecState) (op : StmtOp)
       -- (insertion sort — de-WF 2026-08-03; normalized ints compare
       -- exactly as Go's unsigned/signed order; equal ints are
       -- indistinguishable, so sort stability is unobservable), store
-      -- back. Non-int
-      -- elements fail closed — the frontend only emits this at integer
-      -- element kinds.
+      -- back. Non-int elements fail closed. DEAD since 2026-09-04: the
+      -- frontend has never emitted `sort-slice` since memo §3 row M
+      -- (slices.Sort is the real pdqsort stencil) and the decoder refuses
+      -- the node by name (NativeToIR.lean); this op's deletion is owed to
+      -- the design-hygiene arc (item A11).
       match vs with
       | [baseV] => do
           let slice ← valueAsSlice baseV

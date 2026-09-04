@@ -845,7 +845,14 @@ in `census.tsv` or the histogram — and every cause has a ledger row:
 
 The three new classifications are `tools/lowerdiag/causes.tsv` rows,
 pinned in `TestClassifyTextVocabulary`; the static pass does not emit
-FR-27/FR-28 (a stencil-/hoist-time judgement — "not judged statically").
+FR-27/FR-28 (a stencil-/hoist-time judgement — "not judged statically"),
+but the WIRE pass does: `after/` was regenerated at the lane tip (audit fix
+round A4 — the first run used the 55-row table, before these rows), and the
+census histogram now reads FR-27 ×3 (`cedargo.NewEntityUIDSet`,
+`internal/eval.doInEval`, `types.go:117` — the three `generics-corner`
+unrowed hits of the first run) and FR-28 ×2 (the two `expression-shape`
+hits); keys are repo-relative (`artifacts/cedar/cases/…`) since A10 —
+lowerdiag strips the working directory from a position-keyed cause.
 Ledger §4 rows FR-27, FR-28 and §5 queue slots 27, 28 are this addendum's
 direction-3 record.
 

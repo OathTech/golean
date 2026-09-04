@@ -148,7 +148,7 @@ private def stmtAllowedKeys : String → Option (List String)
   | "select" => some ["stmt", "clauses", "default"]
   | "map-delete" => some ["stmt", "base", "index", "keyType"]
   | "clear-map" => some ["stmt", "base"]
-  | "clear-slice" | "sort-slice" => some ["stmt", "base", "elem"]
+  | "clear-slice" => some ["stmt", "base", "elem"]
   | "append" => some ["stmt", "target", "elem", "slice", "elems"]
   | "copy" => some ["stmt", "target", "dst", "src"]
   | "map-compound-assign" =>
@@ -1085,10 +1085,14 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let base ← decodeExpr s!"{path}.base" (← StrictJson.field path obj "base")
       let elemTy ← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")
       pure (.clearSlice base elemTy)
-  | "sort-slice" =>
-      let base ← decodeExpr s!"{path}.base" (← StrictJson.field path obj "base")
-      let elemTy ← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")
-      pure (.sortSlice base elemTy)
+  -- `sort-slice` (the quorum-pilot `sortSlice` machine op's wire node) is
+  -- NOT decoded since 2026-09-04 (memo §3 row M, lane fr4-rowm audit fix
+  -- round A3): the frontend never emits it — `slices.Sort` is the real
+  -- source-through generic — and a hand-edited wire carrying it would
+  -- realize a DIFFERENT sort member than the one the frontend now emits.
+  -- It falls to the `unsupported statement` refusal below, by name. The
+  -- `Stmt.sortSlice` constructor and its Machine/Ops arms are GoCore's;
+  -- their deletion is the design-hygiene arc's item A11.
   | "append" =>
       let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
       let elemTy ← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")

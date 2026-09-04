@@ -91,6 +91,17 @@ cost and touches the fewest positional `fun_cases` proofs.
      `docs/2026-09-03_hygiene-a-series-design.md`; evidence
      `docs/evidence/2026-09-03_hygiene-a-series/`. Owed to (iii): the
      program-text `locSup` deletion (A4), `itersNormalized` (A8), A7.
+     **A11 (added 2026-09-04 by lane `fr4-rowm`'s audit fix round A3,
+     [AGENT]; OWED, dated 2026-09-04): delete the dead `sortSlice` op** —
+     `Stmt.sortSlice` (Syntax.lean), its Machine.lean/Ops.lean arms, the
+     SyntaxEqb/MachineEqb cases and the Race/NPDRF mentions. Memo §3 row M
+     retired the `slices.Sort` intercept, the frontend has not emitted
+     `sort-slice` since, and the wire decoder refuses the node by name
+     (NativeToIR.lean, that fix round), so the op is dead code from the
+     wire's point of view; a GoCore deletion, so it lands here (the
+     `hygiene-wave3` lane owns GoCore), never on a frontend lane. TODO:
+     with wave (iii) or the next A-series commit, gated like every
+     A-item by `scripts/capped scripts/ci --diff` at zero drift.
      One red gate in the series (A6's first attempt: a dedup-ENGINE
      merge-rate effect, no observation moved) is recorded with both
      transcripts. No [USER] design gate was hit: A4's wire check found

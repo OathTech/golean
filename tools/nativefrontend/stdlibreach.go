@@ -404,7 +404,11 @@ func computeLibraryReach(units []*sourcePkg) error {
 					if x, isIdent := sel.X.(*ast.Ident); isIdent {
 						if pn, isPkg := it.unit.info.Uses[x].(*types.PkgName); isPkg {
 							path := pn.Imported().Path()
-							_, _, intercepted := interceptedLibraryCall(it.unit.info, c)
+							_, _, intercepted, ierr := interceptedLibraryCall(it.unit.info, c)
+							if ierr != nil {
+								walkErr = ierr
+								return false
+							}
 							if fns, shimmed := stdlibShimAllowlist[path]; shimmed {
 								_, intercepted2 := fns[sel.Sel.Name]
 								intercepted = intercepted || intercepted2
@@ -497,26 +501,43 @@ var frontendInterceptedLibraryMembers = map[string]map[string]string{}
 // The switch below keeps NO live arm, so a member listed in the table
 // without an arm reads as NOT intercepted (fail closed toward the real
 // library body, which the reach walk then marks reached).
-func interceptedLibraryCall(info *types.Info, c *ast.CallExpr) (path, member string, intercepted bool) {
+func interceptedLibraryCall(info *types.Info, c *ast.CallExpr) (path, member string, intercepted bool, err error) {
 	sel, isSel := c.Fun.(*ast.SelectorExpr)
 	if !isSel {
-		return "", "", false
+		return "", "", false, nil
 	}
 	x, isIdent := sel.X.(*ast.Ident)
 	if !isIdent {
-		return "", "", false
+		return "", "", false, nil
 	}
 	pn, isPkg := info.Uses[x].(*types.PkgName)
 	if !isPkg {
-		return "", "", false
+		return "", "", false, nil
 	}
 	path, member = pn.Imported().Path(), sel.Sel.Name
-	if _, listed := frontendInterceptedLibraryMembers[path][member]; !listed {
-		return path, member, false
+	if len(frontendInterceptedLibraryMembers) == 0 {
+		// The class is EMPTY (2026-09-04): nothing is intercepted, every
+		// direct call is the real library member.
+		return path, member, false, nil
 	}
-	// No per-member arm remains (see the table's comment); a listed member
-	// without an arm is NOT intercepted.
-	return path, member, false
+	if _, listed := frontendInterceptedLibraryMembers[path][member]; !listed {
+		return path, member, false, nil
+	}
+	return interceptedMemberArm(path, member)
+}
+
+// interceptedMemberArm is the per-member dispatch behind
+// interceptedLibraryCall for a member the table LISTS. FAIL CLOSED (fr4-rowm
+// audit fix round A6): a listed member with no arm here is a table/dispatch
+// disagreement — the register counts it as intercepted while nothing
+// intercepts it — so it is a NAMED REFUSAL, never "not intercepted" (which
+// would silently lower the real body the register says is bypassed). Every
+// arm that existed is retired (slices.Sort — row M; cmp.Compare — lane fr24);
+// re-admitting a member adds its case here AND its table row.
+func interceptedMemberArm(path, member string) (string, string, bool, error) {
+	switch path + "." + member {
+	}
+	return path, member, false, unsup("library member %s.%s is listed in frontendInterceptedLibraryMembers (register class `intercept`) but interceptedLibraryCall has no arm for it — table and dispatch disagree; refused rather than lowering the real body the register says is intercepted (fail closed)", path, member)
 }
 
 func objKind(obj types.Object) string {

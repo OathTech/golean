@@ -2601,6 +2601,24 @@ def main : IO UInt32 := do
     (match Lean.Json.parse "{\"schema\":\"golean-native-v1\",\"funcs\":[],\"types\":[],\"methods\":[]}" with
      | .error _ => false
      | .ok j => !(GoLean.NativeToIR.decodeProgram j).isOk))
+  -- Row M (memo §3; lane fr4-rowm audit fix round A3): the `sort-slice`
+  -- wire node is no longer decoded — the frontend never emits it, and a
+  -- hand-edited wire must be REFUSED by name rather than run the retired
+  -- one-step insertion sort (a different member than the real pdqsort the
+  -- frontend now emits). A `clear-slice` of the same shape still decodes,
+  -- so the refusal is the node's, not the shape's.
+  let sortSliceWire (tag : String) : String :=
+    "{\"schema\":\"golean-native-v1\",\"types\":[],\"methods\":[],\"methodSets\":[],\"globals\":[],\"funcs\":[{\"name\":\"f\",\"params\":[],\"results\":[],\"variadic\":false,\"body\":{\"stmt\":\"block\",\"body\":[{\"stmt\":\"" ++ tag ++ "\",\"base\":{\"expr\":\"nil\"},\"elem\":{\"kind\":\"int\",\"int\":\"int\"}}]}}]}"
+  passed := passed && (← expectTrue "row M: decode refuses the retired sort-slice statement by name"
+    (match Lean.Json.parse (sortSliceWire "sort-slice") with
+     | .error _ => false
+     | .ok j => match GoLean.NativeToIR.decodeProgram j with
+       | .ok _ => false
+       | .error e => (e.splitOn "unsupported statement sort-slice").length > 1))
+  passed := passed && (← expectTrue "row M: the same wire shape as clear-slice still decodes (the refusal is the node's, not the shape's)"
+    (match Lean.Json.parse (sortSliceWire "clear-slice") with
+     | .error _ => false
+     | .ok j => (GoLean.NativeToIR.decodeProgram j).isOk))
   passed := passed && (← expectTrue "MS: decode refuses an unknown coverage token"
     (match Lean.Json.parse "{\"schema\":\"golean-native-v1\",\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[{\"type\":\"main.T\",\"coverage\":\"partial\"}]}" with
      | .error _ => false

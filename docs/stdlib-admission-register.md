@@ -300,8 +300,8 @@ The primitive table is still empty (print/println is slice 3).
   `slices.Sort` row stays green byte-for-byte, and `slices/slices-sort-kinds/*`
   are born (string, float NaN/±0, float32, named string/float kinds, a
   >12-element pdqsort path, `init()`). The raft twin pin MOVES (quorum,
-  tracker, raft and progress call `slices.Sort` at uint64/int kinds — 10
-  sites): the `sort-slice` nodes become static calls to the `slices.Sort[…]`
+  tracker, raft and raftpb call `slices.Sort` at uint64 kinds — 9 sites;
+  `tracker/progress.go`'s call is inside an H-3 quarantined body): the `sort-slice` nodes become static calls to the `slices.Sort[…]`
   stencils and the pdqsort closure joins the wire — a ruled consequence of
   row M, re-pinned with the structural diff in
   `docs/evidence/2026-09-04_fr4-rowm/twin-repin/`. D-002 unchanged (no

@@ -863,3 +863,44 @@ func TestStencilTextClassifiesAsFR4(t *testing.T) {
 		t.Fatalf("an unmatched text must be UNCLASSIFIED, not absorbed into %s", c.ID)
 	}
 }
+
+// fr4-rowm audit fix round A2/A10: (a) the RETIRED whole-export stencil kill
+// text stays a tripwire that classifies FR-4 export-scoped BY NAME; (b) a
+// stencil stub's inner cause classifies through the FR-4 wrapper and the
+// machine's `frontend-quarantined: ` / census `at run: ` prefixes (anchored
+// rows can match inside the wrapper); (c) an absolute-path key is made
+// repo-relative.
+func TestStencilTripwireAndWrapperStripping(t *testing.T) {
+	if err := initCauses(); err != nil {
+		t.Fatal(err)
+	}
+	old := "nativefrontend: native frontend unsupported: method stencil cedargo/internal/mapset.ImmutableMapSet[cedargo/types.EntityUID].All does not lower (instantiation of imported generic type iter.Seq[x] in y (FR-23: …)) — FR-4: method stencils have no per-declaration quarantine yet, so the export refuses whole"
+	c, key := classifyText(old)
+	if c == nil || c.ID != "stencil-kill-tripwire" || c.FR != "FR-4" || c.Scope != "export" {
+		t.Fatalf("the retired kill text must trip the FR-4 export tripwire, got %v", c)
+	}
+	if key != "cedargo/internal/mapset.ImmutableMapSet[cedargo/types.EntityUID].All" {
+		t.Fatalf("tripwire key must be the stencil, got %q", key)
+	}
+	// the live drv-eval-operators text: census prefix + machine prefix +
+	// method wrapper + FR-4 wrapper + an ANCHORED inner row
+	wd, _ := os.Getwd()
+	live := "at run: frontend-quarantined: method cedargo/types.EntityUIDSet.f (FR-4: method stencil at this instantiation does not lower — generic instantiation " + wd + "/artifacts/cedar/cases/drv-eval-operators/cedargo/types/entity_uid.go:143:9; satisfaction answers, calls fail closed)"
+	c, key = classifyText(live)
+	if c == nil || c.ID != "explicit-instantiation-call" {
+		t.Fatalf("anchored inner row must match through the wrappers, got %v (key %q)", c, key)
+	}
+	if key != "artifacts/cedar/cases/drv-eval-operators/cedargo/types/entity_uid.go:143:9" {
+		t.Fatalf("key must be repo-relative, got %q", key)
+	}
+	// a plain (non-stencil) stub at run time classifies too
+	c, _ = classifyText("at run: frontend-quarantined: generic instantiation /elsewhere/artifacts/x/main.go:1:1")
+	if c == nil || c.ID != "explicit-instantiation-call" {
+		t.Fatalf("machine-prefixed stub text must classify, got %v", c)
+	}
+	// the FR-4 fallback still catches a stencil whose inner cause no row knows
+	c, _ = classifyText("method main.box[int].render (FR-4: method stencil at this instantiation does not lower — frobnicate the widget sideways; satisfaction answers, calls fail closed)")
+	if c == nil || c.ID != "stencil-refusal" {
+		t.Fatalf("unknown inner cause must fall to stencil-refusal, got %v", c)
+	}
+}

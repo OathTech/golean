@@ -1737,6 +1737,18 @@ indistinguishable). Becomes real latitude the day non-integer sorts
 land; the declared-unobservable argument is scoped to int kinds at the
 site.
 
+**The `sortSlice` op is UNREACHABLE from the frontend since 2026-09-04
+(memo §3 row M, lane `fr4-rowm`):** `slices.Sort` is source-through — the
+machine executes gc's own `pdqsortOrdered` (deps/go @ go1.26.5
+`slices/zsortordered.go`, stenciled per element type) at EVERY ordered
+kind, so the R13 MECHANISM is now the real pdqsort stencils for `Sort`
+exactly as for `SortFunc` below — gc's member, a version-tracked (b)-pin,
+not a machine choice; the "non-integer sorts land" day came and the
+latitude did NOT become a machine choice. The `sort-slice` wire node is
+refused by the decoder by name (audit fix round A3); the GoCore op itself
+(`Stmt.sortSlice`, Machine/Ops arms) is dead code whose deletion is the
+design-hygiene arc's item A11.
+
 **The `slices.SortFunc` shim carries the SAME tie-order latitude**
 (added 2026-08-22, launch audit V2 — previously recorded only in Go
 comments, `tools/nativefrontend/genericshim.go:21-24` and
@@ -1754,8 +1766,9 @@ version-tracked (b)-pin under G4(a) (memo §5), not a machine choice.
 Rows: `stdlib-source/slices-sortfunc/sortfunc-ties-projected`
 (tie-insensitive — the doc contract) and `sortfunc-ties-realized` (the
 exact order; a toolchain that changes pdqsort moves this row, which is
-the pin's purpose). The `sortSlice` op's row above is unchanged
-(`slices.Sort` at integer kinds; memo §3 row M retires it in slice 4).
+the pin's purpose). The `sortSlice` op's row above records the
+retirement: memo §3 row M landed 2026-09-04 (lane `fr4-rowm`) — `slices.Sort`
+rides the same mechanism (`pdqsortOrdered`), so both sorts are gc's member.
 
 ### R14. Constant arithmetic precision — (d) UNKNOWN (delegated)
 

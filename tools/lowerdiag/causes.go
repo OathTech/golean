@@ -167,6 +167,49 @@ var methodWrap = regexp.MustCompile(`^method \S+ \((.*)\)$`)
 
 const refusalPrefix = "native frontend unsupported: "
 
+// quarantinedPrefix is the MACHINE's prefix on a stub refusal reached at run
+// time (`frontend-quarantined: <stub reason>`); stencilWrapPrefix is the FR-4
+// stencil stub's wrapper ahead of the inner cause (mono.go
+// quarantinedStencilStub — keep the two texts in lockstep, pinned by
+// TestStencilTextClassifiesAsFR4).
+const (
+	quarantinedPrefix = "frontend-quarantined: "
+	stubClosingClause = "; satisfaction answers, calls fail closed"
+	stencilWrapPrefix = "FR-4: method stencil at this instantiation does not lower — "
+)
+
+// causeByID returns the loaded cause row with the given id, or nil.
+func causeByID(id string) *cause {
+	for _, c := range causeList {
+		if c.ID == id {
+			return c
+		}
+	}
+	return nil
+}
+
+// relativizeKey strips the current working directory (and, failing that,
+// any `…/artifacts/` prefix) from a key that carries an absolute source
+// position — the frontend's `fset.Position` spells the path it was given,
+// and lower-diagnose/cedar-census pass absolute case dirs, so a
+// position-keyed cause (`explicit-instantiation-call`) would otherwise put
+// a worktree path into a tracked histogram (fr4-rowm audit fix round A10;
+// evidence rule 2: repo-relative paths, never absolute worktree paths).
+func relativizeKey(key string) string {
+	if !strings.HasPrefix(key, "/") {
+		return key
+	}
+	if wd, err := os.Getwd(); err == nil && wd != "" && wd != "/" {
+		if rel := strings.TrimPrefix(key, wd+"/"); rel != key {
+			return rel
+		}
+	}
+	if i := strings.Index(key, "/artifacts/"); i >= 0 {
+		return key[i+1:]
+	}
+	return key
+}
+
 // classifyText maps one refusal text to its cause row and key. The FIRST
 // matching row in table order wins (the table is ordered specific-first);
 // an unmatched text is returned with nil cause and its head as the key —
@@ -175,8 +218,31 @@ func classifyText(text string) (*cause, string) {
 	inner := strings.TrimSpace(text)
 	inner = strings.TrimPrefix(inner, "nativefrontend: ")
 	inner = strings.TrimPrefix(inner, refusalPrefix)
+	// A stub refusal surfacing at RUN time (the machine's message, as the
+	// cedar census records it: `at run: frontend-quarantined: <stub reason>`)
+	// carries the machine's prefix; strip it so the stub text classifies
+	// like the frontend's own (fr4-rowm audit fix round A2).
+	inner = strings.TrimPrefix(inner, "at run: ")
+	inner = strings.TrimPrefix(inner, quarantinedPrefix)
 	if m := methodWrap.FindStringSubmatch(inner); m != nil {
 		inner = m[1]
+		// The stub's closing clause (quarantinedMethodStub) sits after the
+		// cause; an ANCHORED row (`…$`) can only match with it removed
+		// (fr4-rowm audit fix round A2).
+		inner = strings.TrimSuffix(inner, stubClosingClause)
+	}
+	// An FR-4 stencil stub names the instantiation then its INNER cause
+	// (mono.go quarantinedStencilStub); the cause rows are anchored on the
+	// inner text, so the wrapper must come off before matching — else an
+	// anchored row can never match inside a stencil stub and the text
+	// falls to a catch-all (fr4-rowm audit fix round A2). The fallback row
+	// `stencil-refusal` matches the wrapper itself and so stays reachable
+	// only when no inner row matched (it is tried on the STRIPPED text via
+	// its own pattern below).
+	stencilWrapped := false
+	if strings.HasPrefix(inner, stencilWrapPrefix) {
+		inner = strings.TrimPrefix(inner, stencilWrapPrefix)
+		stencilWrapped = true
 	}
 	for _, c := range causeList {
 		if c.Pattern == nil {
@@ -199,7 +265,12 @@ func classifyText(text string) (*cause, string) {
 					key = c.ID
 				}
 			}
-			return c, key
+			return c, relativizeKey(key)
+		}
+	}
+	if stencilWrapped {
+		if c := causeByID("stencil-refusal"); c != nil {
+			return c, c.ID
 		}
 	}
 	head := inner

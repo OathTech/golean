@@ -5375,7 +5375,11 @@ func (e *emitter) qualifiedTypeName(obj *types.TypeName) string {
 // lane fr4-rowm 2026-09-04). Fail closed either way.
 func (e *emitter) anonymousTypeRefusal(what string, t types.Type) error {
 	if named, ok := types.Unalias(e.applySubst(t)).(*types.Named); ok && named.TypeArgs().Len() > 0 {
-		if _, err := e.instTypeId(named); err != nil {
+		// The SAME call namedTypeName made (instTypeIdForWire = instTypeId +
+		// enqueueTypeInst), so BOTH failure modes re-raise: the C6 key
+		// refusal and enqueueTypeInst's (an imported generic instantiation,
+		// FR-23 — audit fix round A8; instTypeId alone missed the latter).
+		if _, err := e.instTypeIdForWire(named); err != nil {
 			return err
 		}
 	}
@@ -8424,7 +8428,11 @@ func (e *emitter) refuseInterceptedLibraryCallee(keyword string, c *ast.CallExpr
 	if e.curUnit != nil && e.curUnit.library {
 		return nil
 	}
-	if path, member, intercepted := interceptedLibraryCall(e.info, c); intercepted {
+	path, member, intercepted, ierr := interceptedLibraryCall(e.info, c)
+	if ierr != nil {
+		return ierr
+	}
+	if intercepted {
 		why := frontendInterceptedLibraryMembers[path][member]
 		if i := strings.IndexByte(why, '('); i > 0 {
 			why = why[:i]
