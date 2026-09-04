@@ -439,6 +439,22 @@ Rows added this round: 3 (all born red by name): `sort-op-shapes/{defer-sort,go-
   **0 HIGH** (the three pre-existing MEDIUMs: C13 historical version
   sites, C5 FR-7's `=` citation, C9 wire-schema commits since the
   certified set).
+- **Audit fix round gate: `scripts/capped scripts/ci --diff` at `68b15964`
+  (F1–F14 committed): RESULT: PASS** (`gate-tail-fixround.txt`) — baseline
+  diff FULL 3326/3326 no regression (the 3 born-red rows of the round in
+  the pin); re-pin guard 0 PASS→non-PASS; alternation survival ok; all
+  three frontend pins ok; spec-anchors ok (723 + 235 + 26 godoc:);
+  check-stdlib-register ok INCLUDING the type-checked overlay check
+  (errors / internal/stringslite / strings "overlaid package type-checks";
+  overlay 5/12, overlay-import 5/8, intercept 2); check-bugs ok (BUG-090
+  `Pinned-by: none` with `repeat-bound-refused` on its Cases line;
+  coverage ceiling back to 10); frontend unit tests ok (the F1/F2/F3/F6/
+  cap red-first tests); eval tests 148 ok; reconciler 3 / 0 HIGH (the same
+  three pre-existing MEDIUMs). Honesty note: the run's meta says
+  `git_dirty=true` — the ONE uncommitted change while it ran was this
+  README's conclusion paragraph (the last "O(cap)" wording, fixed to
+  BUG-090 a few seconds after the run started); no code, corpus, baseline
+  or pin differed from `68b15964`.
 - Conclusion (one paragraph): with ONE pure-Go expression substituted for
   ONE unsafe expression at five named, byte-checked sites — and nothing
   else hand-written — the machine executing the pinned GOROOT bodies of
@@ -452,5 +468,6 @@ Rows added this round: 3 (all born red by name): `sort-op-shapes/{defer-sort,go-
   and posed, not decided here: the float-bits PRIMITIVE admission (4
   sites, `FormatFloat/ParseFloat` red), the `cmp.Compare` desugar
   retirement (blocked by mono.go's function-local-type naming rule), and
-  the interpreter's O(cap) in-place `append` (Finding 2), which bounds
+  the interpreter's allocation-count-quadratic assoc-list heap (Finding
+  2, re-derived at the audit fix round as BUG-090), which bounds
   every Builder/Buffer row at ~1 KB and sized the fuzz.
