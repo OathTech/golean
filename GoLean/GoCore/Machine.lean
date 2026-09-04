@@ -2374,7 +2374,12 @@ def Cont.class : Cont → FrameClass
   | .frame .. => .callFrame
   | .panicResumeK .. => .resumeMarker
   | .seq .. | .loop .. | .breakableK .. | .labelK .. | .mapIterK .. => .stmtGlue
-  | _ => .exprGlue
+  -- EXHAUSTIVE on purpose (audit fix F2): a new frame must be classified
+  -- here by hand — no absorbing default can make it glue silently.
+  | .deferCalleeK .. | .deferArgsK .. | .callValCalleeK .. | .callValArgsK .. | .strictK ..
+  | .andK .. | .orK .. | .boolK .. | .ifK .. | .whileK .. | .callArgsK .. | .stmtOpK ..
+  | .mapRangeK .. | .panicArgK .. | .chanStK .. | .selectOpsK .. | .tgtOpK .. | .rhsK ..
+  | .storeK .. | .goCalleeK .. | .goArgsK .. | .syncStK .. | .atomicStK .. => .exprGlue
 
 /-- Is the frame glue of either kind (forwards every walk to its tail)? -/
 def Cont.isGlue (k : Cont) : Bool := k.class = .stmtGlue || k.class = .exprGlue
@@ -2643,6 +2648,17 @@ def Config.applyPos : Config → Option (ApplyHead × List GoValue × LocalEnv �
   | .retV v (.rhsK rop refs done [] body env k) =>
       some (.rhs rop refs body, (v :: done).reverse, env, k)
   | _ => none
+
+/-- The lowering contract at an `appendSlice` apply (audit fix F1): the
+frontend hoists EVERY append into a fresh local temp (`emit.go`, the
+append lowering), so the target operand addresses a ROOT cell — a store
+into it cannot panic (`storeLoc_base_noPanic`, MachineSound), which is
+what refutes the post-pop-panic disjunct of `stepFn_consumption_some`.
+Every other configuration satisfies it vacuously. -/
+def Config.appendTargetLocal : Config → Prop
+  | .retV v (.stmtOpK (.appendSlice _) _ done [] _ _) =>
+      ∃ a rest, (v :: done).reverse = .addr (.base a) :: rest
+  | _ => True
 
 /-- **Apply, then deliver** (B2): the ONE bridge from an apply's `Result`
 to the machine's control side. A value continues as `next a`; a
@@ -3496,21 +3512,33 @@ through that pick. The pool layer's projection is `poolConsumption`
 (Multi.lean). -/
 
 /-- The spill decision of an `appendSlice` apply, from the operands and
-the state alone — the machine's own tests in `applyStmtOp`'s spill arm,
-in the same order: no spill when the new length fits the capacity; the
-R16 `growslice` refusal (a recoverable panic, raised BEFORE the site is
-consulted) consumes nothing; otherwise the site's width
-(`appendSpillWidth`). `none` also on any operand the apply would refuse. -/
+the state alone — EVERY test `applyStmtOp`'s append arm performs before
+it consults the stream, in the arm's order (operand shapes, slice
+validation, the visible element read, the target address, the capacity
+test, the R16 `growslice` refusal — a recoverable panic raised BEFORE the
+consult — and the old-element read); `some (appendSpillWidth …)` exactly
+when the arm reaches the consult, `none` whenever it refuses, panics or
+stores in place before it (audit fix F1: `some` ⇔ the consult happens). -/
 def appendSpill? (s : ExecState) (elem : Ty) (vs : List GoValue) : Option Nat :=
   match vs with
-  | [_, sliceV, elemsV] =>
-      match valueAsSlice sliceV, valueAsSlice elemsV, tySizeBytes s.types elem with
-      | .ok slice, .ok elems, .ok elemSize =>
-          let newLen := slice.len + elems.len
-          if newLen ≤ slice.cap then none
-          else if newLen ≥ intExclusiveUpperBound || newLen * elemSize > maxAllocBytes then none
-          else some (appendSpillWidth slice.cap newLen)
-      | _, _, _ => none
+  | [tv, sliceV, elemsV] =>
+      match valueAsSlice sliceV, valueAsSlice elemsV with
+      | .ok slice, .ok elems =>
+          match validateSlice slice, validateSlice elems, sliceVisibleValues s elems, valueAsLoc tv with
+          | .ok _, .ok _, .ok elemValues, .ok _ =>
+              let newLen := slice.len + elemValues.size
+              if newLen ≤ slice.cap then none
+              else
+                match tySizeBytes s.types elem with
+                | .ok elemSize =>
+                    if newLen ≥ intExclusiveUpperBound || newLen * elemSize > maxAllocBytes then none
+                    else
+                      match sliceVisibleValues s slice with
+                      | .ok _ => some (appendSpillWidth slice.cap newLen)
+                      | .error _ => none
+                | .error _ => none
+          | _, _, _, _ => none
+      | _, _ => none
   | _ => none
 
 /-- The TRY heads' consult width at a sync apply (`applySyncOp`): the

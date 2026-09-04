@@ -1,0 +1,6 @@
+# Fix-round tracer spot-check (2026-09-04, [AGENT]) — fix-tip binary (artifacts/golean-fix = scripts/capped lake build at the F1-F6 sources) vs the pre-wave oracle dump-before-sorted.tsv
+# rows: bools/short-circuit-funclit/and-taken bools/short-circuit-funclit/capture-three channels/select-multi-ready channels/select-multi-ready/observable control-flow/labeled-branch-range-map defer/deferred-dispatch-entry-panic/during-panic race/free-sync/rw-trylock-publish race/free-sync/rw-tryrlock-acquire
+# command: scripts/choice-trace-corpus --dump --jobs 2 --out artifacts/choice-trace-fix-spot --golean artifacts/golean-fix <rows>; per-consumption records sorted and compared in Python (see README)
+before records: 156  fix records: 156  IDENTICAL
+per-site: appendSpill 14, l1Sched 52, l2Entry 12, l5ExitWindow 4, mapIter 24, nilValueMethodText 6, postOp 32, tryLock 12
+# a WHOLE-corpus re-run was not repeated for the fix round: the projections' values are unchanged by construction (appendSpill?'s rewrite differs from the old body only on pre-consult-panicking shapes, where the arm never consults); the spot-check exercises every stream-consuming site the corpus reaches (appendSpill, tryLock, l2Entry/select, mapIter, nilValueMethodText) plus the pool sites.

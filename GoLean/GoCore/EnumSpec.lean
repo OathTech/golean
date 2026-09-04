@@ -10,7 +10,7 @@ This file IS that semantics: the machine's reachable observation set,
 defined as the ∃-image of the unmodified interpreter driver
 (`execProgLoop`) over every choice stream and every fuel. Nothing here
 is enumeration machinery — `Obs` is the observation vocabulary,
-`obsOf?` a six-arm projection, `SlowObs` the ∃-form. Any optimized
+`obsOf?` a five-arm projection, `SlowObs` the ∃-form. Any optimized
 enumerator (the dedup engine, `GoLean/EnumDedup.lean`) licenses
 conclusions only through a theorem into THIS definition
 (`checkCert_slowObs`, `EnumDedupSound.lean`); no statement mentions

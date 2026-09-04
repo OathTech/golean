@@ -2980,6 +2980,317 @@ theorem consumesAppendSlice_stmtOpK {v : GoValue} {op : StmtOp} {nt : Nat}
   subst he
   simp [consumesAppendSlice] at h
 
+/-! ### Panic-freeness of the store path (wave-(iii) audit fix F1, 2026-09-04)
+
+The consumption theorem's `some` half first carried a second disjunct — "a
+delivered panic AFTER the pop restores the pre-apply stream" — for two
+sites. Both are REFUTED here: a TRY head's apply never raises a recoverable
+panic (`applyTryLock_noPanic`), and a spilling append whose target is a
+root cell (the frontend's hoisted temp — `Config.appendTargetLocal`) never
+does either (`storeLoc_base_noPanic`, `buildAppendBackingValue_noPanic`).
+The only panic sources on the store path are `arrayGet`/`arraySet`'s
+index-out-of-range (unreachable through a PATH the machine just loaded, and
+absent at a root cell); normalization and default values refuse but never
+panic. -/
+
+/-- `x` is not a recoverable panic. -/
+def NoPanic {α : Type} (x : Except Stop α) : Prop := ∀ msg, x ≠ .error (Stop.panic msg)
+
+theorem NoPanic.ok {α : Type} (a : α) : NoPanic (Except.ok a : Except Stop α) :=
+  fun _ h => by cases h
+theorem NoPanic.pure {α : Type} (a : α) : NoPanic (pure a : Except Stop α) :=
+  fun _ h => by cases h
+theorem NoPanic.stuck {α : Type} (m : String) : NoPanic (stuck m : Except Stop α) :=
+  fun _ h => by cases h
+theorem NoPanic.unsupported {α : Type} (m : String) : NoPanic (unsupported m : Except Stop α) :=
+  fun _ h => by cases h
+theorem NoPanic.internal {α : Type} (m : String) :
+    NoPanic (throw (Stop.internal m) : Except Stop α) :=
+  fun _ h => by simp [throw, throwThe, MonadExceptOf.throw] at h
+theorem NoPanic.bind {α β : Type} {x : Except Stop α} {f : α → Except Stop β}
+    (hx : NoPanic x) (hf : ∀ a, NoPanic (f a)) : NoPanic (x >>= f) := by
+  intro msg h
+  cases x with
+  | error e =>
+    simp only [Bind.bind, Except.bind] at h
+    exact hx msg (congrArg (fun e => (Except.error e : Except Stop α)) (Except.error.inj h))
+  | ok a => simp only [Bind.bind, Except.bind] at h; exact hf a msg h
+theorem NoPanic.map {α β : Type} {x : Except Stop α} (g : α → β) (hx : NoPanic x) :
+    NoPanic (g <$> x) := by
+  intro msg h
+  cases x with
+  | error e =>
+    simp only [Functor.map, Except.map] at h
+    exact hx msg (congrArg (fun e => (Except.error e : Except Stop α)) (Except.error.inj h))
+  | ok a => simp [Functor.map, Except.map] at h
+theorem NoPanic.ite {α : Type} {c : Prop} [Decidable c] {a b : Except Stop α}
+    (ha : NoPanic a) (hb : NoPanic b) : NoPanic (if c then a else b) := by
+  split <;> assumption
+theorem NoPanic.of_ok {α : Type} {x : Except Stop α} {a : α} (h : x = .ok a) : NoPanic x := by
+  subst h; exact NoPanic.ok a
+
+/-- Discharge a `NoPanic` goal over a do-pipeline of the combinators above. -/
+macro "no_panic" : tactic =>
+  `(tactic| repeat first
+    | exact NoPanic.ok _
+    | exact NoPanic.pure _
+    | exact NoPanic.stuck _
+    | exact NoPanic.unsupported _
+    | exact NoPanic.internal _
+    | assumption
+    | apply NoPanic.ite
+    | apply NoPanic.map
+    | (apply NoPanic.bind; rotate_left)
+    | intro _)
+
+theorem normalizeListWith_noPanic {f : GoValue → Except Stop GoValue}
+    (hf : ∀ v, NoPanic (f v)) : ∀ l, NoPanic (normalizeListWith f l)
+  | [] => by unfold normalizeListWith; exact NoPanic.pure _
+  | v :: rest => by
+      unfold normalizeListWith
+      exact NoPanic.bind (hf v) fun _ =>
+        NoPanic.bind (normalizeListWith_noPanic hf rest) fun _ => NoPanic.pure _
+
+theorem normalizeFieldsWith_noPanic {f : Ty → GoValue → Except Stop GoValue}
+    (hf : ∀ t v, NoPanic (f t v)) :
+    ∀ fs vs, NoPanic (normalizeFieldsWith f fs vs)
+  | [], vs => by intro msg h; simp [normalizeFieldsWith] at h
+  | _ :: _, [] => by intro msg h; simp [normalizeFieldsWith] at h
+  | field :: fr, (af, v) :: vr => by
+      unfold normalizeFieldsWith
+      (try dsimp only)
+      refine NoPanic.ite ?_ ?_
+      · exact NoPanic.bind (NoPanic.stuck _) fun _ => NoPanic.bind (hf _ _) fun _ =>
+          NoPanic.bind (normalizeFieldsWith_noPanic hf fr vr) fun _ => NoPanic.pure _
+      · exact NoPanic.bind (hf _ _) fun _ =>
+          NoPanic.bind (normalizeFieldsWith_noPanic hf fr vr) fun _ => NoPanic.pure _
+
+theorem normalizeStructValueWith_noPanic {f : Ty → GoValue → Except Stop GoValue}
+    (hf : ∀ t v, NoPanic (f t v)) (name : TypeId) (fields : Array FieldDef) :
+    ∀ v, NoPanic (normalizeStructValueWith f name fields v) := by
+  intro v
+  cases v <;> simp only [normalizeStructValueWith] <;> (try exact NoPanic.stuck _)
+  (try dsimp only)
+  split
+  · split
+    · exact NoPanic.pure _
+    · exact NoPanic.stuck _
+  · (try dsimp only)
+    split
+    · exact NoPanic.stuck _
+    · (try dsimp only)
+      exact NoPanic.map _ (normalizeFieldsWith_noPanic hf _ _)
+
+theorem normalizeValueForTyFuel_noPanic :
+    ∀ (fuel : Nat) (s : ExecState) (ty : Ty) (v : GoValue),
+      NoPanic (normalizeValueForTyFuel fuel s ty v) := by
+  intro fuel
+  induction fuel with
+  | zero => intro s ty v; simp only [normalizeValueForTyFuel]; exact NoPanic.unsupported _
+  | succ n ih =>
+    intro s ty v
+    unfold normalizeValueForTyFuel
+    split
+    all_goals (try dsimp only)
+    all_goals (try split)
+    all_goals (try dsimp only)
+    all_goals (try (have hfuel := Nat.succ.inj ‹n + 1 = Nat.succ _›; subst hfuel))
+    all_goals first
+      | exact NoPanic.pure _
+      | exact NoPanic.ok _
+      | exact NoPanic.stuck _
+      | exact NoPanic.unsupported _
+      | exact ih _ _ _
+      | exact normalizeStructValueWith_noPanic (fun t v => ih _ t v) _ _ _
+      | exact NoPanic.map _ (normalizeListWith_noPanic (fun v => ih _ _ v) _)
+      | exact NoPanic.bind (NoPanic.stuck _) fun _ =>
+          NoPanic.map _ (normalizeListWith_noPanic (fun v => ih _ _ v) _)
+
+theorem normalizeValueForTy_noPanic (s : ExecState) (ty : Ty) (v : GoValue) :
+    NoPanic (normalizeValueForTy s ty v) := by
+  unfold normalizeValueForTy
+  exact normalizeValueForTyFuel_noPanic typeResolutionFuel s ty v
+
+theorem defaultFieldsWith_noPanic {f : Ty → Except Stop GoValue}
+    (hf : ∀ t, NoPanic (f t)) : ∀ fs, NoPanic (defaultFieldsWith f fs)
+  | [] => by unfold defaultFieldsWith; exact NoPanic.pure _
+  | field :: rest => by
+      unfold defaultFieldsWith
+      exact NoPanic.bind (hf _) fun _ =>
+        NoPanic.bind (defaultFieldsWith_noPanic hf rest) fun _ => NoPanic.pure _
+
+theorem defaultValueFuel_noPanic :
+    ∀ (fuel : Nat) (s : ExecState) (ty : Ty), NoPanic (defaultValueFuel fuel s ty) := by
+  intro fuel
+  induction fuel with
+  | zero => intro s ty; simp only [defaultValueFuel]; exact NoPanic.unsupported _
+  | succ n ih =>
+    intro s ty
+    unfold defaultValueFuel
+    split
+    all_goals (try dsimp only)
+    all_goals (try split)
+    all_goals (try dsimp only)
+    all_goals (try (have hfuel := Nat.succ.inj ‹n + 1 = Nat.succ _›; subst hfuel))
+    all_goals first
+      | exact NoPanic.pure _
+      | exact NoPanic.ok _
+      | exact NoPanic.unsupported _
+      | exact ih _ _
+      | exact NoPanic.map _ (defaultFieldsWith_noPanic (fun t => ih _ t) _)
+      | exact NoPanic.bind (ih _ _) fun _ => NoPanic.pure _
+
+theorem defaultValue_noPanic (s : ExecState) (ty : Ty) : NoPanic (defaultValue s ty) := by
+  unfold defaultValue
+  exact defaultValueFuel_noPanic typeResolutionFuel s ty
+
+/-- A loop whose every body step is panic-free is panic-free. -/
+theorem forIn_noPanic {α β : Type} {body : α → β → Except Stop (ForInStep β)}
+    (hb : ∀ a b, NoPanic (body a b)) :
+    ∀ (l : List α) (acc : β), NoPanic (forIn l acc body)
+  | [], acc => by rw [List.forIn_nil]; exact NoPanic.pure _
+  | a :: as, acc => by
+      rw [List.forIn_cons]
+      refine NoPanic.bind (hb a acc) fun r => ?_
+      cases r with
+      | done b => exact NoPanic.pure _
+      | yield b => exact forIn_noPanic hb as b
+
+theorem buildAppendBackingValue_noPanic (s : ExecState) (elem : Ty)
+    (oldValues elemValues : Array GoValue) (newCap : Nat) :
+    NoPanic (buildAppendBackingValue s elem oldValues elemValues newCap) := by
+  unfold buildAppendBackingValue
+  dsimp only
+  rw [← Array.forIn_toList]
+  refine NoPanic.bind (forIn_noPanic (fun a b => ?_) _ _) fun values => ?_
+  · exact NoPanic.bind (normalizeValueForTy_noPanic _ _ _) fun _ => NoPanic.pure _
+  · refine NoPanic.ite ?_ ?_
+    · refine NoPanic.bind (NoPanic.stuck _) fun _ => ?_
+      rw [Std.Legacy.Range.forIn_eq_forIn_range']
+      refine NoPanic.bind (forIn_noPanic (fun a b => ?_) _ _) fun _ => NoPanic.pure _
+      exact NoPanic.bind (defaultValue_noPanic _ _) fun _ => NoPanic.pure _
+    · rw [Std.Legacy.Range.forIn_eq_forIn_range']
+      refine NoPanic.bind (forIn_noPanic (fun a b => ?_) _ _) fun _ => NoPanic.pure _
+      exact NoPanic.bind (defaultValue_noPanic _ _) fun _ => NoPanic.pure _
+
+theorem StructFields.set_noPanic (fields : Array (String × GoValue)) (needle : String)
+    (value : GoValue) : NoPanic (StructFields.set fields needle value) := by
+  unfold StructFields.set
+  dsimp only
+  rw [← Array.forIn_toList]
+  refine NoPanic.bind (forIn_noPanic (fun a b => ?_) _ _) fun _ => ?_
+  · obtain ⟨name, old⟩ := a
+    (try dsimp only)
+    split <;> exact NoPanic.pure _
+  · (try dsimp only)
+    exact NoPanic.ite (NoPanic.pure _) (NoPanic.stuck _)
+
+/-- A root-cell store never panics: the cell exists or the store is
+`.internal`, and normalization at the cell's type refuses but never panics. -/
+theorem storeLoc_base_noPanic (s : ExecState) (a : Addr) (v : GoValue) :
+    NoPanic (storeLoc s (.base a) v) := by
+  unfold storeLoc ExecState.updateCell
+  split
+  · refine NoPanic.bind ?_ fun _ => NoPanic.pure _
+    dsimp only
+    split
+    · exact NoPanic.bind (normalizeValueForTy_noPanic _ _ _) fun _ => NoPanic.pure _
+    · exact NoPanic.stuck _
+    · exact NoPanic.stuck _
+  · exact NoPanic.internal _
+
+/-- An in-range read makes the same index writable. -/
+theorem arraySet_ok_of_arrayGet_ok {vs : Array GoValue} {i : Int} {x : GoValue}
+    (h : arrayGet vs i = .ok x) (v : GoValue) : ∃ vs', arraySet vs i v = .ok vs' := by
+  unfold arrayGet at h
+  unfold arraySet
+  cases hj : arrayIndexNat vs i with
+  | error e => (try rw [hj] at h); simp [Bind.bind, Except.bind] at h
+  | ok j =>
+    (try rw [hj] at h)
+    simp only [Bind.bind, Except.bind] at h ⊢
+    cases hg : vs[j]? with
+    | none =>
+      (try rw [hg] at h)
+      simp only [indexOutOfRangePanic, GoLean.GoCore.panic, throw, throwThe, MonadExceptOf.throw] at h
+      split at h <;> cases h
+    | some w => (try rw [hg]); exact ⟨_, rfl⟩
+
+/-- A store through a PATH the machine can load never panics: the only
+panic on the store path is `arraySet`'s bounds check, and the load's
+success puts the index in range. -/
+theorem storeLoc_noPanic_of_loadLoc_ok (s : ExecState) :
+    ∀ (loc : Loc) {v₀ : GoValue}, loadLoc s loc = .ok v₀ → ∀ v, NoPanic (storeLoc s loc v)
+  | .base a, _, _, v => storeLoc_base_noPanic s a v
+  | .field base typeId fieldName, v₀, h, v => by
+      unfold loadLoc at h
+      unfold storeLoc
+      cases hb : loadLoc s base with
+      | error e => (try rw [hb] at h); simp [Bind.bind, Except.bind] at h
+      | ok w =>
+        (try rw [hb] at h)
+        simp only [Bind.bind, Except.bind] at h ⊢
+        cases w <;> (try (simp [stuck, throw, throwThe, MonadExceptOf.throw] at h; done))
+        dsimp only
+        refine NoPanic.ite ?_ ?_
+        · -- the tag-mismatch refusal heads the branch: a `stuck`, never a panic
+          intro msg hm
+          simp only [stuck, throw, throwThe, MonadExceptOf.throw] at hm <;> cases hm
+        · exact NoPanic.bind (StructFields.set_noPanic _ _ _) fun updated =>
+            storeLoc_noPanic_of_loadLoc_ok s base hb _
+  | .index base index, v₀, h, v => by
+      unfold loadLoc at h
+      unfold storeLoc
+      cases hb : loadLoc s base with
+      | error e => (try rw [hb] at h); simp [Bind.bind, Except.bind] at h
+      | ok w =>
+        (try rw [hb] at h)
+        simp only [Bind.bind, Except.bind] at h ⊢
+        cases w <;> (try (simp [stuck, throw, throwThe, MonadExceptOf.throw] at h; done))
+        dsimp only at h ⊢
+        obtain ⟨vs', hset⟩ := arraySet_ok_of_arrayGet_ok h v
+        rw [hset]
+        exact storeLoc_noPanic_of_loadLoc_ok s base hb _
+
+theorem tryAcquire_noPanic (op : SyncOp) (pre : SyncPrim) : NoPanic (tryAcquire op pre) := by
+  unfold tryAcquire
+  split <;> first | exact NoPanic.pure _ | exact NoPanic.stuck _ | exact NoPanic.internal _
+
+theorem enterRecvTargets_noPanic (s : ExecState) (targets : List Assignee) (vals : List GoValue)
+    (body : Stmt) (env : LocalEnv) (k : Cont) :
+    NoPanic (enterRecvTargets s targets vals body env k) := by
+  unfold enterRecvTargets
+  split <;> first | exact NoPanic.pure _ | exact NoPanic.stuck _
+
+theorem tryDeliver_noPanic (b : Bool) (s : ExecState) (targets : List Assignee)
+    (env : LocalEnv) (k : Cont) : NoPanic (tryDeliver b s targets env k) := by
+  unfold tryDeliver
+  split
+  · exact NoPanic.pure _
+  · exact NoPanic.bind (enterRecvTargets_noPanic _ _ _ _ _ _) fun _ => NoPanic.pure _
+
+/-- **Site 2 of the retired disjunct**: a TRY head's apply never raises a
+recoverable panic — `tryAcquire` refuses at most, the acquired cell is
+stored through the location the apply just READ (`syncCell`), and the
+result delivery is an `.evalE` entry or a refusal. -/
+theorem applyTryLock_noPanic {s : ExecState} {loc : Loc} {pre : SyncPrim}
+    (hcell : syncCell s loc = .ok pre) (op : SyncOp) (spurious : Bool)
+    (targets : List Assignee) (env : LocalEnv) (k : Cont) :
+    NoPanic (applyTryLock s op loc pre spurious targets env k) := by
+  have hload : ∃ w, loadLoc s loc = .ok w := by
+    unfold syncCell at hcell
+    cases hl : loadLoc s loc with
+    | error e => rw [hl] at hcell; simp [Bind.bind, Except.bind] at hcell
+    | ok w => exact ⟨w, rfl⟩
+  obtain ⟨w, hw⟩ := hload
+  unfold applyTryLock
+  refine NoPanic.bind (tryAcquire_noPanic _ _) fun r => ?_
+  cases r with
+  | none => exact tryDeliver_noPanic _ _ _ _ _
+  | some post =>
+    refine NoPanic.bind (storeLoc_noPanic_of_loadLoc_ok s loc hw _) fun _ => ?_
+    exact NoPanic.ite (tryDeliver_noPanic _ _ _ _ _) (tryDeliver_noPanic _ _ _ _ _)
+
 /-! ### The per-site stream lemmas behind `stepFn_consumption` (B8) -/
 
 theorem except_bind_ok {ε α β : Type} (a : α)
@@ -3074,9 +3385,8 @@ theorem bind_pair_map {α : Type} (T : Except Stop α)
     | ok x => rfl
 
 /-- The spill decision agrees with the arm: at `appendSpill? = none` the
-apply is stream-oblivious — a state result `r` (in place, the R16 refusal
-before the consult, or an operand the apply refuses) paired with the
-untouched stream. -/
+apply is stream-oblivious — a state result `r` (in place, a refusal or
+the R16 panic before the consult) paired with the untouched stream. -/
 theorem applyStmtOp_appendSlice_nospill {σ : ExecState} {elem : Ty} {nt : Nat}
     {vs : List GoValue} (hw : appendSpill? σ elem vs = none) :
     ∃ r : Except Stop ExecState, ∀ ch : Choices,
@@ -3087,61 +3397,67 @@ theorem applyStmtOp_appendSlice_nospill {σ : ExecState} {elem : Ty} {nt : Nat}
   | [_, _], _ => exact ⟨.error (.stuck "malformed appendSlice operands"), fun _ => rfl⟩
   | _ :: _ :: _ :: _ :: _, _ => exact ⟨.error (.stuck "malformed appendSlice operands"), fun _ => rfl⟩
   | [tv, sliceV, elemsV], hw =>
+    unfold appendSpill? at hw
     unfold applyStmtOp
     dsimp only
     cases hsl : valueAsSlice sliceV with
     | error e => exact ⟨.error e, fun _ => rfl⟩
     | ok slice =>
-      simp only [except_bind_ok]
-      cases hel : valueAsSlice elemsV with
+    simp only [except_bind_ok]
+    cases hel : valueAsSlice elemsV with
+    | error e => exact ⟨.error e, fun _ => rfl⟩
+    | ok elems =>
+    simp only [except_bind_ok]
+    cases hv1 : validateSlice slice with
+    | error e => exact ⟨.error e, fun _ => rfl⟩
+    | ok u1 =>
+    simp only [except_bind_ok]
+    cases hv2 : validateSlice elems with
+    | error e => exact ⟨.error e, fun _ => rfl⟩
+    | ok u2 =>
+    simp only [except_bind_ok]
+    cases hvis : sliceVisibleValues σ elems with
+    | error e => exact ⟨.error e, fun _ => rfl⟩
+    | ok elemValues =>
+    simp only [except_bind_ok]
+    cases htl : valueAsLoc tv with
+    | error e => exact ⟨.error e, fun _ => rfl⟩
+    | ok tloc =>
+    simp only [except_bind_ok]
+    simp only [hsl, hel, hv1, hv2, hvis, htl] at hw
+    by_cases hcap : slice.len + elemValues.size ≤ slice.cap
+    · simp only [if_pos hcap]
+      exact ⟨_, fun ch => bind_pair_map _ _ ch⟩
+    · simp only [if_neg hcap]
+      cases hts : tySizeBytes σ.types elem with
       | error e => exact ⟨.error e, fun _ => rfl⟩
-      | ok elems =>
-        simp only [except_bind_ok]
-        cases hv1 : validateSlice slice with
+      | ok elemSize =>
+      simp only [except_bind_ok]
+      simp only [if_neg hcap, hts] at hw
+      split
+      · exact ⟨.error (.panic "runtime error: growslice: len out of range"), fun _ => rfl⟩
+      · rename_i hr16
+        simp only [if_neg hr16] at hw
+        cases hold : sliceVisibleValues σ slice with
         | error e => exact ⟨.error e, fun _ => rfl⟩
-        | ok u1 =>
-          simp only [except_bind_ok]
-          cases hv2 : validateSlice elems with
-          | error e => exact ⟨.error e, fun _ => rfl⟩
-          | ok u2 =>
-            simp only [except_bind_ok]
-            cases hvis : sliceVisibleValues σ elems with
-            | error e => exact ⟨.error e, fun _ => rfl⟩
-            | ok elemValues =>
-              simp only [except_bind_ok]
-              have hsz := sliceVisibleValues_size hvis
-              cases htl : valueAsLoc tv with
-              | error e => exact ⟨.error e, fun _ => rfl⟩
-              | ok tloc =>
-                simp only [except_bind_ok]
-                by_cases hcap : slice.len + elemValues.size ≤ slice.cap
-                · simp only [if_pos hcap]
-                  exact ⟨_, fun ch => bind_pair_map _ _ ch⟩
-                · simp only [if_neg hcap]
-                  cases hts : tySizeBytes σ.types elem with
-                  | error e => exact ⟨.error e, fun _ => rfl⟩
-                  | ok elemSize =>
-                    simp only [except_bind_ok]
-                    unfold appendSpill? at hw
-                    simp only [hsl, hel, hts] at hw
-                    rw [hsz] at hcap
-                    rw [if_neg hcap] at hw
-                    split at hw
-                    · rename_i hr16
-                      simp only [hsz, if_pos hr16]
-                      exact ⟨.error (.panic "runtime error: growslice: len out of range"), fun _ => rfl⟩
-                    · cases hw
+        | ok oldValues => rw [hold] at hw; cases hw
 
-/-- **The spill's pop**: at `appendSpill? = some w` the apply is a
-function `g` of the `appendSpill` pick alone, its stream the site's pop
-at bound `w` — so a spilling append depends on the stream only through
-that pick. -/
+/-- **The spill's pop**: at `appendSpill? = some w` the arm reaches the
+consult and the apply is a function `g` of the `appendSpill` pick alone,
+its stream the site's pop at bound `w` — a spilling append depends on the
+stream only through that pick. Moreover `g` never raises a recoverable
+panic when the target operand addresses a ROOT cell (the frontend's
+hoisted temp, `Config.appendTargetLocal`): the grown backing is built by
+panic-free normalization and stored into an existing or `.internal`-
+refused cell (audit fix F1 — the refutation of the retired disjunct). -/
 theorem applyStmtOp_appendSlice_spill {σ : ExecState} {elem : Ty} {nt : Nat}
     {vs : List GoValue} {w : Nat} (hw : appendSpill? σ elem vs = some w) :
-    ∃ g : Nat → Except Stop ExecState, ∀ ch : Choices,
-      applyStmtOp σ ch (.appendSlice elem) nt vs
-        = (g (Choices.consumeAt .appendSpill w ch).1).map
-            fun s' => (s', (Choices.consumeAt .appendSpill w ch).2) := by
+    ∃ g : Nat → Except Stop ExecState,
+      (∀ ch : Choices,
+        applyStmtOp σ ch (.appendSlice elem) nt vs
+          = (g (Choices.consumeAt .appendSpill w ch).1).map
+              fun s' => (s', (Choices.consumeAt .appendSpill w ch).2))
+      ∧ (∀ a rest, vs = .addr (.base a) :: rest → ∀ pick, NoPanic (g pick)) := by
   match vs, hw with
   | [tv, sliceV, elemsV], hw =>
     unfold appendSpill? at hw
@@ -3151,52 +3467,56 @@ theorem applyStmtOp_appendSlice_spill {σ : ExecState} {elem : Ty} {nt : Nat}
     cases hel : valueAsSlice elemsV with
     | error e => simp [hsl, hel] at hw
     | ok elems =>
+    cases hv1 : validateSlice slice with
+    | error e => simp [hsl, hel, hv1] at hw
+    | ok u1 =>
+    cases hv2 : validateSlice elems with
+    | error e => simp [hsl, hel, hv1, hv2] at hw
+    | ok u2 =>
+    cases hvis : sliceVisibleValues σ elems with
+    | error e => simp [hsl, hel, hv1, hv2, hvis] at hw
+    | ok elemValues =>
+    cases htl : valueAsLoc tv with
+    | error e => simp [hsl, hel, hv1, hv2, hvis, htl] at hw
+    | ok tloc =>
+    simp only [hsl, hel, hv1, hv2, hvis, htl] at hw
+    split at hw
+    · cases hw
+    rename_i hcap
     cases hts : tySizeBytes σ.types elem with
-    | error e => simp [hsl, hel, hts] at hw
+    | error e => rw [hts] at hw; cases hw
     | ok elemSize =>
-    simp only [hsl, hel, hts] at hw
+    simp only [hts] at hw
     split at hw
     · cases hw
-    split at hw
-    · cases hw
-    rename_i hcap hr16
+    rename_i hr16
+    cases hold : sliceVisibleValues σ slice with
+    | error e => rw [hold] at hw; cases hw
+    | ok oldValues =>
+    rw [hold] at hw
     simp only [Option.some.injEq] at hw
     subst hw
     unfold applyStmtOp
     dsimp only
-    simp only [hsl, hel, except_bind_ok]
-    cases hv1 : validateSlice slice with
-    | error e => exact ⟨fun _ => .error e, fun _ => rfl⟩
-    | ok u1 =>
-    simp only [except_bind_ok]
-    cases hv2 : validateSlice elems with
-    | error e => exact ⟨fun _ => .error e, fun _ => rfl⟩
-    | ok u2 =>
-    simp only [except_bind_ok]
-    cases hvis : sliceVisibleValues σ elems with
-    | error e => exact ⟨fun _ => .error e, fun _ => rfl⟩
-    | ok elemValues =>
-    simp only [except_bind_ok]
-    have hsz := sliceVisibleValues_size hvis
-    cases htl : valueAsLoc tv with
-    | error e => exact ⟨fun _ => .error e, fun _ => rfl⟩
-    | ok tloc =>
-    simp only [except_bind_ok, hsz, if_neg hcap, hts, if_neg hr16]
-    cases hold : sliceVisibleValues σ slice with
-    | error e => exact ⟨fun _ => .error e, fun _ => rfl⟩
-    | ok oldValues =>
-    simp only [except_bind_ok]
-    refine ⟨fun extra => ?_, fun ch => ?_⟩
+    simp only [hsl, hel, hv1, hv2, hvis, htl, except_bind_ok, if_neg hcap, hts, if_neg hr16, hold]
+    refine ⟨fun extra => ?_, fun ch => ?_, fun a rest hvs pick => ?_⟩
     · exact do
-        let newCap := slice.len + elems.len +
-          ((appendGrowthCap slice.cap (slice.len + elems.len) - (slice.len + elems.len) + extra)
-            % appendSpillWidth slice.cap (slice.len + elems.len))
+        let newCap := slice.len + elemValues.size +
+          ((appendGrowthCap slice.cap (slice.len + elemValues.size) - (slice.len + elemValues.size) + extra)
+            % appendSpillWidth slice.cap (slice.len + elemValues.size))
         let backing ← buildAppendBackingValue σ elem oldValues elemValues newCap
         let p := σ.alloc backing (.array newCap elem)
-        storeLoc p.2 tloc (.slice { base := some p.1, offset := 0, len := slice.len + elems.len, cap := newCap })
-    · rcases hc : Choices.consumeAt .appendSpill (appendSpillWidth slice.cap (slice.len + elems.len)) ch
+        storeLoc p.2 tloc (.slice { base := some p.1, offset := 0, len := slice.len + elemValues.size, cap := newCap })
+    · rcases hc : Choices.consumeAt .appendSpill (appendSpillWidth slice.cap (slice.len + elemValues.size)) ch
         with ⟨extra, rest⟩
       exact bind_pair_map _ _ rest
+    · -- the target is a root cell: the post-consult tail cannot panic
+      simp only [List.cons.injEq] at hvs
+      obtain ⟨rfl, -⟩ := hvs
+      simp only [valueAsLoc, pure_eq_ok, Except.ok.injEq] at htl
+      subst htl
+      exact NoPanic.bind (buildAppendBackingValue_noPanic _ _ _ _ _) fun _ =>
+        storeLoc_base_noPanic _ _ _
 
 /-- The done-check `mapIterK` step is oblivious: with no candidate
 left it pops the continuation at every stream (BUG-005 (L): "no
@@ -3341,7 +3661,7 @@ macro "consumption_entry_some " h:ident hsc:ident : tactic =>
       Except.ok.injEq, Prod.mk.injEq] at $h:ident
     obtain ⟨h1, h2, h3⟩ := $h:ident
     subst h1; subst h2; subst h3
-    refine .inl ⟨rfl, fun ch₁ hpk => ?_⟩
+    refine ⟨rfl, fun ch₁ hpk => ?_⟩
     (try simp only [List.append_assoc] at hpanic hpk)
     simp [stepFn, enterFramePick_panic hpanic, hpk, Bind.bind, Except.bind]))
 
@@ -3431,17 +3751,14 @@ theorem stepFn_stmtOp_spill {σ : ExecState} {elem : Ty} {nt : Nat} {done : List
     (hg : ∀ ch : Choices, applyStmtOp σ ch (.appendSlice elem) nt (v :: done).reverse
       = (g (Choices.consumeAt .appendSpill w ch).1).map
           fun s' => (s', (Choices.consumeAt .appendSpill w ch).2))
+    (hnp : ∀ pick, NoPanic (g pick))
     {ch₀ : Choices} {c' : Config} {σ' : ExecState} {ch₀' : Choices}
     (h : stepFn σ (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) ch₀
       = .ok (c', σ', ch₀')) :
-    (ch₀' = (Choices.consumeAt .appendSpill w ch₀).2 ∧ ∀ ch : Choices,
+    ch₀' = (Choices.consumeAt .appendSpill w ch₀).2 ∧ ∀ ch : Choices,
       (Choices.consumeAt .appendSpill w ch).1 = (Choices.consumeAt .appendSpill w ch₀).1 →
       stepFn σ (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) ch
-        = .ok (c', σ', (Choices.consumeAt .appendSpill w ch).2))
-    ∨ (ch₀' = ch₀ ∧ σ' = σ ∧ (∃ chain k', c' = .panicking chain k') ∧ ∀ ch : Choices,
-      (Choices.consumeAt .appendSpill w ch).1 = (Choices.consumeAt .appendSpill w ch₀).1 →
-      stepFn σ (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) ch
-        = .ok (c', σ', ch)) := by
+        = .ok (c', σ', (Choices.consumeAt .appendSpill w ch).2) := by
   unfold stepFn at h
   dsimp only at h
   rw [hg ch₀] at h
@@ -3452,19 +3769,14 @@ theorem stepFn_stmtOp_spill {σ : ExecState} {elem : Ty} {nt : Nat} {done : List
       toResult_deadlock, toResult_raceDetected, toResult_fuelOut, Bind.bind, Except.bind,
       pure_eq_ok, deliverS_panic, Except.ok.injEq, Prod.mk.injEq, reduceCtorEq] at h
     case panic msg =>
-    obtain ⟨rfl, rfl, rfl⟩ := h
-    -- the post-pop panic: the delivery restores the PRE-apply stream
-    refine .inr ⟨rfl, rfl, ⟨_, _, rfl⟩, fun ch hpk => ?_⟩
-    unfold stepFn
-    dsimp only
-    rw [hg ch, hpk, hgv]
-    rfl
+    -- refuted: the post-consult tail never panics (`hnp`)
+    exact absurd hgv (hnp _ msg)
   | ok s₂ =>
     rw [hgv] at h
     simp only [Except.map, toResult_ok, Bind.bind, Except.bind, pure_eq_ok, deliverS_ok,
       Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl⟩ := h
-    refine .inl ⟨rfl, fun ch hpk => ?_⟩
+    refine ⟨rfl, fun ch hpk => ?_⟩
     unfold stepFn
     dsimp only
     rw [hg ch, hpk, hgv]
@@ -3867,27 +4179,25 @@ theorem stepFn_consumption_none {σ : ExecState} {c : Config} {ch₀ : Choices}
 set_option maxHeartbeats 1600000 in
 set_option linter.unusedSimpArgs false in
 /-- **The consumption theorem, `some` half**: a step whose projection is
-`some (site, b)` DRAWS the site's pick at bound `b` and depends on the
-stream only through that pick — any stream drawing the same pick yields
-the same successor. Its stream is the site's pop (the first disjunct) —
-EXCEPT when the delivery after the pop is a RECOVERABLE PANIC (the second
-disjunct: an `appendSpill` whose grown-header store panics, a `tryLock`
-whose result delivery panics): there the machine's every-site convention
-"a delivered panic restores the PRE-apply stream" UNDOES the pop. That is
-the machine as it stands (B2 preserved it site for site); the tracer's
-sentinel would flag it and no corpus row reaches it — recorded in the
-wave-(iii) design note as a disclosed latent accounting inconsistency for
-the [USER], not absorbed here. -/
+`some (site, b)` DRAWS the site's pick at bound `b`, its stream is the
+site's pop, and it depends on the stream only through that pick — any
+stream drawing the same pick yields the same successor with its own popped
+tail. The one hypothesis, `Config.appendTargetLocal`, is the frontend's
+lowering contract at an `appendSlice` apply (the target is a hoisted local
+temp, a ROOT cell); under it the post-consult tail of a spilling append
+cannot panic (`applyStmtOp_appendSlice_spill`), as a TRY head's apply never
+can (`applyTryLock_noPanic`) — the "post-pop panic restores the pre-apply
+stream" disjunct the first statement carried was a PROOF ARTIFACT of
+stating the theorem over arbitrary configurations, refuted here (wave-(iii)
+audit fix F1; design note §B8). -/
 theorem stepFn_consumption_some {σ : ExecState} {c : Config} {ch₀ : Choices}
     {c' : Config} {σ' : ExecState} {ch₀' : Choices} {site : ChoiceSite} {b : Nat}
+    (hloc : c.appendTargetLocal)
     (hsc : seqConsumption σ c = some (site, b))
     (h : stepFn σ c ch₀ = .ok (c', σ', ch₀')) :
-    (ch₀' = (Choices.consumeAt site b ch₀).2 ∧ ∀ ch : Choices,
+    ch₀' = (Choices.consumeAt site b ch₀).2 ∧ ∀ ch : Choices,
       (Choices.consumeAt site b ch).1 = (Choices.consumeAt site b ch₀).1 →
-      stepFn σ c ch = .ok (c', σ', (Choices.consumeAt site b ch).2))
-    ∨ (ch₀' = ch₀ ∧ σ' = σ ∧ (∃ chain k, c' = .panicking chain k) ∧ ∀ ch : Choices,
-      (Choices.consumeAt site b ch).1 = (Choices.consumeAt site b ch₀).1 →
-      stepFn σ c ch = .ok (c', σ', ch)) := by
+      stepFn σ c ch = .ok (c', σ', (Choices.consumeAt site b ch).2) := by
   fun_cases stepFn σ c ch₀
   all_goals first
     | (simp [seqConsumption, Config.applyPos, entryCallSite?] at hsc; done)
@@ -3912,8 +4222,10 @@ theorem stepFn_consumption_some {σ : ExecState} {c : Config} {ch₀ : Choices}
   case case96 =>
     simp only [seqConsumption, Config.applyPos] at hsc
     obtain ⟨elem, rfl, rfl, hw⟩ := stmtConsult?_some hsc
-    obtain ⟨g, hg⟩ := applyStmtOp_appendSlice_spill hw
-    exact stepFn_stmtOp_spill hg h
+    obtain ⟨g, hg, hnp⟩ := applyStmtOp_appendSlice_spill hw
+    simp only [Config.appendTargetLocal] at hloc
+    obtain ⟨a, rest, hvs⟩ := hloc
+    exact stepFn_stmtOp_spill hg (hnp a rest hvs) h
   case case118 =>
     rename_i v clauses default? done env k'
     simp only [seqConsumption, Config.applyPos, selectConsult?] at hsc
@@ -3942,7 +4254,7 @@ theorem stepFn_consumption_some {σ : ExecState} {c : Config} {ch₀ : Choices}
             simp only [toResult_ok, Bind.bind, Except.bind, pure_eq_ok, deliverS_ok,
               Except.ok.injEq, Prod.mk.injEq] at h
             obtain ⟨rfl, rfl, rfl⟩ := h
-            refine .inl ⟨rfl, fun ch hpk => ?_⟩
+            refine ⟨rfl, fun ch hpk => ?_⟩
             unfold stepFn
             dsimp only
             rw [applySelect_picks_stream hcore ch, hpk, hget]
@@ -3951,7 +4263,7 @@ theorem stepFn_consumption_some {σ : ExecState} {c : Config} {ch₀ : Choices}
             simp only [toResult_ok, Bind.bind, Except.bind, pure_eq_ok, deliverS_ok,
               Except.ok.injEq, Prod.mk.injEq] at h
             obtain ⟨rfl, rfl, rfl⟩ := h
-            refine .inl ⟨rfl, fun ch hpk => ?_⟩
+            refine ⟨rfl, fun ch hpk => ?_⟩
             unfold stepFn
             dsimp only
             rw [applySelect_picks_stream hcore ch, hpk, hget]
@@ -4004,21 +4316,15 @@ theorem stepFn_consumption_some {σ : ExecState} {c : Config} {ch₀ : Choices}
                   Bind.bind, Except.bind, pure_eq_ok, deliverS_panic, Except.ok.injEq,
                   Prod.mk.injEq, reduceCtorEq] at h
                 case panic msg =>
-                obtain ⟨rfl, rfl, rfl⟩ := h
-                -- the post-pop panic restores the pre-apply stream
-                refine .inr ⟨rfl, rfl, ⟨_, _, rfl⟩, fun ch hpk => ?_⟩
-                unfold stepFn
-                dsimp only
-                simp only [List.reverse_cons, List.reverse_nil, List.nil_append]
-                rw [hap ch, hpk, hat]
-                rfl
+                -- refuted: a TRY head's apply never panics (`applyTryLock_noPanic`)
+                exact absurd hat (applyTryLock_noPanic hcell _ _ _ _ _ msg)
               | ok p =>
                 obtain ⟨c₂, σ₂⟩ := p
                 rw [hat] at h
                 simp only [Except.map, toResult_ok, Bind.bind, Except.bind, pure_eq_ok, deliverS_ok,
                   Except.ok.injEq, Prod.mk.injEq] at h
                 obtain ⟨rfl, rfl, rfl⟩ := h
-                refine .inl ⟨rfl, fun ch hpk => ?_⟩
+                refine ⟨rfl, fun ch hpk => ?_⟩
                 unfold stepFn
                 dsimp only
                 simp only [List.reverse_cons, List.reverse_nil, List.nil_append]
@@ -4058,7 +4364,7 @@ theorem stepFn_consumption_some {σ : ExecState} {c : Config} {ch₀ : Choices}
             rw [hbind] at h
             simp only [Except.map, Except.ok.injEq, Prod.mk.injEq] at h
             obtain ⟨rfl, rfl, rfl⟩ := h
-            refine .inl ⟨rfl, fun ch hpk => ?_⟩
+            refine ⟨rfl, fun ch hpk => ?_⟩
             rcases hcons₁ : Choices.consume ch (cands.size + (if mand = true then 0 else 1)) with ⟨idx₁, tail₁⟩
             rw [hcons₁] at hpk
             simp only at hpk
@@ -4076,7 +4382,7 @@ theorem stepFn_consumption_some {σ : ExecState} {c : Config} {ch₀ : Choices}
           rw [stepFn_mapIter_stop hcands hmand hemp hcons'] at h
           simp only [Except.ok.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl, rfl⟩ := h
-          refine .inl ⟨rfl, fun ch hpk => ?_⟩
+          refine ⟨rfl, fun ch hpk => ?_⟩
           rcases hcons₁ : Choices.consume ch (cands.size + (if false = true then 0 else 1)) with ⟨idx₁, tail₁⟩
           have hcons₁' : Choices.consume ch (cands.size + 1) = (idx₁, tail₁) := by
             simpa using hcons₁

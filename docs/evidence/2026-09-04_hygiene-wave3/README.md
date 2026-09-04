@@ -3,13 +3,16 @@
 Consuming docs: `docs/2026-09-04_hygiene-wave3-design.md` (every §-item's
 "Preservation"/"Gate" paragraph and §B8's finding), `docs/2026-09-03_design-hygiene-arc.md`
 (landing record, step (iii)), `docs/2026-09-03_grumpy-professor-review.md`
-§3(b) (the "LANDED <sha>" lines for B2, B3, B8; §3(a) A7), `docs/BUGS.md` BUG-092.
+§3(b) (the "LANDED <sha>" lines for B2, B3, B8; §3(a) A7). (BUG-092, filed by
+the first B8 records, was REFUTED and retired in the audit fix round — design
+note §B8; no BUGS.md entry remains.)
 
 Provenance: produced 2026-09-04 [AGENT] (design-hygiene arc step (iii),
 worktree `hygiene-wave3` off `main` @ `aceb0dcb` — the A-series on main). The
 ratification the arc rests on is [USER] (Mike, 2026-09-03, relayed by the
 coordinator — quoted in the arc plan). No decision in this directory is a new
-one; the one FINDING (BUG-092) is disclosed, not decided.
+one; the one FINDING (BUG-092) was disclosed, then refuted by lemma in the audit
+fix round (a proof artifact — design note §B8) and retired.
 
 Toolchain: Go `go1.26.5 linux/amd64` (the pin, `baselines/go-oracle-pin`);
 Lean `leanprover/lean4:v4.32.2` (`lean-toolchain`); every `golean` binary is
@@ -51,13 +54,15 @@ cmp before.tsv <item>.tsv                              # choice-trace/<item>-dif
 scripts/capped lake env lean b3-prototype/Proto.lean   # at a tree with the PRE-B3 walks (main @ aceb0dcb)
 ```
 
-EXCLUSIONS (recorded in each run's `excluded.tsv`, never silent): `goroutines/send-then-spin`
-(nonterm=200; the A-series' exclusion) and `strings/trimspace-repeat/repeat-bound-refused`
-(NEW this wave: the row's single-stream trace did not finish in 15 min — three
-drivers × a 16 MiB shim refusal path; the first full run stalled 60 min on it,
-`transcripts/first-run-stall.txt`). Both are traced by no wave run; neither
-touches a stream-consuming site under the default stream that the corpus does
-not exercise elsewhere.
+EXCLUSIONS — exactly TWO rows, recorded in each run's `excluded.tsv`, never
+silent: (1) `goroutines/send-then-spin` — INHERITED from the A-series
+(nonterm=200: the row runs to the step cap under every stream, so its trace is
+the cap, not a consumption record); (2) `strings/trimspace-repeat/repeat-bound-refused`
+— NEW this wave: the row's single-stream trace did not finish in 15 min (three
+drivers × a 16 MiB shim refusal path); the first full run stalled 60 min on it,
+`transcripts/first-run-stall.txt`. Both are traced by no wave run (nor by the
+fix-round spot-check); neither touches a stream-consuming site under the default
+stream that the corpus does not exercise elsewhere.
 
 The pre-wave snapshot: 3328 rows exported, 35 frontend refusals
 (export-fail.tsv), 2 excluded, 19962 (row, stream) lines, 23665 consumptions,
@@ -74,6 +79,8 @@ known frontend refusal `arrays/materialization-budget/over-budget`
 | B2 `Result` at the apply boundary | B2 sources (uncommitted at run; committed unchanged as `91c57c9e`) | PASS | 3365 = 3165/200 | 0 (FULL 3365/3365) | 0 | aggregate DELTA 0 on 19963 lines; per-consumption dump byte-identical, 23665 records (`choice-trace/b2-diff.txt`, `b2-summary.txt`) |
 | B3 the `Cont` algebra (+ A7 accessor) | B3 sources (uncommitted at run; committed unchanged as `cd2a3474`) | PASS | 3365 = 3165/200 | 0 (FULL 3365/3365) | 0 | aggregate DELTA 0; dump byte-identical, 23665 records (`choice-trace/b3-diff.txt`, `b3-summary.txt`) |
 | B8 consumption from the machine | B8 sources (uncommitted at run; committed unchanged as `2e69fde0`) | PASS | 3365 = 3165/200 | 0 (FULL 3365/3365) | 0 | aggregate DELTA 0 on 19963 lines; the NEW tracer's per-consumption dump byte-identical to the OLD tracer's, 23665 records, 0 sentinel / pick-record alarms (`choice-trace/b8-diff.txt`, `b8-summary.txt`) |
+
+| audit fix round F1–F6 (BUG-092 refuted; `Cont.class` exhaustive; Obs emit guard) | fix-round sources (uncommitted at run; committed unchanged as the commit after `2e69fde0`) | PASS | 3365 = 3165/200 | 0 (FULL 3365/3365; negative 394/394) | 0 | SPOT-CHECK, not a whole-corpus re-run: 8 rows covering every reached consumption site, 156 records byte-identical to the oracle (`choice-trace/fix-spot.txt`) |
 
 Each per-item `ci --diff` ran on the item's UNCOMMITTED sources; the commit
 that followed contains exactly those sources (no edit between run and commit).
@@ -93,7 +100,8 @@ regression.
 
 ## Files
 
-- `transcripts/gate-b2.txt`, `gate-b3.txt`, `gate-b8.txt` — `ci --diff` tails.
+- `transcripts/gate-b2.txt`, `gate-b3.txt`, `gate-b8.txt`, `gate-fix.txt` — `ci --diff` tails (the last at the audit fix-round tip).
+- `choice-trace/fix-spot.txt` — the fix-round tracer spot-check (8 rows, 156 records, identical).
 - `transcripts/first-run-stall.txt` — the stalled first snapshot run (exclusion reason).
 - `choice-trace/before-summary.txt`, `b2-summary.txt`, `b3-summary.txt`, `b8-summary.txt` — the corpus tracer summaries.
 - `choice-trace/b2-diff.txt`, `b3-diff.txt`, `b8-diff.txt` — aggregate `trace-diff.sh` output + the per-consumption `cmp` verdict.

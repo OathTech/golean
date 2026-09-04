@@ -242,12 +242,10 @@ inductive StepMFine : MultiConfig → MultiConfig → Prop where
 (goroutine exit is a registry op). -/
 theorem threadDone_atBoundary {c : Config} (h : threadDone c = true) :
     c.atBoundary = true := by
-  match c, h with
-  | .next .stop, _ => rfl
-  | .returning .stop, _ => rfl
-  | .breaking .stop, _ => rfl
-  | .continuing .stop, _ => rfl
-  | .panicked _, _ => rfl
+  -- B3: both are `Config.isTerminal` (the terminal shapes, named once).
+  unfold Config.atBoundary
+  rw [show c.isTerminal = true from h]
+  rfl
 
 /-- A parked goroutine's configuration is a registry boundary. -/
 theorem isBlockedConfig_atBoundary {c : Config} (h : isBlockedConfig c = true) :

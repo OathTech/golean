@@ -781,7 +781,7 @@ function of (kind, key, clock) and the key encodings are in bijection
 with the phantom paths.
 
 _A7 status (2026-09-04, design-hygiene arc step (ii)): SKIPPED — folded into wave (iii)/B3, whose `Cont` classification is this accessor; measured ~85 pattern sites incl. 24 in proofs (design note §A7)._
-_A7 status (2026-09-04, wave (iii)): the ACCESSOR half LANDED with B3 (`cd2a3474`) — `Config.applyPos : Config → Option (ApplyHead × List GoValue × LocalEnv × Cont)`, additive, consumed by B8's `seqConsumption` and the inversion lemmas `applyPos_stmt/_select/_sync`; the accumulator flip and the `applyOperands` spelling NOT done (wave-(iii) note §B3, reasons)._
+_A7 status (2026-09-04, wave (iii)): the ACCESSOR half LANDED with B3 (`cd2a3474`) — `Config.applyPos : Config → Option (ApplyHead × List GoValue × LocalEnv × Cont)`, additive, consumed by ONE consumer (B8's `seqConsumption`) with the inversion lemmas `applyPos_stmt/_select/_sync`; NOT "spelled once" (audit fix F3 correction): the raw `(v :: done).reverse` spelling stays at 64 sites (35 executable / 29 proof) and `applyPos` ADDED 8 spellings + 3 encoding theorems — the flip's true cost is ≈110 sites + 3 restatements, recorded for B4/C3; the accumulator flip and the `applyOperands` spelling NOT done (wave-(iii) note §B3)._
 
 **A7. One accumulator convention and one apply-position accessor.**
 Change: pick `done : List GoValue` reversed (the majority) for the
@@ -1080,7 +1080,7 @@ Preservation: `consumeAtE` projects onto `consumeAt`
 (`Choices.consumeAtE_fst_snd`, State.lean:326) — same picks, same
 stream.
 
-_B8 status (2026-09-04, design-hygiene arc step (iii)): LANDED `2e69fde0` — NOT the `stepFn` 4-tuple reshape (recorded deferral; "hundreds of pinned equations") but the machine's OWN consumption projection `seqConsumption`/`poolConsumption` with the theorem `stepFn_consumption_none`/`_some` (the old `stepFn_oblivious` DERIVED); `CLI.stepNeeds`/`stepNeedsSeq` and the tracer's `seqSite`/`poolSite` are projections (the three hand mirrors gone); the NEW tracer reproduced the OLD tracer's 23665 per-consumption records byte for byte; the theorem's `some` half surfaced BUG-092 (a post-pop delivered panic UNDOES the pop — disclosed, referred to the [USER]); the checker's fragment flags untouched (widening = drift); design note §B8._
+_B8 status (2026-09-04, design-hygiene arc step (iii)): LANDED `2e69fde0` — NOT the `stepFn` 4-tuple reshape (recorded deferral; "hundreds of pinned equations") but the machine's OWN consumption projection `seqConsumption`/`poolConsumption` with the theorem `stepFn_consumption_none`/`_some` (the old `stepFn_oblivious` DERIVED); `CLI.stepNeeds`/`stepNeedsSeq` and the tracer's `seqSite`/`poolSite` are projections (the three hand mirrors gone); the NEW tracer reproduced the OLD tracer's 23665 per-consumption records byte for byte; the theorem's `some` half's FIRST DRAFT carried a "post-pop delivered panic undoes the pop" disjunct filed as BUG-092 — a PROOF ARTIFACT, refuted by lemma in the audit fix round (`applyTryLock_noPanic`; `Config.appendTargetLocal` + `storeLoc_base_noPanic`; `appendSpill?` mirrors every pre-consult test) and RETIRED; the theorem now states the single pop conclusion under the frontend's hoisting contract; the checker's fragment flags untouched (widening = drift); design note §B8._
 
 ### 3(c). The big reshaping — only worth doing before the reasoning repo pins us
 

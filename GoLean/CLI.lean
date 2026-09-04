@@ -868,6 +868,20 @@ def observationOfRun : Except Stop GoCore.Readout → Json
   | .ok result => runJson result
   | .error err => errorJson err
 
+/-- The member VOCABULARY the enumeration lanes emit (audit fix F5,
+2026-09-04): normal readouts, unrecovered panics and the race refusal.
+Since B2 `Obs` can STATE a fatal or deadlock member; the engine
+(`EnumDedup.nodeObs`) and the checker (`checkNode`/`checkEdge`) refuse
+them upstream, and this guard refuses BY NAME at the emit site should
+either ever regress — a member outside the vocabulary must never print
+as a certified observation with a status word the lanes do not declare. -/
+def memberVocabularyRefusal? : GoCore.Machine.Obs → Option String
+  | .ok _ => none
+  | .terminal (.panic _) => none
+  | .terminal .raceDetected => none
+  | .terminal t =>
+      some s!"certified member with terminal status `{t.status}` outside the lanes' member vocabulary (ok/panic/race): a fatal or deadlock member must be refused upstream (engine nodeObs, checker checkNode) — reaching the emit site is an engine/checker regression"
+
 structure EnumOutcome where
   /-- Distinct observations (canonical `Json`, deduplicated by structural
   equality — the same equality `observation-eq` decides). -/
@@ -1384,6 +1398,12 @@ def runDedupObservations (ep : EnumProgram) (cfg : EnumArgs) : IO UInt32 := do
         match o with
         | .ok vs => runJson { values := vs.toArray }
         | .terminal t => errorJson (.terminal t)
+      -- The member vocabulary (audit fix F5): refuse by name before any
+      -- status word is compared or printed.
+      for t in cert.members do
+        if let some why := memberVocabularyRefusal? t.1 then
+          IO.eprintln s!"coverage-observations: {why}. Member: {(obsJson t.1).compress}"
+          return 1
       -- status discipline (audit F1/F8), unchanged in meaning
       for t in cert.members do
         if cfg.expectStatus.any (fun ss => !ss.contains (statusOf t.1)) then

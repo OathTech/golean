@@ -174,14 +174,24 @@ A8's record stands); `Refusal.at`/a driver error type (A9's record).
   else none`. Four 30-arm definitions (≈110 lines) → four 3–8-line
   instances.
 - `Config.isTerminal` — the five terminal shapes named once; `threadDone
-  c := c.isTerminal`; `Config.atBoundary c := c.isTerminal || …` (two of
-  the review's eight enumeration sites; the drivers' per-shape
-  classifications — `execStmtLoop`, `mainOutcome?`, `allStreamsOk` — need
-  the OUTCOME behind the shape and keep it; `Config.terminal` (Prop) is
-  unchanged: its only consumer is prose).
+  c := c.isTerminal`; `Config.atBoundary c := c.isTerminal || …`; and
+  (audit fix F4) NPDRF's `threadDone_atBoundary` proof goes through
+  `isTerminal` instead of re-enumerating the shapes — THREE of the six
+  terminal-shape enumeration sites (the first draft of this note said
+  "two of eight"; the audit's census is six). The three that keep their
+  own arms, each for its own reason: `execStmtLoop` and `mainOutcome?`
+  need the OUTCOME behind the shape (which terminal, with what payload);
+  `allStreamsOk` EXCLUDES `.panicked`, a shape `isTerminal` admits — not a
+  shape/outcome distinction but a different predicate. `Config.terminal`
+  (Prop) is unchanged: its only consumer is prose.
 - A7: `Config.applyPos : Config → Option (ApplyHead × List GoValue ×
-  LocalEnv × Cont)` — the one place that knows the `(v :: done).reverse`
-  operand encoding; consumed by B8's `seqConsumption`.
+  LocalEnv × Cont)` — an ACCESSOR that decodes the `(v :: done).reverse`
+  operand encoding for its ONE consumer, B8's `seqConsumption`. It does
+  NOT make the encoding "spelled once" (the first draft of this note said
+  it did — corrected by audit fix F3): the raw spelling stays at every
+  executable and proof site (counts under "Not done" below), and
+  `applyPos` ADDED eight spellings (its arms) plus three encoding
+  theorems (`applyPos_stmt/_select/_sync`).
 
 **Preservation (definitional, PROVED).** Each instance was proved EQUAL
 to the retired 30-arm definition BEFORE the swap — `pushDefer'_eq`,
@@ -217,9 +227,22 @@ Cont.class, Cont.tail`; MultiSound: two `threadDone` unfoldings gained
   wave; the algebra above is what makes it cheap later (a bundled frame
   is one `tail`/`withTail` arm).
 - The accumulator flip (`vals ++ [v]` → reversed) and spelling every
-  `(v :: done).reverse` through `applyOperands`: ~85 sites incl. 24 in
-  proofs, and the proofs' `List.reverse_cons` normalisations would all
-  move; the accessor `applyPos` is the additive half with the payoff.
+  `(v :: done).reverse` through `applyOperands`: MEASURED (audit fix F3,
+  correcting the draft's "~85 incl. 24 in proofs"): at the B8 tip the
+  raw `(v :: done).reverse` spelling stands at 64 sites — 35 executable,
+  29 in proofs — and `applyPos` added 8 more spellings + 3 encoding
+  theorems, so the flip's TRUE cost is ≈110 sites + 3 theorem
+  restatements (the proofs' `List.reverse_cons` normalisations all move
+  with it). Re-measured at the fix-round tip with
+  `grep -c '(v :: done).reverse'` over `GoLean/`: 73 lines — 44 in
+  executable files (Machine 16 incl. the new `appendTargetLocal`, StepFn
+  7, Multi 10, MultiStreams 2, Race 3, EnumDedupCheck 1, ChoiceTrace 5)
+  and 29 in proof files (MachineSound 10, MultiSound 5, MultiWfSound 5,
+  StateWf 6, EnumDedupSound 3); the audit's 64 counts sites, the grep
+  counts lines and includes the tracer. `applyPos` has ONE consumer
+  (`seqConsumption`); the consumer half (routing the executable sites
+  through it) was NOT landed in the fix round — cost recorded here for
+  B4/C3, which is where the flip belongs.
 - `itersNormalized` deletion (A8 owed): 216 refs (StateWf 113,
   MultiWfSound 103) — a positional re-proof over two files that B8's
   budget did not leave room for; STILL OWED (its five walk lemmas are now
@@ -284,30 +307,64 @@ records byte for byte over the whole corpus (23665 records, 19962
 pick-record cross-checks stayed at 0 alarms. `ci --diff`: PASS 3365 =
 3165/200, FULL 3365/3365, 0 flips (`transcripts/gate-b8.txt`).
 
-**THE FINDING (disclosed, referred to the [USER]; not absorbed).**
-Stating the `some` half exposed a latent inconsistency between the
-machine and every consumption ACCOUNT of it: when a stream-consuming
-apply POPS and its delivery then raises a recoverable panic, the
-machine's every-site convention "a delivered panic returns the PRE-apply
-stream" UNDOES the pop. Reachable in principle at two sites: a spilling
-`appendSlice` whose grown-header STORE panics (e.g. `a[i] = append(b,
-1, 2, 3, 4, 5)` with `b` nil — a spill — and `i` out of range: Go panics
-at the assignment AFTER evaluating the append; the machine pops the
-`appendSpill` pick, then the phase-2 store panics and the step returns
-the un-popped stream), and a TRY head whose result delivery panics. The
-tracer's sentinel would ALARM there (the accountant predicts the pop);
-the enumerator would branch a pick the run then ignores; no corpus row
-reaches either (the whole-corpus trace has 0 alarms; the B8 dump is
-byte-identical). This is an ACCOUNTING question, not an observation: no
-readout or panic message moves, only which later consumptions read
-which stream slot after such a panic — so it is invisible to the
-differential and cannot carry a red-first pin row; the theorem's second
-disjunct is its pin. Filed as BUG-092 (design class; OPEN; the fix — keep
-the popped stream on a post-pop panic, i.e. `deliverS`'s panic branch
-takes the apply's stream at the three streaming applies — changes the
-stream realization on those paths and is the [USER]'s to rule; the
-predecessor machine had the same convention at all 41 sites, so B2
-preserved it, and B8 did not fix it silently).
+**THE FINDING — a PROOF ARTIFACT, refuted (audit fix F1, 2026-09-04).**
+The first statement of the `some` half carried a second disjunct: "or
+the delivery after the pop is a recoverable panic, and the step returns
+the PRE-apply stream (the pop undone)". It was filed as BUG-092 (design
+class) with two supposedly reachable shapes — a spilling `appendSlice`
+whose grown-header STORE panics (`a[i] = append(b, 1, 2, 3, 4, 5)` with
+`b` nil and `i` out of range), and a TRY head whose result delivery
+panics. The pre-merge audit judged both UNREACHABLE, and the disjunct an
+artifact of stating the theorem over ARBITRARY configurations rather
+than the ones the machine and frontend produce. The audit's probes
+(coordinator, relayed; [AGENT]):
+
+| probe | expectation if the disjunct were real | observed |
+|---|---|---|
+| spilling append into an out-of-range `a[i]` | the `appendSpill` pop undone; slot re-read | the panic is raised by the ASSIGNMENT step, not the append: emit.go hoists every `append` into a fresh temp, so the append's target `tloc` is a plain local (a root cell) and its store cannot panic; the cap tracks stream slot 1 — the pop sticks |
+| `TryLock` whose result delivery panics | the `tryLock` pop undone | `applyTryLock` cannot return `.error (.panic _)`: its stores go through cells the machine has just loaded; the mutex stays locked, in-place writes persist |
+
+The refutation is now PROVED, not probed. MachineSound gains a
+`NoPanic` predicate family (`NoPanic x := ∀ msg, x ≠ .error (.panic
+msg)`, closed under `bind`/`map`/`ite`) and the lemmas
+`normalizeValueForTy_noPanic`, `defaultValue_noPanic`,
+`buildAppendBackingValue_noPanic`, `StructFields.set_noPanic`,
+`storeLoc_base_noPanic` (a ROOT-cell store never panics),
+`storeLoc_noPanic_of_loadLoc_ok` (a store through a path the machine can
+load never panics — `arraySet_ok_of_arrayGet_ok`), `tryAcquire_noPanic`,
+`enterRecvTargets_noPanic`, `tryDeliver_noPanic`, and
+`applyTryLock_noPanic`. `appendSpill?` (Machine.lean) was REWRITTEN to
+mirror every test the arm performs BEFORE its consult, in the arm's
+order (both `valueAsSlice`, both `validateSlice`, `sliceVisibleValues` of
+the elements, `valueAsLoc` of the target, the cap test, `tySizeBytes`,
+the R16 bound, `sliceVisibleValues` of the slice) — so `some w` holds
+exactly when the consult happens, and a pre-consult panic (a nil target,
+an index panic in the element read) projects to `none`, where the
+oblivious half applies. The one hypothesis the refutation needs is the
+frontend's lowering contract, reified as `Config.appendTargetLocal :
+Config → Prop` (at an `appendSlice` apply the target operand is `.addr
+(.base a)` — the hoisted temp; `True` elsewhere); under it
+`applyStmtOp_appendSlice_spill`'s new third conjunct gives `NoPanic (g
+pick)` for the post-consult tail (`buildAppendBackingValue_noPanic` then
+`storeLoc_base_noPanic`), `stepFn_stmtOp_spill` takes that as `hnp` and
+its panic branch is closed by `absurd`, and the sync arm's panic branch is
+closed by `applyTryLock_noPanic`. `stepFn_consumption_some` now takes
+`(hloc : c.appendTargetLocal)` and states the SINGLE conclusion "the
+stream is the site's pop, and any stream with the same pick yields the
+same successor with its own popped tail". Honest scope: the hypothesis
+is discharged by the frontend's construction (emit.go's hoisting), which
+this repo validates differentially, not by a Lean proof about the
+frontend — the frontend was not touched. BUG-092 is RETIRED: the entry is
+deleted from `docs/BUGS.md` (the number is not reused); no [USER] ruling
+was needed, because nothing was ever wrong with the machine — only with
+the theorem's first statement. The tracer's byte-identity and the 0
+sentinel alarms were consistent with this all along.
+
+Also in the fix round (F4, records): `except_bind_ok` and
+`bind_pair_stream` MOVED from `GoLean/GoCore/EnumDedupSound.lean` (where
+they were `private`, formerly lines 103 and 109) to MachineSound.lean and
+are public there — B8's select/sync stream lemmas needed them; the note's
+first draft omitted the move.
 
 ## Obs
 
@@ -320,6 +377,15 @@ them is a lane decision the [USER] takes, not a type change — the type
 now permits it. `Obs.eqb` compares terminals by `Terminal`'s
 `DecidableEq`.
 
+Because the type no longer guards the member vocabulary, the guard moved
+to the EMIT site (audit fix F5): `CLI.memberVocabularyRefusal? : Obs →
+Option String` names the refused members (`fatal` and `deadlock` — every
+`Terminal` but `panic` and `raceDetected`), and the CLI's certified-set
+emit loop refuses BY NAME before the status-discipline check. Red-first:
+`Tests/GoCoreEval.lean` fakes a `.terminal (.fatal …)` and a `.terminal
+.deadlock` member and checks both are refused, and that `ok`/`panic`/
+`raceDetected` pass.
+
 
 ## Summary — what landed, what moved, what is owed
 
@@ -327,7 +393,7 @@ now permits it. `Obs.eqb` compares terminals by `Terminal`'s
 |---|---|---|---|
 | B2 `Result` at the apply boundary | `91c57c9e` | `Result`/`toResult` (Value.lean); `panicEntry`, `deliver`, `enterFramePick` (Machine.lean); `deliverS` (StepFn.lean); 17 twin rules deleted (159 → 142); 41 inline conversion sites → 0 (`panicEntry` at the 12 in-helper/nil-callee sites, `deliver`/`deliverS` at every apply/entry); 3 entry funnels → 1; `Obs := ok ∣ terminal Terminal`; `Result` → `Readout` | `step_preserves_wf_loc` 17 cases restated (one macro for the panic branch); `stepFn_sound`/`step_complete`/`step_complete_any_wf_aux`/`stepFn_oblivious` re-tagged (75 → 75 tags) with 4+2 macros; MultiSound/MultiWfSound select-interception and spawn lemmas restated; `entryPanicStream` + its lemma deleted; `Obs.eqb_sound` over `DecidableEq`; the enumeration completeness proof unchanged |
 | B3 the `Cont` algebra + A7 accessor | `cd2a3474` | `Cont.tail`/`withTail`/`class`/`isGlue`/`rebuild` + 6 laws; `pushDefer`/`recoverThroughWrappers`/`recoverResult`/`panicPassthrough` = instances (4 × 30 arms → 4 short defs); `Config.isTerminal` (`threadDone`, `atBoundary`); `Config.applyPos` + `ApplyHead` | generic `Cont.rebuild_locSup` (+ `ownSup`, `locSup_withTail`, `locSup_eq_own_tail`, `tail_locSup_le`) replaces 3 walk inductions; 5 `_itersNormalized` walk lemmas → one-liners; `isTerminal` in 2 MultiSound unfoldings; prototype equivalence proofs in the evidence dir |
-| B8 consumption from the machine | `2e69fde0` | `mapIterConsult?`/`stmtConsult?`(`appendSpill?`)/`selectConsult?`/`syncConsult?`(`tryLockConsult?`)/`entryConsult?` + `seqConsumption` (Machine.lean), `poolConsumption` (Multi.lean); `CLI.stepNeeds`/`stepNeedsSeq` (−140 lines) and the tracer's `seqSite`/`poolSite` are projections | `stepFn_consumption_none`/`_some` (two `fun_cases` sweeps, 102 tags total with `stepFn_sound`), 12 per-site stream lemmas, `seqConsumption_none_of_flags`, `applyPos_stmt/_select/_sync`; `stepFn_oblivious` DERIVED (−380 lines); BUG-092 stated in the `some` half |
+| B8 consumption from the machine | `2e69fde0` | `mapIterConsult?`/`stmtConsult?`(`appendSpill?`)/`selectConsult?`/`syncConsult?`(`tryLockConsult?`)/`entryConsult?` + `seqConsumption` (Machine.lean), `poolConsumption` (Multi.lean); `CLI.stepNeeds`/`stepNeedsSeq` (−140 lines) and the tracer's `seqSite`/`poolSite` are projections | `stepFn_consumption_none`/`_some` (two `fun_cases` sweeps, 102 tags total with `stepFn_sound`), 12 per-site stream lemmas, `seqConsumption_none_of_flags`, `applyPos_stmt/_select/_sync`; `stepFn_oblivious` DERIVED (−380 lines); the `some` half's first-draft second disjunct (filed as BUG-092) REFUTED by lemma and removed in the audit fix round — `NoPanic` family, `applyTryLock_noPanic`, `appendTargetLocal` + `storeLoc_base_noPanic`; `appendSpill?` mirrors every pre-consult test; `Cont.class` exhaustive (F2) |
 
 Net `git diff --shortstat main..HEAD -- GoLean Tests` at the B8 tip: 17 files,
 +3141 / −2092 (+1049 net; `GoLean/GoCore/` alone +2970 / −1747). The wave
@@ -346,8 +412,27 @@ delta on 19963 aggregate lines AND on all 23665 per-consumption records.
 deletion (A8; cheaper now); the program-text `locSup` deletion (A4); the
 helper-internal `Result` monad, if ever wanted (B2's deviation);
 `Cont.eqbF`/bundling/accumulator flip (B3's skips); the `stepFn` 4-tuple
-reshape (B8's deferral — the theorem is the substitute); BUG-092's ruling
-and fix (the [USER]'s); `RaceState.chans/.syncs/.atomics` canonical order
+reshape (B8's deferral — the theorem is the substitute); the accumulator
+flip's consumer half (F3: ≈110 sites + 3 restatements, for B4/C3);
+`RaceState.chans/.syncs/.atomics` canonical order
 (A6's residual — did NOT fall out of B3/B8: neither touched the detector's
 assoc lists; still owed engine-side). `Obs.fatal`/deadlock: DELIVERED as a
 statable type (B2), the lanes' refusal of those members unchanged.
+
+## Audit fix round F1–F6 (2026-09-04, [AGENT] executing the coordinator's FIX-FIRST verdict)
+
+| item | verdict | what changed |
+|---|---|---|
+| F1 (HIGH) BUG-092 is a proof artifact | DONE | refutation proved (`NoPanic` family, `applyTryLock_noPanic`, `Config.appendTargetLocal`, `storeLoc_base_noPanic`, `buildAppendBackingValue_noPanic`; `appendSpill?` mirrors every pre-consult test); `stepFn_consumption_some` single conclusion under `hloc`; BUG-092 deleted from BUGS.md (number retired) — §B8 above |
+| F2 (MEDIUM) `Cont.class` absorbing default | DONE | the 23 `exprGlue` constructors spelled explicitly (31 `Cont` constructors: 1 stop, 1 call frame, 1 resume marker, 5 statement glue, 23 expression glue); no `_ =>` arm (a new constructor is a compile error, not a silent glue) |
+| F3 (MEDIUM) A7 "spelled once" false | RECORDS corrected (consumer half NOT landed) | one consumer; 64 raw sites (35/29) + 8 added spellings + 3 theorems; true flip cost ≈110 + 3 recorded for B4/C3 — §B3 above and the review's A7 line |
+| F4 (LOW) note omissions | DONE | `except_bind_ok`/`bind_pair_stream` move listed; `allStreamsOk`'s real reason (excludes `.panicked`); NPDRF `threadDone_atBoundary` converted (tally 3/6); EnumSpec.lean "six-arm" → five |
+| F5 (LOW) Obs vocabulary guard | DONE | `CLI.memberVocabularyRefusal?` + emit-site refusal by name; red-first unit checks — §Obs above |
+| F6 clean-tip gate | PASS | `scripts/capped scripts/ci --diff` at the fix-round tip: PASS, 3365 = 3165/200, FULL 3365/3365 no regression, negative 394/394, 0 flips (`transcripts/gate-fix.txt`); the TWO tracer exclusions recorded in the evidence README; tracer spot-check 8 rows / 156 records identical (`choice-trace/fix-spot.txt`) |
+
+No frontend, decoder or wire change; no new `ChoiceSite`; no baseline,
+gate or corpus change. The tape is consumed identically (the projections
+are unchanged in value: `appendSpill?`'s rewrite returns `some` in exactly
+the cases the old one did on reachable configurations — the old body
+returned `some` also on pre-consult-panicking shapes, which the arm never
+consults; spot-checked with `choice-trace --dump`, see the README).

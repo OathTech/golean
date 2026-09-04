@@ -2804,6 +2804,16 @@ def main : IO UInt32 := do
     -- makes a claimed member earn its place.
     passed := passed && (← expectTrue "DEDUP: M5 fabricated member REFUSED (its witness does not replay to that observation)"
       (!accepts { cert with members := cert.members.push (.terminal (.panic "fabricated"), [], 10) }))
+    -- F5 (wave-(iii) audit fix): the emit-site vocabulary guard refuses a
+    -- FAKED fatal / deadlock member by name and passes the lanes' three.
+    passed := passed && (← expectTrue "F5: a fatal member is refused by name at the emit site"
+      (CLI.memberVocabularyRefusal? (.terminal (.fatal "sync: unlock of unlocked mutex"))).isSome)
+    passed := passed && (← expectTrue "F5: a deadlock member is refused by name at the emit site"
+      (CLI.memberVocabularyRefusal? (.terminal .deadlock)).isSome)
+    passed := passed && (← expectTrue "F5: ok / panic / race members pass the vocabulary guard"
+      ((CLI.memberVocabularyRefusal? (.ok [])).isNone
+        && (CLI.memberVocabularyRefusal? (.terminal (.panic "x"))).isNone
+        && (CLI.memberVocabularyRefusal? (.terminal .raceDetected)).isNone))
   if passed then
     return 0
   else
