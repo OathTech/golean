@@ -4,7 +4,36 @@
 # driver-coupling pin against THIS set and its wire hash; scripts/ci
 # --slow re-enumerates and must reproduce it exactly. Update
 # deliberately, in its own commit, with the reason — never auto-written.
-# certified: 2026-09-04T19:43:31+00:00  commit: round-12 merge-train step 5a re-certification at main tip e6b2f442 (round-12 train landed: slow-recert-2, slow-rule, fr24)
+# certified: 2026-09-04T22:41:00+00:00  commit: round-13 merge-train step 5a re-certification at main tip 56982423 (round-13 train landed: goals-record, fr4-rowm, hygiene-wave3)
+# re-certification reason (round-13 merge train, step 5a, 2026-09-04): the
+#   standing post-train step (CLAUDE.md merge protocol 5a, [USER]
+#   2026-09-04) fired because the train merged fr4-rowm, which touched
+#   GoLean/NativeToIR.lean (1 commit since the 19:43:31 re-cert, rebased-
+#   landed at 22:01:06Z: the fr4-rowm audit fix round 65272847 — the
+#   retired `sort-slice` decoder arm DELETED and the node refused by name;
+#   no wire schema change by its own description; wire.go untouched this
+#   round). The reconciler's C9 fired accordingly at 67d1ba4f/56982423.
+#   The step-5a --slow re-certification ran at the CLEAN merged tip
+#   56982423 in the primary checkout (`scripts/capped scripts/ci --slow`,
+#   RESULT: PASS, exit 0, 585 s wall 22:41:00Z -> 22:50:45Z, load avg
+#   40.0 four minutes in / 4.53 at end on the shared 32-core box;
+#   3402/3402 baseline diff FULL, 0 flips; 153 eval tests ok). Delta
+#   class: NONE. This fixture's wire sha is UNCHANGED (2f1d639f — the
+#   run's own emitted wire at artifacts/coverage/native/imported-goose/
+#   channel/google-search/wire.json, sha256 bit-identical to the record),
+#   and the fresh GOLEAN_SLOW=1 dedup enumeration reproduced the set AND
+#   the graph bit-for-bit: the same six permutation members {123,132,213,
+#   231,312,321}, nodes=6193933 edges=6565663 dedupHits=371731
+#   certified=checkCert. Params unchanged. Header instant = the run's
+#   START stamp (22:41:00Z), after the last wire commit (22:01:06Z), so
+#   C9's `--since` test clears. K=80 exhibition: 6 of 6 members exhibited
+#   in 12 draws (stopped at the members=6 pin; unexhibited empty). The
+#   gate log is ephemeral (.tmp, untracked); the numbers above are copied
+#   from it and from artifacts/coverage/membership/imported-goose/channel/
+#   google-search/{enum-stats,observations,samples,unexhibited}.txt.
+#   [AGENT] record refresh under the step-5a rule, delta class
+#   DATE/COMMIT-ONLY (set, graph, params, wire sha all unchanged).
+# previously: certified: 2026-09-04T19:43:31+00:00  commit: round-12 merge-train step 5a re-certification at main tip e6b2f442 (round-12 train landed: slow-recert-2, slow-rule, fr24)
 # re-certification reason (round-12 merge train, step 5a, 2026-09-04): the
 #   FIRST run of the standing post-train step adopted this round (CLAUDE.md
 #   merge protocol 5a, [USER] 2026-09-04, landed by slow-rule 3e5acf9b).
