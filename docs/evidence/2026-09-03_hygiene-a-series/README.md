@@ -86,8 +86,9 @@ run — the A10 run) is the record that the committed tip is what was
 certified.
 
 Two findings that are NOT this lane's to fix, recorded here so they are
-not lost: (1) the native frontend's quarantine-reason string for
-multi-label `goto` shapes is export-nondeterministic
+not lost: (1) **BUG-091** (docs/BUGS.md; taken by lane `fr22-fr23`): the
+native frontend's quarantine-reason string for multi-label `goto` shapes is
+export-nondeterministic
 (`stdlib-source/frontier/index-rune-goto`; `choice-trace/a3-summary.txt`)
 — a diagnostics nondeterminism in a by-design FR-21 refusal row, visible
 only through the tracer's `obsHash`; (2) the dedup ENGINE's structural

@@ -68,7 +68,7 @@ position: they are `@[match_pattern] abbrev`s over the nested type
 NO `| .error (.panic msg) =>` arm moved (the review estimated "hundreds"
 of mechanical edits — this makes them zero; the B2 wave that retires the
 panic carrier is where callers move). `simp` sees the view exactly as it
-saw constructors through a generated family of 4 injectivity + 42
+saw constructors through a generated family of 5 injectivity + 42
 pairwise-disjointness `@[simp]` lemmas (`GoError.panic_inj`,
 `GoError.stuck_ne_panic`, …), and a `cases_stop e` tactic macro
 (`rcases e with (_|_|_) | (_|_|_|_) | _`) reproduces the old eight-way
@@ -84,6 +84,13 @@ quantify `Terminal` instead of "the subset of `GoError` I mean".
 **Preservation.** A bijection on constructors (`flat ↔ nested`), the
 status/message tables unchanged; every machine definition is unchanged
 text whose elaboration goes through the view abbrevs. Exact.
+
+**Owed, stated plainly (audit fix round).** The review's A1 payoff
+"`Obs` can be `ok | terminal Terminal`, so `Obs.fatal` becomes statable"
+was NOT delivered by this item: `Obs` (EnumSpec.lean) is still
+`ok | panic | race`. A1 provides the TYPE it needs; wiring `Obs` to
+`Terminal` is the B2/B4 wave's (the enumerator's observation grammar
+moves with the outcome grammar).
 
 **Proof deltas** (arm for arm): `exceptCong.panic_left` (MachineSound)
 splits the nested type explicitly; two `cases e <;> simp_all` sites in
@@ -290,10 +297,10 @@ two runs (the frontend's quarantine-reason string names whichever `goto`
 label its walk meets first — `next` vs `fallback`), and the hash is a
 function of the wire alone (main's binary on the before-wire reproduces
 the before hash; both binaries agree on the A3 wire). Machine delta: 0.
-FINDING, not this lane's to fix (no frontend change in the A-series):
-the native frontend's quarantine reason for multi-label goto shapes is
-export-nondeterministic; recorded for the stdlib lane (a reviewability
-nit — the row's status and its lowering refusal class are stable).
+FILED as **BUG-091** (docs/BUGS.md; taken by lane `fr22-fr23` — no
+frontend change in the A-series): the native frontend's quarantine reason
+for multi-label goto shapes is export-nondeterministic (`emit.go:2194`
+ranges a Go map); the row's status and refusal class are stable.
 
 ## A4 — `Expr.global gid` replaces `Expr.locLit`
 
@@ -331,9 +338,10 @@ is consulted. Exact.
 `evalGlobal` case (the rule's premise IS the produced address's bound —
 6 lines); the module header records that `Expr`/`Stmt`/`Func.locSup` are
 now identically zero. MachineSound: `fun_cases stepFn` renumbered — the
-`.global` arm is two `fun_cases` premises (77 = the refusal, 78 = the
-step) where `locLit` was one, so every positional tag ≥ 78 in
-`stepFn_sound` and `stepFn_oblivious` moved by +1 (75 tag renames; the
+`.global` arm is two `fun_cases` premises (76 = the step, 77 = the
+refusal) where `locLit` was one, so every positional tag ≥ 77 in
+`stepFn_sound` and `stepFn_oblivious` moved by +1 (42 tag renames — 22 in
+`stepFn_sound`, 20 in `stepFn_oblivious`, all old indices ≥ 90; the
 review's recorded fragility — B3's `Cont` algebra is where these go
 named), and each proof gains a 5-line `case77` (the refusal arm is a
 `throw … = .ok …` contradiction). `SyntaxEqb`'s arm and case renamed. No
@@ -481,6 +489,12 @@ lane are unchanged (zero drift).
 (`RaceState` is decided flat — `deriving instance DecidableEq for
 RaceState` now derives through `ShadowKey`, MachineEqb unchanged).
 
+**Residual (audit fix round).** `RaceState.chans`/`.syncs`/`.atomics`
+remain insertion-ordered assoc lists (`assocSet`, Race.lean) — the same
+latent lost-merge hazard the shadow had, engine-side only (structural
+state equality vs interleaving); no row exhibits it today. OWED as an
+engine-side canonical form; recorded on `assocSet`'s docstring.
+
 **The first gate was RED — diagnosed and fixed inside the item; both
 transcripts kept.** `ci --diff` on the first A6 tree reported
 `3083/201`: two `confluent`-lane rows, `goroutines/pipeline/buffered-stage`
@@ -497,12 +511,15 @@ made those states unequal, merges dropped, and the two channel pipelines
 work caps. Fix: the shadow is CANONICAL — kept sorted by key
 (`shadowSet`, over the derived `Ord` on `ShadowKey`/`Loc`/`SyncKind`/
 `SyncWordName`), so equal cell sets are structurally equal whatever the
-interleaving; this is at least the old merging (old-equal lists have equal
-multisets) and strictly more (it also canonicalizes the data/syncWord
-interleavings the old single list did not). Sound for the engine's use
-(structural equality ⇒ same state) exactly as before; re-run of the two
-rows: PASS, 187497 / 866780 nodes (the red attempt hit the cap at
-237357 / 951620+). The second full gate is the record below; the incident
+interleaving; this RESTORED main's exact node counts (two-stage 866,780 /
+buffered-stage 187,497 = the pre-A6 record, `docs/2026-09-01_membership-depth.md`
+rows for these two rows); "more merging" than the old two-list shape holds
+only as set-inclusion (old-equal lists have equal multisets) — zero extra
+merges were measured. Sound for the engine's use (structural equality ⇒
+same state) exactly as before; re-run of the two rows: PASS at those
+counts (the red attempt's own node figures are in
+`transcripts/gate-a6-red-first-attempt.txt`, the rows' `dedup work budget
+exceeded` lines). The second full gate is the record below; the incident
 is the A-series' one red gate and is reported as such — a change in the
 dedup engine's merge RATE, zero change in any observation. Also fixed on
 the same pass: the `constructorNameAsVariable` linter warning on the
@@ -537,7 +554,7 @@ MultiWfSound (2). Reasons to defer rather than force: (1) the accessor
 classification ("`Cont` classification + generic rebuild + field
 bundling"), which wave (iii) builds and re-proves once — doing it here
 means paying the positional `fun_cases` re-tagging twice (A4 already
-paid one such round: 75 tag renames for one arm); (2) the accumulator
+paid one such round: 42 tag renames for one arm); (2) the accumulator
 flip changes nothing observable (frames are not values) and its whole
 payoff is the downstream bind/plug lemma shape that B3 restates anyway;
 (3) the review's own sequencing argument ("they all shift the positional
@@ -619,12 +636,16 @@ from a well-typed program); `stuck` = the machine received a program/
 operand/plan outside the lowering contract (a FRONTEND bug); `internal` =
 a machine invariant broke between two of the machine's own definitions
 (unreachable if the machine is correct) — the test being WHO produced the
-offending shape. Re-tagged against it (StepFn.lean): "malformed
-assignment target plan", "unclassified assignee", "malformed comma-ok
-target plan" (×2), "unclassified expression" — all `.internal` → `.stuck`
-(the shape comes from the program's assignee/expression; the review named
-the first). Kept `.internal`: the empty-operand plan arms (the plan
-functions are the machine's), the malformed `retV`-frame arms
+offending shape. Re-tagged against it (StepFn.lean): "unclassified
+assignee", "unclassified expression" — `.internal` → `.stuck` (the shape
+comes from the program's assignee/expression). Kept `.internal` — after
+the audit fix round reverted three arms this item had re-tagged
+("malformed assignment target plan", "malformed comma-ok target plan"
+×2): they are EMPTY-OPERAND plan arms, and `targetPlan`/`stmtPlan` never
+emit an empty plan (all 12 `stmtPlan` and 3 `targetPlan` arms verified at
+the audit) — a machine postcondition, so `.internal` is the rule's answer,
+matching their siblings; the review's "→ stuck" for the first was read too
+literally. Also kept `.internal`: the malformed `retV`-frame arms
 ("malformed receive/call target plan", "storeK arity"), "step on terminal
 configuration", the seeding assertions — all machine-built shapes.
 Verified before landing: the baseline records `result id stage` only
@@ -669,8 +690,9 @@ registers and THE TABLE of the sync section, the designed-divergence
 statement and residual (b).
 
 **Measured.** Comment-line share (a crude line count: docstring and `--`
-lines over total): Race.lean 68.4% → 66.4% (1614 → 1602 lines; ≈120
-prose lines moved), Machine.lean 43.8% → 43.6%. The review's targets
+lines over total): Race.lean 68.4% → 66.4% (1701 → 1602 lines before the
+first A10 pass → after the second; 186 prose lines moved in the two
+passes), Machine.lean 43.8% → 43.6%. The review's targets
 (Race ≤ 35%, Machine ≤ 25%) are NOT met and were not going to be met by
 this item's rule: what remains in both files IS envelope statements and
 rationale (Machine.lean's six largest docstrings are the ChoiceSite
@@ -687,7 +709,7 @@ not a hygiene one — and is left to the [USER]. [AGENT]
 | A1 stop grammar | `dfa68802` | `Refusal`/`Terminal`/`fuelOut` types; flat names as views | 0 lemmas deleted; 1 restated; simp family + `cases_stop` |
 | A2 dense heap | `7cba41cd` | `Array HeapCell`; `alloc = push`; `nextAddr` derived; `Heap.set`/`freshLoc` gone | assoc-list heap lemmas → array lemmas; NPDRF obstruction 2 closed |
 | A3 payload cells | `6973354b` | `HeapCell` sum; `mapData`/`chanData` gone; one root write path; `coerceStoredValue` gone; `newValue typ : Ty` | −277 lines; `coerceStoredValue_congr` (158) and `_locSup'` (~125) deleted; `updateCell_*` proved once |
-| A4 `Expr.global` | `bcdf04c1` | program text address-free; machine bound-checks the global | `evalGlobal` wf case; 75 positional re-tags + 2 refusal cases |
+| A4 `Expr.global` | `bcdf04c1` | program text address-free; machine bound-checks the global | `evalGlobal` wf case; 42 positional re-tags + 2 refusal cases |
 | A5 `Platform` | `48d9aba8` | one record, one instantiation; `tySizeAlignFuel` parametric | none |
 | A6 `ShadowKey` | `367dab2f` | one shadow, one overlap table, canonical order; `chanObj` shadow gone | none (one red gate: dedup-engine merge rate; fixed) |
 | A7 | SKIPPED | — | → wave (iii) (B3) |

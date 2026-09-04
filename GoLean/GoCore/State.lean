@@ -21,9 +21,12 @@ may only reference — a map's entry table or a channel's buffer. The
 payloads used to be `GoValue` constructors "no expression may produce";
 the cell type now says so: `loadLoc`/`storeLoc` see values only (a payload
 cell refuses there), `mapPayload?`/`storeMapPayload` and
-`chanPayload?`/`storeChanPayload` see payloads only, and every store to a
+`chanPayload?`/`storeChanPayload` see payloads only, and every STORE to a
 value cell is normalized at its declared type (there are no untyped cells
-— `Stmt.allocNew` always carries its type). -/
+— `Stmt.allocNew` always carries its type). The one hole, pre-existing and
+byte-identical to the pre-A3 machine: ALLOCATION does not normalize —
+`.allocNew`'s `s.alloc value typ` (Machine.lean) creates the value cell with
+the evaluated value as is; the first store through it normalizes. -/
 inductive HeapCell where
   /-- A Go value at the cell's declared type; stores normalize to it. -/
   | value (declaredTy : Ty) (v : GoValue)

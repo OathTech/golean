@@ -78,7 +78,8 @@ OVER-approximations (fail-closed direction — may REFUSE a
   synthesized PROMOTION WRAPPER is narrowed to the wrapper's hop path
   (`dispatchAccesses`); UNRECOGNIZED wrapper shapes fall back to the
   whole-pointee read — over-refusal, this envelope. BUG-041 (residual
-  OPEN); pins, guards and the re-open trigger: ledger [DL-1].
+  OPEN); pins, guards and the re-open trigger: ledger [DL-1]
+  (`docs/2026-09-04_core-docstring-ledger.md` — every `[DL-n]` below).
 
 UNDER-approximations (fail-OPEN vs the `-race` oracle — each recorded
 loudly; the racy-negative lane's claim is scoped by these):
@@ -191,7 +192,7 @@ MODEL-INTERNAL loads gc never performs (excluded on purpose):
   pointer-to-array (length is type-static in gc).
 
 SYNCHRONIZATION (the registry's ops — HB updates, never data):
-- `chanCell` loads and `chanData` stores in `applyChanOp`,
+- `chanCell`/`chanPayload?` loads and `storeChanPayload` stores in `applyChanOp`,
   `commitClause`, `resumeThread`, `applyPairing`, `wakeReady`,
   `clauseReady` (spec: channels race-free without synchronization;
   the CHANNEL-OBJECT access pair gc layers on top of this is modeled
@@ -834,7 +835,11 @@ structure SyncClocks where
   semB : VClock := #[]
   deriving Repr, BEq
 
-/-- Update-or-insert in a keyed association list (insertion order). -/
+/-- Update-or-insert in a keyed association list (insertion order). Used by
+`chans`/`syncs`/`atomics`: those stay INSERTION-ordered, so the dedup
+engine's structural equality is order-sensitive on them — the same latent
+lost-merge hazard A6 removed from the shadow (`shadowSet`); OWED, engine
+side (A-series audit fix round, 2026-09-04). -/
 def assocSet {κ α : Type} [BEq κ] (xs : List (κ × α)) (key : κ) (v : α) :
     List (κ × α) :=
   match xs with

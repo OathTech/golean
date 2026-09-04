@@ -291,7 +291,7 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨vs, hload, rfl, rfl, rfl⟩ := h
     exact Step.frameReturnTargets hload
-  -- (The stmtOpK apply's ok path — formerly `case101`, threaded through
+  -- (The stmtOpK apply's ok path — formerly `case102`, threaded through
   -- the delete-prune bind — is closed by the generic pass since the B1
   -- stamps: the arm is a plain `return`.)
   -- Channel statements (channels arc slice 1).
@@ -1457,35 +1457,6 @@ theorem normalizeValueForTy_congr {σ₁ σ₂ : ExecState}
       (normalizeValueForTy σ₂ ty w) := by
   unfold normalizeValueForTy
   exact normalizeValueForTyFuel_congr htypes _ ty v w hcc
-
-/-! Right-sided inversions (the catch-all arms of `coerceStoredValue`
-case on the OLD/NEW pair, so the third value's constructor must be read
-off from the right). -/
-
-theorem GoValue.capCong_eq_right {v w : GoValue} (h : GoValue.capCong v w)
-    (hw : GoValue.isCapStructural w = false) : v = w := by
-  cases v <;> cases w <;>
-    first
-    | rfl
-    | exact h
-    | exact GoValue.noConfusion h
-    | exact Bool.noConfusion hw
-
-theorem GoValue.capCong_struct_right {t : TypeId} {gs : Array (String × GoValue)}
-    {v : GoValue} (h : GoValue.capCong v (.struct t gs)) :
-    ∃ fs, v = .struct t fs ∧ capCongFields fs.toList gs.toList := by
-  cases v <;>
-    first
-    | (obtain ⟨rfl, hf⟩ := h; exact ⟨_, rfl, hf⟩)
-    | exact GoValue.noConfusion h
-
-theorem GoValue.capCong_array_right {ws : Array GoValue} {v : GoValue}
-    (h : GoValue.capCong v (.array ws)) :
-    ∃ vs, v = .array vs ∧ capCongList vs.toList ws.toList := by
-  cases v <;>
-    first
-    | exact ⟨_, rfl, h⟩
-    | exact GoValue.noConfusion h
 
 /-! #### Store congruence: the final spill store cannot depend on the cap -/
 

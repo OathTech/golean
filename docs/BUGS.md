@@ -5037,3 +5037,35 @@ a GoCore REPRESENTATION change, semantics-preserving by the same
 argument shape as B1's map stamps, gated by the full differential. When
 it lands: re-measure the probes above, re-size the fuzz toward the
 asked 100k, and re-expect `repeat-bound-refused`.
+
+## BUG-091 — the native frontend's quarantine-reason text for multi-label `goto` shapes is EXPORT-NONDETERMINISTIC: `emit.go` ranges a Go MAP to name the offending label, so the wire bytes of one program differ run to run [frontend export nondeterminism; fail-closed but non-reproducible refusal text]
+
+- Status: open
+- Pinned-by: none (the affected row is already RED by design — FR-21 frontier refusal; the nondeterminism is in the refusal's TEXT, invisible to the `result id stage` baseline and to the differential's status comparison; visible only through the tracer's `obsHash`)
+- Expect: FAIL
+- Cases: stdlib-source/frontier/index-rune-goto
+- Discovered: 2026-09-04, the design-hygiene A-series (lane `hygiene-a-series`)
+  choice-trace comparison — the row's `obsHash` moved between two whole-corpus
+  runs of IDENTICAL machine sources; diagnosis and transcripts:
+  `docs/evidence/2026-09-03_hygiene-a-series/choice-trace/a3-summary.txt`
+  and `a6-summary.txt` (md5 of the two wires, the one-line JSON diff,
+  and the hash-by-(binary, wire) matrix showing the hash is a function
+  of the wire alone). Confirmed at the pre-merge audit: 30 exports of one
+  2-label program gave 26× "next" / 4× "fallback".
+
+WHAT: `tools/nativefrontend/emit.go:2194` — `for name := range e.gotoLabels`
+picks the label named in the `unsup` reason text by Go MAP iteration order,
+so the emitted `"unsupported": "strings.IndexRune: goto target label
+<next|fallback> not at function body top level"` differs across exports of
+the same program. Every export still REFUSES (fail closed, same class,
+same row status); what breaks is the premise "wire = f(program)" that the
+twin-wire pin and every wire-hash record rest on — for this shape the
+emitted bytes are not reproducible. The same file already sorts label
+sets deterministically at :1390 and :5857 (`// deterministic refusal
+message`); this site is the omission.
+
+PLAN (being taken by lane `fr22-fr23`; NOT this lane's — the A-series
+makes no frontend edits): collect the label names, `sort.Strings`, name
+the first (one line), plus a determinism unit test (emit N× → identical
+bytes) so the class cannot recur silently. Fix criterion: N exports of
+the affected program are byte-identical; the row stays red on FR-21.

@@ -10,7 +10,8 @@ fields. The re-envelope obligations the latitude inventory records (R1,
 R16) become INSTANTIATION — a second `Platform` value — not surgery.
 
 What is parametric TODAY: `tySizeAlignFuel` (Ops.lean) takes a
-`Platform`; `maxAllocBytes`/`chanHeaderBytes`/`intExclusiveUpperBound`
+`Platform` — except its four `.sync` arms (Ops.lean), which are the
+amd64 `unsafe.Sizeof` constants and ignore `p` (owed for B7); `maxAllocBytes`/`chanHeaderBytes`/`intExclusiveUpperBound`
 and `IntKind.bits?` read `platform`. What is NOT yet threaded: the
 `ExecState` carries no platform field and `IntKind.normalize` reads the
 constant, so theorems are stated at `platform` (= `gcAmd64`), not

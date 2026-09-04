@@ -1301,7 +1301,7 @@ release-merge on a negative delta (gc waitgroup.go:81 — BEFORE the
 panic checks, so a recovered negative-counter Done still released).
 The sema-READ half of the misuse pair (an Add taking the counter off 0
 upward, waitgroup.go:111-115) is no longer here: since BUG-080 it is
-the `syncEntryKinds` row the sync arm records in the DATA shadow at the
+the `syncEntryKinds` row the sync arm records in the shadow at the
 primitive's `sema` word, ahead of this event — beside the state RMW's
 go_mem kind (`.atomicWrite @state`, Q-U4RESIDUAL (A)). -/
 def raceWgAddEvent (r : RaceState) (i : Nat) (loc : Loc) (delta : Int) :
@@ -1588,7 +1588,7 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (ev : StepEvent)
               -- `wg.sema` pair precede the acquire/release; the go_mem
               -- kind of the op sits with them), `syncReleaseTailKinds`
               -- AFTER the release on a committed op (Unlock's state Add
-              -- follows `race.Release`) — recorded in the DATA shadow
+              -- follows `race.Release`) — recorded in the shadow
               -- under the sync cell's path, where a plain copy/overwrite
               -- of the primitive (or its enclosing struct) overlaps them.
               match (v :: done).reverse.head? with
