@@ -179,8 +179,23 @@ The flat constructor names the code has always used (`.panic msg`,
 position as `@[match_pattern]` views over the nested type, so no caller
 had to move; the outcome-grammar wave (review B2) retires the view. -/
 
-/-- The three ways the MACHINE declines (none is a Go behaviour). See the
-refusal RULE below (A9) for which to raise. -/
+/-- The three ways the MACHINE declines (none is a Go behaviour).
+
+**THE REFUSAL RULE (design-hygiene A9, 2026-09-04) — stated once, applied
+everywhere.** `unsupported` = a Go construct or behaviour the model does
+not cover, reachable from a well-typed Go program: the fail-closed
+FRONTIER (the differential's `unsupported` status). `stuck` = the machine
+received a program, operand or plan outside the lowering contract
+(ill-typed operand, malformed or unclassifiable shape, arity): a FRONTEND
+bug, never Go behaviour (status `stuck`). `internal` = a machine invariant
+broke between two of the machine's OWN definitions — a frame or plan the
+machine itself built has a shape its consumer does not accept, a seeded
+state fails its assertion, an address the allocator never handed out is
+stored to: unreachable if the machine is correct (status `error`). The
+test is WHO produced the offending shape: the program (→ `stuck`), the
+machine (→ `internal`). Message text is diagnostic (the harness compares
+STATUS); driver-level errors (`runProgramSetupM`'s missing subject /
+arity) remain `stuck` pending a driver error type. -/
 inductive Refusal where
   /-- A Go construct or behaviour the model does not cover, reachable from
   a well-typed Go program: the fail-closed FRONTIER. -/

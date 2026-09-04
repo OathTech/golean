@@ -164,11 +164,11 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           | some (sh, e :: ops) =>
               return (.evalE e env
                 (.tgtOpK sh [] ops [] [] .vals [rhs] [] (.seqn #[]) env k), s, choices)
-          | some (_, []) => throw (.internal "malformed assignment target plan")
+          | some (_, []) => throw (.stuck "malformed assignment target plan")
           | none =>
               match lhs with
               | .unsupported feature => throw (.unsupported feature)
-              | _ => throw (.internal "unclassified assignee")
+              | _ => throw (.stuck "unclassified assignee")
       | .ifThenElse c t e => return (.evalE c env (.ifK t e env k), s, choices)
       | .while c b => return (.evalE c env (.whileK c b env k), s, choices)
       | .returnStmt => return (.returning k, s, choices)
@@ -256,7 +256,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               return (.evalE e env
                 (.tgtOpK sh [] ops [] rest (.mapLookup keyTy valueTy)
                   [base, index] [] (.seqn #[]) env k), s, choices)
-          | some _ => throw (.internal "malformed comma-ok target plan")
+          | some _ => throw (.stuck "malformed comma-ok target plan")
           | none => throw (.unsupported "unsupported statement target assignee")
       | .typeAssert t okT expr targetTy =>
           -- Round 4 (BUG-034): the comma-ok type assertion, same spine.
@@ -265,7 +265,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               return (.evalE e env
                 (.tgtOpK sh [] ops [] rest (.typeAssert targetTy)
                   [expr] [] (.seqn #[]) env k), s, choices)
-          | some _ => throw (.internal "malformed comma-ok target plan")
+          | some _ => throw (.stuck "malformed comma-ok target plan")
           | none => throw (.unsupported "unsupported statement target assignee")
       | .assignMany left right =>
           -- Convergence round (BUG-025): the general multi-assign rides
@@ -349,7 +349,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               | .error (.panic msg) =>
                   return (.panicking [⟨runtimeErrorValue msg, false⟩] k, s, choices)
               | .error err => throw err
-          | none => throw (.internal "unclassified expression")
+          | none => throw (.stuck "unclassified expression")
   | .retV v k =>
       match k with
       | .strictK op done (e :: rest) env k' =>

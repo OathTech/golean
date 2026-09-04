@@ -610,3 +610,37 @@ regression, re-pin guard 0 flips, negative 394/394, eval tests 148/148
 (`transcripts/gate-a8.txt`); choice-trace delta vs the pre-series
 snapshot: 0 on all 19489 lines (`choice-trace/a8-summary.txt`). Net: 20
 files, −71 lines (394 added, 465 deleted).
+
+## A9 — the refusal rule, stated once and applied
+
+**What changed.** The rule is ONE docstring on `Refusal` (Value.lean):
+`unsupported` = frontier (a Go construct/behaviour not modeled, reachable
+from a well-typed program); `stuck` = the machine received a program/
+operand/plan outside the lowering contract (a FRONTEND bug); `internal` =
+a machine invariant broke between two of the machine's own definitions
+(unreachable if the machine is correct) — the test being WHO produced the
+offending shape. Re-tagged against it (StepFn.lean): "malformed
+assignment target plan", "unclassified assignee", "malformed comma-ok
+target plan" (×2), "unclassified expression" — all `.internal` → `.stuck`
+(the shape comes from the program's assignee/expression; the review named
+the first). Kept `.internal`: the empty-operand plan arms (the plan
+functions are the machine's), the malformed `retV`-frame arms
+("malformed receive/call target plan", "storeK arity"), "step on terminal
+configuration", the seeding assertions — all machine-built shapes.
+Verified before landing: the baseline records `result id stage` only
+(no refusal class), so a class re-tag cannot move a row; the gate is the
+check. [AGENT]
+
+**Not done — recorded.** `Refusal.at (phase) (goroutine)` structured
+context in place of `markInitPhase`: the `package init:` message prefix
+is consumed by fuel-out/stuck TRIAGE and by the enumerator driver's own
+init phase (CLI); a structured context would have to render byte-identical
+text to keep triage stable — no gain for the cost here; deferred to B2.
+The driver-error type for `runProgramSetupM` (missing subject, arity) is
+likewise deferred (it wants the `Result`/driver split of B2/B7).
+
+**Gate.** `scripts/capped scripts/ci --diff` on the A9 tree: RESULT PASS,
+`cases=3284 pass=3085 fail=199`, baseline diff FULL 3284/3284 no
+regression, re-pin guard 0 flips, negative 394/394, eval tests 148/148
+(`transcripts/gate-a9.txt`); choice-trace delta vs the pre-series
+snapshot: 0 on all 19489 lines (`choice-trace/a9-summary.txt`).
