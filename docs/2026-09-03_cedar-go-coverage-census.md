@@ -884,3 +884,61 @@ last-resort fallback (the kill is gone, the inner cause is the plan);
 declaring the `go-sort` row's strict depth (64, the sizing convention)
 rather than routing it to the confluent lane. No gate, baseline, corpus or
 trust-surface claim is made here beyond the lane's own landing records.
+
+## 12. Addendum 2026-09-04 — FR-27 landed, FR-28 partially closed: re-measured [AGENT]
+
+Lane `fr27-fr28` (worker under the [AGENT] coordinator; the frontier queue is
+[USER]-ratified with FR-27/FR-28 at slots 27/28; [USER] directions 3 and 4
+and the posture «break rather than preserve incorrect behaviour» — relayed
+by the coordinator, cited as relayed). Method: §1's drivers re-run with the
+lane's frontend over a fresh assembly of the SAME 34 cases plus
+`scripts/lower-diagnose artifacts/cedar-<before|after>/cases/all --tsv`,
+both on this worktree (main `56982423` = before; the lane tip = after).
+Full record: `docs/evidence/2026-09-04_fr27-fr28/` (`before/`, `after/`,
+`m1-table.tsv`).
+
+### 12.1 What moved
+
+| §11.2 first refusal | before (main 56982423) | after |
+|---|---|---|
+| FR-27 `generic instantiation …/types/entity_uid.go:143:9` — `mapset.Immutable[EntityUID](args...)` (`drv-eval-operators`) | 1 driver; histogram FR-27 ×3 (`cedargo.NewEntityUIDSet`, `types.NewEntityUIDSet`, `internal/eval.doInEval`) | GONE: `genericFuncUse` (emit.go) resolves the package-qualified base to the same `funcInstanceAt` the inferred spelling uses. Both `NewEntityUIDSet` declarations LOWER; `doInEval` lowers past the instantiation and stops at its next blocker (`iter.Seq[types.Value]`, FR-23 → the histogram's `iter.Seq[cedargo/types.Value]` 7 → 8). The driver moves on to `maps.Keys` (FR-14 `stdlib-package-unmodeled`) |
+| FR-28 `len of a potentially-panicking operand between …` — `x/exp/schema/internal/parser.lexer.skipWhitespaceAndComments` (`drv-validate`) | 1 driver; histogram FR-28 ×2 (`skipWhitespaceAndComments`, `scanIdent`) | GONE: the shape is `for l.pos < len(l.src) && l.peek() != '\n'` — a pointer receiver's field on the left, `len` of another field of the same receiver, a method call after. Both sides can panic ONLY by nil dereference, which is one runtime error with nothing effectful between the two tests, so the hoist is order-transparent and taken (BUG-032's FR-28 amendment). Both lexer methods LOWER; the driver moves on to `fmt.Errorf` in `x/exp/schema/resolved.resolverState.resolveEntities` (FR-14 `fmt-verb-matrix`, G5) |
+
+### 12.2 The numbers
+
+Per case (`results.tsv`, 34 cases): EXPORT-OK **25 → 25**; FRONTEND-REFUSED
+8 → 8; MACHINE-REFUSED 1 → 1 — no category transition (every driver that
+stopped at FR-27/FR-28 now stops at an FR-14 stub further in; none reaches
+the end). The whole-library case `all`: quarantined declarations 571 → 567
+(the four above: `cedargo.NewEntityUIDSet`, `types.NewEntityUIDSet`,
+`lexer.scanIdent`, `lexer.skipWhitespaceAndComments` quarantined →
+lowered; `census.tsv` diff). Histogram: FR-27 ×3 → 0 and FR-28 ×2 → 0;
+`iter.Seq[cedargo/types.Value]` 7 → 8 (`doInEval` reaching its next
+blocker); everything else identical. No UNCLASSIFIED anywhere (the FR-27
+row `explicit-instantiation-call` stays in `tools/lowerdiag/causes.tsv` as
+a tripwire for the retired text plus the arms' fail-closed fallback; the
+FR-28 row `len-hoist-panic-order` now also matches the `make` hoist's
+refusal text — BUG-083 closed as a named refusal in the same slice). The
+static census (`lower-diagnose`, whole-library case) is UNCHANGED at
+1460/1569 (93.1%), funcs+methods 980/1086 (90.2%), refused 108, export
+kills 2 declarations / 5 of 24 packages — FR-27 and FR-28 are "not judged
+statically" (a stencil-/hoist-time judgement), so the static pass never
+counted them; the movement is entirely in the dynamic pass.
+
+### 12.3 What is next, measured
+
+The eight functional drivers now stop at: `fmt` verbs ×4 (`drv-authz-ast`,
+`drv-ext-datetime`, `drv-ext-decimal`, and now `drv-validate` — G5, the fmt
+re-homing slice), `io.EOF` in value position ×2 (source-through admission
+of `io`, memo §6), `encoding/json` (G6/reflect), `maps.Keys` (`drv-eval-
+operators`: `maps` source-through admission — its members return
+`iter.Seq`, so FR-23 → FR-12 sit behind it), and the machine-side
+`net/netip.Addr` zero value. Decisions in this addendum, all [AGENT]: FR-27
+RETIRED (the source shape lowers; a qualified instantiation into a NON-
+source-through stdlib package refuses by name on FR-14's value-position
+text — corpus row `generics/qualified-instantiation/stdlib-refused`); FR-28
+PARTIALLY CLOSED (the make hoist guarded, nil-deref/map-read transparency;
+the residual — differing panic kinds on the two sides — stays a named
+refusal until BUG-032's linearization; the E13 tension is recorded on
+BUG-083 for the audit). No gate, baseline, corpus or trust-surface claim is
+made here beyond the lane's own landing records (ledger §8o).

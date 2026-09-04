@@ -1,0 +1,35 @@
+category	case	kind	detail
+EXPORT-OK	pkg-root	package	decls=1880 quarantined=522
+EXPORT-OK	pkg-ast	package	decls=1516 quarantined=474
+EXPORT-OK	pkg-internal	package	decls=25 quarantined=1
+EXPORT-OK	pkg-internal__consts	package	decls=3 quarantined=0
+EXPORT-OK	pkg-internal__eval	package	decls=1379 quarantined=486
+EXPORT-OK	pkg-internal__extensions	package	decls=893 quarantined=447
+EXPORT-OK	pkg-internal__json	package	decls=1196 quarantined=464
+EXPORT-OK	pkg-internal__mapset	package	decls=39 quarantined=2
+EXPORT-OK	pkg-internal__parser	package	decls=1335 quarantined=457
+EXPORT-OK	pkg-internal__rust	package	decls=78 quarantined=2
+EXPORT-OK	pkg-types	package	decls=891 quarantined=447
+EXPORT-OK	pkg-x__exp__ast	package	decls=1109 quarantined=447
+EXPORT-OK	pkg-x__exp__batch	package	decls=1922 quarantined=528
+EXPORT-OK	pkg-x__exp__dot	package	decls=913 quarantined=450
+EXPORT-OK	pkg-x__exp__eval	package	decls=1387 quarantined=486
+EXPORT-OK	pkg-x__exp__schema	package	decls=1640 quarantined=477
+EXPORT-OK	pkg-x__exp__schema__ast	package	decls=935 quarantined=447
+EXPORT-OK	pkg-x__exp__schema__internal__json	package	decls=977 quarantined=454
+EXPORT-OK	pkg-x__exp__schema__internal__parser	package	decls=1497 quarantined=463
+EXPORT-OK	pkg-x__exp__schema__resolved	package	decls=1026 quarantined=454
+EXPORT-OK	pkg-x__exp__schema__validate	package	decls=1760 quarantined=477
+EXPORT-OK	pkg-x__exp__types	package	decls=1771 quarantined=480
+EXPORT-OK	all	package	decls=2541 quarantined=567
+EXPORT-OK	k8s-cmd__schema-formatter	package	decls=73 quarantined=5
+EXPORT-OK	k8s-internal__schema	package	decls=962 quarantined=448
+FRONTEND-REFUSED	drv-authz-ast	driver	at run: fmt.Sprintf format \ (go: ok; quarantined=522/1880)
+FRONTEND-REFUSED	drv-authz-cedar-text	driver	at run: method cedargo/internal/parser.scanner.next (stdlib-qualified selector io.EOF in value position: only allowlisted DIRECT CALLS of modeled stdlib members lower (E5 shims / fmt desugar); the value shape is outside the modeled surface (package (go: ok; quarantined=522/1880)
+FRONTEND-REFUSED	drv-authz-json	driver	at run: method cedargo/types.EntityMap.UnmarshalJSON (package-selector call json.Unmarshal (package \ (go: ok; quarantined=522/1880)
+FRONTEND-REFUSED	drv-eval-operators	driver	at run: package-selector call maps.Keys (package \ (go: ok; quarantined=522/1886)
+FRONTEND-REFUSED	drv-ext-datetime	driver	at run: fmt.Errorf format \ (go: ok; quarantined=447/891)
+FRONTEND-REFUSED	drv-ext-decimal	driver	at run: fmt.Errorf format \ (go: ok; quarantined=447/892)
+MACHINE-REFUSED	drv-ext-ipaddr	driver	{"message":"default value for imported named type net/netip.Addr","schema":"golean-observation-v1","status":"unsupported"} (go: ok)
+FRONTEND-REFUSED	drv-policy-json-roundtrip	driver	at run: method cedargo/internal/parser.scanner.next (stdlib-qualified selector io.EOF in value position: only allowlisted DIRECT CALLS of modeled stdlib members lower (E5 shims / fmt desugar); the value shape is outside the modeled surface (package (go: ok; quarantined=522/1880)
+FRONTEND-REFUSED	drv-validate	driver	at run: method cedargo/x/exp/schema/resolved.resolverState.resolveEntities (fmt.Errorf format \ (go: ok; quarantined=507/2098)

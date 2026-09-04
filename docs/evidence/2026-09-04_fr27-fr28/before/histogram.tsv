@@ -1,0 +1,30 @@
+class	key	decls	packages
+FR-14/fmt-verb-matrix	fmt-verb-matrix	68	9
+FR-14/stdlib-package-unmodeled	json.Unmarshal	14	5
+FR-14/stdlib-package-unmodeled	json.Marshal	12	5
+FR-14/stdlib-package-unmodeled	maps.Keys	9	2
+FR-23/imported-generic-inst	iter.Seq[cedargo/types.EntityUID]	7	4
+FR-23/imported-generic-inst	iter.Seq[cedargo/types.Value]	7	4
+FR-14/stdlib-package-unmodeled	maps.Clone	5	4
+FR-14/stdlib-package-unmodeled	fnv.New64	3	1
+FR-14/stdlib-package-unmodeled	maps.Values	3	1
+FR-23/imported-generic-inst	iter.Seq2[cedargo/types.PolicyID,*cedargo.Policy]	3	1
+FR-14/stdlib-package-unmodeled	json.NewDecoder	2	2
+FR-14/stdlib-package-unmodeled	time.UnixMilli	2	1
+FR-14/stdlib-value-position	io.EOF	2	1
+FR-23/imported-generic-inst	iter.Seq2[cedargo/types.String,cedargo/types.Value]	2	2
+FR-23/imported-generic-inst	iter.Seq[cedargo/types.Entity]	2	1
+FR-23/imported-generic-inst	iter.Seq[cedargo/types.String]	2	2
+FR-28/len-hoist-panic-order	len	2	1
+FR-13/anon-struct	anon-struct	1	1
+FR-14/fmt-verb-matrix	fmt.Errorf %v@*string	1	1
+FR-14/fmt-verb-matrix	fmt.Fprintf %x@rune	1	1
+FR-14/fmt-verb-matrix	fmt.Sprintf %x@rune	1	1
+FR-14/stdlib-package-unmodeled	flag.Parse	1	1
+FR-14/stdlib-package-unmodeled	maps.Copy	1	1
+FR-14/stdlib-package-unmodeled	sort.Strings	1	1
+FR-14/stdlib-package-unmodeled	time.Date	1	1
+FR-17/self-shadow-define	self-shadow-define	1	1
+FR-27/explicit-instantiation-call	artifacts/cedar-before/cases/pkg-internal__eval/cedargo/internal/eval/evalers.go:1010:12	1	1
+FR-27/explicit-instantiation-call	artifacts/cedar-before/cases/pkg-root/cedargo/types.go:117:9	1	1
+FR-27/explicit-instantiation-call	artifacts/cedar-before/cases/pkg-types/cedargo/types/entity_uid.go:143:9	1	1

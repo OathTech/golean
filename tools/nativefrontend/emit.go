@@ -5194,7 +5194,7 @@ func (e *emitter) emitExprBare(x ast.Expr) (any, error) {
 			if node, err, handled := e.genericFuncValue(ex.X); handled {
 				return node, err
 			}
-			return nil, unsup("generic instantiation %s", e.fset.Position(ex.Pos()))
+			return nil, e.explicitInstantiationRefusal(ex, ex.X)
 		}
 		return e.emitIndex(ex)
 	case *ast.IndexListExpr:
@@ -5203,7 +5203,7 @@ func (e *emitter) emitExprBare(x ast.Expr) (any, error) {
 		if node, err, handled := e.genericFuncValue(ex.X); handled {
 			return node, err
 		}
-		return nil, unsup("generic instantiation %s", e.fset.Position(ex.Pos()))
+		return nil, e.explicitInstantiationRefusal(ex, ex.X)
 	case *ast.StarExpr:
 		return e.emitStar(ex)
 	case *ast.SliceExpr:
@@ -7978,8 +7978,8 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 	// Index/IndexList). go/types' Instances carries the FULL inferred
 	// argument list; the stencil is registered and the call targets the
 	// mangled FuncId with the instantiated (concrete) signature.
-	if id := e.genericCalleeIdent(c.Fun); id != nil {
-		mangled, csig, err := e.funcInstanceAt(id, e.genericFuncObj(id))
+	if id, fn := e.genericCallee(c.Fun); id != nil {
+		mangled, csig, err := e.funcInstanceAt(id, fn)
 		if err != nil {
 			return nil, false, err
 		}
@@ -8073,15 +8073,24 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 }
 
 // genericFuncValue emits the func value of an explicitly instantiated
-// generic function (`f[int]` in value position). handled=false means the
-// base is not a generic-function identifier and the caller keeps its own
-// refusal.
+// generic function (`f[int]` / `pkg.F[int]` in value position).
+// handled=false means the base denotes no generic function the stencil
+// machinery owns and the caller keeps its own refusal. FR-27 (2026-09-04,
+// lane fr27-fr28): the base may be a package-QUALIFIED selector —
+// `mapset.Immutable[EntityUID](args...)` (cedar-go types/entity_uid.go:143)
+// — resolved by genericFuncUse exactly as emitQualifiedCall resolves the
+// INFERRED spelling: the Instances record is keyed by the selector's
+// identifier, and the stencil mangles under the callee's own package path
+// (funcWireName), so a qualified explicit instantiation and its inferred
+// twin share one stencil. A qualified selector into a stdlib package that
+// is NOT source-through refuses BY NAME here (handled=true): the same
+// FR-14 surface the inferred spelling hits (`stdlib-qualified selector …
+// in value position`), never the shape-blind fallback.
 func (e *emitter) genericFuncValue(base ast.Expr) (any, error, bool) {
-	id, ok := ast.Unparen(base).(*ast.Ident)
-	if !ok {
-		return nil, nil, false
+	id, fn, err := e.genericFuncUse(base)
+	if err != nil {
+		return nil, err, true
 	}
-	fn := e.genericFuncObj(id)
 	if fn == nil {
 		return nil, nil, false
 	}
@@ -8093,27 +8102,86 @@ func (e *emitter) genericFuncValue(base ast.Expr) (any, error, bool) {
 		"captured": []any{}}, nil, true
 }
 
-// genericCalleeIdent unwraps a callee expression to the identifier of a
-// GENERIC function, when that is what it denotes: a bare ident (inferred
-// instantiation) or an Index/IndexList whose base is one (explicit
-// instantiation). Anything else — including index expressions over
-// func-typed VALUES — returns nil and takes the ordinary paths.
-func (e *emitter) genericCalleeIdent(fun ast.Expr) *ast.Ident {
+// genericFuncUse resolves the BASE of an explicit instantiation (or a
+// bare callee) to the use-site identifier and the generic *types.Func it
+// denotes: a bare identifier, or a package-qualified selector whose
+// package is a SOURCE package (the main unit, a case-local package, or a
+// source-through stdlib package — identity.go isSourcePackage). fn=nil
+// means "not a source generic here" and the caller keeps its own path.
+// A qualified selector into a stdlib package OUTSIDE the source set is a
+// named refusal (err != nil): the stencil machinery has no declaration
+// to stencil (registerFuncInst would say so a step later, with a less
+// specific text), and the admission answer is the register's, not this
+// arm's — FR-14.
+func (e *emitter) genericFuncUse(base ast.Expr) (*ast.Ident, *types.Func, error) {
+	switch b := ast.Unparen(base).(type) {
+	case *ast.Ident:
+		if fn := e.genericFuncObj(b); fn != nil {
+			return b, fn, nil
+		}
+	case *ast.SelectorExpr:
+		x, ok := b.X.(*ast.Ident)
+		if !ok {
+			return nil, nil, nil
+		}
+		pkgName, ok := e.info.Uses[x].(*types.PkgName)
+		if !ok {
+			return nil, nil, nil
+		}
+		fn := e.genericFuncObj(b.Sel)
+		if fn == nil {
+			return nil, nil, nil
+		}
+		if !e.isSourcePackage(pkgName.Imported()) {
+			return nil, nil, unsup("stdlib-qualified selector %s.%s in value position (explicit instantiation of a generic function of package %s, which is not source-through — the stdlib admission register decides; FR-14)",
+				x.Name, b.Sel.Name, pkgName.Imported().Path())
+		}
+		return b.Sel, fn, nil
+	}
+	return nil, nil, nil
+}
+
+// genericCallee unwraps a callee expression to the use-site identifier
+// and object of a GENERIC function, when that is what it denotes: a bare
+// or package-qualified name (inferred instantiation) or an Index/
+// IndexList whose base is one (explicit instantiation — FR-27 added the
+// qualified base). Anything else — including index expressions over
+// func-typed VALUES, and a qualified name into a non-source stdlib
+// package (which takes the value path and refuses by name there) —
+// returns nil and takes the ordinary paths. The inferred QUALIFIED
+// spelling is not routed here: emitCall dispatches a SelectorExpr callee
+// to emitQualifiedCall first, which stencils it itself.
+func (e *emitter) genericCallee(fun ast.Expr) (*ast.Ident, *types.Func) {
+	var base ast.Expr
 	switch f := ast.Unparen(fun).(type) {
 	case *ast.Ident:
-		if e.genericFuncObj(f) != nil {
-			return f
-		}
+		base = f
 	case *ast.IndexExpr:
-		if id, ok := ast.Unparen(f.X).(*ast.Ident); ok && e.genericFuncObj(id) != nil {
-			return id
-		}
+		base = f.X
 	case *ast.IndexListExpr:
-		if id, ok := ast.Unparen(f.X).(*ast.Ident); ok && e.genericFuncObj(id) != nil {
-			return id
-		}
+		base = f.X
+	default:
+		return nil, nil
 	}
-	return nil
+	id, fn, err := e.genericFuncUse(base)
+	if err != nil || fn == nil {
+		return nil, nil
+	}
+	return id, fn
+}
+
+// explicitInstantiationRefusal is the fail-closed fallback of the
+// IndexExpr/IndexListExpr VALUE arms: an explicit instantiation whose
+// base genericFuncUse does not resolve to a source generic function (and
+// did not already refuse by name). Legal Go leaves little here — a bare
+// or qualified generic FUNCTION is handled, an instantiated TYPE in
+// expression position is a conversion/composite-literal/method-expression
+// operand that never reaches these arms — so the text names the shape and
+// the base's syntactic kind (FR-27's pre-fix text named only a position,
+// and an absolute path at that: the audit's recorded gap).
+func (e *emitter) explicitInstantiationRefusal(inst ast.Expr, base ast.Expr) error {
+	return unsup("explicit instantiation %s at %s: the base (%T) is not a generic function of a source package — FR-27 residual",
+		types.ExprString(inst), e.fset.Position(inst.Pos()), ast.Unparen(base))
 }
 
 // emitResultTypes emits a function signature's result types (used to type
@@ -8838,8 +8906,13 @@ func (e *emitter) emitBuiltin(c *ast.CallExpr, name string) (any, bool, error) {
 		// conversion message). Realizing gc's point there needs the
 		// full-statement linearization deliberately not built (BUG-032);
 		// FAIL CLOSED naming the shape.
+		//
+		// FR-28 refinement (2026-09-04, lane fr27-fr28): the guard is
+		// `hoistReordersPanic` — the same predicate pair, transparent
+		// when both sides can panic only by nil dereference (identical
+		// panics; the lexer idiom `l.pos < len(l.src) && l.peek()`).
 		if (e.hoistForbidden == "" || e.scHoistOK) && e.sweepOrderedEventAfter(c.End()) {
-			if !e.residualPanicFreeOperand(c.Args[0]) && e.sweepPanickyInlineBefore(c.Pos()) {
+			if e.hoistReordersPanic(c.Args[0], c.Pos()) {
 				return nil, false, unsup("%s of a potentially-panicking operand between a potentially-panicking operand to its left and a later ordered call/receive in the same statement (hoisting %s would reorder the panics; realizing gc's left-to-right point needs full-statement linearization — BUG-032/A6)", name, name)
 			}
 			hoisted, err := e.hoist(node, e.goTypeOf(c))
@@ -9643,6 +9716,29 @@ func (e *emitter) emitMake(c *ast.CallExpr) (any, bool, error) {
 	if e.hoistForbidden != "" {
 		return nil, false, unsup("make in %s", e.hoistForbidden)
 	}
+	// The A6 unordered-panic guard on the SIZE/HINT operands (FR-28,
+	// 2026-09-04, lane fr27-fr28 — closing BUG-083): `make` ALWAYS hoists
+	// (a statement-level allocation), so its size/hint operands are
+	// evaluated ahead of the sweep's remaining inline material. That is
+	// order-transparent unless a size/hint residual can panic AND
+	// potentially-panicking inline material sits lexically LEFT of the
+	// make — then the hoist drags the operand's panic ahead of a spec-
+	// UNORDERED panic (`iv.(int) + len(make([]int, t[k]))`: gc realizes
+	// the interface-conversion panic, the unguarded hoist the index
+	// panic — the BUG-083 table, docs/evidence/2026-09-02_bug082-maphint
+	// §M1). Same predicate pair as len/cap (hoistReordersPanic), same
+	// fail-closed answer, naming the shape. Unlike len/cap no "ordered
+	// event after" condition applies: the hoist is unconditional. Note
+	// the trade BUG-083 priced: the guard is conservative-syntactic, so
+	// the shapes whose LEFT panic is an index/division/nil-deref (where
+	// gc, hoisting the make too, realizes the operand's panic first and
+	// the machine MATCHED) refuse as well — a visible red, never a
+	// guessed order; the nil-deref-only composition stays transparent.
+	for _, arg := range c.Args[1:] {
+		if e.hoistReordersPanic(arg, c.Pos()) {
+			return nil, false, unsup("make of a potentially-panicking size/hint operand with a potentially-panicking operand to its left in the same statement (the make hoist would reorder the panics; realizing gc's left-to-right point needs full-statement linearization — BUG-032/BUG-083)")
+		}
+	}
 	t := e.goTypeOf(c.Args[0])
 	ty, err := e.emitType(t)
 	if err != nil {
@@ -9817,8 +9913,35 @@ func (e *emitter) panicFreeOperand(x ast.Expr) bool {
 			return false
 		}
 		return e.panicFreeOperand(v.X)
+	case *ast.IndexExpr:
+		// FR-28 (2026-09-04): a MAP read never panics by itself
+		// (spec#Index_expressions: a missing key, or a nil map, yields
+		// the element type's zero value); only its operands can — the
+		// key's own evaluation, or hashing an UNCOMPARABLE dynamic key
+		// when the key TYPE is an interface (a statically comparable key
+		// type cannot). Array/slice/string indexing and generic
+		// instantiations keep the conservative answer.
+		return e.panicFreeMapRead(v)
 	}
 	return false
+}
+
+// panicFreeMapRead reports whether index expression v is a map read whose
+// map and key operands are themselves panic-free and whose key type is not
+// an interface — the one indexing shape with no panic of its own.
+func (e *emitter) panicFreeMapRead(v *ast.IndexExpr) bool {
+	t := e.goTypeOf(v.X)
+	if t == nil {
+		return false
+	}
+	m, ok := e.applySubst(t).Underlying().(*types.Map)
+	if !ok {
+		return false
+	}
+	if types.IsInterface(e.applySubst(m.Key()).Underlying()) {
+		return false
+	}
+	return e.panicFreeOperand(v.X) && e.panicFreeOperand(v.Index)
 }
 
 // exprHasCallOrRecv mirrors go/types' hasCallOrRecv flag over one
@@ -10008,6 +10131,12 @@ func (e *emitter) runtimeOrderedCall(c *ast.CallExpr) bool {
 // even though the source syntax is a call — retiring the F23
 // `len(f())` over-refusal. Conversions stay inline and can panic
 // (slice-to-array), so they keep the conservative answer.
+//
+// FR-28 (2026-09-04, lane fr27-fr28): an INLINE builtin — `len`/`cap` —
+// is a call whose residual is NOT a temp: it stays inline with its own
+// operand (`len(b[j])` as the size of a `make`, or as the operand of an
+// outer `len`), so the answer is its operand's. `min`/`max` and every
+// effectful builtin hoist like calls and keep the call answer.
 func (e *emitter) residualPanicFreeOperand(x ast.Expr) bool {
 	if v, ok := ast.Unparen(x).(*ast.CallExpr); ok {
 		if tv, ok := e.info.Types[v]; ok && tv.Value != nil {
@@ -10016,9 +10145,101 @@ func (e *emitter) residualPanicFreeOperand(x ast.Expr) bool {
 		if tv, ok := e.info.Types[v.Fun]; ok && tv.IsType() {
 			return false // conversion: inline, possibly panicking
 		}
+		if id, ok := ast.Unparen(v.Fun).(*ast.Ident); ok && len(v.Args) == 1 {
+			if _, isBuiltin := e.info.Uses[id].(*types.Builtin); isBuiltin && (id.Name == "len" || id.Name == "cap") {
+				return e.residualPanicFreeOperand(v.Args[0])
+			}
+		}
 		return true
 	}
 	return e.panicFreeOperand(x)
+}
+
+// nilDerefOnlyResidual reports whether the RESIDUAL of operand x can
+// panic ONLY by dereferencing a nil pointer — a selector chain (implicit
+// indirection, BUG-039's Indirect() included) or explicit `*p` chain over
+// identifiers/literals/hoisted-call temps, with no index, slice, type
+// assertion, division, shift, interface comparison or conversion
+// anywhere in it. Used by the A6 unordered-panic guard (FR-28 refinement,
+// 2026-09-04): two nil dereferences carry the SAME runtime error
+// ("invalid memory address or nil pointer dereference" — one runtime.Error
+// value, no site-specific text; the machine's panicking family emits the
+// same text at every deref site) and the inline material between them
+// is pure by construction (calls and receives are hoisted), so swapping
+// the order of two nil-deref panics is unobservable: some nil-deref
+// panic fires iff some pointer on the path is nil, whichever is tested
+// first. The hoist is therefore order-transparent on the composition
+// `p.i < len(p.src) && p.next()` — the lexer idiom (cedar-go
+// x/exp/schema/internal/parser.lexer.skipWhitespaceAndComments, the
+// FR-28 witness) — where the pre-refinement guard refused. Everything
+// with a site-specific panic text (index bounds carry the index and
+// length; assertions the types; conversions the lengths) keeps the
+// refusal. Conservative: anything not recognized answers false.
+func (e *emitter) nilDerefOnlyResidual(x ast.Expr) bool {
+	switch v := ast.Unparen(x).(type) {
+	case *ast.Ident, *ast.BasicLit:
+		return true
+	case *ast.SelectorExpr:
+		// Package qualifier or field/method selection: the only panic a
+		// selection itself can raise is the nil dereference of an
+		// implicit or explicit pointer on its path (spec#Selectors);
+		// the base decides the rest.
+		return e.nilDerefOnlyResidual(v.X)
+	case *ast.StarExpr:
+		return e.nilDerefOnlyResidual(v.X)
+	case *ast.IndexExpr:
+		// A map read with a non-interface key type panics only through
+		// its operands (panicFreeMapRead's ground); array/slice/string
+		// indexing carries a site-specific bounds text.
+		t := e.goTypeOf(v.X)
+		if t == nil {
+			return false
+		}
+		if m, ok := e.applySubst(t).Underlying().(*types.Map); ok && !types.IsInterface(e.applySubst(m.Key()).Underlying()) {
+			return e.nilDerefOnlyResidual(v.X) && e.nilDerefOnlyResidual(v.Index)
+		}
+		return false
+	case *ast.CallExpr:
+		if tv, ok := e.info.Types[v]; ok && tv.Value != nil {
+			return true // constant-folded
+		}
+		if tv, ok := e.info.Types[v.Fun]; ok && tv.IsType() {
+			return false // conversion: slice-to-array can panic with a length text
+		}
+		if id, ok := ast.Unparen(v.Fun).(*ast.Ident); ok && len(v.Args) == 1 {
+			if _, isBuiltin := e.info.Uses[id].(*types.Builtin); isBuiltin && (id.Name == "len" || id.Name == "cap") {
+				return e.nilDerefOnlyResidual(v.Args[0])
+			}
+		}
+		return true // a real call: hoisted, its residual is a temp
+	}
+	return false
+}
+
+// hoistReordersPanic is the A6 unordered-panic guard (BUG-032's predicate
+// pair, `residualPanicFreeOperand` × `sweepPanickyInlineBefore`, with the
+// FR-28 nil-deref transparency refinement): hoisting operand x, which sits
+// at pos in the current sweep, would drag a potentially-panicking residual
+// ahead of potentially-panicking INLINE material to its left — two spec-
+// UNORDERED panics whose realized order gc fixes compiler-internally and
+// the machine must not guess (full-statement linearization is the fix
+// BUG-032 records as deliberately not built). TRUE means the caller must
+// refuse by name. FALSE when the residual cannot panic, when nothing
+// panicky is inline to the left, or when BOTH sides can panic only by nil
+// dereference (nilDerefOnlyResidual: identical panics, unobservable
+// order).
+func (e *emitter) hoistReordersPanic(x ast.Expr, pos token.Pos) bool {
+	if e.residualPanicFreeOperand(x) {
+		return false
+	}
+	found, nilOnly := e.sweepPanickyInlineBeforeKinds(pos)
+	if !found {
+		return false
+	}
+	if nilOnly && e.nilDerefOnlyResidual(x) {
+		return false
+	}
+	return true
 }
 
 // sweepPanickyInlineBefore reports whether the current sweep contains
@@ -10041,13 +10262,28 @@ func (e *emitter) residualPanicFreeOperand(x ast.Expr) bool {
 // TRUE (fail closed: combined with a panicky operand this refuses
 // visibly rather than reordering silently).
 func (e *emitter) sweepPanickyInlineBefore(pos token.Pos) bool {
+	found, _ := e.sweepPanickyInlineBeforeKinds(pos)
+	return found
+}
+
+// sweepPanickyInlineBeforeKinds is sweepPanickyInlineBefore's census
+// form (FR-28 refinement, 2026-09-04): found is the predicate's answer;
+// nilOnly reports that EVERY panicky inline node found before pos can
+// panic only by nil dereference (a `*p` or a selector chain whose
+// non-panic-freeness is pointer indirection alone — nilDerefOnlyResidual),
+// the one class whose panics are indistinguishable from each other. The
+// walk stops at the first node of any OTHER kind (the answer is then
+// fixed: found, not nilOnly). A nil sweep root answers (true, false):
+// fail closed.
+func (e *emitter) sweepPanickyInlineBeforeKinds(pos token.Pos) (found bool, nilOnly bool) {
 	root := e.sweepStmt
 	if root == nil {
-		return true
+		return true, false
 	}
-	found := false
+	foundOther := false
+	foundNil := false
 	ast.Inspect(root, func(n ast.Node) bool {
-		if found || n == nil {
+		if foundOther || n == nil {
 			return false
 		}
 		if n.Pos() >= pos {
@@ -10073,60 +10309,86 @@ func (e *emitter) sweepPanickyInlineBefore(pos token.Pos) bool {
 				if t := e.goTypeOf(nn); t != nil {
 					switch u := e.applySubst(t).Underlying().(type) {
 					case *types.Array:
-						found = true
+						foundOther = true
 					case *types.Pointer:
 						if _, arr := u.Elem().Underlying().(*types.Array); arr {
-							found = true
+							foundOther = true
 						}
 					}
 				} else {
-					found = true
+					foundOther = true
 				}
-				return !found
+				return !foundOther
 			}
 		case *ast.IndexExpr:
 			if nn.End() <= pos {
 				// Generic instantiation is type-level, not an index read.
 				if tv, ok := e.info.Types[nn]; !ok || tv.Value == nil {
 					if _, isTypeArg := e.info.Types[nn.Index]; !isTypeArg || !e.info.Types[nn.Index].IsType() {
-						found = true
+						// A map read with a non-interface key has no
+						// panic of its own: descend, its operands are
+						// judged on their own (FR-28, 2026-09-04).
+						if t := e.goTypeOf(nn.X); t != nil {
+							if m, ok := e.applySubst(t).Underlying().(*types.Map); ok && !types.IsInterface(e.applySubst(m.Key()).Underlying()) {
+								return true
+							}
+						}
+						foundOther = true
 						return false
 					}
 				}
 			}
-		case *ast.SliceExpr, *ast.StarExpr, *ast.TypeAssertExpr:
+		case *ast.SliceExpr, *ast.TypeAssertExpr:
 			if n.End() <= pos {
-				found = true
+				foundOther = true
+				return false
+			}
+		case *ast.StarExpr:
+			if n.End() <= pos {
+				// An explicit dereference: nil-deref only if its
+				// operand is; `*a[i]` has the index's panic too.
+				if e.nilDerefOnlyResidual(nn) {
+					foundNil = true
+					return false
+				}
+				foundOther = true
 				return false
 			}
 		case *ast.BinaryExpr:
 			if nn.End() <= pos && (nn.Op == token.QUO || nn.Op == token.REM) {
-				found = true
+				foundOther = true
 				return false
 			}
 			if nn.End() <= pos && (nn.Op == token.SHL || nn.Op == token.SHR) {
 				// A negative (necessarily non-constant) shift count
 				// panics; see the header (NOTE-10 census add).
 				if tv, ok := e.info.Types[nn.Y]; !ok || tv.Value == nil {
-					found = true
+					foundOther = true
 					return false
 				}
 			}
 			if nn.End() <= pos && (nn.Op == token.EQL || nn.Op == token.NEQ) {
 				if t := e.goTypeOf(nn.X); t == nil || types.IsInterface(t.Underlying()) {
-					found = true // interface comparison can panic (uncomparable)
+					foundOther = true // interface comparison can panic (uncomparable)
 					return false
 				}
 			}
 		case *ast.SelectorExpr:
 			if nn.End() <= pos && !e.panicFreeOperand(nn) {
-				found = true
+				// Not panic-free: pointer indirection alone (nil kind) or
+				// a panicky base such as `a[i].f` (other kind).
+				if e.nilDerefOnlyResidual(nn) {
+					foundNil = true
+					return false
+				}
+				foundOther = true
 				return false
 			}
 		}
 		return true
 	})
-	return found
+	found = foundNil || foundOther
+	return found, found && !foundOther
 }
 
 // chanElem resolves an expression's channel element type (substitution-

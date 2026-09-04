@@ -1384,6 +1384,45 @@ alongside every `e.lifted` rollback (both paths).
   visible refusals on one rare composition in receive-free functions,
   in exchange for retiring a spec-FORCED silent wrong answer; the
   four flipped Cases rows measure the retirement side only.
+- FR-28 AMENDMENT (2026-09-04, lane `fr27-fr28`, [AGENT] under the
+  [USER]-ratified frontier queue, relayed): the mechanism GAINED a
+  consumer and a refinement, its residual is unchanged in kind. (1) The
+  predicate pair is now `hoistReordersPanic` (emit.go) and `emitMake`
+  calls it over every size/hint operand — BUG-083's make shapes refuse
+  by name instead of realizing the hint's panic first (BUG-083, now
+  fixed-as-refusal, has the table and the E13 tension note). (2)
+  `residualPanicFreeOperand` recurses into an INLINE builtin's operand
+  (`len`/`cap`: `len(b[j])` as a make size or an outer len's operand is
+  not a hoisted temp — a hole the F23 call arm left, closed; row
+  `make-inner-len`). (3) NIL-DEREF TRANSPARENCY: when the hoisted
+  operand's residual AND every panicky inline node to its left can
+  panic ONLY by nil dereference (`nilDerefOnlyResidual`;
+  `sweepPanickyInlineBeforeKinds` reports the census), the hoist is
+  taken — the two candidate panics are the same runtime error
+  ("invalid memory address or nil pointer dereference": one
+  runtime.Error, no site-specific text, the machine's panicking family
+  emits the same text at every deref site) and the inline material
+  between them is pure by construction (calls/receives hoisted), so
+  which nil test fires first is unobservable: some nil-deref panic fires
+  iff some pointer on the path is nil. This lowers the lexer idiom
+  `for l.pos < len(l.src) && l.peek() != '\n'` (cedar-go x/exp/schema/
+  internal/parser token.go:119, census §11's FR-28 witness — the
+  `drv-validate` driver now passes it and stops at an `fmt.Errorf` verb
+  instead). Pinned green on every nil-ness combination (`len-nil-only-
+  {none,left,operand,both}`, `make-nil-only-*`, `lexer-idiom`); the arm
+  is nil-deref ONLY — an assertion or an index on either side keeps the
+  refusal (`len-assert-vs-nil-operand`, `len-nil-left-vs-index-operand`,
+  red by design). (4) A MAP read with a non-interface key type is
+  panic-free to `panicFreeOperand` and the sweep census
+  (spec#Index_expressions: zero value on a missing key or nil map; an
+  interface-typed key can still panic on an uncomparable dynamic key).
+  The `panicky-between` pin is unchanged (assert left, index operand).
+  What REMAINS of this entry's residual after FR-28: exactly the
+  refusal — a panicky operand between panicky inline material to its
+  left and a later ordered event (len/cap) or an unconditional hoist
+  (make), where the two panics differ in kind; realizing gc's point
+  there is still the unbuilt linearization. Ledger FR-28 is PARTIALLY
+  CLOSED on that basis.
 - M1 AMENDMENT (2026-09-02, bug082-maphint audit fix round, [AGENT]):
   the class gained INSTANCES, not a mechanism. `make(...)` ALWAYS
   hoists (a statement-level allocation) with no A6 guard
@@ -3147,7 +3186,16 @@ FIRST per the standing rule.
   same time the wrong answer died; trade stated in BUG-032's A6
   amendment.)
 - Pinned-by: differential
-- Cases: builtins/len-vs-call-order/chan, builtins/len-vs-call-order/slice, builtins/min-max-vs-call-order/min-value, builtins/min-max-vs-call-order/max-value, builtins/min-max-vs-call-order/min-arg-panic, builtins/len-vs-call-order/short-circuit, builtins/len-vs-call-order/panicky-before-call
+- Cases: builtins/len-vs-call-order/chan, builtins/len-vs-call-order/slice, builtins/min-max-vs-call-order/min-value, builtins/min-max-vs-call-order/max-value, builtins/min-max-vs-call-order/min-arg-panic, builtins/len-vs-call-order/short-circuit, builtins/len-vs-call-order/panicky-before-call, builtins/len-vs-call-order/lexer-idiom, builtins/len-vs-call-order/len-nil-only-none
+- FR-28 note (2026-09-04, lane `fr27-fr28`): the "one fail-closed
+  refusal residual" this fix left (ledger §2 Order_of_evaluation /
+  Length_and_capacity; frontier row FR-28) is narrowed by the nil-deref
+  transparency arm and extended to the `make` hoist — BUG-032's FR-28
+  amendment has the mechanism, BUG-083 the make table. `lexer-idiom`
+  and `len-nil-only-none` join this Cases line as the hoist-with-a-
+  nil-deref-only-operand realization of the spec-forced len-before-
+  call order (the len/cap hoist this entry built, taken where it was
+  refused before).
 
 WIDENED 2026-08-22 (grossmith campaign-2 F-1, promoted by the
 launch-audit fix round): the predicate gap is not `len`/`cap`
@@ -4350,9 +4398,65 @@ this entry's evidence dir, §M1.
 
 ## BUG-083 — the `make` hoist has no unordered-panic guard: a panicky size/hint operand is evaluated ahead of a spec-unordered panicky operand to its left (BUG-032's class; the open-instance ledger for the make shapes)
 
-- Status: open
-- Pinned-by: differential
-- Cases: builtins/len-vs-call-order/hint-panicky-between
+- Status: fixed (2026-09-04, lane `fr27-fr28`, FR-28 — fixed AS A NAMED
+  REFUSAL, not as gc's point: the A6 guard (`hoistReordersPanic` =
+  `residualPanicFreeOperand` × `sweepPanickyInlineBefore`, emit.go) is
+  wired into `emitMake` over every size/hint operand, so the shapes
+  below refuse at frontend-export naming the shape (`make of a
+  potentially-panicking size/hint operand with a potentially-panicking
+  operand to its left in the same statement …`) instead of realizing
+  the hint's panic ahead of the left operand's. The silent wrong answer
+  this entry filed is DEAD; the full-statement linearization BUG-032
+  records as unbuilt is still the only fix that would realize gc's
+  point. The M1 table re-measured at the fix (evidence dir
+  `docs/evidence/2026-09-04_fr27-fr28/m1-table.tsv`): the three
+  assert-left shapes that were WRONG (`iv.(int) + len(make(map, t[k]))`,
+  `… make([]int, t[k])`, `… cap(make(chan int, t[k]))`) now REFUSE; the
+  four index/division/nil-deref-left shapes that MATCHED gc (gc hoists
+  the make too) now REFUSE as well — the trade this entry priced ("would
+  newly refuse the pre-existing slice/chan shapes"), taken under the
+  relayed posture «break rather than preserve incorrect behaviour»: the
+  guard is conservative-syntactic and does not encode gc's compiler-
+  internal ordering of an interface-conversion panic ahead of a hoisted
+  make. Two refinements narrow the over-refusal where the argument is
+  exact: (i) a MAP read with a non-interface key type is panic-free
+  (`gAssertVsMapIndexHint`, `iv.(int) + len(make(map, nm[1]))`, stays
+  green — spec#Index_expressions gives the zero value on a missing key or
+  nil map); (ii) when BOTH the hoisted operand and every panicky inline
+  node to its left can panic ONLY by nil dereference, the two candidate
+  panics are one runtime error and nothing effectful lies between them,
+  so the hoist is order-transparent and taken (`make-nil-only-*`, all
+  four nil-ness combinations green; the same arm lowers the len/cap
+  lexer idiom, BUG-032's amendment). `gAssertVsHintCall` (`iv.(int) +
+  len(make(map, boom()))`) and `gAssertVsPlainCall` are NOT refused and
+  not pinned: the hint is a real CALL whose residual is its temp, so
+  this is the frontend-ANF call-first family the latitude inventory
+  census's at E13 (calls run ahead of a left assertion; both members
+  conforming; NO PIN by that entry's rule) — this entry's original
+  instance list put `… boom()` beside the hint shapes, but its mechanism
+  is E13's, not the hoist guard's, exactly as BUG-032's F23 retirement
+  treats `len(f())`. TENSION RECORDED [AGENT], for the audit: E13 reads
+  the assert-vs-sibling-call axis as latitude with no pin, and `make` is
+  a call ("called like any other function"), so under E13's reading the
+  assert-left make-hint shapes were latitude too — this entry (ratified
+  by the coordinator 2026-09-02) filed them as a wrong answer, and the
+  FR-28 brief asked for a named refusal; the refusal is honest under
+  either reading (a red, never a guessed order) but it is STRICTER than
+  E13's treatment of `min`/`max`/user calls, which still run first.
+  Rows: `hint-panicky-between` flips stage differential → frontend-
+  export (still FAIL by design); `make-slice-panicky-between`,
+  `make-chan-cap-panicky-between` (the pre-existing siblings),
+  `make-index-left` (the priced trade) and `make-inner-len` (the
+  `residualPanicFreeOperand` hole for an INLINE builtin's operand —
+  `len(b[j])` as a size is not a hoisted temp — closed in the same
+  slice) born FAIL/frontend-export by design; `make-hint-panic-free`,
+  `make-hint-call`, `make-hint-map-read` are the guard's green controls.
+  Pinned-by moves to none with `Expect: FAIL` (the BUG-070/078/084
+  precedent: red-by-design refusal pins on a fixed entry — check-bugs
+  (3) forbids a FAIL row on a fixed differential entry).)
+- Pinned-by: none
+- Expect: FAIL
+- Cases: builtins/len-vs-call-order/hint-panicky-between, builtins/len-vs-call-order/make-slice-panicky-between, builtins/len-vs-call-order/make-chan-cap-panicky-between, builtins/len-vs-call-order/make-index-left, builtins/len-vs-call-order/make-inner-len
 - Discovered: 2026-09-02 (bug082-maphint pre-merge audit, M1; the
   auditor's probes `.tmp/audit-bug082/p4`, `p5`, reproduced in
   docs/evidence/2026-09-02_bug082-maphint/README.md §M1)

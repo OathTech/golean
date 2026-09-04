@@ -1,0 +1,16 @@
+# id	subject	args	expected_status	expected_reason	features
+# FR-27 (2026-09-04, lane fr27-fr28): explicit instantiation of a
+# package-QUALIFIED source generic function (`gset.Immutable[string](…)`,
+# cedar-go's mapset.Immutable[EntityUID](args...)). Green rows: the
+# qualified SelectorExpr base resolves through genericFuncUse to the same
+# funcInstanceAt the inferred spelling uses. stdlib-refused is RED
+# frontend-export BY DESIGN: the shape into a stdlib package the register
+# does not admit as source-through refuses BY NAME on FR-14's line
+# (`stdlib-qualified selector maps.Clone in value position …`).
+call	qualCall	-	ok	-	generics,multipackage,imports,calls,methods,variadic
+func-value	qualFuncValue	-	ok	-	generics,multipackage,imports,functions,calls,methods,variadic
+nested	qualNested	-	ok	-	generics,multipackage,imports,structs,fields,functions,calls
+method-value	qualMethodValue	-	ok	-	generics,multipackage,imports,methods,maps,comma_ok
+method-expr	qualMethodExpr	-	ok	-	generics,multipackage,imports,methods,functions
+source-through	qualSourceThrough	-	ok	-	generics,imports,stdlib,slices,calls
+stdlib-refused	qualStdlibRefused	-	ok	-	generics,imports,stdlib,maps,len

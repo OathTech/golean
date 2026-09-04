@@ -1,0 +1,23 @@
+# m1-table.tsv — the BUG-083 / M1 probe table re-measured at the FR-28 frontend (lane fr27-fr28, 2026-09-04).
+# Producer: `go run ./tools/nativefrontend --dir artifacts/m1-probes/<p> --out wire.json` over the two probe bodies
+# copied verbatim from docs/evidence/2026-09-02_bug082-maphint/m1-probes/ (m1-probes/ here; main.go = `package main; func main() {}`;
+# boom()/zero() appended where the body lacked them), then per-function `unsupported` read off the wire (see README Reproduction).
+# gc column: the oracle pin (go1.26.5) is unchanged since the M1 table, so the gc realizations are the M1 README §M1's — NOT re-run here
+# (the corpus rows builtins/len-vs-call-order/* re-measure gc through the harness for every shape that has a row).
+# frontend column: REFUSED = the function is a per-declaration stub carrying the make-guard text
+# `make of a potentially-panicking size/hint operand with a potentially-panicking operand to its left …`; lowers = no refusal.
+# verdict: what the row means at this frontend. E13 = latitude-inventory E13 (frontend-ANF call-first family, no pin by that entry's rule).
+probe	function	shape	gc (M1 README)	main 2026-09-02 (M1 README)	frontend now	verdict	corpus row
+p4	fLeftIndexVsHintIndex	s[i] + len(make(map, t[k]))	IDX5	IDX5 (match)	REFUSED	priced trade: a gc-MATCHING shape now refuses (conservative-syntactic guard; a visible red)	make-index-left (FAIL/frontend-export by design)
+p4	fLeftDivVsHintIndex	1/z + len(make(map, t[k]))	IDX5	IDX5 (match)	REFUSED	priced trade (same)	-
+p4	fLeftAssertVsHintIndex	iv.(int) + len(make(map, t[k]))	CONV	IDX5 (WRONG)	REFUSED	the BUG-083 wrong answer is DEAD: a named refusal	hint-panicky-between (FAIL/frontend-export by design; was FAIL/differential)
+p4	fHintIndexVsRightIndex	len(make(map, t[k])) + s[i]	IDX5	IDX5 (match)	lowers	nothing panicky to the LEFT of the make: not the shape; matches	-
+p4	fLeftNilDerefVsHintIndex	*p + len(make(map, t[k]))	IDX5	IDX5 (match)	REFUSED	priced trade: the left panic is nil-deref but the operand's is an INDEX — kinds differ, not transparent	-
+p4	fLeftIndexHintCallPanic	s[i] + len(make(map, boom()))	BOOM	BOOM (match)	lowers	the hint is a real CALL (residual = its temp); E13 family; matches	make-hint-call (PASS)
+p5	gAssertVsPlainCall	iv.(int) + boom()	CONV	BOOM (pre-existing divergence)	lowers	E13 latitude (calls run ahead of a left assertion; both members conforming; NO PIN by E13's rule) — not this guard's shape	- (E13: no row may pin the assert axis)
+p5	gAssertVsHintCall	iv.(int) + len(make(map, boom()))	CONV	BOOM (WRONG per M1)	lowers	E13 family exactly like gAssertVsPlainCall: the hint is a hoisted call, its panic fires at its own position (BUG-032's F23 arm); the M1 table filed it under the hoist class, its mechanism is E13's — recorded on BUG-083	- (E13)
+p5	gAssertVsSliceMakeLen	iv.(int) + len(make([]int, t[k]))	CONV	IDX5 (pre-existing WRONG)	REFUSED	the pre-existing slice sibling: a named refusal	make-slice-panicky-between (FAIL/frontend-export by design)
+p5	gAssertVsChanMakeCap	iv.(int) + cap(make(chan int, t[k]))	CONV	IDX5 (pre-existing WRONG)	REFUSED	the pre-existing chan sibling: a named refusal	make-chan-cap-panicky-between (FAIL/frontend-export by design)
+p5	gAssertVsNewCall	iv.(int) + *new(int) + zero()	CONV	CONV (match)	lowers	new(T) has no operand; *new(int) is a nil-deref-only residual of a fresh pointer; matches	-
+p5	gAssertVsMapIndexHint	iv.(int) + len(make(map, nm[1]))	CONV	CONV (match)	lowers	a MAP read with a non-interface key is panic-free (refinement (d)); matches	make-hint-map-read (PASS)
+p5	gAssertVsHintPlainVar	iv.(int) + len(make(map, n))	CONV	CONV (match)	lowers	panic-free hint; matches	make-hint-panic-free (PASS)

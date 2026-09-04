@@ -194,6 +194,14 @@ func TestClassifyTextVocabulary(t *testing.T) {
 		`generic instantiation artifacts/cedar/cases/drv-eval-operators/cedargo/types/entity_uid.go:143:9`: "explicit-instantiation-call",
 		`method cedargo/x/exp/schema/internal/parser.lexer.skipWhitespaceAndComments (len of a potentially-panicking operand between a potentially-panicking operand to its left and a later ordered call/receive in the same statement (hoisting len would reorder the panics); satisfaction answers, calls fail closed)`: "len-hoist-panic-order",
 		`default value for imported named type net/netip.Addr`: "imported-type-zero-value",
+		// lane fr27-fr28 (2026-09-04): FR-27 RETIRED for the source shape — the
+		// old `generic instantiation <pos>` text above stays a tripwire; the
+		// value arms' fail-closed fallback names the shape; a qualified
+		// instantiation into a non-source-through stdlib package is FR-14's
+		// value-position text. FR-28: the make hoist joins the A6 guard.
+		`explicit instantiation gset.Immutable[string] at main.go:12:9: the base (*ast.SelectorExpr) is not a generic function of a source package — FR-27 residual`:                                                                                                  "explicit-instantiation-call",
+		`stdlib-qualified selector maps.Clone in value position (explicit instantiation of a generic function of package maps, which is not source-through — the stdlib admission register decides; FR-14)`:                                                           "stdlib-value-position",
+		`make of a potentially-panicking size/hint operand with a potentially-panicking operand to its left in the same statement (the make hoist would reorder the panics; realizing gc's left-to-right point needs full-statement linearization — BUG-032/BUG-083)`: "len-hoist-panic-order",
 	}
 	for text, want := range cases {
 		c, _ := classifyText(text)

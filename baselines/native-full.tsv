@@ -1,4 +1,26 @@
 # GoLean native-frontend full-corpus differential baseline
+# re-pinned: 2026-09-04 (fr27-fr28 lane — FR-27 RETIRED (explicit instantiation of a package-QUALIFIED source
+#   generic, `pkg.F[T](x)`: genericFuncUse resolves the SelectorExpr base to the inferred spelling's stencil) +
+#   FR-28 PARTIALLY CLOSED (the A6 unordered-panic guard `hoistReordersPanic` wired into the `make` hoist —
+#   BUG-083 fixed AS A NAMED REFUSAL; nil-deref-only compositions and map reads order-transparent — cedar-go's
+#   lexer idiom lowers); [AGENT] worker under the [USER]-ratified frontier queue (slots 27/28) and the relayed
+#   posture «break rather than preserve incorrect behaviour» (cited as relayed). drift vs the previous pin =
+#   EXACTLY (a) ONE stage change on a row that stays FAIL: builtins/len-vs-call-order/hint-panicky-between
+#   FAIL/differential -> FAIL/frontend-export (the wrong answer became a refusal by name; BUG-083's Cases line,
+#   now Pinned-by: none + Expect: FAIL); (b) 25 born rows — 18 PASS (generics/qualified-instantiation/{call,
+#   func-value,nested,method-value,method-expr,source-through}; builtins/len-vs-call-order/{make-hint-panic-free,
+#   make-hint-call,make-hint-map-read} the make guard's green controls, {len,make}-nil-only-{none,left,operand,both}
+#   and lexer-idiom the nil-deref transparency pins) and 7 FAIL/frontend-export red BY DESIGN (generics/
+#   qualified-instantiation/stdlib-refused — a qualified instantiation into a NON-source-through stdlib package
+#   refuses by name on FR-14's line; builtins/len-vs-call-order/{make-slice-panicky-between,
+#   make-chan-cap-panicky-between,make-index-left,make-inner-len} on BUG-083's Cases line and FR-28's frontier
+#   line, {len-assert-vs-nil-operand,len-nil-left-vs-index-operand} — the refinement is nil-deref ONLY — on
+#   FR-28's line); 0 PASS -> non-PASS. Twin wire pin and stdlib pin UNCHANGED (raft has no qualified explicit
+#   instantiation and no guarded make/len shape). FULL ci --diff tail: docs/evidence/2026-09-04_fr27-fr28/ci-diff.txt.
+#   [re-derived from the data rows at this re-pin, rebased onto main cb4a6d48 at merge train round 14 ([AGENT]
+#   rebase reconciliation): main's flaky-panic-wait 3403 (3190 PASS / 213 FAIL) + 25 born (18 PASS / 7 FAIL)
+#   + 0 flips = 3428 (3208 PASS / 220 FAIL); tallied by row:
+#   `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv`]
 # re-pinned: 2026-09-04 (flaky-panic-wait lane [AGENT], corpus + stage re-pin, no code change):
 #   noodler/goroutines/goroutine-panic-under-wait RE-LANED strict -> membership (PASS/- -> PASS/membership,
 #   a STAGE-ONLY move): the deferred wg.Done() in the panicking goroutine wakes main's Wait during the
@@ -961,7 +983,9 @@
 #     removed row is named in prose, never left dangling on the line).
 #     NEW rows: unsafe/layout-ops/{sizeof-fixed,layout-struct}
 #     FAIL/frontend-export BY DESIGN. unsafe/boundary/pointer-roundtrip
-# cases: 3403 (3190 PASS / 213 FAIL)
+# cases: 3428 (3208 PASS / 220 FAIL)
+#   [re-derived from the data rows at the fr27-fr28 re-pin 2026-09-04, rebased onto main cb4a6d48 at merge train round 14 ([AGENT] rebase reconciliation): main's flaky-panic-wait 3403 (3190 PASS / 213 FAIL) + 25 born rows (18 PASS: generics/qualified-instantiation/{call,func-value,nested,method-value,method-expr,source-through}, builtins/len-vs-call-order/{make-hint-panic-free,make-hint-call,make-hint-map-read,len-nil-only-{none,left,operand,both},make-nil-only-{none,left,operand,both},lexer-idiom}; 7 FAIL: generics/qualified-instantiation/stdlib-refused, builtins/len-vs-call-order/{make-slice-panicky-between,make-chan-cap-panicky-between,make-index-left,make-inner-len,len-assert-vs-nil-operand,len-nil-left-vs-index-operand}) + 0 FAIL -> PASS + 0 PASS -> FAIL (ONE stage-only change on a row that stays FAIL: builtins/len-vs-call-order/hint-panicky-between differential -> frontend-export) = 3428 (3208 PASS / 220 FAIL); tallied by row: `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3208 / FAIL 220]
+#   [the flaky-panic-wait figure, kept as history:] # cases: 3403 (3190 PASS / 213 FAIL)
 #   [re-derived from the data rows at the flaky-panic-wait re-pin 2026-09-04, rebased onto main ac45aedd at merge train round 14 ([AGENT] rebase reconciliation): main's fr4-rowm 3402 (3189 PASS / 213 FAIL) + 1 born PASS row (noodler/goroutines/goroutine-panic-under-wait-no-done) + ONE stage-only move inside PASS (noodler/goroutines/goroutine-panic-under-wait PASS/- -> PASS/membership), 0 FAIL -> PASS, 0 PASS -> FAIL; tallied by row: `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3190 / FAIL 213)]
 #   [the fr4-rowm figure, kept as history:] # cases: 3402 (3189 PASS / 213 FAIL)
 #   [the checkpoint-C figure, kept as history:] # cases: 3382 (3172 PASS / 210 FAIL)
@@ -1253,7 +1277,25 @@ PASS	builtins/len-vs-call-order/short-circuit	-
 PASS	builtins/len-vs-call-order/short-circuit-skipped	-
 PASS	builtins/len-vs-call-order/panicky-before-call	-
 FAIL	builtins/len-vs-call-order/panicky-between	frontend-export
-FAIL	builtins/len-vs-call-order/hint-panicky-between	differential
+FAIL	builtins/len-vs-call-order/hint-panicky-between	frontend-export
+FAIL	builtins/len-vs-call-order/make-slice-panicky-between	frontend-export
+FAIL	builtins/len-vs-call-order/make-chan-cap-panicky-between	frontend-export
+FAIL	builtins/len-vs-call-order/make-index-left	frontend-export
+FAIL	builtins/len-vs-call-order/make-inner-len	frontend-export
+PASS	builtins/len-vs-call-order/make-hint-panic-free	-
+PASS	builtins/len-vs-call-order/make-hint-call	-
+PASS	builtins/len-vs-call-order/make-hint-map-read	-
+PASS	builtins/len-vs-call-order/len-nil-only-none	-
+PASS	builtins/len-vs-call-order/len-nil-only-left	-
+PASS	builtins/len-vs-call-order/len-nil-only-operand	-
+PASS	builtins/len-vs-call-order/len-nil-only-both	-
+PASS	builtins/len-vs-call-order/make-nil-only-none	-
+PASS	builtins/len-vs-call-order/make-nil-only-left	-
+PASS	builtins/len-vs-call-order/make-nil-only-operand	-
+PASS	builtins/len-vs-call-order/make-nil-only-both	-
+PASS	builtins/len-vs-call-order/lexer-idiom	-
+FAIL	builtins/len-vs-call-order/len-assert-vs-nil-operand	frontend-export
+FAIL	builtins/len-vs-call-order/len-nil-left-vs-index-operand	frontend-export
 PASS	builtins/make-channel-len-cap	-
 PASS	builtins/make-map-hint	-
 PASS	builtins/make-map-hint-eval/panic-map-never-created	-
@@ -2157,6 +2199,13 @@ PASS	generics/map-slice	-
 PASS	generics/method-and-type-set-constraint	-
 PASS	generics/method-constraint-call	-
 PASS	generics/nested-instantiation	-
+PASS	generics/qualified-instantiation/call	-
+PASS	generics/qualified-instantiation/func-value	-
+PASS	generics/qualified-instantiation/nested	-
+PASS	generics/qualified-instantiation/method-value	-
+PASS	generics/qualified-instantiation/method-expr	-
+PASS	generics/qualified-instantiation/source-through	-
+FAIL	generics/qualified-instantiation/stdlib-refused	frontend-export
 PASS	generics/quarantined-instantiation	-
 PASS	generics/quarantined-instantiation-interface	-
 PASS	generics/recursive-constraints/clone	-
