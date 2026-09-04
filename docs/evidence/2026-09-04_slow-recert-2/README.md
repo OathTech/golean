@@ -156,4 +156,4 @@ for `enumerated=`).
 * `ci-diff-gate-dirty.log` — the `--diff` gate on the refreshed-but-uncommitted record (PASS, 3365/3365, 412 s).
 * `diff-k32-membership-rows.tsv` — the 62 rows at K=32 from that run (google-search captioned CERTIFIED-CACHED with the new stamp).
 * `k80-vs-k32-exhibition.tsv` — the joined exhibition table.
-* `ci-fast-gate-clean-tip.log` — the clean-tip fast gate after the commit (follow-up evidence commit).
+* `ci-fast-gate-clean-tip.log` — the clean-tip fast gate after the commit bcaacd9d (follow-up evidence commit): PASS, 3365/3365 no regression, reconciler 2 findings, 102 s (17:49:46Z → 17:51:28Z). A bare `scripts/ci` diffs the LAST recorded differential run — here the `--diff` run made on the uncommitted records — so its notes say "recorded on a DIRTY tree … [recorded at aceb0dc, HEAD is bcaacd9 — stale]"; that is the gate reporting honestly that the differential was not re-run at bcaacd9d. The commit between the two touched records only (the certified header, this dir, operational-lessons); the differential itself ran twice at aceb0dcb — `--slow` on the clean tree, `--diff` with the refreshed record — both PASS, 3365/3365.
