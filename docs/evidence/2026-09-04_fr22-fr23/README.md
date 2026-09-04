@@ -88,11 +88,44 @@ shape `emit.go` already used at its two other sorted refusal sites.
   method-set order, field order or import order reached the wire
   unsorted (those tables were already sorted: interface anchors, method
   sets, imported-named markers, file order at the E8 site).
-- BUG-091's BUGS.md entry is being filed by `hygiene-a-series` and is not
-  on main at this branch's base; the fix + guard land here, and the entry
-  is to be marked fixed (Cases: none — a frontend nondeterminism, not a
-  differential row; guard = the unit test) at whichever landing comes
-  second. [AGENT] note for the coordinator.
+- BUG-091's BUGS.md entry is filed on `hygiene-a-series` (6cd82b89: Status
+  open, Pinned-by none, Expect FAIL, Cases `stdlib-source/frontier/
+  index-rune-goto` — that row is red BY DESIGN on FR-21 and STAYS red: the
+  fix makes the refusal TEXT reproducible, not the result), not on main at
+  this branch's base. The fix + guard land here; whichever lane lands
+  second updates the entry — wording ready to paste: `- Status: fixed
+  (2026-09-04, lane fr22-fr23, commit 1aa49562 — the goto-label set is
+  sorted before the refusal loop, as are the two sibling sites the
+  slice's map-range audit found, langversion.go:178 and
+  stdlibreach.go:580/585; guard = TestEmitIsDeterministic, red-first on
+  main's emitter: docs/evidence/2026-09-04_fr22-fr23/bug091-red-first.txt;
+  the Cases row keeps Expect: FAIL by design)`. [AGENT] note for the
+  coordinator.
+
+## Gate
+
+- **Run 1** (`ci-diff-run1.txt`): uncommitted slice tree at 415f959a, before
+  the re-pin — 3365 rows run; DRIFT = exactly the 2 flips + 15 born rows
+  (`baseline-drift.txt`); re-pin guard 0 PASS→non-PASS; twin/hidden-dep/
+  stdlib pins ok; expected reds: baseline DRIFT and the uncitable
+  `time.Date` doc anchor (fixed).
+- **Run 2**: committed 1aa49562 (rebased onto main e0657d47) — FULL
+  3365/3365 no regression, but recorded on a tree made DIRTY by this
+  README's SHA edit landing mid-run, and the anchor checker re-read the
+  captured `godoc` tokens in `ci-diff-run1.txt` (de-tokenized, noted in
+  that file's header). Not a certification; superseded by run 3.
+- **Run 3** (`ci-diff.txt`): CLEAN tip c996788a — **RESULT: PASS**; baseline
+  diff FULL 3365/3365 no regression; negative 394/394; re-pin guard 0
+  PASS→non-PASS (the 2 GREENED witnesses named); check-frontend-pins ok
+  (twin wire 69a538de… unchanged, hidden-dep pin, stdlib pin 61 files);
+  register check ok; frontend unit tests ok (incl. `perdecl_kill_test.go`,
+  `determinism_test.go`); eval tests 148 ok; reconciler 4 findings /
+  **0 HIGH** — C13 and C5 (FR-7 `=`, FR-14 `slices.Sort`) are main's
+  pre-existing two; C6 = the `BUG-091` mentions here (the entry is on
+  `hygiene-a-series` 6cd82b89, not yet on main); C9 = this slice's own
+  `wire.go` commit after slow-recert's 2026-09-04 certification (no
+  slow-tier row has an opaque instantiation; run 1/3's cached-certification
+  check was green; a `--slow` re-enumeration is that lane's).
 
 ## Files
 
