@@ -276,8 +276,10 @@ type emitter struct {
 	// globalAddr choke point naming the var, so the zero in the cell is
 	// unreachable, never a silent answer. Populated by
 	// quarantineUnlowerableGlobals (the dry-run pre-pass) BEFORE any
-	// function body is emitted.
-	quarantinedGlobals map[*types.Var]string
+	// function body is emitted — and, since FR-24 (2026-09-04), by
+	// collectGlobals for a var whose TYPE does not lower (globalPoison
+	// records which of the two it is; the refusal text differs).
+	quarantinedGlobals map[*types.Var]globalPoison
 	quarantinedInits   map[ast.Expr]bool
 
 	// Stdlib source-through (stdlibsource.go / stdlibreach.go). curUnit
@@ -488,6 +490,11 @@ func (e *emitter) emitType(t types.Type) (any, error) {
 			// pass never reaches them (stdlibreach.go stops at them).
 			if e.importedNamed == nil {
 				e.importedNamed = map[string]*types.Named{}
+			}
+			if _, seen := e.importedNamed[qname]; !seen {
+				// Journaled so a refused body's registration rolls back
+				// with the body (rollbackMono, monoLogImportedNamed).
+				e.monoLog = append(e.monoLog, monoLogEntry{monoLogImportedNamed, qname})
 			}
 			e.importedNamed[qname] = ty
 		}

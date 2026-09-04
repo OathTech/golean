@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+# H-3 residue closed 2026-09-04 (lane fr24): an imported named type a
+# QUARANTINED body registered for the D5 method-set pass now rolls back
+# with the body (mono journal), so the stub pass no longer refuses the
+# whole export on that type's unlowerable signatures (reflect.Value.Complex
+# complex128). `unrelated` flips the kill; `uses-reflect` is red at
+# frontend-export BY DESIGN (the stub names reflect.ValueOf).
+unrelated	unrelated	-	ok	-	methods,stdlib
+uses-reflect	usesReflect	-	ok	-	methods,stdlib,slices

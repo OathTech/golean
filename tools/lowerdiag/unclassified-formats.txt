@@ -5,6 +5,7 @@
 # `&composite in short-circuit operand`); the others are frontend invariants that carry another message (emit.go:215 "%s").
 # 2026-09-04 round-11 merge train [AGENT]: regenerated after the fr22-fr23 slice landed — FOUR new frontend formats surfaced here (FR-4 stencil-naming, FR-22 whole-export, FR-22 $poisoned reference, FR-24 type-unlowerable);
 # classifying them from the format alone (a causes.tsv pattern per row) is OWED to the lower-diagnose lane, not decided at the merge. The real-text paths may still classify (FR-24 is static-only by design).
+# 2026-09-04 lane fr24 [AGENT]: regenerated — the FR-24 whole-export format is GONE (the var is poisoned per declaration) and the poison reference text classifies (causes.tsv global-type-poisoned), so the list shrinks by one.
 &composite (elided) in X
 &composite in X
 X
@@ -17,7 +18,6 @@ method expression (*X).X over a value-receiver method (deref adapter not modeled
 method stencil X.X does not lower (X) — FR-4: method stencils have no per-declaration quarantine yet, so the export refuses whole
 package-level initializer of X does not lower (X) and is not H-11 effect-isolated — skipping it cannot be argued unobservable, so the WHOLE export refuses (FR-22: per-declaration poisoning covers only initializers whose every call is a direct call to an init-callee register row [pureUnmodeledCallees, rendered in docs/stdlib-admission-register.md] with effect- and panic-free argument shapes)
 package-level initializer with no declaration site
-package-level var X: its TYPE does not lower (X) — FR-24: a reached var of an unlowerable type refuses the whole export (per-declaration `$poisoned` cell + reader quarantine is the queued remedy, ledger FR-24)
 package-level var X: its initializer does not lower (X) — H-11 poison: the cell is seeded as the `$poisoned` placeholder and every reference (read, write, address-of) refuses by name; reference refused
 slice literal in X
 substitution into X (X)

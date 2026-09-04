@@ -1,0 +1,3 @@
+nativefrontend: native frontend unsupported: sync.Map (only Mutex/RWMutex/WaitGroup/Once are modeled)
+for the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/init/user-var-struct-field-unlowerable
+exit status 1

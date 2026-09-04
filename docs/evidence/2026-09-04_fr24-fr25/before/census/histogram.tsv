@@ -1,0 +1,4 @@
+class	key	decls	packages
+FR-14/sync-unmodeled	sync.Map	19	19
+FR-14/fmt-verb-matrix	fmt.Sprintf %x@rune	1	1
+FR-14/stdlib-package-unmodeled	flag.Parse	1	1

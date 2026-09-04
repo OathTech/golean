@@ -1,0 +1,134 @@
+NAMED-TRACE reflect.Value
+goroutine 1 [running]:
+runtime/debug.Stack()
+	/usr/local/go/src/runtime/debug/stack.go:26 +0x5e
+main.(*emitter).emitType(0x385fc1b9ab08, {0x7b8cf0?, 0x385fc210c200?})
+	<proto>/tools/nativefrontend/wire.go:504 +0x845
+main.(*emitter).emitAssignTarget(0x385fc1b9ab08, {0x7b9b30, 0x385fc1d12280?}, 0xa0?)
+	<proto>/tools/nativefrontend/emit.go:3597 +0x265
+main.(*emitter).emitAssign(0x385fc1b9ab08, 0x385fc1d7e340)
+	<proto>/tools/nativefrontend/emit.go:3417 +0xe05
+main.(*emitter).emitStmt(0x385fc1b9ab08, {0x7b9dd0?, 0x385fc1d7e340})
+	<proto>/tools/nativefrontend/emit.go:2847 +0x266
+main.(*emitter).emitStmtList(0x385fc1b9ab08, {0x385fc1fe7300?, 0x9, 0x7b7c68?})
+	<proto>/tools/nativefrontend/emit.go:2761 +0x185
+main.(*emitter).emitBlock(0x385fc1d7d380?, 0x385fc32731a0?)
+	<proto>/tools/nativefrontend/emit.go:2742 +0x26
+main.(*emitter).emitFuncDecl(0x385fc1b9ab08, 0x385fc1d7d3b0)
+	<proto>/tools/nativefrontend/emit.go:2139 +0x97f
+main.(*emitter).emitProgram(0x385fc1b9ab08, {0x385fc19d21a8?, 0x385fc297a840?, 0x385fc19d21a8?})
+	<proto>/tools/nativefrontend/emit.go:230 +0xfb7
+main.run()
+	<proto>/tools/nativefrontend/main.go:168 +0xba7
+main.main()
+	<proto>/tools/nativefrontend/main.go:21 +0x13
+
+NAMED-TRACE reflect.Value
+goroutine 1 [running]:
+runtime/debug.Stack()
+	/usr/local/go/src/runtime/debug/stack.go:26 +0x5e
+main.(*emitter).emitType(0x385fc1b9ab08, {0x7b8cf0?, 0x385fc210c200?})
+	<proto>/tools/nativefrontend/wire.go:504 +0x845
+main.(*emitter).emitParams(0x385fc1b9ab08, 0x385fc2749cf8)
+	<proto>/tools/nativefrontend/emit.go:2699 +0xc8
+main.(*emitter).emitFuncDecl(0x385fc1b9ab08, 0x385fc1ebbe30)
+	<proto>/tools/nativefrontend/emit.go:2065 +0x127
+main.(*emitter).emitProgram(0x385fc1b9ab08, {0x385fc19d21a8?, 0x385fc297a840?, 0x385fc19d21a8?})
+	<proto>/tools/nativefrontend/emit.go:230 +0xfb7
+main.run()
+	<proto>/tools/nativefrontend/main.go:168 +0xba7
+main.main()
+	<proto>/tools/nativefrontend/main.go:21 +0x13
+
+IFACE-TRACE reflect.Type
+goroutine 1 [running]:
+runtime/debug.Stack()
+	/usr/local/go/src/runtime/debug/stack.go:26 +0x5e
+main.(*emitter).noteInterface(0x385fc1b9ab08, {0x385fc2bff8a0, 0xc}, 0x385fc2ecba60?)
+	<proto>/tools/nativefrontend/wire.go:340 +0x1b6
+main.(*emitter).emitType(0x385fc1b9ab08, {0x7b8cf0?, 0x385fc210d400?})
+	<proto>/tools/nativefrontend/wire.go:483 +0x51d
+main.(*emitter).emitAssignTarget(0x385fc1b9ab08, {0x7b9b30, 0x385fc1e2b5a0?}, 0x40?)
+	<proto>/tools/nativefrontend/emit.go:3597 +0x265
+main.(*emitter).emitAssign(0x385fc1b9ab08, 0x385fc1ef4140)
+	<proto>/tools/nativefrontend/emit.go:3417 +0xe05
+main.(*emitter).emitStmt(0x385fc1b9ab08, {0x7b9dd0?, 0x385fc1ef4140})
+	<proto>/tools/nativefrontend/emit.go:2847 +0x266
+main.(*emitter).emitStmtList(0x385fc1b9ab08, {0x385fc1ef4300?, 0x4, 0x4?})
+	<proto>/tools/nativefrontend/emit.go:2761 +0x185
+main.(*emitter).emitSwitch(0x385fc1b9ab08, 0x385fc1ebbda0)
+	<proto>/tools/nativefrontend/emit.go:4951 +0x438
+main.(*emitter).emitStmt(0x385fc1b9ab08, {0x7ba190?, 0x385fc1ebbda0})
+	<proto>/tools/nativefrontend/emit.go:2978 +0x245
+main.(*emitter).emitStmtList(0x385fc1b9ab08, {0x385fc1aac500?, 0x2, 0x7b7c68?})
+	<proto>/tools/nativefrontend/emit.go:2761 +0x185
+main.(*emitter).emitBlock(0x385fc1ebbe00?, 0x385fc3284bd0?)
+	<proto>/tools/nativefrontend/emit.go:2742 +0x26
+main.(*emitter).emitFuncDecl(0x385fc1b9ab08, 0x385fc1ebbe30)
+	<proto>/tools/nativefrontend/emit.go:2139 +0x97f
+main.(*emitter).emitProgram(0x385fc1b9ab08, {0x385fc19d21a8?, 0x385fc297a840?, 0x385fc19d21a8?})
+	<proto>/tools/nativefrontend/emit.go:230 +0xfb7
+main.run()
+	<proto>/tools/nativefrontend/main.go:168 +0xba7
+main.main()
+	<proto>/tools/nativefrontend/main.go:21 +0x13
+
+IFACE-TRACE reflect.Type
+goroutine 1 [running]:
+runtime/debug.Stack()
+	/usr/local/go/src/runtime/debug/stack.go:26 +0x5e
+main.(*emitter).noteInterface(0x385fc1b9ab08, {0x385fc2bff920, 0xc}, 0x746920?)
+	<proto>/tools/nativefrontend/wire.go:340 +0x1b6
+main.(*emitter).emitType(0x385fc1b9ab08, {0x7b8cf0?, 0x385fc210d400?})
+	<proto>/tools/nativefrontend/wire.go:483 +0x51d
+main.(*emitter).emitParams(0x385fc1b9ab08, 0x385fc2749d28)
+	<proto>/tools/nativefrontend/emit.go:2699 +0xc8
+main.(*emitter).emitFuncDecl(0x385fc1b9ab08, 0x385fc1ef62d0)
+	<proto>/tools/nativefrontend/emit.go:2065 +0x127
+main.(*emitter).emitProgram(0x385fc1b9ab08, {0x385fc19d21a8?, 0x385fc297a840?, 0x385fc19d21a8?})
+	<proto>/tools/nativefrontend/emit.go:230 +0xfb7
+main.run()
+	<proto>/tools/nativefrontend/main.go:168 +0xba7
+main.main()
+	<proto>/tools/nativefrontend/main.go:21 +0x13
+
+NAMED-TRACE reflect.Value
+goroutine 1 [running]:
+runtime/debug.Stack()
+	/usr/local/go/src/runtime/debug/stack.go:26 +0x5e
+main.(*emitter).emitType(0x385fc1b9ab08, {0x7b8cf0?, 0x385fc210c200?})
+	<proto>/tools/nativefrontend/wire.go:504 +0x845
+main.(*emitter).emitParams(0x385fc1b9ab08, 0x385fc279c030)
+	<proto>/tools/nativefrontend/emit.go:2699 +0xc8
+main.(*emitter).emitFuncDecl(0x385fc1b9ab08, 0x385fc1efe060)
+	<proto>/tools/nativefrontend/emit.go:2065 +0x127
+main.(*emitter).emitProgram(0x385fc1b9ab08, {0x385fc19d21a8?, 0x385fc297a840?, 0x385fc19d21a8?})
+	<proto>/tools/nativefrontend/emit.go:230 +0xfb7
+main.run()
+	<proto>/tools/nativefrontend/main.go:168 +0xba7
+main.main()
+	<proto>/tools/nativefrontend/main.go:21 +0x13
+
+NAMED-TRACE reflect.Value
+goroutine 1 [running]:
+runtime/debug.Stack()
+	/usr/local/go/src/runtime/debug/stack.go:26 +0x5e
+main.(*emitter).emitType(0x385fc1b9ab08, {0x7b8cf0?, 0x385fc210c200?})
+	<proto>/tools/nativefrontend/wire.go:504 +0x845
+main.(*emitter).emitParams(0x385fc1b9ab08, 0x385fc279c030)
+	<proto>/tools/nativefrontend/emit.go:2699 +0xc8
+main.(*emitter).quarantinedMethodStub.func2()
+	<proto>/tools/nativefrontend/emit.go:1928 +0x92
+main.(*emitter).withOpaqueSigs(0x385fc1b9ab08, 0x385fc3386d70)
+	<proto>/tools/nativefrontend/emit.go:1965 +0x143
+main.(*emitter).quarantinedMethodStub(0x385fc1b9ab08, 0x385fc1efe060, {{0x385fc21e9540?, 0xd?}})
+	<proto>/tools/nativefrontend/emit.go:1923 +0x232
+main.(*emitter).emitProgram(0x385fc1b9ab08, {0x385fc19d21a8?, 0x385fc297a840?, 0x385fc19d21a8?})
+	<proto>/tools/nativefrontend/emit.go:269 +0x5b3c
+main.run()
+	<proto>/tools/nativefrontend/main.go:168 +0xba7
+main.main()
+	<proto>/tools/nativefrontend/main.go:21 +0x13
+
+nativefrontend: native frontend unsupported: basic type complex128
+exit status 1

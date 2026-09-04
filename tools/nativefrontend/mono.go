@@ -777,6 +777,19 @@ const (
 	// `Ready() <-chan Ready` shape).
 	monoLogSeenIface
 	monoLogCalledIface
+	// FR-24's neighbour (2026-09-04, lane fr24): an IMPORTED named type
+	// recorded by a refused body (`reflect.Value` from binary.Write's
+	// reflect slow path; any user body touching reflect) must roll back
+	// too — the D5 method-set stub pass (importedTypeDecls) needs EVERY
+	// signature of the type to lower and skips whole when one does not
+	// (`Complex() complex128`), and the interfaces its signatures noted
+	// on the way (`reflect.Type`, with `OverflowComplex(complex128)`)
+	// then FAIL THE WHOLE EXPORT in the interface declaration pass. The
+	// dry-run pre-pass's comment used to list importedNamed as a known,
+	// harmless rollback gap ("never a changed answer"): refuted — the
+	// answer changed from one stub to a whole-export kill, and it masked
+	// itself behind FR-24's structSize kill on cedar-go.
+	monoLogImportedNamed
 )
 
 type monoLogEntry struct {
@@ -811,6 +824,8 @@ func (e *emitter) rollbackMono(m monoMarks) {
 			delete(e.seenInterfaces, entry.key)
 		case monoLogCalledIface:
 			delete(e.calledIfaceMethods, entry.key)
+		case monoLogImportedNamed:
+			delete(e.importedNamed, entry.key)
 		}
 	}
 	e.monoLog = e.monoLog[:m.log]

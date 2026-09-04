@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+# FR-24 (2026-09-04, lane fr24): a USER package-level `var cache sync.Map`
+# is poisoned per declaration (`$poisoned` cell) — the export survives,
+# the healthy initializers keep declaration order, and every reference
+# refuses by name. `used` (method calls) and `addr-of` (address-of) are red
+# at frontend-export BY DESIGN: a PASS there without a design change means
+# the poison broke (a silent zero-valued sync.Map).
+unused	unused	-	ok	-	init,globals,sync
+order-kept	orderKept	-	ok	-	init,globals,sync
+used	used	-	ok	-	init,globals,sync
+addr-of	addrOf	-	ok	-	init,globals,sync

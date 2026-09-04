@@ -1,4 +1,25 @@
 # GoLean native-frontend full-corpus differential baseline
+# re-pinned: 2026-09-04 (fr24 lane, checkpoint A — FR-24 PARTIALLY CLOSED: a package-level var
+#   whose TYPE does not lower is POISONED per declaration (the cell seeds as the reserved
+#   `$poisoned` placeholder, gid kept; every reference refuses by name naming the var, its
+#   type and the type's cause) instead of killing the whole export — user and library vars
+#   alike; the H-3 residue (an imported named type a REFUSED body registered for the D5 stub
+#   pass surviving into the export) journaled and rolled back with the body. [AGENT] under
+#   [USER] direction 3 (relayed by the coordinator, cited as relayed). No wire-schema change.
+#   FULL ci --diff at aceb0dcb (+ the checkpoint, committed; tail in
+#   docs/evidence/2026-09-04_fr24-fr25/ci-diff-A.txt): drift vs the previous pin = EXACTLY
+#   11 born rows — 3 PASS (init/user-var-type-unlowerable/{unused,order-kept},
+#   methods/quarantine-imported-type-residue/unrelated) and 8 FAIL/frontend-export red BY
+#   DESIGN on their FR lines (init/user-var-type-unlowerable/{used,addr-of} — FR-24;
+#   init/library-var-type-poisoned/{sibling,write-int,write-struct,size-int} — FR-25, the
+#   kill behind the poisoned var; init/user-var-struct-field-unlowerable — FR-26;
+#   methods/quarantine-imported-type-residue/uses-reflect — FR-14, the reflect surface);
+#   0 flips either way (the FR-24 witness init/library-var-type-unlowerable stays FAIL,
+#   cause moved sync.Map -> basic type complex128 = FR-25); 0 PASS -> non-PASS; twin wire
+#   pin UNCHANGED (69a538de); stdlib pin unchanged.
+#   [re-derived from the data rows at this re-pin ([AGENT]): main aceb0dcb's 3365 (3165 PASS /
+#   200 FAIL) + 11 born rows (3 PASS / 8 FAIL) = 3376 (3168 PASS / 208 FAIL); tallied by row:
+#   `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv`]
 # re-pinned: 2026-09-04 (fr22-fr23 lane — the two WHOLE-EXPORT kills of the cedar-go census
 #   made PER-DECLARATION, [AGENT] under [USER] direction 3 and the frontier-queue ratification
 #   (both relayed by the coordinator, cited as relayed). FR-22: a package-level initializer
@@ -874,7 +895,9 @@
 #     removed row is named in prose, never left dangling on the line).
 #     NEW rows: unsafe/layout-ops/{sizeof-fixed,layout-struct}
 #     FAIL/frontend-export BY DESIGN. unsafe/boundary/pointer-roundtrip
-# cases: 3365 (3165 PASS / 200 FAIL)
+# cases: 3376 (3168 PASS / 208 FAIL)
+#   [re-derived from the data rows at the fr24 checkpoint-A re-pin 2026-09-04 ([AGENT]: main aceb0dcb's 3365 (3165 PASS / 200 FAIL) + 11 born rows (3 PASS / 8 FAIL), no flips either way; tallied by row: `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv`)]
+#   [the fr22-fr23 figure, kept as history:] # cases: 3365 (3165 PASS / 200 FAIL)
 #   [re-derived from the data rows at the fr22-fr23 re-pin 2026-09-04 ([AGENT]: main 415f959a's 3350 (3157 PASS / 193 FAIL) + 15 born rows (6 PASS / 9 FAIL) with 2 FAIL -> PASS flips; no other row moved; tallied by row: `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3165 / FAIL 200)]
 #   [the round-10 merge-train union figure, kept as history:] # cases: 3350 (3157 PASS / 193 FAIL)
 #   [re-derived from the data rows at the round-10 merge-train rebase of stdlib-source-2 (lane commit 68b15964) onto main 1b8401c0 2026-09-04 ([AGENT], under the [USER] merge sign-off «go ahead and merge these» 2026-09-04): the previous figure 3347 (3157 PASS / 190 FAIL) + this commit's row delta vs its lane parent 74434494 (3 ids: 3 born, 0 changed) = 3350 (3157 PASS / 193 FAIL); counted, not summed by hand]
@@ -2342,6 +2365,10 @@ FAIL	init/hidden-dep-refused	frontend-export
 PASS	init/init-defer-recover	-
 PASS	init/init-panic	-
 PASS	init/init-sees-var-values	-
+FAIL	init/library-var-type-poisoned/sibling	frontend-export
+FAIL	init/library-var-type-poisoned/size-int	frontend-export
+FAIL	init/library-var-type-poisoned/write-int	frontend-export
+FAIL	init/library-var-type-poisoned/write-struct	frontend-export
 FAIL	init/library-var-type-unlowerable	frontend-export
 PASS	init/multi-file-order	-
 PASS	init/multiple-init-order	-
@@ -2369,6 +2396,11 @@ FAIL	init/stdlib-initializer-poison/read	frontend-export
 FAIL	init/stdlib-initializer-poison/cascade	frontend-export
 PASS	init/stdlib-initializer-source-through	-
 FAIL	init/stdlib-initializer-unregistered	frontend-export
+FAIL	init/user-var-struct-field-unlowerable	frontend-export
+FAIL	init/user-var-type-unlowerable/addr-of	frontend-export
+PASS	init/user-var-type-unlowerable/order-kept	-
+PASS	init/user-var-type-unlowerable/unused	-
+FAIL	init/user-var-type-unlowerable/used	frontend-export
 PASS	init/var-init-sequence	-
 PASS	interfaces/acked-indexer/hit	-
 PASS	interfaces/acked-indexer/miss	-
@@ -2689,6 +2721,8 @@ PASS	methods/pointer-receiver-slice-element	-
 PASS	methods/quarantine-embedded/promoted-good	-
 PASS	methods/quarantine-embedded/promoted-satisfies	-
 FAIL	methods/quarantine-embedded/promoted-call	frontend-export
+PASS	methods/quarantine-imported-type-residue/unrelated	-
+FAIL	methods/quarantine-imported-type-residue/uses-reflect	frontend-export
 PASS	methods/quarantine-interface/satisfies	-
 PASS	methods/quarantine-interface/dispatch-good	-
 FAIL	methods/quarantine-interface/dispatch-quarantined	frontend-export

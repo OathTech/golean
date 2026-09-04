@@ -1,0 +1,3 @@
+nativefrontend: native frontend unsupported: basic type complex128
+for the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/init/library-var-type-poisoned
+exit status 1

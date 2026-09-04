@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+# Born-FAIL frontend-export (2026-09-04, lane fr24): a source-declared
+# struct TYPE with a `sync.Map` field — the type-declaration pass refuses
+# the whole export at the field; FR-24's var poison does not reach it (the
+# var's type is a lowerable `named` reference). Rowed as its own frontier
+# item with a plan (ledger §4); flips when that row closes.
+-	unrelated	-	ok	-	init,globals,sync,structs

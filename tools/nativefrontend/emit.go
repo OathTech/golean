@@ -778,10 +778,27 @@ func methodSetCoverageForKind(name, kind string) (coverage string, carrier bool,
 // declaration order (files already in lexical filename order) and builds
 // the wire globals table plus the fabricated per-initializer assignment
 // statements $pkginit emission reuses. The SINGLE gid source: the driver
-// seeds cell gid at Loc.base(gid) in the same order. An unsupported
-// global TYPE refuses the whole export — initialization must zero-seed
-// every global before any subject runs, so there is no per-decl
-// quarantine for init code (design note §2).
+// seeds cell gid at Loc.base(gid) in the same order.
+//
+// A global whose TYPE does not lower (FR-24, 2026-09-04 — the cedar-go
+// census's third kill: encoding/binary's `var structSize sync.Map`,
+// reached through binary.Write → dataSize) used to refuse the WHOLE
+// export here. It is now POISONED per declaration, exactly like an H-11
+// quarantined var: the cell keeps its gid slot (density), seeds as the
+// reserved `$poisoned` placeholder (poisonGlobalCells — the real type
+// has no machine default, by definition), and every reference refuses at
+// the globalAddr choke point naming the var, its type and emitType's
+// cause. Soundness is the same argument as H-11's poison, and simpler: a
+// zero-valued var has NO initializer to skip, so nothing gc runs is
+// omitted; the cell is unreachable by construction, so its content is
+// unobservable. A poisoned var WITH an initializer is decided by the
+// dry-run pre-pass exactly as before (its assignment fails at globalAddr:
+// a user-package initializer must be effect-isolated to be skipped, else
+// the whole export refuses naming it; a library initializer is skipped
+// under the register's init-pure argument). Init CODE (another
+// initializer, an init() body) that references the var refuses the
+// whole export as for any poisoned var — there is no per-decl quarantine
+// for init code (design note §2).
 func (e *emitter) collectGlobals(files []*ast.File) error {
 	// Called once PER UNIT in program initialization order (W1.1):
 	// the maps are program-wide accumulators keyed by object/expr.
@@ -823,16 +840,16 @@ func (e *emitter) collectGlobals(files []*ast.File) error {
 						}
 						ty, err := e.emitType(obj.Type())
 						if err != nil {
-							// FR-24 (2026-09-04): a package-level var whose TYPE
-							// does not lower refuses the WHOLE export here — name
-							// the var and the row, not just the type (cedar-go:
-							// encoding/binary.structSize sync.Map, reached via
-							// binary.Write). The remedy is FR-24's queued slice.
-							var u unsupported
-							if errors.As(err, &u) {
-								return unsup("package-level var %s: its TYPE does not lower (%s) — FR-24: a reached var of an unlowerable type refuses the whole export (per-declaration `$poisoned` cell + reader quarantine is the queued remedy, ledger FR-24)", e.globalWireName(obj), u.what)
+							var uerr unsupported
+							if !errors.As(err, &uerr) {
+								return err // not a refusal: an internal error stays fatal
 							}
-							return err
+							// FR-24: poison per declaration (doc comment above).
+							// The placeholder is written here so the table entry
+							// is never the half-emitted real type; poisonGlobalCells
+							// re-stamps it idempotently and mints the TypeDef.
+							e.poisonGlobal(obj, globalPoison{cause: uerr.what, typeName: obj.Type().String()})
+							ty = map[string]any{"kind": "named", "name": poisonedCellTypeId}
 						}
 						e.globalVars[obj] = len(e.globalDefs)
 						e.globalDefs = append(e.globalDefs, map[string]any{
@@ -950,7 +967,12 @@ func (e *emitter) registerGenericDecls() {
 // current argument rests on ALLOWLIST PURITY plus panic-freedom, not on
 // modelledness of the callee's body.
 func (e *emitter) quarantineUnlowerableGlobals() error {
-	e.quarantinedGlobals = map[*types.Var]string{}
+	// NOT reset here: collectGlobals has already armed the FR-24 type
+	// poisons (poisonGlobal), and their dry-run cascade below rides the
+	// same map.
+	if e.quarantinedGlobals == nil {
+		e.quarantinedGlobals = map[*types.Var]globalPoison{}
+	}
 	e.quarantinedInits = map[ast.Expr]bool{}
 	// Stdlib source-through: a `//go:linkname`d library VARIABLE is a
 	// pull from the runtime (math/bits' `overflowError`/`divideError`
@@ -970,8 +992,8 @@ func (e *emitter) quarantineUnlowerableGlobals() error {
 				continue
 			}
 			if directive, linked := u.linknamed[v.Name()]; linked {
-				e.quarantinedGlobals[v] = "stdlib source-through: package-level variable " + u.path + "." + v.Name() +
-					" is a `" + directive + "` pull whose value lives in the runtime, not in this package's source (no portable substitution; fail closed)"
+				e.poisonGlobal(v, globalPoison{cause: "stdlib source-through: package-level variable " + u.path + "." + v.Name() +
+					" is a `" + directive + "` pull whose value lives in the runtime, not in this package's source (no portable substitution; fail closed)"})
 			}
 		}
 	}
@@ -1037,18 +1059,20 @@ func (e *emitter) quarantineUnlowerableGlobals() error {
 			e.rollbackMono(monoMark)
 			// KNOWN ROLLBACK-SET GAPS, recorded rather than fixed
 			// (audit F2 could-not-verify, 2026-08-20): syncUsed
-			// (wire.go:392), importedNamed (wire.go:416) and
-			// badKeyPaths (identity.go:83) accumulate during the dry
-			// run and are NOT restored, so an entry a SKIPPED
+			// (wire.go) and badKeyPaths (identity.go) accumulate during
+			// the dry run and are NOT restored, so an entry a SKIPPED
 			// initializer was alone in reaching survives into the real
 			// export. The direction is conservative — a stale
-			// badKeyPaths entry refuses, a stale syncUsed/importedNamed
-			// entry adds an unreferenced method-set row or stub — never
-			// a changed answer for emitted code. No corpus case
-			// currently reaches one (the quarantined initializers are
-			// os.Getenv/os.LookupEnv calls, which touch none of the
-			// three); if one ever does, add them here with marks, the
-			// same shape as the lines above.
+			// badKeyPaths entry refuses, a stale syncUsed entry adds an
+			// unreferenced method-set row — never a changed answer for
+			// emitted code. importedNamed WAS on this list with the same
+			// "never a changed answer" claim; that claim was FALSE (a
+			// stale `reflect.Value` entry turned one stubbed body into a
+			// whole-export kill through the D5 stub pass — see
+			// monoLogImportedNamed in mono.go, lane fr24 2026-09-04) and
+			// it now rides the mono journal, rolled back by rollbackMono
+			// above. If a case ever reaches the remaining two, journal
+			// them the same way.
 			if err == nil {
 				continue
 			}
@@ -1085,7 +1109,10 @@ func (e *emitter) quarantineUnlowerableGlobals() error {
 			// quarantined; this keeps that per-declaration shape.
 			for _, v := range ini.Lhs {
 				if v.Name() != "_" {
-					e.quarantinedGlobals[v] = uerr.what
+					if p, already := e.quarantinedGlobals[v]; already && p.typeName != "" {
+						continue // FR-24 type poison stands; the initializer is skipped below
+					}
+					e.poisonGlobal(v, globalPoison{cause: uerr.what})
 				}
 			}
 			e.quarantinedInits[ini.Rhs] = true
@@ -1100,6 +1127,25 @@ func (e *emitter) quarantineUnlowerableGlobals() error {
 // like $pkginit / $recv / $stub; the TypeDef is the empty struct — the
 // most contentless seedable value.
 const poisonedCellTypeId = "$poisoned"
+
+// globalPoison is WHY a package-level var's cell is poisoned: an H-11
+// initializer skip (cause = the initializer's refusal; typeName empty) or,
+// since FR-24 (2026-09-04), an unlowerable TYPE (cause = emitType's
+// refusal, typeName = the Go type as go/types spells it). globalAddr
+// renders the two differently — a reader must learn which it hit.
+type globalPoison struct {
+	cause    string
+	typeName string
+}
+
+// poisonGlobal arms the globalAddr poison for v (the single writer of
+// quarantinedGlobals; collectGlobals and the dry-run pre-pass both use it).
+func (e *emitter) poisonGlobal(v *types.Var, p globalPoison) {
+	if e.quarantinedGlobals == nil {
+		e.quarantinedGlobals = map[*types.Var]globalPoison{}
+	}
+	e.quarantinedGlobals[v] = p
+}
 
 // poisonGlobalCells rewrites the globals table entry of every quarantined
 // var to the `$poisoned` placeholder type and returns the placeholder's
@@ -1586,9 +1632,13 @@ func checkInitQuarantine(funcs, methods []any) error {
 // init() body) it refuses the whole export, or cascades the
 // quarantine when the referencing initializer is itself eligible.
 func (e *emitter) globalAddr(v *types.Var) (any, bool, error) {
-	if reason, bad := e.quarantinedGlobals[v]; bad {
+	if p, bad := e.quarantinedGlobals[v]; bad {
+		if p.typeName != "" {
+			return nil, false, unsup("package-level var %s: type %s does not lower (%s) — FR-24 poison: the cell is the reserved `$poisoned` placeholder and every reference (read, write, method call, address-of) refuses by name; use refused",
+				e.globalWireName(v), p.typeName, p.cause)
+		}
 		return nil, false, unsup("package-level var %s: its initializer does not lower (%s) — H-11 poison: the cell is seeded as the `$poisoned` placeholder and every reference (read, write, address-of) refuses by name; reference refused",
-			e.globalWireName(v), reason)
+			e.globalWireName(v), p.cause)
 	}
 	gid, ok := e.globalVars[v]
 	if !ok {

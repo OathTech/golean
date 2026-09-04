@@ -1,0 +1,48 @@
+UNSUP-TRACE basic type complex128
+goroutine 1 [running]:
+runtime/debug.Stack()
+	/usr/local/go/src/runtime/debug/stack.go:26 +0x5e
+main.unsup({0x787ab4, 0xd}, {0x1a4e04e146d0, 0x1, 0x1})
+	<proto>/tools/nativefrontend/wire.go:393 +0x105
+main.(*emitter).emitBasic(0x467901?, 0x1a4e04e14720?)
+	<proto>/tools/nativefrontend/wire.go:655 +0xcb9
+main.(*emitter).emitType(0x1a4e03ef6b08, {0x7b8bc0?, 0x9eab00?})
+	<proto>/tools/nativefrontend/wire.go:414 +0x154a
+main.(*emitter).emitResults(0x1a4e03ef6b08, 0x1a4e04ad45e8)
+	<proto>/tools/nativefrontend/emit.go:2712 +0xd4
+main.(*emitter).importedMethodStubs(0x1a4e03ef6b08, {0x1a4e055cc250, 0xd}, 0x1a4e04698000)
+	<proto>/tools/nativefrontend/emit.go:6000 +0x32a
+main.(*emitter).importedTypeDecls(0x1a4e03ef6b08)
+	<proto>/tools/nativefrontend/emit.go:5941 +0x5a5
+main.(*emitter).emitProgram(0x1a4e03ef6b08, {0x1a4e03dbc1a8?, 0x1a4e04c20840?, 0x1a4e03dbc1a8?})
+	<proto>/tools/nativefrontend/emit.go:458 +0x27e5
+main.run()
+	<proto>/tools/nativefrontend/main.go:168 +0xba7
+main.main()
+	<proto>/tools/nativefrontend/main.go:21 +0x13
+
+UNSUP-TRACE basic type complex128
+goroutine 1 [running]:
+runtime/debug.Stack()
+	/usr/local/go/src/runtime/debug/stack.go:26 +0x5e
+main.unsup({0x787ab4, 0xd}, {0x1a4e04e14940, 0x1, 0x1})
+	<proto>/tools/nativefrontend/wire.go:393 +0x105
+main.(*emitter).emitBasic(0x1a4e03ef6b08?, 0x1a4e04699000?)
+	<proto>/tools/nativefrontend/wire.go:655 +0xcb9
+main.(*emitter).emitType(0x1a4e03ef6b08, {0x7b8bc0?, 0x9eab00?})
+	<proto>/tools/nativefrontend/wire.go:414 +0x154a
+main.(*emitter).emitTupleTypes(0x1a4e03ef6b08, 0x1a4e04ad51e8)
+	<proto>/tools/nativefrontend/emit.go:1732 +0xbe
+main.(*emitter).emitProgram.func1()
+	<proto>/tools/nativefrontend/emit.go:576 +0x3f
+main.(*emitter).withOpaqueSigs(0x1a4e03ef6b08, 0x1a4e04e15bd0)
+	<proto>/tools/nativefrontend/emit.go:1963 +0x143
+main.(*emitter).emitProgram(0x1a4e03ef6b08, {0x1a4e03dbc1a8?, 0x1a4e04c20840?, 0x1a4e03dbc1a8?})
+	<proto>/tools/nativefrontend/emit.go:574 +0x3448
+main.run()
+	<proto>/tools/nativefrontend/main.go:168 +0xba7
+main.main()
+	<proto>/tools/nativefrontend/main.go:21 +0x13
+
+nativefrontend: native frontend unsupported: basic type complex128
+exit status 1

@@ -1,0 +1,5 @@
+# DIAGNOSTIC — NOT A LOWERING (scripts/lower-diagnose; this file is a record of the frontend's stderr / probe classification, not a gate input)
+# frontend exit status: 1
+nativefrontend: native frontend unsupported: package-level var encoding/binary.structSize: its TYPE does not lower (sync.Map (only Mutex/RWMutex/WaitGroup/Once are modeled)) — FR-24: a reached var of an unlowerable type refuses the whole export (per-declaration `$poisoned` cell + reader quarantine is the queued remedy, ledger FR-24)
+for the full blocker picture run scripts/lower-diagnose artifacts/cedar/cases/all
+exit status 1

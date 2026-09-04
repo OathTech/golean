@@ -1,0 +1,650 @@
+{
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "elem": {
+       "kind": "string"
+      },
+      "elems": [
+       {
+        "index": 0,
+        "value": {
+         "expr": "ident",
+         "name": "s",
+         "type": {
+          "kind": "string"
+         }
+        }
+       }
+      ],
+      "length": 1,
+      "stmt": "slice-lit",
+      "target": {
+       "id": "$c0",
+       "target": "declare",
+       "type": {
+        "elem": {
+         "kind": "string"
+        },
+        "kind": "slice"
+       }
+      }
+     },
+     {
+      "elem": {
+       "kind": "string"
+      },
+      "elems": {
+       "expr": "ident",
+       "name": "$c0",
+       "type": {
+        "elem": {
+         "kind": "string"
+        },
+        "kind": "slice"
+       }
+      },
+      "slice": {
+       "expr": "deref",
+       "ptr": {
+        "expr": "globaladdr",
+        "gid": 0
+       },
+       "type": {
+        "elem": {
+         "kind": "string"
+        },
+        "kind": "slice"
+       }
+      },
+      "stmt": "append",
+      "target": {
+       "id": "$c1",
+       "target": "declare",
+       "type": {
+        "elem": {
+         "kind": "string"
+        },
+        "kind": "slice"
+       }
+      }
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "expr": "globaladdr",
+         "gid": 0
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "$c1",
+        "type": {
+         "elem": {
+          "kind": "string"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "builtin-len",
+        "operand": {
+         "expr": "deref",
+         "ptr": {
+          "expr": "globaladdr",
+          "gid": 0
+         },
+         "type": {
+          "elem": {
+           "kind": "string"
+          },
+          "kind": "slice"
+         }
+        },
+        "operandType": {
+         "elem": {
+          "kind": "string"
+         },
+         "kind": "slice"
+        },
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "note",
+   "params": [
+    {
+     "id": "s",
+     "type": {
+      "kind": "string"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "binary",
+         "op": "*",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "deref",
+          "ptr": {
+           "expr": "globaladdr",
+           "gid": 1
+          },
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "y": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "10"
+         }
+        },
+        "y": {
+         "expr": "deref",
+         "ptr": {
+          "expr": "globaladdr",
+          "gid": 3
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "unused",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "cond": {
+       "expr": "binary",
+       "op": "||",
+       "type": {
+        "kind": "bool"
+       },
+       "x": {
+        "expr": "binary",
+        "op": "||",
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "expr": "binary",
+         "op": "!=",
+         "operandType": {
+          "int": "int",
+          "kind": "int"
+         },
+         "type": {
+          "kind": "bool"
+         },
+         "x": {
+          "expr": "builtin-len",
+          "operand": {
+           "expr": "deref",
+           "ptr": {
+            "expr": "globaladdr",
+            "gid": 0
+           },
+           "type": {
+            "elem": {
+             "kind": "string"
+            },
+            "kind": "slice"
+           }
+          },
+          "operandType": {
+           "elem": {
+            "kind": "string"
+           },
+           "kind": "slice"
+          },
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "y": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "2"
+         }
+        },
+        "y": {
+         "expr": "binary",
+         "op": "!=",
+         "operandType": {
+          "kind": "string"
+         },
+         "type": {
+          "kind": "bool"
+         },
+         "x": {
+          "base": {
+           "expr": "deref",
+           "ptr": {
+            "expr": "globaladdr",
+            "gid": 0
+           },
+           "type": {
+            "elem": {
+             "kind": "string"
+            },
+            "kind": "slice"
+           }
+          },
+          "expr": "index-get",
+          "index": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "0"
+          },
+          "type": {
+           "kind": "string"
+          }
+         },
+         "y": {
+          "bytes": [
+           97
+          ],
+          "expr": "string",
+          "type": {
+           "kind": "string"
+          }
+         }
+        }
+       },
+       "y": {
+        "expr": "binary",
+        "op": "!=",
+        "operandType": {
+         "kind": "string"
+        },
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "base": {
+          "expr": "deref",
+          "ptr": {
+           "expr": "globaladdr",
+           "gid": 0
+          },
+          "type": {
+           "elem": {
+            "kind": "string"
+           },
+           "kind": "slice"
+          }
+         },
+         "expr": "index-get",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "1"
+         },
+         "type": {
+          "kind": "string"
+         }
+        },
+        "y": {
+         "bytes": [
+          98
+         ],
+         "expr": "string",
+         "type": {
+          "kind": "string"
+         }
+        }
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "results": [
+          {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "-1"
+          }
+         ],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "builtin-len",
+        "operand": {
+         "expr": "deref",
+         "ptr": {
+          "expr": "globaladdr",
+          "gid": 0
+         },
+         "type": {
+          "elem": {
+           "kind": "string"
+          },
+          "kind": "slice"
+         }
+        },
+        "operandType": {
+         "elem": {
+          "kind": "string"
+         },
+         "kind": "slice"
+        },
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "orderKept",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "arity": 0,
+   "name": "used",
+   "unsupported": "package-level var cache: type sync.Map does not lower (sync.Map (only Mutex/RWMutex/WaitGroup/Once are modeled)) — FR-24 poison: the cell is the reserved `$poisoned` placeholder and every reference (read, write, method call, address-of) refuses by name; use refused"
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "!=",
+        "operandType": {
+         "kind": "interface",
+         "name": "any"
+        },
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "p",
+         "type": {
+          "kind": "interface",
+          "name": "any"
+         }
+        },
+        "y": {
+         "expr": "nil"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "keep",
+   "params": [
+    {
+     "id": "p",
+     "type": {
+      "kind": "interface",
+      "name": "any"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "arity": 0,
+   "name": "addrOf",
+   "unsupported": "package-level var cache: type sync.Map does not lower (sync.Map (only Mutex/RWMutex/WaitGroup/Once are modeled)) — FR-24 poison: the cell is the reserved `$poisoned` placeholder and every reference (read, write, method call, address-of) refuses by name; use refused"
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "expr": "globaladdr",
+         "gid": 1
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "bytes": [
+           97
+          ],
+          "expr": "string",
+          "type": {
+           "kind": "string"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "note",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "expr": "globaladdr",
+         "gid": 3
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "bytes": [
+           98
+          ],
+          "expr": "string",
+          "type": {
+           "kind": "string"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "note",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "$pkginit",
+   "params": [],
+   "results": [],
+   "variadic": false
+  }
+ ],
+ "globals": [
+  {
+   "name": "seq",
+   "type": {
+    "elem": {
+     "kind": "string"
+    },
+    "kind": "slice"
+   }
+  },
+  {
+   "name": "a",
+   "type": {
+    "int": "int",
+    "kind": "int"
+   }
+  },
+  {
+   "name": "cache",
+   "type": {
+    "kind": "named",
+    "name": "$poisoned"
+   }
+  },
+  {
+   "name": "b",
+   "type": {
+    "int": "int",
+    "kind": "int"
+   }
+  }
+ ],
+ "methodSets": [
+  {
+   "coverage": "full",
+   "type": "$poisoned"
+  }
+ ],
+ "methods": [],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": [
+  {
+   "def": {
+    "fields": [],
+    "kind": "struct"
+   },
+   "name": "$poisoned"
+  }
+ ]
+}

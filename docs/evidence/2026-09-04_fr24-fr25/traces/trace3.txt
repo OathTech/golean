@@ -1,0 +1,145 @@
+QUARANTINED bytes.Buffer.Peek: bytes.Buffer.Peek: stdlib-qualified selector io.EOF in value position: only allowlisted DIRECT CALLS of modeled stdlib m
+QUARANTINED bytes.Buffer.ReadFrom: bytes.Buffer.ReadFrom: stdlib-qualified selector io.EOF in value position: only allowlisted DIRECT CALLS of modeled stdl
+QUARANTINED bytes.Buffer.WriteTo: bytes.Buffer.WriteTo: stdlib-qualified selector io.ErrShortWrite in value position: only allowlisted DIRECT CALLS of mod
+QUARANTINED bytes.Buffer.Read: bytes.Buffer.Read: stdlib-qualified selector io.EOF in value position: only allowlisted DIRECT CALLS of modeled stdlib m
+QUARANTINED bytes.Buffer.ReadByte: bytes.Buffer.ReadByte: stdlib-qualified selector io.EOF in value position: only allowlisted DIRECT CALLS of modeled stdl
+QUARANTINED bytes.Buffer.ReadRune: bytes.Buffer.ReadRune: stdlib-qualified selector io.EOF in value position: only allowlisted DIRECT CALLS of modeled stdl
+QUARANTINED bytes.Buffer.readSlice: bytes.Buffer.readSlice: stdlib-qualified selector io.EOF in value position: only allowlisted DIRECT CALLS of modeled std
+NAMED-TRACE reflect.Value in encoding/binary.Write opaque=false
+goroutine 1 [running]:
+runtime/debug.Stack()
+	/usr/local/go/src/runtime/debug/stack.go:26 +0x5e
+main.(*emitter).emitType(0x31fc39a1ab08, {0x7b8d30?, 0x31fc39efb900?})
+	<proto>/tools/nativefrontend/wire.go:504 +0x845
+main.(*emitter).emitAssignTarget(0x31fc39a1ab08, {0x7b9b78, 0x31fc3a501ea0?}, 0x60?)
+	<proto>/tools/nativefrontend/emit.go:3602 +0x265
+main.(*emitter).emitAssign(0x31fc39a1ab08, 0x31fc3a507bc0)
+	<proto>/tools/nativefrontend/emit.go:3422 +0xe05
+main.(*emitter).emitStmt(0x31fc39a1ab08, {0x7b9e18?, 0x31fc3a507bc0})
+	<proto>/tools/nativefrontend/emit.go:2852 +0x266
+main.(*emitter).emitStmtList(0x31fc39a1ab08, {0x31fc3a50c200?, 0x9, 0x7b7ca8?})
+	<proto>/tools/nativefrontend/emit.go:2766 +0x185
+main.(*emitter).emitBlock(0x31fc3a505080?, 0x31fc3b0571a0?)
+	<proto>/tools/nativefrontend/emit.go:2747 +0x26
+main.(*emitter).emitFuncDecl(0x31fc39a1ab08, 0x31fc3a5050b0)
+	<proto>/tools/nativefrontend/emit.go:2144 +0x97f
+main.(*emitter).emitProgram(0x31fc39a1ab08, {0x31fc39982188?, 0x31fc3a8fe840?, 0x31fc39982188?})
+	<proto>/tools/nativefrontend/emit.go:232 +0xfb7
+main.run()
+	<proto>/tools/nativefrontend/main.go:168 +0xba7
+main.main()
+	<proto>/tools/nativefrontend/main.go:21 +0x13
+
+QUARANTINED encoding/binary.Write: encoding/binary.Write: package-selector call reflect.Indirect (package "reflect" surface not modeled)
+QUARANTINED encoding/binary.encodeFast: encoding/binary.encodeFast: package-selector call math.Float64bits (package "math" surface not modeled)
+NAMED-TRACE reflect.Value in encoding/binary.dataSize opaque=false
+goroutine 1 [running]:
+runtime/debug.Stack()
+	/usr/local/go/src/runtime/debug/stack.go:26 +0x5e
+main.(*emitter).emitType(0x31fc39a1ab08, {0x7b8d30?, 0x31fc39efb900?})
+	<proto>/tools/nativefrontend/wire.go:504 +0x845
+main.(*emitter).emitParams(0x31fc39a1ab08, 0x31fc3a558c00)
+	<proto>/tools/nativefrontend/emit.go:2704 +0xc8
+main.(*emitter).emitFuncDecl(0x31fc39a1ab08, 0x31fc3a523b30)
+	<proto>/tools/nativefrontend/emit.go:2070 +0x127
+main.(*emitter).emitProgram(0x31fc39a1ab08, {0x31fc39982188?, 0x31fc3a8fe840?, 0x31fc39982188?})
+	<proto>/tools/nativefrontend/emit.go:232 +0xfb7
+main.run()
+	<proto>/tools/nativefrontend/main.go:168 +0xba7
+main.main()
+	<proto>/tools/nativefrontend/main.go:21 +0x13
+
+IFACE-TRACE reflect.Type in encoding/binary.dataSize opaque=false
+goroutine 1 [running]:
+runtime/debug.Stack()
+	/usr/local/go/src/runtime/debug/stack.go:26 +0x5e
+main.(*emitter).noteInterface(0x31fc39a1ab08, {0x31fc3ab3c5c0, 0xc}, 0x31fc39f55860?)
+	<proto>/tools/nativefrontend/wire.go:340 +0x1b6
+main.(*emitter).emitType(0x31fc39a1ab08, {0x7b8d30?, 0x31fc3a412f80?})
+	<proto>/tools/nativefrontend/wire.go:483 +0x51d
+main.(*emitter).emitAssignTarget(0x31fc39a1ab08, {0x7b9b78, 0x31fc3a52d1e0?}, 0x0?)
+	<proto>/tools/nativefrontend/emit.go:3602 +0x265
+main.(*emitter).emitAssign(0x31fc39a1ab08, 0x31fc3a5279c0)
+	<proto>/tools/nativefrontend/emit.go:3422 +0xe05
+main.(*emitter).emitStmt(0x31fc39a1ab08, {0x7b9e18?, 0x31fc3a5279c0})
+	<proto>/tools/nativefrontend/emit.go:2852 +0x266
+main.(*emitter).emitStmtList(0x31fc39a1ab08, {0x31fc3a527b80?, 0x4, 0x4?})
+	<proto>/tools/nativefrontend/emit.go:2766 +0x185
+main.(*emitter).emitSwitch(0x31fc39a1ab08, 0x31fc3a523aa0)
+	<proto>/tools/nativefrontend/emit.go:4956 +0x438
+main.(*emitter).emitStmt(0x31fc39a1ab08, {0x7ba1d8?, 0x31fc3a523aa0})
+	<proto>/tools/nativefrontend/emit.go:2983 +0x245
+main.(*emitter).emitStmtList(0x31fc39a1ab08, {0x31fc3a52daa0?, 0x2, 0x7b7ca8?})
+	<proto>/tools/nativefrontend/emit.go:2766 +0x185
+main.(*emitter).emitBlock(0x31fc3a523b00?, 0x31fc3b064bd0?)
+	<proto>/tools/nativefrontend/emit.go:2747 +0x26
+main.(*emitter).emitFuncDecl(0x31fc39a1ab08, 0x31fc3a523b30)
+	<proto>/tools/nativefrontend/emit.go:2144 +0x97f
+main.(*emitter).emitProgram(0x31fc39a1ab08, {0x31fc39982188?, 0x31fc3a8fe840?, 0x31fc39982188?})
+	<proto>/tools/nativefrontend/emit.go:232 +0xfb7
+main.run()
+	<proto>/tools/nativefrontend/main.go:168 +0xba7
+main.main()
+	<proto>/tools/nativefrontend/main.go:21 +0x13
+
+QUARANTINED encoding/binary.dataSize: encoding/binary.dataSize: package-level var encoding/binary.structSize: type sync.Map does not lower (sync.Map (only Mut
+IFACE-TRACE reflect.Type in encoding/binary.sizeof opaque=false
+goroutine 1 [running]:
+runtime/debug.Stack()
+	/usr/local/go/src/runtime/debug/stack.go:26 +0x5e
+main.(*emitter).noteInterface(0x31fc39a1ab08, {0x31fc3ab3c850, 0xc}, 0x31fc3a527900?)
+	<proto>/tools/nativefrontend/wire.go:340 +0x1b6
+main.(*emitter).emitType(0x31fc39a1ab08, {0x7b8d30?, 0x31fc3a412f80?})
+	<proto>/tools/nativefrontend/wire.go:483 +0x51d
+main.(*emitter).emitParams(0x31fc39a1ab08, 0x31fc3a558c30)
+	<proto>/tools/nativefrontend/emit.go:2704 +0xc8
+main.(*emitter).emitFuncDecl(0x31fc39a1ab08, 0x31fc3a523ec0)
+	<proto>/tools/nativefrontend/emit.go:2070 +0x127
+main.(*emitter).emitProgram(0x31fc39a1ab08, {0x31fc39982188?, 0x31fc3a8fe840?, 0x31fc39982188?})
+	<proto>/tools/nativefrontend/emit.go:232 +0xfb7
+main.run()
+	<proto>/tools/nativefrontend/main.go:168 +0xba7
+main.main()
+	<proto>/tools/nativefrontend/main.go:21 +0x13
+
+NAMED-TRACE reflect.Value in encoding/binary.encoder.value opaque=false
+goroutine 1 [running]:
+runtime/debug.Stack()
+	/usr/local/go/src/runtime/debug/stack.go:26 +0x5e
+main.(*emitter).emitType(0x31fc39a1ab08, {0x7b8d30?, 0x31fc39efb900?})
+	<proto>/tools/nativefrontend/wire.go:504 +0x845
+main.(*emitter).emitParams(0x31fc39a1ab08, 0x31fc3a558e28)
+	<proto>/tools/nativefrontend/emit.go:2704 +0xc8
+main.(*emitter).emitFuncDecl(0x31fc39a1ab08, 0x31fc3a4880c0)
+	<proto>/tools/nativefrontend/emit.go:2070 +0x127
+main.(*emitter).emitProgram(0x31fc39a1ab08, {0x31fc39982188?, 0x31fc3a8fe840?, 0x31fc39982188?})
+	<proto>/tools/nativefrontend/emit.go:232 +0xfb7
+main.run()
+	<proto>/tools/nativefrontend/main.go:168 +0xba7
+main.main()
+	<proto>/tools/nativefrontend/main.go:21 +0x13
+
+QUARANTINED encoding/binary.encoder.value: encoding/binary.encoder.value: self-shadowing define with call RHS
+NAMED-TRACE reflect.Value in encoding/binary.encoder.value opaque=true
+goroutine 1 [running]:
+runtime/debug.Stack()
+	/usr/local/go/src/runtime/debug/stack.go:26 +0x5e
+main.(*emitter).emitType(0x31fc39a1ab08, {0x7b8d30?, 0x31fc39efb900?})
+	<proto>/tools/nativefrontend/wire.go:504 +0x845
+main.(*emitter).emitParams(0x31fc39a1ab08, 0x31fc3a558e28)
+	<proto>/tools/nativefrontend/emit.go:2704 +0xc8
+main.(*emitter).quarantinedMethodStub.func2()
+	<proto>/tools/nativefrontend/emit.go:1933 +0x92
+main.(*emitter).withOpaqueSigs(0x31fc39a1ab08, 0x31fc3a9acd50)
+	<proto>/tools/nativefrontend/emit.go:1970 +0x143
+main.(*emitter).quarantinedMethodStub(0x31fc39a1ab08, 0x31fc3a4880c0, {{0x31fc3a4175e0?, 0xd?}})
+	<proto>/tools/nativefrontend/emit.go:1928 +0x232
+main.(*emitter).emitProgram(0x31fc39a1ab08, {0x31fc39982188?, 0x31fc3a8fe840?, 0x31fc39982188?})
+	<proto>/tools/nativefrontend/emit.go:274 +0x5bb9
+main.run()
+	<proto>/tools/nativefrontend/main.go:168 +0xba7
+main.main()
+	<proto>/tools/nativefrontend/main.go:21 +0x13
+
+nativefrontend: native frontend unsupported: basic type complex128
+exit status 1

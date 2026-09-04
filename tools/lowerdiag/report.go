@@ -510,7 +510,7 @@ func buildReport(p *program, target, commit, goVersion, registerPath string, fro
 			case c != nil:
 				fr.Note = "the static census has no declaration with this key or cause: the refusal is at a site the static pass does not judge (library text, an emitter-table detail such as fmt's verb matrix, a stencil, or a load-time shape)"
 				if isTypeShapedCause(c.ID) && !strings.Contains(key, "(") {
-					fr.Note += " — a bare TYPE key with no user declaration carrying it is FR-24's shape: a package-level VARIABLE of a reached source-through library unit whose type does not lower kills the whole export at collectGlobals (cedar-go: encoding/binary.Write -> structSize sync.Map; the refusal text does not name the variable — a message gap recorded in docs/2026-09-04_lower-diagnose.md); cause global-type-unlowerable, " + causesByID["global-type-unlowerable"].Status
+					fr.Note += " — a bare TYPE key with no user declaration carrying it is a LIBRARY-side site: since lane fr24 (2026-09-04) a package-level VARIABLE whose type does not lower is POISONED per declaration (FR-24, cause global-type-unlowerable/global-type-poisoned — no longer a whole-export kill), so a bare type refusal here is the type reaching a signature or body the static pass cannot see (a library declaration, a D5 stub signature, an interface requirement list); the frontend names the site in its text"
 				}
 			}
 			r.First = fr

@@ -575,8 +575,10 @@ func (a *analyzer) genDecl(gd *ast.GenDecl, enclosing *declReport) {
 				}
 				d = a.newDecl(kind, strings.Join(names, ","), sp)
 			}
-			// The variable's TYPE (package level: an unlowerable type kills
-			// the export at collectGlobals — FR-24's shape).
+			// The variable's TYPE (package level: since lane fr24, 2026-09-04,
+			// an unlowerable type POISONS the var per declaration at
+			// collectGlobals — FR-24's shape, decl-scoped; the readers
+			// quarantine by name).
 			for _, n := range sp.Names {
 				if obj := a.info.Defs[n]; obj != nil {
 					if enclosing == nil && gd.Tok == token.VAR {
@@ -585,8 +587,7 @@ func (a *analyzer) genDecl(gd *ast.GenDecl, enclosing *declReport) {
 					fs := a.typeFindings(obj.Type(), sp, d)
 					for _, f := range fs {
 						if enclosing == nil && gd.Tok == token.VAR {
-							f.Export = true
-							d.add(finding{Cause: mustCause("global-type-unlowerable"), Key: n.Name + " " + typeStr(obj.Type()), Pos: f.Pos, Certain: f.Certain, Export: true})
+							d.add(finding{Cause: mustCause("global-type-unlowerable"), Key: n.Name + " " + typeStr(obj.Type()), Pos: f.Pos, Certain: f.Certain})
 						}
 						d.add(f)
 					}

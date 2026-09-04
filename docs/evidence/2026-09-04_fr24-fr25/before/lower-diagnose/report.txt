@@ -1,0 +1,133 @@
+DIAGNOSTIC — NOT A LOWERING. tools/lowerdiag report: no wire is written; nothing in this file is a gate input.
+target: artifacts/cedar/cases/all
+commit: aceb0dcb70369fc86208034bb2c871cd695ef666   go: go1.26.5   tables: 321b2c7d2c9d (causes.tsv + machine-surface.tsv + library-refusals.tsv)
+register: docs/stdlib-admission-register.md (45 rows)   causes table: 52 rows
+
+== first refusal (what the frontend says today)
+  nativefrontend: native frontend unsupported: package-level var encoding/binary.structSize: its TYPE does not lower (sync.Map (only Mutex/RWMutex/WaitGroup/Once are modeled)) — FR-24: a reached var of an unlowerable type refuses the whole export (per-declaration `$poisoned` cell + reader quarantine is the queued remedy, ledger FR-24)
+  -> cause sync-unmodeled [FR-14, decl-scoped] key sync.Map
+  note: the static census has no declaration with this key or cause: the refusal is at a site the static pass does not judge (library text, an emitter-table detail such as fmt's verb matrix, a stencil, or a load-time shape) — a bare TYPE key with no user declaration carrying it is FR-24's shape: a package-level VARIABLE of a reached source-through library unit whose type does not lower kills the whole export at collectGlobals (cedar-go: encoding/binary.Write -> structSize sync.Map; the refusal text does not name the variable — a message gap recorded in docs/2026-09-04_lower-diagnose.md); cause global-type-unlowerable, rowed
+
+== distance
+  declarations demanding nothing refused: 1554 / 1671 (93.0%)   funcs+methods: 1012 / 1126 (89.9%)   may-refuse: 1   refused: 116
+  export kills: 11 declaration(s) refuse the WHOLE export of their package today; 21 / 26 package(s) export-killed (own or inherited)
+
+== blockers by cause (sorted by unblock value: sole = declarations this cause alone blocks)
+  cause                      fr               scope  decls  sole pkgs export  top keys
+  stdlib-package-unmodeled   FR-14            decl      64    32   11      0  encoding/json.Marshal×18, encoding/json.Unmarshal×14, maps.Keys×10, maps.Clone×6, hash/fnv.New64×4
+  stdlib-type-method         FR-14            call      19     9    2      0  net/netip.Prefix.Bits×4, encoding/json.Decoder.Decode×3, net/netip.Addr.BitLen×3, net/netip.Prefix.Addr×3, net/netip.Addr.Is4In6×2
+  reflect                    out-of-language  decl      10     7    3      0  errors.Is×6, errors.As×3, encoding/binary.Write×1
+  slices-sort-kind           FR-14            decl      10     6    5      1  slices.Sort@string×5, slices.Sort@types.String×3, slices.Sort@types.EntityType×1, slices.Sort@types.PolicyID×1
+  imported-generic-sig       FR-23            export     8     6    3      8  iter.Seq×5, iter.Seq2×3
+  stdlib-var-unmodeled       FR-14            decl       6     2    2      0  time.UTC×4, io.EOF×2
+  imported-generic-inst      FR-23            decl      36     1   10      0  iter.Seq×31, iter.Seq2×7
+  range-over-func            FR-12            decl      21     0    8      0  iter.Seq[types.Value]×9, iter.Seq[types.EntityUID]×8, iter.Seq2[types.String, types.Value]×3, iter.Seq2[types.PolicyID, *cedar.Policy]×2, iter.Seq[types.Entity]×2
+  anon-struct                FR-13            decl       2     0    1      0  struct{Type types.EntityType "json:\"type\""; ID types.St...×1, struct{UID types.ImplicitlyMarshaledEntityUID "json:\"uid...×1
+  duplicate-typeid           FR-19            export     2     0    1      2  nodeJSONAlias×2
+  self-shadow-define         FR-17            decl       2     0    2      0  n×1, vv×1
+  stdlib-member-unmodeled    FR-14            decl       2     0    2      0  fmt.Fprintln×1, fmt.Println×1
+  quarantine-cascade         cascade          decl       1     0    1      0  cedargo/types.maxDatetime×1, cedargo/types.minDatetime×1
+  stdlib-source-gap          FR-21            decl       1     0    1      0  bytes.Join×1
+
+== top blockers — what each is and where its plan lives
+   1. stdlib-package-unmodeled [FR-14] — 64 decls (32 sole, 11 pkgs): a call into a stdlib package that is neither source-through nor shimmed (register: no row) — FR-14's extern surface; memo §6 slices (source-through admission per package)
+   2. stdlib-type-method [FR-14] — 19 decls (9 sole, 2 pkgs): a method call on an imported named type whose package is not source-through (time.Time.Before, bytes-like models before slice 2) — the D5 stub answers satisfaction, the call refuses; FR-14
+   3. reflect [out-of-language] — 10 decls (7 sole, 3 pkgs): reflect / internal/reflectlite (encoding/json, errors.Is/As): the G6 reflect-subset frontier — outside the modeled language today
+   4. slices-sort-kind [FR-14] — 10 decls (6 sole, 5 pkgs): slices.Sort outside the sortSlice op's integer kinds (register: intercept row) — memo §3 row M retires the op
+   5. imported-generic-sig [FR-23] — 8 decls (6 sole, 3 pkgs): an IMPORTED generic type instantiated in a METHOD signature (iter.Seq[T] results): unstubbable, so the whole export refuses; ledger queue 23 (a func with the same signature quarantines per declaration — arity-only stub)
+   6. stdlib-var-unmodeled [FR-14] — 6 decls (2 sole, 2 pkgs): a read of a package-level VARIABLE of an unmodeled stdlib package (time.UTC, os.Args, io.EOF) — FR-14 (source-through would seed it)
+   7. imported-generic-inst [FR-23] — 36 decls (1 sole, 10 pkgs): an imported generic type instantiated in a BODY (iter.Seq values, maps.Keys results): per-declaration quarantine; rides FR-23's D5 marker plan, then FR-12 for the calls
+   8. range-over-func [FR-12] — 21 decls (0 sole, 8 pkgs): range-over-func iterators (Go 1.23) — frontend desugar + yield/loop-exit protocol; ledger queue 12 (cedar-go's Authorize loop is this)
+   9. anon-struct [FR-13] — 2 decls (0 sole, 1 pkgs): anonymous non-empty struct type as a first-class type (incl. as a type argument) — structural TypeIds; ledger queue 13
+  10. duplicate-typeid [FR-19] — 2 decls (0 sole, 1 pkgs): two function-local `type T` of one name, or a local type shadowing a package type: WHOLE-EXPORT kill (TypeId collision); ledger queue 19
+
+== projection — declarations lowering if the top causes were fixed, cumulatively
+  + stdlib-package-unmodeled   -> 1586 / 1671 lower (+32), 0 export(s) revived
+  + stdlib-type-method         -> 1602 / 1671 lower (+16), 0 export(s) revived
+  + reflect                    -> 1610 / 1671 lower (+8), 0 export(s) revived
+  + slices-sort-kind           -> 1616 / 1671 lower (+6), 1 export(s) revived
+  + imported-generic-sig       -> 1622 / 1671 lower (+6), 4 export(s) revived
+  + stdlib-var-unmodeled       -> 1627 / 1671 lower (+5), 4 export(s) revived
+  + imported-generic-inst      -> 1642 / 1671 lower (+15), 4 export(s) revived
+  + range-over-func            -> 1660 / 1671 lower (+18), 4 export(s) revived
+
+== per package
+  package                                  decls lowers  may-ref  refd   +top3    share  export
+  cedargo/internal/consts                      9      9        0     0       9   100.0%  ok
+  cedargo/internal                             6      6        0     0       6   100.0%  ok
+  cedargo/internal/mapset                     27     21        0     6      23    77.8%  KILLED (own: method ImmutableMapSet.All: imported-generic-sig iter.Seq; method MapSet.All: imported-generic-sig iter.Seq)
+  cedargo/internal/rust                       21     21        0     0      21   100.0%  ok
+  xexp/constraints                             6      6        0     0       6   100.0%  ok
+  cedargo/types                              197    147        0    50     179    74.6%  KILLED (own: method Record.All: imported-generic-sig iter.Seq2; method Record.Keys: imported-generic-sig iter.Seq; method Record.Values: imported-generic-sig iter.Seq; method Set.All: imported-generic-sig iter.Seq)
+  cedargo/internal/extensions                  3      3        0     0       3   100.0%  KILLED (inherited from cedargo/types)
+  cedargo/x/exp/ast                          225    225        0     0     225   100.0%  KILLED (inherited from cedargo/types)
+  cedargo/internal/json                       52     47        0     5      50    90.4%  KILLED (own: method nodeJSON.MarshalJSON: duplicate-typeid nodeJSONAlias; method nodeJSON.UnmarshalJSON: duplicate-typeid nodeJSONAlias)
+  cedargo/internal/parser                    193    190        1     2     190    98.4%  KILLED (inherited from cedargo/types)
+  cedargo/ast                                 98     98        0     0      98   100.0%  KILLED (inherited from cedargo/internal/json)
+  cedargo/internal/eval                      242    232        0    10     236    95.9%  KILLED (inherited from cedargo/types)
+  cedargo                                     84     76        0     8      79    90.5%  KILLED (own: method PolicyMap.All: imported-generic-sig iter.Seq2; method PolicySet.All: imported-generic-sig iter.Seq2)
+  cedargo/x/exp/batch                         25     21        0     4      22    84.0%  KILLED (inherited from cedargo)
+  cedargo/x/exp/dot                            3      1        0     2       1    33.3%  KILLED (inherited from cedargo/types)
+  cedargo/x/exp/eval                          10     10        0     0      10   100.0%  KILLED (inherited from cedargo/types)
+  cedargo/x/exp/schema/ast                    44     44        0     0      44   100.0%  KILLED (inherited from cedargo/types)
+  cedargo/x/exp/schema/internal/json          20     17        0     3      20    85.0%  KILLED (inherited from cedargo/types)
+  cedargo/x/exp/schema/internal/parser        80     75        0     5      75    93.8%  KILLED (own: func init: slices-sort-kind slices.Sort@string)
+  cedargo/x/exp/schema/resolved               45     44        0     1      44    97.8%  KILLED (inherited from cedargo/types)
+  cedargo/x/exp/schema                        10     10        0     0      10   100.0%  KILLED (inherited from cedargo/types)
+  cedargo/x/exp/schema/validate              157    143        0    14     148    91.1%  KILLED (inherited from cedargo/types)
+  cedargo/x/exp/types                         11      8        0     3      10    72.7%  KILLED (inherited from cedargo/types)
+  main                                         1      1        0     0       1   100.0%  KILLED (inherited from cedargo)
+  cedark8s/cmd/schema-formatter                2      1        0     1       1    50.0%  ok
+  cedark8s/internal/schema                   100     98        0     2      99    98.0%  KILLED (inherited from cedargo/types)
+
+== stdlib / imported keys refused (register class = none; top 25)
+  key                                                  cause                      fr       decls  sole pkgs
+  iter.Seq                                             imported-generic-sig       FR-23       35     5    9
+  encoding/json.Marshal                                stdlib-package-unmodeled   FR-14       18    10    6
+  encoding/json.Unmarshal                              stdlib-package-unmodeled   FR-14       14    12    6
+  maps.Keys                                            stdlib-package-unmodeled   FR-14       10     0    3
+  iter.Seq2                                            imported-generic-sig       FR-23        9     3    4
+  maps.Clone                                           stdlib-package-unmodeled   FR-14        6     5    4
+  errors.Is                                            reflect                    out-of-language     6     4    2
+  hash/fnv.New64                                       stdlib-package-unmodeled   FR-14        4     2    1
+  net/netip.Prefix.Bits                                stdlib-type-method         FR-14        4     0    1
+  time.Date                                            stdlib-package-unmodeled   FR-14        4     0    1
+  time.UTC                                             stdlib-var-unmodeled       FR-14        4     0    1
+  errors.As                                            reflect                    out-of-language     3     3    1
+  net/netip.Prefix.Addr                                stdlib-type-method         FR-14        3     1    1
+  encoding/json.Decoder.Decode                         stdlib-type-method         FR-14        3     0    2
+  encoding/json.NewDecoder                             stdlib-package-unmodeled   FR-14        3     0    2
+  maps.Values                                          stdlib-package-unmodeled   FR-14        3     0    1
+  net/netip.Addr.BitLen                                stdlib-type-method         FR-14        3     0    1
+  io.EOF                                               stdlib-var-unmodeled       FR-14        2     2    1
+  math.Pow10                                           stdlib-package-unmodeled   FR-14        2     1    1
+  time.Time.UnixMilli                                  stdlib-type-method         FR-14        2     1    1
+  net/netip.Addr.Is4In6                                stdlib-type-method         FR-14        2     0    1
+  net/netip.Addr.String                                stdlib-type-method         FR-14        2     0    1
+  time.Time.UTC                                        stdlib-type-method         FR-14        2     0    1
+  time.UnixMilli                                       stdlib-package-unmodeled   FR-14        2     0    1
+  maps.Copy                                            stdlib-package-unmodeled   FR-14        1     1    1
+
+== not judged statically (every cause id the static pass never emits; count = declarations in THIS program referencing the surface it covers, - = shape-level)
+  cause                      fr                decls  what
+  labeled-shape              unrowed               -  statement/expression corner shapes the emitter refuses by arm — not modeled statically
+  stencil-whole-export       FR-4                 94  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
+  local-type-type-argument   c-pin                94  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
+  imported-type-marker       by-design           111  declarations touching an imported named type — the D5 marker itself lowers; only its uncalled-method stubs appear quarantined in a wire
+  generic-template           by-design            94  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
+  generics-corner            unrowed              94  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
+  cmp-compare-shape          FR-14                 3  declarations calling cmp.Compare — the kind-dispatch desugar's shape bound is emitter-side
+  init-schedule              unrowed               -  load-time / initialization-schedule shapes — the dynamic pass (first refusal) is the check
+  hidden-dep-init-order      c-pin                 -  load-time / initialization-schedule shapes — the dynamic pass (first refusal) is the check
+  result-shadow              unrowed               -  statement/expression corner shapes the emitter refuses by arm — not modeled statically
+  statement-shape            unrowed               -  statement/expression corner shapes the emitter refuses by arm — not modeled statically
+  expression-shape           unrowed               -  statement/expression corner shapes the emitter refuses by arm — not modeled statically
+  frontend-apparatus         apparatus             -  frontend fail-closed invariants and pin/overlay/register table inconsistencies — properties of the tree, not the program
+  frontend-invariant         unrowed               -  frontend fail-closed invariants and pin/overlay/register table inconsistencies — properties of the tree, not the program
+
+== notes
+  - static = go/types over the program + its local imports; stdlib judged by the register (source-through members count as lowering unless library-refusals.tsv names them — other FR-21 gaps inside library text are invisible here), the machine-owned surface table and library-refusals.tsv; the measured direction is UNDER-approximation: what fires is exact, what is not judged is listed above per run
+  - may-refuse = shape-dependent (goto hoisting shapes, non-reserved build tags); the distance line counts only certain refusals
+  - export scope = the frontend refuses the WHOLE package export today (H-11 initializer kill, an init() body, unstubbable method signature, global type, duplicate local TypeId); dependents inherit through the import graph; CALL scope (stdlib-type-method; library-refusals.tsv members such as errors.Is) = the declaration LOWERS (the wire does not quarantine it) and the CALL refuses when reached — the imported type's D5 stub or the library function's own quarantine; the distance line counts these as refused demands, the calibration against a wire does not
+  - main.main is not a census declaration: the frontend never emits it (emit.go emitProgram; drivers run named entry functions), so its body cannot block a lowering
+  - not visible statically: fmt's verb×kind matrix, mono.go's stencil-time refusals, per-call-site frontend invariants — the dynamic pass (first refusal) is the check
