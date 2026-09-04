@@ -323,4 +323,50 @@ scripts/capped scripts/ci --diff                                          # the 
 
 ## Gate result (rule 6)
 
-Appended after the runs (below).
+- `scripts/capped scripts/ci --diff` on the slice tree at checkpoint
+  `9fc4a4b7` (+ this README, uncommitted; `gate-tail-diff.txt`): every
+  step ok except the expected `baseline diff (DRIFT)` and, downstream of
+  it, `bug-index cross-check` (BUG-089 marked fixed while the OLD pin still
+  said its rows FAIL) — drift = EXACTLY the 12 FAIL→PASS flips and the 63
+  born rows listed in the re-pin header; 3323 rows run; re-pin guard
+  0 PASS→non-PASS.
+- `baselines/native-full.tsv` re-pinned from that run with the written
+  reason (its header): 3323 rows, `# cases: 3323 (3130 PASS / 193 FAIL)`
+  after the born row `frontier/slices-overlaps` was reshaped onto
+  Insert's in-place path (header AMENDED note). A second full `ci --diff`
+  at `4176f7f1` then PASSED every step except the guard-stage-alt lane's
+  new alternation-survival check (`channels/select-select/beside-loop`'s
+  `lean-observation|differential` alternation and its `# reason:` block
+  had been flattened by the id-sorted regeneration); the data section
+  was rebuilt in manifest order with the alternation and block kept
+  (`check-alternation-survival git:HEAD~1:… …` → exit 0), commit `f3ae90d7`.
+- **Final clean-tip gate: `scripts/capped scripts/ci --diff` at `f3ae90d7`
+  (clean tree): RESULT: PASS** (`gate-tail-final.txt`) — baseline diff
+  FULL 3323/3323 no regression; re-pin guard 0 PASS→non-PASS, 12
+  non-PASS→PASS covered by the header; all three frontend pins ok
+  (deviation `hidden-dep-order` unmoved, twin `6a9ef8bb…`, stdlib-pin 61
+  files); spec-anchors ok (723 spec# + 235 mem# + 26 godoc:);
+  check-stdlib-register ok (source-through 13, substitution 5, overlay
+  5/12, overlay-import 5, primitive 0/2, shim 7, shadow-type 5) AND the
+  overlay table verified at the pin (5 expr + 5 import rows); check-bugs
+  ok (BUG-089 fixed, its nine Cases green; `repeat-bound-refused` triaged
+  `coverage`, ceiling 10 → 11); frontend unit tests ok (incl. the
+  overlay red-first tests); eval tests 148 ok; reconciler 3 findings /
+  **0 HIGH** (the three pre-existing MEDIUMs: C13 historical version
+  sites, C5 FR-7's `=` citation, C9 wire-schema commits since the
+  certified set).
+- Conclusion (one paragraph): with ONE pure-Go expression substituted for
+  ONE unsafe expression at five named, byte-checked sites — and nothing
+  else hand-written — the machine executing the pinned GOROOT bodies of
+  `strings.Builder`, `strings.Join/Repeat`, `errors.New/Join`,
+  `bytes.Equal/Buffer`, `slices.SortFunc`, `binary.LittleEndian.*` and
+  the `strconv` Parse* error paths agrees with `go run` on every row the
+  retired shims and shadow models had, on the 60 new documented-edge rows
+  (incl. 4 membership rows placing gc's `Builder.Cap` inside the R2
+  envelope and a 3,000-operation Builder fuzz), and BUG-089's nine
+  [USER]-directed reds are green with the real `*strconv.NumError`. Open
+  and posed, not decided here: the float-bits PRIMITIVE admission (4
+  sites, `FormatFloat/ParseFloat` red), the `cmp.Compare` desugar
+  retirement (blocked by mono.go's function-local-type naming rule), and
+  the interpreter's O(cap) in-place `append` (Finding 2), which bounds
+  every Builder/Buffer row at ~1 KB and sized the fuzz.
