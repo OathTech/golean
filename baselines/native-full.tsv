@@ -1,4 +1,18 @@
 # GoLean native-frontend full-corpus differential baseline
+# re-pinned: 2026-09-04 (ROUND-9 MERGE TRAIN — [AGENT], under the [USER] merge sign-off
+#   «go ahead and merge» 2026-09-04 naming bug087-paniktext -> q-trylock -> cedar-census in
+#   that order): q-trylock (as amended at its audit fix round F1-F6, next entry) REBASED
+#   onto main 312a4458 = 221d8964 + bug087-paniktext. The rows are the UNION of the two
+#   lanes' pins — disjoint row sets, no row moved in the replay: bug087-paniktext's 3264
+#   (3065 PASS / 199 FAIL) + this slice's 18 born-PASS rows + its 2 FAIL->PASS flips
+#   (sync/out-of-scope-trylock/trylock-uncontended, sync/promoted-mutex/trylock-expr).
+#   NO PASS->non-PASS flips. FULL ci --diff at the rebased clean tip 3345b356: PASS,
+#   3282/3282 no regression; drift vs main 312a4458 = exactly the 20 rows above
+#   (docs/evidence/2026-09-03_q-trylock/round9-gate-tail.txt, round9-drift-vs-main-312a4458.txt);
+#   twin wire f2309df29148... unchanged (bug087 touched no frontend/wire file); choice-trace
+#   over both slices' 29 rows x 6 streams: 0 violations/alarms, tryLock and
+#   nilValueMethodText each draw only on their own lane's rows (round9-choice-trace-summary.txt).
+#   3282 rows; 3085 PASS / 197 FAIL (re-derived from the data rows below).
 # re-pinned: 2026-09-03 (q-trylock lane, as amended at its AUDIT FIX ROUND
 #   F1-F6 and REBASED onto main 221d8964 — Q-TRYLOCK, RULED [USER] 2026-08-31
 #   (docs/2026-08-31_qrow-rulings.md row 5; envelope pre-ruled), own-slice

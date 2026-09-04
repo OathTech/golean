@@ -1,0 +1,43 @@
+choice-trace-corpus: 29 row(s) exported (0 frontend refusals listed in artifacts/choice-trace/export-fail.tsv; 0 row(s) EXCLUDED by --exclude, listed in artifacts/choice-trace/excluded.tsv)
+rows traced: 29 ids, 174 (id,stream) lines; 0 id(s) the tracer could not run (ERROR)
+  by lane: confluent=3, membership=21, racy=2, strict=3
+
+VALIDATOR
+  consumptions checked: 586
+  menu-invariant violations: 0
+  self-check alarms (mirror/accountant, sentinel, pick-record): 0
+  driver-agreement mismatches: 0
+  fuel-out (id,stream) lines: 0
+  consumptions per site (all streams): l1Sched=275, postOp=144, tryLock=101, nilValueMethodText=54, l5ExitWindow=8, backEdge=4
+
+
+# per-row perSite under the default stream (29 rows: this slice's 20 + bug087-paniktext's 9):
+multipkg/nil-value-method-text	nilValueMethodText=1
+noodler/ifaces/global-iface-value-nil	nilValueMethodText=1
+noodler/ifaces/iface-dispatch-value-nil	nilValueMethodText=1
+noodler/ifaces/iface-param-value-nil	nilValueMethodText=1
+noodler/ifaces/mk-helper-value-nil	nilValueMethodText=1
+noodler/ifaces/mv-iface-nil-call	nilValueMethodText=1
+noodler/ifaces/spawn-helper-value-nil	l1Sched=2;nilValueMethodText=1
+noodler/ifaces/spawn-iface-value-nil-devirt	l1Sched=2;nilValueMethodText=1
+noodler/ifaces/spawn-iface-value-nil	l1Sched=2;nilValueMethodText=1
+race/free-sync/rw-trylock-publish	l1Sched=2;postOp=1;tryLock=1
+race/free-sync/rw-tryrlock-acquire	l1Sched=4;postOp=3;tryLock=1
+race/free-sync/trylock-publish	l1Sched=2;postOp=1;tryLock=1
+race/negative-sync/failed-trylock-no-edge	l1Sched=6;postOp=3
+race/negative-sync/overwrite-vs-trylock	l1Sched=9;postOp=2;tryLock=1
+sync/out-of-scope-trylock/trylock-uncontended	tryLock=1
+sync/promoted-mutex/trylock-expr	tryLock=1
+sync/trylock/defer-trylock	tryLock=1
+sync/trylock/discarded-acquires	tryLock=1
+sync/trylock/locked-false	-
+sync/trylock/rw-trylock-reader-held	-
+sync/trylock/rw-trylock-unlocked	tryLock=1
+sync/trylock/rw-tryrlock-pending-writer	l1Sched=7;postOp=6;tryLock=1
+sync/trylock/rw-tryrlock-reader-held	tryLock=1
+sync/trylock/rw-tryrlock-unlocked	tryLock=1
+sync/trylock/rw-try-writer-held	-
+sync/trylock/spin-until-trylock	l1Sched=3;postOp=2;tryLock=1
+sync/trylock/trylock-false-then-lock	l1Sched=6;postOp=5
+sync/trylock/unlock-after-trylock-success	tryLock=1
+sync/trylock/unlocked-acquire	tryLock=1
