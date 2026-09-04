@@ -17,6 +17,9 @@
 #   «go ahead and merge» 2026-09-04) over main 8de57f64 = 312a4458 + q-trylock: the two
 #   witness rows are born FAIL on FR-22/FR-23's Cases lines; no other row moved; no
 #   PASS->non-PASS flip. 3284 rows; 3085 PASS / 199 FAIL (re-derived from the data rows below).
+#   FULL ci --diff at the rebased clean tip 9b56b4fb: PASS, 3284/3284 no regression; drift vs main
+#   8de57f64 = exactly the two born-FAIL witness rows (docs/evidence/2026-09-03_cedar-census/
+#   round9-gate-tail.txt, round9-drift-vs-main-8de57f64.txt); twin wire f2309df29148... unchanged.
 # re-pinned: 2026-09-04 (ROUND-9 MERGE TRAIN — [AGENT], under the [USER] merge sign-off
 #   «go ahead and merge» 2026-09-04 naming bug087-paniktext -> q-trylock -> cedar-census in
 #   that order): q-trylock (as amended at its audit fix round F1-F6, next entry) REBASED

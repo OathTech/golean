@@ -1,0 +1,3 @@
+DRIFT vs /home/dev/projects/golean/.tmp/round9/main3-baseline.tsv (3284 case(s) run):
+generics/imported-generic-in-signature	NEW id (not in baseline) -> FAIL/frontend-export
+init/stdlib-initializer-call	NEW id (not in baseline) -> FAIL/frontend-export
