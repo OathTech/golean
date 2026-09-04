@@ -84,8 +84,13 @@ func indexRuneGoto() int { return strings.IndexRune("ab\u00e9d", 'd') }
 func formatFloatUnsafe() string { return strconv.FormatFloat(1.5, 'g', -1, 64) }
 
 // gc: 3; machine: refuses in slices.overlaps (unsafe.Sizeof) reached
-// from slices.Insert.
-func slicesOverlaps() int { return len(slices.Insert([]int{1, 2}, 1, 9)) }
+// from slices.Insert's IN-PLACE path (len+1 <= cap — the allocating path
+// never calls overlaps, which is why a cap-2 probe passed: recorded).
+func slicesOverlaps() int {
+	s := make([]int, 2, 10)
+	s[0], s[1] = 1, 2
+	return len(slices.Insert(s, 1, 9))
+}
 
 // gc: 97 ('a'); machine: refuses in bytes.Buffer.ReadByte (io.EOF —
 // package io is export-data only).

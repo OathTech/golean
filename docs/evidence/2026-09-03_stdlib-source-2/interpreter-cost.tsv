@@ -1,0 +1,12 @@
+suite	subject	old_wire_bytes	new_wire_bytes	old_ms	new_ms	old_status	new_status	obs_equal
+strings/builder-model	builderWriteString	44978	106963	21	22	ok	ok	yes
+strings/join-conformance	joinBasic	29100	128866	21	22	ok	ok	yes
+strings/trimspace-repeat	repeatBasic	275148	484438	24	27	ok	ok	yes
+errors/new-conformance	errNewReadback	23128	22568	21	20	ok	ok	yes
+bytes/equal-conformance	bytesEqualBasic	27196	23412	21	21	ok	ok	yes
+bytes/buffer-model	bufWritePaths	48316	305999	22	24	ok	ok	yes
+binary/little-endian	leGolden	39823	78681	21	20	ok	ok	yes
+slices/sortfunc-cmp	sortFuncInts	110375	1369680	22	32	ok	ok	yes
+slices/sortfunc-cmp	sortFuncStructTwoKey	110375	1369680	21	34	ok	ok	yes
+strconv/format-parse	parseUintErrors	1031821	1034935	339	379	unsupported	ok	no
+fmt/fprintf-builder	fprintfReturns	217628	279615	23	23	ok	ok	yes

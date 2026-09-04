@@ -1,0 +1,8 @@
+# gc's realized strings.Builder.Cap() (go1.26.5 linux/amd64, GO111MODULE=off go run artifacts/probe/cap) — MakeNoZero size-class rounding
+Grow(10) on empty	16
+WriteString("hello"); Grow(100)	128
+WriteString("abc")	8
+WriteString("abc"); Grow(1) (fits)	8
+Grow(1) on empty	8
+then Grow(33)	64
+Grow(1000) on empty	1024

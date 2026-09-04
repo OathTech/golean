@@ -1,0 +1,124 @@
+results: artifacts/coverage/negative-latest.tsv
+meta: artifacts/coverage/negative-latest.meta.tsv
+
+── derived oracle artifacts re-derived (Tests/FloatVectors.lean + tools/nativefrontend/inittask-std.tsv)
+
+── negative baseline diff
+no regression: 394 case(s) run in negative-latest.tsv match baselines/negative-full.tsv
+
+── differential baseline diff (scripts/coverage-baseline-diff)
+DRIFT vs baselines/native-full.tsv (3323 case(s) run):
+noodler/strings/parse-uint-edges	baseline[FAIL/frontend-export] -> now[PASS/-]
+slices/sortfunc-cmp/float-compare-bound	baseline[FAIL/frontend-export] -> now[PASS/-]
+slices/sortfunc-cmp/named-slice-bound	baseline[FAIL/frontend-export] -> now[PASS/-]
+stdlib-source/binary-order/append-orders	NEW id (not in baseline) -> PASS/-
+stdlib-source/binary-order/be-roundtrip	NEW id (not in baseline) -> PASS/-
+stdlib-source/binary-order/byteorder-interface	NEW id (not in baseline) -> PASS/-
+stdlib-source/binary-order/le-roundtrip-64	NEW id (not in baseline) -> PASS/-
+stdlib-source/binary-order/put-short-panics	NEW id (not in baseline) -> PASS/-
+stdlib-source/builder-cap/grow-after-write	NEW id (not in baseline) -> PASS/membership
+stdlib-source/builder-cap/grow-empty	NEW id (not in baseline) -> PASS/membership
+stdlib-source/builder-cap/grow-hundred	NEW id (not in baseline) -> PASS/membership
+stdlib-source/builder-cap/grow-then-write	NEW id (not in baseline) -> PASS/membership
+stdlib-source/builder-fuzz/seed-0	NEW id (not in baseline) -> PASS/-
+stdlib-source/builder-fuzz/seed-1	NEW id (not in baseline) -> PASS/-
+stdlib-source/builder-fuzz/seed-2	NEW id (not in baseline) -> PASS/-
+stdlib-source/builder-fuzz/seed-3	NEW id (not in baseline) -> PASS/-
+stdlib-source/builder-fuzz/seed-4	NEW id (not in baseline) -> PASS/-
+stdlib-source/builder-fuzz/seed-5	NEW id (not in baseline) -> PASS/-
+stdlib-source/builder-fuzz/seed-6	NEW id (not in baseline) -> PASS/-
+stdlib-source/builder-fuzz/seed-7	NEW id (not in baseline) -> PASS/-
+stdlib-source/builder-fuzz/seed-8	NEW id (not in baseline) -> PASS/-
+stdlib-source/builder-fuzz/seed-9	NEW id (not in baseline) -> PASS/-
+stdlib-source/builder-overlay/copy-panics-after-grow	NEW id (not in baseline) -> PASS/-
+stdlib-source/builder-overlay/grow-contract	NEW id (not in baseline) -> PASS/-
+stdlib-source/builder-overlay/grow-negative	NEW id (not in baseline) -> PASS/-
+stdlib-source/builder-overlay/grow-noop	NEW id (not in baseline) -> PASS/-
+stdlib-source/builder-overlay/join-large	NEW id (not in baseline) -> PASS/-
+stdlib-source/builder-overlay/repeat-1k	NEW id (not in baseline) -> PASS/-
+stdlib-source/builder-overlay/repeat-doubling-loop	NEW id (not in baseline) -> PASS/-
+stdlib-source/builder-overlay/reset-reuse	NEW id (not in baseline) -> PASS/-
+stdlib-source/builder-overlay/string-after-writes	NEW id (not in baseline) -> PASS/-
+stdlib-source/builder-overlay/string-stable-in-place	NEW id (not in baseline) -> PASS/-
+stdlib-source/builder-overlay/write-rune-invalid	NEW id (not in baseline) -> PASS/-
+stdlib-source/bytes-buffer/available-buffer	NEW id (not in baseline) -> PASS/-
+stdlib-source/bytes-buffer/bytes-others	NEW id (not in baseline) -> PASS/-
+stdlib-source/bytes-buffer/grow-contract	NEW id (not in baseline) -> PASS/-
+stdlib-source/bytes-buffer/grow-negative	NEW id (not in baseline) -> PASS/-
+stdlib-source/bytes-buffer/next-bytes-truncate	NEW id (not in baseline) -> PASS/-
+stdlib-source/bytes-buffer/nil-receiver-string	NEW id (not in baseline) -> PASS/-
+stdlib-source/bytes-buffer/reset-reuse	NEW id (not in baseline) -> PASS/-
+stdlib-source/bytes-buffer/truncate-out-of-range	NEW id (not in baseline) -> PASS/-
+stdlib-source/bytes-buffer/unread-byte-error	NEW id (not in baseline) -> PASS/-
+stdlib-source/bytes-buffer/write-side	NEW id (not in baseline) -> PASS/-
+stdlib-source/cmp-compare/float32-and-named	NEW id (not in baseline) -> PASS/-
+stdlib-source/cmp-compare/floats-nan	NEW id (not in baseline) -> PASS/-
+stdlib-source/cmp-compare/less	NEW id (not in baseline) -> PASS/-
+stdlib-source/cmp-compare/or	NEW id (not in baseline) -> PASS/-
+stdlib-source/errors-join/all-nil	NEW id (not in baseline) -> PASS/-
+stdlib-source/errors-join/distinct	NEW id (not in baseline) -> PASS/-
+stdlib-source/errors-join/empty-texts	NEW id (not in baseline) -> PASS/-
+stdlib-source/errors-join/many	NEW id (not in baseline) -> PASS/-
+stdlib-source/errors-join/nested	NEW id (not in baseline) -> PASS/-
+stdlib-source/errors-join/new-is-fresh	NEW id (not in baseline) -> PASS/-
+stdlib-source/errors-join/one	NEW id (not in baseline) -> PASS/-
+stdlib-source/errors-join/unwrap-identity	NEW id (not in baseline) -> PASS/-
+stdlib-source/frontier/atoi-error-path-clone	baseline[FAIL/frontend-export] -> now[PASS/-]
+stdlib-source/frontier/buffer-readbyte-io	NEW id (not in baseline) -> FAIL/frontend-export
+stdlib-source/frontier/bytes-toupper-makenozero	NEW id (not in baseline) -> FAIL/frontend-export
+stdlib-source/frontier/slices-overlaps	NEW id (not in baseline) -> PASS/-
+stdlib-source/slices-sortfunc/others	NEW id (not in baseline) -> PASS/-
+stdlib-source/slices-sortfunc/sort-stable-func	NEW id (not in baseline) -> PASS/-
+stdlib-source/slices-sortfunc/sortfunc-large	NEW id (not in baseline) -> PASS/-
+stdlib-source/slices-sortfunc/sortfunc-named-slice	NEW id (not in baseline) -> PASS/-
+stdlib-source/slices-sortfunc/sortfunc-reversed-input	NEW id (not in baseline) -> PASS/-
+stdlib-source/slices-sortfunc/sortfunc-strings-by-len	NEW id (not in baseline) -> PASS/-
+stdlib-source/slices-sortfunc/sortfunc-ties-projected	NEW id (not in baseline) -> PASS/-
+stdlib-source/slices-sortfunc/sortfunc-ties-realized	NEW id (not in baseline) -> PASS/-
+stdlib-source/strconv-parseuint/bitsize-saturation	baseline[FAIL/frontend-export] -> now[PASS/-]
+stdlib-source/strconv-parseuint/error-quoting	baseline[FAIL/frontend-export] -> now[PASS/-]
+stdlib-source/strconv-parseuint/error-texts	baseline[FAIL/frontend-export] -> now[PASS/-]
+stdlib-source/strconv-parseuint/numerror-type	baseline[FAIL/frontend-export] -> now[PASS/-]
+stdlib-source/strconv-parseuint/range-sentinel	baseline[FAIL/frontend-export] -> now[PASS/-]
+strconv/format-parse/parse-uint-bitsize	baseline[FAIL/frontend-export] -> now[PASS/-]
+strconv/format-parse/parse-uint-errors	baseline[FAIL/frontend-export] -> now[PASS/-]
+strconv/format-parse/parse-uint-range-value	baseline[FAIL/frontend-export] -> now[PASS/-]
+strings/trimspace-repeat/repeat-bound-refused	baseline[FAIL/frontend-export] -> now[FAIL/lean-observation]
+
+── cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)
+  [01] C2  HIGH    scripts/check-bugs.sh FAILS at this tip (the gate's own BUGS<->baseline invariant)
+  [02] C3  HIGH    63 corpus manifest id(s) absent from the tracked baseline (unrecorded cases)
+  [03] C13  MEDIUM  78 doc site(s) across 9 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
+  [04] C5  MEDIUM  6 frontier-table case citation(s) do not resolve against the baseline
+  [05] C5  MEDIUM  1 frontier row(s) claim a red count that is not mechanically re-derivable from their citations. Some of this is citation SHORTHAND (a prose family like 'F3 family 7', an ellipsis inside a glob, or a '+ adjacency' the count deliberately excludes) rather than drift — each needs a read, which is exactly why the count should not be re-derived from prose.
+  [06] C9  MEDIUM  the wire schema moved after the certification date 2026-09-01 (5 commit(s) to wire.go/NativeToIR.lean) — the certified set's wire sha is only current if `scripts/ci --slow` has re-enumerated since
+
+══ scripts/ci summary ══
+  note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  FAIL bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   core build (warning-free)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   eval tests (148 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  note negative baseline diff matched (394 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  FAIL baseline diff (DRIFT — see above)
+  note reconciler: 6 finding(s), 2 HIGH — report-only (details: tools/reconcile-records)
+
+RESULT: FAIL
+exit=1

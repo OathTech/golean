@@ -1,4 +1,47 @@
 # GoLean native-frontend full-corpus differential baseline
+# re-pinned: 2026-09-03 (stdlib-source-2 — the OVERLAY mechanism + shim retirements,
+#   [AGENT] inside G1/G8/G9 as ruled and the ParseUint ruling (a), both [USER] Mike
+#   2026-09-03 relayed by the coordinator, cited as relayed. tools/nativefrontend/
+#   stdlib-overlay.tsv: 5 byte-checked expr sites (internal/stringslite.Clone,
+#   errors.joinError.Error, strings.Builder.{String,copyCheck,grow}) of the cap of
+#   12; bytes/slices/cmp/encoding-binary source-through; shims RETIRED: strings.Join/
+#   Repeat, errors.New, bytes.Equal, slices.SortFunc, binary.LittleEndian.*, shadow
+#   types strings.Builder/bytes.Buffer; cmp.Compare kind shim RETAINED (STOP rule).
+#   FULL ci --diff at checkpoint 9fc4a4b7 (+ the evidence README, uncommitted; log
+#   tail in docs/evidence/2026-09-03_stdlib-source-2/gate-tail-diff.txt): 3323 rows
+#   run; drift vs the previous pin = EXACTLY (a) 12 FAIL -> PASS flips, all free:
+#   BUG-089's nine (strconv/format-parse/parse-uint-{errors,range-value,bitsize},
+#   noodler/strings/parse-uint-edges, stdlib-source/strconv-parseuint/{numerror-type,
+#   range-sentinel,error-texts,error-quoting,bitsize-saturation} — the Clone overlay;
+#   BUG-089 -> fixed), stdlib-source/frontier/atoi-error-path-clone (same site),
+#   slices/sortfunc-cmp/{named-slice-bound,float-compare-bound} (the real SortFunc
+#   takes S ~[]E; the real cmp.Compare at floats); (b) 63 born rows under
+#   stdlib-source/{builder-overlay,builder-cap,builder-fuzz,errors-join,cmp-compare,
+#   slices-sortfunc,bytes-buffer,binary-order,frontier}: 61 PASS, 2 born red by name
+#   (frontier/{bytes-toupper-makenozero,buffer-readbyte-io}, FR-21); (c) ONE FAIL ->
+#   FAIL stage change: strings/trimspace-repeat/repeat-bound-refused frontend-export
+#   -> lean-observation (the retired Repeat shim's 1<<24 bound is gone; the 16 MiB
+#   row is a runner-budget 30 s timeout, BUG-073 updated). PASS -> non-PASS: NONE.
+#   AMENDED the same day before commit: the born row
+#   stdlib-source/frontier/slices-overlaps first PASSed because its cap-2 probe took
+#   slices.Insert's ALLOCATING path (which never calls overlaps); reshaped to the
+#   in-place path (cap 10) it is the intended born-red by-name refusal — recorded as
+#   FAIL/frontend-export here from its own scripts/diff-one run; the final clean-tip
+#   ci --diff (gate-tail-final.txt) confirms the whole file.
+#   3323 rows; 3130 PASS / 193 FAIL.
+#   REPLAYED at the ROUND-10 MERGE TRAIN 2026-09-04 ([AGENT], under the [USER] merge sign-off
+#   «go ahead and merge these» 2026-09-04 naming stdlib-source-2 -> slow-recert in that order)
+#   over main 1b8401c0 (= 221d8964 + round 9: bug087-paniktext, q-trylock, cedar-census):
+#   the rows are the UNION of main's pin (3284 = 3085 / 199) and this commit's row delta vs
+#   its lane parent 221d8964 (63 born rows + 12 FAIL->PASS flips + the repeat-bound-refused
+#   stage move); the two sides' row deltas are DISJOINT (checked by id). Data rows emitted in
+#   scripts/coverage-manifest order (the lane's own final convention, its commit f3ae90d7;
+#   main's three round-9 born rows move from their group tails to their manifest slots —
+#   an ordering-only change, no consumer reads row order). This lane commit's INTERIM
+#   drop of the channels/select-select/beside-loop alternation (`lean-observation|differential`
+#   -> `lean-observation`, restored by the lane itself at f3ae90d7) is NOT replayed: the
+#   [USER]-ruled alternation and its `# reason:` block stay verbatim at every commit.
+#   NO PASS->non-PASS flip. Figure re-derived from the data rows (the `# cases:` line).
 # re-pinned: 2026-09-03 (cedar-census lane — the cedar-go coverage census's
 #   follow-up under [USER] direction 3 (Mike 2026-09-03, relayed by the
 #   [AGENT] coordinator — cited as relayed, not firsthand): the two
@@ -784,7 +827,9 @@
 #     removed row is named in prose, never left dangling on the line).
 #     NEW rows: unsafe/layout-ops/{sizeof-fixed,layout-struct}
 #     FAIL/frontend-export BY DESIGN. unsafe/boundary/pointer-roundtrip
-# cases: 3284 (3085 PASS / 199 FAIL)
+# cases: 3347 (3157 PASS / 190 FAIL)
+#   [re-derived from the data rows at the round-10 merge-train rebase of stdlib-source-2 (commit 4176f7f1) onto main 1b8401c0 2026-09-04 ([AGENT], under the [USER] merge sign-off «go ahead and merge these» 2026-09-04): 3284 (3085 PASS / 199 FAIL) + this commit's row delta vs its lane parent 221d8964 (76 ids: 63 born, 13 changed) = 3347 (3157 PASS / 190 FAIL); counted, not summed by hand]
+#   [the stdlib-source-2-over-221d8964 figure at this commit, kept as history:] # cases: 3323 (3130 PASS / 193 FAIL)
 #   [re-derived from the data rows at the round-9 merge-train rebase of cedar-census onto main 8de57f64 (= 312a4458 + q-trylock) 2026-09-04 ([AGENT], under the [USER] merge sign-off «go ahead and merge» 2026-09-04: the step-2 union's 3282 (3085 PASS / 197 FAIL) + TWO born-FAIL witness rows init/stdlib-initializer-call (FR-22) and generics/imported-generic-in-signature (FR-23) = 3284 (3085 PASS / 199 FAIL); no other row moved; tallied by row, not summed by hand)]
 #   [the cedar-census-over-6a163681 figure, kept as history:] # cases: 3201 (3005 PASS / 196 FAIL)
 #   [re-derived from the data rows at the cedar-census re-pin 2026-09-03 ([AGENT]: the round-8a tip's 3199 (3005 PASS / 194 FAIL) + TWO born-FAIL rows init/stdlib-initializer-call and generics/imported-generic-in-signature (FR-22/FR-23 witnesses, both frontend-export); no other row moved; `awk -F'\t' '!/^#/{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3005 / FAIL 196)]
@@ -1940,6 +1985,7 @@ PASS	generics/higher-order-inference/named-function-type	-
 PASS	generics/higher-order-inference/return-target	-
 PASS	generics/higher-order-inference/partial-instantiation-target	-
 PASS	generics/identity	-
+FAIL	generics/imported-generic-in-signature	frontend-export
 PASS	generics/inference	-
 PASS	generics/instantiated-function-value	-
 PASS	generics/instantiated-map-key	-
@@ -1981,7 +2027,6 @@ PASS	generics/type-set-constraint	-
 PASS	generics/unused-generic-helper	-
 PASS	generics/zero-composite	-
 PASS	generics/zero-values	-
-FAIL	generics/imported-generic-in-signature	frontend-export
 PASS	goroutines/buffered-wake/fifo	confluent
 PASS	goroutines/buffered-wake/cap-one	confluent
 PASS	goroutines/buffered-wake/len-after-join	confluent
@@ -2256,8 +2301,8 @@ FAIL	init/quarantined-var-panicking/sibling	frontend-export
 FAIL	init/quarantined-var-syscall/sibling	frontend-export
 FAIL	init/quarantined-var-writer/read	frontend-export
 PASS	init/spec-dependency-example	-
-PASS	init/var-init-sequence	-
 FAIL	init/stdlib-initializer-call	frontend-export
+PASS	init/var-init-sequence	-
 PASS	interfaces/acked-indexer/hit	-
 PASS	interfaces/acked-indexer/miss	-
 PASS	interfaces/anonymous-alias-dispatch	-
@@ -2653,6 +2698,7 @@ PASS	multipkg/mini-raft-twin/perturb-picks	-
 PASS	multipkg/mini-raft-twin/starve-node	-
 PASS	multipkg/mini-raft-twin/duel	-
 PASS	multipkg/mini-raft-twin/choice-order	membership
+PASS	multipkg/nil-value-method-text	membership
 PASS	multipkg/same-name-identity/type-identity	-
 PASS	multipkg/same-name-identity/func-identity	-
 FAIL	multipkg/same-name-identity-panic	differential
@@ -2662,7 +2708,6 @@ PASS	multipkg/wire-codec/size	-
 PASS	multipkg/wire-codec/golden	-
 PASS	multipkg/wire-codec/unknown-skip	-
 PASS	multipkg/wire-codec/malformed	-
-PASS	multipkg/nil-value-method-text	membership
 PASS	native-smoke/arith	-
 PASS	native-smoke/maprange	-
 PASS	native-smoke/method	-
@@ -3194,7 +3239,7 @@ PASS	noodler/strings/fields-unicode-spaces	-
 PASS	noodler/strings/trimspace-unicode	-
 PASS	noodler/strings/split-edges	-
 PASS	noodler/strings/join-repeat-edges	-
-FAIL	noodler/strings/parse-uint-edges	frontend-export
+PASS	noodler/strings/parse-uint-edges	-
 PASS	noodler/strings/sprint-spacing	-
 PASS	noodler/strings/sprintf-verbs	-
 PASS	noodler/strings/sprintln-basics	-
@@ -3580,8 +3625,8 @@ PASS	slices/sortfunc-cmp/sortfunc-struct-two-key	-
 PASS	slices/sortfunc-cmp/sortfunc-empty-single	-
 PASS	slices/sortfunc-cmp/sort-ties-projected	-
 FAIL	slices/sortfunc-cmp/sortfunc-local-type	frontend-export
-FAIL	slices/sortfunc-cmp/named-slice-bound	frontend-export
-FAIL	slices/sortfunc-cmp/float-compare-bound	frontend-export
+PASS	slices/sortfunc-cmp/named-slice-bound	-
+PASS	slices/sortfunc-cmp/float-compare-bound	-
 PASS	slices/three-index-slice	-
 PASS	spec-examples-decl/addr-deref-nil-matrix/two-deref-outer-nil	-
 PASS	spec-examples-decl/addr-deref-nil-matrix/two-deref-inner-nil	-
@@ -3874,6 +3919,58 @@ PASS	spec-examples-stmt/type-switch-equiv-if/agree-string	-
 PASS	spec-examples-stmt/type-switch-equiv-if/agree-default	-
 FAIL	spec-examples-stmt/type-unify-struct-array	frontend-export
 PASS	spec-examples-stmt/variadic-slice-passthrough	-
+PASS	stdlib-source/binary-order/le-roundtrip-64	-
+PASS	stdlib-source/binary-order/be-roundtrip	-
+PASS	stdlib-source/binary-order/append-orders	-
+PASS	stdlib-source/binary-order/byteorder-interface	-
+PASS	stdlib-source/binary-order/put-short-panics	-
+PASS	stdlib-source/builder-cap/grow-empty	membership
+PASS	stdlib-source/builder-cap/grow-hundred	membership
+PASS	stdlib-source/builder-cap/grow-after-write	membership
+PASS	stdlib-source/builder-cap/grow-then-write	membership
+PASS	stdlib-source/builder-fuzz/seed-0	-
+PASS	stdlib-source/builder-fuzz/seed-1	-
+PASS	stdlib-source/builder-fuzz/seed-2	-
+PASS	stdlib-source/builder-fuzz/seed-3	-
+PASS	stdlib-source/builder-fuzz/seed-4	-
+PASS	stdlib-source/builder-fuzz/seed-5	-
+PASS	stdlib-source/builder-fuzz/seed-6	-
+PASS	stdlib-source/builder-fuzz/seed-7	-
+PASS	stdlib-source/builder-fuzz/seed-8	-
+PASS	stdlib-source/builder-fuzz/seed-9	-
+PASS	stdlib-source/builder-overlay/string-after-writes	-
+PASS	stdlib-source/builder-overlay/string-stable-in-place	-
+PASS	stdlib-source/builder-overlay/grow-contract	-
+PASS	stdlib-source/builder-overlay/grow-noop	-
+PASS	stdlib-source/builder-overlay/grow-negative	-
+PASS	stdlib-source/builder-overlay/copy-panics-after-grow	-
+PASS	stdlib-source/builder-overlay/reset-reuse	-
+PASS	stdlib-source/builder-overlay/write-rune-invalid	-
+PASS	stdlib-source/builder-overlay/join-large	-
+PASS	stdlib-source/builder-overlay/repeat-doubling-loop	-
+PASS	stdlib-source/builder-overlay/repeat-1k	-
+PASS	stdlib-source/bytes-buffer/write-side	-
+PASS	stdlib-source/bytes-buffer/next-bytes-truncate	-
+PASS	stdlib-source/bytes-buffer/unread-byte-error	-
+PASS	stdlib-source/bytes-buffer/grow-contract	-
+PASS	stdlib-source/bytes-buffer/grow-negative	-
+PASS	stdlib-source/bytes-buffer/truncate-out-of-range	-
+PASS	stdlib-source/bytes-buffer/reset-reuse	-
+PASS	stdlib-source/bytes-buffer/nil-receiver-string	-
+PASS	stdlib-source/bytes-buffer/available-buffer	-
+PASS	stdlib-source/bytes-buffer/bytes-others	-
+PASS	stdlib-source/cmp-compare/floats-nan	-
+PASS	stdlib-source/cmp-compare/float32-and-named	-
+PASS	stdlib-source/cmp-compare/less	-
+PASS	stdlib-source/cmp-compare/or	-
+PASS	stdlib-source/errors-join/all-nil	-
+PASS	stdlib-source/errors-join/one	-
+PASS	stdlib-source/errors-join/many	-
+PASS	stdlib-source/errors-join/unwrap-identity	-
+PASS	stdlib-source/errors-join/nested	-
+PASS	stdlib-source/errors-join/empty-texts	-
+PASS	stdlib-source/errors-join/distinct	-
+PASS	stdlib-source/errors-join/new-is-fresh	-
 PASS	stdlib-source/errors-wrap/unwrap	-
 FAIL	stdlib-source/errors-wrap/is	frontend-export
 FAIL	stdlib-source/errors-wrap/as	frontend-export
@@ -3887,10 +3984,21 @@ PASS	stdlib-source/fields-fuzz/group-06	-
 PASS	stdlib-source/fields-fuzz/group-07	-
 PASS	stdlib-source/fields-fuzz/group-08	-
 PASS	stdlib-source/fields-fuzz/group-09	-
-FAIL	stdlib-source/frontier/atoi-error-path-clone	frontend-export
+PASS	stdlib-source/frontier/atoi-error-path-clone	-
 FAIL	stdlib-source/frontier/div64-overflow-value	frontend-export
 FAIL	stdlib-source/frontier/index-rune-goto	frontend-export
 FAIL	stdlib-source/frontier/format-float-unsafe	frontend-export
+FAIL	stdlib-source/frontier/slices-overlaps	frontend-export
+FAIL	stdlib-source/frontier/buffer-readbyte-io	frontend-export
+FAIL	stdlib-source/frontier/bytes-toupper-makenozero	frontend-export
+PASS	stdlib-source/slices-sortfunc/sortfunc-large	-
+PASS	stdlib-source/slices-sortfunc/sortfunc-reversed-input	-
+PASS	stdlib-source/slices-sortfunc/sortfunc-named-slice	-
+PASS	stdlib-source/slices-sortfunc/sortfunc-strings-by-len	-
+PASS	stdlib-source/slices-sortfunc/sortfunc-ties-projected	-
+PASS	stdlib-source/slices-sortfunc/sortfunc-ties-realized	-
+PASS	stdlib-source/slices-sortfunc/sort-stable-func	-
+PASS	stdlib-source/slices-sortfunc/others	-
 PASS	stdlib-source/strconv-format/uint-all-bases	-
 PASS	stdlib-source/strconv-format/int-all-bases	-
 PASS	stdlib-source/strconv-format/extremes	-
@@ -3899,12 +4007,12 @@ PASS	stdlib-source/strconv-format/power-of-two-bases	-
 PASS	stdlib-source/strconv-format/illegal-base-one	-
 PASS	stdlib-source/strconv-format/illegal-base-zero	-
 PASS	stdlib-source/strconv-format/siblings	-
-FAIL	stdlib-source/strconv-parseuint/numerror-type	frontend-export
-FAIL	stdlib-source/strconv-parseuint/range-sentinel	frontend-export
-FAIL	stdlib-source/strconv-parseuint/error-texts	frontend-export
-FAIL	stdlib-source/strconv-parseuint/error-quoting	frontend-export
+PASS	stdlib-source/strconv-parseuint/numerror-type	-
+PASS	stdlib-source/strconv-parseuint/range-sentinel	-
+PASS	stdlib-source/strconv-parseuint/error-texts	-
+PASS	stdlib-source/strconv-parseuint/error-quoting	-
 PASS	stdlib-source/strconv-parseuint/happy-bases	-
-FAIL	stdlib-source/strconv-parseuint/bitsize-saturation	frontend-export
+PASS	stdlib-source/strconv-parseuint/bitsize-saturation	-
 PASS	stdlib-source/strings-fields/empty	-
 PASS	stdlib-source/strings-fields/all-unicode-space	-
 PASS	stdlib-source/strings-fields/mixed-unicode	-
@@ -3939,9 +4047,9 @@ PASS	strconv/format-parse/format-uint-bases	-
 PASS	strconv/format-parse/format-int-vals	-
 PASS	strconv/format-parse/format-illegal-base	-
 PASS	strconv/format-parse/parse-uint-happy	-
-FAIL	strconv/format-parse/parse-uint-errors	frontend-export
-FAIL	strconv/format-parse/parse-uint-range-value	frontend-export
-FAIL	strconv/format-parse/parse-uint-bitsize	frontend-export
+PASS	strconv/format-parse/parse-uint-errors	-
+PASS	strconv/format-parse/parse-uint-range-value	-
+PASS	strconv/format-parse/parse-uint-bitsize	-
 PASS	strconv/format-parse/unmodeled-member	-
 PASS	strings/builder-model/write-string	-
 PASS	strings/builder-model/write-bytes	-
@@ -4025,7 +4133,7 @@ PASS	strings/trimspace-repeat/repeat-basic	-
 PASS	strings/trimspace-repeat/repeat-describe-shape	-
 PASS	strings/trimspace-repeat/repeat-negative	-
 PASS	strings/trimspace-repeat/repeat-overflow	-
-FAIL	strings/trimspace-repeat/repeat-bound-refused	frontend-export
+FAIL	strings/trimspace-repeat/repeat-bound-refused	lean-observation
 PASS	structs/anonymous-field	-
 PASS	structs/blank-field	-
 PASS	structs/comparable	-

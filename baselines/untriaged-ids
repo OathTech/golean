@@ -215,3 +215,14 @@ spec-examples-decl/slice-to-array/ok-forms	coverage
 #   succeeding form, FR-10's value-copy rider (triage L2b); second witness
 #   beside spec-examples-decl/slice-to-array/ok-forms. Retires with FR-10.]
 noodler/conversions/nil-slice-zero-array	coverage
+# 2026-09-03 (stdlib-source-2, [AGENT]): strings/trimspace-repeat/
+# repeat-bound-refused ENTERS as `coverage` — the strings.Repeat SHIM and its
+# golean-invented 1<<24 output bound are RETIRED (the real upstream Repeat
+# lowers); the row's 16 MiB output, which gc allocates fine, is now a
+# RUNNER-BUDGET red: the interpreter's in-place append costs O(cap) per
+# call (docs/evidence/2026-09-03_stdlib-source-2/append-cost-probes.tsv),
+# so the run TIMES OUT at 30 s (stage lean-observation, the runner names
+# the cause). A fail-closed resource refusal of a workload the machine
+# does not scale to — never a wrong answer; retires when the interpreter's
+# appendSlice in-place path is made linear (owed as its own arc; BUG-073).
+strings/trimspace-repeat/repeat-bound-refused	coverage

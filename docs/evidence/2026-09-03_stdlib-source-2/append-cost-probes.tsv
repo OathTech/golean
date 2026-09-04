@@ -1,0 +1,20 @@
+# interpreter cost probes (golean native-json-run wall time, single run each; host shared) — the in-place append finding
+# program: artifacts/probe/cost/main.go shapes reproduced below as (subject, shape, seconds, exit)
+spread256	b := make([]byte, 0, 256); 256 x append(b, 'x')	0.07	0
+spread512	same, 512	0.26	0
+spread1k	same, 1024	1.62	0
+spread2k	same, 2048	10.77	0
+spread4k	same, 4096	>60 (timeout)	124
+nocap1k	var b []byte; 1024 x append(b, 'x') (spilling appends)	0.96	0
+mk4k	make([]byte, 4096)	0.03	0
+app4k	append([]byte(nil), make([]byte, 4096)...)	0.03	0
+str4k	string(make([]byte, 4096))	0.03	0
+builderGrow4k	var b strings.Builder; b.Grow(4096)	0.03	0
+builderWrite1k	Grow(1024) then 64 x WriteString(16 bytes)	1.44	0
+repeat512	strings.Repeat(16 bytes, 32)	0.21	0
+repeat768	strings.Repeat(16 bytes, 48)	0.60	0
+repeat1k	strings.Repeat(16 bytes, 64)	1.44	0
+fuzz100	builder-fuzz subject, 100 ops	0.26	0
+fuzz300	builder-fuzz subject, 300 ops	1.41	0
+fuzz600	builder-fuzz subject, 600 ops	8.52	0
+fuzz1000	builder-fuzz subject, 1000 ops	38.17	0
