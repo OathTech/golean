@@ -166,76 +166,232 @@ def IntKind.compatibleResult (left right : IntKind) : Option IntKind :=
 
 end GoCore
 
-inductive GoError where
-  | panic (message : String)
+/-! ## The stop grammar: `Refusal` / `Terminal` / `GoError` (design-hygiene
+arc A1, 2026-09-04 — `docs/2026-09-03_grumpy-professor-review.md` §3 A1;
+design note `docs/2026-09-03_hygiene-a-series-design.md` §A1)
+
+A run that does not end `.ok` ends in exactly one of three CLASSES, and
+the class is a TYPE, not a comment on a constructor:
+
+* `Refusal` — the machine declined: nothing here is a Go behaviour.
+* `Terminal` — a Go behaviour the run exhibited and stopped on (the
+  differential compares these against `go run`).
+* `GoError.fuelOut` — the model's budget ran out (a MODEL artifact).
+
+The flat constructor names the code has always used (`.panic msg`,
+`.stuck msg`, `.fuelOut`, …) remain valid in BOTH term and pattern
+position as `@[match_pattern]` views over the nested type, so no caller
+had to move; the outcome-grammar wave (review B2) retires the view. -/
+
+/-- The three ways the MACHINE declines (none is a Go behaviour). See the
+refusal RULE below (A9) for which to raise. -/
+inductive Refusal where
+  /-- A Go construct or behaviour the model does not cover, reachable from
+  a well-typed Go program: the fail-closed FRONTIER. -/
   | unsupported (feature : String)
+  /-- The machine received a program outside the lowering contract
+  (ill-typed operand, malformed plan, arity): a FRONTEND bug. -/
   | stuck (message : String)
+  /-- A machine invariant broke between two of the machine's own
+  definitions: unreachable if the machine is correct. -/
   | internal (message : String)
-  /-- Fuel exhaustion — a MODEL artifact, not a program behavior: the
-  bounded run ended before the program did. Distinct from `.stuck` (sem-
-  adequacy arc slice 2, 2026-08-03) so interpreter-level safety can say
-  "every run ends `.ok` or `.fuelOut`, never stuck/panicked" and mean it;
-  conflating the two (the old shape distinguished them only by message
-  text) would make that reading unstatable. -/
-  | fuelOut
-  /-- Deadlock — a PROGRAM behavior, not a model artifact (channels arc
-  slice 1): the run reached a blocked configuration with no runnable
-  goroutine, matching Go's runtime detector (`fatal error: all
-  goroutines are asleep - deadlock!`, exit status 2 — a fatal, not a
-  recoverable panic). In the zero-scheduler slice the single goroutine
-  blocking IS whole-program deadlock, so `stepFn` classifies blocked
-  configurations with this directly; the ThreadPool machine (slice 2)
-  moves the all-blocked judgment to the pool level. The message text is
-  the detector's fixed line — Go pins the abort MESSAGE, though the
-  detection itself is the flagship's rendering of the spec's "blocks
-  forever" (latitude inventory row C9 — "L6" was a stale row id,
-  corrected 2026-08-31; ground-truth note §6). -/
-  | deadlock
-  /-- Data race — a PROGRAM-class refusal, not a model artifact
-  (channels arc slice 3, D2+D3(b)): the pool's segment-level
-  happens-before detector found two HB-unordered conflicting accesses
-  from different goroutines. Races FAIL CLOSED per run (nondeterminism
-  doctrine: no semantics below the DRF line — the memory model's
-  ceiling for racy programs includes "report the race and terminate"
-  and multiword corruption), on every run where the conflicting
-  accesses execute, deterministically given the stream. The
-  differential oracle for this class is `go run -race` (TSan; exit 66);
-  the message is FIXED so per-stream refusal is choice-invariant in the
-  harness. Never combined with deadlock expectations (-race suppresses
-  the deadlock detector — ground-truth note §5). -/
-  | raceDetected
-  /-- An UNRECOVERABLE runtime throw — a PROGRAM behavior, not a model
-  artifact (spec-parity slice 2, sync design note §2): gc's
-  `fatal error: <msg>` aborts (exit status 2) that `recover` does NOT
-  catch (probed: `sync: unlock of unlocked mutex` and the RWMutex
-  misuse throws — runtime `fatal`, never a `panic()`), so they must not
-  be modeled as `.panic` (a recover would wrongly intervene) nor as a
-  refusal (the behavior is probed and deterministic — differentially
-  testable, the deadlock terminal's pattern with a per-case message).
-  The message is gc's fixed string after "fatal error: ", which the
-  harness compares on both sides (`expected_status: fatal`). -/
-  | fatal (message : String)
   deriving Repr, BEq, Inhabited
 
-def GoError.status : GoError → String
-  | .panic _ => "panic"
+/-- The Go behaviours a run can STOP on (each one an oracle-comparable
+observation). -/
+inductive Terminal where
+  /-- A run-time panic. Inside the machine's helpers this is also the
+  RECOVERABLE panic signal (`stepFn` turns a helper's `.panic` into a
+  `.panicking` step); at `.stop` it is the terminal abort line. -/
+  | panic (message : String)
+  /-- An UNRECOVERABLE runtime throw — gc's `fatal error: <msg>` (exit
+  status 2) that `recover` does NOT catch (probed: `sync: unlock of
+  unlocked mutex` and the RWMutex misuse throws — runtime `fatal`, never
+  a `panic()`), so it is neither `.panic` (a recover would wrongly
+  intervene) nor a refusal (the behaviour is probed and deterministic).
+  The message is gc's fixed string after "fatal error: ", compared on both
+  sides (`expected_status: fatal`). -/
+  | fatal (message : String)
+  /-- Deadlock: the run reached a blocked configuration with no runnable
+  goroutine, matching Go's runtime detector (`fatal error: all goroutines
+  are asleep - deadlock!`, exit status 2). The message text is the
+  detector's fixed line (latitude inventory row C9). -/
+  | deadlock
+  /-- Data race: the pool's happens-before detector found two HB-unordered
+  conflicting accesses from different goroutines. Races FAIL CLOSED per
+  run, deterministically given the stream; the differential oracle is
+  `go run -race` (TSan; exit 66); the message is FIXED so per-stream
+  refusal is choice-invariant in the harness. -/
+  | raceDetected
+  deriving Repr, BEq, Inhabited
+
+/-- The stop grammar: a refusal, a Go terminal, or the budget. -/
+inductive GoError where
+  | refusal (r : Refusal)
+  | terminal (t : Terminal)
+  /-- Fuel exhaustion — a MODEL artifact, not a program behaviour: the
+  bounded run ended before the program did. Distinct from `.stuck` so
+  interpreter-level safety can say "every run ends `.ok` or `.fuelOut`,
+  never stuck/panicked" and mean it. -/
+  | fuelOut
+  deriving Repr, BEq, Inhabited
+
+/-! The flat VIEW: the seven classified constructors under their historical
+names, usable in patterns (`@[match_pattern]`). Term and pattern sites
+throughout the machine are unchanged by A1; the nesting is what the types
+say. -/
+
+@[match_pattern] abbrev GoError.panic (message : String) : GoError := .terminal (.panic message)
+@[match_pattern] abbrev GoError.fatal (message : String) : GoError := .terminal (.fatal message)
+@[match_pattern] abbrev GoError.deadlock : GoError := .terminal .deadlock
+@[match_pattern] abbrev GoError.raceDetected : GoError := .terminal .raceDetected
+@[match_pattern] abbrev GoError.unsupported (feature : String) : GoError := .refusal (.unsupported feature)
+@[match_pattern] abbrev GoError.stuck (message : String) : GoError := .refusal (.stuck message)
+@[match_pattern] abbrev GoError.internal (message : String) : GoError := .refusal (.internal message)
+
+
+/-! `simp` sees the view exactly as it saw the flat constructors:
+injectivity and pairwise disjointness of the seven view constructors
+(generated family; the nested type supplies the proofs). -/
+@[simp] theorem GoError.panic_inj {a b : String} : GoError.panic a = GoError.panic b ↔ a = b :=
+  ⟨fun h => by cases h; rfl, fun h => h ▸ rfl⟩
+@[simp] theorem GoError.fatal_inj {a b : String} : GoError.fatal a = GoError.fatal b ↔ a = b :=
+  ⟨fun h => by cases h; rfl, fun h => h ▸ rfl⟩
+@[simp] theorem GoError.unsupported_inj {a b : String} : GoError.unsupported a = GoError.unsupported b ↔ a = b :=
+  ⟨fun h => by cases h; rfl, fun h => h ▸ rfl⟩
+@[simp] theorem GoError.stuck_inj {a b : String} : GoError.stuck a = GoError.stuck b ↔ a = b :=
+  ⟨fun h => by cases h; rfl, fun h => h ▸ rfl⟩
+@[simp] theorem GoError.internal_inj {a b : String} : GoError.internal a = GoError.internal b ↔ a = b :=
+  ⟨fun h => by cases h; rfl, fun h => h ▸ rfl⟩
+@[simp] theorem GoError.panic_ne_fatal {a b : String} : (GoError.panic a = GoError.fatal b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.panic_ne_deadlock {a : String} : (GoError.panic a = GoError.deadlock) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.panic_ne_raceDetected {a : String} : (GoError.panic a = GoError.raceDetected) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.panic_ne_unsupported {a b : String} : (GoError.panic a = GoError.unsupported b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.panic_ne_stuck {a b : String} : (GoError.panic a = GoError.stuck b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.panic_ne_internal {a b : String} : (GoError.panic a = GoError.internal b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.fatal_ne_panic {a b : String} : (GoError.fatal a = GoError.panic b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.fatal_ne_deadlock {a : String} : (GoError.fatal a = GoError.deadlock) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.fatal_ne_raceDetected {a : String} : (GoError.fatal a = GoError.raceDetected) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.fatal_ne_unsupported {a b : String} : (GoError.fatal a = GoError.unsupported b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.fatal_ne_stuck {a b : String} : (GoError.fatal a = GoError.stuck b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.fatal_ne_internal {a b : String} : (GoError.fatal a = GoError.internal b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.deadlock_ne_panic {b : String} : (GoError.deadlock = GoError.panic b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.deadlock_ne_fatal {b : String} : (GoError.deadlock = GoError.fatal b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.deadlock_ne_raceDetected : (GoError.deadlock = GoError.raceDetected) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.deadlock_ne_unsupported {b : String} : (GoError.deadlock = GoError.unsupported b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.deadlock_ne_stuck {b : String} : (GoError.deadlock = GoError.stuck b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.deadlock_ne_internal {b : String} : (GoError.deadlock = GoError.internal b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.raceDetected_ne_panic {b : String} : (GoError.raceDetected = GoError.panic b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.raceDetected_ne_fatal {b : String} : (GoError.raceDetected = GoError.fatal b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.raceDetected_ne_deadlock : (GoError.raceDetected = GoError.deadlock) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.raceDetected_ne_unsupported {b : String} : (GoError.raceDetected = GoError.unsupported b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.raceDetected_ne_stuck {b : String} : (GoError.raceDetected = GoError.stuck b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.raceDetected_ne_internal {b : String} : (GoError.raceDetected = GoError.internal b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.unsupported_ne_panic {a b : String} : (GoError.unsupported a = GoError.panic b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.unsupported_ne_fatal {a b : String} : (GoError.unsupported a = GoError.fatal b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.unsupported_ne_deadlock {a : String} : (GoError.unsupported a = GoError.deadlock) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.unsupported_ne_raceDetected {a : String} : (GoError.unsupported a = GoError.raceDetected) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.unsupported_ne_stuck {a b : String} : (GoError.unsupported a = GoError.stuck b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.unsupported_ne_internal {a b : String} : (GoError.unsupported a = GoError.internal b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.stuck_ne_panic {a b : String} : (GoError.stuck a = GoError.panic b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.stuck_ne_fatal {a b : String} : (GoError.stuck a = GoError.fatal b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.stuck_ne_deadlock {a : String} : (GoError.stuck a = GoError.deadlock) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.stuck_ne_raceDetected {a : String} : (GoError.stuck a = GoError.raceDetected) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.stuck_ne_unsupported {a b : String} : (GoError.stuck a = GoError.unsupported b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.stuck_ne_internal {a b : String} : (GoError.stuck a = GoError.internal b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.internal_ne_panic {a b : String} : (GoError.internal a = GoError.panic b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.internal_ne_fatal {a b : String} : (GoError.internal a = GoError.fatal b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.internal_ne_deadlock {a : String} : (GoError.internal a = GoError.deadlock) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.internal_ne_raceDetected {a : String} : (GoError.internal a = GoError.raceDetected) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.internal_ne_unsupported {a b : String} : (GoError.internal a = GoError.unsupported b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+@[simp] theorem GoError.internal_ne_stuck {a b : String} : (GoError.internal a = GoError.stuck b) ↔ False :=
+  ⟨(fun h => nomatch h), fun h => h.elim⟩
+
+/-- `cases_stop e` splits a `GoError` into its SEVEN flat view cases
+(`unsupported`/`stuck`/`internal`/`panic`/`fatal`/`deadlock`/
+`raceDetected`) plus `fuelOut` — the shape `cases e` produced before the
+A1 nesting; `case panic msg => …` selects by tag suffix as before. -/
+syntax "cases_stop " term : tactic
+macro_rules
+  | `(tactic| cases_stop $e) =>
+    `(tactic| rcases $e:term with (_ | _ | _) | (_ | _ | _ | _) | _)
+
+/-- The harness's status word for a refusal (the observation channel's
+`status` field; `internal` reports as `error`). -/
+def Refusal.status : Refusal → String
   | .unsupported _ => "unsupported"
   | .stuck _ => "stuck"
   | .internal _ => "error"
-  | .fuelOut => "fuel-out"
-  | .deadlock => "deadlock"
-  | .raceDetected => "race"
-  | .fatal _ => "fatal"
 
-def GoError.message : GoError → String
-  | .panic message => message
+def Refusal.message : Refusal → String
   | .unsupported feature => feature
   | .stuck message => message
   | .internal message => message
-  | .fuelOut => "GoCore execution fuel exhausted"
+
+/-- The harness's status word for a Go terminal. -/
+def Terminal.status : Terminal → String
+  | .panic _ => "panic"
+  | .fatal _ => "fatal"
+  | .deadlock => "deadlock"
+  | .raceDetected => "race"
+
+def Terminal.message : Terminal → String
+  | .panic message => message
+  | .fatal message => message
   | .deadlock => "all goroutines are asleep - deadlock!"
   | .raceDetected => "data race detected"
-  | .fatal message => message
+
+/-- Status per class (byte-identical to the pre-A1 flat table). -/
+def GoError.status : GoError → String
+  | .refusal r => r.status
+  | .terminal t => t.status
+  | .fuelOut => "fuel-out"
+
+def GoError.message : GoError → String
+  | .refusal r => r.message
+  | .terminal t => t.message
+  | .fuelOut => "GoCore execution fuel exhausted"
 
 structure Addr where
   id : Nat

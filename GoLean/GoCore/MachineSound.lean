@@ -1185,10 +1185,14 @@ theorem exceptCong.panic_left {α β : Type} {R : α → β → Prop}
   cases y with
   | ok b => exact h.elim
   | error e =>
-    cases e <;>
-      first
-      | exact ⟨_, rfl⟩
-      | exact Bool.noConfusion (h : true = false)
+    -- A1 stop grammar: only the terminal class can hold a panic.
+    rcases e with r | t | _
+    · cases r <;> exact Bool.noConfusion (h : true = false)
+    · cases t <;>
+        first
+        | exact ⟨_, rfl⟩
+        | exact Bool.noConfusion (h : true = false)
+    · exact Bool.noConfusion (h : true = false)
 
 theorem exceptCong.of_ok_bind {α₁ α₂ β₁ β₂ : Type} {S : β₁ → β₂ → Prop}
     {x₁ : α₁} {x₂ : α₂} {f : α₁ → Except GoError β₁}
@@ -2573,7 +2577,8 @@ theorem applySelect_ok_or_panic_any_ch {σ : ExecState}
           cases commits with
           | nil =>
               rcases h with ⟨out, h⟩ | ⟨msg, h⟩ <;>
-                simp [throw, throwThe, MonadExceptOf.throw] at h
+                simp [throw, throwThe, MonadExceptOf.throw, GoError.internal,
+                  GoError.panic] at h
           | cons b rest =>
               simp only [Choices.consumeAt_l2Entry] at h ⊢
               rcases hcons : Choices.consume ch (b :: rest).length

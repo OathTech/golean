@@ -190,7 +190,7 @@ theorem stepFn_append_nospill {s : ExecState} {v : GoValue}
   dsimp only
   rw [applyStmtOp_append_nospill hns ch]
   cases hap : applyStmtOp s [] (.appendSlice elem) nt ((v :: done).reverse) with
-  | error e => cases e <;> rfl
+  | error e => cases_stop e <;> rfl
   | ok p =>
     obtain ⟨s₂, ch₂⟩ := p
     rfl
@@ -863,12 +863,12 @@ theorem checkCert_complete_aux
           exact ih m' r' ⟨kj, hnd⟩ tail o hobs'
       | error e =>
         rw [hru] at hedge hobs'
-        cases e with
-        | raceDetected =>
+        cases_stop e
+        case raceDetected =>
           simp only [obsOf?, Option.some.injEq] at hobs'
           cases hobs'
           exact obsMem_mem hedge
-        | _ => cases hedge
+        all_goals cases hedge
     by_cases hemp : m.threads.isEmpty
     · rw [if_pos hemp] at hnode; cases hnode
     · rw [if_neg hemp] at hnode

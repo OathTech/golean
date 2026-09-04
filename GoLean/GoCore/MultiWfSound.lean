@@ -1173,7 +1173,7 @@ theorem stepThread_wf {s : ExecState} {threads : Array Config} {i : Nat}
                   exact ⟨q1, q3, q4, by simp, pool_set1_wf q4 hts q2 q5⟩
                 | error e =>
                   rw [happly] at h
-                  cases e <;>
+                  cases_stop e <;>
                     simp only [throw, throwThe, MonadExceptOf.throw, pure_eq_ok,
                       Except.ok.injEq, Prod.mk.injEq, reduceCtorEq] at h
                   case panic msg =>

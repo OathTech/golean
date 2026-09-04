@@ -5590,7 +5590,11 @@ theorem applySelect_wf {σ : ExecState}
           | ok r => rw [hcc] at hf; simp_all
           | error e =>
               rw [hcc] at hf
-              cases e <;> simp_all
+              -- A1 stop grammar: the terminal class needs its own split.
+              rcases e with _ | t | _
+              · simp_all
+              · cases t <;> simp_all
+              · simp_all
         exact hcommit cl hmem hcom
     · -- defensive `.inr` (unreachable today): the picked panic as a
       -- `.panicking` configuration over the input state
@@ -5795,7 +5799,11 @@ theorem applySelect_itersNormalized {σ : ExecState}
           | ok r => rw [hcc] at hf; simp_all
           | error e =>
               rw [hcc] at hf
-              cases e <;> simp_all
+              -- A1 stop grammar: the terminal class needs its own split.
+              rcases e with _ | t | _
+              · simp_all
+              · cases t <;> simp_all
+              · simp_all
         exact commitClause_itersNormalized hcom hk
     · -- defensive `.inr`: the panicking configuration forwards `k`
       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h

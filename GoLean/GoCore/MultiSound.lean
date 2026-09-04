@@ -258,7 +258,7 @@ theorem stepFn_selectApply_inv {σ : ExecState} {v : GoValue}
       exact .inl ⟨cl₂, rfl⟩
   | error e =>
       rw [happ] at h
-      cases e <;>
+      cases_stop e <;>
         simp only [throw, throwThe, MonadExceptOf.throw, pure_eq_ok,
           Except.ok.injEq, Prod.mk.injEq, reduceCtorEq] at h
       case panic msg =>
@@ -330,10 +330,10 @@ theorem stepThread_single {σ : ExecState} {c : Config} {ch : Choices}
             unfold stepFn
             dsimp only
             simp only [happly]
-            cases e <;> rfl
+            cases_stop e <;> rfl
           refine ⟨⟨0, .selectPass, []⟩, ?_⟩
           rw [hfn]
-          cases e <;> first | rfl | simp [Functor.map, Except.map]
+          cases_stop e <;> first | rfl | simp [Functor.map, Except.map]
 
 theorem runnableIdxs_singleton {σ : ExecState} {c : Config}
     (h : threadRunnable σ c = true) :
@@ -549,7 +549,7 @@ theorem execProgLoop_single :
               rw [hstep] at hr
               rw [hstep] at hcls
               subst hr
-              cases e <;> simp_all [transferable]
+              cases_stop e <;> simp_all [transferable]
       | none =>
           obtain ⟨ev, hmulti⟩ :=
             stepMulti_single (σ := σ) (ch := ch) hb hsp hd
@@ -794,7 +794,7 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
                     (StepE.lift (Step.selectApply happly))
                 | error e =>
                   rw [happly] at hst
-                  cases e <;>
+                  cases_stop e <;>
                     simp only [throw, throwThe, MonadExceptOf.throw, pure_eq_ok,
                       Except.ok.injEq, Prod.mk.injEq, reduceCtorEq] at hst
                   case panic msg =>
