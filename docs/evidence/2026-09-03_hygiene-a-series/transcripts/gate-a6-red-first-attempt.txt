@@ -1,0 +1,174 @@
+
+[1m── frontend unit tests (go test ./tools/nativefrontend)[0m
+ok  	_<worktree>/tools/nativefrontend	0.468s
+
+[1m── interpreter eval tests (gocore-eval-tests)[0m
+  ok:148  fail:0  exit:0
+
+[1m── re-run full native differential corpus (--diff: tier=slow rows verified against their cached certified records)[0m
+differential coverage summary: cases=3284 pass=3083 fail=201 export_status=0
+results: artifacts/coverage/latest.tsv
+metadata: artifacts/coverage/latest.meta.tsv
+
+[1m── membership-lane gate self-test, go-dependent half (--with-go: F4 param re-validation, F6 frontend guard, B3-B5 slice-4 lane gates, G5 fan-out-never-ran no-publish, T1-T4 timeouts name their cause, T5-T8 exit 2/137/143 name did-not-decide, D1-D6 the strict-lane depth guard; G1-G4 run in the fast half since audit F19)[0m
+ok: membership without why
+ok: nondet tag on a strict row
+ok: strict row with why text
+ok: unknown param key
+ok: invalid lane value
+ok: duplicate param key
+ok: retired samples= param (2026-09-03 sampling rule)
+ok: non-positive param value
+ok: membership without the nondet tag
+ok: tier on a racy row
+ok: tier on a confluent row (W3.2 stage C widening)
+ok: invalid tier value
+ok: membership without explicit width (F2a)
+ok: bare 6-column strict row
+ok: explicit strict row
+ok: well-formed membership row
+ok: confluent without why
+ok: confluent with the nondet tag
+ok: confluent without width
+ok: confluent with a members param
+ok: racy on a non-race expectation
+ok: racy without width
+ok: race expectation left on the strict lane
+ok: race expectation on the membership lane
+ok: well-formed confluent row
+ok: well-formed racy row
+ok: membership row with a members pin
+ok: statuses on a non-membership lane
+ok: statuses malformed entry
+ok: statuses singleton
+ok: statuses missing expected_status
+ok: statuses duplicate entry
+ok: membership row with a status-diverse envelope
+ok: strict row declaring depth=N (P1)
+ok: strict row with depth=0
+ok: strict row with an enumerator param
+ok: strict row with a why
+ok: depth= on a membership row
+ok: depth= on a confluent row
+ok: check-bugs Expect: FAIL with a FAIL row passes
+ok: check-bugs Expect: FAIL with a PASS row fails (5)
+ok: check-bugs none-entry without Expect stays existence-only
+ok: check-bugs unrecognized Expect token fails closed (0)
+ok: baseline-diff (i) member stage differential -> no drift
+ok: baseline-diff (i) member stage nondet -> no drift
+ok: baseline-diff (ii) non-member stage -> drift
+ok: baseline-diff (iii) PASS never absorbed -> drift
+ok: baseline-diff (iv) alternation on a PASS row -> REFUSED
+ok: baseline-diff (v) unknown stage word -> REFUSED
+ok: baseline-diff (vi) alternation without a # reason: line -> REFUSED
+ok: baseline-diff (vii) plain row stays exact -> drift
+ok: baseline-diff (viii) # reason: block over a NON-alternation row (regenerated plain) -> REFUSED
+ok: alternation-survival (ix) re-pin regenerated the row plain -> FAIL
+ok: alternation-survival (ix) re-pin dropped the row -> FAIL
+ok: alternation-survival (ix) removal named in the header -> ok with a note
+ok: alternation-survival (ix) alternation survives -> ok
+ok: alternation-survival unreadable input -> exit 2
+ok: check-bugs alternation row stays in the fidelity filter (unclassified fx/alt fails (4) by name)
+ok: check-bugs mixed alternation fails (6)
+ok: check-bugs empty-stage FAIL row fails (6) by name
+ok: lake-build failure exits 2, no readable results (G1)
+ok: lake-build timeout exits 2, no readable results (G2)
+ok: manifest-not-found exits 2, no readable results (G3)
+ok: empty manifest exits 2 without publishing (G4)
+ok: harness re-validation rejects sites=0 (F4)
+ok: harness refuses the retired samples= param by name (F4b)
+ok: membership under non-native frontend fails closed (F6)
+ok: members= cardinality pin refuses a wrong pin (B3)
+ok: confluent lane refuses a non-singleton set (B4)
+ok: racy lane fails loud on a refuted width (B5)
+ok: depth guard refuses a strict row whose adversarial streams are exhausted, naming the cause (D1)
+FAIL: the same row routed to confluent is certified (|set|=1) (D2); row: FAIL	lane-d2	goroutines,channels,range,close	confluent	enumerator failed (exit 1; schedule-confluence not certified): coverage-observations: dedup engine: dedup work budget exceeded (237357 nodes, 262644 edges, 25288 hits, 133436 hashes, maxBucket 12) — raise the row's work cap
+ok: the same row with a sufficient depth=N passes, recording wide=/depth= (D3)
+ok: an insufficient depth=N is refused, naming the exhausted seeded stream (D4)
+ok: a variant-stream refusal is reported as a refusal (lean-observation), not as nondet (D5)
+ok: harness re-validation refuses depth=0 (D6)
+ok: fan-out that ran no worker exits 2 without publishing (G5)
+ok: G5 named both causes (global fan-out refusal + empty-row guard), no stray .out
+ok: T1-strict-lean-run: cause named at stage lean-observation (Lean run TIMED OUT after 1s)
+    row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	lean-observation	Lean run TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) — no observation produced (expected status ok); captured output: run_with_timeout: TIMED OUT after 1s — killing: /home/dev/projects/golean/.tmp/golean-lane-validation.MJgZDb/fakeroot/.lake/build/bin/golean native-json-run --input /home/dev/projects/golean/.tmp/golean-lane-validation.MJgZDb/artifacts-T1-strict-lean-run/native/lane-t1/wire.json --function forConditionEval
+ok: T2-nondet-rerun: cause named at stage nondet (re-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s)
+    row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	nondet	oracle-invariance re-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) — invariance NOT certified (a killed run is not an observed variance); captured output: run_with_timeout: TIMED OUT after 1s — killing: /home/dev/projects/golean/.tmp/golean-lane-validation.MJgZDb/fakeroot/.lake/build/bin/golean native-json-run --input /home/dev/projects/golean/.tmp/golean-lane-validation.MJgZDb/artifacts-T2-nondet-rerun/native/lane-t1/wire.json --function forConditionEval --choices 9,8,7,6,5,4,3,2,1,0
+ok: T3-coupling-pin: cause named at stage membership (driver-coupling pin: native-json-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s)
+    row: FAIL	lane-t3	maps,range,keys,loops,nondet	membership	driver-coupling pin: native-json-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) — coupling NOT certified (a killed run is not copied-driver drift); captured output: run_with_timeout: TIMED OUT after 1s — killing: /home/dev/projects/golean/.tmp/golean-lane-validation.MJgZDb/fakeroot/.lake/build/bin/golean native-json-run --input /home/dev/projects/golean/.tmp/golean-lane-validation.MJgZDb/artifacts-T3-coupling-pin/native/lane-t3/wire.json --function rangeFirstKey --choices 9,8,7,6,5,4,3,2,1,0
+ok: T4-sample-loop: cause named at stage membership (observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing a Go sample against member #1)
+    row: FAIL	lane-t3	maps,range,keys,loops,nondet	membership	membership check: observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing a Go sample against member #1 — membership NOT decided (a killed comparator is not the too-narrow soundness alarm): sample={"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]} member={"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+ok: T5-comparator-undecodable: cause named at stage go-observation (Go output is not a valid observation (comparator said: left.status: unknown observation status)
+    row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	go-observation	Go output is not a valid observation (comparator said: left.status: unknown observation status "weird"): {"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1233}]}
+ok: T6-lean-run-sigkill: cause named at stage lean-observation (Lean run KILLED (exit 137)
+    row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	lean-observation	Lean run KILLED (exit 137 — SIGKILL: cgroup/OOM or an external kill; did not decide) — no observation produced (expected status ok); captured output: 
+ok: T7-differential-sigterm: cause named at stage differential (observation-eq KILLED (exit 143)
+    row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	differential	observation-eq KILLED (exit 143 — SIGTERM: an external kill; did not decide) — Lean/Go equality NOT decided (not a mismatch): Lean={"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1233}]} Go={"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1233}]}
+ok: T8-go-oracle-sigkill: cause named at stage go-run (go run oracle KILLED (exit 137)
+    row: FAIL	lane-t8	panic,recover,defer,returns,named-results	go-run	go run oracle KILLED (exit 137 — SIGKILL: cgroup/OOM or an external kill; did not decide) — no Go observation produced (not a panic verdict); captured output: 
+ok: D7a-empty-stream: an empty invariance stream is refused by name (nondet)
+ok: D7b-trace-default-only: cause named at stage nondet (traced as the DEFAULT stream (empty stream — harness defect))
+    row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	nondet	depth guard: invariance stream #1 traced as the DEFAULT stream (empty stream — harness defect) — stream coverage NOT established
+ok: D7c-trace-three: cause named at stage nondet (expected 4 stream reports from choice-trace, got 3)
+    row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	nondet	depth guard: expected 4 stream reports from choice-trace, got 3 — stream coverage NOT established: id stream status consumed wide exhaustedAt wideAfterExhaustion perSite maxBound violations firstViolation alarms firstAlarm obsHash driverAgreement\n/home/dev/projects/golean/.tmp/golean-lane-validation.MJgZDb/artifacts-D7c-trace-three/native/lane-t1/wire.json default ok 0 0 - 0 - 0 0 - 0 - 11462033297572717931 ok\n/home/dev/projects/golean/.tmp/golean-lane-validation.MJgZDb/artifacts-D7c-trace-three/native/lane-t1/wire.json 9,8,7,6,5,4,3,2,1,0 ok 0 0 - 0 - 0 0 - 0 - 11462033297572717931 ok\n/home/dev/projects/golean/.tmp/golean-lane-validation.MJgZDb/artifacts-D7c-trace-three/native/lane-t1/wire.json 1,3,5,7,9,2,4,6,8,0 ok 0 0 - 0 - 0 0 - 0 - 11462033297572717931 ok
+ok: S1-pin-early-stop: PASS (exhibited=2 draws=2 (K=32; stopped at the members=2 pin)); draws logged: plain race 
+    row: PASS	lane-S1-pin-early-stop	channels,select,make,len,nondet	membership	enumerated=2 exhibited=2 draws=2 (K=32; stopped at the members=2 pin) unexhibited=0 (members in /home/dev/projects/golean/.tmp/golean-lane-validation.MJgZDb/artifacts-S1-pin-early-stop/membership/lane-S1-pin-early-stop)
+ok: S2-unpinned-full-K: PASS (exhibited=2 draws=32 (K=32; no members= pin — no early stop)); draws logged: plain race plain race plain race plain race plain race plain race plain race plain race plain race plain race plain race plain race plain race plain race plain race plain race 
+    row: PASS	lane-S2-unpinned-full-K	channels,select,make,len,nondet	membership	enumerated=2 exhibited=2 draws=32 (K=32; no members= pin — no early stop) unexhibited=0 (members in /home/dev/projects/golean/.tmp/golean-lane-validation.MJgZDb/artifacts-S2-unpinned-full-K/membership/lane-S2-unpinned-full-K)
+ok: S3-race-draw-outside-set: FAIL (NOT in the machine's enumerated set); draws logged: plain race 
+    row: FAIL	lane-S3-race-draw-outside-set	channels,select,make,len,nondet	membership	Go observation is NOT in the machine's enumerated set (the too-narrow soundness alarm): {"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":999}]} enumerated=2
+ok: S4-killed-draw-is-no-observation: FAIL (draw 2/32 (race) -race go sample: go run oracle KILLED (exit 137); draws logged: plain race 
+    row: FAIL	lane-S4-killed-draw-is-no-observation	channels,select,make,len,nondet	membership	draw 2/32 (race) -race go sample: go run oracle KILLED (exit 137 — SIGKILL: cgroup/OOM or an external kill; did not decide) — no sample produced (not a status verdict); captured output: 
+ok: S5-saturation-undecided: FAIL (sampling rule: observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing draw 2/32 against an earlier distinct draw — saturation NOT decided); draws logged: plain race 
+    row: FAIL	lane-S5-saturation-undecided	channels,select,make,len,nondet	membership	sampling rule: observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing draw 2/32 against an earlier distinct draw — saturation NOT decided (a killed comparator is neither a new observation nor a repeat): draw={"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":210}]} earlier={"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":101}]}
+ok: S6-two-draw-floor: PASS (exhibited=1 draws=2 (floor; K=32; stopped at the members=1 pin after the two-draw floor — one plain + one -race)); draws logged: plain race 
+    row: PASS	lane-S6-two-draw-floor	sync,atomics,ints,goroutines,channels,loops,closures,race,nondet	membership	enumerated=1 exhibited=1 draws=2 (floor; K=32; stopped at the members=1 pin after the two-draw floor — one plain + one -race) unexhibited=0 (members in /home/dev/projects/golean/.tmp/golean-lane-validation.MJgZDb/artifacts-S6-two-draw-floor/membership/lane-S6-two-draw-floor)
+test-lane-validation: FAIL
+
+[1m── re-run negative corpus (--diff)[0m
+results: artifacts/coverage/negative-latest.tsv
+meta: artifacts/coverage/negative-latest.meta.tsv
+
+[1m── derived oracle artifacts re-derived (Tests/FloatVectors.lean + tools/nativefrontend/inittask-std.tsv)[0m
+
+[1m── negative baseline diff[0m
+no regression: 394 case(s) run in negative-latest.tsv match baselines/negative-full.tsv
+
+[1m── differential baseline diff (scripts/coverage-baseline-diff)[0m
+DRIFT vs baselines/native-full.tsv (3284 case(s) run):
+goroutines/pipeline/buffered-stage	baseline[PASS/confluent] -> now[FAIL/confluent]
+goroutines/pipeline/two-stage	baseline[PASS/confluent] -> now[FAIL/confluent]
+
+[1m── cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)[0m
+  [01] C13  MEDIUM  78 doc site(s) across 9 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
+  [02] C5  MEDIUM  1 frontier-table case citation(s) do not resolve against the baseline
+  [03] C9  MEDIUM  the wire schema moved after the certification date 2026-09-01 (15 commit(s) to wire.go/NativeToIR.lean) — the certified set's wire sha is only current if `scripts/ci --slow` has re-enumerated since
+
+[1m══ scripts/ci summary ══[0m
+  note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  FAIL core build has GoLean/ warnings (they corrupt the runner JSON channel)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   eval tests (148 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  FAIL lane-validation fixtures, harness half (a lane gate went quiet — see above)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  note negative baseline diff matched (394 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  FAIL baseline diff (DRIFT — see above)
+  note reconciler: 3 finding(s), 0 HIGH — report-only (details: tools/reconcile-records)
+
+[1mRESULT: FAIL[0m
+exit=1

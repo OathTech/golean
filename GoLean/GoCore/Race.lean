@@ -131,8 +131,8 @@ loudly; the racy-negative lane's claim is scoped by these):
   is same-goroutine-sequenced before its select;
   `selectWakeClosed`'s select has only recv clauses — both remain
   TSan-green for THOSE reasons). Realized as
-  `RaceState.chanObjAccess` (a per-channel `ShadowCell` keyed by the
-  channel's cell `Loc`, EXACT match — channel identity, no path
+  `RaceState.chanObjAccess` (a `ShadowCell` under the channel's
+  `ShadowKey.chanObj` key, EXACT match — channel identity, no path
   overlap), checked-and-recorded by `raceUpdate`'s chan-op arm
   (plain ops) and select-apply arm (the per-send-clause poll read).
   Consequence recorded honestly: `resumeThread`'s
@@ -370,8 +370,61 @@ def locPrefix (l : Loc) : Loc → Bool
   | m@(.field b _ _) => l == m || locPrefix l b
   | m@(.index b _) => l == m || locPrefix l b
 
-/-- Path overlap: the conflict relation on recorded accesses. -/
+/-- Path overlap: the conflict relation on recorded DATA accesses. -/
 def locOverlap (a b : Loc) : Bool := locPrefix a b || locPrefix b a
+
+/-! ## Shadow keys (design-hygiene A6, 2026-09-04)
+
+The shadow is keyed by a `ShadowKey`, not a `Loc`: a `Loc` is a memory
+PATH and means only that. The two non-path things the detector shadows —
+a sync primitive's gc WORD (formerly a phantom `Loc.field` under a
+made-up `TypeId`) and a channel OBJECT (formerly a second shadow with its
+own exact-match cell logic) — are their own constructors, and the one
+`overlap` table says how every pair of keys conflicts. -/
+
+/-- The gc state words of the sync primitives (the field names of the
+pinned struct definitions: `state`/`sema` for Mutex and WaitGroup,
+`w`/`readerCount` for RWMutex, `done`/`m` for Once). -/
+inductive SyncWordName where
+  | state | sema | w | readerCount | done | m
+  deriving Repr, BEq, DecidableEq, Ord
+
+-- The shadow is kept in CANONICAL (sorted) key order, so the dedup
+-- engine's structural state equality is insensitive to the interleaving in
+-- which keys were first touched (`shadowSet`); the total order is the
+-- derived one on the key's components.
+deriving instance Ord for Addr
+deriving instance Ord for TypeId
+deriving instance Ord for Loc
+deriving instance Ord for SyncKind
+
+/-- What one shadow cell is keyed by. -/
+inductive ShadowKey where
+  /-- A memory path (the data footprint; overlap = path prefix). -/
+  | data (l : Loc)
+  /-- A sync primitive's gc word: the primitive's cell path, its kind, the
+  word. Overlaps itself exactly, and any DATA path that is a prefix of
+  the primitive's path (a whole-struct copy/overwrite covers the words); a
+  sibling field's access overlaps none. -/
+  | syncWord (l : Loc) (kind : SyncKind) (word : SyncWordName)
+  /-- A channel object (gc's `c.raceaddr()` instrumentation point): channel
+  identity — exact match only, never path overlap (BUG-045/BUG-046). -/
+  | chanObj (l : Loc)
+  deriving Repr, BEq, DecidableEq, Ord
+
+/-- THE conflict-keying table: when do two shadow keys name overlapping
+memory? Data/data by path overlap; word/word by identity; data/word iff
+the data path is a prefix of the primitive's path (either direction of
+the pair); channel objects only with themselves, exactly. Symmetric by
+construction (each mixed arm is stated both ways). -/
+def ShadowKey.overlap : ShadowKey → ShadowKey → Bool
+  | .data a, .data b => locOverlap a b
+  | .syncWord l k wd, .syncWord l' k' wd' => l == l' && k == k' && wd == wd'
+  | .data d, .syncWord m _ _ => locPrefix d m
+  | .syncWord m _ _, .data d => locPrefix d m
+  | .chanObj a, .chanObj b => a == b
+  | .data _, .chanObj _ | .chanObj _, .data _ => false
+  | .syncWord .., .chanObj _ | .chanObj _, .syncWord .. => false
 
 /-! ## Access kinds and the per-location shadow (TSan/FastTrack skeleton) -/
 
@@ -848,29 +901,44 @@ structure SyncClocks where
   semB : VClock := #[]
   deriving Repr, BEq
 
-/-- Update-or-insert in a `Loc`-keyed association list. -/
-def assocSet {α : Type} (xs : List (Loc × α)) (loc : Loc) (v : α) :
-    List (Loc × α) :=
+/-- Update-or-insert in a keyed association list (insertion order). -/
+def assocSet {κ α : Type} [BEq κ] (xs : List (κ × α)) (key : κ) (v : α) :
+    List (κ × α) :=
   match xs with
-  | [] => [(loc, v)]
+  | [] => [(key, v)]
   | (l, w) :: rest =>
-      if l == loc then (loc, v) :: rest else (l, w) :: assocSet rest loc v
+      if l == key then (key, v) :: rest else (l, w) :: assocSet rest key v
+
+/-- Update-or-insert in the shadow, keeping it SORTED by key (A6): two
+detector states that record the same cells under the same keys are then
+structurally EQUAL whatever order the goroutines first touched the keys
+in — the dedup engine (`RaceState.eqb` is structural) merges them. Before
+A6 the channel-object shadow was a separate list, which gave this
+interleaving-insensitivity for free between data and channel keys; one
+list needs it stated, and gets it for every key class at once. -/
+def shadowSet : List (ShadowKey × ShadowCell) → ShadowKey → ShadowCell →
+    List (ShadowKey × ShadowCell)
+  | [], key, v => [(key, v)]
+  | (k, w) :: rest, key, v =>
+      match compare key k with
+      | .lt => (key, v) :: (k, w) :: rest
+      | .eq => (key, v) :: rest
+      | .gt => (k, w) :: shadowSet rest key v
 
 /-- The detector state: per-goroutine clocks (index = pool goroutine
-id; absent = the birth clock), the access shadow, the channel clocks,
-and (BUG-045) the CHANNEL-OBJECT shadow — gc's `c.raceaddr()`
-instrumentation point, one `ShadowCell` per channel keyed by the
-channel's cell `Loc` with EXACT-loc matching (channel identity; the
-path-overlap relation is for data, not objects). Empty until the pool
+id; absent = the birth clock), THE access shadow — one `ShadowCell` per
+`ShadowKey`: data paths, sync words, and (BUG-045) channel objects (gc's
+`c.raceaddr()` instrumentation point, channel identity — exact match; A6
+folded the former separate channel-object shadow into this one under
+its own key constructor) — and the channel clocks. Empty until the pool
 holds a second goroutine — a single goroutine cannot race with itself
 (every access is sequenced), so the detector is inert on sequential
 runs BY CONSTRUCTION (the conservation theorem's hinge, and the
 whole-corpus zero-overhead guarantee). -/
 structure RaceState where
   clocks : Array VClock := #[]
-  shadow : List (Loc × ShadowCell) := []
+  shadow : List (ShadowKey × ShadowCell) := []
   chans : List (Loc × ChanClocks) := []
-  chanObj : List (Loc × ShadowCell) := []
   /-- Per-sync-cell clock pairs (spec-parity slice 2, `SyncClocks`). -/
   syncs : List (Loc × SyncClocks) := []
   /-- Per-ADDRESS atomic clocks (the atomics arc, wave 1 — the section
@@ -961,21 +1029,31 @@ happens-before this goroutine's current point, of a kind that CONFLICTS
 with this one (`AccessKind.conflicts`: at least one write, not both
 atomic) — is the terminal `raceDetected` (fail closed per run; the
 message is fixed so the refusal is choice-invariant per stream). -/
-def RaceState.access (r : RaceState) (t : Nat) (a : RaceAccess) :
-    Except GoError RaceState :=
-  let (kind, loc) := a
+def RaceState.accessKey (r : RaceState) (t : Nat) (kind : AccessKind)
+    (key : ShadowKey) : Except GoError RaceState :=
   let vt := r.vcOf t
-  let conflict := r.shadow.any fun (l, cell) =>
-    locOverlap loc l && cell.conflicts kind t vt
+  let conflict := r.shadow.any fun (k, cell) =>
+    key.overlap k && cell.conflicts kind t vt
   if conflict then throw .raceDetected
   else
-    let cell := ((r.shadow.find? (·.1 == loc)).map (·.2)).getD {}
-    return { r with shadow := assocSet r.shadow loc (cell.record kind t (vt.get t)) }
+    let cell := ((r.shadow.find? (·.1 == key)).map (·.2)).getD {}
+    return { r with shadow := shadowSet r.shadow key (cell.record kind t (vt.get t)) }
+
+/-- A DATA access: the footprint's `(kind, path)` under the `.data` key. -/
+def RaceState.access (r : RaceState) (t : Nat) (a : RaceAccess) :
+    Except GoError RaceState :=
+  r.accessKey t a.1 (.data a.2)
 
 def RaceState.accesses (r : RaceState) (t : Nat) :
     List RaceAccess → Except GoError RaceState
   | [] => return r
   | a :: rest => do RaceState.accesses (← r.access t a) t rest
+
+/-- Keyed accesses (the sync ops' word accesses). -/
+def RaceState.accessKeys (r : RaceState) (t : Nat) :
+    List (AccessKind × ShadowKey) → Except GoError RaceState
+  | [] => return r
+  | (kind, key) :: rest => do RaceState.accessKeys (← r.accessKey t kind key) t rest
 
 /-- **The CHANNEL-OBJECT access pair (BUG-045 + BUG-046; U3 in the
 module docstring)** — gc's `c.raceaddr()` instrumentation, modeled
@@ -989,20 +1067,15 @@ records one READ per SEND clause at its poll — `selectgo` pass 1's
 acquire-only, nil channels excluded from pollorder; BUG-046 corrected
 the first version's false "selectgo bypasses chansend/closechan"
 premise — that is true of the commit path, not the poll).
-Check-then-record against the per-channel shadow under the
-goroutine's CURRENT clock (before the op's own release/acquire,
-matching gc's instruction order): an HB-unordered read↔write or
-write↔write on the same channel is the terminal `raceDetected` —
-send↔send never conflicts. Exact-loc keying (channel identity),
-unlike the data shadow's path overlap. -/
+Check-then-record under the `.chanObj` key and the goroutine's CURRENT
+clock (before the op's own release/acquire, matching gc's instruction
+order): an HB-unordered read↔write or write↔write on the same channel is
+the terminal `raceDetected` — send↔send never conflicts. Exact keying
+(channel identity — `ShadowKey.overlap`'s `chanObj` arm), unlike the data
+keys' path overlap. -/
 def RaceState.chanObjAccess (r : RaceState) (t : Nat) (loc : Loc)
     (isWrite : Bool) : Except GoError RaceState :=
-  let vt := r.vcOf t
-  let kind : AccessKind := if isWrite then .write else .read
-  let cell := ((r.chanObj.find? (·.1 == loc)).map (·.2)).getD {}
-  if cell.conflicts kind t vt then throw .raceDetected
-  else
-    return { r with chanObj := assocSet r.chanObj loc (cell.record kind t (vt.get t)) }
+  r.accessKey t (if isWrite then .write else .read) (.chanObj loc)
 
 def RaceState.syncOf (r : RaceState) (loc : Loc) : SyncClocks :=
   match r.syncs.find? (·.1 == loc) with
@@ -1270,11 +1343,12 @@ and [USER]-countersigned 2026-09-03 (above).
 Where TSan realizes NOTHING (`race.Disable`) the go_mem kind alone is
 recorded — the former residual (a), now closed BY DESIGN.
 
-WHERE each access lands — the gc WORD, a sub-path of the sync cell's
-`Loc` (`syncWord`: `.field <primitive path> ⟨"sync.<Kind>"⟩ <word>`,
-the field names of the pinned struct definitions). A whole-struct
-copy/overwrite at the primitive's or an enclosing path overlaps every
-word (`locPrefix`); a SIBLING field's plain access overlaps none (check
+WHERE each access lands — the gc WORD, the `ShadowKey.syncWord` of the
+sync cell's path, kind and word (`SyncWordName`: the field names of the
+pinned struct definitions). A whole-struct copy/overwrite at the
+primitive's or an enclosing path overlaps every word
+(`ShadowKey.overlap`'s data/word arm is `locPrefix`); a SIBLING field's
+plain access overlaps none (check
 (i) of the BUG-080 ruling — `probes/u4kind/mu-siblings-under-lock`,
 `mu-disjoint-prims`, `mu-sibling-beside-lock` and the corpus rows
 `race/free-sync/{mutex-siblings,disjoint-prims}` are the green guards).
@@ -1417,16 +1491,16 @@ runner's definition, diagnosed at BUG-080). The owed fix's scope and
 its call-site list are AUTHORITATIVE at TODO.md's BUG-080 follow-up
 item (S–M, trust-surface) — cited, not restated here. -/
 
-/-- The gc WORD of a sync primitive an access lands on, as a sub-path
-of the primitive's own `Loc`: `.field loc ⟨"sync.<Kind>"⟩ word`, `word`
-a field name of the pinned struct (`state`/`sema` for Mutex and
-WaitGroup, `w`/`readerCount` for RWMutex, `done`/`m` for Once — the
-section docstring's table). A shadow KEY only — the detector never
-resolves it against a value; the path shape is what makes a
-copy/overwrite of the primitive (or its enclosing struct) overlap the
-word while sibling fields and sibling words stay disjoint. -/
-def syncWord (loc : Loc) (kind : SyncKind) (word : String) : Loc :=
-  .field loc ⟨"sync." ++ kind.name⟩ word
+/-- The gc WORD of a sync primitive an access lands on: the
+`ShadowKey.syncWord` of the primitive's own cell path, its kind and the
+word (`state`/`sema` for Mutex and WaitGroup, `w`/`readerCount` for
+RWMutex, `done`/`m` for Once — the section docstring's table). A shadow
+KEY (A6; formerly a phantom `Loc.field` path under a made-up `TypeId`):
+`ShadowKey.overlap` is what makes a copy/overwrite of the primitive (or
+its enclosing struct) overlap the word while sibling fields and sibling
+words stay disjoint. -/
+def syncWord (loc : Loc) (kind : SyncKind) (word : SyncWordName) : ShadowKey :=
+  .syncWord loc kind word
 
 /-- The accesses recorded on the primitive's own words at a sync op's
 ENTRY — before the op's release/acquire hook — from the op and the
@@ -1440,36 +1514,36 @@ arm, commit or park alike. `acquired` is the TRY heads' outcome
 `TryRLock`; every other head's row ignores it (their kinds are
 outcome-independent — commit or park alike). -/
 def syncEntryKinds (op : SyncOp) (pre : SyncPrim) (delta : Int) (acquired : Bool)
-    (loc : Loc) : List RaceAccess :=
+    (loc : Loc) : List (AccessKind × ShadowKey) :=
   let at_ := syncWord loc pre.kind
   match op, pre with
   -- Mutex: the state CAS (TSan: atomic write; go_mem's read-like lock
   -- is subsumed by it).
-  | .lock, _ => [(.atomicWrite, at_ "state")]
+  | .lock, _ => [(.atomicWrite, at_ .state)]
   -- Mutex Unlock: the state Add FOLLOWS the release (`syncReleaseTailKinds`).
   | .unlock, _ => []
   -- RWMutex: the realized `race.Read(&rw.w)` + the counter RMW's go_mem
   -- kind (lock read-like, unlock write-like).
-  | .rlock, _ | .wlock, _ => [(.read, at_ "w"), (.atomicRead, at_ "readerCount")]
-  | .runlock, _ | .wunlock, _ => [(.read, at_ "w"), (.atomicWrite, at_ "readerCount")]
+  | .rlock, _ | .wlock, _ => [(.read, at_ .w), (.atomicRead, at_ .readerCount)]
+  | .runlock, _ | .wunlock, _ => [(.read, at_ .w), (.atomicWrite, at_ .readerCount)]
   -- WaitGroup Add/Done: the state RMW is write-like (go_mem); the
   -- realized sema READ when the counter leaves 0 upward.
   | .wgAdd, .waitGroup counter _ =>
-      (if delta > 0 && counter == 0 then [(.read, at_ "sema")] else [])
-        ++ [(.atomicWrite, at_ "state")]
-  | .wgAdd, _ => [(.atomicWrite, at_ "state")]
+      (if delta > 0 && counter == 0 then [(.read, at_ .sema)] else [])
+        ++ [(.atomicWrite, at_ .state)]
+  | .wgAdd, _ => [(.atomicWrite, at_ .state)]
   -- WaitGroup Wait: the counter read is read-like (go_mem); the
   -- realized sema WRITE for the FIRST blocking waiter.
   | .wgWait, .waitGroup counter waiters =>
-      (if counter != 0 && waiters == 0 then [(.write, at_ "sema")] else [])
-        ++ [(.atomicRead, at_ "state")]
-  | .wgWait, _ => [(.atomicRead, at_ "state")]
+      (if counter != 0 && waiters == 0 then [(.write, at_ .sema)] else [])
+        ++ [(.atomicRead, at_ .state)]
+  | .wgWait, _ => [(.atomicRead, at_ .state)]
   -- Once: a Do observing completion is the atomic load of `o.done`;
   -- every other Do is `doSlow`'s `o.m.Lock()` CAS; completion is the
   -- `o.done.Store(true)` (its Unlock's Add is the tail).
-  | .onceBegin _, .once true true => [(.atomicRead, at_ "done")]
-  | .onceBegin _, _ => [(.atomicWrite, at_ "m")]
-  | .onceComplete, _ => [(.atomicWrite, at_ "done")]
+  | .onceBegin _, .once true true => [(.atomicRead, at_ .done)]
+  | .onceBegin _, _ => [(.atomicWrite, at_ .m)]
+  | .onceComplete, _ => [(.atomicWrite, at_ .done)]
   -- Q-TRYLOCK (the section docstring's TryLock rows). Mutex TryLock on
   -- an UNLOCKED cell: the state CAS (:85), realized by TSan whether it
   -- wins (the acquire) or loses (gc's realization of the spurious
@@ -1477,7 +1551,7 @@ def syncEntryKinds (op : SyncOp) (pre : SyncPrim) (delta : Int) (acquired : Bool
   -- the plain early return (:77-79) in a noRaceFuncPkgs package —
   -- nothing realized, and go_mem gives an unsuccessful call no kind
   -- ("no synchronizing effect at all").
-  | .tryLock _, .mutex locked => if locked then [] else [(.atomicWrite, at_ "state")]
+  | .tryLock _, .mutex locked => if locked then [] else [(.atomicWrite, at_ .state)]
   -- RWMutex TryRLock/TryLock: the realized `race.Read(&rw.w)` opens
   -- every outcome (:89/:171, BEFORE `race.Disable`); the counter CAS is
   -- under `race.Disable` (nothing realized), so only go_mem's kind
@@ -1485,7 +1559,7 @@ def syncEntryKinds (op : SyncOp) (pre : SyncPrim) (delta : Int) (acquired : Bool
   -- l.RLock/l.Lock" — lock is read-like → `.atomicRead @readerCount`,
   -- the `rlock`/`wlock` row); a failed call has no go_mem kind.
   | .tryRLock _, .rwmutex .. | .tryWLock _, .rwmutex .. =>
-      (.read, at_ "w") :: (if acquired then [(.atomicRead, at_ "readerCount")] else [])
+      (.read, at_ .w) :: (if acquired then [(.atomicRead, at_ .readerCount)] else [])
   -- KIND MISMATCH — UNREACHABLE BY NAME (audit fix round F4; the
   -- `wakeReady` discipline): `tryAcquire` is `stuck` on a TRY head over
   -- the wrong primitive before any state change, and `raceUpdate` folds
@@ -1507,11 +1581,12 @@ after `syncRelease` (at the bumped epoch), so a goroutine that ACQUIRES
 this very release and then plainly reads the primitive still conflicts
 — TSan's verdict exactly; it also covers go_mem's write-like unlock
 (section docstring, Mutex row). -/
-def syncReleaseTailKinds (op : SyncOp) (pre : SyncPrim) (loc : Loc) : List RaceAccess :=
+def syncReleaseTailKinds (op : SyncOp) (pre : SyncPrim) (loc : Loc) :
+    List (AccessKind × ShadowKey) :=
   let at_ := syncWord loc pre.kind
   match op with
-  | .unlock => [(.atomicWrite, at_ "state")]
-  | .onceComplete => [(.atomicWrite, at_ "m")]
+  | .unlock => [(.atomicWrite, at_ .state)]
+  | .onceComplete => [(.atomicWrite, at_ .m)]
   -- Every other head's recorded set lies entirely at ENTRY
   -- (`syncEntryKinds`). Enumerated, never `_`-absorbed, so a new
   -- constructor is a compile error here as in every other sync arm.

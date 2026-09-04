@@ -413,3 +413,111 @@ if it names `IntKind.bits?`.
 regression, re-pin guard 0 flips, negative 394/394, eval tests 148/148
 (`transcripts/gate-a5.txt`); choice-trace delta vs the pre-series
 snapshot: 0 on all 19489 lines (`choice-trace/a5-summary.txt`).
+
+## A6 — `ShadowKey` instead of phantom `Loc`s in the detector
+
+**What changed** (Race.lean; two call sites in Multi.lean; the dedup hash).
+`inductive ShadowKey | data (l : Loc) | syncWord (l : Loc) (kind : SyncKind)
+(word : SyncWordName) | chanObj (l : Loc)`, with `SyncWordName := state |
+sema | w | readerCount | done | m` (an enum, not a `String`), and ONE table
+`ShadowKey.overlap` (data/data by `locOverlap`; word/word by identity;
+data/word iff the data path is a prefix of the primitive's path, both
+orientations; chanObj/chanObj exactly; every mixed pair else `false`).
+`RaceState.shadow : List (ShadowKey × ShadowCell)`; the separate
+`RaceState.chanObj` shadow is DELETED — `chanObjAccess` is
+`accessKey t kind (.chanObj loc)` and `access` is `accessKey t kind (.data
+loc)` over one check-then-record function. `syncWord loc kind word` now
+builds the key constructor (was `.field loc ⟨"sync." ++ kind.name⟩ word`,
+a phantom path under a made-up `TypeId`); `syncEntryKinds`/
+`syncReleaseTailKinds` return `List (AccessKind × ShadowKey)` and are
+recorded through `RaceState.accessKeys`. `assocSet` is generic in its key
+type. The data FOOTPRINT (`RaceAccess := AccessKind × Loc`, every
+`stepAccesses`/`stmtOpAccesses`/… producer) is unchanged: those ARE
+memory paths — which is the point (`Loc` means "memory path" and only
+that). The dedup node hash (`EnumDedup.lean`) loses its separate
+`chanObj` fold (the cells now sit in the one shadow fold) — a bucketing
+function, no semantic content; the certified records pin observation sets
+and the WIRE hash, not node hashes. [AGENT]
+
+**Recorded deviation from the review's sketch.** The review had
+`RaceAccess := AccessKind × ShadowKey` throughout. Kept as `AccessKind ×
+Loc` for the footprint: every footprint producer names a real memory path,
+and wrapping ~30 constructions in `.data` would buy nothing the type
+already says; the key type appears exactly where keying is decided (the
+shadow and the two sync-word producers). [AGENT]
+
+**Why nicer.** `Loc` means one thing. The two former keying disciplines
+(path overlap for data, exact match for channel objects, and the
+phantom-path trick for sync words) are three arms of one total table over
+an enum-carrying key — the union rule in the sync section's docstring is
+now literally `ShadowKey.overlap`. `SyncWordName` makes a misspelled word
+a compile error where it was a silently-disjoint string.
+
+**Preservation (verdict-for-verdict).** The conflict test is a pure
+function of (kind, key, clock); the keys are in bijection with the old
+encodings (`data l ↔ l`; `syncWord l k w ↔ .field l ⟨"sync."++k.name⟩
+w.name`; `chanObj l ↔ l` in the second shadow), and `overlap` agrees with
+the old tests on every pair that can arise: data/data is `locOverlap`
+verbatim; chanObj pairs were exact-match in their own shadow and are
+exact-match here, disjoint from everything else exactly as a separate
+shadow was; word/word — the old `locOverlap` on two phantom paths holds
+iff they are equal (a phantom `.field m ⟨"sync.K"⟩ w` can be a PROPER
+prefix of the other only by being a prefix of a real primitive path `m'`,
+which no phantom is), i.e. `l = l' ∧ k = k' ∧ w = w'` (the type-id string
+is injective in the kind); data/word — the old `locOverlap d (.field m
+⟨"sync.K"⟩ w) = (d == .field m … || locPrefix d m) || locPrefix (.field m
+…) d`, and the two phantom-equality disjuncts are false on every REAL
+path `d`: a program cannot produce a `Loc.field` step whose `TypeId` is
+`sync.<Kind>` (the frontend lowers `sync.Mutex` and friends to `Ty.sync`,
+whose values are `syncData`, and refuses field access into them), so the
+old test reduced to `locPrefix d m` — the new table's arm. That
+"phantom paths never coincide with real paths" premise was the OLD
+model's unstated soundness assumption; A6 makes it a non-issue by type.
+The differential (incl. the `race/` corpus and the `-race` oracle rows)
+and the trace are the regression; the per-row set records of the racy
+lane are unchanged (zero drift).
+
+**Proof deltas.** None: no proof mentions the shadow's key type
+(`RaceState` is decided flat — `deriving instance DecidableEq for
+RaceState` now derives through `ShadowKey`, MachineEqb unchanged).
+
+**The first gate was RED — diagnosed and fixed inside the item; both
+transcripts kept.** `ci --diff` on the first A6 tree reported
+`3083/201`: two `confluent`-lane rows, `goroutines/pipeline/buffered-stage`
+and `goroutines/pipeline/two-stage`, went PASS→FAIL with `dedup work
+budget exceeded` (`transcripts/gate-a6-red-first-attempt.txt`), while
+every other row and the whole choice-trace were unchanged. Not a machine
+change: the dedup ENGINE (untrusted tooling) merges states by STRUCTURAL
+equality (`RaceState.eqb := decide (a = b)`), and the old channel-object
+shadow was a SEPARATE list — so two runs that touched a data key and a
+channel key in opposite orders still produced structurally equal
+detector states. Folding the two lists into one insertion-ordered list
+made those states unequal, merges dropped, and the two channel pipelines
+(the corpus's heaviest chan-object/data interleavings) overran their
+work caps. Fix: the shadow is CANONICAL — kept sorted by key
+(`shadowSet`, over the derived `Ord` on `ShadowKey`/`Loc`/`SyncKind`/
+`SyncWordName`), so equal cell sets are structurally equal whatever the
+interleaving; this is at least the old merging (old-equal lists have equal
+multisets) and strictly more (it also canonicalizes the data/syncWord
+interleavings the old single list did not). Sound for the engine's use
+(structural equality ⇒ same state) exactly as before; re-run of the two
+rows: PASS, 187497 / 866780 nodes (the red attempt hit the cap at
+237357 / 951620+). The second full gate is the record below; the incident
+is the A-series' one red gate and is reported as such — a change in the
+dedup engine's merge RATE, zero change in any observation. Also fixed on
+the same pass: the `constructorNameAsVariable` linter warning on the
+`overlap` table's `w` binder (the gate treats core warnings as FAIL —
+they corrupt the runner's JSON channel).
+
+
+
+**Gate.** First attempt RED (`transcripts/gate-a6-red-first-attempt.txt`,
+diagnosed above). After the canonical-shadow fix: `scripts/capped
+scripts/ci --diff` RESULT PASS, `cases=3284 pass=3085 fail=199`, baseline
+diff FULL 3284/3284 no regression (the two pipeline rows PASS again:
+187497 / 866780 dedup nodes), re-pin guard 0 flips, negative 394/394,
+eval tests 148/148 (`transcripts/gate-a6.txt`). Choice-trace (both
+attempts) vs the pre-series snapshot: every consumption column identical
+on all 19489 lines; the second attempt's only `obsHash` delta is the same
+frontend wire-nondeterminism row as A3's (`choice-trace/a6-summary.txt`).
+Machine delta: 0.

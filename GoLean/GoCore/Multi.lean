@@ -1619,7 +1619,7 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (ev : StepEvent)
                         match syncCell m'.shared loc with
                         | .error e => throw e  -- the apply just wrote this cell; propagate, never absorb
                         | .ok post => pure (tryLockAcquired op pre post)
-                  let r ← r.accesses i (syncEntryKinds op pre delta acquired loc)
+                  let r ← r.accessKeys i (syncEntryKinds op pre delta acquired loc)
                   let r ← (match op with
                   | .lock | .rlock =>
                       (match m'.threads[i]? with
@@ -1691,7 +1691,7 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (ev : StepEvent)
                   -- write-like unlock (Race.lean, the Mutex row).
                   match m'.threads[i]? with
                   | some (.opDone _ _) =>
-                      r.accesses i (syncReleaseTailKinds op pre loc)
+                      r.accessKeys i (syncReleaseTailKinds op pre loc)
                   | _ => return r
               | _ => return r  -- nil/garbage receiver: the apply panicked
           | .retV v (.atomicStK op done [] _ _) => do

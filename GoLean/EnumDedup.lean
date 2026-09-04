@@ -90,8 +90,6 @@ private def nodeHash (nd : DedupNode) : UInt64 :=
     (UInt64.ofNat nd.r.shadow.length)
   let hShadow := nd.r.shadow.foldl
     (fun (h : UInt64) e => h * 262147 + cellHash e.2) 17
-  let hChanObj := nd.r.chanObj.foldl
-    (fun (h : UInt64) e => h * 524287 + cellHash e.2) 19
   let hChans := nd.r.chans.foldl
     (fun (h : UInt64) e =>
       e.2.slots.foldl (fun (h : UInt64) vc =>
@@ -104,7 +102,7 @@ private def nodeHash (nd : DedupNode) : UInt64 :=
     -- the hash values are unchanged (they were always equal on a dense heap).
     + UInt64.ofNat nd.m.shared.nextAddr * 10007
     + UInt64.ofNat nd.m.shared.heap.size * 100003
-    + hClocks + hShadow * 3 + hChanObj * 5 + hChans * 7
+    + hClocks + hShadow * 3 + hChans * 7
 
 /-- The engine's node equality for dedup: the SOUND tower equality
 (`dedupNodeEqb`, MachineEqb) — here it is a performance choice, not a
