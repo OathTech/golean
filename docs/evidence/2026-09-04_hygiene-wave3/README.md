@@ -3,15 +3,16 @@
 Consuming docs: `docs/2026-09-04_hygiene-wave3-design.md` (every §-item's
 "Preservation"/"Gate" paragraph and §B8's finding), `docs/2026-09-03_design-hygiene-arc.md`
 (landing record, step (iii)), `docs/2026-09-03_grumpy-professor-review.md`
-§3(b) (the "LANDED <sha>" lines for B2, B3, B8; §3(a) A7). (BUG-092, filed by
-the first B8 records, was REFUTED and retired in the audit fix round — design
-note §B8; no BUGS.md entry remains.)
+§3(b) (the "LANDED <sha>" lines for B2, B3, B8; §3(a) A7). (The consumption-accounting
+finding filed by the first B8 records was REFUTED and retired in the audit fix
+round — design note §B8; no BUGS.md entry remains, and it is never numbered on
+main.)
 
 Provenance: produced 2026-09-04 [AGENT] (design-hygiene arc step (iii),
 worktree `hygiene-wave3` off `main` @ `aceb0dcb` — the A-series on main). The
 ratification the arc rests on is [USER] (Mike, 2026-09-03, relayed by the
 coordinator — quoted in the arc plan). No decision in this directory is a new
-one; the one FINDING (BUG-092) was disclosed, then refuted by lemma in the audit
+one; the one FINDING (the consumption-accounting finding (filed on this branch during B8, refuted by lemma in the fix round, never numbered on main)) was disclosed, then refuted by lemma in the audit
 fix round (a proof artifact — design note §B8) and retired.
 
 Toolchain: Go `go1.26.5 linux/amd64` (the pin, `baselines/go-oracle-pin`);
@@ -80,7 +81,7 @@ known frontend refusal `arrays/materialization-budget/over-budget`
 | B3 the `Cont` algebra (+ A7 accessor) | B3 sources (uncommitted at run; committed unchanged as `cd2a3474`) | PASS | 3365 = 3165/200 | 0 (FULL 3365/3365) | 0 | aggregate DELTA 0; dump byte-identical, 23665 records (`choice-trace/b3-diff.txt`, `b3-summary.txt`) |
 | B8 consumption from the machine | B8 sources (uncommitted at run; committed unchanged as `2e69fde0`) | PASS | 3365 = 3165/200 | 0 (FULL 3365/3365) | 0 | aggregate DELTA 0 on 19963 lines; the NEW tracer's per-consumption dump byte-identical to the OLD tracer's, 23665 records, 0 sentinel / pick-record alarms (`choice-trace/b8-diff.txt`, `b8-summary.txt`) |
 
-| audit fix round F1–F6 (BUG-092 refuted; `Cont.class` exhaustive; Obs emit guard) | fix-round sources (uncommitted at run; committed unchanged as the commit after `2e69fde0`) | PASS | 3365 = 3165/200 | 0 (FULL 3365/3365; negative 394/394) | 0 | SPOT-CHECK, not a whole-corpus re-run: 8 rows covering every reached consumption site, 156 records byte-identical to the oracle (`choice-trace/fix-spot.txt`) |
+| audit fix round F1–F6 (the consumption-accounting finding refuted; `Cont.class` exhaustive; Obs emit guard) | fix-round sources (uncommitted at run; committed unchanged as the commit after `2e69fde0`) | PASS | 3365 = 3165/200 | 0 (FULL 3365/3365; negative 394/394) | 0 | SPOT-CHECK, not a whole-corpus re-run: 8 rows covering every reached consumption site, 156 records byte-identical to the oracle (`choice-trace/fix-spot.txt`) |
 
 Each per-item `ci --diff` ran on the item's UNCOMMITTED sources; the commit
 that followed contains exactly those sources (no edit between run and commit).

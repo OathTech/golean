@@ -123,8 +123,9 @@ cost and touches the fewest positional `fun_cases` proofs.
       algebra + `isTerminal` + A7's accessor and SKIPS the eqb
       restructure / field bundling / accumulator flip (reasons in the
       note); B8 is the projection + theorem, NOT the `stepFn` 4-tuple
-      reshape. One finding was filed (BUG-092: a post-pop delivered
-      panic would undo the pop) and then REFUTED in the pre-merge audit's
+      reshape. One finding was filed (a BUGS.md entry on this branch
+      only — a post-pop delivered panic would undo the pop; never
+      numbered on main) and then REFUTED in the pre-merge audit's
       fix round as a proof artifact — unreachable at both sites, proved
       by lemma (`applyTryLock_noPanic`; `appendTargetLocal` +
       `storeLoc_base_noPanic`), the disjunct deleted, the entry retired
@@ -243,6 +244,6 @@ still not scheduled anywhere:
 
 | Slice | Item | Branch | Landed | Notes |
 |---|---|---|---|---|
-| 3 | B2 + B3 + B8 (+ A7 accessor) | `hygiene-wave3` | branch-complete 2026-09-04: B2 `91c57c9e`, B3 `cd2a3474`, B8 `2e69fde0` + records; every gate `ci --diff` PASS 3365 = 3165/200 at zero drift, choice-trace delta 0 aggregate AND per consumption (23665 records); not merged | design note `docs/2026-09-04_hygiene-wave3-design.md`; evidence `docs/evidence/2026-09-04_hygiene-wave3/`; −17 rules, 41 conversion sites → 1 `deliver`, 3 entry funnels → 1, 4 walks → `Cont.rebuild` instances, 3 consumption mirrors → the machine's projection + theorem; BUG-092 filed then REFUTED and retired in the audit fix round F1–F6 (the commit after `2e69fde0` on the branch; design note §B8 + "Audit fix round") |
+| 3 | B2 + B3 + B8 (+ A7 accessor) | `hygiene-wave3` | branch-complete 2026-09-04: B2 `91c57c9e`, B3 `cd2a3474`, B8 `2e69fde0` + records; every gate `ci --diff` PASS 3365 = 3165/200 at zero drift, choice-trace delta 0 aggregate AND per consumption (23665 records); not merged | design note `docs/2026-09-04_hygiene-wave3-design.md`; evidence `docs/evidence/2026-09-04_hygiene-wave3/`; −17 rules, 41 conversion sites → 1 `deliver`, 3 entry funnels → 1, 4 walks → `Cont.rebuild` instances, 3 consumption mirrors → the machine's projection + theorem; the consumption-accounting finding (filed on this branch during B8, refuted by lemma in the fix round, never numbered on main) — filed then REFUTED and retired in the audit fix round F1–F6 (the commit after `2e69fde0` on the branch; design note §B8 + "Audit fix round") |
 | 2 | A-series A1–A10 | `hygiene-a-series` | branch-complete 2026-09-04: A1 `dfa68802`, A2 `7cba41cd`, A3 `6973354b`, A4 `bcdf04c1`, A5 `48d9aba8`, A6 `367dab2f`, A8 `7ff80223`, A9 `80b4ed89`, A10 `884e5226` + a records commit (SHA in the evidence README); every gate `ci --diff` PASS 3284 = 3085/199 at zero drift, choice-trace delta 0; not merged | design note `docs/2026-09-03_hygiene-a-series-design.md`; evidence `docs/evidence/2026-09-03_hygiene-a-series/`; A7 SKIPPED (→ B3); net core delta and per-item lemma tombstones in the note |
 | 1 | B1 stamps | `hygiene-b1-stamps` | branch-complete 2026-09-03, landing commit `f6152a6c`; audit verdict MERGE-READY, fix round `a4cf54e4` (clean-tree ci --diff PASS, 3199/3199); E9 irreflexive-key narrowing RATIFIED [USER] 2026-09-03 (relayed; record in docs/2026-08-31_qrow-rulings.md); merge sign-off pending; not merged | design note `docs/2026-09-03_hygiene-b1-stamps-design.md`; evidence `docs/evidence/2026-09-03_hygiene-b1-stamps/`; 14 defs + 14 theorems + 3 rule premises deleted, −649 lines; zero drift on 3195 rows; +4 rows `maps/nan-key-range`, `maps/nan-key-range-aggregate/{array,struct,interface}` (BUG-088, found by the bisimulation argument, fixed by construction — an E9 narrowing on irreflexive keys, DISCLOSED, [USER] ratification pending at merge) |

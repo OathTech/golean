@@ -310,8 +310,9 @@ pick-record cross-checks stayed at 0 alarms. `ci --diff`: PASS 3365 =
 **THE FINDING — a PROOF ARTIFACT, refuted (audit fix F1, 2026-09-04).**
 The first statement of the `some` half carried a second disjunct: "or
 the delivery after the pop is a recoverable panic, and the step returns
-the PRE-apply stream (the pop undone)". It was filed as BUG-092 (design
-class) with two supposedly reachable shapes — a spilling `appendSlice`
+the PRE-apply stream (the pop undone)". It was filed on this branch as a
+BUGS.md entry (design class; the number it carried here is TAKEN on main by
+an unrelated live entry, so this finding is never numbered on main) with two supposedly reachable shapes — a spilling `appendSlice`
 whose grown-header STORE panics (`a[i] = append(b, 1, 2, 3, 4, 5)` with
 `b` nil and `i` out of range), and a TRY head whose result delivery
 panics. The pre-merge audit judged both UNREACHABLE, and the disjunct an
@@ -354,8 +355,9 @@ stream is the site's pop, and any stream with the same pick yields the
 same successor with its own popped tail". Honest scope: the hypothesis
 is discharged by the frontend's construction (emit.go's hoisting), which
 this repo validates differentially, not by a Lean proof about the
-frontend — the frontend was not touched. BUG-092 is RETIRED: the entry is
-deleted from `docs/BUGS.md` (the number is not reused); no [USER] ruling
+frontend — the frontend was not touched. The finding is RETIRED: its
+entry is deleted from `docs/BUGS.md` (this branch assigns no bug number for
+it; on main the number it briefly used belongs to another bug); no [USER] ruling
 was needed, because nothing was ever wrong with the machine — only with
 the theorem's first statement. The tracer's byte-identity and the 0
 sentinel alarms were consistent with this all along.
@@ -377,6 +379,10 @@ them is a lane decision the [USER] takes, not a type change — the type
 now permits it. `Obs.eqb` compares terminals by `Terminal`'s
 `DecidableEq`.
 
+Note (2026-09-04, after round 12 landed the reasoning-surface plan): B2's
+`Obs.ok (values : List GoValue)` differs from that plan's `Obs.ok (r :
+Readout)` — the readout-carrying form is OWED to B4/B7, not delivered here.
+
 Because the type no longer guards the member vocabulary, the guard moved
 to the EMIT site (audit fix F5): `CLI.memberVocabularyRefusal? : Obs →
 Option String` names the refused members (`fatal` and `deadlock` — every
@@ -393,7 +399,7 @@ emit loop refuses BY NAME before the status-discipline check. Red-first:
 |---|---|---|---|
 | B2 `Result` at the apply boundary | `91c57c9e` | `Result`/`toResult` (Value.lean); `panicEntry`, `deliver`, `enterFramePick` (Machine.lean); `deliverS` (StepFn.lean); 17 twin rules deleted (159 → 142); 41 inline conversion sites → 0 (`panicEntry` at the 12 in-helper/nil-callee sites, `deliver`/`deliverS` at every apply/entry); 3 entry funnels → 1; `Obs := ok ∣ terminal Terminal`; `Result` → `Readout` | `step_preserves_wf_loc` 17 cases restated (one macro for the panic branch); `stepFn_sound`/`step_complete`/`step_complete_any_wf_aux`/`stepFn_oblivious` re-tagged (75 → 75 tags) with 4+2 macros; MultiSound/MultiWfSound select-interception and spawn lemmas restated; `entryPanicStream` + its lemma deleted; `Obs.eqb_sound` over `DecidableEq`; the enumeration completeness proof unchanged |
 | B3 the `Cont` algebra + A7 accessor | `cd2a3474` | `Cont.tail`/`withTail`/`class`/`isGlue`/`rebuild` + 6 laws; `pushDefer`/`recoverThroughWrappers`/`recoverResult`/`panicPassthrough` = instances (4 × 30 arms → 4 short defs); `Config.isTerminal` (`threadDone`, `atBoundary`); `Config.applyPos` + `ApplyHead` | generic `Cont.rebuild_locSup` (+ `ownSup`, `locSup_withTail`, `locSup_eq_own_tail`, `tail_locSup_le`) replaces 3 walk inductions; 5 `_itersNormalized` walk lemmas → one-liners; `isTerminal` in 2 MultiSound unfoldings; prototype equivalence proofs in the evidence dir |
-| B8 consumption from the machine | `2e69fde0` | `mapIterConsult?`/`stmtConsult?`(`appendSpill?`)/`selectConsult?`/`syncConsult?`(`tryLockConsult?`)/`entryConsult?` + `seqConsumption` (Machine.lean), `poolConsumption` (Multi.lean); `CLI.stepNeeds`/`stepNeedsSeq` (−140 lines) and the tracer's `seqSite`/`poolSite` are projections | `stepFn_consumption_none`/`_some` (two `fun_cases` sweeps, 102 tags total with `stepFn_sound`), 12 per-site stream lemmas, `seqConsumption_none_of_flags`, `applyPos_stmt/_select/_sync`; `stepFn_oblivious` DERIVED (−380 lines); the `some` half's first-draft second disjunct (filed as BUG-092) REFUTED by lemma and removed in the audit fix round — `NoPanic` family, `applyTryLock_noPanic`, `appendTargetLocal` + `storeLoc_base_noPanic`; `appendSpill?` mirrors every pre-consult test; `Cont.class` exhaustive (F2) |
+| B8 consumption from the machine | `2e69fde0` | `mapIterConsult?`/`stmtConsult?`(`appendSpill?`)/`selectConsult?`/`syncConsult?`(`tryLockConsult?`)/`entryConsult?` + `seqConsumption` (Machine.lean), `poolConsumption` (Multi.lean); `CLI.stepNeeds`/`stepNeedsSeq` (−140 lines) and the tracer's `seqSite`/`poolSite` are projections | `stepFn_consumption_none`/`_some` (two `fun_cases` sweeps, 102 tags total with `stepFn_sound`), 12 per-site stream lemmas, `seqConsumption_none_of_flags`, `applyPos_stmt/_select/_sync`; `stepFn_oblivious` DERIVED (−380 lines); the `some` half's first-draft second disjunct — the consumption-accounting finding (filed on this branch during B8, refuted by lemma in the fix round, never numbered on main) — REFUTED by lemma and removed in the audit fix round — `NoPanic` family, `applyTryLock_noPanic`, `appendTargetLocal` + `storeLoc_base_noPanic`; `appendSpill?` mirrors every pre-consult test; `Cont.class` exhaustive (F2) |
 
 Net `git diff --shortstat main..HEAD -- GoLean Tests` at the B8 tip: 17 files,
 +3141 / −2092 (+1049 net; `GoLean/GoCore/` alone +2970 / −1747). The wave
@@ -423,7 +429,7 @@ statable type (B2), the lanes' refusal of those members unchanged.
 
 | item | verdict | what changed |
 |---|---|---|
-| F1 (HIGH) BUG-092 is a proof artifact | DONE | refutation proved (`NoPanic` family, `applyTryLock_noPanic`, `Config.appendTargetLocal`, `storeLoc_base_noPanic`, `buildAppendBackingValue_noPanic`; `appendSpill?` mirrors every pre-consult test); `stepFn_consumption_some` single conclusion under `hloc`; BUG-092 deleted from BUGS.md (number retired) — §B8 above |
+| F1 (HIGH) the consumption-accounting finding is a proof artifact | DONE | refutation proved (`NoPanic` family, `applyTryLock_noPanic`, `Config.appendTargetLocal`, `storeLoc_base_noPanic`, `buildAppendBackingValue_noPanic`; `appendSpill?` mirrors every pre-consult test); `stepFn_consumption_some` single conclusion under `hloc`; its BUGS.md entry deleted (never numbered on main) — §B8 above |
 | F2 (MEDIUM) `Cont.class` absorbing default | DONE | the 23 `exprGlue` constructors spelled explicitly (31 `Cont` constructors: 1 stop, 1 call frame, 1 resume marker, 5 statement glue, 23 expression glue); no `_ =>` arm (a new constructor is a compile error, not a silent glue) |
 | F3 (MEDIUM) A7 "spelled once" false | RECORDS corrected (consumer half NOT landed) | one consumer; 64 raw sites (35/29) + 8 added spellings + 3 theorems; true flip cost ≈110 + 3 recorded for B4/C3 — §B3 above and the review's A7 line |
 | F4 (LOW) note omissions | DONE | `except_bind_ok`/`bind_pair_stream` move listed; `allStreamsOk`'s real reason (excludes `.panicked`); NPDRF `threadDone_atBoundary` converted (tally 3/6); EnumSpec.lean "six-arm" → five |
