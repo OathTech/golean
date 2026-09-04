@@ -357,3 +357,59 @@ sequencing argument). [AGENT]
 regression, re-pin guard 0 flips, negative 394/394, eval tests 148/148
 (`transcripts/gate-a4.txt`); choice-trace delta vs the pre-series
 snapshot: 0 on all 19489 lines (`choice-trace/a4-summary.txt`).
+
+## A5 — a `Platform` record, instantiated once
+
+**What changed.** New module `GoLean/GoCore/Platform.lean` (imported by
+Value.lean, so it sits below everything): `structure Platform where
+intBits wordBytes maxAlign maxAllocBytes chanHeaderBytes : Nat`,
+`Platform.intExclusiveUpperBound p := 2^(p.intBits-1)`, `def gcAmd64 :
+Platform := ⟨64, 8, 8, 2^48, 112⟩` carrying the R1 and R16 ENVELOPE
+STATEMENTS (moved verbatim in substance from `IntKind.bits?`'s and Ops.lean's
+docstrings — transfer caveats, probe pointers, the [USER] fidelity
+decision 5(b) citation), and `def platform : Platform := gcAmd64` — THE one
+instantiation. `IntKind.bitsAt (p : Platform)` is the parametric width
+table (`.int/.uint ↦ p.intBits`) and `IntKind.bits? := bitsAt platform`;
+`maxAllocBytes`/`chanHeaderBytes`/`intExclusiveUpperBound` (Ops.lean) read
+the platform's fields; `tySizeAlignFuel (p : Platform)` computes go/types'
+`gcSizes` from `p.wordBytes`/`p.maxAlign` (pointer-shaped types one word,
+strings and interfaces two, slices three; the `sync` struct sizes stay
+fixed-width constants, which they are on gc), and `tySizeBytes` passes
+`platform`. Machine.lean's arms are textually unchanged (they read the
+same names). [AGENT]
+
+**Why nicer.** The pins are one named object with one envelope statement
+each; "portable semantics" is a record with a second instance, not a
+comment: a 32-bit re-envelope (R1 + R16 together, as the inventory
+already insists they move together) is `def gc386 : Platform := ⟨32, 4,
+4, 2^32 - 1, 64⟩` plus whatever the frontend/negative lane need — no
+surgery in the core.
+
+**Recorded scope (a deviation from the review's sketch).** The review
+offered two ways to thread the width to `IntKind.normalize`'s call sites
+("make `IntKind.int (bits)` carry it at lowering, or thread `Platform`")
+and an `ExecState.platform` field. Neither is taken here: the width is
+read from the single instantiation. Consequences, stated plainly: (a) the
+core's theorems are stated at `platform` (= `gcAmd64`), not `∀ p`;
+`tySizeAlignFuel` alone is genuinely parametric; (b) a second instance
+still requires a re-pin of every width-sensitive fixture, exactly as
+before. Threading a platform through `ExecState` touches every
+state-shape lemma (`σ'.types = σ.types ∧ …` conjunctions across
+StateWf/MultiWfSound) — the same wave as review B7's `ProgramCtx`/`Store`
+split, where the state gains its context record anyway; deferred there.
+[AGENT]
+
+**Preservation.** Definitional: at `gcAmd64` every relocated arm computes
+the same number (`2 * 8 = 16`, `3 * 8 = 24`, `2^(64-1) = 2^63`, …), and
+`IntKind.bits?` is the old table pointwise; no proof needed changing —
+zero proof-side edits, the build is the check. Exact.
+
+**Records to update (records commit).** Latitude inventory R1/R16 "pin
+lives at" pointers → `Platform.lean` (`gcAmd64`); `docs/spec-sources.md`
+if it names `IntKind.bits?`.
+
+**Gate.** `scripts/capped scripts/ci --diff` on the A5 tree: RESULT PASS,
+`cases=3284 pass=3085 fail=199`, baseline diff FULL 3284/3284 no
+regression, re-pin guard 0 flips, negative 394/394, eval tests 148/148
+(`transcripts/gate-a5.txt`); choice-trace delta vs the pre-series
+snapshot: 0 on all 19489 lines (`choice-trace/a5-summary.txt`).

@@ -162,55 +162,22 @@ def natFromNonnegativeInt (context : String) (value : Int) : Except GoError Nat 
     panic context
   return value.toNat
 
-/-! ## The maximum allocatable size — a PINNED machine parameter (inventory R16)
+/-! ## The R16 pins, read from THE platform (A5)
 
-Fidelity decision 5(b) ([USER] 2026-08-31): "the deterministic maxAlloc
-panic class modeled". gc panics DETERMINISTICALLY — a recoverable
-run-time panic, not an OOM abort — when ONE allocation request exceeds
-the runtime's maximum allocatable size: `make([]T, n)` / `make(chan T,
-n)` / a spilling `append` whose byte size exceeds the limit. The spec
-sanctions only THAT a panic may occur ("For slices and channels, if n is
-negative or larger than m at run time, a run-time panic occurs";
-§Run-time panics: error values unspecified) and says nothing about a size
-limit — the limit and its value are the IMPLEMENTATION's, so this is
-latitude, pinned here to the oracle's realization exactly as R1 pins the
-`int` width. Probe matrix (go1.26.5 linux/amd64, 2026-09-02):
-`docs/evidence/2026-09-02_t5-maxalloc-probes/`. -/
+The maximum allocatable size and the channel header size are fields of
+`gcAmd64` (`Platform.lean`), where their envelope statements live
+(fidelity decision 5(b), [USER] 2026-08-31; probe matrix
+`docs/evidence/2026-09-02_t5-maxalloc-probes/`). The three names below are
+what the machine's arms read. -/
 
-/-- PINNED LATITUDE — the maximum allocatable size in BYTES (inventory
-R16). gc: `runtime.maxAlloc = 1 << heapAddrBits` (malloc.go:220),
-heapAddrBits = 48 on linux/amd64, so 2^48 = 256 TiB; the check is
-STRICT (`mem > maxAlloc`): a request of exactly 2^48 bytes passes the
-check and then fails to ALLOCATE (fatal "out of memory" — behavior 1,
-the true-OOM class, which stays under the doctrine register #7 rider /
-discrepancy D-001, NOT modeled here). Plausible envelope: any positive
-bound (32-bit gc realizes `2^32 - 1`, tied to R1's width parameter: the
-two must move together — on 32-bit, `int` cannot express a length
-≥ 2^31, so the slice panic is live there only for element sizes ≥ 3:
-elemSize 2 gives at most 2·(2^31−1) = 2^32−2, which is NOT > 2^32−1;
-elemSize 3 gives 3·(2^31−1) > 2^32−1. The channel header differs too —
-`hchanSize` is 64 on 386 (4-byte words, rounded to maxAlign 8), not
-112 — so the channel threshold is another parameter the R16 re-envelope
-must move with the width).
-TRANSFER CAVEAT: a claim that a given `make` panics (or does not)
-transfers only to 64-bit gc-layout targets; the rider on allocation-
-succeeding runs (register #7) still carries every allocation that
-passes this check. -/
-def maxAllocBytes : Nat := 2 ^ 48
+/-- `platform.maxAllocBytes` (R16). -/
+def maxAllocBytes : Nat := platform.maxAllocBytes
 
-/-- gc's channel header size (`hchanSize`, runtime/chan.go:30 — the
-`hchan` struct, 112 bytes on amd64: 7 words + elemsize/closed + 2 waitq
-+ bubble + lock). `makechan` checks the BUFFER against `maxAlloc -
-hchanSize` (chan.go:87), so the channel threshold sits 112 bytes below
-the slice threshold. Probe: `make(chan byte, 1<<48-111)` panics,
-`make(chan byte, 1<<48-112)` attempts the allocation. Part of the R16
-pin (a gc-internal layout fact with a 112-byte observable). -/
-def chanHeaderBytes : Nat := 112
+/-- `platform.chanHeaderBytes` (R16's channel half). -/
+def chanHeaderBytes : Nat := platform.chanHeaderBytes
 
-/-- The exclusive upper bound of `int` (R1's 64-bit pin: 2^63). gc's
-`growslice` panics `len out of range` when the new length overflows
-`int` (slice.go:191) — the same message as the byte-size check. -/
-def intExclusiveUpperBound : Nat := 2 ^ 63
+/-- `platform.intExclusiveUpperBound` (R1's width: 2^63 at 64 bits). -/
+def intExclusiveUpperBound : Nat := platform.intExclusiveUpperBound
 
 /-- Round `offset` up to a multiple of `align` (`align ≥ 1`). -/
 def alignUpTo (offset align : Nat) : Nat :=
@@ -242,13 +209,13 @@ def structSizeAlignWith (fieldSize : Ty → Except GoError (Nat × Nat)) :
       structSizeAlignWith fieldSize rest (fieldOffset + size) (max maxAlign align)
         fieldOffset size
 
-/-- Size and alignment of a type in BYTES under gc's linux/amd64 layout
-(go/types `gcSizes` with WordSize 8, MaxAlign 8 — `deps/go/src/go/types/
-gcsizes.go`, transcribed arm for arm; the `sync` primitives are gc's
-struct sizes, `unsafe.Sizeof`-probed). The R16 pin's second half: the
-byte-size threshold is `elemSize × n`, so element LAYOUT is what places
-the boundary (make([]byte, n) panics from 2^48+1; []int64 from 2^45+1;
-[]struct{int64; byte} — 16 bytes with padding — from 2^44+1). Fuel-
+/-- Size and alignment of a type in BYTES under platform `p`'s layout
+(go/types `gcSizes` with `WordSize = p.wordBytes`, `MaxAlign = p.maxAlign`
+— `deps/go/src/go/types/gcsizes.go`, transcribed arm for arm: pointer-
+shaped types are one word, strings and interfaces two, slices three; the
+`sync` primitives are gc's struct sizes, `unsafe.Sizeof`-probed, which do
+not depend on the word size — their fields are fixed-width). The R16
+pin's LAYOUT half (envelope on `gcAmd64`, `Platform.lean`). Fuel-
 bounded STRUCTURALLY on the fuel (`typeResolutionFuel`), and the fuel
 bounds type-nesting DEPTH only — one unit per array element / defined-
 type indirection / struct level; a struct's field list is walked by
@@ -257,34 +224,34 @@ free (no real Go type nests 1024 deep, and a 1024-field struct is
 ordinary). FAIL-CLOSED: an `.unsupported` type, an unknown defined
 type, an untyped integer kind or exhausted depth fuel is a cause-naming
 refusal, never a guessed size. -/
-def tySizeAlignFuel : Nat → TypeEnv → Ty → Except GoError (Nat × Nat)
+def tySizeAlignFuel (p : Platform) : Nat → TypeEnv → Ty → Except GoError (Nat × Nat)
   | 0, _, _ => unsupported "allocation-size computation: type nesting too deep"
   | fuel + 1, types, ty =>
     match ty with
     | .bool => pure (1, 1)
     | .int kind =>
-        match kind.bits? with
+        match kind.bitsAt p with
         | some bits => pure (bits / 8, bits / 8)
         | none => unsupported s!"allocation-size computation: untyped integer kind {kind.name}"
     | .float kind => pure (kind.bits / 8, kind.bits / 8)
-    | .string => pure (16, 8)
+    | .string => pure (2 * p.wordBytes, p.maxAlign)
     | .array n elem => do
-        let (size, align) ← tySizeAlignFuel fuel types elem
+        let (size, align) ← tySizeAlignFuel p fuel types elem
         pure (n * size, align)
-    | .slice _ => pure (24, 8)
-    | .map _ _ => pure (8, 8)
-    | .chan _ _ => pure (8, 8)
-    | .pointer _ => pure (8, 8)
-    | .funcType _ _ _ => pure (8, 8)
-    | .interface _ => pure (16, 8)
+    | .slice _ => pure (3 * p.wordBytes, p.maxAlign)
+    | .map _ _ => pure (p.wordBytes, p.maxAlign)
+    | .chan _ _ => pure (p.wordBytes, p.maxAlign)
+    | .pointer _ => pure (p.wordBytes, p.maxAlign)
+    | .funcType _ _ _ => pure (p.wordBytes, p.maxAlign)
+    | .interface _ => pure (2 * p.wordBytes, p.maxAlign)
     | .defined id =>
         match TypeEnv.lookup types id with
         | some (.struct fields) =>
             if fields.isEmpty then pure (0, 1)
-            else structSizeAlignWith (tySizeAlignFuel fuel types) fields.toList 0 1 0 0
-        | some (.alias target) => tySizeAlignFuel fuel types target
-        | some (.defined underlying) => tySizeAlignFuel fuel types underlying
-        | some (.interfaceDef _) => pure (16, 8)
+            else structSizeAlignWith (tySizeAlignFuel p fuel types) fields.toList 0 1 0 0
+        | some (.alias target) => tySizeAlignFuel p fuel types target
+        | some (.defined underlying) => tySizeAlignFuel p fuel types underlying
+        | some (.interfaceDef _) => pure (2 * p.wordBytes, p.maxAlign)
         | some (.unsupported feature) =>
             unsupported s!"allocation-size computation: {feature}"
         | none => unsupported s!"allocation-size computation: unknown defined type {id.key}"
@@ -294,10 +261,10 @@ def tySizeAlignFuel : Nat → TypeEnv → Ty → Except GoError (Nat × Nat)
     | .sync .waitGroup => pure (16, 8)
     | .sync .once => pure (12, 4)
 
-/-- The byte size of a type under the R16 pin (`tySizeAlignFuel` at the
-standard fuel). -/
+/-- The byte size of a type under the R16 pin (`tySizeAlignFuel` at THE
+platform and the standard fuel). -/
 def tySizeBytes (types : TypeEnv) (ty : Ty) : Except GoError Nat := do
-  let (size, _) ← tySizeAlignFuel typeResolutionFuel types ty
+  let (size, _) ← tySizeAlignFuel platform typeResolutionFuel types ty
   pure size
 
 /-- Go's TWO-index slice-expression bounds check, with the runtime's exact

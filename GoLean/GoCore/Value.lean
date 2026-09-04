@@ -1,3 +1,5 @@
+import GoLean.GoCore.Platform
+
 namespace GoLean
 
 namespace GoCore
@@ -29,23 +31,13 @@ def IntKind.name : IntKind → String
   | .uint64 => "uint64"
   | .unbounded name => name
 
-/-- PINNED LATITUDE — `int`/`uint` width (inventory R1; register
-extension #6; site caveat added 2026-08-31, closing §9 flag 2's owed
-record). spec#Numeric_types makes the width of `int`/`uint` (and
-`uintptr`, frontend-mapped to uint64) IMPLEMENTATION-SPECIFIC —
-"either 32 or 64 bits"; the plausible envelope is {32, 64} as a
-machine parameter. The `.int => some 64` / `.uint => some 64` arms
-below pin the 64-bit member — the oracle host's realization (gc
-linux/amd64), shared by the frontend's go/types Sizes and the
-negative lane's acceptance. TRANSFER CAVEAT: any claim about
-wrap/overflow at `int`/`uint` boundaries transfers only to 64-bit
-targets; a 32-bit conforming implementation is outside this
-singleton. Re-envelope (width as a parameter across normalize/
-conversions/frontend Sizes/negative-lane acceptance) is XIMPL-gated —
-blocked in practice on any 32-bit oracle lane; see inventory R1. -/
-def IntKind.bits? : IntKind → Option Nat
-  | .int => some 64
-  | .uint => some 64
+/-- The bit width of an integer kind on platform `p`: `int`/`uint` take
+the platform's `intBits` (PINNED LATITUDE R1 — the envelope statement
+lives on `gcAmd64`, `Platform.lean`); sized kinds are their own width;
+untyped constants have none. -/
+def IntKind.bitsAt (p : Platform) : IntKind → Option Nat
+  | .int => some p.intBits
+  | .uint => some p.intBits
   | .int8 => some 8
   | .uint8 => some 8
   | .int16 => some 16
@@ -55,6 +47,10 @@ def IntKind.bits? : IntKind → Option Nat
   | .int64 => some 64
   | .uint64 => some 64
   | .unbounded _ => none
+
+/-- The bit width at THE pinned platform (`platform = gcAmd64`: 64-bit
+`int`). -/
+def IntKind.bits? : IntKind → Option Nat := IntKind.bitsAt platform
 
 def IntKind.signed : IntKind → Bool
   | .int => true
