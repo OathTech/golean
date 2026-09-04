@@ -651,7 +651,7 @@ theorem step_complete {c : Config} {s : ExecState} {c' : Config} {s' : ExecState
   case panicUnwind =>
     rename_i chain k k' hpass
     refine ⟨[], [], ?_⟩
-    cases k <;> simp_all [stepFn, panicPassthrough]
+    cases k <;> simp_all [stepFn, panicPassthrough, Cont.isGlue, Cont.class, Cont.tail]
   -- Channel statements (channels arc slice 1): entry holds the statement
   -- abstract behind its plan (case on it, like stmtOpFirst); the plain
   -- shift needs its `if_neg`, like stmtOpShiftPlain.
@@ -2685,7 +2685,7 @@ theorem step_complete_any_wf_aux {c : Config} {σ : ExecState} {c' : Config}
       hcands =>
     simp [stepFn, hcands, Bind.bind, Except.bind]
   case panicUnwind chain k k' hpass =>
-    cases k <;> simp_all [stepFn, panicPassthrough]
+    cases k <;> simp_all [stepFn, panicPassthrough, Cont.isGlue, Cont.class, Cont.tail]
   case chanStFirst stmt op e rest env k hplan =>
     cases stmt <;>
       first

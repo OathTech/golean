@@ -145,13 +145,7 @@ def opDoneInner : Config → Option Config
 (only main can reach the non-`.next` ones — spawned goroutines run
 under a barrier frame) and the program-aborting `.panicked`. Tombstones
 in the append-only pool. -/
-def threadDone : Config → Bool
-  | .next .stop => true
-  | .returning .stop => true
-  | .breaking .stop => true
-  | .continuing .stop => true
-  | .panicked _ => true
-  | _ => false
+def threadDone (c : Config) : Bool := c.isTerminal
 
 /-- The channel a chan-value points at (`none` for nil channels and
 non-channel values). -/
@@ -256,7 +250,8 @@ registry (channel send/recv/close apply, select apply and the
 no-operand select entry, `go` spawn positions, goroutine exit/abort)
 plus the parked shapes (whose next step is their wake). Between
 boundaries the running goroutine's steps are private to it. -/
-def Config.atBoundary : Config → Bool
+def Config.atBoundary (c : Config) : Bool :=
+  c.isTerminal || match c with
   | .retV _ (.chanStK _ _ [] _ _) => true
   | .retV _ (.selectOpsK _ _ _ [] _ _) => true
   | .retV _ (.goCalleeK [] _ _) => true
@@ -270,11 +265,7 @@ def Config.atBoundary : Config → Bool
   -- BUG-040's shipped default). Envelope statement at `Config.opDone`.
   | .opDone _ _ => true
   | .exec (.selectStmt clauses _) _ _ => (selectOperands clauses.toList).isEmpty
-  | .next .stop => true
-  | .returning .stop => true
-  | .breaking .stop => true
-  | .continuing .stop => true
-  | .panicked _ => true
+  -- (the five terminal shapes: `Config.isTerminal` above)
   | .blockedSend _ _ _ => true
   | .blockedRecv _ _ _ _ _ => true
   | .blockedSelect _ _ _ => true

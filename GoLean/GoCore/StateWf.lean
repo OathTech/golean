@@ -448,6 +448,56 @@ def Cont.locSup : Cont → Nat
         (max (exprListSup pending)
           (max (LocalEnv.locSup env) (Cont.locSup k)))
 
+/-! ### The `Cont` algebra's sup laws (B3): a frame's sup is its own payload
+joined with its tail's, so one lemma bounds every `Cont.rebuild` instance. -/
+
+/-- The frame's OWN payload sup (its tail replaced by `.stop`). -/
+def Cont.ownSup (k : Cont) : Nat := Cont.locSup (k.withTail .stop)
+
+theorem Cont.locSup_withTail {k k₀ t : Cont} (h : k.tail = some k₀) :
+    Cont.locSup (k.withTail t) = max (Cont.ownSup k) (Cont.locSup t) := by
+  cases k <;> simp [Cont.tail] at h <;> simp [Cont.withTail, Cont.ownSup, Cont.locSup] <;> omega
+
+theorem Cont.locSup_eq_own_tail {k k₀ : Cont} (h : k.tail = some k₀) :
+    Cont.locSup k = max (Cont.ownSup k) (Cont.locSup k₀) := by
+  have := Cont.locSup_withTail (t := k₀) h
+  rw [← this]; congr 1
+  cases k <;> simp_all [Cont.tail, Cont.withTail]
+
+theorem Cont.tail_locSup_le {k k₀ : Cont} (h : k.tail = some k₀) :
+    Cont.locSup k₀ ≤ Cont.locSup k := by
+  rw [Cont.locSup_eq_own_tail h]; omega
+
+/-- **The one walk bound**: if the action never raises a frame's sup above
+`bound ⊔ its input` and its payload above the input, neither does the
+rebuilt continuation (strong induction on the frame's size). -/
+theorem Cont.rebuild_locSup {β : Type} {descend : Cont → Bool} {act : Cont → Option (β × Cont)}
+    {bound : Nat} {μ : β → Nat}
+    (hact : ∀ k b k', act k = some (b, k') →
+      μ b ≤ Cont.locSup k ∧ Cont.locSup k' ≤ max bound (Cont.locSup k)) :
+    ∀ k b k', Cont.rebuild descend act k = some (b, k') →
+      μ b ≤ Cont.locSup k ∧ Cont.locSup k' ≤ max bound (Cont.locSup k) := by
+  intro k
+  induction k using WellFounded.induction (r := fun a b : Cont => sizeOf a < sizeOf b)
+    (hwf := (measure sizeOf).wf) with
+  | _ k ih =>
+  intro b k' h
+  by_cases hd : descend k = true
+  · rw [Cont.rebuild_descend hd] at h
+    cases ht : k.tail with
+    | none => rw [ht] at h; exact hact _ _ _ h
+    | some k₀ =>
+      rw [ht] at h
+      simp only [Option.map_eq_some_iff] at h
+      obtain ⟨⟨b₁, k₁⟩, h₁, h₂⟩ := h
+      simp only [Prod.mk.injEq] at h₂
+      obtain ⟨rfl, rfl⟩ := h₂
+      rw [Cont.locSup_withTail ht, Cont.locSup_eq_own_tail ht]
+      have := ih k₀ (Cont.sizeOf_tail_lt ht) b₁ k₁ h₁
+      omega
+  · rw [Cont.rebuild_act (Bool.eq_false_iff.mpr hd)] at h
+    exact hact _ _ _ h
+
 /-- One evaluated select clause's sup (`.blockedSelect` payloads). -/
 def evClauseSup : EvClause → Nat
   | .sendEv chv v _ body =>
@@ -4371,26 +4421,24 @@ theorem pushDefer_locSup {d : GoValue × List GoValue} :
     ∀ {k k' : Cont}, pushDefer d k = some k' →
       Cont.locSup k'
         ≤ max (max (GoValue.locSup d.1) (goValueListSup d.2)) (Cont.locSup k) := by
-  intro k
-  induction k <;> intro k' h <;>
-    simp only [pushDefer, Option.map_eq_some_iff, Option.some.injEq] at h
-  case frame targets results defers k _ =>
-    subst h
+  intro k k' h
+  simp only [pushDefer, Option.map_eq_some_iff] at h
+  obtain ⟨⟨u, k₁⟩, hr, rfl⟩ := h
+  refine (Cont.rebuild_locSup (μ := fun _ => 0) ?_ k u k₁ hr).2
+  intro k b k' ha
+  split at ha
+  · simp only [Option.some.injEq, Prod.mk.injEq] at ha
+    obtain ⟨-, rfl⟩ := ha
     simp only [Cont.locSup, deferListSup, Nat.max_le]
     omega
-  all_goals
-    first
-    | (obtain ⟨k₂, hk₂, rfl⟩ := h
-       rename_i ih
-       have := ih hk₂
-       simp only [Cont.locSup, Nat.max_le] at *
-       omega)
-    | cases h
+  · cases ha
 
 theorem panicPassthrough_locSup {k k' : Cont}
     (h : panicPassthrough k = some k') : Cont.locSup k' ≤ Cont.locSup k := by
-  cases k <;> simp_all [panicPassthrough] <;> subst h <;>
-    simp [Cont.locSup, Nat.max_le] <;> omega
+  unfold panicPassthrough at h
+  split at h
+  · exact Cont.tail_locSup_le h
+  · cases h
 
 theorem markNewestRecovered_locSup :
     ∀ {chain : List PanicEntry} {v : GoValue} {chain' : List PanicEntry},
@@ -4421,102 +4469,64 @@ theorem markNewestRecovered_locSup :
       simp only [panicChainSup] at ih1 ih2 ⊢
       omega
 
-set_option maxHeartbeats 1600000 in
 /-- Companion to `recoverResult_locSup` for the below-the-frame walk
-(wrapper transparency, arc-final audit F1). -/
+(wrapper transparency, arc-final audit F1) — an instance of the one walk
+bound (B3). -/
 theorem recoverThroughWrappers_locSup :
     ∀ {k : Cont} {v : GoValue} {k' : Cont}, recoverThroughWrappers k = some (v, k') →
       GoValue.locSup v ≤ Cont.locSup k ∧ Cont.locSup k' ≤ Cont.locSup k := by
-  intro k
-  induction k <;> intro v k' h
-  case stop => simp [recoverThroughWrappers] at h
-  case panicResumeK chain k _ =>
-    simp only [recoverThroughWrappers, Option.map_eq_some_iff] at h
-    obtain ⟨⟨v₀, chain'⟩, hmark, heq⟩ := h
+  intro k v k' h
+  have := Cont.rebuild_locSup (μ := GoValue.locSup) (bound := 0) ?_ k v k' h
+  · simpa using this
+  intro k b k' ha
+  split at ha
+  · rename_i chain k₀
+    simp only [Option.map_eq_some_iff] at ha
+    obtain ⟨⟨v₀, chain'⟩, hmark, heq⟩ := ha
     simp only [Prod.mk.injEq] at heq
     obtain ⟨rfl, rfl⟩ := heq
     obtain ⟨m1, m2⟩ := markNewestRecovered_locSup hmark
     constructor <;> (simp only [Cont.locSup, Nat.max_le] at m1 m2 ⊢; omega)
-  case frame targets results defers k w ih =>
-    cases w
-    · simp [recoverThroughWrappers] at h
-    · simp only [recoverThroughWrappers, Option.map_eq_some_iff] at h
-      obtain ⟨⟨v₀, k₀⟩, hin, heq⟩ := h
-      simp only [Prod.mk.injEq] at heq
-      obtain ⟨rfl, rfl⟩ := heq
-      obtain ⟨i1, i2⟩ := ih hin
-      constructor <;> (simp only [Cont.locSup, Nat.max_le] at i1 i2 ⊢; omega)
-  all_goals
-    rename_i ih
-    simp only [recoverThroughWrappers, Option.map_eq_some_iff] at h
-    obtain ⟨⟨v₀, k₀⟩, hin, heq⟩ := h
-    simp only [Prod.mk.injEq] at heq
-    obtain ⟨rfl, rfl⟩ := heq
-    obtain ⟨i1, i2⟩ := ih hin
-    constructor
-    · simp only [Cont.locSup, Nat.max_le] at i1 i2 ⊢
-      omega
-    · simp only [Cont.locSup, Nat.max_le] at i1 i2 ⊢
-      first
-        | omega
-        | (constructor <;> omega)
+  · cases ha
 
-set_option maxHeartbeats 1600000 in
 theorem recoverResult_locSup :
     ∀ {k : Cont} {v : GoValue} {k' : Cont}, recoverResult k = (v, k') →
       GoValue.locSup v ≤ Cont.locSup k ∧ Cont.locSup k' ≤ Cont.locSup k := by
-  intro k
-  induction k <;> intro v k' h
-  case stop =>
-    simp only [recoverResult, Prod.mk.injEq] at h
+  intro k v k' h
+  unfold recoverResult at h
+  cases hr : Cont.rebuild Cont.recoverTransparent _ k with
+  | none =>
+    rw [hr] at h
+    simp only [Option.getD_none, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     simp [GoValue.locSup]
-  case panicResumeK chain k _ =>
-    simp only [recoverResult, Prod.mk.injEq] at h
+  | some p =>
+    obtain ⟨v₁, k₁⟩ := p
+    rw [hr] at h
+    simp only [Option.getD_some, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    simp [GoValue.locSup]
-  case frame targets results defers k w ih =>
-    cases w
-    · -- non-wrapper frame: the below-frame walk decides
-      simp only [recoverResult] at h
-      cases hin : recoverThroughWrappers k with
+    have := Cont.rebuild_locSup (μ := GoValue.locSup) (bound := 0) ?_ k v₁ k₁ hr
+    · simpa using this
+    intro k b k' ha
+    split at ha
+    · rename_i t te r ds k₀
+      simp only [Option.some.injEq] at ha
+      cases hin : recoverThroughWrappers k₀ with
       | none =>
-          rw [hin] at h
-          simp only [Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
-          simp [GoValue.locSup]
-      | some p =>
-          obtain ⟨v₀, k₀⟩ := p
-          rw [hin] at h
-          simp only [Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
-          obtain ⟨m1, m2⟩ := recoverThroughWrappers_locSup hin
-          constructor <;> (simp only [Cont.locSup, Nat.max_le] at m1 m2 ⊢; omega)
-    · -- wrapper frame above the walk start: transparent
-      simp only [recoverResult] at h
-      cases hrk : recoverResult k with
-      | mk v₀ k₀ =>
-          rw [hrk] at h
-          simp only [Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
-          obtain ⟨i1, i2⟩ := ih hrk
-          constructor <;> (simp only [Cont.locSup, Nat.max_le] at i1 i2 ⊢; omega)
-  all_goals
-    rename_i ih
-    obtain ⟨i1, i2⟩ := ih (v := _) (k' := _) rfl
-    have hv := congrArg Prod.fst h
-    have hk := congrArg Prod.snd h
-    simp only [recoverResult] at hv hk
-    try dsimp only at hv hk
-    subst hv
-    subst hk
-    constructor
-    · simp only [Cont.locSup, Nat.max_le] at i1 i2 ⊢
-      omega
-    · simp only [Cont.locSup, Nat.max_le] at i1 i2 ⊢
-      first
-        | omega
-        | (constructor <;> omega)
+        rw [hin] at ha
+        simp only [Prod.mk.injEq] at ha
+        obtain ⟨rfl, rfl⟩ := ha
+        simp [GoValue.locSup]
+      | some q =>
+        obtain ⟨v₀, k₁⟩ := q
+        rw [hin] at ha
+        simp only [Prod.mk.injEq] at ha
+        obtain ⟨rfl, rfl⟩ := ha
+        obtain ⟨m1, m2⟩ := recoverThroughWrappers_locSup hin
+        constructor <;> (simp only [Cont.locSup, Nat.max_le] at m1 m2 ⊢; omega)
+    · simp only [Option.some.injEq, Prod.mk.injEq] at ha
+      obtain ⟨rfl, rfl⟩ := ha
+      simp [GoValue.locSup]
 
 
 /-! ## Small append/list bridges for the preservation closers -/
@@ -6642,119 +6652,36 @@ theorem seqCont_itersNormalized {types : TypeEnv} {ss : List Stmt}
     {env : LocalEnv} {k : Cont} :
     Cont.itersNormalized types (seqCont ss env k)
       = Cont.itersNormalized types k := by
-  cases k <;> first
-    | rfl
-    | (simp only [seqCont]; split <;> rfl)
+  rw [Cont.itersNormalized_true, Cont.itersNormalized_true]
+
+/-! The walk lemmas for the (vacuous since B1) iteration-typing component:
+each is `Cont.itersNormalized_true` (A8 recorded the component's deletion
+as owed; B3 shrank its walk lemmas to that fact rather than re-deriving
+them through `Cont.rebuild`). -/
 
 theorem pushDefer_itersNormalized {types : TypeEnv} {d : GoValue × List GoValue} :
     ∀ {k k' : Cont}, pushDefer d k = some k' →
       Cont.itersNormalized types k' = Cont.itersNormalized types k := by
-  intro k
-  induction k <;> intro k' h <;>
-    simp only [pushDefer, Option.map_eq_some_iff, Option.some.injEq] at h
-  case frame targets results defers k _ =>
-    subst h
-    rfl
-  all_goals
-    first
-    | (obtain ⟨k₂, hk₂, rfl⟩ := h
-       rename_i ih
-       simp only [Cont.itersNormalized, ih hk₂])
-    | cases h
+  intro k k' _
+  rw [Cont.itersNormalized_true, Cont.itersNormalized_true]
 
 theorem panicPassthrough_itersNormalized {types : TypeEnv} {k k' : Cont}
-    (h : panicPassthrough k = some k')
-    (hk : Cont.itersNormalized types k = true) :
-    Cont.itersNormalized types k' = true := by
-  cases k <;>
-    simp_all [panicPassthrough, Cont.itersNormalized, Bool.and_eq_true]
+    (_h : panicPassthrough k = some k')
+    (_hk : Cont.itersNormalized types k = true) :
+    Cont.itersNormalized types k' = true :=
+  Cont.itersNormalized_true types k'
 
-/-- Companion to `recoverResult_itersNormalized` for the below-the-frame
-walk (wrapper transparency, arc-final audit F1). -/
 theorem recoverThroughWrappers_itersNormalized {types : TypeEnv} :
     ∀ {k : Cont} {v : GoValue} {k' : Cont}, recoverThroughWrappers k = some (v, k') →
       Cont.itersNormalized types k = true →
-      Cont.itersNormalized types k' = true := by
-  intro k
-  induction k <;> intro v k' h hk
-  case stop => simp [recoverThroughWrappers] at h
-  case panicResumeK chain k _ =>
-    simp only [recoverThroughWrappers, Option.map_eq_some_iff] at h
-    obtain ⟨⟨v₀, chain'⟩, hmark, heq⟩ := h
-    simp only [Prod.mk.injEq] at heq
-    obtain ⟨rfl, rfl⟩ := heq
-    exact hk
-  case frame targets results defers k w ih =>
-    cases w
-    · simp [recoverThroughWrappers] at h
-    · simp only [recoverThroughWrappers, Option.map_eq_some_iff] at h
-      obtain ⟨⟨v₀, k₀⟩, hin, heq⟩ := h
-      simp only [Prod.mk.injEq] at heq
-      obtain ⟨rfl, rfl⟩ := heq
-      simp only [Cont.itersNormalized] at hk ⊢
-      exact ih hin hk
-  all_goals
-    rename_i ih
-    simp only [recoverThroughWrappers, Option.map_eq_some_iff] at h
-    obtain ⟨⟨v₀, k₀⟩, hin, heq⟩ := h
-    simp only [Prod.mk.injEq] at heq
-    obtain ⟨rfl, rfl⟩ := heq
-    simp only [Cont.itersNormalized, Bool.and_eq_true] at hk ⊢
-    first
-      | exact ih hin hk
-      | exact ⟨hk.1, ih hin hk.2⟩
+      Cont.itersNormalized types k' = true :=
+  fun {_ _ k'} _ _ => Cont.itersNormalized_true types k'
 
 theorem recoverResult_itersNormalized {types : TypeEnv} :
     ∀ {k : Cont} {v : GoValue} {k' : Cont}, recoverResult k = (v, k') →
       Cont.itersNormalized types k = true →
-      Cont.itersNormalized types k' = true := by
-  intro k
-  induction k <;> intro v k' h hk
-  case stop =>
-    simp only [recoverResult, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
-    exact hk
-  case panicResumeK chain k _ =>
-    simp only [recoverResult, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
-    exact hk
-  case frame targets results defers k w ih =>
-    cases w
-    · simp only [recoverResult] at h
-      cases hin : recoverThroughWrappers k with
-      | none =>
-          rw [hin] at h
-          simp only [Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
-          exact hk
-      | some p =>
-          obtain ⟨v₀, k₀⟩ := p
-          rw [hin] at h
-          simp only [Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
-          simp only [Cont.itersNormalized] at hk ⊢
-          exact recoverThroughWrappers_itersNormalized hin hk
-    · simp only [recoverResult] at h
-      cases hrk : recoverResult k with
-      | mk v₀ k₀ =>
-          rw [hrk] at h
-          simp only [Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
-          simp only [Cont.itersNormalized] at hk ⊢
-          exact ih hrk hk
-  all_goals
-    rename_i ih
-    have hi := ih (v := _) (k' := _) rfl
-    have hv := congrArg Prod.fst h
-    have hk2 := congrArg Prod.snd h
-    simp only [recoverResult] at hv hk2
-    try dsimp only at hv hk2
-    subst hv
-    subst hk2
-    simp only [Cont.itersNormalized, Bool.and_eq_true] at hk ⊢
-    first
-      | exact hi hk
-      | exact ⟨hk.1, hi hk.2⟩
+      Cont.itersNormalized types k' = true :=
+  fun {_ _ k'} _ _ => Cont.itersNormalized_true types k'
 
 /-- The TYPING half of the preservation theorem, at the (unchanged) type
 environment of the source state: the snapshot rule ESTABLISHES the check

@@ -214,7 +214,7 @@ theorem Config.boundarySite_backEdge_runnable {s : ExecState} {c : Config}
   -- first.
   split at h <;>
     first
-    | (simp [threadRunnable, threadDone, isBlockedConfig]; done)
+    | (simp [threadRunnable, threadDone, Config.isTerminal, isBlockedConfig]; done)
     | cases h
 
 /-- A `selectApplyPlan` extraction pins the configuration's shape (the
@@ -478,7 +478,7 @@ theorem singleton_pool_facts {σ : ExecState} {c : Config}
     have h0 : ((⟨#[c], σ, 0⟩ : MultiConfig).threads[0]? : Option Config) = some c := rfl
     rw [h0]
     split <;> simp_all
-  · unfold threadDone
+  · unfold threadDone Config.isTerminal
     split <;> simp_all
   · unfold isBlockedConfig
     split <;> try simp_all

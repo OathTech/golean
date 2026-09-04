@@ -2272,6 +2272,125 @@ inductive Cont where
   | atomicStK (op : AtomicOp) (done : List GoValue)
       (pending : List Expr) (env : LocalEnv) (k : Cont)
 
+/-! ## The `Cont` algebra (design-hygiene wave (iii), B3, 2026-09-04)
+
+Every frame but `.stop` has exactly ONE tail — the continuation it
+forwards to. The type says so through `Cont.tail`/`Cont.withTail`, and
+the frame CLASSES say which frames are glue (forward every walk to their
+tail) and which are load-bearing (`frame`, `panicResumeK`, `stop`). The
+three continuation walks (`pushDefer`, `recoverThroughWrappers`,
+`recoverResult`) are instances of ONE well-founded combinator,
+`Cont.rebuild`: descend through the frames a predicate admits, act at
+the first it does not, and rebuild the spine above the action. Adding a
+frame is one `tail`/`withTail` arm plus a class — not a new arm in every
+walk. `panicPassthrough` is "glue → tail". Preservation: each instance was
+proved EQUAL to the retired 30-arm definition before the swap
+(`docs/evidence/2026-09-04_hygiene-wave3/b3-prototype/Proto.lean`). -/
+
+/-- The tail (immediate continuation) of a frame; `.stop` has none. -/
+def Cont.tail : Cont → Option Cont
+  | .stop => none
+  | .seq _ _ k | .loop _ _ _ k | .frame _ _ _ _ k _ | .deferCalleeK _ _ k
+  | .deferArgsK _ _ _ _ k | .breakableK k | .labelK _ k | .callValCalleeK _ _ _ k
+  | .callValArgsK _ _ _ _ _ k | .strictK _ _ _ _ k | .andK _ _ k | .orK _ _ k
+  | .boolK k | .ifK _ _ _ k | .whileK _ _ _ k | .callArgsK _ _ _ _ _ k
+  | .stmtOpK _ _ _ _ _ k | .mapRangeK _ _ _ _ _ _ k | .mapIterK _ _ _ _ _ _ _ _ _ k
+  | .panicArgK k | .panicResumeK _ k | .chanStK _ _ _ _ k | .selectOpsK _ _ _ _ _ k
+  | .tgtOpK _ _ _ _ _ _ _ _ _ _ k | .rhsK _ _ _ _ _ _ k | .storeK _ _ _ _ k
+  | .goCalleeK _ _ k | .goArgsK _ _ _ _ k | .syncStK _ _ _ _ k | .atomicStK _ _ _ _ k => some k
+
+/-- Replace the tail, keeping the frame's own payload. `.stop` is unchanged. -/
+def Cont.withTail : Cont → Cont → Cont
+  | .stop, _ => .stop
+  | .seq a b _, t => .seq a b t
+  | .loop a b c _, t => .loop a b c t
+  | .frame a b c d _ w, t => .frame a b c d t w
+  | .deferCalleeK a b _, t => .deferCalleeK a b t
+  | .deferArgsK a b c d _, t => .deferArgsK a b c d t
+  | .breakableK _, t => .breakableK t
+  | .labelK a _, t => .labelK a t
+  | .callValCalleeK a b c _, t => .callValCalleeK a b c t
+  | .callValArgsK a b c d e _, t => .callValArgsK a b c d e t
+  | .strictK a b c d _, t => .strictK a b c d t
+  | .andK a b _, t => .andK a b t
+  | .orK a b _, t => .orK a b t
+  | .boolK _, t => .boolK t
+  | .ifK a b c _, t => .ifK a b c t
+  | .whileK a b c _, t => .whileK a b c t
+  | .callArgsK a b c d e _, t => .callArgsK a b c d e t
+  | .stmtOpK a b c d e _, t => .stmtOpK a b c d e t
+  | .mapRangeK a b c d e f _, t => .mapRangeK a b c d e f t
+  | .mapIterK a b c d e f g h i _, t => .mapIterK a b c d e f g h i t
+  | .panicArgK _, t => .panicArgK t
+  | .panicResumeK a _, t => .panicResumeK a t
+  | .chanStK a b c d _, t => .chanStK a b c d t
+  | .selectOpsK a b c d e _, t => .selectOpsK a b c d e t
+  | .tgtOpK a b c d e f g h i j _, t => .tgtOpK a b c d e f g h i j t
+  | .rhsK a b c d e f _, t => .rhsK a b c d e f t
+  | .storeK a b c d _, t => .storeK a b c d t
+  | .goCalleeK a b _, t => .goCalleeK a b t
+  | .goArgsK a b c d _, t => .goArgsK a b c d t
+  | .syncStK a b c d _, t => .syncStK a b c d t
+  | .atomicStK a b c d _, t => .atomicStK a b c d t
+
+theorem Cont.sizeOf_tail_lt {k k' : Cont} (h : k.tail = some k') : sizeOf k' < sizeOf k := by
+  cases k <;> simp_all [Cont.tail] <;> omega
+
+/-- Putting a frame's own tail back is the identity. -/
+theorem Cont.withTail_tail : ∀ k : Cont, (k.tail.map k.withTail).getD k = k := by
+  intro k; cases k <;> rfl
+
+theorem Cont.tail_withTail {k t : Cont} (h : k ≠ .stop) : (k.withTail t).tail = some t := by
+  cases k <;> first | exact absurd rfl h | rfl
+
+/-- What a frame IS to the walks: statement glue (`seq`/`loop`/scopes/
+the range frame — what `break`/`continue`/`return` and `defer` cross),
+expression glue (an operand or delivery frame — crossed only by a
+panic), a call frame, the suspended-chain marker, or the end. -/
+inductive FrameClass where
+  | stmtGlue | exprGlue | callFrame | resumeMarker | stop
+  deriving DecidableEq, Repr
+
+def Cont.class : Cont → FrameClass
+  | .stop => .stop
+  | .frame .. => .callFrame
+  | .panicResumeK .. => .resumeMarker
+  | .seq .. | .loop .. | .breakableK .. | .labelK .. | .mapIterK .. => .stmtGlue
+  | _ => .exprGlue
+
+/-- Is the frame glue of either kind (forwards every walk to its tail)? -/
+def Cont.isGlue (k : Cont) : Bool := k.class = .stmtGlue || k.class = .exprGlue
+
+/-- **The one continuation walk**: descend through the frames `descend`
+admits (a frame whose tail is `none` — `.stop` — is acted on), ACT at
+the first frame it does not, and rebuild the spine above the action
+(`withTail`). `none` = the action refused (the walk found nothing to do). -/
+def Cont.rebuild {β : Type} (descend : Cont → Bool) (act : Cont → Option (β × Cont)) (k : Cont) :
+    Option (β × Cont) :=
+  if descend k then
+    match _h : k.tail with
+    | some k' => (Cont.rebuild descend act k').map fun (b, k'') => (b, k.withTail k'')
+    | none => act k
+  else act k
+termination_by sizeOf k
+decreasing_by exact Cont.sizeOf_tail_lt _h
+
+theorem Cont.rebuild_descend {β : Type} {descend : Cont → Bool} {act : Cont → Option (β × Cont)}
+    {k : Cont} (hd : descend k = true) :
+    Cont.rebuild descend act k =
+      match k.tail with
+      | some k' => (Cont.rebuild descend act k').map fun (b, k'') => (b, k.withTail k'')
+      | none => act k := by
+  rw [Cont.rebuild]; simp only [hd, ↓reduceIte]; split <;> simp_all
+
+theorem Cont.rebuild_act {β : Type} {descend : Cont → Bool} {act : Cont → Option (β × Cont)}
+    {k : Cont} (hd : descend k = false) : Cont.rebuild descend act k = act k := by
+  rw [Cont.rebuild]; simp [hd]
+
+theorem Cont.rebuild_stop {β : Type} {descend : Cont → Bool} {act : Cont → Option (β × Cont)} :
+    Cont.rebuild descend act .stop = act .stop := by
+  rw [Cont.rebuild]; split <;> simp [Cont.tail]
+
 /-- The continuation for entering a `.seqn`: under a same-env governing
 sequence, SPLICE the statements into it (D1) — Go statement lists splice
 and only blocks scope. Any other continuation wraps in a fresh seq node. -/
@@ -2297,56 +2416,29 @@ def deferrableCallee : GoValue → Bool
   | _ => false
 
 /-- Prepend a pending call onto the innermost enclosing frame's defer chain
-(LIFO). Statement-shaped continuations are walked through; a `defer`
-outside any frame (or under an expression frame, which cannot contain a
-statement) has no rule — fail closed. -/
-def pushDefer (d : GoValue × List GoValue) : Cont → Option Cont
-  | .frame t te r ds k w => some (.frame t te r (d :: ds) k w)
-  | .seq rest env k => (pushDefer d k).map (Cont.seq rest env)
-  | .loop c b env k => (pushDefer d k).map (Cont.loop c b env)
-  | .breakableK k => (pushDefer d k).map Cont.breakableK
-  | .labelK name k => (pushDefer d k).map (Cont.labelK name)
-  | .mapIterK kv vv kt vt b base prod st env k =>
-      (pushDefer d k).map (Cont.mapIterK kv vv kt vt b base prod st env)
-  | _ => none
+(LIFO): walk through STATEMENT glue to the first call frame and push. A
+`defer` outside any frame (or under an expression frame, which cannot
+contain a statement) finds nothing — fail closed. -/
+def pushDefer (d : GoValue × List GoValue) (k : Cont) : Option Cont :=
+  (Cont.rebuild (fun k => k.class = .stmtGlue)
+    (fun k => match k with
+      | .frame t te r ds k w => some ((), .frame t te r (d :: ds) k w)
+      | _ => none) k).map (·.2)
 
-/-- One unwinding step through a continuation frame: every frame that is
-not a call frame, a suspended-chain marker, or `.stop` is stripped with
-the chain unchanged — statement glue AND expression frames (a panic can
-surface mid-expression, unlike `break`/`continue`/`return`). The three
-`none` heads each have their own unwinding rules. -/
-def panicPassthrough : Cont → Option Cont
-  | .seq _ _ k => some k
-  | .loop _ _ _ k => some k
-  | .breakableK k => some k
-  | .labelK _ k => some k
-  | .mapIterK _ _ _ _ _ _ _ _ _ k => some k
-  | .strictK _ _ _ _ k => some k
-  | .andK _ _ k => some k
-  | .orK _ _ k => some k
-  | .boolK k => some k
-  | .ifK _ _ _ k => some k
-  | .whileK _ _ _ k => some k
-  | .callArgsK _ _ _ _ _ k => some k
-  | .stmtOpK _ _ _ _ _ k => some k
-  | .mapRangeK _ _ _ _ _ _ k => some k
-  | .callValCalleeK _ _ _ k => some k
-  | .callValArgsK _ _ _ _ _ k => some k
-  | .deferCalleeK _ _ k => some k
-  | .deferArgsK _ _ _ _ k => some k
-  | .panicArgK k => some k
-  | .chanStK _ _ _ _ k => some k
-  | .selectOpsK _ _ _ _ _ k => some k
-  | .tgtOpK _ _ _ _ _ _ _ _ _ _ k => some k
-  | .rhsK _ _ _ _ _ _ k => some k
-  | .storeK _ _ _ _ k => some k
-  | .goCalleeK _ _ k => some k
-  | .goArgsK _ _ _ _ k => some k
-  | .syncStK _ _ _ _ k => some k
-  | .atomicStK _ _ _ _ k => some k
-  | .frame _ _ _ _ _ _ => none
-  | .panicResumeK _ _ => none
-  | .stop => none
+/-- One unwinding step through a continuation frame: GLUE of either kind
+is stripped with the chain unchanged — statement glue AND expression
+frames (a panic can surface mid-expression, unlike `break`/`continue`/
+`return`). The three non-glue heads (call frame, suspended-chain marker,
+`.stop`) each have their own unwinding rules. -/
+def panicPassthrough (k : Cont) : Option Cont :=
+  if k.isGlue then k.tail else none
+
+/-- Glue for the RECOVER walks: statement/expression glue AND wrapper
+frames (compiler-synthesized promotion wrappers, `frame … true`) are
+transparent; a non-wrapper frame, the marker and `.stop` are not. -/
+def Cont.recoverTransparent : Cont → Bool
+  | .frame _ _ _ _ _ w => w
+  | k => k.isGlue
 
 /-- Below the ONE non-wrapper frame of the recover walk: statement glue
 and WRAPPER frames are transparent on the way down to the
@@ -2359,59 +2451,12 @@ continuations this arm is only ever reached with the marker DIRECTLY
 below (the panic-drain rule constructs the deferred frame on the marker,
 and nothing inserts glue below an entered frame), so behavior on
 wrapper-free programs is unchanged. -/
-def recoverThroughWrappers : Cont → Option (GoValue × Cont)
-  | .panicResumeK chain k =>
-      (markNewestRecovered chain).map (fun (v, chain') => (v, .panicResumeK chain' k))
-  | .frame t te r ds k true =>
-      (recoverThroughWrappers k).map (fun (v, k') => (v, .frame t te r ds k' true))
-  | .frame _ _ _ _ _ false => none
-  | .stop => none
-  | .seq a b k => (recoverThroughWrappers k).map (fun (v, k') => (v, .seq a b k'))
-  | .loop a b c k => (recoverThroughWrappers k).map (fun (v, k') => (v, .loop a b c k'))
-  | .breakableK k => (recoverThroughWrappers k).map (fun (v, k') => (v, .breakableK k'))
-  | .labelK a k => (recoverThroughWrappers k).map (fun (v, k') => (v, .labelK a k'))
-  | .mapIterK a b c d e f g h i k =>
-      (recoverThroughWrappers k).map (fun (v, k') => (v, .mapIterK a b c d e f g h i k'))
-  | .strictK a b c d k =>
-      (recoverThroughWrappers k).map (fun (v, k') => (v, .strictK a b c d k'))
-  | .andK a b k => (recoverThroughWrappers k).map (fun (v, k') => (v, .andK a b k'))
-  | .orK a b k => (recoverThroughWrappers k).map (fun (v, k') => (v, .orK a b k'))
-  | .boolK k => (recoverThroughWrappers k).map (fun (v, k') => (v, .boolK k'))
-  | .ifK a b c k => (recoverThroughWrappers k).map (fun (v, k') => (v, .ifK a b c k'))
-  | .whileK a b c k => (recoverThroughWrappers k).map (fun (v, k') => (v, .whileK a b c k'))
-  | .callArgsK a b c d e k =>
-      (recoverThroughWrappers k).map (fun (v, k') => (v, .callArgsK a b c d e k'))
-  | .stmtOpK a b c d e k =>
-      (recoverThroughWrappers k).map (fun (v, k') => (v, .stmtOpK a b c d e k'))
-  | .mapRangeK a b c d e f k =>
-      (recoverThroughWrappers k).map (fun (v, k') => (v, .mapRangeK a b c d e f k'))
-  | .callValCalleeK a b c k =>
-      (recoverThroughWrappers k).map (fun (v, k') => (v, .callValCalleeK a b c k'))
-  | .callValArgsK a b c d e k =>
-      (recoverThroughWrappers k).map (fun (v, k') => (v, .callValArgsK a b c d e k'))
-  | .deferCalleeK a b k =>
-      (recoverThroughWrappers k).map (fun (v, k') => (v, .deferCalleeK a b k'))
-  | .deferArgsK a b c d k =>
-      (recoverThroughWrappers k).map (fun (v, k') => (v, .deferArgsK a b c d k'))
-  | .panicArgK k => (recoverThroughWrappers k).map (fun (v, k') => (v, .panicArgK k'))
-  | .chanStK a b c d k =>
-      (recoverThroughWrappers k).map (fun (v, k') => (v, .chanStK a b c d k'))
-  | .selectOpsK a b c d e k =>
-      (recoverThroughWrappers k).map (fun (v, k') => (v, .selectOpsK a b c d e k'))
-  | .tgtOpK a b c d e f g h i j k =>
-      (recoverThroughWrappers k).map (fun (v, k') => (v, .tgtOpK a b c d e f g h i j k'))
-  | .rhsK a b c d e f k =>
-      (recoverThroughWrappers k).map (fun (v, k') => (v, .rhsK a b c d e f k'))
-  | .storeK a b c d k =>
-      (recoverThroughWrappers k).map (fun (v, k') => (v, .storeK a b c d k'))
-  | .goCalleeK a b k =>
-      (recoverThroughWrappers k).map (fun (v, k') => (v, .goCalleeK a b k'))
-  | .goArgsK a b c d k =>
-      (recoverThroughWrappers k).map (fun (v, k') => (v, .goArgsK a b c d k'))
-  | .syncStK a b c d k =>
-      (recoverThroughWrappers k).map (fun (v, k') => (v, .syncStK a b c d k'))
-  | .atomicStK a b c d k =>
-      (recoverThroughWrappers k).map (fun (v, k') => (v, .atomicStK a b c d k'))
+def recoverThroughWrappers (k : Cont) : Option (GoValue × Cont) :=
+  Cont.rebuild Cont.recoverTransparent
+    (fun k => match k with
+      | .panicResumeK chain k =>
+          (markNewestRecovered chain).map fun (v, chain') => (v, .panicResumeK chain' k)
+      | _ => none) k
 
 /-- The `recover()` builtin (arc doc §A1; wrapper transparency added at
 the arc-final audit F1/BUG-015, 2026-08-06): walk the continuation to the
@@ -2427,60 +2472,17 @@ the continuation with the entry marked, or `.nil` and the continuation
 unchanged (never stuck: `recover` outside a panic-run deferred function
 is a defined no-op in Go). A wrapper frame ABOVE the walk's start cannot
 occur from lowered Go (`recover()` never appears textually inside a
-synthesized wrapper); for totality it is transparent there too. -/
-def recoverResult : Cont → GoValue × Cont
-  | .frame t te r ds k false =>
-      (match recoverThroughWrappers k with
-       | some (v, k') => (v, .frame t te r ds k' false)
-       | none => (.nil, .frame t te r ds k false))
-  | .frame t te r ds k true =>
-      let (v, k') := recoverResult k
-      (v, .frame t te r ds k' true)
-  | k@.stop => (.nil, k)
-  | k@(.panicResumeK _ _) => (.nil, k)
-  | .seq a b k => let (v, k') := recoverResult k; (v, .seq a b k')
-  | .loop a b c k => let (v, k') := recoverResult k; (v, .loop a b c k')
-  | .breakableK k => let (v, k') := recoverResult k; (v, .breakableK k')
-  | .labelK a k => let (v, k') := recoverResult k; (v, .labelK a k')
-  | .mapIterK a b c d e f g h i k =>
-      let (v, k') := recoverResult k; (v, .mapIterK a b c d e f g h i k')
-  | .strictK a b c d k => let (v, k') := recoverResult k; (v, .strictK a b c d k')
-  | .andK a b k => let (v, k') := recoverResult k; (v, .andK a b k')
-  | .orK a b k => let (v, k') := recoverResult k; (v, .orK a b k')
-  | .boolK k => let (v, k') := recoverResult k; (v, .boolK k')
-  | .ifK a b c k => let (v, k') := recoverResult k; (v, .ifK a b c k')
-  | .whileK a b c k => let (v, k') := recoverResult k; (v, .whileK a b c k')
-  | .callArgsK a b c d e k =>
-      let (v, k') := recoverResult k; (v, .callArgsK a b c d e k')
-  | .stmtOpK a b c d e k => let (v, k') := recoverResult k; (v, .stmtOpK a b c d e k')
-  | .mapRangeK a b c d e f k =>
-      let (v, k') := recoverResult k; (v, .mapRangeK a b c d e f k')
-  | .callValCalleeK a b c k =>
-      let (v, k') := recoverResult k; (v, .callValCalleeK a b c k')
-  | .callValArgsK a b c d e k =>
-      let (v, k') := recoverResult k; (v, .callValArgsK a b c d e k')
-  | .deferCalleeK a b k => let (v, k') := recoverResult k; (v, .deferCalleeK a b k')
-  | .deferArgsK a b c d k =>
-      let (v, k') := recoverResult k; (v, .deferArgsK a b c d k')
-  | .panicArgK k => let (v, k') := recoverResult k; (v, .panicArgK k')
-  | .chanStK a b c d k =>
-      let (v, k') := recoverResult k; (v, .chanStK a b c d k')
-  | .selectOpsK a b c d e k =>
-      let (v, k') := recoverResult k; (v, .selectOpsK a b c d e k')
-  | .tgtOpK a b c d e f g h i j k =>
-      let (v, k') := recoverResult k; (v, .tgtOpK a b c d e f g h i j k')
-  | .rhsK a b c d e f k =>
-      let (v, k') := recoverResult k; (v, .rhsK a b c d e f k')
-  | .storeK a b c d k =>
-      let (v, k') := recoverResult k; (v, .storeK a b c d k')
-  | .goCalleeK a b k =>
-      let (v, k') := recoverResult k; (v, .goCalleeK a b k')
-  | .goArgsK a b c d k =>
-      let (v, k') := recoverResult k; (v, .goArgsK a b c d k')
-  | .syncStK a b c d k =>
-      let (v, k') := recoverResult k; (v, .syncStK a b c d k')
-  | .atomicStK a b c d k =>
-      let (v, k') := recoverResult k; (v, .atomicStK a b c d k')
+synthesized wrapper); for totality it is transparent there too. The
+action always answers (`.nil` where the walk finds no frame), so the
+`getD` is totality plumbing only. -/
+def recoverResult (k : Cont) : GoValue × Cont :=
+  (Cont.rebuild Cont.recoverTransparent
+    (fun k => match k with
+      | .frame t te r ds k' false =>
+          some (match recoverThroughWrappers k' with
+            | some (v, k'') => (v, .frame t te r ds k'' false)
+            | none => (.nil, .frame t te r ds k' false))
+      | k => some (.nil, k)) k).getD (.nil, k)
 
 /-- Control configurations (the Iris `Expr` projection; the `ExecState` is
 the paired `Step` component, as before). New over the old relation:
@@ -2583,6 +2585,46 @@ inductive Config where
   the apply). Appended at the END so positional case tags stay
   stable. -/
   | blockedSync (op : SyncOp) (loc : Loc) (env : LocalEnv) (k : Cont)
+
+/-- **The terminal shapes, named once** (B3): a goroutine with nothing
+left to do — the four unwound `.stop` terminals (only main can reach the
+non-`.next` ones; spawned goroutines run under a barrier frame) and the
+program-aborting `.panicked`. `threadDone` and the boundary predicate
+consume this; the drivers, which need the OUTCOME behind the shape, keep
+their per-shape classification. -/
+def Config.isTerminal : Config → Bool
+  | .next .stop | .returning .stop | .breaking .stop | .continuing .stop => true
+  | .panicked _ => true
+  | _ => false
+
+/-- The head of an APPLY position (A7): which apply the last operand's
+arrival triggers. -/
+inductive ApplyHead where
+  | strict (op : StrictOp)
+  | stmt (op : StmtOp) (nt : Nat)
+  | chan (op : ChanStOp)
+  | select (clauses : List (SelectClauseHead × Stmt)) (default? : Option Stmt)
+  | sync (op : SyncOp)
+  | atomic (op : AtomicOp)
+  | rhs (rop : RhsOp) (refs : List TargetRef) (body : Stmt)
+
+/-- **The apply-position accessor** (A7, review U6): the one place that
+knows the operand encoding. `some (head, operands, env, k)` exactly at a
+`.retV v (…K … done [] env k)` whose last operand `v` just arrived, with
+the operands in evaluation order (`(v :: done).reverse` — the frames
+accumulate most-recent-first). Consumers that only need to know "is this
+an apply of X to vs" read this instead of re-matching the seven frames. -/
+def Config.applyPos : Config → Option (ApplyHead × List GoValue × LocalEnv × Cont)
+  | .retV v (.strictK op done [] env k) => some (.strict op, (v :: done).reverse, env, k)
+  | .retV v (.stmtOpK op nt done [] env k) => some (.stmt op nt, (v :: done).reverse, env, k)
+  | .retV v (.chanStK op done [] env k) => some (.chan op, (v :: done).reverse, env, k)
+  | .retV v (.selectOpsK clauses default? done [] env k) =>
+      some (.select clauses default?, (v :: done).reverse, env, k)
+  | .retV v (.syncStK op done [] env k) => some (.sync op, (v :: done).reverse, env, k)
+  | .retV v (.atomicStK op done [] env k) => some (.atomic op, (v :: done).reverse, env, k)
+  | .retV v (.rhsK rop refs done [] body env k) =>
+      some (.rhs rop refs body, (v :: done).reverse, env, k)
+  | _ => none
 
 /-- **Apply, then deliver** (B2): the ONE bridge from an apply's `Result`
 to the machine's control side. A value continues as `next a`; a
