@@ -181,6 +181,19 @@ rows and 4 FAIL→PASS flips, nothing else.
   column still carries the frontend's absolute position text — stripped
   in the evidence copy by `sed "s|$PWD/||"` (recorded here).
 
+### Gate after the fix round
+
+`scripts/capped scripts/ci --diff` at `7c858b6a` (clean tree): **RESULT:
+PASS** — `cases=3402 pass=3189 fail=213 export_status=0` (the two A5
+residual pins born FAIL, pre-pinned; 0 PASS→non-PASS, re-pin guard clean);
+frontend pins ok — twin wire UNCHANGED at `4ee39f73…` (A3 is decoder-only);
+stdlib register = tables; frontend unit tests (incl. the A6 fail-closed and
+A8 tests), lowerdiag tests (incl. the A2 tripwire), eval tests (incl. the
+A3 `sort-slice` refusal) ok; check-spec-anchors / check-bugs / check-coverage
+ok. Reconciler at the tip: **C13 + C5** (FR-7's pre-existing `=` citation)
++ the C9 certified-record currency note the coordinator expects from the
+decoder move — **C14 GONE, 0 HIGH**. Transcript: `ci-diff-fix-round.txt`.
+
 ## Files
 
 - `before/`, `after/` — census + lower-diagnose records (absolute worktree
@@ -188,7 +201,8 @@ rows and 4 FAIL→PASS flips, nothing else.
 - `twin-repin/structural-diff.txt` — the JSON diff behind the twin re-pin
   (`b4458244…` → `4ee39f73…`).
 - `ci-diff.txt` — the clean gate's transcript from the baseline diff to the
-  summary (`88445d1c`); `ci-diff-1-drift-run.txt` — the pre-re-pin drift
+  summary (`88445d1c`); `ci-diff-fix-round.txt` — the same at `7c858b6a`
+  (the audit fix round); `ci-diff-1-drift-run.txt` — the pre-re-pin drift
   run's tail (the 22-line drift list = the movement).
 
 ## Reproduction (from the repo root, on the lane tip)
