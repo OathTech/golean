@@ -169,4 +169,21 @@ scripts/capped scripts/ci --diff
 
 ## Gate
 
-(filled in by the records follow-up commit after the certified run — see below)
+Slice commit `6441bd37` (branch `fr27-fr28` off main `56982423`; this
+README's gate paragraph and the `ci-diff.txt` transcript land in the
+records follow-up commit — the tree the gate certified is `6441bd37`, which
+the follow-up changes only under `docs/evidence/`).
+`scripts/capped scripts/ci --diff` at `6441bd37` (clean tree):
+**RESULT: PASS** — `differential coverage summary: cases=3427 pass=3207
+fail=220 export_status=0`; `baseline diff FULL (3427/3427, no regression)`;
+`re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)`;
+`frontend pins (realized init-order deviation + twin wire = pinned bytes)`
+— the twin wire pin 4ee39f73… UNCHANGED; `stdlib admission register =
+frontend tables`; `spec-anchor citations resolve at the pin`; frontend unit
+tests + lowering-diagnostic tables green; `check-bugs: ok (92 bug(s))`;
+reconciler 3 finding(s), 0 HIGH (the three MEDIUMs — C13 historical Go
+version strings, C5 FR-7's pre-existing `=` citation, C9 the wire-schema
+commit 65272847 of lane fr4-rowm vs the certified set's date — are all
+pre-existing on main 56982423). Transcript: `ci-diff.txt` (absolute
+worktree prefix stripped). An earlier full run on the DIRTY tree before the
+records were finished also passed (3427/3427, 0 flips) and is not kept.
