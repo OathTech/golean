@@ -1,0 +1,47 @@
+DIAGNOSTIC — NOT A LOWERING. tools/lowerdiag report: no wire is written; nothing in this file is a gate input.
+target: artifacts/lower-diagnose/inputs/raft-twin
+commit: e0657d4770b9a5b608a647066b4e925d87a6392c+dirty   go: go1.26.5
+register: docs/stdlib-admission-register.md (42 rows)   causes table: 49 rows
+
+== first refusal (what the frontend says today)
+  frontend: EXPORT OK — the program lowers (per-declaration quarantines, if any, are in the wire's unsupported stubs; the static census below is the demand view)
+
+== distance
+  declarations demanding nothing refused: 691 / 696 (99.3%)   funcs+methods: 486 / 490 (99.2%)   may-refuse: 1   refused: 4
+  export kills: 0 declaration(s) refuse the WHOLE export of their package today; 0 / 7 package(s) export-killed (own or inherited)
+
+== blockers by cause (sorted by unblock value: sole = declarations this cause alone blocks)
+  cause                      fr               scope  decls  sole pkgs export  top keys
+  stdlib-package-unmodeled   FR-14            decl       2     2    1      0  os.Exit×2
+  stdlib-type-method         FR-14            decl       2     2    1      0  log.Logger.Panic×1, log.Logger.Panicf×1
+
+== top blockers — what each is and where its plan lives
+   1. stdlib-package-unmodeled [FR-14] — 2 decls (2 sole, 1 pkgs): a call into a stdlib package that is neither source-through nor shimmed (register: no row) — FR-14's extern surface; memo §6 slices (source-through admission per package)
+   2. stdlib-type-method [FR-14] — 2 decls (2 sole, 1 pkgs): a method call on an imported named type whose package is not source-through (time.Time.Before, bytes-like models before slice 2) — the D5 stub answers satisfaction, the call refuses; FR-14
+
+== projection — declarations lowering if the top causes were fixed, cumulatively
+  + stdlib-package-unmodeled   -> 694 / 696 lower (+2), 0 export(s) revived
+  + stdlib-type-method         -> 696 / 696 lower (+2), 0 export(s) revived
+
+== per package
+  package                                  decls lowers  may-ref  refd   +top3    share  export
+  quorum                                      25     25        0     0      25   100.0%  ok
+  raftpb                                     250    250        0     0     250   100.0%  ok
+  tracker                                     48     48        0     0      48   100.0%  ok
+  confchange                                  24     24        0     0      24   100.0%  ok
+  proto                                        6      6        0     0       6   100.0%  ok
+  raft                                       292    287        1     4     292    98.3%  ok
+  main                                        51     51        0     0      51   100.0%  ok
+
+== stdlib / imported keys refused (register class = none; top 25)
+  key                                                  cause                      fr       decls  sole pkgs
+  os.Exit                                              stdlib-package-unmodeled   FR-14        2     2    1
+  log.Logger.Panic                                     stdlib-type-method         FR-14        1     1    1
+  log.Logger.Panicf                                    stdlib-type-method         FR-14        1     1    1
+
+== notes
+  - static = go/types over the program + its local imports; stdlib judged by the register (source-through members counted as lowering — FR-21 gaps inside library text are invisible here) and the machine-owned surface table
+  - may-refuse = shape-dependent (goto hoisting shapes, non-reserved build tags); the distance line counts only certain refusals
+  - export scope = the frontend refuses the WHOLE package export today (H-11 initializer kill, an init() body, unstubbable method signature, global type, duplicate local TypeId); dependents inherit through the import graph
+  - main.main is not a census declaration: the frontend never emits it (emit.go emitProgram; drivers run named entry functions), so its body cannot block a lowering
+  - not visible statically: fmt's verb×kind matrix, mono.go's stencil-time refusals, per-call-site frontend invariants — the dynamic pass (first refusal) is the check

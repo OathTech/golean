@@ -1,0 +1,5 @@
+raft	method	DefaultLogger.Fatal	raft/logger.go:134	4	refused(static)	false	stdlib-package-unmodeled:os.Exit@raft/logger.go:136	fmt.Sprint (shim)	-
+raft	method	DefaultLogger.Fatalf	raft/logger.go:139	4	refused(static)	false	stdlib-package-unmodeled:os.Exit@raft/logger.go:141	fmt.Sprintf (shim)	-
+raft	method	DefaultLogger.Panic	raft/logger.go:144	3	refused(static)	false	stdlib-type-method:log.Logger.Panic@raft/logger.go:145	-	log.Logger
+raft	method	DefaultLogger.Panicf	raft/logger.go:148	3	refused(static)	false	stdlib-type-method:log.Logger.Panicf@raft/logger.go:149	-	log.Logger
+raft	file	state_trace_nop.go	raft/state_trace_nop.go:17	0	may-refuse(static)	false	build-constraint:!with_tla@raft/state_trace_nop.go:15 (may) EXPORT	-	-

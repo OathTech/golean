@@ -447,6 +447,32 @@ The default executable lane is a conformance signal, not an expected-failure
 test suite. A case that does not match Go remains a failure even when the
 failure is understood.
 
+### Diagnosing a refusal
+
+A `FAIL/frontend-export` row (or any program the frontend refuses) shows
+ONE cause — the first refusal the emitter hit — and fixing it may only
+reveal the next (the cedar-go census's FR-22 → FR-23 → FR-24 sequence,
+export fraction unchanged each time). [USER] direction (4) of
+`docs/language-coverage-ledger.md` §0 (2026-09-04, coordinator-relayed:
+«it'd be useful if we didn't just get stuck without any information
+about *why* it's happening») is served by `scripts/lower-diagnose <dir |
+main.go> [--json] [--tsv]` (`tools/lowerdiag`;
+`docs/2026-09-04_lower-diagnose.md`): it runs the real frontend for the
+first refusal (what a user sees today), then a STATIC go/types demand
+census over EVERY declaration of the program and its case-local
+imports, judged against `docs/stdlib-admission-register.md` and the
+machine-owned surface, and reports the full histogram of blockers by
+cause and ledger FR row, the sole-blocker counts, the cumulative
+projection ("if these were fixed, N more declarations lower"), the
+per-package export status (whole-export kills and who inherits them),
+and a distance line. The frontend's own refusal now ends with a line
+pointing at it. It is REPORT-ONLY lane tooling: it writes no wire, every
+artifact opens with `DIAGNOSTIC — NOT A LOWERING`, its output root is
+`artifacts/lower-diagnose/`, and no gate, baseline or corpus path reads
+it; `scripts/cedar-census` uses the same engine for its static demand
+step (one implementation of the cause taxonomy, `tools/lowerdiag/causes.tsv`,
+checked against the ledger's FR ids by `go test ./tools/lowerdiag`).
+
 ### The tracked baseline and its stage column
 
 `baselines/native-full.tsv` (and `baselines/negative-full.tsv`) record

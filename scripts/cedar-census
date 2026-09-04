@@ -30,8 +30,12 @@
 #   drive      frontend -> wire; per-decl census of the wire; machine run;
 #              go run; comparison — the gotest-triage categories:
 #              FRONTEND-REFUSED / MACHINE-REFUSED / MATCH / MISMATCH / INFRA.
-#   demand     STATIC per-function demand census (tools/cedarcensus demand)
-#              — the per-function picture behind the whole-export kills.
+#   demand     STATIC per-declaration demand census — tools/lowerdiag
+#              (scripts/lower-diagnose's engine; ONE implementation of the
+#              cause taxonomy, tools/lowerdiag/causes.tsv) over the
+#              whole-library case: the per-declaration picture behind the
+#              whole-export kills. Replaced tools/cedarcensus's private
+#              demand.go + classify rules 2026-09-04 ([USER] direction 4).
 #   report     census.tsv (per declaration), results.tsv (per case),
 #              histogram.tsv (per cause class / key), meta.
 #
@@ -96,6 +100,7 @@ preflight() {
   [[ -d "$CEDAR_K8S_DIR/.git" || -f "$CEDAR_K8S_DIR/.git" ]] || die "$CEDAR_K8S_DIR is not a git checkout (scripts/setup-deps --only cedar-access-control-for-k8s)"
   mkdir -p "$GO_BUILD_CACHE"
   env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go build -o "$OUT/cedarcensus" ./tools/cedarcensus || die "tools/cedarcensus does not build"
+  env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go build -o "$OUT/lowerdiag" ./tools/lowerdiag || die "tools/lowerdiag does not build"
   env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go build -o /dev/null ./tools/nativefrontend || die "tools/nativefrontend does not build"
 }
 
@@ -280,7 +285,7 @@ drive_one() {
     printf 'FRONTEND-REFUSED\t%s\t%s\t%s\n' "$name" "$kind" "$(one_line "$(printf '%s\n' "$fe_out" | normalize_cause)")"; return
   fi
   # Per-declaration census of the wire (every case, package drivers included).
-  "$OUT/cedarcensus" wire "$wire" > "$dir/decls.tsv" || { printf 'INFRA\t%s\t%s\t%s\n' "$name" "$kind" "wire census failed"; return; }
+  "$OUT/lowerdiag" wire "$wire" > "$dir/decls.tsv" || { printf 'INFRA\t%s\t%s\t%s\n' "$name" "$kind" "wire census failed"; return; }
   local total quar
   total=$(($(wc -l < "$dir/decls.tsv") - 1)); quar=$(awk -F'\t' 'NR>1 && $4=="quarantined"' "$dir/decls.tsv" | wc -l)
   if [[ "$kind" == "package" ]]; then
@@ -345,27 +350,16 @@ drive() {
 }
 
 demand() {
-  # STATIC per-function demand census over the assembled copy (tools/
-  # cedarcensus demand) — the per-function picture the frontend's whole-
-  # export kill points hide. Judged against the supply table; static.
-  local pk
-  pk="$({ sed 's#^\.$#cedargo#; s#^#cedargo/#; s#cedargo/cedargo#cedargo#' "$OUT/cedargo-packages.txt"
-          sed 's#^#cedark8s/#' "$OUT/cedark8s-packages.txt" | grep -v '^cedark8s/cmd/'; } | tr '\n' ' ')"
-  # shellcheck disable=SC2086
-  env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" "$OUT/cedarcensus" demand "$SRC" $pk > "$OUT/demand.tsv" || die "static demand census failed"
-  # Histogram: functions demanding each refused key; "sole" = functions
-  # where that key is the ONLY refusal (the direct unblock count).
-  { printf 'key\tfunctions\tsole_blocker_functions\tpackages\n'
-    awk -F'\t' 'NR>1 && ($5!="-" || $7!="-") {
-        n=0; delete ks
-        if ($5!="-") { m=split($5,a,","); for(i=1;i<=m;i++) ks[a[i]]=1 }
-        if ($7!="-") { m=split($7,b,","); for(i=1;i<=m;i++) ks[b[i]]=1 }
-        for (k in ks) n++
-        for (k in ks) { c[k]++; p[k SUBSEP $1]=1; if (n==1) sole[k]++ }
-      } END { for (k in c) { pc=0; for (x in p) { split(x,q,SUBSEP); if (q[1]==k) pc++ } print k "\t" c[k] "\t" sole[k]+0 "\t" pc } }' "$OUT/demand.tsv" | sort -t$'\t' -k2,2nr -k1,1; } > "$OUT/demand-histogram.tsv"
-  { printf 'package\tfunctions\tlowers_static\trefused_static\tshare_lowers\n'
-    awk -F'\t' 'NR>1 { t[$1]++; if ($9 ~ /^lowers/) l[$1]++ } END { for (p in t) printf "%s\t%d\t%d\t%d\t%.1f%%\n", p, t[p], l[p]+0, t[p]-l[p], 100*(l[p]+0)/t[p] }' "$OUT/demand.tsv" | sort; } > "$OUT/demand-per-package.tsv"
-  echo "demand: $(($(wc -l < "$OUT/demand.tsv") - 1)) functions -> $OUT/demand.tsv" >&2
+  # STATIC per-declaration demand census over the WHOLE-LIBRARY case dir
+  # (main.go + cedargo/ + xexp/ — the same copy the frontend saw), by
+  # tools/lowerdiag (no frontend run here: the drive step is the dynamic
+  # pass). Its three TSVs open with the DIAGNOSTIC banner line (a `#`
+  # comment) — never a wire, never a gate input.
+  [[ -d "$CASES/all" ]] || die "no whole-library case at $CASES/all (run cases first)"
+  "$OUT/lowerdiag" report --repo "$ROOT" --decls-tsv "$OUT/demand.tsv" --histogram-tsv "$OUT/demand-histogram.tsv" \
+      --per-package-tsv "$OUT/demand-per-package.tsv" "$CASES/all" > "$OUT/demand-report.txt" \
+    || { cat "$OUT/demand-report.txt" >&2; die "static demand census (tools/lowerdiag) failed"; }
+  echo "demand: $(grep -cv '^#' "$OUT/demand.tsv" | awk '{print $1-1}') declarations -> $OUT/demand.tsv (report: $OUT/demand-report.txt)" >&2
 }
 
 report() {
@@ -381,7 +375,7 @@ report() {
         awk -F'\t' -v pkg="$local_pkg" -v c="$name" 'NR>1 && $1==pkg && $3 !~ /goleanShim/ { print $0 "\t" c }' "$CASES/$name/decls.tsv"
       else
         cause="$(awk -F'\t' -v c="$name" '$2==c { print $4 }' "$OUT/results.tsv")"
-        class_key="$(printf '%s\n' "$cause" | "$OUT/cedarcensus" classify 2>/dev/null || true)"
+        class_key="$(printf '%s\n' "$cause" | "$OUT/lowerdiag" classify 2>/dev/null || true)"
         printf '%s\tpackage\t%s\texport-refused\t%s\t%s\t%s\t%s\n' "$local_pkg" "$local_pkg" "$cause" "${class_key%%$'\t'*}" "${class_key#*$'\t'}" "$name"
       fi
     done < "$OUT/case-index.tsv"; } > "$OUT/census.tsv"
@@ -404,8 +398,11 @@ report() {
   echo "== library declarations"; awk -F'\t' 'NR>1 { t++; if ($4=="lowered") l++ } END { printf "total=%d lowered=%d quarantined/refused=%d (%.1f%% lowered)\n", t, l, t-l, 100*l/t }' "$OUT/census.tsv"
   echo "== histogram (top 15)"; head -16 "$OUT/histogram.tsv"
   if [[ -f "$OUT/demand.tsv" ]]; then
-    echo "== STATIC demand census"; awk -F'\t' 'NR>1 { t++; if ($9 ~ /^lowers/) l++ } END { printf "functions=%d lowers(static)=%d refused(static)=%d (%.1f%% lowers)\n", t, l, t-l, 100*l/t }' "$OUT/demand.tsv"
-    echo "== static demand histogram (top 15)"; head -16 "$OUT/demand-histogram.tsv"
+    # tools/lowerdiag decls.tsv: col 2 kind, col 6 verdict (lowers|may-refuse|refused)(static); `#` = the DIAGNOSTIC banner.
+    echo "== STATIC demand census (tools/lowerdiag; funcs+methods for the census-doc comparison, then all declarations)"
+    awk -F'\t' '!/^#/ && $1!="pkg" { t++; if ($6 ~ /^lowers/) l++; if ($2=="func"||$2=="method") { ft++; if ($6 ~ /^lowers/) fl++ } } END { printf "funcs+methods=%d lowers(static)=%d refused/may=%d (%.1f%% lowers)   all declarations=%d lowers(static)=%d (%.1f%%)\n", ft, fl, ft-fl, 100*fl/ft, t, l, 100*l/t }' "$OUT/demand.tsv"
+    echo "== static demand histogram (top 15 causes, then keys)"; grep -v '^#' "$OUT/demand-histogram.tsv" | head -16
+    echo "== full static report: $OUT/demand-report.txt"
   fi
 }
 

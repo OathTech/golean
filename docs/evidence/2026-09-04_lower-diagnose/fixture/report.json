@@ -1,0 +1,324 @@
+{
+ "banner": "DIAGNOSTIC — NOT A LOWERING. tools/lowerdiag report: no wire is written; nothing in this file is a gate input.",
+ "target": "tools/lowerdiag/testdata/fivecauses",
+ "commit": "e0657d4770b9a5b608a647066b4e925d87a6392c+dirty",
+ "go_version": "go1.26.5",
+ "register": "docs/stdlib-admission-register.md",
+ "register_rows": 42,
+ "causes_rows": 49,
+ "first_refusal": {
+  "text": "nativefrontend: native frontend unsupported: package-selector call time.Unix (package \"time\" surface not modeled)",
+  "cause": "stdlib-package-unmodeled",
+  "fr": "FR-14",
+  "key": "time.Unix",
+  "scope": "decl",
+  "static_site": "main var epoch @main.go:13 [init-callee-unmodeled/FR-22, EXPORT-scoped] | main var epoch @main.go:13 [stdlib-package-unmodeled/FR-14, EXPORT-scoped]",
+  "note": "the same refusal string covers a body call and a package-level initializer; the static census places this key at an export-scoped site — that is the kill (see the site's FR row)"
+ },
+ "frontend_export_ok": false,
+ "decls": 9,
+ "funcs_methods": 8,
+ "decls_lowering_static": 4,
+ "funcs_methods_lowering_static": 4,
+ "decls_may_refuse": 0,
+ "decls_refused_static": 5,
+ "export_kill_decls": 1,
+ "packages_export_killed": 1,
+ "packages": [
+  {
+   "package": "main",
+   "decls": 9,
+   "funcs_methods": 8,
+   "lowers_static": 4,
+   "funcs_methods_lower_static": 4,
+   "may_refuse": 0,
+   "refused_static": 5,
+   "export_status": "KILLED (own: var epoch: init-callee-unmodeled time.Unix; var epoch: stdlib-package-unmodeled time.Unix)",
+   "lowers_after_top_fixes": 7
+  }
+ ],
+ "causes": [
+  {
+   "cause": "stdlib-package-unmodeled",
+   "fr": "FR-14",
+   "status": "rowed",
+   "scope": "decl",
+   "decls": 2,
+   "sole": 1,
+   "packages": 1,
+   "export_kills": 1,
+   "top_keys": [
+    "time.Sleep×1",
+    "time.Unix×1"
+   ],
+   "diagnosis": "a call into a stdlib package that is neither source-through nor shimmed (register: no row) — FR-14's extern surface; memo §6 slices (source-through admission per package)"
+  },
+  {
+   "cause": "anon-struct",
+   "fr": "FR-13",
+   "status": "rowed",
+   "scope": "decl",
+   "decls": 1,
+   "sole": 1,
+   "packages": 1,
+   "export_kills": 0,
+   "top_keys": [
+    "struct{x int; y int}×1"
+   ],
+   "diagnosis": "anonymous non-empty struct type as a first-class type (incl. as a type argument) — structural TypeIds; ledger queue 13"
+  },
+  {
+   "cause": "complex",
+   "fr": "FR-15",
+   "status": "rowed",
+   "scope": "decl",
+   "decls": 1,
+   "sole": 1,
+   "packages": 1,
+   "export_kills": 0,
+   "top_keys": [
+    "builtin complex×1",
+    "builtin real×1",
+    "complex128×1"
+   ],
+   "diagnosis": "complex numbers (types, literals, constants, real/imag/complex) — the one large arc, last in the queue (15)"
+  },
+  {
+   "cause": "range-over-func",
+   "fr": "FR-12",
+   "status": "rowed",
+   "scope": "decl",
+   "decls": 1,
+   "sole": 1,
+   "packages": 1,
+   "export_kills": 0,
+   "top_keys": [
+    "func(yield func(int) bool)×1"
+   ],
+   "diagnosis": "range-over-func iterators (Go 1.23) — frontend desugar + yield/loop-exit protocol; ledger queue 12 (cedar-go's Authorize loop is this)"
+  },
+  {
+   "cause": "init-callee-unmodeled",
+   "fr": "FR-22",
+   "status": "rowed",
+   "scope": "export",
+   "decls": 1,
+   "sole": 0,
+   "packages": 1,
+   "export_kills": 1,
+   "top_keys": [
+    "time.Unix×1"
+   ],
+   "diagnosis": "a package-level initializer CALLS something outside the H-11 effect-isolation allowlist (pureUnmodeledCallees = os.Getenv/LookupEnv) and the initializer does not lower: WHOLE-EXPORT refusal today; ledger queue 22 (per-declaration var poisoning)"
+  }
+ ],
+ "stdlib_keys": [
+  {
+   "key": "time.Sleep",
+   "cause": "stdlib-package-unmodeled",
+   "fr": "FR-14",
+   "decls": 1,
+   "sole": 1,
+   "packages": 1
+  },
+  {
+   "key": "time.Unix",
+   "cause": "stdlib-package-unmodeled",
+   "fr": "FR-14",
+   "decls": 1,
+   "sole": 1,
+   "packages": 1
+  }
+ ],
+ "projection": [
+  {
+   "fixed_causes": [
+    "stdlib-package-unmodeled"
+   ],
+   "decls_lowering": 5,
+   "gain": 1,
+   "exports_revived": 0
+  },
+  {
+   "fixed_causes": [
+    "stdlib-package-unmodeled",
+    "anon-struct"
+   ],
+   "decls_lowering": 6,
+   "gain": 1,
+   "exports_revived": 0
+  },
+  {
+   "fixed_causes": [
+    "stdlib-package-unmodeled",
+    "anon-struct",
+    "complex"
+   ],
+   "decls_lowering": 7,
+   "gain": 1,
+   "exports_revived": 0
+  },
+  {
+   "fixed_causes": [
+    "stdlib-package-unmodeled",
+    "anon-struct",
+    "complex",
+    "range-over-func"
+   ],
+   "decls_lowering": 8,
+   "gain": 1,
+   "exports_revived": 0
+  },
+  {
+   "fixed_causes": [
+    "stdlib-package-unmodeled",
+    "anon-struct",
+    "complex",
+    "range-over-func",
+    "init-callee-unmodeled"
+   ],
+   "decls_lowering": 9,
+   "gain": 1,
+   "exports_revived": 1
+  }
+ ],
+ "unrowed_causes_seen": null,
+ "notes": [
+  "static = go/types over the program + its local imports; stdlib judged by the register (source-through members counted as lowering — FR-21 gaps inside library text are invisible here) and the machine-owned surface table",
+  "may-refuse = shape-dependent (goto hoisting shapes, non-reserved build tags); the distance line counts only certain refusals",
+  "export scope = the frontend refuses the WHOLE package export today (H-11 initializer kill, an init() body, unstubbable method signature, global type, duplicate local TypeId); dependents inherit through the import graph",
+  "main.main is not a census declaration: the frontend never emits it (emit.go emitProgram; drivers run named entry functions), so its body cannot block a lowering",
+  "not visible statically: fmt's verb×kind matrix, mono.go's stencil-time refusals, per-call-site frontend invariants — the dynamic pass (first refusal) is the check"
+ ],
+ "declarations": [
+  {
+   "pkg": "main",
+   "kind": "var",
+   "name": "epoch",
+   "pos": "main.go:13",
+   "loc": 1,
+   "verdict": "refused(static)",
+   "export_kill": true,
+   "causes": [
+    "init-callee-unmodeled:time.Unix@main.go:13 EXPORT",
+    "stdlib-package-unmodeled:time.Unix@main.go:13 EXPORT"
+   ],
+   "supplied": null,
+   "imported_types": [
+    "time.Time"
+   ]
+  },
+  {
+   "pkg": "main",
+   "kind": "func",
+   "name": "anonStruct",
+   "pos": "main.go:16",
+   "loc": 4,
+   "verdict": "refused(static)",
+   "export_kill": false,
+   "causes": [
+    "anon-struct:struct{x int; y int}@main.go:17"
+   ],
+   "supplied": null,
+   "imported_types": null
+  },
+  {
+   "pkg": "main",
+   "kind": "func",
+   "name": "complexValue",
+   "pos": "main.go:22",
+   "loc": 4,
+   "verdict": "refused(static)",
+   "export_kill": false,
+   "causes": [
+    "complex:builtin complex@main.go:23",
+    "complex:builtin real@main.go:24",
+    "complex:complex128@main.go:23"
+   ],
+   "supplied": null,
+   "imported_types": null
+  },
+  {
+   "pkg": "main",
+   "kind": "func",
+   "name": "rangeFunc",
+   "pos": "main.go:28",
+   "loc": 7,
+   "verdict": "refused(static)",
+   "export_kill": false,
+   "causes": [
+    "range-over-func:func(yield func(int) bool)@main.go:30"
+   ],
+   "supplied": null,
+   "imported_types": null
+  },
+  {
+   "pkg": "main",
+   "kind": "func",
+   "name": "packageCall",
+   "pos": "main.go:37",
+   "loc": 3,
+   "verdict": "refused(static)",
+   "export_kill": false,
+   "causes": [
+    "stdlib-package-unmodeled:time.Sleep@main.go:38"
+   ],
+   "supplied": null,
+   "imported_types": [
+    "time.Duration"
+   ]
+  },
+  {
+   "pkg": "main",
+   "kind": "func",
+   "name": "cleanFields",
+   "pos": "main.go:42",
+   "loc": 1,
+   "verdict": "lowers(static)",
+   "export_kill": false,
+   "causes": null,
+   "supplied": [
+    "strings.Fields (source-through)"
+   ],
+   "imported_types": null
+  },
+  {
+   "pkg": "main",
+   "kind": "func",
+   "name": "cleanArith",
+   "pos": "main.go:43",
+   "loc": 1,
+   "verdict": "lowers(static)",
+   "export_kill": false,
+   "causes": null,
+   "supplied": null,
+   "imported_types": null
+  },
+  {
+   "pkg": "main",
+   "kind": "func",
+   "name": "cleanUsesEpoch",
+   "pos": "main.go:44",
+   "loc": 1,
+   "verdict": "lowers(static)",
+   "export_kill": false,
+   "causes": null,
+   "supplied": null,
+   "imported_types": [
+    "time.Time"
+   ]
+  },
+  {
+   "pkg": "main",
+   "kind": "func",
+   "name": "clean3",
+   "pos": "main.go:45",
+   "loc": 1,
+   "verdict": "lowers(static)",
+   "export_kill": false,
+   "causes": null,
+   "supplied": null,
+   "imported_types": null
+  }
+ ]
+}

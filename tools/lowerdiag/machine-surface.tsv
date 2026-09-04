@@ -1,0 +1,38 @@
+# tools/lowerdiag/machine-surface.tsv — the LANGUAGE/MEMORY-MODEL-owned stdlib
+# surface the machine lowers directly (NOT a stdlib-register concern: the
+# register lists library admissions; these are wire ops). Read by
+# tools/lowerdiag beside docs/stdlib-admission-register.md. Every row cites
+# the frontend source it transcribes; TestMachineSurfaceCitesSources checks
+# the cited files exist and mention the entry.
+# kind: sync-type | sync-op | atomic-op-prefix | atomic-kind | init-callee
+kind	entry	source	detail
+sync-type	sync.Mutex	tools/nativefrontend/wire.go	emitType's sync arm: "only Mutex/RWMutex/WaitGroup/Once are modeled" (+ sync.Locker as a plain interface)
+sync-type	sync.RWMutex	tools/nativefrontend/wire.go	same arm
+sync-type	sync.WaitGroup	tools/nativefrontend/wire.go	same arm
+sync-type	sync.Once	tools/nativefrontend/wire.go	same arm
+sync-type	sync.Locker	tools/nativefrontend/wire.go	a PLAIN INTERFACE (Lock/Unlock), rides the general named-interface path
+sync-op	sync.Mutex.Lock	tools/nativefrontend/emit.go	sync-op wire node (emitSyncCall)
+sync-op	sync.Mutex.Unlock	tools/nativefrontend/emit.go	sync-op wire node
+sync-op	sync.Mutex.TryLock	tools/nativefrontend/emit.go	Q-TRYLOCK landed 2026-09-03
+sync-op	sync.RWMutex.Lock	tools/nativefrontend/emit.go	sync-op wire node
+sync-op	sync.RWMutex.Unlock	tools/nativefrontend/emit.go	sync-op wire node
+sync-op	sync.RWMutex.RLock	tools/nativefrontend/emit.go	sync-op wire node
+sync-op	sync.RWMutex.RUnlock	tools/nativefrontend/emit.go	sync-op wire node
+sync-op	sync.RWMutex.TryLock	tools/nativefrontend/emit.go	Q-TRYLOCK
+sync-op	sync.RWMutex.TryRLock	tools/nativefrontend/emit.go	Q-TRYLOCK
+sync-op	sync.WaitGroup.Add	tools/nativefrontend/emit.go	sync-op wire node
+sync-op	sync.WaitGroup.Done	tools/nativefrontend/emit.go	sync-op wire node
+sync-op	sync.WaitGroup.Wait	tools/nativefrontend/emit.go	sync-op wire node
+sync-op	sync.Once.Do	tools/nativefrontend/emit.go	sync-op wire node
+atomic-op-prefix	Load	tools/nativefrontend/atomics.go	atomicOpPrefixes (wave 1): package funcs Load<Kind> and the typed wrappers' Load method
+atomic-op-prefix	Store	tools/nativefrontend/atomics.go	atomicOpPrefixes
+atomic-op-prefix	Swap	tools/nativefrontend/atomics.go	atomicOpPrefixes
+atomic-op-prefix	CompareAndSwap	tools/nativefrontend/atomics.go	atomicOpPrefixes
+atomic-op-prefix	Add	tools/nativefrontend/atomics.go	atomicOpPrefixes
+atomic-kind	Int32	tools/nativefrontend/atomics.go	atomicTypedWrappers / atomicIntSuffixes
+atomic-kind	Int64	tools/nativefrontend/atomics.go	atomicTypedWrappers / atomicIntSuffixes
+atomic-kind	Uint32	tools/nativefrontend/atomics.go	atomicTypedWrappers / atomicIntSuffixes
+atomic-kind	Uint64	tools/nativefrontend/atomics.go	atomicTypedWrappers / atomicIntSuffixes
+atomic-kind	Uintptr	tools/nativefrontend/atomics.go	atomicTypedWrappers / atomicIntSuffixes
+init-callee	os.Getenv	tools/nativefrontend/emit.go	pureUnmodeledCallees — H-11's effect-isolation allowlist (FR-22's boundary on main)
+init-callee	os.LookupEnv	tools/nativefrontend/emit.go	pureUnmodeledCallees

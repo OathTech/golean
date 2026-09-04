@@ -1,0 +1,25 @@
+# DIAGNOSTIC comparison: funcs+methods per cedargo package — the 2026-09-03 census's demand-per-package.tsv (tools/cedarcensus demand, cedar-census worktree artifacts at 1b8401c0) vs tools/lowerdiag at this lane (register-supplied). Producer: the python block in docs/evidence/2026-09-04_lower-diagnose/README.md.
+package	census_funcs	census_lowers	now_funcs	now_lowers	delta_lowers
+cedargo	43	34	43	37	+3
+cedargo/ast	93	92	93	93	+1
+cedargo/internal	0	0	0	0	+0
+cedargo/internal/consts	1	1	1	1	+0
+cedargo/internal/eval	171	159	171	165	+6
+cedargo/internal/extensions	1	1	1	1	+0
+cedargo/internal/json	33	28	33	28	+0
+cedargo/internal/mapset	23	17	23	17	+0
+cedargo/internal/parser	125	101	125	122	+21
+cedargo/internal/rust	15	10	15	15	+5
+cedargo/types	133	82	133	85	+3
+cedargo/x/exp/ast	163	163	163	163	+0
+cedargo/x/exp/batch	12	8	12	8	+0
+cedargo/x/exp/dot	3	0	3	1	+1
+cedargo/x/exp/eval	8	8	8	8	+0
+cedargo/x/exp/schema	9	9	9	9	+0
+cedargo/x/exp/schema/ast	20	20	20	20	+0
+cedargo/x/exp/schema/internal/json	11	8	11	7	-1
+cedargo/x/exp/schema/internal/parser	53	43	53	49	+6
+cedargo/x/exp/schema/resolved	28	22	28	26	+4
+cedargo/x/exp/schema/validate	131	80	131	123	+43
+cedargo/x/exp/types	9	6	9	6	+0
+TOTAL cedargo	1085	892	1085	984	+92

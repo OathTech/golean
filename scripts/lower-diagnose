@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+# scripts/lower-diagnose — report EVERY blocker a Go program would hit in the
+# native frontend, classified by cause and ledger FR row — not only the first
+# refusal the frontend prints.
+#
+# LANE TOOLING, NOT A GATE (docs/2026-09-04_lower-diagnose.md). [USER]
+# direction 4 (Mike, 2026-09-04, coordinator-relayed): «Right, I agree - it'd
+# be useful if we didn't just get stuck without any information about *why*
+# it's happening». Output is a REPORT, never a lowering: nothing here writes
+# a wire (the frontend's --out is /dev/null), every artifact opens with
+# "DIAGNOSTIC — NOT A LOWERING", and the output root is artifacts/lower-
+# diagnose/ (gitignored) — no gate, baseline or corpus path reads it.
+#
+#   scripts/lower-diagnose <go package dir | main.go> [--json] [--out DIR]
+#                          [--no-frontend] [--tsv]
+#
+# What it does:
+#   1. DYNAMIC pass — runs the REAL frontend (tools/nativefrontend) on the
+#      target with --out /dev/null and keeps its stderr: the first refusal,
+#      exactly what a user sees today (--no-frontend skips it).
+#   2. STATIC pass — tools/lowerdiag: go/types over the program and its
+#      case-local imports; per declaration, every refused demand, judged
+#      against docs/stdlib-admission-register.md (read, not hardcoded) and
+#      tools/lowerdiag/machine-surface.tsv; causes from tools/lowerdiag/
+#      causes.tsv (checked against the ledger's FR ids by go test).
+#   3. REPORT — first refusal + cause; distance line; the full histogram
+#      (cause -> declarations, sole-blocker count, packages); top blockers
+#      with their FR rows/plans; the cumulative projection; per package.
+#      Human text to stdout and $OUT/<slug>/report.txt; --json adds
+#      report.json; --tsv adds decls.tsv / histogram.tsv / per-package.tsv.
+#
+# Preconditions (fail closed): live `go` == baselines/go-oracle-pin
+# (GOLEAN_ALLOW_GO_DRIFT=1 probes loudly and the report header says so);
+# deps/go at the pin (the frontend's stdlib source-through needs it —
+# scripts/setup-deps --only go).
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+
+die() { echo "lower-diagnose: $*" >&2; exit 2; }
+
+TARGET=""; JSON=0; TSV=0; RUN_FE=1; OUT="${LOWER_DIAGNOSE_ARTIFACTS:-artifacts/lower-diagnose}"
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --json) JSON=1 ;;
+    --tsv) TSV=1 ;;
+    --no-frontend) RUN_FE=0 ;;
+    --out) OUT="${2:?--out needs a dir}"; shift ;;
+    -h|--help) sed -n '2,40p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -*) die "unknown flag $1" ;;
+    *) [[ -z "$TARGET" ]] || die "one target only (got $TARGET and $1)"; TARGET="$1" ;;
+  esac
+  shift
+done
+[[ -n "$TARGET" ]] || die "usage: scripts/lower-diagnose <dir|main.go> [--json] [--tsv] [--out DIR] [--no-frontend]"
+[[ -e "$TARGET" ]] || die "target $TARGET does not exist"
+if [[ -f "$TARGET" ]]; then TARGET_DIR="$(dirname "$TARGET")"; else TARGET_DIR="$TARGET"; fi
+TARGET_DIR="$(realpath -e -- "$TARGET_DIR")"
+
+# Output root: under artifacts/ only (structural: a diagnostic can never land
+# beside a wire the gate reads).
+ART_ABS="$(realpath -m -- "$ROOT/artifacts")"
+OUT_ABS="$(realpath -m -- "$OUT")"
+if [[ "$OUT_ABS" != "$ART_ABS" && "$OUT_ABS" != "$ART_ABS"/* ]]; then
+  die "refusing output root outside $ROOT/artifacts/ ($OUT)"
+fi
+mkdir -p "$OUT"; OUT="$(realpath -e -- "$OUT")"
+
+command -v go >/dev/null 2>&1 || die "go not found on PATH"
+pin_file="$ROOT/baselines/go-oracle-pin"
+[[ -f "$pin_file" ]] || die "baselines/go-oracle-pin missing — the oracle pin is unverifiable; refusing"
+go_pin="$(head -1 "$pin_file" | tr -d '[:space:]')"
+go_live="$(go version | awk '{print $3}')"
+if [[ "$go_live" != "$go_pin" ]]; then
+  if [[ "${GOLEAN_ALLOW_GO_DRIFT:-0}" = 1 ]]; then
+    echo "WARNING: live toolchain $go_live != pinned oracle $go_pin (GOLEAN_ALLOW_GO_DRIFT=1 — NOT the oracle of record)" >&2
+  else
+    die "live toolchain $go_live != pinned oracle $go_pin; refusing (GOLEAN_ALLOW_GO_DRIFT=1 to probe loudly)"
+  fi
+fi
+
+GO_BUILD_CACHE="$OUT/go-build-cache"; mkdir -p "$GO_BUILD_CACHE"
+env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go build -o "$OUT/lowerdiag" ./tools/lowerdiag || die "tools/lowerdiag does not build"
+
+# Slug: the target's path relative to the repo when inside it, else its
+# basename + a hash of the absolute path (two temp dirs never collide).
+if [[ "$TARGET_DIR" == "$ROOT"/* ]]; then
+  slug="${TARGET_DIR#"$ROOT"/}"; slug="${slug//\//__}"
+else
+  slug="$(basename "$TARGET_DIR")-$(printf '%s' "$TARGET_DIR" | sha256sum | cut -c1-8)"
+fi
+CASE="$OUT/$slug"; mkdir -p "$CASE"
+
+# 1. DYNAMIC pass: the real frontend, no wire kept.
+FE_ERR="$CASE/frontend-first-refusal.txt"
+fe_args=()
+if [[ "$RUN_FE" = 1 ]]; then
+  fe_rc=0
+  timeout "${LOWER_DIAGNOSE_GO_TIMEOUT:-120}" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" \
+    go run ./tools/nativefrontend --dir "$TARGET_DIR" --out /dev/null > /dev/null 2> "$FE_ERR" || fe_rc=$?
+  if [[ "$fe_rc" -eq 124 ]]; then
+    echo "frontend TIMED OUT after ${LOWER_DIAGNOSE_GO_TIMEOUT:-120}s — no first refusal captured (INFRA)" > "$FE_ERR"
+  elif [[ "$fe_rc" -eq 0 ]]; then
+    : > "$FE_ERR"   # export OK: an empty file is the signal
+  fi
+  fe_args=(--frontend-stderr "$FE_ERR")
+fi
+
+# 2 + 3. STATIC pass and the report.
+tsv_args=()
+if [[ "$TSV" = 1 ]]; then
+  tsv_args=(--decls-tsv "$CASE/decls.tsv" --histogram-tsv "$CASE/histogram.tsv" --per-package-tsv "$CASE/per-package.tsv")
+fi
+"$OUT/lowerdiag" report --repo "$ROOT" "${fe_args[@]+"${fe_args[@]}"}" "${tsv_args[@]+"${tsv_args[@]}"}" "$TARGET_DIR" > "$CASE/report.txt" \
+  || { cat "$CASE/report.txt" >&2; die "static pass failed for $TARGET_DIR (see above)"; }
+if [[ "$JSON" = 1 ]]; then
+  "$OUT/lowerdiag" report --repo "$ROOT" "${fe_args[@]+"${fe_args[@]}"}" --json "$TARGET_DIR" > "$CASE/report.json" || die "json report failed"
+fi
+cat "$CASE/report.txt"
+echo "lower-diagnose: report -> $CASE/report.txt$( [[ "$JSON" = 1 ]] && printf ' + report.json' )$( [[ "$TSV" = 1 ]] && printf ' + decls/histogram/per-package.tsv' ); first refusal -> $FE_ERR" >&2

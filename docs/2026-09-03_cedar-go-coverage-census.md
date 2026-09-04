@@ -276,6 +276,23 @@ fns (`Entity.MarshalJSON`, `ImplicitlyMarshaledEntityUID.MarshalJSON`,
 nextToken` — shape not checked against FR-11/FR-20). No `go`, no
 complex, no `print/println`, no `unsafe`, no `reflect`.
 
+**Tooling note (2026-09-04, [AGENT], lane `lower-diagnose`):** the
+static demand census is now produced by `tools/lowerdiag` (the engine of
+`scripts/lower-diagnose`, [USER] direction 4 — ledger §0) instead of the
+retired `tools/cedarcensus demand`; `scripts/cedar-census demand` writes
+the same three files (`demand.tsv`, `demand-histogram.tsv`,
+`demand-per-package.tsv`, now with a leading `# DIAGNOSTIC — NOT A
+LOWERING` line) plus `demand-report.txt`. Two differences from the table
+above, both explained in `docs/evidence/2026-09-04_lower-diagnose/README.md`:
+(i) the supply table is READ from `docs/stdlib-admission-register.md`
+(the 2026-09-03 run used a frozen shim-era copy; since stdlib-source-2
+`errors.Join`, `slices.Contains/Collect/Sorted`, `bytes.Buffer.*`,
+`strings.Compare` are source-through and count as lowering), so the
+lowers(static) count is higher; (ii) the denominator includes every
+declaration kind (vars, consts, types, files), with the funcs+methods
+line reported separately for comparison with the 1,085 here. The
+numbers in §3.4 stand as the 2026-09-03 measurement.
+
 ### 3.5 Top 10 blockers, ranked by what they unblock
 
 Ranking = declarations touching the blocker, tie-broken by sole-blocker

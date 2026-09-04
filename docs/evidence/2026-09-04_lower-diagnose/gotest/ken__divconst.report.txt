@@ -1,0 +1,40 @@
+DIAGNOSTIC — NOT A LOWERING. tools/lowerdiag report: no wire is written; nothing in this file is a gate input.
+target: artifacts/lower-diagnose/inputs/gotest/ken__divconst
+commit: e0657d4770b9a5b608a647066b4e925d87a6392c+dirty   go: go1.26.5
+register: docs/stdlib-admission-register.md (42 rows)   causes table: 49 rows
+
+== first refusal (what the frontend says today)
+  frontend: EXPORT OK — the program lowers (per-declaration quarantines, if any, are in the wire's unsupported stubs; the static census below is the demand view)
+
+== distance
+  declarations demanding nothing refused: 11 / 27 (40.7%)   funcs+methods: 10 / 26 (38.5%)   may-refuse: 0   refused: 16
+  export kills: 0 declaration(s) refuse the WHOLE export of their package today; 0 / 1 package(s) export-killed (own or inherited)
+
+== blockers by cause (sorted by unblock value: sole = declarations this cause alone blocks)
+  cause                      fr               scope  decls  sole pkgs export  top keys
+  print-builtin              out-of-language  decl       8     8    1      0  println×8
+  stdlib-package-unmodeled   FR-14            decl       8     8    1      0  math/rand.Intn×8, math/rand.Uint32×8
+
+== top blockers — what each is and where its plan lives
+   1. print-builtin [out-of-language] — 8 decls (8 sole, 1 pkgs): print/println: "implementation-specific … not guaranteed to stay in the language" (ledger §2 Bootstrapping); a G2 primitive slice would admit statement-position println (gotest lever)
+   2. stdlib-package-unmodeled [FR-14] — 8 decls (8 sole, 1 pkgs): a call into a stdlib package that is neither source-through nor shimmed (register: no row) — FR-14's extern surface; memo §6 slices (source-through admission per package)
+
+== projection — declarations lowering if the top causes were fixed, cumulatively
+  + print-builtin              -> 19 / 27 lower (+8), 0 export(s) revived
+  + stdlib-package-unmodeled   -> 27 / 27 lower (+8), 0 export(s) revived
+
+== per package
+  package                                  decls lowers  may-ref  refd   +top3    share  export
+  main                                        27     11        0    16      27    40.7%  ok
+
+== stdlib / imported keys refused (register class = none; top 25)
+  key                                                  cause                      fr       decls  sole pkgs
+  math/rand.Intn                                       stdlib-package-unmodeled   FR-14        8     0    1
+  math/rand.Uint32                                     stdlib-package-unmodeled   FR-14        8     0    1
+
+== notes
+  - static = go/types over the program + its local imports; stdlib judged by the register (source-through members counted as lowering — FR-21 gaps inside library text are invisible here) and the machine-owned surface table
+  - may-refuse = shape-dependent (goto hoisting shapes, non-reserved build tags); the distance line counts only certain refusals
+  - export scope = the frontend refuses the WHOLE package export today (H-11 initializer kill, an init() body, unstubbable method signature, global type, duplicate local TypeId); dependents inherit through the import graph
+  - main.main is not a census declaration: the frontend never emits it (emit.go emitProgram; drivers run named entry functions), so its body cannot block a lowering
+  - not visible statically: fmt's verb×kind matrix, mono.go's stencil-time refusals, per-call-site frontend invariants — the dynamic pass (first refusal) is the check

@@ -27,6 +27,20 @@ DETECTION — never left as an unrowed red in the post-vintage bucket.
 First application: the noodler lane's FG-1..FG-5 → FR-16..FR-20 (§8e).
 Second application: the cedar-go coverage census's two whole-export
 kill points → FR-22/FR-23 (§8h; `docs/2026-09-03_cedar-go-coverage-census.md`).
+**(4) [USER] 2026-09-04 (Mike, relayed by the [AGENT] coordinator —
+citation, not firsthand), said of the pattern where fixing one
+whole-export refusal on cedar-go revealed the next (FR-22 → FR-23 →
+FR-24) with the export fraction unchanged each time: «Right, I agree -
+it'd be useful if we didn't just get stuck without any information
+about *why* it's happening».** Standing rule derived from it: a refusal
+must come with the FULL picture — every blocker a program would hit,
+classified by cause and FR row and counted, not only the first one the
+frontend prints. Instrument: `scripts/lower-diagnose` (tools/lowerdiag;
+`docs/2026-09-04_lower-diagnose.md`) — a STATIC demand census over
+every declaration beside the frontend's first refusal, the cause table
+`tools/lowerdiag/causes.tsv` checked against this file's FR ids by
+`go test ./tools/lowerdiag`; the frontend's whole-export refusal now
+ends with one line pointing at it. Report-only: no gate reads it.
 
 ## 0. Denominator, instruments, maintenance
 

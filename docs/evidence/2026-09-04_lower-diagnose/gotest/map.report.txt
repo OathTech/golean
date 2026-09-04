@@ -1,0 +1,44 @@
+DIAGNOSTIC — NOT A LOWERING. tools/lowerdiag report: no wire is written; nothing in this file is a gate input.
+target: artifacts/lower-diagnose/inputs/gotest/map
+commit: e0657d4770b9a5b608a647066b4e925d87a6392c+dirty   go: go1.26.5
+register: docs/stdlib-admission-register.md (42 rows)   causes table: 49 rows
+
+== first refusal (what the frontend says today)
+  frontend: EXPORT OK — the program lowers (per-declaration quarantines, if any, are in the wire's unsupported stubs; the static census below is the demand view)
+
+== distance
+  declarations demanding nothing refused: 4 / 6 (66.7%)   funcs+methods: 3 / 5 (60.0%)   may-refuse: 0   refused: 2
+  export kills: 0 declaration(s) refuse the WHOLE export of their package today; 0 / 1 package(s) export-killed (own or inherited)
+
+== blockers by cause (sorted by unblock value: sole = declarations this cause alone blocks)
+  cause                      fr               scope  decls  sole pkgs export  top keys
+  stdlib-package-unmodeled   FR-14            decl       2     1    1      0  math.NaN×2, math.Float32bits×1, math.Float32frombits×1, math.Float64bits×1, math.Float64frombits×1
+  complex                    FR-15            decl       1     0    1      0  builtin complex×1, complex128×1, complex64×1
+
+== top blockers — what each is and where its plan lives
+   1. stdlib-package-unmodeled [FR-14] — 2 decls (1 sole, 1 pkgs): a call into a stdlib package that is neither source-through nor shimmed (register: no row) — FR-14's extern surface; memo §6 slices (source-through admission per package)
+   2. complex [FR-15] — 1 decls (0 sole, 1 pkgs): complex numbers (types, literals, constants, real/imag/complex) — the one large arc, last in the queue (15)
+
+== projection — declarations lowering if the top causes were fixed, cumulatively
+  + stdlib-package-unmodeled   -> 5 / 6 lower (+1), 0 export(s) revived
+  + complex                    -> 6 / 6 lower (+1), 0 export(s) revived
+
+== per package
+  package                                  decls lowers  may-ref  refd   +top3    share  export
+  main                                         6      4        0     2       6    66.7%  ok
+
+== stdlib / imported keys refused (register class = none; top 25)
+  key                                                  cause                      fr       decls  sole pkgs
+  math.NaN                                             stdlib-package-unmodeled   FR-14        2     0    1
+  math.Float32bits                                     stdlib-package-unmodeled   FR-14        1     0    1
+  math.Float32frombits                                 stdlib-package-unmodeled   FR-14        1     0    1
+  math.Float64bits                                     stdlib-package-unmodeled   FR-14        1     0    1
+  math.Float64frombits                                 stdlib-package-unmodeled   FR-14        1     0    1
+  math.IsNaN                                           stdlib-package-unmodeled   FR-14        1     0    1
+
+== notes
+  - static = go/types over the program + its local imports; stdlib judged by the register (source-through members counted as lowering — FR-21 gaps inside library text are invisible here) and the machine-owned surface table
+  - may-refuse = shape-dependent (goto hoisting shapes, non-reserved build tags); the distance line counts only certain refusals
+  - export scope = the frontend refuses the WHOLE package export today (H-11 initializer kill, an init() body, unstubbable method signature, global type, duplicate local TypeId); dependents inherit through the import graph
+  - main.main is not a census declaration: the frontend never emits it (emit.go emitProgram; drivers run named entry functions), so its body cannot block a lowering
+  - not visible statically: fmt's verb×kind matrix, mono.go's stencil-time refusals, per-call-site frontend invariants — the dynamic pass (first refusal) is the check

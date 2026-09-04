@@ -7,6 +7,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"go/ast"
@@ -20,6 +21,15 @@ import (
 func main() {
 	if err := run(); err != nil {
 		fmt.Fprintln(os.Stderr, "nativefrontend:", err)
+		// A refusal names its cause (the line above) — and, since 2026-09-04
+		// ([USER] direction 4, ledger §0), points at the full picture: the
+		// first refusal is one blocker of possibly many. Message text only;
+		// the pipelines that read this stderr take its first line (the
+		// baseline's detail column carries the rest, uncompared).
+		var u unsupported
+		if errors.As(err, &u) {
+			fmt.Fprintln(os.Stderr, "for the full blocker picture run scripts/lower-diagnose <the --dir given above>")
+		}
 		os.Exit(1)
 	}
 }

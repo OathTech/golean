@@ -1,0 +1,52 @@
+DIAGNOSTIC — NOT A LOWERING. tools/lowerdiag report: no wire is written; nothing in this file is a gate input.
+target: tools/lowerdiag/testdata/fivecauses
+commit: e0657d4770b9a5b608a647066b4e925d87a6392c+dirty   go: go1.26.5
+register: docs/stdlib-admission-register.md (42 rows)   causes table: 49 rows
+
+== first refusal (what the frontend says today)
+  nativefrontend: native frontend unsupported: package-selector call time.Unix (package "time" surface not modeled)
+  -> cause stdlib-package-unmodeled [FR-14, decl-scoped] key time.Unix
+  static site(s): main var epoch @main.go:13 [init-callee-unmodeled/FR-22, EXPORT-scoped] | main var epoch @main.go:13 [stdlib-package-unmodeled/FR-14, EXPORT-scoped]
+  note: the same refusal string covers a body call and a package-level initializer; the static census places this key at an export-scoped site — that is the kill (see the site's FR row)
+
+== distance
+  declarations demanding nothing refused: 4 / 9 (44.4%)   funcs+methods: 4 / 8 (50.0%)   may-refuse: 0   refused: 5
+  export kills: 1 declaration(s) refuse the WHOLE export of their package today; 1 / 1 package(s) export-killed (own or inherited)
+
+== blockers by cause (sorted by unblock value: sole = declarations this cause alone blocks)
+  cause                      fr               scope  decls  sole pkgs export  top keys
+  stdlib-package-unmodeled   FR-14            decl       2     1    1      1  time.Sleep×1, time.Unix×1
+  anon-struct                FR-13            decl       1     1    1      0  struct{x int; y int}×1
+  complex                    FR-15            decl       1     1    1      0  builtin complex×1, builtin real×1, complex128×1
+  range-over-func            FR-12            decl       1     1    1      0  func(yield func(int) bool)×1
+  init-callee-unmodeled      FR-22            export     1     0    1      1  time.Unix×1
+
+== top blockers — what each is and where its plan lives
+   1. stdlib-package-unmodeled [FR-14] — 2 decls (1 sole, 1 pkgs): a call into a stdlib package that is neither source-through nor shimmed (register: no row) — FR-14's extern surface; memo §6 slices (source-through admission per package)
+   2. anon-struct [FR-13] — 1 decls (1 sole, 1 pkgs): anonymous non-empty struct type as a first-class type (incl. as a type argument) — structural TypeIds; ledger queue 13
+   3. complex [FR-15] — 1 decls (1 sole, 1 pkgs): complex numbers (types, literals, constants, real/imag/complex) — the one large arc, last in the queue (15)
+   4. range-over-func [FR-12] — 1 decls (1 sole, 1 pkgs): range-over-func iterators (Go 1.23) — frontend desugar + yield/loop-exit protocol; ledger queue 12 (cedar-go's Authorize loop is this)
+   5. init-callee-unmodeled [FR-22] — 1 decls (0 sole, 1 pkgs): a package-level initializer CALLS something outside the H-11 effect-isolation allowlist (pureUnmodeledCallees = os.Getenv/LookupEnv) and the initializer does not lower: WHOLE-EXPORT refusal today; ledger queue 22 (per-declaration var poisoning)
+
+== projection — declarations lowering if the top causes were fixed, cumulatively
+  + stdlib-package-unmodeled   -> 5 / 9 lower (+1), 0 export(s) revived
+  + anon-struct                -> 6 / 9 lower (+1), 0 export(s) revived
+  + complex                    -> 7 / 9 lower (+1), 0 export(s) revived
+  + range-over-func            -> 8 / 9 lower (+1), 0 export(s) revived
+  + init-callee-unmodeled      -> 9 / 9 lower (+1), 1 export(s) revived
+
+== per package
+  package                                  decls lowers  may-ref  refd   +top3    share  export
+  main                                         9      4        0     5       7    44.4%  KILLED (own: var epoch: init-callee-unmodeled time.Unix; var epoch: stdlib-package-unmodeled time.Unix)
+
+== stdlib / imported keys refused (register class = none; top 25)
+  key                                                  cause                      fr       decls  sole pkgs
+  time.Sleep                                           stdlib-package-unmodeled   FR-14        1     1    1
+  time.Unix                                            stdlib-package-unmodeled   FR-14        1     1    1
+
+== notes
+  - static = go/types over the program + its local imports; stdlib judged by the register (source-through members counted as lowering — FR-21 gaps inside library text are invisible here) and the machine-owned surface table
+  - may-refuse = shape-dependent (goto hoisting shapes, non-reserved build tags); the distance line counts only certain refusals
+  - export scope = the frontend refuses the WHOLE package export today (H-11 initializer kill, an init() body, unstubbable method signature, global type, duplicate local TypeId); dependents inherit through the import graph
+  - main.main is not a census declaration: the frontend never emits it (emit.go emitProgram; drivers run named entry functions), so its body cannot block a lowering
+  - not visible statically: fmt's verb×kind matrix, mono.go's stencil-time refusals, per-call-site frontend invariants — the dynamic pass (first refusal) is the check

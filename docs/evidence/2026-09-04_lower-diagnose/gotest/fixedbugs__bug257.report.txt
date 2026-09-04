@@ -1,0 +1,44 @@
+DIAGNOSTIC — NOT A LOWERING. tools/lowerdiag report: no wire is written; nothing in this file is a gate input.
+target: artifacts/lower-diagnose/inputs/gotest/fixedbugs__bug257
+commit: e0657d4770b9a5b608a647066b4e925d87a6392c+dirty   go: go1.26.5
+register: docs/stdlib-admission-register.md (42 rows)   causes table: 49 rows
+
+== first refusal (what the frontend says today)
+  frontend: EXPORT OK — the program lowers (per-declaration quarantines, if any, are in the wire's unsupported stubs; the static census below is the demand view)
+
+== distance
+  declarations demanding nothing refused: 2 / 3 (66.7%)   funcs+methods: 0 / 1 (0.0%)   may-refuse: 0   refused: 1
+  export kills: 0 declaration(s) refuse the WHOLE export of their package today; 0 / 1 package(s) export-killed (own or inherited)
+
+== blockers by cause (sorted by unblock value: sole = declarations this cause alone blocks)
+  cause                      fr               scope  decls  sole pkgs export  top keys
+  print-builtin              out-of-language  decl       1     0    1      0  println×1
+  stdlib-member-unmodeled    FR-14            decl       1     0    1      0  fmt.Println×1
+  stdlib-package-unmodeled   FR-14            decl       1     0    1      0  crypto/md5.New×1, io.WriteString×1
+
+== top blockers — what each is and where its plan lives
+   1. print-builtin [out-of-language] — 1 decls (0 sole, 1 pkgs): print/println: "implementation-specific … not guaranteed to stay in the language" (ledger §2 Bootstrapping); a G2 primitive slice would admit statement-position println (gotest lever)
+   2. stdlib-member-unmodeled [FR-14] — 1 decls (0 sole, 1 pkgs): a member of a PARTIALLY modeled (shim) package outside its retained direct-call members (fmt.Println …) — FR-14; fmt re-homing is memo G5 (slice 4)
+   3. stdlib-package-unmodeled [FR-14] — 1 decls (0 sole, 1 pkgs): a call into a stdlib package that is neither source-through nor shimmed (register: no row) — FR-14's extern surface; memo §6 slices (source-through admission per package)
+
+== projection — declarations lowering if the top causes were fixed, cumulatively
+  + print-builtin              -> 2 / 3 lower (+0), 0 export(s) revived
+  + stdlib-member-unmodeled    -> 2 / 3 lower (+0), 0 export(s) revived
+  + stdlib-package-unmodeled   -> 3 / 3 lower (+1), 0 export(s) revived
+
+== per package
+  package                                  decls lowers  may-ref  refd   +top3    share  export
+  main                                         3      2        0     1       3    66.7%  ok
+
+== stdlib / imported keys refused (register class = none; top 25)
+  key                                                  cause                      fr       decls  sole pkgs
+  crypto/md5.New                                       stdlib-package-unmodeled   FR-14        1     0    1
+  fmt.Println                                          stdlib-member-unmodeled    FR-14        1     0    1
+  io.WriteString                                       stdlib-package-unmodeled   FR-14        1     0    1
+
+== notes
+  - static = go/types over the program + its local imports; stdlib judged by the register (source-through members counted as lowering — FR-21 gaps inside library text are invisible here) and the machine-owned surface table
+  - may-refuse = shape-dependent (goto hoisting shapes, non-reserved build tags); the distance line counts only certain refusals
+  - export scope = the frontend refuses the WHOLE package export today (H-11 initializer kill, an init() body, unstubbable method signature, global type, duplicate local TypeId); dependents inherit through the import graph
+  - main.main is not a census declaration: the frontend never emits it (emit.go emitProgram; drivers run named entry functions), so its body cannot block a lowering
+  - not visible statically: fmt's verb×kind matrix, mono.go's stencil-time refusals, per-call-site frontend invariants — the dynamic pass (first refusal) is the check

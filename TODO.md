@@ -34,6 +34,33 @@ for the [USER]) is in the plan.
 - [ ] (iv) B4/B5/B6/B7
 - [ ] (v) C1–C5 — each a [USER] design gate when reached
 
+## Lowering diagnostic (`scripts/lower-diagnose`, [USER] direction 4, 2026-09-04)
+
+Landed as report-only lane tooling (`docs/2026-09-04_lower-diagnose.md`).
+Follow-ups, none gate-bearing:
+
+- [ ] Flip `tools/lowerdiag/causes.tsv` row `global-type-unlowerable` from
+  `pending:fr22-fr23` to `rowed` when branch `fr22-fr23` (FR-24) lands —
+  `go test ./tools/lowerdiag` fails as STALE until it is flipped, so the
+  merge train cannot forget it.
+- [ ] Static-pass resolution gaps, said so in the report's notes: fmt's
+  verb×kind matrix (a constant format string is not checked against the
+  emitter's table), FR-21 gaps inside source-through library text
+  (library members count as lowering), mono.go stencil-time refusals,
+  the non-call initializer shapes `initializerEffectIsolated` rejects
+  (index/deref/receive — export scope UNDER-reported for them). Each
+  is a candidate to close by reading the frontend's own tables instead
+  of re-deriving them; do not fork the tables.
+- [ ] `unrowed` causes the tool can emit (`build-constraint`,
+  `local-import-shape`, `init-schedule`, `labeled-shape`,
+  `result-shadow`, `generics-corner`, `frontend-invariant`): when one
+  shows up on a real program, row it (direction 3) — the report flags
+  them in an UNROWED line.
+- [ ] `--json` consumers: the census doc's §3.4 numbers were produced by
+  the retired `cedarcensus demand`; re-derive them from `demand-report.txt`
+  at the next census run and update the doc's table (the delta vs the
+  2026-09-03 numbers is explained in the lower-diagnose evidence README).
+
 ## Owed from the split (tracked in the split plan)
 
 - GoCore relational-module extraction slice → the reasoning side
