@@ -290,7 +290,11 @@ func readRegister(path string, s *supply) error {
 	}
 	block := txt[i:j]
 	known := map[string]bool{"source-through": true, "substitution": true, "overlay": true, "overlay-import": true,
-		"intercept": true, "primitive": true, "shim": true, "shadow-type": true}
+		"intercept": true, "primitive": true, "shim": true, "shadow-type": true,
+		// init-callee (FR-22 slice, 2026-09-04): the register renders pureUnmodeledCallees as a class;
+		// the diagnostic's init-callee supply stays sourced from machine-surface.tsv (pinned to the
+		// frontend by TestMachineSurfaceEqualsFrontendTables), so the class is known, not consumed here.
+		"init-callee": true}
 	rows := 0
 	for _, line := range strings.Split(block, "\n") {
 		if strings.HasPrefix(line, "<!--") || strings.HasPrefix(line, "```") || strings.TrimSpace(line) == "" {

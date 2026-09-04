@@ -617,7 +617,7 @@ func checkMachineSurface(tsv string, ss surfaceSets) error {
 
 func TestMachineSurfaceEqualsFrontendTables(t *testing.T) {
 	ss := frontendSurface(t)
-	if len(ss.syncOps) < 10 || len(ss.syncTypes) != 5 || len(ss.atomicPrefixes) != 5 || len(ss.atomicKinds) != 5 || len(ss.initCallees) != 2 {
+	if len(ss.syncOps) < 10 || len(ss.syncTypes) != 5 || len(ss.atomicPrefixes) != 5 || len(ss.atomicKinds) != 5 || len(ss.initCallees) != 3 {
 		t.Fatalf("derivation looks wrong: ops=%d types=%d prefixes=%d kinds=%d init=%d", len(ss.syncOps), len(ss.syncTypes), len(ss.atomicPrefixes), len(ss.atomicKinds), len(ss.initCallees))
 	}
 	if err := checkMachineSurface(machineSurfaceTSV, ss); err != nil {

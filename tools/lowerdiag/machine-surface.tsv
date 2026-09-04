@@ -36,3 +36,4 @@ atomic-kind	Uint64	tools/nativefrontend/atomics.go	atomicTypedWrappers / atomicI
 atomic-kind	Uintptr	tools/nativefrontend/atomics.go	atomicTypedWrappers / atomicIntSuffixes
 init-callee	os.Getenv	tools/nativefrontend/emit.go	pureUnmodeledCallees — H-11's effect-isolation allowlist (FR-22's boundary on main)
 init-callee	os.LookupEnv	tools/nativefrontend/emit.go	pureUnmodeledCallees
+init-callee	time.Date	tools/nativefrontend/emit.go	pureUnmodeledCallees — admitted at the FR-22 slice (2026-09-04, lane fr22-fr23) with its written result-only/panic-free argument; the register's init-callee class renders the same table
