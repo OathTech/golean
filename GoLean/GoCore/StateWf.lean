@@ -216,7 +216,7 @@ mutual
 
 def Stmt.locSup : Stmt → Nat
   | .initialization _ | .returnStmt | .breakStmt | .continueStmt
-  | .label _ | .breakTo _ | .continueTo _ | .unsupported _ => 0
+  | .inertLabel _ | .breakTo _ | .continueTo _ | .unsupported _ => 0
   | .seqn ss => stmtListSup ss.toList
   | .block _ ss => stmtListSup ss.toList
   | .breakable body => Stmt.locSup body
@@ -224,7 +224,7 @@ def Stmt.locSup : Stmt → Nat
   | .assign l r => max (Assignee.locSup l) (Expr.locSup r)
   | .assignMany ls rs =>
       max (assigneeListSup ls.toList) (exprListSup rs.toList)
-  | .newValue t v _ => max (Assignee.locSup t) (Expr.locSup v)
+  | .allocNew t v _ => max (Assignee.locSup t) (Expr.locSup v)
   | .makeSlice t _ len cap =>
       max (Assignee.locSup t) (max (Expr.locSup len) (optExprSup cap))
   | .makeMap t _ _ space =>
@@ -753,11 +753,11 @@ sem-adequacy slice 3). -/
 @[simp] theorem pure_eq_ok {ε α : Type} (a : α) :
     (pure a : Except ε α) = .ok a := rfl
 @[simp] theorem stuck_def {α : Type} (m : String) :
-    (GoCore.stuck m : Except GoError α) = .error (.stuck m) := rfl
+    (GoCore.stuck m : Except Stop α) = .error (.stuck m) := rfl
 @[simp] theorem panic_def {α : Type} (m : String) :
-    (GoCore.panic m : Except GoError α) = .error (.panic m) := rfl
+    (GoCore.panic m : Except Stop α) = .error (.panic m) := rfl
 @[simp] theorem unsupported_def {α : Type} (m : String) :
-    (GoCore.unsupported m : Except GoError α) = .error (.unsupported m) := rfl
+    (GoCore.unsupported m : Except Stop α) = .error (.unsupported m) := rfl
 
 theorem bind_eq_ok {ε α β : Type} {x : Except ε α}
     {f : α → Except ε β} {b : β} :
@@ -767,7 +767,7 @@ theorem bind_eq_ok {ε α β : Type} {x : Except ε α}
 /-- Invariant transport along a successful `forIn` over a list in
 `Except` — the loop shape of every op-table `for` loop. -/
 theorem forIn_list_inv {α β : Type} {P : β → Prop} :
-    ∀ {l : List α} {f : α → β → Except GoError (ForInStep β)} {b₀ bf : β},
+    ∀ {l : List α} {f : α → β → Except Stop (ForInStep β)} {b₀ bf : β},
     (∀ a ∈ l, ∀ b r, P b → f a b = .ok r → P (forInStepVal r)) →
     P b₀ → forIn l b₀ f = .ok bf → P bf := by
   intro l
@@ -1002,7 +1002,7 @@ theorem Loc.locSup_field {b : Loc} {t : TypeId} {f : String} :
 
 /-! ## Type-directed value operations: outputs never invent locations -/
 
-theorem normalizeListWith_locSup {f : GoValue → Except GoError GoValue}
+theorem normalizeListWith_locSup {f : GoValue → Except Stop GoValue}
     (hf : ∀ v r, f v = .ok r → GoValue.locSup r ≤ GoValue.locSup v) :
     ∀ {l : List GoValue} {arr : Array GoValue},
       normalizeListWith f l = .ok arr →
@@ -1025,7 +1025,7 @@ theorem normalizeListWith_locSup {f : GoValue → Except GoError GoValue}
     simp only [goValueListSup]
     omega
 
-theorem normalizeFieldsWith_locSup {f : Ty → GoValue → Except GoError GoValue}
+theorem normalizeFieldsWith_locSup {f : Ty → GoValue → Except Stop GoValue}
     (hf : ∀ ty v r, f ty v = .ok r → GoValue.locSup r ≤ GoValue.locSup v) :
     ∀ {fields : List FieldDef} {vals : List (String × GoValue)}
       {arr : Array (String × GoValue)},
@@ -1061,7 +1061,7 @@ theorem normalizeFieldsWith_locSup {f : Ty → GoValue → Except GoError GoValu
         simp only [goValueFieldsSup] at *
         omega
 
-theorem normalizeStructValueWith_locSup {f : Ty → GoValue → Except GoError GoValue}
+theorem normalizeStructValueWith_locSup {f : Ty → GoValue → Except Stop GoValue}
     (hf : ∀ ty v r, f ty v = .ok r → GoValue.locSup r ≤ GoValue.locSup v)
     {name : TypeId} {fields : Array FieldDef} {v r : GoValue}
     (h : normalizeStructValueWith f name fields v = .ok r) :
@@ -1159,7 +1159,7 @@ theorem normalizeValueForTy_locSup {s : ExecState} {ty : Ty} {v r : GoValue}
   unfold normalizeValueForTy at h
   exact normalizeValueForTyFuel_locSup _ h
 
-theorem defaultFieldsWith_locSup {f : Ty → Except GoError GoValue}
+theorem defaultFieldsWith_locSup {f : Ty → Except Stop GoValue}
     (hf : ∀ ty r, f ty = .ok r → GoValue.locSup r = 0) :
     ∀ {fields : List FieldDef} {arr : Array (String × GoValue)},
       defaultFieldsWith f fields = .ok arr →
@@ -1346,7 +1346,7 @@ returns the value UNCHANGED. Stated against an arbitrary state whose
 `types` is the checker's environment. -/
 
 theorem isNormalListWith_sound {f : GoValue → Bool}
-    {g : GoValue → Except GoError GoValue}
+    {g : GoValue → Except Stop GoValue}
     (hfg : ∀ v, f v = true → g v = .ok v) :
     ∀ {l : List GoValue}, isNormalListWith f l = true →
       normalizeListWith g l = .ok l.toArray := by
@@ -1360,7 +1360,7 @@ theorem isNormalListWith_sound {f : GoValue → Bool}
       pure, Except.pure]
 
 theorem isNormalFieldsWith_sound {f : Ty → GoValue → Bool}
-    {g : Ty → GoValue → Except GoError GoValue}
+    {g : Ty → GoValue → Except Stop GoValue}
     (hfg : ∀ ty v, f ty v = true → g ty v = .ok v) :
     ∀ {fds : List FieldDef} {vals : List (String × GoValue)},
       isNormalFieldsWith f fds vals = true →
@@ -1451,7 +1451,7 @@ theorem isNormalForTyFuel_sound {σ : ExecState} :
               hsz, hf, Bind.bind, Except.bind, Except.map, Functor.map,
               pure, Except.pure]
           all_goals exact absurd h (by simp)
-        | unsupported _ => exact absurd h (by simp)
+        | opaqueDecl _ => exact absurd h (by simp)
         | interfaceDef _ => exact absurd h (by simp)
     | unsupported _ => simp [isNormalForTyFuel] at h
     | bool => simp [normalizeValueForTyFuel, pure, Except.pure]
@@ -1780,7 +1780,7 @@ theorem StructFields.set_locSup {fields : Array (String × GoValue)}
 /-! ## `ExecState.updateCell`: the one root-cell write (A3) -/
 
 theorem ExecState.updateCell_shape {σ σ' : ExecState} {a : Addr}
-    {f : HeapCell → Except GoError HeapCell} (h : σ.updateCell a f = .ok σ') :
+    {f : HeapCell → Except Stop HeapCell} (h : σ.updateCell a f = .ok σ') :
     σ'.types = σ.types ∧ σ'.functions = σ.functions ∧ σ'.methods = σ.methods
       ∧ σ'.nextAddr = σ.nextAddr
       ∧ ∃ cell cell', Heap.lookup σ.heap (.base a) = some cell ∧ f cell = .ok cell'
@@ -3701,15 +3701,15 @@ theorem storeTarget_pres {σ : ExecState} {r : TargetRef} {v : GoValue}
     simp only [TargetRef.locSup, Nat.max_le] at hr
     exact mapAssignValue_pres hw hr.1 hr.2 hv h
 
-theorem applyStmtOpCore_wf {σ : ExecState} {op : StmtOp} {nt : Nat}
+theorem applyStmtOpCore_wf {σ : ExecState} {op : StmtOp}
     {vs : List GoValue} {σ' : ExecState}
     (hw : StateWf σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
-    (h : applyStmtOpCore σ op nt vs = .ok σ') :
+    (h : applyStmtOpCore σ op vs = .ok σ') :
     StmtOpPres σ σ' := by
   have hheap := hw.heap_le
   rw [applyStmtOpCore.eq_def] at h
   split at h
-  · -- newValue
+  · -- allocNew
     rename_i typ
     split at h
     · rename_i tv value
@@ -4274,7 +4274,7 @@ theorem stmtPlan_locSup {stmt : Stmt} {op : StmtOp} {nt : Nat} {es : List Expr}
     first
     | (simp [stmtPlan] at h; done)
     | skip
-  case newValue target value typ =>
+  case allocNew target value typ =>
     simp only [stmtPlan] at h
     obtain ⟨te, hte, h⟩ := Option.bind_eq_some_iff.mp h
     simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at h
@@ -5433,7 +5433,7 @@ theorem applySyncOp_wf {σ : ExecState} {ch : Choices} {op : SyncOp}
 set_option maxHeartbeats 1600000 in
 /-- Extract the source element behind one `mapM` output position (the
 multi-ready select arm's commit list). -/
-theorem mapM_getElem?_mem {α β : Type} {f : α → Except GoError β}
+theorem mapM_getElem?_mem {α β : Type} {f : α → Except Stop β}
     {xs : List α} {ys : List β} {i : Nat} {b : β}
     (h : xs.mapM f = .ok ys) (hb : ys[i]? = some b) :
     ∃ a ∈ xs, f a = .ok b := by
@@ -6012,20 +6012,6 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc h1 ⊢
-    omega
-  case stmtOpNullary stmt op nt env k ch ch' hplan happly =>
-    obtain ⟨w1, w2, w3, w4, w5⟩ := applyStmtOp_wf hs
-      (by simp [goValueListSup]) happly
-    refine ⟨w1, ?_, w4, w2⟩
-    simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
-      GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
-      stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
-      goValueListSup_append, exprListSup_append, stmtListSup_append,
-      locListSup_append, panicChainSup_append, goValueListSup_reverse,
-      targetRefListSup, targetPlansSup, targetRefListSup_append,
-      LocalEnv.locSup, Scope.locSup,
-      runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
-      Nat.max_le] at hc ⊢
     omega
   case stmtOpApply op nt done v env k ch ch' happly =>
     have hop : goValueListSup (v :: done).reverse ≤ σ.nextAddr := by

@@ -244,7 +244,7 @@ def chanOpClause (c : Config) : Option (Bool × GoValue) :=
   | _ => none
 
 /-- The evaluated clauses of a select at its apply position. -/
-def selectEvs (c : Config) : Option (Except GoError (List EvClause) × Nat) :=
+def selectEvs (c : Config) : Option (Except Stop (List EvClause) × Nat) :=
   match c with
   | .retV v (.selectOpsK clauses _ done [] _ _) =>
       some (evalClauses clauses ((v :: done).reverse), clauses.length)

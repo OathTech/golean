@@ -552,7 +552,7 @@ theorem stepAllBranchesOk_sound {post : ExecState → Bool} {n : Nat}
         | (m', choices', ev) => do
             let r' ← raceUpdate m.shared m.threads ev m' r
             execProgLoop n m' r' choices')
-        : Except GoError (ExecOutcome × Choices))
+        : Except Stop (ExecOutcome × Choices))
         = .ok (.normal σf, ch') ∧ post σf = true := by
   intro ch
   unfold stepAllBranchesOk at hall
@@ -613,7 +613,7 @@ theorem stepAllBranchesOk_sound {post : ExecState → Bool} {n : Nat}
             | (m', choices', ev) => do
                 let r' ← raceUpdate m.shared m.threads ev m' r
                 execProgLoop n m' r' choices')
-            : Except GoError (ExecOutcome × Choices))
+            : Except Stop (ExecOutcome × Choices))
             = .ok (.normal σf, ch') ∧ post σf = true := by
       intro chTail ev m' r' hru hnext hreal
       obtain ⟨σf, ch'', hrec, hpost⟩ := ih hnext chTail

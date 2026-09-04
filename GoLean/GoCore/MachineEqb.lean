@@ -198,7 +198,7 @@ theorem StrictOp.eqb_sound :
 /-! ## `StmtOp` — the wide-statement op table (11 ctors) -/
 
 def StmtOp.eqb : StmtOp → StmtOp → Bool
-  | .newValue t1, .newValue t2 => Ty.eqb t1 t2
+  | .allocNew t1, .allocNew t2 => Ty.eqb t1 t2
   | .makeSlice e1 c1, .makeSlice e2 c2 => Ty.eqb e1 e2 && c1 == c2
   | .makeMap s1, .makeMap s2 => s1 == s2
   | .makeChan e1 c1, .makeChan e2 c2 => Ty.eqb e1 e2 && c1 == c2
@@ -214,7 +214,7 @@ def StmtOp.eqb : StmtOp → StmtOp → Bool
 theorem StmtOp.eqb_sound : ∀ (a b : StmtOp), StmtOp.eqb a b = true → a = b := by
   intro a b h
   cases a <;> cases b <;> (try (first | rfl | exact Bool.noConfusion h))
-  case newValue.newValue t1 t2 =>
+  case allocNew.allocNew t1 t2 =>
     cases Ty.eqb_sound h; rfl
   case makeSlice.makeSlice e1 c1 e2 c2 =>
     obtain ⟨h1, h2⟩ := andSplit2 h

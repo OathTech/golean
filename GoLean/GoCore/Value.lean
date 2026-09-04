@@ -162,7 +162,7 @@ def IntKind.compatibleResult (left right : IntKind) : Option IntKind :=
 
 end GoCore
 
-/-! ## The stop grammar: `Refusal` / `Terminal` / `GoError` (design-hygiene
+/-! ## The stop grammar: `Refusal` / `Terminal` / `Stop` (design-hygiene
 arc A1, 2026-09-04 — `docs/2026-09-03_grumpy-professor-review.md` §3 A1;
 design note `docs/2026-09-03_hygiene-a-series-design.md` §A1)
 
@@ -172,7 +172,7 @@ the class is a TYPE, not a comment on a constructor:
 * `Refusal` — the machine declined: nothing here is a Go behaviour.
 * `Terminal` — a Go behaviour the run exhibited and stopped on (the
   differential compares these against `go run`).
-* `GoError.fuelOut` — the model's budget ran out (a MODEL artifact).
+* `Stop.fuelOut` — the model's budget ran out (a MODEL artifact).
 
 The flat constructor names the code has always used (`.panic msg`,
 `.stuck msg`, `.fuelOut`, …) remain valid in BOTH term and pattern
@@ -222,7 +222,7 @@ inductive Terminal where
   deriving Repr, BEq, Inhabited
 
 /-- The stop grammar: a refusal, a Go terminal, or the budget. -/
-inductive GoError where
+inductive Stop where
   | refusal (r : Refusal)
   | terminal (t : Terminal)
   /-- Fuel exhaustion — a MODEL artifact, not a program behaviour: the
@@ -237,114 +237,114 @@ names, usable in patterns (`@[match_pattern]`). Term and pattern sites
 throughout the machine are unchanged by A1; the nesting is what the types
 say. -/
 
-@[match_pattern] abbrev GoError.panic (message : String) : GoError := .terminal (.panic message)
-@[match_pattern] abbrev GoError.fatal (message : String) : GoError := .terminal (.fatal message)
-@[match_pattern] abbrev GoError.deadlock : GoError := .terminal .deadlock
-@[match_pattern] abbrev GoError.raceDetected : GoError := .terminal .raceDetected
-@[match_pattern] abbrev GoError.unsupported (feature : String) : GoError := .refusal (.unsupported feature)
-@[match_pattern] abbrev GoError.stuck (message : String) : GoError := .refusal (.stuck message)
-@[match_pattern] abbrev GoError.internal (message : String) : GoError := .refusal (.internal message)
+@[match_pattern] abbrev Stop.panic (message : String) : Stop := .terminal (.panic message)
+@[match_pattern] abbrev Stop.fatal (message : String) : Stop := .terminal (.fatal message)
+@[match_pattern] abbrev Stop.deadlock : Stop := .terminal .deadlock
+@[match_pattern] abbrev Stop.raceDetected : Stop := .terminal .raceDetected
+@[match_pattern] abbrev Stop.unsupported (feature : String) : Stop := .refusal (.unsupported feature)
+@[match_pattern] abbrev Stop.stuck (message : String) : Stop := .refusal (.stuck message)
+@[match_pattern] abbrev Stop.internal (message : String) : Stop := .refusal (.internal message)
 
 
 /-! `simp` sees the view exactly as it saw the flat constructors:
 injectivity and pairwise disjointness of the seven view constructors
 (generated family; the nested type supplies the proofs). -/
-@[simp] theorem GoError.panic_inj {a b : String} : GoError.panic a = GoError.panic b ↔ a = b :=
+@[simp] theorem Stop.panic_inj {a b : String} : Stop.panic a = Stop.panic b ↔ a = b :=
   ⟨fun h => by cases h; rfl, fun h => h ▸ rfl⟩
-@[simp] theorem GoError.fatal_inj {a b : String} : GoError.fatal a = GoError.fatal b ↔ a = b :=
+@[simp] theorem Stop.fatal_inj {a b : String} : Stop.fatal a = Stop.fatal b ↔ a = b :=
   ⟨fun h => by cases h; rfl, fun h => h ▸ rfl⟩
-@[simp] theorem GoError.unsupported_inj {a b : String} : GoError.unsupported a = GoError.unsupported b ↔ a = b :=
+@[simp] theorem Stop.unsupported_inj {a b : String} : Stop.unsupported a = Stop.unsupported b ↔ a = b :=
   ⟨fun h => by cases h; rfl, fun h => h ▸ rfl⟩
-@[simp] theorem GoError.stuck_inj {a b : String} : GoError.stuck a = GoError.stuck b ↔ a = b :=
+@[simp] theorem Stop.stuck_inj {a b : String} : Stop.stuck a = Stop.stuck b ↔ a = b :=
   ⟨fun h => by cases h; rfl, fun h => h ▸ rfl⟩
-@[simp] theorem GoError.internal_inj {a b : String} : GoError.internal a = GoError.internal b ↔ a = b :=
+@[simp] theorem Stop.internal_inj {a b : String} : Stop.internal a = Stop.internal b ↔ a = b :=
   ⟨fun h => by cases h; rfl, fun h => h ▸ rfl⟩
-@[simp] theorem GoError.panic_ne_fatal {a b : String} : (GoError.panic a = GoError.fatal b) ↔ False :=
+@[simp] theorem Stop.panic_ne_fatal {a b : String} : (Stop.panic a = Stop.fatal b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.panic_ne_deadlock {a : String} : (GoError.panic a = GoError.deadlock) ↔ False :=
+@[simp] theorem Stop.panic_ne_deadlock {a : String} : (Stop.panic a = Stop.deadlock) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.panic_ne_raceDetected {a : String} : (GoError.panic a = GoError.raceDetected) ↔ False :=
+@[simp] theorem Stop.panic_ne_raceDetected {a : String} : (Stop.panic a = Stop.raceDetected) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.panic_ne_unsupported {a b : String} : (GoError.panic a = GoError.unsupported b) ↔ False :=
+@[simp] theorem Stop.panic_ne_unsupported {a b : String} : (Stop.panic a = Stop.unsupported b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.panic_ne_stuck {a b : String} : (GoError.panic a = GoError.stuck b) ↔ False :=
+@[simp] theorem Stop.panic_ne_stuck {a b : String} : (Stop.panic a = Stop.stuck b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.panic_ne_internal {a b : String} : (GoError.panic a = GoError.internal b) ↔ False :=
+@[simp] theorem Stop.panic_ne_internal {a b : String} : (Stop.panic a = Stop.internal b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.fatal_ne_panic {a b : String} : (GoError.fatal a = GoError.panic b) ↔ False :=
+@[simp] theorem Stop.fatal_ne_panic {a b : String} : (Stop.fatal a = Stop.panic b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.fatal_ne_deadlock {a : String} : (GoError.fatal a = GoError.deadlock) ↔ False :=
+@[simp] theorem Stop.fatal_ne_deadlock {a : String} : (Stop.fatal a = Stop.deadlock) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.fatal_ne_raceDetected {a : String} : (GoError.fatal a = GoError.raceDetected) ↔ False :=
+@[simp] theorem Stop.fatal_ne_raceDetected {a : String} : (Stop.fatal a = Stop.raceDetected) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.fatal_ne_unsupported {a b : String} : (GoError.fatal a = GoError.unsupported b) ↔ False :=
+@[simp] theorem Stop.fatal_ne_unsupported {a b : String} : (Stop.fatal a = Stop.unsupported b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.fatal_ne_stuck {a b : String} : (GoError.fatal a = GoError.stuck b) ↔ False :=
+@[simp] theorem Stop.fatal_ne_stuck {a b : String} : (Stop.fatal a = Stop.stuck b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.fatal_ne_internal {a b : String} : (GoError.fatal a = GoError.internal b) ↔ False :=
+@[simp] theorem Stop.fatal_ne_internal {a b : String} : (Stop.fatal a = Stop.internal b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.deadlock_ne_panic {b : String} : (GoError.deadlock = GoError.panic b) ↔ False :=
+@[simp] theorem Stop.deadlock_ne_panic {b : String} : (Stop.deadlock = Stop.panic b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.deadlock_ne_fatal {b : String} : (GoError.deadlock = GoError.fatal b) ↔ False :=
+@[simp] theorem Stop.deadlock_ne_fatal {b : String} : (Stop.deadlock = Stop.fatal b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.deadlock_ne_raceDetected : (GoError.deadlock = GoError.raceDetected) ↔ False :=
+@[simp] theorem Stop.deadlock_ne_raceDetected : (Stop.deadlock = Stop.raceDetected) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.deadlock_ne_unsupported {b : String} : (GoError.deadlock = GoError.unsupported b) ↔ False :=
+@[simp] theorem Stop.deadlock_ne_unsupported {b : String} : (Stop.deadlock = Stop.unsupported b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.deadlock_ne_stuck {b : String} : (GoError.deadlock = GoError.stuck b) ↔ False :=
+@[simp] theorem Stop.deadlock_ne_stuck {b : String} : (Stop.deadlock = Stop.stuck b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.deadlock_ne_internal {b : String} : (GoError.deadlock = GoError.internal b) ↔ False :=
+@[simp] theorem Stop.deadlock_ne_internal {b : String} : (Stop.deadlock = Stop.internal b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.raceDetected_ne_panic {b : String} : (GoError.raceDetected = GoError.panic b) ↔ False :=
+@[simp] theorem Stop.raceDetected_ne_panic {b : String} : (Stop.raceDetected = Stop.panic b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.raceDetected_ne_fatal {b : String} : (GoError.raceDetected = GoError.fatal b) ↔ False :=
+@[simp] theorem Stop.raceDetected_ne_fatal {b : String} : (Stop.raceDetected = Stop.fatal b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.raceDetected_ne_deadlock : (GoError.raceDetected = GoError.deadlock) ↔ False :=
+@[simp] theorem Stop.raceDetected_ne_deadlock : (Stop.raceDetected = Stop.deadlock) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.raceDetected_ne_unsupported {b : String} : (GoError.raceDetected = GoError.unsupported b) ↔ False :=
+@[simp] theorem Stop.raceDetected_ne_unsupported {b : String} : (Stop.raceDetected = Stop.unsupported b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.raceDetected_ne_stuck {b : String} : (GoError.raceDetected = GoError.stuck b) ↔ False :=
+@[simp] theorem Stop.raceDetected_ne_stuck {b : String} : (Stop.raceDetected = Stop.stuck b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.raceDetected_ne_internal {b : String} : (GoError.raceDetected = GoError.internal b) ↔ False :=
+@[simp] theorem Stop.raceDetected_ne_internal {b : String} : (Stop.raceDetected = Stop.internal b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.unsupported_ne_panic {a b : String} : (GoError.unsupported a = GoError.panic b) ↔ False :=
+@[simp] theorem Stop.unsupported_ne_panic {a b : String} : (Stop.unsupported a = Stop.panic b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.unsupported_ne_fatal {a b : String} : (GoError.unsupported a = GoError.fatal b) ↔ False :=
+@[simp] theorem Stop.unsupported_ne_fatal {a b : String} : (Stop.unsupported a = Stop.fatal b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.unsupported_ne_deadlock {a : String} : (GoError.unsupported a = GoError.deadlock) ↔ False :=
+@[simp] theorem Stop.unsupported_ne_deadlock {a : String} : (Stop.unsupported a = Stop.deadlock) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.unsupported_ne_raceDetected {a : String} : (GoError.unsupported a = GoError.raceDetected) ↔ False :=
+@[simp] theorem Stop.unsupported_ne_raceDetected {a : String} : (Stop.unsupported a = Stop.raceDetected) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.unsupported_ne_stuck {a b : String} : (GoError.unsupported a = GoError.stuck b) ↔ False :=
+@[simp] theorem Stop.unsupported_ne_stuck {a b : String} : (Stop.unsupported a = Stop.stuck b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.unsupported_ne_internal {a b : String} : (GoError.unsupported a = GoError.internal b) ↔ False :=
+@[simp] theorem Stop.unsupported_ne_internal {a b : String} : (Stop.unsupported a = Stop.internal b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.stuck_ne_panic {a b : String} : (GoError.stuck a = GoError.panic b) ↔ False :=
+@[simp] theorem Stop.stuck_ne_panic {a b : String} : (Stop.stuck a = Stop.panic b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.stuck_ne_fatal {a b : String} : (GoError.stuck a = GoError.fatal b) ↔ False :=
+@[simp] theorem Stop.stuck_ne_fatal {a b : String} : (Stop.stuck a = Stop.fatal b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.stuck_ne_deadlock {a : String} : (GoError.stuck a = GoError.deadlock) ↔ False :=
+@[simp] theorem Stop.stuck_ne_deadlock {a : String} : (Stop.stuck a = Stop.deadlock) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.stuck_ne_raceDetected {a : String} : (GoError.stuck a = GoError.raceDetected) ↔ False :=
+@[simp] theorem Stop.stuck_ne_raceDetected {a : String} : (Stop.stuck a = Stop.raceDetected) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.stuck_ne_unsupported {a b : String} : (GoError.stuck a = GoError.unsupported b) ↔ False :=
+@[simp] theorem Stop.stuck_ne_unsupported {a b : String} : (Stop.stuck a = Stop.unsupported b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.stuck_ne_internal {a b : String} : (GoError.stuck a = GoError.internal b) ↔ False :=
+@[simp] theorem Stop.stuck_ne_internal {a b : String} : (Stop.stuck a = Stop.internal b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.internal_ne_panic {a b : String} : (GoError.internal a = GoError.panic b) ↔ False :=
+@[simp] theorem Stop.internal_ne_panic {a b : String} : (Stop.internal a = Stop.panic b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.internal_ne_fatal {a b : String} : (GoError.internal a = GoError.fatal b) ↔ False :=
+@[simp] theorem Stop.internal_ne_fatal {a b : String} : (Stop.internal a = Stop.fatal b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.internal_ne_deadlock {a : String} : (GoError.internal a = GoError.deadlock) ↔ False :=
+@[simp] theorem Stop.internal_ne_deadlock {a : String} : (Stop.internal a = Stop.deadlock) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.internal_ne_raceDetected {a : String} : (GoError.internal a = GoError.raceDetected) ↔ False :=
+@[simp] theorem Stop.internal_ne_raceDetected {a : String} : (Stop.internal a = Stop.raceDetected) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.internal_ne_unsupported {a b : String} : (GoError.internal a = GoError.unsupported b) ↔ False :=
+@[simp] theorem Stop.internal_ne_unsupported {a b : String} : (Stop.internal a = Stop.unsupported b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
-@[simp] theorem GoError.internal_ne_stuck {a b : String} : (GoError.internal a = GoError.stuck b) ↔ False :=
+@[simp] theorem Stop.internal_ne_stuck {a b : String} : (Stop.internal a = Stop.stuck b) ↔ False :=
   ⟨(fun h => nomatch h), fun h => h.elim⟩
 
-/-- `cases_stop e` splits a `GoError` into its SEVEN flat view cases
+/-- `cases_stop e` splits a `Stop` into its SEVEN flat view cases
 (`unsupported`/`stuck`/`internal`/`panic`/`fatal`/`deadlock`/
 `raceDetected`) plus `fuelOut` — the shape `cases e` produced before the
 A1 nesting; `case panic msg => …` selects by tag suffix as before. -/
@@ -379,12 +379,12 @@ def Terminal.message : Terminal → String
   | .raceDetected => "data race detected"
 
 /-- Status per class (byte-identical to the pre-A1 flat table). -/
-def GoError.status : GoError → String
+def Stop.status : Stop → String
   | .refusal r => r.status
   | .terminal t => t.status
   | .fuelOut => "fuel-out"
 
-def GoError.message : GoError → String
+def Stop.message : Stop → String
   | .refusal r => r.message
   | .terminal t => t.message
   | .fuelOut => "GoCore execution fuel exhausted"

@@ -68,7 +68,10 @@ inductive TypeDef where
   name-tagged); defined-over-defined-struct fails closed at the
   consumer until a case needs it. -/
   | defined (underlying : Ty)
-  | unsupported (feature : String)
+  /-- A declaration the frontend marks OPAQUE by design (imported/quarantined
+  types): its uses refuse by name (`reason`). Renamed from `unsupported` (A8; `opaque` itself is a Lean keyword)
+  so it is not confused with `Ty.unsupported`/`Expr.unsupported`. -/
+  | opaqueDecl (reason : String)
   deriving Repr, BEq
 
 inductive Expr where
@@ -283,7 +286,7 @@ inductive Stmt where
   | initialization (var : Param)
   | assign (left : Assignee) (right : Expr)
   | assignMany (left : Array Assignee) (right : Array Expr)
-  | newValue (target : Assignee) (value : Expr) (typ : Ty)
+  | allocNew (target : Assignee) (value : Expr) (typ : Ty)
   | makeSlice (target : Assignee) (elem : Ty) (len : Expr) (cap : Option Expr)
   | makeMap (target : Assignee) (key value : Ty) (initialSpace : Option Expr)
   | mapAssign (base index value : Expr) (keyTy valueTy : Ty)
@@ -350,7 +353,7 @@ inductive Stmt where
   oracle is aligned with `GODEBUG=panicnil=0`). The unwinding arc,
   `docs/2026-07-25_unwinding-arc.md`. -/
   | panicStmt (payload : Expr)
-  | label (name : String)
+  | inertLabel (name : String)
   -- Channel statements (channels arc slice 1,
   -- `docs/2026-08-06_channels-arc-design.md` D7). Range-over-channel is a
   -- FRONTEND desugar to a receive loop (recorded in the design note's

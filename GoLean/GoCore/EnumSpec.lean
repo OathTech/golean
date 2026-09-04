@@ -30,7 +30,7 @@ namespace GoLean.GoCore.Machine
 vocabulary (`enumPoolRun`'s statuses, as data): main's normal terminal
 with the readout values, an unrecovered panic (any goroutine), or the
 race detector's refusal. Deadlock, fuel exhaustion, stuck/unsupported/
-internal errors, AND `GoError.fatal` are NOT observations (the lane
+internal errors, AND `Stop.fatal` are NOT observations (the lane
 fails loud on them; `obsOf?` is `none`). The fatal exclusion is a
 CAPABILITY bound, not just a refusal: `Obs` has no fatal constructor,
 so an envelope containing a fatal member (a `go` of a nil func,
@@ -51,7 +51,7 @@ readout mirrors `enumPoolRun`'s terminal (`loadMany` at the pinned
 result locations); an errored readout is no observation (the checker
 refuses such nodes — fail closed, never a silent member). -/
 def obsOf? (resultLocs : List Loc) :
-    Except GoError (ExecOutcome × Choices) → Option Obs
+    Except Stop (ExecOutcome × Choices) → Option Obs
   | .ok (.normal σf, _) =>
       match loadMany σf resultLocs with
       | .ok vs => some (.ok vs)

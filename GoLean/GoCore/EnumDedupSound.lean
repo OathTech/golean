@@ -106,8 +106,8 @@ private theorem except_bind_ok {ε α β : Type} (a : α)
 /-- Stream pass-through of a two-stage `Except` pipeline ending in a
 `(·, choices)` pair — the shape of `applyStmtOp`'s non-spill append
 branch. -/
-private theorem bind_pair_stream {α : Type} (T : Except GoError α)
-    (g : α → Except GoError ExecState) (ch : Choices) :
+private theorem bind_pair_stream {α : Type} (T : Except Stop α)
+    (g : α → Except Stop ExecState) (ch : Choices) :
     (do let a ← T; let x ← g a;
         pure ((x, ch) : ExecState × Choices))
       = (match (do let a ← T; let x ← g a;
@@ -835,7 +835,7 @@ theorem checkCert_complete_aux
             | (m', choices', ev) => do
                 let r' ← raceUpdate m.shared m.threads ev m' r
                 execProgLoop n m' r' choices')
-           : Except GoError (ExecOutcome × Choices)) = some o →
+           : Except Stop (ExecOutcome × Choices)) = some o →
         o ∈ cert.obsSet := by
       intro chS hstep hobs'
       obtain ⟨vecs, hv, -, hparts⟩ := checkStep_parts hstep

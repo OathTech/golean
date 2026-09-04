@@ -23,7 +23,7 @@ the cell type now says so: `loadLoc`/`storeLoc` see values only (a payload
 cell refuses there), `mapPayload?`/`storeMapPayload` and
 `chanPayload?`/`storeChanPayload` see payloads only, and every store to a
 value cell is normalized at its declared type (there are no untyped cells
-— `Stmt.newValue` always carries its type). -/
+— `Stmt.allocNew` always carries its type). -/
 inductive HeapCell where
   /-- A Go value at the cell's declared type; stores normalize to it. -/
   | value (declaredTy : Ty) (v : GoValue)
@@ -94,7 +94,7 @@ structure Result where
 /-- Statement-execution outcome classification. Survives the reshape S4
 deletion because the Surface layer's `execStmt`-SHAPED wrapper (F4 §2's
 decided interface, restored at R3) reproduces the old signature
-`… → Except GoError (ExecOutcome × Choices)` over iterated `stepFn`. -/
+`… → Except Stop (ExecOutcome × Choices)` over iterated `stepFn`. -/
 inductive ExecOutcome where
   | normal (state : ExecState)
   | returned (state : ExecState)
@@ -162,7 +162,7 @@ def StructFields.lookup : Array (String × GoValue) → String → Option GoValu
         none
 
 def StructFields.set (fields : Array (String × GoValue)) (needle : String)
-    (value : GoValue) : Except GoError (Array (String × GoValue)) := do
+    (value : GoValue) : Except Stop (Array (String × GoValue)) := do
   let mut out := #[]
   let mut found := false
   for (name, old) in fields do
@@ -448,20 +448,20 @@ invariant breach, never Go behaviour). The ONE write path for every root
 cell (`storeLoc`, `storeMapPayload`, `storeChanPayload`); `Array.set` under
 `hi` is what makes a phantom cell unrepresentable (A2/A3). -/
 def ExecState.updateCell (state : ExecState) (a : Addr)
-    (f : HeapCell → Except GoError HeapCell) : Except GoError ExecState :=
+    (f : HeapCell → Except Stop HeapCell) : Except Stop ExecState :=
   if hi : a.id < state.heap.size then do
     let cell ← f state.heap[a.id]
     return { state with heap := state.heap.set a.id cell hi }
   else
     throw (.internal s!"store to unallocated address {repr (Loc.base a)}: no heap cell (allocation goes through ExecState.alloc only)")
 
-def unsupported {α : Type} (feature : String) : Except GoError α :=
+def unsupported {α : Type} (feature : String) : Except Stop α :=
   throw (.unsupported feature)
 
-def panic {α : Type} (message : String) : Except GoError α :=
+def panic {α : Type} (message : String) : Except Stop α :=
   throw (.panic message)
 
-def stuck {α : Type} (message : String) : Except GoError α :=
+def stuck {α : Type} (message : String) : Except Stop α :=
   throw (.stuck message)
 
 /-! ## Payload cells (A3): the map/channel readers and writers -/
@@ -470,7 +470,7 @@ def stuck {α : Type} (message : String) : Except GoError α :=
 there (a value cell, a channel, no cell) is an ill-shaped program
 operand — refused. -/
 def mapPayload? (state : ExecState) (loc : Loc) :
-    Except GoError (Array (Nat × GoValue × GoValue) × Nat) :=
+    Except Stop (Array (Nat × GoValue × GoValue) × Nat) :=
   match Heap.lookup state.heap loc with
   | some (.mapPayload entries nextId) => return (entries, nextId)
   | some (.value _ v) => stuck s!"expected map data at {repr loc}, got value {repr v}"
@@ -479,7 +479,7 @@ def mapPayload? (state : ExecState) (loc : Loc) :
 
 /-- The channel payload at a root cell: `(buf, capacity, closed)`. -/
 def chanPayload? (state : ExecState) (loc : Loc) :
-    Except GoError (Array GoValue × Nat × Bool) :=
+    Except Stop (Array GoValue × Nat × Bool) :=
   match Heap.lookup state.heap loc with
   | some (.chanPayload buf capacity closed) => return (buf, capacity, closed)
   | some (.value _ v) => stuck s!"expected channel data at {repr loc}, got value {repr v}"
@@ -490,7 +490,7 @@ def chanPayload? (state : ExecState) (loc : Loc) :
 cell must already be a map payload. -/
 def storeMapPayload (state : ExecState) (loc : Loc)
     (entries : Array (Nat × GoValue × GoValue)) (nextId : Nat) :
-    Except GoError ExecState :=
+    Except Stop ExecState :=
   match loc with
   | .base a =>
       state.updateCell a fun
@@ -502,7 +502,7 @@ def storeMapPayload (state : ExecState) (loc : Loc)
 /-- Replace a channel payload WHOLE; the cell must already be a channel
 payload. -/
 def storeChanPayload (state : ExecState) (loc : Loc) (buf : Array GoValue)
-    (capacity : Nat) (closed : Bool) : Except GoError ExecState :=
+    (capacity : Nat) (closed : Bool) : Except Stop ExecState :=
   match loc with
   | .base a =>
       state.updateCell a fun

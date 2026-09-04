@@ -12,7 +12,7 @@ sharing the rule premises' functions verbatim (`strictPlan`,
 (fail closed). Panics are in-model: a panic *step* produces a
 `.panicking` configuration (`.ok`) that unwinds — running defers, open to
 `recover` — and an unrecovered chain reaching `.stop` becomes `.panicked`,
-which the driver reports as `GoError.panic`; only out-of-model conditions
+which the driver reports as `Stop.panic`; only out-of-model conditions
 are `Except` errors.
 
 Nondeterminism: the sequential choice points (mapRange pick-next,
@@ -70,7 +70,7 @@ why the pick lives in the funnels and not at the arm; the relation's
 entry-panic rules (and `StepE.spawn`) quantify the pick. -/
 def enterFrameStep (s : ExecState) (fid : FuncId) (args : List GoValue)
     (mk : Func → LocalEnv → List Loc → Config) (k : Cont)
-    (choices : Choices) : Except GoError (Config × ExecState × Choices) :=
+    (choices : Choices) : Except Stop (Config × ExecState × Choices) :=
   match enterFrame s fid args with
   | .ok (func, frameEnv, resultLocs, s') => .ok (mk func frameEnv resultLocs, s', choices)
   | .error (.panic msg) =>
@@ -87,7 +87,7 @@ The two NORMAL drain sites reuse `enterFrameStep` (no chain in flight —
 their panic starts unwinding at this frame with its remaining defers). -/
 def enterFrameDeferPanicking (s : ExecState) (fid : FuncId) (args : List GoValue)
     (mk : Func → LocalEnv → Config) (chain : List PanicEntry) (krest : Cont)
-    (choices : Choices) : Except GoError (Config × ExecState × Choices) :=
+    (choices : Choices) : Except Stop (Config × ExecState × Choices) :=
   match enterFrame s fid args with
   | .ok (func, frameEnv, _resultLocs, s') => .ok (mk func frameEnv, s', choices)
   | .error (.panic msg) =>
@@ -101,7 +101,7 @@ def enterFrameDeferPanicking (s : ExecState) (fid : FuncId) (args : List GoValue
 steps *to* `.panicked`); `.error` means the machine is stuck here, with
 the reason. Never call on a terminal configuration (the driver guards). -/
 def stepFn (s : ExecState) (c : Config) (choices : Choices) :
-    Except GoError (Config × ExecState × Choices) := do
+    Except Stop (Config × ExecState × Choices) := do
   match c with
   | .panicked _ => throw (.internal "step on terminal panicked configuration")
   | .panicking chain k =>
@@ -174,7 +174,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .returnStmt => return (.returning k, s, choices)
       | .breakStmt => return (.breaking k, s, choices)
       | .continueStmt => return (.continuing k, s, choices)
-      | .label _ => return (.next k, s, choices)
+      | .inertLabel _ => return (.next k, s, choices)
       | .labeled name b => return (.exec b env (.labelK name k), s, choices)
       | .breakTo name => return (.breakingTo name k, s, choices)
       | .continueTo name => return (.continuingTo name k, s, choices)
@@ -300,14 +300,15 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           | some (_, []) => throw (.internal "empty atomic-statement operand plan")
           | none => throw (.unsupported "malformed atomic-statement shape (arity/kind/targets)")
       | wide =>
-          -- newValue / makeSlice / makeMap / mapAssign / mapLookup /
+          -- allocNew / makeSlice / makeMap / mapAssign / mapLookup /
           -- typeAssert / appendSlice / copySlice
           match stmtPlan wide with
           | some (op, nt, e :: rest) =>
               return (.evalE e env (.stmtOpK op nt [] rest env k), s, choices)
-          | some (op, nt, []) => do
-              let (s', choices') ← applyStmtOp s choices op nt []
-              return (.next k, s', choices')
+          -- A8: no `stmtPlan` arm emits an empty operand list (every plan
+          -- starts with its target); the shape is refused by name, never
+          -- applied (the former `Step.stmtOpNullary` rule was dead).
+          | some (_, _, []) => throw (.internal "empty statement operand plan")
           | none => throw (.unsupported "unsupported statement target assignee")
   | .evalE e env k =>
       match e with
@@ -828,9 +829,9 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
 /-- Fuel-bounded iteration of `stepFn` to a terminal configuration. Fuel
 counts machine steps; the terminal check precedes the fuel check so a
 finished program never reports exhaustion. `.panicked` reports as
-`GoError.panic` — the same classification surface as the big-step
+`Stop.panic` — the same classification surface as the big-step
 interpreter's. -/
-def runConfig : Nat → ExecState → Config → Choices → Except GoError (ExecState × Choices)
+def runConfig : Nat → ExecState → Config → Choices → Except Stop (ExecState × Choices)
   | fuel, s, c, choices =>
       match c with
       | .next .stop => return (s, choices)
@@ -856,7 +857,7 @@ over `.stop`, and read the pinned result locations at the terminal
 configuration. Env-in-config throughout — `ExecState.locals` unused. -/
 def runFunctionWithContextM (fuel : Nat) (types : TypeEnv) (functions : Array Func)
     (func : Func) (args : Array GoValue) (methods : Array MethodInfo := #[])
-    (choices : Choices := []) : Except GoError Result := do
+    (choices : Choices := []) : Except Stop Result := do
   let state : ExecState := { types, functions, methods }
   if func.args.size != args.size then
     throw (.stuck s!"expected {func.args.size} argument(s), got {args.size}")
@@ -879,7 +880,7 @@ statements stay recognizable. Fuel counts machine steps. The `env`
 argument replaces the old `ExecState.locals` seeding (deleted at S4 —
 env-in-config is the only name-resolution story). -/
 def execStmtLoop : Nat → ExecState → Config → Choices →
-    Except GoError (ExecOutcome × Choices)
+    Except Stop (ExecOutcome × Choices)
   | fuel, σ, c, choices =>
       match c with
       | .next .stop => return (.normal σ, choices)
@@ -900,7 +901,7 @@ def execStmtLoop : Nat → ExecState → Config → Choices →
 
 @[inherit_doc execStmtLoop]
 def execStmt (fuel : Nat) (env : LocalEnv) (σ : ExecState) (choices : Choices)
-    (prog : Stmt) : Except GoError (ExecOutcome × Choices) :=
+    (prog : Stmt) : Except Stop (ExecOutcome × Choices) :=
   execStmtLoop fuel σ (.exec prog env .stop) choices
 
 /-- Raw `n`-fold iteration of `stepFn` — NO terminal check and no outcome
@@ -913,18 +914,18 @@ reachability carrier for the interpreter-level invariance judgment
 step", with the choice stream threaded exactly as `execStmtLoop` threads
 it. -/
 def stepFnIter : Nat → ExecState → Config → Choices →
-    Except GoError (Config × ExecState × Choices)
+    Except Stop (Config × ExecState × Choices)
   | 0, σ, c, choices => .ok (c, σ, choices)
   | n + 1, σ, c, choices => do
       let (c', σ', choices') ← stepFn σ c choices
       stepFnIter n σ' c' choices'
 
 def runFunctionWithTypesM (fuel : Nat) (types : TypeEnv) (func : Func)
-    (args : Array GoValue) : Except GoError Result :=
+    (args : Array GoValue) : Except Stop Result :=
   runFunctionWithContextM fuel types #[func] func args
 
 def runFunctionM (fuel : Nat) (func : Func) (args : Array GoValue) :
-    Except GoError Result :=
+    Except Stop Result :=
   runFunctionWithTypesM fuel [] func args
 
 -- `runNamedFunctionM`/`runNamedFunctionIntsM` DELETED (delta-review N4,
@@ -953,7 +954,7 @@ executable analogue of Perennial's `GlobalAlloc` address pin; can only
 fire if seeding ever stops being the first allocations from a fresh
 state — an internal invariant break, never Go behavior). -/
 def seedGlobals (state : ExecState) (globals : Array GlobalDef) :
-    Except GoError ExecState := do
+    Except Stop ExecState := do
   if state.nextAddr != 0 then
     throw (.internal "global seeding requires a fresh state")
   let mut s := state
@@ -972,7 +973,7 @@ phases apart. `panic` is NOT marked — its message is the Go-observable
 abort line the differential compares — and `fuelOut` carries no message
 (an init-phase fuel exhaustion is indistinguishable by design; the
 docstrings say so). -/
-def markInitPhase : GoError → GoError
+def markInitPhase : Stop → Stop
   | .stuck msg => .stuck s!"package init: {msg}"
   | .unsupported msg => .unsupported s!"package init: {msg}"
   | .internal msg => .internal s!"package init: {msg}"
@@ -982,11 +983,11 @@ def markInitPhase : GoError → GoError
 termination under a targetless barrier frame. Malformed shapes fail
 closed; a panic during initialization aborts the run (Go: a panicking
 initializer kills the program before `main`), surfacing through
-`runConfig`'s `.panicked` terminal as `GoError.panic` (message
+`runConfig`'s `.panicked` terminal as `Stop.panic` (message
 unmarked — it is the Go-observable abort). Diagnostic errors carry the
 `package init:` marker (`markInitPhase`). -/
 def runPkgInitM (fuel : Nat) (state : ExecState) (choices : Choices) :
-    Except GoError (ExecState × Choices) := do
+    Except Stop (ExecState × Choices) := do
   match findFunctionIn? state.functions pkgInitFuncId with
   | none => return (state, choices)
   | some initF =>
@@ -1013,7 +1014,7 @@ and this is exactly the old named-function entry wiring
 (`runFunctionWithContextM`'s, over a `Program`). -/
 def runProgramSetupM (fuel : Nat) (program : Program) (name : String)
     (args : Array GoValue) (choices : Choices := []) :
-    Except GoError (Config × ExecState × List Loc × Choices) := do
+    Except Stop (Config × ExecState × List Loc × Choices) := do
   let func ←
     match findFunctionIn? program.funcs ⟨name⟩ with
     | some func => pure func
@@ -1035,13 +1036,13 @@ def runProgramSetupM (fuel : Nat) (program : Program) (name : String)
 
 @[inherit_doc runProgramSetupM]
 def runProgramM (fuel : Nat) (program : Program) (name : String)
-    (args : Array GoValue) (choices : Choices := []) : Except GoError Result := do
+    (args : Array GoValue) (choices : Choices := []) : Except Stop Result := do
   let (c₀, s₃, resultLocs, choices₁) ← runProgramSetupM fuel program name args choices
   let (sF, _) ← runConfig fuel s₃ c₀ choices₁
   return { values := (← loadMany sF resultLocs).toArray }
 
 def runProgramIntsM (fuel : Nat) (program : Program) (name : String)
-    (args : Array Int) (choices : List Nat := []) : Except GoError Result :=
+    (args : Array Int) (choices : List Nat := []) : Except Stop Result :=
   runProgramM fuel program name (args.map GoValue.int) choices
 
 end GoLean.GoCore.Machine

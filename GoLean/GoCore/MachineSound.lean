@@ -99,10 +99,6 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
       obtain ⟨rfl, rfl, rfl⟩ := h
       exact Step.callImmediatePanic ‹_› ‹_› hd
     · simp at h
-  case case67 =>
-    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
-    obtain ⟨⟨s₂, ch₂⟩, hd, rfl, rfl, rfl⟩ := h
-    exact Step.stmtOpNullary ‹_› hd
   case case69 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨v, hd, rfl, rfl, rfl⟩ := h
@@ -439,14 +435,6 @@ theorem step_complete {c : Config} {s : ExecState} {c' : Config} {s' : ExecState
       first
         | (simp_all [stepFn, stmtPlan, Bind.bind, Except.bind]; done)
         | (rename_i o; cases o <;> (simp_all [stepFn, stmtPlan, Bind.bind, Except.bind]; done))
-  case stmtOpNullary =>
-    rename_i stmt op nt env k ch₀ ch₁ hplan happly
-    refine ⟨ch₀, ch₁, ?_⟩
-    cases stmt <;>
-      first
-        | (simp_all [stepFn, stmtPlan, Bind.bind, Except.bind]; done)
-        | (rename_i o; cases o <;> (simp_all [stepFn, stmtPlan, Bind.bind, Except.bind]; done))
-  -- The choice-carrying apply rules: the witness stream is the rule's own.
   case stmtOpApply =>
     rename_i op nt done v env k ch₀ ch₁ h1
     exact ⟨ch₀, ch₁, by simp_all [stepFn]⟩
@@ -946,7 +934,7 @@ theorem Heap.lookup_set_ne {h : Heap} {i : Nat} {l : Loc} {c : HeapCell}
 
 /-- A root-cell update touches no other root cell (A3: the one write path). -/
 theorem ExecState.updateCell_lookup_ne {σ σ' : ExecState} {a : Addr}
-    {f : HeapCell → Except GoError HeapCell} {l : Loc}
+    {f : HeapCell → Except Stop HeapCell} {l : Loc}
     (h : σ.updateCell a f = .ok σ') (hne : (Loc.base a : Loc) ≠ l) :
     Heap.lookup σ'.heap l = Heap.lookup σ.heap l := by
   obtain ⟨i⟩ := a
@@ -1147,7 +1135,7 @@ theorem GoValue.capCong_array_left {vs : Array GoValue} {w : GoValue}
 
 /-! #### Outcome-class congruence: `exceptCong` -/
 
-def _root_.GoLean.GoError.isPanic : GoError → Bool
+def _root_.GoLean.Stop.isPanic : Stop → Bool
   | .panic _ => true
   | _ => false
 
@@ -1157,14 +1145,14 @@ throws on everything else, so panic-vs-not is the only error distinction
 the completeness kit needs; error MESSAGES may differ — `repr` of a
 slice prints its cap). -/
 def exceptCong {α β : Type} (R : α → β → Prop) :
-    Except GoError α → Except GoError β → Prop
+    Except Stop α → Except Stop β → Prop
   | .ok a, .ok b => R a b
   | .error e₁, .error e₂ => e₁.isPanic = e₂.isPanic
   | _, _ => False
 
 theorem exceptCong.bind_congr {α β γ δ : Type} {R : α → β → Prop}
-    {S : γ → δ → Prop} {x : Except GoError α} {y : Except GoError β}
-    {f : α → Except GoError γ} {g : β → Except GoError δ}
+    {S : γ → δ → Prop} {x : Except Stop α} {y : Except Stop β}
+    {f : α → Except Stop γ} {g : β → Except Stop δ}
     (hxy : exceptCong R x y)
     (hfg : ∀ a b, R a b → exceptCong S (f a) (g b)) :
     exceptCong S (x >>= f) (y >>= g) := by
@@ -1179,7 +1167,7 @@ theorem exceptCong.bind_congr {α β γ δ : Type} {R : α → β → Prop}
     | ok b => exact hfg a b hxy
 
 theorem exceptCong.map_congr {α β γ δ : Type} {R : α → β → Prop}
-    {S : γ → δ → Prop} {x : Except GoError α} {y : Except GoError β}
+    {S : γ → δ → Prop} {x : Except Stop α} {y : Except Stop β}
     {f : α → γ} {g : β → δ}
     (hxy : exceptCong R x y) (hfg : ∀ a b, R a b → S (f a) (g b)) :
     exceptCong S (f <$> x) (g <$> y) := by
@@ -1193,14 +1181,14 @@ theorem exceptCong.map_congr {α β γ δ : Type} {R : α → β → Prop}
     | error e₂ => exact hxy.elim
     | ok b => exact hfg a b hxy
 
-theorem exceptCong.self {α : Type} {R : α → α → Prop} {x : Except GoError α}
+theorem exceptCong.self {α : Type} {R : α → α → Prop} {x : Except Stop α}
     (h : ∀ a, R a a) : exceptCong R x x := by
   cases x with
   | ok a => exact h a
   | error e => rfl
 
 theorem exceptCong.ok_left {α β : Type} {R : α → β → Prop}
-    {x : Except GoError α} {y : Except GoError β} {a : α}
+    {x : Except Stop α} {y : Except Stop β} {a : α}
     (h : exceptCong R x y) (hx : x = .ok a) : ∃ b, y = .ok b ∧ R a b := by
   subst hx
   cases y with
@@ -1208,7 +1196,7 @@ theorem exceptCong.ok_left {α β : Type} {R : α → β → Prop}
   | error e => exact h.elim
 
 theorem exceptCong.panic_left {α β : Type} {R : α → β → Prop}
-    {x : Except GoError α} {y : Except GoError β} {m : String}
+    {x : Except Stop α} {y : Except Stop β} {m : String}
     (h : exceptCong R x y) (hx : x = .error (.panic m)) :
     ∃ m', y = .error (.panic m') := by
   subst hx
@@ -1225,13 +1213,13 @@ theorem exceptCong.panic_left {α β : Type} {R : α → β → Prop}
     · exact Bool.noConfusion (h : true = false)
 
 theorem exceptCong.of_ok_bind {α₁ α₂ β₁ β₂ : Type} {S : β₁ → β₂ → Prop}
-    {x₁ : α₁} {x₂ : α₂} {f : α₁ → Except GoError β₁}
-    {g : α₂ → Except GoError β₂}
+    {x₁ : α₁} {x₂ : α₂} {f : α₁ → Except Stop β₁}
+    {g : α₂ → Except Stop β₂}
     (h : exceptCong S (f x₁) (g x₂)) :
     exceptCong S (Except.ok x₁ >>= f) (Except.ok x₂ >>= g) := h
 
 theorem exceptCong.ite_congr {α β : Type} {R : α → β → Prop} {c : Prop}
-    [Decidable c] {x₁ y₁ : Except GoError α} {x₂ y₂ : Except GoError β}
+    [Decidable c] {x₁ y₁ : Except Stop α} {x₂ y₂ : Except Stop β}
     (ht : c → exceptCong R x₁ x₂) (he : ¬c → exceptCong R y₁ y₂) :
     exceptCong R (if c then x₁ else y₁) (if c then x₂ else y₂) := by
   by_cases h : c
@@ -1242,7 +1230,7 @@ theorem exceptCong.ite_congr {α β : Type} {R : α → β → Prop} {c : Prop}
 
 /-! #### Congruence of the value walks along `capCong` -/
 
-theorem normalizeListWith_congr {f g : GoValue → Except GoError GoValue}
+theorem normalizeListWith_congr {f g : GoValue → Except Stop GoValue}
     (hfg : ∀ v w, GoValue.capCong v w → exceptCong GoValue.capCong (f v) (g w)) :
     ∀ {l₁ l₂ : List GoValue}, capCongList l₁ l₂ →
       exceptCong (fun a b : Array GoValue => capCongList a.toList b.toList)
@@ -1267,7 +1255,7 @@ theorem normalizeListWith_congr {f g : GoValue → Except GoError GoValue}
       rw [Array.toList_append, Array.toList_append]
       exact ⟨hab, habs⟩
 
-theorem normalizeFieldsWith_congr {f g : Ty → GoValue → Except GoError GoValue}
+theorem normalizeFieldsWith_congr {f g : Ty → GoValue → Except Stop GoValue}
     (hfg : ∀ ty v w, GoValue.capCong v w →
       exceptCong GoValue.capCong (f ty v) (g ty w)) :
     ∀ (fds : List FieldDef) {l₁ l₂ : List (String × GoValue)},
@@ -1329,7 +1317,7 @@ theorem normalizeValueForTyFuel_congr {σ₁ σ₂ : ExecState}
   induction fuel with
   | zero =>
     intro ty v w hcc
-    simp [normalizeValueForTyFuel, exceptCong, GoError.isPanic]
+    simp [normalizeValueForTyFuel, exceptCong, Stop.isPanic]
   | succ f ih =>
     intro ty v w hcc
     cases ty with
@@ -1417,7 +1405,7 @@ theorem normalizeValueForTyFuel_congr {σ₁ σ₂ : ExecState}
         cases td with
         | alias target => exact ih target v w hcc
         | defined target => exact ih target v w hcc
-        | unsupported _ => exact rfl
+        | opaqueDecl _ => exact rfl
         | interfaceDef _ => exact rfl
         | struct fields =>
           cases v <;>
@@ -1459,7 +1447,7 @@ theorem normalizeValueForTyFuel_congr {σ₁ σ₂ : ExecState}
       -- type) fail closed on BOTH sides with the same error class.
       cases v <;> cases w <;>
         simp_all [GoValue.capCong, normalizeValueForTyFuel, exceptCong,
-          GoError.isPanic]
+          Stop.isPanic]
     | pointer _ => exact hcc
 
 theorem normalizeValueForTy_congr {σ₁ σ₂ : ExecState}
@@ -1510,8 +1498,8 @@ def forInStepCong {β₁ β₂ : Type} (R : β₁ → β₂ → Prop) :
 
 /-- Generic `forIn` congruence over `Except` for related loop states. -/
 theorem forIn_congr_except {α β₁ β₂ : Type} {R : β₁ → β₂ → Prop}
-    {body₁ : α → β₁ → Except GoError (ForInStep β₁)}
-    {body₂ : α → β₂ → Except GoError (ForInStep β₂)}
+    {body₁ : α → β₁ → Except Stop (ForInStep β₁)}
+    {body₂ : α → β₂ → Except Stop (ForInStep β₂)}
     (hbody : ∀ a b₁ b₂, R b₁ b₂ →
       exceptCong (forInStepCong R) (body₁ a b₁) (body₂ a b₂)) :
     ∀ (l : List α) {b₁ b₂}, R b₁ b₂ →
@@ -1538,8 +1526,8 @@ theorem forIn_congr_except {α β₁ β₂ : Type} {R : β₁ → β₂ → Prop
 
 @[inherit_doc forIn_congr_except]
 theorem forIn_congr_except_array {α β₁ β₂ : Type} {R : β₁ → β₂ → Prop}
-    {body₁ : α → β₁ → Except GoError (ForInStep β₁)}
-    {body₂ : α → β₂ → Except GoError (ForInStep β₂)}
+    {body₁ : α → β₁ → Except Stop (ForInStep β₁)}
+    {body₂ : α → β₂ → Except Stop (ForInStep β₂)}
     (hbody : ∀ a b₁ b₂, R b₁ b₂ →
       exceptCong (forInStepCong R) (body₁ a b₁) (body₂ a b₂))
     (l : Array α) {b₁ b₂ : _} (hb : R b₁ b₂) :
@@ -1614,7 +1602,7 @@ theorem arraySet_congr {values : Array GoValue} {i : Int} {v w : GoValue}
 root and the two update functions agree in class on every cell (A3; the
 congruence behind `storeLoc_congr`). -/
 theorem ExecState.updateCell_congr {σ₁ σ₂ : ExecState} {a : Addr}
-    {f₁ f₂ : HeapCell → Except GoError HeapCell}
+    {f₁ f₂ : HeapCell → Except Stop HeapCell}
     (hl : Heap.lookup σ₂.heap (.base a) = Heap.lookup σ₁.heap (.base a))
     (hf : ∀ c, exceptCong (fun _ _ : HeapCell => True) (f₁ c) (f₂ c)) :
     exceptCong (fun _ _ : ExecState => True)
@@ -1704,7 +1692,7 @@ theorem storeLoc_congr {σ₁ σ₂ : ExecState} (htypes : σ₂.types = σ₁.t
 /-- A loop whose every successful step yields a one-element push grows
 the accumulator by exactly the list length. -/
 theorem forIn_yield_push_size {α : Type}
-    {body : α → Array GoValue → Except GoError (ForInStep (Array GoValue))}
+    {body : α → Array GoValue → Except Stop (ForInStep (Array GoValue))}
     (hshape : ∀ a r out, body a r = .ok out → ∃ v, out = .yield (r.push v)) :
     ∀ (l : List α) {acc out : Array GoValue},
       forIn l acc body = .ok out → out.size = acc.size + l.length := by
@@ -1730,7 +1718,7 @@ theorem forIn_yield_push_size {α : Type}
 
 /-- A loop whose body always succeeds (with a yield) succeeds. -/
 theorem forIn_ok_of_body_ok {α β : Type}
-    {body : α → β → Except GoError (ForInStep β)}
+    {body : α → β → Except Stop (ForInStep β)}
     (hok : ∀ a b, ∃ r, body a b = .ok (.yield r)) :
     ∀ (l : List α) (acc : β), ∃ out, forIn l acc body = .ok out := by
   intro l
@@ -1746,7 +1734,7 @@ theorem forIn_ok_of_body_ok {α β : Type}
 
 /-- A successful nonempty loop's first step succeeded. -/
 theorem forIn_head_ok {α β : Type}
-    {body : α → β → Except GoError (ForInStep β)} {a : α} {l : List α}
+    {body : α → β → Except Stop (ForInStep β)} {a : α} {l : List α}
     {acc : β} {out : β} (h : forIn (a :: l) acc body = .ok out) :
     ∃ r, body a acc = .ok r := by
   rw [List.forIn_cons, bind_eq_ok] at h
@@ -1838,7 +1826,7 @@ theorem defaultValueFuel_ok_of_normalize_ok {σ : ExecState} :
         | defined target =>
           obtain ⟨d, hd⟩ := ih target v r h
           exact ⟨d, by simp [defaultValueFuel, hlook, hd]⟩
-        | unsupported _ => simp at h
+        | opaqueDecl _ => simp at h
         | interfaceDef _ => simp at h
         | struct fields =>
           have h' : normalizeStructValueWith (normalizeValueForTyFuel f σ)
@@ -1966,7 +1954,7 @@ theorem sliceVisibleValues_size {σ : ExecState} {sl : SliceValue}
   simpa [List.length_range'] using hsz
 
 /-- `exceptCong.self` strengthened with a success postcondition. -/
-theorem exceptCong.self_post {α : Type} {P : α → Prop} {x : Except GoError α}
+theorem exceptCong.self_post {α : Type} {P : α → Prop} {x : Except Stop α}
     (h : ∀ a, x = .ok a → P a) :
     exceptCong (fun a b : α => a = b ∧ P a) x x := by
   cases x with
@@ -1974,15 +1962,15 @@ theorem exceptCong.self_post {α : Type} {P : α → Prop} {x : Except GoError �
   | error e => rfl
 
 /-- Two successes are trivially outcome-congruent. -/
-theorem exceptCong.of_oks {α β : Type} {x : Except GoError α}
-    {y : Except GoError β} (hx : ∃ a, x = .ok a) (hy : ∃ b, y = .ok b) :
+theorem exceptCong.of_oks {α β : Type} {x : Except Stop α}
+    {y : Except Stop β} (hx : ∃ a, x = .ok a) (hy : ∃ b, y = .ok b) :
     exceptCong (fun _ _ => True) x y := by
   obtain ⟨a, rfl⟩ := hx
   obtain ⟨b, rfl⟩ := hy
   exact trivial
 
-theorem bind_isOk {α β : Type} {x : Except GoError α}
-    {f : α → Except GoError β} (hx : ∃ a, x = .ok a)
+theorem bind_isOk {α β : Type} {x : Except Stop α}
+    {f : α → Except Stop β} (hx : ∃ a, x = .ok a)
     (hf : ∀ a, ∃ b, f a = .ok b) : ∃ b, x >>= f = .ok b := by
   obtain ⟨a, rfl⟩ := hx
   simpa [Bind.bind, Except.bind] using hf a
@@ -2197,7 +2185,7 @@ theorem tryDeliver_ok_any {b : Bool} {σ : ExecState} {targets : List Assignee}
       simp_all [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
 
 theorem tryDeliver_error_any {b : Bool} {σ : ExecState} {targets : List Assignee}
-    {env : LocalEnv} {k : Cont} {e : GoError}
+    {env : LocalEnv} {k : Cont} {e : Stop}
     (h : tryDeliver b σ targets env k = .error e) (b₂ : Bool) (σ₂ : ExecState) :
     tryDeliver b₂ σ₂ targets env k = .error e := by
   cases targets with
@@ -2234,7 +2222,7 @@ before the pick applies (`tryAcquire`, the pre-committed `storeLoc`) or
 in `tryDeliver`, whose error is the same for both flags. -/
 theorem applyTryLock_error_any {σ : ExecState} {op : SyncOp} {loc : Loc}
     {pre : SyncPrim} {b₀ : Bool} {targets : List Assignee} {env : LocalEnv}
-    {k : Cont} {e : GoError}
+    {k : Cont} {e : Stop}
     (h : applyTryLock σ op loc pre b₀ targets env k = .error e) (b : Bool) :
     applyTryLock σ op loc pre b targets env k = .error e := by
   rw [applyTryLock.eq_def] at h ⊢
@@ -2291,7 +2279,7 @@ theorem applySyncOp_core_ok {σ : ExecState} {ch₀ : Choices} {op : SyncOp}
 
 /-- … and on error. -/
 theorem applySyncOp_core_error {σ : ExecState} {ch₀ : Choices} {op : SyncOp}
-    {vs : List GoValue} {env : LocalEnv} {k : Cont} {e : GoError}
+    {vs : List GoValue} {env : LocalEnv} {k : Cont} {e : Stop}
     (hop : op.tryTargets? = none)
     (h : applySyncOp σ ch₀ op vs env k = .error e) :
     ∀ ch : Choices, applySyncOp σ ch op vs env k = .error e := by
@@ -2406,7 +2394,7 @@ theorem bindIterVars_ok_of_normal {env : LocalEnv} {σ : ExecState}
         ExecState.alloc, ExecState.allocCell, pure, Except.pure]
 
 /-- `mapM` over `Except` preserves length on success. -/
-theorem mapM_ok_length {α β : Type} {f : α → Except GoError β}
+theorem mapM_ok_length {α β : Type} {f : α → Except Stop β}
     {xs : List α} {ys : List β}
     (h : xs.mapM f = .ok ys) : ys.length = xs.length := by
   induction xs generalizing ys with
@@ -2456,8 +2444,8 @@ theorem applySelect_ok_or_panic_any_ch {σ : ExecState}
           cases commits with
           | nil =>
               rcases h with ⟨out, h⟩ | ⟨msg, h⟩ <;>
-                simp [throw, throwThe, MonadExceptOf.throw, GoError.internal,
-                  GoError.panic] at h
+                simp [throw, throwThe, MonadExceptOf.throw, Stop.internal,
+                  Stop.panic] at h
           | cons b rest =>
               simp only [Choices.consumeAt_l2Entry] at h ⊢
               rcases hcons : Choices.consume ch (b :: rest).length
@@ -2481,13 +2469,13 @@ on success AND on error. -/
 theorem applyStmtOp_eq_core {σ : ExecState} {ch : Choices} {op : StmtOp}
     {nt : Nat} {vs : List GoValue} (hop : ∀ e, op ≠ .appendSlice e) :
     applyStmtOp σ ch op nt vs
-      = (fun σ₂ => (σ₂, ch)) <$> applyStmtOpCore σ op nt vs := by
+      = (fun σ₂ => (σ₂, ch)) <$> applyStmtOpCore σ op vs := by
   cases op <;>
     first
     | exact absurd rfl (hop _)
     | (simp only [applyStmtOp, Bind.bind, Except.bind, Functor.map, Except.map,
          pure, Except.pure]
-       all_goals (cases applyStmtOpCore σ _ nt vs <;> rfl))
+       all_goals (cases applyStmtOpCore σ _ vs <;> rfl))
 
 /-- Mapping cannot manufacture or change an error. -/
 theorem map_eq_error {ε α β : Type} {g : α → β} {x : Except ε α} {e : ε} :
@@ -2585,14 +2573,6 @@ theorem step_complete_any_wf_aux {c : Config} {σ : ExecState} {c' : Config}
            obtain ⟨rfl, hargs⟩ := hplan
            simp_all [stepFn, strictPlan])
   case stmtOpFirst stmt op nt e rest env k hplan =>
-    cases stmt <;>
-      first
-        | (simp_all [stepFn, stmtPlan, Bind.bind, Except.bind]; done)
-        | (rename_i o; cases o <;>
-            (simp_all [stepFn, stmtPlan, Bind.bind, Except.bind]; done))
-  case stmtOpNullary stmt op nt env k ch₀ ch₁ hplan happly =>
-    obtain ⟨⟨σ₂, ch₂⟩, hr⟩ := applyStmtOp_ok_any_ch_wf
-      (by simp [goValueListSup]) happly ch
     cases stmt <;>
       first
         | (simp_all [stepFn, stmtPlan, Bind.bind, Except.bind]; done)
@@ -2841,7 +2821,8 @@ at fuel `N` ⇒ every stream's run completes within `N`. -/
 /-- Is this configuration about to dispatch `applyStmtOp` with an
 `appendSlice` op (the one stream-consuming wide op)? Conservative
 shape check on the two `applyStmtOp` call sites in `stepFn`: the
-`stmtOpK` apply position and the nullary wide-statement arm. -/
+`stmtOpK` apply position (the former nullary wide-statement arm is a
+refusal since A8 — no `stmtPlan` emits an empty operand list). -/
 def consumesAppendSlice : Config → Bool
   | .retV _ (.stmtOpK op _ _ [] _ _) =>
       match op with
@@ -2919,33 +2900,6 @@ theorem consumesAppendSlice_stmtOpK {v : GoValue} {op : StmtOp} {nt : Nat}
   intro e he
   subst he
   simp [consumesAppendSlice] at h
-
-/-- The nullary wide-statement shape flag transfers to the planned op. -/
-theorem consumesAppendSlice_execPlan {stmt : Stmt} {env : LocalEnv} {k : Cont}
-    {op : StmtOp} {nt : Nat}
-    (hplan : stmtPlan stmt = some (op, nt, []))
-    (h : consumesAppendSlice (.exec stmt env k) = false) :
-    ∀ e, op ≠ .appendSlice e := by
-  intro e he
-  subst he
-  simp [consumesAppendSlice, hplan] at h
-
-/-- The `stepFn` equation at a nullary wide-statement configuration: with
-the plan pinned (`some (op, nt, [])`), the arm is exactly the immediate
-`applyStmtOp` dispatch. Proved by statement cases: non-wide constructors
-refute the plan hypothesis; wide constructors reduce and rewrite. -/
-theorem stepFn_exec_plan_nullary {σ : ExecState} {stmt : Stmt}
-    {env : LocalEnv} {k : Cont} {op : StmtOp} {nt : Nat} {ch : Choices}
-    (hplan : stmtPlan stmt = some (op, nt, [])) :
-    stepFn σ (.exec stmt env k) ch
-      = (do
-          let (s', choices') ← applyStmtOp σ ch op nt []
-          pure (.next k, s', choices')) := by
-  cases stmt <;>
-    first
-    | (simp [stmtPlan] at hplan; done)
-    | (simp only [stepFn]
-       rw [hplan])
 
 set_option maxHeartbeats 1600000 in
 set_option linter.unusedSimpArgs false in
@@ -3136,17 +3090,6 @@ theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
       · simp only [stepFn, enterFrameStep, hd, nilValueMethodWidth_of_isSome_false hnv,
           Choices.consumeAt_nilValueMethodText_one, entryPanicText_of_isSome_false hnv]
     · simp at h
-  case case67 =>
-    rename_i op nt hplan
-    have hop := consumesAppendSlice_execPlan hplan hnc
-    rw [stepFn_exec_plan_nullary hplan, applyStmtOp_eq_core hop] at h
-    simp only [bind_eq_ok, map_eq_ok] at h
-    obtain ⟨a, ⟨σ₂, hcore, rfl⟩, hrest⟩ := h
-    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hrest
-    obtain ⟨rfl, rfl, rfl⟩ := hrest
-    refine ⟨by simp, fun ch => ?_⟩
-    rw [stepFn_exec_plan_nullary hplan, applyStmtOp_eq_core hop, hcore]
-    rfl
   case case69 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨v, hd, rfl, rfl, rfl⟩ := h

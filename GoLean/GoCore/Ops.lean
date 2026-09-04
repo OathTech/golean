@@ -56,7 +56,7 @@ computes by exact widening through binary64 and one rounding back —
 softfloat64.go:506-517's own definition (innocuous double rounding for
 `+ - * /`; design note §6). -/
 def floatBinaryResult (opName : String) (op64 op32 : Nat → Nat → Nat)
-    (left right : GoValue) : Except GoError GoValue := do
+    (left right : GoValue) : Except Stop GoValue := do
   match left, right with
   | .float lb lk, .float rb rk =>
       if lk == rk then
@@ -71,7 +71,7 @@ def floatBinaryResult (opName : String) (op64 op32 : Nat → Nat → Nat)
 ordering answers false on a NaN operand (note §4; the corpus pin is
 `floats/nan-comparisons`). -/
 def floatCompareResult (opName : String) (cmp64 cmp32 : Nat → Nat → Bool)
-    (left right : GoValue) : Except GoError Bool := do
+    (left right : GoValue) : Except Stop Bool := do
   match left, right with
   | .float lb lk, .float rb rk =>
       if lk == rk then
@@ -121,19 +121,19 @@ def floatMinMaxBits (isMin : Bool) (kind : FloatKind) (a b : Nat) : Nat :=
       | .float32 => a >>> 31 == 1
     if isMin == aNegSign then a else b
 
-def floatMinMax (isMin : Bool) : GoValue → GoValue → Except GoError GoValue
+def floatMinMax (isMin : Bool) : GoValue → GoValue → Except Stop GoValue
   | .float a ka, .float b kb =>
       if ka == kb then return .float (floatMinMaxBits isMin ka a b) ka
       else stuck s!"mismatched min/max float kinds: {ka.name} and {kb.name}"
   | l, r => stuck s!"mismatched min/max float operands: {repr l} and {repr r}"
 
-def indexOutOfRangePanic (index : Int) (length : Nat) : Except GoError α :=
+def indexOutOfRangePanic (index : Int) (length : Nat) : Except Stop α :=
   if index < 0 then
     panic s!"runtime error: index out of range [{index}]"
   else
     panic s!"runtime error: index out of range [{index}] with length {length}"
 
-def arrayIndexNat (values : Array GoValue) (index : Int) : Except GoError Nat := do
+def arrayIndexNat (values : Array GoValue) (index : Int) : Except Stop Nat := do
   if index < 0 then
     indexOutOfRangePanic index values.size
   let i := index.toNat
@@ -142,14 +142,14 @@ def arrayIndexNat (values : Array GoValue) (index : Int) : Except GoError Nat :=
   else
     indexOutOfRangePanic index values.size
 
-def arrayGet (values : Array GoValue) (index : Int) : Except GoError GoValue := do
+def arrayGet (values : Array GoValue) (index : Int) : Except Stop GoValue := do
   let i ← arrayIndexNat values index
   match values[i]? with
   | some value => return value
   | none => indexOutOfRangePanic index values.size
 
 def arraySet (values : Array GoValue) (index : Int) (value : GoValue) :
-    Except GoError (Array GoValue) := do
+    Except Stop (Array GoValue) := do
   let i ← arrayIndexNat values index
   -- No per-element coercion (A3): the ROOT store normalizes the whole
   -- array at the cell's declared type, which is where element typing lives.
@@ -157,7 +157,7 @@ def arraySet (values : Array GoValue) (index : Int) (value : GoValue) :
   | some _ => return values.set! i value
   | none => indexOutOfRangePanic index values.size
 
-def natFromNonnegativeInt (context : String) (value : Int) : Except GoError Nat := do
+def natFromNonnegativeInt (context : String) (value : Int) : Except Stop Nat := do
   if value < 0 then
     panic context
   return value.toNat
@@ -198,8 +198,8 @@ fields as "nesting too deep"). Accumulators: end offset of the fields
 laid so far, max alignment so far, and the LAST field's offset and size
 (the final-field rule needs both). Non-empty field lists only (the
 caller handles `struct{}` = (0, 1)). -/
-def structSizeAlignWith (fieldSize : Ty → Except GoError (Nat × Nat)) :
-    List FieldDef → Nat → Nat → Nat → Nat → Except GoError (Nat × Nat)
+def structSizeAlignWith (fieldSize : Ty → Except Stop (Nat × Nat)) :
+    List FieldDef → Nat → Nat → Nat → Nat → Except Stop (Nat × Nat)
   | [], _, maxAlign, lastOffset, lastSize =>
       let lastSize := if lastOffset > 0 && lastSize == 0 then 1 else lastSize
       pure (alignUpTo (lastOffset + lastSize) maxAlign, maxAlign)
@@ -224,7 +224,7 @@ free (no real Go type nests 1024 deep, and a 1024-field struct is
 ordinary). FAIL-CLOSED: an `.unsupported` type, an unknown defined
 type, an untyped integer kind or exhausted depth fuel is a cause-naming
 refusal, never a guessed size. -/
-def tySizeAlignFuel (p : Platform) : Nat → TypeEnv → Ty → Except GoError (Nat × Nat)
+def tySizeAlignFuel (p : Platform) : Nat → TypeEnv → Ty → Except Stop (Nat × Nat)
   | 0, _, _ => unsupported "allocation-size computation: type nesting too deep"
   | fuel + 1, types, ty =>
     match ty with
@@ -252,7 +252,7 @@ def tySizeAlignFuel (p : Platform) : Nat → TypeEnv → Ty → Except GoError (
         | some (.alias target) => tySizeAlignFuel p fuel types target
         | some (.defined underlying) => tySizeAlignFuel p fuel types underlying
         | some (.interfaceDef _) => pure (2 * p.wordBytes, p.maxAlign)
-        | some (.unsupported feature) =>
+        | some (.opaqueDecl feature) =>
             unsupported s!"allocation-size computation: {feature}"
         | none => unsupported s!"allocation-size computation: unknown defined type {id.key}"
     | .unsupported feature => unsupported s!"allocation-size computation: {feature}"
@@ -263,7 +263,7 @@ def tySizeAlignFuel (p : Platform) : Nat → TypeEnv → Ty → Except GoError (
 
 /-- The byte size of a type under the R16 pin (`tySizeAlignFuel` at THE
 platform and the standard fuel). -/
-def tySizeBytes (types : TypeEnv) (ty : Ty) : Except GoError Nat := do
+def tySizeBytes (types : TypeEnv) (ty : Ty) : Except Stop Nat := do
   let (size, _) ← tySizeAlignFuel platform typeResolutionFuel types ty
   pure size
 
@@ -275,7 +275,7 @@ then the LOW: negative renders `[l:]` (Go omits the high there), else
 `[l:h]`. `limitName` is `length` for strings/arrays, `capacity` for
 slices. Returns the checked bounds. -/
 def checkSliceBounds (limitName : String) (limit : Nat) (low high : Int) :
-    Except GoError (Nat × Nat) := do
+    Except Stop (Nat × Nat) := do
   if high < 0 then
     panic s!"runtime error: slice bounds out of range [:{high}]"
   if high > limit then
@@ -291,7 +291,7 @@ max-vs-capacity check: HIGH against max (negative `[:h:]`, over `[:h:m]`),
 then LOW (negative `[l::]`, over `[l:h:]`) — the runtime's exact messages,
 oracle-pinned 2026-07-25. -/
 def checkSliceBounds3 (max : Nat) (low high : Int) :
-    Except GoError (Nat × Nat) := do
+    Except Stop (Nat × Nat) := do
   if high < 0 then
     panic s!"runtime error: slice bounds out of range [:{high}:]"
   if high > max then
@@ -307,7 +307,7 @@ with no suffix, over renders `[::m] with <limitName> <limit>` — `capacity`
 for slices, `length` for arrays (pre-merge audit 2026-07-26 caught the
 hardcoded "capacity" diverging on array bases; oracle-pinned). -/
 def checkSliceMax (limitName : String) (limit : Nat) (max : Int) :
-    Except GoError Nat := do
+    Except Stop Nat := do
   if max < 0 then
     panic s!"runtime error: slice bounds out of range [::{max}]"
   if max > limit then
@@ -372,7 +372,7 @@ decreasing_by
 def runesOfString (s : GoString) : Array Int :=
   runesOfStringAux s 0 #[]
 
-def stringByteGet (value : GoString) (index : Int) : Except GoError GoValue := do
+def stringByteGet (value : GoString) (index : Int) : Except Stop GoValue := do
   if index < 0 then
     indexOutOfRangePanic index value.length
   let i := index.toNat
@@ -381,13 +381,13 @@ def stringByteGet (value : GoString) (index : Int) : Except GoError GoValue := d
   | none => indexOutOfRangePanic index value.length
 
 def stringSlice (value : GoString) (low high : Int) (max : Option Int) :
-    Except GoError GoValue := do
+    Except Stop GoValue := do
   if max.isSome then
     stuck "full slice expression over string"
   let (low, high) ← checkSliceBounds "length" value.length low high
   return .string (value.slice low high)
 
-def validateSlice (slice : SliceValue) : Except GoError Unit := do
+def validateSlice (slice : SliceValue) : Except Stop Unit := do
   if slice.len > slice.cap then
     stuck s!"malformed GoCore slice: len {slice.len} > cap {slice.cap}"
   match slice.base with
@@ -398,7 +398,7 @@ def validateSlice (slice : SliceValue) : Except GoError Unit := do
       else
         stuck s!"malformed GoCore nil slice: {repr slice}"
 
-def sliceIndexLoc (slice : SliceValue) (index : Int) : Except GoError Loc := do
+def sliceIndexLoc (slice : SliceValue) (index : Int) : Except Stop Loc := do
   validateSlice slice
   -- Go's exact index message (same renderer as arrays; the old plain
   -- "slice index out of bounds" was a latent divergence found by the
@@ -414,7 +414,7 @@ def sliceIndexLoc (slice : SliceValue) (index : Int) : Except GoError Loc := do
     indexOutOfRangePanic index slice.len
 
 def sliceFromSlice (slice : SliceValue) (low high : Int) (max : Option Int) :
-    Except GoError GoValue := do
+    Except Stop GoValue := do
   validateSlice slice
   match max with
   | none =>
@@ -436,7 +436,7 @@ def sliceFromSlice (slice : SliceValue) (low high : Int) (max : Option Int) :
       }
 
 def sliceFromArray (base : Loc) (length : Nat) (low high : Int) (max : Option Int) :
-    Except GoError GoValue := do
+    Except Stop GoValue := do
   match max with
   | none =>
       let (low, high) ← checkSliceBounds "length" length low high
@@ -540,7 +540,7 @@ def Ty.mentionsUnsupported (ty : Ty) : Bool :=
   Ty.mentionsUnsupportedFuel typeResolutionFuel ty
 
 /-- The canonical dynamic-type tag for boxing, fail-closed. -/
-def canonicalDynamicTy (state : ExecState) (typ : Ty) : Except GoError Ty := do
+def canonicalDynamicTy (state : ExecState) (typ : Ty) : Except Stop Ty := do
   let c := canonicalTy state typ
   if c.mentionsUnsupported then
     unsupported s!"interface conversion for dynamic type {repr typ}"
@@ -583,7 +583,7 @@ def tyUncomparableFuel : Nat → ExecState → Ty → Option Bool
        -- type decides at comparison time), as is `.unsupported`-free
        -- structure; an ABSENT declaration is unknown.
        | some (.interfaceDef _) => some false
-       | some (.unsupported _) => none
+       | some (.opaqueDecl _) => none
        | none => none)
   | fuel + 1, state, .array _ e => tyUncomparableFuel fuel state e
   | 0, _, .defined _ => none
@@ -867,7 +867,7 @@ every declared named type, promoted methods included (the frontend
 synthesizes forwarding wrappers), so a missing method on an
 embedded-field type is real information. -/
 def firstUnsatisfiedMethod? (state : ExecState) (dynTy : Ty) (interfaceName : TypeId) :
-    Except GoError (Option String) := do
+    Except Stop (Option String) := do
   if isEmptyInterfaceName interfaceName then
     return none
   match interfaceDeclaredMethods? state interfaceName with
@@ -906,7 +906,7 @@ modeled"
             return (some name)
 
 def dynamicImplementsInterface (state : ExecState) (dynTy : Ty) (interfaceName : TypeId) :
-    Except GoError Bool := do
+    Except Stop Bool := do
   return (← firstUnsatisfiedMethod? state dynTy interfaceName).isNone
 
 /-- Apply the (already fuel-decremented) element normalizer to each list
@@ -919,8 +919,8 @@ interpreter (`docs/2026-08-03_sem-adequacy-arc.md`, slice-1 spike).
 Crucially the fuel still bounds only NESTING DEPTH, not node count: a first
 de-WF attempt charged fuel per element and was caught making `Progress` —
 and with it the ∀-config theorem — false at configs past the budget. -/
-def normalizeListWith (f : GoValue → Except GoError GoValue) :
-    List GoValue → Except GoError (Array GoValue)
+def normalizeListWith (f : GoValue → Except Stop GoValue) :
+    List GoValue → Except Stop (Array GoValue)
   | value :: rest => do
       let head ← f value
       let tail ← normalizeListWith f rest
@@ -929,9 +929,9 @@ def normalizeListWith (f : GoValue → Except GoError GoValue) :
 
 /-- Normalize struct field values pairwise with the (already
 fuel-decremented) normalizer, checking field-name alignment. -/
-def normalizeFieldsWith (f : Ty → GoValue → Except GoError GoValue) :
+def normalizeFieldsWith (f : Ty → GoValue → Except Stop GoValue) :
     List FieldDef → List (String × GoValue) →
-    Except GoError (Array (String × GoValue))
+    Except Stop (Array (String × GoValue))
   | field :: fieldRest, (actualField, value) :: valueRest => do
       if actualField != field.name then
         stuck s!"struct value field mismatch: expected {field.name}, got {actualField}"
@@ -959,8 +959,8 @@ def emptyStructAssignable (actual name : TypeId)
 (already fuel-decremented) field normalizer. A mismatched tag is accepted
 only through the empty-struct ASSIGNABILITY escape (retagged copy — Go's
 assignment); anything else stays stuck. -/
-def normalizeStructValueWith (f : Ty → GoValue → Except GoError GoValue)
-    (name : TypeId) (fields : Array FieldDef) : GoValue → Except GoError GoValue
+def normalizeStructValueWith (f : Ty → GoValue → Except Stop GoValue)
+    (name : TypeId) (fields : Array FieldDef) : GoValue → Except Stop GoValue
   | .struct actual fieldsValue => do
       if actual != name then
         if emptyStructAssignable actual name fields fieldsValue then
@@ -978,7 +978,7 @@ def normalizeStructValueWith (f : Ty → GoValue → Except GoError GoValue)
 -- fuel still bounds nesting DEPTH only — one unit per array/struct level or
 -- defined-type resolution, never per element. The public
 -- `normalizeValueForTy` seeds `typeResolutionFuel` and keeps its signature.
-def normalizeValueForTyFuel : Nat → ExecState → Ty → GoValue → Except GoError GoValue
+def normalizeValueForTyFuel : Nat → ExecState → Ty → GoValue → Except Stop GoValue
   | 0, _, _, _ => unsupported "normalizing: type nesting too deep"
   | _ + 1, _, .int kind, .int value _ => return .int (kind.normalize value) kind
   | _ + 1, _, .int kind, value => stuck s!"expected {kind.name} value, got {repr value}"
@@ -1020,7 +1020,7 @@ def normalizeValueForTyFuel : Nat → ExecState → Ty → GoValue → Except Go
       | some (.defined target) => normalizeValueForTyFuel fuel state target value
       | some (.struct fields) =>
           normalizeStructValueWith (normalizeValueForTyFuel fuel state) name fields value
-      | some (.unsupported feature) => unsupported s!"normalizing {feature}"
+      | some (.opaqueDecl feature) => unsupported s!"normalizing {feature}"
       | some (.interfaceDef _) => unsupported s!"normalizing at interface type {name.key}"
       | none => unsupported s!"normalizing unknown defined type {name.key}"
   | _ + 1, _, .unsupported feature, _ => unsupported s!"normalizing {feature}"
@@ -1034,7 +1034,7 @@ example (σ : ExecState) (kind : IntKind) :
   simp [normalizeValueForTyFuel]; rfl
 
 def normalizeValueForTy (state : ExecState) (ty : Ty) (value : GoValue) :
-    Except GoError GoValue :=
+    Except Stop GoValue :=
   normalizeValueForTyFuel typeResolutionFuel state ty value
 
 /-! ### Self-normalization check (sem-adequacy arc slice 3, 2026-08-04)
@@ -1110,7 +1110,7 @@ def isNormalForTyFuel : Nat → TypeEnv → Ty → GoValue → Bool
                 && isNormalFieldsWith (isNormalForTyFuel fuel types)
                     fields.toList fieldsValue.toList
           | _ => false
-      | some (.unsupported _) => false
+      | some (.opaqueDecl _) => false
       | some (.interfaceDef _) => false
       | none => false
   | _ + 1, _, .unsupported _, _ => false
@@ -1137,7 +1137,7 @@ def structTagCompatible (state : ExecState) (actual expected : TypeId) : Bool :=
 -- Total: structural recursion on the `Loc` argument (field/index bases are
 -- strict subterms). loadLoc depends only on itself and total helpers, so it is
 -- a genuine `def` — the premise of the eventual `wp_load` proof rule.
-def loadLoc (state : ExecState) : Loc → Except GoError GoValue
+def loadLoc (state : ExecState) : Loc → Except Stop GoValue
   | loc@(.base _) =>
       match Heap.lookup state.heap loc with
       | some (.value _ v) => return v
@@ -1169,7 +1169,7 @@ channel) at the root is an ill-shaped operand (`.stuck`); a missing cell
 is BUG-085's `.internal` (through `ExecState.updateCell`, the one root
 write path: `Array.set` under its bound — the phantom-cell arm is
 unrepresentable by type). -/
-def storeLoc (state : ExecState) : Loc → GoValue → Except GoError ExecState
+def storeLoc (state : ExecState) : Loc → GoValue → Except Stop ExecState
     | .base a, value =>
         state.updateCell a fun
           | .value ty _ => do
@@ -1196,7 +1196,7 @@ def storeLoc (state : ExecState) : Loc → GoValue → Except GoError ExecState
 -- (control-side env lookup + `loadLoc`), never a state-side name lookup.
 
 -- Total via fuel: only the `.defined → .alias` chain recurses; fuel bounds it.
-def convertValueToTyFuel : Nat → ExecState → Ty → GoValue → Except GoError GoValue
+def convertValueToTyFuel : Nat → ExecState → Ty → GoValue → Except Stop GoValue
   | _, _, .int kind, .int value _ => return .int (kind.normalize value) kind
   -- Float → int (design note §3.3, decision 4): the spec pins truncation
   -- toward zero; an out-of-range or NaN source is IMPLEMENTATION-
@@ -1262,7 +1262,7 @@ def convertValueToTyFuel : Nat → ExecState → Ty → GoValue → Except GoErr
 from {actual.key} (non-identical underlying)"
                 | _ => unsupported s!"conversion to struct type {name.key} from {actual.key}"
           | _ => unsupported s!"conversion to struct type {name.key}"
-      | some (.unsupported feature) => unsupported s!"conversion to {feature}"
+      | some (.opaqueDecl feature) => unsupported s!"conversion to {feature}"
       | some (.interfaceDef _) => unsupported s!"conversion to interface type {name.key}"
       | none => unsupported s!"conversion to unknown defined type {name.key}"
   -- Identity conversions Go permits at runtime with no representation
@@ -1341,14 +1341,14 @@ to array or pointer to array with length {n}"
   | _, _, other, _ => unsupported s!"conversion to {repr other}"
 
 def convertValueToTy (state : ExecState) (typ : Ty) (value : GoValue) :
-    Except GoError GoValue :=
+    Except Stop GoValue :=
   convertValueToTyFuel typeResolutionFuel state typ value
 
 /-- Default value for each struct field with the (already fuel-decremented)
 default builder, in declaration order. Structural on the list; part of the
 de-WF recipe (see `normalizeListWith`). -/
-def defaultFieldsWith (f : Ty → Except GoError GoValue) :
-    List FieldDef → Except GoError (Array (String × GoValue))
+def defaultFieldsWith (f : Ty → Except Stop GoValue) :
+    List FieldDef → Except Stop (Array (String × GoValue))
   | field :: rest => do
       let head ← f field.typ
       let tail ← defaultFieldsWith f rest
@@ -1360,7 +1360,7 @@ def defaultFieldsWith (f : Ty → Except GoError GoValue) :
 -- the element default once and replicates it (`defaultValue` is pure, so all
 -- elements are equal); the `length == 0` guard preserves the original
 -- behavior of not evaluating the element type for an empty array.
-def defaultValueFuel : Nat → ExecState → Ty → Except GoError GoValue
+def defaultValueFuel : Nat → ExecState → Ty → Except Stop GoValue
   | 0, _, _ => unsupported "default value: type nesting too deep"
   | _ + 1, _, .bool => return .bool false
   | _ + 1, _, .int kind => return .int 0 kind
@@ -1386,7 +1386,7 @@ def defaultValueFuel : Nat → ExecState → Ty → Except GoError GoValue
           .struct name <$> defaultFieldsWith (defaultValueFuel fuel state) fields.toList
       | some (.alias target) => defaultValueFuel fuel state target
       | some (.defined target) => defaultValueFuel fuel state target
-      | some (.unsupported feature) => unsupported s!"default value for {feature}"
+      | some (.opaqueDecl feature) => unsupported s!"default value for {feature}"
       | some (.interfaceDef _) => unsupported s!"default value at interface type {name.key}"
       | none => unsupported s!"default value for unknown defined type {name.key}"
   | _ + 1, _, .unsupported feature => unsupported s!"default value for {feature}"
@@ -1397,14 +1397,14 @@ example (σ : ExecState) (kind : IntKind) :
     defaultValueFuel 5 σ (.int kind) = .ok (.int 0 kind) := by
   simp [defaultValueFuel]; rfl
 
-def defaultValue (state : ExecState) (ty : Ty) : Except GoError GoValue :=
+def defaultValue (state : ExecState) (ty : Ty) : Except Stop GoValue :=
   defaultValueFuel typeResolutionFuel state ty
 
 /-- Build a struct value field-by-field from positional literal args, normalizing
 each against its field type. Not recursive with `buildStructValue` (it only calls
 the total `normalizeValueForTy`); callers guarantee the checked length. -/
 def buildStructFields (state : ExecState) :
-    List FieldDef → List GoValue → Except GoError (Array (String × GoValue))
+    List FieldDef → List GoValue → Except Stop (Array (String × GoValue))
   | field :: fieldRest, value :: valueRest => do
       let head ← normalizeValueForTy state field.typ value
       let tail ← buildStructFields state fieldRest valueRest
@@ -1412,7 +1412,7 @@ def buildStructFields (state : ExecState) :
   | _, _ => return #[]
 
 -- Total via fuel: only the `.defined → .alias` chain recurses; fuel bounds it.
-def buildStructValueFuel : Nat → ExecState → Ty → Array GoValue → Except GoError GoValue
+def buildStructValueFuel : Nat → ExecState → Ty → Array GoValue → Except Stop GoValue
   | fuel + 1, state, .defined name, args => do
       match TypeEnv.lookup state.types name with
       | some (.struct fields) =>
@@ -1426,20 +1426,20 @@ def buildStructValueFuel : Nat → ExecState → Ty → Array GoValue → Except
       -- TypeDef.defined docstring).
       | some (.defined _) => unsupported s!"struct literal for defined type {name.key} over non-struct underlying"
       | some (.interfaceDef _) => unsupported s!"struct literal for interface type {name.key}"
-      | some (.unsupported feature) => unsupported s!"struct literal for {feature}"
+      | some (.opaqueDecl feature) => unsupported s!"struct literal for {feature}"
       | none => unsupported s!"struct literal for unknown defined type {name.key}"
   | 0, _, .defined _, _ => unsupported "struct literal: type nesting too deep"
   | _, _, .unsupported feature, _ => unsupported s!"struct literal for {feature}"
   | _, _, other, _ => unsupported s!"struct literal for non-defined type {repr other}"
 
 def buildStructValue (state : ExecState) (typ : Ty) (args : Array GoValue) :
-    Except GoError GoValue :=
+    Except Stop GoValue :=
   buildStructValueFuel typeResolutionFuel state typ args
 
 -- Not recursive: it calls only the now-total defaultValue / normalizeValueForTy,
 -- so the for-loops are fine in a plain def.
 def buildArrayValue (state : ExecState) (length : Nat) (elem : Ty)
-    (args : Array (Int × GoValue)) : Except GoError GoValue := do
+    (args : Array (Int × GoValue)) : Except Stop GoValue := do
   let mut values := #[]
   for _ in [:length] do
     values := values.push (← defaultValue state elem)
@@ -1456,12 +1456,12 @@ def buildArrayValue (state : ExecState) (length : Nat) (elem : Ty)
   return .array values
 
 def buildDefaultArrayValue (state : ExecState) (length : Nat) (elem : Ty) :
-    Except GoError GoValue :=
+    Except Stop GoValue :=
   buildArrayValue state length elem #[]
 
 -- Not recursive; total now that defaultValue / resolveDefinedAliases are.
 def typeAssertValue (state : ExecState) (value : GoValue) (targetTy : Ty) :
-    Except GoError (GoValue × Bool) := do
+    Except Stop (GoValue × Bool) := do
   let failed ← defaultValue state targetTy
   match value with
   | .nil => return (failed, false)
@@ -1526,31 +1526,31 @@ def typeAssertPanicMessage (state : ExecState) (value : GoValue) (targetTy : Ty)
         dynamicTypeNameForMessage state value ++ ", not " ++
         goTypeNameForMessage state targetTy
 
-def valueAsInt : GoValue → Except GoError Int
+def valueAsInt : GoValue → Except Stop Int
   | .int value _ => return value
   | other => stuck s!"expected int value, got {repr other}"
 
-def valueAsIntValue : GoValue → Except GoError (Int × IntKind)
+def valueAsIntValue : GoValue → Except Stop (Int × IntKind)
   | .int value kind => return (value, kind)
   | other => stuck s!"expected int value, got {repr other}"
 
-def valueAsBool : GoValue → Except GoError Bool
+def valueAsBool : GoValue → Except Stop Bool
   | .bool value => return value
   | other => stuck s!"expected bool value, got {repr other}"
 
-def valueAsSlice : GoValue → Except GoError SliceValue
+def valueAsSlice : GoValue → Except Stop SliceValue
   | .slice value => return value
   | other => stuck s!"expected slice value, got {repr other}"
 
-def valueAsMap : GoValue → Except GoError MapValue
+def valueAsMap : GoValue → Except Stop MapValue
   | .map value => return value
   | other => stuck s!"expected map value, got {repr other}"
 
-def valueAsChan : GoValue → Except GoError ChanValue
+def valueAsChan : GoValue → Except Stop ChanValue
   | .chan value => return value
   | other => stuck s!"expected channel value, got {repr other}"
 
-def valueAsLoc : GoValue → Except GoError Loc
+def valueAsLoc : GoValue → Except Stop Loc
   | .addr loc => return loc
   | .nil => panic "runtime error: invalid memory address or nil pointer dereference"
   | other => stuck s!"expected address value, got {repr other}"
@@ -1558,8 +1558,8 @@ def valueAsLoc : GoValue → Except GoError Loc
 /-- Compare list elements pairwise with the (already fuel-decremented)
 comparator; callers guarantee equal, checked lengths. Structural on the
 list; part of the de-WF recipe (see `normalizeListWith`). -/
-def valueEqListWith (f : GoValue → GoValue → Except GoError Bool) :
-    List GoValue → List GoValue → Except GoError Bool
+def valueEqListWith (f : GoValue → GoValue → Except Stop Bool) :
+    List GoValue → List GoValue → Except Stop Bool
   | leftValue :: leftRest, rightValue :: rightRest => do
       if ← f leftValue rightValue then
         valueEqListWith f leftRest rightRest
@@ -1569,9 +1569,9 @@ def valueEqListWith (f : GoValue → GoValue → Except GoError Bool) :
 
 /-- Compare struct fields pairwise with the (already fuel-decremented)
 comparator, checking field-name alignment on both sides. -/
-def valueEqFieldsWith (f : Ty → GoValue → GoValue → Except GoError Bool) :
+def valueEqFieldsWith (f : Ty → GoValue → GoValue → Except Stop Bool) :
     List FieldDef → List (String × GoValue) → List (String × GoValue) →
-    Except GoError Bool
+    Except Stop Bool
   | field :: fieldRest, (leftName, leftValue) :: leftRest, (rightName, rightValue) :: rightRest => do
       if leftName != field.name then
         stuck s!"left struct equality field mismatch: expected {field.name}, got {leftName}"
@@ -1587,7 +1587,7 @@ def valueEqFieldsWith (f : Ty → GoValue → GoValue → Except GoError Bool) :
 -- normalize block; fuel bounds nesting DEPTH only). The public `valueEq`
 -- seeds `typeResolutionFuel`, keeping its original signature so call sites
 -- are unchanged.
-def valueEqFuel : Nat → ExecState → Ty → GoValue → GoValue → Except GoError Bool
+def valueEqFuel : Nat → ExecState → Ty → GoValue → GoValue → Except Stop Bool
     | 0, _, _, _, _ => unsupported "equality: type nesting too deep"
     | _ + 1, _, .bool, .bool left, .bool right => return left == right
     | _ + 1, _, .bool, left, right => stuck s!"bool equality expected bool operands, got {repr left} and {repr right}"
@@ -1724,7 +1724,7 @@ def valueEqFuel : Nat → ExecState → Ty → GoValue → GoValue → Except Go
                   stuck s!"right struct equality field count mismatch: expected {fields.size}, got {rightFields.size}"
                 valueEqFieldsWith (valueEqFuel fuel state) fields.toList leftFields.toList rightFields.toList
             | _, _ => stuck s!"struct equality expected struct {name.key} operands, got {repr left} and {repr right}"
-        | some (.unsupported feature) => unsupported s!"equality for {feature}"
+        | some (.opaqueDecl feature) => unsupported s!"equality for {feature}"
         | some (.interfaceDef _) => unsupported s!"equality at interface type {name.key}"
         | none => unsupported s!"equality for unknown defined type {name.key}"
     | _ + 1, _, .unsupported feature, _, _ => unsupported s!"equality for {feature}"
@@ -1735,7 +1735,7 @@ example (σ : ExecState) (a b : Bool) :
     valueEqFuel 5 σ .bool (.bool a) (.bool b) = .ok (a == b) := by
   simp [valueEqFuel]; rfl
 
-def valueEq (state : ExecState) (ty : Ty) (left right : GoValue) : Except GoError Bool :=
+def valueEq (state : ExecState) (ty : Ty) (left right : GoValue) : Except Stop Bool :=
   valueEqFuel typeResolutionFuel state ty left right
 
 /-- Go's `typehash` is VALUE-directed, not type-directed: it recurses into
@@ -1806,7 +1806,7 @@ which never short-circuits. Split out of `mapEntryIndex?` so the NIL-map
 paths (which never reach the entry scan) can run it too — Go panics there
 as well. -/
 def checkKeyHashable (state : ExecState) (key : GoValue)
-    (isInsert : Bool) (nonEmpty : Bool) : Except GoError Unit :=
+    (isInsert : Bool) (nonEmpty : Bool) : Except Stop Unit :=
   match valueHashability state key with
   | .unhashable name => throw (.panic (hashPanicMessage name (isInsert || nonEmpty)))
   | .unknown name => unsupported s!"map key hashability for unknown defined type {name}"
@@ -1819,7 +1819,7 @@ def checkKeyHashable (state : ExecState) (key : GoValue)
 -- limit) lives at `mapAssignValue` (Machine.lean).
 def mapEntryIndex? (state : ExecState) (keyTy : Ty)
     (entries : Array (Nat × GoValue × GoValue))
-    (key : GoValue) (isInsert : Bool := false) : Except GoError (Option Nat) := do
+    (key : GoValue) (isInsert : Bool := false) : Except Stop (Option Nat) := do
   checkKeyHashable state key isInsert (!entries.isEmpty)
   let mut i := 0
   for (_, entryKey, _) in entries do
@@ -1831,26 +1831,26 @@ def mapEntryIndex? (state : ExecState) (keyTy : Ty)
 -- The float arms are IEEE-unordered on NaN (note §4): a NaN operand
 -- makes < <= > >= ALL false, so > is lt with swapped operands and >= is
 -- le swapped — NOT the negation of <=/<.
-def valueLess : GoValue → GoValue → Except GoError Bool
+def valueLess : GoValue → GoValue → Except Stop Bool
   | .int left _, .int right _ => return left < right
   | left@(.float _ _), right => floatCompareResult "<" FloatBits.flt64 FloatBits.flt32 left right
   | .string left, .string right => return GoString.compare left right == .lt
   | left, right => stuck s!"mismatched < operands: {repr left} and {repr right}"
 
-def valueAtMost : GoValue → GoValue → Except GoError Bool
+def valueAtMost : GoValue → GoValue → Except Stop Bool
   | .int left _, .int right _ => return left <= right
   | left@(.float _ _), right => floatCompareResult "<=" FloatBits.fle64 FloatBits.fle32 left right
   | .string left, .string right => return GoString.compare left right != .gt
   | left, right => stuck s!"mismatched <= operands: {repr left} and {repr right}"
 
-def valueGreater : GoValue → GoValue → Except GoError Bool
+def valueGreater : GoValue → GoValue → Except Stop Bool
   | .int left _, .int right _ => return left > right
   | left@(.float _ _), right =>
       floatCompareResult ">" (fun l r => FloatBits.flt64 r l) (fun l r => FloatBits.flt32 r l) left right
   | .string left, .string right => return GoString.compare left right == .gt
   | left, right => stuck s!"mismatched > operands: {repr left} and {repr right}"
 
-def valueAtLeast : GoValue → GoValue → Except GoError Bool
+def valueAtLeast : GoValue → GoValue → Except Stop Bool
   | .int left _, .int right _ => return left >= right
   | left@(.float _ _), right =>
       floatCompareResult ">=" (fun l r => FloatBits.fle64 r l) (fun l r => FloatBits.fle32 r l) left right
@@ -1866,7 +1866,7 @@ without depending on the big-step module slated for deletion. Pure motion —
 no behavior change. -/
 
 def intBinaryResult (opName : String) (op : Int → Int → Int) (left right : GoValue) :
-    Except GoError GoValue := do
+    Except Stop GoValue := do
   let (leftValue, leftKind) ← valueAsIntValue left
   let (rightValue, rightKind) ← valueAsIntValue right
   let kind ←
@@ -1875,18 +1875,18 @@ def intBinaryResult (opName : String) (op : Int → Int → Int) (left right : G
     | none => stuck s!"mismatched {opName} integer kinds: {leftKind.name} and {rightKind.name}"
   return .int (kind.normalize (op leftValue rightValue)) kind
 
-def intKindBitWidth (opName : String) (kind : IntKind) : Except GoError Nat := do
+def intKindBitWidth (opName : String) (kind : IntKind) : Except Stop Nat := do
   match kind.bits? with
   | some bits => return bits
   | none => unsupported s!"{opName} for unbounded integer kind {kind.name}"
 
-def intKindUnsignedNat (kind : IntKind) (value : Int) : Except GoError Nat := do
+def intKindUnsignedNat (kind : IntKind) (value : Int) : Except Stop Nat := do
   let bits ← intKindBitWidth "bitwise operator" kind
   let modulus : Int := (2 : Int) ^ bits
   return (value % modulus).toNat
 
 def intBitwiseBinaryResult (opName : String) (op : Nat → Nat → Nat) (left right : GoValue) :
-    Except GoError GoValue := do
+    Except Stop GoValue := do
   let (leftValue, leftKind) ← valueAsIntValue left
   let (rightValue, rightKind) ← valueAsIntValue right
   let kind ←
@@ -1897,7 +1897,7 @@ def intBitwiseBinaryResult (opName : String) (op : Nat → Nat → Nat) (left ri
   let rightBits ← intKindUnsignedNat kind rightValue
   return .int (kind.normalize (Int.ofNat (op leftBits rightBits))) kind
 
-def intBitClearResult (left right : GoValue) : Except GoError GoValue := do
+def intBitClearResult (left right : GoValue) : Except Stop GoValue := do
   let (leftValue, leftKind) ← valueAsIntValue left
   let (rightValue, rightKind) ← valueAsIntValue right
   let kind ←
@@ -1910,14 +1910,14 @@ def intBitClearResult (left right : GoValue) : Except GoError GoValue := do
   let rightBits ← intKindUnsignedNat kind rightValue
   return .int (kind.normalize (Int.ofNat (Nat.land leftBits (Nat.xor rightBits mask)))) kind
 
-def intBitNegResult (value : GoValue) : Except GoError GoValue := do
+def intBitNegResult (value : GoValue) : Except Stop GoValue := do
   let (intValue, kind) ← valueAsIntValue value
   let bits ← intKindBitWidth "^" kind
   let mask := (2 ^ bits) - 1
   let valueBits ← intKindUnsignedNat kind intValue
   return .int (kind.normalize (Int.ofNat (Nat.xor valueBits mask))) kind
 
-def shiftCountNat (count : GoValue) : Except GoError Nat := do
+def shiftCountNat (count : GoValue) : Except Stop Nat := do
   let count ← valueAsInt count
   if count < 0 then
     panic "runtime error: negative shift amount"
@@ -1930,12 +1930,12 @@ def arithmeticShiftRight (value : Int) (count : Nat) : Int :=
   else
     Int.tdiv value divisor
 
-def intShiftLeftResult (left right : GoValue) : Except GoError GoValue := do
+def intShiftLeftResult (left right : GoValue) : Except Stop GoValue := do
   let (leftValue, leftKind) ← valueAsIntValue left
   let count ← shiftCountNat right
   return .int (leftKind.normalize (leftValue * ((2 : Int) ^ count))) leftKind
 
-def intShiftRightResult (left right : GoValue) : Except GoError GoValue := do
+def intShiftRightResult (left right : GoValue) : Except Stop GoValue := do
   let (leftValue, leftKind) ← valueAsIntValue left
   let count ← shiftCountNat right
   let shifted :=
@@ -1949,7 +1949,7 @@ def intShiftRightResult (left right : GoValue) : Except GoError GoValue := do
 mutual cluster (it was never recursive — it only loads through the slice's
 backing locations), same motion commit as the helpers above. -/
 def sliceVisibleValues (state : ExecState) (slice : SliceValue) :
-    Except GoError (Array GoValue) := do
+    Except Stop (Array GoValue) := do
   validateSlice slice
   let mut values := #[]
   for i in [:slice.len] do
@@ -1964,7 +1964,7 @@ Pure motion — no behavior change. -/
 `(id, key, value)` in cell order, and the map's `nextId` counter
 (entry-identity stamps, B1); `none` for a nil map. -/
 def mapEntries (state : ExecState) (map : MapValue) :
-    Except GoError (Option (Loc × Array (Nat × GoValue × GoValue) × Nat)) := do
+    Except Stop (Option (Loc × Array (Nat × GoValue × GoValue) × Nat)) := do
   match map.base with
   | none => return none
   | some baseLoc =>
@@ -1972,7 +1972,7 @@ def mapEntries (state : ExecState) (map : MapValue) :
       return some (baseLoc, p.1, p.2)
 
 def mapLookupValue (state : ExecState) (map : MapValue) (key : GoValue)
-    (keyTy valueTy : Ty) : Except GoError (GoValue × Bool) := do
+    (keyTy valueTy : Ty) : Except Stop (GoValue × Bool) := do
   match ← mapEntries state map with
   -- A NIL map still hashes the key: Go panics `hash of unhashable type: X`
   -- (the `h == nil` arm of mapKeyError; probed 2026-07-31) before returning
@@ -2042,7 +2042,7 @@ def appendSpillWidth (oldCap newLen : Nat) : Nat :=
   appendSpillUpper oldCap newLen - newLen + 1
 
 def buildAppendBackingValue (state : ExecState) (elem : Ty)
-    (oldValues elemValues : Array GoValue) (newCap : Nat) : Except GoError GoValue := do
+    (oldValues elemValues : Array GoValue) (newCap : Nat) : Except Stop GoValue := do
   let mut values := #[]
   for value in oldValues ++ elemValues do
     values := values.push (← normalizeValueForTy state elem value)
@@ -2127,7 +2127,7 @@ def nilValueMethodText? (state : ExecState) (fid : FuncId) (args : List GoValue)
               | _ => none
 
 def dynamicDispatch? (state : ExecState) (func : Func) (argValues : Array GoValue) :
-    Except GoError (Option (Func × Array GoValue)) := do
+    Except Stop (Option (Func × Array GoValue)) := do
   match methodInfoByFuncId? state func.id with
   | none => return none
   | some method =>
@@ -2172,9 +2172,9 @@ def dynamicDispatch? (state : ExecState) (func : Func) (argValues : Array GoValu
                   -- are errors, keeping the proof layer's error-arm
                   -- discharge shape (`dynamicDispatch?_locSup`).
                   throw (if dynamicMethodSetRecorded state dynTy then
-                    GoError.stuck s!"dynamic type {goTypeNameForMessage state dynTy} has no method {method.name}"
+                    Stop.stuck s!"dynamic type {goTypeNameForMessage state dynTy} has no method {method.name}"
                   else
-                    GoError.unsupported s!"interface dispatch of {method.name} on \
+                    Stop.unsupported s!"interface dispatch of {method.name} on \
 {goTypeNameForMessage state dynTy}: its method set has NO record on the \
 wire (a method-carrying type without a MethodSetRecord) — refusing \
 rather than dispatching from no information (BUG-009/BUG-053 class)")

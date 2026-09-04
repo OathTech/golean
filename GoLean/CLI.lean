@@ -226,7 +226,7 @@ private def runJson : GoLean.GoCore.Result → Json
         ("values", Json.arr (values.map goValueJson))
       ]
 
-private def errorJson (error : GoError) : Json :=
+private def errorJson (error : Stop) : Json :=
   Json.mkObj [
     ("schema", Json.str observationSchema),
     ("status", Json.str error.status),
@@ -387,7 +387,7 @@ def decodeObservation (path raw : String) : Except String Json := do
         decodeGoValueObservation s!"{path}.values[{i}]" value)
       return json
   -- "fatal" (spec-parity slice 2): gc's unrecoverable runtime-throw
-  -- class (`GoError.fatal` — the sync misuse fatals), message-carrying
+  -- class (`Stop.fatal` — the sync misuse fatals), message-carrying
   -- like deadlock/race.
   | "panic" | "unsupported" | "stuck" | "error" | "fuel-out" | "deadlock" | "race"
   | "fatal" =>
@@ -683,7 +683,7 @@ private def parseEnumArgs : List String → EnumArgs → Except String EnumArgs
         parseEnumArgs rest { cfg with expectStatus := some parts }
   | flag :: _, _ => .error s!"unknown or incomplete option: {flag}\n{usage}"
 
-private def renderGoError (err : GoError) : String :=
+private def renderStop (err : Stop) : String :=
   s!"{err.status}: {err.message}"
 
 /-- The per-run-invariant half of the enumeration driver: subject lookup,
@@ -704,7 +704,7 @@ structure EnumProgram where
   args : Array GoValue
 
 def enumSetup (program : GoCore.Program) (name : String)
-    (args : Array GoValue) : Except GoError EnumProgram := do
+    (args : Array GoValue) : Except Stop EnumProgram := do
   -- Pre-init step ORDER (find → arity → seed → init-shape) is shared
   -- verbatim with `runProgramM` (audit response 2026-08-05, C6:
   -- divergent orders gave divergent fail-closed errors on the
@@ -754,7 +754,7 @@ is KEPT: the panic is a member), and — lane d — `"race"` (the
 detector's refusal, also a member with its stream: for a racy case
 EVERY enumerated path must carry it, which `--expect-status race`
 enforces; under any other expectation a race member fails the status
-discipline loudly). All other `GoError`s (stuck, unsupported,
+discipline loudly). All other `Stop`s (stuck, unsupported,
 internal, fuel-out, and `deadlock` — a deadlocking member still has
 no membership handling) propagate and the enumeration fails loud.
 Returns (status, observation, leftover); non-`private` so the
@@ -762,7 +762,7 @@ driver-agreement eval tests can pin it against the originals it
 mirrors (audit F5). -/
 def enumPoolRun (resultLocs : List Loc) :
     Nat → GoCore.Machine.MultiConfig → GoCore.Machine.RaceState →
-    GoCore.Choices → Except GoError (String × Json × GoCore.Choices)
+    GoCore.Choices → Except Stop (String × Json × GoCore.Choices)
   | fuel, m, r, choices =>
       if m.threads.isEmpty then
         throw (.internal "thread pool without a main goroutine")
@@ -819,7 +819,7 @@ observation (a panicking initializer aborts the program before the
 subject), reported with the leftover stream like any panic member. -/
 def enumInitRun :
     Nat → GoCore.ExecState → GoCore.Machine.Config → GoCore.Choices →
-    Except GoError (Sum (GoCore.ExecState × GoCore.Choices) (String × GoCore.Choices))
+    Except Stop (Sum (GoCore.ExecState × GoCore.Choices) (String × GoCore.Choices))
   | _, σ, .next .stop, choices => return .inl (σ, choices)
   | _, _, .panicked msg, choices => return .inr (msg, choices)
   | _, _, .blockedSend _ _ _, _ => throw .deadlock
@@ -839,7 +839,7 @@ the subject itself on the leftover. The returned leftover is the
 composite run's — init sites and subject sites are all sites of the
 run, which is what the explore loop's probe semantics count. -/
 def enumRunProgram (ep : EnumProgram) (runFuel : Nat)
-    (stream : GoCore.Choices) : Except GoError (String × Json × GoCore.Choices) := do
+    (stream : GoCore.Choices) : Except Stop (String × Json × GoCore.Choices) := do
   let (σ₁, choices₁) ←
     match ep.initBody? with
     | none => pure (ep.σ₀, stream)
@@ -864,7 +864,7 @@ def enumRunProgram (ep : EnumProgram) (runFuel : Nat)
 /-- The observation `native-json-run` prints for a driver result — public
 so the driver-agreement eval tests compare the two drivers on the SAME
 canonical JSON (audit F5). -/
-def observationOfRun : Except GoError GoCore.Result → Json
+def observationOfRun : Except Stop GoCore.Result → Json
   | .ok result => runJson result
   | .error err => errorJson err
 
@@ -1233,9 +1233,9 @@ def probeSite (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
           -- check either. Counted as a probe run (work accounting).
           o := { o with probes := o.probes + 1 }
         else
-          throw s!"alias-guard probe {prefixPicks ++ [d]} failed: the probed member's run errored — {renderGoError GoError.fuelOut}. Under a correct bound this rung aliases onto an in-bound member, so this is a member-class failure (e.g. a deadlocking or fuel-out member, which has no membership handling), NOT evidence against the computed bound {bound} (audit F15; a bound refutation is a probe OBSERVATION outside the enumerated set)"
+          throw s!"alias-guard probe {prefixPicks ++ [d]} failed: the probed member's run errored — {renderStop Stop.fuelOut}. Under a correct bound this rung aliases onto an in-bound member, so this is a member-class failure (e.g. a deadlocking or fuel-out member, which has no membership handling), NOT evidence against the computed bound {bound} (audit F15; a bound refutation is a probe OBSERVATION outside the enumerated set)"
     | .error err =>
-        throw s!"alias-guard probe {prefixPicks ++ [d]} failed: the probed member's run errored — {renderGoError err}. Under a correct bound this rung aliases onto an in-bound member, so this is a member-class failure (e.g. a deadlocking or fuel-out member, which has no membership handling), NOT evidence against the computed bound {bound} (audit F15; a bound refutation is a probe OBSERVATION outside the enumerated set)"
+        throw s!"alias-guard probe {prefixPicks ++ [d]} failed: the probed member's run errored — {renderStop err}. Under a correct bound this rung aliases onto an in-bound member, so this is a member-class failure (e.g. a deadlocking or fuel-out member, which has no membership handling), NOT evidence against the computed bound {bound} (audit F15; a bound refutation is a probe OBSERVATION outside the enumerated set)"
     | .ok (_, obs, _) =>
         let pset :=
           if o.probeObservations.contains obs then o.probeObservations
@@ -1295,7 +1295,7 @@ partial def poolDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
             fun o p =>
               match GoCore.Machine.loadMany σf resultLocs with
               | .error e =>
-                  .error s!"result readout failed at a terminal: {renderGoError e}"
+                  .error s!"result readout failed at a terminal: {renderStop e}"
               | .ok vals =>
                   recordLeaf ctx o p "ok"
                     (runJson { values := vals.toArray }) p.length
@@ -1395,7 +1395,7 @@ partial def poolStepDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
       -- sentinel-free step's result.
       match GoCore.Machine.stepMulti m (picks ++ [0]) with
       | .error e =>
-          .error s!"machine step failed under pick assignment {path.reverse} — cannot certify the observation set: {renderGoError e}"
+          .error s!"machine step failed under pick assignment {path.reverse} — cannot certify the observation set: {renderStop e}"
       | .ok (m', leftover, ev) =>
           if leftover != [0] then
             .error s!"consumption accountant drift under {path.reverse}: sentinel-suffixed step left {leftover} (expected the sentinel alone) — the accountant {if leftover.isEmpty then "MISSED a consumption site (the machine drew the sentinel)" else "over-counted (supplied picks went unconsumed)"}; driver-copy drift, cannot certify"
@@ -1405,7 +1405,7 @@ partial def poolStepDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
                 recordLeaf ctx { out with steps := out.steps + 1 } path
                   "race" (errorJson .raceDetected) path.length
             | .error e =>
-                .error s!"race-detector update failed: {renderGoError e}"
+                .error s!"race-detector update failed: {renderStop e}"
             | .ok r' =>
                 poolDFS ctx { out with steps := out.steps + 1 } path
                   resultLocs fuel m' r'
@@ -1419,13 +1419,13 @@ partial def subjectEntry (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
     (σ : GoCore.ExecState) : Except String EnumOutcome := do
   match GoCore.Machine.bindParams [] σ ctx.ep.func.args.toList
       ctx.ep.args.toList with
-  | .error e => .error s!"subject entry failed: {renderGoError e}"
+  | .error e => .error s!"subject entry failed: {renderStop e}"
   | .ok (env, s₂) =>
     match GoCore.Machine.allocDecls env s₂ ctx.ep.func.results.toList with
-    | .error e => .error s!"subject entry failed: {renderGoError e}"
+    | .error e => .error s!"subject entry failed: {renderStop e}"
     | .ok (frameEnv, s₃) =>
       match GoCore.Machine.pinResultLocs frameEnv ctx.ep.func.results.toList with
-      | .error e => .error s!"subject entry failed: {renderGoError e}"
+      | .error e => .error s!"subject entry failed: {renderStop e}"
       | .ok resultLocs =>
           poolDFS ctx out path resultLocs ctx.runFuel
             ⟨#[.exec ctx.ep.func.body frameEnv (.frame [] [] [] [] .stop)], s₃, 0⟩
@@ -1460,7 +1460,7 @@ partial def initDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
             branchSite ctx out path bound path.length fun o b =>
               match GoCore.Machine.stepFn σ c [b, 0] with
               | .error e =>
-                  .error s!"package init step failed under {(b :: path).reverse}: {renderGoError e}"
+                  .error s!"package init step failed under {(b :: path).reverse}: {renderStop e}"
               | .ok (c', σ', leftover) =>
                   if leftover != [0] then
                     .error s!"consumption accountant drift in package init under {(b :: path).reverse}: sentinel-suffixed step left {leftover} (expected the sentinel alone) — driver-copy drift"
@@ -1472,7 +1472,7 @@ partial def initDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
             -- a step the accountant called non-consuming.
             match GoCore.Machine.stepFn σ c [0] with
             | .error e =>
-                .error s!"package init failed under {path.reverse}: {renderGoError (GoCore.Machine.markInitPhase e)}"
+                .error s!"package init failed under {path.reverse}: {renderStop (GoCore.Machine.markInitPhase e)}"
             | .ok (c', σ', leftover) =>
                 if leftover != [0] then
                   .error s!"consumption accountant drift in package init under {path.reverse}: a step the accountant called non-consuming drew the sentinel — driver-copy drift"
@@ -1527,17 +1527,17 @@ def runDedupObservations (ep : EnumProgram) (cfg : EnumArgs) : IO UInt32 := do
     return 1
   match GoCore.Machine.bindParams [] ep.σ₀ ep.func.args.toList ep.args.toList with
   | .error e =>
-      IO.eprintln s!"coverage-observations: subject entry failed: {renderGoError e}"
+      IO.eprintln s!"coverage-observations: subject entry failed: {renderStop e}"
       return 1
   | .ok (env, s₂) =>
   match GoCore.Machine.allocDecls env s₂ ep.func.results.toList with
   | .error e =>
-      IO.eprintln s!"coverage-observations: subject entry failed: {renderGoError e}"
+      IO.eprintln s!"coverage-observations: subject entry failed: {renderStop e}"
       return 1
   | .ok (frameEnv, s₃) =>
   match GoCore.Machine.pinResultLocs frameEnv ep.func.results.toList with
   | .error e =>
-      IO.eprintln s!"coverage-observations: subject entry failed: {renderGoError e}"
+      IO.eprintln s!"coverage-observations: subject entry failed: {renderStop e}"
       return 1
   | .ok resultLocs =>
     let m₀ : GoCore.Machine.MultiConfig :=
@@ -1602,7 +1602,7 @@ private def runCoverageObservations (args : List String) : IO UInt32 := do
               | .ok program =>
                   match enumSetup program functionName (cfg.args.map GoValue.int) with
                   | .error err =>
-                      IO.eprintln s!"coverage-observations: setup failed: {renderGoError err}"
+                      IO.eprintln s!"coverage-observations: setup failed: {renderStop err}"
                       return 1
                   | .ok ep =>
                       match cfg.engine with

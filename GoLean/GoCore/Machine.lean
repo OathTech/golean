@@ -54,7 +54,7 @@ mid-arc audit):
   emits initializations inside `.seqn`/`.block` statement lists.
 
 Statement-side coverage (S2): the full interpreter fragment. Wide
-statements (`newValue`, make/assign/lookup for maps and
+statements (`allocNew`, make/assign/lookup for maps and
 slices, `typeAssert`, `appendSlice`, `copySlice`) go through one generic
 `stmtOpK` frame — an operand plan (`stmtPlan`) whose leading `ntargets`
 operands are target addresses, checked as they arrive (preserving the
@@ -196,7 +196,7 @@ def strictPlan : Expr → Option (StrictOp × List Expr)
 high, optional max already as `Int`). Transcribed from the interpreter's
 `.slice` arm. -/
 def applySlice (s : ExecState) (b : GoValue) (lowValue highValue : Int)
-    (maxValue : Option Int) : Except GoError (GoValue × ExecState) := do
+    (maxValue : Option Int) : Except Stop (GoValue × ExecState) := do
   match b with
   | .string value => return ((← stringSlice value lowValue highValue maxValue), s)
   | .slice slice => return ((← sliceFromSlice slice lowValue highValue maxValue), s)
@@ -216,7 +216,7 @@ against the base. Shared verbatim between the `indexAddr` strict op
 `storeTarget` (an assignment's OWN index target — spec §Assignments
 defers the check to the STORE, phase 2; convergence round BUG-029,
 pinned by `channels/recv-edge/oob-second-target-stores-first`). -/
-def indexTargetLoc (s : ExecState) (b i : GoValue) : Except GoError Loc := do
+def indexTargetLoc (s : ExecState) (b i : GoValue) : Except Stop Loc := do
   let indexValue ← valueAsInt i
   match b with
   | .slice slice => sliceIndexLoc slice indexValue
@@ -256,7 +256,7 @@ conforming ORIGINAL-KEY-RETAINING implementation is outside this
 singleton; no claim about the stored key transfers to it. Re-envelope
 (two-point retention choice) is XIMPL-gated — see inventory E10. -/
 def mapAssignValue (s : ExecState) (keyTy valueTy : Ty)
-    (baseV keyV valueV : GoValue) : Except GoError ExecState := do
+    (baseV keyV valueV : GoValue) : Except Stop ExecState := do
   let map ← valueAsMap baseV
   let key ← normalizeValueForTy s keyTy keyV
   let value ← normalizeValueForTy s valueTy valueV
@@ -283,7 +283,7 @@ big-step interpreter's `evalExpr`, minus the recursion. Panics are Go
 behavior (`.panic`); `.stuck`/`.unsupported` mean no relation rule matches
 (fail closed). The catch-all arm covers head/arity mismatches unreachable
 via `strictPlan`. -/
-def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError (GoValue × ExecState)
+def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except Stop (GoValue × ExecState)
   | .add, [l, r] =>
       match l, r with
       | .int .., .int .. => do return ((← intBinaryResult "+" (· + ·) l r), s)
@@ -636,7 +636,7 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
 
 /-- Declare typed locals: allocate each at its default value, extending the
 environment (the functional form of the old `DeclsR`). -/
-def allocDecls : LocalEnv → ExecState → List Param → Except GoError (LocalEnv × ExecState)
+def allocDecls : LocalEnv → ExecState → List Param → Except Stop (LocalEnv × ExecState)
   | env, s, [] => return (env, s)
   | env, s, p :: rest => do
       let v ← defaultValue s p.typ
@@ -646,7 +646,7 @@ def allocDecls : LocalEnv → ExecState → List Param → Except GoError (Local
 /-- Bind call parameters into a frame environment, normalized at declared
 type (the functional form of the old `BindParamsR`). Arity is checked by
 `enterFrame` before this runs. -/
-def bindParams : LocalEnv → ExecState → List Param → List GoValue → Except GoError (LocalEnv × ExecState)
+def bindParams : LocalEnv → ExecState → List Param → List GoValue → Except Stop (LocalEnv × ExecState)
   | env, s, [], [] => return (env, s)
   | env, s, p :: ps, v :: vs => do
       let v' ← normalizeValueForTy s p.typ v
@@ -657,7 +657,7 @@ def bindParams : LocalEnv → ExecState → List Param → List GoValue → Exce
 
 /-- Resolve freshly declared result names to their frame locations, at call
 time (the functional form of the old `LookupsR`; D2-proper result pinning). -/
-def pinResultLocs (env : LocalEnv) : List Param → Except GoError (List Loc)
+def pinResultLocs (env : LocalEnv) : List Param → Except Stop (List Loc)
   | [] => return []
   | p :: ps =>
       match env.lookup p.id with
@@ -665,13 +665,13 @@ def pinResultLocs (env : LocalEnv) : List Param → Except GoError (List Loc)
       | none => stuck s!"unbound GoCore result variable: {p.id}"
 
 /-- Load a list of locations (frame-exit result reads; old `LoadsR`). -/
-def loadMany (s : ExecState) : List Loc → Except GoError (List GoValue)
+def loadMany (s : ExecState) : List Loc → Except Stop (List GoValue)
   | [] => return []
   | loc :: locs => do return (← loadLoc s loc) :: (← loadMany s locs)
 
 /-- Store values to locations pairwise (frame-exit target writes; old
 `StoreManyR`). -/
-def storeMany : ExecState → List Loc → List GoValue → Except GoError ExecState
+def storeMany : ExecState → List Loc → List GoValue → Except Stop ExecState
   | s, [], [] => return s
   | s, loc :: locs, v :: vs => do storeMany (← storeLoc s loc v) locs vs
   | _, [], _ :: _ => stuck "extra GoCore assignment value"
@@ -684,7 +684,7 @@ the machine (frame entry). The two arity checks mirror the interpreter's
 (pre-dispatch in `execFunctionCallWithLocs`, post-dispatch in
 `execFunctionWithValues`). -/
 def enterFrame (s : ExecState) (fid : FuncId) (argVals : List GoValue) :
-    Except GoError (Func × LocalEnv × List Loc × ExecState) := do
+    Except Stop (Func × LocalEnv × List Loc × ExecState) := do
   let func ←
     match findFunctionIn? s.functions fid with
     | some func => pure func
@@ -781,7 +781,7 @@ theorem entryPanicText_entryPanicStream {s : ExecState} {fid : FuncId}
 addresses, then the value operands), then perform the state update in one
 `applyStmtOp` step. -/
 inductive StmtOp where
-  | newValue (typ : Ty)
+  | allocNew (typ : Ty)
   | makeSlice (elem : Ty) (hasCap : Bool)
   | makeMap (hasSpace : Bool)
   /-- `make(chan T[, n])` (channels arc slice 1): allocate an empty
@@ -809,9 +809,9 @@ moved it onto the phase-split delivery machinery (`tgtOpK`/`rhsK`/
 `storeK`), whose per-store phase 2 the one-shot `applyStmtOp` cannot
 express. -/
 def stmtPlan : Stmt → Option (StmtOp × Nat × List Expr)
-  | .newValue target value typ => do
+  | .allocNew target value typ => do
       let te ← assigneeExpr target
-      return (.newValue typ, 1, [te, value])
+      return (.allocNew typ, 1, [te, value])
   | .makeSlice target elem len cap => do
       let te ← assigneeExpr target
       return (.makeSlice elem cap.isSome, 1, [te, len] ++ cap.toList)
@@ -846,16 +846,16 @@ correspondence kit's `∀ choices` lemmas dispatch through this core rather
 than a per-arm congruence bash. Arms are verbatim from the old
 `applyStmtOp` minus the trailing `choices` threading.
 -/
-def applyStmtOpCore (s : ExecState) (op : StmtOp) (_nt : Nat)
-    (vs : List GoValue) : Except GoError ExecState := do
+def applyStmtOpCore (s : ExecState) (op : StmtOp)
+    (vs : List GoValue) : Except Stop ExecState := do
   match op with
-  | .newValue typ =>
+  | .allocNew typ =>
       match vs with
       | [tv, value] => do
           let loc ← valueAsLoc tv
           let (nloc, s₁) := s.alloc value typ
           return ((← storeLoc s₁ loc (.addr nloc)))
-      | _ => stuck "malformed newValue operands"
+      | _ => stuck "malformed allocNew operands"
   | .makeSlice elem hasCap => do
       let (tv, lenV, capV?) ←
         match vs, hasCap with
@@ -1062,8 +1062,8 @@ target addresses, then values). One state-update step. `appendSlice`'s
 spill path consumes a capacity choice — the second nondeterministic point
 — and is the ONLY arm that touches the stream; everything else dispatches
 to the choices-free `applyStmtOpCore`. -/
-def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (nt : Nat)
-    (vs : List GoValue) : Except GoError (ExecState × Choices) := do
+def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (_nt : Nat)
+    (vs : List GoValue) : Except Stop (ExecState × Choices) := do
   match op with
   | .appendSlice elem =>
       match vs with
@@ -1130,7 +1130,7 @@ def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (nt : Nat)
             return ((← storeLoc current tloc
               (.slice { base := some base, offset := 0, len := newLen, cap := newCap })), choices)
       | _ => stuck "malformed appendSlice operands"
-  | op => do return ((← applyStmtOpCore s op nt vs), choices)
+  | op => do return ((← applyStmtOpCore s op vs), choices)
 
 /-- Range START (BUG-005 (L) surgery, replacing the retired snapshot):
 the ranged map's base cell and its START-ID set — the entry ids live
@@ -1140,7 +1140,7 @@ clause; entry-identity stamps, B1). Shared verbatim by rule
 `Step.mapRangeStart` and `stepFn`'s `mapRangeK` arm. The load here is
 a real heap read (the footprint's `mapRangeK` arm). -/
 def mapRangeStartSets (s : ExecState) (v : GoValue) :
-    Except GoError (Option Loc × Array Nat) := do
+    Except Stop (Option Loc × Array Nat) := do
   let map ← valueAsMap v
   match map.base with
   | none => return (none, #[])
@@ -1153,7 +1153,7 @@ nil map = no entries), ids included. Every `mapIterNext` pick —
 including the final done-check — performs this read (gc's exhausted
 `mapIterNext` still reads; the U1-closing footprint arm records it). -/
 def mapIterLiveEntries (s : ExecState) (base : Option Loc) :
-    Except GoError (Array (Nat × GoValue × GoValue)) := do
+    Except Stop (Array (Nat × GoValue × GoValue)) := do
   match base with
   | none => return #[]
   | some l =>
@@ -1205,7 +1205,7 @@ case rests on exactly this). Shared VERBATIM by the `Step.mapIter*`
 rules and `stepFn`. -/
 def mapIterCandidates (s : ExecState) (keyTy valTy : Ty)
     (base : Option Loc) (produced : Array Nat) :
-    Except GoError (Array (Nat × GoValue × GoValue)) := do
+    Except Stop (Array (Nat × GoValue × GoValue)) := do
   let entries ← mapIterLiveEntries s base
   let out := (filterCandidateList produced entries.toList).toArray
   if snapshotEntriesSelfNormalized s.types keyTy valTy out then
@@ -1232,7 +1232,7 @@ def mapIterMandatoryRemains (candidates : Array (Nat × GoValue × GoValue))
 `declareLocal`s. -/
 def bindIterVars (env : LocalEnv) (s : ExecState) (keyVar valVar : Option String)
     (keyTy valTy : Ty) (key value : GoValue) :
-    Except GoError (LocalEnv × ExecState) := do
+    Except Stop (LocalEnv × ExecState) := do
   let (env, s) ←
     match keyVar with
     | some name => do
@@ -1349,7 +1349,7 @@ anchor value, apply each index/field step — bounds checks
 after earlier targets' stores landed (BUG-029/BUG-033). Structural on
 `steps`; arity mismatches are malformed frames (fail closed). -/
 def resolveChain (s : ExecState) : GoValue → List TargetStep → List GoValue →
-    Except GoError GoValue
+    Except Stop GoValue
   | cur, [], [] => return cur
   | cur, .index :: steps, i :: idxs => do
       resolveChain s (.addr (← indexTargetLoc s cur i)) steps idxs
@@ -1361,7 +1361,7 @@ def resolveChain (s : ExecState) : GoValue → List TargetStep → List GoValue 
 OWN checks — nil address (`valueAsLoc`), bounds (`indexTargetLoc`),
 nil field bases, nil map — firing HERE (spec §Assignments: "the
 assignments are carried out in left-to-right order"). -/
-def storeTarget (s : ExecState) (r : TargetRef) (v : GoValue) : Except GoError ExecState := do
+def storeTarget (s : ExecState) (r : TargetRef) (v : GoValue) : Except Stop ExecState := do
   match r with
   | .chain anchor idxs steps =>
       storeLoc s (← valueAsLoc (← resolveChain s anchor steps idxs)) v
@@ -1383,7 +1383,7 @@ inductive RhsOp where
 /-- Apply the value source to the evaluated right-hand operands.
 Shared verbatim by rule `Step.rhsStores`/`rhsStoresPanic` and
 `stepFn`'s `rhsK` finish arm. -/
-def applyRhsOp (s : ExecState) : RhsOp → List GoValue → Except GoError (List GoValue)
+def applyRhsOp (s : ExecState) : RhsOp → List GoValue → Except Stop (List GoValue)
   | .vals, vs => return vs
   | .mapLookup keyTy valueTy, [baseV, keyV] => do
       let map ← valueAsMap baseV
@@ -1436,7 +1436,7 @@ theorem stmtPlan_of_chanPlan {stmt : Stmt} {p : ChanStOp × List Expr}
 
 /-- Load a channel's data cell: (buffer, capacity, closed). -/
 def chanCell (s : ExecState) (loc : Loc) :
-    Except GoError (Array GoValue × Nat × Bool) :=
+    Except Stop (Array GoValue × Nat × Bool) :=
   chanPayload? s loc
 
 /-- The values a receive delivers to its target list: the received value,
@@ -1558,7 +1558,7 @@ theorem chanPlan_of_syncPlan {stmt : Stmt} {p : SyncOp × List Expr}
 
 /-- Load a sync primitive's cell. A non-sync cell is `stuck` (fail
 closed — the frontend types every receiver). -/
-def syncCell (s : ExecState) (loc : Loc) : Except GoError SyncPrim := do
+def syncCell (s : ExecState) (loc : Loc) : Except Stop SyncPrim := do
   match ← loadLoc s loc with
   | .syncData p => return p
   | other => stuck s!"expected sync primitive data, got {repr other}"
@@ -1658,7 +1658,7 @@ decrement idiom). `cas`: swapped iff `cur == old` at `kind`. Pure
 with `raceUpdate`'s atomic arm, which re-derives a CAS's outcome from
 the pre-state to pick the release/acquire shape. -/
 def atomicCompute (head : AtomicStmtOp) (kind : IntKind) (cur : Int)
-    (operands : List GoValue) : Except GoError (Option Int × GoValue) :=
+    (operands : List GoValue) : Except Stop (Option Int × GoValue) :=
   match head, operands with
   | .load, [] => return (none, .int cur kind)
   | .store, [v] => do return (some (kind.normalize (← valueAsInt v)), .unit)
@@ -1695,7 +1695,7 @@ def selectOperands : List (SelectClauseHead × Stmt) → List Expr
 of `selectOperands`' flattening). Fails closed on arity drift and on
 unsupported receive-target assignees. -/
 def evalClauses : List (SelectClauseHead × Stmt) → List GoValue →
-    Except GoError (List EvClause)
+    Except Stop (List EvClause)
   | [], [] => return []
   | (.send _ _ elem, body) :: rest, chv :: vv :: vs => do
       return .sendEv chv vv elem body :: (← evalClauses rest vs)
@@ -1710,7 +1710,7 @@ def evalClauses : List (SelectClauseHead × Stmt) → List GoValue →
 channel counts as READY and panics when selected — probe p23;
 `select.go`'s pass-1 send check tests closed first). A nil channel is
 never ready. -/
-def clauseReady (s : ExecState) : EvClause → Except GoError Bool
+def clauseReady (s : ExecState) : EvClause → Except Stop Bool
   | .sendEv chv _ _ _ => do
       let ch ← valueAsChan chv
       match ch.base with
@@ -1727,7 +1727,7 @@ def clauseReady (s : ExecState) : EvClause → Except GoError Bool
           return buf.size > 0 || closed
 
 /-- The ready sublist, in clause order. -/
-def readyClauses (s : ExecState) : List EvClause → Except GoError (List EvClause)
+def readyClauses (s : ExecState) : List EvClause → Except Stop (List EvClause)
   | [] => return []
   | c :: rest => do
       let tail ← readyClauses s rest
@@ -2422,7 +2422,7 @@ inductive Config where
   -- slice 2's ThreadPool the PAIRING/wake steps live at the pool level,
   -- and per-goroutine relation-silence here is what makes that extension
   -- additive. In this zero-scheduler slice the driver classifies any
-  -- blocked configuration as the deadlocked run (`GoError.deadlock`):
+  -- blocked configuration as the deadlocked run (`Stop.deadlock`):
   -- one blocked goroutine with no siblings IS Go's "all goroutines are
   -- asleep" state. Payloads carry what a future pairing step needs
   -- (channel identity, in-flight value, delivery targets); `ch = none` is
@@ -2543,7 +2543,7 @@ shape) cannot arise from `targetsPlan` — fail closed, never a silent
 default. -/
 def enterRecvTargets (s : ExecState) (targets : List Assignee)
     (vals : List GoValue) (body : Stmt) (env : LocalEnv) (k : Cont) :
-    Except GoError (Config × ExecState) := do
+    Except Stop (Config × ExecState) := do
   match targetsPlan targets with
   | some ((sh, e :: ops) :: rest) =>
       return (.evalE e env (.tgtOpK sh [] ops [] rest .vals [] vals body env k), s)
@@ -2570,7 +2570,7 @@ completion marker `.opDone .postOp` — the post-op scheduling point
 wrapped (a park IS a boundary shape already) and panicking outcomes
 are not (the abort window is B3, deferred — boundary-set note §2). -/
 def applyChanOp (s : ExecState) (op : ChanStOp) (vs : List GoValue)
-    (env : LocalEnv) (k : Cont) : Except GoError (Config × ExecState) := do
+    (env : LocalEnv) (k : Cont) : Except Stop (Config × ExecState) := do
   match op, vs with
   | .send elem, [chv, vv] => do
       let ch ← valueAsChan chv
@@ -2660,7 +2660,7 @@ conservation untouched).
 
 Outcomes, per primitive (design note §4):
 * Mutex — `lock`: unlocked → locked; locked → park. `unlock`: locked →
-  unlocked; unlocked → the UNRECOVERABLE `GoError.fatal
+  unlocked; unlocked → the UNRECOVERABLE `Stop.fatal
   "sync: unlock of unlocked mutex"` (probe p01: gc's runtime `fatal`,
   recover does not catch — never a `.panicking`). No owner tracking
   (probe p09: cross-goroutine unlock is legal).
@@ -2701,7 +2701,7 @@ the stream and dispatches everything else here unchanged. Shared
 verbatim (through `applySyncOp`) by rule `Step.syncStApply` and
 `stepFn`'s `syncStK` apply arm. -/
 def applySyncOpCore (s : ExecState) (op : SyncOp) (vs : List GoValue)
-    (env : LocalEnv) (k : Cont) : Except GoError (Config × ExecState) := do
+    (env : LocalEnv) (k : Cont) : Except Stop (Config × ExecState) := do
   match op, vs with
   | .lock, [av] => do
       let loc ← valueAsLoc av
@@ -2871,7 +2871,7 @@ holds → the writer bit (the `wlock` immediate acquire). `.ok none` on a
 held cell; a kind-mismatched cell or a
 non-try head is a `stuck`/`internal` ERROR (fail closed, before any pick
 matters). -/
-def tryAcquire (op : SyncOp) (pre : SyncPrim) : Except GoError (Option SyncPrim) :=
+def tryAcquire (op : SyncOp) (pre : SyncPrim) : Except Stop (Option SyncPrim) :=
   match op, pre with
   | .tryLock _, .mutex locked => pure (if locked then none else some (.mutex true))
   | .tryRLock _, .rwmutex writer readers pendingW =>
@@ -2916,7 +2916,7 @@ exists (the `onceBegin` shape), else the plain continuation — success
 depends on the TARGET LIST alone (`tryDeliver_ok_any`), never on the
 state or the value. Every outcome carries `.opDone .postOp` (B1). -/
 def tryDeliver (b : Bool) (s : ExecState) (targets : List Assignee)
-    (env : LocalEnv) (k : Cont) : Except GoError (Config × ExecState) :=
+    (env : LocalEnv) (k : Cont) : Except Stop (Config × ExecState) :=
   match targets with
   | [] => return (.opDone .postOp (.next k), s)
   | _ :: _ => do
@@ -2997,7 +2997,7 @@ precedent, `atomics/spin`); the `Fair`-quantified claim class is
 reasoning-side future work TO BE BUILT (proposal §2). -/
 def applyTryLock (s : ExecState) (op : SyncOp) (loc : Loc) (pre : SyncPrim)
     (spurious : Bool) (targets : List Assignee) (env : LocalEnv) (k : Cont) :
-    Except GoError (Config × ExecState) := do
+    Except Stop (Config × ExecState) := do
   match ← tryAcquire op pre with
   | none => tryDeliver false s targets env k
   | some post => do
@@ -3019,7 +3019,7 @@ draw the `tryLock` site at `tryLockWidth` (bound 1 = no pop), and apply
 passed through untouched (`applySyncOp_eq_core`). Shared verbatim by
 rule `Step.syncStApply` and `stepFn`'s `syncStK` apply arm. -/
 def applySyncOp (s : ExecState) (ch : Choices) (op : SyncOp) (vs : List GoValue)
-    (env : LocalEnv) (k : Cont) : Except GoError (Config × ExecState × Choices) := do
+    (env : LocalEnv) (k : Cont) : Except Stop (Config × ExecState × Choices) := do
   match op.tryTargets?, vs with
   | some targets, [av] => do
       let loc ← valueAsLoc av
@@ -3036,7 +3036,7 @@ def applySyncOp (s : ExecState) (ch : Choices) (op : SyncOp) (vs : List GoValue)
 normalized integer at the op's kind, or no store at all (`load`, a
 failed `cas`). -/
 def atomicStore (s : ExecState) (loc : Loc) (kind : IntKind) :
-    Option Int → Except GoError ExecState
+    Option Int → Except Stop ExecState
   | some nv => storeLoc s loc (.int nv kind)
   | none => pure s
 
@@ -3088,7 +3088,7 @@ need no alignment; the 32-bit `unaligned 64-bit atomic operation` fatal
 is outside this pin (R1's transfer caveat applies). Shared verbatim by
 rule `Step.atomicStApply` and `stepFn`'s `atomicStK` apply arm. -/
 def applyAtomicOp (s : ExecState) (op : AtomicOp) (vs : List GoValue)
-    (env : LocalEnv) (k : Cont) : Except GoError (Config × ExecState) := do
+    (env : LocalEnv) (k : Cont) : Except Stop (Config × ExecState) := do
   match vs with
   | av :: operands => do
       let loc ← valueAsLoc av
@@ -3122,7 +3122,7 @@ entry-path `applySelect`, the arrival-path `.commit` in `stepThread`,
 and the wake path `resumeThread`); the panicking commit is not
 wrapped (B3 deferred). -/
 def commitClause (s : ExecState) (env : LocalEnv) (k : Cont) :
-    EvClause → Except GoError (Config × ExecState)
+    EvClause → Except Stop (Config × ExecState)
   | .sendEv chv vv elem body => do
       let ch ← valueAsChan chv
       match ch.base with
@@ -3233,7 +3233,7 @@ discarded with its commit either way. -/
 def applySelectCore (s : ExecState)
     (clauses : List (SelectClauseHead × Stmt)) (default? : Option Stmt)
     (vs : List GoValue) (env : LocalEnv) (k : Cont) :
-    Except GoError SelectOutcome := do
+    Except Stop SelectOutcome := do
   let evs ← evalClauses clauses vs
   match ← readyClauses s evs with
   | [] =>
@@ -3265,14 +3265,14 @@ def applySelectCore (s : ExecState)
         | .ok r => .ok (cl, .inl r)
         | .error (.panic msg) => .ok (cl, .inr msg)
         | .error e => .error e :
-          Except GoError (EvClause × Sum (Config × ExecState) String))
+          Except Stop (EvClause × Sum (Config × ExecState) String))
       return .picks commits
 
 @[inherit_doc applySelectCore]
 def applySelect (s : ExecState) (clauses : List (SelectClauseHead × Stmt))
     (default? : Option Stmt) (vs : List GoValue) (env : LocalEnv) (k : Cont)
     (ch : Choices) :
-    Except GoError (Config × ExecState × Choices × Option EvClause) := do
+    Except Stop (Config × ExecState × Choices × Option EvClause) := do
   -- The 4th component is Q2's emitted commit identity (`none` =
   -- default taken or parked): the sequential `stepFn` arm PROJECTS it
   -- away; the pool's select interception (`stepThread`) carries it
@@ -3437,8 +3437,8 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       Step (.exec .breakStmt env k) s (.breaking k) s
   | continueStmt {env k s} :
       Step (.exec .continueStmt env k) s (.continuing k) s
-  | label {name env k s} :
-      Step (.exec (.label name) env k) s (.next k) s
+  | inertLabel {name env k s} :
+      Step (.exec (.inertLabel name) env k) s (.next k) s
   -- Labeled statements and labeled break/continue (control-flow slice,
   -- docs/2026-08-04_control-flow-design.md). The label scope catches
   -- `breakingTo` at a match; bare signals pass through it; `continuingTo`
@@ -3566,10 +3566,6 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   | stmtOpFirst {stmt op nt e rest env k s} :
       stmtPlan stmt = some (op, nt, e :: rest) →
       Step (.exec stmt env k) s (.evalE e env (.stmtOpK op nt [] rest env k)) s
-  | stmtOpNullary {stmt op nt env k s s' ch ch'} :
-      stmtPlan stmt = some (op, nt, []) →
-      applyStmtOp s ch op nt [] = .ok (s', ch') →
-      Step (.exec stmt env k) s (.next k) s'
   | stmtOpShiftTarget {op nt done v loc e rest env k s} :
       done.length < nt →
       valueAsLoc v = .ok loc →

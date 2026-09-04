@@ -129,7 +129,7 @@ theorem arrivalPlan_of_single {s : ExecState} {threads : Array Config}
 
 @[inherit_doc arrivalPlan_of_cellPath]
 theorem arrivalPlan_of_error {s : ExecState} {threads : Array Config}
-    {i : Nat} {c : Config} {e : GoError} {ch : Choices}
+    {i : Nat} {c : Config} {e : Stop} {ch : Choices}
     (h : arrivalCases s threads i c = .error e) :
     arrivalPlan s threads i c ch = .error e := by
   unfold arrivalPlan
@@ -153,7 +153,7 @@ theorem arrivalPlan_of_multi {s : ExecState} {threads : Array Config}
     match os[idx]? with
     | some o => pure ((some o : Option ArrivalOutcome), ch', ps)
     | none => throw (.internal "select L2 ready pick out of range")
-    : Except GoError (Option ArrivalOutcome × Choices × List PickRecord)) = _
+    : Except Stop (Option ArrivalOutcome × Choices × List PickRecord)) = _
   rw [Choices.consumeAtE_pop rfl, hcons]
   dsimp only
   cases os[sel]? <;> rfl
@@ -435,7 +435,7 @@ strengthening opportunity (it would need a per-step
 blocked-not-wake-ready invariant carried through the induction);
 deadlock preservation under the driver swap is validated by the
 corpus's 12 pinned deadlock cases instead. -/
-def transferable : Except GoError (ExecOutcome × Choices) → Prop
+def transferable : Except Stop (ExecOutcome × Choices) → Prop
   | .ok _ => True
   | .error .fuelOut => True
   | .error (.panic _) => True
@@ -490,7 +490,7 @@ accounting. -/
 theorem execProgLoop_single :
     ∀ {fuel : Nat} {σ : ExecState} {c : Config} {ch : Choices}
       {rs : RaceState}
-      {r : Except GoError (ExecOutcome × Choices)},
+      {r : Except Stop (ExecOutcome × Choices)},
       execStmtLoop fuel σ c ch = r → transferable r →
       execProgLoop fuel ⟨#[c], σ, 0⟩ rs ch = r := by
   intro fuel
@@ -582,7 +582,7 @@ and the concurrent carrier's runs coincide on single-goroutine
 programs. -/
 theorem execProg_single_eq_execStmt {fuel : Nat} {env : LocalEnv}
     {σ : ExecState} {ch : Choices} {prog : Stmt}
-    {r : Except GoError (ExecOutcome × Choices)}
+    {r : Except Stop (ExecOutcome × Choices)}
     (hr : execStmt fuel env σ ch prog = r) (htr : transferable r) :
     execProg fuel env σ ch prog = r :=
   execProgLoop_single hr htr

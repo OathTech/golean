@@ -1375,9 +1375,9 @@ private def coreNewFunction : GoCore.Func := {
       { id := "s", typ := .pointer (.slice .int) }
     ]
     #[
-      .newValue (.var "p") (.defaultValue .int) .int,
+      .allocNew (.var "p") (.defaultValue .int) .int,
       .assign (.addr (.var "p")) (.intLit 7),
-      .newValue (.var "s") (.defaultValue (.slice .int)) (.slice .int),
+      .allocNew (.var "s") (.defaultValue (.slice .int)) (.slice .int),
       .assign (.var "z")
         (.add
           (.mul (.deref (.var "p") .int) (.intLit 10))
@@ -1543,7 +1543,7 @@ private def coreBreakContinueFunction : GoCore.Func := {
     ]
 }
 
-private def expectIntResult (name : String) (result : Except GoError GoLean.GoCore.Result)
+private def expectIntResult (name : String) (result : Except Stop GoLean.GoCore.Result)
     (expected : Int) : IO Bool := do
   match result with
   | .ok result =>
@@ -1565,7 +1565,7 @@ private def expectTrue (name : String) (b : Bool) : IO Bool := do
     IO.eprintln s!"FAIL: {name}: condition is false"
     return false
 
-private def expectBoolResult (name : String) (result : Except GoError GoLean.GoCore.Result)
+private def expectBoolResult (name : String) (result : Except Stop GoLean.GoCore.Result)
     (expected : Bool) : IO Bool := do
   match result with
   | .ok result =>
@@ -1579,7 +1579,7 @@ private def expectBoolResult (name : String) (result : Except GoError GoLean.GoC
       IO.eprintln s!"FAIL: {name}: expected success, got {repr err}"
       return false
 
-private def expectValues (name : String) (result : Except GoError GoLean.GoCore.Result)
+private def expectValues (name : String) (result : Except Stop GoLean.GoCore.Result)
     (expected : Array GoValue) : IO Bool := do
   match result with
   | .ok result =>
@@ -1593,7 +1593,7 @@ private def expectValues (name : String) (result : Except GoError GoLean.GoCore.
       IO.eprintln s!"FAIL: {name}: expected success, got {repr err}"
       return false
 
-private def expectErrorStatus (name : String) (result : Except GoError GoLean.GoCore.Result)
+private def expectErrorStatus (name : String) (result : Except Stop GoLean.GoCore.Result)
     (expected : String) : IO Bool := do
   match result with
   | .ok result =>
@@ -1607,7 +1607,7 @@ private def expectErrorStatus (name : String) (result : Except GoError GoLean.Go
         IO.eprintln s!"FAIL: {name}: expected {expected}, got {err.status}: {err.message}"
         return false
 
-private def expectOk (name : String) (result : Except GoError GoLean.GoCore.Result) :
+private def expectOk (name : String) (result : Except Stop GoLean.GoCore.Result) :
     IO Bool := do
   match result with
   | .ok _ =>
@@ -2292,7 +2292,7 @@ def main : IO UInt32 := do
   -- window. NON-VACUITY (checkable): at the pre-fix machine — tip
   -- 8b8fa09f plus only this program+pin, before the Machine.lean
   -- waiter-reset landed in 537fa219 — `lake exe gocore-eval-tests`
-  -- FAILED this pin with exactly `GoError.panic "sync: WaitGroup
+  -- FAILED this pin with exactly `Stop.panic "sync: WaitGroup
   -- misuse: Add called concurrently with Wait"` (the Add-side arm
   -- since removed).
   passed := passed && (← expectIntResult "GoCore sync: Add in the reuse window is CLEAN (gc resets the wait count in the zeroing Add; two-waiter shape, both parked)"
@@ -2377,7 +2377,7 @@ def main : IO UInt32 := do
   -- (sem-adequacy arc slice 2, 2026-08-03: interpreter-side Progress says
   -- "only .ok or fuel-out" — that reading is meaningless if the machine
   -- reports running out of fuel as being stuck). Guardrail authored
-  -- BEFORE the GoError.fuelOut refinement; red against the old core.
+  -- BEFORE the Stop.fuelOut refinement; red against the old core.
   passed := passed && (← expectErrorStatus "GoCore fuel exhaustion is fuel-out, not stuck"
     (GoCore.Machine.runFunctionWithContextM 1 []
       #[coreClosureBodyFunction, coreClosureShareFunction] coreClosureShareFunction #[]) "fuel-out")
@@ -2658,7 +2658,7 @@ def main : IO UInt32 := do
     "\"types\":[{\"name\":\"main.T\",\"def\":{\"kind\":\"defined\",\"target\":{\"kind\":\"int\",\"int\":\"int\"}}}," ++
     "{\"name\":\"main.locker\",\"def\":{\"kind\":\"interface\",\"methods\":[{\"name\":\"Lock\",\"params\":[],\"results\":[],\"variadic\":false}]}}]," ++
     "\"methodSets\":[" ++ records ++ "]}"
-  let msQuery (records : String) : Except String (Except GoError Bool) :=
+  let msQuery (records : String) : Except String (Except Stop Bool) :=
     match Lean.Json.parse (msWire records) with
     | .error e => .error e
     | .ok j =>

@@ -1,0 +1,20 @@
+# choice-trace after A8 (tree = the A8 commit's sources). trace-diff.sh vs before:
+rows before=19489 after=19489
+DELTA: 0 (every (id,stream) line identical on all columns)
+per-site totals before:   consumptions per site (all streams): l1Sched=9361, postOp=4513, appendSpill=3151, backEdge=2400, mapIter=2006, l5ExitWindow=307, tryLock=101, nilValueMethodText=84, l2Entry=24, l4Waiter=22, l2Arriva
+
+  by lane: confluent=89, membership=57, racy=35, strict=3067
+
+VALIDATOR
+  consumptions checked: 21972
+  menu-invariant violations: 0
+  self-check alarms (mirror/accountant, sentinel, pick-record): 0
+  driver-agreement mismatches: 0
+  fuel-out (id,stream) lines: 0
+    ERROR arrays/materialization-budget/over-budget (baseline: FAIL/lean-observation): <worktree>/artifacts/choice-trace-a8/wire/arrays__materialization-budget__over-budget.json: native lowering: a
+  ids with a machine refusal under some traced stream (unsupported/stuck/internal/error, or an unexpected fatal): 152; of these 152 are non-PASS in the tracked baseline
+  consumptions per site (all streams): l1Sched=9361, postOp=4513, appendSpill=3151, backEdge=2400, mapIter=2006, l5ExitWindow=307, tryLock=101, nilValueMethodText=84, l2Entry=24, l4Waiter=22, l2Arrival=3
+
+STRICT-LANE DEPTH EXPOSURE (lane=strict rows; confluent rows shown separately)
+  strict: 3067 rows; consumptions under the default stream:
+    all consumptions:      0: 2714, 1-8: 324, 9-10: 4, 11-32: 14, 33-128: 8, >128: 3

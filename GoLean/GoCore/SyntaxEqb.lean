@@ -401,7 +401,7 @@ def TypeDef.eqb : TypeDef → TypeDef → Bool
   | .alias t1, .alias t2 => Ty.eqb t1 t2
   | .interfaceDef m1, .interfaceDef m2 => eqbArrayP MethodSig.eqb m1 m2
   | .defined u1, .defined u2 => Ty.eqb u1 u2
-  | .unsupported x, .unsupported y => x == y
+  | .opaqueDecl x, .opaqueDecl y => x == y
   | _, _ => false
 
 theorem TypeDef.eqb_sound (a b : TypeDef) (h : TypeDef.eqb a b = true) :
@@ -415,7 +415,7 @@ theorem TypeDef.eqb_sound (a b : TypeDef) (h : TypeDef.eqb a b = true) :
     cases eqbArrayP_sound MethodSig.eqb_sound h; rfl
   case defined.defined u1 u2 =>
     cases Ty.eqb_sound (show Ty.eqb u1 u2 = true from h); rfl
-  case unsupported.unsupported x y =>
+  case opaqueDecl.opaqueDecl x y =>
     cases eq_of_beq (show (x == y) = true from h); rfl
 
 def GlobalDef.eqb (a b : GlobalDef) : Bool :=
@@ -463,7 +463,7 @@ def Stmt.eqbF : Nat → Stmt → Stmt → Bool
         Assignee.eqbF f l1 l2 && Expr.eqbF f r1 r2
     | .assignMany l1 r1, .assignMany l2 r2 =>
         eqbArrayP (Assignee.eqbF f) l1 l2 && eqbArrayP (Expr.eqbF f) r1 r2
-    | .newValue t1 v1 y1, .newValue t2 v2 y2 =>
+    | .allocNew t1 v1 y1, .allocNew t2 v2 y2 =>
         Assignee.eqbF f t1 t2 && Expr.eqbF f v1 v2 && Ty.eqb y1 y2
     | .makeSlice t1 e1 l1 c1, .makeSlice t2 e2 l2 c2 =>
         Assignee.eqbF f t1 t2 && Ty.eqb e1 e2 && Expr.eqbF f l1 l2
@@ -514,7 +514,7 @@ def Stmt.eqbF : Nat → Stmt → Stmt → Bool
     | .breakTo l1, .breakTo l2 => l1 == l2
     | .continueTo l1, .continueTo l2 => l1 == l2
     | .panicStmt p1, .panicStmt p2 => Expr.eqbF f p1 p2
-    | .label n1, .label n2 => n1 == n2
+    | .inertLabel n1, .inertLabel n2 => n1 == n2
     | .makeChan t1 e1 c1, .makeChan t2 e2 c2 =>
         Assignee.eqbF f t1 t2 && Ty.eqb e1 e2
           && eqbOptionP (Expr.eqbF f) c1 c2
@@ -560,7 +560,7 @@ theorem Stmt.eqbF_sound : ∀ f (a b : Stmt), Stmt.eqbF f a b = true → a = b :
       obtain ⟨h1, h2⟩ := andSplit2 h
       cases eqbArrayP_sound (Assignee.eqbF_sound f) h1
       cases eqbArrayP_sound (Expr.eqbF_sound f) h2; rfl
-    case newValue.newValue t1 v1 y1 t2 v2 y2 =>
+    case allocNew.allocNew t1 v1 y1 t2 v2 y2 =>
       obtain ⟨h1, h2, h3⟩ := andSplit3 h
       cases Assignee.eqbF_sound _ _ _ h1; cases Expr.eqbF_sound _ _ _ h2
       cases Ty.eqb_sound h3; rfl
@@ -645,7 +645,7 @@ theorem Stmt.eqbF_sound : ∀ f (a b : Stmt), Stmt.eqbF f a b = true → a = b :
     case continueTo.continueTo l1 l2 =>
       cases eq_of_beq (show (l1 == l2) = true from h); rfl
     case panicStmt.panicStmt p1 p2 => cases Expr.eqbF_sound _ _ _ h; rfl
-    case label.label n1 n2 =>
+    case inertLabel.inertLabel n1 n2 =>
       cases eq_of_beq (show (n1 == n2) = true from h); rfl
     case makeChan.makeChan t1 e1 c1 t2 e2 c2 =>
       obtain ⟨h1, h2, h3⟩ := andSplit3 h

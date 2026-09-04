@@ -10,7 +10,7 @@ set at `Loc`-path granularity and advances vector clocks over goroutine
 ids on the registry ops' happens-before edges (the memory model's
 channel rules, quoted at their implementation sites in `Multi.lean`).
 Two HB-unordered conflicting accesses from different goroutines are the
-terminal `GoError.raceDetected` — races FAIL CLOSED per run,
+terminal `Stop.raceDetected` — races FAIL CLOSED per run,
 deterministically given the stream (the detector is a pure function of
 the observed steps; it consumes NO choices).
 
@@ -165,7 +165,7 @@ FOOTPRINT ARMS (recorded accesses):
   (triage L1, same treatment; `.runesFromString`'s operand is a string
   VALUE in hand and its allocation is fresh — no footprint, like
   `.bytesFromString`).
-- `applyStmtOpCore` newValue/makeSlice/makeMap/makeChan target stores,
+- `applyStmtOpCore` allocNew/makeSlice/makeMap/makeChan target stores,
   mapAssign/mapDelete/clearMap (via `mapEntries`/`mapAssignValue`),
   clearSlice/sortSlice/copySlice element loops, appendSlice (in-place
   writes, spill reads via `sliceVisibleValues`, header store) →
@@ -760,7 +760,7 @@ escape); target-cell writes, map-object accesses, and slice-element
 reads/writes are. -/
 def stmtOpAccesses (op : StmtOp) (vs : List GoValue) : List RaceAccess :=
   match op, vs with
-  | .newValue _, [tv, _] => targetWrite tv
+  | .allocNew _, [tv, _] => targetWrite tv
   | .makeSlice _ _, tv :: _ => targetWrite tv
   | .makeMap _, tv :: _ => targetWrite tv
   | .makeChan _ _, tv :: _ => targetWrite tv
@@ -1030,7 +1030,7 @@ with this one (`AccessKind.conflicts`: at least one write, not both
 atomic) — is the terminal `raceDetected` (fail closed per run; the
 message is fixed so the refusal is choice-invariant per stream). -/
 def RaceState.accessKey (r : RaceState) (t : Nat) (kind : AccessKind)
-    (key : ShadowKey) : Except GoError RaceState :=
+    (key : ShadowKey) : Except Stop RaceState :=
   let vt := r.vcOf t
   let conflict := r.shadow.any fun (k, cell) =>
     key.overlap k && cell.conflicts kind t vt
@@ -1041,17 +1041,17 @@ def RaceState.accessKey (r : RaceState) (t : Nat) (kind : AccessKind)
 
 /-- A DATA access: the footprint's `(kind, path)` under the `.data` key. -/
 def RaceState.access (r : RaceState) (t : Nat) (a : RaceAccess) :
-    Except GoError RaceState :=
+    Except Stop RaceState :=
   r.accessKey t a.1 (.data a.2)
 
 def RaceState.accesses (r : RaceState) (t : Nat) :
-    List RaceAccess → Except GoError RaceState
+    List RaceAccess → Except Stop RaceState
   | [] => return r
   | a :: rest => do RaceState.accesses (← r.access t a) t rest
 
 /-- Keyed accesses (the sync ops' word accesses). -/
 def RaceState.accessKeys (r : RaceState) (t : Nat) :
-    List (AccessKind × ShadowKey) → Except GoError RaceState
+    List (AccessKind × ShadowKey) → Except Stop RaceState
   | [] => return r
   | (kind, key) :: rest => do RaceState.accessKeys (← r.accessKey t kind key) t rest
 
@@ -1074,7 +1074,7 @@ the terminal `raceDetected` — send↔send never conflicts. Exact keying
 (channel identity — `ShadowKey.overlap`'s `chanObj` arm), unlike the data
 keys' path overlap. -/
 def RaceState.chanObjAccess (r : RaceState) (t : Nat) (loc : Loc)
-    (isWrite : Bool) : Except GoError RaceState :=
+    (isWrite : Bool) : Except Stop RaceState :=
   r.accessKey t (if isWrite then .write else .read) (.chanObj loc)
 
 def RaceState.syncOf (r : RaceState) (loc : Loc) : SyncClocks :=
@@ -1476,7 +1476,7 @@ every race-free program (vet's `copylocks` flags every shape in the
 class).
 
 RESIDUAL (b), an outcome-CLASS deviation — both sides ABORT, but the
-machine's abort is an asserted program outcome (`GoError.fatal`,
+machine's abort is an asserted program outcome (`Stop.fatal`,
 Value.lean:207-217) where gc's is the race report then the same abort:
 the
 detector folds SUCCESSFUL pool steps only (`execProgLoop` runs

@@ -92,13 +92,13 @@ Design points (docs/2026-08-06_channels-arc-design.md):
 
 * **Deadlock.** ALL goroutines asleep — no thread runnable (tombstones
   excluded, parked threads unrunnable unless wake-ready) — is the
-  `GoError.deadlock` terminal, generalizing slice 1's immediate
+  `Stop.deadlock` terminal, generalizing slice 1's immediate
   single-thread classification and matching Go's detector state.
 
 Fail closed (a visible `.unsupported`, never a silent approximation):
 select-with-select rendezvous. `go` of a nil func value is gc's
 "go of nil func value" runtime FATAL (probed 2026-08-07), MODELED via
-`GoError.fatal` since the 19-red slice (triage L10, 2026-08-19; the
+`Stop.fatal` since the 19-red slice (triage L10, 2026-08-19; the
 class itself landed at spec-parity slice 2). Multi-ready select went
 LIVE at slice 4
 (the L2 site — envelope statement at `applySelect`; arrival-path
@@ -349,10 +349,10 @@ that leaks the nil-interface class through a spawn would be misrouted
 to a child abort by this arm — keep the hoist, or split the classes
 upstream (recorded hazard, S2 audit response). A nil callee is gc's
 "go of nil func value" runtime FATAL at the spawn (probed 2026-08-07,
-refuting the older child-panic analysis): modeled as `GoError.fatal`
+refuting the older child-panic analysis): modeled as `Stop.fatal`
 (triage L10). -/
 def spawnStep (s : ExecState) (cv : GoValue) (args : List GoValue) (k : Cont)
-    (ch : Choices) : Except GoError (Config × Config × ExecState × Choices) := do
+    (ch : Choices) : Except Stop (Config × Config × ExecState × Choices) := do
   match cv with
   | .funcVal fid captured =>
       match enterFrame s fid (captured ++ args) with
@@ -380,7 +380,7 @@ def spawnStep (s : ExecState) (cv : GoValue) (args : List GoValue) (k : Cont)
   -- A nil callee is gc's "go of nil func value" runtime FATAL, raised
   -- AT THE SPAWN in the spawning goroutine (probed 2026-08-07;
   -- unrecoverable, exit 2). Routed through the machine's own fatal
-  -- class (triage L10, 2026-08-19) — the sync-misuse `GoError.fatal`
+  -- class (triage L10, 2026-08-19) — the sync-misuse `Stop.fatal`
   -- convention, gc's fixed string after "fatal error: ". The old
   -- refusal's stated reason ("the fatal class is unmodeled this
   -- slice") expired when the class landed at spec-parity slice 2.
@@ -437,7 +437,7 @@ only AFTER the communication, spec §Assignments via BUG-022/BUG-029).
 Shared verbatim by the wake step and the pairing steps. -/
 def resumeRecvDelivery (s : ExecState) (v : GoValue) (ok : Bool)
     (targets : List Assignee) (env : LocalEnv) (k : Cont) :
-    Except GoError (Config × ExecState) := do
+    Except Stop (Config × ExecState) := do
   match targets with
   | [] => return (.next k, s)
   | _ :: _ =>
@@ -449,7 +449,7 @@ the clause — targets (spec step 4) then the clause body (step 5).
 instead of dequeued from the buffer. -/
 def selectRecvDelivery (s : ExecState) (v : GoValue) (ok : Bool)
     (targets : List Assignee) (body : Stmt) (env : LocalEnv) (k : Cont) :
-    Except GoError (Config × ExecState) := do
+    Except Stop (Config × ExecState) := do
   match targets with
   | [] => return (.exec body env k, s)
   | _ :: _ =>
@@ -481,7 +481,7 @@ B1 (stage C): a parked op's completion is a completion — every
 proceeding resume lands on `.opDone .postOp` (the select arm through
 `commitClause`'s own wrap); the close-woken sender's panic is not
 wrapped (B3 deferred). -/
-def resumeThread (s : ExecState) : Config → Except GoError (Config × ExecState)
+def resumeThread (s : ExecState) : Config → Except Stop (Config × ExecState)
   | .blockedSend (some loc) v k => do
       let (buf, capacity, closed) ← chanCell s loc
       if closed then
@@ -780,7 +780,7 @@ recv-side waiter beside a NONEMPTY buffer is an hchan-invariant breach
 (`applyPairing` refuses `.internal` rather than jumping the queue). -/
 def chanArrivalPlan (s : ExecState) (threads : Array Config) (i : Nat)
     (op : ChanStOp) (vs : List GoValue) (env : LocalEnv) (k : Cont) :
-    Except GoError (Option (Config × List (Nat × PairTarget))) := do
+    Except Stop (Option (Config × List (Nat × PairTarget))) := do
   match op, vs with
   | .send elem, [chv, vv] =>
       match chanValueLoc chv with
@@ -855,7 +855,7 @@ inductive ArrivalAnalysis where
 def selectArrivalCases (s : ExecState) (threads : Array Config) (i : Nat)
     (clauses : List (SelectClauseHead × Stmt)) (vs : List GoValue)
     (env : LocalEnv) (k : Cont) :
-    Except GoError ArrivalAnalysis := do
+    Except Stop ArrivalAnalysis := do
   match selectClauseChans clauses vs with
   | none => return .cellPath
   | some sides =>
@@ -899,7 +899,7 @@ def selectArrivalCases (s : ExecState) (threads : Array Config) (i : Nat)
             | none => return (ci, false, [])
         -- One outcome per waiter-extended-ready clause, clause order.
         let mkOutcome : Nat × Bool × List (Nat × PairTarget) →
-            Except GoError ArrivalOutcome := fun (ci, _, ws) =>
+            Except Stop ArrivalOutcome := fun (ci, _, ws) =>
           if ws.isEmpty then
             match evs[ci]? with
             | some cl => return .commit cl env k
@@ -931,7 +931,7 @@ def selectArrivalCases (s : ExecState) (threads : Array Config) (i : Nat)
 
 @[inherit_doc chanArrivalPlan]
 def arrivalCases (s : ExecState) (threads : Array Config) (i : Nat) :
-    Config → Except GoError ArrivalAnalysis
+    Config → Except Stop ArrivalAnalysis
   | .retV v (.chanStK op done [] env k) => do
       match ← chanArrivalPlan s threads i op ((v :: done).reverse) env k with
       | none => return .cellPath
@@ -948,7 +948,7 @@ conservation literal). Q2: the pick rides out as its `PickRecord`
 (empty on the non-consuming analyses) for the step event. -/
 def arrivalPlan (s : ExecState) (threads : Array Config) (i : Nat)
     (c : Config) (ch : Choices) :
-    Except GoError (Option ArrivalOutcome × Choices × List PickRecord) := do
+    Except Stop (Option ArrivalOutcome × Choices × List PickRecord) := do
   match ← arrivalCases s threads i c with
   | .cellPath => return (none, ch, [])
   | .single bc cands => return (some (.pair bc cands), ch, [])
@@ -984,7 +984,7 @@ boundary — the `.opDone` this rule just created — so wrapping it
 would add a no-op step and no latitude (boundary-set note §2 B1). -/
 def applyPairing (s : ExecState) (threads : Array Config) (i : Nat)
     (bc : Config) (cand : Nat × PairTarget) :
-    Except GoError (Array Config × ExecState) := do
+    Except Stop (Array Config × ExecState) := do
   match bc, cand.2 with
   | .blockedSend (some loc) v k, .opWaiter j =>
       match threads[j]? with
@@ -1103,7 +1103,7 @@ the sequential `stepFn`, a blocked outcome simply parking (partners
 were already ruled out by the plan). -/
 def stepThread (s : ExecState) (threads : Array Config) (i : Nat)
     (ch : Choices) :
-    Except GoError (Array Config × ExecState × Choices × StepEvent) := do
+    Except Stop (Array Config × ExecState × Choices × StepEvent) := do
   match threads[i]? with
   | none => throw (.internal "thread index out of range")
   | some c =>
@@ -1184,7 +1184,7 @@ def stepThread (s : ExecState) (threads : Array Config) (i : Nat)
 /-- `stepThread` lifted back into a `MultiConfig` (the stepped goroutine
 becomes the running one). -/
 def stepThreadInto (m : MultiConfig) (i : Nat) (ch : Choices) :
-    Except GoError (MultiConfig × Choices × StepEvent) := do
+    Except Stop (MultiConfig × Choices × StepEvent) := do
   let (ts, s', ch', ev) ← stepThread m.shared m.threads i ch
   return ({ threads := ts, shared := s', cur := i }, ch', ev)
 
@@ -1237,7 +1237,7 @@ the DEADLOCK terminal (all goroutines are asleep; unreachable at a
 postOp boundary, whose issuer is runnable). Between boundaries the
 running goroutine steps privately. -/
 def stepMulti (m : MultiConfig) (ch : Choices) :
-    Except GoError (MultiConfig × Choices × StepEvent) := do
+    Except Stop (MultiConfig × Choices × StepEvent) := do
   match m.threads[m.cur]? with
   | none => throw (.internal "running goroutine out of range")
   | some c =>
@@ -1305,7 +1305,7 @@ the `syncEntryKinds` row the sync arm records in the DATA shadow at the
 primitive's `sema` word, ahead of this event — beside the state RMW's
 go_mem kind (`.atomicWrite @state`, Q-U4RESIDUAL (A)). -/
 def raceWgAddEvent (r : RaceState) (i : Nat) (loc : Loc) (delta : Int) :
-    Except GoError RaceState :=
+    Except Stop RaceState :=
   if delta < 0 then return (r.syncRelease i loc) else return r
 
 -- `wokenPartner` DELETED (stage B, audit O-2): the pairing partner
@@ -1327,7 +1327,7 @@ cell-path channel op it performs: buffered send/receive through the
 slot clocks, closed-empty receive through the close clock, panicking
 or unready shapes no edge. -/
 def raceCommitClauseEvent (s : ExecState) (i : Nat) (r : RaceState) :
-    EvClause → Except GoError RaceState
+    EvClause → Except Stop RaceState
   | .sendEv chv _ _ _ => do
       match chanValueLoc chv with
       | some loc => do
@@ -1367,7 +1367,7 @@ parks; the arm remains for the racy members' pre-refusal semantics).
 A buffered send/receive completes through the slot clocks; a
 closed-empty receive acquires the close clock. -/
 def raceWakeEvent (s : ExecState) (i : Nat) (r : RaceState) :
-    Config → Except GoError RaceState
+    Config → Except Stop RaceState
   | .blockedSend (some loc) _ _ => do
       let (_, cap, closed) ← chanCell s loc
       if closed then return r
@@ -1418,7 +1418,7 @@ sender releases into the tail slot. The channel comes from the parked
 partner's shape, or from the arriving op when the partner is a parked
 select clause (select-with-select pairing is refused upstream). -/
 def racePairEvent (s : ExecState) (tsPre : Array Config) (i j : Nat)
-    (cPre : Config) (r : RaceState) : Except GoError RaceState := do
+    (cPre : Config) (r : RaceState) : Except Stop RaceState := do
   let viaSlots (loc : Loc) (cap : Nat) (senderFirst : Bool)
       (sender recv : Nat) : RaceState :=
     if senderFirst then (r.slotOp sender loc cap true).slotOp recv loc cap false
@@ -1463,7 +1463,7 @@ clause order is detection-equivalent — same pre-op clock, same-
 goroutine re-records upsert). Factored out of `raceUpdate` so the
 pairing / commit / pass arms share it. -/
 def raceChanEntryReads (i : Nat) (cPre : Config)
-    (r : RaceState) : Except GoError RaceState := do
+    (r : RaceState) : Except Stop RaceState := do
   match cPre with
   | .retV v (.chanStK op done [] _ _) =>
       (match op, (v :: done).reverse with
@@ -1491,7 +1491,7 @@ derived from the pre-configuration (the footprint table's job); no
 stream is consulted — `raceUpdate` no longer takes one. -/
 def raceUpdate (sPre : ExecState) (tsPre : Array Config) (ev : StepEvent)
     (m' : MultiConfig)
-    (r : RaceState) : Except GoError RaceState := do
+    (r : RaceState) : Except Stop RaceState := do
   if m'.threads.size ≤ 1 then return r
   else
     let i := ev.who
@@ -1817,7 +1817,7 @@ relation needed NO widening: `StepM`/`schedPick` already allow
 post-main-terminal steps of runnable goroutines — the driver was the
 narrow side. -/
 def execProgLoop : Nat → MultiConfig → RaceState → Choices →
-    Except GoError (ExecOutcome × Choices)
+    Except Stop (ExecOutcome × Choices)
   | fuel, m, r, choices =>
       if m.threads.isEmpty then
         throw (.internal "thread pool without a main goroutine")
@@ -1863,7 +1863,7 @@ fail-closed diagnostic classes are covered by the full-corpus
 bit-identity check, not the theorem (S2 audit response: citation
 matched to the theorem's actual strength). -/
 def execProg (fuel : Nat) (env : LocalEnv) (σ : ExecState) (choices : Choices)
-    (prog : Stmt) : Except GoError (ExecOutcome × Choices) :=
+    (prog : Stmt) : Except Stop (ExecOutcome × Choices) :=
   execProgLoop fuel ⟨#[.exec prog env .stop], σ, 0⟩ {} choices
 
 /-- The whole-PROGRAM pool entry: `runProgramM`'s wiring (shared setup —
@@ -1874,7 +1874,7 @@ phase runs on the sequential driver — the decided slice scope). Result
 readout: main's pinned result locations in the shared state at main's
 exit, exactly the sequential driver's readout. -/
 def runProgramPoolM (fuel : Nat) (program : Program) (name : String)
-    (args : Array GoValue) (choices : Choices := []) : Except GoError Result := do
+    (args : Array GoValue) (choices : Choices := []) : Except Stop Result := do
   let (c₀, s₀, resultLocs, choices₁) ← runProgramSetupM fuel program name args choices
   match ← execProgLoop fuel ⟨#[c₀], s₀, 0⟩ {} choices₁ with
   | (.normal sF, _) => return { values := (← loadMany sF resultLocs).toArray }
@@ -2007,7 +2007,7 @@ instance (m : MultiConfig) : Decidable (MultiWf m) := by
 
 
 def runProgramPoolIntsM (fuel : Nat) (program : Program) (name : String)
-    (args : Array Int) (choices : List Nat := []) : Except GoError Result :=
+    (args : Array Int) (choices : List Nat := []) : Except Stop Result :=
   runProgramPoolM fuel program name (args.map GoValue.int) choices
 
 end GoLean.GoCore.Machine

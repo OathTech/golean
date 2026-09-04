@@ -944,7 +944,7 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
       let value ← decodeExpr s!"{path}.value" (← StrictJson.field path obj "value")
       let elemTy ← decodeTy s!"{path}.elemType" (← StrictJson.field path obj "elemType")
-      pure (.seqn ((← declaresOf #[t]).push (.newValue t.assignee value elemTy)))
+      pure (.seqn ((← declaresOf #[t]).push (.allocNew t.assignee value elemTy)))
   | "make-slice" =>
       let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
       let elemTy ← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")
@@ -1694,7 +1694,7 @@ private def decodeTypeDef (path : String) (json : Json) : LowerM (TypeId × Type
       -- normalization, conversion) keeps failing closed on the reason.
       let feature ← StrictJson.string s!"{path}.def.feature"
         (← StrictJson.field s!"{path}.def" defObj "feature")
-      pure (⟨name⟩, .unsupported feature)
+      pure (⟨name⟩, .opaqueDecl feature)
   | other => fail s!"unsupported type definition kind {other} at {path}"
 
 private def decodeFunc (path : String) (json : Json) : LowerM Func := do

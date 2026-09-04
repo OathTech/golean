@@ -521,3 +521,92 @@ attempts) vs the pre-series snapshot: every consumption column identical
 on all 19489 lines; the second attempt's only `obsHash` delta is the same
 frontend wire-nondeterminism row as A3's (`choice-trace/a6-summary.txt`).
 Machine delta: 0.
+
+## A7 — one accumulator convention and one apply-position accessor: SKIPPED
+
+**Decision [AGENT]: not done in this series; folded into wave (iii).**
+Measured footprint before deciding: the apply-position pattern
+`.retV v (.stmtOpK|strictK|chanStK|selectOpsK|syncOpK|atomicOpK|rhsK|
+tgtOpK …)` appears at ~85 sites across 11 files (Machine 35, MultiSound
+11, Multi 9, EnumDedupSound 6, Race 6, ChoiceTrace 5, MultiStreams 5,
+CLI 4, MultiWfSound 2, EnumDedupCheck 1, MachineSound 1) — 24 of them
+in proofs — and the call-frame accumulator flip touches 12 rule/`stepFn`
+sites plus the frame-shape lemmas in StateWf (8), MultiSound (4) and
+MultiWfSound (2). Reasons to defer rather than force: (1) the accessor
+`Config.applyPos` IS the special case of review B3's `Cont`
+classification ("`Cont` classification + generic rebuild + field
+bundling"), which wave (iii) builds and re-proves once — doing it here
+means paying the positional `fun_cases` re-tagging twice (A4 already
+paid one such round: 75 tag renames for one arm); (2) the accumulator
+flip changes nothing observable (frames are not values) and its whole
+payoff is the downstream bind/plug lemma shape that B3 restates anyway;
+(3) the review's own sequencing argument ("they all shift the positional
+`fun_cases` tags — pay once") applies. Recorded here so the arc plan's
+(iii) picks it up explicitly.
+
+
+## A8 — dead-generality sweep (done in part; the rest recorded)
+
+**Done.**
+- `Stmt.label` → `Stmt.inertLabel` (and `Step.label` → `Step.inertLabel`):
+  the name says what the rule does (a no-op marker the frontend never
+  emits; `labeled` is the real thing).
+- `Stmt.newValue`/`StmtOp.newValue` → `allocNew` (21 token sites; the
+  `Option Ty` → `Ty` half of this item landed with A3).
+- `TypeDef.unsupported` → `TypeDef.opaqueDecl (reason)`: the frontend's
+  BY-DESIGN quarantine of imported/opaque type declarations is no longer
+  spelled like `Ty.unsupported`/`Expr.unsupported` (the fail-closed
+  frontier). Deviation from the review's `.opaque`: `opaque` is a Lean
+  keyword — legal in dotted patterns, illegal as a `cases … with |
+  opaque` alternative — so `opaqueDecl`. [AGENT]
+- `GoError` → `Stop` (335 token sites across GoLean/ and Tests/, incl.
+  `renderGoError` → `renderStop`): the outcome type's name says what it
+  is — the way a run STOPS (refusal / terminal / budget), not an error.
+- `applyStmtOpCore`'s unused `_nt` parameter dropped (`applyStmtOp` keeps
+  `nt` for its rules' arity but binds it `_nt`).
+- `Step.stmtOpNullary` DELETED with its `stepFn` dispatch: no `stmtPlan`
+  arm emits an empty operand list (every plan starts with its target), so
+  the arm was unreachable. The MATCH arm itself must remain for
+  exhaustiveness and is now a fail-closed REFUSAL by name
+  (`.internal "empty statement operand plan"`, the shape of its sibling
+  `some (_, [])` arms) — so the `fun_cases` premise count is unchanged
+  (no re-tagging), the refusal arm closes generically in both positional
+  proofs, and the two lemmas that existed only for the rule
+  (`consumesAppendSlice_execPlan`, `stepFn_exec_plan_nullary`, 27 lines)
+  and its three proof cases (`stepFn_sound`'s `case67`,
+  `step_complete`'s and `step_complete_any_wf`'s `stmtOpNullary` cases,
+  `step_preserves_wf`'s case) are deleted. Preservation: the rule had no
+  instance (no plan is empty) — the machine's step relation is unchanged
+  on every configuration a program can reach; the interpreter's arm was
+  never taken.
+
+**Not done — recorded with reasons.**
+- `GoValue.unit`: NOT dead, contrary to the review — `atomicCompute`'s
+  `.store` arm produces it as the (never delivered) result of an atomic
+  store. Removing it means an `Option GoValue` result on `atomicCompute`
+  and restating `applyAtomicOp_wf`'s delivery case; deferred to the B2
+  outcome-grammar wave, where the atomic apply's result plumbing is
+  reshaped anyway.
+- `ExecOutcome.returned/broke/continued`: 60+ sites incl. the
+  `execStmtLoop`/`execProgLoop` lemma statements in MachineSound,
+  MultiSound (`transferable`), MultiStreams and NPDRF; a medium re-proof
+  wave for a type whose three extra constructors are unreachable under a
+  root frame. Deferred to (iv) B4 (thread-level `Status`), which retypes
+  the outcome anyway.
+- `Config.itersNormalized` and its `MachineWf`/`MultiWf` conjunct: 216
+  references (StateWf 113, MultiWfSound 103) — vacuous by
+  `Cont.itersNormalized_true` but threaded through every wf lemma;
+  deleting it is a positional re-proof over both files. Deferred to
+  wave (iii) with the `Cont` reshaping.
+- `Expr.length/capacity`'s `typ` (constant-fold at the frontend): a
+  FRONTEND/wire change (emit.go) — outside this lane's rules (no
+  frontend change unless the item is about it). Not done; noted for the
+  frontend lane.
+
+
+**Gate.** `scripts/capped scripts/ci --diff` on the A8 tree: RESULT PASS,
+`cases=3284 pass=3085 fail=199`, baseline diff FULL 3284/3284 no
+regression, re-pin guard 0 flips, negative 394/394, eval tests 148/148
+(`transcripts/gate-a8.txt`); choice-trace delta vs the pre-series
+snapshot: 0 on all 19489 lines (`choice-trace/a8-summary.txt`). Net: 20
+files, −71 lines (394 added, 465 deleted).
