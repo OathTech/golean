@@ -5040,7 +5040,15 @@ asked 100k, and re-expect `repeat-bound-refused`.
 
 ## BUG-091 — the native frontend's quarantine-reason text for multi-label `goto` shapes is EXPORT-NONDETERMINISTIC: `emit.go` ranges a Go MAP to name the offending label, so the wire bytes of one program differ run to run [frontend export nondeterminism; fail-closed but non-reproducible refusal text]
 
-- Status: open
+- Status: fixed (2026-09-04, lane `fr22-fr23`, commit 977b92e5 (pre-rebase 1aa49562; snapshot refs/snapshots/round11-fr22-fr23-2026-09-04) — the goto-label set
+  is `sort.Strings`-ed before the refusal loop; the slice's go/types-typed audit of
+  every `range <map>` in the frontend (57 sites) found and sorted two sibling
+  first-hit refusals, `langversion.go` (build-constraint reserved tags) and
+  `stdlibreach.go` (library layout-constant scan, now source-position order);
+  guard = `TestEmitIsDeterministic` (20 emissions byte-compared; RED-FIRST on
+  main's emitter: `docs/evidence/2026-09-04_fr22-fr23/bug091-red-first.txt`;
+  audit inventory `bug091-map-range-audit.tsv`). The Cases row keeps `Expect:
+  FAIL` BY DESIGN: the fix makes the refusal TEXT reproducible, not the result.)
 - Pinned-by: none (the affected row is already RED by design — FR-21 frontier refusal; the nondeterminism is in the refusal's TEXT, invisible to the `result id stage` baseline and to the differential's status comparison; visible only through the tracer's `obsHash`)
 - Expect: FAIL
 - Cases: stdlib-source/frontier/index-rune-goto
