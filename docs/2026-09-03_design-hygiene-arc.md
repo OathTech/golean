@@ -126,7 +126,10 @@ cost and touches the fewest positional `fun_cases` proofs.
     ACCOUNTING (the marker strip is one `stepFn` step on both
     drivers; removing it shifts the exact fuel at which `fuelOut`
     fires — either keep a no-op step or accept the shift and re-pin,
-    a [USER] call).
+    a [USER] call). The C-items' consumer-interface target, gap
+    analysis, dependency order, per-item gates and sequence are in
+    `docs/2026-09-04_reasoning-surface-plan.md` ([USER]-directed
+    2026-09-04, relayed; docs only).
 
 ## Not this arc's to decide — SEMANTICS decisions for the [USER]
 
