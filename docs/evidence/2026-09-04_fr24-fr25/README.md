@@ -183,8 +183,10 @@ methods/types/globals/method sets identical) — 69a538de → b4458244.
 ## cedar-go: after (tip — every checkpoint measured; A, B, C agree)
 
 `census-A/` (checkpoint A, tree 83b71132 = A before its header-only
-amend) and `after/census/` (RE-RUN on the committed tip 1982677d, clean
-tree — `meta.tsv`): **29
+amend) and `after/census/` (RE-RUN on the clean audit-fix tip 13197684 —
+`meta.tsv`; its `histogram.tsv` now buckets the stencil refusals FR-4
+(M3): 17 library-package cases — the 25 in the text = those 17 + 8
+drivers, `results.tsv`): **29
 FRONTEND-REFUSED / 5 EXPORT-OK of 34 — export fraction UNCHANGED**, but
 the FR-24 kill is GONE and the 29 refusals are the two causes §9.3's
 pass C had predicted counterfactually, now measured on the UNRELAXED
@@ -247,6 +249,13 @@ sanitized to `<repo>/`.)
   reconciler 0 HIGH. This tail is committed AFTER the tree it certifies
   (the records-tail commits that follow 1982677d touch only this
   directory and the ledger's cases cells — f07219c9, de698dd3).
+- **Audit fix round M1–M4, L5–L6** (`ci-diff-D.txt`): on the committed
+  fix-round tip 13197684 (clean) — RESULT PASS; 3382/3382 no regression;
+  re-pin guard 0 PASS→non-PASS (M1's re-emit flipped no row); twin
+  b4458244 unchanged; frontend unit tests incl. the wire-integrity tests,
+  lowerdiag tests incl. `TestStencilTextClassifiesAsFR4`; reconciler 0
+  HIGH. The census/lower-diagnose under `after/` were re-run on this same
+  clean tip; the tail commit that adds them touches only this directory.
 
 ## Files
 

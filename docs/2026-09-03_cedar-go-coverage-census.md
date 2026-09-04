@@ -751,7 +751,7 @@ pass C predicted counterfactually — now measured on the UNRELAXED copy:
 
 | cause | cases | class | row |
 |---|---|---|---|
-| `method stencil cedargo/internal/mapset.ImmutableMapSet[cedargo/types.EntityUID].All does not lower (instantiation of imported generic type iter.Seq[…] …) — FR-4` | 25 (everything importing `types`) | method STENCILS have no per-declaration quarantine (the H-3 residual) — a SOURCE generic type's method returning `iter.Seq[T]` | **FR-4** (queue 4) — the next kill |
+| `method stencil cedargo/internal/mapset.ImmutableMapSet[cedargo/types.EntityUID].All does not lower (instantiation of imported generic type iter.Seq[…] …) — FR-4` | 25 cases = 17 library-package cases (`histogram.tsv`'s `FR-4/stencil-refusal` row, classified FR-4 since the audit fix round M3 — before it the text fell through to FR-23/`imported-generic-inst` by its inner cause) + 8 drivers (everything importing `types`) | method STENCILS have no per-declaration quarantine (the H-3 residual) — a SOURCE generic type's method returning `iter.Seq[T]` | **FR-4** (queue 4) — the next kill |
 | `slices.Sort at non-integer element type string` | 4 (`all`, `drv-validate`, `x/exp/schema`, `x/exp/schema/internal/parser`) | an `init()` body (`x/exp/schema/internal/parser/marshal.go:350`) — init code has no per-declaration quarantine BY DESIGN | FR-14 / memo §3 row M |
 
 Why FR-25 never showed on cedar-go itself: the FR-4 stencil refusal fires

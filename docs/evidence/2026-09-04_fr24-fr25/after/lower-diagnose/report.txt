@@ -1,7 +1,7 @@
 DIAGNOSTIC — NOT A LOWERING. tools/lowerdiag report: no wire is written; nothing in this file is a gate input.
 target: artifacts/cedar/cases/all
-commit: 65676c84c7f0f26443cb144f7f33b68a700ad156+dirty   go: go1.26.5   tables: f8e205892d30 (causes.tsv + machine-surface.tsv + library-refusals.tsv)
-register: docs/stdlib-admission-register.md (43 rows)   causes table: 54 rows
+commit: 131976842a661ff185805dd4f516ee100a7ab20e   go: go1.26.5   tables: 97cca702ff6e (causes.tsv + machine-surface.tsv + library-refusals.tsv)
+register: docs/stdlib-admission-register.md (43 rows)   causes table: 55 rows
 
 == first refusal (what the frontend says today)
   nativefrontend: native frontend unsupported: slices.Sort at non-integer element type string
@@ -113,6 +113,7 @@ register: docs/stdlib-admission-register.md (43 rows)   causes table: 54 rows
   cause                      fr                decls  what
   labeled-shape              unrowed               -  statement/expression corner shapes the emitter refuses by arm — not modeled statically
   basic-type-opaque-sig      FR-25                 -  not modeled statically
+  stencil-refusal            FR-4                  -  not modeled statically
   global-type-poisoned       FR-24                 -  not modeled statically
   stencil-whole-export       FR-4                 94  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
   local-type-type-argument   c-pin                94  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
