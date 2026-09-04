@@ -1,0 +1,7 @@
+# The first pre-wave snapshot run (this worktree's binary at main @ aceb0dcb, aggregate-only tracer): chunk 5 stalled ~60 min on strings/trimspace-repeat/repeat-bound-refused (its single default-stream trace alone exceeded a 15-min timeout: .tmp/probe-repeat.out); run killed, row excluded from every wave run (recorded in each run's excluded.tsv).
+
+choice-trace-corpus: 3329 row(s) exported (35 frontend refusals listed in artifacts/choice-trace-before/export-fail.tsv; 1 row(s) EXCLUDED by --exclude, listed in artifacts/choice-trace-before/excluded.tsv)
+choice-trace-corpus: a tracer process failed (see artifacts/choice-trace-before/results-*.log)
+
+--- single-row probe (timeout 900 s):
+timeout 900 .lake/build/bin/golean choice-trace --input "$w" --function       872.72s user 1.90s system 97% cpu 15:00.09 total

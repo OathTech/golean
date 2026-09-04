@@ -16,10 +16,11 @@ module existed:
    past the prefix is the canonical default and the "adversarial" runs
    converge to the default trajectory. Nothing measured how many
    consumptions a strict row actually makes. This tracer replays ONE
-   stream in lockstep with the consumption accountant (`CLI.stepNeeds` /
-   `CLI.stepNeedsSeq`, the enumerator's mirror of the machine's
-   consumption points) and records EVERY consumption: site, bound, the
-   stream value drawn (or EXHAUSTED), the realized pick.
+   stream in lockstep with the machine's OWN consumption projection
+   (`seqConsumption`/`poolConsumption` — since wave (iii) B8 the one
+   account of the machine's consumption points, guaranteed by
+   `stepFn_consumption_*`) and records EVERY consumption: site, bound,
+   the stream value drawn (or EXHAUSTED), the realized pick.
 
 2. **modeled ⊆ permitted at the site level (C3 finding 3).** Per
    consumption it checks the MENU INVARIANTS: the pick is inside the
@@ -46,8 +47,9 @@ right pragmatic subset (R2's width is a DECLARED subset of the spec's
 unbounded latitude — the check is against the declaration).
 
 THREE-WAY SELF-CHECK on every run (so the tracer cannot silently drift
-from what it traces): (a) the site-tagged mirror here must agree with
-`CLI.stepNeeds` on every bound; (b) the sentinel discipline of the
+from what it traces): (a) the tagged projection here must agree with
+`CLI.stepNeeds` on every bound (both are `poolConsumption` since B8 — the
+channel stays as the drift alarm it was); (b) the sentinel discipline of the
 enumerator — a pool step fed exactly the accounted picks plus one
 sentinel must leave the sentinel alone; (c) the machine's OWN labeled
 records (`StepEvent.picks`, emitted by `Choices.consumeAtE` at the

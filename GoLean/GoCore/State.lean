@@ -211,11 +211,13 @@ def Choices.consume (choices : Choices) (bound : Nat) : Nat × Choices :=
 /-- **The choice-site census, as a datatype** (W3.2 slice 1 stage A —
 audit finding C-3/queue Q1, ruled G0 2026-08-20). One constructor per
 consumption site in the semantic core; adding a site REQUIRES a
-constructor here plus a `ChoiceSite.policy` row, an accountant arm
-(`stepNeeds`/`stepNeedsSeq`, CLI.lean's lockstep inventory), and the
-site's envelope statement in situ — the doc-resident census sweeps
-(nondeterminism doctrine preamble, latitude inventory §0) are retired
-by this type's exhaustiveness and now point here.
+constructor here plus a `ChoiceSite.policy` row, its consult in the
+machine's own consumption projection (`seqConsumption`/`poolConsumption`,
+Machine.lean/Multi.lean — since wave (iii) B8 the ONE account of where the
+stream is consulted; the theorem `stepFn_consumption_*` breaks loudly on an
+unaccounted arm), and the site's envelope statement in situ — the
+doc-resident census sweeps (nondeterminism doctrine preamble, latitude
+inventory §0) are retired by this type's exhaustiveness and now point here.
 
 The sites and their consuming definitions:
 * `mapIter`      — range-over-map pick-next (`stepFn`'s `.mapIterK`

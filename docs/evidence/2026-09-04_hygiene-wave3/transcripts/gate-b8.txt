@@ -1,0 +1,60 @@
+  ok: G5 named both causes (global fan-out refusal + empty-row guard), no stray .out
+  ok: T1-strict-lean-run: cause named at stage lean-observation (Lean run TIMED OUT after 1s)
+      row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	lean-observation	Lean run TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) — no observation produced (expected status ok); captured output: run_with_timeout: TIMED OUT after 1s — killing: /home/dev/projects/golean/.tmp/golean-lane-validation.MT9WN5/fakeroot/.lake/build/bin/golean native-json-run --input /home/dev/projects/golean/.tmp/golean-lane-validation.MT9WN5/artifacts-T1-strict-lean-run/native/lane-t1/wire.json --function forConditionEval
+  ok: T2-nondet-rerun: cause named at stage nondet (re-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s)
+      row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	nondet	oracle-invariance re-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) — invariance NOT certified (a killed run is not an observed variance); captured output: run_with_timeout: TIMED OUT after 1s — killing: /home/dev/projects/golean/.tmp/golean-lane-validation.MT9WN5/fakeroot/.lake/build/bin/golean native-json-run --input /home/dev/projects/golean/.tmp/golean-lane-validation.MT9WN5/artifacts-T2-nondet-rerun/native/lane-t1/wire.json --function forConditionEval --choices 9,8,7,6,5,4,3,2,1,0
+  ok: T3-coupling-pin: cause named at stage membership (driver-coupling pin: native-json-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s)
+      row: FAIL	lane-t3	maps,range,keys,loops,nondet	membership	driver-coupling pin: native-json-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) — coupling NOT certified (a killed run is not copied-driver drift); captured output: run_with_timeout: TIMED OUT after 1s — killing: /home/dev/projects/golean/.tmp/golean-lane-validation.MT9WN5/fakeroot/.lake/build/bin/golean native-json-run --input /home/dev/projects/golean/.tmp/golean-lane-validation.MT9WN5/artifacts-T3-coupling-pin/native/lane-t3/wire.json --function rangeFirstKey --choices 9,8,7,6,5,4,3,2,1,0
+  ok: T4-sample-loop: cause named at stage membership (observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing a Go sample against member #1)
+  ok: T5-comparator-undecodable: cause named at stage go-observation (Go output is not a valid observation (comparator said: left.status: unknown observation status)
+  ok: T6-lean-run-sigkill: cause named at stage lean-observation (Lean run KILLED (exit 137)
+  ok: T7-differential-sigterm: cause named at stage differential (observation-eq KILLED (exit 143)
+  ok: T8-go-oracle-sigkill: cause named at stage go-run (go run oracle KILLED (exit 137)
+  test-lane-validation: ok
+
+[1m── re-run negative corpus (--diff)[0m
+results: artifacts/coverage/negative-latest.tsv
+meta: artifacts/coverage/negative-latest.meta.tsv
+
+[1m── derived oracle artifacts re-derived (Tests/FloatVectors.lean + tools/nativefrontend/inittask-std.tsv)[0m
+
+[1m── negative baseline diff[0m
+no regression: 394 case(s) run in negative-latest.tsv match baselines/negative-full.tsv
+
+[1m── differential baseline diff (scripts/coverage-baseline-diff)[0m
+no regression: 3365 case(s) run in latest.tsv match baselines/native-full.tsv
+
+[1m── cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)[0m
+  [01] C13  MEDIUM  78 doc site(s) across 9 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
+  [02] C5  MEDIUM  2 frontier-table case citation(s) do not resolve against the baseline
+  [03] C9  MEDIUM  the wire schema moved after the certification date 2026-09-04T01:02:30+00:00 (5 commit(s) to wire.go/NativeToIR.lean) — the certified set's wire sha is only current if `scripts/ci --slow` has re-enumerated since
+
+[1m══ scripts/ci summary ══[0m
+  note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   core build (warning-free)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   eval tests (148 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  note negative baseline diff matched (394 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  note baseline diff FULL (3365/3365, no regression) but recorded on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  note reconciler: 3 finding(s), 0 HIGH — report-only (details: tools/reconcile-records)
+
+[1mRESULT: PASS[0m

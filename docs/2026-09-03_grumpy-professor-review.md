@@ -781,6 +781,7 @@ function of (kind, key, clock) and the key encodings are in bijection
 with the phantom paths.
 
 _A7 status (2026-09-04, design-hygiene arc step (ii)): SKIPPED — folded into wave (iii)/B3, whose `Cont` classification is this accessor; measured ~85 pattern sites incl. 24 in proofs (design note §A7)._
+_A7 status (2026-09-04, wave (iii)): the ACCESSOR half LANDED with B3 (`cd2a3474`) — `Config.applyPos : Config → Option (ApplyHead × List GoValue × LocalEnv × Cont)`, additive, consumed by B8's `seqConsumption` and the inversion lemmas `applyPos_stmt/_select/_sync`; the accumulator flip and the `applyOperands` spelling NOT done (wave-(iii) note §B3, reasons)._
 
 **A7. One accumulator convention and one apply-position accessor.**
 Change: pick `done : List GoValue` reversed (the majority) for the
@@ -958,6 +959,8 @@ today (all 41 build `[⟨runtimeErrorValue msg, false⟩]`); helper-level
 Downstream: half the rule-indexed lemmas; `Progress`-class statements
 quantify `Result`.
 
+_B2 status (2026-09-04, design-hygiene arc step (iii)): LANDED `91c57c9e` (branch `hygiene-wave3`) — `Result` at the APPLY BOUNDARY (`toResult` once, `deliver` once; the helper-internal monad route measured and deferred, cost-driven), the 17 twins deleted (159 → 142 rules), `enterFramePick` the one entry funnel (replaces `enterFrameStep`/`enterFrameDeferPanicking` and `spawnStep`'s copy), `Obs := ok | terminal Terminal` (A1's owed payoff — fatal/deadlock statable; engine + checker still refuse them), driver readout `Result` → `Readout`; design note `docs/2026-09-04_hygiene-wave3-design.md` §B2._
+
 **B3. `Cont` classification + generic rebuild (Q4) and field bundling
 (Q3).**
 Change: `inductive FrameClass | glue | callFrame | resumeMarker |
@@ -981,6 +984,8 @@ Preservation: definitional — each walk's instance is proved equal to
 today's definition by `cases k <;> rfl` (30 cases, once).
 Downstream: `Cont` has an algebra (`tail`, `withTail`, the class
 lemmas); "unwinding strips glue" is a lemma, not 24 rules.
+
+_B3 status (2026-09-04, design-hygiene arc step (iii)): LANDED `cd2a3474` — `Cont.tail`/`withTail`, `FrameClass`/`Cont.class`, ONE well-founded `Cont.rebuild`; `pushDefer`/`recoverThroughWrappers`/`recoverResult` as instances (each proved EQUAL to its 30-arm predecessor before the swap — evidence `b3-prototype/`), `panicPassthrough` = glue → tail, the generic `Cont.rebuild_locSup` replacing three walk inductions, `Config.isTerminal` (threadDone, atBoundary), plus A7's additive `Config.applyPos`; NOT done with reasons: `Cont.eqbF` restructure, field bundling, the accumulator flip, `itersNormalized` deletion (owed); design note §B3._
 
 **B4. Signal unification (Q6) and a thread-level `Status`.**
 Change: `inductive Signal | brk | cont | ret | brkTo L | contTo L`;
@@ -1074,6 +1079,8 @@ Cost: medium — the recorded `stepFn` 3-tuple → 4-tuple reshape
 Preservation: `consumeAtE` projects onto `consumeAt`
 (`Choices.consumeAtE_fst_snd`, State.lean:326) — same picks, same
 stream.
+
+_B8 status (2026-09-04, design-hygiene arc step (iii)): LANDED `2e69fde0` — NOT the `stepFn` 4-tuple reshape (recorded deferral; "hundreds of pinned equations") but the machine's OWN consumption projection `seqConsumption`/`poolConsumption` with the theorem `stepFn_consumption_none`/`_some` (the old `stepFn_oblivious` DERIVED); `CLI.stepNeeds`/`stepNeedsSeq` and the tracer's `seqSite`/`poolSite` are projections (the three hand mirrors gone); the NEW tracer reproduced the OLD tracer's 23665 per-consumption records byte for byte; the theorem's `some` half surfaced BUG-092 (a post-pop delivered panic UNDOES the pop — disclosed, referred to the [USER]); the checker's fragment flags untouched (widening = drift); design note §B8._
 
 ### 3(c). The big reshaping — only worth doing before the reasoning repo pins us
 

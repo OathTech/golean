@@ -4173,7 +4173,8 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   -- were folded into their entry rules by B2 — `enterFramePick` +
   -- `deliver`; the BUG-087 entry-panic TEXT is now the pick the rule's
   -- quantified stream draws: on the wrapper family the two-member set
-  -- {nil-dereference text, gc's `panicwrap` text}, elsewhere `msg`.)
+  -- {nil-dereference text, gc's `panicwrap` text}, elsewhere `msg`. The
+  -- deleted docstrings' history: ledger [DL-20].)
   /-- Channel statements (channels arc slice 1; receive reordered at the
   audit response, BUG-022): pre-communication operand entry, plain
   shifts, one apply step — the apply's outcome a full CONFIGURATION

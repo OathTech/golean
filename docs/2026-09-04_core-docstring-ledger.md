@@ -340,3 +340,33 @@ guards `race/free-sync/rw-copy-beside-{rlock,lock}` stay green), and
 every race-free program (vet's `copylocks` flags every shape in the
 class).
 ```
+
+## [DL-20] Wave (iii) — history prose deleted with the B2 twin rules and the B3 walks (Machine.lean, StepFn.lean)
+
+Recorded 2026-09-04 [AGENT] (design-hygiene wave (iii), `hygiene-wave3`). Not a move: the B2 apply/entry twin rules (`callImmediatePanic` … `panicFrameDeferEnterPanic`, 17 rules) and the two frame-entry helpers `enterFrameStep`/`enterFrameDeferPanicking` were DELETED with their docstrings, and B3 replaced the 30-arm walks (`pushDefer`, `panicPassthrough`, `recoverThroughWrappers`, `recoverResult`) by `Cont.rebuild` instances. The history those docstrings carried, kept here so it is not lost:
+
+```
+  Frame-ENTRY panics are ordinary recoverable panics (2026-08-05, slice-2
+  stage 5: dynamic dispatch on a nil interface or the auto-deref of a nil
+  pointer box raises inside `enterFrame`; Go recovers these like any other
+  panic — pinned by `interfaces/recover-nil-dispatch/*`). One twin per
+  ordinary call-entry rule, appended at the END of the inductive so existing
+  positional case tags in the correspondence proofs keep their numbering.
+  DEFERRED-call entry has its own twins further below
+  (`frameDeferFallEnterPanic` and friends — audit F1+F5, 2026-08-05; the
+  original narrowing here was scoped too widely).
+  THE ENTRY-PANIC TEXT (BUG-087, all seven entry-panic rules): the payload
+  text is `entryPanicText s fid args msg pick` with `pick` quantified
+  freely — on the wrapper family (`nilValueMethodText?`) that is the
+  two-member set {nil-dereference text, gc's `panicwrap` text} the
+  `nilValueMethodText` site draws from; elsewhere it is `msg` alone.
+  (enterFrameStep) Kept as ONE helper so each stepFn call site remains a
+  single `fun_cases` branch (the correspondence proofs' case numbering is
+  positional). The NORMAL-drain deferred-call entries reuse it too (audit
+  F1+F5, 2026-08-05); the PANIC-PATH drain uses `enterFrameDeferPanicking`
+  (chain join). The stream meets a frame entry only here, in
+  `enterFrameDeferPanicking`, and in the `go`-statement entry `spawnStep`
+  (Multi.lean — the same pick; audit fix F1).
+```
+
+The surviving statements (the BUG-087 envelope, the recover walk's gc rule, the wrapper-transparency argument) stay in situ on `enterFramePick`, `recoverResult` and `recoverThroughWrappers`.

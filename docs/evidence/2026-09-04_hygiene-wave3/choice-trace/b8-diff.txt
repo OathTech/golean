@@ -1,0 +1,5 @@
+rows before=19963 after=19963
+DELTA: 0 (every (id,stream) line identical on all columns)
+per-site totals before:   consumptions per site (all streams): l1Sched=9361, appendSpill=4844, postOp=4513, backEdge=2400, mapIter=2006, l5ExitWindow=307, tryLock=101, nilValueMethodText=84, l2Entry=24, l4Waiter=22, l2Arriva
+dump records before=23665 b8=23665
+DUMP: byte-identical (sorted per-consumption records) — the NEW tracer (machine projections) reproduces the OLD tracer (hand mirror)

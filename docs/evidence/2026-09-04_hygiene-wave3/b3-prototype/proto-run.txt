@@ -1,0 +1,5 @@
+Cont.rebuild.induct : ∀ (descend : Cont → Bool) (motive : Cont → Prop),
+  (∀ (x : Cont), descend x = true → ∀ (k' : Cont), x.tail = some k' → motive k' → motive x) →
+    (∀ (x : Cont), descend x = true → x.tail = none → motive x) →
+      (∀ (x : Cont), ¬descend x = true → motive x) → ∀ (k : Cont), motive k
+exit=0

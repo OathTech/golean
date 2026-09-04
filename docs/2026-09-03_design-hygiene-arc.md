@@ -114,6 +114,22 @@ cost and touches the fewest positional `fun_cases` proofs.
       the machine itself. They all shift the positional `fun_cases`
       tags in MachineSound, so the re-proof is paid once. A1 folds in
       here if not already landed under (ii).
+      Status: DONE on branch `hygiene-wave3` (2026-09-04), forked from
+      `main` @ `aceb0dcb`: B2 `91c57c9e`, B3 `cd2a3474`, B8 `2e69fde0`,
+      each with the full differential at ZERO drift (3365 = 3165/200) and
+      the whole-corpus choice trace byte-identical PER CONSUMPTION to
+      the pre-wave snapshot. Recorded deviations: B2 puts `Result` at the
+      APPLY BOUNDARY, not through the helpers (cost); B3 lands the
+      algebra + `isTerminal` + A7's accessor and SKIPS the eqb
+      restructure / field bundling / accumulator flip (reasons in the
+      note); B8 is the projection + theorem, NOT the `stepFn` 4-tuple
+      reshape. ONE FINDING referred to the [USER]: BUG-092 (a
+      stream-consuming apply whose delivery panics after its pop
+      returns the pre-apply stream — the pop is undone; accounting only,
+      no observation moves, unexhibited by the corpus). Owed onward:
+      `itersNormalized` deletion (A8), the program-text `locSup`
+      deletion (A4). Design note `docs/2026-09-04_hygiene-wave3-design.md`;
+      evidence `docs/evidence/2026-09-04_hygiene-wave3/`.
 
 (iv) **B4 / B5 / B6 / B7 in any order**: signal unification + a
      thread-level `Status` (Q6); a `Chan` module; frontend-resolved
@@ -225,5 +241,6 @@ still not scheduled anywhere:
 
 | Slice | Item | Branch | Landed | Notes |
 |---|---|---|---|---|
+| 3 | B2 + B3 + B8 (+ A7 accessor) | `hygiene-wave3` | branch-complete 2026-09-04: B2 `91c57c9e`, B3 `cd2a3474`, B8 `2e69fde0` + records; every gate `ci --diff` PASS 3365 = 3165/200 at zero drift, choice-trace delta 0 aggregate AND per consumption (23665 records); not merged | design note `docs/2026-09-04_hygiene-wave3-design.md`; evidence `docs/evidence/2026-09-04_hygiene-wave3/`; −17 rules, 41 conversion sites → 1 `deliver`, 3 entry funnels → 1, 4 walks → `Cont.rebuild` instances, 3 consumption mirrors → the machine's projection + theorem; BUG-092 filed (disclosed finding, [USER] ruling pending) |
 | 2 | A-series A1–A10 | `hygiene-a-series` | branch-complete 2026-09-04: A1 `dfa68802`, A2 `7cba41cd`, A3 `6973354b`, A4 `bcdf04c1`, A5 `48d9aba8`, A6 `367dab2f`, A8 `7ff80223`, A9 `80b4ed89`, A10 `884e5226` + a records commit (SHA in the evidence README); every gate `ci --diff` PASS 3284 = 3085/199 at zero drift, choice-trace delta 0; not merged | design note `docs/2026-09-03_hygiene-a-series-design.md`; evidence `docs/evidence/2026-09-03_hygiene-a-series/`; A7 SKIPPED (→ B3); net core delta and per-item lemma tombstones in the note |
 | 1 | B1 stamps | `hygiene-b1-stamps` | branch-complete 2026-09-03, landing commit `f6152a6c`; audit verdict MERGE-READY, fix round `a4cf54e4` (clean-tree ci --diff PASS, 3199/3199); E9 irreflexive-key narrowing RATIFIED [USER] 2026-09-03 (relayed; record in docs/2026-08-31_qrow-rulings.md); merge sign-off pending; not merged | design note `docs/2026-09-03_hygiene-b1-stamps-design.md`; evidence `docs/evidence/2026-09-03_hygiene-b1-stamps/`; 14 defs + 14 theorems + 3 rule premises deleted, −649 lines; zero drift on 3195 rows; +4 rows `maps/nan-key-range`, `maps/nan-key-range-aggregate/{array,struct,interface}` (BUG-088, found by the bisimulation argument, fixed by construction — an E9 narrowing on irreflexive keys, DISCLOSED, [USER] ratification pending at merge) |
