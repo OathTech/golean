@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+# FR-4 × FR-23 (2026-09-04, lane fr4-rowm): a stencil refused in its
+# SIGNATURE (iter.Seq[T] at T = int) is a per-declaration stub whose
+# signature carries FR-23's opaque marker; `call` is red BY DESIGN at
+# frontend-export (the member is refused by name — FR-23; its range body
+# is FR-12's) and flips when those land.
+sibling	sibling	-	ok	-	generics,methods,structs,stdlib,len
+satisfies	satisfies	-	ok	-	generics,methods,interfaces,type_assertions,comma_ok,stdlib
+call	call	-	ok	-	generics,methods,range,stdlib

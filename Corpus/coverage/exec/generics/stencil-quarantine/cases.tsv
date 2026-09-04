@@ -1,8 +1,18 @@
 # id	subject	args	expected_status	expected_reason	features
-# FRONTIER PIN (slice 6): the H-3 residual — an unlowerable method
-# STENCIL refuses the whole export, so the sibling is red for someone
-# else's declaration. Flips green when the stencil quarantine lands
-# (ledger FR row); the H-3 method-set-completeness invariant applies
-# there too (a quarantined stencil must stay in the instantiated
-# type's method set).
+# FR-4 (2026-09-04, lane fr4-rowm): method STENCILS quarantine per
+# declaration (mono.go quarantinedStencilStub — the H-3 contract at one
+# receiver instantiation). `sibling` was the FRONTIER PIN (slice 6; the
+# whole export refused on someone else's stencil) and FLIPS green here.
+# Red BY DESIGN at frontend-export: every row that CALLS the quarantined
+# stencil (directly, through interface dispatch, or through another
+# stencil) — the stub refuses by name; `local-type-c6` stays red on the
+# ratified (c)-pin C6 (a function-local type as a type argument), now
+# demonstrably per-declaration (its siblings are green).
 sibling	stencilSibling	-	ok	-	generics,methods,stdlib
+stencil-call-refuses	stencilCallRefuses	-	ok	-	generics,methods,stdlib,len
+iface-satisfied	ifaceSatisfied	-	ok	-	generics,methods,interfaces,type_assertions,comma_ok,stdlib
+iface-dispatch	ifaceDispatch	-	ok	-	generics,methods,interfaces,type_assertions,stdlib,len
+transitive-lowers	transitiveLowers	-	ok	-	generics,methods,structs,stdlib
+transitive-call	transitiveCall	-	ok	-	generics,methods,structs,stdlib,len
+dedup-second-body	dedupSecondBody	-	ok	-	generics,methods,stdlib
+local-type-c6	localC6	-	ok	-	generics,methods,defined_type,conversions,stdlib

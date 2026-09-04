@@ -1,2 +1,4 @@
 # id	subject	args	expected_status	expected_reason	features
+# FLIPPED FAIL→PASS 2026-09-04 (lane fr4-rowm, memo §3 row M): slices.Sort at
+# string is the real generic; the refusal this row pinned is retired.
 -	sortNonIntegerElements	-	ok	-	slices,sort,externs,strings

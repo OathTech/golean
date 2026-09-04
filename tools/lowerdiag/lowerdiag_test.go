@@ -150,8 +150,16 @@ func TestRegisterIsRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !sup.sourceThrough["strings"] || sup.shim["fmt.Sprintf"] == "" || !sup.intercept["slices.Sort"] {
-		t.Fatalf("register not read: source-through strings=%v shim fmt.Sprintf=%q intercept slices.Sort=%v", sup.sourceThrough["strings"], sup.shim["fmt.Sprintf"], sup.intercept["slices.Sort"])
+	if !sup.sourceThrough["strings"] || sup.shim["fmt.Sprintf"] == "" || !sup.sourceThrough["slices"] {
+		t.Fatalf("register not read: source-through strings=%v shim fmt.Sprintf=%q source-through slices=%v", sup.sourceThrough["strings"], sup.shim["fmt.Sprintf"], sup.sourceThrough["slices"])
+	}
+	// The intercept class is EMPTY since 2026-09-04 (slices.Sort retired by
+	// memo §3 row M, lane fr4-rowm; cmp.Compare by lane fr24): the register
+	// must carry no intercept row — a row here without the code table is
+	// what check-stdlib-register catches, and the static pass must not
+	// treat slices.Sort as supplied-by-intercept any more.
+	if len(sup.intercept) != 0 {
+		t.Fatalf("register lists intercept rows %v — the class is frozen at 0", sup.intercept)
 	}
 	if sup.registerRows < 20 {
 		t.Fatalf("only %d register rows read", sup.registerRows)
@@ -182,6 +190,10 @@ func TestClassifyTextVocabulary(t *testing.T) {
 		`stdlib source-through: internal/stringslite.Clone needs unsafe.String (…)`:                               "stdlib-source-gap",
 		`references quarantined package-level variable maxDatetime (its initializer does not lower: …)`:           "quarantine-cascade",
 		`imported package-level variable time.UTC has no seeded cell`:                                             "stdlib-var-unmodeled",
+		// measured on cedar-go once FR-4 stopped killing the export (lane fr4-rowm, census §11)
+		`generic instantiation artifacts/cedar/cases/drv-eval-operators/cedargo/types/entity_uid.go:143:9`: "explicit-instantiation-call",
+		`method cedargo/x/exp/schema/internal/parser.lexer.skipWhitespaceAndComments (len of a potentially-panicking operand between a potentially-panicking operand to its left and a later ordered call/receive in the same statement (hoisting len would reorder the panics); satisfaction answers, calls fail closed)`: "len-hoist-panic-order",
+		`default value for imported named type net/netip.Addr`: "imported-type-zero-value",
 	}
 	for text, want := range cases {
 		c, _ := classifyText(text)
@@ -793,7 +805,11 @@ func TestCalibrationAgainstWire(t *testing.T) {
 	// isE LOWERS in the wire: the quarantine sits on the library function
 	// (errors.Is itself), so the static finding is CALL-scoped and the
 	// declaration agrees with the wire.
-	want := map[string]bool{"retBox": false, "assignBox": true, "sortStrings": true, "sortInts": false, "deferSort": true, "isE": false, "fields": false}
+	// sortStrings / deferSort LOWER since memo §3 row M (lane fr4-rowm,
+	// 2026-09-04): slices.Sort is the real generic at every ordered kind
+	// and nothing is intercepted, so the string sort and the deferred
+	// function value both reach pdqsortOrdered.
+	want := map[string]bool{"retBox": false, "assignBox": true, "sortStrings": false, "sortInts": false, "deferSort": false, "isE": false, "fields": false}
 	if wireQ["errors.Is"] == "" {
 		t.Errorf("wire: the library function errors.Is should be quarantined (library-refusals.tsv row); got lowered")
 	}
@@ -804,23 +820,44 @@ func TestCalibrationAgainstWire(t *testing.T) {
 	}
 }
 
-// Audit fix round M3 (lane fr24, 2026-09-04): the FR-4 stencil text must
-// classify as FR-4 — before the `stencil-refusal` row, the cedar-go census's
-// 25 `method stencil … does not lower (instantiation of imported generic
-// type iter.Seq[…] …)` refusals were SILENTLY bucketed FR-23 through their
-// inner cause. And an unmatched text is UNCLASSIFIED (nil), never a
-// neighbour bucket.
+// Audit fix round M3 (lane fr24, 2026-09-04) made the FR-4 WHOLE-EXPORT
+// stencil text classify as FR-4 (before the `stencil-refusal` row the
+// cedar-go census's 25 kills were silently bucketed FR-23 through their
+// inner cause — wrong while the KILL was FR-4's). Lane fr4-rowm closed FR-4
+// per declaration: the kill text is gone, the stencil is a stub whose
+// blocker IS its inner cause, so inner-cause bucketing is now the honest
+// answer, and the FR-4 row is the LAST-resort fallback for a stencil whose
+// inner cause no row knows. An unmatched text is UNCLASSIFIED (nil), never
+// a neighbour bucket.
 func TestStencilTextClassifiesAsFR4(t *testing.T) {
 	if err := initCauses(); err != nil {
 		t.Fatal(err)
 	}
-	text := "nativefrontend: native frontend unsupported: method stencil cedargo/internal/mapset.ImmutableMapSet[cedargo/types.EntityUID].All does not lower (instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] in cedargo/internal/mapset.ImmutableMapSet[cedargo/types.EntityUID].All (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub)) — FR-4: method stencils have no per-declaration quarantine yet, so the export refuses whole"
+	// Since FR-4 closed per declaration (lane fr4-rowm, mono.go
+	// quarantinedStencilStub) the stencil's refusal is the STUB's
+	// `unsupported` reason: the instantiation named first, the inner cause
+	// after it. classifyText unwraps the method wrapper, so the stub
+	// classifies by its INNER cause — the row whose plan unblocks it
+	// (here FR-23, the iter.Seq value) — exactly like an H-3 stub.
+	text := "method cedargo/internal/mapset.ImmutableMapSet[cedargo/types.EntityUID].All (FR-4: method stencil at this instantiation does not lower — instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] in cedargo/internal/mapset.ImmutableMapSet[cedargo/types.EntityUID].All (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub); signature instantiates imported generic iter.Seq[cedargo/types.EntityUID] — not modeled (FR-23), carried as an opaque marker; satisfaction answers, calls fail closed)"
 	c, key := classifyText(text)
-	if c == nil || c.FR != "FR-4" || c.ID != "stencil-refusal" {
-		t.Fatalf("stencil text must classify as FR-4/stencil-refusal, got %v (key %q)", c, key)
+	if c == nil || c.FR != "FR-23" || c.ID != "imported-generic-inst" {
+		t.Fatalf("stencil stub text must classify by its inner cause (FR-23/imported-generic-inst), got %v (key %q)", c, key)
 	}
-	if key != "cedargo/internal/mapset.ImmutableMapSet[cedargo/types.EntityUID].All" {
-		t.Fatalf("key must be the stencil, got %q", key)
+	if key != "iter.Seq[cedargo/types.EntityUID]" {
+		t.Fatalf("key must be the inner cause's, got %q", key)
+	}
+	// A stencil whose inner cause NO row knows falls to the FR-4 row (the
+	// table's last row, the stencil fallback) — never UNCLASSIFIED.
+	unknown := "method main.box[int].render (FR-4: method stencil at this instantiation does not lower — frobnicate the widget sideways; satisfaction answers, calls fail closed)"
+	if c, _ := classifyText(unknown); c == nil || c.FR != "FR-4" || c.ID != "stencil-refusal" {
+		t.Fatalf("a stencil stub with an unknown inner cause must fall to FR-4/stencil-refusal, got %v", c)
+	}
+	// The RETIRED whole-export text (the frontend no longer produces it)
+	// must not be absorbed by the stencil row.
+	old := "method stencil cedargo/internal/mapset.ImmutableMapSet[cedargo/types.EntityUID].All does not lower (frobnicate) — FR-4: method stencils have no per-declaration quarantine yet, so the export refuses whole"
+	if c, _ := classifyText(old); c != nil && c.ID == "stencil-refusal" {
+		t.Fatalf("the retired whole-export stencil text must not classify as stencil-refusal")
 	}
 	if c, _ := classifyText("method stencil-ish wording the table does not know: frobnicate the widget"); c != nil {
 		t.Fatalf("an unmatched text must be UNCLASSIFIED, not absorbed into %s", c.ID)

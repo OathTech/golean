@@ -1,4 +1,9 @@
-# id	subject	args	expected_status	expected_reason	features
-# BORN-RED by design (stdlib-source-2 audit fix round F1): defer/go of the frontend-intercepted slices.Sort refuse by name; green when memo §3 row M retires the sortSlice op.
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# BORN-RED by design (stdlib-source-2 audit fix round F1): defer/go of the frontend-intercepted slices.Sort refused by name. FLIPPED FAIL→PASS 2026-09-04 (lane fr4-rowm): memo §3 row M retired the sortSlice op — nothing is intercepted, the deferred/spawned FUNCTION VALUE is the real generic with its closure on the wire.
 defer-sort	deferSort	-	ok	-	stdlib,sort,slices,defer,named-results,closures
-go-sort	goSort	-	ok	-	stdlib,sort,slices,goroutines,len
+# go-sort: the spawned goroutine now RUNS the real pdqsort (row M), so the
+# scheduler consumes picks past the 8-entry fixed streams (measured 2026-09-04:
+# 1 wide pick after exhaustion at consumption 8, default w=2); the observation
+# (len, unwritten by Sort) is schedule-independent — strict with the declared
+# depth, min 64 per the [AGENT] sizing convention (coverage-suite-structure §lane).
+go-sort	goSort	-	ok	-	stdlib,sort,slices,goroutines,len	strict	-	depth=64

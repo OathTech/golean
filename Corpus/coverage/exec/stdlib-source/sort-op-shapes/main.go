@@ -9,9 +9,12 @@ package main
 // `defer slices.Sort(s)` / `go slices.Sort(s)` lowered the real generic
 // with `math/bits.Len` pruned off the wire and the machine went `stuck:
 // GoCore function not found` where a refusal was owed. Now both shapes
-// REFUSE BY NAME (one predicate for walk and emitter: stdlibreach.go
-// interceptedLibraryCall); these rows are born red by design and turn
-// green when row M lands (the real slices.Sort everywhere). gc: 123 / 3.
+// REFUSED BY NAME (one predicate for walk and emitter: stdlibreach.go
+// interceptedLibraryCall); these rows were born red by design and turned
+// GREEN 2026-09-04 (lane fr4-rowm) when memo §3 row M retired the op: the
+// intercept table is empty, so the deferred/spawned function value is the
+// real `slices.Sort[[]int,int]` with `pdqsortOrdered`/`math/bits.Len` on
+// the wire. gc: 123 / 3.
 
 import "slices"
 

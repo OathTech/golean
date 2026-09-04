@@ -59,6 +59,20 @@
 #      H-3-quarantined MajorityConfig.Describe; referenced by no body)
 #      leave the wire — the SOLE change (0 added, 0 changed; enumerated
 #      by a JSON diff, docs/evidence/2026-09-04_fr24-fr25/twin-repin-C/).
+#      Re-pin history: 2026-09-04 (lane fr4-rowm, memo §3 row M — the
+#      `slices.Sort` machine-op intercept RETIRED; the G1-G9 stdlib plan
+#      ruled «(3) agree, go ahead with the plan» [USER], relayed)
+#      b4458244… → 4ee39f73…: the twin's nine `slices.Sort` sites
+#      (quorum.MajorityConfig.{CommittedIndex,Slice,String},
+#      tracker.ProgressTracker.{LearnerNodes,Visit,VoterNodes},
+#      tracker.ProgressMap.String, raft.raft.campaign,
+#      raftpb.ConfState.Equivalent$lit0) lose their `sort-slice` machine-op
+#      node for a static call to the real `slices.Sort[[]uint64,uint64]`
+#      stencil, and the pdqsort closure joins the wire (16 funcs added:
+#      slices.{Sort,pdqsortOrdered,…}[uint64], cmp.{Less,isNaN}[uint64]);
+#      0 removed, 0 types/globals changed, 0 `sort-slice` nodes remain
+#      (enumerated by a JSON diff, docs/evidence/2026-09-04_fr4-rowm/
+#      twin-repin/structural-diff.txt).
 #
 # Fail-closed throughout: missing baseline, failed build, failed emit,
 # failed run, or any byte drift exits 1 naming the failing pin.

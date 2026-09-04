@@ -1,0 +1,80 @@
+e/lane-t3/wire.json --function rangeFirstKey --choices 9,8,7,6,5,4,3,2,1,0
+  ok: T4-sample-loop: cause named at stage membership (observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing a Go sample against member #1)
+  ok: T5-comparator-undecodable: cause named at stage go-observation (Go output is not a valid observation (comparator said: left.status: unknown observation status)
+  ok: T6-lean-run-sigkill: cause named at stage lean-observation (Lean run KILLED (exit 137)
+  ok: T7-differential-sigterm: cause named at stage differential (observation-eq KILLED (exit 143)
+  ok: T8-go-oracle-sigkill: cause named at stage go-run (go run oracle KILLED (exit 137)
+  test-lane-validation: ok
+
+[1m── re-run negative corpus (--diff)[0m
+results: artifacts/coverage/negative-latest.tsv
+meta: artifacts/coverage/negative-latest.meta.tsv
+
+[1m── derived oracle artifacts re-derived (Tests/FloatVectors.lean + tools/nativefrontend/inittask-std.tsv)[0m
+
+[1m── negative baseline diff[0m
+no regression: 394 case(s) run in negative-latest.tsv match baselines/negative-full.tsv
+
+[1m── differential baseline diff (scripts/coverage-baseline-diff)[0m
+DRIFT vs baselines/native-full.tsv (3400 case(s) run):
+generics/stencil-quarantine-iterseq/call	NEW id (not in baseline) -> FAIL/frontend-export
+generics/stencil-quarantine-iterseq/satisfies	NEW id (not in baseline) -> PASS/-
+generics/stencil-quarantine-iterseq/sibling	NEW id (not in baseline) -> PASS/-
+generics/stencil-quarantine/dedup-second-body	NEW id (not in baseline) -> PASS/-
+generics/stencil-quarantine/iface-dispatch	NEW id (not in baseline) -> FAIL/frontend-export
+generics/stencil-quarantine/iface-satisfied	NEW id (not in baseline) -> PASS/-
+generics/stencil-quarantine/local-type-c6	NEW id (not in baseline) -> FAIL/frontend-export
+generics/stencil-quarantine/sibling	baseline[FAIL/frontend-export] -> now[PASS/-]
+generics/stencil-quarantine/stencil-call-refuses	NEW id (not in baseline) -> FAIL/frontend-export
+generics/stencil-quarantine/transitive-call	NEW id (not in baseline) -> FAIL/frontend-export
+generics/stencil-quarantine/transitive-lowers	NEW id (not in baseline) -> PASS/-
+slices/slices-sort-kinds/float-nan-first	NEW id (not in baseline) -> PASS/-
+slices/slices-sort-kinds/float-signed-zero	NEW id (not in baseline) -> PASS/-
+slices/slices-sort-kinds/float32	NEW id (not in baseline) -> PASS/-
+slices/slices-sort-kinds/init-sort	NEW id (not in baseline) -> PASS/-
+slices/slices-sort-kinds/named-float	NEW id (not in baseline) -> PASS/-
+slices/slices-sort-kinds/named-string	NEW id (not in baseline) -> PASS/-
+slices/slices-sort-kinds/string	NEW id (not in baseline) -> PASS/-
+slices/slices-sort-kinds/string-large	NEW id (not in baseline) -> PASS/-
+slices/slices-sort-non-integer-refusal	baseline[FAIL/frontend-export] -> now[PASS/-]
+stdlib-source/sort-op-shapes/defer-sort	baseline[FAIL/frontend-export] -> now[PASS/-]
+stdlib-source/sort-op-shapes/go-sort	baseline[FAIL/frontend-export] -> now[PASS/-]
+
+[1m── cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)[0m
+  [01] C3  HIGH    18 corpus manifest id(s) absent from the tracked baseline (unrecorded cases)
+  [02] C4  HIGH    §8's frontier bucket label says FR-1…FR-26 but the highest §4 row id is FR-28 — the label lags the table (re-derive)
+  [03] C13  MEDIUM  78 doc site(s) across 9 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
+  [04] C14  MEDIUM  1 discrepancy-backlog entry(ies) carry no parseable review-by date (the decay-date rule requires one per entry)
+  [05] C5  MEDIUM  13 frontier-table case citation(s) do not resolve against the baseline
+  [06] C5  MEDIUM  1 frontier row(s) claim a red count that is not mechanically re-derivable from their citations. Some of this is citation SHORTHAND (a prose family like 'F3 family 7', an ellipsis inside a glob, or a '+ adjacency' the count deliberately excludes) rather than drift — each needs a read, which is exactly why the count should not be re-derived from prose.
+
+[1m══ scripts/ci summary ══[0m
+  note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   core build (warning-free)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   eval tests (148 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  note negative baseline diff matched (394 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  FAIL baseline diff (DRIFT — see above)
+  note reconciler: 6 finding(s), 2 HIGH — report-only (details: tools/reconcile-records)
+
+[1mRESULT: FAIL[0m
+ci exit 1

@@ -938,18 +938,12 @@ func (a *analyzer) body(d *declReport, root ast.Node, fd *ast.FuncDecl) {
 				if path, member, obj, ok := a.stdlibSel(sel); ok {
 					if _, isType := obj.(*types.TypeName); !isType {
 						a.classifyPkgCall(d, path, member, x)
-						// slices.Sort is the sortSlice MACHINE OP at integer
-						// element kinds only (register: intercept row; emit.go
-						// emitSortStmt "slices.Sort at non-integer element type").
-						if path == "slices" && member == "Sort" && len(x.Args) == 1 {
-							if tv, ok := a.info.Types[x.Args[0]]; ok && tv.Type != nil {
-								if sl, ok := tv.Type.Underlying().(*types.Slice); ok {
-									if b, ok := sl.Elem().Underlying().(*types.Basic); !ok || b.Info()&types.IsInteger == 0 {
-										d.add(finding{Cause: mustCause("slices-sort-kind"), Key: "slices.Sort@" + typeStr(sl.Elem()), Pos: pos, Certain: true})
-									}
-								}
-							}
-						}
+						// (slices.Sort's element-kind check — the sortSlice
+						// MACHINE OP's integer-kinds-only intercept — was
+						// here until 2026-09-04; RETIRED with the op by memo
+						// §3 row M, lane fr4-rowm: slices.Sort is a
+						// source-through member like the rest of `slices`,
+						// judged by classifyPkgCall's source-through arm.)
 					}
 					break
 				}

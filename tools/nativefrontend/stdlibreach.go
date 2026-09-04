@@ -461,28 +461,42 @@ func computeLibraryReach(units []*sourcePkg) error {
 // with `math/bits.Len` pruned off the wire, a machine `stuck` where a
 // refusal was owed); `defer`/`go` of an intercepted member REFUSE by name
 // (emit.go DeferStmt/GoStmt arms).
-var frontendInterceptedLibraryMembers = map[string]map[string]string{
-	"slices": {"Sort": "the quorum-pilot `sortSlice` MACHINE OP at integer element kinds (emit.go emitSortStmt, ExprStmt position only; non-integer kinds refuse by name — row slices/slices-sort-non-integer-refusal; memo §3 row M retires the op in slice 4, when this entry goes with it); `defer`/`go` of it refuse by name (rows stdlib-source/sort-op-shapes/*)"},
-	// cmp.Compare's kind-dispatch desugar was the second entry until
-	// 2026-09-04 (lane fr24) — RETIRED per the [USER] ruling «(2) given we
-	// have a plan, I think this should be an honest red» (relayed by the
-	// coordinator): the real generic lowers at every type argument; a
-	// function-local defined type argument refuses at mono.go's C6 rule
-	// (rows slices/sortfunc-cmp/cmp-compare-kinds, stdlib-source/cmp-compare/
-	// local-float-type — FR-19's line).
-}
+//
+// EMPTY since 2026-09-04 — the class is frozen at 0 and shrinks only
+// (register: `intercept`). Its two entries were:
+//   - `slices.Sort` → the quorum-pilot `sortSlice` MACHINE OP at integer
+//     element kinds (emit.go emitSortStmt; non-integer kinds refused by
+//     name). RETIRED by memo §3 row M (lane fr4-rowm; the G1-G9 plan
+//     ruled «(3) agree, go ahead with the plan» [USER], relayed): the
+//     real generic lowers at every ordered kind — rows slices/slices-sort*,
+//     slices/slices-sort-kinds/*, stdlib-source/sort-op-shapes/* (the
+//     defer/go shapes, green now that nothing is intercepted).
+//   - cmp.Compare's kind-dispatch desugar, RETIRED 2026-09-04 (lane fr24)
+//     per the [USER] ruling «(2) given we have a plan, I think this should
+//     be an honest red» (relayed): a function-local defined type argument
+//     refuses at mono.go's C6 rule (rows slices/sortfunc-cmp/cmp-compare-
+//     kinds, stdlib-source/cmp-compare/local-float-type — FR-19's line).
+//
+// A new entry is a register widening AND needs its arm in
+// interceptedLibraryCall's switch (the predicate fails closed on a listed
+// member without an arm — see below).
+var frontendInterceptedLibraryMembers = map[string]map[string]string{}
 
 // interceptedLibraryCall reports whether a direct qualified CALL of a
 // library member is one the FRONTEND intercepts (table above) — the one
 // predicate both the reach walk (do not mark the callee) and the emitter
 // (which lowering, which refusal) consult, so they cannot disagree. The
-// per-member conditions mirror the emitter's dispatch exactly:
+// per-member conditions mirror the emitter's dispatch exactly. The table
+// is EMPTY (2026-09-04): both former arms are retired —
 //
-//	slices.Sort  — every direct call (the op in ExprStmt position; defer/go
-//	               refuse by name).
+//	slices.Sort  — every direct call was the `sortSlice` op in ExprStmt
+//	               position (defer/go refused by name); memo §3 row M.
+//	cmp.Compare  — intercepted iff the type argument was an integer or
+//	               string basic kind; lane fr24.
 //
-// (cmp.Compare's kind-dispatch arm — intercepted iff the type argument was
-// an integer or string basic kind — was retired 2026-09-04, lane fr24.)
+// The switch below keeps NO live arm, so a member listed in the table
+// without an arm reads as NOT intercepted (fail closed toward the real
+// library body, which the reach walk then marks reached).
 func interceptedLibraryCall(info *types.Info, c *ast.CallExpr) (path, member string, intercepted bool) {
 	sel, isSel := c.Fun.(*ast.SelectorExpr)
 	if !isSel {
@@ -500,10 +514,8 @@ func interceptedLibraryCall(info *types.Info, c *ast.CallExpr) (path, member str
 	if _, listed := frontendInterceptedLibraryMembers[path][member]; !listed {
 		return path, member, false
 	}
-	switch path + "." + member {
-	case "slices.Sort":
-		return path, member, true
-	}
+	// No per-member arm remains (see the table's comment); a listed member
+	// without an arm is NOT intercepted.
 	return path, member, false
 }
 

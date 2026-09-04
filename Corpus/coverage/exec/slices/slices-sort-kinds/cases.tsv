@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features
+# memo §3 row M (2026-09-04, lane fr4-rowm): slices.Sort is the real
+# source-through generic at EVERY ordered kind (the sortSlice machine-op
+# intercept retired). Non-integer / named kinds, the pdqsort paths past the
+# insertion-sort threshold, and the init() shape (cedar-go's kill).
+string	sortStrings	-	ok	-	stdlib,slices,sort,generics,strings,concat,range
+named-string	sortNamedStrings	-	ok	-	stdlib,slices,sort,generics,strings,defined_type,conversions
+float-nan-first	sortFloatNaNFirst	-	ok	-	stdlib,slices,sort,generics,floats,division,comparisons
+float-signed-zero	sortFloatSignedZero	-	ok	-	stdlib,slices,sort,generics,floats,division,comparisons
+float32	sortFloat32	-	ok	-	stdlib,slices,sort,generics,floats,widths,conversions
+named-float	sortNamedFloats	-	ok	-	stdlib,slices,sort,generics,floats,defined_type,conversions
+string-large	sortStringsLarge	-	ok	-	stdlib,slices,sort,generics,strings,concat,range
+init-sort	initSort	-	ok	-	stdlib,slices,sort,generics,strings,init,globals,concat

@@ -494,14 +494,20 @@ func (e *emitter) enqueueTypeInst(inst *types.Named, key string) error {
 }
 
 // flushTypeInsts drains the instantiated-type queue, appending TypeDefs,
-// stenciled methods, and their lifted literals. RESIDUAL SCOPE of H-3
-// (2026-08-19): DECLARED methods now quarantine per-declaration
-// (emit.go, quarantinedMethodStub), but a method STENCIL — a method of a
-// generic type at one receiver instantiation — still fails the whole
-// export. Extending the stub to stencils needs the instantiation
-// rollback to interact with a stub that keeps a substituted signature
-// alive; deliberately not done in the same slice. Recorded in
-// docs/bugfix-arc-log.md §H-3.
+// stenciled methods, and their lifted literals. A method STENCIL — a
+// method of a generic type at one receiver instantiation — whose body
+// does not lower quarantines PER DECLARATION (FR-4, 2026-09-04, lane
+// fr4-rowm; the H-3 residual closed): it becomes a signature-carrying
+// stub under the instantiation's key (quarantinedStencilStub), the rest
+// of the export lowers, and a CALL of it refuses by name. The stencil's
+// own registrations (lifted literals, local types, mono journal incl.
+// importedNamed) rolled back inside emitFuncInst; the stub's SIGNATURE
+// then re-registers exactly the instantiations it mentions (emitted in
+// SIGNATURE-OPAQUE mode, so an imported generic result type — FR-23 —
+// composes as an opaque marker). A stencil whose signature does not lower
+// even so still refuses the whole export (quarantinedMethodStub's
+// sigRefusal: an incomplete method set is worse than a visible red).
+// History: docs/bugfix-arc-log.md §H-3 (the residual), ledger FR-4.
 func (e *emitter) flushTypeInsts(typeDefs, methods, funcs []any) ([]any, []any, []any, bool, error) {
 	did := false
 	for len(e.typeInstQueue) > 0 {
@@ -545,17 +551,21 @@ func (e *emitter) flushTypeInsts(typeDefs, methods, funcs []any) ([]any, []any, 
 		for _, d := range e.genericMethodDecls[work.inst.Origin()] {
 			m, err := e.emitMethodInst(work, d)
 			if err != nil {
-				// NAME the stencil (2026-09-04, FR-22/FR-23 slice — a
-				// diagnostic strengthening only): the H-3 residual
-				// (ledger FR-4) refuses the WHOLE export here, and the
-				// bare inner cause could not be triaged to a
-				// declaration (cedar-go pass C: `slices.Sort at
-				// non-integer element type string` with no site).
+				// Per-declaration quarantine for METHOD STENCILS (FR-4):
+				// an UNSUPPORTED stencil becomes a fail-closed stub
+				// naming the instantiation and the inner cause; the
+				// export survives. Non-unsupported errors (internal
+				// invariants) still fail the export.
 				var u unsupported
-				if errors.As(err, &u) {
-					err = unsup("method stencil %s.%s does not lower (%s) — FR-4: method stencils have no per-declaration quarantine yet, so the export refuses whole", work.key, d.Name.Name, u.what)
+				if !errors.As(err, &u) {
+					return nil, nil, nil, did, err
 				}
-				return nil, nil, nil, did, err
+				stub, serr := e.quarantinedStencilStub(work, d, u)
+				if serr != nil {
+					return nil, nil, nil, did, serr
+				}
+				methods = append(methods, stub)
+				continue
 			}
 			funcs = append(funcs, e.lifted...)
 			e.lifted = nil
@@ -566,22 +576,57 @@ func (e *emitter) flushTypeInsts(typeDefs, methods, funcs []any) ([]any, []any, 
 	return typeDefs, methods, funcs, did, nil
 }
 
-// emitMethodInst stencils one method declaration at a receiver
-// instantiation: the environment binds the method's RECEIVER type
-// parameters (the only kind Go has — methods cannot add their own, spec
-// §Method declarations) to the instance's arguments; the FuncId is
-// receiverTypeId + "." + name, produced by the ordinary emitFuncDecl
-// receiver path through the substitution-aware namedTypeName.
-func (e *emitter) emitMethodInst(work *typeInstWork, d *ast.FuncDecl) (map[string]any, error) {
+// quarantinedStencilStub builds the declaration-only stub for a method
+// STENCIL whose body did not lower (FR-4): quarantinedMethodStub's shape
+// (emit.go — `name`, `recvType`, `recv`, `params`, `results`, `variadic`,
+// `unsupported`), built under the stencil's SUBSTITUTION so the receiver
+// TypeId is the instantiation's mangled key and every parameter/result
+// type is the instantiated one — the signature interface satisfaction
+// reads (H-3's method-set-completeness invariant, now at one receiver
+// instantiation). The refusal text names the instantiation
+// (`main.box[int].render`) and carries the inner cause, so a call that
+// lands on the stub says exactly which stencil refused and why.
+//
+// emitFuncInst has already restored the emitter state and rolled back
+// the refused body's registrations; the substitution is re-entered here
+// only for the signature. A substitution failure surfacing as an Invalid
+// type (substErr) is re-raised — never a stub with a guessed signature.
+func (e *emitter) quarantinedStencilStub(work *typeInstWork, d *ast.FuncDecl, u unsupported) (map[string]any, error) {
+	env, targs, err := e.stencilEnv(work, d)
+	if err != nil {
+		return nil, err
+	}
+	savedSubst, savedName, savedErr, savedTargs := e.curSubst, e.curFuncName, e.substErr, e.curTargs
+	e.curSubst, e.curFuncName, e.substErr, e.curTargs = env, work.key+"."+d.Name.Name, nil, targs
+	defer func() {
+		e.curSubst, e.curFuncName, e.substErr, e.curTargs = savedSubst, savedName, savedErr, savedTargs
+	}()
+	named := unsupported{what: "FR-4: method stencil at this instantiation does not lower — " + u.what}
+	stub, err := e.quarantinedMethodStub(d, named)
+	if err == nil && e.substErr != nil {
+		err = e.substErr
+	}
+	if err != nil {
+		return nil, err
+	}
+	return stub, nil
+}
+
+// stencilEnv binds a generic method declaration's RECEIVER type parameters
+// (the only kind Go has — methods cannot add their own, spec §Method
+// declarations) to the instantiation's arguments, in declaration order.
+// Shared by emitMethodInst (the body) and quarantinedStencilStub (the
+// signature of a refused body) so the two cannot substitute differently.
+func (e *emitter) stencilEnv(work *typeInstWork, d *ast.FuncDecl) (map[*types.TypeParam]types.Type, []types.Type, error) {
 	fn, ok := e.info.Defs[d.Name].(*types.Func)
 	if !ok {
-		return nil, unsup("generic method %s has no definition object", d.Name.Name)
+		return nil, nil, unsup("generic method %s has no definition object", d.Name.Name)
 	}
 	sig := fn.Type().(*types.Signature)
 	rtp := sig.RecvTypeParams()
 	targs := work.inst.TypeArgs()
 	if rtp.Len() != targs.Len() {
-		return nil, unsup("receiver arity mismatch stenciling %s.%s: %d receiver params, %d args",
+		return nil, nil, unsup("receiver arity mismatch stenciling %s.%s: %d receiver params, %d args",
 			work.key, d.Name.Name, rtp.Len(), targs.Len())
 	}
 	env := map[*types.TypeParam]types.Type{}
@@ -589,6 +634,20 @@ func (e *emitter) emitMethodInst(work *typeInstWork, d *ast.FuncDecl) (map[strin
 	for i := 0; i < rtp.Len(); i++ {
 		env[rtp.At(i)] = targs.At(i)
 		targsList[i] = targs.At(i)
+	}
+	return env, targsList, nil
+}
+
+// emitMethodInst stencils one method declaration at a receiver
+// instantiation: the environment binds the method's RECEIVER type
+// parameters (the only kind Go has — methods cannot add their own, spec
+// §Method declarations) to the instance's arguments; the FuncId is
+// receiverTypeId + "." + name, produced by the ordinary emitFuncDecl
+// receiver path through the substitution-aware namedTypeName.
+func (e *emitter) emitMethodInst(work *typeInstWork, d *ast.FuncDecl) (map[string]any, error) {
+	env, targsList, err := e.stencilEnv(work, d)
+	if err != nil {
+		return nil, err
 	}
 	return e.emitFuncInst(&funcInstWork{
 		mangled: work.key + "." + d.Name.Name, decl: d, env: env,

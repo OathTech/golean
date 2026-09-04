@@ -1,4 +1,24 @@
 # GoLean native-frontend full-corpus differential baseline
+# re-pinned: 2026-09-04 (fr4-rowm lane — FR-4 method-stencil quarantine per declaration + memo §3 row M, the
+#   slices.Sort machine-op intercept RETIRED; [AGENT] worker under the [USER]-ratified frontier queue (FR-4 =
+#   slot 4) and the ruled stdlib plan G1-G9 («(3) agree, go ahead with the plan», relayed by the coordinator,
+#   cited as relayed). drift vs the previous pin = EXACTLY (a) 4 FAIL -> PASS flips: generics/stencil-quarantine/
+#   sibling (the FR-4 witness), slices/slices-sort-non-integer-refusal (the refusal no longer exists),
+#   stdlib-source/sort-op-shapes/{defer-sort,go-sort} (nothing is intercepted; go-sort declares strict depth=64);
+#   (b) 18 born rows — 13 PASS (generics/stencil-quarantine/{iface-satisfied,transitive-lowers,dedup-second-body},
+#   generics/stencil-quarantine-iterseq/{sibling,satisfies}, slices/slices-sort-kinds/{string,named-string,
+#   float-nan-first,float-signed-zero,float32,named-float,string-large,init-sort}) and 5 FAIL/frontend-export red
+#   BY DESIGN (generics/stencil-quarantine/{stencil-call-refuses,iface-dispatch,transitive-call} — the stub
+#   refuses by name, FR-4's line; generics/stencil-quarantine-iterseq/call — FR-23 by name; generics/
+#   stencil-quarantine/local-type-c6 — the (c)-pin C6, per declaration); 0 PASS -> non-PASS. Every other
+#   slices.Sort row (slices/slices-sort*, quorum/committed-index-real/*, stdlib-source/slices-sortfunc/*) stays
+#   PASS through the real generic. Twin wire pin MOVED as row M's ruled consequence (raft's nine slices.Sort
+#   sites: sort-slice nodes -> slices.Sort[[]uint64,uint64] static calls + 16 stencils; 0 removed):
+#   b4458244c259 -> 4ee39f732d51, structural diff in docs/evidence/2026-09-04_fr4-rowm/twin-repin/. Stdlib pin
+#   unchanged. FULL ci --diff tail: docs/evidence/2026-09-04_fr4-rowm/ci-diff.txt.
+#   [re-derived from the data rows at this re-pin ([AGENT]): checkpoint C's 3382 (3172 PASS / 210 FAIL) + 18
+#   born (13 PASS / 5 FAIL) + 4 FAIL->PASS = 3400 (3189 PASS / 211 FAIL); tallied by row:
+#   `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv`]
 # re-pinned: 2026-09-04 (fr24 lane, checkpoint C — the cmp.Compare kind-dispatch desugar RETIRED:
 #   [USER] Mike 2026-09-04, relayed by the [AGENT] coordinator (cited as relayed): «(2) given we have
 #   a plan, I think this should be an honest red». cmpshim.go deleted; cmp.Compare is the real
@@ -926,7 +946,7 @@
 #     removed row is named in prose, never left dangling on the line).
 #     NEW rows: unsafe/layout-ops/{sizeof-fixed,layout-struct}
 #     FAIL/frontend-export BY DESIGN. unsafe/boundary/pointer-roundtrip
-# cases: 3382 (3172 PASS / 210 FAIL)
+# cases: 3400 (3189 PASS / 211 FAIL)
 #   [re-derived from the data rows at the fr24 checkpoint-C re-pin 2026-09-04 ([AGENT]: checkpoint B's 3382 (3173 PASS / 209 FAIL) with ONE ruled PASS -> FAIL flip, slices/sortfunc-cmp/cmp-compare-kinds; tallied by row: `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv`)]
 #   [the checkpoint-B figure, kept as history:] # cases: 3382 (3173 PASS / 209 FAIL)
 #   [re-derived from the data rows at the fr24 checkpoint-B re-pin 2026-09-04 ([AGENT]: checkpoint A's 3376 (3168 PASS / 208 FAIL) + 6 born rows (3 PASS / 3 FAIL) with 2 FAIL -> PASS flips; tallied by row: `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv`)]
@@ -2127,7 +2147,17 @@ PASS	generics/recursive-constraints/pointer-self	-
 PASS	generics/recursive-constraints/comparable	-
 PASS	generics/recursive-generic-type	-
 PASS	generics/self-recursive	-
-FAIL	generics/stencil-quarantine/sibling	frontend-export
+PASS	generics/stencil-quarantine/sibling	-
+FAIL	generics/stencil-quarantine/stencil-call-refuses	frontend-export
+PASS	generics/stencil-quarantine/iface-satisfied	-
+FAIL	generics/stencil-quarantine/iface-dispatch	frontend-export
+PASS	generics/stencil-quarantine/transitive-lowers	-
+FAIL	generics/stencil-quarantine/transitive-call	frontend-export
+PASS	generics/stencil-quarantine/dedup-second-body	-
+FAIL	generics/stencil-quarantine/local-type-c6	frontend-export
+PASS	generics/stencil-quarantine-iterseq/sibling	-
+PASS	generics/stencil-quarantine-iterseq/satisfies	-
+FAIL	generics/stencil-quarantine-iterseq/call	frontend-export
 PASS	generics/structural-transparency	-
 PASS	generics/type-aliases/slice-same-type	-
 PASS	generics/type-aliases/map-literal	-
@@ -3759,7 +3789,15 @@ PASS	slices/slices-sort-edges/defined-elem-type	-
 PASS	slices/slices-sort-edges/unsigned-above-half	-
 PASS	slices/slices-sort-edges/signed-negatives	-
 PASS	slices/slices-sort-edges/subslice-aliasing	-
-FAIL	slices/slices-sort-non-integer-refusal	frontend-export
+PASS	slices/slices-sort-kinds/string	-
+PASS	slices/slices-sort-kinds/named-string	-
+PASS	slices/slices-sort-kinds/float-nan-first	-
+PASS	slices/slices-sort-kinds/float-signed-zero	-
+PASS	slices/slices-sort-kinds/float32	-
+PASS	slices/slices-sort-kinds/named-float	-
+PASS	slices/slices-sort-kinds/string-large	-
+PASS	slices/slices-sort-kinds/init-sort	-
+PASS	slices/slices-sort-non-integer-refusal	-
 FAIL	slices/sortfunc-cmp/cmp-compare-kinds	frontend-export
 PASS	slices/sortfunc-cmp/sortfunc-ints	-
 PASS	slices/sortfunc-cmp/sortfunc-reverse	-
@@ -4142,8 +4180,8 @@ PASS	stdlib-source/slices-sortfunc/sortfunc-ties-projected	-
 PASS	stdlib-source/slices-sortfunc/sortfunc-ties-realized	-
 PASS	stdlib-source/slices-sortfunc/sort-stable-func	-
 PASS	stdlib-source/slices-sortfunc/others	-
-FAIL	stdlib-source/sort-op-shapes/defer-sort	frontend-export
-FAIL	stdlib-source/sort-op-shapes/go-sort	frontend-export
+PASS	stdlib-source/sort-op-shapes/defer-sort	-
+PASS	stdlib-source/sort-op-shapes/go-sort	-
 PASS	stdlib-source/strconv-format/uint-all-bases	-
 PASS	stdlib-source/strconv-format/int-all-bases	-
 PASS	stdlib-source/strconv-format/extremes	-

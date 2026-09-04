@@ -1,0 +1,5 @@
+class	key	decls	packages
+FR-4/stencil-refusal	cedargo/internal/mapset.ImmutableMapSet[cedargo/types.EntityUID].All	17	17
+FR-14/slices-sort-kind	slices.Sort@string	2	2
+FR-14/fmt-verb-matrix	fmt.Sprintf %x@rune	1	1
+FR-14/stdlib-package-unmodeled	flag.Parse	1	1

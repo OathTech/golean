@@ -360,8 +360,11 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	// for every instantiated type that reached the wire — including
 	// derived instantiations registered DURING stenciling, to a joint
 	// fixpoint. Unsupported FUNCTION stencils quarantine into fail-closed
-	// stubs exactly like unsupported plain declarations; type and method
-	// stencils follow the standing whole-export policy.
+	// stubs exactly like unsupported plain declarations, and so do
+	// METHOD stencils (FR-4, mono.go quarantinedStencilStub: a
+	// signature-carrying stub under the instantiation's key); an
+	// instantiated TYPE whose own TypeDef (a field type) does not lower
+	// still refuses the whole export (FR-26's neighbourhood).
 	funcs, typeDefs, methods, err = e.drainMono(funcs, typeDefs, methods)
 	if err != nil {
 		return nil, err
@@ -1931,7 +1934,7 @@ func (e *emitter) quarantinedMethodStub(d *ast.FuncDecl, u unsupported) (map[str
 	}
 	tName, okName := e.namedTypeName(defType)
 	if !okName {
-		return nil, unsup("quarantined method on anonymous type %s", defType)
+		return nil, e.anonymousTypeRefusal("quarantined method", defType)
 	}
 	// A signature that does not lower cannot be recorded honestly: refuse the
 	// whole export, carrying BOTH reasons so the log says why a method that
@@ -2143,7 +2146,7 @@ func (e *emitter) emitFuncDecl(d *ast.FuncDecl) (map[string]any, error) {
 		}
 		name, ok := e.namedTypeName(defType)
 		if !ok {
-			return nil, unsup("method on anonymous type %s", defType)
+			return nil, e.anonymousTypeRefusal("method", defType)
 		}
 		fn["recv"] = map[string]any{"id": localName(recv), "type": rty}
 		fn["recvType"] = name
@@ -2982,24 +2985,20 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 					}
 				}
 			}
-			// slices.Sort at an integer element kind: the quorum-pilot
-			// extern (docs/2026-07-30_quorum-extern-policy.md) — the
-			// `sortSlice` MACHINE OP, intercepted ahead of the library
-			// (memo §3 row M retires it in slice 4; the reach walk's
-			// frontendInterceptedLibraryMembers keeps the real
-			// slices.Sort off the wire meanwhile). Every OTHER `slices`
-			// member lowers from the source-through unit through the
-			// ordinary call path below (slice 2: slices.SortFunc's
-			// generic desugar retired; `overlaps`-reaching members
-			// refuse by name through the unsafe scan).
-			if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
-				if pkgIdent, ok := sel.X.(*ast.Ident); ok {
-					if pkgName, ok := e.info.Uses[pkgIdent].(*types.PkgName); ok &&
-						pkgName.Imported().Path() == "slices" && sel.Sel.Name == "Sort" {
-						return e.emitSortStmt(call)
-					}
-				}
-			}
+			// `slices.Sort(s)` used to be intercepted HERE onto the
+			// quorum-pilot `sortSlice` MACHINE OP at integer element
+			// kinds (docs/2026-07-30_quorum-extern-policy.md; non-integer
+			// kinds refused by name). RETIRED 2026-09-04 (lane fr4-rowm,
+			// memo docs/2026-09-03_stdlib-boundary-design.md §3 row M —
+			// the G1-G9 plan ruled «(3) agree, go ahead with the plan»
+			// [USER], relayed): every `slices` member, Sort included,
+			// lowers from the source-through unit through the ordinary
+			// call path below — `slices.Sort` → `pdqsortOrdered`
+			// stenciled per element type by mono.go, gc's exact member at
+			// EVERY ordered kind (strings, floats with NaN-first, named
+			// kinds). The machine op and the `sort-slice` wire node are
+			// now unreferenced by the frontend (their deletion is the
+			// hygiene arc's; the decoder key stays — no wire-schema change).
 			// Sync-primitive method calls in statement position
 			// (spec-parity slice 2, design note §7): the whole modeled
 			// sync surface. Recognized-but-out-of-scope members fail
@@ -5365,6 +5364,24 @@ func (e *emitter) qualifiedTypeName(obj *types.TypeName) string {
 // name is resolved at the current instantiation, and an instantiated
 // generic type names by its mangled key (which also enqueues its TypeDef
 // stencil — every TypeId the wire mentions must be declared).
+// anonymousTypeRefusal is the refusal for a receiver/base type namedTypeName
+// could not name. namedTypeName answers false BOTH for a genuinely anonymous
+// type and for an INSTANTIATION whose mangled key does not render (mono.go
+// renderTypeArg — the C6 function-local type-argument rule, a collision) —
+// it cannot carry the error. Re-raise the LOUD per-key reason in the second
+// case, so a `box[localT].m()` call names C6 instead of "method on
+// anonymous type main.box[main.localT]" (which tools/lowerdiag classified
+// FR-13; found by TestQuarantinedStencilRollbackKeepsSharedInstantiation,
+// lane fr4-rowm 2026-09-04). Fail closed either way.
+func (e *emitter) anonymousTypeRefusal(what string, t types.Type) error {
+	if named, ok := types.Unalias(e.applySubst(t)).(*types.Named); ok && named.TypeArgs().Len() > 0 {
+		if _, err := e.instTypeId(named); err != nil {
+			return err
+		}
+	}
+	return unsup("%s on anonymous type %s", what, t)
+}
+
 func (e *emitter) namedTypeName(t types.Type) (string, bool) {
 	// Aliases are identity-transparent (G4): the NAME belongs to the
 	// aliased type, never the alias.
@@ -5739,7 +5756,7 @@ func (e *emitter) synthesizeWrapper(named *types.Named, tName string, msel *type
 		}
 		defName, ok := e.namedTypeName(defType)
 		if !ok {
-			return nil, unsup("promoted method on anonymous type %s", defType)
+			return nil, e.anonymousTypeRefusal("promoted method", defType)
 		}
 		innerFunc = defName + "." + mfn.Name()
 		ft, err := hopFinalType(rootT, hops)
@@ -6615,7 +6632,7 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 			}
 			name, ok := e.namedTypeName(defType)
 			if !ok {
-				return nil, unsup("method on anonymous type %s", defType)
+				return nil, e.anonymousTypeRefusal("method", defType)
 			}
 			// The receiver is captured AT METHOD-VALUE TIME, adjusted
 			// through any embedded hops NOW (design note D1.2 — pinned by
@@ -6671,7 +6688,7 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 			}
 			name, ok := e.namedTypeName(baseT)
 			if !ok {
-				return nil, unsup("method expression on anonymous type %s", baseT)
+				return nil, e.anonymousTypeRefusal("method expression", baseT)
 			}
 			wireRecvPtr := false
 			if _, isPtr := recvType.(*types.Pointer); isPtr {
@@ -8391,23 +8408,29 @@ func (e *emitter) qualifiedPkgRef(sel *ast.SelectorExpr) (*types.PkgName, bool) 
 // loudly.
 // refuseInterceptedLibraryCallee (audit fix round F1): a `defer`/`go` whose
 // callee is a FRONTEND-INTERCEPTED library member (stdlibreach.go
-// frontendInterceptedLibraryMembers / interceptedLibraryCall — the
-// `slices.Sort` machine op; the cmp.Compare kind desugar until its
-// retirement 2026-09-04) refuses BY NAME.
-// The interception is a lowering of the direct CALL in expression-
+// frontendInterceptedLibraryMembers / interceptedLibraryCall) refuses BY
+// NAME. An interception is a lowering of the direct CALL in expression-
 // statement position; in defer/go position the callee is a FUNCTION VALUE,
 // which the shared predicate says the reach walk did not mark reached —
 // lowering the real generic there left its closure (`math/bits.Len`) off
 // the wire and the machine `stuck`, a wrong shape where a refusal was
-// owed (rows stdlib-source/sort-op-shapes/*). A library-unit body never
-// reaches here (library-internal calls are never intercepted).
+// owed (rows stdlib-source/sort-op-shapes/*, green since row M). The
+// table is EMPTY since 2026-09-04 (the `slices.Sort` machine op retired,
+// memo §3 row M; the cmp.Compare desugar retired the same day), so this
+// is dead until a member is admitted to the intercept class again — a
+// register widening. A library-unit body never reaches here
+// (library-internal calls are never intercepted).
 func (e *emitter) refuseInterceptedLibraryCallee(keyword string, c *ast.CallExpr) error {
 	if e.curUnit != nil && e.curUnit.library {
 		return nil
 	}
 	if path, member, intercepted := interceptedLibraryCall(e.info, c); intercepted {
-		return unsup("%s %s.%s: the direct call of this library member is frontend-intercepted (%s) in expression-statement position only; as a deferred/spawned FUNCTION VALUE it has no lowering — refused by name rather than lowering the real body the reach walk pruned (memo §3 row M retires the interception)",
-			keyword, path, member, frontendInterceptedLibraryMembers[path][member][:strings.IndexByte(frontendInterceptedLibraryMembers[path][member], '(')])
+		why := frontendInterceptedLibraryMembers[path][member]
+		if i := strings.IndexByte(why, '('); i > 0 {
+			why = why[:i]
+		}
+		return unsup("%s %s.%s: the direct call of this library member is frontend-intercepted (%s) in expression-statement position only; as a deferred/spawned FUNCTION VALUE it has no lowering — refused by name rather than lowering the real body the reach walk pruned",
+			keyword, path, member, why)
 	}
 	return nil
 }
@@ -8739,7 +8762,7 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 	}
 	name, ok := e.namedTypeName(defType)
 	if !ok {
-		return nil, false, unsup("method on anonymous type %s", defType)
+		return nil, false, e.anonymousTypeRefusal("method", defType)
 	}
 	// Receiver argument, adjusted through any embedded-field hops at the
 	// call site (design note D1.2; see promotedReceiverArg for the rule).
@@ -8999,32 +9022,12 @@ func (e *emitter) emitDeleteStmt(c *ast.CallExpr) (any, error) {
 	return map[string]any{"stmt": "map-delete", "base": base, "index": index, "keyType": keyTy}, nil
 }
 
-// emitSortStmt lowers `slices.Sort(s)` at an INTEGER element kind onto the
-// machine's sortSlice op (exact for integers — equal elements are
-// indistinguishable, so Go's sort instability is unobservable). Everything
-// else fails closed (docs/2026-07-30_quorum-extern-policy.md).
-func (e *emitter) emitSortStmt(c *ast.CallExpr) (any, error) {
-	if len(c.Args) != 1 {
-		return nil, unsup("slices.Sort with %d arguments", len(c.Args))
-	}
-	sl, ok := e.goTypeOf(c.Args[0]).Underlying().(*types.Slice)
-	if !ok {
-		return nil, unsup("slices.Sort on non-slice %s", e.goTypeOf(c.Args[0]))
-	}
-	b, ok := sl.Elem().Underlying().(*types.Basic)
-	if !ok || b.Info()&types.IsInteger == 0 {
-		return nil, unsup("slices.Sort at non-integer element type %s", sl.Elem())
-	}
-	base, err := e.emitExpr(c.Args[0])
-	if err != nil {
-		return nil, err
-	}
-	elemTy, err := e.emitType(sl.Elem())
-	if err != nil {
-		return nil, err
-	}
-	return map[string]any{"stmt": "sort-slice", "base": base, "elem": elemTy}, nil
-}
+// (emitSortStmt — `slices.Sort` onto the machine's `sortSlice` op at integer
+// element kinds, `sort-slice` wire node — was here until 2026-09-04; RETIRED
+// by memo §3 row M, lane fr4-rowm: slices.Sort is the real generic through
+// the source-through unit at every ordered kind. The wire node's decoder
+// arm in NativeToIR.lean and the op in GoLean/GoCore are unreferenced by
+// the frontend and owed to the hygiene arc — not deleted here.)
 
 // emitClearStmt lowers `clear(m)` / `clear(s)` onto the machine's clear ops.
 func (e *emitter) emitClearStmt(c *ast.CallExpr) (any, error) {

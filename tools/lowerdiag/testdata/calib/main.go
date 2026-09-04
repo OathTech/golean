@@ -31,11 +31,13 @@ func assignBox() (any, string) {
 	return x, s
 }
 
-// slices.Sort is the sortSlice machine op at INTEGER kinds only.
+// slices.Sort is the real source-through generic at every ordered kind
+// (memo §3 row M, 2026-09-04): both lower.
 func sortStrings(s []string) { slices.Sort(s) }
 func sortInts(s []int)       { slices.Sort(s) }
 
-// defer of an intercepted member refuses by name.
+// defer of slices.Sort: the intercept table is empty since row M, so the
+// deferred FUNCTION VALUE is the real generic and lowers.
 func deferSort(s []int) { defer slices.Sort(s) }
 
 // errors.Is reaches internal/reflectlite (register: refuses by name).

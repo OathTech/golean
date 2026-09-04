@@ -22,6 +22,7 @@ package main
 // (check-frontend-pins, check-spec-anchors) already fail closed on that.
 
 import (
+	"encoding/json"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -418,13 +419,13 @@ func TestStdlibRegisterDumpCaps(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"count\toverlay\t5 / cap 12", "count\toverlay-import\t5 / cap 8", "count\tintercept\t1 ", "intercept\tslices.Sort\t", "count\tprimitive\t0 / cap 2", "source-through\tstrings\t", "substitution\tinternal/bytealg/indexbyte_native.go -> indexbyte_generic.go\t", "count\tshim\t6 ", "count\tshadow-type\t5", "source-through\tbytes\t", "source-through\tslices\t", "source-through\tcmp\t", "source-through\tencoding/binary\t", "shim\tfmt.Sprintf\t", "overlay\tinternal/stringslite/strings.go:149\t`unsafe.String(&b[0], len(b))` -> `string(b)`", "overlay\tstrings/builder.go:47\t", "overlay-import\tstrings/builder.go:11\t`\"unsafe\"` -> `_ \"unsafe\"`"} {
+	for _, want := range []string{"count\toverlay\t5 / cap 12", "count\toverlay-import\t5 / cap 8", "count\tintercept\t0 ", "count\tprimitive\t0 / cap 2", "source-through\tstrings\t", "substitution\tinternal/bytealg/indexbyte_native.go -> indexbyte_generic.go\t", "count\tshim\t6 ", "count\tshadow-type\t5", "source-through\tbytes\t", "source-through\tslices\t", "source-through\tcmp\t", "source-through\tencoding/binary\t", "shim\tfmt.Sprintf\t", "overlay\tinternal/stringslite/strings.go:149\t`unsafe.String(&b[0], len(b))` -> `string(b)`", "overlay\tstrings/builder.go:47\t", "overlay-import\tstrings/builder.go:11\t`\"unsafe\"` -> `_ \"unsafe\"`"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("register dump lacks %q:\n%s", want, out)
 		}
 	}
 	for _, retired := range []string{"shim\tstrings.Fields\t", "shim\tstrings.Split\t", "shim\tstrings.TrimSpace\t", "shim\tstrconv.FormatUint\t", "shim\tstrconv.FormatInt\t", "shim\tstrconv.ParseUint\t",
-		"shim\tstrings.Join\t", "shim\tstrings.Repeat\t", "shim\terrors.New\t", "shim\tbytes.Equal\t", "shim\tslices.SortFunc\t", "shim\tencoding/binary.LittleEndian.Uint64\t", "shim\tencoding/binary.LittleEndian.PutUint64\t", "shadow-type\tstrings.Builder\t", "shadow-type\tbytes.Buffer\t"} {
+		"shim\tstrings.Join\t", "shim\tstrings.Repeat\t", "shim\terrors.New\t", "shim\tbytes.Equal\t", "shim\tslices.SortFunc\t", "shim\tencoding/binary.LittleEndian.Uint64\t", "shim\tencoding/binary.LittleEndian.PutUint64\t", "shadow-type\tstrings.Builder\t", "shadow-type\tbytes.Buffer\t", "intercept\tslices.Sort\t", "intercept\tcmp.Compare\t"} {
 		if strings.Contains(out, retired) {
 			t.Fatalf("register dump still lists a retired shim %q", retired)
 		}
@@ -576,37 +577,60 @@ func main() { subject() }
 	}
 }
 
-// TestInterceptedLibraryCalleeRefusesInDeferGo (audit fix round F1): the
-// reach walk and the emitter share one predicate; defer/go of an
-// intercepted member refuses by name instead of lowering a pruned body.
-func TestInterceptedLibraryCalleeRefusesInDeferGo(t *testing.T) {
+// TestSlicesSortIsTheRealGenericEverywhere (memo §3 row M, lane fr4-rowm,
+// 2026-09-04): the `slices.Sort` intercept onto the `sortSlice` machine op
+// is RETIRED, so every shape — the direct call, `defer`, `go` — reaches the
+// real source-through generic: the `slices.Sort[…]` stencil and its
+// `pdqsortOrdered` closure are on the wire, the subject is NOT quarantined,
+// and NO `sort-slice` node is emitted (the op is unreferenced). Before row
+// M the defer/go shapes refused by name (audit fix round F1) and the
+// direct call was the machine op at integer kinds only; the intercept
+// table is empty now, and the predicate says so for slices.Sort.
+func TestSlicesSortIsTheRealGenericEverywhere(t *testing.T) {
 	withStdlibRoots(t)
-	for _, kw := range []string{"defer", "go"} {
+	if len(frontendInterceptedLibraryMembers) != 0 {
+		t.Fatalf("the intercept table must be EMPTY since row M (a new entry is a register widening): %v", frontendInterceptedLibraryMembers)
+	}
+	for _, shape := range []string{"", "defer", "go"} {
 		dir := writeMain(t, `package main
 
 import "slices"
 
-func subject() int { s := []int{3, 1, 2}; `+kw+` slices.Sort(s); return len(s) }
+func subject() int { s := []string{"c", "a", "b"}; `+shape+` slices.Sort(s); return len(s) }
 
 func main() { subject() }
 `)
 		program, err := lowerProgramDir(t, dir)
 		if err != nil {
-			t.Fatalf("%s: lower: %v", kw, err)
+			t.Fatalf("%q: lower: %v", shape, err)
 		}
 		fns := funcNames(program)
 		subj, ok := fns["subject"]
 		if !ok {
-			t.Fatalf("%s: subject not on the wire", kw)
+			t.Fatalf("%q: subject not on the wire", shape)
 		}
-		reason, _ := subj["unsupported"].(string)
-		if !strings.Contains(reason, kw+" slices.Sort") || !strings.Contains(reason, "frontend-intercepted") {
-			t.Fatalf("%s slices.Sort must quarantine subject by name; got %q", kw, reason)
+		if reason, stubbed := subj["unsupported"]; stubbed {
+			t.Fatalf("%q: subject quarantined — slices.Sort must lower through the real generic; got %v", shape, reason)
 		}
-		if _, real := fns["slices.Sort"]; real {
-			t.Fatalf("%s: the real slices.Sort was reached", kw)
+		if _, real := fns["slices.Sort[[]string,string]"]; !real {
+			t.Fatalf("%q: the real slices.Sort stencil is not on the wire; funcs: %v", shape, keysOf(fns))
+		}
+		if _, pdq := fns["slices.pdqsortOrdered[string]"]; !pdq {
+			t.Fatalf("%q: pdqsortOrdered[string] not stenciled; funcs: %v", shape, keysOf(fns))
+		}
+		if strings.Contains(mustJSON(t, program), `"sort-slice"`) {
+			t.Fatalf("%q: a sort-slice machine-op node was emitted — the intercept is retired", shape)
 		}
 	}
+}
+
+func mustJSON(t *testing.T, v any) string {
+	t.Helper()
+	b, err := json.Marshal(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
 }
 
 func keysOf(m map[string]map[string]any) []string {

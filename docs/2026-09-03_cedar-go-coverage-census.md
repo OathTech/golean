@@ -798,3 +798,82 @@ checkpoint A; widening the D5 stub pass to the opaque window at B (D5 in
 the evidence README); rowing FR-26 (a struct FIELD of an unlowerable
 type) rather than fixing it here. No gate, baseline, corpus or
 trust-surface claim is made here beyond the lane's own landing records.
+
+## 11. Addendum 2026-09-04 — FR-4 per-declaration + memo §3 row M landed: re-measured [AGENT]
+
+Lane `fr4-rowm` (worker under the [AGENT] coordinator; the frontier queue
+is [USER]-ratified with FR-4 at slot 4; the stdlib plan G1-G9 is ruled
+«(3) agree, go ahead with the plan» [USER] and its memo row M names this
+retirement; [USER] directions 3 and 4 and the posture «break rather than
+preserve incorrect behaviour» — all relayed by the coordinator, cited as
+relayed). Method: §1's drivers re-run with the lane's frontend over the
+SAME assembled copy (34 cases) plus `scripts/lower-diagnose
+artifacts/cedar/cases/all` before and after, both on this worktree (main
+`9128e6c0` = before; the lane tip = after). Full record:
+`docs/evidence/2026-09-04_fr4-rowm/` (`before/`, `after/`, `twin-repin/`).
+
+### 11.1 What moved
+
+| kill (§10.2) | before (main 9128e6c0) | after |
+|---|---|---|
+| FR-4 `method stencil mapset.ImmutableMapSet[EntityUID].All does not lower (…iter.Seq…) — FR-4: … the export refuses whole` | 25 / 34 cases refused on it | GONE as a kill: the stencil is a per-declaration STUB under its instantiation key (`mono.go quarantinedStencilStub`; the H-3 contract), its signature emitted opaque (FR-23's marker for `iter.Seq[EntityUID]`); calls of `All` refuse by name through the inner cause (FR-23 → FR-12), exactly as the brief predicted |
+| `slices.Sort at non-integer element type string` inside `init()` (`x/exp/schema/internal/parser/marshal.go:352`) | 4 / 34 | GONE: the machine-op intercept is retired (row M); `slices.Sort` at string is the real `pdqsortOrdered[string]` stencil and the `init()` lowers like any other body |
+
+### 11.2 The numbers
+
+Per case (`results.tsv`, 34 cases): EXPORT-OK **5 → 25**; FRONTEND-REFUSED
+**29 → 8**; MACHINE-REFUSED 0 → 1. By transition: 5 EXPORT-OK stayed; 20
+FRONTEND-REFUSED → EXPORT-OK (all 20 library-package blank-import drivers
+that were killed by FR-4 or the `init()` sort — e.g. `pkg-root`,
+`pkg-types`, `pkg-ast`, every `x/exp/*` package, `k8s-internal__schema`);
+8 FRONTEND-REFUSED → FRONTEND-REFUSED (the eight functional drivers,
+now refused AT RUN by a per-declaration stub, never at export — the
+`detail` column changed from a whole-export kill to `at run: <stub
+reason> (go: ok; quarantined=N/M)`); 1 FRONTEND-REFUSED → MACHINE-REFUSED
+(`drv-ext-ipaddr`). Every first refusal is classified — no UNCLASSIFIED
+in `census.tsv` or the histogram — and every cause has a ledger row:
+
+| driver | first refusal at run | cause / row |
+|---|---|---|
+| `drv-authz-ast` | `fmt.Sprintf format …` | FR-14 `fmt-verb-matrix` (G5) |
+| `drv-authz-cedar-text`, `drv-policy-json-roundtrip` | `internal/parser.scanner.next` — `io.EOF` in value position | FR-14 `stdlib-value-position` (`io` unmodeled) |
+| `drv-authz-json` | `types.EntityMap.UnmarshalJSON` — `json.Unmarshal` | FR-14 `stdlib-package-unmodeled` (`encoding/json`, G6/reflect) |
+| `drv-eval-operators` | `generic instantiation …/types/entity_uid.go:143:9` — `mapset.Immutable[EntityUID](args...)` | **FR-27 (NEW row, this addendum)**: explicit instantiation of a package-qualified source generic — `genericFuncValue` resolves an identifier base only; plan: resolve the `SelectorExpr` base → `funcInstanceAt`; cause `explicit-instantiation-call` |
+| `drv-ext-datetime`, `drv-ext-decimal` | `fmt.Errorf format …` | FR-14 `fmt-verb-matrix` |
+| `drv-ext-ipaddr` | MACHINE: `default value for imported named type net/netip.Addr` | FR-14 (`net/netip` unmodeled; the D5 marker has no zero value) — cause `imported-type-zero-value` (NEW causes.tsv row, call-scoped) |
+| `drv-validate` | `x/exp/schema/internal/parser.lexer.skipWhitespaceAndComments` — `len` of a potentially-panicking operand between a panicking operand and a later ordered event | **FR-28 (NEW row)**: BUG-062's recorded fail-closed residual, given a frontier row so it classifies by name (was the `expression-shape` catch-all); plan BUG-032's full-statement linearization |
+
+The three new classifications are `tools/lowerdiag/causes.tsv` rows,
+pinned in `TestClassifyTextVocabulary`; the static pass does not emit
+FR-27/FR-28 (a stencil-/hoist-time judgement — "not judged statically").
+Ledger §4 rows FR-27, FR-28 and §5 queue slots 27, 28 are this addendum's
+direction-3 record.
+
+`scripts/lower-diagnose` static census (widened scope of §10.3, UNCHANGED
+unit): declarations demanding nothing refused **1455/1569 (92.7%) →
+1460/1569 (93.1%)**; funcs+methods 975/1086 (89.8%) → 980/1086 (90.2%);
+refused 113 → 108; **export kills 3 → 2 declarations, 7/24 → 5/24
+packages** (the `init()` `slices.Sort` kill is gone; the two that remain
+are FR-19's `nodeJSONAlias` ×2 in `x/exp/schema/internal/json`). The
+`slices-sort-kind` cause (9 declarations, 5 sole, 4 packages) left the
+blockers table; the head of the table is unchanged — `encoding/json`
+(FR-14/G6, 62 declarations, 31 sole), `net/netip` type methods (19),
+`errors.Is/As` (reflect, 10), `iter.Seq` in signatures (FR-23, 8) and
+bodies (36, 1 sole) with `range-over-func` (FR-12, 21) behind them.
+
+### 11.3 What is next, measured
+
+The whole-library case `all` now EXPORTS (557 quarantined declarations
+on its wire, every one classified). The functional drivers reach the
+machine and stop at their first stub: `fmt` verbs (G5 — the fmt re-homing
+slice), `encoding/json` (G6), `io.EOF`/`net/netip` (source-through
+admissions per memo §6), FR-27 (S, a frontend generality fix), FR-28
+(BUG-032's linearization), and — behind all of these for the
+authorization path proper — FR-23 → FR-12 (the `iter.Seq` members whose
+bodies are range-over-func). Decisions in this addendum, all [AGENT]:
+rowing FR-27 and FR-28 rather than fixing them on this lane (scope: FR-4 +
+row M); classifying a stencil stub by its INNER cause with the FR-4 row as
+last-resort fallback (the kill is gone, the inner cause is the plan);
+declaring the `go-sort` row's strict depth (64, the sizing convention)
+rather than routing it to the confluent lane. No gate, baseline, corpus or
+trust-surface claim is made here beyond the lane's own landing records.

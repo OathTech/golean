@@ -210,3 +210,235 @@ func main() {}
 		t.Fatalf("refusal does not say the signature is the blocker: %v", err)
 	}
 }
+
+// ---- FR-4: per-declaration quarantine for method STENCILS (lane fr4-rowm,
+// 2026-09-04; mono.go quarantinedStencilStub) ----
+
+const quarantineStencilSrc = `package main
+
+import "reflect"
+
+type box[T any] struct{ v T }
+
+// render does not lower (reflect.TypeOf — see quarantineMethodSrc for why
+// reflection is the pick): the quarantined STENCIL at box[int].
+func (b box[T]) render(prefix string, rest ...int) (string, error) {
+	return prefix + reflect.TypeOf(b.v).String(), nil
+}
+
+// get lowers: the healthy sibling stencil of the same instantiation.
+func (b box[T]) get() T { return b.v }
+
+func (b *box[T]) ptrRender() string { return reflect.TypeOf(b.v).String() }
+
+type renderer interface {
+	render(prefix string, rest ...int) (string, error)
+	get() int
+}
+
+func use() int {
+	b := box[int]{v: 3}
+	var x any = b
+	if r, ok := x.(renderer); ok {
+		return r.get()
+	}
+	return 0
+}
+
+func main() { println(use()) }
+`
+
+// TestQuarantinedStencilKeepsExport is FR-4's headline: one unlowerable
+// method STENCIL used to refuse the WHOLE export (ledger FR-4, the H-3
+// residual). The sibling stencil and the rest of the package survive it.
+func TestQuarantinedStencilKeepsExport(t *testing.T) {
+	program, err := emitSource(t, quarantineStencilSrc)
+	if err != nil {
+		t.Fatalf("export refused by a quarantinable method stencil: %v", err)
+	}
+	get := findMethod(program, "main.box[int]", "get")
+	if get == nil {
+		t.Fatal("the lowerable sibling stencil main.box[int].get is missing from the wire")
+	}
+	if _, stubbed := get["unsupported"]; stubbed {
+		t.Fatal("a lowerable stencil was quarantined")
+	}
+	if get["body"] == nil {
+		t.Fatal("the lowerable sibling stencil lost its body")
+	}
+	// The instantiated TypeDef itself is on the wire (the stub's receiver
+	// needs its declaration).
+	if typeDefByName(program, "main.box[int]") == nil {
+		t.Fatal("the instantiation's TypeDef main.box[int] is missing")
+	}
+}
+
+// TestQuarantinedStencilNeverDropped: the stub stays in the instantiation's
+// method table under the MANGLED receiver key, carries the REAL
+// (substituted) signature — receiver spelling, params, variadic, results —
+// and its refusal names the instantiation and the inner cause.
+func TestQuarantinedStencilNeverDropped(t *testing.T) {
+	program, err := emitSource(t, quarantineStencilSrc)
+	if err != nil {
+		t.Fatalf("export: %v", err)
+	}
+	stub := findMethod(program, "main.box[int]", "render")
+	if stub == nil {
+		t.Fatal("quarantined stencil DROPPED from the method table — interface satisfaction would answer a silently wrong no")
+	}
+	reason, _ := stub["unsupported"].(string)
+	for _, want := range []string{"method main.box[int].render", "FR-4: method stencil at this instantiation does not lower", "reflect", "satisfaction answers, calls fail closed"} {
+		if !strings.Contains(reason, want) {
+			t.Fatalf("stub reason lacks %q: %q", want, reason)
+		}
+	}
+	if stub["body"] != nil {
+		t.Fatal("a quarantined stencil must carry no body")
+	}
+	params, _ := stub["params"].([]any)
+	if len(params) != 2 {
+		t.Fatalf("stub params: want 2 (prefix, rest), got %v", stub["params"])
+	}
+	if v, _ := stub["variadic"].(bool); !v {
+		t.Fatal("stub lost the variadic marker (satisfaction compares it)")
+	}
+	results, _ := stub["results"].([]any)
+	if len(results) != 2 {
+		t.Fatalf("stub results: want 2 (string, error), got %v", stub["results"])
+	}
+	recv, _ := stub["recv"].(map[string]any)
+	if recv == nil || namedTypeName(recv["type"]) != "main.box[int]" {
+		t.Fatalf("stub receiver must be the instantiation's TypeId, got %v", stub["recv"])
+	}
+	// A POINTER-receiver stencil stubs the same way, receiver spelled as a
+	// pointer to the instantiation.
+	ptr := findMethod(program, "main.box[int]", "ptrRender")
+	if ptr == nil {
+		t.Fatal("pointer-receiver stencil dropped")
+	}
+	if _, stubbed := ptr["unsupported"]; !stubbed {
+		t.Fatal("pointer-receiver stencil with an unlowerable body was not quarantined")
+	}
+	if pr, _ := ptr["recv"].(map[string]any); pr == nil || fmtType(pr["type"]) != "ptr(main.box[int])" {
+		t.Fatalf("pointer stub receiver spelling: %v", ptr["recv"])
+	}
+}
+
+// fmtType renders a wire type as ptr(...)/named for the receiver checks.
+func fmtType(t any) string {
+	m, _ := t.(map[string]any)
+	if m == nil {
+		return "?"
+	}
+	switch m["kind"] {
+	case "ptr", "pointer":
+		return "ptr(" + fmtType(m["elem"]) + ")"
+	case "named":
+		return namedTypeName(m)
+	}
+	return "?"
+}
+
+// TestQuarantinedStencilSignatureOpaque: a stencil refused IN ITS SIGNATURE
+// (an imported generic instantiation, FR-23 — cedar-go's
+// `ImmutableMapSet[EntityUID].All() iter.Seq[EntityUID]`) composes with the
+// stencil quarantine: the body emission refuses (FR-23), the stub's
+// signature is emitted in SIGNATURE-OPAQUE mode, the marker TypeDef is
+// on the wire, and the export survives.
+func TestQuarantinedStencilSignatureOpaque(t *testing.T) {
+	src := `package main
+
+import "iter"
+
+type set[T comparable] struct{ items []T }
+
+func (s set[T]) size() int { return len(s.items) }
+
+func (s set[T]) All() iter.Seq[T] {
+	return func(yield func(T) bool) {
+		for _, v := range s.items {
+			if !yield(v) {
+				return
+			}
+		}
+	}
+}
+
+func use() int { return set[int]{items: []int{1, 2}}.size() }
+
+func main() { println(use()) }
+`
+	program, err := emitSource(t, src)
+	if err != nil {
+		t.Fatalf("export refused: %v", err)
+	}
+	size := findMethod(program, "main.set[int]", "size")
+	if size == nil || size["body"] == nil {
+		t.Fatal("the sibling stencil main.set[int].size did not lower")
+	}
+	all := findMethod(program, "main.set[int]", "All")
+	if all == nil {
+		t.Fatal("the FR-23 stencil was dropped from the method table")
+	}
+	reason, _ := all["unsupported"].(string)
+	for _, want := range []string{"method main.set[int].All", "FR-4: method stencil at this instantiation does not lower", "iter.Seq[int]", "FR-23", "opaque marker"} {
+		if !strings.Contains(reason, want) {
+			t.Fatalf("stub reason lacks %q: %q", want, reason)
+		}
+	}
+	results, _ := all["results"].([]any)
+	if len(results) != 1 || namedTypeName(results[0].(map[string]any)["type"]) != "iter.Seq[int]" {
+		t.Fatalf("the stub must carry iter.Seq[int] as an opaque named result, got %v", all["results"])
+	}
+	if typeDefByName(program, "iter.Seq[int]") == nil {
+		t.Fatal("the opaque marker TypeDef iter.Seq[int] is missing")
+	}
+}
+
+// TestQuarantinedStencilRollbackKeepsSharedInstantiation: the SAME
+// instantiation registered by a healthy body and by a body that is then
+// quarantined (a C6 local-type argument) — the quarantine's mono rollback
+// must undo only its own journal entries, so the shared instantiation and
+// its stencils stay on the wire and the healthy body keeps its call.
+func TestQuarantinedStencilRollbackKeepsSharedInstantiation(t *testing.T) {
+	src := `package main
+
+type box[T any] struct{ v T }
+
+func (b box[T]) get() T { return b.v }
+
+func healthy() int { return box[int]{v: 1}.get() }
+
+func local() int {
+	type score int
+	return int(box[score]{v: 2}.get()) + box[int]{v: 3}.get()
+}
+
+func main() { println(healthy() + local()) }
+`
+	program, err := emitSource(t, src)
+	if err != nil {
+		t.Fatalf("export refused: %v", err)
+	}
+	if h := funcByName(program, "healthy"); h == nil || h["body"] == nil {
+		t.Fatal("healthy did not lower")
+	}
+	l := funcByName(program, "local")
+	if l == nil {
+		t.Fatal("local missing")
+	}
+	if reason, _ := l["unsupported"].(string); !strings.Contains(reason, "function-local defined type score as a type argument") {
+		t.Fatalf("local must be quarantined on the C6 naming refusal, got %q", reason)
+	}
+	if get := findMethod(program, "main.box[int]", "get"); get == nil || get["body"] == nil {
+		t.Fatal("the shared instantiation's stencil main.box[int].get was rolled back with the quarantined body")
+	}
+	if typeDefByName(program, "main.box[int]") == nil {
+		t.Fatal("the shared instantiation's TypeDef was rolled back")
+	}
+	for _, td := range program["types"].([]any) {
+		if name, _ := td.(map[string]any)["name"].(string); strings.Contains(name, "score") {
+			t.Fatalf("a local-type instantiation leaked onto the wire: %s", name)
+		}
+	}
+}

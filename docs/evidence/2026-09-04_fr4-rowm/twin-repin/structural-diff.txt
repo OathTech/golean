@@ -1,0 +1,37 @@
+# twin wire structural diff — memo §3 row M (slices.Sort intercept retired), lane fr4-rowm, 2026-09-04
+# producer: python3 JSON diff of baselines/pins/twin-chdriver.wire.json (old) vs a fresh emit over the
+#   check-frontend-pins twin assembly (raftsubject/{quorum,raftpb,tracker,proto,confchange,raft} + tools/raftsubject/twin-*.go)
+#   GO111MODULE=off go run ./tools/nativefrontend --dir <assembly> --out <new>
+old sha256 b4458244c2593f0b8e20afdc3f2d3bef465d2069d1bf487395c0edb20663053f
+new sha256 4ee39f732d51218a792393fa3143980dfde8a2a6f587fbfaa224c5c4ba28b447
+funcs: added 16 removed 0 changed 1
+  + cmp.Less[uint64]
+  + cmp.isNaN[uint64]
+  + slices.Sort[[]uint64,uint64]
+  + slices.breakPatternsOrdered[uint64]
+  + slices.choosePivotOrdered[uint64]
+  + slices.heapSortOrdered[uint64]
+  + slices.insertionSortOrdered[uint64]
+  + slices.medianAdjacentOrdered[uint64]
+  + slices.medianOrdered[uint64]
+  + slices.order2Ordered[uint64]
+  + slices.partialInsertionSortOrdered[uint64]
+  + slices.partitionEqualOrdered[uint64]
+  + slices.partitionOrdered[uint64]
+  + slices.pdqsortOrdered[uint64]
+  + slices.reverseRangeOrdered[uint64]
+  + slices.siftDownOrdered[uint64]
+  ~ raftpb.ConfState.Equivalent$lit0 (sort-slice nodes: 1 -> 0 ; static calls to slices.Sort[[]uint64,uint64]: 1 )
+methods: added 0 removed 0 changed 8
+  ~ quorum.MajorityConfig.CommittedIndex (sort-slice nodes: 1 -> 0 ; static calls to slices.Sort[[]uint64,uint64]: 1 )
+  ~ quorum.MajorityConfig.Slice (sort-slice nodes: 1 -> 0 ; static calls to slices.Sort[[]uint64,uint64]: 1 )
+  ~ quorum.MajorityConfig.String (sort-slice nodes: 1 -> 0 ; static calls to slices.Sort[[]uint64,uint64]: 1 )
+  ~ raft.raft.campaign (sort-slice nodes: 1 -> 0 ; static calls to slices.Sort[[]uint64,uint64]: 1 )
+  ~ tracker.ProgressMap.String (sort-slice nodes: 1 -> 0 ; static calls to slices.Sort[[]uint64,uint64]: 1 )
+  ~ tracker.ProgressTracker.LearnerNodes (sort-slice nodes: 1 -> 0 ; static calls to slices.Sort[[]uint64,uint64]: 1 )
+  ~ tracker.ProgressTracker.Visit (sort-slice nodes: 1 -> 0 ; static calls to slices.Sort[[]uint64,uint64]: 1 )
+  ~ tracker.ProgressTracker.VoterNodes (sort-slice nodes: 1 -> 0 ; static calls to slices.Sort[[]uint64,uint64]: 1 )
+types: added 0 removed 0 changed 0
+globals: added 0 removed 0 changed 0
+sort-slice nodes in the whole wire: old 9 new 0
+top-level keys identical: True
