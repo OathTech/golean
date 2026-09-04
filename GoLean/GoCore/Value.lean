@@ -234,7 +234,7 @@ inductive Terminal where
   `go run -race` (TSan; exit 66); the message is FIXED so per-stream
   refusal is choice-invariant in the harness. -/
   | raceDetected
-  deriving Repr, BEq, Inhabited
+  deriving Repr, DecidableEq, Inhabited
 
 /-- The stop grammar: a refusal, a Go terminal, or the budget. -/
 inductive Stop where
@@ -367,6 +367,81 @@ syntax "cases_stop " term : tactic
 macro_rules
   | `(tactic| cases_stop $e) =>
     `(tactic| rcases $e:term with (_ | _ | _) | (_ | _ | _ | _) | _)
+
+/-! ## The apply-boundary result (design-hygiene wave (iii), B2, 2026-09-04)
+
+A helper that can raise a RECOVERABLE Go panic returns `Except Stop α`
+and signals the panic as `.error (.panic msg)` — the same carrier the
+refusals and the unrecoverable terminals use. At the APPLY BOUNDARY (the
+one place a `stepFn` arm or a `Step` rule consumes a helper's outcome)
+that signal is classified ONCE, by `toResult`: a value, or a panic to
+deliver as an unwinding configuration (`Machine.deliver`). Refusals,
+`fatal`/`deadlock`/`raceDetected` and `fuelOut` stay `Except` errors —
+they have no successor configuration. The review's full route (the
+`Result` monad THROUGH every helper) was measured and deferred: every
+`Except Stop` signature in Ops/Machine/State and every helper lemma
+(~230 sites) would move for the same one classification. -/
+
+/-- The outcome of an apply: a value, or a recoverable Go panic (the text
+of its `runtime.Error` payload). -/
+inductive Result (α : Type) where
+  | ok (a : α)
+  | panic (msg : String)
+  deriving Repr
+
+/-- Classify a helper's outcome at the apply boundary: `.panic` becomes a
+`Result.panic`; a value stays a value; every other stop propagates. -/
+def toResult {α : Type} : Except Stop α → Except Stop (Result α)
+  | .ok a => .ok (.ok a)
+  | .error (.terminal (.panic msg)) => .ok (.panic msg)
+  | .error e => .error e
+
+@[simp] theorem toResult_ok {α : Type} {a : α} : toResult (.ok a : Except Stop α) = .ok (.ok a) := rfl
+
+@[simp] theorem toResult_panic {α : Type} {msg : String} :
+    toResult (.error (Stop.panic msg) : Except Stop α) = .ok (.panic msg) := rfl
+
+@[simp] theorem toResult_refusal {α : Type} {r : Refusal} :
+    toResult (.error (.refusal r) : Except Stop α) = .error (.refusal r) := rfl
+@[simp] theorem toResult_fatal {α : Type} {msg : String} :
+    toResult (.error (Stop.fatal msg) : Except Stop α) = .error (Stop.fatal msg) := rfl
+@[simp] theorem toResult_deadlock {α : Type} :
+    toResult (.error Stop.deadlock : Except Stop α) = .error Stop.deadlock := rfl
+@[simp] theorem toResult_raceDetected {α : Type} :
+    toResult (.error Stop.raceDetected : Except Stop α) = .error Stop.raceDetected := rfl
+@[simp] theorem toResult_fuelOut {α : Type} :
+    toResult (.error .fuelOut : Except Stop α) = .error .fuelOut := rfl
+
+theorem toResult_error {α : Type} {e : Stop} (h : ∀ msg, e ≠ .panic msg) :
+    toResult (.error e : Except Stop α) = .error e := by
+  cases_stop e <;> first | rfl | exact absurd rfl (h _)
+
+theorem toResult_eq_ok_ok {α : Type} {x : Except Stop α} {a : α} :
+    toResult x = .ok (.ok a) ↔ x = .ok a := by
+  cases x with
+  | ok b => simp [toResult]
+  | error e => cases_stop e <;> simp [toResult]
+
+theorem toResult_eq_ok_panic {α : Type} {x : Except Stop α} {msg : String} :
+    toResult x = .ok (.panic msg) ↔ x = .error (.panic msg) := by
+  cases x with
+  | ok b => simp [toResult]
+  | error e => cases_stop e <;> simp [toResult]
+
+theorem toResult_eq_error {α : Type} {x : Except Stop α} {e : Stop} :
+    toResult x = .error e ↔ x = .error e ∧ ∀ msg, e ≠ .panic msg := by
+  cases x with
+  | ok b => simp [toResult]
+  | error e' =>
+    cases_stop e' <;> simp [toResult] <;> (intro h; subst h; simp)
+
+/-- The `Result` of a successful classification, by cases: a value or a panic. -/
+theorem toResult_cases {α : Type} {x : Except Stop α} {r : Result α}
+    (h : toResult x = .ok r) :
+    (∃ a, r = .ok a ∧ x = .ok a) ∨ (∃ msg, r = .panic msg ∧ x = .error (.panic msg)) := by
+  cases r with
+  | ok a => exact .inl ⟨a, rfl, toResult_eq_ok_ok.mp h⟩
+  | panic msg => exact .inr ⟨msg, rfl, toResult_eq_ok_panic.mp h⟩
 
 /-- The harness's status word for a refusal (the observation channel's
 `status` field; `internal` reports as `error`). -/

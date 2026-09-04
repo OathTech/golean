@@ -28,28 +28,29 @@ namespace GoLean.GoCore.Machine
 
 /-- One observation of a pool run — the membership lane's member
 vocabulary (`enumPoolRun`'s statuses, as data): main's normal terminal
-with the readout values, an unrecovered panic (any goroutine), or the
-race detector's refusal. Deadlock, fuel exhaustion, stuck/unsupported/
-internal errors, AND `Stop.fatal` are NOT observations (the lane
-fails loud on them; `obsOf?` is `none`). The fatal exclusion is a
-CAPABILITY bound, not just a refusal: `Obs` has no fatal constructor,
-so an envelope containing a fatal member (a `go` of a nil func,
-sync-misuse fatals — modeled machine behaviors) is structurally
-un-statable in this vocabulary. Both lanes refuse fatal loudly, so no
-accepted certificate or DFS record can silently omit a fatal member;
-the widening (`Obs.fatal`, Q8 of the W3.2 Q-rows) is graded
-post-launch. (Sentence owed since audit-2 N-3; landed 2026-08-22,
-launch audit W-1/D3-F-1.) -/
+with the readout values, or a Go TERMINAL the run stopped on (`Terminal`,
+Value.lean: an unrecovered panic in any goroutine, a `fatal` throw,
+deadlock, the race detector's refusal). Fuel exhaustion and the
+refusals (stuck/unsupported/internal) are NOT observations (`obsOf?` is
+`none`; the checker fails loud on them). Since wave (iii) B2 the
+vocabulary is the outcome grammar's own `Terminal`, so EVERY Go
+terminal is statable — the former capability bound (`Obs` had no
+`fatal`/`deadlock` constructor: Q8 of the W3.2 Q-rows, audit-2 N-3,
+launch audit W-1/D3-F-1) is closed at the TYPE. The ENGINE and the
+CHECKER still refuse `fatal` and `deadlock` members loudly
+(`EnumDedup.nodeObs`, `checkEdge`/`checkNode`: no membership handling
+for them yet — a certified set never contains one silently); admitting
+them is a lane decision, not a type change. -/
 inductive Obs where
   | ok (values : List GoValue)
-  | panic (msg : String)
-  | race
+  | terminal (t : Terminal)
   deriving Repr
 
 /-- Project a driver result to its observation, if any. The `.ok`
 readout mirrors `enumPoolRun`'s terminal (`loadMany` at the pinned
 result locations); an errored readout is no observation (the checker
-refuses such nodes — fail closed, never a silent member). -/
+refuses such nodes — fail closed, never a silent member); every Go
+terminal IS one. -/
 def obsOf? (resultLocs : List Loc) :
     Except Stop (ExecOutcome × Choices) → Option Obs
   | .ok (.normal σf, _) =>
@@ -57,8 +58,7 @@ def obsOf? (resultLocs : List Loc) :
       | .ok vs => some (.ok vs)
       | .error _ => none
   | .ok (_, _) => none
-  | .error (.panic msg) => some (.panic msg)
-  | .error .raceDetected => some .race
+  | .error (.terminal t) => some (.terminal t)
   | .error _ => none
 
 /-- **THE SLOW SEMANTICS** (design note §1): observation `o` is

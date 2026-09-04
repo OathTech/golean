@@ -89,12 +89,15 @@ theorem spawnStep_wf {s : ExecState} {cv : GoValue} {args : List GoValue}
   unfold spawnStep at h
   split at h
   · rename_i fid captured
-    split at h
-    · rename_i func frameEnv resultLocs s₂ henter
-      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    -- B2: the ONE entry funnel classifies; the child is delivered.
+    simp only [bind_eq_ok] at h
+    obtain ⟨⟨r, ch₁⟩, hpick, h⟩ := h
+    have hcap : goValueListSup captured ≤ s.nextAddr := by
+      simpa [GoValue.locSup] using hcv
+    rcases enterFramePick_cases hpick with
+      ⟨func, frameEnv, resultLocs, s₂, rfl, henter, rfl⟩ | ⟨msg, rfl, henter, rfl⟩
+    · simp only [deliver_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-      have hcap : goValueListSup captured ≤ s.nextAddr := by
-        simpa [GoValue.locSup] using hcv
       obtain ⟨w1, w2, w3, w4, w5, w6, w7, w8⟩ := enterFrame_wf hw
         (by rw [goValueListSup_append]; omega) henter
       refine ⟨w1, ?_, ?_, w3, w2, ?_, ?_⟩
@@ -104,16 +107,13 @@ theorem spawnStep_wf {s : ExecState} {cv : GoValue} {args : List GoValue}
         omega
       · simpa [Config.itersNormalized, Cont.itersNormalized] using hik
       · simp [Config.itersNormalized, Cont.itersNormalized]
-    · rename_i msg henter
-      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    · simp only [deliver_panic, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl, rfl⟩ := h
       refine ⟨hw, ?_, ?_, rfl, Nat.le_refl _, ?_, ?_⟩
       · simpa [Config.locSup] using hk
-      · simp [Config.locSup, panicChainSup, runtimeErrorValue_locSup,
-          Cont.locSup]
+      · simp [Config.locSup, panicChainSup, panicEntry_locSup, Cont.locSup]
       · simpa [Config.itersNormalized, Cont.itersNormalized] using hik
       · simp [Config.itersNormalized, Cont.itersNormalized]
-    · simp [throw, throwThe, MonadExceptOf.throw] at h
   · simp [throw, throwThe, MonadExceptOf.throw] at h
   · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
 
@@ -197,7 +197,7 @@ theorem resumeThread_wf {s : ExecState} {c c' : Config} {s' : ExecState}
     · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       refine ⟨hw, ?_, rfl, Nat.le_refl _, ?_⟩
-      · simp only [Config.locSup, panicChainSup, runtimeErrorValue_locSup,
+      · simp only [Config.locSup, panicChainSup, runtimeErrorValue_locSup, panicEntry_locSup,
           Nat.max_le]
         omega
       · simpa [Config.itersNormalized] using hik
@@ -1149,7 +1149,8 @@ theorem stepThread_wf {s : ExecState} {threads : Array Config} {i : Nat}
                 | ok r₂ =>
                   obtain ⟨c₂, s₂, ch₂, cl?⟩ := r₂
                   rw [happly] at h
-                  simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+                  simp only [toResult_ok, Bind.bind, Except.bind, pure_eq_ok,
+                    Except.ok.injEq, Prod.mk.injEq] at h
                   obtain ⟨rfl, rfl, rfl, rfl⟩ := h
                   obtain ⟨q1, q2, q3, q4⟩ :=
                     applySelect_wf hw hb1 hb2 hb3 hb4 hb5 happly
@@ -1160,15 +1161,17 @@ theorem stepThread_wf {s : ExecState} {threads : Array Config} {i : Nat}
                 | error e =>
                   rw [happly] at h
                   cases_stop e <;>
-                    simp only [throw, throwThe, MonadExceptOf.throw, pure_eq_ok,
-                      Except.ok.injEq, Prod.mk.injEq, reduceCtorEq] at h
+                    simp only [toResult_panic, toResult_refusal, toResult_fatal, toResult_deadlock,
+                      toResult_raceDetected, toResult_fuelOut, Bind.bind, Except.bind, pure_eq_ok,
+                      deliver_panic, List.nil_append, Except.ok.injEq, Prod.mk.injEq,
+                      reduceCtorEq] at h
                   case panic msg =>
                   obtain ⟨rfl, rfl, rfl, rfl⟩ := h
                   refine ⟨hw, rfl, Nat.le_refl _, by simp, ?_⟩
                   refine pool_set1_wf (Nat.le_refl _) hts ?_ ?_
                   · simp only [ConfigWf, Config.locSup, Cont.locSup,
                       goValueListSup, exprListSup, Nat.max_le] at hc ⊢
-                    simp only [panicChainSup, runtimeErrorValue_locSup]
+                    simp only [panicChainSup, panicEntry_locSup]
                     omega
                   · simpa [Config.itersNormalized, Cont.itersNormalized] using hic
             | single bc cands =>

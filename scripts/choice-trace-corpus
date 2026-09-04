@@ -21,6 +21,10 @@
 #                  entry streams — see GoLean/ChoiceTrace.lean parseStream)
 #   --golean BIN   the golean binary (default .lake/build/bin/golean — build
 #                  it via `scripts/capped lake build golean` first)
+#   --dump         also write every consumption (id, stream, idx, phase, site,
+#                  bound, streamValue, pick) to $OUT/dump-<k>.tsv per chunk —
+#                  the per-consumption byte-identity oracle (design-hygiene
+#                  wave (iii), B8-prep 2026-09-04)
 #   --exclude ID   leave this manifest id out of the batch (repeatable). The
 #                  exclusion is RECORDED in $OUT/excluded.tsv and echoed in the
 #                  summary header, never silent. Use for rows that spin to the
@@ -45,9 +49,11 @@ STREAMS='default;9,8,7,6,5,4,3,2,1,0;1,3,5,7,9,2,4,6,8,0;5,5,5,5,5,5,5,5;rand:1:
 GOLEAN_BIN="$ROOT/.lake/build/bin/golean"
 IDS=()
 EXCLUDE=()
+DUMP=0
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
     --jobs) JOBS="$2"; shift 2 ;;
+    --dump) DUMP=1; shift ;;
     --exclude) EXCLUDE+=("$2"); shift 2 ;;
     --fuel) FUEL="$2"; shift 2 ;;
     --out) OUT="$2"; shift 2 ;;
@@ -120,8 +126,10 @@ fi
 per=$(( (total + JOBS - 1) / JOBS ))
 pids=()
 for ((k = 0; k < JOBS; k++)); do
-  rm -f "$OUT/results-$k.tsv"
-  "$GOLEAN_BIN" choice-trace --batch "$OUT/batch.tsv" --out "$OUT/results-$k.tsv" --fuel "$FUEL" --skip $((k * per)) --take "$per" 2> "$OUT/results-$k.log" &
+  rm -f "$OUT/results-$k.tsv" "$OUT/dump-$k.tsv"
+  dump_args=()
+  [[ "$DUMP" -eq 1 ]] && dump_args=(--dump "$OUT/dump-$k.tsv")
+  "$GOLEAN_BIN" choice-trace --batch "$OUT/batch.tsv" --out "$OUT/results-$k.tsv" ${dump_args[@]+"${dump_args[@]}"} --fuel "$FUEL" --skip $((k * per)) --take "$per" 2> "$OUT/results-$k.log" &
   pids+=($!)
 done
 rc=0

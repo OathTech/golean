@@ -156,7 +156,7 @@ private def nodeObs (resultLocs : List Loc) (nd : DedupNode) :
   if nd.m.threads.isEmpty then throw "thread pool without a main goroutine"
   else
     match nd.m.panicMsg? with
-    | some msg => return some (.panic msg, false)
+    | some msg => return some (.terminal (.panic msg), false)
     | none =>
       match nd.m.mainOutcome? with
       | some (.normal σf) =>
@@ -275,7 +275,7 @@ private partial def explore (resultLocs : List Loc) (budget : Nat)
                       succs := succs.push k'
                       if isNew then newIdxs := k' :: newIdxs
                   | .error .raceDetected =>
-                      stM := recordMember stM .race edgeStream (steps + 2)
+                      stM := recordMember stM (.terminal .raceDetected) edgeStream (steps + 2)
                       stM := { stM with stats :=
                         { stM.stats with edges := stM.stats.edges + 1 } }
                       succs := succs.push 0

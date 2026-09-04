@@ -1550,9 +1550,15 @@ def valueAsChan : GoValue → Except Stop ChanValue
   | .chan value => return value
   | other => stuck s!"expected channel value, got {repr other}"
 
+/-- gc's nil-dereference `runtime.Error` text — the one message the
+machine raises at every nil-address use (`valueAsLoc`, the nil-callee
+invocations, the nil-box dispatch). -/
+def nilDerefPanicText : String :=
+  "runtime error: invalid memory address or nil pointer dereference"
+
 def valueAsLoc : GoValue → Except Stop Loc
   | .addr loc => return loc
-  | .nil => panic "runtime error: invalid memory address or nil pointer dereference"
+  | .nil => panic nilDerefPanicText
   | other => stuck s!"expected address value, got {repr other}"
 
 /-- Compare list elements pairwise with the (already fuel-decremented)
@@ -2148,7 +2154,7 @@ def dynamicDispatch? (state : ExecState) (func : Func) (argValues : Array GoValu
                   -- TEXT raised here is member 0 of BUG-087's two-member
                   -- set; on the wrapper family (`nilValueMethodText?`
                   -- above — the envelope statement) the frame-entry
-                  -- funnels (`enterFrameStep`, StepFn.lean) draw the
+                  -- funnel (`enterFramePick`, Machine.lean) draws the
                   -- `nilValueMethodText` pick and may substitute member
                   -- 1, gc's `panicwrap` text. This arm itself stays
                   -- stream-free (no `Choices` reach `Except`-land).
@@ -2156,7 +2162,7 @@ def dynamicDispatch? (state : ExecState) (func : Func) (argValues : Array GoValu
                     if needsDeref then
                       match inner with
                       | .addr loc => loadLoc state loc
-                      | .nil => throw (.panic "runtime error: invalid memory address or nil pointer dereference")
+                      | .nil => throw (.panic nilDerefPanicText)
                       | other => stuck s!"pointer-box receiver expected address, got {repr other}"
                     else
                       pure inner
@@ -2182,7 +2188,7 @@ rather than dispatching from no information (BUG-009/BUG-053 class)")
           -- dereference panic (probe-pinned; the stub body behind this
           -- is unreachable and fails stuck if a bug ever reaches it).
           | some GoValue.nil =>
-              throw (.panic "runtime error: invalid memory address or nil pointer dereference")
+              throw (.panic nilDerefPanicText)
           | _ => return none
 
 /-- Structurally-recursive insertion into a `le`-sorted list (de-WF,

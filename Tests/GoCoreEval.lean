@@ -1543,7 +1543,7 @@ private def coreBreakContinueFunction : GoCore.Func := {
     ]
 }
 
-private def expectIntResult (name : String) (result : Except Stop GoLean.GoCore.Result)
+private def expectIntResult (name : String) (result : Except Stop GoLean.GoCore.Readout)
     (expected : Int) : IO Bool := do
   match result with
   | .ok result =>
@@ -1565,7 +1565,7 @@ private def expectTrue (name : String) (b : Bool) : IO Bool := do
     IO.eprintln s!"FAIL: {name}: condition is false"
     return false
 
-private def expectBoolResult (name : String) (result : Except Stop GoLean.GoCore.Result)
+private def expectBoolResult (name : String) (result : Except Stop GoLean.GoCore.Readout)
     (expected : Bool) : IO Bool := do
   match result with
   | .ok result =>
@@ -1579,7 +1579,7 @@ private def expectBoolResult (name : String) (result : Except Stop GoLean.GoCore
       IO.eprintln s!"FAIL: {name}: expected success, got {repr err}"
       return false
 
-private def expectValues (name : String) (result : Except Stop GoLean.GoCore.Result)
+private def expectValues (name : String) (result : Except Stop GoLean.GoCore.Readout)
     (expected : Array GoValue) : IO Bool := do
   match result with
   | .ok result =>
@@ -1593,7 +1593,7 @@ private def expectValues (name : String) (result : Except Stop GoLean.GoCore.Res
       IO.eprintln s!"FAIL: {name}: expected success, got {repr err}"
       return false
 
-private def expectErrorStatus (name : String) (result : Except Stop GoLean.GoCore.Result)
+private def expectErrorStatus (name : String) (result : Except Stop GoLean.GoCore.Readout)
     (expected : String) : IO Bool := do
   match result with
   | .ok result =>
@@ -1607,7 +1607,7 @@ private def expectErrorStatus (name : String) (result : Except Stop GoLean.GoCor
         IO.eprintln s!"FAIL: {name}: expected {expected}, got {err.status}: {err.message}"
         return false
 
-private def expectOk (name : String) (result : Except Stop GoLean.GoCore.Result) :
+private def expectOk (name : String) (result : Except Stop GoLean.GoCore.Readout) :
     IO Bool := do
   match result with
   | .ok _ =>
@@ -2803,7 +2803,7 @@ def main : IO UInt32 := do
     -- the witness replay through the unmodified execProgLoop is what
     -- makes a claimed member earn its place.
     passed := passed && (← expectTrue "DEDUP: M5 fabricated member REFUSED (its witness does not replay to that observation)"
-      (!accepts { cert with members := cert.members.push (.panic "fabricated", [], 10) }))
+      (!accepts { cert with members := cert.members.push (.terminal (.panic "fabricated"), [], 10) }))
   if passed then
     return 0
   else

@@ -627,10 +627,9 @@ theorem Obs.eqb_sound {a b : Obs} (h : Obs.eqb a b = true) : a = b := by
     cases eqbListP_sound (fun _ _ hh => GoValue.eqb_sound hh)
       (show eqbListP GoValue.eqb vs ws = true from h)
     rfl
-  case panic.panic x y =>
+  case terminal.terminal x y =>
     cases eq_of_beq (show (x == y) = true from h)
     rfl
-  case race.race => rfl
 
 theorem obsMem_mem {mems : Array (Obs × Choices × Nat)} {o : Obs}
     (h : obsMem mems o = true) : o ∈ mems.toList.map (·.1) := by

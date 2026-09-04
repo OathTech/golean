@@ -245,7 +245,7 @@ theorem stepFn_selectApply_inv {σ : ExecState} {v : GoValue}
         = .ok (c', σ', ch', cl?))
       ∨ (∃ msg, applySelect σ clauses default? ((v :: done).reverse) env k' ch
           = .error (.panic msg)
-          ∧ c' = .panicking [⟨runtimeErrorValue msg, false⟩] k'
+          ∧ c' = .panicking [panicEntry msg] k'
           ∧ σ' = σ ∧ ch' = ch) := by
   unfold stepFn at h
   dsimp only at h
@@ -253,14 +253,16 @@ theorem stepFn_selectApply_inv {σ : ExecState} {v : GoValue}
   | ok r =>
       obtain ⟨c₂, s₂, ch₂, cl₂⟩ := r
       rw [happ] at h
-      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      simp only [toResult_ok, Bind.bind, Except.bind, pure_eq_ok, deliverS_ok,
+        Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl⟩ := h
       exact .inl ⟨cl₂, rfl⟩
   | error e =>
       rw [happ] at h
       cases_stop e <;>
-        simp only [throw, throwThe, MonadExceptOf.throw, pure_eq_ok,
-          Except.ok.injEq, Prod.mk.injEq, reduceCtorEq] at h
+        simp only [toResult_panic, toResult_refusal, toResult_fatal, toResult_deadlock,
+          toResult_raceDetected, toResult_fuelOut, Bind.bind, Except.bind, pure_eq_ok,
+          deliverS_panic, List.nil_append, Except.ok.injEq, Prod.mk.injEq, reduceCtorEq] at h
       case panic msg =>
         obtain ⟨rfl, rfl, rfl⟩ := h
         exact .inr ⟨msg, rfl, rfl, rfl, rfl⟩
@@ -325,7 +327,7 @@ theorem stepThread_single {σ : ExecState} {c : Config} {ch : Choices}
               (.retV v (.selectOpsK clauses default? done [] env k')) ch
               = (match e with
                  | .panic msg =>
-                     .ok (.panicking [⟨runtimeErrorValue msg, false⟩] k', σ, ch)
+                     .ok (.panicking [panicEntry msg] k', σ, ch)
                  | e => .error e) := by
             unfold stepFn
             dsimp only
@@ -784,30 +786,31 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
                 | ok r₂ =>
                   obtain ⟨c', s₂, ch₂, cl?⟩ := r₂
                   rw [happly] at hst
-                  simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
+                  simp only [toResult_ok, Bind.bind, Except.bind, pure_eq_ok,
+                    Except.ok.injEq, Prod.mk.injEq] at hst
                   obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
                   have hts : m.threads.setIfInBounds i c'
                       = (m.threads.setIfInBounds i c') ++ ([] : List Config).toArray := by
                     simp
                   rw [hts]
                   exact StepM.thread hsched hti hbl hac
-                    (StepE.lift (Step.selectApply happly))
+                    (StepE.lift (Step.selectApply (toResult_eq_ok_ok.mpr happly) rfl))
                 | error e =>
                   rw [happly] at hst
                   cases_stop e <;>
-                    simp only [throw, throwThe, MonadExceptOf.throw, pure_eq_ok,
-                      Except.ok.injEq, Prod.mk.injEq, reduceCtorEq] at hst
+                    simp only [toResult_panic, toResult_refusal, toResult_fatal, toResult_deadlock,
+                      toResult_raceDetected, toResult_fuelOut, Bind.bind, Except.bind, pure_eq_ok,
+                      deliver_panic, List.nil_append, Except.ok.injEq, Prod.mk.injEq,
+                      reduceCtorEq] at hst
                   case panic msg =>
                   obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
-                  have hts : m.threads.setIfInBounds i
-                        (.panicking [⟨runtimeErrorValue msg, false⟩] k')
-                      = (m.threads.setIfInBounds i
-                          (.panicking [⟨runtimeErrorValue msg, false⟩] k'))
+                  have hts : m.threads.setIfInBounds i (.panicking [panicEntry msg] k')
+                      = (m.threads.setIfInBounds i (.panicking [panicEntry msg] k'))
                         ++ ([] : List Config).toArray := by
                     simp
                   rw [hts]
                   exact StepM.thread hsched hti hbl hac
-                    (StepE.lift (Step.selectApplyPanic happly))
+                    (StepE.lift (Step.selectApply (toResult_eq_ok_panic.mpr happly) rfl))
             | single bc cs =>
               rw [arrivalPlan_of_single hac] at hst
               simp only [Bind.bind, Except.bind] at hst
@@ -1133,7 +1136,7 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
           exact stepMulti_of_inner hsched hinner
         · have hinner : ∃ evI, stepThread m.shared m.threads i ch₀
               = .ok (m.threads.setIfInBounds i
-                    (.panicking [⟨runtimeErrorValue msg, false⟩] k'),
+                    (.panicking [panicEntry msg] k'),
                   m.shared, ch₀, evI) :=
             ⟨_, by
               unfold stepThread

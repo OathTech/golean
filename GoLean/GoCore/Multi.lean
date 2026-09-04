@@ -355,28 +355,24 @@ def spawnStep (s : ExecState) (cv : GoValue) (args : List GoValue) (k : Cont)
     (ch : Choices) : Except Stop (Config × Config × ExecState × Choices) := do
   match cv with
   | .funcVal fid captured =>
-      match enterFrame s fid (captured ++ args) with
-      | .ok (func, frameEnv, _resultLocs, s') =>
-          -- The parent lands on the completion marker (BUG-040, slice
-          -- 4; stage C: `.spawned k` unified into `.opDone .l1Sched
-          -- (.next k)`): a registry boundary of its own, so the next
-          -- pool step reschedules among {parent, child, …} instead of
-          -- running the parent privately to its next sync op. The
-          -- `l1Sched` tag preserves the spawn boundary's exact shipped
-          -- default (slot 0 = lowest-index runnable), NOT the postOp
-          -- issuer-continues convention.
-          return (.opDone .l1Sched (.next k),
-            .exec func.body frameEnv (.frame [] [] [] [] .stop func.wrapper), s', ch)
-      | .error (.panic msg) =>
-          -- The child's entry panic draws the `nilValueMethodText` pick
-          -- exactly like `enterFrameStep` (BUG-087 audit fix F1): on the
-          -- wrapper family `go v.M()` may abort with gc's panicwrap text.
-          let r := Choices.consumeAt .nilValueMethodText
-            (nilValueMethodWidth s fid (captured ++ args)) ch
-          return (.opDone .l1Sched (.next k),
-            .panicking [⟨runtimeErrorValue
-              (entryPanicText s fid (captured ++ args) msg r.1), false⟩] .stop, s, r.2)
-      | .error e => throw e
+      -- The ONE entry funnel (B2): the child's entry panic draws the
+      -- `nilValueMethodText` pick exactly like every other frame entry
+      -- (BUG-087 audit fix F1: on the wrapper family `go v.M()` may abort
+      -- with gc's panicwrap text) and is DELIVERED in the child, under
+      -- the child's empty continuation — its first observable act is
+      -- aborting on that panic.
+      let (r, ch') ← enterFramePick s fid (captured ++ args) ch
+      -- The parent lands on the completion marker (BUG-040, slice
+      -- 4; stage C: `.spawned k` unified into `.opDone .l1Sched
+      -- (.next k)`): a registry boundary of its own, so the next
+      -- pool step reschedules among {parent, child, …} instead of
+      -- running the parent privately to its next sync op. The
+      -- `l1Sched` tag preserves the spawn boundary's exact shipped
+      -- default (slot 0 = lowest-index runnable), NOT the postOp
+      -- issuer-continues convention.
+      let (child, s') := deliver s .stop (fun (func, frameEnv, _, s') =>
+        (.exec func.body frameEnv (.frame [] [] [] [] .stop func.wrapper), s')) r
+      return (.opDone .l1Sched (.next k), child, s', ch')
   -- A nil callee is gc's "go of nil func value" runtime FATAL, raised
   -- AT THE SPAWN in the spawning goroutine (probed 2026-08-07;
   -- unrecoverable, exit 2). Routed through the machine's own fatal
@@ -417,16 +413,15 @@ theorem spawnStep_oblivious {s : ExecState} {cv : GoValue} {args : List GoValue}
   cases cv with
   | funcVal fid captured =>
     have hn' := hn fid captured rfl
-    simp only [nilValueMethodWidth_of_none hn', Choices.consumeAt_nilValueMethodText_one,
-      entryPanicText_of_none hn'] at h ⊢
-    split at h
-    · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    -- B2: the entry funnel is stream-oblivious outside the family.
+    simp only [enterFramePick_of_none hn'] at h ⊢
+    cases hx : toResult (enterFrame s fid (captured ++ args)) with
+    | error e => simp [hx, Except.map, Bind.bind, Except.bind] at h
+    | ok r =>
+      simp only [hx, Except.map, Bind.bind, Except.bind, pure_eq_ok,
+        Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-      exact ⟨rfl, fun ch => by simp_all⟩
-    · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-      exact ⟨rfl, fun ch => by simp_all⟩
-    · simp [throw, throwThe, MonadExceptOf.throw] at h
+      exact ⟨rfl, fun ch => by simp [Except.map, Bind.bind, Except.bind]⟩
   | nil => simp [throw, throwThe, MonadExceptOf.throw] at h
   | _ => simp [throw, throwThe, MonadExceptOf.throw] at h
 
@@ -485,7 +480,7 @@ def resumeThread (s : ExecState) : Config → Except Stop (Config × ExecState)
   | .blockedSend (some loc) v k => do
       let (buf, capacity, closed) ← chanCell s loc
       if closed then
-        return (.panicking [⟨runtimeErrorValue "send on closed channel", false⟩] k, s)
+        return (.panicking [panicEntry "send on closed channel"] k, s)
       else if buf.size < capacity then do
         let s' ← storeChanPayload s loc (buf.push v) capacity closed
         return (.opDone .postOp (.next k), s')
@@ -1164,18 +1159,16 @@ def stepThread (s : ExecState) (threads : Array Config) (i : Nat)
                   -- sequential arm projects the identity away, this
                   -- path keeps it), the same defensive panic wrapping
                   -- with the pre-consumption stream.
-                  match applySelect s clauses default?
-                      ((v :: done).reverse) env k' ch₁ with
+                  match ← toResult (applySelect s clauses default?
+                      ((v :: done).reverse) env k' ch₁) with
                   | .ok (c', s', ch₂, cl?) =>
                       return (threads.setIfInBounds i c', s', ch₂,
                         ⟨i, match cl? with
                             | some cl => .selectCommit cl
                             | none => .selectPass, ps₁⟩)
-                  | .error (.panic msg) =>
-                      return (threads.setIfInBounds i
-                        (.panicking [⟨runtimeErrorValue msg, false⟩] k'),
-                        s, ch₁, ⟨i, .selectPass, ps₁⟩)
-                  | .error err => throw err
+                  | .panic msg =>
+                      let (c', s') := deliver s k' id (.panic msg)
+                      return (threads.setIfInBounds i c', s', ch₁, ⟨i, .selectPass, ps₁⟩)
               | none => do
                   let (c', s', ch₂) ← stepFn s c ch₁
                   return (threads.setIfInBounds i c', s', ch₂,
@@ -1874,7 +1867,7 @@ phase runs on the sequential driver — the decided slice scope). Result
 readout: main's pinned result locations in the shared state at main's
 exit, exactly the sequential driver's readout. -/
 def runProgramPoolM (fuel : Nat) (program : Program) (name : String)
-    (args : Array GoValue) (choices : Choices := []) : Except Stop Result := do
+    (args : Array GoValue) (choices : Choices := []) : Except Stop Readout := do
   let (c₀, s₀, resultLocs, choices₁) ← runProgramSetupM fuel program name args choices
   match ← execProgLoop fuel ⟨#[c₀], s₀, 0⟩ {} choices₁ with
   | (.normal sF, _) => return { values := (← loadMany sF resultLocs).toArray }
@@ -2007,7 +2000,7 @@ instance (m : MultiConfig) : Decidable (MultiWf m) := by
 
 
 def runProgramPoolIntsM (fuel : Nat) (program : Program) (name : String)
-    (args : Array Int) (choices : List Nat := []) : Except Stop Result :=
+    (args : Array Int) (choices : List Nat := []) : Except Stop Readout :=
   runProgramPoolM fuel program name (args.map GoValue.int) choices
 
 end GoLean.GoCore.Machine

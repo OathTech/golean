@@ -90,7 +90,10 @@ structure ExecState where
 derived quantity, not a field: it cannot drift from the heap. -/
 def ExecState.nextAddr (state : ExecState) : Nat := state.heap.size
 
-structure Result where
+/-- The driver's READOUT: the subject's result values at its terminal
+(renamed from `Result` in wave (iii) — `Result` is now the apply-boundary
+outcome, Value.lean). -/
+structure Readout where
   values : Array GoValue
   deriving Repr, BEq
 
@@ -259,10 +262,10 @@ The sites and their consuming definitions:
                    wrapper family — `nilValueMethodText?` (Ops.lean:
                    the envelope statement, beside the nil arm of
                    `dynamicDispatch?`) — else a bound-1 consult that
-                   pops nothing; consumed in `enterFrameStep` /
-                   `enterFrameDeferPanicking` (StepFn.lean) and in the
-                   `go`-statement entry `spawnStep` (Multi.lean) — the
-                   three frame-entry funnels with the stream in hand.
+                   pops nothing; consumed in `enterFramePick`
+                   (Machine.lean) — THE one frame-entry funnel with the
+                   stream in hand (B2), shared by every `stepFn` entry
+                   arm and the `go`-statement entry `spawnStep`.
 * `tryLock`      — TryLock/TryRLock's spurious-failure member
                    (Q-TRYLOCK, RULED [USER] 2026-08-31 row 5, implemented
                    2026-09-03): `applySyncOp`'s try-head arm, Machine.lean

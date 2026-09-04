@@ -218,7 +218,7 @@ private partial def goValueJson : GoValue → Json
   | .syncData p =>
       Json.mkObj [("tag", Json.str "syncData"), ("state", Json.str s!"{repr p}")]
 
-private def runJson : GoLean.GoCore.Result → Json
+private def runJson : GoLean.GoCore.Readout → Json
   | { values } =>
       Json.mkObj [
         ("schema", Json.str observationSchema),
@@ -864,7 +864,7 @@ def enumRunProgram (ep : EnumProgram) (runFuel : Nat)
 /-- The observation `native-json-run` prints for a driver result — public
 so the driver-agreement eval tests compare the two drivers on the SAME
 canonical JSON (audit F5). -/
-def observationOfRun : Except Stop GoCore.Result → Json
+def observationOfRun : Except Stop GoCore.Readout → Json
   | .ok result => runJson result
   | .error err => errorJson err
 
@@ -1555,16 +1555,18 @@ def runDedupObservations (ep : EnumProgram) (cfg : EnumArgs) : IO UInt32 := do
           resultLocs m₀ r₀ cert then
         IO.eprintln "coverage-observations: dedup certificate REFUSED by the verified checker — cannot certify (engine bug or fragment mismatch)"
         return 1
+      -- The status/JSON words are the outcome grammar's own (`Terminal.status`,
+      -- `errorJson` on the terminal) — byte-identical to the former per-
+      -- constructor table for panic/race; fatal/deadlock members are still
+      -- refused upstream (engine + checker), so no new word is emitted.
       let statusOf : GoCore.Machine.Obs → String := fun o =>
         match o with
         | .ok _ => "ok"
-        | .panic _ => "panic"
-        | .race => "race"
+        | .terminal t => t.status
       let obsJson : GoCore.Machine.Obs → Json := fun o =>
         match o with
         | .ok vs => runJson { values := vs.toArray }
-        | .panic msg => errorJson (.panic msg)
-        | .race => errorJson .raceDetected
+        | .terminal t => errorJson (.terminal t)
       -- status discipline (audit F1/F8), unchanged in meaning
       for t in cert.members do
         if cfg.expectStatus.any (fun ss => !ss.contains (statusOf t.1)) then

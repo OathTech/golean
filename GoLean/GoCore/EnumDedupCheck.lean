@@ -67,8 +67,7 @@ def DedupCert.obsSet (cert : DedupCert) : List Obs :=
 hood). -/
 def Obs.eqb : Obs → Obs → Bool
   | .ok vs, .ok ws => eqbListP GoValue.eqb vs ws
-  | .panic a, .panic b => a == b
-  | .race, .race => true
+  | .terminal a, .terminal b => a == b
   | _, _ => false
 
 /-- Is `o` among the members? -/
@@ -169,7 +168,7 @@ def checkEdge (nodeEqb : DedupNode → DedupNode → Bool)
            (match nodes[succIdx]? with
             | some ndS => nodeEqb ⟨m', r'⟩ ndS
             | none => false)
-       | .error .raceDetected => obsMem mems .race
+       | .error .raceDetected => obsMem mems (.terminal .raceDetected)
        | .error _ => false)
   | .error _ => false
 
@@ -196,7 +195,7 @@ def checkNode (nodeEqb : DedupNode → DedupNode → Bool)
   if nd.m.threads.isEmpty then false
   else
     match nd.m.panicMsg? with
-    | some msg => obsMem mems (.panic msg)
+    | some msg => obsMem mems (.terminal (.panic msg))
     | none =>
       match nd.m.mainOutcome? with
       | some (.normal σf) =>

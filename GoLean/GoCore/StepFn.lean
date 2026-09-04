@@ -13,7 +13,9 @@ sharing the rule premises' functions verbatim (`strictPlan`,
 `.panicking` configuration (`.ok`) that unwinds — running defers, open to
 `recover` — and an unrecovered chain reaching `.stop` becomes `.panicked`,
 which the driver reports as `Stop.panic`; only out-of-model conditions
-are `Except` errors.
+are `Except` errors. Every apply/entry arm is "apply, then deliver"
+(B2): the helper's outcome is classified once (`toResult`) and
+`deliverS` turns it into the step (`Machine.deliver` + the stream).
 
 Nondeterminism: the sequential choice points (mapRange pick-next,
 appendSlice spill capacity, and — slice 4 — the multi-ready select's
@@ -40,62 +42,34 @@ namespace GoLean.GoCore.Machine
 
 open GoLean
 
-/-- Ordinary call-frame entry with the frame-entry panic rule folded in
-(2026-08-05, slice-2 stage 5): a `.panic` raised inside `enterFrame`
-(dynamic dispatch on a nil interface; the auto-deref of a nil pointer
-box) is an ordinary RECOVERABLE panic in Go, so it steps to `.panicking`
-under the caller's continuation `k` — pinned by
-`interfaces/recover-nil-dispatch/*`. Kept as ONE helper so each stepFn
-call site remains a single `fun_cases` branch (the correspondence
-proofs' case numbering is positional). The NORMAL-drain deferred-call
-entries reuse it too (audit F1+F5, 2026-08-05: the entry panic is the
-deferred invocation's panic and starts unwinding at the draining frame
-— pass `k := .frame targets results ds k'`); the PANIC-PATH drain uses
-`enterFrameDeferPanicking` below (chain join).
+/-- The executable's delivery (B2): `deliver` with the choice stream —
+a value continues as `next a` (carrying the apply's OWN post-stream);
+a recoverable panic unwinds under `k` over the pre-apply state with the
+PRE-apply stream `ch` (the abandoned apply consumed nothing that the
+unwind keeps — today's every-site convention, now one definition). The
+relation's `deliver` is this without the stream (`deliverS_deliver`). -/
+def deliverS {α : Type} (s : ExecState) (k : Cont) (ch : Choices)
+    (next : α → Config × ExecState × Choices) (r : Result α)
+    (chain : List PanicEntry := []) : Config × ExecState × Choices :=
+  match r with
+  | .ok a => next a
+  | .panic msg => (.panicking (chain ++ [panicEntry msg]) k, s, ch)
 
-THE ENTRY-PANIC TEXT PICK (BUG-087, `ChoiceSite.nilValueMethodText`;
-[USER] ruling 2026-09-03 «demonic choice so both are admitted», relayed
-— `docs/2026-08-31_qrow-rulings.md`): the panic branch consults the
-site at bound `nilValueMethodWidth s fid args` — 2 exactly on the
-wrapper family (`nilValueMethodText?`, Ops.lean, the envelope
-statement), where slot 0 keeps the nil-dereference text `enterFrame`
-raised and slot 1 substitutes gc's `panicwrap` text; 1 elsewhere, where
-the site's `consumeAtOne := false` policy makes the consult a no-op
-(`Choices.consumeAt_nilValueMethodText_one`) — so every non-family
-entry consumes exactly as before. The stream meets a frame entry only
-here, in `enterFrameDeferPanicking` below, and in the `go`-statement
-entry `spawnStep` (Multi.lean — the same pick; audit fix F1) — the
-`Except`-land `enterFrame`/`dynamicDispatch?` stay stream-free — which is
-why the pick lives in the funnels and not at the arm; the relation's
-entry-panic rules (and `StepE.spawn`) quantify the pick. -/
-def enterFrameStep (s : ExecState) (fid : FuncId) (args : List GoValue)
-    (mk : Func → LocalEnv → List Loc → Config) (k : Cont)
-    (choices : Choices) : Except Stop (Config × ExecState × Choices) :=
-  match enterFrame s fid args with
-  | .ok (func, frameEnv, resultLocs, s') => .ok (mk func frameEnv resultLocs, s', choices)
-  | .error (.panic msg) =>
-      let r := Choices.consumeAt .nilValueMethodText (nilValueMethodWidth s fid args) choices
-      .ok (.panicking [⟨runtimeErrorValue (entryPanicText s fid args msg r.1), false⟩] k, s, r.2)
-  | .error err => .error err
+@[simp] theorem deliverS_ok {α : Type} {s : ExecState} {k : Cont} {ch : Choices}
+    {next : α → Config × ExecState × Choices} {a : α} {chain : List PanicEntry} :
+    deliverS s k ch next (.ok a) chain = next a := rfl
 
-/-- DEFERRED-call frame entry ON THE PANIC PATH (audit F1+F5,
-2026-08-05): an entry panic is the deferred INVOCATION's panic and JOINS
-the suspended chain newest-last, exactly like the `.nil`-callee drain arm
-below — remaining defers keep draining and `recover` answers the newest
-entry. One helper so the stepFn site stays a single `fun_cases` branch.
-The two NORMAL drain sites reuse `enterFrameStep` (no chain in flight —
-their panic starts unwinding at this frame with its remaining defers). -/
-def enterFrameDeferPanicking (s : ExecState) (fid : FuncId) (args : List GoValue)
-    (mk : Func → LocalEnv → Config) (chain : List PanicEntry) (krest : Cont)
-    (choices : Choices) : Except Stop (Config × ExecState × Choices) :=
-  match enterFrame s fid args with
-  | .ok (func, frameEnv, _resultLocs, s') => .ok (mk func frameEnv, s', choices)
-  | .error (.panic msg) =>
-      -- The same `nilValueMethodText` pick as `enterFrameStep` (BUG-087).
-      let r := Choices.consumeAt .nilValueMethodText (nilValueMethodWidth s fid args) choices
-      .ok (.panicking (chain ++ [⟨runtimeErrorValue (entryPanicText s fid args msg r.1), false⟩])
-        krest, s, r.2)
-  | .error err => .error err
+@[simp] theorem deliverS_panic {α : Type} {s : ExecState} {k : Cont} {ch : Choices}
+    {next : α → Config × ExecState × Choices} {msg : String} {chain : List PanicEntry} :
+    deliverS s k ch next (.panic msg) chain = (.panicking (chain ++ [panicEntry msg]) k, s, ch) := rfl
+
+/-- The executable delivery projects onto the relation's. -/
+theorem deliverS_deliver {α : Type} {s : ExecState} {k : Cont} {ch : Choices}
+    {next : α → Config × ExecState × Choices} {r : Result α} {chain : List PanicEntry}
+    {c' : Config} {s' : ExecState} {ch' : Choices}
+    (h : deliverS s k ch next r chain = (c', s', ch')) :
+    deliver s k (fun a => ((next a).1, (next a).2.1)) r chain = (c', s') := by
+  cases r <;> simp_all [deliverS, deliver]
 
 /-- One machine step. `.ok` is a step the relation permits (including
 steps *to* `.panicked`); `.error` means the machine is stuck here, with
@@ -109,22 +83,21 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .frame _targets _tenv _results [] k' _ => return (.panicking chain k', s, choices)
       | .frame targets tenv results ((cv, args) :: ds) k' w =>
           match cv with
-          | .funcVal fid captured =>
+          | .funcVal fid captured => do
               -- Defers run on the panic path, above the suspended chain's
               -- marker (the shape `recover`'s walk detects). An ENTRY
-              -- panic joins the chain (audit F1+F5). The deferred
-              -- callee's frame carries ITS wrapper flag (BUG-015).
-              enterFrameDeferPanicking s fid (captured ++ args)
-                (fun func frameEnv =>
-                  .exec func.body frameEnv
+              -- panic joins the chain (audit F1+F5; `deliverS`'s `chain`).
+              -- The deferred callee's frame carries ITS wrapper flag (BUG-015).
+              let (r, ch') ← enterFramePick s fid (captured ++ args) choices
+              return deliverS s (.frame targets tenv results ds k' w) ch'
+                (fun (func, frameEnv, _, s') =>
+                  (.exec func.body frameEnv
                     (.frame [] [] [] [] (.panicResumeK chain
-                      (.frame targets tenv results ds k' w)) func.wrapper))
-                chain (.frame targets tenv results ds k' w) choices
+                      (.frame targets tenv results ds k' w)) func.wrapper), s', ch')) r chain
           | .nil =>
               -- The nil invocation's panic joins the chain; remaining
               -- defers keep draining.
-              return (.panicking (chain ++ [⟨runtimeErrorValue
-                "runtime error: invalid memory address or nil pointer dereference", false⟩])
+              return (.panicking (chain ++ [panicEntry nilDerefPanicText])
                 (.frame targets tenv results ds k' w), s, choices)
           | other => throw (.stuck s!"deferred callee is not a function value: {repr other}")
       | .panicResumeK suspended k' =>
@@ -200,10 +173,11 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               match args.toList with
               | a :: rest =>
                   return (.evalE a env (.callArgsK fid plans [] rest env k), s, choices)
-              | [] =>
-                  enterFrameStep s fid []
-                    (fun func frameEnv resultLocs =>
-                      .exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper)) k choices
+              | [] => do
+                  let (r, ch') ← enterFramePick s fid [] choices
+                  return deliverS s k ch' (fun (func, frameEnv, resultLocs, s') =>
+                    (.exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper),
+                      s', ch')) r
           | none => throw (.unsupported "unsupported call target assignee")
       | .mapRange keyVar valVar mapExpr keyTy valTy body =>
           return (.evalE mapExpr env
@@ -343,23 +317,17 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           match strictPlan e with
           | some (op, e₁ :: rest) =>
               return (.evalE e₁ env (.strictK op [] rest env k), s, choices)
-          | some (op, []) =>
-              match applyStrictOp s op [] with
-              | .ok (v, s') => return (.retV v k, s', choices)
-              | .error (.panic msg) =>
-                  return (.panicking [⟨runtimeErrorValue msg, false⟩] k, s, choices)
-              | .error err => throw err
+          | some (op, []) => do
+              let r ← toResult (applyStrictOp s op [])
+              return deliverS s k choices (fun (v, s') => (.retV v k, s', choices)) r
           | none => throw (.stuck "unclassified expression")
   | .retV v k =>
       match k with
       | .strictK op done (e :: rest) env k' =>
           return (.evalE e env (.strictK op (v :: done) rest env k'), s, choices)
-      | .strictK op done [] _ k' =>
-          match applyStrictOp s op (v :: done).reverse with
-          | .ok (out, s') => return (.retV out k', s', choices)
-          | .error (.panic msg) =>
-              return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
-          | .error err => throw err
+      | .strictK op done [] _ k' => do
+          let r ← toResult (applyStrictOp s op (v :: done).reverse)
+          return deliverS s k' choices (fun (out, s') => (.retV out k', s', choices)) r
       | .andK r env k' => do
           if ← valueAsBool v then
             return (.evalE r env (.boolK k'), s, choices)
@@ -386,10 +354,11 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           | a :: rest =>
               return (.evalE a env
                 (.callArgsK fid plans (vals ++ [v]) rest env k'), s, choices)
-          | [] =>
-              enterFrameStep s fid (vals ++ [v])
-                (fun func frameEnv resultLocs =>
-                  .exec func.body frameEnv (.frame plans env resultLocs [] k' func.wrapper)) k' choices
+          | [] => do
+              let (r, ch') ← enterFramePick s fid (vals ++ [v]) choices
+              return deliverS s k' ch' (fun (func, frameEnv, resultLocs, s') =>
+                (.exec func.body frameEnv (.frame plans env resultLocs [] k' func.wrapper),
+                  s', ch')) r
       | .stmtOpK op nt done pending env k' =>
           -- Target addresses are checked as they arrive ONLY when more
           -- operands follow (interpreter panic timing); at the apply
@@ -397,31 +366,24 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           -- `locsOf`, so the rules need no extra guard there.
           match pending with
           | e :: rest =>
-              if done.length < nt then
-                match valueAsLoc v with
-                | .error (.panic msg) =>
-                    return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
-                | .error err => throw err
-                | .ok _ =>
-                    return (.evalE e env (.stmtOpK op nt (v :: done) rest env k'), s, choices)
+              if done.length < nt then do
+                let r ← toResult (valueAsLoc v)
+                return deliverS s k' choices
+                  (fun _ => (.evalE e env (.stmtOpK op nt (v :: done) rest env k'), s, choices)) r
               else
                 return (.evalE e env (.stmtOpK op nt (v :: done) rest env k'), s, choices)
-          | [] =>
-              match applyStmtOp s choices op nt (v :: done).reverse with
-              | .ok (s', choices') => return (.next k', s', choices')
-              | .error (.panic msg) =>
-                  return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
-              | .error err => throw err
+          | [] => do
+              let r ← toResult (applyStmtOp s choices op nt (v :: done).reverse)
+              return deliverS s k' choices (fun (s', choices') => (.next k', s', choices')) r
       | .callValCalleeK plans args env k' =>
           match v, args with
-          | .funcVal fid captured, [] =>
-              enterFrameStep s fid captured
-                (fun func frameEnv resultLocs =>
-                  .exec func.body frameEnv (.frame plans env resultLocs [] k' func.wrapper)) k' choices
+          | .funcVal fid captured, [] => do
+              let (r, ch') ← enterFramePick s fid captured choices
+              return deliverS s k' ch' (fun (func, frameEnv, resultLocs, s') =>
+                (.exec func.body frameEnv (.frame plans env resultLocs [] k' func.wrapper),
+                  s', ch')) r
           | .nil, [] =>
-              return (.panicking [⟨runtimeErrorValue
-                "runtime error: invalid memory address or nil pointer dereference", false⟩]
-                k', s, choices)
+              return (.panicking [panicEntry nilDerefPanicText] k', s, choices)
           | cv, a :: rest =>
               -- Go evaluates the callee and ALL arguments before the nil
               -- check fires, so nil proceeds into the argument walk.
@@ -436,14 +398,13 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
                 (.callValArgsK cv plans (vals ++ [v]) rest env k'), s, choices)
           | [] =>
               match cv with
-              | .funcVal fid captured =>
-                  enterFrameStep s fid (captured ++ vals ++ [v])
-                    (fun func frameEnv resultLocs =>
-                      .exec func.body frameEnv (.frame plans env resultLocs [] k' func.wrapper)) k' choices
+              | .funcVal fid captured => do
+                  let (r, ch') ← enterFramePick s fid (captured ++ vals ++ [v]) choices
+                  return deliverS s k' ch' (fun (func, frameEnv, resultLocs, s') =>
+                    (.exec func.body frameEnv (.frame plans env resultLocs [] k' func.wrapper),
+                      s', ch')) r
               | .nil =>
-                  return (.panicking [⟨runtimeErrorValue
-                    "runtime error: invalid memory address or nil pointer dereference", false⟩]
-                    k', s, choices)
+                  return (.panicking [panicEntry nilDerefPanicText] k', s, choices)
               | other => throw (.stuck s!"expected function value, got {repr other}")
       | .deferCalleeK args env k' =>
           if deferrableCallee v then
@@ -478,28 +439,22 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           match pending with
           | e :: rest =>
               return (.evalE e env (.chanStK op (v :: done) rest env k'), s, choices)
-          | [] =>
-              match applyChanOp s op (v :: done).reverse env k' with
-              | .ok (c', s') => return (c', s', choices)
-              | .error (.panic msg) =>
-                  return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
-              | .error err => throw err
+          | [] => do
+              let r ← toResult (applyChanOp s op (v :: done).reverse env k')
+              return deliverS s k' choices (fun (c', s') => (c', s', choices)) r
       | .selectOpsK clauses default? done pending env k' =>
           match pending with
           | e :: rest =>
               return (.evalE e env
                 (.selectOpsK clauses default? (v :: done) rest env k'), s, choices)
-          | [] =>
+          | [] => do
               -- The stream threads through the apply: multi-ready
               -- readiness consumes the L2 clause pick (slice 4). The
               -- SEQUENTIAL step projects away the emitted commit
               -- identity (Q2) — the pool's select interception in
               -- `stepThread` is its consumer.
-              match applySelect s clauses default? (v :: done).reverse env k' choices with
-              | .ok (c', s', choices', _) => return (c', s', choices')
-              | .error (.panic msg) =>
-                  return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
-              | .error err => throw err
+              let r ← toResult (applySelect s clauses default? (v :: done).reverse env k' choices)
+              return deliverS s k' choices (fun (c', s', choices', _) => (c', s', choices')) r
       | .tgtOpK sh ops pending refs targets rop rhs vals body env k' =>
           -- Delivery PHASE 1 (convergence round, BUG-029): operand
           -- values accumulate; each target completes into a
@@ -535,13 +490,10 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           match pending with
           | e :: rest =>
               return (.evalE e env (.rhsK rop refs (v :: done) rest body env k'), s, choices)
-          | [] =>
-              match applyRhsOp s rop (v :: done).reverse with
-              | .ok vals =>
-                  return (.next (.storeK refs vals body env k'), s, choices)
-              | .error (.panic msg) =>
-                  return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
-              | .error err => throw err
+          | [] => do
+              let r ← toResult (applyRhsOp s rop (v :: done).reverse)
+              return deliverS s k' choices
+                (fun vals => (.next (.storeK refs vals body env k'), s, choices)) r
       | .goCalleeK args env k' =>
           -- Spawn callee arrived. Nil registers into the walk like a
           -- deferred callee (gc evaluates the arguments before its
@@ -567,7 +519,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           match pending with
           | e :: rest =>
               return (.evalE e env (.syncStK op (v :: done) rest env k'), s, choices)
-          | [] =>
+          | [] => do
               -- The sync apply (spec-parity slice 2): the stream is
               -- threaded through `applySyncOp` — only the TRY heads draw
               -- from it (`ChoiceSite.tryLock`, Q-TRYLOCK; the envelope
@@ -577,27 +529,21 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               -- envelope statement). `.fatal` propagates as the
               -- unrecoverable terminal it is; recoverable panics become
               -- `.panicking`.
-              match applySyncOp s choices op (v :: done).reverse env k' with
-              | .ok (c', s', choices') => return (c', s', choices')
-              | .error (.panic msg) =>
-                  return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
-              | .error err => throw err
+              let r ← toResult (applySyncOp s choices op (v :: done).reverse env k')
+              return deliverS s k' choices (fun (c', s', choices') => (c', s', choices')) r
       | .atomicStK op done pending env k' =>
           match pending with
           | e :: rest =>
               return (.evalE e env (.atomicStK op (v :: done) rest env k'), s, choices)
-          | [] =>
+          | [] => do
               -- The atomic apply (atomics arc wave 1): ONE fused step,
               -- consuming NO choices (the envelope statement at
               -- `applyAtomicOp` — SC is the L1 interleaving of these
               -- indivisible steps). The nil-address panic is the
               -- recoverable runtime error gc realizes (SIGSEGV →
               -- `runtime.Error`); everything else propagates.
-              match applyAtomicOp s op (v :: done).reverse env k' with
-              | .ok (c', s') => return (c', s', choices)
-              | .error (.panic msg) =>
-                  return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
-              | .error err => throw err
+              let r ← toResult (applyAtomicOp s op (v :: done).reverse env k')
+              return deliverS s k' choices (fun (c', s') => (c', s', choices)) r
       | .stop => throw (.internal "value delivered to empty continuation")
       | _ => throw (.internal "value delivered to statement continuation")
   | .next k =>
@@ -629,22 +575,22 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           throw (.internal "malformed call target plan")
       | .frame targets tenv results ((cv, args) :: ds) k' w =>
           match cv with
-          | .funcVal fid captured =>
+          | .funcVal fid captured => do
               -- A deferred call's results are DISCARDED (Go); only effects
               -- matter, so the inner frame reads and stores nothing. An
               -- ENTRY panic is the invocation's panic: it starts unwinding
               -- at this frame with its remaining defers (audit F1+F5,
               -- mirroring the .nil arm below).
-              enterFrameStep s fid (captured ++ args)
-                (fun func frameEnv _ =>
-                  .exec func.body frameEnv
-                    (.frame [] [] [] [] (.frame targets tenv results ds k' w) func.wrapper))
-                (.frame targets tenv results ds k' w) choices
+              let (r, ch') ← enterFramePick s fid (captured ++ args) choices
+              return deliverS s (.frame targets tenv results ds k' w) ch'
+                (fun (func, frameEnv, _, s') =>
+                  (.exec func.body frameEnv
+                    (.frame [] [] [] [] (.frame targets tenv results ds k' w) func.wrapper),
+                    s', ch')) r
           | .nil =>
               -- Registration succeeded; the INVOCATION panics (Go), and
               -- this frame's remaining defers run on the panic path.
-              return (.panicking [⟨runtimeErrorValue
-                "runtime error: invalid memory address or nil pointer dereference", false⟩]
+              return (.panicking [panicEntry nilDerefPanicText]
                 (.frame targets tenv results ds k' w), s, choices)
           | other => throw (.stuck s!"deferred callee is not a function value: {repr other}")
       | .panicResumeK chain k' =>
@@ -690,12 +636,10 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           -- per step, LEFT-TO-RIGHT; a store-time panic (nil address,
           -- bounds, nil map) fires AFTER earlier stores landed.
           match refs, vals with
-          | r :: rs, val :: vrest =>
-              match storeTarget s r val with
-              | .ok s' => return (.next (.storeK rs vrest body env k'), s', choices)
-              | .error (.panic msg) =>
-                  return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
-              | .error err => throw err
+          | ref :: rs, val :: vrest => do
+              let r ← toResult (storeTarget s ref val)
+              return deliverS s k' choices
+                (fun s' => (.next (.storeK rs vrest body env k'), s', choices)) r
           | [], [] => return (.exec body env k', s, choices)
           | _, _ => throw (.internal "storeK value/target arity mismatch (the shared phase-2 spine: receive delivery, assignment, comma-ok, call write-back)")
       | _ => throw (.internal "completion delivered to expression continuation")
@@ -750,22 +694,22 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           throw (.internal "malformed call target plan")
       | .frame targets tenv results ((cv, args) :: ds) k' w =>
           match cv with
-          | .funcVal fid captured =>
+          | .funcVal fid captured => do
               -- A deferred call's results are DISCARDED (Go); only effects
               -- matter, so the inner frame reads and stores nothing. An
               -- ENTRY panic is the invocation's panic: it starts unwinding
               -- at this frame with its remaining defers (audit F1+F5,
               -- mirroring the .nil arm below).
-              enterFrameStep s fid (captured ++ args)
-                (fun func frameEnv _ =>
-                  .exec func.body frameEnv
-                    (.frame [] [] [] [] (.frame targets tenv results ds k' w) func.wrapper))
-                (.frame targets tenv results ds k' w) choices
+              let (r, ch') ← enterFramePick s fid (captured ++ args) choices
+              return deliverS s (.frame targets tenv results ds k' w) ch'
+                (fun (func, frameEnv, _, s') =>
+                  (.exec func.body frameEnv
+                    (.frame [] [] [] [] (.frame targets tenv results ds k' w) func.wrapper),
+                    s', ch')) r
           | .nil =>
               -- Registration succeeded; the INVOCATION panics (Go), and
               -- this frame's remaining defers run on the panic path.
-              return (.panicking [⟨runtimeErrorValue
-                "runtime error: invalid memory address or nil pointer dereference", false⟩]
+              return (.panicking [panicEntry nilDerefPanicText]
                 (.frame targets tenv results ds k' w), s, choices)
           | other => throw (.stuck s!"deferred callee is not a function value: {repr other}")
       | .stop => throw (.internal "return unwound past the entry frame")
@@ -857,7 +801,7 @@ over `.stop`, and read the pinned result locations at the terminal
 configuration. Env-in-config throughout — `ExecState.locals` unused. -/
 def runFunctionWithContextM (fuel : Nat) (types : TypeEnv) (functions : Array Func)
     (func : Func) (args : Array GoValue) (methods : Array MethodInfo := #[])
-    (choices : Choices := []) : Except Stop Result := do
+    (choices : Choices := []) : Except Stop Readout := do
   let state : ExecState := { types, functions, methods }
   if func.args.size != args.size then
     throw (.stuck s!"expected {func.args.size} argument(s), got {args.size}")
@@ -921,11 +865,11 @@ def stepFnIter : Nat → ExecState → Config → Choices →
       stepFnIter n σ' c' choices'
 
 def runFunctionWithTypesM (fuel : Nat) (types : TypeEnv) (func : Func)
-    (args : Array GoValue) : Except Stop Result :=
+    (args : Array GoValue) : Except Stop Readout :=
   runFunctionWithContextM fuel types #[func] func args
 
 def runFunctionM (fuel : Nat) (func : Func) (args : Array GoValue) :
-    Except Stop Result :=
+    Except Stop Readout :=
   runFunctionWithTypesM fuel [] func args
 
 -- `runNamedFunctionM`/`runNamedFunctionIntsM` DELETED (delta-review N4,
@@ -1036,13 +980,13 @@ def runProgramSetupM (fuel : Nat) (program : Program) (name : String)
 
 @[inherit_doc runProgramSetupM]
 def runProgramM (fuel : Nat) (program : Program) (name : String)
-    (args : Array GoValue) (choices : Choices := []) : Except Stop Result := do
+    (args : Array GoValue) (choices : Choices := []) : Except Stop Readout := do
   let (c₀, s₃, resultLocs, choices₁) ← runProgramSetupM fuel program name args choices
   let (sF, _) ← runConfig fuel s₃ c₀ choices₁
   return { values := (← loadMany sF resultLocs).toArray }
 
 def runProgramIntsM (fuel : Nat) (program : Program) (name : String)
-    (args : Array Int) (choices : List Nat := []) : Except Stop Result :=
+    (args : Array Int) (choices : List Nat := []) : Except Stop Readout :=
   runProgramM fuel program name (args.map GoValue.int) choices
 
 end GoLean.GoCore.Machine

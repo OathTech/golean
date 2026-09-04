@@ -775,7 +775,8 @@ def StreamReport.tsvLine (id : String) (r : StreamReport) : String :=
 `CLI.enumRunProgram`'s status/leftover meter and the real engine's
 observation. -/
 def traceStream (program : Program) (functionName : String) (args : Array Int)
-    (ep : CLI.EnumProgram) (fuel : Nat) (spec : String) : Except String StreamReport := do
+    (ep : CLI.EnumProgram) (fuel : Nat) (spec : String) :
+    Except String (StreamReport × RunOutcome) := do
   let stream ← parseStream spec
   let out ← traceProgram ep fuel stream
   -- Enumerator driver: observation + leftover meter. The meter is
@@ -801,7 +802,20 @@ def traceStream (program : Program) (functionName : String) (args : Array Int)
   if realObs != enumObs then
     agree := agree ++ ["engine/enumerator observation mismatch"]
   let agreeS := if agree.isEmpty then "ok" else "MISMATCH: " ++ "; ".intercalate agree
-  return summarize spec out enumObs agreeS
+  return (summarize spec out enumObs agreeS, out)
+
+/-- One per-consumption DUMP line (wave-(iii) B8-prep, 2026-09-04): the
+tracer's labeled record for one consumption of one (case, stream) —
+`id \t stream \t idx \t phase \t site \t bound \t streamValue \t pick`.
+The byte-identity oracle for the B8 consumption-projection refactor: the
+dump of the pre-wave tracer over the whole corpus must be reproduced
+byte-for-byte by the post-wave tracer. -/
+def Consumption.dumpLine (id spec : String) (c : Consumption) : String :=
+  "\t".intercalate [id, (if spec == "" then "default" else spec), toString c.idx, c.phase,
+    siteName c.site, toString c.bound, optNat c.streamValue, toString c.pick]
+
+def dumpHeader : String :=
+  "\t".intercalate ["id", "stream", "idx", "phase", "site", "bound", "streamValue", "pick"]
 
 structure CaseSpec where
   id : String
@@ -820,22 +834,26 @@ def loadProgram (wire : String) : IO (Except String Program) := do
       | .ok program => return .ok program
 
 /-- Run one case's streams; TSV lines out (a failing setup/run yields a
-single `status=ERROR` line naming the cause — never a silent skip). -/
-def runCase (spec : CaseSpec) (fuel : Nat) : IO (List String) := do
+single `status=ERROR` line naming the cause — never a silent skip), plus
+the per-consumption dump lines (`Consumption.dumpLine`). -/
+def runCase (spec : CaseSpec) (fuel : Nat) : IO (List String × List String) := do
   let errLine := fun (what : String) =>
     "\t".intercalate [spec.id, "-", "ERROR", "-", "-", "-", "-", "-", "-", "0", (what.replace "\t" " ").replace "\n" " ", "0", "-", "-", "-"]
   match ← loadProgram spec.wire with
-  | .error e => return [errLine e]
+  | .error e => return ([errLine e], [])
   | .ok program =>
     match CLI.enumSetup program spec.functionName (spec.args.map GoValue.int) with
-    | .error e => return [errLine s!"setup failed: {e.status}: {e.message}"]
+    | .error e => return ([errLine s!"setup failed: {e.status}: {e.message}"], [])
     | .ok ep =>
         let mut lines : List String := []
+        let mut dump : List String := []
         for st in spec.streams do
           match traceStream program spec.functionName spec.args ep fuel st with
           | .error e => lines := lines ++ [errLine s!"stream {st}: {e}"]
-          | .ok r => lines := lines ++ [r.tsvLine spec.id]
-        return lines
+          | .ok (r, out) =>
+              lines := lines ++ [r.tsvLine spec.id]
+              dump := dump ++ (out.acc.consumed.toList.map (Consumption.dumpLine spec.id st))
+        return (lines, dump)
 
 /-- Manifest line: `id \t wire \t function \t args(csv or -) \t streams(;-separated;
 "default" for the empty stream)`. -/
@@ -853,7 +871,8 @@ def parseCaseLine (line : String) : Except String CaseSpec :=
 /-- Batch mode: append one TSV line per (case, stream) to `outPath` as it
 goes (partial results survive an interrupted run); the header is written
 when the file is created. -/
-def runBatch (manifestPath outPath : String) (fuel : Nat) (skip take : Nat) : IO Nat := do
+def runBatch (manifestPath outPath : String) (dumpPath : Option String) (fuel : Nat)
+    (skip take : Nat) : IO Nat := do
   let contents ← IO.FS.readFile manifestPath
   let lines := (contents.splitOn "\n").filter (fun l => l != "" && !l.startsWith "#")
   let lines := (lines.drop skip).take take
@@ -871,6 +890,10 @@ def runBatch (manifestPath outPath : String) (fuel : Nat) (skip take : Nat) : IO
     else do
       IO.FS.writeFile outPath (tsvHeader ++ "\n")
       pure []
+  -- The per-consumption dump (B8-prep) is NOT resumable: it is rewritten
+  -- from scratch on every batch run (a partial dump would silently pair
+  -- with a resumed results file).
+  if let some dp := dumpPath then IO.FS.writeFile dp (dumpHeader ++ "\n")
   let mut n := 0
   for line in lines do
     match parseCaseLine line with
@@ -879,8 +902,10 @@ def runBatch (manifestPath outPath : String) (fuel : Nat) (skip take : Nat) : IO
     match parseCaseLine line with
     | .error e => IO.FS.withFile outPath .append fun h => h.putStrLn ("\t".intercalate ["?", "-", "ERROR", "-", "-", "-", "-", "-", "-", "0", e, "0", "-", "-", "-"])
     | .ok spec =>
-        let out ← runCase spec fuel
+        let (out, dump) ← runCase spec fuel
         IO.FS.withFile outPath .append fun h => for l in out do h.putStrLn l
+        if let some dp := dumpPath then
+          IO.FS.withFile dp .append fun h => for l in dump do h.putStrLn l
     n := n + 1
   return n
 
@@ -891,7 +916,8 @@ private def usage : String :=
   "  golean choice-trace --input <wire.json> --function <name> [--arg-int <n> ...] [--fuel <n>]\n" ++
   "      [--stream <spec>]...      spec: default | n,n,... | rand:<seed>:<len>   (default: the empty stream)\n" ++
   "      [--trace]                 also print every consumption (idx phase site bound streamValue pick violations)\n" ++
-  "  golean choice-trace --batch <manifest.tsv> --out <results.tsv> [--fuel <n>] [--skip <k>] [--take <n>]\n" ++
+  "  golean choice-trace --batch <manifest.tsv> --out <results.tsv> [--dump <consumptions.tsv>] [--fuel <n>] [--skip <k>] [--take <n>]\n" ++
+  "      --dump: also write every consumption (id stream idx phase site bound streamValue pick), one line each\n" ++
   "      manifest: id \\t wire \\t function \\t args(csv|-) \\t streams(;-separated)\n"
 
 structure Args where
@@ -903,6 +929,7 @@ structure Args where
   trace : Bool := false
   batch : Option String := none
   out : Option String := none
+  dump : Option String := none
   skip : Nat := 0
   take : Nat := 1000000000
   help : Bool := false
@@ -925,6 +952,7 @@ private def parseArgs : List String → Args → Except String Args
   | "--trace" :: rest, a => parseArgs rest { a with trace := true }
   | "--batch" :: p :: rest, a => parseArgs rest { a with batch := some p }
   | "--out" :: p :: rest, a => parseArgs rest { a with out := some p }
+  | "--dump" :: p :: rest, a => parseArgs rest { a with dump := some p }
   | "--skip" :: v :: rest, a =>
       match v.toNat? with
       | some n => parseArgs rest { a with skip := n }
@@ -951,7 +979,7 @@ def main (argv : List String) : IO UInt32 := do
             IO.eprintln s!"--batch needs --out <results.tsv>\n{usage}"
             return 2
         | some out =>
-            let n ← runBatch manifest out a.fuel a.skip a.take
+            let n ← runBatch manifest out a.dump a.fuel a.skip a.take
             IO.eprintln s!"choice-trace: {n} case(s) traced into {out}"
             return 0
     | none =>
@@ -975,14 +1003,11 @@ def main (argv : List String) : IO UInt32 := do
                   | .error e =>
                       IO.eprintln s!"choice-trace: stream [{st}]: {e}"
                       rc := 1
-                  | .ok r =>
+                  | .ok (r, out) =>
                       IO.println (r.tsvLine input)
                       if a.trace then
-                        match traceProgram ep a.fuel (← IO.ofExcept (parseStream st)) with
-                        | .error e => IO.eprintln s!"choice-trace: {e}"
-                        | .ok out =>
-                            for c in out.acc.consumed do
-                              IO.eprintln s!"  #{c.idx} {c.phase} {siteName c.site} bound={c.bound} stream={optNat c.streamValue} pick={c.pick}{if c.violations.isEmpty then "" else " VIOLATION: " ++ "; ".intercalate c.violations}"
+                        for c in out.acc.consumed do
+                          IO.eprintln s!"  #{c.idx} {c.phase} {siteName c.site} bound={c.bound} stream={optNat c.streamValue} pick={c.pick}{if c.violations.isEmpty then "" else " VIOLATION: " ++ "; ".intercalate c.violations}"
                       if !r.violations.isEmpty || !r.alarms.isEmpty || r.driverAgreement != "ok" then
                         rc := 1
                 return rc
