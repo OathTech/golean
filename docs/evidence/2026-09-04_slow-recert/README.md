@@ -136,3 +136,27 @@ and the stop reason).
 * `diff-k32-membership-rows.tsv` — the 58 rows at K=32 from that run (google-search captioned CERTIFIED-CACHED with the new stamp).
 * `k80-vs-k32-exhibition.tsv` — the joined exhibition table.
 * `ci-diff-gate-clean-tip.log` — the clean-tip fast gate after the commit (added by the follow-up evidence commit).
+
+## Round-10 merge train landing (2026-09-04, [AGENT] under the [USER] sign-off «go ahead and merge these»)
+
+- Rebased onto main `415f959a` (= `1b8401c0` + `stdlib-source-2`, landed first
+  on this train); no conflicts (this lane touches only the certified record,
+  this evidence directory and `docs/operational-lessons.md`).
+- **The certification stands at the new tip — checked, not assumed.**
+  `stdlib-source-2` moved the twin wire pin and the stdlib source-through
+  set, but `imported-goose/channel/google-search` imports nothing: a fresh
+  frontend emit on the rebased tree (`go run ./tools/nativefrontend --dir
+  Corpus/coverage/exec/imported-goose/channel/google-search`) hashes to
+  `2f1d639f2042466f50b61ab117db5b39629c425f733650b9be992c0b85beefcc` = the
+  record's wire sha, bit-identical; and `git log --since
+  2026-09-04T01:02:30+00:00 -- tools/nativefrontend/wire.go
+  GoLean/NativeToIR.lean` is EMPTY (C9's own test) — `stdlib-source-2`
+  touched neither wire file. `tools/reconcile-records` on the rebased tree:
+  2 findings, C13 + C5 only (C9 retired).
+- The certified record is NOT re-stamped. Its header convention (`#
+  certified: <ISO instant>  commit: <the commit at which the --slow run
+  certified the set>`, with every `# previously:` line naming the run's own
+  commit) records where the re-enumeration RAN — `1b8401c0` — and that run
+  was not repeated here; re-stamping it to `415f959a` would claim a run that
+  did not happen. Its validity at `415f959a` rests on the two checks above,
+  recorded here rather than in the record.
