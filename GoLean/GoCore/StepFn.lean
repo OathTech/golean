@@ -323,7 +323,15 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           match LocalEnv.lookup env id with
           | some loc => return (.retV (.addr loc) k, s, choices)
           | none => throw (.stuck s!"unbound GoCore variable address: {id}")
-      | .locLit l => return (.retV (.addr l) k, s, choices)
+      | .global gid =>
+          -- A4: the global's cell must exist (the driver seeded the first
+          -- `n` cells; the decoder bound-checked `gid < n`). The check is
+          -- the wf-preserving net behind that decode-time check — a `gid`
+          -- past the heap is a decoder/driver breach, refused by name.
+          if gid < s.heap.size then
+            return (.retV (.addr (.base ⟨gid⟩)) k, s, choices)
+          else
+            throw (.stuck s!"global {gid} out of range: the heap has {s.heap.size} cell(s)")
       | .and l r => return (.evalE l env (.andK r env k), s, choices)
       | .or l r => return (.evalE l env (.orK r env k), s, choices)
       | .recoverCall =>
@@ -933,7 +941,7 @@ def runFunctionM (fuel : Nat) (func : Func) (args : Array GoValue) :
 
 Globals are ordinary base heap cells seeded by the DRIVER as the first
 `n` allocations — cell `i` at `Loc.base ⟨i⟩`, wire declaration order —
-so the frontend's statically resolved `Expr.locLit` references land on
+so the frontend's statically resolved `Expr.global` references land on
 them. `$pkginit` (variable initializers in `go/types`' `InitOrder`, then
 the `$initN` functions) runs to completion before the subject, in the
 same state, consuming from the same choice stream. Driver-level

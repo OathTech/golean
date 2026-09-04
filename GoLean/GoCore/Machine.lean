@@ -137,7 +137,7 @@ inductive StrictOp where
 
 /-- Classify an expression as a strict-operator application: the head and
 the operand list, in evaluation order. `none` for the forms with their own
-rules (`var`/literals/`ref`/`locLit`, short-circuit `and`/`or`) and for
+rules (`var`/literals/`ref`/`global`, short-circuit `and`/`or`) and for
 `unsupported`. -/
 def strictPlan : Expr → Option (StrictOp × List Expr)
   | .convert ty e => some (.convert ty, [e])
@@ -3319,8 +3319,10 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   | evalRef {id loc env k s} :
       LocalEnv.lookup env id = some loc →
       Step (.evalE (.ref id) env k) s (.retV (.addr loc) k) s
-  | evalLocLit {l env k s} :
-      Step (.evalE (.locLit l) env k) s (.retV (.addr l) k) s
+  /-- A global's address is its index, provided the cell exists (A4). -/
+  | evalGlobal {gid env k s} :
+      gid < s.heap.size →
+      Step (.evalE (.global gid) env k) s (.retV (.addr (.base ⟨gid⟩)) k) s
   /-- Enter a strict form with at least one operand: evaluate the first
   under the generic frame. -/
   | evalStrict {e op e₁ rest env k s} :

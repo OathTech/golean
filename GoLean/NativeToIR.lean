@@ -423,9 +423,11 @@ partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
   | "ref" =>
       pure (.ref (← StrictJson.string s!"{path}.id" (← StrictJson.field path obj "id")))
   | "globaladdr" =>
-      -- A statically resolved package-level variable address (init slice,
+      -- A statically resolved package-level variable (init slice,
       -- docs/2026-08-05_init-design.md §2): global `gid` (wire declaration
-      -- order) lives at the driver-seeded cell `Loc.base ⟨gid⟩`. The gid
+      -- order) lives at the driver-seeded cell `Loc.base ⟨gid⟩`; the core
+      -- node is the INDEX (`Expr.global`, A4) — the machine resolves it to
+      -- the address at evaluation time. The gid
       -- assignment is the emitter's single collection loop (dense by
       -- construction), and the BOUND CHECK here is the decode-boundary
       -- collision check (audit response 2026-08-05, C1): a dangling gid
@@ -436,7 +438,7 @@ partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
       let gid ← StrictJson.nat s!"{path}.gid" (← StrictJson.field path obj "gid")
       let nGlobals ← read
       if gid < nGlobals then
-        pure (.locLit (.base ⟨gid⟩))
+        pure (.global gid)
       else
         fail s!"globaladdr gid {gid} out of range at {path} (program declares {nGlobals} global(s))"
   | "deref" =>

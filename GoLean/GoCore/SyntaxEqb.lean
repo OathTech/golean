@@ -132,7 +132,7 @@ def Expr.eqbF : Nat → Expr → Expr → Bool
     | .ref x, .ref y => x == y
     | .funcVal i1 c1, .funcVal i2 c2 =>
         i1 == i2 && eqbArrayP (Expr.eqbF f) c1 c2
-    | .locLit l1, .locLit l2 => l1 == l2
+    | .global g1, .global g2 => g1 == g2
     | .deref p1 t1, .deref p2 t2 => Expr.eqbF f p1 p2 && Ty.eqb t1 t2
     | .addrOfDeref p1, .addrOfDeref p2 => Expr.eqbF f p1 p2
     | .structLit t1 a1, .structLit t2 a2 =>
@@ -247,8 +247,8 @@ theorem Expr.eqbF_sound : ∀ f (a b : Expr), Expr.eqbF f a b = true → a = b :
     case funcVal.funcVal i1 c1 i2 c2 =>
       obtain ⟨h1, h2⟩ := andSplit2 h
       cases FuncId.beq_sound h1; cases eqbArrayP_sound ih h2; rfl
-    case locLit.locLit l1 l2 =>
-      cases eq_of_beq (show (l1 == l2) = true from h); rfl
+    case global.global g1 g2 =>
+      cases eq_of_beq (show (g1 == g2) = true from h); rfl
     case deref.deref p1 t1 p2 t2 =>
       obtain ⟨h1, h2⟩ := andSplit2 h
       cases ih _ _ h1; cases Ty.eqb_sound h2; rfl

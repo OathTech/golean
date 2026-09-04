@@ -1795,7 +1795,7 @@ private def coreEnumInitPickInit : GoCore.Func := {
         (.ifThenElse (.lessCmp (.var "first") (.intLit 0))
           (.assign (.var "first") (.var "k"))
           (.seqn #[])),
-      .assign (.addr (.locLit (.base ⟨0⟩))) (.var "first")
+      .assign (.addr (.global 0)) (.var "first")
     ]
 }
 
@@ -1803,7 +1803,7 @@ private def coreEnumInitReadFunction : GoCore.Func := {
   id := ⟨"enum_init_read_F"⟩,
   args := #[],
   results := #[coreParam "z"],
-  body := .assign (.var "z") (.deref (.locLit (.base ⟨0⟩)) .int)
+  body := .assign (.var "z") (.deref (.global 0) .int)
 }
 
 private def enumInitPickProgram : GoCore.Program := {

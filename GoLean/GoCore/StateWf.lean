@@ -38,12 +38,16 @@ Carrier inventory (checked against `Value.lean`/`State.lean`/`Syntax.lean`/
   dangle, so keys contribute nothing and `Heap.lookup_key_locSup` is the
   array bound;
 * `Scope`/`LocalEnv` — the bound locations;
-* **`Expr` — `.locLit` carries a `Loc`** (contra the slice plan's "program
-  text carries no locs" assumption; found by the `Syntax.lean` scan this
-  module's plan mandated). `Stmt`/`Assignee` recurse into `Expr`. Every
-  other `Expr`/`Stmt` field is loc-free (`Ty`/`TypeId`/`FuncId`/literals).
+* **`Expr` — LOC-FREE since A4 (2026-09-04)**: the former `.locLit (l :
+  Loc)` is `.global (gid : Nat)`, an index the machine resolves to an
+  address at evaluation time (`Step.evalGlobal`'s premise `gid <
+  s.heap.size` is what keeps the produced address bounded). The
+  `Expr.locSup`/`Stmt.locSup`/`Func.locSup` carriers below are therefore
+  identically zero and are kept only because the lemma network is stated
+  over them — deleting them is the owed simplification recorded in the
+  A-series design note (§A4).
 * **`Func` bodies** (hence `ExecState.functions`) — a consequence of the
-  `.locLit` finding: `enterFrame` moves `func.body` from the STATE into the
+  historical `.locLit` finding: `enterFrame` moves `func.body` from the STATE into the
   configuration, so state well-formedness must cover stored function bodies
   or preservation fails at every call rule. `types`/`methods` carry no locs
   (`TypeDef`/`MethodSig`/`MethodInfo` are name/`Ty` data).
@@ -154,14 +158,15 @@ def LocalEnv.locSup : LocalEnv → Nat
 
 mutual
 
-/-- Program-text locations: only `.locLit` carries one (proof-facing;
-never frontend-emitted) — every other field is loc-free; the recursion
-covers every `Expr`-carrying position. -/
+/-- Program-text locations: NONE since A4 (`.global gid` is an index, not
+an address) — every arm is zero; the recursion covers every
+`Expr`-carrying position and is kept for the lemma network stated over it
+(owed deletion, design note §A4). -/
 def Expr.locSup : Expr → Nat
   | .var _ | .nil _ | .intLit _ _ | .floatLit _ _ _ | .stringLit _
   | .boolLit _ | .ref _
   | .defaultValue _ | .recoverCall | .unsupported _ => 0
-  | .locLit l => Loc.locSup l
+  | .global _ => 0
   | .convert _ e | .bytesFromString e | .stringFromByteSlice e
   | .stringFromRune e | .runesFromString e | .stringFromRuneSlice e
   | .bitNeg e | .neg e | .not e | .deref e _
@@ -5782,6 +5787,15 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega)
+  case evalGlobal =>
+    -- A4: the produced address is the global's index; the rule's premise
+    -- (the cell exists) is exactly its bound.
+    rename_i gid env k hgid
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
+    simp only [ConfigWf, Config.locSup, Expr.locSup, Nat.max_le] at hc ⊢
+    have hna : σ.nextAddr = σ.heap.size := rfl
+    simp only [GoValue.locSup, Loc.locSup, Loc.rootBase]
+    omega
   case panicArgValue v k =>
     refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     have hp := panicPayload_locSup (v := v)

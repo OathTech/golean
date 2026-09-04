@@ -294,3 +294,66 @@ FINDING, not this lane's to fix (no frontend change in the A-series):
 the native frontend's quarantine reason for multi-label goto shapes is
 export-nondeterministic; recorded for the stdlib lane (a reviewability
 nit — the row's status and its lowering refusal class are stable).
+
+## A4 — `Expr.global gid` replaces `Expr.locLit`
+
+**What changed.** `Expr.locLit (l : Loc)` → `Expr.global (gid : Nat)`
+(Syntax.lean). The decoder's `"globaladdr"` arm emits `.global gid` (its
+`gid < nGlobals` bound check unchanged); `stepFn` evaluates `.global gid`
+to `.retV (.addr (.base ⟨gid⟩))` when `gid < s.heap.size` and REFUSES
+(`.stuck "global … out of range"`) otherwise; the relation's rule is
+`Step.evalGlobal` with the premise `gid < s.heap.size`. `Expr.locSup`'s
+arm is `0`. The two hand-built eval-test programs use `.global 0`. [AGENT]
+
+**Wire impact: none (verified, pre-series finding).** The wire already
+carried `{"expr":"globaladdr","gid":N}`; only the decoder's core node
+changed. The twin-wire pin pins the frontend's emitted bytes, which did not
+move — no [USER] call was needed.
+
+**Why nicer.** Program text is address-free again: a `Program` is a
+constant (no heap address can be spelled in it), and the machine — not the
+decoder — is what turns a global index into a cell address, with the bound
+where the bound belongs. The bound is the DRIVER's contract (global `i` is
+the `i`-th seeded cell); the decoder's check against the declared global
+count is the exact check, the machine's `gid < heap.size` is the
+wf-preserving net behind it (a `gid` past the heap is a decoder/driver
+breach, refused by name; a `gid` between the global count and the heap
+size is unreachable through the decoder).
+
+**Preservation.** On every accepted program every `gid` is below the
+declared global count, and the driver seeds exactly that many cells first
+(`seedGlobals` asserts cell `i` lands at `.base ⟨i⟩`), so at every
+evaluation `gid < heap.size` holds and `.global gid` produces exactly the
+`.addr (.base ⟨gid⟩)` the old `.locLit (.base ⟨gid⟩)` produced; no stream
+is consulted. Exact.
+
+**Proof deltas.** StateWf: `step_preserves_wf_loc` gains an explicit
+`evalGlobal` case (the rule's premise IS the produced address's bound —
+6 lines); the module header records that `Expr`/`Stmt`/`Func.locSup` are
+now identically zero. MachineSound: `fun_cases stepFn` renumbered — the
+`.global` arm is two `fun_cases` premises (77 = the refusal, 78 = the
+step) where `locLit` was one, so every positional tag ≥ 78 in
+`stepFn_sound` and `stepFn_oblivious` moved by +1 (75 tag renames; the
+review's recorded fragility — B3's `Cont` algebra is where these go
+named), and each proof gains a 5-line `case77` (the refusal arm is a
+`throw … = .ok …` contradiction). `SyntaxEqb`'s arm and case renamed. No
+lemma deleted or weakened.
+
+**Owed simplification (recorded, not done here).** With `.global` the
+program-text carriers `Expr.locSup`/`optExprSup`/`exprListSup`/
+`keyedExprListSup`/`Assignee.locSup`/`Stmt.locSup`/`stmtListSup`/
+`selectClause*Sup`/`Func.locSup`/`funcListSup` (StateWf.lean:150–290,
+~145 lines) are identically zero, and `StateWf`'s "stored function bodies"
+clause is vacuous. Deleting them means restating `Cont.locSup` (every arm
+that sums a `Stmt.locSup body`/`exprListSup pending`/`targetPlansSup`),
+`ExecState.locSup`, and re-threading the ~40 `*_locSup` plan lemmas and the
+hundreds of `hbody : Stmt.locSup … ≤ b` hypotheses through StateWf and
+MultiWfSound — the same positional re-proof wave B3 pays for `Cont`, so
+it is deferred to wave (iii) rather than paid twice (review §3's own
+sequencing argument). [AGENT]
+
+**Gate.** `scripts/capped scripts/ci --diff` on the A4 tree: RESULT PASS,
+`cases=3284 pass=3085 fail=199`, baseline diff FULL 3284/3284 no
+regression, re-pin guard 0 flips, negative 394/394, eval tests 148/148
+(`transcripts/gate-a4.txt`); choice-trace delta vs the pre-series
+snapshot: 0 on all 19489 lines (`choice-trace/a4-summary.txt`).

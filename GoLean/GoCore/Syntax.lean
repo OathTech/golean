@@ -121,15 +121,16 @@ inductive Expr where
   reference; §8 of the coverage-scoping note). Operands evaluate left to
   right like any strict form. -/
   | funcVal (fid : FuncId) (captured : Array Expr)
-  /-- A resolved location literal — evaluates to its address. Two
-  producers: the relation's name-resolution substitution (`substLoc`; the
-  location-resolved core of `docs/2026-07-19_reshape-mechanics-design.md`),
-  and — since the init slice (`docs/2026-08-05_init-design.md` §2, revising
-  the original "never emitted by the frontend") — the frontend's statically
-  resolved PACKAGE-LEVEL variable references: global `i` (wire declaration
-  order) lives at the driver-seeded cell `Loc.base ⟨i⟩`. It remains unused
-  for anything env-resolved. -/
-  | locLit (l : Loc)
+  /-- A PACKAGE-LEVEL variable by its global index (design-hygiene A4,
+  2026-09-04; was `locLit (l : Loc)`): the frontend's statically resolved
+  reference to global `gid` (wire declaration order,
+  `docs/2026-08-05_init-design.md` §2). The MACHINE turns it into the
+  address `Loc.base ⟨gid⟩` at evaluation time — the driver seeds global
+  `i` as the `i`-th allocation — after checking the cell exists, so program
+  text is ADDRESS-FREE: a `Program` is a constant and `StateWf` is about the
+  heap alone. The only `Expr` form that names a global; env-resolved
+  references stay `ref`. -/
+  | global (gid : Nat)
   | deref (ptr : Expr) (typ : Ty)
   /-- `&*p` / `&(*p)` — the spec's own composite (spec#Address_operators:
   "if the evaluation of `x` would cause a run-time panic, then the
@@ -498,7 +499,7 @@ structure MethodSetRecord where
 `docs/2026-08-05_init-design.md` §2): the driver seeds one heap cell per
 entry — zero value at the declared type — as the FIRST allocations, in
 array order, so entry `i`'s cell is exactly `Loc.base ⟨i⟩` and the
-frontend can resolve every reference statically (`Expr.locLit`). `name`
+frontend can resolve every reference statically (`Expr.global`). `name`
 is carried for diagnostics only; runtime resolution never consults it. -/
 structure GlobalDef where
   name : String
