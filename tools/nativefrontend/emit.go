@@ -823,6 +823,15 @@ func (e *emitter) collectGlobals(files []*ast.File) error {
 						}
 						ty, err := e.emitType(obj.Type())
 						if err != nil {
+							// FR-24 (2026-09-04): a package-level var whose TYPE
+							// does not lower refuses the WHOLE export here — name
+							// the var and the row, not just the type (cedar-go:
+							// encoding/binary.structSize sync.Map, reached via
+							// binary.Write). The remedy is FR-24's queued slice.
+							var u unsupported
+							if errors.As(err, &u) {
+								return unsup("package-level var %s: its TYPE does not lower (%s) — FR-24: a reached var of an unlowerable type refuses the whole export (per-declaration `$poisoned` cell + reader quarantine is the queued remedy, ledger FR-24)", e.globalWireName(obj), u.what)
+							}
 							return err
 						}
 						e.globalVars[obj] = len(e.globalDefs)
@@ -946,10 +955,12 @@ func (e *emitter) quarantineUnlowerableGlobals() error {
 	// Stdlib source-through: a `//go:linkname`d library VARIABLE is a
 	// pull from the runtime (math/bits' `overflowError`/`divideError`
 	// are runtime.overflowError/divideError — the language's own panic
-	// VALUES, with no initializer in this package). Its cell would be
-	// zero-seeded, so a read would yield a nil error where gc yields the
-	// runtime's value — a silent wrong answer. Poison it like an H-11
-	// quarantined global: every reference refuses, naming the directive.
+	// VALUES, with no initializer in this package). Left alone its cell
+	// would seed as a zero value, so a read would yield a nil error where
+	// gc yields the runtime's value — a silent wrong answer. Poison it
+	// like an H-11 quarantined global: every reference refuses, naming
+	// the directive, and the cell seeds as `$poisoned` (poisonGlobalCells
+	// covers this class too — 4 cells on the current library set).
 	for _, u := range e.units {
 		if !u.library || len(u.linknamed) == 0 {
 			continue
@@ -1153,7 +1164,7 @@ func (e *emitter) poisonGlobalCells() []any {
 var pureUnmodeledCallees = map[string]string{
 	"os.Getenv":    "reads the ambient environment — permanently outside the machine's world (no shim can model it); result-only, never panics (founding row, H-11 2026-08-20)",
 	"os.LookupEnv": "reads the ambient environment — permanently outside the machine's world; result-only, never panics (founding row, H-11 2026-08-20)",
-	"time.Date":    "constructs a Time value from its arguments (the time.Date doc comment at the pin, deps/go/src/time/time.go @ go1.26.5: out-of-range values are normalized, never rejected); the only panic is a nil Location, which the admitted argument shapes exclude — the Location position can only be an exported non-source package variable (time.UTC, time.Local; both non-nil at the pin), never a source-declared or nil-able expression; no I/O, no process state, no argument referent mutated (FR-22 row, 2026-09-04 [AGENT]; cedar-go census 2026-09-03 §3.2: `types/datetime.go:16,19`)",
+	"time.Date":    "constructs a Time value from its arguments (the time.Date doc comment at the pin, deps/go/src/time/time.go @ go1.26.5: out-of-range values are normalized, never rejected); result-only in the oracle-visible sense — no output stream, no process state, no argument referent mutated — with ONE transitive READ disclosed: Date -> loc.lookup -> (*Location).get -> localOnce.Do(initLocal) when loc == time.Local, and initLocal reads the TZ environment variable and /etc/localtime (zoneinfo_unix.go @ the pin); a read is not an effect any oracle observes, and initLocal cannot panic (every error path falls back to UTC); panic-free over the admitted argument shapes: Date's only panic is a nil Location, and the Location position can only be an exported non-source package variable (time.UTC or time.Local, both non-nil at the pin) — untyped nil and every source-declared expression of pointer type are refused. SCOPE NOTE: foreignPackageValue admits ANY exported variable/constant of ANY non-source package in ANY argument position, so what closes this row is its enumeration of the callee's own behaviour on such inputs, not the predicate (FR-22 row, 2026-09-04 [AGENT]; cedar-go census 2026-09-03 §3.2: `types/datetime.go:16,19`; argument amended at the audit fix round, item 1)",
 }
 
 // initializerEffectIsolated reports whether SKIPPING the initializer
@@ -1576,7 +1587,7 @@ func checkInitQuarantine(funcs, methods []any) error {
 // quarantine when the referencing initializer is itself eligible.
 func (e *emitter) globalAddr(v *types.Var) (any, bool, error) {
 	if reason, bad := e.quarantinedGlobals[v]; bad {
-		return nil, false, unsup("package-level var %s: its initializer does not lower (%s) — H-11 poison: the cell is zero-seeded and every reference (read, write, address-of) refuses by name; reference refused",
+		return nil, false, unsup("package-level var %s: its initializer does not lower (%s) — H-11 poison: the cell is seeded as the `$poisoned` placeholder and every reference (read, write, address-of) refuses by name; reference refused",
 			e.globalWireName(v), reason)
 	}
 	gid, ok := e.globalVars[v]
@@ -1624,7 +1635,7 @@ func (e *emitter) synthesizePkgInit() (map[string]any, error) {
 		stmts := make([]ast.Stmt, 0, len(u.info.InitOrder))
 		for _, ini := range u.info.InitOrder {
 			// H-11: a quarantined initializer is SKIPPED — its vars'
-			// cells stay zero-seeded and poisoned (globalAddr), so
+			// cells stay `$poisoned`-seeded and poisoned (globalAddr), so
 			// $pkginit must not attempt the emission that already
 			// failed the dry-run. An UNREACHED library initializer
 			// (stdlibreach.go, prunedInits) is skipped too: no cell,

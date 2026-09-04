@@ -458,7 +458,11 @@ func (e *emitter) enqueueTypeInst(inst *types.Named, key string) error {
 		// the enclosing declaration becomes a per-declaration stub and the
 		// export survives — the census's whole-export kill is gone, the
 		// members themselves stay refused by name.
-		return unsup("instantiation of imported generic type %s (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub)", key)
+		site := e.curFuncName
+		if site == "" {
+			site = "a package-level declaration"
+		}
+		return unsup("instantiation of imported generic type %s in %s (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub)", key, site)
 	}
 	var unit *sourcePkg
 	if e.srcPkgSet != nil {

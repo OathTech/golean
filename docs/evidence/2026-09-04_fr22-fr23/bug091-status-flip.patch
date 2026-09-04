@@ -1,0 +1,20 @@
+# bug091-status-flip.patch — apply AFTER rebasing fr22-fr23 onto a main that contains hygiene-a-series (BUG-091 filed at 3d8cdbdb): `git apply docs/evidence/2026-09-04_fr22-fr23/bug091-status-flip.patch` from the repo root. Generated 2026-09-04 [AGENT] against `git show 3d8cdbdb:docs/BUGS.md`; flips only the entry's Status line. Do NOT apply on a tree without the entry (this branch deliberately adds no BUG-091 entry — it would duplicate).
+--- a/docs/BUGS.md	2026-09-04 06:37:11.455891913 +0000
++++ b/docs/BUGS.md	2026-09-04 06:37:11.467597493 +0000
+@@ -4962,7 +4962,15 @@
+ 
+ ## BUG-091 — the native frontend's quarantine-reason text for multi-label `goto` shapes is EXPORT-NONDETERMINISTIC: `emit.go` ranges a Go MAP to name the offending label, so the wire bytes of one program differ run to run [frontend export nondeterminism; fail-closed but non-reproducible refusal text]
+ 
+-- Status: open
++- Status: fixed (2026-09-04, lane `fr22-fr23`, commit 1aa49562 — the goto-label set
++  is `sort.Strings`-ed before the refusal loop; the slice's go/types-typed audit of
++  every `range <map>` in the frontend (57 sites) found and sorted two sibling
++  first-hit refusals, `langversion.go` (build-constraint reserved tags) and
++  `stdlibreach.go` (library layout-constant scan, now source-position order);
++  guard = `TestEmitIsDeterministic` (20 emissions byte-compared; RED-FIRST on
++  main's emitter: `docs/evidence/2026-09-04_fr22-fr23/bug091-red-first.txt`;
++  audit inventory `bug091-map-range-audit.tsv`). The Cases row keeps `Expect:
++  FAIL` BY DESIGN: the fix makes the refusal TEXT reproducible, not the result.)
+ - Pinned-by: none (the affected row is already RED by design — FR-21 frontier refusal; the nondeterminism is in the refusal's TEXT, invisible to the `result id stage` baseline and to the differential's status comparison; visible only through the tracer's `obsHash`)
+ - Expect: FAIL
+ - Cases: stdlib-source/frontier/index-rune-goto

@@ -1,3 +1,3 @@
-# init/stdlib-initializer-unregistered — whole-export refusal (frontend stderr), 2026-09-04
+# init/stdlib-initializer-unregistered — whole-export refusal (frontend stderr), re-captured at the audit fix round 2026-09-04
 nativefrontend: native frontend unsupported: package-level initializer of pid does not lower (package-selector call os.Getpid (package "os" surface not modeled)) and is not H-11 effect-isolated — skipping it cannot be argued unobservable, so the WHOLE export refuses (FR-22: per-declaration poisoning covers only initializers whose every call is a direct call to an init-callee register row [pureUnmodeledCallees, rendered in docs/stdlib-admission-register.md] with effect- and panic-free argument shapes)
 exit status 1

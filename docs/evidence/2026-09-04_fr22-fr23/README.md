@@ -46,8 +46,12 @@ sync.Map`), and behind it (pass C, counterfactual) FR-4 and a
 - D2 [AGENT]: poisoned cells seed as `$poisoned` (uniformly, not only
   when the real type has no default) — the placeholder is the honest
   description of what the machine holds, the cell is unreachable, and
-  the poison becomes visible on the wire. The twin has no poisoned var,
-  so the pin is unaffected (checked before landing and by the gate).
+  the poison becomes visible on the wire. UNIFORMLY means it also covers
+  the pre-existing `//go:linkname` library-variable quarantine class
+  (`math/bits.overflowError`/`divideError` and their kin — 4 cells on the
+  current library set), whose cells were plain zero values before. The
+  twin has no poisoned var, so the pin is unaffected (checked before
+  landing and by the gate).
 - D3 [AGENT]: the opaque marker is minted ONLY inside `withOpaqueSigs`
   (stub signatures, interface requirement lists, promoted-method stubs);
   a body use refuses at `enqueueTypeInst` as before. An imported generic
@@ -92,8 +96,11 @@ shape `emit.go` already used at its two other sorted refusal sites.
   open, Pinned-by none, Expect FAIL, Cases `stdlib-source/frontier/
   index-rune-goto` — that row is red BY DESIGN on FR-21 and STAYS red: the
   fix makes the refusal TEXT reproducible, not the result), not on main at
-  this branch's base. The fix + guard land here; whichever lane lands
-  second updates the entry — wording ready to paste: `- Status: fixed
+  this branch's base. The fix + guard land here; the train applies
+  `bug091-status-flip.patch` (this dir; generated against
+  `git show 3d8cdbdb:docs/BUGS.md`, dry-run applies cleanly) after rebasing
+  this branch onto the main that carries the entry — wording (also in the
+  patch): `- Status: fixed
   (2026-09-04, lane fr22-fr23, commit 1aa49562 — the goto-label set is
   sorted before the refusal loop, as are the two sibling sites the
   slice's map-range audit found, langversion.go:178 and

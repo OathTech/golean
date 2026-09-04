@@ -13,6 +13,8 @@ package main
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -41,10 +43,13 @@ func f(n int) int {
 func main() { println(f(5)) }
 `
 
-// A multi-error shape: several declarations quarantine (each carries its
-// own refusal text into the wire), an interface with an opaque generic
-// requirement, a poisoned package-level var, imported method-set stubs,
-// promotion wrappers — every table the emitter sorts or should sort.
+// A multi-quarantine shape that EXPORTS (audit fix round item 2: the
+// first cut carried a complex128 method whose signature refused the whole
+// export, making the case one constant string 20× — vacuous): opaque
+// generic stubs, an interface with an opaque requirement, poisoned
+// package-level vars (`$poisoned` cells), imported method-set stubs,
+// promotion wrappers — every table the emitter sorts or should sort
+// (70 stubs + 5 `$poisoned` cells on the current emitter).
 const detMultiSrc = `package main
 
 import (
@@ -64,8 +69,6 @@ func (b Bag) All() iter.Seq[int] {
 		}
 	}
 }
-
-func (b Bag) Bad(c complex128) int { return int(real(c)) }
 
 type Iterable interface{ All() iter.Seq[int] }
 
@@ -121,5 +124,110 @@ func TestEmitIsDeterministic(t *testing.T) {
 	// sorted order, not the map's (this is the byte that flipped on main).
 	if got := emitOnce(t, detGotoSrc); !strings.Contains(got, `"goto target label fallback not at function body top level"`) {
 		t.Fatalf("goto shape: stub does not name the sorted-first label: %.400s", got)
+	}
+}
+
+// The multi-quarantine shape must actually EXPORT, with the tables the
+// case exists to guard present — otherwise the byte comparison above is
+// comparing one refusal string with itself.
+func TestDeterminismShapeExports(t *testing.T) {
+	program, err := emitSource(t, detMultiSrc)
+	if err != nil {
+		t.Fatalf("multi-quarantine shape must export (a whole-export refusal makes the determinism case vacuous): %v", err)
+	}
+	stubs := 0
+	for _, key := range []string{"funcs", "methods"} {
+		for _, x := range program[key].([]any) {
+			if m, ok := x.(map[string]any); ok && m["unsupported"] != nil {
+				stubs++
+			}
+		}
+	}
+	poisoned := 0
+	for _, g := range program["globals"].([]any) {
+		if namedTypeName(g.(map[string]any)["type"]) == poisonedCellTypeId {
+			poisoned++
+		}
+	}
+	if stubs < 10 || poisoned != 3 {
+		t.Fatalf("shape carries %d stubs and %d $poisoned cells; want many stubs (>= 10) and exactly 3 poisoned (env, when, later)", stubs, poisoned)
+	}
+}
+
+// UNITS-BEARING determinism (audit fix round item 2): emitSource type-checks
+// with importer.Default and never builds source units, so the sorted
+// refusal sites in the LOADER path — langversion.go's reserved-tag scan
+// (load.go's per-unit constraint check) and stdlibreach.go's library
+// scans — are unreachable from the cases above. These run the REAL
+// pipeline (lowerProgramDir: parse → shims → loadProgram → emitProgram).
+func TestEmitIsDeterministicWithUnits(t *testing.T) {
+	withStdlibRoots(t)
+	const runs = 12
+	// (a) a case-local package whose one file carries a build constraint
+	// naming TWO reserved tags: the refusal must name the sorted-first
+	// tag (`darwin`), never `linux` — the langversion.go:178 site.
+	dir := writeMain(t, `package main
+
+import "helper"
+
+func main() { println(helper.N) }
+`)
+	if err := os.MkdirAll(filepath.Join(dir, "helper"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "helper", "h.go"), []byte("//go:build linux || darwin\n\npackage helper\n\nconst N = 1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var first string
+	for i := 0; i < runs; i++ {
+		_, err := lowerProgramDir(t, dir)
+		if err == nil {
+			t.Fatalf("a reserved-tag build constraint must refuse the export")
+		}
+		if i == 0 {
+			first = err.Error()
+			if !strings.Contains(first, `reserved tag "darwin"`) {
+				t.Fatalf("refusal must name the sorted-first reserved tag darwin: %s", first)
+			}
+			continue
+		}
+		if err.Error() != first {
+			t.Fatalf("units-bearing refusal text differs between runs (BUG-091):\n%s\n%s", first, err.Error())
+		}
+	}
+	// (b) a program through two source-through library units (strings,
+	// errors): the loader, reach walk and library pruning must yield
+	// byte-identical wires.
+	lib := writeMain(t, `package main
+
+import (
+	"errors"
+	"strings"
+)
+
+var banner = strings.Repeat("ab", 3)
+var sentinel = errors.New("boom")
+
+func f() string { return banner + sentinel.Error() }
+
+func main() { println(f()) }
+`)
+	var firstWire string
+	for i := 0; i < 6; i++ {
+		program, err := lowerProgramDir(t, lib)
+		if err != nil {
+			t.Fatalf("library program must export: %v", err)
+		}
+		b, jerr := json.Marshal(program)
+		if jerr != nil {
+			t.Fatal(jerr)
+		}
+		if i == 0 {
+			firstWire = string(b)
+			continue
+		}
+		if string(b) != firstWire {
+			t.Fatalf("units-bearing wire differs between runs %d and 0 (BUG-091)", i)
+		}
 	}
 }

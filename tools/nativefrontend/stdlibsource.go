@@ -44,7 +44,7 @@ package main
 //     in the runtime) are recorded per unit: a body-less function
 //     quarantines (emitFuncDecl's standing refusal, cause-named), a
 //     linknamed VARIABLE is poisoned like an H-11 quarantined global —
-//     reading it refuses instead of yielding a zero-seeded cell (the
+//     reading it refuses instead of yielding a zero-valued cell (the
 //     silent-wrong-answer shape: math/bits' `overflowError`).
 //   - Anything outside the allowed list keeps today's refusals verbatim.
 
@@ -85,7 +85,7 @@ var stdlibSourceAllowed = map[string]string{
 	"bytes":                "slice-2 target (Equal retired from shim; Buffer retired from the E5-T shadow model — pure Go, its growth idiom `append([]byte(nil), make([]byte, c)...)` is the overlay's model); ReadFrom/WriteTo reach `io` (export data only) and quarantine by name; init-pure: three errors.New sentinels + the asciiSpace table",
 	"slices":               "slice-2 target (SortFunc retired from the generic desugar — pdqsortCmpFunc stenciled per element type by mono.go, gc's exact member incl. tie order); Sort stays the sortSlice MACHINE OP at integer kinds until memo §3 row M (frontendInterceptedLibraryMembers); Insert/Replace reach `overlaps` (unsafe.Sizeof/pointer arithmetic) and refuse by name — REFUSED, not overlaid (FR-21 row stdlib-source/frontier/slices-overlaps); iter-typed members are unreached unless called; init-pure: no package-level initializers",
 	"cmp":                  "slice-2 target (Compare retired from the kind-dispatch desugar — the real generic body, NaN arm included, so floats lower too); pure, no imports; init-pure: no package-level state",
-	"encoding/binary":      "slice-2 target (LittleEndian.Uint64/PutUint64 retired from the package-variable method desugar — the exported vars and their unexported receiver types lower as ordinary library declarations); Read/Write/Size are reflect and refuse by name (export data); init-pure: two errors.New sentinels, zero-valued ByteOrder vars, an unreached sync.Map",
+	"encoding/binary":      "slice-2 target (LittleEndian.Uint64/PutUint64 retired from the package-variable method desugar — the exported vars and their unexported receiver types lower as ordinary library declarations); Read/Write/Size are reflect and refuse by name (export data); init-pure: two errors.New sentinels, zero-valued ByteOrder vars, a sync.Map (structSize) that is unreached unless Write/Read/Size is called — REACHED by cedar-go's binary.Write, where its TYPE refuses the export (ledger FR-24, 2026-09-04; the init-pure claim itself holds: the var has no initializer)",
 }
 
 //go:embed stdlib-substitutions.tsv

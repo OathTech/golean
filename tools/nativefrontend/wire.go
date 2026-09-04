@@ -13,6 +13,7 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"strings"
 )
 
 // emitter walks a type-checked package and produces wire nodes (Go values
@@ -679,6 +680,22 @@ func (e *emitter) emitInstantiatedNamed(ty *types.Named) (any, error) {
 			key, err := e.instTypeId(ty)
 			if err != nil {
 				return nil, err
+			}
+			// The marker carries NO method stubs, so it is honest only for
+			// a type whose exported method set is EMPTY (iter.Seq/Seq2 are
+			// func types): a marker for `unique.Handle[T]` (has Value())
+			// would make satisfaction answer a false "no" — the D5
+			// skip-whole hazard. Refuse those (audit fix round, item 7).
+			if ms := types.NewMethodSet(types.NewPointer(ty)); ms.Len() > 0 {
+				exported := []string{}
+				for i := 0; i < ms.Len(); i++ {
+					if ms.At(i).Obj().Exported() {
+						exported = append(exported, ms.At(i).Obj().Name())
+					}
+				}
+				if len(exported) > 0 {
+					return nil, unsup("instantiation of imported generic type %s in a declaration signature: the type has exported methods (%s) and the opaque marker carries no method stubs, so satisfaction could answer a false no — refused (FR-23 covers method-less imported generics only)", key, strings.Join(exported, ", "))
+				}
 			}
 			if e.opaqueInsts == nil {
 				e.opaqueInsts = map[string]*types.Named{}

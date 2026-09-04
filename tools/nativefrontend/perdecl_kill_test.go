@@ -328,3 +328,27 @@ func TestRegisterDumpRendersInitCalleeClass(t *testing.T) {
 		}
 	}
 }
+
+// The opaque marker carries no method stubs, so an imported generic
+// instantiation WITH exported methods must REFUSE in signature position
+// (a stub-less marker would let satisfaction answer a false no — the D5
+// skip-whole hazard; audit fix round item 7). unique.Handle[T] has Value().
+func TestOpaqueRefusesImportedGenericWithMethods(t *testing.T) {
+	const src = `package main
+
+import "unique"
+
+type Bag struct{ items []int }
+
+func (b Bag) H() unique.Handle[int] { return unique.Make(1) }
+
+func main() {}
+`
+	_, err := emitSource(t, src)
+	if err == nil {
+		t.Fatalf("an imported generic WITH methods in a signature must refuse, not get a stub-less marker")
+	}
+	if !strings.Contains(err.Error(), "unique.Handle[int]") || !strings.Contains(err.Error(), "Value") {
+		t.Fatalf("refusal must name the type and its exported method(s): %v", err)
+	}
+}

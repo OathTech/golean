@@ -335,12 +335,12 @@
   {
    "arity": 0,
    "name": "readPoisoned",
-   "unsupported": "package-level var maxDatetime: its initializer does not lower (package-selector call time.Date (package \"time\" surface not modeled)) — H-11 poison: the cell is zero-seeded and every reference (read, write, address-of) refuses by name; reference refused"
+   "unsupported": "package-level var maxDatetime: its initializer does not lower (package-selector call time.Date (package \"time\" surface not modeled)) — H-11 poison: the cell is seeded as the `$poisoned` placeholder and every reference (read, write, address-of) refuses by name; reference refused"
   },
   {
    "arity": 0,
    "name": "readCascade",
-   "unsupported": "package-level var minAlias: its initializer does not lower (package-level var minDatetime: its initializer does not lower (package-selector call time.Date (package \"time\" surface not modeled)) — H-11 poison: the cell is zero-seeded and every reference (read, write, address-of) refuses by name; reference refused) — H-11 poison: the cell is zero-seeded and every reference (read, write, address-of) refuses by name; reference refused"
+   "unsupported": "package-level var minAlias: its initializer does not lower (package-level var minDatetime: its initializer does not lower (package-selector call time.Date (package \"time\" surface not modeled)) — H-11 poison: the cell is seeded as the `$poisoned` placeholder and every reference (read, write, address-of) refuses by name; reference refused) — H-11 poison: the cell is seeded as the `$poisoned` placeholder and every reference (read, write, address-of) refuses by name; reference refused"
   },
   {
    "body": {

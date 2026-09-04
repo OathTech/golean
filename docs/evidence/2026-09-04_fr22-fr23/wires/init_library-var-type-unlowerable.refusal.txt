@@ -1,3 +1,3 @@
-# init/library-var-type-unlowerable — whole-export refusal (frontend stderr), 2026-09-04
-nativefrontend: native frontend unsupported: sync.Map (only Mutex/RWMutex/WaitGroup/Once are modeled)
+# init/library-var-type-unlowerable — whole-export refusal (frontend stderr), re-captured at the audit fix round 2026-09-04
+nativefrontend: native frontend unsupported: package-level var encoding/binary.structSize: its TYPE does not lower (sync.Map (only Mutex/RWMutex/WaitGroup/Once are modeled)) — FR-24: a reached var of an unlowerable type refuses the whole export (per-declaration `$poisoned` cell + reader quarantine is the queued remedy, ledger FR-24)
 exit status 1

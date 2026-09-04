@@ -11,7 +11,7 @@
   {
    "arity": 1,
    "name": "Evens",
-   "unsupported": "instantiation of imported generic type iter.Seq[int] (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub)"
+   "unsupported": "instantiation of imported generic type iter.Seq[int] in Evens (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub)"
   },
   {
    "body": {
@@ -144,17 +144,17 @@
   {
    "arity": 0,
    "name": "callMethod",
-   "unsupported": "instantiation of imported generic type iter.Seq[int] (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub)"
+   "unsupported": "instantiation of imported generic type iter.Seq[int] in callMethod (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub)"
   },
   {
    "arity": 0,
    "name": "callFunc",
-   "unsupported": "instantiation of imported generic type iter.Seq[int] (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub)"
+   "unsupported": "instantiation of imported generic type iter.Seq[int] in callFunc (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub)"
   },
   {
    "arity": 0,
    "name": "callParam",
-   "unsupported": "instantiation of imported generic type iter.Seq[int] (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub)"
+   "unsupported": "instantiation of imported generic type iter.Seq[int] in callParam (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub)"
   },
   {
    "body": {
@@ -400,7 +400,7 @@
   {
    "arity": 0,
    "name": "callPromoted",
-   "unsupported": "instantiation of imported generic type iter.Seq[int] (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub)"
+   "unsupported": "instantiation of imported generic type iter.Seq[int] in callPromoted (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub)"
   }
  ],
  "methodSets": [
@@ -442,7 +442,7 @@
      }
     }
    ],
-   "unsupported": "method main.Bag.All (instantiation of imported generic type iter.Seq[int] (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub); signature instantiates imported generic iter.Seq[int] — not modeled (FR-23), carried as an opaque marker; satisfaction answers, calls fail closed)",
+   "unsupported": "method main.Bag.All (instantiation of imported generic type iter.Seq[int] in main.Bag.All (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub); signature instantiates imported generic iter.Seq[int] — not modeled (FR-23), carried as an opaque marker; satisfaction answers, calls fail closed)",
    "variadic": false
   },
   {
@@ -473,7 +473,7 @@
      }
     }
    ],
-   "unsupported": "method main.Bag.Sum (instantiation of imported generic type iter.Seq[int] (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub); satisfaction answers, calls fail closed)",
+   "unsupported": "method main.Bag.Sum (instantiation of imported generic type iter.Seq[int] in main.Bag.Sum (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub); satisfaction answers, calls fail closed)",
    "variadic": false
   },
   {
@@ -519,7 +519,7 @@
      }
     }
    ],
-   "unsupported": "promoted method main.Outer.All (forwarding wrapper not synthesized: instantiation of imported generic type iter.Seq[int] (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub); satisfaction answers, calls fail closed)",
+   "unsupported": "promoted method main.Outer.All (forwarding wrapper not synthesized: instantiation of imported generic type iter.Seq[int] in callPromoted (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub); satisfaction answers, calls fail closed)",
    "variadic": false
   },
   {
@@ -550,7 +550,7 @@
      }
     }
    ],
-   "unsupported": "promoted method main.Outer.Sum (forwarding wrapper not synthesized: instantiation of imported generic type iter.Seq[int] (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub); satisfaction answers, calls fail closed)",
+   "unsupported": "promoted method main.Outer.Sum (forwarding wrapper not synthesized: instantiation of imported generic type iter.Seq[int] in callPromoted (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub); satisfaction answers, calls fail closed)",
    "variadic": false
   }
  ],

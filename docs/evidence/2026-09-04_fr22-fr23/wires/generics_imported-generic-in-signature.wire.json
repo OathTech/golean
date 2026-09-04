@@ -196,7 +196,7 @@
      }
     }
    ],
-   "unsupported": "method main.Bag.All (instantiation of imported generic type iter.Seq[int] (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub); signature instantiates imported generic iter.Seq[int] — not modeled (FR-23), carried as an opaque marker; satisfaction answers, calls fail closed)",
+   "unsupported": "method main.Bag.All (instantiation of imported generic type iter.Seq[int] in main.Bag.All (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub); signature instantiates imported generic iter.Seq[int] — not modeled (FR-23), carried as an opaque marker; satisfaction answers, calls fail closed)",
    "variadic": false
   },
   {
@@ -219,7 +219,7 @@
      }
     }
    ],
-   "unsupported": "method main.Bag.Indexed (instantiation of imported generic type iter.Seq2[string,int] (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub); signature instantiates imported generic iter.Seq2[string,int] — not modeled (FR-23), carried as an opaque marker; satisfaction answers, calls fail closed)",
+   "unsupported": "method main.Bag.Indexed (instantiation of imported generic type iter.Seq2[string,int] in main.Bag.Indexed (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub); signature instantiates imported generic iter.Seq2[string,int] — not modeled (FR-23), carried as an opaque marker; satisfaction answers, calls fail closed)",
    "variadic": false
   }
  ],

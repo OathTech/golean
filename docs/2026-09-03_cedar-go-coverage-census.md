@@ -631,9 +631,13 @@ of its own. `types/record.go:35` calls `binary.Write(h,
 binary.LittleEndian, m[k].hash())`; `encoding/binary` is a
 source-through library unit (slice 2), `Write` is reached, its reach
 walk reaches `dataSize` → the package-level `var structSize sync.Map`,
-and `collectGlobals` refuses that var's TYPE for the whole export. The
-register's `encoding/binary` row says "an unreached sync.Map" — true
-until a program reaches `binary.Write/Read/Size`; cedar-go does. Rowed
+and `collectGlobals` refuses that var's TYPE for the whole export (since
+the slice's audit fix round the text NAMES it: `package-level var
+encoding/binary.structSize: its TYPE does not lower (sync.Map (only …)) —
+FR-24 …`; the bare text above is what the census run measured). The
+register's `encoding/binary` row said "an unreached sync.Map" — true
+until a program reaches `binary.Write/Read/Size`; cedar-go does (the row
+now says so). Rowed
 as **FR-24** (ledger §4, queue 24, S): the FR-22 mechanism applied to an
 unlowerable TYPE — seed the cell as `$poisoned`, quarantine every reader
 (`dataSize`, hence `Write/Read/Size`) by name, keep the export. Witness
