@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+# FR-22 residual, red BY DESIGN at frontend-export: a DEPENDENT initializer
+# whose shape is not effect-isolated (a method call on the poisoned value)
+# refuses the WHOLE export at the dependency, naming maxYear, the poison
+# chain and the register — never a silently-zero maxYear. Flips only with
+# a design change (a per-declaration treatment of the dependent shape).
+-	unrelated	-	ok	-	init,globals,stdlib,methods

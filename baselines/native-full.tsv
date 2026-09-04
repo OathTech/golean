@@ -1,4 +1,31 @@
 # GoLean native-frontend full-corpus differential baseline
+# re-pinned: 2026-09-04 (fr22-fr23 lane — the two WHOLE-EXPORT kills of the cedar-go census
+#   made PER-DECLARATION, [AGENT] under [USER] direction 3 and the frontier-queue ratification
+#   (both relayed by the coordinator, cited as relayed). FR-22: a package-level initializer
+#   calling an `init-callee` register row (time.Date admitted with its written argument) is
+#   SKIPPED and its var POISONED (the cell seeds as the reserved `$poisoned` placeholder;
+#   every reference refuses by name); unregistered callees keep the whole-export refusal,
+#   now naming the var, the callee and the register. FR-23: an imported generic instantiation
+#   in a method/func/interface/promoted-method SIGNATURE is an opaque marker under its mangled
+#   TypeId (the D5 marker shape — no wire-schema change), the declaration a fail-closed stub;
+#   satisfaction exact, every CALL refuses by name. FR-24 rowed (the next kill: a reached
+#   library var whose TYPE does not lower — binary.Write -> structSize sync.Map). BUG-091:
+#   three map-ordered refusal loops sorted (goto labels, build-constraint tags, library
+#   layout-constant scan) + TestEmitIsDeterministic. FULL ci --diff at 415f959a (+ the slice,
+#   uncommitted; tail in docs/evidence/2026-09-04_fr22-fr23/ci-diff-run1.txt): 3365 rows run;
+#   drift vs the previous pin = EXACTLY (a) 2 FAIL -> PASS flips, the two census witnesses
+#   init/stdlib-initializer-call (FR-22) and generics/imported-generic-in-signature (FR-23);
+#   (b) 15 born rows — 6 PASS (init/stdlib-initializer-poison/{sibling,order-kept},
+#   init/stdlib-initializer-source-through, generics/imported-generic-sig-calls/{sibling,
+#   satisfies,satisfies-embedded}) and 9 FAIL/frontend-export red BY DESIGN on their FR lines
+#   (init/stdlib-initializer-poison/{read,cascade}, init/stdlib-initializer-{dependent,
+#   unregistered} — FR-22; generics/imported-generic-sig-calls/{call-method,call-func,
+#   call-param,call-promoted} — FR-23; init/library-var-type-unlowerable — FR-24 witness);
+#   0 PASS -> non-PASS; twin wire pin UNCHANGED (69a538de); stdlib pin unchanged.
+#   [re-derived from the data rows at this re-pin ([AGENT]): main 415f959a's 3350 (3157 PASS /
+#   193 FAIL) + 15 born rows (6 PASS / 9 FAIL) with 2 FAIL -> PASS flips = 3365 (3165 PASS /
+#   200 FAIL); tallied by row, not summed by hand:
+#   `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv`]
 # re-pinned: 2026-09-03 (stdlib-source-2 — the OVERLAY mechanism + shim retirements,
 #   [AGENT] inside G1/G8/G9 as ruled and the ParseUint ruling (a), both [USER] Mike
 #   2026-09-03 relayed by the coordinator, cited as relayed. tools/nativefrontend/
@@ -847,7 +874,9 @@
 #     removed row is named in prose, never left dangling on the line).
 #     NEW rows: unsafe/layout-ops/{sizeof-fixed,layout-struct}
 #     FAIL/frontend-export BY DESIGN. unsafe/boundary/pointer-roundtrip
-# cases: 3350 (3157 PASS / 193 FAIL)
+# cases: 3365 (3165 PASS / 200 FAIL)
+#   [re-derived from the data rows at the fr22-fr23 re-pin 2026-09-04 ([AGENT]: main 415f959a's 3350 (3157 PASS / 193 FAIL) + 15 born rows (6 PASS / 9 FAIL) with 2 FAIL -> PASS flips; no other row moved; tallied by row: `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3165 / FAIL 200)]
+#   [the round-10 merge-train union figure, kept as history:] # cases: 3350 (3157 PASS / 193 FAIL)
 #   [re-derived from the data rows at the round-10 merge-train rebase of stdlib-source-2 (lane commit 68b15964) onto main 1b8401c0 2026-09-04 ([AGENT], under the [USER] merge sign-off «go ahead and merge these» 2026-09-04): the previous figure 3347 (3157 PASS / 190 FAIL) + this commit's row delta vs its lane parent 74434494 (3 ids: 3 born, 0 changed) = 3350 (3157 PASS / 193 FAIL); counted, not summed by hand]
 #   [the stdlib-source-2-over-221d8964 figure at this lane commit, kept as history:] # cases: 3326 (3130 PASS / 196 FAIL)
 #   [the previous round-10 union figure, kept as history:] # cases: 3347 (3157 PASS / 190 FAIL)
@@ -2008,7 +2037,14 @@ PASS	generics/higher-order-inference/named-function-type	-
 PASS	generics/higher-order-inference/return-target	-
 PASS	generics/higher-order-inference/partial-instantiation-target	-
 PASS	generics/identity	-
-FAIL	generics/imported-generic-in-signature	frontend-export
+PASS	generics/imported-generic-in-signature	-
+PASS	generics/imported-generic-sig-calls/sibling	-
+PASS	generics/imported-generic-sig-calls/satisfies	-
+PASS	generics/imported-generic-sig-calls/satisfies-embedded	-
+FAIL	generics/imported-generic-sig-calls/call-method	frontend-export
+FAIL	generics/imported-generic-sig-calls/call-func	frontend-export
+FAIL	generics/imported-generic-sig-calls/call-param	frontend-export
+FAIL	generics/imported-generic-sig-calls/call-promoted	frontend-export
 PASS	generics/inference	-
 PASS	generics/instantiated-function-value	-
 PASS	generics/instantiated-map-key	-
@@ -2306,6 +2342,7 @@ FAIL	init/hidden-dep-refused	frontend-export
 PASS	init/init-defer-recover	-
 PASS	init/init-panic	-
 PASS	init/init-sees-var-values	-
+FAIL	init/library-var-type-unlowerable	frontend-export
 PASS	init/multi-file-order	-
 PASS	init/multiple-init-order	-
 PASS	init/multi-value-var-init	-
@@ -2324,7 +2361,14 @@ FAIL	init/quarantined-var-panicking/sibling	frontend-export
 FAIL	init/quarantined-var-syscall/sibling	frontend-export
 FAIL	init/quarantined-var-writer/read	frontend-export
 PASS	init/spec-dependency-example	-
-FAIL	init/stdlib-initializer-call	frontend-export
+PASS	init/stdlib-initializer-call	-
+FAIL	init/stdlib-initializer-dependent	frontend-export
+PASS	init/stdlib-initializer-poison/sibling	-
+PASS	init/stdlib-initializer-poison/order-kept	-
+FAIL	init/stdlib-initializer-poison/read	frontend-export
+FAIL	init/stdlib-initializer-poison/cascade	frontend-export
+PASS	init/stdlib-initializer-source-through	-
+FAIL	init/stdlib-initializer-unregistered	frontend-export
 PASS	init/var-init-sequence	-
 PASS	interfaces/acked-indexer/hit	-
 PASS	interfaces/acked-indexer/miss	-

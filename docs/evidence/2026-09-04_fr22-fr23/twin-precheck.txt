@@ -1,0 +1,5 @@
+# twin-precheck.txt — prototype frontend (stdlib-source-2 @ 74434494 + this slice's patch) over the twin assembly vs the pinned wire, BEFORE landing (2026-09-04, cwd = stdlib-source-2 worktree for the stdlib pin)
+# cmd: nativefrontend-proto --dir <twin-prog> --out twin.wire.json && cmp baselines/pins/twin-chdriver.wire.json twin.wire.json
+cmp: identical (TWIN PIN UNCHANGED)
+6a9ef8bb5ba80c4c7346a0ff18f7b7dd5601bf30fb2bd4dfbf3802906d5e23e3  .claude/worktrees/stdlib-source-2/baselines/pins/twin-chdriver.wire.json
+6a9ef8bb5ba80c4c7346a0ff18f7b7dd5601bf30fb2bd4dfbf3802906d5e23e3  .tmp/fr22-fr23/twin/twin.wire.json

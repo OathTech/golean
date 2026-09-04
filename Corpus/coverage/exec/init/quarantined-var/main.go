@@ -3,8 +3,10 @@ package main
 // H-11 guardrails (raft W4.0, 2026-08-20): per-declaration quarantine
 // for package-level VARS whose initializer does not lower — the H-3
 // analogue for `var` (G-3's structural half). Contract: the var KEEPS
-// its type-carrying globals entry (the cell is zero-seeded and its gid
-// stays dense — never dropped), $pkginit SKIPS its initializer, and
+// its globals entry (gid-dense — never dropped; since 2026-09-04 the
+// cell seeds as the reserved `$poisoned` placeholder type rather than
+// the real type, FR-22 — a real type with no machine default would
+// otherwise refuse EVERY subject at seeding), $pkginit SKIPS its initializer, and
 // EVERY reference — read, write, address-of — refuses at the choke
 // point naming the variable, so the zero in the cell is unreachable,
 // never a silent answer. A function that references a quarantined var

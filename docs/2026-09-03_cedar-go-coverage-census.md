@@ -598,3 +598,85 @@ where "cross-check" says so).
   §1.2 tables); the S1-S4/G6 bucket rule. The [USER] question is the
   only [USER] item; no gate, baseline, corpus or trust-surface change
   was made or proposed for merge.
+
+## 9. Addendum 2026-09-04 — the FR-22 / FR-23 slice re-measured [AGENT]
+
+Lane `fr22-fr23` (worker under the [AGENT] coordinator; the frontier
+queue ordering is [USER]-ratified §0 direction 2, the rowing rule is
+[USER] direction 3 — both relayed, cited as relayed). Method: §1's
+drivers, re-run with the slice's frontend over the SAME assembled copy
+(`artifacts/cedar/cases/*`, 34 cases); the machine-side pipeline is
+unchanged. Full record: `docs/evidence/2026-09-04_fr22-fr23/`.
+
+### 9.1 What moved
+
+| kill (§3.2 / §3.3) | before | after |
+|---|---|---|
+| FR-22 `var maxDatetime = time.Date(…)` — whole export | 18/22 packages + 9/9 drivers refused on it | GONE: `time.Date` is an `init-callee` register row (result-only, panic-free over the admitted argument shapes — the row's written argument), so the two initializers are SKIPPED and `maxDatetime`/`minDatetime` are poisoned per declaration (`$poisoned` cells; readers `types.Datetime.…` quarantine by name). The kill for callees NOT on the register stays whole-export by design (H-11 audit F1/F1b: the skip cannot be argued unobservable) and now names the var, the callee and the register. |
+| FR-23 `iter.Seq`/`iter.Seq2` in a method / func / interface SIGNATURE — whole export | the pass-B second kill (10 signatures) | GONE: signatures emit in SIGNATURE-OPAQUE mode — the instantiation is an opaque marker under its mangled TypeId (`iter.Seq2[cedargo/types.String,cedargo/types.Value]`), the declaration is a fail-closed stub, satisfaction still answers exactly (the same key on the requirement and the implementation), every CALL refuses by name (FR-23), and a body that consumes the value refuses at its own emit (FR-12 for the `range`, FR-23 for the value). `authorize.go:13`'s `PolicyIterator` interface lowers the same way. |
+
+### 9.2 What did NOT move — the next kill, measured (pass A′, this slice's frontend, no relaxation)
+
+**Export fraction unchanged: 5/34 cases** (`internal`, `internal/consts`,
+`internal/mapset`, `internal/rust`, `cedark8s/cmd/schema-formatter` —
+the same five as §3.1). All 29 previously FR-22-refused cases now refuse
+on ONE new cause:
+
+```
+native frontend unsupported: sync.Map (only Mutex/RWMutex/WaitGroup/Once are modeled)
+```
+
+Traced (evidence dir, `trace-syncmap.txt`): cedar-go has no `sync.Map`
+of its own. `types/record.go:35` calls `binary.Write(h,
+binary.LittleEndian, m[k].hash())`; `encoding/binary` is a
+source-through library unit (slice 2), `Write` is reached, its reach
+walk reaches `dataSize` → the package-level `var structSize sync.Map`,
+and `collectGlobals` refuses that var's TYPE for the whole export. The
+register's `encoding/binary` row says "an unreached sync.Map" — true
+until a program reaches `binary.Write/Read/Size`; cedar-go does. Rowed
+as **FR-24** (ledger §4, queue 24, S): the FR-22 mechanism applied to an
+unlowerable TYPE — seed the cell as `$poisoned`, quarantine every reader
+(`dataSize`, hence `Write/Read/Size`) by name, keep the export. Witness
+`init/library-var-type-unlowerable` (born-FAIL, subject untouched by the
+var).
+
+### 9.3 Pass C (counterfactual, LABELLED): past FR-24
+
+Census COPY only, never `deps/`: `record.go:35`'s `binary.Write` replaced
+by the byte-identical `var hb [8]byte; binary.LittleEndian.PutUint64(hb[:],
+m[k].hash()); _, _ = h.Write(hb[:])` (little-endian `uint64` is exactly
+those 8 bytes; the hash writer never errors) — symmetric under `go run`,
+so it cannot skew the differential, and it is what FR-24's fix would
+expose. Still 5/34 EXPORT-OK; the 29 refusals split into TWO causes:
+
+| cause | cases | class | row |
+|---|---|---|---|
+| `method stencil cedargo/internal/mapset.ImmutableMapSet[cedargo/types.EntityUID].All does not lower (instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] …) — FR-4` | 25 (everything importing `types`) | method STENCILS have no per-declaration quarantine (the H-3 residual) — a SOURCE generic type's method returning `iter.Seq[T]`, at its first instantiation | **FR-4** (queue 4, ½–1 day; the stencil refusal now NAMES the stencil — this slice's diagnostic strengthening in `mono.go flushTypeInsts`) |
+| `slices.Sort at non-integer element type string` | 4 (`all`, `drv-validate`, `x/exp/schema`, `x/exp/schema/internal/parser`) | an `init()` BODY (`x/exp/schema/internal/parser/marshal.go:350`) — init code has no per-declaration quarantine BY DESIGN (it runs before every subject), so this is the genuine `slices.Sort`-beyond-integer-kinds gap, not a frontend kill class | FR-14 / memo §3 row M (`sortSlice` machine op at integer kinds only) |
+
+So the frontier for cedar-go's export, in order: FR-24 (S) → FR-4 (S) →
+`slices.Sort` at string (memo row M) → then the per-declaration picture
+of §3.4 becomes measurable by the frontend census for the first time
+(the demand histogram's `errors.Join` 29 / `bytes.Buffer` 31 /
+`encoding/json` 38 / `slices.Contains` 15 members become per-function
+quarantines, not kills — `errors.Join` and `bytes.Buffer` are
+source-through since slice 2, so many of those should now LOWER; that
+claim is NOT measured here and is left as the next census's question).
+
+### 9.4 Numbers
+
+pass A′ (this slice): FRONTEND-REFUSED 29 (all `sync.Map`), EXPORT-OK 5,
+machine 0/0/0. pass C (counterfactual): FRONTEND-REFUSED 29 (25 FR-4 +
+4 `slices.Sort`), EXPORT-OK 5. Per-declaration census of the five
+exporting packages: unchanged from §3.1 (their declarations touch
+neither kill). The static demand census (§3.4) is unaffected — its
+`sig:imported-generic-inst` key correctly still reads "refused": the
+MEMBERS are still refused by name; what changed is the blast radius
+(per declaration, not per export).
+
+Decisions in this addendum, all [AGENT]: the pass-C relaxation and its
+labelling; rowing FR-24 rather than folding it into this slice (the
+brief's scope was the two rowed kills; FR-24 is the smallest-diagnosed
+next item and is posed to the coordinator as such). No gate, baseline,
+corpus or trust-surface claim is made here beyond the slice's own
+landing records.

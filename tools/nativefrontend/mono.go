@@ -452,7 +452,13 @@ func (e *emitter) enqueueTypeInst(inst *types.Named, key string) error {
 	// loaded — multi-package W1.1); stdlib generic types keep the
 	// standing refusal (no AST to stencil from).
 	if obj.Pkg() == nil || !e.isSourcePackage(obj.Pkg()) {
-		return unsup("instantiation of imported generic type %s", key)
+		// FR-23 (2026-09-04): a VALUE of an imported generic instantiation
+		// never lowers (this refusal); in a declaration SIGNATURE the type
+		// is carried as an opaque marker instead (wire.go sigOpaque), so
+		// the enclosing declaration becomes a per-declaration stub and the
+		// export survives — the census's whole-export kill is gone, the
+		// members themselves stay refused by name.
+		return unsup("instantiation of imported generic type %s (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub)", key)
 	}
 	var unit *sourcePkg
 	if e.srcPkgSet != nil {
@@ -535,6 +541,16 @@ func (e *emitter) flushTypeInsts(typeDefs, methods, funcs []any) ([]any, []any, 
 		for _, d := range e.genericMethodDecls[work.inst.Origin()] {
 			m, err := e.emitMethodInst(work, d)
 			if err != nil {
+				// NAME the stencil (2026-09-04, FR-22/FR-23 slice — a
+				// diagnostic strengthening only): the H-3 residual
+				// (ledger FR-4) refuses the WHOLE export here, and the
+				// bare inner cause could not be triaged to a
+				// declaration (cedar-go pass C: `slices.Sort at
+				// non-integer element type string` with no site).
+				var u unsupported
+				if errors.As(err, &u) {
+					err = unsup("method stencil %s.%s does not lower (%s) — FR-4: method stencils have no per-declaration quarantine yet, so the export refuses whole", work.key, d.Name.Name, u.what)
+				}
 				return nil, nil, nil, did, err
 			}
 			funcs = append(funcs, e.lifted...)

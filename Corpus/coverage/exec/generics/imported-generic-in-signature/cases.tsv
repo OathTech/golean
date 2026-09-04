@@ -1,3 +1,3 @@
 # id	subject	args	expected_status	expected_reason	features
 -	unrelatedToTheIterators	-	ok	-	generics,methods,structs,stdlib
-# Born-FAIL frontend-export: FR-23 (ledger §4; cedar-go census 2026-09-03). Legal Go: the refusal is quarantinedMethodStub's sigRefusal arm — "instantiation of imported generic type iter.Seq[int] … its own SIGNATURE does not lower either" — a whole-export kill. Flips at queue 23 (then FR-12 unblocks the calls). Rowed 2026-09-03, [USER] direction 3 (coordinator relay).
+# FLIPPED FAIL->PASS 2026-09-04 (lane fr22-fr23, ledger FR-23 PARTIALLY CLOSED): Bag.All / Bag.Indexed are declaration-only stubs whose signatures carry iter.Seq[int] / iter.Seq2[string,int] as OPAQUE markers (SIGNATURE-OPAQUE mode) — satisfaction answers, the calls refuse by name (generics/imported-generic-sig-calls pins them red). Born FAIL 2026-09-03 as the whole-export kill witness (census §3.3; [USER] direction 3, coordinator relay). A FAIL here again means the kill is back.

@@ -1,0 +1,36 @@
+# cedar-passC.txt — pass C, a LABELLED COUNTERFACTUAL (2026-09-04): a scratch COPY of the assembled cases with types/record.go:35 relaxed — `_ = binary.Write(h, binary.LittleEndian, m[k].hash())` -> `var hb [8]byte; binary.LittleEndian.PutUint64(hb[:], m[k].hash()); _, _ = h.Write(hb[:])` (byte-identical little-endian uint64; symmetric under go run) — then the same drive loop as pass A'. Never applied to deps/. Cause of each refusal after the FR-4 stencil-naming fix: 25 = `method stencil cedargo/internal/mapset.ImmutableMapSet[cedargo/types.EntityUID].All does not lower (instantiation of imported generic type iter.Seq[…]) — FR-4`; 4 = `slices.Sort at non-integer element type string` (an init() body, x/exp/schema/internal/parser/marshal.go:350).
+# cmd: cp -r <cases> <copy>; sed -i '<the substitution above>' <copy>/*/cedargo/types/record.go; for c in ...; do nativefrontend-proto --dir <copy>/$c --out <copy>/$c/wire.json; done
+all: REFUSED: nativefrontend: native frontend unsupported: slices.Sort at non-integer element type string
+drv-authz-ast: REFUSED: nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] (FR-23: no source to stencil an imported generic from — a value of this type nev
+drv-authz-cedar-text: REFUSED: nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] (FR-23: no source to stencil an imported generic from — a value of this type nev
+drv-authz-json: REFUSED: nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] (FR-23: no source to stencil an imported generic from — a value of this type nev
+drv-eval-operators: REFUSED: nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] (FR-23: no source to stencil an imported generic from — a value of this type nev
+drv-ext-datetime: REFUSED: nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] (FR-23: no source to stencil an imported generic from — a value of this type nev
+drv-ext-decimal: REFUSED: nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] (FR-23: no source to stencil an imported generic from — a value of this type nev
+drv-ext-ipaddr: REFUSED: nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] (FR-23: no source to stencil an imported generic from — a value of this type nev
+drv-policy-json-roundtrip: REFUSED: nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] (FR-23: no source to stencil an imported generic from — a value of this type nev
+drv-validate: REFUSED: nativefrontend: native frontend unsupported: slices.Sort at non-integer element type string
+k8s-cmd__schema-formatter: EXPORT (5 stubs)
+k8s-internal__schema: REFUSED: nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] (FR-23: no source to stencil an imported generic from — a value of this type nev
+pkg-ast: REFUSED: nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] (FR-23: no source to stencil an imported generic from — a value of this type nev
+pkg-internal: EXPORT (1 stubs)
+pkg-internal__consts: EXPORT (0 stubs)
+pkg-internal__eval: REFUSED: nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] (FR-23: no source to stencil an imported generic from — a value of this type nev
+pkg-internal__extensions: REFUSED: nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] (FR-23: no source to stencil an imported generic from — a value of this type nev
+pkg-internal__json: REFUSED: nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] (FR-23: no source to stencil an imported generic from — a value of this type nev
+pkg-internal__mapset: EXPORT (2 stubs)
+pkg-internal__parser: REFUSED: nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] (FR-23: no source to stencil an imported generic from — a value of this type nev
+pkg-internal__rust: EXPORT (2 stubs)
+pkg-root: REFUSED: nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] (FR-23: no source to stencil an imported generic from — a value of this type nev
+pkg-types: REFUSED: nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] (FR-23: no source to stencil an imported generic from — a value of this type nev
+pkg-x__exp__ast: REFUSED: nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] (FR-23: no source to stencil an imported generic from — a value of this type nev
+pkg-x__exp__batch: REFUSED: nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] (FR-23: no source to stencil an imported generic from — a value of this type nev
+pkg-x__exp__dot: REFUSED: nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] (FR-23: no source to stencil an imported generic from — a value of this type nev
+pkg-x__exp__eval: REFUSED: nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] (FR-23: no source to stencil an imported generic from — a value of this type nev
+pkg-x__exp__schema: REFUSED: nativefrontend: native frontend unsupported: slices.Sort at non-integer element type string
+pkg-x__exp__schema__ast: REFUSED: nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] (FR-23: no source to stencil an imported generic from — a value of this type nev
+pkg-x__exp__schema__internal__json: REFUSED: nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] (FR-23: no source to stencil an imported generic from — a value of this type nev
+pkg-x__exp__schema__internal__parser: REFUSED: nativefrontend: native frontend unsupported: slices.Sort at non-integer element type string
+pkg-x__exp__schema__resolved: REFUSED: nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] (FR-23: no source to stencil an imported generic from — a value of this type nev
+pkg-x__exp__schema__validate: REFUSED: nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] (FR-23: no source to stencil an imported generic from — a value of this type nev
+pkg-x__exp__types: REFUSED: nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] (FR-23: no source to stencil an imported generic from — a value of this type nev

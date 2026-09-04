@@ -1,0 +1,4 @@
+class	key	decls	packages
+other	nativefrontend	19	19
+stdlib-call	flag.Parse	1	1
+stdlib-call	fmt.Sprintf verb %x @rune	1	1

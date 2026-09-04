@@ -1,0 +1,12 @@
+# bug091-red-first.txt — TestEmitIsDeterministic run against MAIN's emitter (git archive 415f959a tools/nativefrontend) BEFORE the fix, 2026-09-04
+# cmd: go test -count=1 -run TestEmitIsDeterministic ./tools/nativefrontend   (in a scratch copy of the HEAD package + the new test file)
+--- FAIL: TestEmitIsDeterministic (0.00s)
+    determinism_test.go:114: goto-two-labels: emission 14 differs from emission 0 (BUG-091: a map iteration order reached the output)
+        --- 0:
+        {"fileOrder":[{"files":["main.go"],"package":"main"}],"funcs":[{"arity":1,"name":"f","unsupported":"goto target label next not at function body top level"}],"methodSets":[],"methods":[],"package":"main","schema":"golean-native-v1","types":[]}
+        --- 14:
+        {"fileOrder":[{"files":["main.go"],"package":"main"}],"funcs":[{"arity":1,"name":"f","unsupported":"goto target label fallback not at function body top level"}],"methodSets":[],"methods":[],"package":"main","schema":"golean-native-v1","types":[]}
+FAIL
+FAIL	_/home/dev/projects/golean/.tmp/fr22-fr23/redfirst/tools/nativefrontend	0.003s
+FAIL
+EXIT=0

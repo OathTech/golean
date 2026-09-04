@@ -1,0 +1,20 @@
+# baseline-drift.txt — the DRIFT block of ci-diff-run1.txt: every row that moved vs main 415f959a's baseline (2 FAIL->PASS flips, 15 born rows: 6 PASS / 9 FAIL, 0 PASS->non-PASS)
+DRIFT vs baselines/native-full.tsv (3365 case(s) run):
+generics/imported-generic-in-signature	baseline[FAIL/frontend-export] -> now[PASS/-]
+generics/imported-generic-sig-calls/call-func	NEW id (not in baseline) -> FAIL/frontend-export
+generics/imported-generic-sig-calls/call-method	NEW id (not in baseline) -> FAIL/frontend-export
+generics/imported-generic-sig-calls/call-param	NEW id (not in baseline) -> FAIL/frontend-export
+generics/imported-generic-sig-calls/call-promoted	NEW id (not in baseline) -> FAIL/frontend-export
+generics/imported-generic-sig-calls/satisfies	NEW id (not in baseline) -> PASS/-
+generics/imported-generic-sig-calls/satisfies-embedded	NEW id (not in baseline) -> PASS/-
+generics/imported-generic-sig-calls/sibling	NEW id (not in baseline) -> PASS/-
+init/library-var-type-unlowerable	NEW id (not in baseline) -> FAIL/frontend-export
+init/stdlib-initializer-call	baseline[FAIL/frontend-export] -> now[PASS/-]
+init/stdlib-initializer-dependent	NEW id (not in baseline) -> FAIL/frontend-export
+init/stdlib-initializer-poison/cascade	NEW id (not in baseline) -> FAIL/frontend-export
+init/stdlib-initializer-poison/order-kept	NEW id (not in baseline) -> PASS/-
+init/stdlib-initializer-poison/read	NEW id (not in baseline) -> FAIL/frontend-export
+init/stdlib-initializer-poison/sibling	NEW id (not in baseline) -> PASS/-
+init/stdlib-initializer-source-through	NEW id (not in baseline) -> PASS/-
+init/stdlib-initializer-unregistered	NEW id (not in baseline) -> FAIL/frontend-export
+

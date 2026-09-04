@@ -53,6 +53,7 @@ import (
 	"go/token"
 	"go/version"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -175,7 +176,12 @@ func refuseBuildConstrainedFiles(fset *token.FileSet, files []*ast.File) error {
 					}
 					tags := map[string]bool{}
 					constraintTags(expr, tags)
+					tagNames := make([]string, 0, len(tags))
 					for tag := range tags {
+						tagNames = append(tagNames, tag)
+					}
+					sort.Strings(tagNames) // deterministic refusal message (BUG-091)
+					for _, tag := range tagNames {
 						if reservedConstraintTag(tag) {
 							return unsup("file %s carries build constraint %q using reserved tag %q (platform/version/toolchain-conditional file selection is outside the modeled fragment) — fail closed", name, line, tag)
 						}

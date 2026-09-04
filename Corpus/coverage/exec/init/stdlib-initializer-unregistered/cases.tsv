@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+# FR-22 residual, red BY DESIGN at frontend-export: an unmodeled callee
+# NOT on the init-callee register (os.Getpid) keeps the WHOLE-export
+# refusal — the skip cannot be argued unobservable (H-11 audit F1/F1b) —
+# and the refusal names the var, the callee and the register. Flips only
+# when a register row for the callee is admitted with its argument.
+-	unrelated	-	ok	-	init,globals,stdlib

@@ -1,0 +1,16 @@
+# id	subject	args	expected_status	expected_reason	features
+# FR-23 (2026-09-04): imported generic instantiations (iter.Seq[int]) in
+# method/func/interface SIGNATURES are opaque markers, so the export
+# survives per declaration. Green: the sibling, and interface
+# SATISFACTION through the opaque key (Bag has All() iter.Seq[int],
+# Plain does not; Outer promotes it). Red BY DESIGN at frontend-export:
+# every CALL of such a declaration (method, plain func, param position,
+# promoted) — the members themselves stay refused by name (FR-23), and
+# their range-over-func bodies are FR-12's.
+sibling	sibling	-	ok	-	generics,methods,structs,stdlib
+satisfies	satisfies	-	ok	-	generics,interfaces,type_assertions,comma_ok,stdlib
+satisfies-embedded	satisfiesEmbedded	-	ok	-	generics,interfaces,embedding,type_assertions,comma_ok,stdlib
+call-method	callMethod	-	ok	-	generics,methods,range,stdlib
+call-func	callFunc	-	ok	-	generics,range,stdlib
+call-param	callParam	-	ok	-	generics,methods,stdlib
+call-promoted	callPromoted	-	ok	-	generics,methods,embedding,range,stdlib

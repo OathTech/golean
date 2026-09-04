@@ -95,6 +95,7 @@ func stdlibRegisterDump() (string, error) {
 	}
 	line("count", "shim", itoa(shims)+" (frozen, D-002; retired by rows of memo §3)")
 	line("count", "shadow-type", itoa(len(modeledImportedTypes)))
+	line("count", "init-callee", itoa(len(pureUnmodeledCallees))+" (H-11 pureUnmodeledCallees: unmodeled stdlib functions a package-level initializer may call and still be SKIPPED with its vars poisoned; each row states result-only + panic-free over the admitted argument shapes; a row is an admission, not a model)")
 
 	paths := sortedStringKeys(stdlibSourceAllowed)
 	for _, p := range paths {
@@ -152,6 +153,9 @@ func stdlibRegisterDump() (string, error) {
 			detail = "E5-T shadow model whose methods lower to machine atomic-op intrinsics (atomics arc wave 1, atomics.go; sync/atomic is memory-model-owned, memo §2.3.4 — listed, not a source-through concern)"
 		}
 		line("shadow-type", k, detail)
+	}
+	for _, k := range sortedStringKeys(pureUnmodeledCallees) {
+		line("init-callee", k, pureUnmodeledCallees[k])
 	}
 	return b.String(), nil
 }

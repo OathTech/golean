@@ -1,0 +1,9 @@
+# trace-syncmap.txt — where cedar-go's post-FR-22 'sync.Map' refusal comes from (2026-09-04)
+# 1. cedar-go non-test code has no sync.Map:
+grep -rn 'sync\.Map' deps/cedar-go --include='*.go' | grep -v _test.go  -> (no output)
+# 2. the only encoding/binary use: deps/cedar-go/types/record.go:35  _ = binary.Write(h, binary.LittleEndian, m[k].hash())
+# 3. probe A (exports): binary.BigEndian.PutUint64/Uint64 only  -> EXPORT-OK
+# 4. probe B (exports): hash/fnv + binary.LittleEndian.PutUint64  -> EXPORT-OK
+# 5. probe C (refuses): binary.Write(&bytes.Buffer, binary.LittleEndian, uint64) with an unrelated subject:
+nativefrontend: native frontend unsupported: sync.Map (only Mutex/RWMutex/WaitGroup/Once are modeled)
+# 6. deps/go/src/encoding/binary/binary.go: Write -> dataSize -> 'var structSize sync.Map' (the reached library var); collectGlobals emitType refuses the TYPE -> whole export. Rowed FR-24; witness init/library-var-type-unlowerable.

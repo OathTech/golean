@@ -1,0 +1,2310 @@
+{
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "elem": {
+       "kind": "string"
+      },
+      "elems": [
+       {
+        "index": 0,
+        "value": {
+         "expr": "ident",
+         "name": "s",
+         "type": {
+          "kind": "string"
+         }
+        }
+       }
+      ],
+      "length": 1,
+      "stmt": "slice-lit",
+      "target": {
+       "id": "$c0",
+       "target": "declare",
+       "type": {
+        "elem": {
+         "kind": "string"
+        },
+        "kind": "slice"
+       }
+      }
+     },
+     {
+      "elem": {
+       "kind": "string"
+      },
+      "elems": {
+       "expr": "ident",
+       "name": "$c0",
+       "type": {
+        "elem": {
+         "kind": "string"
+        },
+        "kind": "slice"
+       }
+      },
+      "slice": {
+       "expr": "deref",
+       "ptr": {
+        "expr": "globaladdr",
+        "gid": 0
+       },
+       "type": {
+        "elem": {
+         "kind": "string"
+        },
+        "kind": "slice"
+       }
+      },
+      "stmt": "append",
+      "target": {
+       "id": "$c1",
+       "target": "declare",
+       "type": {
+        "elem": {
+         "kind": "string"
+        },
+        "kind": "slice"
+       }
+      }
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "expr": "globaladdr",
+         "gid": 0
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "$c1",
+        "type": {
+         "elem": {
+          "kind": "string"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "builtin-len",
+        "operand": {
+         "expr": "deref",
+         "ptr": {
+          "expr": "globaladdr",
+          "gid": 0
+         },
+         "type": {
+          "elem": {
+           "kind": "string"
+          },
+          "kind": "slice"
+         }
+        },
+        "operandType": {
+         "elem": {
+          "kind": "string"
+         },
+         "kind": "slice"
+        },
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "note",
+   "params": [
+    {
+     "id": "s",
+     "type": {
+      "kind": "string"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "binary",
+         "op": "+",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "deref",
+          "ptr": {
+           "expr": "globaladdr",
+           "gid": 1
+          },
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "y": {
+          "expr": "deref",
+          "ptr": {
+           "expr": "globaladdr",
+           "gid": 3
+          },
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         }
+        },
+        "y": {
+         "expr": "deref",
+         "ptr": {
+          "expr": "globaladdr",
+          "gid": 6
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "sibling",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "out",
+        "target": "declare",
+        "type": {
+         "kind": "string"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "bytes": [],
+        "expr": "string",
+        "type": {
+         "kind": "string"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "body": {
+       "body": [
+        {
+         "op": "+",
+         "read": {
+          "expr": "ident",
+          "name": "out",
+          "type": {
+           "kind": "string"
+          }
+         },
+         "rhs": {
+          "expr": "ident",
+          "name": "s",
+          "type": {
+           "kind": "string"
+          }
+         },
+         "stmt": "compound-assign",
+         "target": {
+          "id": "out",
+          "target": "var"
+         }
+        }
+       ],
+       "stmt": "block"
+      },
+      "collection": {
+       "expr": "deref",
+       "ptr": {
+        "expr": "globaladdr",
+        "gid": 0
+       },
+       "type": {
+        "elem": {
+         "kind": "string"
+        },
+        "kind": "slice"
+       }
+      },
+      "elemType": {
+       "kind": "string"
+      },
+      "keyVar": null,
+      "kind": "slice",
+      "stmt": "range",
+      "valVar": "s"
+     },
+     {
+      "results": [
+       {
+        "expr": "ident",
+        "name": "out",
+        "type": {
+         "kind": "string"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "orderKept",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "string"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "arity": 0,
+   "name": "readPoisoned",
+   "unsupported": "package-level var maxDatetime: its initializer does not lower (package-selector call time.Date (package \"time\" surface not modeled)) — H-11 poison: the cell is zero-seeded and every reference (read, write, address-of) refuses by name; reference refused"
+  },
+  {
+   "arity": 0,
+   "name": "readCascade",
+   "unsupported": "package-level var minAlias: its initializer does not lower (package-level var minDatetime: its initializer does not lower (package-selector call time.Date (package \"time\" surface not modeled)) — H-11 poison: the cell is zero-seeded and every reference (read, write, address-of) refuses by name; reference refused) — H-11 poison: the cell is zero-seeded and every reference (read, write, address-of) refuses by name; reference refused"
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "expr": "globaladdr",
+         "gid": 1
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "bytes": [
+           97
+          ],
+          "expr": "string",
+          "type": {
+           "kind": "string"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "note",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "expr": "globaladdr",
+         "gid": 3
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "bytes": [
+           98
+          ],
+          "expr": "string",
+          "type": {
+           "kind": "string"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "note",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "expr": "globaladdr",
+         "gid": 6
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "bytes": [
+           99
+          ],
+          "expr": "string",
+          "type": {
+           "kind": "string"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "note",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "$pkginit",
+   "params": [],
+   "results": [],
+   "variadic": false
+  }
+ ],
+ "globals": [
+  {
+   "name": "seq",
+   "type": {
+    "elem": {
+     "kind": "string"
+    },
+    "kind": "slice"
+   }
+  },
+  {
+   "name": "a",
+   "type": {
+    "int": "int",
+    "kind": "int"
+   }
+  },
+  {
+   "name": "maxDatetime",
+   "type": {
+    "kind": "named",
+    "name": "$poisoned"
+   }
+  },
+  {
+   "name": "b",
+   "type": {
+    "int": "int",
+    "kind": "int"
+   }
+  },
+  {
+   "name": "minDatetime",
+   "type": {
+    "kind": "named",
+    "name": "$poisoned"
+   }
+  },
+  {
+   "name": "minAlias",
+   "type": {
+    "kind": "named",
+    "name": "$poisoned"
+   }
+  },
+  {
+   "name": "c",
+   "type": {
+    "int": "int",
+    "kind": "int"
+   }
+  }
+ ],
+ "methodSets": [
+  {
+   "coverage": "full",
+   "type": "$poisoned"
+  },
+  {
+   "coverage": "exported",
+   "type": "time.Duration"
+  },
+  {
+   "coverage": "exported",
+   "type": "time.Location"
+  },
+  {
+   "coverage": "exported",
+   "type": "time.Month"
+  },
+  {
+   "coverage": "exported",
+   "type": "time.Time"
+  },
+  {
+   "coverage": "exported",
+   "type": "time.Weekday"
+  }
+ ],
+ "methods": [
+  {
+   "name": "Add",
+   "params": [
+    {
+     "id": "d",
+     "type": {
+      "kind": "named",
+      "name": "time.Duration"
+     }
+    }
+   ],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "named",
+      "name": "time.Time"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.Add (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "AddDate",
+   "params": [
+    {
+     "id": "years",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "months",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "days",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "named",
+      "name": "time.Time"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.AddDate (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "After",
+   "params": [
+    {
+     "id": "u",
+     "type": {
+      "kind": "named",
+      "name": "time.Time"
+     }
+    }
+   ],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.After (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "AppendBinary",
+   "params": [
+    {
+     "id": "b",
+     "type": {
+      "elem": {
+       "int": "uint8",
+       "kind": "int"
+      },
+      "kind": "slice"
+     }
+    }
+   ],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "elem": {
+       "int": "uint8",
+       "kind": "int"
+      },
+      "kind": "slice"
+     }
+    },
+    {
+     "id": "$res1",
+     "type": {
+      "kind": "interface",
+      "name": "error"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.AppendBinary (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "AppendFormat",
+   "params": [
+    {
+     "id": "b",
+     "type": {
+      "elem": {
+       "int": "uint8",
+       "kind": "int"
+      },
+      "kind": "slice"
+     }
+    },
+    {
+     "id": "layout",
+     "type": {
+      "kind": "string"
+     }
+    }
+   ],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "elem": {
+       "int": "uint8",
+       "kind": "int"
+      },
+      "kind": "slice"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.AppendFormat (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "AppendText",
+   "params": [
+    {
+     "id": "b",
+     "type": {
+      "elem": {
+       "int": "uint8",
+       "kind": "int"
+      },
+      "kind": "slice"
+     }
+    }
+   ],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "elem": {
+       "int": "uint8",
+       "kind": "int"
+      },
+      "kind": "slice"
+     }
+    },
+    {
+     "id": "$res1",
+     "type": {
+      "kind": "interface",
+      "name": "error"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.AppendText (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Before",
+   "params": [
+    {
+     "id": "u",
+     "type": {
+      "kind": "named",
+      "name": "time.Time"
+     }
+    }
+   ],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.Before (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Clock",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "hour",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "min",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "sec",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.Clock (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Compare",
+   "params": [
+    {
+     "id": "u",
+     "type": {
+      "kind": "named",
+      "name": "time.Time"
+     }
+    }
+   ],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.Compare (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Date",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "year",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "month",
+     "type": {
+      "kind": "named",
+      "name": "time.Month"
+     }
+    },
+    {
+     "id": "day",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.Date (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Day",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.Day (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Equal",
+   "params": [
+    {
+     "id": "u",
+     "type": {
+      "kind": "named",
+      "name": "time.Time"
+     }
+    }
+   ],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.Equal (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Format",
+   "params": [
+    {
+     "id": "layout",
+     "type": {
+      "kind": "string"
+     }
+    }
+   ],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "string"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.Format (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "GoString",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "string"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.GoString (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "GobDecode",
+   "params": [
+    {
+     "id": "data",
+     "type": {
+      "elem": {
+       "int": "uint8",
+       "kind": "int"
+      },
+      "kind": "slice"
+     }
+    }
+   ],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "elem": {
+      "kind": "named",
+      "name": "time.Time"
+     },
+     "kind": "pointer"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "interface",
+      "name": "error"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.GobDecode (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "GobEncode",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "elem": {
+       "int": "uint8",
+       "kind": "int"
+      },
+      "kind": "slice"
+     }
+    },
+    {
+     "id": "$res1",
+     "type": {
+      "kind": "interface",
+      "name": "error"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.GobEncode (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Hour",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.Hour (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "ISOWeek",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "year",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "week",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.ISOWeek (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "In",
+   "params": [
+    {
+     "id": "loc",
+     "type": {
+      "elem": {
+       "kind": "named",
+       "name": "time.Location"
+      },
+      "kind": "pointer"
+     }
+    }
+   ],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "named",
+      "name": "time.Time"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.In (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "IsDST",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.IsDST (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "IsZero",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.IsZero (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Local",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "named",
+      "name": "time.Time"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.Local (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Location",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "elem": {
+       "kind": "named",
+       "name": "time.Location"
+      },
+      "kind": "pointer"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.Location (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "MarshalBinary",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "elem": {
+       "int": "uint8",
+       "kind": "int"
+      },
+      "kind": "slice"
+     }
+    },
+    {
+     "id": "$res1",
+     "type": {
+      "kind": "interface",
+      "name": "error"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.MarshalBinary (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "MarshalJSON",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "elem": {
+       "int": "uint8",
+       "kind": "int"
+      },
+      "kind": "slice"
+     }
+    },
+    {
+     "id": "$res1",
+     "type": {
+      "kind": "interface",
+      "name": "error"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.MarshalJSON (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "MarshalText",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "elem": {
+       "int": "uint8",
+       "kind": "int"
+      },
+      "kind": "slice"
+     }
+    },
+    {
+     "id": "$res1",
+     "type": {
+      "kind": "interface",
+      "name": "error"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.MarshalText (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Minute",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.Minute (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Month",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "named",
+      "name": "time.Month"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.Month (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Nanosecond",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.Nanosecond (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Round",
+   "params": [
+    {
+     "id": "d",
+     "type": {
+      "kind": "named",
+      "name": "time.Duration"
+     }
+    }
+   ],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "named",
+      "name": "time.Time"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.Round (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Second",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.Second (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "String",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "string"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.String (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Sub",
+   "params": [
+    {
+     "id": "u",
+     "type": {
+      "kind": "named",
+      "name": "time.Time"
+     }
+    }
+   ],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "named",
+      "name": "time.Duration"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.Sub (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Truncate",
+   "params": [
+    {
+     "id": "d",
+     "type": {
+      "kind": "named",
+      "name": "time.Duration"
+     }
+    }
+   ],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "named",
+      "name": "time.Time"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.Truncate (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "UTC",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "named",
+      "name": "time.Time"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.UTC (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Unix",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int64",
+      "kind": "int"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.Unix (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "UnixMicro",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int64",
+      "kind": "int"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.UnixMicro (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "UnixMilli",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int64",
+      "kind": "int"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.UnixMilli (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "UnixNano",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int64",
+      "kind": "int"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.UnixNano (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "UnmarshalBinary",
+   "params": [
+    {
+     "id": "data",
+     "type": {
+      "elem": {
+       "int": "uint8",
+       "kind": "int"
+      },
+      "kind": "slice"
+     }
+    }
+   ],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "elem": {
+      "kind": "named",
+      "name": "time.Time"
+     },
+     "kind": "pointer"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "interface",
+      "name": "error"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.UnmarshalBinary (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "UnmarshalJSON",
+   "params": [
+    {
+     "id": "data",
+     "type": {
+      "elem": {
+       "int": "uint8",
+       "kind": "int"
+      },
+      "kind": "slice"
+     }
+    }
+   ],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "elem": {
+      "kind": "named",
+      "name": "time.Time"
+     },
+     "kind": "pointer"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "interface",
+      "name": "error"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.UnmarshalJSON (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "UnmarshalText",
+   "params": [
+    {
+     "id": "data",
+     "type": {
+      "elem": {
+       "int": "uint8",
+       "kind": "int"
+      },
+      "kind": "slice"
+     }
+    }
+   ],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "elem": {
+      "kind": "named",
+      "name": "time.Time"
+     },
+     "kind": "pointer"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "interface",
+      "name": "error"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.UnmarshalText (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Weekday",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "named",
+      "name": "time.Weekday"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.Weekday (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Year",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.Year (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "YearDay",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.YearDay (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Zone",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "name",
+     "type": {
+      "kind": "string"
+     }
+    },
+    {
+     "id": "offset",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.Zone (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "ZoneBounds",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Time"
+    }
+   },
+   "recvType": "time.Time",
+   "results": [
+    {
+     "id": "start",
+     "type": {
+      "kind": "named",
+      "name": "time.Time"
+     }
+    },
+    {
+     "id": "end",
+     "type": {
+      "kind": "named",
+      "name": "time.Time"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Time.ZoneBounds (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Abs",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Duration"
+    }
+   },
+   "recvType": "time.Duration",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "named",
+      "name": "time.Duration"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Duration.Abs (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Hours",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Duration"
+    }
+   },
+   "recvType": "time.Duration",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "float": "float64",
+      "kind": "float"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Duration.Hours (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Microseconds",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Duration"
+    }
+   },
+   "recvType": "time.Duration",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int64",
+      "kind": "int"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Duration.Microseconds (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Milliseconds",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Duration"
+    }
+   },
+   "recvType": "time.Duration",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int64",
+      "kind": "int"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Duration.Milliseconds (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Minutes",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Duration"
+    }
+   },
+   "recvType": "time.Duration",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "float": "float64",
+      "kind": "float"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Duration.Minutes (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Nanoseconds",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Duration"
+    }
+   },
+   "recvType": "time.Duration",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int64",
+      "kind": "int"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Duration.Nanoseconds (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Round",
+   "params": [
+    {
+     "id": "m",
+     "type": {
+      "kind": "named",
+      "name": "time.Duration"
+     }
+    }
+   ],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Duration"
+    }
+   },
+   "recvType": "time.Duration",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "named",
+      "name": "time.Duration"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Duration.Round (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Seconds",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Duration"
+    }
+   },
+   "recvType": "time.Duration",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "float": "float64",
+      "kind": "float"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Duration.Seconds (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "String",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Duration"
+    }
+   },
+   "recvType": "time.Duration",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "string"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Duration.String (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Truncate",
+   "params": [
+    {
+     "id": "m",
+     "type": {
+      "kind": "named",
+      "name": "time.Duration"
+     }
+    }
+   ],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Duration"
+    }
+   },
+   "recvType": "time.Duration",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "named",
+      "name": "time.Duration"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Duration.Truncate (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "String",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "elem": {
+      "kind": "named",
+      "name": "time.Location"
+     },
+     "kind": "pointer"
+    }
+   },
+   "recvType": "time.Location",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "string"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Location.String (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "String",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Month"
+    }
+   },
+   "recvType": "time.Month",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "string"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Month.String (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "String",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "time.Weekday"
+    }
+   },
+   "recvType": "time.Weekday",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "string"
+     }
+    }
+   ],
+   "unsupported": "imported method time.Weekday.String (declaration-only stub: satisfaction answers, calls fail closed)",
+   "variadic": false
+  }
+ ],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": [
+  {
+   "def": {
+    "fields": [],
+    "kind": "struct"
+   },
+   "name": "$poisoned"
+  },
+  {
+   "def": {
+    "feature": "imported named type time.Time",
+    "kind": "unsupported"
+   },
+   "name": "time.Time"
+  },
+  {
+   "def": {
+    "feature": "imported named type time.Duration",
+    "kind": "unsupported"
+   },
+   "name": "time.Duration"
+  },
+  {
+   "def": {
+    "feature": "imported named type time.Location",
+    "kind": "unsupported"
+   },
+   "name": "time.Location"
+  },
+  {
+   "def": {
+    "feature": "imported named type time.Month",
+    "kind": "unsupported"
+   },
+   "name": "time.Month"
+  },
+  {
+   "def": {
+    "feature": "imported named type time.Weekday",
+    "kind": "unsupported"
+   },
+   "name": "time.Weekday"
+  },
+  {
+   "def": {
+    "kind": "interface",
+    "methods": [
+     {
+      "name": "Error",
+      "params": [],
+      "results": [
+       {
+        "kind": "string"
+       }
+      ],
+      "variadic": false
+     }
+    ]
+   },
+   "name": "error"
+  }
+ ]
+}

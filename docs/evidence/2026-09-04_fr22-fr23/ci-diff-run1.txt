@@ -1,0 +1,71 @@
+# ci-diff-run1.txt — scripts/capped scripts/ci --diff on the UNCOMMITTED slice tree at 415f959a (+ code, corpus, register doc; BEFORE the baseline re-pin), 2026-09-04; tail -n 70. Expected reds: baseline diff DRIFT (the re-pin consumes it) and the spec-anchor step (godoc:time.Date is not citable — fixed before run 2).
+[1m── re-run negative corpus (--diff)[0m
+results: artifacts/coverage/negative-latest.tsv
+meta: artifacts/coverage/negative-latest.meta.tsv
+
+[1m── derived oracle artifacts re-derived (Tests/FloatVectors.lean + tools/nativefrontend/inittask-std.tsv)[0m
+
+[1m── negative baseline diff[0m
+no regression: 394 case(s) run in negative-latest.tsv match baselines/negative-full.tsv
+
+[1m── differential baseline diff (scripts/coverage-baseline-diff)[0m
+DRIFT vs baselines/native-full.tsv (3365 case(s) run):
+generics/imported-generic-in-signature	baseline[FAIL/frontend-export] -> now[PASS/-]
+generics/imported-generic-sig-calls/call-func	NEW id (not in baseline) -> FAIL/frontend-export
+generics/imported-generic-sig-calls/call-method	NEW id (not in baseline) -> FAIL/frontend-export
+generics/imported-generic-sig-calls/call-param	NEW id (not in baseline) -> FAIL/frontend-export
+generics/imported-generic-sig-calls/call-promoted	NEW id (not in baseline) -> FAIL/frontend-export
+generics/imported-generic-sig-calls/satisfies	NEW id (not in baseline) -> PASS/-
+generics/imported-generic-sig-calls/satisfies-embedded	NEW id (not in baseline) -> PASS/-
+generics/imported-generic-sig-calls/sibling	NEW id (not in baseline) -> PASS/-
+init/library-var-type-unlowerable	NEW id (not in baseline) -> FAIL/frontend-export
+init/stdlib-initializer-call	baseline[FAIL/frontend-export] -> now[PASS/-]
+init/stdlib-initializer-dependent	NEW id (not in baseline) -> FAIL/frontend-export
+init/stdlib-initializer-poison/cascade	NEW id (not in baseline) -> FAIL/frontend-export
+init/stdlib-initializer-poison/order-kept	NEW id (not in baseline) -> PASS/-
+init/stdlib-initializer-poison/read	NEW id (not in baseline) -> FAIL/frontend-export
+init/stdlib-initializer-poison/sibling	NEW id (not in baseline) -> PASS/-
+init/stdlib-initializer-source-through	NEW id (not in baseline) -> PASS/-
+init/stdlib-initializer-unregistered	NEW id (not in baseline) -> FAIL/frontend-export
+
+[1m── baseline re-pin guard (HEAD-vs-HEAD~1; flips must be on a BUGS.md Cases: line)[0m
+
+[1m── cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)[0m
+  [01] C3  HIGH    15 corpus manifest id(s) absent from the tracked baseline (unrecorded cases)
+  [02] C5  HIGH    1 frontier row(s) have NO red left: every case they cite now PASSes, so the feature appears to have LANDED without its row retiring. §4 is 'the authority for every red case in the baseline' and these counts feed §8's 84.
+  [03] C13  MEDIUM  78 doc site(s) across 9 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
+  [04] C5  MEDIUM  22 frontier-table case citation(s) do not resolve against the baseline
+  [05] C5  MEDIUM  2 frontier row(s) claim a red count that is not mechanically re-derivable from their citations. Some of this is citation SHORTHAND (a prose family like 'F3 family 7', an ellipsis inside a glob, or a '+ adjacency' the count deliberately excludes) rather than drift — each needs a read, which is exactly why the count should not be re-derived from prose.
+  [06] C6  MEDIUM  3 dangling `BUG` cross-reference(s) in docs/ (the id has no definition)
+  [07] C9  MEDIUM  the wire schema moved after the certification date 2026-09-01 (11 commit(s) to wire.go/NativeToIR.lean) — the certified set's wire sha is only current if `scripts/ci --slow` has re-enumerated since
+
+[1m══ scripts/ci summary ══[0m
+  note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  FAIL spec-anchor citations (see above)
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   core build (warning-free)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   eval tests (148 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  note negative baseline diff matched (394 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  FAIL baseline diff (DRIFT — see above)
+  ok   re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)
+  note reconciler: 7 finding(s), 2 HIGH — report-only (details: tools/reconcile-records)
+
+[1mRESULT: FAIL[0m
+EXIT=1

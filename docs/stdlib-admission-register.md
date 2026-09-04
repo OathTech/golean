@@ -36,6 +36,7 @@ column of the block made the check fail naming the line
 | primitive | a machine op of LIBRARY origin (`print`/`println` when G2's slice lands; `sync` and `sortSlice` are language/memory-model and are listed elsewhere, not counted) | **2** | [USER] re-ratification |
 | shim | a RETAINED user-package injection (`stdlibshim.go` and the fmt desugar; since slice 2 also the cmp.Compare kind-dispatch desugar, `cmpshim.go`, retained by the slice's STOP rule) — frozen under D-002, retired row by row per memo §3 | frozen | n/a — shrinks only |
 | shadow-type | an E5-T shadow model (`importedmodel.go`); since slice 2 only the `sync/atomic` wrappers (the atomics arc's intrinsics) — `strings.Builder`/`bytes.Buffer` RETIRED onto source-through + overlay | frozen | n/a |
+| init-callee | an UNMODELED stdlib function a package-level initializer may CALL and still have the initializer SKIPPED with its declared vars poisoned per declaration (H-11's `pureUnmodeledCallees`, `emit.go`; the `$poisoned` cell + `globalAddr` refusal on every reference). A row is an ADMISSION with a written argument that the callee is result-only (no output stream, no filesystem, no process state, no argument referent mutated) and panic-free over the argument shapes `initializerEffectIsolated` admits — never a "not modeled yet" list (H-11 audit F1/F1b, 2026-08-20) | uncapped, each row argued | a row here with its argument; [AGENT] rows are flagged in the slice log for the [USER] |
 
 Every source-through and substitution row owes **Fields-standard
 validation** in the differential: behaviour-class rows in the corpus
@@ -229,6 +230,27 @@ The primitive table is still empty (print/println is slice 3).
   overlay 5/12, overlay-import 5/8, intercept 2, primitive 0/2, shim 7,
   shadow-type 5.
 
+- **2026-09-04 `fr22-fr23`** ([AGENT]; ledger FR-22/FR-23, [USER]
+  direction 3 relayed): the `init-callee` class is added to this
+  register — the H-11 allowlist `pureUnmodeledCallees` was the ONE stdlib
+  admission table the register did not render (a table widened in code
+  without this file would have passed the gate). Its two founding rows
+  (`os.Getenv`, `os.LookupEnv`) are listed with their argument; ONE row
+  added, `time.Date` — result-only (constructs a `Time`; its doc comment at the pin,
+  deps/go/src/time/time.go @ go1.26.5, normalizes out-of-range values —
+  `time` is not source-through, so no `godoc:` anchor is available), panic-free over the admitted
+  shapes (its only panic is a nil `Location`; the predicate admits the
+  Location position only as an exported non-source package variable —
+  `time.UTC`/`time.Local`, non-nil at the pin — and refuses untyped `nil`
+  and every source-declared pointer). This is the cedar-go census's
+  first kill (`types/datetime.go:16,19`). No shim, overlay, primitive or
+  source-through change; the `time` package itself stays a design-memo
+  question (specified primitive vs source-through). The FR-22 re-run also
+  found `encoding/binary`'s "unreached sync.Map" reachable through
+  `binary.Write` (ledger FR-24) — the row text above is unchanged (it is
+  the register's INIT-PURE claim, which still holds; the kill is a TYPE
+  refusal at `collectGlobals`, rowed with its plan).
+
 ## The machine block
 
 Rendered by `GO111MODULE=off go run ./tools/nativefrontend --stdlib-register`
@@ -247,6 +269,7 @@ count	intercept	2 (library members whose direct call the frontend lowers to a ma
 count	primitive	0 / cap 2
 count	shim	7 (frozen, D-002; retired by rows of memo §3)
 count	shadow-type	5
+count	init-callee	3 (H-11 pureUnmodeledCallees: unmodeled stdlib functions a package-level initializer may call and still be SKIPPED with its vars poisoned; each row states result-only + panic-free over the admitted argument shapes; a row is an admission, not a model)
 source-through	bytes	slice-2 target (Equal retired from shim; Buffer retired from the E5-T shadow model — pure Go, its growth idiom `append([]byte(nil), make([]byte, c)...)` is the overlay's model); ReadFrom/WriteTo reach `io` (export data only) and quarantine by name; init-pure: three errors.New sentinels + the asciiSpace table
 source-through	cmp	slice-2 target (Compare retired from the kind-dispatch desugar — the real generic body, NaN arm included, so floats lower too); pure, no imports; init-pure: no package-level state
 source-through	encoding/binary	slice-2 target (LittleEndian.Uint64/PutUint64 retired from the package-variable method desugar — the exported vars and their unexported receiver types lower as ordinary library declarations); Read/Write/Size are reflect and refuse by name (export data); init-pure: two errors.New sentinels, zero-valued ByteOrder vars, an unreached sync.Map
@@ -289,5 +312,8 @@ shadow-type	sync/atomic.Int64	E5-T shadow model whose methods lower to machine a
 shadow-type	sync/atomic.Uint32	E5-T shadow model whose methods lower to machine atomic-op intrinsics (atomics arc wave 1, atomics.go; sync/atomic is memory-model-owned, memo §2.3.4 — listed, not a source-through concern)
 shadow-type	sync/atomic.Uint64	E5-T shadow model whose methods lower to machine atomic-op intrinsics (atomics arc wave 1, atomics.go; sync/atomic is memory-model-owned, memo §2.3.4 — listed, not a source-through concern)
 shadow-type	sync/atomic.Uintptr	E5-T shadow model whose methods lower to machine atomic-op intrinsics (atomics arc wave 1, atomics.go; sync/atomic is memory-model-owned, memo §2.3.4 — listed, not a source-through concern)
+init-callee	os.Getenv	reads the ambient environment — permanently outside the machine's world (no shim can model it); result-only, never panics (founding row, H-11 2026-08-20)
+init-callee	os.LookupEnv	reads the ambient environment — permanently outside the machine's world; result-only, never panics (founding row, H-11 2026-08-20)
+init-callee	time.Date	constructs a Time value from its arguments (the time.Date doc comment at the pin, deps/go/src/time/time.go @ go1.26.5: out-of-range values are normalized, never rejected); the only panic is a nil Location, which the admitted argument shapes exclude — the Location position can only be an exported non-source package variable (time.UTC, time.Local; both non-nil at the pin), never a source-declared or nil-able expression; no I/O, no process state, no argument referent mutated (FR-22 row, 2026-09-04 [AGENT]; cedar-go census 2026-09-03 §3.2: `types/datetime.go:16,19`)
 ```
 <!-- register:end -->

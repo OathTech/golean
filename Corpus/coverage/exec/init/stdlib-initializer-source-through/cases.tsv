@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+# FR-22 plan item (ii): a package-level initializer whose callee is a
+# SOURCE-THROUGH stdlib function (strings.Repeat, errors.New) routes
+# through the library loader — the var is real, not poisoned, and readable.
+-	readBanner	-	ok	-	init,globals,stdlib,strings

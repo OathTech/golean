@@ -62,6 +62,7 @@ package main
 import (
 	"go/ast"
 	"go/types"
+	"sort"
 )
 
 // reachSet is a library unit's reached-declaration set. Every consumer
@@ -470,11 +471,12 @@ var frontendInterceptedLibraryMembers = map[string]map[string]string{
 // predicate both the reach walk (do not mark the callee) and the emitter
 // (which lowering, which refusal) consult, so they cannot disagree. The
 // per-member conditions mirror the emitter's dispatch exactly:
-//   slices.Sort  — every direct call (the op in ExprStmt position; defer/go
-//                  refuse by name);
-//   cmp.Compare  — iff the (single) type argument's underlying type is an
-//                  integer or string basic kind (cmpshim.go's dispatch);
-//                  floats and non-basic types are the real generic.
+//
+//	slices.Sort  — every direct call (the op in ExprStmt position; defer/go
+//	               refuse by name);
+//	cmp.Compare  — iff the (single) type argument's underlying type is an
+//	               integer or string basic kind (cmpshim.go's dispatch);
+//	               floats and non-basic types are the real generic.
 func interceptedLibraryCall(info *types.Info, c *ast.CallExpr) (path, member string, intercepted bool) {
 	sel, isSel := c.Fun.(*ast.SelectorExpr)
 	if !isSel {
@@ -577,12 +579,26 @@ func (e *emitter) checkUnsafeLayoutOpsLibrary(u *sourcePkg) error {
 				" — its folded value is gc's IMPLEMENTATION-SPECIFIC memory layout (spec#Size_and_alignment_guarantees forces only the fixed-width types); out of language, ledger row Package_unsafe (fail closed)"
 		}
 	}
+	// Visit the reached specs in SOURCE-POSITION order (BUG-091): these
+	// loops return on the FIRST hit, so a map-order walk would make the
+	// refusal text — and hence which declaration the export names —
+	// vary between runs when two reached specs both mention a site.
+	typeSpecs := make([]*ast.TypeSpec, 0, len(u.reached.types))
 	for ts := range u.reached.types {
+		typeSpecs = append(typeSpecs, ts)
+	}
+	sort.Slice(typeSpecs, func(i, j int) bool { return typeSpecs[i].Pos() < typeSpecs[j].Pos() })
+	for _, ts := range typeSpecs {
 		if site, hit := find(ts); hit {
 			return unsup("stdlib source package %q: reached type %s mentions %s — a layout constant in a declaration would launder into every use (fail closed, whole export)", u.path, ts.Name.Name, site)
 		}
 	}
+	valueSpecs := make([]*ast.ValueSpec, 0, len(u.reached.values))
 	for vs := range u.reached.values {
+		valueSpecs = append(valueSpecs, vs)
+	}
+	sort.Slice(valueSpecs, func(i, j int) bool { return valueSpecs[i].Pos() < valueSpecs[j].Pos() })
+	for _, vs := range valueSpecs {
 		if site, hit := find(vs); hit {
 			return unsup("stdlib source package %q: reached var/const spec %s mentions %s — a folded layout constant would launder into every use (fail closed, whole export)", u.path, vs.Names[0].Name, site)
 		}

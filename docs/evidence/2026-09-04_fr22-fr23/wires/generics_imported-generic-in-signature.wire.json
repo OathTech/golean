@@ -1,0 +1,263 @@
+{
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "elem": {
+       "int": "int",
+       "kind": "int"
+      },
+      "elems": [
+       {
+        "index": 0,
+        "value": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "1"
+        }
+       },
+       {
+        "index": 1,
+        "value": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "2"
+        }
+       },
+       {
+        "index": 2,
+        "value": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "3"
+        }
+       }
+      ],
+      "length": 3,
+      "stmt": "slice-lit",
+      "target": {
+       "id": "$c0",
+       "target": "declare",
+       "type": {
+        "elem": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "slice"
+       }
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "b",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.Bag"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "expr": "ident",
+          "name": "$c0",
+          "type": {
+           "elem": {
+            "int": "int",
+            "kind": "int"
+           },
+           "kind": "slice"
+          }
+         }
+        ],
+        "expr": "struct-lit",
+        "target": {
+         "kind": "named",
+         "name": "main.Bag"
+        },
+        "type": {
+         "kind": "named",
+         "name": "main.Bag"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "builtin-len",
+        "operand": {
+         "expr": "field-get",
+         "field": "items",
+         "recv": {
+          "expr": "ident",
+          "name": "b",
+          "type": {
+           "kind": "named",
+           "name": "main.Bag"
+          }
+         },
+         "type": {
+          "elem": {
+           "int": "int",
+           "kind": "int"
+          },
+          "kind": "slice"
+         },
+         "typeId": "main.Bag"
+        },
+        "operandType": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "slice"
+        },
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "unrelatedToTheIterators",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  }
+ ],
+ "methodSets": [
+  {
+   "coverage": "exported",
+   "type": "iter.Seq2[string,int]"
+  },
+  {
+   "coverage": "exported",
+   "type": "iter.Seq[int]"
+  },
+  {
+   "coverage": "full",
+   "type": "main.Bag"
+  }
+ ],
+ "methods": [
+  {
+   "name": "All",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "main.Bag"
+    }
+   },
+   "recvType": "main.Bag",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "named",
+      "name": "iter.Seq[int]"
+     }
+    }
+   ],
+   "unsupported": "method main.Bag.All (instantiation of imported generic type iter.Seq[int] (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub); signature instantiates imported generic iter.Seq[int] — not modeled (FR-23), carried as an opaque marker; satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "name": "Indexed",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "main.Bag"
+    }
+   },
+   "recvType": "main.Bag",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "named",
+      "name": "iter.Seq2[string,int]"
+     }
+    }
+   ],
+   "unsupported": "method main.Bag.Indexed (instantiation of imported generic type iter.Seq2[string,int] (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub); signature instantiates imported generic iter.Seq2[string,int] — not modeled (FR-23), carried as an opaque marker; satisfaction answers, calls fail closed)",
+   "variadic": false
+  }
+ ],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": [
+  {
+   "def": {
+    "fields": [
+     {
+      "embedded": false,
+      "name": "items",
+      "type": {
+       "elem": {
+        "int": "int",
+        "kind": "int"
+       },
+       "kind": "slice"
+      }
+     }
+    ],
+    "kind": "struct"
+   },
+   "name": "main.Bag"
+  },
+  {
+   "def": {
+    "feature": "instantiation of imported generic type iter.Seq2[string,int] (FR-23: carried as an opaque marker in declaration signatures only — no value of it ever lowers; satisfaction answers, every structural use refuses)",
+    "kind": "unsupported"
+   },
+   "name": "iter.Seq2[string,int]"
+  },
+  {
+   "def": {
+    "feature": "instantiation of imported generic type iter.Seq[int] (FR-23: carried as an opaque marker in declaration signatures only — no value of it ever lowers; satisfaction answers, every structural use refuses)",
+    "kind": "unsupported"
+   },
+   "name": "iter.Seq[int]"
+  }
+ ]
+}

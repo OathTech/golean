@@ -155,6 +155,22 @@ type emitter struct {
 	// answer instead of refusing (BUG-009's polarity).
 	importedNamed map[string]*types.Named
 
+	// SIGNATURE-OPAQUE mode (FR-23, 2026-09-04): while set, an
+	// instantiation of an IMPORTED generic type (`iter.Seq[int]`,
+	// `iter.Seq2[K,V]`, any stdlib `pkg.G[...]`) emits as an opaque
+	// `named` reference under its mangled TypeId instead of refusing,
+	// and the key is recorded in opaqueInsts for an existence-only
+	// `unsupported` marker TypeDef (the D5 shape). Set ONLY around
+	// signature emission for declarations whose bodies never lower —
+	// quarantined method stubs, interface requirement lists, promoted-
+	// method stubs — so a VALUE of such a type never exists in the
+	// machine: satisfaction answers (identical keys ⇔ identical Go
+	// types, the mangler's injectivity), a CALL refuses by name, and a
+	// body that would construct or consume the value refuses at its
+	// own emitType (this flag is off) and quarantines per declaration.
+	sigOpaque   bool
+	opaqueInsts map[string]*types.Named
+
 	// The modeled sync primitive types whose identity reached the wire
 	// (arc-end fix round 2026-08-10): emitProgram emits, per type, its
 	// FULL exported (pointer) method set as declaration-only stubs —
@@ -651,6 +667,25 @@ func floatType(kind string) map[string]any {
 func (e *emitter) emitInstantiatedNamed(ty *types.Named) (any, error) {
 	if mentionsTypeParam(ty, nil) {
 		return nil, unsup("instantiated type %s still mentions a type parameter", ty)
+	}
+	if e.sigOpaque {
+		if obj := ty.Obj(); obj.Pkg() == nil || !e.isSourcePackage(obj.Pkg()) {
+			// FR-23: an imported generic instantiation in a SIGNATURE
+			// that never gets a body. The mangled key is the identity
+			// (collision-registered like any instantiation); the marker
+			// TypeDef is emitted from opaqueInsts in emitProgram. No
+			// stencil is enqueued — there is no source to stencil from,
+			// which is exactly why bodies refuse (enqueueTypeInst).
+			key, err := e.instTypeId(ty)
+			if err != nil {
+				return nil, err
+			}
+			if e.opaqueInsts == nil {
+				e.opaqueInsts = map[string]*types.Named{}
+			}
+			e.opaqueInsts[key] = ty
+			return map[string]any{"kind": "named", "name": key}, nil
+		}
 	}
 	if iface, isIface := ty.Underlying().(*types.Interface); isIface {
 		if !iface.IsMethodSet() {

@@ -1,3 +1,3 @@
 # id	subject	args	expected_status	expected_reason	features
 -	unrelatedToTheInitializer	-	ok	-	init,globals,stdlib
-# Born-FAIL frontend-export: FR-22 (ledger §4; cedar-go census 2026-09-03). Legal Go: the refusal is the H-11 whole-export kill "package-selector call time.Date (package "time" surface not modeled)" raised from a package-level initializer. Flips at queue 22. Rowed 2026-09-03, [USER] direction 3 (coordinator relay).
+# FLIPPED FAIL->PASS 2026-09-04 (lane fr22-fr23, ledger FR-22 PARTIALLY CLOSED): time.Date is an init-callee register row, so the initializer is SKIPPED and maxDatetime is POISONED per declaration ($poisoned cell; any reader would be an H-3 stub naming the var and the callee — the read rows live in init/stdlib-initializer-poison). Born FAIL 2026-09-03 as the whole-export kill witness (cedar-go census §3.2; [USER] direction 3, coordinator relay). A FAIL here again means the kill is back.

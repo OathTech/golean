@@ -1,0 +1,12 @@
+# id	subject	args	expected_status	expected_reason	features
+# FR-22 (2026-09-04): a package-level initializer calling an init-callee
+# register row (time.Date) is SKIPPED and its var POISONED per
+# declaration — the cell seeds as the `$poisoned` placeholder, $pkginit
+# keeps the healthy initializers in declaration order, and every
+# reference refuses by name (the H-3 stub names the var and the callee).
+# The two read rows are red at frontend-export BY DESIGN: a PASS there
+# without a design change means the poison broke (a silent zero).
+sibling	sibling	-	ok	-	init,globals,stdlib
+order-kept	orderKept	-	ok	-	init,globals,stdlib,strings
+read	readPoisoned	-	ok	-	init,globals,stdlib
+cascade	readCascade	-	ok	-	init,globals,stdlib

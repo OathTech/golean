@@ -107,6 +107,19 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	if err := e.quarantineUnlowerableGlobals(); err != nil {
 		return nil, err
 	}
+	// Poisoned cells seed as the reserved `$poisoned` placeholder type
+	// (FR-22, 2026-09-04): a quarantined var's REAL type can be one the
+	// machine has no default value for (`time.Time` is a D5 marker —
+	// `defaultValue` refuses it, and seedGlobals runs before every
+	// subject, so the poison would have refused the whole program at
+	// seeding instead of the one reader). The cell is unreachable by
+	// construction — every reference already refused at globalAddr — so
+	// its content and type are unobservable; the placeholder makes the
+	// poison VISIBLE on the wire (today it is not) while keeping the gid
+	// dense and the wire schema unchanged (a `named` type over a `struct`
+	// TypeDef, both existing shapes). Uniform over every poisoned var,
+	// so no reader has to know which real types seed and which do not.
+	typeDefs = append(typeDefs, e.poisonGlobalCells()...)
 
 	// E7 hidden-dependency init-order detector (hiddendep.go): a kept
 	// initializer reaching an interface-dispatched method that reads an
@@ -554,12 +567,18 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 			for i := 0; i < iface.NumMethods(); i++ {
 				m := iface.Method(i)
 				sig := m.Type().(*types.Signature)
-				params, err := e.emitTupleTypes(sig.Params())
-				if err != nil {
-					return nil, err
-				}
-				results, err := e.emitTupleTypes(sig.Results())
-				if err != nil {
+				// SIGNATURE-OPAQUE (FR-23): the requirement list is a
+				// signature; an imported generic instantiation in it is
+				// the opaque marker, as in emitGenDeclTypes above.
+				var params, results []any
+				if _, err := e.withOpaqueSigs(func() error {
+					var err error
+					if params, err = e.emitTupleTypes(sig.Params()); err != nil {
+						return err
+					}
+					results, err = e.emitTupleTypes(sig.Results())
+					return err
+				}); err != nil {
 					return nil, err
 				}
 				// `variadic` is part of the SIGNATURE Go compares for
@@ -590,6 +609,15 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	// guarding collisions.
 	typeDefs = append(typeDefs, e.localTypeDefs...)
 	methods = append(methods, e.localIfaceMethods...)
+
+	// FR-23 opaque markers: one existence-only TypeDef per imported
+	// generic instantiation that reached a declaration signature in
+	// SIGNATURE-OPAQUE mode (stubs, interface requirement lists,
+	// promoted-method stubs). AFTER the interface fixpoint above, which
+	// is the last place a signature is emitted; the duplicate-TypeId
+	// refusal below still guards the table (a mangled key carries `[`,
+	// so it cannot collide with a declared or D5-marker name).
+	typeDefs = append(typeDefs, e.opaqueMarkerTypeDefs()...)
 
 	// The identity keys are built; refuse the export if any dotted
 	// import path reached a qualifier (the key grammar guard —
@@ -878,10 +906,13 @@ func (e *emitter) registerGenericDecls() {
 // question asked is "does it lower". One that does not, with an
 // UNSUPPORTED refusal, and whose expression is effect-isolated
 // (initializerEffectIsolated), quarantines its declared vars instead
-// of refusing the export: the vars' cells stay on the wire (typed,
-// zero-seeded, gid-dense — never dropped), $pkginit skips the
-// initializer, and every reference refuses through globalAddr's
-// poison. Anything else keeps today's whole-export refusal.
+// of refusing the export: the vars' cells stay on the wire (gid-dense —
+// never dropped; since 2026-09-04 seeded as the reserved `$poisoned`
+// placeholder type, poisonGlobalCells, because the real type may have
+// no machine default), $pkginit skips the initializer, and every
+// reference refuses through globalAddr's poison. Anything else keeps
+// today's whole-export refusal — since 2026-09-04 naming the
+// declaration, the cause and the init-callee register (FR-22).
 //
 // The poison is armed DURING this pass, so a later initializer that
 // merely reads a quarantined var fails its own dry-run through the
@@ -1016,9 +1047,19 @@ func (e *emitter) quarantineUnlowerableGlobals() error {
 			}
 			if !e.initializerEffectIsolated(ini.Rhs) && !u.library {
 				// Not isolatable: the failing initializer has lowerable
-				// parts with potential modeled effects. Whole-export
-				// refusal, exactly as before H-11.
-				return err
+				// parts with potential modeled effects, or a call whose
+				// callee is not an init-callee register row. Whole-export
+				// refusal, exactly as before H-11 — the sound direction
+				// (audit F1/F1b) — but NAMING the declaration, the
+				// original cause, and the register that decides (FR-22,
+				// 2026-09-04: the kill is per-declaration only where the
+				// skip can be argued unobservable).
+				names := []string{}
+				for _, v := range ini.Lhs {
+					names = append(names, e.globalWireName(v))
+				}
+				return unsup("package-level initializer of %s does not lower (%s) and is not H-11 effect-isolated — skipping it cannot be argued unobservable, so the WHOLE export refuses (FR-22: per-declaration poisoning covers only initializers whose every call is a direct call to an init-callee register row [pureUnmodeledCallees, rendered in docs/stdlib-admission-register.md] with effect- and panic-free argument shapes)",
+					strings.Join(names, ", "), uerr.what)
 			}
 			// A LIBRARY unit's initializer that does not lower (audit fix
 			// round B2: `errors.errorType = reflectlite.TypeOf(...)`,
@@ -1042,6 +1083,45 @@ func (e *emitter) quarantineUnlowerableGlobals() error {
 	return nil
 }
 
+// poisonedCellTypeId is the reserved TypeId of the placeholder every
+// H-11-poisoned package-level variable's cell is seeded with (see the
+// call site in emitProgram). `$` keeps it outside Go's identifier space,
+// like $pkginit / $recv / $stub; the TypeDef is the empty struct — the
+// most contentless seedable value.
+const poisonedCellTypeId = "$poisoned"
+
+// poisonGlobalCells rewrites the globals table entry of every quarantined
+// var to the `$poisoned` placeholder type and returns the placeholder's
+// TypeDef (once; empty when nothing is poisoned). The real type is not
+// recoverable from the wire afterwards — deliberately: no emitted body
+// can reach the cell, and the placeholder is the honest description of
+// what the machine holds there.
+func (e *emitter) poisonGlobalCells() []any {
+	if len(e.quarantinedGlobals) == 0 {
+		return nil
+	}
+	poisoned := 0
+	for v := range e.quarantinedGlobals {
+		gid, hasCell := e.globalVars[v]
+		if !hasCell {
+			continue // a blank or unreached var: no cell to seed
+		}
+		def, isMap := e.globalDefs[gid].(map[string]any)
+		if !isMap {
+			continue
+		}
+		def["type"] = map[string]any{"kind": "named", "name": poisonedCellTypeId}
+		poisoned++
+	}
+	if poisoned == 0 {
+		return nil
+	}
+	return []any{map[string]any{
+		"name": poisonedCellTypeId,
+		"def":  map[string]any{"kind": "struct", "fields": []any{}},
+	}}
+}
+
 // pureUnmodeledCallees is the POSITIVE ALLOWLIST of unmodeled standard
 // library functions H-11's eligibility predicate may treat as pure:
 // keyed by "<import path>.<func name>", so a local import alias cannot
@@ -1059,9 +1139,21 @@ func (e *emitter) quarantineUnlowerableGlobals() error {
 // list — that was exactly the refuted reasoning (audit F1,
 // 2026-08-20). Anything absent refuses the whole export, which is the
 // sound direction.
-var pureUnmodeledCallees = map[string]bool{
-	"os.Getenv":    true,
-	"os.LookupEnv": true,
+//
+// Since 2026-09-04 (FR-22) the table is the `init-callee` class of the
+// stdlib ADMISSION REGISTER (stdlibregister.go → docs/stdlib-admission-
+// register.md, byte-checked by scripts/check-stdlib-register): every row
+// carries its written result-only + panic-free argument, and a row added
+// here without the register fails the gate. The value is that argument.
+// A row's argument must cover the ARGUMENT SHAPES the predicate admits
+// (initializerEffectIsolated: effect-free, panic-free expressions of
+// value-isolated type, or an exported variable/constant of a non-source
+// package — a value the machine never models and no source code can
+// alias, since its every value-position use is itself refused).
+var pureUnmodeledCallees = map[string]string{
+	"os.Getenv":    "reads the ambient environment — permanently outside the machine's world (no shim can model it); result-only, never panics (founding row, H-11 2026-08-20)",
+	"os.LookupEnv": "reads the ambient environment — permanently outside the machine's world; result-only, never panics (founding row, H-11 2026-08-20)",
+	"time.Date":    "constructs a Time value from its arguments (the time.Date doc comment at the pin, deps/go/src/time/time.go @ go1.26.5: out-of-range values are normalized, never rejected); the only panic is a nil Location, which the admitted argument shapes exclude — the Location position can only be an exported non-source package variable (time.UTC, time.Local; both non-nil at the pin), never a source-declared or nil-able expression; no I/O, no process state, no argument referent mutated (FR-22 row, 2026-09-04 [AGENT]; cedar-go census 2026-09-03 §3.2: `types/datetime.go:16,19`)",
 }
 
 // initializerEffectIsolated reports whether SKIPPING the initializer
@@ -1104,7 +1196,14 @@ func (e *emitter) initializerEffectIsolated(rhs ast.Expr) bool {
 		}
 		switch u := t.Underlying().(type) {
 		case *types.Basic:
-			return u.Kind() != types.Invalid && u.Kind() != types.UnsafePointer
+			// Untyped nil is a *types.Basic too, but it is never a
+			// value-isolated VALUE — it is the nil of some pointer /
+			// slice / map / chan / func / interface type, and a callee
+			// may panic on it (`time.Date(…, nil)` does). Refuse it
+			// here rather than let a panicking initializer be skipped
+			// (FR-22 audit of the register's time.Date row, 2026-09-04).
+			return u.Kind() != types.Invalid && u.Kind() != types.UnsafePointer &&
+				u.Kind() != types.UntypedNil
 		case *types.Array:
 			return isolatedType(u.Elem(), depth+1)
 		case *types.Struct:
@@ -1266,11 +1365,24 @@ func (e *emitter) initializerEffectIsolated(rhs ast.Expr) bool {
 			if !isFn {
 				return false
 			}
-			if !pureUnmodeledCallees[pkgName.Imported().Path()+"."+fn.Name()] {
+			if _, registered := pureUnmodeledCallees[pkgName.Imported().Path()+"."+fn.Name()]; !registered {
 				return false
 			}
 			for _, a := range nn.Args {
-				if !admissible(a, depth+1) || !isolatedType(e.goTypeOf(a), 0) {
+				if !admissible(a, depth+1) {
+					return false
+				}
+				// Value-isolated type, OR an exported variable/constant
+				// of a NON-source package (FR-22, 2026-09-04: `time.UTC`
+				// in the Location position of time.Date). The machine
+				// models no foreign package's cells and refuses every
+				// value-position use of one in source code (emitSelector:
+				// "stdlib-qualified selector … in value position"), so
+				// nothing the callee receives through it can alias or
+				// invoke modeled state — the same isolation property
+				// isolatedType certifies for basics, by unreachability
+				// rather than by type shape.
+				if !isolatedType(e.goTypeOf(a), 0) && !e.foreignPackageValue(a) {
 					return false
 				}
 			}
@@ -1282,6 +1394,40 @@ func (e *emitter) initializerEffectIsolated(rhs ast.Expr) bool {
 		}
 	}
 	return admissible(rhs, 0)
+}
+
+// foreignPackageValue reports whether x is a qualified identifier naming
+// an exported VARIABLE or CONSTANT of a non-source, non-library package
+// (`time.UTC`): a value the machine never holds a cell for. Parenthesized
+// forms are looked through; anything else — a source-package object, a
+// function value, a type — answers false (the sound direction).
+func (e *emitter) foreignPackageValue(x ast.Expr) bool {
+	for {
+		p, isParen := x.(*ast.ParenExpr)
+		if !isParen {
+			break
+		}
+		x = p.X
+	}
+	sel, isSel := x.(*ast.SelectorExpr)
+	if !isSel {
+		return false
+	}
+	base, isIdent := sel.X.(*ast.Ident)
+	if !isIdent {
+		return false
+	}
+	pkgName, isPkg := e.info.Uses[base].(*types.PkgName)
+	if !isPkg || e.isSourcePackage(pkgName.Imported()) {
+		return false
+	}
+	switch obj := e.info.Uses[sel.Sel].(type) {
+	case *types.Var:
+		return obj.Exported() && obj.Pkg() == pkgName.Imported()
+	case *types.Const:
+		return obj.Exported() && obj.Pkg() == pkgName.Imported()
+	}
+	return false
 }
 
 // isInstantiation reports whether the head of an IndexExpr /
@@ -1430,7 +1576,7 @@ func checkInitQuarantine(funcs, methods []any) error {
 // quarantine when the referencing initializer is itself eligible.
 func (e *emitter) globalAddr(v *types.Var) (any, bool, error) {
 	if reason, bad := e.quarantinedGlobals[v]; bad {
-		return nil, false, unsup("references quarantined package-level variable %s (its initializer does not lower: %s) — the cell is zero-seeded but poisoned, every reference fails closed (H-11)",
+		return nil, false, unsup("package-level var %s: its initializer does not lower (%s) — H-11 poison: the cell is zero-seeded and every reference (read, write, address-of) refuses by name; reference refused",
 			e.globalWireName(v), reason)
 	}
 	gid, ok := e.globalVars[v]
@@ -1608,12 +1754,21 @@ func (e *emitter) emitGenDeclTypes(d *ast.GenDecl) ([]any, []any, error) {
 			for i := 0; i < iface.NumMethods(); i++ {
 				m := iface.Method(i)
 				sig := m.Type().(*types.Signature)
-				params, err := e.emitParams(sig.Params())
-				if err != nil {
-					return nil, nil, err
-				}
-				results, err := e.emitResults(sig.Results())
-				if err != nil {
+				// SIGNATURE-OPAQUE (FR-23): a requirement like
+				// `All() iter.Seq2[K,V]` (cedar-go's PolicyIterator)
+				// names an imported generic instantiation; it is a
+				// signature, never a body, so the opaque marker keeps
+				// satisfaction exact and the export alive. The same
+				// key is minted for the implementing method's stub.
+				var params, results []any
+				if _, err := e.withOpaqueSigs(func() error {
+					var err error
+					if params, err = e.emitParams(sig.Params()); err != nil {
+						return err
+					}
+					results, err = e.emitResults(sig.Results())
+					return err
+				}); err != nil {
 					return nil, nil, err
 				}
 				ifaceMethods = append(ifaceMethods, map[string]any{
@@ -1698,27 +1853,132 @@ func (e *emitter) quarantinedMethodStub(d *ast.FuncDecl, u unsupported) (map[str
 			"no signature-carrying stub exists, so the export refuses rather than record an incomplete method set",
 			tName, d.Name.Name, u.what, cause)
 	}
-	recvTy, err := e.emitType(recv.Type())
+	// The signature is emitted in SIGNATURE-OPAQUE mode (FR-23,
+	// 2026-09-04): an imported generic instantiation in it (`iter.Seq[T]`)
+	// becomes an opaque marker under its mangled TypeId instead of a
+	// refusal — the identity satisfaction compares is still exact, and
+	// no body can ever produce a value of the type (wire.go sigOpaque).
+	// Anything ELSE the signature cannot express still refuses whole.
+	var recvTy any
+	var params, results []any
+	opaque, err := e.withOpaqueSigs(func() error {
+		var err error
+		if recvTy, err = e.emitType(recv.Type()); err != nil {
+			return err
+		}
+		if params, err = e.emitParams(sig.Params()); err != nil {
+			return err
+		}
+		results, err = e.emitResults(sig.Results())
+		return err
+	})
 	if err != nil {
 		return nil, sigRefusal(err)
 	}
-	params, err := e.emitParams(sig.Params())
-	if err != nil {
-		return nil, sigRefusal(err)
-	}
-	results, err := e.emitResults(sig.Results())
-	if err != nil {
-		return nil, sigRefusal(err)
+	reason := "method " + tName + "." + d.Name.Name + " (" + u.what
+	if len(opaque) > 0 {
+		reason += "; signature instantiates imported generic " + strings.Join(opaque, ", ") +
+			" — not modeled (FR-23), carried as an opaque marker"
 	}
 	return map[string]any{
-		"name":     d.Name.Name,
-		"recvType": tName,
-		"recv":     map[string]any{"id": "$recv", "type": recvTy},
-		"params":   params,
-		"results":  results,
-		"variadic": sig.Variadic(),
-		"unsupported": "method " + tName + "." + d.Name.Name + " (" + u.what +
-			"; satisfaction answers, calls fail closed)",
+		"name":        d.Name.Name,
+		"recvType":    tName,
+		"recv":        map[string]any{"id": "$recv", "type": recvTy},
+		"params":      params,
+		"results":     results,
+		"variadic":    sig.Variadic(),
+		"unsupported": reason + "; satisfaction answers, calls fail closed)",
+	}, nil
+}
+
+// withOpaqueSigs runs f with SIGNATURE-OPAQUE mode on (wire.go sigOpaque)
+// and returns the sorted mangled keys of the imported generic
+// instantiations f minted as opaque markers — so a stub's refusal can
+// NAME them. The flag is restored whatever f does; it is never left on
+// across a body emission (a body must refuse on these types).
+func (e *emitter) withOpaqueSigs(f func() error) ([]string, error) {
+	saved := e.sigOpaque
+	before := map[string]bool{}
+	for k := range e.opaqueInsts {
+		before[k] = true
+	}
+	e.sigOpaque = true
+	err := f()
+	e.sigOpaque = saved
+	minted := []string{}
+	for k := range e.opaqueInsts {
+		if !before[k] {
+			minted = append(minted, k)
+		}
+	}
+	sort.Strings(minted)
+	return minted, err
+}
+
+// opaqueMarkerTypeDefs renders the existence-only TypeDef for every
+// imported generic instantiation that reached a signature in opaque mode
+// (FR-23): the D5 marker shape (`kind: unsupported`), so the decoder
+// knows the TypeId, satisfaction can compare it, and every STRUCTURAL
+// use — a default value, a conversion, a field — keeps refusing on the
+// feature text. Sorted for a deterministic wire. No wire-schema change:
+// the shape is the one importedTypeDecls already emits.
+func (e *emitter) opaqueMarkerTypeDefs() []any {
+	out := []any{}
+	for _, key := range sortedStringKeys(e.opaqueInsts) {
+		out = append(out, map[string]any{
+			"name": key,
+			"def": map[string]any{"kind": "unsupported",
+				"feature": "instantiation of imported generic type " + key +
+					" (FR-23: carried as an opaque marker in declaration signatures only — no value of it ever lowers; satisfaction answers, every structural use refuses)"},
+		})
+	}
+	return out
+}
+
+// promotedSigStub is the declaration-only stub for a PROMOTED method whose
+// forwarding wrapper cannot be synthesized with an `unsupported` cause
+// (FR-23, 2026-09-04: the promoted method's signature instantiates an
+// imported generic; before this the wrapper's emitType refused the WHOLE
+// export). Same contract as syncPromotedStub and quarantinedMethodStub —
+// the method-set entry is never dropped (D2: a missing wrapper makes
+// satisfaction answer a false "no"), the real signature is carried
+// (opaque mode), and a CALL through it fails closed naming the cause.
+func (e *emitter) promotedSigStub(named *types.Named, tName string, mfn *types.Func, recvIsPtr bool, cause unsupported) (map[string]any, error) {
+	sig := mfn.Type().(*types.Signature)
+	var valueTy any
+	var params, results []any
+	opaque, err := e.withOpaqueSigs(func() error {
+		var err error
+		if valueTy, err = e.emitType(named); err != nil {
+			return err
+		}
+		if params, err = e.emitParams(sig.Params()); err != nil {
+			return err
+		}
+		results, err = e.emitResults(sig.Results())
+		return err
+	})
+	if err != nil {
+		return nil, unsup("promoted method %s.%s cannot be forwarded (%s) and its own SIGNATURE does not lower either (%v): no signature-carrying stub exists, so the export refuses rather than record an incomplete method set",
+			tName, mfn.Name(), cause.what, err)
+	}
+	recvTy := valueTy
+	if recvIsPtr {
+		recvTy = map[string]any{"kind": "pointer", "elem": valueTy}
+	}
+	reason := "promoted method " + tName + "." + mfn.Name() + " (forwarding wrapper not synthesized: " + cause.what
+	if len(opaque) > 0 {
+		reason += "; signature instantiates imported generic " + strings.Join(opaque, ", ") +
+			" — not modeled (FR-23), carried as an opaque marker"
+	}
+	return map[string]any{
+		"name":        mfn.Name(),
+		"recvType":    tName,
+		"recv":        map[string]any{"id": "$recv", "type": recvTy},
+		"params":      params,
+		"results":     results,
+		"variadic":    sig.Variadic(),
+		"unsupported": reason + "; satisfaction answers, calls fail closed)",
 	}, nil
 }
 
@@ -2191,7 +2451,12 @@ func (e *emitter) emitGotoBody(b *ast.BlockStmt) (map[string]any, error) {
 		}
 		segs[len(segs)-1].stmts = append(segs[len(segs)-1].stmts, inner)
 	}
+	gotoNames := make([]string, 0, len(e.gotoLabels))
 	for name := range e.gotoLabels {
+		gotoNames = append(gotoNames, name)
+	}
+	sort.Strings(gotoNames) // deterministic refusal message (BUG-091)
+	for _, name := range gotoNames {
 		if _, ok := segIdx[name]; !ok {
 			return nil, unsup("goto target label %s not at function body top level", name)
 		}
@@ -5239,7 +5504,22 @@ func (e *emitter) synthesizePromotionWrappers() ([]any, error) {
 			}
 			w, err := e.synthesizeWrapper(named, tName, useSel, recvIsPtr)
 			if err != nil {
-				return nil, err
+				// An UNSUPPORTED wrapper (FR-23, 2026-09-04: the
+				// promoted method's signature instantiates an imported
+				// generic, so its forwarding body cannot even be typed)
+				// becomes a declaration-only stub — the method-set
+				// entry stays (D2), the call fails closed by name.
+				// Every other error still refuses the export.
+				var u unsupported
+				if !errors.As(err, &u) {
+					return nil, err
+				}
+				stub, serr := e.promotedSigStub(named, tName, mfn, recvIsPtr, u)
+				if serr != nil {
+					return nil, serr
+				}
+				out = append(out, stub)
+				continue
 			}
 			out = append(out, w)
 		}

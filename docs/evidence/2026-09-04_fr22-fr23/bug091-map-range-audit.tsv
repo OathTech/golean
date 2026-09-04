@@ -1,0 +1,37 @@
+# bug091-map-range-audit.tsv — every 'for … := range <map>' in tools/nativefrontend (go/types-typed inventory, tool: .tmp maprange over the patched tree, 2026-09-04) with its order classification
+# columns: site	consumer	verdict
+# verdicts: SORTED = keys collected then sort.Strings/sort.Slice before any emitted string or wire field; SET = builds a map/set or counts (order-insensitive); FIXPOINT = least-fixpoint closure (order-independent result); FIXED = order reached an emitted string on main, sorted in this slice (BUG-091); INTERNAL = order reaches only an internal table-consistency error (not source-dependent)
+atomics.go:318	modeledImportedTypes map build	SET
+emit.go:413	calledKeys -> sort.Strings (interface anchors)	SORTED
+emit.go:479	hostDefNames set	SET
+emit.go:555	pending -> sort.Strings (interface declaration fixpoint)	SORTED
+emit.go:597	ifaceNames -> sort.Strings	SORTED
+emit.go:686/690	msSet -> msKeys -> sort.Strings (methodSets)	SORTED
+emit.go:954	linknamed poison into quarantinedGlobals map	SET
+emit.go:1101	poisonGlobalCells: per-gid rewrite (new in this slice)	SET
+emit.go:1455	collectCalledFuncs into a set	SET
+emit.go:1530	names -> sort.Strings (deterministic refusal message)	SORTED
+emit.go:1899/1906	withOpaqueSigs before-set + minted -> sort.Strings (new in this slice)	SORTED
+emit.go:2451	gotoLabels -> unsup naming the FIRST label	FIXED (sort.Strings before the loop; TestEmitIsDeterministic red-first on main)
+emit.go:4458	kindFields map copy	SET
+emit.go:5844	importedNamed pending -> sort.Strings	SORTED
+emit.go:6044	syncUsed names -> sort.Strings	SORTED
+emit.go:6124	syncValueLowered demanded -> sort.Strings	SORTED
+emit.go:7226	captureParam map copy	SET
+emit.go:8190	members -> sort.Strings (refusal message)	SORTED
+identity.go:152	badKeyPaths -> sort.Strings (refusal message)	SORTED
+importedmodel.go:101	names -> sort.Strings	SORTED
+langversion.go:178	tags -> unsup naming the FIRST reserved tag	FIXED (sort.Strings before the loop)
+load.go:249/251, 295, 438, 678	file paths / seen / deps keys / unit names -> sort.Strings or sort.Slice	SORTED
+load.go:593	g.src closure to a fixpoint (g.node)	FIXPOINT
+load.go:662, 677	per-unit mutation / map copy	SET
+main.go:111/113	file paths -> sort.Strings (E8 realization site)	SORTED
+stdlibreach.go:571	forcedQuarantine map build	SET
+stdlibreach.go:580, 585	reached types/values -> unsup naming the FIRST hit	FIXED (sort.Slice by source position before the loops)
+stdlibregister.go:81-93	counts	SET
+stdlibregister.go:121-142, 165	rows -> sort.Strings; sortedStringKeys	SORTED
+stdlibshim.go:223	closeShimDeps work stack; result is the needed SET; the only order-dependent text is the internal stdlibShimDeps-consistency error	INTERNAL
+stdlibshim.go:973	reserved set	SET
+stdlibshim.go:1004	names -> sort.Strings	SORTED
+stdlibsource.go:613, 833	selected set / linknamed map copy	SET
+stdlibsource.go:617, 709, 735	out / missing / paths -> sort.Strings	SORTED
