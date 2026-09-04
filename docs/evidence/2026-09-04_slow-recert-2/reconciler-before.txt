@@ -1,0 +1,33 @@
+# producer: tools/reconcile-records run in the slow-recert-2 worktree at aceb0dcb, record NOT yet refreshed (tree identical to main aceb0dcb); 2026-09-04T17:35:12+00:00
+========================================================================
+reconcile-records — cross-ledger reconciliation (READ-ONLY)
+========================================================================
+baseline            3365 cases  3165 PASS  200 FAIL
+baseline header     [3365, 3165, 200]  matches the rows
+bugs                91 entries  9 open  82 fixed
+untriaged           14 tracked  {'coverage': 10, 'latitude': 4}  ceilings {'coverage': 10, 'latitude': 4, 'wrong-answer': 0}
+ledgers             16 L-entries  7 I-rows  24 FR-rows  10 Q-rows  42 latitude rows
+
+[01] C13  MEDIUM  78 doc site(s) across 9 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
+        docs/2026-08-20_go-scheduling-semantics-dossier.md: 60 site(s)
+        docs/2026-09-01_oracle-legs.md: 5 site(s)
+        docs/2026-07-25_unwinding-arc.md: 4 site(s)
+        docs/assessment/lane-b-lower-bound.md: 4 site(s)
+        docs/2026-08-17_spec-and-community-truth-campaign.md: 1 site(s)
+        docs/2026-09-01_grossmith-campaign-3.md: 1 site(s)
+        docs/spec-divergence-ledger.md: 1 site(s)
+        docs/assessment/lane-a3-shims-spectruth.md: 1 site(s)
+        docs/assessment/lane-e-outsider-review.md: 1 site(s)
+
+[02] C5  MEDIUM  2 frontier-table case citation(s) do not resolve against the baseline
+        FR-7 (/home/dev/projects/golean/.claude/worktrees/slow-recert-2/docs/language-coverage-ledger.md:349) cites `=` — resolves to no baseline id
+        FR-14 (/home/dev/projects/golean/.claude/worktrees/slow-recert-2/docs/language-coverage-ledger.md:356) cites `slices.Sort` — resolves to no baseline id
+
+[03] C9  MEDIUM  the wire schema moved after the certification date 2026-09-04T01:02:30+00:00 (5 commit(s) to wire.go/NativeToIR.lean) — the certified set's wire sha is only current if `scripts/ci --slow` has re-enumerated since
+        7ab1c7b8 fr22-fr23 audit fix round 1-7 [time.Date row argument corrected; determinism test un-vacuous; FR-24/FR-23 refusals name their site; $poisoned text; evidence provenance; BUG-091 flip patch staged]
+        977b92e5 FR-22 + FR-23: the cedar-go census's two WHOLE-EXPORT kills made PER-DECLARATION — (a) a package-level initializer calling an `init-callee` register row (time.Date admitted with its written result-only/panic-free argument; the H-11 allowlist becomes a register class) is SKIPPED and its var POISONED, the cell seeded as the reserved `$poisoned` placeholder (the real type may have no machine default), every reference refusing by name; unregistered callees keep the whole-export refusal, now naming var + callee + register; (b) an imported generic instantiation in a method/func/interface/promoted-method SIGNATURE is an opaque marker under its mangled TypeId (D5 marker shape), the declaration a fail-closed stub — satisfaction exact, every CALL refuses by name. FR-24 rowed (the next kill measured on cedar-go: a reached library var whose TYPE does not lower — binary.Write -> structSize sync.Map; born-FAIL witness). BUG-091 (coordinator addition): three map-ordered refusal loops sorted (goto labels, build-constraint tags, library layout scan) + TestEmitIsDeterministic (red-first on main's emitter, recorded); FR-4 stencil refusals name their stencil. Baseline re-pinned 3350 -> 3365 (3165/200): 2 FAIL->PASS witness flips, 15 born rows (6 PASS / 9 FAIL red-by-design on FR-22/23/24), 0 PASS->non-PASS; twin wire pin UNCHANGED (69a538de); stdlib pin unchanged; cedar-go export fraction unchanged (5/34 — FR-24 is the kill now; pass-C counterfactual: FR-4 + a slices.Sort init()). [TRUST-ADJACENT: frontend per-declaration quarantine; no wire schema change] [AGENT under [USER] direction 3 + the frontier-queue ratification, both coordinator-relayed]
+        07ec0588 A8 dead-generality sweep: GoError → Stop, Stmt.label → inertLabel, newValue → allocNew, TypeDef.unsupported → opaqueDecl, applyStmtOpCore's unused nt dropped, Step.stmtOpNullary deleted (its dispatch arm is a fail-closed refusal) [design-hygiene arc (ii); α-renames + an unreachable rule; zero baseline drift; zero choice-trace delta]
+        e046feb2 A4 Expr.global gid replaces Expr.locLit: program text is address-free; the machine resolves a global index to its cell (gid < heap.size, else refuses) [design-hygiene arc (ii); semantics-preserving; zero baseline drift; zero choice-trace delta; no wire change]
+        7857a414 A3 payload cells: HeapCell = value ty v | mapPayload | chanPayload; GoValue.mapData/chanData deleted; one root write path (ExecState.updateCell); coerceStoredValue deleted; newValue typ : Ty [design-hygiene arc (ii); semantics-preserving; zero baseline drift; zero machine choice-trace delta]
+
+3 finding(s).

@@ -410,3 +410,37 @@ full ISO instant (`# certified: 2026-09-04T01:02:30+00:00  commit:
 …`), which both the harness (`sed 's/^# certified: //'`) and the
 reconciler (`(\S+)\s+commit:`) already accept. Evidence and the K=80
 exhibition table: `docs/evidence/2026-09-04_slow-recert/`.
+
+**Addendum (2026-09-04, second re-cert the same day — the re-cert is a
+standing post-train step, not a one-off).** The 01:02 re-cert cleared
+C9 for exactly one merge train. The round-11 train (hygiene A3/A4/A8,
+fr22-fr23 + its audit round, lower-diagnose) landed five more commits
+to `wire.go`/`NativeToIR.lean` by 16:40Z and C9 fired again on the
+very next gate; the second re-cert (`slow-recert-2`, run 17:24Z at the
+clean tip aceb0dcb, 516 s wall under a 1-min load peak of 54 —
+dedup set AND graph reproduced bit-for-bit, wire sha still 2f1d639f)
+is recorded in `docs/evidence/2026-09-04_slow-recert-2/`. Two
+observations. (a) **C9 re-fires after EVERY frontend-touching round**,
+because `NativeToIR.lean` is on nearly every semantics slice's path
+(three of the five round-11 commits were machine-side refactors —
+payload cells, address-free globals — that touched the decoder without
+changing a wire byte). Treating the re-cert as a lane someone spawns
+after noticing the MEDIUM means the record is stale for the whole
+window between the train and the noticing; twice today that window
+was long enough for other lanes to gate against it. (b) The discharge
+is mechanical when the set is identical (header instant + commit,
+delta class DATE/COMMIT-ONLY) and only becomes a decision when a set
+MOVES — which is precisely when it must not be buried in a train. So
+the honest shape is a **standing post-train step**: whoever lands a
+train whose merged branches touched `tools/nativefrontend/wire.go` or
+`GoLean/NativeToIR.lean` (`git log <old-tip>..<new-tip> -- <the two
+files>` non-empty) runs `scripts/capped scripts/ci --slow` at the new
+clean tip before the train is declared landed, refreshes the header if
+IDENTICAL, and STOPS with a finding if not. PROPOSAL ONLY, [AGENT]:
+the merge train is today a coordinator procedure, not a script, so
+this is a rule for that procedure (or a one-line check in the train's
+landing checklist), not a tool change; whether to adopt it — and
+whether a same-day K=80 exhibition (this run: 5 of 6 vs the morning's
+6 of 6 on `google-search`) is worth the extra ~8 minutes per train — is
+a [USER] call. Until ruled on, C9 stays the signal and the re-cert
+stays owed on every fire.

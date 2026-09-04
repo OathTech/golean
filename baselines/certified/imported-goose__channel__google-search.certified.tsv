@@ -4,7 +4,37 @@
 # driver-coupling pin against THIS set and its wire hash; scripts/ci
 # --slow re-enumerates and must reproduce it exactly. Update
 # deliberately, in its own commit, with the reason — never auto-written.
-# certified: 2026-09-04T01:02:30+00:00  commit: slow-recert re-certification at main tip 1b8401c0 (round-9 train landed: bug087-paniktext, q-trylock, cedar-census)
+# certified: 2026-09-04T17:24:37+00:00  commit: slow-recert-2 re-certification at main tip aceb0dcb (round-11 train landed: hygiene A3/A4/A8, fr22-fr23 + its audit round, lower-diagnose)
+# re-certification reason (slow-recert-2, 2026-09-04): the reconciler's
+#   C9 fired again after the round-11 train — "wire schema moved after
+#   the certification date 2026-09-04T01:02:30" — 5 commits to wire.go /
+#   NativeToIR.lean since the 01:02 re-cert (A3 payload cells 7857a414,
+#   A4 Expr.global e046feb2, A8 dead-generality 07ec0588, FR-22/FR-23
+#   $poisoned + signature-opaque markers 977b92e5, its audit round
+#   7ab1c7b8; the last at 16:40:23Z). Three of the five are MACHINE-side
+#   moves (HeapCell payload cells, address-free globals) that a wire-sha
+#   cache key cannot see — exactly the case the 01:02 block below names
+#   as the reason the re-cert is owed on every wire move. The owed
+#   --slow re-certification ran at the CLEAN tip aceb0dcb (`scripts/capped
+#   scripts/ci --slow`, RESULT: PASS, exit 0, 516 s wall 17:24:37Z ->
+#   17:33:13Z, load avg 5.10 at start / 10.83 at end, 1-min peak 54.6
+#   mid-run on the shared 32-core box; 3365/3365 baseline diff FULL, 0
+#   flips). Delta class: NONE. This fixture's wire sha is UNCHANGED
+#   (2f1d639f — fresh frontend emit at the tip before the run, sha256
+#   bit-identical to the record; the fixture imports nothing and none
+#   of the moved node kinds occurs in its wire), and the fresh
+#   GOLEAN_SLOW=1 dedup enumeration reproduced the set AND the graph
+#   bit-for-bit: the same six permutation members, nodes=6193933
+#   edges=6565663 dedupHits=371731 certified=checkCert. Params
+#   unchanged. Header instant = the run's START stamp (17:24:37Z), after
+#   the last wire commit, so C9's `--since` test clears. K=80
+#   exhibition: 5 of 6 members exhibited in 80 draws (231 unexhibited;
+#   pin NOT reached) vs 6 of 6 at the 01:02 run — sampling variance on a
+#   6-member row, recorded, not a finding (the RESULT does not depend
+#   on exhibition). Evidence: docs/evidence/2026-09-04_slow-recert-2/.
+#   [AGENT] record refresh, delta class DATE/COMMIT-ONLY (set, graph,
+#   params, wire sha all unchanged).
+# previously: certified: 2026-09-04T01:02:30+00:00  commit: slow-recert re-certification at main tip 1b8401c0 (round-9 train landed: bug087-paniktext, q-trylock, cedar-census)
 # re-certification reason (slow-recert, 2026-09-04): the reconciler's
 #   C9 reported "wire schema moved after the certification date
 #   2026-09-01" on every gate since — 13 commits to wire.go /

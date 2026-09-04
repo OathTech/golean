@@ -1,0 +1,21 @@
+key	value
+frontend	native
+manifest	/home/dev/projects/golean/.tmp/golean-coverage-manifest.koRu78
+manifest_sha256	e6ee0005fda30b1f1065c033be137c8be602d88ab9e5e5b831c766c33a01aaf7
+manifest_cases	3365
+total_corpus_cases	unknown
+full_run	unknown
+filters	unknown
+git_commit	aceb0dcb70369fc86208034bb2c871cd695ef666
+git_dirty	false
+go_toolchain	go1.26.5
+go_drift_allowed	0
+go_drift_actual	false
+depth_guard	choice-trace wideAfterExhaustion=0 on every invariance stream
+depth_seeds	1,2,3
+depth_generator	lcg31(1103515245,12345) bits16..31
+depth_trace_timeout_seconds	240
+membership_draws	80
+jobs	32
+fanout_find_exit	0
+fanout_pool_exit	0

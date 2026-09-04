@@ -1,0 +1,2 @@
+# producer: sha256sum of a fresh frontend emit at aceb0dcb BEFORE the --slow run: env GO111MODULE=off GOCACHE=$PWD/artifacts/coverage/go-build-cache go run ./tools/nativefrontend --dir Corpus/coverage/exec/imported-goose/channel/google-search --out .tmp/precheck/wire.json
+2f1d639f2042466f50b61ab117db5b39629c425f733650b9be992c0b85beefcc  wire.json

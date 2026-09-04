@@ -1,0 +1,1 @@
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":231}]}
