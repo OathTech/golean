@@ -168,7 +168,12 @@ Optional lane columns (membership lane, arc slice 3,
   soundness alarm exactly as before, checked on EVERY draw. Fixtures:
   `scripts/test-lane-validation --with-go` S1-S4 (red-first record and
   the before/after exhibition table:
-  `docs/evidence/2026-09-03_sampling-budget/`).
+  `docs/evidence/2026-09-03_sampling-budget/`). A merge train whose
+  landed branches touched `tools/nativefrontend/wire.go` or
+  `GoLean/NativeToIR.lean` runs `scripts/ci --slow` at the merged tip
+  to refresh `tier=slow` certification before being declared landed
+  (`CLAUDE.md` merge protocol step 5a; `docs/operational-lessons.md`
+  "A cached certification is owed a re-run…").
 - Fail-closed both ways: `lane=membership` requires the `nondet` feature
   tag and a `why`; a `nondet`-tagged case requires `lane=membership`; a
   membership case whose enumerated set is a singleton fails ("belongs in

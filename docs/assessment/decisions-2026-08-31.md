@@ -147,3 +147,13 @@ train, [AGENT]; the lane's own wording follows):
   early stop fires only after one plain AND one `-race` draw; the three
   `members=1` rows re-run under it take exactly two draws, both in the
   set (caption `draws=2 (floor; …)`).
+
+**Addendum 2026-09-04 — standing post-train `--slow` re-cert, ADOPTED
+[USER]** (Mike, relayed by the coordinator; cited as relayed): «Yeah,
+that make sense, let's adopt that» — a merge train whose landed
+branches touched `tools/nativefrontend/wire.go` or
+`GoLean/NativeToIR.lean` runs `scripts/ci --slow` at the merged tip and
+refreshes the certification record, with a changed certified set
+reported as a finding rather than re-pinned away (`CLAUDE.md` merge
+protocol step 5a; `docs/operational-lessons.md` addendum; lane
+`slow-recert-2`).

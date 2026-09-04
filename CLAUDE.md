@@ -95,6 +95,10 @@ Everything else is untrusted tooling.
 4. Pause; merge only on explicit at-that-moment sign-off.
 5. `git checkout main && git merge --ff-only <branch>` (if refused:
    rebase, re-gate, re-ask).
+5a. If any merged branch touched `tools/nativefrontend/wire.go` or
+    `GoLean/NativeToIR.lean`, the train runs `scripts/ci --slow` at
+    the merged tip and refreshes the certification record; a changed
+    certified set is a finding, not a re-pin ([USER] 2026-09-04).
 6. End parked on `main`, clean, green. Push is a separate sign-off.
 
 ## Working practices

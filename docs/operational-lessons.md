@@ -444,3 +444,20 @@ whether a same-day K=80 exhibition (this run: 5 of 6 vs the morning's
 6 of 6 on `google-search`) is worth the extra ~8 minutes per train — is
 a [USER] call. Until ruled on, C9 stays the signal and the re-cert
 stays owed on every fire.
+
+**Addendum (2026-09-04): the standing post-train step — ADOPTED
+[USER].** C9 re-fired the same day after the round-11 train landed
+five more commits to `wire.go`/`NativeToIR.lean`; lane `slow-recert-2`
+(`docs/evidence/2026-09-04_slow-recert-2/README.md`, not yet merged to
+main as of this entry) ran the second re-cert and proposed making it a
+standing post-train step rather than a re-cert someone spawns after
+noticing the MEDIUM: whenever a merge train's landed branches touched
+`tools/nativefrontend/wire.go` or `GoLean/NativeToIR.lean`, run
+`scripts/ci --slow` at the merged tip and refresh the certification
+record before the train is declared landed — an identical set
+refreshes the header only, a changed set is a finding reported before
+the train continues, never a silent re-pin. **ADOPTED [USER]
+2026-09-04** (Mike, relayed by the [AGENT] coordinator; cited as
+relayed): «Yeah, that make sense, let's adopt that» — adopting the
+proposal as written. Recorded as merge protocol step 5a, `CLAUDE.md`
+"The merge protocol".
