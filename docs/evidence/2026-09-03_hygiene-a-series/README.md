@@ -99,3 +99,4 @@ exists for every other assoc-list-shaped component of `RaceState`
 (`chans`, `syncs`, `atomics`) and of `ExecState` in principle; an
 engine-side canonical form would make merge rates interleaving-insensitive
 across the board. [AGENT]
+| audit fix round F1–F7 (`6cd82b89`) | committed tip, clean tree | fast `ci` PASS (`transcripts/gate-fixround-fast.txt`; its baseline diff covered 1 row — check-bugs' `Expect: FAIL` re-run of BUG-091's case overwrites `latest.tsv` before the diff) then full `ci --diff` PASS (`transcripts/gate-fixround-full.txt`) | 3284 = 3085/199 | 0 (FULL 3284/3284) | 0 | not re-traced (F2/F3 are a build; no ChoiceSite or consumption path touched) |
