@@ -1,0 +1,2 @@
+69a538de716a948bba8c4c927844aea10ae6058b0c3f8313189b0ead9905e036  baselines/pins/twin-chdriver.wire.json
+b4458244c2593f0b8e20afdc3f2d3bef465d2069d1bf487395c0edb20663053f  <fresh emit at checkpoint C>

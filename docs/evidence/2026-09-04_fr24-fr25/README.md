@@ -132,6 +132,66 @@ markers in their signatures.
   TypeDef, which is what a call would reach if one could be emitted (it
   cannot: every call site mentions a value of the type).
 
+## Checkpoint C — the cmp.Compare retirement (commit named in the Gate section)
+
+[USER] ruling (Mike 2026-09-04, relayed by the [AGENT] coordinator, cited
+as relayed): «(2) given we have a plan, I think this should be an honest
+red». Mechanism: `cmpshim.go` DELETED; `stdlibshim.go` loses the three
+kind shims (`goleanShimCmpCompare{Uint,Int,String}`) and its
+`stdlibGenericDesugarInject` entry (the table stays, EMPTY — the one place
+a future entry lands, against the frozen count); `stdlibreach.go` loses
+the `cmp` `intercept` row and the `cmp.Compare` arm of
+`interceptedLibraryCall`; `emit.go` loses the dispatch hook. `cmp.Compare`
+is the real source-through generic at every type argument. Rows,
+verified one by one (`scripts/coverage run` over every id of
+`slices/sortfunc-cmp`, `stdlib-source/cmp-compare`,
+`stdlib-source/slices-sortfunc`): EXACTLY ONE flip —
+`slices/sortfunc-cmp/cmp-compare-kinds` PASS→FAIL (`function-local defined
+type index as a type argument … refused rather than guessed`, mono.go's
+C6 rule; FR-19's line, BUGS.md BUG-092 Cases line); `stdlib-source/
+cmp-compare/local-float-type` and `slices/sortfunc-cmp/sortfunc-local-type`
+already red the same way; all 17 other rows PASS through the real generic
+(ints, strings, floats incl. NaN, named non-local types, struct keys,
+Less/Or). No FINDING (nothing went red for another reason). Register:
+intercept 2 → 1, shim 7 → 6; D-002: "6 fmt shims remain; the freeze is
+intact". Twin pin MOVED, a ruled consequence checked before landing
+(`twin-repin-C/`): raft's `quorum/majority.go` calls `cmp.Compare` inside
+`MajorityConfig.Describe`, an H-3 quarantined stub, so the ONLY wire
+change is the three dead injected shims leaving (0 added, 0 changed;
+methods/types/globals/method sets identical) — 69a538de → b4458244.
+
+- D7 [AGENT]: `stdlib-source/cmp-compare/local-float-type` MOVES from the
+  C6 (c)-pin bucket to FR-19's line (with `cmp-compare-kinds`): same
+  refusal, and the brief names FR-19's scope-qualified TypeId KEY as the
+  plan — where the local type's NAME is unobservable (no `%T`/`%v` of a
+  value of the type) the key can carry the scope; C6 keeps the
+  observable-name cases (ledger §5.1 item 1 re-worded). Both rows sit on
+  BUG-092's Cases line (the re-pin guard's requirement for a PASS→non-PASS
+  flip; Status open, Pinned-by none, Expect FAIL).
+
+## cedar-go: after (tip — every checkpoint measured; A, B, C agree)
+
+`census-A/` (checkpoint A, tree 83b71132 = A before its header-only
+amend) and `after/census/` (the C tree; `meta.tsv` names the commit the
+runner saw — see the Gate section for the tip re-run): **29
+FRONTEND-REFUSED / 5 EXPORT-OK of 34 — export fraction UNCHANGED**, but
+the FR-24 kill is GONE and the 29 refusals are the two causes §9.3's
+pass C had predicted counterfactually, now measured on the UNRELAXED
+copy: 25 × `method stencil cedargo/internal/mapset.ImmutableMapSet[…].All
+does not lower (… iter.Seq[…] …) — FR-4` and 4 × `slices.Sort at
+non-integer element type string` (an `init()` body). FR-25 never
+surfaces on cedar-go itself because the FR-4 stencil refusal fires in
+the mono drain before the interface fixpoint; the corpus rows carry the
+FR-25 witness. `after/lower-diagnose/`: static 1554/1671 (93.0%)
+UNCHANGED (kills became stubs; the values stay refused), export-kill
+declarations 11 → 3 and packages export-killed 21/26 → 7/26 — the
+remaining three are FR-19's `nodeJSONAlias` ×2 and the `slices.Sort`
+`init()`. Next blockers, in order: FR-4 stencils → `slices.Sort` at
+string in `init()` (memo §3 row M) → FR-19 `nodeJSONAlias` → the
+per-declaration surface (`encoding/json` FR-14/G6 64 decls, `net/netip`
+methods 19, `errors.Is/As` reflect 10, `iter.Seq` values FR-23→FR-12).
+Every cause in the report has a ledger row — no UNROWED cause appeared.
+
 ## cedar-go: before (main aceb0dcb)
 
 `before/census/` = `scripts/cedar-census run` on main's frontend (the
@@ -149,7 +209,20 @@ sanitized to `<repo>/`.)
 
 ## Gate
 
-(filled per checkpoint)
+- **A** (`ci-diff-A.txt`): `scripts/capped scripts/ci --diff` on the
+  committed checkpoint A (83b71132; amended to 4359dc2e for the
+  baseline's `# cases:` header line only — the reconciler's C1H) —
+  RESULT PASS; 3376/3376 no regression; negative 394/394; re-pin guard 0
+  PASS→non-PASS; twin 69a538de unchanged; register ok; frontend unit
+  tests (incl. `fr24_test.go`) and lowerdiag tests ok; eval tests 148;
+  reconciler 1 HIGH = the header count line (fixed by the amend).
+- **B** (`ci-diff-B.txt`): on the committed checkpoint B (65676c84) —
+  RESULT PASS; 3382/3382 no regression; re-pin guard 0 PASS→non-PASS (2
+  FAIL→PASS flips, the FR-25 witnesses); twin 69a538de unchanged;
+  reconciler 0 HIGH.
+- **C / tip** (`ci-diff-C.txt`): on the committed checkpoint C — see the
+  file's tail for the RESULT line, the ruled flip on BUG-092's Cases
+  line, the moved twin pin b4458244, register intercept 1 / shim 6.
 
 ## Files
 
@@ -160,6 +233,10 @@ sanitized to `<repo>/`.)
 | `wires-A/*` | `GO111MODULE=off go run ./tools/nativefrontend --dir Corpus/coverage/exec/<row> --out wires-A/<row>.wire.json 2> wires-A/<row>.stderr` at checkpoint A | wires of the exporting row dirs; first-refusal stderr of the refused ones |
 | `wires-B/*` | `GO111MODULE=off go run ./tools/nativefrontend --dir Corpus/coverage/exec/<row> --out wires-B/<row>.wire.json` at checkpoint B | the `complex128` marker + stubs (`methods_signature-basic-unlowerable`), the poisoned `encoding/binary.structSize` cell beside the lowered package and the `reflect.Value` D5 marker/stubs (`init_library-var-type-poisoned`), the flipped FR-24 witness (`init_library-var-type-unlowerable`) |
 | `ci-diff-A.txt` | `scripts/capped scripts/ci --diff` on the committed checkpoint A (pre-amend tree 83b71132; the amend touched only the baseline's `# cases:` header line the reconciler flagged, C1H) | RESULT PASS, 3376/3376 no regression, 0 flips, twin 69a538de unchanged, reconciler 1 HIGH = the header count line (fixed by the amend) |
+| `ci-diff-B.txt`, `ci-diff-C.txt` | `scripts/capped scripts/ci --diff` on the committed checkpoints B and C (tails; paths sanitized to `<repo>/`) | the gates |
+| `census-A/*`, `after/census/*` | `scripts/cedar-census run` at checkpoint A and at C | 29 FRONTEND-REFUSED (25 FR-4 + 4 `slices.Sort`) / 5 EXPORT-OK, both |
+| `after/lower-diagnose/*` | `scripts/lower-diagnose artifacts/cedar/cases/all --json --tsv --include cedark8s/cmd/schema-formatter,cedark8s/internal/schema` at C | the standing full-blocker report AFTER |
+| `twin-repin-C/structural-diff.txt`, `hashes.txt` | python3 JSON diff of `baselines/pins/twin-chdriver.wire.json` (pinned) vs the fresh emit; `sha256sum` | the SOLE change: 3 dead shim funcs removed |
 | `traces/*` | the parked prototype's `FR24_TRACE*` stack traces (NOT ported), sanitized | the diagnosis trail: `basic type complex128` reached from `reflect.Type`'s requirement list / `reflect.Value`'s D5 stubs |
 
 ## Reproduction

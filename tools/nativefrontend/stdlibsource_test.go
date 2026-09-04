@@ -418,7 +418,7 @@ func TestStdlibRegisterDumpCaps(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"count\toverlay\t5 / cap 12", "count\toverlay-import\t5 / cap 8", "count\tintercept\t2 ", "intercept\tslices.Sort\t", "intercept\tcmp.Compare\t", "count\tprimitive\t0 / cap 2", "source-through\tstrings\t", "substitution\tinternal/bytealg/indexbyte_native.go -> indexbyte_generic.go\t", "count\tshim\t7 ", "count\tshadow-type\t5", "source-through\tbytes\t", "source-through\tslices\t", "source-through\tcmp\t", "source-through\tencoding/binary\t", "shim\tfmt.Sprintf\t", "shim\tcmp.Compare\tgeneric kind-dispatch desugar (cmpshim.go)", "overlay\tinternal/stringslite/strings.go:149\t`unsafe.String(&b[0], len(b))` -> `string(b)`", "overlay\tstrings/builder.go:47\t", "overlay-import\tstrings/builder.go:11\t`\"unsafe\"` -> `_ \"unsafe\"`"} {
+	for _, want := range []string{"count\toverlay\t5 / cap 12", "count\toverlay-import\t5 / cap 8", "count\tintercept\t1 ", "intercept\tslices.Sort\t", "count\tprimitive\t0 / cap 2", "source-through\tstrings\t", "substitution\tinternal/bytealg/indexbyte_native.go -> indexbyte_generic.go\t", "count\tshim\t6 ", "count\tshadow-type\t5", "source-through\tbytes\t", "source-through\tslices\t", "source-through\tcmp\t", "source-through\tencoding/binary\t", "shim\tfmt.Sprintf\t", "overlay\tinternal/stringslite/strings.go:149\t`unsafe.String(&b[0], len(b))` -> `string(b)`", "overlay\tstrings/builder.go:47\t", "overlay-import\tstrings/builder.go:11\t`\"unsafe\"` -> `_ \"unsafe\"`"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("register dump lacks %q:\n%s", want, out)
 		}

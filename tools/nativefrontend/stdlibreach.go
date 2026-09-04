@@ -463,7 +463,13 @@ func computeLibraryReach(units []*sourcePkg) error {
 // (emit.go DeferStmt/GoStmt arms).
 var frontendInterceptedLibraryMembers = map[string]map[string]string{
 	"slices": {"Sort": "the quorum-pilot `sortSlice` MACHINE OP at integer element kinds (emit.go emitSortStmt, ExprStmt position only; non-integer kinds refuse by name — row slices/slices-sort-non-integer-refusal; memo §3 row M retires the op in slice 4, when this entry goes with it); `defer`/`go` of it refuse by name (rows stdlib-source/sort-op-shapes/*)"},
-	"cmp":    {"Compare": "the kind-dispatch desugar (cmpshim.go) at INTEGER and STRING type arguments, RETAINED by slice 2's STOP rule — intercepts every such direct call site, not only the local-type row; float type arguments fall through to the real generic (so a function-local FLOAT type argument still refuses at mono.go's C6 rule — row stdlib-source/cmp-compare/local-float-type); `defer`/`go` of it refuse by name"},
+	// cmp.Compare's kind-dispatch desugar was the second entry until
+	// 2026-09-04 (lane fr24) — RETIRED per the [USER] ruling «(2) given we
+	// have a plan, I think this should be an honest red» (relayed by the
+	// coordinator): the real generic lowers at every type argument; a
+	// function-local defined type argument refuses at mono.go's C6 rule
+	// (rows slices/sortfunc-cmp/cmp-compare-kinds, stdlib-source/cmp-compare/
+	// local-float-type — FR-19's line).
 }
 
 // interceptedLibraryCall reports whether a direct qualified CALL of a
@@ -473,10 +479,10 @@ var frontendInterceptedLibraryMembers = map[string]map[string]string{
 // per-member conditions mirror the emitter's dispatch exactly:
 //
 //	slices.Sort  — every direct call (the op in ExprStmt position; defer/go
-//	               refuse by name);
-//	cmp.Compare  — iff the (single) type argument's underlying type is an
-//	               integer or string basic kind (cmpshim.go's dispatch);
-//	               floats and non-basic types are the real generic.
+//	               refuse by name).
+//
+// (cmp.Compare's kind-dispatch arm — intercepted iff the type argument was
+// an integer or string basic kind — was retired 2026-09-04, lane fr24.)
 func interceptedLibraryCall(info *types.Info, c *ast.CallExpr) (path, member string, intercepted bool) {
 	sel, isSel := c.Fun.(*ast.SelectorExpr)
 	if !isSel {
@@ -497,16 +503,6 @@ func interceptedLibraryCall(info *types.Info, c *ast.CallExpr) (path, member str
 	switch path + "." + member {
 	case "slices.Sort":
 		return path, member, true
-	case "cmp.Compare":
-		inst, ok := info.Instances[sel.Sel]
-		if !ok || inst.TypeArgs.Len() != 1 {
-			return path, member, false
-		}
-		basic, _ := inst.TypeArgs.At(0).Underlying().(*types.Basic)
-		if basic == nil {
-			return path, member, false
-		}
-		return path, member, basic.Info()&types.IsInteger != 0 || basic.Info()&types.IsString != 0
 	}
 	return path, member, false
 }

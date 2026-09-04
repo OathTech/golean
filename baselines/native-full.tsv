@@ -1,4 +1,18 @@
 # GoLean native-frontend full-corpus differential baseline
+# re-pinned: 2026-09-04 (fr24 lane, checkpoint C — the cmp.Compare kind-dispatch desugar RETIRED:
+#   [USER] Mike 2026-09-04, relayed by the [AGENT] coordinator (cited as relayed): «(2) given we have
+#   a plan, I think this should be an honest red». cmpshim.go deleted; cmp.Compare is the real
+#   source-through generic at every type argument. drift vs the previous pin = EXACTLY ONE
+#   PASS -> FAIL flip, the RULED one: slices/sortfunc-cmp/cmp-compare-kinds (a FUNCTION-LOCAL
+#   `index` type argument -> mono.go's C6 naming refusal; FR-19's line; BUGS.md BUG-092 Cases line);
+#   every other cmp.Compare row stays PASS through the real generic (slices/sortfunc-cmp/*,
+#   stdlib-source/cmp-compare/*, stdlib-source/slices-sortfunc/*). 0 born rows. Twin wire pin
+#   MOVED as a ruled consequence (raft's quorum.MajorityConfig.Describe calls cmp.Compare at
+#   quorum.Index/uint64): 69a538de716a -> b4458244c259, structural diff in
+#   docs/evidence/2026-09-04_fr24-fr25/twin-repin-C/. FULL ci --diff tail: ci-diff-C.txt there.
+#   [re-derived from the data rows at this re-pin ([AGENT]): checkpoint B's 3382 (3173 PASS / 209
+#   FAIL) - 1 PASS + 1 FAIL = 3382 (3172 PASS / 210 FAIL); tallied by row:
+#   `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv`]
 # re-pinned: 2026-09-04 (fr24 lane, checkpoint B — FR-25 PARTIALLY CLOSED, the [USER]-approved rider
 #   (Mike 2026-09-04, relayed by the coordinator, cited as relayed: «(3) yes, makes sense»): an
 #   unlowerable BASIC type (complex64/complex128/unsafe.Pointer) in a method/func SIGNATURE or an
@@ -912,7 +926,9 @@
 #     removed row is named in prose, never left dangling on the line).
 #     NEW rows: unsafe/layout-ops/{sizeof-fixed,layout-struct}
 #     FAIL/frontend-export BY DESIGN. unsafe/boundary/pointer-roundtrip
-# cases: 3382 (3173 PASS / 209 FAIL)
+# cases: 3382 (3172 PASS / 210 FAIL)
+#   [re-derived from the data rows at the fr24 checkpoint-C re-pin 2026-09-04 ([AGENT]: checkpoint B's 3382 (3173 PASS / 209 FAIL) with ONE ruled PASS -> FAIL flip, slices/sortfunc-cmp/cmp-compare-kinds; tallied by row: `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv`)]
+#   [the checkpoint-B figure, kept as history:] # cases: 3382 (3173 PASS / 209 FAIL)
 #   [re-derived from the data rows at the fr24 checkpoint-B re-pin 2026-09-04 ([AGENT]: checkpoint A's 3376 (3168 PASS / 208 FAIL) + 6 born rows (3 PASS / 3 FAIL) with 2 FAIL -> PASS flips; tallied by row: `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv`)]
 #   [the checkpoint-A figure, kept as history:] # cases: 3376 (3168 PASS / 208 FAIL)
 #   [re-derived from the data rows at the fr24 checkpoint-A re-pin 2026-09-04 ([AGENT]: main aceb0dcb's 3365 (3165 PASS / 200 FAIL) + 11 born rows (3 PASS / 8 FAIL), no flips either way; tallied by row: `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv`)]
@@ -3744,7 +3760,7 @@ PASS	slices/slices-sort-edges/unsigned-above-half	-
 PASS	slices/slices-sort-edges/signed-negatives	-
 PASS	slices/slices-sort-edges/subslice-aliasing	-
 FAIL	slices/slices-sort-non-integer-refusal	frontend-export
-PASS	slices/sortfunc-cmp/cmp-compare-kinds	-
+FAIL	slices/sortfunc-cmp/cmp-compare-kinds	frontend-export
 PASS	slices/sortfunc-cmp/sortfunc-ints	-
 PASS	slices/sortfunc-cmp/sortfunc-reverse	-
 PASS	slices/sortfunc-cmp/sortfunc-struct-two-key	-

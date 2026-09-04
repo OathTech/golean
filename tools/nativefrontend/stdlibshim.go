@@ -81,10 +81,12 @@ import (
 // are source-through units; the `unsafe` idioms inside strings.Builder,
 // errors.Join and internal/stringslite.Clone are OVERLAID (stdlib-
 // overlay.tsv, byte-checked, cap 12). cmp.Compare's kind-dispatch
-// desugar is RETAINED by the slice's STOP rule (cmpshim.go's header:
-// retiring it flipped slices/sortfunc-cmp/cmp-compare-kinds red on
-// mono.go's function-local-type naming refusal — posed to the [USER]).
-// What else remains here is the fmt DESUGAR bundle (memo §2.3.3 / G5 —
+// desugar, RETAINED by slice 2's STOP rule, was RETIRED 2026-09-04 (lane
+// fr24) per the [USER] ruling «(2) given we have a plan, I think this
+// should be an honest red» (relayed by the coordinator): cmpshim.go is
+// deleted and slices/sortfunc-cmp/cmp-compare-kinds is red on FR-19's
+// line (mono.go's function-local-type naming refusal, C6).
+// What remains here is the fmt DESUGAR bundle (memo §2.3.3 / G5 —
 // slice 4 re-homes it) and, inside it, goleanShimErrorsNew as fmt.Errorf's error constructor ONLY: a user
 // `errors.New(...)` is the real library function now; Errorf's constructed
 // error keeps the injected type until slice 4 routes Errorf onto the real
@@ -134,11 +136,6 @@ const fmtDynShimKey = "goleanShimFmtSprintfDyn"
 // catch them. Injected whenever any shim is (it costs one dead decl).
 const shimUnsupportedName = "goleanShimUnsupported"
 
-// The cmp.Compare kind shims (cmpshim.go — the one generic desugar
-// RETAINED after slice 2 by the STOP rule; see that file's header).
-const cmpCompareUintShimName = "goleanShimCmpCompareUint"
-const cmpCompareIntShimName = "goleanShimCmpCompareInt"
-const cmpCompareStringShimName = "goleanShimCmpCompareString"
 
 // stdlibShimAllowlist: package import path -> selector name -> shim
 // declaration name for DIRECT-CALL shims. EMPTY since slice 2 (every
@@ -148,15 +145,20 @@ const cmpCompareStringShimName = "goleanShimCmpCompareString"
 // against the register's frozen count.
 var stdlibShimAllowlist = map[string]map[string]string{}
 
-// stdlibGenericDesugarInject: packages whose GENERIC members desugar at
-// emit time (cmpshim.go emitCmpCompareCall) — the injection scan plants
-// their shims on call presence, like stdlibDesugarInject, but the call
-// is not a direct-call rewrite (Compare dispatches to a kind shim with
-// converts). Since slice 2: cmp.Compare only (slices.SortFunc retired).
-var stdlibGenericDesugarInject = map[string]map[string][]string{
-	"cmp": {"Compare": {cmpCompareUintShimName, cmpCompareIntShimName,
-		cmpCompareStringShimName}},
-}
+// stdlibGenericDesugarInject: packages whose GENERIC members desugared at
+// emit time — the injection scan plants their shims on call presence,
+// like stdlibDesugarInject, for a call that is not a direct-call rewrite.
+// EMPTY since 2026-09-04 (lane fr24): the last entry, cmp.Compare's
+// kind-dispatch desugar (cmpshim.go, deleted), was RETIRED per the [USER]
+// ruling (Mike 2026-09-04, relayed by the coordinator, cited as relayed:
+// «(2) given we have a plan, I think this should be an honest red») —
+// cmp.Compare is the real source-through generic at EVERY type argument;
+// a function-local defined type argument refuses at mono.go's C6 naming
+// rule (row slices/sortfunc-cmp/cmp-compare-kinds, red on FR-19's line).
+// Kept as the table the emitter, the reach walk and the register consult,
+// so a future entry has exactly one place to land — against the
+// register's frozen count.
+var stdlibGenericDesugarInject = map[string]map[string][]string{}
 
 // stdlibDesugarInject: package import path -> selector names whose
 // CALL presence triggers a shim-bundle injection although the call
@@ -191,9 +193,6 @@ var stdlibShimDeclNames = map[string][]string{
 	fmtDynShimKey: {fmtDynShimKey, "goleanShimStringer",
 		"goleanShimFmtDynVerb", "goleanShimFmtDynInt", "goleanShimFmtDynUint",
 		"goleanShimFmtSprintDyn", "goleanShimFmtSprintlnDyn"},
-	cmpCompareUintShimName:   {cmpCompareUintShimName},
-	cmpCompareIntShimName:    {cmpCompareIntShimName},
-	cmpCompareStringShimName: {cmpCompareStringShimName},
 	shimUnsupportedName:      {shimUnsupportedName},
 }
 
@@ -799,54 +798,6 @@ func goleanShimFmtSprintlnDyn(args []any) string {
 `,
 
 
-	// cmp.Compare kind shims (emit-time dispatch with explicit
-	// converts, emit.go's emitCmpCompareCall). For integer and string
-	// kinds these are exactly cmp.Compare's semantics; floats (the NaN
-	// arm) are excluded from the dispatch, so the shims never see them.
-	cmpCompareUintShimName: `
-// goleanShimCmpCompareUint is the native frontend's cmp.Compare shim
-// at unsigned-integer kinds (W4.3 item 1 landing B). Injected
-// declaration — not user code.
-func goleanShimCmpCompareUint(a, b uint64) int {
-	if a < b {
-		return -1
-	}
-	if a > b {
-		return 1
-	}
-	return 0
-}
-`,
-
-	cmpCompareIntShimName: `
-// goleanShimCmpCompareInt is the native frontend's cmp.Compare shim at
-// signed-integer kinds (W4.3 item 1 landing B). Injected declaration —
-// not user code.
-func goleanShimCmpCompareInt(a, b int64) int {
-	if a < b {
-		return -1
-	}
-	if a > b {
-		return 1
-	}
-	return 0
-}
-`,
-
-	cmpCompareStringShimName: `
-// goleanShimCmpCompareString is the native frontend's cmp.Compare shim
-// at string kinds (W4.3 item 1 landing B). Injected declaration — not
-// user code.
-func goleanShimCmpCompareString(a, b string) int {
-	if a < b {
-		return -1
-	}
-	if a > b {
-		return 1
-	}
-	return 0
-}
-`,
 	shimUnsupportedName: `
 // goleanShimUnsupported raises an UNRECOVERABLE machine stop (audit
 // R4-C-3): the emitter force-quarantines this declaration

@@ -140,7 +140,7 @@ func stdlibRegisterDump() (string, error) {
 	}
 	for path, fns := range stdlibGenericDesugarInject {
 		for sel := range fns {
-			shimRows = append(shimRows, path+"."+sel+"\tgeneric kind-dispatch desugar (cmpshim.go) — RETAINED by slice 2's STOP rule: its retirement flips slices/sortfunc-cmp/cmp-compare-kinds red on mono.go's function-local-type instantiation naming refusal; posed to the [USER] (evidence README); floats fall through to the real generic")
+			shimRows = append(shimRows, path+"."+sel+"\tgeneric emit-time desugar (stdlibGenericDesugarInject — EMPTY since the cmp.Compare kind desugar retired 2026-09-04; a new entry is a register widening)")
 		}
 	}
 	sort.Strings(shimRows)

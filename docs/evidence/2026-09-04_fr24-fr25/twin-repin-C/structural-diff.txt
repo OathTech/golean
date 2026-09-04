@@ -1,0 +1,20 @@
+# twin wire structural diff — pinned (69a538de716a…) vs fresh emit at fr24 checkpoint C (b4458244c259…); producer: python3 over the two JSON files (docs/evidence/2026-09-04_fr24-fr25/README.md Reproduction)
+funcs removed: ['quorum.goleanShimCmpCompareInt', 'quorum.goleanShimCmpCompareString', 'quorum.goleanShimCmpCompareUint']
+funcs added: []
+funcs changed: []
+types removed: []
+types added: []
+types changed: []
+globals removed: []
+globals added: []
+globals changed: []
+methods removed: []
+methods added: []
+methods changed: []
+methodSets equal: True
+fileOrder equal: True
+package equal: True
+schema equal: True
+removed func quorum.goleanShimCmpCompareInt unsupported: None referenced by any body in the pinned wire: False
+removed func quorum.goleanShimCmpCompareString unsupported: None referenced by any body in the pinned wire: False
+removed func quorum.goleanShimCmpCompareUint unsupported: None referenced by any body in the pinned wire: False

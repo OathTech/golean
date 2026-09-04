@@ -1,0 +1,28 @@
+# DIAGNOSTIC — NOT A LOWERING. tools/lowerdiag report: no wire is written; nothing in this file is a gate input.
+package	decls	funcs_methods	lowers_static	funcs_methods_lower_static	may_refuse	refused_static	share_lowers	lowers_after_top3	export_status
+cedargo/internal/consts	9	1	9	1	0	0	100.0%	9	ok
+cedargo/internal	6	0	6	0	0	0	100.0%	6	ok
+cedargo/internal/mapset	27	23	21	17	0	6	77.8%	23	ok
+cedargo/internal/rust	21	15	21	15	0	0	100.0%	21	ok
+xexp/constraints	6	0	6	0	0	0	100.0%	6	ok
+cedargo/types	197	133	147	85	0	50	74.6%	179	ok
+cedargo/internal/extensions	3	1	3	1	0	0	100.0%	3	ok
+cedargo/x/exp/ast	225	163	225	163	0	0	100.0%	225	ok
+cedargo/internal/json	52	33	47	28	0	5	90.4%	50	KILLED (own: method nodeJSON.MarshalJSON: duplicate-typeid nodeJSONAlias; method nodeJSON.UnmarshalJSON: duplicate-typeid nodeJSONAlias)
+cedargo/internal/parser	193	125	190	122	1	2	98.4%	190	ok
+cedargo/ast	98	93	98	93	0	0	100.0%	98	KILLED (inherited from cedargo/internal/json)
+cedargo/internal/eval	242	171	232	161	0	10	95.9%	236	ok
+cedargo	84	43	76	36	0	8	90.5%	79	KILLED (inherited from cedargo/internal/json)
+cedargo/x/exp/batch	25	12	21	8	0	4	84.0%	22	KILLED (inherited from cedargo/internal/json)
+cedargo/x/exp/dot	3	3	1	1	0	2	33.3%	1	ok
+cedargo/x/exp/eval	10	8	10	8	0	0	100.0%	10	ok
+cedargo/x/exp/schema/ast	44	20	44	20	0	0	100.0%	44	ok
+cedargo/x/exp/schema/internal/json	20	11	17	8	0	3	85.0%	20	ok
+cedargo/x/exp/schema/internal/parser	80	53	75	48	0	5	93.8%	75	KILLED (own: func init: slices-sort-kind slices.Sort@string)
+cedargo/x/exp/schema/resolved	45	28	44	27	0	1	97.8%	44	ok
+cedargo/x/exp/schema	10	9	10	9	0	0	100.0%	10	KILLED (inherited from cedargo/x/exp/schema/internal/parser)
+cedargo/x/exp/schema/validate	157	131	143	117	0	14	91.1%	148	ok
+cedargo/x/exp/types	11	9	8	6	0	3	72.7%	10	ok
+main	1	1	1	1	0	0	100.0%	1	KILLED (inherited from cedargo/internal/json)
+cedark8s/cmd/schema-formatter	2	2	1	1	0	1	50.0%	1	ok
+cedark8s/internal/schema	100	38	98	36	0	2	98.0%	99	ok

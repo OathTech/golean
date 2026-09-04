@@ -32,9 +32,9 @@ column of the block made the check fail naming the line
 | substitution | one UPSTREAM file swapped for another UPSTREAM file of the same package (`*_native.go` + `.s` → `*_generic.go`); no text of ours | uncapped | every row names its upstream twin (`tools/nativefrontend/stdlib-substitutions.tsv`) |
 | overlay | OUR text at a library path: ONE pure-Go expression substituted for ONE unsafe (or runtime-implemented) expression at ONE named site, recorded in `tools/nativefrontend/stdlib-overlay.tsv` (package, file, line, the upstream bytes, the substitute, the semantic argument + its verified premise) and BYTE-CHECKED at every load — the recorded line must carry the recorded bytes exactly once or the unit refuses by site (slice 2, 2026-09-03: `internal/stringslite.Clone`, `errors.joinError.Error`, `strings.Builder.{String,copyCheck,grow}`). `internal/strconv`'s float-bits casts are NOT overlaid (see the slice log: a primitive admission, [USER]-gated) | **12** `expr` rows | [USER] re-ratification |
 | overlay-import | the consequential neutralization of an import a file no longer uses once its `expr` rows apply (`"unsafe"` -> `_ "unsafe"`); no semantics; admitted only for a file that has an `expr` row (parser-enforced); an `expr` row may NOT target an import line (audit fix round F2), and after the rows apply no LIVE binding to `unsafe`/`internal/abi` or to a neutralized path may survive (post-hoc check); the overlaid package must type-check (`--stdlib-overlay-check`, F3) | **8** (own cap, enforced by the dump; the NUMBER is [AGENT]-provisional pending [USER] — 5 today + headroom for bytes' MakeNoZero import) | [USER] re-ratification |
-| intercept | a source-through library member whose DIRECT CALL the frontend lowers to a machine op or a retained desugar instead of the library body (`slices.Sort` → the `sortSlice` op; `cmp.Compare` → the kind desugar at integer/string type arguments); ONE predicate (`interceptedLibraryCall`) serves the reach walk and the emitter; `defer`/`go` of such a member refuses by name (audit fix round F1) | frozen (shrinks: memo §3 row M retires slices.Sort; the cmp desugar's fate is a gate) | n/a |
+| intercept | a source-through library member whose DIRECT CALL the frontend lowers to a machine op or a retained desugar instead of the library body (`slices.Sort` → the `sortSlice` op; `cmp.Compare` → the kind desugar at integer/string type arguments UNTIL 2026-09-04 — RETIRED, lane `fr24`, per the [USER] ruling «(2) given we have a plan, I think this should be an honest red», relayed); ONE predicate (`interceptedLibraryCall`) serves the reach walk and the emitter; `defer`/`go` of such a member refuses by name (audit fix round F1) | frozen (shrinks: memo §3 row M retires slices.Sort) | n/a |
 | primitive | a machine op of LIBRARY origin (`print`/`println` when G2's slice lands; `sync` and `sortSlice` are language/memory-model and are listed elsewhere, not counted) | **2** | [USER] re-ratification |
-| shim | a RETAINED user-package injection (`stdlibshim.go` and the fmt desugar; since slice 2 also the cmp.Compare kind-dispatch desugar, `cmpshim.go`, retained by the slice's STOP rule) — frozen under D-002, retired row by row per memo §3 | frozen | n/a — shrinks only |
+| shim | a RETAINED user-package injection (`stdlibshim.go` and the fmt desugar; the cmp.Compare kind-dispatch desugar `cmpshim.go`, retained by slice 2's STOP rule, RETIRED 2026-09-04 by [USER] ruling — 6 remain, all fmt) — frozen under D-002, retired row by row per memo §3 | frozen | n/a — shrinks only |
 | shadow-type | an E5-T shadow model (`importedmodel.go`); since slice 2 only the `sync/atomic` wrappers (the atomics arc's intrinsics) — `strings.Builder`/`bytes.Buffer` RETIRED onto source-through + overlay | frozen | n/a |
 | init-callee | an UNMODELED stdlib function a package-level initializer may CALL and still have the initializer SKIPPED with its declared vars poisoned per declaration (H-11's `pureUnmodeledCallees`, `emit.go`; the `$poisoned` cell + `globalAddr` refusal on every reference). A row is an ADMISSION with a written argument that the callee is result-only (no output stream, no filesystem, no process state, no argument referent mutated) and panic-free over the argument shapes `initializerEffectIsolated` admits — never a "not modeled yet" list (H-11 audit F1/F1b, 2026-08-20) | uncapped, each row argued | a row here with its argument; [AGENT] rows are flagged in the slice log for the [USER] |
 
@@ -250,6 +250,28 @@ The primitive table is still empty (print/println is slice 3).
   `binary.Write` (ledger FR-24) — the row text above is unchanged (it is
   the register's INIT-PURE claim, which still holds; the kill is a TYPE
   refusal at `collectGlobals`, rowed with its plan).
+- **2026-09-04 (lane `fr24`, checkpoints A–C; `docs/evidence/2026-09-04_fr24-fr25/`).**
+  (A) FR-24: the `encoding/binary` row re-worded — `structSize sync.Map`
+  is POISONED per declaration when reached (the `$poisoned` cell; every
+  reader an H-3 stub naming it), no longer a whole-export kill; the
+  init-pure claim unchanged. (B) FR-25: no table moved. (C) **cmp.Compare
+  desugar RETIRED — [USER] Mike 2026-09-04, relayed by the [AGENT]
+  coordinator (cited as relayed): «(2) given we have a plan, I think this
+  should be an honest red».** `cmpshim.go` deleted with its three kind
+  shims (`goleanShimCmpCompare{Uint,Int,String}`), the `intercept` row and
+  the `stdlibGenericDesugarInject` entry gone (table kept, EMPTY);
+  `cmp.Compare` is the real generic at every type argument. Consequence,
+  taken as ruled: `slices/sortfunc-cmp/cmp-compare-kinds` (a function-
+  local `index` type argument) goes RED on mono.go's C6 naming refusal —
+  FR-19's line (plan: the scope-qualified TypeId key), BUGS.md BUG-092
+  Cases line; every OTHER cmp.Compare row stays green through the real
+  generic (verified row by row at the checkpoint). The raft twin pin MOVES
+  (quorum's `majority.go` calls cmp.Compare inside `MajorityConfig.Describe`,
+  an H-3 quarantined stub — the ONLY wire change is the three dead injected
+  kind shims leaving; 0 added, 0 changed): re-pinned 69a538de → b4458244
+  with the structural diff in the evidence dir. Counts: intercept 2 → 1, **shim 7 →
+  6 (the fmt desugar's six); the D-002 freeze is intact — no retained body
+  changed.**
 
 ## The machine block
 
@@ -265,13 +287,13 @@ count	source-through	13 (uncapped)
 count	substitution	5 (uncapped; each names its upstream twin)
 count	overlay	5 / cap 12 (expr sites, stdlib-overlay.tsv; byte-checked at every load)
 count	overlay-import	5 / cap 8 (consequential import neutralizations of overlaid files; no semantics; own cap, [AGENT]-provisional pending [USER])
-count	intercept	2 (library members whose direct call the frontend lowers to a machine op or a retained desugar instead of the library body — stdlibreach.go frontendInterceptedLibraryMembers, one predicate for reach walk and emitter)
+count	intercept	1 (library members whose direct call the frontend lowers to a machine op or a retained desugar instead of the library body — stdlibreach.go frontendInterceptedLibraryMembers, one predicate for reach walk and emitter)
 count	primitive	0 / cap 2
-count	shim	7 (frozen, D-002; retired by rows of memo §3)
+count	shim	6 (frozen, D-002; retired by rows of memo §3)
 count	shadow-type	5
 count	init-callee	3 (H-11 pureUnmodeledCallees: unmodeled stdlib functions a package-level initializer may call and still be SKIPPED with its vars poisoned; each row states result-only + panic-free over the admitted argument shapes; a row is an admission, not a model)
 source-through	bytes	slice-2 target (Equal retired from shim; Buffer retired from the E5-T shadow model — pure Go, its growth idiom `append([]byte(nil), make([]byte, c)...)` is the overlay's model); ReadFrom/WriteTo reach `io` (export data only) and quarantine by name; init-pure: three errors.New sentinels + the asciiSpace table
-source-through	cmp	slice-2 target (Compare retired from the kind-dispatch desugar — the real generic body, NaN arm included, so floats lower too); pure, no imports; init-pure: no package-level state
+source-through	cmp	slice-2 target; Compare is the REAL generic at EVERY type argument since 2026-09-04 (lane fr24: the retained integer/string kind-dispatch desugar RETIRED per the [USER] ruling «(2) … an honest red», relayed — a function-local defined type argument now refuses at mono.go's C6 naming rule, rows slices/sortfunc-cmp/cmp-compare-kinds + stdlib-source/cmp-compare/local-float-type on FR-19's line; NaN arm included); pure, no imports; init-pure: no package-level state
 source-through	encoding/binary	slice-2 target (LittleEndian.Uint64/PutUint64 retired from the package-variable method desugar — the exported vars and their unexported receiver types lower as ordinary library declarations); Read/Write/Size are reflect and refuse by name (export data); init-pure: two errors.New sentinels, zero-valued ByteOrder vars, a sync.Map (structSize, dataSize's cache) reached whenever Write/Read/Size is — its TYPE does not lower, so the var is POISONED per declaration (`$poisoned` cell; dataSize and every reader an H-3 stub naming the var, its type and the cause — ledger FR-24, PARTIALLY CLOSED 2026-09-04, lane fr24; the init-pure claim itself holds: the var has no initializer)
 source-through	errors	errors.New (slice 2: the user-facing SHIM retired — every errors.New is the real *errors.errorString), Join (its unsafe.String OVERLAID), Unwrap; Is/As reach internal/reflectlite and refuse by name (FR-21 → G6)
 source-through	internal/bytealg	the byte-search leaves strings.Index/Count/Split reach; assembly on amd64, swapped for the package's own *_generic.go twins by stdlib-substitutions.tsv; MakeNoZero (body-less) is overlaid away at its one strings caller
@@ -298,9 +320,7 @@ overlay-import	errors/join.go:8	`"unsafe"` -> `_ "unsafe"` — consequential: th
 overlay-import	strings/builder.go:8	`"internal/abi"` -> `_ "internal/abi"` — consequential: the file's only `abi.` use is the line-39 site.
 overlay-import	strings/builder.go:9	`"internal/bytealg"` -> `_ "internal/bytealg"` — consequential: the file's only `bytealg.` use is the line-67 site.
 overlay-import	strings/builder.go:11	`"unsafe"` -> `_ "unsafe"` — consequential: the file's `unsafe.` uses are the line-39 and line-47 sites.
-intercept	cmp.Compare	the kind-dispatch desugar (cmpshim.go) at INTEGER and STRING type arguments, RETAINED by slice 2's STOP rule — intercepts every such direct call site, not only the local-type row; float type arguments fall through to the real generic (so a function-local FLOAT type argument still refuses at mono.go's C6 rule — row stdlib-source/cmp-compare/local-float-type); `defer`/`go` of it refuse by name
 intercept	slices.Sort	the quorum-pilot `sortSlice` MACHINE OP at integer element kinds (emit.go emitSortStmt, ExprStmt position only; non-integer kinds refuse by name — row slices/slices-sort-non-integer-refusal; memo §3 row M retires the op in slice 4, when this entry goes with it); `defer`/`go` of it refuse by name (rows stdlib-source/sort-op-shapes/*)
-shim	cmp.Compare	generic kind-dispatch desugar (cmpshim.go) — RETAINED by slice 2's STOP rule: its retirement flips slices/sortfunc-cmp/cmp-compare-kinds red on mono.go's function-local-type instantiation naming refusal; posed to the [USER] (evidence README); floats fall through to the real generic
 shim	fmt.Errorf	fmt desugar (fmtdesugar.go; memo §2.3.3 / G5 — slice 4 re-homes it; its bundle keeps goleanShimErrorsNew as Errorf's error constructor only)
 shim	fmt.Fprint	fmt desugar (fmtdesugar.go; memo §2.3.3 / G5 — slice 4 re-homes it; its bundle keeps goleanShimErrorsNew as Errorf's error constructor only)
 shim	fmt.Fprintf	fmt desugar (fmtdesugar.go; memo §2.3.3 / G5 — slice 4 re-homes it; its bundle keeps goleanShimErrorsNew as Errorf's error constructor only)

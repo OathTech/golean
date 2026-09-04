@@ -1,11 +1,11 @@
 package main
 
 // cmp through the REAL source-through package (slice 2, 2026-09-03). The
-// kind-dispatch desugar for cmp.Compare at integer/string kinds is
-// RETAINED (cmpshim.go, the slice's STOP rule); everything else here is
-// the real generic: float kinds (the NaN arm the desugar excluded — the
-// old float-compare-bound refusal is gone), cmp.Less, cmp.Or, and
-// cmp.Compare at a named float type. (`math` is not a source-through
+// kind-dispatch desugar for cmp.Compare at integer/string kinds, RETAINED
+// by the slice's STOP rule, was RETIRED 2026-09-04 (lane fr24, [USER]
+// ruling «(2) … an honest red», relayed): everything here is the real
+// generic — float kinds (the NaN arm), cmp.Less, cmp.Or, cmp.Compare at a
+// named float type. (`math` is not a source-through
 // package: NaN, ±Inf and -0 are produced by float arithmetic on
 // variables — `z/z`, `1/z`, `-z` — exactly as gc computes them.)
 
@@ -40,13 +40,14 @@ func cmpOr() (int, string, float64) {
 	return cmp.Or(0, 0, 7, 9), cmp.Or("", "", "x", "y"), cmp.Or(0.0, nan())
 }
 
-// The retained kind-dispatch desugar (cmpshim.go) intercepts EVERY integer/
-// string cmp.Compare call site — including the function-local defined
-// type the row slices/sortfunc-cmp/cmp-compare-kinds pins — but a
-// function-local FLOAT type falls through to the real generic and hits
-// mono.go's C6 naming rule: an ASYMMETRY the audit asked to row (born red
-// by name; C6 is a ratified (c)-impossibility, revisitable under FR-19's
-// scope-qualified TypeId plan). gc: 1000 - 1 + 1 = ... see main.
+// A function-local FLOAT type argument reaches the real generic and hits
+// mono.go's C6 naming rule (born red by name at the slice-2 audit fix
+// round — then an ASYMMETRY against the retained desugar's int/string
+// masking; since 2026-09-04 the int/string local-type row
+// slices/sortfunc-cmp/cmp-compare-kinds is red the same way, so the
+// asymmetry is gone and both sit on FR-19's line: the scope-qualified
+// TypeId key is the plan; C6 stays the impossibility only where the NAME
+// is observable). gc: 1000 - 1 + 1 = ... see main.
 func cmpLocalFloatType() int {
 	type score float64
 	return cmp.Compare(score(2.5), score(1.5))*100 + cmp.Compare(score(1), score(1))*10 + cmp.Compare(score(-1), score(0)) + 1000

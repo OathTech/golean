@@ -590,7 +590,7 @@ func notJudgedRows(all []*declReport) []notJudged {
 			row.What = "declarations calling a fmt shim member — the verb×kind matrix and arity are checked at emit time only"
 		case "cmp-compare-shape":
 			row.Count = countIf(func(d *declReport) bool { return hasSupplied(d, "cmp.Compare") })
-			row.What = "declarations calling cmp.Compare — the kind-dispatch desugar's shape bound is emitter-side"
+			row.What = "declarations calling cmp.Compare — the real generic since the kind desugar retired (2026-09-04); a function-local type argument is a stencil-time C6 refusal"
 		case "generics-corner", "generic-template", "local-type-type-argument", "stencil-whole-export":
 			row.Count = countIf(func(d *declReport) bool { return d.GenericSites > 0 })
 			row.What = "declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged"

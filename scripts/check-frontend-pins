@@ -49,6 +49,16 @@
 #      TryLock stub above present on both sides. [USER]-authorized by G9 +
 #      ruling (a) (relayed); structural diff + hashes in
 #      docs/evidence/2026-09-03_stdlib-source-2/twin-{structural-diff,pin}-round10*.
+#      Re-pin history: 2026-09-04 (lane fr24, checkpoint C) 69a538de… →
+#      b4458244… — the cmp.Compare kind-dispatch desugar RETIRED per the
+#      [USER] ruling (Mike 2026-09-04, relayed by the coordinator, cited
+#      as relayed: «(2) given we have a plan, I think this should be an
+#      honest red»): the three dead injected shims
+#      quorum.goleanShimCmpCompare{Int,String,Uint} (planted by the
+#      file-presence scan for majority.go's cmp.Compare calls inside the
+#      H-3-quarantined MajorityConfig.Describe; referenced by no body)
+#      leave the wire — the SOLE change (0 added, 0 changed; enumerated
+#      by a JSON diff, docs/evidence/2026-09-04_fr24-fr25/twin-repin-C/).
 #
 # Fail-closed throughout: missing baseline, failed build, failed emit,
 # failed run, or any byte drift exits 1 naming the failing pin.

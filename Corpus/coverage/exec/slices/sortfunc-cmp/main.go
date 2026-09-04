@@ -1,11 +1,17 @@
 package main
 
 // slices.SortFunc + cmp.Compare conformance (W4.3 item 1 landing B —
-// the W1.2 inheritance, H-5; docs/raft-w43-log.md). Mechanisms:
-// cmp.Compare desugars at emit time to kind shims (unsigned/signed/
-// string) with explicit conversions; slices.SortFunc emits a call to
-// an INJECTED GENERIC insertion-sort shim, stenciled through the
-// ordinary mono pipeline at the call's element type.
+// the W1.2 inheritance, H-5; docs/raft-w43-log.md). Mechanisms TODAY
+// (both members are the REAL source-through generics since stdlib
+// source-through slice 2 / lane fr24 2026-09-04): slices.SortFunc is
+// pdqsortCmpFunc stenciled at the element type; cmp.Compare is the real
+// generic at every type argument — its integer/string kind-dispatch
+// desugar (the original landing-B mechanism) was RETIRED 2026-09-04 per
+// the [USER] ruling (Mike, relayed by the coordinator, cited as relayed:
+// «(2) given we have a plan, I think this should be an honest red»), so
+// cmpCompareKinds — whose `index` is a FUNCTION-LOCAL defined type
+// argument — is red BY RULING on mono.go's C6 naming refusal (FR-19's
+// line: the scope-qualified TypeId key is the plan).
 //
 // THE TIE LATITUDE, recorded: upstream SortFunc is "not guaranteed to
 // be stable" — any cmp-consistent order conforms. The shim (insertion

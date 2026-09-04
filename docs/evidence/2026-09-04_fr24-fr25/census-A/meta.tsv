@@ -1,0 +1,10 @@
+key	value
+git_commit	83b71132f814f29e7f9d583f2836a0993cf58ec3
+cedar_go	deps/cedar-go@cda92d0d9345fce26b36366288afd3c909fc7bd8
+cedar_k8s	deps/cedar-access-control-for-k8s@660c6374dff9e6c47647f1c7a17f728d75296324
+go_toolchain	go1.26.5
+golean_bin	<repo>/.lake/build/bin/golean
+pass	A (unpatched copy — today's coverage)
+date	2026-09-04T17:34:48Z
+go_timeout_s	60
+lean_timeout_s	120

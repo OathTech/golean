@@ -23,7 +23,7 @@
   check-coverage: ok (135 canonical tags; no dead tags; 3 all-failing (warn))
 
 [1m── spec-anchor citations (scripts/check-spec-anchors)[0m
-  check-spec-anchors: ok — 739 spec# + 254 mem# + 26 godoc: citations all resolve at pin c19862e5f
+  check-spec-anchors: ok — 740 spec# + 254 mem# + 26 godoc: citations all resolve at pin c19862e5f
 
 [1m── stdlib admission register (scripts/check-stdlib-register)[0m
   check-stdlib-register: ok — register machine block = frontend tables (source-through=13 (uncapped); substitution=5 (uncapped; each names its upstream twin); overlay=5 / cap 12 (expr sites, stdlib-overlay.tsv; byte-checked at every load); overlay-import=5 / cap 8 (consequential import neutralizations of overlaid files; no semantics; own cap, [AGENT]-provisional pending [USER]); intercept=2 (library members whose direct call the frontend lowers to a machine op or a retained desugar instead of the library body — stdlibreach.go frontendInterceptedLibraryMembers, one predicate for reach walk and emitter); primitive=0 / cap 2; shim=7 (frozen, D-002; retired by rows of memo §3); shadow-type=5; init-callee=3 (H-11 pureUnmodeledCallees: unmodeled stdlib functions a package-level initializer may call and still be SKIPPED with its vars poisoned; each row states result-only + panic-free over the admitted argument shapes; a row is an admission, not a model))
@@ -55,16 +55,16 @@ check-frontend-pins: ok [stdlib-pin] — 61 lowered stdlib source files match th
   test-import-goose: all fixtures behave
 
 [1m── frontend unit tests (go test ./tools/nativefrontend)[0m
-ok  	_<repo>/tools/nativefrontend	0.975s
+ok  	_<repo>/tools/nativefrontend	0.969s
 
 [1m── lowering-diagnostic tables (go test ./tools/lowerdiag — causes.tsv vs ledger, surface tables vs frontend, calibration)[0m
-ok  	_<repo>/tools/lowerdiag	0.529s
+ok  	_<repo>/tools/lowerdiag	0.534s
 
 [1m── interpreter eval tests (gocore-eval-tests)[0m
   ok:148  fail:0  exit:0
 
 [1m── re-run full native differential corpus (--diff: tier=slow rows verified against their cached certified records)[0m
-differential coverage summary: cases=3376 pass=3168 fail=208 export_status=0
+differential coverage summary: cases=3382 pass=3173 fail=209 export_status=0
 results: artifacts/coverage/latest.tsv
 metadata: artifacts/coverage/latest.meta.tsv
 
@@ -88,11 +88,11 @@ metadata: artifacts/coverage/latest.meta.tsv
   ok: fan-out that ran no worker exits 2 without publishing (G5)
   ok: G5 named both causes (global fan-out refusal + empty-row guard), no stray .out
   ok: T1-strict-lean-run: cause named at stage lean-observation (Lean run TIMED OUT after 1s)
-      row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	lean-observation	Lean run TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) — no observation produced (expected status ok); captured output: run_with_timeout: TIMED OUT after 1s — killing: <repo>/.tmp/golean-lane-validation.bT8ArF/fakeroot/.lake/build/bin/golean native-json-run --input <repo>/.tmp/golean-lane-validation.bT8ArF/artifacts-T1-strict-lean-run/native/lane-t1/wire.json --function forConditionEval
+      row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	lean-observation	Lean run TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) — no observation produced (expected status ok); captured output: run_with_timeout: TIMED OUT after 1s — killing: <repo>/.tmp/golean-lane-validation.vZVUH9/fakeroot/.lake/build/bin/golean native-json-run --input <repo>/.tmp/golean-lane-validation.vZVUH9/artifacts-T1-strict-lean-run/native/lane-t1/wire.json --function forConditionEval
   ok: T2-nondet-rerun: cause named at stage nondet (re-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s)
-      row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	nondet	oracle-invariance re-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) — invariance NOT certified (a killed run is not an observed variance); captured output: run_with_timeout: TIMED OUT after 1s — killing: <repo>/.tmp/golean-lane-validation.bT8ArF/fakeroot/.lake/build/bin/golean native-json-run --input <repo>/.tmp/golean-lane-validation.bT8ArF/artifacts-T2-nondet-rerun/native/lane-t1/wire.json --function forConditionEval --choices 9,8,7,6,5,4,3,2,1,0
+      row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	nondet	oracle-invariance re-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) — invariance NOT certified (a killed run is not an observed variance); captured output: run_with_timeout: TIMED OUT after 1s — killing: <repo>/.tmp/golean-lane-validation.vZVUH9/fakeroot/.lake/build/bin/golean native-json-run --input <repo>/.tmp/golean-lane-validation.vZVUH9/artifacts-T2-nondet-rerun/native/lane-t1/wire.json --function forConditionEval --choices 9,8,7,6,5,4,3,2,1,0
   ok: T3-coupling-pin: cause named at stage membership (driver-coupling pin: native-json-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s)
-      row: FAIL	lane-t3	maps,range,keys,loops,nondet	membership	driver-coupling pin: native-json-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) — coupling NOT certified (a killed run is not copied-driver drift); captured output: run_with_timeout: TIMED OUT after 1s — killing: <repo>/.tmp/golean-lane-validation.bT8ArF/fakeroot/.lake/build/bin/golean native-json-run --input <repo>/.tmp/golean-lane-validation.bT8ArF/artifacts-T3-coupling-pin/native/lane-t3/wire.json --function rangeFirstKey --choices 9,8,7,6,5,4,3,2,1,0
+      row: FAIL	lane-t3	maps,range,keys,loops,nondet	membership	driver-coupling pin: native-json-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) — coupling NOT certified (a killed run is not copied-driver drift); captured output: run_with_timeout: TIMED OUT after 1s — killing: <repo>/.tmp/golean-lane-validation.vZVUH9/fakeroot/.lake/build/bin/golean native-json-run --input <repo>/.tmp/golean-lane-validation.vZVUH9/artifacts-T3-coupling-pin/native/lane-t3/wire.json --function rangeFirstKey --choices 9,8,7,6,5,4,3,2,1,0
   ok: T4-sample-loop: cause named at stage membership (observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing a Go sample against member #1)
   ok: T5-comparator-undecodable: cause named at stage go-observation (Go output is not a valid observation (comparator said: left.status: unknown observation status)
   ok: T6-lean-run-sigkill: cause named at stage lean-observation (Lean run KILLED (exit 137)
@@ -110,16 +110,17 @@ meta: artifacts/coverage/negative-latest.meta.tsv
 no regression: 394 case(s) run in negative-latest.tsv match baselines/negative-full.tsv
 
 [1m── differential baseline diff (scripts/coverage-baseline-diff)[0m
-no regression: 3376 case(s) run in latest.tsv match baselines/native-full.tsv
+no regression: 3382 case(s) run in latest.tsv match baselines/native-full.tsv
 
 [1m── baseline re-pin guard (HEAD-vs-HEAD~1; flips must be on a BUGS.md Cases: line)[0m
+  re-pin note: GREENED	init/library-var-type-poisoned/sibling	FAIL -> PASS
+  re-pin note: GREENED	init/library-var-type-unlowerable	FAIL -> PASS
 
 [1m── cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)[0m
-  [01] C1H  HIGH    baselines/native-full.tsv:898 header says 3365 cases (3165 PASS / 200 FAIL) but the data rows count 3376 (3168 PASS / 208 FAIL) — stale header; re-derive it from the rows (and add the derivation line)
-  [02] C13  MEDIUM  78 doc site(s) across 9 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
-  [03] C5  MEDIUM  8 frontier-table case citation(s) do not resolve against the baseline
-  [04] C5  MEDIUM  1 frontier row(s) claim a red count that is not mechanically re-derivable from their citations. Some of this is citation SHORTHAND (a prose family like 'F3 family 7', an ellipsis inside a glob, or a '+ adjacency' the count deliberately excludes) rather than drift — each needs a read, which is exactly why the count should not be re-derived from prose.
-  [05] C9  MEDIUM  the wire schema moved after the certification date 2026-09-04T01:02:30+00:00 (6 commit(s) to wire.go/NativeToIR.lean) — the certified set's wire sha is only current if `scripts/ci --slow` has re-enumerated since
+  [01] C13  MEDIUM  78 doc site(s) across 9 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
+  [02] C5  MEDIUM  12 frontier-table case citation(s) do not resolve against the baseline
+  [03] C5  MEDIUM  2 frontier row(s) claim a red count that is not mechanically re-derivable from their citations. Some of this is citation SHORTHAND (a prose family like 'F3 family 7', an ellipsis inside a glob, or a '+ adjacency' the count deliberately excludes) rather than drift — each needs a read, which is exactly why the count should not be re-derived from prose.
+  [04] C9  MEDIUM  the wire schema moved after the certification date 2026-09-04T01:02:30+00:00 (7 commit(s) to wire.go/NativeToIR.lean) — the certified set's wire sha is only current if `scripts/ci --slow` has re-enumerated since
 
 [1m══ scripts/ci summary ══[0m
   note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
@@ -146,9 +147,10 @@ no regression: 3376 case(s) run in latest.tsv match baselines/native-full.tsv
   ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
   ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
   ok   negative baseline diff (no regression)
-  ok   baseline diff FULL (3376/3376, no regression)
+  ok   baseline diff FULL (3382/3382, no regression)
   ok   re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)
-  note reconciler: 5 finding(s), 1 HIGH — report-only (details: tools/reconcile-records)
+  note re-pin baselines/native-full.tsv: 2 non-PASS→PASS flip(s), 0 deleted row(s) — report-only; verify the re-pin's written reason covers them
+  note reconciler: 4 finding(s), 0 HIGH — report-only (details: tools/reconcile-records)
 
 [1mRESULT: PASS[0m
 ci rc=0

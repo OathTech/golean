@@ -359,7 +359,7 @@ to an FR/Q row here, a (c)-pin (triage §4), or an (a)-queued fix
 | FR-16 | `defer` of a builtin other than `recover`/`close` (`defer delete(m, k)`; the same arm refuses `defer panic(v)`, `defer print…`) — noodler FG-2 | emit.go:2591 — `unsup("defer of builtin %s", id.Name)` (measured at 345ef090; only `recover` and `close` lower — `emitDeferClose` is the close special case) | spec#Defer_statements, spec#Built-in_functions | 1 (`noodler/defers/deferred-delete`) | frontend-only: FR-1's thunk desugar on the `defer` side — synthesize a one-shot closure over the NOW-evaluated operands and defer it (the `emitDeferClose` shape generalized; gc's own `deferwrap1` is the precedent, as `gowrap1` is FR-1's) | seq → queue 16 (S) — logged 2026-09-03, [USER] direction 3 (§0) |
 | FR-17 | inner-scope self-shadowing define with a call RHS (`x := f(x)` where the call reads the OUTER `x`) — noodler FG-5 | emit.go:3057 — `unsup("self-shadowing define with call RHS")` (the W7 A-9 shadow-capture pre-binding's one fail-closed arm, `docs/2026-08-21_w7-desugar-inventory.md` A-9) | spec#Short_variable_declarations, spec#Declarations_and_scope | 1 (`noodler/frontier/self-shadow-define`) | frontend-only: extend A-9's pre-binding to the call's ARGUMENTS — every argument that reads a shadowed name pre-binds to a hoisted temp evaluated in the outer scope before the fresh cells are declared (the non-call arm's `containsVarUse` mechanism, applied per argument) | seq → queue 17 (S) — logged 2026-09-03, [USER] direction 3 |
 | FR-18 | allocation, tuple-splat or interface method value DIRECTLY in a short-circuit RIGHT operand (`&&` and the or-operator): `make`, `new`, slice literal, map literal, `f(g())`, `(i.M)()` — noodler FG-3; FR-2 carries the receive case | emit.go:7104 sets `hoistForbidden = "short-circuit operand"`; the standing sites refuse per-declaration — :8966 `unsup("make in %s", e.hoistForbidden)`, :8211 `unsup("new in %s", …)`, :6597 `unsup("slice literal in %s", …)`, :6651 `unsup("map literal in %s", …)`, :2330/:2355 `unsup("call/allocation in %s (would change evaluation order)", …)`, :6035 `unsup("interface method value in %s", …)` (lines at 345ef090; the report's were measured at its lane tip); the same guard covers `append`/`copy`/`&composite` (:8871/:8936/:6321/:6394), not yet pinned | spec#Logical_operators, spec#Order_of_evaluation | 6 (`noodler/frontier/short-circuit-{alloc-make,alloc-new,slice-literal,map-literal,splat-call,iface-method-value}`) | frontend-only: extend FR-2's mechanism — the E3 conditional normalization (`scHoistOK` hoisting of the RHS's effects into the guarded branch) — to these operand kinds; these six rows ARE the guardrails the E3 BUILT record owes (`docs/gallery-campaign-log/g2.md:504-535`: "widening any of them later owes its own guardrail rows first"), so the arc's flips are pre-declared; add `append`/`copy`/`&composite` pins first | seq → queue 18 (M) — logged 2026-09-03, [USER] direction 3; pairs with queue 2 |
-| FR-19 | duplicate local TypeId — two functions each declaring `type T int`, or a function-local type shadowing a package-level type of the same name: a WHOLE-EXPORT kill (the noodler tripped it three times by accident) — noodler FG-1 | emit.go:554 — `unsup("duplicate TypeId %s (a function-local type collides with another declaration)", n)` (the `seenTypeIds` gate over the flattened `typeDefs`; the control-flow design doc's "fail-closed rider", `docs/2026-08-04_control-flow-design.md`) | spec#Type_definitions, spec#Declarations_and_scope, spec#Type_identity | 2 (`noodler/local-types/{distinct,shadow}`) | frontend: per-declaration TypeId disambiguation — scope-qualify the identity KEY (enclosing function + declaration position) while the RENDERED name keeps gc's spelling (gc prints `main.T` for both types; distinctness is observable through identity, assertion and comparison, never through the name), collision-checked at the one boundary. BUG-018's fix (`qualifiedTypeName` parameterizing function-local TypeIds by the enclosing instantiation's type arguments) is the precedent for a key that carries scope the name does not. §5.1 item 1 (C6: a local type as a type ARGUMENT names a compiler counter) stays an impossibility row — unaffected | seq → queue 19 (M) — logged 2026-09-03, [USER] direction 3 |
+| FR-19 | duplicate local TypeId — two functions each declaring `type T int`, or a function-local type shadowing a package-level type of the same name: a WHOLE-EXPORT kill (the noodler tripped it three times by accident) — noodler FG-1 | emit.go:554 — `unsup("duplicate TypeId %s (a function-local type collides with another declaration)", n)` (the `seenTypeIds` gate over the flattened `typeDefs`; the control-flow design doc's "fail-closed rider", `docs/2026-08-04_control-flow-design.md`) | spec#Type_definitions, spec#Declarations_and_scope, spec#Type_identity | 4 (`noodler/local-types/{distinct,shadow}`; since 2026-09-04 (lane `fr24`, checkpoint C) also `slices/sortfunc-cmp/cmp-compare-kinds` (FLIPPED PASS→FAIL by [USER] ruling — Mike 2026-09-04, relayed by the [AGENT] coordinator, cited as relayed: «(2) given we have a plan, I think this should be an honest red» — the cmp.Compare kind desugar that masked it is retired; the function-local `index` type argument hits mono.go's C6 naming refusal) and `stdlib-source/cmp-compare/local-float-type` (moved here from the C6 (c)-pin bucket — same refusal, same plan); both on BUGS.md BUG-092's Cases line) | frontend: per-declaration TypeId disambiguation — scope-qualify the identity KEY (enclosing function + declaration position) while the RENDERED name keeps gc's spelling (gc prints `main.T` for both types; distinctness is observable through identity, assertion and comparison, never through the name), collision-checked at the one boundary. BUG-018's fix (`qualifiedTypeName` parameterizing function-local TypeIds by the enclosing instantiation's type arguments) is the precedent for a key that carries scope the name does not. §5.1 item 1 (C6: a local type as a type ARGUMENT names a compiler counter) stays an impossibility row — unaffected — and, since the cmp retirement, the same scope-qualified KEY is the plan for a function-local type as a generic type ARGUMENT where the rendered name is unobservable (`cmp.Compare[index]`): the mangled instantiation key carries the scope; C6 remains the impossibility only for an OBSERVABLE name (`%T`/`%v` of a value of the type) | seq → queue 19 (M) — logged 2026-09-03, [USER] direction 3 |
 | FR-20 | forward `goto` to a label inside an enclosing nested block (a for body), the goto nested deeper than its label — noodler FG-4 | emit.go:1743/:2069 — `unsup("goto target label %s not at function body top level", name)` (the goto envelope restructures segments at the function body's top level only; the control-flow design doc's "outside the envelope" list) | spec#Goto_statements, spec#Labeled_statements, spec#Blocks | 1 (`noodler/frontier/goto-forward-in-block`) | LEGALITY CHECKED 2026-09-03: gc go1.26.5 (`go vet` + `go build`) accepts the case — the label's block ENCLOSES the goto and no declaration is skipped, so neither spec#Goto_statements prohibition applies; a genuine coverage gap, not a mis-filed negative case. Fix: frontend — apply the segment restructuring (`emitGotoBody`) at the label's ENCLOSING block rather than only the function body (the block containing the label is the segmentation unit; forward-only jumps out of nested statements into it need no fresh-cell story — FR-11 is the backward class) | seq → queue 20 (M) — logged 2026-09-03, [USER] direction 3 |
 | FR-22 | ~~a package-level `var` initializer that CALLS a stdlib function outside H-11's `pureUnmodeledCallees` allowlist — WHOLE-EXPORT kill~~ **PARTIALLY CLOSED 2026-09-04 (lane `fr22-fr23`): the kill is per-declaration for `init-callee` REGISTER rows; the members themselves remain refused by name.** Mechanism: `pureUnmodeledCallees` became the `init-callee` class of the stdlib admission register (`docs/stdlib-admission-register.md`, byte-checked by `scripts/check-stdlib-register`) — each row carries its written result-only + panic-free argument over the admitted argument shapes; `time.Date` admitted ([AGENT], the census's kill; audit fix round item 1: the row DISCLOSES its one transitive read — with `time.Local`, Date → `loc.lookup` → `(*Location).get` → `localOnce.Do(initLocal)` reads `TZ` and `/etc/localtime` — argued effect-free (a read no oracle observes) and panic-free (initLocal falls back to UTC on every error)); argument shapes widened by ONE form — an exported variable/constant of ANY non-source package in ANY argument position (`foreignPackageValue`; `time.UTC`/`time.Local` here), sound because the machine models no foreign cell and every value-position use of one in source refuses — so a register row's written argument must cover the callee's behaviour on every such input (the row's enumeration, not the predicate, closes it); untyped `nil` explicitly excluded (a nil Location panics). A poisoned var's cell now seeds as the reserved `$poisoned` placeholder (`struct{}` TypeDef) — its real type may have no machine default (`time.Time` is a D5 marker; seeding would have refused EVERY subject) and the cell is unreachable by construction; the poison is thereby VISIBLE on the wire. Reads refuse by name: `package-level var maxDatetime: its initializer does not lower (package-selector call time.Date …) — H-11 poison …`. RESIDUAL (the sound direction, H-11 audit F1/F1b): a callee NOT on the register, or a dependent initializer whose shape is not effect-isolated, still refuses the WHOLE export — now naming the declaration, the cause and the register (`init/stdlib-initializer-{unregistered,dependent}`). Init ORDER: the skipped initializer's slot is vacuous, the healthy ones keep declaration order (`stdlib-initializer-poison/order-kept`). | emit.go `quarantineUnlowerableGlobals` (whole-export arm: `package-level initializer of %s does not lower (%s) and is not H-11 effect-isolated — … (FR-22: per-declaration poisoning covers only initializers whose every call is a direct call to an init-callee register row …)`), `globalAddr` (poison text), `poisonGlobalCells`, `initializerEffectIsolated` + `foreignPackageValue`; register class `init-callee` (stdlibregister.go) | spec#Package_initialization (dependency order then declaration order; a skipped initializer occupies a vacuous slot — E7/BUG-061 unaffected), the `time.Date` doc comment at the pin (deps/go/src/time/time.go @ go1.26.5; `time` is not source-through, so no `godoc:` anchor) | 4 red BY DESIGN (`init/stdlib-initializer-poison/{read,cascade}`, `init/stdlib-initializer-dependent`, `init/stdlib-initializer-unregistered`); green: `init/stdlib-initializer-call` (FLIPPED 2026-09-04), `init/stdlib-initializer-poison/{sibling,order-kept}`, `init/stdlib-initializer-source-through` (plan item (ii): source-through callees route through the library loader — strings.Repeat, errors.New) | frontend; the register is the admission point — a new callee = a row with its argument, never a blanket rule (the refuted F1 reasoning) | partially closed 2026-09-04 (was queue 22); residual class stays here, [USER]-ratified rowing (direction 3, relayed) |
 | FR-23 | ~~an IMPORTED generic type instantiated in a method or func SIGNATURE is UNSTUBBABLE → WHOLE-EXPORT kill~~ **PARTIALLY CLOSED 2026-09-04 (lane `fr22-fr23`): the kill is per-declaration; the members themselves remain refused by name.** Mechanism: SIGNATURE-OPAQUE mode (wire.go `sigOpaque`/`opaqueInsts`, emit.go `withOpaqueSigs`) — while a declaration-only SIGNATURE is emitted (quarantined method stubs, interface requirement lists + interface dispatch anchors, promoted-method stubs), an imported generic instantiation emits as an opaque `named` reference under its mangled TypeId (`iter.Seq[int]`, `iter.Seq2[main.K,*main.V]`) and gets an existence-only `unsupported` TypeDef with NO method stubs (the D5 marker shape — NO wire-schema change; `opaqueMarkerTypeDefs`) — honest only for a method-less type, so an imported generic instantiation WITH exported methods (`unique.Handle[T]`) is REFUSED in opaque mode rather than given a stub-less marker that would let satisfaction answer a false no (audit fix round item 7; `TestOpaqueRefusesImportedGenericWithMethods`). Satisfaction stays exact (identical mangled keys ⇔ identical Go types); a VALUE of the type never lowers (bodies emit with the flag off and refuse at `enqueueTypeInst`, message now suffixed `(FR-23: …)`), so a CALL of any such declaration refuses by name — method, plain func (arity stub, unchanged), param position, promoted (`promotedSigStub`, new: the forwarding wrapper's `unsupported` becomes a stub instead of a whole-export refusal). RESIDUAL: the members are refused (FR-23), their `range` bodies are FR-12's; a SOURCE generic type's method stencil mentioning the type is FR-4's (measured on cedar-go: `mapset.ImmutableMapSet[EntityUID].All`, addendum §9.3). | emit.go `quarantinedMethodStub` (the `sigRefusal` arm now reached only by non-generic un-lowerable signatures — since FR-25 (lane `fr24`) not `complex128` either: an anonymous-struct parameter, FR-13), `emitGenDeclTypes` interface arm, the interface-declaration fixpoint, `synthesizePromotionWrappers`; wire.go `emitInstantiatedNamed`; mono.go `enqueueTypeInst` | spec#Instantiations, spec#Method_declarations, spec#Interface_types (method-set identity), spec#For_range (the calls, FR-12) | 4 red BY DESIGN (`generics/imported-generic-sig-calls/{call-method,call-func,call-param,call-promoted}`); green: `generics/imported-generic-in-signature` (FLIPPED 2026-09-04), `generics/imported-generic-sig-calls/{sibling,satisfies,satisfies-embedded}` (satisfaction THROUGH the opaque key: Bag yes, Plain no, Outer via promotion) | frontend; FR-12 then unblocks the calls (`maps.All`/`slices.Collect` bodies ride the stdlib surface, FR-14) | partially closed 2026-09-04 (was queue 23); residual class stays here |
@@ -452,12 +452,13 @@ USER DIRECTION: the burden of proof is flipped; absence from the queue
 requires a written profound reason. The complete list:
 
 1. **Function-local defined types as generic type arguments** (2 reds,
-   `generics/local-type-argument`; since the stdlib-source-2 audit fix
-   round also `stdlib-source/cmp-compare/local-float-type` — a
-   function-local FLOAT type argument reaching the real `cmp.Compare`;
-   the retained kind desugar masks C6 for int/string kinds only, an
-   asymmetry rowed on purpose; FR-19's scope-qualified TypeId plan may
-   make C6 revisitable) — triage (c)-row C6: gc's observable
+   `generics/local-type-argument`; `stdlib-source/cmp-compare/local-float-type`
+   sat here from the stdlib-source-2 audit fix round until 2026-09-04,
+   when lane `fr24` retired the cmp.Compare kind desugar by [USER] ruling
+   and MOVED it, with the newly red `slices/sortfunc-cmp/cmp-compare-kinds`,
+   to FR-19's line: where the local type's NAME is unobservable the
+   scope-qualified TypeId KEY is a plan, not an impossibility — C6 keeps
+   the observable-name cases) — triage (c)-row C6: gc's observable
    name embeds a compiler-internal counter (`score·1`) that is not a
    function of anything the language defines; a bare name is not
    injective. Impossibility, not backlog. User ratification at the arc
@@ -532,15 +533,24 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (3382 cases, 3173 PASS /
-209 FAIL — the FR-25 checkpoint-B re-pin 2026-09-04 [AGENT], lane `fr24`
-on main aceb0dcb, §8l): checkpoint A's 3376 / 3168 / 208 + 6 born rows
-(3 PASS / 3 FAIL/frontend-export, red BY DESIGN on FR-25) + 2 FAIL→PASS
-flips (`init/library-var-type-unlowerable`, `init/library-var-type-
-poisoned/sibling`) − 0 PASS→FAIL: 3376 + 6 = 3382; 3168 + 3 + 2 = 3173;
-208 + 3 − 2 = 209 — re-derived from the baseline's data rows, not summed
-by hand (the baseline header carries the same `awk` tally). The
-paragraphs below are the previous figures, kept as history:
+All numbers at the current tracked baseline (3382 cases, 3172 PASS /
+210 FAIL — the cmp.Compare-retirement checkpoint-C re-pin 2026-09-04
+[AGENT] under the [USER] ruling «(2) given we have a plan, I think this
+should be an honest red» (relayed), lane `fr24` on main aceb0dcb, §8m):
+checkpoint B's 3382 / 3173 / 209 + 0 born rows + 0 FAIL→PASS − 1
+PASS→FAIL (`slices/sortfunc-cmp/cmp-compare-kinds`, the RULED flip, on
+BUGS.md BUG-092's Cases line): 3382; 3173 − 1 = 3172; 209 + 1 = 210 —
+re-derived from the baseline's data rows, not summed by hand (the
+baseline header carries the same `awk` tally). The paragraphs below are
+the previous figures, kept as history:
+
+The checkpoint-B figure (3382 cases, 3173 PASS / 209 FAIL — the FR-25
+checkpoint-B re-pin 2026-09-04 [AGENT], lane `fr24` on main aceb0dcb,
+§8l): checkpoint A's 3376 / 3168 / 208 + 6 born rows (3 PASS / 3
+FAIL/frontend-export, red BY DESIGN on FR-25) + 2 FAIL→PASS flips
+(`init/library-var-type-unlowerable`, `init/library-var-type-poisoned/
+sibling`) − 0 PASS→FAIL: 3376 + 6 = 3382; 3168 + 3 + 2 = 3173; 208 + 3 −
+2 = 209.
 
 The checkpoint-A figure (3376 cases, 3168 PASS / 208 FAIL — the FR-24
 checkpoint re-pin 2026-09-04 [AGENT], lane `fr24` on main aceb0dcb,
@@ -810,12 +820,14 @@ bucket's BUG-041 red changed ROW, not count):**
 
 | bucket | reds |
 | --- | --- |
-| frontier FR-1…FR-26 (§4) | 121 |
+| frontier FR-1…FR-26 (§4) | 123 |
 | design questions Q-* (§6) | 9 |
-| (c) profound-reason pins (triage §4 + the unsafe marker) | 10 + 1 |
+| (c) profound-reason pins (triage §4 + the unsafe marker) | 9 + 1 |
 | (a)-queued fixes (triage §3.2: A3 5, A4 1, A5 1, A7 1) | 8 |
 | post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) + the gotest-fixes BUG-078 budget refusal pin (`arrays/materialization-budget/over-budget`, on BUG-078's Cases line since the audit fix round) + the bug082-maphint audit-round BUG-083 hoist-order pin (`builtins/len-vs-call-order/hint-panicky-between`, 2026-09-02) + the q-u4-gomem BUG-084 designed-divergence pins (`race/gomem-only/*`, 5 rows: go_mem-racy / TSan-green shapes REFUSED by [USER] ruling Q-U4RESIDUAL (A), 2026-09-02) + the noodler lane's 23 born-FAIL probe rows (2026-09-03, `docs/2026-09-03_noodler-report.md`: 3 on BUG-087's Cases line (RETIRED 2026-09-03 by the `bug087-paniktext` fix — all three PASS/membership under the R9a two-member envelope, not counted here), 2 on BUG-086's (RETIRED 2026-09-03 by the `bug086-shim-closure` fix — both PASS, not counted here), 11 FG-1..FG-5 frontier candidates (MOVED OUT 2026-09-03 to their own rows FR-16..FR-20 — counted in the frontier bucket above, §8e), 2 BUG-068 red-by-design re-hits, 1 FR-3 re-hit, 3 triage-F6/A3 re-hits, 1 FR-10 value-copy witness in untriaged-ids — 7 noodler reds remain in this bucket) − the shim-surface refusal pins flipped green by `stdlib-source-1` (7, 2026-09-03; movement below) + BUG-089's designed ParseUint error-path reds (4 pre-existing rows flipped + 5 born; Cases line — ALL NINE GREEN since `stdlib-source-2`, 2026-09-03: the Clone overlay; BUG-089 fixed) − the two W4.3 SortFunc/cmp bound pins `slices/sortfunc-cmp/{named-slice-bound,float-compare-bound}` flipped green by the real `slices`/`cmp` source (`stdlib-source-2`); the BUG-073 pin `strings/trimspace-repeat/repeat-bound-refused` stays (a runner-budget red since `stdlib-source-2`, ; BUG-090's Cases-line budget pin since its audit fix round) | 60 |
-| **total** | **209** |
+| **total** | **210** |
+
+*(Movement at the cmp.Compare retirement, checkpoint C 2026-09-04 (lane `fr24`, §8m; on main aceb0dcb: 3382 = 3172 / 210; [USER] ruling «(2) given we have a plan, I think this should be an honest red», relayed): frontier 121 → 123 — `slices/sortfunc-cmp/cmp-compare-kinds` flipped PASS→FAIL by ruling onto FR-19's line (+1; BUGS.md BUG-092 Cases line, the re-pin guard's requirement) and `stdlib-source/cmp-compare/local-float-type` MOVED from the C6 (c)-pin bucket to FR-19's line (+1 here, −1 there: same refusal, now with a plan — the scope-qualified TypeId key; C6 keeps the observable-name cases); (c)-pins 10 + 1 → 9 + 1. No other bucket moved: 123 + 9 + 10 + 8 + 60 = 210 ✓ (= the baseline's FAIL count).)*
 
 *(Movement at the FR-25 checkpoint B 2026-09-04 (lane `fr24`, §8l; on main aceb0dcb: 3382 = 3173 / 209): frontier 120 → 121 — the two FR-25 witnesses `init/library-var-type-unlowerable` and `init/library-var-type-poisoned/sibling` flipped GREEN (−2), 3 born-FAIL rows red BY DESIGN entered on FR-25 (`methods/signature-basic-unlowerable/{iface-called,func-called,method-called}` — the call sites mention a complex VALUE) (+3), and `init/library-var-type-poisoned/{write-int,write-struct,size-int}` changed LINE inside the bucket (FR-25 → FR-14: red by name at `reflect.Indirect`, count unchanged); the checkpoint's 3 born-PASS rows appear in no bucket. No other bucket moved: 121 + 9 + 11 + 8 + 60 = 209 ✓ (= the baseline's FAIL count).)*
 
@@ -1258,6 +1270,43 @@ Register unchanged (no table moved). `tools/lowerdiag`: the static pass
 no longer marks a complex/unsafe type in a METHOD signature an export
 kill; cause `basic-type-opaque-sig` (FR-25, call-scoped) classifies the
 stub text; `imported-generic-sig` re-described (decl-scoped).
+
+### 8m. Movement at the cmp.Compare retirement (2026-09-04, lane `fr24`, checkpoint C; on main aceb0dcb)
+
+Baseline before: 3382 rows (3173 PASS / 209 FAIL).
+The cmp.Compare kind-dispatch desugar (`cmpshim.go`, the one generic
+desugar slice 2's STOP rule retained) is RETIRED — [USER] Mike
+2026-09-04, relayed by the [AGENT] coordinator (cited as relayed): «(2)
+given we have a plan, I think this should be an honest red». `cmp.Compare`
+is the real source-through generic at every type argument. Movement,
+tallied by row:
+
+```
+FLIPPED PASS→FAIL by ruling (frontier +1; BUGS.md BUG-092 Cases line):
+  slices/sortfunc-cmp/cmp-compare-kinds              function-local `index` type argument → mono.go C6 naming refusal (FR-19's line)
+MOVED between buckets (count-neutral overall; (c)-pins −1, frontier +1):
+  stdlib-source/cmp-compare/local-float-type         C6 (c)-pin → FR-19's line (same refusal; the scope-qualified key is its plan)
+STAYED GREEN through the real generic (verified row by row):
+  slices/sortfunc-cmp/{sortfunc-ints,sortfunc-reverse,sortfunc-struct-two-key,sortfunc-empty-single,sort-ties-projected,named-slice-bound,float-compare-bound}
+  stdlib-source/cmp-compare/{floats-nan,float32-and-named,less,or}
+  stdlib-source/slices-sortfunc/*
+```
+
+3382 rows = 3172 PASS / 210 FAIL (3173 − 1 / 209 + 1); frontier 121 + 2
+= 123, (c)-pins 10 → 9; the §8 closing arithmetic re-derived by row in
+the bucket table above (123 + 9 + 10 + 8 + 60 = 210). 1 PASS→non-PASS,
+the ruled one, listed on BUG-092's Cases line (re-pin guard green). Twin
+wire pin MOVED — a ruled consequence, checked before landing: raft's
+`quorum/majority.go` calls `cmp.Compare` at `quorum.Index` and `uint64`
+(package-level types — the real generic would stencil; but `Describe` is an
+H-3 quarantined stub, so its body never lowers): the ONLY change is that
+the three injected kind shims `quorum.goleanShimCmpCompare{Int,String,Uint}`
+— dead declarations the file-presence scan planted, referenced by no body —
+leave the wire (0 added, 0 changed; methods, types, globals, method sets
+identical); re-pinned
+69a538de716a… → b4458244c259…, structural diff in `docs/evidence/2026-09-04_fr24-fr25/twin-repin-C/`.
+Register: intercept 2 → 1, shim 7 → 6 (D-002: "6 fmt shims remain; the
+freeze is intact"), `cmp` row re-worded, block re-rendered.
 
 ### 8c. The re-derivation, 2026-08-22 vintage → the 2026-09-01 tip
 

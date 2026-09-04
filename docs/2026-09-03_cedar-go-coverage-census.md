@@ -720,3 +720,75 @@ brief's scope was the two rowed kills; FR-24 is the smallest-diagnosed
 next item and is posed to the coordinator as such). No gate, baseline,
 corpus or trust-surface claim is made here beyond the slice's own
 landing records.
+
+## 10. Addendum 2026-09-04 — FR-24 / FR-25 landed, cmp.Compare retired: re-measured [AGENT]
+
+Lane `fr24` (worker under the [AGENT] coordinator; the rowing rule is
+[USER] direction 3 and the posture «break rather than preserve incorrect
+behaviour» — both relayed, cited as relayed; the two rulings this lane
+lands are quoted in §10.1). Method: §1's drivers, re-run with each
+checkpoint's frontend over the SAME assembled copy (`artifacts/cedar/
+cases/*`, 34 cases) plus `scripts/lower-diagnose artifacts/cedar/cases/all`
+(the standing full-blocker report, `docs/2026-09-04_lower-diagnose.md`);
+machine-side pipeline unchanged. Full record:
+`docs/evidence/2026-09-04_fr24-fr25/` (`before/`, `census-A/`, `after/`).
+
+### 10.1 What moved
+
+| kill | before (§9.2, main aceb0dcb) | after |
+|---|---|---|
+| FR-24 `var structSize sync.Map` (encoding/binary, reached through `binary.Write` → `dataSize`) — whole export at `collectGlobals` | 29/34 cases refused on `package-level var encoding/binary.structSize: its TYPE does not lower (sync.Map …) — FR-24 …` | GONE as a kill (checkpoint A): the var is POISONED per declaration (`$poisoned` cell, gid kept); `dataSize` is an H-3 stub naming `encoding/binary.structSize`, `sync.Map` and the cause; the rest of the package lowers (`wires-B/init_library-var-type-poisoned.wire.json`). |
+| (new, the handoff's kill #1) the H-3 residue: `reflect.Value` recorded in the D5 method-set table by `binary.Write`'s body BEFORE the body refused | masked behind FR-24 | GONE (A): the registration rides the mono journal and rolls back with the refused body (`monoLogImportedNamed`) — independently witnessed by a user `reflect.ValueOf(x).Len()` program (a whole-export kill on main; now an H-3 stub, `methods/quarantine-imported-type-residue`). |
+| FR-25 `complex128` in `reflect.Type`'s requirement list (`OverflowComplex`), reached from the now-lowering `encoding/binary.sizeof(t reflect.Type)` — whole export in the interface pass; and `reflect.Value`'s D5 stubs (`Complex() complex128`) skipping whole | masked behind FR-24 on cedar-go; measured on the corpus rows at A (`init/library-var-type-poisoned/*`: `basic type complex128`) | GONE (checkpoint B, the [USER]-approved rider «(3) yes, makes sense»): the opaque `named complex128` marker + existence-only `unsupported` TypeDef; `reflect.Value` gets its marker + full stub set. The FR-24 witness `init/library-var-type-unlowerable` flipped PASS only here — two checkpoints deep, as the handoff predicted. |
+| the `cmp.Compare` kind desugar (D-002's last non-fmt shim) | retained by slice 2's STOP rule | RETIRED (checkpoint C, [USER] ruling «(2) given we have a plan, I think this should be an honest red»): no cedar-go effect (cedar-go's `cmp.Compare` calls are at package-level types); the corpus row `slices/sortfunc-cmp/cmp-compare-kinds` is the honest red (FR-19's line). |
+
+### 10.2 What did NOT move — the next kills, measured (checkpoints A, B and C agree)
+
+**Export fraction unchanged: 5/34 cases** (`internal`, `internal/consts`,
+`internal/mapset`, `internal/rust`, `cedark8s/cmd/schema-formatter` —
+the same five as §3.1). The 29 refusals split into the TWO causes §9.3's
+pass C predicted counterfactually — now measured on the UNRELAXED copy:
+
+| cause | cases | class | row |
+|---|---|---|---|
+| `method stencil cedargo/internal/mapset.ImmutableMapSet[cedargo/types.EntityUID].All does not lower (instantiation of imported generic type iter.Seq[…] …) — FR-4` | 25 (everything importing `types`) | method STENCILS have no per-declaration quarantine (the H-3 residual) — a SOURCE generic type's method returning `iter.Seq[T]` | **FR-4** (queue 4) — the next kill |
+| `slices.Sort at non-integer element type string` | 4 (`all`, `drv-validate`, `x/exp/schema`, `x/exp/schema/internal/parser`) | an `init()` body (`x/exp/schema/internal/parser/marshal.go:350`) — init code has no per-declaration quarantine BY DESIGN | FR-14 / memo §3 row M |
+
+Why FR-25 never showed on cedar-go itself: the FR-4 stencil refusal fires
+in the mono drain BEFORE the interface fixpoint that would have hit
+`OverflowComplex(complex128)`; the census sees one first refusal per
+case. The corpus rows carry the FR-25 witness instead.
+
+Behind these two, the static census (`after/lower-diagnose/report.txt`)
+names the order: FR-19 `nodeJSONAlias` (a duplicate TypeId in
+`x/exp/schema/internal/json`, 2 declarations, export-scoped), then the
+per-declaration surface — `encoding/json` (FR-14, G6/reflect: 64
+declarations), `net/netip` type methods (19), `errors.Is/As` (reflect,
+10), `iter.Seq` values in bodies (FR-23 → FR-12). Every cause in the
+report has a ledger row (`TestCausesTableAgreesWithLedger`); no
+UNROWED cause appeared in this run.
+
+### 10.3 Numbers
+
+before (main aceb0dcb): FRONTEND-REFUSED 29 (all FR-24), EXPORT-OK 5,
+machine 0/0/0. after A: FRONTEND-REFUSED 29 (25 FR-4 + 4 `slices.Sort`),
+EXPORT-OK 5. after C (tip): FRONTEND-REFUSED 29 (25 FR-4 + 4
+`slices.Sort`), EXPORT-OK 5, machine 0/0/0. lower-diagnose static:
+before 1554/1671 declarations demanding nothing refused (93.0%), 11
+export-kill declarations, 21/26 packages export-killed; after (tip): 1554/1671 (93.0%) UNCHANGED — the per-declaration picture
+does not move because nothing that refused now lowers (the kills became
+stubs, the values stay refused) — but the EXPORT picture does: export-
+kill declarations 11 → 3 and packages export-killed 21/26 → 7/26 (own or
+inherited): FR-24's var and FR-25's method signatures are decl-scoped in
+the static pass now; the 3 remaining are FR-19's `nodeJSONAlias` ×2
+(`x/exp/schema/internal/json`) and the `slices.Sort` at string inside
+`init()` (`x/exp/schema/internal/parser`). The dynamic first refusal on
+the whole-library case is FR-4 (the mono drain runs first), which the
+static pass does not see (a stencil-time refusal) — the report's
+"not judged statically" section says so by count.
+
+Decisions in this addendum, all [AGENT]: keeping the H-3 residue fix in
+checkpoint A; widening the D5 stub pass to the opaque window at B (D5 in
+the evidence README); rowing FR-26 (a struct FIELD of an unlowerable
+type) rather than fixing it here. No gate, baseline, corpus or
+trust-surface claim is made here beyond the lane's own landing records.

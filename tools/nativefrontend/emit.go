@@ -7880,14 +7880,11 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 		}
 		// (The H-14 package-variable method desugar and the W4.3
 		// slices.SortFunc generic desugar — RETIRED in stdlib
-		// source-through slice 2: those members lower from their
-		// library units through the qualified/method call paths below.)
-		// cmp.Compare's kind dispatch (cmpshim.go) is RETAINED by the
-		// slice's STOP rule; a float call site falls through to the
-		// real generic.
-		if node, handled, err := e.emitCmpCompareCall(c, sel); handled || err != nil {
-			return node, handled, err
-		}
+		// source-through slice 2; cmp.Compare's kind dispatch —
+		// RETIRED 2026-09-04, lane fr24, per the [USER] ruling «(2) …
+		// an honest red» (relayed): those members lower from their
+		// library units through the qualified/method call paths below,
+		// the real generic at every type argument.)
 		// Qualified call into a SOURCE package (`tracker.F(x)` — W1.1):
 		// a static call to the path-qualified FuncId. Stdlib-qualified
 		// selectors fall through to the standing method machinery and
@@ -8358,7 +8355,8 @@ func (e *emitter) qualifiedPkgRef(sel *ast.SelectorExpr) (*types.PkgName, bool) 
 // refuseInterceptedLibraryCallee (audit fix round F1): a `defer`/`go` whose
 // callee is a FRONTEND-INTERCEPTED library member (stdlibreach.go
 // frontendInterceptedLibraryMembers / interceptedLibraryCall — the
-// `slices.Sort` machine op, the cmp.Compare kind desugar) refuses BY NAME.
+// `slices.Sort` machine op; the cmp.Compare kind desugar until its
+// retirement 2026-09-04) refuses BY NAME.
 // The interception is a lowering of the direct CALL in expression-
 // statement position; in defer/go position the callee is a FUNCTION VALUE,
 // which the shared predicate says the reach walk did not mark reached —

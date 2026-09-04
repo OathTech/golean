@@ -3,6 +3,7 @@
 # mechanisms land. Tie order is recorded latitude (unstable sort); the
 # rows are tie-free except sort-ties-projected, whose observation is
 # tie-invariant by construction.
+# cmp-compare-kinds: RED by [USER] ruling since 2026-09-04 (lane fr24; «(2) given we have a plan, I think this should be an honest red», relayed) — the cmp.Compare kind desugar that masked it is retired; the function-local `index` type argument hits mono.go's C6 naming refusal; plan = FR-19's scope-qualified TypeId key (ledger FR-19 Cases; BUGS.md BUG-092 Cases line).
 cmp-compare-kinds	cmpCompareKinds	-	ok	-	stdlib,sort,ints,defined_type
 sortfunc-ints	sortFuncInts	-	ok	-	stdlib,sort,slices,closures,higher_order
 sortfunc-reverse	sortFuncReverse	-	ok	-	stdlib,sort,slices,closures,higher_order

@@ -1,0 +1,5 @@
+# DIAGNOSTIC — NOT A LOWERING (scripts/lower-diagnose; this file is a record of the frontend's stderr / probe classification, not a gate input)
+# frontend exit status: 1
+nativefrontend: native frontend unsupported: slices.Sort at non-integer element type string
+for the full blocker picture run scripts/lower-diagnose artifacts/cedar/cases/all
+exit status 1

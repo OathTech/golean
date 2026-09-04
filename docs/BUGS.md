@@ -5077,3 +5077,37 @@ makes no frontend edits): collect the label names, `sort.Strings`, name
 the first (one line), plus a determinism unit test (emit N× → identical
 bytes) so the class cannot recur silently. Fix criterion: N exports of
 the affected program are byte-identical; the row stays red on FR-21.
+
+## BUG-092 — `cmp.Compare` at a FUNCTION-LOCAL defined type argument refuses (mono.go's C6 naming rule) now that the kind-dispatch desugar is retired — a designed red BY [USER] RULING, plan on FR-19 [coverage; frontend generic instantiation at local types]
+
+- Status: open
+- Pinned-by: none (both rows are RED by design at frontend-export; the refusal is mono.go's `function-local defined type %s as a type argument (gc renders these with a compiler-internal unique suffix … — refused rather than guessed)`; nothing here is a wrong answer)
+- Expect: FAIL
+- Cases: slices/sortfunc-cmp/cmp-compare-kinds, stdlib-source/cmp-compare/local-float-type
+- Discovered: 2026-09-03 (stdlib source-through slice 2: retiring the desugar flipped `cmp-compare-kinds` red; the slice's STOP rule restored it and POSED the choice to the [USER]); DECIDED 2026-09-04 — [USER] Mike, relayed by the [AGENT] coordinator (cited as relayed): «(2) given we have a plan, I think this should be an honest red». Landed by lane `fr24`, checkpoint C (`docs/evidence/2026-09-04_fr24-fr25/`).
+
+WHAT: `cmp` is a source-through library unit and `cmp.Compare[T]` is the real
+generic at every type argument. A call whose type argument is a defined type
+declared INSIDE a function body (`type index uint64` in `cmpCompareKinds`;
+`type score float64` in `cmpLocalFloatType`) instantiates the generic at a
+type mono.go refuses to NAME: gc renders function-local types in
+instantiation renderings with a compiler-internal unique suffix
+(`score·1`), the ratified impossibility C6 (ledger §5.1 item 1). The
+retired desugar (`cmpshim.go`, W4.3 landing B) sidestepped the naming by
+never instantiating anything — it converted to a monomorphic kind shim —
+which is why `cmp-compare-kinds` was green under it for integer/string
+kinds while the float row was already red (the asymmetry the slice-2 audit
+rowed). Both rows now refuse the same way, by name, at frontend-export.
+
+WHY A BUG ENTRY: the [USER] ruled the row an honest red rather than keep a
+shim whose only remaining purpose was masking a frontend generality gap
+(D-002: 6 fmt shims remain; the freeze is intact). The re-pin guard
+requires every PASS→non-PASS flip on a Cases line; this is that line.
+
+PLAN (FR-19, ledger §4 / queue 19): scope-qualify the identity KEY of a
+function-local type (enclosing function + declaration position) while the
+RENDERED name keeps gc's spelling — the mangled instantiation key then
+carries the scope and `cmp.Compare[main.index@cmpCompareKinds]` stencils;
+C6 stays the impossibility only where the NAME is observable (`%T`/`%v` of
+a value of the type), which neither row does. Fix criterion: both Cases
+rows PASS through the real generic; the entry flips to fixed.
