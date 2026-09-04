@@ -155,6 +155,10 @@ type emitter struct {
 	// signature-carrying method STUBS, so interface satisfaction can
 	// answer instead of refusing (BUG-009's polarity).
 	importedNamed map[string]*types.Named
+	// The importedNamed entries importedTypeDecls has already emitted
+	// (audit fix round M1): the pass runs before AND after the interface
+	// fixpoint, emitting each type once.
+	importedDeclsDone map[string]bool
 
 	// SIGNATURE-OPAQUE mode (FR-23, 2026-09-04): while set, an
 	// instantiation of an IMPORTED generic type (`iter.Seq[int]`,

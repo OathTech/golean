@@ -1,0 +1,3 @@
+# M1 red-first (audit fix round, lane fr24 2026-09-04): `named` TypeIds with NO TypeDef in the checkpoint-B evidence wires (committed at 1982677d), enumerated by python3 over the JSON; TestWireIntegrityRedFirstOnPreM1Wires asserts checkWireNamedTypes REFUSES these same files by name.
+init_library-var-type-poisoned.pre.wire.json -> internal/abi.Type (1), internal/abi.UncommonType (1), reflect.ChanDir (1), reflect.Method (2) | total occurrences 5
+init_library-var-type-unlowerable.pre.wire.json -> internal/abi.Type (1), internal/abi.UncommonType (1), reflect.ChanDir (1), reflect.Method (2) | total occurrences 5

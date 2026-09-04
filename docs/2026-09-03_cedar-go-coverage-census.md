@@ -773,9 +773,15 @@ UNROWED cause appeared in this run.
 before (main aceb0dcb): FRONTEND-REFUSED 29 (all FR-24), EXPORT-OK 5,
 machine 0/0/0. after A: FRONTEND-REFUSED 29 (25 FR-4 + 4 `slices.Sort`),
 EXPORT-OK 5. after C (tip): FRONTEND-REFUSED 29 (25 FR-4 + 4
-`slices.Sort`), EXPORT-OK 5, machine 0/0/0. lower-diagnose static:
-before 1554/1671 declarations demanding nothing refused (93.0%), 11
-export-kill declarations, 21/26 packages export-killed; after (tip): 1554/1671 (93.0%) UNCHANGED — the per-declaration picture
+`slices.Sort`), EXPORT-OK 5, machine 0/0/0. lower-diagnose static —
+UNIT AND SCOPE (audit fix round M4): 1554/1671 counts declarations of ALL
+kinds (funcs, methods, types, vars, consts) over cedargo + the two
+cedark8s packages + the `xexp/constraints` stand-in + the case's `main`,
+so it is NOT §0/§3.4's 1085 (funcs+methods, cedargo only); the comparable
+funcs+methods figure the report prints for the same widened scope is
+1012/1126 (89.9%); "N/26 packages" counts `main` and the stand-in —
+before 1554/1671 (93.0%), 11 export-kill declarations, 21/26 packages
+export-killed; after (tip): 1554/1671 (93.0%) UNCHANGED — the per-declaration picture
 does not move because nothing that refused now lowers (the kills became
 stubs, the values stay refused) — but the EXPORT picture does: export-
 kill declarations 11 → 3 and packages export-killed 21/26 → 7/26 (own or

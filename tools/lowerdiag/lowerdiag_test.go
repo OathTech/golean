@@ -803,3 +803,26 @@ func TestCalibrationAgainstWire(t *testing.T) {
 		}
 	}
 }
+
+// Audit fix round M3 (lane fr24, 2026-09-04): the FR-4 stencil text must
+// classify as FR-4 — before the `stencil-refusal` row, the cedar-go census's
+// 25 `method stencil … does not lower (instantiation of imported generic
+// type iter.Seq[…] …)` refusals were SILENTLY bucketed FR-23 through their
+// inner cause. And an unmatched text is UNCLASSIFIED (nil), never a
+// neighbour bucket.
+func TestStencilTextClassifiesAsFR4(t *testing.T) {
+	if err := initCauses(); err != nil {
+		t.Fatal(err)
+	}
+	text := "nativefrontend: native frontend unsupported: method stencil cedargo/internal/mapset.ImmutableMapSet[cedargo/types.EntityUID].All does not lower (instantiation of imported generic type iter.Seq[cedargo/types.EntityUID] in cedargo/internal/mapset.ImmutableMapSet[cedargo/types.EntityUID].All (FR-23: no source to stencil an imported generic from — a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub)) — FR-4: method stencils have no per-declaration quarantine yet, so the export refuses whole"
+	c, key := classifyText(text)
+	if c == nil || c.FR != "FR-4" || c.ID != "stencil-refusal" {
+		t.Fatalf("stencil text must classify as FR-4/stencil-refusal, got %v (key %q)", c, key)
+	}
+	if key != "cedargo/internal/mapset.ImmutableMapSet[cedargo/types.EntityUID].All" {
+		t.Fatalf("key must be the stencil, got %q", key)
+	}
+	if c, _ := classifyText("method stencil-ish wording the table does not know: frobnicate the widget"); c != nil {
+		t.Fatalf("an unmatched text must be UNCLASSIFIED, not absorbed into %s", c.ID)
+	}
+}

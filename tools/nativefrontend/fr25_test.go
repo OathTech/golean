@@ -11,6 +11,9 @@ package main
 // pin the observable contract; these pin the wire shape.
 
 import (
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -210,5 +213,98 @@ func main() { println(fine()) }
 	}
 	if r, _ := f["unsupported"].(string); !strings.Contains(r, "FR-24 poison") || !strings.Contains(r, "complex128") {
 		t.Fatalf("readZ must be a stub naming the poisoned var and its type: %q", r)
+	}
+}
+
+// ---- audit fix round M1 (2026-09-04): wire integrity ----------------------
+
+// The frontend refuses a wire whose `named` TypeId has no TypeDef, naming
+// it (before M1 the machine was the only check — Ops.lean `unknown defined
+// type` — on a baseline-PASS wire).
+func TestWireIntegrityRefusesDanglingNamed(t *testing.T) {
+	typeDefs := []any{map[string]any{"name": "main.T", "def": map[string]any{"kind": "struct", "fields": []any{}}}}
+	funcs := []any{map[string]any{"name": "f", "params": []any{
+		map[string]any{"id": "x", "type": map[string]any{"kind": "named", "name": "reflect.ChanDir"}},
+		map[string]any{"id": "y", "type": map[string]any{"kind": "pointer", "elem": map[string]any{"kind": "named", "name": "reflect.ChanDir"}}},
+		map[string]any{"id": "z", "type": map[string]any{"kind": "named", "name": "main.T"}},
+		map[string]any{"id": "w", "type": map[string]any{"kind": "named", "name": emptyStructName}},
+	}}}
+	err := checkWireNamedTypes(typeDefs, funcs, nil, nil)
+	if err == nil {
+		t.Fatalf("a dangling `named reflect.ChanDir` must refuse")
+	}
+	for _, want := range []string{"wire integrity", "reflect.ChanDir (2 reference(s))", "1 `named` TypeId(s)"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("refusal must contain %q: %v", want, err)
+		}
+	}
+	if strings.Contains(err.Error(), "main.T") || strings.Contains(err.Error(), emptyStructName) {
+		t.Fatalf("a defined TypeId / the decoder's struct{} must not be reported: %v", err)
+	}
+}
+
+// RED-FIRST witness: the checkpoint-B evidence wires as committed (before
+// M1) carried four imported named types with no TypeDef — reflect.Type's
+// requirement list registered them AFTER the imported-type pass had run.
+// The copies under m1-red-first/ are the permanent record; the assertion
+// must refuse them by name.
+func TestWireIntegrityRedFirstOnPreM1Wires(t *testing.T) {
+	files, _ := filepath.Glob("../../docs/evidence/2026-09-04_fr24-fr25/m1-red-first/*.pre.wire.json")
+	if len(files) != 2 {
+		t.Fatalf("expected the two pre-M1 wires, found %v", files)
+	}
+	for _, f := range files {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var p map[string]any
+		if err := json.Unmarshal(b, &p); err != nil {
+			t.Fatal(err)
+		}
+		tds, _ := p["types"].([]any)
+		fns, _ := p["funcs"].([]any)
+		ms, _ := p["methods"].([]any)
+		gs, _ := p["globals"].([]any)
+		err = checkWireNamedTypes(tds, fns, ms, gs)
+		if err == nil {
+			t.Fatalf("%s: the pre-M1 wire must be REFUSED (it shipped dangling TypeIds)", f)
+		}
+		for _, want := range []string{"internal/abi.Type (", "internal/abi.UncommonType (", "reflect.ChanDir (", "reflect.Method (", "4 `named` TypeId(s)"} {
+			if !strings.Contains(err.Error(), want) {
+				t.Fatalf("%s: refusal must name %q: %v", f, want, err)
+			}
+		}
+	}
+}
+
+// After M1 the late registrations get their markers: a quarantined method
+// signature mentioning reflect.Value pulls reflect.Type's requirement list,
+// whose types (reflect.ChanDir, reflect.Method, internal/abi.*) now have
+// TypeDefs — and emitProgram's own integrity check passed.
+func TestLateImportedNamedGetsMarker(t *testing.T) {
+	const src = `package main
+
+import "reflect"
+
+type U struct{ n int }
+
+func (u U) Len(v reflect.Value) int { return v.Len() + u.n }
+
+func fine() int { return 7 }
+
+func main() { println(fine()) }
+`
+	program, err := emitSource(t, src)
+	if err != nil {
+		t.Fatalf("export must survive with every named TypeId defined: %v", err)
+	}
+	for _, name := range []string{"reflect.Value", "reflect.ChanDir", "reflect.Method"} {
+		if typeDefByName(program, name) == nil {
+			t.Fatalf("%s must have a (marker) TypeDef after the late imported-type pass", name)
+		}
+	}
+	if typeDefByName(program, "reflect.Type") == nil {
+		t.Fatalf("reflect.Type's interface TypeDef missing")
 	}
 }

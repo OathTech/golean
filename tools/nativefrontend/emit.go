@@ -545,7 +545,15 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	// a FIXPOINT over the seen set rather than one pass.
 	// Instantiated types can surface inside interface method signatures
 	// and vice versa, so the fixpoint interleaves the mono drain.
+	// OUTER fixpoint (audit fix round M1, lane fr24): a requirement list
+	// emitted here can register a NEW imported named type (reflect.Type's
+	// list → reflect.ChanDir, reflect.Method, internal/abi.Type/
+	// UncommonType), which then needs its D5 marker + stubs — and THOSE
+	// stubs' signatures can note fresh interfaces again. Iterate until
+	// neither side moves; the wire-integrity assertion below is the
+	// fail-closed check that nothing was left dangling.
 	ifaceDefs := map[string]any{}
+	for {
 	for {
 		funcs, typeDefs, methods, err = e.drainMono(funcs, typeDefs, methods)
 		if err != nil {
@@ -592,6 +600,13 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 			}
 			ifaceDefs[name] = map[string]any{"kind": "interface", "methods": sigs}
 		}
+	}
+		lateDefs, lateStubs := e.importedTypeDecls()
+		if len(lateDefs) == 0 && len(lateStubs) == 0 {
+			break
+		}
+		typeDefs = append(typeDefs, lateDefs...)
+		methods = append(methods, lateStubs...)
 	}
 	ifaceNames := make([]string, 0, len(ifaceDefs))
 	for k := range ifaceDefs {
@@ -664,6 +679,18 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	// requirement tables, not carriers; alias defs are transparent (the
 	// carrier key resolves through them). Sorted for a deterministic
 	// wire; the decoder synthesizes the canonical struct{} record.
+	// WIRE INTEGRITY (audit fix round M1, lane fr24 2026-09-04): every
+	// `named` TypeId anywhere on the wire must resolve to a TypeDef in this
+	// table. Before this check a D5 type registered by a requirement list
+	// AFTER the imported-type pass shipped as a dangling reference, caught
+	// only by the machine (Ops.lean `unknown defined type`) — a frontend
+	// gap on a baseline-PASS wire. Refuses by name; the decoder's own
+	// synthesized `struct{}` record is the one name allowed without a
+	// TypeDef here.
+	if err := checkWireNamedTypes(typeDefs, funcs, methods, e.globalDefs); err != nil {
+		return nil, err
+	}
+
 	msSet := map[string]string{}
 	for _, td := range typeDefs {
 		m, ok := td.(map[string]any)
@@ -5925,7 +5952,17 @@ func (e *emitter) promotedReceiverArg(sel *ast.SelectorExpr, hops []int, pointer
 func (e *emitter) importedTypeDecls() ([]any, []any) {
 	tds := []any{}
 	stubs := []any{}
-	done := map[string]bool{}
+	// Emitter-level (audit fix round M1, lane fr24 2026-09-04): the pass
+	// runs TWICE per export — once before the interface fixpoint (a stub
+	// signature can mention a fresh interface) and again after it, for
+	// the imported named types the requirement lists themselves register
+	// (reflect.Type's list names reflect.ChanDir/Method, internal/abi.*).
+	// Before M1 those late registrations had no TypeDef: a dangling
+	// `named` on a baseline-PASS wire, fail-closed only at the machine.
+	if e.importedDeclsDone == nil {
+		e.importedDeclsDone = map[string]bool{}
+	}
+	done := e.importedDeclsDone
 	for {
 		pending := []string{}
 		for n := range e.importedNamed {
@@ -10666,4 +10703,48 @@ func itoa(i int) string {
 		b = append([]byte{'-'}, b...)
 	}
 	return string(b)
+}
+
+// checkWireNamedTypes is the frontend-side wire-integrity assertion (M1):
+// walks every emitted node and refuses, naming each TypeId and its count,
+// if a `named` reference has no TypeDef. Sorted for a deterministic text.
+func checkWireNamedTypes(typeDefs, funcs, methods, globals []any) error {
+	defs := map[string]bool{emptyStructName: true}
+	for _, td := range typeDefs {
+		if m, ok := td.(map[string]any); ok {
+			if n, ok := m["name"].(string); ok {
+				defs[n] = true
+			}
+		}
+	}
+	dangling := map[string]int{}
+	var walk func(v any)
+	walk = func(v any) {
+		switch x := v.(type) {
+		case map[string]any:
+			if k, _ := x["kind"].(string); k == "named" {
+				if n, ok := x["name"].(string); ok && !defs[n] {
+					dangling[n]++
+				}
+			}
+			for _, c := range x {
+				walk(c)
+			}
+		case []any:
+			for _, c := range x {
+				walk(c)
+			}
+		}
+	}
+	for _, table := range [][]any{typeDefs, funcs, methods, globals} {
+		walk(table)
+	}
+	if len(dangling) == 0 {
+		return nil
+	}
+	parts := []string{}
+	for _, n := range sortedStringKeys(dangling) {
+		parts = append(parts, n+" ("+itoa(dangling[n])+" reference(s))")
+	}
+	return unsup("wire integrity: %d `named` TypeId(s) on the wire have no TypeDef — %s — refused rather than shipped for the machine to reject (M1: an imported type registered after the imported-type pass, or a marker never minted)", len(dangling), strings.Join(parts, ", "))
 }

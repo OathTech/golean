@@ -6,6 +6,7 @@
 # 2026-09-04 round-11 merge train [AGENT]: regenerated after the fr22-fr23 slice landed — FOUR new frontend formats surfaced here (FR-4 stencil-naming, FR-22 whole-export, FR-22 $poisoned reference, FR-24 type-unlowerable);
 # classifying them from the format alone (a causes.tsv pattern per row) is OWED to the lower-diagnose lane, not decided at the merge. The real-text paths may still classify (FR-24 is static-only by design).
 # 2026-09-04 lane fr24 [AGENT]: regenerated — the FR-24 whole-export format is GONE (the var is poisoned per declaration) and the poison reference text classifies (causes.tsv global-type-poisoned), so the list shrinks by one.
+# 2026-09-04 lane fr24 audit fix round M3 [AGENT]: regenerated — the FR-4 stencil format now classifies (causes.tsv stencil-refusal, ordered before imported-generic-inst) and the M1 wire-integrity format rides frontend-invariant.
 &composite (elided) in X
 &composite in X
 X
@@ -15,7 +16,6 @@ interface method substitution produced non-signature for X
 map literal in X
 method X not found on substituted receiver X
 method expression (*X).X over a value-receiver method (deref adapter not modeled)
-method stencil X.X does not lower (X) — FR-4: method stencils have no per-declaration quarantine yet, so the export refuses whole
 package-level initializer of X does not lower (X) and is not H-11 effect-isolated — skipping it cannot be argued unobservable, so the WHOLE export refuses (FR-22: per-declaration poisoning covers only initializers whose every call is a direct call to an init-callee register row [pureUnmodeledCallees, rendered in docs/stdlib-admission-register.md] with effect- and panic-free argument shapes)
 package-level initializer with no declaration site
 package-level var X: its initializer does not lower (X) — H-11 poison: the cell is seeded as the `$poisoned` placeholder and every reference (read, write, address-of) refuses by name; reference refused

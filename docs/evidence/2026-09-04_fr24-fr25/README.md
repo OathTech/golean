@@ -125,6 +125,17 @@ markers in their signatures.
   unchanged — checked before landing and by the gate). The item-7 rule
   is met: a basic type has no methods, and an imported generic
   instantiation WITH exported methods still refuses in opaque mode.
+  AUDIT FIX ROUND M1: this widening pulled `reflect.Type`, whose
+  requirement list — emitted in the interface fixpoint AFTER the
+  imported-type pass — registered `reflect.ChanDir`, `reflect.Method`,
+  `internal/abi.{Type,UncommonType}` with no TypeDef: the dangling
+  `named` had moved one level down, onto two baseline-PASS wires, caught
+  only by the machine. CLOSED: the imported-type pass re-runs after the
+  fixpoint (outer loop) and `checkWireNamedTypes` refuses any wire with
+  a `named` TypeId lacking a TypeDef, by name. Red-first: `m1-red-first/`
+  (the committed pre-M1 wires + `dangling-named.txt`;
+  `TestWireIntegrityRedFirstOnPreM1Wires` refuses them); `wires-B/`
+  re-emitted — 0 dangling, the twin b4458244 unchanged.
 - D6 [AGENT]: the body-value refusal text stays FR-15's (`basic type
   complex128`, `builtin real`, `constant kind Complex`) — the brief's
   "refuses by name" is met (the type is named) and the FR-15 row cites
@@ -150,7 +161,7 @@ verified one by one (`scripts/coverage run` over every id of
 type index as a type argument … refused rather than guessed`, mono.go's
 C6 rule; FR-19's line, BUGS.md BUG-092 Cases line); `stdlib-source/
 cmp-compare/local-float-type` and `slices/sortfunc-cmp/sortfunc-local-type`
-already red the same way; all 17 other rows PASS through the real generic
+already red the same way; of the 22 ids run, the other 19 PASS through the real generic
 (ints, strings, floats incl. NaN, named non-local types, struct keys,
 Less/Or). No FINDING (nothing went red for another reason). Register:
 intercept 2 → 1, shim 7 → 6; D-002: "6 fmt shims remain; the freeze is
@@ -182,8 +193,13 @@ does not lower (… iter.Seq[…] …) — FR-4` and 4 × `slices.Sort at
 non-integer element type string` (an `init()` body). FR-25 never
 surfaces on cedar-go itself because the FR-4 stencil refusal fires in
 the mono drain before the interface fixpoint; the corpus rows carry the
-FR-25 witness. `after/lower-diagnose/`: static 1554/1671 (93.0%)
-UNCHANGED (kills became stubs; the values stay refused), export-kill
+FR-25 witness. `after/lower-diagnose/` (re-run on the clean tip at the audit fix round —
+the first copy stamped checkpoint B + dirty): static 1554/1671 (93.0%)
+UNCHANGED (kills became stubs; the values stay refused) — UNIT/SCOPE (M4):
+declarations of ALL kinds over cedargo + the two cedark8s packages + the
+`xexp` stand-in + `main`, not the census's 1085 funcs+methods cedargo-only
+denominator; the comparable funcs+methods figure is 1012/1126 (89.9%);
+"N/26 packages" counts `main` and the stand-in — export-kill
 declarations 11 → 3 and packages export-killed 21/26 → 7/26 — the
 remaining three are FR-19's `nodeJSONAlias` ×2 and the `slices.Sort`
 `init()`. Next blockers, in order: FR-4 stencils → `slices.Sort` at
@@ -200,8 +216,10 @@ worktree at `aceb0dcb`, no edits): 29 FRONTEND-REFUSED / 5 EXPORT-OK of
 TYPE does not lower (sync.Map …) — FR-24 …`. `before/lower-diagnose/` =
 `scripts/lower-diagnose artifacts/cedar/cases/all --json --tsv --include
 cedark8s/cmd/schema-formatter,cedark8s/internal/schema`: first refusal
-FR-24; static: 1554/1671 declarations demanding nothing refused (93.0%),
-11 export-kill declarations, 21/26 packages export-killed; top blockers
+FR-24; static: 1554/1671 declarations demanding nothing refused (93.0%;
+ALL declaration kinds over cedargo + 2 cedark8s packages + the stand-in +
+main — funcs+methods 1012/1126 = 89.9%; M4), 11 export-kill
+declarations, 21/26 packages export-killed (main and the stand-in counted); top blockers
 FR-14 `encoding/json` (64 decls), FR-14 type methods (19), reflect (10),
 `slices.Sort` at string (10), FR-23 signatures (8), FR-19
 `nodeJSONAlias` (2, export). (Paths in the copied artifacts are
@@ -227,8 +245,8 @@ sanitized to `<repo>/`.)
   line; twin b4458244 = pinned bytes (the re-pin); register ok (intercept
   1, shim 6); frontend unit tests, lowerdiag tests, eval tests 148;
   reconciler 0 HIGH. This tail is committed AFTER the tree it certifies
-  (the records-tail commit that follows 1982677d touches only this
-  directory).
+  (the records-tail commits that follow 1982677d touch only this
+  directory and the ledger's cases cells — f07219c9, de698dd3).
 
 ## Files
 
@@ -243,6 +261,7 @@ sanitized to `<repo>/`.)
 | `census-A/*`, `after/census/*` | `scripts/cedar-census run` at checkpoint A and at C | 29 FRONTEND-REFUSED (25 FR-4 + 4 `slices.Sort`) / 5 EXPORT-OK, both |
 | `after/lower-diagnose/*` | `scripts/lower-diagnose artifacts/cedar/cases/all --json --tsv --include cedark8s/cmd/schema-formatter,cedark8s/internal/schema` at C | the standing full-blocker report AFTER |
 | `twin-repin-C/structural-diff.txt`, `hashes.txt` | python3 JSON diff of `baselines/pins/twin-chdriver.wire.json` (pinned) vs the fresh emit; `sha256sum` | the SOLE change: 3 dead shim funcs removed |
+| `m1-red-first/*` | copies of the two `wires-B` files as committed at 1982677d + `dangling-named.txt` (python3 enumeration) | the M1 red-first: 4 dangling TypeIds × 5 occurrences per wire; refused by `checkWireNamedTypes` |
 | `traces/*` | the parked prototype's `FR24_TRACE*` stack traces (NOT ported), sanitized | the diagnosis trail: `basic type complex128` reached from `reflect.Type`'s requirement list / `reflect.Value`'s D5 stubs |
 
 ## Reproduction

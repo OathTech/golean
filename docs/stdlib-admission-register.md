@@ -254,7 +254,12 @@ The primitive table is still empty (print/println is slice 3).
   (A) FR-24: the `encoding/binary` row re-worded — `structSize sync.Map`
   is POISONED per declaration when reached (the `$poisoned` cell; every
   reader an H-3 stub naming it), no longer a whole-export kill; the
-  init-pure claim unchanged. (B) FR-25: no table moved. (C) **cmp.Compare
+  init-pure claim unchanged — and, audit fix round L6: `structSize` is the
+  ONLY live library var of an unlowerable type in the admitted set today
+  (zero-valued, no initializer), so the "library initializer skipped
+  without the isolation test" exposure FR-24's doc comment names has no
+  instance; a future one is a row here first. (B) FR-25: no table moved.
+  (C) **cmp.Compare
   desugar RETIRED — [USER] Mike 2026-09-04, relayed by the [AGENT]
   coordinator (cited as relayed): «(2) given we have a plan, I think this
   should be an honest red».** `cmpshim.go` deleted with its three kind

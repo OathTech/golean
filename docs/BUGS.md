@@ -5083,13 +5083,15 @@ the affected program are byte-identical; the row stays red on FR-21.
 - Status: open
 - Pinned-by: none (both rows are RED by design at frontend-export; the refusal is mono.go's `function-local defined type %s as a type argument (gc renders these with a compiler-internal unique suffix … — refused rather than guessed)`; nothing here is a wrong answer)
 - Expect: FAIL
-- Cases: slices/sortfunc-cmp/cmp-compare-kinds, stdlib-source/cmp-compare/local-float-type
+- Cases: slices/sortfunc-cmp/cmp-compare-kinds, stdlib-source/cmp-compare/local-float-type, slices/sortfunc-cmp/sortfunc-local-type
 - Discovered: 2026-09-03 (stdlib source-through slice 2: retiring the desugar flipped `cmp-compare-kinds` red; the slice's STOP rule restored it and POSED the choice to the [USER]); DECIDED 2026-09-04 — [USER] Mike, relayed by the [AGENT] coordinator (cited as relayed): «(2) given we have a plan, I think this should be an honest red». Landed by lane `fr24`, checkpoint C (`docs/evidence/2026-09-04_fr24-fr25/`).
 
 WHAT: `cmp` is a source-through library unit and `cmp.Compare[T]` is the real
 generic at every type argument. A call whose type argument is a defined type
 declared INSIDE a function body (`type index uint64` in `cmpCompareKinds`;
-`type score float64` in `cmpLocalFloatType`) instantiates the generic at a
+`type score float64` in `cmpLocalFloatType`; `type ltup struct{…}` in
+`sortFuncLocalType` — `slices.SortFunc[[]ltup, ltup]`, added at the fr24
+audit fix round L5: the identical mono.go text) instantiates the generic at a
 type mono.go refuses to NAME: gc renders function-local types in
 instantiation renderings with a compiler-internal unique suffix
 (`score·1`), the ratified impossibility C6 (ledger §5.1 item 1). The
