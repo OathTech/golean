@@ -1,0 +1,21 @@
+# tools/lowerdiag/unclassified-formats.txt — the frontend unsup(...) format strings (verbs -> X) that causes.tsv
+# does NOT classify from the FORMAT alone. Regenerate: lowerdiag vocabulary tools/nativefrontend (TestVocabularyCoverageIsTracked
+# asserts equality, so a new unclassified string surfaces here, never silently). Most rows classify from the REAL text —
+# the pattern keys on the argument (`builtin println in statement position`, `sync.Map.Load with 2 arguments`,
+# `&composite in short-circuit operand`); the others are frontend invariants that carry another message (emit.go:215 "%s").
+&composite (elided) in X
+&composite in X
+X
+X with X arguments
+builtin X in statement position
+interface method substitution produced non-signature for X
+map literal in X
+method X not found on substituted receiver X
+method expression (*X).X over a value-receiver method (deref adapter not modeled)
+package-level initializer with no declaration site
+slice literal in X
+substitution into X (X)
+sync.Once.Do argument is not a func()
+sync.Once.Do with X arguments
+sync.WaitGroup.Add with X arguments
+sync.X.X with X arguments

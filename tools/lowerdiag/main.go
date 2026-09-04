@@ -18,6 +18,10 @@
 //	    stubs (the census's decls.tsv): pkg kind name status cause class key
 //	lowerdiag classify
 //	    stdin refusal lines -> class TAB key (class = FR/cause-id)
+//	lowerdiag vocabulary tools/nativefrontend
+//	    every distinct unsup(...) format string of the frontend, how many
+//	    causes.tsv classifies, and the unclassified ones (the tracked
+//	    tools/lowerdiag/unclassified-formats.txt must equal that list)
 //
 // Two [USER] directions this serves (docs/language-coverage-ledger.md §0):
 // (3) every detected gap is rowed with a plan; (4) a refusal comes with the
@@ -60,14 +64,30 @@ func run(args []string) error {
 		return wire(args[1])
 	case "classify":
 		return classifyStdin()
+	case "vocabulary":
+		if len(args) != 2 {
+			return fmt.Errorf("vocabulary needs the frontend source dir (tools/nativefrontend)")
+		}
+		total, n, un, err := vocabularyCoverage(args[1])
+		if err != nil {
+			return err
+		}
+		fmt.Printf("# %s\n# distinct unsup(...) formats: %d; classified by causes.tsv: %d; unclassified (listed): %d\n", diagnosticBanner, total, n, len(un))
+		for _, u := range un {
+			fmt.Println(u)
+		}
+		return nil
 	}
-	return fmt.Errorf("unknown subcommand %q (report|wire|classify)", args[0])
+	return fmt.Errorf("unknown subcommand %q (report|wire|classify|vocabulary)", args[0])
 }
 
 func runReport(args []string) error {
 	fs := flag.NewFlagSet("report", flag.ContinueOnError)
 	repo := fs.String("repo", ".", "repository root (for docs/stdlib-admission-register.md and baselines/go-oracle-pin)")
-	stderrFile := fs.String("frontend-stderr", "", "file holding the real frontend's stderr for this target (the DYNAMIC pass's first refusal); empty file = export OK")
+	stderrFile := fs.String("frontend-stderr", "", "file holding the real frontend's stderr for this target (the DYNAMIC pass's first refusal)")
+	frontendRC := fs.Int("frontend-rc", -1, "the real frontend's exit status for this target (-1 = the dynamic pass did not run); only 0 is EXPORT OK, a nonzero status without a named refusal is INFRA")
+	quarFile := fs.String("frontend-quarantines", "", "file holding `lowerdiag wire` rows of the probe wire (when the export succeeded)")
+	includes := fs.String("include", "", "comma-separated case-local package paths to census beside the main package's imports (the census's extra roots)")
 	asJSON := fs.Bool("json", false, "write the JSON report to stdout instead of the human one")
 	declsTSV := fs.String("decls-tsv", "", "also write the per-declaration TSV here")
 	histTSV := fs.String("histogram-tsv", "", "also write the cause/key histogram TSV here")
@@ -100,20 +120,36 @@ func runReport(args []string) error {
 	if err != nil {
 		return err
 	}
-	prog, err := loadProgram(target, sup)
+	var incs []string
+	for _, inc := range strings.Split(*includes, ",") {
+		if strings.TrimSpace(inc) != "" {
+			incs = append(incs, strings.TrimSpace(inc))
+		}
+	}
+	prog, err := loadProgram(target, sup, incs...)
 	if err != nil {
 		return err
 	}
 	prog.census()
-	var stderrText string
-	ran := false
-	if *stderrFile != "" {
+	var stderrText, quarText string
+	if *frontendRC >= 0 {
+		if *stderrFile == "" {
+			return fmt.Errorf("--frontend-rc given without --frontend-stderr: a dynamic pass must hand over the frontend's text (fail closed)")
+		}
 		b, err := os.ReadFile(*stderrFile)
 		if err != nil {
 			return fmt.Errorf("--frontend-stderr %s: %v", *stderrFile, err)
 		}
 		stderrText = string(b)
-		ran = true
+	} else if *stderrFile != "" {
+		return fmt.Errorf("--frontend-stderr given without --frontend-rc: the exit status is what decides EXPORT OK vs INFRA (fail closed)")
+	}
+	if *quarFile != "" {
+		b, err := os.ReadFile(*quarFile)
+		if err != nil {
+			return fmt.Errorf("--frontend-quarantines %s: %v", *quarFile, err)
+		}
+		quarText = string(b)
 	}
 	if *commit == "" {
 		*commit = gitCommit(*repo)
@@ -122,7 +158,7 @@ func runReport(args []string) error {
 	if r, err := filepath.Rel(*repo, target); err == nil && !strings.HasPrefix(r, "..") {
 		rel = r
 	}
-	rep := buildReport(prog, rel, *commit, goVersion, "docs/stdlib-admission-register.md", stderrText, ran)
+	rep := buildReport(prog, rel, *commit, goVersion, "docs/stdlib-admission-register.md", stderrText, *frontendRC, quarText)
 	if *declsTSV != "" {
 		if err := writeFileWith(*declsTSV, func(w *os.File) { writeDeclsTSV(w, rep) }); err != nil {
 			return err
@@ -146,7 +182,7 @@ func runReport(args []string) error {
 }
 
 func writeFileWith(path string, f func(*os.File)) error {
-	if strings.HasSuffix(path, "wire.json") || strings.HasSuffix(path, ".wire.json") {
+	if looksLikeWireName(path) {
 		return fmt.Errorf("refusing to write a diagnostic under a wire file name (%s): a report must never look like a lowering", path)
 	}
 	w, err := os.Create(path)
@@ -155,6 +191,14 @@ func writeFileWith(path string, f func(*os.File)) error {
 	}
 	f(w)
 	return w.Close()
+}
+
+// looksLikeWireName: any base name containing "wire.json" in any case,
+// with any suffix (`.tmp`, `.bak`) — the gate's wire files are `*.wire.json`
+// and a diagnostic must never be mistakable for one.
+func looksLikeWireName(path string) bool {
+	base := strings.ToLower(filepath.Base(path))
+	return strings.Contains(base, "wire.json") || strings.Contains(strings.ReplaceAll(base, "_", "."), "wire.json")
 }
 
 func gitCommit(repo string) string {
@@ -199,6 +243,7 @@ func wire(path string) error {
 	if err := json.Unmarshal(b, &prog); err != nil {
 		return err
 	}
+	fmt.Println("# " + diagnosticBanner + " (lowerdiag wire: per-declaration classification of the wire's quarantine stubs)")
 	fmt.Println("pkg\tkind\tname\tstatus\tcause\tclass\tkey")
 	row := func(kind, name string, unsupported any) {
 		status, causeTxt, class, key := "lowered", "-", "-", "-"

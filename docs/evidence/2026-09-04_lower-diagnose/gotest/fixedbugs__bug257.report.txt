@@ -1,10 +1,11 @@
 DIAGNOSTIC — NOT A LOWERING. tools/lowerdiag report: no wire is written; nothing in this file is a gate input.
 target: artifacts/lower-diagnose/inputs/gotest/fixedbugs__bug257
-commit: e0657d4770b9a5b608a647066b4e925d87a6392c+dirty   go: go1.26.5
-register: docs/stdlib-admission-register.md (42 rows)   causes table: 49 rows
+commit: 55987a6c4d91124bc4f2d1721c07cb686fa1cb85+dirty   go: go1.26.5   tables: 35d472cde2ed (causes.tsv + machine-surface.tsv + library-refusals.tsv)
+register: docs/stdlib-admission-register.md (42 rows)   causes table: 52 rows
 
 == first refusal (what the frontend says today)
-  frontend: EXPORT OK — the program lowers (per-declaration quarantines, if any, are in the wire's unsupported stubs; the static census below is the demand view)
+  frontend: EXPORT OK (rc 0) — the export lowers; the probe wire carries 1 quarantined non-shim declaration(s):
+    func gotestMain: FR-14/stdlib-package-unmodeled md5.New
 
 == distance
   declarations demanding nothing refused: 2 / 3 (66.7%)   funcs+methods: 0 / 1 (0.0%)   may-refuse: 0   refused: 1
@@ -36,9 +37,26 @@ register: docs/stdlib-admission-register.md (42 rows)   causes table: 49 rows
   fmt.Println                                          stdlib-member-unmodeled    FR-14        1     0    1
   io.WriteString                                       stdlib-package-unmodeled   FR-14        1     0    1
 
+== not judged statically (every cause id the static pass never emits; count = declarations in THIS program referencing the surface it covers, - = shape-level)
+  cause                      fr                decls  what
+  labeled-shape              unrowed               -  statement/expression corner shapes the emitter refuses by arm — not modeled statically
+  stencil-whole-export       FR-4                  0  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
+  local-type-type-argument   c-pin                 0  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
+  imported-type-marker       by-design             0  declarations touching an imported named type — the D5 marker itself lowers; only its uncalled-method stubs appear quarantined in a wire
+  generic-template           by-design             0  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
+  generics-corner            unrowed               0  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
+  cmp-compare-shape          FR-14                 0  declarations calling cmp.Compare — the kind-dispatch desugar's shape bound is emitter-side
+  init-schedule              unrowed               -  load-time / initialization-schedule shapes — the dynamic pass (first refusal) is the check
+  hidden-dep-init-order      c-pin                 -  load-time / initialization-schedule shapes — the dynamic pass (first refusal) is the check
+  result-shadow              unrowed               -  statement/expression corner shapes the emitter refuses by arm — not modeled statically
+  statement-shape            unrowed               -  statement/expression corner shapes the emitter refuses by arm — not modeled statically
+  expression-shape           unrowed               -  statement/expression corner shapes the emitter refuses by arm — not modeled statically
+  frontend-apparatus         apparatus             -  frontend fail-closed invariants and pin/overlay/register table inconsistencies — properties of the tree, not the program
+  frontend-invariant         unrowed               -  frontend fail-closed invariants and pin/overlay/register table inconsistencies — properties of the tree, not the program
+
 == notes
-  - static = go/types over the program + its local imports; stdlib judged by the register (source-through members counted as lowering — FR-21 gaps inside library text are invisible here) and the machine-owned surface table
+  - static = go/types over the program + its local imports; stdlib judged by the register (source-through members count as lowering unless library-refusals.tsv names them — other FR-21 gaps inside library text are invisible here), the machine-owned surface table and library-refusals.tsv; the measured direction is UNDER-approximation: what fires is exact, what is not judged is listed above per run
   - may-refuse = shape-dependent (goto hoisting shapes, non-reserved build tags); the distance line counts only certain refusals
-  - export scope = the frontend refuses the WHOLE package export today (H-11 initializer kill, an init() body, unstubbable method signature, global type, duplicate local TypeId); dependents inherit through the import graph
+  - export scope = the frontend refuses the WHOLE package export today (H-11 initializer kill, an init() body, unstubbable method signature, global type, duplicate local TypeId); dependents inherit through the import graph; CALL scope (stdlib-type-method; library-refusals.tsv members such as errors.Is) = the declaration LOWERS (the wire does not quarantine it) and the CALL refuses when reached — the imported type's D5 stub or the library function's own quarantine; the distance line counts these as refused demands, the calibration against a wire does not
   - main.main is not a census declaration: the frontend never emits it (emit.go emitProgram; drivers run named entry functions), so its body cannot block a lowering
   - not visible statically: fmt's verb×kind matrix, mono.go's stencil-time refusals, per-call-site frontend invariants — the dynamic pass (first refusal) is the check

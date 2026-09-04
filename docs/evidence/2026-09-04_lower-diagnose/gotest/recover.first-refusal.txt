@@ -1,3 +1,5 @@
+# DIAGNOSTIC — NOT A LOWERING (scripts/lower-diagnose; this file is a record of the frontend's stderr / probe classification, not a gate input)
+# frontend exit status: 1
 nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[reflect.StructField]
-for the full blocker picture run scripts/lower-diagnose <the --dir given above>
+for the full blocker picture run scripts/lower-diagnose artifacts/lower-diagnose/inputs/gotest/recover
 exit status 1

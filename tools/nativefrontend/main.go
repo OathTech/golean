@@ -27,8 +27,8 @@ func main() {
 		// the pipelines that read this stderr take its first line (the
 		// baseline's detail column carries the rest, uncompared).
 		var u unsupported
-		if errors.As(err, &u) {
-			fmt.Fprintln(os.Stderr, "for the full blocker picture run scripts/lower-diagnose <the --dir given above>")
+		if errors.As(err, &u) && refusedDir != "" {
+			fmt.Fprintf(os.Stderr, "for the full blocker picture run scripts/lower-diagnose %s\n", refusedDir)
 		}
 		os.Exit(1)
 	}
@@ -53,6 +53,10 @@ func enableMaterializedAliases() {
 		os.Setenv("GODEBUG", "gotypesalias=1")
 	}
 }
+
+// refusedDir: the --dir of this run, for the refusal hint line (message
+// text only — read by nothing).
+var refusedDir string
 
 func run() error {
 	enableMaterializedAliases()
@@ -107,6 +111,7 @@ func run() error {
 	if *dir == "" {
 		return fmt.Errorf("--dir is required")
 	}
+	refusedDir = *dir
 
 	fset := token.NewFileSet()
 	pkgs, err := parser.ParseDir(fset, *dir, nonTestGoFile, parser.ParseComments)

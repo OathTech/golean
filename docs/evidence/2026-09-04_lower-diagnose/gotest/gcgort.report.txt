@@ -1,12 +1,13 @@
 DIAGNOSTIC — NOT A LOWERING. tools/lowerdiag report: no wire is written; nothing in this file is a gate input.
 target: artifacts/lower-diagnose/inputs/gotest/gcgort
-commit: e0657d4770b9a5b608a647066b4e925d87a6392c+dirty   go: go1.26.5
-register: docs/stdlib-admission-register.md (42 rows)   causes table: 49 rows
+commit: 55987a6c4d91124bc4f2d1721c07cb686fa1cb85+dirty   go: go1.26.5   tables: 35d472cde2ed (causes.tsv + machine-surface.tsv + library-refusals.tsv)
+register: docs/stdlib-admission-register.md (42 rows)   causes table: 52 rows
 
 == first refusal (what the frontend says today)
   nativefrontend: native frontend unsupported: basic type complex64
   -> cause complex [FR-15, decl-scoped] key complex
   static site(s): main func newStructT @main.go:1835 [complex/FR-15] | main func newStructT @main.go:1836 [complex/FR-15] | main type structT @main.go:1810 [complex/FR-15] | main var types @main.go:1066 [complex/FR-15] | main var types @main.go:981 [complex/FR-15] | main var types @main.go:983 [complex/FR-15]
+  note: no static declaration carries this exact key (the frontend spells it differently); 6 declaration(s) carry the same cause — listed
 
 == distance
   declarations demanding nothing refused: 7 / 11 (63.6%)   funcs+methods: 2 / 4 (50.0%)   may-refuse: 0   refused: 4
@@ -15,15 +16,18 @@ register: docs/stdlib-admission-register.md (42 rows)   causes table: 49 rows
 == blockers by cause (sorted by unblock value: sole = declarations this cause alone blocks)
   cause                      fr               scope  decls  sole pkgs export  top keys
   complex                    FR-15            decl       3     2    1      0  complex128×3, complex64×3, builtin complex×2, builtin imag×1, builtin real×1
-  stdlib-package-unmodeled   FR-14            decl       2     1    1      0  runtime.Gosched×1, runtime/debug.SetGCPercent×1
+  stdlib-package-unmodeled   FR-14            decl       2     0    1      0  runtime.Gosched×1, runtime/debug.SetGCPercent×1
+  quarantine-cascade         cascade          decl       1     0    1      0  main.types×1
 
 == top blockers — what each is and where its plan lives
    1. complex [FR-15] — 3 decls (2 sole, 1 pkgs): complex numbers (types, literals, constants, real/imag/complex) — the one large arc, last in the queue (15)
-   2. stdlib-package-unmodeled [FR-14] — 2 decls (1 sole, 1 pkgs): a call into a stdlib package that is neither source-through nor shimmed (register: no row) — FR-14's extern surface; memo §6 slices (source-through admission per package)
+   2. stdlib-package-unmodeled [FR-14] — 2 decls (0 sole, 1 pkgs): a call into a stdlib package that is neither source-through nor shimmed (register: no row) — FR-14's extern surface; memo §6 slices (source-through admission per package)
+   3. quarantine-cascade [cascade] — 1 decls (0 sole, 1 pkgs): refused because it REFERENCES a declaration that is itself refused (a poisoned var, a quarantined callee) — fix the root cause, this row lifts
 
 == projection — declarations lowering if the top causes were fixed, cumulatively
   + complex                    -> 9 / 11 lower (+2), 0 export(s) revived
-  + stdlib-package-unmodeled   -> 11 / 11 lower (+2), 0 export(s) revived
+  + stdlib-package-unmodeled   -> 10 / 11 lower (+1), 0 export(s) revived
+  + quarantine-cascade         -> 11 / 11 lower (+1), 0 export(s) revived
 
 == per package
   package                                  decls lowers  may-ref  refd   +top3    share  export
@@ -31,12 +35,29 @@ register: docs/stdlib-admission-register.md (42 rows)   causes table: 49 rows
 
 == stdlib / imported keys refused (register class = none; top 25)
   key                                                  cause                      fr       decls  sole pkgs
-  runtime/debug.SetGCPercent                           stdlib-package-unmodeled   FR-14        1     1    1
   runtime.Gosched                                      stdlib-package-unmodeled   FR-14        1     0    1
+  runtime/debug.SetGCPercent                           stdlib-package-unmodeled   FR-14        1     0    1
+
+== not judged statically (every cause id the static pass never emits; count = declarations in THIS program referencing the surface it covers, - = shape-level)
+  cause                      fr                decls  what
+  labeled-shape              unrowed               -  statement/expression corner shapes the emitter refuses by arm — not modeled statically
+  stencil-whole-export       FR-4                  0  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
+  local-type-type-argument   c-pin                 0  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
+  imported-type-marker       by-design             0  declarations touching an imported named type — the D5 marker itself lowers; only its uncalled-method stubs appear quarantined in a wire
+  generic-template           by-design             0  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
+  generics-corner            unrowed               0  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
+  cmp-compare-shape          FR-14                 0  declarations calling cmp.Compare — the kind-dispatch desugar's shape bound is emitter-side
+  init-schedule              unrowed               -  load-time / initialization-schedule shapes — the dynamic pass (first refusal) is the check
+  hidden-dep-init-order      c-pin                 -  load-time / initialization-schedule shapes — the dynamic pass (first refusal) is the check
+  result-shadow              unrowed               -  statement/expression corner shapes the emitter refuses by arm — not modeled statically
+  statement-shape            unrowed               -  statement/expression corner shapes the emitter refuses by arm — not modeled statically
+  expression-shape           unrowed               -  statement/expression corner shapes the emitter refuses by arm — not modeled statically
+  frontend-apparatus         apparatus             -  frontend fail-closed invariants and pin/overlay/register table inconsistencies — properties of the tree, not the program
+  frontend-invariant         unrowed               -  frontend fail-closed invariants and pin/overlay/register table inconsistencies — properties of the tree, not the program
 
 == notes
-  - static = go/types over the program + its local imports; stdlib judged by the register (source-through members counted as lowering — FR-21 gaps inside library text are invisible here) and the machine-owned surface table
+  - static = go/types over the program + its local imports; stdlib judged by the register (source-through members count as lowering unless library-refusals.tsv names them — other FR-21 gaps inside library text are invisible here), the machine-owned surface table and library-refusals.tsv; the measured direction is UNDER-approximation: what fires is exact, what is not judged is listed above per run
   - may-refuse = shape-dependent (goto hoisting shapes, non-reserved build tags); the distance line counts only certain refusals
-  - export scope = the frontend refuses the WHOLE package export today (H-11 initializer kill, an init() body, unstubbable method signature, global type, duplicate local TypeId); dependents inherit through the import graph
+  - export scope = the frontend refuses the WHOLE package export today (H-11 initializer kill, an init() body, unstubbable method signature, global type, duplicate local TypeId); dependents inherit through the import graph; CALL scope (stdlib-type-method; library-refusals.tsv members such as errors.Is) = the declaration LOWERS (the wire does not quarantine it) and the CALL refuses when reached — the imported type's D5 stub or the library function's own quarantine; the distance line counts these as refused demands, the calibration against a wire does not
   - main.main is not a census declaration: the frontend never emits it (emit.go emitProgram; drivers run named entry functions), so its body cannot block a lowering
   - not visible statically: fmt's verb×kind matrix, mono.go's stencil-time refusals, per-call-site frontend invariants — the dynamic pass (first refusal) is the check

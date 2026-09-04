@@ -1,0 +1,32 @@
+# tools/lowerdiag/library-refusals.tsv — members of SOURCE-THROUGH stdlib
+# packages that the loader refuses BY NAME (FR-21 gaps, reflect reach): a
+# register row admits the package, but these members do not lower today.
+# Read by tools/lowerdiag beside the register (the register's detail column
+# says this in prose; this table is the machine-readable form). Every row
+# names its witness: a baseline id that must be FAIL/frontend-export
+# (TestLibraryRefusalsWitnessed — a PASS means the gap closed and the row is
+# stale), or `-` with the evidence dir that observed the quarantine.
+# member: pkgpath.Func or pkgpath.Type.Method
+member	cause	witness	detail
+errors.Is	reflect	stdlib-source/errors-wrap/is	errors.Is reaches internal/reflectlite (register: "Is/As reach internal/reflectlite and refuse by name (FR-21 -> G6)")
+errors.As	reflect	stdlib-source/errors-wrap/as	same
+strings.IndexRune	stdlib-source-gap	stdlib-source/frontier/index-rune-goto	FR-11's goto shape inside library text (strings.IndexRune's goto-next label)
+math/bits.Div64	stdlib-source-gap	stdlib-source/frontier/div64-overflow-value	the runtime-linknamed overflowError/divideError values (poisoned by the linkname rule)
+strconv.FormatFloat	stdlib-source-gap	stdlib-source/frontier/format-float-unsafe	internal/strconv deps.go float-bits casts (a PRIMITIVE admission, [USER]-gated)
+strconv.ParseFloat	stdlib-source-gap	stdlib-source/frontier/format-float-unsafe	same float-bits casts on the parse side
+strconv.AppendFloat	stdlib-source-gap	stdlib-source/frontier/format-float-unsafe	same
+slices.Insert	stdlib-source-gap	stdlib-source/frontier/slices-overlaps	slices.Insert's in-place path reaches the unsafe overlaps helper (REFUSED, memo §1.3)
+bytes.ToUpper	stdlib-source-gap	stdlib-source/frontier/bytes-toupper-makenozero	bytealg.MakeNoZero at bytes' four sites (Join/Repeat/ToUpper/ToLower)
+bytes.ToLower	stdlib-source-gap	stdlib-source/frontier/bytes-toupper-makenozero	same MakeNoZero site class
+bytes.Join	stdlib-source-gap	stdlib-source/frontier/bytes-toupper-makenozero	same
+bytes.Repeat	stdlib-source-gap	stdlib-source/frontier/bytes-toupper-makenozero	same
+bytes.Buffer.ReadByte	stdlib-var-unmodeled	stdlib-source/frontier/buffer-readbyte-io	bytes.Buffer's read side references io.EOF (io is export-data only; value-position refusal inside library text)
+bytes.Buffer.Read	stdlib-var-unmodeled	-	same io.EOF reference; observed quarantined in the raft twin wire (docs/evidence/2026-09-04_lower-diagnose/raft-twin/wire-decls-classified.tsv)
+bytes.Buffer.ReadRune	stdlib-var-unmodeled	-	same (raft twin wire)
+bytes.Buffer.ReadFrom	stdlib-var-unmodeled	-	same (raft twin wire)
+bytes.Buffer.WriteTo	stdlib-var-unmodeled	-	io.ErrShortWrite reference (raft twin wire)
+bytes.Buffer.ReadBytes	stdlib-var-unmodeled	-	via readSlice's io.EOF (raft twin wire: readSlice quarantined)
+bytes.Buffer.ReadString	stdlib-var-unmodeled	-	via readSlice's io.EOF (raft twin wire)
+encoding/binary.Read	reflect	-	register row: "Read/Write/Size are reflect and refuse by name (export data)"
+encoding/binary.Write	reflect	-	register row (and FR-24's structSize sync.Map global on the same path)
+encoding/binary.Size	reflect	-	register row

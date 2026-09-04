@@ -6,11 +6,14 @@ package main
 // through the host's export data), then for EVERY declaration the set of
 // refused demands it makes, judged against the supply tables (causes.go).
 //
-// It is a static over-approximation of "would the frontend quarantine this
-// declaration": shape-dependent refusals are reported as MAY-REFUSE (the
-// goto hoisting shapes, build tags), and what needs the emitter's own
-// tables (fmt's verb×kind matrix, FR-21 gaps inside library text) is
-// outside its resolution and said so in the report.
+// Measured direction (calibration against the frontend's own wires,
+// docs/2026-09-04_lower-diagnose.md §5): an UNDER-approximation of "would
+// the frontend quarantine this declaration" — the rules that fire are exact
+// (0 false positives after the audit fix round), and what the pass does not
+// judge is disclosed PER RUN in the report's "not judged statically"
+// section (fmt's verb×kind matrix, mono.go's stencil-time refusals, …).
+// Shape-dependent refusals are reported as MAY-REFUSE (the goto hoisting
+// shapes, non-reserved build tags).
 
 import (
 	"fmt"
@@ -31,6 +34,7 @@ type finding struct {
 	Pos     string
 	Certain bool // false = shape-dependent (may-refuse)
 	Export  bool // this site is a WHOLE-EXPORT refusal today
+	Call    bool // the DECLARATION lowers; the CALL refuses when reached (a library-side quarantine or a D5 stub)
 }
 
 type declReport struct {
@@ -40,6 +44,9 @@ type declReport struct {
 	Findings        []finding // deduped by (cause id, key)
 	Supplied        []string  // "key (class)" — stdlib demands that lower today
 	ImportedTypes   []string  // opaque D5 markers (not blockers by themselves)
+	GenericSites    int       // type parameters declared + instantiation sites (mono.go's stencil-time refusals are not judged here)
+	IsGeneric       bool      // declares type parameters: a TEMPLATE, quarantined by design, stenciled per instantiation
+	usedVars        map[types.Object]bool
 	fkeys           map[string]bool
 	skeys           map[string]bool
 	tkeys           map[string]bool
@@ -56,6 +63,7 @@ func (d *declReport) add(f finding) {
 			if d.Findings[i].Cause.ID == f.Cause.ID && d.Findings[i].Key == f.Key {
 				d.Findings[i].Export = d.Findings[i].Export || f.Export
 				d.Findings[i].Certain = d.Findings[i].Certain || f.Certain
+				d.Findings[i].Call = d.Findings[i].Call && f.Call
 			}
 		}
 		return
@@ -94,6 +102,21 @@ func (d *declReport) certainFindings() []finding {
 	}
 	return out
 }
+
+// declRefusals: the certain findings that refuse THIS declaration (scope
+// decl/export) — `call`-scoped findings (an imported type's D5 stub) leave
+// the declaration lowered and refuse when the call is reached.
+func (d *declReport) declRefusals() []finding {
+	var out []finding
+	for _, f := range d.Findings {
+		if f.Certain && !f.isCall() {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+func (f finding) isCall() bool { return f.Call || f.Cause.Scope == "call" }
 
 func (d *declReport) verdict() string {
 	certain, may := 0, 0
@@ -141,9 +164,13 @@ type program struct {
 	order    []string // load order (dependencies first), main last
 	typeErrs []string
 	loading  map[string]bool
+	varDecls map[types.Object]*declReport // package-level vars of local packages -> their declaration
 }
 
-func loadProgram(root string, sup *supply) (*program, error) {
+// loadProgram loads the main package at root, its transitive case-local
+// imports, and every `includes` path (a case-local package the main
+// package does not import — the census's extra roots).
+func loadProgram(root string, sup *supply, includes ...string) (*program, error) {
 	fi, err := os.Stat(root)
 	if err != nil {
 		return nil, err
@@ -155,9 +182,17 @@ func loadProgram(root string, sup *supply) (*program, error) {
 		root = filepath.Dir(root)
 	}
 	p := &program{root: root, fset: token.NewFileSet(), sup: sup, std: importer.Default(),
-		pkgs: map[string]*localPkg{}, loading: map[string]bool{}}
+		pkgs: map[string]*localPkg{}, loading: map[string]bool{}, varDecls: map[types.Object]*declReport{}}
 	if _, err := p.load("main", root); err != nil {
 		return nil, err
+	}
+	for _, inc := range includes {
+		if !p.isLocalPath(inc) {
+			return nil, fmt.Errorf("--include %q: no case-local package directory %s", inc, filepath.Join(root, filepath.FromSlash(inc)))
+		}
+		if _, err := p.Import(inc); err != nil {
+			return nil, err
+		}
 	}
 	if len(p.typeErrs) > 0 {
 		n := len(p.typeErrs)
@@ -289,6 +324,22 @@ func (p *program) census() {
 		lp := p.pkgs[path]
 		a := &analyzer{p: p, lp: lp, info: lp.info}
 		a.run()
+	}
+	// quarantine-cascade: a declaration that READS a package-level variable
+	// whose own declaration is refused per declaration (a poisoned cell —
+	// H-11 seeds it and every reader refuses by name).
+	for _, path := range p.order {
+		for _, d := range p.pkgs[path].decls {
+			for obj := range d.usedVars {
+				vd := p.varDecls[obj]
+				// An export-killed var poisons nothing: the whole export refuses
+				// today (the cascade is the PER-DECLARATION poisoning's shape).
+				if vd == nil || vd == d || len(vd.declRefusals()) == 0 || vd.exportKill() {
+					continue
+				}
+				d.add(finding{Cause: mustCause("quarantine-cascade"), Key: vd.Pkg + "." + obj.Name(), Pos: d.Pos, Certain: true})
+			}
+		}
 	}
 }
 
@@ -440,6 +491,10 @@ func (a *analyzer) funcDecl(fd *ast.FuncDecl) {
 		kind, name = "method", recvName(fd.Recv.List[0].Type)+"."+name
 	}
 	d := a.newDecl(kind, name, fd)
+	if fd.Type.TypeParams != nil && len(fd.Type.TypeParams.List) > 0 {
+		d.GenericSites++
+		d.IsGeneric = true
+	}
 	// Signature: a type that does not lower makes a METHOD unstubbable
 	// (export kill, FR-23's sigRefusal arm); a func quarantines with an
 	// arity-only stub.
@@ -524,6 +579,9 @@ func (a *analyzer) genDecl(gd *ast.GenDecl, enclosing *declReport) {
 			// the export at collectGlobals — FR-24's shape).
 			for _, n := range sp.Names {
 				if obj := a.info.Defs[n]; obj != nil {
+					if enclosing == nil && gd.Tok == token.VAR {
+						a.p.varDecls[obj] = d
+					}
 					fs := a.typeFindings(obj.Type(), sp, d)
 					for _, f := range fs {
 						if enclosing == nil && gd.Tok == token.VAR {
@@ -761,7 +819,13 @@ func (a *analyzer) classifyPkgCall(d *declReport, path, member string, at ast.No
 	case sup.intercept[key]:
 		d.supplied(key, "intercept")
 	case sup.sourceThrough[path]:
-		d.supplied(key, "source-through")
+		if lr, ok := sup.libRefused[key]; ok {
+			// The library function itself is quarantined (FR-21 / reflect);
+			// this declaration LOWERS and the call refuses when reached.
+			d.add(finding{Cause: mustCause(lr.Cause), Key: key, Pos: pos, Certain: true, Call: true})
+		} else {
+			d.supplied(key, "source-through")
+		}
 	case sup.shim[key] != "":
 		d.supplied(key, "shim")
 	case sup.shimPackage(path):
@@ -804,7 +868,11 @@ func (a *analyzer) classifyMethod(d *declReport, recv types.Type, method string,
 			d.add(finding{Cause: mustCause("atomic-unmodeled"), Key: key, Pos: pos, Certain: true})
 		}
 	case sup.sourceThrough[path]:
-		d.supplied(key, "source-through")
+		if lr, ok := sup.libRefused[key]; ok {
+			d.add(finding{Cause: mustCause(lr.Cause), Key: key, Pos: pos, Certain: true, Call: true})
+		} else {
+			d.supplied(key, "source-through")
+		}
 	case path == "reflect" || path == "internal/reflectlite":
 		d.add(finding{Cause: mustCause("reflect"), Key: key, Pos: pos, Certain: true})
 	default:
@@ -834,35 +902,13 @@ func (a *analyzer) body(d *declReport, root ast.Node, fd *ast.FuncDecl) {
 			}
 		}
 	}
-	// Enclosing signature stack for return-statement boxing (FR-7).
-	var sigStack []*types.Signature
-	if fd != nil {
-		if obj, ok := a.info.Defs[fd.Name].(*types.Func); ok {
-			sigStack = append(sigStack, obj.Type().(*types.Signature))
-		}
-	}
 	var stack []ast.Node
 	ast.Inspect(root, func(n ast.Node) bool {
 		if n == nil {
-			top := stack[len(stack)-1]
 			stack = stack[:len(stack)-1]
-			if _, ok := top.(*ast.FuncLit); ok && len(sigStack) > 0 {
-				sigStack = sigStack[:len(sigStack)-1]
-			}
 			return true
 		}
 		stack = append(stack, n)
-		if fl, ok := n.(*ast.FuncLit); ok {
-			if tv, ok := a.info.Types[fl]; ok {
-				if sig, ok := tv.Type.(*types.Signature); ok {
-					sigStack = append(sigStack, sig)
-				} else {
-					sigStack = append(sigStack, nil)
-				}
-			} else {
-				sigStack = append(sigStack, nil)
-			}
-		}
 		pos := a.p.pos(n)
 		switch x := n.(type) {
 		case *ast.GenDecl:
@@ -888,6 +934,18 @@ func (a *analyzer) body(d *declReport, root ast.Node, fd *ast.FuncDecl) {
 				if path, member, obj, ok := a.stdlibSel(sel); ok {
 					if _, isType := obj.(*types.TypeName); !isType {
 						a.classifyPkgCall(d, path, member, x)
+						// slices.Sort is the sortSlice MACHINE OP at integer
+						// element kinds only (register: intercept row; emit.go
+						// emitSortStmt "slices.Sort at non-integer element type").
+						if path == "slices" && member == "Sort" && len(x.Args) == 1 {
+							if tv, ok := a.info.Types[x.Args[0]]; ok && tv.Type != nil {
+								if sl, ok := tv.Type.Underlying().(*types.Slice); ok {
+									if b, ok := sl.Elem().Underlying().(*types.Basic); !ok || b.Info()&types.IsInteger == 0 {
+										d.add(finding{Cause: mustCause("slices-sort-kind"), Key: "slices.Sort@" + typeStr(sl.Elem()), Pos: pos, Certain: true})
+									}
+								}
+							}
+						}
 					}
 					break
 				}
@@ -932,7 +990,11 @@ func (a *analyzer) body(d *declReport, root ast.Node, fd *ast.FuncDecl) {
 				switch s.Kind() {
 				case types.MethodVal:
 					if !parentIsCallFun {
-						a.classifyMethod(d, s.Recv(), x.Sel.Name, x)
+						if a.syncRecv(s.Recv()) {
+							d.add(finding{Cause: mustCause("sync-value-shape"), Key: "method value " + typeStr(s.Recv()) + "." + x.Sel.Name, Pos: pos, Certain: true})
+						} else {
+							a.classifyMethod(d, s.Recv(), x.Sel.Name, x)
+						}
 					}
 				case types.MethodExpr:
 					// (*T).Mv over a value-receiver method — the deref adapter.
@@ -945,7 +1007,11 @@ func (a *analyzer) body(d *declReport, root ast.Node, fd *ast.FuncDecl) {
 							}
 						}
 					}
-					a.classifyMethod(d, s.Recv(), x.Sel.Name, x)
+					if a.syncRecv(s.Recv()) {
+						d.add(finding{Cause: mustCause("sync-value-shape"), Key: "method expression " + typeStr(s.Recv()) + "." + x.Sel.Name, Pos: pos, Certain: true})
+					} else {
+						a.classifyMethod(d, s.Recv(), x.Sel.Name, x)
+					}
 				}
 			}
 		case *ast.RangeStmt:
@@ -968,9 +1034,31 @@ func (a *analyzer) body(d *declReport, root ast.Node, fd *ast.FuncDecl) {
 			if name, ok := isBuiltin(a, x.Call.Fun); ok {
 				d.add(finding{Cause: mustCause("go-of-builtin"), Key: name, Pos: pos, Certain: true})
 			}
+			a.interceptedSpawn(d, "go", x.Call, pos)
 		case *ast.DeferStmt:
 			if name, ok := isBuiltin(a, x.Call.Fun); ok && name != "recover" && name != "close" {
 				d.add(finding{Cause: mustCause("defer-of-builtin"), Key: name, Pos: pos, Certain: true})
+			}
+			a.interceptedSpawn(d, "defer", x.Call, pos)
+		case *ast.CompositeLit:
+			// A non-empty composite literal of a sync/atomic primitive (Q-SYNCLIT:
+			// the empty literal is the zero value and lowers).
+			if tv, ok := a.info.Types[x]; ok && tv.Type != nil && len(x.Elts) > 0 {
+				if nm, ok := types.Unalias(tv.Type).(*types.Named); ok && nm.Obj().Pkg() != nil {
+					if pp := nm.Obj().Pkg().Path(); pp == "sync" || pp == "sync/atomic" {
+						d.add(finding{Cause: mustCause("sync-literal"), Key: pp + "." + nm.Obj().Name(), Pos: pos, Certain: true})
+					}
+				}
+			}
+		case *ast.Ident:
+			if _, inst := a.info.Instances[x]; inst {
+				d.GenericSites++
+			}
+			if v, ok := a.info.Uses[x].(*types.Var); ok && v.Pkg() != nil && a.p.isLocalPkg(v.Pkg()) && v.Parent() == v.Pkg().Scope() {
+				if d.usedVars == nil {
+					d.usedVars = map[types.Object]bool{}
+				}
+				d.usedVars[v] = true
 			}
 		case *ast.BranchStmt:
 			if x.Tok == token.GOTO && x.Label != nil {
@@ -1014,21 +1102,10 @@ func (a *analyzer) body(d *declReport, root ast.Node, fd *ast.FuncDecl) {
 					}
 				}
 			}
-		case *ast.ReturnStmt:
-			if len(x.Results) == 1 && len(sigStack) > 0 && sigStack[len(sigStack)-1] != nil {
-				sig := sigStack[len(sigStack)-1]
-				if sig.Results().Len() > 1 {
-					if tv, ok := a.info.Types[x.Results[0]]; ok {
-						if tup, ok := tv.Type.(*types.Tuple); ok && tup.Len() == sig.Results().Len() {
-							for i := 0; i < tup.Len(); i++ {
-								if boxes(sig.Results().At(i).Type(), tup.At(i).Type()) {
-									d.add(finding{Cause: mustCause("tuple-iface-box"), Key: "return " + typeStr(sig.Results().At(i).Type()), Pos: pos, Certain: true})
-								}
-							}
-						}
-					}
-				}
-			}
+		// NO ReturnStmt arm: `return two()` into interface results LOWERS (the
+		// emitter destructures the tuple into $c0/$c1 with an explicit
+		// to-interface box); FR-7's unsup exists only on the assign /
+		// value-spec paths (emit.go 3018/3109/3421/3495). Audit fix round 2.
 		case *ast.ValueSpec:
 			if len(x.Values) == 1 && len(x.Names) > 1 {
 				if tv, ok := a.info.Types[x.Values[0]]; ok {
@@ -1055,6 +1132,29 @@ func (a *analyzer) body(d *declReport, root ast.Node, fd *ast.FuncDecl) {
 		}
 		return true
 	})
+}
+
+// syncRecv: is t (or *t) one of the machine-owned sync primitives?
+func (a *analyzer) syncRecv(t types.Type) bool {
+	if p, ok := t.(*types.Pointer); ok {
+		t = p.Elem()
+	}
+	nm, ok := types.Unalias(t).(*types.Named)
+	return ok && nm.Obj().Pkg() != nil && nm.Obj().Pkg().Path() == "sync" && a.p.sup.syncType["sync."+nm.Obj().Name()]
+}
+
+// interceptedSpawn: defer/go of a frontend-INTERCEPTED library member
+// (slices.Sort, cmp.Compare) refuses by name (emit.go: "the direct call of
+// this library member is frontend-intercepted … in expression-statement
+// position only").
+func (a *analyzer) interceptedSpawn(d *declReport, how string, call *ast.CallExpr, pos string) {
+	sel, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return
+	}
+	if path, member, _, ok := a.stdlibSel(sel); ok && a.p.sup.intercept[path+"."+member] {
+		d.add(finding{Cause: mustCause("intercepted-defer-go"), Key: how + " " + path + "." + member, Pos: pos, Certain: true})
+	}
 }
 
 // boxes: assigning a component of static type src into a target of type

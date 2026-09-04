@@ -1,0 +1,2 @@
+# DIAGNOSTIC — NOT A LOWERING (scripts/lower-diagnose; this file is a record of the frontend's stderr / probe classification, not a gate input)
+# frontend exit status: 0

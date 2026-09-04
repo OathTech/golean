@@ -1,0 +1,59 @@
+# DIAGNOSTIC — NOT A LOWERING. tools/lowerdiag report: no wire is written; nothing in this file is a gate input. (lowerdiag wire: per-declaration classification of the wire's quarantine stubs)
+pkg	kind	name	status	cause	class	key
+errors	func	errors.Is	quarantined	errors.Is: package-selector call reflectlite.TypeOf (package "internal/reflectlite" surface not modeled)	FR-14/stdlib-package-unmodeled	reflectlite.TypeOf
+errors	func	errors.is	lowered	-	-	-
+unicode	func	unicode.IsSpace	lowered	-	-	-
+unicode	func	unicode.is16	lowered	-	-	-
+unicode	func	unicode.is32	lowered	-	-	-
+unicode	func	unicode.isExcludingLatin	lowered	-	-	-
+strings	func	strings.Fields	lowered	-	-	-
+strings	func	strings.FieldsFunc	lowered	-	-	-
+main	func	two	lowered	-	-	-
+main	func	retBox	lowered	-	-	-
+main	func	assignBox	quarantined	implicit interface conversion in multi-value assignment (interfaces campaign, deferred)	FR-7/tuple-iface-box	tuple-iface-box
+main	func	sortStrings	quarantined	slices.Sort at non-integer element type string	FR-14/slices-sort-kind	slices.Sort@string
+main	func	sortInts	lowered	-	-	-
+main	func	deferSort	quarantined	defer slices.Sort: the direct call of this library member is frontend-intercepted (the quorum-pilot `sortSlice` MACHINE OP at integer element kinds ) in expression-statement position only; as a deferred/spawned FUNCTION VALUE it has no lowering — refused by name rather than lowering the real body the reach walk pruned (memo §3 row M retires the interception)	FR-14/intercepted-defer-go	intercepted-defer-go
+main	func	isE	lowered	-	-	-
+main	func	fields	lowered	-	-	-
+main	func	sprintf$fmt0	lowered	-	-	-
+main	func	sprintf	lowered	-	-	-
+main	func	entry	lowered	-	-	-
+main	func	goleanShimFmtDynVerb$lit0	lowered	-	-	-
+main	func	goleanShimFmtDynVerb	lowered	-	-	-
+main	func	goleanShimFmtDynInt	lowered	-	-	-
+main	func	goleanShimFmtDynUint	lowered	-	-	-
+main	func	goleanShimFmtSprintfDyn	lowered	-	-	-
+main	func	goleanShimFmtSprintDyn	lowered	-	-	-
+main	func	goleanShimFmtSprintlnDyn	lowered	-	-	-
+main	func	goleanShimFmtUint	lowered	-	-	-
+main	func	goleanShimFmtInt	lowered	-	-	-
+main	func	goleanShimFmtHex	lowered	-	-	-
+main	func	goleanShimFmtBool	lowered	-	-	-
+main	func	goleanShimFmtQuoteBytes	lowered	-	-	-
+main	func	goleanShimFmtQuoteString	lowered	-	-	-
+main	func	goleanShimFmtStringVerb	lowered	-	-	-
+main	func	goleanShimFmtHexString	lowered	-	-	-
+main	func	goleanShimFmtRender	lowered	-	-	-
+main	func	goleanShimFmtRenderCall$lit0	lowered	-	-	-
+main	func	goleanShimFmtRenderCall	lowered	-	-	-
+main	func	goleanShimFmtError	lowered	-	-	-
+main	func	goleanShimFmtErrorCall$lit0	lowered	-	-	-
+main	func	goleanShimFmtErrorCall	lowered	-	-	-
+main	func	goleanShimFmtPanicValue	lowered	-	-	-
+main	func	goleanShimFmtPadLeft	lowered	-	-	-
+main	func	goleanShimFmtIntPad	lowered	-	-	-
+main	func	goleanShimFmtUintPad	lowered	-	-	-
+main	func	goleanShimUnsupported	quarantined	golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time — the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers	FR-14/fmt-verb-matrix	fmt-verb-matrix
+main	func	$pkginit	lowered	-	-	-
+main	method	main.E.Error	lowered	-	-	-
+unicode	type	unicode.RangeTable	lowered	-	-	-
+unicode	type	unicode.Range16	lowered	-	-	-
+unicode	type	unicode.Range32	lowered	-	-	-
+main	type	main.E	lowered	-	-	-
+main	type	error	lowered	-	-	-
+main	type	interface{Is(error) bool}	lowered	-	-	-
+main	type	interface{Unwrap() []error}	lowered	-	-	-
+main	type	interface{Unwrap() error}	lowered	-	-	-
+main	type	main.goleanShimStringer	lowered	-	-	-
+strings	type	strings.span	lowered	-	-	-

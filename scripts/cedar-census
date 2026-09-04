@@ -287,7 +287,7 @@ drive_one() {
   # Per-declaration census of the wire (every case, package drivers included).
   "$OUT/lowerdiag" wire "$wire" > "$dir/decls.tsv" || { printf 'INFRA\t%s\t%s\t%s\n' "$name" "$kind" "wire census failed"; return; }
   local total quar
-  total=$(($(wc -l < "$dir/decls.tsv") - 1)); quar=$(awk -F'\t' 'NR>1 && $4=="quarantined"' "$dir/decls.tsv" | wc -l)
+  total=$(awk -F'\t' '!/^#/ && $1!="pkg"' "$dir/decls.tsv" | wc -l); quar=$(awk -F'\t' '!/^#/ && $4=="quarantined"' "$dir/decls.tsv" | wc -l)
   if [[ "$kind" == "package" ]]; then
     printf 'EXPORT-OK\t%s\t%s\t%s\n' "$name" "$kind" "decls=$total quarantined=$quar"; return
   fi
@@ -356,7 +356,11 @@ demand() {
   # pass). Its three TSVs open with the DIAGNOSTIC banner line (a `#`
   # comment) — never a wire, never a gate input.
   [[ -d "$CASES/all" ]] || die "no whole-library case at $CASES/all (run cases first)"
-  "$OUT/lowerdiag" report --repo "$ROOT" --decls-tsv "$OUT/demand.tsv" --histogram-tsv "$OUT/demand-histogram.tsv" \
+  # The k8s cedar-go-only subset is not imported by the whole-library driver:
+  # census it as extra roots (--include), as the retired cedarcensus demand did.
+  local inc="" d
+  while IFS= read -r d; do [[ -n "$d" ]] && inc="${inc:+$inc,}cedark8s/$d"; done < "$OUT/cedark8s-packages.txt"
+  "$OUT/lowerdiag" report --repo "$ROOT" ${inc:+--include "$inc"} --decls-tsv "$OUT/demand.tsv" --histogram-tsv "$OUT/demand-histogram.tsv" \
       --per-package-tsv "$OUT/demand-per-package.tsv" "$CASES/all" > "$OUT/demand-report.txt" \
     || { cat "$OUT/demand-report.txt" >&2; die "static demand census (tools/lowerdiag) failed"; }
   echo "demand: $(grep -cv '^#' "$OUT/demand.tsv" | awk '{print $1-1}') declarations -> $OUT/demand.tsv (report: $OUT/demand-report.txt)" >&2
@@ -372,7 +376,7 @@ report() {
       local_pkg="$target"
       if [[ -f "$CASES/$name/decls.tsv" ]]; then
         # Injected shim helpers (goleanShim*) are frontend artifacts, not library declarations.
-        awk -F'\t' -v pkg="$local_pkg" -v c="$name" 'NR>1 && $1==pkg && $3 !~ /goleanShim/ { print $0 "\t" c }' "$CASES/$name/decls.tsv"
+        awk -F'\t' -v pkg="$local_pkg" -v c="$name" '!/^#/ && $1==pkg && $1!="pkg" && $3 !~ /goleanShim/ { print $0 "\t" c }' "$CASES/$name/decls.tsv"
       else
         cause="$(awk -F'\t' -v c="$name" '$2==c { print $4 }' "$OUT/results.tsv")"
         class_key="$(printf '%s\n' "$cause" | "$OUT/lowerdiag" classify 2>/dev/null || true)"

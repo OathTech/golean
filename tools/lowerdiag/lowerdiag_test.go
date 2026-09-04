@@ -2,9 +2,17 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -207,7 +215,7 @@ func fixtureReport(t *testing.T, dir string) *report {
 		t.Fatalf("load %s: %v", dir, err)
 	}
 	prog.census()
-	return buildReport(prog, dir, "test", "test", "docs/stdlib-admission-register.md", "", false)
+	return buildReport(prog, dir, "test", "test", "docs/stdlib-admission-register.md", "", -1, "")
 }
 
 // TestFixtureFiveBlockers — testdata/fivecauses has exactly five known
@@ -305,21 +313,493 @@ func TestFirstRefusalLocatesExportSite(t *testing.T) {
 		t.Fatal(err)
 	}
 	prog.census()
-	r := buildReport(prog, "x", "c", "g", "reg", `nativefrontend: native frontend unsupported: package-selector call time.Unix (package "time" surface not modeled)`+"\n", true)
+	r := buildReport(prog, "x", "c", "g", "reg", `nativefrontend: native frontend unsupported: package-selector call time.Unix (package "time" surface not modeled)`+"\n", 1, "")
 	if r.First == nil || r.First.Cause != "stdlib-package-unmodeled" || r.First.Key != "time.Unix" {
 		t.Fatalf("first refusal: %+v", r.First)
 	}
 	if !strings.Contains(r.First.StaticSite, "EXPORT-scoped") || !regexp.MustCompile(`var epoch`).MatchString(r.First.StaticSite) {
 		t.Fatalf("static site did not name the export-scoped initializer: %q", r.First.StaticSite)
 	}
-	r2 := buildReport(prog, "x", "c", "g", "reg", "", true)
+	r2 := buildReport(prog, "x", "c", "g", "reg", "", 0, "")
 	if !r2.FrontendOK || r2.First != nil {
-		t.Fatalf("empty stderr must read as export OK")
+		t.Fatalf("rc 0 must read as export OK")
 	}
 }
 
 func TestWireFileNamesRefused(t *testing.T) {
-	if err := writeFileWith(filepath.Join(t.TempDir(), "x.wire.json"), func(*os.File) {}); err == nil {
-		t.Fatal("a diagnostic under a wire file name must be refused")
+	for _, n := range []string{"x.wire.json", "wire.json", "twin.WIRE.JSON", "x.wire.json.tmp", "Wire.Json.bak", "a_wire.json"} {
+		if err := writeFileWith(filepath.Join(t.TempDir(), n), func(*os.File) {}); err == nil {
+			t.Errorf("a diagnostic under wire-like name %q must be refused", n)
+		}
+	}
+	if err := writeFileWith(filepath.Join(t.TempDir(), "report.txt"), func(*os.File) {}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestCrashedFrontendIsNotExportOK — audit fix round 1 (HIGH, fail-open):
+// a nonzero exit with an empty stderr (a crashed frontend, a shim exit 3)
+// must print INFRA naming the rc, never EXPORT OK; only rc 0 is OK; a
+// timeout is INFRA; a nonzero rc WITH a named refusal is the first refusal.
+func TestCrashedFrontendIsNotExportOK(t *testing.T) {
+	if err := initCauses(); err != nil {
+		t.Fatal(err)
+	}
+	sup, err := newSupply("../../docs/stdlib-admission-register.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	prog, err := loadProgram("testdata/fivecauses", sup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prog.census()
+	for _, tc := range []struct {
+		rc     int
+		stderr string
+		ok     bool
+		cause  string
+	}{
+		{3, "", false, "INFRA"},
+		{3, "panic: runtime error\n", false, "INFRA"},
+		{1, "exit status 1\n", false, "INFRA"},
+		{124, "", false, "INFRA"},
+		{97, "", false, "INFRA"},
+		{0, "", true, ""},
+		{0, "# DIAGNOSTIC banner only\n", true, ""},
+		{1, "nativefrontend: native frontend unsupported: basic type complex128\n", false, "complex"},
+		{1, "# DIAGNOSTIC — NOT A LOWERING\n# frontend exit status: 1\nnativefrontend: native frontend unsupported: basic type complex128\n", false, "complex"},
+	} {
+		r := buildReport(prog, "x", "c", "g", "reg", tc.stderr, tc.rc, "")
+		if r.FrontendOK != tc.ok {
+			t.Errorf("rc %d stderr %q: FrontendOK=%v want %v", tc.rc, tc.stderr, r.FrontendOK, tc.ok)
+		}
+		if tc.cause != "" && (r.First == nil || r.First.Cause != tc.cause) {
+			t.Errorf("rc %d stderr %q: first=%+v want cause %s", tc.rc, tc.stderr, r.First, tc.cause)
+		}
+		if tc.cause == "INFRA" && r.First != nil && !strings.Contains(r.First.Key+r.First.Note, "rc "+itoa(tc.rc)) && tc.rc != 124 {
+			t.Errorf("rc %d: INFRA line must name the rc: %+v", tc.rc, r.First)
+		}
+		var buf bytes.Buffer
+		writeHuman(&buf, r)
+		if !tc.ok && strings.Contains(buf.String(), "EXPORT OK") {
+			t.Errorf("rc %d: the human report says EXPORT OK", tc.rc)
+		}
+	}
+	// a quarantine list on rc 0 is surfaced
+	r := buildReport(prog, "x", "c", "g", "reg", "", 0, "# banner\npkg\tkind\tname\tstatus\tcause\tclass\tkey\nmain\tfunc\tf\tquarantined\tbasic type complex128\tFR-15/complex\tcomplex\nmain\tfunc\tgoleanShimX\tquarantined\tx\ty\tz\n")
+	if len(r.WireQuarantines) != 1 || !strings.Contains(r.WireQuarantines[0], "func f") {
+		t.Fatalf("wire quarantines: %v", r.WireQuarantines)
+	}
+}
+
+func itoa(i int) string { return fmt.Sprintf("%d", i) }
+
+// ---- machine-surface.tsv vs the frontend's own tables (audit fix round 3) ----
+
+// frontendSurface derives, with go/ast, the modeled sync ops (syncOpFor +
+// syncValueOpFor + emitSyncOpStmt's prim/m cases), the sync types (wire.go's
+// sync arm + Locker), the atomics prefixes/kinds (atomics.go tables) and
+// pureUnmodeledCallees (emit.go) from the frontend sources.
+type surfaceSets struct {
+	syncTypes, syncOps, atomicPrefixes, atomicKinds, initCallees map[string]bool
+}
+
+func frontendSurface(t *testing.T) surfaceSets {
+	fset := token.NewFileSet()
+	parse := func(name string) *ast.File {
+		f, err := parser.ParseFile(fset, filepath.Join("../nativefrontend", name), nil, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return f
+	}
+	emit, atomics, wire := parse("emit.go"), parse("atomics.go"), parse("wire.go")
+	ss := surfaceSets{map[string]bool{}, map[string]bool{}, map[string]bool{}, map[string]bool{}, map[string]bool{}}
+	strLit := func(e ast.Expr) (string, bool) {
+		if bl, ok := e.(*ast.BasicLit); ok && bl.Kind == token.STRING {
+			s, err := strconv.Unquote(bl.Value)
+			return s, err == nil
+		}
+		return "", false
+	}
+	isIdent := func(e ast.Expr, names ...string) bool {
+		id, ok := e.(*ast.Ident)
+		if !ok {
+			return false
+		}
+		for _, n := range names {
+			if id.Name == n {
+				return true
+			}
+		}
+		return false
+	}
+	// sync ops from the three functions
+	var funcs = map[string]bool{"syncOpFor": true, "syncValueOpFor": true, "emitSyncOpStmt": true}
+	found := 0
+	for _, d := range emit.Decls {
+		fd, ok := d.(*ast.FuncDecl)
+		if !ok || !funcs[fd.Name.Name] || fd.Body == nil {
+			continue
+		}
+		found++
+		// prim/method switch shapes
+		var walk func(n ast.Node, prim string)
+		walk = func(n ast.Node, prim string) {
+			ast.Inspect(n, func(m ast.Node) bool {
+				switch x := m.(type) {
+				case *ast.SwitchStmt:
+					if isIdent(x.Tag, "prim") {
+						for _, cc := range x.Body.List {
+							c := cc.(*ast.CaseClause)
+							for _, e := range c.List {
+								if p, ok := strLit(e); ok {
+									for _, st := range c.Body {
+										walk(st, p)
+									}
+								}
+							}
+						}
+						return false
+					}
+					if isIdent(x.Tag, "method", "m") && prim != "" {
+						for _, cc := range x.Body.List {
+							for _, e := range cc.(*ast.CaseClause).List {
+								if mth, ok := strLit(e); ok {
+									ss.syncOps["sync."+prim+"."+mth] = true
+								}
+							}
+						}
+						return false
+					}
+				case *ast.BinaryExpr:
+					// prim == "X" && m == "Y"   |   method == "Y" (prim from the enclosing case)
+					if x.Op == token.LAND {
+						var p, mth string
+						for _, side := range []ast.Expr{x.X, x.Y} {
+							if be, ok := side.(*ast.BinaryExpr); ok && be.Op == token.EQL {
+								if v, ok := strLit(be.Y); ok {
+									if isIdent(be.X, "prim") {
+										p = v
+									} else if isIdent(be.X, "method", "m") {
+										mth = v
+									}
+								}
+							}
+						}
+						if p != "" && mth != "" {
+							ss.syncOps["sync."+p+"."+mth] = true
+						}
+					}
+					if x.Op == token.EQL && prim != "" && isIdent(x.X, "method", "m") {
+						if v, ok := strLit(x.Y); ok {
+							ss.syncOps["sync."+prim+"."+v] = true
+						}
+					}
+				}
+				return true
+			})
+		}
+		walk(fd.Body, "")
+	}
+	if found != 3 {
+		t.Fatalf("expected syncOpFor, syncValueOpFor, emitSyncOpStmt in emit.go; found %d", found)
+	}
+	// sync types: wire.go's `case "Mutex", "RWMutex", "WaitGroup", "Once":` (the
+	// clause whose sibling default refuses "sync.%s (only ...") + Locker.
+	ast.Inspect(wire, func(n ast.Node) bool {
+		sw, ok := n.(*ast.SwitchStmt)
+		if !ok {
+			return true
+		}
+		hasRefusal := false
+		for _, cc := range sw.Body.List {
+			c := cc.(*ast.CaseClause)
+			if c.List == nil {
+				ast.Inspect(&ast.BlockStmt{List: c.Body}, func(m ast.Node) bool {
+					if bl, ok := m.(*ast.BasicLit); ok && strings.Contains(bl.Value, "sync.%s (only") {
+						hasRefusal = true
+					}
+					return true
+				})
+			}
+		}
+		if !hasRefusal {
+			return true
+		}
+		for _, cc := range sw.Body.List {
+			for _, e := range cc.(*ast.CaseClause).List {
+				if v, ok := strLit(e); ok {
+					ss.syncTypes["sync."+v] = true
+				}
+			}
+		}
+		return false
+	})
+	ss.syncTypes["sync.Locker"] = true // `obj.Name() != "Locker"` guard: a plain interface
+	// atomics tables and pureUnmodeledCallees
+	keysOf := func(f *ast.File, name string, want string) {
+		ast.Inspect(f, func(n ast.Node) bool {
+			vs, ok := n.(*ast.ValueSpec)
+			if !ok || len(vs.Names) != 1 || vs.Names[0].Name != name || len(vs.Values) != 1 {
+				return true
+			}
+			cl, ok := vs.Values[0].(*ast.CompositeLit)
+			if !ok {
+				return true
+			}
+			for _, el := range cl.Elts {
+				switch x := el.(type) {
+				case *ast.KeyValueExpr:
+					if v, ok := strLit(x.Key); ok {
+						switch want {
+						case "kind":
+							ss.atomicKinds[v] = true
+						case "init":
+							ss.initCallees[v] = true
+						}
+					}
+				case *ast.CompositeLit: // {"CompareAndSwap", "cas"}
+					if len(x.Elts) == 2 {
+						if v, ok := strLit(x.Elts[0]); ok {
+							ss.atomicPrefixes[v] = true
+						}
+					}
+				}
+			}
+			return false
+		})
+	}
+	keysOf(atomics, "atomicIntSuffixes", "kind")
+	keysOf(atomics, "atomicOpPrefixes", "prefix")
+	keysOf(emit, "pureUnmodeledCallees", "init")
+	return ss
+}
+
+// checkMachineSurface compares a machine-surface table against the derived
+// sets, BOTH ways.
+func checkMachineSurface(tsv string, ss surfaceSets) error {
+	s := &supply{sourceThrough: map[string]bool{}, shim: map[string]string{}, intercept: map[string]bool{},
+		shadowType: map[string]bool{}, syncType: map[string]bool{}, syncOp: map[string]bool{},
+		atomicKind: map[string]bool{}, initCallee: map[string]bool{}}
+	if err := readMachineSurface(tsv, s); err != nil {
+		return err
+	}
+	prefixes := map[string]bool{}
+	for _, p := range s.atomicPrefix {
+		prefixes[p] = true
+	}
+	var errs []string
+	cmp := func(what string, table, frontend map[string]bool) {
+		for k := range table {
+			if !frontend[k] {
+				errs = append(errs, what+": table row "+k+" is NOT in the frontend's tables")
+			}
+		}
+		for k := range frontend {
+			if !table[k] {
+				errs = append(errs, what+": frontend models "+k+" but the table lacks it")
+			}
+		}
+	}
+	cmp("sync-type", s.syncType, ss.syncTypes)
+	cmp("sync-op", s.syncOp, ss.syncOps)
+	cmp("atomic-op-prefix", prefixes, ss.atomicPrefixes)
+	cmp("atomic-kind", s.atomicKind, ss.atomicKinds)
+	cmp("init-callee", s.initCallee, ss.initCallees)
+	if len(errs) > 0 {
+		sort.Strings(errs)
+		return fmt.Errorf("%s", strings.Join(errs, "\n"))
+	}
+	return nil
+}
+
+func TestMachineSurfaceEqualsFrontendTables(t *testing.T) {
+	ss := frontendSurface(t)
+	if len(ss.syncOps) < 10 || len(ss.syncTypes) != 5 || len(ss.atomicPrefixes) != 5 || len(ss.atomicKinds) != 5 || len(ss.initCallees) != 2 {
+		t.Fatalf("derivation looks wrong: ops=%d types=%d prefixes=%d kinds=%d init=%d", len(ss.syncOps), len(ss.syncTypes), len(ss.atomicPrefixes), len(ss.atomicKinds), len(ss.initCallees))
+	}
+	if err := checkMachineSurface(machineSurfaceTSV, ss); err != nil {
+		t.Fatal(err)
+	}
+	// red-first: the audit's fabrication (RLocker as a modeled op) is caught,
+	// and so is a DROPPED real row.
+	fab := machineSurfaceTSV + "sync-op\tsync.RWMutex.RLocker\ttools/nativefrontend/emit.go\tfabricated\n"
+	if err := checkMachineSurface(fab, ss); err == nil || !strings.Contains(err.Error(), "RLocker") {
+		t.Fatalf("fabricated RLocker row not caught: %v", err)
+	}
+	dropped := strings.Replace(machineSurfaceTSV, "sync-op\tsync.WaitGroup.Done\t", "#dropped\t", 1)
+	if err := checkMachineSurface(dropped, ss); err == nil || !strings.Contains(err.Error(), "WaitGroup.Done") {
+		t.Fatalf("dropped Done row not caught: %v", err)
+	}
+}
+
+// ---- library-refusals.tsv witnesses -----------------------------------------
+
+func TestLibraryRefusalsWitnessed(t *testing.T) {
+	if err := initCauses(); err != nil {
+		t.Fatal(err)
+	}
+	rows, err := loadLibraryRefusals(libraryRefusalsTSV)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile("../../baselines/native-full.tsv")
+	if err != nil {
+		t.Fatal(err)
+	}
+	status := map[string]string{}
+	for _, l := range strings.Split(string(b), "\n") {
+		if strings.HasPrefix(l, "#") {
+			continue
+		}
+		f := strings.Split(l, "\t")
+		if len(f) >= 2 {
+			status[f[1]] = f[0]
+		}
+	}
+	for _, r := range rows {
+		if r.Witness == "-" {
+			if !strings.Contains(r.Detail, "register row") && !strings.Contains(r.Detail, "wire") {
+				t.Errorf("%s: no witness and the detail cites neither the register nor a wire", r.Member)
+			}
+			continue
+		}
+		switch status[r.Witness] {
+		case "FAIL":
+		case "":
+			t.Errorf("%s cites witness %s which is not in the baseline", r.Member, r.Witness)
+		default:
+			t.Errorf("%s cites witness %s which is %s — the gap closed; the row is STALE", r.Member, r.Witness, status[r.Witness])
+		}
+	}
+}
+
+// ---- vocabulary coverage --------------------------------------------------
+
+// TestVocabularyCoverageIsTracked — the causes table's coverage of the
+// frontend's refusal vocabulary is measured, and the unclassified remainder
+// is the tracked list (a new unsup(...) string the table does not classify
+// shows up here, never silently).
+func TestVocabularyCoverageIsTracked(t *testing.T) {
+	if err := initCauses(); err != nil {
+		t.Fatal(err)
+	}
+	total, n, un, err := vocabularyCoverage("../nativefrontend")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total < 300 || n*10 < total*9 {
+		t.Fatalf("coverage %d/%d — below the 90%% the design doc states", n, total)
+	}
+	b, err := os.ReadFile("unclassified-formats.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var tracked []string
+	for _, l := range strings.Split(string(b), "\n") {
+		if strings.HasPrefix(l, "#") || strings.TrimSpace(l) == "" {
+			continue
+		}
+		tracked = append(tracked, l)
+	}
+	if strings.Join(tracked, "\n") != strings.Join(un, "\n") {
+		t.Fatalf("unclassified-formats.txt != the measured unclassified set (regenerate with `lowerdiag vocabulary tools/nativefrontend`):\nwant:\n%s\nhave:\n%s", strings.Join(un, "\n"), strings.Join(tracked, "\n"))
+	}
+}
+
+// ---- calibration against a real wire (audit fix round 6) -------------------
+
+// TestCalibrationAgainstWire runs the REAL frontend on testdata/calib and
+// asserts, per user declaration, that the static verdict equals the wire's
+// quarantine set — except declarations the static pass declares NOT judged
+// (those referencing fmt shim members), which are reported, not asserted.
+func TestCalibrationAgainstWire(t *testing.T) {
+	if err := initCauses(); err != nil {
+		t.Fatal(err)
+	}
+	repo, _ := filepath.Abs("../..")
+	fixture := filepath.Join(repo, "tools/lowerdiag/testdata/calib")
+	probe := filepath.Join(t.TempDir(), "calib.probe.DIAGNOSTIC-COPY.json")
+	cache := os.Getenv("GOCACHE")
+	if cache == "" {
+		cache = filepath.Join(repo, "artifacts", "go-build-cache")
+	}
+	cmd := exec.Command("go", "run", "./tools/nativefrontend", "--dir", fixture, "--out", probe)
+	cmd.Dir = repo
+	cmd.Env = append(os.Environ(), "GO111MODULE=off", "GOCACHE="+cache)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("the frontend must lower the calibration fixture's export (fail closed — the test cannot run without deps/go at the pin): %v\n%s", err, out)
+	}
+	wb, err := os.ReadFile(probe)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var w map[string]any
+	if err := json.Unmarshal(wb, &w); err != nil {
+		t.Fatal(err)
+	}
+	wireQ := map[string]string{}
+	for _, f := range asList(w["funcs"]) {
+		if u, ok := f["unsupported"].(string); ok {
+			wireQ[str(f["name"])] = u
+		} else {
+			wireQ[str(f["name"])] = ""
+		}
+	}
+	sup, err := newSupply(filepath.Join(repo, "docs/stdlib-admission-register.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	prog, err := loadProgram(fixture, sup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prog.census()
+	checked, disagreements := 0, []string{}
+	for _, d := range prog.pkgs["main"].decls {
+		if d.Kind != "func" || d.IsGeneric {
+			continue
+		}
+		u, inWire := wireQ[d.Name]
+		if !inWire {
+			t.Errorf("static decl %s not in the wire", d.Name)
+			continue
+		}
+		unjudged := false
+		for _, s := range d.Supplied {
+			if strings.Contains(s, "(shim)") {
+				unjudged = true
+			}
+		}
+		if unjudged {
+			t.Logf("not judged (shim member): %s — wire: %q", d.Name, u)
+			continue
+		}
+		checked++
+		staticRefused := len(d.declRefusals()) > 0
+		if staticRefused != (u != "") {
+			disagreements = append(disagreements, fmt.Sprintf("%s: static refused=%v (%v) wire=%q", d.Name, staticRefused, d.Findings, u))
+		}
+	}
+	if checked < 8 {
+		t.Fatalf("only %d declarations checked", checked)
+	}
+	if len(disagreements) > 0 {
+		t.Fatalf("static verdict != wire on %d declaration(s):\n%s", len(disagreements), strings.Join(disagreements, "\n"))
+	}
+	// the specific shapes the round was about
+	// isE LOWERS in the wire: the quarantine sits on the library function
+	// (errors.Is itself), so the static finding is CALL-scoped and the
+	// declaration agrees with the wire.
+	want := map[string]bool{"retBox": false, "assignBox": true, "sortStrings": true, "sortInts": false, "deferSort": true, "isE": false, "fields": false}
+	if wireQ["errors.Is"] == "" {
+		t.Errorf("wire: the library function errors.Is should be quarantined (library-refusals.tsv row); got lowered")
+	}
+	for name, refused := range want {
+		if (wireQ[name] != "") != refused {
+			t.Errorf("wire: %s quarantined=%v want %v (%q)", name, wireQ[name] != "", refused, wireQ[name])
+		}
 	}
 }

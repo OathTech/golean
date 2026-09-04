@@ -468,6 +468,22 @@ else
   bad "frontend unit tests"
 fi
 
+# 3b. Lowering-diagnostic unit tests (lane tooling, report-only — but the
+#     causes table's ledger check is what keeps tools/lowerdiag/causes.tsv
+#     from drifting from docs/language-coverage-ledger.md's FR/Q rows, and
+#     the machine-surface / library-refusal tables from drifting from the
+#     frontend's own tables and the baseline; a `pending:<branch>` row goes
+#     STALE the moment its FR row lands. Guard-strengthening only: nothing
+#     here reads the diagnostic's output.)
+step "lowering-diagnostic tables (go test ./tools/lowerdiag — causes.tsv vs ledger, surface tables vs frontend, calibration)"
+if ldout="$(GO111MODULE=off GOCACHE="$PWD/artifacts/go-build-cache" go test ./tools/lowerdiag 2>&1)"; then
+  echo "$ldout" | tail -2
+  ok "lowering-diagnostic tables"
+else
+  echo "$ldout" | tail -20
+  bad "lowering-diagnostic tables (causes.tsv / machine-surface.tsv / library-refusals.tsv drifted, or the static pass disagrees with a wire)"
+fi
+
 # 4. Interpreter unit tests.
 step "interpreter eval tests (gocore-eval-tests)"
 evout="$(lake exe gocore-eval-tests 2>&1)"; evrc=$?

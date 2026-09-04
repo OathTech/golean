@@ -1,3 +1,5 @@
+# DIAGNOSTIC — NOT A LOWERING (scripts/lower-diagnose; this file is a record of the frontend's stderr / probe classification, not a gate input)
+# frontend exit status: 1
 nativefrontend: native frontend unsupported: sync.Map (only Mutex/RWMutex/WaitGroup/Once are modeled)
-for the full blocker picture run scripts/lower-diagnose <the --dir given above>
+for the full blocker picture run scripts/lower-diagnose artifacts/cedar/cases/all
 exit status 1

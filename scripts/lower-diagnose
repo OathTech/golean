@@ -12,7 +12,7 @@
 # diagnose/ (gitignored) — no gate, baseline or corpus path reads it.
 #
 #   scripts/lower-diagnose <go package dir | main.go> [--json] [--out DIR]
-#                          [--no-frontend] [--tsv]
+#                          [--no-frontend] [--tsv] [--include pkg[,pkg]]
 #
 # What it does:
 #   1. DYNAMIC pass — runs the REAL frontend (tools/nativefrontend) on the
@@ -40,13 +40,14 @@ cd "$ROOT"
 
 die() { echo "lower-diagnose: $*" >&2; exit 2; }
 
-TARGET=""; JSON=0; TSV=0; RUN_FE=1; OUT="${LOWER_DIAGNOSE_ARTIFACTS:-artifacts/lower-diagnose}"
+TARGET=""; JSON=0; TSV=0; RUN_FE=1; INCLUDE=""; OUT="${LOWER_DIAGNOSE_ARTIFACTS:-artifacts/lower-diagnose}"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --json) JSON=1 ;;
     --tsv) TSV=1 ;;
     --no-frontend) RUN_FE=0 ;;
     --out) OUT="${2:?--out needs a dir}"; shift ;;
+    --include) INCLUDE="${2:?--include needs pkg paths}"; shift ;;
     -h|--help) sed -n '2,40p' "${BASH_SOURCE[0]}"; exit 0 ;;
     -*) die "unknown flag $1" ;;
     *) [[ -z "$TARGET" ]] || die "one target only (got $TARGET and $1)"; TARGET="$1" ;;
@@ -58,12 +59,18 @@ done
 if [[ -f "$TARGET" ]]; then TARGET_DIR="$(dirname "$TARGET")"; else TARGET_DIR="$TARGET"; fi
 TARGET_DIR="$(realpath -e -- "$TARGET_DIR")"
 
-# Output root: under artifacts/ only (structural: a diagnostic can never land
-# beside a wire the gate reads).
-ART_ABS="$(realpath -m -- "$ROOT/artifacts")"
+# Output root: EXACTLY artifacts/lower-diagnose/ or a directory under it
+# (structural: a diagnostic can never land beside a wire the gate reads —
+# not in artifacts/coverage, not at a bare artifacts/, not anywhere an
+# environment override points; the pattern of scripts/oracle-version-sweep's
+# judged-tree refusal, inverted to an allowlist). `..` segments refused as
+# written, before normalization.
+DIAG_ABS="$(realpath -m -- "$ROOT/artifacts/lower-diagnose")"
+refuse_root() { echo "lower-diagnose: refusing output root $1 ($2) — diagnostics live ONLY under $DIAG_ABS/" >&2; exit 2; }
+case "$OUT" in *..*) refuse_root "$OUT" "contains .." ;; esac
 OUT_ABS="$(realpath -m -- "$OUT")"
-if [[ "$OUT_ABS" != "$ART_ABS" && "$OUT_ABS" != "$ART_ABS"/* ]]; then
-  die "refusing output root outside $ROOT/artifacts/ ($OUT)"
+if [[ "$OUT_ABS" != "$DIAG_ABS" && "$OUT_ABS" != "$DIAG_ABS"/* ]]; then
+  refuse_root "$OUT" "$OUT_ABS"
 fi
 mkdir -p "$OUT"; OUT="$(realpath -e -- "$OUT")"
 
@@ -92,19 +99,33 @@ else
 fi
 CASE="$OUT/$slug"; mkdir -p "$CASE"
 
-# 1. DYNAMIC pass: the real frontend, no wire kept.
+# 1. DYNAMIC pass: the real frontend. Its exit status is handed to the
+# report VERBATIM (only rc 0 is EXPORT OK; a nonzero status without a
+# named refusal is INFRA — never OK). On success the probe wire goes to a
+# fresh mktemp dir under a non-wire name and is read ONCE by `lowerdiag
+# wire` for the per-declaration quarantine list; nothing under $CASE is
+# ever a wire.
+BANNER="# DIAGNOSTIC — NOT A LOWERING (scripts/lower-diagnose; this file is a record of the frontend's stderr / probe classification, not a gate input)"
 FE_ERR="$CASE/frontend-first-refusal.txt"
+FE_QUAR="$CASE/frontend-quarantines.tsv"
 fe_args=()
 if [[ "$RUN_FE" = 1 ]]; then
   fe_rc=0
+  PROBE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/lower-diagnose-probe.XXXXXX")"
+  PROBE="$PROBE_DIR/probe.DIAGNOSTIC-COPY.json"
   timeout "${LOWER_DIAGNOSE_GO_TIMEOUT:-120}" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" \
-    go run ./tools/nativefrontend --dir "$TARGET_DIR" --out /dev/null > /dev/null 2> "$FE_ERR" || fe_rc=$?
-  if [[ "$fe_rc" -eq 124 ]]; then
-    echo "frontend TIMED OUT after ${LOWER_DIAGNOSE_GO_TIMEOUT:-120}s — no first refusal captured (INFRA)" > "$FE_ERR"
-  elif [[ "$fe_rc" -eq 0 ]]; then
-    : > "$FE_ERR"   # export OK: an empty file is the signal
+    go run ./tools/nativefrontend --dir "$TARGET_DIR" --out "$PROBE" > /dev/null 2> "$FE_ERR.raw" || fe_rc=$?
+  # repo-relative paths only (evidence rule 2: no absolute worktree paths)
+  { echo "$BANNER"; echo "# frontend exit status: $fe_rc"; sed "s#$ROOT/##g" "$FE_ERR.raw"; } > "$FE_ERR"; rm -f "$FE_ERR.raw"
+  if [[ "$fe_rc" -eq 0 && -s "$PROBE" ]]; then
+    "$OUT/lowerdiag" wire "$PROBE" > "$FE_QUAR" || die "probe wire classification failed"
+    rm -f "$PROBE"   # the probe wire is read once and discarded (its dir is a mktemp scratch dir)
+    fe_args=(--frontend-rc "$fe_rc" --frontend-stderr "$FE_ERR" --frontend-quarantines "$FE_QUAR")
+  else
+    [[ "$fe_rc" -eq 0 ]] && fe_rc=97   # rc 0 with no wire produced: not a success — name it
+    rm -f "$PROBE"
+    fe_args=(--frontend-rc "$fe_rc" --frontend-stderr "$FE_ERR")
   fi
-  fe_args=(--frontend-stderr "$FE_ERR")
 fi
 
 # 2 + 3. STATIC pass and the report.
@@ -112,10 +133,11 @@ tsv_args=()
 if [[ "$TSV" = 1 ]]; then
   tsv_args=(--decls-tsv "$CASE/decls.tsv" --histogram-tsv "$CASE/histogram.tsv" --per-package-tsv "$CASE/per-package.tsv")
 fi
-"$OUT/lowerdiag" report --repo "$ROOT" "${fe_args[@]+"${fe_args[@]}"}" "${tsv_args[@]+"${tsv_args[@]}"}" "$TARGET_DIR" > "$CASE/report.txt" \
+inc_args=(); [[ -n "$INCLUDE" ]] && inc_args=(--include "$INCLUDE")
+"$OUT/lowerdiag" report --repo "$ROOT" "${fe_args[@]+"${fe_args[@]}"}" "${tsv_args[@]+"${tsv_args[@]}"}" "${inc_args[@]+"${inc_args[@]}"}" "$TARGET_DIR" > "$CASE/report.txt" \
   || { cat "$CASE/report.txt" >&2; die "static pass failed for $TARGET_DIR (see above)"; }
 if [[ "$JSON" = 1 ]]; then
-  "$OUT/lowerdiag" report --repo "$ROOT" "${fe_args[@]+"${fe_args[@]}"}" --json "$TARGET_DIR" > "$CASE/report.json" || die "json report failed"
+  "$OUT/lowerdiag" report --repo "$ROOT" "${fe_args[@]+"${fe_args[@]}"}" "${inc_args[@]+"${inc_args[@]}"}" --json "$TARGET_DIR" > "$CASE/report.json" || die "json report failed"
 fi
 cat "$CASE/report.txt"
 echo "lower-diagnose: report -> $CASE/report.txt$( [[ "$JSON" = 1 ]] && printf ' + report.json' )$( [[ "$TSV" = 1 ]] && printf ' + decls/histogram/per-package.tsv' ); first refusal -> $FE_ERR" >&2

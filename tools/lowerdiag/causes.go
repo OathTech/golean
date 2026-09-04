@@ -8,10 +8,18 @@ package main
 
 import (
 	"bufio"
+	"crypto/sha256"
 	_ "embed"
+	"encoding/hex"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
+	"path/filepath"
 	"regexp"
+	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -21,12 +29,22 @@ var causesTSV string
 //go:embed machine-surface.tsv
 var machineSurfaceTSV string
 
+//go:embed library-refusals.tsv
+var libraryRefusalsTSV string
+
+// tableSHA stamps every report with the version of the three tracked
+// tables (first 12 hex of sha256 over their concatenation).
+func tableSHA() string {
+	h := sha256.Sum256([]byte(causesTSV + "\x00" + machineSurfaceTSV + "\x00" + libraryRefusalsTSV))
+	return hex.EncodeToString(h[:])[:12]
+}
+
 // cause is one row of causes.tsv.
 type cause struct {
 	ID        string
-	FR        string // FR-n | Q-* | out-of-language | by-design | cascade | c-pin | unrowed
+	FR        string // FR-n | Q-* | out-of-language | by-design | cascade | c-pin | unrowed | apparatus
 	Status    string // rowed | pending:<branch>
-	Scope     string // decl | export
+	Scope     string // decl | export | call
 	Pattern   *regexp.Regexp
 	KeyTmpl   string // "-" = the cause id
 	Diagnosis string
@@ -34,7 +52,7 @@ type cause struct {
 
 // frTokens: the non-FR/non-Q values the `fr` column may take.
 var frTokens = map[string]bool{
-	"out-of-language": true, "by-design": true, "cascade": true, "c-pin": true, "unrowed": true,
+	"out-of-language": true, "by-design": true, "cascade": true, "c-pin": true, "unrowed": true, "apparatus": true,
 }
 
 var causesByID = map[string]*cause{}
@@ -79,8 +97,8 @@ func loadCauses(src string) ([]*cause, error) {
 		if c.Status != "rowed" && !strings.HasPrefix(c.Status, "pending:") {
 			return nil, fmt.Errorf("causes.tsv line %d (%s): status %q is not rowed|pending:<branch>", line, c.ID, c.Status)
 		}
-		if c.Scope != "decl" && c.Scope != "export" {
-			return nil, fmt.Errorf("causes.tsv line %d (%s): scope %q is not decl|export", line, c.ID, c.Scope)
+		if c.Scope != "decl" && c.Scope != "export" && c.Scope != "call" {
+			return nil, fmt.Errorf("causes.tsv line %d (%s): scope %q is not decl|export|call", line, c.ID, c.Scope)
 		}
 		if f[4] != "-" {
 			re, err := regexp.Compile(f[4])
@@ -139,6 +157,8 @@ var staticCauseIDs = []string{
 	"go-of-builtin", "recv-short-circuit", "method-expr-deref", "range-assign-nonident",
 	"tuple-iface-box", "defer-of-builtin", "self-shadow-define", "alloc-short-circuit",
 	"duplicate-typeid", "local-import-shape", "build-constraint", "fmt-verb-matrix",
+	"slices-sort-kind", "intercepted-defer-go", "quarantine-cascade", "sync-literal", "sync-value-shape",
+	"stdlib-source-gap",
 }
 
 // methodWrap unwraps the per-declaration quarantine's "method T.M (cause;
@@ -213,6 +233,45 @@ type supply struct {
 	atomicKind    map[string]bool
 	initCallee    map[string]bool // pureUnmodeledCallees
 	surfaceRows   int
+	libRefused    map[string]libraryRefusal // source-through members refused by name
+}
+
+// libraryRefusal is one row of library-refusals.tsv.
+type libraryRefusal struct {
+	Member, Cause, Witness, Detail string
+}
+
+func loadLibraryRefusals(src string) ([]libraryRefusal, error) {
+	var out []libraryRefusal
+	sc := bufio.NewScanner(strings.NewReader(src))
+	header := false
+	seen := map[string]bool{}
+	for sc.Scan() {
+		t := sc.Text()
+		if strings.HasPrefix(t, "#") || strings.TrimSpace(t) == "" {
+			continue
+		}
+		f := strings.Split(t, "\t")
+		if !header {
+			if t != "member\tcause\twitness\tdetail" {
+				return nil, fmt.Errorf("library-refusals.tsv: header is %q", t)
+			}
+			header = true
+			continue
+		}
+		if len(f) != 4 {
+			return nil, fmt.Errorf("library-refusals.tsv: row %q has %d columns, want 4", t, len(f))
+		}
+		if seen[f[0]] {
+			return nil, fmt.Errorf("library-refusals.tsv: duplicate member %s", f[0])
+		}
+		seen[f[0]] = true
+		if causesByID[f[1]] == nil {
+			return nil, fmt.Errorf("library-refusals.tsv: member %s cites cause %q which causes.tsv does not row", f[0], f[1])
+		}
+		out = append(out, libraryRefusal{f[0], f[1], f[2], f[3]})
+	}
+	return out, sc.Err()
 }
 
 // readRegister parses the machine block of docs/stdlib-admission-register.md
@@ -322,6 +381,14 @@ func newSupply(registerPath string) (*supply, error) {
 	if err := readMachineSurface(machineSurfaceTSV, s); err != nil {
 		return nil, err
 	}
+	rows, err := loadLibraryRefusals(libraryRefusalsTSV)
+	if err != nil {
+		return nil, err
+	}
+	s.libRefused = map[string]libraryRefusal{}
+	for _, r := range rows {
+		s.libRefused[r.Member] = r
+	}
 	return s, nil
 }
 
@@ -350,4 +417,84 @@ func (s *supply) atomicModeled(name string) bool {
 		}
 	}
 	return false
+}
+
+// ---- the refusal vocabulary (coverage measurement) --------------------------
+
+var verbRE = regexp.MustCompile(`%[-+# 0-9.]*[sdqvTtxXbcefgp]`)
+
+// frontendFormats returns every distinct `unsup(...)` format string in the
+// frontend's non-test sources, with its verbs replaced by X, sorted.
+func frontendFormats(frontendDir string) ([]string, error) {
+	files, err := filepath.Glob(filepath.Join(frontendDir, "*.go"))
+	if err != nil {
+		return nil, err
+	}
+	set := map[string]bool{}
+	fset := token.NewFileSet()
+	for _, f := range files {
+		if strings.HasSuffix(f, "_test.go") {
+			continue
+		}
+		af, err := parser.ParseFile(fset, f, nil, 0)
+		if err != nil {
+			return nil, err
+		}
+		ast.Inspect(af, func(n ast.Node) bool {
+			c, ok := n.(*ast.CallExpr)
+			if !ok || len(c.Args) == 0 {
+				return true
+			}
+			if id, ok := c.Fun.(*ast.Ident); !ok || id.Name != "unsup" {
+				return true
+			}
+			if lit, ok := concatLiteral(c.Args[0]); ok {
+				set[strings.ReplaceAll(verbRE.ReplaceAllString(lit, "X"), "%%", "%")] = true
+			}
+			return true
+		})
+	}
+	out := make([]string, 0, len(set))
+	for k := range set {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out, nil
+}
+
+// concatLiteral folds a string literal or a `"a" + "b"` concatenation.
+func concatLiteral(e ast.Expr) (string, bool) {
+	switch x := e.(type) {
+	case *ast.BasicLit:
+		if x.Kind == token.STRING {
+			s, err := strconv.Unquote(x.Value)
+			return s, err == nil
+		}
+	case *ast.BinaryExpr:
+		if x.Op == token.ADD {
+			l, ok1 := concatLiteral(x.X)
+			r, ok2 := concatLiteral(x.Y)
+			return l + r, ok1 && ok2
+		}
+	case *ast.ParenExpr:
+		return concatLiteral(x.X)
+	}
+	return "", false
+}
+
+// vocabularyCoverage classifies every frontend format string; returns the
+// classified count and the sorted unclassified formats.
+func vocabularyCoverage(frontendDir string) (total int, classified int, unclassified []string, err error) {
+	fmts, err := frontendFormats(frontendDir)
+	if err != nil {
+		return 0, 0, nil, err
+	}
+	for _, f := range fmts {
+		if c, _ := classifyText(f); c != nil {
+			classified++
+		} else {
+			unclassified = append(unclassified, f)
+		}
+	}
+	return len(fmts), classified, unclassified, nil
 }

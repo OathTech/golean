@@ -276,22 +276,41 @@ fns (`Entity.MarshalJSON`, `ImplicitlyMarshaledEntityUID.MarshalJSON`,
 nextToken` — shape not checked against FR-11/FR-20). No `go`, no
 complex, no `print/println`, no `unsafe`, no `reflect`.
 
-**Tooling note (2026-09-04, [AGENT], lane `lower-diagnose`):** the
-static demand census is now produced by `tools/lowerdiag` (the engine of
-`scripts/lower-diagnose`, [USER] direction 4 — ledger §0) instead of the
-retired `tools/cedarcensus demand`; `scripts/cedar-census demand` writes
-the same three files (`demand.tsv`, `demand-histogram.tsv`,
-`demand-per-package.tsv`, now with a leading `# DIAGNOSTIC — NOT A
-LOWERING` line) plus `demand-report.txt`. Two differences from the table
-above, both explained in `docs/evidence/2026-09-04_lower-diagnose/README.md`:
-(i) the supply table is READ from `docs/stdlib-admission-register.md`
-(the 2026-09-03 run used a frozen shim-era copy; since stdlib-source-2
-`errors.Join`, `slices.Contains/Collect/Sorted`, `bytes.Buffer.*`,
-`strings.Compare` are source-through and count as lowering), so the
-lowers(static) count is higher; (ii) the denominator includes every
-declaration kind (vars, consts, types, files), with the funcs+methods
-line reported separately for comparison with the 1,085 here. The
-numbers in §3.4 stand as the 2026-09-03 measurement.
+**Tooling note (2026-09-04, [AGENT], lane `lower-diagnose`; audit fix
+round applied):** the static demand census is now produced by
+`tools/lowerdiag` (the engine of `scripts/lower-diagnose`, [USER]
+direction 4 — ledger §0) instead of the retired `tools/cedarcensus
+demand`; `scripts/cedar-census demand` writes the same three files
+(`demand.tsv`, `demand-histogram.tsv`, `demand-per-package.tsv`, now with
+a leading `# DIAGNOSTIC — NOT A LOWERING` line) plus `demand-report.txt`,
+and censuses the `cedark8s` packages as extra roots (`--include`), so
+§6's `cedark8s/internal/schema` 36/38 is REPRODUCED. Re-run at the lane
+(evidence `docs/evidence/2026-09-04_lower-diagnose/cedar-go/`): cedargo
+**974/1085 funcs+methods lower statically** vs the 892/1085 above —
+IDENTICAL denominator package by package; per declaration, 85
+census-refused → now lower (register rows landed since 2026-09-03:
+`errors.Join` 24, `bytes.Buffer.WriteRune` 15, `slices.Contains` 13,
+`bytes.Buffer.Bytes` 4, `strings.Compare/Contains/TrimPrefix/…`,
+`utf8.DecodeRune`, `strconv.ParseInt/Quote*`) and 3 census-lowers → now
+refused, all REAL refusals the old tool did not check: `internal/parser.
+Decoder.decode` reads `io.EOF` (a var of an unmodeled package);
+`x/exp/schema/internal/parser.init` calls `slices.Sort` on `[]string`
+(the sortSlice op's integer bound — and an `init()` body is a WHOLE-EXPORT
+kill: this is the pass-C counterfactual's "a slices.Sort init()", found
+statically); `cedark8s/internal/schema.CedarSchema.SortActionEntities`,
+the same `slices.Sort@string`. Rule-level diff between the two tools:
+the old `go-statement` flag (every `go` statement counted as a refusal —
+dropped, `go` lowers), the old SYNTACTIC anonymous-struct rule (any
+`struct{…}` AST node, including the declared type's own struct — replaced
+by the typed rule over every expression/signature type), the old
+unconditional `goto` flag (replaced by FR-20 certain vs FR-11
+may-refuse), the old frozen shim-era supply map (replaced by the register
+read at run time + `library-refusals.tsv` + the machine-surface table);
+rules the old tool lacked: var reads of unmodeled packages, `init()`
+export scope, initializer effect-isolation scope, `slices.Sort` element
+kind, intercepted defer/go, FR-7 assign/value-spec boxing, FR-17/18/19
+shapes, library members refused by name (`errors.Is/As`). The numbers in
+§3.4 stand as the 2026-09-03 measurement.
 
 ### 3.5 Top 10 blockers, ranked by what they unblock
 

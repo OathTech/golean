@@ -1,11 +1,12 @@
 {
  "banner": "DIAGNOSTIC — NOT A LOWERING. tools/lowerdiag report: no wire is written; nothing in this file is a gate input.",
  "target": "tools/lowerdiag/testdata/fivecauses",
- "commit": "e0657d4770b9a5b608a647066b4e925d87a6392c+dirty",
+ "commit": "55987a6c4d91124bc4f2d1721c07cb686fa1cb85+dirty",
+ "tables_sha": "35d472cde2ed",
  "go_version": "go1.26.5",
  "register": "docs/stdlib-admission-register.md",
  "register_rows": 42,
- "causes_rows": 49,
+ "causes_rows": 52,
  "first_refusal": {
   "text": "nativefrontend: native frontend unsupported: package-selector call time.Unix (package \"time\" surface not modeled)",
   "cause": "stdlib-package-unmodeled",
@@ -16,6 +17,94 @@
   "note": "the same refusal string covers a body call and a package-level initializer; the static census places this key at an export-scoped site — that is the kill (see the site's FR row)"
  },
  "frontend_export_ok": false,
+ "frontend_rc": 1,
+ "frontend_wire_quarantines": null,
+ "not_judged_statically": [
+  {
+   "cause": "labeled-shape",
+   "fr": "unrowed",
+   "decls_referencing": -1,
+   "what": "statement/expression corner shapes the emitter refuses by arm — not modeled statically"
+  },
+  {
+   "cause": "stencil-whole-export",
+   "fr": "FR-4",
+   "decls_referencing": 0,
+   "what": "declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged"
+  },
+  {
+   "cause": "local-type-type-argument",
+   "fr": "c-pin",
+   "decls_referencing": 0,
+   "what": "declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged"
+  },
+  {
+   "cause": "imported-type-marker",
+   "fr": "by-design",
+   "decls_referencing": 3,
+   "what": "declarations touching an imported named type — the D5 marker itself lowers; only its uncalled-method stubs appear quarantined in a wire"
+  },
+  {
+   "cause": "generic-template",
+   "fr": "by-design",
+   "decls_referencing": 0,
+   "what": "declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged"
+  },
+  {
+   "cause": "generics-corner",
+   "fr": "unrowed",
+   "decls_referencing": 0,
+   "what": "declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged"
+  },
+  {
+   "cause": "cmp-compare-shape",
+   "fr": "FR-14",
+   "decls_referencing": 0,
+   "what": "declarations calling cmp.Compare — the kind-dispatch desugar's shape bound is emitter-side"
+  },
+  {
+   "cause": "init-schedule",
+   "fr": "unrowed",
+   "decls_referencing": -1,
+   "what": "load-time / initialization-schedule shapes — the dynamic pass (first refusal) is the check"
+  },
+  {
+   "cause": "hidden-dep-init-order",
+   "fr": "c-pin",
+   "decls_referencing": -1,
+   "what": "load-time / initialization-schedule shapes — the dynamic pass (first refusal) is the check"
+  },
+  {
+   "cause": "result-shadow",
+   "fr": "unrowed",
+   "decls_referencing": -1,
+   "what": "statement/expression corner shapes the emitter refuses by arm — not modeled statically"
+  },
+  {
+   "cause": "statement-shape",
+   "fr": "unrowed",
+   "decls_referencing": -1,
+   "what": "statement/expression corner shapes the emitter refuses by arm — not modeled statically"
+  },
+  {
+   "cause": "expression-shape",
+   "fr": "unrowed",
+   "decls_referencing": -1,
+   "what": "statement/expression corner shapes the emitter refuses by arm — not modeled statically"
+  },
+  {
+   "cause": "frontend-apparatus",
+   "fr": "apparatus",
+   "decls_referencing": -1,
+   "what": "frontend fail-closed invariants and pin/overlay/register table inconsistencies — properties of the tree, not the program"
+  },
+  {
+   "cause": "frontend-invariant",
+   "fr": "unrowed",
+   "decls_referencing": -1,
+   "what": "frontend fail-closed invariants and pin/overlay/register table inconsistencies — properties of the tree, not the program"
+  }
+ ],
  "decls": 9,
  "funcs_methods": 8,
  "decls_lowering_static": 4,
@@ -184,9 +273,9 @@
  ],
  "unrowed_causes_seen": null,
  "notes": [
-  "static = go/types over the program + its local imports; stdlib judged by the register (source-through members counted as lowering — FR-21 gaps inside library text are invisible here) and the machine-owned surface table",
+  "static = go/types over the program + its local imports; stdlib judged by the register (source-through members count as lowering unless library-refusals.tsv names them — other FR-21 gaps inside library text are invisible here), the machine-owned surface table and library-refusals.tsv; the measured direction is UNDER-approximation: what fires is exact, what is not judged is listed above per run",
   "may-refuse = shape-dependent (goto hoisting shapes, non-reserved build tags); the distance line counts only certain refusals",
-  "export scope = the frontend refuses the WHOLE package export today (H-11 initializer kill, an init() body, unstubbable method signature, global type, duplicate local TypeId); dependents inherit through the import graph",
+  "export scope = the frontend refuses the WHOLE package export today (H-11 initializer kill, an init() body, unstubbable method signature, global type, duplicate local TypeId); dependents inherit through the import graph; CALL scope (stdlib-type-method; library-refusals.tsv members such as errors.Is) = the declaration LOWERS (the wire does not quarantine it) and the CALL refuses when reached — the imported type's D5 stub or the library function's own quarantine; the distance line counts these as refused demands, the calibration against a wire does not",
   "main.main is not a census declaration: the frontend never emits it (emit.go emitProgram; drivers run named entry functions), so its body cannot block a lowering",
   "not visible statically: fmt's verb×kind matrix, mono.go's stencil-time refusals, per-call-site frontend invariants — the dynamic pass (first refusal) is the check"
  ],
@@ -206,7 +295,8 @@
    "supplied": null,
    "imported_types": [
     "time.Time"
-   ]
+   ],
+   "generic_sites": 0
   },
   {
    "pkg": "main",
@@ -220,7 +310,8 @@
     "anon-struct:struct{x int; y int}@main.go:17"
    ],
    "supplied": null,
-   "imported_types": null
+   "imported_types": null,
+   "generic_sites": 0
   },
   {
    "pkg": "main",
@@ -236,7 +327,8 @@
     "complex:complex128@main.go:23"
    ],
    "supplied": null,
-   "imported_types": null
+   "imported_types": null,
+   "generic_sites": 0
   },
   {
    "pkg": "main",
@@ -250,7 +342,8 @@
     "range-over-func:func(yield func(int) bool)@main.go:30"
    ],
    "supplied": null,
-   "imported_types": null
+   "imported_types": null,
+   "generic_sites": 0
   },
   {
    "pkg": "main",
@@ -266,7 +359,8 @@
    "supplied": null,
    "imported_types": [
     "time.Duration"
-   ]
+   ],
+   "generic_sites": 0
   },
   {
    "pkg": "main",
@@ -280,7 +374,8 @@
    "supplied": [
     "strings.Fields (source-through)"
    ],
-   "imported_types": null
+   "imported_types": null,
+   "generic_sites": 0
   },
   {
    "pkg": "main",
@@ -292,7 +387,8 @@
    "export_kill": false,
    "causes": null,
    "supplied": null,
-   "imported_types": null
+   "imported_types": null,
+   "generic_sites": 0
   },
   {
    "pkg": "main",
@@ -306,7 +402,8 @@
    "supplied": null,
    "imported_types": [
     "time.Time"
-   ]
+   ],
+   "generic_sites": 0
   },
   {
    "pkg": "main",
@@ -318,7 +415,8 @@
    "export_kill": false,
    "causes": null,
    "supplied": null,
-   "imported_types": null
+   "imported_types": null,
+   "generic_sites": 0
   }
  ]
 }

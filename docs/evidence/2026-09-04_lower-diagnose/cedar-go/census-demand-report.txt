@@ -4,9 +4,7 @@ commit: 55987a6c4d91124bc4f2d1721c07cb686fa1cb85+dirty   go: go1.26.5   tables: 
 register: docs/stdlib-admission-register.md (42 rows)   causes table: 52 rows
 
 == first refusal (what the frontend says today)
-  nativefrontend: native frontend unsupported: sync.Map (only Mutex/RWMutex/WaitGroup/Once are modeled)
-  -> cause sync-unmodeled [FR-14, decl-scoped] key sync.Map
-  note: the static census has no declaration with this key or cause: the refusal is at a site the static pass does not judge (library text, an emitter-table detail such as fmt's verb matrix, a stencil, or a load-time shape) — a bare TYPE key with no user declaration carrying it is FR-24's shape: a package-level VARIABLE of a reached source-through library unit whose type does not lower kills the whole export at collectGlobals (cedar-go: encoding/binary.Write -> structSize sync.Map; the refusal text does not name the variable — a message gap recorded in docs/2026-09-04_lower-diagnose.md); cause global-type-unlowerable, pending:fr22-fr23
+  (dynamic pass not run — pass --frontend-rc/--frontend-stderr)
 
 == distance
   declarations demanding nothing refused: 1554 / 1671 (93.0%)   funcs+methods: 1012 / 1126 (89.9%)   may-refuse: 1   refused: 116

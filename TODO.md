@@ -41,16 +41,21 @@ Follow-ups, none gate-bearing:
 
 - [ ] Flip `tools/lowerdiag/causes.tsv` row `global-type-unlowerable` from
   `pending:fr22-fr23` to `rowed` when branch `fr22-fr23` (FR-24) lands —
-  `go test ./tools/lowerdiag` fails as STALE until it is flipped, so the
-  merge train cannot forget it.
-- [ ] Static-pass resolution gaps, said so in the report's notes: fmt's
-  verb×kind matrix (a constant format string is not checked against the
-  emitter's table), FR-21 gaps inside source-through library text
-  (library members count as lowering), mono.go stencil-time refusals,
-  the non-call initializer shapes `initializerEffectIsolated` rejects
-  (index/deref/receive — export scope UNDER-reported for them). Each
-  is a candidate to close by reading the frontend's own tables instead
-  of re-deriving them; do not fork the tables.
+  `go test ./tools/lowerdiag` (a `scripts/ci` step since the audit fix
+  round) FAILS THE GATE as STALE until it is flipped, so the merge train
+  cannot forget it: whichever of the two lanes lands second flips it in
+  its rebase.
+- [ ] Static-pass blind spots, listed PER RUN in the report's "not judged
+  statically" section with reference counts: fmt's verb×kind matrix (a
+  constant format string is not checked against the emitter's table),
+  FR-21 gaps inside source-through library text beyond the members
+  `library-refusals.tsv` names, mono.go stencil-time refusals (C6),
+  Q-SYNCVAL's promoted-through-interface-dispatch spelling, the non-call
+  initializer shapes `initializerEffectIsolated` rejects (export scope
+  UNDER-reported for them). Each is a candidate to close by reading the
+  frontend's own tables instead of re-deriving them; do not fork the
+  tables. Calibration (`TestCalibrationAgainstWire`) is where a closed
+  gap proves itself.
 - [ ] `unrowed` causes the tool can emit (`build-constraint`,
   `local-import-shape`, `init-schedule`, `labeled-shape`,
   `result-shadow`, `generics-corner`, `frontend-invariant`): when one

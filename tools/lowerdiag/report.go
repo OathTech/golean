@@ -66,6 +66,7 @@ type declOut struct {
 	Causes        []string `json:"causes"` // "cause:key[@pos][ (may)][ EXPORT]"
 	Supplied      []string `json:"supplied"`
 	ImportedTypes []string `json:"imported_types"`
+	GenericSites  int      `json:"generic_sites"`
 }
 
 type firstRefusal struct {
@@ -78,36 +79,50 @@ type firstRefusal struct {
 	Note       string `json:"note"`
 }
 
-type report struct {
-	Banner         string           `json:"banner"`
-	Target         string           `json:"target"`
-	Commit         string           `json:"commit"`
-	GoVersion      string           `json:"go_version"`
-	Register       string           `json:"register"`
-	RegisterRows   int              `json:"register_rows"`
-	CausesRows     int              `json:"causes_rows"`
-	First          *firstRefusal    `json:"first_refusal"`
-	FrontendOK     bool             `json:"frontend_export_ok"`
-	Decls          int              `json:"decls"`
-	Funcs          int              `json:"funcs_methods"`
-	Lowers         int              `json:"decls_lowering_static"`
-	FuncsLower     int              `json:"funcs_methods_lowering_static"`
-	MayRefuse      int              `json:"decls_may_refuse"`
-	Refused        int              `json:"decls_refused_static"`
-	ExportKills    int              `json:"export_kill_decls"`
-	KilledPackages int              `json:"packages_export_killed"`
-	Packages       []pkgRow         `json:"packages"`
-	Causes         []causeRow       `json:"causes"`
-	Keys           []keyRow         `json:"stdlib_keys"`
-	Projection     []projectionStep `json:"projection"`
-	Unrowed        []string         `json:"unrowed_causes_seen"`
-	Notes          []string         `json:"notes"`
-	Declarations   []declOut        `json:"declarations"`
+type notJudged struct {
+	Cause string `json:"cause"`
+	FR    string `json:"fr"`
+	Count int    `json:"decls_referencing"` // -1 = shape-level, not countable
+	What  string `json:"what"`
 }
 
-func buildReport(p *program, target, commit, goVersion, registerPath string, frontendStderr string, frontendRan bool) *report {
-	r := &report{Banner: diagnosticBanner, Target: target, Commit: commit, GoVersion: goVersion,
-		Register: registerPath, RegisterRows: p.sup.registerRows, CausesRows: len(causeList)}
+type report struct {
+	Banner          string           `json:"banner"`
+	Target          string           `json:"target"`
+	Commit          string           `json:"commit"`
+	Tables          string           `json:"tables_sha"`
+	GoVersion       string           `json:"go_version"`
+	Register        string           `json:"register"`
+	RegisterRows    int              `json:"register_rows"`
+	CausesRows      int              `json:"causes_rows"`
+	First           *firstRefusal    `json:"first_refusal"`
+	FrontendOK      bool             `json:"frontend_export_ok"`
+	FrontendRC      int              `json:"frontend_rc"`
+	WireQuarantines []string         `json:"frontend_wire_quarantines"` // "kind name: class key" from the probe wire when the export succeeded
+	NotJudged       []notJudged      `json:"not_judged_statically"`
+	Decls           int              `json:"decls"`
+	Funcs           int              `json:"funcs_methods"`
+	Lowers          int              `json:"decls_lowering_static"`
+	FuncsLower      int              `json:"funcs_methods_lowering_static"`
+	MayRefuse       int              `json:"decls_may_refuse"`
+	Refused         int              `json:"decls_refused_static"`
+	ExportKills     int              `json:"export_kill_decls"`
+	KilledPackages  int              `json:"packages_export_killed"`
+	Packages        []pkgRow         `json:"packages"`
+	Causes          []causeRow       `json:"causes"`
+	Keys            []keyRow         `json:"stdlib_keys"`
+	Projection      []projectionStep `json:"projection"`
+	Unrowed         []string         `json:"unrowed_causes_seen"`
+	Notes           []string         `json:"notes"`
+	Declarations    []declOut        `json:"declarations"`
+}
+
+// frontendRC: -1 = the dynamic pass did not run; otherwise the frontend's
+// exit status. quarantines: the `lowerdiag wire` rows of the probe wire when
+// the export succeeded ("" if none).
+func buildReport(p *program, target, commit, goVersion, registerPath string, frontendStderr string, frontendRC int, quarantines string) *report {
+	r := &report{Banner: diagnosticBanner, Target: target, Commit: commit, GoVersion: goVersion, Tables: tableSHA(),
+		Register: registerPath, RegisterRows: p.sup.registerRows, CausesRows: len(causeList), FrontendRC: frontendRC}
 	// Flatten declarations in package order, decl order.
 	var all []*declReport
 	for _, path := range p.order {
@@ -278,7 +293,14 @@ func buildReport(p *program, target, commit, goVersion, registerPath string, fro
 		}
 		return a.Cause < b.Cause
 	})
-	sort.Strings(r.Unrowed)
+	for _, d := range all {
+		for _, f := range d.Findings {
+			if !f.Certain && f.Cause.FR == "unrowed" {
+				r.Unrowed = append(r.Unrowed, f.Cause.ID+" (may-refuse)")
+			}
+		}
+	}
+	r.Unrowed = dedup(sortedCopy(r.Unrowed))
 	for k, a := range keys {
 		r.Keys = append(r.Keys, keyRow{Key: k, Cause: keyCause[k].ID, FR: keyCause[k].FR, Decls: a.decls, Sole: a.sole, Packages: len(a.pkgs)})
 	}
@@ -294,8 +316,10 @@ func buildReport(p *program, target, commit, goVersion, registerPath string, fro
 	})
 	// Projection: fix the top causes cumulatively (by the cause ranking);
 	// a declaration lowers once ALL its certain causes are fixed.
+	// ONE convention with the distance line: a declaration lowers when it
+	// has no finding at all (may-refuse included) whose cause is unfixed.
 	lowersUnder := func(fixed map[string]bool, d *declReport) bool {
-		for _, f := range d.certainFindings() {
+		for _, f := range d.Findings {
 			if !fixed[f.Cause.ID] {
 				return false
 			}
@@ -385,7 +409,7 @@ func buildReport(p *program, target, commit, goVersion, registerPath string, fro
 	// Declarations (full list, for --json and the TSV).
 	for _, d := range all {
 		o := declOut{Pkg: d.Pkg, Kind: d.Kind, Name: d.Name, Pos: d.Pos, LOC: d.LOC, Verdict: d.verdict(), ExportKill: d.exportKill(),
-			Supplied: append([]string(nil), d.Supplied...), ImportedTypes: append([]string(nil), d.ImportedTypes...)}
+			Supplied: append([]string(nil), d.Supplied...), ImportedTypes: append([]string(nil), d.ImportedTypes...), GenericSites: d.GenericSites}
 		sort.Strings(o.Supplied)
 		sort.Strings(o.ImportedTypes)
 		for _, f := range d.Findings {
@@ -396,17 +420,48 @@ func buildReport(p *program, target, commit, goVersion, registerPath string, fro
 			if f.Export {
 				s += " EXPORT"
 			}
+			if f.isCall() {
+				s += " CALL"
+			}
 			o.Causes = append(o.Causes, s)
 		}
 		sort.Strings(o.Causes)
 		r.Declarations = append(r.Declarations, o)
 	}
-	// The first refusal (dynamic pass).
-	if frontendRan {
-		first := strings.TrimSpace(firstLine(frontendStderr))
-		if first == "" {
+	// The first refusal (dynamic pass). Fail closed on the exit status: only
+	// rc 0 is EXPORT OK; a refusal must carry the frontend's own text; any
+	// other exit (a crash, a timeout, a shim exit) is INFRA, never OK.
+	if frontendRC >= 0 {
+		var lines []string
+		for _, l := range strings.Split(frontendStderr, "\n") {
+			if strings.TrimSpace(l) == "" || strings.HasPrefix(l, "# ") {
+				continue
+			}
+			lines = append(lines, l)
+		}
+		first := ""
+		if len(lines) > 0 {
+			first = strings.TrimSpace(lines[0])
+		}
+		switch {
+		case frontendRC == 0:
 			r.FrontendOK = true
-		} else {
+			for _, l := range strings.Split(quarantines, "\n") {
+				if strings.HasPrefix(l, "#") || strings.HasPrefix(l, "pkg\t") || strings.TrimSpace(l) == "" {
+					continue
+				}
+				f := strings.Split(l, "\t")
+				if len(f) >= 7 && f[3] == "quarantined" && !strings.Contains(f[2], "goleanShim") {
+					r.WireQuarantines = append(r.WireQuarantines, f[1]+" "+f[2]+": "+f[5]+" "+f[6])
+				}
+			}
+			sort.Strings(r.WireQuarantines)
+		case frontendRC == 124:
+			r.First = &firstRefusal{Text: first, Cause: "INFRA", FR: "-", Key: "timeout", Scope: "-", Note: "the frontend TIMED OUT (rc 124) — no refusal was named; not a verdict"}
+		case first == "" || !strings.Contains(first, "native frontend unsupported") && classifyFirst(first) == nil:
+			r.First = &firstRefusal{Text: first, Cause: "INFRA", FR: "-", Key: fmt.Sprintf("rc %d", frontendRC), Scope: "-",
+				Note: fmt.Sprintf("the frontend exited %d WITHOUT a named refusal (a crash, a build failure, a shim exit) — NOT a successful export and not a coverage verdict; read its stderr", frontendRC)}
+		default:
 			fr := &firstRefusal{Text: first}
 			c, key := classifyText(first)
 			if c == nil {
@@ -417,23 +472,31 @@ func buildReport(p *program, target, commit, goVersion, registerPath string, fro
 			}
 			// Locate the key in the static census: an export-scoped site
 			// names the real kill (a body call and an initializer call
-			// share one refusal string).
-			var sites []string
+			// share one refusal string). Fall back to declarations carrying
+			// the same CAUSE when the dynamic text's key is spelled
+			// differently from the static one (FR-23: `main.Bag.All` vs
+			// the instantiated type).
+			var sites, sameCauseSites []string
 			for _, d := range all {
 				for _, f := range d.Findings {
-					sameCause := fr.Cause != "UNCLASSIFIED" && f.Cause.ID == fr.Cause
-					if f.Key == key || (sameCause && key == fr.Cause) || (sameCause && strings.HasSuffix(key, "."+f.Key)) || (sameCause && strings.HasSuffix(f.Key, "."+key)) {
-						s := d.Pkg + " " + d.Kind + " " + d.Name + " @" + f.Pos + " [" + f.Cause.ID + "/" + f.Cause.FR
-						if f.Export {
-							s += ", EXPORT-scoped"
-						}
-						s += "]"
-						sites = append(sites, s)
+					desc := d.Pkg + " " + d.Kind + " " + d.Name + " @" + f.Pos + " [" + f.Cause.ID + "/" + f.Cause.FR
+					if f.Export {
+						desc += ", EXPORT-scoped"
+					}
+					desc += "]"
+					sameCause := c != nil && f.Cause.ID == c.ID
+					switch {
+					case f.Key == key || (sameCause && (strings.HasSuffix(key, "."+f.Key) || strings.HasSuffix(f.Key, "."+key))):
+						sites = append(sites, desc)
+					case sameCause:
+						sameCauseSites = append(sameCauseSites, desc)
 					}
 				}
 			}
 			sort.Strings(sites)
-			if len(sites) > 0 {
+			sort.Strings(sameCauseSites)
+			switch {
+			case len(sites) > 0:
 				fr.StaticSite = strings.Join(dedup(sites), " | ")
 				for _, s := range sites {
 					if strings.Contains(s, "EXPORT-scoped") {
@@ -441,8 +504,11 @@ func buildReport(p *program, target, commit, goVersion, registerPath string, fro
 						break
 					}
 				}
-			} else if c != nil {
-				fr.Note = "the static census has no declaration with this key: the refusal is at a site the static pass does not model (library text, emitter-table detail such as fmt's verb matrix, or a load-time shape)"
+			case len(sameCauseSites) > 0:
+				fr.StaticSite = strings.Join(dedup(sameCauseSites), " | ")
+				fr.Note = fmt.Sprintf("no static declaration carries this exact key (the frontend spells it differently); %d declaration(s) carry the same cause — listed", len(dedup(sameCauseSites)))
+			case c != nil:
+				fr.Note = "the static census has no declaration with this key or cause: the refusal is at a site the static pass does not judge (library text, an emitter-table detail such as fmt's verb matrix, a stencil, or a load-time shape)"
 				if isTypeShapedCause(c.ID) && !strings.Contains(key, "(") {
 					fr.Note += " — a bare TYPE key with no user declaration carrying it is FR-24's shape: a package-level VARIABLE of a reached source-through library unit whose type does not lower kills the whole export at collectGlobals (cedar-go: encoding/binary.Write -> structSize sync.Map; the refusal text does not name the variable — a message gap recorded in docs/2026-09-04_lower-diagnose.md); cause global-type-unlowerable, " + causesByID["global-type-unlowerable"].Status
 				}
@@ -450,10 +516,14 @@ func buildReport(p *program, target, commit, goVersion, registerPath string, fro
 			r.First = fr
 		}
 	}
+	// What the static pass does NOT judge — every non-static cause id, with
+	// the count of declarations that reference the members/shapes it covers
+	// where that is countable.
+	r.NotJudged = notJudgedRows(all)
 	r.Notes = []string{
-		"static = go/types over the program + its local imports; stdlib judged by the register (source-through members counted as lowering — FR-21 gaps inside library text are invisible here) and the machine-owned surface table",
+		"static = go/types over the program + its local imports; stdlib judged by the register (source-through members count as lowering unless library-refusals.tsv names them — other FR-21 gaps inside library text are invisible here), the machine-owned surface table and library-refusals.tsv; the measured direction is UNDER-approximation: what fires is exact, what is not judged is listed above per run",
 		"may-refuse = shape-dependent (goto hoisting shapes, non-reserved build tags); the distance line counts only certain refusals",
-		"export scope = the frontend refuses the WHOLE package export today (H-11 initializer kill, an init() body, unstubbable method signature, global type, duplicate local TypeId); dependents inherit through the import graph",
+		"export scope = the frontend refuses the WHOLE package export today (H-11 initializer kill, an init() body, unstubbable method signature, global type, duplicate local TypeId); dependents inherit through the import graph; CALL scope (stdlib-type-method; library-refusals.tsv members such as errors.Is) = the declaration LOWERS (the wire does not quarantine it) and the CALL refuses when reached — the imported type's D5 stub or the library function's own quarantine; the distance line counts these as refused demands, the calibration against a wire does not",
 		"main.main is not a census declaration: the frontend never emits it (emit.go emitProgram; drivers run named entry functions), so its body cannot block a lowering",
 		"not visible statically: fmt's verb×kind matrix, mono.go's stencil-time refusals, per-call-site frontend invariants — the dynamic pass (first refusal) is the check",
 	}
@@ -468,6 +538,80 @@ func isTypeShapedCause(id string) bool {
 		return true
 	}
 	return false
+}
+
+func classifyFirst(text string) *cause {
+	c, _ := classifyText(text)
+	return c
+}
+
+func sortedCopy(xs []string) []string {
+	out := append([]string(nil), xs...)
+	sort.Strings(out)
+	return out
+}
+
+// notJudgedRows lists every causes.tsv id the static pass never emits,
+// with a per-run count of the declarations that reference the surface
+// it covers (shim members for the fmt verb matrix, source-through members
+// for FR-21 gaps, generic sites for the stencil-time refusals, …); -1 =
+// shape-level, not countable from the census.
+func notJudgedRows(all []*declReport) []notJudged {
+	static := map[string]bool{}
+	for _, id := range staticCauseIDs {
+		static[id] = true
+	}
+	countIf := func(pred func(d *declReport) bool) int {
+		n := 0
+		for _, d := range all {
+			if pred(d) {
+				n++
+			}
+		}
+		return n
+	}
+	hasSupplied := func(d *declReport, sub string) bool {
+		for _, s := range d.Supplied {
+			if strings.Contains(s, sub) {
+				return true
+			}
+		}
+		return false
+	}
+	var out []notJudged
+	for _, c := range causeList {
+		if static[c.ID] {
+			continue
+		}
+		row := notJudged{Cause: c.ID, FR: c.FR, Count: -1}
+		switch c.ID {
+		case "fmt-verb-matrix":
+			row.Count = countIf(func(d *declReport) bool { return hasSupplied(d, "fmt.") && hasSupplied(d, "(shim)") })
+			row.What = "declarations calling a fmt shim member — the verb×kind matrix and arity are checked at emit time only"
+		case "cmp-compare-shape":
+			row.Count = countIf(func(d *declReport) bool { return hasSupplied(d, "cmp.Compare") })
+			row.What = "declarations calling cmp.Compare — the kind-dispatch desugar's shape bound is emitter-side"
+		case "generics-corner", "generic-template", "local-type-type-argument", "stencil-whole-export":
+			row.Count = countIf(func(d *declReport) bool { return d.GenericSites > 0 })
+			row.What = "declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged"
+		case "imported-type-marker":
+			row.Count = countIf(func(d *declReport) bool { return len(d.ImportedTypes) > 0 })
+			row.What = "declarations touching an imported named type — the D5 marker itself lowers; only its uncalled-method stubs appear quarantined in a wire"
+		case "hidden-dep-init-order", "init-schedule", "local-import-shape", "build-constraint":
+			row.What = "load-time / initialization-schedule shapes — the dynamic pass (first refusal) is the check"
+		case "result-shadow", "labeled-shape", "statement-shape", "expression-shape":
+			row.What = "statement/expression corner shapes the emitter refuses by arm — not modeled statically"
+		case "frontend-invariant", "frontend-apparatus":
+			row.What = "frontend fail-closed invariants and pin/overlay/register table inconsistencies — properties of the tree, not the program"
+		case "global-type-unlowerable":
+			row.Count = countIf(func(d *declReport) bool { return hasSupplied(d, "(source-through") })
+			row.What = "declarations calling into source-through library units — a reached library VARIABLE of unlowerable type (FR-24) is invisible here (only user-package globals are judged)"
+		default:
+			row.What = "not modeled statically"
+		}
+		out = append(out, row)
+	}
+	return out
 }
 
 func allSameKey(fs []finding, key string) bool {
@@ -508,13 +652,20 @@ func pct(a, b int) string {
 // writeHuman renders the report for a reader.
 func writeHuman(w io.Writer, r *report) {
 	fmt.Fprintln(w, r.Banner)
-	fmt.Fprintf(w, "target: %s\ncommit: %s   go: %s\nregister: %s (%d rows)   causes table: %d rows\n\n", r.Target, r.Commit, r.GoVersion, r.Register, r.RegisterRows, r.CausesRows)
+	fmt.Fprintf(w, "target: %s\ncommit: %s   go: %s   tables: %s (causes.tsv + machine-surface.tsv + library-refusals.tsv)\nregister: %s (%d rows)   causes table: %d rows\n\n", r.Target, r.Commit, r.GoVersion, r.Tables, r.Register, r.RegisterRows, r.CausesRows)
 	fmt.Fprintln(w, "== first refusal (what the frontend says today)")
 	switch {
 	case r.First == nil && r.FrontendOK:
-		fmt.Fprintln(w, "  frontend: EXPORT OK — the program lowers (per-declaration quarantines, if any, are in the wire's unsupported stubs; the static census below is the demand view)")
+		fmt.Fprintf(w, "  frontend: EXPORT OK (rc 0) — the export lowers; the probe wire carries %d quarantined non-shim declaration(s):\n", len(r.WireQuarantines))
+		for i, q := range r.WireQuarantines {
+			if i >= 25 {
+				fmt.Fprintf(w, "    … %d more (report.json frontend_wire_quarantines)\n", len(r.WireQuarantines)-25)
+				break
+			}
+			fmt.Fprintf(w, "    %s\n", q)
+		}
 	case r.First == nil:
-		fmt.Fprintln(w, "  (dynamic pass not run — pass --frontend-stderr)")
+		fmt.Fprintln(w, "  (dynamic pass not run — pass --frontend-rc/--frontend-stderr)")
 	default:
 		fmt.Fprintf(w, "  %s\n  -> cause %s [%s, %s-scoped] key %s\n", r.First.Text, r.First.Cause, r.First.FR, r.First.Scope, r.First.Key)
 		if r.First.StaticSite != "" {
@@ -569,6 +720,15 @@ func writeHuman(w io.Writer, r *report) {
 	if len(r.Unrowed) > 0 {
 		fmt.Fprintf(w, "\n== UNROWED causes seen (the ledger has no row — direction 3 owes one): %s\n", strings.Join(r.Unrowed, ", "))
 	}
+	fmt.Fprintln(w, "\n== not judged statically (every cause id the static pass never emits; count = declarations in THIS program referencing the surface it covers, - = shape-level)")
+	fmt.Fprintf(w, "  %-26s %-16s %6s  %s\n", "cause", "fr", "decls", "what")
+	for _, nj := range r.NotJudged {
+		cnt := "-"
+		if nj.Count >= 0 {
+			cnt = fmt.Sprintf("%d", nj.Count)
+		}
+		fmt.Fprintf(w, "  %-26s %-16s %6s  %s\n", nj.Cause, nj.FR, cnt, nj.What)
+	}
 	fmt.Fprintln(w, "\n== notes")
 	for _, n := range r.Notes {
 		fmt.Fprintf(w, "  - %s\n", n)
@@ -584,10 +744,10 @@ func writeJSON(w io.Writer, r *report) error {
 // writeDeclsTSV: the per-declaration table (the census's demand.tsv).
 func writeDeclsTSV(w io.Writer, r *report) {
 	fmt.Fprintln(w, "# "+diagnosticBanner)
-	fmt.Fprintln(w, "pkg\tkind\tname\tpos\tloc\tverdict\texport_kill\tcauses\tsupplied\timported_types")
+	fmt.Fprintln(w, "pkg\tkind\tname\tpos\tloc\tverdict\texport_kill\tcauses\tsupplied\timported_types\tgeneric_sites")
 	for _, d := range r.Declarations {
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%d\t%s\t%v\t%s\t%s\t%s\n", d.Pkg, d.Kind, d.Name, d.Pos, d.LOC, d.Verdict, d.ExportKill,
-			dash(strings.Join(d.Causes, ",")), dash(strings.Join(d.Supplied, ",")), dash(strings.Join(d.ImportedTypes, ",")))
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%d\t%s\t%v\t%s\t%s\t%s\t%d\n", d.Pkg, d.Kind, d.Name, d.Pos, d.LOC, d.Verdict, d.ExportKill,
+			dash(strings.Join(d.Causes, ",")), dash(strings.Join(d.Supplied, ",")), dash(strings.Join(d.ImportedTypes, ",")), d.GenericSites)
 	}
 }
 

@@ -1,38 +1,54 @@
 DIAGNOSTIC — NOT A LOWERING. tools/lowerdiag report: no wire is written; nothing in this file is a gate input.
-target: Corpus/coverage/exec/complex/basic
+target: tools/lowerdiag/testdata/calib
 commit: 55987a6c4d91124bc4f2d1721c07cb686fa1cb85+dirty   go: go1.26.5   tables: 35d472cde2ed (causes.tsv + machine-surface.tsv + library-refusals.tsv)
 register: docs/stdlib-admission-register.md (42 rows)   causes table: 52 rows
 
 == first refusal (what the frontend says today)
-  frontend: EXPORT OK (rc 0) — the export lowers; the probe wire carries 1 quarantined non-shim declaration(s):
-    func complexBasic: FR-15/complex complex
+  frontend: EXPORT OK (rc 0) — the export lowers; the probe wire carries 4 quarantined non-shim declaration(s):
+    func assignBox: FR-7/tuple-iface-box tuple-iface-box
+    func deferSort: FR-14/intercepted-defer-go intercepted-defer-go
+    func errors.Is: FR-14/stdlib-package-unmodeled reflectlite.TypeOf
+    func sortStrings: FR-14/slices-sort-kind slices.Sort@string
 
 == distance
-  declarations demanding nothing refused: 0 / 1 (0.0%)   funcs+methods: 0 / 1 (0.0%)   may-refuse: 0   refused: 1
+  declarations demanding nothing refused: 8 / 12 (66.7%)   funcs+methods: 7 / 11 (63.6%)   may-refuse: 0   refused: 4
   export kills: 0 declaration(s) refuse the WHOLE export of their package today; 0 / 1 package(s) export-killed (own or inherited)
 
 == blockers by cause (sorted by unblock value: sole = declarations this cause alone blocks)
   cause                      fr               scope  decls  sole pkgs export  top keys
-  complex                    FR-15            decl       1     1    1      0  builtin complex×1, builtin imag×1, builtin real×1, complex128×1
+  intercepted-defer-go       FR-14            decl       1     1    1      0  defer slices.Sort×1
+  reflect                    out-of-language  decl       1     1    1      0  errors.Is×1
+  slices-sort-kind           FR-14            decl       1     1    1      0  slices.Sort@string×1
+  tuple-iface-box            FR-7             decl       1     1    1      0  assign any×1
 
 == top blockers — what each is and where its plan lives
-   1. complex [FR-15] — 1 decls (1 sole, 1 pkgs): complex numbers (types, literals, constants, real/imag/complex) — the one large arc, last in the queue (15)
+   1. intercepted-defer-go [FR-14] — 1 decls (1 sole, 1 pkgs): defer/go of a frontend-intercepted library member (slices.Sort, cmp.Compare) — refuses by name; memo §3 row M
+   2. reflect [out-of-language] — 1 decls (1 sole, 1 pkgs): reflect / internal/reflectlite (encoding/json, errors.Is/As): the G6 reflect-subset frontier — outside the modeled language today
+   3. slices-sort-kind [FR-14] — 1 decls (1 sole, 1 pkgs): slices.Sort outside the sortSlice op's integer kinds (register: intercept row) — memo §3 row M retires the op
+   4. tuple-iface-box [FR-7] — 1 decls (1 sole, 1 pkgs): implicit boxing of tuple COMPONENTS into interface targets (multi-value assign/return); ledger queue 7
 
 == projection — declarations lowering if the top causes were fixed, cumulatively
-  + complex                    -> 1 / 1 lower (+1), 0 export(s) revived
+  + intercepted-defer-go       -> 9 / 12 lower (+1), 0 export(s) revived
+  + reflect                    -> 10 / 12 lower (+1), 0 export(s) revived
+  + slices-sort-kind           -> 11 / 12 lower (+1), 0 export(s) revived
+  + tuple-iface-box            -> 12 / 12 lower (+1), 0 export(s) revived
 
 == per package
   package                                  decls lowers  may-ref  refd   +top3    share  export
-  main                                         1      0        0     1       1     0.0%  ok
+  main                                        12      8        0     4      11    66.7%  ok
+
+== stdlib / imported keys refused (register class = none; top 25)
+  key                                                  cause                      fr       decls  sole pkgs
+  errors.Is                                            reflect                    out-of-language     1     1    1
 
 == not judged statically (every cause id the static pass never emits; count = declarations in THIS program referencing the surface it covers, - = shape-level)
   cause                      fr                decls  what
   labeled-shape              unrowed               -  statement/expression corner shapes the emitter refuses by arm — not modeled statically
-  stencil-whole-export       FR-4                  0  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
-  local-type-type-argument   c-pin                 0  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
+  stencil-whole-export       FR-4                  3  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
+  local-type-type-argument   c-pin                 3  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
   imported-type-marker       by-design             0  declarations touching an imported named type — the D5 marker itself lowers; only its uncalled-method stubs appear quarantined in a wire
-  generic-template           by-design             0  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
-  generics-corner            unrowed               0  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
+  generic-template           by-design             3  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
+  generics-corner            unrowed               3  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
   cmp-compare-shape          FR-14                 0  declarations calling cmp.Compare — the kind-dispatch desugar's shape bound is emitter-side
   init-schedule              unrowed               -  load-time / initialization-schedule shapes — the dynamic pass (first refusal) is the check
   hidden-dep-init-order      c-pin                 -  load-time / initialization-schedule shapes — the dynamic pass (first refusal) is the check
