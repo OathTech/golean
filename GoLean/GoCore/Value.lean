@@ -567,8 +567,9 @@ inductive Loc where
   deriving Repr, BEq, DecidableEq
 
 /-- The derived `BEq Addr` is the field's `Nat` equality — lawful. Needed
-so heap-key disequalities (`Heap.set` at a FRESH address leaves bounded
-lookups unchanged) are provable (∀-choices kit, sem-adequacy slice 3). -/
+so address disequalities (an allocation at the FRESH address leaves every
+bounded lookup unchanged — `Heap.lookup_push_ne`) are provable
+(∀-choices kit, sem-adequacy slice 3). -/
 instance : LawfulBEq Addr where
   eq_of_beq {a b} h := by
     obtain ⟨i⟩ := a

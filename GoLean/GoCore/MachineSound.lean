@@ -913,19 +913,30 @@ only value component the choice reaches). -/
 `loadLoc`/`storeLoc` ever look up along the path. -/
 def Loc.rootLoc (l : Loc) : Loc := .base ⟨Loc.rootBase l⟩
 
-theorem Heap.lookup_set_ne {h : Heap} {k l : Loc} {c : HeapCell}
-    (hne : k ≠ l) :
-    Heap.lookup (Heap.set h k c) l = Heap.lookup h l := by
-  induction h with
-  | nil => simp [Heap.set, Heap.lookup, beq_eq_false_iff_ne.mpr hne]
-  | cons p rest ih =>
-    obtain ⟨loc, old⟩ := p
-    simp only [Heap.set]
-    cases hb : (loc == k) with
-    | true =>
-      obtain rfl := eq_of_beq hb
-      simp [Heap.lookup, beq_eq_false_iff_ne.mpr hne]
-    | false => simp [Heap.lookup, ih]
+/-- Allocation does not touch any other root cell (dense heap: `push` is
+invisible below the old size). -/
+theorem Heap.lookup_push_ne {h : Heap} {l : Loc} {c : HeapCell}
+    (hne : (Loc.base ⟨h.size⟩ : Loc) ≠ l) :
+    Heap.lookup (h.push c) l = Heap.lookup h l := by
+  cases l with
+  | base a =>
+    obtain ⟨j⟩ := a
+    have hj : j ≠ h.size := fun hj => hne (by subst hj; rfl)
+    simp [Heap.lookup, Array.getElem?_push, hj]
+  | field _ _ _ => rfl
+  | index _ _ => rfl
+
+/-- An in-range overwrite does not touch any other root cell. -/
+theorem Heap.lookup_set_ne {h : Heap} {i : Nat} {l : Loc} {c : HeapCell}
+    {hi : i < h.size} (hne : (Loc.base ⟨i⟩ : Loc) ≠ l) :
+    Heap.lookup (h.set i c hi) l = Heap.lookup h l := by
+  cases l with
+  | base a =>
+    obtain ⟨j⟩ := a
+    have hj : i ≠ j := fun hj => hne (by subst hj; rfl)
+    simp [Heap.lookup, Array.getElem?_set_ne hi hj]
+  | field _ _ _ => rfl
+  | index _ _ => rfl
 
 /-- The tag-compatibility check reads only the types map (triage L7). -/
 theorem structTagCompatible_congr {σ₁ σ₂ : ExecState}
@@ -1762,22 +1773,53 @@ theorem storeLoc_congr {σ₁ σ₂ : ExecState} (htypes : σ₂.types = σ₁.t
     intro v w hl hcc
     have hl' : Heap.lookup σ₂.heap (.base a) = Heap.lookup σ₁.heap (.base a) := hl
     simp only [storeLoc]
-    rw [hl']
-    cases hlook : Heap.lookup σ₁.heap (.base a) with
-    | none => exact rfl  -- both sides refuse `.internal` (BUG-085): same class
-    | some cell =>
-      dsimp only
-      cases hdt : cell.declaredTy with
-      | some ty =>
-        dsimp only
-        refine exceptCong.bind_congr (normalizeValueForTy_congr htypes hcc)
-          fun _ _ _ => ?_
-        exact trivial
-      | none =>
-        dsimp only
-        refine exceptCong.bind_congr (coerceStoredValue_congr _ _ hcc)
-          fun _ _ _ => ?_
-        exact trivial
+    -- The root match is DEPENDENT on the dense heap (its `Array.set` carries
+    -- the lookup's bounds proof), so the two lookups are split rather than
+    -- rewritten (`split` visits σ₁'s outer match, σ₁'s `declaredTy` match,
+    -- then σ₂'s outer match); `hl'` identifies the arms.
+    split
+    · rename_i cellA hcellA
+      try dsimp only
+      split
+      · rename_i tyA hdtA
+        split
+        · rename_i cellB hcellB
+          have hAB := hl'
+          rw [hcellA, hcellB] at hAB
+          obtain rfl := Option.some.inj hAB
+          try dsimp only
+          rw [hdtA]
+          try dsimp only
+          refine exceptCong.bind_congr (normalizeValueForTy_congr htypes hcc)
+            fun _ _ _ => ?_
+          exact trivial
+        · rename_i hcellB
+          have hAB := hl'
+          rw [hcellA, hcellB] at hAB
+          simp at hAB
+      · rename_i hdtA
+        split
+        · rename_i cellB hcellB
+          have hAB := hl'
+          rw [hcellA, hcellB] at hAB
+          obtain rfl := Option.some.inj hAB
+          try dsimp only
+          rw [hdtA]
+          try dsimp only
+          refine exceptCong.bind_congr (coerceStoredValue_congr _ _ hcc)
+            fun _ _ _ => ?_
+          exact trivial
+        · rename_i hcellB
+          have hAB := hl'
+          rw [hcellA, hcellB] at hAB
+          simp at hAB
+    · rename_i hcellA
+      split
+      · rename_i cellB hcellB
+        have hAB := hl'
+        rw [hcellA, hcellB] at hAB
+        simp at hAB
+      · exact rfl  -- both sides refuse `.internal` (BUG-085): same class
   | field b tid fname ih =>
     intro v w hl hcc
     simp only [storeLoc]
@@ -2235,11 +2277,9 @@ theorem applyStmtOp_appendSlice_congr {σ : ExecState} {elem : Ty} {nt : Nat}
           (storeLoc_congr ?_ (l := tloc) ?_ ?_)
           fun _ _ _ => ?_
         · exact rfl
-        · show Heap.lookup (Heap.set σ.heap (.base ⟨σ.nextAddr⟩) _)
-              (Loc.rootLoc tloc)
-            = Heap.lookup (Heap.set σ.heap (.base ⟨σ.nextAddr⟩) _)
-              (Loc.rootLoc tloc)
-          rw [Heap.lookup_set_ne hkey, Heap.lookup_set_ne hkey]
+        · show Heap.lookup (σ.heap.push _) (Loc.rootLoc tloc)
+            = Heap.lookup (σ.heap.push _) (Loc.rootLoc tloc)
+          rw [Heap.lookup_push_ne hkey, Heap.lookup_push_ne hkey]
         · exact ⟨rfl, rfl, rfl⟩
         · exact trivial
 
@@ -2490,41 +2530,29 @@ theorem bindIterVars_ok_of_normal {env : LocalEnv} {σ : ExecState}
     cases vv with
     | none => exact ⟨env, σ, rfl⟩
     | some nv =>
-      refine ⟨env.declare nv (.base ⟨σ.nextAddr⟩),
-        { σ with
-          heap := Heap.set σ.heap (.base ⟨σ.nextAddr⟩)
-            { declaredTy := some vt, value := value },
-          nextAddr := σ.nextAddr + 1 }, ?_⟩
+      refine ⟨env.declare nv (.base ⟨σ.heap.size⟩),
+        { σ with heap := σ.heap.push { declaredTy := some vt, value := value } }, ?_⟩
       simp [isNormalForTy_sound hv, Bind.bind, Except.bind, ExecState.alloc,
-        ExecState.freshLoc, pure, Except.pure]
+        pure, Except.pure]
   | some nk =>
     cases vv with
     | none =>
-      refine ⟨env.declare nk (.base ⟨σ.nextAddr⟩),
-        { σ with
-          heap := Heap.set σ.heap (.base ⟨σ.nextAddr⟩)
-            { declaredTy := some kt, value := key },
-          nextAddr := σ.nextAddr + 1 }, ?_⟩
+      refine ⟨env.declare nk (.base ⟨σ.heap.size⟩),
+        { σ with heap := σ.heap.push { declaredTy := some kt, value := key } }, ?_⟩
       simp [isNormalForTy_sound hk, Bind.bind, Except.bind, ExecState.alloc,
-        ExecState.freshLoc, pure, Except.pure]
+        pure, Except.pure]
     | some nv =>
       have hv' : normalizeValueForTy
-          { σ with
-            heap := Heap.set σ.heap (.base ⟨σ.nextAddr⟩)
-              { declaredTy := some kt, value := key },
-            nextAddr := σ.nextAddr + 1 } vt value = .ok value :=
+          { σ with heap := σ.heap.push { declaredTy := some kt, value := key } }
+          vt value = .ok value :=
         isNormalForTy_sound hv
-      refine ⟨(env.declare nk (.base ⟨σ.nextAddr⟩)).declare nv
-          (.base ⟨σ.nextAddr + 1⟩),
+      refine ⟨(env.declare nk (.base ⟨σ.heap.size⟩)).declare nv
+          (.base ⟨(σ.heap.push { declaredTy := some kt, value := key }).size⟩),
         { σ with
-          heap := Heap.set
-            (Heap.set σ.heap (.base ⟨σ.nextAddr⟩)
-              { declaredTy := some kt, value := key })
-            (.base ⟨σ.nextAddr + 1⟩)
-            { declaredTy := some vt, value := value },
-          nextAddr := σ.nextAddr + 1 + 1 }, ?_⟩
+          heap := (σ.heap.push { declaredTy := some kt, value := key }).push
+            { declaredTy := some vt, value := value } }, ?_⟩
       simp [isNormalForTy_sound hk, hv', Bind.bind, Except.bind,
-        ExecState.alloc, ExecState.freshLoc, pure, Except.pure]
+        ExecState.alloc, pure, Except.pure]
 
 /-- `mapM` over `Except` preserves length on success. -/
 theorem mapM_ok_length {α β : Type} {f : α → Except GoError β}

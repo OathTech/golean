@@ -100,8 +100,10 @@ private def nodeHash (nd : DedupNode) : UInt64 :=
           + UInt64.ofNat e.2.recvCount * 59)) 13
   hThreads * 131
     + UInt64.ofNat nd.m.cur * 1009
+    -- `nextAddr` IS `heap.size` on the dense heap (A2); both terms kept so
+    -- the hash values are unchanged (they were always equal on a dense heap).
     + UInt64.ofNat nd.m.shared.nextAddr * 10007
-    + UInt64.ofNat nd.m.shared.heap.length * 100003
+    + UInt64.ofNat nd.m.shared.heap.size * 100003
     + hClocks + hShadow * 3 + hChanObj * 5 + hChans * 7
 
 /-- The engine's node equality for dedup: the SOUND tower equality

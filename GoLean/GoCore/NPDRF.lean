@@ -59,13 +59,18 @@ starts honest):
    per-goroutine allocation arenas. This is why the mover lemmas below
    cover the NON-allocating store class first — `appendSlice`'s SPILL
    path (fresh backing) is exactly the allocating class.
-2. **Fresh-cell insertion order.** Even without `nextAddr`, two stores
-   that CREATE their cells (`Heap.set` on a missing key appends)
-   produce permuted heap LISTS under swapped order — commutation is up
-   to assoc-list extensional equality, not structural equality. The
-   mover statements below therefore carry existing-cell/frame
-   premises; the eventual proof should work over an extensional heap
-   equivalence.
+2. **Fresh-cell insertion order — DISCHARGED BY CONSTRUCTION (dense
+   heap, design-hygiene A2, 2026-09-04).** The obstruction was that two
+   stores CREATING their cells (`Heap.set` on a missing key appended)
+   produced permuted heap LISTS under swapped order, so commutation held
+   only up to assoc-list extensional equality. On the dense heap
+   (`Heap := Array HeapCell`) a store can only OVERWRITE an existing
+   index (`Array.set` under the lookup's bounds proof) and only
+   `ExecState.alloc` creates cells (`push`, obstruction 1's class), so
+   two non-allocating stores to distinct roots commute up to structural
+   heap equality (`Array.set` commutes at distinct indices). The mover
+   statements below still carry their existing-cell/frame premises (they
+   were stated before A2); the text is kept as the record.
 3. **BUG-040 (the post-spawn decision point) — DISCHARGED at slice 4,
    then GENERALIZED at W3.2 slice 1 (stages C/D, 2026-08-20/21).**
    The coupling "programs outside DRF are exactly those the machine
@@ -435,15 +440,16 @@ theorem storeLoc_root_frame :
           simpa [Loc.rootLoc, Loc.rootBase] using this)
       unfold storeLoc at h
       split at h
-      · split at h
+      · rename_i cell hcell
+        split at h
         · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
           obtain ⟨v', _, hσ⟩ := h
           subst hσ
-          exact Heap.lookup_set_ne hkey
+          exact Heap.lookup_set_ne (hi := Heap.lookup_lt hcell) hkey
         · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
           obtain ⟨v', _, hσ⟩ := h
           subst hσ
-          exact Heap.lookup_set_ne hkey
+          exact Heap.lookup_set_ne (hi := Heap.lookup_lt hcell) hkey
       · -- unallocated root: the store REFUSES (BUG-085), nothing to show
         simp [throw, throwThe, MonadExceptOf.throw] at h
   | field b tid fname ih =>

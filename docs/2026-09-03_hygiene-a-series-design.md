@@ -101,3 +101,87 @@ on the uncommitted A1 sources — the tree that became the A1 commit, no
 edit between run and commit; the series-final clean-tip gate is in the
 records commit). Choice-trace delta vs the pre-series snapshot: see the
 evidence README (A1 row).
+
+## A2 — the dense heap: `Heap := Array HeapCell`, addresses are indices
+
+**What changed.** `Heap := Array HeapCell` (State.lean); `Heap.lookup h
+(.base ⟨i⟩) = h[i]?` (a field/index path has no cell — paths resolve to
+their root first, as before); `ExecState.alloc` is `push` at address
+`heap.size`; the `nextAddr` FIELD is deleted and `ExecState.nextAddr σ :=
+σ.heap.size` is a derived definition (so it cannot drift from the heap,
+and the ~370 proof statements phrased over `σ.nextAddr` stay readable);
+`ExecState.freshLoc` and `Heap.set` are deleted. `storeLoc`'s root arm
+writes with `Array.set` under the bounds proof the lookup supplies
+(`Heap.lookup_lt : Heap.lookup h (.base a) = some c → a.id < h.size`), and
+its `none` arm keeps BUG-085's `.internal` refusal — but that refusal is
+now the ONLY thing that can happen out of range: the phantom-cell
+materialization BUG-085 removed is unrepresentable by type (there is no
+`Heap.set`; `Array.set` carries its bound). `StateWf` is unchanged in
+statement (`ExecState.locSup σ ≤ σ.nextAddr`) but `Heap.locSup` is now the
+sup over cell VALUES only — keys cannot dangle — so half the carriers
+leave the invariant; `Heap.lookup_key_locSup` is the array bound
+(`Loc.locSup l ≤ h.size`). `EnumDedup`'s state hash keeps both terms
+(`nextAddr` and `heap.size`, which were always equal on a dense heap) so
+hash values are unchanged; `MachineEqb.ExecState.eqb` drops the redundant
+`nextAddr` conjunct and compares the heap as an array
+(`eqbArrayP HeapCell.eqb`). [AGENT]
+
+**Recorded deviation from the review's sketch.** The review had
+out-of-range `Heap.set` be `stuck`; the arm stays `.internal` — BUG-085's
+ruling (an invariant breach, never an ill-shaped program operand), pinned
+by the `Tests/GoCoreEval.lean` guard (`storeLoc {} (.base ⟨0⟩) (.int 7)`
+must be `.error (.internal _)`), which still passes unchanged. [AGENT]
+
+**Why nicer.** Density is a TYPE fact, not an audited call-graph
+invariant (Ops.lean's old 20-line "why the `none` arm is unreachable"
+argument is gone; the decoder's `globaladdr` bound and the driver's
+`StateWf` assert are defense in depth, not the only defense). The heap
+lemmas are array lemmas: `Heap.lookup_locSup` (membership),
+`Heap.push_locSup`, `Heap.set_locSup`, `Heap.lookup_push_ne`,
+`Heap.lookup_set_ne` — each a few lines over `Array.mem_push` /
+`Array.mem_or_eq_of_mem_set` / `Array.getElem?_push` /
+`Array.getElem?_set_ne`, replacing the assoc-list inductions.
+`Heap.locSup_le_iff : Heap.locSup h ≤ b ↔ ∀ c ∈ h, c.locSup ≤ b` is the
+dense address space's whole ownership story (G-REPR's base). NPDRF
+obstruction 2 (fresh-cell insertion order — stores that CREATED cells
+permuted the assoc list) is DISCHARGED BY CONSTRUCTION: a store can only
+overwrite an existing index; only `alloc` creates cells (obstruction 1's
+class). Text kept in NPDRF.lean as the record.
+
+**Preservation.** On every machine-reachable state the old
+`List (Loc × HeapCell)` had distinct `.base` keys `0 … nextAddr-1`, each
+present (density: `alloc` was the only creator and wrote the cell in the
+same step; `storeLoc` only overwrote — BUG-085 having removed the append),
+so it is in bijection with an `Array HeapCell` of length `nextAddr` under
+`key i ↦ index i`; `lookup`, the overwrite, and `alloc` commute with the
+bijection, and `nextAddr = size` holds by construction. Every corpus run
+starts from the seeded state (`runProgramSetupM`, asserted `StateWf`) and
+never leaves the reachable set, so no run observes the representation.
+Refusal MESSAGES are byte-identical (the `.internal` text still prints
+`repr (Loc.base a)`). The differential is the regression; the trace shows
+no consumption moved.
+
+**Proof deltas** (arm for arm). StateWf.lean: `Heap.locSup` via
+`heapCellsSup h.toList` (+ `heapCellsSup_eq`, `heapLocSup_eq` restated over
+cells, `Heap.locSup_le_iff` NEW); `Heap.lookup_locSup` (3 lines, was a
+9-line induction), `Heap.lookup_key_locSup` (restated: `≤ h.size`),
+`Heap.set_locSup` (restated over `Array.set`), `Heap.push_locSup` (NEW,
+replaces the alloc use of the old `set_locSup`); `storeLoc_shape`'s base
+case supplies the bounds proof and `Array.size_set`; `alloc_shape`'s
+record bridge is the `push` form. MachineSound.lean: `Heap.lookup_set_ne`
+(12-line assoc-list induction) → `Heap.lookup_push_ne` + `Heap.lookup_set_ne`
+(array one-liners); `storeLoc_congr`'s base case can no longer `rw` the
+lookup (the root match is DEPENDENT — its `Array.set` carries the lookup's
+bounds proof), so it splits both lookups and identifies the arms through
+the hypothesis (the two mismatched arms are `some = none` contradictions);
+the appendSlice spill congruence and `bindIterVars_ok_of_normal`'s three
+explicit witness states use the `push` form. NPDRF.lean:
+`storeLoc_root_frame` names the lookup hypothesis and passes the bound.
+No lemma weakened; `Heap.set` and `ExecState.freshLoc` deleted with their
+`simp` mentions (tombstoned here).
+
+**Gate.** `scripts/capped scripts/ci --diff` on the A2 tree: RESULT PASS,
+`cases=3284 pass=3085 fail=199`, baseline diff FULL 3284/3284 no
+regression, re-pin guard 0 flips, negative 394/394, eval tests 148/148
+incl. the BUG-085 guard (`transcripts/gate-a2.txt`). Choice-trace delta vs
+the pre-series snapshot: evidence README, A2 row.

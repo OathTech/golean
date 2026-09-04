@@ -1241,36 +1241,27 @@ callees (normalizeValueForTy, coerceStoredValue) are themselves total.
 The premise of `wp_store`.
 
 FAIL CLOSED at the root: a store to a `.base` address with NO heap cell
-REFUSES. The `none` arm is unreachable by HEAP DENSITY — every address
-below `nextAddr` has a cell — which is an audited call-graph invariant,
-NOT a `StateWf` consequence (`StateWf` is only the bound `locSup σ ≤
-nextAddr`; it says nothing about which addresses are populated) and not
-a theorem: `nextAddr` advances only in `ExecState.freshLoc`, whose sole
-caller `ExecState.alloc` writes the cell in the same step; the only
-non-proof `Heap.set` sites are `alloc` and this function's hit arm;
-nothing erases a cell; the only non-proof `Loc.base` constructions are
-`freshLoc` and the decoder's bound-checked `globaladdr`. (The grumpy
-review's A2 dense-heap proposal would make density true by type; until
-then it is a candidate lemma, stated here as the premise it is.)
-Reaching the arm therefore means an invariant breach (a dangling
-`.addr`, a decoder gid past its bound) — the arm used to MATERIALIZE an
-untyped phantom cell there (BUG-085, grumpy-professor review U5/A2), an
-absorbing fallback on the trusted surface that would have silently
-aliased whatever later allocation landed on that address. The refusal is
-`.internal`, the constructor the core already uses for "cannot happen on
-a well-formed state" (Multi.lean's hchan-invariant and resume-on-unready
-breaches), as opposed to `.stuck` for an ill-shaped program operand. -/
+REFUSES `.internal` (BUG-085: the arm used to MATERIALIZE an untyped
+phantom cell — an absorbing fallback on the trusted surface). On the
+dense heap (A2) the hit arm's write is `Array.set` under the bounds proof
+the lookup supplies (`Heap.lookup_lt`), so a store can only ever
+overwrite an existing cell: the phantom arm is unrepresentable by type,
+and the refusal below is reachable only from a dangling `.addr` or a
+decoder gid past the seeded globals — an invariant breach, never Go
+behaviour (`.internal`, the core's "cannot happen on a well-formed state"
+class, as opposed to `.stuck` for an ill-shaped program operand). -/
 def storeLoc (state : ExecState) : Loc → GoValue → Except GoError ExecState
-    | loc@(.base _), value => do
-        match Heap.lookup state.heap loc with
+    | .base a, value => do
+        match hcell : Heap.lookup state.heap (.base a) with
         | some cell => do
             let value ←
               match cell.declaredTy with
               | some ty => normalizeValueForTy state ty value
               | none => coerceStoredValue cell.value value
-            return { state with heap := Heap.set state.heap loc { cell with value } }
+            return { state with
+              heap := state.heap.set a.id { cell with value } (Heap.lookup_lt hcell) }
         | none =>
-            throw (.internal s!"store to unallocated address {repr loc}: no heap cell (allocation goes through ExecState.alloc only)")
+            throw (.internal s!"store to unallocated address {repr (Loc.base a)}: no heap cell (allocation goes through ExecState.alloc only)")
     | .field base typeId fieldName, value => do
         match ← loadLoc state base with
         | .struct actualType fields =>

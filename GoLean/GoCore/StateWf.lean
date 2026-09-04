@@ -31,7 +31,10 @@ Carrier inventory (checked against `Value.lean`/`State.lean`/`Syntax.lean`/
 * `Loc` — the carrier itself (`.base`; recursion through `.field`/`.index`);
 * `GoValue` — `.addr`, `.slice` (base), `.map` (base), and recursion
   through `.interface`/`.struct`/`.array`/`.mapData`/`.funcVal`;
-* `HeapCell`/`Heap` — cell values AND keys (`declaredTy` is a `Ty`: no locs);
+* `HeapCell`/`Heap` — cell values (`declaredTy` is a `Ty`: no locs). Since
+  the dense heap (A2, 2026-09-04) addresses are INDICES: a key cannot
+  dangle, so keys contribute nothing and `Heap.lookup_key_locSup` is the
+  array bound;
 * `Scope`/`LocalEnv` — the bound locations;
 * **`Expr` — `.locLit` carries a `Loc`** (contra the slice plan's "program
   text carries no locs" assumption; found by the `Syntax.lean` scan this
@@ -128,11 +131,13 @@ end
 def HeapCell.locSup (c : HeapCell) : Nat :=
   GoValue.locSup c.value
 
-/-- The heap: KEYS and cell values both. -/
-def Heap.locSup : Heap → Nat
+def heapCellsSup : List HeapCell → Nat
   | [] => 0
-  | (l, c) :: rest =>
-      max (max (Loc.locSup l) (HeapCell.locSup c)) (Heap.locSup rest)
+  | c :: rest => max (HeapCell.locSup c) (heapCellsSup rest)
+
+/-- The heap: its cell values (addresses are indices — no keys to bound;
+dense heap, A2). -/
+def Heap.locSup (h : Heap) : Nat := heapCellsSup h.toList
 
 /-- One lexical scope: every bound location. -/
 def Scope.locSup : Scope → Nat
@@ -663,11 +668,21 @@ theorem goValueEntriesSup_eq :
   | [] => rfl
   | (_, _, _) :: vs => by simp [goValueEntriesSup, supBy, goValueEntriesSup_eq vs]
 
-theorem heapLocSup_eq :
-    ∀ h : Heap, Heap.locSup h
-      = supBy (fun p => max (Loc.locSup p.1) (HeapCell.locSup p.2)) h
+theorem heapCellsSup_eq :
+    ∀ l : List HeapCell, heapCellsSup l = supBy HeapCell.locSup l
   | [] => rfl
-  | (_, _) :: rest => by simp [Heap.locSup, supBy, heapLocSup_eq rest]
+  | _ :: rest => by simp [heapCellsSup, supBy, heapCellsSup_eq rest]
+
+theorem heapLocSup_eq (h : Heap) :
+    Heap.locSup h = supBy HeapCell.locSup h.toList :=
+  heapCellsSup_eq _
+
+/-- Bounding the heap = bounding every cell (the dense heap's whole
+ownership story: `Loc.rootBase < size` per cell value). -/
+theorem Heap.locSup_le_iff {h : Heap} {b : Nat} :
+    Heap.locSup h ≤ b ↔ ∀ c ∈ h, HeapCell.locSup c ≤ b := by
+  rw [heapLocSup_eq, supBy_le_iff]
+  simp only [Array.mem_toList_iff]
 
 theorem scopeLocSup_eq :
     ∀ s : Scope, Scope.locSup s = supBy (fun p => Loc.locSup p.2) s
@@ -805,50 +820,44 @@ theorem LocalEnv.pushScope_locSup {env : LocalEnv} :
 
 theorem Heap.lookup_locSup {h : Heap} {l : Loc} {c : HeapCell}
     (hl : Heap.lookup h l = some c) : HeapCell.locSup c ≤ Heap.locSup h := by
-  induction h with
-  | nil => simp [Heap.lookup] at hl
-  | cons p rest ih =>
-    obtain ⟨l', c'⟩ := p
+  cases l with
+  | base a =>
+    obtain ⟨i⟩ := a
     simp only [Heap.lookup] at hl
-    split at hl
-    · cases hl
-      simp only [Heap.locSup]
-      omega
-    · refine Nat.le_trans (ih hl) ?_
-      simp only [Heap.locSup]
-      omega
+    exact Heap.locSup_le_iff.mp (Nat.le_refl _) c (Array.mem_of_getElem? hl)
+  | field _ _ _ => simp [Heap.lookup] at hl
+  | index _ _ => simp [Heap.lookup] at hl
 
-/-- The KEY side of `Heap.lookup_locSup`: a mapped location's own root
-base is bounded by the heap's sup (keys contribute to `Heap.locSup`
-alongside cell values). Feeds `InitialSplit.heapBounded` — the derivation
-that made the old `bounded` field redundant (sem-adequacy slice 5). -/
+/-- The KEY side: a mapped root address is below the heap's SIZE — on the
+dense heap this is the array bound, not a sup over keys (keys no longer
+contribute to `Heap.locSup`). -/
 theorem Heap.lookup_key_locSup {h : Heap} {l : Loc} {c : HeapCell}
-    (hl : Heap.lookup h l = some c) : Loc.locSup l ≤ Heap.locSup h := by
-  induction h with
-  | nil => simp [Heap.lookup] at hl
-  | cons p rest ih =>
-    obtain ⟨l', c'⟩ := p
-    simp only [Heap.lookup] at hl
-    split at hl
-    · rename_i hbeq
-      obtain rfl := eq_of_beq hbeq
-      simp only [Heap.locSup]
-      omega
-    · refine Nat.le_trans (ih hl) ?_
-      simp only [Heap.locSup]
-      omega
+    (hl : Heap.lookup h l = some c) : Loc.locSup l ≤ h.size := by
+  cases l with
+  | base a =>
+    have := Heap.lookup_lt hl
+    simp only [Loc.locSup, Loc.rootBase]
+    omega
+  | field _ _ _ => simp [Heap.lookup] at hl
+  | index _ _ => simp [Heap.lookup] at hl
 
-theorem Heap.set_locSup {h : Heap} {l : Loc} {c : HeapCell} :
-    Heap.locSup (Heap.set h l c)
-      ≤ max (Heap.locSup h) (max (Loc.locSup l) (HeapCell.locSup c)) := by
-  induction h with
-  | nil => simp [Heap.set, Heap.locSup]
-  | cons p rest ih =>
-    obtain ⟨l', c'⟩ := p
-    simp only [Heap.set]
-    split
-    · simp only [Heap.locSup]; omega
-    · simp only [Heap.locSup] at *; omega
+/-- Allocation (`push`) adds exactly the new cell's sup. -/
+theorem Heap.push_locSup {h : Heap} {c : HeapCell} :
+    Heap.locSup (h.push c) ≤ max (Heap.locSup h) (HeapCell.locSup c) := by
+  rw [Heap.locSup_le_iff]
+  intro x hx
+  rcases Array.mem_push.mp hx with hx | rfl
+  · exact Nat.le_trans (Heap.locSup_le_iff.mp (Nat.le_refl _) x hx) (Nat.le_max_left _ _)
+  · exact Nat.le_max_right _ _
+
+/-- An in-range overwrite is bounded by the old heap and the new cell. -/
+theorem Heap.set_locSup {h : Heap} {i : Nat} {c : HeapCell} {hi : i < h.size} :
+    Heap.locSup (h.set i c hi) ≤ max (Heap.locSup h) (HeapCell.locSup c) := by
+  rw [Heap.locSup_le_iff]
+  intro x hx
+  rcases Array.mem_or_eq_of_mem_set hx with hx | rfl
+  · exact Nat.le_trans (Heap.locSup_le_iff.mp (Nat.le_refl _) x hx) (Nat.le_max_left _ _)
+  · exact Nat.le_max_right _ _
 
 /-! ## Value-primitive lemmas -/
 
@@ -1905,14 +1914,16 @@ theorem storeLoc_shape {σ : ExecState} :
     unfold storeLoc at h
     split at h
     · rename_i cell hcell
+      -- the dense heap's in-range overwrite: `Array.set` under the
+      -- lookup's bound; `nextAddr` (= size) is unchanged by `Array.size_set`
       split at h
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
         obtain ⟨v', hv', hσ⟩ := h
         subst hσ
         have hb : GoValue.locSup v' ≤ GoValue.locSup v :=
           normalizeValueForTy_locSup hv'
-        refine ⟨rfl, rfl, rfl, rfl, ?_⟩
-        refine Nat.le_trans Heap.set_locSup ?_
+        refine ⟨rfl, rfl, rfl, by simp [ExecState.nextAddr], ?_⟩
+        refine Nat.le_trans (Heap.set_locSup (hi := Heap.lookup_lt hcell)) ?_
         have hc : HeapCell.locSup { cell with value := v' }
             = GoValue.locSup v' := rfl
         omega
@@ -1921,8 +1932,8 @@ theorem storeLoc_shape {σ : ExecState} :
         subst hσ
         have hb : GoValue.locSup v' ≤ GoValue.locSup v :=
           coerceStoredValue_locSup hv'
-        refine ⟨rfl, rfl, rfl, rfl, ?_⟩
-        refine Nat.le_trans Heap.set_locSup ?_
+        refine ⟨rfl, rfl, rfl, by simp [ExecState.nextAddr], ?_⟩
+        refine Nat.le_trans (Heap.set_locSup (hi := Heap.lookup_lt hcell)) ?_
         have hc : HeapCell.locSup { cell with value := v' }
             = GoValue.locSup v' := rfl
         omega
@@ -1988,17 +1999,17 @@ theorem alloc_shape {σ : ExecState} {v : GoValue} {ty : Option Ty} {l : Loc}
       ∧ σ'.types = σ.types ∧ σ'.functions = σ.functions ∧ σ'.methods = σ.methods
       ∧ Heap.locSup σ'.heap
           ≤ max (Heap.locSup σ.heap) (max (σ.nextAddr + 1) (GoValue.locSup v)) := by
-  -- definitional bridge to the explicit record form
-  have h1 : Loc.base ⟨σ.nextAddr⟩ = l := congrArg Prod.fst h
+  -- definitional bridge to the explicit record form (dense heap: `push`)
+  have h1 : Loc.base ⟨σ.heap.size⟩ = l := congrArg Prod.fst h
   have h2 : ({ σ with
-      heap := Heap.set σ.heap (Loc.base ⟨σ.nextAddr⟩) { declaredTy := ty, value := v },
-      nextAddr := σ.nextAddr + 1 } : ExecState) = σ' := congrArg Prod.snd h
+      heap := σ.heap.push { declaredTy := ty, value := v } } : ExecState) = σ'
+    := congrArg Prod.snd h
   subst h1
   subst h2
-  refine ⟨rfl, rfl, rfl, rfl, rfl, ?_⟩
-  refine Nat.le_trans Heap.set_locSup ?_
+  refine ⟨rfl, by simp [ExecState.nextAddr], rfl, rfl, rfl, ?_⟩
+  refine Nat.le_trans Heap.push_locSup ?_
   have hc : HeapCell.locSup { declaredTy := ty, value := v } = GoValue.locSup v := rfl
-  have hl : Loc.locSup (.base ⟨σ.nextAddr⟩) = σ.nextAddr + 1 := rfl
+  simp only [ExecState.nextAddr]
   omega
 
 theorem alloc_wf {σ : ExecState} {v : GoValue} {ty : Option Ty} {l : Loc}

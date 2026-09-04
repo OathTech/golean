@@ -24,7 +24,14 @@ structure HeapCell where
   value : GoValue
   deriving Repr, BEq
 
-abbrev Heap := List (Loc × HeapCell)
+/-- The heap: a DENSE array of cells — an address IS an index
+(design-hygiene arc A2, 2026-09-04; review §3 A2). `Loc.base ⟨i⟩` names
+cell `i`; `ExecState.alloc` is `push`, so every address below the size has
+a cell BY TYPE and the allocator's next address is the size. There is no
+way to write a cell that does not exist: `storeLoc` refuses out of range
+(BUG-085's phantom-materialization arm is unrepresentable — `Array.set`
+carries its bounds proof). -/
+abbrev Heap := Array HeapCell
 abbrev TypeEnv := List (TypeId × TypeDef)
 
 /-- The machine state. Locals are NOT here (reshape S4, 2026-07-23): the
@@ -42,9 +49,12 @@ structure ExecState where
   hand-built state refuses every method-carrier query until its
   records are stated explicitly. -/
   methodSets : Array MethodSetRecord := #[]
-  heap : Heap := []
-  nextAddr : Nat := 0
+  heap : Heap := #[]
   deriving Repr, BEq
+
+/-- The allocator's NEXT address = the heap's size (dense heap, A2). A
+derived quantity, not a field: it cannot drift from the heap. -/
+def ExecState.nextAddr (state : ExecState) : Nat := state.heap.size
 
 structure Result where
   values : Array GoValue
@@ -91,18 +101,20 @@ def LocalEnv.pushScope (env : LocalEnv) : LocalEnv :=
 -- `LocalEnv.popScope` deleted (reshape S4): scope exit is continuation
 -- discard in the machine; nothing pops.
 
-def Heap.lookup : Heap → Loc → Option HeapCell
-  | [], _ => none
-  | (loc, cell) :: rest, needle =>
-      if loc == needle then some cell else Heap.lookup rest needle
+/-- The cell at a ROOT address (`.base ⟨i⟩` ↦ `heap[i]?`); a field/index
+path is not a heap key (`loadLoc`/`storeLoc` resolve paths to their root
+first), so it has no cell. -/
+def Heap.lookup (h : Heap) : Loc → Option HeapCell
+  | .base ⟨i⟩ => h[i]?
+  | _ => none
 
-def Heap.set : Heap → Loc → HeapCell → Heap
-  | [], loc, cell => [(loc, cell)]
-  | (loc, old) :: rest, needle, cell =>
-      if loc == needle then
-        (loc, cell) :: rest
-      else
-        (loc, old) :: Heap.set rest needle cell
+/-- A found root address is in range (the dense heap's bounds proof, used
+by `storeLoc`'s `Array.set`). -/
+theorem Heap.lookup_lt {h : Heap} {a : Addr} {c : HeapCell}
+    (hl : Heap.lookup h (.base a) = some c) : a.id < h.size := by
+  obtain ⟨i⟩ := a
+  simp only [Heap.lookup] at hl
+  exact (Array.getElem?_eq_some_iff.mp hl).1
 
 def TypeEnv.lookup : TypeEnv → TypeId → Option TypeDef
   | [], _ => none
@@ -390,14 +402,12 @@ theorem Choices.consumeAtE_of_lt {site : ChoiceSite} {bound : Nat}
   have hnb : ¬ bound ≤ 1 := Nat.not_le_of_lt hb
   simp [Choices.consumeAtE, Choices.consumeAt, hnb]
 
-def ExecState.freshLoc (state : ExecState) : Loc × ExecState :=
-  let loc := Loc.base { id := state.nextAddr }
-  (loc, { state with nextAddr := state.nextAddr + 1 })
-
+/-- Allocate a fresh cell: the new address is the heap's size and the
+cell is pushed (dense heap, A2 — the ONLY way a cell comes to exist). -/
 def ExecState.alloc (state : ExecState) (value : GoValue) (typ : Option Ty := none) :
     Loc × ExecState :=
-  let (loc, state) := state.freshLoc
-  (loc, { state with heap := Heap.set state.heap loc { declaredTy := typ, value } })
+  (.base ⟨state.heap.size⟩,
+    { state with heap := state.heap.push { declaredTy := typ, value } })
 
 def unsupported {α : Type} (feature : String) : Except GoError α :=
   throw (.unsupported feature)

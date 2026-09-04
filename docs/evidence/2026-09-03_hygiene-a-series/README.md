@@ -57,3 +57,4 @@ nilValueMethodText=84 l2Entry=24 l4Waiter=22 l2Arrival=3`, 0 violations /
 | item | tree gated | ci --diff | rows | drift | flips | choice-trace delta vs before |
 |---|---|---|---|---|---|---|
 | A1 stop grammar | A1 sources (uncommitted at run; committed unchanged) | PASS | 3284 = 3085/199 | 0 (FULL 3284/3284) | 0 | 0 — 19489/19489 (id,stream) lines identical on every column; per-site totals identical (`choice-trace/a1-summary.txt`) |
+| A2 dense heap | A2 sources (uncommitted at run; committed unchanged) | PASS | 3284 = 3085/199 | 0 (FULL 3284/3284) | 0 | 0 — 19489/19489 lines identical; per-site totals identical (`choice-trace/a2-summary.txt`) |
