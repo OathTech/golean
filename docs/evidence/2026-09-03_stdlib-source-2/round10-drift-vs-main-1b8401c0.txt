@@ -1,0 +1,81 @@
+# round-10 drift: baselines/native-full.tsv at the rebased stdlib-source-2 tip vs main 1b8401c0, by id ([AGENT] 2026-09-04)
+# 79 ids: 66 born (60 PASS / 6 FAIL), 13 changed, 0 removed; PASS->non-PASS: 0
+born	stdlib-source/binary-order/append-orders	PASS/-
+born	stdlib-source/binary-order/be-roundtrip	PASS/-
+born	stdlib-source/binary-order/byteorder-interface	PASS/-
+born	stdlib-source/binary-order/le-roundtrip-64	PASS/-
+born	stdlib-source/binary-order/put-short-panics	PASS/-
+born	stdlib-source/builder-cap/grow-after-write	PASS/membership
+born	stdlib-source/builder-cap/grow-empty	PASS/membership
+born	stdlib-source/builder-cap/grow-hundred	PASS/membership
+born	stdlib-source/builder-cap/grow-then-write	PASS/membership
+born	stdlib-source/builder-fuzz/seed-0	PASS/-
+born	stdlib-source/builder-fuzz/seed-1	PASS/-
+born	stdlib-source/builder-fuzz/seed-2	PASS/-
+born	stdlib-source/builder-fuzz/seed-3	PASS/-
+born	stdlib-source/builder-fuzz/seed-4	PASS/-
+born	stdlib-source/builder-fuzz/seed-5	PASS/-
+born	stdlib-source/builder-fuzz/seed-6	PASS/-
+born	stdlib-source/builder-fuzz/seed-7	PASS/-
+born	stdlib-source/builder-fuzz/seed-8	PASS/-
+born	stdlib-source/builder-fuzz/seed-9	PASS/-
+born	stdlib-source/builder-overlay/copy-panics-after-grow	PASS/-
+born	stdlib-source/builder-overlay/grow-contract	PASS/-
+born	stdlib-source/builder-overlay/grow-negative	PASS/-
+born	stdlib-source/builder-overlay/grow-noop	PASS/-
+born	stdlib-source/builder-overlay/join-large	PASS/-
+born	stdlib-source/builder-overlay/repeat-1k	PASS/-
+born	stdlib-source/builder-overlay/repeat-doubling-loop	PASS/-
+born	stdlib-source/builder-overlay/reset-reuse	PASS/-
+born	stdlib-source/builder-overlay/string-after-writes	PASS/-
+born	stdlib-source/builder-overlay/string-stable-in-place	PASS/-
+born	stdlib-source/builder-overlay/write-rune-invalid	PASS/-
+born	stdlib-source/bytes-buffer/available-buffer	PASS/-
+born	stdlib-source/bytes-buffer/bytes-others	PASS/-
+born	stdlib-source/bytes-buffer/grow-contract	PASS/-
+born	stdlib-source/bytes-buffer/grow-negative	PASS/-
+born	stdlib-source/bytes-buffer/next-bytes-truncate	PASS/-
+born	stdlib-source/bytes-buffer/nil-receiver-string	PASS/-
+born	stdlib-source/bytes-buffer/reset-reuse	PASS/-
+born	stdlib-source/bytes-buffer/truncate-out-of-range	PASS/-
+born	stdlib-source/bytes-buffer/unread-byte-error	PASS/-
+born	stdlib-source/bytes-buffer/write-side	PASS/-
+born	stdlib-source/cmp-compare/float32-and-named	PASS/-
+born	stdlib-source/cmp-compare/floats-nan	PASS/-
+born	stdlib-source/cmp-compare/less	PASS/-
+born	stdlib-source/cmp-compare/local-float-type	FAIL/frontend-export
+born	stdlib-source/cmp-compare/or	PASS/-
+born	stdlib-source/errors-join/all-nil	PASS/-
+born	stdlib-source/errors-join/distinct	PASS/-
+born	stdlib-source/errors-join/empty-texts	PASS/-
+born	stdlib-source/errors-join/many	PASS/-
+born	stdlib-source/errors-join/nested	PASS/-
+born	stdlib-source/errors-join/new-is-fresh	PASS/-
+born	stdlib-source/errors-join/one	PASS/-
+born	stdlib-source/errors-join/unwrap-identity	PASS/-
+born	stdlib-source/frontier/buffer-readbyte-io	FAIL/frontend-export
+born	stdlib-source/frontier/bytes-toupper-makenozero	FAIL/frontend-export
+born	stdlib-source/frontier/slices-overlaps	FAIL/frontend-export
+born	stdlib-source/slices-sortfunc/others	PASS/-
+born	stdlib-source/slices-sortfunc/sort-stable-func	PASS/-
+born	stdlib-source/slices-sortfunc/sortfunc-large	PASS/-
+born	stdlib-source/slices-sortfunc/sortfunc-named-slice	PASS/-
+born	stdlib-source/slices-sortfunc/sortfunc-reversed-input	PASS/-
+born	stdlib-source/slices-sortfunc/sortfunc-strings-by-len	PASS/-
+born	stdlib-source/slices-sortfunc/sortfunc-ties-projected	PASS/-
+born	stdlib-source/slices-sortfunc/sortfunc-ties-realized	PASS/-
+born	stdlib-source/sort-op-shapes/defer-sort	FAIL/frontend-export
+born	stdlib-source/sort-op-shapes/go-sort	FAIL/frontend-export
+changed	noodler/strings/parse-uint-edges	FAIL/frontend-export -> PASS/-
+changed	slices/sortfunc-cmp/float-compare-bound	FAIL/frontend-export -> PASS/-
+changed	slices/sortfunc-cmp/named-slice-bound	FAIL/frontend-export -> PASS/-
+changed	stdlib-source/frontier/atoi-error-path-clone	FAIL/frontend-export -> PASS/-
+changed	stdlib-source/strconv-parseuint/bitsize-saturation	FAIL/frontend-export -> PASS/-
+changed	stdlib-source/strconv-parseuint/error-quoting	FAIL/frontend-export -> PASS/-
+changed	stdlib-source/strconv-parseuint/error-texts	FAIL/frontend-export -> PASS/-
+changed	stdlib-source/strconv-parseuint/numerror-type	FAIL/frontend-export -> PASS/-
+changed	stdlib-source/strconv-parseuint/range-sentinel	FAIL/frontend-export -> PASS/-
+changed	strconv/format-parse/parse-uint-bitsize	FAIL/frontend-export -> PASS/-
+changed	strconv/format-parse/parse-uint-errors	FAIL/frontend-export -> PASS/-
+changed	strconv/format-parse/parse-uint-range-value	FAIL/frontend-export -> PASS/-
+changed	strings/trimspace-repeat/repeat-bound-refused	FAIL/frontend-export -> FAIL/lean-observation

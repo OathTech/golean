@@ -38,6 +38,17 @@
 #      the move is the stub policy's, [USER]-ruled (A) 2026-09-03 —
 #      «we should break things rather than preserve incorrect behavior»
 #      (relayed by the [AGENT] coordinator).
+#      Re-pin history: 2026-09-04 (lane stdlib-source-2, landed at the
+#      round-10 merge train) f2309df2… → 69a538de… — RE-DERIVED on the
+#      rebased tree (the lane's own pin was 45cd882a… → 6a9ef8bb…; both
+#      sides had moved the pin, so neither's bytes were taken): stdlib
+#      source-through slice 2 — 6 hand-written shim bodies out
+#      (quorum.goleanShimStringsRepeat{,Bound}, raft.goleanShim{BytesEqual,
+#      LEPutUint64,LEUint64,StringsJoin}), the 18 reached library functions
+#      + bytes.Buffer/binary.littleEndian/slices.xorshift methods in; the
+#      TryLock stub above present on both sides. [USER]-authorized by G9 +
+#      ruling (a) (relayed); structural diff + hashes in
+#      docs/evidence/2026-09-03_stdlib-source-2/twin-{structural-diff,pin}-round10*.
 #
 # Fail-closed throughout: missing baseline, failed build, failed emit,
 # failed run, or any byte drift exits 1 naming the failing pin.

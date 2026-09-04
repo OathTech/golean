@@ -42,7 +42,13 @@
 #   «go ahead and merge these» 2026-09-04) over main 1b8401c0: the audit fix round's 3 born
 #   FAIL/frontend-export rows join the round-10 union (previous union figure 3347 = 3157 / 190;
 #   row deltas disjoint by id; manifest order). NO PASS->non-PASS flip. Figure re-derived
-#   from the data rows (the `# cases:` line).
+#   from the data rows (the `# cases:` line). Twin wire pin RE-DERIVED on the rebased tree
+#   (both sides had moved it from 45cd882a…): f2309df2… -> 69a538de… = exactly this lane's
+#   structural delta on top of q-trylock's TryLock stub (docs/evidence/2026-09-03_stdlib-
+#   source-2/twin-pin-round10-hashes.txt). FULL ci --diff at the rebased tip 548541fc (+ the
+#   round-10 records files, uncommitted, named in round10-gate-tail.txt): PASS, 3350/3350 no
+#   regression; drift vs main 1b8401c0 = exactly this lane's 79 ids (66 born, 12 FAIL->PASS,
+#   1 stage-only), 0 PASS->non-PASS (round10-drift-vs-main-1b8401c0.txt).
 #   REPLAYED at the ROUND-10 MERGE TRAIN 2026-09-04 ([AGENT], under the [USER] merge sign-off
 #   «go ahead and merge these» 2026-09-04 naming stdlib-source-2 -> slow-recert in that order)
 #   over main 1b8401c0 (= 221d8964 + round 9: bug087-paniktext, q-trylock, cedar-census):

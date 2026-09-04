@@ -198,7 +198,10 @@ The primitive table is still empty (print/println is slice 3).
   overlay-import 5, primitive 0/2, shim 7, shadow-type 5. Pins moved:
   `baselines/stdlib-pin.tsv` 48 → 61 files (the four new packages);
   twin wire `45cd882a…` → `6a9ef8bb…` ([USER]-authorized G9 + ruling (a),
-  relayed; structural diff in the evidence dir). Evidence:
+  relayed; structural diff in the evidence dir; RE-DERIVED at the round-10
+  merge train 2026-09-04 over main 1b8401c0 as `f2309df2…` → `69a538de…` —
+  the same structural delta on top of q-trylock's TryLock stub,
+  `twin-pin-round10-hashes.txt`). Evidence:
   `docs/evidence/2026-09-03_stdlib-source-2/`.
 
 - **2026-09-04 `stdlib-source-2` AUDIT FIX ROUND** ([AGENT]; verdict

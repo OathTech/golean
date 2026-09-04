@@ -1,0 +1,14 @@
+# Round-10 merge train, 2026-09-04 ([AGENT], under the [USER] merge sign-off «go ahead and merge these»):
+# the twin wire pin RE-DERIVED on the rebased tree (stdlib-source-2 rebased onto main 1b8401c0), not taken
+# from either side of the rebase. Both sides had moved it from 45cd882a…: q-trylock -> f2309df2… (the
+# bodied sync.Mutex.TryLock stub, round 9) and this lane -> 6a9ef8bb… (6 shim bodies out, 18 library
+# funcs + Buffer/littleEndian/xorshift methods in).
+old (main 1b8401c0, q-trylock's pin): f2309df2914810d4aa31095ebfd93c82ec51581fcdb13e8ee3236836eb2bca52
+new (fresh emit on the rebased tree): 69a538de716a948bba8c4c927844aea10ae6058b0c3f8313189b0ead9905e036
+lane tip pin (20de2f90, superseded):   6a9ef8bb5ba80c4c7346a0ff18f7b7dd5601bf30fb2bd4dfbf3802906d5e23e3
+# twin-structural-diff-round10.txt (producer: slice 1's twin-structural-diff.py) enumerates old -> new; it is
+# IDENTICAL line for line to the lane's twin-structural-diff.txt (45cd882a… -> 6a9ef8bb…): exactly this
+# lane's delta and nothing else. q-trylock's bodied `sync.Mutex.TryLock` stub is present in BOTH old and
+# new (methods[518] -> methods[535]; indices shift with the added library methods).
+# Note: git's textual auto-merge of the two sides produced the SAME bytes as the fresh emit (69a538de716a948bba8c4c927844aea10ae6058b0c3f8313189b0ead9905e036);
+# the fresh emit is the authority, the coincidence is recorded, not relied on.

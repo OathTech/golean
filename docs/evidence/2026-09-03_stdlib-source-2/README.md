@@ -289,7 +289,15 @@ runner-budget red whose colour depends on the box and
 - `baselines/pins/twin-chdriver.wire.json`:
   `45cd882a6e09c8942fbc5f2f774480af26b6703bbc4ad246d4b609f123c5deda` →
   `6a9ef8bb5ba80c4c7346a0ff18f7b7dd5601bf30fb2bd4dfbf3802906d5e23e3`
-  (10.35 MB → 10.72 MB). `twin-structural-diff.txt` (producer: slice 1's
+  (10.35 MB → 10.72 MB). **ROUND-10 MERGE TRAIN 2026-09-04 ([AGENT], under the
+  [USER] merge sign-off «go ahead and merge these»):** both sides of the rebase
+  had moved this pin from `45cd882a…` (q-trylock → `f2309df2…`, the bodied
+  `sync.Mutex.TryLock` stub; this lane → `6a9ef8bb…`), so neither side's bytes
+  were taken — the pin was RE-EMITTED on the rebased tree: `f2309df2…` →
+  `69a538de716a948bba8c4c927844aea10ae6058b0c3f8313189b0ead9905e036` (`twin-pin-round10-hashes.txt`);
+  `twin-structural-diff-round10.txt` (same producer) is identical line for
+  line to `twin-structural-diff.txt` — exactly this lane's delta, nothing
+  else, with the TryLock stub present on both sides (methods[518] → [535]). `twin-structural-diff.txt` (producer: slice 1's
   `twin-structural-diff.py`, same normalizations and the same stated
   limits): funcs removed = exactly the 6 retired shim bodies
   (`quorum.goleanShimStringsRepeat{,Bound}`, `raft.goleanShimBytesEqual`,
@@ -471,3 +479,37 @@ Rows added this round: 3 (all born red by name): `sort-op-shapes/{defer-sort,go-
   the interpreter's allocation-count-quadratic assoc-list heap (Finding
   2, re-derived at the audit fix round as BUG-090), which bounds
   every Builder/Buffer row at ~1 KB and sized the fuzz.
+
+## Round-10 merge train landing (2026-09-04, [AGENT] under the [USER] sign-off «go ahead and merge these»)
+
+- Rebased onto main `1b8401c0` (= `221d8964` + round 9: `bug087-paniktext`,
+  `q-trylock`, `cedar-census`). Conflicts and their resolutions:
+  `docs/coverage-ledger.md` (stdlib row: this lane's; noodler row: main's
+  BUG-087-fixed text); `baselines/native-full.tsv` (UNION by id — main's
+  3284 = 3085/199 + this lane's 66 born / 12 flips / 1 stage move, the two
+  sides' row deltas disjoint; rows emitted in `scripts/coverage-manifest`
+  order, the alternation row + its `# reason:` block kept verbatim at every
+  replayed commit; `# cases:` re-derived by counting: **3350 = 3157 PASS /
+  193 FAIL**); `docs/language-coverage-ledger.md` (this lane's §8g
+  re-lettered **§8i** — `q-trylock`'s §8g and `cedar-census`'s §8h landed
+  first; bucket table recomputed from the union: frontier 101 → 105, (c)
+  9 → 10, post-vintage 71 → 60, total 199 → 193). Everything else
+  auto-merged (BUGS.md union: BUG-087/088/089 fixed, BUG-090 new;
+  `emit.go`: the `refuseInterceptedLibraryCallee` DeferStmt/GoStmt arms sit
+  before and disjoint from q-trylock's `emitDeferSyncOp` path — go build/vet/
+  test green).
+- Twin wire pin RE-DERIVED, not taken from either side: `f2309df2…` →
+  `69a538de…` (`twin-pin-round10-hashes.txt`, `twin-structural-diff-round10.txt`
+  = this lane's delta exactly, TryLock stub on both sides).
+- Gate: `scripts/capped scripts/ci --diff` at tip `548541fc` + the five
+  uncommitted records-only files named in `round10-gate-tail.txt`:
+  **RESULT: PASS** — baseline diff FULL 3350/3350 no regression; all three
+  frontend pins ok (deviation unmoved, twin `69a538de…`, stdlib-pin 61);
+  check-stdlib-register ok incl. the overlay check at the pin; spec-anchors
+  ok (732/253/26); check-bugs ok (90 bugs; coverage 10/10, latitude 4/4);
+  eval tests 148 ok; reconciler 3 findings / 0 HIGH (C13, C5, and C9 — the
+  latter retires when `slow-recert`, next on this train, lands). Drift vs
+  main `1b8401c0` (`round10-drift-vs-main-1b8401c0.txt`): 79 ids = 66 born
+  (60 PASS / 6 FAIL) + 13 changed (12 FAIL→PASS + `repeat-bound-refused`
+  stage-only); **0 PASS→non-PASS**.
+
