@@ -6,8 +6,10 @@ rulings cited below — citation, never firsthand). Consuming docs:
 `docs/2026-09-03_cedar-go-coverage-census.md` §9 (addendum);
 `docs/stdlib-admission-register.md` (class `init-callee`, slice log).
 Tree: the slice is commit 1aa49562 on branch `fr22-fr23` (rebased onto
-main e0657d47; clean — `ci-diff.txt` is the gate tail on exactly that
-tree; the records commit that adds the tail follows it). Host: linux/amd64 (shared build box,
+main e0657d47), amended by the audit fix round e781846c; `ci-diff.txt` is
+the clean-tip gate tail for the pre-audit tip c996788a and
+`ci-diff-audit.txt` the one for the audit-round records tip (each names
+the exact tree it certified; the tail commit always follows). Host: linux/amd64 (shared build box,
 other lanes active — no timing-sensitive numbers here). Toolchain:
 `go version go1.26.5 linux/amd64` = `baselines/go-oracle-pin`; golean
 from `scripts/capped lake build golean` on this tree.
@@ -134,6 +136,39 @@ shape `emit.go` already used at its two other sorted refusal sites.
   slow-tier row has an opaque instantiation; run 1/3's cached-certification
   check was green; a `--slow` re-enumeration is that lane's).
 
+## Audit fix round 1-7 (coordinator verdict FIX-FIRST; D1 confirmed) — commit e781846c
+
+1. `time.Date` register row (emit.go + rendered block + ledger FR-22): the
+   transitive read through `time.Local` (initLocal: `TZ`, `/etc/localtime`)
+   is disclosed and argued effect-free (a read no oracle observes) and
+   panic-free (falls back to UTC); `foreignPackageValue`'s scope is stated
+   — any exported var/const of any non-source package in any argument
+   position — so the row's enumeration, not the predicate, closes it.
+2. `determinism_test.go`: the `complex128` method that made the
+   multi-quarantine case a constant refusal string is gone (the shape now
+   EXPORTS — `TestDeterminismShapeExports` pins ≥10 stubs + 3 `$poisoned`
+   cells); `TestEmitIsDeterministicWithUnits` drives the REAL loader
+   (`lowerProgramDir`): a two-reserved-tag build constraint in a case-local
+   package must refuse naming the sorted-first tag `darwin`, and a
+   two-library-unit program must emit byte-identical wires.
+3. FR-24's refusal names `<pkg>.<var>` + FR-24 (`collectGlobals`, unsupported
+   causes only) — `wires/init_library-var-type-unlowerable.refusal.txt`.
+4. mono.go's FR-23 body-position refusal names the enclosing declaration.
+5. "zero-seeded" → `$poisoned` in the poison message and comments; wires
+   re-captured (reason text is in no pinned observation — baseline
+   untouched).
+6. Provenance: census re-run at the tip (meta git_commit e781846c, pass-label
+   note), pass C re-captured at the tip.
+7. `encoding/binary` register row: the sync.Map is reachable via `Write`
+   (FR-24); opaque mode now REFUSES an imported generic instantiation with
+   exported methods (`unique.Handle[T]` — a stub-less marker could answer
+   a false no; `TestOpaqueRefusesImportedGenericWithMethods`); audit TSV
+   line numbers regenerated at the tip; D2 notes the `go:linkname` class.
+Train prep: `bug091-status-flip.patch` (see the BUG-091 section).
+Gate on the audit tree: fast `ci` RESULT PASS (twin 69a538de unchanged,
+register ok, reconciler 0 HIGH); the `--diff` tail on the records tip is
+`ci-diff-audit.txt`.
+
 ## Files
 
 | file | producer | what |
@@ -145,8 +180,8 @@ shape `emit.go` already used at its two other sorted refusal sites.
 | (in `ci-diff*.txt`) | `scripts/check-stdlib-register` (a ci step) | the register block equals the code's tables (class `init-callee`, 3 rows) |
 | (in `ci-diff*.txt`) | `go test ./tools/nativefrontend` (a ci step) | frontend unit tests incl. `perdecl_kill_test.go` (7 tests) and `determinism_test.go` (BUG-091 guard) |
 | `cedar-passA-prime.txt` | pre-landing preview with the prototype frontend (header names the command) | 29 FRONTEND-REFUSED (all `sync.Map`) / 5 EXPORT-OK |
-| `census-passA-prime/` | `scripts/cedar-census run` on THIS branch (git_commit in `meta.tsv`) → `results.tsv`, `census.tsv`, `histogram.tsv`, `per-package.tsv`, `meta.tsv` | the landed-tree census: identical categories (29 / 5), every refusal `sync.Map` |
-| `cedar-passC.txt` | the pass-C loop in the addendum §9.3 (commands inline in the file header) | 25 FR-4 + 4 `slices.Sort` / 5 EXPORT-OK |
+| `census-passA-prime/` | `scripts/cedar-census run` on THIS branch at the audit-fix-round tip e781846c (`meta.tsv` git_commit; the runner labels every non-relaxed run "pass A" — the note line in the copied meta says why this is the addendum's A′) → `results.tsv`, `census.tsv`, `histogram.tsv`, `per-package.tsv`, `meta.tsv` | the branch census: 29 FRONTEND-REFUSED, every one `package-level var encoding/binary.structSize: its TYPE does not lower (sync.Map …) — FR-24 …` (item 3's named refusal) / 5 EXPORT-OK |
+| `cedar-passC.txt` | the pass-C counterfactual RE-CAPTURED at the tip e781846c with this branch's frontend (commands in the header) | 25 FR-4 (stencil named) + 4 `slices.Sort` init() / 5 EXPORT-OK — matches §9.3 |
 | `trace-syncmap.txt` | the two probe programs + emits that trace `sync.Map` to `binary.Write` → `dataSize` → `structSize` | the FR-24 diagnosis |
 | `twin-precheck.txt` | prototype frontend over the twin assembly vs `baselines/pins/twin-chdriver.wire.json`, before landing | `cmp` equal |
 | `wires/` | `GO111MODULE=off go run ./tools/nativefrontend --dir Corpus/coverage/exec/<row> --out …` for the 5 exporting rows; stderr for the 3 whole-export rows (`*.refusal.txt`) | the `$poisoned` globals table (`init_stdlib-initializer-poison.wire.json`: `maxDatetime`/`minDatetime`/`minAlias` typed `named $poisoned`; the unreferenced `time.*` D5 markers registered by collectGlobals before the poison are a harmless known residue), the opaque `iter.Seq[int]`/`iter.Seq2[string,int]` marker TypeDefs and stubs, and the three named whole-export refusals |

@@ -1,10 +1,11 @@
+# NOTE (added to this copy, 2026-09-04 [AGENT]): scripts/cedar-census labels every non-relaxed run 'pass A'; this run is the census addendum's pass A' — the same drivers over the same assembled copy, with THIS branch's frontend (git_commit below = the audit-fix-round tip). The runner's meta is otherwise verbatim.
 key	value
-git_commit	415f959aaa21502fbb29f86b25b3cbfe7b02e677
+git_commit	e781846c9d4204d821d1d1cc96d4aa8dc96879d9
 cedar_go	deps/cedar-go@cda92d0d9345fce26b36366288afd3c909fc7bd8
 cedar_k8s	deps/cedar-access-control-for-k8s@660c6374dff9e6c47647f1c7a17f728d75296324
 go_toolchain	go1.26.5
 golean_bin	/home/dev/projects/golean/.claude/worktrees/fr22-fr23/.lake/build/bin/golean
 pass	A (unpatched copy — today's coverage)
-date	2026-09-04T05:41:27Z
+date	2026-09-04T06:43:13Z
 go_timeout_s	60
 lean_timeout_s	120
