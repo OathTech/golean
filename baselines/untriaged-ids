@@ -219,10 +219,12 @@ noodler/conversions/nil-slice-zero-array	coverage
 # repeat-bound-refused ENTERS as `coverage` — the strings.Repeat SHIM and its
 # golean-invented 1<<24 output bound are RETIRED (the real upstream Repeat
 # lowers); the row's 16 MiB output, which gc allocates fine, is now a
-# RUNNER-BUDGET red: the interpreter's in-place append costs O(cap) per
-# call (docs/evidence/2026-09-03_stdlib-source-2/append-cost-probes.tsv),
+# RUNNER-BUDGET red: the interpreter's heap is an association list — allocation-count-
+# QUADRATIC cost, BUG-090 (docs/evidence/2026-09-03_stdlib-source-2/append-cost-probes.tsv),
 # so the run TIMES OUT at 30 s (stage lean-observation, the runner names
 # the cause). A fail-closed resource refusal of a workload the machine
-# does not scale to — never a wrong answer; retires when the interpreter's
-# appendSlice in-place path is made linear (owed as its own arc; BUG-073).
-strings/trimspace-repeat/repeat-bound-refused	coverage
+# does not scale to — never a wrong answer; retires when the hygiene arc's
+# A2 dense heap lands (BUG-090's plan; BUG-073).
+# 2026-09-04 (audit fix round F5): the row MOVED to BUG-090's Cases line
+# (the BUG-078 / RECORD 8 precedent for a none-entry's budget pin) and left
+# this file; the entry above is kept as history.

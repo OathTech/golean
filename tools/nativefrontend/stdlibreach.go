@@ -395,13 +395,15 @@ func computeLibraryReach(units []*sourcePkg) error {
 			// library function: the callee is not reached, only its
 			// arguments are walked. The VALUE shape (`f := slices.Sort`)
 			// and every library-internal call reach the real declaration
-			// (and lower, or refuse, as ordinary library text).
+			// (the VALUE shape then REFUSES — explicit generic instantiation
+			// as a value is outside the fragment; library-internal calls
+			// lower as ordinary library text).
 			if c, isCall := n.(*ast.CallExpr); isCall && !it.unit.library {
 				if sel, isSel := c.Fun.(*ast.SelectorExpr); isSel {
 					if x, isIdent := sel.X.(*ast.Ident); isIdent {
 						if pn, isPkg := it.unit.info.Uses[x].(*types.PkgName); isPkg {
 							path := pn.Imported().Path()
-							intercepted := frontendInterceptedLibraryMembers[path][sel.Sel.Name]
+							_, _, intercepted := interceptedLibraryCall(it.unit.info, c)
 							if fns, shimmed := stdlibShimAllowlist[path]; shimmed {
 								_, intercepted2 := fns[sel.Sel.Name]
 								intercepted = intercepted || intercepted2
@@ -449,11 +451,62 @@ func computeLibraryReach(units []*sourcePkg) error {
 // frontend desugar INSTEAD of the library body — so the reach walk must
 // not mark the body reached (it would drag the real declaration and its
 // closure onto the wire for nothing, or refuse where the interception
-// succeeds). One entry today: `slices.Sort` is the `sortSlice` machine
-// op at integer element kinds (emit.go's statement handler; memo §3 row
-// M retires the op in slice 4, when this entry goes with it).
-var frontendInterceptedLibraryMembers = map[string]map[string]bool{
-	"slices": {"Sort": true},
+// succeeds). Rendered in the admission register (class `intercept`), so
+// widening this map fails scripts/check-stdlib-register. The reach walk
+// and the emitter consult ONE predicate, interceptedLibraryCall (audit fix
+// round F1: the walk used to treat ANY direct `slices.Sort(s)` call as
+// intercepted while the emitter intercepted only the ExprStmt shape —
+// `defer slices.Sort(s)` / `go slices.Sort(s)` lowered the real generic
+// with `math/bits.Len` pruned off the wire, a machine `stuck` where a
+// refusal was owed); `defer`/`go` of an intercepted member REFUSE by name
+// (emit.go DeferStmt/GoStmt arms).
+var frontendInterceptedLibraryMembers = map[string]map[string]string{
+	"slices": {"Sort": "the quorum-pilot `sortSlice` MACHINE OP at integer element kinds (emit.go emitSortStmt, ExprStmt position only; non-integer kinds refuse by name — row slices/slices-sort-non-integer-refusal; memo §3 row M retires the op in slice 4, when this entry goes with it); `defer`/`go` of it refuse by name (rows stdlib-source/sort-op-shapes/*)"},
+	"cmp":    {"Compare": "the kind-dispatch desugar (cmpshim.go) at INTEGER and STRING type arguments, RETAINED by slice 2's STOP rule — intercepts every such direct call site, not only the local-type row; float type arguments fall through to the real generic (so a function-local FLOAT type argument still refuses at mono.go's C6 rule — row stdlib-source/cmp-compare/local-float-type); `defer`/`go` of it refuse by name"},
+}
+
+// interceptedLibraryCall reports whether a direct qualified CALL of a
+// library member is one the FRONTEND intercepts (table above) — the one
+// predicate both the reach walk (do not mark the callee) and the emitter
+// (which lowering, which refusal) consult, so they cannot disagree. The
+// per-member conditions mirror the emitter's dispatch exactly:
+//   slices.Sort  — every direct call (the op in ExprStmt position; defer/go
+//                  refuse by name);
+//   cmp.Compare  — iff the (single) type argument's underlying type is an
+//                  integer or string basic kind (cmpshim.go's dispatch);
+//                  floats and non-basic types are the real generic.
+func interceptedLibraryCall(info *types.Info, c *ast.CallExpr) (path, member string, intercepted bool) {
+	sel, isSel := c.Fun.(*ast.SelectorExpr)
+	if !isSel {
+		return "", "", false
+	}
+	x, isIdent := sel.X.(*ast.Ident)
+	if !isIdent {
+		return "", "", false
+	}
+	pn, isPkg := info.Uses[x].(*types.PkgName)
+	if !isPkg {
+		return "", "", false
+	}
+	path, member = pn.Imported().Path(), sel.Sel.Name
+	if _, listed := frontendInterceptedLibraryMembers[path][member]; !listed {
+		return path, member, false
+	}
+	switch path + "." + member {
+	case "slices.Sort":
+		return path, member, true
+	case "cmp.Compare":
+		inst, ok := info.Instances[sel.Sel]
+		if !ok || inst.TypeArgs.Len() != 1 {
+			return path, member, false
+		}
+		basic, _ := inst.TypeArgs.At(0).Underlying().(*types.Basic)
+		if basic == nil {
+			return path, member, false
+		}
+		return path, member, basic.Info()&types.IsInteger != 0 || basic.Info()&types.IsString != 0
+	}
+	return path, member, false
 }
 
 func objKind(obj types.Object) string {

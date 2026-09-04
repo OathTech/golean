@@ -123,11 +123,12 @@ func joinLarge() (int, string) {
 
 // 768 bytes: the doubling WriteString(b.String()[:chunk]) loop (chunk =
 // min(n-len, len, chunkMax) with chunkMax = n below upstream's 8 KB
-// chunk limit). INTERPRETER COST (measured, slice-2 README): the
-// machine's in-place `append` into spare capacity costs O(cap) per call
-// (4,096 one-byte appends > 60 s; 1 KB Builder ~1.5 s), so the 8 KB
-// chunk-limit arm and the 15 KB / 64 KB probes this row first carried
-// exceed the 30 s row budget — a recorded cost bound, not a semantics gap.
+// chunk limit). INTERPRETER COST (BUG-090, measured in the slice-2
+// README): the machine's heap is an association list, so allocation-
+// heavy and cell-write-heavy loops are quadratic (a 1 KB Builder ~1.5 s;
+// 4,096 one-byte appends > 60 s), and the 8 KB chunk-limit arm and the
+// 15 KB / 64 KB probes this row first carried exceed the 30 s row budget
+// — a recorded cost bound, not a semantics gap.
 func repeatDoublingLoop() (int, int, string, string, string) {
 	big := strings.Repeat("abcdefgh", 96)
 	sum := 0
@@ -139,8 +140,8 @@ func repeatDoublingLoop() (int, int, string, string, string) {
 }
 
 // 1,024 bytes through the real body (the retired shim's golean-invented
-// 1<<24 bound is gone; what bounds Repeat now is interpreter cost — see
-// strings/trimspace-repeat/repeat-bound-refused, a runner-budget red).
+// 1<<24 bound is gone; what bounds Repeat now is interpreter cost, BUG-090
+// — see strings/trimspace-repeat/repeat-bound-refused, a runner-budget red).
 func repeat1K() (int, byte, byte) {
 	s := strings.Repeat("0123456789abcdef", 64)
 	return len(s), s[0], s[len(s)-1]

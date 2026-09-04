@@ -1133,10 +1133,14 @@ bulk, the rest is deletion and rows.
 > `slices/sortfunc-cmp/cmp-compare-kinds` red — the real generic at a
 > FUNCTION-LOCAL defined type hits mono.go's local-type naming refusal
 > (audit response M3), a frontend generality gap; the desugar is RETAINED
-> (`cmpshim.go`) and the decision posed. **Finding 2 (cost):** the
-> interpreter's in-place `append` into spare capacity costs O(cap) per
-> call (4,096 one-byte appends > 60 s; a 1 KB Builder ≈ 1.5 s), so
-> Builder/Buffer workloads beyond ~1 KB exceed the 30 s row budget —
+> (`cmpshim.go`) and the decision posed. **Finding 2 (cost, BUG-090):**
+> the interpreter's heap is an association list, so every allocation and
+> cell write costs O(live cells) — allocation-heavy loops are quadratic
+> in allocation count (`make([]byte,4)` ×1,000 0.15 s, ×4,000 3.0 s) and
+> byte-slice `append` workloads worse (4,096 one-byte appends 82 s; a
+> 1 KB Builder ≈ 1.5 s) — so Builder/Buffer workloads beyond ~1 KB exceed
+> the 30 s row budget (re-derived at the audit fix round: the slice had
+> blamed the in-place append path alone) —
 > §3 row 5's "honest budget refusal" branch is what `repeat-bound-refused`
 > became (BUG-073), and the Builder fuzz is 10 × 300 operations, not 100k.
 > `Builder.grow`'s substitute realizes MakeNoZero's documented "at least

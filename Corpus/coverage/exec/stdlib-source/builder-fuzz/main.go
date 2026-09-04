@@ -2,9 +2,11 @@ package main
 
 // The strings.Builder LIBRARY-vs-ORACLE FUZZ (stdlib source-through slice
 // 2, 2026-09-03; docs/evidence/2026-09-03_stdlib-source-2/). Ten subjects
-// × 300 pseudo-random Builder operations = 3,000 operations (the 100k
-// the slice brief asked for is out of the 30 s row budget: the machine's
-// in-place append costs O(cap) per call — measured in the README), driven
+// × 300 pseudo-random Builder operations = 3,000 operations in total —
+// sized by measurement (100 ops 0.26 s, 300 1.4 s, 1,000 38 s per
+// subject; the machine's assoc-list heap makes the cost quadratic in
+// allocation count, BUG-090; the slice brief's 100k is out of the 30 s
+// row budget until the dense heap lands), driven
 // by an IN-PROGRAM xorshift64* generator (so the machine and go run draw
 // the identical sequence): WriteString / WriteByte / WriteRune (ASCII,
 // 2-, 3-, 4-byte, RuneError-producing invalid code points) / Write /
@@ -13,7 +15,7 @@ package main
 // Len, final String prefix), so any byte the overlaid String() / grow()
 // / copyCheck() path gets wrong anywhere in the 100k operations changes
 // the hash. Reset fires about every 64 operations to bound the buffer
-// (the interpreter copies on every String(), and appends cost O(cap)).
+// (every String() allocates and every append writes cells — BUG-090).
 // Cap is never observed
 // (allocator latitude — the membership suite strings/builder-cap).
 

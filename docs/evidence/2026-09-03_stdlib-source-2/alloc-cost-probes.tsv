@@ -1,0 +1,12 @@
+# audit fix round F5 re-derivation: allocation-COUNT cost (golean native-json-run wall time, single runs; program artifacts/probe/alloc/main.go, shapes below)
+alloc1k	1,000 x make([]byte, 4)	0.15	0
+alloc2k	2,000 x make([]byte, 4)	0.63	0
+alloc4k	4,000 x make([]byte, 4)	3.01	0
+arith4k	4,000 pure-arithmetic iterations	0.09	0
+arith40k	40,000 pure-arithmetic iterations	0.68	0
+ptr1k	1,000 x new(int) + write + read	0.19	0
+ptr4k	4,000 x new(int) + write + read	4.08	0
+str4k	4,000 x string([]byte{b})	4.15	0
+inplace4k	make([]byte, 0, 4096) then 4,096 x append(b, 'x')	81.68	0
+live4kThen1kAppends	4,000 live make([]byte,4) cells, THEN 1,000 in-place appends into a 1,000-cap slice	>120 (timeout)	124
+# reading: quadratic in allocation count with cap fixed; append amplifies by cap-many cell writes and by the live heap (State.lean: Heap := List (Loc × HeapCell), linear lookup/set) — BUG-090

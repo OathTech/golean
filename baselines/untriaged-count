@@ -169,7 +169,7 @@
 #   operand; the frontend now emits the spec's auto-deref), repaired by
 #   its fix and folded into its Cases. The buildout's import of
 #   unittest/embedded.go re-surfaced the class and forced the triage.
-coverage 11
+coverage 10
 latitude 4
 wrong-answer 0
 # 2026-08-09 (spec-parity slice 2, sync guardrails)  16 -> 50, mostly
@@ -349,7 +349,12 @@ wrong-answer 0
 #   repeat-bound-refused ENTERS as `coverage` — the Repeat shim's cause-named
 #   1<<24 bound retired with the shim (the real Repeat has no golean bound),
 #   and the 16 MiB row became a 30 s runner-budget timeout at lean-observation
-#   (the interpreter's O(cap) in-place append; measured in the slice-2
-#   evidence README). Same class as the BUG-078 budget pin: a machine-
+#   (BUG-090: the assoc-list heap's allocation-count-quadratic cost;
+#   measured in the slice-2 evidence README). Same class as the BUG-078 budget pin: a machine-
 #   refuses/gc-succeeds resource red, never a wrong answer. latitude 4 and
 #   wrong-answer 0 unchanged.
+# 11 -> 10 (2026-09-04, stdlib-source-2 audit fix round F5): the raise above
+#   is REVERTED the same way BUG-078's was (RECORD 8): the cost finding is
+#   now a Pinned-by: none entry, BUG-090, and repeat-bound-refused sits on
+#   its Cases line as the budget pin; same red, same cause; only the
+#   accounting moves. wrong-answer stays 0.

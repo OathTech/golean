@@ -35,6 +35,14 @@ import (
 const (
 	stdlibOverlayCap   = 12
 	stdlibPrimitiveCap = 2
+	// stdlibOverlayImportCap: the consequential `import` rows' OWN cap
+	// (audit fix round, [AGENT] structural decision disclosed for the
+	// [USER]): 5 today + headroom for bytes' MakeNoZero import should a
+	// later slice overlay those sites. The NUMBER is [AGENT]-provisional
+	// pending [USER] ratification; the expr cap keeps its meaning
+	// "semantic substitutions" — honest only because expr rows are barred
+	// from import lines (stdlibsource.go applyStdlibOverlay, F2).
+	stdlibOverlayImportCap = 8
 )
 
 // The overlay table lives in stdlib-overlay.tsv (stdlibsource.go parses
@@ -56,6 +64,9 @@ func stdlibRegisterDump() (string, error) {
 	if overlayExpr > stdlibOverlayCap {
 		return "", unsup("stdlib admission register: %d overlay sites exceed the cap of %d ([USER] re-ratification required)", overlayExpr, stdlibOverlayCap)
 	}
+	if overlayImports > stdlibOverlayImportCap {
+		return "", unsup("stdlib admission register: %d overlay import-neutralization rows exceed the cap of %d ([USER] re-ratification required)", overlayImports, stdlibOverlayImportCap)
+	}
 	if len(stdlibPrimitives) > stdlibPrimitiveCap {
 		return "", unsup("stdlib admission register: %d library-origin primitives exceed the cap of %d ([USER] re-ratification required)", len(stdlibPrimitives), stdlibPrimitiveCap)
 	}
@@ -65,7 +76,12 @@ func stdlibRegisterDump() (string, error) {
 	line("count", "source-through", itoa(len(stdlibSourceAllowed))+" (uncapped)")
 	line("count", "substitution", itoa(len(subs))+" (uncapped; each names its upstream twin)")
 	line("count", "overlay", itoa(overlayExpr)+" / cap "+itoa(stdlibOverlayCap)+" (expr sites, stdlib-overlay.tsv; byte-checked at every load)")
-	line("count", "overlay-import", itoa(overlayImports)+" (consequential import neutralizations of overlaid files; no semantics; not counted against the cap)")
+	line("count", "overlay-import", itoa(overlayImports)+" / cap "+itoa(stdlibOverlayImportCap)+" (consequential import neutralizations of overlaid files; no semantics; own cap, [AGENT]-provisional pending [USER])")
+	intercepts := 0
+	for _, ms := range frontendInterceptedLibraryMembers {
+		intercepts += len(ms)
+	}
+	line("count", "intercept", itoa(intercepts)+" (library members whose direct call the frontend lowers to a machine op or a retained desugar instead of the library body — stdlibreach.go frontendInterceptedLibraryMembers, one predicate for reach walk and emitter)")
 	line("count", "primitive", itoa(len(stdlibPrimitives))+" / cap "+itoa(stdlibPrimitiveCap))
 	shims := 0
 	for _, fns := range stdlibShimAllowlist {
@@ -99,6 +115,16 @@ func stdlibRegisterDump() (string, error) {
 	}
 	for _, k := range sortedStringKeys(stdlibPrimitives) {
 		line("primitive", k, stdlibPrimitives[k])
+	}
+	interceptRows := []string{}
+	for path, ms := range frontendInterceptedLibraryMembers {
+		for m, why := range ms {
+			interceptRows = append(interceptRows, path+"."+m+"\t"+why)
+		}
+	}
+	sort.Strings(interceptRows)
+	for _, r := range interceptRows {
+		line("intercept", r)
 	}
 	shimRows := []string{}
 	for path, fns := range stdlibShimAllowlist {

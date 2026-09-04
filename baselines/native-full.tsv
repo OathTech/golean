@@ -17,8 +17,9 @@
 #   slices/sortfunc-cmp/{named-slice-bound,float-compare-bound} (the real SortFunc
 #   takes S ~[]E; the real cmp.Compare at floats); (b) 63 born rows under
 #   stdlib-source/{builder-overlay,builder-cap,builder-fuzz,errors-join,cmp-compare,
-#   slices-sortfunc,bytes-buffer,binary-order,frontier}: 61 PASS, 2 born red by name
-#   (frontier/{bytes-toupper-makenozero,buffer-readbyte-io}, FR-21); (c) ONE FAIL ->
+#   slices-sortfunc,bytes-buffer,binary-order,frontier}: 60 PASS, 3 born red by name
+#   (frontier/{bytes-toupper-makenozero,buffer-readbyte-io,slices-overlaps}, FR-21 —
+#   corrected at the audit fix round F4: the first summary said 61/2); (c) ONE FAIL ->
 #   FAIL stage change: strings/trimspace-repeat/repeat-bound-refused frontend-export
 #   -> lean-observation (the retired Repeat shim's 1<<24 bound is gone; the 16 MiB
 #   row is a runner-budget 30 s timeout, BUG-073 updated). PASS -> non-PASS: NONE.
@@ -29,6 +30,19 @@
 #   FAIL/frontend-export here from its own scripts/diff-one run; the final clean-tip
 #   ci --diff (gate-tail-final.txt) confirms the whole file.
 #   3323 rows; 3130 PASS / 193 FAIL.
+#   AUDIT FIX ROUND 2026-09-04 ([AGENT]): +3 born rows, all FAIL/frontend-export by
+#   name — stdlib-source/sort-op-shapes/{defer-sort,go-sort} (F1: defer/go of the
+#   frontend-intercepted slices.Sort refuse by name; FR-14, memo §3 row M closes
+#   them) and stdlib-source/cmp-compare/local-float-type (a function-local FLOAT
+#   type argument reaching the real cmp.Compare hits mono.go's C6 rule — the
+#   asymmetry the retained kind desugar leaves; (c)-pin C6). Rows recorded from
+#   their own runs; the clean-tip ci --diff (gate-tail-fixround.txt) confirms the
+#   file. 3326 rows; 3130 PASS / 196 FAIL.
+#   REPLAYED at the ROUND-10 MERGE TRAIN 2026-09-04 ([AGENT], under the [USER] merge sign-off
+#   «go ahead and merge these» 2026-09-04) over main 1b8401c0: the audit fix round's 3 born
+#   FAIL/frontend-export rows join the round-10 union (previous union figure 3347 = 3157 / 190;
+#   row deltas disjoint by id; manifest order). NO PASS->non-PASS flip. Figure re-derived
+#   from the data rows (the `# cases:` line).
 #   REPLAYED at the ROUND-10 MERGE TRAIN 2026-09-04 ([AGENT], under the [USER] merge sign-off
 #   «go ahead and merge these» 2026-09-04 naming stdlib-source-2 -> slow-recert in that order)
 #   over main 1b8401c0 (= 221d8964 + round 9: bug087-paniktext, q-trylock, cedar-census):
@@ -827,7 +841,10 @@
 #     removed row is named in prose, never left dangling on the line).
 #     NEW rows: unsafe/layout-ops/{sizeof-fixed,layout-struct}
 #     FAIL/frontend-export BY DESIGN. unsafe/boundary/pointer-roundtrip
-# cases: 3347 (3157 PASS / 190 FAIL)
+# cases: 3350 (3157 PASS / 193 FAIL)
+#   [re-derived from the data rows at the round-10 merge-train rebase of stdlib-source-2 (lane commit 68b15964) onto main 1b8401c0 2026-09-04 ([AGENT], under the [USER] merge sign-off «go ahead and merge these» 2026-09-04): the previous figure 3347 (3157 PASS / 190 FAIL) + this commit's row delta vs its lane parent 74434494 (3 ids: 3 born, 0 changed) = 3350 (3157 PASS / 193 FAIL); counted, not summed by hand]
+#   [the stdlib-source-2-over-221d8964 figure at this lane commit, kept as history:] # cases: 3326 (3130 PASS / 196 FAIL)
+#   [the previous round-10 union figure, kept as history:] # cases: 3347 (3157 PASS / 190 FAIL)
 #   [re-derived from the data rows at the round-10 merge-train rebase of stdlib-source-2 (commit 4176f7f1) onto main 1b8401c0 2026-09-04 ([AGENT], under the [USER] merge sign-off «go ahead and merge these» 2026-09-04): 3284 (3085 PASS / 199 FAIL) + this commit's row delta vs its lane parent 221d8964 (76 ids: 63 born, 13 changed) = 3347 (3157 PASS / 190 FAIL); counted, not summed by hand]
 #   [the stdlib-source-2-over-221d8964 figure at this commit, kept as history:] # cases: 3323 (3130 PASS / 193 FAIL)
 #   [re-derived from the data rows at the round-9 merge-train rebase of cedar-census onto main 8de57f64 (= 312a4458 + q-trylock) 2026-09-04 ([AGENT], under the [USER] merge sign-off «go ahead and merge» 2026-09-04: the step-2 union's 3282 (3085 PASS / 197 FAIL) + TWO born-FAIL witness rows init/stdlib-initializer-call (FR-22) and generics/imported-generic-in-signature (FR-23) = 3284 (3085 PASS / 199 FAIL); no other row moved; tallied by row, not summed by hand)]
@@ -3963,6 +3980,7 @@ PASS	stdlib-source/cmp-compare/floats-nan	-
 PASS	stdlib-source/cmp-compare/float32-and-named	-
 PASS	stdlib-source/cmp-compare/less	-
 PASS	stdlib-source/cmp-compare/or	-
+FAIL	stdlib-source/cmp-compare/local-float-type	frontend-export
 PASS	stdlib-source/errors-join/all-nil	-
 PASS	stdlib-source/errors-join/one	-
 PASS	stdlib-source/errors-join/many	-
@@ -3999,6 +4017,8 @@ PASS	stdlib-source/slices-sortfunc/sortfunc-ties-projected	-
 PASS	stdlib-source/slices-sortfunc/sortfunc-ties-realized	-
 PASS	stdlib-source/slices-sortfunc/sort-stable-func	-
 PASS	stdlib-source/slices-sortfunc/others	-
+FAIL	stdlib-source/sort-op-shapes/defer-sort	frontend-export
+FAIL	stdlib-source/sort-op-shapes/go-sort	frontend-export
 PASS	stdlib-source/strconv-format/uint-all-bases	-
 PASS	stdlib-source/strconv-format/int-all-bases	-
 PASS	stdlib-source/strconv-format/extremes	-

@@ -418,7 +418,7 @@ func TestStdlibRegisterDumpCaps(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"count\toverlay\t5 / cap 12", "count\toverlay-import\t5 ", "count\tprimitive\t0 / cap 2", "source-through\tstrings\t", "substitution\tinternal/bytealg/indexbyte_native.go -> indexbyte_generic.go\t", "count\tshim\t7 ", "count\tshadow-type\t5", "source-through\tbytes\t", "source-through\tslices\t", "source-through\tcmp\t", "source-through\tencoding/binary\t", "shim\tfmt.Sprintf\t", "shim\tcmp.Compare\tgeneric kind-dispatch desugar (cmpshim.go)", "overlay\tinternal/stringslite/strings.go:149\t`unsafe.String(&b[0], len(b))` -> `string(b)`", "overlay\tstrings/builder.go:47\t", "overlay-import\tstrings/builder.go:11\t`\"unsafe\"` -> `_ \"unsafe\"`"} {
+	for _, want := range []string{"count\toverlay\t5 / cap 12", "count\toverlay-import\t5 / cap 8", "count\tintercept\t2 ", "intercept\tslices.Sort\t", "intercept\tcmp.Compare\t", "count\tprimitive\t0 / cap 2", "source-through\tstrings\t", "substitution\tinternal/bytealg/indexbyte_native.go -> indexbyte_generic.go\t", "count\tshim\t7 ", "count\tshadow-type\t5", "source-through\tbytes\t", "source-through\tslices\t", "source-through\tcmp\t", "source-through\tencoding/binary\t", "shim\tfmt.Sprintf\t", "shim\tcmp.Compare\tgeneric kind-dispatch desugar (cmpshim.go)", "overlay\tinternal/stringslite/strings.go:149\t`unsafe.String(&b[0], len(b))` -> `string(b)`", "overlay\tstrings/builder.go:47\t", "overlay-import\tstrings/builder.go:11\t`\"unsafe\"` -> `_ \"unsafe\"`"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("register dump lacks %q:\n%s", want, out)
 		}
@@ -441,6 +441,17 @@ func TestStdlibRegisterDumpCaps(t *testing.T) {
 	stdlibOverlayTSV = saved
 	if err == nil || !strings.Contains(err.Error(), "exceed the cap") {
 		t.Fatalf("an over-cap overlay table must refuse; got %v", err)
+	}
+	// The import-row cap (F-round): cap+1 import rows behind one expr row refuse.
+	overImp := "strings\tstrings.go\t1\texpr\told\tnew\tprobe\n"
+	for i := 0; i <= stdlibOverlayImportCap; i++ {
+		overImp += "strings\tstrings.go\t" + itoa(i+2) + "\timport\t\"p" + itoa(i) + "\"\t_ \"p" + itoa(i) + "\"\tprobe\n"
+	}
+	stdlibOverlayTSV = overImp
+	_, err = stdlibRegisterDump()
+	stdlibOverlayTSV = saved
+	if err == nil || !strings.Contains(err.Error(), "import-neutralization rows exceed the cap") {
+		t.Fatalf("an over-cap import-row table must refuse; got %v", err)
 	}
 	// Exactly cap rows render (the cap is inclusive).
 	stdlibOverlayTSV = strings.Join(strings.Split(strings.TrimRight(over, "\n"), "\n")[:stdlibOverlayCap], "\n") + "\n"
@@ -493,13 +504,108 @@ func TestStdlibOverlayTableRules(t *testing.T) {
 	if _, _, err := applyStdlibOverlay(rows, "strings", "/x/strings/builder.go", []byte("package strings\n\tunsafe.String(p) + unsafe.String(p)\n")); err == nil || !strings.Contains(err.Error(), "ambiguous") {
 		t.Fatalf("two occurrences must refuse; got %v", err)
 	}
-	if _, _, err := applyStdlibOverlay(rows, "strings", "/x/strings/builder.go", []byte("one line only\n")); err == nil || !strings.Contains(err.Error(), "only 1 line") {
+	if _, _, err := applyStdlibOverlay(rows, "strings", "/x/strings/builder.go", []byte("package strings\n")); err == nil || !strings.Contains(err.Error(), "only 1 line") {
 		t.Fatalf("a missing line must refuse; got %v", err)
 	}
 	// A file the table does not name passes through byte-identical.
 	same, applied, err := applyStdlibOverlay(rows, "strings", "/x/strings/other.go", src)
 	if err != nil || len(applied) != 0 || string(same) != string(src) {
 		t.Fatalf("untouched file changed: %v %v", err, applied)
+	}
+	// F2 (a): an expr row targeting an import line refuses by site.
+	imp := []byte("package strings\n\nimport (\n\t\"internal/bytealg\"\n\t\"unsafe\"\n)\n\nfunc f() { _ = unsafe.Sizeof(0); _ = bytealg.MaxLen }\n")
+	rows2, _ := parseStdlibOverlay(row("strings", "builder.go", "4", "expr", `"internal/bytealg"`, `zz "internal/bytealg"`))
+	if _, _, err := applyStdlibOverlay(rows2, "strings", "/x/strings/builder.go", imp); err == nil || !strings.Contains(err.Error(), "inside the file's import declaration") {
+		t.Fatalf("an expr row on an import line must refuse; got %v", err)
+	}
+	// F2 (b): after the rows apply, a LIVE banned import refuses (the
+	// bytealg import is neutralized, the unsafe one is not).
+	rows3, _ := parseStdlibOverlay(row("strings", "builder.go", "8", "expr", "unsafe.Sizeof(0)", "8") + row("strings", "builder.go", "4", "import", `"internal/bytealg"`, `_ "internal/bytealg"`))
+	if _, _, err := applyStdlibOverlay(rows3, "strings", "/x/strings/builder.go", imp); err == nil || !strings.Contains(err.Error(), "LIVE import of \"unsafe\"") {
+		t.Fatalf("a surviving live banned import must refuse; got %v", err)
+	}
+}
+
+// TestStdlibOverlayCheckTypeChecks (audit fix round F3, red-first): the
+// overlay check TYPE-CHECKS each overlaid package — dropping the
+// builder.go:47 expr row while keeping the import rows leaves
+// `unsafe.String` live behind a blank import, which byte-checking alone
+// accepted (rc 0) and go/types refuses naming the file.
+func TestStdlibOverlayCheckTypeChecks(t *testing.T) {
+	withStdlibRoots(t)
+	if _, err := stdlibOverlayCheck(); err != nil {
+		t.Fatalf("the shipped table must verify: %v", err)
+	}
+	saved := stdlibOverlayTSV
+	defer func() { stdlibOverlayTSV = saved }()
+	kept := []string{}
+	for _, l := range strings.Split(saved, "\n") {
+		if strings.HasPrefix(l, "strings\tbuilder.go\t47\t") {
+			continue
+		}
+		kept = append(kept, l)
+	}
+	stdlibOverlayTSV = strings.Join(kept, "\n")
+	if stdlibOverlayTSV == saved {
+		t.Fatal("probe did not drop the builder.go:47 row")
+	}
+	_, err := stdlibOverlayCheck()
+	if err == nil || !strings.Contains(err.Error(), "does not type-check") || !strings.Contains(err.Error(), "builder.go") {
+		t.Fatalf("an import row whose site still uses the package must fail the type-check naming the file; got %v", err)
+	}
+}
+
+// TestStdlibOverlayRowMustApply (audit fix round F6): a row naming a file
+// the package does not select refuses at load, not silently no-ops.
+func TestStdlibOverlayRowMustApply(t *testing.T) {
+	withStdlibRoots(t)
+	saved := stdlibOverlayTSV
+	defer func() { stdlibOverlayTSV = saved }()
+	stdlibOverlayTSV = saved + "strings\tnosuchfile.go\t1\texpr\tunsafe.String(x)\tstring(x)\tprobe\n"
+	dir := writeMain(t, `package main
+
+import "strings"
+
+func subject() string { return strings.Repeat("x", 2) }
+
+func main() { subject() }
+`)
+	_, err := lowerProgramDir(t, dir)
+	if err == nil || !strings.Contains(err.Error(), "strings/nosuchfile.go:1") || !strings.Contains(err.Error(), "applied 0 time(s)") {
+		t.Fatalf("a row that never applies must refuse by site; got %v", err)
+	}
+}
+
+// TestInterceptedLibraryCalleeRefusesInDeferGo (audit fix round F1): the
+// reach walk and the emitter share one predicate; defer/go of an
+// intercepted member refuses by name instead of lowering a pruned body.
+func TestInterceptedLibraryCalleeRefusesInDeferGo(t *testing.T) {
+	withStdlibRoots(t)
+	for _, kw := range []string{"defer", "go"} {
+		dir := writeMain(t, `package main
+
+import "slices"
+
+func subject() int { s := []int{3, 1, 2}; `+kw+` slices.Sort(s); return len(s) }
+
+func main() { subject() }
+`)
+		program, err := lowerProgramDir(t, dir)
+		if err != nil {
+			t.Fatalf("%s: lower: %v", kw, err)
+		}
+		fns := funcNames(program)
+		subj, ok := fns["subject"]
+		if !ok {
+			t.Fatalf("%s: subject not on the wire", kw)
+		}
+		reason, _ := subj["unsupported"].(string)
+		if !strings.Contains(reason, kw+" slices.Sort") || !strings.Contains(reason, "frontend-intercepted") {
+			t.Fatalf("%s slices.Sort must quarantine subject by name; got %q", kw, reason)
+		}
+		if _, real := fns["slices.Sort"]; real {
+			t.Fatalf("%s: the real slices.Sort was reached", kw)
+		}
 	}
 }
 

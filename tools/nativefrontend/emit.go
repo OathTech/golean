@@ -2687,6 +2687,9 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 		// pending call is prepended to the frame's chain and runs at frame
 		// exit (W3 §9). A method value or closure callee is just an
 		// expression, so this reuses the func-value machinery.
+		if err := e.refuseInterceptedLibraryCallee("defer", st.Call); err != nil {
+			return nil, err
+		}
 		if id, ok := st.Call.Fun.(*ast.Ident); ok {
 			if _, isBuiltin := e.info.Uses[id].(*types.Builtin); isBuiltin {
 				// `defer recover()` does NOT recover: recover must be called
@@ -2744,6 +2747,9 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 			if _, isBuiltin := e.info.Uses[id].(*types.Builtin); isBuiltin {
 				return nil, unsup("go of builtin %s", id.Name)
 			}
+		}
+		if err := e.refuseInterceptedLibraryCallee("go", st.Call); err != nil {
+			return nil, err
 		}
 		callee, err := e.emitExpr(st.Call.Fun)
 		if err != nil {
@@ -7979,6 +7985,28 @@ func (e *emitter) qualifiedPkgRef(sel *ast.SelectorExpr) (*types.PkgName, bool) 
 // like local generics); a func-typed package VARIABLE becomes a call
 // through the value read from its seeded cell. Anything else refuses
 // loudly.
+// refuseInterceptedLibraryCallee (audit fix round F1): a `defer`/`go` whose
+// callee is a FRONTEND-INTERCEPTED library member (stdlibreach.go
+// frontendInterceptedLibraryMembers / interceptedLibraryCall — the
+// `slices.Sort` machine op, the cmp.Compare kind desugar) refuses BY NAME.
+// The interception is a lowering of the direct CALL in expression-
+// statement position; in defer/go position the callee is a FUNCTION VALUE,
+// which the shared predicate says the reach walk did not mark reached —
+// lowering the real generic there left its closure (`math/bits.Len`) off
+// the wire and the machine `stuck`, a wrong shape where a refusal was
+// owed (rows stdlib-source/sort-op-shapes/*). A library-unit body never
+// reaches here (library-internal calls are never intercepted).
+func (e *emitter) refuseInterceptedLibraryCallee(keyword string, c *ast.CallExpr) error {
+	if e.curUnit != nil && e.curUnit.library {
+		return nil
+	}
+	if path, member, intercepted := interceptedLibraryCall(e.info, c); intercepted {
+		return unsup("%s %s.%s: the direct call of this library member is frontend-intercepted (%s) in expression-statement position only; as a deferred/spawned FUNCTION VALUE it has no lowering — refused by name rather than lowering the real body the reach walk pruned (memo §3 row M retires the interception)",
+			keyword, path, member, frontendInterceptedLibraryMembers[path][member][:strings.IndexByte(frontendInterceptedLibraryMembers[path][member], '(')])
+	}
+	return nil
+}
+
 func (e *emitter) emitQualifiedCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, bool, error) {
 	pkgName, ok := e.qualifiedPkgRef(sel)
 	if !ok {

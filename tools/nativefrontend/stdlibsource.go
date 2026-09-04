@@ -55,7 +55,10 @@ import (
 	"fmt"
 	"go/ast"
 	"go/build"
+	"go/importer"
 	"go/parser"
+	"go/token"
+	"go/types"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -217,6 +220,7 @@ func applyStdlibOverlay(rows []stdlibOverlayRow, pkg, file string, src []byte) (
 	var lines [][]byte
 	split := false
 	applied := []string{}
+	var importLines map[int]bool
 	for _, r := range rows {
 		if r.pkg != pkg || r.file != base {
 			continue
@@ -224,6 +228,17 @@ func applyStdlibOverlay(rows []stdlibOverlayRow, pkg, file string, src []byte) (
 		if !split {
 			lines = strings_SplitLinesKeepEnds(src)
 			split = true
+			var err error
+			if importLines, err = importDeclLines(file, src); err != nil {
+				return nil, nil, err
+			}
+		}
+		// Audit fix round F2: an `expr` row may not target an import line
+		// (it could rebind `"internal/bytealg"` under another name and
+		// slip past the textual substitute ban); only `import` rows touch
+		// the import declaration, and those are shape-checked at parse.
+		if r.kind == "expr" && importLines[r.line] {
+			return nil, nil, unsup("stdlib overlay %s: an expr row targets a line inside the file's import declaration — only `import` rows (\"p\" -> _ \"p\") may touch imports (fail closed)", r.site())
 		}
 		if r.line > len(lines) {
 			return nil, nil, unsup("stdlib overlay %s: the pinned file has only %d line(s) — the recorded site does not exist in this text (fail closed; the overlay table is stale for this pin)", r.site(), len(lines))
@@ -246,7 +261,111 @@ func applyStdlibOverlay(rows []stdlibOverlayRow, pkg, file string, src []byte) (
 	for _, l := range lines {
 		out = append(out, l...)
 	}
+	// Audit fix round F2, the POST-HOC half: whatever the rows did, the
+	// overlaid file may keep NO live binding to `unsafe` or `internal/abi`
+	// (the out-of-language packages an overlay exists to remove), nor to
+	// any package one of ITS import rows neutralized (a second, live
+	// import of the same path would re-open it) — re-derived from the
+	// overlaid text's import declaration, refused by file and line.
+	// (`internal/bytealg` is a source-through package a file may use
+	// legitimately — internal/stringslite does — so it is banned only
+	// where an import row of the file neutralized it.)
+	banned := map[string]bool{"unsafe": true, "internal/abi": true}
+	for _, r := range rows {
+		if r.pkg == pkg && r.file == base && r.kind == "import" {
+			banned[strings.Trim(r.old, `"`)] = true
+		}
+	}
+	if err := checkNoLiveOverlayBannedImport(file, out, banned); err != nil {
+		return nil, nil, err
+	}
 	return out, applied, nil
+}
+
+// importDeclLines returns the set of 1-based line numbers covered by the
+// file's import declarations (AST-computed from the UPSTREAM bytes).
+func importDeclLines(file string, src []byte) (map[int]bool, error) {
+	fset := token.NewFileSet()
+	af, err := parser.ParseFile(fset, file, src, parser.ImportsOnly)
+	if err != nil {
+		return nil, unsup("stdlib overlay: cannot parse %s to locate its import declaration (%v) — fail closed", file, err)
+	}
+	lines := map[int]bool{}
+	for _, d := range af.Decls {
+		gd, ok := d.(*ast.GenDecl)
+		if !ok || gd.Tok != token.IMPORT {
+			continue
+		}
+		from, to := fset.Position(gd.Pos()).Line, fset.Position(gd.End()).Line
+		for l := from; l <= to; l++ {
+			lines[l] = true
+		}
+	}
+	return lines, nil
+}
+
+// checkNoLiveOverlayBannedImport parses the OVERLAID text's imports and
+// refuses a non-blank binding to an overlayBannedImportPaths package.
+func checkNoLiveOverlayBannedImport(file string, overlaid []byte, banned map[string]bool) error {
+	fset := token.NewFileSet()
+	af, err := parser.ParseFile(fset, file, overlaid, parser.ImportsOnly)
+	if err != nil {
+		return unsup("stdlib overlay: the overlaid %s does not parse (%v) — fail closed", file, err)
+	}
+	for _, imp := range af.Imports {
+		path := strings.Trim(imp.Path.Value, `"`)
+		if !banned[path] {
+			continue
+		}
+		if imp.Name == nil || imp.Name.Name != "_" {
+			return unsup("stdlib overlay: %s:%d keeps a LIVE import of %q after the overlay applied — every use of it must be substituted and the import neutralized (`_ %q`); fail closed", file, fset.Position(imp.Pos()).Line, path, path)
+		}
+	}
+	return nil
+}
+
+// typeCheckOverlaidPackage (audit fix round F3): the invariant licensing
+// an `import` row — no `p.` selector survives its file's expr rows — is
+// enforced by TYPE-CHECKING the overlaid package with go/types (unmodeled
+// imports from the host toolchain's export data, which the frontend pins
+// to the oracle rev). Any error refuses, naming file and line. Called by
+// --stdlib-overlay-check for every package the table names.
+func typeCheckOverlaidPackage(pkg string, files []string, rows []stdlibOverlayRow) error {
+	fset := token.NewFileSet()
+	var parsed []*ast.File
+	for _, f := range files {
+		src, err := os.ReadFile(f)
+		if err != nil {
+			return unsup("stdlib overlay check: cannot read %s (%v)", f, err)
+		}
+		src, _, err = applyStdlibOverlay(rows, pkg, f, src)
+		if err != nil {
+			return err
+		}
+		af, err := parser.ParseFile(fset, f, src, parser.ParseComments)
+		if err != nil {
+			return unsup("stdlib overlay check: overlaid %s does not parse: %v", f, err)
+		}
+		parsed = append(parsed, af)
+	}
+	lang, err := pinnedLangVersion()
+	if err != nil {
+		return err
+	}
+	var first error
+	conf := types.Config{Importer: importer.Default(), GoVersion: lang, Error: func(e error) {
+		if first == nil {
+			first = e
+		}
+	}}
+	_, err = conf.Check(pkg, fset, parsed, nil)
+	if err != nil {
+		if first != nil {
+			err = first
+		}
+		return unsup("stdlib overlay check: the overlaid package %q does not type-check — %v (an import row whose file still uses the package, or an expr substitute that does not type; fail closed)", pkg, err)
+	}
+	return nil
 }
 
 // strings_SplitLinesKeepEnds splits src after every '\n', keeping the
@@ -301,28 +420,50 @@ func stdlibOverlayCheck() (string, error) {
 		for _, f := range files {
 			selected[filepath.Base(f)] = f
 		}
+		// All of a file's rows apply TOGETHER (the byte check is per row
+		// inside applyStdlibOverlay; the post-hoc import-binding check
+		// needs the whole file's rows in force).
+		files_ := map[string]bool{}
 		for _, r := range rows {
-			if r.pkg != pkg {
-				continue
+			if r.pkg == pkg {
+				files_[r.file] = true
 			}
-			f, ok := selected[r.file]
+		}
+		for _, file := range sortedStringKeys(files_) {
+			f, ok := selected[file]
 			if !ok {
-				return "", unsup("stdlib overlay %s: %s is not among the files selected for package %q under the oracle context — the row names text the frontend never lowers (fail closed)", r.site(), r.file, pkg)
+				return "", unsup("stdlib overlay %s/%s: the file is not among the files selected for package %q under the oracle context — the row names text the frontend never lowers (fail closed)", pkg, file, pkg)
 			}
 			src, err := os.ReadFile(f)
 			if err != nil {
-				return "", unsup("stdlib overlay %s: cannot read %s (%v)", r.site(), f, err)
+				return "", unsup("stdlib overlay %s/%s: cannot read %s (%v)", pkg, file, f, err)
 			}
-			if _, applied, err := applyStdlibOverlay([]stdlibOverlayRow{r}, pkg, f, src); err != nil {
+			want := 0
+			for _, r := range rows {
+				if r.pkg == pkg && r.file == file {
+					want++
+				}
+			}
+			_, applied, err := applyStdlibOverlay(rows, pkg, f, src)
+			if err != nil {
 				return "", err
-			} else if len(applied) != 1 {
-				return "", unsup("internal: stdlib overlay %s did not apply exactly once (%d)", r.site(), len(applied))
 			}
-			b.WriteString(r.kind + "\t" + r.site() + "\t" + r.old + " -> " + r.new + "\n")
+			if len(applied) != want {
+				return "", unsup("internal: stdlib overlay %s/%s: %d row(s) applied, %d listed", pkg, file, len(applied), want)
+			}
+			for _, r := range rows {
+				if r.pkg == pkg && r.file == file {
+					b.WriteString(r.kind + "\t" + r.site() + "\t" + r.old + " -> " + r.new + "\n")
+				}
+			}
 		}
+		if err := typeCheckOverlaidPackage(pkg, files, rows); err != nil {
+			return "", err
+		}
+		b.WriteString("# " + pkg + ": overlaid package type-checks\n")
 	}
 	expr, imports := stdlibOverlayCount(rows)
-	b.WriteString(fmt.Sprintf("# %d expr row(s) (cap %d), %d import row(s): every row's bytes verified at the pinned checkout\n", expr, stdlibOverlayCap, imports))
+	b.WriteString(fmt.Sprintf("# %d expr row(s) (cap %d), %d import row(s) (cap %d): every row's bytes verified at the pinned checkout; every overlaid package type-checked\n", expr, stdlibOverlayCap, imports, stdlibOverlayImportCap))
 	return b.String(), nil
 }
 
@@ -693,6 +834,21 @@ func (l *loader) parseLibrary(path string, pin map[string]string) (*sourcePkg, e
 			unit.linknamed[local] = directive
 		}
 		unit.files = append(unit.files, af)
+	}
+	// Audit fix round F6: a row naming a file the package does not select
+	// would be a silent no-op — every row of this package must have applied
+	// exactly once.
+	seen := map[string]int{}
+	for _, site := range unit.overlaid {
+		seen[site]++
+	}
+	for _, r := range overlay {
+		if r.pkg != path {
+			continue
+		}
+		if n := seen[r.site()]; n != 1 {
+			return nil, unsup("stdlib overlay %s: the row applied %d time(s) while loading package %q — its file is not among the selected files (or the site is duplicated); a row that does not apply is not an overlay (fail closed)", r.site(), n, path)
+		}
 	}
 	// NO shim injection into library units: the shims are user-package
 	// text (stdlibshim.go); a library body calling a shimmed member

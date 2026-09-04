@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+# BORN-RED by design (stdlib-source-2 audit fix round F1): defer/go of the frontend-intercepted slices.Sort refuse by name; green when memo §3 row M retires the sortSlice op.
+defer-sort	deferSort	-	ok	-	stdlib,sort,slices,defer,named-results,closures
+go-sort	goSort	-	ok	-	stdlib,sort,slices,goroutines,len

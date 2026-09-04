@@ -123,7 +123,11 @@ unused import).
    counted 1 of the 2 primitive slots, realized on the machine's existing
    float bit-pattern representation — or keep the float formatting paths
    refused until `print`/`println` (slice 3, which needs float printing
-   too) forces the question?"
+   too) forces the question?" **Auditor's view (verbatim, recorded, not
+   decided here):** ADMIT, with the condition that it preserve NaN
+   payloads exactly (deps.go:29 builds `nan()` from the payload
+   0x7FF8000000000001) and with ±0 / quiet-vs-signaling NaN round-trip
+   probes as its rows.
 2. **`slices/slices.go:453–465` `overlaps`:** REFUSED as the memo says
    (unsafe.Sizeof + pointer arithmetic on element addresses; the machine
    has no address arithmetic to substitute). `slices.Insert/Replace`
@@ -166,10 +170,20 @@ KEPT — 7 shims:
   desugar lives in `cmpshim.go` unchanged in body (D-002 freeze intact);
   float call sites fall through to the REAL generic (`stdlib-source/cmp-compare/*`
   — the old float refusal is gone, `slices/sortfunc-cmp/float-compare-bound`
-  green). **Decision posed to the [USER]:** retire it and take
-  `cmp-compare-kinds` red on a BUGS Cases line (the ParseUint shape), or
-  land the local-type instantiation naming first (a frontend generality
-  arc), or keep the desugar.
+  green). **Scope, stated honestly (audit):** the desugar intercepts EVERY
+  integer/string `cmp.Compare` call site, not only the local-type row — it
+  masks C6 for int/string kinds only; a function-local FLOAT type still
+  reaches the real generic and refuses at C6 (row
+  `stdlib-source/cmp-compare/local-float-type`, born red — the asymmetry,
+  rowed). **Decision posed to the [USER] — both views verbatim:**
+  worker: retire it and take `cmp-compare-kinds` red on a BUGS Cases line
+  (the ParseUint shape), or land the local-type instantiation naming
+  first (a frontend generality arc), or keep the desugar. Auditor: KEEP —
+  "C6 in ledger §5.1 is a ratified impossibility so the red would be
+  permanent". Coordinator note: FR-19's plan (a scope-qualified TypeId
+  KEY with gc's spelled RENDERED name) may make C6 revisitable — if it
+  lands, the int/string local-type shape lowers through the real generic
+  too and the desugar can retire without a red.
 
 ## Results
 
@@ -204,7 +218,8 @@ PASS→non-PASS: NONE at the landing tree. (During the slice
 finding above.) FAIL→FAIL with a changed stage:
 `strings/trimspace-repeat/repeat-bound-refused` (frontend-export refusal
 → lean-observation 30 s timeout; BUG-073 updated — the real Repeat has no
-golean bound; see the cost finding).
+golean bound; the row is BUG-090's Cases-line budget pin since the audit
+fix round; see the cost finding).
 
 New rows (60, `Corpus/coverage/exec/stdlib-source/`): `builder-overlay`
 11/11, `builder-cap` 4/4 (membership; every draw inside the enumerated
@@ -232,11 +247,12 @@ hash; observation = (hash, final Len, String prefix). Strict rows with
 append-spill picks). **Sized by measurement, not by the brief:** the
 brief asked for 100k operations; the machine's cost per subject rises
 superlinearly (`append-cost-probes.tsv`: 100 ops 0.26 s, 300 ops 1.4 s,
-600 ops 8.5 s, 1,000 ops 38 s — over the 30 s row budget), so the fuzz is
-3,000 operations in total; the residual to the asked count is recorded,
-not hidden.
+600 ops 8.5 s, 1,000 ops 38 s — over the 30 s row budget; the cause is
+BUG-090's allocation-count-quadratic heap, not the Builder body), so the
+fuzz is 3,000 operations in total; the residual to the asked count is
+recorded, not hidden, and re-sizing toward 100k is BUG-090's plan.
 
-### Interpreter cost (FINDING 2 — the in-place `append` cost)
+### Interpreter cost (FINDING 2 — RE-DERIVED at the audit fix round: BUG-090, the allocation-count-quadratic heap)
 
 `interpreter-cost.tsv` — golean `native-json-run` per subject, avg of 3,
 old wire (main's frontend) vs new wire, same binary: every shim/shadow
@@ -244,16 +260,27 @@ row moved by +0–13 ms (the pdqsort stencils add ~10 ms and grow the
 `slices/sortfunc-cmp` wire 110 KB → 1.37 MB); `parseUintErrors` went
 unsupported → ok at 379 ms (slice 1's `strconv.Quote` table cost).
 
-`append-cost-probes.tsv` — the finding: **an in-place `append` into
-spare capacity costs O(cap) per call in the interpreter** (256 one-byte
-appends 0.07 s; 512 0.26 s; 1,024 1.6 s; 2,048 10.8 s; 4,096 > 60 s;
-`make`/`string()`/spilling `append` of 4 KB are instant). Consequences,
-all recorded: Builder/Buffer workloads beyond ~1 KB exceed the 30 s row
-budget; `strings.Repeat`'s 8 KB chunk-limit arm cannot be exercised;
-`repeat-bound-refused` (16 MiB) is a runner-budget red; the fuzz is
-10 × 300. No machine change was made (out of this slice's scope); the
-remedy belongs to the interpreter's `appendSlice` in-place path and is
-owed as its own arc.
+`append-cost-probes.tsv` — the slice's first reading blamed the in-place
+`append` path alone (256 one-byte appends 0.07 s; 512 0.26 s; 1,024
+1.6 s; 2,048 10.8 s; 4,096 82 s; `make`/`string()`/one spilling `append`
+of 4 KB instant). **The audit's probe corrected the attribution** and
+the fix round re-derived it (`alloc-cost-probes.tsv`): `make([]byte, 4)`
+in a loop — 1,000: 0.15 s, 2,000: 0.63 s, 4,000: 3.0 s (quadratic in
+ALLOCATION COUNT, cap fixed); `new(int)` 4,000: 4.1 s; `string()` 4,000:
+4.2 s; pure arithmetic linear (40,000: 0.68 s); and the SAME 1,000
+appends after 4,000 live 4-byte allocations time out at 120 s — the cost
+scales with the LIVE HEAP. Mechanism (`GoLean/GoCore/State.lean`):
+`abbrev Heap := List (Loc × HeapCell)`, `Heap.lookup`/`Heap.set` linear —
+every allocation and every cell write is O(live cells); a byte-slice
+`append` writes cap-many cells, which is the amplification the first
+reading mistook for the whole cause. Filed as **BUG-090** (performance
+class, `Pinned-by: none`; `repeat-bound-refused` is its Cases-line budget
+pin and left untriaged-ids), plan = the hygiene arc's A2 dense heap (+A3).
+Consequences, all recorded: Builder/Buffer rows stay ≤ ~1 KB; the 8 KB
+chunk-limit arm cannot be exercised; `repeat-bound-refused` (16 MiB) is a
+runner-budget red whose colour depends on the box and
+`LEAN_TIMEOUT_SECONDS`; the fuzz is 10 × 300. No machine change was made
+(out of this slice's scope).
 
 ### Pins (rule 7: [USER]-authorized by G9 + ruling (a), both relayed)
 
@@ -271,7 +298,7 @@ owed as its own arc.
   functions (`bytes.Equal`, `strings.Join`, `strings.Repeat`,
   `math/bits.Mul*`/`Len*`, `slices.nextPowerOfTwo`, …); methods added =
   `bytes.Buffer.{empty,grow,readSlice,tryGrowByReslice}`,
-  `encoding/binary.littleEndian.*` (12), `slices.xorshift.Next`,
+  `encoding/binary.littleEndian.*` (11), `slices.xorshift.Next`,
   `strings.Builder.grow`; methods changed = the Buffer/Builder members
   (shadow-model bodies → real bodies, stubs → bodies) and the raft/
   confchange callers of the retired shims; globals added = `bytes.{ErrTooLarge,
@@ -320,6 +347,63 @@ python3 docs/evidence/2026-09-03_stdlib-source-1/twin-structural-diff.py <(git s
 scripts/gotest-triage run --jobs 8 ; scripts/gotest-triage report
 scripts/capped scripts/ci --diff                                          # the gate
 ```
+
+## Audit fix round (2026-09-04, same lane) — verdict FIX-FIRST; what changed
+
+F1 (HIGH, regression at the trusted surface): `defer slices.Sort(s)` /
+`go slices.Sort(s)` — the reach walk treated ANY direct `slices.Sort`
+call as intercepted (callee never marked) while the emitter intercepted
+only the ExprStmt shape; defer/go lowered the real generic with
+`math/bits.Len` pruned → machine `stuck` where main had refused by name.
+Fix: ONE predicate `interceptedLibraryCall` (stdlibreach.go) consulted by
+the reach walk AND the emitter (`emitCmpCompareCall` dispatches through
+it; DeferStmt/GoStmt arms call `refuseInterceptedLibraryCallee`, which
+refuses defer/go of any intercepted member BY NAME). Rows
+`stdlib-source/sort-op-shapes/{defer-sort,go-sort}` (gc 123 / 3; born red
+by name; green when memo §3 row M retires the op); unit test
+`TestInterceptedLibraryCalleeRefusesInDeferGo`.
+F2: an `expr` row may no longer target an import line (AST-computed from
+the upstream bytes: `importDeclLines`), and post-hoc, after all rows
+apply, the overlaid file's import bindings are re-derived and a LIVE
+binding to `unsafe`/`internal/abi`, or to any path one of the file's
+`import` rows neutralized, refuses by file:line (`checkNoLiveOverlayBannedImport`;
+`internal/bytealg` stays legitimately live in `internal/stringslite`).
+Tests in `TestStdlibOverlayTableRules`.
+F3: `--stdlib-overlay-check` now TYPE-CHECKS every overlaid package
+(`typeCheckOverlaidPackage`: go/types over the overlaid files, host
+export data for unmodeled imports); red-first `TestStdlibOverlayCheckTypeChecks`
+(dropping the builder.go:47 expr row while keeping its import rows now
+fails naming `builder.go`). A file's rows apply TOGETHER in the check.
+F4: the baseline header's "61 PASS, 2 born red" corrected to 60 / 3 (the
+AMENDED note kept as history).
+F5: the cost finding re-derived → BUG-090 (above; `alloc-cost-probes.tsv`);
+every prose site corrected (memo marker, BUG-073, untriaged notes, corpus
+comments, coverage ledger, this README); `repeat-bound-refused` moved onto
+BUG-090's Cases line (coverage ceiling 11 → 10, the RECORD 8 shape).
+F6: a row whose file the package never selects refuses at load
+(`parseLibrary`: every row of the package must apply exactly once;
+`TestStdlibOverlayRowMustApply`).
+F7: `frontendInterceptedLibraryMembers` carries reasons and is rendered
+in the register (class `intercept`, count 2: `slices.Sort`, `cmp.Compare`);
+widening it fails `check-stdlib-register`.
+F8: `slices/slices-sort-non-integer-refusal` stays rowed; memo §3 row M
+closes it.
+F9–F14: coverage-ledger frontier count 7 rows / 6 red; README littleEndian
+11; fuzz header "3,000 operations"; overlay row :39 marks the escape.go
+text as paraphrase; row :67 states the bound (48/33 = 1.45; page rounding
+1.25; both < 2); BUG-073 notes the red's colour depends on the box and
+`LEAN_TIMEOUT_SECONDS`; stdlibreach.go comment: the value shape refuses.
+IMPORT-ROW CAP ([AGENT] structural decision, disclosed for the [USER]):
+`overlay-import` rows have their OWN enforced cap, `stdlibOverlayImportCap
+= 8` (5 today + headroom for bytes' MakeNoZero import); the NUMBER is
+[AGENT]-provisional pending [USER]; the expr cap keeps meaning "semantic
+substitutions" — honest only because F2 bars expr rows from import lines.
+Red-first in `TestStdlibRegisterDumpCaps`.
+GATES: recorded above, both views verbatim (float-bits: worker posed /
+auditor ADMIT with NaN-payload + ±0 + quiet/signaling probes; cmp.Compare:
+worker posed / auditor KEEP; coordinator: FR-19 may make C6 revisitable).
+Rows added this round: 3 (all born red by name): `sort-op-shapes/{defer-sort,go-sort}`,
+`cmp-compare/local-float-type`.
 
 ## Gate result (rule 6)
 

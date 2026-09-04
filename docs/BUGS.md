@@ -3789,10 +3789,14 @@ named in refusals") failed on exactly the row it cited.
   golean bound in Repeat at all — the row (a 16 MiB output gc allocates
   fine) is now a RUNNER-BUDGET red: the machine cannot materialize it
   within the 30 s row budget (`lean-observation`, "TIMED OUT after 30s
-  (LEAN_TIMEOUT_SECONDS)" — the runner names the cause; the cost is the
-  interpreter's O(cap) in-place `append`, measured in the slice-2
-  evidence README), deliberately FAIL forever, so it stays OFF the
-  Cases line (check-bugs rule 3). The memo (§3 row 5) pre-announced
+  (LEAN_TIMEOUT_SECONDS)" — the runner names the cause; the cost is
+  BUG-090's allocation-count-quadratic interpreter heap, measured in the
+  slice-2 evidence README), deliberately FAIL forever, so it stays OFF
+  the Cases line (check-bugs rule 3). The red's COLOUR depends on the
+  box and on LEAN_TIMEOUT_SECONDS: a faster host or a longer budget
+  could turn a 16 MiB Repeat green without any change here — which is
+  why it sits on BUG-090's Cases line as a BUDGET pin (a resource
+  refusal), not as a designed semantic red. The memo (§3 row 5) pre-announced
   exactly this outcome: "else stays an honest budget refusal
   (re-expected with reason)".
 - Cases: strings/trimspace-repeat/repeat-overflow
@@ -4977,3 +4981,56 @@ carries the same shape. Raft: the twin subject's `raftpb.
 ConfChangesFromString` calls ParseUint; the twin WIRE carries the real
 body + the `Clone` stub (pin moved, structural diff in the evidence dir);
 no corpus row exercises that path at this tip.
+
+## BUG-090 — the interpreter's heap is an association list: every allocation and every cell write costs O(live cells), so allocation-heavy loops are QUADRATIC in allocation count and byte-slice `append` workloads worse — a cost bound that shapes corpus design (fuzz sizes, Builder rows, the 16 MiB Repeat row) [PERFORMANCE class; no wrong answer; GoCore representation]
+
+- Status: open (found 2026-09-03/04 at the stdlib-source-2 landing and
+  RE-DERIVED at its audit fix round F5 — the slice first attributed the
+  cost to the in-place `append` path alone; the auditor's `make([]byte,
+  4)`-in-a-loop probe showed allocation COUNT is the driver)
+- Pinned-by: none (a performance bound, not a fidelity divergence: no
+  row's observable is wrong; the row below exceeds the budget and refuses
+  at `lean-observation` with the runner's named timeout — a FAIL-BY-DESIGN
+  budget pin listed on the Cases line per the BUG-078 precedent, RECORD 8:
+  check-bugs verifies EXISTENCE only for none-entries and counts a listed
+  row as explained, so the row leaves baselines/untriaged-ids)
+- Cases: strings/trimspace-repeat/repeat-bound-refused
+- Discovered: 2026-09-03, lane `stdlib-source-2` (the real
+  `strings.Repeat`/`Builder` bodies made multi-KB byte buffers reachable
+  for the first time); measured
+  `docs/evidence/2026-09-03_stdlib-source-2/append-cost-probes.tsv`
+
+**Measurements** (golean `native-json-run`, single runs, shared box):
+`make([]byte, 4)` in a loop — 1,000: 0.15 s, 2,000: 0.63 s, 4,000:
+3.0 s (×4 count → ×20 time, quadratic); `new(int)` 1,000: 0.19 s,
+4,000: 4.1 s; `string([]byte{…})` 4,000: 4.2 s; pure arithmetic 4,000:
+0.09 s, 40,000: 0.68 s (linear). In-place `append` of one byte into a
+pre-sized `make([]byte, 0, n)`: 256: 0.07 s, 512: 0.26 s, 1,024: 1.6 s,
+2,048: 10.8 s, 4,096: 82 s; the SAME 1,000 appends after 4,000 live
+4-byte allocations: > 120 s (timeout) — the append cost scales with the
+LIVE HEAP, not only with the slice.
+
+**Mechanism** (`GoLean/GoCore/State.lean`): `abbrev Heap := List (Loc ×
+HeapCell)` with `Heap.lookup`/`Heap.set` walking the list — O(live cells)
+per read/write; a fresh allocation appends past every existing cell.
+Every allocation, every cell write, every value materialization pays
+it; a byte-slice `append` writes cap-many cells (or re-materializes the
+backing array), which is the amplification the slice first mistook for
+the whole cause. (Hypothesis-with-evidence: the assoc-list
+representation is confirmed by the source; a profile is owed at the
+fix.)
+
+**Consequences recorded**: Builder/Buffer rows stay ≤ ~1 KB; the
+`strings.Repeat` 8 KB chunk-limit arm cannot be exercised; the Builder
+fuzz is 10 × 300 operations, not the 100k the slice brief asked for
+(`stdlib-source/builder-fuzz`); the 16 MiB `repeat-bound-refused` row is
+a runner-budget red (BUG-073); the gotest lane's `fixedbugs/issue24419.go`
+sits at MACHINE-REFUSED (30 s).
+
+**Plan (closes this entry)**: the design-hygiene arc's A2 item (a DENSE
+heap — `Array`-indexed cells keyed by `Loc`, O(1) lookup/set) with A3
+(the professor's allocation-path items), `docs/2026-09-03_design-hygiene-arc.md`;
+a GoCore REPRESENTATION change, semantics-preserving by the same
+argument shape as B1's map stamps, gated by the full differential. When
+it lands: re-measure the probes above, re-size the fuzz toward the
+asked 100k, and re-expect `repeat-bound-refused`.

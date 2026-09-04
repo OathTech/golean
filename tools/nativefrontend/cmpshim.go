@@ -42,6 +42,13 @@ func (e *emitter) emitCmpCompareCall(c *ast.CallExpr, sel *ast.SelectorExpr) (an
 	if !ok || pkgName.Imported().Path() != "cmp" || sel.Sel.Name != "Compare" {
 		return nil, false, nil
 	}
+	// The ONE predicate shared with the reach walk (stdlibreach.go
+	// interceptedLibraryCall, audit fix round F1/F7): a call this returns
+	// false for (float or non-basic type argument) is the REAL generic —
+	// and the walk marked it reached.
+	if _, _, intercepted := interceptedLibraryCall(e.info, c); !intercepted {
+		return nil, false, nil
+	}
 	if c.Ellipsis.IsValid() || len(c.Args) != 2 {
 		return nil, false, unsup("cmp.Compare call shape outside the modeled subset")
 	}

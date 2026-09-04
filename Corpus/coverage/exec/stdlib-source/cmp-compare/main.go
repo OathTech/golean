@@ -40,7 +40,20 @@ func cmpOr() (int, string, float64) {
 	return cmp.Or(0, 0, 7, 9), cmp.Or("", "", "x", "y"), cmp.Or(0.0, nan())
 }
 
+// The retained kind-dispatch desugar (cmpshim.go) intercepts EVERY integer/
+// string cmp.Compare call site — including the function-local defined
+// type the row slices/sortfunc-cmp/cmp-compare-kinds pins — but a
+// function-local FLOAT type falls through to the real generic and hits
+// mono.go's C6 naming rule: an ASYMMETRY the audit asked to row (born red
+// by name; C6 is a ratified (c)-impossibility, revisitable under FR-19's
+// scope-qualified TypeId plan). gc: 1000 - 1 + 1 = ... see main.
+func cmpLocalFloatType() int {
+	type score float64
+	return cmp.Compare(score(2.5), score(1.5))*100 + cmp.Compare(score(1), score(1))*10 + cmp.Compare(score(-1), score(0)) + 1000
+}
+
 func main() {
+	println(cmpLocalFloatType())
 	println(cmpFloatsNaN())
 	a, b, c := cmpFloat32AndNamed()
 	println(a, b, c)
