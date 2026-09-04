@@ -4,7 +4,35 @@
 # driver-coupling pin against THIS set and its wire hash; scripts/ci
 # --slow re-enumerates and must reproduce it exactly. Update
 # deliberately, in its own commit, with the reason — never auto-written.
-# certified: 2026-09-04T17:24:37+00:00  commit: slow-recert-2 re-certification at main tip aceb0dcb (round-11 train landed: hygiene A3/A4/A8, fr22-fr23 + its audit round, lower-diagnose)
+# certified: 2026-09-04T19:43:31+00:00  commit: round-12 merge-train step 5a re-certification at main tip e6b2f442 (round-12 train landed: slow-recert-2, slow-rule, fr24)
+# re-certification reason (round-12 merge train, step 5a, 2026-09-04): the
+#   FIRST run of the standing post-train step adopted this round (CLAUDE.md
+#   merge protocol 5a, [USER] 2026-09-04, landed by slow-rule 3e5acf9b).
+#   The train merged fr24, which touched tools/nativefrontend/wire.go
+#   (3 commits since the 17:24:37 re-cert, all rebased-landed at
+#   19:28:06Z: FR-24 checkpoint A ecbbaadd, FR-25 checkpoint B b146dff2,
+#   the fr24 audit round 67e0686b — per-declaration quarantine + the
+#   wire-integrity assertion; no wire schema change by their own
+#   description). The reconciler's C9 fired accordingly at e6b2f442. The
+#   step-5a --slow re-certification ran at the CLEAN merged tip e6b2f442
+#   in the primary checkout (`scripts/capped scripts/ci --slow`, RESULT:
+#   PASS, exit 0, 542 s wall 19:43:31Z -> 19:52:33Z; 3382/3382 baseline
+#   diff FULL, 0 flips). Delta class: NONE. This fixture's wire sha is
+#   UNCHANGED (2f1d639f — the run's own emitted wire, sha256
+#   bit-identical to the record; the --diff gate's CERTIFIED-CACHED
+#   check at the fr24 tip had already confirmed the same), and the fresh
+#   GOLEAN_SLOW=1 dedup enumeration reproduced the set AND the graph
+#   bit-for-bit: the same six permutation members {123,132,213,231,312,
+#   321}, nodes=6193933 edges=6565663 dedupHits=371731 certified=checkCert.
+#   Params unchanged. Header instant = the run's START stamp (19:43:31Z),
+#   after the last wire commit (19:28:06Z), so C9's `--since` test clears.
+#   K=80 exhibition: 6 of 6 members exhibited in 54 draws (stopped at the
+#   members=6 pin; unexhibited empty). The gate log is ephemeral (.tmp,
+#   untracked); the numbers above are copied from it and from
+#   artifacts/coverage/membership/imported-goose/channel/google-search/.
+#   [AGENT] record refresh under the step-5a rule, delta class
+#   DATE/COMMIT-ONLY (set, graph, params, wire sha all unchanged).
+# previously: certified: 2026-09-04T17:24:37+00:00  commit: slow-recert-2 re-certification at main tip aceb0dcb (round-11 train landed: hygiene A3/A4/A8, fr22-fr23 + its audit round, lower-diagnose)
 # re-certification reason (slow-recert-2, 2026-09-04): the reconciler's
 #   C9 fired again after the round-11 train — "wire schema moved after
 #   the certification date 2026-09-04T01:02:30" — 5 commits to wire.go /
