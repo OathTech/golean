@@ -108,7 +108,25 @@ section and ledger §8n.
 
 ## Gate
 
-GATE_PLACEHOLDER
+Slice commit `88445d1c` (branch `fr4-rowm` off main `9128e6c0`; this
+README's gate paragraph and the `ci-diff.txt` transcript land in the
+records follow-up commit — the tree the gate certified is `88445d1c`,
+which the follow-up changes only under `docs/evidence/`).
+`scripts/capped scripts/ci --diff` at `88445d1c` (clean tree):
+**RESULT: PASS** — `differential coverage summary: cases=3400 pass=3189
+fail=211 export_status=0`; baseline re-pin guard (HEAD-vs-HEAD~1) clean,
+0 PASS→non-PASS; frontend pins ok (realized init-order deviation + twin
+wire = pinned bytes `4ee39f73…`; stdlib pin 61 files unchanged); stdlib
+admission register = frontend tables; `go test ./tools/nativefrontend`
+(incl. the four new FR-4 stencil tests, the row-M shape test, wire-
+integrity, determinism) and `go test ./tools/lowerdiag` (causes.tsv vs
+ledger, calibration vs wire, vocabulary) ok; check-spec-anchors,
+check-bugs, check-coverage ok; eval tests 148 ok; reconciler 3 findings,
+**0 HIGH** (the three MEDIUMs pre-date this lane: C13 historical Go
+versions, C14 one backlog decay date, C5 FR-7's `=` citation). The
+drift run BEFORE the re-pin (same tree content, dirty) is
+`ci-diff-1-drift-run.txt`: its baseline diff lists exactly the 18 born
+rows and 4 FAIL→PASS flips, nothing else.
 
 ## Files
 
@@ -116,8 +134,9 @@ GATE_PLACEHOLDER
   paths stripped to repo-relative).
 - `twin-repin/structural-diff.txt` — the JSON diff behind the twin re-pin
   (`b4458244…` → `4ee39f73…`).
-- `ci-diff.txt` — the gate transcript's tail (the differential summary,
-  the re-pin guard, the flips).
+- `ci-diff.txt` — the clean gate's transcript from the baseline diff to the
+  summary (`88445d1c`); `ci-diff-1-drift-run.txt` — the pre-re-pin drift
+  run's tail (the 22-line drift list = the movement).
 
 ## Reproduction (from the repo root, on the lane tip)
 
