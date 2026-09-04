@@ -648,6 +648,8 @@ are cited.
 
 ### 3(a). Cheap and local
 
+_A1 status (2026-09-04, design-hygiene arc step (ii)): LANDED `dfa68802` (branch `hygiene-a-series`, 2026-09-04) — flat names kept as `@[match_pattern]` views; design note §A1._
+
 **A1. Split `GoError` into three types (the type change only; the
 monad change is B2).**
 Change: `Refusal := unsupported msg | stuck msg | internal msg`;
@@ -667,6 +669,8 @@ Preservation: a bijection on constructors; `GoError.status` strings
 unchanged, so the CLI observation is byte-identical.
 Downstream: adequacy statements quantify `Terminal`, not "the subset
 of GoError I mean".
+
+_A2 status (2026-09-04, design-hygiene arc step (ii)): LANDED `7cba41cd` — `nextAddr` a derived def; BUG-085's `.internal` refusal kept (recorded deviation); design note §A2._
 
 **A2. Dense heap: `Heap := Array HeapCell`, addresses are indices.**
 Change: `Heap.lookup (.base ⟨i⟩) = heap[i]?`; `Heap.set` out of range
@@ -692,6 +696,8 @@ observes the difference. The differential is the regression.
 Downstream: G-REPR's "re-keyed heap" gets a dense address space for
 free; `Loc.rootBase < size` is the whole ownership story.
 
+_A3 status (2026-09-04, design-hygiene arc step (ii)): LANDED `6973354b` — plus one root write path `ExecState.updateCell`; `coerceStoredValue` deleted; `newValue typ : Ty`; design note §A3._
+
 **A3. Move `mapData`/`chanData` out of `GoValue` into the cell.**
 Change: `HeapCell.content := value (declaredTy : Ty) (v : GoValue) |
 mapPayload (entries) | chanPayload (buf cap closed)`; delete
@@ -716,6 +722,8 @@ of `loadLoc`/`storeLoc` on all reachable states.
 Downstream: points-to for maps/chans is a distinct predicate by
 construction (`l ↦ₘ entries`), which is what a channel logic wants.
 
+_A4 status (2026-09-04, design-hygiene arc step (ii)): LANDED `bcdf04c1` — no wire change (the wire already carried `globaladdr gid`; the twin pin pins emitted bytes); the program-text `locSup` deletion is OWED to wave (iii); design note §A4._
+
 **A4. `Expr.global (gid : Nat)` replacing `Expr.locLit`.**
 Change: the frontend emits `gid`; the core evaluates `.global gid` to
 `.addr (.base ⟨gid⟩)` after checking `gid < σ.globalCount` (a new
@@ -733,6 +741,8 @@ globals.size`, and the driver seeds cell `i` at `.base ⟨i⟩`
 Downstream: no `Func.locSup` hypothesis on any program-level theorem;
 the split plan's "GoCore extraction" carries less.
 
+_A5 status (2026-09-04, design-hygiene arc step (ii)): LANDED `48d9aba8` — record + `gcAmd64` + single instantiation `platform`; `tySizeAlignFuel` parametric; no `ExecState.platform` field yet (→ B7); design note §A5._
+
 **A5. A `Platform` record, instantiated once.**
 Change: `structure Platform where intBits : Nat; maxAllocBytes : Nat;
 chanHeaderBytes : Nat; sizes : Ty → TypeEnv → Except Refusal (Nat ×
@@ -747,6 +757,8 @@ Cost: small; four constants and one function move; every
 `IntKind.int (bits)` carry it at lowering, or thread `Platform`.
 Preservation: at `gcAmd64` every arm computes the same numbers.
 Downstream: re-envelope of R1/R16 is instantiation, not surgery.
+
+_A6 status (2026-09-04, design-hygiene arc step (ii)): LANDED `367dab2f` — footprint keeps `AccessKind × Loc` (recorded deviation); first gate RED (dedup-engine merge rate), fixed by a canonical sorted shadow; design note §A6._
 
 **A6. A `ShadowKey` type instead of phantom `Loc`s.**
 Change: `inductive ShadowKey | data (l : Loc) | syncWord (l : Loc)
@@ -767,6 +779,8 @@ change their `at_` helper.
 Preservation: verdict-for-verdict — the conflict test is a pure
 function of (kind, key, clock) and the key encodings are in bijection
 with the phantom paths.
+
+_A7 status (2026-09-04, design-hygiene arc step (ii)): SKIPPED — folded into wave (iii)/B3, whose `Cont` classification is this accessor; measured ~85 pattern sites incl. 24 in proofs (design note §A7)._
 
 **A7. One accumulator convention and one apply-position accessor.**
 Change: pick `done : List GoValue` reversed (the majority) for the
@@ -789,6 +803,8 @@ inside frames never observed (frames are not values); the accessor is
 definitional.
 Downstream: bind/plug lemmas over frames normalize one shape.
 
+_A8 status (2026-09-04, design-hygiene arc step (ii)): LANDED `7ff80223` (in part) — renames (`Stop`, `inertLabel`, `allocNew`, `opaqueDecl`), `_nt` drop, `stmtOpNullary` deleted; NOT done with reasons: `GoValue.unit` (not dead — the atomic store result), `ExecOutcome` (→ B4), `itersNormalized` (→ (iii)), `length/capacity typ` (frontend); design note §A8._
+
 **A8. Dead-generality sweep** (extends the queue's Q5).
 Delete: `GoValue.unit`; `ExecOutcome.returned/broke/continued`
 (`execStmt` returns `ExecState`; `mainOutcome?` returns `Option
@@ -804,6 +820,8 @@ for `*[n]T` emit `intLit n`). Rename `Stmt.label` → `.inertLabel`
 types by design, `GoError` → `Stop` (with A1).
 Preservation: each deletion is of an unreachable arm or an
 unproducible value; the renames are α.
+
+_A9 status (2026-09-04, design-hygiene arc step (ii)): LANDED `80b4ed89` — rule on `Refusal`; five `.internal` → `.stuck` re-tags; `Refusal.at`/driver error type deferred (→ B2/B7); design note §A9._
 
 **A9. State the refusal rule in one place and apply it.**
 Docstring on `Refusal` (three sentences): `unsupported` = a Go
@@ -824,6 +842,8 @@ within class — VERIFY against `scripts/coverage`'s status grammar
 before landing; if `error` vs `stuck` is compared, keep the class
 map). Downstream: "on a well-formed program the machine never
 returns `.internal`" becomes a stateable (if unproved) property.
+
+_A10 status (2026-09-04, design-hygiene arc step (ii)): LANDED `884e5226` — 19 history blocks moved to `docs/2026-09-04_core-docstring-ledger.md`; Race.lean 68.4%→66.4%, Machine.lean 43.8%→43.6% comment lines — the ≤35%/≤25% targets are NOT met: what remains is envelope statements and design rationale, which this item keeps by its own rule; design note §A10._
 
 **A10. Docstring diet.**
 Keep in situ: the envelope statement (≤ 12 lines) and the transfer

@@ -82,6 +82,19 @@ cost and touches the fewest positional `fun_cases` proofs.
      statements stay in situ). A1 is the outcome grammar's first
      half and may be folded into wave (iii) instead — whichever
      lands first records the choice here.
+     Status: DONE on branch `hygiene-a-series` (2026-09-04), forked
+     from `main` @ `1b8401c0` (both prerequisite lanes landed): A1–A6,
+     A8 (in part), A9, A10 (in part) landed as one commit each with the
+     full differential at ZERO drift and the whole-corpus choice trace at
+     ZERO consumption delta; A7 SKIPPED (folded into (iii)); A1 landed
+     under (ii) — the choice is recorded here. Design note
+     `docs/2026-09-03_hygiene-a-series-design.md`; evidence
+     `docs/evidence/2026-09-03_hygiene-a-series/`. Owed to (iii): the
+     program-text `locSup` deletion (A4), `itersNormalized` (A8), A7.
+     One red gate in the series (A6's first attempt: a dedup-ENGINE
+     merge-rate effect, no observation moved) is recorded with both
+     transcripts. No [USER] design gate was hit: A4's wire check found
+     no wire change.
 
 (iii) **B2 + B3 + B8 as ONE re-proof wave** — the `Result` monad
       through the helpers (the 17 `*Panic` twin rules and the 41
@@ -174,4 +187,5 @@ change the semantics or its accounting, and none is scheduled here
 
 | Slice | Item | Branch | Landed | Notes |
 |---|---|---|---|---|
+| 2 | A-series A1–A10 | `hygiene-a-series` | branch-complete 2026-09-04: A1 `dfa68802`, A2 `7cba41cd`, A3 `6973354b`, A4 `bcdf04c1`, A5 `48d9aba8`, A6 `367dab2f`, A8 `7ff80223`, A9 `80b4ed89`, A10 `884e5226` + a records commit (SHA in the evidence README); every gate `ci --diff` PASS 3284 = 3085/199 at zero drift, choice-trace delta 0; not merged | design note `docs/2026-09-03_hygiene-a-series-design.md`; evidence `docs/evidence/2026-09-03_hygiene-a-series/`; A7 SKIPPED (→ B3); net core delta and per-item lemma tombstones in the note |
 | 1 | B1 stamps | `hygiene-b1-stamps` | branch-complete 2026-09-03, landing commit `f6152a6c`; audit verdict MERGE-READY, fix round `a4cf54e4` (clean-tree ci --diff PASS, 3199/3199); E9 irreflexive-key narrowing RATIFIED [USER] 2026-09-03 (relayed; record in docs/2026-08-31_qrow-rulings.md); merge sign-off pending; not merged | design note `docs/2026-09-03_hygiene-b1-stamps-design.md`; evidence `docs/evidence/2026-09-03_hygiene-b1-stamps/`; 14 defs + 14 theorems + 3 rule premises deleted, −649 lines; zero drift on 3195 rows; +4 rows `maps/nan-key-range`, `maps/nan-key-range-aggregate/{array,struct,interface}` (BUG-088, found by the bisimulation argument, fixed by construction — an E9 narrowing on irreflexive keys, DISCLOSED, [USER] ratification pending at merge) |

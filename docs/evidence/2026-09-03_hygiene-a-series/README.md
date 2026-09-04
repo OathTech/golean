@@ -65,3 +65,36 @@ nilValueMethodText=84 l2Entry=24 l4Waiter=22 l2Arrival=3`, 0 violations /
 | A7 apply-position accessor | — | SKIPPED (design note §A7: folded into wave (iii)/B3) | — | — | — | — |
 | A8 sweep | A8 sources (uncommitted at run; committed unchanged) | PASS | 3284 = 3085/199 | 0 (FULL 3284/3284) | 0 | 0 — 19489/19489 lines identical (`choice-trace/a8-summary.txt`) |
 | A9 refusal rule | A9 sources (uncommitted at run; committed unchanged) | PASS | 3284 = 3085/199 | 0 (FULL 3284/3284) | 0 | 0 — 19489/19489 lines identical (`choice-trace/a9-summary.txt`) |
+| A10 docstring diet | A10 sources (uncommitted at run; committed unchanged) | PASS | 3284 = 3085/199 | 0 (FULL 3284/3284) | 0 | 0 — 19489/19489 lines identical (`choice-trace/a10-summary.txt`) |
+
+## Series record
+
+Commits (branch `hygiene-a-series`, forked from `main` @ `1b8401c0`):
+A1 `dfa68802`, A2 `7cba41cd`, A3 `6973354b`, A4 `bcdf04c1`, A5 `48d9aba8`,
+A6 `367dab2f`, A8 `7ff80223`, A9 `80b4ed89`, A10 `884e5226`, then the
+records commit (this README's final row) and a docs-only follow-up with the
+clean-tip fast gate tail (`transcripts/gate-clean-tip.txt`). A7 SKIPPED.
+Net `git diff --shortstat main..HEAD -- GoLean Tests` at A10: 25 files,
++1727 / −1791.
+
+Each per-item `ci --diff` above ran on the item's UNCOMMITTED sources
+(the same bytes were then committed with no edit in between — the gate
+records say `git_dirty=true` for that reason, as B1's did); the clean-tip
+fast gate (`scripts/capped scripts/ci`, no `--diff`: escape-hatch scans,
+build, eval tests, and the baseline diff of the LAST recorded differential
+run — the A10 run) is the record that the committed tip is what was
+certified.
+
+Two findings that are NOT this lane's to fix, recorded here so they are
+not lost: (1) the native frontend's quarantine-reason string for
+multi-label `goto` shapes is export-nondeterministic
+(`stdlib-source/frontier/index-rune-goto`; `choice-trace/a3-summary.txt`)
+— a diagnostics nondeterminism in a by-design FR-21 refusal row, visible
+only through the tracer's `obsHash`; (2) the dedup ENGINE's structural
+state equality is sensitive to the insertion order of the detector's
+shadow (surfaced by A6's first gate; `transcripts/gate-a6-red-first-attempt.txt`)
+— now moot for the shadow (kept canonical), but the same sensitivity
+exists for every other assoc-list-shaped component of `RaceState`
+(`chans`, `syncs`, `atomics`) and of `ExecState` in principle; an
+engine-side canonical form would make merge rates interleaving-insensitive
+across the board. [AGENT]

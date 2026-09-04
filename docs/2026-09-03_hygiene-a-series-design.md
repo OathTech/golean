@@ -1,6 +1,6 @@
 # The A-series — design note and preservation arguments (2026-09-04)
 
-Status: IN PROGRESS on branch `hygiene-a-series` (design-hygiene arc step
+Status: BRANCH-COMPLETE on `hygiene-a-series` (2026-09-04; not merged — audit-ask pending) (design-hygiene arc step
 (ii); plan `docs/2026-09-03_design-hygiene-arc.md`; source proposals
 `docs/2026-09-03_grumpy-professor-review.md` §3(a) A1–A10). Provenance:
 [AGENT] execution inside the [USER]-ratified arc (Mike, 2026-09-03,
@@ -644,3 +644,73 @@ likewise deferred (it wants the `Result`/driver split of B2/B7).
 regression, re-pin guard 0 flips, negative 394/394, eval tests 148/148
 (`transcripts/gate-a9.txt`); choice-trace delta vs the pre-series
 snapshot: 0 on all 19489 lines (`choice-trace/a9-summary.txt`).
+
+## A10 — docstring diet (done in part; targets not met, said plainly)
+
+**What moved.** 19 blocks of HISTORY prose left the trusted core for
+`docs/2026-09-04_core-docstring-ledger.md`, each verbatim under an anchor
+(`[DL-1]`…`[DL-19]`) that the shortened in-situ docstring cites: from
+Race.lean's module docstring — O1's pin/guard/re-open lists, U1's
+closure narrative, U3's BUG-046 correction and BUG-045 "refusal-set
+agreement" correction records, U5's audit-round provenance, U4's
+before/after closure history, the call-site inventory's spine-migration
+parentheticals (BUG-025/034/037) and the S3-convergence note; from the
+sync section — the union reading's countersign relay chain, the
+TryLock/TryRLock probe-run narrative, the Mutex/RWMutex/WaitGroup rows'
+probe isolations, the contention guards, the designed-divergence probe
+families; from Machine.lean — the tryLock envelope's ruling-provenance
+preamble, `mapIterK`'s retired-design history and its E9 evidence/pin
+paragraph. KEPT in situ, by the item's own rule: every ENVELOPE
+STATEMENT (mapIterK/E9, postOp, backEdge, tryLock, L2, the sync and
+atomic apply envelopes, R1/R16 now on `gcAmd64`), every transfer caveat,
+the footprint design rationale ("why a curated per-shape footprint"), the
+call-site inventory itself (the lockstep obligation's checklist), the two
+registers and THE TABLE of the sync section, the designed-divergence
+statement and residual (b).
+
+**Measured.** Comment-line share (a crude line count: docstring and `--`
+lines over total): Race.lean 68.4% → 66.4% (1614 → 1602 lines; ≈120
+prose lines moved), Machine.lean 43.8% → 43.6%. The review's targets
+(Race ≤ 35%, Machine ≤ 25%) are NOT met and were not going to be met by
+this item's rule: what remains in both files IS envelope statements and
+rationale (Machine.lean's six largest docstrings are the ChoiceSite
+envelopes the doctrine requires in situ; Race.lean's are the footprint
+rationale, the inventory, and the sync/atomic registers and table).
+Reaching the targets would mean moving envelope statements — a doctrine
+question (the nondeterminism doctrine puts the envelope at the site),
+not a hygiene one — and is left to the [USER]. [AGENT]
+
+## Summary — what landed, what moved, what is owed
+
+| item | commit | core effect | proof side |
+|---|---|---|---|
+| A1 stop grammar | `dfa68802` | `Refusal`/`Terminal`/`fuelOut` types; flat names as views | 0 lemmas deleted; 1 restated; simp family + `cases_stop` |
+| A2 dense heap | `7cba41cd` | `Array HeapCell`; `alloc = push`; `nextAddr` derived; `Heap.set`/`freshLoc` gone | assoc-list heap lemmas → array lemmas; NPDRF obstruction 2 closed |
+| A3 payload cells | `6973354b` | `HeapCell` sum; `mapData`/`chanData` gone; one root write path; `coerceStoredValue` gone; `newValue typ : Ty` | −277 lines; `coerceStoredValue_congr` (158) and `_locSup'` (~125) deleted; `updateCell_*` proved once |
+| A4 `Expr.global` | `bcdf04c1` | program text address-free; machine bound-checks the global | `evalGlobal` wf case; 75 positional re-tags + 2 refusal cases |
+| A5 `Platform` | `48d9aba8` | one record, one instantiation; `tySizeAlignFuel` parametric | none |
+| A6 `ShadowKey` | `367dab2f` | one shadow, one overlap table, canonical order; `chanObj` shadow gone | none (one red gate: dedup-engine merge rate; fixed) |
+| A7 | SKIPPED | — | → wave (iii) (B3) |
+| A8 sweep | `7ff80223` | `Stop`, `inertLabel`, `allocNew`, `opaqueDecl`; `_nt`; `stmtOpNullary` gone | 2 lemmas + 3 cases deleted; `.unit`/`ExecOutcome`/`itersNormalized`/frontend typ NOT done |
+| A9 refusal rule | `80b4ed89` | rule on `Refusal`; 5 re-tags | none |
+| A10 diet | `884e5226` | 19 history blocks → ledger | none |
+
+Net core delta across the series (`git diff --shortstat main..HEAD`,
+A1–A10): GoLean/ + Tests/ 25 files, +1727 / −1791 (−64 lines net);
+`GoLean/GoCore/` alone 20 files, +1676 / −1717 (−41 net) — the count
+includes the A1 simp family (+47 one-line lemmas), the new `Platform.lean`
+(+80, mostly the relocated R1/R16 envelope prose) and A3's new payload
+helpers, against the deletions tombstoned per item above (the largest:
+`coerceStoredValue_congr` 158, `coerceStoredValue_locSup'` ~125, the
+assoc-list heap machinery, `Heap.set`/`freshLoc`, the nullary rule's
+lemmas). Lines are not the point; the per-item "what got shorter or
+vanished" lists are.
+Every gate: `ci --diff` PASS `3284 = 3085/199`, FULL 3284/3284 no
+regression, 0 flips; every choice trace: 0 consumption delta.
+
+**A10 gate.** `scripts/capped scripts/ci --diff` on the A10 tree: RESULT
+PASS, `cases=3284 pass=3085 fail=199`, baseline diff FULL 3284/3284 no
+regression, re-pin guard 0 flips, negative 394/394, eval tests 148/148
+(`transcripts/gate-a10.txt`); choice-trace delta 0 on all 19489 lines
+(`choice-trace/a10-summary.txt`). (A comment-only change; the gate is run
+anyway — every item, no exceptions.)

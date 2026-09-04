@@ -1410,9 +1410,12 @@ row so the axis stops being invisible, nothing more.
 ### R1. `int`/`uint` width — (b) PINNED to 64 bits
 
 - WHERE: spec §Numeric types: `uint`/`int` are "implementation-specific
-  sizes" — "either 32 or 64 bits". Machine: `IntKind.bits?`
-  Value.lean:47–48 (`.int => some 64`, `.uint => some 64`);
-  `IntKind.normalize` wraps at the fixed width. Recorded only in
+  sizes" — "either 32 or 64 bits". Machine (since design-hygiene A5,
+  2026-09-04): `Platform.intBits`, pinned at `gcAmd64` (Platform.lean —
+  the envelope statement lives on that instance; `platform := gcAmd64`
+  is THE one instantiation), read by `IntKind.bitsAt`/`IntKind.bits?`
+  (Value.lean; `.int`/`.uint ↦ p.intBits`); `IntKind.normalize` wraps
+  at that width. Recorded only in
   docs/semantics.md:199 as an "executable testing policy" with the
   stated intent that width become an explicit parameter — the record
   PREDATES the envelope doctrine; the owed site-level caveat in
@@ -1426,10 +1429,13 @@ row so the axis stops being invisible, nothing more.
 - EVIDENCE: GC (amd64 = 64-bit only). XIMPL is the evidence class that
   BEARS here more than anywhere sequential: a 32-bit gc / tinygo lane
   would exercise the other point.
-- RE-ENVELOPE OBLIGATION + COST: parameterize width (IntKind.bits?,
-  normalize, conversions, the frontend's go/types Sizes config, the
-  negative lane's acceptance) — PERVASIVE but mechanical; blocked in
-  practice on having any 32-bit oracle to differentiate against.
+- RE-ENVELOPE OBLIGATION + COST: a second `Platform` instance (A5 made
+  the width a record field; `tySizeAlignFuel` is parametric, the rest of
+  the core reads the single instantiation — threading a platform through
+  `ExecState` is deferred to B7, design note §A5), plus the frontend's
+  go/types Sizes config and the negative lane's acceptance — mechanical;
+  blocked in practice on having any 32-bit oracle to differentiate
+  against.
   MODERATE-HIGH cost, LOW urgency until a cross-implementation lane
   exists.
 
@@ -1812,9 +1818,12 @@ runtime observable. OPEN QUESTION as stated.
   `plainError` with no `runtime error:` prefix), `growslice: len out of
   range` (slice.go:191–252, on the GROWN cap, or an `int` overflow of
   the new length); `makemap` CLAMPS an over-limit or negative hint to 0
-  (map.go:60–67) and never panics. Machine: `maxAllocBytes`,
-  `chanHeaderBytes`, `intExclusiveUpperBound`, `tySizeAlignFuel`
-  (Ops.lean, the R16 docstrings), consumed at the `makeSlice` /
+  (map.go:60–67) and never panics. Machine: `Platform.maxAllocBytes`,
+  `.chanHeaderBytes`, `.intExclusiveUpperBound`, `.wordBytes`/`.maxAlign`
+  pinned at `gcAmd64` (Platform.lean, since design-hygiene A5 — the R16
+  envelope statement lives there), read by Ops.lean's `maxAllocBytes`,
+  `chanHeaderBytes`, `intExclusiveUpperBound` and `tySizeAlignFuel
+  platform`, consumed at the `makeSlice` /
   `makeChan` arms of `applyStmtOpCore` and the `appendSlice` spill path
   of `applyStmtOp` (Machine.lean), each BEFORE materialization; the
   `makeMap` arm's pre-slice negative-hint panic (an older gc string
@@ -1898,10 +1907,11 @@ runtime observable. OPEN QUESTION as stated.
   BUG-078 residual (2)), `make([]struct{}, huge)` (same materialization),
   and any `append` past the limit. XIMPL (32-bit gc, gccgo, tinygo
   bounds) is the evidence class that would size the envelope.
-- RE-ENVELOPE OBLIGATION + COST: parameterize `{maxAllocBytes,
-  chanHeaderBytes, tySizeAlignFuel}` TOGETHER with R1's width (one
-  layout/memory-model structure threaded to the three arms) — LOW-
-  MODERATE, mechanical; worthless until a second oracle exists. The
+- RE-ENVELOPE OBLIGATION + COST: a second `Platform` instance (A5,
+  2026-09-04: the record `Platform` carries R1's width and R16's three
+  numbers TOGETHER — `def gc386 : Platform := …` is the re-envelope's
+  core half; the instantiation point is `platform`) — LOW, mechanical;
+  worthless until a second oracle exists. The
   D-001 model (an allocation-failure outcome for behavior 1, a budget
   in every statement) is the larger owed change and is NOT this row's.
 
@@ -2122,7 +2132,8 @@ memory)" for the doctrine's.
    pervasive but mechanical, and worthless until a 32-bit oracle lane
    (cross-implementation evidence) exists. (semantics.md:199 records
    the policy; site-level caveat at `IntKind.bits?` ADDED 2026-08-31 —
-   the owed record discharged, §9 flag 2.)
+   the owed record discharged, §9 flag 2; since A5 the caveat sits on
+   `gcAmd64`, Platform.lean.)
 7. **Library-doc-silent behaviors are modeled at gc's realized point.**
    WaitGroup's int32 wrap-before-negative-test (BUG-055), the sync
    misuse FATAL class and its exact strings (probes p01–p03), the
@@ -2258,8 +2269,8 @@ their queued-debt standing.
    prose only, with no caveat/envelope statement at the site although
    the singleton-narrowing rule (nondeterminism doctrine F8/F15) would
    require one if shipped today. The envelope statement now sits at
-   `IntKind.bits?` (Value.lean) — pin, envelope {32,64}, transfer
-   caveat, XIMPL gate. (The flag stood 20 days after being recorded
+   `gcAmd64` (Platform.lean; was `IntKind.bits?` until A5) — pin,
+   envelope {32,64}, transfer caveat, XIMPL gate. (The flag stood 20 days after being recorded
    as owed.)
 3. **Doctrine draft seeded #2's "to gc's realization"** — see §8's
    correction paragraph.

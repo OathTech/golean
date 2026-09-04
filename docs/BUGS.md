@@ -4564,8 +4564,11 @@ the records-only fix round).
   arm; nothing erases a cell; the only non-proof `Loc.base`
   constructions are `freshLoc` (State.lean:362) and the decoder's
   bound-checked `globaladdr` (NativeToIR.lean:437, gid < the
-  driver-seeded global count). Density is a candidate lemma for the
-  review's A2 dense-heap proposal, which would make it true by type.
+  driver-seeded global count). Density is TRUE BY TYPE since the A2
+  dense heap (design-hygiene A-series, 2026-09-04: `Heap := Array
+  HeapCell`, every root write is `ExecState.updateCell`'s bounds-checked
+  `Array.set`; the `.internal` refusal is the only out-of-range
+  behaviour — `docs/2026-09-03_hygiene-a-series-design.md` §A2/§A3).
   The pin is therefore a Lean-level executable guard in `Tests/GoCoreEval.lean`
   (`gocore-eval-tests`, run by `scripts/ci`): `storeLoc {} (.base ⟨0⟩)
   (.int 7)` must be `.error (.internal _)` — shown FAIL against main's
