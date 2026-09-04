@@ -1245,6 +1245,82 @@ def stepMulti (m : MultiConfig) (ch : Choices) :
     else
       stepThreadInto m m.cur ch
 
+/-! ## The pool consumption projection (B8) -/
+
+/-- **The pool-step consumption projection** — the one definition behind
+`CLI.stepNeeds` and the tracer's `poolSite` (review U10: the hand-written
+dispatch mirrors are gone). Given the picks already supplied for the
+NEXT `stepMulti` call, the site and bound of its next draw, or `none`
+when the step consumes nothing further. Walks `stepMulti`'s own decision
+points with the machine's own functions: the boundary consult
+(`Config.boundarySite`, `schedSlots` — consumed only at ≥ 2 slots), the
+spawn's child-entry pick, the arrival analysis (`arrivalCases`: the L4
+waiter pick at ≥ 2 candidates, the L2 arrival pick at `.multi`), and,
+on the cell path, the sequential projection `seqConsumption`. -/
+def poolConsumption (m : MultiConfig) (picks : Choices) : Option (ChoiceSite × Nat) :=
+  match m.threads[m.cur]? with
+  | none => none
+  | some c₀ =>
+    let site₀ := c₀.boundarySite
+    let menu := schedSlots m.shared m.threads m.cur site₀
+    let l1 : Option (Nat × Choices) :=
+      if c₀.atBoundary then
+        match menu with
+        | [] => none
+        | [j] => some (j, picks)
+        | rs =>
+            match picks with
+            | [] => none
+            | p :: rest =>
+                match rs[p % rs.length]? with
+                | some j => some (j, rest)
+                | none => none
+      else some (m.cur, picks)
+    match c₀.atBoundary, menu, picks with
+    | true, _ :: _ :: _, [] => some (site₀, menu.length)
+    | _, _, _ =>
+      match l1 with
+      | none => none
+      | some (i, ch) =>
+        match m.threads[i]? with
+        | none => none
+        | some c =>
+          if isBlockedConfig c then none
+          else if (opDoneInner c).isSome then none
+          else
+            match spawnPlan c with
+            | some _ =>
+                match entryCallSite? c with
+                | some (fid, args) =>
+                    if nilValueMethodWidth m.shared fid args ≤ 1 then none
+                    else match ch with
+                      | [] => some (.nilValueMethodText, nilValueMethodWidth m.shared fid args)
+                      | _ :: _ => none
+                | none => none
+            | none =>
+              match arrivalCases m.shared m.threads i c with
+              | .error _ => none
+              | .ok (.single _ cs) =>
+                  if cs.length ≤ 1 then none
+                  else match ch with
+                    | [] => some (.l4Waiter, cs.length)
+                    | _ :: _ => none
+              | .ok (.multi os) =>
+                  match ch with
+                  | [] => some (.l2Arrival, os.length)
+                  | p :: rest =>
+                      match os[p % os.length]? with
+                      | some (.pair _ cs) =>
+                          if cs.length ≤ 1 then none
+                          else match rest with
+                            | [] => some (.l4Waiter, cs.length)
+                            | _ :: _ => none
+                      | _ => none
+              | .ok .cellPath =>
+                  match ch with
+                  | [] => seqConsumption m.shared c
+                  | _ :: _ => none
+
 /-! ## The registry's SECOND duty: segment-level happens-before race
 detection (slice 3, D2+D3(b))
 

@@ -409,140 +409,122 @@ def tryLockFacts (s : ExecState) (c : Config) : MenuFacts :=
       | _, _ => bad "try-lock apply shape recognized"
   | _ => bad "try-lock apply shape recognized"
 
-/-! ## The site-tagged consumption mirror -/
+/-! ## The consumption projection, with the validator's menu facts
 
-/-- The sequential-machine sites at a `stepFn` position (the mirror of
-`CLI.stepNeedsSeq`, tagged with the census site and the menu facts). -/
+Since wave (iii) B8 the WHICH-SITE/WHAT-BOUND question is answered by the
+machine's own projections (`seqConsumption`/`poolConsumption` — theorem
+`stepFn_consumption`); the tracer no longer mirrors the dispatch ladder.
+What stays here is the VALIDATOR's half: for the site the machine names,
+an independent, deliberately simple recomputation of the menu facts from
+the pre-state (`MenuFacts`), compared against the machine's bound. -/
+
+/-- The menu facts for a SEQUENTIAL consumption the machine reports at
+`(σ, c)`, by site. -/
+def seqFacts (σ : ExecState) (c : Config) : ChoiceSite → MenuFacts
+  | .mapIter =>
+      match c with
+      | .next (.mapIterK _ _ _ _ _ base produced start _ _) => mapIterFacts σ base produced start
+      | _ => { specWidth := none, invariants := [("mapIter site at a non-range configuration", false)],
+               pickCheck := fun _ => [] }
+  | .l2Entry =>
+      match c with
+      | .retV v (.selectOpsK clauses default? done [] env k) =>
+          match applySelectCore σ clauses default? ((v :: done).reverse) env k with
+          | .ok (.picks commits) => entryFacts σ c commits.length
+          | _ => { specWidth := none, invariants := [("l2Entry site without a multi-ready analysis", false)],
+                   pickCheck := fun _ => [] }
+      | _ => { specWidth := none, invariants := [("l2Entry site at a non-select configuration", false)],
+               pickCheck := fun _ => [] }
+  | .appendSpill => spillFacts σ c
+  | .tryLock => tryLockFacts σ c
+  | .nilValueMethodText =>
+      match entryCallSite? c with
+      | some (fid, args) => nilTextFacts σ fid args
+      | none => { specWidth := none, invariants := [("nilValueMethodText site at a non-entry configuration", false)],
+                  pickCheck := fun _ => [] }
+  | site => { specWidth := none, invariants := [(s!"{siteName site} reported by the sequential projection", false)],
+              pickCheck := fun _ => [] }
+
+/-- The sequential-machine consumption at a `stepFn` position, tagged
+with the menu facts: the machine's `seqConsumption`, plus the validator's
+recomputation. -/
 def seqSite (σ : ExecState) (c : Config) :
     Option (ChoiceSite × Nat × MenuFacts) :=
-  match c with
-  | .next (.mapIterK _ _ keyTy valTy _ base produced start _ _) =>
-      match mapIterCandidates σ keyTy valTy base produced with
-      | .error _ => none
-      | .ok cands =>
-          if cands.isEmpty then none
-          else
-            let mand := mapIterMandatoryRemains cands start
-            some (.mapIter, cands.size + (if mand then 0 else 1),
-                mapIterFacts σ base produced start)
-  | .retV v (.selectOpsK clauses default? done [] env k) =>
-      match applySelectCore σ clauses default? ((v :: done).reverse) env k with
-      | .ok (.picks commits) => some (.l2Entry, commits.length, entryFacts σ c commits.length)
-      | _ => none
-  | .retV v (.stmtOpK (.appendSlice _) _ done [] _ _) =>
-      match (v :: done).reverse with
-      | [_, sliceV, elemsV] =>
-          match valueAsSlice sliceV, valueAsSlice elemsV with
-          | .ok slice, .ok elems =>
-              let newLen := slice.len + elems.len
-              if newLen ≤ slice.cap then none
-              else some (.appendSpill, appendSpillWidth slice.cap newLen, spillFacts σ c)
-          | _, _ => none
-      | _ => none
-  | .retV v (.syncStK op done [] _ _) =>
-      -- The TRY heads' `tryLock` site (Q-TRYLOCK): the bound is the
-      -- machine's own `tryLockWidth` over the receiver cell; width 1
-      -- pops nothing (`consumeAtOne := false`), so no site is reported.
-      match op.tryTargets?, (v :: done).reverse with
-      | some _, [av] =>
-          match valueAsLoc av with
-          | .error _ => none
-          | .ok loc =>
-              match syncCell σ loc with
-              | .error _ => none
-              | .ok pre =>
-                  let w := tryLockWidth op pre
-                  if w ≤ 1 then none else some (.tryLock, w, tryLockFacts σ c)
-      | _, _ => none
-  | c =>
-      -- The frame-entry panic-text site (BUG-087): the mirror of
-      -- `CLI.stepNeedsSeq`'s arm, tagged.
-      match entryCallSite? c with
-      | some (fid, args) =>
-          if nilValueMethodWidth σ fid args ≤ 1 then none
-          else some (.nilValueMethodText, nilValueMethodWidth σ fid args, nilTextFacts σ fid args)
-      | none => none
+  (seqConsumption σ c).map fun (site, bound) => (site, bound, seqFacts σ c site)
 
-/-- The pool-step mirror of `CLI.stepNeeds`, tagged: given the picks
-already supplied for the CURRENT pool step, the next consumption's site,
-bound, and menu facts — or `none` when the step draws nothing further. -/
-def poolSite (m : MultiConfig) (picks : List Nat) :
-    Option (ChoiceSite × Nat × MenuFacts) :=
+/-- The goroutine `stepMulti` will step and the picks it will hand that
+goroutine's own consumption — the boundary consult already resolved
+against `picks` (the machine's `schedSlots` menu). -/
+def poolTarget (m : MultiConfig) (picks : List Nat) : Option (Nat × List Nat) :=
   match m.threads[m.cur]? with
   | none => none
   | some c₀ =>
-    let site₀ := c₀.boundarySite
-    let menu := schedSlots m.shared m.threads m.cur site₀
-    let l1 : Option (Nat × List Nat) :=
-      if c₀.atBoundary then
-        match menu with
-        | [] => none
-        | [j] => some (j, picks)
-        | rs =>
-            match picks with
-            | [] => none
-            | p :: rest =>
-                match rs[p % rs.length]? with
-                | some j => some (j, rest)
-                | none => none
-      else some (m.cur, picks)
-    match c₀.atBoundary, menu, picks with
-    | true, _ :: _ :: _, [] => some (site₀, menu.length, schedFacts m site₀ menu)
-    | _, _, _ =>
-      match l1 with
-      | none => none
+    let menu := schedSlots m.shared m.threads m.cur c₀.boundarySite
+    if c₀.atBoundary then
+      match menu with
+      | [] => none
+      | [j] => some (j, picks)
+      | rs =>
+          match picks with
+          | [] => none
+          | p :: rest =>
+              match rs[p % rs.length]? with
+              | some j => some (j, rest)
+              | none => none
+    else some (m.cur, picks)
+
+/-- The menu facts for a POOL consumption the machine reports at `m` with
+`picks` supplied, by site (the validator's recomputation of the context
+each site's facts need). -/
+def poolFacts (m : MultiConfig) (picks : List Nat) (site : ChoiceSite) (bound : Nat) : MenuFacts :=
+  match site with
+  | .l1Sched | .postOp | .backEdge =>
+      match m.threads[m.cur]? with
+      | some c₀ => schedFacts m site (schedSlots m.shared m.threads m.cur c₀.boundarySite)
+      | none => { specWidth := none, invariants := [("scheduler site without a running goroutine", false)],
+                  pickCheck := fun _ => [] }
+  | .l5ExitWindow => exitWindowFacts m
+  | _ =>
+      match poolTarget m picks with
+      | none => { specWidth := none, invariants := [(s!"{siteName site} without a stepped goroutine", false)],
+                  pickCheck := fun _ => [] }
       | some (i, ch) =>
         match m.threads[i]? with
-        | none => none
+        | none => { specWidth := none, invariants := [("stepped goroutine out of range", false)],
+                    pickCheck := fun _ => [] }
         | some c =>
-          if isBlockedConfig c then none
-          else if (opDoneInner c).isSome then none
-          else
-            match spawnPlan c with
-            | some _ =>
-                match entryCallSite? c with
-                | some (fid, args) =>
-                    if nilValueMethodWidth m.shared fid args ≤ 1 then none
-                    else match ch with
-                      | [] => some (.nilValueMethodText, nilValueMethodWidth m.shared fid args,
-                          nilTextFacts m.shared fid args)
-                      | _ :: _ => none
-                | none => none
-            | none =>
+          match site with
+          | .nilValueMethodText =>
+              match entryCallSite? c with
+              | some (fid, args) => nilTextFacts m.shared fid args
+              | none => seqFacts m.shared c site
+          | .l4Waiter =>
               match arrivalCases m.shared m.threads i c with
-              | .error _ => none
-              | .ok (.single _ cs) =>
-                  if cs.length ≤ 1 then none
-                  else match ch with
-                    | [] => some (.l4Waiter, cs.length,
-                        waiterFacts m.shared m.threads i (chanOpClause c) cs)
-                    | _ :: _ => none
+              | .ok (.single _ cs) => waiterFacts m.shared m.threads i (chanOpClause c) cs
               | .ok (.multi os) =>
                   match ch with
-                  | [] => some (.l2Arrival, os.length, arrivalFacts m.shared m.threads i c os.length)
-                  | p :: rest =>
+                  | p :: _ =>
                       match os[p % os.length]? with
                       | some (.pair _ cs) =>
-                          if cs.length ≤ 1 then none
-                          else match rest with
-                            | [] =>
-                                -- The chosen clause's channel/side, for
-                                -- the independent partner scan.
-                                let chvSide : Option (Bool × GoValue) :=
-                                  match cs.head?, selectEvs c with
-                                  | some (ci, _), some (.ok evs, _) =>
-                                      (evs[ci]?).map clauseChan
-                                  | _, _ => none
-                                some (.l4Waiter, cs.length,
-                                  waiterFacts m.shared m.threads i chvSide cs)
-                            | _ :: _ => none
-                      | _ => none
-              | .ok .cellPath =>
-                  -- The sequential machine's own sites: at most one pick
-                  -- per step, so a supplied pick means nothing further.
-                  match ch with
-                  | [] => seqSite m.shared c
-                  | _ :: _ => none
+                          let chvSide : Option (Bool × GoValue) :=
+                            match cs.head?, selectEvs c with
+                            | some (ci, _), some (.ok evs, _) => (evs[ci]?).map clauseChan
+                            | _, _ => none
+                          waiterFacts m.shared m.threads i chvSide cs
+                      | _ => { specWidth := none, invariants := [("l4Waiter site without a pairing outcome", false)],
+                               pickCheck := fun _ => [] }
+                  | [] => { specWidth := none, invariants := [("l4Waiter site at a multi analysis without its L2 pick", false)],
+                            pickCheck := fun _ => [] }
+              | _ => { specWidth := none, invariants := [("l4Waiter site without a pairing analysis", false)],
+                       pickCheck := fun _ => [] }
+          | .l2Arrival => arrivalFacts m.shared m.threads i c bound
+          | site => seqFacts m.shared c site
+
+/-- The pool-step consumption at `m` with `picks` supplied, tagged: the
+machine's `poolConsumption`, plus the validator's recomputation. -/
+def poolSite (m : MultiConfig) (picks : List Nat) :
+    Option (ChoiceSite × Nat × MenuFacts) :=
+  (poolConsumption m picks).map fun (site, bound) => (site, bound, poolFacts m picks site bound)
 
 /-! ## The lockstep driver -/
 

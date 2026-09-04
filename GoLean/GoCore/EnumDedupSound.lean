@@ -96,31 +96,8 @@ theorem stepThread_l4_run {s : ExecState} {ts : Array Config} {i : Nat}
       rw [hpair]
       rfl
 
-/-- `bind` of a known-`ok` scrutinee, as a rewrite (keeps the REST of
-the pipeline in folded `bind` form — unlike a `dsimp` through
-`Except.bind`, which turns every bind into a match and defeats the
-`bind_pair_stream` unification below). -/
-private theorem except_bind_ok {ε α β : Type} (a : α)
-    (f : α → Except ε β) : (Except.ok a >>= f) = f a := rfl
-
-/-- Stream pass-through of a two-stage `Except` pipeline ending in a
-`(·, choices)` pair — the shape of `applyStmtOp`'s non-spill append
-branch. -/
-private theorem bind_pair_stream {α : Type} (T : Except Stop α)
-    (g : α → Except Stop ExecState) (ch : Choices) :
-    (do let a ← T; let x ← g a;
-        pure ((x, ch) : ExecState × Choices))
-      = (match (do let a ← T; let x ← g a;
-                   pure ((x, ([] : Choices)) : ExecState × Choices)) with
-         | .ok (s', _) => .ok (s', ch)
-         | .error e => .error e) := by
-  cases T with
-  | error e => rfl
-  | ok a =>
-    simp only [Bind.bind, Except.bind]
-    cases g a with
-    | error e => rfl
-    | ok x => rfl
+-- (`except_bind_ok` and `bind_pair_stream` moved to MachineSound with the B8
+-- consumption lemmas; used here as before.)
 
 /-- **N-APP determinization**: a NON-SPILLING `appendSlice` apply is
 stream-oblivious — `applyStmtOp` returns the stream verbatim and the

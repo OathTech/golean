@@ -2980,312 +2980,223 @@ theorem consumesAppendSlice_stmtOpK {v : GoValue} {op : StmtOp} {nt : Nat}
   subst he
   simp [consumesAppendSlice] at h
 
-set_option maxHeartbeats 1600000 in
-set_option linter.unusedSimpArgs false in
-/-- **Stream obliviousness of the non-consuming arms**: away from the
-four consuming shapes (a `mapIterK` at the `.next` position — excluded
-by `hmi` — an `appendSlice` apply position — excluded by `hnc` — a
-select apply position, whose `applySelect` may draw the L2 clause pick
-— excluded by `hns`, slice 4 — a frame entry in BUG-087's wrapper
-family, whose `enterFramePick` draws the `nilValueMethodText` pick —
-excluded by `hnv` — and a TRY head's sync apply, which draws the
-`tryLock` site — excluded by `hnt`, Q-TRYLOCK), a step
-that succeeds under one stream succeeds under EVERY stream, with the SAME
-successor and the stream returned untouched. Sweep over `stepFn`'s case
-tree; a newly added stream-consuming arm breaks this proof loudly rather
-than silently unsounding the checker. -/
-theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
-    {c' : Config} {σ' : ExecState} {ch₀' : Choices}
-    (hmi : ∀ (kv vv : Option String) (kt vt : Ty) (body : Stmt)
-      (base : Option Loc) (produced start : Array Nat)
-      (env : LocalEnv) (k : Cont),
-      c ≠ .next (.mapIterK kv vv kt vt body base produced start env k))
-    (hnc : consumesAppendSlice c = false)
-    (hns : consumesSelect c = false)
-    (hnv : consumesNilValueMethod σ c = false)
-    (hnt : consumesTryLock c = false)
-    (h : stepFn σ c ch₀ = .ok (c', σ', ch₀')) :
-    ch₀' = ch₀ ∧ ∀ ch : Choices, stepFn σ c ch = .ok (c', σ', ch) := by
-  fun_cases stepFn σ c ch₀
-  all_goals first
-    | exact absurd rfl (hmi _ _ _ _ _ _ _ _ _ _)
-    | (simp [consumesSelect] at hns; done)
-    | (refine ⟨?_, fun ch => ?_⟩ <;> (simp_all [stepFn]; done))
-    | skip
-  -- 23 arms remain: every one binds through a choices-free helper
-  -- (enterFrame / allocDecls / defaultValue / loadLoc / valueAsBool /
-  -- mapRangeSnapshotEntries / loadMany+storeMany) or dispatches a
-  -- non-appendSlice applyStmtOp (`hnc`). Uniform recipe: reduce the probe
-  -- equation, invert its bind, replay the same bind at the arbitrary
-  -- stream (the helpers never see the stream).
-  case case77 =>
-    -- A4: a global past the heap REFUSES (`.stuck`); no step is produced.
-    rename_i hgid
-    simp only [stepFn] at h
-    rw [if_neg hgid] at h
-    simp [throw, throwThe, MonadExceptOf.throw] at h
-  case case3 =>
-    oblivious_entry h hnv
-  case case13 =>
-    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
-    obtain ⟨⟨env', s₁⟩, hd, rfl, rfl, rfl⟩ := h
-    refine ⟨by simp, fun ch => ?_⟩
-    simp only [stepFn, bind_eq_ok]
-    refine ⟨⟨env', s₁⟩, hd, ?_⟩
-    simp
-  -- Channel receive entry (channels arc slice 1): the plan match needs
-  -- its hypothesis rewritten in; both arms are stream-oblivious.
-  case case41 =>
-    rename_i hplan
-    simp only [stepFn] at h
-    rw [hplan] at h
-    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl, rfl⟩ := h
-    refine ⟨rfl, fun ch => ?_⟩
-    simp only [stepFn]
-    rw [hplan]
-    rfl
-  case case42 =>
-    rename_i hplan
-    simp only [stepFn] at h
-    rw [hplan] at h
-    simp [throw, throwThe, MonadExceptOf.throw] at h
-  case case43 =>
-    rename_i hplan hgt
-    simp only [stepFn] at h
-    rw [hplan, if_pos hgt] at h
-    simp [throw, throwThe, MonadExceptOf.throw] at h
-  case case44 =>
-    rename_i hplan hgt
-    simp only [stepFn] at h
-    rw [hplan, if_neg hgt] at h
-    simp [throw, throwThe, MonadExceptOf.throw] at h
-  -- Sync statements (spec-parity slice 2): the chan recipes — entry is
-  -- stream-transparent; the APPLY is stream-transparent for every
-  -- non-TRY head (`hnt` excludes the TRY heads — Q-TRYLOCK's
-  -- `tryLock` site; `applySyncOp_core_ok`/`_error`).
-  -- Sync statements (spec-parity slice 2): the chan recipes — entry is
-  -- stream-transparent; the APPLY is stream-transparent for every
-  -- non-TRY head (`hnt` excludes the TRY heads — Q-TRYLOCK's
-  -- `tryLock` site; `applySyncOp_core_ok`/`_error`).
-  case case133 =>
-    have hnone := consumesTryLock_none hnt
-    simp_all only [stepFn, bind_eq_ok, pure_eq_ok]
-    obtain ⟨r, hres, h⟩ := h
-    rcases toResult_cases hres with ⟨⟨c₂, σ₂, ch₂⟩, rfl, happly⟩ | ⟨msg, rfl, happly⟩
-    · simp only [deliverS_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl⟩ := h
-      obtain ⟨rfl, hall⟩ := applySyncOp_core_ok hnone happly
-      refine ⟨rfl, fun ch => ?_⟩
-      have hc := hall ch
-      simp only [List.reverse_cons] at hc
-      simp [stepFn, hc, Bind.bind, Except.bind]
-    · simp only [deliverS_panic, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl⟩ := h
-      refine ⟨rfl, fun ch => ?_⟩
-      have hc := applySyncOp_core_error hnone happly ch
-      simp only [List.reverse_cons] at hc
-      simp [stepFn, hc, Bind.bind, Except.bind]
-  case case60 =>
-    rename_i hplan
-    simp only [stepFn] at h
-    rw [hplan] at h
-    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl, rfl⟩ := h
-    refine ⟨rfl, fun ch => ?_⟩
-    simp only [stepFn]
-    rw [hplan]
-    rfl
-  case case61 =>
-    rename_i hplan
-    simp only [stepFn] at h
-    rw [hplan] at h
-    simp [throw, throwThe, MonadExceptOf.throw] at h
-  case case62 =>
-    rename_i hplan
-    simp only [stepFn] at h
-    rw [hplan] at h
-    simp [throw, throwThe, MonadExceptOf.throw] at h
-  -- sync/atomic statements (atomics arc wave 1): the sync recipes —
-  -- entry is stream-transparent (the apply consumes nothing,
-  -- applyAtomicOp's envelope statement).
-  case case63 =>
-    rename_i hplan
-    simp only [stepFn] at h
-    rw [hplan] at h
-    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl, rfl⟩ := h
-    refine ⟨rfl, fun ch => ?_⟩
-    simp only [stepFn]
-    rw [hplan]
-    rfl
-  case case64 =>
-    rename_i hplan
-    simp only [stepFn] at h
-    rw [hplan] at h
-    simp [throw, throwThe, MonadExceptOf.throw] at h
-  case case65 =>
-    rename_i hplan
-    simp only [stepFn] at h
-    rw [hplan] at h
-    simp [throw, throwThe, MonadExceptOf.throw] at h
-  case case14 =>
-    simp_all [stepFn, bind_eq_ok]
-    obtain ⟨v, hd, h1, h2, h3⟩ := h
-    exact ⟨h3.symm, v, hd, h1, h2⟩
-  case case36 =>
-    oblivious_entry h hnv
-  case case69 =>
-    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
-    obtain ⟨v, hd, rfl, rfl, rfl⟩ := h
-    refine ⟨by simp, fun ch => ?_⟩
-    simp only [stepFn, bind_eq_ok]
-    refine ⟨v, hd, ?_⟩
-    simp
-  case case83 =>
-    oblivious_apply h
-  case case86 =>
-    oblivious_apply h
-  case case87 =>
-    simp only [stepFn, bind_eq_ok] at h
-    obtain ⟨b, hb, h⟩ := h
-    obtain rfl := valueAsBool_ok hb
-    cases b <;>
-      (simp only [Bool.false_eq_true, reduceIte, pure_eq_ok, Except.ok.injEq,
-         Prod.mk.injEq] at h
-       obtain ⟨rfl, rfl, rfl⟩ := h
-       refine ⟨by simp, fun ch => ?_⟩
-       simp [stepFn, valueAsBool, Bind.bind, Except.bind])
-  case case88 =>
-    simp only [stepFn, bind_eq_ok] at h
-    obtain ⟨b, hb, h⟩ := h
-    obtain rfl := valueAsBool_ok hb
-    cases b <;>
-      (simp only [Bool.false_eq_true, reduceIte, pure_eq_ok, Except.ok.injEq,
-         Prod.mk.injEq] at h
-       obtain ⟨rfl, rfl, rfl⟩ := h
-       refine ⟨by simp, fun ch => ?_⟩
-       simp [stepFn, valueAsBool, Bind.bind, Except.bind])
-  case case89 =>
-    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
-    obtain ⟨b, hb, rfl, rfl, rfl⟩ := h
-    refine ⟨by simp, fun ch => ?_⟩
-    simp only [stepFn, bind_eq_ok]
-    refine ⟨b, hb, ?_⟩
-    simp
-  case case90 =>
-    simp only [stepFn, bind_eq_ok] at h
-    obtain ⟨b, hb, h⟩ := h
-    obtain rfl := valueAsBool_ok hb
-    cases b <;>
-      (simp only [Bool.false_eq_true, reduceIte, pure_eq_ok, Except.ok.injEq,
-         Prod.mk.injEq] at h
-       obtain ⟨rfl, rfl, rfl⟩ := h
-       refine ⟨by simp, fun ch => ?_⟩
-       simp [stepFn, valueAsBool, Bind.bind, Except.bind])
-  case case91 =>
-    simp only [stepFn, bind_eq_ok] at h
-    obtain ⟨b, hb, h⟩ := h
-    obtain rfl := valueAsBool_ok hb
-    cases b <;>
-      (simp only [Bool.false_eq_true, reduceIte, pure_eq_ok, Except.ok.injEq,
-         Prod.mk.injEq] at h
-       obtain ⟨rfl, rfl, rfl⟩ := h
-       refine ⟨by simp, fun ch => ?_⟩
-       simp [stepFn, valueAsBool, Bind.bind, Except.bind])
-  case case93 =>
-    oblivious_entry h hnv
-  case case94 =>
-    rename_i hlt
-    simp only [stepFn, if_pos hlt] at h
-    (try simp only [Bind.bind, Except.bind] at h)
-    split at h
-    · simp at h
-    · rename_i r hres
-      cases r with
-      | ok a =>
-        simp only [deliverS_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl, rfl⟩ := h
-        exact ⟨rfl, fun ch => by simp [stepFn, if_pos hlt, hres, Bind.bind, Except.bind]⟩
-      | panic msg =>
-        simp only [deliverS_panic, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl, rfl⟩ := h
-        exact ⟨rfl, fun ch => by simp [stepFn, if_pos hlt, hres, Bind.bind, Except.bind]⟩
-  case case95 =>
-    rename_i hlt
-    simp only [stepFn, if_neg hlt, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl, rfl⟩ := h
-    refine ⟨by simp, fun ch => ?_⟩
-    simp only [stepFn, if_neg hlt]
-    rfl
-  case case96 =>
-    have hop := consumesAppendSlice_stmtOpK hnc
-    simp_all only [stepFn, bind_eq_ok, pure_eq_ok]
-    obtain ⟨r, hres, h⟩ := h
-    rcases toResult_cases hres with ⟨⟨σ₂, ch₂⟩, rfl, happly⟩ | ⟨msg, rfl, happly⟩
-    · simp only [deliverS_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl⟩ := h
-      rw [applyStmtOp_eq_core hop, map_eq_ok] at happly
-      obtain ⟨σ₃, hcore, heq⟩ := happly
-      injection heq with h1 h2
-      subst h1
-      subst h2
-      -- (the opening `simp_all only [bind_eq_ok]` left the ∀-goal in its
-      -- ∃-form: name the classified result at the arbitrary stream)
-      refine ⟨rfl, fun ch => ⟨.ok (σ₃, ch), ?_, rfl⟩⟩
-      rw [applyStmtOp_eq_core hop, hcore]
-      rfl
-    · simp only [deliverS_panic, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl⟩ := h
-      rw [applyStmtOp_eq_core hop, map_eq_error] at happly
-      refine ⟨rfl, fun ch => ⟨.panic msg, ?_, rfl⟩⟩
-      rw [applyStmtOp_eq_core hop, happly]
-      rfl
-  case case97 =>
-    oblivious_entry h hnv
-  case case103 =>
-    oblivious_entry h hnv
-  case case113 =>
-    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
-    obtain ⟨bs, hd, rfl, rfl, rfl⟩ := h
-    refine ⟨by simp, fun ch => ?_⟩
-    simp only [stepFn, bind_eq_ok]
-    refine ⟨bs, hd, ?_⟩
-    simp
-  case case116 =>
-    oblivious_apply h
-  case case126 =>
-    oblivious_apply h
-  case case135 =>
-    oblivious_apply h
-  case case143 =>
-    simp only [stepFn, bind_eq_ok] at h
-    obtain ⟨vs, _, h⟩ := h
-    simp [throw, throwThe, MonadExceptOf.throw] at h
-  case case144 =>
-    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
-    obtain ⟨vs, hload, rfl, rfl, rfl⟩ := h
-    refine ⟨by simp, fun ch => ?_⟩
-    simp only [stepFn, bind_eq_ok]
-    refine ⟨vs, hload, ?_⟩
-    simp
-  case case146 =>
-    oblivious_entry h hnv
-  case case154 =>
-    oblivious_apply h
-  case case180 =>
-    simp only [stepFn, bind_eq_ok] at h
-    obtain ⟨vs, _, h⟩ := h
-    simp [throw, throwThe, MonadExceptOf.throw] at h
-  case case181 =>
-    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
-    obtain ⟨vs, hload, rfl, rfl, rfl⟩ := h
-    refine ⟨by simp, fun ch => ?_⟩
-    simp only [stepFn, bind_eq_ok]
-    refine ⟨vs, hload, ?_⟩
-    simp
-  case case183 =>
-    oblivious_entry h hnv
+/-! ### The per-site stream lemmas behind `stepFn_consumption` (B8) -/
+
+theorem except_bind_ok {ε α β : Type} (a : α)
+    (f : α → Except ε β) : (Except.ok a >>= f) = f a := rfl
+
+/-- Stream pass-through of a two-stage `Except` pipeline ending in a
+`(·, choices)` pair — the shape of `applyStmtOp`'s append branches. -/
+theorem bind_pair_stream {α : Type} (T : Except Stop α)
+    (g : α → Except Stop ExecState) (ch : Choices) :
+    (do let a ← T; let x ← g a;
+        pure ((x, ch) : ExecState × Choices))
+      = (match (do let a ← T; let x ← g a;
+                   pure ((x, ([] : Choices)) : ExecState × Choices)) with
+         | .ok (s', _) => .ok (s', ch)
+         | .error e => .error e) := by
+  cases T with
+  | error e => rfl
+  | ok a =>
+    simp only [Bind.bind, Except.bind]
+    cases g a with
+    | error e => rfl
+    | ok x => rfl
+
+/-- A `.done` readiness analysis: `applySelect` passes the stream through. -/
+theorem applySelect_done_stream {σ : ExecState} {clauses : List (SelectClauseHead × Stmt)}
+    {default? : Option Stmt} {vs : List GoValue} {env : LocalEnv} {k : Cont}
+    {c₁ : Config} {s₁ : ExecState} {cl? : Option EvClause}
+    (h : applySelectCore σ clauses default? vs env k = .ok (.done c₁ s₁ cl?)) (ch : Choices) :
+    applySelect σ clauses default? vs env k ch = .ok (c₁, s₁, ch, cl?) := by
+  simp [applySelect, h, Bind.bind, Except.bind]
+
+/-- A multi-ready analysis: `applySelect`'s stream is the L2 pop, and the
+outcome depends on the stream only through the pick. -/
+theorem applySelect_picks_stream {σ : ExecState} {clauses : List (SelectClauseHead × Stmt)}
+    {default? : Option Stmt} {vs : List GoValue} {env : LocalEnv} {k : Cont}
+    {commits : List (EvClause × Sum (Config × ExecState) String)}
+    (h : applySelectCore σ clauses default? vs env k = .ok (.picks commits)) (ch : Choices) :
+    applySelect σ clauses default? vs env k ch =
+      (match commits[(Choices.consumeAt .l2Entry commits.length ch).1]? with
+       | some (cl, .inl (c', s')) => .ok (c', s', (Choices.consumeAt .l2Entry commits.length ch).2, some cl)
+       | some (cl, .inr msg) =>
+           .ok (.panicking [panicEntry msg] k, σ, (Choices.consumeAt .l2Entry commits.length ch).2, some cl)
+       | none => .error (.internal "select ready-clause pick out of range")) := by
+  simp only [applySelect, h, Bind.bind, Except.bind]
+  rfl
+
+/-- An error of the analysis is an error of the apply. -/
+theorem applySelect_error_stream {σ : ExecState} {clauses : List (SelectClauseHead × Stmt)}
+    {default? : Option Stmt} {vs : List GoValue} {env : LocalEnv} {k : Cont} {e : Stop}
+    (h : applySelectCore σ clauses default? vs env k = .error e) (ch : Choices) :
+    applySelect σ clauses default? vs env k ch = .error e := by
+  simp [applySelect, h, Bind.bind, Except.bind]
+
+/-- A TRY head's apply, in terms of the site's pop. -/
+theorem applySyncOp_try_stream {σ : ExecState} {op : SyncOp} {targets : List Assignee}
+    {av : GoValue} {loc : Loc} {pre : SyncPrim} {env : LocalEnv} {k : Cont}
+    (ht : op.tryTargets? = some targets) (hl : valueAsLoc av = .ok loc)
+    (hc : syncCell σ loc = .ok pre) (ch : Choices) :
+    applySyncOp σ ch op [av] env k =
+      (applyTryLock σ op loc pre
+        ((Choices.consumeAt .tryLock (tryLockWidth op pre) ch).1 == 1) targets env k).map
+        fun p => (p.1, p.2, (Choices.consumeAt .tryLock (tryLockWidth op pre) ch).2) := by
+  simp only [applySyncOp, ht, hl, hc, Bind.bind, Except.bind, Except.map]
+  cases applyTryLock σ op loc pre
+      ((Choices.consumeAt .tryLock (tryLockWidth op pre) ch).1 == 1) targets env k <;> rfl
+
+/-- A TRY head whose consult does not pop (`tryLockConsult? = none` at a
+resolvable receiver) is stream-oblivious: width 1 pops nothing and forces
+pick 0. -/
+theorem applySyncOp_try_nopop {σ : ExecState} {op : SyncOp} {targets : List Assignee}
+    {av : GoValue} {loc : Loc} {pre : SyncPrim} {env : LocalEnv} {k : Cont}
+    (ht : op.tryTargets? = some targets) (hl : valueAsLoc av = .ok loc)
+    (hc : syncCell σ loc = .ok pre) (hw : tryLockWidth op pre ≤ 1) (ch : Choices) :
+    applySyncOp σ ch op [av] env k =
+      (applyTryLock σ op loc pre false targets env k).map fun p => (p.1, p.2, ch) := by
+  rw [applySyncOp_try_stream ht hl hc ch, Choices.consumeAt_le_one hw rfl]
+  rfl
+
+/-- A two-stage `Except` pipeline ending in a `(·, ch)` pair is the
+pipeline's value paired with `ch`. -/
+theorem bind_pair_map {α : Type} (T : Except Stop α)
+    (g : α → Except Stop ExecState) (ch : Choices) :
+    (do let a ← T; let x ← g a;
+        pure ((x, ch) : ExecState × Choices))
+      = (do let a ← T; g a).map fun s' => (s', ch) := by
+  cases T with
+  | error e => rfl
+  | ok a =>
+    simp only [Bind.bind, Except.bind]
+    cases g a with
+    | error e => rfl
+    | ok x => rfl
+
+/-- The spill decision agrees with the arm: at `appendSpill? = none` the
+apply is stream-oblivious — a state result `r` (in place, the R16 refusal
+before the consult, or an operand the apply refuses) paired with the
+untouched stream. -/
+theorem applyStmtOp_appendSlice_nospill {σ : ExecState} {elem : Ty} {nt : Nat}
+    {vs : List GoValue} (hw : appendSpill? σ elem vs = none) :
+    ∃ r : Except Stop ExecState, ∀ ch : Choices,
+      applyStmtOp σ ch (.appendSlice elem) nt vs = r.map fun s' => (s', ch) := by
+  match vs, hw with
+  | [], _ => exact ⟨.error (.stuck "malformed appendSlice operands"), fun _ => rfl⟩
+  | [_], _ => exact ⟨.error (.stuck "malformed appendSlice operands"), fun _ => rfl⟩
+  | [_, _], _ => exact ⟨.error (.stuck "malformed appendSlice operands"), fun _ => rfl⟩
+  | _ :: _ :: _ :: _ :: _, _ => exact ⟨.error (.stuck "malformed appendSlice operands"), fun _ => rfl⟩
+  | [tv, sliceV, elemsV], hw =>
+    unfold applyStmtOp
+    dsimp only
+    cases hsl : valueAsSlice sliceV with
+    | error e => exact ⟨.error e, fun _ => rfl⟩
+    | ok slice =>
+      simp only [except_bind_ok]
+      cases hel : valueAsSlice elemsV with
+      | error e => exact ⟨.error e, fun _ => rfl⟩
+      | ok elems =>
+        simp only [except_bind_ok]
+        cases hv1 : validateSlice slice with
+        | error e => exact ⟨.error e, fun _ => rfl⟩
+        | ok u1 =>
+          simp only [except_bind_ok]
+          cases hv2 : validateSlice elems with
+          | error e => exact ⟨.error e, fun _ => rfl⟩
+          | ok u2 =>
+            simp only [except_bind_ok]
+            cases hvis : sliceVisibleValues σ elems with
+            | error e => exact ⟨.error e, fun _ => rfl⟩
+            | ok elemValues =>
+              simp only [except_bind_ok]
+              have hsz := sliceVisibleValues_size hvis
+              cases htl : valueAsLoc tv with
+              | error e => exact ⟨.error e, fun _ => rfl⟩
+              | ok tloc =>
+                simp only [except_bind_ok]
+                by_cases hcap : slice.len + elemValues.size ≤ slice.cap
+                · simp only [if_pos hcap]
+                  exact ⟨_, fun ch => bind_pair_map _ _ ch⟩
+                · simp only [if_neg hcap]
+                  cases hts : tySizeBytes σ.types elem with
+                  | error e => exact ⟨.error e, fun _ => rfl⟩
+                  | ok elemSize =>
+                    simp only [except_bind_ok]
+                    unfold appendSpill? at hw
+                    simp only [hsl, hel, hts] at hw
+                    rw [hsz] at hcap
+                    rw [if_neg hcap] at hw
+                    split at hw
+                    · rename_i hr16
+                      simp only [hsz, if_pos hr16]
+                      exact ⟨.error (.panic "runtime error: growslice: len out of range"), fun _ => rfl⟩
+                    · cases hw
+
+/-- **The spill's pop**: at `appendSpill? = some w` the apply is a
+function `g` of the `appendSpill` pick alone, its stream the site's pop
+at bound `w` — so a spilling append depends on the stream only through
+that pick. -/
+theorem applyStmtOp_appendSlice_spill {σ : ExecState} {elem : Ty} {nt : Nat}
+    {vs : List GoValue} {w : Nat} (hw : appendSpill? σ elem vs = some w) :
+    ∃ g : Nat → Except Stop ExecState, ∀ ch : Choices,
+      applyStmtOp σ ch (.appendSlice elem) nt vs
+        = (g (Choices.consumeAt .appendSpill w ch).1).map
+            fun s' => (s', (Choices.consumeAt .appendSpill w ch).2) := by
+  match vs, hw with
+  | [tv, sliceV, elemsV], hw =>
+    unfold appendSpill? at hw
+    cases hsl : valueAsSlice sliceV with
+    | error e => simp [hsl] at hw
+    | ok slice =>
+    cases hel : valueAsSlice elemsV with
+    | error e => simp [hsl, hel] at hw
+    | ok elems =>
+    cases hts : tySizeBytes σ.types elem with
+    | error e => simp [hsl, hel, hts] at hw
+    | ok elemSize =>
+    simp only [hsl, hel, hts] at hw
+    split at hw
+    · cases hw
+    split at hw
+    · cases hw
+    rename_i hcap hr16
+    simp only [Option.some.injEq] at hw
+    subst hw
+    unfold applyStmtOp
+    dsimp only
+    simp only [hsl, hel, except_bind_ok]
+    cases hv1 : validateSlice slice with
+    | error e => exact ⟨fun _ => .error e, fun _ => rfl⟩
+    | ok u1 =>
+    simp only [except_bind_ok]
+    cases hv2 : validateSlice elems with
+    | error e => exact ⟨fun _ => .error e, fun _ => rfl⟩
+    | ok u2 =>
+    simp only [except_bind_ok]
+    cases hvis : sliceVisibleValues σ elems with
+    | error e => exact ⟨fun _ => .error e, fun _ => rfl⟩
+    | ok elemValues =>
+    simp only [except_bind_ok]
+    have hsz := sliceVisibleValues_size hvis
+    cases htl : valueAsLoc tv with
+    | error e => exact ⟨fun _ => .error e, fun _ => rfl⟩
+    | ok tloc =>
+    simp only [except_bind_ok, hsz, if_neg hcap, hts, if_neg hr16]
+    cases hold : sliceVisibleValues σ slice with
+    | error e => exact ⟨fun _ => .error e, fun _ => rfl⟩
+    | ok oldValues =>
+    simp only [except_bind_ok]
+    refine ⟨fun extra => ?_, fun ch => ?_⟩
+    · exact do
+        let newCap := slice.len + elems.len +
+          ((appendGrowthCap slice.cap (slice.len + elems.len) - (slice.len + elems.len) + extra)
+            % appendSpillWidth slice.cap (slice.len + elems.len))
+        let backing ← buildAppendBackingValue σ elem oldValues elemValues newCap
+        let p := σ.alloc backing (.array newCap elem)
+        storeLoc p.2 tloc (.slice { base := some p.1, offset := 0, len := slice.len + elems.len, cap := newCap })
+    · rcases hc : Choices.consumeAt .appendSpill (appendSpillWidth slice.cap (slice.len + elems.len)) ch
+        with ⟨extra, rest⟩
+      exact bind_pair_map _ _ rest
 
 /-- The done-check `mapIterK` step is oblivious: with no candidate
 left it pops the continuation at every stream (BUG-005 (L): "no
@@ -3370,6 +3281,902 @@ theorem stepFn_mapIter_stop {σ : ExecState} {kv vv : Option String}
     exfalso
     have := (Array.getElem?_eq_some_iff.mp heq).1
     omega
+
+/-! ### The consumption theorem (design-hygiene wave (iii), B8, 2026-09-04)
+
+`seqConsumption` (Machine.lean) is the machine's own account of WHERE
+`stepFn` consults the stream and at what bound. `stepFn_consumption_none`
+and `stepFn_consumption_some` are the guarantee: a `none` step is
+stream-oblivious; a `some (site, b)` step's stream is the site's pop at
+bound `b` and the step depends on the stream only through that pick. The
+former hand-flag theorem `stepFn_oblivious` is a corollary
+(`seqConsumption_none_of_flags`). -/
+
+/-- The entry arms of the `none` sweep: the entry classifies stream-free
+(outside the family, or a non-panicking entry — `entryConsult?_none`). -/
+macro "oblivious_entry_with " h:ident hpk:term : tactic =>
+  `(tactic| (
+    have hpk' := $hpk
+    rw [hpk' _] at $h:ident
+    cases hx : toResult (enterFrame _ _ _) with
+    | error e =>
+      rw [hx] at $h:ident
+      simp [Except.map, Bind.bind, Except.bind] at $h:ident
+    | ok r =>
+      rw [hx] at $h:ident
+      cases r with
+      | ok a =>
+        simp only [Except.map, Bind.bind, Except.bind, pure_eq_ok, Pure.pure, Except.pure,
+          deliverS_ok, Except.ok.injEq, Prod.mk.injEq] at $h:ident
+        obtain ⟨h1, h2, h3⟩ := $h:ident
+        subst h1; subst h2; subst h3
+        exact ⟨rfl, fun ch => by
+          (try simp only [List.append_assoc] at hpk' hx)
+          simp [stepFn, hpk', hx, Except.map, Bind.bind, Except.bind]⟩
+      | panic msg =>
+        simp only [Except.map, Bind.bind, Except.bind, pure_eq_ok, Pure.pure, Except.pure,
+          deliverS_panic, Except.ok.injEq, Prod.mk.injEq] at $h:ident
+        obtain ⟨h1, h2, h3⟩ := $h:ident
+        subst h1; subst h2; subst h3
+        exact ⟨rfl, fun ch => by
+          (try simp only [List.append_assoc] at hpk' hx)
+          simp [stepFn, hpk', hx, Except.map, Bind.bind, Except.bind]⟩))
+
+macro "consumption_entry_none " h:ident hsc:ident : tactic =>
+  `(tactic| (
+    simp_all only [stepFn, seqConsumption, Config.applyPos, entryCallSite?]
+    rcases entryConsult?_none $hsc:ident with hnv | hnp
+    · oblivious_entry_with $h:ident (enterFramePick_oblivious_of_isSome_false hnv)
+    · oblivious_entry_with $h:ident (enterFramePick_of_nopanic hnp)))
+
+/-- The entry arms of the `some` sweep: the family's width-2 pop on the
+panic path (`entryConsult?_some`, `enterFramePick_panic`). -/
+macro "consumption_entry_some " h:ident hsc:ident : tactic =>
+  `(tactic| (
+    simp_all only [stepFn, seqConsumption, Config.applyPos, entryCallSite?]
+    obtain ⟨hsite, hb, hw, msg, hpanic⟩ := entryConsult?_some $hsc:ident
+    subst hsite; subst hb
+    rw [enterFramePick_panic hpanic] at $h:ident
+    simp only [Bind.bind, Except.bind, pure_eq_ok, Pure.pure, Except.pure, deliverS_panic,
+      Except.ok.injEq, Prod.mk.injEq] at $h:ident
+    obtain ⟨h1, h2, h3⟩ := $h:ident
+    subst h1; subst h2; subst h3
+    refine .inl ⟨rfl, fun ch₁ hpk => ?_⟩
+    (try simp only [List.append_assoc] at hpanic hpk)
+    simp [stepFn, enterFramePick_panic hpanic, hpk, Bind.bind, Except.bind]))
+
+/-- A wide-statement apply whose consult is `none` is a stream-oblivious
+apply: `applyStmtOpCore` for every non-append head, the non-spilling /
+refusing append otherwise. -/
+theorem applyStmtOp_of_stmtConsult?_none {σ : ExecState} {op : StmtOp} {nt : Nat}
+    {vs : List GoValue} (h : stmtConsult? σ op vs = none) :
+    ∃ r : Except Stop ExecState, ∀ ch : Choices,
+      applyStmtOp σ ch op nt vs = r.map fun s' => (s', ch) := by
+  by_cases hap : ∀ e, op ≠ .appendSlice e
+  · refine ⟨applyStmtOpCore σ op vs, fun ch => ?_⟩
+    rw [applyStmtOp_eq_core hap]
+    rfl
+  · obtain ⟨e, rfl⟩ : ∃ e, op = .appendSlice e := by
+      cases op <;>
+        first
+        | exact ⟨_, rfl⟩
+        | exact absurd (fun e h => by cases h) hap
+    simp only [stmtConsult?, Option.map_eq_none_iff] at h
+    exact applyStmtOp_appendSlice_nospill h
+
+theorem stmtConsult?_some {σ : ExecState} {op : StmtOp} {vs : List GoValue}
+    {site : ChoiceSite} {b : Nat} (h : stmtConsult? σ op vs = some (site, b)) :
+    ∃ elem, op = .appendSlice elem ∧ site = .appendSpill ∧ appendSpill? σ elem vs = some b := by
+  cases op with
+  | appendSlice elem =>
+    simp only [stmtConsult?, Option.map_eq_some_iff, Prod.mk.injEq] at h
+    obtain ⟨w, hw, rfl, rfl⟩ := h
+    exact ⟨elem, rfl, rfl, hw⟩
+  | _ => simp [stmtConsult?] at h
+
+set_option linter.unusedSimpArgs false in
+/-- An unwinding configuration is an entry position only at a frame whose
+head defer is a function value. -/
+theorem entryCallSite?_panicking {chain : List PanicEntry} {k : Cont} {p : FuncId × List GoValue}
+    (h : entryCallSite? (.panicking chain k) = some p) :
+    ∃ t te r fid captured args ds k' w,
+      k = .frame t te r ((.funcVal fid captured, args) :: ds) k' w := by
+  cases k <;> simp [entryCallSite?] at h
+  rename_i t te r ds k' w
+  cases ds with
+  | nil => simp [entryCallSite?] at h
+  | cons d ds =>
+    obtain ⟨cv, args⟩ := d
+    cases cv <;> simp [entryCallSite?] at h
+    exact ⟨t, te, r, _, _, args, ds, k', w, rfl⟩
+
+/-- The wide-statement apply arm at a stream-oblivious apply. -/
+theorem stepFn_stmtOp_oblivious {σ : ExecState} {op : StmtOp} {nt : Nat} {done : List GoValue}
+    {v : GoValue} {env : LocalEnv} {k : Cont} {r : Except Stop ExecState}
+    (hr : ∀ ch : Choices, applyStmtOp σ ch op nt (v :: done).reverse = r.map fun s' => (s', ch))
+    {ch₀ : Choices} {c' : Config} {σ' : ExecState} {ch₀' : Choices}
+    (h : stepFn σ (.retV v (.stmtOpK op nt done [] env k)) ch₀ = .ok (c', σ', ch₀')) :
+    ch₀' = ch₀ ∧ ∀ ch : Choices,
+      stepFn σ (.retV v (.stmtOpK op nt done [] env k)) ch = .ok (c', σ', ch) := by
+  unfold stepFn at h
+  dsimp only at h
+  rw [hr ch₀] at h
+  cases r with
+  | error e =>
+    cases_stop e <;> simp only [Except.map, toResult_panic, toResult_refusal, toResult_fatal,
+      toResult_deadlock, toResult_raceDetected, toResult_fuelOut, Bind.bind, Except.bind,
+      pure_eq_ok, deliverS_panic, Except.ok.injEq, Prod.mk.injEq, reduceCtorEq] at h
+    case panic msg =>
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    refine ⟨rfl, fun ch => ?_⟩
+    unfold stepFn
+    dsimp only
+    rw [hr ch]
+    rfl
+  | ok s₂ =>
+    simp only [Except.map, toResult_ok, Bind.bind, Except.bind, pure_eq_ok, deliverS_ok,
+      Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    refine ⟨rfl, fun ch => ?_⟩
+    unfold stepFn
+    dsimp only
+    rw [hr ch]
+    rfl
+
+/-- The wide-statement apply arm at a SPILLING append: the `appendSpill`
+pop, and pick-dependence only. -/
+theorem stepFn_stmtOp_spill {σ : ExecState} {elem : Ty} {nt : Nat} {done : List GoValue}
+    {v : GoValue} {env : LocalEnv} {k : Cont} {w : Nat}
+    {g : Nat → Except Stop ExecState}
+    (hg : ∀ ch : Choices, applyStmtOp σ ch (.appendSlice elem) nt (v :: done).reverse
+      = (g (Choices.consumeAt .appendSpill w ch).1).map
+          fun s' => (s', (Choices.consumeAt .appendSpill w ch).2))
+    {ch₀ : Choices} {c' : Config} {σ' : ExecState} {ch₀' : Choices}
+    (h : stepFn σ (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) ch₀
+      = .ok (c', σ', ch₀')) :
+    (ch₀' = (Choices.consumeAt .appendSpill w ch₀).2 ∧ ∀ ch : Choices,
+      (Choices.consumeAt .appendSpill w ch).1 = (Choices.consumeAt .appendSpill w ch₀).1 →
+      stepFn σ (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) ch
+        = .ok (c', σ', (Choices.consumeAt .appendSpill w ch).2))
+    ∨ (ch₀' = ch₀ ∧ σ' = σ ∧ (∃ chain k', c' = .panicking chain k') ∧ ∀ ch : Choices,
+      (Choices.consumeAt .appendSpill w ch).1 = (Choices.consumeAt .appendSpill w ch₀).1 →
+      stepFn σ (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) ch
+        = .ok (c', σ', ch)) := by
+  unfold stepFn at h
+  dsimp only at h
+  rw [hg ch₀] at h
+  cases hgv : g (Choices.consumeAt .appendSpill w ch₀).1 with
+  | error e =>
+    rw [hgv] at h
+    cases_stop e <;> simp only [Except.map, toResult_panic, toResult_refusal, toResult_fatal,
+      toResult_deadlock, toResult_raceDetected, toResult_fuelOut, Bind.bind, Except.bind,
+      pure_eq_ok, deliverS_panic, Except.ok.injEq, Prod.mk.injEq, reduceCtorEq] at h
+    case panic msg =>
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    -- the post-pop panic: the delivery restores the PRE-apply stream
+    refine .inr ⟨rfl, rfl, ⟨_, _, rfl⟩, fun ch hpk => ?_⟩
+    unfold stepFn
+    dsimp only
+    rw [hg ch, hpk, hgv]
+    rfl
+  | ok s₂ =>
+    rw [hgv] at h
+    simp only [Except.map, toResult_ok, Bind.bind, Except.bind, pure_eq_ok, deliverS_ok,
+      Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    refine .inl ⟨rfl, fun ch hpk => ?_⟩
+    unfold stepFn
+    dsimp only
+    rw [hg ch, hpk, hgv]
+    rfl
+
+/-- The sync apply arm at a stream-oblivious apply (`r.map` with the
+stream passed through). -/
+theorem stepFn_syncApply_oblivious {σ : ExecState} {op : SyncOp} {done : List GoValue}
+    {v : GoValue} {env : LocalEnv} {k : Cont} {r : Except Stop (Config × ExecState)}
+    (hr : ∀ ch : Choices, applySyncOp σ ch op (v :: done).reverse env k
+      = r.map fun p => (p.1, p.2, ch))
+    {ch₀ : Choices} {c' : Config} {σ' : ExecState} {ch₀' : Choices}
+    (h : stepFn σ (.retV v (.syncStK op done [] env k)) ch₀ = .ok (c', σ', ch₀')) :
+    ch₀' = ch₀ ∧ ∀ ch : Choices,
+      stepFn σ (.retV v (.syncStK op done [] env k)) ch = .ok (c', σ', ch) := by
+  unfold stepFn at h
+  dsimp only at h
+  rw [hr ch₀] at h
+  cases r with
+  | error e =>
+    cases_stop e <;> simp only [Except.map, toResult_panic, toResult_refusal, toResult_fatal,
+      toResult_deadlock, toResult_raceDetected, toResult_fuelOut, Bind.bind, Except.bind,
+      pure_eq_ok, deliverS_panic, Except.ok.injEq, Prod.mk.injEq, reduceCtorEq] at h
+    case panic msg =>
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    refine ⟨rfl, fun ch => ?_⟩
+    unfold stepFn
+    dsimp only
+    rw [hr ch]
+    rfl
+  | ok p =>
+    obtain ⟨c₂, σ₂⟩ := p
+    simp only [Except.map, toResult_ok, Bind.bind, Except.bind, pure_eq_ok, deliverS_ok,
+      Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    refine ⟨rfl, fun ch => ?_⟩
+    unfold stepFn
+    dsimp only
+    rw [hr ch]
+    rfl
+
+set_option maxHeartbeats 1600000 in
+set_option linter.unusedSimpArgs false in
+/-- **The consumption theorem, `none` half**: a step whose projection is
+`none` is stream-oblivious — it succeeds under EVERY stream with the same
+successor and the stream returned untouched. Sweep over `stepFn`'s case
+tree; every arm binds through stream-free helpers or through one of the
+five consults at a non-popping instance (`applyStmtOp_of_stmtConsult?_none`,
+`applySelect_done_stream`, `applySyncOp_try_nopop`/`_core_ok`,
+`stepFn_mapIter_done`, `entryConsult?_none`). A newly added
+stream-consuming arm breaks this proof loudly. -/
+theorem stepFn_consumption_none {σ : ExecState} {c : Config} {ch₀ : Choices}
+    {c' : Config} {σ' : ExecState} {ch₀' : Choices}
+    (hsc : seqConsumption σ c = none)
+    (h : stepFn σ c ch₀ = .ok (c', σ', ch₀')) :
+    ch₀' = ch₀ ∧ ∀ ch : Choices, stepFn σ c ch = .ok (c', σ', ch) := by
+  fun_cases stepFn σ c ch₀
+  all_goals first
+    | (refine ⟨?_, fun ch => ?_⟩ <;> (simp_all [stepFn]; done))
+    | skip
+  case case3 =>
+    consumption_entry_none h hsc
+  case case36 =>
+    consumption_entry_none h hsc
+  case case93 =>
+    consumption_entry_none h hsc
+  case case97 =>
+    consumption_entry_none h hsc
+  case case103 =>
+    consumption_entry_none h hsc
+  case case146 =>
+    consumption_entry_none h hsc
+  case case183 =>
+    consumption_entry_none h hsc
+  case case96 =>
+    simp only [seqConsumption, Config.applyPos] at hsc
+    obtain ⟨r, hr⟩ := applyStmtOp_of_stmtConsult?_none hsc
+    exact stepFn_stmtOp_oblivious hr h
+  case case118 =>
+    rename_i v clauses default? done env k'
+    simp only [seqConsumption, Config.applyPos, selectConsult?] at hsc
+    cases hcore : applySelectCore σ clauses default? ((v :: done).reverse) env k' with
+    | error e =>
+      unfold stepFn at h
+      dsimp only at h
+      rw [applySelect_error_stream hcore ch₀] at h
+      cases_stop e <;> simp only [toResult_panic, toResult_refusal, toResult_fatal,
+        toResult_deadlock, toResult_raceDetected, toResult_fuelOut, Bind.bind, Except.bind,
+        pure_eq_ok, deliverS_panic, Except.ok.injEq, Prod.mk.injEq, reduceCtorEq] at h
+      case panic msg =>
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      refine ⟨rfl, fun ch => ?_⟩
+      unfold stepFn
+      dsimp only
+      rw [applySelect_error_stream hcore ch]
+      rfl
+    | ok o =>
+      cases o with
+      | done c₁ s₁ cl? =>
+        unfold stepFn at h
+        dsimp only at h
+        rw [applySelect_done_stream hcore ch₀] at h
+        simp only [toResult_ok, Bind.bind, Except.bind, pure_eq_ok, deliverS_ok,
+          Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl, rfl⟩ := h
+        refine ⟨rfl, fun ch => ?_⟩
+        unfold stepFn
+        dsimp only
+        rw [applySelect_done_stream hcore ch]
+        rfl
+      | picks commits =>
+        rw [hcore] at hsc
+        simp at hsc
+  case case133 =>
+    rename_i v op done env k'
+    simp only [seqConsumption, Config.applyPos, syncConsult?, Option.map_eq_none_iff] at hsc
+    cases hop : op.tryTargets? with
+    | none =>
+      -- a non-TRY head: the stream-free core (`applySyncOp_core_ok/_error`)
+      cases hap : applySyncOp σ ch₀ op ((v :: done).reverse) env k' with
+      | error e =>
+        exact stepFn_syncApply_oblivious (r := .error e)
+          (fun ch => by rw [applySyncOp_core_error hop hap ch]; rfl) h
+      | ok p =>
+        obtain ⟨c₂, σ₂, ch₂⟩ := p
+        obtain ⟨rfl, hall⟩ := applySyncOp_core_ok hop hap
+        exact stepFn_syncApply_oblivious (r := .ok (c₂, σ₂))
+          (fun ch => by rw [hall ch]; rfl) h
+    | some targets =>
+      -- a TRY head: the receiver must resolve to a cell whose consult is width ≤ 1
+      cases done with
+      | cons hd tl =>
+        exfalso
+        unfold stepFn at h
+        dsimp only at h
+        unfold applySyncOp at h
+        rw [hop] at h
+        rcases hrev : (v :: hd :: tl).reverse with _ | ⟨a, _ | ⟨b, rest⟩⟩
+        · have := congrArg List.length hrev; simp at this
+        · have := congrArg List.length hrev; simp at this
+        · rw [hrev] at h
+          simp [stuck, throw, throwThe, MonadExceptOf.throw, Bind.bind, Except.bind] at h
+      | nil =>
+        simp only [List.reverse_cons, List.reverse_nil, List.nil_append] at hsc
+        unfold tryLockConsult? at hsc
+        rw [hop] at hsc
+        (try dsimp only at hsc)
+        cases hl : valueAsLoc v with
+        | error e =>
+          refine stepFn_syncApply_oblivious (r := .error e) (fun ch => ?_) h
+          simp [applySyncOp, hop, hl, Bind.bind, Except.bind, Except.map]
+        | ok loc =>
+          rw [hl] at hsc
+          (try dsimp only at hsc)
+          cases hcell : syncCell σ loc with
+          | error e =>
+            refine stepFn_syncApply_oblivious (r := .error e) (fun ch => ?_) h
+            simp [applySyncOp, hop, hl, hcell, Bind.bind, Except.bind, Except.map]
+          | ok pre =>
+            rw [hcell] at hsc
+            (try dsimp only at hsc)
+            have hw : tryLockWidth op pre ≤ 1 := by
+              by_cases hle : tryLockWidth op pre ≤ 1
+              · exact hle
+              · simp [hle] at hsc
+            exact stepFn_syncApply_oblivious
+              (r := applyTryLock σ op loc pre false targets env k')
+              (fun ch => by simpa using applySyncOp_try_nopop hop hl hcell hw ch) h
+  case case153 =>
+    rename_i kv vv kt vt body base produced start env k'
+    simp only [seqConsumption, mapIterConsult?] at hsc
+    cases hcands : mapIterCandidates σ kt vt base produced with
+    | error e =>
+      exfalso
+      simp [stepFn, hcands, Bind.bind, Except.bind] at h
+    | ok cands =>
+      rw [hcands] at hsc
+      by_cases hemp : cands.isEmpty
+      · rw [Array.isEmpty_iff] at hemp
+        subst hemp
+        rw [stepFn_mapIter_done hcands ch₀] at h
+        simp only [Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl, rfl⟩ := h
+        exact ⟨rfl, fun ch => stepFn_mapIter_done hcands ch⟩
+      · simp [hemp] at hsc
+  case case77 =>
+    -- A4: a global past the heap REFUSES (`.stuck`); no step is produced.
+    rename_i hgid
+    simp only [stepFn] at h
+    rw [if_neg hgid] at h
+    simp [throw, throwThe, MonadExceptOf.throw] at h
+  case case13 =>
+    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
+    obtain ⟨⟨env', s₁⟩, hd, rfl, rfl, rfl⟩ := h
+    refine ⟨by simp, fun ch => ?_⟩
+    simp only [stepFn, bind_eq_ok]
+    refine ⟨⟨env', s₁⟩, hd, ?_⟩
+    simp
+  -- Channel receive entry (channels arc slice 1): the plan match needs
+  -- its hypothesis rewritten in; both arms are stream-oblivious.
+  case case41 =>
+    rename_i hplan
+    simp only [stepFn] at h
+    rw [hplan] at h
+    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    refine ⟨rfl, fun ch => ?_⟩
+    simp only [stepFn]
+    rw [hplan]
+    rfl
+  case case42 =>
+    rename_i hplan
+    simp only [stepFn] at h
+    rw [hplan] at h
+    simp [throw, throwThe, MonadExceptOf.throw] at h
+  case case43 =>
+    rename_i hplan hgt
+    simp only [stepFn] at h
+    rw [hplan, if_pos hgt] at h
+    simp [throw, throwThe, MonadExceptOf.throw] at h
+  case case44 =>
+    rename_i hplan hgt
+    simp only [stepFn] at h
+    rw [hplan, if_neg hgt] at h
+    simp [throw, throwThe, MonadExceptOf.throw] at h
+  -- Sync statements (spec-parity slice 2): the chan recipes — entry is
+  -- stream-transparent; the APPLY is stream-transparent for every
+  -- non-TRY head (`hnt` excludes the TRY heads — Q-TRYLOCK's
+  -- `tryLock` site; `applySyncOp_core_ok`/`_error`).
+  -- Sync statements (spec-parity slice 2): the chan recipes — entry is
+  -- stream-transparent; the APPLY is stream-transparent for every
+  -- non-TRY head (`hnt` excludes the TRY heads — Q-TRYLOCK's
+  -- `tryLock` site; `applySyncOp_core_ok`/`_error`).
+  case case60 =>
+    rename_i hplan
+    simp only [stepFn] at h
+    rw [hplan] at h
+    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    refine ⟨rfl, fun ch => ?_⟩
+    simp only [stepFn]
+    rw [hplan]
+    rfl
+  case case61 =>
+    rename_i hplan
+    simp only [stepFn] at h
+    rw [hplan] at h
+    simp [throw, throwThe, MonadExceptOf.throw] at h
+  case case62 =>
+    rename_i hplan
+    simp only [stepFn] at h
+    rw [hplan] at h
+    simp [throw, throwThe, MonadExceptOf.throw] at h
+  -- sync/atomic statements (atomics arc wave 1): the sync recipes —
+  -- entry is stream-transparent (the apply consumes nothing,
+  -- applyAtomicOp's envelope statement).
+  case case63 =>
+    rename_i hplan
+    simp only [stepFn] at h
+    rw [hplan] at h
+    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    refine ⟨rfl, fun ch => ?_⟩
+    simp only [stepFn]
+    rw [hplan]
+    rfl
+  case case64 =>
+    rename_i hplan
+    simp only [stepFn] at h
+    rw [hplan] at h
+    simp [throw, throwThe, MonadExceptOf.throw] at h
+  case case65 =>
+    rename_i hplan
+    simp only [stepFn] at h
+    rw [hplan] at h
+    simp [throw, throwThe, MonadExceptOf.throw] at h
+  case case14 =>
+    simp_all [stepFn, bind_eq_ok]
+    obtain ⟨v, hd, h1, h2, h3⟩ := h
+    exact ⟨h3.symm, v, hd, h1, h2⟩
+  case case69 =>
+    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
+    obtain ⟨v, hd, rfl, rfl, rfl⟩ := h
+    refine ⟨by simp, fun ch => ?_⟩
+    simp only [stepFn, bind_eq_ok]
+    refine ⟨v, hd, ?_⟩
+    simp
+  case case83 =>
+    oblivious_apply h
+  case case86 =>
+    oblivious_apply h
+  case case87 =>
+    simp only [stepFn, bind_eq_ok] at h
+    obtain ⟨b, hb, h⟩ := h
+    obtain rfl := valueAsBool_ok hb
+    cases b <;>
+      (simp only [Bool.false_eq_true, reduceIte, pure_eq_ok, Except.ok.injEq,
+         Prod.mk.injEq] at h
+       obtain ⟨rfl, rfl, rfl⟩ := h
+       refine ⟨by simp, fun ch => ?_⟩
+       simp [stepFn, valueAsBool, Bind.bind, Except.bind])
+  case case88 =>
+    simp only [stepFn, bind_eq_ok] at h
+    obtain ⟨b, hb, h⟩ := h
+    obtain rfl := valueAsBool_ok hb
+    cases b <;>
+      (simp only [Bool.false_eq_true, reduceIte, pure_eq_ok, Except.ok.injEq,
+         Prod.mk.injEq] at h
+       obtain ⟨rfl, rfl, rfl⟩ := h
+       refine ⟨by simp, fun ch => ?_⟩
+       simp [stepFn, valueAsBool, Bind.bind, Except.bind])
+  case case89 =>
+    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
+    obtain ⟨b, hb, rfl, rfl, rfl⟩ := h
+    refine ⟨by simp, fun ch => ?_⟩
+    simp only [stepFn, bind_eq_ok]
+    refine ⟨b, hb, ?_⟩
+    simp
+  case case90 =>
+    simp only [stepFn, bind_eq_ok] at h
+    obtain ⟨b, hb, h⟩ := h
+    obtain rfl := valueAsBool_ok hb
+    cases b <;>
+      (simp only [Bool.false_eq_true, reduceIte, pure_eq_ok, Except.ok.injEq,
+         Prod.mk.injEq] at h
+       obtain ⟨rfl, rfl, rfl⟩ := h
+       refine ⟨by simp, fun ch => ?_⟩
+       simp [stepFn, valueAsBool, Bind.bind, Except.bind])
+  case case91 =>
+    simp only [stepFn, bind_eq_ok] at h
+    obtain ⟨b, hb, h⟩ := h
+    obtain rfl := valueAsBool_ok hb
+    cases b <;>
+      (simp only [Bool.false_eq_true, reduceIte, pure_eq_ok, Except.ok.injEq,
+         Prod.mk.injEq] at h
+       obtain ⟨rfl, rfl, rfl⟩ := h
+       refine ⟨by simp, fun ch => ?_⟩
+       simp [stepFn, valueAsBool, Bind.bind, Except.bind])
+  case case94 =>
+    rename_i hlt
+    simp only [stepFn, if_pos hlt] at h
+    (try simp only [Bind.bind, Except.bind] at h)
+    split at h
+    · simp at h
+    · rename_i r hres
+      cases r with
+      | ok a =>
+        simp only [deliverS_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl, rfl⟩ := h
+        exact ⟨rfl, fun ch => by simp [stepFn, if_pos hlt, hres, Bind.bind, Except.bind]⟩
+      | panic msg =>
+        simp only [deliverS_panic, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl, rfl⟩ := h
+        exact ⟨rfl, fun ch => by simp [stepFn, if_pos hlt, hres, Bind.bind, Except.bind]⟩
+  case case95 =>
+    rename_i hlt
+    simp only [stepFn, if_neg hlt, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    refine ⟨by simp, fun ch => ?_⟩
+    simp only [stepFn, if_neg hlt]
+    rfl
+  case case113 =>
+    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
+    obtain ⟨bs, hd, rfl, rfl, rfl⟩ := h
+    refine ⟨by simp, fun ch => ?_⟩
+    simp only [stepFn, bind_eq_ok]
+    refine ⟨bs, hd, ?_⟩
+    simp
+  case case116 =>
+    oblivious_apply h
+  case case126 =>
+    oblivious_apply h
+  case case135 =>
+    oblivious_apply h
+  case case143 =>
+    simp only [stepFn, bind_eq_ok] at h
+    obtain ⟨vs, _, h⟩ := h
+    simp [throw, throwThe, MonadExceptOf.throw] at h
+  case case144 =>
+    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
+    obtain ⟨vs, hload, rfl, rfl, rfl⟩ := h
+    refine ⟨by simp, fun ch => ?_⟩
+    simp only [stepFn, bind_eq_ok]
+    refine ⟨vs, hload, ?_⟩
+    simp
+  case case154 =>
+    oblivious_apply h
+  case case180 =>
+    simp only [stepFn, bind_eq_ok] at h
+    obtain ⟨vs, _, h⟩ := h
+    simp [throw, throwThe, MonadExceptOf.throw] at h
+  case case181 =>
+    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
+    obtain ⟨vs, hload, rfl, rfl, rfl⟩ := h
+    refine ⟨by simp, fun ch => ?_⟩
+    simp only [stepFn, bind_eq_ok]
+    refine ⟨vs, hload, ?_⟩
+    simp
+
+set_option maxHeartbeats 1600000 in
+set_option linter.unusedSimpArgs false in
+/-- **The consumption theorem, `some` half**: a step whose projection is
+`some (site, b)` DRAWS the site's pick at bound `b` and depends on the
+stream only through that pick — any stream drawing the same pick yields
+the same successor. Its stream is the site's pop (the first disjunct) —
+EXCEPT when the delivery after the pop is a RECOVERABLE PANIC (the second
+disjunct: an `appendSpill` whose grown-header store panics, a `tryLock`
+whose result delivery panics): there the machine's every-site convention
+"a delivered panic restores the PRE-apply stream" UNDOES the pop. That is
+the machine as it stands (B2 preserved it site for site); the tracer's
+sentinel would flag it and no corpus row reaches it — recorded in the
+wave-(iii) design note as a disclosed latent accounting inconsistency for
+the [USER], not absorbed here. -/
+theorem stepFn_consumption_some {σ : ExecState} {c : Config} {ch₀ : Choices}
+    {c' : Config} {σ' : ExecState} {ch₀' : Choices} {site : ChoiceSite} {b : Nat}
+    (hsc : seqConsumption σ c = some (site, b))
+    (h : stepFn σ c ch₀ = .ok (c', σ', ch₀')) :
+    (ch₀' = (Choices.consumeAt site b ch₀).2 ∧ ∀ ch : Choices,
+      (Choices.consumeAt site b ch).1 = (Choices.consumeAt site b ch₀).1 →
+      stepFn σ c ch = .ok (c', σ', (Choices.consumeAt site b ch).2))
+    ∨ (ch₀' = ch₀ ∧ σ' = σ ∧ (∃ chain k, c' = .panicking chain k) ∧ ∀ ch : Choices,
+      (Choices.consumeAt site b ch).1 = (Choices.consumeAt site b ch₀).1 →
+      stepFn σ c ch = .ok (c', σ', ch)) := by
+  fun_cases stepFn σ c ch₀
+  all_goals first
+    | (simp [seqConsumption, Config.applyPos, entryCallSite?] at hsc; done)
+    | (simp [stepFn] at h; done)
+    | (simp_all [stepFn]; done)
+    | (simp_all [seqConsumption, Config.applyPos, entryCallSite?]; done)
+    | skip
+  case case3 =>
+    consumption_entry_some h hsc
+  case case36 =>
+    consumption_entry_some h hsc
+  case case93 =>
+    consumption_entry_some h hsc
+  case case97 =>
+    consumption_entry_some h hsc
+  case case103 =>
+    consumption_entry_some h hsc
+  case case146 =>
+    consumption_entry_some h hsc
+  case case183 =>
+    consumption_entry_some h hsc
+  case case96 =>
+    simp only [seqConsumption, Config.applyPos] at hsc
+    obtain ⟨elem, rfl, rfl, hw⟩ := stmtConsult?_some hsc
+    obtain ⟨g, hg⟩ := applyStmtOp_appendSlice_spill hw
+    exact stepFn_stmtOp_spill hg h
+  case case118 =>
+    rename_i v clauses default? done env k'
+    simp only [seqConsumption, Config.applyPos, selectConsult?] at hsc
+    cases hcore : applySelectCore σ clauses default? ((v :: done).reverse) env k' with
+    | error e => rw [hcore] at hsc; cases hsc
+    | ok o =>
+      cases o with
+      | done c₁ s₁ cl? => rw [hcore] at hsc; cases hsc
+      | picks commits =>
+        rw [hcore] at hsc
+        simp only [Option.some.injEq, Prod.mk.injEq] at hsc
+        obtain ⟨rfl, rfl⟩ := hsc
+        unfold stepFn at h
+        dsimp only at h
+        rw [applySelect_picks_stream hcore ch₀] at h
+        cases hget : commits[(Choices.consumeAt .l2Entry commits.length ch₀).1]? with
+        | none =>
+          rw [hget] at h
+          simp [Bind.bind, Except.bind] at h
+        | some p =>
+          rw [hget] at h
+          obtain ⟨cl, r⟩ := p
+          cases r with
+          | inl q =>
+            obtain ⟨c₂, s₂⟩ := q
+            simp only [toResult_ok, Bind.bind, Except.bind, pure_eq_ok, deliverS_ok,
+              Except.ok.injEq, Prod.mk.injEq] at h
+            obtain ⟨rfl, rfl, rfl⟩ := h
+            refine .inl ⟨rfl, fun ch hpk => ?_⟩
+            unfold stepFn
+            dsimp only
+            rw [applySelect_picks_stream hcore ch, hpk, hget]
+            rfl
+          | inr msg =>
+            simp only [toResult_ok, Bind.bind, Except.bind, pure_eq_ok, deliverS_ok,
+              Except.ok.injEq, Prod.mk.injEq] at h
+            obtain ⟨rfl, rfl, rfl⟩ := h
+            refine .inl ⟨rfl, fun ch hpk => ?_⟩
+            unfold stepFn
+            dsimp only
+            rw [applySelect_picks_stream hcore ch, hpk, hget]
+            rfl
+  case case133 =>
+    rename_i v op done env k'
+    simp only [seqConsumption, Config.applyPos, syncConsult?, Option.map_eq_some_iff,
+      Prod.mk.injEq] at hsc
+    obtain ⟨w, hw, rfl, rfl⟩ := hsc
+    unfold tryLockConsult? at hw
+    cases hop : op.tryTargets? with
+    | none => rw [hop] at hw; cases hw
+    | some targets =>
+      rw [hop] at hw
+      cases done with
+      | cons hd tl =>
+        exfalso
+        rcases hrev : (v :: hd :: tl).reverse with _ | ⟨a, _ | ⟨b, rest⟩⟩
+        · have := congrArg List.length hrev; simp at this
+        · have := congrArg List.length hrev; simp at this
+        · rw [hrev] at hw; cases hw
+      | nil =>
+        simp only [List.reverse_cons, List.reverse_nil, List.nil_append] at h hw
+        (try dsimp only at hw)
+        cases hl : valueAsLoc v with
+        | error e => rw [hl] at hw; cases hw
+        | ok loc =>
+          rw [hl] at hw
+          (try dsimp only at hw)
+          cases hcell : syncCell σ loc with
+          | error e => rw [hcell] at hw; cases hw
+          | ok pre =>
+            rw [hcell] at hw
+            (try dsimp only at hw)
+            split at hw
+            · cases hw
+            · simp only [Option.some.injEq] at hw
+              subst hw
+              have hap := applySyncOp_try_stream (env := env) (k := k') hop hl hcell
+              unfold stepFn at h
+              dsimp only at h
+              simp only [List.reverse_cons, List.reverse_nil, List.nil_append] at h
+              rw [hap ch₀] at h
+              cases hat : applyTryLock σ op loc pre
+                  ((Choices.consumeAt .tryLock (tryLockWidth op pre) ch₀).1 == 1) targets env k' with
+              | error e =>
+                rw [hat] at h
+                cases_stop e <;> simp only [Except.map, toResult_panic, toResult_refusal,
+                  toResult_fatal, toResult_deadlock, toResult_raceDetected, toResult_fuelOut,
+                  Bind.bind, Except.bind, pure_eq_ok, deliverS_panic, Except.ok.injEq,
+                  Prod.mk.injEq, reduceCtorEq] at h
+                case panic msg =>
+                obtain ⟨rfl, rfl, rfl⟩ := h
+                -- the post-pop panic restores the pre-apply stream
+                refine .inr ⟨rfl, rfl, ⟨_, _, rfl⟩, fun ch hpk => ?_⟩
+                unfold stepFn
+                dsimp only
+                simp only [List.reverse_cons, List.reverse_nil, List.nil_append]
+                rw [hap ch, hpk, hat]
+                rfl
+              | ok p =>
+                obtain ⟨c₂, σ₂⟩ := p
+                rw [hat] at h
+                simp only [Except.map, toResult_ok, Bind.bind, Except.bind, pure_eq_ok, deliverS_ok,
+                  Except.ok.injEq, Prod.mk.injEq] at h
+                obtain ⟨rfl, rfl, rfl⟩ := h
+                refine .inl ⟨rfl, fun ch hpk => ?_⟩
+                unfold stepFn
+                dsimp only
+                simp only [List.reverse_cons, List.reverse_nil, List.nil_append]
+                rw [hap ch, hpk, hat]
+                rfl
+  case case153 =>
+    rename_i kv vv kt vt body base produced start env k'
+    simp only [seqConsumption, mapIterConsult?] at hsc
+    cases hcands : mapIterCandidates σ kt vt base produced with
+    | error e => rw [hcands] at hsc; cases hsc
+    | ok cands =>
+      rw [hcands] at hsc
+      (try dsimp only at hsc)
+      by_cases hemp : cands.isEmpty
+      · simp [hemp] at hsc
+      · rw [if_neg hemp] at hsc
+        simp only [Option.some.injEq, Prod.mk.injEq] at hsc
+        obtain ⟨rfl, rfl⟩ := hsc
+        obtain ⟨mand, hmand⟩ : ∃ m, mapIterMandatoryRemains cands start = m := ⟨_, rfl⟩
+        rw [hmand]
+        simp only [Choices.consumeAt_mapIter]
+        rcases hcons : Choices.consume ch₀ (cands.size + (if mand = true then 0 else 1)) with ⟨idx, tail⟩
+        have hpos : 0 < cands.size := by
+          rcases Nat.eq_zero_or_pos cands.size with hz | hp
+          · exact absurd (by simpa [Array.isEmpty_iff, Array.size_eq_zero_iff] using hz) hemp
+          · exact hp
+        have hltw : idx < cands.size + (if mand = true then 0 else 1) := by
+          have hb := consume_fst_lt (ch := ch₀) (bound := cands.size + (if mand = true then 0 else 1))
+            (by cases mand <;> simp <;> omega)
+          rw [hcons] at hb
+          exact hb
+        by_cases hlt : idx < cands.size
+        · rw [stepFn_mapIter_pick hcands hmand hemp hcons hlt] at h
+          cases hbind : bindIterVars env.pushScope σ kv vv kt vt cands[idx].2.1 cands[idx].2.2 with
+          | error e => rw [hbind] at h; simp [Except.map] at h
+          | ok p =>
+            rw [hbind] at h
+            simp only [Except.map, Except.ok.injEq, Prod.mk.injEq] at h
+            obtain ⟨rfl, rfl, rfl⟩ := h
+            refine .inl ⟨rfl, fun ch hpk => ?_⟩
+            rcases hcons₁ : Choices.consume ch (cands.size + (if mand = true then 0 else 1)) with ⟨idx₁, tail₁⟩
+            rw [hcons₁] at hpk
+            simp only at hpk
+            subst hpk
+            rw [stepFn_mapIter_pick hcands hmand hemp hcons₁ hlt, hbind]
+            rfl
+        · have hmandf : mand = false := by
+            cases mand
+            · rfl
+            · exfalso; simp at hltw; omega
+          subst hmandf
+          have hidx : idx = cands.size := by simp at hltw; omega
+          subst hidx
+          have hcons' : Choices.consume ch₀ (cands.size + 1) = (cands.size, tail) := by simpa using hcons
+          rw [stepFn_mapIter_stop hcands hmand hemp hcons'] at h
+          simp only [Except.ok.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl, rfl⟩ := h
+          refine .inl ⟨rfl, fun ch hpk => ?_⟩
+          rcases hcons₁ : Choices.consume ch (cands.size + (if false = true then 0 else 1)) with ⟨idx₁, tail₁⟩
+          have hcons₁' : Choices.consume ch (cands.size + 1) = (idx₁, tail₁) := by
+            simpa using hcons₁
+          rw [hcons₁] at hpk
+          simp only at hpk
+          subst hpk
+          rw [stepFn_mapIter_stop hcands hmand hemp hcons₁']
+
+set_option linter.unusedSimpArgs false in
+/-- The apply-position accessor's inversions (A7): a `some` names the frame. -/
+theorem applyPos_stmt {c : Config} {op : StmtOp} {nt : Nat} {vs : List GoValue}
+    {env : LocalEnv} {k : Cont} (h : c.applyPos = some (.stmt op nt, vs, env, k)) :
+    ∃ v done, c = .retV v (.stmtOpK op nt done [] env k) ∧ vs = (v :: done).reverse := by
+  unfold Config.applyPos at h
+  split at h <;> simp only [Option.some.injEq, Prod.mk.injEq, ApplyHead.stmt.injEq,
+    reduceCtorEq, false_and] at h
+  obtain ⟨⟨rfl, rfl⟩, rfl, rfl, rfl⟩ := h
+  exact ⟨_, _, rfl, rfl⟩
+
+set_option linter.unusedSimpArgs false in
+theorem applyPos_select {c : Config} {clauses : List (SelectClauseHead × Stmt)}
+    {default? : Option Stmt} {vs : List GoValue} {env : LocalEnv} {k : Cont}
+    (h : c.applyPos = some (.select clauses default?, vs, env, k)) :
+    ∃ v done, c = .retV v (.selectOpsK clauses default? done [] env k) := by
+  unfold Config.applyPos at h
+  split at h <;> simp only [Option.some.injEq, Prod.mk.injEq, ApplyHead.select.injEq,
+    reduceCtorEq, false_and] at h
+  obtain ⟨⟨rfl, rfl⟩, rfl, rfl, rfl⟩ := h
+  exact ⟨_, _, rfl⟩
+
+set_option linter.unusedSimpArgs false in
+theorem applyPos_sync {c : Config} {op : SyncOp} {vs : List GoValue}
+    {env : LocalEnv} {k : Cont} (h : c.applyPos = some (.sync op, vs, env, k)) :
+    ∃ v done, c = .retV v (.syncStK op done [] env k) := by
+  unfold Config.applyPos at h
+  split at h <;> simp only [Option.some.injEq, Prod.mk.injEq, ApplyHead.sync.injEq,
+    reduceCtorEq, false_and] at h
+  obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+  exact ⟨_, _, rfl⟩
+
+/-- The five hand flags of the retired sweep entail a `none` projection. -/
+theorem seqConsumption_none_of_flags {σ : ExecState} {c : Config}
+    (hmi : ∀ (kv vv : Option String) (kt vt : Ty) (body : Stmt)
+      (base : Option Loc) (produced start : Array Nat)
+      (env : LocalEnv) (k : Cont),
+      c ≠ .next (.mapIterK kv vv kt vt body base produced start env k))
+    (hnc : consumesAppendSlice c = false)
+    (hns : consumesSelect c = false)
+    (hnv : consumesNilValueMethod σ c = false)
+    (hnt : consumesTryLock c = false) :
+    seqConsumption σ c = none := by
+  revert hmi hnc hns hnv hnt
+  unfold seqConsumption
+  split <;> intro hmi hnc hns hnv hnt
+  · exact absurd rfl (hmi _ _ _ _ _ _ _ _ _ _)
+  · split
+    all_goals first
+      | rfl
+      | (rename_i heq
+         obtain ⟨v, done, rfl, rfl⟩ := applyPos_stmt heq
+         cases ‹StmtOp› <;> simp_all [stmtConsult?, consumesAppendSlice])
+      | (rename_i heq
+         obtain ⟨v, done, rfl⟩ := applyPos_select heq
+         simp [consumesSelect] at hns)
+      | (rename_i heq
+         obtain ⟨v, done, rfl⟩ := applyPos_sync heq
+         simp only [consumesTryLock, Option.isSome_eq_false_iff, Option.isNone_iff_eq_none] at hnt
+         simp [syncConsult?, tryLockConsult?, hnt])
+      | (split
+         · rename_i fid args heq
+           unfold consumesNilValueMethod at hnv
+           rw [heq] at hnv
+           (try dsimp only at hnv)
+           unfold entryConsult?
+           rw [if_pos (by unfold nilValueMethodWidth; simp [hnv])]
+         · rfl)
+
+/-- **Stream obliviousness of the non-consuming arms** — the retired sweep
+(W3.2 slice 1 stage A) as a COROLLARY of the consumption theorem: away
+from the five consuming shapes (a `mapIterK` at the `.next` position —
+excluded by `hmi` — an `appendSlice` apply position — excluded by `hnc` —
+a select apply position — excluded by `hns` — a frame entry in BUG-087's
+wrapper family — excluded by `hnv` — and a TRY head's sync apply —
+excluded by `hnt`), a step that succeeds under one stream succeeds under
+EVERY stream, with the SAME successor and the stream returned untouched.
+Its consumers (`allStreamsOk`'s soundness, the pool-level
+`stepThread_oblivious`) are unchanged. -/
+theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
+    {c' : Config} {σ' : ExecState} {ch₀' : Choices}
+    (hmi : ∀ (kv vv : Option String) (kt vt : Ty) (body : Stmt)
+      (base : Option Loc) (produced start : Array Nat)
+      (env : LocalEnv) (k : Cont),
+      c ≠ .next (.mapIterK kv vv kt vt body base produced start env k))
+    (hnc : consumesAppendSlice c = false)
+    (hns : consumesSelect c = false)
+    (hnv : consumesNilValueMethod σ c = false)
+    (hnt : consumesTryLock c = false)
+    (h : stepFn σ c ch₀ = .ok (c', σ', ch₀')) :
+    ch₀' = ch₀ ∧ ∀ ch : Choices, stepFn σ c ch = .ok (c', σ', ch) :=
+  stepFn_consumption_none (seqConsumption_none_of_flags hmi hnc hns hnv hnt) h
 
 /-- The one-layer unfolding of `execStmtLoop`, as an EQUATION (the loop
 is fuel-structural, so the definitional unfolding needs the fuel

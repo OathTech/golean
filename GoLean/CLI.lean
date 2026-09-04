@@ -961,205 +961,22 @@ Member statuses and the status discipline (audit F1) are unchanged;
 case enumerates under `--expect-status race`, so EVERY path must
 refuse. Deadlock members still fail loud (no membership handling). -/
 
-/-- The consumption accountant (docstring above): walks the consumption
-decision points of ONE `stepMulti` call over the supplied pick vector.
-`none` = the vector suffices (the real `stepMulti` will draw only from
-it); `some b` = the step's next draw would exceed the vector — a site
-of bound `b` at this position. Errors and non-consuming refusals
-return `none` (the real step surfaces them). -/
+/-- The consumption accountant (docstring above), since wave (iii) B8 a
+PROJECTION of the machine's own `poolConsumption` (Multi.lean) — the
+dispatch ladder is no longer mirrored here. `none` = the vector suffices
+(the real `stepMulti` will draw only from it); `some b` = the step's next
+draw would exceed the vector — a site of bound `b` at this position. -/
 def stepNeeds (m : GoCore.Machine.MultiConfig) (picks : GoCore.Choices) :
     Option Nat :=
-  match m.threads[m.cur]? with
-  | none => none
-  | some c₀ =>
-    -- Site: the boundary scheduling pick (l1Sched, or stage C's
-    -- postOp — the marker's own site; consumed only when the slot
-    -- MENU has ≥ 2 entries). The mirror indexes the same menu the
-    -- machine does (`schedSlots` — issuer-first at postOp), never
-    -- bare `runnableIdxs`: the slot→goroutine mapping is part of the
-    -- decision being mirrored.
-    let menu := GoCore.Machine.schedSlots m.shared m.threads m.cur
-      c₀.boundarySite
-    let l1 : Option (Nat × GoCore.Choices) :=
-      if c₀.atBoundary then
-        match menu with
-        | [] => none  -- all asleep: classified before stepping
-        | [j] => some (j, picks)
-        | rs =>
-            match picks with
-            | [] => none  -- signal handled below via the sentinel
-            | p :: rest =>
-                match rs[p % rs.length]? with
-                | some j => some (j, rest)
-                | none => none
-      else some (m.cur, picks)
-    match c₀.atBoundary, menu, picks with
-    | true, _ :: _ :: _, [] => some menu.length
-    | _, _, _ =>
-      match l1 with
-      | none => none
-      | some (i, ch) =>
-        match m.threads[i]? with
-        | none => none
-        | some c =>
-          if GoCore.Machine.isBlockedConfig c then none
-          else if (GoCore.Machine.opDoneInner c).isSome then none
-          else
-            match GoCore.Machine.spawnPlan c with
-            | some _ =>
-                -- The spawn's child-entry panic-text pick (BUG-087 audit
-                -- fix F1): the same shared entry table and bound.
-                match GoCore.Machine.entryCallSite? c with
-                | some (fid, args) =>
-                    if GoCore.Machine.nilValueMethodWidth m.shared fid args ≤ 1 then none
-                    else match ch with
-                      | [] => some (GoCore.Machine.nilValueMethodWidth m.shared fid args)
-                      | _ :: _ => none
-                | none => none
-            | none =>
-              match GoCore.Machine.arrivalCases m.shared m.threads i c with
-              | .error _ => none
-              | .ok (.single _ cs) =>
-                  if cs.length ≤ 1 then none
-                  else match ch with
-                    | [] => some cs.length
-                    | _ :: _ => none
-              | .ok (.multi os) =>
-                  (match ch with
-                  | [] => some os.length
-                  | p :: rest =>
-                      match os[p % os.length]? with
-                      | some (.pair _ cs) =>
-                          if cs.length ≤ 1 then none
-                          else match rest with
-                            | [] => some cs.length
-                            | _ :: _ => none
-                      | _ => none)
-              | .ok .cellPath =>
-                  -- The sequential machine's own sites, per shape.
-                  match c with
-                  | .next (.mapIterK _ _ keyTy valTy _ base produced start _ _) =>
-                      -- BUG-005 (L): the pick width is candidates + the
-                      -- stop slot, computed from the STATE with the
-                      -- machine's own analysis functions (never a
-                      -- hand-copied bound).
-                      (match GoCore.Machine.mapIterCandidates m.shared
-                          keyTy valTy base produced with
-                      | .error _ => none
-                      | .ok cands =>
-                          if cands.isEmpty then none
-                          else
-                            let mand := GoCore.Machine.mapIterMandatoryRemains
-                              cands start
-                            match ch with
-                            | [] => some (cands.size
-                                + (if mand then 0 else 1))
-                            | _ :: _ => none)
-                  | .retV v (.selectOpsK clauses default? done [] env k) =>
-                      (match GoCore.Machine.applySelectCore m.shared clauses
-                          default? ((v :: done).reverse) env k with
-                      | .ok (.picks commits) =>
-                          (match ch with
-                          | [] => some commits.length
-                          | _ :: _ => none)
-                      | _ => none)
-                  | .retV v (.stmtOpK (.appendSlice _) _ done [] _ _) =>
-                      -- The spill's capacity site (bound mirrors
-                      -- `applyStmtOp`'s appendSlice arm verbatim).
-                      (match (v :: done).reverse with
-                      | [_, sliceV, elemsV] =>
-                          (match GoCore.valueAsSlice sliceV,
-                              GoCore.valueAsSlice elemsV with
-                          | .ok slice, .ok elems =>
-                              let newLen := slice.len + elems.len
-                              if newLen ≤ slice.cap then none
-                              else match ch with
-                                | [] => some
-                                    (GoCore.appendSpillWidth slice.cap newLen)
-                                | _ :: _ => none
-                          | _, _ => none)
-                      | _ => none)
-                  | .retV v (.syncStK op done [] _ _) =>
-                      -- The TRY heads' `tryLock` site (Q-TRYLOCK): the
-                      -- bound mirrors `applySyncOp` verbatim — the
-                      -- machine's own `syncCell` read and `tryLockWidth`;
-                      -- width 1 pops nothing (`consumeAtOne := false`).
-                      (match op.tryTargets?, (v :: done).reverse with
-                      | some _, [av] =>
-                          (match GoCore.valueAsLoc av with
-                          | .error _ => none
-                          | .ok loc =>
-                              match GoCore.Machine.syncCell m.shared loc with
-                              | .error _ => none
-                              | .ok pre =>
-                                  let w := GoCore.Machine.tryLockWidth op pre
-                                  if w ≤ 1 then none
-                                  else match ch with
-                                    | [] => some w
-                                    | _ :: _ => none)
-                      | _, _ => none)
-                  | c =>
-                      -- The frame-entry panic-text site (BUG-087,
-                      -- `nilValueMethodText`): bound 2 exactly on the
-                      -- wrapper family, from the machine's own analysis
-                      -- (`nilValueMethodWidth`; a width-1 shape draws
-                      -- nothing — the site's consumeAtOne=false policy).
-                      match GoCore.Machine.entryCallSite? c with
-                      | some (fid, args) =>
-                          if GoCore.Machine.nilValueMethodWidth m.shared fid args ≤ 1 then none
-                          else match ch with
-                            | [] => some (GoCore.Machine.nilValueMethodWidth m.shared fid args)
-                            | _ :: _ => none
-                      | none => none
+  (GoCore.Machine.poolConsumption m picks).map (·.2)
 
 /-- The SEQUENTIAL accountant for the `$pkginit` phase (one `stepFn`
 step consumes at most one pick): `some b` iff this configuration's next
-step draws a pick, with bound `b`. -/
+step draws a pick, with bound `b` — the machine's `seqConsumption`
+(theorem `stepFn_consumption`), projected. -/
 def stepNeedsSeq (σ : GoCore.ExecState) (c : GoCore.Machine.Config) :
     Option Nat :=
-  match c with
-  | .next (.mapIterK _ _ keyTy valTy _ base produced start _ _) =>
-      (match GoCore.Machine.mapIterCandidates σ keyTy valTy base produced with
-      | .error _ => none
-      | .ok cands =>
-          if cands.isEmpty then none
-          else
-            let mand := GoCore.Machine.mapIterMandatoryRemains cands start
-            some (cands.size + (if mand then 0 else 1)))
-  | .retV v (.selectOpsK clauses default? done [] env k) =>
-      (match GoCore.Machine.applySelectCore σ clauses default?
-          ((v :: done).reverse) env k with
-      | .ok (.picks commits) => some commits.length
-      | _ => none)
-  | .retV v (.stmtOpK (.appendSlice _) _ done [] _ _) =>
-      (match (v :: done).reverse with
-      | [_, sliceV, elemsV] =>
-          (match GoCore.valueAsSlice sliceV, GoCore.valueAsSlice elemsV with
-          | .ok slice, .ok elems =>
-              let newLen := slice.len + elems.len
-              if newLen ≤ slice.cap then none
-              else some (GoCore.appendSpillWidth slice.cap newLen)
-          | _, _ => none)
-      | _ => none)
-  | .retV v (.syncStK op done [] _ _) =>
-      (match op.tryTargets?, (v :: done).reverse with
-      | some _, [av] =>
-          (match GoCore.valueAsLoc av with
-          | .error _ => none
-          | .ok loc =>
-              match GoCore.Machine.syncCell σ loc with
-              | .error _ => none
-              | .ok pre =>
-                  let w := GoCore.Machine.tryLockWidth op pre
-                  if w ≤ 1 then none else some w)
-      | _, _ => none)
-  | c =>
-      -- The frame-entry panic-text site (BUG-087): see `stepNeeds`.
-      match GoCore.Machine.entryCallSite? c with
-      | some (fid, args) =>
-          if GoCore.Machine.nilValueMethodWidth σ fid args ≤ 1 then none
-          else some (GoCore.Machine.nilValueMethodWidth σ fid args)
-      | none => none
+  (GoCore.Machine.seqConsumption σ c).map (·.2)
 
 /-- Exploration context (invariant across the tree). -/
 structure ExpCtx where

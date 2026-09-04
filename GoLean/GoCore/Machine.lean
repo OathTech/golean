@@ -833,6 +833,18 @@ theorem enterFramePick_cases {s : ExecState} {fid : FuncId} {args : List GoValue
       obtain ⟨rfl, rfl⟩ := h
       exact .inr ⟨msg, rfl, toResult_eq_ok_panic.mp hx, rfl⟩
 
+/-- An entry that does NOT panic never touches the stream. -/
+theorem enterFramePick_of_nopanic {s : ExecState} {fid : FuncId} {args : List GoValue}
+    (hnp : ∀ msg, enterFrame s fid args ≠ .error (.panic msg)) (ch : Choices) :
+    enterFramePick s fid args ch = (toResult (enterFrame s fid args)).map (·, ch) := by
+  unfold enterFramePick
+  cases hx : toResult (enterFrame s fid args) with
+  | error e => rfl
+  | ok r =>
+    cases r with
+    | ok a => rfl
+    | panic msg => exact absurd (toResult_eq_ok_panic.mp hx) (hnp msg)
+
 /-- An entry that classifies under one stream classifies under every
 stream (the classification is `enterFrame`'s, stream-free; only the
 panic TEXT and the popped tail depend on the stream). -/
@@ -858,6 +870,12 @@ theorem enterFramePick_of_isSome_false {s : ExecState} {fid : FuncId} {args : Li
     | panic msg =>
       simp [nilValueMethodWidth_of_isSome_false hn, entryPanicText_of_isSome_false hn, Except.map,
         Choices.consumeAt_nilValueMethodText_one]
+
+/-- The family-free entry, ∀-stream form. -/
+theorem enterFramePick_oblivious_of_isSome_false {s : ExecState} {fid : FuncId}
+    {args : List GoValue} (hn : (nilValueMethodText? s fid args).isSome = false) (ch : Choices) :
+    enterFramePick s fid args ch = (toResult (enterFrame s fid args)).map (·, ch) :=
+  enterFramePick_of_isSome_false hn
 
 @[inherit_doc enterFramePick_of_isSome_false]
 theorem enterFramePick_of_none {s : ExecState} {fid : FuncId} {args : List GoValue}
@@ -3464,6 +3482,148 @@ def applySelect (s : ExecState) (clauses : List (SelectClauseHead × Stmt))
           -- with the pick CONSUMED, exactly like the `.inl` route.
           return (.panicking [panicEntry msg] k, s, ch', some cl)
       | none => throw (.internal "select ready-clause pick out of range")
+
+/-! ## The consumption projection (design-hygiene wave (iii), B8, 2026-09-04)
+
+WHERE the sequential machine consults the choice stream, and at what
+bound — computed by the machine's OWN functions, once, instead of the
+three hand-written mirrors that used to live in `CLI.stepNeeds`/
+`stepNeedsSeq` and `ChoiceTrace.seqSite`/`poolSite` (review U10). The
+theorem `stepFn_consumption` (MachineSound) is the guarantee: `none` ⇒
+the step is stream-oblivious; `some (site, b)` ⇒ the step's stream is
+`(Choices.consumeAt site b ch).2` and the step depends on the stream only
+through that pick. The pool layer's projection is `poolConsumption`
+(Multi.lean). -/
+
+/-- The spill decision of an `appendSlice` apply, from the operands and
+the state alone — the machine's own tests in `applyStmtOp`'s spill arm,
+in the same order: no spill when the new length fits the capacity; the
+R16 `growslice` refusal (a recoverable panic, raised BEFORE the site is
+consulted) consumes nothing; otherwise the site's width
+(`appendSpillWidth`). `none` also on any operand the apply would refuse. -/
+def appendSpill? (s : ExecState) (elem : Ty) (vs : List GoValue) : Option Nat :=
+  match vs with
+  | [_, sliceV, elemsV] =>
+      match valueAsSlice sliceV, valueAsSlice elemsV, tySizeBytes s.types elem with
+      | .ok slice, .ok elems, .ok elemSize =>
+          let newLen := slice.len + elems.len
+          if newLen ≤ slice.cap then none
+          else if newLen ≥ intExclusiveUpperBound || newLen * elemSize > maxAllocBytes then none
+          else some (appendSpillWidth slice.cap newLen)
+      | _, _, _ => none
+  | _ => none
+
+/-- The TRY heads' consult width at a sync apply (`applySyncOp`): the
+receiver cell's `tryLockWidth`, `none` unless it pops (width 2). -/
+def tryLockConsult? (s : ExecState) (op : SyncOp) (vs : List GoValue) : Option Nat :=
+  match op.tryTargets?, vs with
+  | some _, [av] =>
+      match valueAsLoc av with
+      | .ok loc =>
+          match syncCell s loc with
+          | .ok pre => if tryLockWidth op pre ≤ 1 then none else some (tryLockWidth op pre)
+          | .error _ => none
+      | .error _ => none
+  | _, _ => none
+
+/-- The range frame's consult: `mapIter` at width candidates + stop, the
+site that pops even at width 1 (`stepFn`'s own `mapIterCandidates` /
+`mapIterMandatoryRemains`); nothing at an empty candidate set. -/
+def mapIterConsult? (σ : ExecState) (keyTy valTy : Ty) (base : Option Loc)
+    (produced start : Array Nat) : Option (ChoiceSite × Nat) :=
+  match mapIterCandidates σ keyTy valTy base produced with
+  | .ok cands =>
+      if cands.isEmpty then none
+      else some (.mapIter, cands.size + (if mapIterMandatoryRemains cands start then 0 else 1))
+  | .error _ => none
+
+/-- The wide-statement apply's consult: only a SPILLING `appendSlice`
+draws (`appendSpill?`). -/
+def stmtConsult? (σ : ExecState) (op : StmtOp) (vs : List GoValue) : Option (ChoiceSite × Nat) :=
+  match op with
+  | .appendSlice elem => (appendSpill? σ elem vs).map (.appendSpill, ·)
+  | _ => none
+
+/-- The select apply's consult: the L2 pick at a multi-ready analysis
+(`applySelectCore`'s `.picks`), nothing at `.done` or a refusal. -/
+def selectConsult? (σ : ExecState) (clauses : List (SelectClauseHead × Stmt))
+    (default? : Option Stmt) (vs : List GoValue) (env : LocalEnv) (k : Cont) :
+    Option (ChoiceSite × Nat) :=
+  match applySelectCore σ clauses default? vs env k with
+  | .ok (.picks commits) => some (.l2Entry, commits.length)
+  | _ => none
+
+/-- The sync apply's consult: a TRY head at an acquirable cell (`tryLockConsult?`). -/
+def syncConsult? (σ : ExecState) (op : SyncOp) (vs : List GoValue) : Option (ChoiceSite × Nat) :=
+  (tryLockConsult? σ op vs).map (.tryLock, ·)
+
+/-- The frame entry's consult: `nilValueMethodText` at width 2 (the wrapper
+family) when `enterFrame` PANICS — the pick is drawn on the panic path only
+(`enterFramePick`); nothing at width 1 or at a successful entry. -/
+def entryConsult? (σ : ExecState) (fid : FuncId) (args : List GoValue) : Option (ChoiceSite × Nat) :=
+  if nilValueMethodWidth σ fid args ≤ 1 then none
+  else match enterFrame σ fid args with
+    | .error (.panic _) => some (.nilValueMethodText, nilValueMethodWidth σ fid args)
+    | _ => none
+
+/-- **The sequential consumption projection**: the site and bound the next
+`stepFn` step draws — `some` exactly when the consult POPS (a bound-1
+consult at a `consumeAtOne := false` site is `none`). Five sites, one
+consult function each: `mapIter` at a live range frame, `appendSpill` at
+a spilling append, `l2Entry` at a multi-ready select, `tryLock` at an
+acquirable TRY head, `nilValueMethodText` at a panicking frame entry in
+the wrapper family. -/
+def seqConsumption (σ : ExecState) (c : Config) : Option (ChoiceSite × Nat) :=
+  match c with
+  | .next (.mapIterK _ _ keyTy valTy _ base produced start _ _) =>
+      mapIterConsult? σ keyTy valTy base produced start
+  | c =>
+    match c.applyPos with
+    | some (.stmt op _, vs, _, _) => stmtConsult? σ op vs
+    | some (.select clauses default?, vs, env, k) => selectConsult? σ clauses default? vs env k
+    | some (.sync op, vs, _, _) => syncConsult? σ op vs
+    | some (.strict _, _, _, _) | some (.chan _, _, _, _) | some (.atomic _, _, _, _)
+    | some (.rhs _ _ _, _, _, _) => none
+    | none =>
+      match entryCallSite? c with
+      | some (fid, args) => entryConsult? σ fid args
+      | none => none
+
+/-- What a `none` entry consult says: outside the wrapper family, or an
+entry that does not panic. -/
+theorem entryConsult?_none {σ : ExecState} {fid : FuncId} {args : List GoValue}
+    (h : entryConsult? σ fid args = none) :
+    (nilValueMethodText? σ fid args).isSome = false
+      ∨ ∀ msg, enterFrame σ fid args ≠ .error (.panic msg) := by
+  unfold entryConsult? at h
+  split at h
+  · left
+    rename_i hle
+    unfold nilValueMethodWidth at hle
+    split at hle
+    · omega
+    · exact Bool.eq_false_iff.mpr ‹_›
+  · right
+    intro msg hp
+    rw [hp] at h
+    simp at h
+
+/-- What a `some` entry consult says: the family's width 2 and a panicking entry. -/
+theorem entryConsult?_some {σ : ExecState} {fid : FuncId} {args : List GoValue}
+    {site : ChoiceSite} {b : Nat} (h : entryConsult? σ fid args = some (site, b)) :
+    site = .nilValueMethodText ∧ b = nilValueMethodWidth σ fid args
+      ∧ 1 < nilValueMethodWidth σ fid args
+      ∧ ∃ msg, enterFrame σ fid args = .error (.panic msg) := by
+  unfold entryConsult? at h
+  split at h
+  · cases h
+  · rename_i hgt
+    split at h
+    · rename_i msg hp
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact ⟨rfl, rfl, Nat.lt_of_not_le hgt, msg, hp⟩
+    · cases h
 
 /-! ## The step relation -/
 
