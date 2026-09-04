@@ -28,13 +28,8 @@ theorem valueAsBool_ok {v : GoValue} {b : Bool} (h : valueAsBool v = .ok b) :
 /-- The choice consumed at a nondeterministic point is in bounds (for a
 positive bound) — `consume` reduces modulo the bound. -/
 theorem consume_fst_lt {ch : Choices} {bound : Nat} (hb : 0 < bound) :
-    (Choices.consume ch bound).1 < bound := by
-  cases ch with
-  | nil => simpa [Choices.consume] using hb
-  | cons c rest =>
-      have h := Nat.mod_lt c (y := max 1 bound) (by omega)
-      simp only [Choices.consume]
-      omega
+    (Choices.consume ch bound).1 < bound :=
+  Choices.consume_fst_lt hb
 
 /-! ### Soundness -/
 
@@ -304,7 +299,7 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
     -- candidates load precedes every split), so done/stop/pick are
     -- separated manually here.
     rename_i keyVar valVar keyTy valTy body base produced start env k'
-    simp only [stepFn, Choices.consumeAt_mapIter, bind_eq_ok] at h
+    simp only [stepFn, bind_eq_ok] at h
     obtain ⟨cands, hcands, h⟩ := h
     by_cases hemp : cands.isEmpty
     · rw [if_pos hemp] at h
@@ -317,7 +312,7 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
       have hsz : 0 < cands.size := by
         simp only [Array.isEmpty_iff] at hemp
         exact Array.size_pos_iff.mpr hemp
-      rcases hcons : ch.consume (cands.size + (if mand then 0 else 1))
+      rcases hcons : Choices.consumeAt .mapIter (cands.size + (if mand then 0 else 1)) ch
         with ⟨idx, ch₂⟩
       rw [hcons] at h
       simp only at h
@@ -332,7 +327,7 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
           exact Step.mapIterStop hcands (by omega) hmand
         · -- mand = true: width = size, so idx < size — no stop slot
           exfalso
-          have hb := consume_fst_lt
+          have hb := Choices.consumeAt_fst_lt (site := .mapIter)
             (ch := ch) (bound := cands.size + if true = true then 0 else 1)
             (by simp; omega)
           rw [hcons] at hb
@@ -598,15 +593,21 @@ theorem step_complete {c : Config} {s : ExecState} {c' : Config} {s' : ExecState
   case mapIterNext =>
     rename_i keyVar valVar keyTy valTy body base produced start cands idx
       env env' k hidx hcands hbind
-    refine ⟨[idx], [], ?_⟩
     -- The mandatory test is pure (B1 stamps); name its value.
     obtain ⟨mand, hmand⟩ : ∃ m, mapIterMandatoryRemains cands start = m := ⟨_, rfl⟩
-    have hwidth : idx < max 1 (cands.size + (if mand then 0 else 1)) := by
+    have hwidth : idx < cands.size + (if mand then 0 else 1) := by
       cases mand <;> simp <;> omega
-    have hcons : Choices.consume [idx]
-        (cands.size + (if mand then 0 else 1)) = (idx, []) := by
-      simp [Choices.consume, Nat.mod_eq_of_lt hwidth]
-    simp only [stepFn, Choices.consumeAt_mapIter, hcands, hmand, bind_eq_ok]
+    -- The witness stream `[idx]` realizes the pick (at width 1 the pick
+    -- is the forced 0 and the stream is untouched — the uniform rule).
+    rcases hcons : Choices.consumeAt .mapIter
+        (cands.size + (if mand then 0 else 1)) [idx] with ⟨idx', tail⟩
+    have hidx' : idx = idx' := by
+      have := Choices.consumeAt_fst_singleton (site := .mapIter) hwidth
+      rw [hcons] at this
+      exact this.symm
+    subst hidx'
+    refine ⟨[idx], tail, ?_⟩
+    simp only [stepFn, hcands, hmand, bind_eq_ok]
     refine ⟨cands, rfl, ?_⟩
     rw [if_neg (by
       simp only [Array.isEmpty_iff]
@@ -629,11 +630,12 @@ theorem step_complete {c : Config} {s : ExecState} {c' : Config} {s' : ExecState
     rename_i keyVar valVar keyTy valTy body base produced start cands env k
       hne hmand hcands
     refine ⟨[cands.size], [], ?_⟩
-    have hcons : Choices.consume [cands.size] (cands.size + 1)
+    have hcons : Choices.consumeAt .mapIter (cands.size + 1) [cands.size]
         = (cands.size, []) := by
+      rw [Choices.consumeAt_of_lt (by omega)]
       simp [Choices.consume, Nat.mod_eq_of_lt
         (show cands.size < max 1 (cands.size + 1) by omega)]
-    simp only [stepFn, Choices.consumeAt_mapIter, hcands, hmand, bind_eq_ok]
+    simp only [stepFn, hcands, hmand, bind_eq_ok]
     refine ⟨cands, rfl, ?_⟩
     rw [if_neg (by simp only [Array.isEmpty_iff, ← Array.size_eq_zero_iff]; exact hne)]
     have hred : (cands.size + if false = true then 0 else 1)
@@ -1989,24 +1991,6 @@ theorem defaultValueFuel_ok_of_normalize_ok {σ : ExecState} :
                           pure, Except.pure]⟩
           all_goals exact absurd h' (by simp [normalizeStructValueWith])
 
-/-- The growth policy never shrinks below the requested length. -/
-theorem appendGrowthCap_ge {oldCap newLen : Nat} (h : oldCap < newLen) :
-    newLen ≤ appendGrowthCap oldCap newLen := by
-  unfold appendGrowthCap
-  rw [if_neg (by omega)]
-  split
-  · omega
-  · split
-    · omega
-    · split
-      · omega
-      · have hloop : ∀ cap, newLen ≤ appendGrowthCap.loop newLen cap := by
-          intro cap
-          fun_induction appendGrowthCap.loop with
-          | case1 c hge => simpa using hge
-          | case2 c hlt ih => exact ih
-        exact hloop oldCap
-
 /-- A valid slice's visible length is below its capacity. -/
 theorem validateSlice_le {sl : SliceValue} {u : Unit}
     (h : validateSlice sl = .ok u) : sl.len ≤ sl.cap := by
@@ -2529,11 +2513,10 @@ theorem applySelect_ok_or_panic_any_ch {σ : ExecState}
                 simp [throw, throwThe, MonadExceptOf.throw, Stop.internal,
                   Stop.panic] at h
           | cons b rest =>
-              simp only [Choices.consumeAt_l2Entry] at h ⊢
-              rcases hcons : Choices.consume ch (b :: rest).length
+              rcases hcons : Choices.consumeAt .l2Entry (b :: rest).length ch
                 with ⟨idx, ch'⟩
               have hlt : idx < (b :: rest).length := by
-                have := consume_fst_lt (ch := ch)
+                have := Choices.consumeAt_fst_lt (site := .l2Entry) (ch := ch)
                   (show 0 < (b :: rest).length by simp)
                 rw [hcons] at this
                 simpa using this
@@ -2598,9 +2581,9 @@ theorem stepFn_mapIter_ok_any {σ : ExecState} {kv vv : Option String}
         = .ok out := by
   intro ch
   have hsnap := mapIterCandidates_normalized hcands
-  simp only [stepFn, Choices.consumeAt_mapIter, hcands, Bind.bind, Except.bind]
+  simp only [stepFn, hcands, Bind.bind, Except.bind]
   rw [hmand, if_neg hne]
-  rcases hcons : ch.consume (cands.size + (if mand = true then 0 else 1))
+  rcases hcons : Choices.consumeAt .mapIter (cands.size + (if mand = true then 0 else 1)) ch
     with ⟨idx', rest'⟩
   dsimp only
   split
@@ -3366,7 +3349,7 @@ theorem applySyncOp_try_nopop {σ : ExecState} {op : SyncOp} {targets : List Ass
     (hc : syncCell σ loc = .ok pre) (hw : tryLockWidth op pre ≤ 1) (ch : Choices) :
     applySyncOp σ ch op [av] env k =
       (applyTryLock σ op loc pre false targets env k).map fun p => (p.1, p.2, ch) := by
-  rw [applySyncOp_try_stream ht hl hc ch, Choices.consumeAt_le_one hw rfl]
+  rw [applySyncOp_try_stream ht hl hc ch, Choices.consumeAt_le_one hw]
   rfl
 
 /-- A two-stage `Except` pipeline ending in a `(·, ch)` pair is the
@@ -3545,7 +3528,7 @@ theorem stepFn_mapIter_pick {σ : ExecState} {kv vv : Option String}
     (hcands : mapIterCandidates σ kt vt base produced = .ok cands)
     (hmand : mapIterMandatoryRemains cands start = mand)
     (hne : ¬ cands.isEmpty = true)
-    (hcons : Choices.consume ch (cands.size + (if mand = true then 0 else 1))
+    (hcons : Choices.consumeAt .mapIter (cands.size + (if mand = true then 0 else 1)) ch
       = (idx, tail))
     (hlt : idx < cands.size) :
     stepFn σ (.next (.mapIterK kv vv kt vt body base produced start env k)) ch
@@ -3555,7 +3538,7 @@ theorem stepFn_mapIter_pick {σ : ExecState} {kv vv : Option String}
             (.mapIterK kv vv kt vt body base (produced.push cands[idx].1)
               start env k),
             p.2, tail)) := by
-  simp only [stepFn, Choices.consumeAt_mapIter, hcands, Bind.bind, Except.bind]
+  simp only [stepFn, hcands, Bind.bind, Except.bind]
   rw [hmand, if_neg hne, hcons]
   dsimp only
   split
@@ -3586,10 +3569,10 @@ theorem stepFn_mapIter_stop {σ : ExecState} {kv vv : Option String}
     (hcands : mapIterCandidates σ kt vt base produced = .ok cands)
     (hmand : mapIterMandatoryRemains cands start = false)
     (hne : ¬ cands.isEmpty = true)
-    (hcons : Choices.consume ch (cands.size + 1) = (cands.size, tail)) :
+    (hcons : Choices.consumeAt .mapIter (cands.size + 1) ch = (cands.size, tail)) :
     stepFn σ (.next (.mapIterK kv vv kt vt body base produced start env k)) ch
       = .ok (.next k, σ, tail) := by
-  simp only [stepFn, Choices.consumeAt_mapIter, hcands, Bind.bind, Except.bind]
+  simp only [stepFn, hcands, Bind.bind, Except.bind]
   rw [hmand, if_neg hne]
   have hred : (cands.size + if false = true then 0 else 1)
       = cands.size + 1 := by simp
@@ -3954,6 +3937,7 @@ theorem stepFn_consumption_none {σ : ExecState} {c : Config} {ch₀ : Choices}
       simp [stepFn, hcands, Bind.bind, Except.bind] at h
     | ok cands =>
       rw [hcands] at hsc
+      (try dsimp only at hsc)
       by_cases hemp : cands.isEmpty
       · rw [Array.isEmpty_iff] at hemp
         subst hemp
@@ -3961,7 +3945,33 @@ theorem stepFn_consumption_none {σ : ExecState} {c : Config} {ch₀ : Choices}
         simp only [Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl, rfl⟩ := h
         exact ⟨rfl, fun ch => stepFn_mapIter_done hcands ch⟩
-      · simp [hemp] at hsc
+      · -- G-U: a width-1 consult (the last MANDATORY candidate) pops
+        -- nothing and forces pick 0 — the step is oblivious.
+        rw [if_neg hemp] at hsc
+        obtain ⟨mand, hmand⟩ : ∃ m, mapIterMandatoryRemains cands start = m := ⟨_, rfl⟩
+        rw [hmand] at hsc
+        have hw : cands.size + (if mand = true then 0 else 1) ≤ 1 := by
+          by_cases hle : cands.size + (if mand = true then 0 else 1) ≤ 1
+          · exact hle
+          · simp [hle] at hsc
+        have hpos : 0 < cands.size := by
+          rcases Nat.eq_zero_or_pos cands.size with hz | hp
+          · exact absurd (by simpa [Array.isEmpty_iff, Array.size_eq_zero_iff] using hz) hemp
+          · exact hp
+        have hcons : ∀ ch : Choices,
+            Choices.consumeAt .mapIter (cands.size + (if mand = true then 0 else 1)) ch
+              = (0, ch) :=
+          fun ch => Choices.consumeAt_le_one hw
+        rw [stepFn_mapIter_pick hcands hmand hemp (hcons ch₀) hpos] at h
+        cases hbind : bindIterVars env.pushScope σ kv vv kt vt cands[0].2.1 cands[0].2.2 with
+        | error e => rw [hbind] at h; simp [Except.map] at h
+        | ok p =>
+          rw [hbind] at h
+          simp only [Except.map, Except.ok.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl, rfl⟩ := h
+          refine ⟨rfl, fun ch => ?_⟩
+          rw [stepFn_mapIter_pick hcands hmand hemp (hcons ch) hpos, hbind]
+          rfl
   case case77 =>
     -- A4: a global past the heap REFUSES (`.stuck`); no step is produced.
     rename_i hgid
@@ -4341,18 +4351,22 @@ theorem stepFn_consumption_some {σ : ExecState} {c : Config} {ch₀ : Choices}
       by_cases hemp : cands.isEmpty
       · simp [hemp] at hsc
       · rw [if_neg hemp] at hsc
-        simp only [Option.some.injEq, Prod.mk.injEq] at hsc
-        obtain ⟨rfl, rfl⟩ := hsc
         obtain ⟨mand, hmand⟩ : ∃ m, mapIterMandatoryRemains cands start = m := ⟨_, rfl⟩
-        rw [hmand]
-        simp only [Choices.consumeAt_mapIter]
-        rcases hcons : Choices.consume ch₀ (cands.size + (if mand = true then 0 else 1)) with ⟨idx, tail⟩
+        rw [hmand] at hsc
+        -- G-U: the projection reports the consult only at width ≥ 2.
+        have hsc' : ChoiceSite.mapIter = site ∧ (cands.size + (if mand = true then 0 else 1)) = b := by
+          by_cases hle : cands.size + (if mand = true then 0 else 1) ≤ 1
+          · simp [hle] at hsc
+          · simpa [hle] using hsc
+        obtain ⟨rfl, rfl⟩ := hsc'
+        rcases hcons : Choices.consumeAt .mapIter (cands.size + (if mand = true then 0 else 1)) ch₀ with ⟨idx, tail⟩
         have hpos : 0 < cands.size := by
           rcases Nat.eq_zero_or_pos cands.size with hz | hp
           · exact absurd (by simpa [Array.isEmpty_iff, Array.size_eq_zero_iff] using hz) hemp
           · exact hp
         have hltw : idx < cands.size + (if mand = true then 0 else 1) := by
-          have hb := consume_fst_lt (ch := ch₀) (bound := cands.size + (if mand = true then 0 else 1))
+          have hb := Choices.consumeAt_fst_lt (site := .mapIter) (ch := ch₀)
+            (bound := cands.size + (if mand = true then 0 else 1))
             (by cases mand <;> simp <;> omega)
           rw [hcons] at hb
           exact hb
@@ -4365,7 +4379,7 @@ theorem stepFn_consumption_some {σ : ExecState} {c : Config} {ch₀ : Choices}
             simp only [Except.map, Except.ok.injEq, Prod.mk.injEq] at h
             obtain ⟨rfl, rfl, rfl⟩ := h
             refine ⟨rfl, fun ch hpk => ?_⟩
-            rcases hcons₁ : Choices.consume ch (cands.size + (if mand = true then 0 else 1)) with ⟨idx₁, tail₁⟩
+            rcases hcons₁ : Choices.consumeAt .mapIter (cands.size + (if mand = true then 0 else 1)) ch with ⟨idx₁, tail₁⟩
             rw [hcons₁] at hpk
             simp only at hpk
             subst hpk
@@ -4378,13 +4392,13 @@ theorem stepFn_consumption_some {σ : ExecState} {c : Config} {ch₀ : Choices}
           subst hmandf
           have hidx : idx = cands.size := by simp at hltw; omega
           subst hidx
-          have hcons' : Choices.consume ch₀ (cands.size + 1) = (cands.size, tail) := by simpa using hcons
+          have hcons' : Choices.consumeAt .mapIter (cands.size + 1) ch₀ = (cands.size, tail) := by simpa using hcons
           rw [stepFn_mapIter_stop hcands hmand hemp hcons'] at h
           simp only [Except.ok.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl, rfl⟩ := h
           refine ⟨rfl, fun ch hpk => ?_⟩
-          rcases hcons₁ : Choices.consume ch (cands.size + (if false = true then 0 else 1)) with ⟨idx₁, tail₁⟩
-          have hcons₁' : Choices.consume ch (cands.size + 1) = (idx₁, tail₁) := by
+          rcases hcons₁ : Choices.consumeAt .mapIter (cands.size + (if false = true then 0 else 1)) ch with ⟨idx₁, tail₁⟩
+          have hcons₁' : Choices.consumeAt .mapIter (cands.size + 1) ch = (idx₁, tail₁) := by
             simpa using hcons₁
           rw [hcons₁] at hpk
           simp only at hpk
@@ -4591,25 +4605,25 @@ theorem execStmtLoop_ok_of_allStreamsOk :
         obtain ⟨mand, hmand⟩ : ∃ m, mapIterMandatoryRemains cands start = m := ⟨_, rfl⟩
         rw [hmand] at hall
         rw [List.all_eq_true] at hall
-        rcases hcons : Choices.consume ch
-          (cands.size + (if mand = true then 0 else 1)) with ⟨idx, tail⟩
+        rcases hcons : Choices.consumeAt .mapIter
+          (cands.size + (if mand = true then 0 else 1)) ch with ⟨idx, tail⟩
         have hpos : 0 < cands.size := by
           rcases Nat.eq_zero_or_pos cands.size with hz | hp
           · exact absurd (by simpa [Array.isEmpty_iff, Array.size_eq_zero_iff]
               using hz) hne
           · exact hp
         have hltw : idx < cands.size + (if mand = true then 0 else 1) := by
-          have hb := consume_fst_lt (ch := ch)
+          have hb := Choices.consumeAt_fst_lt (site := .mapIter) (ch := ch)
             (bound := cands.size + (if mand = true then 0 else 1))
             (by cases mand <;> simp <;> omega)
           rw [hcons] at hb
           exact hb
         have hidx := hall idx (by simpa using List.mem_range.mpr hltw)
-        have hconsi : Choices.consume [idx]
-            (cands.size + (if mand = true then 0 else 1)) = (idx, []) := by
-          simp [Choices.consume,
-            Nat.mod_eq_of_lt (show idx < max 1 (cands.size
-              + (if mand = true then 0 else 1)) by omega)]
+        -- the probe stream `[idx]` realizes the pick (its tail is
+        -- irrelevant: the checker discards the probe's stream)
+        obtain ⟨probeTail, hconsi⟩ : ∃ t, Choices.consumeAt .mapIter
+            (cands.size + (if mand = true then 0 else 1)) [idx] = (idx, t) :=
+          ⟨_, Prod.ext (Choices.consumeAt_fst_singleton hltw) rfl⟩
         by_cases hlt : idx < cands.size
         · -- a pick
           rw [stepFn_mapIter_pick hcands hmand hne hconsi hlt] at hidx
@@ -4638,10 +4652,10 @@ theorem execStmtLoop_ok_of_allStreamsOk :
             simp at hltw
             omega
           subst hidxeq
-          have hconsi' : Choices.consume [cands.size] (cands.size + 1)
-              = (cands.size, []) := by
+          have hconsi' : Choices.consumeAt .mapIter (cands.size + 1) [cands.size]
+              = (cands.size, probeTail) := by
             simpa using hconsi
-          have hcons' : Choices.consume ch (cands.size + 1)
+          have hcons' : Choices.consumeAt .mapIter (cands.size + 1) ch
               = (cands.size, tail) := by
             simpa using hcons
           rw [stepFn_mapIter_stop hcands hmand hne hconsi'] at hidx

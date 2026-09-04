@@ -704,10 +704,9 @@ def enterFrame (s : ExecState) (fid : FuncId) (argVals : List GoValue) :
 
 /-- The `nilValueMethodText` site's stream bound at a frame entry
 (BUG-087): 2 on the wrapper family (`nilValueMethodText?` — the
-envelope statement, Ops.lean), 1 everywhere else. With the site's
-`consumeAtOne := false` policy a bound-1 consult pops nothing, so every
-entry outside the family consumes exactly what it consumed before the
-site existed. -/
+envelope statement, Ops.lean), 1 everywhere else. A bound-1 consult pops
+nothing (the uniform rule, `Choices.consumeAt`), so every entry outside
+the family consumes exactly what it consumed before the site existed. -/
 def nilValueMethodWidth (s : ExecState) (fid : FuncId) (args : List GoValue) : Nat :=
   if (nilValueMethodText? s fid args).isSome then 2 else 1
 
@@ -734,10 +733,10 @@ theorem entryPanicText_of_none {s : ExecState} {fid : FuncId} {args : List GoVal
   simp [entryPanicText, h]
 
 /-- The site's bound-1 consult (outside the family) is inert — the
-declared `consumeAtOne := false` policy, specialized. -/
+uniform rule (`Choices.consumeAt_one`), specialized to the site. -/
 @[simp] theorem Choices.consumeAt_nilValueMethodText_one {ch : Choices} :
     Choices.consumeAt .nilValueMethodText 1 ch = (0, ch) :=
-  Choices.consumeAt_le_one (Nat.le_refl 1) rfl
+  Choices.consumeAt_one
 
 /-- The `isSome = false` spellings of the two `_of_none` facts (the shape
 `simp` leaves a `consumesNilValueMethod … = false` hypothesis in). -/
@@ -765,8 +764,8 @@ ONLY, the `nilValueMethodText` site is consulted at bound
 `docs/2026-08-31_qrow-rulings.md`): 2 exactly on the wrapper family
 (`nilValueMethodText?`, Ops.lean, the envelope statement), where slot 0
 keeps the nil-dereference text `enterFrame` raised and slot 1
-substitutes gc's `panicwrap` text; 1 elsewhere, where the site's
-`consumeAtOne := false` policy makes the consult a no-op
+substitutes gc's `panicwrap` text; 1 elsewhere, where the uniform
+bound-≤-1 rule makes the consult a no-op
 (`Choices.consumeAt_nilValueMethodText_one`) — so every non-family entry
 consumes exactly as before the site existed. The successful entry
 returns the stream untouched. Every frame entry of the machine goes
@@ -868,8 +867,7 @@ theorem enterFramePick_of_isSome_false {s : ExecState} {fid : FuncId} {args : Li
     cases r with
     | ok a => rfl
     | panic msg =>
-      simp [nilValueMethodWidth_of_isSome_false hn, entryPanicText_of_isSome_false hn, Except.map,
-        Choices.consumeAt_nilValueMethodText_one]
+      simp [nilValueMethodWidth_of_isSome_false hn, entryPanicText_of_isSome_false hn, Except.map]
 
 /-- The family-free entry, ∀-stream form. -/
 theorem enterFramePick_oblivious_of_isSome_false {s : ExecState} {fid : FuncId}
@@ -888,8 +886,7 @@ theorem enterFramePick_of_none {s : ExecState} {fid : FuncId} {args : List GoVal
     cases r with
     | ok a => rfl
     | panic msg =>
-      simp [nilValueMethodWidth_of_none hn, entryPanicText_of_none hn, Except.map,
-        Choices.consumeAt_nilValueMethodText_one]
+      simp [nilValueMethodWidth_of_none hn, entryPanicText_of_none hn, Except.map]
 
 /-! ## Wide statements: the statement-op table -/
 
@@ -1174,6 +1171,45 @@ def applyStmtOpCore (s : ExecState) (op : StmtOp)
       | _ => stuck "malformed copySlice operands"
   | .appendSlice _ =>
       throw (.internal "applyStmtOpCore: appendSlice dispatches through applyStmtOp")
+
+/-- The growth policy never shrinks below the requested length. -/
+theorem appendGrowthCap_ge {oldCap newLen : Nat} (h : oldCap < newLen) :
+    newLen ≤ appendGrowthCap oldCap newLen := by
+  unfold appendGrowthCap
+  rw [if_neg (by omega)]
+  split
+  · omega
+  · split
+    · omega
+    · split
+      · omega
+      · have hloop : ∀ cap, newLen ≤ appendGrowthCap.loop newLen cap := by
+          intro cap
+          fun_induction appendGrowthCap.loop with
+          | case1 c hge => simpa using hge
+          | case2 c hlt ih => exact ih
+        exact hloop oldCap
+
+/-- The append-spill site's bound is ≥ 2 at EVERY operand pair: the
+envelope's upper end (`appendSpillUpper` = max 32 (2 × growth cap)) is
+strictly above the new length, so the spill consult always has a choice
+and the uniform rule always pops there — the "width ≥ 2 by construction"
+fact the retired per-site policy table asserted in prose. -/
+theorem one_lt_appendSpillWidth (oldCap newLen : Nat) :
+    1 < appendSpillWidth oldCap newLen := by
+  unfold appendSpillWidth appendSpillUpper
+  by_cases h : oldCap < newLen
+  · have := appendGrowthCap_ge h
+    omega
+  · unfold appendGrowthCap
+    rw [if_pos (by omega)]
+    omega
+
+/-- The spill consult is the raw pop (its bound is ≥ 2 always). -/
+@[simp] theorem Choices.consumeAt_appendSpill {oldCap newLen : Nat} {ch : Choices} :
+    Choices.consumeAt .appendSpill (appendSpillWidth oldCap newLen) ch
+      = ch.consume (appendSpillWidth oldCap newLen) :=
+  Choices.consumeAt_of_lt (one_lt_appendSpillWidth oldCap newLen)
 
 /-- Apply a wide statement's head to its evaluated operands (`nt` leading
 target addresses, then values). One state-update step. `appendSlice`'s
@@ -3093,8 +3129,8 @@ PRE-step cell: 2 when the op could acquire — `TryLock` on an unlocked
 Mutex; `TryRLock` when no writer HOLDS (a pending writer does not force
 the failure — the R1 note at `applyTryLock`); RWMutex `TryLock` when no
 writer holds and no reader does (the `wlock` immediate-acquire
-condition) — else 1 (the failure is forced; the site's
-`consumeAtOne := false` policy pops nothing). A kind-mismatched cell is
+condition) — else 1 (the failure is forced; a bound-1 consult pops
+nothing under the uniform rule). A kind-mismatched cell is
 width 1 too (the apply is `stuck` there, before any pick matters). The
 accountants (`CLI.stepNeeds`, `ChoiceTrace.seqSite`) recompute the bound
 through THIS function. -/
@@ -3159,7 +3195,7 @@ THE ENVELOPE, per head, from the pre-step cell:
   is UNEXHIBITED-BUT-PERMITTED: the membership rows over {1, 0} carry
   it (`sync/trylock/*`), never a strict row.
 * held (`tryLockWidth` = 1) → `false`, deterministically, and the site
-  is consulted at bound 1 WITHOUT a pop (`consumeAtOne := false`), so a
+  is consulted at bound 1 WITHOUT a pop (the uniform rule), so a
   TryLock on a held lock is stream-transparent (probes `muLocked`,
   `rwMatrix`: false 20/20). RWMutex `TryRLock` is FORCED false only while
   a writer HOLDS (`writer = true`): gc's `readerCount` goes negative at
@@ -3554,15 +3590,19 @@ def tryLockConsult? (s : ExecState) (op : SyncOp) (vs : List GoValue) : Option N
       | .error _ => none
   | _, _ => none
 
-/-- The range frame's consult: `mapIter` at width candidates + stop, the
-site that pops even at width 1 (`stepFn`'s own `mapIterCandidates` /
-`mapIterMandatoryRemains`); nothing at an empty candidate set. -/
+/-- The range frame's consult: `mapIter` at width candidates + stop
+(`stepFn`'s own `mapIterCandidates` / `mapIterMandatoryRemains`) when
+that width is ≥ 2; nothing at an empty candidate set, and nothing at
+width 1 — the last MANDATORY candidate, a forced pick that pops nothing
+under the uniform rule (G-U; before it this site popped at width 1). -/
 def mapIterConsult? (σ : ExecState) (keyTy valTy : Ty) (base : Option Loc)
     (produced start : Array Nat) : Option (ChoiceSite × Nat) :=
   match mapIterCandidates σ keyTy valTy base produced with
   | .ok cands =>
       if cands.isEmpty then none
-      else some (.mapIter, cands.size + (if mapIterMandatoryRemains cands start then 0 else 1))
+      else
+        let w := cands.size + (if mapIterMandatoryRemains cands start then 0 else 1)
+        if w ≤ 1 then none else some (.mapIter, w)
   | .error _ => none
 
 /-- The wide-statement apply's consult: only a SPILLING `appendSlice`
@@ -3595,8 +3635,8 @@ def entryConsult? (σ : ExecState) (fid : FuncId) (args : List GoValue) : Option
     | _ => none
 
 /-- **The sequential consumption projection**: the site and bound the next
-`stepFn` step draws — `some` exactly when the consult POPS (a bound-1
-consult at a `consumeAtOne := false` site is `none`). Five sites, one
+`stepFn` step draws — `some` exactly when the consult POPS (a bound-≤-1
+consult is `none` at every site — the uniform rule, G-U). Five sites, one
 consult function each: `mapIter` at a live range frame, `appendSpill` at
 a spilling append, `l2Entry` at a multi-ready select, `tryLock` at an
 acquirable TRY head, `nilValueMethodText` at a panicking frame entry in

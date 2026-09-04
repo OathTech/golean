@@ -62,14 +62,20 @@ noted where it would bear), ARCH (proposal/issue archaeology — none done
 yet; noted where it would bear).
 
 **The choice-site census IS code** (W3.2 slice 1 stage A): the
-`ChoiceSite` datatype + `ChoiceSite.policy` table in
+`ChoiceSite` datatype + `ChoiceSite.canonicalSlot0` table in
 `GoLean/GoCore/State.lean` is the census of record — every consumption
 goes through `Choices.consumeAt` with its site tag, so a new site
 requires a constructor (exhaustiveness-checked) and this table below is
-a reader's mirror, no longer a hand-synced record. The per-site
-consume-when column is the `consumeAtOne` policy declaration (the
-L1/L4 singleton non-consumption moved from caller-side special cases
-into the table at stage A, behavior-identical):
+a reader's mirror, no longer a hand-synced record. **Consumption is
+under ONE rule since G-U (2026-09-04): a consult pops the stream iff
+its bound is ≥ 2, at every site** — the per-site `SitePolicy.consumeAtOne`
+flag (stage A's transcription of the then-current code: `mapIter` alone
+popped at width 1) is DELETED; design gate G-U RULED [USER] 2026-09-04
+as recommended (relayed by the [AGENT] coordinator —
+`docs/2026-09-04_reasoning-surface-plan.md` §5.4; design note
+`docs/2026-09-04_c-arc-gu-design.md`). The "Consumed when" column below
+is therefore the same rule in every row; a cell says only WHERE the
+site's bound can be 1 (a forced pick, no pop):
 
 **Mirror re-synced 2026-08-22** (settlement branch, `reconcile-records`
 C12). The mirror had DRIFTED and nothing was watching it: it carried 7
@@ -99,7 +105,7 @@ between sweeps (the reconciler's C12 checks row COUNT, not lines).
 
 | Site | Code | Bound | Consumed when | Empty-stream default |
 |---|---|---|---|---|
-| Map-iteration pick (`mapIter`) | StepFn.lean:615–621 | live candidates + conditional stop slot | every iteration (even width 1) | first remaining candidate in cell order, stop LAST (columns re-synced 2026-08-22 — the Bound/default cells were still describing the RETIRED snapshot design; launch audit D2-F1) |
+| Map-iteration pick (`mapIter`) | StepFn.lean `.mapIterK` arm | live candidates + conditional stop slot | every iteration with ≥ 2 slots — the LAST mandatory candidate is a bound-1 consult and pops nothing (G-U 2026-09-04; before it this site alone popped at width 1) | first remaining candidate in cell order, stop LAST (columns re-synced 2026-08-22 — the Bound/default cells were still describing the RETIRED snapshot design; launch audit D2-F1) |
 | Append spill capacity (`appendSpill`) | Machine.lean:963 | `appendSpillWidth` (Ops.lean:1972) | every spill | gc growth-formula point |
 | L2 select pick, entry path (`l2Entry`) | Machine.lean:2819 | ready-clause count | only width > 1 | first ready clause (clause order) |
 | L2 select pick, arrival path (`l2Arrival`) | Multi.lean:853 | `.multi` outcome count | only `.multi` | first ready clause |
@@ -109,7 +115,7 @@ between sweeps (the reconciler's C12 checks row COUNT, not lines).
 | Post-op boundary pick (`postOp`, W3.2 stage C) | Multi.lean:1153 (via `Config.boundarySite`, :1100) | \|runnable\| (issuer-first menu, `schedSlots` :1122) | at an `.opDone .postOp` marker, only width > 1 | slot 0 = the ISSUER continues (the pre-widening schedule, literally) |
 | Loop back-edge pick (`backEdge`, W3.2 stage D) | Multi.lean:1153 (via `Config.boundarySite`, :1101–1103) | \|runnable\| (current-first menu, `schedSlots` :1123) | at a loop re-entry shape (`.loop`, `.mapIterK`), only width > 1 | slot 0 = the CURRENT goroutine continues |
 | Frame-entry panic TEXT pick (`nilValueMethodText`, BUG-087 / R9a, 2026-09-03) | StepFn.lean `enterFrameStep` + `enterFrameDeferPanicking`, Multi.lean `spawnStep` (envelope statement `nilValueMethodText?`, Ops.lean, beside `dynamicDispatch?`'s nil arm) | `nilValueMethodWidth` — 2 on the wrapper family, 1 elsewhere | at a frame entry in the family (value-receiver method dispatched through an interface holding a nil `*T`, target not a promotion wrapper), only width > 1 | slot 0 = the nil-dereference text (the pre-BUG-087 machine's only member) |
-| TryLock spurious failure (`tryLock`, Q-TRYLOCK 2026-09-03) | Machine.lean `applySyncOp` (the TRY-head arm; envelope statement at `applyTryLock`) | `tryLockWidth op pre` — 2 at an acquirable cell (`tryAcquire`), 1 at a held one | only width 2 (an acquirable cell; the held cell's bound-1 consult pops nothing — `consumeAtOne := false`) | slot 0 = ACQUIRE (gc's realized point); slot 1 = the spurious false |
+| TryLock spurious failure (`tryLock`, Q-TRYLOCK 2026-09-03) | Machine.lean `applySyncOp` (the TRY-head arm; envelope statement at `applyTryLock`) | `tryLockWidth op pre` — 2 at an acquirable cell (`tryAcquire`), 1 at a held one | only width 2 (an acquirable cell; the held cell's bound-1 consult pops nothing — the uniform rule) | slot 0 = ACQUIRE (gc's realized point); slot 1 = the spurious false |
 
 The race detector consumes NOTHING and replays nothing (stage B, Q2:
 `raceUpdate` folds the step's emitted `StepEvent` — the old
@@ -668,8 +674,8 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   = ACQUIRE (the same state transition as Lock/RLock/write-Lock, the
   same acquire edge), slot 1 = SPURIOUS FAILURE (deliver `false`, no
   state change, no HB edge). HELD → `false` deterministically, bound
-  1, NO pop (`consumeAtOne := false`) — a forced failure is not a
-  choice. The empty stream realizes slot 0, so the strict lane's
+  1, NO pop (the uniform rule; at the time the site's `consumeAtOne :=
+  false` flag) — a forced failure is not a choice. The empty stream realizes slot 0, so the strict lane's
   uncontended TryLock matches gc. Result-observing rows are MEMBERSHIP
   rows over {acquired, spurious} — a strict pin is impossible (the
   width-2 draw fails strict's stream invariance), and the
@@ -1013,6 +1019,23 @@ gc's early store a deviation, L-016, 2026-09-02).
 
 ### E9. Map iteration order — (a) ENVELOPED (full literal envelope over the LIVE map) — RE-ENVELOPED 2026-08-19 (BUG-005 (L) surgery, user-ruled); cross-goroutine prune CLOSED 2026-09-02; MECHANISM = entry-identity stamps since 2026-09-03 (B1)
 
+- CONSUMPTION RULE (G-U, 2026-09-04): the `mapIter` consult pops the
+  stream iff its width (candidates + stop slot) is ≥ 2 — the uniform
+  rule of `Choices.consumeAt`. Before G-U this site alone popped at
+  width 1 (the last MANDATORY candidate, a forced pick); the
+  `ChoiceSite.policy` table attributed that pop to "memo §5 ruling Q3".
+  PROVENANCE, made explicit here: the Q3 ruling ([USER] Mike,
+  2026-08-19, `docs/2026-08-19_bug005-map-range-memo.md` §5) defines
+  the CANONICAL MEMBER — the machine at the zero stream, stop ordered
+  LAST — and says nothing about popping at width 1; the width-1 pop was
+  the stage-A [AGENT] transcription of the code as it stood. G-U (RULED
+  [USER] 2026-09-04 as recommended, relayed) supersedes that
+  transcription; the Q3 ruling itself is UNCHANGED and still holds
+  (the zero stream picks slot 0 at every width, popped or not, so the
+  canonical produce-all member is the same machine run). Behaviour SET
+  unchanged; realization under fixed streams re-indexed — certified by
+  the whole-corpus choice-trace bijection
+  (`docs/evidence/2026-09-04_c-arc-gu/`).
 - MECHANISM OF RECORD (design-hygiene arc slice 1, B1 — the second
   audit's Q11; [AGENT] execution inside the [USER]-ratified arc,
   `docs/2026-09-03_design-hygiene-arc.md`; design note
@@ -2330,7 +2353,10 @@ their queued-debt standing.
    even at width 1 (StepFn.lean:616–621 — the doctrine's width>1 phrasing
    describes the pool sites and append's always-consume is width-formed;
    no behavioral consequence, but stream authors should know the
-   alignment rule differs per site).
+   alignment rule differs per site). **RESOLVED by G-U 2026-09-04**: the
+   alignment rule is uniform (pop iff bound ≥ 2) at every site; the
+   realization shift it caused on fixed streams is certified by the
+   choice-trace bijection (`docs/2026-09-04_c-arc-gu-design.md`).
 6. **OWED (recorded 2026-09-01, C7-refresh lane [AGENT])** — the
    `resumeThread` docstring (Multi.lean:376–401, "gc … woken select
    commits the case its waking event belongs to, never a fresh

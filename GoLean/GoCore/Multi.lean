@@ -31,9 +31,9 @@ Design points (docs/2026-08-06_channels-arc-design.md):
   involvement. The scheduling `Choices` sites (`ChoiceSite.l1Sched`,
   `ChoiceSite.postOp` — the site is the boundary shape's own,
   `Config.boundarySite`; the postOp slot menu is issuer-first,
-  `schedSlots`) are consumed ONLY when the menu has ≥ 2 slots — their
-  declared policy (`consumeAtOne := false`): a raw pop at bound 1
-  would desynchronize every existing adversarial-stream run;
+  `schedSlots`) are consumed ONLY when the menu has ≥ 2 slots — the
+  uniform consumption rule (`Choices.consumeAt`, G-U): a raw pop at
+  bound 1 would desynchronize every existing adversarial-stream run;
   sequential conservation depends on this.
 
 * **D7 — pairing over waiter queues, WITH gc's waiter-queue
@@ -303,7 +303,7 @@ def Config.atBoundary (c : Config) : Bool :=
   -- goroutine-step-granularity interleavings respecting blocking/HB —
   -- inside C1's argued-maximal class. The site (`ChoiceSite.backEdge`,
   -- slot 0 = current-continues via `schedSlots`) is what makes the
-  -- liveness tier's Fair non-vacuous (the site's policy docstring).
+  -- liveness tier's Fair non-vacuous (the site's `canonicalSlot0` docstring).
   -- `.next (.mapIterK …)` is the one iteration form with its own
   -- frame, and it was ALREADY a choice-consuming position (the
   -- mapIter pick) — making it a boundary aligns the two disciplines.
@@ -1122,8 +1122,8 @@ def stepThread (s : ExecState) (threads : Array Config) (i : Nat)
               | _ :: _ => do
                   -- L4 (`ChoiceSite.l4Waiter`): any matching waiter.
                   -- The singleton non-consumption that used to be a
-                  -- caller-side special case here is now the site's
-                  -- declared policy (`consumeAtOne := false`).
+                  -- caller-side special case here is the uniform
+                  -- bound-≤-1 rule of `Choices.consumeAt`.
                   let (idx, ch₂, ps₂) := Choices.consumeAtE .l4Waiter cs.length ch₁
                   match cs[idx]? with
                   | some cand => do
@@ -1178,8 +1178,8 @@ an `.opDone` marker carries its own tag (`postOp` for op completions,
 bit-for-bit); every other boundary shape is the L1 site. The match is
 CLAMPED: a marker hand-built with a non-scheduling tag (no emitter
 produces one) consults the L1 site — the universal pre-widening
-behavior — so the site's non-popping policy holds for ARBITRARY
-configurations (`Config.boundarySite_consumeAtOne`), which the
+behavior — so the singleton-menu non-consumption (the uniform rule of
+`Choices.consumeAt`) holds for ARBITRARY configurations, which the
 sequential-conservation lemmas quantify over. Stage D adds the
 back-edge shapes with their `backEdge` tag. -/
 def Config.boundarySite : Config → ChoiceSite
@@ -1231,9 +1231,9 @@ def stepMulti (m : MultiConfig) (ch : Choices) :
       | rs => do
           -- The site consultation (`l1Sched`/`postOp`): the
           -- sole-runnable non-consumption that used to be a
-          -- caller-side `[i]` special case is now each site's declared
-          -- policy (`consumeAtOne := false`) — sequential
-          -- conservation's hinge, as table rows. Q2: the pick record
+          -- caller-side `[i]` special case is the uniform bound-≤-1
+          -- rule of `Choices.consumeAt` — sequential conservation's
+          -- hinge. Q2: the pick record
           -- prefixes the picked goroutine's own event picks.
           let (pick, ch₁, ps) :=
             Choices.consumeAtE c.boundarySite rs.length ch

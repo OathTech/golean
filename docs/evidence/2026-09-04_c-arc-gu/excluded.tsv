@@ -1,0 +1,2 @@
+goroutines/send-then-spin	excluded by --exclude (trace separately)
+strings/trimspace-repeat/repeat-bound-refused	excluded by --exclude (trace separately)

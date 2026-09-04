@@ -136,6 +136,61 @@ theorem arrivalPlan_of_error {s : ExecState} {threads : Array Config}
   rw [h]
   rfl
 
+/-- A `.multi` arrival analysis carries ≥ 2 outcomes — one per
+waiter-extended-ready clause, and the `[]`/singleton readiness lists take
+`selectArrivalCases`'s other arms (`.cellPath`/`.single`). This is the
+"≥ 2 by construction" fact under which the L2 arrival consult always
+POPS under the uniform consumption rule (G-U). -/
+theorem arrivalCases_multi_length {s : ExecState} {threads : Array Config}
+    {i : Nat} {c : Config} {os : List ArrivalOutcome}
+    (h : arrivalCases s threads i c = .ok (.multi os)) : 1 < os.length := by
+  unfold arrivalCases at h
+  split at h
+  · -- a channel op: `chanArrivalPlan` never yields `.multi`
+    simp only [Bind.bind, Except.bind] at h
+    split at h
+    · cases h
+    · split at h <;> cases h
+  · unfold selectArrivalCases at h
+    split at h
+    · cases h
+    · split at h
+      · cases h
+      · simp only [Bind.bind, Except.bind] at h
+        split at h
+        · cases h
+        · split at h
+          · cases h
+          · split at h
+            · cases h
+            · split at h
+              · cases h
+              · split at h
+                · cases h
+                · cases h
+            · rename_i ready hnil hsingle
+              split at h
+              · cases h
+              · -- the `.multi` arm: `os` is the mapM image of the filtered
+                -- readiness list, which fell through `[]` and `[_]`
+                split at h
+                · cases h
+                · rename_i os' hmap
+                  simp only [pure, Except.pure, Except.ok.injEq,
+                    ArrivalAnalysis.multi.injEq] at h
+                  subst h
+                  rw [mapM_ok_length hmap]
+                  generalize hf : List.filter _ _ = ready' at hnil hsingle
+                  cases ready' with
+                  | nil => exact absurd rfl hnil
+                  | cons a t =>
+                    cases t with
+                    | nil =>
+                      obtain ⟨ci, cell, ws⟩ := a
+                      exact absurd rfl (hsingle ci cell ws)
+                    | cons b t' => simp
+  · cases h
+
 @[inherit_doc arrivalPlan_of_cellPath]
 theorem arrivalPlan_of_multi {s : ExecState} {threads : Array Config}
     {i : Nat} {c : Config} {os : List ArrivalOutcome} {sel : Nat}
@@ -146,6 +201,7 @@ theorem arrivalPlan_of_multi {s : ExecState} {threads : Array Config}
       = (match os[sel]? with
         | some o => .ok (some o, ch₁, [⟨.l2Arrival, os.length, sel⟩])
         | none => .error (.internal "select L2 ready pick out of range")) := by
+  have hlen := arrivalCases_multi_length h
   unfold arrivalPlan
   rw [h]
   show (do
@@ -154,7 +210,7 @@ theorem arrivalPlan_of_multi {s : ExecState} {threads : Array Config}
     | some o => pure ((some o : Option ArrivalOutcome), ch', ps)
     | none => throw (.internal "select L2 ready pick out of range")
     : Except Stop (Option ArrivalOutcome × Choices × List PickRecord)) = _
-  rw [Choices.consumeAtE_pop rfl, hcons]
+  rw [Choices.consumeAtE_of_lt hlen, hcons]
   dsimp only
   cases os[sel]? <;> rfl
 
@@ -183,15 +239,6 @@ theorem step_opDone_inv {sc : ChoiceSite} {c c' : Config}
     c' = c ∧ σ' = σ := by
   cases h
   exact ⟨rfl, rfl⟩
-
-/-- The clamped boundary site never pops at bound 1 — for ARBITRARY
-configurations (the clamp in `Config.boundarySite` is what makes this
-unconditional; the sequential-conservation lemmas quantify over any
-config). -/
-theorem Config.boundarySite_consumeAtOne (c : Config) :
-    (Config.boundarySite c).policy.consumeAtOne = false := by
-  unfold Config.boundarySite
-  split <;> rfl
 
 /-- A postOp boundary site is exactly a postOp-tagged marker. -/
 theorem Config.boundarySite_postOp_shape {c : Config}
@@ -354,7 +401,7 @@ theorem schedSlots_singleton {σ : ExecState} {c : Config}
 /-- **The one-thread pool step is the sequential step** (the D2a
 consumption rule at work: a single runnable goroutine never consumes a
 scheduler choice — at the L1 site AND at stage C's postOp site, both
-by the declared `consumeAtOne := false` policy via the clamped
+by the uniform bound-≤-1 rule of `Choices.consumeAt` through the clamped
 `Config.boundarySite` — and with no partner the intercept never
 fires). -/
 theorem stepMulti_single {σ : ExecState} {c : Config} {ch : Choices}
@@ -383,8 +430,7 @@ theorem stepMulti_single {σ : ExecState} {c : Config} {ch : Choices}
       from schedSlots_singleton hrun]
     dsimp only
     rw [show Choices.consumeAtE c.boundarySite [0].length ch = (0, ch, [])
-      from Choices.consumeAtE_le_one (by simp)
-        (Config.boundarySite_consumeAtOne c)]
+      from Choices.consumeAtE_le_one (by simp)]
     simp only [List.getElem?_cons_zero]
     simp only [Bind.bind, Except.bind]
     rw [hinto]
@@ -899,8 +945,8 @@ theorem stepMulti_sound {m : MultiConfig} {ch ch' : Choices}
       | cons r0 rest =>
         rw [hrs] at h
         -- The boundary site (`consumeAtE c.boundarySite` — l1Sched or
-        -- stage C's postOp): one arm covers the sole slot (policy: no
-        -- pop at bound 1, `boundarySite_consumeAtOne`) and the
+        -- stage C's postOp): one arm covers the sole slot (no pop at
+        -- bound 1 — the uniform rule, `consumeAtE_le_one`) and the
         -- consuming pick.
         dsimp only at h
         rcases hcons : Choices.consumeAtE c.boundarySite
@@ -981,8 +1027,8 @@ theorem stepMulti_of_inner {m : MultiConfig} {i : Nat} {chI chI' : Choices}
       -- Realize the pick through the boundary's own slot menu
       -- (`schedSlots`/`boundarySite` — stage C): every runnable
       -- goroutine is IN the menu (`mem_schedSlots_of_runnable`), and
-      -- the site never pops at a singleton menu
-      -- (`boundarySite_consumeAtOne`).
+      -- the site never pops at a singleton menu (the uniform rule,
+      -- `consumeAtE_le_one`).
       have hmenu : i ∈ schedSlots m.shared m.threads m.cur c₀.boundarySite :=
         mem_schedSlots_of_runnable hsched
       cases hrs : schedSlots m.shared m.threads m.cur c₀.boundarySite with
@@ -1005,8 +1051,7 @@ theorem stepMulti_of_inner {m : MultiConfig} {i : Nat} {chI chI' : Choices}
             -- sole slot: the site's policy consumes nothing
             rw [show Choices.consumeAtE c₀.boundarySite [i].length chI
                 = (0, chI, [])
-              from Choices.consumeAtE_le_one (by simp)
-                (Config.boundarySite_consumeAtOne c₀)]
+              from Choices.consumeAtE_le_one (by simp)]
             simp only [List.getElem?_cons_zero]
             simp only [Bind.bind, Except.bind]
             unfold stepThreadInto
@@ -1203,9 +1248,9 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
               Except.bind]
             rw [arrivalPlan_of_single hplan]
             dsimp only
-            -- singleton candidate: the L4 site's policy consumes nothing
+            -- singleton candidate: a bound-1 consult consumes nothing
             rw [show Choices.consumeAtE .l4Waiter [cand].length ([] : Choices)
-              = (0, [], []) from Choices.consumeAtE_le_one (by simp) rfl]
+              = (0, [], []) from Choices.consumeAtE_le_one (by simp)]
             simp only [List.getElem?_cons_zero]
             rw [hap']
             rfl⟩
@@ -1283,7 +1328,7 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
             rw [arrivalPlan_of_multi hplan hconsS, hget]
             dsimp only
             rw [show Choices.consumeAtE .l4Waiter [cand].length ([] : Choices)
-              = (0, [], []) from Choices.consumeAtE_le_one (by simp) rfl]
+              = (0, [], []) from Choices.consumeAtE_le_one (by simp)]
             simp only [List.getElem?_cons_zero]
             rw [hap']
             rfl⟩

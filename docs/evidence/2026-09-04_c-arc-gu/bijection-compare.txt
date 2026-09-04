@@ -1,0 +1,4 @@
+DUMP: IDENTICAL (23016 records)
+RESULTS (status, obsHash per (row, stream position)): IDENTICAL (20184 lines)
+BIJECTION CHECK: PASS
+after-transformed dump == expected: IDENTICAL (cmp, LC_ALL=C)

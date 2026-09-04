@@ -395,7 +395,7 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
                   dsimp only at h
                   -- singleton candidate: the L4 site consumes nothing
                   rw [show Choices.consumeAtE .l4Waiter [cand].length ch₀
-                    = (0, ch₀, []) from Choices.consumeAtE_le_one (by simp) rfl] at h
+                    = (0, ch₀, []) from Choices.consumeAtE_le_one (by simp)] at h
                   simp only [List.getElem?_cons_zero] at h
                   simp only [bind_eq_ok] at h
                   obtain ⟨⟨ts₂, s₂⟩, hpair, h⟩ := h
@@ -408,7 +408,7 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
                     Bind.bind, Except.bind,
                     arrivalPlan_of_single (ch := ch) harr]
                   rw [show Choices.consumeAtE .l4Waiter [cand].length ch
-                    = (0, ch, []) from Choices.consumeAtE_le_one (by simp) rfl]
+                    = (0, ch, []) from Choices.consumeAtE_le_one (by simp)]
                   simp only [List.getElem?_cons_zero]
                   rw [hpair]
                   rfl
@@ -639,8 +639,7 @@ theorem stepAllBranchesOk_sound {post : ExecState → Bool} {n : Nat}
           rw [if_pos hb, hrs] at hsm
           dsimp only at hsm
           rw [show Choices.consumeAtE c.boundarySite [r0].length ([] : Choices)
-            = (0, [], []) from Choices.consumeAtE_le_one (by simp)
-              (Config.boundarySite_consumeAtOne c)] at hsm
+            = (0, [], []) from Choices.consumeAtE_le_one (by simp)] at hsm
           simp only [List.getElem?_cons_zero] at hsm
           simp only [bind_eq_ok] at hsm
           obtain ⟨⟨m₂, ch₂, ev₂⟩, hinto, hsm⟩ := hsm
@@ -667,8 +666,7 @@ theorem stepAllBranchesOk_sound {post : ExecState → Bool} {n : Nat}
             dsimp only
             rw [show Choices.consumeAtE c.boundarySite [r0].length ch
                 = (0, ch, [])
-              from Choices.consumeAtE_le_one (by simp)
-                (Config.boundarySite_consumeAtOne c)]
+              from Choices.consumeAtE_le_one (by simp)]
             simp only [List.getElem?_cons_zero]
             simp only [Bind.bind, Except.bind]
             unfold stepThreadInto

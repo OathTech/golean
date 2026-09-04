@@ -211,7 +211,7 @@ def Choices.consume (choices : Choices) (bound : Nat) : Nat × Choices :=
 /-- **The choice-site census, as a datatype** (W3.2 slice 1 stage A —
 audit finding C-3/queue Q1, ruled G0 2026-08-20). One constructor per
 consumption site in the semantic core; adding a site REQUIRES a
-constructor here plus a `ChoiceSite.policy` row, its consult in the
+constructor here plus a `ChoiceSite.canonicalSlot0` row, its consult in the
 machine's own consumption projection (`seqConsumption`/`poolConsumption`,
 Machine.lean/Multi.lean — since wave (iii) B8 the ONE account of where the
 stream is consulted; the theorem `stepFn_consumption_*` breaks loudly on an
@@ -291,98 +291,118 @@ inductive ChoiceSite where
   | tryLock
   deriving Repr, DecidableEq
 
-/-- Per-site consumption policy — ONE table (audit C-1: the per-site
-width-1 behaviors become declarations instead of per-site
-discoveries). -/
-structure SitePolicy where
-  /-- Does a CONSULTATION of this site pop the stream even at bound
-  ≤ 1? `true` = the consuming code pops unconditionally wherever it
-  consults the site (`mapIter` genuinely consults at width 1 — §9
-  flag 5, the done-check pick; `appendSpill`/`l2Entry`/`l2Arrival`
-  consult only where the bound is ≥ 2 BY CONSTRUCTION — spill width
-  ≥ 2 always, `.picks`/`.multi` carry ≥ 2 ready clauses — so their
-  `true` transcribes the current unconditional pop exactly and is
-  vacuous at 1). `false` = a bound-≤-1 consultation consumes nothing
-  (the L1/L4 singleton non-consumption that sequential conservation
-  depends on, formerly caller-side special cases). -/
-  consumeAtOne : Bool
-  /-- The canonical member at slot 0 (audit C-2's cross-site
-  convention, docstring-checked): the empty/exhausted stream must
-  realize the machine's default behavior at this site. -/
-  canonicalSlot0 : String
+/-- **The canonical member at slot 0** — one docstring row per site
+(audit C-2's cross-site convention): the empty/exhausted stream must
+realize the machine's default behavior at this site. This is the whole
+of what used to be the per-site `SitePolicy` table: its `consumeAtOne`
+flag was DELETED by G-U (design gate RULED [USER] 2026-09-04, relayed —
+`docs/2026-09-04_reasoning-surface-plan.md` §5.4; design note
+`docs/2026-09-04_c-arc-gu-design.md`) — every site now consumes under
+ONE rule, `Choices.consumeAt` below, so no site has a consumption
+policy of its own to declare. -/
+def ChoiceSite.canonicalSlot0 : ChoiceSite → String
+  | .mapIter =>
+      "first remaining candidate in cell order (stop LAST; the zero stream IS the canonical produce-all member — memo §5 ruling Q3; the last MANDATORY candidate is a bound-1 consult and pops nothing, G-U)"
+  | .appendSpill =>
+      "the growth-formula capacity (extra = 0 keeps gc's deterministic point; width ≥ 2 always — `one_lt_appendSpillWidth`)"
+  | .l2Entry =>
+      "first ready clause in clause order (.picks is ≥ 2 ready by construction; singleton commit is .done upstream)"
+  | .l2Arrival =>
+      "first waiter-extended-ready clause in clause order (.multi is ≥ 2 ready by construction — `arrivalCases_multi_length`)"
+  | .l4Waiter =>
+      "first matched waiter in goroutine order (clause order within a select); a singleton candidate pairs without a pop"
+  | .l1Sched =>
+      "lowest-index runnable goroutine; a sole runnable steps without a pop (sequential conservation's hinge)"
+  | .l5ExitWindow =>
+      "exit now (0 = teardown at main's terminal; bound is constant 2)"
+  | .postOp =>
+      "the ISSUER continues (slot 0 = the goroutine that completed the op — the old machine's schedule, so the empty/default stream reproduces it exactly; slots 1.. = the other runnables in goroutine order; a sole-runnable issuer consults at bound 1 without a pop — sequential conservation's hinge, as at l1Sched)"
+  | .tryLock =>
+      "ACQUIRE (slot 0 = the success member — gc's realized point, so the empty/default stream reproduces gc's always-succeeds behavior and the strict lane's uncontended TryLock matches the oracle; slot 1 = mem#locks' spurious false: no state change, no HB edge); a HELD cell consults at bound 1 without a pop (the failure is forced, not chosen — a data site, not a scheduling one)"
+  | .backEdge =>
+      "the CURRENT goroutine continues (slot 0 = the looping goroutine — the old machine's schedule; slots 1.. = the other runnables in goroutine order; sole-runnable loops consult at bound 1 without a pop). THE FAIRNESS-EXPRESSIBILITY NOTE (boundary-set note §4, G1): this site is what makes a future Fair : stream → Prop NON-VACUOUS — a registry-free monopolist now OFFERS a scheduling pick at every iteration, so 'every goroutine runnable at infinitely many scheduling picks is picked at infinitely many' genuinely forces the partner to run; without it the liveness tier's fairness hypothesis would be unsatisfiable on exactly the spinner shapes it exists for"
+  | .nilValueMethodText =>
+      "the nil-dereference text `runtime error: invalid memory address or nil pointer dereference` (slot 0 = the pre-BUG-087 machine's only member, gc's default-build text on the devirtualized shapes; slot 1 = gc's panicwrap text `value method <pkg>.<T>.<M> called using nil *<T> pointer`, its text through the autogenerated wrapper — same source, `-gcflags=-l`); bound is 2 exactly on the wrapper family (nilValueMethodText? = some), 1 elsewhere, and a bound-1 consult pops nothing — every non-family frame entry consumes exactly as before"
 
-/-- The policy table. Every row transcribes the pre-Q1 code's exact
-behavior at its site — byte-identical streams (stage A's acceptance:
-the full differential holds with zero drift). -/
-def ChoiceSite.policy : ChoiceSite → SitePolicy
-  | .mapIter => ⟨true,
-      "first remaining candidate in cell order (stop LAST; consumed even at width 1 — memo §5 ruling Q3)"⟩
-  | .appendSpill => ⟨true,
-      "the growth-formula capacity (extra = 0 keeps gc's deterministic point; width ≥ 2 always)"⟩
-  | .l2Entry => ⟨true,
-      "first ready clause in clause order (.picks is ≥ 2 ready by construction; singleton commit is .done upstream)"⟩
-  | .l2Arrival => ⟨true,
-      "first waiter-extended-ready clause in clause order (.multi is ≥ 2 ready by construction)"⟩
-  | .l4Waiter => ⟨false,
-      "first matched waiter in goroutine order (clause order within a select); a singleton candidate pairs without a pop"⟩
-  | .l1Sched => ⟨false,
-      "lowest-index runnable goroutine; a sole runnable steps without a pop (sequential conservation's hinge)"⟩
-  | .l5ExitWindow => ⟨false,
-      "exit now (0 = teardown at main's terminal; bound is constant 2, so the flag is inert)"⟩
-  | .postOp => ⟨false,
-      "the ISSUER continues (slot 0 = the goroutine that completed the op — the old machine's schedule, so the empty/default stream reproduces it exactly; slots 1.. = the other runnables in goroutine order; a sole-runnable issuer consults at bound 1 without a pop — sequential conservation's hinge, as at l1Sched)"⟩
-  | .tryLock => ⟨false,
-      "ACQUIRE (slot 0 = the success member — gc's realized point, so the empty/default stream reproduces gc's always-succeeds behavior and the strict lane's uncontended TryLock matches the oracle; slot 1 = mem#locks' spurious false: no state change, no HB edge); a HELD cell consults at bound 1 without a pop (the failure is forced, not chosen — a data site, not a scheduling one)"⟩
-  | .backEdge => ⟨false,
-      "the CURRENT goroutine continues (slot 0 = the looping goroutine — the old machine's schedule; slots 1.. = the other runnables in goroutine order; sole-runnable loops consult at bound 1 without a pop). THE FAIRNESS-EXPRESSIBILITY NOTE (boundary-set note §4, G1): this site is what makes a future Fair : stream → Prop NON-VACUOUS — a registry-free monopolist now OFFERS a scheduling pick at every iteration, so 'every goroutine runnable at infinitely many scheduling picks is picked at infinitely many' genuinely forces the partner to run; without it the liveness tier's fairness hypothesis would be unsatisfiable on exactly the spinner shapes it exists for"⟩
-  | .nilValueMethodText => ⟨false,
-      "the nil-dereference text `runtime error: invalid memory address or nil pointer dereference` (slot 0 = the pre-BUG-087 machine's only member, gc's default-build text on the devirtualized shapes; slot 1 = gc's panicwrap text `value method <pkg>.<T>.<M> called using nil *<T> pointer`, its text through the autogenerated wrapper — same source, `-gcflags=-l`); bound is 2 exactly on the wrapper family (nilValueMethodText? = some), 1 elsewhere, and a bound-1 consult pops nothing — every non-family frame entry consumes exactly as before"⟩
+-- (`site` is the census TAG: the rule no longer reads anything from it,
+-- and that is the point — the tag is for the trace and the theorems.)
+set_option linter.unusedVariables false in
+/-- **THE one consumption combinator** (audit Q1), under **THE one
+consumption rule** (G-U, RULED [USER] 2026-09-04, relayed): a consult
+POPS the stream iff it has a choice — `bound ≥ 2` — and is inert
+(`(0, ch)`) at bound ≤ 1, at EVERY site. Every nondeterministic point in
+the interpreter resolves through this with its census tag, which is what
+makes a labeled consumption trace (Q2) and per-site enumeration
+expressible; `Choices` itself stays `List Nat` (streams stay writable by
+hand and by the enumerator).
 
-/-- **THE one consumption combinator** (audit Q1): every
-nondeterministic point in the interpreter resolves through this, with
-its census tag — which is what makes a labeled consumption trace (Q2)
-and per-site enumeration policy expressible. `Choices` itself stays
-`List Nat` (streams stay writable by hand and by the enumerator). -/
+Before G-U the rule was per-site (`SitePolicy.consumeAtOne`): `mapIter`
+popped even at width 1 (its last mandatory candidate), no other site did.
+The SET of behaviours is unchanged by the uniformization — a width-1 pop
+chose the only member — but which fixed stream realizes which member
+shifts by one entry after every former width-1 pop; the bijection on
+streams (delete the entries the width-1 `mapIter` consults drew) is the
+certificate, checked over the whole corpus by the choice-trace dump
+(`docs/evidence/2026-09-04_c-arc-gu/`). -/
 def Choices.consumeAt (site : ChoiceSite) (bound : Nat) (ch : Choices) :
     Nat × Choices :=
-  if bound ≤ 1 ∧ !site.policy.consumeAtOne then (0, ch)
+  if bound ≤ 1 then (0, ch)
   else ch.consume bound
 
-/-- An always-popping site's consultation is the raw pop. -/
-theorem Choices.consumeAt_pop {site : ChoiceSite} {bound : Nat}
-    {ch : Choices} (h : site.policy.consumeAtOne = true) :
-    Choices.consumeAt site bound ch = ch.consume bound := by
-  simp [Choices.consumeAt, h]
-
-@[simp] theorem Choices.consumeAt_mapIter {bound : Nat} {ch : Choices} :
-    Choices.consumeAt .mapIter bound ch = ch.consume bound :=
-  Choices.consumeAt_pop rfl
-
-@[simp] theorem Choices.consumeAt_appendSpill {bound : Nat} {ch : Choices} :
-    Choices.consumeAt .appendSpill bound ch = ch.consume bound :=
-  Choices.consumeAt_pop rfl
-
-@[simp] theorem Choices.consumeAt_l2Entry {bound : Nat} {ch : Choices} :
-    Choices.consumeAt .l2Entry bound ch = ch.consume bound :=
-  Choices.consumeAt_pop rfl
-
-@[simp] theorem Choices.consumeAt_l2Arrival {bound : Nat} {ch : Choices} :
-    Choices.consumeAt .l2Arrival bound ch = ch.consume bound :=
-  Choices.consumeAt_pop rfl
-
-/-- A guarded site's bound-≤-1 consultation consumes nothing (the
-declared singleton non-consumption). -/
+/-- THE width-1 lemma: a bound-≤-1 consultation consumes nothing, at
+every site (the per-site `consumeAt_*_one` no-pop facts are instances). -/
 theorem Choices.consumeAt_le_one {site : ChoiceSite} {bound : Nat}
-    {ch : Choices} (hb : bound ≤ 1)
-    (h : site.policy.consumeAtOne = false) :
+    {ch : Choices} (hb : bound ≤ 1) :
     Choices.consumeAt site bound ch = (0, ch) := by
-  simp [Choices.consumeAt, hb, h]
+  simp [Choices.consumeAt, hb]
 
-/-- A guarded site's bound-≥-2 consultation is the raw pop. -/
+@[simp] theorem Choices.consumeAt_one {site : ChoiceSite} {ch : Choices} :
+    Choices.consumeAt site 1 ch = (0, ch) :=
+  Choices.consumeAt_le_one (Nat.le_refl 1)
+
+@[simp] theorem Choices.consumeAt_zero {site : ChoiceSite} {ch : Choices} :
+    Choices.consumeAt site 0 ch = (0, ch) :=
+  Choices.consumeAt_le_one (Nat.zero_le 1)
+
+/-- A bound-≥-2 consultation is the raw pop. -/
 theorem Choices.consumeAt_of_lt {site : ChoiceSite} {bound : Nat}
     {ch : Choices} (hb : 1 < bound) :
     Choices.consumeAt site bound ch = ch.consume bound := by
   simp [Choices.consumeAt, Nat.not_le_of_lt hb]
+
+/-- The raw pop's pick is below a positive bound. -/
+theorem Choices.consume_fst_lt {ch : Choices} {bound : Nat} (hb : 0 < bound) :
+    (Choices.consume ch bound).1 < bound := by
+  cases ch with
+  | nil => simpa [Choices.consume] using hb
+  | cons c rest =>
+      have h := Nat.mod_lt c (y := max 1 bound) (by omega)
+      simp only [Choices.consume]
+      omega
+
+/-- A consultation's pick is below a positive bound (at bound 1 the pick
+is the forced 0; above it, the raw pop's modulus). -/
+theorem Choices.consumeAt_fst_lt {site : ChoiceSite} {ch : Choices} {bound : Nat}
+    (hb : 0 < bound) :
+    (Choices.consumeAt site bound ch).1 < bound := by
+  by_cases h : bound ≤ 1
+  · rw [Choices.consumeAt_le_one h]; omega
+  · rw [Choices.consumeAt_of_lt (Nat.lt_of_not_le h)]
+    exact Choices.consume_fst_lt hb
+
+/-- The singleton stream `[idx]` realizes the pick `idx` at any bound
+above it — the completeness witness (at bound 1, `idx = 0` is the forced
+pick and the stream is not touched). -/
+theorem Choices.consumeAt_fst_singleton {site : ChoiceSite} {bound idx : Nat}
+    (h : idx < bound) :
+    (Choices.consumeAt site bound [idx]).1 = idx := by
+  by_cases hb : bound ≤ 1
+  · rw [Choices.consumeAt_le_one hb]; omega
+  · rw [Choices.consumeAt_of_lt (Nat.lt_of_not_le hb)]
+    simp only [Choices.consume]
+    have hmax : max 1 bound = bound := by omega
+    rw [hmax]
+    exact Nat.mod_eq_of_lt h
 
 /-- One labeled consumption: which site drew, at what bound, which
 slot (W3.2 slice 1 stage B — the Q2 step-event channel's atom). The
@@ -395,13 +415,13 @@ structure PickRecord where
   deriving Repr, BEq
 
 /-- `Choices.consumeAt` with its pick RECORD emitted (Q2): the record
-list is `[]` exactly when the consultation consumed nothing (a guarded
-site at bound ≤ 1), else the singleton labeled pick — emitted BY the
+list is `[]` exactly when the consultation consumed nothing (bound ≤ 1,
+the uniform rule), else the singleton labeled pick — emitted BY the
 consuming site, never reconstructed from the stream. -/
 def Choices.consumeAtE (site : ChoiceSite) (bound : Nat) (ch : Choices) :
     Nat × Choices × List PickRecord :=
   let (p, ch') := Choices.consumeAt site bound ch
-  if bound ≤ 1 ∧ !site.policy.consumeAtOne then (p, ch', [])
+  if bound ≤ 1 then (p, ch', [])
   else (p, ch', [⟨site, bound, p⟩])
 
 /-- The record-emitting form projects onto `consumeAt` (the two can
@@ -414,25 +434,15 @@ theorem Choices.consumeAtE_fst_snd {site : ChoiceSite} {bound : Nat}
   simp only [Choices.consumeAtE]
   split <;> rfl
 
-/-- An always-popping site's record-emitting consultation, in raw-pop
-terms (the proof layer's working shape at `l2Arrival`-class sites). -/
-theorem Choices.consumeAtE_pop {site : ChoiceSite} {bound : Nat}
-    {ch : Choices} (h : site.policy.consumeAtOne = true) :
-    Choices.consumeAtE site bound ch
-      = ((ch.consume bound).1, (ch.consume bound).2,
-         [⟨site, bound, (ch.consume bound).1⟩]) := by
-  simp [Choices.consumeAtE, Choices.consumeAt, h]
-
-/-- A guarded site's bound-≤-1 record-emitting consultation consumes
-nothing and records nothing. -/
+/-- A bound-≤-1 record-emitting consultation consumes nothing and
+records nothing. -/
 theorem Choices.consumeAtE_le_one {site : ChoiceSite} {bound : Nat}
-    {ch : Choices} (hb : bound ≤ 1)
-    (h : site.policy.consumeAtOne = false) :
+    {ch : Choices} (hb : bound ≤ 1) :
     Choices.consumeAtE site bound ch = (0, ch, []) := by
-  simp [Choices.consumeAtE, Choices.consumeAt, hb, h]
+  simp [Choices.consumeAtE, Choices.consumeAt, hb]
 
-/-- A guarded site's bound-≥-2 record-emitting consultation is the raw
-pop plus its record. -/
+/-- A bound-≥-2 record-emitting consultation is the raw pop plus its
+record. -/
 theorem Choices.consumeAtE_of_lt {site : ChoiceSite} {bound : Nat}
     {ch : Choices} (hb : 1 < bound) :
     Choices.consumeAtE site bound ch

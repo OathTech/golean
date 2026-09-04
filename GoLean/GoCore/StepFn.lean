@@ -611,7 +611,9 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           -- ruling Q3): first candidate in cell order, never stop
           -- while a candidate remains, so mutation-free ranges keep
           -- the old first-remaining pick sequence and self-inserting
-          -- loops fuel-out VISIBLY.
+          -- loops fuel-out VISIBLY. The consult at the LAST mandatory
+          -- candidate has width 1 and pops nothing (the uniform rule,
+          -- G-U 2026-09-04 — before it this site popped at width 1).
           let cands ← mapIterCandidates s keyTy valTy base produced
           if cands.isEmpty then
             return (.next k', s, choices)

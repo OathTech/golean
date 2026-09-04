@@ -43,7 +43,14 @@ after wave (iii) above, in this order — each item is still its own
 [USER] design gate when reached (a HARD STOP; the 2026-09-04 ruling
 adopts the recommendation, it does not waive the per-item stop):
 
-- [ ] U — `consumeAtOne` uniformization (G-U), first after wave (iii)
+- [x] U — `consumeAtOne` uniformization (G-U), first after wave (iii) —
+      LANDED 2026-09-04 on lane `c-arc-gu` ([AGENT] under the [USER]
+      ruling, relayed): `Choices.consumeAt` pops iff bound ≥ 2 at every
+      site, `SitePolicy`/`consumeAtOne` deleted, `mapIterConsult?` reports
+      `none` at width 1; behaviour sets certified identical, stream
+      realization re-indexed (design note
+      `docs/2026-09-04_c-arc-gu-design.md`, evidence
+      `docs/evidence/2026-09-04_c-arc-gu/`)
 - [ ] B4 — `Signal` + thread `Status`
 - [ ] C5 — `.opDone` out of `Config`, into `Status` (G-C5)
 - [ ] B7 — `ProgramCtx`/`Store` split
@@ -241,7 +248,7 @@ see the R15 entry below.
       on lane `q-trylock` 2026-09-03 (merge pending audit + sign-off):
       `sync.Mutex.TryLock` / `RWMutex.TryLock` / `RWMutex.TryRLock`
       modeled with mem#locks' spurious-failure member as the width-2
-      `ChoiceSite.tryLock` (`consumeAtOne := false`; slot 0 = acquire,
+      `ChoiceSite.tryLock` (no pop at bound 1 — then `consumeAtOne := false`, since G-U the uniform rule; slot 0 = acquire,
       gc's realized point; slot 1 = the spurious false; bound 1 = no pop
       at a held cell), success-edge-only detector per the derived
       per-word table (Race.lean), frontend lowering for every spelling

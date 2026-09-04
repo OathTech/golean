@@ -1,0 +1,17 @@
+rows=3364
+(row,stream)=20184
+records_before=23715
+width1_mapIter_records_deleted=699 (of which at an exhausted stream: 121)
+records_expected_after=23016
+(row,stream)_with_a_realization_shift=63
+before per-site appendSpill=4868
+before per-site backEdge=2404
+before per-site l1Sched=9367
+before per-site l2Arrival=3
+before per-site l2Entry=24
+before per-site l4Waiter=22
+before per-site l5ExitWindow=323
+before per-site mapIter=2006
+before per-site nilValueMethodText=84
+before per-site postOp=4513
+before per-site tryLock=101

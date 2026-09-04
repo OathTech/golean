@@ -419,8 +419,7 @@ theorem stepMulti_total_covered {m : MultiConfig} {vecs : List (List Nat)}
             dsimp only at hsm
             rw [show Choices.consumeAtE c.boundarySite [r0].length v
                 = (0, v, [])
-              from Choices.consumeAtE_le_one (by simp)
-                (Config.boundarySite_consumeAtOne c)] at hsm
+              from Choices.consumeAtE_le_one (by simp)] at hsm
             simp only [List.getElem?_cons_zero] at hsm
             simp only [bind_eq_ok] at hsm
             obtain ⟨⟨m₂, ch₂, ev₂⟩, hinto, hsm⟩ := hsm
@@ -443,8 +442,7 @@ theorem stepMulti_total_covered {m : MultiConfig} {vecs : List (List Nat)}
             dsimp only
             rw [show Choices.consumeAtE c.boundarySite [r0].length v
                 = (0, v, [])
-              from Choices.consumeAtE_le_one (by simp)
-                (Config.boundarySite_consumeAtOne c)]
+              from Choices.consumeAtE_le_one (by simp)]
             simp only [List.getElem?_cons_zero]
             simp only [Bind.bind, Except.bind]
             unfold stepThreadInto
@@ -457,8 +455,7 @@ theorem stepMulti_total_covered {m : MultiConfig} {vecs : List (List Nat)}
             dsimp only
             rw [show Choices.consumeAtE c.boundarySite [r0].length ch
                 = (0, ch, [])
-              from Choices.consumeAtE_le_one (by simp)
-                (Config.boundarySite_consumeAtOne c)]
+              from Choices.consumeAtE_le_one (by simp)]
             simp only [List.getElem?_cons_zero]
             simp only [Bind.bind, Except.bind]
             unfold stepThreadInto

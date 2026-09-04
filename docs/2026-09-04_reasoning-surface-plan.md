@@ -1545,7 +1545,7 @@ What cedar-go does NOT need and this plan therefore does not hurry:
 | # | Item | Depends on | Sessions | Preservation | Gate to [USER] |
 |---|---|---|---|---|---|
 | 0 | wave (iii) B2 + B3 + B8 (+A7) | — | 3-4 (in flight) | exact | — (ratified arc) |
-| 1 | U `consumeAtOne` uniform | B8 | 1 + re-pin | behaviour set exact; realization re-pins | G-U |
+| 1 | U `consumeAtOne` uniform — LANDED 2026-09-04 | B8 | 1 + re-pin (re-pin was EMPTY) | behaviour set exact; realization re-pins | G-U |
 | 2 | B4 `Signal` + `Status` (+I2) | (iii) | 2 | exact | — |
 | 3 | C5 `.opDone` → flag | B4 | 1 | exact on baselines; theorem restated | G-C5 |
 | 4 | B7 `ProgramCtx`/`Store` (+I1, Platform threading) | (iii) | 2 | re-packaging | — |
@@ -1623,7 +1623,13 @@ useful reasoning surface».
   deleted; behaviour sets certified identical by the membership lane;
   realized members under fixed streams re-pinned with the choice-trace
   bijection as evidence.» Rec: YES, first after wave (iii). RULED
-  [USER] 2026-09-04 — as recommended (relayed).
+  [USER] 2026-09-04 — as recommended (relayed). **LANDED 2026-09-04**
+  (lane `c-arc-gu`, [AGENT]; design note
+  `docs/2026-09-04_c-arc-gu-design.md`, evidence
+  `docs/evidence/2026-09-04_c-arc-gu/`): rule `pop iff bound ≥ 2` at
+  every site, `SitePolicy`/`consumeAtOne` deleted, certified sets
+  identical, bijection PASS over the whole corpus (23016 records),
+  ZERO baseline drift — the forecast re-pin was empty (design note §4).
 - **G-C5.** «`.opDone` becomes a per-thread `boundary` flag; the strip
   stays a POOL step (no baseline fuel shift); the sequential relation
   drops `Step.opDoneStrip`; `execProg_single_eq_execStmt` is restated

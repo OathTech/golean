@@ -158,7 +158,9 @@ cost and touches the fewest positional `fun_cases` proofs.
     (`consumeAtOne`, G-U) → B4 → C5 (G-C5) → B7 → C1 (G-C1) → C2
     (G-C2, parallel lane) → B6 (parallel lane) → P (G-P) → C3 (G-C3)
     → C4 (G-C4) → B5 (optional, any time) → I5 (`Interface.lean`) →
-    the assessment re-run → the pin offer (G-PIN). Each C-item still
+    the assessment re-run → the pin offer (G-PIN). **U LANDED
+    2026-09-04** (lane `c-arc-gu`; `docs/2026-09-04_c-arc-gu-design.md`).
+    Each C-item still
     returns to the [USER] as its own design gate when reached — a
     HARD STOP, never self-adjudicated (CLAUDE.md, autonomous arcs);
     the 2026-09-04 ruling is a recommendation ADOPTED per gate, not a
@@ -192,7 +194,16 @@ still not scheduled anywhere:
 - `ChoiceSite.policy.consumeAtOne` uniformization (`mapIter` pops at
   width 1, no other site does) — set of behaviours unchanged, stream
   realization changes, every fixed-stream baseline re-pins. RULED IN
-  as G-U, first C-arc item after wave (iii).
+  as G-U, first C-arc item after wave (iii). **LANDED 2026-09-04**
+  (lane `c-arc-gu`, [AGENT] under the relayed [USER] ruling): the
+  uniform rule `pop iff bound ≥ 2`, `SitePolicy` deleted; certified sets
+  identical over the whole corpus and ZERO baseline drift (3402/3402
+  FULL) — the "every fixed-stream baseline re-pins" forecast was too
+  pessimistic: no baseline row is indexed by a non-empty stream (the
+  strict differential runs the EMPTY stream, which the re-index cannot
+  move; the fixed streams are an invariance check). The realization
+  shift (13 rows × 5 streams) is certified by the choice-trace
+  bijection — `docs/2026-09-04_c-arc-gu-design.md`.
 - Native method promotion in the core instead of frontend wrappers —
   changes the frontend contract and the detector's hop-path argument.
   RULED IN as G-P, after C1 in the C-arc order.

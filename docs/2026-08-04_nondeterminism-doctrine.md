@@ -61,9 +61,11 @@ deterministic GIVEN a stream (executability — the differential trust
 root — is the project's foundational requirement and the reason a
 set-valued semantics was never an option). Consumption sites are named
 and few — **the canonical census is now CODE**: the `ChoiceSite`
-datatype + `ChoiceSite.policy` table (`GoLean/GoCore/State.lean`, W3.2
-slice 1 stage A per the design audit's Q1/C-3 finding). Adding a site
-requires a constructor and a policy row, so the F16-style periodic doc
+datatype + `ChoiceSite.canonicalSlot0` table (`GoLean/GoCore/State.lean`, W3.2
+slice 1 stage A per the design audit's Q1/C-3 finding; the per-site
+`consumeAtOne` policy flag that table carried was deleted by G-U,
+2026-09-04 — every site consumes under ONE rule, pop iff bound ≥ 2).
+Adding a site requires a constructor and a canonical-slot row, so the F16-style periodic doc
 sweep that used to keep this preamble current is retired by
 exhaustiveness; the list below is a READER'S MIRROR of that datatype
 (historical note: brought current by hand at the arc-final audit F16,

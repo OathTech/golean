@@ -529,7 +529,8 @@ the work cap all fail LOUD, never truncate silently.
 THE ACCOUNTANT-EXHAUSTIVENESS INVENTORY (a standing LOCKSTEP
 obligation, the Race.lean-inventory mold: a new `Choices.consumeAt`
 call site in the semantic core MUST add its `ChoiceSite` constructor
-and policy row (State.lean — the census as code, exhaustiveness-checked),
+and `canonicalSlot0` row (State.lean — the census as code, exhaustiveness-checked;
+consumption itself is under the ONE uniform rule, pop iff bound ≥ 2 — G-U),
 its `stepNeeds`/`stepNeedsSeq` arm, AND its row here; the sentinel
 alarm is the executable check).
 The semantic core's consume sites and their accountant arms:

@@ -5012,7 +5012,8 @@ lane implements it).
 **FIXED 2026-09-03 (lane `bug087-paniktext`, [AGENT] implementing the
 [USER] ruling above — cited as relayed, not firsthand).** The
 re-envelope is `ChoiceSite.nilValueMethodText` (State.lean; width 2,
-demonic, `consumeAtOne := false`), drawn in the frame-entry funnels
+demonic, no pop at its bound-1 consults — then the site's `consumeAtOne
+:= false` policy flag, since G-U 2026-09-04 the uniform rule), drawn in the frame-entry funnels
 `enterFrameStep`/`enterFrameDeferPanicking` (StepFn.lean — the only
 places the stream meets a frame entry; `Ops.lean`'s nil arm itself stays
 `Except`-land and raises member 0). The shape predicate is
