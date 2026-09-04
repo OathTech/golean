@@ -1,13 +1,14 @@
 # id	subject	args	expected_status	expected_reason	features
-# FR-24 (2026-09-04, lane fr24): encoding/binary's `var structSize sync.Map`
-# is REACHED (Write/Size → dataSize) and its TYPE does not lower; the var
-# is poisoned per declaration (`$poisoned` cell; dataSize an H-3 stub
-# naming it — the emit trace in the evidence dir). ALL FOUR rows are
-# born-FAIL frontend-export on FR-25 (the next kill behind the var:
-# reflect.Type's `OverflowComplex(complex128)` requirement, reached through
-# the lowered `sizeof`). When FR-25 closes: `sibling` flips PASS; the three
-# Write/Size rows stay red BY DESIGN — one H-3 stub each on `reflect`
-# (the register's standing claim), never a PASS without a design change.
+# FR-24 + FR-25 (2026-09-04, lane fr24): encoding/binary's `var structSize
+# sync.Map` is REACHED (Write/Size → dataSize) and its TYPE does not lower;
+# the var is poisoned per declaration (`$poisoned` cell; dataSize an H-3 stub
+# naming it — checkpoint A). Behind it sat FR-25 (reflect.Type's
+# `OverflowComplex(complex128)` requirement, reached through the lowered
+# `sizeof`): checkpoint B's opaque-basic marker lowered that too, so
+# `sibling` is PASS (the package lowers beside the poisoned var). The three
+# Write/Size rows are red at frontend-export BY DESIGN — one H-3 stub each
+# on `reflect.Indirect` (the register's standing claim "Read/Write/Size are
+# reflect and refuse by name"); never a PASS without a design change.
 sibling	sibling	-	ok	-	init,globals,stdlib
 write-int	writeInt	-	ok	-	init,globals,stdlib,ints
 write-struct	writeStruct	-	ok	-	init,globals,stdlib,structs

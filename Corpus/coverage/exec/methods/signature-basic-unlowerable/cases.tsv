@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features
+# FR-25 (2026-09-04, lane fr24; [USER]-approved rider, relayed): complex128
+# in a method/func SIGNATURE or an interface REQUIREMENT list is an opaque
+# marker — the declaration lowers, satisfaction answers, only values/calls
+# refuse. The three `*-called` rows are red at frontend-export BY DESIGN
+# (a complex VALUE — FR-15's own refusal): a PASS there without a design
+# change means a complex value lowered silently.
+iface-uncalled	ifaceUncalled	-	ok	-	interfaces,methods,complex,type_assertions
+iface-called	ifaceCalled	-	ok	-	interfaces,methods,complex
+func-uncalled	funcUncalled	-	ok	-	functions,complex
+func-called	funcCalled	-	ok	-	functions,complex
+method-uncalled	methodUncalled	-	ok	-	methods,complex
+method-called	methodCalled	-	ok	-	methods,complex

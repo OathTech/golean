@@ -186,7 +186,7 @@ func TestOpaqueNeverAdmittedInBody(t *testing.T) {
 	// One more time through the raw emitter: the flag must be off after
 	// every signature pass (a leak would admit the type in bodies).
 	e := &emitter{}
-	if _, err := e.withOpaqueSigs(func() error { return nil }); err != nil || e.sigOpaque {
+	if _, _, err := e.withOpaqueSigs(func() error { return nil }); err != nil || e.sigOpaque {
 		t.Fatalf("withOpaqueSigs left sigOpaque=%v", e.sigOpaque)
 	}
 }

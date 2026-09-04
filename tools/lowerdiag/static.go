@@ -496,8 +496,11 @@ func (a *analyzer) funcDecl(fd *ast.FuncDecl) {
 		d.IsGeneric = true
 	}
 	// Signature: a type that does not lower makes a METHOD unstubbable
-	// (export kill, FR-23's sigRefusal arm); a func quarantines with an
-	// arity-only stub.
+	// (export kill, FR-23's sigRefusal arm) — EXCEPT the opaque-marker
+	// classes, which stub per declaration: imported generic instantiations
+	// (FR-23) and, since lane fr24 (2026-09-04), unlowerable basic types
+	// (FR-25: complex64/complex128/unsafe.Pointer). A func quarantines with
+	// an arity-only stub.
 	if obj, ok := a.info.Defs[fd.Name].(*types.Func); ok {
 		sig := obj.Type().(*types.Signature)
 		tuples := []*types.Tuple{sig.Params(), sig.Results()}
@@ -505,8 +508,8 @@ func (a *analyzer) funcDecl(fd *ast.FuncDecl) {
 			for i := 0; i < tup.Len(); i++ {
 				for _, f := range a.typeFindings(tup.At(i).Type(), fd.Type, d) {
 					if f.Cause.ID == "imported-generic-inst" && isMethod {
-						f = finding{Cause: mustCause("imported-generic-sig"), Key: f.Key, Pos: f.Pos, Certain: true, Export: true}
-					} else if isMethod {
+						f = finding{Cause: mustCause("imported-generic-sig"), Key: f.Key, Pos: f.Pos, Certain: true}
+					} else if isMethod && f.Cause.ID != "complex" && f.Cause.ID != "unsafe" {
 						f.Export = true
 					}
 					d.add(f)

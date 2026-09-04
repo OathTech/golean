@@ -185,13 +185,17 @@ func TestQuarantinedMethodCarriesRealSignature(t *testing.T) {
 // carrying a guessed signature. `complex128` is a currently-unmodeled type,
 // so the parameter is what breaks; the body is unlowerable too.
 func TestQuarantinedMethodUnlowerableSignatureRefuses(t *testing.T) {
+	// Since FR-25 (2026-09-04, lane fr24) a BASIC unlowerable type in the
+	// signature is an opaque marker (fr25_test.go); the sigRefusal arm is
+	// reached by what no marker covers — an anonymous non-empty struct
+	// parameter (FR-13) here.
 	const src = `package main
 
 import "fmt"
 
 type U struct{ n int }
 
-func (u U) Bad(c complex128) int { return len(fmt.Sprintf("%v", c)) }
+func (u U) Bad(s struct{ a int }) int { return len(fmt.Sprintf("%v", s)) }
 
 func main() {}
 `

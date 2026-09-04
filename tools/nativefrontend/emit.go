@@ -571,7 +571,7 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 				// signature; an imported generic instantiation in it is
 				// the opaque marker, as in emitGenDeclTypes above.
 				var params, results []any
-				if _, err := e.withOpaqueSigs(func() error {
+				if _, _, err := e.withOpaqueSigs(func() error {
 					var err error
 					if params, err = e.emitTupleTypes(sig.Params()); err != nil {
 						return err
@@ -1822,7 +1822,7 @@ func (e *emitter) emitGenDeclTypes(d *ast.GenDecl) ([]any, []any, error) {
 				// satisfaction exact and the export alive. The same
 				// key is minted for the implementing method's stub.
 				var params, results []any
-				if _, err := e.withOpaqueSigs(func() error {
+				if _, _, err := e.withOpaqueSigs(func() error {
 					var err error
 					if params, err = e.emitParams(sig.Params()); err != nil {
 						return err
@@ -1922,7 +1922,7 @@ func (e *emitter) quarantinedMethodStub(d *ast.FuncDecl, u unsupported) (map[str
 	// Anything ELSE the signature cannot express still refuses whole.
 	var recvTy any
 	var params, results []any
-	opaque, err := e.withOpaqueSigs(func() error {
+	opaque, basics, err := e.withOpaqueSigs(func() error {
 		var err error
 		if recvTy, err = e.emitType(recv.Type()); err != nil {
 			return err
@@ -1936,11 +1936,7 @@ func (e *emitter) quarantinedMethodStub(d *ast.FuncDecl, u unsupported) (map[str
 	if err != nil {
 		return nil, sigRefusal(err)
 	}
-	reason := "method " + tName + "." + d.Name.Name + " (" + u.what
-	if len(opaque) > 0 {
-		reason += "; signature instantiates imported generic " + strings.Join(opaque, ", ") +
-			" — not modeled (FR-23), carried as an opaque marker"
-	}
+	reason := "method " + tName + "." + d.Name.Name + " (" + u.what + e.opaqueSigClauses(opaque, basics)
 	return map[string]any{
 		"name":        d.Name.Name,
 		"recvType":    tName,
@@ -1954,26 +1950,39 @@ func (e *emitter) quarantinedMethodStub(d *ast.FuncDecl, u unsupported) (map[str
 
 // withOpaqueSigs runs f with SIGNATURE-OPAQUE mode on (wire.go sigOpaque)
 // and returns the sorted mangled keys of the imported generic
-// instantiations f minted as opaque markers — so a stub's refusal can
-// NAME them. The flag is restored whatever f does; it is never left on
-// across a body emission (a body must refuse on these types).
-func (e *emitter) withOpaqueSigs(f func() error) ([]string, error) {
-	saved := e.sigOpaque
-	before := map[string]bool{}
-	for k := range e.opaqueInsts {
-		before[k] = true
-	}
+// instantiations (FR-23) and the sorted spellings of the unlowerable
+// basic types (FR-25) f TOUCHED as opaque markers — minted or re-used
+// (lane fr24: "minted only" left a stub whose marker an earlier
+// requirement list had minted with no clause naming it) — so a stub's
+// refusal can NAME them. The flag is restored whatever f does; it is
+// never left on across a body emission (a body must refuse on these
+// types).
+func (e *emitter) withOpaqueSigs(f func() error) (insts, basics []string, err error) {
+	saved, savedInsts, savedBasics := e.sigOpaque, e.opaqueTouchedInsts, e.opaqueTouchedBasics
+	e.opaqueTouchedInsts, e.opaqueTouchedBasics = map[string]bool{}, map[string]bool{}
 	e.sigOpaque = true
-	err := f()
+	err = f()
 	e.sigOpaque = saved
-	minted := []string{}
-	for k := range e.opaqueInsts {
-		if !before[k] {
-			minted = append(minted, k)
-		}
+	insts = sortedStringKeys(e.opaqueTouchedInsts)
+	basics = sortedStringKeys(e.opaqueTouchedBasics)
+	e.opaqueTouchedInsts, e.opaqueTouchedBasics = savedInsts, savedBasics
+	return insts, basics, err
+}
+
+// opaqueSigClauses renders, for a stub's `unsupported` reason, the opaque
+// markers its signature minted (withOpaqueSigs) — each named with its row,
+// so a CALL that lands on the stub says exactly why it fails closed.
+func (e *emitter) opaqueSigClauses(insts, basics []string) string {
+	out := ""
+	if len(insts) > 0 {
+		out += "; signature instantiates imported generic " + strings.Join(insts, ", ") +
+			" — not modeled (FR-23), carried as an opaque marker"
 	}
-	sort.Strings(minted)
-	return minted, err
+	for _, k := range basics {
+		_, cause, _ := opaqueBasicMarker(e.opaqueBasics[k])
+		out += "; FR-25: basic type " + k + " is " + cause + " — carried as an opaque marker in the signature only"
+	}
+	return out
 }
 
 // opaqueMarkerTypeDefs renders the existence-only TypeDef for every
@@ -1993,6 +2002,19 @@ func (e *emitter) opaqueMarkerTypeDefs() []any {
 					" (FR-23: carried as an opaque marker in declaration signatures only — no value of it ever lowers; satisfaction answers, every structural use refuses)"},
 		})
 	}
+	// FR-25: the unlowerable basic types that reached a signature in opaque
+	// mode — the same marker shape under the basic type's own spelling
+	// (`complex128`, `unsafe.Pointer`; predeclared names, so no declared
+	// TypeId can collide — those are package-qualified).
+	for _, key := range sortedStringKeys(e.opaqueBasics) {
+		_, cause, _ := opaqueBasicMarker(e.opaqueBasics[key])
+		out = append(out, map[string]any{
+			"name": key,
+			"def": map[string]any{"kind": "unsupported",
+				"feature": "FR-25: basic type " + key + " is " + cause +
+					" — carried as an opaque marker in declaration signatures only; no value of it ever lowers; satisfaction answers, every structural use refuses"},
+		})
+	}
 	return out
 }
 
@@ -2008,7 +2030,7 @@ func (e *emitter) promotedSigStub(named *types.Named, tName string, mfn *types.F
 	sig := mfn.Type().(*types.Signature)
 	var valueTy any
 	var params, results []any
-	opaque, err := e.withOpaqueSigs(func() error {
+	opaque, basics, err := e.withOpaqueSigs(func() error {
 		var err error
 		if valueTy, err = e.emitType(named); err != nil {
 			return err
@@ -2027,11 +2049,7 @@ func (e *emitter) promotedSigStub(named *types.Named, tName string, mfn *types.F
 	if recvIsPtr {
 		recvTy = map[string]any{"kind": "pointer", "elem": valueTy}
 	}
-	reason := "promoted method " + tName + "." + mfn.Name() + " (forwarding wrapper not synthesized: " + cause.what
-	if len(opaque) > 0 {
-		reason += "; signature instantiates imported generic " + strings.Join(opaque, ", ") +
-			" — not modeled (FR-23), carried as an opaque marker"
-	}
+	reason := "promoted method " + tName + "." + mfn.Name() + " (forwarding wrapper not synthesized: " + cause.what + e.opaqueSigClauses(opaque, basics)
 	return map[string]any{
 		"name":        mfn.Name(),
 		"recvType":    tName,
@@ -5989,7 +6007,26 @@ func (e *emitter) importedMethodStubs(qname string, named *types.Named) ([]any, 
 			continue
 		}
 		sig := mfn.Type().(*types.Signature)
-		valueTy, err := e.emitType(named)
+		// SIGNATURE-OPAQUE (FR-23 + FR-25, 2026-09-04): a D5 stub is a
+		// declaration-only signature, so an imported generic instantiation
+		// or an unlowerable basic type in it is an opaque marker
+		// (`reflect.Value.Complex() complex128`, `Value.Seq() iter.Seq[Value]`)
+		// instead of skipping the type's WHOLE method set — the skip left a
+		// dangling `named` and dragged the interfaces the other signatures
+		// noted into the fixpoint. Anything else still skips whole (below).
+		var valueTy any
+		var params, results []any
+		insts, basics, err := e.withOpaqueSigs(func() error {
+			var err error
+			if valueTy, err = e.emitType(named); err != nil {
+				return err
+			}
+			if params, err = e.emitParams(sig.Params()); err != nil {
+				return err
+			}
+			results, err = e.emitResults(sig.Results())
+			return err
+		})
 		if err != nil {
 			return nil, false
 		}
@@ -5997,16 +6034,8 @@ func (e *emitter) importedMethodStubs(qname string, named *types.Named) ([]any, 
 		if valSet.Lookup(mfn.Pkg(), mfn.Name()) == nil {
 			recvTy = map[string]any{"kind": "pointer", "elem": valueTy}
 		}
-		params, err := e.emitParams(sig.Params())
-		if err != nil {
-			return nil, false
-		}
-		results, err := e.emitResults(sig.Results())
-		if err != nil {
-			return nil, false
-		}
 		refusal := "imported method " + qname + "." + mfn.Name() +
-			" (declaration-only stub: satisfaction answers, calls fail closed)"
+			" (declaration-only stub: satisfaction answers, calls fail closed" + e.opaqueSigClauses(insts, basics) + ")"
 		if cause, named := atomicStubRefusal(qname, mfn.Name()); named {
 			refusal = cause
 		}

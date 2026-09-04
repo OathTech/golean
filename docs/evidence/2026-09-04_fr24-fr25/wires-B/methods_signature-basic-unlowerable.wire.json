@@ -1,0 +1,793 @@
+{
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "elem": {
+       "kind": "interface",
+       "name": "any"
+      },
+      "elems": [
+       {
+        "index": 0,
+        "value": {
+         "dynamic": {
+          "kind": "named",
+          "name": "main.Yes"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "args": [
+           {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "1"
+           }
+          ],
+          "expr": "struct-lit",
+          "target": {
+           "kind": "named",
+           "name": "main.Yes"
+          },
+          "type": {
+           "kind": "named",
+           "name": "main.Yes"
+          }
+         },
+         "target": {
+          "kind": "interface",
+          "name": "any"
+         }
+        }
+       },
+       {
+        "index": 1,
+        "value": {
+         "dynamic": {
+          "kind": "named",
+          "name": "main.No"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "args": [],
+          "expr": "struct-lit",
+          "target": {
+           "kind": "named",
+           "name": "main.No"
+          },
+          "type": {
+           "kind": "named",
+           "name": "main.No"
+          }
+         },
+         "target": {
+          "kind": "interface",
+          "name": "any"
+         }
+        }
+       }
+      ],
+      "length": 2,
+      "stmt": "slice-lit",
+      "target": {
+       "id": "$c0",
+       "target": "declare",
+       "type": {
+        "elem": {
+         "kind": "interface",
+         "name": "any"
+        },
+        "kind": "slice"
+       }
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "vals",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "kind": "interface",
+          "name": "any"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "$c0",
+        "type": {
+         "elem": {
+          "kind": "interface",
+          "name": "any"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "out",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "0"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "body": {
+       "body": [
+        {
+         "cond": {
+          "expr": "ident",
+          "name": "ok",
+          "type": {
+           "kind": "bool"
+          }
+         },
+         "else": {
+          "body": [
+           {
+            "op": "+",
+            "read": {
+             "expr": "ident",
+             "name": "out",
+             "type": {
+              "int": "int",
+              "kind": "int"
+             }
+            },
+            "rhs": {
+             "expr": "binary",
+             "op": "+",
+             "type": {
+              "int": "int",
+              "kind": "int"
+             },
+             "x": {
+              "expr": "ident",
+              "name": "i",
+              "type": {
+               "int": "int",
+               "kind": "int"
+              }
+             },
+             "y": {
+              "expr": "int",
+              "type": {
+               "int": "int",
+               "kind": "int"
+              },
+              "value": "1"
+             }
+            },
+            "stmt": "compound-assign",
+            "target": {
+             "id": "out",
+             "target": "var"
+            }
+           }
+          ],
+          "stmt": "block"
+         },
+         "init": {
+          "expr": {
+           "expr": "ident",
+           "name": "v",
+           "type": {
+            "kind": "interface",
+            "name": "any"
+           }
+          },
+          "okTarget": {
+           "id": "ok",
+           "target": "declare",
+           "type": {
+            "kind": "bool"
+           }
+          },
+          "stmt": "type-assert",
+          "target": {
+           "id": "k",
+           "target": "declare",
+           "type": {
+            "kind": "interface",
+            "name": "main.Kinder"
+           }
+          },
+          "targetType": {
+           "kind": "interface",
+           "name": "main.Kinder"
+          }
+         },
+         "stmt": "if",
+         "then": {
+          "body": [
+           {
+            "define": true,
+            "lhs": [
+             {
+              "id": "$c1",
+              "target": "declare",
+              "type": {
+               "int": "int",
+               "kind": "int"
+              }
+             }
+            ],
+            "rhs": [
+             {
+              "args": [
+               {
+                "expr": "ident",
+                "name": "k",
+                "type": {
+                 "kind": "interface",
+                 "name": "main.Kinder"
+                }
+               }
+              ],
+              "expr": "call",
+              "func": "main.Kinder.Kind",
+              "resultTypes": [
+               {
+                "int": "int",
+                "kind": "int"
+               }
+              ]
+             }
+            ],
+            "stmt": "assign"
+           },
+           {
+            "op": "+",
+            "read": {
+             "expr": "ident",
+             "name": "out",
+             "type": {
+              "int": "int",
+              "kind": "int"
+             }
+            },
+            "rhs": {
+             "expr": "binary",
+             "op": "*",
+             "type": {
+              "int": "int",
+              "kind": "int"
+             },
+             "x": {
+              "expr": "binary",
+              "op": "*",
+              "type": {
+               "int": "int",
+               "kind": "int"
+              },
+              "x": {
+               "expr": "binary",
+               "op": "+",
+               "type": {
+                "int": "int",
+                "kind": "int"
+               },
+               "x": {
+                "expr": "ident",
+                "name": "i",
+                "type": {
+                 "int": "int",
+                 "kind": "int"
+                }
+               },
+               "y": {
+                "expr": "int",
+                "type": {
+                 "int": "int",
+                 "kind": "int"
+                },
+                "value": "1"
+               }
+              },
+              "y": {
+               "expr": "int",
+               "type": {
+                "int": "int",
+                "kind": "int"
+               },
+               "value": "10"
+              }
+             },
+             "y": {
+              "expr": "ident",
+              "name": "$c1",
+              "type": {
+               "int": "int",
+               "kind": "int"
+              }
+             }
+            },
+            "stmt": "compound-assign",
+            "target": {
+             "id": "out",
+             "target": "var"
+            }
+           }
+          ],
+          "stmt": "block"
+         }
+        }
+       ],
+       "stmt": "block"
+      },
+      "collection": {
+       "expr": "ident",
+       "name": "vals",
+       "type": {
+        "elem": {
+         "kind": "interface",
+         "name": "any"
+        },
+        "kind": "slice"
+       }
+      },
+      "elemType": {
+       "kind": "interface",
+       "name": "any"
+      },
+      "keyVar": "i",
+      "kind": "slice",
+      "stmt": "range",
+      "valVar": "v"
+     },
+     {
+      "results": [
+       {
+        "expr": "ident",
+        "name": "out",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "ifaceUncalled",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "arity": 0,
+   "name": "ifaceCalled",
+   "unsupported": "constant kind Complex"
+  },
+  {
+   "arity": 1,
+   "name": "mkComplex",
+   "unsupported": "basic type complex128"
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "results": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "42"
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "funcUncalled",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "arity": 0,
+   "name": "funcCalled",
+   "unsupported": "builtin real"
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c2",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "args": [
+           {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "5"
+           }
+          ],
+          "expr": "struct-lit",
+          "target": {
+           "kind": "named",
+           "name": "main.Yes"
+          },
+          "type": {
+           "kind": "named",
+           "name": "main.Yes"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "main.Yes.Kind",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "ident",
+        "name": "$c2",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "methodUncalled",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "arity": 0,
+   "name": "methodCalled",
+   "unsupported": "constant kind Complex"
+  }
+ ],
+ "methodSets": [
+  {
+   "coverage": "exported",
+   "type": "complex128"
+  },
+  {
+   "coverage": "full",
+   "type": "main.No"
+  },
+  {
+   "coverage": "full",
+   "type": "main.Yes"
+  }
+ ],
+ "methods": [
+  {
+   "interface": true,
+   "name": "Kind",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "interface",
+     "name": "main.Kinder"
+    }
+   },
+   "recvType": "main.Kinder",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "interface": true,
+   "name": "OverflowComplex",
+   "params": [
+    {
+     "id": "x",
+     "type": {
+      "kind": "named",
+      "name": "complex128"
+     }
+    }
+   ],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "interface",
+     "name": "main.Kinder"
+    }
+   },
+   "recvType": "main.Kinder",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "results": [
+       {
+        "expr": "field-get",
+        "field": "k",
+        "recv": {
+         "expr": "ident",
+         "name": "y",
+         "type": {
+          "kind": "named",
+          "name": "main.Yes"
+         }
+        },
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "typeId": "main.Yes"
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "Kind",
+   "params": [],
+   "recv": {
+    "id": "y",
+    "type": {
+     "kind": "named",
+     "name": "main.Yes"
+    }
+   },
+   "recvType": "main.Yes",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "name": "OverflowComplex",
+   "params": [
+    {
+     "id": "x",
+     "type": {
+      "kind": "named",
+      "name": "complex128"
+     }
+    }
+   ],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "main.Yes"
+    }
+   },
+   "recvType": "main.Yes",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "unsupported": "method main.Yes.OverflowComplex (basic type complex128; FR-25: basic type complex128 is not modeled (FR-15: complex numbers — the one large arc, last in the queue) — carried as an opaque marker in the signature only; satisfaction answers, calls fail closed)",
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "results": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "2"
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "Kind",
+   "params": [],
+   "recv": {
+    "id": "",
+    "type": {
+     "kind": "named",
+     "name": "main.No"
+    }
+   },
+   "recvType": "main.No",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  }
+ ],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": [
+  {
+   "def": {
+    "fields": [
+     {
+      "embedded": false,
+      "name": "k",
+      "type": {
+       "int": "int",
+       "kind": "int"
+      }
+     }
+    ],
+    "kind": "struct"
+   },
+   "name": "main.Yes"
+  },
+  {
+   "def": {
+    "fields": [],
+    "kind": "struct"
+   },
+   "name": "main.No"
+  },
+  {
+   "def": {
+    "kind": "interface",
+    "methods": [
+     {
+      "name": "Kind",
+      "params": [],
+      "results": [
+       {
+        "int": "int",
+        "kind": "int"
+       }
+      ],
+      "variadic": false
+     },
+     {
+      "name": "OverflowComplex",
+      "params": [
+       {
+        "kind": "named",
+        "name": "complex128"
+       }
+      ],
+      "results": [
+       {
+        "kind": "bool"
+       }
+      ],
+      "variadic": false
+     }
+    ]
+   },
+   "name": "main.Kinder"
+  },
+  {
+   "def": {
+    "feature": "FR-25: basic type complex128 is not modeled (FR-15: complex numbers — the one large arc, last in the queue) — carried as an opaque marker in declaration signatures only; no value of it ever lowers; satisfaction answers, every structural use refuses",
+    "kind": "unsupported"
+   },
+   "name": "complex128"
+  }
+ ]
+}

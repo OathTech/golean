@@ -8,23 +8,24 @@
 // the mere reach of binary.Write took the whole export down (cedar-go
 // types/record.go:35, census addendum §9.2).
 //
-// TODAY every row here is still red at frontend-export, on the NEXT kill
-// behind the poisoned var (rowed FR-25, same evidence dir): `sizeof(t
-// reflect.Type)` LOWERS, and reflect.Type's requirement list carries
-// `OverflowComplex(complex128)`, which the interface declaration pass
-// refuses whole ("basic type complex128"). When FR-25 closes:
-//   sibling      flips PASS — the package lowers beside the poisoned var
+// Behind the poisoned var sat the NEXT kill (FR-25, closed per declaration
+// at this lane's checkpoint B — the [USER]-approved rider, relayed):
+// `sizeof(t reflect.Type)` LOWERS, and reflect.Type's requirement list
+// carries `OverflowComplex(complex128)`, which the interface declaration
+// pass used to refuse whole ("basic type complex128"); it is now an opaque
+// `named complex128` marker. Hence:
+//   sibling      PASS — the package lowers beside the poisoned var
 //                (PutUint64: the byte-order path, untouched by structSize);
-//   writeInt     stays red BY NAME at Write: the intDataSize FAST path
-//                never touches structSize, but Write's SLOW path (the same
-//                body) is reflect, so Write is ONE H-3 stub on
-//                `reflect.Indirect` — the register's encoding/binary row
-//                already says so ("Read/Write/Size are reflect and refuse
-//                by name"); the fast path is not separately reachable;
-//   writeStruct  stays red at the same Write stub (dataSize's own
-//                structSize refusal sits behind it, never reached first);
-//   sizeInt      stays red at Size (type-switch fast path, reflect
-//                fallback in the same body → one stub).
+//   writeInt     red BY NAME at Write: the intDataSize FAST path never
+//                touches structSize, but Write's SLOW path (the same body)
+//                is reflect, so Write is ONE H-3 stub on `reflect.Indirect`
+//                — the register's encoding/binary row already says so
+//                ("Read/Write/Size are reflect and refuse by name"); the
+//                fast path is not separately reachable;
+//   writeStruct  red at the same Write stub (dataSize's own structSize
+//                refusal sits behind it, never reached first);
+//   sizeInt      red at Size (type-switch fast path, reflect fallback in
+//                the same body → one stub).
 package main
 
 import (

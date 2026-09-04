@@ -1,4 +1,21 @@
 # GoLean native-frontend full-corpus differential baseline
+# re-pinned: 2026-09-04 (fr24 lane, checkpoint B — FR-25 PARTIALLY CLOSED, the [USER]-approved rider
+#   (Mike 2026-09-04, relayed by the coordinator, cited as relayed: «(3) yes, makes sense»): an
+#   unlowerable BASIC type (complex64/complex128/unsafe.Pointer) in a method/func SIGNATURE or an
+#   interface REQUIREMENT list is an opaque `named <basic>` marker + existence-only `unsupported`
+#   TypeDef (the D5 marker shape; no wire-schema change) — the declaration lowers, satisfaction
+#   answers exactly, a VALUE of the type still refuses on FR-15's text; the D5 imported-type stub
+#   pass emits under the same mode. [AGENT]. FULL ci --diff at the committed checkpoint (tail in
+#   docs/evidence/2026-09-04_fr24-fr25/ci-diff-B.txt): drift vs the previous pin = EXACTLY (a) 2
+#   FAIL -> PASS flips — init/library-var-type-unlowerable (the FR-24 witness) and
+#   init/library-var-type-poisoned/sibling; (b) 6 born rows — 3 PASS
+#   (methods/signature-basic-unlowerable/{iface-uncalled,func-uncalled,method-uncalled}) and 3
+#   FAIL/frontend-export red BY DESIGN on FR-25 (methods/signature-basic-unlowerable/{iface-called,
+#   func-called,method-called} — the call sites mention a complex VALUE); 0 PASS -> non-PASS; twin
+#   wire pin UNCHANGED (69a538de); stdlib pin unchanged.
+#   [re-derived from the data rows at this re-pin ([AGENT]): checkpoint A's 3376 (3168 PASS / 208
+#   FAIL) + 6 born rows (3 PASS / 3 FAIL) with 2 FAIL -> PASS flips = 3382 (3173 PASS / 209 FAIL);
+#   tallied by row: `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv`]
 # re-pinned: 2026-09-04 (fr24 lane, checkpoint A — FR-24 PARTIALLY CLOSED: a package-level var
 #   whose TYPE does not lower is POISONED per declaration (the cell seeds as the reserved
 #   `$poisoned` placeholder, gid kept; every reference refuses by name naming the var, its
@@ -895,7 +912,9 @@
 #     removed row is named in prose, never left dangling on the line).
 #     NEW rows: unsafe/layout-ops/{sizeof-fixed,layout-struct}
 #     FAIL/frontend-export BY DESIGN. unsafe/boundary/pointer-roundtrip
-# cases: 3376 (3168 PASS / 208 FAIL)
+# cases: 3382 (3173 PASS / 209 FAIL)
+#   [re-derived from the data rows at the fr24 checkpoint-B re-pin 2026-09-04 ([AGENT]: checkpoint A's 3376 (3168 PASS / 208 FAIL) + 6 born rows (3 PASS / 3 FAIL) with 2 FAIL -> PASS flips; tallied by row: `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv`)]
+#   [the checkpoint-A figure, kept as history:] # cases: 3376 (3168 PASS / 208 FAIL)
 #   [re-derived from the data rows at the fr24 checkpoint-A re-pin 2026-09-04 ([AGENT]: main aceb0dcb's 3365 (3165 PASS / 200 FAIL) + 11 born rows (3 PASS / 8 FAIL), no flips either way; tallied by row: `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv`)]
 #   [the fr22-fr23 figure, kept as history:] # cases: 3365 (3165 PASS / 200 FAIL)
 #   [re-derived from the data rows at the fr22-fr23 re-pin 2026-09-04 ([AGENT]: main 415f959a's 3350 (3157 PASS / 193 FAIL) + 15 born rows (6 PASS / 9 FAIL) with 2 FAIL -> PASS flips; no other row moved; tallied by row: `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3165 / FAIL 200)]
@@ -2365,11 +2384,11 @@ FAIL	init/hidden-dep-refused	frontend-export
 PASS	init/init-defer-recover	-
 PASS	init/init-panic	-
 PASS	init/init-sees-var-values	-
-FAIL	init/library-var-type-poisoned/sibling	frontend-export
+PASS	init/library-var-type-poisoned/sibling	-
 FAIL	init/library-var-type-poisoned/size-int	frontend-export
 FAIL	init/library-var-type-poisoned/write-int	frontend-export
 FAIL	init/library-var-type-poisoned/write-struct	frontend-export
-FAIL	init/library-var-type-unlowerable	frontend-export
+PASS	init/library-var-type-unlowerable	-
 PASS	init/multi-file-order	-
 PASS	init/multiple-init-order	-
 PASS	init/multi-value-var-init	-
@@ -2738,6 +2757,12 @@ PASS	methods/recv-implicit-addr-deref/method-value-nil	-
 PASS	methods/recv-implicit-addr-deref/non-nil-control	-
 PASS	methods/recv-implicit-addr-deref/sync-recv-nil	-
 PASS	methods/same-name-method-closures	-
+FAIL	methods/signature-basic-unlowerable/func-called	frontend-export
+PASS	methods/signature-basic-unlowerable/func-uncalled	-
+FAIL	methods/signature-basic-unlowerable/iface-called	frontend-export
+PASS	methods/signature-basic-unlowerable/iface-uncalled	-
+FAIL	methods/signature-basic-unlowerable/method-called	frontend-export
+PASS	methods/signature-basic-unlowerable/method-uncalled	-
 PASS	methods/value-auto-deref	-
 PASS	methods/value-receiver-via-pointer-var/addr-of-var	-
 PASS	methods/value-receiver-via-pointer-var/addr-of-literal	-

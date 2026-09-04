@@ -84,6 +84,54 @@ of each row dir at A (`*.wire.json` for the two exporting dirs — the
 `$poisoned` cell `cache`, the stubs naming it; `*.stderr` for the three
 refused dirs).
 
+## Checkpoint B — FR-25, the rider (commit named in the Gate section)
+
+Mechanism: `wire.go emitBasic` — under `sigOpaque` an unlowerable basic
+type (`complex64`, `complex128`, `unsafe.Pointer`; `opaqueBasicMarker`)
+is an opaque `named <basic>` marker recorded in `opaqueBasics`;
+`opaqueMarkerTypeDefs` mints its existence-only `unsupported` TypeDef
+(text `FR-25: basic type complex128 is not modeled (FR-15: …) — carried
+as an opaque marker in declaration signatures only …`); `withOpaqueSigs`
+returns the FR-23 and FR-25 markers a window TOUCHED (minted or re-used
+— "minted only" left a stub whose marker an earlier requirement list had
+minted with no clause naming it; fixed before landing) and
+`opaqueSigClauses` renders them into every stub's reason; the D5
+`importedMethodStubs` now emit under the same opaque window (D5 [AGENT]
+below). Tests: `fr25_test.go` (5), `TestQuarantinedMethodUnlowerable
+SignatureRefuses` re-aimed at the arm's remaining reach (an anonymous-
+struct parameter). Rows: `methods/signature-basic-unlowerable/
+{iface,func,method}-uncalled` PASS, `*-called` red BY DESIGN (the call
+sites mention a complex VALUE — `constant kind Complex` / `builtin real`,
+FR-15's text; counted on FR-25's line); FLIPPED FAIL→PASS:
+`init/library-var-type-unlowerable` (the FR-24 witness — two checkpoints
+deep, as the handoff predicted) and `init/library-var-type-poisoned/
+sibling`; `init/library-var-type-poisoned/{write-int,write-struct,
+size-int}` red by name at `encoding/binary.Write/Size: package-selector
+call reflect.Indirect` (moved to FR-14's line — exactly what their row
+comment said would remain). `wires-B/` holds the emits: the
+`complex128` marker TypeDef and the `main.Yes.OverflowComplex` stub
+naming it; the binary row's wire with `encoding/binary.structSize` as a
+`$poisoned` cell, `dataSize` a stub naming it, and the `reflect.Value`
+D5 marker + stubs with `complex128`/`unsafe.Pointer`/`iter.Seq[…]`
+markers in their signatures.
+
+- D5 [AGENT]: the D5 imported-type stub pass (`importedMethodStubs`)
+  emits under the opaque window too. Before, ONE unlowerable signature
+  skipped the type's whole method set (no marker, no stubs — a dangling
+  `named` on the wire, and the interfaces the other signatures had noted
+  still reached the fixpoint); now the type gets its marker and its FULL
+  stub set, each stub naming its markers. The twin is unaffected (its one
+  D5 type, `log.Logger`, was already stubbed whole; pin 69a538de
+  unchanged — checked before landing and by the gate). The item-7 rule
+  is met: a basic type has no methods, and an imported generic
+  instantiation WITH exported methods still refuses in opaque mode.
+- D6 [AGENT]: the body-value refusal text stays FR-15's (`basic type
+  complex128`, `builtin real`, `constant kind Complex`) — the brief's
+  "refuses by name" is met (the type is named) and the FR-15 row cites
+  that text for 27 rows; the FR-25 text is on the STUB and the marker
+  TypeDef, which is what a call would reach if one could be emitted (it
+  cannot: every call site mentions a value of the type).
+
 ## cedar-go: before (main aceb0dcb)
 
 `before/census/` = `scripts/cedar-census run` on main's frontend (the
@@ -110,6 +158,8 @@ sanitized to `<repo>/`.)
 | `before/census/*` | `scripts/cedar-census run` at main aceb0dcb (worktree, unedited) | results/histogram/per-package/meta of the BEFORE census |
 | `before/lower-diagnose/*` | `scripts/lower-diagnose artifacts/cedar/cases/all --json --tsv --include cedark8s/cmd/schema-formatter,cedark8s/internal/schema` at main | the standing full-blocker report BEFORE |
 | `wires-A/*` | `GO111MODULE=off go run ./tools/nativefrontend --dir Corpus/coverage/exec/<row> --out wires-A/<row>.wire.json 2> wires-A/<row>.stderr` at checkpoint A | wires of the exporting row dirs; first-refusal stderr of the refused ones |
+| `wires-B/*` | `GO111MODULE=off go run ./tools/nativefrontend --dir Corpus/coverage/exec/<row> --out wires-B/<row>.wire.json` at checkpoint B | the `complex128` marker + stubs (`methods_signature-basic-unlowerable`), the poisoned `encoding/binary.structSize` cell beside the lowered package and the `reflect.Value` D5 marker/stubs (`init_library-var-type-poisoned`), the flipped FR-24 witness (`init_library-var-type-unlowerable`) |
+| `ci-diff-A.txt` | `scripts/capped scripts/ci --diff` on the committed checkpoint A (pre-amend tree 83b71132; the amend touched only the baseline's `# cases:` header line the reconciler flagged, C1H) | RESULT PASS, 3376/3376 no regression, 0 flips, twin 69a538de unchanged, reconciler 1 HIGH = the header count line (fixed by the amend) |
 | `traces/*` | the parked prototype's `FR24_TRACE*` stack traces (NOT ported), sanitized | the diagnosis trail: `basic type complex128` reached from `reflect.Type`'s requirement list / `reflect.Value`'s D5 stubs |
 
 ## Reproduction

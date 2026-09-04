@@ -171,6 +171,23 @@ type emitter struct {
 	// own emitType (this flag is off) and quarantines per declaration.
 	sigOpaque   bool
 	opaqueInsts map[string]*types.Named
+	// FR-25 (2026-09-04, lane fr24; [USER]-approved rider, relayed): in
+	// the same SIGNATURE-OPAQUE mode an unlowerable BASIC type
+	// (complex64/complex128 — FR-15's kinds; unsafe.Pointer — out of
+	// language) emits as an opaque `named <basic>` marker under the
+	// basic type's own spelling and is recorded here for an existence-
+	// only `unsupported` TypeDef (opaqueMarkerTypeDefs). A basic type has
+	// NO methods, so the marker is honest by construction (the fr22-fr23
+	// audit's item-7 rule): satisfaction over a requirement list or a
+	// stub that mentions it answers exactly, a VALUE of the type never
+	// exists in the machine (emitBasic refuses with the flag off), and a
+	// CALL of the declaration refuses by name (the stub's reason).
+	opaqueBasics map[string]*types.Basic
+	// The markers the CURRENT withOpaqueSigs window touched (minted OR
+	// re-used — a key first minted by an interface requirement list is
+	// still the reason a later method stub fails closed), so every stub's
+	// reason names its own markers. Reset per window.
+	opaqueTouchedInsts, opaqueTouchedBasics map[string]bool
 
 	// The modeled sync primitive types whose identity reached the wire
 	// (arc-end fix round 2026-08-10): emitProgram emits, per type, its
@@ -652,8 +669,40 @@ func (e *emitter) emitBasic(b *types.Basic) (any, error) {
 	case types.UntypedString:
 		return map[string]any{"kind": "string"}, nil
 	default:
+		// FR-25: in SIGNATURE-OPAQUE mode an unlowerable basic type is an
+		// opaque marker (doc comment at opaqueBasics); everywhere else it
+		// refuses — the FR-15 text the ledger row cites, unchanged.
+		if e.sigOpaque {
+			if key, cause, ok := opaqueBasicMarker(b); ok {
+				if e.opaqueBasics == nil {
+					e.opaqueBasics = map[string]*types.Basic{}
+				}
+				e.opaqueBasics[key] = b
+				if e.opaqueTouchedBasics == nil {
+					e.opaqueTouchedBasics = map[string]bool{}
+				}
+				e.opaqueTouchedBasics[key] = true
+				_ = cause // rendered by opaqueMarkerTypeDefs / opaqueSigClauses
+				return map[string]any{"kind": "named", "name": key}, nil
+			}
+		}
 		return nil, unsup("basic type %s", b)
 	}
+}
+
+// opaqueBasicMarker names the basic kinds FR-25 carries as opaque markers
+// in declaration signatures, with the cause the marker's TypeDef and the
+// stub's reason state. Exactly the kinds emitBasic refuses that a
+// SIGNATURE can mention: the untyped kinds exist only for constants and
+// Invalid is an internal error, so both stay refusals (never masked).
+func opaqueBasicMarker(b *types.Basic) (key, cause string, ok bool) {
+	switch b.Kind() {
+	case types.Complex64, types.Complex128:
+		return b.String(), "not modeled (FR-15: complex numbers — the one large arc, last in the queue)", true
+	case types.UnsafePointer:
+		return b.String(), "out of language (package unsafe: implementation-specific layout, ledger §2 Package_unsafe)", true
+	}
+	return "", "", false
 }
 
 func intType(kind string) map[string]any {
@@ -708,6 +757,10 @@ func (e *emitter) emitInstantiatedNamed(ty *types.Named) (any, error) {
 				e.opaqueInsts = map[string]*types.Named{}
 			}
 			e.opaqueInsts[key] = ty
+			if e.opaqueTouchedInsts == nil {
+				e.opaqueTouchedInsts = map[string]bool{}
+			}
+			e.opaqueTouchedInsts[key] = true
 			return map[string]any{"kind": "named", "name": key}, nil
 		}
 	}
