@@ -172,8 +172,8 @@ methods/types/globals/method sets identical) — 69a538de → b4458244.
 ## cedar-go: after (tip — every checkpoint measured; A, B, C agree)
 
 `census-A/` (checkpoint A, tree 83b71132 = A before its header-only
-amend) and `after/census/` (the C tree; `meta.tsv` names the commit the
-runner saw — see the Gate section for the tip re-run): **29
+amend) and `after/census/` (RE-RUN on the committed tip 1982677d, clean
+tree — `meta.tsv`): **29
 FRONTEND-REFUSED / 5 EXPORT-OK of 34 — export fraction UNCHANGED**, but
 the FR-24 kill is GONE and the 29 refusals are the two causes §9.3's
 pass C had predicted counterfactually, now measured on the UNRELAXED
@@ -220,9 +220,15 @@ sanitized to `<repo>/`.)
   RESULT PASS; 3382/3382 no regression; re-pin guard 0 PASS→non-PASS (2
   FAIL→PASS flips, the FR-25 witnesses); twin 69a538de unchanged;
   reconciler 0 HIGH.
-- **C / tip** (`ci-diff-C.txt`): on the committed checkpoint C — see the
-  file's tail for the RESULT line, the ruled flip on BUG-092's Cases
-  line, the moved twin pin b4458244, register intercept 1 / shim 6.
+- **C / tip** (`ci-diff-C.txt`): on the committed checkpoint C
+  (1982677d, clean tree) — RESULT PASS; 3382/3382 no regression;
+  negative 394/394; re-pin guard: 1 PASS→non-PASS flip
+  (`slices/sortfunc-cmp/cmp-compare-kinds`), listed on BUG-092's Cases
+  line; twin b4458244 = pinned bytes (the re-pin); register ok (intercept
+  1, shim 6); frontend unit tests, lowerdiag tests, eval tests 148;
+  reconciler 0 HIGH. This tail is committed AFTER the tree it certifies
+  (the records-tail commit that follows 1982677d touches only this
+  directory).
 
 ## Files
 
