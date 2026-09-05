@@ -39,5 +39,36 @@ in drafting. Runtime results in the prior A3 handoff are historical and must
 not be reported as fresh sprint preflight. Record commands, exact tested
 sources, toolchain pins, logs, failures and evidence hashes here as they run.
 
-Next: create the sprint/lane worktrees, reproduce the existing gates within
-the resource cap, and write the Boolean constructor/profile and claim matrix.
+## Live lane state (2026-09-05)
+
+- Integration: `.claude/worktrees/typed-consumer-sprint`, branch
+  `typed-consumer-sprint`, base `10fefeb3`; coordinator owns BooleanStore,
+  generic setup and integration documents. New BooleanStore helper proofs
+  compile under the cap; this is not yet a complete O1 runtime invariant.
+- Static typing: `.claude/worktrees/typed-boolean`, branch `typed-boolean`;
+  independent judgments/checkers compile; tests and ordinary CI pending.
+- Preflight: `.claude/worktrees/typed-preflight`; full CI differential is
+  running. A1/A2 gates passed fresh, including A2 native artifact and 3/3
+  differentials. Full admission gate and corpus baseline remain pending.
+- Statement review: `.claude/worktrees/typed-contract-review`; kernel/Go
+  counterexamples and candidate-contract review, no implementation signoff.
+
+The [runtime design](2026-09-05_boolean-runtime-contract-design.md) records
+candidate statements, constructor obligations and actual-vs-static context
+issues. `seqCont` declaration splicing was found during review and corrected
+in the static design before its checker proof was finalized.
+
+## New decision candidates (not yet ruled)
+
+- O2 abort rendering: valid Unicode/newline/invalid-UTF8 string payloads can
+  reach abort but be refused by the current renderer. The reviewer preserved
+  kernel and Go witnesses. Determine repairs justified by the current
+  first-line observation policy; invalid bytes exceed the current String
+  terminal representation and may require a critical decision.
+- O2 equal recovered/repanicked string payloads: rendering refuses the
+  unresolved boxing-identity case (existing BUG-004). Preserve the witness;
+  no equality-implies-same-box assumption and no silent profile narrowing.
+
+These are open investigations, not permission to weaken O2 or stop independent
+O1 work. Next: finish generic Boolean setup helpers, review the concrete
+runtime statement matrix, complete static tests and preflight evidence.
