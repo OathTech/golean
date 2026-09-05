@@ -68,8 +68,16 @@ assert-left-recv-w	assertLeftRecvW	-	ok	-	interfaces,type_assertions,channels,re
 # census descends into a call that ENCLOSES the hoisting construct), with a receive as the event, and an allocating
 # conversion whose own operand panics stays INLINE with the operand's probe and lowers — and a compound target that CONTAINS A CALL beside a hoisted len (its address is
 # hoisted to a temp; its check is unprobed). Two pre-existing divergences found by the re-audit's measurements are rowed
-# red-first as BUG-104 (the compound target's hoisted address/key temp panics BEFORE the RHS call; gc after); the second
+# red-first as BUG-104 (the compound target's hoisted address/key temp panics BEFORE the RHS's ordered event; gc after); the second
 # value-axis instance is BUG-101's second row. assert-ok-early-len-hoist stays BUG-101's first row.
+# --- e13-b FINAL VERIFICATION audit fix round (2026-09-05; R''-2, R''-8): BUG-104's class is every ORDERED EVENT on the RHS, not
+# calls alone — the receive spellings (compound-call-target-vs-recv, map-compound-index-key-vs-recv: witness len(ch) after
+# recovery, gc 0 = received first, the machine 1 = the hoisted temp panicked first) and the method-call spelling
+# (map-compound-index-key-vs-method: gc `M` then the panic, the machine the panic alone) join BUG-104's Cases line red-first,
+# FAIL/differential with gc's output pinned. bytes-conv-value-vs-mutating-call (born PASS, strict) pins gc's 98 for
+# `int([]byte(s)[0]) + func() int { s = "zz"; return 1 }()`: the hoisted allocating conversion (D4 (v)) realizes the
+# conversion BEFORE the mutating call — gc's member, and a silent wrong value (123) on main b77f3298 — the recorded
+# exception to E12's call-first value pin (inventory E12; design §6 item 7).
 tgt-assert-vs-len-hoist	tgtAssertVsLenHoist	-	panic	interface conversion: interface {} is string, not int	slices,indexing,len,calls,panic,evaluation_order,print,interfaces,type_assertions,assignment,nondet	membership	latitude E13 option (b), lane e13-b RE-AUDIT fix round 2026-09-05 ([AGENT]; RULED [USER] Mike, relayed by the coordinator): `x[iv.(int)] = len(b[j]) + wit(5)`: the TARGET's assertion (phase-1 operand, probed) vs the hoisted len's index panic: RAISE = the conversion with nothing printed (gc's member — assertions are EARLY in gc), DEFER = `index out of range [5] with length 1` (the len operand at its hoisted position). Red by design at the first fix round (the narrowed guard, targets unprobed); lowered at the re-audit fix round. members=2	width=2,sites=8,members=2
 tgt-assert-vs-make	tgtAssertVsMake	-	panic	interface conversion: interface {} is string, not int	slices,indexing,len,make,panic,evaluation_order,interfaces,type_assertions,assignment,nondet	membership	latitude E13 option (b), lane e13-b RE-AUDIT fix round 2026-09-05 ([AGENT]; RULED [USER] Mike, relayed by the coordinator): `x[iv.(int)] = len(make([]int, t[k]))`: the target's assertion vs the unconditional make hoist's size panic: RAISE = the conversion (gc), DEFER = `index out of range [5] with length 1`. members=2	width=2,sites=8,members=2
 compound-assert-vs-len	compoundAssertVsLen	-	panic	interface conversion: interface {} is string, not int	slices,indexing,len,calls,panic,evaluation_order,print,interfaces,type_assertions,assignment,nondet	membership	latitude E13 option (b), lane e13-b RE-AUDIT fix round 2026-09-05 ([AGENT]; RULED [USER] Mike, relayed by the coordinator): `x[iv.(int)] += len(b[j]) + wit(5)`: the compound target is a phase-1 READ, probed as a whole: RAISE = the conversion (gc), DEFER = the len operand's `[5] with length 1`. members=2	width=2,sites=8,members=2
@@ -100,3 +108,7 @@ compound-call-target-vs-call	compoundCallTargetVsCall	-	panic	index out of range
 map-compound-index-key-vs-call	mapCompoundIndexKeyVsCall	-	panic	index out of range [5] with length 1	maps,slices,indexing,calls,panic,evaluation_order,print,assignment	-	-	-
 assert-ok-early-len-hoist	assertOkEarlyLenHoist	-	ok	-	interfaces,type_assertions,len,slicing,calls,closures,evaluation_order,print	-	-	-
 slice-value-early-len-hoist	sliceValueEarlyLenHoist	-	ok	-	slices,slicing,indexing,len,calls,closures,evaluation_order,print	-	-	-
+compound-call-target-vs-recv	compoundCallTargetVsRecv	-	ok	-	slices,indexing,channels,recover,defer,panic,evaluation_order,print,assignment	-	-
+map-compound-index-key-vs-recv	mapCompoundIndexKeyVsRecv	-	ok	-	maps,slices,indexing,channels,recover,defer,panic,evaluation_order,assignment	-	-
+map-compound-index-key-vs-method	mapCompoundIndexKeyVsMethod	-	panic	index out of range [5] with length 1	maps,slices,indexing,methods,calls,pointers,panic,evaluation_order,print,assignment	-	-
+bytes-conv-value-vs-mutating-call	bytesConvValueVsMutatingCall	-	ok	-	conversions,strings,slices,indexing,calls,closures,evaluation_order	-	-

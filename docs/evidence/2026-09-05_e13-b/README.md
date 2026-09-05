@@ -391,6 +391,123 @@ in the commit and in design §4 (D4–D6, "RE-AUDIT"), §6 items 3/7/9/10,
   re-pinned from that run (header block on the file); the CLEAN-tree gate
   is the section below.
 
+## The final verification fix round (2026-09-05, [AGENT] worker; the final verification audit returned FIX-FIRST — records only, no rule change)
+
+The audit verified the widening over ~60 programs and 17 re-enumerated
+membership rows and found NO spec-forced order admitted; its nine items
+are record corrections, applied in full. Dispositions ([AGENT]):
+
+- RENUMBER: the lane's entry is BUG-104 everywhere on this branch —
+  branch `c-arc-c2` filed the former number and merges first (`fr19-bug097` holds
+  BUG-100; BUG-101/BUG-102 are this branch's alone). 25 mentions across
+  11 files (corpus `cases.tsv`/`main.go`, baseline header, doctrine,
+  inventory, design, BUGS.md, this README, `focused-run-reaudit.tsv`,
+  `reaudit-witnesses.tsv`, the ledger) renumbered; a MERGE-TRAIN NOTE on
+  the BUG-104 entry says why and is the ONLY place on the branch that
+  spells the former number (so a train-side grep for c2's id finds the
+  note and nothing else).
+- R''-1 (MED): the doctrine's register #2 sentence claimed BUG-101 and
+  BUG-104 were on inventory §10's honesty-critical known-≠-oracle list
+  while the list (`E3, E5, E7, R3`) did not carry them, and E2's heading
+  had `known ≠ gc` without a list entry. Resolved by ADDING E2 (value
+  axis), BUG-101 and BUG-104 to the list (three classes stated per row:
+  (b) pins with gc elsewhere, E5's forced-with-gc-deviating, and the two
+  open observed-∉-modeled bugs) and editing the doctrine sentence in the
+  same change, per the standing sync rule; E2 gains the bullet; §10.1
+  records the movement.
+- R''-2 (MED): BUG-104's class has live unrowed spellings — measured
+  ∉ modeled at the tip: `x[f()] += <-c` (gc `f` then received, witness
+  `len(ch)` 0; the machine `f` then the hoisted temp's panic, witness
+  1), `m[t[k]] += <-c` (gc 0, the machine 1), `m[t[k]] += q.M()` (gc
+  `M` then the panic; the machine the panic alone). Rows
+  `compound-call-target-vs-recv`, `map-compound-index-key-vs-recv`,
+  `map-compound-index-key-vs-method` born FAIL/differential on BUG-104's
+  Cases line (`focused-run-final.tsv`); the entry's heading and prose
+  generalized from "calls" to "ordered events".
+- R''-3 (MED): design §4 D4's "`probeSuppress` stays ONLY where the spec
+  FORCES…" was false — `emitMapCompound` (emit.go) holds `probeSuppress`
+  across a map compound target's base and key, not spec-forced, exactly
+  BUG-104's map rows. Listed in D4 as the one UNFORCED suppression,
+  cross-referenced to BUG-104, and added to D5's residue list.
+- R''-4 (MED): receivers. Measured by path at the tip (probe programs
+  below): a receiver reaching `emitExpr` (value receiver's operand, a
+  pointer receiver on an already-pointer operand, an interface-typed
+  receiver) IS probed when a hoisted argument event follows — two members
+  ∋ gc's LATE member; the `receiverAddr` path (the implicit `&x` of a
+  pointer-receiver call on an addressable non-pointer operand, and
+  `(*p).M()`) is NOT probed — a singleton at gc's LATE member on the
+  measured shapes. Design D4/D5 and §6 item 4 corrected; inventory E14
+  gains the sub-axis; E13 bullet (3) and E6's heading name the
+  `receiverAddr` path as the residue. The `scripts/check-frontend-pins`
+  note now carries the PER-PROBE list of the six methods whose count
+  moved at the re-audit re-pin: re-derived by rebuilding the fix round's
+  frontend from commit 0de73ec5 (its twin wire reproduces d531a225… byte
+  for byte) and diffing against the tip's (c358d0f4…) probe by probe —
+  the ten NEW probes are all phase-1 target operands (CloneMessage
+  `out.Entries`/`out.Responses`/`out.Changes`, appendEntry `cloned[i]`
+  ×2, loadState `r.raftLog`, recvAck `ro.acks` (the target base),
+  CreateSnapshot `ms.snapshot.Metadata` ×3); the four PRE-EXISTING
+  probes in the same methods (loadState `r.logger` — the RECEIVER of
+  `Panicf` — `r.id`, `r.raftLog.committed`; recvAck's argument `ro.acks`)
+  date from the lane's first pin. [AGENT] note on the auditor's count:
+  their list (CloneMessage ×2, appendEntry, loadState ×4, recvAck ×2,
+  CreateSnapshot ×3) counted those four pre-existing probes as part of
+  the +10; the structural diff (`twin-repin/structural-diff.txt`,
+  loadState 3 → 4, recvAck 1 → 2) and the rebuilt fix-round wire agree
+  that the delta is the ten target operands. The kernel of the finding
+  — receivers ARE probed, the design said otherwise — stands and is
+  fixed.
+- R''-5 (MED): the gate sections' "3 reconciler findings, all
+  pre-existing on main" corrected — C9 is this branch's (its
+  `NativeToIR.lean` commits postdate the certified record's date; main
+  re-certified after this lane forked) and the step-5a `--slow` refresh
+  at the merged tip is stated as OWED.
+- R''-6 (MED): inventory E13's "39 → 55: 16 rows joined" re-derived from
+  the baseline's stage column: 39 + 11 born membership + 5 FAIL→PASS
+  flips into membership (the sixth designed red lowered strict) + 1
+  strict→membership lane move (`addr-index-left-len-hoist`) = 56; this
+  round's 4 born rows add no membership row, so 56 stands.
+- R''-7 (LOW): the four corpus comments stating the REVERSED rules
+  ("targets are never probed", "recover never probed", "&a[i] never
+  probed", "allocating conversion never probed") rewritten to the
+  implemented rule; the fix-round header comment marked HISTORY.
+- R''-8 (LOW): D4 (v)'s hoist of `[]byte(s)`/`[]rune(s)` moves E12's
+  VALUE realization from call-first to operand-first on those two
+  shapes — and fixes a silent wrong value on main: `int([]byte(s)[0]) +
+  func() int { s = "zz"; return 1 }()` — gc 98, main b77f3298 123, the
+  tip 98. Recorded as the exception on E12's census note and design §6
+  item 7; row `bytes-conv-value-vs-mutating-call` born PASS (strict)
+  pins gc's 98.
+- R''-9 (LOW): BUG-101's prose said "FAIL/differential by design" while
+  `assert-ok-early-len-hoist` fails at stage `lean-observation` (a
+  status mismatch: gc `ok`, the machine a panic) and `slice-value-early-
+  len-hoist` at `differential`; the entry now states the stage per row
+  and that `Pinned-by: differential` is check-bugs' two-token vocabulary,
+  not a stage name (the baseline header had it right).
+
+The receiver probe programs (R''-4; `go run` at the pin and the tip
+frontend + `golean coverage-observations`, `.tmp/audit3/final/
+recvprobe2/`): with `type T struct{ x int }`, `func (t *T) M2(a int)
+int { println("M2", a); return 7 }`, `func (t T) V2(a int) int {
+println("V2", a); return 7 }`, `wit` printing its argument, `s :=
+make([]T, 1); i := 9` (or `[]*T`), `var p *T` —
+
+| shape | path | probes | machine set | gc |
+| --- | --- | --- | --- | --- |
+| `s[i].M2(wit(5))`, `s` a `[]T` | `receiverAddr` (implicit `&s[i]`, `index-addr`) | 0 | 1: `wit 5` then the index panic | `wit 5` then the panic |
+| `s[i].V2(wit(5))`, `s` a `[]T` | `emitExpr` (value receiver) | 1 | 2: the panic alone / `wit 5` then the panic | `wit 5` then the panic |
+| `s[i].M2(wit(5))`, `s` a `[]*T` | `emitExpr` (pointer operand) | 1 | 2: as above | `wit 5` then the panic |
+| `(*p).M2(wit(5))` | `receiverAddr` (`addr-of-deref`) | 0 | 1: `wit 5` then the nil deref | `wit 5` then the nil deref |
+| `p.M2(wit(5))`, `p` nil | `emitExpr` | 0 | 1: `wit 5`, `M2 5`, 7 (no panic) | the same |
+| `s[i].M() + wit(5)` (the receiver's own call is the only event after it) | either | 0 | 1: the panic alone (FORCED: receiver → its call → the later call) | the panic alone |
+
+gc's member is in every set; the two `receiverAddr` singletons are
+gc's member (LATE), so the residue is a one-member set on a two-member
+axis, not an ∉-gc answer.
+
+The gate for this round is the section that follows the RE-AUDIT gate
+below (recorded from the clean committed tip in the follow-up commit).
+
 ## The RE-AUDIT fix round's gate (clean tree)
 
 `scripts/capped scripts/ci --diff` at the clean committed tip `d9367386`
@@ -399,12 +516,24 @@ in `gate-tail.txt`): RESULT PASS; baseline diff FULL 3559/3559, no
 regression; negative 394/394; frontend pins ok (twin = c358d0f4…);
 frontend unit tests (the rewritten `e13guard_test.go`) and lowerdiag
 tables ok; bug-index cross-check ok (BUG-101 open/differential 2 rows,
-BUG-102 designed reds 6 rows with `Expect: FAIL`, BUG-103 open/
+BUG-102 designed reds 6 rows with `Expect: FAIL`, BUG-104 open/
 differential 2 rows, BUG-032/BUG-083 fixed with PASS-only Cases lines —
 the six retired designed reds on BUG-083's); re-pin guard `0 PASS→non-PASS
-flip(s)`; reconciler 3 findings, 0 HIGH, all pre-existing on main (C13,
-C5 FR-7, C9). Tally re-derived by awk from the committed baseline: PASS
-3315, FAIL 244 (3559). The round's earlier gates: 42e8bf6f (the baseline's
+flip(s)`; reconciler 3 findings, 0 HIGH — C13 and C5 FR-7 pre-existing
+on main; C9 is PRODUCED BY THIS BRANCH (corrected at the final
+verification fix round, R''-5: the first writing said all three were
+pre-existing). C9 is the certified record's currency: this branch's
+three commits touching `GoLean/NativeToIR.lean` (b2fd9f15, bcf73396,
+42e8bf6f — the decoder's probe/recover/conversion refusals) postdate the
+tracked `baselines/certified/*.certified.tsv` header date
+(2026-09-05T04:38:59), so the reconciler reports the certified set's wire
+sha as possibly stale; main has no such finding (its record was
+re-certified at 05:46:32 at b77f3298, after this lane forked from
+b77f3298, and main's own wire commits predate that). The `scripts/ci
+--slow` re-certification at the MERGED tip is the merge protocol's step
+5a obligation ([USER] 2026-09-04) and is OWED to the train — a changed
+certified set there is a finding, not a re-pin. Tally re-derived by awk
+from the committed baseline: PASS 3315, FAIL 244 (3559). The round's earlier gates: 42e8bf6f (the baseline's
 PASS rows had lost their lane-stage column — 243 stage-only DRIFT cells,
 fixed at cf85243b), cf85243b (PASS, superseded by the inline-conversion
 follow-up 03f77a15), 03f77a15 (PASS but `git_dirty=true`: an evidence-tsv
@@ -419,8 +548,11 @@ regression; negative 394/394; frontend pins ok (twin = d531a225…);
 frontend unit tests (incl. `e13guard_test.go`) and lowerdiag tables ok;
 bug-index cross-check ok (BUG-101 open/differential, BUG-102 designed
 reds with `Expect: FAIL`, BUG-032/BUG-083 fixed with PASS-only Cases
-lines); reconciler 3 findings, 0 HIGH, all pre-existing on main (C13,
-C5, C9) — `gate-tail.txt`. The re-pin guard certified the baseline in
+lines); reconciler 3 findings, 0 HIGH — C13 and C5 pre-existing on main,
+C9 this branch's (the certified record's currency vs the lane's
+`NativeToIR.lean` commits; the step-5a `--slow` refresh is owed to the
+train — see the re-audit gate section above; corrected at the final
+verification fix round, R''-5) — `gate-tail.txt`. The re-pin guard certified the baseline in
 the fix round's first, dirty-tree gate (same baseline bytes; `0
 PASS→non-PASS flip(s)`, 10 born rows); at the clean tip the baseline is
 unchanged between HEAD~1 and HEAD so the guard has nothing to judge.

@@ -251,14 +251,16 @@ func main() {
 
 // --- e13-b audit fix round (2026-09-05): the boundary of the envelope ---
 //
-// R1 — panicky material the envelope does NOT probe (an assignment/IncDec/
-// compound TARGET operand, an address-of operand, an operand containing
-// recover() or an allocating conversion) left of a hoisted len/cap/make
-// whose operand panics. The first cut deleted the whole A6 guard and these
-// lowered as a SILENT single-member answer ≠ gc (gc evaluates the
-// assertion first; the machine the hoisted operand's panic). The narrowed
-// A6 guard refuses them BY NAME: rows red by design (frontend-export),
-// on BUG-102's Cases line (the designed-red entry).
+// R1 (HISTORY — the rule below was REVERSED by the RE-AUDIT fix round the
+// same day; see the RE-AUDIT block further down): the audit fix round did
+// NOT probe an assignment/IncDec/compound TARGET operand, an address-of
+// operand, or an operand containing recover() or an allocating conversion,
+// and refused them (narrowed A6 guard) left of a hoisted len/cap/make whose
+// operand panics — six rows red by design on BUG-102's Cases line. Since
+// the re-audit fix round all four subclasses are PROBED (design §4 D4) and
+// the six rows are two-member membership sets (one a singleton) on
+// BUG-083's PASS-only Cases line. The per-row comments state the
+// implemented rule.
 
 func sinkP(p *int, l, w int) int { return *p + l + w }
 
@@ -293,8 +295,10 @@ func compoundAssertVsLen() int {
 	return x[0]
 }
 
-// map-element TARGET key (design §4 D4: targets are never probed — the
-// map-assign path had been left probed; one rule for every target now).
+// map-element TARGET key: a phase-1 target operand (spec#Assignment_statements),
+// PROBED like every operand since the re-audit fix round (design §4 D4; the
+// first fix round had suppressed every target — the regression the re-audit
+// named). Two members, gc's EARLY assertion in the set.
 func mapKeyAssertVsLen() int {
 	m := map[string]int{}
 	b := [][]int{{1}}
@@ -304,7 +308,10 @@ func mapKeyAssertVsLen() int {
 	return m["a"]
 }
 
-// left material containing recover() is never probed (purity).
+// `recover()` is an ordered event the emitter HOISTS (`$c := recover()`), so
+// the operand's residual `$c.(int)` is pure and PROBED (design §4 D4 (iv),
+// re-audit R1'-4); here the assertion succeeds and the len operand's index
+// panic is the only member — a singleton, strict.
 func recoverAssertVsLen() (r int) {
 	defer func() {
 		b := [][]int{{1}}
@@ -314,8 +321,9 @@ func recoverAssertVsLen() (r int) {
 	panic(3)
 }
 
-// an address-of operand (`&a[i]` lowers to an inline index-addr, never
-// probed) left of the hoisted len.
+// an address-of operand: `&a[i]` is a bounds-checking `index-addr`, PROBED
+// as a whole (design §4 D4 (ii)) left of the hoisted len — a two-member set
+// since the re-audit fix round (it was a strict control at the fix round).
 func addrIndexLeftLenHoist() int {
 	a := make([]int, 1)
 	i := 9
@@ -324,8 +332,10 @@ func addrIndexLeftLenHoist() int {
 	return sinkP(&a[i], len(b[j]), wit(5))
 }
 
-// an allocating conversion ([]byte(s)) is never probed (R7: a probe would
-// allocate twice).
+// an allocating conversion (`[]byte(s)`) HOISTS to a temp when an ordered
+// event follows it (design §4 D4 (v), re-audit R1'-3), so the residual
+// `$b[7]` is pure and PROBED; only an INLINE conversion stays unprobed (R7:
+// a probe would allocate twice). Two members, gc's in the set.
 func bytesConvLeftLenHoist() int {
 	s := "ab"
 	b := [][]int{{1}}
@@ -541,9 +551,12 @@ func compoundCallTargetVsLen() int {
 }
 
 // BUG-104 (open, red-first): a compound target whose ADDRESS or KEY is
-// hoisted to a temp — its bounds check fires at the hoist, before the RHS
-// call; gc reads it in the residual after the call (`f`, `wit 5`, then the
-// panic). Pre-existing on main b77f3298 (measured at the re-audit).
+// hoisted to a temp — its bounds check fires at the hoist, before the RHS's
+// ordered events; gc reads it in the residual after them (`f`, `wit 5`, then
+// the panic). Pre-existing on main b77f3298 (measured at the re-audit). The
+// class is every ORDERED EVENT on the RHS (a call, a receive, a method
+// call), not calls alone — the receive and method-call spellings are the
+// final-audit rows at the end of this file (R″-2).
 func compoundCallTargetVsCall() int {
 	x := make([]int, 1)
 	x[fnine()] += wit(5)
@@ -567,4 +580,60 @@ func sliceValueEarlyLenHoist() int {
 	i := 0
 	j := 0
 	return a[i:][0] + len(b[j:]) + func() int { i = 1; println("mut"); return 0 }()
+}
+
+// --- e13-b FINAL VERIFICATION audit fix round (2026-09-05, R″-2, R″-8) ---
+
+// BUG-104's class, the receive spelling (R″-2; red-first, differential):
+// `x[f()] += <-ch` — gc prints `f`, RECEIVES (the buffered channel drains,
+// witness len(ch) = 0), then panics at the residual's index read; the
+// machine panics at the hoisted `$p := &x[$f]` BEFORE the receive (witness
+// 1). `emitReadWriteTarget`'s call path, as in compoundCallTargetVsCall.
+func compoundCallTargetVsRecv() (r int) {
+	x := make([]int, 1)
+	ch := make(chan int, 1)
+	ch <- 3
+	defer func() { recover(); r = len(ch) }()
+	x[fnine()] += <-ch
+	return x[0]
+}
+
+// The map-key spelling with a receive (R″-2): `m[t[k]] += <-ch` — gc
+// receives first (witness 0), the machine panics at the hoisted key temp
+// `$k := t[k]` (emitMapCompound, its `probeSuppress` NOT spec-forced —
+// design §4 D4) before the receive (witness 1).
+func mapCompoundIndexKeyVsRecv() (r int) {
+	m := map[int]int{}
+	t := []int{1}
+	k := 5
+	ch := make(chan int, 1)
+	ch <- 3
+	defer func() { recover(); r = len(ch) }()
+	m[t[k]] += <-ch
+	return len(m)
+}
+
+// The method-call spelling (R″-2): `m[t[k]] += q.M()` — gc prints `M` then
+// panics `index out of range [5] with length 1`; the machine panics with
+// no output on every stream.
+func mapCompoundIndexKeyVsMethod() int {
+	m := map[int]int{}
+	t := []int{1}
+	k := 5
+	q := &T{}
+	m[t[k]] += q.M()
+	return len(m)
+}
+
+// R″-8 (born PASS, strict): the hoisted allocating conversion (design §4
+// D4 (v)) changes E12's VALUE realization for `[]byte(s)`/`[]rune(s)` from
+// call-first to OPERAND-first — and that is gc's member: `[]byte(s)` is
+// taken BEFORE the sibling call mutates `s`, so gc prints 98 ('a' + 1);
+// main b77f3298 (the conversion inline in the residual, read after the
+// mutation) printed 123 ('z' + 1) — a silent wrong VALUE the hoist fixed.
+// Pinned here as the recorded exception to E12's call-first pin (inventory
+// E12's census note; design §6 item 7).
+func bytesConvValueVsMutatingCall() int {
+	s := "ab"
+	return int([]byte(s)[0]) + func() int { s = "zz"; return 1 }()
 }

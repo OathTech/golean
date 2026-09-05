@@ -1,4 +1,5 @@
 
+
 # e13-b RE-AUDIT fix round focused run (scripts/capped scripts/diff-one over the 94-row E13 family: builtins/e13-sibling-panic-order/* (61), builtins/len-vs-call-order/* (31), binop-order/operand-panic-vs-call/{call-before-left,call-before-left-div}) at the re-audit fix round's final code tip — result / id / features / stage / detail. 84 PASS (56 membership, 28 strict) / 10 FAIL (6 BUG-102 designed reds, 2 BUG-104 red-first, 2 BUG-101 red-first).
 result	id	features	stage	detail
 PASS	binop-order/operand-panic-vs-call/call-before-left	indexing,calls,closures,evaluation_order,nondet	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/binop-order/operand-panic-vs-call/call-before-left)

@@ -5945,9 +5945,16 @@ static guard would have to refuse every probed operand beside a call
 that MAY mutate its inputs (any call, absent an effect analysis) — the
 ordinary `a[i] + f()` idiom class, option (a) of E13's four-way
 treatment, rejected by the [USER] ruling (relayed). So: rowed, not
-guessed — a red-first row with gc's value pinned (`expected_status ok`,
-value 6, output `mut`), FAIL/differential by design until the value
-axis is enveloped.
+guessed — red-first rows with gc's value pinned, red by design until the
+value axis is enveloped. THE STAGES, per row (final verification fix
+round R''-9, [AGENT]): `assert-ok-early-len-hoist` FAILS at stage
+`lean-observation` (gc `ok`, value 6, output `mut`; the machine PANICS —
+a status mismatch surfaces at the machine-observation stage, before the
+differential compare), `slice-value-early-len-hoist` at stage
+`differential` (both `ok`; 12 vs 22). `Pinned-by: differential` above is
+`check-bugs.sh`'s vocabulary (a Go-vs-Lean fidelity red at a fidelity
+stage, as opposed to `none`; the field admits only those two tokens), not
+the row's stage name — the baseline header and the rows carry the stage.
 
 FIX DIRECTION (E12's obligation, not this lane's): realize BOTH values —
 the probe would have to CARRY its early value into the residual (a
@@ -6081,28 +6088,57 @@ every array-shaped conversion in the corpus (the `BUG-020` fix's `structs/unname
 rows are the template: red-first, then the arm, then PASS on this Cases line). Ledger:
 `docs/language-coverage-ledger.md` §2 Conversions row names it.
 
-## BUG-104 — a compound-assignment target whose ADDRESS or KEY is hoisted to a temp panics at the hoist, BEFORE the RHS's calls; gc reads the target in the residual, AFTER them (`x[f()] += wit(5)`: gc `f`, `wit 5`, then `index out of range [9]`; the machine `f` then the panic — `m[t[k]] += wit(5)`: gc `wit 5` then `[5] with length 1`, the machine the panic alone) [frontend lowering; evaluation order; spec#Assignment_statements phase 1 vs the eval-once rewrite]
+## BUG-104 — a compound-assignment target whose ADDRESS or KEY is hoisted to a temp panics at the hoist, BEFORE the RHS's ordered events (calls, receives, method calls); gc reads the target in the residual, AFTER them (`x[f()] += wit(5)`: gc `f`, `wit 5`, then `index out of range [9]`; the machine `f` then the panic — `m[t[k]] += wit(5)`: gc `wit 5` then `[5] with length 1`, the machine the panic alone — `x[f()] += <-ch`: gc receives first, the machine panics first) [frontend lowering; evaluation order; spec#Assignment_statements phase 1 vs the eval-once rewrite]
 
-- Status: open ([AGENT], e13-b re-audit fix round 2026-09-05 — found by the re-audit's measurements, pre-existing on main b77f3298; lettered BUG-103 on the lane, RENUMBERED BUG-104 at the round-17 rebase onto main 9343a310 because main's BUG-103 is c-arc-c2's array-conversion entry — [AGENT] reconciler)
+- Status: open ([AGENT], e13-b re-audit fix round 2026-09-05 — found by the re-audit's measurements, pre-existing on main b77f3298; three more spellings rowed at the final verification fix round the same day, R''-2)
+  Round-17 rebase note ([AGENT] reconciler, 2026-09-05): the renumber the Status line describes was applied at the rebase of the lane's re-audit commit itself (main's BUG-103, c-arc-c2's array-conversion entry, landed at this train before this lane), so no rebased commit ever carried two BUG-103 headings.
 - Pinned-by: differential
-- Cases: builtins/e13-sibling-panic-order/compound-call-target-vs-call, builtins/e13-sibling-panic-order/map-compound-index-key-vs-call
+- Cases: builtins/e13-sibling-panic-order/compound-call-target-vs-call, builtins/e13-sibling-panic-order/map-compound-index-key-vs-call, builtins/e13-sibling-panic-order/compound-call-target-vs-recv, builtins/e13-sibling-panic-order/map-compound-index-key-vs-recv, builtins/e13-sibling-panic-order/map-compound-index-key-vs-method
+
+MERGE-TRAIN NOTE ([AGENT], 2026-09-05, final verification fix round): this
+entry was filed on lane `e13-b` as BUG-103. Branch `c-arc-c2` filed its own
+BUG-103 and merges ahead of this branch (`fr19-bug097` holds BUG-100;
+BUG-101/BUG-102 are this branch's alone), so the entry is RENUMBERED to
+BUG-104 here, before the merge, to keep the index's ids unique — every
+record on this branch (corpus comments, baseline header, doctrine,
+inventory, design, evidence, ledger) says BUG-104; this note is the only
+place on the branch that spells the former number (it is c2's).
 
 WHAT: `x op= y` evaluates `x` once (spec#Assignment_statements). Two
 lowering paths realize the "once" by hoisting a TEMP at the target's
-lexical position, ahead of the RHS's hoisted calls: `emitReadWriteTarget`
+lexical position, ahead of the RHS's hoisted ORDERED EVENTS — a call, a
+receive, a method call (the class is every ordered event the RHS carries,
+not calls alone: final verification fix round R''-2): `emitReadWriteTarget`
 when the target CONTAINS A CALL (`x[f()]` → `$f := f(); $p := &x[$f]` —
 the `index-addr` bounds-checks at that hoist, Machine.lean
 `indexTargetLoc`), and `emitMapCompound` for every map target (`m[t[k]]`
 → `$m := m; $k := t[k]`). gc's `order.go` `safeExpr` saves the target's
 OPERANDS (base, index/key VALUE — `t[k]`'s operands, not `t[k]`) to temps
 and leaves the index/read node in the RESIDUAL, so its bounds check fires
-after the RHS's call temps: `f`, `wit 5`, then the panic; the machine
+after the RHS's event temps: `f`, `wit 5`, then the panic; the machine
 panics before `wit 5` on every stream. Observed (gc) ∉ modeled: a
 lower-bound violation, deterministic, on any compound target whose
 hoisted temp can panic (a call-bearing slice/array index; a map key
-that is itself a panicky index). The spec orders neither (the target's
-read is phase-1 material against the RHS's calls — E2/E13's omission),
-so the fix is an ENVELOPE, not a pin. Pre-existing: measured at
+that is itself a panicky index) beside ANY ordered event on the RHS.
+The other spellings, measured at the final verification audit (R''-2)
+and rowed red-first with gc's output pinned: a RECEIVE as the event —
+`x[f()] += <-ch` (gc `f`, then the receive — witness `len(ch)` 0 after
+recovery — then the index panic; the machine `f` then the panic before
+the receive, witness 1: `compound-call-target-vs-recv`) and `m[t[k]] +=
+<-ch` (gc receives first, witness 0; the machine's hoisted key temp
+panics first, witness 1: `map-compound-index-key-vs-recv`); a METHOD
+CALL as the event — `m[t[k]] += q.M()` (gc `M` then the panic; the
+machine the panic alone: `map-compound-index-key-vs-method`). The map
+path's `probeSuppress` in `emitMapCompound` (held across the target's
+base and key) is the one UNFORCED suppression in the frontend (design §4
+D4; its every other site is spec-forced) — it does not cause the bug
+(the hoisted temp is not an inline operand either way) but it is the
+rule that goes with the fix. The spec orders neither (the target's read
+is phase-1 material against the RHS's ordered events — E2/E13's
+omission), so the fix is an ENVELOPE, not a pin. Inventory §10 lists this
+entry on the known-≠-oracle list (added at the final verification fix
+round, R''-1: an open observed-∉-modeled debt with a queue position, not
+a pin). Pre-existing: measured at
 b77f3298 with the re-audit probes (`P3_compound_call_index`,
 `P23_mapcompound_index_call`); untouched by e13-b's probe (the hoisted
 temp's panic is not an inline operand's — no probe hook fires) and by
@@ -6114,7 +6150,8 @@ FIX DIRECTION: decompose the target the way gc's `safeExpr` does —
 temps for the base and the index/key VALUE (`$b := x; $i := f()` /
 `$m := m; $kk := k`), the indexing/read itself left in the residual
 (`$b[$i] = $b[$i] + $w`, `$m[$t[$kk]]`) — so the bounds check is inline
-material the E13 probe covers, realizing both orders. Until then the
-compound-call target beside a hoisted len refuses by name (BUG-102's
-`compound-call-target-vs-len`) and these two rows are red-first with
-gc's output pinned.
+material the E13 probe covers, realizing both orders (for the map path
+this also retires `emitMapCompound`'s unforced `probeSuppress`). Until
+then the compound-call target beside a hoisted len refuses by name
+(BUG-102's `compound-call-target-vs-len`) and these five rows are
+red-first with gc's output pinned.

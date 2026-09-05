@@ -782,6 +782,12 @@ gc's early store a deviation, L-016, 2026-09-02).
 
 ### E2. Call vs. assignment-target operands — (b) PINNED call-first on the VALUE axis, **known ≠ gc** on the EARLY-realized kinds; the PANIC axis (a) ENVELOPED via E13's `unseqPanic` since the e13-b re-audit fix round (2026-09-05)
 
+- FINAL VERIFICATION FIX ROUND (e13-b, 2026-09-05, [AGENT]; R''-1): this
+  entry's VALUE axis JOINS §10's known-≠-oracle list — the heading had
+  said `known ≠ gc` since the re-audit fix round without a list entry
+  (the list is the class; a heading is not). BUG-101's two rows are the
+  filed witnesses (reached through E12/E13's shapes); the PANIC axis
+  stays enveloped via E13 and is not on the list.
 - RE-AUDIT FIX ROUND (e13-b, 2026-09-05, [AGENT]; audit finding R1'-1):
   the heading's former "(b) PINNED to gc (call-first)" was FALSE as a
   statement about gc — gc is call-first only for INDEX-kind target
@@ -951,7 +957,7 @@ gc's early store a deviation, L-016, 2026-09-02).
   (issue43835's `g`/`h` pass on gc — its fix covers `return`); the
   deviation of this row is the ASSIGNMENT side with non-result targets.
 
-### E6. `len`/`cap` hoist discriminating shapes — (a) ENVELOPED via E13's `unseqPanic` where the left material is PROBED; REFUSED (narrowed A6 guard) where it is not — after the e13-b re-audit fix round (2026-09-05) that residue is a compound target that CONTAINS A CALL, a method-call receiver operand, a forced select/range target, an inline allocating conversion's operand; zero sites of its own
+### E6. `len`/`cap` hoist discriminating shapes — (a) ENVELOPED via E13's `unseqPanic` where the left material is PROBED; REFUSED (narrowed A6 guard) where it is not — after the e13-b re-audit fix round (2026-09-05) that residue is a compound target that CONTAINS A CALL, a method-call receiver operand on the `receiverAddr` path, a forced select/range target, an inline allocating conversion's operand; zero sites of its own
 
 - WHERE (history): BUG-032's fix, narrowed by mini-slice A6 (2026-08-31)
   to the composition (panicky residual operand) x (panicky inline
@@ -1425,6 +1431,25 @@ subexpressions of one binary operator).
   the pre-call state, so the machine offers the panic (RAISE) beside the
   call-first value (DEFER, gc's, this entry's pin) — E13's observable
   riding an E12 row.
+  EXCEPTION TO THE CALL-FIRST VALUE PIN (e13-b re-audit fix round D4 (v),
+  RECORDED at the final verification fix round 2026-09-05, R''-8,
+  [AGENT]): for the two ALLOCATING CONVERSIONS `[]byte(s)` / `[]rune(s)`
+  followed by an ordered event in the same sweep, the frontend HOISTS the
+  conversion to a temp at its lexical position (so that its residual is
+  pure and probeable), and therefore realizes those two shapes
+  OPERAND-first on the VALUE axis, not call-first: `int([]byte(s)[0]) +
+  func() int { s = "zz"; return 1 }()` — gc 98 (`'a' + 1`: the
+  conversion reads `s` before the call mutates it), main b77f3298 123
+  (`'z' + 1`: the inline conversion read the mutated `s` — a silent wrong
+  VALUE under the call-first pin, gc ∉ the machine's single member), the
+  e13-b tip 98. Row `builtins/e13-sibling-panic-order/bytes-conv-value-
+  vs-mutating-call` (born PASS, strict) pins gc's 98. The exception is
+  exactly the two conversion heads and only when an event follows; every
+  other shape of this entry (the `noodler/latitude/*` rows, the compound-
+  assign rows, `a[i] + f()`) keeps the call-first realization. gc's
+  member on these two shapes is order.go's `safeExpr`/`copyExpr`
+  treatment of the conversion (a value-producing allocation evaluated at
+  its position); the machine's hoist now agrees. Design §6 item 7.
 
 ### E13. Non-call panicking operations (type assertion, indexing, …) vs SIBLING ordered events — (a) ENVELOPED (`unseqPanic`, lane e13-b 2026-09-05 — the implementation of the RULED (b) LATITUDE ruling of 2026-09-05 [USER] (relayed), landed at merge train round 17; was (b) PINNED structural, calls first)
 
@@ -1598,9 +1623,16 @@ machine construct §3, the frontend §4, the residuals §6).
   `tgt-assert-vs-recv-w`, and the six former designed reds, now on
   BUG-083's line). What remains unprobed and REFUSED beside a hoist is a
   compound target that CONTAINS A CALL (`compound-call-target-vs-len`), a
-  method-call receiver operand (E14), a forced select/range target, an
-  inline allocating conversion's operand; the compound-call target
-  beside a plain call is BUG-104 (open, ∉ gc, pre-existing on main); (4)
+  method-call receiver operand ON THE `receiverAddr` PATH only (the
+  implicit `&x` of a pointer-receiver call on an addressable non-pointer
+  operand, and `(*p).M()`'s `addr-of-deref` — E14's sub-axis; receivers
+  that reach `emitExpr` ARE probed, measured at the final verification
+  fix round R''-4), a forced select/range target, an inline allocating
+  conversion's operand, and a map compound target's base and key
+  (`emitMapCompound`'s `probeSuppress`, the frontend's one UNFORCED
+  suppression — design §4 D4); the compound-call target beside a plain
+  call, a receive or a method call is BUG-104 (open, ∉ gc, five rows,
+  pre-existing on main); (4)
   the VALUE observable is E12's — and is REACHABLE through the len shape
   the retired guard used to refuse: `iv.(int) + len(b[j:]) + func() int {
   iv = "s"; return 1 }()` with `iv` holding an int — gc 6, the machine the
@@ -1646,10 +1678,23 @@ machine construct §3, the frontend §4, the residuals §6).
   mechanism, more pops on panicking rows).
 - RE-ENVELOPE OBLIGATION: MEASURED-DISCHARGED for the probed sibling-
   panic axis only — the membership rows' sets contain gc's draw
-  (§EVIDENCE; 39 at the fix round, 55 after the re-audit fix round: 16
-  target/address-of/recover/conversion rows joined). NOT discharged:
-  (3)'s residue (the compound-call target, receiver operands, forced
-  targets — refused beside a hoist; BUG-104 beside a plain call), (4) the
+  (§EVIDENCE; 39 at the fix round, 56 after the re-audit fix round —
+  RE-DERIVED at the final verification fix round (R''-6, [AGENT]) from
+  the baseline's `membership` stage column over the 94-row E13 family:
+  39 + 11 born membership rows (`tgt-assert-vs-call`, `map-tgt-assert-vs-
+  call`, `tgt-assert-vs-{min-call,copy-call,append,recv-w}`, `addr-
+  assert-left-call`, `compound-index-vs-len`, `array-base-target-vs-len`,
+  `recover-assert-vs-call-w`, `bytes-conv-payload-vs-call`) + 5 FAIL→PASS
+  flips INTO membership (`tgt-assert-vs-len-hoist`, `tgt-assert-vs-make`,
+  `compound-assert-vs-len`, `map-key-assert-vs-len`, `bytes-conv-left-len-
+  hoist`; the sixth designed red, `recover-assert-vs-len`, lowered
+  STRICT) + 1 strict→membership lane move (`addr-index-left-len-hoist`) =
+  56; the earlier "55: 16 rows joined" had dropped the lane move. The
+  final round's 4 born rows add none (3 red-first on BUG-104, 1 strict
+  PASS), so 56 stands). NOT discharged:
+  (3)'s residue (the compound-call target, the `receiverAddr` receiver
+  path, forced targets — refused beside a hoist; BUG-104 beside a plain
+  call, a receive or a method call), (4) the
   value axis (BUG-101, two rows, E12's obligation), (5) the structural-
   allocation class (refused), (8) the interleaving members. Those carry
   their own notes; E2–E4's obligations ride §7 item 5.
@@ -1673,6 +1718,34 @@ rode it); no divergence is known. NO PIN MAY BE TAKEN HERE (the
 frontend's structural realization stands as scaffolding, not as a
 pin) — this is a census
 row so the axis stops being invisible, nothing more.
+
+- RECEIVER SUB-AXIS, measured (e13-b final verification fix round,
+  2026-09-05, [AGENT], R''-4): the receiver operand's PANIC vs the
+  argument list's hoisted events is E13's probe question in receiver
+  position, and the frontend answers it by PATH. A receiver that reaches
+  `emitExpr` — a VALUE receiver's operand (`s[i].V2(wit(5))`, `s` a
+  `[]T`), a pointer-receiver call on an already-pointer operand
+  (`s[i].M2(wit(5))`, `s` a `[]*T`), an interface-typed receiver (the
+  twin's `r.logger.Panicf(…, r.id, state.GetCommit(), …)` — the probe on
+  `r.logger` in `raft.raft.loadState`, present since the lane's first
+  pin) — IS probed when a hoisted argument event follows it: two members
+  (the receiver's panic before the argument call, or after), gc's LATE
+  member in the set (measured: gc prints `wit 5` then panics on both
+  slice shapes). A receiver that goes through `receiverAddr` — the
+  IMPLICIT `&x` of a pointer-receiver call on an addressable non-pointer
+  operand (`s[i].M2(wit(5))`, `s` a `[]T`: the `index-addr` bounds
+  check) and `(*p).M2(wit(5))` (the `addr-of-deref` nil check) — is NOT
+  probed: a singleton at the LATE member, which is gc's on both measured
+  shapes (`wit 5` then the panic), so no ∉-gc answer, but a
+  one-member set on a two-member axis (the same kind of structural
+  point as the events-first pin this row already records). A receiver
+  whose own call is the ONLY event after it (`s[i].M() + wit(5)`) is a
+  FORCED position — the receiver precedes its call, which precedes the
+  later call — and is rightly unprobed (singleton, gc agrees). The
+  events-ahead-of-arguments realization this row is about is untouched
+  (a probe reorders no events). Design `docs/2026-09-05_e13-b-design.md`
+  §4 D4/D5 and §6 item 4 carry the same statement; the `receiverAddr`
+  residue is E13 bullet (3)'s.
 
 ### R1. `int`/`uint` width — (b) PINNED to 64 bits
 
@@ -2748,21 +2821,43 @@ history block, never in a membership line.
   narrowed — back since the fix round; the previous "9 → 8" was not
   derivable from the list, audit R12).
 - Known-≠-oracle deterministic points (the honesty-critical list):
-  E3, E5, E7, R3(escaping path). Two CLASSES inside one list, stated
+  E2 (VALUE axis, its EARLY-realized kinds — BUG-101's two rows), E3,
+  E5, E7, R3(escaping path), BUG-104 (a compound target's hoisted
+  address/key temp — five rows). THREE CLASSES inside one list, stated
   per row: E3, E7, R3 are (b)/(b-n) PINS with gc on another conforming
-  member (re-envelope debts, §7); **E5 is a (c) FORCED row on which gc
-  DEVIATES** (L-016, [USER] ruling 2026-09-02) — it stays listed
+  member (re-envelope debts, §7), and E2's value axis is a (b) PIN of
+  the same kind whose gc-elsewhere member is FILED as an open bug
+  (BUG-101) rather than only recorded; **E5 is a (c) FORCED row on which
+  gc DEVIATES** (L-016, [USER] ruling 2026-09-02) — it stays listed
   because the oracle disagrees with the machine there, but the
-  disagreement is gc's, not a debt of ours. (E13 added 2026-08-20 and
-  LEFT 2026-09-05 — re-enveloped at lane e13-b, gc's member is IN the
-  set on both former axes; the C2+C3 send-then-spin wedge LEFT this
-  list 2026-08-21 — W3.2 stages C/D re-enveloped it, register #1
-  discharged; E5's class changed 2026-09-02.)
+  disagreement is gc's, not a debt of ours; **BUG-104 is an OPEN
+  observed-∉-modeled bug** (no pin and no site — the frontend's eval-once
+  temp; the fix is an envelope) listed because the oracle's deterministic
+  answer is outside the machine's set on five rows. (E13 added 2026-08-20
+  and LEFT 2026-09-05 — re-enveloped at lane e13-b, gc's member is IN the
+  set on both former axes; E2/BUG-101/BUG-104 JOINED 2026-09-05 at the
+  e13-b final verification fix round, R''-1 — the doctrine's register #2
+  sentence had claimed the two bugs were listed while this list did not
+  carry them, and E2's heading had said `known ≠ gc` without a list
+  entry; the doctrine sentence was edited in the same change, per its
+  standing rule; the C2+C3 send-then-spin wedge LEFT this list 2026-08-21
+  — W3.2 stages C/D re-enveloped it, register #1 discharged; E5's class
+  changed 2026-09-02.)
 
 ### 10.1 Movement and history (NOT membership)
 
 Nothing in this block is a class member by virtue of being named here.
 
+- **E13-b FINAL VERIFICATION FIX ROUND (2026-09-05, [AGENT]; records
+  only, no rule change): E2's value axis, BUG-101 and BUG-104 JOIN the
+  known-≠-oracle list (R''-1)**; BUG-104 (renumbered — `c-arc-c2` holds
+  the lane's former number; the entry's merge-train note) gains its receive and method-call
+  spellings (5 rows, R''-2); E13's residue (3) corrected — receivers
+  reaching `emitExpr` ARE probed, the unprobed receiver residue is the
+  `receiverAddr` path (R''-4, E14's sub-axis recorded); E12's value pin
+  carries the hoisted-allocating-conversion exception (R''-8, row
+  `bytes-conv-value-vs-mutating-call`); the membership tally re-derived
+  39 → 56 (R''-6). Counts unchanged: (a)/(b)/(c)/(d)/REFUSED as below.
 - **E13-b RE-AUDIT FIX ROUND (2026-09-05, [AGENT]): E2's PANIC axis
   ENVELOPED, E6's refusal narrowed to a one-row residue** (REFUSED count
   re-derived: 7 — the structural-allocation class counted as its own

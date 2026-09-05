@@ -149,19 +149,47 @@
 #      index/deref OPERANDS siblings of the RHS's calls, so they are
 #      PROBED like every operand, design §4 D4 rewritten) d531a225… →
 #      c358d0f4…: +10 `unseq-probe` statements (128 in total, 7 funcs +
-#      37 methods) on the phase-1 target operands of six methods —
-#      raftpb.{Message,ConfChangeV2}.CloneMessage (`out.Entries[i] = …`,
-#      `out.Responses[i] = …`, `out.Changes[i] = …` — the pointer-selector
-#      base reads), raft.MemoryStorage.CreateSnapshot
-#      (`ms.snapshot.Metadata.… = …`), raft.raft.{appendEntry,loadState}
-#      (`cloned[i].… = …`, `r.raftLog.committed = …`), raft.readOnly.recvAck
-#      (`ro.acks[from] = max(…)` — the probe the fix round had removed,
-#      back with the phase-1 rule); 0 added/removed/other changes
-#      (enumerated by a JSON diff, docs/evidence/2026-09-05_e13-b/
-#      twin-repin/). Stripping every probe from c358d0f4… still yields
-#      4ee39f73… byte for byte. Raft's twin driver reaches no early panic
-#      on these operands (pure pointer-selector reads), so the twin's
-#      observations are unchanged.
+#      37 methods); 0 added/removed/other changes (enumerated by a JSON
+#      diff, docs/evidence/2026-09-05_e13-b/twin-repin/). THE PER-PROBE
+#      LIST of the six methods whose count moved (re-derived at the
+#      final verification fix round, 2026-09-05 [AGENT], by rebuilding
+#      the fix round's frontend from commit 0de73ec5 — it reproduces
+#      d531a225… byte for byte — and diffing the two wires probe by
+#      probe; 14 probes in these methods at the tip, 10 of them NEW):
+#        raftpb.Message.CloneMessage      0 -> 2  NEW `out.Entries`, NEW `out.Responses`
+#                                                 (the phase-1 BASE operand of the targets
+#                                                 `out.Entries[i] = …CloneMessage()` /
+#                                                 `out.Responses[i] = …` — pointer-selector reads)
+#        raftpb.ConfChangeV2.CloneMessage 0 -> 1  NEW `out.Changes` (the same shape)
+#        raft.raft.appendEntry            0 -> 2  NEW `cloned[i]` x2 (the index-read base
+#                                                 operand of the targets `cloned[i].Term = new(…)`
+#                                                 / `cloned[i].Index = new(…)`)
+#        raft.raft.loadState              3 -> 4  NEW `r.raftLog` (the base operand of the
+#                                                 target `r.raftLog.committed = state.GetCommit()`);
+#                                                 PRE-EXISTING since the lane's first pin: `r.logger`
+#                                                 — the RECEIVER of `Panicf`, an interface-typed
+#                                                 receiver emitted through emitExpr and probed
+#                                                 because the arguments hoist `state.GetCommit()`
+#                                                 and `r.raftLog.lastIndex()` — and `r.id`,
+#                                                 `r.raftLog.committed`, Panicf ARGUMENT operands
+#        raft.readOnly.recvAck            1 -> 2  NEW `ro.acks` (the map-assign target's base —
+#                                                 the probe the fix round had removed, back with
+#                                                 the phase-1 rule); PRE-EXISTING `ro.acks` (the
+#                                                 `ro.acks[from]` operand inside `max(…, Uint64(ctx))`)
+#        raft.MemoryStorage.CreateSnapshot 0 -> 3 NEW `ms.snapshot.Metadata` x3 (the base operand
+#                                                 of the targets `ms.snapshot.Metadata.{Index,Term,
+#                                                 ConfState} = …`)
+#      So the ten NEW probes are all phase-1 TARGET operands (the re-audit
+#      fix round's D4 rule); the four pre-existing probes in the same
+#      methods include a method-call RECEIVER (`r.logger`) — receivers
+#      that reach emitExpr are probed (design §4 D4/D5, inventory E14's
+#      sub-axis; the final verification audit's R''-4 corrected the
+#      design's "receivers stay unprobed" — its own tally of the delta,
+#      which counted loadState x4 and recvAck x2 as new, double-counted
+#      these four pre-existing probes). Stripping every probe from
+#      c358d0f4… still yields 4ee39f73… byte for byte. Raft's twin
+#      driver reaches no early panic on these operands (pure
+#      pointer-selector reads), so the twin's observations are unchanged.
 #      Re-pin history: 2026-09-05 (round-17 merge train, lane e13-b rebased
 #      onto main 9343a310 — round-17 rebase: e13-b probes × landed
 #      fr19/b4/c2; [AGENT] reconciler). The pin at EVERY rebased commit is a
@@ -177,7 +205,7 @@
 #      added or removed. Per rebased commit:
 #        a9a2e2b1… → 31fb50dc…: rebased commit 1 (the lane's b2fd9f15, pin 7c545840… on the lane): 119 probes, 7 funcs + 33 methods
 #        31fb50dc… → 1e32bae3…: rebased commit 2 (the lane's bcf73396 audit fix round, pin d531a225… on the lane): 118 probes (R1's map-target rule, one probe fewer), 7 funcs + 33 methods
-#        1e32bae3… → 758110a3…: rebased commit 5 (the lane's 42e8bf6f re-audit fix round, pin c358d0f4… on the lane): 128 probes (+10 phase-1 target operands), 7 funcs + 37 methods
+#        1e32bae3… → 758110a3…: rebased commit 5 (the lane's 42e8bf6f re-audit fix round, pin c358d0f4… on the lane): 128 probes (+10 phase-1 target operands), 7 funcs + 37 methods; the lane's later commits (03f77a15's follow-up widening, the records rounds) emit the IDENTICAL wire — the pin stands
 #
 # Fail-closed throughout: missing baseline, failed build, failed emit,
 # failed run, or any byte drift exits 1 naming the failing pin.

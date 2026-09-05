@@ -181,10 +181,18 @@ write a bare "#6"/"#7".
    (b) as relayed by the [AGENT] coordinator, lane `e13-b`; the audit
    fix round's NARROWED refusal on the material the probe cannot reach
    stands beside it — inventory E6), and hidden-dep init order to go/types' point (E7) — with
-   the known ≠ gc cases (**E3, E7, and E5** — synced 2026-08-31 to
+   the known ≠ gc cases (**E3, E7, E5, and — since the e13-b final
+   verification fix round, 2026-09-05 — E2's VALUE axis (its
+   EARLY-realized kinds), BUG-101 (that axis's two filed rows) and
+   BUG-104 (the compound target's hoisted temp)** — synced 2026-08-31 to
    inventory §10's honesty-critical list, which this entry had drifted
    one short of, phase-2 finding A1-04; re-synced 2026-09-05 when E13
-   LEFT that list — its sibling-panic axis was RE-ENVELOPED at lane
+   LEFT that list, and again the same day when E2/BUG-101/BUG-104 JOINED
+   it (final verification finding R''-1: this sentence had claimed the
+   two bugs were on the list while the list, `E3, E5, E7, R3`, did not
+   carry them and E2's heading had gained `known ≠ gc` without joining —
+   the list and this sentence were edited in one change, per the
+   standing rule below) — its sibling-panic axis was RE-ENVELOPED at lane
    `e13-b` under the [USER] ruling (b) (relayed), the `unseqPanic` choice site,
    gc's member now certified inside the set on both former axes where
    the operand is probed — after the lane's re-audit fix round (2026-09-05)
@@ -194,9 +202,11 @@ write a bare "#6"/"#7".
    receiver operand, a structural allocation's payload) REFUSES by name
    (E6 narrowed, E13 residuals 3/5, BUG-102), so NO shape on this axis
    is a silent gc-absent single member — the measured exceptions are
-   ROWED red-first: the value axis (E12/BUG-101, two rows) and the
-   compound target's hoisted temp (BUG-104, two rows), both on §10's
-   honesty-critical list as known ≠ gc; §10
+   ROWED red-first: the value axis (E2/E12, BUG-101, two rows) and the
+   compound target's hoisted temp (BUG-104, five rows since the final
+   verification fix round — call, receive and method-call spellings),
+   both on §10's honesty-critical list as known ≠ gc, as OPEN
+   observed-∉-modeled debts (added there at R''-1, not pins); §10
    also lists R3, a representation row outside this entry's
    evaluation-order scope) carried as standing deviation records
    queued for re-envelope (inventory §7 items 3 and 5) — EXCEPT E5,

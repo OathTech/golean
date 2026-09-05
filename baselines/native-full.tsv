@@ -1,6 +1,25 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3589 (3346 PASS / 243 FAIL)
-#   [re-derived from the data rows at the round-17 rebase of e13-b onto main 9343a310, 2026-09-05 (re-audit follow-up commit): awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv -> PASS 3346, FAIL 243; main's 3528 = 3283 / 245 as history]
+# cases: 3593 (3347 PASS / 246 FAIL)
+#   [re-derived from the data rows at the round-17 rebase of e13-b onto main 9343a310, 2026-09-05 (final verification fix round commit): awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv -> PASS 3347, FAIL 246; main's 3528 = 3283 / 245 as history]
+#   [the previous figure, 3589 = 3346 / 243 (the rebased re-audit follow-up), was re-derived the same way; the lane's own figures — 3559 = 3315 / 244 -> 3563 = 3316 / 247 over main b77f3298's rows — are in the block below]
+# re-pinned: 2026-09-05 (e13-b lane, FINAL VERIFICATION FIX ROUND R''-1..R''-9 — [AGENT] worker; the final verification audit
+#   returned FIX-FIRST, records only: the widening admits no spec-forced order. Corpus rows + records; NO frontend/machine change,
+#   twin wire unchanged (c358d0f4…). drift vs the previous pin = EXACTLY 4 born rows in builtins/e13-sibling-panic-order/
+#   (inserted after the family's last row, 0 reorders), 0 flips of pre-existing rows: 3 FAIL/differential red-first on BUG-104's
+#   Cases line (compound-call-target-vs-recv, map-compound-index-key-vs-recv — `x[f()] += <-ch` / `m[t[k]] += <-ch`, witness
+#   len(ch) after recovery: gc 0 (received first), the machine 1 (the hoisted target temp panicked first); map-compound-index-
+#   key-vs-method — `m[t[k]] += q.M()`: gc `M` then the panic, the machine the panic alone; BUG-104 = the lane's entry
+#   RENUMBERED (the merge-train note on the BUGS.md entry says why), branch c-arc-c2 holds the former number and merges first; the class generalized from calls to every ordered event on the
+#   RHS, R''-2), 1 PASS strict (bytes-conv-value-vs-mutating-call — `int([]byte(s)[0]) + func() int { s = "zz"; return 1 }()`:
+#   gc 98, the tip 98, main b77f3298 123 — the hoisted allocating conversion's value-axis by-product, pinned as E12's recorded
+#   exception, R''-8). 0 PASS -> FAIL. Tally 3559 = 3315 / 244 -> 3563 = 3316 / 247. [round-17 rebase onto main 9343a310: the same rows over main's 3528 = 3283 / 245 give 3589 = 3346 / 243 -> 3593 = 3347 / 246,
+#   re-derived from the data rows by the awk above (data rows = main's 3528 + this lane's 65 born - 0 removed; the lane's 12 + 6 + 1 FAIL -> PASS flips and its
+#   lane moves re-applied against main's rows; 0 PASS -> non-PASS vs main); twin pin 758110a3 unchanged since the rebased re-audit commit (a FRESH EMIT from the
+#   merged frontend; strip-probes = a9a2e2b1 structurally) — scripts/check-frontend-pins history.] Evidence:
+#   docs/evidence/2026-09-05_e13-b/README.md "The final verification fix round".
+#   [re-derivation note: the round's first re-pin (42e8bf6f/cf85243b) had bytes-conv-payload-vs-call FAIL/frontend-export by design — the
+#   frontend refused an allocating conversion whose operand panics; measured against d75049c0's two-member set and REVERTED to inline
+#   (the operand's probe realizes both orders), so the row is PASS/membership and the figure is 3559 = 3315 / 244, not 3314 / 245.]
 #   [re-derivation note: the round's first re-pin (42e8bf6f/cf85243b) had bytes-conv-payload-vs-call FAIL/frontend-export by design — the
 #   frontend refused an allocating conversion whose operand panics; measured against d75049c0's two-member set and REVERTED to inline
 #   (the operand's probe realizes both orders), so the row is PASS/membership and the figure is 3559 = 3315 / 244, not 3314 / 245.]
@@ -1528,6 +1547,10 @@ FAIL	builtins/e13-sibling-panic-order/compound-call-target-vs-len	frontend-expor
 FAIL	builtins/e13-sibling-panic-order/compound-call-target-vs-call	differential
 FAIL	builtins/e13-sibling-panic-order/map-compound-index-key-vs-call	differential
 FAIL	builtins/e13-sibling-panic-order/slice-value-early-len-hoist	differential
+FAIL	builtins/e13-sibling-panic-order/compound-call-target-vs-recv	differential
+FAIL	builtins/e13-sibling-panic-order/map-compound-index-key-vs-recv	differential
+FAIL	builtins/e13-sibling-panic-order/map-compound-index-key-vs-method	differential
+PASS	builtins/e13-sibling-panic-order/bytes-conv-value-vs-mutating-call	-
 PASS	builtins/len-cap-array-pointer	-
 PASS	builtins/len-vs-call-order/chan	-
 PASS	builtins/len-vs-call-order/slice	-
