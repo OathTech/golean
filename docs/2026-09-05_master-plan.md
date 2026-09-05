@@ -1601,3 +1601,16 @@ off `main` with `scripts/setup-deps --from <sibling checkout>`:
   eval tests 198 ok, twin pin unchanged (`git_dirty=true` noted by the
   gate — it certified the worktree state, not a commit). The clean-tip
   re-run is recorded in the addendum below once it completes.
+
+**Addendum 2026-09-05 ([AGENT], lane `master-plan-0905`) — the clean-tip
+gate.** `scripts/capped scripts/ci --diff` at the committed tip
+`d797fb94` (this file + the `CLAUDE.md` pointer, tree otherwise
+byte-identical to `9343a310`): `RESULT: PASS`; 24 steps ok, 0 FAIL;
+`differential coverage summary: cases=3528 pass=3283 fail=245`;
+baseline diff FULL 3528/3528 no regression; negative baseline diff no
+regression (394); `check-frontend-pins: ok [twin-wire] — fresh emit =
+pinned wire (a9a2e2b14d60…)`; `check-stdlib-register: ok`; eval tests
+198 ok; reconciler 4 findings, 0 HIGH, report-only (C13, C5, C6 — this
+file's e13-b refs — C9); no `git_dirty` note (clean tree). Log kept in
+the lane's `.tmp/ci-diff-clean.log` (untracked; the tail is this
+paragraph and the commit message).
