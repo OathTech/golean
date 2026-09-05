@@ -196,3 +196,58 @@ exit=0
 166-
 167-[1mRESULT: FAIL[0m
 168-exit=1
+
+==================================================================================================
+# ROUND-17 REBASE — scripts/capped scripts/ci --diff at the CLEAN rebased tip 433b5f4c (branch c-arc-c2 rebased onto main cf858f0f;
+#   [AGENT] reconciler, 2026-09-05). Tree clean at the run: artifacts/coverage/latest.meta.tsv git_commit=433b5f4c… git_dirty=false,
+#   go_toolchain=go1.26.5, manifest_cases=3528. Tail verbatim (ANSI stripped):
+# cases=3528 pass=3283 fail=245 = main's 3523/3279/244 + the lane's 5 born rows (4 PASS, 1 FAIL red-first on BUG-103); baseline diff FULL
+#   3528/3528 no regression (zero drift; no re-pin happened in the run, so no re-pin-guard line is printed); twin = a9a2e2b1… (fresh emit);
+#   eval tests 198 ok; reconciler 3 findings 0 HIGH — C13 (historical Go-version mentions) and C5 (1 frontier-table citation) are present on
+#   main's own c-arc-b4 gate tail (pre-existing, not this lane's); C9 is merge-protocol step 5a's ci --slow at the train.
+==================================================================================================
+meta: artifacts/coverage/negative-latest.meta.tsv
+
+── derived oracle artifacts re-derived (Tests/FloatVectors.lean + tools/nativefrontend/inittask-std.tsv)
+
+── negative baseline diff
+no regression: 394 case(s) run in negative-latest.tsv match baselines/negative-full.tsv
+
+── differential baseline diff (scripts/coverage-baseline-diff)
+no regression: 3528 case(s) run in latest.tsv match baselines/native-full.tsv
+
+── cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)
+  [01] C13  MEDIUM  78 doc site(s) across 9 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
+  [02] C5  MEDIUM  1 frontier-table case citation(s) do not resolve against the baseline
+  [03] C9  MEDIUM  the wire schema moved after the certification date 2026-09-05T05:46:32+00:00 (3 commit(s) to wire.go/NativeToIR.lean) — the certified set's wire sha is only current if `scripts/ci --slow` has re-enumerated since
+
+══ scripts/ci summary ══
+  note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   core build (warning-free)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   eval tests (198 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  ok   negative baseline diff (no regression)
+  ok   baseline diff FULL (3528/3528, no regression)
+  note reconciler: 3 finding(s), 0 HIGH — report-only (details: tools/reconcile-records)
+
+RESULT: PASS
+exit=0
