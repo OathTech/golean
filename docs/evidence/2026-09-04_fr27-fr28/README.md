@@ -11,8 +11,13 @@ BUG-083 (fixed AS A NAMED REFUSAL), BUG-032 (FR-28 amendment), BUG-062
 `len-hoist-panic-order`; `baselines/native-full.tsv` (re-pin header); `docs/2026-08-11_latitude-inventory.md`
 E13 (the four-way treatment paragraph). Tree: branch `fr27-fr28` off main
 `56982423` (3402 rows, 3189/213), REBASED onto main `ac45aedd` at the audit
-fix round 2026-09-05 (main added only the certified google-search record);
-the commits are named in the Gate section. Host: linux/amd64 (shared build
+fix round 2026-09-05 (main added only the certified google-search record),
+then REBASED again onto main `cb4a6d48` at merge train round 14 (main had
+gained the flaky-panic-wait merge — +1 born-PASS noodler row and a stage-only
+move, taking main to 3403 = 3190/213 — and the docs-only g6-reflect-memo
+merge; the rebased tracked figure is 3434 = 3209/225, re-derived from the
+data rows, [AGENT] rebase reconciliation); the commits are named in the
+Gate section. Host: linux/amd64 (shared build
 box, other lanes active — no timing-sensitive numbers here). Toolchain:
 `go version go1.26.5 linux/amd64` = `baselines/go-oracle-pin`; golean from
 `scripts/capped lake build golean` on this tree (`GoLean/` untouched — the
@@ -192,7 +197,8 @@ panic-free,make-hint-call,make-hint-map-read}` PASS (guard controls),
 `{make-slice-panicky-between,make-chan-cap-panicky-between,make-index-left,
 make-inner-len,len-assert-vs-nil-operand,len-nil-left-vs-index-operand}`
 FAIL/frontend-export by design. 0 PASS→non-PASS. 3402 + 31 = 3433 = 3208 /
-225 (ledger §8o).
+225 (ledger §8o) at the lane's own pins; 3403 + 31 = 3434 = 3209 / 225 after
+the round-14 rebase onto main `cb4a6d48` (ledger §8).
 
 ## Reproduction (repo root)
 
@@ -220,21 +226,27 @@ scripts/capped scripts/ci --diff
 
 ## Gate
 
-Slice commit `6441bd37` (branch `fr27-fr28` off main `56982423`; this
-README's gate paragraph and the `ci-diff.txt` transcript land in the
-records follow-up commit — the tree the gate certified is `6441bd37`, which
-the follow-up changes only under `docs/evidence/`).
-`scripts/capped scripts/ci --diff` at `6441bd37` (clean tree):
-**RESULT: PASS** — `differential coverage summary: cases=3427 pass=3207
-fail=220 export_status=0`; `baseline diff FULL (3427/3427, no regression)`;
+Commits on branch `fr27-fr28`, rebased onto main `ac45aedd` at the audit
+fix round: `023a2673` (the slice), `05fb678a` (audit fix round F1-F7) — these
+ids are the pre-round-14 ones; the merge-train round-14 rebase onto main
+`cb4a6d48` rewrote them (header/tally conflicts in the baseline and the
+ledger reconciled, counts re-derived from the data rows; the round-14 gate
+at the rebased tip is the merge train's record, not this README's); this
+README's gate paragraph, the `ci-diff.txt` transcript and the clean-tip
+`after/lower-diagnose-report.txt` land in the records follow-up commit —
+the tree the gate certified is `05fb678a`, which the follow-up changes only
+under `docs/evidence/`.
+`scripts/capped scripts/ci --diff` at `05fb678a` (clean tree, `git_dirty=false`):
+**RESULT: PASS** — `differential coverage summary: cases=3433 pass=3208
+fail=225 export_status=0`; `baseline diff FULL (3433/3433, no regression)`;
 `re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)`;
 `frontend pins (realized init-order deviation + twin wire = pinned bytes)`
 — the twin wire pin 4ee39f73… UNCHANGED; `stdlib admission register =
 frontend tables`; `spec-anchor citations resolve at the pin`; frontend unit
-tests + lowering-diagnostic tables green; `check-bugs: ok (92 bug(s))`;
-reconciler 3 finding(s), 0 HIGH (the three MEDIUMs — C13 historical Go
-version strings, C5 FR-7's pre-existing `=` citation, C9 the wire-schema
-commit 65272847 of lane fr4-rowm vs the certified set's date — are all
-pre-existing on main 56982423). Transcript: `ci-diff.txt` (absolute
-worktree prefix stripped). An earlier full run on the DIRTY tree before the
-records were finished also passed (3427/3427, 0 flips) and is not kept.
+tests (incl. determinism / wire-integrity) + lowering-diagnostic tables
+green; `check-bugs: ok (92 bug(s))`; reconciler 2 finding(s), 0 HIGH (C13
+historical Go version strings, C5 FR-7's pre-existing `=` citation — both
+pre-existing on main; C9 cleared by the rebase). Transcript: `ci-diff.txt`
+(absolute worktree prefix stripped). History: the pre-rebase slice commit
+`6441bd37` also certified PASS (3427/3427, 0 flips) before the audit fix
+round found F1; that transcript is superseded and not kept.

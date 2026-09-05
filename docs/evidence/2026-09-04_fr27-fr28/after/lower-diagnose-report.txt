@@ -1,6 +1,6 @@
 DIAGNOSTIC — NOT A LOWERING. tools/lowerdiag report: no wire is written; nothing in this file is a gate input.
 target: artifacts/cedar-after/cases/all
-commit: 0bfaee03fd7ff0d90fe17195811c3d5f0b502cd6+dirty   go: go1.26.5   tables: 1eeeaa9573c0 (causes.tsv + machine-surface.tsv + library-refusals.tsv)
+commit: 05fb678a7bb32bcb51a1ec28a30604d59075a7d7   go: go1.26.5   tables: 1eeeaa9573c0 (causes.tsv + machine-surface.tsv + library-refusals.tsv)
 register: docs/stdlib-admission-register.md (42 rows)   causes table: 59 rows
 
 == first refusal (what the frontend says today)
