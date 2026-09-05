@@ -87,7 +87,8 @@ must stay visible in theorem statements and the final evidence record.
 ## Implemented result and assessment
 
 [AGENT] The bounded A2 implementation is complete, with the separate gate
-green; independent adversarial review and integration remain owed. This is
+green and [independent adversarial review PASS](2026-09-05_iris-customer-review.md);
+integration remains owed. The review required no code changes. This is
 not a declaration that the whole of Gate A has passed. The implementation is
 in `spikes/iris-customer/`; its README is the theorem and module map.
 

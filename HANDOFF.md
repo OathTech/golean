@@ -5,7 +5,8 @@ Iris test customer plus an independent known-issues fix thread. Branch
 `gate-a2-iris`, base `8db2d6da`. Main remains untouched.
 
 Status: bounded implementation complete; dedicated gate PASS. Independent
-adversarial review and integration are OWED. No merge/push authorized.
+adversarial review PASS, with no required code changes; integration is OWED.
+No merge/push authorized. Review: `docs/2026-09-05_iris-customer-review.md`.
 
 Plan and completed assessment: `docs/2026-09-05_iris-customer-design.md`.
 Package: `spikes/iris-customer/` (separate Lake package, outside default core
@@ -29,10 +30,14 @@ matched, and 3/3 differential cases passed on go1.26.5. Fingerprint:
 Dependency pins are exact and tracked-clean; clean network bootstrap was
 not tested. No semantics runtime, frontend or baseline edits in this lane.
 
-Next: pose the charter's unconditional pre-merge adversarial audit ask; do
-not merge without explicit sign-off. Review ownership non-vacuity, the Iris
-dependency of the result, source/artifact provenance, exact pool/output
-scope and the gate. Then promote semantics-owned A1 bridges/facade, specify
+The user authorized the pre-merge review on 2026-09-05. The independent
+reviewer reproduced the gate and verified ownership non-vacuity, the Iris
+dependency of the result, source/artifact provenance and exact pool/output
+scope. A scratch mutation of the deferred store from true to false made the
+unchanged WP proof fail at the store. Review artifacts are preserved separately
+from the original sealed implementation evidence.
+
+Next: obtain explicit merge sign-off. Then promote semantics-owned A1 bridges/facade, specify
 A3's admission slice, and exercise this customer across B7/C1. General
 composition and concurrent adequacy remain open; A2 does not close all Gate A.
 

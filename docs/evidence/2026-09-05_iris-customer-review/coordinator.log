@@ -1,0 +1,12 @@
+Coordinator review checks; 2026-09-05
+A2 candidate: 2f0a5a0386c23f8ecf0514bb2e6588df9ba3cada
+BUG-103 candidate: 7b7bc42c3f77154099ccbb3c6f6a302a8d1987d4
+Full BUG-103 measurement matches all 3598 baseline outcomes and permitted stages.
+Stage alternatives respected: channels/select-select/beside-loop = lean-observation, baseline = lean-observation|differential; pre-existing allowance unchanged.
+Changed existing entry: structs/decl-order-reversed/conversion-array-target
+Added entries: structs/decl-order-reversed/conversion-empty-eval-once,structs/decl-order-reversed/conversion-float-elements,structs/decl-order-reversed/conversion-nested-copy,structs/decl-order-reversed/conversion-shared-references,structs/decl-order-reversed/conversion-unnamed-target
+Removed entries: none
+Changed path intersection: HANDOFF.md
+No combined-tree execution has been performed; handoff resolution, rebase and applicable gates are integration work.
+Primary main: 8db2d6dad165393f4d3cdffee63b8e7d624f39e6
+Primary checkout status: clean

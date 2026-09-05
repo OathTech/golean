@@ -1,0 +1,15 @@
+/home/dev/projects/golean/.claude/worktrees/gate-a2-iris/.tmp/iris-adversarial.Bj1UUI/mutated-handler/GoLeanIris/Examples.lean:151:22: error: Tactic `rfl` failed: The left-hand side
+  normalizeValueForTy state✝ Ty.bool (GoValue.bool false)
+is not definitionally equal to the right-hand side
+  Except.ok (GoValue.bool true)
+
+GF : BundledGFunctors
+inst✝ : GoGS GF
+heap : GoCore.Heap
+hctx : GoGS.context GF = programState heap
+a : Nat
+old : GoValue
+p t : Nat
+state✝ : ExecState
+a✝ : ContextEq state✝ (GoGS.context GF)
+⊢ normalizeValueForTy state✝ Ty.bool (GoValue.bool false) = Except.ok (GoValue.bool true)
