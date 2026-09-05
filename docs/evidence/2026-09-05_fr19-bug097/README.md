@@ -153,7 +153,20 @@ first README/design/census said it still exported (withdrawn at R2).
 
 ## Gate
 
-Full run 2 (`.tmp/ci-diff-2.log`, tail in `gate-tail-run2-before-repin.txt`):
+FINAL (audit fix round R18): `gate-tail.txt` is the FULL `scripts/capped
+scripts/ci --diff` at the CLEAN committed tip 9296512f — every step ok,
+`baseline diff FULL (3523/3523, no regression)`, `negative baseline diff
+(no regression)` (394), `re-pin guard (0 PASS→non-PASS flip(s))`,
+`eval tests (179 ok)`, reconciler 3 findings / 0 HIGH (the pre-existing
+MEDIUM C13/C5/C9), RESULT: PASS; both run records carry
+`git_commit 9296512f… git_dirty false` (the file reproduces them). The
+first attempt at this run (882d4d23) went dirty mid-run because the
+worker edited records while it ran — discarded, not recorded; the lane's
+earlier `gate-tail.txt` (fast gate, `git_dirty=true`) is replaced.
+`differential coverage summary: cases=3523 pass=3279 fail=244` = the
+tracked baseline, tallied by row.
+
+Lane landing, for history — full run 2 (`.tmp/ci-diff-2.log`, tail in `gate-tail-run2-before-repin.txt`):
 `differential coverage summary: cases=3516 pass=3275 fail=241`; drift vs the
 tracked baseline = EXACTLY the predicted set — 8 FAIL→PASS flips
 (`generics/local-type-argument`, `multipkg/same-name-anon-iface`,
