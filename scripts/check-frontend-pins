@@ -120,6 +120,35 @@
 #      main's table, 0 in the new one); funcs, methods, methodSets,
 #      globals, fileOrder, package, schema IDENTICAL including order.
 #      Expected classes only (fr19's fields, c2's order); nothing else.
+#      Re-pin history: 2026-09-05 (lane e13-b — latitude E13 option (b),
+#      RULED [USER] Mike 2026-09-05, relayed by the [AGENT] coordinator,
+#      cited as relayed: «we should do what the standard supports, and avoid
+#      over-refusal if we can. That's what (b) means right?») 4ee39f73… →
+#      11270c55…: the frontend now emits an `unseq-probe` statement at the
+#      lexical position of every panicky non-call operand (here: 119
+#      `field-get` operands — pointer-selector reads such as `pr.Match`)
+#      that has a sibling ordered event lexically after it, so the machine
+#      realizes BOTH spec-unsequenced orders (`ChoiceSite.unseqPanic`) —
+#      the SOLE structural change (7 funcs + 33 methods gain probe
+#      statements; 0 added/removed/other changes; enumerated by a JSON
+#      diff, docs/evidence/2026-09-05_e13-b/twin-repin/). Raft's twin
+#      driver reaches no early panic on these operands, so the twin's
+#      observations are unchanged (the probe pops only on a panic).
+#      Design: docs/2026-09-05_e13-b-design.md §4/§7.
+#      Re-pin history: 2026-09-05 (round-17 merge train, lane e13-b rebased
+#      onto main 9343a310 — round-17 rebase: e13-b probes × landed
+#      fr19/b4/c2) a9a2e2b1… → 31fb50dc…: a FRESH EMIT from the MERGED frontend
+#      over the twin assembly at this rebased commit, never a merge result
+#      (the lane's own pin above was taken from the pre-fr19/pre-c2
+#      frontend; neither side's bytes were kept). Structural diff against
+#      main's a9a2e2b1… (order-aware, docs/evidence/2026-09-05_e13-b/
+#      twin-repin/round17-*): 7 funcs + 33 methods gain `unseq-probe`
+#      statements (119 in total); stripping every probe yields main's
+#      a9a2e2b1… (structural identity incl. order); types (93 entries,
+#      fr19's display/pkg, c2's dependency order), globals, methodSets,
+#      fileOrder, package, schema IDENTICAL. Expected classes only (this
+#      lane's probes); nothing else. Later commits of the lane re-emit
+#      at each rebased commit — the entries below record each hash.
 #
 # Fail-closed throughout: missing baseline, failed build, failed emit,
 # failed run, or any byte drift exits 1 naming the failing pin.

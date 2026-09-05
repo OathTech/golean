@@ -1,0 +1,67 @@
+# focused run (scripts/diff-one over the 65 touched rows) — result / id / lane detail
+result	id	stage	detail
+PASS	builtins/len-vs-call-order/len-nil-only-operand	-	
+PASS	builtins/len-vs-call-order/len-nil-only-both	-	
+PASS	builtins/e13-sibling-panic-order/slice-left-len-call	-	
+PASS	builtins/len-vs-call-order/make-nil-only-both	-	
+PASS	builtins/len-vs-call-order/panicky-between	-	
+PASS	builtins/len-vs-call-order/make-hint-panic-free	-	
+PASS	builtins/len-vs-call-order/len-nil-only-none	-	
+PASS	builtins/len-vs-call-order/chan	-	
+PASS	builtins/e13-sibling-panic-order/assert-left-min-inline	-	
+PASS	builtins/len-vs-call-order/make-nil-only-none	-	
+PASS	builtins/len-vs-call-order/len-nil-left-vs-index-operand	-	
+PASS	builtins/len-vs-call-order/lexer-idiom	-	
+PASS	binop-order/operand-panic-vs-call/left-first	-	
+PASS	builtins/len-vs-call-order/make-nil-only-operand	-	
+PASS	builtins/len-vs-call-order/short-circuit-skipped	-	
+PASS	builtins/e13-sibling-panic-order/assert-right-call	-	
+PASS	builtins/len-vs-call-order/recv-bearing	-	
+PASS	builtins/len-vs-call-order/make-hint-map-read	-	
+PASS	builtins/len-vs-call-order/short-circuit	-	
+PASS	builtins/e13-sibling-panic-order/assert-middle	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-middle)
+PASS	builtins/e13-sibling-panic-order/assert-left-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-left-call)
+PASS	builtins/len-vs-call-order/make-chan-cap-panicky-between	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/len-vs-call-order/make-chan-cap-panicky-between)
+PASS	builtins/e13-sibling-panic-order/assert-left-copy	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-left-copy)
+PASS	builtins/len-vs-call-order/make-index-left	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/len-vs-call-order/make-index-left)
+PASS	builtins/len-vs-call-order/make-hint-array-any-key	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/len-vs-call-order/make-hint-array-any-key)
+PASS	builtins/len-vs-call-order/len-struct-any-key-left-assert	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/len-vs-call-order/len-struct-any-key-left-assert)
+PASS	builtins/e13-sibling-panic-order/assert-composite-lit	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-composite-lit)
+PASS	builtins/e13-sibling-panic-order/iface-cmp-left-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/iface-cmp-left-call)
+PASS	builtins/e13-sibling-panic-order/conv-left-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/conv-left-call)
+PASS	builtins/e13-sibling-panic-order/deref-left-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/deref-left-call)
+PASS	builtins/e13-sibling-panic-order/assert-left-method	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-left-method)
+PASS	builtins/e13-sibling-panic-order/deref-left-index-arg-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/deref-left-index-arg-call)
+PASS	builtins/e13-sibling-panic-order/assert-left-make-slice	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-left-make-slice)
+PASS	builtins/e13-sibling-panic-order/index-middle	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/index-middle)
+PASS	builtins/e13-sibling-panic-order/index-left-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/index-left-call)
+PASS	builtins/e13-sibling-panic-order/two-index-left-call	membership	enumerated=3 exhibited=1 draws=32 (K=32; pin members=3 NOT reached — 1 distinct drawn) unexhibited=2 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/two-index-left-call)
+PASS	builtins/e13-sibling-panic-order/shift-left-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/shift-left-call)
+PASS	builtins/e13-sibling-panic-order/assert-vs-mutating-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-vs-mutating-call)
+PASS	builtins/len-vs-call-order/len-assert-vs-nil-operand	-	
+PASS	builtins/len-vs-call-order/slice	-	
+PASS	builtins/e13-sibling-panic-order/div-left-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/div-left-call)
+PASS	builtins/len-vs-call-order/make-slice-panicky-between	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/len-vs-call-order/make-slice-panicky-between)
+PASS	builtins/len-vs-call-order/panicky-before-call	-	
+PASS	builtins/e13-sibling-panic-order/index-assert-left-call	membership	enumerated=3 exhibited=1 draws=32 (K=32; pin members=3 NOT reached — 1 distinct drawn) unexhibited=2 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/index-assert-left-call)
+PASS	builtins/len-vs-call-order/make-nil-only-left	-	
+PASS	builtins/e13-sibling-panic-order/index-composite-lit	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/index-composite-lit)
+PASS	builtins/e13-sibling-panic-order/assert-arg-sibling	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-arg-sibling)
+PASS	builtins/len-vs-call-order/make-hint-generic-int-key	-	
+PASS	builtins/len-vs-call-order/hint-panicky-between	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/len-vs-call-order/hint-panicky-between)
+PASS	builtins/len-vs-call-order/len-nil-only-left	-	
+PASS	builtins/e13-sibling-panic-order/index-arg-sibling	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/index-arg-sibling)
+PASS	builtins/e13-sibling-panic-order/forced-arg-only	-	
+PASS	builtins/e13-sibling-panic-order/assert-left-len-slice-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-left-len-slice-call)
+PASS	builtins/len-vs-call-order/make-inner-len	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/len-vs-call-order/make-inner-len)
+PASS	builtins/len-vs-call-order/make-hint-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/len-vs-call-order/make-hint-call)
+PASS	builtins/e13-sibling-panic-order/send-chan-index	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/send-chan-index)
+PASS	binop-order/operand-panic-vs-call/call-before-left	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/binop-order/operand-panic-vs-call/call-before-left)
+PASS	binop-order/operand-panic-vs-call/call-before-left-div	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/binop-order/operand-panic-vs-call/call-before-left-div)
+PASS	builtins/e13-sibling-panic-order/index-left-call-arg-panics	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/index-left-call-arg-panics)
+PASS	builtins/e13-sibling-panic-order/assert-left-append	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-left-append)
+PASS	builtins/e13-sibling-panic-order/assert-left-new-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-left-new-call)
+PASS	builtins/len-vs-call-order/make-hint-struct-any-key	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/len-vs-call-order/make-hint-struct-any-key)
+PASS	builtins/len-vs-call-order/make-hint-generic-any-key	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/len-vs-call-order/make-hint-generic-any-key)
+PASS	builtins/e13-sibling-panic-order/assert-return-list	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-return-list)
+PASS	builtins/e13-sibling-panic-order/assert-left-recv-w	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-left-recv-w)

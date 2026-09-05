@@ -2873,7 +2873,7 @@ func (e *emitter) emitStmtList(list []ast.Stmt) ([]any, error) {
 		e.hoisted = nil
 		e.sweepStmt = s
 		w, err := e.emitStmt(s)
-		hoists := e.hoisted
+		hoists := pruneTrailingProbes(e.hoisted)
 		e.hoisted = saved
 		e.sweepStmt = savedRoot
 		if err != nil {
@@ -2900,7 +2900,7 @@ func (e *emitter) hoist(node any, resultType types.Type) (any, error) {
 	}
 	name := "$c" + itoa(e.tmpSeq)
 	e.tmpSeq++
-	e.hoisted = append(e.hoisted, map[string]any{
+	e.pushHoist(map[string]any{
 		"stmt":   "assign",
 		"define": true,
 		"lhs":    []any{map[string]any{"target": "declare", "id": name, "type": ty}},
@@ -2942,7 +2942,7 @@ func (e *emitter) splatMultiCall(c *ast.CallExpr) ([]any, error) {
 		lhs = append(lhs, map[string]any{"target": "declare", "id": name, "type": ty})
 		idents = append(idents, map[string]any{"expr": "ident", "name": name, "type": ty})
 	}
-	e.hoisted = append(e.hoisted, map[string]any{
+	e.pushHoist(map[string]any{
 		"stmt":   "assign",
 		"define": true,
 		"lhs":    lhs,
@@ -3699,7 +3699,7 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 
 // emitAssignTarget emits an lvalue. On `:=`, a target ident that go/types
 // records as a new definition is a declaration (carries its type).
-func (e *emitter) emitAssignTarget(l ast.Expr, define bool) (any, error) {
+func (e *emitter) emitAssignTargetUnprobed(l ast.Expr, define bool) (any, error) {
 	if pname, ok := e.capturedPtr(l); ok {
 		return map[string]any{"target": "addr",
 			"expr": map[string]any{"expr": "ident", "name": pname}}, nil
@@ -3948,7 +3948,7 @@ func (e *emitter) emitDeclStmt(st *ast.DeclStmt) (any, error) {
 				node = map[string]any{"stmt": "var", "decls": decls}
 			}
 		}
-		hoists := e.hoisted
+		hoists := pruneTrailingProbes(e.hoisted)
 		e.hoisted = saved
 		e.sweepStmt = savedRoot
 		if err != nil {
@@ -3996,7 +3996,7 @@ func (e *emitter) emitIf(st *ast.IfStmt) (any, error) {
 		saved := e.hoisted
 		e.hoisted = nil
 		cond, err = e.emitExpr(st.Cond)
-		condHoists = e.hoisted
+		condHoists = pruneTrailingProbes(e.hoisted)
 		e.hoisted = saved
 	} else {
 		// No init: there is no scope to stay inside, and the enclosing
@@ -4023,7 +4023,7 @@ func (e *emitter) emitIf(st *ast.IfStmt) (any, error) {
 		saved := e.hoisted
 		e.hoisted = nil
 		els, err := e.emitStmt(st.Else)
-		elseHoists := e.hoisted
+		elseHoists := pruneTrailingProbes(e.hoisted)
 		e.hoisted = saved
 		if err != nil {
 			return nil, err
@@ -4161,7 +4161,7 @@ func (e *emitter) emitFor(st *ast.ForStmt) (any, error) {
 		e.hoisted = nil
 		e.sweepStmt = st.Cond
 		cond, err := e.emitExpr(st.Cond)
-		condHoists := e.hoisted
+		condHoists := pruneTrailingProbes(e.hoisted)
 		e.hoisted = saved
 		e.sweepStmt = savedRoot
 		if err != nil {
@@ -4181,7 +4181,7 @@ func (e *emitter) emitFor(st *ast.ForStmt) (any, error) {
 		e.hoisted = nil
 		e.sweepStmt = st.Post
 		post, err := e.emitStmt(st.Post)
-		postHoists := e.hoisted
+		postHoists := pruneTrailingProbes(e.hoisted)
 		e.hoisted = saved
 		e.sweepStmt = savedRoot
 		if err != nil {
@@ -4232,7 +4232,7 @@ func (e *emitter) emitForPerIteration(st *ast.ForStmt, vars []*ast.Ident) (any, 
 		e.hoisted = nil
 		e.sweepStmt = st.Init
 		initW, err := e.emitStmt(st.Init)
-		hoists := e.hoisted
+		hoists := pruneTrailingProbes(e.hoisted)
 		e.hoisted = saved
 		e.sweepStmt = savedRoot
 		if err != nil {
@@ -4302,7 +4302,7 @@ func (e *emitter) emitForPerIteration(st *ast.ForStmt, vars []*ast.Ident) (any, 
 		e.hoisted = nil
 		e.sweepStmt = st.Post
 		post, err := e.emitStmt(st.Post)
-		postHoists := e.hoisted
+		postHoists := pruneTrailingProbes(e.hoisted)
 		e.hoisted = saved
 		e.sweepStmt = savedRoot
 		if err != nil {
@@ -4326,7 +4326,7 @@ func (e *emitter) emitForPerIteration(st *ast.ForStmt, vars []*ast.Ident) (any, 
 		e.hoisted = nil
 		e.sweepStmt = st.Cond
 		cond, err := e.emitExpr(st.Cond)
-		condHoists := e.hoisted
+		condHoists := pruneTrailingProbes(e.hoisted)
 		e.hoisted = saved
 		e.sweepStmt = savedRoot
 		if err != nil {
@@ -4651,7 +4651,7 @@ func (e *emitter) emitRange(rs *ast.RangeStmt) (any, error) {
 // once). When the lvalue is effectful, pre-bind its address to a temp and
 // read through it; a pure lvalue keeps the direct two-emission form, whose
 // double evaluation is unobservable.
-func (e *emitter) emitReadWriteTarget(lv ast.Expr) (any, any, error) {
+func (e *emitter) emitReadWriteTargetUnprobed(lv ast.Expr) (any, any, error) {
 	if !containsCall(lv) {
 		target, err := e.emitLValue(lv)
 		if err != nil {
@@ -4688,6 +4688,7 @@ func (e *emitter) emitReadWriteTarget(lv ast.Expr) (any, any, error) {
 // first refactor emitted it first and maps/compound-assign-eval-once
 // caught the swap immediately).
 func (e *emitter) emitMapCompound(ix *ast.IndexExpr, mt *types.Map, op string, rhsExpr ast.Expr) (any, error) {
+	e.probeSuppress++ // the map-element TARGET's base and key (E2's axis, not E13's)
 	baseW, err := e.emitExpr(ix.X)
 	if err != nil {
 		return nil, err
@@ -4697,6 +4698,7 @@ func (e *emitter) emitMapCompound(ix *ast.IndexExpr, mt *types.Map, op string, r
 		return nil, err
 	}
 	keyW, err := e.emitExpr(ix.Index)
+	e.probeSuppress--
 	if err != nil {
 		return nil, err
 	}
@@ -4855,7 +4857,7 @@ func (e *emitter) emitTypeSwitch(st *ast.TypeSwitchStmt) (any, error) {
 	e.hoisted = nil
 	e.sweepStmt = guardExpr
 	guardW, err := e.emitExpr(guardExpr)
-	hoists := e.hoisted
+	hoists := pruneTrailingProbes(e.hoisted)
 	e.hoisted = saved
 	e.sweepStmt = savedRoot
 	if err != nil {
@@ -5018,7 +5020,7 @@ func (e *emitter) emitSwitch(st *ast.SwitchStmt) (any, error) {
 		e.hoisted = nil
 		e.sweepStmt = st.Tag
 		tagExpr, err := e.emitExpr(st.Tag)
-		hoists := e.hoisted
+		hoists := pruneTrailingProbes(e.hoisted)
 		e.hoisted = saved
 		e.sweepStmt = savedRoot
 		if err != nil {
@@ -5107,7 +5109,7 @@ func (e *emitter) emitSwitch(st *ast.SwitchStmt) (any, error) {
 		e.hoisted = nil
 		e.sweepStmt = cases[k].expr
 		cw, err := e.emitExpr(cases[k].expr)
-		hoists := e.hoisted
+		hoists := pruneTrailingProbes(e.hoisted)
 		e.hoisted = saved
 		e.sweepStmt = savedRoot
 		if err != nil {
@@ -5209,7 +5211,10 @@ func (e *emitter) emitSwitch(st *ast.SwitchStmt) (any, error) {
 }
 
 func (e *emitter) emitExpr(x ast.Expr) (any, error) {
+	start := len(e.hoisted)
+	e.nodeStarts = append(e.nodeStarts, start)
 	node, err := e.emitExprBare(x)
+	e.nodeStarts = e.nodeStarts[:len(e.nodeStarts)-1]
 	if err != nil {
 		return nil, err
 	}
@@ -5221,7 +5226,184 @@ func (e *emitter) emitExpr(x ast.Expr) (any, error) {
 			}
 		}
 	}
+	// THE UNSEQUENCED-OPERAND PROBE (latitude E13 option (b), RULED [USER]
+	// 2026-09-05 relayed; lane e13-b; design docs/2026-09-05_e13-b-design.md
+	// §4 rules D1–D4). A panicky NON-CALL operand that stays inline
+	// (probeKind: index/slice/assertion/deref/division/shift/interface
+	// comparison/slice→array conversion) gets an `unseq-probe` statement at
+	// its LEXICAL position among the hoisted events — appended now, so it
+	// sits before every event hoisted after it. The machine evaluates the
+	// probe there: a value is discarded (the operand is re-evaluated at its
+	// residual position), a panic is the `unseqPanic` pick (DEFER = the
+	// pre-change trajectory, RAISE = gc's assertion-axis realization). A
+	// child's probe is subsumed by its panicky parent's (`x[a[i]]` probes
+	// once); an operand of the event being hoisted never keeps one
+	// (pushHoist drops them — the FORCED position); a trailing probe with
+	// no event after it is pruned at the sweep's capture (order-transparent).
+	// Not for assignment targets (probeSuppress — E2/E3/E4), not for an
+	// operand containing `recover()` (double evaluation would change it —
+	// the decoder refuses such a probe fail-closed), not for a hoisted node
+	// (its residual is a temp).
+	if e.probeSuppress == 0 && !isHoistedTemp(node) && e.probeKind(x) && !containsRecover(e, x) {
+		e.dropTrailingProbes(start)
+		e.hoisted = append(e.hoisted, map[string]any{"stmt": "unseq-probe", "expr": node})
+	}
 	return node, nil
+}
+
+// isProbeStmt reports whether a hoist-accumulator entry is an
+// `unseq-probe` statement.
+func isProbeStmt(st any) bool {
+	m, ok := st.(map[string]any)
+	return ok && m["stmt"] == "unseq-probe"
+}
+
+// isHoistedTemp reports whether an emitted node is the temp reference of a
+// hoisted event (`$c…`/`$mv…`): its residual cannot panic, so it is never
+// probed.
+func isHoistedTemp(node any) bool {
+	m, ok := node.(map[string]any)
+	if !ok || m["expr"] != "ident" {
+		return false
+	}
+	name, ok := m["name"].(string)
+	return ok && strings.HasPrefix(name, "$")
+}
+
+// dropTrailingProbes removes the `unseq-probe` entries at the END of the
+// accumulator whose index is ≥ start (contiguous from the end).
+func (e *emitter) dropTrailingProbes(start int) {
+	for len(e.hoisted) > start && isProbeStmt(e.hoisted[len(e.hoisted)-1]) {
+		e.hoisted = e.hoisted[:len(e.hoisted)-1]
+	}
+}
+
+// pushHoist appends an event's hoisted statement(s) to the accumulator —
+// THE one way an event joins it (E13 option (b), design §4 D2). It first
+// drops the trailing probes appended since the CURRENT node's start:
+// those probe the node's own operands, which the event's statement
+// evaluates itself (spec#Order_of_evaluation: "g cannot be called before
+// its arguments are evaluated" — the FORCED position), so a probe there
+// would only ever be a wasted pop. Probes of SIBLING operands (left of an
+// earlier hoist inside the node) are not trailing and survive:
+// `f(a[i], g())` keeps probe(a[i]) before `$g`; `f(a[i])` drops it.
+func (e *emitter) pushHoist(stmts ...any) {
+	start := 0
+	if n := len(e.nodeStarts); n > 0 {
+		start = e.nodeStarts[n-1]
+	}
+	e.dropTrailingProbes(start)
+	e.hoisted = append(e.hoisted, stmts...)
+}
+
+// pruneTrailingProbes drops the `unseq-probe` entries at the end of a
+// captured accumulator (design §4 D3): with no event after it in its
+// sweep, a probe is order-transparent — the residual evaluates the same
+// operand next, with nothing effectful in between — and would only cost
+// a stream pop when the operand panics.
+func pruneTrailingProbes(hoists []any) []any {
+	for len(hoists) > 0 && isProbeStmt(hoists[len(hoists)-1]) {
+		hoists = hoists[:len(hoists)-1]
+	}
+	return hoists
+}
+
+// probeKind is the ONE census of the panicky non-call operand kinds
+// (design §1 P): operand syntax that stays INLINE in the residual and can
+// raise a run-time panic of its own. Mirrors what the retired A6 guard's
+// sweep census (`sweepPanickyInlineBeforeKinds`, deleted 2026-09-05)
+// enumerated, sharpened where the retired census was conservative:
+// integer division with a NON-CONSTANT divisor only (a constant divisor
+// is compile-checked; float division never panics — latitude R5), a shift
+// by a non-constant SIGNED count only (an unsigned count cannot be
+// negative). A constant-folded node has no run-time evaluation.
+func (e *emitter) probeKind(x ast.Expr) bool {
+	if tv, ok := e.typesEntry(x); ok && tv.Value != nil {
+		return false
+	}
+	switch v := ast.Unparen(x).(type) {
+	case *ast.IndexExpr:
+		if tv, ok := e.info.Types[v.Index]; ok && tv.IsType() {
+			return false // generic instantiation, type-level
+		}
+		// A map read with a hash-safe key type has no panic of its own
+		// (spec#Index_expressions: zero value on a missing key or nil map);
+		// array/slice/string indexing and interface-containing keys panic.
+		return e.hashSafeMapRead(v) == nil
+	case *ast.SliceExpr, *ast.TypeAssertExpr, *ast.StarExpr:
+		return true
+	case *ast.SelectorExpr:
+		// Implicit or explicit pointer indirection on the path (BUG-039's
+		// Indirect() included) — or a panicky base (`a[i].f`, which the
+		// child's probe already covers and this parent subsumes).
+		return !e.panicFreeOperand(v)
+	case *ast.BinaryExpr:
+		switch v.Op {
+		case token.QUO, token.REM:
+			if tv, ok := e.info.Types[v.Y]; ok && tv.Value != nil {
+				return false // constant divisor: compile-checked non-zero
+			}
+			t := e.goTypeOf(v)
+			if t == nil {
+				return true
+			}
+			b, isBasic := e.applySubst(t).Underlying().(*types.Basic)
+			return !isBasic || b.Info()&types.IsInteger != 0
+		case token.SHL, token.SHR:
+			if tv, ok := e.info.Types[v.Y]; ok && tv.Value != nil {
+				return false // constant count: compile-checked
+			}
+			t := e.goTypeOf(v.Y)
+			if t == nil {
+				return true
+			}
+			b, isBasic := e.applySubst(t).Underlying().(*types.Basic)
+			return !isBasic || b.Info()&types.IsUnsigned == 0
+		case token.EQL, token.NEQ:
+			t := e.goTypeOf(v.X)
+			return t == nil || containsInterface(e.applySubst(t))
+		}
+		return false
+	case *ast.CallExpr:
+		// A conversion is inline; only the slice-to-array(-pointer) class
+		// panics (spec#Conversions_from_slice_to_array_or_array_pointer).
+		if tv, ok := e.info.Types[v.Fun]; ok && tv.IsType() {
+			t := e.goTypeOf(v)
+			if t == nil {
+				return true
+			}
+			switch u := e.applySubst(t).Underlying().(type) {
+			case *types.Array:
+				return true
+			case *types.Pointer:
+				_, arr := u.Elem().Underlying().(*types.Array)
+				return arr
+			}
+		}
+		return false
+	}
+	return false
+}
+
+// containsRecover reports whether x contains a call of the builtin
+// recover() — an operand the probe must not evaluate twice.
+func containsRecover(e *emitter, x ast.Expr) bool {
+	found := false
+	ast.Inspect(x, func(n ast.Node) bool {
+		if found {
+			return false
+		}
+		if c, ok := n.(*ast.CallExpr); ok {
+			if id, ok := ast.Unparen(c.Fun).(*ast.Ident); ok {
+				if b, isBuiltin := e.info.Uses[id].(*types.Builtin); isBuiltin && b.Name() == "recover" {
+					found = true
+					return false
+				}
+			}
+		}
+		return true
+	})
+	return found
 }
 
 func (e *emitter) emitExprBare(x ast.Expr) (any, error) {
@@ -6738,7 +6920,7 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 				mvName := "$mv" + itoa(e.tmpSeq)
 				e.tmpSeq++
 				mvIdent := map[string]any{"expr": "ident", "name": mvName, "type": gty}
-				e.hoisted = append(e.hoisted,
+				e.pushHoist(
 					map[string]any{"stmt": "assign", "define": true,
 						"lhs": []any{map[string]any{"target": "declare", "id": mvName, "type": gty}},
 						"rhs": []any{recvArg}},
@@ -7051,7 +7233,7 @@ func (e *emitter) emitAddressOf(x ast.Expr) (any, error) {
 // emitLValue emits an assignment target for an arbitrary addressable
 // expression: plain locals stay `var`, everything else becomes an addressed
 // location (`&x` form) that GoCore assigns through.
-func (e *emitter) emitLValue(x ast.Expr) (any, error) {
+func (e *emitter) emitLValueUnprobed(x ast.Expr) (any, error) {
 	if pname, ok := e.capturedPtr(x); ok {
 		return map[string]any{"target": "addr",
 			"expr": map[string]any{"expr": "ident", "name": pname}}, nil
@@ -7146,7 +7328,7 @@ func (e *emitter) hoistNewFromValue(val any, elem types.Type) (any, error) {
 	ptrTy := map[string]any{"kind": "pointer", "elem": elemTy}
 	name := "$c" + itoa(e.tmpSeq)
 	e.tmpSeq++
-	e.hoisted = append(e.hoisted, map[string]any{
+	e.pushHoist(map[string]any{
 		"stmt":     "new",
 		"target":   map[string]any{"target": "declare", "id": name, "type": ptrTy},
 		"value":    val,
@@ -7317,7 +7499,7 @@ func (e *emitter) hoistSliceLit(elems []any, elemTy any, length int64) (any, err
 	sliceTy := map[string]any{"kind": "slice", "elem": elemTy}
 	name := "$c" + itoa(e.tmpSeq)
 	e.tmpSeq++
-	e.hoisted = append(e.hoisted, map[string]any{
+	e.pushHoist(map[string]any{
 		"stmt":   "slice-lit",
 		"target": map[string]any{"target": "declare", "id": name, "type": sliceTy},
 		"elem":   elemTy,
@@ -7413,7 +7595,7 @@ func (e *emitter) emitMapLit(cl *ast.CompositeLit, m *types.Map) (any, error) {
 	}
 	name := "$c" + itoa(e.tmpSeq)
 	e.tmpSeq++
-	e.hoisted = append(e.hoisted, map[string]any{
+	e.pushHoist(map[string]any{
 		"stmt":      "map-lit",
 		"target":    map[string]any{"target": "declare", "id": name, "type": mapTy},
 		"keyType":   keyTy,
@@ -7580,6 +7762,9 @@ func (e *emitter) emitFuncLit(lit *ast.FuncLit) (any, error) {
 	savedBranch, savedGoto := e.branchLabels, e.gotoLabels
 	savedSeg, savedPC, savedLoop := e.gotoSeg, e.gotoPC, e.gotoLoop
 	savedForbidden, savedSCHoistOK := e.hoistForbidden, e.scHoistOK
+	savedStarts, savedSuppress := e.nodeStarts, e.probeSuppress
+	defer func() { e.nodeStarts, e.probeSuppress = savedStarts, savedSuppress }()
+	e.nodeStarts, e.probeSuppress = nil, 0 // a lifted body is its own hoist context (E13 probes)
 	e.captureParam, e.hoisted = newCapture, nil
 	e.curResults = sig.Results()
 	// Named-result shadow renaming for the LIT's own body (its frame,
@@ -7815,16 +8000,19 @@ func (e *emitter) emitBinary(b *ast.BinaryExpr) (any, error) {
 	var y any
 	if op == "&&" || op == "||" {
 		savedHoisted := e.hoisted
+		savedStarts := e.nodeStarts
 		savedForbidden := e.hoistForbidden
 		savedOK := e.scHoistOK
 		savedRoot := e.sweepStmt
 		e.hoisted = nil
+		e.nodeStarts = nil // the RHS accumulator has its own node starts (E13 probes)
 		e.hoistForbidden = "short-circuit operand"
 		e.scHoistOK = true
 		e.sweepStmt = b.Y
 		y, err = e.emitExpr(b.Y)
-		rhsHoists := e.hoisted
+		rhsHoists := pruneTrailingProbes(e.hoisted)
 		e.hoisted = savedHoisted
+		e.nodeStarts = savedStarts
 		e.hoistForbidden = savedForbidden
 		e.scHoistOK = savedOK
 		e.sweepStmt = savedRoot
@@ -7846,7 +8034,7 @@ func (e *emitter) emitBinary(b *ast.BinaryExpr) (any, error) {
 			}
 			name := "$c" + itoa(e.tmpSeq)
 			e.tmpSeq++
-			e.hoisted = append(e.hoisted, map[string]any{
+			e.pushHoist(map[string]any{
 				"stmt": "assign", "define": true,
 				"lhs":  []any{map[string]any{"target": "declare", "id": name, "type": ty}},
 				"rhs":  []any{x},
@@ -7861,7 +8049,7 @@ func (e *emitter) emitBinary(b *ast.BinaryExpr) (any, error) {
 				"lhs":  []any{map[string]any{"target": "var", "id": name}},
 				"rhs":  []any{y},
 			})
-			e.hoisted = append(e.hoisted, map[string]any{
+			e.pushHoist(map[string]any{
 				"stmt": "if", "cond": cond,
 				"then": map[string]any{"stmt": "block", "body": body},
 			})
@@ -9077,24 +9265,19 @@ func (e *emitter) emitBuiltin(c *ast.CallExpr, name string) (any, bool, error) {
 		// `len(p.xs)` for no order reason at all — BUG-032/F23).
 		//
 		// The hoist evaluates the operand ahead of the sweep's REMAINING
-		// INLINE material. That is order-transparent unless BOTH (a) the
-		// residual operand (calls hoist out of it first) can panic AND
-		// (b) potentially-panicking inline material sits lexically LEFT
-		// of the builtin — then hoisting would drag the operand's panic
-		// ahead of a spec-UNORDERED panic gc realizes first
-		// (`iv.(int) + len(b[j]) + f()` must panic with gc's interface-
-		// conversion message). Realizing gc's point there needs the
-		// full-statement linearization deliberately not built (BUG-032);
-		// FAIL CLOSED naming the shape.
-		//
-		// FR-28 refinement (2026-09-04, lane fr27-fr28): the guard is
-		// `hoistReordersPanic` — the same predicate pair, transparent
-		// when both sides can panic only by nil dereference (identical
-		// panics; the lexer idiom `l.pos < len(l.src) && l.peek()`).
+		// INLINE material. Where potentially-panicking inline material
+		// sits lexically LEFT of the builtin, the two panics are spec-
+		// UNSEQUENCED (spec#Order_of_evaluation orders the builtin call
+		// against other calls, not against a sibling assertion or index)
+		// and since 2026-09-05 (latitude E13 option (b), RULED [USER]
+		// relayed, lane e13-b) the left material carries `unseq-probe`
+		// statements (emitExpr) that let the machine realize BOTH orders
+		// as a membership set — `iv.(int) + len(b[j]) + f()` lowers to
+		// probe(iv.(int)); $l := len(b[j]); $f := f(); … whose members are
+		// gc's interface conversion (RAISE) and the index panic (DEFER).
+		// The A6 unordered-panic guard (`hoistReordersPanic`, BUG-032/
+		// BUG-083, FR-28) that REFUSED this composition is retired.
 		if (e.hoistForbidden == "" || e.scHoistOK) && e.sweepOrderedEventAfter(c.End()) {
-			if e.hoistReordersPanic(c.Args[0], c.Pos()) {
-				return nil, false, unsup("%s of a potentially-panicking operand between a potentially-panicking operand to its left and a later ordered call/receive in the same statement (hoisting %s would reorder the panics; realizing gc's left-to-right point needs full-statement linearization — BUG-032/A6)", name, name)
-			}
 			hoisted, err := e.hoist(node, e.goTypeOf(c))
 			if err != nil {
 				return nil, false, err
@@ -9146,7 +9329,7 @@ func (e *emitter) emitBuiltin(c *ast.CallExpr, name string) (any, bool, error) {
 		ptrTy := map[string]any{"kind": "pointer", "elem": elemTy}
 		name := "$c" + itoa(e.tmpSeq)
 		e.tmpSeq++
-		e.hoisted = append(e.hoisted, map[string]any{
+		e.pushHoist(map[string]any{
 			"stmt":     "new",
 			"target":   map[string]any{"target": "declare", "id": name, "type": ptrTy},
 			"value":    val,
@@ -9915,7 +10098,7 @@ func (e *emitter) emitAppend(c *ast.CallExpr) (any, bool, error) {
 	}
 	name := "$c" + itoa(e.tmpSeq)
 	e.tmpSeq++
-	e.hoisted = append(e.hoisted, map[string]any{
+	e.pushHoist(map[string]any{
 		"stmt":   "append",
 		"target": map[string]any{"target": "declare", "id": name, "type": ty},
 		"elem":   elemTy,
@@ -9945,7 +10128,7 @@ func (e *emitter) emitCopy(c *ast.CallExpr) (any, bool, error) {
 	name := "$c" + itoa(e.tmpSeq)
 	e.tmpSeq++
 	intTy := intType("int")
-	e.hoisted = append(e.hoisted, map[string]any{
+	e.pushHoist(map[string]any{
 		"stmt":   "copy",
 		"target": map[string]any{"target": "declare", "id": name, "type": intTy},
 		"dst":    dst,
@@ -9961,29 +10144,14 @@ func (e *emitter) emitMake(c *ast.CallExpr) (any, bool, error) {
 	if e.hoistForbidden != "" {
 		return nil, false, unsup("make in %s", e.hoistForbidden)
 	}
-	// The A6 unordered-panic guard on the SIZE/HINT operands (FR-28,
-	// 2026-09-04, lane fr27-fr28 — closing BUG-083): `make` ALWAYS hoists
-	// (a statement-level allocation), so its size/hint operands are
-	// evaluated ahead of the sweep's remaining inline material. That is
-	// order-transparent unless a size/hint residual can panic AND
-	// potentially-panicking inline material sits lexically LEFT of the
-	// make — then the hoist drags the operand's panic ahead of a spec-
-	// UNORDERED panic (`iv.(int) + len(make([]int, t[k]))`: gc realizes
-	// the interface-conversion panic, the unguarded hoist the index
-	// panic — the BUG-083 table, docs/evidence/2026-09-02_bug082-maphint
-	// §M1). Same predicate pair as len/cap (hoistReordersPanic), same
-	// fail-closed answer, naming the shape. Unlike len/cap no "ordered
-	// event after" condition applies: the hoist is unconditional. Note
-	// the trade BUG-083 priced: the guard is conservative-syntactic, so
-	// the shapes whose LEFT panic is an index/division/nil-deref (where
-	// gc, hoisting the make too, realizes the operand's panic first and
-	// the machine MATCHED) refuse as well — a visible red, never a
-	// guessed order; the nil-deref-only composition stays transparent.
-	for _, arg := range c.Args[1:] {
-		if e.hoistReordersPanic(arg, c.Pos()) {
-			return nil, false, unsup("make of a potentially-panicking size/hint operand with a potentially-panicking operand to its left in the same statement (the make hoist would reorder the panics; realizing gc's left-to-right point needs full-statement linearization — BUG-032/BUG-083)")
-		}
-	}
+	// The size/hint operands are evaluated at the hoisted make statement.
+	// Panicky inline material lexically LEFT of the make (`iv.(int) +
+	// len(make([]int, t[k]))`) is spec-UNSEQUENCED against it and carries
+	// `unseq-probe` statements (emitExpr, latitude E13 option (b), lane
+	// e13-b 2026-09-05), so the machine realizes both orders — gc's
+	// interface conversion and the hint's index panic — as a membership
+	// set. The A6 guard FR-28 wired here (BUG-083 fixed AS A REFUSAL) is
+	// retired: the refusal was standing in for latitude.
 	t := e.goTypeOf(c.Args[0])
 	ty, err := e.emitType(t)
 	if err != nil {
@@ -10011,7 +10179,7 @@ func (e *emitter) emitMake(c *ast.CallExpr) (any, bool, error) {
 			}
 			node["cap"] = capArg
 		}
-		e.hoisted = append(e.hoisted, node)
+		e.pushHoist(node)
 		return ref, false, nil
 	case *types.Map:
 		keyTy, err := e.emitType(u.Key())
@@ -10043,7 +10211,7 @@ func (e *emitter) emitMake(c *ast.CallExpr) (any, bool, error) {
 			}
 			node["hint"] = hintArg
 		}
-		e.hoisted = append(e.hoisted, node)
+		e.pushHoist(node)
 		return ref, false, nil
 	case *types.Chan:
 		// make(chan T[, n]) (channels arc slice 1). A negative runtime n
@@ -10062,7 +10230,7 @@ func (e *emitter) emitMake(c *ast.CallExpr) (any, bool, error) {
 			}
 			node["cap"] = capArg
 		}
-		e.hoisted = append(e.hoisted, node)
+		e.pushHoist(node)
 		return ref, false, nil
 	default:
 		return nil, false, unsup("make of %s", t)
@@ -10434,272 +10602,14 @@ func (e *emitter) runtimeOrderedCall(c *ast.CallExpr) bool {
 	return true
 }
 
-// residualPanicFreeOperand reports whether the RESIDUAL of operand x —
-// what remains inline after its emission hoisted the real calls out —
-// cannot panic. Same conservative-syntactic ground as panicFreeOperand,
-// plus one arm: a non-conversion, non-constant call leaves only its
-// bound temp in the residual (its own panic fires at its hoisted
-// position, the correct lexical one), so it is residual-panic-free
-// even though the source syntax is a call — retiring the F23
-// `len(f())` over-refusal. Conversions stay inline and can panic
-// (slice-to-array), so they keep the conservative answer.
-//
-// FR-28 (2026-09-04, lane fr27-fr28): an INLINE builtin — `len`/`cap` —
-// is a call whose residual is NOT a temp: it stays inline with its own
-// operand (`len(b[j])` as the size of a `make`, or as the operand of an
-// outer `len`), so the answer is its operand's. `min`/`max` and every
-// effectful builtin hoist like calls and keep the call answer.
-func (e *emitter) residualPanicFreeOperand(x ast.Expr) bool {
-	if v, ok := ast.Unparen(x).(*ast.CallExpr); ok {
-		if tv, ok := e.info.Types[v]; ok && tv.Value != nil {
-			return true // constant-folded: no runtime evaluation at all
-		}
-		if tv, ok := e.info.Types[v.Fun]; ok && tv.IsType() {
-			return false // conversion: inline, possibly panicking
-		}
-		if id, ok := ast.Unparen(v.Fun).(*ast.Ident); ok && len(v.Args) == 1 {
-			if _, isBuiltin := e.info.Uses[id].(*types.Builtin); isBuiltin && (id.Name == "len" || id.Name == "cap") {
-				return e.residualPanicFreeOperand(v.Args[0])
-			}
-		}
-		return true
-	}
-	return e.panicFreeOperand(x)
-}
-
-// nilDerefOnlyResidual reports whether the RESIDUAL of operand x can
-// panic ONLY by dereferencing a nil pointer — a selector chain (implicit
-// indirection, BUG-039's Indirect() included) or explicit `*p` chain over
-// identifiers/literals/hoisted-call temps/hash-safe map reads, with no
-// array/slice/string index, slice, type assertion, division, shift,
-// interface comparison or conversion anywhere in it. Used by the A6 unordered-panic guard (FR-28 refinement,
-// 2026-09-04): two nil dereferences carry the SAME runtime error
-// ("invalid memory address or nil pointer dereference" — one runtime.Error
-// value, no site-specific text; the machine's panicking family emits the
-// same text at every deref site) and the inline material between them
-// is pure by construction (calls and receives are hoisted), so swapping
-// the order of two nil-deref panics is unobservable: some nil-deref
-// panic fires iff some pointer on the path is nil, whichever is tested
-// first. The hoist is therefore order-transparent on the composition
-// `p.i < len(p.src) && p.next()` — the lexer idiom (cedar-go
-// x/exp/schema/internal/parser.lexer.skipWhitespaceAndComments, the
-// FR-28 witness) — where the pre-refinement guard refused. Everything
-// with a site-specific panic text (index bounds carry the index and
-// length; assertions the types; conversions the lengths) keeps the
-// refusal. Conservative: anything not recognized answers false.
-func (e *emitter) nilDerefOnlyResidual(x ast.Expr) bool {
-	switch v := ast.Unparen(x).(type) {
-	case *ast.Ident, *ast.BasicLit:
-		return true
-	case *ast.SelectorExpr:
-		// Package qualifier or field/method selection: the only panic a
-		// selection itself can raise is the nil dereference of an
-		// implicit or explicit pointer on its path (spec#Selectors);
-		// the base decides the rest.
-		return e.nilDerefOnlyResidual(v.X)
-	case *ast.StarExpr:
-		return e.nilDerefOnlyResidual(v.X)
-	case *ast.IndexExpr:
-		// A map read with a hash-safe key type panics only through its
-		// operands (hashSafeMapRead's ground); array/slice/string
-		// indexing carries a site-specific bounds text.
-		if e.hashSafeMapRead(v) != nil {
-			return e.nilDerefOnlyResidual(v.X) && e.nilDerefOnlyResidual(v.Index)
-		}
-		return false
-	case *ast.CallExpr:
-		if tv, ok := e.info.Types[v]; ok && tv.Value != nil {
-			return true // constant-folded
-		}
-		if tv, ok := e.info.Types[v.Fun]; ok && tv.IsType() {
-			return false // conversion: slice-to-array can panic with a length text
-		}
-		if id, ok := ast.Unparen(v.Fun).(*ast.Ident); ok && len(v.Args) == 1 {
-			if _, isBuiltin := e.info.Uses[id].(*types.Builtin); isBuiltin && (id.Name == "len" || id.Name == "cap") {
-				return e.nilDerefOnlyResidual(v.Args[0])
-			}
-		}
-		return true // a real call: hoisted, its residual is a temp
-	}
-	return false
-}
-
-// hoistReordersPanic is the A6 unordered-panic guard (BUG-032's predicate
-// pair, `residualPanicFreeOperand` × `sweepPanickyInlineBefore`, with the
-// FR-28 nil-deref transparency refinement): hoisting operand x, which sits
-// at pos in the current sweep, would drag a potentially-panicking residual
-// ahead of potentially-panicking INLINE material to its left — two spec-
-// UNORDERED panics whose realized order gc fixes compiler-internally and
-// the machine must not guess (full-statement linearization is the fix
-// BUG-032 records as deliberately not built). TRUE means the caller must
-// refuse by name. FALSE when the residual cannot panic, when nothing
-// panicky is inline to the left, or when BOTH sides can panic only by nil
-// dereference (nilDerefOnlyResidual: identical panics, unobservable
-// order).
-func (e *emitter) hoistReordersPanic(x ast.Expr, pos token.Pos) bool {
-	if e.residualPanicFreeOperand(x) {
-		return false
-	}
-	found, nilOnly := e.sweepPanickyInlineBeforeKinds(pos)
-	if !found {
-		return false
-	}
-	if nilOnly && e.nilDerefOnlyResidual(x) {
-		return false
-	}
-	return true
-}
-
-// sweepPanickyInlineBefore reports whether the current sweep contains
-// potentially-panicking INLINE material strictly before pos: syntax
-// whose evaluation stays in the residual expression (not hoisted) and
-// can panic, so hoisting a later builtin's panicky operand ahead of it
-// would reorder two spec-UNORDERED panics away from gc's realized
-// left-to-right point (the BUG-032 shape, `iv.(int) + len(b[j]) + f()`).
-// Real calls and receives are pruned — their evaluation (arguments
-// included) happens at their own hoisted statements, which precede any
-// later builtin's hoist in emission order — as are func-literal bodies.
-// The panicky kinds mirror initializerEffectIsolated's census: indexing,
-// slicing, dereference, type assertion, division/remainder, shifts by a
-// non-constant count (negative counts panic; constant counts are
-// compile-checked — the arm this list was MISSING until the audit fix
-// round 2026-09-01, NOTE-10: the mirror claim was false, and a
-// shift-left composition silently hoisted where every sibling shape
-// refused), interface comparison, implicitly-indirecting selection,
-// and slice-to-array(-pointer) conversions. A nil sweep root answers
-// TRUE (fail closed: combined with a panicky operand this refuses
-// visibly rather than reordering silently).
-//
-// sweepPanickyInlineBeforeKinds is the census form of the predicate the
-// BUG-032 records call `sweepPanickyInlineBefore` (the boolean wrapper of
-// that name was deleted at the fr27-fr28 audit fix round F7 — no callers;
-// hoistReordersPanic consumes the census directly): found is the
-// predicate's answer;
-// nilOnly reports that EVERY panicky inline node found before pos can
-// panic only by nil dereference (a `*p` or a selector chain whose
-// non-panic-freeness is pointer indirection alone — nilDerefOnlyResidual),
-// the one class whose panics are indistinguishable from each other. The
-// walk stops at the first node of any OTHER kind (the answer is then
-// fixed: found, not nilOnly). A nil sweep root answers (true, false):
-// fail closed.
-func (e *emitter) sweepPanickyInlineBeforeKinds(pos token.Pos) (found bool, nilOnly bool) {
-	root := e.sweepStmt
-	if root == nil {
-		return true, false
-	}
-	foundOther := false
-	foundNil := false
-	ast.Inspect(root, func(n ast.Node) bool {
-		if foundOther || n == nil {
-			return false
-		}
-		if n.Pos() >= pos {
-			return false // at/after the builtin: not "to its left"
-		}
-		switch nn := n.(type) {
-		case *ast.FuncLit:
-			return false
-		case *ast.UnaryExpr:
-			if nn.Op == token.ARROW {
-				return false // receive: hoisted at its own position
-			}
-		case *ast.CallExpr:
-			if e.runtimeOrderedCall(nn) {
-				return false // real call: hoisted, args evaluate there
-			}
-			if tv, ok := e.info.Types[nn]; ok && tv.Value != nil {
-				return false // constant-folded subtree
-			}
-			if tv, ok := e.info.Types[nn.Fun]; ok && tv.IsType() && nn.End() <= pos {
-				// Conversion: only the slice-to-array(-pointer) class
-				// panics (spec#Conversions_from_slice_to_array_or_array_pointer...).
-				if t := e.goTypeOf(nn); t != nil {
-					switch u := e.applySubst(t).Underlying().(type) {
-					case *types.Array:
-						foundOther = true
-					case *types.Pointer:
-						if _, arr := u.Elem().Underlying().(*types.Array); arr {
-							foundOther = true
-						}
-					}
-				} else {
-					foundOther = true
-				}
-				return !foundOther
-			}
-		case *ast.IndexExpr:
-			if nn.End() <= pos {
-				// Generic instantiation is type-level, not an index read.
-				if tv, ok := e.info.Types[nn]; !ok || tv.Value == nil {
-					if _, isTypeArg := e.info.Types[nn.Index]; !isTypeArg || !e.info.Types[nn.Index].IsType() {
-						// A map read with a hash-safe key type (no
-						// interface anywhere in it — audit fix round F1)
-						// has no panic of its own: descend, its operands
-						// are judged on their own (FR-28, 2026-09-04).
-						if e.hashSafeMapRead(nn) != nil {
-							return true
-						}
-						foundOther = true
-						return false
-					}
-				}
-			}
-		case *ast.SliceExpr, *ast.TypeAssertExpr:
-			if n.End() <= pos {
-				foundOther = true
-				return false
-			}
-		case *ast.StarExpr:
-			if n.End() <= pos {
-				// An explicit dereference: nil-deref only if its
-				// operand is; `*a[i]` has the index's panic too.
-				if e.nilDerefOnlyResidual(nn) {
-					foundNil = true
-					return false
-				}
-				foundOther = true
-				return false
-			}
-		case *ast.BinaryExpr:
-			if nn.End() <= pos && (nn.Op == token.QUO || nn.Op == token.REM) {
-				foundOther = true
-				return false
-			}
-			if nn.End() <= pos && (nn.Op == token.SHL || nn.Op == token.SHR) {
-				// A negative (necessarily non-constant) shift count
-				// panics; see the header (NOTE-10 census add).
-				if tv, ok := e.info.Types[nn.Y]; !ok || tv.Value == nil {
-					foundOther = true
-					return false
-				}
-			}
-			if nn.End() <= pos && (nn.Op == token.EQL || nn.Op == token.NEQ) {
-				// A comparison panics on an uncomparable DYNAMIC value:
-				// an interface operand, or a struct/array operand
-				// CONTAINING an interface (audit fix round F1 — the
-				// pre-existing arm tested the top-level type only).
-				if t := e.goTypeOf(nn.X); t == nil || containsInterface(e.applySubst(t)) {
-					foundOther = true
-					return false
-				}
-			}
-		case *ast.SelectorExpr:
-			if nn.End() <= pos && !e.panicFreeOperand(nn) {
-				// Not panic-free: pointer indirection alone (nil kind) or
-				// a panicky base such as `a[i].f` (other kind).
-				if e.nilDerefOnlyResidual(nn) {
-					foundNil = true
-					return false
-				}
-				foundOther = true
-				return false
-			}
-		}
-		return true
-	})
-	found = foundNil || foundOther
-	return found, found && !foundOther
-}
+// (residualPanicFreeOperand / nilDerefOnlyResidual / hoistReordersPanic /
+// sweepPanickyInlineBeforeKinds — the A6 unordered-panic GUARD of
+// BUG-032/BUG-062/BUG-083 and FR-28 — were deleted 2026-09-05, lane e13-b:
+// the composition they refused, a panicky hoisted operand beside panicky
+// inline material to its left, is spec-UNSEQUENCED and is now realized as
+// BOTH orders through the `unseq-probe` statements emitExpr appends
+// (latitude E13 option (b), RULED [USER], relayed). Their census of the
+// panicky kinds lives on as `probeKind`.)
 
 // chanElem resolves an expression's channel element type (substitution-
 // aware for stencils).
@@ -10745,7 +10655,7 @@ func (e *emitter) hoistChanRecv(u *ast.UnaryExpr) (any, error) {
 	}
 	name := "$c" + itoa(e.tmpSeq)
 	e.tmpSeq++
-	e.hoisted = append(e.hoisted, map[string]any{
+	e.pushHoist(map[string]any{
 		"stmt":    "chan-recv",
 		"targets": []any{map[string]any{"target": "declare", "id": name, "type": elemTy}},
 		"ch":      chW,
@@ -10761,7 +10671,7 @@ func (e *emitter) hoistChanRecv(u *ast.UnaryExpr) (any, error) {
 // step, so it lands before a LATER target's store panic. The map VALUE
 // must not need interface boxing (the machine stores the delivered
 // value raw) — callers check.
-func (e *emitter) emitMapTargetWire(ix *ast.IndexExpr, m *types.Map) (any, error) {
+func (e *emitter) emitMapTargetWireUnprobed(ix *ast.IndexExpr, m *types.Map) (any, error) {
 	baseW, err := e.emitExpr(ix.X)
 	if err != nil {
 		return nil, err
@@ -10958,7 +10868,7 @@ func (e *emitter) machineSelectTargets(lhs []ast.Expr, elemGo types.Type) ([]any
 				e.hoisted = nil
 				e.sweepStmt = lv
 				mw, err := e.emitMapTargetWire(ix, m)
-				hoists = e.hoisted
+				hoists = pruneTrailingProbes(e.hoisted)
 				e.hoisted = saved
 				e.sweepStmt = savedRoot
 				if err != nil {
@@ -10980,7 +10890,7 @@ func (e *emitter) machineSelectTargets(lhs []ast.Expr, elemGo types.Type) ([]any
 		e.hoisted = nil
 		e.sweepStmt = lv
 		w, err := e.emitAssignTarget(lv, false)
-		hoists = e.hoisted
+		hoists = pruneTrailingProbes(e.hoisted)
 		e.hoisted = saved
 		e.sweepStmt = savedRoot
 		if err != nil {
@@ -11330,4 +11240,33 @@ func checkWireNamedTypes(typeDefs, funcs, methods, globals []any) error {
 		parts = append(parts, n+" ("+itoa(dangling[n])+" reference(s))")
 	}
 	return unsup("wire integrity: %d `named` TypeId(s) on the wire have no TypeDef — %s — refused rather than shipped for the machine to reject (M1: an imported type registered after the imported-type pass, or a marker never minted)", len(dangling), strings.Join(parts, ", "))
+}
+
+// The assignment-TARGET paths emit their operands with probing suppressed
+// (E13 option (b), design §4 D4): phase-1 target operands vs the RHS's
+// calls are E2/E3/E4's axes, (b)-pinned with their own re-envelope
+// obligations — not this lane's. The wrappers below hold `probeSuppress`
+// around the unprobed bodies (a counter, so nesting composes).
+func (e *emitter) emitAssignTarget(l ast.Expr, define bool) (any, error) {
+	e.probeSuppress++
+	defer func() { e.probeSuppress-- }()
+	return e.emitAssignTargetUnprobed(l, define)
+}
+
+func (e *emitter) emitLValue(x ast.Expr) (any, error) {
+	e.probeSuppress++
+	defer func() { e.probeSuppress-- }()
+	return e.emitLValueUnprobed(x)
+}
+
+func (e *emitter) emitReadWriteTarget(lv ast.Expr) (any, any, error) {
+	e.probeSuppress++
+	defer func() { e.probeSuppress-- }()
+	return e.emitReadWriteTargetUnprobed(lv)
+}
+
+func (e *emitter) emitMapTargetWire(ix *ast.IndexExpr, m *types.Map) (any, error) {
+	e.probeSuppress++
+	defer func() { e.probeSuppress-- }()
+	return e.emitMapTargetWireUnprobed(ix, m)
 }

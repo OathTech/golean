@@ -92,10 +92,11 @@ def siteName : ChoiceSite → String
   | .backEdge => "backEdge"
   | .nilValueMethodText => "nilValueMethodText"
   | .tryLock => "tryLock"
+  | .unseqPanic => "unseqPanic"
 
 def allSites : List ChoiceSite :=
   [.mapIter, .appendSpill, .l2Entry, .l2Arrival, .l4Waiter, .l1Sched,
-   .l5ExitWindow, .postOp, .backEdge, .nilValueMethodText, .tryLock]
+   .l5ExitWindow, .postOp, .backEdge, .nilValueMethodText, .tryLock, .unseqPanic]
 
 /-- Pool-layer sites: the ones whose consumption the machine records in
 `StepEvent.picks` (`Choices.consumeAtE`); the sequential-machine sites
@@ -397,6 +398,20 @@ def nilTextFacts (s : ExecState) (fid : FuncId) (args : List GoValue) : MenuFact
             ("target is not a synthesized promotion wrapper", notWrapper) ]
         pickCheck := fun p => if p < 2 then [] else [s!"pick {p} outside the two texts"] }
 
+/-- The `unseqPanic` site's menu facts (latitude E13 option (b), lane
+`e13-b`): the pick exists ONLY at a panic that reached an unsequenced-
+operand probe frame, where the width is the constant 2 (DEFER / RAISE);
+any other configuration reporting the site is a violation. -/
+def unseqPanicFacts (c : Config) : MenuFacts :=
+  match c with
+  | .panicking _ (.probeK _) =>
+      { specWidth := some 2
+        invariants := [("width is the constant 2 (DEFER / RAISE)", true)]
+        pickCheck := fun p => if p ≥ 2 then [s!"pick {p} outside the width 2"] else [] }
+  | _ => { specWidth := none,
+           invariants := [("unseqPanic site at a configuration that is not a panic at a probe frame", false)],
+           pickCheck := fun _ => [] }
+
 /-- TryLock facts (Q-TRYLOCK, `ChoiceSite.tryLock`): the width is
 recomputed through the machine's own `tryLockWidth` over the receiver
 cell (2 iff `tryAcquire` says acquirable, else 1 — and a width-1 consult
@@ -456,6 +471,7 @@ def seqFacts (σ : ExecState) (c : Config) : ChoiceSite → MenuFacts
                pickCheck := fun _ => [] }
   | .appendSpill => spillFacts σ c
   | .tryLock => tryLockFacts σ c
+  | .unseqPanic => unseqPanicFacts c
   | .nilValueMethodText =>
       match entryCallSite? c with
       | some (fid, args) => nilTextFacts σ fid args

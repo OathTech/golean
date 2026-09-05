@@ -173,13 +173,19 @@ write a bare "#6"/"#7".
    order, BUG-052), OURS where gc's realization is compiler-internal
    (inter-target order E3, targets-vs-RHS E4), STRUCTURAL (frontend
    ANF) on the call-first family (binop operand order E12,
-   non-call-panic vs sibling calls E13, receiver-vs-arguments E14 —
-   axes censused 2026-08-17/20/22, after this entry's original
-   wording), and hidden-dep init order to go/types' point (E7) — with
-   the known ≠ gc cases (**E3, E7, E13 on its type-assertion axis, and
-   E5** — synced 2026-08-31 to inventory §10's honesty-critical list,
-   which this entry had drifted one short of, phase-2 finding A1-04;
-   §10 also lists R3, a representation row outside this entry's
+   receiver-vs-arguments E14 — axes censused 2026-08-17/20/22, after
+   this entry's original wording; non-call-panic vs sibling events E13
+   was in this family until 2026-09-05, when it became the first of
+   the family to be RE-ENVELOPED — the `unseq-probe` statement + the
+   `unseqPanic` pick, both orders as a membership set, [USER] ruling
+   (b), lane `e13-b`), and hidden-dep init order to go/types' point (E7) — with
+   the known ≠ gc cases (**E3, E7, and E5** — synced 2026-08-31 to
+   inventory §10's honesty-critical list, which this entry had drifted
+   one short of, phase-2 finding A1-04; re-synced 2026-09-05 when E13
+   LEFT that list — its sibling-panic axis was RE-ENVELOPED at lane
+   `e13-b` under the [USER] ruling (b), the `unseqPanic` choice site,
+   gc's member now certified inside the set on both former axes; §10
+   also lists R3, a representation row outside this entry's
    evaluation-order scope) carried as standing deviation records
    queued for re-envelope (inventory §7 items 3 and 5) — EXCEPT E5,
    whose class changed 2026-09-02 ([USER] ruling): the early store

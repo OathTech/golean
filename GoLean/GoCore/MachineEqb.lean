@@ -439,6 +439,7 @@ def Cont.eqbF : Nat → Cont → Cont → Bool
         GoValue.eqb c1 c2 && eqbListP GoValue.eqb v1 v2
           && eqbListP (Expr.eqbF f) p1 p2 && e1 == e2 && Cont.eqbF f k1 k2
     | .breakableK k1, .breakableK k2 => Cont.eqbF f k1 k2
+    | .probeK k1, .probeK k2 => Cont.eqbF f k1 k2
     | .labelK l1 k1, .labelK l2 k2 => l1 == l2 && Cont.eqbF f k1 k2
     | .callValCalleeK t1 a1 e1 k1, .callValCalleeK t2 a2 e2 k2 =>
         eqbListP (eqbProdP TargetShape.eqb (eqbListP (Expr.eqbF f))) t1 t2
@@ -578,6 +579,7 @@ theorem Cont.eqbF_sound : ∀ f (a b : Cont), Cont.eqbF f a b = true → a = b :
       cases GoValue.eqb_sound h1; cases goValues_sound h2
       cases exprs_sound f h3; cases eq_of_beq h4; cases ih _ _ h5; rfl
     case breakableK.breakableK k1 k2 => cases ih _ _ h; rfl
+    case probeK.probeK k1 k2 => cases ih _ _ h; rfl
     case labelK.labelK l1 k1 l2 k2 =>
       obtain ⟨h1, h2⟩ := andSplit2 h
       cases eq_of_beq h1; cases ih _ _ h2; rfl

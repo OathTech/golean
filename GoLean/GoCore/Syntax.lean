@@ -580,6 +580,29 @@ inductive Stmt where
   Appended at the END of the inductive so positional case tags stay
   stable. -/
   | print (newline : Bool) (args : Array Expr)
+  /-- **The unsequenced-operand probe** (latitude E13 re-envelope, lane
+  `e13-b`, 2026-09-05 — option (b) RULED [USER], relayed; design
+  `docs/2026-09-05_e13-b-design.md` §3): "evaluate the spec-UNSEQUENCED
+  non-call operand `e` at THIS position among the statement's hoisted
+  events — or not yet." The frontend emits one at the lexical position of
+  a panicky inline operand (index, slice, type assertion, dereference,
+  division, shift, interface comparison, slice→array conversion) that has
+  a sibling ordered event (call, receive, hoisted built-in) lexically AFTER
+  it — the pair spec#Order_of_evaluation leaves unordered. `e` is PURE by
+  construction (calls, receives and allocations are hoisted out of it;
+  `recover()` is excluded by the frontend and refused by the decoder), so
+  evaluating it here changes nothing: a VALUE is discarded and the operand
+  is re-evaluated at its residual position (`Cont.probeK`), a PANIC is the
+  `ChoiceSite.unseqPanic` pick — slot 0 DEFER (not raised here; the
+  residual evaluation raises whatever it raises after the sibling events —
+  the pre-change machine's only member, gc's realization for index/deref/
+  division/shift/conversion operands), slot 1 RAISE (the panic propagates
+  now, before the sibling events — gc's realization for type assertions,
+  slice expressions and interface comparisons). No consumption unless the
+  operand panics here. Go runtime semantics, not a frontend quirk: the
+  choice IS the spec's silence, reified where the doctrine demands
+  ("no semantic choice hides in evaluator recursion"). -/
+  | unseqProbe (e : Expr)
   deriving Repr, BEq, Inhabited
 
 structure Func where

@@ -1,0 +1,170 @@
+builtins/e13-sibling-panic-order/assert-left-call [assertLeftCall -]: coverage-observations: observations=2 steps=76 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}
+      {"message":"interface conversion: interface {} is string, not int","output":"wit 5\n","status":"panic"}
+builtins/e13-sibling-panic-order/assert-middle [assertMiddle -]: coverage-observations: observations=2 steps=115 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"interface conversion: interface {} is string, not int","output":"wit 1\n","status":"panic"}
+      {"message":"interface conversion: interface {} is string, not int","output":"wit 1\nwit 2\n","status":"panic"}
+builtins/e13-sibling-panic-order/assert-arg-sibling [assertArgSibling -]: coverage-observations: observations=2 steps=74 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}
+      {"message":"interface conversion: interface {} is string, not int","output":"wit 7\n","status":"panic"}
+builtins/e13-sibling-panic-order/assert-composite-lit [assertCompositeLit -]: coverage-observations: observations=2 steps=86 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}
+      {"message":"interface conversion: interface {} is string, not int","output":"wit 7\n","status":"panic"}
+builtins/e13-sibling-panic-order/assert-return-list [assertReturnList -]: coverage-observations: observations=2 steps=97 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}
+      {"message":"interface conversion: interface {} is string, not int","output":"wit 7\n","status":"panic"}
+builtins/e13-sibling-panic-order/assert-left-method [assertLeftMethod -]: coverage-observations: observations=2 steps=99 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}
+      {"message":"interface conversion: interface {} is string, not int","output":"M\n","status":"panic"}
+builtins/e13-sibling-panic-order/assert-left-make-slice [assertLeftMakeSlice -]: coverage-observations: observations=2 steps=103 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}
+      {"message":"runtime error: index out of range [5] with length 2","output":"","status":"panic"}
+builtins/e13-sibling-panic-order/assert-left-len-slice-call [assertLeftLenSliceCall -]: coverage-observations: observations=2 steps=109 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}
+      {"message":"runtime error: slice bounds out of range [5:2]","output":"","status":"panic"}
+builtins/e13-sibling-panic-order/assert-left-new-call [assertLeftNewCall -]: coverage-observations: observations=2 steps=94 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}
+      {"message":"interface conversion: interface {} is string, not int","output":"wit 5\n","status":"panic"}
+builtins/e13-sibling-panic-order/assert-left-append [assertLeftAppend -]: coverage-observations: observations=2 steps=149 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}
+      {"message":"runtime error: index out of range [5] with length 2","output":"","status":"panic"}
+builtins/e13-sibling-panic-order/assert-left-copy [assertLeftCopy -]: coverage-observations: observations=2 steps=201 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}
+      {"message":"runtime error: index out of range [5] with length 2","output":"","status":"panic"}
+builtins/e13-sibling-panic-order/assert-vs-mutating-call [assertVsMutatingCall -]: coverage-observations: observations=2 steps=91 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}
+      {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":5}]}
+builtins/e13-sibling-panic-order/iface-cmp-left-call [ifaceCmpLeftCall -]: coverage-observations: observations=2 steps=103 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"runtime error: comparing uncomparable type []int","output":"","status":"panic"}
+      {"message":"runtime error: comparing uncomparable type []int","output":"wit 5\n","status":"panic"}
+builtins/e13-sibling-panic-order/index-left-call [indexLeftCall -]: coverage-observations: observations=2 steps=114 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"runtime error: index out of range [9] with length 1","output":"","status":"panic"}
+      {"message":"runtime error: index out of range [9] with length 1","output":"wit 5\n","status":"panic"}
+builtins/e13-sibling-panic-order/index-middle [indexMiddle -]: coverage-observations: observations=2 steps=153 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"runtime error: index out of range [9] with length 1","output":"wit 1\n","status":"panic"}
+      {"message":"runtime error: index out of range [9] with length 1","output":"wit 1\nwit 2\n","status":"panic"}
+builtins/e13-sibling-panic-order/index-arg-sibling [indexArgSibling -]: coverage-observations: observations=2 steps=112 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"runtime error: index out of range [9] with length 1","output":"","status":"panic"}
+      {"message":"runtime error: index out of range [9] with length 1","output":"wit 7\n","status":"panic"}
+builtins/e13-sibling-panic-order/index-composite-lit [indexCompositeLit -]: coverage-observations: observations=2 steps=124 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"runtime error: index out of range [9] with length 1","output":"","status":"panic"}
+      {"message":"runtime error: index out of range [9] with length 1","output":"wit 7\n","status":"panic"}
+builtins/e13-sibling-panic-order/send-chan-index [sendChanIndex -]: coverage-observations: observations=2 steps=97 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"runtime error: index out of range [9] with length 0","output":"","status":"panic"}
+      {"message":"runtime error: index out of range [9] with length 0","output":"wit 7\n","status":"panic"}
+builtins/e13-sibling-panic-order/deref-left-call [derefLeftCall -]: coverage-observations: observations=2 steps=65 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"runtime error: invalid memory address or nil pointer dereference","output":"","status":"panic"}
+      {"message":"runtime error: invalid memory address or nil pointer dereference","output":"wit 5\n","status":"panic"}
+builtins/e13-sibling-panic-order/div-left-call [divLeftCall -]: coverage-observations: observations=2 steps=85 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"runtime error: integer divide by zero","output":"","status":"panic"}
+      {"message":"runtime error: integer divide by zero","output":"wit 5\n","status":"panic"}
+builtins/e13-sibling-panic-order/shift-left-call [shiftLeftCall -]: coverage-observations: observations=2 steps=85 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"runtime error: negative shift amount","output":"","status":"panic"}
+      {"message":"runtime error: negative shift amount","output":"wit 5\n","status":"panic"}
+builtins/e13-sibling-panic-order/conv-left-call [convLeftCall -]: coverage-observations: observations=2 steps=101 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"runtime error: cannot convert slice with length 1 to array or pointer to array with length 2","output":"","status":"panic"}
+      {"message":"runtime error: cannot convert slice with length 1 to array or pointer to array with length 2","output":"wit 5\n","status":"panic"}
+builtins/e13-sibling-panic-order/two-index-left-call [twoIndexLeftCall -]: coverage-observations: observations=3 steps=182 probes=6 sites=2 leaves=3 maxdepth=2 width=2
+      {"message":"runtime error: index out of range [5] with length 2","output":"","status":"panic"}
+      {"message":"runtime error: index out of range [9] with length 1","output":"","status":"panic"}
+      {"message":"runtime error: index out of range [9] with length 1","output":"wit 5\n","status":"panic"}
+builtins/e13-sibling-panic-order/index-assert-left-call [indexAssertLeftCall -]: coverage-observations: observations=3 steps=141 probes=6 sites=2 leaves=3 maxdepth=2 width=2
+      {"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}
+      {"message":"runtime error: index out of range [9] with length 1","output":"","status":"panic"}
+      {"message":"runtime error: index out of range [9] with length 1","output":"wit 5\n","status":"panic"}
+builtins/e13-sibling-panic-order/index-left-call-arg-panics [indexLeftCallArgPanics -]: coverage-observations: observations=2 steps=131 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"runtime error: index out of range [5] with length 2","output":"","status":"panic"}
+      {"message":"runtime error: index out of range [9] with length 1","output":"","status":"panic"}
+builtins/e13-sibling-panic-order/deref-left-index-arg-call [derefLeftIndexArgCall -]: coverage-observations: observations=2 steps=90 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"runtime error: index out of range [5] with length 2","output":"","status":"panic"}
+      {"message":"runtime error: invalid memory address or nil pointer dereference","output":"","status":"panic"}
+builtins/e13-sibling-panic-order/forced-arg-only [forcedArgOnly -]: coverage-observations: observations=1 steps=76 probes=0 sites=0 leaves=1 maxdepth=0 width=2
+      {"message":"runtime error: index out of range [5] with length 2","output":"","status":"panic"}
+builtins/e13-sibling-panic-order/assert-right-call [assertRightCall -]: coverage-observations: observations=1 steps=68 probes=0 sites=0 leaves=1 maxdepth=0 width=2
+      {"message":"interface conversion: interface {} is string, not int","output":"wit 5\n","status":"panic"}
+builtins/e13-sibling-panic-order/assert-left-min-inline [assertLeftMinInline -]: coverage-observations: observations=1 steps=91 probes=0 sites=0 leaves=1 maxdepth=0 width=2
+      {"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}
+builtins/e13-sibling-panic-order/slice-left-len-call [sliceLeftCall -]: coverage-observations: observations=1 steps=73 probes=0 sites=0 leaves=1 maxdepth=0 width=2
+      {"message":"runtime error: slice bounds out of range [9:1]","output":"","status":"panic"}
+builtins/e13-sibling-panic-order/assert-left-recv-w [assertLeftRecvW -]: coverage-observations: observations=2 steps=183 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+      {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+builtins/len-vs-call-order/chan [lenVsCallChan -]: coverage-observations: observations=1 steps=108 probes=0 sites=0 leaves=1 maxdepth=0 width=2
+      {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+builtins/len-vs-call-order/slice [lenVsCallSlice -]: coverage-observations: site bound 30 exceeds the case's width 2 — the width assertion is REFUTED (me
+builtins/len-vs-call-order/recv-bearing [lenVsCallRecvBearing -]: coverage-observations: observations=1 steps=173 probes=0 sites=0 leaves=1 maxdepth=0 width=2
+      {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]}
+builtins/len-vs-call-order/short-circuit [lenVsCallShortCircuit 1]: coverage-observations: observations=1 steps=186 probes=0 sites=0 leaves=1 maxdepth=0 width=2
+      {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":1003}]}
+builtins/len-vs-call-order/short-circuit-skipped [lenVsCallShortCircuit 0]: coverage-observations: observations=1 steps=96 probes=0 sites=0 leaves=1 maxdepth=0 width=2
+      {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+builtins/len-vs-call-order/panicky-before-call [lenPanickyBeforeCall 3]: coverage-observations: observations=1 steps=103 probes=0 sites=0 leaves=1 maxdepth=0 width=2
+      {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+builtins/len-vs-call-order/panicky-between [lenPanickyBetween 2]: coverage-observations: observations=1 steps=171 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+builtins/len-vs-call-order/hint-panicky-between [hintPanickyBetween -]: coverage-observations: observations=2 steps=103 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}
+      {"message":"runtime error: index out of range [5] with length 2","output":"","status":"panic"}
+builtins/len-vs-call-order/make-slice-panicky-between [makeSlicePanickyBetween -]: coverage-observations: observations=2 steps=103 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}
+      {"message":"runtime error: index out of range [5] with length 2","output":"","status":"panic"}
+builtins/len-vs-call-order/make-chan-cap-panicky-between [makeChanCapPanickyBetween -]: coverage-observations: observations=2 steps=103 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}
+      {"message":"runtime error: index out of range [5] with length 2","output":"","status":"panic"}
+builtins/len-vs-call-order/make-index-left [makeIndexLeft -]: coverage-observations: observations=2 steps=133 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"runtime error: index out of range [5] with length 2","output":"","status":"panic"}
+      {"message":"runtime error: index out of range [9] with length 1","output":"","status":"panic"}
+builtins/len-vs-call-order/make-inner-len [makeInnerLen -]: coverage-observations: observations=2 steps=81 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}
+      {"message":"runtime error: index out of range [3] with length 0","output":"","status":"panic"}
+builtins/len-vs-call-order/make-hint-panic-free [makeHintPanicFree -]: coverage-observations: observations=1 steps=64 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}
+builtins/len-vs-call-order/make-hint-call [makeHintCall -]: coverage-observations: observations=2 steps=80 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"boom-call","output":"","status":"panic"}
+      {"message":"runtime error: index out of range [9] with length 1","output":"","status":"panic"}
+builtins/len-vs-call-order/make-hint-map-read [makeHintMapRead -]: coverage-observations: observations=1 steps=84 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}
+builtins/len-vs-call-order/len-nil-only-none [lenNilOnly 0]: coverage-observations: observations=1 steps=324 probes=0 sites=0 leaves=1 maxdepth=0 width=2
+      {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":14}]}
+builtins/len-vs-call-order/len-nil-only-left [lenNilOnly 1]: coverage-observations: observations=1 steps=165 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"runtime error: invalid memory address or nil pointer dereference","output":"","status":"panic"}
+builtins/len-vs-call-order/len-nil-only-operand [lenNilOnly 2]: coverage-observations: observations=1 steps=97 probes=0 sites=0 leaves=1 maxdepth=0 width=2
+      {"message":"runtime error: invalid memory address or nil pointer dereference","output":"","status":"panic"}
+builtins/len-vs-call-order/len-nil-only-both [lenNilOnly 3]: coverage-observations: observations=1 steps=75 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"runtime error: invalid memory address or nil pointer dereference","output":"","status":"panic"}
+builtins/len-vs-call-order/make-nil-only-none [makeNilOnly 0]: coverage-observations: observations=1 steps=132 probes=0 sites=0 leaves=1 maxdepth=0 width=2
+      {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":8}]}
+builtins/len-vs-call-order/make-nil-only-left [makeNilOnly 1]: coverage-observations: observations=1 steps=102 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"runtime error: invalid memory address or nil pointer dereference","output":"","status":"panic"}
+builtins/len-vs-call-order/make-nil-only-operand [makeNilOnly 2]: coverage-observations: observations=1 steps=84 probes=0 sites=0 leaves=1 maxdepth=0 width=2
+      {"message":"runtime error: invalid memory address or nil pointer dereference","output":"","status":"panic"}
+builtins/len-vs-call-order/make-nil-only-both [makeNilOnly 3]: coverage-observations: observations=1 steps=62 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"runtime error: invalid memory address or nil pointer dereference","output":"","status":"panic"}
+builtins/len-vs-call-order/lexer-idiom [lexerIdiom -]: coverage-observations: observations=1 steps=508 probes=0 sites=0 leaves=1 maxdepth=0 width=2
+      {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}
+builtins/len-vs-call-order/len-assert-vs-nil-operand [lenAssertVsNilOperand -]: coverage-observations: observations=1 steps=162 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}
+builtins/len-vs-call-order/len-nil-left-vs-index-operand [lenNilLeftVsIndexOperand -]: coverage-observations: observations=1 steps=91 probes=0 sites=0 leaves=1 maxdepth=0 width=2
+      {"message":"runtime error: index out of range [3] with length 0","output":"","status":"panic"}
+builtins/len-vs-call-order/make-hint-struct-any-key [makeHintStructAnyKey -]: coverage-observations: observations=2 steps=104 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"hash of unhashable type: []int","output":"","status":"panic"}
+      {"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}
+builtins/len-vs-call-order/make-hint-array-any-key [makeHintArrayAnyKey -]: coverage-observations: observations=2 steps=104 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"hash of unhashable type: []int","output":"","status":"panic"}
+      {"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}
+builtins/len-vs-call-order/len-struct-any-key-left-assert [lenStructAnyKeyLeftAssert -]: coverage-observations: observations=2 steps=106 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"hash of unhashable type: []int","output":"","status":"panic"}
+      {"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}
+builtins/len-vs-call-order/make-hint-generic-any-key [makeHintGenericAnyKey -]: coverage-observations: observations=2 steps=91 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"hash of unhashable type: []int","output":"","status":"panic"}
+      {"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}
+builtins/len-vs-call-order/make-hint-generic-int-key [makeHintGenericIntKey -]: coverage-observations: observations=1 steps=86 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}
+binop-order/operand-panic-vs-call/left-first [binopLeftIndexFirst -]: coverage-observations: observations=1 steps=154 probes=0 sites=0 leaves=1 maxdepth=0 width=2
+      {"message":"runtime error: index out of range [8] with length 3","output":"","status":"panic"}
+binop-order/operand-panic-vs-call/call-before-left [binopCallBeforeLeftIndex -]: coverage-observations: observations=2 steps=162 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"runtime error: index out of range [8] with length 3","output":"","status":"panic"}
+      {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":11}]}
+binop-order/operand-panic-vs-call/call-before-left-div [binopCallBeforeLeftDiv -]: coverage-observations: observations=2 steps=260 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+      {"message":"runtime error: index out of range [8] with length 3","output":"","status":"panic"}
+      {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":7}]}

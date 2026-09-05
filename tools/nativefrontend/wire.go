@@ -76,6 +76,21 @@ type emitter struct {
 	// Whether the `defer recover()` no-op function has been registered.
 	deferNoopEmitted bool
 
+	// nodeStarts (latitude E13 option (b), lane e13-b 2026-09-05 — design
+	// docs/2026-09-05_e13-b-design.md §4): the hoist-accumulator length at
+	// entry of every emitExpr node still being emitted, innermost last.
+	// `pushHoist` (the ONE way an event's statement joins the accumulator)
+	// first drops the trailing `unseq-probe` entries appended since the
+	// current node's start — those are probes of the node's OWN operands,
+	// which the event's statement evaluates itself (the FORCED "arguments
+	// before the call" position never gets a probe). Swapped with the
+	// accumulator wherever the accumulator is swapped inside an expression
+	// (the short-circuit RHS; a lifted func-literal body).
+	nodeStarts []int
+	// probeSuppress > 0 while an assignment TARGET (E2/E3/E4's axes, not
+	// E13's) is being emitted: no unseq-probe is appended for its operands.
+	probeSuppress int
+
 	// sweepStmt is the AST node whose emission owns the CURRENT hoist
 	// accumulator (the "sweep"): the statement in emitStmtList, or the
 	// sub-node at every site that opens a fresh accumulator (if/for

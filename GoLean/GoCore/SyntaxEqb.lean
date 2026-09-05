@@ -492,6 +492,7 @@ def Stmt.eqbF : Nat → Stmt → Stmt → Bool
     | .mapDelete b1 i1 k1, .mapDelete b2 i2 k2 =>
         Expr.eqbF f b1 b2 && Expr.eqbF f i1 i2 && Ty.eqb k1 k2
     | .clearMap b1, .clearMap b2 => Expr.eqbF f b1 b2
+    | .unseqProbe e1, .unseqProbe e2 => Expr.eqbF f e1 e2
     | .clearSlice b1 e1, .clearSlice b2 e2 =>
         Expr.eqbF f b1 b2 && Ty.eqb e1 e2
     | .sortSlice b1 e1, .sortSlice b2 e2 =>
@@ -600,6 +601,7 @@ theorem Stmt.eqbF_sound : ∀ f (a b : Stmt), Stmt.eqbF f a b = true → a = b :
       cases Expr.eqbF_sound _ _ _ h1; cases Expr.eqbF_sound _ _ _ h2
       cases Ty.eqb_sound h3; rfl
     case clearMap.clearMap b1 b2 => cases Expr.eqbF_sound _ _ _ h; rfl
+    case unseqProbe.unseqProbe e1 e2 => cases Expr.eqbF_sound _ _ _ h; rfl
     case clearSlice.clearSlice b1 e1 b2 e2 =>
       obtain ⟨h1, h2⟩ := andSplit2 h
       cases Expr.eqbF_sound _ _ _ h1; cases Ty.eqb_sound h2; rfl

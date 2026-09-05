@@ -1,4 +1,4 @@
-# id	subject	args	expected_status	expected_reason	features
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
 # GREEN since mini-slice A6 (2026-08-31, t1-fidelity-fixes; was 2 RED
 # pins from the slice-5 triage §3.4): spec#Order_of_evaluation + the
 # built-ins-are-called-like-any-other-function sentence force len
@@ -7,68 +7,67 @@
 # the receive-bearing shape; short-circuit pins the same order inside
 # a short-circuit RHS; panicky-before-call pins the hoist WITH a
 # panicky operand (nothing panicky to its left — gc's exact order).
-# panicky-between is the surviving BUG-032/A6 refusal, RED
-# frontend-export BY DESIGN: panicky operand between a spec-unordered
-# panicky operand on the left and an ordered call after — hoisting
-# would reorder the panics; refusing keeps it visible. B-3 correction
-# (2026-09-01): that refusal fires in receive-FREE functions too —
-# A6 was not a pure narrowing; the new refusal is the price of
-# retiring BUG-062's silent wrong answer there (trade in BUG-032's
-# A6 amendment).
-# hint-panicky-between (BUG-082 audit fix round M1, 2026-09-02): the
-# make-HINT instance of the same class — RED BY DESIGN at stage
-# differential (a wrong answer) until 2026-09-04; since FR-28 (lane
-# fr27-fr28) the A6 guard is wired into emitMake and the row is RED
-# frontend-export BY DESIGN (the make hoist refuses by name), with
-# make-slice-panicky-between / make-chan-cap-panicky-between (the
-# pre-existing siblings), make-index-left (the priced trade: a LEFT
-# index panic refuses too) and make-inner-len (the inline-builtin
-# residual hole) beside it. Still on BUG-083's Cases line (fixed,
-# Pinned-by: none, Expect: FAIL). make-hint-panic-free / make-hint-call
-# and make-hint-map-read (a map read with a hash-safe key is panic-free)
-# are the guard's GREEN controls. make-hint-call is E13-ADJACENT (audit fix
-# round, 2026-09-05): it pins an INDEX-vs-hoisted-CALL agreement (`s[i]`
-# left, `boom()` as the hint) — the indexing axis of latitude E13, where
-# gc and the machine happen to agree and E13 takes no pin; it is kept as
-# a guard control (the call residual must not trip the guard), not as a
-# claim about the order. make-hint-{struct-any-key,array-any-key},
-# len-struct-any-key-left-assert (audit fix round F1): key types CONTAINING
-# an interface are hash-panicky — RED frontend-export BY NAME (the first
-# cut's IsInterface test admitted them: a wrong answer, and a regression of
-# the A6 refusal on the len path); make-hint-generic-{any,int}-key pin the
-# `K comparable` twin (any refuses, int lowers). len-nil-only-* / make-nil-only-* /
-# lexer-idiom pin the nil-deref TRANSPARENCY refinement green (which
-# bit 1 = left pointer nil, bit 2 = operand pointer nil); len-assert-vs-
-# nil-operand / len-nil-left-vs-index-operand pin that the refinement
-# is nil-deref ONLY (RED frontend-export BY DESIGN).
-chan	lenVsCallChan	-	ok	-	channels,len,evaluation_order,calls
-slice	lenVsCallSlice	-	ok	-	slices,len,evaluation_order,calls,append
-recv-bearing	lenVsCallRecvBearing	-	ok	-	channels,len,evaluation_order,calls
-short-circuit	lenVsCallShortCircuit	1	ok	-	channels,len,evaluation_order,calls,bools
-short-circuit-skipped	lenVsCallShortCircuit	0	ok	-	channels,len,evaluation_order,calls,bools
-panicky-before-call	lenPanickyBeforeCall	3	ok	-	slices,len,evaluation_order,calls,panic,recover,indexing
-panicky-between	lenPanickyBetween	2	ok	-	slices,len,evaluation_order,calls,panic,recover,indexing,interfaces,type_assertions
-hint-panicky-between	hintPanickyBetween	-	panic	interface conversion	maps,make,len,evaluation_order,panic,indexing,interfaces,type_assertions
-make-slice-panicky-between	makeSlicePanickyBetween	-	panic	interface conversion	slices,make,len,evaluation_order,panic,indexing,interfaces,type_assertions
-make-chan-cap-panicky-between	makeChanCapPanickyBetween	-	panic	interface conversion	channels,make,cap,evaluation_order,panic,indexing,interfaces,type_assertions
-make-index-left	makeIndexLeft	-	panic	index out of range [5] with length 2	maps,make,len,evaluation_order,panic,indexing,slices
-make-inner-len	makeInnerLen	-	panic	interface conversion	slices,make,len,evaluation_order,panic,indexing,interfaces,type_assertions
-make-hint-panic-free	makeHintPanicFree	-	panic	interface conversion	maps,make,len,evaluation_order,panic,interfaces,type_assertions
-make-hint-call	makeHintCall	-	panic	boom-call	maps,make,len,evaluation_order,panic,calls,indexing,slices
-make-hint-map-read	makeHintMapRead	-	panic	interface conversion	maps,make,len,evaluation_order,panic,interfaces,type_assertions,indexing
-len-nil-only-none	lenNilOnly	0	ok	-	pointers,structs,len,evaluation_order,calls,bools,nil
-len-nil-only-left	lenNilOnly	1	panic	invalid memory address or nil pointer dereference	pointers,structs,len,evaluation_order,calls,bools,nil,panic
-len-nil-only-operand	lenNilOnly	2	panic	invalid memory address or nil pointer dereference	pointers,structs,len,evaluation_order,calls,bools,nil,panic
-len-nil-only-both	lenNilOnly	3	panic	invalid memory address or nil pointer dereference	pointers,structs,len,evaluation_order,calls,bools,nil,panic
-make-nil-only-none	makeNilOnly	0	ok	-	pointers,structs,make,len,evaluation_order,slices,nil
-make-nil-only-left	makeNilOnly	1	panic	invalid memory address or nil pointer dereference	pointers,structs,make,len,evaluation_order,slices,nil,panic
-make-nil-only-operand	makeNilOnly	2	panic	invalid memory address or nil pointer dereference	pointers,structs,make,len,evaluation_order,slices,nil,panic
-make-nil-only-both	makeNilOnly	3	panic	invalid memory address or nil pointer dereference	pointers,structs,make,len,evaluation_order,slices,nil,panic
-lexer-idiom	lexerIdiom	-	ok	-	pointers,structs,methods,len,evaluation_order,calls,bools,loops,slices
-len-assert-vs-nil-operand	lenAssertVsNilOperand	-	panic	interface conversion	pointers,structs,len,evaluation_order,calls,panic,interfaces,type_assertions
-len-nil-left-vs-index-operand	lenNilLeftVsIndexOperand	-	panic	index out of range [3] with length 0	pointers,structs,len,evaluation_order,calls,panic,indexing,slices
-make-hint-struct-any-key	makeHintStructAnyKey	-	panic	interface conversion	maps,make,len,evaluation_order,panic,interfaces,type_assertions,indexing,structs,comparability
-make-hint-array-any-key	makeHintArrayAnyKey	-	panic	interface conversion	maps,make,len,evaluation_order,panic,interfaces,type_assertions,indexing,arrays,comparability
-len-struct-any-key-left-assert	lenStructAnyKeyLeftAssert	-	panic	interface conversion	maps,len,evaluation_order,calls,panic,interfaces,type_assertions,indexing,structs,comparability
-make-hint-generic-any-key	makeHintGenericAnyKey	-	panic	interface conversion	maps,make,len,evaluation_order,panic,interfaces,type_assertions,indexing,generics,comparability
-make-hint-generic-int-key	makeHintGenericIntKey	-	panic	interface conversion	maps,make,len,evaluation_order,panic,interfaces,type_assertions,indexing,generics
+#
+# THE A6 UNORDERED-PANIC GUARD IS RETIRED (lane e13-b, 2026-09-05 —
+# latitude E13 option (b), RULED [USER] 2026-09-05, relayed by the
+# coordinator; design docs/2026-09-05_e13-b-design.md). The composition
+# it refused — a panicky hoisted operand (len/cap's, make's size/hint)
+# beside panicky inline material to its LEFT — is spec-UNSEQUENCED
+# (spec#Order_of_evaluation orders calls against calls, not against a
+# sibling assertion or index), and the frontend now emits an
+# `unseq-probe` at the left operand's lexical position so the machine
+# realizes BOTH orders (`ChoiceSite.unseqPanic`: DEFER = the sibling
+# event first — the pre-change machine's only member; RAISE = the left
+# operand's panic first — gc's realization for assertions). The rows
+# that were RED frontend-export BY DESIGN (panicky-between's family,
+# hint-panicky-between and its make siblings, make-index-left,
+# make-inner-len, the any-key rows, len-nil-left-vs-index-operand,
+# len-assert-vs-nil-operand) now LOWER: those whose two orders are
+# observably distinct are lane=membership rows (members=2, both
+# certified by enumeration; gc's draw is the EARLY member on the
+# assertion rows and the LATE member on make-index-left/make-hint-call —
+# every draw inside the set); those whose two orders coincide
+# (panicky-between: the witness is 0 either way; len-assert-vs-nil-
+# operand: the operand `p.s` cannot panic at run time; len-nil-left-vs-
+# index-operand: `p.n` cannot panic; make-hint-{panic-free,map-read,
+# generic-int-key}: the hint is panic-free) are strict PASS rows. The
+# nil-deref transparency rows (len-nil-only-*, make-nil-only-*,
+# lexer-idiom) stay strict: two nil dereferences are one panic text. The
+# expected_reason of a panic-status membership row is the substring gc's
+# draws carry (the pre-filter applies to gc samples only; if gc ever
+# drew the other member the row would fail LOUDLY at the pre-filter —
+# the honest outcome of the oracle moving). make-hint-call is no longer
+# "E13-adjacent": it IS an E13 row — the left index vs the hint call
+# (`boom()`), two members {boom-call, index [9]}, gc draws boom-call
+# (LATE).
+chan	lenVsCallChan	-	ok	-	channels,len,evaluation_order,calls	-	-	-
+slice	lenVsCallSlice	-	ok	-	slices,len,evaluation_order,calls,append	-	-	-
+recv-bearing	lenVsCallRecvBearing	-	ok	-	channels,len,evaluation_order,calls	-	-	-
+short-circuit	lenVsCallShortCircuit	1	ok	-	channels,len,evaluation_order,calls,bools	-	-	-
+short-circuit-skipped	lenVsCallShortCircuit	0	ok	-	channels,len,evaluation_order,calls,bools	-	-	-
+panicky-before-call	lenPanickyBeforeCall	3	ok	-	slices,len,evaluation_order,calls,panic,recover,indexing	-	-	-
+panicky-between	lenPanickyBetween	2	ok	-	slices,len,evaluation_order,calls,panic,recover,indexing,interfaces,type_assertions	-	-	-
+hint-panicky-between	hintPanickyBetween	-	panic	interface conversion	maps,make,len,evaluation_order,panic,indexing,interfaces,type_assertions,nondet	membership	latitude E13 option (b), lane e13-b 2026-09-05 (RULED [USER], relayed): `iv.(int) + len(make(map[int]int, t[k]))` — the assertion is spec-UNSEQUENCED against the make call; the ONLY consumption site is the unseqPanic probe of `iv.(int)` (bound 2): RAISE = interface conversion (gc's member — assertions are EARLY in gc), DEFER = the hint's `index out of range [5] with length 2`. members=2; gc draws one member deterministically, so the K draws exhibit one and run to the budget	width=2,sites=8,members=2
+make-slice-panicky-between	makeSlicePanickyBetween	-	panic	interface conversion	slices,make,len,evaluation_order,panic,indexing,interfaces,type_assertions,nondet	membership	latitude E13 option (b), lane e13-b 2026-09-05 (RULED [USER], relayed): `iv.(int) + len(make([]int, t[k]))` — assertion vs the make call's size operand; site = the probe of `iv.(int)` (bound 2): RAISE = interface conversion (gc), DEFER = the size's index panic. members=2	width=2,sites=8,members=2
+make-chan-cap-panicky-between	makeChanCapPanickyBetween	-	panic	interface conversion	channels,make,cap,evaluation_order,panic,indexing,interfaces,type_assertions,nondet	membership	latitude E13 option (b), lane e13-b 2026-09-05 (RULED [USER], relayed): `iv.(int) + cap(make(chan int, t[k]))` — assertion vs the make call's capacity operand; site = the probe of `iv.(int)` (bound 2): RAISE = interface conversion (gc), DEFER = the capacity's index panic. members=2	width=2,sites=8,members=2
+make-index-left	makeIndexLeft	-	panic	index out of range [5] with length 2	maps,make,len,evaluation_order,panic,indexing,slices,nondet	membership	latitude E13 option (b), lane e13-b 2026-09-05 (RULED [USER], relayed): `s[i] + len(make(map[int]int, t[k]))` — a LEFT index vs the hint's index, two panic TEXTS; site = the probe of `s[i]` (bound 2): RAISE = `index out of range [9] with length 1`, DEFER = the hint's `[5] with length 2` (gc's member — index operands are LATE in gc). members=2; formerly the FR-28 guard's 'priced trade' refusal	width=2,sites=8,members=2
+make-inner-len	makeInnerLen	-	panic	interface conversion	slices,make,len,evaluation_order,panic,indexing,interfaces,type_assertions,nondet	membership	latitude E13 option (b), lane e13-b 2026-09-05 (RULED [USER], relayed): `iv.(int) + len(make([]int, len(b[j])))` — assertion vs the inline len's index operand evaluated at the make; site = the probe of `iv.(int)` (bound 2): RAISE = interface conversion (gc), DEFER = `index out of range [3] with length 0`. members=2	width=2,sites=8,members=2
+make-hint-panic-free	makeHintPanicFree	-	panic	interface conversion	maps,make,len,evaluation_order,panic,interfaces,type_assertions	-	-	-
+make-hint-call	makeHintCall	-	panic	boom-call	maps,make,len,evaluation_order,panic,calls,indexing,slices,nondet	membership	latitude E13 option (b), lane e13-b 2026-09-05 (RULED [USER], relayed): `s[i] + len(make(map[int]int, boom()))` — a LEFT index vs the hint CALL boom(); site = the probe of `s[i]` (bound 2): RAISE = `index out of range [9] with length 1`, DEFER = `boom-call` (gc's member — index operands are LATE). members=2; was a strict 'E13-adjacent' control, now routed to the lane it belongs to	width=2,sites=8,members=2
+make-hint-map-read	makeHintMapRead	-	panic	interface conversion	maps,make,len,evaluation_order,panic,interfaces,type_assertions,indexing	-	-	-
+len-nil-only-none	lenNilOnly	0	ok	-	pointers,structs,len,evaluation_order,calls,bools,nil	-	-	-
+len-nil-only-left	lenNilOnly	1	panic	invalid memory address or nil pointer dereference	pointers,structs,len,evaluation_order,calls,bools,nil,panic	-	-	-
+len-nil-only-operand	lenNilOnly	2	panic	invalid memory address or nil pointer dereference	pointers,structs,len,evaluation_order,calls,bools,nil,panic	-	-	-
+len-nil-only-both	lenNilOnly	3	panic	invalid memory address or nil pointer dereference	pointers,structs,len,evaluation_order,calls,bools,nil,panic	-	-	-
+make-nil-only-none	makeNilOnly	0	ok	-	pointers,structs,make,len,evaluation_order,slices,nil	-	-	-
+make-nil-only-left	makeNilOnly	1	panic	invalid memory address or nil pointer dereference	pointers,structs,make,len,evaluation_order,slices,nil,panic	-	-	-
+make-nil-only-operand	makeNilOnly	2	panic	invalid memory address or nil pointer dereference	pointers,structs,make,len,evaluation_order,slices,nil,panic	-	-	-
+make-nil-only-both	makeNilOnly	3	panic	invalid memory address or nil pointer dereference	pointers,structs,make,len,evaluation_order,slices,nil,panic	-	-	-
+lexer-idiom	lexerIdiom	-	ok	-	pointers,structs,methods,len,evaluation_order,calls,bools,loops,slices	-	-	-
+len-assert-vs-nil-operand	lenAssertVsNilOperand	-	panic	interface conversion	pointers,structs,len,evaluation_order,calls,panic,interfaces,type_assertions	-	-	-
+len-nil-left-vs-index-operand	lenNilLeftVsIndexOperand	-	panic	index out of range [3] with length 0	pointers,structs,len,evaluation_order,calls,panic,indexing,slices	-	-	-
+make-hint-struct-any-key	makeHintStructAnyKey	-	panic	interface conversion	maps,make,len,evaluation_order,panic,interfaces,type_assertions,indexing,structs,comparability,nondet	membership	latitude E13 option (b), lane e13-b 2026-09-05 (RULED [USER], relayed): `iv.(int) + len(make(map[int]int, nm[k]))` with `nm map[struct{v any}]int` — assertion vs the hint's hash-panicky map read; site = the probe of `iv.(int)` (bound 2): RAISE = interface conversion (gc), DEFER = `hash of unhashable type: []int`. members=2	width=2,sites=8,members=2
+make-hint-array-any-key	makeHintArrayAnyKey	-	panic	interface conversion	maps,make,len,evaluation_order,panic,interfaces,type_assertions,indexing,arrays,comparability,nondet	membership	latitude E13 option (b), lane e13-b 2026-09-05 (RULED [USER], relayed): the `[1]any`-key twin of make-hint-struct-any-key; site = the probe of `iv.(int)` (bound 2): RAISE = interface conversion (gc), DEFER = `hash of unhashable type: []int`. members=2	width=2,sites=8,members=2
+len-struct-any-key-left-assert	lenStructAnyKeyLeftAssert	-	panic	interface conversion	maps,len,evaluation_order,calls,panic,interfaces,type_assertions,indexing,structs,comparability,nondet	membership	latitude E13 option (b), lane e13-b 2026-09-05 (RULED [USER], relayed): `iv.(int) + len(nm[k]) + wit(5)` — assertion vs the hoisted len's hash-panicky operand; site = the probe of `iv.(int)` (bound 2): RAISE = interface conversion (gc), DEFER = `hash of unhashable type: []int`. members=2	width=2,sites=8,members=2
+make-hint-generic-any-key	makeHintGenericAnyKey	-	panic	interface conversion	maps,make,len,evaluation_order,panic,interfaces,type_assertions,indexing,generics,comparability,nondet	membership	latitude E13 option (b), lane e13-b 2026-09-05 (RULED [USER], relayed): the `K comparable` stencil at K = any; site = the probe of `iv.(int)` (bound 2): RAISE = interface conversion (gc), DEFER = `hash of unhashable type: []int`. members=2	width=2,sites=8,members=2
+make-hint-generic-int-key	makeHintGenericIntKey	-	panic	interface conversion	maps,make,len,evaluation_order,panic,interfaces,type_assertions,indexing,generics	-	-	-

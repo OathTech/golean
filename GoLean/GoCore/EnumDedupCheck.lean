@@ -122,6 +122,10 @@ def innerVecs (s : ExecState) (ts : Array Thread) (i : Nat) :
       else if consumesTryLock c then none
       else if isMapIterNext c then none
       else if consumesNilValueMethod s c then none
+      -- E13 option (b): a panic at an unsequenced-operand probe frame draws
+      -- the `unseqPanic` pick — outside the certified fragment (fail
+      -- closed; the CLI enumerator carries such rows).
+      else if consumesUnseqPanic c then none
       else
         match arrivalCases s ts i c with
         | .ok (.single _ cs) =>

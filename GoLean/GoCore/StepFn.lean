@@ -152,6 +152,21 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           | other => throw (.stuck s!"deferred callee is not a function value: {repr other}")
       | .panicResumeK suspended k' =>
           return (.panicking (suspended ++ chain) k', s, choices)
+      | .probeK k' =>
+          -- THE `unseqPanic` CONSULT (latitude E13 option (b), lane `e13-b`
+          -- 2026-09-05; envelope statement at `Stmt.unseqProbe`): an
+          -- unsequenced operand panicked at its lexical position ahead of
+          -- a sibling ordered event. Bound 2, always a pop here (the ONLY
+          -- place the probe consults): slot 0 DEFER — the panic is not
+          -- raised now, the operand is re-evaluated at its residual
+          -- position (`.next k'`; the pre-change machine's trajectory and
+          -- the empty stream's); slot 1 RAISE — propagate now. A `.stuck`/
+          -- `.unsupported`/`fatal` from the operand never reaches this arm
+          -- (those are thrown `Stop`s, never `.panicking`), so DEFER can
+          -- only defer a RECOVERABLE run-time panic. Written as a single
+          -- term (no `if`-split) so `fun_cases` sees one arm.
+          let (pick, ch') := Choices.consumeAt .unseqPanic 2 choices
+          return (if pick = 0 then .next k' else .panicking chain k', s, ch')
       | .stop =>
           -- THE ABORT (B4, `Config.abort?`): an unrecovered chain at the
           -- empty continuation stops the sequential machine with the Go
@@ -327,6 +342,11 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               return (.evalE e env (.atomicStK aop [] rest env k), s, choices)
           | some (_, []) => throw (.internal "empty atomic-statement operand plan")
           | none => throw (.unsupported "malformed atomic-statement shape (arity/kind/targets)")
+      | .unseqProbe e =>
+          -- The unsequenced-operand probe (E13 option (b)): evaluate the
+          -- operand under its own frame; the frame decides what a value
+          -- (discard) or a panic (the `unseqPanic` pick) means.
+          return (.evalE e env (.probeK k), s, choices)
       | wide =>
           -- allocNew / makeSlice / makeMap / mapAssign / mapLookup /
           -- typeAssert / appendSlice / copySlice
@@ -598,6 +618,10 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               -- `runtime.Error`); everything else propagates.
               let r ← toResult (applyAtomicOp s op (v :: done).reverse env k')
               return deliverS s k' choices (fun (c', s') => (c', s', choices)) r
+      | .probeK k' =>
+          -- The probed operand yielded a VALUE: nothing to choose, nothing
+          -- consumed — it is re-evaluated at its residual position.
+          return (.next k', s, choices)
       | .stop => throw (.internal "value delivered to empty continuation")
       | _ => throw (.internal "value delivered to statement continuation")
   | .next k =>

@@ -126261,6 +126261,36 @@
       }
      },
      {
+      "expr": {
+       "expr": "field-get",
+       "field": "logger",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "r",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.raft"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.raft"
+        }
+       },
+       "type": {
+        "kind": "interface",
+        "name": "raft.Logger"
+       },
+       "typeId": "raft.raft"
+      },
+      "stmt": "unseq-probe"
+     },
+     {
       "define": true,
       "lhs": [
        {
@@ -126847,6 +126877,66 @@
       "kind": "slice",
       "stmt": "range",
       "valVar": "n"
+     },
+     {
+      "expr": {
+       "expr": "field-get",
+       "field": "logger",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "r",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.raft"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.raft"
+        }
+       },
+       "type": {
+        "kind": "interface",
+        "name": "raft.Logger"
+       },
+       "typeId": "raft.raft"
+      },
+      "stmt": "unseq-probe"
+     },
+     {
+      "expr": {
+       "expr": "field-get",
+       "field": "id",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "r",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.raft"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.raft"
+        }
+       },
+       "type": {
+        "int": "uint64",
+        "kind": "int"
+       },
+       "typeId": "raft.raft"
+      },
+      "stmt": "unseq-probe"
      },
      {
       "define": true,
@@ -132397,6 +132487,66 @@
                     "then": {
                      "body": [
                       {
+                       "expr": {
+                        "expr": "field-get",
+                        "field": "logger",
+                        "recv": {
+                         "expr": "deref",
+                         "ptr": {
+                          "expr": "ident",
+                          "name": "r",
+                          "type": {
+                           "elem": {
+                            "kind": "named",
+                            "name": "raft.raft"
+                           },
+                           "kind": "pointer"
+                          }
+                         },
+                         "type": {
+                          "kind": "named",
+                          "name": "raft.raft"
+                         }
+                        },
+                        "type": {
+                         "kind": "interface",
+                         "name": "raft.Logger"
+                        },
+                        "typeId": "raft.raft"
+                       },
+                       "stmt": "unseq-probe"
+                      },
+                      {
+                       "expr": {
+                        "expr": "field-get",
+                        "field": "id",
+                        "recv": {
+                         "expr": "deref",
+                         "ptr": {
+                          "expr": "ident",
+                          "name": "r",
+                          "type": {
+                           "elem": {
+                            "kind": "named",
+                            "name": "raft.raft"
+                           },
+                           "kind": "pointer"
+                          }
+                         },
+                         "type": {
+                          "kind": "named",
+                          "name": "raft.raft"
+                         }
+                        },
+                        "type": {
+                         "int": "uint64",
+                         "kind": "int"
+                        },
+                        "typeId": "raft.raft"
+                       },
+                       "stmt": "unseq-probe"
+                      },
+                      {
                        "define": true,
                        "lhs": [
                         {
@@ -133810,6 +133960,45 @@
       "stmt": "breakable"
      },
      {
+      "expr": {
+       "expr": "field-get",
+       "field": "Progress",
+       "recv": {
+        "expr": "field-get",
+        "field": "trk",
+        "recv": {
+         "expr": "deref",
+         "ptr": {
+          "expr": "ident",
+          "name": "r",
+          "type": {
+           "elem": {
+            "kind": "named",
+            "name": "raft.raft"
+           },
+           "kind": "pointer"
+          }
+         },
+         "type": {
+          "kind": "named",
+          "name": "raft.raft"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "tracker.ProgressTracker"
+        },
+        "typeId": "raft.raft"
+       },
+       "type": {
+        "kind": "named",
+        "name": "tracker.ProgressMap"
+       },
+       "typeId": "tracker.ProgressTracker"
+      },
+      "stmt": "unseq-probe"
+     },
+     {
       "define": true,
       "lhs": [
        {
@@ -133964,6 +134153,66 @@
       "stmt": "if",
       "then": {
        "body": [
+        {
+         "expr": {
+          "expr": "field-get",
+          "field": "logger",
+          "recv": {
+           "expr": "deref",
+           "ptr": {
+            "expr": "ident",
+            "name": "r",
+            "type": {
+             "elem": {
+              "kind": "named",
+              "name": "raft.raft"
+             },
+             "kind": "pointer"
+            }
+           },
+           "type": {
+            "kind": "named",
+            "name": "raft.raft"
+           }
+          },
+          "type": {
+           "kind": "interface",
+           "name": "raft.Logger"
+          },
+          "typeId": "raft.raft"
+         },
+         "stmt": "unseq-probe"
+        },
+        {
+         "expr": {
+          "expr": "field-get",
+          "field": "id",
+          "recv": {
+           "expr": "deref",
+           "ptr": {
+            "expr": "ident",
+            "name": "r",
+            "type": {
+             "elem": {
+              "kind": "named",
+              "name": "raft.raft"
+             },
+             "kind": "pointer"
+            }
+           },
+           "type": {
+            "kind": "named",
+            "name": "raft.raft"
+           }
+          },
+          "type": {
+           "int": "uint64",
+           "kind": "int"
+          },
+          "typeId": "raft.raft"
+         },
+         "stmt": "unseq-probe"
+        },
         {
          "define": true,
          "lhs": [
@@ -134809,6 +135058,36 @@
                  "then": {
                   "body": [
                    {
+                    "expr": {
+                     "expr": "field-get",
+                     "field": "Match",
+                     "recv": {
+                      "expr": "deref",
+                      "ptr": {
+                       "expr": "ident",
+                       "name": "pr",
+                       "type": {
+                        "elem": {
+                         "kind": "named",
+                         "name": "tracker.Progress"
+                        },
+                        "kind": "pointer"
+                       }
+                      },
+                      "type": {
+                       "kind": "named",
+                       "name": "tracker.Progress"
+                      }
+                     },
+                     "type": {
+                      "int": "uint64",
+                      "kind": "int"
+                     },
+                     "typeId": "tracker.Progress"
+                    },
+                    "stmt": "unseq-probe"
+                   },
+                   {
                     "define": true,
                     "lhs": [
                      {
@@ -135123,6 +135402,36 @@
                             "stmt": "if",
                             "then": {
                              "body": [
+                              {
+                               "expr": {
+                                "expr": "field-get",
+                                "field": "Match",
+                                "recv": {
+                                 "expr": "deref",
+                                 "ptr": {
+                                  "expr": "ident",
+                                  "name": "pr",
+                                  "type": {
+                                   "elem": {
+                                    "kind": "named",
+                                    "name": "tracker.Progress"
+                                   },
+                                   "kind": "pointer"
+                                  }
+                                 },
+                                 "type": {
+                                  "kind": "named",
+                                  "name": "tracker.Progress"
+                                 }
+                                },
+                                "type": {
+                                 "int": "uint64",
+                                 "kind": "int"
+                                },
+                                "typeId": "tracker.Progress"
+                               },
+                               "stmt": "unseq-probe"
+                              },
                               {
                                "define": true,
                                "lhs": [
@@ -135548,6 +135857,66 @@
                          {
                           "body": [
                            {
+                            "expr": {
+                             "expr": "field-get",
+                             "field": "logger",
+                             "recv": {
+                              "expr": "deref",
+                              "ptr": {
+                               "expr": "ident",
+                               "name": "r",
+                               "type": {
+                                "elem": {
+                                 "kind": "named",
+                                 "name": "raft.raft"
+                                },
+                                "kind": "pointer"
+                               }
+                              },
+                              "type": {
+                               "kind": "named",
+                               "name": "raft.raft"
+                              }
+                             },
+                             "type": {
+                              "kind": "interface",
+                              "name": "raft.Logger"
+                             },
+                             "typeId": "raft.raft"
+                            },
+                            "stmt": "unseq-probe"
+                           },
+                           {
+                            "expr": {
+                             "expr": "field-get",
+                             "field": "id",
+                             "recv": {
+                              "expr": "deref",
+                              "ptr": {
+                               "expr": "ident",
+                               "name": "r",
+                               "type": {
+                                "elem": {
+                                 "kind": "named",
+                                 "name": "raft.raft"
+                                },
+                                "kind": "pointer"
+                               }
+                              },
+                              "type": {
+                               "kind": "named",
+                               "name": "raft.raft"
+                              }
+                             },
+                             "type": {
+                              "int": "uint64",
+                              "kind": "int"
+                             },
+                             "typeId": "raft.raft"
+                            },
+                            "stmt": "unseq-probe"
+                           },
+                           {
                             "define": true,
                             "lhs": [
                              {
@@ -135943,6 +136312,39 @@
                          {
                           "body": [
                            {
+                            "expr": {
+                             "expr": "field-get",
+                             "field": "Inflights",
+                             "recv": {
+                              "expr": "deref",
+                              "ptr": {
+                               "expr": "ident",
+                               "name": "pr",
+                               "type": {
+                                "elem": {
+                                 "kind": "named",
+                                 "name": "tracker.Progress"
+                                },
+                                "kind": "pointer"
+                               }
+                              },
+                              "type": {
+                               "kind": "named",
+                               "name": "tracker.Progress"
+                              }
+                             },
+                             "type": {
+                              "elem": {
+                               "kind": "named",
+                               "name": "tracker.Inflights"
+                              },
+                              "kind": "pointer"
+                             },
+                             "typeId": "tracker.Progress"
+                            },
+                            "stmt": "unseq-probe"
+                           },
+                           {
                             "define": true,
                             "lhs": [
                              {
@@ -136088,6 +136490,36 @@
                     },
                     "else": {
                      "body": [
+                      {
+                       "expr": {
+                        "expr": "field-get",
+                        "field": "id",
+                        "recv": {
+                         "expr": "deref",
+                         "ptr": {
+                          "expr": "ident",
+                          "name": "r",
+                          "type": {
+                           "elem": {
+                            "kind": "named",
+                            "name": "raft.raft"
+                           },
+                           "kind": "pointer"
+                          }
+                         },
+                         "type": {
+                          "kind": "named",
+                          "name": "raft.raft"
+                         }
+                        },
+                        "type": {
+                         "int": "uint64",
+                         "kind": "int"
+                        },
+                        "typeId": "raft.raft"
+                       },
+                       "stmt": "unseq-probe"
+                      },
                       {
                        "define": true,
                        "lhs": [
@@ -136441,6 +136873,36 @@
                     }
                    },
                    {
+                    "expr": {
+                     "expr": "field-get",
+                     "field": "id",
+                     "recv": {
+                      "expr": "deref",
+                      "ptr": {
+                       "expr": "ident",
+                       "name": "r",
+                       "type": {
+                        "elem": {
+                         "kind": "named",
+                         "name": "raft.raft"
+                        },
+                        "kind": "pointer"
+                       }
+                      },
+                      "type": {
+                       "kind": "named",
+                       "name": "raft.raft"
+                      }
+                     },
+                     "type": {
+                      "int": "uint64",
+                      "kind": "int"
+                     },
+                     "typeId": "raft.raft"
+                    },
+                    "stmt": "unseq-probe"
+                   },
+                   {
                     "define": true,
                     "lhs": [
                      {
@@ -136752,6 +137214,36 @@
                     "then": {
                      "body": [
                       {
+                       "expr": {
+                        "expr": "field-get",
+                        "field": "Match",
+                        "recv": {
+                         "expr": "deref",
+                         "ptr": {
+                          "expr": "ident",
+                          "name": "pr",
+                          "type": {
+                           "elem": {
+                            "kind": "named",
+                            "name": "tracker.Progress"
+                           },
+                           "kind": "pointer"
+                          }
+                         },
+                         "type": {
+                          "kind": "named",
+                          "name": "tracker.Progress"
+                         }
+                        },
+                        "type": {
+                         "int": "uint64",
+                         "kind": "int"
+                        },
+                        "typeId": "tracker.Progress"
+                       },
+                       "stmt": "unseq-probe"
+                      },
+                      {
                        "define": true,
                        "lhs": [
                         {
@@ -136882,6 +137374,66 @@
                     "stmt": "if",
                     "then": {
                      "body": [
+                      {
+                       "expr": {
+                        "expr": "field-get",
+                        "field": "logger",
+                        "recv": {
+                         "expr": "deref",
+                         "ptr": {
+                          "expr": "ident",
+                          "name": "r",
+                          "type": {
+                           "elem": {
+                            "kind": "named",
+                            "name": "raft.raft"
+                           },
+                           "kind": "pointer"
+                          }
+                         },
+                         "type": {
+                          "kind": "named",
+                          "name": "raft.raft"
+                         }
+                        },
+                        "type": {
+                         "kind": "interface",
+                         "name": "raft.Logger"
+                        },
+                        "typeId": "raft.raft"
+                       },
+                       "stmt": "unseq-probe"
+                      },
+                      {
+                       "expr": {
+                        "expr": "field-get",
+                        "field": "id",
+                        "recv": {
+                         "expr": "deref",
+                         "ptr": {
+                          "expr": "ident",
+                          "name": "r",
+                          "type": {
+                           "elem": {
+                            "kind": "named",
+                            "name": "raft.raft"
+                           },
+                           "kind": "pointer"
+                          }
+                         },
+                         "type": {
+                          "kind": "named",
+                          "name": "raft.raft"
+                         }
+                        },
+                        "type": {
+                         "int": "uint64",
+                         "kind": "int"
+                        },
+                        "typeId": "raft.raft"
+                       },
+                       "stmt": "unseq-probe"
+                      },
                       {
                        "define": true,
                        "lhs": [
@@ -137196,6 +137748,66 @@
               "stmt": "if",
               "then": {
                "body": [
+                {
+                 "expr": {
+                  "expr": "field-get",
+                  "field": "logger",
+                  "recv": {
+                   "expr": "deref",
+                   "ptr": {
+                    "expr": "ident",
+                    "name": "r",
+                    "type": {
+                     "elem": {
+                      "kind": "named",
+                      "name": "raft.raft"
+                     },
+                     "kind": "pointer"
+                    }
+                   },
+                   "type": {
+                    "kind": "named",
+                    "name": "raft.raft"
+                   }
+                  },
+                  "type": {
+                   "kind": "interface",
+                   "name": "raft.Logger"
+                  },
+                  "typeId": "raft.raft"
+                 },
+                 "stmt": "unseq-probe"
+                },
+                {
+                 "expr": {
+                  "expr": "field-get",
+                  "field": "id",
+                  "recv": {
+                   "expr": "deref",
+                   "ptr": {
+                    "expr": "ident",
+                    "name": "r",
+                    "type": {
+                     "elem": {
+                      "kind": "named",
+                      "name": "raft.raft"
+                     },
+                     "kind": "pointer"
+                    }
+                   },
+                   "type": {
+                    "kind": "named",
+                    "name": "raft.raft"
+                   }
+                  },
+                  "type": {
+                   "int": "uint64",
+                   "kind": "int"
+                  },
+                  "typeId": "raft.raft"
+                 },
+                 "stmt": "unseq-probe"
+                },
                 {
                  "define": true,
                  "lhs": [
@@ -137748,6 +138360,39 @@
                  "then": {
                   "body": [
                    {
+                    "expr": {
+                     "expr": "field-get",
+                     "field": "raftLog",
+                     "recv": {
+                      "expr": "deref",
+                      "ptr": {
+                       "expr": "ident",
+                       "name": "r",
+                       "type": {
+                        "elem": {
+                         "kind": "named",
+                         "name": "raft.raft"
+                        },
+                        "kind": "pointer"
+                       }
+                      },
+                      "type": {
+                       "kind": "named",
+                       "name": "raft.raft"
+                      }
+                     },
+                     "type": {
+                      "elem": {
+                       "kind": "named",
+                       "name": "raft.raftLog"
+                      },
+                      "kind": "pointer"
+                     },
+                     "typeId": "raft.raft"
+                    },
+                    "stmt": "unseq-probe"
+                   },
+                   {
                     "define": true,
                     "lhs": [
                      {
@@ -138009,6 +138654,66 @@
                  "stmt": "if",
                  "then": {
                   "body": [
+                   {
+                    "expr": {
+                     "expr": "field-get",
+                     "field": "logger",
+                     "recv": {
+                      "expr": "deref",
+                      "ptr": {
+                       "expr": "ident",
+                       "name": "r",
+                       "type": {
+                        "elem": {
+                         "kind": "named",
+                         "name": "raft.raft"
+                        },
+                        "kind": "pointer"
+                       }
+                      },
+                      "type": {
+                       "kind": "named",
+                       "name": "raft.raft"
+                      }
+                     },
+                     "type": {
+                      "kind": "interface",
+                      "name": "raft.Logger"
+                     },
+                     "typeId": "raft.raft"
+                    },
+                    "stmt": "unseq-probe"
+                   },
+                   {
+                    "expr": {
+                     "expr": "field-get",
+                     "field": "id",
+                     "recv": {
+                      "expr": "deref",
+                      "ptr": {
+                       "expr": "ident",
+                       "name": "r",
+                       "type": {
+                        "elem": {
+                         "kind": "named",
+                         "name": "raft.raft"
+                        },
+                        "kind": "pointer"
+                       }
+                      },
+                      "type": {
+                       "kind": "named",
+                       "name": "raft.raft"
+                      }
+                     },
+                     "type": {
+                      "int": "uint64",
+                      "kind": "int"
+                     },
+                     "typeId": "raft.raft"
+                    },
+                    "stmt": "unseq-probe"
+                   },
                    {
                     "define": true,
                     "lhs": [
@@ -138534,6 +139239,36 @@
               "stmt": "assign"
              },
              {
+              "expr": {
+               "expr": "field-get",
+               "field": "Match",
+               "recv": {
+                "expr": "deref",
+                "ptr": {
+                 "expr": "ident",
+                 "name": "pr",
+                 "type": {
+                  "elem": {
+                   "kind": "named",
+                   "name": "tracker.Progress"
+                  },
+                  "kind": "pointer"
+                 }
+                },
+                "type": {
+                 "kind": "named",
+                 "name": "tracker.Progress"
+                }
+               },
+               "type": {
+                "int": "uint64",
+                "kind": "int"
+               },
+               "typeId": "tracker.Progress"
+              },
+              "stmt": "unseq-probe"
+             },
+             {
               "define": true,
               "lhs": [
                {
@@ -138988,6 +139723,39 @@
                ],
                "stmt": "block"
               }
+             },
+             {
+              "expr": {
+               "expr": "field-get",
+               "field": "readOnly",
+               "recv": {
+                "expr": "deref",
+                "ptr": {
+                 "expr": "ident",
+                 "name": "r",
+                 "type": {
+                  "elem": {
+                   "kind": "named",
+                   "name": "raft.raft"
+                  },
+                  "kind": "pointer"
+                 }
+                },
+                "type": {
+                 "kind": "named",
+                 "name": "raft.raft"
+                }
+               },
+               "type": {
+                "elem": {
+                 "kind": "named",
+                 "name": "raft.readOnly"
+                },
+                "kind": "pointer"
+               },
+               "typeId": "raft.raft"
+              },
+              "stmt": "unseq-probe"
              },
              {
               "define": true,
@@ -139724,6 +140492,66 @@
                  "stmt": "expr"
                 },
                 {
+                 "expr": {
+                  "expr": "field-get",
+                  "field": "logger",
+                  "recv": {
+                   "expr": "deref",
+                   "ptr": {
+                    "expr": "ident",
+                    "name": "r",
+                    "type": {
+                     "elem": {
+                      "kind": "named",
+                      "name": "raft.raft"
+                     },
+                     "kind": "pointer"
+                    }
+                   },
+                   "type": {
+                    "kind": "named",
+                    "name": "raft.raft"
+                   }
+                  },
+                  "type": {
+                   "kind": "interface",
+                   "name": "raft.Logger"
+                  },
+                  "typeId": "raft.raft"
+                 },
+                 "stmt": "unseq-probe"
+                },
+                {
+                 "expr": {
+                  "expr": "field-get",
+                  "field": "id",
+                  "recv": {
+                   "expr": "deref",
+                   "ptr": {
+                    "expr": "ident",
+                    "name": "r",
+                    "type": {
+                     "elem": {
+                      "kind": "named",
+                      "name": "raft.raft"
+                     },
+                     "kind": "pointer"
+                    }
+                   },
+                   "type": {
+                    "kind": "named",
+                    "name": "raft.raft"
+                   }
+                  },
+                  "type": {
+                   "int": "uint64",
+                   "kind": "int"
+                  },
+                  "typeId": "raft.raft"
+                 },
+                 "stmt": "unseq-probe"
+                },
+                {
                  "define": true,
                  "lhs": [
                   {
@@ -140023,6 +140851,66 @@
                   "resultTypes": []
                  },
                  "stmt": "expr"
+                },
+                {
+                 "expr": {
+                  "expr": "field-get",
+                  "field": "logger",
+                  "recv": {
+                   "expr": "deref",
+                   "ptr": {
+                    "expr": "ident",
+                    "name": "r",
+                    "type": {
+                     "elem": {
+                      "kind": "named",
+                      "name": "raft.raft"
+                     },
+                     "kind": "pointer"
+                    }
+                   },
+                   "type": {
+                    "kind": "named",
+                    "name": "raft.raft"
+                   }
+                  },
+                  "type": {
+                   "kind": "interface",
+                   "name": "raft.Logger"
+                  },
+                  "typeId": "raft.raft"
+                 },
+                 "stmt": "unseq-probe"
+                },
+                {
+                 "expr": {
+                  "expr": "field-get",
+                  "field": "id",
+                  "recv": {
+                   "expr": "deref",
+                   "ptr": {
+                    "expr": "ident",
+                    "name": "r",
+                    "type": {
+                     "elem": {
+                      "kind": "named",
+                      "name": "raft.raft"
+                     },
+                     "kind": "pointer"
+                    }
+                   },
+                   "type": {
+                    "kind": "named",
+                    "name": "raft.raft"
+                   }
+                  },
+                  "type": {
+                   "int": "uint64",
+                   "kind": "int"
+                  },
+                  "typeId": "raft.raft"
+                 },
+                 "stmt": "unseq-probe"
                 },
                 {
                  "define": true,
@@ -140476,6 +141364,66 @@
                ],
                "stmt": "block"
               }
+             },
+             {
+              "expr": {
+               "expr": "field-get",
+               "field": "logger",
+               "recv": {
+                "expr": "deref",
+                "ptr": {
+                 "expr": "ident",
+                 "name": "r",
+                 "type": {
+                  "elem": {
+                   "kind": "named",
+                   "name": "raft.raft"
+                  },
+                  "kind": "pointer"
+                 }
+                },
+                "type": {
+                 "kind": "named",
+                 "name": "raft.raft"
+                }
+               },
+               "type": {
+                "kind": "interface",
+                "name": "raft.Logger"
+               },
+               "typeId": "raft.raft"
+              },
+              "stmt": "unseq-probe"
+             },
+             {
+              "expr": {
+               "expr": "field-get",
+               "field": "id",
+               "recv": {
+                "expr": "deref",
+                "ptr": {
+                 "expr": "ident",
+                 "name": "r",
+                 "type": {
+                  "elem": {
+                   "kind": "named",
+                   "name": "raft.raft"
+                  },
+                  "kind": "pointer"
+                 }
+                },
+                "type": {
+                 "kind": "named",
+                 "name": "raft.raft"
+                }
+               },
+               "type": {
+                "int": "uint64",
+                "kind": "int"
+               },
+               "typeId": "raft.raft"
+              },
+              "stmt": "unseq-probe"
              },
              {
               "define": true,
@@ -142262,6 +143210,36 @@
                }
               ],
               "stmt": "assign"
+             },
+             {
+              "expr": {
+               "expr": "field-get",
+               "field": "Match",
+               "recv": {
+                "expr": "deref",
+                "ptr": {
+                 "expr": "ident",
+                 "name": "pr",
+                 "type": {
+                  "elem": {
+                   "kind": "named",
+                   "name": "tracker.Progress"
+                  },
+                  "kind": "pointer"
+                 }
+                },
+                "type": {
+                 "kind": "named",
+                 "name": "tracker.Progress"
+                }
+               },
+               "type": {
+                "int": "uint64",
+                "kind": "int"
+               },
+               "typeId": "tracker.Progress"
+              },
+              "stmt": "unseq-probe"
              },
              {
               "define": true,
@@ -144434,6 +145412,66 @@
               "stmt": "assign"
              },
              {
+              "expr": {
+               "expr": "field-get",
+               "field": "logger",
+               "recv": {
+                "expr": "deref",
+                "ptr": {
+                 "expr": "ident",
+                 "name": "r",
+                 "type": {
+                  "elem": {
+                   "kind": "named",
+                   "name": "raft.raft"
+                  },
+                  "kind": "pointer"
+                 }
+                },
+                "type": {
+                 "kind": "named",
+                 "name": "raft.raft"
+                }
+               },
+               "type": {
+                "kind": "interface",
+                "name": "raft.Logger"
+               },
+               "typeId": "raft.raft"
+              },
+              "stmt": "unseq-probe"
+             },
+             {
+              "expr": {
+               "expr": "field-get",
+               "field": "id",
+               "recv": {
+                "expr": "deref",
+                "ptr": {
+                 "expr": "ident",
+                 "name": "r",
+                 "type": {
+                  "elem": {
+                   "kind": "named",
+                   "name": "raft.raft"
+                  },
+                  "kind": "pointer"
+                 }
+                },
+                "type": {
+                 "kind": "named",
+                 "name": "raft.raft"
+                }
+               },
+               "type": {
+                "int": "uint64",
+                "kind": "int"
+               },
+               "typeId": "raft.raft"
+              },
+              "stmt": "unseq-probe"
+             },
+             {
               "define": true,
               "lhs": [
                {
@@ -145275,6 +146313,126 @@
            },
            {
             "body": [
+             {
+              "expr": {
+               "expr": "field-get",
+               "field": "logger",
+               "recv": {
+                "expr": "deref",
+                "ptr": {
+                 "expr": "ident",
+                 "name": "r",
+                 "type": {
+                  "elem": {
+                   "kind": "named",
+                   "name": "raft.raft"
+                  },
+                  "kind": "pointer"
+                 }
+                },
+                "type": {
+                 "kind": "named",
+                 "name": "raft.raft"
+                }
+               },
+               "type": {
+                "kind": "interface",
+                "name": "raft.Logger"
+               },
+               "typeId": "raft.raft"
+              },
+              "stmt": "unseq-probe"
+             },
+             {
+              "expr": {
+               "expr": "field-get",
+               "field": "id",
+               "recv": {
+                "expr": "deref",
+                "ptr": {
+                 "expr": "ident",
+                 "name": "r",
+                 "type": {
+                  "elem": {
+                   "kind": "named",
+                   "name": "raft.raft"
+                  },
+                  "kind": "pointer"
+                 }
+                },
+                "type": {
+                 "kind": "named",
+                 "name": "raft.raft"
+                }
+               },
+               "type": {
+                "int": "uint64",
+                "kind": "int"
+               },
+               "typeId": "raft.raft"
+              },
+              "stmt": "unseq-probe"
+             },
+             {
+              "expr": {
+               "expr": "field-get",
+               "field": "Term",
+               "recv": {
+                "expr": "deref",
+                "ptr": {
+                 "expr": "ident",
+                 "name": "r",
+                 "type": {
+                  "elem": {
+                   "kind": "named",
+                   "name": "raft.raft"
+                  },
+                  "kind": "pointer"
+                 }
+                },
+                "type": {
+                 "kind": "named",
+                 "name": "raft.raft"
+                }
+               },
+               "type": {
+                "int": "uint64",
+                "kind": "int"
+               },
+               "typeId": "raft.raft"
+              },
+              "stmt": "unseq-probe"
+             },
+             {
+              "expr": {
+               "expr": "field-get",
+               "field": "state",
+               "recv": {
+                "expr": "deref",
+                "ptr": {
+                 "expr": "ident",
+                 "name": "r",
+                 "type": {
+                  "elem": {
+                   "kind": "named",
+                   "name": "raft.raft"
+                  },
+                  "kind": "pointer"
+                 }
+                },
+                "type": {
+                 "kind": "named",
+                 "name": "raft.raft"
+                }
+               },
+               "type": {
+                "kind": "named",
+                "name": "raft.StateType"
+               },
+               "typeId": "raft.raft"
+              },
+              "stmt": "unseq-probe"
+             },
              {
               "define": true,
               "lhs": [
@@ -148702,6 +149860,96 @@
            {
             "body": [
              {
+              "expr": {
+               "expr": "field-get",
+               "field": "logger",
+               "recv": {
+                "expr": "deref",
+                "ptr": {
+                 "expr": "ident",
+                 "name": "r",
+                 "type": {
+                  "elem": {
+                   "kind": "named",
+                   "name": "raft.raft"
+                  },
+                  "kind": "pointer"
+                 }
+                },
+                "type": {
+                 "kind": "named",
+                 "name": "raft.raft"
+                }
+               },
+               "type": {
+                "kind": "interface",
+                "name": "raft.Logger"
+               },
+               "typeId": "raft.raft"
+              },
+              "stmt": "unseq-probe"
+             },
+             {
+              "expr": {
+               "expr": "field-get",
+               "field": "id",
+               "recv": {
+                "expr": "deref",
+                "ptr": {
+                 "expr": "ident",
+                 "name": "r",
+                 "type": {
+                  "elem": {
+                   "kind": "named",
+                   "name": "raft.raft"
+                  },
+                  "kind": "pointer"
+                 }
+                },
+                "type": {
+                 "kind": "named",
+                 "name": "raft.raft"
+                }
+               },
+               "type": {
+                "int": "uint64",
+                "kind": "int"
+               },
+               "typeId": "raft.raft"
+              },
+              "stmt": "unseq-probe"
+             },
+             {
+              "expr": {
+               "expr": "field-get",
+               "field": "Term",
+               "recv": {
+                "expr": "deref",
+                "ptr": {
+                 "expr": "ident",
+                 "name": "r",
+                 "type": {
+                  "elem": {
+                   "kind": "named",
+                   "name": "raft.raft"
+                  },
+                  "kind": "pointer"
+                 }
+                },
+                "type": {
+                 "kind": "named",
+                 "name": "raft.raft"
+                }
+               },
+               "type": {
+                "int": "uint64",
+                "kind": "int"
+               },
+               "typeId": "raft.raft"
+              },
+              "stmt": "unseq-probe"
+             },
+             {
               "define": true,
               "lhs": [
                {
@@ -149671,6 +150919,66 @@
               "then": {
                "body": [
                 {
+                 "expr": {
+                  "expr": "field-get",
+                  "field": "logger",
+                  "recv": {
+                   "expr": "deref",
+                   "ptr": {
+                    "expr": "ident",
+                    "name": "r",
+                    "type": {
+                     "elem": {
+                      "kind": "named",
+                      "name": "raft.raft"
+                     },
+                     "kind": "pointer"
+                    }
+                   },
+                   "type": {
+                    "kind": "named",
+                    "name": "raft.raft"
+                   }
+                  },
+                  "type": {
+                   "kind": "interface",
+                   "name": "raft.Logger"
+                  },
+                  "typeId": "raft.raft"
+                 },
+                 "stmt": "unseq-probe"
+                },
+                {
+                 "expr": {
+                  "expr": "field-get",
+                  "field": "id",
+                  "recv": {
+                   "expr": "deref",
+                   "ptr": {
+                    "expr": "ident",
+                    "name": "r",
+                    "type": {
+                     "elem": {
+                      "kind": "named",
+                      "name": "raft.raft"
+                     },
+                     "kind": "pointer"
+                    }
+                   },
+                   "type": {
+                    "kind": "named",
+                    "name": "raft.raft"
+                   }
+                  },
+                  "type": {
+                   "int": "uint64",
+                   "kind": "int"
+                  },
+                  "typeId": "raft.raft"
+                 },
+                 "stmt": "unseq-probe"
+                },
+                {
                  "define": true,
                  "lhs": [
                   {
@@ -150020,6 +151328,39 @@
                ],
                "stmt": "block"
               }
+             },
+             {
+              "expr": {
+               "expr": "field-get",
+               "field": "readStates",
+               "recv": {
+                "expr": "deref",
+                "ptr": {
+                 "expr": "ident",
+                 "name": "r",
+                 "type": {
+                  "elem": {
+                   "kind": "named",
+                   "name": "raft.raft"
+                  },
+                  "kind": "pointer"
+                 }
+                },
+                "type": {
+                 "kind": "named",
+                 "name": "raft.raft"
+                }
+               },
+               "type": {
+                "elem": {
+                 "kind": "named",
+                 "name": "raft.ReadState"
+                },
+                "kind": "slice"
+               },
+               "typeId": "raft.raft"
+              },
+              "stmt": "unseq-probe"
              },
              {
               "define": true,
@@ -152749,6 +154090,69 @@
                "resultTypes": []
               },
               "stmt": "expr"
+             },
+             {
+              "expr": {
+               "expr": "field-get",
+               "field": "readOnly",
+               "recv": {
+                "expr": "deref",
+                "ptr": {
+                 "expr": "ident",
+                 "name": "r",
+                 "type": {
+                  "elem": {
+                   "kind": "named",
+                   "name": "raft.raft"
+                  },
+                  "kind": "pointer"
+                 }
+                },
+                "type": {
+                 "kind": "named",
+                 "name": "raft.raft"
+                }
+               },
+               "type": {
+                "elem": {
+                 "kind": "named",
+                 "name": "raft.readOnly"
+                },
+                "kind": "pointer"
+               },
+               "typeId": "raft.raft"
+              },
+              "stmt": "unseq-probe"
+             },
+             {
+              "expr": {
+               "expr": "field-get",
+               "field": "id",
+               "recv": {
+                "expr": "deref",
+                "ptr": {
+                 "expr": "ident",
+                 "name": "r",
+                 "type": {
+                  "elem": {
+                   "kind": "named",
+                   "name": "raft.raft"
+                  },
+                  "kind": "pointer"
+                 }
+                },
+                "type": {
+                 "kind": "named",
+                 "name": "raft.raft"
+                }
+               },
+               "type": {
+                "int": "uint64",
+                "kind": "int"
+               },
+               "typeId": "raft.raft"
+              },
+              "stmt": "unseq-probe"
              },
              {
               "define": true,
@@ -167461,6 +168865,138 @@
   {
    "body": {
     "body": [
+     {
+      "expr": {
+       "expr": "field-get",
+       "field": "Voters",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "state",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raftpb.ConfState"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raftpb.ConfState"
+        }
+       },
+       "type": {
+        "elem": {
+         "int": "uint64",
+         "kind": "int"
+        },
+        "kind": "slice"
+       },
+       "typeId": "raftpb.ConfState"
+      },
+      "stmt": "unseq-probe"
+     },
+     {
+      "expr": {
+       "expr": "field-get",
+       "field": "VotersOutgoing",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "state",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raftpb.ConfState"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raftpb.ConfState"
+        }
+       },
+       "type": {
+        "elem": {
+         "int": "uint64",
+         "kind": "int"
+        },
+        "kind": "slice"
+       },
+       "typeId": "raftpb.ConfState"
+      },
+      "stmt": "unseq-probe"
+     },
+     {
+      "expr": {
+       "expr": "field-get",
+       "field": "Learners",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "state",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raftpb.ConfState"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raftpb.ConfState"
+        }
+       },
+       "type": {
+        "elem": {
+         "int": "uint64",
+         "kind": "int"
+        },
+        "kind": "slice"
+       },
+       "typeId": "raftpb.ConfState"
+      },
+      "stmt": "unseq-probe"
+     },
+     {
+      "expr": {
+       "expr": "field-get",
+       "field": "LearnersNext",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "state",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raftpb.ConfState"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raftpb.ConfState"
+        }
+       },
+       "type": {
+        "elem": {
+         "int": "uint64",
+         "kind": "int"
+        },
+        "kind": "slice"
+       },
+       "typeId": "raftpb.ConfState"
+      },
+      "stmt": "unseq-probe"
+     },
      {
       "define": true,
       "lhs": [
@@ -201063,6 +202599,38 @@
          }
         },
         {
+         "expr": {
+          "expr": "field-get",
+          "field": "pending",
+          "recv": {
+           "expr": "deref",
+           "ptr": {
+            "expr": "ident",
+            "name": "t",
+            "type": {
+             "elem": {
+              "kind": "named",
+              "name": "main.twin"
+             },
+             "kind": "pointer"
+            }
+           },
+           "type": {
+            "kind": "named",
+            "name": "main.twin"
+           }
+          },
+          "type": {
+           "elem": {
+            "kind": "string"
+           },
+           "kind": "slice"
+          },
+          "typeId": "main.twin"
+         },
+         "stmt": "unseq-probe"
+        },
+        {
          "define": true,
          "lhs": [
           {
@@ -201860,6 +203428,39 @@
           }
          ],
          "stmt": "assign"
+        },
+        {
+         "expr": {
+          "expr": "field-get",
+          "field": "st",
+          "recv": {
+           "expr": "deref",
+           "ptr": {
+            "expr": "ident",
+            "name": "nd",
+            "type": {
+             "elem": {
+              "kind": "named",
+              "name": "main.twinNode"
+             },
+             "kind": "pointer"
+            }
+           },
+           "type": {
+            "kind": "named",
+            "name": "main.twinNode"
+           }
+          },
+          "type": {
+           "elem": {
+            "kind": "named",
+            "name": "raft.MemoryStorage"
+           },
+           "kind": "pointer"
+          },
+          "typeId": "main.twinNode"
+         },
+         "stmt": "unseq-probe"
         },
         {
          "define": true,
@@ -259528,6 +261129,35 @@
   {
    "body": {
     "body": [
+     {
+      "expr": {
+       "expr": "field-get",
+       "field": "Func",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "e",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "strconv.NumError"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "strconv.NumError"
+        }
+       },
+       "type": {
+        "kind": "string"
+       },
+       "typeId": "strconv.NumError"
+      },
+      "stmt": "unseq-probe"
+     },
      {
       "define": true,
       "lhs": [
@@ -381795,6 +383425,39 @@
       "body": {
        "body": [
         {
+         "expr": {
+          "expr": "field-get",
+          "field": "raft",
+          "recv": {
+           "expr": "deref",
+           "ptr": {
+            "expr": "ident",
+            "name": "rn",
+            "type": {
+             "elem": {
+              "kind": "named",
+              "name": "raft.RawNode"
+             },
+             "kind": "pointer"
+            }
+           },
+           "type": {
+            "kind": "named",
+            "name": "raft.RawNode"
+           }
+          },
+          "type": {
+           "elem": {
+            "kind": "named",
+            "name": "raft.raft"
+           },
+           "kind": "pointer"
+          },
+          "typeId": "raft.RawNode"
+         },
+         "stmt": "unseq-probe"
+        },
+        {
          "elemType": {
           "int": "uint64",
           "kind": "int"
@@ -384657,6 +386320,36 @@
               "then": {
                "body": [
                 {
+                 "expr": {
+                  "expr": "field-get",
+                  "field": "logger",
+                  "recv": {
+                   "expr": "deref",
+                   "ptr": {
+                    "expr": "ident",
+                    "name": "l",
+                    "type": {
+                     "elem": {
+                      "kind": "named",
+                      "name": "raft.raftLog"
+                     },
+                     "kind": "pointer"
+                    }
+                   },
+                   "type": {
+                    "kind": "named",
+                    "name": "raft.raftLog"
+                   }
+                  },
+                  "type": {
+                   "kind": "interface",
+                   "name": "raft.Logger"
+                  },
+                  "typeId": "raft.raftLog"
+                 },
+                 "stmt": "unseq-probe"
+                },
+                {
                  "define": true,
                  "lhs": [
                   {
@@ -385902,6 +387595,36 @@
       }
      },
      {
+      "expr": {
+       "expr": "field-get",
+       "field": "applying",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "l",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.raftLog"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.raftLog"
+        }
+       },
+       "type": {
+        "int": "uint64",
+        "kind": "int"
+       },
+       "typeId": "raft.raftLog"
+      },
+      "stmt": "unseq-probe"
+     },
+     {
       "define": true,
       "lhs": [
        {
@@ -386846,6 +388569,36 @@
        ],
        "stmt": "block"
       }
+     },
+     {
+      "expr": {
+       "expr": "field-get",
+       "field": "applying",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "l",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.raftLog"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.raftLog"
+        }
+       },
+       "type": {
+        "int": "uint64",
+        "kind": "int"
+       },
+       "typeId": "raft.raftLog"
+      },
+      "stmt": "unseq-probe"
      },
      {
       "define": true,
@@ -388454,6 +390207,36 @@
          "stmt": "if",
          "then": {
           "body": [
+           {
+            "expr": {
+             "expr": "field-get",
+             "field": "logger",
+             "recv": {
+              "expr": "deref",
+              "ptr": {
+               "expr": "ident",
+               "name": "l",
+               "type": {
+                "elem": {
+                 "kind": "named",
+                 "name": "raft.raftLog"
+                },
+                "kind": "pointer"
+               }
+              },
+              "type": {
+               "kind": "named",
+               "name": "raft.raftLog"
+              }
+             },
+             "type": {
+              "kind": "interface",
+              "name": "raft.Logger"
+             },
+             "typeId": "raft.raftLog"
+            },
+            "stmt": "unseq-probe"
+           },
            {
             "define": true,
             "lhs": [
@@ -392644,6 +394427,36 @@
    "body": {
     "body": [
      {
+      "expr": {
+       "expr": "field-get",
+       "field": "logger",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "l",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.raftLog"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.raftLog"
+        }
+       },
+       "type": {
+        "kind": "interface",
+        "name": "raft.Logger"
+       },
+       "typeId": "raft.raftLog"
+      },
+      "stmt": "unseq-probe"
+     },
+     {
       "define": true,
       "lhs": [
        {
@@ -395997,6 +397810,36 @@
       "stmt": "if",
       "then": {
        "body": [
+        {
+         "expr": {
+          "expr": "field-get",
+          "field": "logger",
+          "recv": {
+           "expr": "deref",
+           "ptr": {
+            "expr": "ident",
+            "name": "l",
+            "type": {
+             "elem": {
+              "kind": "named",
+              "name": "raft.raftLog"
+             },
+             "kind": "pointer"
+            }
+           },
+           "type": {
+            "kind": "named",
+            "name": "raft.raftLog"
+           }
+          },
+          "type": {
+           "kind": "interface",
+           "name": "raft.Logger"
+          },
+          "typeId": "raft.raftLog"
+         },
+         "stmt": "unseq-probe"
+        },
         {
          "define": true,
          "lhs": [
@@ -409182,6 +411025,36 @@
          "then": {
           "body": [
            {
+            "expr": {
+             "expr": "field-get",
+             "field": "logger",
+             "recv": {
+              "expr": "deref",
+              "ptr": {
+               "expr": "ident",
+               "name": "r",
+               "type": {
+                "elem": {
+                 "kind": "named",
+                 "name": "raft.raft"
+                },
+                "kind": "pointer"
+               }
+              },
+              "type": {
+               "kind": "named",
+               "name": "raft.raft"
+              }
+             },
+             "type": {
+              "kind": "interface",
+              "name": "raft.Logger"
+             },
+             "typeId": "raft.raft"
+            },
+            "stmt": "unseq-probe"
+           },
+           {
             "define": true,
             "lhs": [
              {
@@ -409780,6 +411653,36 @@
          "then": {
           "body": [
            {
+            "expr": {
+             "expr": "field-get",
+             "field": "logger",
+             "recv": {
+              "expr": "deref",
+              "ptr": {
+               "expr": "ident",
+               "name": "r",
+               "type": {
+                "elem": {
+                 "kind": "named",
+                 "name": "raft.raft"
+                },
+                "kind": "pointer"
+               }
+              },
+              "type": {
+               "kind": "named",
+               "name": "raft.raft"
+              }
+             },
+             "type": {
+              "kind": "interface",
+              "name": "raft.Logger"
+             },
+             "typeId": "raft.raft"
+            },
+            "stmt": "unseq-probe"
+           },
+           {
             "define": true,
             "lhs": [
              {
@@ -410355,6 +412258,36 @@
          "stmt": "if",
          "then": {
           "body": [
+           {
+            "expr": {
+             "expr": "field-get",
+             "field": "logger",
+             "recv": {
+              "expr": "deref",
+              "ptr": {
+               "expr": "ident",
+               "name": "r",
+               "type": {
+                "elem": {
+                 "kind": "named",
+                 "name": "raft.raft"
+                },
+                "kind": "pointer"
+               }
+              },
+              "type": {
+               "kind": "named",
+               "name": "raft.raft"
+              }
+             },
+             "type": {
+              "kind": "interface",
+              "name": "raft.Logger"
+             },
+             "typeId": "raft.raft"
+            },
+            "stmt": "unseq-probe"
+           },
            {
             "define": true,
             "lhs": [
@@ -413614,6 +415547,66 @@
       "stmt": "assign"
      },
      {
+      "expr": {
+       "expr": "field-get",
+       "field": "logger",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "r",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.raft"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.raft"
+        }
+       },
+       "type": {
+        "kind": "interface",
+        "name": "raft.Logger"
+       },
+       "typeId": "raft.raft"
+      },
+      "stmt": "unseq-probe"
+     },
+     {
+      "expr": {
+       "expr": "field-get",
+       "field": "id",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "r",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.raft"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.raft"
+        }
+       },
+       "type": {
+        "int": "uint64",
+        "kind": "int"
+       },
+       "typeId": "raft.raft"
+      },
+      "stmt": "unseq-probe"
+     },
+     {
       "define": true,
       "lhs": [
        {
@@ -416770,6 +418763,39 @@
        }
       },
       "stmt": "defer"
+     },
+     {
+      "expr": {
+       "expr": "field-get",
+       "field": "raftLog",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "r",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.raft"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.raft"
+        }
+       },
+       "type": {
+        "elem": {
+         "kind": "named",
+         "name": "raft.raftLog"
+        },
+        "kind": "pointer"
+       },
+       "typeId": "raft.raft"
+      },
+      "stmt": "unseq-probe"
      },
      {
       "define": true,
@@ -430137,6 +432163,96 @@
                     "stmt": "assign"
                    },
                    {
+                    "expr": {
+                     "expr": "field-get",
+                     "field": "logger",
+                     "recv": {
+                      "expr": "deref",
+                      "ptr": {
+                       "expr": "ident",
+                       "name": "r",
+                       "type": {
+                        "elem": {
+                         "kind": "named",
+                         "name": "raft.raft"
+                        },
+                        "kind": "pointer"
+                       }
+                      },
+                      "type": {
+                       "kind": "named",
+                       "name": "raft.raft"
+                      }
+                     },
+                     "type": {
+                      "kind": "interface",
+                      "name": "raft.Logger"
+                     },
+                     "typeId": "raft.raft"
+                    },
+                    "stmt": "unseq-probe"
+                   },
+                   {
+                    "expr": {
+                     "expr": "field-get",
+                     "field": "id",
+                     "recv": {
+                      "expr": "deref",
+                      "ptr": {
+                       "expr": "ident",
+                       "name": "r",
+                       "type": {
+                        "elem": {
+                         "kind": "named",
+                         "name": "raft.raft"
+                        },
+                        "kind": "pointer"
+                       }
+                      },
+                      "type": {
+                       "kind": "named",
+                       "name": "raft.raft"
+                      }
+                     },
+                     "type": {
+                      "int": "uint64",
+                      "kind": "int"
+                     },
+                     "typeId": "raft.raft"
+                    },
+                    "stmt": "unseq-probe"
+                   },
+                   {
+                    "expr": {
+                     "expr": "field-get",
+                     "field": "Vote",
+                     "recv": {
+                      "expr": "deref",
+                      "ptr": {
+                       "expr": "ident",
+                       "name": "r",
+                       "type": {
+                        "elem": {
+                         "kind": "named",
+                         "name": "raft.raft"
+                        },
+                        "kind": "pointer"
+                       }
+                      },
+                      "type": {
+                       "kind": "named",
+                       "name": "raft.raft"
+                      }
+                     },
+                     "type": {
+                      "int": "uint64",
+                      "kind": "int"
+                     },
+                     "typeId": "raft.raft"
+                    },
+                    "stmt": "unseq-probe"
+                   },
+                   {
                     "define": true,
                     "lhs": [
                      {
@@ -431382,6 +433498,96 @@
                    },
                    {
                     "body": [
+                     {
+                      "expr": {
+                       "expr": "field-get",
+                       "field": "logger",
+                       "recv": {
+                        "expr": "deref",
+                        "ptr": {
+                         "expr": "ident",
+                         "name": "r",
+                         "type": {
+                          "elem": {
+                           "kind": "named",
+                           "name": "raft.raft"
+                          },
+                          "kind": "pointer"
+                         }
+                        },
+                        "type": {
+                         "kind": "named",
+                         "name": "raft.raft"
+                        }
+                       },
+                       "type": {
+                        "kind": "interface",
+                        "name": "raft.Logger"
+                       },
+                       "typeId": "raft.raft"
+                      },
+                      "stmt": "unseq-probe"
+                     },
+                     {
+                      "expr": {
+                       "expr": "field-get",
+                       "field": "id",
+                       "recv": {
+                        "expr": "deref",
+                        "ptr": {
+                         "expr": "ident",
+                         "name": "r",
+                         "type": {
+                          "elem": {
+                           "kind": "named",
+                           "name": "raft.raft"
+                          },
+                          "kind": "pointer"
+                         }
+                        },
+                        "type": {
+                         "kind": "named",
+                         "name": "raft.raft"
+                        }
+                       },
+                       "type": {
+                        "int": "uint64",
+                        "kind": "int"
+                       },
+                       "typeId": "raft.raft"
+                      },
+                      "stmt": "unseq-probe"
+                     },
+                     {
+                      "expr": {
+                       "expr": "field-get",
+                       "field": "Term",
+                       "recv": {
+                        "expr": "deref",
+                        "ptr": {
+                         "expr": "ident",
+                         "name": "r",
+                         "type": {
+                          "elem": {
+                           "kind": "named",
+                           "name": "raft.raft"
+                          },
+                          "kind": "pointer"
+                         }
+                        },
+                        "type": {
+                         "kind": "named",
+                         "name": "raft.raft"
+                        }
+                       },
+                       "type": {
+                        "int": "uint64",
+                        "kind": "int"
+                       },
+                       "typeId": "raft.raft"
+                      },
+                      "stmt": "unseq-probe"
+                     },
                      {
                       "define": true,
                       "lhs": [
@@ -432813,6 +435019,96 @@
                     "else": {
                      "body": [
                       {
+                       "expr": {
+                        "expr": "field-get",
+                        "field": "logger",
+                        "recv": {
+                         "expr": "deref",
+                         "ptr": {
+                          "expr": "ident",
+                          "name": "r",
+                          "type": {
+                           "elem": {
+                            "kind": "named",
+                            "name": "raft.raft"
+                           },
+                           "kind": "pointer"
+                          }
+                         },
+                         "type": {
+                          "kind": "named",
+                          "name": "raft.raft"
+                         }
+                        },
+                        "type": {
+                         "kind": "interface",
+                         "name": "raft.Logger"
+                        },
+                        "typeId": "raft.raft"
+                       },
+                       "stmt": "unseq-probe"
+                      },
+                      {
+                       "expr": {
+                        "expr": "field-get",
+                        "field": "id",
+                        "recv": {
+                         "expr": "deref",
+                         "ptr": {
+                          "expr": "ident",
+                          "name": "r",
+                          "type": {
+                           "elem": {
+                            "kind": "named",
+                            "name": "raft.raft"
+                           },
+                           "kind": "pointer"
+                          }
+                         },
+                         "type": {
+                          "kind": "named",
+                          "name": "raft.raft"
+                         }
+                        },
+                        "type": {
+                         "int": "uint64",
+                         "kind": "int"
+                        },
+                        "typeId": "raft.raft"
+                       },
+                       "stmt": "unseq-probe"
+                      },
+                      {
+                       "expr": {
+                        "expr": "field-get",
+                        "field": "Term",
+                        "recv": {
+                         "expr": "deref",
+                         "ptr": {
+                          "expr": "ident",
+                          "name": "r",
+                          "type": {
+                           "elem": {
+                            "kind": "named",
+                            "name": "raft.raft"
+                           },
+                           "kind": "pointer"
+                          }
+                         },
+                         "type": {
+                          "kind": "named",
+                          "name": "raft.raft"
+                         }
+                        },
+                        "type": {
+                         "int": "uint64",
+                         "kind": "int"
+                        },
+                        "typeId": "raft.raft"
+                       },
+                       "stmt": "unseq-probe"
+                      },
+                      {
                        "define": true,
                        "lhs": [
                         {
@@ -433299,6 +435595,96 @@
                        "stmt": "if",
                        "then": {
                         "body": [
+                         {
+                          "expr": {
+                           "expr": "field-get",
+                           "field": "logger",
+                           "recv": {
+                            "expr": "deref",
+                            "ptr": {
+                             "expr": "ident",
+                             "name": "r",
+                             "type": {
+                              "elem": {
+                               "kind": "named",
+                               "name": "raft.raft"
+                              },
+                              "kind": "pointer"
+                             }
+                            },
+                            "type": {
+                             "kind": "named",
+                             "name": "raft.raft"
+                            }
+                           },
+                           "type": {
+                            "kind": "interface",
+                            "name": "raft.Logger"
+                           },
+                           "typeId": "raft.raft"
+                          },
+                          "stmt": "unseq-probe"
+                         },
+                         {
+                          "expr": {
+                           "expr": "field-get",
+                           "field": "id",
+                           "recv": {
+                            "expr": "deref",
+                            "ptr": {
+                             "expr": "ident",
+                             "name": "r",
+                             "type": {
+                              "elem": {
+                               "kind": "named",
+                               "name": "raft.raft"
+                              },
+                              "kind": "pointer"
+                             }
+                            },
+                            "type": {
+                             "kind": "named",
+                             "name": "raft.raft"
+                            }
+                           },
+                           "type": {
+                            "int": "uint64",
+                            "kind": "int"
+                           },
+                           "typeId": "raft.raft"
+                          },
+                          "stmt": "unseq-probe"
+                         },
+                         {
+                          "expr": {
+                           "expr": "field-get",
+                           "field": "Term",
+                           "recv": {
+                            "expr": "deref",
+                            "ptr": {
+                             "expr": "ident",
+                             "name": "r",
+                             "type": {
+                              "elem": {
+                               "kind": "named",
+                               "name": "raft.raft"
+                              },
+                              "kind": "pointer"
+                             }
+                            },
+                            "type": {
+                             "kind": "named",
+                             "name": "raft.raft"
+                            }
+                           },
+                           "type": {
+                            "int": "uint64",
+                            "kind": "int"
+                           },
+                           "typeId": "raft.raft"
+                          },
+                          "stmt": "unseq-probe"
+                         },
                          {
                           "define": true,
                           "lhs": [
@@ -433889,6 +436275,96 @@
                      }
                     ],
                     "stmt": "assign"
+                   },
+                   {
+                    "expr": {
+                     "expr": "field-get",
+                     "field": "logger",
+                     "recv": {
+                      "expr": "deref",
+                      "ptr": {
+                       "expr": "ident",
+                       "name": "r",
+                       "type": {
+                        "elem": {
+                         "kind": "named",
+                         "name": "raft.raft"
+                        },
+                        "kind": "pointer"
+                       }
+                      },
+                      "type": {
+                       "kind": "named",
+                       "name": "raft.raft"
+                      }
+                     },
+                     "type": {
+                      "kind": "interface",
+                      "name": "raft.Logger"
+                     },
+                     "typeId": "raft.raft"
+                    },
+                    "stmt": "unseq-probe"
+                   },
+                   {
+                    "expr": {
+                     "expr": "field-get",
+                     "field": "id",
+                     "recv": {
+                      "expr": "deref",
+                      "ptr": {
+                       "expr": "ident",
+                       "name": "r",
+                       "type": {
+                        "elem": {
+                         "kind": "named",
+                         "name": "raft.raft"
+                        },
+                        "kind": "pointer"
+                       }
+                      },
+                      "type": {
+                       "kind": "named",
+                       "name": "raft.raft"
+                      }
+                     },
+                     "type": {
+                      "int": "uint64",
+                      "kind": "int"
+                     },
+                     "typeId": "raft.raft"
+                    },
+                    "stmt": "unseq-probe"
+                   },
+                   {
+                    "expr": {
+                     "expr": "field-get",
+                     "field": "Vote",
+                     "recv": {
+                      "expr": "deref",
+                      "ptr": {
+                       "expr": "ident",
+                       "name": "r",
+                       "type": {
+                        "elem": {
+                         "kind": "named",
+                         "name": "raft.raft"
+                        },
+                        "kind": "pointer"
+                       }
+                      },
+                      "type": {
+                       "kind": "named",
+                       "name": "raft.raft"
+                      }
+                     },
+                     "type": {
+                      "int": "uint64",
+                      "kind": "int"
+                     },
+                     "typeId": "raft.raft"
+                    },
+                    "stmt": "unseq-probe"
                    },
                    {
                     "define": true,
@@ -435933,6 +438409,39 @@
               "then": {
                "body": [
                 {
+                 "expr": {
+                  "expr": "field-get",
+                  "field": "raftLog",
+                  "recv": {
+                   "expr": "deref",
+                   "ptr": {
+                    "expr": "ident",
+                    "name": "r",
+                    "type": {
+                     "elem": {
+                      "kind": "named",
+                      "name": "raft.raft"
+                     },
+                     "kind": "pointer"
+                    }
+                   },
+                   "type": {
+                    "kind": "named",
+                    "name": "raft.raft"
+                   }
+                  },
+                  "type": {
+                   "elem": {
+                    "kind": "named",
+                    "name": "raft.raftLog"
+                   },
+                   "kind": "pointer"
+                  },
+                  "typeId": "raft.raft"
+                 },
+                 "stmt": "unseq-probe"
+                },
+                {
                  "define": true,
                  "lhs": [
                   {
@@ -436978,6 +439487,36 @@
            {
             "body": [
              {
+              "expr": {
+               "expr": "field-get",
+               "field": "Vote",
+               "recv": {
+                "expr": "deref",
+                "ptr": {
+                 "expr": "ident",
+                 "name": "r",
+                 "type": {
+                  "elem": {
+                   "kind": "named",
+                   "name": "raft.raft"
+                  },
+                  "kind": "pointer"
+                 }
+                },
+                "type": {
+                 "kind": "named",
+                 "name": "raft.raft"
+                }
+               },
+               "type": {
+                "int": "uint64",
+                "kind": "int"
+               },
+               "typeId": "raft.raft"
+              },
+              "stmt": "unseq-probe"
+             },
+             {
               "define": true,
               "lhs": [
                {
@@ -437795,6 +440334,96 @@
               },
               "else": {
                "body": [
+                {
+                 "expr": {
+                  "expr": "field-get",
+                  "field": "logger",
+                  "recv": {
+                   "expr": "deref",
+                   "ptr": {
+                    "expr": "ident",
+                    "name": "r",
+                    "type": {
+                     "elem": {
+                      "kind": "named",
+                      "name": "raft.raft"
+                     },
+                     "kind": "pointer"
+                    }
+                   },
+                   "type": {
+                    "kind": "named",
+                    "name": "raft.raft"
+                   }
+                  },
+                  "type": {
+                   "kind": "interface",
+                   "name": "raft.Logger"
+                  },
+                  "typeId": "raft.raft"
+                 },
+                 "stmt": "unseq-probe"
+                },
+                {
+                 "expr": {
+                  "expr": "field-get",
+                  "field": "id",
+                  "recv": {
+                   "expr": "deref",
+                   "ptr": {
+                    "expr": "ident",
+                    "name": "r",
+                    "type": {
+                     "elem": {
+                      "kind": "named",
+                      "name": "raft.raft"
+                     },
+                     "kind": "pointer"
+                    }
+                   },
+                   "type": {
+                    "kind": "named",
+                    "name": "raft.raft"
+                   }
+                  },
+                  "type": {
+                   "int": "uint64",
+                   "kind": "int"
+                  },
+                  "typeId": "raft.raft"
+                 },
+                 "stmt": "unseq-probe"
+                },
+                {
+                 "expr": {
+                  "expr": "field-get",
+                  "field": "Vote",
+                  "recv": {
+                   "expr": "deref",
+                   "ptr": {
+                    "expr": "ident",
+                    "name": "r",
+                    "type": {
+                     "elem": {
+                      "kind": "named",
+                      "name": "raft.raft"
+                     },
+                     "kind": "pointer"
+                    }
+                   },
+                   "type": {
+                    "kind": "named",
+                    "name": "raft.raft"
+                   }
+                  },
+                  "type": {
+                   "int": "uint64",
+                   "kind": "int"
+                  },
+                  "typeId": "raft.raft"
+                 },
+                 "stmt": "unseq-probe"
+                },
                 {
                  "define": true,
                  "lhs": [
@@ -438840,6 +441469,96 @@
               "stmt": "if",
               "then": {
                "body": [
+                {
+                 "expr": {
+                  "expr": "field-get",
+                  "field": "logger",
+                  "recv": {
+                   "expr": "deref",
+                   "ptr": {
+                    "expr": "ident",
+                    "name": "r",
+                    "type": {
+                     "elem": {
+                      "kind": "named",
+                      "name": "raft.raft"
+                     },
+                     "kind": "pointer"
+                    }
+                   },
+                   "type": {
+                    "kind": "named",
+                    "name": "raft.raft"
+                   }
+                  },
+                  "type": {
+                   "kind": "interface",
+                   "name": "raft.Logger"
+                  },
+                  "typeId": "raft.raft"
+                 },
+                 "stmt": "unseq-probe"
+                },
+                {
+                 "expr": {
+                  "expr": "field-get",
+                  "field": "id",
+                  "recv": {
+                   "expr": "deref",
+                   "ptr": {
+                    "expr": "ident",
+                    "name": "r",
+                    "type": {
+                     "elem": {
+                      "kind": "named",
+                      "name": "raft.raft"
+                     },
+                     "kind": "pointer"
+                    }
+                   },
+                   "type": {
+                    "kind": "named",
+                    "name": "raft.raft"
+                   }
+                  },
+                  "type": {
+                   "int": "uint64",
+                   "kind": "int"
+                  },
+                  "typeId": "raft.raft"
+                 },
+                 "stmt": "unseq-probe"
+                },
+                {
+                 "expr": {
+                  "expr": "field-get",
+                  "field": "Vote",
+                  "recv": {
+                   "expr": "deref",
+                   "ptr": {
+                    "expr": "ident",
+                    "name": "r",
+                    "type": {
+                     "elem": {
+                      "kind": "named",
+                      "name": "raft.raft"
+                     },
+                     "kind": "pointer"
+                    }
+                   },
+                   "type": {
+                    "kind": "named",
+                    "name": "raft.raft"
+                   }
+                  },
+                  "type": {
+                   "int": "uint64",
+                   "kind": "int"
+                  },
+                  "typeId": "raft.raft"
+                 },
+                 "stmt": "unseq-probe"
+                },
                 {
                  "define": true,
                  "lhs": [
@@ -440719,6 +443438,39 @@
       }
      },
      {
+      "expr": {
+       "expr": "field-get",
+       "field": "raftLog",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "r",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.raft"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.raft"
+        }
+       },
+       "type": {
+        "elem": {
+         "kind": "named",
+         "name": "raft.raftLog"
+        },
+        "kind": "pointer"
+       },
+       "typeId": "raft.raft"
+      },
+      "stmt": "unseq-probe"
+     },
+     {
       "define": true,
       "lhs": [
        {
@@ -441213,6 +443965,132 @@
        ],
        "stmt": "block"
       }
+     },
+     {
+      "expr": {
+       "expr": "field-get",
+       "field": "logger",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "r",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.raft"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.raft"
+        }
+       },
+       "type": {
+        "kind": "interface",
+        "name": "raft.Logger"
+       },
+       "typeId": "raft.raft"
+      },
+      "stmt": "unseq-probe"
+     },
+     {
+      "expr": {
+       "expr": "field-get",
+       "field": "id",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "r",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.raft"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.raft"
+        }
+       },
+       "type": {
+        "int": "uint64",
+        "kind": "int"
+       },
+       "typeId": "raft.raft"
+      },
+      "stmt": "unseq-probe"
+     },
+     {
+      "expr": {
+       "expr": "field-get",
+       "field": "raftLog",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "r",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.raft"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.raft"
+        }
+       },
+       "type": {
+        "elem": {
+         "kind": "named",
+         "name": "raft.raftLog"
+        },
+        "kind": "pointer"
+       },
+       "typeId": "raft.raft"
+      },
+      "stmt": "unseq-probe"
+     },
+     {
+      "expr": {
+       "expr": "field-get",
+       "field": "raftLog",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "r",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.raft"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.raft"
+        }
+       },
+       "type": {
+        "elem": {
+         "kind": "named",
+         "name": "raft.raftLog"
+        },
+        "kind": "pointer"
+       },
+       "typeId": "raft.raft"
+      },
+      "stmt": "unseq-probe"
      },
      {
       "define": true,
@@ -442004,6 +444882,39 @@
       "stmt": "assign"
      },
      {
+      "expr": {
+       "expr": "field-get",
+       "field": "raftLog",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "r",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.raft"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.raft"
+        }
+       },
+       "type": {
+        "elem": {
+         "kind": "named",
+         "name": "raft.raftLog"
+        },
+        "kind": "pointer"
+       },
+       "typeId": "raft.raft"
+      },
+      "stmt": "unseq-probe"
+     },
+     {
       "define": true,
       "lhs": [
        {
@@ -442716,6 +445627,39 @@
   {
    "body": {
     "body": [
+     {
+      "expr": {
+       "expr": "field-get",
+       "field": "raftLog",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "r",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.raft"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.raft"
+        }
+       },
+       "type": {
+        "elem": {
+         "kind": "named",
+         "name": "raft.raftLog"
+        },
+        "kind": "pointer"
+       },
+       "typeId": "raft.raft"
+      },
+      "stmt": "unseq-probe"
+     },
      {
       "define": true,
       "lhs": [
@@ -446938,6 +449882,39 @@
          "stmt": "expr"
         },
         {
+         "expr": {
+          "expr": "field-get",
+          "field": "raftLog",
+          "recv": {
+           "expr": "deref",
+           "ptr": {
+            "expr": "ident",
+            "name": "r",
+            "type": {
+             "elem": {
+              "kind": "named",
+              "name": "raft.raft"
+             },
+             "kind": "pointer"
+            }
+           },
+           "type": {
+            "kind": "named",
+            "name": "raft.raft"
+           }
+          },
+          "type": {
+           "elem": {
+            "kind": "named",
+            "name": "raft.raftLog"
+           },
+           "kind": "pointer"
+          },
+          "typeId": "raft.raft"
+         },
+         "stmt": "unseq-probe"
+        },
+        {
          "define": true,
          "lhs": [
           {
@@ -447612,6 +450589,36 @@
        ],
        "stmt": "block"
       }
+     },
+     {
+      "expr": {
+       "expr": "field-get",
+       "field": "logger",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "r",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.raft"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.raft"
+        }
+       },
+       "type": {
+        "kind": "interface",
+        "name": "raft.Logger"
+       },
+       "typeId": "raft.raft"
+      },
+      "stmt": "unseq-probe"
      },
      {
       "define": true,
@@ -450397,6 +453404,66 @@
       "then": {
        "body": [
         {
+         "expr": {
+          "expr": "field-get",
+          "field": "logger",
+          "recv": {
+           "expr": "deref",
+           "ptr": {
+            "expr": "ident",
+            "name": "r",
+            "type": {
+             "elem": {
+              "kind": "named",
+              "name": "raft.raft"
+             },
+             "kind": "pointer"
+            }
+           },
+           "type": {
+            "kind": "named",
+            "name": "raft.raft"
+           }
+          },
+          "type": {
+           "kind": "interface",
+           "name": "raft.Logger"
+          },
+          "typeId": "raft.raft"
+         },
+         "stmt": "unseq-probe"
+        },
+        {
+         "expr": {
+          "expr": "field-get",
+          "field": "id",
+          "recv": {
+           "expr": "deref",
+           "ptr": {
+            "expr": "ident",
+            "name": "r",
+            "type": {
+             "elem": {
+              "kind": "named",
+              "name": "raft.raft"
+             },
+             "kind": "pointer"
+            }
+           },
+           "type": {
+            "kind": "named",
+            "name": "raft.raft"
+           }
+          },
+          "type": {
+           "int": "uint64",
+           "kind": "int"
+          },
+          "typeId": "raft.raft"
+         },
+         "stmt": "unseq-probe"
+        },
+        {
          "define": true,
          "lhs": [
           {
@@ -450434,6 +453501,55 @@
           }
          ],
          "stmt": "assign"
+        },
+        {
+         "expr": {
+          "expr": "field-get",
+          "field": "committed",
+          "recv": {
+           "expr": "deref",
+           "ptr": {
+            "expr": "field-get",
+            "field": "raftLog",
+            "recv": {
+             "expr": "deref",
+             "ptr": {
+              "expr": "ident",
+              "name": "r",
+              "type": {
+               "elem": {
+                "kind": "named",
+                "name": "raft.raft"
+               },
+               "kind": "pointer"
+              }
+             },
+             "type": {
+              "kind": "named",
+              "name": "raft.raft"
+             }
+            },
+            "type": {
+             "elem": {
+              "kind": "named",
+              "name": "raft.raftLog"
+             },
+             "kind": "pointer"
+            },
+            "typeId": "raft.raft"
+           },
+           "type": {
+            "kind": "named",
+            "name": "raft.raftLog"
+           }
+          },
+          "type": {
+           "int": "uint64",
+           "kind": "int"
+          },
+          "typeId": "raft.raftLog"
+         },
+         "stmt": "unseq-probe"
         },
         {
          "define": true,
@@ -451135,6 +454251,36 @@
   {
    "body": {
     "body": [
+     {
+      "expr": {
+       "expr": "field-get",
+       "field": "electionTimeout",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "r",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.raft"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.raft"
+        }
+       },
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "typeId": "raft.raft"
+      },
+      "stmt": "unseq-probe"
+     },
      {
       "define": true,
       "lhs": [
@@ -452195,6 +455341,39 @@
       "stmt": "if",
       "then": {
        "body": [
+        {
+         "expr": {
+          "expr": "field-get",
+          "field": "readStates",
+          "recv": {
+           "expr": "deref",
+           "ptr": {
+            "expr": "ident",
+            "name": "r",
+            "type": {
+             "elem": {
+              "kind": "named",
+              "name": "raft.raft"
+             },
+             "kind": "pointer"
+            }
+           },
+           "type": {
+            "kind": "named",
+            "name": "raft.raft"
+           }
+          },
+          "type": {
+           "elem": {
+            "kind": "named",
+            "name": "raft.ReadState"
+           },
+           "kind": "slice"
+          },
+          "typeId": "raft.raft"
+         },
+         "stmt": "unseq-probe"
+        },
         {
          "define": true,
          "lhs": [
@@ -453876,6 +457055,39 @@
    "body": {
     "body": [
      {
+      "expr": {
+       "expr": "field-get",
+       "field": "raft",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "rn",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.RawNode"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.RawNode"
+        }
+       },
+       "type": {
+        "elem": {
+         "kind": "named",
+         "name": "raft.raft"
+        },
+        "kind": "pointer"
+       },
+       "typeId": "raft.RawNode"
+      },
+      "stmt": "unseq-probe"
+     },
+     {
       "define": true,
       "lhs": [
        {
@@ -454232,6 +457444,39 @@
   {
    "body": {
     "body": [
+     {
+      "expr": {
+       "expr": "field-get",
+       "field": "raft",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "rn",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.RawNode"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.RawNode"
+        }
+       },
+       "type": {
+        "elem": {
+         "kind": "named",
+         "name": "raft.raft"
+        },
+        "kind": "pointer"
+       },
+       "typeId": "raft.RawNode"
+      },
+      "stmt": "unseq-probe"
+     },
      {
       "define": true,
       "lhs": [
@@ -455023,6 +458268,39 @@
    "body": {
     "body": [
      {
+      "expr": {
+       "expr": "field-get",
+       "field": "raft",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "rn",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.RawNode"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.RawNode"
+        }
+       },
+       "type": {
+        "elem": {
+         "kind": "named",
+         "name": "raft.raft"
+        },
+        "kind": "pointer"
+       },
+       "typeId": "raft.RawNode"
+      },
+      "stmt": "unseq-probe"
+     },
+     {
       "define": true,
       "lhs": [
        {
@@ -455679,6 +458957,64 @@
       "then": {
        "body": [
         {
+         "expr": {
+          "expr": "field-get",
+          "field": "Progress",
+          "recv": {
+           "expr": "field-get",
+           "field": "trk",
+           "recv": {
+            "expr": "deref",
+            "ptr": {
+             "expr": "field-get",
+             "field": "raft",
+             "recv": {
+              "expr": "deref",
+              "ptr": {
+               "expr": "ident",
+               "name": "rn",
+               "type": {
+                "elem": {
+                 "kind": "named",
+                 "name": "raft.RawNode"
+                },
+                "kind": "pointer"
+               }
+              },
+              "type": {
+               "kind": "named",
+               "name": "raft.RawNode"
+              }
+             },
+             "type": {
+              "elem": {
+               "kind": "named",
+               "name": "raft.raft"
+              },
+              "kind": "pointer"
+             },
+             "typeId": "raft.RawNode"
+            },
+            "type": {
+             "kind": "named",
+             "name": "raft.raft"
+            }
+           },
+           "type": {
+            "kind": "named",
+            "name": "tracker.ProgressTracker"
+           },
+           "typeId": "raft.raft"
+          },
+          "type": {
+           "kind": "named",
+           "name": "tracker.ProgressMap"
+          },
+          "typeId": "tracker.ProgressTracker"
+         },
+         "stmt": "unseq-probe"
+        },
+        {
          "define": true,
          "lhs": [
           {
@@ -456253,6 +459589,39 @@
        }
       ],
       "stmt": "assign"
+     },
+     {
+      "expr": {
+       "expr": "field-get",
+       "field": "raftLog",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "r",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.raft"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.raft"
+        }
+       },
+       "type": {
+        "elem": {
+         "kind": "named",
+         "name": "raft.raftLog"
+        },
+        "kind": "pointer"
+       },
+       "typeId": "raft.raft"
+      },
+      "stmt": "unseq-probe"
      },
      {
       "define": true,
@@ -460085,6 +463454,58 @@
          "stmt": "assign"
         },
         {
+         "expr": {
+          "expr": "field-get",
+          "field": "raftLog",
+          "recv": {
+           "expr": "deref",
+           "ptr": {
+            "expr": "field-get",
+            "field": "raft",
+            "recv": {
+             "expr": "deref",
+             "ptr": {
+              "expr": "ident",
+              "name": "rn",
+              "type": {
+               "elem": {
+                "kind": "named",
+                "name": "raft.RawNode"
+               },
+               "kind": "pointer"
+              }
+             },
+             "type": {
+              "kind": "named",
+              "name": "raft.RawNode"
+             }
+            },
+            "type": {
+             "elem": {
+              "kind": "named",
+              "name": "raft.raft"
+             },
+             "kind": "pointer"
+            },
+            "typeId": "raft.RawNode"
+           },
+           "type": {
+            "kind": "named",
+            "name": "raft.raft"
+           }
+          },
+          "type": {
+           "elem": {
+            "kind": "named",
+            "name": "raft.raftLog"
+           },
+           "kind": "pointer"
+          },
+          "typeId": "raft.raft"
+         },
+         "stmt": "unseq-probe"
+        },
+        {
          "define": true,
          "lhs": [
           {
@@ -461166,6 +464587,39 @@
       "then": {
        "body": [
         {
+         "expr": {
+          "expr": "field-get",
+          "field": "raftLog",
+          "recv": {
+           "expr": "deref",
+           "ptr": {
+            "expr": "ident",
+            "name": "r",
+            "type": {
+             "elem": {
+              "kind": "named",
+              "name": "raft.raft"
+             },
+             "kind": "pointer"
+            }
+           },
+           "type": {
+            "kind": "named",
+            "name": "raft.raft"
+           }
+          },
+          "type": {
+           "elem": {
+            "kind": "named",
+            "name": "raft.raftLog"
+           },
+           "kind": "pointer"
+          },
+          "typeId": "raft.raft"
+         },
+         "stmt": "unseq-probe"
+        },
+        {
          "define": true,
          "lhs": [
           {
@@ -462223,6 +465677,39 @@
    "body": {
     "body": [
      {
+      "expr": {
+       "expr": "field-get",
+       "field": "raft",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "rn",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.RawNode"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.RawNode"
+        }
+       },
+       "type": {
+        "elem": {
+         "kind": "named",
+         "name": "raft.raft"
+        },
+        "kind": "pointer"
+       },
+       "typeId": "raft.RawNode"
+      },
+      "stmt": "unseq-probe"
+     },
+     {
       "define": true,
       "lhs": [
        {
@@ -462659,6 +466146,39 @@
        }
       ],
       "stmt": "assign"
+     },
+     {
+      "expr": {
+       "expr": "field-get",
+       "field": "raft",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "rn",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.RawNode"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.RawNode"
+        }
+       },
+       "type": {
+        "elem": {
+         "kind": "named",
+         "name": "raft.raft"
+        },
+        "kind": "pointer"
+       },
+       "typeId": "raft.RawNode"
+      },
+      "stmt": "unseq-probe"
      },
      {
       "define": true,
@@ -463116,6 +466636,39 @@
    "body": {
     "body": [
      {
+      "expr": {
+       "expr": "field-get",
+       "field": "raft",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "rn",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.RawNode"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.RawNode"
+        }
+       },
+       "type": {
+        "elem": {
+         "kind": "named",
+         "name": "raft.raft"
+        },
+        "kind": "pointer"
+       },
+       "typeId": "raft.RawNode"
+      },
+      "stmt": "unseq-probe"
+     },
+     {
       "define": true,
       "lhs": [
        {
@@ -463512,6 +467065,39 @@
    "body": {
     "body": [
      {
+      "expr": {
+       "expr": "field-get",
+       "field": "raft",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "rn",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.RawNode"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.RawNode"
+        }
+       },
+       "type": {
+        "elem": {
+         "kind": "named",
+         "name": "raft.raft"
+        },
+        "kind": "pointer"
+       },
+       "typeId": "raft.RawNode"
+      },
+      "stmt": "unseq-probe"
+     },
+     {
       "define": true,
       "lhs": [
        {
@@ -463868,6 +467454,39 @@
   {
    "body": {
     "body": [
+     {
+      "expr": {
+       "expr": "field-get",
+       "field": "raft",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "rn",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.RawNode"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.RawNode"
+        }
+       },
+       "type": {
+        "elem": {
+         "kind": "named",
+         "name": "raft.raft"
+        },
+        "kind": "pointer"
+       },
+       "typeId": "raft.RawNode"
+      },
+      "stmt": "unseq-probe"
+     },
      {
       "define": true,
       "lhs": [
@@ -464321,6 +467940,42 @@
    "body": {
     "body": [
      {
+      "expr": {
+       "expr": "field-get",
+       "field": "unconfirmedReads",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "ro",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.readOnly"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.readOnly"
+        }
+       },
+       "type": {
+        "elem": {
+         "elem": {
+          "kind": "named",
+          "name": "raft.readIndexRequest"
+         },
+         "kind": "pointer"
+        },
+        "kind": "slice"
+       },
+       "typeId": "raft.readOnly"
+      },
+      "stmt": "unseq-probe"
+     },
+     {
       "elemType": {
        "kind": "named",
        "name": "raft.readIndexRequest"
@@ -464607,6 +468262,80 @@
       "stmt": "if",
       "then": {
        "body": [
+        {
+         "expr": {
+          "expr": "field-get",
+          "field": "acks",
+          "recv": {
+           "expr": "deref",
+           "ptr": {
+            "expr": "ident",
+            "name": "ro",
+            "type": {
+             "elem": {
+              "kind": "named",
+              "name": "raft.readOnly"
+             },
+             "kind": "pointer"
+            }
+           },
+           "type": {
+            "kind": "named",
+            "name": "raft.readOnly"
+           }
+          },
+          "type": {
+           "key": {
+            "int": "uint64",
+            "kind": "int"
+           },
+           "kind": "map",
+           "value": {
+            "int": "uint64",
+            "kind": "int"
+           }
+          },
+          "typeId": "raft.readOnly"
+         },
+         "stmt": "unseq-probe"
+        },
+        {
+         "expr": {
+          "expr": "field-get",
+          "field": "acks",
+          "recv": {
+           "expr": "deref",
+           "ptr": {
+            "expr": "ident",
+            "name": "ro",
+            "type": {
+             "elem": {
+              "kind": "named",
+              "name": "raft.readOnly"
+             },
+             "kind": "pointer"
+            }
+           },
+           "type": {
+            "kind": "named",
+            "name": "raft.readOnly"
+           }
+          },
+          "type": {
+           "key": {
+            "int": "uint64",
+            "kind": "int"
+           },
+           "kind": "map",
+           "value": {
+            "int": "uint64",
+            "kind": "int"
+           }
+          },
+          "typeId": "raft.readOnly"
+         },
+         "stmt": "unseq-probe"
+        },
         {
          "define": true,
          "lhs": [
@@ -483104,6 +486833,42 @@
        }
       ],
       "stmt": "assign"
+     },
+     {
+      "expr": {
+       "expr": "field-get",
+       "field": "nodes",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "t",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "main.twin"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "main.twin"
+        }
+       },
+       "type": {
+        "elem": {
+         "elem": {
+          "kind": "named",
+          "name": "main.twinNode"
+         },
+         "kind": "pointer"
+        },
+        "kind": "slice"
+       },
+       "typeId": "main.twin"
+      },
+      "stmt": "unseq-probe"
      },
      {
       "define": true,

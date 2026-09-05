@@ -1,4 +1,15 @@
-# id	subject	args	expected_status	expected_reason	features
-left-first	binopLeftIndexFirst	-	panic	index out of range [8]	indexing,division,panic,evaluation_order
-call-before-left	binopCallBeforeLeftIndex	-	ok	-	indexing,calls,closures,evaluation_order
-call-before-left-div	binopCallBeforeLeftDiv	-	ok	-	indexing,calls,closures,division,evaluation_order
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# E12 guardrails (2026-08-17): the left operand's index read vs the call
+# that repairs it. left-first pins left-to-right among non-calls (no call:
+# both indexes panic, the LEFT one first). call-before-left and
+# call-before-left-div became lane=membership rows at lane e13-b
+# (2026-09-05 — latitude E13 option (b), RULED [USER], relayed): the LEFT
+# index panics on the pre-call state, so the machine's unseqPanic probe
+# offers RAISE (the index panic, before the call) and DEFER (the call
+# repairs the index; a value) — members differing in STATUS
+# (statuses=ok+panic); gc realizes the value (index operands are LATE in
+# gc). E12's VALUE pin is untouched: the DEFER member is the call-first
+# value exactly as before.
+left-first	binopLeftIndexFirst	-	panic	index out of range [8]	indexing,division,panic,evaluation_order	-	-	-
+call-before-left	binopCallBeforeLeftIndex	-	ok	-	indexing,calls,closures,evaluation_order,nondet	membership	latitude E13 option (b), lane e13-b 2026-09-05 (RULED [USER], relayed): `a[i] + f()` where f sets i in range — the left index is spec-UNSEQUENCED against the call; the ONLY consumption site is the unseqPanic probe of `a[i]` (bound 2): DEFER = the call runs first and the read succeeds (value 11 — gc's member, index operands are LATE in gc; E12's call-first VALUE pin), RAISE = `index out of range [8] with length 3` before the call. members=2 (statuses ok+panic); gc draws one member deterministically	width=2,sites=8,members=2,statuses=ok+panic
+call-before-left-div	binopCallBeforeLeftDiv	-	ok	-	indexing,calls,closures,division,evaluation_order,nondet	membership	latitude E13 option (b), lane e13-b 2026-09-05 (RULED [USER], relayed): `a[8] / f()` where f replaces a with a longer slice — the left index vs the call; site = the probe of `a[8]` (bound 2): DEFER = value 7 (gc's member), RAISE = `index out of range [8] with length 3`. members=2 (statuses ok+panic)	width=2,sites=8,members=2,statuses=ok+panic

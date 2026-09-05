@@ -218,6 +218,7 @@ mutual
 def Stmt.locSup : Stmt → Nat
   | .initialization _ | .returnStmt | .breakStmt | .continueStmt
   | .inertLabel _ | .breakTo _ | .continueTo _ | .unsupported _ => 0
+  | .unseqProbe e => Expr.locSup e
   | .seqn ss => stmtListSup ss.toList
   | .block _ ss => stmtListSup ss.toList
   | .breakable body => Stmt.locSup body
@@ -362,6 +363,7 @@ evaluated operand values, environments, pending expressions/statements,
 map-iteration snapshots, defer chains, suspended panic chains). -/
 def Cont.locSup : Cont → Nat
   | .stop => 0
+  | .probeK k => Cont.locSup k
   | .seq rest env k =>
       max (max (stmtListSup rest) (LocalEnv.locSup env)) (Cont.locSup k)
   | .loop cond body env k =>
@@ -568,6 +570,7 @@ at its own key/value types under `types`. Each constructor forwards to
 its (unique) continuation tail; only `mapIterK` contributes a check. -/
 def Cont.itersNormalized (types : TypeEnv) : Cont → Bool
   | .stop => true
+  | .probeK k => Cont.itersNormalized types k
   | .seq _ _ k => Cont.itersNormalized types k
   | .loop _ _ _ k => Cont.itersNormalized types k
   | .frame _ _ _ _ k _ => Cont.itersNormalized types k

@@ -131,6 +131,18 @@ private def exprAllowedKeys : String → Option (List String)
   | "sync-op" => some ["expr", "op", "args", "resultTypes"]
   | _ => none
 
+/-- Does a wire JSON subtree contain a `recover()` expression node
+(`{"expr": "recover"}`)? A syntactic walk over the JSON — used by the
+`unseq-probe` decoder's fail-closed refusal (E13 option (b)). -/
+private partial def jsonMentionsRecover : Json → Bool
+  | .obj kvs =>
+      (match kvs.get? "expr" with
+        | some (Json.str "recover") => true
+        | _ => false)
+      || kvs.toList.any (fun (_, v) => jsonMentionsRecover v)
+  | .arr xs => xs.any jsonMentionsRecover
+  | _ => false
+
 /-- Allowed key sets for statement nodes, by `stmt` tag. `for` and
 `range` are deliberately ABSENT (`none`): their decoders check keys
 themselves, so the `labeled` wrapper's direct-dispatch path is covered
@@ -163,6 +175,7 @@ private def stmtAllowedKeys : String → Option (List String)
   | "print" => some ["stmt", "newline", "args"]
   | "append" => some ["stmt", "target", "elem", "slice", "elems"]
   | "copy" => some ["stmt", "target", "dst", "src"]
+  | "unseq-probe" => some ["stmt", "expr"]
   | "map-compound-assign" =>
       some ["stmt", "op", "base", "index", "read", "rhs", "keyType", "valueType"]
   | "map-assign" => some ["stmt", "base", "index", "value", "keyType", "valueType"]
@@ -1145,6 +1158,18 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let dst ← decodeExpr s!"{path}.dst" (← StrictJson.field path obj "dst")
       let src ← decodeExpr s!"{path}.src" (← StrictJson.field path obj "src")
       pure (.seqn ((← declaresOf #[t]).push (.copySlice t.assignee dst src)))
+  | "unseq-probe" =>
+      -- The unsequenced-operand probe (latitude E13 option (b), lane e13-b
+      -- 2026-09-05; `Stmt.unseqProbe` is the envelope statement). The
+      -- frontend never probes an operand containing `recover()` — the
+      -- machine evaluates a probed operand TWICE (once at the probe, once
+      -- at its residual position), which would consume the recover; this
+      -- decoder refuses such a probe BY NAME so a hand-edited or drifted
+      -- wire cannot reach the machine with one (fail closed).
+      let exprJ ← StrictJson.field path obj "expr"
+      if jsonMentionsRecover exprJ then
+        throw s!"{path}.expr: an unseq-probe operand mentions recover() — a probed operand is evaluated twice, which would consume the recover (E13 option (b), design §3 purity); refused by name"
+      pure (.unseqProbe (← decodeExpr s!"{path}.expr" exprJ))
   | "map-compound-assign" =>
       -- m[k] op= v with base/key pre-hoisted by the frontend: read via
       -- mapGet, combine, store via mapAssign.

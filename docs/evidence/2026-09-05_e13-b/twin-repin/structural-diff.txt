@@ -1,0 +1,48 @@
+# twin wire structural diff — pinned (main b77f3298, sha 4ee39f73…) vs fresh emit at the e13-b tip
+# Method: JSON-parse both; a function/method entry is CHANGED iff its JSON differs; 'probes-only' = stripping every
+# {"stmt":"unseq-probe"} entry from the fresh entry's statement lists makes it byte-identical to the pinned entry.
+funcs: 430 pinned / 430 fresh; added []; removed []
+  func raft.newRaft: unseq-probe statements=3 probes-only=True
+  func raft.stepLeader: unseq-probe statements=29 probes-only=True
+  func raft.stepCandidate: unseq-probe statements=6 probes-only=True
+  func raft.stepFollower: unseq-probe statements=6 probes-only=True
+  func raft.sendMsgReadIndexResponse: unseq-probe statements=2 probes-only=True
+  func raft.DescribeConfState: unseq-probe statements=4 probes-only=True
+  func newTwin: unseq-probe statements=2 probes-only=True
+methods: 537 pinned / 537 fresh
+  method[3] {'id': 'e', 'type': {'elem': {'kind': 'named', 'name': 'strconv.NumError'}, 'kind': 'pointer'}}.Error: unseq-probe statements=1 probes-only=True
+  method[264] {'id': 'rn', 'type': {'elem': {'kind': 'named', 'name': 'raft.RawNode'}, 'kind': 'pointer'}}.Bootstrap: unseq-probe statements=1 probes-only=True
+  method[268] {'id': 'l', 'type': {'elem': {'kind': 'named', 'name': 'raft.raftLog'}, 'kind': 'pointer'}}.findConflict: unseq-probe statements=1 probes-only=True
+  method[273] {'id': 'l', 'type': {'elem': {'kind': 'named', 'name': 'raft.raftLog'}, 'kind': 'pointer'}}.nextCommittedEnts: unseq-probe statements=1 probes-only=True
+  method[274] {'id': 'l', 'type': {'elem': {'kind': 'named', 'name': 'raft.raftLog'}, 'kind': 'pointer'}}.hasNextCommittedEnts: unseq-probe statements=1 probes-only=True
+  method[282] {'id': 'l', 'type': {'elem': {'kind': 'named', 'name': 'raft.raftLog'}, 'kind': 'pointer'}}.commitTo: unseq-probe statements=1 probes-only=True
+  method[295] {'id': 'l', 'type': {'elem': {'kind': 'named', 'name': 'raft.raftLog'}, 'kind': 'pointer'}}.restore: unseq-probe statements=1 probes-only=True
+  method[298] {'id': 'l', 'type': {'elem': {'kind': 'named', 'name': 'raft.raftLog'}, 'kind': 'pointer'}}.mustCheckOutOfBounds: unseq-probe statements=1 probes-only=True
+  method[346] {'id': 'r', 'type': {'elem': {'kind': 'named', 'name': 'raft.raft'}, 'kind': 'pointer'}}.send: unseq-probe statements=3 probes-only=True
+  method[349] {'id': 'r', 'type': {'elem': {'kind': 'named', 'name': 'raft.raft'}, 'kind': 'pointer'}}.maybeSendSnapshot: unseq-probe statements=2 probes-only=True
+  method[356] {'id': 'r', 'type': {'elem': {'kind': 'named', 'name': 'raft.raft'}, 'kind': 'pointer'}}.maybeCommit: unseq-probe statements=1 probes-only=True
+  method[369] {'id': 'r', 'type': {'elem': {'kind': 'named', 'name': 'raft.raft'}, 'kind': 'pointer'}}.Step: unseq-probe statements=23 probes-only=True
+  method[370] {'id': 'r', 'type': {'elem': {'kind': 'named', 'name': 'raft.raft'}, 'kind': 'pointer'}}.handleAppendEntries: unseq-probe statements=6 probes-only=True
+  method[371] {'id': 'r', 'type': {'elem': {'kind': 'named', 'name': 'raft.raft'}, 'kind': 'pointer'}}.handleHeartbeat: unseq-probe statements=1 probes-only=True
+  method[373] {'id': 'r', 'type': {'elem': {'kind': 'named', 'name': 'raft.raft'}, 'kind': 'pointer'}}.restore: unseq-probe statements=2 probes-only=True
+  method[377] {'id': 'r', 'type': {'elem': {'kind': 'named', 'name': 'raft.raft'}, 'kind': 'pointer'}}.loadState: unseq-probe statements=3 probes-only=True
+  method[379] {'id': 'r', 'type': {'elem': {'kind': 'named', 'name': 'raft.raft'}, 'kind': 'pointer'}}.resetRandomizedElectionTimeout: unseq-probe statements=1 probes-only=True
+  method[383] {'id': 'r', 'type': {'elem': {'kind': 'named', 'name': 'raft.raft'}, 'kind': 'pointer'}}.responseToReadIndexReq: unseq-probe statements=1 probes-only=True
+  method[388] {'id': 'rn', 'type': {'elem': {'kind': 'named', 'name': 'raft.RawNode'}, 'kind': 'pointer'}}.Campaign: unseq-probe statements=1 probes-only=True
+  method[389] {'id': 'rn', 'type': {'elem': {'kind': 'named', 'name': 'raft.RawNode'}, 'kind': 'pointer'}}.Propose: unseq-probe statements=1 probes-only=True
+  method[391] {'id': 'rn', 'type': {'elem': {'kind': 'named', 'name': 'raft.RawNode'}, 'kind': 'pointer'}}.ApplyConfChange: unseq-probe statements=1 probes-only=True
+  method[392] {'id': 'rn', 'type': {'elem': {'kind': 'named', 'name': 'raft.RawNode'}, 'kind': 'pointer'}}.Step: unseq-probe statements=1 probes-only=True
+  method[394] {'id': 'rn', 'type': {'elem': {'kind': 'named', 'name': 'raft.RawNode'}, 'kind': 'pointer'}}.readyWithoutAccept: unseq-probe statements=1 probes-only=True
+  method[395] {'id': 'rn', 'type': {'elem': {'kind': 'named', 'name': 'raft.RawNode'}, 'kind': 'pointer'}}.acceptReady: unseq-probe statements=1 probes-only=True
+  method[397] {'id': 'rn', 'type': {'elem': {'kind': 'named', 'name': 'raft.RawNode'}, 'kind': 'pointer'}}.HasReady: unseq-probe statements=1 probes-only=True
+  method[402] {'id': 'rn', 'type': {'elem': {'kind': 'named', 'name': 'raft.RawNode'}, 'kind': 'pointer'}}.ReportUnreachable: unseq-probe statements=1 probes-only=True
+  method[403] {'id': 'rn', 'type': {'elem': {'kind': 'named', 'name': 'raft.RawNode'}, 'kind': 'pointer'}}.ReportSnapshot: unseq-probe statements=1 probes-only=True
+  method[404] {'id': 'rn', 'type': {'elem': {'kind': 'named', 'name': 'raft.RawNode'}, 'kind': 'pointer'}}.TransferLeader: unseq-probe statements=1 probes-only=True
+  method[405] {'id': 'rn', 'type': {'elem': {'kind': 'named', 'name': 'raft.RawNode'}, 'kind': 'pointer'}}.ForgetLeader: unseq-probe statements=1 probes-only=True
+  method[406] {'id': 'rn', 'type': {'elem': {'kind': 'named', 'name': 'raft.RawNode'}, 'kind': 'pointer'}}.ReadIndex: unseq-probe statements=1 probes-only=True
+  method[407] {'id': 'ro', 'type': {'elem': {'kind': 'named', 'name': 'raft.readOnly'}, 'kind': 'pointer'}}.addRequest: unseq-probe statements=1 probes-only=True
+  method[408] {'id': 'ro', 'type': {'elem': {'kind': 'named', 'name': 'raft.readOnly'}, 'kind': 'pointer'}}.recvAck: unseq-probe statements=2 probes-only=True
+  method[457] {'id': 't', 'type': {'elem': {'kind': 'named', 'name': 'main.twin'}, 'kind': 'pointer'}}.deliverIdx: unseq-probe statements=1 probes-only=True
+other top-level keys changed: []
+TOTAL unseq-probe statements added: 119; probed operand kinds: {'field-get': 119}
+SOLE structural change: unseq-probe statements (E13 option (b)); 0 functions/methods/types/globals added or removed; 0 other node changes.

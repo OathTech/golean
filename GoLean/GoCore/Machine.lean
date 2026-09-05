@@ -2450,6 +2450,16 @@ inductive Cont where
   positional case tags stay stable. -/
   | atomicStK (op : AtomicOp) (done : List GoValue)
       (pending : List Expr) (env : LocalEnv) (k : Cont)
+  /-- **The unsequenced-operand probe frame** (latitude E13 option (b),
+  `e13-b` 2026-09-05; `Stmt.unseqProbe` is the envelope statement): the
+  probed operand is being evaluated above `k`. A VALUE arriving here is
+  discarded (`.next k`) — the operand is re-evaluated at its residual
+  position; a PANIC arriving here is the `ChoiceSite.unseqPanic` pick
+  (`stepFn`'s `.panicking` arm: DEFER → `.next k`, RAISE → `.panicking
+  chain k`). Its own `FrameClass` (`.probe`): NOT glue — `panicPassthrough`
+  must not strip it, `break`/`continue`/`return` have no rule at it
+  (unreachable: only expression evaluation happens under a probe). -/
+  | probeK (k : Cont)
 
 /-! ## The `Cont` algebra (design-hygiene wave (iii), B3, 2026-09-04)
 
@@ -2476,7 +2486,8 @@ def Cont.tail : Cont → Option Cont
   | .stmtOpK _ _ _ _ _ k | .mapRangeK _ _ _ _ _ _ k | .mapIterK _ _ _ _ _ _ _ _ _ k
   | .panicArgK k | .panicResumeK _ k | .chanStK _ _ _ _ k | .selectOpsK _ _ _ _ _ k
   | .tgtOpK _ _ _ _ _ _ _ _ _ _ k | .rhsK _ _ _ _ _ _ k | .storeK _ _ _ _ k
-  | .goCalleeK _ _ k | .goArgsK _ _ _ _ k | .syncStK _ _ _ _ k | .atomicStK _ _ _ _ k => some k
+  | .goCalleeK _ _ k | .goArgsK _ _ _ _ k | .syncStK _ _ _ _ k | .atomicStK _ _ _ _ k
+  | .probeK k => some k
 
 /-- Replace the tail, keeping the frame's own payload. `.stop` is unchanged. -/
 def Cont.withTail : Cont → Cont → Cont
@@ -2511,6 +2522,7 @@ def Cont.withTail : Cont → Cont → Cont
   | .goArgsK a b c d _, t => .goArgsK a b c d t
   | .syncStK a b c d _, t => .syncStK a b c d t
   | .atomicStK a b c d _, t => .atomicStK a b c d t
+  | .probeK _, t => .probeK t
 
 theorem Cont.sizeOf_tail_lt {k k' : Cont} (h : k.tail = some k') : sizeOf k' < sizeOf k := by
   cases k <;> simp_all [Cont.tail] <;> omega
@@ -2528,12 +2540,19 @@ expression glue (an operand or delivery frame — crossed only by a
 panic), a call frame, the suspended-chain marker, or the end. -/
 inductive FrameClass where
   | stmtGlue | exprGlue | callFrame | resumeMarker | stop
+  /-- The unsequenced-operand probe frame (`Cont.probeK`, E13 option (b)):
+  crossed by NO walk — the `.panicking` arm ACTS on it (the `unseqPanic`
+  pick), `recover` does not see through it (a probed operand never
+  contains `recover()`: frontend rule + decoder refusal), and the
+  statement-level travellers (`break`/`continue`/`return`) cannot reach it. -/
+  | probe
   deriving DecidableEq, Repr
 
 def Cont.class : Cont → FrameClass
   | .stop => .stop
   | .frame .. => .callFrame
   | .panicResumeK .. => .resumeMarker
+  | .probeK .. => .probe
   | .seq .. | .loop .. | .breakableK .. | .labelK .. | .mapIterK .. => .stmtGlue
   -- EXHAUSTIVE on purpose (audit fix F2): a new frame must be classified
   -- here by hand — no absorbing default can make it glue silently.
@@ -3894,17 +3913,29 @@ def entryConsult? (σ : ExecState) (fid : FuncId) (args : List GoValue) : Option
     | .error (.panic _) => some (.nilValueMethodText, nilValueMethodWidth σ fid args)
     | _ => none
 
+/-- Does this configuration's next step draw the `unseqPanic` pick (E13
+option (b), `e13-b`)? `true` exactly at a panic that has reached an
+unsequenced-operand probe frame — `.panicking _ (.probeK _)`, bound 2,
+always a pop. The stream-obliviousness checkers exclude exactly this
+(`stepFn_oblivious`' `hnu`, `poolThreadOblivious`, `innerVecs`) — a
+fail-closed flag like `consumesAppendSlice`. -/
+def consumesUnseqPanic : Config → Bool
+  | .panicking _ (.probeK _) => true
+  | _ => false
+
 /-- **The sequential consumption projection**: the site and bound the next
 `stepFn` step draws — `some` exactly when the consult POPS (a bound-≤-1
-consult is `none` at every site — the uniform rule, G-U). Five sites, one
+consult is `none` at every site — the uniform rule, G-U). Six sites, one
 consult function each: `mapIter` at a live range frame, `appendSpill` at
 a spilling append, `l2Entry` at a multi-ready select, `tryLock` at an
 acquirable TRY head, `nilValueMethodText` at a panicking frame entry in
-the wrapper family. -/
+the wrapper family, `unseqPanic` at a panic that reached an
+unsequenced-operand probe frame (bound 2, constant). -/
 def seqConsumption (σ : ExecState) (c : Config) : Option (ChoiceSite × Nat) :=
   match c with
   | .next (.mapIterK _ _ keyTy valTy _ base produced start _ _) =>
       mapIterConsult? σ keyTy valTy base produced start
+  | .panicking _ (.probeK _) => some (.unseqPanic, 2)
   | c =>
     match c.applyPos with
     | some (.stmt op _, vs, _, _) => stmtConsult? σ op vs
@@ -4615,6 +4646,24 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       toResult (applyAtomicOp s op (v :: done).reverse env k) = .ok r →
       deliver s k id r = (c', s') →
       Step (.retV v (.atomicStK op done [] env k)) s c' s'
+  -- The unsequenced-operand probe (latitude E13 option (b), lane `e13-b`
+  -- 2026-09-05, RULED [USER] relayed; envelope statement at
+  -- `Stmt.unseqProbe`): evaluate the operand under the probe frame; a
+  -- value is discarded; a PANIC reaching the frame has TWO successors —
+  -- nondeterminism where Go has it (spec#Order_of_evaluation orders
+  -- neither the operand nor the sibling event first). Appended at the END
+  -- so positional case tags stay stable.
+  | unseqProbe {e env k s} :
+      Step (.exec (.unseqProbe e) env k) s (.evalE e env (.probeK k)) s
+  | probeValue {v k s} :
+      Step (.retV v (.probeK k)) s (.next k) s
+  /-- DEFER (slot 0): the early panic is not raised here; the operand is
+  re-evaluated at its residual position after the sibling events. -/
+  | probeDefer {chain k s} :
+      Step (.panicking chain (.probeK k)) s (.next k) s
+  /-- RAISE (slot 1): the panic propagates now, ahead of the sibling events. -/
+  | probeRaise {chain k s} :
+      Step (.panicking chain (.probeK k)) s (.panicking chain k) s
 
 /-- Reflexive-transitive closure of `Step`. -/
 inductive Steps : Config → ExecState → Config → ExecState → Prop where

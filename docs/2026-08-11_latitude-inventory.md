@@ -116,6 +116,7 @@ between sweeps (the reconciler's C12 checks row COUNT, not lines).
 | Loop back-edge pick (`backEdge`, W3.2 stage D) | Multi.lean:1153 (via `Config.boundarySite`, :1101–1103) | \|runnable\| (current-first menu, `schedSlots` :1123) | at a loop re-entry shape (`.loop`, `.mapIterK`), only width > 1 | slot 0 = the CURRENT goroutine continues |
 | Frame-entry panic TEXT pick (`nilValueMethodText`, BUG-087 / R9a, 2026-09-03) | StepFn.lean `enterFrameStep` + `enterFrameDeferPanicking`, Multi.lean `spawnStep` (envelope statement `nilValueMethodText?`, Ops.lean, beside `dynamicDispatch?`'s nil arm) | `nilValueMethodWidth` — 2 on the wrapper family, 1 elsewhere | at a frame entry in the family (value-receiver method dispatched through an interface holding a nil `*T`, target not a promotion wrapper), only width > 1 | slot 0 = the nil-dereference text (the pre-BUG-087 machine's only member) |
 | TryLock spurious failure (`tryLock`, Q-TRYLOCK 2026-09-03) | Machine.lean `applySyncOp` (the TRY-head arm; envelope statement at `applyTryLock`) | `tryLockWidth op pre` — 2 at an acquirable cell (`tryAcquire`), 1 at a held one | only width 2 (an acquirable cell; the held cell's bound-1 consult pops nothing — the uniform rule) | slot 0 = ACQUIRE (gc's realized point); slot 1 = the spurious false |
+| Unsequenced sibling panic order (`unseqPanic`, E13 option (b), lane e13-b 2026-09-05) | StepFn.lean, the `.panicking chain (.probeK k)` arm (the envelope statement is `Stmt.unseqProbe`'s docstring, Syntax.lean; projection arm in `seqConsumption`, Machine.lean) | 2, constant — and ONLY at a panic that reached an unsequenced-operand probe frame; a probe whose operand yields a value consults nothing | only when a probed operand PANICS at its lexical position ahead of a sibling ordered event (an `a[i] + f()` row whose `a[i]` never panics early pops nothing) | slot 0 = DEFER (the sibling events first; the operand is re-evaluated in the residual — the pre-change machine's only member, gc's for index/deref/division/shift/conversion); slot 1 = RAISE (the operand's panic first — gc's for type assertions, slice expressions, interface comparisons) |
 
 The race detector consumes NOTHING and replays nothing (stage B, Q2:
 `raceUpdate` folds the step's emitted `StepEvent` — the old
@@ -925,26 +926,35 @@ gc's early store a deviation, L-016, 2026-09-02).
   (issue43835's `g`/`h` pass on gc — its fix covers `return`); the
   deviation of this row is the ASSIGNMENT side with non-result targets.
 
-### E6. `len`/`cap` hoist discriminating shapes — REFUSED (narrowed to the true residual, A6 2026-08-31)
+### E6. `len`/`cap` hoist discriminating shapes — (a) ENVELOPED via E13's `unseqPanic` (the REFUSED row RETIRED 2026-09-05, lane e13-b; zero sites of its own)
 
-- WHERE: BUG-032's fix as amended by mini-slice A6 (t1-fidelity-fixes):
-  the refusal now fires ONLY on the composition (panicky residual
-  operand) x (panicky inline material to its left) x (ordered event
-  after it in the same sweep) — `sweepOrderedEventAfter` /
-  `residualPanicFreeOperand` / `sweepPanickyInlineBefore`, emit.go;
-  pinned red-by-design at builtins/len-vs-call-order/panicky-between.
-  Not latitude: a coverage refusal that EXISTS because realizing gc's
-  point inside the E3/E4 latitude needs the linearization not built.
-  The F23 reach (idiomatic `len(p.xs)` refused in any receive-bearing
-  function; whole-package kills through methods) is RETIRED: those
-  shapes now lower, inline or hoisted, at gc's realized order
-  (channels/recv-order/dead-recv-len-* and the e6-* pair pin it
-  green). B-3 correction (2026-09-01 audit fix round): A6 is NOT a
-  pure narrowing — the sweep-scoped predicate fires on calls too, so
-  receive-FREE functions GAINED this refusal on the composition at
-  the same time BUG-062's silent wrong answer died there; trade
-  stated (a new visible refusal bought the retirement of a
-  spec-FORCED silent wrong answer).
+- WHERE (history): BUG-032's fix, narrowed by mini-slice A6 (2026-08-31)
+  to the composition (panicky residual operand) x (panicky inline
+  material to its left) x (ordered event after it in the same sweep) —
+  `hoistReordersPanic` (emit.go), extended to the `make` hoist by FR-28
+  (2026-09-04, BUG-083 fixed AS A REFUSAL). The F23 over-reach was
+  retired at A6; B-3 (2026-09-01) recorded that A6 was not a pure
+  narrowing (receive-free functions gained the refusal).
+- RETIRED 2026-09-05 (E13 option (b), RULED [USER], relayed): the
+  composition the guard refused is spec-UNSEQUENCED (the builtin call is
+  ordered against other calls, not against a sibling assertion/index),
+  and the machine now realizes BOTH orders through the `unseq-probe`
+  statements the frontend emits (`ChoiceSite.unseqPanic`; E13). The
+  guard's predicates (`hoistReordersPanic`, `residualPanicFreeOperand`,
+  `nilDerefOnlyResidual`, `sweepPanickyInlineBeforeKinds`) are DELETED;
+  the refusal texts they produced match nothing (the `lowerdiag` cause
+  `len-hoist-panic-order` is a tripwire). Every row that pinned the
+  refusal red-by-design now LOWERS: `builtins/len-vs-call-order/
+  {panicky-between,len-nil-left-vs-index-operand,len-assert-vs-nil-
+  operand}` strict PASS (singleton sets), `{hint-panicky-between,
+  make-slice-panicky-between,make-chan-cap-panicky-between,make-index-
+  left,make-inner-len,make-hint-{struct,array,generic}-any-key,
+  len-struct-any-key-left-assert}` membership PASS (two members each).
+  The FORCED half of the same code — `sweepOrderedEventAfter`, the
+  hoist of `len`/`cap`/`min`/`max` when an event follows (BUG-062) — is
+  unchanged. This row leaves §5 (it stood in for latitude; the latitude
+  is now enveloped at E13). Design: `docs/2026-09-05_e13-b-design.md`
+  §4 D5.
 
 ### E7. Hidden-dependency initialization order — (b) PINNED to go/types' conforming order, **known ≠ gc**
 
@@ -1307,124 +1317,131 @@ subexpressions of one binary operator).
   `maps/map-literal-duplicate-eval-order`. E12 was written for binary
   operators only; the census now covers these sibling positions under
   the same pin.
+  E13 BY-PRODUCT NOTE (lane e13-b, 2026-09-05): the `unseqPanic` probe
+  (E13) consults ONLY when a non-call operand PANICS ahead of a sibling
+  event, so this entry's VALUE observable is untouched — every
+  `noodler/latitude/*` row and the compound-assign rows stay singleton
+  strict rows (measured at the lane: 0 of them moved), and the (b)
+  call-first VALUE pin stands with its obligation. Two panic-side
+  by-products ARE E12(ii)'s: (1) two probed operands both panicking
+  early can realize the SECOND's panic ahead of the FIRST's (the
+  DEFER×RAISE combination — `builtins/e13-sibling-panic-order/two-index-
+  left-call`, 3 members), a member the spec permits (non-call vs
+  non-call order is unspecified by omission; I-2 UNSEQ) and wider than
+  this entry's left-to-right pin on exactly the panic-vs-panic shapes;
+  (2) a hoisted ALLOCATION's payload (`g([]int{t[k]})`) evaluates at the
+  allocation's hoisted position, ahead of inline material to its left —
+  a pre-existing structural departure from left-to-right among
+  non-calls, now paired with a probe on the left material, so both
+  orders are realized there too. Neither changes a value observable.
+  `binop-order/operand-panic-vs-call/{call-before-left,call-before-left-
+  div}` moved to lane=membership at e13-b: their LEFT index panics on
+  the pre-call state, so the machine offers the panic (RAISE) beside the
+  call-first value (DEFER, gc's, this entry's pin) — E13's observable
+  riding an E12 row.
 
-### E13. Non-call panicking operations (type assertion, indexing) vs SIBLING calls — (b) PINNED, structural (the same frontend ANF hoist): calls first — RULED (b) LATITUDE 2026-09-05 [USER] (relayed): BOTH orders admitted via a membership shape; IMPLEMENTATION OWED (lane `e13-b`; the pin stands until it lands)
+### E13. Non-call panicking operations (type assertion, indexing, …) vs SIBLING ordered events — (a) ENVELOPED (`unseqPanic`, lane e13-b 2026-09-05 — the implementation of the RULED (b) LATITUDE ruling of 2026-09-05 [USER] (relayed), landed at merge train round 17; was (b) PINNED structural, calls first)
 
 Added 2026-08-20 from the grossmith campaign-2 record
 (`docs/2026-08-20_grossmith-findings-2.md` §4, case `case_16162`, seed
 4016162; F-3 of that document's owed follow-ups). E12's sibling on the
 same spec ground, one level up: E12 is the order of the operand events
 of ONE binary operator against the calls in it; this entry is the order
-of a non-call operation's PANIC against calls that are its lexical
-SIBLINGS — other elements of the same RHS list, or other arguments of
-the same call.
+of a non-call operation's PANIC against ordered events that are its
+lexical SIBLINGS — other elements of the same RHS list, or other
+arguments of the same call. **RE-ENVELOPED 2026-09-05** — option (b)
+of the four-way treatment below, RULED [USER] Mike 2026-09-05, verbatim
+as relayed by the [AGENT] coordinator (cited as relayed): «we should do
+what the standard supports, and avoid over-refusal if we can. That's
+what (b) means right?» — design of record
+`docs/2026-09-05_e13-b-design.md` (the decision procedure §1, the
+machine construct §3, the frontend §4, the residuals §6).
 
 - WHERE: spec#Order_of_evaluation, OMISSION-grounded (the absence is
   the anchor, as at C1/C5/E12(ii)): the left-to-right rule's scope is
   "function calls, method calls, receive operations, and binary logical
   operations" — a **type assertion** is none of these, and neither is
-  an **index expression**. The "except as required lexically" clause
-  does not reach a sibling: it forces a non-call operation only when
-  that operation is an ARGUMENT of a lexically earlier call ("g cannot
-  be called before its arguments are evaluated"). **That distinction is
-  the whole entry**, and getting it wrong in the other direction is a
-  BUG, not latitude: the argument position IS forced, which is exactly
-  the forced point BUG-062 is open on (findings §1 — built-in call
-  arguments; §1.4's `user-arg-index` and `b3-append-arg-index` probes
-  are the machine getting the forced side right). Machine realization
-  point: no GoCore choice site — the frontend's A-normal-form pass
-  (`tools/nativefrontend/wire.go:25`, the same pass E12 names) hoists
-  the sibling calls to temps ahead of the expression, leaving the
-  assertion's type check and the index's bounds check in place, so the
-  calls run first.
-- PIN: a sibling call's effects land BEFORE a type assertion's failure
-  panic and before an index expression's bounds panic. Plausible
-  envelope: any relative order of the non-call operation's panic and
-  the sibling calls' effects, SUBJECT to the spec's hard constraints
-  (calls/receives/binary-logical stay lexically ordered among
-  themselves; a call's own arguments precede it). Reading: **UNSEQ**,
-  not merely either-order — `docs/spec-interpretations.md` **I-2**,
-  backed by ledger `L-013`; the F2 sentence E12 leaves owed is answered
-  for this entry by that adopted reading.
-- EVIDENCE: GC — and unusually, the two axes fall on OPPOSITE sides,
-  which is the cleanest possible demonstration that the point is
-  latitude rather than a machine defect on one of them:
-
-  | probe | shape | gc | machine | source |
-  |---|---|---|---|---|
-  | `d1-assert-vs-call` | `iv.(T0), w(max(w(1,4), w(59,5)), 6)` | 0 (assertion panics first) | 4005 (all three `w` calls ran) | findings §4 |
-  | `d2-assert-as-call-arg` | `sink(iv.(T0), w(7,9))` | 0 | 9 | findings §4 |
-  | `bare-index` | `s[i], wit()` | 9 | 9 | findings §1.4 |
-
-  `4005 = ((0*31+4)*31+5)*31+6`, i.e. the machine ran the whole `w`
-  chain before the assertion panicked. On the **assertion** axis gc
-  realizes the other member; on the **indexing** axis gc happens to
-  realize ours. gc is SELF-STABLE on the assertion axis (default flags
-  and `-gcflags=all='-N -l'` agree), so this is latitude in the spec,
-  not instability in gc — the contrast with E3, where gc's realization
-  is compiler-internal and hence unpinnable, is worth keeping. XIMPL
-  would bear on whether any implementation orders these; none known.
-
-  MIN/MAX EVIDENCE (audit fix round 2026-09-01, probes a6p/a6q —
-  gc @ go1.26.5, machine re-run at the fix tip; `b`/`b2` are slices
-  whose lengths make the two index panics' messages distinct where it
-  matters, `wit4` is an effectful ordered call):
-
-  | probe | shape (panicky-left x min/max) | gc | machine |
-  |---|---|---|---|
-  | a6p-p1 | `iv.(int) + min(b[j],1) + wit4(5)` | interface conversion (assert first) | index `[3]`/len 0 (min's arg first) |
-  | a6q-q5 | `iv.(int) + min(*p,1) + wit4(5)` | interface conversion | nil deref |
-  | a6q-q6 | `iv.(int) + min(*p,1) + <-ch` | interface conversion | nil deref |
-  | a6q-q1 | `b2[k] + max(b[j],1) + wit4(5)` | index `[3]`/len 0 (max's arg first) | index `[3]`/len 0 |
-  | a6p-p3 | `(7/d)*0 + min(b[j],1) + wit4(5)` | index `[3]`/len 0 (min's arg first) | index `[3]`/len 0 |
-  | a6p-p5 | `b2[k] + min(*p,1) + wit4(5)` | nil deref (min's arg first) | nil deref |
-
-  [AGENT] MEMBERSHIP: **min/max join the ANF call-first hoist family
-  (E12/E13).** The frontend hoists min/max like calls (they are
-  excluded from the A6 len/cap inline treatment — runtimeOrderedCall's
-  len/cap/min/max carve-out is about ORDERED-EVENT status, not about
-  their own emission), and gc's realizations land EXACTLY on this
-  family's existing pattern: gc runs min/max ARGUMENTS ahead of a
-  lexically-left index/division panic (q1/p3/p5 — machine agrees) and
-  realizes a lexically-left ASSERTION panic first (p1/q5/q6 — machine
-  realizes the arg's panic; opposite members, both conforming — the
-  same assertion-vs-indexing split as the d1/bare-index rows above).
-  This AFFIRMS the E12/E13 reading that BUG-062's status already
-  takes; the assert-axis divergences are census'd HERE, not open
-  bugs, and the NO-PIN rule of this entry covers the min/max axes
-  identically (a strict pin on the assert axis would record latitude
-  as a fidelity failure).
-- FOUR-WAY TREATMENT, POSED FOR THE [USER] (fr27-fr28 audit fix round,
-  2026-09-05, [AGENT] — evidence `docs/evidence/2026-09-04_fr27-fr28/
-  e13-probes.tsv`, five shapes, gc interface-conversion on every one; NOT
-  decided here): the same composition — a spec-unordered panicky operand
-  (the assertion `iv.(int)`) LEFT of an always-hoisting construct whose
-  argument `t[k]` panics — is treated FOUR ways today. (1) `make`
-  (`iv.(int) + len(make([]int, t[k]))`): REFUSED by name since FR-28
-  (BUG-083 fixed as a refusal; the make hoist carries BUG-032's A6
-  guard). (2) `min`/`max` and user calls (`iv.(int) + min(t[k],1) +
-  wit(5)`, `iv.(int) + wit(t[k])`): LOWER to the index panic — this
-  entry's censused latitude, no pin. (3) `append`/`copy` (`iv.(int) +
-  len(append(s, t[k])) + wit(5)`, `iv.(int) + copy(dst[t[k]:], src)`):
-  LOWER to the index panic — DIVERGENT from gc and censused NOWHERE: the
-  mechanism is this entry's (an ordered call hoisted ahead of the
-  assertion), but the evidence table above names only min/max/user calls,
-  so the census did not cover them until this probe. (4) `len`/`cap`
-  (`iv.(int) + len(b[j]) + wit(5)`): REFUSED (BUG-032's original A6
-  shape). The options, for the [USER]: (a) extend the guard to EVERY
-  always-hoisting construct (append/copy/min/max/user-call arguments;
-  `&T{…}` payloads) — uniform fail-closed, at the cost of refusing the
-  ordinary `a[i] + f(b[j])` idiom class wherever a panicky operand sits
-  left of a call with a panicky argument; (b) admit BOTH members
-  everywhere as latitude via a membership shape (the §7 item-5 panic-
-  identity treatment this entry's re-envelope obligation already names)
-  and retire the make/len-cap refusals into it; (c) keep the split with
-  E13 amended to census append/copy explicitly (and `make-hint-call`,
-  `builtins/len-vs-call-order`, noted as E13-adjacent: it pins an index-
-  vs-hoisted-call AGREEMENT on the indexing axis, kept as a guard
-  control). Until ruled: the make/len-cap refusals stand (honest reds),
-  (3) is a recorded, un-pinned divergence of this entry's kind, and no
-  new pin is taken on either axis.
+  an **index expression**, a slice expression, a dereference, a
+  division, a shift, an interface comparison or a slice-to-array
+  conversion. The "except as required lexically" clause does not reach
+  a sibling: it forces a non-call operation only when that operation is
+  an ARGUMENT of the event ("g cannot be called before its arguments
+  are evaluated"). **That distinction is the whole entry**, and getting
+  it wrong in the other direction is a BUG, not latitude: the argument
+  position IS forced (BUG-062's territory — `builtins/e13-sibling-
+  panic-order/{forced-arg-only,index-left-call-arg-panics,deref-left-
+  index-arg-call}` pin that no member ever runs the call before its
+  argument). The decision procedure over the AST — which pairs are
+  FORCED (F1–F5) and which UNSEQUENCED — is design §1.
+- ENVELOPE (the machine's set, per probed operand): the frontend emits
+  an `unseq-probe` statement at the lexical position of every panicky
+  non-call operand that has a sibling ordered event lexically AFTER it
+  (`tools/nativefrontend/emit.go`, the `emitExpr` hook; the census of
+  the panicky kinds is `probeKind`, ONE function). The machine
+  evaluates the probe there: a value is discarded (the operand is
+  re-evaluated at its residual position — pure by construction: calls,
+  receives and allocations are hoisted out of it, `recover()` is never
+  probed and the decoder refuses a probe containing one); a PANIC is the
+  `ChoiceSite.unseqPanic` pick at bound 2 — **DEFER** (slot 0: the
+  sibling events first, the operand re-evaluated after them — the
+  pre-change machine's only member) or **RAISE** (slot 1: the operand's
+  panic first). No consumption unless the operand panics early, so an
+  ordinary `a[i] + f()` row's stream is untouched. With one probed
+  operand this is exactly the ruling's "both orders"; with two, the
+  DEFER×RAISE combination is a third member (the second operand's panic
+  ahead of the first's — permitted by the same omission, I-2 UNSEQ; E12
+  by-product note). The set is a SUBSET of the two total orders'
+  observables by the purity argument (design §3), and every realized
+  member is spec-conforming. Rule-site citation: `Stmt.unseqProbe`'s
+  docstring (Syntax.lean) carries the clause; the census mirror (§0)
+  carries the row.
+- gc's MEMBER, per operand kind (evidence `docs/evidence/2026-09-05_e13-b/
+  gc-realization.txt`, 32 probes at the pin): EARLY (= RAISE) for type
+  assertions, slice expressions and interface comparisons; LATE
+  (= DEFER) for index, dereference, division, shift and slice-to-array
+  conversion operands — gc's compiler-internal rule (order.go: `ODOTTYPE`
+  / `OSLICE*` / interface `OEQ` are safe-expression-ordered early;
+  `OINDEX`/`ODEREF`/`ODIV`/`OLSH` stay in the residual) landing on two
+  different conforming members. So the assertion-vs-indexing split this
+  entry used to record as "two axes on opposite sides" is not a machine
+  defect on either axis: both are members, and gc's draw lies in the
+  certified set on every corpus row (§EVIDENCE). gc is SELF-STABLE
+  (default flags and `-gcflags=all='-N -l'` agree), so the contrast
+  with E3 (compiler-internal, unpinnable) stands: this is latitude in
+  the spec. XIMPL would bear on whether any implementation orders these
+  a third way; none known.
+- EVIDENCE: GC + enumeration. The corpus rows are MEMBERSHIP rows
+  (lane=membership, `width=2`, `members=` pinned by enumeration; the
+  §7 item-5 panic-identity treatment realized as SET membership over
+  the choice stream — the comparator is not relaxed, the set is wider):
+  `builtins/e13-sibling-panic-order/*` (31 rows: the §2 probe family —
+  assertion/slice/comparison/index/deref/division/shift/conversion left
+  of a call; the middle position; the receive sibling; the argument-list
+  sibling (d2); the composite literal and return list; the send
+  statement; `append`/`copy` — the divergence the fr27-fr28 audit found
+  censused NOWHERE, now certified members; `make`; a mutating call
+  (members differing in STATUS); two probed operands (3 members); and
+  the strict controls), the retired-refusal rows of `builtins/len-vs-
+  call-order/*` (E6), and `binop-order/operand-panic-vs-call/{call-
+  before-left,call-before-left-div}`. gc's draw exhibits ONE member per
+  row (deterministic per toolchain; the K=32 draws run to the budget —
+  the BUG-087 rows' precedent); the OTHER member is argued from the
+  spec's silence plus gc's own realization of it on the other operand
+  kinds. The historical probe tables (d1/d2/bare-index; the min/max
+  a6p/a6q table) are superseded by the row set and the evidence dir;
+  their readings stand (min/max hoist like calls — ordered events — and
+  their arguments are FORCED before them; a lexically-left assertion vs
+  a later min/max is this entry's latitude).
+- THE FOUR-WAY TREATMENT (fr27-fr28 audit fix round, 2026-09-05 —
+  `docs/evidence/2026-09-04_fr27-fr28/e13-probes.tsv`) — RESOLVED by
+  the ruling: (1) `make` REFUSED, (2) `min`/`max`/user calls lowered
+  call-first, (3) `append`/`copy` lowered call-first and censused
+  nowhere, (4) `len`/`cap` REFUSED. Option (b) taken: all four are ONE
+  treatment now — a membership set with both orders; the make and
+  len/cap refusals RETIRED (E6, BUG-032, BUG-083, FR-28 CLOSED);
+  append/copy censused by row. Option (a) (extend the refusal to every
+  hoisting construct) would have refused the ordinary `a[i] + f(b[j])`
+  idiom class; option (c) would have kept a wrong-by-omission census.
   - **RULED (b) — [USER] 2026-09-05 (relayed).** The [USER] quote was
     received by the [AGENT] coordinator in conversation and relayed to
     the recording worker (lane `rulings-0905`); cited as relayed, not
@@ -1445,36 +1462,47 @@ the same call.
     before its arguments are evaluated") — BUG-062's territory, already
     realized. Option (3) above (`append`/`copy`) is covered by the same
     shape, so its un-pinned divergence closes with the implementation,
-    not before. IMPLEMENTATION OWED to lane `e13-b` (launched
-    2026-09-05): a design note first (the membership shape's exact
-    member set per composition, the forced-vs-unsequenced classifier,
-    the rows that move from refusal to membership), then the frontend
-    and membership-lane changes under the differential. The NO-PIN
-    bullet below stays IN FORCE until that design note lands; this
-    entry's heading tag moves from (b) PINNED to (a) ENVELOPED only
-    when the implementation is merged, never on the ruling alone.
-- NO PIN MAY BE TAKEN HERE. Deliberately **not** a corpus case, and no
-  strict-lane row may pin either axis: the machine and gc realize
-  different members on the assertion axis, so a strict pin would record
-  a divergence as a fidelity failure, and a pin on the indexing axis
-  would freeze an agreement that the spec does not require. This is a
-  census row, nothing more. (Campaign disposition, findings §4:
-  "an inventory entry, not a fix".) The generator-side observation that
-  a STRICT-lane outcome-determinism claim can land on a point like this
-  is grossmith's, handed back as F-5 — external, no patch. IN FORCE
-  after the 2026-09-05 (b) ruling: nothing here is pinned until lane
-  `e13-b`'s design note lands and its membership rows replace the
-  refusals.
-- RE-ENVELOPE OBLIGATION + COST: rides E2/E12's family — the same
-  panic-identity membership treatment §7 item 5 queues (admit any of
-  the candidate panics) covers this entry's observable, since the only
-  thing visible here is WHICH panic wins and what ran before it. Until
-  E2 opens, no new machine arms. MODERATE, sequential-only observable.
-  Census follow-on, in E12's spirit: the same reasoning applies to
-  every other non-call panicking operation in operand position
-  (division by zero, slice-to-array conversion, nil-map write, nil
-  dereference) against sibling calls — not separately probed, and NOT
-  claimed by this entry.
+    not before. IMPLEMENTATION LANDED — lane `e13-b`
+    (design note `docs/2026-09-05_e13-b-design.md`: the member set per
+    composition, the forced-vs-unsequenced classifier §1, the rows that
+    moved from refusal to membership §5; merged at merge train round 17,
+    2026-09-05). The former NO-PIN bullet is replaced by the PINS ARE
+    MEMBERSHIP ROWS bullet below, and this entry's heading tag moved
+    from (b) PINNED to (a) ENVELOPED with the merge — per this
+    sub-bullet's own rule, never on the ruling alone. (Sub-bullet kept
+    verbatim as the ruling's provenance record; the "owed" sentence
+    rewritten at the round-17 rebase, [AGENT].)
+- PINS ARE MEMBERSHIP ROWS NOW (replacing the former "NO PIN MAY BE
+  TAKEN HERE"): the old rule existed because a STRICT row on either
+  axis would have recorded latitude as fidelity (assertion axis) or
+  frozen an unrequired agreement (indexing axis). With the set
+  enveloped, a membership row pins the SET and samples gc into it — the
+  honest pin. A strict row on this axis is legitimate only where the
+  set is a singleton by construction (both orders coincide: `len-assert-
+  vs-nil-operand`, `panicky-between`'s witness, an inline `min`), or
+  where the position is FORCED (F2) or a recorded residual (§6.1:
+  `assert-right-call`). The generator-side observation that a STRICT-
+  lane outcome-determinism claim can land on a point like this is
+  grossmith's (F-5) — answered: such a row now fails at stage `nondet`
+  and is routed to membership (measured at the lane: the two binop rows
+  and `make-hint-call` did exactly that).
+- RESIDUAL NARROWINGS (recorded, design §6; each a (b-n) sub-axis with
+  its own note, none oracle-visible today): (1) an operand RIGHT of the
+  event (`f() + a[i]`) realizes only the lexical (events-first) order —
+  gc agrees (probe u); (2) an operand that is the hoisted event's OWN
+  operand (`len(s[i:]) + wit(5)`: the slice expression evaluates at
+  len's position) realizes only the lexical order against LATER events
+  — gc agrees (`slice-left-len-call`); (3) an operand containing
+  `recover()` is not probed; (4) the VALUE observable (E12) and the
+  assignment-target axes (E2/E3/E4) and the receiver axis (E14) are not
+  this entry's; (5) a probed operand is evaluated twice on the no-panic
+  path — a constant-factor cost, no fuel-out flips measured. Cost of
+  removing (1)–(2): a probe for every panicky operand regardless of
+  position (LOW mechanism, more pops on panicking rows).
+- RE-ENVELOPE OBLIGATION: DISCHARGED for the sibling-panic axis (this
+  entry's observable); the residuals above carry their own small notes;
+  E12's obligation (the value axis) and E2–E4's are unchanged and still
+  ride §7 item 5.
 
 ## 3. Representation, runtime, and library realization
 
@@ -2171,12 +2199,15 @@ exit having no HB edge.
 
 ## 5. Refusals standing in for latitude (inventory of fail-closed resolutions)
 
-R6 (float→int out-of-range), E6 (len/cap hoist shapes),
+R6 (float→int out-of-range),
 select-with-select
 rendezvous (Multi.lean:804/:813), racy programs (C10 — by doctrine),
 uintptr observations, `go` during `$pkginit` (StepFn.lean:511–525).
 Each is honest (visible red, never a wrong answer); none is a fidelity
-achievement.
+achievement. E6 (len/cap hoist shapes) LEFT this list 2026-09-05 (lane
+e13-b): the refusal stood in for E13's latitude, which is now enveloped
+(`unseqPanic`) — the first refusal of this list retired into an
+envelope rather than a pin.
 
 ## 6. Unknowns — suspected latitude, not yet analyzed (class (d))
 
@@ -2289,7 +2320,14 @@ concurrency-relevance (the charter: concurrency matters most),
 5. **E3/E4 — the unordered-panic-selection axes.** Deterministic
    divergences from gc recorded and probed (unpinnable
    compiler-internal realization); needs the membership/panic-identity
-   envelope treatment or linearization. Sequential-only,
+   envelope treatment or linearization. **E13 LEFT this item
+   2026-09-05** (lane e13-b, [USER] ruling (b)): the sibling-panic axis
+   is the FIRST realization of exactly this treatment — an
+   `unseq-probe` statement + the `unseqPanic` pick, membership rows
+   certifying both panics; the same mold (a probe at the operand's
+   lexical position, a pick on the panic path) is the candidate
+   mechanism for E3/E4's target operands once the assignment path is
+   opened (design `docs/2026-09-05_e13-b-design.md` §6 item 4). Sequential-only,
    moderate cost — above R1/R4-class pins because it is
    oracle-visible in panic-selection shapes today. **E5 LEFT this
    item 2026-09-02** ([USER] ruling): its re-envelope obligation is
@@ -2529,10 +2567,13 @@ had LEFT the class — C2/C3 inside the (b) list and E9 inside the
 mention, so the mentions moved out. Keep it that way: put prose in the
 history block, never in a membership line.
 
-- (a) ENVELOPED: 10 sites / 11 entries — C1, C2, C3, C4, C5, C6, C8, C12, E9, R2,
-  R18 (via L1, zero new sites; its statement-granularity obligation is live).
-- (b) PINNED: **18 entries** — concurrency: C9; sequential order: E2,
-  E3, E4, E7, E10, E11, E12, E13; representation/runtime: R1, R8,
+- (a) ENVELOPED: 11 sites / 13 entries — C1, C2, C3, C4, C5, C6, C8, C12, E6
+  (via E13's `unseqPanic`, zero sites of its own — the retired len/cap
+  refusal row, kept as the history of what stood in for the latitude), E9,
+  E13, R2, R18 (via L1, zero new sites; its statement-granularity
+  obligation is live).
+- (b) PINNED: **17 entries** — concurrency: C9; sequential order: E2,
+  E3, E4, E7, E10, E11, E12; representation/runtime: R1, R8,
   R9, R10, R11, R12, R15, R16, R17.
 - (b-n) NARROWED with recorded caveat: 7 — C7, E8, R3, R4, R5, R7, R13.
 - (c) FORCED: the §4 list (machine follows; BUG-005's mandated
@@ -2540,25 +2581,36 @@ history block, never in a membership line.
   by the (L) surgery's delete-prune); rows carrying the tag: E1, E5
   (since 2026-09-02), E14.
 - (d) UNKNOWN: 6 (U-2 … U-7; U-1 probed and admitted at W3.2 stage C, 2026-08-20).
-- REFUSED standing in for latitude: 9 (§5).
+- REFUSED standing in for latitude: 8 (§5; E6 left 2026-09-05).
 - Known-≠-oracle deterministic points (the honesty-critical list):
-  E3, E5, E7, E13(type-assertion axis; the indexing axis agrees),
-  R3(escaping path). Two CLASSES inside one list, stated per row: E3,
-  E7, E13, R3 are (b)/(b-n) PINS with gc on another conforming member
-  (re-envelope debts, §7); **E5 is a (c) FORCED row on which gc
+  E3, E5, E7, R3(escaping path). Two CLASSES inside one list, stated
+  per row: E3, E7, R3 are (b)/(b-n) PINS with gc on another conforming
+  member (re-envelope debts, §7); **E5 is a (c) FORCED row on which gc
   DEVIATES** (L-016, [USER] ruling 2026-09-02) — it stays listed
   because the oracle disagrees with the machine there, but the
-  disagreement is gc's, not a debt of ours. (E13 added 2026-08-20; the
-  C2+C3 send-then-spin wedge LEFT this list 2026-08-21 — W3.2 stages
-  C/D re-enveloped it, register #1 discharged; E5's class changed
-  2026-09-02. E13's (b)-latitude ruling of 2026-09-05 ([USER],
-  relayed) moves it OFF this list and out of the (b) PINNED count when
-  lane `e13-b` lands the membership shape — not before; the tallies
-  above record the machine as it stands.)
+  disagreement is gc's, not a debt of ours. (E13 added 2026-08-20 and
+  LEFT 2026-09-05 — re-enveloped at lane e13-b, gc's member is IN the
+  set on both former axes; the C2+C3 send-then-spin wedge LEFT this
+  list 2026-08-21 — W3.2 stages C/D re-enveloped it, register #1
+  discharged; E5's class changed 2026-09-02.)
 
 ### 10.1 Movement and history (NOT membership)
 
 Nothing in this block is a class member by virtue of being named here.
+
+- **(b) 18 → 17, (a) 11 → 13 entries / 10 → 11 sites, REFUSED 9 → 8
+  (2026-09-05).** **E13 moved (b) → (a)** by [USER] ruling (option (b)
+  of E13's four-way treatment, Mike 2026-09-05, relayed; lane `e13-b`):
+  the sibling-panic order is the new `ChoiceSite.unseqPanic` — the
+  second site added since the census became code — with its §0 mirror
+  row in the same commit; **E6 RETIRED** from §5 (the len/cap and make
+  refusals it inventoried stood in for E13's latitude and are deleted);
+  E13 LEFT the known-≠-oracle list (gc's member is certified in the set
+  on every row). E6 keeps a heading — tagged (a) via E13, zero sites of
+  its own, the R18-via-L1 mold — so the history of the refusal that
+  stood in for this latitude stays readable in place; it contributes
+  no site and no envelope of its own. Recording agent [AGENT]; the
+  envelope is the [USER]'s.
 
 - **(a), 9 → 10 (2026-09-03).** **C12 ADDED** (Q-TRYLOCK, RULED [USER]
   2026-08-31 row 5, own-slice sequencing [USER] 2026-09-03, lane

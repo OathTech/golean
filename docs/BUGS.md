@@ -1581,10 +1581,31 @@ alongside every `e.lifted` rollback (both paths).
   first half) are unaffected: still both-legal, still open envelope.
   Analysis [AGENT] (grossmith campaign-3 verifier, 2026-09-02); the
   class call [USER].
+- E13-b AMENDMENT (2026-09-05, lane `e13-b`, [USER] ruling (b) relayed
+  — design `docs/2026-09-05_e13-b-design.md`): THE RESIDUAL IS GONE.
+  The A6 guard (`hoistReordersPanic` = `residualPanicFreeOperand` ×
+  `sweepPanickyInlineBeforeKinds`, the nil-deref transparency arm, and
+  the `emitMake` wiring FR-28 added) is DELETED: the composition it
+  refused — a panicky hoisted operand beside panicky inline material to
+  its left — is spec-UNSEQUENCED, and the frontend now emits an
+  `unseq-probe` at the left material's lexical position so the machine
+  realizes BOTH orders (`ChoiceSite.unseqPanic`). "Realizing gc's point
+  needs full-statement linearization" was the wrong target: gc's point
+  is ONE member (early for assertions, late for index/deref/division/
+  shift/conversion); the envelope is the product. `panicky-between`
+  (this entry's red-by-design pin) LOWERS and PASSes strict — its
+  witness is 0 under both orders (a singleton set); `len-nil-left-vs-
+  index-operand` and `len-assert-vs-nil-operand` likewise (their left
+  operands cannot panic at run time); the rows whose two orders differ
+  are membership rows on BUG-083's Cases line. The FORCED half —
+  `sweepOrderedEventAfter`'s hoist of `len`/`cap`/`min`/`max` when an
+  event follows (BUG-062) — is unchanged, and the four Cases rows below
+  keep pinning the inline realization green. Latitude E6 (this entry's
+  refusal, as the inventory listed it) is RETIRED into E13.
 - Pinned-by: differential (since the 2026-08-31 A6 amendment above:
   the once-refused rows now pin the inline realization green; the
-  surviving refusal shape is pinned red-by-design on BUG-062's
-  panicky-between row)
+  refusal shape that survived A6 and FR-28 was RETIRED 2026-09-05 —
+  the E13-b amendment above)
 - Cases: channels/recv-order/dead-recv-len-operand, channels/recv-order/dead-recv-len-embedded, bools/short-circuit-funclit/e6-recv-len-in-sc, bools/short-circuit-funclit/e6-recv-len-outside
 - Discovered: 2026-08-06 (channels-arc-s1 convergence round, verified —
   severity minor: both realized orders are spec-legal, but the
@@ -3272,6 +3293,16 @@ FIRST per the standing rule.
   nil-deref-only-operand realization of the spec-forced len-before-
   call order (the len/cap hoist this entry built, taken where it was
   refused before).
+- E13-b note (2026-09-05, lane `e13-b`): the residual refusal is
+  RETIRED (BUG-032's E13-b amendment; latitude E13 option (b), [USER]
+  ruling relayed). This entry's FORCED-point fix — the sweep-scoped
+  hoist of a builtin when an ordered event follows — is untouched and
+  is exactly the F2 side of the E13 decision procedure (design §1): an
+  ARGUMENT of a later call is evaluated before the call, never a
+  choice. What changed is the OTHER side: panicky inline material LEFT
+  of the hoisted builtin now carries an `unseq-probe`, so `iv.(int) +
+  len(b[j]) + f()` lowers instead of refusing and realizes both spec-
+  permitted panic orders. Every row on this Cases line stays green.
 
 WIDENED 2026-08-22 (grossmith campaign-2 F-1, promoted by the
 launch-audit fix round): the predicate gap is not `len`/`cap`
@@ -4559,8 +4590,32 @@ this entry's evidence dir, §M1.
   Pinned-by moves to none with `Expect: FAIL` (the BUG-070/078/084
   precedent: red-by-design refusal pins on a fixed entry — check-bugs
   (3) forbids a FAIL row on a fixed differential entry).)
-- Pinned-by: none
-- Expect: FAIL
+  **REFUSAL RETIRED INTO LATITUDE (2026-09-05, lane `e13-b` — E13
+  option (b), RULED [USER] Mike 2026-09-05, relayed by the [AGENT]
+  coordinator: «we should do what the standard supports, and avoid
+  over-refusal if we can. That's what (b) means right?»; design
+  `docs/2026-09-05_e13-b-design.md`).** STATUS CHANGE with its reason:
+  the shapes this entry filed were never a wrong answer in the sense of
+  observed-∉-modeled-by-right — gc's realization (the assertion's panic
+  first) and the machine's (the hint's) are BOTH conforming members of
+  a spec-UNSEQUENCED pair (the TENSION paragraph above said so); the
+  A6 guard that closed the entry AS A REFUSAL was standing in for
+  latitude, and the ruling retires it. The `make` guard and the whole
+  `hoistReordersPanic` predicate family are DELETED (emit.go); the
+  frontend emits an `unseq-probe` at the left operand's lexical
+  position and the machine realizes both orders (`ChoiceSite.unseqPanic`:
+  DEFER = the hint first, RAISE = the assertion first). Every row on
+  the Cases line below LOWERS and is a `lane=membership` row with two
+  certified members, gc's draw inside the set (its member is RAISE on
+  the assert-left rows — gc evaluates type assertions early — and DEFER
+  on `make-index-left`); `hint-panicky-between` flips FAIL/frontend-
+  export → PASS/membership with its siblings (a refusal became an
+  answer, not a pin). `Expect: FAIL` is dropped and Pinned-by returns to
+  differential: check-bugs (3) now demands these rows PASS, which they
+  do. The full-statement linearization this entry named as "the only
+  fix that would realize gc's point" is NOT what landed — gc's point is
+  one member, not the target; the design note §3 has the argument.
+- Pinned-by: differential
 - Cases: builtins/len-vs-call-order/hint-panicky-between, builtins/len-vs-call-order/make-slice-panicky-between, builtins/len-vs-call-order/make-chan-cap-panicky-between, builtins/len-vs-call-order/make-index-left, builtins/len-vs-call-order/make-inner-len, builtins/len-vs-call-order/make-hint-struct-any-key, builtins/len-vs-call-order/make-hint-array-any-key, builtins/len-vs-call-order/make-hint-generic-any-key, builtins/len-vs-call-order/len-struct-any-key-left-assert
 - Discovered: 2026-09-02 (bug082-maphint pre-merge audit, M1; the
   auditor's probes `.tmp/audit-bug082/p4`, `p5`, reproduced in

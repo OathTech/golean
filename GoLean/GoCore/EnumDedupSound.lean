@@ -317,6 +317,11 @@ theorem stepThread_total_covered {s : ExecState} {ts : Array Thread}
                   | false =>
                   rw [hnnv] at hiv
                   simp only [Bool.false_eq_true, reduceIte] at hiv
+                  cases hnup : consumesUnseqPanic c with
+                  | true => rw [hnup] at hiv; simp at hiv
+                  | false =>
+                  rw [hnup] at hiv
+                  simp only [Bool.false_eq_true, reduceIte] at hiv
                   cases harr : arrivalCases s ts i c with
                   | error e => rw [harr] at hiv; cases hiv
                   | ok a =>

@@ -1,4 +1,27 @@
 # GoLean native-frontend full-corpus differential baseline
+# cases: 3559 (3326 PASS / 233 FAIL)
+#   [re-derived from the data rows at the round-17 rebase of e13-b onto main 9343a310, 2026-09-05: awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv -> PASS 3326, FAIL 233; main's 3528 = 3283 / 245 as history]
+# re-pinned: 2026-09-05 (e13-b lane — latitude E13 option (b), RULED [USER] Mike 2026-09-05, relayed by the [AGENT]
+#   coordinator, cited as relayed: «we should do what the standard supports, and avoid over-refusal if we can. That's
+#   what (b) means right?»; [AGENT] worker. The machine gains `Stmt.unseqProbe` / `Cont.probeK` / `ChoiceSite.unseqPanic`
+#   (a spec-UNSEQUENCED non-call operand's panic vs a sibling ordered event: DEFER / RAISE, bound 2 only when the operand
+#   panics early), the frontend emits `unseq-probe` at every such operand's lexical position, and the A6 unordered-panic
+#   guard family (BUG-032/BUG-062/BUG-083, FR-28) is DELETED — its refusals stood in for latitude. drift vs main's pin
+#   (3528 = 3283 PASS / 245 FAIL — the c-arc-c2 round-17 rebase, the next block) = EXACTLY: 12 FAIL -> PASS flips, every id on a BUGS.md Cases line (BUG-083's nine make/len rows -> PASS/membership,
+#   BUG-032's builtins/len-vs-call-order/panicky-between + len-assert-vs-nil-operand + len-nil-left-vs-index-operand ->
+#   PASS strict); 3 PASS -> PASS lane moves (builtins/len-vs-call-order/make-hint-call, binop-order/operand-panic-vs-call/
+#   {call-before-left,call-before-left-div}: strict -> membership — their strict PASS had pinned one member of a two-member
+#   set); 31 born rows, all PASS (builtins/e13-sibling-panic-order/*: 27 membership rows certifying both panic orders with
+#   gc's draw inside the set, 4 strict controls); 0 PASS -> FAIL. Tally 3528 = 3283 / 245 -> 3559 = 3326 / 233 (3283 + 31 + 12;
+#   245 - 12), re-derived from the data rows by the awk above. (The lane's own pre-rebase figure, over main b77f3298's rows:
+#   3498 = 3252 / 246 -> 3529 = 3295 / 234 — the same rows, the same verdicts.)
+#   The channels/select-select/beside-loop alternation row is kept verbatim (its `# reason:` block below it).
+#   Evidence: docs/evidence/2026-09-05_e13-b/README.md; design docs/2026-09-05_e13-b-design.md.
+#   [rebased onto main 9343a310 at merge train round 17 ([AGENT] rebase reconciliation): the lane forked from main b77f3298 and main
+#   gained fr19-bug097, c-arc-b4 and c-arc-c2 in between — the blocks below this lane's are main's, kept verbatim. Data rows = main's
+#   3528 + this lane's 31 born - 0 removed, the 12 FAIL -> PASS flips and 3 lane moves re-applied against main's rows; 0 PASS -> non-PASS
+#   vs main. The raft twin wire pin is a FRESH EMIT from the merged frontend at this rebased commit (a9a2e2b1 -> 31fb50dc: 119 `unseq-probe`
+#   statements, the sole structural class; strip-probes = a9a2e2b1 structurally) — scripts/check-frontend-pins history.]
 # re-pinned: 2026-09-05 (c-arc-c2 lane, AUDIT FIX ROUND R1-R16 — [AGENT] worker; REBASED onto main cf858f0f at merge train round 17,
 #   [AGENT] reconciler): drift vs main's pin (3523 = 3279 PASS / 244 FAIL — the fr19-bug097 audit fix round's, the next block) = EXACTLY
 #   5 born rows, 0 flips of pre-existing rows, 0 reorders: structs/decl-order-reversed/{zero-values,array-equality,interface-box,
@@ -1313,8 +1336,8 @@ PASS	binary/little-endian/golden	-
 PASS	binary/little-endian/heartbeat-ctx-shape	-
 PASS	binary/little-endian/short-read	-
 PASS	binop-order/operand-panic-vs-call/left-first	-
-PASS	binop-order/operand-panic-vs-call/call-before-left	-
-PASS	binop-order/operand-panic-vs-call/call-before-left-div	-
+PASS	binop-order/operand-panic-vs-call/call-before-left	membership
+PASS	binop-order/operand-panic-vs-call/call-before-left-div	membership
 PASS	bools/generic-type-set/not-defined	-
 PASS	bools/generic-type-set/and-or	-
 PASS	bools/generic-type-set/equality	-
@@ -1393,6 +1416,37 @@ PASS	builtins/copy-edge/array-slice	-
 PASS	builtins/copy-edge/string-prefix	-
 PASS	builtins/copy-edge/generic-slices	-
 PASS	builtins/copy-string-to-bytes	-
+PASS	builtins/e13-sibling-panic-order/assert-left-call	membership
+PASS	builtins/e13-sibling-panic-order/assert-middle	membership
+PASS	builtins/e13-sibling-panic-order/assert-arg-sibling	membership
+PASS	builtins/e13-sibling-panic-order/assert-composite-lit	membership
+PASS	builtins/e13-sibling-panic-order/assert-return-list	membership
+PASS	builtins/e13-sibling-panic-order/assert-left-method	membership
+PASS	builtins/e13-sibling-panic-order/assert-left-make-slice	membership
+PASS	builtins/e13-sibling-panic-order/assert-left-len-slice-call	membership
+PASS	builtins/e13-sibling-panic-order/assert-left-new-call	membership
+PASS	builtins/e13-sibling-panic-order/assert-left-append	membership
+PASS	builtins/e13-sibling-panic-order/assert-left-copy	membership
+PASS	builtins/e13-sibling-panic-order/assert-vs-mutating-call	membership
+PASS	builtins/e13-sibling-panic-order/iface-cmp-left-call	membership
+PASS	builtins/e13-sibling-panic-order/index-left-call	membership
+PASS	builtins/e13-sibling-panic-order/index-middle	membership
+PASS	builtins/e13-sibling-panic-order/index-arg-sibling	membership
+PASS	builtins/e13-sibling-panic-order/index-composite-lit	membership
+PASS	builtins/e13-sibling-panic-order/send-chan-index	membership
+PASS	builtins/e13-sibling-panic-order/deref-left-call	membership
+PASS	builtins/e13-sibling-panic-order/div-left-call	membership
+PASS	builtins/e13-sibling-panic-order/shift-left-call	membership
+PASS	builtins/e13-sibling-panic-order/conv-left-call	membership
+PASS	builtins/e13-sibling-panic-order/two-index-left-call	membership
+PASS	builtins/e13-sibling-panic-order/index-assert-left-call	membership
+PASS	builtins/e13-sibling-panic-order/index-left-call-arg-panics	membership
+PASS	builtins/e13-sibling-panic-order/deref-left-index-arg-call	membership
+PASS	builtins/e13-sibling-panic-order/forced-arg-only	-
+PASS	builtins/e13-sibling-panic-order/assert-right-call	-
+PASS	builtins/e13-sibling-panic-order/assert-left-min-inline	-
+PASS	builtins/e13-sibling-panic-order/slice-left-len-call	-
+PASS	builtins/e13-sibling-panic-order/assert-left-recv-w	membership
 PASS	builtins/len-cap-array-pointer	-
 PASS	builtins/len-vs-call-order/chan	-
 PASS	builtins/len-vs-call-order/slice	-
@@ -1400,14 +1454,14 @@ PASS	builtins/len-vs-call-order/recv-bearing	-
 PASS	builtins/len-vs-call-order/short-circuit	-
 PASS	builtins/len-vs-call-order/short-circuit-skipped	-
 PASS	builtins/len-vs-call-order/panicky-before-call	-
-FAIL	builtins/len-vs-call-order/panicky-between	frontend-export
-FAIL	builtins/len-vs-call-order/hint-panicky-between	frontend-export
-FAIL	builtins/len-vs-call-order/make-slice-panicky-between	frontend-export
-FAIL	builtins/len-vs-call-order/make-chan-cap-panicky-between	frontend-export
-FAIL	builtins/len-vs-call-order/make-index-left	frontend-export
-FAIL	builtins/len-vs-call-order/make-inner-len	frontend-export
+PASS	builtins/len-vs-call-order/panicky-between	-
+PASS	builtins/len-vs-call-order/hint-panicky-between	membership
+PASS	builtins/len-vs-call-order/make-slice-panicky-between	membership
+PASS	builtins/len-vs-call-order/make-chan-cap-panicky-between	membership
+PASS	builtins/len-vs-call-order/make-index-left	membership
+PASS	builtins/len-vs-call-order/make-inner-len	membership
 PASS	builtins/len-vs-call-order/make-hint-panic-free	-
-PASS	builtins/len-vs-call-order/make-hint-call	-
+PASS	builtins/len-vs-call-order/make-hint-call	membership
 PASS	builtins/len-vs-call-order/make-hint-map-read	-
 PASS	builtins/len-vs-call-order/len-nil-only-none	-
 PASS	builtins/len-vs-call-order/len-nil-only-left	-
@@ -1418,12 +1472,12 @@ PASS	builtins/len-vs-call-order/make-nil-only-left	-
 PASS	builtins/len-vs-call-order/make-nil-only-operand	-
 PASS	builtins/len-vs-call-order/make-nil-only-both	-
 PASS	builtins/len-vs-call-order/lexer-idiom	-
-FAIL	builtins/len-vs-call-order/len-assert-vs-nil-operand	frontend-export
-FAIL	builtins/len-vs-call-order/len-nil-left-vs-index-operand	frontend-export
-FAIL	builtins/len-vs-call-order/make-hint-struct-any-key	frontend-export
-FAIL	builtins/len-vs-call-order/make-hint-array-any-key	frontend-export
-FAIL	builtins/len-vs-call-order/len-struct-any-key-left-assert	frontend-export
-FAIL	builtins/len-vs-call-order/make-hint-generic-any-key	frontend-export
+PASS	builtins/len-vs-call-order/len-assert-vs-nil-operand	-
+PASS	builtins/len-vs-call-order/len-nil-left-vs-index-operand	-
+PASS	builtins/len-vs-call-order/make-hint-struct-any-key	membership
+PASS	builtins/len-vs-call-order/make-hint-array-any-key	membership
+PASS	builtins/len-vs-call-order/len-struct-any-key-left-assert	membership
+PASS	builtins/len-vs-call-order/make-hint-generic-any-key	membership
 PASS	builtins/len-vs-call-order/make-hint-generic-int-key	-
 PASS	builtins/make-channel-len-cap	-
 PASS	builtins/make-map-hint	-

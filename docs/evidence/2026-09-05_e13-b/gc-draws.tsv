@@ -1,0 +1,79 @@
+# gc draw tables for the membership rows this lane touches (plain/-race alternating, K=32): id, draws, distinct observations drawn, the observation(s)
+binop-order/operand-panic-vs-call/call-before-left	draws=32	distinct=1
+	{"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":11}]}	plain=16 race=16
+binop-order/operand-panic-vs-call/call-before-left-div	draws=32	distinct=1
+	{"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":7}]}	plain=16 race=16
+builtins/e13-sibling-panic-order/assert-arg-sibling	draws=32	distinct=1
+	{"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}	plain=16 race=16
+builtins/e13-sibling-panic-order/assert-composite-lit	draws=32	distinct=1
+	{"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}	plain=16 race=16
+builtins/e13-sibling-panic-order/assert-left-append	draws=32	distinct=1
+	{"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}	plain=16 race=16
+builtins/e13-sibling-panic-order/assert-left-call	draws=32	distinct=1
+	{"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}	plain=16 race=16
+builtins/e13-sibling-panic-order/assert-left-copy	draws=32	distinct=1
+	{"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}	plain=16 race=16
+builtins/e13-sibling-panic-order/assert-left-len-slice-call	draws=32	distinct=1
+	{"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}	plain=16 race=16
+builtins/e13-sibling-panic-order/assert-left-make-slice	draws=32	distinct=1
+	{"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}	plain=16 race=16
+builtins/e13-sibling-panic-order/assert-left-method	draws=32	distinct=1
+	{"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}	plain=16 race=16
+builtins/e13-sibling-panic-order/assert-left-new-call	draws=32	distinct=1
+	{"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}	plain=16 race=16
+builtins/e13-sibling-panic-order/assert-left-recv-w	draws=2	distinct=1
+	{"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}	plain=1 race=1
+builtins/e13-sibling-panic-order/assert-middle	draws=32	distinct=1
+	{"message":"interface conversion: interface {} is string, not int","output":"wit 1\n","status":"panic"}	plain=16 race=16
+builtins/e13-sibling-panic-order/assert-return-list	draws=32	distinct=1
+	{"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}	plain=16 race=16
+builtins/e13-sibling-panic-order/assert-vs-mutating-call	draws=32	distinct=1
+	{"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}	plain=16 race=16
+builtins/e13-sibling-panic-order/conv-left-call	draws=32	distinct=1
+	{"message":"runtime error: cannot convert slice with length 1 to array or pointer to array with length 2","output":"wit 5\n","status":"panic"}	plain=16 race=16
+builtins/e13-sibling-panic-order/deref-left-call	draws=32	distinct=1
+	{"message":"runtime error: invalid memory address or nil pointer dereference","output":"wit 5\n","status":"panic"}	plain=16 race=16
+builtins/e13-sibling-panic-order/deref-left-index-arg-call	draws=32	distinct=1
+	{"message":"runtime error: index out of range [5] with length 2","output":"","status":"panic"}	plain=16 race=16
+builtins/e13-sibling-panic-order/div-left-call	draws=32	distinct=1
+	{"message":"runtime error: integer divide by zero","output":"wit 5\n","status":"panic"}	plain=16 race=16
+builtins/e13-sibling-panic-order/iface-cmp-left-call	draws=32	distinct=1
+	{"message":"runtime error: comparing uncomparable type []int","output":"wit 5\n","status":"panic"}	plain=16 race=16
+builtins/e13-sibling-panic-order/index-arg-sibling	draws=32	distinct=1
+	{"message":"runtime error: index out of range [9] with length 1","output":"wit 7\n","status":"panic"}	plain=16 race=16
+builtins/e13-sibling-panic-order/index-assert-left-call	draws=32	distinct=1
+	{"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}	plain=16 race=16
+builtins/e13-sibling-panic-order/index-composite-lit	draws=32	distinct=1
+	{"message":"runtime error: index out of range [9] with length 1","output":"wit 7\n","status":"panic"}	plain=16 race=16
+builtins/e13-sibling-panic-order/index-left-call	draws=32	distinct=1
+	{"message":"runtime error: index out of range [9] with length 1","output":"wit 5\n","status":"panic"}	plain=16 race=16
+builtins/e13-sibling-panic-order/index-left-call-arg-panics	draws=32	distinct=1
+	{"message":"runtime error: index out of range [5] with length 2","output":"","status":"panic"}	plain=16 race=16
+builtins/e13-sibling-panic-order/index-middle	draws=32	distinct=1
+	{"message":"runtime error: index out of range [9] with length 1","output":"wit 1\nwit 2\n","status":"panic"}	plain=16 race=16
+builtins/e13-sibling-panic-order/send-chan-index	draws=32	distinct=1
+	{"message":"runtime error: index out of range [9] with length 0","output":"wit 7\n","status":"panic"}	plain=16 race=16
+builtins/e13-sibling-panic-order/shift-left-call	draws=32	distinct=1
+	{"message":"runtime error: negative shift amount","output":"wit 5\n","status":"panic"}	plain=16 race=16
+builtins/e13-sibling-panic-order/two-index-left-call	draws=32	distinct=1
+	{"message":"runtime error: index out of range [9] with length 1","output":"wit 5\n","status":"panic"}	plain=16 race=16
+builtins/len-vs-call-order/hint-panicky-between	draws=32	distinct=1
+	{"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}	plain=16 race=16
+builtins/len-vs-call-order/len-struct-any-key-left-assert	draws=32	distinct=1
+	{"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}	plain=16 race=16
+builtins/len-vs-call-order/make-chan-cap-panicky-between	draws=32	distinct=1
+	{"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}	plain=16 race=16
+builtins/len-vs-call-order/make-hint-array-any-key	draws=32	distinct=1
+	{"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}	plain=16 race=16
+builtins/len-vs-call-order/make-hint-call	draws=32	distinct=1
+	{"message":"boom-call","output":"","status":"panic"}	plain=16 race=16
+builtins/len-vs-call-order/make-hint-generic-any-key	draws=32	distinct=1
+	{"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}	plain=16 race=16
+builtins/len-vs-call-order/make-hint-struct-any-key	draws=32	distinct=1
+	{"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}	plain=16 race=16
+builtins/len-vs-call-order/make-index-left	draws=32	distinct=1
+	{"message":"runtime error: index out of range [5] with length 2","output":"","status":"panic"}	plain=16 race=16
+builtins/len-vs-call-order/make-inner-len	draws=32	distinct=1
+	{"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}	plain=16 race=16
+builtins/len-vs-call-order/make-slice-panicky-between	draws=32	distinct=1
+	{"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}	plain=16 race=16

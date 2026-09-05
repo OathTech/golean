@@ -88,7 +88,14 @@ Rules of the file:
   E13 concurs). This row adopts the UNSEQ reading as the GOVERNING
   DIRECTION; a session consuming E12 must not treat its per-row F2
   sentence as already written. Both readings are recorded and UNSEQ is
-  the wider, doctrine-safe direction.
+  the wider, doctrine-safe direction. E13's F2 sentence IS written since
+  2026-09-05 (lane `e13-b`, [USER] ruling (b); design
+  `docs/2026-09-05_e13-b-design.md` §1/§3): the machine realizes each
+  probed operand independently at its lexical position or in the
+  residual, so with two probed operands the set contains an
+  INTERLEAVING (the second operand's panic ahead of the first's) — a
+  member only UNSEQ licenses; either-order would have excluded it. The
+  first machine-side consumer of this row's direction.
 
 ### I-3. A "may"-restriction's exhibit is one realization, not a mandate — backed by L-010
 
