@@ -1914,6 +1914,13 @@ The type-descriptor decision, frontend rejection leg and scoped Gate D pin
 criteria remain separate open work. See the current lane handoffs and sealed
 evidence; no old assurance estimate is reinstated by these small successes.
 
+The proposed next long-cycle block is detailed in the
+[typed-consumer sprint charter](2026-09-05_typed-consumer-sprint-charter.md):
+typed Boolean and restricted recovery contracts, independent customer reuse,
+then B7/I1, with C1 handed off to a subsequent block. **DRAFT [AGENT], pending
+[USER] kickoff approval** of its scope and internal decision/review delegation;
+this pointer does not authorize execution or change existing gate rulings.
+
 ### 7.5 The F10 consequence (RULED [USER], Q1) for §3.A and §3.H
 
 - **In scope here, permanently:** the semantic transition relation
