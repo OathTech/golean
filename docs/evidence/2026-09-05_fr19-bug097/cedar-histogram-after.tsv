@@ -1,7 +1,7 @@
 # DIAGNOSTIC — NOT A LOWERING. tools/lowerdiag report: no wire is written; nothing in this file is a gate input.
 kind	key	cause	fr	scope	decls	sole	packages	export_kills
 cause	stdlib-package-unmodeled	stdlib-package-unmodeled	FR-14	decl	62	32	9	0
-cause	unexported-method-scope	unexported-method-scope	FR-29	export	17	17	2	17
+cause	unexported-method-scope	unexported-method-scope	FR-31	export	17	17	2	17
 cause	stdlib-type-method	stdlib-type-method	FR-14	call	19	9	2	0
 cause	reflect	reflect	out-of-language	decl	10	7	3	0
 cause	imported-generic-sig	imported-generic-sig	FR-23	decl	8	6	3	0
