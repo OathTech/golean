@@ -1,4 +1,14 @@
 # GoLean native-frontend full-corpus differential baseline
+# re-pinned: 2026-09-05 (bug095-096 lane — BUG-095 (frontend: an embedding interface's wire declaration collapsed
+#   to the embedded subset at dispatch sites) and BUG-096 (machine: a shift count ≥ width formed 2^count and aborted
+#   the process) FIXED; [AGENT] worker under [USER] direction 3 (wrong answers outrank hygiene). drift vs the
+#   previous pin = EXACTLY 17 born rows, all PASS: interfaces/embedding-satisfaction/{typeswitch,assert,assert-ok,
+#   nested,negative,method-value,method-expr,promoted,generic} (8 RED-FIRST on main; negative — own method
+#   present, embedded one missing — is the control) and ints/shift-count-bound/{left-huge,right-huge-signed,right-huge-unsigned,
+#   width,width-minus-one,int-count,negative-panic,untyped-const} (5 aborted the PROCESS on main; the other 3 are
+#   controls). 0 flips of pre-existing rows. The slice-3 pins (generics/type-switch-interface-param/*,
+#   ints/shift-count-huge) are NOT on main yet — they flip FAIL -> PASS when both lanes are merged (recorded on
+#   BUG-095/096). Evidence: docs/evidence/2026-09-05_bug095-096/.
 # re-pinned: 2026-09-05 (stdlib-slice-3 AUDIT FIX ROUND — A1: the float-bits guard made sign-insensitive and gc/amd64's
 #   min/max payload-OR idiom transcribed (two reported wrong answers closed); A2: the fd-2 split fail-closed on four
 #   understated shapes; [AGENT] under the same [USER] rulings as the slice). drift vs the slice's pin = EXACTLY (a) ONE
@@ -2622,6 +2632,15 @@ PASS	interfaces/embedded-interface-shadowing/interface-field-shadowed	-
 PASS	interfaces/embedded-interface-shadowing/pointer-method-promoted	-
 PASS	interfaces/embedded-interface-shadowing/nil-pointer-method-promoted	-
 PASS	interfaces/embedded-interface-shadowing/explicit-duplicate	-
+PASS	interfaces/embedding-satisfaction/assert	-
+PASS	interfaces/embedding-satisfaction/assert-ok	-
+PASS	interfaces/embedding-satisfaction/generic	-
+PASS	interfaces/embedding-satisfaction/method-expr	-
+PASS	interfaces/embedding-satisfaction/method-value	-
+PASS	interfaces/embedding-satisfaction/negative	-
+PASS	interfaces/embedding-satisfaction/nested	-
+PASS	interfaces/embedding-satisfaction/promoted	-
+PASS	interfaces/embedding-satisfaction/typeswitch	-
 PASS	interfaces/error-idioms/nil-error	-
 PASS	interfaces/error-idioms/value-equality	-
 PASS	interfaces/error-idioms/pointer-identity	-
@@ -2758,6 +2777,14 @@ PASS	ints/observation-kind/struct-fields	-
 PASS	ints/observation-kind/boxed-uint16	-
 PASS	ints/scalars	-
 PASS	ints/shifts	-
+PASS	ints/shift-count-bound/int-count	-
+PASS	ints/shift-count-bound/left-huge	-
+PASS	ints/shift-count-bound/negative-panic	-
+PASS	ints/shift-count-bound/right-huge-signed	-
+PASS	ints/shift-count-bound/right-huge-unsigned	-
+PASS	ints/shift-count-bound/untyped-const	-
+PASS	ints/shift-count-bound/width	-
+PASS	ints/shift-count-bound/width-minus-one	-
 PASS	ints/shift-width-boundaries	-
 PASS	ints/signed-unsigned-conversion	-
 PASS	ints/signed-width-wrap	-
@@ -4646,10 +4673,10 @@ FAIL	builtins/print/refused/zero-operands	frontend-export
 PASS	builtins/print/string	-
 PASS	builtins/print/uints	-
 PASS	builtins/print/values-and-output	-
-FAIL	generics/type-switch-interface-param	differential
-FAIL	generics/type-switch-interface-param/bound	differential
-FAIL	generics/type-switch-interface-param/plain	differential
-FAIL	ints/shift-count-huge	lean-observation
+PASS	generics/type-switch-interface-param	-
+PASS	generics/type-switch-interface-param/bound	-
+PASS	generics/type-switch-interface-param/plain	-
+PASS	ints/shift-count-huge	-
 FAIL	builtins/float-bits/min-max-canonical-refused	lean-observation
 PASS	builtins/float-bits/min-max-payload	-
 PASS	builtins/float-bits/min-max-payload/float32	-

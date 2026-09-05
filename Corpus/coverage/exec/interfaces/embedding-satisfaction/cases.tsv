@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+typeswitch	embeddingSatisfactionTypeSwitch	-	ok	-	interfaces,embedding,type_switch,methods,multi_result
+assert	embeddingSatisfactionAssert	-	panic	interface conversion: main.esOnlyFoo is not main.esJ: missing method bar	interfaces,embedding,type_assertions,methods,panic
+assert-ok	embeddingSatisfactionAssertOk	-	ok	-	interfaces,embedding,type_assertions,comma_ok,methods,multi_result
+nested	embeddingSatisfactionNested	-	ok	-	interfaces,embedding,type_assertions,comma_ok,type_switch,methods,multi_result
+negative	embeddingSatisfactionNegative	-	panic	interface conversion: main.esOnlyBar is not main.esJ: missing method foo	interfaces,embedding,type_assertions,methods,panic
+method-value	embeddingSatisfactionMethodValue	-	ok	-	interfaces,embedding,type_assertions,comma_ok,methods,multi_result
+method-expr	embeddingSatisfactionMethodExpr	-	ok	-	interfaces,embedding,type_assertions,comma_ok,methods,multi_result
+promoted	embeddingSatisfactionPromoted	-	ok	-	interfaces,embedding,type_assertions,comma_ok,methods,structs,multi_result
+generic	embeddingSatisfactionGeneric	-	ok	-	interfaces,embedding,type_switch,generics,methods,multi_result

@@ -1,0 +1,9 @@
+# producer: go run (go1.26.5 linux/amd64) of Corpus/coverage/exec/ints/shift-count-bound/main.go with main() replaced by one printing each subject and recovering the panicking one (README Reproduction)
+0 0 0 0
+0 -1 -1 -1
+0 0 0
+0 0 0 0 -1 -1
+-9223372036854775808 9223372036854775808 -128 -1
+0 9223372036854775808
+1099511627776 0 -2147483648 0
+negative: runtime error: negative shift amount

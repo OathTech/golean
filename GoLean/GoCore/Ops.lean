@@ -2019,14 +2019,31 @@ def arithmeticShiftRight (value : Int) (count : Nat) : Int :=
   else
     Int.tdiv value divisor
 
+/-- A shift count at or past the operand's width leaves no operand bit in
+place (spec#Operators: shifts "behave as if the left operand is shifted n
+times by 1"): 0 for every left shift and for an unsigned right shift, the
+sign fill (-1 / 0) for a signed right shift. The saturation is decided
+BEFORE `2 ^ count` is formed — over `Int` the power is unbounded, and a
+count such as `1 << 32` made Lean's `Nat.pow` guard ABORT the process
+(no observation, no refusal) where Go answers 0 (BUG-096). The width
+lookup refuses an unbounded kind by name; none reaches the machine (the
+decoder never produces one), so this is the fail-closed arm, not a
+regression. -/
 def intShiftLeftResult (left right : GoValue) : Except Stop GoValue := do
   let (leftValue, leftKind) ← valueAsIntValue left
   let count ← shiftCountNat right
+  let bits ← intKindBitWidth "<<" leftKind
+  if bits ≤ count then
+    return .int 0 leftKind
   return .int (leftKind.normalize (leftValue * ((2 : Int) ^ count))) leftKind
 
 def intShiftRightResult (left right : GoValue) : Except Stop GoValue := do
   let (leftValue, leftKind) ← valueAsIntValue left
   let count ← shiftCountNat right
+  let bits ← intKindBitWidth ">>" leftKind
+  if bits ≤ count then
+    -- Every operand bit is shifted out: the sign fill remains (BUG-096).
+    return .int (if leftKind.signed && leftValue < 0 then -1 else 0) leftKind
   let shifted :=
     if leftKind.signed then
       arithmeticShiftRight leftValue count

@@ -1,0 +1,19 @@
+# producer: docs/evidence/2026-09-05_bug095-096/README.md Reproduction block; columns: subject, exit code, native-json-run output (stdout+stderr)
+## RED-FIRST: main's machine (primary checkout .lake/build/bin/golean @ ac45aedd) on main's frontend wire (shift-count-bound.wire-main.json; byte-identical to the fixed frontend's — the frontend is untouched for BUG-096)
+shiftCountBoundLeftHuge	rc=1	INTERNAL PANIC: Nat.pow exponent is too big
+shiftCountBoundRightHugeSigned	rc=1	INTERNAL PANIC: Nat.pow exponent is too big
+shiftCountBoundRightHugeUnsigned	rc=1	INTERNAL PANIC: Nat.pow exponent is too big
+shiftCountBoundWidth	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int64","tag":"int","value":0},{"kind":"uint64","tag":"int","value":0},{"kind":"int8","tag":"int","value":0},{"kind":"uint8","tag":"int","value":0},{"kind":"int64","tag":"int","value":-1},{"kind":"int32","tag":"int","value":-1}]}
+shiftCountBoundWidthMinusOne	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int64","tag":"int","value":-9223372036854775808},{"kind":"uint64","tag":"int","value":9223372036854775808},{"kind":"int8","tag":"int","value":-128},{"kind":"int32","tag":"int","value":-1}]}
+shiftCountBoundIntCount	rc=1	INTERNAL PANIC: Nat.pow exponent is too big
+shiftCountBoundNegativePanic	rc=1	{"message":"runtime error: negative shift amount","schema":"golean-observation-v1","status":"panic"}
+shiftCountBoundUntypedConst	rc=1	INTERNAL PANIC: Nat.pow exponent is too big
+## FIXED: fixed machine on the fixed frontend wire (shift-count-bound.wire-fixed.json)
+shiftCountBoundLeftHuge	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0},{"kind":"uint64","tag":"int","value":0},{"kind":"int32","tag":"int","value":0},{"kind":"uint8","tag":"int","value":0}]}
+shiftCountBoundRightHugeSigned	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0},{"kind":"int","tag":"int","value":-1},{"kind":"int64","tag":"int","value":-1},{"kind":"int8","tag":"int","value":-1}]}
+shiftCountBoundRightHugeUnsigned	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"uint","tag":"int","value":0},{"kind":"uint64","tag":"int","value":0},{"kind":"uint8","tag":"int","value":0}]}
+shiftCountBoundWidth	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int64","tag":"int","value":0},{"kind":"uint64","tag":"int","value":0},{"kind":"int8","tag":"int","value":0},{"kind":"uint8","tag":"int","value":0},{"kind":"int64","tag":"int","value":-1},{"kind":"int32","tag":"int","value":-1}]}
+shiftCountBoundWidthMinusOne	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int64","tag":"int","value":-9223372036854775808},{"kind":"uint64","tag":"int","value":9223372036854775808},{"kind":"int8","tag":"int","value":-128},{"kind":"int32","tag":"int","value":-1}]}
+shiftCountBoundIntCount	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0},{"kind":"uint64","tag":"int","value":9223372036854775808}]}
+shiftCountBoundNegativePanic	rc=1	{"message":"runtime error: negative shift amount","schema":"golean-observation-v1","status":"panic"}
+shiftCountBoundUntypedConst	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"uint64","tag":"int","value":1099511627776},{"kind":"uint8","tag":"int","value":0},{"kind":"int32","tag":"int","value":-2147483648},{"kind":"int","tag":"int","value":0}]}

@@ -562,6 +562,15 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 		if err != nil {
 			return nil, err
 		}
+		// One wire name, one method set (BUG-095's mechanism, now a refusal):
+		// a name registered with two non-identical interfaces would put on
+		// the wire whichever registration came LAST, making the machine's
+		// satisfaction answers emission-order-dependent. Fail the export by
+		// name instead.
+		if len(e.ifaceConflicts) > 0 {
+			sort.Strings(e.ifaceConflicts)
+			return nil, unsup("interface wire name registered with two different method sets: %s", strings.Join(e.ifaceConflicts, "; "))
+		}
 		pending := []string{}
 		for k := range e.seenInterfaces {
 			if _, done := ifaceDefs[k]; !done {
@@ -5738,7 +5747,7 @@ func (e *emitter) synthesizeWrapper(named *types.Named, tName string, msel *type
 	origRecv := sig.Recv().Type()
 	var innerFunc string
 	var innerRecvArg any
-	if origIface, isIface := origRecv.Underlying().(*types.Interface); isIface {
+	if _, isIface := origRecv.Underlying().(*types.Interface); isIface {
 		// Promoted from an embedded INTERFACE field: forward as dynamic
 		// dispatch on the field value (nil field panics at dispatch — Go's
 		// nil-interface method call).
@@ -5750,7 +5759,16 @@ func (e *emitter) synthesizeWrapper(named *types.Named, tName string, msel *type
 		if !ok {
 			return nil, unsup("promotion from anonymous interface field in %s", tName)
 		}
-		e.noteInterface(ifaceName, origIface)
+		// BUG-095: register the STATIC interface's OWN method set under its
+		// wire name, never the method's DECLARING interface (for a method
+		// reached through an EMBEDDED interface that is the embedded one, and
+		// noteInterface is keyed by name — registering it here collapsed the
+		// embedding interface's requirement list to the embedded subset).
+		staticIface, ok := e.staticIfaceOf(ft)
+		if !ok {
+			return nil, unsup("promotion from embedded field %s of %s: static type is not a value interface", ifaceName, tName)
+		}
+		e.noteInterface(ifaceName, staticIface)
 		e.noteCalledIfaceMethod(ifaceName+"."+mfn.Name(), calledIfaceMethod{
 			ifaceName: ifaceName, method: mfn.Name(), sig: sig,
 			subst: e.curSubst,
@@ -6571,7 +6589,7 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 				}
 			}
 			recvType := fn.Type().(*types.Signature).Recv().Type()
-			if recvIface, isIface := recvType.Underlying().(*types.Interface); isIface {
+			if _, isIface := recvType.Underlying().(*types.Interface); isIface {
 				// Interface METHOD VALUE (design note D6): capture the BOX
 				// now — fixed at value time (defer/defer-interface-value-eval)
 				// — and dispatch through the anchor at the call. A NIL box
@@ -6601,7 +6619,16 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 				if !ok {
 					return nil, unsup("method value on unnameable interface type %s", ifaceStatic)
 				}
-				e.noteInterface(ifaceName, recvIface)
+				// BUG-095: register the STATIC interface's OWN method set under its
+				// wire name, never the method's DECLARING interface (for a method
+				// reached through an EMBEDDED interface that is the embedded one, and
+				// noteInterface is keyed by name — registering it here collapsed the
+				// embedding interface's requirement list to the embedded subset).
+				staticIface, ok := e.staticIfaceOf(ifaceStatic)
+				if !ok {
+					return nil, unsup("interface method selector on %s: static type is not a value interface", ifaceStatic)
+				}
+				e.noteInterface(ifaceName, staticIface)
 				e.noteCalledIfaceMethod(ifaceName+"."+fn.Name(), calledIfaceMethod{
 					ifaceName: ifaceName, method: fn.Name(),
 					sig:   fn.Type().(*types.Signature),
@@ -6665,13 +6692,22 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 			}
 			sig := fn.Type().(*types.Signature)
 			recvType := sig.Recv().Type()
-			if recvIface, isIface := recvType.Underlying().(*types.Interface); isIface {
+			if _, isIface := recvType.Underlying().(*types.Interface); isIface {
 				ifaceStatic := e.goTypeOf(sel.X)
 				ifaceName, ok := e.ifaceWireName(ifaceStatic)
 				if !ok {
 					return nil, unsup("method expression on unnameable interface type %s", ifaceStatic)
 				}
-				e.noteInterface(ifaceName, recvIface)
+				// BUG-095: register the STATIC interface's OWN method set under its
+				// wire name, never the method's DECLARING interface (for a method
+				// reached through an EMBEDDED interface that is the embedded one, and
+				// noteInterface is keyed by name — registering it here collapsed the
+				// embedding interface's requirement list to the embedded subset).
+				staticIface, ok := e.staticIfaceOf(ifaceStatic)
+				if !ok {
+					return nil, unsup("interface method selector on %s: static type is not a value interface", ifaceStatic)
+				}
+				e.noteInterface(ifaceName, staticIface)
 				e.noteCalledIfaceMethod(ifaceName+"."+fn.Name(), calledIfaceMethod{
 					ifaceName: ifaceName, method: fn.Name(), sig: sig,
 					subst: e.curSubst,
@@ -8809,7 +8845,7 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 	// first argument — AS IS, no address-of or copy adjustment (the boxed
 	// value carries its own receiver; methodReceiverArg's pointer logic is
 	// for concrete receivers only).
-	if recvIface, isIface := recvType.Underlying().(*types.Interface); isIface {
+	if _, isIface := recvType.Underlying().(*types.Interface); isIface {
 		// The interface VALUE being dispatched on: the receiver expression
 		// itself, or — promotion through an embedded interface FIELD
 		// (design note D1.4) — the field value reached by the hop walk (a
@@ -8845,7 +8881,16 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 		// Record the dispatch target so emitProgram can synthesize a table
 		// anchor when the interface is not declared in this package
 		// (predeclared error, imported interfaces).
-		e.noteInterface(ifaceName, recvIface)
+		// BUG-095: register the STATIC interface's OWN method set under its
+		// wire name, never the method's DECLARING interface (for a method
+		// reached through an EMBEDDED interface that is the embedded one, and
+		// noteInterface is keyed by name — registering it here collapsed the
+		// embedding interface's requirement list to the embedded subset).
+		staticIface, ok := e.staticIfaceOf(ifaceStatic)
+		if !ok {
+			return nil, false, unsup("interface method call on %s: static type is not a value interface", ifaceStatic)
+		}
+		e.noteInterface(ifaceName, staticIface)
 		e.noteCalledIfaceMethod(ifaceName+"."+sel.Sel.Name, calledIfaceMethod{
 			ifaceName: ifaceName, method: sel.Sel.Name,
 			sig:   fn.Type().(*types.Signature),

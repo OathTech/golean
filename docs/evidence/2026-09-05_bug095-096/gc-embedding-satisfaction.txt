@@ -1,0 +1,10 @@
+# producer: go run (go1.26.5 linux/amd64) of Corpus/coverage/exec/interfaces/embedding-satisfaction/main.go with main() replaced by one printing each subject and recovering the two panicking ones (README Reproduction)
+1 2 3 0 2
+false true true false 1
+false false true 1 3
+1 false true
+1 false true
+1 false true
+211 112 110 205
+assert: interface conversion: main.esOnlyFoo is not main.esJ: missing method bar
+negative: interface conversion: main.esOnlyBar is not main.esJ: missing method foo

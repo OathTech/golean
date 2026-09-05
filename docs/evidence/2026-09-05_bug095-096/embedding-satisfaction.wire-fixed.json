@@ -1,0 +1,5656 @@
+{
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c0",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "expr": "ident",
+          "name": "j",
+          "type": {
+           "kind": "interface",
+           "name": "main.esJ"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "main.esJ.foo",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "ident",
+        "name": "$c0",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "esThroughJ",
+   "params": [
+    {
+     "id": "j",
+     "type": {
+      "kind": "interface",
+      "name": "main.esJ"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c1",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "expr": "ident",
+          "name": "k",
+          "type": {
+           "kind": "interface",
+           "name": "main.esK"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "main.esK.foo",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "ident",
+        "name": "$c1",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "esThroughK",
+   "params": [
+    {
+     "id": "k",
+     "type": {
+      "kind": "interface",
+      "name": "main.esK"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "body": {
+       "body": [
+        {
+         "define": true,
+         "lhs": [
+          {
+           "id": "$ts2",
+           "target": "declare",
+           "type": {
+            "kind": "interface",
+            "name": "main.esI"
+           }
+          }
+         ],
+         "rhs": [
+          {
+           "expr": "ident",
+           "name": "i",
+           "type": {
+            "kind": "interface",
+            "name": "main.esI"
+           }
+          }
+         ],
+         "stmt": "assign"
+        },
+        {
+         "body": [
+          {
+           "expr": {
+            "expr": "ident",
+            "name": "$ts2",
+            "type": {
+             "kind": "interface",
+             "name": "main.esI"
+            }
+           },
+           "okTarget": {
+            "id": "$tso5",
+            "target": "declare",
+            "type": {
+             "kind": "bool"
+            }
+           },
+           "stmt": "type-assert",
+           "target": {
+            "id": "$tsv5",
+            "target": "declare",
+            "type": {
+             "kind": "interface",
+             "name": "main.esK"
+            }
+           },
+           "targetType": {
+            "kind": "interface",
+            "name": "main.esK"
+           }
+          },
+          {
+           "cond": {
+            "expr": "ident",
+            "name": "$tso5",
+            "type": {
+             "kind": "bool"
+            }
+           },
+           "else": {
+            "body": [
+             {
+              "expr": {
+               "expr": "ident",
+               "name": "$ts2",
+               "type": {
+                "kind": "interface",
+                "name": "main.esI"
+               }
+              },
+              "okTarget": {
+               "id": "$tso4",
+               "target": "declare",
+               "type": {
+                "kind": "bool"
+               }
+              },
+              "stmt": "type-assert",
+              "target": {
+               "id": "$tsv4",
+               "target": "declare",
+               "type": {
+                "kind": "interface",
+                "name": "main.esJ"
+               }
+              },
+              "targetType": {
+               "kind": "interface",
+               "name": "main.esJ"
+              }
+             },
+             {
+              "cond": {
+               "expr": "ident",
+               "name": "$tso4",
+               "type": {
+                "kind": "bool"
+               }
+              },
+              "else": {
+               "body": [
+                {
+                 "expr": {
+                  "expr": "ident",
+                  "name": "$ts2",
+                  "type": {
+                   "kind": "interface",
+                   "name": "main.esI"
+                  }
+                 },
+                 "okTarget": {
+                  "id": "$tso3",
+                  "target": "declare",
+                  "type": {
+                   "kind": "bool"
+                  }
+                 },
+                 "stmt": "type-assert",
+                 "target": {
+                  "id": "$tsv3",
+                  "target": "declare",
+                  "type": {
+                   "kind": "interface",
+                   "name": "main.esI"
+                  }
+                 },
+                 "targetType": {
+                  "kind": "interface",
+                  "name": "main.esI"
+                 }
+                },
+                {
+                 "cond": {
+                  "expr": "ident",
+                  "name": "$tso3",
+                  "type": {
+                   "kind": "bool"
+                  }
+                 },
+                 "else": {
+                  "body": [
+                   {
+                    "results": [
+                     {
+                      "expr": "int",
+                      "type": {
+                       "int": "int",
+                       "kind": "int"
+                      },
+                      "value": "0"
+                     }
+                    ],
+                    "stmt": "return"
+                   }
+                  ],
+                  "stmt": "block"
+                 },
+                 "stmt": "if",
+                 "then": {
+                  "body": [
+                   {
+                    "results": [
+                     {
+                      "expr": "int",
+                      "type": {
+                       "int": "int",
+                       "kind": "int"
+                      },
+                      "value": "1"
+                     }
+                    ],
+                    "stmt": "return"
+                   }
+                  ],
+                  "stmt": "block"
+                 }
+                }
+               ],
+               "stmt": "block"
+              },
+              "stmt": "if",
+              "then": {
+               "body": [
+                {
+                 "results": [
+                  {
+                   "expr": "int",
+                   "type": {
+                    "int": "int",
+                    "kind": "int"
+                   },
+                   "value": "2"
+                  }
+                 ],
+                 "stmt": "return"
+                }
+               ],
+               "stmt": "block"
+              }
+             }
+            ],
+            "stmt": "block"
+           },
+           "stmt": "if",
+           "then": {
+            "body": [
+             {
+              "results": [
+               {
+                "expr": "int",
+                "type": {
+                 "int": "int",
+                 "kind": "int"
+                },
+                "value": "3"
+               }
+              ],
+              "stmt": "return"
+             }
+            ],
+            "stmt": "block"
+           }
+          }
+         ],
+         "stmt": "block"
+        }
+       ],
+       "stmt": "block"
+      },
+      "stmt": "breakable"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "esClassify",
+   "params": [
+    {
+     "id": "i",
+     "type": {
+      "kind": "interface",
+      "name": "main.esI"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "body": {
+       "body": [
+        {
+         "define": true,
+         "lhs": [
+          {
+           "id": "$ts6",
+           "target": "declare",
+           "type": {
+            "kind": "interface",
+            "name": "any"
+           }
+          }
+         ],
+         "rhs": [
+          {
+           "expr": "ident",
+           "name": "x",
+           "type": {
+            "kind": "interface",
+            "name": "any"
+           }
+          }
+         ],
+         "stmt": "assign"
+        },
+        {
+         "body": [
+          {
+           "expr": {
+            "expr": "ident",
+            "name": "$ts6",
+            "type": {
+             "kind": "interface",
+             "name": "any"
+            }
+           },
+           "okTarget": {
+            "id": "$tso9",
+            "target": "declare",
+            "type": {
+             "kind": "bool"
+            }
+           },
+           "stmt": "type-assert",
+           "target": {
+            "id": "$tsv9",
+            "target": "declare",
+            "type": {
+             "kind": "interface",
+             "name": "main.esK"
+            }
+           },
+           "targetType": {
+            "kind": "interface",
+            "name": "main.esK"
+           }
+          },
+          {
+           "cond": {
+            "expr": "ident",
+            "name": "$tso9",
+            "type": {
+             "kind": "bool"
+            }
+           },
+           "else": {
+            "body": [
+             {
+              "expr": {
+               "expr": "ident",
+               "name": "$ts6",
+               "type": {
+                "kind": "interface",
+                "name": "any"
+               }
+              },
+              "okTarget": {
+               "id": "$tso8",
+               "target": "declare",
+               "type": {
+                "kind": "bool"
+               }
+              },
+              "stmt": "type-assert",
+              "target": {
+               "id": "$tsv8",
+               "target": "declare",
+               "type": {
+                "kind": "interface",
+                "name": "main.esJ"
+               }
+              },
+              "targetType": {
+               "kind": "interface",
+               "name": "main.esJ"
+              }
+             },
+             {
+              "cond": {
+               "expr": "ident",
+               "name": "$tso8",
+               "type": {
+                "kind": "bool"
+               }
+              },
+              "else": {
+               "body": [
+                {
+                 "expr": {
+                  "expr": "ident",
+                  "name": "$ts6",
+                  "type": {
+                   "kind": "interface",
+                   "name": "any"
+                  }
+                 },
+                 "okTarget": {
+                  "id": "$tso7",
+                  "target": "declare",
+                  "type": {
+                   "kind": "bool"
+                  }
+                 },
+                 "stmt": "type-assert",
+                 "target": {
+                  "id": "$tsv7",
+                  "target": "declare",
+                  "type": {
+                   "kind": "interface",
+                   "name": "main.esI"
+                  }
+                 },
+                 "targetType": {
+                  "kind": "interface",
+                  "name": "main.esI"
+                 }
+                },
+                {
+                 "cond": {
+                  "expr": "ident",
+                  "name": "$tso7",
+                  "type": {
+                   "kind": "bool"
+                  }
+                 },
+                 "else": {
+                  "body": [
+                   {
+                    "results": [
+                     {
+                      "expr": "int",
+                      "type": {
+                       "int": "int",
+                       "kind": "int"
+                      },
+                      "value": "0"
+                     }
+                    ],
+                    "stmt": "return"
+                   }
+                  ],
+                  "stmt": "block"
+                 },
+                 "stmt": "if",
+                 "then": {
+                  "body": [
+                   {
+                    "results": [
+                     {
+                      "expr": "int",
+                      "type": {
+                       "int": "int",
+                       "kind": "int"
+                      },
+                      "value": "1"
+                     }
+                    ],
+                    "stmt": "return"
+                   }
+                  ],
+                  "stmt": "block"
+                 }
+                }
+               ],
+               "stmt": "block"
+              },
+              "stmt": "if",
+              "then": {
+               "body": [
+                {
+                 "results": [
+                  {
+                   "expr": "int",
+                   "type": {
+                    "int": "int",
+                    "kind": "int"
+                   },
+                   "value": "2"
+                  }
+                 ],
+                 "stmt": "return"
+                }
+               ],
+               "stmt": "block"
+              }
+             }
+            ],
+            "stmt": "block"
+           },
+           "stmt": "if",
+           "then": {
+            "body": [
+             {
+              "results": [
+               {
+                "expr": "int",
+                "type": {
+                 "int": "int",
+                 "kind": "int"
+                },
+                "value": "3"
+               }
+              ],
+              "stmt": "return"
+             }
+            ],
+            "stmt": "block"
+           }
+          }
+         ],
+         "stmt": "block"
+        }
+       ],
+       "stmt": "block"
+      },
+      "stmt": "breakable"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "esClassifyAny",
+   "params": [
+    {
+     "id": "x",
+     "type": {
+      "kind": "interface",
+      "name": "any"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c10",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "dynamic": {
+           "kind": "named",
+           "name": "main.esFooBar"
+          },
+          "expr": "to-interface",
+          "operand": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "1"
+          },
+          "target": {
+           "kind": "interface",
+           "name": "main.esJ"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "esThroughJ",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c11",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "dynamic": {
+           "kind": "named",
+           "name": "main.esAll"
+          },
+          "expr": "to-interface",
+          "operand": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "1"
+          },
+          "target": {
+           "kind": "interface",
+           "name": "main.esK"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "esThroughK",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "trigger",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "$c10",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "$c11",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c12",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "dynamic": {
+           "kind": "named",
+           "name": "main.esOnlyFoo"
+          },
+          "expr": "to-interface",
+          "operand": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "5"
+          },
+          "target": {
+           "kind": "interface",
+           "name": "main.esI"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "esClassify",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c13",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "dynamic": {
+           "kind": "named",
+           "name": "main.esFooBar"
+          },
+          "expr": "to-interface",
+          "operand": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "6"
+          },
+          "target": {
+           "kind": "interface",
+           "name": "main.esI"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "esClassify",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c14",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "dynamic": {
+           "kind": "named",
+           "name": "main.esAll"
+          },
+          "expr": "to-interface",
+          "operand": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "7"
+          },
+          "target": {
+           "kind": "interface",
+           "name": "main.esI"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "esClassify",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c15",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "dynamic": {
+           "kind": "named",
+           "name": "main.esOnlyBar"
+          },
+          "expr": "to-interface",
+          "operand": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "8"
+          },
+          "target": {
+           "kind": "interface",
+           "name": "any"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "esClassifyAny",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "ident",
+        "name": "$c12",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "$c13",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "$c14",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "$c15",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "trigger",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "embeddingSatisfactionTypeSwitch",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res1",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res2",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res3",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res4",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "trigger",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "dynamic": {
+           "kind": "named",
+           "name": "main.esFooBar"
+          },
+          "expr": "to-interface",
+          "operand": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "1"
+          },
+          "target": {
+           "kind": "interface",
+           "name": "main.esJ"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "esThroughJ",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "decls": [
+       {
+        "id": "i",
+        "init": {
+         "dynamic": {
+          "kind": "named",
+          "name": "main.esOnlyFoo"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "7"
+         },
+         "target": {
+          "kind": "interface",
+          "name": "main.esI"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "main.esI"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "j",
+        "target": "declare",
+        "type": {
+         "kind": "interface",
+         "name": "main.esJ"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "type-assert",
+        "operand": {
+         "expr": "ident",
+         "name": "i",
+         "type": {
+          "kind": "interface",
+          "name": "main.esI"
+         }
+        },
+        "source": {
+         "kind": "interface",
+         "name": "main.esI"
+        },
+        "target": {
+         "kind": "interface",
+         "name": "main.esJ"
+        },
+        "type": {
+         "kind": "interface",
+         "name": "main.esJ"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c16",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "expr": "ident",
+          "name": "j",
+          "type": {
+           "kind": "interface",
+           "name": "main.esJ"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "main.esJ.foo",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "$c16",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "trigger",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "embeddingSatisfactionAssert",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "trigger",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "dynamic": {
+           "kind": "named",
+           "name": "main.esFooBar"
+          },
+          "expr": "to-interface",
+          "operand": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "1"
+          },
+          "target": {
+           "kind": "interface",
+           "name": "main.esJ"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "esThroughJ",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "decls": [
+       {
+        "id": "a",
+        "init": {
+         "dynamic": {
+          "kind": "named",
+          "name": "main.esOnlyFoo"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "1"
+         },
+         "target": {
+          "kind": "interface",
+          "name": "main.esI"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "main.esI"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "b",
+        "init": {
+         "dynamic": {
+          "kind": "named",
+          "name": "main.esFooBar"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "2"
+         },
+         "target": {
+          "kind": "interface",
+          "name": "main.esI"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "main.esI"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "c",
+        "init": {
+         "dynamic": {
+          "kind": "named",
+          "name": "main.esAll"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "3"
+         },
+         "target": {
+          "kind": "interface",
+          "name": "main.esI"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "main.esI"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "d",
+        "init": {
+         "dynamic": {
+          "kind": "named",
+          "name": "main.esOnlyBar"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "4"
+         },
+         "target": {
+          "kind": "interface",
+          "name": "any"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "a",
+       "type": {
+        "kind": "interface",
+        "name": "main.esI"
+       }
+      },
+      "okTarget": {
+       "id": "okA",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "target": "blank"
+      },
+      "targetType": {
+       "kind": "interface",
+       "name": "main.esJ"
+      }
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "b",
+       "type": {
+        "kind": "interface",
+        "name": "main.esI"
+       }
+      },
+      "okTarget": {
+       "id": "okB",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "target": "blank"
+      },
+      "targetType": {
+       "kind": "interface",
+       "name": "main.esJ"
+      }
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "c",
+       "type": {
+        "kind": "interface",
+        "name": "main.esI"
+       }
+      },
+      "okTarget": {
+       "id": "okC",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "target": "blank"
+      },
+      "targetType": {
+       "kind": "interface",
+       "name": "main.esJ"
+      }
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "d",
+       "type": {
+        "kind": "interface",
+        "name": "any"
+       }
+      },
+      "okTarget": {
+       "id": "okD",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "target": "blank"
+      },
+      "targetType": {
+       "kind": "interface",
+       "name": "main.esJ"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "ident",
+        "name": "okA",
+        "type": {
+         "kind": "bool"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "okB",
+        "type": {
+         "kind": "bool"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "okC",
+        "type": {
+         "kind": "bool"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "okD",
+        "type": {
+         "kind": "bool"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "trigger",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "embeddingSatisfactionAssertOk",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "bool"
+     }
+    },
+    {
+     "id": "$res1",
+     "type": {
+      "kind": "bool"
+     }
+    },
+    {
+     "id": "$res2",
+     "type": {
+      "kind": "bool"
+     }
+    },
+    {
+     "id": "$res3",
+     "type": {
+      "kind": "bool"
+     }
+    },
+    {
+     "id": "$res4",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "decls": [
+       {
+        "id": "a",
+        "init": {
+         "dynamic": {
+          "kind": "named",
+          "name": "main.esFooBar"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "2"
+         },
+         "target": {
+          "kind": "interface",
+          "name": "main.esI"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "main.esI"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "c",
+        "init": {
+         "dynamic": {
+          "kind": "named",
+          "name": "main.esOnlyFoo"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "4"
+         },
+         "target": {
+          "kind": "interface",
+          "name": "main.esI"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "main.esI"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "b",
+        "init": {
+         "dynamic": {
+          "kind": "named",
+          "name": "main.esAll"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "1"
+         },
+         "target": {
+          "kind": "interface",
+          "name": "main.esI"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "main.esI"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "a",
+       "type": {
+        "kind": "interface",
+        "name": "main.esI"
+       }
+      },
+      "okTarget": {
+       "id": "okA",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "target": "blank"
+      },
+      "targetType": {
+       "kind": "interface",
+       "name": "main.esK"
+      }
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "c",
+       "type": {
+        "kind": "interface",
+        "name": "main.esI"
+       }
+      },
+      "okTarget": {
+       "id": "okC",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "target": "blank"
+      },
+      "targetType": {
+       "kind": "interface",
+       "name": "main.esK"
+      }
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "b",
+       "type": {
+        "kind": "interface",
+        "name": "main.esI"
+       }
+      },
+      "okTarget": {
+       "id": "okB",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "id": "k",
+       "target": "declare",
+       "type": {
+        "kind": "interface",
+        "name": "main.esK"
+       }
+      },
+      "targetType": {
+       "kind": "interface",
+       "name": "main.esK"
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "sum",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "0"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cond": {
+       "expr": "ident",
+       "name": "okB",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "define": false,
+         "lhs": [
+          {
+           "id": "sum",
+           "target": "var"
+          }
+         ],
+         "rhs": [
+          {
+           "args": [
+            {
+             "expr": "ident",
+             "name": "k",
+             "type": {
+              "kind": "interface",
+              "name": "main.esK"
+             }
+            }
+           ],
+           "expr": "call",
+           "func": "main.esK.foo",
+           "resultTypes": [
+            {
+             "int": "int",
+             "kind": "int"
+            }
+           ]
+          }
+         ],
+         "stmt": "assign"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c17",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "dynamic": {
+           "kind": "named",
+           "name": "main.esAll"
+          },
+          "expr": "to-interface",
+          "operand": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "9"
+          },
+          "target": {
+           "kind": "interface",
+           "name": "main.esI"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "esClassify",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "ident",
+        "name": "okA",
+        "type": {
+         "kind": "bool"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "okC",
+        "type": {
+         "kind": "bool"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "okB",
+        "type": {
+         "kind": "bool"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "sum",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "$c17",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "embeddingSatisfactionNested",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "bool"
+     }
+    },
+    {
+     "id": "$res1",
+     "type": {
+      "kind": "bool"
+     }
+    },
+    {
+     "id": "$res2",
+     "type": {
+      "kind": "bool"
+     }
+    },
+    {
+     "id": "$res3",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res4",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "trigger",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "dynamic": {
+           "kind": "named",
+           "name": "main.esFooBar"
+          },
+          "expr": "to-interface",
+          "operand": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "1"
+          },
+          "target": {
+           "kind": "interface",
+           "name": "main.esJ"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "esThroughJ",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "decls": [
+       {
+        "id": "x",
+        "init": {
+         "dynamic": {
+          "kind": "named",
+          "name": "main.esOnlyBar"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "3"
+         },
+         "target": {
+          "kind": "interface",
+          "name": "any"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "j",
+        "target": "declare",
+        "type": {
+         "kind": "interface",
+         "name": "main.esJ"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "type-assert",
+        "operand": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "kind": "interface",
+          "name": "any"
+         }
+        },
+        "source": {
+         "kind": "interface",
+         "name": "any"
+        },
+        "target": {
+         "kind": "interface",
+         "name": "main.esJ"
+        },
+        "type": {
+         "kind": "interface",
+         "name": "main.esJ"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c18",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "expr": "ident",
+          "name": "j",
+          "type": {
+           "kind": "interface",
+           "name": "main.esJ"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "main.esJ.foo",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "$c18",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "trigger",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "embeddingSatisfactionNegative",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "decls": [
+       {
+        "id": "j",
+        "init": {
+         "dynamic": {
+          "kind": "named",
+          "name": "main.esFooBar"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "1"
+         },
+         "target": {
+          "kind": "interface",
+          "name": "main.esJ"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "main.esJ"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$mv19",
+        "target": "declare",
+        "type": {
+         "kind": "interface",
+         "name": "main.esJ"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "j",
+        "type": {
+         "kind": "interface",
+         "name": "main.esJ"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cond": {
+       "expr": "binary",
+       "op": "==",
+       "operandType": {
+        "kind": "interface",
+        "name": "main.esJ"
+       },
+       "x": {
+        "expr": "ident",
+        "name": "$mv19",
+        "type": {
+         "kind": "interface",
+         "name": "main.esJ"
+        }
+       },
+       "y": {
+        "expr": "nil"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "runtimeError": true,
+       "stmt": "panic",
+       "value": {
+        "bytes": [
+         114,
+         117,
+         110,
+         116,
+         105,
+         109,
+         101,
+         32,
+         101,
+         114,
+         114,
+         111,
+         114,
+         58,
+         32,
+         105,
+         110,
+         118,
+         97,
+         108,
+         105,
+         100,
+         32,
+         109,
+         101,
+         109,
+         111,
+         114,
+         121,
+         32,
+         97,
+         100,
+         100,
+         114,
+         101,
+         115,
+         115,
+         32,
+         111,
+         114,
+         32,
+         110,
+         105,
+         108,
+         32,
+         112,
+         111,
+         105,
+         110,
+         116,
+         101,
+         114,
+         32,
+         100,
+         101,
+         114,
+         101,
+         102,
+         101,
+         114,
+         101,
+         110,
+         99,
+         101
+        ],
+        "expr": "string"
+       }
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "f",
+        "target": "declare",
+        "type": {
+         "kind": "func",
+         "params": [],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "captured": [
+         {
+          "expr": "ident",
+          "name": "$mv19",
+          "type": {
+           "kind": "interface",
+           "name": "main.esJ"
+          }
+         }
+        ],
+        "expr": "func-value",
+        "func": "main.esJ.foo",
+        "type": {
+         "kind": "func",
+         "params": [],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "decls": [
+       {
+        "id": "a",
+        "init": {
+         "dynamic": {
+          "kind": "named",
+          "name": "main.esOnlyFoo"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "2"
+         },
+         "target": {
+          "kind": "interface",
+          "name": "main.esI"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "main.esI"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "b",
+        "init": {
+         "dynamic": {
+          "kind": "named",
+          "name": "main.esFooBar"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "3"
+         },
+         "target": {
+          "kind": "interface",
+          "name": "main.esI"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "main.esI"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "a",
+       "type": {
+        "kind": "interface",
+        "name": "main.esI"
+       }
+      },
+      "okTarget": {
+       "id": "okA",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "target": "blank"
+      },
+      "targetType": {
+       "kind": "interface",
+       "name": "main.esJ"
+      }
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "b",
+       "type": {
+        "kind": "interface",
+        "name": "main.esI"
+       }
+      },
+      "okTarget": {
+       "id": "okB",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "target": "blank"
+      },
+      "targetType": {
+       "kind": "interface",
+       "name": "main.esJ"
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c20",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [],
+        "callee": {
+         "expr": "ident",
+         "name": "f",
+         "type": {
+          "kind": "func",
+          "params": [],
+          "results": [
+           {
+            "int": "int",
+            "kind": "int"
+           }
+          ],
+          "variadic": false
+         }
+        },
+        "expr": "call-value",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "ident",
+        "name": "$c20",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "okA",
+        "type": {
+         "kind": "bool"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "okB",
+        "type": {
+         "kind": "bool"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "embeddingSatisfactionMethodValue",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res1",
+     "type": {
+      "kind": "bool"
+     }
+    },
+    {
+     "id": "$res2",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "decls": [
+       {
+        "id": "j",
+        "init": {
+         "dynamic": {
+          "kind": "named",
+          "name": "main.esFooBar"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "1"
+         },
+         "target": {
+          "kind": "interface",
+          "name": "main.esJ"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "main.esJ"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "g",
+        "target": "declare",
+        "type": {
+         "kind": "func",
+         "params": [
+          {
+           "kind": "interface",
+           "name": "main.esJ"
+          }
+         ],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "captured": [],
+        "expr": "func-value",
+        "func": "main.esJ.foo",
+        "type": {
+         "kind": "func",
+         "params": [
+          {
+           "kind": "interface",
+           "name": "main.esJ"
+          }
+         ],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "decls": [
+       {
+        "id": "a",
+        "init": {
+         "dynamic": {
+          "kind": "named",
+          "name": "main.esOnlyFoo"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "2"
+         },
+         "target": {
+          "kind": "interface",
+          "name": "main.esI"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "main.esI"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "b",
+        "init": {
+         "dynamic": {
+          "kind": "named",
+          "name": "main.esFooBar"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "3"
+         },
+         "target": {
+          "kind": "interface",
+          "name": "main.esI"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "main.esI"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "a",
+       "type": {
+        "kind": "interface",
+        "name": "main.esI"
+       }
+      },
+      "okTarget": {
+       "id": "okA",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "target": "blank"
+      },
+      "targetType": {
+       "kind": "interface",
+       "name": "main.esJ"
+      }
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "b",
+       "type": {
+        "kind": "interface",
+        "name": "main.esI"
+       }
+      },
+      "okTarget": {
+       "id": "okB",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "target": "blank"
+      },
+      "targetType": {
+       "kind": "interface",
+       "name": "main.esJ"
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c21",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "expr": "ident",
+          "name": "j",
+          "type": {
+           "kind": "interface",
+           "name": "main.esJ"
+          }
+         }
+        ],
+        "callee": {
+         "expr": "ident",
+         "name": "g",
+         "type": {
+          "kind": "func",
+          "params": [
+           {
+            "kind": "interface",
+            "name": "main.esJ"
+           }
+          ],
+          "results": [
+           {
+            "int": "int",
+            "kind": "int"
+           }
+          ],
+          "variadic": false
+         }
+        },
+        "expr": "call-value",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "ident",
+        "name": "$c21",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "okA",
+        "type": {
+         "kind": "bool"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "okB",
+        "type": {
+         "kind": "bool"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "embeddingSatisfactionMethodExpr",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res1",
+     "type": {
+      "kind": "bool"
+     }
+    },
+    {
+     "id": "$res2",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "b",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.esBox"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "dynamic": {
+           "kind": "named",
+           "name": "main.esFooBar"
+          },
+          "expr": "to-interface",
+          "operand": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "1"
+          },
+          "target": {
+           "kind": "interface",
+           "name": "main.esJ"
+          }
+         }
+        ],
+        "expr": "struct-lit",
+        "target": {
+         "kind": "named",
+         "name": "main.esBox"
+        },
+        "type": {
+         "kind": "named",
+         "name": "main.esBox"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "decls": [
+       {
+        "id": "a",
+        "init": {
+         "dynamic": {
+          "kind": "named",
+          "name": "main.esOnlyFoo"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "2"
+         },
+         "target": {
+          "kind": "interface",
+          "name": "main.esI"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "main.esI"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "c",
+        "init": {
+         "dynamic": {
+          "kind": "named",
+          "name": "main.esFooBar"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "3"
+         },
+         "target": {
+          "kind": "interface",
+          "name": "main.esI"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "main.esI"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "a",
+       "type": {
+        "kind": "interface",
+        "name": "main.esI"
+       }
+      },
+      "okTarget": {
+       "id": "okA",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "target": "blank"
+      },
+      "targetType": {
+       "kind": "interface",
+       "name": "main.esJ"
+      }
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "c",
+       "type": {
+        "kind": "interface",
+        "name": "main.esI"
+       }
+      },
+      "okTarget": {
+       "id": "okC",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "target": "blank"
+      },
+      "targetType": {
+       "kind": "interface",
+       "name": "main.esJ"
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c22",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "expr": "field-get",
+          "field": "esJ",
+          "recv": {
+           "expr": "ident",
+           "name": "b",
+           "type": {
+            "kind": "named",
+            "name": "main.esBox"
+           }
+          },
+          "typeId": "main.esBox"
+         }
+        ],
+        "expr": "call",
+        "func": "main.esJ.foo",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "ident",
+        "name": "$c22",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "okA",
+        "type": {
+         "kind": "bool"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "okC",
+        "type": {
+         "kind": "bool"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "embeddingSatisfactionPromoted",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res1",
+     "type": {
+      "kind": "bool"
+     }
+    },
+    {
+     "id": "$res2",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c23",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "dynamic": {
+           "kind": "named",
+           "name": "main.esOnlyFoo"
+          },
+          "expr": "to-interface",
+          "operand": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "11"
+          },
+          "target": {
+           "kind": "interface",
+           "name": "main.esI"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "esWhich[main.esJ]",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c24",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "dynamic": {
+           "kind": "named",
+           "name": "main.esFooBar"
+          },
+          "expr": "to-interface",
+          "operand": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "12"
+          },
+          "target": {
+           "kind": "interface",
+           "name": "main.esI"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "esWhich[main.esJ]",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c25",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "dynamic": {
+           "kind": "named",
+           "name": "main.esOnlyFoo"
+          },
+          "expr": "to-interface",
+          "operand": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "10"
+          },
+          "target": {
+           "kind": "interface",
+           "name": "main.esI"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "esWhich[main.esI]",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c26",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "dynamic": {
+           "kind": "named",
+           "name": "main.esOnlyFoo"
+          },
+          "expr": "to-interface",
+          "operand": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "5"
+          },
+          "target": {
+           "kind": "interface",
+           "name": "main.esI"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "esWhich[main.esFooBar]",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "ident",
+        "name": "$c23",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "$c24",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "$c25",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "$c26",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "embeddingSatisfactionGeneric",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res1",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res2",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res3",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "body": {
+       "body": [
+        {
+         "define": true,
+         "lhs": [
+          {
+           "id": "$ts27",
+           "target": "declare",
+           "type": {
+            "kind": "interface",
+            "name": "main.esI"
+           }
+          }
+         ],
+         "rhs": [
+          {
+           "expr": "ident",
+           "name": "i",
+           "type": {
+            "kind": "interface",
+            "name": "main.esI"
+           }
+          }
+         ],
+         "stmt": "assign"
+        },
+        {
+         "body": [
+          {
+           "expr": {
+            "expr": "ident",
+            "name": "$ts27",
+            "type": {
+             "kind": "interface",
+             "name": "main.esI"
+            }
+           },
+           "okTarget": {
+            "id": "$tso31",
+            "target": "declare",
+            "type": {
+             "kind": "bool"
+            }
+           },
+           "stmt": "type-assert",
+           "target": {
+            "id": "$tsv31",
+            "target": "declare",
+            "type": {
+             "kind": "interface",
+             "name": "main.esJ"
+            }
+           },
+           "targetType": {
+            "kind": "interface",
+            "name": "main.esJ"
+           }
+          },
+          {
+           "cond": {
+            "expr": "ident",
+            "name": "$tso31",
+            "type": {
+             "kind": "bool"
+            }
+           },
+           "else": {
+            "body": [
+             {
+              "expr": {
+               "expr": "ident",
+               "name": "$ts27",
+               "type": {
+                "kind": "interface",
+                "name": "main.esI"
+               }
+              },
+              "okTarget": {
+               "id": "$tso29",
+               "target": "declare",
+               "type": {
+                "kind": "bool"
+               }
+              },
+              "stmt": "type-assert",
+              "target": {
+               "id": "$tsv29",
+               "target": "declare",
+               "type": {
+                "kind": "named",
+                "name": "main.esOnlyFoo"
+               }
+              },
+              "targetType": {
+               "kind": "named",
+               "name": "main.esOnlyFoo"
+              }
+             },
+             {
+              "cond": {
+               "expr": "ident",
+               "name": "$tso29",
+               "type": {
+                "kind": "bool"
+               }
+              },
+              "else": {
+               "body": [
+                {
+                 "define": true,
+                 "lhs": [
+                  {
+                   "id": "x",
+                   "target": "declare",
+                   "type": {
+                    "kind": "interface",
+                    "name": "main.esI"
+                   }
+                  }
+                 ],
+                 "rhs": [
+                  {
+                   "expr": "ident",
+                   "name": "$ts27",
+                   "type": {
+                    "kind": "interface",
+                    "name": "main.esI"
+                   }
+                  }
+                 ],
+                 "stmt": "assign"
+                },
+                {
+                 "define": true,
+                 "lhs": [
+                  {
+                   "id": "$c28",
+                   "target": "declare",
+                   "type": {
+                    "int": "int",
+                    "kind": "int"
+                   }
+                  }
+                 ],
+                 "rhs": [
+                  {
+                   "args": [
+                    {
+                     "expr": "ident",
+                     "name": "x",
+                     "type": {
+                      "kind": "interface",
+                      "name": "main.esI"
+                     }
+                    }
+                   ],
+                   "expr": "call",
+                   "func": "main.esI.foo",
+                   "resultTypes": [
+                    {
+                     "int": "int",
+                     "kind": "int"
+                    }
+                   ]
+                  }
+                 ],
+                 "stmt": "assign"
+                },
+                {
+                 "results": [
+                  {
+                   "expr": "binary",
+                   "op": "+",
+                   "type": {
+                    "int": "int",
+                    "kind": "int"
+                   },
+                   "x": {
+                    "expr": "int",
+                    "type": {
+                     "int": "int",
+                     "kind": "int"
+                    },
+                    "value": "300"
+                   },
+                   "y": {
+                    "expr": "ident",
+                    "name": "$c28",
+                    "type": {
+                     "int": "int",
+                     "kind": "int"
+                    }
+                   }
+                  }
+                 ],
+                 "stmt": "return"
+                }
+               ],
+               "stmt": "block"
+              },
+              "stmt": "if",
+              "then": {
+               "body": [
+                {
+                 "define": true,
+                 "lhs": [
+                  {
+                   "id": "x",
+                   "target": "declare",
+                   "type": {
+                    "kind": "named",
+                    "name": "main.esOnlyFoo"
+                   }
+                  }
+                 ],
+                 "rhs": [
+                  {
+                   "expr": "ident",
+                   "name": "$tsv29",
+                   "type": {
+                    "kind": "named",
+                    "name": "main.esOnlyFoo"
+                   }
+                  }
+                 ],
+                 "stmt": "assign"
+                },
+                {
+                 "define": true,
+                 "lhs": [
+                  {
+                   "id": "$c30",
+                   "target": "declare",
+                   "type": {
+                    "int": "int",
+                    "kind": "int"
+                   }
+                  }
+                 ],
+                 "rhs": [
+                  {
+                   "args": [
+                    {
+                     "expr": "ident",
+                     "name": "x",
+                     "type": {
+                      "kind": "named",
+                      "name": "main.esOnlyFoo"
+                     }
+                    }
+                   ],
+                   "expr": "call",
+                   "func": "main.esOnlyFoo.foo",
+                   "resultTypes": [
+                    {
+                     "int": "int",
+                     "kind": "int"
+                    }
+                   ]
+                  }
+                 ],
+                 "stmt": "assign"
+                },
+                {
+                 "results": [
+                  {
+                   "expr": "binary",
+                   "op": "+",
+                   "type": {
+                    "int": "int",
+                    "kind": "int"
+                   },
+                   "x": {
+                    "expr": "int",
+                    "type": {
+                     "int": "int",
+                     "kind": "int"
+                    },
+                    "value": "200"
+                   },
+                   "y": {
+                    "expr": "ident",
+                    "name": "$c30",
+                    "type": {
+                     "int": "int",
+                     "kind": "int"
+                    }
+                   }
+                  }
+                 ],
+                 "stmt": "return"
+                }
+               ],
+               "stmt": "block"
+              }
+             }
+            ],
+            "stmt": "block"
+           },
+           "stmt": "if",
+           "then": {
+            "body": [
+             {
+              "define": true,
+              "lhs": [
+               {
+                "id": "x",
+                "target": "declare",
+                "type": {
+                 "kind": "interface",
+                 "name": "main.esJ"
+                }
+               }
+              ],
+              "rhs": [
+               {
+                "expr": "ident",
+                "name": "$tsv31",
+                "type": {
+                 "kind": "interface",
+                 "name": "main.esJ"
+                }
+               }
+              ],
+              "stmt": "assign"
+             },
+             {
+              "define": true,
+              "lhs": [
+               {
+                "id": "$c32",
+                "target": "declare",
+                "type": {
+                 "int": "int",
+                 "kind": "int"
+                }
+               }
+              ],
+              "rhs": [
+               {
+                "args": [
+                 {
+                  "expr": "ident",
+                  "name": "x",
+                  "type": {
+                   "kind": "interface",
+                   "name": "main.esJ"
+                  }
+                 }
+                ],
+                "expr": "call",
+                "func": "main.esJ.foo",
+                "resultTypes": [
+                 {
+                  "int": "int",
+                  "kind": "int"
+                 }
+                ]
+               }
+              ],
+              "stmt": "assign"
+             },
+             {
+              "results": [
+               {
+                "expr": "binary",
+                "op": "+",
+                "type": {
+                 "int": "int",
+                 "kind": "int"
+                },
+                "x": {
+                 "expr": "int",
+                 "type": {
+                  "int": "int",
+                  "kind": "int"
+                 },
+                 "value": "100"
+                },
+                "y": {
+                 "expr": "ident",
+                 "name": "$c32",
+                 "type": {
+                  "int": "int",
+                  "kind": "int"
+                 }
+                }
+               }
+              ],
+              "stmt": "return"
+             }
+            ],
+            "stmt": "block"
+           }
+          }
+         ],
+         "stmt": "block"
+        }
+       ],
+       "stmt": "block"
+      },
+      "stmt": "breakable"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "esWhich[main.esJ]",
+   "params": [
+    {
+     "id": "i",
+     "type": {
+      "kind": "interface",
+      "name": "main.esI"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "body": {
+       "body": [
+        {
+         "define": true,
+         "lhs": [
+          {
+           "id": "$ts33",
+           "target": "declare",
+           "type": {
+            "kind": "interface",
+            "name": "main.esI"
+           }
+          }
+         ],
+         "rhs": [
+          {
+           "expr": "ident",
+           "name": "i",
+           "type": {
+            "kind": "interface",
+            "name": "main.esI"
+           }
+          }
+         ],
+         "stmt": "assign"
+        },
+        {
+         "body": [
+          {
+           "expr": {
+            "expr": "ident",
+            "name": "$ts33",
+            "type": {
+             "kind": "interface",
+             "name": "main.esI"
+            }
+           },
+           "okTarget": {
+            "id": "$tso37",
+            "target": "declare",
+            "type": {
+             "kind": "bool"
+            }
+           },
+           "stmt": "type-assert",
+           "target": {
+            "id": "$tsv37",
+            "target": "declare",
+            "type": {
+             "kind": "interface",
+             "name": "main.esI"
+            }
+           },
+           "targetType": {
+            "kind": "interface",
+            "name": "main.esI"
+           }
+          },
+          {
+           "cond": {
+            "expr": "ident",
+            "name": "$tso37",
+            "type": {
+             "kind": "bool"
+            }
+           },
+           "else": {
+            "body": [
+             {
+              "expr": {
+               "expr": "ident",
+               "name": "$ts33",
+               "type": {
+                "kind": "interface",
+                "name": "main.esI"
+               }
+              },
+              "okTarget": {
+               "id": "$tso35",
+               "target": "declare",
+               "type": {
+                "kind": "bool"
+               }
+              },
+              "stmt": "type-assert",
+              "target": {
+               "id": "$tsv35",
+               "target": "declare",
+               "type": {
+                "kind": "named",
+                "name": "main.esOnlyFoo"
+               }
+              },
+              "targetType": {
+               "kind": "named",
+               "name": "main.esOnlyFoo"
+              }
+             },
+             {
+              "cond": {
+               "expr": "ident",
+               "name": "$tso35",
+               "type": {
+                "kind": "bool"
+               }
+              },
+              "else": {
+               "body": [
+                {
+                 "define": true,
+                 "lhs": [
+                  {
+                   "id": "x",
+                   "target": "declare",
+                   "type": {
+                    "kind": "interface",
+                    "name": "main.esI"
+                   }
+                  }
+                 ],
+                 "rhs": [
+                  {
+                   "expr": "ident",
+                   "name": "$ts33",
+                   "type": {
+                    "kind": "interface",
+                    "name": "main.esI"
+                   }
+                  }
+                 ],
+                 "stmt": "assign"
+                },
+                {
+                 "define": true,
+                 "lhs": [
+                  {
+                   "id": "$c34",
+                   "target": "declare",
+                   "type": {
+                    "int": "int",
+                    "kind": "int"
+                   }
+                  }
+                 ],
+                 "rhs": [
+                  {
+                   "args": [
+                    {
+                     "expr": "ident",
+                     "name": "x",
+                     "type": {
+                      "kind": "interface",
+                      "name": "main.esI"
+                     }
+                    }
+                   ],
+                   "expr": "call",
+                   "func": "main.esI.foo",
+                   "resultTypes": [
+                    {
+                     "int": "int",
+                     "kind": "int"
+                    }
+                   ]
+                  }
+                 ],
+                 "stmt": "assign"
+                },
+                {
+                 "results": [
+                  {
+                   "expr": "binary",
+                   "op": "+",
+                   "type": {
+                    "int": "int",
+                    "kind": "int"
+                   },
+                   "x": {
+                    "expr": "int",
+                    "type": {
+                     "int": "int",
+                     "kind": "int"
+                    },
+                    "value": "300"
+                   },
+                   "y": {
+                    "expr": "ident",
+                    "name": "$c34",
+                    "type": {
+                     "int": "int",
+                     "kind": "int"
+                    }
+                   }
+                  }
+                 ],
+                 "stmt": "return"
+                }
+               ],
+               "stmt": "block"
+              },
+              "stmt": "if",
+              "then": {
+               "body": [
+                {
+                 "define": true,
+                 "lhs": [
+                  {
+                   "id": "x",
+                   "target": "declare",
+                   "type": {
+                    "kind": "named",
+                    "name": "main.esOnlyFoo"
+                   }
+                  }
+                 ],
+                 "rhs": [
+                  {
+                   "expr": "ident",
+                   "name": "$tsv35",
+                   "type": {
+                    "kind": "named",
+                    "name": "main.esOnlyFoo"
+                   }
+                  }
+                 ],
+                 "stmt": "assign"
+                },
+                {
+                 "define": true,
+                 "lhs": [
+                  {
+                   "id": "$c36",
+                   "target": "declare",
+                   "type": {
+                    "int": "int",
+                    "kind": "int"
+                   }
+                  }
+                 ],
+                 "rhs": [
+                  {
+                   "args": [
+                    {
+                     "expr": "ident",
+                     "name": "x",
+                     "type": {
+                      "kind": "named",
+                      "name": "main.esOnlyFoo"
+                     }
+                    }
+                   ],
+                   "expr": "call",
+                   "func": "main.esOnlyFoo.foo",
+                   "resultTypes": [
+                    {
+                     "int": "int",
+                     "kind": "int"
+                    }
+                   ]
+                  }
+                 ],
+                 "stmt": "assign"
+                },
+                {
+                 "results": [
+                  {
+                   "expr": "binary",
+                   "op": "+",
+                   "type": {
+                    "int": "int",
+                    "kind": "int"
+                   },
+                   "x": {
+                    "expr": "int",
+                    "type": {
+                     "int": "int",
+                     "kind": "int"
+                    },
+                    "value": "200"
+                   },
+                   "y": {
+                    "expr": "ident",
+                    "name": "$c36",
+                    "type": {
+                     "int": "int",
+                     "kind": "int"
+                    }
+                   }
+                  }
+                 ],
+                 "stmt": "return"
+                }
+               ],
+               "stmt": "block"
+              }
+             }
+            ],
+            "stmt": "block"
+           },
+           "stmt": "if",
+           "then": {
+            "body": [
+             {
+              "define": true,
+              "lhs": [
+               {
+                "id": "x",
+                "target": "declare",
+                "type": {
+                 "kind": "interface",
+                 "name": "main.esI"
+                }
+               }
+              ],
+              "rhs": [
+               {
+                "expr": "ident",
+                "name": "$tsv37",
+                "type": {
+                 "kind": "interface",
+                 "name": "main.esI"
+                }
+               }
+              ],
+              "stmt": "assign"
+             },
+             {
+              "define": true,
+              "lhs": [
+               {
+                "id": "$c38",
+                "target": "declare",
+                "type": {
+                 "int": "int",
+                 "kind": "int"
+                }
+               }
+              ],
+              "rhs": [
+               {
+                "args": [
+                 {
+                  "expr": "ident",
+                  "name": "x",
+                  "type": {
+                   "kind": "interface",
+                   "name": "main.esI"
+                  }
+                 }
+                ],
+                "expr": "call",
+                "func": "main.esI.foo",
+                "resultTypes": [
+                 {
+                  "int": "int",
+                  "kind": "int"
+                 }
+                ]
+               }
+              ],
+              "stmt": "assign"
+             },
+             {
+              "results": [
+               {
+                "expr": "binary",
+                "op": "+",
+                "type": {
+                 "int": "int",
+                 "kind": "int"
+                },
+                "x": {
+                 "expr": "int",
+                 "type": {
+                  "int": "int",
+                  "kind": "int"
+                 },
+                 "value": "100"
+                },
+                "y": {
+                 "expr": "ident",
+                 "name": "$c38",
+                 "type": {
+                  "int": "int",
+                  "kind": "int"
+                 }
+                }
+               }
+              ],
+              "stmt": "return"
+             }
+            ],
+            "stmt": "block"
+           }
+          }
+         ],
+         "stmt": "block"
+        }
+       ],
+       "stmt": "block"
+      },
+      "stmt": "breakable"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "esWhich[main.esI]",
+   "params": [
+    {
+     "id": "i",
+     "type": {
+      "kind": "interface",
+      "name": "main.esI"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "body": {
+       "body": [
+        {
+         "define": true,
+         "lhs": [
+          {
+           "id": "$ts39",
+           "target": "declare",
+           "type": {
+            "kind": "interface",
+            "name": "main.esI"
+           }
+          }
+         ],
+         "rhs": [
+          {
+           "expr": "ident",
+           "name": "i",
+           "type": {
+            "kind": "interface",
+            "name": "main.esI"
+           }
+          }
+         ],
+         "stmt": "assign"
+        },
+        {
+         "body": [
+          {
+           "expr": {
+            "expr": "ident",
+            "name": "$ts39",
+            "type": {
+             "kind": "interface",
+             "name": "main.esI"
+            }
+           },
+           "okTarget": {
+            "id": "$tso43",
+            "target": "declare",
+            "type": {
+             "kind": "bool"
+            }
+           },
+           "stmt": "type-assert",
+           "target": {
+            "id": "$tsv43",
+            "target": "declare",
+            "type": {
+             "kind": "named",
+             "name": "main.esFooBar"
+            }
+           },
+           "targetType": {
+            "kind": "named",
+            "name": "main.esFooBar"
+           }
+          },
+          {
+           "cond": {
+            "expr": "ident",
+            "name": "$tso43",
+            "type": {
+             "kind": "bool"
+            }
+           },
+           "else": {
+            "body": [
+             {
+              "expr": {
+               "expr": "ident",
+               "name": "$ts39",
+               "type": {
+                "kind": "interface",
+                "name": "main.esI"
+               }
+              },
+              "okTarget": {
+               "id": "$tso41",
+               "target": "declare",
+               "type": {
+                "kind": "bool"
+               }
+              },
+              "stmt": "type-assert",
+              "target": {
+               "id": "$tsv41",
+               "target": "declare",
+               "type": {
+                "kind": "named",
+                "name": "main.esOnlyFoo"
+               }
+              },
+              "targetType": {
+               "kind": "named",
+               "name": "main.esOnlyFoo"
+              }
+             },
+             {
+              "cond": {
+               "expr": "ident",
+               "name": "$tso41",
+               "type": {
+                "kind": "bool"
+               }
+              },
+              "else": {
+               "body": [
+                {
+                 "define": true,
+                 "lhs": [
+                  {
+                   "id": "x",
+                   "target": "declare",
+                   "type": {
+                    "kind": "interface",
+                    "name": "main.esI"
+                   }
+                  }
+                 ],
+                 "rhs": [
+                  {
+                   "expr": "ident",
+                   "name": "$ts39",
+                   "type": {
+                    "kind": "interface",
+                    "name": "main.esI"
+                   }
+                  }
+                 ],
+                 "stmt": "assign"
+                },
+                {
+                 "define": true,
+                 "lhs": [
+                  {
+                   "id": "$c40",
+                   "target": "declare",
+                   "type": {
+                    "int": "int",
+                    "kind": "int"
+                   }
+                  }
+                 ],
+                 "rhs": [
+                  {
+                   "args": [
+                    {
+                     "expr": "ident",
+                     "name": "x",
+                     "type": {
+                      "kind": "interface",
+                      "name": "main.esI"
+                     }
+                    }
+                   ],
+                   "expr": "call",
+                   "func": "main.esI.foo",
+                   "resultTypes": [
+                    {
+                     "int": "int",
+                     "kind": "int"
+                    }
+                   ]
+                  }
+                 ],
+                 "stmt": "assign"
+                },
+                {
+                 "results": [
+                  {
+                   "expr": "binary",
+                   "op": "+",
+                   "type": {
+                    "int": "int",
+                    "kind": "int"
+                   },
+                   "x": {
+                    "expr": "int",
+                    "type": {
+                     "int": "int",
+                     "kind": "int"
+                    },
+                    "value": "300"
+                   },
+                   "y": {
+                    "expr": "ident",
+                    "name": "$c40",
+                    "type": {
+                     "int": "int",
+                     "kind": "int"
+                    }
+                   }
+                  }
+                 ],
+                 "stmt": "return"
+                }
+               ],
+               "stmt": "block"
+              },
+              "stmt": "if",
+              "then": {
+               "body": [
+                {
+                 "define": true,
+                 "lhs": [
+                  {
+                   "id": "x",
+                   "target": "declare",
+                   "type": {
+                    "kind": "named",
+                    "name": "main.esOnlyFoo"
+                   }
+                  }
+                 ],
+                 "rhs": [
+                  {
+                   "expr": "ident",
+                   "name": "$tsv41",
+                   "type": {
+                    "kind": "named",
+                    "name": "main.esOnlyFoo"
+                   }
+                  }
+                 ],
+                 "stmt": "assign"
+                },
+                {
+                 "define": true,
+                 "lhs": [
+                  {
+                   "id": "$c42",
+                   "target": "declare",
+                   "type": {
+                    "int": "int",
+                    "kind": "int"
+                   }
+                  }
+                 ],
+                 "rhs": [
+                  {
+                   "args": [
+                    {
+                     "expr": "ident",
+                     "name": "x",
+                     "type": {
+                      "kind": "named",
+                      "name": "main.esOnlyFoo"
+                     }
+                    }
+                   ],
+                   "expr": "call",
+                   "func": "main.esOnlyFoo.foo",
+                   "resultTypes": [
+                    {
+                     "int": "int",
+                     "kind": "int"
+                    }
+                   ]
+                  }
+                 ],
+                 "stmt": "assign"
+                },
+                {
+                 "results": [
+                  {
+                   "expr": "binary",
+                   "op": "+",
+                   "type": {
+                    "int": "int",
+                    "kind": "int"
+                   },
+                   "x": {
+                    "expr": "int",
+                    "type": {
+                     "int": "int",
+                     "kind": "int"
+                    },
+                    "value": "200"
+                   },
+                   "y": {
+                    "expr": "ident",
+                    "name": "$c42",
+                    "type": {
+                     "int": "int",
+                     "kind": "int"
+                    }
+                   }
+                  }
+                 ],
+                 "stmt": "return"
+                }
+               ],
+               "stmt": "block"
+              }
+             }
+            ],
+            "stmt": "block"
+           },
+           "stmt": "if",
+           "then": {
+            "body": [
+             {
+              "define": true,
+              "lhs": [
+               {
+                "id": "x",
+                "target": "declare",
+                "type": {
+                 "kind": "named",
+                 "name": "main.esFooBar"
+                }
+               }
+              ],
+              "rhs": [
+               {
+                "expr": "ident",
+                "name": "$tsv43",
+                "type": {
+                 "kind": "named",
+                 "name": "main.esFooBar"
+                }
+               }
+              ],
+              "stmt": "assign"
+             },
+             {
+              "define": true,
+              "lhs": [
+               {
+                "id": "$c44",
+                "target": "declare",
+                "type": {
+                 "int": "int",
+                 "kind": "int"
+                }
+               }
+              ],
+              "rhs": [
+               {
+                "args": [
+                 {
+                  "expr": "ident",
+                  "name": "x",
+                  "type": {
+                   "kind": "named",
+                   "name": "main.esFooBar"
+                  }
+                 }
+                ],
+                "expr": "call",
+                "func": "main.esFooBar.foo",
+                "resultTypes": [
+                 {
+                  "int": "int",
+                  "kind": "int"
+                 }
+                ]
+               }
+              ],
+              "stmt": "assign"
+             },
+             {
+              "results": [
+               {
+                "expr": "binary",
+                "op": "+",
+                "type": {
+                 "int": "int",
+                 "kind": "int"
+                },
+                "x": {
+                 "expr": "int",
+                 "type": {
+                  "int": "int",
+                  "kind": "int"
+                 },
+                 "value": "100"
+                },
+                "y": {
+                 "expr": "ident",
+                 "name": "$c44",
+                 "type": {
+                  "int": "int",
+                  "kind": "int"
+                 }
+                }
+               }
+              ],
+              "stmt": "return"
+             }
+            ],
+            "stmt": "block"
+           }
+          }
+         ],
+         "stmt": "block"
+        }
+       ],
+       "stmt": "block"
+      },
+      "stmt": "breakable"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "esWhich[main.esFooBar]",
+   "params": [
+    {
+     "id": "i",
+     "type": {
+      "kind": "interface",
+      "name": "main.esI"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  }
+ ],
+ "methodSets": [
+  {
+   "coverage": "full",
+   "type": "main.esAll"
+  },
+  {
+   "coverage": "full",
+   "type": "main.esBox"
+  },
+  {
+   "coverage": "full",
+   "type": "main.esFooBar"
+  },
+  {
+   "coverage": "full",
+   "type": "main.esOnlyBar"
+  },
+  {
+   "coverage": "full",
+   "type": "main.esOnlyFoo"
+  }
+ ],
+ "methods": [
+  {
+   "interface": true,
+   "name": "foo",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "interface",
+     "name": "main.esI"
+    }
+   },
+   "recvType": "main.esI",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "interface": true,
+   "name": "bar",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "interface",
+     "name": "main.esJ"
+    }
+   },
+   "recvType": "main.esJ",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "interface": true,
+   "name": "foo",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "interface",
+     "name": "main.esJ"
+    }
+   },
+   "recvType": "main.esJ",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "interface": true,
+   "name": "bar",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "interface",
+     "name": "main.esK"
+    }
+   },
+   "recvType": "main.esK",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "interface": true,
+   "name": "baz",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "interface",
+     "name": "main.esK"
+    }
+   },
+   "recvType": "main.esK",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "interface": true,
+   "name": "foo",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "interface",
+     "name": "main.esK"
+    }
+   },
+   "recvType": "main.esK",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "results": [
+       {
+        "expr": "convert",
+        "target": {
+         "int": "int",
+         "kind": "int"
+        },
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "kind": "named",
+          "name": "main.esOnlyFoo"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "foo",
+   "params": [],
+   "recv": {
+    "id": "x",
+    "type": {
+     "kind": "named",
+     "name": "main.esOnlyFoo"
+    }
+   },
+   "recvType": "main.esOnlyFoo",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "results": [
+       {
+        "expr": "convert",
+        "target": {
+         "int": "int",
+         "kind": "int"
+        },
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "kind": "named",
+          "name": "main.esFooBar"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "foo",
+   "params": [],
+   "recv": {
+    "id": "x",
+    "type": {
+     "kind": "named",
+     "name": "main.esFooBar"
+    }
+   },
+   "recvType": "main.esFooBar",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "*",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "convert",
+         "target": {
+          "int": "int",
+          "kind": "int"
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "x",
+          "type": {
+           "kind": "named",
+           "name": "main.esFooBar"
+          }
+         }
+        },
+        "y": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "10"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "bar",
+   "params": [],
+   "recv": {
+    "id": "x",
+    "type": {
+     "kind": "named",
+     "name": "main.esFooBar"
+    }
+   },
+   "recvType": "main.esFooBar",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "results": [
+       {
+        "expr": "convert",
+        "target": {
+         "int": "int",
+         "kind": "int"
+        },
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "kind": "named",
+          "name": "main.esOnlyBar"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "bar",
+   "params": [],
+   "recv": {
+    "id": "x",
+    "type": {
+     "kind": "named",
+     "name": "main.esOnlyBar"
+    }
+   },
+   "recvType": "main.esOnlyBar",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "results": [
+       {
+        "expr": "convert",
+        "target": {
+         "int": "int",
+         "kind": "int"
+        },
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "kind": "named",
+          "name": "main.esAll"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "foo",
+   "params": [],
+   "recv": {
+    "id": "x",
+    "type": {
+     "kind": "named",
+     "name": "main.esAll"
+    }
+   },
+   "recvType": "main.esAll",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "*",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "convert",
+         "target": {
+          "int": "int",
+          "kind": "int"
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "x",
+          "type": {
+           "kind": "named",
+           "name": "main.esAll"
+          }
+         }
+        },
+        "y": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "10"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "bar",
+   "params": [],
+   "recv": {
+    "id": "x",
+    "type": {
+     "kind": "named",
+     "name": "main.esAll"
+    }
+   },
+   "recvType": "main.esAll",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "*",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "convert",
+         "target": {
+          "int": "int",
+          "kind": "int"
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "x",
+          "type": {
+           "kind": "named",
+           "name": "main.esAll"
+          }
+         }
+        },
+        "y": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "100"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "baz",
+   "params": [],
+   "recv": {
+    "id": "x",
+    "type": {
+     "kind": "named",
+     "name": "main.esAll"
+    }
+   },
+   "recvType": "main.esAll",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$w0",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "expr": "field-get",
+          "field": "esJ",
+          "recv": {
+           "expr": "ident",
+           "name": "$recv",
+           "type": {
+            "kind": "named",
+            "name": "main.esBox"
+           }
+          },
+          "typeId": "main.esBox"
+         }
+        ],
+        "expr": "call",
+        "func": "main.esJ.bar",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "ident",
+        "name": "$w0",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "bar",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "main.esBox"
+    }
+   },
+   "recvType": "main.esBox",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false,
+   "wrapper": true
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$w0",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "expr": "field-get",
+          "field": "esJ",
+          "recv": {
+           "expr": "ident",
+           "name": "$recv",
+           "type": {
+            "kind": "named",
+            "name": "main.esBox"
+           }
+          },
+          "typeId": "main.esBox"
+         }
+        ],
+        "expr": "call",
+        "func": "main.esJ.foo",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "ident",
+        "name": "$w0",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "foo",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "named",
+     "name": "main.esBox"
+    }
+   },
+   "recvType": "main.esBox",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false,
+   "wrapper": true
+  }
+ ],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": [
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "int": "int",
+     "kind": "int"
+    }
+   },
+   "name": "main.esOnlyFoo"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "int": "int",
+     "kind": "int"
+    }
+   },
+   "name": "main.esFooBar"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "int": "int",
+     "kind": "int"
+    }
+   },
+   "name": "main.esOnlyBar"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "int": "int",
+     "kind": "int"
+    }
+   },
+   "name": "main.esAll"
+  },
+  {
+   "def": {
+    "fields": [
+     {
+      "embedded": true,
+      "name": "esJ",
+      "type": {
+       "kind": "interface",
+       "name": "main.esJ"
+      }
+     }
+    ],
+    "kind": "struct"
+   },
+   "name": "main.esBox"
+  },
+  {
+   "def": {
+    "kind": "interface",
+    "methods": [
+     {
+      "name": "foo",
+      "params": [],
+      "results": [
+       {
+        "int": "int",
+        "kind": "int"
+       }
+      ],
+      "variadic": false
+     }
+    ]
+   },
+   "name": "main.esI"
+  },
+  {
+   "def": {
+    "kind": "interface",
+    "methods": [
+     {
+      "name": "bar",
+      "params": [],
+      "results": [
+       {
+        "int": "int",
+        "kind": "int"
+       }
+      ],
+      "variadic": false
+     },
+     {
+      "name": "foo",
+      "params": [],
+      "results": [
+       {
+        "int": "int",
+        "kind": "int"
+       }
+      ],
+      "variadic": false
+     }
+    ]
+   },
+   "name": "main.esJ"
+  },
+  {
+   "def": {
+    "kind": "interface",
+    "methods": [
+     {
+      "name": "bar",
+      "params": [],
+      "results": [
+       {
+        "int": "int",
+        "kind": "int"
+       }
+      ],
+      "variadic": false
+     },
+     {
+      "name": "baz",
+      "params": [],
+      "results": [
+       {
+        "int": "int",
+        "kind": "int"
+       }
+      ],
+      "variadic": false
+     },
+     {
+      "name": "foo",
+      "params": [],
+      "results": [
+       {
+        "int": "int",
+        "kind": "int"
+       }
+      ],
+      "variadic": false
+     }
+    ]
+   },
+   "name": "main.esK"
+  }
+ ]
+}

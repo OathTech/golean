@@ -1,0 +1,31 @@
+# producer: docs/evidence/2026-09-05_bug095-096/README.md Reproduction block; columns: subject, exit code, native-json-run output (stdout+stderr)
+## RED-FIRST: main's frontend (built from the primary checkout @ ac45aedd) wire embedding-satisfaction.wire-main.json, on main's machine (primary checkout .lake/build/bin/golean @ ac45aedd; lake build --no-build: all targets up-to-date)
+embeddingSatisfactionTypeSwitch	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":3},{"kind":"int","tag":"int","value":3},{"kind":"int","tag":"int","value":3},{"kind":"int","tag":"int","value":0},{"kind":"int","tag":"int","value":2}]}
+embeddingSatisfactionAssert	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8}]}
+embeddingSatisfactionAssertOk	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"tag":"bool","value":true},{"tag":"bool","value":true},{"tag":"bool","value":true},{"tag":"bool","value":false},{"kind":"int","tag":"int","value":1}]}
+embeddingSatisfactionNested	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"tag":"bool","value":true},{"tag":"bool","value":true},{"tag":"bool","value":true},{"kind":"int","tag":"int","value":1},{"kind":"int","tag":"int","value":3}]}
+embeddingSatisfactionNegative	rc=1	{"message":"interface conversion: main.esOnlyBar is not main.esJ: missing method foo","schema":"golean-observation-v1","status":"panic"}
+embeddingSatisfactionMethodValue	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1},{"tag":"bool","value":true},{"tag":"bool","value":true}]}
+embeddingSatisfactionMethodExpr	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1},{"tag":"bool","value":true},{"tag":"bool","value":true}]}
+embeddingSatisfactionPromoted	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1},{"tag":"bool","value":true},{"tag":"bool","value":true}]}
+embeddingSatisfactionGeneric	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":111},{"kind":"int","tag":"int","value":112},{"kind":"int","tag":"int","value":110},{"kind":"int","tag":"int","value":205}]}
+## CONTROL: main's frontend wire on the FIXED machine — the machine is not the root; it answers what the wire declares
+embeddingSatisfactionTypeSwitch	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":3},{"kind":"int","tag":"int","value":3},{"kind":"int","tag":"int","value":3},{"kind":"int","tag":"int","value":0},{"kind":"int","tag":"int","value":2}]}
+embeddingSatisfactionAssert	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8}]}
+embeddingSatisfactionAssertOk	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"tag":"bool","value":true},{"tag":"bool","value":true},{"tag":"bool","value":true},{"tag":"bool","value":false},{"kind":"int","tag":"int","value":1}]}
+embeddingSatisfactionNested	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"tag":"bool","value":true},{"tag":"bool","value":true},{"tag":"bool","value":true},{"kind":"int","tag":"int","value":1},{"kind":"int","tag":"int","value":3}]}
+embeddingSatisfactionNegative	rc=1	{"message":"interface conversion: main.esOnlyBar is not main.esJ: missing method foo","schema":"golean-observation-v1","status":"panic"}
+embeddingSatisfactionMethodValue	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1},{"tag":"bool","value":true},{"tag":"bool","value":true}]}
+embeddingSatisfactionMethodExpr	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1},{"tag":"bool","value":true},{"tag":"bool","value":true}]}
+embeddingSatisfactionPromoted	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1},{"tag":"bool","value":true},{"tag":"bool","value":true}]}
+embeddingSatisfactionGeneric	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":111},{"kind":"int","tag":"int","value":112},{"kind":"int","tag":"int","value":110},{"kind":"int","tag":"int","value":205}]}
+## FIXED: fixed frontend wire (embedding-satisfaction.wire-fixed.json) on the fixed machine
+embeddingSatisfactionTypeSwitch	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1},{"kind":"int","tag":"int","value":2},{"kind":"int","tag":"int","value":3},{"kind":"int","tag":"int","value":0},{"kind":"int","tag":"int","value":2}]}
+embeddingSatisfactionAssert	rc=1	{"message":"interface conversion: main.esOnlyFoo is not main.esJ: missing method bar","schema":"golean-observation-v1","status":"panic"}
+embeddingSatisfactionAssertOk	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"tag":"bool","value":false},{"tag":"bool","value":true},{"tag":"bool","value":true},{"tag":"bool","value":false},{"kind":"int","tag":"int","value":1}]}
+embeddingSatisfactionNested	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"tag":"bool","value":false},{"tag":"bool","value":false},{"tag":"bool","value":true},{"kind":"int","tag":"int","value":1},{"kind":"int","tag":"int","value":3}]}
+embeddingSatisfactionNegative	rc=1	{"message":"interface conversion: main.esOnlyBar is not main.esJ: missing method foo","schema":"golean-observation-v1","status":"panic"}
+embeddingSatisfactionMethodValue	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1},{"tag":"bool","value":false},{"tag":"bool","value":true}]}
+embeddingSatisfactionMethodExpr	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1},{"tag":"bool","value":false},{"tag":"bool","value":true}]}
+embeddingSatisfactionPromoted	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1},{"tag":"bool","value":false},{"tag":"bool","value":true}]}
+embeddingSatisfactionGeneric	rc=0	{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":211},{"kind":"int","tag":"int","value":112},{"kind":"int","tag":"int","value":110},{"kind":"int","tag":"int","value":205}]}

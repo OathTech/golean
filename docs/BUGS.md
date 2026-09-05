@@ -5356,60 +5356,110 @@ carries the trigger.
 
 ## BUG-095 — a type switch (and its `case`) against an interface type that EMBEDS another interface answers "satisfied" for a dynamic type that implements only the EMBEDDED interface's methods (`case J` with `J interface{ I; bar() }` matches a `myint` that has `foo` but no `bar`) [fidelity; interfaces/embedding; surfaced by the output observable]
 
-- Status: open
+- Status: fixed (2026-09-05, lane `bug095-096` [AGENT] under [USER] direction 3 — the ROOT is the
+  FRONTEND's interface-declaration emission, not the machine's satisfaction walk: at every
+  interface DISPATCH site (`emitCall`'s interface-receiver arm, the method-value and
+  method-expression arms, and the promotion wrapper over an embedded interface FIELD)
+  `tools/nativefrontend/emit.go` registered the interface under the STATIC operand's wire
+  name but with the METHOD'S DECLARING interface (`Signature.Recv()`), which for a method
+  promoted from an embedded interface is the EMBEDDED one; `noteInterface` was
+  last-writer-wins, so `j.foo()` with `j : J` and `foo` declared in `I` rewrote `main.J`'s
+  wire TypeDef to `I`'s method set `{foo}`. The machine then answered exactly what the wire
+  declared (evidence: the CONTROL block of `bug095-machine-transcripts.tsv` — main's wire on
+  the fixed machine reproduces every wrong answer). FIX: the four sites register the static
+  interface type's OWN `*types.Interface` (`staticIfaceOf`, alias-transparent and
+  substitution-aware; `tools/nativefrontend/wire.go`), and `noteInterface` now REFUSES the
+  export by name when one wire name is registered with two non-identical method sets
+  (`ifaceConflicts`, checked in `emitProgram`'s declaration pass) — the silent mechanism is a
+  named refusal. Guards: `TestEmbeddingInterfaceDefKeepsOwnMethods` (RED-FIRST on main's
+  emitter: `main.J` = `[foo]`, `docs/evidence/2026-09-05_bug095-096/embedding-satisfaction.interface-defs.txt`)
+  and `TestNoteInterfaceConflictRecorded`. Twin pin: unmoved (the raft twin declares no
+  embedding interface; `scripts/check-frontend-pins` green).)
 - Pinned-by: differential
-- Cases: generics/type-switch-interface-param, generics/type-switch-interface-param/bound, generics/type-switch-interface-param/plain
-- Discovered: 2026-09-04 (stdlib slice 3's gotest triage re-run — $GOROOT/test/typeparam/typeswitch3.go, whose printed output is compared since this slice: gc `myint 11`, machine `T 11`; reduced to three corpus rows the same day)
+- Cases: interfaces/embedding-satisfaction/typeswitch, interfaces/embedding-satisfaction/assert, interfaces/embedding-satisfaction/assert-ok, interfaces/embedding-satisfaction/nested, interfaces/embedding-satisfaction/method-value, interfaces/embedding-satisfaction/method-expr, interfaces/embedding-satisfaction/promoted, interfaces/embedding-satisfaction/generic, generics/type-switch-interface-param, generics/type-switch-interface-param/bound, generics/type-switch-interface-param/plain
+- Discovered: 2026-09-04 (stdlib slice 3's gotest triage re-run — $GOROOT/test/typeparam/typeswitch3.go,
+  whose printed output is compared since that slice: gc `myint 11`, machine `T 11`; the slice-3
+  lane recorded this entry OPEN on its branch (a4865e66) with Cases
+  generics/type-switch-interface-param{,/bound,/plain}. MERGE-TRAIN NOTE [AGENT]: this entry and
+  slice 3's are ONE bug under ONE number (095 was already allocated to it there; main's next free
+  number, 093, belongs to other in-flight lanes) — whichever merges second keeps THIS entry's
+  Status/prose and APPENDS slice 3's three Cases ids to the line above; those three rows flip
+  FAIL -> PASS at that merge (a non-PASS -> PASS flip, allowed; baseline re-pin note owed there).)
 
-WHAT: `type I interface{ foo() int }`, `type J interface{ I; bar() }`,
-`type myint int` with `foo` only, `type myint32 int32` with `foo` and
-`bar`. gc: `switch i.(type) { case J: … case myint: … }` on `myint(11)`
-takes `case myint` (myint does not implement J — no `bar`); the machine
-takes `case J`. ROOT CAUSE (audit fix round B1, 2026-09-05 — the fix
-lane `bug095-096` was redirected to it): the FRONTEND, not the machine's
-satisfaction walk. `emit.go:8757` `noteInterface(ifaceName, recvIface)`
-records the interface-method-set table entry KEYED by the call's STATIC
-interface type but REGISTERS the declaring receiver's interface — a call
-`i.foo()` with `i : J` (whose `foo` is declared on the embedded `I`)
-notes `J ↦ I`'s method set; `noteInterface` is last-write-wins, so the
-wire's `methodSets` record for `J` ends up carrying `I`'s requirement
-list ({foo}) and the machine — answering ONLY from the records, per the
-BUG-053 contract — correctly decides that `myint` satisfies what the
-record says `J` requires. The machine is faithful to a wrong record. The
-three rows pin the class in three shapes (the gotest file's generic `case
-T` at `T := J`, the same with a bound variable and a method call, the
-non-generic `case J`), but they are ORDER-FRAGILE: the non-generic twin
-passes in isolation — whether the wrong record wins depends on which
-`i.foo()` call site the emitter visits last. The fix lane adds
-order-robust pins (a program whose only interface calls are through the
-embedding interface, and its mirror).
+WHAT (spec#Embedded_interfaces, spec#Interface_types, spec#Method_sets): the method set of
+`J interface{ I; bar() }` is the UNION `{foo, bar}`; a type implements `J` iff its method set
+is a superset. On main, with `type myint int` carrying `foo` only, `x.(J)` succeeded, the
+comma-ok form answered `true`, `case J` matched before `case myint`, the one-value
+assertion `i.(J)` returned normally where gc panics (RED-FIRST block: machine `ok [8]`), and
+— the slice-3 auditor's shape — `i.(J).bar()` reached the machine's dispatch-invariant STUCK
+`dynamic type main.esOnlyFoo has no method bar`. Two levels are lost at once for `K ⊃ J ⊃ I`
+(main's wire: `main.esK = [foo]`). The direction is always ACCEPTS TOO MUCH. The defect is
+EMISSION-ORDER DEPENDENT: a dispatch of the embedding interface's OWN method through it
+(`j.bar()`) re-registers the full set, so a program containing one such dispatch AFTER the
+poisoner is correct by accident — which is why (slice-3 audit, relayed by the coordinator)
+the slice-3 entry's claim that "the NON-generic twin also fails" is FALSE in isolation, and
+its three pins are order-fragile (an emission-order change would turn them green with the
+defect alive). The `interfaces/embedding-satisfaction` file therefore contains NO dispatch of
+an embedding interface's own method through it: every row exercises the wrong satisfaction
+directly, whatever order the emitter visits bodies in (8 rows red-first; `negative` — own
+method present, EMBEDDED one missing — is correct on main by construction and stays as the
+control). The pre-existing rows `interfaces/embedded-interface{,-assertion}` never saw it
+because their dynamic types carry every method.
 
-PLAN (lane `bug095-096`, in flight): `noteInterface` must register the
-STATIC interface's own method set (or refuse when the two differ), never
-the declaring receiver's; the three rows flip PASS with the fix and the
-robust pins are added alongside.
+CLASS PROBE vs gc (all nine rows PASS; `docs/evidence/2026-09-05_bug095-096/README.md`):
+type switch `case J` (typeswitch), one-value assertion panic text `interface conversion:
+main.esOnlyFoo is not main.esJ: missing method bar` (assert), comma-ok (assert-ok), nested
+embedding K ⊃ J ⊃ I with the two-levels-down method dispatched — gc rejects a type carrying
+two of K's three methods, main accepted one of three (nested), the reverse cell —
+own method present, embedded one missing → `missing method foo` (negative), the trigger as a
+method value / method expression / promoted wrapper (method-value, method-expr, promoted),
+and the type-parameter case instantiated to `J` — typeswitch3.go's exact shape (generic:
+gc 211 112 110 205, main 111 112 110 205). Interface-to-interface CONVERSION is static
+(go/types checks it; no runtime check exists to be wrong). Embedding two interfaces with a
+same-named method of DIFFERENT signature is a compile error (`duplicate method`) — not a
+runtime question; the identical-signature duplicate is already pinned
+(`interfaces/embedded-interface-duplicate-method`).
 
 ## BUG-096 — a shift by a count far past the operand width (`x << (1<<32)`, `u << (1<<40)`) makes the machine compute `2^count` in `Nat` and DIE with an INTERNAL PANIC (`Nat.pow exponent is too big`) instead of yielding 0 [fidelity/robustness; ints/shifts; surfaced by the gotest re-run]
 
-- Status: open
+- Status: fixed (2026-09-05, lane `bug095-096` [AGENT] under [USER] direction 3 —
+  `GoLean/GoCore/Ops.lean` `intShiftLeftResult` / `intShiftRightResult` now look up the
+  operand kind's width and SATURATE before any power is formed: `count ≥ bits` yields 0 for
+  a left shift and an unsigned right shift, and the sign fill (−1 for a negative signed
+  operand, else 0) for a signed right shift; the in-width path is unchanged. The width lookup
+  (`intKindBitWidth`) refuses an `unbounded` kind by name — none reaches the machine (the wire
+  decoder never produces one), so that arm is fail-closed, not a regression. The two
+  `StateWf` lemmas (`intShift{Left,Right}Result_locSup`) follow the new branch. GoCore audit:
+  these were the ONLY `^`/`Nat.pow` sites with a RUNTIME exponent — every other power in
+  `GoLean/GoCore/` is over a kind width (≤ 64), a platform constant, or a FloatBits
+  exponent-difference bounded by the float format. Cost, not just abort: the coordinator's
+  measurement (slice-3 audit, relayed) puts a count of `1<<31` at ~1.1 GB RSS on main —
+  a `2^count` that fits under the `Nat.pow` guard is still materialized; the saturation
+  removes that too.)
 - Pinned-by: differential
-- Cases: ints/shift-count-huge
-- Discovered: 2026-09-04 (stdlib slice 3's gotest triage re-run — $GOROOT/test/fixedbugs/bug356.go, formerly print-refused: `go run` prints nothing, `native-json-run` aborts the PROCESS with `INTERNAL PANIC: Nat.pow exponent is too big` — the row lands at stage lean-observation with no observation at all)
+- Cases: ints/shift-count-bound/left-huge, ints/shift-count-bound/right-huge-signed, ints/shift-count-bound/right-huge-unsigned, ints/shift-count-bound/int-count, ints/shift-count-bound/untyped-const, ints/shift-count-huge
+- Discovered: 2026-09-04 (stdlib slice 3's gotest triage re-run — $GOROOT/test/fixedbugs/bug356.go:
+  `go run` prints nothing, `native-json-run` aborts the PROCESS with `INTERNAL PANIC: Nat.pow
+  exponent is too big`. The slice-3 lane recorded this entry OPEN on its branch (a4865e66) with
+  Cases ints/shift-count-huge. MERGE-TRAIN NOTE [AGENT]: same rule as BUG-095 — one bug, one
+  number; the second merge keeps this entry and appends `ints/shift-count-huge`, which flips
+  FAIL -> PASS at that merge.)
 
-WHAT: spec#Operators — shifts "behave as if the left operand is shifted n
-times by 1", so `12345 << (1<<32)` is 0 for an `int` and `1 << (1<<40)`
-is 0 for a `uint64`; the arithmetic-right shift of a negative operand by a
-huge count is -1. The machine's shift arm evaluates `2^count` (or
-`value * 2^count`) over unbounded `Nat`/`Int` BEFORE normalizing to the
-kind's width — fine for every count below ~2^24, fatal beyond Lean's
-`Nat.pow` guard. A wrong-answer class by construction (a process abort is
-neither an observation nor a refusal — the harness sees no JSON) and a
-one-line fix in principle: saturate the count at the operand width before
-exponentiating (`count ≥ bits → 0` for left shifts and logical right
-shifts, `→ -1 / 0` by sign for arithmetic right shifts).
+WHAT (spec#Operators — "There is no upper limit on the shift count. Shifts behave as if the
+left operand is shifted n times by 1"): `12345 << (1<<32)` is 0 for an `int`, `1 << (1<<40)`
+is 0 for a `uint64`, `-x >> (1<<32)` is −1. The machine's shift arms evaluated `2^count` over
+unbounded `Int` BEFORE normalizing to the kind's width — fine below Lean's `Nat.pow` guard,
+fatal beyond it: a process abort is neither an observation nor a refusal (the harness sees
+no JSON). RED-FIRST transcript (main's binary at ac45aedd, `bug096-machine-transcripts.tsv`):
+left-huge / right-huge-signed / right-huge-unsigned / int-count / untyped-const all
+`INTERNAL PANIC`; width (count exactly 64/8/32), width-minus-one (63/7/31) and
+negative-panic (a hugely NEGATIVE count → `runtime error: negative shift amount`) were
+already right and stay as controls.
 
-PLAN: a small ints fix lane (Ops.lean's shift arms + the row flips PASS;
-the existing shifts suite covers the in-width counts). IN FLIGHT (lane
-`bug095-096`, 2026-09-05): the ~6-line saturation of the shift count at
-the operand width before exponentiating.
-
+CLASS PROBE vs gc (all eight rows PASS): `x << (1<<32)` over int/uint64/int32/uint8;
+signed `>>` by 1<<40 of positive and negative operands (0 / −1); unsigned `>>` (0); count
+exactly at the width; the last in-width count (`1<<63`, `int8(1)<<7` = −128); a SIGNED count
+type (`int`, Go 1.13+) both huge and in-width; the negative-count panic text; and the
+untyped-constant left operand of a non-constant shift (`var b uint8 = 1 << m` with m = 8 → 0;
+`d := 1 << big` → int → 0; `var c int32 = 1 << k`, k = 31 → MinInt32) — the type rule is
+go/types' (spec#Operators), the width that saturates is the assumed type's.

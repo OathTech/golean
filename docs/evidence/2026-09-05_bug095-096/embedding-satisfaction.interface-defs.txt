@@ -1,0 +1,7 @@
+# producer: python3 snippet in README Reproduction; interface TypeDefs of the two wires, methods in wire order
+main main.esI ['foo']
+main main.esJ ['foo']
+main main.esK ['foo']
+fixed main.esI ['foo']
+fixed main.esJ ['bar', 'foo']
+fixed main.esK ['bar', 'baz', 'foo']

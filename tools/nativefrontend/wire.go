@@ -139,6 +139,9 @@ type emitter struct {
 	// no call site had an EMPTY requirement list and every dynamic type
 	// vacuously satisfied it (pre-merge audit 2026-07-31, finding 0).
 	seenInterfaces map[string]*types.Interface
+	// Wire names registered with NON-IDENTICAL interfaces (noteInterface);
+	// non-empty refuses the export in emitProgram's declaration pass.
+	ifaceConflicts []string
 
 	// Every NAMED STRUCT type declared in the package (package-level and
 	// function-local), collected by emitGenDeclTypes for the promotion
@@ -354,10 +357,36 @@ func (e *emitter) noteInterface(name string, iface *types.Interface) {
 	if e.seenInterfaces == nil {
 		e.seenInterfaces = map[string]*types.Interface{}
 	}
-	if _, seen := e.seenInterfaces[name]; !seen {
-		e.monoLog = append(e.monoLog, monoLogEntry{monoLogSeenIface, name})
+	if prev, seen := e.seenInterfaces[name]; seen {
+		// Same name, different method set: recorded here, refused by
+		// emitProgram's declaration pass (BUG-095: the dispatch sites used
+		// to register a method's DECLARING interface under the STATIC
+		// operand's name, and last-writer-wins silently shrank an embedding
+		// interface's requirement list to the embedded subset).
+		if !types.Identical(prev, iface) {
+			e.ifaceConflicts = append(e.ifaceConflicts, fmt.Sprintf("%s (%s vs %s)", name,
+				types.TypeString(prev, nil), types.TypeString(iface, nil)))
+		}
+		return
 	}
+	e.monoLog = append(e.monoLog, monoLogEntry{monoLogSeenIface, name})
 	e.seenInterfaces[name] = iface
+}
+
+// staticIfaceOf resolves the *types.Interface a STATIC interface-typed
+// operand denotes — alias-transparent and substitution-aware (a type
+// parameter under stenciling resolves to its instantiation; an
+// unsubstituted one is refused, its constraint being no value type). This
+// is the interface whose FULL method set belongs under the operand's wire
+// name. The method's declaring receiver (`Signature.Recv()`) is NOT it when
+// the method is promoted from an embedded interface (BUG-095).
+func (e *emitter) staticIfaceOf(t types.Type) (*types.Interface, bool) {
+	t = types.Unalias(e.applySubst(t))
+	if _, isTP := t.(*types.TypeParam); isTP {
+		return nil, false
+	}
+	iface, ok := t.Underlying().(*types.Interface)
+	return iface, ok
 }
 
 // noteCalledIfaceMethod records one interface-dispatch call target (the

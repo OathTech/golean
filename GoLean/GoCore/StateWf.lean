@@ -2864,8 +2864,10 @@ theorem intShiftLeftResult_locSup {l r v : GoValue}
   simp only [bind_eq_ok] at h
   obtain ⟨⟨lv, lk⟩, _, h⟩ := h
   simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-  obtain ⟨c, hc, rfl⟩ := h
-  rfl
+  obtain ⟨c, hc, bits, hbits, h⟩ := h
+  -- BUG-096: the width-saturation branch and the in-width branch both
+  -- produce a plain `.int`, whose locSup is 0.
+  split at h <;> simp only [pure_eq_ok, Except.ok.injEq] at h <;> subst h <;> rfl
 
 theorem intShiftRightResult_locSup {l r v : GoValue}
     (h : intShiftRightResult l r = .ok v) : GoValue.locSup v = 0 := by
@@ -2873,8 +2875,8 @@ theorem intShiftRightResult_locSup {l r v : GoValue}
   simp only [bind_eq_ok] at h
   obtain ⟨⟨lv, lk⟩, _, h⟩ := h
   simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-  obtain ⟨c, hc, rfl⟩ := h
-  rfl
+  obtain ⟨c, hc, bits, hbits, h⟩ := h
+  split at h <;> simp only [pure_eq_ok, Except.ok.injEq] at h <;> subst h <;> rfl
 
 /-! ## `applyStrictOp` preserves well-formedness -/
 

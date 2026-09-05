@@ -10,12 +10,16 @@
 # 2026-09-04 lane fr4-rowm [AGENT]: the FR-4 whole-export stencil format and emitSortStmt's three `slices.Sort …` formats are GONE from the frontend (FR-4 per-declaration; memo §3 row M); a stencil stub's reason rides quarantinedMethodStub's existing wrapper and classifies by its INNER cause, with causes.tsv stencil-refusal moved LAST as the fallback. List unchanged (the retired formats were classified, never here).
 # 2026-09-04 lane stdlib-slice-3 [AGENT]: regenerated — print/println LOWER since this slice (emitPrintStmt) and their five new refusal formats classify from the format alone (causes.tsv print-zero-operands / print-float / print-builtin accept the vocabulary tool's `X` verb), so the list shrinks by one.
 # 2026-09-05 lane stdlib-slice-3 audit fix round C4 [AGENT]: CORRECTION — `builtin X in statement position` is NOT gone (emit.go's default arm still emits it for the builtins spec#Expression_statements forbids there; it stays on this list); the two float-bits `math.X` shape/pin formats that surfaced at the slice now classify from the format alone (causes.tsv float-bits-shape), and the dot-import refusal format classifies (dot-import-float-bits).
+# 2026-09-05 lane bug095-096 [AGENT]: regenerated — THREE new frontend formats surface here, all INVARIANT refusals of the BUG-095 fix (emit.go's dispatch sites now register the STATIC interface's own method set; `interface method call on X` / `interface method selector on X: static type is not a value interface` fire only if a dispatch operand's static type is not a value interface after substitution — unreachable for type-checked Go, kept fail-closed; `interface wire name registered with two different method sets: X` is noteInterface's collision guard, wire.go). Not coverage gaps, so no causes.tsv row; the same class as the other invariant formats here.
 &composite (elided) in X
 &composite in X
 X
 X with X arguments
 builtin X in statement position
+interface method call on X: static type is not a value interface
+interface method selector on X: static type is not a value interface
 interface method substitution produced non-signature for X
+interface wire name registered with two different method sets: X
 map literal in X
 method X not found on substituted receiver X
 method expression (*X).X over a value-receiver method (deref adapter not modeled)

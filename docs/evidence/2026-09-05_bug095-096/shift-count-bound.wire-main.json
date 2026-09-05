@@ -1,0 +1,1905 @@
+{
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "decls": [
+       {
+        "id": "i",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "uint64",
+          "kind": "int"
+         },
+         "value": "4294967296"
+        },
+        "type": {
+         "int": "uint64",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "x",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "12345"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "decls": [
+       {
+        "id": "u",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "uint64",
+          "kind": "int"
+         },
+         "value": "1"
+        },
+        "type": {
+         "int": "uint64",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "s",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "int32",
+          "kind": "int"
+         },
+         "value": "-7"
+        },
+        "type": {
+         "int": "int32",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "b",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "value": "255"
+        },
+        "type": {
+         "int": "uint8",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "\u003c\u003c",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "i",
+         "type": {
+          "int": "uint64",
+          "kind": "int"
+         }
+        }
+       },
+       {
+        "expr": "binary",
+        "op": "\u003c\u003c",
+        "type": {
+         "int": "uint64",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "u",
+         "type": {
+          "int": "uint64",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "i",
+         "type": {
+          "int": "uint64",
+          "kind": "int"
+         }
+        }
+       },
+       {
+        "expr": "binary",
+        "op": "\u003c\u003c",
+        "type": {
+         "int": "int32",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "s",
+         "type": {
+          "int": "int32",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "i",
+         "type": {
+          "int": "uint64",
+          "kind": "int"
+         }
+        }
+       },
+       {
+        "expr": "binary",
+        "op": "\u003c\u003c",
+        "type": {
+         "int": "uint8",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "b",
+         "type": {
+          "int": "uint8",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "i",
+         "type": {
+          "int": "uint64",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "shiftCountBoundLeftHuge",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res1",
+     "type": {
+      "int": "uint64",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res2",
+     "type": {
+      "int": "int32",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res3",
+     "type": {
+      "int": "uint8",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "decls": [
+       {
+        "id": "i",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "uint64",
+          "kind": "int"
+         },
+         "value": "1099511627776"
+        },
+        "type": {
+         "int": "uint64",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "x",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "12345"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "decls": [
+       {
+        "id": "n",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "int64",
+          "kind": "int"
+         },
+         "value": "-12345"
+        },
+        "type": {
+         "int": "int64",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "m",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "int8",
+          "kind": "int"
+         },
+         "value": "-1"
+        },
+        "type": {
+         "int": "int8",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "\u003e\u003e",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "i",
+         "type": {
+          "int": "uint64",
+          "kind": "int"
+         }
+        }
+       },
+       {
+        "expr": "binary",
+        "op": "\u003e\u003e",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "unary",
+         "op": "-",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "x",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "i",
+         "type": {
+          "int": "uint64",
+          "kind": "int"
+         }
+        }
+       },
+       {
+        "expr": "binary",
+        "op": "\u003e\u003e",
+        "type": {
+         "int": "int64",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "n",
+         "type": {
+          "int": "int64",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "i",
+         "type": {
+          "int": "uint64",
+          "kind": "int"
+         }
+        }
+       },
+       {
+        "expr": "binary",
+        "op": "\u003e\u003e",
+        "type": {
+         "int": "int8",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "m",
+         "type": {
+          "int": "int8",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "i",
+         "type": {
+          "int": "uint64",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "shiftCountBoundRightHugeSigned",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res1",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res2",
+     "type": {
+      "int": "int64",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res3",
+     "type": {
+      "int": "int8",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "decls": [
+       {
+        "id": "i",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "uint",
+          "kind": "int"
+         },
+         "value": "8589934592"
+        },
+        "type": {
+         "int": "uint",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "a",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "uint",
+          "kind": "int"
+         },
+         "value": "9223372036854775813"
+        },
+        "type": {
+         "int": "uint",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "b",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "uint64",
+          "kind": "int"
+         },
+         "value": "18446744073709551615"
+        },
+        "type": {
+         "int": "uint64",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "c",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "value": "200"
+        },
+        "type": {
+         "int": "uint8",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "\u003e\u003e",
+        "type": {
+         "int": "uint",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "a",
+         "type": {
+          "int": "uint",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "i",
+         "type": {
+          "int": "uint",
+          "kind": "int"
+         }
+        }
+       },
+       {
+        "expr": "binary",
+        "op": "\u003e\u003e",
+        "type": {
+         "int": "uint64",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "b",
+         "type": {
+          "int": "uint64",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "i",
+         "type": {
+          "int": "uint",
+          "kind": "int"
+         }
+        }
+       },
+       {
+        "expr": "binary",
+        "op": "\u003e\u003e",
+        "type": {
+         "int": "uint8",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "c",
+         "type": {
+          "int": "uint8",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "i",
+         "type": {
+          "int": "uint",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "shiftCountBoundRightHugeUnsigned",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "uint",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res1",
+     "type": {
+      "int": "uint64",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res2",
+     "type": {
+      "int": "uint8",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "decls": [
+       {
+        "id": "w64",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "uint",
+          "kind": "int"
+         },
+         "value": "64"
+        },
+        "type": {
+         "int": "uint",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "w8",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "uint",
+          "kind": "int"
+         },
+         "value": "8"
+        },
+        "type": {
+         "int": "uint",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "a",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "int64",
+          "kind": "int"
+         },
+         "value": "1"
+        },
+        "type": {
+         "int": "int64",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "b",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "uint64",
+          "kind": "int"
+         },
+         "value": "18446744073709551615"
+        },
+        "type": {
+         "int": "uint64",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "c",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "int8",
+          "kind": "int"
+         },
+         "value": "1"
+        },
+        "type": {
+         "int": "int8",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "d",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "value": "1"
+        },
+        "type": {
+         "int": "uint8",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "e",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "int64",
+          "kind": "int"
+         },
+         "value": "-5"
+        },
+        "type": {
+         "int": "int64",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "f",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "int32",
+          "kind": "int"
+         },
+         "value": "-5"
+        },
+        "type": {
+         "int": "int32",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "\u003c\u003c",
+        "type": {
+         "int": "int64",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "a",
+         "type": {
+          "int": "int64",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "w64",
+         "type": {
+          "int": "uint",
+          "kind": "int"
+         }
+        }
+       },
+       {
+        "expr": "binary",
+        "op": "\u003e\u003e",
+        "type": {
+         "int": "uint64",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "b",
+         "type": {
+          "int": "uint64",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "w64",
+         "type": {
+          "int": "uint",
+          "kind": "int"
+         }
+        }
+       },
+       {
+        "expr": "binary",
+        "op": "\u003c\u003c",
+        "type": {
+         "int": "int8",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "c",
+         "type": {
+          "int": "int8",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "w8",
+         "type": {
+          "int": "uint",
+          "kind": "int"
+         }
+        }
+       },
+       {
+        "expr": "binary",
+        "op": "\u003c\u003c",
+        "type": {
+         "int": "uint8",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "d",
+         "type": {
+          "int": "uint8",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "w8",
+         "type": {
+          "int": "uint",
+          "kind": "int"
+         }
+        }
+       },
+       {
+        "expr": "binary",
+        "op": "\u003e\u003e",
+        "type": {
+         "int": "int64",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "e",
+         "type": {
+          "int": "int64",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "w64",
+         "type": {
+          "int": "uint",
+          "kind": "int"
+         }
+        }
+       },
+       {
+        "expr": "binary",
+        "op": "\u003e\u003e",
+        "type": {
+         "int": "int32",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "f",
+         "type": {
+          "int": "int32",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "binary",
+         "op": "/",
+         "type": {
+          "int": "uint",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "w64",
+          "type": {
+           "int": "uint",
+           "kind": "int"
+          }
+         },
+         "y": {
+          "expr": "int",
+          "type": {
+           "int": "uint",
+           "kind": "int"
+          },
+          "value": "2"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "shiftCountBoundWidth",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int64",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res1",
+     "type": {
+      "int": "uint64",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res2",
+     "type": {
+      "int": "int8",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res3",
+     "type": {
+      "int": "uint8",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res4",
+     "type": {
+      "int": "int64",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res5",
+     "type": {
+      "int": "int32",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "decls": [
+       {
+        "id": "s63",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "uint",
+          "kind": "int"
+         },
+         "value": "63"
+        },
+        "type": {
+         "int": "uint",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "s7",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "uint",
+          "kind": "int"
+         },
+         "value": "7"
+        },
+        "type": {
+         "int": "uint",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "s31",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "uint",
+          "kind": "int"
+         },
+         "value": "31"
+        },
+        "type": {
+         "int": "uint",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "a",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "int64",
+          "kind": "int"
+         },
+         "value": "1"
+        },
+        "type": {
+         "int": "int64",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "b",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "uint64",
+          "kind": "int"
+         },
+         "value": "1"
+        },
+        "type": {
+         "int": "uint64",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "c",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "int8",
+          "kind": "int"
+         },
+         "value": "1"
+        },
+        "type": {
+         "int": "int8",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "d",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "int32",
+          "kind": "int"
+         },
+         "value": "-1"
+        },
+        "type": {
+         "int": "int32",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "\u003c\u003c",
+        "type": {
+         "int": "int64",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "a",
+         "type": {
+          "int": "int64",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "s63",
+         "type": {
+          "int": "uint",
+          "kind": "int"
+         }
+        }
+       },
+       {
+        "expr": "binary",
+        "op": "\u003c\u003c",
+        "type": {
+         "int": "uint64",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "b",
+         "type": {
+          "int": "uint64",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "s63",
+         "type": {
+          "int": "uint",
+          "kind": "int"
+         }
+        }
+       },
+       {
+        "expr": "binary",
+        "op": "\u003c\u003c",
+        "type": {
+         "int": "int8",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "c",
+         "type": {
+          "int": "int8",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "s7",
+         "type": {
+          "int": "uint",
+          "kind": "int"
+         }
+        }
+       },
+       {
+        "expr": "binary",
+        "op": "\u003e\u003e",
+        "type": {
+         "int": "int32",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "d",
+         "type": {
+          "int": "int32",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "s31",
+         "type": {
+          "int": "uint",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "shiftCountBoundWidthMinusOne",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int64",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res1",
+     "type": {
+      "int": "uint64",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res2",
+     "type": {
+      "int": "int8",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res3",
+     "type": {
+      "int": "int32",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "decls": [
+       {
+        "id": "n",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "1099511627776"
+        },
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "m",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "63"
+        },
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "x",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "3"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "decls": [
+       {
+        "id": "u",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "uint64",
+          "kind": "int"
+         },
+         "value": "1"
+        },
+        "type": {
+         "int": "uint64",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "\u003c\u003c",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "n",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       },
+       {
+        "expr": "binary",
+        "op": "\u003c\u003c",
+        "type": {
+         "int": "uint64",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "u",
+         "type": {
+          "int": "uint64",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "m",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "shiftCountBoundIntCount",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res1",
+     "type": {
+      "int": "uint64",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "decls": [
+       {
+        "id": "n",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "-1099511627776"
+        },
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "x",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "3"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "\u003c\u003c",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "n",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "shiftCountBoundNegativePanic",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "decls": [
+       {
+        "id": "n",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "uint",
+          "kind": "int"
+         },
+         "value": "40"
+        },
+        "type": {
+         "int": "uint",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "m",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "uint",
+          "kind": "int"
+         },
+         "value": "8"
+        },
+        "type": {
+         "int": "uint",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "k",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "uint",
+          "kind": "int"
+         },
+         "value": "31"
+        },
+        "type": {
+         "int": "uint",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "big",
+        "init": {
+         "expr": "int",
+         "type": {
+          "int": "uint",
+          "kind": "int"
+         },
+         "value": "34359738368"
+        },
+        "type": {
+         "int": "uint",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "u",
+        "init": {
+         "expr": "binary",
+         "op": "\u003c\u003c",
+         "type": {
+          "int": "uint64",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "int",
+          "type": {
+           "int": "uint64",
+           "kind": "int"
+          },
+          "value": "1"
+         },
+         "y": {
+          "expr": "ident",
+          "name": "n",
+          "type": {
+           "int": "uint",
+           "kind": "int"
+          }
+         }
+        },
+        "type": {
+         "int": "uint64",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "b",
+        "init": {
+         "expr": "binary",
+         "op": "\u003c\u003c",
+         "type": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "int",
+          "type": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "value": "1"
+         },
+         "y": {
+          "expr": "ident",
+          "name": "m",
+          "type": {
+           "int": "uint",
+           "kind": "int"
+          }
+         }
+        },
+        "type": {
+         "int": "uint8",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "c",
+        "init": {
+         "expr": "binary",
+         "op": "\u003c\u003c",
+         "type": {
+          "int": "int32",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "int",
+          "type": {
+           "int": "int32",
+           "kind": "int"
+          },
+          "value": "1"
+         },
+         "y": {
+          "expr": "ident",
+          "name": "k",
+          "type": {
+           "int": "uint",
+           "kind": "int"
+          }
+         }
+        },
+        "type": {
+         "int": "int32",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "d",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "binary",
+        "op": "\u003c\u003c",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "1"
+        },
+        "y": {
+         "expr": "ident",
+         "name": "big",
+         "type": {
+          "int": "uint",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "ident",
+        "name": "u",
+        "type": {
+         "int": "uint64",
+         "kind": "int"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "b",
+        "type": {
+         "int": "uint8",
+         "kind": "int"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "c",
+        "type": {
+         "int": "int32",
+         "kind": "int"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "d",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "shiftCountBoundUntypedConst",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "uint64",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res1",
+     "type": {
+      "int": "uint8",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res2",
+     "type": {
+      "int": "int32",
+      "kind": "int"
+     }
+    },
+    {
+     "id": "$res3",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  }
+ ],
+ "methodSets": [],
+ "methods": [],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": []
+}

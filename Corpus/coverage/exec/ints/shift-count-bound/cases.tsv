@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+left-huge	shiftCountBoundLeftHuge	-	ok	-	ints,shifts,widths,overflow,multi_result
+right-huge-signed	shiftCountBoundRightHugeSigned	-	ok	-	ints,shifts,widths,overflow,multi_result
+right-huge-unsigned	shiftCountBoundRightHugeUnsigned	-	ok	-	ints,shifts,widths,overflow,multi_result
+width	shiftCountBoundWidth	-	ok	-	ints,shifts,widths,multi_result
+width-minus-one	shiftCountBoundWidthMinusOne	-	ok	-	ints,shifts,widths,overflow,multi_result
+int-count	shiftCountBoundIntCount	-	ok	-	ints,shifts,widths,multi_result
+negative-panic	shiftCountBoundNegativePanic	-	panic	runtime error: negative shift amount	ints,shifts,panic
+untyped-const	shiftCountBoundUntypedConst	-	ok	-	ints,shifts,widths,overflow,multi_result
