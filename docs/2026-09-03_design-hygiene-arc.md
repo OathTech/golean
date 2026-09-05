@@ -160,6 +160,23 @@ cost and touches the fewest positional `fun_cases` proofs.
     → C4 (G-C4) → B5 (optional, any time) → I5 (`Interface.lean`) →
     the assessment re-run → the pin offer (G-PIN). **U LANDED
     2026-09-04** (lane `c-arc-gu`; `docs/2026-09-04_c-arc-gu-design.md`).
+    **Two lanes INSERTED 2026-09-05, [USER]-ruled (relayed by the
+    [AGENT] coordinator; quote in
+    `docs/2026-09-04_reasoning-surface-plan.md` §5.4's 2026-09-05
+    record):** (1) the **G6 T1 lane** — the `reflectlite` facility
+    (gates G6-1 … G6-5 RULED as recommended,
+    `docs/2026-09-04_g6-reflect-design.md` §6) — runs AFTER C2, as a
+    PARALLEL lane beside B6 (so the order reads … → C2 (G-C2, parallel
+    lane) → {B6 ‖ G6 T1} → P (G-P) → …); T2+ of the facility after P,
+    before or parallel to C3; the facility COMPLETE before G-PIN; `fmt`
+    source-through after T2 (G6-4); `encoding/json` v1 last (G6-5) —
+    the memo's §4.5 sequence is the plan of record. (2) the **E13-(b)
+    lane** (`e13-b`, launched 2026-09-05) — the membership shape that
+    admits BOTH sibling-panic orders where the spec leaves them
+    unsequenced and retires the `make`/`len`-`cap` refusals into it
+    (`docs/2026-08-11_latitude-inventory.md` E13, RULED (b)) — is a
+    SEMANTICS lane, not a C-item: it is independent of the C-arc order
+    and may run at any point; its design note precedes any pin change.
     Each C-item still
     returns to the [USER] as its own design gate when reached — a
     HARD STOP, never self-adjudicated (CLAUDE.md, autonomous arcs);
@@ -169,7 +186,9 @@ cost and touches the fewest positional `fun_cases` proofs.
     recommendation, answered «Great, this sounds good - let's move ahead
     with the plan» (coordinator reading [AGENT], DISCLOSED to the [USER]
     for confirmation or correction; `docs/2026-09-04_c-arc-gu-design.md`
-    §0; if corrected, the next lane amends). C1 memory module
+    §0; if corrected, the next lane amends — **CONFIRMED [USER]
+    2026-09-05, «(1) approved», relayed; G-U and G-OUT had landed
+    before the confirmation, disclosed in the plan's §5.4 record**). C1 memory module
     with an access trace; C2 well-founded `TypeEnv` (the fuel towers
     become structural); C3 `Cont` as `List Frame` (pre-pin only —
     after the downstream repo pins the `Cont` shape it is a breaking
@@ -213,7 +232,15 @@ still not scheduled anywhere:
   changes the frontend contract and the detector's hop-path argument.
   RULED IN as G-P, after C1 in the C-arc order.
 - Unsequenced operand evaluation (a Cerberus `unseq`) — a semantics
-  WIDENING; the doctrine's business. Still out.
+  WIDENING; the doctrine's business. Still out AS A GENERAL WIDENING.
+  Its sibling-panic INSTANCE — E13's four-way treatment (a non-call
+  operation's panic vs sibling calls' effects, the `make`/`len`-`cap`
+  refusals and the append/copy divergence) — was RULED (b) [USER]
+  2026-09-05 (relayed: «we should do what the standard supports, and
+  avoid over-refusal if we can»): both orders admitted via a membership
+  shape where the spec leaves them unsequenced, forced argument
+  positions stay gc-exact; lane `e13-b`, inserted in the sequence
+  above, (v).
 - The range-over-slice desugar's race footprint vs gc's — a fidelity
   question. Still out.
 - Boxing identity for efaces (`renderPanicHead`) — a semantics

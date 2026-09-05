@@ -1355,6 +1355,7 @@ alongside every `e.lifted` rollback (both paths).
 
 ## BUG-032 — the fnHasRecv len/cap hoist drags its OPERAND's panic ahead of spec-unordered panics to its left
 
+- Ruling 2026-09-05 ([USER], relayed via the [AGENT] coordinator; no status change): E13's four-way treatment RULED (b) — the A6 residual refusal (`panicky-between` and kin) retires into a membership shape admitting both orders where the spec leaves them unsequenced; `docs/2026-08-11_latitude-inventory.md` E13, lane `e13-b`.
 - A6 AMENDMENT (2026-08-31, t1-fidelity-fixes — the over-refusal
   retirement this entry's F23 paragraph priced): the refusal is
   narrowed to its TRUE residual. The predicate is now sweep-scoped
@@ -4408,6 +4409,7 @@ this entry's evidence dir, §M1.
 
 ## BUG-083 — the `make` hoist has no unordered-panic guard: a panicky size/hint operand is evaluated ahead of a spec-unordered panicky operand to its left (BUG-032's class; the open-instance ledger for the make shapes)
 
+- Ruling 2026-09-05 ([USER], relayed via the [AGENT] coordinator; no status change): E13's four-way treatment RULED (b) — the `make` refusals below retire into a membership shape admitting both orders where the spec leaves them unsequenced (the E13 tension this entry records is resolved toward latitude); `docs/2026-08-11_latitude-inventory.md` E13, lane `e13-b`.
 - Status: fixed (2026-09-04, lane `fr27-fr28`, FR-28 — fixed AS A NAMED
   REFUSAL, not as gc's point: the A6 guard (`hoistReordersPanic` =
   `residualPanicFreeOperand` × `sweepPanickyInlineBefore`, emit.go) is

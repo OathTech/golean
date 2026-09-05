@@ -1628,6 +1628,34 @@ to scheduled (`docs/2026-09-03_design-hygiene-arc.md` (v)): «I think
 we should try to do the disruptive thing if it'll result in a more
 useful reasoning surface».
 
+**Ruling record, 2026-09-05 (confirmation of the gate reading).**
+[AGENT] record; the [USER] quote was received by the [AGENT]
+coordinator in conversation and RELAYED to the recording worker (lane
+`rulings-0905`), so it is cited as relayed, not firsthand (U0-incident
+convention). The coordinator's reading above — all nine gates (G-U,
+G-C5, G-C1, G-C2, G-P, G-C3, G-C4, G-OUT, G-PIN) RULED as recommended
+by the 2026-09-04 «move ahead with the plan» reply — had been DISCLOSED
+for confirmation or correction rather than asserted
+(`docs/2026-09-04_c-arc-gu-design.md` §0). On 2026-09-05 the
+coordinator put it to the [USER] EXPLICITLY, as item (1) of an
+eight-item list (1: this gate-provenance reading; 2: E13's four-way
+treatment, options (a)/(b)/(c), coordinator recommending (b); 3: push;
+4–8: G6-1 … G6-5, each with the memo's recommendation (a)). Mike's
+reply, verbatim as relayed: «(1) approved, (2) we should do what the standard supports, and avoid over-refusal if we can. That's what (b) means right? (3) done, (4-8) all approved as recommended». Item (1) CONFIRMS the
+reading: the nine gates stand RULED as recommended, at-the-gate, by
+the 2026-09-04 reply. **Ordering, disclosed:** TWO gates' implementations
+LANDED on 2026-09-04, BEFORE this confirmation arrived — G-U (lane
+`c-arc-gu`, merged in the round-14 train; executed under the relayed
+reading with the reading disclosed in its design note §0) and G-OUT
+(lane `stdlib-slice-3`, the `StepEvent.out` event trace, §3 above) —
+so the confirmation ratifies both after the fact. No other gate's
+implementation landed ahead of the confirmation (G-C5, G-C1, G-C2,
+G-P, G-C3, G-C4, G-PIN had no landed code at 2026-09-05). Items
+(2)–(8) rule matters recorded elsewhere: E13 (b)
+(`docs/2026-08-11_latitude-inventory.md` E13, lane `e13-b`); push
+(«done» — a separate [USER] sign-off, not this document's); G6-1 …
+G6-5 as recommended (`docs/2026-09-04_g6-reflect-design.md` §6).
+
 - **G-U.** «Uniform consumption rule (pop iff bound ≥ 2); `consumeAtOne`
   deleted; behaviour sets certified identical by the membership lane;
   realized members under fixed streams re-pinned with the choice-trace

@@ -944,7 +944,10 @@ at dynamic sites, reflective remainder refused. Recommendation:
 **(iii) now**, with (ii) posed separately as G6. Grounds: (i) violates
 the TCB constraint and (N); (ii) is a large design of its own; (iii)
 deletes the hand-written renderers and their bounds while changing no
-trusted surface. RULED [USER] 2026-09-03 — as recommended.
+trusted surface. RULED [USER] 2026-09-03 — as recommended. **Since
+2026-09-05 (G6-4 RULED (a), relayed): (iii) is an INTERIM — retired by
+G6-4 once T2 of the facility lands; slice 4 narrowed to the `strconv`
+leaves (see the slice list below).**
 
 **G6 — A modeled, layout-free `reflect` subset as a machine facility
 (future arc, not this memo's ask).** Options: (a) commission a design
@@ -1153,6 +1156,18 @@ bulk, the rest is deletion and rows.
 `cmp.Compare`/`slices.SortFunc` → 14 more rows of §3, and the register
 with its caps. **Slice 3:** `print`/`println` + the observable (G2).
 **Slice 4:** `fmt` re-homing (G5) and `sortSlice` retirement.
+**NARROWED 2026-09-05 per G6-4 (a) — RULED [USER] 2026-09-05 as
+recommended, relayed (`docs/2026-09-04_g6-reflect-design.md` §6 ruling
+record; the quote is cited there, not firsthand here):** slice 4's
+`fmt` half is reduced to its `strconv`-LEAVES step — delete the
+`goleanShimFmtUint/Int/Hex/Bool/Quote*` leaves NOW (real `strconv`
+source-through replaces them, an unconditional improvement); KEEP the
+verb×kind matrix and the dyn switch until the reflect facility's T2
+lands; the G5 (iii) frontend specialization (`fmtdesugar.go`) is an
+INTERIM, to be DELETED at G6-4 when `fmt` becomes source-through over the
+facility — one `fmt` semantics, not two. The `sortSlice` retirement is
+unchanged by this ruling (its frontend side landed with memo §3 row M;
+the GoCore op deletion is A11 of the hygiene arc).
 
 ---
 

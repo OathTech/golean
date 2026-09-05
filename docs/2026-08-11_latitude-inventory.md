@@ -1304,7 +1304,7 @@ subexpressions of one binary operator).
   operators only; the census now covers these sibling positions under
   the same pin.
 
-### E13. Non-call panicking operations (type assertion, indexing) vs SIBLING calls — (b) PINNED, structural (the same frontend ANF hoist): calls first
+### E13. Non-call panicking operations (type assertion, indexing) vs SIBLING calls — (b) PINNED, structural (the same frontend ANF hoist): calls first — RULED (b) LATITUDE 2026-09-05 [USER] (relayed): BOTH orders admitted via a membership shape; IMPLEMENTATION OWED (lane `e13-b`; the pin stands until it lands)
 
 Added 2026-08-20 from the grossmith campaign-2 record
 (`docs/2026-08-20_grossmith-findings-2.md` §4, case `case_16162`, seed
@@ -1421,6 +1421,34 @@ the same call.
   control). Until ruled: the make/len-cap refusals stand (honest reds),
   (3) is a recorded, un-pinned divergence of this entry's kind, and no
   new pin is taken on either axis.
+  - **RULED (b) — [USER] 2026-09-05 (relayed).** The [USER] quote was
+    received by the [AGENT] coordinator in conversation and relayed to
+    the recording worker (lane `rulings-0905`); cited as relayed, not
+    firsthand. Posed as item (2) of an eight-item list with the
+    coordinator recommending (b), Mike replied, verbatim as relayed:
+    «(1) approved, (2) we should do what the standard supports, and avoid over-refusal if we can. That's what (b) means right? (3) done, (4-8) all approved as recommended». The coordinator's gloss [AGENT] of what (b)
+    means, answering the question in the reply: wherever the spec
+    leaves the order of a non-call operation's panic and its sibling
+    calls UNSEQUENCED (the omission above; I-2/L-013), the machine
+    admits BOTH orders as latitude via a membership shape (the §7
+    item-5 panic-identity treatment: any of the candidate panics, with
+    whatever ran before it), and the `make` (BUG-083/FR-28) and
+    `len`/`cap` (BUG-032 A6 residual) refusals RETIRE into that shape —
+    "do what the standard supports, avoid over-refusal". The FORCED
+    positions are NOT latitude and stay gc-exact: a panicky operand
+    that is an ARGUMENT of a lexically earlier call must be evaluated
+    before that call (spec#Order_of_evaluation, "g cannot be called
+    before its arguments are evaluated") — BUG-062's territory, already
+    realized. Option (3) above (`append`/`copy`) is covered by the same
+    shape, so its un-pinned divergence closes with the implementation,
+    not before. IMPLEMENTATION OWED to lane `e13-b` (launched
+    2026-09-05): a design note first (the membership shape's exact
+    member set per composition, the forced-vs-unsequenced classifier,
+    the rows that move from refusal to membership), then the frontend
+    and membership-lane changes under the differential. The NO-PIN
+    bullet below stays IN FORCE until that design note lands; this
+    entry's heading tag moves from (b) PINNED to (a) ENVELOPED only
+    when the implementation is merged, never on the ruling alone.
 - NO PIN MAY BE TAKEN HERE. Deliberately **not** a corpus case, and no
   strict-lane row may pin either axis: the machine and gc realize
   different members on the assertion axis, so a strict pin would record
@@ -1429,7 +1457,10 @@ the same call.
   census row, nothing more. (Campaign disposition, findings §4:
   "an inventory entry, not a fix".) The generator-side observation that
   a STRICT-lane outcome-determinism claim can land on a point like this
-  is grossmith's, handed back as F-5 — external, no patch.
+  is grossmith's, handed back as F-5 — external, no patch. IN FORCE
+  after the 2026-09-05 (b) ruling: nothing here is pinned until lane
+  `e13-b`'s design note lands and its membership rows replace the
+  refusals.
 - RE-ENVELOPE OBLIGATION + COST: rides E2/E12's family — the same
   panic-identity membership treatment §7 item 5 queues (admit any of
   the candidate panics) covers this entry's observable, since the only
@@ -2514,7 +2545,10 @@ history block, never in a membership line.
   disagreement is gc's, not a debt of ours. (E13 added 2026-08-20; the
   C2+C3 send-then-spin wedge LEFT this list 2026-08-21 — W3.2 stages
   C/D re-enveloped it, register #1 discharged; E5's class changed
-  2026-09-02.)
+  2026-09-02. E13's (b)-latitude ruling of 2026-09-05 ([USER],
+  relayed) moves it OFF this list and out of the (b) PINNED count when
+  lane `e13-b` lands the membership shape — not before; the tallies
+  above record the machine as it stands.)
 
 ### 10.1 Movement and history (NOT membership)
 

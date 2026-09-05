@@ -1,7 +1,8 @@
 # G6 — a modeled, layout-free `reflect` subset as a machine facility, or its permanent exclusion (design memo, 2026-09-04)
 
-**Status:** DESIGN MEMO, [AGENT]-authored, nothing decided here. Every
-decision is a numbered gate in §6 for the [USER].
+**Status:** DESIGN MEMO, [AGENT]-authored; nothing was decided in it.
+Every decision is a numbered gate in §6 — **all five RULED [USER]
+2026-09-05 as recommended ((a) each), relayed** (§6 ruling record).
 
 **Commission (cited as relayed, not firsthand):** gate G6 of the stdlib
 boundary memo (`docs/2026-09-03_stdlib-boundary-design.md` §5) — «(a)
@@ -560,7 +561,11 @@ lengthened: (C) is a parallel lane after C2; T2+ slots after P, before or
 parallel to C3, and touches `Interface.lean` only through the two §1.1
 facts above. The facility should be COMPLETE (at whatever tier is ruled)
 before G-PIN — after the pin, `GoValue.typeDesc` and `FieldDef.tag` are
-two-repo changes.
+two-repo changes. **This sequence is the PLAN OF RECORD since
+2026-09-05** (G6-1 … G6-5 RULED as recommended, §6): T1 (`reflectlite`)
+after C2 in a parallel lane; T2+ after G-P; complete before G-PIN; `fmt`
+source-through after T2 (G6-4); `encoding/json` v1 last (G6-5); it is
+inserted into the arc ledger `docs/2026-09-03_design-hygiene-arc.md` (v).
 
 ---
 
@@ -649,8 +654,23 @@ text to source-through) is the largest single item here and its
 customer is one harness leg, not the theorem. That split is G6-5's
 option (b).
 
-The gates, numbered, verbatim, with the recommendation. None is decided
-here.
+**Ruling record, 2026-09-05.** [AGENT] record; the [USER] quote was
+received by the [AGENT] coordinator in conversation and RELAYED to the
+recording worker (lane `rulings-0905`), so it is cited as relayed, not
+firsthand (U0-incident convention). The five gates below were put to
+the [USER] as items (4)–(8) of an eight-item list, each with its verbatim
+text and this memo's recommendation (a); Mike replied, verbatim as
+relayed: «(1) approved, (2) we should do what the standard supports, and avoid over-refusal if we can. That's what (b) means right? (3) done, (4-8) all approved as recommended» — «(4-8) all approved as recommended» rules
+G6-1 … G6-5 each at option (a). Sequencing consequence: §4.5 is now the
+plan of record — T1 (`reflectlite`) after C2 in a parallel lane; T2+
+after G-P; the facility complete before G-PIN; `fmt` source-through after
+T2 (G6-4); `encoding/json` v1 last (G6-5). Slice 4 of the stdlib plan is
+NARROWED accordingly (`docs/2026-09-03_stdlib-boundary-design.md`, slice
+4; `fmtdesugar.go` is an interim deleted at G6-4). Each ruling is marked
+on its gate below; the gate texts and grounds are unchanged.
+
+The gates, numbered, verbatim, with the recommendation. None was decided
+in this memo; the rulings are recorded per gate.
 
 **G6-1 — Class.** «Admit a NEW register class, `facility`: a named
 machine op family whose every op is a PROJECTION of existing machine data
@@ -668,6 +688,7 @@ Grounds: (b) makes both existing caps meaningless and hides 1,500 lines
 of our text in a class built for one-line diffs; (c) refuses cedar-go's
 codec and every `errors.Is` in real code, for no fidelity gain (refusals
 are already honest). Size: the class itself 1 session (register + check).
+RULED [USER] 2026-09-05 — as recommended ((a)), relayed.
 
 **G6-2 — Scope.** «Build T1 (`reflectlite`: `errors.Is/As`, `sort.Slice*`)
 first as its own slice; T2 (`reflect` read tier: `DeepEqual`, `binary`
@@ -679,6 +700,7 @@ Recommendation: **(a)**. Grounds: T1 forces every structural decision on
 the smallest surface (G9's order); T2 is where the coverage is (35 gotest
 files, `fmt`); T3's cost is `json`'s and should be decided with it.
 Sizes: T1 2.5-4; T2 4-5; T3 3-4 (+1 twin pin move); T4 1-2 if ever.
+RULED [USER] 2026-09-05 — as recommended ((a)), relayed.
 
 **G6-3 — Ordering.** «T1 after C2 (well-founded `TypeEnv`), in a parallel
 lane; T2+ after G-P (native promotion), because `NumMethod`/`Method(i)`/
@@ -690,7 +712,8 @@ against fuel (re-pay at C2); (c) everything after G-PIN (two-repo
 changes). Recommendation: **(a)**. Grounds: plan §4.3's own sequencing
 note; §5.1 of the plan shows C2 as a parallel lane from item 2, so T1
 starts within weeks; (c) is the one order that makes every later step a
-coordinated pin move.
+coordinated pin move. RULED [USER] 2026-09-05 — as recommended ((a)),
+relayed.
 
 **G6-4 — `fmt`.** «Once T2 lands, `fmt` becomes a SOURCE-THROUGH package
 over the facility (`print.go`/`format.go`/`errors.go`/`internal/fmtsort`
@@ -716,7 +739,9 @@ Size: 4-6 sessions after T2 (source-through admission, the `pp` overlay,
 the `os.Stdout` dependency on G7's slice, the corpus's 46+25 fmt rows
 plus the Formatter family re-run as the regression, the desugar
 deletion). It is NOT the same arc as T2 — same lane sequence, separate
-gate-green points.
+gate-green points. RULED [USER] 2026-09-05 — as recommended ((a)),
+relayed: slice 4 narrowed to its `strconv`-leaves step, not skipped;
+`fmtdesugar.go` is an interim, deleted at G6-4.
 
 **G6-5 — `encoding/json`.** «Admit `encoding/json` (v1 text at the pin;
 the `jsonv2` experiment is off in the oracle build) as source-through
@@ -743,6 +768,8 @@ struct-identity audit; corpus rows for `Marshal`/`Unmarshal` over tagged
 structs, `omitempty`/`omitzero`/`string` options, `Marshaler`/
 `TextMarshaler` dispatch, map-key sorting, the `UnsupportedTypeError`/
 `UnsupportedValueError` (NaN, cycles) paths, and the `%v` error texts).
+RULED [USER] 2026-09-05 — as recommended ((a)), relayed: `encoding/json`
+v1 admitted as the LAST arc of the sequence.
 
 **Totals, for planning:** (C)-first path to a complete T1-T3 facility with
 `fmt` and `json` = 1 + (2.5-4) + (4-5) + (3-4) + (4-6) + (5-7) ≈
