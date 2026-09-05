@@ -315,3 +315,20 @@ E13 family — the 65 lane-tip rows PASS unchanged (39 membership, 26
 strict), 10 born (1 PASS, 8 FAIL/frontend-export by design, 1
 FAIL/lean-observation = BUG-101).
 
+## The fix round's gate (clean tree)
+
+`scripts/capped scripts/ci --diff` at the clean committed tip `0de73ec5`
+(`git_dirty=false`): RESULT PASS; baseline diff FULL 3539/3539, no
+regression; negative 394/394; frontend pins ok (twin = d531a225…);
+frontend unit tests (incl. `e13guard_test.go`) and lowerdiag tables ok;
+bug-index cross-check ok (BUG-101 open/differential, BUG-102 designed
+reds with `Expect: FAIL`, BUG-032/BUG-083 fixed with PASS-only Cases
+lines); reconciler 3 findings, 0 HIGH, all pre-existing on main (C13,
+C5, C9) — `gate-tail.txt`. The re-pin guard certified the baseline in
+the fix round's first, dirty-tree gate (same baseline bytes; `0
+PASS→non-PASS flip(s)`, 10 born rows); at the clean tip the baseline is
+unchanged between HEAD~1 and HEAD so the guard has nothing to judge.
+Tally re-derived by awk from the committed baseline: PASS 3296, FAIL 243
+(3539). Membership artifacts from this run: every one of the 39
+membership rows again `enumerated=N exhibited=1 draws=32`.
+
