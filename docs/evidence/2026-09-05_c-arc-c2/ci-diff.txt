@@ -1,12 +1,54 @@
-# scripts/capped scripts/ci --diff — lane c-arc-c2, CLEAN tip 166244f7 (code 3a229bae + refusal-class fix f33d3092 + records 166244f7), 2026-09-05; full output tail (the run's own text, verbatim)
-# an earlier run at 3a229bae (before f33d3092) FAILED only the lowering-diagnostic vocabulary step and was otherwise identical: baseline diff FULL 3498/3498 no regression, negative 394 match, twin pin ok; its summary block is kept at the end of this file for the record
+# scripts/capped scripts/ci --diff — lane c-arc-c2, AUDIT FIX ROUND, CLEAN tip 4f985c69 (rebased onto main 426af905; code+corpus+baseline+records commit 4f985c69), 2026-09-05; the run's own text, verbatim, from the frontend-pins step to the end (the steps before it are the static checks, all ok — see the summary block); then the differential run's recorded metadata (git_commit / git_dirty) from artifacts/coverage/latest.meta.tsv and negative-latest.meta.tsv
+# (audit fix R8: this record carries the 'differential coverage summary: cases=…' line it is cited for and the clean-tree git_dirty=false of THIS run; the two earlier runs' summary blocks — clean tip 166244f7 PASS, and 3a229bae FAIL on the lowerdiag step only — are kept at the end as history)
 
+[1m── frontend pins (scripts/check-frontend-pins — deviation observation + raft twin wire)[0m
+nativefrontend: WARNING (E7 allow active): native frontend unsupported: package-level initializer of [hiddenX] reaches a method call through an interface (.ab), and a same-package method ab reads the initialized package variable hiddenA: a HIDDEN data dependency — spec#Package_initialization leaves the initialization order unspecified there, and the realized go/types InitOrder is KNOWN to differ from gc's on this shape (latitude E7; deviation record init/hidden-dep-order) — fail closed
+check-frontend-pins: ok [hidden-dep-order] — realized deviation order matches the recorded pin
+check-frontend-pins: ok [twin-wire] — fresh emit = pinned wire (d2bcb07bb9f6…)
+check-frontend-pins: ok [stdlib-pin] — 61 lowered stdlib source files match the pinned sha256 manifest
+
+[1m── import-goose gate self-test (scripts/test-import-goose)[0m
+  test-import-goose: all fixtures behave
+
+[1m── frontend unit tests (go test ./tools/nativefrontend)[0m
+ok  	_/home/dev/projects/golean/.claude/worktrees/c-arc-c2/tools/nativefrontend	0.963s
+
+[1m── lowering-diagnostic tables (go test ./tools/lowerdiag — causes.tsv vs ledger, surface tables vs frontend, calibration)[0m
+ok  	_/home/dev/projects/golean/.claude/worktrees/c-arc-c2/tools/lowerdiag	0.538s
+
+[1m── interpreter eval tests (gocore-eval-tests)[0m
+  ok:170  fail:0  exit:0
+
+[1m── re-run full native differential corpus (--diff: tier=slow rows verified against their cached certified records)[0m
+differential coverage summary: cases=3503 pass=3256 fail=247 export_status=0
+results: artifacts/coverage/latest.tsv
+metadata: artifacts/coverage/latest.meta.tsv
+
+[1m── membership-lane gate self-test, go-dependent half (--with-go: F4 param re-validation, F6 frontend guard, B3-B5 slice-4 lane gates, G5 fan-out-never-ran no-publish, T1-T4 timeouts name their cause, T5-T8 exit 2/137/143 name did-not-decide, D1-D6 the strict-lane depth guard; G1-G4 run in the fast half since audit F19)[0m
+  ok: lake-build failure exits 2, no readable results (G1)
+  ok: lake-build timeout exits 2, no readable results (G2)
+  ok: manifest-not-found exits 2, no readable results (G3)
+  ok: empty manifest exits 2 without publishing (G4)
+  ok: harness re-validation rejects sites=0 (F4)
+  ok: harness refuses the retired samples= param by name (F4b)
+  ok: membership under non-native frontend fails closed (F6)
+  ok: members= cardinality pin refuses a wrong pin (B3)
+  ok: confluent lane refuses a non-singleton set (B4)
+  ok: racy lane fails loud on a refuted width (B5)
+  ok: depth guard refuses a strict row whose adversarial streams are exhausted, naming the cause (D1)
+  ok: the same row routed to confluent is certified (|set|=1) (D2)
+  ok: the same row with a sufficient depth=N passes, recording wide=/depth= (D3)
+  ok: an insufficient depth=N is refused, naming the exhausted seeded stream (D4)
+  ok: a variant-stream refusal is reported as a refusal (lean-observation), not as nondet (D5)
+  ok: harness re-validation refuses depth=0 (D6)
+  ok: fan-out that ran no worker exits 2 without publishing (G5)
+  ok: G5 named both causes (global fan-out refusal + empty-row guard), no stray .out
   ok: T1-strict-lean-run: cause named at stage lean-observation (Lean run TIMED OUT after 1s)
-      row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	lean-observation	Lean run TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) — no observation produced (expected status ok); captured output: run_with_timeout: TIMED OUT after 1s — killing: /home/dev/projects/golean/.tmp/golean-lane-validation.Ivx9YD/fakeroot/.lake/build/bin/golean native-json-run --input /home/dev/projects/golean/.tmp/golean-lane-validation.Ivx9YD/artifacts-T1-strict-lean-run/native/lane-t1/wire.json --function forConditionEval
+      row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	lean-observation	Lean run TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) — no observation produced (expected status ok); captured output: run_with_timeout: TIMED OUT after 1s — killing: /home/dev/projects/golean/.tmp/golean-lane-validation.SDFl0Z/fakeroot/.lake/build/bin/golean native-json-run --input /home/dev/projects/golean/.tmp/golean-lane-validation.SDFl0Z/artifacts-T1-strict-lean-run/native/lane-t1/wire.json --function forConditionEval
   ok: T2-nondet-rerun: cause named at stage nondet (re-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s)
-      row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	nondet	oracle-invariance re-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) — invariance NOT certified (a killed run is not an observed variance); captured output: run_with_timeout: TIMED OUT after 1s — killing: /home/dev/projects/golean/.tmp/golean-lane-validation.Ivx9YD/fakeroot/.lake/build/bin/golean native-json-run --input /home/dev/projects/golean/.tmp/golean-lane-validation.Ivx9YD/artifacts-T2-nondet-rerun/native/lane-t1/wire.json --function forConditionEval --choices 9,8,7,6,5,4,3,2,1,0
+      row: FAIL	lane-t1	control_flow,loops,evaluation_order,calls	nondet	oracle-invariance re-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) — invariance NOT certified (a killed run is not an observed variance); captured output: run_with_timeout: TIMED OUT after 1s — killing: /home/dev/projects/golean/.tmp/golean-lane-validation.SDFl0Z/fakeroot/.lake/build/bin/golean native-json-run --input /home/dev/projects/golean/.tmp/golean-lane-validation.SDFl0Z/artifacts-T2-nondet-rerun/native/lane-t1/wire.json --function forConditionEval --choices 9,8,7,6,5,4,3,2,1,0
   ok: T3-coupling-pin: cause named at stage membership (driver-coupling pin: native-json-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s)
-      row: FAIL	lane-t3	maps,range,keys,loops,nondet	membership	driver-coupling pin: native-json-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) — coupling NOT certified (a killed run is not copied-driver drift); captured output: run_with_timeout: TIMED OUT after 1s — killing: /home/dev/projects/golean/.tmp/golean-lane-validation.Ivx9YD/fakeroot/.lake/build/bin/golean native-json-run --input /home/dev/projects/golean/.tmp/golean-lane-validation.Ivx9YD/artifacts-T3-coupling-pin/native/lane-t3/wire.json --function rangeFirstKey --choices 9,8,7,6,5,4,3,2,1,0
+      row: FAIL	lane-t3	maps,range,keys,loops,nondet	membership	driver-coupling pin: native-json-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) — coupling NOT certified (a killed run is not copied-driver drift); captured output: run_with_timeout: TIMED OUT after 1s — killing: /home/dev/projects/golean/.tmp/golean-lane-validation.SDFl0Z/fakeroot/.lake/build/bin/golean native-json-run --input /home/dev/projects/golean/.tmp/golean-lane-validation.SDFl0Z/artifacts-T3-coupling-pin/native/lane-t3/wire.json --function rangeFirstKey --choices 9,8,7,6,5,4,3,2,1,0
   ok: T4-sample-loop: cause named at stage membership (observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing a Go sample against member #1)
   ok: T5-comparator-undecodable: cause named at stage go-observation (Go output is not a valid observation (comparator said: left.status: unknown observation status)
   ok: T6-lean-run-sigkill: cause named at stage lean-observation (Lean run KILLED (exit 137)
@@ -24,13 +66,64 @@ meta: artifacts/coverage/negative-latest.meta.tsv
 no regression: 394 case(s) run in negative-latest.tsv match baselines/negative-full.tsv
 
 [1m── differential baseline diff (scripts/coverage-baseline-diff)[0m
-no regression: 3498 case(s) run in latest.tsv match baselines/native-full.tsv
+no regression: 3503 case(s) run in latest.tsv match baselines/native-full.tsv
+
+[1m── baseline re-pin guard (HEAD-vs-HEAD~1; flips must be on a BUGS.md Cases: line)[0m
 
 [1m── cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)[0m
-  [01] C13  MEDIUM  78 doc site(s) across 9 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
-  [02] C5  MEDIUM  1 frontier-table case citation(s) do not resolve against the baseline
-  [03] C9  MEDIUM  the wire schema moved after the certification date 2026-09-05T04:38:59+00:00 (3 commit(s) to wire.go/NativeToIR.lean) — the certified set's wire sha is only current if `scripts/ci --slow` has re-enumerated since
+  [01] C4  HIGH    the language-coverage ledger §8 arithmetic is computed over a STALE baseline: §8 says 3498 cases / 3252 PASS / 246 FAIL; the tracked baseline at this tip is 3503 / 3256 / 247 (delta: 5 cases, 1 reds). §8 claims 'every one on a named row' — that claim is not re-derivable at this tip.
+  [02] C4  HIGH    §8's red buckets account for 246 reds; the baseline at this tip has 247 — 1 red(s) are NOT on a named row at the current tip (the §8 invariant 'zero unmapped' does not hold as written)
+  [03] C13  MEDIUM  78 doc site(s) across 9 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
+  [04] C5  MEDIUM  1 frontier-table case citation(s) do not resolve against the baseline
+  [05] C6  MEDIUM  1 dangling `BUG` cross-reference(s) in docs/ (the id has no definition)
+  [06] C9  MEDIUM  the wire schema moved after the certification date 2026-09-05T05:46:32+00:00 (1 commit(s) to wire.go/NativeToIR.lean) — the certified set's wire sha is only current if `scripts/ci --slow` has re-enumerated since
 
+[1m══ scripts/ci summary ══[0m
+  note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   core build (warning-free)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   eval tests (170 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  ok   negative baseline diff (no regression)
+  ok   baseline diff FULL (3503/3503, no regression)
+  ok   re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)
+  note reconciler: 6 finding(s), 2 HIGH — report-only (details: tools/reconcile-records)
+
+[1mRESULT: PASS[0m
+exit=0
+
+# --- artifacts/coverage/latest.meta.tsv (the differential run this gate judged) ---
+manifest_sha256	59c533ca70f4e8fe43b56c8028a721d0efd7405ec9e18208cb06b58fe861cee7
+git_commit	4f985c69143619d8cfe2efa56cb4ff7f2b695760
+git_dirty	false
+# --- artifacts/coverage/negative-latest.meta.tsv ---
+git_commit	4f985c69143619d8cfe2efa56cb4ff7f2b695760
+git_dirty	false
+
+# --- tally re-derived from the tracked baseline's data rows at this tip: awk -F'	' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv ---
+PASS 3256
+FAIL 247
+
+# ==== HISTORY: earlier runs on this lane (summary blocks only) ====
+# ---- clean tip 166244f7 (pre-audit branch-complete tip; PASS; cases=3498 pass=3252 fail=246) ----
 [1m══ scripts/ci summary ══[0m
   note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
   ok   oracle toolchain (go1.26.5 = pin)
@@ -61,6 +154,16 @@ no regression: 3498 case(s) run in latest.tsv match baselines/native-full.tsv
 
 [1mRESULT: PASS[0m
 exit=0
+139:[1m══ scripts/ci summary ══[0m
+140-  note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
+141-  ok   oracle toolchain (go1.26.5 = pin)
+142-  ok   escape-hatch preflight
+143-  ok   meta-layer escape hatches (allowlist empty since the repo split)
+144-  ok   escape-hatch addendum (no decide +native / native-config spellings)
+145-  ok   bug-index cross-check
+146-  ok   feature-coverage (no dead tags)
+147-  ok   spec-anchor citations resolve at the pin
+148-  ok   stdlib admission register = frontend tables
 
 # ---- earlier run at 3a229bae (lowerdiag step FAIL; everything else ok) — summary block only ----
 139:[1m══ scripts/ci summary ══[0m

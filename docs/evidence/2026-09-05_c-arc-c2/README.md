@@ -31,6 +31,8 @@ relayed by the coordinator and cited as relayed).
 | `corpus-slice.txt` | `scripts/coverage run --prefix structs/decl-order-reversed` at the audit-fix-round tip (R11 rows) | 4 PASS + 1 FAIL red-first on BUG-103 (`conversion-array-target`, `unsupported: conversion to Ty.array 3 (Ty.defined 2)`; gc 104) |
 | `choice-trace/excluded.tsv` | the two rows excluded from the trace on both sides, each with its REASON (audit fix R8/R9) | `send-then-spin` (nonterm by design), `repeat-bound-refused` (16 MiB materialization; identity UNMEASURED, result gate-covered) |
 | `lean-line-delta.txt` | `git diff --numstat` per Lean file vs `main` | GoLean/ +1763 −1466 (net +297); not a reduction, not claimed as one |
+| `twin-repin/round17-structural-diff.txt` | round-17 rebase: ORDER-aware JSON comparison of main cf858f0f's pin `f89e1c9e…` vs the FRESH EMIT `a9a2e2b1…` from the merged frontend (producer `round17-perm-diff.py`; `round17-fr19-producer-diff.txt` is the fr19 name-keyed producer's reading of the same pair) | `types` a permutation of the 93 entries (36 moved — the lane's 36; `quorum.tup·1` not among them), every entry carrying `display`/`pkg` on both sides, violations 12 → 0; everything else identical including order — the two expected classes, nothing else |
+| `twin-repin/round17-new-pin.sha256` | sha256 of the re-emitted pin at the rebase | `a9a2e2b1…` |
 
 ## Reproduction (from the worktree root, at the SHAs above)
 
@@ -52,7 +54,26 @@ docs/evidence/2026-09-03_hygiene-a-series/choice-trace/trace-diff.sh artifacts/c
 scripts/capped scripts/ci --diff
 ```
 
-## Gate
+## Gate — audit fix round (2026-09-05, the current record)
+
+`scripts/capped scripts/ci --diff` at the CLEAN tip `4f985c69` (the
+audit fix round's code+corpus+baseline+records commit, on `main`
+`426af905`): **RESULT: PASS**, every step ok — core build warning-free;
+frontend pins ok (twin wire = the pinned bytes `d2bcb07b…`, UNCHANGED by
+the fix round); frontend unit tests ok (100 PASS incl. the R12 duplicate
+pin); lowering-diagnostic tables ok; eval tests 170 ok (the 5 `C2/R1`,
+`C2/R2` pins included); differential `cases=3503 pass=3256 fail=247`,
+baseline diff FULL 3503/3503 **no regression**; re-pin guard 0 PASS →
+non-PASS flips; negative 394 match; `git_dirty false` on both records
+(`ci-diff.txt` carries the meta lines). Drift vs the pre-audit tip:
+EXACTLY the 5 born rows of `structs/decl-order-reversed/` (4 PASS, 1
+red-first on BUG-103), 0 flips, 0 reorders — re-derived by awk. The
+reconciler's report-only findings at this run (2 HIGH: ledger §8 stale at
+3498 / one red not yet in a §8 bucket; 1 dangling bug-id token (the unmerged e13-b lane's first entry number) in the
+design note) are records fixed in the docs-only commit on top; C9 is the
+train's step-5a `ci --slow`. Full tail: `ci-diff.txt`.
+
+## Gate — the branch-complete tip before the audit (history)
 
 `scripts/capped scripts/ci --diff` at the CLEAN tip `166244f7` (records
 commit on top of code `3a229bae` + `f33d3092`): **RESULT: PASS**, every
@@ -111,6 +132,39 @@ field), ROWED AND FIXED by the `c-arc-b4` lane's audit fix round
 cross-referenced, not duplicated (audit fix R7; design note §7). The
 whole-corpus identity claim is MINUS the excluded `repeat-bound-refused`
 row (design note §7, audit fix R9).
+
+## Round-17 rebase (2026-09-05, [AGENT] reconciler)
+
+The branch was rebased onto `main` @ `cf858f0f` at merge train round 17
+([USER] sign-off «great do the merge», relayed), over the `fr19-bug097`
+(TypeId identity vs display: REQUIRED `display`/`pkg` per wire TypeDef,
+`displayNameOf`/`typePkgForMessage`/`symbolKeyForMessage`,
+`typeAssertPanicMessage : Except Stop String`) and `c-arc-b4`
+(`Signal`/`Thread`, the abort as one step, `enumPoolRun`'s `Except (Stop
+× GoString)`) landings. Compositions, all [AGENT] and disclosed in the
+design note §9: the display record is looked up through the entry's key
+read back from the C2 index (`displayNameOf (idx)` → `TypeEnv.nameOf?` →
+`displayNameOfId`), the decoder builds one record per table entry IN
+TABLE ORDER with the two reserved entries' records leading
+(`TypeEnv.reservedDisplays`: `struct{}` → `struct {}`/`""`; the
+runtime-error entry → `runtimeErrorDisplayMarker`/`"runtime"`),
+`Program.typeDisplays` defaults to those reserved records (matching
+`typeDefs`'s default), R16's payload note moved into b4's shared
+`abortMsg`, `dynamicTypeName?` stays deleted (fr19), the reserved-key
+decoder refusal names both facts (`duplicate TypeId struct{} … the
+machine-reserved TypeId struct{}`), and `MachineSound.lean`'s positional
+`fun_cases` tags are b4's — verified: the C2 commits touched no tag line
+and `stepFn`'s control structure is main's, so the merged file's tags
+were re-derived by the build itself (the file compiles with zero
+warnings). The twin pin is a fresh emit (row above). Baseline: main's
+3523 + the lane's 5 born rows = 3528 = 3283 / 245, re-derived by the
+header's `awk`; 0 flips. Per-commit builds: the C2 code commit and the
+audit-fix-round commit each built (`lake build golean gocore-eval-tests`,
+warning-free) with the eval tests green (193 / 198 ok); the lowerdiag
+vocabulary test is red at the C2 code commit ALONE — exactly as on the
+original branch — and green from the next commit (`36b980c8`, the
+cycle-refusal reclassification) on. The gate at the clean rebased tip is
+recorded in `ci-diff.txt` (round-17 section).
 
 ## Provenance
 

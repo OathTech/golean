@@ -1,0 +1,72 @@
+# twin wire structural diff — round-17 merge train, lane c-arc-c2 rebased onto main cf858f0f (2026-09-05, [AGENT] reconciler)
+# old = main cf858f0f's pin (f89e1c9e…, the fr19-bug097 re-pin); new = a FRESH EMIT from the MERGED frontend over the check-frontend-pins twin assembly
+#   (raftsubject/{quorum,raftpb,tracker,proto,confchange,raft} + tools/raftsubject/twin-*.go; GO111MODULE=off go run ./tools/nativefrontend --dir <assembly> --out <new>),
+#   installed as baselines/pins/twin-chdriver.wire.json at the rebased C2 code commit; scripts/check-frontend-pins certifies the pin byte-equal to the emit.
+# producer: round17-perm-diff.py (ORDER-aware; the fr19 producer twin-structural-diff.py keys entries by name and reports the same two pins as
+#   'types: added 0 removed 0 changed 0' — round17-fr19-producer-diff.txt — which is the expected reading of a pure permutation).
+# expected classes: (1) fr19's display/pkg fields on every type entry — present on BOTH sides, so no field change; (2) c2's dependency order — a
+#   permutation of the 93 types entries (36 moved, the C2 lane's 36; fr19's quorum.tup·1 not among them); order-contract violations 12 -> 0.
+# verdict: exactly the two expected classes; funcs/methods/methodSets/globals/fileOrder/package/schema IDENTICAL including order. No finding.
+old sha256 f89e1c9e0b5b3082dc6a778f121fe6abc5b01288a4b20bf3c11126422dd735b0
+new sha256 a9a2e2b14d605273e83cd99e84c3a8b359c460581027e4d8a14f81fd5362b084
+fileOrder: IDENTICAL (order included)
+funcs: IDENTICAL (order included)
+globals: IDENTICAL (order included)
+methodSets: IDENTICAL (order included)
+methods: IDENTICAL (order included)
+package: IDENTICAL (order included)
+schema: IDENTICAL (order included)
+types: old 93 entries, new 93 entries
+types is a permutation (same multiset, byte-equal per canonicalized entry): True
+every type entry carries exactly name/def/display/pkg — old: True  new: True
+entries that moved: 36 of 93
+old_idx -> new_idx  name
+  10 ->    9  bytes.readOp
+   9 ->   10  bytes.Buffer
+  14 ->   13  quorum.MajorityConfig
+  13 ->   14  quorum.JointConfig
+  37 ->   35  tracker.StateType
+  35 ->   36  tracker.Progress
+  36 ->   37  tracker.ProgressMap
+  44 ->   43  raft.unstable
+  70 ->   44  raft.entryEncodingSize
+  43 ->   45  raft.raftLog
+  45 ->   46  raft.DefaultLogger
+  46 ->   47  raft.SnapshotStatus
+  53 ->   48  raft.StateType
+  47 ->   49  raft.SoftState
+  48 ->   50  raft.Ready
+  49 ->   51  raft.Peer
+  50 ->   52  raft.ReadOnlyOption
+  51 ->   53  raft.lockedRand
+  52 ->   54  raft.CampaignType
+  54 ->   55  raft.Config
+  71 ->   56  raft.entryPayloadSize
+  56 ->   57  raft.stepFunc
+  55 ->   58  raft.raft
+  57 ->   59  raft.RawNode
+  58 ->   60  raft.ProgressType
+  59 ->   61  raft.ReadState
+  60 ->   62  raft.readIndexRequest
+  61 ->   63  raft.readOnly
+  62 ->   64  raft.TracingEvent
+  64 ->   65  raft.BasicStatus
+  63 ->   66  raft.Status
+  65 ->   67  raft.inMemStorageCallStats
+  66 ->   68  raft.MemoryStorage
+  67 ->   69  raft.entryID
+  68 ->   70  raft.logSlice
+  69 ->   71  raft.EntryFormatter
+order-contract violations: old 12, new 0
+  old: ('bytes.Buffer', 'bytes.readOp', 9, 10)
+  old: ('quorum.JointConfig', 'quorum.MajorityConfig', 13, 14)
+  old: ('tracker.Progress', 'tracker.StateType', 35, 37)
+  old: ('raft.raftLog', 'raft.unstable', 43, 44)
+  old: ('raft.raftLog', 'raft.entryEncodingSize', 43, 70)
+  old: ('raft.raftLog', 'raft.entryEncodingSize', 43, 70)
+  old: ('raft.SoftState', 'raft.StateType', 47, 53)
+  old: ('raft.raft', 'raft.entryEncodingSize', 55, 70)
+  old: ('raft.raft', 'raft.entryPayloadSize', 55, 71)
+  old: ('raft.raft', 'raft.entryPayloadSize', 55, 71)
+  old: ('raft.raft', 'raft.stepFunc', 55, 56)
+  old: ('raft.Status', 'raft.BasicStatus', 63, 64)

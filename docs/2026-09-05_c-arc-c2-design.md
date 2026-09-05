@@ -577,8 +577,116 @@ unit test), R13 §10, R14 §0, R16 `StepFn.lean` (the unrenderable-abort
 refusal names the payload's dynamic type by its table key beside the
 `repr`). Incidental: BUG-103 filed (array-target conversions, a machine
 gap the R11 rows detected; red-first row, §7/§10). Rebased onto `main` @ `426af905` first (records-only ahead;
-clean). The fix-round gate tail and the tally follow in `ci-diff.txt`
-and the evidence README (recorded after the run, at the clean tip).
+clean). Fix-round commit `4f985c69` (core + CLI + frontend + corpus +
+baseline + records). **Gate: `scripts/capped scripts/ci --diff` at the
+CLEAN tip `4f985c69` — RESULT: PASS**; `differential coverage summary:
+cases=3503 pass=3256 fail=247`; `baseline diff FULL (3503/3503, no
+regression)`; `re-pin guard (0 PASS→non-PASS flip(s), all listed in
+BUGS.md Cases)`; `negative baseline diff (no regression)` (394);
+`frontend pins (realized init-order deviation + twin wire = pinned
+bytes)` ok — twin `d2bcb07b…` UNCHANGED (the R11 rows are corpus, not
+twin, material); `eval tests (170 ok)`; core build warning-free; the
+record made on a clean tree (`git_dirty false` in both meta files).
+Tally re-derived by awk from the baseline's data rows: PASS 3256 / FAIL
+247 = 3498 + 5 born − 0 flips. Reconciler (report-only): the two C4
+HIGHs it raised at this run — ledger §8 arithmetic stale at 3498 and
+"1 red not on a named row" — are the ledger's §8 not yet carrying the
+born rows; fixed in the records commit on top (§8u, the bucket table),
+together with its C6 (a bug-id token for the unmerged e13-b lane's first entry, which resolves nowhere
+on this branch — reworded). C9 is merge-protocol step 5a's `ci --slow`
+at the train. Tail verbatim: `ci-diff.txt`. This paragraph and the
+ledger/README updates are the docs-only records commit on top of the
+gated tip; the tree is otherwise byte-identical to `4f985c69`.
+
+**Round-17 rebase onto `main` @ `cf858f0f` (2026-09-05, [AGENT]
+reconciler; [USER] sign-off «great do the merge», relayed).** Two
+landings sat between the lane's fork (`426af905`) and the train's main:
+`fr19-bug097` (identity vs display — `display`/`pkg` REQUIRED per wire
+TypeDef, `Program.typeDisplays`, the display renderers,
+`typeAssertPanicMessage : Except Stop String`, the twin pin at
+`f89e1c9e…`, baseline 3523 = 3279 / 244) and `c-arc-b4` (`Signal`,
+`Thread`, the abort as one `stepFn` step through `abortMsg`,
+`enumPoolRun`/`enumRunProgram : Except (Stop × GoString) …`,
+`MachineSound.lean` tags renumbered). Every change of both survives, and
+every change of this lane; the compositions, each [AGENT]:
+1. **Display through the index.** fr19 keyed display records by
+   `TypeId`; this lane keys the table by index. `displayNameOf (idx :
+   TypeIdx)` renders the reserved runtime-error index's marker FIRST
+   (the same first check `renderPanicPayload` makes), otherwise reads
+   the entry's key back (`TypeEnv.nameOf?`) and looks the record up by
+   it (`displayNameOfId`, fr19's function on a `TypeId`; interface
+   leaves, name-keyed by design, call it directly). The decoder builds
+   ONE record per table entry IN TABLE ORDER — `TypeEnv.reservedDisplays`
+   leading, then each declared TypeDef's `display`/`pkg` — and refuses
+   duplicate TypeIds (this lane's pre-pass; fr19's R7 loop is subsumed —
+   the reserved-key refusal now names both facts, `duplicate TypeId
+   struct{} … the machine-reserved TypeId struct{}`, so both lanes'
+   pins hold), so the record a key finds IS the record of the entry the
+   index resolves to. `typePkgForMessage` and `symbolKeyForMessage`
+   read the key through the index the same way (an index the table
+   lacks REFUSES by name in the pkgpath arm — never `""`); `.pointer
+   (.defined idx)` follows fr19's uncommon-section rule unchanged.
+   `renderPanicPayload`'s `main.T(v)` composes both rules: an index the
+   table lacks is unrenderable (`none`, this lane), a present entry
+   renders its display record or the visible no-record marker (fr19).
+2. **The reserved entries' display records** (`Syntax.lean`, beside
+   `TypeEnv.reserved`): `struct{}` → `{ name := "struct {}", pkg := ""
+   }` (fr19's own synthesized record, gc's spelling of the empty
+   struct); the runtime-error entry → `{ name :=
+   runtimeErrorDisplayMarker, pkg := "runtime" }` — there is no single
+   gc-correct type STRING (BUG-099: gc has a concrete type per fault),
+   so the record carries fr19's cause-naming marker, which is what fr19's
+   `displayNameOf` special case rendered from the record's ABSENCE; the
+   special case is kept as belt-and-braces (`runtimeErrorTypeIdx` first,
+   `runtimeErrorTypeId` on a record-less key), and the two routes agree
+   (eval pin `R3 × C2`). The pkgpath `runtime` IS gc-correct for every
+   concrete fault type (all live in package `runtime`); it is unreachable
+   from `typeAssertPanicMessage` (the R3 guard refuses first; no Go
+   source can name the synthetic type as a target). The marker's
+   definition moved from `Ops.lean` to `Syntax.lean` for this.
+   `Program.typeDisplays` DEFAULTS to the reserved records, matching
+   `typeDefs`'s default (`TypeEnv.reserved`, audit fix R2): a
+   declaration-free hand-built `Program` renders `struct {}` as gc does;
+   a hand-built program that declares types still renders the visible
+   no-record marker for them unless it states their displays (fr19's
+   rule, unchanged). `ExecState.typeDisplays` stays `#[]` by default.
+3. **b4's abort.** `renderPanicHead`'s `none` arm is `abortMsg`'s
+   refusal since b4 (one shared text for the sequential machine and the
+   pool); audit fix R16's dynamic-type note moved INTO `abortMsg`.
+4. **CLI/tracer.** `runJson m.shared.types.nameOf? { values := (←
+   (loadMany …).mapError (·, acc)).toArray, … }` and `observationOfRunOut
+   program.typeDefs.nameOf? (.error (e, out))` — b4's paired refusal
+   output with this lane's `nameOf` argument.
+5. **`MachineSound.lean` positional tags** are b4's, not a textual
+   merge's: this lane's commits touched NO `case caseN` line
+   (`git diff 426af905 aac764ad` on the file has zero tag lines) and the
+   merged `stepFn` differs from main's only in the state literal, so the
+   tags b4 derived from main's `stepFn` are the merged file's tags; the
+   file builds warning-free (a mis-aimed tag would not).
+6. **`dynamicTypeName?`** stays deleted (fr19 removed it as unused;
+   this lane's index-keyed copy was unused too); the one comment naming
+   it (`NativeToIR.lean`) now names `checkedDynamicTy`.
+7. **Twin pin: a FRESH EMIT** from the merged frontend, `f89e1c9e… →
+   a9a2e2b1…` (the rule this section set above, applied to itself):
+   `types` is a permutation of the 93 entries (36 moved — the same 36 as
+   the lane's own permutation; fr19's `quorum.tup·1` is not among them),
+   every entry carrying `display`/`pkg` on both sides, order-contract
+   violations 12 → 0; funcs/methods/methodSets/globals/fileOrder
+   identical INCLUDING order. Exactly the two expected classes (fr19's
+   fields, c2's order), nothing else (`twin-repin/round17-*`;
+   `scripts/check-frontend-pins` history — the lane's own entry kept,
+   the round-17 entry appended).
+8. **Baseline**: main's 3523 + this lane's 5 born rows = 3528 = 3283 /
+   245 (0 flips), re-derived by the header's `awk`; ledger §8 tally,
+   bucket table (post-vintage 60 → 61: 141 + 9 + 26 + 8 + 61 = 245) and
+   §8u re-derived; BUG-103 keeps its number (main has BUG-098..100; 101
+   and 102 stay reserved for the unmerged `e13-b` lane), `check-bugs`
+   ok. Tests ported: fr19's display pins to the index-keyed table
+   (reserved prefix + `.defined 2`/`.defined 3`), this lane's C2 wire
+   pins gain the required `display`/`pkg` fields; two pins added (`R3 ×
+   C2`, `C2 × display`) and the decoded-table pin asserts the display
+   records sit in table order beside their TypeDefs. Per-commit builds
+   and the gate: evidence README, round-17 section; `ci-diff.txt`.
 
 ## 10. Records touched
 
@@ -609,8 +717,9 @@ rows — 4 PASS + 1 red-first FAIL — header block; tally 3498 → 3503 =
 3256 PASS / 247 FAIL, re-derived by awk);
 `Corpus/coverage/exec/structs/decl-order-reversed/` (new); `docs/BUGS.md`
 (BUG-103 filed: array-target conversions, open, Cases line
-`structs/decl-order-reversed/conversion-array-target`; numbered after
-the unmerged `e13-b` lane's BUG-101/102 so the train has no collision);
+`structs/decl-order-reversed/conversion-array-target`; numbered 103 so
+the train has no collision with the two entries the unmerged `e13-b`
+lane files as 101 and 102);
 `docs/language-coverage-ledger.md` §2 Conversions row (BUG-103 named);
 `docs/evidence/2026-09-03_hygiene-a-series/choice-trace/trace-diff.sh`
 (both sides' totals). No PASS → non-PASS flip: the one FAIL row is BORN

@@ -1,0 +1,15 @@
+# twin wire structural diff — lane fr19-bug097 (FR-19 scope-ordinal TypeIds, BUG-097 anonymous-interface keys, BUG-059 display records), 2026-09-05
+# producer: docs/evidence/2026-09-05_fr19-bug097/twin-repin/twin-structural-diff.py (tracked since audit fix round R12)
+#   old = baselines/pins/twin-chdriver.wire.json at the lane's fork (main b77f3298); new = the re-pinned file, which
+#   scripts/check-frontend-pins certifies byte-equal to a fresh emit over the twin assembly
+#   (raftsubject/{quorum,raftpb,tracker,proto,confchange,raft} + tools/raftsubject/twin-*.go;
+#   GO111MODULE=off go run ./tools/nativefrontend --dir <assembly> --out <new>)
+old sha256 f89e1c9e0b5b3082dc6a778f121fe6abc5b01288a4b20bf3c11126422dd735b0
+new sha256 a9a2e2b14d605273e83cd99e84c3a8b359c460581027e4d8a14f81fd5362b084
+funcs: added 0 removed 0 changed 0
+methods: added 0 removed 0 changed 0
+types: added 0 removed 0 changed 0
+globals: added 0 removed 0 changed 0
+methodSets: added 0 removed 0 changed 0
+fileOrder: identical: True
+top-level keys identical: True; remaining top-level values identical: True

@@ -563,7 +563,22 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (3523 cases, 3279 PASS /
+All numbers at the current tracked baseline (3528 cases, 3283 PASS /
+245 FAIL — lane `c-arc-c2`'s audit fix round REBASED onto main cf858f0f
+at merge train round 17, 2026-09-05 [AGENT] reconciler, §8u: main's 3523 /
+3279 / 244 (lane `fr19-bug097` after its audit fix round, §8s) + 5 born
+rows (4 PASS
+`structs/decl-order-reversed/{zero-values,array-equality,interface-box,defined-array-values}`,
+the R11 order-coverage rows; 1 FAIL `structs/decl-order-reversed/conversion-array-target`
+red-first on BUG-103's Cases line — array-target conversions fall into
+`convertValueToTy`'s catch-all, a machine gap detected while writing the
+rows) − 0 flips: 3523 + 5 = 3528; 3279 + 4 = 3283; 244 + 1 = 245 —
+re-derived from the data rows by the header's `awk`. Reds table:
+post-vintage 60 → 61 (the BUG-103 pin entered); no other bucket moved:
+141 + 9 + 26 + 8 + 61 = 245 ✓. The lane's own pre-rebase figure was
+3498 / 3252 / 246 → 3503 / 3256 / 247 over main 426af905's rows — the
+same 5 rows, the same verdicts. The previous figure's derivation, kept as
+history: (3523 cases, 3279 PASS /
 244 FAIL — lane `fr19-bug097` after its audit fix round, §8s: the lane's
 3516 / 3275 / 241 + 7 born rows (4 PASS, 3 FAIL: 2 by design, 1 the open
 wrong answer BUG-099) − 0 flips; the lane figure itself was main
@@ -993,8 +1008,10 @@ bucket's BUG-041 red changed ROW, not count):**
 | design questions Q-* (§6) | 9 |
 | (c) profound-reason pins (triage §4 + §5.1 item 3's 8 address-printing `print` refusals + R7's 7 default-NaN refusals — stdlib slice 3 and its audit fix round A1, movement §8p/§8q; §5.1 item 1's C6 pin is `scoping/local-type-identity/type-instantiation-refused` since 2026-09-05, replacing `generics/local-type-argument`, which flipped green — §8s) + the unsafe marker | 25 + 1 |
 | (a)-queued fixes (triage §3.2: A3 5, A4 1, A5 1, A7 1) | 8 |
-| post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) + the gotest-fixes BUG-078 budget refusal pin (`arrays/materialization-budget/over-budget`, on BUG-078's Cases line since the audit fix round) + the bug082-maphint audit-round BUG-083 hoist-order pin (`builtins/len-vs-call-order/hint-panicky-between`, 2026-09-02) + the q-u4-gomem BUG-084 designed-divergence pins (`race/gomem-only/*`, 5 rows: go_mem-racy / TSan-green shapes REFUSED by [USER] ruling Q-U4RESIDUAL (A), 2026-09-02) + the noodler lane's 23 born-FAIL probe rows (2026-09-03, `docs/2026-09-03_noodler-report.md`: 3 on BUG-087's Cases line (RETIRED 2026-09-03 by the `bug087-paniktext` fix — all three PASS/membership under the R9a two-member envelope, not counted here), 2 on BUG-086's (RETIRED 2026-09-03 by the `bug086-shim-closure` fix — both PASS, not counted here), 11 FG-1..FG-5 frontier candidates (MOVED OUT 2026-09-03 to their own rows FR-16..FR-20 — counted in the frontier bucket above, §8e), 2 BUG-068 red-by-design re-hits, 1 FR-3 re-hit, 3 triage-F6/A3 re-hits, 1 FR-10 value-copy witness in untriaged-ids — 7 noodler reds remain in this bucket) − the shim-surface refusal pins flipped green by `stdlib-source-1` (7, 2026-09-03; movement below) + BUG-089's designed ParseUint error-path reds (4 pre-existing rows flipped + 5 born; Cases line — ALL NINE GREEN since `stdlib-source-2`, 2026-09-03: the Clone overlay; BUG-089 fixed) − the two W4.3 SortFunc/cmp bound pins `slices/sortfunc-cmp/{named-slice-bound,float-compare-bound}` flipped green by the real `slices`/`cmp` source (`stdlib-source-2`); the BUG-073 pin `strings/trimspace-repeat/repeat-bound-refused` stays (a runner-budget red since `stdlib-source-2`, ; BUG-090's Cases-line budget pin since its audit fix round) − `slices/sortfunc-cmp/sortfunc-local-type` MOVED to FR-19's line (fr24 audit fix round L5, 2026-09-04: the identical C6 naming refusal, now with FR-19's plan) + the stdlib-slice-3 gotest-surfaced fidelity pins (2026-09-04: `generics/type-switch-interface-param{,/bound,/plain}` on BUG-095's Cases line, `ints/shift-count-huge` on BUG-096's — ALL FOUR GREEN since the `bug095-096` fix landed at merge train round 15, 2026-09-05: re-pinned FAIL→PASS at the rebase, the ids moved to the FIXED entries' Cases lines; not counted here) + the bug095-096 audit-round BUG-097 pin (`multipkg/same-name-anon-iface`, 2026-09-05: the anonymous-interface wire name is package-NAME-qualified, two same-named packages fuse two interfaces — a wrong answer on main, refused by name since BUG-095's conflict guard; open, plan on the entry — FIXED 2026-09-05 by `fr19-bug097`, GREEN, not counted here) − BUG-059's W1.1 pin `multipkg/same-name-identity-panic` (red since 2026-08-18 in this bucket; FIXED 2026-09-05 by `fr19-bug097`, GREEN — §8s) + the fr19-bug097 audit-round BUG-099 pins (`panic-recover/recovered-runtime-error-type/{observed,assert-int}`, 2026-09-05: the recovered runtime error's ONE synthetic type vs gc's concrete type per fault — `observed` an open WRONG ANSWER at the differential stage, `assert-int` its fail-closed face; open, plan on the entry) | 60 |
-| **total** | **244** |
+| post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) + the gotest-fixes BUG-078 budget refusal pin (`arrays/materialization-budget/over-budget`, on BUG-078's Cases line since the audit fix round) + the bug082-maphint audit-round BUG-083 hoist-order pin (`builtins/len-vs-call-order/hint-panicky-between`, 2026-09-02) + the q-u4-gomem BUG-084 designed-divergence pins (`race/gomem-only/*`, 5 rows: go_mem-racy / TSan-green shapes REFUSED by [USER] ruling Q-U4RESIDUAL (A), 2026-09-02) + the noodler lane's 23 born-FAIL probe rows (2026-09-03, `docs/2026-09-03_noodler-report.md`: 3 on BUG-087's Cases line (RETIRED 2026-09-03 by the `bug087-paniktext` fix — all three PASS/membership under the R9a two-member envelope, not counted here), 2 on BUG-086's (RETIRED 2026-09-03 by the `bug086-shim-closure` fix — both PASS, not counted here), 11 FG-1..FG-5 frontier candidates (MOVED OUT 2026-09-03 to their own rows FR-16..FR-20 — counted in the frontier bucket above, §8e), 2 BUG-068 red-by-design re-hits, 1 FR-3 re-hit, 3 triage-F6/A3 re-hits, 1 FR-10 value-copy witness in untriaged-ids — 7 noodler reds remain in this bucket) − the shim-surface refusal pins flipped green by `stdlib-source-1` (7, 2026-09-03; movement below) + BUG-089's designed ParseUint error-path reds (4 pre-existing rows flipped + 5 born; Cases line — ALL NINE GREEN since `stdlib-source-2`, 2026-09-03: the Clone overlay; BUG-089 fixed) − the two W4.3 SortFunc/cmp bound pins `slices/sortfunc-cmp/{named-slice-bound,float-compare-bound}` flipped green by the real `slices`/`cmp` source (`stdlib-source-2`); the BUG-073 pin `strings/trimspace-repeat/repeat-bound-refused` stays (a runner-budget red since `stdlib-source-2`, ; BUG-090's Cases-line budget pin since its audit fix round) − `slices/sortfunc-cmp/sortfunc-local-type` MOVED to FR-19's line (fr24 audit fix round L5, 2026-09-04: the identical C6 naming refusal, now with FR-19's plan) + the stdlib-slice-3 gotest-surfaced fidelity pins (2026-09-04: `generics/type-switch-interface-param{,/bound,/plain}` on BUG-095's Cases line, `ints/shift-count-huge` on BUG-096's — ALL FOUR GREEN since the `bug095-096` fix landed at merge train round 15, 2026-09-05: re-pinned FAIL→PASS at the rebase, the ids moved to the FIXED entries' Cases lines; not counted here) + the bug095-096 audit-round BUG-097 pin (`multipkg/same-name-anon-iface`, 2026-09-05: the anonymous-interface wire name is package-NAME-qualified, two same-named packages fuse two interfaces — a wrong answer on main, refused by name since BUG-095's conflict guard; open, plan on the entry — FIXED 2026-09-05 by `fr19-bug097`, GREEN, not counted here) − BUG-059's W1.1 pin `multipkg/same-name-identity-panic` (red since 2026-08-18 in this bucket; FIXED 2026-09-05 by `fr19-bug097`, GREEN — §8s) + the fr19-bug097 audit-round BUG-099 pins (`panic-recover/recovered-runtime-error-type/{observed,assert-int}`, 2026-09-05: the recovered runtime error's ONE synthetic type vs gc's concrete type per fault — `observed` an open WRONG ANSWER at the differential stage, `assert-int` its fail-closed face; open, plan on the entry) + the c-arc-c2 audit-round BUG-103 pin (`structs/decl-order-reversed/conversion-array-target`, 2026-09-05: a conversion whose target's resolved shape is an ARRAY falls into `convertValueToTy`'s catch-all — the arm BUG-020's fix left out; a fail-closed refusal of legal Go, gc 104; open, plan on the entry; §8u) | 61 |
+| **total** | **245** |
+
+*(Movement at the c-arc-c2 audit fix round REBASED onto main cf858f0f, merge train round 17, 2026-09-05 ([AGENT] rebase reconciliation; §8u; tracked figure 3528 = 3283 / 245 — main was 3523 = 3279 / 244, the lane's pre-rebase figure 3503 = 3256 / 247 on main 426af905): 0 flips, 5 born (4 PASS, 1 FAIL): post-vintage 60 → 61 — BUG-103's `structs/decl-order-reversed/conversion-array-target` (array-target conversions, red-first); no other bucket moved: 141 + 9 + 26 + 8 + 61 = 245. The C2 slice itself moved no baseline row; its re-pin is the twin WIRE, re-emitted at the rebase from the merged frontend (f89e1c9e… → a9a2e2b1…: fr19's display/pkg fields × c2's dependency order — `scripts/check-frontend-pins` history).)*
 
 *(Movement at the fr19-bug097 lane, 2026-09-05 (§8s; post-lane figure 3516 = 3275 / 241 — main b77f3298 was 3498 = 3252 / 246): 8 FAIL→PASS flips, 0 PASS→non-PASS, 18 born (15 PASS, 3 FAIL by design): frontier 143 → 140 — FR-19's five reds (`noodler/local-types/{distinct,shadow}`, `slices/sortfunc-cmp/{cmp-compare-kinds,sortfunc-local-type}`, `stdlib-source/cmp-compare/local-float-type`) flipped green and FR-31's two born (`multipkg/unexported-method-scope/{assert-panic,distinct}`, BUG-098); (c)-pins 25 → 25 — `generics/local-type-argument` green, `scoping/local-type-identity/type-instantiation-refused` born red (C6 narrowed to the type-instantiation shape); post-vintage 60 → 58 — `multipkg/same-name-anon-iface` (BUG-097) and `multipkg/same-name-identity-panic` (BUG-059) green; 15 born PASS on FR-19's/BUG-097's lines. 140 + 9 + 26 + 8 + 58 = 241.)*
 
@@ -1684,6 +1701,36 @@ BUG-059, BUG-092 fixed; BUG-018 addendum; BUG-098 filed (Pinned-by: none,
 Expect: FAIL, 3 rows since R4); at the audit fix round BUG-099 (recovered
 runtime-error type; open, 2 rows) and BUG-100 (the C6 designed-red pin's
 `Expect: FAIL` guard) filed, BUG-019 addendum (R20).
+### 8u. Movement at the C-arc C2 audit fix round (2026-09-05, lane `c-arc-c2`; on main 426af905, rebased onto main cf858f0f at merge train round 17)
+
+Lettered §8u on the lane (§8p–§8s are main's — §8s, `fr19-bug097`, landed
+before this lane; §8t stays reserved for the unmerged `e13-b` lane). [AGENT]. The C2 slice itself (`aac764ad`, the
+well-founded index-keyed type table) moved NO baseline row — its one
+re-pin was the twin WIRE (a permutation of the `types` table). The audit
+fix round adds the R11 order-coverage rows, `structs/decl-order-reversed/`
+— six types declared in reverse dependency order so every wire `types`
+entry MOVES under the frontend ordering, with array-element edges at two
+depths: 4 born PASS (`zero-values`, `array-equality`, `interface-box`,
+`defined-array-values`) and 1 born FAIL, `conversion-array-target`, at
+`lean-observation` — RED-FIRST on **BUG-103** (filed at detection: a
+conversion whose target's resolved shape is an ARRAY, `Raw(cs)` between two
+defined `[3]Code` types or `[3]Code(r)` to the unnamed type, falls into
+`convertValueToTy`'s catch-all `unsupported "conversion to Ty.array …"`;
+BUG-020 added the pointer/slice/map/func arms and left the array arm out;
+gc 104; plan on the entry: one normalizing copy arm). §2 Conversions row
+names it. On the lane: 3498 → 3503 = 3256 / 247; at the round-17 rebase
+onto main cf858f0f (the fr19-bug097 and c-arc-b4 landings in between):
+3523 → 3528 = 3283 / 245 — the same 5 rows, the same verdicts, re-derived
+from the data rows by the header's `awk`; post-vintage bucket 60 → 61; 0
+flips, 0 reorders. The twin wire pin was RE-EMITTED at the rebase from the
+merged frontend (f89e1c9e… → a9a2e2b1…; the lane's own 4ee39f73… →
+d2bcb07b… was the pre-fr19 frontend's): `types` a permutation of the 93
+entries (the same 36 moved; fr19's `quorum.tup·1` not among them), every
+entry carrying fr19's `display`/`pkg` on both sides, everything else
+identical including order (`docs/evidence/2026-09-05_c-arc-c2/twin-repin/round17-*`).
+Evidence: `docs/evidence/2026-09-05_c-arc-c2/` (`ci-diff.txt`
+at the clean tip, `corpus-slice.txt`); design note
+`docs/2026-09-05_c-arc-c2-design.md` §7/§9.
 
 ### 8c. The re-derivation, 2026-08-22 vintage → the 2026-09-01 tip
 
