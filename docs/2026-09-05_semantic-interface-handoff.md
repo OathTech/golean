@@ -40,6 +40,12 @@ The [USER]'s execution authorization covers this integration. The final
 record commit changes only documentation/evidence; the branch is ready to
 fast-forward to main. See `docs/evidence/2026-09-05_semantic-interface-integration/`.
 
+Landing check: a whole-diff whitespace check flags twelve original whitespace
+lines in the preserved review's `source-equivalence.log` and
+`tracked-code.diff` (including required context-line spaces in the raw diff).
+Those sealed bytes are retained. The same check excluding only those two
+verbatim artifacts passes; no source whitespace error is being exempted.
+
 This is an experimental interface, not G-PIN or completion of Gate A.
 The first A3 implementation proceeds in `gate-a3-admission`; B7/C1 and
 general composition/adequacy remain separate obligations. Push has not been
