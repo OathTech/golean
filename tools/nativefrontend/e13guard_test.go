@@ -1,20 +1,25 @@
 package main
 
-// The narrowed A6 unordered-panic guard and the structural-allocation
-// guard (e13-b audit fix round, 2026-09-05, findings R1/R2/R7): the E13
-// option (b) envelope probes a panicky non-call operand ONLY where the
-// emitter can (`emitExpr`'s hook); wherever it cannot — an assignment/
-// IncDec/compound TARGET operand, an address-of operand, an operand
-// containing `recover()` or an allocating conversion — a later len/cap/
-// make hoist would still realize only the events-first panic order, and
-// the guard refuses BY NAME (the first cut deleted the whole A6 family
-// and silently pinned those subclasses). A structural allocation (`&T{}`,
-// slice/map literal, interface method value) with a panicky payload
-// followed by an ordered event is refused too: the allocation evaluates
-// its payload at its hoisted position, gc in the residual after the
-// call, and no probe can reach gc's member. Each case is a per-decl
-// quarantine (the function carries `unsupported`), never a whole-export
-// kill; the positive controls pin that the envelope itself is untouched.
+// The E13 option (b) envelope's BOUNDARY after the e13-b RE-AUDIT fix round
+// (2026-09-05, findings R1'-1..R1'-4, R2'-1; the first fix round's R1/R2/R7
+// history is in the design's §4). The envelope probes every panicky
+// non-call operand the emitter can reach: since the re-audit that includes
+// the PHASE-1 operands of assignment targets (spec#Assignment_statements — a target's
+// index/deref operands are siblings of the RHS's calls; the target's own
+// check is the phase-2 store's), address-of operands (`&a[i]` is a
+// bounds-checking `index-addr`), array-of-array target bases, the hoisted
+// `recover()` residual, and a HOISTED allocating conversion (hoisted when an
+// ordered event follows it). The narrowed A6 guard refuses BY NAME only the
+// residue — a compound target that contains a call (its address is a
+// hoisted temp, its check unprobed) beside a hoisted len/cap/min/max/append/
+// copy/make — and the structural-allocation guard refuses a `&T{}`/slice
+// literal/allocating conversion whose panicky payload precedes an ordered
+// event (gc evaluates such a payload after the call; no probe reaches that
+// member), in return-, println- and sink-rooted spellings alike (the census
+// descends into a call that ENCLOSES the hoisting construct). Map literals
+// and literals forced by an enclosing call lower. Each refusal is a
+// per-decl quarantine (the function carries `unsupported`), never a
+// whole-export kill.
 
 import (
 	"strings"
@@ -76,10 +81,14 @@ func probeCount(t *testing.T, program map[string]any, name string) int {
 const e13GuardSrc = `package main
 
 func wit(x int) int { println("wit", x); return x }
+func fnine() int { println("f"); return 9 }
+func sinkP(p *int, w int) int { return *p + w }
+func useT(t *T) int { println("useT"); return t.x }
 
 type T struct{ x int }
 
-// R1: assignment TARGET index (a type assertion) vs a hoisted len whose operand panics.
+// --- phase-1 TARGET operands are probed (R1'-1) ---
+
 func tgtAssertVsLenHoist() int {
 	x := make([]int, 1)
 	b := [][]int{{1}}
@@ -89,7 +98,6 @@ func tgtAssertVsLenHoist() int {
 	return x[0]
 }
 
-// R1: the same against the unconditional make hoist.
 func tgtAssertVsMake() int {
 	x := make([]int, 1)
 	t := []int{1}
@@ -99,7 +107,13 @@ func tgtAssertVsMake() int {
 	return x[0]
 }
 
-// R1: compound-assign target.
+func tgtAssertVsCall() int {
+	x := make([]int, 1)
+	var iv interface{} = "s"
+	x[iv.(int)] = wit(5)
+	return x[0]
+}
+
 func compoundAssertVsLen() int {
 	x := make([]int, 1)
 	b := [][]int{{1}}
@@ -109,7 +123,6 @@ func compoundAssertVsLen() int {
 	return x[0]
 }
 
-// R1: map-element TARGET key (D4 consistency — targets are never probed).
 func mapKeyAssertVsLen() int {
 	m := map[string]int{}
 	b := [][]int{{1}}
@@ -119,7 +132,55 @@ func mapKeyAssertVsLen() int {
 	return m["a"]
 }
 
-// R1: left material containing recover() is not probed.
+func mapTgtAssertVsCall() int {
+	m := map[string]int{}
+	var iv interface{} = 7
+	m[iv.(string)] = wit(5)
+	return m["a"]
+}
+
+// the receive-statement form keeps the target's probe ahead of the statement
+func tgtAssertVsRecv() int {
+	x := make([]int, 1)
+	var iv interface{} = "s"
+	ch := make(chan int, 1)
+	ch <- 9
+	x[iv.(int)] = <-ch
+	return x[0]
+}
+
+// an array-of-array target's base is probed at its index-addr
+func arrayBaseTargetVsLen() int {
+	var aa [1][1]int
+	i := 5
+	b := [][]int{{1}}
+	j := 5
+	aa[i][0] = len(b[j]) + wit(5)
+	return aa[0][0]
+}
+
+// --- the min/max guard wiring (R1'-2) ---
+
+func tgtAssertVsMin() int {
+	x := make([]int, 1)
+	t := []int{1}
+	k := 5
+	q := 3
+	var iv interface{} = "s"
+	x[iv.(int)] = min(q, t[k]) + wit(5)
+	return x[0]
+}
+
+// --- address-of operands are probed as a whole (R1'-1) ---
+
+func addrAssertLeftCall() int {
+	a := make([]int, 1)
+	var iv interface{} = "s"
+	return sinkP(&a[iv.(int)], wit(5))
+}
+
+// --- recover(): a hoisted ordered event, its residual probed (R1'-4) ---
+
 func recoverAssertVsLen() (r int) {
 	defer func() {
 		b := [][]int{{1}}
@@ -129,7 +190,8 @@ func recoverAssertVsLen() (r int) {
 	panic(3)
 }
 
-// R7: an allocating conversion is not probed either.
+// --- allocating conversions hoist when an event follows (R1'-3) ---
+
 func bytesConvVsLen() int {
 	s := "ab"
 	b := [][]int{{1}}
@@ -137,9 +199,21 @@ func bytesConvVsLen() int {
 	return int([]byte(s)[7]) + len(b[j]) + wit(5)
 }
 
+func bytesConvSlicePrintroot() {
+	s := "ab"
+	b := [][]int{{1}}
+	j := 5
+	println(int([]byte(s)[1:7][0]) + len(b[j]) + wit(5))
+}
+
+// no event after: the conversion stays inline, nothing to probe against
+func bytesConvNoEvent() int {
+	s := "ab"
+	return wit(5) + int([]byte(s)[7])
+}
+
 // FR-28 transparency: nil-deref-only on both sides stays lowered (the
-// raftpb CloneMessage idiom: a pointer-selector TARGET and a len of a
-// pointer selector).
+// raftpb CloneMessage idiom).
 func nilOnlyTargetVsMake(x, out *T) {
 	type D struct{ data []byte }
 	var xd, od *D
@@ -156,36 +230,63 @@ func assertLeftLenHoist() int {
 	return iv.(int) + len(b[j]) + wit(5)
 }
 
-// R2: a &composite literal whose payload panics, followed by a call.
+// --- the narrowed A6 guard's residue: a compound target containing a call ---
+
+func compoundCallTargetVsLen() int {
+	x := make([]int, 1)
+	b := [][]int{{1}}
+	j := 5
+	x[fnine()] += len(b[j]) + wit(5)
+	return x[0]
+}
+
+// --- the structural-allocation class (R2 / R1'-3 / R2'-1) ---
+
 func compositePtrPayload() int {
 	s := make([]int, 1)
 	i := 9
 	return (&T{x: s[i]}).x + wit(5)
 }
 
-// R2: a slice literal payload, followed by a call.
+func compositePtrPayloadPrintroot() {
+	s := make([]int, 1)
+	i := 9
+	println((&T{x: s[i]}).x + wit(5))
+}
+
 func sliceLitPayload() int {
 	s := make([]int, 1)
 	i := 9
 	return []int{s[i]}[0] + wit(5)
 }
 
-// R2 control: no ordered event after the literal — lowers.
+func sliceLitPayloadRecv() int {
+	s := make([]int, 1)
+	i := 9
+	ch := make(chan int, 1)
+	ch <- 3
+	return []int{s[i]}[0] + <-ch
+}
+
+func bytesConvPanickyPayload() int {
+	s := "ab"
+	i, j := 5, 7
+	return int([]byte(s[i:j])[0]) + wit(5)
+}
+
+// controls that lower
 func compositePtrPayloadNoEvent() int {
 	s := make([]int, 1)
 	i := 9
 	return wit(5) + (&T{x: s[i]}).x
 }
 
-// R2 control: the event is INSIDE the literal (a sibling element) — lowers
-// with the element's probe (the assert-composite-lit row's shape).
 func compositeSiblingEvent() int {
 	s := make([]int, 1)
 	i := 9
 	return []int{s[i], wit(7)}[0]
 }
 
-// R2 control: a variadic pack is part of the call it feeds — no guard.
 func variadicPackThenCall(xs ...int) int { return len(xs) }
 func variadicSibling() int {
 	s := make([]int, 1)
@@ -193,29 +294,72 @@ func variadicSibling() int {
 	return variadicPackThenCall(s[i], wit(7)) + wit(8)
 }
 
+func mapLitPayloadVsCall() int {
+	s := make([]int, 1)
+	i := 9
+	return map[int]int{s[i]: 1}[0] + wit(5)
+}
+
+func compositePtrInArgThenCall() int {
+	s := make([]int, 1)
+	i := 9
+	return useT(&T{x: s[i]}) + wit(5)
+}
+
+// the literal's sibling event INSIDE the same call: not forced, refused
+func compositePtrInArgWithSiblingEvent() int {
+	s := make([]int, 1)
+	i := 9
+	return useT2(&T{x: s[i]}, wit(5))
+}
+func useT2(t *T, w int) int { return t.x + w }
+
 func main() {}
 `
 
-func TestNarrowedA6GuardRefusesUnprobedLeftMaterial(t *testing.T) {
+func TestPhase1TargetOperandsAreProbed(t *testing.T) {
 	program, err := emitSource(t, e13GuardSrc)
 	if err != nil {
 		t.Fatalf("whole export refused: %v", err)
 	}
-	for _, fn := range []string{"tgtAssertVsLenHoist", "compoundAssertVsLen", "mapKeyAssertVsLen", "recoverAssertVsLen", "bytesConvVsLen"} {
-		u := funcRefusal(t, program, fn)
-		if !strings.Contains(u, "hoisted past UNPROBED panicky material") || !strings.Contains(u, "e13-b audit fix round R1") {
-			t.Errorf("%s: expected the narrowed A6 len refusal by name, got %q", fn, u)
+	for fn, want := range map[string]int{
+		"tgtAssertVsLenHoist": 1, "tgtAssertVsMake": 1, "tgtAssertVsCall": 1,
+		"compoundAssertVsLen": 2, "mapKeyAssertVsLen": 1, "mapTgtAssertVsCall": 1,
+		"tgtAssertVsRecv": 1, "arrayBaseTargetVsLen": 1, "tgtAssertVsMin": 1,
+		"addrAssertLeftCall": 1,
+	} {
+		if u := funcRefusal(t, program, fn); u != "" {
+			t.Errorf("%s: a phase-1 target/address-of operand must lower probed, got refusal %q", fn, u)
+			continue
 		}
-	}
-	if u := funcRefusal(t, program, "tgtAssertVsMake"); !strings.Contains(u, "make of a potentially-panicking size/hint operand hoisted past UNPROBED") {
-		t.Errorf("tgtAssertVsMake: expected the narrowed A6 make refusal by name, got %q", u)
+		if n := probeCount(t, program, fn); n != want {
+			t.Errorf("%s: expected %d unseq-probe(s), got %d", fn, want, n)
+		}
 	}
 }
 
-func TestNarrowedA6GuardKeepsTheEnvelopeAndTransparency(t *testing.T) {
+func TestRecoverResidualAndHoistedConversionAreProbed(t *testing.T) {
 	program, err := emitSource(t, e13GuardSrc)
 	if err != nil {
 		t.Fatalf("whole export refused: %v", err)
+	}
+	// recover() is hoisted (`$c := recover()`), so the probed residual sits
+	// in the deferred func literal's own wire function; the outer function
+	// must simply lower.
+	if u := funcRefusal(t, program, "recoverAssertVsLen"); u != "" {
+		t.Errorf("recoverAssertVsLen: the hoisted recover()'s residual is probeable, got refusal %q", u)
+	}
+	for _, fn := range []string{"bytesConvVsLen", "bytesConvSlicePrintroot"} {
+		if u := funcRefusal(t, program, fn); u != "" {
+			t.Errorf("%s: a hoisted allocating conversion's residual is probeable, got refusal %q", fn, u)
+			continue
+		}
+		if n := probeCount(t, program, fn); n != 1 {
+			t.Errorf("%s: expected exactly one unseq-probe over the hoisted conversion's residual, got %d", fn, n)
+		}
+	}
+	if n := probeCount(t, program, "bytesConvNoEvent"); n != 0 {
+		t.Errorf("bytesConvNoEvent: an INLINE allocating conversion must never be probed, got %d probes", n)
 	}
 	if u := funcRefusal(t, program, "assertLeftLenHoist"); u != "" {
 		t.Errorf("assertLeftLenHoist: probed left material must lower, got refusal %q", u)
@@ -226,8 +370,16 @@ func TestNarrowedA6GuardKeepsTheEnvelopeAndTransparency(t *testing.T) {
 	if u := funcRefusal(t, program, "nilOnlyTargetVsMake"); u != "" {
 		t.Errorf("nilOnlyTargetVsMake: FR-28's nil-deref transparency must hold, got refusal %q", u)
 	}
-	if n := probeCount(t, program, "bytesConvVsLen"); n != 0 {
-		t.Errorf("bytesConvVsLen: an allocating conversion must never be probed, got %d probes", n)
+}
+
+func TestNarrowedA6GuardRefusesTheResidue(t *testing.T) {
+	program, err := emitSource(t, e13GuardSrc)
+	if err != nil {
+		t.Fatalf("whole export refused: %v", err)
+	}
+	u := funcRefusal(t, program, "compoundCallTargetVsLen")
+	if !strings.HasPrefix(u, "len of a potentially-panicking operand hoisted past UNPROBED panicky material") || !strings.Contains(u, "index expression") {
+		t.Errorf("compoundCallTargetVsLen: expected the narrowed A6 len refusal naming the unprobed hoisted-address target, got %q", u)
 	}
 }
 
@@ -236,15 +388,22 @@ func TestStructuralAllocGuard(t *testing.T) {
 	if err != nil {
 		t.Fatalf("whole export refused: %v", err)
 	}
-	for fn, kind := range map[string]string{"compositePtrPayload": "&composite literal", "sliceLitPayload": "slice literal"} {
+	for fn, kind := range map[string]string{
+		"compositePtrPayload":               "&composite literal",
+		"compositePtrPayloadPrintroot":      "&composite literal",
+		"sliceLitPayload":                   "slice literal",
+		"sliceLitPayloadRecv":               "slice literal",
+		"bytesConvPanickyPayload":           "allocating conversion []byte(string)",
+		"compositePtrInArgWithSiblingEvent": "&composite literal",
+	} {
 		u := funcRefusal(t, program, fn)
 		if !strings.HasPrefix(u, "structural allocation ("+kind+") with a potentially-panicking payload") || !strings.Contains(u, "e13-b audit fix round R2") {
-			t.Errorf("%s: expected the structural-allocation refusal by name, got %q", fn, u)
+			t.Errorf("%s: expected the structural-allocation refusal by name (%s), got %q", fn, kind, u)
 		}
 	}
-	for _, fn := range []string{"compositePtrPayloadNoEvent", "compositeSiblingEvent", "variadicSibling"} {
+	for _, fn := range []string{"compositePtrPayloadNoEvent", "compositeSiblingEvent", "variadicSibling", "mapLitPayloadVsCall", "compositePtrInArgThenCall"} {
 		if u := funcRefusal(t, program, fn); u != "" {
-			t.Errorf("%s: must lower (no event after the literal / event inside it / a variadic pack), got refusal %q", fn, u)
+			t.Errorf("%s: must lower (no event after / event inside / variadic pack / map literal / forced by the enclosing call), got refusal %q", fn, u)
 		}
 	}
 	if n := probeCount(t, program, "compositeSiblingEvent"); n != 1 {

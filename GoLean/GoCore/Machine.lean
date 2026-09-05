@@ -4658,13 +4658,23 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   -- rules at a `probeK` frame): a `probeK` frame is created by exactly one
   -- rule (`unseqProbe`, under `.evalE`), and expression evaluation reaches
   -- a statement-level configuration only through `retV` (a value) or
-  -- `panicking` (a panic) — `.breaking`/`.continuing`/`.returning`/
-  -- `.breakingTo`/`.continuingTo` arise from `.exec` of a statement, and no
-  -- statement executes under a probe (the probed operand is an `Expr`; a
-  -- func literal called inside it runs in its OWN frame, whose travellers
-  -- stop at that `.frame`). So `.breaking (.probeK _)` and friends are
-  -- unreachable from a well-formed configuration; `stepFn` names them
-  -- `stuck` by name (never a silent default) — e13-b audit fix round R12.
+  -- `panicking` (a panic) — a `.signal sg _` (B4's one control form for
+  -- break/continue/return and their labelled forms) arises from `.exec` of
+  -- a statement, and no statement executes under a probe (the probed
+  -- operand is an `Expr`; a func literal called inside it runs in its OWN
+  -- frame, whose signals stop at that `.frame`). So `.signal _ (.probeK _)`
+  -- and `.next (.probeK _)` are unreachable from a well-formed
+  -- configuration; `stepFn` refuses them through `signalRefusal`'s
+  -- expression-frame arm and the `.next` catch-all ("break/continue/return/
+  -- completion delivered to expression continuation" — Machine.lean's
+  -- `signalRefusal`, StepFn.lean's `.signal`/`.next` arms; each site's
+  -- comment names `probeK` among the frames it covers), never a silent
+  -- default (`signalStep` has no `probeK` row: `none` there). The fix round
+  -- did NOT add explicit `.probeK` arms (every added arm shifts
+  -- `MachineSound`'s positional case tags) — e13-b audit fix round R12;
+  -- wording corrected at the re-audit (R1'-6: the earlier text claimed a
+  -- `stuck` naming `probeK` that does not exist) and restated over B4's
+  -- `Signal` at the round-17 rebase ([AGENT]).
   | unseqProbe {e env k s} :
       Step (.exec (.unseqProbe e) env k) s (.evalE e env (.probeK k)) s
   | probeValue {v k s} :

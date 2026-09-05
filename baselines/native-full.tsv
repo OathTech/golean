@@ -1,6 +1,35 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3569 (3327 PASS / 242 FAIL)
-#   [re-derived from the data rows at the round-17 rebase of e13-b onto main 9343a310, 2026-09-05 (audit fix round commit): awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv -> PASS 3327, FAIL 242; main's 3528 = 3283 / 245 as history]
+# cases: 3589 (3345 PASS / 244 FAIL)
+#   [re-derived from the data rows at the round-17 rebase of e13-b onto main 9343a310, 2026-09-05 (re-audit fix round commit): awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv -> PASS 3345, FAIL 244; main's 3528 = 3283 / 245 as history]
+# re-pinned: 2026-09-05 (e13-b lane, RE-AUDIT FIX ROUND R1'-1..R1'-8, R2'-1 — [AGENT] worker; the re-audit returned FIX-FIRST: the
+#   audit fix round's assignment-TARGET suppression was a REGRESSION (spec#Assignment_statements phase 1 makes a target's index/deref
+#   OPERANDS siblings of the RHS's calls — unsequenced, gc raising the assertion FIRST; `m[iv.(string)] = wit(5)` had two members
+#   with gc's in the set at b2fd9f15 and one without at d75049c0). The frontend now PROBES phase-1 target operands, address-of
+#   operands (`&a[i]`, `&p.f`), array-of-array target bases, the hoisted `recover()` residual and a HOISTED allocating conversion
+#   (design §4 D4); the narrowed A6 guard is wired at every hoist and its census descends into an enclosing call (D5); the
+#   structural-allocation guard admits map literals and literals forced by an enclosing call (D6). drift vs the previous pin =
+#   EXACTLY: 6 FAIL -> PASS flips (the fix round's six narrowed-guard designed reds builtins/e13-sibling-panic-order/
+#   {tgt-assert-vs-len-hoist,tgt-assert-vs-make,compound-assert-vs-len,map-key-assert-vs-len,bytes-conv-left-len-hoist} -> PASS/
+#   membership, recover-assert-vs-len -> PASS strict (a singleton) — every id moved from BUG-102's Cases line to BUG-083's PASS-only
+#   line with the reason); 2 PASS -> PASS lane moves (strict -> membership: builtins/e13-sibling-panic-order/addr-index-left-len-
+#   hoist — the `&a[i]` probe makes it a two-member set — and channels/recv-map-elem/key-panic-drains — `m[xs[9]] = <-ch`, the
+#   receive-statement target's key is probed and the probe kept ahead of the statement; its strict PASS had pinned gc's member of a
+#   two-member set, caught at stage nondet in this re-pin's full run); 20 born rows in builtins/e13-sibling-panic-order/ (inserted
+#   after the family's last row, 0 reorders): 12 PASS (10 membership — tgt-assert-vs-call, map-tgt-assert-vs-call, tgt-assert-vs-
+#   {min-call,copy-call,append,recv-w}, addr-assert-left-call, compound-index-vs-len, array-base-target-vs-len, recover-assert-vs-
+#   call-w; 2 strict controls — map-lit-payload-vs-call, composite-ptr-in-arg-then-call), 8 FAIL: 5 frontend-export BY DESIGN on
+#   BUG-102's Cases line (composite-ptr-payload-vs-call-printroot, slice-lit-payload-vs-call-sinkroot, slice-lit-payload-vs-recv,
+#   bytes-conv-payload-vs-call — the structural-allocation class; compound-call-target-vs-len — the narrowed guard's residue), 2
+#   FAIL/differential red-first on BUG-104's Cases line (compound-call-target-vs-call, map-compound-index-key-vs-call — a compound
+#   target's hoisted address/key temp panics BEFORE the RHS call, gc after; pre-existing on main b77f3298), 1 FAIL/differential
+#   red-first on BUG-101's Cases line (slice-value-early-len-hoist — the value axis, slice kind: gc `mut` 12, the machine 22).
+#   0 PASS -> FAIL. Tally 3539 = 3296 / 243 -> 3559 = 3314 / 245. [round-17 rebase onto main 9343a310: the same rows over main's 3528 = 3283 / 245 give 3569 = 3327 / 242 -> 3589 = 3345 / 244,
+#   re-derived from the data rows by the awk above; the lane's BUG-104 is BUG-104 here (main's BUG-104 is c-arc-c2's); this commit's stage-only PASS -> PASS
+#   regression (the re-pin script wrote `-` for every PASS row, the lane's next commit cf85243b restores them) is NOT composed — those rows keep main's stage;
+#   the twin pin at this rebased commit is a FRESH EMIT from the merged frontend, a9a2e2b1 -> 758110a3 (128 unseq-probe statements; strip-probes = a9a2e2b1
+#   structurally) — scripts/check-frontend-pins history.] The twin wire re-pinned (c358d0f4…: +10 probes on phase-1
+#   target operands, 128 in total; strip-probes still = b77f3298's 4ee39f73…). The channels/select-select/beside-loop alternation
+#   row is kept verbatim (its `# reason:` block below it). Evidence: docs/evidence/2026-09-05_e13-b/README.md "The RE-AUDIT fix round".
 # re-pinned: 2026-09-05 (e13-b lane, AUDIT FIX ROUND R1-R12 — [AGENT] worker; the adversarial audit returned BLOCK on the guard
 #   retirement below: the envelope probes only what emitExpr can reach, and the deleted A6 guard had swept the WHOLE statement,
 #   so on UNPROBED left material (assignment/IncDec/compound targets, address-of operands, recover(), allocating conversions)
@@ -1465,16 +1494,36 @@ PASS	builtins/e13-sibling-panic-order/assert-right-call	-
 PASS	builtins/e13-sibling-panic-order/assert-left-min-inline	-
 PASS	builtins/e13-sibling-panic-order/slice-left-len-call	-
 PASS	builtins/e13-sibling-panic-order/assert-left-recv-w	membership
-FAIL	builtins/e13-sibling-panic-order/tgt-assert-vs-len-hoist	frontend-export
-FAIL	builtins/e13-sibling-panic-order/tgt-assert-vs-make	frontend-export
-FAIL	builtins/e13-sibling-panic-order/compound-assert-vs-len	frontend-export
-FAIL	builtins/e13-sibling-panic-order/map-key-assert-vs-len	frontend-export
-FAIL	builtins/e13-sibling-panic-order/recover-assert-vs-len	frontend-export
+PASS	builtins/e13-sibling-panic-order/tgt-assert-vs-len-hoist	-
+PASS	builtins/e13-sibling-panic-order/tgt-assert-vs-make	-
+PASS	builtins/e13-sibling-panic-order/compound-assert-vs-len	-
+PASS	builtins/e13-sibling-panic-order/map-key-assert-vs-len	-
+PASS	builtins/e13-sibling-panic-order/recover-assert-vs-len	-
 PASS	builtins/e13-sibling-panic-order/addr-index-left-len-hoist	-
-FAIL	builtins/e13-sibling-panic-order/bytes-conv-left-len-hoist	frontend-export
+PASS	builtins/e13-sibling-panic-order/bytes-conv-left-len-hoist	-
 FAIL	builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call	frontend-export
 FAIL	builtins/e13-sibling-panic-order/slice-lit-payload-vs-call	frontend-export
 FAIL	builtins/e13-sibling-panic-order/assert-ok-early-len-hoist	lean-observation
+PASS	builtins/e13-sibling-panic-order/tgt-assert-vs-call	-
+PASS	builtins/e13-sibling-panic-order/map-tgt-assert-vs-call	-
+PASS	builtins/e13-sibling-panic-order/tgt-assert-vs-min-call	-
+PASS	builtins/e13-sibling-panic-order/tgt-assert-vs-copy-call	-
+PASS	builtins/e13-sibling-panic-order/tgt-assert-vs-append	-
+PASS	builtins/e13-sibling-panic-order/tgt-assert-vs-recv-w	-
+PASS	builtins/e13-sibling-panic-order/addr-assert-left-call	-
+PASS	builtins/e13-sibling-panic-order/compound-index-vs-len	-
+PASS	builtins/e13-sibling-panic-order/array-base-target-vs-len	-
+PASS	builtins/e13-sibling-panic-order/recover-assert-vs-call-w	-
+PASS	builtins/e13-sibling-panic-order/map-lit-payload-vs-call	-
+PASS	builtins/e13-sibling-panic-order/composite-ptr-in-arg-then-call	-
+FAIL	builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call-printroot	frontend-export
+FAIL	builtins/e13-sibling-panic-order/slice-lit-payload-vs-call-sinkroot	frontend-export
+FAIL	builtins/e13-sibling-panic-order/slice-lit-payload-vs-recv	frontend-export
+FAIL	builtins/e13-sibling-panic-order/bytes-conv-payload-vs-call	frontend-export
+FAIL	builtins/e13-sibling-panic-order/compound-call-target-vs-len	frontend-export
+FAIL	builtins/e13-sibling-panic-order/compound-call-target-vs-call	differential
+FAIL	builtins/e13-sibling-panic-order/map-compound-index-key-vs-call	differential
+FAIL	builtins/e13-sibling-panic-order/slice-value-early-len-hoist	differential
 PASS	builtins/len-cap-array-pointer	-
 PASS	builtins/len-vs-call-order/chan	-
 PASS	builtins/len-vs-call-order/slice	-

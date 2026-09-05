@@ -201,15 +201,19 @@ stated here and in design §10.
 ## Twin wire re-pin (`twin-repin/`)
 
 `hashes.txt` (4ee39f73… at main b77f3298 → 7c545840… at the lane tip
-b2fd9f15 → d531a225… after the fix round; the lane tip's README and
-`scripts/check-frontend-pins` wrote 11270c55…, a WRONG hash — audit R5,
-corrected), `structural-diff.txt` (regenerated at the fix round against
-b77f3298's pin): 430/430 functions, 537/537 methods, 0 added/removed; 7
-functions and 33 methods gain `unseq-probe` statements (118 in total,
-every probed operand a `field-get` — pointer-selector reads such as
-`pr.Match` left of a method call); stripping the probes makes every
-changed entry byte-identical to the pinned one; no other top-level key
-changed. vs the lane tip's 7c545840…: exactly ONE probe fewer, on
+b2fd9f15 → d531a225… after the fix round → c358d0f4… after the RE-AUDIT
+fix round; the lane tip's README and `scripts/check-frontend-pins` wrote
+11270c55…, a WRONG hash — audit R5, corrected), `structural-diff.txt`
+(regenerated at the re-audit fix round against b77f3298's pin): 430/430
+functions, 537/537 methods, 0 added/removed; 7 functions and 37 methods
+gain `unseq-probe` statements (128 in total: the fix round's 118
+pointer-selector reads left of a method call, plus 10 phase-1
+assignment-TARGET operands — `out.Entries[i] = …`'s base read in
+`raftpb.Message.CloneMessage` and its siblings, `ms.snapshot.Metadata.…
+= …`, `cloned[i].… = …`, `r.raftLog.committed = …`, and
+`ro.acks[from] = max(…)`'s base, the probe the fix round had removed);
+stripping the probes makes every changed entry byte-identical to the
+pinned one; no other top-level key changed. vs the lane tip's 7c545840…: exactly ONE probe fewer, on
 `raft.readOnly.recvAck`'s map-assign TARGET `ro.acks[from] = max(…)` (D4,
 audit R1); the narrowed A6 guard and the allocation guard fire nowhere in
 the twin (the nil-deref transparency keeps raftpb's six `CloneMessage`
@@ -310,10 +314,80 @@ Findings R1–R12 and their dispositions are in the fix-round commits
   traveller arms declined (D11 above); `emit.go`'s `panicFreeOperand`
   docstring corrected (`residualPanicFreeOperand` is reinstated).
 
-Focused run at the fix round (`focused-run-fixround.tsv`): the 76-row
-E13 family — the 65 lane-tip rows PASS unchanged (39 membership, 26
+Focused run at the fix round (`focused-run-fixround.tsv`): the 74-row
+E13 family — the 64 lane-tip rows PASS unchanged (39 membership, 25
 strict), 10 born (1 PASS, 8 FAIL/frontend-export by design, 1
-FAIL/lean-observation = BUG-101).
+FAIL/lean-observation = BUG-101). (The first draft of this paragraph,
+the tsv header and design §10 wrote 76 / 65 / 26 — re-derived at the
+re-audit fix round from the tsv's 74 data rows.)
+
+## The RE-AUDIT fix round (2026-09-05, [AGENT] worker; the re-audit returned FIX-FIRST — R2 lifted, R1 partially)
+
+Findings R1'-1..R1'-8, R2'-1 and the MED/LOW batches; dispositions are
+in the commit and in design §4 (D4–D6, "RE-AUDIT"), §6 items 3/7/9/10,
+§10. The substance:
+
+- R1'-1 (HIGH, a REGRESSION of the fix round): the fix round's target
+  suppression pinned the events-first member on `m[iv.(string)] =
+  wit(5)` (two members ∋ gc at b2fd9f15, one ∌ gc at d75049c0).
+  spec#Assignment_statements phase 1 makes a target's index/deref OPERANDS
+  siblings of the RHS's calls; the frontend now probes them (the
+  target's own store check is phase 2 and exempt from the census),
+  along with address-of operands (`&a[i]`, `&p.f`), array-of-array
+  target bases and the receive-statement form's targets (its trailing
+  probes are kept — the statement receives before it evaluates them).
+  Witnesses: `reaudit-witnesses.tsv` (129 programs × 4 frontends × gc).
+- R1'-2: `residualPanicFreeOperand`/`nilDerefOnlyResidual` recurse into
+  `min`/`max` (the fix round's "a real call" answer short-circuited the
+  guard); the guard is wired at the min/max/append/copy hoists too.
+  After R1'-1 every auditor shape there is a two-member set ∋ gc.
+- R1'-3: the census descends into a call that ENCLOSES the hoisting
+  construct (`println(EXPR)`, `sink(EXPR)`); an allocating conversion
+  HOISTS when an ordered event follows it, so `int([]byte(s)[1:7][0]) +
+  wit(5)` is a two-member set ∋ gc (its EARLY slice panic); a
+  conversion whose own operand panics is the structural class.
+- R1'-4: `recover()` was always hoisted (`$c := recover()`), so the
+  exclusion is decided on the wire and `r = recover().(int) + wit(5)`
+  is a two-member set ∋ gc. Boundary statement: after this round NO
+  shape on the sibling-panic axis is a silent gc-absent single member —
+  what is unprobed is REFUSED by name (BUG-102: 7 designed reds), and
+  the measured exceptions are ROWED red-first (BUG-101: the value axis,
+  2 rows; BUG-104: the compound target's hoisted address/key temp, 2
+  rows, pre-existing on main). The doctrine's §10 list carries them.
+- R1'-5: ledger FR-28's reds cell rewritten with a leading count (7);
+  `tools/reconcile-records` fails CLOSED on a reds cell without a
+  leading count (C5 HIGH) — it found FR-27 and FR-29, both fixed; the
+  §4 sum re-derives the frontier bucket (140).
+- R1'-6: Machine.lean's "stuck by name" claim corrected; a comment at
+  each StepFn traveller catch-all names `probeK`; design §8 aligned.
+- R1'-7: BUG-101 gains `slice-value-early-len-hoist` (gc `mut` 12,
+  machine 22); the class stated as every EARLY-realized probe kind.
+- R1'-8: design §6 item 9 — with ≥2 events after a probed operand the
+  machine offers the endpoints only; the interleaving is a (b-n)
+  obligation (I-2/L-013).
+- R2'-1: `structuralAllocGuard` skips a literal forced by an enclosing
+  call (`println(useT(&T{x: s[i]}) + wit(5))`, control row
+  `composite-ptr-in-arg-then-call`) and MAP literals (gc's OMAPLIT
+  evaluates dynamic entries at the literal — control `map-lit-payload-
+  vs-call`); `[]int{s[i]}[0] + <-ch` measured LATE in gc (witness
+  `len(ch)` = 0 after recovery, `Q2_slicelit_recv_w`) — refused, a
+  designed red, not a control.
+- New rows: 20 born in `e13-sibling-panic-order/` (61 in the dir, 94 in
+  the family); the six fix-round designed reds LOWER (BUG-083's Cases
+  line). Focused run `focused-run-reaudit.tsv`: 83 PASS (55 membership,
+  28 strict) / 11 FAIL (7 BUG-102, 2 BUG-104, 2 BUG-101).
+- The twin: 128 probes (+10 target-operand reads), strip-probes ≡
+  b77f3298's 4ee39f73… byte for byte; re-pinned c358d0f4….
+- The full run (the first gate, dirty tree, `scripts/capped scripts/ci
+  --diff`): 3539 = 3296 / 243 → 3559 = 3314 / 245 — 20 born (12 PASS, 8
+  FAIL — all on Cases lines), 6 FAIL→PASS (BUG-083's line), 2 PASS→PASS
+  lane moves (`addr-index-left-len-hoist`; and `channels/recv-map-elem/
+  key-panic-drains`, caught at stage nondet: the receive-statement
+  target's probe makes `m[xs[9]] = <-ch` a two-member set — re-routed to
+  membership, gc's receive-first member in the set), 0 PASS→FAIL; the
+  `select-select/beside-loop` alternation kept verbatim. The baseline is
+  re-pinned from that run (header block on the file); the CLEAN-tree gate
+  is the section below.
 
 ## The fix round's gate (clean tree)
 

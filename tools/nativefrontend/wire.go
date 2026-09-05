@@ -87,23 +87,34 @@ type emitter struct {
 	// accumulator wherever the accumulator is swapped inside an expression
 	// (the short-circuit RHS; a lifted func-literal body).
 	nodeStarts []int
-	// probeSuppress > 0 while an assignment TARGET (E2/E3/E4's axes, not
-	// E13's) is being emitted: no unseq-probe is appended for its operands.
+	// probeSuppress > 0 while a target the spec FORCES after its event is
+	// being emitted (a select RecvStmt's left-hand side, a range clause's
+	// iteration targets — see the emitAssignTarget wrapper's header; the
+	// re-audit fix round R1'-1 lifted it from the phase-1 `=`/op=/IncDec
+	// targets, whose operands are probed like any operand): no unseq-probe
+	// is appended for its operands.
 	probeSuppress int
-	// probedNodes records every AST node for which emitExpr APPENDED an
-	// unseq-probe (whether or not a later pushHoist/prune dropped it — a
-	// dropped probe means the operand sits in a FORCED position, which is
-	// covered by the event that evaluates it). The narrowed A6 guard
+	// probedNodes records every AST node for which a probe was APPENDED
+	// (whether or not a later pushHoist/prune dropped it — a dropped probe
+	// means the operand sits in a FORCED position, which is covered by the
+	// event that evaluates it). The narrowed A6 guard
 	// (`unprobedPanickyBefore`, e13-b audit fix round R1) walks a sweep
-	// for panicky non-call material that is NOT in this set: material in
-	// an assignment/IncDec/compound target, an address-of or receiver
-	// operand (probeSuppress), or an operand containing recover() / an
-	// allocating conversion — the positions the E13 (b) envelope does not
-	// probe, where a len/cap/make hoist would still realize only the
-	// events-first order. Keyed by node identity; never reset (nodes are
-	// unique; stencils re-emit the same nodes with the same structural
-	// answer).
+	// for panicky non-call material that is NOT in this set — after the
+	// re-audit fix round: an inline allocating conversion's operand, an
+	// array-of-array target base that no hook reached, a hoisted-address
+	// compound target, a forced (probeSuppress) target — the positions the
+	// E13 (b) envelope does not probe, where a len/cap/min/max/append/copy/
+	// make hoist would still realize only the events-first order. Keyed by
+	// node identity; never reset (nodes are unique; stencils re-emit the
+	// same nodes with the same structural answer).
 	probedNodes map[ast.Expr]bool
+	// eventBeforeResidual is set by a statement emitter whose statement
+	// performs an ordered event BEFORE it evaluates its inline operands
+	// (the receive-statement form `x[k] = <-ch`: communication first, then
+	// the target operands — BUG-022/BUG-029), so that emitStmtList keeps
+	// the statement's trailing probes instead of pruning them as order-
+	// transparent (re-audit fix round R1'-1). Reset per statement.
+	eventBeforeResidual bool
 
 	// sweepStmt is the AST node whose emission owns the CURRENT hoist
 	// accumulator (the "sweep"): the statement in emitStmtList, or the

@@ -366,3 +366,203 @@ func assertOkEarlyLenHoist() int {
 	j := 0
 	return iv.(int) + len(b[j:]) + func() int { iv = "s"; println("mut"); return 1 }()
 }
+
+// --- e13-b RE-AUDIT fix round (2026-09-05, R1'-1..R1'-7, R2'-1): the boundary
+// moved. Assignment TARGET operands are PHASE-1 material (spec#Assignment_statements)
+// and are now PROBED like every operand — the six 2026-09-05 fix-round rows
+// above LOWER as two-member sets (gc's EARLY assertion in the set); so do
+// address-of operands (`&a[i]`, `&p.f`), array-of-array target bases, the
+// hoisted-`recover()` residual and a hoisted allocating conversion. What
+// stays REFUSED by name is the residue below (BUG-102): a structural
+// allocation's panicky payload before an ordered event (now including the
+// call-rooted spellings and an allocating conversion's panicky operand), and
+// a compound target that contains a CALL (its address is hoisted to a temp,
+// its bounds check unprobed) beside a hoisted len.
+
+// The re-audit's core witness: the target's assertion vs the RHS call —
+// gc raises the conversion with NOTHING printed (EARLY); the first fix
+// round's target suppression had left only the `wit 5` member.
+func tgtAssertVsCall() int {
+	x := []int{1, 2, 3}
+	var iv interface{} = "s"
+	x[iv.(int)] = wit(5)
+	return x[0]
+}
+
+func mapTgtAssertVsCall() int {
+	m := map[string]int{}
+	var iv interface{} = 3
+	m[iv.(string)] = wit(5)
+	return len(m)
+}
+
+// R1'-2(b): the min / copy / append hoists beside a probed target operand.
+func tgtAssertVsMinCall() int {
+	x := []int{1, 2, 3}
+	t := []int{1, 2}
+	k := 9
+	q := 3
+	var iv interface{} = "s"
+	x[iv.(int)] = min(q, t[k]) + wit(5)
+	return x[0]
+}
+
+func tgtAssertVsCopyCall() int {
+	x := []int{1, 2, 3}
+	d := []int{0}
+	s := []int{1}
+	var iv interface{} = "s"
+	x[iv.(int)] = copy(d, s) + wit(5)
+	return x[0]
+}
+
+func tgtAssertVsAppend() int {
+	x := []int{1, 2, 3}
+	sl := make([]int, 1, 2)
+	var iv interface{} = "s"
+	x[iv.(int)] = len(append(sl, wit(5)))
+	return x[0]
+}
+
+// The receive-statement form: the target operand vs the communication —
+// the statement receives BEFORE it evaluates its targets, so the probe is
+// kept ahead of it (`eventBeforeResidual`); the witness is len(ch) after
+// recovery: 1 = the assertion panicked first (gc), 0 = the receive happened.
+func tgtAssertVsRecvW() (r int) {
+	x := []int{1, 2, 3}
+	var iv interface{} = "s"
+	ch := make(chan int, 1)
+	ch <- 9
+	defer func() { recover(); r = len(ch) }()
+	x[iv.(int)] = <-ch
+	return x[0]
+}
+
+// An address-of operand is probed as a whole (`index-addr` bounds-checks).
+func addrAssertLeftCall() int {
+	a := make([]int, 1)
+	var iv interface{} = "s"
+	return sinkP(&a[iv.(int)], 0, wit(5))
+}
+
+// The compound read `x[9]` is phase-1 material of `x = x + y`: its bounds
+// check vs the hoisted len's operand — gc: the len operand's panic (LATE).
+func compoundIndexVsLen() int {
+	x := make([]int, 1)
+	b := [][]int{{1}}
+	j := 5
+	x[9] += len(b[j]) + wit(5)
+	return x[0]
+}
+
+// An array-of-array target's BASE `aa[i]` is a phase-1 operand (probed at
+// its `index-addr`); the outer `aa[i][0]` is the phase-2 store check.
+func arrayBaseTargetVsLen() int {
+	var aa [1][1]int
+	i := 5
+	b := [][]int{{1, 2}}
+	j := 7
+	aa[i][0] = len(b[j]) + wit(5)
+	return aa[0][0]
+}
+
+// `recover()` is a hoisted ordered event; the residual `$c.(int)` is a
+// pure probeable operand. Witness: whether `wit 5` printed before the
+// conversion panic (gc: it did not — the assertion is EARLY).
+func recoverAssertVsCallW() (w int) {
+	defer func() { recover(); w++ }()
+	func() {
+		defer func() {
+			r := recover().(int) + wit(5)
+			println("r", r)
+		}()
+		panic("s")
+	}()
+	return 0
+}
+
+// R2'-1 controls: a MAP literal's dynamic entries evaluate at the literal
+// (gc too — order.go OMAPLIT); a literal inside the ARGUMENT subtree of a
+// call that precedes the next event is forced before that event.
+func mapLitPayloadVsCall() int {
+	s := []int{1}
+	i := 5
+	return map[int]int{s[i]: 1}[0] + wit(5)
+}
+
+func useT(t *T) int { println("useT"); return t.x }
+
+func compositePtrInArgThenCall() int {
+	s := []int{1}
+	i := 5
+	return useT(&T{x: s[i]}) + wit(5)
+}
+
+// BUG-102 (designed reds), the residue: call-rooted spellings of the
+// structural-allocation class (R1'-3's census sees through an enclosing
+// call), the receive as the later event, an allocating conversion whose
+// operand panics, and a compound target that contains a call beside a len.
+func compositePtrPayloadVsCallPrintroot() {
+	s := make([]int, 1)
+	i := 9
+	println((&T{x: s[i]}).x + wit(5))
+}
+
+func sliceLitPayloadVsCallSinkroot() int {
+	s := make([]int, 1)
+	i := 9
+	return sink([]int{s[i]}[0]+wit(5), 0)
+}
+
+func sliceLitPayloadVsRecv() int {
+	s := make([]int, 1)
+	i := 9
+	ch := make(chan int, 1)
+	ch <- 3
+	return []int{s[i]}[0] + <-ch
+}
+
+func bytesConvPayloadVsCall() int {
+	s := "ab"
+	i, j := 5, 7
+	return int([]byte(s[i:j])[0]) + wit(5)
+}
+
+func fnine() int { println("f"); return 9 }
+
+func compoundCallTargetVsLen() int {
+	x := make([]int, 1)
+	b := [][]int{{1}}
+	j := 5
+	x[fnine()] += len(b[j]) + wit(5)
+	return x[0]
+}
+
+// BUG-104 (open, red-first): a compound target whose ADDRESS or KEY is
+// hoisted to a temp — its bounds check fires at the hoist, before the RHS
+// call; gc reads it in the residual after the call (`f`, `wit 5`, then the
+// panic). Pre-existing on main b77f3298 (measured at the re-audit).
+func compoundCallTargetVsCall() int {
+	x := make([]int, 1)
+	x[fnine()] += wit(5)
+	return x[0]
+}
+
+func mapCompoundIndexKeyVsCall() int {
+	m := map[int]int{}
+	t := []int{1}
+	k := 5
+	m[t[k]] += wit(5)
+	return len(m)
+}
+
+// BUG-101 (open, red-first), the second value-axis instance (R1'-7): a
+// SLICE expression that succeeds early and reads a mutated index late —
+// gc `mut` then 12 (the early value), the machine 22 (the residual's).
+func sliceValueEarlyLenHoist() int {
+	a := []int{10, 20}
+	b := []int{1, 2}
+	i := 0
+	j := 0
+	return a[i:][0] + len(b[j:]) + func() int { i = 1; println("mut"); return 0 }()
+}

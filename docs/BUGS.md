@@ -4662,7 +4662,22 @@ this entry's evidence dir, §M1.
   fix that would realize gc's point" is NOT what landed — gc's point is
   one member, not the target; the design note §3 has the argument.
 - Pinned-by: differential
-- Cases: builtins/len-vs-call-order/hint-panicky-between, builtins/len-vs-call-order/make-slice-panicky-between, builtins/len-vs-call-order/make-chan-cap-panicky-between, builtins/len-vs-call-order/make-index-left, builtins/len-vs-call-order/make-inner-len, builtins/len-vs-call-order/make-hint-struct-any-key, builtins/len-vs-call-order/make-hint-array-any-key, builtins/len-vs-call-order/make-hint-generic-any-key, builtins/len-vs-call-order/len-struct-any-key-left-assert
+- Cases: builtins/len-vs-call-order/hint-panicky-between, builtins/len-vs-call-order/make-slice-panicky-between, builtins/len-vs-call-order/make-chan-cap-panicky-between, builtins/len-vs-call-order/make-index-left, builtins/len-vs-call-order/make-inner-len, builtins/len-vs-call-order/make-hint-struct-any-key, builtins/len-vs-call-order/make-hint-array-any-key, builtins/len-vs-call-order/make-hint-generic-any-key, builtins/len-vs-call-order/len-struct-any-key-left-assert, builtins/e13-sibling-panic-order/tgt-assert-vs-len-hoist, builtins/e13-sibling-panic-order/tgt-assert-vs-make, builtins/e13-sibling-panic-order/compound-assert-vs-len, builtins/e13-sibling-panic-order/map-key-assert-vs-len, builtins/e13-sibling-panic-order/recover-assert-vs-len, builtins/e13-sibling-panic-order/bytes-conv-left-len-hoist
+
+RE-AUDIT FIX ROUND (e13-b, 2026-09-05, [AGENT]): the six ids after
+`len-struct-any-key-left-assert` were BUG-102's designed reds at the
+lane's first fix round (the NARROWED A6 guard refused a len/cap/make
+hoist beside an UNPROBED assignment-target / recover() / allocating-
+conversion operand). The re-audit (R1'-1, R1'-4) found the target
+operands to be spec#Assignment_statements PHASE-1 material — siblings of the RHS's
+calls, unsequenced — so the refusal stood in for latitude exactly as
+this entry's make rows did: the frontend now probes them (and the
+hoisted `recover()`'s residual, and a HOISTED allocating conversion),
+the rows lower as two-member membership sets with gc's EARLY assertion
+in the set (`recover-assert-vs-len` is a singleton: `recover().(int)`
+succeeds on `panic(3)`, so nothing panics early), and they move here —
+the same retirement-into-latitude this entry records, with the same
+reason. Their history stays on BUG-102.
 - E13-b AUDIT FIX ROUND AMENDMENT (2026-09-05, [AGENT]; audit finding
   R1): the retirement into E13 holds for PROBED left material only. The
   first cut deleted the make guard whole, so `x[iv.(int)] = len(make(
@@ -5882,7 +5897,20 @@ item 1 — never by a fix.
 
 - Status: open ([AGENT], e13-b audit fix round 2026-09-05 — audit finding R1, value axis)
 - Pinned-by: differential
-- Cases: builtins/e13-sibling-panic-order/assert-ok-early-len-hoist
+- Cases: builtins/e13-sibling-panic-order/assert-ok-early-len-hoist, builtins/e13-sibling-panic-order/slice-value-early-len-hoist
+
+THE CLASS (re-audit fix round R1'-7, 2026-09-05, [AGENT]): every
+EARLY-realized probe kind — the operand kinds gc evaluates BEFORE the
+sibling calls (type assertion, slice expression; interface comparison
+measured to MATCH: `(jv == jv)` reads no mutable index, `h3`/`h4` in the
+re-audit probes) — whose early evaluation SUCCEEDS while a sibling call
+mutates what it reads: the probe discards the early value, the residual
+re-reads after the mutation. Second row, the slice instance: `n = a[i:][0]
++ len(b[j:]) + mut()` with `mut` setting `i = 1` — gc prints `mut` then
+`12` (the slice taken before the call), the machine `mut` then `22`; it
+was REFUSED at b77f3298 (the whole A6 guard), lowers since the lane tip.
+Index/dereference/division/shift/conversion operands are LATE in gc and
+agree with the machine's residual re-evaluation (`h1`, `m1`, `m2`).
 
 WHAT: `Stmt.unseqProbe` (E13 option (b)) evaluates a panicky non-call
 operand at its lexical position and, when the evaluation YIELDS A VALUE,
@@ -5931,72 +5959,90 @@ panics) — exactly the re-index E13's design §7 avoided and the design
 gate the brief names. Inventory E12 carries the note; §6 residual 2 of
 the e13-b design cross-references this entry.
 
-## BUG-102 — DESIGNED REDS of the E13 (b) envelope's BOUNDARY: the narrowed A6 guard's refusals (a len/cap/make hoist of a panicky operand past UNPROBED panicky left material — an assignment/IncDec/compound target, an address-of operand, `recover()`, an allocating conversion) and the structural-allocation class (a `&T{…}`/slice/map literal's panicky payload before an ordered event) refuse by name [coverage; frontend hoist/guard surface; e13-b audit fix round R1/R2; the entry exists so the refusals cannot stop firing unnoticed]
+## BUG-102 — DESIGNED REDS of the E13 (b) envelope's BOUNDARY, as moved by the re-audit fix round: the structural-allocation class (a `&T{…}`/slice literal, an interface method value, or an allocating conversion whose PANICKY payload precedes an ordered call/receive — in return-, println- and sink-rooted spellings) and the narrowed A6 guard's residue (a compound target that CONTAINS A CALL beside a hoisted len) refuse by name [coverage; frontend hoist/guard surface; e13-b audit fix round R1/R2 + re-audit fix round R1'-1..R1'-4, R2'-1; the entry exists so the refusals cannot stop firing unnoticed]
 
-- Status: open (designed reds — a refusal standing in for latitude, inventory E6 narrowed / E13 residuals 3 and 5; [AGENT], e13-b audit fix round 2026-09-05)
+- Status: open (designed reds — a refusal standing in for latitude, inventory E6 narrowed / E13 residuals 3 and 5; [AGENT], e13-b audit fix round 2026-09-05; Cases line re-derived at the re-audit fix round the same day)
 - Pinned-by: none
 - Expect: FAIL
-- Cases: builtins/e13-sibling-panic-order/tgt-assert-vs-len-hoist, builtins/e13-sibling-panic-order/tgt-assert-vs-make, builtins/e13-sibling-panic-order/compound-assert-vs-len, builtins/e13-sibling-panic-order/map-key-assert-vs-len, builtins/e13-sibling-panic-order/recover-assert-vs-len, builtins/e13-sibling-panic-order/bytes-conv-left-len-hoist, builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call, builtins/e13-sibling-panic-order/slice-lit-payload-vs-call
+- Cases: builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call, builtins/e13-sibling-panic-order/slice-lit-payload-vs-call, builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call-printroot, builtins/e13-sibling-panic-order/slice-lit-payload-vs-call-sinkroot, builtins/e13-sibling-panic-order/slice-lit-payload-vs-recv, builtins/e13-sibling-panic-order/bytes-conv-payload-vs-call, builtins/e13-sibling-panic-order/compound-call-target-vs-len
 
-WHAT (spec#Order_of_evaluation, the OMISSION: a type assertion / index /
-slice / dereference / division / shift / interface comparison / slice-
-to-array conversion is not a call, so its order against a sibling call,
-receive or hoisted built-in is unspecified — latitude E13, enveloped by
-option (b) [USER]-ruled, relayed): the envelope realizes BOTH orders
-through an `unseq-probe` at the operand's lexical position, but the
-frontend can place that probe only where `emitExpr`'s hook fires. It
-does NOT fire on an assignment/IncDec/compound TARGET operand
-(`probeSuppress`, design §4 D4 — E2's axis), an address-of operand
-(`&a[i]` lowers to an inline `index-addr`), an operand containing
-`recover()` (double evaluation would consume it) or an allocating
-conversion (`[]byte(s)`/`[]rune(s)` — a probe would allocate twice, R7).
-Beside a hoisted `len`/`cap` (with a later ordered event) or the
-unconditional `make` hoist whose operand can panic, such material would
-see ONLY the events-first order — `x[iv.(int)] = len(b[j]) + wit(5)`: gc
-raises the interface conversion, the machine `index out of range [5]`;
-`r = recover().(int) + len(b[j]) + wit(5)` in a defer: gc's final panic
-is the index one, the machine's a recovered 3 — a silent single-member
-answer ≠ gc, which the lane tip b2fd9f15 had lowered where main b77f3298
-REFUSED (the whole A6 guard). The NARROWED A6 guard (emit.go
-`hoistReordersUnprobedPanic` = `residualPanicFreeOperand` ×
-`unprobedPanickyBefore` — the old census minus every probed node — with
-FR-28's `nilDerefOnlyResidual` transparency) refuses these BY NAME at
-the len/cap hoist and in `emitMake`; the text names the boundary (`…
-hoisted past UNPROBED panicky material to its left (<kind> at
-<file:line:col>) …`). One row is conservative: `bytes-conv-left-len-
-hoist` (gc's index operand is LATE, so gc's answer coincides with the
-machine's events-first order) — refused all the same, as the pre-e13
-guard did (BUG-083's "priced trade"): a visible red beats a hidden pin
-of gc's compiler-internal choice.
+HISTORY (the first fix round's six rows, RETIRED at the re-audit fix
+round): `tgt-assert-vs-len-hoist`, `tgt-assert-vs-make`,
+`compound-assert-vs-len`, `map-key-assert-vs-len`, `recover-assert-vs-
+len`, `bytes-conv-left-len-hoist` were red by design here because the
+first fix round SUPPRESSED probing on every assignment target (design §4
+D4 as first written) and never probed a `recover()`-bearing or
+allocating-conversion-bearing operand, so the narrowed A6 guard refused
+a len/cap/make hoist beside them. The re-audit (2026-09-05) found that
+spec#Assignment_statements phase 1 makes a target's index/deref OPERANDS siblings
+of the RHS's calls — unsequenced, gc raising the assertion FIRST — so the
+suppression had PINNED the events-first member (`m[iv.(string)] =
+wit(5)`: two members with gc's in the set at b2fd9f15, ONE member
+without at d75049c0 — a regression, R1'-1). The re-audit fix round
+probes phase-1 target operands (the target's own index/deref/map-write
+check is the phase-2 STORE's and is exempt from the census), address-of
+operands (`&a[i]`/`&p.f` — bounds-/nil-checking address computations),
+array-of-array target bases, the hoisted `recover()`'s residual (`$c :=
+recover()` is an ordered event the emitter already hoisted; `$c.(int)`
+is pure — R1'-4) and a HOISTED allocating conversion (`[]byte(s)` hoists
+to a temp when an ordered event follows it; its residual `$b[1:7][0]` is
+pure — R1'-3); the six rows lower as membership sets (one a singleton)
+and sit on BUG-083's Cases line with the reason.
 
-THE STRUCTURAL-ALLOCATION CLASS (audit R2): a composite-literal `&T{…}` /
-elided `&T`, a slice or map literal, or an interface method value is not
-a call; it hoists to its lexical position and evaluates its payload
-THERE, ahead of every ordered event lexically after it, while gc leaves
-the literal in the residual after the call temps — `(&T{x: s[i]}).x +
-wit(5)`: gc prints `wit 5` then panics, the machine panics with no output
-on every stream (a probe on `s[i]` cannot reach gc's member: the
-allocation statement re-raises a deferred panic at the same early
-position — disposition (a) measured and rejected). Pre-existing on main
-(the hoist order was emission order there too), undisclosed under E13's
-"DISCHARGED" until the audit. `structuralAllocGuard` refuses by name
-when the payload is panicky and `sweepOrderedEventAfter(lit.End())`; the
-no-event, event-inside-the-literal (`assert-composite-lit`) and variadic-
-pack shapes lower.
+WHAT REMAINS (spec#Order_of_evaluation, the OMISSION: a literal's
+payload and a compound target's read are not calls, so their order
+against a sibling call/receive is unspecified — latitude E13/E2's
+territory; the machine realizes ONE member where gc realizes the OTHER,
+and no probe reaches gc's member):
+
+THE STRUCTURAL-ALLOCATION CLASS (audit R2; re-audit R1'-3/R2'-1): a
+composite-literal `&T{…}` / elided `&T`, a slice literal, an interface
+method value, or an ALLOCATING CONVERSION whose OWN operand can panic
+(`[]byte(s[i:j])`) hoists to its lexical position and evaluates its
+payload THERE, ahead of every ordered event lexically after it, while
+gc leaves the literal in the residual after the call temps — `(&T{x:
+s[i]}).x + wit(5)`: gc prints `wit 5` then panics, the machine panics
+with no output on every stream (a probe on `s[i]` cannot reach gc's
+member: the allocation statement re-raises a deferred panic at the same
+early position — disposition (a) measured and rejected); with a RECEIVE
+as the event gc receives first (`[]int{s[i]}[0] + <-ch`, witness
+`len(ch)` = 0 after recovery). Pre-existing on main. `structuralAllocGuard`
+refuses by name when the payload is panicky and
+`sweepOrderedEventAfter(lit.End())`, in the return-rooted spelling and
+— since the re-audit's census fix (R1'-3: a call that ENCLOSES the
+hoisting construct is descended, not pruned) — the println-/sink-rooted
+spellings too. NOT refused (controls, green): a MAP literal (gc's
+order.go `OMAPLIT` emits its dynamic entries as statements at the
+literal's position — the machine's member IS gc's, `map-lit-payload-vs-
+call`), a literal inside the ARGUMENT subtree of an ordered call that
+precedes the next event (forced: `composite-ptr-in-arg-then-call`, R2'-1
+— the first fix round over-refused it), the no-event / event-inside-
+the-literal / variadic-pack shapes.
+
+THE NARROWED A6 GUARD'S RESIDUE: a compound/IncDec target that CONTAINS
+A CALL (`x[fnine()] += len(b[j]) + wit(5)`) — `emitReadWriteTarget`
+hoists its ADDRESS to a temp (`$p := &x[$f]`), so its bounds check is
+unprobed material left of the len hoist: refused by name (the guard is
+wired at the len/cap/min/max hoists and the unconditional make/append/
+copy hoists — R1'-2). Its no-len sibling `x[fnine()] += wit(5)` LOWERS
+and is ∉ gc: BUG-104 (open, differential).
 
 WHY AN ENTRY: BUG-032 and BUG-083 are `fixed` and the check-bugs
-invariant requires their Cases lines to be PASS-only; these eight rows
+invariant requires their Cases lines to be PASS-only; these seven rows
 are red BY DESIGN and must trip the gate if the refusal ever stops
 firing (a designed red that turns green is a retirement that skipped its
 record — the BUG-093 mold). `tools/lowerdiag` causes
-`len-hoist-panic-order` (live again) and `alloc-payload-panic-order`
-classify the texts; ledger FR-28 (CLOSED for probed material, REOPENED
-NARROWED); inventory E6 (narrowed, back in §5) and E13 residuals 3/5;
-design `docs/2026-09-05_e13-b-design.md` §4 D5/D6. RETIREMENT PATH: a
-probe that can reach a target / `recover()` / allocation-payload
-position — E2's and E12's re-envelope obligations — retires each
-subclass into the envelope; each retirement flips its rows green and
-must move them to a `fixed` entry's Cases line with the reason written.
+`len-hoist-panic-order` and `alloc-payload-panic-order` classify the
+texts; ledger FR-28 (CLOSED for probed material, REOPENED NARROWED — the
+narrowing itself narrowed at the re-audit); inventory E6 (narrowed, in
+§5) and E13 residuals 3/5; design `docs/2026-09-05_e13-b-design.md` §4
+D5/D6. RETIREMENT PATH: for the structural class, a lowering that
+evaluates a literal's panicky payload in the RESIDUAL (gc's member) —
+or a probe shape that can defer an allocation's payload; for the
+compound-call residue, BUG-104's fix (a decomposed target — base and
+index temps, the bounds check in the residual). Each retirement flips
+its rows green and must move them to a `fixed` entry's Cases line with
+the reason written, as the six above did.
 
 ## BUG-103 — conversions whose TARGET's resolved shape is an ARRAY (`Raw(cs)` between two defined `[3]Code` types, `[3]Code(r)` to the unnamed array type) are refused by `convertValueToTy`'s catch-all — BUG-020 added the pointer/slice/map/func arms and left the array arm out [coverage; GoCore conversions; fail-closed refusal of legal Go; surfaced by the C-arc C2 audit fix round (R11 rows), 2026-09-05]
 
@@ -6032,3 +6078,41 @@ by name as every other arm does). Needs its own slice with a full run: the arm i
 every array-shaped conversion in the corpus (the `BUG-020` fix's `structs/unnamed-conversion-targets/*`
 rows are the template: red-first, then the arm, then PASS on this Cases line). Ledger:
 `docs/language-coverage-ledger.md` §2 Conversions row names it.
+
+## BUG-104 — a compound-assignment target whose ADDRESS or KEY is hoisted to a temp panics at the hoist, BEFORE the RHS's calls; gc reads the target in the residual, AFTER them (`x[f()] += wit(5)`: gc `f`, `wit 5`, then `index out of range [9]`; the machine `f` then the panic — `m[t[k]] += wit(5)`: gc `wit 5` then `[5] with length 1`, the machine the panic alone) [frontend lowering; evaluation order; spec#Assignment_statements phase 1 vs the eval-once rewrite]
+
+- Status: open ([AGENT], e13-b re-audit fix round 2026-09-05 — found by the re-audit's measurements, pre-existing on main b77f3298; lettered BUG-104 on the lane, RENUMBERED BUG-104 at the round-17 rebase onto main 9343a310 because main's BUG-104 is c-arc-c2's array-conversion entry — [AGENT] reconciler)
+- Pinned-by: differential
+- Cases: builtins/e13-sibling-panic-order/compound-call-target-vs-call, builtins/e13-sibling-panic-order/map-compound-index-key-vs-call
+
+WHAT: `x op= y` evaluates `x` once (spec#Assignment_statements). Two
+lowering paths realize the "once" by hoisting a TEMP at the target's
+lexical position, ahead of the RHS's hoisted calls: `emitReadWriteTarget`
+when the target CONTAINS A CALL (`x[f()]` → `$f := f(); $p := &x[$f]` —
+the `index-addr` bounds-checks at that hoist, Machine.lean
+`indexTargetLoc`), and `emitMapCompound` for every map target (`m[t[k]]`
+→ `$m := m; $k := t[k]`). gc's `order.go` `safeExpr` saves the target's
+OPERANDS (base, index/key VALUE — `t[k]`'s operands, not `t[k]`) to temps
+and leaves the index/read node in the RESIDUAL, so its bounds check fires
+after the RHS's call temps: `f`, `wit 5`, then the panic; the machine
+panics before `wit 5` on every stream. Observed (gc) ∉ modeled: a
+lower-bound violation, deterministic, on any compound target whose
+hoisted temp can panic (a call-bearing slice/array index; a map key
+that is itself a panicky index). The spec orders neither (the target's
+read is phase-1 material against the RHS's calls — E2/E13's omission),
+so the fix is an ENVELOPE, not a pin. Pre-existing: measured at
+b77f3298 with the re-audit probes (`P3_compound_call_index`,
+`P23_mapcompound_index_call`); untouched by e13-b's probe (the hoisted
+temp's panic is not an inline operand's — no probe hook fires) and by
+the first fix round. The call-free compound target (`x[iv.(int)] +=
+wit(5)`) is NOT this bug: it is read inline and probed (`compound-
+assert-vs-len`, `compound-index-vs-len` — two members, gc's in the set).
+
+FIX DIRECTION: decompose the target the way gc's `safeExpr` does —
+temps for the base and the index/key VALUE (`$b := x; $i := f()` /
+`$m := m; $kk := k`), the indexing/read itself left in the residual
+(`$b[$i] = $b[$i] + $w`, `$m[$t[$kk]]`) — so the bounds check is inline
+material the E13 probe covers, realizing both orders. Until then the
+compound-call target beside a hoisted len refuses by name (BUG-102's
+`compound-call-target-vs-len`) and these two rows are red-first with
+gc's output pinned.

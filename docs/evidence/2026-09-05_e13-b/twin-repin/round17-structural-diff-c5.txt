@@ -1,0 +1,60 @@
+# round-17 rebase: structural diff of the fresh emit at rebased commit 5 vs main's a9a2e2b1… (producer: the README's python block, order-aware, all top-level keys)
+top-level keys base: ['fileOrder', 'funcs', 'globals', 'methodSets', 'methods', 'package', 'schema', 'types'] cur: ['fileOrder', 'funcs', 'globals', 'methodSets', 'methods', 'package', 'schema', 'types']
+fileOrder: identical=True
+funcs: 450 base / 450 cur; added []; removed []
+  order identical: True
+  func raft.newRaft: unseq-probe statements=3 probes-only=True
+  func raft.stepLeader: unseq-probe statements=29 probes-only=True
+  func raft.stepCandidate: unseq-probe statements=6 probes-only=True
+  func raft.stepFollower: unseq-probe statements=6 probes-only=True
+  func raft.sendMsgReadIndexResponse: unseq-probe statements=2 probes-only=True
+  func raft.DescribeConfState: unseq-probe statements=4 probes-only=True
+  func newTwin: unseq-probe statements=2 probes-only=True
+  changed entries: 7
+globals: identical=True
+methodSets: identical=True
+methods: 537 base / 537 cur; added []; removed []
+  order identical: True
+  method {"id": "e", "type": {"elem": {"kind": "named", "name": "strconv.NumError"}, "kind": "pointer"}}.Error: unseq-probe statements=1 probes-only=True
+  method {"id": "x", "type": {"elem": {"kind": "named", "name": "raftpb.Message"}, "kind": "pointer"}}.CloneMessage: unseq-probe statements=2 probes-only=True
+  method {"id": "x", "type": {"elem": {"kind": "named", "name": "raftpb.ConfChangeV2"}, "kind": "pointer"}}.CloneMessage: unseq-probe statements=1 probes-only=True
+  method {"id": "rn", "type": {"elem": {"kind": "named", "name": "raft.RawNode"}, "kind": "pointer"}}.Bootstrap: unseq-probe statements=1 probes-only=True
+  method {"id": "l", "type": {"elem": {"kind": "named", "name": "raft.raftLog"}, "kind": "pointer"}}.findConflict: unseq-probe statements=1 probes-only=True
+  method {"id": "l", "type": {"elem": {"kind": "named", "name": "raft.raftLog"}, "kind": "pointer"}}.nextCommittedEnts: unseq-probe statements=1 probes-only=True
+  method {"id": "l", "type": {"elem": {"kind": "named", "name": "raft.raftLog"}, "kind": "pointer"}}.hasNextCommittedEnts: unseq-probe statements=1 probes-only=True
+  method {"id": "l", "type": {"elem": {"kind": "named", "name": "raft.raftLog"}, "kind": "pointer"}}.commitTo: unseq-probe statements=1 probes-only=True
+  method {"id": "l", "type": {"elem": {"kind": "named", "name": "raft.raftLog"}, "kind": "pointer"}}.restore: unseq-probe statements=1 probes-only=True
+  method {"id": "l", "type": {"elem": {"kind": "named", "name": "raft.raftLog"}, "kind": "pointer"}}.mustCheckOutOfBounds: unseq-probe statements=1 probes-only=True
+  method {"id": "r", "type": {"elem": {"kind": "named", "name": "raft.raft"}, "kind": "pointer"}}.send: unseq-probe statements=3 probes-only=True
+  method {"id": "r", "type": {"elem": {"kind": "named", "name": "raft.raft"}, "kind": "pointer"}}.maybeSendSnapshot: unseq-probe statements=2 probes-only=True
+  method {"id": "r", "type": {"elem": {"kind": "named", "name": "raft.raft"}, "kind": "pointer"}}.maybeCommit: unseq-probe statements=1 probes-only=True
+  method {"id": "r", "type": {"elem": {"kind": "named", "name": "raft.raft"}, "kind": "pointer"}}.appendEntry: unseq-probe statements=2 probes-only=True
+  method {"id": "r", "type": {"elem": {"kind": "named", "name": "raft.raft"}, "kind": "pointer"}}.Step: unseq-probe statements=23 probes-only=True
+  method {"id": "r", "type": {"elem": {"kind": "named", "name": "raft.raft"}, "kind": "pointer"}}.handleAppendEntries: unseq-probe statements=6 probes-only=True
+  method {"id": "r", "type": {"elem": {"kind": "named", "name": "raft.raft"}, "kind": "pointer"}}.handleHeartbeat: unseq-probe statements=1 probes-only=True
+  method {"id": "r", "type": {"elem": {"kind": "named", "name": "raft.raft"}, "kind": "pointer"}}.restore: unseq-probe statements=2 probes-only=True
+  method {"id": "r", "type": {"elem": {"kind": "named", "name": "raft.raft"}, "kind": "pointer"}}.loadState: unseq-probe statements=4 probes-only=True
+  method {"id": "r", "type": {"elem": {"kind": "named", "name": "raft.raft"}, "kind": "pointer"}}.resetRandomizedElectionTimeout: unseq-probe statements=1 probes-only=True
+  method {"id": "r", "type": {"elem": {"kind": "named", "name": "raft.raft"}, "kind": "pointer"}}.responseToReadIndexReq: unseq-probe statements=1 probes-only=True
+  method {"id": "rn", "type": {"elem": {"kind": "named", "name": "raft.RawNode"}, "kind": "pointer"}}.Campaign: unseq-probe statements=1 probes-only=True
+  method {"id": "rn", "type": {"elem": {"kind": "named", "name": "raft.RawNode"}, "kind": "pointer"}}.Propose: unseq-probe statements=1 probes-only=True
+  method {"id": "rn", "type": {"elem": {"kind": "named", "name": "raft.RawNode"}, "kind": "pointer"}}.ApplyConfChange: unseq-probe statements=1 probes-only=True
+  method {"id": "rn", "type": {"elem": {"kind": "named", "name": "raft.RawNode"}, "kind": "pointer"}}.Step: unseq-probe statements=1 probes-only=True
+  method {"id": "rn", "type": {"elem": {"kind": "named", "name": "raft.RawNode"}, "kind": "pointer"}}.readyWithoutAccept: unseq-probe statements=1 probes-only=True
+  method {"id": "rn", "type": {"elem": {"kind": "named", "name": "raft.RawNode"}, "kind": "pointer"}}.acceptReady: unseq-probe statements=1 probes-only=True
+  method {"id": "rn", "type": {"elem": {"kind": "named", "name": "raft.RawNode"}, "kind": "pointer"}}.HasReady: unseq-probe statements=1 probes-only=True
+  method {"id": "rn", "type": {"elem": {"kind": "named", "name": "raft.RawNode"}, "kind": "pointer"}}.ReportUnreachable: unseq-probe statements=1 probes-only=True
+  method {"id": "rn", "type": {"elem": {"kind": "named", "name": "raft.RawNode"}, "kind": "pointer"}}.ReportSnapshot: unseq-probe statements=1 probes-only=True
+  method {"id": "rn", "type": {"elem": {"kind": "named", "name": "raft.RawNode"}, "kind": "pointer"}}.TransferLeader: unseq-probe statements=1 probes-only=True
+  method {"id": "rn", "type": {"elem": {"kind": "named", "name": "raft.RawNode"}, "kind": "pointer"}}.ForgetLeader: unseq-probe statements=1 probes-only=True
+  method {"id": "rn", "type": {"elem": {"kind": "named", "name": "raft.RawNode"}, "kind": "pointer"}}.ReadIndex: unseq-probe statements=1 probes-only=True
+  method {"id": "ro", "type": {"elem": {"kind": "named", "name": "raft.readOnly"}, "kind": "pointer"}}.addRequest: unseq-probe statements=1 probes-only=True
+  method {"id": "ro", "type": {"elem": {"kind": "named", "name": "raft.readOnly"}, "kind": "pointer"}}.recvAck: unseq-probe statements=2 probes-only=True
+  method {"id": "ms", "type": {"elem": {"kind": "named", "name": "raft.MemoryStorage"}, "kind": "pointer"}}.CreateSnapshot: unseq-probe statements=3 probes-only=True
+  method {"id": "t", "type": {"elem": {"kind": "named", "name": "main.twin"}, "kind": "pointer"}}.deliverIdx: unseq-probe statements=1 probes-only=True
+  changed entries: 37
+package: identical=True
+schema: identical=True
+types: identical=True
+total unseq-probe statements in changed entries: 128 ; in whole file: 128
+strip-probes(cur) == base (canonical re-serialization, order-aware): True

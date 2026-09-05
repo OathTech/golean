@@ -686,6 +686,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
                 (fun s' => (.next (.storeK rs vrest body env k'), s', choices)) r
           | [], [] => return (.exec body env k', s, choices)
           | _, _ => throw (.internal "storeK value/target arity mismatch (the shared phase-2 spine: receive delivery, assignment, comma-ok, call write-back)")
+      -- covers `.probeK` too (unreachable: no statement runs under a probe — Machine.lean's reachability invariant; e13-b R12/R1'-6)
       | _ => throw (.internal "completion delivered to expression continuation")
   | .signal sg k =>
       -- The frame×signal TABLE (B4, rule `signal`): pass, catch, or —
@@ -698,6 +699,9 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           match sg, k with
           | .ret, .frame targets tenv results ds k' w =>
               stepFrameExit s targets tenv results ds k' w choices
+          -- covers `.probeK` too (unreachable: no statement runs under a probe — Machine.lean's
+          -- reachability invariant; e13-b R12/R1'-6): `signalRefusal`'s expression-frame arm names
+          -- the cause ("… delivered to expression continuation"), never a silent default.
           | _, _ => throw (signalRefusal sg k)
   -- Blocked configurations (channels arc slice 1): relation-silent — no
   -- pairing partner can exist in the sequential machine, so stepping one

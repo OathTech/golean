@@ -143,6 +143,25 @@
 #      Stripping every probe from d531a225… yields 4ee39f73… byte for
 #      byte (twin-repin/structural-diff.txt). Design:
 #      docs/2026-09-05_e13-b-design.md §4/§7.
+#      Re-pin history: 2026-09-05 (lane e13-b, RE-AUDIT fix round —
+#      [AGENT]; the re-audit returned FIX-FIRST on the fix round's target
+#      suppression: spec#Assignment_statements phase 1 makes an assignment target's
+#      index/deref OPERANDS siblings of the RHS's calls, so they are
+#      PROBED like every operand, design §4 D4 rewritten) d531a225… →
+#      c358d0f4…: +10 `unseq-probe` statements (128 in total, 7 funcs +
+#      37 methods) on the phase-1 target operands of six methods —
+#      raftpb.{Message,ConfChangeV2}.CloneMessage (`out.Entries[i] = …`,
+#      `out.Responses[i] = …`, `out.Changes[i] = …` — the pointer-selector
+#      base reads), raft.MemoryStorage.CreateSnapshot
+#      (`ms.snapshot.Metadata.… = …`), raft.raft.{appendEntry,loadState}
+#      (`cloned[i].… = …`, `r.raftLog.committed = …`), raft.readOnly.recvAck
+#      (`ro.acks[from] = max(…)` — the probe the fix round had removed,
+#      back with the phase-1 rule); 0 added/removed/other changes
+#      (enumerated by a JSON diff, docs/evidence/2026-09-05_e13-b/
+#      twin-repin/). Stripping every probe from c358d0f4… still yields
+#      4ee39f73… byte for byte. Raft's twin driver reaches no early panic
+#      on these operands (pure pointer-selector reads), so the twin's
+#      observations are unchanged.
 #      Re-pin history: 2026-09-05 (round-17 merge train, lane e13-b rebased
 #      onto main 9343a310 — round-17 rebase: e13-b probes × landed
 #      fr19/b4/c2; [AGENT] reconciler). The pin at EVERY rebased commit is a
@@ -158,6 +177,7 @@
 #      added or removed. Per rebased commit:
 #        a9a2e2b1… → 31fb50dc…: rebased commit 1 (the lane's b2fd9f15, pin 7c545840… on the lane): 119 probes, 7 funcs + 33 methods
 #        31fb50dc… → 1e32bae3…: rebased commit 2 (the lane's bcf73396 audit fix round, pin d531a225… on the lane): 118 probes (R1's map-target rule, one probe fewer), 7 funcs + 33 methods
+#        1e32bae3… → 758110a3…: rebased commit 5 (the lane's 42e8bf6f re-audit fix round, pin c358d0f4… on the lane): 128 probes (+10 phase-1 target operands), 7 funcs + 37 methods
 #
 # Fail-closed throughout: missing baseline, failed build, failed emit,
 # failed run, or any byte drift exits 1 naming the failing pin.

@@ -288008,6 +288008,42 @@
          "body": {
           "body": [
            {
+            "expr": {
+             "expr": "field-get",
+             "field": "Entries",
+             "recv": {
+              "expr": "deref",
+              "ptr": {
+               "expr": "ident",
+               "name": "out",
+               "type": {
+                "elem": {
+                 "kind": "named",
+                 "name": "raftpb.Message"
+                },
+                "kind": "pointer"
+               }
+              },
+              "type": {
+               "kind": "named",
+               "name": "raftpb.Message"
+              }
+             },
+             "type": {
+              "elem": {
+               "elem": {
+                "kind": "named",
+                "name": "raftpb.Entry"
+               },
+               "kind": "pointer"
+              },
+              "kind": "slice"
+             },
+             "typeId": "raftpb.Message"
+            },
+            "stmt": "unseq-probe"
+           },
+           {
             "define": true,
             "lhs": [
              {
@@ -289326,6 +289362,42 @@
         {
          "body": {
           "body": [
+           {
+            "expr": {
+             "expr": "field-get",
+             "field": "Responses",
+             "recv": {
+              "expr": "deref",
+              "ptr": {
+               "expr": "ident",
+               "name": "out",
+               "type": {
+                "elem": {
+                 "kind": "named",
+                 "name": "raftpb.Message"
+                },
+                "kind": "pointer"
+               }
+              },
+              "type": {
+               "kind": "named",
+               "name": "raftpb.Message"
+              }
+             },
+             "type": {
+              "elem": {
+               "elem": {
+                "kind": "named",
+                "name": "raftpb.Message"
+               },
+               "kind": "pointer"
+              },
+              "kind": "slice"
+             },
+             "typeId": "raftpb.Message"
+            },
+            "stmt": "unseq-probe"
+           },
            {
             "define": true,
             "lhs": [
@@ -302716,6 +302788,42 @@
         {
          "body": {
           "body": [
+           {
+            "expr": {
+             "expr": "field-get",
+             "field": "Changes",
+             "recv": {
+              "expr": "deref",
+              "ptr": {
+               "expr": "ident",
+               "name": "out",
+               "type": {
+                "elem": {
+                 "kind": "named",
+                 "name": "raftpb.ConfChangeV2"
+                },
+                "kind": "pointer"
+               }
+              },
+              "type": {
+               "kind": "named",
+               "name": "raftpb.ConfChangeV2"
+              }
+             },
+             "type": {
+              "elem": {
+               "elem": {
+                "kind": "named",
+                "name": "raftpb.ConfChangeSingle"
+               },
+               "kind": "pointer"
+              },
+              "kind": "slice"
+             },
+             "typeId": "raftpb.ConfChangeV2"
+            },
+            "stmt": "unseq-probe"
+           },
            {
             "define": true,
             "lhs": [
@@ -419871,6 +419979,41 @@
          "stmt": "assign"
         },
         {
+         "expr": {
+          "base": {
+           "expr": "ident",
+           "name": "cloned",
+           "type": {
+            "elem": {
+             "elem": {
+              "kind": "named",
+              "name": "raftpb.Entry"
+             },
+             "kind": "pointer"
+            },
+            "kind": "slice"
+           }
+          },
+          "expr": "index-get",
+          "index": {
+           "expr": "ident",
+           "name": "i",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           }
+          },
+          "type": {
+           "elem": {
+            "kind": "named",
+            "name": "raftpb.Entry"
+           },
+           "kind": "pointer"
+          }
+         },
+         "stmt": "unseq-probe"
+        },
+        {
          "elemType": {
           "int": "uint64",
           "kind": "int"
@@ -419973,6 +420116,41 @@
           }
          ],
          "stmt": "assign"
+        },
+        {
+         "expr": {
+          "base": {
+           "expr": "ident",
+           "name": "cloned",
+           "type": {
+            "elem": {
+             "elem": {
+              "kind": "named",
+              "name": "raftpb.Entry"
+             },
+             "kind": "pointer"
+            },
+            "kind": "slice"
+           }
+          },
+          "expr": "index-get",
+          "index": {
+           "expr": "ident",
+           "name": "i",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           }
+          },
+          "type": {
+           "elem": {
+            "kind": "named",
+            "name": "raftpb.Entry"
+           },
+           "kind": "pointer"
+          }
+         },
+         "stmt": "unseq-probe"
         },
         {
          "elemType": {
@@ -453879,6 +454057,39 @@
       }
      },
      {
+      "expr": {
+       "expr": "field-get",
+       "field": "raftLog",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "r",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raft.raft"
+          },
+          "kind": "pointer"
+         }
+        },
+        "type": {
+         "kind": "named",
+         "name": "raft.raft"
+        }
+       },
+       "type": {
+        "elem": {
+         "kind": "named",
+         "name": "raft.raftLog"
+        },
+        "kind": "pointer"
+       },
+       "typeId": "raft.raft"
+      },
+      "stmt": "unseq-probe"
+     },
+     {
       "define": true,
       "lhs": [
        {
@@ -468300,6 +468511,43 @@
          "stmt": "unseq-probe"
         },
         {
+         "expr": {
+          "expr": "field-get",
+          "field": "acks",
+          "recv": {
+           "expr": "deref",
+           "ptr": {
+            "expr": "ident",
+            "name": "ro",
+            "type": {
+             "elem": {
+              "kind": "named",
+              "name": "raft.readOnly"
+             },
+             "kind": "pointer"
+            }
+           },
+           "type": {
+            "kind": "named",
+            "name": "raft.readOnly"
+           }
+          },
+          "type": {
+           "key": {
+            "int": "uint64",
+            "kind": "int"
+           },
+           "kind": "map",
+           "value": {
+            "int": "uint64",
+            "kind": "int"
+           }
+          },
+          "typeId": "raft.readOnly"
+         },
+         "stmt": "unseq-probe"
+        },
+        {
          "define": true,
          "lhs": [
           {
@@ -475539,6 +475787,58 @@
       "stmt": "assign"
      },
      {
+      "expr": {
+       "expr": "field-get",
+       "field": "Metadata",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "field-get",
+         "field": "snapshot",
+         "recv": {
+          "expr": "deref",
+          "ptr": {
+           "expr": "ident",
+           "name": "ms",
+           "type": {
+            "elem": {
+             "kind": "named",
+             "name": "raft.MemoryStorage"
+            },
+            "kind": "pointer"
+           }
+          },
+          "type": {
+           "kind": "named",
+           "name": "raft.MemoryStorage"
+          }
+         },
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raftpb.Snapshot"
+          },
+          "kind": "pointer"
+         },
+         "typeId": "raft.MemoryStorage"
+        },
+        "type": {
+         "kind": "named",
+         "name": "raftpb.Snapshot"
+        }
+       },
+       "type": {
+        "elem": {
+         "kind": "named",
+         "name": "raftpb.SnapshotMetadata"
+        },
+        "kind": "pointer"
+       },
+       "typeId": "raftpb.Snapshot"
+      },
+      "stmt": "unseq-probe"
+     },
+     {
       "elemType": {
        "int": "uint64",
        "kind": "int"
@@ -475639,6 +475939,58 @@
        }
       ],
       "stmt": "assign"
+     },
+     {
+      "expr": {
+       "expr": "field-get",
+       "field": "Metadata",
+       "recv": {
+        "expr": "deref",
+        "ptr": {
+         "expr": "field-get",
+         "field": "snapshot",
+         "recv": {
+          "expr": "deref",
+          "ptr": {
+           "expr": "ident",
+           "name": "ms",
+           "type": {
+            "elem": {
+             "kind": "named",
+             "name": "raft.MemoryStorage"
+            },
+            "kind": "pointer"
+           }
+          },
+          "type": {
+           "kind": "named",
+           "name": "raft.MemoryStorage"
+          }
+         },
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "raftpb.Snapshot"
+          },
+          "kind": "pointer"
+         },
+         "typeId": "raft.MemoryStorage"
+        },
+        "type": {
+         "kind": "named",
+         "name": "raftpb.Snapshot"
+        }
+       },
+       "type": {
+        "elem": {
+         "kind": "named",
+         "name": "raftpb.SnapshotMetadata"
+        },
+        "kind": "pointer"
+       },
+       "typeId": "raftpb.Snapshot"
+      },
+      "stmt": "unseq-probe"
      },
      {
       "define": true,
@@ -475869,6 +476221,58 @@
       "stmt": "if",
       "then": {
        "body": [
+        {
+         "expr": {
+          "expr": "field-get",
+          "field": "Metadata",
+          "recv": {
+           "expr": "deref",
+           "ptr": {
+            "expr": "field-get",
+            "field": "snapshot",
+            "recv": {
+             "expr": "deref",
+             "ptr": {
+              "expr": "ident",
+              "name": "ms",
+              "type": {
+               "elem": {
+                "kind": "named",
+                "name": "raft.MemoryStorage"
+               },
+               "kind": "pointer"
+              }
+             },
+             "type": {
+              "kind": "named",
+              "name": "raft.MemoryStorage"
+             }
+            },
+            "type": {
+             "elem": {
+              "kind": "named",
+              "name": "raftpb.Snapshot"
+             },
+             "kind": "pointer"
+            },
+            "typeId": "raft.MemoryStorage"
+           },
+           "type": {
+            "kind": "named",
+            "name": "raftpb.Snapshot"
+           }
+          },
+          "type": {
+           "elem": {
+            "kind": "named",
+            "name": "raftpb.SnapshotMetadata"
+           },
+           "kind": "pointer"
+          },
+          "typeId": "raftpb.Snapshot"
+         },
+         "stmt": "unseq-probe"
+        },
         {
          "define": true,
          "lhs": [

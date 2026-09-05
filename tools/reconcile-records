@@ -489,6 +489,16 @@ def check_frontier_rows(bl):
         finding("C5", "low", f"{len(ambiguous)} frontier-table citation(s) are ambiguous suffixes", ambiguous)
     if unresolved:
         finding("C5", "medium", f"{len(unresolved)} frontier-table case citation(s) do not resolve against the baseline", unresolved)
+    # FAIL CLOSED on the cell SHAPE (e13-b re-audit fix round R1'-5,
+    # 2026-09-05): a §4 reds cell with no leading integer used to be
+    # skipped by the count check above (`claimed is None`), so a row whose
+    # cell read `red by design: ...` — naming ids that had all turned
+    # green — was never judged. The reds cell's contract is `<count> ...`;
+    # a cell that does not start with its count is itself a HIGH finding.
+    uncounted = [f"{r['id']} ({LANGLEDGER}:{r['line']}) reds cell has no leading count: {r['cell'][:80]!r}"
+                 for r in rows if r["claimed"] is None]
+    if uncounted:
+        finding("C5", "high", f"{len(uncounted)} frontier row(s) have a reds cell without a leading integer count — the count check cannot judge them (fail closed: re-derive the count and put it first)", uncounted)
     empty = [m for z, m in mismatched if z]
     partial = [m for z, m in mismatched if not z]
     if empty:
