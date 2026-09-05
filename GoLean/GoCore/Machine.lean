@@ -2109,9 +2109,10 @@ def renderPanicPayload (state : ExecState) : GoValue → Option String
   | .interface .bool (.bool b) => some (if b then "true" else "false")
   -- A DEFINED-type payload renders qualified with Go's
   -- `printanycustomtype` shape: `main.Code(7)` (BUG-004 item 2 — the
-  -- identity is modeled since the interfaces campaign; the KEY is
-  -- package-qualified by the frontend, so it renders verbatim). Only
-  -- the int-underlying form is pinned; other underlyings stay closed.
+  -- identity is modeled since the interfaces campaign; the type prints
+  -- its DISPLAY record — gc's type string — never its key, design note
+  -- 2026-09-05 §3.2). Only the int-underlying form is pinned; other
+  -- underlyings stay closed.
   | .interface (.defined name) (.int v _) =>
       if name == runtimeErrorTypeId then
         none
@@ -2128,7 +2129,7 @@ def renderPanicPayload (state : ExecState) : GoValue → Option String
       else if panicPayloadIsRewritten state (.defined name) then
         none -- Error()/String() would have to be CALLED: fail closed
       else
-        some s!"{name.key}({v})"
+        some s!"{displayNameOf state name}({v})"
   | _ => none
 
 /-- Go's first abort line for a panic chain. The `[recovered, repanicked]`

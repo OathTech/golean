@@ -455,6 +455,13 @@ theorem MethodSetRecord.beq_sound {a b : MethodSetRecord}
   obtain ⟨h1, h2⟩ := andSplit2 h
   cases eq_of_beq h1; cases MethodSetCoverage.beq_sound h2; rfl
 
+theorem TypeDisplay.beq_sound {a b : TypeDisplay}
+    (h : (a == b) = true) : a = b := by
+  obtain ⟨n1, p1⟩ := a
+  obtain ⟨n2, p2⟩ := b
+  obtain ⟨h1, h2⟩ := andSplit2 h
+  cases eq_of_beq h1; cases eq_of_beq h2; rfl
+
 /-! ## `Stmt` -/
 
 /-- Fuel-structural `Stmt` equality: self-recursive on the fuel, with

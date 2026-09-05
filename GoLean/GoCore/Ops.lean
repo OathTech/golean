@@ -684,9 +684,40 @@ layer. -/
 def isEmptyInterfaceName (id : TypeId) : Bool :=
   id.key == "any" || id.key == "empty_interface"
 
+/-- The display record of a `TypeId` (design note 2026-09-05 §3): a
+lookup, never a parse of the key. -/
+def typeDisplay? (state : ExecState) (id : TypeId) : Option TypeDisplay :=
+  state.typeDisplays.foldl
+    (fun found entry =>
+      match found with
+      | some _ => found
+      | none => if entry.1 == id then some entry.2 else none)
+    none
+
+/-- gc's type string for a `TypeId`, from its display record. NO record
+renders a VISIBLE marker — never the key: the key is path-qualified
+identity (`red/inner.T`) and gc prints the package NAME (`inner.T`), so
+rendering the key was exactly BUG-059's fail-open text. Unreachable
+from a decoded wire (the decoder requires a record per TypeDef);
+reachable from hand-built programs, which must state their displays. -/
+def displayNameOf (state : ExecState) (id : TypeId) : String :=
+  match typeDisplay? state id with
+  | some d => d.name
+  | none => s!"<TypeId {id.key} has no display record>"
+
+/-- The declaring package path a type-assertion text compares (gc's
+`pkgpath()`; `runtime/error.go` `TypeAssertionError.Error`): the display
+record's `pkg` for a named/interface type, `""` for every unnamed type. -/
+def typePkgForMessage (state : ExecState) (typ : Ty) : String :=
+  match resolveDefinedAliases state typ with
+  | .defined id | .interface id => ((typeDisplay? state id).map (·.pkg)).getD ""
+  | _ => ""
+
 -- Total via fuel: recurses through both alias resolution and type subterms
 -- (pointer/slice/map/array elements), so fuel bounds combined depth. Only used
 -- for error-message rendering; on exhaustion it returns a placeholder.
+-- Named and anonymous-interface leaves render their DISPLAY record
+-- (design note 2026-09-05 §3.2), never their key.
 def goTypeNameForMessageFuel : Nat → ExecState → Ty → String
   | fuel + 1, state, typ =>
       match resolveDefinedAliases state typ with
@@ -700,8 +731,8 @@ def goTypeNameForMessageFuel : Nat → ExecState → Ty → String
       | .chan .both elem => s!"chan {goTypeNameForMessageFuel fuel state elem}"
       | .chan .send elem => s!"chan<- {goTypeNameForMessageFuel fuel state elem}"
       | .chan .recv elem => s!"<-chan {goTypeNameForMessageFuel fuel state elem}"
-      | .interface name => if isEmptyInterfaceName name then "interface {}" else name.key
-      | .defined name => name.key
+      | .interface name => if isEmptyInterfaceName name then "interface {}" else displayNameOf state name
+      | .defined name => displayNameOf state name
       | .array length elem => s!"[{length}]{goTypeNameForMessageFuel fuel state elem}"
       | .funcType params results variadic =>
           -- Go renders the signature: `func()`, `func(int) bool`,
@@ -732,16 +763,6 @@ def goTypeNameForMessageFuel : Nat → ExecState → Ty → String
 
 def goTypeNameForMessage (state : ExecState) (typ : Ty) : String :=
   goTypeNameForMessageFuel typeResolutionFuel state typ
-
-def dynamicTypeName? (state : ExecState) (typ : Ty) : Option String :=
-  match resolveDefinedAliases state typ with
-  | .defined id => some id.key
-  | .pointer (.defined id) => some s!"*{id.key}"
-  | .bool => some "bool"
-  | .int kind => some kind.name
-  | .float kind => some kind.name
-  | .string => some "string"
-  | _ => none
 
 def methodInfoByFuncId? (state : ExecState) (id : FuncId) : Option MethodInfo :=
   state.methods.foldl
@@ -1605,9 +1626,26 @@ def typeAssertPanicMessage (state : ExecState) (value : GoValue) (targetTy : Ty)
       "interface conversion: " ++ dynamicTypeNameForMessage state value ++
         " is not " ++ goTypeNameForMessage state targetTy ++ missing
   | _, _ =>
-      "interface conversion: " ++ sourceName ++ " is " ++
+      let base := "interface conversion: " ++ sourceName ++ " is " ++
         dynamicTypeNameForMessage state value ++ ", not " ++
         goTypeNameForMessage state targetTy
+      -- gc's disambiguating suffix (`runtime/error.go`
+      -- `TypeAssertionError.Error`, probed go1.26.5 — design note
+      -- 2026-09-05 §1/§3.2): this arm is reached only when the dynamic
+      -- and asserted types DIFFER, so equal displays are gc's deliberate
+      -- name-ambiguity — `inner.T, not inner.T (types from different
+      -- packages)` when the declaring paths differ, `main.L, not main.L
+      -- (types from different scopes)` when they agree (two functions'
+      -- local `L`; two anonymous types).
+      match value with
+      | .interface dynTy _ =>
+          if goTypeNameForMessage state dynTy == goTypeNameForMessage state targetTy then
+            if typePkgForMessage state dynTy != typePkgForMessage state targetTy then
+              base ++ " (types from different packages)"
+            else
+              base ++ " (types from different scopes)"
+          else base
+      | _ => base
 
 def valueAsInt : GoValue → Except Stop Int
   | .int value _ => return value
@@ -2174,7 +2212,12 @@ name-vs-path class. A generic receiver's type arguments print as
 `[...]` (`funcNamePiecesForPrint`, traceback.go: the wrapper symbol's
 `[…]` span collapses; probe: `main.Box[...].Val … nil *Box[...]
 pointer`), so the key's bracket span collapses the same way. Evidence:
-`docs/evidence/2026-09-03_bug087-paniktext/`. -/
+`docs/evidence/2026-09-03_bug087-paniktext/`. Since the identity/display
+split (2026-09-05, design note §3.2) this is the ONE message rendered from
+the KEY, not the display record: the text is symbol-derived, and the
+full-run re-pin showed the pinned `pkgs/valuer.T.Val` witness
+(`multipkg/nil-value-method-text`) go red under the display —
+`symbolKeyForMessage` below renders the receiver's key. -/
 def panicwrapText (recvKey methodName : String) : String :=
   let (base, generic) :=
     match recvKey.splitOn "[" with
@@ -2183,6 +2226,16 @@ def panicwrapText (recvKey methodName : String) : String :=
   let suffix := if generic then "[...]" else ""
   let typ := (base.splitOn ".").getLastD base
   s!"value method {base}{suffix}.{methodName} called using nil *{typ}{suffix} pointer"
+
+/-- The receiver spelling `panicwrapText` consumes: the TypeId KEY (gc's
+wrapper SYMBOL is path-qualified, `<pkgpath>.(*T).M`), pointers as `*`,
+structural leaves as the message renderer spells them. -/
+def symbolKeyForMessage (state : ExecState) (typ : Ty) : String :=
+  match resolveDefinedAliases state typ with
+  | .defined id => id.key
+  | .interface id => id.key
+  | .pointer (.defined id) => s!"*{id.key}"
+  | other => goTypeNameForMessage state other
 
 /-- **The BUG-087 envelope statement** (latitude inventory R9a; [USER]
 ruling 2026-09-03 «demonic choice so both are admitted», relayed —
@@ -2231,7 +2284,7 @@ def nilValueMethodText? (state : ExecState) (fid : FuncId) (args : List GoValue)
                       | some target =>
                           if target.wrapper then none
                           else some (panicwrapText
-                            (goTypeNameForMessage state concrete.recv) concrete.name)
+                            (symbolKeyForMessage state concrete.recv) concrete.name)
                       | none => none
                   | _ => none
               | _ => none

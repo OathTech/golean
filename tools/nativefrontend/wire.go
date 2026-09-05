@@ -123,6 +123,21 @@ type emitter struct {
 	localTypeDefs     []any
 	localIfaceMethods []any
 
+	// Identity vs display (docs/2026-09-05_fr19-bug097-design.md §0):
+	// the display record of every minted TypeId key (identity.go
+	// noteTypeDisplay) — attached to every TypeDef by emitProgram; a
+	// key registered with two displays refuses (displayConflicts).
+	typeDisplays     map[string]typeDisplay
+	displayConflicts []string
+	// Scope ordinals of FUNCTION-LOCAL type declarations (design note
+	// §2.2), built once per program by localTypeOrdinal; a local type
+	// outside the table is recorded for the fail-closed refusal.
+	localOrdinals map[*types.TypeName]int
+	badLocalTypes map[string]bool
+	// BUG-098 guard input: unexported requirement name -> declaring
+	// package paths (identity.go noteUnexportedRequirements).
+	unexportedReqs map[string]map[string]bool
+
 	// Interface-receiver methods CALLED somewhere in the package, keyed
 	// "<IfaceName>.<Method>" (the exact func id the call emits). Interfaces
 	// declared in the package anchor their methods via emitGenDeclTypes;
@@ -238,6 +253,13 @@ type emitter struct {
 	// qualifiedTypeName to parameterize TypeIds of function-local type
 	// declarations (arc-final audit F3).
 	curTargs []types.Type
+	// curInstDecl is the generic declaration whose stencil is being
+	// emitted (nil outside stenciling): qualifiedTypeName parameterizes
+	// ONLY the local types declared INSIDE it (BUG-018), not every
+	// function-local type the stencil body mentions — a local type
+	// passed AS a type argument (`cmp.Compare[main.score·1]`, FR-19) is
+	// declared outside and keeps its own key (lane fr19-bug097).
+	curInstDecl *ast.FuncDecl
 	substErr         error
 	genericFuncDecls map[*types.Func]*ast.FuncDecl
 	funcInsts        map[string]*funcInstWork
@@ -358,6 +380,7 @@ func (e *emitter) noteInterface(name string, iface *types.Interface) {
 	if e.seenInterfaces == nil {
 		e.seenInterfaces = map[string]*types.Interface{}
 	}
+	e.noteUnexportedRequirements(iface)
 	if prev, seen := e.seenInterfaces[name]; seen {
 		// Same name, different method set: recorded here, refused by
 		// emitProgram's declaration pass (BUG-095: the dispatch sites used
@@ -621,23 +644,21 @@ func (e *emitter) emitType(t types.Type) (any, error) {
 		}
 		// Anonymous non-empty interface (a `case interface{ M() }`, an
 		// assert target, a variable type): canonical wire name from the
-		// type's own rendering — SOUND because Go interface identity is
-		// structural, so structurally identical spellings are one type
-		// (design note 2026-08-05 D3). Registered like named interfaces,
+		// type's own IDENTITY rendering — SOUND because Go interface
+		// identity is structural, so structurally identical method sets
+		// are one type (design note 2026-08-05 D3). The key is minted by
+		// the ONE constructor anonIfaceKey (identity.go; BUG-097 fixed
+		// 2026-09-05): path-qualified named types, path-qualified
+		// unexported method names, scope-ordinal local types — so two
+		// same-named packages' `interface{ Get() T }` are two keys and
+		// noteInterface's BUG-095 conflict guard never sees them as one.
+		// The gc display (`interface { Get() inner.T }`) travels
+		// separately (design note §3). Registered like named interfaces,
 		// so the declaration pass emits its full method set.
-		// BUG-097 (open): the qualifier here is the package NAME
-		// (`p.Name()`), NOT the import-path qualifier every other TypeId
-		// uses (`pkgQualifier`, BUG-010 — the package-name collision
-		// check this comment used to cite is RETIRED). Two same-named
-		// packages at different paths therefore render two DISTINCT
-		// anonymous interfaces (`interface{ M() inner.T }` over
-		// red/inner.T vs blue/inner.T) as ONE wire name; noteInterface's
-		// conflict guard turns that into a named refusal (pinned red:
-		// multipkg/same-name-anon-iface). Plan: pass e.pkgQualifier.
-		if !ty.IsMethodSet() {
-			return nil, unsup("non-method-set interface type %s (type constraints are not interface values)", ty)
+		name, err := e.anonIfaceKey(ty)
+		if err != nil {
+			return nil, err
 		}
-		name := types.TypeString(ty, func(p *types.Package) string { return p.Name() })
 		e.noteInterface(name, ty)
 		return map[string]any{"kind": "interface", "name": name}, nil
 	case *types.Signature:
@@ -741,6 +762,8 @@ func (e *emitter) emitBasic(b *types.Basic) (any, error) {
 					e.opaqueBasics = map[string]*types.Basic{}
 				}
 				e.opaqueBasics[key] = b
+				// A basic type's gc display is its own spelling.
+				e.noteTypeDisplay(key, typeDisplay{display: key})
 				if e.opaqueTouchedBasics == nil {
 					e.opaqueTouchedBasics = map[string]bool{}
 				}

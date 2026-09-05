@@ -427,9 +427,9 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 		// substitution (arc-final audit F5): the key is
 		// substitution-aware, the recorded origin sig is not.
 		savedSubst, savedName, savedErr := e.curSubst, e.curFuncName, e.substErr
-		savedTargs := e.curTargs
+		savedTargs, savedDecl := e.curTargs, e.curInstDecl
 		e.curSubst, e.curFuncName, e.substErr = cm.subst, k, nil
-		e.curTargs = nil
+		e.curTargs, e.curInstDecl = nil, nil
 		params, err := e.emitParams(cm.sig.Params())
 		if err == nil {
 			var rerr error
@@ -438,7 +438,7 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 			}
 		}
 		e.curSubst, e.curFuncName, e.substErr = savedSubst, savedName, savedErr
-		e.curTargs = savedTargs
+		e.curTargs, e.curInstDecl = savedTargs, savedDecl
 		if err != nil {
 			return nil, err
 		}
@@ -659,9 +659,17 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	if err := e.checkKeyPathGrammar(); err != nil {
 		return nil, err
 	}
-	// Duplicate TypeIds (e.g. two functions each declaring a local
-	// `type T int`, or a local type shadowing a package-level one) would
-	// silently alias in GoCore's global type table — refuse.
+	// A function-local type that reached a key without a scope ordinal
+	// (design note 2026-09-05 §2.2) refuses by name.
+	if err := e.checkLocalTypeOrdinals(); err != nil {
+		return nil, err
+	}
+	// Duplicate TypeIds would silently alias in GoCore's global type
+	// table — refuse. Since FR-19's scope-qualified keys (2026-09-05)
+	// two functions' `type T int`, or a local shadowing a package-level
+	// type, key apart (`main.T·1`/`main.T·2`); this is the boundary
+	// collision check the key grammar's injectivity argument stands
+	// behind, no longer a whole-export kill legal Go can reach.
 	seenTypeIds := map[string]bool{}
 	for _, td := range typeDefs {
 		if m, ok := td.(map[string]any); ok {
@@ -672,6 +680,19 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 				seenTypeIds[n] = true
 			}
 		}
+	}
+	// Identity vs display (design note 2026-09-05 §3.1): every TypeDef
+	// carries gc's display and its declaring package path beside its
+	// key; a key with no registered display refuses.
+	if err := e.attachTypeDisplays(typeDefs); err != nil {
+		return nil, err
+	}
+	// BUG-098 (design note §2.5): an UNEXPORTED interface method name is
+	// package-scoped, but the wire's method tables carry bare names — a
+	// requirement `get` from one package and a concrete `get` from
+	// another would be judged satisfied. Refuse the export, by name.
+	if err := e.checkUnexportedMethodScopes(); err != nil {
+		return nil, err
 	}
 
 	// Transitive quarantine check (audit response 2026-08-05, C3): if
@@ -1219,6 +1240,9 @@ func (e *emitter) poisonGlobalCells() []any {
 	if poisoned == 0 {
 		return nil
 	}
+	// Synthetic, never gc-observable (every reference already refused):
+	// its display is its own name.
+	e.noteTypeDisplay(poisonedCellTypeId, typeDisplay{display: poisonedCellTypeId})
 	return []any{map[string]any{
 		"name": poisonedCellTypeId,
 		"def":  map[string]any{"kind": "struct", "fields": []any{}},
@@ -5346,9 +5370,30 @@ func (e *emitter) emitSliceExpr(se *ast.SliceExpr) (any, error) {
 func (e *emitter) qualifiedTypeName(obj *types.TypeName) string {
 	pkg := obj.Pkg()
 	if pkg == nil {
+		// Universe (`error`): gc displays the bare name too.
+		e.noteTypeDisplay(obj.Name(), typeDisplay{display: obj.Name()})
 		return obj.Name()
 	}
 	base := e.pkgQualifier(pkg) + "." + obj.Name()
+	// The gc DISPLAY (design note 2026-09-05 §3): package NAME, no scope
+	// information — registered beside the key below.
+	disp := pkg.Name() + "." + obj.Name()
+	local := obj.Parent() != pkg.Scope()
+	// A FUNCTION-LOCAL type carries its scope ordinal (FR-19, design
+	// note §2.2): `main.T·1` / `main.T·2` for two functions' `type T`,
+	// `main.Shadowed·1` for a local shadowing the package-level
+	// `main.Shadowed`. The display stays `main.T` — gc's own (it trims
+	// the counter; a failed cross-assert says `(types from different
+	// scopes)`). An ordinal the table cannot supply is recorded for the
+	// export-time refusal (checkLocalTypeOrdinals); the key keeps a
+	// marker so it can never alias a package-level type meanwhile.
+	if local {
+		if n, ok := e.localTypeOrdinal(obj); ok {
+			base += "·" + itoa(n)
+		} else {
+			base += "·?"
+		}
+	}
 	// A type DECLARED INSIDE a generic function (its scope is not the
 	// package scope) is named by gc with the ENCLOSING INSTANTIATION's
 	// type arguments — probe-verified go1.26.5: reflect.Name() =
@@ -5356,10 +5401,13 @@ func (e *emitter) qualifiedTypeName(obj *types.TypeName) string {
 	// parameterizes the same way (arc-final audit F3, 2026-08-06;
 	// BUG-018: the bare key aliased instantiations, reporting wrong
 	// dynamic names at one instantiation and refusing legal Go at two).
-	// Rendering failures record substErr (fail closed at the stencil
-	// boundary, like applySubst) and keep the bare name for the refusal
-	// message.
-	if e.curTargs != nil && obj.Parent() != pkg.Scope() {
+	// INSIDE means declared within the stencil's declaration
+	// (declaredInActiveStencil) — a local type the stencil merely
+	// MENTIONS, e.g. its own type argument `cmp.Compare[main.score·1]`,
+	// keeps its own key (FR-19, 2026-09-05). Rendering failures record
+	// substErr (fail closed at the stencil boundary, like applySubst)
+	// and keep the bare name for the refusal message.
+	if local && e.declaredInActiveStencil(obj) {
 		rendered := make([]string, len(e.curTargs))
 		ok := true
 		for i, t := range e.curTargs {
@@ -5375,8 +5423,10 @@ func (e *emitter) qualifiedTypeName(obj *types.TypeName) string {
 		}
 		if ok {
 			base += "[" + strings.Join(rendered, ",") + "]"
+			disp += "[" + strings.Join(rendered, ",") + "]"
 		}
 	}
+	e.noteTypeDisplay(base, typeDisplay{display: disp, pkg: pkg.Path()})
 	return base
 }
 
@@ -5894,10 +5944,15 @@ func (e *emitter) ifaceWireName(t types.Type) (string, bool) {
 		if iface.Empty() {
 			return emptyInterfaceName, true
 		}
-		// Package-NAME qualifier: the same BUG-097 hazard as emitType's
-		// anonymous-interface arm (wire.go) — the two spellings must stay
-		// byte-identical, so fix both together (plan: e.pkgQualifier).
-		name := types.TypeString(iface, func(p *types.Package) string { return p.Name() })
+		// The ONE anonymous-interface key constructor (identity.go
+		// anonIfaceKey; BUG-097 fixed 2026-09-05) — the same spelling
+		// emitType's anonymous-interface arm mints for type positions.
+		// Callers refuse on false; the key's own refusal (a type outside
+		// the key grammar) is re-raised when the type reaches emitType.
+		name, err := e.anonIfaceKey(iface)
+		if err != nil {
+			return "", false
+		}
 		e.noteInterface(name, iface)
 		return name, true
 	}

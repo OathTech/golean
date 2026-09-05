@@ -1682,10 +1682,19 @@ private def decodeMethodSig (path : String) (json : Json) : LowerM MethodSig := 
   let results ← resultsJson.mapIdxM (fun i t => decodeTy s!"{path}.results[{i}]" t)
   pure { name, params, results, variadic }
 
-private def decodeTypeDef (path : String) (json : Json) : LowerM (TypeId × TypeDef) := do
+/-- One `program.types[i]` entry: the TypeDef under its identity KEY plus
+its DISPLAY record (design note `docs/2026-09-05_fr19-bug097-design.md`
+§3.1). `display` (gc's type string) and `pkg` (declaring import path,
+`""` for unnamed/universe/synthetic) are REQUIRED — an old wire, or an
+emitter that forgets them, refuses at decode, never at the first panic
+text (the `methodSets` discipline). -/
+private def decodeTypeDef (path : String) (json : Json) :
+    LowerM ((TypeId × TypeDef) × TypeDisplay) := do
   let obj ← StrictJson.obj path json
-  checkAllowedKeys path obj ["name", "def"]
+  checkAllowedKeys path obj ["name", "def", "display", "pkg"]
   let name ← StrictJson.string s!"{path}.name" (← StrictJson.field path obj "name")
+  let display ← StrictJson.string s!"{path}.display" (← StrictJson.field path obj "display")
+  let pkg ← StrictJson.string s!"{path}.pkg" (← StrictJson.field path obj "pkg")
   let defObj ← StrictJson.obj s!"{path}.def" (← StrictJson.field path obj "def")
   let kind ← StrictJson.string s!"{path}.def.kind" (← StrictJson.field s!"{path}.def" defObj "kind")
   -- NOTE: the def-object `kind` vocabulary is DISTINCT from the type
@@ -1697,7 +1706,7 @@ private def decodeTypeDef (path : String) (json : Json) : LowerM (TypeId × Type
       | "interface" => some ["kind", "methods"]
       | "unsupported" => some ["kind", "feature"]
       | _ => none) kind
-  match kind with
+  let td : TypeId × TypeDef ← match kind with
   | "struct" =>
       let fields ← StrictJson.array s!"{path}.def.fields" (← StrictJson.field s!"{path}.def" defObj "fields")
       pure (⟨name⟩, .struct (← fields.mapIdxM (fun i f => decodeFieldDef s!"{path}.def.fields[{i}]" f)))
@@ -1724,6 +1733,7 @@ private def decodeTypeDef (path : String) (json : Json) : LowerM (TypeId × Type
         (← StrictJson.field s!"{path}.def" defObj "feature")
       pure (⟨name⟩, .opaqueDecl feature)
   | other => fail s!"unsupported type definition kind {other} at {path}"
+  pure (td, { name := display, pkg })
 
 private def decodeFunc (path : String) (json : Json) : LowerM Func := do
   let obj ← StrictJson.obj path json
@@ -1870,9 +1880,16 @@ partial def decodeProgram (json : Json) : Except String Program := do
   let funcsJson ← StrictJson.array "program.funcs" (← StrictJson.field "program" obj "funcs")
   let funcs ← funcsJson.mapIdxM (fun i f => (decodeFunc s!"program.funcs[{i}]" f).run ng)
   let typesJson ← StrictJson.array "program.types" (← StrictJson.field "program" obj "types")
-  let declaredDefs ← typesJson.mapIdxM (fun i t => (decodeTypeDef s!"program.types[{i}]" t).run ng)
+  let declaredEntries ← typesJson.mapIdxM (fun i t => (decodeTypeDef s!"program.types[{i}]" t).run ng)
+  let declaredDefs := declaredEntries.map (·.1)
   -- The canonical empty struct (map[K]struct{} set idiom) is always available.
   let typeDefs := #[(⟨"struct{}"⟩, TypeDef.struct #[])] ++ declaredDefs
+  -- Its display record beside it (gc spells the empty struct `struct {}`;
+  -- an unnamed type's pkgpath is empty); one record per TypeDef, in the
+  -- TypeDef order (design note 2026-09-05 §3.1).
+  let typeDisplays : Array (TypeId × TypeDisplay) :=
+    #[(⟨"struct{}"⟩, { name := "struct {}", pkg := "" })]
+      ++ declaredEntries.map (fun e => (e.1.1, e.2))
   let methodsJson ← StrictJson.array "program.methods" (← StrictJson.field "program" obj "methods")
   let methodPairs ← methodsJson.mapIdxM (fun i m => (decodeMethod s!"program.methods[{i}]" m).run ng)
   -- Method bodies are executable functions (looked up by FuncId on call);
@@ -1918,6 +1935,6 @@ must be full|exported, got {other}"
       throw s!"native lowering: duplicate method-set record for {r.key} in program"
     seenRecords := seenRecords.insert r.key
   pure { typeDefs, funcs := allFuncs, methods := methodPairs.map Prod.snd, globals,
-         methodSets }
+         methodSets, typeDisplays }
 
 end GoLean.NativeToIR

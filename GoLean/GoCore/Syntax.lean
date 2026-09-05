@@ -563,6 +563,22 @@ structure GlobalDef where
   typ : Ty
   deriving Repr, BEq
 
+/-- The DISPLAY record of a `TypeId` (design note
+`docs/2026-09-05_fr19-bug097-design.md` §0/§3): `name` is gc's runtime
+type string for the type (`NameString` — package-NAME qualified, no
+scope information, deliberately ambiguous: `inner.T` for both
+`red/inner.T` and `blue/inner.T`, `main.L` for every function-local `L`),
+`pkg` its declaring import path (`""` for unnamed, universe and synthetic
+types — gc's `pkgpath()` of an unnamed type). The machine RENDERS panic
+texts from this and decides nothing by it; identity is the `TypeId.key`
+alone. Carried on the wire per TypeDef (REQUIRED there); defaulted `#[]`
+in `Program`/`ExecState` so hand-built programs render a visible
+no-record marker rather than a fabricated gc text. -/
+structure TypeDisplay where
+  name : String
+  pkg : String := ""
+  deriving Repr, BEq
+
 structure Program where
   typeDefs : Array (TypeId × TypeDef) := #[]
   funcs : Array Func
@@ -576,6 +592,9 @@ structure Program where
   defaulted `#[]` here so hand-built programs FAIL CLOSED on carrier
   queries rather than answering from absence. -/
   methodSets : Array MethodSetRecord := #[]
+  /-- The display records (design note 2026-09-05 §3.1), one per TypeDef
+  on a decoded wire; `#[]` for hand-built programs (no-record marker). -/
+  typeDisplays : Array (TypeId × TypeDisplay) := #[]
   deriving Repr, BEq
 
 def findFunctionIn? (funcs : Array Func) (id : FuncId) : Option Func :=

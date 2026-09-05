@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+missing	crossAnonMissing	-	panic	interface conversion: inner.T is not interface { Get() inner.T }: missing method Get	multipackage,imports,identity,interfaces,type_assertions,panic
+source	anonSourceCross	-	panic	interface conversion: interface { Get() inner.T } is inner.T, not inner.W	multipackage,imports,identity,interfaces,type_assertions,panic

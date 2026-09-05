@@ -142,9 +142,29 @@ not by running anything.
 
 ## BUG-059 — panic messages render multi-segment TypeId qualifiers as the import PATH where gc renders the package NAME
 
-- Status: open
+- Status: fixed (2026-09-05, lane `fr19-bug097` — the structural fix this
+  entry always named, "separating DISPLAY from IDENTITY in GoCore":
+  design note `docs/2026-09-05_fr19-bug097-design.md` §3. Every wire
+  TypeDef carries a REQUIRED `display` (gc's `NameString` — package-NAME
+  qualified, scope-free, deliberately ambiguous; `cmd/compile/internal/
+  types/fmt.go` fmtTypeIDName, the string `reflectdata.dcommontype`
+  stores) and `pkg` (declaring import path); `Program`/`ExecState.
+  typeDisplays` carry them; `goTypeNameForMessage`, `renderPanicPayload`
+  render the record and never the key (no record → a VISIBLE marker, not
+  a fabricated text); `typeAssertPanicMessage` appends gc's suffix when
+  the displays collide — ` (types from different packages)` for distinct
+  declaring paths, ` (types from different scopes)` otherwise
+  (`runtime/error.go` `TypeAssertionError.Error`, probed go1.26.5). The
+  pinned witness renders `interface conversion: interface {} is inner.T,
+  not inner.T (types from different packages)` byte-exact; the R-1
+  quotient this row waited on is no longer needed for it. The
+  observation channel (`TypeId.unqualified`, reflect `Name()`) was
+  checked for a remainder and has none: gc's `Name()` keeps an
+  instantiation's PATH-qualified bracket (`Pair[red/inner.T]`, probe P5),
+  which is the key's spelling. The identity note's §3.3 residue is
+  RETIRED. `dynamicTypeName?` (key-rendering, unused) deleted.)
 - Pinned-by: differential
-- Cases: multipkg/same-name-identity-panic
+- Cases: multipkg/same-name-identity-panic, scoping/local-type-identity/scopes-panic, scoping/local-type-identity/shadow-panic
 
 > **R-1 conversion state (2026-08-21, raft W4.3 item 5 —
 > docs/raft-w43-log.md).** The 2026-08-20 R-1 ruling quotients this
@@ -1923,7 +1943,16 @@ named empty structs (defined types) keep their names.
   same instantiation across functions — probe-verified. The
   two-instantiation shape now exports and runs;
   generics/local-type-argument stays red as M3's separate recorded
-  refusal of the type-ARGUMENT direction.)
+  refusal of the type-ARGUMENT direction.) (ADDENDUM 2026-09-05, lane
+  `fr19-bug097`: the key is now `main.box·N[int]` — the FR-19 scope
+  ordinal before the instantiation bracket; `TypeId.unqualified` strips
+  both the qualifier and the ordinal, so the observation stays
+  `box[int]`; the display record is gc's `main.box[int]`. The
+  parameterization applies only to a type declared INSIDE the stencil's
+  declaration (`declaredInActiveStencil`), not to every local type the
+  stencil mentions — the first cut of this fix parameterized a stencil's
+  OWN local type ARGUMENT and hit C6 on it. `generics/local-type-argument`
+  is green since the same day (BUG-092).)
 - Pinned-by: differential
 - Cases: generics/local-type-in-generic/dynamic-name, generics/local-type-in-generic/assert-panic
 - Discovered: 2026-08-06 (arc-final audit F3)
@@ -5225,10 +5254,19 @@ the affected program are byte-identical; the row stays red on FR-21.
 
 ## BUG-092 — `cmp.Compare` at a FUNCTION-LOCAL defined type argument refuses (mono.go's C6 naming rule) now that the kind-dispatch desugar is retired — a designed red BY [USER] RULING, plan on FR-19 [coverage; frontend generic instantiation at local types]
 
-- Status: open
-- Pinned-by: none (both rows are RED by design at frontend-export; the refusal is mono.go's `function-local defined type %s as a type argument (gc renders these with a compiler-internal unique suffix … — refused rather than guessed)`; nothing here is a wrong answer)
-- Expect: FAIL
-- Cases: slices/sortfunc-cmp/cmp-compare-kinds, stdlib-source/cmp-compare/local-float-type, slices/sortfunc-cmp/sortfunc-local-type
+- Status: fixed (2026-09-05, lane `fr19-bug097` — FR-19's plan landed,
+  design note `docs/2026-09-05_fr19-bug097-design.md` §2.2: a function-
+  local type keys by SCOPE ORDINAL (`main.index·1`), and a FUNCTION
+  instantiation's FuncId is identity-only (never a gc text), so
+  `cmp.Compare[main.index·1]` / `slices.SortFunc[[]main.ltup·1,main.ltup·1]`
+  stencil through the real generic — `renderTypeKey` admits local types
+  in `funcInstCtx`. C6 stays for a generic TYPE's argument (observable
+  `main.box[main.score·N]`, gc's compiler counter), pinned red by design
+  by `scoping/local-type-identity/type-instantiation-refused`. The PLAN's
+  `@cmpCompareKinds` spelling became the per-package source-order ordinal
+  `·N` (design note §2.2, decisions log). All three rows PASS.)
+- Pinned-by: differential
+- Cases: slices/sortfunc-cmp/cmp-compare-kinds, stdlib-source/cmp-compare/local-float-type, slices/sortfunc-cmp/sortfunc-local-type, generics/local-type-argument
 - Discovered: 2026-09-03 (stdlib source-through slice 2: retiring the desugar flipped `cmp-compare-kinds` red; the slice's STOP rule restored it and POSED the choice to the [USER]); DECIDED 2026-09-04 — [USER] Mike, relayed by the [AGENT] coordinator (cited as relayed): «(2) given we have a plan, I think this should be an honest red». Landed by lane `fr24`, checkpoint C (`docs/evidence/2026-09-04_fr24-fr25/`).
 
 WHAT: `cmp` is a source-through library unit and `cmp.Compare[T]` is the real
@@ -5487,9 +5525,23 @@ go/types' (spec#Operators), the width that saturates is the assumed type's.
 
 ## BUG-097 — the ANONYMOUS-interface wire name is qualified with package NAMES while every other TypeId is keyed by import PATH: two same-named packages at different paths fuse two DISTINCT `interface{ M() T }` types onto ONE wire name — a wrong satisfaction answer on main, a named refusal since BUG-095's conflict guard [fidelity; frontend identity; multipkg; surfaced by the bug095-096 audit (R2)]
 
-- Status: open
+- Status: fixed (2026-09-05, lane `fr19-bug097`, design note
+  `docs/2026-09-05_fr19-bug097-design.md` §2.3: the anonymous-interface
+  key is minted by ONE constructor, `anonIfaceKey` (identity.go), used by
+  both `emitType`'s interface arm and `ifaceWireName` — path-qualified
+  named types, PATH-qualified UNEXPORTED method names (the probe found
+  that `types.TypeString` never qualifies those even with a qualifier,
+  so the PLAN's one-liner would have left a second fusion class —
+  BUG-098), function-local types by scope ordinal, methods in gc's
+  order. `interface{Get() red/inner.T}` ≠ `interface{Get() blue/inner.T}`;
+  the conflict guard never sees them as one. The gc display
+  `interface { Get() inner.T }` travels beside the key (BUG-059's split),
+  so the missing-method / nil / source-position texts are byte-exact —
+  pinned by `multipkg/same-name-anon-iface-panic/{missing,source}` and
+  the single-package display suite `interfaces/anon-iface-display/*`.
+  Evidence: `docs/evidence/2026-09-05_fr19-bug097/` (gc probes P2/P3/P5).)
 - Pinned-by: differential
-- Cases: multipkg/same-name-anon-iface
+- Cases: multipkg/same-name-anon-iface, multipkg/same-name-anon-iface-panic/missing, multipkg/same-name-anon-iface-panic/source, interfaces/anon-iface-display/missing-order, interfaces/anon-iface-display/unexported, interfaces/anon-iface-display/unexported-satisfied, interfaces/anon-iface-display/embedded-flattened, interfaces/anon-iface-display/source-display, interfaces/anon-iface-display/nil, interfaces/anon-iface-display/slice-target, interfaces/anon-iface-display/named-result
 
 WHAT (spec#Type_identity: two named types are identical only if they are the same type —
 `red/inner.T` is not `blue/inner.T`; two interface types are identical iff they have the same
@@ -5531,3 +5583,53 @@ second one. Not fixed in the audit fix round: a two-site one-liner, but its blas
 rendering decision — recorded, rowed, red. Ledger: FR-13's structural-TypeId row is the
 neighbouring frontier (anonymous STRUCT types); this entry keeps the anonymous-INTERFACE
 identity defect on its own line since it is a wrong-answer class, not a coverage gap.
+
+## BUG-098 — UNEXPORTED interface method names are package-scoped in Go but BARE on the wire: a requirement `get` declared in one package would be judged satisfied by a concrete `get` from another — a wrong satisfaction answer, refused whole-export by a guard until the names are qualified [fidelity; frontend + machine identity; multipkg; found by the fr19-bug097 gc probes (P3/P5)]
+
+- Status: open
+- Pinned-by: none (both rows are RED BY DESIGN at frontend-export: the guard `checkUnexportedMethodScopes` (identity.go) refuses `unexported interface method name(s) shared across packages: get (required by blue/inner, implemented in red/inner) …`; nothing on the wire answers)
+- Expect: FAIL
+- Cases: multipkg/unexported-method-scope/assert-panic, multipkg/unexported-method-scope/distinct
+- Discovered: 2026-09-05 (lane `fr19-bug097`, gc probe P3: `types.TypeString` never qualifies unexported interface METHOD names, even with a qualifier — so BUG-097's planned one-liner would have left this fusion class; P5: gc answers `true false` for red's `interface{ get() int }` vs blue's on a red value)
+
+WHAT (spec#Type_identity: two interface types are identical iff they have the same
+set of methods with the same names and identical signatures, where NON-EXPORTED
+method names must originate in the same package; spec#Uniqueness_of_identifiers /
+spec#Exported_identifiers): `red/inner.T`'s method `get` is `red/inner.get`, not
+`blue/inner.get`, so red's `T` does NOT implement blue's `interface{ get() int }`
+(gc probe P5: `ri.IsGet(x), bi.IsGet(x)` = `true false`; the failed assert says
+`interface conversion: inner.T is not interface { inner.get() int }: missing method
+get`). The wire's requirement lists (`MethodSig.name`), method tables
+(`MethodInfo.name`) and dispatch anchors (`<Iface>.<method>`) carry BARE method
+names, and the machine matches requirements to concrete methods by that bare name
+— so once the two anonymous interfaces are distinct KEYS (BUG-097's fix) the
+machine answers `true true`: a WRONG ANSWER where main REFUSED (on main the two
+interfaces fused onto one name and BUG-095's conflict guard killed the export).
+Before the split main was refusing by accident; the wrong answer was one key away.
+
+GUARD (2026-09-05, this lane, fail closed): `emitProgram` refuses the WHOLE export
+when an unexported requirement name declared in source package P has a concrete
+method of that name declared in a DIFFERENT source package Q (`noteInterface`
+records requirement names → declaring paths; `checkUnexportedMethodScopes` walks
+every unit's `Defs` for unexported methods) — the only shape on which bare-name
+tables can answer wrong. Single-package programs never trip it (P == Q);
+promoted methods keep their declaring package, so a struct embedding another
+package's type satisfying THAT package's interface is not flagged. Static twin in
+`tools/lowerdiag` (`unexported-method-scope`, FR-31). MEASURED on cedar-go
+(`docs/2026-09-03_cedar-go-coverage-census.md` §13): the guard kills
+`cedargo/x/exp/schema/ast` (`isType` required by `x/exp/schema/resolved`,
+implemented in `ast` — 17 declarations, 2 packages own/inherited) which the
+census had counted as lowering: that count was a LATENT WRONG-ANSWER class, now
+an honest red.
+
+PLAN (FR-31, ledger §4 / queue 31): qualify unexported method names by declaring
+package PATH wherever the wire carries a matching name — `MethodSig.name`,
+`MethodInfo.name`, the interface dispatch anchors and `calledIfaceMethods` keys,
+method-value/expression emission — leaving FuncIds (`<recv TypeId>.<name>`, whose
+receiver already carries the path) untouched; the machine's `missing method`
+text renders the bare name (display, like TypeIds). Frontend-wide but mechanical
+(one `methodWireName(*types.Func)` helper at every `"name":` site of a method
+entry); sequenced after the parallel emit.go lanes land. Fix criterion: both
+Cases rows PASS (`true false`; the gc text above), the guard retires, the
+cedar-go `ast` export revives.
+

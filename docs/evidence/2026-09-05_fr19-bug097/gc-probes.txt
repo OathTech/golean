@@ -1,0 +1,75 @@
+# gc probe transcripts — go version: go version go1.26.5 linux/amd64 — 2026-09-05, lane fr19-bug097
+# P1 (single package: named/anonymous/local types; scopes.go = same-named locals in two functions)
+scopes: A-value asserted to B's L: interface conversion: interface {} is main.L, not main.L (types from different scopes)
+scopes: assert to own anon iface (missing): interface conversion: main.L is not interface { Get() main.L }: missing method Get
+scopes: assert to other anon iface (missing): interface conversion: main.L is not interface { Get() main.L }: missing method Get
+named->named: interface conversion: interface {} is main.T, not main.U
+named->anon-missing: interface conversion: main.T is not interface { M() }: missing method M
+named->anon-two: interface conversion: main.T is not interface { Get() int; M() }: missing method M
+named->anon-order: interface conversion: main.T is not interface { A(); Z() }: missing method A
+anon-src->named: interface conversion: interface { Get() int } is main.T, not main.V
+anon-src-two->named: interface conversion: interface { Get() int; main.get() int } is main.T, not main.V
+anon-with-named-result: interface conversion: main.T is not interface { Get() main.T }: missing method Get
+anon-with-embedded: interface conversion: main.T is not interface { Error() string; Get() int }: missing method Error
+anon-unexported: interface conversion: main.T is not interface { M(); main.get() int }: missing method M
+nil->anon: interface conversion: interface is nil, not interface { M() }
+nil->named-iface: interface conversion: interface is nil, not fmt.Stringer
+nil->concrete: interface conversion: interface {} is nil, not main.T
+struct->anon-struct: interface conversion: interface {} is main.S, not struct { X int }
+anon-struct-src: interface conversion: interface {} is struct { X int }, not main.S
+func: interface conversion: interface {} is main.T, not func(int) bool
+ptr: interface conversion: interface {} is main.T, not *main.T
+slice-of-anon: interface conversion: interface {} is main.T, not []interface { M() }
+map-of-anon: interface conversion: interface {} is main.T, not map[string]interface { M() }
+chan: interface conversion: interface {} is main.T, not chan main.T
+local->local: interface conversion: interface {} is main.L, not main.U
+  eq=false main.L main.L
+localA->localB-type: <nil>
+local->anon-missing: interface conversion: main.L is not interface { M() }: missing method M
+uncomparable: runtime error: comparing uncomparable type []int
+uncomparable-anon-struct: runtime error: comparing uncomparable type struct { F []int }
+local-in-anon-iface: interface conversion: main.T is not interface { Get() main.L }: missing method Get
+%T local: main.L; %v: 1
+%T anon iface var: main.T
+# P2 (red/inner + blue/inner: same package NAME, distinct paths; inner.go is the shared package source)
+1 4 true false true false
+concrete same-name: interface conversion: interface {} is inner.Q, not inner.Q (types from different packages)
+red T -> blue anon iface: interface conversion: inner.T is not interface { Get() inner.T }: missing method Get
+red T -> red anon iface ok: <nil>
+red T -> blue T: interface conversion: interface {} is inner.T, not inner.T (types from different packages)
+red T -> blue unexported anon: interface conversion: inner.T is not interface { M(); inner.get() int }: missing method M
+anon src -> concrete: interface conversion: interface { Get() inner.T } is inner.T, not inner.W
+nil -> red anon: interface conversion: interface is nil, not interface { Get() inner.T }
+%T: inner.T inner.T
+%T anon struct: struct { F inner.T }
+anon struct assert: interface conversion: interface {} is struct { F inner.T }, not struct { F inner.T } (types from different scopes)
+# P3 (go/types TypeString qualification — unexported methods are NOT qualified even with a qualifier)
+b: nil-qf="interface{M() main.L; error}"  qf="interface{M() PATH(main).L; error}"
+d: nil-qf="interface{N(main.L, ...int) (main.L, error)}"  qf="interface{N(PATH(main).L, ...int) (PATH(main).L, error)}"
+a: nil-qf="interface{Get() int; get() int}"  qf="interface{Get() int; get() int}"
+c: nil-qf="struct{X int; Y main.L \"tag\"}"  qf="struct{X int; Y PATH(main).L \"tag\"}"
+# P4 (gc type strings: instantiations, ·N local counter, anonymous struct/func/chan spellings)
+main.Pair[int,string]
+main.Pair[red/inner.T,*red/inner.Q]
+main.Pair[interface { Get() red/inner.T },struct { X int }]
+main.Pair[[]red/inner.T,map[string]red/inner.T]
+main.Pair[func(red/inner.T) bool,chan red/inner.T]
+main.Pair[interface {},error]
+main.box[main.score·1] main.box[main.other·2] main.box[main.score·3] main.score
+main.inner[int] main.inner[string]
+struct { main.S; X int "json:\"x\""; y inner.T }
+struct {}
+[3]inner.T
+func(...int) (int, error)
+chan<- inner.T <-chan inner.T
+<nil> <nil>
+[]interface { Get() inner.T; main.get() int }
+[][]struct { A int; B int }
+map[struct { K string }][]uint8
+uint8 int32
+interface conversion: interface {} is main.box[int], not main.box[string]
+# P5 (unexported single-method anonymous interface across same-named packages; gc %T and reflect Name() of an instantiation over a sub-path type keep the PATH in the bracket)
+cross unexported single: interface conversion: inner.T is not interface { inner.get() int }: missing method get
+true false
+main.Pair[red/inner.T]
+pair assert: interface conversion: interface {} is main.Pair[red/inner.T], not main.Pair[blue/inner.T]

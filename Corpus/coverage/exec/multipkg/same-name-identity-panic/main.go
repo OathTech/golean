@@ -8,7 +8,13 @@ package main
 // package NAME (ambiguous on purpose) plus the disambiguating suffix.
 // This pins the machine's MESSAGE fidelity for path-keyed TypeIds, not
 // just its identity verdict — the identity half lives in
-// multipkg/same-name-identity.
+// multipkg/same-name-identity. RED from 2026-08-18 (BUG-059: the machine
+// rendered the path-qualified KEY) until 2026-09-05 (lane fr19-bug097,
+// design note docs/2026-09-05_fr19-bug097-design.md §3): the wire
+// carries gc's DISPLAY (`inner.T`, package `red/inner`) beside the key,
+// and the concrete-target text appends gc's suffix when the displays
+// collide — `(types from different packages)` for distinct declaring
+// paths. GREEN.
 
 import (
 	bi "blue/inner"
@@ -35,10 +41,9 @@ func main() {}
 // the day the split completes:
 //   gc:  interface conversion: interface {} is inner.T, not inner.T
 //        (types from different packages)
-//   ours: the path-qualified form over red/inner.T / blue/inner.T
-// (the machine's abort rendering — the differential red above IS the
-// member disagreement, kept red until the machine can carry the
-// quotient).
+//   ours: WAS the path-qualified form over red/inner.T / blue/inner.T;
+//         since 2026-09-05 byte-equal to gc's (display/identity split —
+//         the quotient is no longer needed for this row).
 func sameNameForcedHalf() string {
 	out := ""
 	func() {

@@ -944,3 +944,62 @@ the residual — differing panic kinds on the two sides — stays a named
 refusal until BUG-032's linearization; the E13 tension is recorded on
 BUG-083 for the audit). No gate, baseline, corpus or trust-surface claim is
 made here beyond the lane's own landing records (ledger §8o).
+
+## 13. Addendum 2026-09-05 — FR-19 closed (scope-ordinal TypeIds), BUG-097/BUG-059 fixed, BUG-098 guarded: re-measured [AGENT]
+
+Lane `fr19-bug097` (design note `docs/2026-09-05_fr19-bug097-design.md`;
+evidence `docs/evidence/2026-09-05_fr19-bug097/`). Same assembled copy
+(`scripts/cedar-census assemble` + `cases`, deps/cedar-go @ cda92d0,
+cedar-access-control-for-k8s @ 660c637), same static pass
+(`scripts/lower-diagnose artifacts/cedar/cases/all --tsv`), same unit and
+scope as §10.3/§12.2.
+
+### 13.1 What moved
+
+* **`nodeJSONAlias` (FR-19) is gone.** `nodeJSON.MarshalJSON` /
+  `UnmarshalJSON` each declare a local `type nodeJSONAlias`; the two now
+  key `cedargo/internal/json.nodeJSONAlias·1` / `·2` and the package
+  LOWERS (`ok`, 47/52 declarations demanding nothing refused). Its
+  export-kill inheritance (`cedargo/ast`, `cedargo`, `cedargo/x/exp/batch`,
+  `main`) is lifted with it. The `duplicate-typeid` cause left the table
+  (the frontend text survives only as the boundary collision guard;
+  `tools/lowerdiag` no longer finds it statically).
+* **A NEW export kill, honest: `unexported-method-scope` (FR-31, BUG-098).**
+  `cedargo/x/exp/schema/resolved` requires an unexported `isType()` in an
+  interface; `cedargo/x/exp/schema/ast` implements `isType` on nine types.
+  Go keys unexported method names by package, the wire's method tables
+  carry bare names, so the machine could judge an `ast` value to satisfy
+  `resolved`'s interface — a wrong-answer class the census had been
+  COUNTING AS LOWERING. The frontend guard refuses the export by name
+  (17 declarations: the 9 implementations + the requirement sites; the
+  package and `x/exp/schema/internal/json` inherit the kill).
+
+### 13.2 The numbers
+
+Before (§12.2, main at this lane's fork): declarations demanding nothing
+refused **1460/1569 (93.1%)**, funcs+methods 980/1086 (90.2%), refused
+108, export kills **2 declarations / 5 of 24 packages**. After:
+**1443/1569 (92.0%)**, funcs+methods 965/1086 (88.9%), refused 125,
+export kills **17 declarations / 8 of 24 packages**. Movement by cause:
+`duplicate-typeid` 2 → 0; `unexported-method-scope` 0 → 17 (17 sole, 2
+pkgs, 17 export); every other row unchanged (the head is still
+`encoding/json` FR-14, 62 declarations / 32 sole — one more sole than
+§12.2 because a declaration `nodeJSONAlias` used to co-block is now
+blocked by FR-14 alone). Dynamic first refusal on `all`: EXPORT OK, 557
+→ 552 quarantined declarations (the five `internal/json` bodies that
+now lower). The drop in the headline number is the honest direction: a
+hidden wrong answer became a visible red; FR-31's fix (path-qualified
+unexported method names, queue 31) revives the 17 and the two packages.
+
+### 13.3 What is next, measured
+
+Unchanged from §12.3 except FR-31 ahead of it in the export-kill column:
+`encoding/json` (G6/reflect) heads the per-declaration table; the
+x/exp/schema tree is now gated by FR-31 (own) and FR-14 (`encoding/json`
+in `internal/json`'s bodies) rather than FR-19. Decisions in this
+addendum, all [AGENT]: FR-19 CLOSED with scope-ordinal keys; BUG-098
+guarded whole-export rather than fixed in this lane (the fix is
+mechanical but frontend-wide; rowed FR-31 with its plan). No gate,
+baseline, corpus or trust-surface claim is made here beyond the lane's
+own landing records (ledger §8p).
+

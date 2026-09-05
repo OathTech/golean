@@ -83,6 +83,11 @@ structure ExecState where
   hand-built state refuses every method-carrier query until its
   records are stated explicitly. -/
   methodSets : Array MethodSetRecord := #[]
+  /-- Display records (design note 2026-09-05 §3): gc's type string per
+  `TypeId`, for panic-text RENDERING only. Default `#[]` = a hand-built
+  state renders the visible `<TypeId … has no display record>` marker,
+  never the key (rendering the key was BUG-059). -/
+  typeDisplays : Array (TypeId × TypeDisplay) := #[]
   heap : Heap := #[]
   deriving Repr, BEq
 

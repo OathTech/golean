@@ -13,16 +13,24 @@ package main
 //	FuncId  genericAdd[int]           bare declared name + bracketed args
 //	        main.box[int].Get        (methods: receiver TypeId + "." + name)
 //
-// Arguments render the way reflect/the runtime spell them — package-NAME
-// qualifiers, "," separators with no space (types.TypeString uses ", ";
-// reflect.Type.Name() does not), canonical basic names (byte→uint8,
+// Arguments render the way gc's LinkString spells them inside an
+// instantiation's bracket (cmd/compile/internal/types/fmt.go fmtTypeID;
+// probe P4 in docs/evidence/2026-09-05_fr19-bug097/gc-probes.txt:
+// `main.Pair[red/inner.T,*red/inner.Q]`) — import-PATH qualifiers
+// (qualifiedTypeName, BUG-010; a dot-free path is its own PathToPrefix),
+// "," separators with no space, canonical basic names (byte→uint8,
 // rune→int32), "interface {}" for the empty interface, "struct {}" for
-// the empty struct — so Go panic texts contain the key VERBATIM and
-// TypeId.unqualified reproduces reflect.Type.Name() (the observation
-// channel's contract). SCOPE of that claim (audit response M3): it holds
-// exactly on the ADMITTED argument surface; function-local defined types
-// — which gc names with a compiler-internal unique suffix (main.score·1)
-// no source-derived key can reproduce — are refused, not approximated.
+// the empty struct — so a type instantiation's key IS its gc display
+// and TypeId.unqualified reproduces reflect.Type.Name() (the observation
+// channel's contract). SCOPE of that claim (audit response M3; narrowed
+// 2026-09-05, design note §2.2): it holds exactly on the ADMITTED
+// argument surface; a function-local defined type as a TYPE
+// instantiation's argument — which gc names with a compiler-internal
+// counter (main.score·1) no source-derived key can reproduce, and which
+// IS observable through the instantiated type's name — is refused, not
+// approximated (C6). As a FUNCTION instantiation's argument the same
+// local type is admitted under its scope-ordinal key (a FuncId is never
+// rendered), and inside an anonymous-interface identity key likewise.
 
 import (
 	"errors"
@@ -358,6 +366,8 @@ func (e *emitter) funcInstanceAt(id *ast.Ident, fn *types.Func) (string, *types.
 	// The stencil FuncId roots at the identity-boundary wire name
 	// (W1.1): a source-package generic mangles as "path.F[int]", so two
 	// same-named generics in different packages stencil apart.
+	// Function-local type arguments are admitted here (funcInstCtx): the
+	// FuncId is identity only, never a gc text.
 	mangled, err := e.instFuncId(e.funcWireName(fn), targs)
 	if err != nil {
 		return "", nil, err
@@ -596,10 +606,10 @@ func (e *emitter) quarantinedStencilStub(work *typeInstWork, d *ast.FuncDecl, u 
 	if err != nil {
 		return nil, err
 	}
-	savedSubst, savedName, savedErr, savedTargs := e.curSubst, e.curFuncName, e.substErr, e.curTargs
-	e.curSubst, e.curFuncName, e.substErr, e.curTargs = env, work.key+"."+d.Name.Name, nil, targs
+	savedSubst, savedName, savedErr, savedTargs, savedDecl := e.curSubst, e.curFuncName, e.substErr, e.curTargs, e.curInstDecl
+	e.curSubst, e.curFuncName, e.substErr, e.curTargs, e.curInstDecl = env, work.key+"."+d.Name.Name, nil, targs, d
 	defer func() {
-		e.curSubst, e.curFuncName, e.substErr, e.curTargs = savedSubst, savedName, savedErr, savedTargs
+		e.curSubst, e.curFuncName, e.substErr, e.curTargs, e.curInstDecl = savedSubst, savedName, savedErr, savedTargs, savedDecl
 	}()
 	named := unsupported{what: "FR-4: method stencil at this instantiation does not lower — " + u.what}
 	stub, err := e.quarantinedMethodStub(d, named)
@@ -736,7 +746,7 @@ func (e *emitter) flushFuncInsts(funcs []any) ([]any, error) {
 // quarantine in emitProgram.
 func (e *emitter) emitFuncInst(work *funcInstWork) (map[string]any, error) {
 	savedSubst, savedName, savedErr := e.curSubst, e.curFuncName, e.substErr
-	savedTargs := e.curTargs
+	savedTargs, savedDecl := e.curTargs, e.curInstDecl
 	// Stencil bodies emit under their DECLARING unit's type-checker
 	// record (multi-package W1.1): the body's AST nodes are keyed there.
 	savedPkg, savedInfo := e.pkg, e.info
@@ -744,7 +754,7 @@ func (e *emitter) emitFuncInst(work *funcInstWork) (map[string]any, error) {
 		e.setUnit(work.unit)
 	}
 	e.curSubst, e.curFuncName, e.substErr = work.env, work.mangled, nil
-	e.curTargs = work.targs
+	e.curTargs, e.curInstDecl = work.targs, work.decl
 	e.liftSeq = 0
 	liftedMark := len(e.lifted)
 	localTypesMark := len(e.localTypeDefs)
@@ -761,7 +771,7 @@ func (e *emitter) emitFuncInst(work *funcInstWork) (map[string]any, error) {
 		err = e.substErr
 	}
 	e.curSubst, e.curFuncName, e.substErr = savedSubst, savedName, savedErr
-	e.curTargs = savedTargs
+	e.curTargs, e.curInstDecl = savedTargs, savedDecl
 	e.pkg, e.info = savedPkg, savedInfo
 	if err != nil {
 		e.lifted = e.lifted[:liftedMark]
@@ -942,6 +952,14 @@ func (e *emitter) instTypeId(inst *types.Named) (string, error) {
 	if err := e.registerMangledKey(key, inst); err != nil {
 		return "", err
 	}
+	// The gc DISPLAY of an instantiation (design note 2026-09-05 §3.1):
+	// the origin by package NAME, the bracket exactly as the key spells
+	// it (gc's LinkString of the arguments — probe P4).
+	if pkg := inst.Obj().Pkg(); pkg != nil {
+		e.noteTypeDisplay(key, typeDisplay{display: pkg.Name() + "." + inst.Obj().Name() + "[" + args + "]", pkg: pkg.Path()})
+	} else {
+		e.noteTypeDisplay(key, typeDisplay{display: inst.Obj().Name() + "[" + args + "]"})
+	}
 	return key, nil
 }
 
@@ -953,7 +971,7 @@ func (e *emitter) instTypeId(inst *types.Named) (string, error) {
 func (e *emitter) instFuncId(name string, targs []types.Type) (string, error) {
 	rendered := make([]string, len(targs))
 	for i, t := range targs {
-		r, err := e.renderTypeArg(t)
+		r, err := e.renderTypeKey(t, funcInstCtx)
 		if err != nil {
 			return "", err
 		}
@@ -994,69 +1012,119 @@ func (e *emitter) renderTypeArgList(list *types.TypeList) (string, error) {
 // spelling with direction+elem inside the injectivity argument.
 // TestManglingSurfaceFailsClosed pins the refusal itself.
 func (e *emitter) renderTypeArg(t types.Type) (string, error) {
+	return e.renderTypeKey(t, typeInstCtx)
+}
+
+// keyCtx is the identity-key rendering context (design note 2026-09-05
+// §2.1–§2.3): what the key may admit depends on whether it can reach a
+// gc-observable text.
+type keyCtx struct {
+	// localTypes: a function-local defined type renders by its scope
+	// ordinal (`main.score·1`, identity only) — else C6 refuses it.
+	localTypes bool
+	// chans / anonIfaces: unnamed channel types / anonymous non-empty
+	// interfaces render (`chan T`, `interface{…}`) — else the standing
+	// mangling-surface refusals.
+	chans, anonIfaces bool
+}
+
+var (
+	// A TYPE instantiation's key is its gc display (observable): the
+	// admitted mangling surface exactly as before.
+	typeInstCtx = keyCtx{}
+	// A FUNCTION instantiation's key is never rendered: local types
+	// are admitted by ordinal. The surface is otherwise unchanged
+	// (generics/chan-type-arg stays a recorded coverage gap).
+	funcInstCtx = keyCtx{localTypes: true}
+	// An anonymous interface's identity key: everything Go type
+	// identity distinguishes, spelled canonically.
+	ifaceKeyCtx = keyCtx{localTypes: true, chans: true, anonIfaces: true}
+)
+
+// renderTypeKey renders one type inside an identity key under ctx.
+func (e *emitter) renderTypeKey(t types.Type, ctx keyCtx) (string, error) {
 	switch ty := t.(type) {
 	case *types.Basic:
+		if ty.Kind() == types.Invalid && e.substErr != nil {
+			return "", e.substErr
+		}
 		return renderBasicArg(ty)
 	case *types.Named:
-		// FUNCTION-LOCAL defined types refuse (audit response M3, a
-		// recorded narrowing): gc names them in instantiation renderings
-		// with a compiler-internal, globally-unique suffix (probe
-		// 2026-08-05: two same-named locals render `main.score·1` /
-		// `main.score·2`), which a bare `pkg.Name` key can neither
-		// reproduce (observation/panic-text divergence) nor keep
-		// injective (two same-named locals in different functions would
-		// share one key — the collision registry catches the two-type
-		// case loud, mono_test pins it, but the single-type divergence is
-		// silent). Refusing beats shipping a guessed numbering.
-		if obj := ty.Obj(); obj.Pkg() != nil && obj.Parent() != obj.Pkg().Scope() {
+		// FUNCTION-LOCAL defined types as a TYPE instantiation's argument
+		// refuse (audit response M3; narrowed 2026-09-05 to this
+		// observable shape — design note §2.2/§2.4): gc names them in
+		// instantiation renderings with a compiler-internal counter
+		// (probe 2026-08-05 and P4: `main.score·1`/`main.score·3`) which
+		// no source-derived key can reproduce — the instantiated type's
+		// name is observable (`%T`, a failed assert's text). Refusing
+		// beats shipping a guessed numbering. Where the key is identity
+		// only (a FuncId, an anonymous-interface key) the scope ordinal
+		// is the key (qualifiedTypeName).
+		if obj := ty.Obj(); !ctx.localTypes && obj.Pkg() != nil && obj.Parent() != obj.Pkg().Scope() {
 			return "", unsup("function-local defined type %s as a type argument (gc renders these with a compiler-internal unique suffix, e.g. %s·1 — refused rather than guessed)",
 				obj.Name(), obj.Name())
 		}
 		if ty.TypeArgs().Len() > 0 {
+			// A nested TYPE instantiation reaches the wire as a TypeId
+			// of its own: typeInstCtx regardless of the outer context.
 			return e.instTypeId(ty)
 		}
 		return e.qualifiedTypeName(ty.Obj()), nil
 	case *types.Alias:
 		// Aliases are transparent for identity (§3.2): render the aliased
 		// type; aliases never mint TypeIds.
-		return e.renderTypeArg(types.Unalias(ty))
+		return e.renderTypeKey(types.Unalias(ty), ctx)
 	case *types.Pointer:
-		elem, err := e.renderTypeArg(ty.Elem())
+		elem, err := e.renderTypeKey(ty.Elem(), ctx)
 		if err != nil {
 			return "", err
 		}
 		return "*" + elem, nil
 	case *types.Slice:
-		elem, err := e.renderTypeArg(ty.Elem())
+		elem, err := e.renderTypeKey(ty.Elem(), ctx)
 		if err != nil {
 			return "", err
 		}
 		return "[]" + elem, nil
 	case *types.Array:
-		elem, err := e.renderTypeArg(ty.Elem())
+		elem, err := e.renderTypeKey(ty.Elem(), ctx)
 		if err != nil {
 			return "", err
 		}
 		return "[" + itoa64(ty.Len()) + "]" + elem, nil
 	case *types.Map:
-		key, err := e.renderTypeArg(ty.Key())
+		key, err := e.renderTypeKey(ty.Key(), ctx)
 		if err != nil {
 			return "", err
 		}
-		val, err := e.renderTypeArg(ty.Elem())
+		val, err := e.renderTypeKey(ty.Elem(), ctx)
 		if err != nil {
 			return "", err
 		}
 		return "map[" + key + "]" + val, nil
+	case *types.Chan:
+		if !ctx.chans {
+			// The standing mangling-surface gap (audit F9;
+			// generics/chan-type-arg): text unchanged.
+			return "", unsup("type argument outside the mangling surface: %T (%s)", t, t)
+		}
+		elem, err := e.renderTypeKey(ty.Elem(), ctx)
+		if err != nil {
+			return "", err
+		}
+		return chanSpelling(ty, elem), nil
 	case *types.Signature:
-		return e.renderSignatureArg(ty)
+		return e.renderSignatureKey(ty, ctx, true)
 	case *types.Interface:
 		if ty.Empty() {
 			// reflect's spelling of the empty interface (G1 probe:
 			// Vec[any] names as "Vec[interface {}]").
 			return "interface {}", nil
 		}
-		return "", unsup("anonymous non-empty interface as a type argument (%s)", ty)
+		if !ctx.anonIfaces {
+			return "", unsup("anonymous non-empty interface as a type argument (%s)", ty)
+		}
+		return e.anonIfaceKey(ty)
 	case *types.Struct:
 		if ty.NumFields() == 0 {
 			// The canonical EMPTY struct is inside the admitted type
@@ -1074,13 +1142,15 @@ func (e *emitter) renderTypeArg(t types.Type) (string, error) {
 	}
 }
 
-// renderSignatureArg matches reflect's func-type spelling: parameters
+// renderSignatureKey matches reflect's func-type spelling: parameters
 // ", "-joined, variadic "...T", results "" / " T" / " (T, U)" (G1 probe:
-// "func(int, string) (int, error)", "func(...int) int").
-func (e *emitter) renderSignatureArg(sig *types.Signature) (string, error) {
+// "func(int, string) (int, error)", "func(...int) int"); `func` prefixed
+// for a function type, bare for an interface method's signature inside
+// an anonymous-interface key (anonIfaceKey).
+func (e *emitter) renderSignatureKey(sig *types.Signature, ctx keyCtx, withFunc bool) (string, error) {
 	params := make([]string, sig.Params().Len())
 	for i := 0; i < sig.Params().Len(); i++ {
-		p, err := e.renderTypeArg(sig.Params().At(i).Type())
+		p, err := e.renderTypeKey(sig.Params().At(i).Type(), ctx)
 		if err != nil {
 			return "", err
 		}
@@ -1089,12 +1159,15 @@ func (e *emitter) renderSignatureArg(sig *types.Signature) (string, error) {
 		}
 		params[i] = p
 	}
-	out := "func(" + strings.Join(params, ", ") + ")"
+	out := "(" + strings.Join(params, ", ") + ")"
+	if withFunc {
+		out = "func" + out
+	}
 	switch sig.Results().Len() {
 	case 0:
 		return out, nil
 	case 1:
-		r, err := e.renderTypeArg(sig.Results().At(0).Type())
+		r, err := e.renderTypeKey(sig.Results().At(0).Type(), ctx)
 		if err != nil {
 			return "", err
 		}
@@ -1102,7 +1175,7 @@ func (e *emitter) renderSignatureArg(sig *types.Signature) (string, error) {
 	default:
 		results := make([]string, sig.Results().Len())
 		for i := 0; i < sig.Results().Len(); i++ {
-			r, err := e.renderTypeArg(sig.Results().At(i).Type())
+			r, err := e.renderTypeKey(sig.Results().At(i).Type(), ctx)
 			if err != nil {
 				return "", err
 			}

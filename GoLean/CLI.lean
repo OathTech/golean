@@ -756,7 +756,8 @@ def enumSetup (program : GoCore.Program) (name : String)
     throw (.stuck s!"expected {func.args.size} argument(s), got {args.size}")
   let state : GoCore.ExecState :=
     { types := program.typeDefs.toList, functions := program.funcs
-      methods := program.methods, methodSets := program.methodSets }
+      methods := program.methods, methodSets := program.methodSets
+      typeDisplays := program.typeDisplays }
   let σ₀ ← GoCore.Machine.seedGlobals state program.globals
   -- Defense-in-depth behind the decoder's globaladdr bound check
   -- (audit response, C1): mirror of `runProgramM`'s post-seed assert.

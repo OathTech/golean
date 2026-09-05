@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+scopes-panic	localScopesPanic	-	panic	interface conversion: interface {} is main.L, not main.L (types from different scopes)	defined_type,identity,scoping,type_assertions,panic,closures
+anon-ifaces-distinct	localAnonIfacesDistinct	-	ok	-	defined_type,identity,scoping,interfaces,comma_ok,closures
+anon-iface-missing	localAnonIfaceMissing	-	panic	interface conversion: main.L is not interface { Get() main.L }: missing method Get	defined_type,identity,scoping,interfaces,type_assertions,panic
+shadow-panic	localShadowPanic	-	panic	interface conversion: interface {} is main.Shadowed, not main.Shadowed (types from different scopes)	defined_type,identity,scoping,shadowing,interfaces,type_assertions,panic
+shadow-identity	localShadowIdentity	-	ok	-	defined_type,identity,scoping,shadowing,interfaces,comma_ok
+# type-instantiation-refused: RED BY DESIGN (frontend-export) — C6, ledger §5.1 item 1, narrowed 2026-09-05 (lane fr19-bug097) to a local type as a generic TYPE's argument: gc's observable instantiation name carries the compiler counter `·N` (probe P4). Legal Go; the refusal is mono.go's "function-local defined type score as a type argument (...)". Replaces generics/local-type-argument (a FUNCTION instantiation, now green) as the C6 pin.
+type-instantiation-refused	localTypeInstantiationRefused	-	ok	-	defined_type,identity,scoping,generics

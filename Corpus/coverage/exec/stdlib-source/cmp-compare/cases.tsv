@@ -4,5 +4,5 @@ floats-nan	cmpFloatsNaN	-	ok	-	stdlib,floats,generics,loops,arrays,division
 float32-and-named	cmpFloat32AndNamed	-	ok	-	stdlib,floats,generics,defined_type
 less	cmpLess	-	ok	-	stdlib,floats,strings,generics,bools
 or	cmpOr	-	ok	-	stdlib,generics,variadic,floats,strings
-# BORN-RED by name (audit fix round): a function-local FLOAT type argument reaches the real generic and mono.go's C6 rule. Since 2026-09-04 (lane fr24, the cmp desugar retired by [USER] ruling) the int/string local-type shape (slices/sortfunc-cmp/cmp-compare-kinds) is red the same way — both on FR-19's line (plan: the scope-qualified TypeId key; BUGS.md BUG-092 Cases line).
+# BORN-RED by name (audit fix round): a function-local FLOAT type argument reaches the real generic and mono.go's C6 rule. Since 2026-09-04 (lane fr24, the cmp desugar retired by [USER] ruling) the int/string local-type shape (slices/sortfunc-cmp/cmp-compare-kinds) was red the same way — both on FR-19's line (plan: the scope-qualified TypeId key; BUGS.md BUG-092 Cases line). FLIPPED PASS 2026-09-05 (lane fr19-bug097): `cmp.Compare[main.score·N]`, a FUNCTION instantiation's identity-only key (design note docs/2026-09-05_fr19-bug097-design.md §2.2).
 local-float-type	cmpLocalFloatType	-	ok	-	stdlib,floats,generics,defined_type

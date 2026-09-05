@@ -1,0 +1,38 @@
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+building Lean executable...
+Build completed successfully (62 jobs).
+native frontend: per-case type-check + emit (no batch export)
+FAIL	scoping/local-type-identity/shadow-panic	defined_type,identity,scoping,shadowing,interfaces,type_assertions,panic	stage=go-observation	detail=Go panic did not contain expected reason interface conversion: interface {} is main.Shadowed, not main.Shadowed (types from different scopes): panic: interface conversion: main.Shadowed is not interface { Get() int }: missing method Get\n\ngoroutine 1 [running]:\nmain.localShadowPanic(...)\n /home/dev/projects/golean/.claude/worktrees/fr19-bug097/artifacts/coverage/go-run/scoping__local-type-identity__shadow-panic/main.go:66\nmain.main()\n /home/dev/projects/golean/.claude/worktrees/fr19-bug097/artifacts/coverage/go-run/scoping__local-type-identity__shadow-panic/zz_golean_harness.go:132 +0x59\nexit status 2
+FAIL	scoping/local-type-identity/type-instantiation-refused	defined_type,identity,scoping,generics	stage=frontend-export	detail={"message":"frontend-quarantined: function-local defined type score as a type argument (gc renders these with a compiler-internal unique suffix, e.g. score·1 — refused rather than guessed)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+FAIL	stdlib-source/cmp-compare/local-float-type	stdlib,floats,generics,defined_type	stage=frontend-export	detail={"message":"normalizing frontend-quarantined: function-local defined type score as a type argument (gc renders these with a compiler-internal unique suffix, e.g. score·1 — refused rather than guessed)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+FAIL	multipkg/same-name-anon-iface-panic/unexported-distinct	multipackage,imports,identity,interfaces,type_assertions,comma_ok,multi_result	stage=differential	detail=Lean={"output":"","schema":"golean-observation-v1","status":"ok","values":[{"tag":"bool","value":true},{"tag":"bool","value":true}]} Go={"output":"","schema":"golean-observation-v1","status":"ok","values":[{"tag":"bool","value":true},{"tag":"bool","value":false}]} left:  {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"tag":"bool","value":true},{"tag":"bool","value":true}]}\nright: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"tag":"bool","value":true},{"tag":"bool","value":false}]}
+FAIL	generics/local-type-argument	generics,scoping,defined_type,conversions	stage=frontend-export	detail={"message":"normalizing frontend-quarantined: function-local defined type score as a type argument (gc renders these with a compiler-internal unique suffix, e.g. score·1 — refused rather than guessed)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+FAIL	multipkg/same-name-anon-iface-panic/unexported	multipackage,imports,identity,interfaces,type_assertions,panic	stage=lean-observation	detail=expected status panic, got {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+FAIL	slices/sortfunc-cmp/sortfunc-local-type	stdlib,sort,slices,structs,generics	stage=frontend-export	detail={"message":"normalizing frontend-quarantined: function-local defined type ltup as a type argument (gc renders these with a compiler-internal unique suffix, e.g. ltup·1 — refused rather than guessed)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+FAIL	slices/sortfunc-cmp/cmp-compare-kinds	stdlib,sort,ints,defined_type	stage=frontend-export	detail={"message":"normalizing frontend-quarantined: function-local defined type index as a type argument (gc renders these with a compiler-internal unique suffix, e.g. index·1 — refused rather than guessed)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	interfaces/anon-iface-display/named-result	interfaces,type_assertions,panic,identity
+PASS	interfaces/anon-iface-display/unexported-satisfied	interfaces,type_assertions,comma_ok,identity,methods
+PASS	multipkg/same-name-identity-panic	multipackage,imports,identity,type_assertions,panic,structs
+PASS	multipkg/same-name-anon-iface-panic/missing	multipackage,imports,identity,interfaces,type_assertions,panic
+PASS	interfaces/anon-iface-display/missing-order	interfaces,type_assertions,panic,identity
+PASS	noodler/local-types/shadow	defined_type,identity,interfaces,scoping,shadowing
+PASS	multipkg/same-name-identity-panic/forced-half	multipackage,imports,identity,type_assertions,panic,recover
+PASS	multipkg/same-name-anon-iface-panic/source	multipackage,imports,identity,interfaces,type_assertions,panic
+PASS	noodler/local-types/distinct	defined_type,identity,interfaces,scoping
+PASS	scoping/local-type-identity/anon-ifaces-distinct	defined_type,identity,scoping,interfaces,comma_ok,closures
+PASS	generics/local-type-in-generic/dynamic-name	generics,structs,interfaces,identity
+PASS	generics/local-type-in-generic/assert-panic	generics,structs,interfaces,type_assertions,panic,identity
+PASS	multipkg/same-name-anon-iface	multipackage,imports,identity,interfaces,type_assertions,comma_ok,multi_result
+PASS	scoping/local-type-identity/shadow-identity	defined_type,identity,scoping,shadowing,interfaces,comma_ok
+PASS	scoping/local-type-identity/scopes-panic	defined_type,identity,scoping,type_assertions,panic,closures
+PASS	scoping/local-type-identity/anon-iface-missing	defined_type,identity,scoping,interfaces,type_assertions,panic
+PASS	interfaces/anon-iface-display/unexported	interfaces,type_assertions,panic,identity
+PASS	interfaces/anon-iface-display/nil	interfaces,type_assertions,panic,nil
+PASS	interfaces/anon-iface-display/slice-target	interfaces,type_assertions,panic,slices,identity
+PASS	interfaces/anon-iface-display/source-display	interfaces,type_assertions,panic,identity
+PASS	interfaces/anon-iface-display/embedded-flattened	interfaces,embedding,type_assertions,panic,identity
+
+differential coverage summary: cases=29 pass=21 fail=8 export_status=0
+results: artifacts/coverage/latest.tsv
+metadata: artifacts/coverage/latest.meta.tsv
+exit 1

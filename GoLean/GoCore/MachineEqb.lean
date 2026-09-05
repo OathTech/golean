@@ -823,12 +823,13 @@ def ExecState.eqb (a b : ExecState) : Bool :=
     && eqbArrayP (Func.eqbF stateEqbFuel) a.functions b.functions
     && eqbArrayP MethodInfo.eqb a.methods b.methods
     && eqbArrayP (· == ·) a.methodSets b.methodSets
+    && eqbArrayP (eqbProdP (· == ·) (· == ·)) a.typeDisplays b.typeDisplays
 
 theorem ExecState.eqb_sound (a b : ExecState) (h : ExecState.eqb a b = true) :
     a = b := by
-  obtain ⟨ty1, fn1, me1, ms1, hp1⟩ := a
-  obtain ⟨ty2, fn2, me2, ms2, hp2⟩ := b
-  obtain ⟨h1, h3, h4, h5, h6⟩ := andSplit5 h
+  obtain ⟨ty1, fn1, me1, ms1, td1, hp1⟩ := a
+  obtain ⟨ty2, fn2, me2, ms2, td2, hp2⟩ := b
+  obtain ⟨h1, h3, h4, h5, h6, h7⟩ := andSplit6 h
   cases eqbArrayP_sound HeapCell.eqb_sound h1
   cases eqbListP_sound
     (fun _ _ hh =>
@@ -836,6 +837,9 @@ theorem ExecState.eqb_sound (a b : ExecState) (h : ExecState.eqb a b = true) :
   cases eqbArrayP_sound (Func.eqbF_sound stateEqbFuel) h4
   cases eqbArrayP_sound MethodInfo.eqb_sound h5
   cases eqbArrayP_sound (fun _ _ hh => MethodSetRecord.beq_sound hh) h6
+  cases eqbArrayP_sound
+    (fun _ _ hh =>
+      eqbProdP_sound (fun _ _ k => eq_of_beq k) (fun _ _ k => TypeDisplay.beq_sound k) hh) h7
   rfl
 
 /-! ## The detector state

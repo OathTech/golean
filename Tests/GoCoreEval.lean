@@ -2399,6 +2399,17 @@ def main : IO UInt32 := do
     (TypeId.unqualified ⟨"main.T"⟩) "T")
   passed := passed && (← expectStrEq "TypeId.unqualified unqualified key unchanged"
     (TypeId.unqualified ⟨"struct{}"⟩) "struct{}")
+  -- FR-19 scope ordinals (design note 2026-09-05 §2.2): the `·N` marker
+  -- is identity only — reflect.Name() of a function-local type is bare;
+  -- inside a generic function it keeps the instantiation bracket (BUG-018).
+  passed := passed && (← expectStrEq "TypeId.unqualified strips the local-type scope ordinal"
+    (TypeId.unqualified ⟨"main.L·2"⟩) "L")
+  passed := passed && (← expectStrEq "TypeId.unqualified strips ordinal, keeps the instantiation bracket"
+    (TypeId.unqualified ⟨"main.box·1[int]"⟩) "box[int]")
+  passed := passed && (← expectStrEq "TypeId.unqualified sub-path package qualifier"
+    (TypeId.unqualified ⟨"red/inner.T"⟩) "T")
+  passed := passed && (← expectStrEq "TypeId.unqualified of an anonymous interface key is the unnamed type's empty Name()"
+    (TypeId.unqualified ⟨"interface{Get() red/inner.T}"⟩) "")
   passed := passed && (← expectStrEq "TypeId.unqualified predeclared key unchanged"
     (TypeId.unqualified ⟨"error"⟩) "error")
   passed := passed && (← expectStrEq "TypeId.unqualified mangled key, builtin arg"
@@ -2673,8 +2684,8 @@ def main : IO UInt32 := do
   -- refuse `unsupported`, proving the guard keys on the RECORD.
   let msWire (records : String) : String :=
     "{\"schema\":\"golean-native-v1\",\"funcs\":[],\"methods\":[]," ++
-    "\"types\":[{\"name\":\"main.T\",\"def\":{\"kind\":\"defined\",\"target\":{\"kind\":\"int\",\"int\":\"int\"}}}," ++
-    "{\"name\":\"main.locker\",\"def\":{\"kind\":\"interface\",\"methods\":[{\"name\":\"Lock\",\"params\":[],\"results\":[],\"variadic\":false}]}}]," ++
+    "\"types\":[{\"name\":\"main.T\",\"display\":\"main.T\",\"pkg\":\"main\",\"def\":{\"kind\":\"defined\",\"target\":{\"kind\":\"int\",\"int\":\"int\"}}}," ++
+    "{\"name\":\"main.locker\",\"display\":\"main.locker\",\"pkg\":\"main\",\"def\":{\"kind\":\"interface\",\"methods\":[{\"name\":\"Lock\",\"params\":[],\"results\":[],\"variadic\":false}]}}]," ++
     "\"methodSets\":[" ++ records ++ "]}"
   let msQuery (records : String) : Except String (Except Stop Bool) :=
     match Lean.Json.parse (msWire records) with
@@ -2747,7 +2758,8 @@ def main : IO UInt32 := do
                      recv := .interface ⟨"main.speaker"⟩ }] }
   let dispWithRecord : GoCore.ExecState :=
     { dispNoRecord with
-      methodSets := #[{ key := "main.T", coverage := .full }] }
+      methodSets := #[{ key := "main.T", coverage := .full }],
+      typeDisplays := #[(⟨"main.T"⟩, { name := "main.T", pkg := "main" })] }
   passed := passed && (← expectTrue "MS: dispatch on a carrier with NO record refuses unsupported (dispatch-half pin — never an answer from absence)"
     (match GoCore.dynamicDispatch? dispNoRecord speakIfaceFunc #[dispBox] with
      | .error err => err.status == "unsupported"
@@ -2760,6 +2772,36 @@ def main : IO UInt32 := do
     (GoCore.Machine.renderPanicPayload dispNoRecord dispBox).isNone)
   passed := passed && (← expectTrue "MS: the same payload WITH the record renders main.T(7) (mutation sensitivity)"
     (GoCore.Machine.renderPanicPayload dispWithRecord dispBox == some "main.T(7)"))
+  -- Identity vs display (design note 2026-09-05 §3.2): the renderer reads
+  -- the DISPLAY record, never the key — with the record present but no
+  -- display, the payload renders the visible no-record marker, not the key.
+  let dispRecordNoDisplay : GoCore.ExecState :=
+    { dispNoRecord with methodSets := #[{ key := "main.T", coverage := .full }] }
+  passed := passed && (← expectTrue "DISPLAY: a defined-type payload with a method-set record but NO display record renders the marker, never the key"
+    (GoCore.Machine.renderPanicPayload dispRecordNoDisplay dispBox == some "<TypeId main.T has no display record>(7)"))
+  -- The same split in the type-assertion text: identity by key
+  -- (red/inner.T ≠ blue/inner.T), display by record (`inner.T` both),
+  -- gc's suffix chosen by the declaring package path.
+  let sameNameState : GoCore.ExecState :=
+    { types := [(⟨"red/inner.T"⟩, .defined (.int .int)), (⟨"blue/inner.T"⟩, .defined (.int .int))],
+      typeDisplays := #[(⟨"red/inner.T"⟩, { name := "inner.T", pkg := "red/inner" }),
+                        (⟨"blue/inner.T"⟩, { name := "inner.T", pkg := "blue/inner" })] }
+  passed := passed && (← expectStrEq "DISPLAY: same-name different-path assert text is gc's (types from different packages)"
+    (GoCore.typeAssertPanicMessage sameNameState
+      (.interface (.defined ⟨"red/inner.T"⟩) (.int 1 .int)) (.defined ⟨"blue/inner.T"⟩) none none)
+    "interface conversion: interface {} is inner.T, not inner.T (types from different packages)")
+  let scopesState : GoCore.ExecState :=
+    { types := [(⟨"main.L·1"⟩, .defined (.int .int)), (⟨"main.L·2"⟩, .defined (.int .int))],
+      typeDisplays := #[(⟨"main.L·1"⟩, { name := "main.L", pkg := "main" }),
+                        (⟨"main.L·2"⟩, { name := "main.L", pkg := "main" })] }
+  passed := passed && (← expectStrEq "DISPLAY: same-name same-package (two local scopes) assert text is gc's (types from different scopes)"
+    (GoCore.typeAssertPanicMessage scopesState
+      (.interface (.defined ⟨"main.L·1"⟩) (.int 1 .int)) (.defined ⟨"main.L·2"⟩) none none)
+    "interface conversion: interface {} is main.L, not main.L (types from different scopes)")
+  passed := passed && (← expectStrEq "DISPLAY: distinct displays carry no suffix"
+    (GoCore.typeAssertPanicMessage sameNameState
+      (.interface (.defined ⟨"red/inner.T"⟩) (.int 1 .int)) (.int .int) none none)
+    "interface conversion: interface {} is inner.T, not int")
   -- THE DEDUP CERTIFIER'S REFUSALS (POR slice, audit fix 2026-08-21,
   -- finding B-LOW): the slice landed `checkCert` with its fail-closed
   -- behavior demonstrated ONCE, by hand, in a session probe — no

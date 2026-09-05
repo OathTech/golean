@@ -1,0 +1,20 @@
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+building Lean executable...
+Build completed successfully (62 jobs).
+native frontend: per-case type-check + emit (no batch export)
+FAIL	multipkg/same-name-anon-iface-panic/unexported	multipackage,imports,identity,interfaces,type_assertions,panic	stage=frontend-export	detail=native frontend: nativefrontend: native frontend unsupported: unexported interface method name(s) shared across packages: get (required by blue/inner, implemented in red/inner); get (required by red/inner, implemented in blue/inner) — an unexported method name is package-scoped (spec#Type_identity) but the wire's method tables carry bare names, so satisfaction could answer wrong; refused (BUG-098, docs/2026-09-05_fr19-bug097-design.md §2.5)\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/multipkg/same-name-anon-iface-panic\nexit status 1
+FAIL	multipkg/same-name-anon-iface-panic/unexported-distinct	multipackage,imports,identity,interfaces,type_assertions,comma_ok,multi_result	stage=frontend-export	detail=native frontend: nativefrontend: native frontend unsupported: unexported interface method name(s) shared across packages: get (required by blue/inner, implemented in red/inner); get (required by red/inner, implemented in blue/inner) — an unexported method name is package-scoped (spec#Type_identity) but the wire's method tables carry bare names, so satisfaction could answer wrong; refused (BUG-098, docs/2026-09-05_fr19-bug097-design.md §2.5)\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/multipkg/same-name-anon-iface-panic\nexit status 1
+FAIL	scoping/local-type-identity/type-instantiation-refused	defined_type,identity,scoping,generics	stage=frontend-export	detail={"message":"frontend-quarantined: function-local defined type score as a type argument (gc renders these with a compiler-internal unique suffix, e.g. score·1 — refused rather than guessed)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	generics/local-type-argument	generics,scoping,defined_type,conversions
+PASS	scoping/local-type-identity/shadow-panic	defined_type,identity,scoping,shadowing,interfaces,type_assertions,panic
+PASS	generics/local-type-in-generic/dynamic-name	generics,structs,interfaces,identity
+PASS	generics/local-type-in-generic/assert-panic	generics,structs,interfaces,type_assertions,panic,identity
+PASS	multipkg/same-name-anon-iface	multipackage,imports,identity,interfaces,type_assertions,comma_ok,multi_result
+PASS	stdlib-source/cmp-compare/local-float-type	stdlib,floats,generics,defined_type
+PASS	slices/sortfunc-cmp/cmp-compare-kinds	stdlib,sort,ints,defined_type
+PASS	slices/sortfunc-cmp/sortfunc-local-type	stdlib,sort,slices,structs,generics
+
+differential coverage summary: cases=11 pass=8 fail=3 export_status=0
+results: artifacts/coverage/latest.tsv
+metadata: artifacts/coverage/latest.meta.tsv
+exit 1

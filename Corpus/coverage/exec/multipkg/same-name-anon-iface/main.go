@@ -13,7 +13,11 @@ package main
 // `1 4 false false`); since BUG-095's noteInterface conflict guard it
 // is a REFUSAL by name (`interface wire name registered with two
 // different method sets: interface{Get() inner.T} (...red/inner.T vs
-// ...blue/inner.T)`). RED until the qualifier is the import path.
+// ...blue/inner.T)`). FIXED 2026-09-05 (lane fr19-bug097, design note
+// docs/2026-09-05_fr19-bug097-design.md §2.3): the key is minted by
+// anonIfaceKey, path-qualified — `interface{Get() red/inner.T}` vs
+// `interface{Get() blue/inner.T}` — and the gc display
+// `interface { Get() inner.T }` travels separately. GREEN.
 
 import (
 	bi "blue/inner"

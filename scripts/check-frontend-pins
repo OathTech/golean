@@ -73,6 +73,22 @@
 #      0 removed, 0 types/globals changed, 0 `sort-slice` nodes remain
 #      (enumerated by a JSON diff, docs/evidence/2026-09-04_fr4-rowm/
 #      twin-repin/structural-diff.txt).
+#      Re-pin history: 2026-09-05 (lane fr19-bug097 — FR-19 scope-ordinal
+#      TypeIds, BUG-097 path-keyed anonymous interfaces, BUG-059 display
+#      records; docs/2026-09-05_fr19-bug097-design.md) 4ee39f73… →
+#      f89e1c9e…: (1) every one of the 92 TypeDefs gains `display`/`pkg`
+#      (def bytes identical); (2) quorum.MajorityConfig.Describe — an H-3
+#      stub since the cmp retirement (its function-local `tup` reached
+#      `slices.SortFunc` and mono.go's C6 refusal) — LOWERS: a function
+#      instantiation at a local type is identity-only, so `quorum.tup·1`
+#      joins the types and 20 funcs join the wire (Describe's 2 literals +
+#      fmt shim, slices.SortFunc/pdqsortCmpFunc/… ×15 at [quorum.tup·1],
+#      cmp.Compare[quorum.Index], cmp.Compare[uint64], cmp.isNaN[quorum.Index]);
+#      (3) the 208 funcs / 203 methods otherwise "changed" differ ONLY by
+#      program-wide temporary renumbering ($cN/$swfN/$swiN/$tsN — Describe's
+#      body now consumes counters ahead of them; 3214 + 2802 leaf changes,
+#      all of that class, 0 other). 0 removed, 0 globals changed (JSON
+#      diff, docs/evidence/2026-09-05_fr19-bug097/twin-repin/structural-diff.txt).
 #
 # Fail-closed throughout: missing baseline, failed build, failed emit,
 # failed run, or any byte drift exits 1 naming the failing pin.

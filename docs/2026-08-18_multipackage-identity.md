@@ -99,6 +99,17 @@ itself.
 
 ## §3 The rendering residue (argued, not hidden)
 
+> **RETIRED 2026-09-05 (lane `fr19-bug097`,
+> `docs/2026-09-05_fr19-bug097-design.md`).** The residue below (3.) is
+> gone: identity and display are two wire fields now — every TypeDef
+> carries gc's `NameString` display and its declaring path beside the
+> path-qualified key, the machine renders the record and decides by the
+> key, and gc's `(types from different packages)` / `(… scopes)` suffix
+> is reproduced from the declaring paths. `multipkg/same-name-identity-panic`
+> is green; BUG-059 closed. The key grammar of §1 gained the function-
+> local scope ordinal `·N` and the anonymous-interface form (design note
+> §2.1); the dotted-path refusal (2.) stands and now also covers `·`.
+
 GoCore renders `TypeId.key` in two observation-bearing channels:
 
 - `TypeId.unqualified` (GoLean/GoCore/Value.lean) — the

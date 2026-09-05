@@ -1004,7 +1004,8 @@ def runProgramSetupM (fuel : Nat) (program : Program) (name : String)
     throw (.stuck s!"expected {func.args.size} argument(s), got {args.size}")
   let state : ExecState :=
     { types := program.typeDefs.toList, functions := program.funcs
-      methods := program.methods, methodSets := program.methodSets }
+      methods := program.methods, methodSets := program.methodSets
+      typeDisplays := program.typeDisplays }
   let s₀ ← seedGlobals state program.globals
   if StateWf s₀ then pure () else
     throw (.internal "seeded state ill-formed: a location in a global cell or function body dangles beyond the allocator bound")

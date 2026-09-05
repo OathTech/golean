@@ -12,11 +12,16 @@
 # 2026-09-05 lane stdlib-slice-3 audit fix round C4 [AGENT]: CORRECTION — `builtin X in statement position` is NOT gone (emit.go's default arm still emits it for the builtins spec#Expression_statements forbids there; it stays on this list); the two float-bits `math.X` shape/pin formats that surfaced at the slice now classify from the format alone (causes.tsv float-bits-shape), and the dot-import refusal format classifies (dot-import-float-bits).
 # 2026-09-05 lane bug095-096 [AGENT]: regenerated — THREE new frontend formats surface here, all INVARIANT refusals of the BUG-095 fix (emit.go's dispatch sites now register the STATIC interface's own method set; `interface method call on X` / `interface method selector on X: static type is not a value interface` fire only if a dispatch operand's static type is not a value interface after substitution — unreachable for type-checked Go, kept fail-closed; `interface wire name registered with two different method sets: X` is noteInterface's collision guard, wire.go). Not coverage gaps, so no causes.tsv row; the same class as the other invariant formats here.
 # 2026-09-05 lane bug095-096 audit fix round [AGENT]: CORRECTION — the `interface method selector on X` format WAS reachable for type-checked Go via a method EXPRESSION over a struct with the method promoted from an embedded INTERFACE field (`S.foo`, `type S struct{ J }`: the arm branched on the method's declaring receiver, not the operand); audit fix R4 routes that shape to the concrete arm (S's promotion wrapper), after which the format is invariant as claimed. The collision-guard format is now DEDUPLICATED per pair (R7) and re-checked after the outer fixpoint (R5); it is also BUG-097's refusal (anonymous-interface names qualified by package NAME — pinned red by multipkg/same-name-anon-iface), so it is a bug-pinned red rather than a coverage gap; the format string and the list are unchanged.
+# 2026-09-05 lane fr19-bug097 [AGENT]: regenerated — FIVE new frontend formats are the identity/display boundary's OWN invariants (docs/2026-09-05_fr19-bug097-design.md §2.2/§3.1: a TypeDef with no display record, a key with two displays, a local type with no scope ordinal, a TypeDef of unexpected shape, an unexported method with no package; plus `variadic parameter of non-slice type`): minting defects the emitter cannot reach on legal Go, not coverage causes — unclassified by design, listed here so a firing one surfaces.
 &composite (elided) in X
 &composite in X
+TypeDef X has no display record — its key was minted outside the identity boundary constructors (docs/2026-09-05_fr19-bug097-design.md §3.1)
+TypeDef entry of unexpected shape X
+TypeId registered with two different display records: X
 X
 X with X arguments
 builtin X in statement position
+function-local type(s) X reached a TypeId without a scope ordinal (not among the loaded units' declarations — docs/2026-09-05_fr19-bug097-design.md §2.2)
 interface method call on X: static type is not a value interface
 interface method selector on X: static type is not a value interface
 interface method substitution produced non-signature for X
@@ -33,3 +38,5 @@ sync.Once.Do argument is not a func()
 sync.Once.Do with X arguments
 sync.WaitGroup.Add with X arguments
 sync.X.X with X arguments
+unexported interface method X with no declaring package
+variadic parameter of non-slice type X

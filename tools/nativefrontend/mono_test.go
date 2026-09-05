@@ -212,12 +212,18 @@ func TestInstFuncIdRenderings(t *testing.T) {
 	}
 }
 
-// TestLocalTypeArgumentRefuses (audit response M3): a FUNCTION-LOCAL
-// defined type as a type argument refuses — gc names these with a
-// compiler-internal globally-unique suffix (main.score·1) that a bare
-// pkg.Name key can neither reproduce nor keep injective.
+// TestLocalTypeArgumentRefuses (audit response M3; narrowed 2026-09-05,
+// lane fr19-bug097, design note §2.2/§2.4): a FUNCTION-LOCAL defined type
+// as a TYPE instantiation's argument refuses — gc names the instantiated
+// type with a compiler-internal counter (main.box[main.score·1]) that IS
+// observable (`%T`, a failed assert's text) and that no source-derived
+// key reproduces (C6). As a FUNCTION instantiation's argument the same
+// local type is ADMITTED under its scope-ordinal key — a FuncId is never
+// rendered — and the key carries the ordinal, not the bare name.
 func TestLocalTypeArgumentRefuses(t *testing.T) {
 	src := `package main
+
+type box[T any] struct{ v T }
 
 func withLocal() any {
 	type score int
@@ -229,16 +235,33 @@ func main() { _ = withLocal() }
 `
 	e, pkg := checkSource(t, src)
 	var local *types.Named
+	var boxT *types.Named
 	for _, obj := range collectTypeNames(e) {
 		if obj.Name() == "score" {
 			local = obj.Type().(*types.Named)
 		}
+		if obj.Name() == "box" {
+			boxT = obj.Type().(*types.Named)
+		}
 	}
-	if local == nil {
-		t.Fatalf("no local type score in Defs")
+	if local == nil || boxT == nil {
+		t.Fatalf("no local type score / generic box in Defs")
 	}
-	if _, err := e.instFuncId("f", []types.Type{local}); err == nil {
-		t.Fatalf("function-local defined type mangled instead of refusing")
+	got, err := e.instFuncId("f", []types.Type{local})
+	if err != nil {
+		t.Fatalf("function instantiation at a local type must be admitted (identity-only FuncId): %v", err)
+	}
+	if got != "f[main.score·1]" {
+		t.Fatalf("function instantiation key: got %q, want f[main.score·1] (the scope-ordinal key, design note §2.2)", got)
+	}
+	inst, err := types.Instantiate(nil, boxT, []types.Type{local}, false)
+	if err != nil {
+		t.Fatalf("instantiate box[score]: %v", err)
+	}
+	if _, err := e.instTypeId(inst.(*types.Named)); err == nil {
+		t.Fatalf("TYPE instantiation at a function-local type mangled instead of refusing (C6: the name is observable)")
+	} else if !strings.Contains(err.Error(), "function-local defined type score as a type argument") {
+		t.Fatalf("C6 refusal text changed: %v", err)
 	}
 	_ = pkg
 }

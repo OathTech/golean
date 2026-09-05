@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+missing-order	anonMissingOrder	-	panic	interface conversion: main.T is not interface { A(); Z() }: missing method A	interfaces,type_assertions,panic,identity
+unexported	anonUnexported	-	panic	interface conversion: main.T is not interface { M(); main.get() int }: missing method M	interfaces,type_assertions,panic,identity
+unexported-satisfied	anonUnexportedSatisfied	-	ok	-	interfaces,type_assertions,comma_ok,identity,methods
+embedded-flattened	anonEmbeddedFlattened	-	panic	interface conversion: main.T is not interface { Error() string; Get() int }: missing method Error	interfaces,embedding,type_assertions,panic,identity
+source-display	anonSourceDisplay	-	panic	interface conversion: interface { Get() int } is main.T, not main.V	interfaces,type_assertions,panic,identity
+nil	anonNil	-	panic	interface conversion: interface is nil, not interface { M() }	interfaces,type_assertions,panic,nil
+slice-target	anonSliceTarget	-	panic	interface conversion: interface {} is main.T, not []interface { M() }	interfaces,type_assertions,panic,slices,identity
+named-result	anonNamedResult	-	panic	interface conversion: main.T is not interface { Get() main.T }: missing method Get	interfaces,type_assertions,panic,identity

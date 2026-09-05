@@ -506,23 +506,33 @@ instance : LawfulBEq TypeId where
     show (k == k) = true
     simp
 
-/-- Strip the LEADING package qualifier from a `TypeId` key, matching Go's
-`reflect.Type.Name()` — the observation channel's naming contract
-(`GoLean/CLI.lean`). Generic instantiation keys (`main.Pair[main.Inner]`,
-generics slice 2026-08-05, design note §3.4) qualify their type ARGUMENTS
-inside the brackets too, and `Name()` keeps those qualifiers
-(`Pair[main.Inner]`) — so only the package segment BEFORE the first `[` is
-stripped. The old `splitOn "." |>.getLast!` truncated such keys to
-`"Inner]"`. For every pre-generics key (`main.T`, `struct{}`, `any`) the
-behavior is unchanged. -/
+/-- Strip the LEADING package qualifier — and, since the FR-19 scope
+ordinal (design note `docs/2026-09-05_fr19-bug097-design.md` §2.2), the
+`·N` scope marker of a function-local type — from a `TypeId` key,
+matching Go's `reflect.Type.Name()`, the observation channel's naming
+contract (`GoLean/CLI.lean`): `main.T` → `T`, `main.T·2` → `T`,
+`main.box·1[int]` → `box[int]`. Generic instantiation keys
+(`main.Pair[main.Inner]`, generics slice 2026-08-05, design note §3.4)
+qualify their type ARGUMENTS inside the brackets too, and `Name()` keeps
+those qualifiers (`Pair[main.Inner]`) — so only the segment BEFORE the
+first `[` is touched (Go identifiers contain neither `.`, `·` nor `[`).
+An anonymous-interface key (`interface{…}`) names an UNNAMED type, whose
+`Name()` is `""`. For every other key (`struct{}`, `any`) the behavior is
+unchanged. -/
 def TypeId.unqualified (id : TypeId) : String :=
-  -- The key prefix before any type-argument bracket; a `.` in it is the
-  -- package qualifier (Go identifiers cannot contain `.` or `[`).
-  let head := ((id.key.splitOn "[").headD id.key).splitOn "."
-  match head with
-  | [] => id.key
-  | [_] => id.key
-  | first :: _ => (id.key.drop (first.length + 1)).toString
+  if id.key.startsWith "interface{" then "" else
+  let (head, rest) :=
+    match id.key.splitOn "[" with
+    | [] => (id.key, "")
+    | h :: [] => (h, "")
+    | h :: t => (h, "[" ++ "[".intercalate t)
+  let head :=
+    match head.splitOn "." with
+    | [] => head
+    | [_] => head
+    | first :: _ => (head.drop (first.length + 1)).toString
+  let head := (head.splitOn "·").headD head
+  head ++ rest
 
 namespace GoCore
 

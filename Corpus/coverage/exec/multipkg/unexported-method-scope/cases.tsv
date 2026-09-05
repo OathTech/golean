@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+# Both RED BY DESIGN (frontend-export): BUG-098's whole-export guard (identity.go checkUnexportedMethodScopes); ledger FR-31; flips at queue 31 (path-qualified unexported method names on the wire).
+assert-panic	unexportedCrossAssert	-	panic	interface conversion: inner.T is not interface { inner.get() int }: missing method get	multipackage,imports,identity,interfaces,type_assertions,panic
+distinct	unexportedDistinct	-	ok	-	multipackage,imports,identity,interfaces,type_assertions,comma_ok,multi_result

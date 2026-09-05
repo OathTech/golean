@@ -320,10 +320,39 @@ func (p *program) isLocalPkg(tp *types.Package) bool {
 // ---- the declaration census -----------------------------------------------
 
 func (p *program) census() {
+	analyzers := map[string]*analyzer{}
 	for _, path := range p.order {
 		lp := p.pkgs[path]
 		a := &analyzer{p: p, lp: lp, info: lp.info}
 		a.run()
+		analyzers[path] = a
+	}
+	// BUG-098 (FR-31): an UNEXPORTED interface method name required in
+	// package P and implemented by a concrete method in a DIFFERENT local
+	// package Q — package-scoped names on a bare-name wire; the frontend
+	// refuses the WHOLE export (identity.go checkUnexportedMethodScopes),
+	// so the finding is export-scoped on both the requirement and the
+	// implementation declarations.
+	for _, reqPath := range p.order {
+		ra := analyzers[reqPath]
+		for name, reqDecls := range ra.unexportedReqs {
+			for _, implPath := range p.order {
+				if implPath == reqPath {
+					continue
+				}
+				implDecls := analyzers[implPath].unexportedImpls[name]
+				if len(implDecls) == 0 {
+					continue
+				}
+				key := name + " (required by " + reqPath + ", implemented in " + implPath + ")"
+				for _, d := range reqDecls {
+					d.add(finding{Cause: mustCause("unexported-method-scope"), Key: key, Pos: d.Pos, Certain: true, Export: true})
+				}
+				for _, d := range implDecls {
+					d.add(finding{Cause: mustCause("unexported-method-scope"), Key: key, Pos: d.Pos, Certain: true, Export: true})
+				}
+			}
+		}
 	}
 	// quarantine-cascade: a declaration that READS a package-level variable
 	// whose own declaration is refused per declaration (a poisoned cell —
@@ -347,9 +376,17 @@ type analyzer struct {
 	p    *program
 	lp   *localPkg
 	info *types.Info
-	// per-package: function-local type names for FR-19
+	// per-package: function-local type names (FR-19 — CLOSED 2026-09-05,
+	// lane fr19-bug097: scope-ordinal keys; kept as the census's count of
+	// local type declarations, no longer a finding)
 	localTypes map[string][]*declReport
 	pkgTypes   map[string]bool
+	// per-package, for the program-level BUG-098 rule (census): the
+	// UNEXPORTED interface method names this package REQUIRES (interface
+	// declarations and anonymous interface literals) and the unexported
+	// methods it IMPLEMENTS, each with the declarations that carry them.
+	unexportedReqs  map[string][]*declReport
+	unexportedImpls map[string][]*declReport
 }
 
 func typeStr(t types.Type) string {
@@ -383,21 +420,10 @@ func (a *analyzer) run() {
 			}
 		}
 	}
-	// FR-19: duplicate function-local TypeIds (two locals of one name, or
-	// a local shadowing a package-level type).
-	names := make([]string, 0, len(a.localTypes))
-	for n := range a.localTypes {
-		names = append(names, n)
-	}
-	sort.Strings(names)
-	for _, n := range names {
-		ds := a.localTypes[n]
-		if len(ds) > 1 || a.pkgTypes[n] {
-			for _, d := range ds {
-				d.add(finding{Cause: mustCause("duplicate-typeid"), Key: n, Pos: d.Pos, Certain: true, Export: true})
-			}
-		}
-	}
+	// FR-19 (duplicate function-local TypeIds) CLOSED 2026-09-05: two
+	// locals of one name, or a local shadowing a package-level type, key
+	// apart by scope ordinal (docs/2026-09-05_fr19-bug097-design.md §2.2)
+	// — nothing to find here any more; localTypes stays a census count.
 }
 
 // fileLevel: import shapes and build constraints — package-level refusals
@@ -536,17 +562,52 @@ func (a *analyzer) funcDecl(fd *ast.FuncDecl) {
 			}
 		}
 	}()
-	// Function-local types (FR-19).
+	// Function-local types (FR-19, closed — counted, not a finding) and
+	// anonymous interface literals' unexported requirements (BUG-098).
+	if isMethod && !ast.IsExported(fd.Name.Name) {
+		a.noteUnexportedImpl(fd.Name.Name, d)
+	}
 	ast.Inspect(fd.Body, func(n ast.Node) bool {
-		if gd, ok := n.(*ast.GenDecl); ok && gd.Tok == token.TYPE {
-			for _, s := range gd.Specs {
-				ts := s.(*ast.TypeSpec)
-				a.localTypes[ts.Name.Name] = append(a.localTypes[ts.Name.Name], d)
+		switch x := n.(type) {
+		case *ast.GenDecl:
+			if x.Tok == token.TYPE {
+				for _, s := range x.Specs {
+					ts := s.(*ast.TypeSpec)
+					a.localTypes[ts.Name.Name] = append(a.localTypes[ts.Name.Name], d)
+				}
 			}
+		case *ast.InterfaceType:
+			a.noteUnexportedReqs(x, d)
 		}
 		return true
 	})
 	a.body(d, fd.Body, fd)
+}
+
+// noteUnexportedReqs records the unexported method names an interface
+// literal requires (BUG-098 rule input). Embedded interfaces are not
+// expanded here: the embedded declaration records its own methods.
+func (a *analyzer) noteUnexportedReqs(it *ast.InterfaceType, d *declReport) {
+	if it.Methods == nil {
+		return
+	}
+	for _, f := range it.Methods.List {
+		for _, n := range f.Names {
+			if !ast.IsExported(n.Name) {
+				if a.unexportedReqs == nil {
+					a.unexportedReqs = map[string][]*declReport{}
+				}
+				a.unexportedReqs[n.Name] = append(a.unexportedReqs[n.Name], d)
+			}
+		}
+	}
+}
+
+func (a *analyzer) noteUnexportedImpl(name string, d *declReport) {
+	if a.unexportedImpls == nil {
+		a.unexportedImpls = map[string][]*declReport{}
+	}
+	a.unexportedImpls[name] = append(a.unexportedImpls[name], d)
 }
 
 func (a *analyzer) genDecl(gd *ast.GenDecl, enclosing *declReport) {
@@ -564,6 +625,10 @@ func (a *analyzer) genDecl(gd *ast.GenDecl, enclosing *declReport) {
 				if named, ok := obj.Type().(*types.Named); ok {
 					a.typeInside(named.Underlying(), sp, d)
 				}
+			}
+			// An interface DECLARATION's unexported requirements (BUG-098).
+			if it, ok := sp.Type.(*ast.InterfaceType); ok {
+				a.noteUnexportedReqs(it, d)
 			}
 		case *ast.ValueSpec:
 			names := make([]string, 0, len(sp.Names))
