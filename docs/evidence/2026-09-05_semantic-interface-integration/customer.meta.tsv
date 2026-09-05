@@ -1,0 +1,21 @@
+key	value
+frontend	native
+manifest	spikes/iris-customer/fixtures/manifest.tsv
+manifest_sha256	66fd2c537206e66e91c10e168988e2bc861e9b08ba6ae33c1cf1038b4761b7e4
+manifest_cases	3
+total_corpus_cases	unknown
+full_run	unknown
+filters	unknown
+git_commit	63172c7d5540a28e7d6a6d6761239c29ace2fa08
+git_dirty	false
+go_toolchain	go1.26.5
+go_drift_allowed	0
+go_drift_actual	false
+depth_guard	choice-trace wideAfterExhaustion=0 on every invariance stream
+depth_seeds	1,2,3
+depth_generator	lcg31(1103515245,12345) bits16..31
+depth_trace_timeout_seconds	240
+membership_draws	32
+jobs	2
+fanout_find_exit	0
+fanout_pool_exit	0

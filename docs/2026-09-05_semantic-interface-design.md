@@ -67,3 +67,22 @@ promoted contract types/theorems use `GoLean.Semantics`. Old A1 bridge files
 are import shims, not aliases preserving the old fully qualified names. The
 experimental customer is migrated explicitly, and its audit requires the
 new names. This is a documented pre-pin API change.
+
+## Review and integration result
+
+The independent review passes with no findings; see
+`docs/2026-09-05_semantic-interface-review.md`. The exact reviewed sources
+survived a conflict-free rebase onto A2 + BUG-103 main `8ad8cfc8`, producing
+tested commit `63172c7d`. Ordinary CI and both opt-in gates pass on that
+integrated tree. The core audit checks 16 exports / 193 constants; A1 and
+A2 retain 12 / 529 and 18 / 941 respectively. Every audit rejects its three
+compiled poison controls; A2 freshly matches the entire native artifact and
+passes all three differential cases. No new full-corpus run was necessary
+for this proof relocation: ordinary CI explicitly compares BUG-103's
+recorded 3598-case / 394-negative results, and 202 eval checks run afresh.
+One cached slow-tier certificate and the two existing report-only record
+findings retain the limitations documented in BUG-103's integration note.
+
+This satisfies the bounded promotion task. The facade remains experimental;
+A3 admission is next, and the remaining representation dependencies above
+are still obligations for B7/C1 and composition work.
