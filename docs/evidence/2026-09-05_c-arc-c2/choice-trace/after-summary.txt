@@ -1,0 +1,28 @@
+# scripts/choice-trace-corpus summary — TIP binary (c-arc-c2 @ 166244f7), same wires, 2026-09-05
+# command: scripts/choice-trace-corpus --jobs 8 --out artifacts/choice-trace-after --golean .lake/build/bin/golean --exclude goroutines/send-then-spin --exclude strings/trimspace-repeat/repeat-bound-refused
+choice-trace-corpus: 3459 row(s) exported (37 frontend refusals listed in artifacts/choice-trace-after/export-fail.tsv; 2 row(s) EXCLUDED by --exclude, listed in artifacts/choice-trace-after/excluded.tsv)
+EXCLUDED rows (not traced in this run — trace separately, e.g. with a lower --fuel):
+  goroutines/send-then-spin	excluded by --exclude (trace separately)
+  strings/trimspace-repeat/repeat-bound-refused	excluded by --exclude (trace separately)
+
+rows traced: 3458 ids, 20748 (id,stream) lines; 1 id(s) the tracer could not run (ERROR)
+  by lane: confluent=89, membership=63, racy=36, strict=3270
+
+VALIDATOR
+  consumptions checked: 23115
+  menu-invariant violations: 0
+  self-check alarms (mirror/accountant, sentinel, pick-record): 0
+  driver-agreement mismatches: 6
+  fuel-out (id,stream) lines: 0
+    MISMATCH builtins/float-bits/roundtrip-payloads [default]: MISMATCH: engine/enumerator observation mismatch
+    MISMATCH builtins/float-bits/roundtrip-payloads [9,8,7,6,5,4,3,2,1,0]: MISMATCH: engine/enumerator observation mismatch
+    MISMATCH builtins/float-bits/roundtrip-payloads [1,3,5,7,9,2,4,6,8,0]: MISMATCH: engine/enumerator observation mismatch
+    MISMATCH builtins/float-bits/roundtrip-payloads [5,5,5,5,5,5,5,5]: MISMATCH: engine/enumerator observation mismatch
+    MISMATCH builtins/float-bits/roundtrip-payloads [rand:1:4096]: MISMATCH: engine/enumerator observation mismatch
+    MISMATCH builtins/float-bits/roundtrip-payloads [rand:2:4096]: MISMATCH: engine/enumerator observation mismatch
+    ERROR arrays/materialization-budget/over-budget (baseline: FAIL/lean-observation): /home/dev/projects/golean/.claude/worktrees/c-arc-c2/artifacts/choice-trace-after/wire/arrays__materialization-budget__over-budget.json: native lowering: array 
+  ids with a machine refusal under some traced stream (unsupported/stuck/internal/error, or an unexpected fatal): 195; of these 195 are non-PASS in the tracked baseline
+  consumptions per site (all streams): l1Sched=9443, appendSpill=4868, postOp=4534, backEdge=2404, mapIter=1307, l5ExitWindow=325, tryLock=101, nilValueMethodText=84, l2Entry=24, l4Waiter=22, l2Arrival=3
+
+182:choice-trace-corpus: FINDINGS present (see above)
+183:after exit=1

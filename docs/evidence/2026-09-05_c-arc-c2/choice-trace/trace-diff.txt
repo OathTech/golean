@@ -1,0 +1,41 @@
+# docs/evidence/2026-09-03_hygiene-a-series/choice-trace/trace-diff.sh artifacts/choice-trace-before artifacts/choice-trace-after
+# verdict: 20749 (id,stream) lines on each side; 12 lines differ, all on two baseline-FAIL rows whose status is 'unsupported' on BOTH binaries
+#   (panic-recover/panic-defined-payload-methods/{error,stringer}, 6 streams each): every consumption column identical, ONLY obsHash differs —
+#   the refusal MESSAGE reprs the payload's dynamic type, 'Ty.defined { key := "main.payloadCode" }' before vs 'Ty.defined 2' after (see delta-observations.txt).
+#   Every other line (20737) byte-identical incl. obsHash; per-site consumption totals identical (types consume nothing).
+rows before=20749 after=20749
+DELTA lines:
+14690,14693c14690,14693
+< panic-recover/panic-defined-payload-methods/error	1,3,5,7,9,2,4,6,8,0	unsupported	0	0	-	0	-	0	0	-	0	-	8278507055454294637	ok
+< panic-recover/panic-defined-payload-methods/error	5,5,5,5,5,5,5,5	unsupported	0	0	-	0	-	0	0	-	0	-	8278507055454294637	ok
+< panic-recover/panic-defined-payload-methods/error	9,8,7,6,5,4,3,2,1,0	unsupported	0	0	-	0	-	0	0	-	0	-	8278507055454294637	ok
+< panic-recover/panic-defined-payload-methods/error	default	unsupported	0	0	-	0	-	0	0	-	0	-	8278507055454294637	ok
+---
+> panic-recover/panic-defined-payload-methods/error	1,3,5,7,9,2,4,6,8,0	unsupported	0	0	-	0	-	0	0	-	0	-	17297597354339770504	ok
+> panic-recover/panic-defined-payload-methods/error	5,5,5,5,5,5,5,5	unsupported	0	0	-	0	-	0	0	-	0	-	17297597354339770504	ok
+> panic-recover/panic-defined-payload-methods/error	9,8,7,6,5,4,3,2,1,0	unsupported	0	0	-	0	-	0	0	-	0	-	17297597354339770504	ok
+> panic-recover/panic-defined-payload-methods/error	default	unsupported	0	0	-	0	-	0	0	-	0	-	17297597354339770504	ok
+14700,14701c14700,14701
+< panic-recover/panic-defined-payload-methods/error	rand:1:4096	unsupported	0	0	-	0	-	0	0	-	0	-	8278507055454294637	ok
+< panic-recover/panic-defined-payload-methods/error	rand:2:4096	unsupported	0	0	-	0	-	0	0	-	0	-	8278507055454294637	ok
+---
+> panic-recover/panic-defined-payload-methods/error	rand:1:4096	unsupported	0	0	-	0	-	0	0	-	0	-	17297597354339770504	ok
+> panic-recover/panic-defined-payload-methods/error	rand:2:4096	unsupported	0	0	-	0	-	0	0	-	0	-	17297597354339770504	ok
+14708,14711c14708,14711
+< panic-recover/panic-defined-payload-methods/stringer	1,3,5,7,9,2,4,6,8,0	unsupported	0	0	-	0	-	0	0	-	0	-	17277521937597564394	ok
+< panic-recover/panic-defined-payload-methods/stringer	5,5,5,5,5,5,5,5	unsupported	0	0	-	0	-	0	0	-	0	-	17277521937597564394	ok
+< panic-recover/panic-defined-payload-methods/stringer	9,8,7,6,5,4,3,2,1,0	unsupported	0	0	-	0	-	0	0	-	0	-	17277521937597564394	ok
+< panic-recover/panic-defined-payload-methods/stringer	default	unsupported	0	0	-	0	-	0	0	-	0	-	17277521937597564394	ok
+---
+> panic-recover/panic-defined-payload-methods/stringer	1,3,5,7,9,2,4,6,8,0	unsupported	0	0	-	0	-	0	0	-	0	-	14080475689693443548	ok
+> panic-recover/panic-defined-payload-methods/stringer	5,5,5,5,5,5,5,5	unsupported	0	0	-	0	-	0	0	-	0	-	14080475689693443548	ok
+> panic-recover/panic-defined-payload-methods/stringer	9,8,7,6,5,4,3,2,1,0	unsupported	0	0	-	0	-	0	0	-	0	-	14080475689693443548	ok
+> panic-recover/panic-defined-payload-methods/stringer	default	unsupported	0	0	-	0	-	0	0	-	0	-	14080475689693443548	ok
+14718,14719c14718,14719
+< panic-recover/panic-defined-payload-methods/stringer	rand:1:4096	unsupported	0	0	-	0	-	0	0	-	0	-	17277521937597564394	ok
+< panic-recover/panic-defined-payload-methods/stringer	rand:2:4096	unsupported	0	0	-	0	-	0	0	-	0	-	17277521937597564394	ok
+---
+> panic-recover/panic-defined-payload-methods/stringer	rand:1:4096	unsupported	0	0	-	0	-	0	0	-	0	-	14080475689693443548	ok
+> panic-recover/panic-defined-payload-methods/stringer	rand:2:4096	unsupported	0	0	-	0	-	0	0	-	0	-	14080475689693443548	ok
+per-site totals before:   consumptions per site (all streams): l1Sched=9443, appendSpill=4868, postOp=4534, backEdge=2404, mapIter=1307, l5ExitWindow=325, tryLock=101, nilValueMethodText=84, l2Entry=24, l4Waiter=22, l2Arriva
+diff exit=1

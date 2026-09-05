@@ -301,9 +301,11 @@ cannot exhibit it: the frontend orders every wire).
 
 **Gates and measurements** (all in the evidence dir):
 
-- `scripts/capped scripts/ci --diff` at the committed tip `3a229bae`:
-  see §9 for the tail. Expected and required: ZERO baseline drift beyond
-  the twin pin; any moved row is a finding.
+- `scripts/capped scripts/ci --diff` at the clean tip `166244f7`:
+  **PASS**, baseline diff FULL 3498/3498 no regression, negative 394
+  match, twin pin = the re-pinned bytes; ZERO drift beyond the twin pin
+  (the one stage move landed inside the recorded `beside-loop`
+  alternation). Tail: evidence `ci-diff.txt`; §9.
 - Twin pin `4ee39f73… → d2bcb07b…`: `twin-repin/structural-diff.txt` —
   funcs/methods/methodSets/globals/fileOrder IDENTICAL; `types` is a
   PERMUTATION of the 92 entries (36 moved), byte-equal per entry; the
@@ -316,10 +318,20 @@ cannot exhibit it: the frontend orders every wire).
   `git archive` in `.tmp/before`) and with the tip binary, compared by
   the a-series `trace-diff.sh` on every consumption-relevant column
   INCLUDING `obsHash` (the observation JSON's hash) and
-  `driverAgreement` — the plan's "choice trace zero delta (types
-  consume nothing)" and the brief's readout identity in one measurement.
-  Both binaries read the SAME (dependency-ordered) wires: the old
-  decoder is order-agnostic, so the comparison isolates the machine.
+  `driverAgreement`. Both binaries read the SAME (dependency-ordered)
+  wires: the old decoder is order-agnostic, so the comparison isolates
+  the machine. RESULT: 20737 of 20749 (id,stream) lines byte-identical;
+  the 12 that differ are the 6 streams of two baseline-FAIL rows
+  (`panic-recover/panic-defined-payload-methods/{error,stringer}`,
+  `unsupported` on both binaries, identical consumption) whose REFUSAL
+  TEXT `repr`s the dynamic type — `Ty.defined { key := "main.payloadCode"
+  }` → `Ty.defined 2` (§4's disclosed diagnostic change; not an
+  observation any baseline carries). Per-site consumption totals
+  identical: the choice trace has ZERO delta — types consume nothing.
+  Two rows excluded on both sides and recorded (`excluded.tsv`): the
+  a-series' `goroutines/send-then-spin` and the red-by-design
+  `strings/trimspace-repeat/repeat-bound-refused` (30 s gate timeout;
+  the tracer has none).
 - Eval tests: 165 ok, 0 fail (`eval-tests.txt`); 12 new `C2:` pins for
   the decoder's acceptance clause, the core's `WellFounded`/
   `firstViolation?` agreement, the observation channel through the
@@ -406,9 +418,16 @@ Lane `c-arc-c2` off `main` @ `b77f3298`. Code commit `3a229bae`
 (core + decoder + frontend + twin re-pin + records); this note and the
 evidence dir follow in the records commit (SHA in the evidence README).
 
-Gate: `scripts/capped scripts/ci --diff` at `3a229bae` — tail verbatim
-in `docs/evidence/2026-09-05_c-arc-c2/ci-diff.txt`; the tally and drift
-verdict are copied into the evidence README once the run completes.
+Gate: `scripts/capped scripts/ci --diff` at the clean tip `166244f7`
+(code `3a229bae`, refusal-class fix `f33d3092`, records `166244f7`) —
+**RESULT: PASS**; `differential coverage summary: cases=3498 pass=3252
+fail=246`; `baseline diff FULL (3498/3498, no regression)`; `negative
+baseline diff (no regression)` (394); `frontend pins (realized init-order
+deviation + twin wire = pinned bytes)` ok; eval tests 165 ok; the record
+made on a clean tree. Tail verbatim in
+`docs/evidence/2026-09-05_c-arc-c2/ci-diff.txt`. The final records
+commit (this note's landing text, the evidence README's gate and trace
+sections, the G6 memo pointer) is docs-only on top of the gated tip.
 Branch-complete; the audit ask is the coordinator's to pose; merge/push
 are the [USER]'s. Merge-protocol step 5a applies at the train: this
 branch touches `tools/nativefrontend/wire.go`'s emission surface

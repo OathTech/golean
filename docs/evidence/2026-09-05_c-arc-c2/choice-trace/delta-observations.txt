@@ -1,0 +1,11 @@
+# the two rows whose obsHash differs: native-json-run observations under both binaries (wire: the tip frontend's emit)
+## panic-recover/panic-defined-payload-methods/error  function=panicDefinedErrorPayload  (baseline: FAIL)
+before: {"message":"panic abort rendering for payload GoLean.GoValue.interface
+  (GoLean.GoCore.Ty.defined { key := \"main.payloadCode\" })
+  (GoLean.GoValue.int 9 (GoLean.GoCore.IntKind.int))","output":"","schema":"golean-observation-v1","status":"unsupported"}
+after:  {"message":"panic abort rendering for payload GoLean.GoValue.interface (GoLean.GoCore.Ty.defined 2) (GoLean.GoValue.int 9 (GoLean.GoCore.IntKind.int))","output":"","schema":"golean-observation-v1","status":"unsupported"}
+## panic-recover/panic-defined-payload-methods/stringer  function=panicDefinedStringerPayload  (baseline: FAIL)
+before: {"message":"panic abort rendering for payload GoLean.GoValue.interface
+  (GoLean.GoCore.Ty.defined { key := \"main.payloadName\" })
+  (GoLean.GoValue.int 3 (GoLean.GoCore.IntKind.int))","output":"","schema":"golean-observation-v1","status":"unsupported"}
+after:  {"message":"panic abort rendering for payload GoLean.GoValue.interface (GoLean.GoCore.Ty.defined 3) (GoLean.GoValue.int 3 (GoLean.GoCore.IntKind.int))","output":"","schema":"golean-observation-v1","status":"unsupported"}

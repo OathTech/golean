@@ -43,8 +43,8 @@ GO111MODULE=off go run ./tools/nativefrontend --dir .tmp/twin/prog --out .tmp/tw
 # pre-change binary
 mkdir -p .tmp/before && git archive b77f3298 | tar -x -C .tmp/before && (cd .tmp/before && scripts/capped lake build golean)
 # readout identity + choice-trace delta (types consume nothing)
-scripts/choice-trace-corpus --jobs 8 --out artifacts/choice-trace-before --golean .tmp/before/.lake/build/bin/golean --exclude goroutines/send-then-spin > artifacts/choice-trace-before.log 2>&1
-scripts/choice-trace-corpus --jobs 8 --out artifacts/choice-trace-after  --golean .lake/build/bin/golean            --exclude goroutines/send-then-spin > artifacts/choice-trace-after.log 2>&1
+scripts/choice-trace-corpus --jobs 8 --out artifacts/choice-trace-before --golean .tmp/before/.lake/build/bin/golean --exclude goroutines/send-then-spin --exclude strings/trimspace-repeat/repeat-bound-refused > artifacts/choice-trace-before.log 2>&1
+scripts/choice-trace-corpus --jobs 8 --out artifacts/choice-trace-after  --golean .lake/build/bin/golean            --exclude goroutines/send-then-spin --exclude strings/trimspace-repeat/repeat-bound-refused > artifacts/choice-trace-after.log 2>&1
 docs/evidence/2026-09-03_hygiene-a-series/choice-trace/trace-diff.sh artifacts/choice-trace-before artifacts/choice-trace-after
 # the gate
 scripts/capped scripts/ci --diff
@@ -52,11 +52,54 @@ scripts/capped scripts/ci --diff
 
 ## Gate
 
-GATE-TAIL-PLACEHOLDER
+`scripts/capped scripts/ci --diff` at the CLEAN tip `166244f7` (records
+commit on top of code `3a229bae` + `f33d3092`): **RESULT: PASS**, every
+step ok — core build warning-free; frontend pins ok (twin wire = the
+re-pinned bytes `d2bcb07b…`); frontend unit tests ok; lowering-diagnostic
+tables ok; eval tests 165 ok; differential `cases=3498 pass=3252 fail=246`,
+baseline diff FULL 3498/3498 **no regression**; negative 394 match; the
+differential record made on a clean tree (`git_dirty false`). ZERO
+baseline drift beyond the twin pin: no result flip, no stage move outside
+the one recorded stage ALTERNATION (`channels/select-select/beside-loop`,
+`lean-observation|differential`, [USER]-ruled 2026-09-03 — the run
+landed on its `lean-observation` member). Reconciler: 3 report-only
+findings, 0 HIGH; C9 says what merge-protocol step 5a says — the wire
+schema moved (`emit.go`/`NativeToIR.lean`), so the train runs `ci
+--slow` and refreshes the certification record. Full tail:
+`ci-diff.txt` (an earlier run at `3a229bae` failed ONLY the lowerdiag
+vocabulary step — a refusal string's class — and is kept at the end of
+the file).
 
 ## Readout identity and the choice trace
 
-TRACE-PLACEHOLDER
+Both binaries traced the whole executable corpus × 6 streams on the SAME
+wires (the tip frontend's, dependency-ordered; the old decoder is
+order-agnostic): 3458 ids, 20749 (id,stream) lines each side, 37 frontend
+refusals (identical sets), 2 rows EXCLUDED and recorded
+(`choice-trace/excluded.tsv`): `goroutines/send-then-spin` (the a-series
+precedent: nonterm=200 spins to the fuel cap) and
+`strings/trimspace-repeat/repeat-bound-refused` (a RED-BY-DESIGN baseline
+row that the gate stops at `LEAN_TIMEOUT_SECONDS=30s`; the tracer has no
+timeout and ran its first stream for 30+ minutes under the old binary
+before this lane stopped it — by PID — and excluded it on both sides).
+
+`trace-diff.sh` verdict (`choice-trace/trace-diff.txt`): **20737 of 20749
+lines byte-identical on every column including `obsHash`; the 12
+differing lines are the 6 streams of two baseline-FAIL rows**
+(`panic-recover/panic-defined-payload-methods/{error,stringer}`) whose
+status is `unsupported` on BOTH binaries with identical consumption
+columns — only the refusal MESSAGE changed, because it `repr`s the
+payload's dynamic type: `Ty.defined { key := "main.payloadCode" }` before,
+`Ty.defined 2` after (`choice-trace/delta-observations.txt`; design note
+§4). Per-site consumption totals identical (`l1Sched=9443 appendSpill=4868
+postOp=4534 backEdge=2404 mapIter=1307 l5ExitWindow=325 tryLock=101
+nilValueMethodText=84 l2Entry=24 l4Waiter=22 l2Arrival=3` on both sides):
+the choice trace has ZERO delta — types consume nothing. Menu-invariant
+violations 0 and self-check alarms 0 on both sides; the 6 driver-agreement
+MISMATCH lines (`builtins/float-bits/roundtrip-payloads`) and the 1 tracer
+ERROR (`arrays/materialization-budget/over-budget`, BUG-078's decode-time
+refusal) are IDENTICAL on both binaries — pre-existing on `main`, not this
+lane's (rowed for the coordinator in the summary).
 
 ## Provenance
 
