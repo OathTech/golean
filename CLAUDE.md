@@ -112,7 +112,12 @@ Everything else is untrusted tooling.
 - The pre-merge adversarial audit: the ask is unconditional; scope
   and waiver are the user's.
 
-## The merge protocol (exact, every time)
+## The merge protocol (to main, exact, every time)
+
+[USER] clarified 2026-09-05: merges **to main** always require user
+approval. Agents may merge into feature branches when the user has given
+standing approval for that work. Such approval covers the internal
+integration only; it does not authorize a merge to main or a push.
 
 1. All work on branches off `main`, in worktrees
    (`.claude/worktrees/<lane>`, one writer per worktree; primary
@@ -134,7 +139,8 @@ Everything else is untrusted tooling.
   provenance on every logged decision; snapshot refs before risky
   git ops; honest reporting (failures with output).
 - Autonomous arcs: judgment delegated inside written boundaries; no
-  gate weakening, no trust-surface changes, no merge/push;
+  gate weakening, no trust-surface changes, no merge to main or push;
+  feature-branch integration may proceed under standing user approval;
   branch-complete + audit-ask posed is the end state. **Named
   design gates are HARD STOPS**: a run that cannot stop EXITS
   rather than self-adjudicating the gate.

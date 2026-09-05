@@ -4,6 +4,13 @@
 charter: `CLAUDE.md`.** The "Planning Docs" pointers below are historical
 operating documents, not current instructions.
 
+The active typed-consumer sprint is approved in
+`docs/2026-09-05_typed-consumer-sprint-charter.md` (K1–K5, [USER]
+2026-09-05). It authorizes parallel agents, independent reviews and
+feature/sprint-branch integration. Every merge to main still requires
+explicit user approval; push is separate. Current sprint state belongs in
+`docs/2026-09-05_typed-consumer-sprint-handoff.md`.
+
 ## Project Context
 
 - GoCore is the semantic center of this repo. The native Go frontend

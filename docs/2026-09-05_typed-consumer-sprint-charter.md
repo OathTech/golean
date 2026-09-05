@@ -1,9 +1,10 @@
 # Long-cycle charter: a typed sequential contract, exercised by Iris
 
-**Status: DRAFT — proposed by [AGENT], 2026-09-05.** The [USER] requested
-this charter and delegated its drafting, not execution of the new sprint.
-The kickoff decisions in §2 are recommendations awaiting approval. This
-document records no new [USER] ruling and authorizes no merge or push.
+**Status: APPROVED — [USER], 2026-09-05.** K1–K5 are approved for execution.
+The [USER] clarified K4: merges to main always require user approval;
+agents may merge into feature branches under standing user approval.
+This sprint has that standing approval for internal integration and reviews.
+No merge to main or push is authorized by the kickoff approval.
 
 **Starting point:** `main` at `47195683`. Plan of record:
 [master plan §7.4.1](2026-09-05_master-plan.md#741-executed-consumer-contract-increments-2026-09-05).
@@ -49,17 +50,19 @@ are not completion criteria for this block.
 
 ## 2. Critical decisions to settle once, before kickoff
 
-Approval of this charter with the defaults below would authorize the whole
-bounded sprint, including parallel agent work and the specified independent
-reviews. Record the actual approval and any amendments here before execution;
-do not infer approval from silence or from this draft's presence in git.
+The [USER] approved all five defaults: “Agree with all 5.” This authorizes
+the bounded sprint, including parallel agent work and the specified
+independent reviews. K4 was clarified in the same message: “merges *to main*
+are always user-approved. Feature branches can be merged to by agents, when
+standign approval is given by the user”. The table below records the approved
+defaults; its recommendation explanations are retained as rationale.
 
 | Decision | Recommended ruling | Why it belongs at kickoff |
 |---|---|---|
 | K1. Scope and order | Commit to O1–O5: Boolean contract, restricted recovery contract, then B7/I1. Produce a C1 handoff but leave its implementation for the next block. | This sets the ambition and prevents a second memory-semantics project from absorbing the contract work. |
 | K2. Supported domain | Approve the two minimum profiles in §3, opt-in admission, explicit resource premises, and terminal-aware safety. Require the specified witnesses; agents may strengthen auxiliary invariants, but may not exclude required witnesses or weaken outcomes. | The domain of the theorem is a product decision. A broad theorem name must not conceal a smaller promise. |
 | K3. Change authority | Authorize representation changes and fidelity repairs needed by these outcomes when existing Go rules and project rulings determine the behavior. Require a separate, reviewed repair with a failing regression first. Defer new semantic-policy choices and changes to the trusted base. | This permits real implementation work without licensing arbitrary decisions about Go latitude or proof assumptions. |
-| K4. Internal reviews and integration | Preauthorize the review scope in §6, separate implementation worktrees, and integration on a dedicated sprint branch after gates pass. Internal checkpoints are agent-reviewed acceptance checks; no routine user audit ask is needed between them. | The standing charter otherwise requires user-facing audit asks and stops. This is a narrow, sprint-specific delegation. |
+| K4. Internal reviews and integration | Standing approval covers the review scope in §6, separate implementation worktrees, and merges into feature/sprint branches after gates pass. Internal checkpoints are agent-reviewed acceptance checks; no routine user audit ask is needed between them. Every merge to main requires explicit user approval. | This gives agents authority for internal integration while keeping the user in control of main. |
 | K5. Closing authority | Reserve main merge, push, release/pin claims, scope reductions, and unresolved critical choices for the user at the closing review. Keep the current toolchain pins and build/sandbox protections. | The sprint can finish autonomously with a concrete result while preserving control over product commitments and publication. |
 
 K4 changes only the internal review/integration workflow for this approved
@@ -412,8 +415,8 @@ Immediate contact is reserved for a user response strictly necessary to
 protect ongoing work or resolve an external access/approval boundary that
 cannot safely be deferred. Otherwise the expected interaction pattern is
 **one kickoff approval, autonomous work with progress reports, one closing
-review**. Closing decisions include merge/push authority, acceptance of any
-proposed scope change, and the next charter; none is presumed here.
+review**. Closing decisions include main-merge/push authority, acceptance of
+any proposed scope change, and the next charter; none is presumed here.
 
 ## 8. Effect on the overall GoLean plan
 

@@ -1917,9 +1917,10 @@ evidence; no old assurance estimate is reinstated by these small successes.
 The proposed next long-cycle block is detailed in the
 [typed-consumer sprint charter](2026-09-05_typed-consumer-sprint-charter.md):
 typed Boolean and restricted recovery contracts, independent customer reuse,
-then B7/I1, with C1 handed off to a subsequent block. **DRAFT [AGENT], pending
-[USER] kickoff approval** of its scope and internal decision/review delegation;
-this pointer does not authorize execution or change existing gate rulings.
+then B7/I1, with C1 handed off to a subsequent block. **APPROVED [USER],
+2026-09-05:** K1–K5 authorize execution, internal reviews, and feature/sprint
+branch merges under standing approval. Merges to main always require explicit
+user approval. Other named design-gate rulings remain unchanged.
 
 ### 7.5 The F10 consequence (RULED [USER], Q1) for §3.A and §3.H
 
