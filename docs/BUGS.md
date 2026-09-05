@@ -6096,13 +6096,14 @@ rows are the template: red-first, then the arm, then PASS on this Cases line). L
 - Cases: builtins/e13-sibling-panic-order/compound-call-target-vs-call, builtins/e13-sibling-panic-order/map-compound-index-key-vs-call, builtins/e13-sibling-panic-order/compound-call-target-vs-recv, builtins/e13-sibling-panic-order/map-compound-index-key-vs-recv, builtins/e13-sibling-panic-order/map-compound-index-key-vs-method
 
 MERGE-TRAIN NOTE ([AGENT], 2026-09-05, final verification fix round): this
-entry was filed on lane `e13-b` as BUG-103. Branch `c-arc-c2` filed its own
-BUG-103 and merges ahead of this branch (`fr19-bug097` holds BUG-100;
-BUG-101/BUG-102 are this branch's alone), so the entry is RENUMBERED to
-BUG-104 here, before the merge, to keep the index's ids unique — every
-record on this branch (corpus comments, baseline header, doctrine,
-inventory, design, evidence, ledger) says BUG-104; this note is the only
-place on the branch that spells the former number (it is c2's).
+entry was filed on lane `e13-b` under the NEXT free number at the time,
+103. Branch `c-arc-c2` filed its own entry under 103 and merges ahead of
+this branch (lane `fr19-bug097` holds 100; BUG-101/BUG-102 are this
+branch's alone), so the entry is RENUMBERED to BUG-104 here, before the
+merge, to keep the index's ids unique — every record on this branch
+(corpus comments, baseline header, doctrine, inventory, design, evidence,
+ledger) says BUG-104, and no record on the branch spells the former id
+(a train-side grep for c2's id finds nothing here; the number is c2's).
 
 WHAT: `x op= y` evaluates `x` once (spec#Assignment_statements). Two
 lowering paths realize the "once" by hoisting a TEMP at the target's

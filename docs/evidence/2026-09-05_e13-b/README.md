@@ -397,15 +397,16 @@ The audit verified the widening over ~60 programs and 17 re-enumerated
 membership rows and found NO spec-forced order admitted; its nine items
 are record corrections, applied in full. Dispositions ([AGENT]):
 
-- RENUMBER: the lane's entry is BUG-104 everywhere on this branch —
-  branch `c-arc-c2` filed the former number and merges first (`fr19-bug097` holds
-  BUG-100; BUG-101/BUG-102 are this branch's alone). 25 mentions across
+- RENUMBER: the lane's entry (filed under the then-next free number,
+  103) is BUG-104 everywhere on this branch — branch `c-arc-c2` filed
+  its own entry under 103 and merges first (`fr19-bug097` holds 100;
+  BUG-101/BUG-102 are this branch's alone). 25 mentions across
   11 files (corpus `cases.tsv`/`main.go`, baseline header, doctrine,
   inventory, design, BUGS.md, this README, `focused-run-reaudit.tsv`,
   `reaudit-witnesses.tsv`, the ledger) renumbered; a MERGE-TRAIN NOTE on
-  the BUG-104 entry says why and is the ONLY place on the branch that
-  spells the former number (so a train-side grep for c2's id finds the
-  note and nothing else).
+  the BUG-104 entry says why; no record on the branch spells the former
+  id (a train-side grep for c2's id finds nothing here — measured 0
+  hits; the reconciler's C6 dangling-id check is clean of it too).
 - R''-1 (MED): the doctrine's register #2 sentence claimed BUG-101 and
   BUG-104 were on inventory §10's honesty-critical known-≠-oracle list
   while the list (`E3, E5, E7, R3`) did not carry them, and E2's heading
@@ -507,6 +508,20 @@ axis, not an ∉-gc answer.
 
 The gate for this round is the section that follows the RE-AUDIT gate
 below (recorded from the clean committed tip in the follow-up commit).
+History of this round's gates: the first `scripts/capped scripts/ci
+--diff` ran at 8a200b39 (the fix commit) and returned RESULT PASS —
+baseline diff FULL 3563/3563, no regression; re-pin guard `0
+PASS→non-PASS flip(s)`; twin pin unchanged; reconciler 4 findings, 0 HIGH
+(C13, C5 FR-7, C9 — this branch's, see R''-5 — and a NEW C6: 4 dangling
+`BUG` cross-references, the bare ids of c2's and fr19's entries spelled
+in the renumber notes; reworded in the follow-up so the notes name the
+numbers without the id syntax) — but its `latest.meta.tsv` says
+`git_dirty=true`: a one-file records edit (the doctrine's R''-4 receiver
+qualification) sat in the working tree for about a minute while the run
+started, was parked as a patch and re-applied after the run. That run
+certifies a worktree state, not a commit; the clean-tip gate below
+supersedes it (the same convention as 03f77a15 → d9367386 in the
+re-audit round).
 
 ## The RE-AUDIT fix round's gate (clean tree)
 

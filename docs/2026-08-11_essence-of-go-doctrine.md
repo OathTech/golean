@@ -199,7 +199,9 @@ write a bare "#6"/"#7".
    that includes assignment-target operands, address-of operands, the
    hoisted `recover()` residual and hoisted allocating conversions; the
    remaining unprobed residue (a call-bearing compound target, a
-   receiver operand, a structural allocation's payload) REFUSES by name
+   receiver operand on the `receiverAddr` path — receivers that reach
+   `emitExpr` ARE probed, final verification fix round R''-4 — a
+   structural allocation's payload) REFUSES by name beside a hoist
    (E6 narrowed, E13 residuals 3/5, BUG-102), so NO shape on this axis
    is a silent gc-absent single member — the measured exceptions are
    ROWED red-first: the value axis (E2/E12, BUG-101, two rows) and the
