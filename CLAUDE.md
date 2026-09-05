@@ -126,6 +126,8 @@ Everything else is untrusted tooling.
 
 ## Pointers
 
+The master plan (the whole roadmap, dated, indexed by package —
+the whole-project review's map): `docs/2026-09-05_master-plan.md` ·
 The split plan (this era's opening decision):
 `docs/2026-08-31_repo-split-plan.md` · Reviving the parked
 reasoning product: `docs/2026-08-31_reasoning-revival-guide.md` · Branch index for the parked
