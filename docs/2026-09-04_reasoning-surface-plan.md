@@ -371,6 +371,15 @@ four (`runProgramM`/`runProgramPoolM`/`execStmt`/`runConfig`).
 
 ### 1.6 The small-step/big-step correspondence
 
+> **Annotation 2026-09-05 ([AGENT], lane `review-landing-0905`) —
+> REJECTED AS SKETCHED, see review F2** (`docs/2026-09-05_project-gate-
+> audit.md`): the left side fixes `ch`, the right side selects a path
+> existentially — a two-result program refutes ⇐; the fuel bound,
+> `RaceState` (`execProgLoop` runs `raceUpdate` per step) and the
+> output prefix are unaccounted for. Corrected, stream-quantified
+> bridge statements are owed by the Gate A spike (master plan §7.4);
+> the text below is kept as the record of the sketch.
+
 ```lean
 theorem run_ok_iff_stepsM : run P e a fuel ch = .obs (.ok r) ↔
     ∃ m, StepsM (init P e a) m ∧ mainDone m ∧ readout m = r ∧ stepCount ≤ fuel        -- shape; the ≤ is the fuel side
@@ -391,6 +400,18 @@ semantics side. It is our lemma to prove, once, because `init P e a`
 assert at :1028) is ours.
 
 ### 1.7 The frame algebra and the bind lemma
+
+> **Annotation 2026-09-05 ([AGENT], lane `review-landing-0905`) —
+> REJECTED AS SKETCHED, see review F3**: `recoverResult` reads the
+> continuation, so appending frames changes both the value and the
+> continuation of the recover step (reproduced: evidence
+> `ContractProbes.lean`); the "one side condition on one rule" below
+> is not admissible in the pinned Iris `Language.Context` class, so the
+> unconditional `step_fill`/`step_fill_inv` and the `EctxLanguage`
+> instance are not promised. The admissible context class and its
+> laws (or continuation-sensitive bind rules, or a redesign) are owed
+> by the Gate A spike (master plan §7.4). C3's representation change
+> (G-C3, RULED) stands; it does not by itself yield the instance.
 
 ```lean
 def Config.fill (K : Cont) (c : Config) : Config := ⟨c.mode, c.k ++ K⟩       -- C3
@@ -1583,6 +1604,13 @@ What cedar-go does NOT need and this plan therefore does not hurry:
 | 13 | assessment re-run | 12 | 1-2 | — | — |
 | 14 | pin offer | 13 | — | — | G-PIN |
 
+> **Annotation 2026-09-05 ([AGENT], lane `review-landing-0905`):**
+> row 12 (I5, "2 sessions") and row 14's gate are re-read per §5.4's
+> 2026-09-05 addendum — I5 is no longer "2 sessions, routine"; it is
+> the OUTPUT of the Gate A spike, sized after it. The estimates below
+> stand as refactoring estimates and are WITHDRAWN as assurance
+> estimates (review §"Revised next-phase plan").
+
 Critical path: (iii) → B7 → C1 → P → C3 → I5 → assessment → pin ≈ 17-22
 sessions; with C2 and B6/C4 in parallel lanes and merge trains the
 whole table is ≈ 28-38 sessions of work at 1-3 concurrent lanes. That
@@ -1743,6 +1771,52 @@ G6-5 as recommended (`docs/2026-09-04_g6-reflect-design.md` §6).
   breaking change; a change to §1 is a pin move with a written
   reason.» Rec: offer after §5.3's four conditions. RULED [USER]
   2026-09-04 — as recommended (relayed).
+
+**Addendum 2026-09-05 ([AGENT], lane `review-landing-0905`) — G-PIN's
+criteria are to be REVISED; I5 re-sized.** The independent project
+gate audit (`docs/2026-09-05_project-gate-audit.md`; dispositions in
+`docs/2026-09-05_master-plan.md` §7) found the consumer contract this
+document proposes to be wrong as sketched: F2 (§1.6's bridge fixes the
+stream on one side and quantifies the path on the other; fuel,
+`RaceState`, output unaccounted), F3 (§1.7's `fill = append` does not
+give the unconditional context laws — `recoverResult` reads the
+continuation; a recover side condition is not admissible in the pinned
+Iris `Language.Context`), F5 (`StateWf` is `locSup ≤ nextAddr` only;
+`Accepted`/`run_refusal_free` vary between §1.5 and §1.9 and lack a
+typed entry/argument boundary). Its recommendation: «no consumer pin
+under the current G-PIN criteria». Consequences, recorded here without
+rewriting the text above:
+
+- **G-PIN stays RULED** (the 2026-09-04 quote; the pin is offered when
+  `Interface.lean` matches §1). Its CRITERIA — §5.3's four conditions
+  and §1's §1.6/§1.7 shapes — are to be REVISED: §1.6 and §1.7 are
+  annotated «REJECTED AS SKETCHED — see review F2/F3»; the corrected
+  statements (stream-quantified bridges; the admissible context class
+  and its laws; typed entry/admission predicates; the
+  declaration-vs-universal `typeDesc` decision) are owed by the Gate A
+  consumer-contract spike (master plan §7.4 item (1), PROPOSED
+  [AGENT]); the revised criteria (Gate D's exit: sequential and
+  concurrent pins offered separately, with fingerprints, proved
+  bridges, stated assumptions, live consumer tests, fresh
+  certification) are a [USER] decision when posed. Until then the
+  reading "a change to §1 is a pin move" applies to a §1 that does not
+  yet have its final shape — no pin is offered on the sketched §1.
+- **I5 is no longer "2 sessions, routine"** (§5.1 row 12, §3.A of the
+  master plan): its statements are the spike's output and it is sized
+  after Gate A, not before.
+- **§5.2's expected re-run result "unchanged"** is replaced by an
+  open-ended reassessment (review E13; master plan §7.3).
+- **The home of the relation** ([USER] 2026-09-05, Q1, relayed — master
+  plan §7.5): the relation, observations, domain invariants and
+  coherence proofs live HERE permanently; the extraction slice is
+  withdrawn. The customer adapter of §1.14 may be built in-repo as a
+  SPIKE outside the default build and the gate — iris-lean does not
+  become a dependency of the shipped semantics; §1.14's "the
+  instantiation is the customer's" stands for everything past the toy
+  facts.
+- Unchanged: G-U, G-C5, G-C1, G-C2, G-P, G-C3, G-C4, G-OUT rulings and
+  landings above. C3 remains a representation change; the claim that
+  it yields `EctxLanguage` is withdrawn (F3).
 
 ### 5.5 What the grumpy professor will not pretend
 

@@ -11,23 +11,41 @@ semantics, validated by differential testing.** One product, one
 claim.
 
 Since the repo split (2026-08-31, [USER]-directed —
-`docs/2026-08-31_repo-split-plan.md`), the reasoning product (the
-Iris proof layer, relational-semantics instances, the designated
-theorem set, the judge/audit apparatus) is NOT here: it is parked
-whole on branch `park/reasoning-2026-08-31`, pending migration to
-a separate repo that will consume this one as a pinned dependency.
-This repo makes NO verification claims. Do not rebuild proof
-machinery here; reasoning work happens on the parked line and,
-later, in its own repo.
+`docs/2026-08-31_repo-split-plan.md`), the Iris proof layer (the
+designated theorem set, the judge/audit apparatus, program proofs)
+is NOT here: it is parked whole on branch
+`park/reasoning-2026-08-31`, pending migration to a separate repo
+that will consume this one as a pinned dependency. This repo makes
+NO verification claims about Go programs.
+
+The boundary, ruled 2026-09-05 ([USER], Mike, verbatim, relayed by
+the [AGENT] coordinator — cite as relayed; review F10, `docs/
+2026-09-05_master-plan.md` §7.5): «I agree btw, that it makes sense
+for the relational semantics to live in this repo. In the case of
+cerberus-lean, we didn't do this because cerberus is fixed (we are
+just porting it) and the relational semantics is downstream. But
+here we are co-designing the semantics to support both execution
+and proof. So we should build both in this repo, with a thin enough
+customer layer that we can feel confident we are building the right
+thing». So: the semantic transition relation, its observations, the
+invariants stating its domain, and the executable↔relation coherence
+proofs LIVE HERE, co-designed with the executable core (the merge
+invariant in `AGENTS.md`). Iris resources, WP rules, program proofs,
+tactics, and consumer ghost state are the customer's, downstream. A
+thin customer adapter (an iris-lean `Language` instance + toy facts)
+may be built in-repo as a SPIKE, outside the default build and the
+gate's dependency graph, to validate the interface.
 
 Top-level goals ([USER], Mike, 2026-09-04, verbatim, relayed by the
 [AGENT] coordinator — cite as relayed): «(1) to be a highly accurate
 go semantics, and (2) to support reasoning about go using an
 iris-lean layer (which we won't build, that's a customer)». The
-iris-lean layer is a CUSTOMER, never built here — this repo ships
-the consumer interface it needs
-(`docs/2026-09-04_reasoning-surface-plan.md` §1 →
-`GoLean/Interface.lean` when it exists).
+iris-lean layer is a CUSTOMER, never built here (the interface-
+validation spike above excepted) — this repo ships the consumer
+interface it needs (`docs/2026-09-04_reasoning-surface-plan.md` §1 →
+`GoLean/Interface.lean` when it exists; §1.6/§1.7 as sketched are
+REJECTED by the 2026-09-05 review, F2/F3 — the corrected statements
+are owed by the Gate A spike, master plan §7.4).
 
 - The semantics is **the weakest machine Go permits, all latitude
   included**. Differential testing is the lower bound (observed ∈
@@ -40,10 +58,10 @@ the consumer interface it needs
   `raftharness/`) is the test suite for the semantics — every
   fixture is a differential test case first; the raft subject's
   lowering is pinned by `scripts/check-frontend-pins`.
-- Known-owed (recorded in the split plan): the Prop-level relation
-  (`GoLean/GoCore/Machine.lean` + soundness modules) is destined
-  for the reasoning side but is interleaved with the executable
-  core; it stays here, inert, until its extraction slice.
+- The Prop-level relation (`GoLean/GoCore/Machine.lean` + the
+  soundness modules) is part of the product, not a debt: the split
+  plan's extraction slice is WITHDRAWN ([USER] 2026-09-05, above);
+  it must keep pace with the interpreter (merge invariant).
 
 ## The trusted surface (and nothing else)
 
@@ -63,8 +81,8 @@ Everything else is untrusted tooling.
 - **The semantic core is total.** No `sorry`, no `native_decide`,
   no axioms anywhere in `GoLean/`; no `partial` in the semantic
   core `GoLean/GoCore/` — structural/well-founded recursion so the
-  proof direction stays reachable for the downstream reasoning
-  repo. (The wire decoder `NativeToIR.lean`, the CLI, and
+  coherence proofs here and the customer's proofs downstream stay
+  reachable. (The wire decoder `NativeToIR.lean`, the CLI, and
   `EnumDedup.lean` use `partial` for JSON/search descent; they are
   outside the core. The in-build Audit sweep left with the proofs
   package; the ci escape-hatch scans are the standing check here.)
@@ -127,7 +145,10 @@ Everything else is untrusted tooling.
 ## Pointers
 
 The master plan (the whole roadmap, dated, indexed by package —
-the whole-project review's map): `docs/2026-09-05_master-plan.md` ·
+the plan of record; §7 = the review's dispositions and the revised
+wave): `docs/2026-09-05_master-plan.md` · The independent project
+gate audit (2026-09-05, verdict + F1–F13 + Gates A–D):
+`docs/2026-09-05_project-gate-audit.md` ·
 The split plan (this era's opening decision):
 `docs/2026-08-31_repo-split-plan.md` · Reviving the parked
 reasoning product: `docs/2026-08-31_reasoning-revival-guide.md` · Branch index for the parked

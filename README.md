@@ -1,5 +1,9 @@
 # GoLean
 
+**Plan of record: `docs/2026-09-05_master-plan.md` (+ its §7 addendum,
+the 2026-09-05 review dispositions); charter: `CLAUDE.md`.** The
+pointers further down are historical unless they say otherwise.
+
 This is the project repo for the Go-to-Lean tool.
 
 The parent workspace contains research notes and reference dependencies under
@@ -16,12 +20,14 @@ Direction:
   lowering adapter and fail closed.
 - Differential tests compare ordinary Go execution (`go run`) against Lean
   execution of GoCore.
-- The verification/reasoning product built on this semantics lives on branch
+- The Iris proof layer built on this semantics lives on branch
   `park/reasoning-2026-08-31`, pending migration to its own repo (the repo
-  split, 2026-08-31 — `docs/2026-08-31_repo-split-plan.md`); this repo is the
-  semantics and its differential validation only.
+  split, 2026-08-31 — `docs/2026-08-31_repo-split-plan.md`, with its
+  2026-09-05 addendum: the semantic relation and its coherence proofs stay
+  HERE; this repo makes no verification claims about Go programs).
 
-Design and roadmap docs:
+Design and roadmap docs (HISTORICAL — superseded as current direction by
+the plan of record above; kept for their design rationale):
 
 - `docs/architecture.md`: project layers and ownership boundaries.
 - `docs/semantics.md`: GoCore semantics design.

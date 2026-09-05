@@ -1,5 +1,9 @@
 # AGENTS.md
 
+**Plan of record: `docs/2026-09-05_master-plan.md` (+ §7 addendum);
+charter: `CLAUDE.md`.** The "Planning Docs" pointers below are historical
+operating documents, not current instructions.
+
 ## Project Context
 
 - GoCore is the semantic center of this repo. The native Go frontend
@@ -15,10 +19,14 @@
   validated model. The verification chain built on it (machine-checked,
   kernel-judged theorems) lives on branch `park/reasoning-2026-08-31`,
   pending its own repo. The Prop-level relation (`Step`/`Steps` in
-  `Machine.lean`) is proof infrastructure destined for that side; it
-  remains here only until its extraction slice (interleaved with the
-  executable core — see the split plan's owed item). While it is here it
-  must keep pace with the interpreter — see the merge invariant below.
+  `Machine.lean`), its observations, domain invariants and the
+  executable↔relation coherence proofs LIVE HERE permanently and are
+  co-designed with the interpreter ([USER] 2026-09-05, review F10 —
+  `CLAUDE.md` "What this repo is"; the split plan's extraction slice is
+  WITHDRAWN, its 2026-09-05 addendum). [Amended 2026-09-05; the sentence
+  previously read "proof infrastructure destined for that side … until
+  its extraction slice".] It must keep pace with the interpreter — see
+  the merge invariant below.
 
 ## Architecture Rules
 
@@ -39,6 +47,12 @@
   `docs/nondeterminism-design.md` and the design-review notes.
 
 ## Planning Docs
+
+HISTORICAL (2026-09-05): the three documents below are the Gobra-era
+operating guide, the cleanup inventory and the July handoff; they are kept
+for their rules' rationale, but the current plan is
+`docs/2026-09-05_master-plan.md` and the current handoff convention is the
+lane `HANDOFF.md` + design-note pattern it describes.
 
 - `docs/gocore-semantics-upgrade-goal.md` is the operating guide for the
   semantics cleanup/upgrade. Follow its phase gates, forbidden behaviors,

@@ -185,3 +185,50 @@ The verification product — statements, proofs, judge, veneer gates
   dedup engine needs), MultiSound, MultiWfSound, MultiStreams,
   NPDRF, Race, plus the StateEqb/SyntaxEqb/MachineEqb seam.
 - `architecture.md`/`roadmap.md` semantics rewrite.
+
+## Addendum 2026-09-05 — the relational-module extraction is WITHDRAWN
+
+[AGENT] record (lane `review-landing-0905`, records only). The [USER]
+quote was received by the [AGENT] coordinator and RELAYED to this
+lane; cited as relayed, not firsthand (U0-incident convention).
+
+The independent project gate audit (`docs/2026-09-05_project-gate-audit.md`,
+F10) recommended keeping the semantic transition relation, its
+observations, the invariants stating its domain, and the
+executable/relation coherence proofs in this repository, and the
+[USER] ruled, 2026-09-05: «I agree btw, that it makes sense for the
+relational semantics to live in this repo. In the case of
+cerberus-lean, we didn't do this because cerberus is fixed (we are
+just porting it) and the relational semantics is downstream. But here
+we are co-designing the semantics to support both execution and
+proof. So we should build both in this repo, with a thin enough
+customer layer that we can feel confident we are building the right
+thing».
+
+Consequences for this document:
+
+- The 2026-08-31 follow-up ruling above («I would see the relational
+  semantics … as living on the reasoning side») is SUPERSEDED by the
+  2026-09-05 ruling. The "Known-owed item (named): the GoCore
+  relational modules" paragraph and the "[AGENT]-owed work" bullet
+  "The GoCore relational-module extraction slice" are WITHDRAWN as
+  plan items. `Machine`, `MachineSound`, `Multi`, `MultiSound`,
+  `MultiWfSound`, `MultiStreams`, `NPDRF`, `Race` and the
+  `StateEqb`/`SyntaxEqb`/`MachineEqb` seam stay in `GoLean/GoCore/`
+  as part of the semantics product, bound by `AGENTS.md`'s merge
+  invariant. The text above is left as written (history).
+- What remains TRUE of the split: the Iris layer (resources, WP
+  rules, program proofs, tactics, consumer ghost state, the
+  designated theorem set, the judge/audit apparatus) is downstream —
+  parked on `park/reasoning-2026-08-31`, pending its own repo that
+  consumes this one as a pinned dependency; main makes NO
+  verification claims about Go programs; the gate-step inventory and
+  docs split above stand; the park branch stays the archive
+  (`docs/ARCHIVE.md`). The migration-stage [USER] decisions
+  ("Deferred to the migration stage") are unchanged in kind but come
+  due under the revised pin criteria (master plan §7.4, Gate D).
+- New, as a SPIKE (PROPOSED [AGENT], master plan §7.4 item (1)): a
+  thin customer adapter — an iris-lean `Language` instance plus toy
+  facts — may be built in-repo, outside the default build and the
+  gate's dependency graph, to validate the consumer interface. It is
+  not the reasoning product and does not move it back.

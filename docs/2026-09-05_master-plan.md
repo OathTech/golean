@@ -74,6 +74,12 @@ join it, frontier bucket 141 → 137 and post-vintage 61 → 66, twin pin
 `a9a2e2b1…` → `758110a3…`. The reconciler's C6 finding this document
 caused at `9343a310` (dangling e13-b bug refs) cleared at the rebase.
 
+**Note 2026-09-05 ([AGENT], lane `review-landing-0905`, per the
+independent review's F1 — §7 below):** the state this document describes
+at `75dcb6d1` is a **conditional research snapshot**, not a
+verification-consumer release; §1.7's E1–E7 "floor" is read through §7.3's
+qualification table.
+
 ### 0.3 Status vocabulary (exact; used for every item below)
 
 | word | meaning | must carry |
@@ -202,7 +208,7 @@ reviewer can test. Each line names its test and its current state.
 |---|---|---|---|
 | E1 | Core is total: no `sorry`/`native_decide`/axiom in `GoLean/`, no `partial` in `GoLean/GoCore/` | `scripts/ci` escape-hatch steps (lines 193, 235, 276) | met (gate green at tip) |
 | E2 | Differential lower bound holds on the whole corpus: zero unexplained wrong answers | `scripts/check-bugs.sh` → `wrong-answer 0/0` | met (0/0; 14 unexplained reds are coverage 10 / latitude 4) |
-| E3 | Every red is rowed: frontier row, design question, (c)-pin with written reason, or BUGS Cases line | ledger §8 bucket arithmetic 141+9+26+8+61 = 245 | met by arithmetic; the reviewer re-derives it (§2.2) |
+| E3 | Every red is rowed: frontier row, design question, (c)-pin with written reason, or BUGS Cases line | ledger §8 bucket arithmetic 137+9+26+8+66 = 246 [corrected 2026-09-05 addendum: the row carried the `9343a310` figures 141+9+26+8+61 = 245; the tip's are ledger :576-577 and §2.2] | met by arithmetic; the reviewer re-derives it (§2.2) |
 | E4 | Every spec section classified | ledger §8 status table: 158 sections, zero unclassified | met (§2.3) |
 | E5 | Latitude census is code and matches the mirror | `python3 tools/reconcile-records` check C12; `inductive ChoiceSite` (`State.lean:288-299`) 12 ctors = §0 table 12 rows | met; `file:line` cites in the mirror are stale (§3.D) |
 | E6 | No known-≠-oracle deterministic pin without a queued re-envelope obligation or a recorded gc deviation | inventory §10 list {E3, E5, E7, E13, R3} vs §7 queue | met formally; E3/E7/R3 obligations are OPEN debts (§3.D) |
@@ -298,7 +304,11 @@ shadow-type=5 (the `sync/atomic` typed wrappers); init-callee=3
 
 ### 2.5 Downstream subjects
 
-- **raft**: twin wire pin `a9a2e2b1…` (§0.2), checked by `scripts/
+- **raft**: twin wire pin `758110a3f5a212b8138d5c4ce88fd1b1b62bee35760c289d47157fe1a1e573c7`
+  [corrected 2026-09-05 addendum: the row said `a9a2e2b1…`, the
+  pre-e13-b pin; `sha256sum baselines/pins/twin-chdriver.wire.json` at
+  `7677865a`/`75dcb6d1` gives `758110a3…`, as §0.2 already stated —
+  review F13] (§0.2), checked by `scripts/
   check-frontend-pins` (ci step 424) — fresh emit = pinned bytes;
   static lowering 691/696 declarations (`docs/2026-09-04_lower-diagnose.md`,
   calibration; not re-derived). W4 stage-2 (tracker differential) is the
@@ -1679,3 +1689,286 @@ baseline diff FULL 3593/3593 no regression; negative 394 no regression;
 (758110a3f5a2…)`; `check-stdlib-register: ok`; eval tests 198 ok;
 reconciler 2 findings, 0 HIGH, report-only (C13, C5); no `git_dirty`
 note. This is the tail of record for the branch as offered for audit.
+
+---
+
+## 7. Addendum 2026-09-05 — the project gate audit and its dispositions
+
+[AGENT] record (lane `review-landing-0905`, records only, off `main` @
+`75dcb6d1`). The two [USER] quotes below were received by the [AGENT]
+coordinator in conversation and RELAYED to this lane; they are cited
+as relayed, not firsthand (U0-incident convention). Everything not so
+marked is [AGENT]. Per §6.1 this is a dated addendum: earlier sections
+are not rewritten except for the three factual corrections the review
+named (§7.6), each marked `[corrected 2026-09-05 addendum]` inline.
+
+### 7.1 The review and its verdict
+
+The independent whole-project review commissioned by the [USER]
+(§0.1, §6.3) ran at `main` @ `75dcb6d1` (this document's tree plus its
+own landing record). Its report is `docs/2026-09-05_project-gate-audit.md`
+(245 lines) with evidence in `docs/evidence/2026-09-05_project-gate-audit/`
+— both authored by the review agent, landed byte-for-byte by this lane
+(sha256 verified against the review worktree; commit `cda95cca`). The
+review reproduced this document's baseline counts (3,593 = 3,347 / 246;
+negative 394) and the gate (`RESULT: PASS`, incremental, not clean-room).
+
+Its verdict, quoted: «**Continue the project, retain GoCore and the
+native frontend, but revise the next-phase plan before treating it as a
+verification-consumer release plan.** … It is a credible research
+foundation. It is not yet a generally faithful, portable Go model on
+which a consumer should base unqualified Go verification claims.» And:
+«I recommend a **conditional next-phase go**, and **no consumer pin
+under the current G-PIN criteria**. … This is a change of sequencing
+and assurance architecture, not a recommendation to start over.» Of the
+four-lane wave in §5.2: «I would not launch the whole proposed four-lane
+wave unchanged.»
+
+The [USER]'s two statements on the review, verbatim as relayed:
+
+- **Q1** (on F10, the home of the semantic relation): «I agree btw, that
+  it makes sense for the relational semantics to live in this repo. In
+  the case of cerberus-lean, we didn't do this because cerberus is fixed
+  (we are just porting it) and the relational semantics is downstream.
+  But here we are co-designing the semantics to support both execution
+  and proof. So we should build both in this repo, with a thin enough
+  customer layer that we can feel confident we are building the right
+  thing».
+- **Q2** (sequencing): «let's update the master plan first» — i.e. this
+  document is amended (this addendum) BEFORE any lane of the revised
+  wave launches. Q2 rules the order; it does not itself rule the wave's
+  content (§7.4).
+
+The coordinator's own assessment ([AGENT], not a ruling): agreed with
+F1–F9 and F11–F13; recommended adopting the review's Gates A–D as the
+next-phase framing and the revised wave of §7.4. The [USER] has not
+ruled on §7.4's items (1)–(6) except by Q2's sequencing; they are
+PROPOSED [AGENT].
+
+### 7.2 Per-finding dispositions F1–F13
+
+Vocabulary (§0.3): RULED [USER] = a [USER] quote exists (Q1); ACCEPTED
+[AGENT] = the coordinator adopts the review's change as the plan, mapped
+to a concrete item, no [USER] ruling claimed; PENDING [USER] = the
+decision is the [USER]'s, named.
+
+| # | finding (one line) | review's change | disposition | maps to |
+|---|---|---|---|---|
+| F1 | §1.7 promotes accounting results (E2's `wrong-answer 0/0` counts UNTRIAGED rows; open BUG-099/101/104 are wrong answers; 10 differential reds) into an E1–E7 "fidelity floor" | three separate release predicates; count open + guarded wrong answers with untriaged; label the current state a conditional research snapshot | ACCEPTED [AGENT] (E-table + snapshot label, §7.3, §0.2 note); the predicates are PROPOSED [AGENT]; **naming the supported profile** is PENDING [USER] | §7.3; §3.G's guarded-wrong-answer marker (already at §5.4 "adopt/decline") |
+| F2 | RSP §1.6's `run_ok_iff_stepsM` fixes `ch` on the left and quantifies the path existentially on the right — a two-result program refutes ⇐; fuel bound, `RaceState`, output prefix omitted | separate bridges: fixed-stream run ↔ stream-labelled trace; `∃ fuel ch` ↔ suitable finite detector-valid observation-bearing trace; prove a two-choice example each way before scheduling I5 | ACCEPTED [AGENT] | wave item (1), Gate A; RSP §1.6 annotated REJECTED AS SKETCHED, §5.4 addendum |
+| F3 | RSP §1.7: `List Frame` + `fill = append` does not give unconditional `step_fill`/`step_fill_inv` — `recoverResult` reads the continuation (evidence `ContractProbes.lean`); an `EctxLanguage` instance with a recover side condition is not the pinned Iris class | consumer-contract spike now: restrict the admissible context class, or continuation-sensitive bind rules, or redesign; a basic `Language` instance without generic `EctxLanguage`; adapter kept outside the shipped dependency graph | ACCEPTED [AGENT]; G-C3 stays RULED as a representation change (§3.A item 5) but is no longer claimed to yield the instance | wave item (1), Gate A; RSP §1.7 annotated |
+| F4 | concurrent proof readiness rests on NPDRF's draft reduction, `schedPick` boundaries and the reconstructed access table; HOLE 0 ≠ go_mem exactness | scoped reference step/event model at access granularity; prove the reduction for the observable projection or expose it as an explicit transfer assumption; decide before a concurrent pin; sequential milestone independent | ACCEPTED [AGENT] as framing (Gate D splits the sequential and concurrent pin offers; E7's "met" re-read per §7.3); the concurrent-pin scoping and the NPDRF proof investment are PENDING [USER] (already §5.4 "at G-PIN") | Gate D; C1 (G-C1, RULED) continues as wave item (2) |
+| F5 | `StateWf` is `locSup ≤ nextAddr` only (an ill-typed cell satisfies it); `Accepted`/`run_refusal_free` vary between RSP §1.5/§1.9 and lack a typed entry/argument boundary; quarantine admits partial exports | define `WireWellFormed`, `ProgramWellTyped`, valid entry/arguments, feature/extern support contract separately; decoding yields the structural invariants; runtime typing preserved or a checked boundary; state the strongest justified refusal-free result | ACCEPTED [AGENT] | wave item (1), Gate A (typed entry/admission predicates); the owed `Accepted P` bundle, allocation normalization and the C2 bound theorem (§3.A "Owed") are pulled forward into it |
+| F6 | evaluation-order repair is a chain of hoisting patches (`probeK` discards an early value, BUG-101; BUG-104 hoist/panic order); ~12k-line `emit.go` carries semantics with no translation validation | specify expression evaluation as a dependency/ordering relation over values, effects, failure; bounded prototype (calls, receives, short-circuit, multiassign, mutation, multiple panics); generated interaction tests; one small translation certificate | ACCEPTED [AGENT]; the E2/E12 value-axis gate (§5.4 "now") is to be POSED WITH the design note, not before it | wave item (5), design note before any lane; §3.D item 2; BUG-101 resolved inside the design (Gate B) |
+| F7 | `TypeId.unqualified` parses the minted key; `keyPathHazard` rejects dotted module paths (vendor at a dot-free path); C6 "impossibility" over-broad (`box[score]` returning 4 observes no gc name) | opaque/interned semantic IDs with package/scope/instantiation structure; display metadata separate; refuse display operations at their observation point; revisit C6's permanent exclusion; module-aware source manifest | ACCEPTED [AGENT]; the C6 §5.1-item-1 narrowing ratification (§5.4 "now") is PENDING [USER] and is now to be posed WITH the F7 note (recommendation: revisit, not ratify as-is) | wave item (5), design note; §3.B item 18; Gate B ("replace key-grammar restrictions with semantic identity metadata") |
+| F8 | slow-tier `CERTIFIED-CACHED` sets are keyed on wire hash + row parameters + 4 sampled streams; a `StepFn`/`Ops`/`Multi`/checker change leaves a stale certificate until the nightly slow run | bind certificates to a semantic-source/build fingerprint, toolchain, observation schema, checker/enumerator version; stale certification release-blocking | ACCEPTED [AGENT] | wave item (3), fix-lane item 5; §3.E; merge protocol 5a's trigger set widens when it lands (a charter edit, at landing) |
+| F9 | `coverage-negative` runs `go build` only — 394 PASS = the oracle rejects the fixtures, not that GoLean rejects them for the right reason; decoder `.getD .int` discard-temp fallback (`NativeToIR.lean:1507,1584`) | add a frontend rejection leg (type error / unsupported / parser / infra distinguished); malformed-wire tests; require metadata or derive from a validated callee signature | ACCEPTED [AGENT] | wave item (3), fix-lane item 4 (the decoder fallback); the frontend negative leg is a Gate C item (§7.4) |
+| F10 | the charter's "relation destined for extraction" fights the merge invariant and the interface's own theorem needs | keep the transition relation, observations, domain invariants and executable/relation coherence HERE; Iris resources, WP rules, program proofs, tactics, ghost state downstream | **RULED [USER]** 2026-09-05, Q1 (quoted §7.1, relayed) | §7.5; `CLAUDE.md` amended; split plan addendum; §3.A's extraction item WITHDRAWN |
+| F11 | reflection is a major semantic expansion; `typeDesc (idx : TypeIdx)` indexes DECLARED types while `TypeOf(1)`/`TypeOf([]int{})` need a universal descriptor | gate T1 on a small type/descriptor algebra + addressability tests (builtin, unnamed composite, recursive, defined, interface); track semantic obligations and replacement-code surface, not category counts | ACCEPTED [AGENT] as a sequencing proposal; G6-1…G6-5 are RULED [USER] 2026-09-05 (RSP §5.4), so the HOLD on T1 is PENDING [USER] confirmation | wave item (4); §3.C item 2; the two `Interface.lean` deltas (§3.A "Owed") are re-decided at the spike |
+| F12 | one `gcAmd64` platform instance; 386 static ≠ 32-bit execution; correlated evidence (same emitter/codec/oracle); no Cedar functional MATCH, raft is a wire pin only | one real end-to-end workload (normal, error, boundary paths) as a milestone; scheduled external tests; second oracle configuration and platform; separate language-profile guarantees from gc-compatible diagnostics/limits/float policy | ACCEPTED [AGENT] as framing (Gate C); the workload choice (cedar driver vs raft component — raft restart is a [USER] call, §3.H) and the second-toolchain install (machine-global) are PENDING [USER] (already §5.4) | Gate C; §3.H; §3.E item 2 (cadence) |
+| F13 | 1,681 + 1,821 lines of plan supersede nothing; `README.md`/`AGENTS.md` send newcomers to Gobra-era/July documents as current; stale twin hash and old numbers here | one short current contract, one generated status/obligation table, immutable per-change evidence manifests; archive and redirect every entry point; release names (`baseline-compatible` vs `supported-profile-conformant`) | ACCEPTED [AGENT]; performed in part by this lane (§7.6); the generated status table and the baseline-header narrative removal (§5.4 "adopt/decline") are PENDING [USER] | wave item (6), records |
+
+### 7.3 The exit checklist, re-read (F1); the three release predicates
+
+The review's E1–E13 qualification table is adopted VERBATIM as the
+current reading of §1.7's checklist ([AGENT]; it replaces §1.7's
+"E1-E7 … hold today" sentence as the operative reading, without
+rewriting §1.7):
+
+| Criterion | Audit disposition |
+|---|---|
+| E1 total/sorry-free core | Escape-hatch scans and build pass; totality does not imply semantic correctness |
+| E2 whole-corpus lower bound | Not established literally; the zero counter measures untriaged wrong answers (F1) |
+| E3 every red rowed | Baseline/bug checks and accounting reproduced; not a fidelity certificate |
+| E4 spec sections classified | Classification is useful inventory, not tests of all normative clauses |
+| E5 choice census matches code | Reconciler agrees; matching known constructors does not discover omitted latitude |
+| E6 pins have obligations | A debt-management condition, insufficient for an all-latitude release |
+| E7 exact go_mem race refusal | Not established by the sampled detector campaign; F4 remains |
+| E8 consumer interface | Not met; F2/F3/F5 must change its contract before implementation |
+| E9 sequential frontier | Not met; open rows remain |
+| E10 no injected library text | Not met; six fmt shims remain, and facility replacements need explicit scope (F11) |
+| E11 downstream subjects | Wire pin reproduced; no current end-to-end Cedar result independently established |
+| E12 oracle cadence | Scripts/workflow exist; second configuration and campaign cadence remain incomplete |
+| E13 post-reshape assessment | Future work; require an open-ended reassessment, not a predetermined unchanged result |
+
+Consequences for earlier sections, as readings (not rewrites): §1.7's
+"E1-E7 are the lower-bound/honesty floor and hold today" is
+WITHDRAWN as a floor claim — E1 and E3–E6 hold as ACCOUNTING results,
+E2 and E7 do not hold literally; §3.A item 9 / §5.3's "expected result
+is 'unchanged'" is replaced by "open-ended reassessment" (E13).
+
+**Three release predicates, PROPOSED [AGENT]** (the review's F1
+change; each to be published separately, never folded into one green):
+
+1. **No unclassified failures** — every non-PASS row on a named row
+   (today's E3 arithmetic; a records predicate).
+2. **Zero known wrong answers within an explicitly named supported
+   profile** — counting OPEN wrong-answer entries (today BUG-099,
+   BUG-101, BUG-104) and GUARDED wrong-answer classes (refusals that
+   replaced a wrong answer, e.g. the BUG-098 guard) alongside the
+   untriaged counter; the profile is named by the [USER] (PENDING —
+   the review's suggestion: sequential first, Gate D).
+3. **A justified behavioural envelope for that profile** — the latitude
+   inventory's pinned/narrowed/unknown/refused axes enumerated for the
+   profile, each with its re-envelope obligation or recorded gc
+   deviation (§3.D), stated as an envelope, not as "all latitude
+   included".
+
+Intentional reds stay red; expected Go behaviour is never edited to
+make a release green (the review's words; the charter's "break
+incorrect behaviour" rule).
+
+### 7.4 Gates A–D as the next-phase framing; the revised wave
+
+**PROPOSED [AGENT]** (coordinator recommendation, relayed to this lane);
+Q2 orders it — this addendum lands first, lanes launch after — and
+rules nothing else. Gates A–D are the review's, adopted as the frame
+around §5.1's dependency graph (which stands; the gates say what must
+be TRUE before each pin-relevant step, the graph says what must LAND):
+
+- **Gate A — make the consumer contract real.** Corrected bridge
+  statements; the admissible context class and its laws;
+  observation/terminal/output policy; typed entry and admission
+  predicates; the declaration-vs-universal type-descriptor decision;
+  recover and nondeterminism counterexamples demonstrated against the
+  rejected contracts; a minimal downstream adapter exercise. Exit: no
+  false or ambiguous signature in the proposed pin; every unproved
+  result has an exact statement, prerequisites, owner and stated effect
+  on consumer claims. Estimates for I5 and after are re-made only after
+  this gate.
+- **Gate B — repair fidelity families and consolidate memory.** B7 and
+  C1 (emitted accesses, reviewed `peek` uses); BUG-098/103/104 fixed,
+  BUG-099 owned; BUG-101 resolved within the evaluation-order design;
+  key-grammar restrictions replaced by semantic identity metadata; C2's
+  bound theorem; allocation/admission checks. Exit: the named
+  sequential profile has zero known wrong answers; generated
+  ordering/aliasing/exception tests pass; traces cover every modelled
+  user access; invalid admission rejected explicitly.
+- **Gate C — demonstrate utility and independent agreement.** The
+  smallest genuine Cedar functional driver or a raft component,
+  end-to-end, normal and failure paths; only the library facilities it
+  needs; second-oracle and upstream-test lanes on the relevant
+  features; the frontend negative leg; certificate provenance covering
+  all semantic dependencies. Exit: repeatable end-to-end differential
+  success on a real target and a consumer proof/example through the
+  public interface without unfolding internals.
+- **Gate D — separate sequential and concurrent pin offers.** A
+  sequential pin may precede the concurrent reduction proof; a
+  concurrent pin must resolve or explicitly scope reference
+  granularity, DRF domain, race treatment, main-exit observations and
+  the scheduler reduction. Exit: the pin records source/profile/
+  toolchain fingerprints, exact observation equivalence, supported
+  domains, proved bridges, remaining assumptions, live consumer tests,
+  fresh certification. G-PIN (RULED, RSP §5.4) keeps its ruling; its
+  CRITERIA (RSP §5.3's four conditions) are to be REVISED to Gate D's
+  exit — the revision is owed by the Gate A spike and is itself a
+  [USER] decision when posed.
+
+**The revised next wave** (each item: status; what it replaces in §5.2):
+
+| # | item | status | replaces in §5.2 |
+|---|---|---|---|
+| (1) | **Consumer-contract spike (Gate A)**: corrected bridge statements PROVED on a two-choice example (both directions); the admissible context class and its laws (the recover counterexample as the first test); typed entry/admission predicates (`WireWellFormed`, `ProgramWellTyped`, valid entry/arguments, support contract); a minimal iris-lean `Language` adapter — IN-REPO per Q1, but OUTSIDE this package's default dependency graph and NOT built by `scripts/ci` (a separate Lake target or package; iris-lean is not a dependency of the shipped semantics). Sized after, not before. | PROPOSED [AGENT]; first to launch after this addendum (Q2) | NEW; supersedes §3.A item 8's "I5 last, 2 sessions" and §5.3's timing — I5 becomes the OUTPUT of Gate A, not a late routine item |
+| (2) | **B7** `ProgramCtx`/`Store` (+I1) then **C1** `Mem` + trace (G-C1) | B7 PROPOSED-next, unchanged; C1 RULED [USER] 2026-09-04, unchanged | §5.2 lane 1 and its "then C1" — RETAINED |
+| (3) | **Fix lane widened to five items**: BUG-098/FR-31 (`methodWireName`), BUG-103 (machine arm), BUG-104 (`safeExpr`-style decomposition), the decoder `.getD .int` discard-temp fallback (`NativeToIR.lean:1507,1584`; F9 — require metadata or derive from the validated callee signature), the slow-tier certificate fingerprint (F8 — semantic-source/build + toolchain + observation schema + checker/enumerator version; stale = release-blocking) | PROPOSED [AGENT] | §5.2 lane 4 (three-bug lane) — WIDENED |
+| (4) | **HOLD G6 T1 `reflectlite`** until a type-descriptor algebra spike (F11: builtin, unnamed composite, recursive, defined, interface types; addressability; `typeDesc` over `Ty` vs `TypeIdx`) | PROPOSED [AGENT]; T1 is RULED (G6-1…G6-5, RSP §5.4) so the hold is PENDING [USER] confirmation | §5.2 lane 2 — HELD (not cancelled) |
+| (5) | **Design notes before lanes**: (a) the evaluation-order family model (F6 — ordering relation over values/effects/failure; bounded prototype; generated interaction tests; one translation certificate; BUG-101's value axis decided inside it); (b) semantic identity metadata (F7 — opaque/interned IDs with package/scope/instantiation structure, display separate, C6 revisited, module-aware manifest) | PROPOSED [AGENT] | NEW; the E2/E12 value-axis gate and the C6 narrowing ratification (§5.4 "now") move to "with the note" |
+| (6) | **Records**: this addendum; the F13 redirects (§7.6); the status-table generator and baseline-header narrative removal remain PENDING [USER] (§5.4) | PROPOSED [AGENT]; this lane performed the first slice | NEW (F13) |
+
+Not addressed by the revised wave as relayed: **B6 `VarId`** (§5.2 lane
+3) — status unchanged (PROPOSED, parallel lane; twin pin moves); not
+launched by this addendum; its slot is a coordinator/[USER] call at
+wave launch. **Sizing:** §3.A "Risks (v)" and §5.3's 17–22 / 28–38
+session estimates are, per the review, «useful guesses for mechanical
+refactoring … not credible assurance estimates while Gates A and D
+remain unresolved»; they are RETAINED as refactoring estimates and
+WITHDRAWN as assurance estimates; ranges are re-issued after Gate A.
+
+### 7.5 The F10 consequence (RULED [USER], Q1) for §3.A and §3.H
+
+- **In scope here, permanently:** the semantic transition relation
+  (`Step`/`StepM`, `GoLean/GoCore/Machine.lean`, `Multi*.lean`), its
+  observations and readouts, the invariants that state its domain
+  (`StateWf` and the typed-admission predicates Gate A owes), and the
+  executable↔relation coherence proofs (`MachineSound.lean`'s
+  `stepFn_sound`/`step_complete`, `MultiSound`, `MultiWfSound`,
+  `execProg_single_eq_execStmt`, the corrected bridges, the dedup
+  checker's `checkCert_slowObs`) — co-designed with the executable
+  core under `AGENTS.md`'s merge invariant. `NPDRF.lean` and `Race.lean`
+  stay here as the domain statements for the concurrent pin (Gate D).
+- **Downstream (the customer's):** Iris resources, WP rules, program
+  proofs (including `cedarGo_refines`, §3.H), tactics, consumer ghost
+  state.
+- **The extraction slice is WITHDRAWN as a plan item:** §3.A "Owed" last
+  bullet ("The GoCore relational-module extraction (split plan,
+  known-owed) …") and §5.1's graph line `relational-module extraction
+  ─► (at/before migration)` are struck; the split plan carries the
+  matching addendum. "Optionally separate Lean targets" (the review's
+  wording) remains an [AGENT] packaging option, not an extraction.
+- **The thin customer adapter is a SPIKE** (wave item (1)): an iris-lean
+  `Language` instance plus toy facts, in-repo, outside the default
+  build and outside `scripts/ci`'s dependency graph, existing to
+  validate the interface («a thin enough customer layer that we can
+  feel confident we are building the right thing», Q1). It makes no
+  Go-program verification claim; `CLAUDE.md`'s product statement is
+  unchanged: this repo makes NO verification claims about Go programs.
+- **§3.H:** the cedar refinement's consumption list ("What the proof
+  consumes, in order") cites `run_ok_iff_stepsM` and
+  `fill`/`step_fill_inv` in their §1.6/§1.7 SKETCHED shapes; per F2/F3
+  those are read as placeholders for the corrected Gate A statements.
+  The refinement proof itself stays downstream; what it consumes is
+  built here. The census §13 blocker table and the "path to the first
+  MATCH" are unchanged; Gate C makes that path a milestone.
+
+### 7.6 F13 items performed by this lane (records only)
+
+- Landed the review and its evidence unmodified (`cda95cca`).
+- This document: §0.2 snapshot note (F1); §1.7 E3 arithmetic
+  `141+9+26+8+61 = 245` → `137+9+26+8+66 = 246` (the `9343a310` figures
+  had survived the re-derivation); §2.5 twin hash `a9a2e2b1…` →
+  `758110a3f5a212b8138d5c4ce88fd1b1b62bee35760c289d47157fe1a1e573c7`
+  (the pre-e13-b pin had survived; §0.2 already had the right value).
+  Other occurrences of the old figures (§0.2 history, §6.4 gate tails)
+  are explicitly historical and stand. No other stale figure was found
+  by `grep` for `a9a2e2b1|3528|3283|245|141`.
+- `CLAUDE.md`: the "What this repo is" boundary and the Known-owed
+  bullet rewritten to the ruled boundary (Q1 quoted); the totality
+  bullet's "downstream reasoning repo" clause re-aimed; the review
+  added to Pointers.
+- `docs/2026-08-31_repo-split-plan.md`: dated addendum — extraction
+  WITHDRAWN; what remains true of the split.
+- `docs/2026-09-04_reasoning-surface-plan.md`: §1.6/§1.7 annotated
+  "REJECTED AS SKETCHED — see review F2/F3"; §5.4 addendum on G-PIN's
+  criteria and I5's sizing; §5.1 annotated.
+- `README.md`, `AGENTS.md`: one-line plan-of-record redirect at the
+  top; the older roadmap/operating pointers marked historical (nothing
+  deleted).
+- `docs/ARCHIVE.md`: checked — it indexes branches and snapshot refs
+  only (27 lines, no live documents); no entry added.
+
+### 7.7 For the next review — what remains unverified
+
+Carried from the review's own scope statement and this lane's reading:
+
+- No whole detector campaign (`scripts/detector-soundness` full
+  select), no new cross-compiler campaign, no fresh Cedar census, no
+  parked proof rebuild, no full slow-tier (`--slow`) recertification —
+  the review's gate was incremental on the primary checkout, not a
+  clean-room fresh-worktree bootstrap.
+- The contract counterexamples (`ContractProbes.lean`) are compiled
+  evaluation probes, not kernel-checked counterexample theorems; Gate A
+  owes the theorems.
+- E7's "met" (HOLE 0 over 364 in-scope rows) is a sampled result; the
+  reference-granularity model (F4) does not exist yet.
+- The cedar-go static figures (§2.5) and the GOROOT/test triage were
+  NOT re-run at `75dcb6d1`; the review took them as recorded.
+- The certified slow-tier set is `CERTIFIED-CACHED` at this tip under
+  the wire-hash key only (F8) — a semantic-source fingerprint does not
+  exist yet, so "identical certified set" is a wire-level statement.
+- The reconciler's 78 version-citation sites and FR-7's `=` case id
+  (MEDIUM, report-only) are open; the ledger staleness noted at §2.2
+  (reds heading "196", "19 live arcs … 94 reds", queue row 5) was not
+  re-confirmed at this tip by this lane.
+- Whether G-PIN's revised criteria (Gate D) are accepted, and which
+  supported profile predicate 2 names, are [USER] decisions not yet
+  posed.
