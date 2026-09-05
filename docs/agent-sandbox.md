@@ -10,11 +10,14 @@ writable while a command still needs approval because it is destructive, uses
 the network, or otherwise crosses the approval policy. Do not bundle cleanup
 commands with probes.
 
-Use one of these locations for scratch directories:
+Prefer the session's permitted `$TMPDIR` for scratch directories. Use
+`/private/tmp` only on a platform/session where that path is available and
+granted:
 
 ```sh
-mktemp -d /private/tmp/golean-sandbox.XXXXXX
 mktemp -d "${TMPDIR%/}/golean-sandbox.XXXXXX"
+# macOS, when /private/tmp is granted:
+mktemp -d /private/tmp/golean-sandbox.XXXXXX
 ```
 
 On macOS, `/tmp` is a symlink to `/private/tmp`; prefer `/private/tmp` in
@@ -32,17 +35,38 @@ approval. Those commands are destructive even when the target is under
 `/private/tmp`. Prefer unique scratch directories and leave them for OS temp
 cleanup, or ask for approval before deleting them.
 
-For direct Go probes, keep Go's build cache inside a writable temp or artifact
-directory instead of the user-level cache:
+For direct Go probes, use the current worktree's artifact cache, matching
+`scripts/diff-coverage`, instead of the user-level cache. Run these commands
+from the worktree root:
 
 ```sh
-GOCACHE=/private/tmp/go-build go run ./path/to/package
-GO111MODULE=off GOCACHE=/private/tmp/go-build go run ./path/to/package
+GOCACHE="$PWD/artifacts/go-build-cache" go run ./path/to/package
+GO111MODULE=off GOCACHE="$PWD/artifacts/go-build-cache" go run ./path/to/package
 ```
 
 The differential runner already does this for normal coverage runs by setting
 `GOCACHE` internally. This note is only for ad hoc probes outside
 `scripts/coverage`, `scripts/diff-coverage`, and `scripts/diff-one`.
+
+### Linux/nono cache-path denial (2026-09-05)
+
+The previous `/private/tmp/go-build` recommendation came from macOS.
+In this Linux nono session, an optional direct Go probe failed with
+`failed to initialize build cache at /private/tmp/go-build: mkdir /private:
+permission denied`. `nono why --path /private/tmp/go-build --op write`
+confirmed `path_not_granted`. The differential harness's worktree-local
+`artifacts/go-build-cache` was permitted and its runs succeeded. The [USER]
+authorized documenting this correction so other agents use that cache.
+
+Use the worktree-local cache above and the session's permitted `$TMPDIR`.
+Do not create `/private` or change filesystem permissions to repair this
+policy denial. If another path is required, diagnose it with
+`nono why --path <path> --op write`. Either pre-create the required directory
+outside the sandbox and add a narrow `--allow <path>` grant to the next
+`nono run`, or use a derived profile draft and have it reviewed/applied with
+`nono profile promote` before restarting. Do not edit the active profile
+from inside the sandbox. Approval inside Codex cannot enlarge nono's outer
+OS sandbox.
 
 If a command fails because the sandbox blocked network access, rerun that exact
 needed command with an explicit escalation request and a narrow justification.

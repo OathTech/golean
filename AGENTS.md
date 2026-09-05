@@ -96,8 +96,19 @@ lane `HANDOFF.md` + design-note pattern it describes.
 ## Sandbox And Scratch Files
 
 - See `docs/agent-sandbox.md` before using temp files in agent sessions.
-- Use unique scratch directories under `/private/tmp` or `$TMPDIR`.
-- For direct Go probes outside the coverage scripts, set
-  `GOCACHE=/private/tmp/go-build` so Go does not write to the user cache.
+- Use unique scratch directories under the session's permitted `$TMPDIR`
+  (or `/private/tmp` on macOS when that path is granted).
+- For direct Go probes outside the coverage scripts, use the current
+  worktree's cache, matching `scripts/diff-coverage`. From the worktree root:
+  `GOCACHE="$PWD/artifacts/go-build-cache" go run ./path/to/package`
+  (add `GO111MODULE=off` for standalone probes outside a Go module).
+- **Linux under nono:** do not hard-code `/private/tmp/go-build`; that was
+  macOS-specific guidance. It can fail with `mkdir /private: permission
+  denied` because the outer OS sandbox has not granted that path. Use the
+  worktree-local cache above and unique scratch directories under the
+  session's permitted `$TMPDIR`. If a different path is actually needed,
+  diagnose it with `nono why --path <path> --op write`; granting it requires
+  restarting with a narrow `nono run --allow <path>` grant or a reviewed
+  derived profile. Codex approval cannot enlarge the outer nono sandbox.
 - Do not run `rm`, `rm -r`, or `rm -rf` without explicit approval, even under
   `/private/tmp`. Leave scratch dirs for OS cleanup unless deletion is approved.
