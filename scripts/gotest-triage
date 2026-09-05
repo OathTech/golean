@@ -241,7 +241,7 @@ run_one() {
   # does); the combined text is still what the .out comparison and the
   # status classification read (the testdir rule compares combined output).
   local go_out go_rc
-  (cd "$dir" && timeout "$GO_TIMEOUT" env GO111MODULE=off GODEBUG=panicnil=0 GOCACHE="$GO_BUILD_CACHE" go run main.go > oracle.stdout 2> oracle.stderr)
+  (cd "$dir" && timeout "$GO_TIMEOUT" env GO111MODULE=off GOFLAGS= GODEBUG=panicnil=0 GOCACHE="$GO_BUILD_CACHE" go run main.go > oracle.stdout 2> oracle.stderr)
   go_rc=$?
   go_out="$(cat "$dir/oracle.stdout" "$dir/oracle.stderr")"
 

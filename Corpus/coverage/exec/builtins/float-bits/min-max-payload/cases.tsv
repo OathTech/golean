@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+-	minMaxPayload	-	ok	-	builtins,float_bits,floats,min,max,multi_result
+float32	minMaxPayload32	-	ok	-	builtins,float_bits,floats,min,max,multi_result

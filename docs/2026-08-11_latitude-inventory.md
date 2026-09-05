@@ -1625,6 +1625,38 @@ instance of R2.
   out of scope"), so claiming (q) would claim a discharge that does
   not exist. If `math` lands, re-decide: a new observation channel is
   exactly what (q) is conditional on.
+- **2026-09-04/05 (stdlib slice 3 + its audit fix round A1) — THE CHANNEL
+  LANDED; RE-DECIDED.** `math.Float64bits`/`Float32bits` are the
+  `float-bits` PRIMITIVE ([USER]-admitted 2026-09-04, relayed), so NaN
+  payloads ARE value-observable in-language and the scope condition
+  above no longer holds. Measured at the pin (rows `builtins/float-bits/*`):
+  gc/amd64 realizes 0xFFF8000000000000 for a runtime 0/0 (SSE "real
+  indefinite", sign SET), propagates the first NaN operand's payload
+  through arithmetic, and its float `min`/`max` lowering ORs the two
+  operands' bits when one is a NaN (`AMD64.rules` MINSD/MINSD/POR:
+  `Float64bits(min(Float64frombits(0x7FF8000000000001), 2.5))` =
+  0x7FFC000000000001); the machine's every produced NaN is
+  softfloat64.go's 0x7FF8000000000000 (sign clear) or, through `fneg`,
+  its negation. **Resolution — the refusal is the GUARD, (b-n) kept:**
+  `floatBitsApply` refuses `*bits` of the default NaN under EITHER sign
+  (audit A1 found the first cut's exact-pattern guard REPORTING
+  `Float64bits(-(0/0))` = 0xFFF8… where gc gives 0x7FF8… — a wrong
+  answer, closed 2026-09-05); `floatMinMaxBits` is bit-transcribed from
+  gc/amd64's idiom over frombits payloads (A1's second wrong answer,
+  closed — rows `min-max-payload{,/float32}` green) and returns the
+  DEFAULT NaN whenever either operand is one (an OR over it would carry
+  the wrong sign undetectably), so the producible-NaN set stays exactly
+  {default, −default} and the guard is COMPLETE over it. Designed reds:
+  `canonical-nan-refused`, `neg-canonical-refused{,/float32}`,
+  `min-max-canonical-refused`, `nan-arith-payload-refused{,/canonical-
+  roundtrip}` and the `roundtrip-payloads` row (its 0xFFF8… entry,
+  PASS→FAIL at A1 — the legitimate round-trip of the negated default is
+  the over-refusal's price), all BUG-094. **RE-ENVELOPE OBLIGATION, LIVE:**
+  either a platform-faithful NaN rule (default = 0xFFF8… with SSE
+  first-operand propagation, scoped to the oracle platform like R4's
+  per-op rounding) or an (a) envelope over the payloads gc's ports
+  realize; owner: the floats design (`docs/2026-08-04_floats-design.md`).
+  Not taken here.
 
 ### R8. WaitGroup counter representation — (b) PINNED to gc's bit layout
 
@@ -2012,6 +2044,71 @@ guaranteed", "may", "implementation-specific" — `slices.SortFunc`'s tie
 order, `strings.Builder.Cap`, `math`'s asm-vs-Go last ulp) land their
 R-rows here at admission (register rule). Evidence for the slice-1 census: `docs/evidence/2026-09-03_stdlib-source-1/`.
 
+### R17. `print`/`println` output FORMAT — (b) PINNED to gc go1.26.5 `runtime/print.go`, version-tracked (added 2026-09-04, stdlib slice 3; gate G2 RULED [USER], relayed)
+
+- WHERE: spec#Bootstrapping — "formatting of arguments is
+  implementation-specific" and the built-ins are "not guaranteed to
+  stay in the language" (verbatim at the `deps/go` pin). The observable
+  is the program's fd-2 byte stream — in-language (a `print`
+  statement), compared byte-exactly since this slice through the
+  `output` observation field (`StepEvent.out` → `Readout.output`; G-OUT).
+- MACHINE: `renderPrint`/`renderPrintOperand` (Machine.lean) transcribe
+  `runtime/print.go` @ go1.26.5 for exactly the kinds whose rendering is
+  a pure function of the value: `printbool` (`true`/`false`),
+  `printint`/`printuint` (decimal, `-` for negatives; a defined type
+  prints as its underlying kind — `print` never calls methods),
+  `printstring` (bytes verbatim); `println` = operands joined by
+  `printsp` (` `) with `printnl` (`\n`) after the last; `print` = the
+  concatenation. Pinned by rows `builtins/print/*` (13 strict green) and
+  by 120 `$GOROOT/test` files MATCHING with their output compared
+  (`docs/evidence/2026-09-04_stdlib-slice-3/gotest-results.tsv`).
+- FAIL-CLOSED EDGES (BUG-093): floats/complex — gc's
+  `printfloat64` is `internal/strconv.AppendFloat(v, 'g', -1)`, the
+  shortest round-trip decimal, a go1.26 CHANGE (commit 9035f7ae
+  "runtime: use internal/strconv"; 1.25 printed `+1.500000e+000`) —
+  which is precisely why this is a VERSION-TRACKED pin and not a spec
+  envelope; the zero-operand spellings; prints during `$pkginit`;
+  PERMANENT refusals for the address-printing kinds (ledger §5.1 item 3).
+- Plausible envelope: any formatting (the sentence says so); the pin is
+  what makes the equality lane possible. PERMANENT-pin candidate of the
+  R9/R10 class (the same runtime printing code); "not guaranteed to
+  stay" is a re-check obligation at every oracle pin move (the print.go
+  excerpt lives in the evidence dir). Claims about print BYTES never
+  transfer beyond gc 1.26.x.
+
+### R18. Concurrent `print` ORDER — (a) ENVELOPED via L1 at REGISTRY granularity, with a LIVE re-envelope obligation (added 2026-09-04, stdlib slice 3; obligation recorded at its audit fix round C1, 2026-09-05)
+
+- WHERE: spec#Bootstrapping says nothing about ordering across
+  goroutines — the order of two goroutines' print statements is the
+  SCHEDULE. gc: each statement is atomic under `printlock`
+  (runtime/print.go:60-87), so the realizable members are statement
+  orders, never a byte interleaving within a statement.
+- MACHINE: output is a TRACE — the driver folds each step's
+  `StepEvent.out` in step order (`execProgLoopOut`), so the set of
+  possible `output` strings is the set of statement orders the L1
+  envelope admits; the membership lane enumerates it (the path
+  enumerator carries a per-path accumulator; `engine=dedup` REFUSES
+  printing rows by name — output is a trace, its nodes key on state).
+  Row `builtins/print/goroutine-interleaving` (membership, members=2:
+  {`a\nb\n`, `b\na\n`}); strict rows are single-goroutine or
+  order-forced (`goroutine-ordered`). No new `ChoiceSite`: the event is
+  not a choice, the schedule is.
+- **THE OBLIGATION (C1): the machine's L1 switches only at REGISTRY
+  boundaries and back-edges, so a registry-free run of SEVERAL prints is
+  atomic on the machine while gc may preempt between the statements.**
+  g1 = {print a; print b}, g2 = {print c}: the enumerator admits exactly
+  {abc, cab}; gc can realize `acb` (the audit reported 1/300 draws; the
+  lane's own 600 draws — 300 plain, 300 `-race` — exhibited only
+  abc/cab: `docs/evidence/2026-09-04_stdlib-slice-3/c1-probe/`, and a
+  sample that is not observed is not a bound). A membership row over
+  this shape would be observed∉modeled at the byte level the moment gc
+  samples it — so NO corpus row is written (a flaky gate is not a
+  record); the shape is rowed as ledger FR-30 with its fix direction:
+  a scheduling point between statements (an L1 consult at the
+  statement boundary, the C2 back-edge precedent) or an explicit
+  output-order latitude at the fold. Until then, concurrent-print
+  claims transfer only at registry granularity.
+
 ## 4. Forced points — the compact list (class (c))
 
 For completeness, the main spec-mandated points the machine implements
@@ -2395,10 +2492,11 @@ had LEFT the class — C2/C3 inside the (b) list and E9 inside the
 mention, so the mentions moved out. Keep it that way: put prose in the
 history block, never in a membership line.
 
-- (a) ENVELOPED: 10 sites / 10 entries — C1, C2, C3, C4, C5, C6, C8, C12, E9, R2.
-- (b) PINNED: **17 entries** — concurrency: C9; sequential order: E2,
+- (a) ENVELOPED: 10 sites / 11 entries — C1, C2, C3, C4, C5, C6, C8, C12, E9, R2,
+  R18 (via L1, zero new sites; its statement-granularity obligation is live).
+- (b) PINNED: **18 entries** — concurrency: C9; sequential order: E2,
   E3, E4, E7, E10, E11, E12, E13; representation/runtime: R1, R8,
-  R9, R10, R11, R12, R15, R16.
+  R9, R10, R11, R12, R15, R16, R17.
 - (b-n) NARROWED with recorded caveat: 7 — C7, E8, R3, R4, R5, R7, R13.
 - (c) FORCED: the §4 list (machine follows; BUG-005's mandated
   point — removed-before-reached never produced — CLOSED 2026-08-19

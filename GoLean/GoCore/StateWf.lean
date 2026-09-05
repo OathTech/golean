@@ -2899,16 +2899,10 @@ theorem zip_snd_sup_le {keys : List Int} {vs : List GoValue} :
 theorem floatBitsApply_locSup {op : FloatBitsOp} {v r : GoValue}
     (h : floatBitsApply op v = .ok r) : GoValue.locSup r = 0 := by
   unfold floatBitsApply at h
-  split at h
-  · split at h
-    · simp [unsupported, throw, throwThe, MonadExceptOf.throw] at h
-    · simp only [pure_eq_ok, Except.ok.injEq] at h; subst h; simp [GoValue.locSup]
-  · split at h
-    · simp [unsupported, throw, throwThe, MonadExceptOf.throw] at h
-    · simp only [pure_eq_ok, Except.ok.injEq] at h; subst h; simp [GoValue.locSup]
-  · simp only [pure_eq_ok, Except.ok.injEq] at h; subst h; simp [GoValue.locSup]
-  · simp only [pure_eq_ok, Except.ok.injEq] at h; subst h; simp [GoValue.locSup]
-  · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+  split at h <;> (try split at h) <;>
+    first
+    | (simp [unsupported, stuck, throw, throwThe, MonadExceptOf.throw] at h; done)
+    | (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h; simp [GoValue.locSup]; done)
 
 set_option maxHeartbeats 1600000 in
 theorem applyStrictOp_wf {σ : ExecState} {op : StrictOp} {vs : List GoValue}

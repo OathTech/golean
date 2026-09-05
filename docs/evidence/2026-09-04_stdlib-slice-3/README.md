@@ -14,11 +14,17 @@
 - Host: linux/amd64, shared build box (other lanes' gates running
   concurrently — the gotest wall-clock timeouts in `gotest-results.tsv`
   are load-sensitive and NOT verdicts).
-- Tree: branch `stdlib-slice-3`; the records below were produced from the
-  dirty working tree during the slice (the final SHA is in the design
-  note §8 / the coordinator report); `rows-run.log` and
-  `gotest-results.tsv` are re-derivable at any later commit by the
-  commands below.
+- Tree: branch `stdlib-slice-3` off main ac45aedd (rebased onto main fc9bbef1
+  at merge train round 14, 2026-09-05 [AGENT]; the records here are unchanged
+  by the rebase — the tracked figure became 3479 = 3230 / 249 from the lane's
+  own 3447 = 3210 / 237, see the baseline header); the slice's records
+  were produced from the dirty working tree that became commit 450fca72
+  (slice) / a4865e66 (slice tip); the audit-fix-round records
+  (`rows-run-audit-fix-round.log`, `harness-split-tests.txt`, `c1-probe/`)
+  from the tree that became the round's commit (SHA in the coordinator
+  report). `gotest-results.tsv` is re-derivable at any later commit by the
+  commands below (absolute worktree paths in the recorded outputs are
+  elided as `<worktree>`).
 
 ## Artifacts and reproduction (from the repo root)
 
@@ -46,6 +52,15 @@
   0.1f, overflow), widening/narrowing.
 - `rows-run.log` — `scripts/coverage run --prefix builtins/print --prefix
   builtins/float-bits`: 20 PASS, 14 FAIL by design (worktree path elided).
+- `rows-run-audit-fix-round.log` — the A1/A2/D probe re-run: `scripts/coverage
+  run --prefix builtins/float-bits --prefix builtins/print/refused --prefix
+  spec-examples-stmt/min-max`: `min-max-payload{,/float32}` GREEN (gc's OR
+  idiom bit-exact, both widths), `neg-canonical-refused{,/float32}`,
+  `min-max-canonical-refused` and `roundtrip-payloads` REFUSED by the
+  sign-insensitive guard (the last is the ruled PASS→FAIL flip), the
+  spec-example min/max pins unchanged, `refused/unsafe-pointer` red,
+  `refused/race-with-output` red at go-observation naming the split's cause.
+- `c1-probe/` — the statement-granularity scheduling probe (README inside).
 - `gotest-results.tsv` — `scripts/gotest-triage run --jobs 8 --only <each of
   the 195 files the 2026-09-01 triage recorded as print-refused>`; the id
   list is the `FRONTEND-REFUSED … builtin (print|println) in statement
@@ -53,9 +68,12 @@
   MATCH 120 / FRONTEND-REFUSED 62 / MACHINE-REFUSED 10 / MISMATCH 2 / INFRA 1
   (design note §6 diagnoses each MISMATCH/INFRA).
 - `harness-split-tests.txt` — `go test -v -run TestSplit ./tools/coverageharness`
-  (GO111MODULE=off): the fd-2 split's red-first tests (ok, panic incl. the
-  glued-print and double-marker refusals, fatal/deadlock incl. the
-  unwinding shape, race, UTF-8, the literal).
+  (GO111MODULE=off): the fd-2 split's red-first tests, extended at the audit
+  fix round A2 with the four understated shapes (`panic: fakepanic: real`,
+  a printed `panic: fake` line, a printed `panic: hello` line beside a
+  deadlock block, `fatal error: mine` glued to a deadlock block — all refuse
+  by name now) beside the accepted ones (ok, panic, newline payload, repanic
+  chain, fatal/deadlock incl. the unwinding shape, race, UTF-8, the literal).
 - `register-render.tsv` — `GO111MODULE=off go run ./tools/nativefrontend
   --stdlib-register`: the machine block pasted into the register (primitive 2 / cap 2).
 

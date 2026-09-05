@@ -321,10 +321,13 @@ The primitive table is FULL (2/2) since slice 3: `float-bits` and `print-output`
   as a primitive language operation? This sounds reasonable, do it»); the
   audit's condition (NaN payloads bit-exact, ±0, quiet/signalling probes)
   is met by construction — the machine's float IS its bit pattern — and
-  pinned by rows `builtins/float-bits/*` (7 green, 20+ probes). One
-  fail-closed arm disclosed: `*bits` of the machine's CANONICAL NaN refuses
-  (inventory R7 — the narrowing would otherwise present as a wrong answer;
-  BUG-094, 3 designed reds). (ii) `print-output` — `print`/`println` as
+  pinned by rows `builtins/float-bits/*` (6 green at the slice; 7 after
+  the audit fix round A1 — `roundtrip-payloads` red, `min-max-payload{,/
+  float32}` green; 30+ probes). One fail-closed arm disclosed: `*bits` of
+  the machine's DEFAULT NaN under either sign refuses (inventory R7 — the
+  narrowing would otherwise present as a wrong answer; A1 closed two
+  reported wrong answers — the negated default and the `min`/`max`
+  payload OR, now bit-transcribed from gc/amd64; BUG-094, 7 designed reds). (ii) `print-output` — `print`/`println` as
   `Stmt.print` with gc go1.26.5 `runtime/print.go` pinned for
   bool/integer/string (G2 RULED [USER] as recommended, relayed), the bytes
   an OUTPUT EVENT (`StepEvent.out`) folded by the driver into
@@ -336,7 +339,9 @@ The primitive table is FULL (2/2) since slice 3: `float-bits` and `print-output`
   complex, zero-operand spellings and init-phase prints refuse this slice
   (ledger FR-29; BUG-093). Not a shim: no text of ours enters the wire —
   D-002 is untouched. Gotest lever: 120 of the 195 print-refused files now
-  MATCH with output compared (2 MISMATCH → BUG-095/BUG-096 pins; report
+  MATCH with output compared (2 MISMATCH: `typeswitch3.go` → BUG-095, a
+  FRONTEND record defect; `bug352.go` → the recorded R15 zero-size-address
+  latitude, unpinned; 1 INFRA: `bug356.go` → BUG-096; report
   `docs/2026-09-04_stdlib-slice-3-design.md` §6).
 
 ## The machine block

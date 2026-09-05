@@ -1,6 +1,9 @@
 # Stdlib slice 3 — `print`/`println` as machine built-ins with an output observable, plus the `float-bits` primitive (2026-09-04)
 
-**Lane:** `stdlib-slice-3` (branch off `main` @ ac45aedd). **Status:**
+**Lane:** `stdlib-slice-3` (branch off `main` @ ac45aedd; rebased onto main
+fc9bbef1 at merge train round 14, 2026-09-05 [AGENT] — the figures in
+this note are the lane's own on ac45aedd unless marked; the rebased
+tracked figure is in §8's last bullet). **Status:**
 branch complete, gate PASS (§8), NO merge — the audit ask is the
 coordinator's. **Provenance:** [AGENT] worker under three [USER]
 rulings relayed by the [AGENT] coordinator (cited as relayed
@@ -131,15 +134,38 @@ unobservable in-language. This primitive makes them observable, and
 gc/amd64 realizes different bits: `0xFFF8000000000000` for a runtime
 0/0 (SSE "real indefinite"), and first-operand payload propagation
 through arithmetic. Reporting the canonical pattern would be the
-narrowing presenting as a wrong answer, so `*bits` REFUSES it by name;
-every non-canonical payload can only have entered through `*frombits`
-(the machine never produces one) and passes bit-exact — which is what
-the audit's condition asks for and rows `roundtrip-payloads` (10
-patterns incl. `0x7FF8000000000001`, sNaN, −qNaN, ±0, ±Inf, subnormal
-min, finite max), `nan-semantics`, `float32` (quiet and signalling
-32-bit payloads, −0f) pin green. The over-refusal
-(`Float64bits(Float64frombits(0x7FF8000000000000))`) is rowed red
-(BUG-094). Alternatives rejected: (i) admit and let the mismatch stand —
+narrowing presenting as a wrong answer, so `*bits` REFUSES it by name —
+under EITHER sign since the audit fix round A1 (2026-09-05): `fneg64` is
+a bare sign flip, so the machine DOES produce the negated default
+(`-(zero/zero)` = 0xFFF8…, where gc gives 0x7FF8…); the first cut's
+exact-pattern guard REPORTED it — a wrong answer, closed. The
+producible-NaN set is {default, −default} (and the 32-bit pair) —
+`floatMinMaxBits` keeps it so (§2.4) — and every other pattern entered
+through `*frombits` and passes bit-exact — which is what the audit's
+condition asks for and rows `roundtrip-payloads` (9 of its 10 patterns:
+`0x7FF8000000000001`, sNaN, ±0, ±Inf, subnormal min, finite max, 1.0 —
+its 0xFFF8… entry refuses since A1, the row's PASS→FAIL flip),
+`nan-semantics`, `float32` (quiet and signalling 32-bit payloads, −0f)
+pin. The over-refusals (`Float64bits(Float64frombits(0x7FF8000000000000))`,
+the −default round-trip) are rowed red (BUG-094: `canonical-nan-refused`,
+`neg-canonical-refused{,/float32}`, `roundtrip-payloads`).
+
+**2.4 `min`/`max` payloads (audit fix round A1).** gc/amd64 lowers float
+`min` to `t1 = MINSD x y; t2 = MINSD t1 x; POR t1 t2` and `max` to
+`-min(-x,-y)` (`AMD64.rules` @ go1.26.5): with a NaN operand the result
+is the OR of both operands' bits — `Float64bits(min(Float64frombits
+(0x7FF8000000000001), 2.5))` = 0x7FFC000000000001 — where the first cut
+returned the NaN operand (0x7FF8000000000001): a wrong answer once
+payloads were observable. `floatMinMaxBits` is now that idiom,
+bit-probed (rows `min-max-payload{,/float32}`: both operand orders, ±0
+ties, NaN/NaN, sNaN — green; the spec-example `min-max-float-specials`
+pins unchanged), with ONE pre-check: if either operand is the default
+NaN (either sign) the result is the default NaN, not the OR — gc's
+default has the opposite sign, so the OR would carry a sign-wrong
+pattern the `*bits` guard could not recognize (row
+`min-max-canonical-refused` red). The pure-Go `runtime.fmin` of the
+other ports returns the NaN operand: a (b)-pin to the oracle platform,
+in R7's amendment. Alternatives rejected: (i) admit and let the mismatch stand —
 a wrong answer at a forced point, against doctrine; (ii) make the
 softfloat payload-faithful to x86 SSE now — a floats-design decision of
 R4's class (platform-scoped), out of this slice's scope; recorded as
@@ -161,8 +187,13 @@ citable set to primitive-row packages would be a G3 amendment, posed in
 a defined type prints as its underlying kind, `print` never calls
 methods), `printstring` (bytes verbatim); `println` = operands joined by
 `printsp` (` `) + `printnl` (`\n`); `print` = concatenation. One
-statement is one machine step: gc brackets the statement in
-`printlock`/`printunlock`, so the atomicity is exact by construction.
+statement is one machine step, matching gc's per-statement
+`printlock`/`printunlock` WITHIN a statement — but the machine switches
+goroutines only at registry boundaries and back-edges, so a registry-free
+run of several prints is atomic on the machine where gc may preempt
+between them (audit fix round C1: R18's live obligation, ledger FR-30,
+the `c1-probe` in the evidence dir; no strict or membership row over
+that shape).
 `Stmt.print (newline : Bool) (args : Array Expr)` rides the wide-
 statement mold (`StmtOp.print`, `stmtPlan` with zero targets,
 `applyStmtOpCore` = validate through `renderPrint`, state unchanged);
@@ -232,7 +263,21 @@ and was not taken.
   bug, three pins), **BUG-096** (huge shift counts abort the machine).
 - **Race rows with program output** are not comparable (TSan's report
   interleaves asynchronously; the split requires an empty prefix and
-  does not detect prints AFTER the report — recorded gap, §5).
+  does not detect prints AFTER the report — rowed limitation:
+  `builtins/print/refused/race-with-output`, FR-29 (iv), §5).
+- **C1 / FR-30:** the machine's statement-level atomicity of registry-
+  free print runs vs gc's preemption between statements (R18's
+  obligation) — fix direction: a scheduling point between statements or
+  an output-order latitude at the fold.
+- **C9 (reconciler, MEDIUM):** the certified record's stamp precedes the
+  branch's wire-schema commits (the enumeration ran before them; the
+  `print`/`float-bits` nodes do not appear in the fixture, wire sha
+  unchanged) — the merge train's standing step-5a re-certification at
+  the merged tip clears it; disclosed, not re-stamped.
+- **C15 (owed, reconciler):** a check for bare `R\d+` latitude citations
+  resolving to a `### R\d+.` heading — this slice's first cut cited
+  R17/R18 in eight places before the rows existed (A3). Recorded in
+  TODO.md; not implemented here.
 
 ## 5. The harness split (apparatus, TRUST-ADJACENT)
 
@@ -244,11 +289,16 @@ program's prints, then gc's abort report, then `go run`'s `exit status N`
 trailer). `attach_output <status>` splices `"output":<literal>` into the
 observation, the literal produced by `coverageharness --split-stderr F
 --expected-status S` (`split.go`), FAIL-CLOSED: ok = whole stream (an
-exit trailer refuses); panic = up to the UNIQUE line-start `panic: `
-(zero candidates — a print without a trailing newline glued to the
-report — or two refuse); fatal/deadlock = the unique line-start marker,
-the panic-then-fatal unwinding shape included; race = the prefix must
-be empty; invalid UTF-8 refuses. Red-first tests
+exit trailer refuses); panic = the ONE occurrence of `panic: ` anywhere
+in the stream (repanic continuations `\n\tpanic: ` excepted), at a line
+start, followed by gc's goroutine trace header — zero, several, glued or
+header-less refuse by name (hardened at the audit fix round A2, which
+found four shapes the first cut UNDERSTATED: a printed `panic: fake`
+line or marker text glued to the report was taken as the block start);
+fatal/deadlock = the one `fatal error: `/`panic: ` marker IN TOTAL (the
+panic-then-fatal unwinding shape counts once); race = the prefix must
+be empty; invalid UTF-8 refuses; `GOFLAGS` scrubbed on the oracle run
+(C3: build chatter must never reach the compared channel). Red-first tests
 (`split_test.go`, transcript in the evidence dir). The membership
 sampler injects the same way; `scripts/gotest-triage` captures
 separately too and its `.out`-golden files are now COMPARED (the
@@ -261,22 +311,25 @@ raft prints nothing and calls no float-bits function).
 
 ## 6. Rows and the gotest delta
 
-Strict green (16): `builtins/print/{ints,uints,bool,string,mixed,
-println-spacing,print-no-spacing,multiple-calls-order,values-and-output,
-print-then-panic,print-then-runtime-panic,print-then-recover,
-goroutine-ordered}` + `builtins/float-bits/{roundtrip-payloads,
-nan-semantics,literals-and-zero,frombits-arith,float32,widening}` (20
-with float-bits; 27 probes vs gc across the float-bits rows, 60+ printed
-operands across the print rows). Membership green (1):
-`builtins/print/goroutine-interleaving` (members=2, R18). Designed red
-(14): BUG-093's eleven (`refused/*` ×10, `in-init`) and BUG-094's three.
-Bug pins born red (4): BUG-095's three, BUG-096's one.
+Strict green (19 at the slice; 20 after the audit fix round): 13
+`builtins/print/{ints,uints,bool,string,mixed,println-spacing,
+print-no-spacing,multiple-calls-order,values-and-output,print-then-panic,
+print-then-runtime-panic,print-then-recover,goroutine-ordered}` + 6
+`builtins/float-bits/{roundtrip-payloads,nan-semantics,literals-and-zero,
+frombits-arith,float32,widening}` (A1: `roundtrip-payloads` → red,
+`min-max-payload{,/float32}` born green: 5 + 2 = 7 float-bits green).
+Membership green (1): `builtins/print/goroutine-interleaving` (members=2,
+R18). Designed red: BUG-093's thirteen (`refused/*` ×12 incl.
+`unsafe-pointer` and `race-with-output`, `in-init`) and BUG-094's seven
+(A1 added `neg-canonical-refused{,/float32}`, `min-max-canonical-refused`,
+`roundtrip-payloads`). Bug pins born red (4): BUG-095's three (order-
+fragile — the fix lane adds robust ones), BUG-096's one.
 
 Gotest (`scripts/gotest-triage run --only …` over the 195 files the
 2026-09-01 triage recorded as print-refused; evidence
 `gotest-results.tsv`): **120 MATCH** (output compared byte-exactly,
-`.out` goldens included), 62 FRONTEND-REFUSED (print kinds: 8 float, 5
-address; os.Exit ×14 — gate G7; time.Sleep, runtime.FuncForPC,
+`.out` goldens included), 62 FRONTEND-REFUSED (print kinds: 10 float, 13
+address — counted on the refusal texts, C2; os.Exit ×14 — gate G7; time.Sleep, runtime.FuncForPC,
 reflect.TypeOf, math.Pow, range-over-func, a duplicate-FuncId
 decoder refusal …), 10 MACHINE-REFUSED (5 wall-clock timeouts, 3
 init-phase prints, method5.go's array conversion, recover2.go's
@@ -327,6 +380,29 @@ exponent is too big`, reduced to BUG-096.
   fixed), 153 eval tests, twin wire pin UNCHANGED (4ee39f732d51…), deviation
   pin re-recorded with `"output":""`. Drift vs the previous pin: exactly
   38 born rows, 0 flips → re-pinned in commit 1e177465 (baseline header
-  note; ledger §8o).
-- Final fast gate at the clean tip: the coordinator report carries the
-  `RESULT` line and SHA.
+  note; ledger §8p — lettered §8o on the lane, re-lettered at the round-14
+  rebase because `fr27-fr28`'s §8o landed first).
+- Final fast gate at the clean tip (a4865e66): `RESULT: PASS`, 0 HIGH.
+- **Audit fix round (2026-09-05, A1–A3, B1/B2, C1–C6, D):** A1 closed two
+  wrong-answer families (§2.3/§2.4; `roundtrip-payloads` PASS→FAIL on
+  BUG-094's line; 7 new rows); A2 made the fd-2 split refuse the four
+  attack shapes (§5; `race-with-output` rowed) and scrubbed GOFLAGS; A3
+  wrote R7's amendment, R17, R18 (the first cut's edits never landed —
+  a backgrounded script failed silently, caught by the audit); B1
+  redirected BUG-095's diagnosis to the frontend's `noteInterface`; C1
+  recorded FR-30/R18's obligation with the `c1-probe`; numbers, lowerdiag
+  classification, evidence paths and the D items corrected. Gate line
+  and SHA in the coordinator report.
+- **Rebase onto main fc9bbef1 (merge train round 14, 2026-09-05
+  [AGENT]):** main had gained flaky-panic-wait (+1 PASS row),
+  g6-reflect-memo (docs), fr27-fr28 (+31 rows, frontend changes) and
+  c-arc-gu (the G-U choice-consumption rule in GoCore/State.lean) since
+  ac45aedd. Conflicts were confined to the baseline header/tally and the
+  ledger §8 records and were reconciled by hand; the Lean/Go code
+  auto-merged textually and the round-14 gate is what verifies it. The
+  tracked figure re-derived from the data rows: 3479 = 3230 PASS / 249
+  FAIL = main's 3434 (3209 / 225) + the lane's 45 born (21 PASS / 24
+  FAIL), 0 flips of main's rows (`roundtrip-payloads` is a born FAIL
+  against main; it stays on BUG-094's Cases line). The lane's
+  pre-rebase figure was 3447 = 3210 / 237. Gate line and SHA in the
+  coordinator report.

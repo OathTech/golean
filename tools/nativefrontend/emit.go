@@ -8044,6 +8044,15 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 		if fn, isAtomic := isAtomicFunc(obj); isAtomic {
 			return e.emitAtomicCall(c, fn)
 		}
+		// A bare-ident call of a `math` float-bits function can only come
+		// from a dot-import (`import . "math"`); the selector spelling
+		// lowers to the primitive, this one refuses NAMING the package
+		// (audit fix round D, 2026-09-05) — the dot-import defect class
+		// stays visible rather than being lowered on a path the identity
+		// boundary does not police.
+		if fn, isFB := isFloatBitsFunc(obj); isFB {
+			return nil, false, unsup("dot-imported math.%s called as a bare identifier: the float-bits primitive lowers the qualified spelling only (import . \"math\" is outside the identity boundary) — fail closed", fn.Name())
+		}
 		sig, _ = obj.Type().(*types.Signature)
 		// Wire FuncId via the identity boundary (W1.1): same-package
 		// calls inside a non-main unit must target the QUALIFIED id.

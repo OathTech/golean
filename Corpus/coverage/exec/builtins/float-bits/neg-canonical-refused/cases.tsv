@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+-	negCanonicalRefused	-	ok	-	builtins,float_bits,floats,division
+float32	negCanonicalRefused32	-	ok	-	builtins,float_bits,floats,division

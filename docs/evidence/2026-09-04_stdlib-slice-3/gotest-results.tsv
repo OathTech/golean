@@ -45,7 +45,7 @@ FRONTEND-REFUSED	fixedbugs/bug258.go	package-selector call math.Pow (package \
 MATCH	fixedbugs/bug261.go	status=ok
 MATCH	fixedbugs/bug272.go	status=ok
 MATCH	fixedbugs/bug281.go	status=ok
-FRONTEND-REFUSED	fixedbugs/bug286.go	wire-decode: {"message":"/home/dev/projects/golean/.claude/worktrees/stdlib-slice-3/artifacts/gotest/cases/fixedbugs__bug286/wire.json: native lowering: duplicate function id main.J.f in program","schema":"golean-observation-v1","status":"error"}
+FRONTEND-REFUSED	fixedbugs/bug286.go	wire-decode: {"message":"<worktree>/artifacts/gotest/cases/fixedbugs__bug286/wire.json: native lowering: duplicate function id main.J.f in program","schema":"golean-observation-v1","status":"error"}
 MATCH	fixedbugs/bug291.go	status=ok
 MATCH	fixedbugs/bug293.go	status=ok
 MATCH	fixedbugs/bug296.go	status=ok

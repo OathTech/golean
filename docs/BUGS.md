@@ -5262,7 +5262,7 @@ rows PASS through the real generic; the entry flips to fixed.
 - Status: open
 - Pinned-by: none (every row is RED by design: the frontend refuses at `emitPrintStmt` by name — floats/complex (`floats and complex print through internal/strconv.AppendFloat …`), zero operands (`with zero operands …`), the address-printing kinds (`prints an address in gc …`, PERMANENT — ledger §5.1 item 3) — and the machine refuses an init-phase print at `runInitConfig` (`print/println during package initialization …`); a lowering that produced bytes here would be a wrong answer against gc's stderr)
 - Expect: FAIL
-- Cases: builtins/print/refused/float, builtins/print/refused/float32, builtins/print/refused/zero-operands, builtins/print/refused/pointer, builtins/print/refused/nil-pointer, builtins/print/refused/slice, builtins/print/refused/map, builtins/print/refused/chan, builtins/print/refused/func, builtins/print/refused/interface, builtins/print/in-init
+- Cases: builtins/print/refused/float, builtins/print/refused/float32, builtins/print/refused/zero-operands, builtins/print/refused/pointer, builtins/print/refused/nil-pointer, builtins/print/refused/slice, builtins/print/refused/map, builtins/print/refused/chan, builtins/print/refused/func, builtins/print/refused/interface, builtins/print/refused/unsafe-pointer, builtins/print/in-init, builtins/print/refused/race-with-output
 - Discovered: 2026-09-04 (stdlib slice 3, lane `stdlib-slice-3`; design note `docs/2026-09-04_stdlib-slice-3-design.md` §3.3–§3.4)
 
 WHAT: gate G2 (RULED [USER] 2026-09-03 as recommended, relayed by the
@@ -5292,9 +5292,15 @@ a permanent by-name refusal (ledger §5.1 item 3, re-posed at this slice).
 
 MEASURED (gotest triage re-run over the 195 formerly print-refused
 $GOROOT/test files, `docs/evidence/2026-09-04_stdlib-slice-3/gotest-results.tsv`):
-120 MATCH with output compared, 13 refuse on these print kinds (8 float,
-5 address), 3 on the init-phase guard, the rest on unrelated frontiers
-(os.Exit ×14 — gate G7 — time.Sleep, runtime.FuncForPC, reflect …).
+120 MATCH with output compared, 23 refuse on these print kinds (10 float,
+13 address — counted on the refusal texts, audit fix round C2), 3 on the
+init-phase guard, the rest on unrelated frontiers (os.Exit ×14 — gate G7
+— time.Sleep, runtime.FuncForPC, reflect …). (iv), added at the audit fix
+round A2: a RACY program that prints — TSan's report interleaves
+asynchronously with the program's fd-2 bytes, so the harness split
+refuses any output before the report and does NOT detect output after
+it; row `builtins/print/refused/race-with-output` is the rowed
+limitation (red at stage go-observation by the split's own name).
 
 PLAN: ledger FR-29 (queue 29, M).
 
@@ -5303,7 +5309,7 @@ PLAN: ledger FR-29 (queue 29, M).
 - Status: open
 - Pinned-by: none (all three rows are RED by design at lean-observation: `floatBitsApply` refuses `unsupported "math.Float64bits of the machine's canonical NaN (0x7FF8000000000000): the payload of a machine-PRODUCED NaN is latitude the machine narrows (inventory R7) and gc/amd64 realizes differently — refused rather than reported"`; a reported 0x7FF8000000000000 would be a wrong answer against gc's 0xFFF8000000000000 (0/0) or 0x7FF8000000000001 (payload propagation))
 - Expect: FAIL
-- Cases: builtins/float-bits/canonical-nan-refused, builtins/float-bits/nan-arith-payload-refused, builtins/float-bits/nan-arith-payload-refused/canonical-roundtrip
+- Cases: builtins/float-bits/canonical-nan-refused, builtins/float-bits/nan-arith-payload-refused, builtins/float-bits/nan-arith-payload-refused/canonical-roundtrip, builtins/float-bits/neg-canonical-refused, builtins/float-bits/neg-canonical-refused/float32, builtins/float-bits/min-max-canonical-refused, builtins/float-bits/roundtrip-payloads
 - Discovered: 2026-09-04 (stdlib slice 3; the primitive's admission condition — «preserve NaN payloads exactly … ±0 / quiet/signaling round-trip probes» — is MET for every pattern that enters through `Float64frombits` (rows `builtins/float-bits/roundtrip-payloads`, `nan-semantics`, `float32`: bit-exact, green); what the condition did not anticipate is the machine's OWN NaNs)
 
 WHAT: R7 narrows every NaN the machine produces (arithmetic, conversion) to
@@ -5315,14 +5321,30 @@ for 0/0 ("real indefinite", sign bit set) and PROPAGATES the first NaN
 operand's payload through arithmetic (`Float64frombits(0x7FF8000000000001) * 2`
 keeps the payload), so the machine's canonical result would present as a
 wrong answer at exactly one observable pattern. `floatBitsApply` therefore
-refuses the canonical NaN under `*bits` by name (Ops.lean); every
-non-canonical payload can only have entered through `*frombits` and passes
-through bit-exact. The OVER-refusal — `Float64bits(Float64frombits(0x7FF8000000000000))`,
-a legitimate round-trip of the canonical pattern — is the third row: the
-price of not being able to distinguish provenance, recorded rather than
-absorbed. Same class as the R6 float→int refusal pins: a declared latitude
-resolved by failing closed. [AGENT] decision, disclosed in the design note
-§2.3.
+refuses the DEFAULT NaN under `*bits` by name (Ops.lean) — under EITHER
+sign, since the audit fix round A1 (2026-09-05): the first cut tested the
+canonical pattern exactly, but `fneg64` is a bare sign flip, so
+`Float64bits(-(zero/zero))` REPORTED 0xFFF8000000000000 where gc gives
+0x7FF8000000000000 — a wrong answer (row `neg-canonical-refused{,/float32}`
+pins it red now). A1's second family: float `min`/`max`. gc/amd64's
+lowering ORs the two operands' bits when one is a NaN (AMD64.rules
+MINSD/MINSD/POR; `max = -min(-x,-y)`), so `Float64bits(min(Float64frombits
+(0x7FF8000000000001), 2.5))` is 0x7FFC000000000001 in gc — the first cut
+returned the NaN operand's bits and was WRONG; `floatMinMaxBits` is now
+transcribed from the idiom (rows `min-max-payload{,/float32}` green, both
+operand orders, ±0 ties, NaN/NaN) and returns the default NaN whenever
+either operand is one (gc's default carries the opposite sign — an OR
+over it would report a sign-wrong pattern the guard cannot recognize;
+row `min-max-canonical-refused`). The producible-NaN set is therefore
+exactly {default, −default}; every other pattern entered through
+`*frombits` and passes bit-exact. The OVER-refusals —
+`Float64bits(Float64frombits(0x7FF8000000000000))` and the 0xFFF8… entry
+of `roundtrip-payloads` (PASS→FAIL at A1: the row's own reason line in
+the baseline header) — are the price of not distinguishing provenance,
+recorded rather than absorbed. Same class as the R6 float→int refusal
+pins: a declared latitude resolved by failing closed. [AGENT] decision,
+disclosed in the design note §2.3; falsified invariant texts ("the
+machine never produces a non-canonical NaN") corrected at A1.
 
 PLAN: R7's re-envelope — either make NaN payload production platform-
 faithful (x86 SSE rules: first-operand propagation, 0xFFF8… for invalid
@@ -5343,26 +5365,29 @@ WHAT: `type I interface{ foo() int }`, `type J interface{ I; bar() }`,
 `type myint int` with `foo` only, `type myint32 int32` with `foo` and
 `bar`. gc: `switch i.(type) { case J: … case myint: … }` on `myint(11)`
 takes `case myint` (myint does not implement J — no `bar`); the machine
-takes `case J`. The three rows pin the class in three shapes: the generic
-form of the gotest file (`case T` with `T` instantiated to `J`), the same
-with the switch BINDING and a method call on the bound value, and the
-NON-generic twin `case J` — which also fails, so the defect is interface
-EMBEDDING in the satisfaction check, not the type parameter. Hypothesis
-(untested): the machine's method-set record or satisfaction walk for `J`
-contains only the embedded interface's requirement (`foo`) and drops `J`'s
-own `bar`, or the embedded interface is treated as satisfied-by-embedding
-rather than by method set (spec#Interface_types: "the method set of T
-includes the methods of E … a type implements an interface if its method
-set is a superset of the interface's"). `myint32(12)` (which implements
-J) matches `case J` on both sides, and `case I` matches `myint` on both
-sides — the wrong answer is exactly the "embedded satisfied, own method
-missing" cell.
+takes `case J`. ROOT CAUSE (audit fix round B1, 2026-09-05 — the fix
+lane `bug095-096` was redirected to it): the FRONTEND, not the machine's
+satisfaction walk. `emit.go:8757` `noteInterface(ifaceName, recvIface)`
+records the interface-method-set table entry KEYED by the call's STATIC
+interface type but REGISTERS the declaring receiver's interface — a call
+`i.foo()` with `i : J` (whose `foo` is declared on the embedded `I`)
+notes `J ↦ I`'s method set; `noteInterface` is last-write-wins, so the
+wire's `methodSets` record for `J` ends up carrying `I`'s requirement
+list ({foo}) and the machine — answering ONLY from the records, per the
+BUG-053 contract — correctly decides that `myint` satisfies what the
+record says `J` requires. The machine is faithful to a wrong record. The
+three rows pin the class in three shapes (the gotest file's generic `case
+T` at `T := J`, the same with a bound variable and a method call, the
+non-generic `case J`), but they are ORDER-FRAGILE: the non-generic twin
+passes in isolation — whether the wrong record wins depends on which
+`i.foo()` call site the emitter visits last. The fix lane adds
+order-robust pins (a program whose only interface calls are through the
+embedding interface, and its mirror).
 
-PLAN: a diagnosis lane on the interfaces campaign's satisfaction
-machinery (`dynamicMethodSetRecorded` / the type-switch case check) with
-the three rows as the red-first pins; not this slice's scope (the slice
-touched neither interfaces nor type switches — it made the wrong answer
-VISIBLE).
+PLAN (lane `bug095-096`, in flight): `noteInterface` must register the
+STATIC interface's own method set (or refuse when the two differ), never
+the declaring receiver's; the three rows flip PASS with the fix and the
+robust pins are added alongside.
 
 ## BUG-096 — a shift by a count far past the operand width (`x << (1<<32)`, `u << (1<<40)`) makes the machine compute `2^count` in `Nat` and DIE with an INTERNAL PANIC (`Nat.pow exponent is too big`) instead of yielding 0 [fidelity/robustness; ints/shifts; surfaced by the gotest re-run]
 
@@ -5384,5 +5409,7 @@ exponentiating (`count ≥ bits → 0` for left shifts and logical right
 shifts, `→ -1 / 0` by sign for arithmetic right shifts).
 
 PLAN: a small ints fix lane (Ops.lean's shift arms + the row flips PASS;
-the existing shifts suite covers the in-width counts).
+the existing shifts suite covers the in-width counts). IN FLIGHT (lane
+`bug095-096`, 2026-09-05): the ~6-line saturation of the shift count at
+the operand width before exponentiating.
 

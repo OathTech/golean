@@ -1343,7 +1343,11 @@ go_run_oracle() {
   # (byte-identical text to the old 2>&1 capture, stdout first), and the
   # run's exit code is returned unchanged.
   local rc=0
-  run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GODEBUG=panicnil=0 GOCACHE="$GO_BUILD_CACHE" \
+  # GOFLAGS is SCRUBBED (audit fix round C3, 2026-09-05): an inherited
+  # `GOFLAGS=-x`/`-v` writes build chatter to the child's stderr, which
+  # is now a COMPARED channel (the `output` field), like GODEBUG already
+  # was pinned for panicnil.
+  run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOFLAGS= GODEBUG=panicnil=0 GOCACHE="$GO_BUILD_CACHE" \
     ${gopath_env[@]+"${gopath_env[@]}"} \
     bash -c 'cd "$1" && shift && exec go run "$@" .' go-run-oracle "$go_run_dir" ${race_flag[@]+"${race_flag[@]}"} \
     > "$go_run_dir/oracle.stdout" 2> "$go_run_dir/oracle.stderr" || rc=$?

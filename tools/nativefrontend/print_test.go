@@ -166,3 +166,26 @@ func TestStdlibRegisterPrimitivesFull(t *testing.T) {
 		}
 	}
 }
+
+func TestFloatBitsDotImportRefusesNamingMath(t *testing.T) {
+	src := `package main
+import . "math"
+func subject(f float64) uint64 {
+	return Float64bits(f)
+}
+`
+	refused, msg := exportRefused(t, src)
+	if !refused {
+		program, err := emitSource(t, src)
+		if err != nil {
+			t.Fatal(err)
+		}
+		msg = mustJSON(t, program)
+	}
+	if !strings.Contains(msg, "dot-imported math.Float64bits") {
+		t.Errorf("a dot-imported float-bits call must refuse naming math:\n%s", msg)
+	}
+	if strings.Contains(msg, `"expr":"float-bits"`) {
+		t.Errorf("a dot-imported float-bits call must not lower:\n%s", msg)
+	}
+}

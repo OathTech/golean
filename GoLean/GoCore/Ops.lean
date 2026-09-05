@@ -81,39 +81,52 @@ payloads exactly (deps.go:29 builds nan() from payload
 0x7FF8000000000001) and ±0 / quiet/signaling round-trip probes»).
 
 ONE fail-closed arm, disclosed [AGENT]: `*bits` REFUSES the machine's
-CANONICAL NaN (`FloatBits.nan64` = 0x7FF8000000000000 / `nan32` =
-0x7FC00000). Latitude inventory R7 narrows every NaN the machine
-PRODUCES (arithmetic, conversion) to that one pattern — softfloat64.go's
-own rule, `return nan64` at every NaN-producing case — while the oracle
-platform (gc/amd64, SSE) realizes hardware payload propagation (first
-NaN operand's payload; 0xFFF8… "real indefinite" for invalid
-operations). R7's whole argument was "payloads are unobservable
-in-language"; this primitive makes them observable, so a canonical-NaN
-observation is exactly the point where the machine's narrowing would
-present as a wrong answer (`Float64bits(zero/zero)`: machine
-0x7FF8000000000000, gc 0xFFF8000000000000). The refusal names the cause;
-the over-refusal (`Float64bits(Float64frombits(0x7FF8000000000000))` is a
-legitimate round-trip that also refuses) is rowed
-(`builtins/float-bits/canonical-nan-refused`) and is R7's re-envelope
-obligation, not this slice's. Every NON-canonical NaN payload can only
-have entered through `*frombits` (the machine never produces one), so
-it passes through untouched. -/
+DEFAULT NaN under EITHER sign (`FloatBits.nan64` = 0x7FF8000000000000 and
+its negation 0xFFF8000000000000; `nan32` = 0x7FC00000 / 0xFFC00000).
+Latitude inventory R7 narrows every NaN the machine PRODUCES (arithmetic,
+conversion) to that one payload — softfloat64.go's own rule, `return
+nan64` at every NaN-producing case — while the oracle platform (gc/amd64,
+SSE) realizes hardware payloads (first NaN operand's payload;
+0xFFF8… "real indefinite" for invalid operations). R7's whole argument
+was "payloads are unobservable in-language"; this primitive makes them
+observable, so a default-NaN observation is exactly the point where the
+machine's narrowing would present as a wrong answer (`Float64bits(zero/zero)`:
+machine 0x7FF8000000000000, gc 0xFFF8000000000000). The guard is
+SIGN-INSENSITIVE because the machine DOES produce the negated default:
+`fneg64` is a bare sign flip (`-(zero/zero)` = 0xFFF8… on the machine,
+0x7FF8… in gc — audit fix round A1, 2026-09-05, closed a reported wrong
+answer here). The producible-NaN set is therefore exactly {nan64, -nan64}
+(and the 32-bit pair): every OTHER NaN pattern can only have entered
+through `*frombits` — `floatMinMaxBits` preserves this by returning the
+DEFAULT NaN whenever either operand is one (so it refuses downstream) and
+transcribing gc/amd64's payload-OR idiom only over frombits payloads
+(A1's second family: `Float64bits(min(Float64frombits(0x7FF8…01), 2.5))`
+= 0x7FFC000000000001 on both sides). The over-refusal
+(`Float64bits(Float64frombits(0x7FF8000000000000))` / `…(0xFFF8…)`, a
+legitimate round-trip) is rowed (`builtins/float-bits/{canonical-nan-refused,
+neg-canonical-refused}`, BUG-094) and is R7's re-envelope obligation, not
+this slice's. -/
 def floatBitsApply (op : FloatBitsOp) (v : GoValue) : Except Stop GoValue :=
   match op, v with
   | .f64bits, .float bits .float64 =>
-      if bits == FloatBits.nan64 then
-        unsupported s!"{op.name} of the machine's canonical NaN (0x7FF8000000000000): the payload of a machine-PRODUCED NaN is latitude the machine narrows (inventory R7) and gc/amd64 realizes differently — refused rather than reported (row builtins/float-bits/canonical-nan-refused)"
+      -- Sign-insensitive: the default NaN and its negation both refuse.
+      if bits &&& 0x7FFFFFFFFFFFFFFF == FloatBits.nan64 then
+        unsupported s!"{op.name} of the machine's default NaN (0x7FF8000000000000 or its negation): the payload of a machine-PRODUCED NaN is latitude the machine narrows (inventory R7) and gc/amd64 realizes differently — refused rather than reported (rows builtins/float-bits/canonical-nan-refused and neg-canonical-refused)"
       else
         return .int (Int.ofNat bits) .uint64
   | .f32bits, .float bits .float32 =>
-      if bits == FloatBits.nan32 then
-        unsupported s!"{op.name} of the machine's canonical NaN (0x7FC00000): the payload of a machine-PRODUCED NaN is latitude the machine narrows (inventory R7) and gc/amd64 realizes differently — refused rather than reported (row builtins/float-bits/canonical-nan-refused)"
+      if bits &&& 0x7FFFFFFF == FloatBits.nan32 then
+        unsupported s!"{op.name} of the machine's default NaN (0x7FC00000 or its negation): the payload of a machine-PRODUCED NaN is latitude the machine narrows (inventory R7) and gc/amd64 realizes differently — refused rather than reported (rows builtins/float-bits/canonical-nan-refused and neg-canonical-refused)"
       else
         return .int (Int.ofNat bits) .uint32
   | .f64frombits, .int bits .uint64 =>
-      return .float (FloatKind.float64.normalizeBits bits.toNat) .float64
+      -- A uint64 cell is normalized non-negative; a negative here is a
+      -- lowering-contract breach, never silently absorbed by `toNat`.
+      if bits < 0 then stuck s!"{op.name}: negative operand {bits} at kind uint64 (normalization contract breached)"
+      else return .float (FloatKind.float64.normalizeBits bits.toNat) .float64
   | .f32frombits, .int bits .uint32 =>
-      return .float (FloatKind.float32.normalizeBits bits.toNat) .float32
+      if bits < 0 then stuck s!"{op.name}: negative operand {bits} at kind uint32 (normalization contract breached)"
+      else return .float (FloatKind.float32.normalizeBits bits.toNat) .float32
   | op, other => stuck s!"{op.name}: operand {repr other} is not of the pinned kind (float64/uint64 or float32/uint32)"
 
 /-- IEEE comparison at matching float kinds: NaN is UNORDERED — every
@@ -142,33 +155,54 @@ def anyFloatOperand (vs : List GoValue) : Bool :=
 
 /-- IEEE `min`/`max` selection over two float operands (triage L3,
 spec §Min_and_max's special-case table, pinned by
-`spec-examples-stmt/min-max-float-specials`): a NaN operand propagates
-(the result is the NaN OPERAND — payload bits are unobservable through
-the observation channel, which renders NaN-ness only); an equal
-compare is either identical bits or the ±0 pair, and the tie breaks by
-SIGN — "negative zero is smaller than (non-negative) zero", so `min`
-keeps the negative-signed operand and `max` the other. The result is
-always ONE OF THE OPERANDS. Non-float or kind-mismatched pairs are
-stuck (go/types makes them unreachable from typed Go). -/
+`spec-examples-stmt/min-max-float-specials`), BIT-TRANSCRIBED since the
+stdlib-slice-3 audit fix round A1 (2026-09-05) from gc/amd64's lowering
+(`cmd/compile/internal/ssa/_gen/AMD64.rules` @ go1.26.5, "Floating-point
+min is tricky"):
+
+    t1  = MINSD x y      -- SSE MINSD: x < y ? x : y  (unordered or equal → y)
+    t2  = MINSD t1 x
+    min = POR t1 t2      -- bitwise OR
+    max = -min(-x, -y)
+
+which realizes the spec's table — a NaN operand propagates, `min(-0, +0)`
+is `-0` (the OR keeps the sign bit), `max(-0, +0)` is `+0` — AND fixes the
+NaN PAYLOAD gc reports through `math.Float64bits`: the OR of the two
+operands' bits (`min(Float64frombits(0x7FF8000000000001), 2.5)` =
+0x7FFC000000000001), where the previous "return the NaN operand" rule
+reported 0x7FF8000000000001 — a wrong answer once `float-bits` made
+payloads observable (audit A1). The pure-Go `runtime.fmin` (other
+ports) returns the NaN operand instead: this is a (b)-pin to the oracle
+platform, inventory R7's amendment. THE DEFAULT-NaN PRE-CHECK: if EITHER
+operand is the machine's default NaN (either sign — the only NaNs the
+machine produces, `floatBitsApply`'s doc), the result is the default NaN
+itself, NOT the OR: gc's default NaN carries the OPPOSITE sign
+(0xFFF8…), so an OR over it would report a sign-wrong pattern the
+downstream `*bits` guard could not recognize; returning the default NaN
+keeps the producible-NaN set at {nan64, -nan64} and lets the guard refuse
+it by name. Value semantics are unchanged either way (a NaN is a NaN).
+Non-float or kind-mismatched pairs are stuck (go/types makes them
+unreachable from typed Go). -/
 def floatMinMaxBits (isMin : Bool) (kind : FloatKind) (a b : Nat) : Nat :=
-  let (cmp, isnan) :=
+  let (isNaN, defaultNaN, neg, lt) :=
     match kind with
-    | .float64 => FloatBits.fcmp64 a b
-    | .float32 => FloatBits.fcmp32 a b
-  if isnan then
-    let aIsNaN :=
-      match kind with
-      | .float64 => (FloatBits.fcmp64 a a).2
-      | .float32 => (FloatBits.fcmp32 a a).2
-    if aIsNaN then a else b
-  else if cmp < 0 then (if isMin then a else b)
-  else if 0 < cmp then (if isMin then b else a)
+    | .float64 =>
+        ((fun x => (FloatBits.fcmp64 x x).2), FloatBits.nan64, FloatBits.fneg64,
+          fun x y => FloatBits.flt64 x y)
+    | .float32 =>
+        ((fun x => (FloatBits.fcmp32 x x).2), FloatBits.nan32, FloatBits.fneg32,
+          fun x y => FloatBits.flt32 x y)
+  let signMask : Nat := match kind with | .float64 => 0x7FFFFFFFFFFFFFFF | .float32 => 0x7FFFFFFF
+  if (isNaN a && a &&& signMask == defaultNaN) || (isNaN b && b &&& signMask == defaultNaN) then
+    defaultNaN
   else
-    let aNegSign :=
-      match kind with
-      | .float64 => a >>> 63 == 1
-      | .float32 => a >>> 31 == 1
-    if isMin == aNegSign then a else b
+    -- MINSD x y = x < y ? x : y (unordered or equal yields the SECOND operand).
+    let minsd := fun (x y : Nat) => if lt x y then x else y
+    let amd64Min := fun (x y : Nat) =>
+      let t1 := minsd x y
+      let t2 := minsd t1 x
+      t1 ||| t2
+    if isMin then amd64Min a b else neg (amd64Min (neg a) (neg b))
 
 def floatMinMax (isMin : Bool) : GoValue → GoValue → Except Stop GoValue
   | .float a ka, .float b kb =>

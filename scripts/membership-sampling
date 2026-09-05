@@ -115,7 +115,7 @@ oracle() {  # $1 = harness dir, $2 = "" | race
   # stdout/stderr captured SEPARATELY (stdlib slice 3): the `output`
   # observation field is the program's fd-2 prefix, split fail-closed by
   # the harness's --split-stderr mode exactly as scripts/diff-coverage does.
-  (cd "$dir" && env GO111MODULE=off GODEBUG=panicnil=0 GOCACHE="$GO_BUILD_CACHE" ${gopath_env[@]+"${gopath_env[@]}"} go run ${race[@]+"${race[@]}"} . > oracle.stdout 2> oracle.stderr) || rc=$?
+  (cd "$dir" && env GO111MODULE=off GOFLAGS= GODEBUG=panicnil=0 GOCACHE="$GO_BUILD_CACHE" ${gopath_env[@]+"${gopath_env[@]}"} go run ${race[@]+"${race[@]}"} . > oracle.stdout 2> oracle.stderr) || rc=$?
   out="$(cat "$dir/oracle.stdout" "$dir/oracle.stderr")"
   if [[ "$rc" -eq 0 ]]; then
     out="$(cat "$dir/oracle.stdout")"

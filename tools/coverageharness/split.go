@@ -12,17 +12,16 @@ package main
 //
 // Rules, per expected status (mirrors scripts/diff-coverage's classification):
 //   ok        no trailer; the whole stderr is the program's output.
-//   panic     exactly ONE line-start `panic: ` (position 0 or after '\n');
-//             the prefix ends there. Zero candidates → refuse (a print without
-//             a trailing newline glues onto the report: `abcpanic: x` — the
-//             boundary is not recoverable); two or more → refuse (a payload or
-//             a program line that itself begins `panic: ` — ambiguous).
-//   fatal,    the runtime's `fatal error: ` line, or — the unwinding shape,
-//   deadlock  `defer m.Unlock()` in a panicking frame — a leading `panic: `
-//             line with the fatal on a tab-indented continuation: the block
-//             starts at the earliest line-start marker; more than one
-//             line-start `panic: ` or more than one line-start `fatal error: `
-//             refuses.
+//   panic     exactly ONE occurrence of `panic: ` ANYWHERE in the stream
+//             (repanic continuations `\n\tpanic: ` excepted), at a line start,
+//             followed by gc's goroutine trace header — the prefix ends
+//             there (abortBlockStart). A print of the marker text — on its
+//             own line, glued to the report, or anywhere — refuses.
+//   fatal,    exactly ONE occurrence of `fatal error: ` OR `panic: ` in
+//   deadlock  total (the unwinding shape `panic: v [recovered]\n\tfatal
+//             error: …` counts once — its fatal line is a continuation), at a
+//             line start, followed by the trace header. A printed `panic: …`
+//             beside a real `fatal error: ` block (or the converse) refuses.
 //   race      TSan's report interleaves ASYNCHRONOUSLY with the program's
 //             prints and the program continues past it (exit 66 at the end),
 //             so a program prefix is not well-defined: any byte before the
@@ -45,8 +44,17 @@ import (
 
 var exitTrailerRe = regexp.MustCompile(`(?m)^exit status \d+\n\z`)
 
-// lineStarts returns every offset at which `marker` occurs at a line start.
-func lineStarts(b, marker []byte) []int {
+var goroutineHeaderRe = regexp.MustCompile(`\n\ngoroutine \d+ \[`)
+
+// markerOccurrences returns every offset of `marker` in b that is NOT a
+// repanic/unwinding CONTINUATION line — gc prints a recovered-and-repanicked
+// chain as `panic: first [recovered]\n\tpanic: second` and a fatal raised
+// during unwinding as `panic: v [recovered]\n\tfatal error: …` (runtime/
+// panic.go printpanics, :734-752 @ go1.26.5): a marker preceded by "\n\t"
+// belongs to the block that began above it. Every OTHER occurrence — at a
+// line start OR glued mid-line — counts, so a program that printed the
+// marker text itself, with or without a trailing newline, is VISIBLE.
+func markerOccurrences(b, marker []byte) []int {
 	var out []int
 	off := 0
 	for {
@@ -55,11 +63,44 @@ func lineStarts(b, marker []byte) []int {
 			return out
 		}
 		p := off + i
-		if p == 0 || b[p-1] == '\n' {
+		if !(p >= 2 && b[p-1] == '\t' && b[p-2] == '\n') {
 			out = append(out, p)
 		}
 		off = p + 1
 	}
+}
+
+// abortBlockStart finds the ONE abort block among the given markers
+// (audit fix round A2, 2026-09-05 — fail-closed on every shape a program's
+// own prints could confuse): across ALL the markers there must be exactly
+// one non-continuation occurrence in total; it must sit at a line start
+// (offset 0 or after '\n' — a marker glued to a print that lacked its
+// newline is not recoverable: the program's text and gc's report share a
+// line); and the block must be WELL-FORMED — the goroutine trace header
+// `\n\ngoroutine N [` must follow (gc prints it after the panic/fatal lines
+// under the default GOTRACEBACK). Zero or several occurrences refuse by
+// name (a print of `panic: …`/`fatal error: …` anywhere makes the split
+// ambiguous, even on a line of its own — the block is never guessed).
+func abortBlockStart(body []byte, markers ...string) (int, error) {
+	var occ []int
+	for _, m := range markers {
+		occ = append(occ, markerOccurrences(body, []byte(m))...)
+	}
+	switch len(occ) {
+	case 0:
+		return -1, fmt.Errorf("stderr split: no %s block found (no report at all), refused", strings.Join(markers, "/"))
+	case 1:
+	default:
+		return -1, fmt.Errorf("stderr split: %d occurrences of %s outside repanic/unwinding continuations — ambiguous (the program printed the marker text itself, or printed without a trailing newline so its text and the report share a line), refused", len(occ), strings.Join(markers, "/"))
+	}
+	p := occ[0]
+	if !(p == 0 || body[p-1] == '\n') {
+		return -1, fmt.Errorf("stderr split: the %s block is glued mid-line to the program's output (a print without a trailing newline) — the boundary is not recoverable, refused", strings.Join(markers, "/"))
+	}
+	if !goroutineHeaderRe.Match(body[p:]) {
+		return -1, fmt.Errorf("stderr split: the %s block at offset %d is not followed by gc's goroutine trace header — not a well-formed abort report, refused", strings.Join(markers, "/"), p)
+	}
+	return p, nil
 }
 
 // stripTrailer removes `go run`'s `exit status N` trailer (required for every
@@ -88,32 +129,26 @@ func splitStderr(stderr []byte, status string) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		ps := lineStarts(body, []byte("panic: "))
-		switch len(ps) {
-		case 1:
-			prefix = body[:ps[0]]
-		case 0:
-			return nil, fmt.Errorf("stderr split: no line-start `panic: ` block — a print without a trailing newline glued onto the panic report (or no report at all); the boundary is not recoverable, refused")
-		default:
-			return nil, fmt.Errorf("stderr split: %d line-start `panic: ` lines — ambiguous (a program line or a payload line that itself begins `panic: `), refused", len(ps))
+		p, err := abortBlockStart(body, "panic: ")
+		if err != nil {
+			return nil, err
 		}
+		prefix = body[:p]
 	case "fatal", "deadlock":
 		body, err := stripTrailer(stderr)
 		if err != nil {
 			return nil, err
 		}
-		fs := lineStarts(body, []byte("fatal error: "))
-		ps := lineStarts(body, []byte("panic: "))
-		if len(fs) > 1 || len(ps) > 1 || len(fs)+len(ps) == 0 {
-			return nil, fmt.Errorf("stderr split: %d line-start `fatal error: ` and %d line-start `panic: ` lines — the abort block must start at exactly one line-start marker (or the panic-then-fatal unwinding shape), refused", len(fs), len(ps))
+		// The block starts at the ONE marker — `fatal error: ` for a plain
+		// throw/deadlock, `panic: ` for the panic-then-fatal unwinding shape
+		// (whose fatal line is a "\n\t" continuation). One in total: a
+		// program-printed `panic: …` line beside a real `fatal error: `
+		// block (or the converse) is ambiguous and refuses.
+		p, err := abortBlockStart(body, "fatal error: ", "panic: ")
+		if err != nil {
+			return nil, err
 		}
-		start := -1
-		for _, p := range append(fs, ps...) {
-			if start < 0 || p < start {
-				start = p
-			}
-		}
-		prefix = body[:start]
+		prefix = body[:p]
 	case "race":
 		body, err := stripTrailer(stderr)
 		if err != nil {

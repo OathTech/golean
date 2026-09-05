@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	minMaxCanonicalRefused	-	ok	-	builtins,float_bits,floats,min,division

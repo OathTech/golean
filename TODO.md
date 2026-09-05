@@ -67,10 +67,23 @@ each gate, per the coordinator's reading [AGENT], disclosed to the
 - [ ] I5 — `GoLean/Interface.lean` + bridge theorems
 - [ ] assessment re-run
 - [ ] pin offer (G-PIN)
-- [ ] **G-OUT — decide before stdlib slice 3 lands. RULED: per-step
+- [x] **G-OUT — decide before stdlib slice 3 lands. RULED: per-step
   event** (`StepEvent.out`, folded by the driver into `Readout`;
   `Obs.terminal` carries the stderr prefix) — not otherwise ordered
-  in the table above; §4.1 of the plan.
+  in the table above; §4.1 of the plan. **LANDED 2026-09-04 (lane
+  `stdlib-slice-3`)**: `StepEvent.out`, `execProgLoopOut` (+
+  `execProgLoopOut_snd`), `RunResult`, `Readout.output`, the `output`
+  observation field. OWED to the C-arc: the EnumSpec `Obs` type is still
+  output-free (design note §4).
+- [ ] **C15 (owed, reconciler; from the stdlib-slice-3 audit fix round
+  A3):** a `tools/reconcile-records` check that every bare `R\d+`
+  latitude citation in docs/ resolves to a `### R\d+.` heading in
+  `docs/2026-08-11_latitude-inventory.md` — the slice's first cut cited
+  R17/R18 in eight places before the rows existed. Not implemented at
+  the round.
+- [ ] **FR-30 / R18 obligation (stdlib-slice-3 audit fix round C1):**
+  statement-granularity scheduling for concurrent prints (a scheduling
+  point between statements or an output-order latitude at the fold).
 
 ## Lowering diagnostic (`scripts/lower-diagnose`, [USER] direction 4, 2026-09-04)
 

@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	raceWithOutput	-	race	-	builtins,print,race,goroutines	racy	a racy program that prints: TSan reports the write/write conflict; the fd-2 split refuses the row because program output precedes the report (FR-29 iv — the recorded limitation; red at go-observation by name)	width=4,sites=32

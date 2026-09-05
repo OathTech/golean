@@ -65,9 +65,9 @@ panic: boom
 
 goroutine 1 [running]:
 main.printThenPanic(...)
-	/home/dev/projects/golean/.claude/worktrees/stdlib-slice-3/artifacts/coverage/go-run/builtins__print__print-then-panic/main.go:9
+	<worktree>/artifacts/coverage/go-run/builtins__print__print-then-panic/main.go:9
 main.main()
-	/home/dev/projects/golean/.claude/worktrees/stdlib-slice-3/artifacts/coverage/go-run/builtins__print__print-then-panic/zz_golean_harness.go:132 +0x5d
+	<worktree>/artifacts/coverage/go-run/builtins__print__print-then-panic/zz_golean_harness.go:132 +0x5d
 exit status 2
 == builtins__print__print-then-recover
 -- stdout:
@@ -83,9 +83,9 @@ panic: runtime error: index out of range [3] with length 0
 
 goroutine 1 [running]:
 main.printThenRuntimePanic(...)
-	/home/dev/projects/golean/.claude/worktrees/stdlib-slice-3/artifacts/coverage/go-run/builtins__print__print-then-runtime-panic/main.go:7
+	<worktree>/artifacts/coverage/go-run/builtins__print__print-then-runtime-panic/main.go:7
 main.main()
-	/home/dev/projects/golean/.claude/worktrees/stdlib-slice-3/artifacts/coverage/go-run/builtins__print__print-then-runtime-panic/zz_golean_harness.go:132 +0x3e
+	<worktree>/artifacts/coverage/go-run/builtins__print__print-then-runtime-panic/zz_golean_harness.go:132 +0x3e
 exit status 2
 == builtins__print__refused__chan
 -- stdout:

@@ -366,6 +366,33 @@ values as schema-versioned observations. For `panic` cases, it lets the process
 panic; the runner extracts the actual Go panic line and compares that
 normalized observation against Lean.
 
+**The `output` field (stdlib slice 3, 2026-09-04; split hardened at its
+audit fix round A2, 2026-09-05).** Every observation — on BOTH sides and at
+EVERY status — carries `"output"`: the program's own fd-2 bytes, i.e. what
+`print`/`println` wrote (the machine's `StepEvent.out` events folded in
+step order into `Readout.output`; on a terminal, the prefix printed before
+it — G-OUT). The field is always present (possibly `""`), so the comparator
+is total and an old-shape observation without it fails the exact-key decode
+rather than comparing. Oracle side: the runner captures the `go run` child's
+stdout (the harness JSON) and stderr SEPARATELY (`go_run_oracle` →
+`oracle.stdout`/`oracle.stderr` under the case's go-run dir; `GOFLAGS` and
+`GODEBUG` pinned so no build chatter reaches the compared channel) and
+recovers the program prefix with the harness's `--split-stderr` mode
+(`tools/coverageharness/split.go`), FAIL-CLOSED: `ok` = the whole stream;
+`panic` = the ONE occurrence of `panic: ` in the stream (repanic
+continuations `\n\tpanic: ` excepted), at a line start and followed by gc's
+goroutine trace header — a program that printed the marker text anywhere,
+or printed without a trailing newline so its text and the report share a
+line, refuses; `fatal`/`deadlock` = the one `fatal error: `/`panic: `
+marker in total (the panic-then-fatal unwinding shape counts once); `race` =
+the prefix must be empty (TSan's report interleaves asynchronously; rows
+with program output are not comparable, and output AFTER the report is not
+detected — `builtins/print/refused/race-with-output`, FR-29 (iv)); non-UTF-8
+bytes refuse (the JSON string cannot carry them byte-exactly — the Lean
+encoder refuses the same way). A refused split is a red row at stage
+`go-observation` naming the harness's cause. Standard output (fd 1) is NOT
+an observable (os.Stdout is gate G7); the harness JSON owns that channel.
+
 Handwritten `main` functions may remain useful for `go run` debugging, but they
 are not part of the differential contract.
 

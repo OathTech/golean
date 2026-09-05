@@ -1023,7 +1023,7 @@ def renderPrintOperand : GoValue → Except Stop GoString
       | _ => return GoString.fromLeanString (toString v)
   | .string s => return s
   | .float _ kind =>
-      unsupported s!"print of a {kind.name} operand: gc formats floats with internal/strconv.AppendFloat 'g' -1 (shortest round-trip, go1.26 commit 9035f7ae), not transcribed this slice — refused by name (row builtins/print/float-refused)"
+      unsupported s!"print of a {kind.name} operand: gc formats floats with internal/strconv.AppendFloat 'g' -1 (shortest round-trip, go1.26 commit 9035f7ae), not transcribed this slice — refused by name (rows builtins/print/refused/float and refused/float32)"
   | .nil => unsupported "print of a nil pointer/interface/slice/map/chan/func operand: gc prints an ADDRESS (0x0 / (0x0,0x0) / [0/0]0x0), which the machine does not model — refused by name"
   | .addr _ => unsupported "print of a pointer operand: gc prints its address (runtime/print.go printpointer), which the machine does not model — refused by name"
   | .interface .. => unsupported "print of an interface operand: gc prints (0xtypeword,0xdata) (runtime/print.go printeface/printiface), addresses the machine does not model — refused by name"
