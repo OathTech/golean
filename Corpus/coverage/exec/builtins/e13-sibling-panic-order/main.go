@@ -500,8 +500,10 @@ func compositePtrInArgThenCall() int {
 
 // BUG-102 (designed reds), the residue: call-rooted spellings of the
 // structural-allocation class (R1'-3's census sees through an enclosing
-// call), the receive as the later event, an allocating conversion whose
-// operand panics, and a compound target that contains a call beside a len.
+// call), the receive as the later event, and a compound target that
+// contains a call beside a len. (bytesConvPayloadVsCall is NOT a designed
+// red: a conversion whose operand panics stays inline with the operand's
+// probe — a two-member membership row.)
 func compositePtrPayloadVsCallPrintroot() {
 	s := make([]int, 1)
 	i := 9

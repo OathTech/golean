@@ -8297,18 +8297,31 @@ func (e *emitter) emitUnaryExpr(u *ast.UnaryExpr) (any, error) {
 // observables), the conversion itself cannot panic, and the enclosing
 // operand's residual (`$b[1:7][0]`) is pure and probeable, so both orders
 // are realized. A conversion whose OWN operand can panic (`[]byte(s[i:j])`)
-// is a structural allocation with a panicky payload: hoisting would
-// realize the payload's panic before the later event only, and gc's
-// member depends on the payload's kind — refused by name
-// (`structuralAllocGuard`), never guessed. With no event after, or where
-// hoisting is forbidden (a short-circuit right operand outside the temp
-// path), the conversion stays inline as before.
+// stays INLINE instead: hoisting it would drop the operand's probe
+// (`pushHoist`) and realize the payload's panic before the later event
+// only, while inline the operand `s[i:j]` keeps its own probe (appended
+// as it was emitted — the conversion is not a hoist) and both orders of
+// the PAYLOAD's panic are realized (RAISE = gc's early slice panic, DEFER
+// = after the event); the enclosing operand is then unprobed (it carries
+// the allocating head) and the narrowed A6 guard's census still sees it
+// beside a later len/cap/make hoist. Measured (re-audit fix round, probe
+// `P9_bytesconv_slice_payload`): d75049c0 lowered this shape as exactly
+// that two-member set — a refusal here would have been an over-refusal.
+// With no event after, or where hoisting is forbidden (a short-circuit
+// right operand outside the temp path), the conversion stays inline too.
 func (e *emitter) allocatingConversion(c *ast.CallExpr, kind string, node any) (any, bool, error) {
 	if (e.hoistForbidden != "" && !e.scHoistOK) || !e.sweepOrderedEventAfter(c.End()) {
 		return node, false, nil
 	}
-	if err := e.structuralAllocGuard("allocating conversion "+kind, c); err != nil {
-		return nil, false, err
+	start := 0
+	if n := len(e.nodeStarts); n > 0 {
+		start = e.nodeStarts[n-1]
+	}
+	if e.anyProbeSince(start) {
+		return node, false, nil // a panicky operand: inline, its probe survives
+	}
+	if found, _ := e.unprobedPanickyWithin(c.Args[0]); found {
+		return node, false, nil // unprobed panicky operand: inline, the census keeps it
 	}
 	hoisted, err := e.hoist(node, e.goTypeOf(c))
 	if err != nil {

@@ -345,19 +345,21 @@ in the commit and in design §4 (D4–D6, "RE-AUDIT"), §6 items 3/7/9/10,
   construct (`println(EXPR)`, `sink(EXPR)`); an allocating conversion
   HOISTS when an ordered event follows it, so `int([]byte(s)[1:7][0]) +
   wit(5)` is a two-member set ∋ gc (its EARLY slice panic); a
-  conversion whose own operand panics is the structural class.
+  conversion whose own operand panics stays inline with the operand's
+  probe (two members ∋ gc — a first draft refused it, measured against
+  d75049c0's two-member set and reverted).
 - R1'-4: `recover()` was always hoisted (`$c := recover()`), so the
   exclusion is decided on the wire and `r = recover().(int) + wit(5)`
   is a two-member set ∋ gc. Boundary statement: after this round NO
   shape on the sibling-panic axis is a silent gc-absent single member —
-  what is unprobed is REFUSED by name (BUG-102: 7 designed reds), and
+  what is unprobed is REFUSED by name (BUG-102: 6 designed reds), and
   the measured exceptions are ROWED red-first (BUG-101: the value axis,
   2 rows; BUG-104: the compound target's hoisted address/key temp, 2
   rows, pre-existing on main). The doctrine's §10 list carries them.
-- R1'-5: ledger FR-28's reds cell rewritten with a leading count (7);
+- R1'-5: ledger FR-28's reds cell rewritten with a leading count (6);
   `tools/reconcile-records` fails CLOSED on a reds cell without a
   leading count (C5 HIGH) — it found FR-27 and FR-29, both fixed; the
-  §4 sum re-derives the frontier bucket (140).
+  §4 sum re-derives the frontier bucket (139).
 - R1'-6: Machine.lean's "stuck by name" claim corrected; a comment at
   each StepFn traveller catch-all names `probeK`; design §8 aligned.
 - R1'-7: BUG-101 gains `slice-value-early-len-hoist` (gc `mut` 12,
@@ -374,12 +376,12 @@ in the commit and in design §4 (D4–D6, "RE-AUDIT"), §6 items 3/7/9/10,
   designed red, not a control.
 - New rows: 20 born in `e13-sibling-panic-order/` (61 in the dir, 94 in
   the family); the six fix-round designed reds LOWER (BUG-083's Cases
-  line). Focused run `focused-run-reaudit.tsv`: 83 PASS (55 membership,
-  28 strict) / 11 FAIL (7 BUG-102, 2 BUG-104, 2 BUG-101).
+  line). Focused run `focused-run-reaudit.tsv`: 84 PASS (56 membership,
+  28 strict) / 10 FAIL (6 BUG-102, 2 BUG-104, 2 BUG-101).
 - The twin: 128 probes (+10 target-operand reads), strip-probes ≡
   b77f3298's 4ee39f73… byte for byte; re-pinned c358d0f4….
 - The full run (the first gate, dirty tree, `scripts/capped scripts/ci
-  --diff`): 3539 = 3296 / 243 → 3559 = 3314 / 245 — 20 born (12 PASS, 8
+  --diff`): 3539 = 3296 / 243 → 3559 = 3315 / 244 — 20 born (13 PASS, 7
   FAIL — all on Cases lines), 6 FAIL→PASS (BUG-083's line), 2 PASS→PASS
   lane moves (`addr-index-left-len-hoist`; and `channels/recv-map-elem/
   key-panic-drains`, caught at stage nondet: the receive-statement

@@ -1617,14 +1617,14 @@ machine construct §3, the frontend §4, the residuals §6).
   BUG-102) — RE-AUDIT (R1'-3, R2'-1): the refusal reaches the println-/
   sink-rooted spellings (the census descends into an enclosing call),
   the receive as the event (`[]int{s[i]}[0] + <-ch`: gc receives first,
-  measured with a `len(ch)` witness) and an allocating conversion whose
-  own operand panics (`[]byte(s[i:j])`); it does NOT fire on a MAP
+  measured with a `len(ch)` witness); an allocating conversion whose
+  own operand panics (`[]byte(s[i:j])`) stays inline with the operand's
+  probe (`bytes-conv-payload-vs-call`, two members ∋ gc); it does NOT fire on a MAP
   literal (gc's `OMAPLIT` evaluates dynamic entries at the literal —
   the machine's member is gc's, `map-lit-payload-vs-call`) or on a
   literal forced by an enclosing call (`composite-ptr-in-arg-then-call`);
   rows `{composite-ptr-payload-vs-call-printroot,slice-lit-payload-vs-
-  call-sinkroot,slice-lit-payload-vs-recv,bytes-conv-payload-vs-call}`
-  join BUG-102; (6) a probed operand is evaluated twice on the no-panic path
+  call-sinkroot,slice-lit-payload-vs-recv}` join BUG-102; (6) a probed operand is evaluated twice on the no-panic path
   — a constant-factor cost, no fuel-out flips measured; (7) the race
   detector sees the early read as an ordinary read, so under DEFER the
   operand is READ TWICE in program order — a write racing the first read

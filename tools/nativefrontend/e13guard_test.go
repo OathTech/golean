@@ -388,12 +388,19 @@ func TestStructuralAllocGuard(t *testing.T) {
 	if err != nil {
 		t.Fatalf("whole export refused: %v", err)
 	}
+	// An allocating conversion whose OWN operand panics stays inline and
+	// keeps the operand's probe (both orders of the payload's panic).
+	if u := funcRefusal(t, program, "bytesConvPanickyPayload"); u != "" {
+		t.Errorf("bytesConvPanickyPayload: an inline conversion with a probed operand must lower, got refusal %q", u)
+	}
+	if n := probeCount(t, program, "bytesConvPanickyPayload"); n != 1 {
+		t.Errorf("bytesConvPanickyPayload: expected the operand's probe to survive (1), got %d", n)
+	}
 	for fn, kind := range map[string]string{
 		"compositePtrPayload":               "&composite literal",
 		"compositePtrPayloadPrintroot":      "&composite literal",
 		"sliceLitPayload":                   "slice literal",
 		"sliceLitPayloadRecv":               "slice literal",
-		"bytesConvPanickyPayload":           "allocating conversion []byte(string)",
 		"compositePtrInArgWithSiblingEvent": "&composite literal",
 	} {
 		u := funcRefusal(t, program, fn)

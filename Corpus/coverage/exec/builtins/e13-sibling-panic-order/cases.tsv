@@ -66,7 +66,7 @@ assert-left-recv-w	assertLeftRecvW	-	ok	-	interfaces,type_assertions,channels,re
 # line — the refusal retired into latitude), and the shapes below join them. What REMAINS refused by name (BUG-102): a
 # structural allocation's panicky payload before an ordered event — now in its call-rooted spellings too (R1'-3: the
 # census descends into a call that ENCLOSES the hoisting construct), with a receive as the event, and an allocating
-# conversion whose OWN operand panics — and a compound target that CONTAINS A CALL beside a hoisted len (its address is
+# conversion whose own operand panics stays INLINE with the operand's probe and lowers — and a compound target that CONTAINS A CALL beside a hoisted len (its address is
 # hoisted to a temp; its check is unprobed). Two pre-existing divergences found by the re-audit's measurements are rowed
 # red-first as BUG-104 (the compound target's hoisted address/key temp panics BEFORE the RHS call; gc after); the second
 # value-axis instance is BUG-101's second row. assert-ok-early-len-hoist stays BUG-101's first row.
@@ -94,7 +94,7 @@ slice-lit-payload-vs-call	sliceLitPayloadVsCall	-	panic	index out of range [9] w
 composite-ptr-payload-vs-call-printroot	compositePtrPayloadVsCallPrintroot	-	panic	index out of range [9] with length 1	slices,indexing,calls,panic,evaluation_order,print,literals,pointers,structs	-	-	-
 slice-lit-payload-vs-call-sinkroot	sliceLitPayloadVsCallSinkroot	-	panic	index out of range [9] with length 1	slices,indexing,calls,panic,evaluation_order,print,literals	-	-	-
 slice-lit-payload-vs-recv	sliceLitPayloadVsRecv	-	panic	index out of range [9] with length 1	slices,indexing,channels,panic,evaluation_order,literals	-	-	-
-bytes-conv-payload-vs-call	bytesConvPayloadVsCall	-	panic	slice bounds out of range [:7] with length 2	slices,slicing,indexing,calls,panic,evaluation_order,print,conversions,strings	-	-	-
+bytes-conv-payload-vs-call	bytesConvPayloadVsCall	-	panic	slice bounds out of range [:7] with length 2	slices,slicing,indexing,calls,panic,evaluation_order,print,conversions,strings,nondet	membership	latitude E13 option (b), lane e13-b RE-AUDIT fix round 2026-09-05 ([AGENT]; RULED [USER] Mike, relayed by the coordinator): `int([]byte(s[i:j])[0]) + wit(5)`: an allocating conversion whose OWN operand panics stays INLINE (hoisting it would drop the operand's probe), so the operand `s[i:j]` keeps its probe: RAISE = the slice panic with nothing printed (gc's member — slice expressions are EARLY in gc), DEFER = `wit 5` then the slice panic. d75049c0 realized the same two members; a first draft of this round refused the shape (measured, reverted as an over-refusal). members=2	width=2,sites=8,members=2
 compound-call-target-vs-len	compoundCallTargetVsLen	-	panic	index out of range [5] with length 1	slices,indexing,len,calls,panic,evaluation_order,print,assignment	-	-	-
 compound-call-target-vs-call	compoundCallTargetVsCall	-	panic	index out of range [9] with length 1	slices,indexing,calls,panic,evaluation_order,print,assignment	-	-	-
 map-compound-index-key-vs-call	mapCompoundIndexKeyVsCall	-	panic	index out of range [5] with length 1	maps,slices,indexing,calls,panic,evaluation_order,print,assignment	-	-	-

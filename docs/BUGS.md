@@ -5959,12 +5959,12 @@ panics) — exactly the re-index E13's design §7 avoided and the design
 gate the brief names. Inventory E12 carries the note; §6 residual 2 of
 the e13-b design cross-references this entry.
 
-## BUG-102 — DESIGNED REDS of the E13 (b) envelope's BOUNDARY, as moved by the re-audit fix round: the structural-allocation class (a `&T{…}`/slice literal, an interface method value, or an allocating conversion whose PANICKY payload precedes an ordered call/receive — in return-, println- and sink-rooted spellings) and the narrowed A6 guard's residue (a compound target that CONTAINS A CALL beside a hoisted len) refuse by name [coverage; frontend hoist/guard surface; e13-b audit fix round R1/R2 + re-audit fix round R1'-1..R1'-4, R2'-1; the entry exists so the refusals cannot stop firing unnoticed]
+## BUG-102 — DESIGNED REDS of the E13 (b) envelope's BOUNDARY, as moved by the re-audit fix round: the structural-allocation class (a `&T{…}`/slice literal or an interface method value whose PANICKY payload precedes an ordered call/receive — in return-, println- and sink-rooted spellings) and the narrowed A6 guard's residue (a compound target that CONTAINS A CALL beside a hoisted len) refuse by name [coverage; frontend hoist/guard surface; e13-b audit fix round R1/R2 + re-audit fix round R1'-1..R1'-4, R2'-1; the entry exists so the refusals cannot stop firing unnoticed]
 
 - Status: open (designed reds — a refusal standing in for latitude, inventory E6 narrowed / E13 residuals 3 and 5; [AGENT], e13-b audit fix round 2026-09-05; Cases line re-derived at the re-audit fix round the same day)
 - Pinned-by: none
 - Expect: FAIL
-- Cases: builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call, builtins/e13-sibling-panic-order/slice-lit-payload-vs-call, builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call-printroot, builtins/e13-sibling-panic-order/slice-lit-payload-vs-call-sinkroot, builtins/e13-sibling-panic-order/slice-lit-payload-vs-recv, builtins/e13-sibling-panic-order/bytes-conv-payload-vs-call, builtins/e13-sibling-panic-order/compound-call-target-vs-len
+- Cases: builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call, builtins/e13-sibling-panic-order/slice-lit-payload-vs-call, builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call-printroot, builtins/e13-sibling-panic-order/slice-lit-payload-vs-call-sinkroot, builtins/e13-sibling-panic-order/slice-lit-payload-vs-recv, builtins/e13-sibling-panic-order/compound-call-target-vs-len
 
 HISTORY (the first fix round's six rows, RETIRED at the re-audit fix
 round): `tgt-assert-vs-len-hoist`, `tgt-assert-vs-make`,
@@ -5996,10 +5996,9 @@ territory; the machine realizes ONE member where gc realizes the OTHER,
 and no probe reaches gc's member):
 
 THE STRUCTURAL-ALLOCATION CLASS (audit R2; re-audit R1'-3/R2'-1): a
-composite-literal `&T{…}` / elided `&T`, a slice literal, an interface
-method value, or an ALLOCATING CONVERSION whose OWN operand can panic
-(`[]byte(s[i:j])`) hoists to its lexical position and evaluates its
-payload THERE, ahead of every ordered event lexically after it, while
+composite-literal `&T{…}` / elided `&T`, a slice literal, or an interface
+method value hoists to its lexical position and evaluates its payload
+THERE, ahead of every ordered event lexically after it, while
 gc leaves the literal in the residual after the call temps — `(&T{x:
 s[i]}).x + wit(5)`: gc prints `wit 5` then panics, the machine panics
 with no output on every stream (a probe on `s[i]` cannot reach gc's
@@ -6011,7 +6010,10 @@ refuses by name when the payload is panicky and
 `sweepOrderedEventAfter(lit.End())`, in the return-rooted spelling and
 — since the re-audit's census fix (R1'-3: a call that ENCLOSES the
 hoisting construct is descended, not pruned) — the println-/sink-rooted
-spellings too. NOT refused (controls, green): a MAP literal (gc's
+spellings too. An ALLOCATING CONVERSION whose own operand can panic
+(`[]byte(s[i:j])`) is NOT this class: it stays inline and its operand's
+probe realizes both orders (`bytes-conv-payload-vs-call`, a membership
+row). NOT refused (controls, green): a MAP literal (gc's
 order.go `OMAPLIT` emits its dynamic entries as statements at the
 literal's position — the machine's member IS gc's, `map-lit-payload-vs-
 call`), a literal inside the ARGUMENT subtree of an ordered call that
@@ -6028,7 +6030,7 @@ copy hoists — R1'-2). Its no-len sibling `x[fnine()] += wit(5)` LOWERS
 and is ∉ gc: BUG-104 (open, differential).
 
 WHY AN ENTRY: BUG-032 and BUG-083 are `fixed` and the check-bugs
-invariant requires their Cases lines to be PASS-only; these seven rows
+invariant requires their Cases lines to be PASS-only; these six rows
 are red BY DESIGN and must trip the gate if the refusal ever stops
 firing (a designed red that turns green is a retirement that skipped its
 record — the BUG-093 mold). `tools/lowerdiag` causes
@@ -6081,7 +6083,7 @@ rows are the template: red-first, then the arm, then PASS on this Cases line). L
 
 ## BUG-104 — a compound-assignment target whose ADDRESS or KEY is hoisted to a temp panics at the hoist, BEFORE the RHS's calls; gc reads the target in the residual, AFTER them (`x[f()] += wit(5)`: gc `f`, `wit 5`, then `index out of range [9]`; the machine `f` then the panic — `m[t[k]] += wit(5)`: gc `wit 5` then `[5] with length 1`, the machine the panic alone) [frontend lowering; evaluation order; spec#Assignment_statements phase 1 vs the eval-once rewrite]
 
-- Status: open ([AGENT], e13-b re-audit fix round 2026-09-05 — found by the re-audit's measurements, pre-existing on main b77f3298; lettered BUG-104 on the lane, RENUMBERED BUG-104 at the round-17 rebase onto main 9343a310 because main's BUG-104 is c-arc-c2's array-conversion entry — [AGENT] reconciler)
+- Status: open ([AGENT], e13-b re-audit fix round 2026-09-05 — found by the re-audit's measurements, pre-existing on main b77f3298; lettered BUG-103 on the lane, RENUMBERED BUG-104 at the round-17 rebase onto main 9343a310 because main's BUG-103 is c-arc-c2's array-conversion entry — [AGENT] reconciler)
 - Pinned-by: differential
 - Cases: builtins/e13-sibling-panic-order/compound-call-target-vs-call, builtins/e13-sibling-panic-order/map-compound-index-key-vs-call
 
