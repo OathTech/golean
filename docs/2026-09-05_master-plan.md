@@ -1,7 +1,9 @@
 # The GoLean master plan — the whole roadmap to a "good" Go semantics, as understood on 2026-09-05
 
 Status: PLAN OF RECORD (index), docs only. [AGENT]-authored (lane
-`master-plan-0905`, worktree off `main` @ `9343a310`); [USER]-commissioned.
+`master-plan-0905`, worktree off `main` @ `9343a310`, rebased onto
+`7677865a` when the `e13-b` train landed mid-gate — §0.2 addendum);
+[USER]-commissioned.
 Every number below names the command or file:line it came from; every
 status is one of the six words in §0.3; every decision cited carries
 [USER]/[AGENT] provenance. This repo makes NO verification claims
@@ -28,28 +30,49 @@ written to be CHECKED, not believed: §6.3 is the review brief.
 
 ### 0.2 The snapshot this document describes
 
-- `main` @ `9343a310`, 2026-09-05 (`git log -1 main`). Its message
-  records the gate tail: PASS; cases=3528 pass=3283 fail=245; baseline
-  diff FULL 3528/3528; twin `a9a2e2b1…` = fresh emit; eval tests 198 ok.
+- `main` @ `7677865a`, 2026-09-05 (`git log -1 main`) — the `e13-b`
+  round-17 records commit; its message records the gate tail: PASS;
+  cases=3593 pass=3347 fail=246; baseline diff FULL 3593/3593; twin
+  `758110a3…` = fresh emit; eval tests 198 ok; git_dirty false.
 - Re-derived here: `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k
-  in c) print k, c[k]}' baselines/native-full.tsv` → `PASS 3283`, `FAIL
-  245` (total 3528). Negative lane: `baselines/negative-full.tsv` 394
+  in c) print k, c[k]}' baselines/native-full.tsv` → `PASS 3347`, `FAIL
+  246` (total 3593). Negative lane: `baselines/negative-full.tsv` 394
   PASS / 0 FAIL (same awk).
+- The first draft of this document was measured at `9343a310` (3528 =
+  3283/245; twin `a9a2e2b1…`); every figure below was re-derived at
+  `7677865a` after the rebase, and where a section keeps the older
+  figure for history it says so.
 - Oracle pin: `baselines/go-oracle-pin` = `go1.26.5`; spec pin
   `golang/go @ go1.26.5` = `c19862e5f8…` (`docs/spec-sources.md:15-19`).
 - Twin wire pin: `sha256sum baselines/pins/twin-chdriver.wire.json` =
-  `a9a2e2b14d605273…` (moved at `21bb79f7`, re-emitted fresh at the
-  round-17 train, `9343a310`).
-- Concurrently IN FLIGHT at snapshot time: lane `e13-b` (round-17 train,
-  pre-rebase tip `389f4618`, worktree `.claude/worktrees/e13-b` mid-rebase
-  onto `9343a310`). Where this document cites e13-b it cites its design
-  note at `389f4618` and treats every e13-b fact as IN FLIGHT.
+  `758110a3f5a212b8…` (moved by e13-b's 128 `unseq-probe` statements;
+  fresh emit at the round-17 train tip `7677865a`; the pre-e13-b pin was
+  `a9a2e2b1…` at `9343a310`).
+- `e13-b` LANDED in the same train: semantics `2fb7d54d`, audit fix
+  rounds `7a5cd534` / `42893297` / `e4d785de`, records `7677865a`. Its
+  design note is `docs/2026-09-05_e13-b-design.md` on main; where this
+  document cites it at `389f4618` (the pre-rebase lane tip) the content
+  is the same note.
+
+**Addendum 2026-09-05 ([AGENT], this lane) — the tip moved during the
+gate.** The first `scripts/ci --diff` of this lane ran at `9343a310`
+while the `e13-b` train landed twelve commits on `main`; per the brief
+the lane was rebased (snapshot ref `refs/snapshots/master-plan-0905-
+pre-rebase`; clean rebase, records-only commits) and every number in §2
+re-derived from the new tree. What changed between the two tips: +65
+rows (3528 → 3593; the E13 family, 39 → 56 membership rows), BUG-101/
+102/104 now on main (104 entries, 16 open), `ChoiceSite` gains
+`unseqPanic` (12 constructors), E13 moves to (a) ENVELOPED and leaves
+the honesty-critical list while E2's value axis (BUG-101) and BUG-104
+join it, frontier bucket 141 → 137 and post-vintage 61 → 66, twin pin
+`a9a2e2b1…` → `758110a3…`. The reconciler's C6 finding this document
+caused at `9343a310` (dangling e13-b bug refs) cleared at the rebase.
 
 ### 0.3 Status vocabulary (exact; used for every item below)
 
 | word | meaning | must carry |
 |---|---|---|
-| LANDED | on `main` at or before `9343a310` | the commit SHA |
+| LANDED | on `main` at or before `7677865a` | the commit SHA |
 | IN FLIGHT | branch-complete or under audit, not on main | the branch name |
 | RULED | a [USER] decision exists and is recorded | the record pointer (file §/line) |
 | PROPOSED | an [AGENT] recommendation with no [USER] ruling | "[AGENT]" and the decision the [USER] would make |
@@ -169,13 +192,13 @@ implementation's scheduler.
 **Exit criteria for "good as we understand it now"** — a checklist the
 reviewer can test. Each line names its test and its current state.
 
-| # | criterion | test | state at 9343a310 |
+| # | criterion | test | state at 7677865a |
 |---|---|---|---|
 | E1 | Core is total: no `sorry`/`native_decide`/axiom in `GoLean/`, no `partial` in `GoLean/GoCore/` | `scripts/ci` escape-hatch steps (lines 193, 235, 276) | met (gate green at tip) |
 | E2 | Differential lower bound holds on the whole corpus: zero unexplained wrong answers | `scripts/check-bugs.sh` → `wrong-answer 0/0` | met (0/0; 14 unexplained reds are coverage 10 / latitude 4) |
 | E3 | Every red is rowed: frontier row, design question, (c)-pin with written reason, or BUGS Cases line | ledger §8 bucket arithmetic 141+9+26+8+61 = 245 | met by arithmetic; the reviewer re-derives it (§2.2) |
 | E4 | Every spec section classified | ledger §8 status table: 158 sections, zero unclassified | met (§2.3) |
-| E5 | Latitude census is code and matches the mirror | `python3 tools/reconcile-records` check C12; `inductive ChoiceSite` (`State.lean:288-298`) 11 ctors = §0 table 11 rows | met; `file:line` cites in the mirror are stale (§3.D) |
+| E5 | Latitude census is code and matches the mirror | `python3 tools/reconcile-records` check C12; `inductive ChoiceSite` (`State.lean:288-299`) 12 ctors = §0 table 12 rows | met; `file:line` cites in the mirror are stale (§3.D) |
 | E6 | No known-≠-oracle deterministic pin without a queued re-envelope obligation or a recorded gc deviation | inventory §10 list {E3, E5, E7, E13, R3} vs §7 queue | met formally; E3/E7/R3 obligations are OPEN debts (§3.D) |
 | E7 | Racy programs refuse per run, per go_mem exactly | `scripts/detector-soundness --select in-scope`: HOLE cell 0 | met (364 in-scope rows; HOLE 2 → 0 after BUG-080; §3.D item 6) |
 | E8 | Consumer interface exists and matches plan §1 | `GoLean/Interface.lean` present; bridge theorems stated | NOT met — I5 not started (§3.A) |
@@ -192,44 +215,44 @@ lower-bound/honesty floor and hold today; E8-E13 are the roadmap.
 
 ## 2. Where we are (measured)
 
-Every figure: the command or `file:line`, at `9343a310` unless marked.
+Every figure: the command or `file:line`, at `7677865a` unless marked.
 Numbers this lane could NOT derive are listed in §2.10 and marked
 "(not re-derived)" where used.
 
 ### 2.1 The baseline tally and its stage breakdown
 
 `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}'
-baselines/native-full.tsv` → PASS 3283, FAIL 245 (3528). By stage (same
-file, `$1,$3`): PASS `-` 3096, confluent 88, membership 64, racy 35; FAIL
-frontend-export 204, lean-observation 34, differential 4, confluent 1,
+baselines/native-full.tsv` → PASS 3347, FAIL 246 (3593). By stage (same
+file, `$1,$3`): PASS `-` 3103, confluent 88, membership 121, racy 35; FAIL
+frontend-export 198, lean-observation 35, differential 10, confluent 1,
 go-observation 1, `lean-observation|differential` 1 (the single
 [USER]-ruled stage alternation row, `channels/select-select/beside-loop`,
 `docs/coverage-suite-structure.md:508-539`). Negative lane: 394 PASS / 0
 FAIL (`baselines/negative-full.tsv`).
 
-The header of `native-full.tsv` is 1244 comment lines above the column
-header (line 1245); 28 `# re-pinned:` certification blocks since
+The header of `native-full.tsv` is 1337 comment lines above the column
+header (line 1338); 32 `# re-pinned:` certification blocks since
 2026-09-03 (`grep -c '^# re-pinned:'`). That header is where merge-train
 conflicts land (§3.I).
 
-### 2.2 The red buckets (ledger §8, lines 1005-1013)
+### 2.2 The red buckets (ledger §8, lines 1094-1099 at `7677865a`)
 
 | bucket | reds | derivation the ledger names |
 |---|---|---|
-| frontier FR-1…FR-31 | 141 | sum of §4 `reds` cells (§3.B lists them) |
+| frontier FR-1…FR-31 | 137 | sum of §4 `reds` cells (§3.B lists them; 141 at `9343a310`, −4 when e13-b retired FR-28's A6 refusals into membership) |
 | design questions Q-* | 9 | ledger §6 rows |
 | (c) profound-reason pins + the `unsafe` marker | 25 + 1 | triage §4 + §5.1 items 1-3 |
 | (a)-queued fixes A3/A4/A5/A7 | 8 | triage §3.2 |
-| post-vintage arc reds (BUGS Cases lines) | 61 | §8b/§8c `comm` of FAIL ids old vs new, each mapped to a Cases line |
-| total | 245 | 141+9+26+8+61 |
+| post-vintage arc reds (BUGS Cases lines) | 66 | §8b/§8c `comm` of FAIL ids old vs new, each mapped to a Cases line (61 at `9343a310`; +5 = BUG-101 ×2 + BUG-104 ×3 red-first) |
+| total | 246 | 137+9+26+8+66 |
 
 The `comm` method (ledger 1737-1743): `git show <vintage>:baselines/
 native-full.tsv | awk '$1=="FAIL"{print $2}' | sort > old; awk … > new;
-comm -23 old new; comm -13 old new`. Staleness the extract found and
-the reviewer should confirm: ledger line 990 heading still says "The 196
-baseline reds"; the "queue mass" paragraph (1091-1098) says "19 live
-arcs … 94 reds" against a frontier of 141; queue row `5` (line 427) is
-not struck although FR-5 is RETIRED.
+comm -23 old new; comm -13 old new`. Staleness found at `9343a310` and
+still to confirm at the new tip (line numbers are the older tip's): the
+reds heading (990) still says "The 196 baseline reds"; the "queue mass"
+paragraph (1091-1098) says "19 live arcs … 94 reds" against a frontier
+of 137; queue row `5` (427) is not struck although FR-5 is RETIRED.
 
 ### 2.3 Language coverage (ledger §8 status table, lines 972-988)
 
@@ -242,10 +265,10 @@ Complex_numbers — both FR-15), latitude 0 as primary, out-of-language
 Frontier table (ledger §4, lines 341-373): **31 rows** — 21 open, 6
 PARTIALLY CLOSED (FR-4, 22, 23, 24, 25, 28), 1 CLOSED (FR-19), 3
 RETIRED/LANDED (FR-5, 8, 27). Reds per class of red: frontier
-refusals (the 141 above, all at stage frontend-export or lean-observation
+refusals (the 137 above, all at stage frontend-export or lean-observation
 by name); designed reds (BUG-084 ×5 go_mem-only, BUG-100 C6 pin, BUG-102
-on e13-b, the 8 address-printing `print` refusals, R7's 7 default-NaN
-refusals); latitude pins standing red (R15 zero-size address; E3/E7
+×6 at the E13 (b) boundary, the 8 address-printing `print` refusals,
+R7's 7 default-NaN refusals); latitude pins standing red (R15 zero-size address; E3/E7
 deviation rows); post-vintage bugs (BUG-078, 083, 090, 093, 099, 103…).
 
 `docs/coverage-ledger.md` (area × status, 36 rows): 8 active, 25 partial,
@@ -299,23 +322,25 @@ shadow-type=5 (the `sync/atomic` typed wrappers); init-callee=3
   BUG-077/078/079 found alongside), all FIXED. Print-refused files:
   195 (`docs/2026-09-03_stdlib-boundary-design-census.md:474-508`); after
   stdlib slice 3, 120/195 MATCH (`docs/2026-09-04_stdlib-slice-3-design.md:44-45`;
-  not re-derived here). The report has NOT been re-run at `9343a310`.
+  not re-derived here). The report has NOT been re-run at `7677865a`.
 
 ### 2.6 Open bugs and the ratchet
 
-`scripts/check-bugs.sh` → `ok (101 bug(s); pinned cases behave as
+`scripts/check-bugs.sh` → `ok (104 bug(s); pinned cases behave as
 claimed)`; backlog 14 unexplained fidelity failures: coverage 10/10,
 latitude 4/4, **wrong-answer 0/0**. `grep -c '^## BUG-' docs/BUGS.md` =
-101; `- Status: open` 13, `fixed` 88 (the only two words the gate
-accepts). The 13 open, by class (§3.G has the table): 2 wrong-answer at
+104; `- Status: open` 16, `fixed` 88 (the only two words the gate
+accepts). The 16 open, by class (§3.G has the table) — the 13 that were
+open at `9343a310`: 2 wrong-answer at
 a forced point held as red-first pins (BUG-099 runtime-error type
 identity; BUG-061 init-order pruning, ruled latitude at L-011); 4
 refusals of legal Go (BUG-008, 041, 103, 093); 1 latent Prop-level
 unsoundness (BUG-002); 1 apparatus budget (BUG-065); 1 performance
 (BUG-090); 1 latitude (BUG-094); 2 designed/guarded (BUG-100 C6 pin,
-BUG-098 guard over a wrong-answer class); 1 rendering (BUG-004). IN
-FLIGHT on `e13-b`: BUG-101 (E12 value axis), BUG-102 (designed reds),
-BUG-104 (compound-target hoist order) — none on main.
+BUG-098 guard over a wrong-answer class); 1 rendering (BUG-004); plus the three e13-b landed: BUG-101
+(wrong-answer at a forced VALUE point, red-first, 2 rows), BUG-102
+(designed reds, 6 rows), BUG-104 (wrong-answer — lower-bound violation,
+red-first, 5 rows).
 
 The ratchet (`scripts/check-bugs.sh:23-31`, `baselines/untriaged-count:
 2-3, 14-17`) counts unexplained FAIL rows at fidelity stages
@@ -331,21 +356,23 @@ paragraph at the lines above. §3.G proposes the fix.
 
 ### 2.7 The choice tape
 
-`inductive ChoiceSite` (`GoLean/GoCore/State.lean:288-298`): 11
+`inductive ChoiceSite` (`GoLean/GoCore/State.lean:288-299`): 12
 constructors — `mapIter appendSpill l2Entry l2Arrival l4Waiter l1Sched
-l5ExitWindow postOp backEdge nilValueMethodText tryLock`; scheduling
-subset `{l1Sched, l5ExitWindow, postOp, backEdge}`. The inventory's §0
-mirror has 11 rows; `python3 tools/reconcile-records` check C12 raises
-no finding (rows = constructors). Inventory §10 tallies (lines
-2531-2543): (a) ENVELOPED 10 sites / 11 entries; (b) PINNED 18; (b-n)
-NARROWED 7; (c) FORCED E1, E5, E14; (d) UNKNOWN 6; REFUSED 9 (§5 lists
-6 — an arithmetic discrepancy no gate checks; §3.D). Consumption rule
+l5ExitWindow postOp backEdge nilValueMethodText tryLock unseqPanic`
+(the last added by e13-b); scheduling subset `{l1Sched, l5ExitWindow,
+postOp, backEdge}`. The inventory's §0 mirror has 12 rows; `python3
+tools/reconcile-records` check C12 raises no finding (rows =
+constructors). Inventory §10 tallies at `7677865a` (its "## 10"
+section): (a) ENVELOPED 11 sites / 13 entries; (b) PINNED 17; (b-n)
+NARROWED 7 (C7, E8, R3, R4, R5, R7, R13); (c) FORCED the §4 list; (d)
+UNKNOWN 6; REFUSED 6 (re-derived by e13-b — the "9 vs 6" discrepancy
+of the older tip is gone). Consumption rule
 since G-U (LANDED `e58eff5e`/`9cece4e8`, 2026-09-04): pop iff bound ≥ 2,
 at every site (the landing record `0cdb15f4` names the lane-local SHA
 `9cece4e8`; `e58eff5e` is the same change on main); whole-corpus trace
 bijection PASS over 23,016 records
-(`docs/2026-09-04_c-arc-gu-design.md` §4). Membership rows: 64 PASS + 1
-FAIL at stage membership (§2.1); certified sets pinned by `members=`;
+(`docs/2026-09-04_c-arc-gu-design.md` §4). Membership rows: 121 PASS at stage
+membership (§2.1; 64 before e13-b); certified sets pinned by `members=`;
 sampling budget K=32 on `--diff`, K=80 on `--slow` ([USER] 2026-09-03,
 `docs/coverage-suite-structure.md:136-176`).
 
@@ -409,8 +436,6 @@ field away on refusal paths (`561f855b`; `docs/operational-lessons.md:
 - gotest 120/195 print-refused files MATCH — quoted from
   `docs/2026-09-04_stdlib-slice-3-design.md:44-45`; `scripts/gotest-triage`
   not re-run at this tip.
-- The 3559 = 3315/244 tally of `e13-b` — from its design note §10 at
-  `389f4618`; the landed tally is whatever the train records.
 - Session estimates everywhere are [AGENT] guesses anchored to two
   calibration points (plan §3.0: the A-series and B1); they are not
   measurements.
@@ -440,11 +465,11 @@ over a core whose representation no longer leaks into consumer proofs
 `coerceStoredValue` ×131, `typeResolutionFuel` ×335 — theorems about our
 representation, not about Go). Then the assessment re-run and the pin
 offer. Authoritative sequence: plan §5.1 table; this section updates its
-status column to `9343a310`.
+status column to `7677865a`.
 
 **Current state (plan §5.1 rows, updated).**
 
-| # | item | status at 9343a310 | evidence |
+| # | item | status at 7677865a | evidence |
 |---|---|---|---|
 | 0 | wave (iii) B2+B3+B8 (+A7 accessor half) | LANDED `1ebd7465` (B2) / `dfe763f9` (B3) / `50e3ea41` (B8), 2026-09-04 — the design note's `91c57c9e`/`cd2a3474`/`2e69fde0` are pre-rebase lane SHAs; train round 13, 5a at `ac45aedd` | `docs/2026-09-04_hygiene-wave3-design.md` |
 | 1 | U `consumeAtOne` uniformization (G-U) | LANDED `e58eff5e` (landing record `0cdb15f4`; fix round `fc9bbef1`) | `docs/2026-09-04_c-arc-gu-design.md`, `docs/evidence/2026-09-04_c-arc-gu/` |
@@ -545,8 +570,8 @@ blocks a gate):
   Ty.defined i mentioned ⇒ i < types.size` (`c-arc-c2` §8; audit R10/R1).
   Note: `hasReservedPrefix` compares a long string — never `decide` it.
 - The two `Interface.lean` deltas above (`typeDesc`, `FieldDef.tag`).
-- `.probeK` traveller arms — IN FLIGHT on `e13-b` (design note at
-  `389f4618`, §3 and §8): the `unseq-probe` frame `probeK` (Machine.lean)
+- `.probeK` traveller arms — OWED from e13-b (LANDED `2fb7d54d`; design
+  note §3 and §8): the `unseq-probe` frame `probeK` (Machine.lean)
   admits only expression evaluation, so a `.breaking`/`.continuing`/
   `.returning` traveller at it has no `Step` rule; `stepFn` refuses it
   through the existing `.internal` catch-all rather than explicit
@@ -602,7 +627,8 @@ omitted here): FR-1, FR-2, FR-3, FR-6, FR-7, FR-9, FR-10,
 FR-11, FR-12, FR-13, FR-14, FR-16, FR-17, FR-18, FR-26, FR-31, FR-20,
 FR-15. Closed this week: FR-19 (`249dc607`), FR-27 (`6caf9c18`);
 partially: FR-4 (`eff1c1a1`), FR-22/23 (`977b92e5`), FR-24 (`ecbbaadd`),
-FR-25 (`b146dff2`), FR-28 (`6caf9c18` → `e13-b`).
+FR-25 (`b146dff2`), FR-28 (`6caf9c18`, then e13-b `2fb7d54d` retired its A6 refusals into
+membership).
 
 **Work items** (the plan cells, ledger §4; reds = the row's cell).
 
@@ -803,18 +829,21 @@ debts.
 1. **E13 sibling panic order as latitude — option (b)** — RULED [USER]
    2026-09-05 («we should do what the standard supports, and avoid
    over-refusal if we can. That's what (b) means right?», relayed;
-   `e13-b` note §0); IN FLIGHT `e13-b` (round-17 train). Adds site
-   `ChoiceSite.unseqPanic` (the 12th) and `Stmt.unseqProbe`; retires the
+   e13-b note §0); LANDED `2fb7d54d` + fix rounds `7a5cd534` /
+   `42893297` / `e4d785de` (round-17 train, records `7677865a`). Adds
+   site `ChoiceSite.unseqPanic` (the 12th) and `Stmt.unseqProbe`; retires the
    `make`/`len`/`cap` A6 refusals into a membership shape for PROBED
    material; narrowed A6 refusal stays for unprobed shapes (BUG-102
-   designed reds); twin pin moves (128 `unseq-probe` statements,
-   `c358d0f4…` at `389f4618`). Its note §10 tally: 3559 = 3315/244 (+4
-   born at the final round; not re-derived). Exit: E13 heading moves to
-   (a); the inventory §10 list and tallies re-derived in the same
-   change; register #2's known-≠-gc sentence edited in sync (the
-   STANDING RULE of 2026-08-31).
-2. **E12 value axis — BUG-101** — IN FLIGHT as a red-first row on
-   `e13-b` (`assert-ok-early-len-hoist`, gc `mut\n6` vs the machine's
+   designed reds); twin pin moved (128 `unseq-probe` statements; main's
+   pin `758110a3…`). Landed tally 3593 = 3347/246 (`7677865a`). Exit
+   REACHED: inventory E13 heading is (a) ENVELOPED (`unseqPanic`); §10's
+   honesty-critical list now reads E2 (value axis, BUG-101's rows), E3,
+   E5, E7, R3, BUG-104 (inventory :2823-2830); membership rows 39 → 56
+   in the family. Reviewer: confirm register #2's known-≠-gc sentence in
+   the doctrine was edited in the same change (the STANDING RULE of
+   2026-08-31).
+2. **E12/E2 value axis — BUG-101** — LANDED as a red-first row with
+   e13-b (`assert-ok-early-len-hoist`, gc `mut\n6` vs the machine's
    conversion panic; second row `slice-value-early-len-hoist`): the
    probe evaluates a panicky operand early but DISCARDS its value, so
    when a sibling call mutates what it read gc's early VALUE differs.
@@ -825,8 +854,8 @@ debts.
    row). E12's F2 sentence (either-order vs interleaving claim,
    `docs/spec-interpretations.md` I-2 scope note, lines 84-91) is still
    owed.
-3. **BUG-104 compound-target hoist order** — IN FLIGHT red-first on
-   `e13-b` (5 rows): `emitReadWriteTarget`/`emitMapCompound` hoist a temp
+3. **BUG-104 compound-target hoist order** — LANDED red-first with
+   e13-b (5 rows; open): `emitReadWriteTarget`/`emitMapCompound` hoist a temp
    whose bounds check panics BEFORE the RHS's ordered events; gc's
    `safeExpr` leaves the read in the residual. Fix = decompose like
    `safeExpr` so the E13 probe covers it; an ENVELOPE, not a pin (the
@@ -950,15 +979,15 @@ two-draw floor as ruled). Step 5a (slow-tier re-cert
 after any train touching `wire.go`/`NativeToIR.lean`; [USER] 2026-09-04
 «Yeah, that make sense, let's adopt that», `operational-lessons.md:
 435-484`) ran at rounds 13/14/15 (`ac45aedd`, `8fce7625`, `076f5eec`).
-**Reconciler C9 at `9343a310`: the wire schema moved after the last
-certification (3 commits: `21bb79f7`, `7bc0f9ca`, `249dc607`) — the
-round-17 tip's step 5a re-certification is OWED** (or lands with the
+**Reconciler C9 at `7677865a`: the wire schema moved after the last
+certification (6 commits, incl. `21bb79f7`, `7bc0f9ca`, `249dc607` and
+e13-b's) — the round-17 tip's step 5a re-certification is OWED** (or lands with the
 train's final tip). Reconciler `tools/reconcile-records`: REPORT-ONLY
-ci step (969); 3 MEDIUM findings at `9343a310` (C13, C5, C9). With
-THIS document in the tree it reports a fourth — C6: 16 `BUG-101`/
-`BUG-102`/`BUG-104` cross-references that resolve to no `docs/BUGS.md`
-entry on main, because those entries exist only on `e13-b` (IN FLIGHT).
-Recorded here rather than evaded; expected to clear when e13-b lands.
+ci step (969); 3 MEDIUM findings at `7677865a` (C13, C5, C9 — the
+last now counting 6 wire-touching commits since the 05:46Z
+certification). At `9343a310` this document had added a fourth (C6:
+its `BUG-101/102/104` references had no entry on main); it cleared at
+the rebase.
 
 **Tracer completeness / driver agreement.** `golean choice-trace`
 (`GoLean/ChoiceTrace.lean`, observation-only, outside the core) compares
@@ -1000,7 +1029,7 @@ disagreement, empty stream, < 4 reports) = `nondet` FAIL, never a pass
 6. **gotest extensions** (report 291-296): statement-position print/
    println; the 127 `rundir` multi-file tests; the 675 `errorcheck`
    files as a frontend-refusal-vs-gc-diagnostic lane. Also: re-run at
-   `9343a310` (the report is at `f2bc17dd`).
+   `7677865a` (the report is at `fa589f62`/`f2bc17dd`).
 7. **Noodler standing persona** ([USER] 2026-09-03: probe rows are
    always rolled in): 563 rows / 90 packages landed; next probes
    (report §9): autogenerated-wrapper texts, systematic `unsup(...)`
@@ -1109,7 +1138,7 @@ each has a `causes.tsv` row with an FR id.
 open BUG has a class, a plan and a lane or a queue slot; nothing leaves
 the ratchet's view by becoming a refusal.
 
-**The 13 open entries at `9343a310`** (`docs/BUGS.md`; line = entry
+**The 13 entries open before e13-b landed** (`docs/BUGS.md` at `9343a310`; line = entry
 start; class per the entry's own tag where it has one, else [AGENT]).
 
 | BUG | line | class | what | plan | lane / slot |
@@ -1128,11 +1157,16 @@ start; class per the entry's own tag where it has one, else [AGENT]).
 | 100 | 5743 | designed (c)-pin | C6: function-local type as generic TYPE argument | none — retires only by [USER] re-ruling of ledger §5.1 item 1 | `fr19-bug097` (ratification pending) |
 | 103 | 5767 | refusal of legal Go (machine) | `convertValueToTy` lacks the array-target arm | one arm normalizing an `.array` copy; own slice, full run | C-arc C2 audit; three-bug lane (§5) |
 
-IN FLIGHT on `e13-b` (not on main): BUG-101 (E12 value axis, 2 rows,
-§3.D item 2), BUG-102 (designed reds behind the narrowed A6 guard),
-BUG-104 (compound-target hoist order, 5 rows, §3.D item 3). e13-b
-renumbered its 103 → 104 so the two lanes' entries coexist (e13-b BUGS
-5828-5836).
+Landed with e13-b (`7677865a`; the table above is the 13 of the older
+tip — these three make 16 open):
+
+| BUG | class | what | plan | lane / slot |
+|---|---|---|---|---|
+| 101 | wrong-answer at a forced VALUE point (red-first, 2 rows) | the E13 probe evaluates a panicky operand early but discards its value; a mutating sibling call makes gc's early value differ | carry the early value into the residual as a VALUE-axis choice — E2/E12's obligation, a design gate | **BLOCKED-ON-USER** (§3.D item 2) |
+| 102 | designed reds (6 rows) | the narrowed A6 guard and the structural-allocation refusal at the E13 (b) boundary | retire as probes widen (right-of-event operands, compound-call targets) | e13-b successor |
+| 104 | wrong-answer, lower-bound violation (red-first, 5 rows) | compound-target address/key temp panics before the RHS's ordered events | `safeExpr`-style decomposition so the probe covers it | three-bug lane (§5.2) |
+
+(e13-b renumbered its own 103 → 104 so the two lanes' entries coexist.)
 
 The untriaged backlog (14 rows, `baselines/untriaged-ids`): 10 coverage,
 4 latitude, 0 wrong-answer — each id listed with its disposition; the
@@ -1427,7 +1461,7 @@ LANDED (main SHAs; §3 has the rest): A-series A1 8738d04d … A10 4c57a876,
         FR-19 249dc607, FR-27 6caf9c18, FR-4/22-25/28 partial (§3.B),
         strict-routing 82f74922, sampling-budget f98d4919, atomics w1 1b3796c6,
         detector-soundness 05d0ec54/5da5d8ff, gotest-fixes fa589f62
-IN FLIGHT: e13-b (E13 (b); BUG-101/102/104; 12th site; twin pin move)
+LANDED (round 17): e13-b 2fb7d54d → 7677865a (E13 (b); BUG-101/102/104; 12th site; twin pin 758110a3…)
 
 A  B7 ──► C1 ──► P ──► C3 ──► I5 ──► assessment re-run ──► G-PIN offer
    B6 ──► C4 ──────────────────┘             ▲
@@ -1440,20 +1474,20 @@ C  narrowed slice 4 (strconv leaves) ─┐
 
 B  FR-1/2/3/6/7 (S, no deps) · FR-9 (raft) · FR-10 AFTER C1 · FR-13 WITH C2 (now) ·
    FR-11/20 goto → Signal modes (after B4: now) · FR-12 (M-L; cedar path) ·
-   FR-31 AFTER e13-b lands · FR-26 · FR-15 LAST
+   FR-31 (e13-b has landed — unblocked) · FR-26 · FR-15 LAST
 
-D  e13-b lands ─► E12 value-axis gate (BUG-101) ─► E2 two-point envelope (E12/E13 ride it)
+D  e13-b LANDED ─► E12/E2 value-axis gate (BUG-101) ─► E2 two-point envelope (E12 rides it)
    E7 site · R3 arm · E3/E4 envelope · R7 · R18/FR-30 · BUG-080 (b) · atomics w2
 
 E  step 5a at the train tip (OWED) · cadence ruling · second toolchain · reconciler C15/mirror check
-G  three-bug lane: BUG-103 (machine arm) · BUG-098/FR-31 (after e13-b) · BUG-104 (after e13-b)
+G  three-bug lane: BUG-103 (machine arm) · BUG-098/FR-31 · BUG-104 (all unblocked at 7677865a)
 H  cedar first MATCH ⇐ FR-31 + T1 + slice 4 ⇐ then FR-12 for the authorization path
    raft W4 stage 2 ⇐ [USER] restart + FR-9 + E7
 ```
 
 Cross-package couplings that bite if ignored: FR-10 before C1 bakes a
 view into `Mem` twice; G6 T2 before P reads a D2 record whose meaning P
-changes; FR-31 before e13-b conflicts in `emit.go`; C4 before B6 has no
+changes; FR-31 before e13-b would have conflicted in `emit.go` (moot since the rebase); C4 before B6 has no
 `VarId` to allocate by; any wire-touching train without step 5a leaves
 the certified set stale (C9).
 
@@ -1468,13 +1502,11 @@ Four lanes in parallel, then one:
 3. **B6 `VarId`** — parallel, 2-3 sessions; twin pin moves — coordinate
    the fresh-emit rule with any other pin-moving lane in the same train.
 4. **Three-bug fix lane** — BUG-103 (one machine arm; template
-   BUG-020's rows), BUG-098/FR-31 (`methodWireName`, frontend-wide;
-   starts after e13-b lands), BUG-104 (`safeExpr`-style decomposition;
-   after e13-b lands). Exit: the 3 + 3 + 5 rows PASS; the BUG-098 guard
-   retires; cedar `all` revives; a BUGS Cases line for any PASS→non-PASS.
-   Note: items 2-3 of this lane cannot start until the e13-b train is
-   declared landed (they edit `emit.go` and BUG-104's rows exist only
-   there).
+   BUG-020's rows), BUG-098/FR-31 (`methodWireName`, frontend-wide),
+   BUG-104 (`safeExpr`-style decomposition). Exit: the 1 + 3 + 5 rows
+   PASS; the BUG-098 guard retires; cedar `all` revives; a BUGS Cases
+   line for any PASS→non-PASS. All three are unblocked at `7677865a`
+   (e13-b has landed; the `emit.go` conflict is moot).
 
 Then **C1** (G-C1) after B7 lands — 4-6 sessions, the trace-equality
 audit, the detector re-run. C2's landing also lets FR-13 be designed
@@ -1489,7 +1521,8 @@ now; the narrowed slice 4 is an S-sized lane any time.
 - **Pin offer (G-PIN)** — after the re-run, under plan §5.3's four
   conditions; the migration-stage [USER] decisions (§3.I item 4) come
   due at the same time.
-- **Step 5a** — at the e13-b train's declared tip (owed now).
+- **Step 5a** — at the round-17 train's tip `7677865a` (reconciler C9:
+  6 wire-touching commits since the last certification; owed now).
 - **Decay reviews** — D-002 2026-10-31; D-001 2026-11-30.
 - **Oracle pin move** — when go1.27 ships (a runbook is owed, §4 item 7).
 
@@ -1497,7 +1530,7 @@ now; the narrowed slice 4 is an S-sized lane any time.
 
 | when | decision | where posed |
 |---|---|---|
-| now | E12 value-axis design gate (BUG-101): (a) envelope vs keep the red row | §3.D item 2; e13-b BUGS entry |
+| now | E2/E12 value-axis design gate (BUG-101): (a) envelope vs keep the red row | §3.D item 2; `docs/BUGS.md` BUG-101 |
 | now | ratify the C6 §5.1-item-1 narrowing ([AGENT] 2026-09-05) | §3.B item 18; ledger 462-481 |
 | now | primitive-cap re-ratification for G7 (`os.Exit`, `os.Stdout/Stderr`) — G6-4 depends on it | §3.C item 7; register 36, 95 |
 | now | overlay-import cap 8 ([AGENT]-provisional) | register 34, 360 |
@@ -1587,14 +1620,15 @@ off `main` with `scripts/setup-deps --from <sibling checkout>`:
 ### 6.4 Landing record
 
 - Written in worktree `.claude/worktrees/master-plan-0905`, branch
-  `master-plan-0905`, off `main` @ `9343a310`, 2026-09-05, [AGENT]
-  author under the [USER] commission of §0.1.
+  `master-plan-0905`, off `main` @ `9343a310`, rebased onto `7677865a`
+  (§0.2 addendum), 2026-09-05, [AGENT] author under the [USER]
+  commission of §0.1.
 - Records-only change set: this file; a pointer line in `CLAUDE.md`
   "Pointers". `docs/ARCHIVE.md` indexes archive/park branches only
   (27 lines; no live plans), so no entry was added there.
-- Known effect on the tree: `python3 tools/reconcile-records` gains one
-  MEDIUM (C6, 16 e13-b bug cross-references in this file; §3.E) until
-  e13-b lands.
+- Effect on the tree at `9343a310`: `python3 tools/reconcile-records`
+  gained one MEDIUM (C6, 16 e13-b bug cross-references in this file);
+  cleared at the rebase onto `7677865a` (3 findings, none this file's).
 - Gate: `scripts/capped scripts/ci --diff` — first run on the dirty
   tree (this file uncommitted): `RESULT: PASS`, cases=3528 pass=3283
   fail=245, baseline diff FULL 3528/3528 no regression, negative 394,
