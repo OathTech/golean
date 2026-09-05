@@ -7978,8 +7978,12 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 	// Index/IndexList). go/types' Instances carries the FULL inferred
 	// argument list; the stencil is registered and the call targets the
 	// mangled FuncId with the instantiated (concrete) signature.
-	if id, fn := e.genericCallee(c.Fun); id != nil {
-		mangled, csig, err := e.funcInstanceAt(id, fn)
+	gid, gfn, gerr := e.genericCallee(c.Fun)
+	if gerr != nil {
+		return nil, false, gerr
+	}
+	if gid != nil {
+		mangled, csig, err := e.funcInstanceAt(gid, gfn)
 		if err != nil {
 			return nil, false, err
 		}
@@ -8083,11 +8087,14 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 // identifier, and the stencil mangles under the callee's own package path
 // (funcWireName), so a qualified explicit instantiation and its inferred
 // twin share one stencil. A qualified selector into a stdlib package that
-// is NOT source-through refuses BY NAME here (handled=true): the same
-// FR-14 surface the inferred spelling hits (`stdlib-qualified selector …
-// in value position`), never the shape-blind fallback.
+// is NOT source-through refuses BY NAME here (handled=true) on FR-14's
+// `stdlib-qualified selector <pkg>.<F> in value position` text — the
+// inferred spelling of the same call refuses on FR-14's OTHER text
+// (`package-selector call <pkg>.<F> (package … surface not modeled)`,
+// emitCall's stdlib arm; a different cause row, the same FR row) — never
+// the shape-blind fallback.
 func (e *emitter) genericFuncValue(base ast.Expr) (any, error, bool) {
-	id, fn, err := e.genericFuncUse(base)
+	id, fn, err := e.genericFuncUse(base, "value position")
 	if err != nil {
 		return nil, err, true
 	}
@@ -8113,7 +8120,7 @@ func (e *emitter) genericFuncValue(base ast.Expr) (any, error, bool) {
 // to stencil (registerFuncInst would say so a step later, with a less
 // specific text), and the admission answer is the register's, not this
 // arm's — FR-14.
-func (e *emitter) genericFuncUse(base ast.Expr) (*ast.Ident, *types.Func, error) {
+func (e *emitter) genericFuncUse(base ast.Expr, shape string) (*ast.Ident, *types.Func, error) {
 	switch b := ast.Unparen(base).(type) {
 	case *ast.Ident:
 		if fn := e.genericFuncObj(b); fn != nil {
@@ -8133,8 +8140,8 @@ func (e *emitter) genericFuncUse(base ast.Expr) (*ast.Ident, *types.Func, error)
 			return nil, nil, nil
 		}
 		if !e.isSourcePackage(pkgName.Imported()) {
-			return nil, nil, unsup("stdlib-qualified selector %s.%s in value position (explicit instantiation of a generic function of package %s, which is not source-through — the stdlib admission register decides; FR-14)",
-				x.Name, b.Sel.Name, pkgName.Imported().Path())
+			return nil, nil, unsup("stdlib-qualified selector %s.%s in %s (explicit instantiation of a generic function of package %s, which is not source-through — the stdlib admission register decides; FR-14)",
+				x.Name, b.Sel.Name, shape, pkgName.Imported().Path())
 		}
 		return b.Sel, fn, nil
 	}
@@ -8146,12 +8153,12 @@ func (e *emitter) genericFuncUse(base ast.Expr) (*ast.Ident, *types.Func, error)
 // or package-qualified name (inferred instantiation) or an Index/
 // IndexList whose base is one (explicit instantiation — FR-27 added the
 // qualified base). Anything else — including index expressions over
-// func-typed VALUES, and a qualified name into a non-source stdlib
-// package (which takes the value path and refuses by name there) —
-// returns nil and takes the ordinary paths. The inferred QUALIFIED
+// func-typed VALUES — returns nil and takes the ordinary paths; an
+// explicit instantiation of a non-source-through stdlib generic in
+// callee position is the FR-14 named refusal (err). The inferred QUALIFIED
 // spelling is not routed here: emitCall dispatches a SelectorExpr callee
 // to emitQualifiedCall first, which stencils it itself.
-func (e *emitter) genericCallee(fun ast.Expr) (*ast.Ident, *types.Func) {
+func (e *emitter) genericCallee(fun ast.Expr) (*ast.Ident, *types.Func, error) {
 	var base ast.Expr
 	switch f := ast.Unparen(fun).(type) {
 	case *ast.Ident:
@@ -8161,13 +8168,20 @@ func (e *emitter) genericCallee(fun ast.Expr) (*ast.Ident, *types.Func) {
 	case *ast.IndexListExpr:
 		base = f.X
 	default:
-		return nil, nil
+		return nil, nil, nil
 	}
-	id, fn, err := e.genericFuncUse(base)
-	if err != nil || fn == nil {
-		return nil, nil
+	// The FR-14 named refusal of a non-source-through stdlib generic is
+	// RETURNED, not swallowed (audit fix round F3: the first cut dropped
+	// it here and the value path had to re-derive it — fail closed at the
+	// first site that knows).
+	id, fn, err := e.genericFuncUse(base, "callee position")
+	if err != nil {
+		return nil, nil, err
 	}
-	return id, fn
+	if fn == nil {
+		return nil, nil, nil
+	}
+	return id, fn, nil
 }
 
 // explicitInstantiationRefusal is the fail-closed fallback of the
@@ -9917,10 +9931,11 @@ func (e *emitter) panicFreeOperand(x ast.Expr) bool {
 		// FR-28 (2026-09-04): a MAP read never panics by itself
 		// (spec#Index_expressions: a missing key, or a nil map, yields
 		// the element type's zero value); only its operands can — the
-		// key's own evaluation, or hashing an UNCOMPARABLE dynamic key
-		// when the key TYPE is an interface (a statically comparable key
-		// type cannot). Array/slice/string indexing and generic
-		// instantiations keep the conservative answer.
+		// key's own evaluation, or hashing an UNCOMPARABLE dynamic value
+		// when the key TYPE contains an interface anywhere (`any`,
+		// `struct{v any}`, `[1]any` — containsInterface; audit fix round
+		// F1). Array/slice/string indexing and generic instantiations
+		// keep the conservative answer.
 		return e.panicFreeMapRead(v)
 	}
 	return false
@@ -9930,18 +9945,84 @@ func (e *emitter) panicFreeOperand(x ast.Expr) bool {
 // map and key operands are themselves panic-free and whose key type is not
 // an interface — the one indexing shape with no panic of its own.
 func (e *emitter) panicFreeMapRead(v *ast.IndexExpr) bool {
+	m := e.hashSafeMapRead(v)
+	return m != nil && e.panicFreeOperand(v.X) && e.panicFreeOperand(v.Index)
+}
+
+// hashSafeMapRead reports the map type of index expression v when v is a
+// map read whose key TYPE cannot hash-panic: a key type that contains no
+// interface anywhere (containsInterface). A key type that is statically
+// comparable but CONTAINS an interface — `struct{v any}`, `[1]any` — is
+// hashed at run time and panics on an uncomparable dynamic value (`hash of
+// unhashable type: []int`; corpus row maps/array-key-interface-elem-
+// unhashable). Audit fix round F1 (2026-09-05): the first cut tested
+// `types.IsInterface(key)` only, which admitted exactly those key types —
+// a silent wrong answer on `iv.(int) + len(make(map, nm[k]))` (the hoisted
+// hash panic realized ahead of gc's interface-conversion panic) and a
+// REGRESSION of the A6 guard on `iv.(int) + len(nm[k]) + wit(5)`, which
+// main refused. nil when v is not a map read or the key can hash-panic.
+func (e *emitter) hashSafeMapRead(v *ast.IndexExpr) *types.Map {
 	t := e.goTypeOf(v.X)
 	if t == nil {
-		return false
+		return nil
 	}
 	m, ok := e.applySubst(t).Underlying().(*types.Map)
 	if !ok {
-		return false
+		return nil
 	}
-	if types.IsInterface(e.applySubst(m.Key()).Underlying()) {
-		return false
+	if containsInterface(e.applySubst(m.Key())) {
+		return nil
 	}
-	return e.panicFreeOperand(v.X) && e.panicFreeOperand(v.Index)
+	return m
+}
+
+// containsInterface reports whether a value of type t can carry a dynamic
+// type — an interface anywhere in its structure: the type itself, a struct
+// field (recursively), an array element; a named type through its
+// underlying; a type parameter answers TRUE (its instantiation may be an
+// interface — the stencil path substitutes first, so a concrete answer is
+// available there). Hashing (map key) and `==`/`!=` on such a type can
+// panic at run time on an uncomparable dynamic value even though the type
+// is statically comparable (spec#Comparison_operators, spec#Map_types).
+// Pointers, channels, basic types, strings, and structs/arrays of those
+// cannot. Conservative on anything unrecognized (true).
+func containsInterface(t types.Type) bool {
+	seen := map[types.Type]bool{}
+	var walk func(t types.Type) bool
+	walk = func(t types.Type) bool {
+		if t == nil {
+			return true
+		}
+		if seen[t] {
+			return false
+		}
+		seen[t] = true
+		switch u := t.Underlying().(type) {
+		case *types.Interface:
+			return true
+		case *types.TypeParam:
+			return true
+		case *types.Basic:
+			return u.Kind() == types.Invalid
+		case *types.Pointer, *types.Chan:
+			return false
+		case *types.Struct:
+			for i := 0; i < u.NumFields(); i++ {
+				if walk(u.Field(i).Type()) {
+					return true
+				}
+			}
+			return false
+		case *types.Array:
+			return walk(u.Elem())
+		default:
+			// slices, maps, funcs, signatures, tuples: not comparable
+			// (never a legal key or == operand) or not a value type;
+			// answer true so no caller treats them as hash-safe.
+			return true
+		}
+	}
+	return walk(t)
 }
 
 // exprHasCallOrRecv mirrors go/types' hasCallOrRecv flag over one
@@ -10158,9 +10239,9 @@ func (e *emitter) residualPanicFreeOperand(x ast.Expr) bool {
 // nilDerefOnlyResidual reports whether the RESIDUAL of operand x can
 // panic ONLY by dereferencing a nil pointer — a selector chain (implicit
 // indirection, BUG-039's Indirect() included) or explicit `*p` chain over
-// identifiers/literals/hoisted-call temps, with no index, slice, type
-// assertion, division, shift, interface comparison or conversion
-// anywhere in it. Used by the A6 unordered-panic guard (FR-28 refinement,
+// identifiers/literals/hoisted-call temps/hash-safe map reads, with no
+// array/slice/string index, slice, type assertion, division, shift,
+// interface comparison or conversion anywhere in it. Used by the A6 unordered-panic guard (FR-28 refinement,
 // 2026-09-04): two nil dereferences carry the SAME runtime error
 // ("invalid memory address or nil pointer dereference" — one runtime.Error
 // value, no site-specific text; the machine's panicking family emits the
@@ -10188,14 +10269,10 @@ func (e *emitter) nilDerefOnlyResidual(x ast.Expr) bool {
 	case *ast.StarExpr:
 		return e.nilDerefOnlyResidual(v.X)
 	case *ast.IndexExpr:
-		// A map read with a non-interface key type panics only through
-		// its operands (panicFreeMapRead's ground); array/slice/string
+		// A map read with a hash-safe key type panics only through its
+		// operands (hashSafeMapRead's ground); array/slice/string
 		// indexing carries a site-specific bounds text.
-		t := e.goTypeOf(v.X)
-		if t == nil {
-			return false
-		}
-		if m, ok := e.applySubst(t).Underlying().(*types.Map); ok && !types.IsInterface(e.applySubst(m.Key()).Underlying()) {
+		if e.hashSafeMapRead(v) != nil {
 			return e.nilDerefOnlyResidual(v.X) && e.nilDerefOnlyResidual(v.Index)
 		}
 		return false
@@ -10261,13 +10338,12 @@ func (e *emitter) hoistReordersPanic(x ast.Expr, pos token.Pos) bool {
 // and slice-to-array(-pointer) conversions. A nil sweep root answers
 // TRUE (fail closed: combined with a panicky operand this refuses
 // visibly rather than reordering silently).
-func (e *emitter) sweepPanickyInlineBefore(pos token.Pos) bool {
-	found, _ := e.sweepPanickyInlineBeforeKinds(pos)
-	return found
-}
-
-// sweepPanickyInlineBeforeKinds is sweepPanickyInlineBefore's census
-// form (FR-28 refinement, 2026-09-04): found is the predicate's answer;
+//
+// sweepPanickyInlineBeforeKinds is the census form of the predicate the
+// BUG-032 records call `sweepPanickyInlineBefore` (the boolean wrapper of
+// that name was deleted at the fr27-fr28 audit fix round F7 — no callers;
+// hoistReordersPanic consumes the census directly): found is the
+// predicate's answer;
 // nilOnly reports that EVERY panicky inline node found before pos can
 // panic only by nil dereference (a `*p` or a selector chain whose
 // non-panic-freeness is pointer indirection alone — nilDerefOnlyResidual),
@@ -10325,13 +10401,12 @@ func (e *emitter) sweepPanickyInlineBeforeKinds(pos token.Pos) (found bool, nilO
 				// Generic instantiation is type-level, not an index read.
 				if tv, ok := e.info.Types[nn]; !ok || tv.Value == nil {
 					if _, isTypeArg := e.info.Types[nn.Index]; !isTypeArg || !e.info.Types[nn.Index].IsType() {
-						// A map read with a non-interface key has no
-						// panic of its own: descend, its operands are
-						// judged on their own (FR-28, 2026-09-04).
-						if t := e.goTypeOf(nn.X); t != nil {
-							if m, ok := e.applySubst(t).Underlying().(*types.Map); ok && !types.IsInterface(e.applySubst(m.Key()).Underlying()) {
-								return true
-							}
+						// A map read with a hash-safe key type (no
+						// interface anywhere in it — audit fix round F1)
+						// has no panic of its own: descend, its operands
+						// are judged on their own (FR-28, 2026-09-04).
+						if e.hashSafeMapRead(nn) != nil {
+							return true
 						}
 						foundOther = true
 						return false
@@ -10368,8 +10443,12 @@ func (e *emitter) sweepPanickyInlineBeforeKinds(pos token.Pos) (found bool, nilO
 				}
 			}
 			if nn.End() <= pos && (nn.Op == token.EQL || nn.Op == token.NEQ) {
-				if t := e.goTypeOf(nn.X); t == nil || types.IsInterface(t.Underlying()) {
-					foundOther = true // interface comparison can panic (uncomparable)
+				// A comparison panics on an uncomparable DYNAMIC value:
+				// an interface operand, or a struct/array operand
+				// CONTAINING an interface (audit fix round F1 — the
+				// pre-existing arm tested the top-level type only).
+				if t := e.goTypeOf(nn.X); t == nil || containsInterface(e.applySubst(t)) {
+					foundOther = true
 					return false
 				}
 			}

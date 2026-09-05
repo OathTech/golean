@@ -1,0 +1,6 @@
+# census-diff.tsv — per-declaration status changes, cedar-go whole-library case, before (main 56982423) -> after (lane tip, audit fix round); producer: diff <(cut -f1-4 artifacts/cedar-before/census.tsv) <(cut -f1-4 artifacts/cedar-after2/census.tsv)
+package	kind	name	before	after
+cedargo	func	cedargo.NewEntityUIDSet	quarantined	lowered
+cedargo/types	func	cedargo/types.NewEntityUIDSet	quarantined	lowered
+cedargo/x/exp/schema/internal/parser	method	cedargo/x/exp/schema/internal/parser.lexer.scanIdent	quarantined	lowered
+cedargo/x/exp/schema/internal/parser	method	cedargo/x/exp/schema/internal/parser.lexer.skipWhitespaceAndComments	quarantined	lowered

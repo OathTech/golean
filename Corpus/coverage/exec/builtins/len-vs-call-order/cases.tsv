@@ -25,7 +25,18 @@
 # index panic refuses too) and make-inner-len (the inline-builtin
 # residual hole) beside it. Still on BUG-083's Cases line (fixed,
 # Pinned-by: none, Expect: FAIL). make-hint-panic-free / make-hint-call
-# and make-hint-map-read (a map read is panic-free) are the guard's GREEN controls. len-nil-only-* / make-nil-only-* /
+# and make-hint-map-read (a map read with a hash-safe key is panic-free)
+# are the guard's GREEN controls. make-hint-call is E13-ADJACENT (audit fix
+# round, 2026-09-05): it pins an INDEX-vs-hoisted-CALL agreement (`s[i]`
+# left, `boom()` as the hint) — the indexing axis of latitude E13, where
+# gc and the machine happen to agree and E13 takes no pin; it is kept as
+# a guard control (the call residual must not trip the guard), not as a
+# claim about the order. make-hint-{struct-any-key,array-any-key},
+# len-struct-any-key-left-assert (audit fix round F1): key types CONTAINING
+# an interface are hash-panicky — RED frontend-export BY NAME (the first
+# cut's IsInterface test admitted them: a wrong answer, and a regression of
+# the A6 refusal on the len path); make-hint-generic-{any,int}-key pin the
+# `K comparable` twin (any refuses, int lowers). len-nil-only-* / make-nil-only-* /
 # lexer-idiom pin the nil-deref TRANSPARENCY refinement green (which
 # bit 1 = left pointer nil, bit 2 = operand pointer nil); len-assert-vs-
 # nil-operand / len-nil-left-vs-index-operand pin that the refinement
@@ -56,3 +67,8 @@ make-nil-only-both	makeNilOnly	3	panic	invalid memory address or nil pointer der
 lexer-idiom	lexerIdiom	-	ok	-	pointers,structs,methods,len,evaluation_order,calls,bools,loops,slices
 len-assert-vs-nil-operand	lenAssertVsNilOperand	-	panic	interface conversion	pointers,structs,len,evaluation_order,calls,panic,interfaces,type_assertions
 len-nil-left-vs-index-operand	lenNilLeftVsIndexOperand	-	panic	index out of range [3] with length 0	pointers,structs,len,evaluation_order,calls,panic,indexing,slices
+make-hint-struct-any-key	makeHintStructAnyKey	-	panic	interface conversion	maps,make,len,evaluation_order,panic,interfaces,type_assertions,indexing,structs,comparability
+make-hint-array-any-key	makeHintArrayAnyKey	-	panic	interface conversion	maps,make,len,evaluation_order,panic,interfaces,type_assertions,indexing,arrays,comparability
+len-struct-any-key-left-assert	lenStructAnyKeyLeftAssert	-	panic	interface conversion	maps,len,evaluation_order,calls,panic,interfaces,type_assertions,indexing,structs,comparability
+make-hint-generic-any-key	makeHintGenericAnyKey	-	panic	interface conversion	maps,make,len,evaluation_order,panic,interfaces,type_assertions,indexing,generics,comparability
+make-hint-generic-int-key	makeHintGenericIntKey	-	panic	interface conversion	maps,make,len,evaluation_order,panic,interfaces,type_assertions,indexing,generics

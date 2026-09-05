@@ -200,6 +200,7 @@ func TestClassifyTextVocabulary(t *testing.T) {
 		// instantiation into a non-source-through stdlib package is FR-14's
 		// value-position text. FR-28: the make hoist joins the A6 guard.
 		`explicit instantiation gset.Immutable[string] at main.go:12:9: the base (*ast.SelectorExpr) is not a generic function of a source package — FR-27 residual`:                                                                                                  "explicit-instantiation-call",
+		`stdlib-qualified selector maps.Clone in callee position (explicit instantiation of a generic function of package maps, which is not source-through — the stdlib admission register decides; FR-14)`:                                                          "stdlib-value-position",
 		`stdlib-qualified selector maps.Clone in value position (explicit instantiation of a generic function of package maps, which is not source-through — the stdlib admission register decides; FR-14)`:                                                           "stdlib-value-position",
 		`make of a potentially-panicking size/hint operand with a potentially-panicking operand to its left in the same statement (the make hoist would reorder the panics; realizing gc's left-to-right point needs full-statement linearization — BUG-032/BUG-083)`: "len-hoist-panic-order",
 	}

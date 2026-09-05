@@ -1412,10 +1412,14 @@ alongside every `e.lifted` rollback (both paths).
   {none,left,operand,both}`, `make-nil-only-*`, `lexer-idiom`); the arm
   is nil-deref ONLY — an assertion or an index on either side keeps the
   refusal (`len-assert-vs-nil-operand`, `len-nil-left-vs-index-operand`,
-  red by design). (4) A MAP read with a non-interface key type is
-  panic-free to `panicFreeOperand` and the sweep census
-  (spec#Index_expressions: zero value on a missing key or nil map; an
-  interface-typed key can still panic on an uncomparable dynamic key).
+  red by design). (4) A MAP read whose key type contains NO interface
+  anywhere (`containsInterface` — audit fix round F1, 2026-09-05: the
+  first cut tested the top-level type only and admitted `struct{v any}` /
+  `[1]any` keys, whose hash can panic — a wrong answer on the make path
+  and a REGRESSION of this entry's refusal on the len path, `iv.(int) +
+  len(nm[k]) + wit(5)`, both closed; BUG-083 has the rows) is panic-free
+  to `panicFreeOperand` and the sweep census (spec#Index_expressions:
+  zero value on a missing key or nil map).
   The `panicky-between` pin is unchanged (assert left, index operand).
   What REMAINS of this entry's residual after FR-28: exactly the
   refusal — a panicky operand between panicky inline material to its
@@ -1423,7 +1427,13 @@ alongside every `e.lifted` rollback (both paths).
   (make), where the two panics differ in kind; realizing gc's point
   there is still the unbuilt linearization. Ledger FR-28 is PARTIALLY
   CLOSED on that basis.
-- M1 AMENDMENT (2026-09-02, bug082-maphint audit fix round, [AGENT]):
+- M1 AMENDMENT (2026-09-02, bug082-maphint audit fix round, [AGENT]) —
+  SUPERSEDED 2026-09-04 by the FR-28 amendment above (the `make` hoist
+  now carries the A6 guard; `hint-panicky-between` is a frontend-export
+  refusal, not a differential red; BUG-083 is fixed AS A REFUSAL, no
+  longer open) — the paragraph is kept as history and its "pinned
+  red-by-design at stage differential (a wrong answer, not a refusal)"
+  and "BUG-083 (open)" clauses no longer describe the tree:
   the class gained INSTANCES, not a mechanism. `make(...)` ALWAYS
   hoists (a statement-level allocation) with no A6 guard
   (`residualPanicFreeOperand` × `sweepPanickyInlineBefore` is wired
@@ -4405,21 +4415,49 @@ this entry's evidence dir, §M1.
   below refuse at frontend-export naming the shape (`make of a
   potentially-panicking size/hint operand with a potentially-panicking
   operand to its left in the same statement …`) instead of realizing
-  the hint's panic ahead of the left operand's. The silent wrong answer
-  this entry filed is DEAD; the full-statement linearization BUG-032
-  records as unbuilt is still the only fix that would realize gc's
-  point. The M1 table re-measured at the fix (evidence dir
-  `docs/evidence/2026-09-04_fr27-fr28/m1-table.tsv`): the three
-  assert-left shapes that were WRONG (`iv.(int) + len(make(map, t[k]))`,
-  `… make([]int, t[k])`, `… cap(make(chan int, t[k]))`) now REFUSE; the
-  four index/division/nil-deref-left shapes that MATCHED gc (gc hoists
-  the make too) now REFUSE as well — the trade this entry priced ("would
-  newly refuse the pre-existing slice/chan shapes"), taken under the
-  relayed posture «break rather than preserve incorrect behaviour»: the
-  guard is conservative-syntactic and does not encode gc's compiler-
-  internal ordering of an interface-conversion panic ahead of a hoisted
-  make. Two refinements narrow the over-refusal where the argument is
-  exact: (i) a MAP read with a non-interface key type is panic-free
+  the hint's panic ahead of the left operand's. WHAT IS CLOSED, exactly:
+  every make size/hint operand whose residual can panic, beside panicky
+  inline material to its left, refuses — the filed shapes are refusals
+  by name; the full-statement linearization BUG-032 records as unbuilt
+  is still the only fix that would realize gc's point. AUDIT FIX ROUND
+  F1 (2026-09-05): the first cut's map-read refinement (i) tested the key
+  TYPE with `types.IsInterface`, admitting key types that are statically
+  comparable but CONTAIN an interface (`struct{v any}`, `[1]any`) — such
+  a key is hashed at run time and panics on an uncomparable dynamic
+  value (`hash of unhashable type: []int`, the mechanism of
+  `maps/array-key-interface-elem-unhashable`) — so between 6441bd37 and
+  the fix round the slice was itself WRONG on `iv.(int) + len(make(map,
+  nm[k]))` with such a key (gc: interface conversion; machine: the hash
+  panic) and had REGRESSED the A6 refusal on the len path (`iv.(int) +
+  len(nm[k]) + wit(5)`, refused on main, lowered wrong). Closed by
+  `containsInterface` (an interface anywhere in the key type — struct
+  fields recursively, array elements, named through underlying, a type
+  parameter until substituted) at every site: `hashSafeMapRead`
+  (panicFreeOperand / nilDerefOnlyResidual / the sweep census) and the
+  sweep's `==`/`!=` arm, which had the same top-level-only test. Rows
+  `make-hint-struct-any-key`, `make-hint-array-any-key`,
+  `len-struct-any-key-left-assert` red BY NAME; `make-hint-generic-
+  {any,int}-key` pin the `K comparable` twin (`any` refuses after
+  applySubst, `int` lowers). The M1 table re-measured at the fix
+  (evidence dir `docs/evidence/2026-09-04_fr27-fr28/m1-table.tsv`;
+  counts derivation-anchored to the TSV, audit fix round F2): SIX
+  probes REFUSE — the three assert-left shapes that were WRONG
+  (`iv.(int) + len(make(map, t[k]))`, `… make([]int, t[k])`, `…
+  cap(make(chan int, t[k]))`) and the THREE index/division/nil-deref-
+  left shapes (`s[i] + …`, `1/z + …`, `*p + …`) that MATCHED gc — the
+  trade this entry priced ("would newly refuse the pre-existing
+  slice/chan shapes"), taken under the relayed posture «break rather
+  than preserve incorrect behaviour»; SEVEN lower. On those three traded
+  shapes gc's point IS the hoist's point (gc hoists the make too, so the
+  hint's panic fires first on both sides) — the refusal there is
+  defensible not because the machine was wrong but because the guard is
+  conservative-syntactic (it does not encode gc's compiler-internal rule
+  that ONLY an interface-conversion panic on the left is ordered ahead of
+  a hoisted make), and because latitude E13 takes NO pin on the indexing
+  axis: an agreement there is not spec-required, so freezing it would
+  pin latitude, and refusing it leaves nothing wrong on the record (F6).
+  Two refinements narrow the over-refusal where the argument is exact:
+  (i) a MAP read whose key type contains no interface is panic-free
   (`gAssertVsMapIndexHint`, `iv.(int) + len(make(map, nm[1]))`, stays
   green — spec#Index_expressions gives the zero value on a missing key or
   nil map); (ii) when BOTH the hoisted operand and every panicky inline
@@ -4456,7 +4494,7 @@ this entry's evidence dir, §M1.
   (3) forbids a FAIL row on a fixed differential entry).)
 - Pinned-by: none
 - Expect: FAIL
-- Cases: builtins/len-vs-call-order/hint-panicky-between, builtins/len-vs-call-order/make-slice-panicky-between, builtins/len-vs-call-order/make-chan-cap-panicky-between, builtins/len-vs-call-order/make-index-left, builtins/len-vs-call-order/make-inner-len
+- Cases: builtins/len-vs-call-order/hint-panicky-between, builtins/len-vs-call-order/make-slice-panicky-between, builtins/len-vs-call-order/make-chan-cap-panicky-between, builtins/len-vs-call-order/make-index-left, builtins/len-vs-call-order/make-inner-len, builtins/len-vs-call-order/make-hint-struct-any-key, builtins/len-vs-call-order/make-hint-array-any-key, builtins/len-vs-call-order/make-hint-generic-any-key, builtins/len-vs-call-order/len-struct-any-key-left-assert
 - Discovered: 2026-09-02 (bug082-maphint pre-merge audit, M1; the
   auditor's probes `.tmp/audit-bug082/p4`, `p5`, reproduced in
   docs/evidence/2026-09-02_bug082-maphint/README.md §M1)

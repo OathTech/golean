@@ -203,6 +203,54 @@ func makeHintCall() int {
 	return s[i] + len(make(map[int]int, boomCall()))
 }
 
+// Audit fix round F1 (2026-09-05): the map-read arm admitted key TYPES
+// that are statically comparable but CONTAIN an interface (`struct{v
+// any}`, `[1]any`) — hashing such a key panics at run time on an
+// uncomparable dynamic value (`hash of unhashable type: []int`, the
+// maps/array-key-interface-elem-unhashable row's mechanism), so the
+// hoisted hint's hash panic ran ahead of gc's interface-conversion panic
+// (a WRONG ANSWER), and on the len/cap path (`iv.(int) + len(nm[k]) +
+// wit4(5)`) the same hole REGRESSED the A6 refusal main had. The arm now
+// asks containsInterface (any interface anywhere in the key type); these
+// three rows are RED frontend-export BY NAME, and the generic twin pins
+// that a `K comparable` instantiated at `any` refuses (applySubst first)
+// while `K = int` lowers (CONV on both sides). NOT called from main.
+type anyKey struct{ v any }
+
+func makeHintStructAnyKey() int {
+	var iv interface{} = "s"
+	nm := map[anyKey]int{}
+	k := anyKey{v: []int{1}}
+	return iv.(int) + len(make(map[int]int, nm[k]))
+}
+
+func makeHintArrayAnyKey() int {
+	var iv interface{} = "s"
+	nm := map[[1]any]int{}
+	k := [1]any{[]int{1}}
+	return iv.(int) + len(make(map[int]int, nm[k]))
+}
+
+func lenStructAnyKeyLeftAssert() int {
+	var iv interface{} = "s"
+	nm := map[anyKey][]int{}
+	k := anyKey{v: []int{1}}
+	return iv.(int) + len(nm[k]) + wit4(5)
+}
+
+func makeHintGenericKey[K comparable](nm map[K]int, k K) int {
+	var iv interface{} = "s"
+	return iv.(int) + len(make(map[int]int, nm[k]))
+}
+
+func makeHintGenericAnyKey() int {
+	return makeHintGenericKey[any](map[any]int{}, []int{1})
+}
+
+func makeHintGenericIntKey() int {
+	return makeHintGenericKey[int](map[int]int{1: 2}, 1)
+}
+
 // FR-28 nil-deref TRANSPARENCY (the refinement that lowers cedar-go's
 // lexer idiom): when BOTH the hoisted operand and every panicky inline
 // node to its left can panic ONLY by nil dereference, the two candidate
@@ -296,4 +344,5 @@ func main() {
 	lenNilOnly(0)
 	makeNilOnly(0)
 	lexerIdiom()
+	_ = makeHintGenericIntKey
 }

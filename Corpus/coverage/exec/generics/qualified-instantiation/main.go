@@ -90,8 +90,16 @@ func qualSourceThrough() int {
 // called from main: the frontend quarantines the declaration.
 func qualStdlibRefused() int {
 	m := map[string]int{"a": 1, "b": 2}
-	c := maps.Clone[map[string]int](m)
+	c := maps.Clone[map[string]int](m) // CALLEE position: genericCallee returns the refusal (audit fix round F3)
 	return len(c)
+}
+
+// stdlib-refused-value (RED BY DESIGN, frontend-export): the same shape
+// in VALUE position — the IndexExpr arm's genericFuncValue names it.
+func qualStdlibRefusedValue() int {
+	m := map[string]int{"a": 1, "b": 2}
+	clone := maps.Clone[map[string]int]
+	return len(clone(m))
 }
 
 func main() {

@@ -1367,6 +1367,37 @@ the same call.
   bugs, and the NO-PIN rule of this entry covers the min/max axes
   identically (a strict pin on the assert axis would record latitude
   as a fidelity failure).
+- FOUR-WAY TREATMENT, POSED FOR THE [USER] (fr27-fr28 audit fix round,
+  2026-09-05, [AGENT] — evidence `docs/evidence/2026-09-04_fr27-fr28/
+  e13-probes.tsv`, five shapes, gc interface-conversion on every one; NOT
+  decided here): the same composition — a spec-unordered panicky operand
+  (the assertion `iv.(int)`) LEFT of an always-hoisting construct whose
+  argument `t[k]` panics — is treated FOUR ways today. (1) `make`
+  (`iv.(int) + len(make([]int, t[k]))`): REFUSED by name since FR-28
+  (BUG-083 fixed as a refusal; the make hoist carries BUG-032's A6
+  guard). (2) `min`/`max` and user calls (`iv.(int) + min(t[k],1) +
+  wit(5)`, `iv.(int) + wit(t[k])`): LOWER to the index panic — this
+  entry's censused latitude, no pin. (3) `append`/`copy` (`iv.(int) +
+  len(append(s, t[k])) + wit(5)`, `iv.(int) + copy(dst[t[k]:], src)`):
+  LOWER to the index panic — DIVERGENT from gc and censused NOWHERE: the
+  mechanism is this entry's (an ordered call hoisted ahead of the
+  assertion), but the evidence table above names only min/max/user calls,
+  so the census did not cover them until this probe. (4) `len`/`cap`
+  (`iv.(int) + len(b[j]) + wit(5)`): REFUSED (BUG-032's original A6
+  shape). The options, for the [USER]: (a) extend the guard to EVERY
+  always-hoisting construct (append/copy/min/max/user-call arguments;
+  `&T{…}` payloads) — uniform fail-closed, at the cost of refusing the
+  ordinary `a[i] + f(b[j])` idiom class wherever a panicky operand sits
+  left of a call with a panicky argument; (b) admit BOTH members
+  everywhere as latitude via a membership shape (the §7 item-5 panic-
+  identity treatment this entry's re-envelope obligation already names)
+  and retire the make/len-cap refusals into it; (c) keep the split with
+  E13 amended to census append/copy explicitly (and `make-hint-call`,
+  `builtins/len-vs-call-order`, noted as E13-adjacent: it pins an index-
+  vs-hoisted-call AGREEMENT on the indexing axis, kept as a guard
+  control). Until ruled: the make/len-cap refusals stand (honest reds),
+  (3) is a recorded, un-pinned divergence of this entry's kind, and no
+  new pin is taken on either axis.
 - NO PIN MAY BE TAKEN HERE. Deliberately **not** a corpus case, and no
   strict-lane row may pin either axis: the machine and gc realize
   different members on the assertion axis, so a strict pin would record

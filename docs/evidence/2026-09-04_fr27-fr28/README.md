@@ -8,9 +8,11 @@ Length_and_capacity), §4 rows FR-27 (RETIRED) and FR-28 (PARTIALLY CLOSED),
 `docs/2026-09-03_cedar-go-coverage-census.md` §12 (addendum); `docs/BUGS.md`
 BUG-083 (fixed AS A NAMED REFUSAL), BUG-032 (FR-28 amendment), BUG-062
 (note); `tools/lowerdiag/causes.tsv` rows `explicit-instantiation-call`,
-`len-hoist-panic-order`; `baselines/native-full.tsv` (re-pin header).
-Tree: branch `fr27-fr28` off main `56982423` (3402 rows, 3189/213); the
-slice commit is named in the Gate section. Host: linux/amd64 (shared build
+`len-hoist-panic-order`; `baselines/native-full.tsv` (re-pin header); `docs/2026-08-11_latitude-inventory.md`
+E13 (the four-way treatment paragraph). Tree: branch `fr27-fr28` off main
+`56982423` (3402 rows, 3189/213), REBASED onto main `ac45aedd` at the audit
+fix round 2026-09-05 (main added only the certified google-search record);
+the commits are named in the Gate section. Host: linux/amd64 (shared build
 box, other lanes active — no timing-sensitive numbers here). Toolchain:
 `go version go1.26.5 linux/amd64` = `baselines/go-oracle-pin`; golean from
 `scripts/capped lake build golean` on this tree (`GoLean/` untouched — the
@@ -40,8 +42,11 @@ incorrect behaviour», relayed). Two exact refinements narrow the refusal:
 nil-deref-ONLY compositions are order-transparent (one runtime error,
 nothing effectful between the two tests) — cedar-go's lexer idiom `l.pos <
 len(l.src) && l.peek()` lowers; a map read with a non-interface key is
-panic-free. `residualPanicFreeOperand` recurses into an inline builtin's
-operand (hole closed). FR-28 PARTIALLY CLOSED: the residual — two panics of
+panic-free — where "non-interface" means NO interface anywhere in the key
+type (`containsInterface`; the first cut's top-level `IsInterface` test was
+itself a wrong answer and a len-path regression, closed at the audit fix
+round F1 — see below). `residualPanicFreeOperand` recurses into an inline
+builtin's operand (hole closed). FR-28 PARTIALLY CLOSED: the residual — two panics of
 differing kind on the two sides — stays refused until BUG-032's
 linearization. cedar-go: 25/34 EXPORT-OK unchanged in category; the two
 witnesses lower and their drivers stop at FR-14 stubs further in;
@@ -72,9 +77,22 @@ dynamic-pass judgements). Twin wire pin unchanged.
   for make (`{len,make}-nil-only-*`) and on the lexer idiom; the arm is
   nil-deref ONLY (`len-assert-vs-nil-operand`, `len-nil-left-vs-index-
   operand` red by design). Conservative on anything not recognized.
-- D4: map reads with a non-interface key type are panic-free
-  (spec#Index_expressions); an interface-typed key can still panic on an
-  uncomparable dynamic key and keeps the conservative answer.
+- D4: map reads whose key type contains NO interface anywhere are panic-free
+  (spec#Index_expressions); a key type that is an interface or CONTAINS one
+  (`struct{v any}`, `[1]any`, a type parameter before substitution) can
+  hash-panic on an uncomparable dynamic value and keeps the conservative
+  answer. AUDIT FIX ROUND F1 (2026-09-05): the first cut (6441bd37) tested
+  `types.IsInterface(key)` only — WRONG on `iv.(int) + len(make(map,
+  nm[k]))` with `nm map[struct{v any}]int` / `map[[1]any]int` (gc:
+  interface conversion; machine: `hash of unhashable type: []int`) and a
+  REGRESSION on the len path `iv.(int) + len(nm[k]) + wit(5)` (refused on
+  main, lowered wrong). `containsInterface` at every site (hashSafeMapRead
+  for panicFreeOperand / nilDerefOnlyResidual / the sweep census; the
+  sweep's `==`/`!=` arm, which had the same top-level-only test). Rows
+  `make-hint-{struct,array}-any-key`, `len-struct-any-key-left-assert`
+  red by name; `make-hint-generic-{any,int}-key` pin the `K comparable`
+  twin (any → refuses via applySubst; int → lowers). Cross-reference:
+  `maps/array-key-interface-elem-unhashable` (the hash-panic mechanism).
 - D5: `gAssertVsHintCall` (`iv.(int) + len(make(map, boom()))`) and
   `gAssertVsPlainCall` are NOT refused and NOT pinned: the hint is a real
   call whose residual is its temp (BUG-032's F23 arm) — E13's call-first
@@ -86,6 +104,11 @@ dynamic-pass judgements). Twin wire pin unchanged.
   ("called like any other function"), so the make guard is STRICTER than
   E13's treatment of `min`/`max`/user calls (which still run first). The
   refusal is honest under either reading; the brief asked for it.
+- D9 (F3): `genericCallee` RETURNS the FR-14 named refusal for a non-source-
+  through stdlib generic in callee position (the first cut swallowed it and
+  the value path re-derived it); the text names the shape (`in callee
+  position` / `in value position`); causes.tsv `stdlib-value-position`
+  matches both. Rows `stdlib-refused` (callee) + `stdlib-refused-value`.
 - D7: BUG-083 → `Status: fixed`, `Pinned-by: none`, `Expect: FAIL` (the
   BUG-070/078/084 precedent for red-by-design refusal pins; check-bugs (3)
   forbids a FAIL row on a fixed differential entry). The four make rows are
@@ -103,7 +126,10 @@ dynamic-pass judgements). Twin wire pin unchanged.
 
 `before/` and `after/`: `results.tsv` (per case), `histogram.tsv`,
 `demand-histogram.tsv` (census), `lower-diagnose-report.txt` (static, the
-whole-library case). Per case (34): EXPORT-OK 25 → 25; FRONTEND-REFUSED
+whole-library case); `census-diff.tsv` (the per-declaration status changes
+— the full `census.tsv` is an `artifacts/` product and does not ship).
+`after/` was re-measured at the audit fix round (F1 frontend; identical
+categories, histogram and diff to the slice's first `after/`). Per case (34): EXPORT-OK 25 → 25; FRONTEND-REFUSED
 8 → 8 (all `at run`, per-declaration stubs); MACHINE-REFUSED 1 → 1
 (`drv-ext-ipaddr`, `net/netip.Addr` zero value). No category transition.
 First refusals that MOVED: `drv-eval-operators` FR-27
@@ -122,26 +148,51 @@ statically").
 ## The M1 table re-measured (`m1-table.tsv`)
 
 The BUG-083 probe bodies (copied verbatim to `m1-probes/`) at the FR-28
-frontend: 7 REFUSED by name (the 3 assert-left WRONG shapes + the 4
-gc-MATCHING index/division/nil-deref-left shapes — the priced trade), 6
-lower (`fHintIndexVsRightIndex` — nothing to the left; `gAssertVsNewCall`;
-`gAssertVsHintPlainVar`; `gAssertVsMapIndexHint` — refinement D4;
-`fLeftIndexHintCallPanic`, `gAssertVsHintCall`, `gAssertVsPlainCall` —
-call residuals, E13). Corpus rows in the table's last column re-measure gc
-through the harness for every shape that has one.
+frontend — counts anchored to the TSV's `frontend now` column (audit fix
+round F2 corrected the prose, which said 7/6 and "four"): **6 REFUSED** by
+name (the 3 assert-left WRONG shapes `fLeftAssertVsHintIndex`,
+`gAssertVsSliceMakeLen`, `gAssertVsChanMakeCap` + the **3** gc-MATCHING
+index/division/nil-deref-left shapes `fLeftIndexVsHintIndex`,
+`fLeftDivVsHintIndex`, `fLeftNilDerefVsHintIndex` — the priced trade; on
+these three gc's point IS the hoist's point, and refusal is defensible
+because E13 takes no pin on the indexing axis), **7 lower**
+(`fHintIndexVsRightIndex` — nothing to the left; `gAssertVsNewCall`;
+`gAssertVsHintPlainVar`; `gAssertVsMapIndexHint` — refinement D4 (an
+`int` key: hash-safe); `fLeftIndexHintCallPanic`, `gAssertVsHintCall`,
+`gAssertVsPlainCall` — call residuals, E13). Unchanged by F1 (no probe has
+an interface-containing key). Corpus rows in the table's last column
+re-measure gc through the harness for every shape that has one.
+
+## E13 consistency probes (`e13-probes.tsv`, `probes/e13-shapes.go`)
+
+Prepared for the [USER], NOT decided here (audit fix round). Five shapes
+put the assertion `iv.(int)` LEFT of an always-hoisting construct whose
+argument `t[k]` panics; gc realizes the interface-conversion panic on
+every one. Frontend/machine: `make` REFUSES (this slice's guard);
+`append` and `copy` LOWER to the index panic — divergent, censused
+NOWHERE today (E13's mechanism, but E13's evidence table names only
+min/max/user calls); `min` and a user call LOWER to the index panic —
+E13-censused latitude, no pin. The four-way treatment and the three
+options are recorded at L:E13 (latitude inventory). `make-hint-call`
+(born PASS) is flagged E13-adjacent on its row: it pins an index-vs-
+hoisted-call AGREEMENT on E13's indexing axis (kept as a guard control,
+not as an order claim).
 
 ## Corpus movement (the differential)
 
 STAGE CHANGE (FAIL → FAIL): `builtins/len-vs-call-order/hint-panicky-between`
-differential → frontend-export. BORN (25): `generics/qualified-instantiation/
+differential → frontend-export. BORN (31 = 25 at the slice + 6 at the audit
+fix round: `make-hint-{struct,array,generic-any}-key`,
+`len-struct-any-key-left-assert` FAIL by design, `make-hint-generic-int-key`
+PASS, `generics/qualified-instantiation/stdlib-refused-value` FAIL by design): `generics/qualified-instantiation/
 {call,func-value,nested,method-value,method-expr,source-through}` PASS,
 `stdlib-refused` FAIL by design; `builtins/len-vs-call-order/{make-hint-
 panic-free,make-hint-call,make-hint-map-read}` PASS (guard controls),
 `{len,make}-nil-only-{none,left,operand,both}` PASS, `lexer-idiom` PASS,
 `{make-slice-panicky-between,make-chan-cap-panicky-between,make-index-left,
 make-inner-len,len-assert-vs-nil-operand,len-nil-left-vs-index-operand}`
-FAIL/frontend-export by design. 0 PASS→non-PASS. 3402 + 25 = 3427 = 3207 /
-220 (ledger §8o).
+FAIL/frontend-export by design. 0 PASS→non-PASS. 3402 + 31 = 3433 = 3208 /
+225 (ledger §8o).
 
 ## Reproduction (repo root)
 

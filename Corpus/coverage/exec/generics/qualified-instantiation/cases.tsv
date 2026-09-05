@@ -6,7 +6,10 @@
 # funcInstanceAt the inferred spelling uses. stdlib-refused is RED
 # frontend-export BY DESIGN: the shape into a stdlib package the register
 # does not admit as source-through refuses BY NAME on FR-14's line
-# (`stdlib-qualified selector maps.Clone in value position …`).
+# (`stdlib-qualified selector maps.Clone in callee position …`; the VALUE
+# form is stdlib-refused-value, `… in value position …` — audit fix round
+# F3: the callee-position refusal is RETURNED by genericCallee, not
+# re-derived by the value path).
 call	qualCall	-	ok	-	generics,multipackage,imports,calls,methods,variadic
 func-value	qualFuncValue	-	ok	-	generics,multipackage,imports,functions,calls,methods,variadic
 nested	qualNested	-	ok	-	generics,multipackage,imports,structs,fields,functions,calls
@@ -14,3 +17,4 @@ method-value	qualMethodValue	-	ok	-	generics,multipackage,imports,methods,maps,c
 method-expr	qualMethodExpr	-	ok	-	generics,multipackage,imports,methods,functions
 source-through	qualSourceThrough	-	ok	-	generics,imports,stdlib,slices,calls
 stdlib-refused	qualStdlibRefused	-	ok	-	generics,imports,stdlib,maps,len
+stdlib-refused-value	qualStdlibRefusedValue	-	ok	-	generics,imports,stdlib,maps,len,functions

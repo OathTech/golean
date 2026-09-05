@@ -893,7 +893,8 @@ and the posture «break rather than preserve incorrect behaviour» — relayed
 by the coordinator, cited as relayed). Method: §1's drivers re-run with the
 lane's frontend over a fresh assembly of the SAME 34 cases plus
 `scripts/lower-diagnose artifacts/cedar-<before|after>/cases/all --tsv`,
-both on this worktree (main `56982423` = before; the lane tip = after).
+both on this worktree (main `56982423` = before; the lane tip after its
+audit fix round, rebased onto main `ac45aedd`, = after).
 Full record: `docs/evidence/2026-09-04_fr27-fr28/` (`before/`, `after/`,
 `m1-table.tsv`).
 
@@ -912,7 +913,8 @@ stopped at FR-27/FR-28 now stops at an FR-14 stub further in; none reaches
 the end). The whole-library case `all`: quarantined declarations 571 → 567
 (the four above: `cedargo.NewEntityUIDSet`, `types.NewEntityUIDSet`,
 `lexer.scanIdent`, `lexer.skipWhitespaceAndComments` quarantined →
-lowered; `census.tsv` diff). Histogram: FR-27 ×3 → 0 and FR-28 ×2 → 0;
+lowered; the per-declaration diff ships as `census-diff.tsv` in the
+evidence dir — the full `census.tsv` is an `artifacts/` product). Histogram: FR-27 ×3 → 0 and FR-28 ×2 → 0;
 `iter.Seq[cedargo/types.Value]` 7 → 8 (`doInEval` reaching its next
 blocker); everything else identical. No UNCLASSIFIED anywhere (the FR-27
 row `explicit-instantiation-call` stays in `tools/lowerdiag/causes.tsv` as

@@ -1,0 +1,11 @@
+# e13-probes.tsv — E13 consistency probes (fr27-fr28 audit fix round, 2026-09-05). Producer: probes/e13-shapes.go as a
+# `package main` dir; gc = `GO111MODULE=off go run .` (go1.26.5, recover() text); frontend = `go run ./tools/nativefrontend --dir <dir>
+# --out wire.json`, per-function `unsupported`; machine = `.lake/build/bin/golean native-json-run --input wire.json --function <fn>`.
+# All five shapes put a spec-UNORDERED panicky operand (the assertion `iv.(int)`) LEFT of an always-hoisting construct whose
+# argument panics (`t[k]`, k out of range). gc realizes the assertion first on every one. Only `make` is guarded.
+shape	function	construct	gc	frontend	machine	treatment today
+iv.(int) + len(make([]int, t[k]))	makeShape	make (unconditional hoist)	interface conversion	REFUSED (make guard, FR-28/BUG-083)	-	named refusal (this slice)
+iv.(int) + len(append(s, t[k])) + wit(5)	appendShape	append (ordered call, hoisted)	interface conversion	lowers	index out of range [5] with length 2	DIVERGENT, censused nowhere — E12/E13 call-first family by mechanism, but E13's evidence table names min/max/user calls, not append
+iv.(int) + copy(dst[t[k]:], src)	copyShape	copy (ordered call, hoisted)	interface conversion	lowers	index out of range [5] with length 2	DIVERGENT, censused nowhere (same)
+iv.(int) + min(t[k], 1) + wit(5)	minShape	min (hoisted like a call)	interface conversion	lowers	index out of range [5] with length 2	E13-censused latitude (min/max evidence table, a6p-p1), NO PIN
+iv.(int) + wit(t[k])	callShape	user call	interface conversion	lowers	index out of range [5] with length 2	E13-censused latitude (d1/d2), NO PIN
