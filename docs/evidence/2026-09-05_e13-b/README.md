@@ -159,6 +159,36 @@ re-emitted with the rebased frontend and enumerated with the rebased
 `golean` (`coverage-observations --function sub --max-width 2`), the
 cell compared with the recorded re-audit-tip column: **129 / 129 identical** — every observation set equal as a set (the recorded column was unsorted in two cells, `S3_addrof_vs_makeboom` and `Z2_realcall_noindex`), every refusal the same text (13 per-declaration quarantines read from the wire's `unsupported` field — the structural-allocation class, the narrowed A6 guard's `Q4_compound_call_tgt_len`, the range-target quarantine — and the two width-REFUTED enumerations `P20_tgt_append`/`b7_tgt_assert_append`, whose recorded cells were truncated); so every gc member recorded IN its set is still in it and every rowed absence (BUG-101's g1/g2/g3/g4/h2/h5, BUG-104's P3/P23) is unchanged. No regression from fr19/b4/c2. Producer: `.tmp/audit3/round17/{regen,post}.py` (the lane's tool dir; the table's header carries the method).
 
+## The round-17 rebase's gate (clean rebased tip d61dcd39)
+
+`scripts/capped scripts/ci --diff` at the CLEAN rebased tip `d61dcd39`
+(the 12 rebased commits, the last amended with the round-17 trailer;
+`artifacts/coverage/latest.meta.tsv`: `git_commit d61dcd39…`,
+`git_dirty false`) — **RESULT: PASS**. Verbatim summary lines:
+`ok core build (warning-free)` · `ok frontend pins (realized init-order
+deviation + twin wire = pinned bytes)` (twin 758110a3f5a2…, a fresh emit)
+· `ok eval tests (198 ok)` · `ok bug-index cross-check` · `differential
+coverage summary: cases=3593 pass=3347 fail=246 export_status=0` · `ok
+baseline diff FULL (3593/3593, no regression)` · `ok negative baseline
+diff (no regression)` (394) · `RESULT: PASS`. The baseline **re-pin
+guard** step did not fire at this tip: the baseline is byte-identical
+between HEAD~1 and HEAD (both records commits), so the guard had nothing
+to judge — the movement vs main was re-derived by hand from the rows
+instead (design §11 item 6; ledger §8t's round-17 paragraph): 65 born, 12
+FAIL→PASS on BUG-032's/BUG-083's Cases lines, 4 lane moves, **0
+PASS→non-PASS**. Reconciler (report-only): 3 findings, **0 HIGH** — C13
+(historical Go versions in docs) and C5 (FR-7's `=` citation) are
+pre-existing on main; C9 (the wire schema moved after the slow-tier
+certification date — 6 commits to wire.go/NativeToIR.lean, three of them
+this lane's, three fr19's/c2's) is merge-protocol step 5a's `scripts/ci
+--slow` at the merged tip, OWED to the train. The FR-19 HIGH the lane's
+fail-closed C5 check raised against main's row (a reds cell without a
+leading count) was fixed in the rebased tip (count 1: BUG-100's C6 pin).
+`go test ./tools/nativefrontend/... ./tools/lowerdiag/...`: ok / ok.
+Full tail: `gate-tail-round17.txt`. This section, that file and the
+FR-19 citation touch-up are the records commit on top of the gated tip;
+the tree is otherwise byte-identical to `d61dcd39`.
+
 ## gc's realization (`gc-realization.txt`, producer `probes/gc-realization.go`)
 
 32 recover-based probes at go1.26.5; `w` is an effect witness the sibling
