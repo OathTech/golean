@@ -1668,3 +1668,14 @@ pinned wire (758110a3f5a2…)`; `check-stdlib-register: ok`; eval tests
 198 ok; reconciler 3 findings, 0 HIGH, report-only (C13, C5, C9 — none
 this file's); no `git_dirty` note (clean tree). This tail supersedes the
 `d797fb94` one above for the current tip.
+
+**Addendum 2026-09-05 ([AGENT], lane `master-plan-0905`) — the gate at
+the FINAL rebased tip.** `scripts/capped scripts/ci --diff` at
+`573b9734` (this file over `main` @ `79214ab2`; tree otherwise
+byte-identical to main): `RESULT: PASS`; 24 steps ok, 0 FAIL;
+`differential coverage summary: cases=3593 pass=3347 fail=246`;
+baseline diff FULL 3593/3593 no regression; negative 394 no regression;
+`check-frontend-pins: ok [twin-wire] — fresh emit = pinned wire
+(758110a3f5a2…)`; `check-stdlib-register: ok`; eval tests 198 ok;
+reconciler 2 findings, 0 HIGH, report-only (C13, C5); no `git_dirty`
+note. This is the tail of record for the branch as offered for audit.
