@@ -2,8 +2,9 @@
 
 [AGENT], 2026-09-05. The user authorized landing the reviewed A2 customer,
 integrating BUG-103, and continuing with the semantic interface and A3 lanes.
-A2 landed on main at `700128f3`. BUG-103 is being rebased and re-gated on
-that tip in its own worktree; the coordinator owns the final merge.
+A2 landed on main at `700128f3`. BUG-103 is rebased and re-gated on that
+tip. Fresh full CI and both A1/A2 customer gates PASS; the coordinator owns
+the authorized final fast-forward merge.
 
 The rebase's sole source conflict was two added lane handoffs. Both original
 texts are preserved byte-for-byte as dated documents:
@@ -17,5 +18,9 @@ passed, and the user subsequently authorized this integration. Original
 sealed evidence remains unchanged; its HANDOFF.md hash denotes the original
 BUG-103 handoff, now preserved at the dated path above.
 
-Integration status and fresh combined-tree gate evidence will be recorded in
-`docs/2026-09-05_bug103-integration.md`. No push is authorized.
+Integration disposition and fresh combined-tree gate evidence are recorded in
+`docs/2026-09-05_bug103-integration.md`. Full differential: 3,598 cases,
+3,353 PASS / 245 known FAIL, no result/stage drift; 394 negative oracle
+checks and 202 eval checks pass. One slow-tier certificate remains cached.
+The source-reviewed runtime/proof/customer bytes are unchanged by integration.
+No push is authorized.

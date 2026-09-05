@@ -1,0 +1,6 @@
+Fresh full measurement counts: {'PASS': 3353, 'FAIL': 245}
+IDs unchanged vs original full measurement and checked-in baseline: 3598
+Result deltas vs original full measurement: []
+Stage deltas vs original full measurement: []
+All result/stage pairs satisfy existing baseline (including explicit stage alternatives).
+Slow-tier rows: [('imported-goose/channel/google-search', 'CERTIFIED-CACHED (certified 2026-09-05T17:57:01+00:00  commit: round-17 merge-train step 5a re-certification at main tip 7677865a (round-17 train landed: fr19-bug097, c-arc-b4, c-arc-c2, e13-b); samples + driver-coupling checked against the tracked set; full re-certification via scripts/ci --slow): members=6 exhibited=4 draws=32 (K=32; pin members=6 NOT reached — 4 distinct drawn) unexhibited=2')]

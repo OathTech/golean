@@ -1,0 +1,12 @@
+Integration review by implementing integration agent; original source reviews remain independent.
+Original BUG-103 changed paths: 175
+Integration changed paths: 177
+Every original BUG-103 changed path except root handoff has exactly its reviewed bytes.
+Two added dated handoffs preserve both original lane texts byte-for-byte (source-binding.log).
+Root handoff inspected: identifies A2 landed main, BUG rebase/regate, historical authorization/review wording, relocated evidence hash, no push.
+No source conflict, executable/proof/customer source edit, baseline edit, or gate relaxation introduced by integration.
+Ops normalization and StateWf locSup arm match the source-reviewed implementation; Step.strictApply shares the total existing operation premise.
+Static typing/admission is explicitly outside BUG-103 normalization claim; A3 remains separately owed.
+Default package dependency files unchanged from main; Iris remains opt-in.
+Frontend files untouched: special merged-tip --slow frontend certification rule is not triggered.
+Fresh core/full differential/negative and both customer gates are recorded separately; no pass assumed here before completion.

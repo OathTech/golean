@@ -1,0 +1,11 @@
+byte-identical original handoff: main docs/2026-09-05_iris-customer-handoff.md 358d135d6a045d133318e40108ec72ebf5b2848f37e47f5ff4cf3253de701cb4
+byte-identical original handoff: snapshot/bug103-before-a2-integration-20260905 docs/2026-09-05_bug103-array-conversion-handoff.md 6846d7ee8ade7e1014b3b8100461e011245b952b7d3a44aac0c088d5e8a835a4
+original evidence check: semantic_input_sha256_by_file 70 PASS; original HANDOFF relocated explicitly
+original evidence check: changed_file_sha256 31 PASS; original HANDOFF relocated explicitly
+semantic aggregate: 1404ce45f13defd4b69eb71c1cd1f6acea31f0648a9cc8aa317d3485d11985f8
+unchanged sealed/source tree: docs/evidence/2026-09-05_bug103-array-conversion relative to snapshot/bug103-before-a2-integration-20260905
+unchanged sealed/source tree: docs/evidence/2026-09-05_bug103-array-conversion-review relative to snapshot/bug103-before-a2-integration-20260905
+unchanged sealed/source tree: spikes/gate-a1 relative to main
+unchanged sealed/source tree: spikes/iris-customer relative to main
+combined integration inventory: 3691 files 4a749157d16ede7064e4c27ac755469e31748914a158b008c059cc0b2e2dc8b1
+reference tracked inputs checked; build caches are independent copies; all .lake symlinks resolve inside this worktree
