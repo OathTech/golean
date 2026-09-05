@@ -4,7 +4,22 @@
 # driver-coupling pin against THIS set and its wire hash; scripts/ci
 # --slow re-enumerates and must reproduce it exactly. Update
 # deliberately, in its own commit, with the reason — never auto-written.
-# certified: 2026-09-04T22:41:00+00:00  commit: round-13 merge-train step 5a re-certification at main tip 56982423 (round-13 train landed: goals-record, fr4-rowm, hygiene-wave3)
+# certified: 2026-09-05T00:30:00+00:00  commit: stdlib-slice-3 lane — the `output` observation field (G-OUT) added to every observation; set re-enumerated by `scripts/capped scripts/ci --slow` on the branch (see the reason block)
+# re-certification reason (lane stdlib-slice-3, 2026-09-05, [AGENT]): stdlib slice 3
+#   added the `output` field (the program's fd-2 bytes, `StepEvent.out`
+#   folded by the driver — design gate G-OUT RULED [USER], relayed) to
+#   EVERY observation on both sides, so the six member observations gain
+#   `"output":""` — a FORMAT change of the record, not a set change: the
+#   fresh GOLEAN_SLOW=1 dedup enumeration on the branch reproduced the same
+#   six permutation members {123,132,213,231,312,321} (google-search prints
+#   nothing; the dedup engine refuses printing rows by name). The wire sha
+#   is UNCHANGED (2f1d639f… — the `print`/`float-bits` wire nodes do not
+#   appear in this fixture); params unchanged. The run: the slice's first
+#   full `--slow` gate (artifacts transcript in the coordinator report),
+#   which reported exactly this row as "re-certification DIFFERS" on the
+#   old record and 0 flips elsewhere; the record is updated in its own
+#   commit per the header rule. The merge train's step 5a re-certifies at
+#   the merged tip as usual.
 # re-certification reason (round-13 merge train, step 5a, 2026-09-04): the
 #   standing post-train step (CLAUDE.md merge protocol 5a, [USER]
 #   2026-09-04) fired because the train merged fr4-rowm, which touched
@@ -220,9 +235,9 @@
 # params: width=4,sites=48,work=60000000,members=6,engine=dedup,tier=slow
 # wire-sha256: 2f1d639f2042466f50b61ab117db5b39629c425f733650b9be992c0b85beefcc
 # enum-stats: observations=6 steps=6565663 probes=0 sites=6193933 leaves=0 maxdepth=0 width=4 engine=dedup nodes=6193933 edges=6565663 dedupHits=371731 certified=checkCert
-{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":123}]}
-{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":132}]}
-{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":213}]}
-{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":231}]}
-{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":312}]}
-{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":321}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":123}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":132}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":213}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":231}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":312}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":321}]}
