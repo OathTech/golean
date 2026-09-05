@@ -1,0 +1,7 @@
+{
+  ".tmp/audit-20260905/ci-diff.log": "f56dace836e47bbb817ee33c9a287e55dbf2445401b40bc10d176c7c0463f3a5",
+  "artifacts/coverage/latest.tsv": "8ddc3b89dc976011fc2e3b5be882d1a34aba9b69dc102419200e797f68aa783a",
+  "baselines/native-full.tsv": "d1253bc2f0fe323ec296e81fac748e5a95fb643cb97b43e6010433131c49320f",
+  "baselines/pins/twin-chdriver.wire.json": "758110a3f5a212b8138d5c4ce88fd1b1b62bee35760c289d47157fe1a1e573c7",
+  ".tmp/audit-20260905/printprobe/wire-current.json": "65746803a581d55a94d7a707706d7e941ba254d62a0fd59d57d1fd7524135f97"
+}

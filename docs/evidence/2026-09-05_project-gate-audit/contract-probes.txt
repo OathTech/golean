@@ -1,0 +1,3 @@
+GoLean.GoValue.nil
+GoLean.GoValue.interface (GoLean.GoCore.Ty.defined 1) (GoLean.GoValue.string { bytes := #[97, 117, 100, 105, 116] })
+true
