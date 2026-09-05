@@ -3166,8 +3166,12 @@ theorem applyStrictOp_wf {σ : ExecState} {op : StrictOp} {vs : List GoValue}
       split <;> intro h
       · simp only [bind_eq_ok] at h
         obtain ⟨m, hm, hc⟩ := h
-        simp [GoCore.panic, throw, throwThe, MonadExceptOf.throw] at hc
+        -- `typeAssertPanicMessage` is `Except Stop String` (audit fix
+        -- round R1/R3, 2026-09-05): whichever way it goes, the result is
+        -- an `.error` (a refusal, or the panic), never `.ok`.
+        simp [Bind.bind, Except.bind, GoCore.panic, throw, throwThe, MonadExceptOf.throw] at hc
       · simp_all [Bind.bind, Except.bind, throw, throwThe, MonadExceptOf.throw]
+        split at h <;> simp_all
   · -- indexGet
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨iv, hiv, h⟩ := h

@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+# BUG-099 (2026-09-05): the machine has ONE synthetic runtime-error TypeId where gc has a concrete type per fault.
+observed	recoveredRuntimeErrorAsAny	-	ok	-	panic,recover,defer,identity,interfaces
+assert-int	recoveredRuntimeErrorAssertInt	-	panic	runtime.boundsError, not int	panic,recover,defer,identity,type_assertions

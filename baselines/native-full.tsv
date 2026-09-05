@@ -10,6 +10,17 @@
 #   Born PASS: interfaces/anon-iface-display/embedded-flattened, interfaces/anon-iface-display/missing-order, interfaces/anon-iface-display/named-result, interfaces/anon-iface-display/nil, interfaces/anon-iface-display/slice-target, interfaces/anon-iface-display/source-display, interfaces/anon-iface-display/unexported, interfaces/anon-iface-display/unexported-satisfied, multipkg/same-name-anon-iface-panic/missing, multipkg/same-name-anon-iface-panic/source, scoping/local-type-identity/anon-iface-missing, scoping/local-type-identity/anon-ifaces-distinct, scoping/local-type-identity/scopes-panic, scoping/local-type-identity/shadow-identity, scoping/local-type-identity/shadow-panic.
 #   Tally 3498 = 3252 / 246 -> 3516 = 3275 / 241 (3252 + 8 + 15 = 3275; 246 - 8 + 3 = 241); tallied by row: `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv`.
 #   The raft twin wire pin MOVED (4ee39f73 -> f89e1c9e; quorum.MajorityConfig.Describe lowers; display/pkg on every TypeDef) — scripts/check-frontend-pins history.
+# re-pinned: 2026-09-05 (fr19-bug097 lane, adversarial-audit fix round R1-R22 [AGENT]) — 7 born rows, 0 flips of pre-existing rows:
+#   multipkg/same-name-pointer-panic/{no-methods,value-method,pointer-method,slice-control} PASS (R1 BLOCKER: gc's pkgpath() of
+#   *T is T's package iff *T has a method set — `*inner.Q, not *inner.Q (types from different packages)`; was `scopes`);
+#   multipkg/unexported-method-scope/distinct-names FAIL/frontend-export BY DESIGN (R4: the DISTINCT-name BUG-098 shape main
+#   answered WRONG — gc false, main true — now refused by the guard; BUG-098 Cases, Expect: FAIL);
+#   panic-recover/recovered-runtime-error-type/assert-int FAIL/lean-observation BY DESIGN (R3: `r.(int)` on a recovered runtime
+#   error refuses by name — one synthetic runtime-error id where gc has a concrete type per fault) and
+#   panic-recover/recovered-runtime-error-type/observed FAIL/differential — an OPEN WRONG ANSWER measured at the round (R20: the
+#   observation channel names the payload `Error`, gc `boundsError`; string vs struct value) — both on BUG-099's Cases line (open).
+#   Tally 3516 = 3275 / 241 -> 3523 = 3279 / 244 (3275 + 4; 241 + 3); tallied by row with the awk above. Twin pin unchanged (f89e1c9e).
+#   Evidence: docs/evidence/2026-09-05_fr19-bug097/README.md (audit fix round section); design note §3.2/§3.3/§7.
 # re-pinned: 2026-09-05 (bug095-096 lane, AUDIT FIX ROUND R1-R7 — [AGENT] worker; drift vs the lane's first pin = EXACTLY
 #   2 born rows, 0 flips of pre-existing rows: interfaces/embedding-satisfaction/method-expr-promoted PASS (audit fix R4 —
 #   a method expression over a struct whose method is promoted from an embedded INTERFACE field now lowers to the promotion
@@ -3074,8 +3085,13 @@ PASS	multipkg/same-name-identity/type-identity	-
 PASS	multipkg/same-name-identity/func-identity	-
 PASS	multipkg/same-name-identity-panic	-
 PASS	multipkg/same-name-identity-panic/forced-half	-
+PASS	multipkg/same-name-pointer-panic/no-methods	-
+PASS	multipkg/same-name-pointer-panic/value-method	-
+PASS	multipkg/same-name-pointer-panic/pointer-method	-
+PASS	multipkg/same-name-pointer-panic/slice-control	-
 FAIL	multipkg/unexported-method-scope/assert-panic	frontend-export
 FAIL	multipkg/unexported-method-scope/distinct	frontend-export
+FAIL	multipkg/unexported-method-scope/distinct-names	frontend-export
 PASS	multipkg/wire-codec/roundtrip	-
 PASS	multipkg/wire-codec/size	-
 PASS	multipkg/wire-codec/golden	-
@@ -3697,6 +3713,8 @@ PASS	panic-recover/recover-repanic	-
 PASS	panic-recover/recover-store-local	-
 PASS	panic-recover/recover-twice	-
 PASS	panic-recover/recover-value	-
+FAIL	panic-recover/recovered-runtime-error-type/observed	differential
+FAIL	panic-recover/recovered-runtime-error-type/assert-int	lean-observation
 PASS	panic-recover/repanic-recovered-by-outer	-
 FAIL	panic-recover/repanic-same-value-abort	lean-observation
 PASS	panic-recover/repanic-same-value-abort/forced-half	-

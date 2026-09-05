@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+# BUG-059 pointer shapes (audit fix round R1, 2026-09-05): gc's pkgpath() of *T is T's package iff *T has a method set; the suffix follows.
+no-methods	pointerNoMethods	-	panic	*inner.P, not *inner.P (types from different scopes)	multipackage,imports,identity,type_assertions,panic,pointers,structs
+value-method	pointerValueMethod	-	panic	*inner.Q, not *inner.Q (types from different packages)	multipackage,imports,identity,type_assertions,panic,pointers,structs,methods
+pointer-method	pointerPointerMethod	-	panic	*inner.R, not *inner.R (types from different packages)	multipackage,imports,identity,type_assertions,panic,pointers,structs,methods
+slice-control	sliceOfMethodType	-	panic	[]inner.Q, not []inner.Q (types from different scopes)	multipackage,imports,identity,type_assertions,panic,slices,structs,methods

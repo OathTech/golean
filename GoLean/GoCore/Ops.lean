@@ -694,24 +694,37 @@ def typeDisplay? (state : ExecState) (id : TypeId) : Option TypeDisplay :=
       | none => if entry.1 == id then some entry.2 else none)
     none
 
+/-- The visible rendering of the machine-minted runtime-error payload
+type (`runtimeErrorTypeId`, `$runtime.Error`). gc has no ONE type here:
+a nil dereference is `runtime.errorString`, an index fault
+`runtime.boundsError`, a failed assert `*runtime.TypeAssertionError`, a
+zero divide `runtime.runtimeError` — the machine collapses them onto one
+synthetic id and cannot spell the concrete one, so its display is a
+marker that NAMES that cause (audit fix round R3, 2026-09-05 [AGENT]).
+It is a text for refusal messages and the belt-and-suspenders reach;
+`typeAssertPanicMessage` REFUSES before this could reach an observable
+panic text. -/
+def runtimeErrorDisplayMarker : String :=
+  "<runtime error payload: gc's concrete type (runtime.errorString / \
+runtime.boundsError / *runtime.TypeAssertionError / …) is not modeled — \
+one synthetic $runtime.Error id, BUG-009/BUG-053 class>"
+
 /-- gc's type string for a `TypeId`, from its display record. NO record
 renders a VISIBLE marker — never the key: the key is path-qualified
 identity (`red/inner.T`) and gc prints the package NAME (`inner.T`), so
-rendering the key was exactly BUG-059's fail-open text. Unreachable
-from a decoded wire (the decoder requires a record per TypeDef);
-reachable from hand-built programs, which must state their displays. -/
+rendering the key was exactly BUG-059's fail-open text. Reached from a
+decoded wire by exactly ONE id — the machine-minted `$runtime.Error`
+(no TypeDef, so no record; `runtimeErrorDisplayMarker`, a program that
+`recover()`s and asserts the payload reaches it inside the BUG-009/
+BUG-053 refusal text) — and otherwise only from hand-built programs,
+which must state their displays (the decoder requires a record per
+TypeDef). -/
 def displayNameOf (state : ExecState) (id : TypeId) : String :=
   match typeDisplay? state id with
   | some d => d.name
-  | none => s!"<TypeId {id.key} has no display record>"
-
-/-- The declaring package path a type-assertion text compares (gc's
-`pkgpath()`; `runtime/error.go` `TypeAssertionError.Error`): the display
-record's `pkg` for a named/interface type, `""` for every unnamed type. -/
-def typePkgForMessage (state : ExecState) (typ : Ty) : String :=
-  match resolveDefinedAliases state typ with
-  | .defined id | .interface id => ((typeDisplay? state id).map (·.pkg)).getD ""
-  | _ => ""
+  | none =>
+      if id == runtimeErrorTypeId then runtimeErrorDisplayMarker
+      else s!"<TypeId {id.key} has no display record>"
 
 -- Total via fuel: recurses through both alias resolution and type subterms
 -- (pointer/slice/map/array elements), so fuel bounds combined depth. Only used
@@ -1591,6 +1604,73 @@ def dynamicTypeNameForMessage (state : ExecState) : GoValue → String
   | .nil => "nil"
   | other => s!"{repr other}"
 
+/-- Does `*T` (for a defined `T`) carry a NON-EMPTY method set on the
+wire — some `MethodInfo` with receiver `T` (value receivers, which `*T`
+inherits) or `*T` (pointer receivers)? Promoted methods are flattened
+onto the embedding type at emission, so they are entries too. -/
+def pointerMethodSetNonEmpty (state : ExecState) (elem : Ty) : Bool :=
+  state.methods.any (fun m =>
+    match methodRecvDynamicTy? state m with
+    | some recv => recv == elem || recv == .pointer elem
+    | none => false)
+
+/-- The declaring package path a type-assertion text compares — gc's
+`rtype.pkgpath()` (`runtime/type.go`), fed by `reflectdata`'s
+`uncommonSize`/`typePkg` (`cmd/compile/internal/reflectdata/reflect.go`
+@ go1.26.5): a type has a package path exactly when it has an UNCOMMON
+section — every NAMED type, and an UNNAMED type whose method set is
+NON-EMPTY — and `typePkg` of `*T` is `T`'s package. Audit fix round R1
+(2026-09-05 [AGENT]; the first cut answered `""` for EVERY non-TypeId
+`Ty`, so `*inner.Q, not *inner.Q` got ` (types from different scopes)`
+where gc prints ` (types from different packages)` whenever `Q` has a
+method). Arms:
+* `.defined`/`.interface` → the display record's `pkg`; NO record
+  REFUSES by name (the record is required per TypeDef — its absence is
+  a hand-built-program defect; the retired `.getD ""` was a fail-open
+  default beside a fail-noisy renderer, audit R10).
+* `*T`, `T` defined non-pointer non-interface → `pkg(T)` when some
+  method of `T` or `*T` is on the wire; when NONE is, the method-set
+  record decides: `full` ⇒ the set is genuinely empty ⇒ `""` (gc: no
+  uncommon section, pointer kind ⇒ `""`); `exported`-only or ABSENT ⇒
+  the emptiness is UNKNOWN (unexported methods are off the wire /
+  nothing recorded) ⇒ REFUSE by name rather than guess.
+* `*sync.X` → `"sync"` (the primitives are gc's named types with
+  methods; `sync.Mutex` and friends live in package `sync`).
+* every other unnamed type — slices, maps, arrays, chans, funcs,
+  `**T`, `*I` — → `""`: no methods, and neither struct nor interface
+  kind (`pkgpath`'s two kind arms; the machine's one unnamed struct,
+  `struct{}`, is a `.defined` TypeDef whose record says `""`, and an
+  anonymous interface's record says `""` — gc: `t.Sym() == nil ⇒ tpkg
+  = nil`, reflect.go's TINTER arm). -/
+def typePkgForMessage (state : ExecState) (typ : Ty) : Except Stop String :=
+  let recordPkg (id : TypeId) : Except Stop String :=
+    match typeDisplay? state id with
+    | some d => pure d.pkg
+    | none => unsupported s!"type-assertion text: TypeId {id.key} has no display record, so its \
+declaring package path (gc's pkgpath(), the `(types from different packages|scopes)' \
+suffix) cannot be derived (design note 2026-09-05 §3.2: no record is a defect, never `\"\"')"
+  match resolveDefinedAliases state typ with
+  | .defined id | .interface id => recordPkg id
+  | .pointer elem =>
+      match resolveDefinedAliases state elem with
+      | .defined id =>
+          if pointerMethodSetNonEmpty state (.defined id) then recordPkg id
+          else
+            match methodSetCoverage? state id.key with
+            | some .full => pure ""
+            | some .exported =>
+                unsupported s!"type-assertion text: whether *{displayNameOf state id} has a method set \
+(gc's pkgpath() of a pointer type is its element's package iff the pointer's method set is \
+non-empty) is UNDECIDABLE from an exported-only method-set record with no exported method on \
+the wire — refused rather than guessed (BUG-009/BUG-053 class)"
+            | none =>
+                unsupported s!"type-assertion text: *{displayNameOf state id} — {id.key} has NO \
+method-set record on the wire, so whether *T's method set is empty (gc's pkgpath() rule) is \
+unknown; refused rather than guessed (BUG-009/BUG-053 class)"
+      | .sync _ => pure "sync"
+      | _ => pure ""
+  | _ => pure ""
+
 /-- Go's failed-type-assert panic message, in all FOUR of its real shapes
 (probed 2026-07-31, `.tmp/fix/probe/assert`; the machine had one shape, with
 a hardcoded `interface {}` source and no missing-method form at all —
@@ -1610,21 +1690,33 @@ pre-merge audit 2026-07-31, findings 7 and 8):
 type; the message then falls back to the empty-interface spelling, which is
 what every pre-existing GoCore term meant. -/
 def typeAssertPanicMessage (state : ExecState) (value : GoValue) (targetTy : Ty)
-    (sourceTy : Option Ty) (missingMethod : Option String) : String :=
+    (sourceTy : Option Ty) (missingMethod : Option String) : Except Stop String := do
+  -- The machine-minted runtime-error payload has ONE synthetic dynamic
+  -- type where gc has several concrete ones (`runtimeErrorDisplayMarker`):
+  -- a text naming it (`r := recover(); r.(int)`) cannot be gc's — refuse
+  -- by name rather than print a marker as an observation (audit fix
+  -- round R3, 2026-09-05 [AGENT]; the interface-target arm never gets
+  -- here — satisfaction refuses first on the missing method-set record).
+  if let .interface (.defined dynId) _ := value then
+    if dynId == runtimeErrorTypeId then
+      unsupported s!"type-assertion panic text names the dynamic type of a recovered runtime \
+error, which the machine models as one synthetic id ({runtimeErrorTypeId.key}) where gc has a \
+concrete runtime type per fault (runtime.errorString / runtime.boundsError / \
+*runtime.TypeAssertionError / …) — no byte-exact text exists (BUG-009/BUG-053 class)"
   let sourceName :=
     match sourceTy with
     | some t => goTypeNameForMessage state t
     | none => "interface {}"
   match resolveDefinedAliases state targetTy, value with
   | .interface _, .nil =>
-      "interface conversion: interface is nil, not " ++ goTypeNameForMessage state targetTy
+      pure ("interface conversion: interface is nil, not " ++ goTypeNameForMessage state targetTy)
   | .interface _, _ =>
       let missing :=
         match missingMethod with
         | some m => s!": missing method {m}"
         | none => ""
-      "interface conversion: " ++ dynamicTypeNameForMessage state value ++
-        " is not " ++ goTypeNameForMessage state targetTy ++ missing
+      pure ("interface conversion: " ++ dynamicTypeNameForMessage state value ++
+        " is not " ++ goTypeNameForMessage state targetTy ++ missing)
   | _, _ =>
       let base := "interface conversion: " ++ sourceName ++ " is " ++
         dynamicTypeNameForMessage state value ++ ", not " ++
@@ -1636,16 +1728,18 @@ def typeAssertPanicMessage (state : ExecState) (value : GoValue) (targetTy : Ty)
       -- name-ambiguity — `inner.T, not inner.T (types from different
       -- packages)` when the declaring paths differ, `main.L, not main.L
       -- (types from different scopes)` when they agree (two functions'
-      -- local `L`; two anonymous types).
+      -- local `L`; two anonymous types). The paths come from
+      -- `typePkgForMessage` (gc's `pkgpath()`), which REFUSES when the
+      -- wire cannot decide them — the refusal propagates, never a guess.
       match value with
       | .interface dynTy _ =>
           if goTypeNameForMessage state dynTy == goTypeNameForMessage state targetTy then
-            if typePkgForMessage state dynTy != typePkgForMessage state targetTy then
-              base ++ " (types from different packages)"
+            if (← typePkgForMessage state dynTy) != (← typePkgForMessage state targetTy) then
+              pure (base ++ " (types from different packages)")
             else
-              base ++ " (types from different scopes)"
-          else base
-      | _ => base
+              pure (base ++ " (types from different scopes)")
+          else pure base
+      | _ => pure base
 
 def valueAsInt : GoValue → Except Stop Int
   | .int value _ => return value

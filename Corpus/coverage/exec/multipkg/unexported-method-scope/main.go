@@ -14,8 +14,26 @@ package main
 
 import (
 	bi "blue/inner"
+	"emb"
 	ri "red/inner"
 )
+
+// DISTINCT-NAME shape (audit fix round R4, 2026-09-05): S promotes emb's
+// unexported `get` — that is `emb.get`, not `main.get` — so S does NOT
+// implement main's `interface{ get() int }`. gc: false. On main before this
+// lane the bare-name tables matched and the machine answered TRUE (a
+// silent wrong answer — the same-name shape above was refused by accident,
+// this one was not); the guard now refuses the export by name.
+type S struct{ emb.E }
+
+type J interface{ get() int }
+
+// gc: false
+func unexportedDistinctNames() bool {
+	var x any = S{}
+	_, ok := x.(J)
+	return ok
+}
 
 // gc: interface conversion: inner.T is not interface { inner.get() int }: missing method get
 func unexportedCrossAssert() int {
@@ -31,6 +49,7 @@ func unexportedDistinct() (bool, bool) {
 
 func main() {
 	println(unexportedDistinct())
+	println(unexportedDistinctNames())
 	func() {
 		defer func() { println(recover().(error).Error()) }()
 		unexportedCrossAssert()

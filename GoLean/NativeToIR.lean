@@ -1884,6 +1884,18 @@ partial def decodeProgram (json : Json) : Except String Program := do
   let declaredDefs := declaredEntries.map (·.1)
   -- The canonical empty struct (map[K]struct{} set idiom) is always available.
   let typeDefs := #[(⟨"struct{}"⟩, TypeDef.struct #[])] ++ declaredDefs
+  -- Collision check at the boundary (the globals / function-id /
+  -- method-set-record siblings; audit fix round R7, 2026-09-05): a
+  -- duplicate `program.types[i].name` would make `TypeEnv.lookup` answer
+  -- from whichever entry comes first — for the TypeDef, the display
+  -- record, AND the synthesized `struct{}`. The emitter refuses the
+  -- duplicate itself; a hand-edited or foreign wire must not get past
+  -- the decoder either.
+  let mut seenTypeIds : Std.HashSet String := {}
+  for (id, _) in typeDefs do
+    if seenTypeIds.contains id.key then
+      throw s!"native lowering: duplicate TypeId {id.key} in program.types"
+    seenTypeIds := seenTypeIds.insert id.key
   -- Its display record beside it (gc spells the empty struct `struct {}`;
   -- an unnamed type's pkgpath is empty); one record per TypeDef, in the
   -- TypeDef order (design note 2026-09-05 §3.1).

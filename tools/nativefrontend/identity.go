@@ -89,23 +89,51 @@ func (e *emitter) isSourceScope(parent *types.Scope) bool {
 }
 
 // pkgQualifier returns the wire qualifier for a declaring package: its
-// IMPORT PATH (Go's identity — the BUG-010 fix). Dotted paths break
-// the key grammar (the '.' separator; identity note §3.2) and are
+// IMPORT PATH (Go's identity — the BUG-010 fix). A path the key grammar
+// or gc's link-symbol spelling cannot carry verbatim (keyPathHazard) is
 // RECORDED here for checkKeyPathGrammar's fail-closed refusal.
 func (e *emitter) pkgQualifier(pkg *types.Package) string {
 	p := pkg.Path()
-	// `·` (U+00B7) is the scope-ordinal marker of function-local TypeIds
-	// (design note 2026-09-05 §2.1): legal in an import path by
-	// spec#Import_declarations (category Po), never in an identifier —
-	// a path carrying it would break the key grammar the same way `.`
-	// does, so it is refused at the same boundary.
-	if strings.ContainsAny(p, ".·") {
+	if why := keyPathHazard(p); why != "" {
 		if e.badKeyPaths == nil {
-			e.badKeyPaths = map[string]bool{}
+			e.badKeyPaths = map[string]string{}
 		}
-		e.badKeyPaths[p] = true
+		e.badKeyPaths[p] = why
 	}
 	return p
+}
+
+// keyPathHazard names why an import path cannot be a wire qualifier, or
+// returns "" when it can. Three classes, each a byte-exactness hazard:
+//   - '.' — the key grammar's qualifier/name separator (identity note
+//     §3.2; `TypeId.unqualified` strips at the FIRST '.').
+//   - '·' U+00B7 — the scope-ordinal marker of function-local TypeIds
+//     (design note 2026-09-05 §2.1): legal in an import path by
+//     spec#Import_declarations (category Po), never in an identifier.
+//   - every byte gc's `objabi.PathToPrefix` %-escapes in a link symbol —
+//     bytes >= 0x7F, '%', '"', space and control characters (audit fix
+//     round R11, 2026-09-05 [AGENT]): an instantiation bracket is gc's
+//     LinkString, so `Pair[pkgs/naïve.T]` DISPLAYS as
+//     `main.Pair[pkgs/na%c3%afve.T]` while the key (= the display's
+//     bracket, mono.go) spells the raw path; no display record could be
+//     byte-exact, and only the abort renderer's non-ASCII refusal masked
+//     it. Refused at the minting boundary instead of modeled: a path
+//     with such bytes is legal Go (category L letters), so this is a
+//     named coverage refusal, not a wrong answer.
+func keyPathHazard(p string) string {
+	if strings.Contains(p, ".") {
+		return "contains '.' (the key grammar's qualifier/name separator)"
+	}
+	if strings.Contains(p, "·") {
+		return "contains '·' U+00B7 (the local-type scope-ordinal marker)"
+	}
+	for i := 0; i < len(p); i++ {
+		c := p[i]
+		if c >= 0x7F || c <= ' ' || c == '%' || c == '"' {
+			return "contains a byte gc's objabi.PathToPrefix %-escapes (>= 0x7F, '%', '\"', space/control), so gc's LinkString bracket would display the escaped path where the key spells the raw one"
+		}
+	}
+	return ""
 }
 
 // funcWireName mints the wire FuncId of a PACKAGE-LEVEL function
@@ -145,12 +173,14 @@ func (e *emitter) initFuncWireName(u *sourcePkg, n int) string {
 	return e.pkgQualifier(u.pkg) + "." + name
 }
 
-// checkKeyPathGrammar fails the export when a dotted import path
-// reached a wire qualifier: `TypeId.unqualified` (the reflect-Name
-// observation contract) strips at the FIRST '.', and the key
-// injectivity argument (identity note §1) needs dot-free qualifiers.
-// Fail closed at the boundary that minted the key, like the
-// package-name collision check this replaces.
+// checkKeyPathGrammar fails the export when an import path the key
+// grammar cannot carry (keyPathHazard) reached a wire qualifier:
+// `TypeId.unqualified` (the reflect-Name observation contract) strips at
+// the FIRST '.', the key injectivity argument (identity note §1) needs
+// dot-free qualifiers, and gc's link-symbol escaping makes a display
+// over a non-ASCII path unreproducible. Fail closed at the boundary that
+// minted the key, like the package-name collision check this replaces;
+// every offending path is named with its reason.
 func (e *emitter) checkKeyPathGrammar() error {
 	if len(e.badKeyPaths) == 0 {
 		return nil
@@ -160,7 +190,11 @@ func (e *emitter) checkKeyPathGrammar() error {
 		paths = append(paths, p)
 	}
 	sort.Strings(paths)
-	return unsup("dotted import path(s) in wire identity keys: %v — the key grammar reserves '.' for the qualifier/name separator and '·' for the local-type scope ordinal (docs/2026-08-18_multipackage-identity.md §3; docs/2026-09-05_fr19-bug097-design.md §2.1); vendor at dot-free paths", paths)
+	named := make([]string, len(paths))
+	for i, p := range paths {
+		named[i] = strconv.Quote(p) + " " + e.badKeyPaths[p]
+	}
+	return unsup("import path(s) unusable as wire identity qualifiers: %s — the key grammar reserves '.' for the qualifier/name separator and '·' for the local-type scope ordinal, and gc's objabi.PathToPrefix %%-escapes bytes >= 0x7F / '%%' / '\"' / space in the LinkString brackets a display reproduces (docs/2026-08-18_multipackage-identity.md §3; docs/2026-09-05_fr19-bug097-design.md §2.1); vendor at a dot-free ASCII path", strings.Join(named, "; "))
 }
 
 // ---- identity vs display (docs/2026-09-05_fr19-bug097-design.md §0) ----
@@ -510,7 +544,14 @@ func (e *emitter) anonIfaceKey(iface *types.Interface) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	e.noteTypeDisplay(key, typeDisplay{display: disp})
+	// pkg is "" BY gc's RULE, not by omission (audit fix round R1,
+	// 2026-09-05 [AGENT]): reflectdata/reflect.go's TINTER arm sets the
+	// interfacetype's PkgPath only for a NAMED interface (`t.Sym() != nil`,
+	// excluding the `error` universe type); an anonymous interface has no
+	// Sym, so `rtype.pkgpath()` of it is "" whatever its unexported
+	// methods' packages are — those travel per method name (`dname(...,
+	// pkg, ...)` when `a.name.Pkg != tpkg`), not on the type.
+	e.noteTypeDisplay(key, typeDisplay{display: disp, pkg: ""})
 	return key, nil
 }
 

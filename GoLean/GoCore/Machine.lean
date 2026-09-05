@@ -432,7 +432,7 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except Stop (G
           | .interface interfaceName, .interface dynTy _ =>
               firstUnsatisfiedMethod? s dynTy interfaceName
           | _, _ => pure none
-        panic (typeAssertPanicMessage s v targetTy sourceTy missing)
+        panic (← typeAssertPanicMessage s v targetTy sourceTy missing)
   | .indexGet, [b, i] => do
       let indexValue ← valueAsInt i
       match b with

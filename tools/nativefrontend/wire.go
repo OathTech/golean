@@ -297,7 +297,7 @@ type emitter struct {
 	// recorded. Successor of the retired package-NAME collision check
 	// (BUG-010: keys are path-qualified now, so distinct packages
 	// cannot collide by construction).
-	badKeyPaths map[string]bool
+	badKeyPaths map[string]string // path -> keyPathHazard reason
 
 	// Package-level variables (init slice, docs/2026-08-05_init-design.md):
 	// `collectGlobals` is the SINGLE place gids come from — a dense index

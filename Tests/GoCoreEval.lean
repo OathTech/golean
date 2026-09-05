@@ -2638,6 +2638,38 @@ def main : IO UInt32 := do
     (match Lean.Json.parse "{\"schema\":\"golean-native-v1\",\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[{\"type\":\"main.T\",\"coverage\":\"full\"},{\"type\":\"main.T\",\"coverage\":\"full\"}]}" with
      | .error _ => false
      | .ok j => !(GoLean.NativeToIR.decodeProgram j).isOk))
+  -- TD (design note 2026-09-05 §3.1; audit fix round R6/R7): every
+  -- `program.types[i]` entry REQUIRES `display` and `pkg` — an old wire or
+  -- a forgetting emitter refuses at decode, naming the field — while the
+  -- empty string is a legal `pkg` (unnamed/universe/synthetic types) and
+  -- a duplicate TypeId refuses like the globals/funcs/methodSets siblings.
+  let typesWire (entries : String) : String :=
+    "{\"schema\":\"golean-native-v1\",\"funcs\":[],\"methods\":[],\"methodSets\":[],\"types\":[" ++ entries ++ "]}"
+  let tdEntry (name : String) (extra : String) : String :=
+    "{\"name\":\"" ++ name ++ "\",\"def\":{\"kind\":\"defined\",\"target\":{\"kind\":\"int\",\"int\":\"int\"}}" ++ extra ++ "}"
+  let decodeTypes (entries : String) : Except String Unit :=
+    match Lean.Json.parse (typesWire entries) with
+    | .error e => .error s!"json parse failed: {e}"
+    | .ok j => (GoLean.NativeToIR.decodeProgram j).map (fun _ => ())
+  let refusesNaming (r : Except String Unit) (needle : String) : Bool :=
+    match r with
+    | .error e => (e.splitOn needle).length > 1
+    | .ok _ => false
+  passed := passed && (← expectTrue "TD: a TypeDef with display and pkg decodes (control)"
+    (decodeTypes (tdEntry "main.T" ",\"display\":\"main.T\",\"pkg\":\"main\"")).isOk)
+  passed := passed && (← expectTrue "TD: an EMPTY pkg is accepted (unnamed/universe/synthetic types declare \"\")"
+    (decodeTypes (tdEntry "error" ",\"display\":\"error\",\"pkg\":\"\"")).isOk)
+  passed := passed && (← expectTrue "TD: a TypeDef missing `display` refuses at decode, naming the field"
+    (refusesNaming (decodeTypes (tdEntry "main.T" ",\"pkg\":\"main\"")) "display"))
+  passed := passed && (← expectTrue "TD: a TypeDef missing `pkg` refuses at decode, naming the field"
+    (refusesNaming (decodeTypes (tdEntry "main.T" ",\"display\":\"main.T\"")) "pkg"))
+  passed := passed && (← expectTrue "TD/R7: a duplicate TypeId in program.types refuses by name"
+    (refusesNaming (decodeTypes (tdEntry "main.T" ",\"display\":\"main.T\",\"pkg\":\"main\"" ++ "," ++
+                                 tdEntry "main.T" ",\"display\":\"main.T\",\"pkg\":\"main\""))
+      "duplicate TypeId main.T"))
+  passed := passed && (← expectTrue "TD/R7: a wire spelling the synthesized `struct{}` TypeDef collides with it and refuses"
+    (refusesNaming (decodeTypes (tdEntry "struct{}" ",\"display\":\"struct {}\",\"pkg\":\"\""))
+      "duplicate TypeId struct{}"))
   -- WIRE-CORRUPTION backstops in decodeReturn / decodeTy (audit fix
   -- round 2026-09-01). BLOCKER 1: the BUG-075 slice's n=1 return fast
   -- path ran BEFORE the arity check, so a one-operand `return` at a
@@ -2786,22 +2818,125 @@ def main : IO UInt32 := do
     { types := [(⟨"red/inner.T"⟩, .defined (.int .int)), (⟨"blue/inner.T"⟩, .defined (.int .int))],
       typeDisplays := #[(⟨"red/inner.T"⟩, { name := "inner.T", pkg := "red/inner" }),
                         (⟨"blue/inner.T"⟩, { name := "inner.T", pkg := "blue/inner" })] }
+  -- `typeAssertPanicMessage` is `Except Stop String` since the audit fix
+  -- round (R1/R3/R10, 2026-09-05): the suffix's package paths can REFUSE.
+  let assertText (r : Except Stop String) : String :=
+    match r with
+    | .ok t => t
+    | .error e => s!"<refused: {e.status}>"
+  let assertRefuses (r : Except Stop String) (needle : String) : Bool :=
+    match r with
+    | .error (.unsupported msg) => (msg.splitOn needle).length > 1
+    | _ => false
   passed := passed && (← expectStrEq "DISPLAY: same-name different-path assert text is gc's (types from different packages)"
-    (GoCore.typeAssertPanicMessage sameNameState
-      (.interface (.defined ⟨"red/inner.T"⟩) (.int 1 .int)) (.defined ⟨"blue/inner.T"⟩) none none)
+    (assertText (GoCore.typeAssertPanicMessage sameNameState
+      (.interface (.defined ⟨"red/inner.T"⟩) (.int 1 .int)) (.defined ⟨"blue/inner.T"⟩) none none))
     "interface conversion: interface {} is inner.T, not inner.T (types from different packages)")
   let scopesState : GoCore.ExecState :=
     { types := [(⟨"main.L·1"⟩, .defined (.int .int)), (⟨"main.L·2"⟩, .defined (.int .int))],
       typeDisplays := #[(⟨"main.L·1"⟩, { name := "main.L", pkg := "main" }),
                         (⟨"main.L·2"⟩, { name := "main.L", pkg := "main" })] }
   passed := passed && (← expectStrEq "DISPLAY: same-name same-package (two local scopes) assert text is gc's (types from different scopes)"
-    (GoCore.typeAssertPanicMessage scopesState
-      (.interface (.defined ⟨"main.L·1"⟩) (.int 1 .int)) (.defined ⟨"main.L·2"⟩) none none)
+    (assertText (GoCore.typeAssertPanicMessage scopesState
+      (.interface (.defined ⟨"main.L·1"⟩) (.int 1 .int)) (.defined ⟨"main.L·2"⟩) none none))
     "interface conversion: interface {} is main.L, not main.L (types from different scopes)")
   passed := passed && (← expectStrEq "DISPLAY: distinct displays carry no suffix"
-    (GoCore.typeAssertPanicMessage sameNameState
-      (.interface (.defined ⟨"red/inner.T"⟩) (.int 1 .int)) (.int .int) none none)
+    (assertText (GoCore.typeAssertPanicMessage sameNameState
+      (.interface (.defined ⟨"red/inner.T"⟩) (.int 1 .int)) (.int .int) none none))
     "interface conversion: interface {} is inner.T, not int")
+  -- R10: the pkgpath of a TypeId with NO display record REFUSES by name
+  -- (the retired `.getD ""` answered `""` from nothing). Pinned on
+  -- `typePkgForMessage` directly: through the assert text the arm is
+  -- unreachable — a record-less type renders the no-record marker, so its
+  -- display never EQUALS the other side's and no suffix is computed.
+  let noRecordState : GoCore.ExecState :=
+    { types := [(⟨"red/inner.T"⟩, .defined (.int .int)), (⟨"blue/inner.T"⟩, .defined (.int .int))],
+      typeDisplays := #[(⟨"red/inner.T"⟩, { name := "inner.T", pkg := "red/inner" })] }
+  passed := passed && (← expectTrue "DISPLAY/R10: typePkgForMessage of a display-less TypeId refuses by name (never a `\"\"` pkg)"
+    (assertRefuses (GoCore.typePkgForMessage noRecordState (.defined ⟨"blue/inner.T"⟩)) "has no display record"))
+  passed := passed && (← expectTrue "DISPLAY/R10: typePkgForMessage of a recorded TypeId is its record's pkg (control)"
+    (match GoCore.typePkgForMessage noRecordState (.defined ⟨"red/inner.T"⟩) with
+     | .ok p => p == "red/inner"
+     | .error _ => false))
+  passed := passed && (← expectStrEq "DISPLAY/R10: a display-less side renders the marker, so the assert text carries no suffix (the arm is not reached)"
+    (assertText (GoCore.typeAssertPanicMessage noRecordState
+      (.interface (.defined ⟨"red/inner.T"⟩) (.int 1 .int)) (.defined ⟨"blue/inner.T"⟩) none none))
+    "interface conversion: interface {} is inner.T, not <TypeId blue/inner.T has no display record>")
+  -- R1 (audit BLOCKER): gc's pkgpath() of `*T` is T's package iff `*T`'s
+  -- method set is non-empty (reflectdata uncommonSize/typePkg; probed
+  -- go1.26.5: `*inner.Q, not *inner.Q (types from different packages)`
+  -- for Q with a value OR pointer method, `(types from different scopes)`
+  -- for method-less P). States: same-named Q in red/inner and blue/inner.
+  let qTypes : GoCore.TypeEnv :=
+    [(⟨"red/inner.Q"⟩, .struct #[]), (⟨"blue/inner.Q"⟩, .struct #[])]
+  let qDisplays : Array (TypeId × GoCore.TypeDisplay) :=
+    #[(⟨"red/inner.Q"⟩, { name := "inner.Q", pkg := "red/inner" }),
+      (⟨"blue/inner.Q"⟩, { name := "inner.Q", pkg := "blue/inner" })]
+  let qRecords : Array GoCore.MethodSetRecord :=
+    #[{ key := "red/inner.Q", coverage := .full }, { key := "blue/inner.Q", coverage := .full }]
+  let ptrQ (path : String) : GoCore.Ty := .pointer (.defined ⟨path⟩)
+  let ptrBox (path : String) : GoValue := .interface (ptrQ path) (.addr (.base ⟨0⟩))
+  -- (i) value-receiver method on both Q's → `*Q` inherits it → packages.
+  let valueMethodState : GoCore.ExecState :=
+    { types := qTypes, typeDisplays := qDisplays, methodSets := qRecords,
+      methods := #[{ name := "M", funcId := ⟨"red/inner.Q.M"⟩, recv := .defined ⟨"red/inner.Q"⟩ },
+                   { name := "M", funcId := ⟨"blue/inner.Q.M"⟩, recv := .defined ⟨"blue/inner.Q"⟩ }] }
+  passed := passed && (← expectStrEq "R1: *Q with a VALUE-receiver method — gc's (types from different packages)"
+    (assertText (GoCore.typeAssertPanicMessage valueMethodState
+      (ptrBox "red/inner.Q") (ptrQ "blue/inner.Q") none none))
+    "interface conversion: interface {} is *inner.Q, not *inner.Q (types from different packages)")
+  -- (ii) pointer-receiver method → the same.
+  let ptrMethodState : GoCore.ExecState :=
+    { valueMethodState with
+      methods := #[{ name := "M", funcId := ⟨"red/inner.Q.M"⟩, recv := ptrQ "red/inner.Q" },
+                   { name := "M", funcId := ⟨"blue/inner.Q.M"⟩, recv := ptrQ "blue/inner.Q" }] }
+  passed := passed && (← expectStrEq "R1: *Q with a POINTER-receiver method — gc's (types from different packages)"
+    (assertText (GoCore.typeAssertPanicMessage ptrMethodState
+      (ptrBox "red/inner.Q") (ptrQ "blue/inner.Q") none none))
+    "interface conversion: interface {} is *inner.Q, not *inner.Q (types from different packages)")
+  -- (iii) NO methods, FULL records → the sets are genuinely empty → scopes
+  -- (gc: no uncommon section, pointer kind ⇒ pkgpath "").
+  let noMethodState : GoCore.ExecState :=
+    { valueMethodState with methods := #[] }
+  passed := passed && (← expectStrEq "R1: method-less *P with full records — gc's (types from different scopes)"
+    (assertText (GoCore.typeAssertPanicMessage noMethodState
+      (ptrBox "red/inner.Q") (ptrQ "blue/inner.Q") none none))
+    "interface conversion: interface {} is *inner.Q, not *inner.Q (types from different scopes)")
+  -- (iv) NO methods and NO record → the emptiness is unknown → REFUSE by
+  -- name (never a guessed suffix); (v) exported-only record, nothing
+  -- exported on the wire → the same refusal.
+  passed := passed && (← expectTrue "R1: method-less *T with NO method-set record refuses by name"
+    (assertRefuses (GoCore.typeAssertPanicMessage { noMethodState with methodSets := #[] }
+      (ptrBox "red/inner.Q") (ptrQ "blue/inner.Q") none none) "NO method-set record"))
+  passed := passed && (← expectTrue "R1: method-less *T with an exported-only record refuses by name"
+    (assertRefuses (GoCore.typeAssertPanicMessage
+      { noMethodState with methodSets := #[{ key := "red/inner.Q", coverage := .exported },
+                                            { key := "blue/inner.Q", coverage := .exported }] }
+      (ptrBox "red/inner.Q") (ptrQ "blue/inner.Q") none none) "UNDECIDABLE"))
+  -- (vi) `[]Q` — an unnamed slice has no method set whatever Q carries →
+  -- scopes (probed: `[]inner.Q, not []inner.Q (types from different scopes)`).
+  passed := passed && (← expectStrEq "R1: []Q of a method-carrying Q — gc's (types from different scopes)"
+    (assertText (GoCore.typeAssertPanicMessage valueMethodState
+      (.interface (.slice (.defined ⟨"red/inner.Q"⟩)) (.slice { base := none, offset := 0, len := 0, cap := 0 }))
+      (.slice (.defined ⟨"blue/inner.Q"⟩)) none none))
+    "interface conversion: interface {} is []inner.Q, not []inner.Q (types from different scopes)")
+  -- R3: the machine-minted runtime-error payload has one synthetic dynamic
+  -- type where gc has several concrete ones — a concrete-target assert
+  -- text naming it REFUSES (never prints a marker as an observation), and
+  -- `displayNameOf` renders the cause-naming marker rather than
+  -- `<TypeId $runtime.Error has no display record>` (the old docstring
+  -- called this unreachable; `recover(); r.(error)` reaches it inside the
+  -- BUG-009/BUG-053 refusal text).
+  passed := passed && (← expectTrue "R3: asserting a recovered runtime error to a concrete type refuses by name"
+    (assertRefuses (GoCore.typeAssertPanicMessage sameNameState
+      (GoCore.Machine.runtimeErrorValue "runtime error: index out of range [3] with length 3") (.int .int) none none)
+      "recovered runtime error"))
+  passed := passed && (← expectStrEq "R3: displayNameOf renders the runtime-error marker, naming its cause"
+    (GoCore.displayNameOf sameNameState GoCore.runtimeErrorTypeId) GoCore.runtimeErrorDisplayMarker)
+  passed := passed && (← expectTrue "R3: the marker names the synthetic id and the BUG class (not the bare no-record text)"
+    ((GoCore.runtimeErrorDisplayMarker.splitOn "$runtime.Error").length > 1
+      && (GoCore.runtimeErrorDisplayMarker.splitOn "BUG-009/BUG-053").length > 1
+      && (GoCore.runtimeErrorDisplayMarker.splitOn "has no display record").length == 1))
   -- THE DEDUP CERTIFIER'S REFUSALS (POR slice, audit fix 2026-08-21,
   -- finding B-LOW): the slice landed `checkCert` with its fail-closed
   -- behavior demonstrated ONCE, by hand, in a session probe — no

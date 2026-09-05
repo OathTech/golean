@@ -7,7 +7,9 @@ package main
 // docs/evidence/2026-09-05_fr19-bug097/gc-probes.txt).
 
 import (
+	"go/token"
 	"go/types"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -182,5 +184,133 @@ func TestUnexportedMethodScopeGuardSinglePackage(t *testing.T) {
 	e.noteInterface("k", iface)
 	if err := e.checkUnexportedMethodScopes(); err != nil {
 		t.Fatalf("single-package unexported requirement must not refuse: %v", err)
+	}
+}
+
+// ---- the emitter's fail-closed refusals at the identity/display boundary
+// (audit fix round R5, 2026-09-05: three refusals shipped with no test) ----
+
+// TestAttachTypeDisplaysRefusesUnregisteredKey: a TypeDef whose key has
+// no display record was minted outside the boundary constructors — the
+// attach pass refuses by name (identity.go attachTypeDisplays).
+func TestAttachTypeDisplaysRefusesUnregisteredKey(t *testing.T) {
+	e := &emitter{}
+	e.noteTypeDisplay("main.Known", typeDisplay{display: "main.Known", pkg: "main"})
+	known := map[string]any{"name": "main.Known", "def": map[string]any{"kind": "struct", "fields": []any{}}}
+	if err := e.attachTypeDisplays([]any{known}); err != nil {
+		t.Fatalf("registered key must attach: %v", err)
+	}
+	if known["display"] != "main.Known" || known["pkg"] != "main" {
+		t.Fatalf("attach wrote %v/%v", known["display"], known["pkg"])
+	}
+	ghost := map[string]any{"name": "main.Ghost", "def": map[string]any{"kind": "struct", "fields": []any{}}}
+	err := e.attachTypeDisplays([]any{known, ghost})
+	if err == nil {
+		t.Fatal("a TypeDef with no display record must refuse the export")
+	}
+	if !strings.Contains(err.Error(), "TypeDef main.Ghost has no display record") {
+		t.Fatalf("refusal must name the key and the cause; got: %v", err)
+	}
+}
+
+// TestDisplayConflictRefusal: one key registered with two different
+// display records is a minting defect — refused by name, listing the key
+// and both records (identity.go noteTypeDisplay / displayConflictRefusal);
+// a repeated IDENTICAL registration is not a conflict.
+func TestDisplayConflictRefusal(t *testing.T) {
+	e := &emitter{}
+	e.noteTypeDisplay("main.T", typeDisplay{display: "main.T", pkg: "main"})
+	e.noteTypeDisplay("main.T", typeDisplay{display: "main.T", pkg: "main"})
+	if err := e.displayConflictRefusal(); err != nil {
+		t.Fatalf("an identical re-registration is not a conflict: %v", err)
+	}
+	e.noteTypeDisplay("main.T", typeDisplay{display: "other.T", pkg: "other"})
+	err := e.displayConflictRefusal()
+	if err == nil {
+		t.Fatal("two different display records for one key must refuse")
+	}
+	for _, want := range []string{"two different display records", "main.T", "main.T/main", "other.T/other"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("refusal must contain %q; got: %v", want, err)
+		}
+	}
+	// The attach pass carries the same refusal even when every key is
+	// registered (the conflict, not the absence, is the cause).
+	td := map[string]any{"name": "main.T", "def": map[string]any{"kind": "struct", "fields": []any{}}}
+	if err := e.attachTypeDisplays([]any{td}); err == nil || !strings.Contains(err.Error(), "two different display records") {
+		t.Fatalf("attach must refuse on a display conflict; got: %v", err)
+	}
+}
+
+// TestLocalTypeOrdinalMissingRefuses: a function-local TypeName the
+// ordinal table does not know (not among the loaded units' Defs) cannot
+// be keyed — recorded and refused by name (identity.go localTypeOrdinal /
+// checkLocalTypeOrdinals); the real locals of the same package resolve.
+func TestLocalTypeOrdinalMissingRefuses(t *testing.T) {
+	e, pkg := checkSource(t, identityTestSrc)
+	// Control: a genuine local type has an ordinal and the check is silent.
+	var localL *types.TypeName
+	for _, obj := range e.info.Defs {
+		if tn, ok := obj.(*types.TypeName); ok && tn.Name() == "L" && tn.Parent() != pkg.Scope() {
+			localL = tn
+			break
+		}
+	}
+	if localL == nil {
+		t.Fatal("fixture has no local L")
+	}
+	if n, ok := e.localTypeOrdinal(localL); !ok || n < 1 {
+		t.Fatalf("local L must carry an ordinal, got %d/%v", n, ok)
+	}
+	if err := e.checkLocalTypeOrdinals(); err != nil {
+		t.Fatalf("no phantom yet, check must be silent: %v", err)
+	}
+	// A phantom local type: declared in a scope below the package scope,
+	// unknown to types.Info.Defs.
+	phantomScope := types.NewScope(pkg.Scope(), token.NoPos, token.NoPos, "phantom")
+	ghost := types.NewTypeName(token.NoPos, pkg, "Ghost", nil)
+	types.NewNamed(ghost, types.Typ[types.Int], nil)
+	phantomScope.Insert(ghost)
+	if _, ok := e.localTypeOrdinal(ghost); ok {
+		t.Fatal("a TypeName outside the units' Defs must not receive an ordinal")
+	}
+	err := e.checkLocalTypeOrdinals()
+	if err == nil {
+		t.Fatal("a local type without an ordinal must refuse the export")
+	}
+	if !strings.Contains(err.Error(), "main.Ghost") || !strings.Contains(err.Error(), "without a scope ordinal") {
+		t.Fatalf("refusal must name the type and the cause; got: %v", err)
+	}
+}
+
+// TestKeyPathGrammarRefusesEscapedPaths (audit fix round R11): an import
+// path gc's objabi.PathToPrefix would %-escape (non-ASCII, '%', '"') is
+// refused at the minting boundary by name, alongside the '.' and '·'
+// grammar hazards; a plain ASCII path is not.
+func TestKeyPathGrammarRefusesEscapedPaths(t *testing.T) {
+	ok := &emitter{}
+	ok.pkgQualifier(types.NewPackage("pkgs/naive", "naive"))
+	ok.pkgQualifier(types.NewPackage("red/inner", "inner"))
+	if err := ok.checkKeyPathGrammar(); err != nil {
+		t.Fatalf("ASCII dot-free paths must pass: %v", err)
+	}
+	cases := map[string]string{
+		"pkgs/naïve":       "PathToPrefix",
+		"pkgs/100%":        "PathToPrefix",
+		"pkgs/\"quoted\"":  "PathToPrefix",
+		"example.com/pkgs": "'.'",
+		"pkgs/a·b":         "U+00B7",
+	}
+	for path, want := range cases {
+		e := &emitter{}
+		e.pkgQualifier(types.NewPackage(path, "p"))
+		err := e.checkKeyPathGrammar()
+		if err == nil {
+			t.Errorf("%q must refuse", path)
+			continue
+		}
+		if !strings.Contains(err.Error(), want) || !strings.Contains(err.Error(), strconv.Quote(path)) {
+			t.Errorf("%q: refusal must name the path and the hazard (%s); got: %v", path, want, err)
+		}
 	}
 }
