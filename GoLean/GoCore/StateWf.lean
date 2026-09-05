@@ -512,7 +512,7 @@ def evClausesSup : List EvClause → Nat
   | [] => 0
   | c :: cs => max (evClauseSup c) (evClausesSup cs)
 
-/-- Configuration sup. `.panicked` carries only the rendered message. -/
+/-- Configuration sup. -/
 def Config.locSup : Config → Nat
   | .exec stmt env k =>
       max (max (Stmt.locSup stmt) (LocalEnv.locSup env)) (Cont.locSup k)
@@ -521,7 +521,6 @@ def Config.locSup : Config → Nat
   | .retV v k => max (GoValue.locSup v) (Cont.locSup k)
   | .next k | .signal _ k => Cont.locSup k
   | .panicking chain k => max (panicChainSup chain) (Cont.locSup k)
-  | .panicked _ => 0
   | .blockedSend ch v k =>
       max (optLocSup ch) (max (GoValue.locSup v) (Cont.locSup k))
   | .blockedRecv ch targets _ env k =>
@@ -530,13 +529,9 @@ def Config.locSup : Config → Nat
           (max (LocalEnv.locSup env) (Cont.locSup k)))
   | .blockedSelect clauses env k =>
       max (evClausesSup clauses) (max (LocalEnv.locSup env) (Cont.locSup k))
-  | .opDone _ inner => Config.locSup inner
   | .blockedSync op loc env k =>
       max (max (syncOpSup op) (Loc.locSup loc))
         (max (LocalEnv.locSup env) (Cont.locSup k))
-
-@[simp] theorem Config.locSup_opDone {sc : ChoiceSite} {c : Config} :
-    Config.locSup (.opDone sc c) = Config.locSup c := rfl
 
 /-- The signal table never mints a location: every successor it produces
 is built from the frame's own payload (B4). -/
@@ -619,14 +614,7 @@ def Config.itersNormalized (types : TypeEnv) : Config → Bool
   | .blockedSend _ _ k => Cont.itersNormalized types k
   | .blockedRecv _ _ _ _ k => Cont.itersNormalized types k
   | .blockedSelect _ _ k => Cont.itersNormalized types k
-  | .opDone _ inner => Config.itersNormalized types inner
   | .blockedSync _ _ _ k => Cont.itersNormalized types k
-  | .panicked _ => true
-
-@[simp] theorem Config.itersNormalized_opDone {types : TypeEnv}
-    {sc : ChoiceSite} {c : Config} :
-    Config.itersNormalized types (.opDone sc c)
-      = Config.itersNormalized types c := rfl
 
 /-- VACUITY, stated loudly (BUG-005 (L) surgery): with the snapshot
 retired, no constructor contributes a check, so the component is
@@ -5869,8 +5857,8 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
     -- B4: the table's successors are built from the frame's own payload.
     refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     have hle := signalStep_locSup hstep
-    simp only [ConfigWf, Config.locSup] at hc ⊢
-    omega
+    simp only [ConfigWf, Config.locSup] at hc
+    exact Nat.le_trans hle hc
   case evalGlobal =>
     -- A4: the produced address is the global's index; the rule's premise
     -- (the cell exists) is exactly its bound.

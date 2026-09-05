@@ -52,12 +52,11 @@ result locations); an errored readout is no observation (the checker
 refuses such nodes — fail closed, never a silent member); every Go
 terminal IS one. -/
 def obsOf? (resultLocs : List Loc) :
-    Except Stop (ExecOutcome × Choices) → Option Obs
-  | .ok (.normal σf, _) =>
+    Except Stop (ExecState × Choices) → Option Obs
+  | .ok (σf, _) =>
       match loadMany σf resultLocs with
       | .ok vs => some (.ok vs)
       | .error _ => none
-  | .ok (_, _) => none
   | .error (.terminal t) => some (.terminal t)
   | .error _ => none
 

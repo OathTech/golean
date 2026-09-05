@@ -8,7 +8,7 @@ the two discharge routes the slice-2 build log recorded for `GoSpecC`'s
 `∀ ch` quantifier ("the concurrent WP or a pool-level ∀-streams kernel
 checker"). One kernel evaluation certifies that EVERY choice stream —
 schedules (L1) and data latitude together, D8's single-stream design —
-runs a seeded pool to main's `.normal` terminal with a caller-chosen
+runs a seeded pool to main's terminal with a caller-chosen
 Bool readout of the joined final state.
 
 Design (mirroring the sequential checker's discipline,
@@ -43,7 +43,7 @@ Design (mirroring the sequential checker's discipline,
   fail-closed flag its verdict is stream-independent.
 
 `execProgLoop_ok_of_allStreamsOkPool` is the soundness theorem: checker
-true at fuel `N` ⇒ every stream's pool run completes `.ok (.normal σf)`
+true at fuel `N` ⇒ every stream's pool run completes `.ok σf`
 within `N` with `post σf = true` — in particular no run deadlocks, no
 run trips the race detector, on ANY modeled schedule.
 -/
@@ -85,12 +85,14 @@ longer a blanket refusal — accepted exactly when the arrival analysis
 is partnerless (`.cellPath`) AND the apply is non-consuming
 (`selectApplyDone`, the `.done` shape); a multi-ready (L2-consuming)
 or partnered select still fails closed. -/
-def poolThreadOblivious (s : ExecState) (ts : Array Config) (i : Nat) : Bool :=
+def poolThreadOblivious (s : ExecState) (ts : Array Thread) (i : Nat) : Bool :=
   match ts[i]? with
   | none => false
-  | some c =>
+  | some (.aborted _) => true
+  | some (.running _ (some _)) => true
+  | some (.running c none) =>
     if isBlockedConfig c then true
-    else if (opDoneInner c).isSome then true
+    else if c.abort?.isSome then true
     else if (spawnPlan c).isSome then !consumesNilValueMethod s c
     else if consumesSelect c then
       (match arrivalCases s ts i c with
@@ -206,8 +208,8 @@ detector folds events, so obliviousness of the verdict rides on
 obliviousness of the event — which holds by construction on certified
 shapes, whose picks lists are empty and whose actions are computed
 stream-freely). -/
-theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
-    {ch₀ : Choices} {ts' : Array Config} {s' : ExecState} {ch₀' : Choices}
+theorem stepThread_oblivious {s : ExecState} {ts : Array Thread} {i : Nat}
+    {ch₀ : Choices} {ts' : Array Thread} {s' : ExecState} {ch₀' : Choices}
     {ev : StepEvent}
     (hobl : poolThreadOblivious s ts i = true)
     (h : stepThread s ts i ch₀ = .ok (ts', s', ch₀', ev)) :
@@ -217,8 +219,20 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
   unfold stepThread at h
   cases hti : ts[i]? with
   | none => rw [hti] at hobl; cases hobl
-  | some c =>
+  | some t =>
     rw [hti] at hobl h
+    rcases t with ⟨c, b⟩ | msg
+    case aborted => simp [throw, throwThe, MonadExceptOf.throw] at h
+    cases b with
+    | some site =>
+      -- the boundary CLEAR (C5): stream-free
+      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+      refine ⟨rfl, fun ch => ?_⟩
+      unfold stepThread
+      rw [hti]
+      rfl
+    | none =>
     by_cases hblc : isBlockedConfig c = true
     · simp only [hblc, reduceIte, bind_eq_ok] at h
       obtain ⟨⟨c₂, s₂⟩, hres, h⟩ := h
@@ -231,18 +245,22 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
       rfl
     · simp only [Bool.not_eq_true] at hblc
       simp only [hblc, Bool.false_eq_true, reduceIte] at h hobl
-      cases hsc : opDoneInner c with
-      | some inner =>
-        rw [hsc] at h
+      cases hab : c.abort? with
+      | some p =>
+        -- THE ABORT (B4): the render reads no stream
+        obtain ⟨first, rest⟩ := p
+        rw [hab] at h
+        simp only [bind_eq_ok] at h
+        obtain ⟨msg, hmsg, h⟩ := h
         simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl, rfl, rfl⟩ := h
         refine ⟨rfl, fun ch => ?_⟩
         unfold stepThread
         rw [hti]
-        simp only [hblc, Bool.false_eq_true, reduceIte, hsc]
+        simp only [hblc, Bool.false_eq_true, reduceIte, hab, hmsg, Bind.bind, Except.bind]
         rfl
       | none =>
-        rw [hsc] at h hobl
+        rw [hab] at h hobl
         simp only [Option.isSome_none, Bool.false_eq_true, reduceIte] at hobl
         cases hsp : spawnPlan c with
         | some p =>
@@ -267,7 +285,7 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
           refine ⟨rfl, fun ch => ?_⟩
           unfold stepThread
           rw [hti]
-          simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp, hall ch,
+          simp only [hblc, Bool.false_eq_true, reduceIte, hab, hsp, hall ch,
             Bind.bind, Except.bind]
           rfl
         | none =>
@@ -317,7 +335,7 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
                     refine ⟨rfl, fun ch => ?_⟩
                     unfold stepThread
                     rw [hti]
-                    simp only [hblc, Bool.false_eq_true, reduceIte, hsc,
+                    simp only [hblc, Bool.false_eq_true, reduceIte, hab,
                       hsp, Bind.bind, Except.bind,
                       arrivalPlan_of_cellPath (ch := ch) harr]
                     simp only [selectApplyPlan]
@@ -373,7 +391,7 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
               refine ⟨rfl, fun ch => ?_⟩
               unfold stepThread
               rw [hti]
-              simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp,
+              simp only [hblc, Bool.false_eq_true, reduceIte, hab, hsp,
                 Bind.bind, Except.bind, arrivalPlan_of_cellPath (ch := ch) harr]
               rw [hselp]
               dsimp only
@@ -404,7 +422,7 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
                   refine ⟨rfl, fun ch => ?_⟩
                   unfold stepThread
                   rw [hti]
-                  simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp,
+                  simp only [hblc, Bool.false_eq_true, reduceIte, hab, hsp,
                     Bind.bind, Except.bind,
                     arrivalPlan_of_single (ch := ch) harr]
                   rw [show Choices.consumeAtE .l4Waiter [cand].length ch
@@ -444,13 +462,13 @@ def stepAllBranchesOk (next : MultiConfig → RaceState → Bool)
     | .error _ => false
   match m.threads[m.cur]? with
   | none => false
-  | some c =>
-    if c.atBoundary then
+  | some t =>
+    if t.atBoundary then
       -- Branch over the boundary's SLOT MENU (stage C: `schedSlots`
       -- at the boundary's own site — issuer-first at postOp), so the
       -- probe's `[j]` prefix indexes exactly the slot the machine's
-      -- `consumeAtE c.boundarySite` resolves.
-      match schedSlots m.shared m.threads m.cur c.boundarySite with
+      -- `consumeAtE t.boundarySite` resolves.
+      match schedSlots m.shared m.threads m.cur t.boundarySite with
       | [] => false
       | [i] => probe i []
       | rs =>
@@ -462,7 +480,7 @@ def stepAllBranchesOk (next : MultiConfig → RaceState → Bool)
 
 /-- **THE POOL ∀-STREAMS CHECKER** (docstring above): kernel-evaluable
 certification that every choice stream completes the pool run at main's
-`.normal` terminal with `post` true of the joined final state. The
+terminal with `post` true of the joined final state. The
 BUG-044 MAIN-EXIT WINDOW (L5) is covered: at main's terminal with other
 goroutines still runnable, BOTH window branches must certify — the
 exit itself (`post σf`) AND every continuation step
@@ -478,12 +496,11 @@ def allStreamsOkPool (post : ExecState → Bool) :
       | some _ => false
       | none =>
         match m.mainOutcome? with
-        | some (.normal σf) =>
+        | some σf =>
           (match runnableIdxs m.shared m.threads with
           | [] => post σf
           | _ :: _ =>
               post σf && stepAllBranchesOk (allStreamsOkPool post fuel) m r)
-        | some _ => false
         | none =>
           if (runnableIdxs m.shared m.threads).isEmpty then false
           else stepAllBranchesOk (allStreamsOkPool post fuel) m r
@@ -532,7 +549,7 @@ set_option maxHeartbeats 1600000 in
 induction step of the checker's soundness theorem: if every scheduler
 branch of one pool step certifies (with `next` = the fuel-`n` checker,
 whose soundness is the induction hypothesis `ih`), then under EVERY
-stream the step-then-recurse pipeline completes at main's `.normal`
+stream the step-then-recurse pipeline completes at main's
 terminal with `post`. Shared verbatim by both classification arms that
 step (mid-run, and the BUG-044 main-exit window's continue branch).
 Stage B: the detector folds the step EVENT — the probe's event equals
@@ -543,7 +560,7 @@ theorem stepAllBranchesOk_sound {post : ExecState → Bool} {n : Nat}
     (ih : ∀ {m' : MultiConfig} {r' : RaceState},
       allStreamsOkPool post n m' r' = true →
       ∀ ch : Choices, ∃ (σf : ExecState) (ch' : Choices),
-        execProgLoop n m' r' ch = .ok (.normal σf, ch') ∧ post σf = true)
+        execProgLoop n m' r' ch = .ok (σf, ch') ∧ post σf = true)
     (hall : stepAllBranchesOk (allStreamsOkPool post n) m r = true) :
     ∀ ch : Choices, ∃ (σf : ExecState) (ch' : Choices),
       ((do
@@ -552,8 +569,8 @@ theorem stepAllBranchesOk_sound {post : ExecState → Bool} {n : Nat}
         | (m', choices', ev) => do
             let r' ← raceUpdate m.shared m.threads ev m' r
             execProgLoop n m' r' choices')
-        : Except Stop (ExecOutcome × Choices))
-        = .ok (.normal σf, ch') ∧ post σf = true := by
+        : Except Stop (ExecState × Choices))
+        = .ok (σf, ch') ∧ post σf = true := by
   intro ch
   unfold stepAllBranchesOk at hall
   dsimp only at hall
@@ -613,8 +630,8 @@ theorem stepAllBranchesOk_sound {post : ExecState → Bool} {n : Nat}
             | (m', choices', ev) => do
                 let r' ← raceUpdate m.shared m.threads ev m' r
                 execProgLoop n m' r' choices')
-            : Except Stop (ExecOutcome × Choices))
-            = .ok (.normal σf, ch') ∧ post σf = true := by
+            : Except Stop (ExecState × Choices))
+            = .ok (σf, ch') ∧ post σf = true := by
       intro chTail ev m' r' hru hnext hreal
       obtain ⟨σf, ch'', hrec, hpost⟩ := ih hnext chTail
       refine ⟨σf, ch'', ?_, hpost⟩
@@ -790,7 +807,7 @@ theorem stepAllBranchesOk_sound {post : ExecState → Bool} {n : Nat}
 set_option maxHeartbeats 1600000 in
 /-- **Checker soundness**: `allStreamsOkPool post fuel m r = true`
 certifies that EVERY choice stream's pool run from `(m, r)` completes
-at main's `.normal` terminal within `fuel`, with `post` true of the
+at main's terminal within `fuel`, with `post` true of the
 joined final state — schedules and data latitude quantified together
 (one stream), deadlock and race refusals excluded on every modeled
 schedule, and (BUG-044) the main-exit window's branches both covered:
@@ -800,7 +817,7 @@ theorem execProgLoop_ok_of_allStreamsOkPool {post : ExecState → Bool} :
     ∀ {fuel : Nat} {m : MultiConfig} {r : RaceState},
       allStreamsOkPool post fuel m r = true →
       ∀ ch : Choices, ∃ (σf : ExecState) (ch' : Choices),
-        execProgLoop fuel m r ch = .ok (.normal σf, ch') ∧ post σf = true := by
+        execProgLoop fuel m r ch = .ok (σf, ch') ∧ post σf = true := by
   intro fuel
   induction fuel with
   | zero =>
@@ -819,30 +836,25 @@ theorem execProgLoop_ok_of_allStreamsOkPool {post : ExecState → Bool} :
       | none =>
         rw [hp] at hall
         cases hm : m.mainOutcome? with
-        | some out =>
+        | some σf =>
           rw [hm] at hall
-          cases out with
-          | normal σf =>
-            cases hrs : runnableIdxs m.shared m.threads with
-            | nil =>
-              rw [hrs] at hall
-              exact ⟨σf, ch, rfl, hall⟩
-            | cons r0 rest =>
-              -- the BUG-044 main-exit window: both picks certified
-              rw [hrs] at hall
-              rw [Bool.and_eq_true] at hall
-              obtain ⟨hpost, hstep⟩ := hall
-              dsimp only
-              rcases hcons : Choices.consume ch 2 with ⟨pick, ch₁⟩
-              dsimp only
-              by_cases hpick : (pick == 0) = true
-              · rw [if_pos hpick]
-                exact ⟨σf, ch₁, rfl, hpost⟩
-              · rw [if_neg hpick]
-                exact stepAllBranchesOk_sound ih hstep ch₁
-          | returned σf => cases hall
-          | broke σf => cases hall
-          | continued σf => cases hall
+          cases hrs : runnableIdxs m.shared m.threads with
+          | nil =>
+            rw [hrs] at hall
+            exact ⟨σf, ch, rfl, hall⟩
+          | cons r0 rest =>
+            -- the BUG-044 main-exit window: both picks certified
+            rw [hrs] at hall
+            rw [Bool.and_eq_true] at hall
+            obtain ⟨hpost, hstep⟩ := hall
+            dsimp only
+            rcases hcons : Choices.consume ch 2 with ⟨pick, ch₁⟩
+            dsimp only
+            by_cases hpick : (pick == 0) = true
+            · rw [if_pos hpick]
+              exact ⟨σf, ch₁, rfl, hpost⟩
+            · rw [if_neg hpick]
+              exact stepAllBranchesOk_sound ih hstep ch₁
         | none =>
           rw [hm] at hall
           by_cases hrun : (runnableIdxs m.shared m.threads).isEmpty
@@ -857,7 +869,7 @@ under more fuel (the classification arms precede the fuel check —
 every larger fuel in `TerminatesC`-shaped statements). -/
 theorem execProgLoop_mono :
     ∀ {fuel : Nat} {m : MultiConfig} {r : RaceState} {ch : Choices}
-      {out : ExecOutcome} {ch' : Choices} {fuel' : Nat},
+      {out : ExecState} {ch' : Choices} {fuel' : Nat},
       execProgLoop fuel m r ch = .ok (out, ch') → fuel ≤ fuel' →
       execProgLoop fuel' m r ch = .ok (out, ch') := by
   intro fuel
@@ -987,7 +999,7 @@ throws. With `execProgLoop_mono` this makes the certificate-derived
 fuel-independence lift). -/
 theorem execProgLoop_le :
     ∀ {fuel : Nat} {m : MultiConfig} {r : RaceState} {ch : Choices}
-      {out : ExecOutcome} {ch' : Choices} {fuel' : Nat},
+      {out : ExecState} {ch' : Choices} {fuel' : Nat},
       execProgLoop fuel m r ch = .ok (out, ch') → fuel' ≤ fuel →
       execProgLoop fuel' m r ch = .ok (out, ch')
         ∨ execProgLoop fuel' m r ch = .error .fuelOut := by
@@ -1223,20 +1235,15 @@ theorem allStreamsOkPool_mono {post : ExecState → Bool} :
           cases hm : m.mainOutcome? with
           | some o =>
             rw [hm] at h
-            cases o with
-            | normal σf =>
-              cases hrs : runnableIdxs m.shared m.threads with
-              | nil =>
-                rw [hrs] at h
-                exact h
-              | cons r0 rest =>
-                rw [hrs] at h
-                rw [Bool.and_eq_true] at h ⊢
-                obtain ⟨hpost, hstep⟩ := h
-                exact ⟨hpost, stepAllBranchesOk_mono hnext hstep⟩
-            | returned σf => cases h
-            | broke σf => cases h
-            | continued σf => cases h
+            cases hrs : runnableIdxs m.shared m.threads with
+            | nil =>
+              rw [hrs] at h
+              exact h
+            | cons r0 rest =>
+              rw [hrs] at h
+              rw [Bool.and_eq_true] at h ⊢
+              obtain ⟨hpost, hstep⟩ := h
+              exact ⟨hpost, stepAllBranchesOk_mono hnext hstep⟩
           | none =>
             rw [hm] at h
             by_cases hrun : (runnableIdxs m.shared m.threads).isEmpty

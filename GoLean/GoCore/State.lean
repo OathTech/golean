@@ -108,22 +108,11 @@ structure Readout where
   output : GoString := GoString.empty
   deriving Repr, BEq
 
-/-- Statement-execution outcome classification. Survives the reshape S4
-deletion because the Surface layer's `execStmt`-SHAPED wrapper (F4 §2's
-decided interface, restored at R3) reproduces the old signature
-`… → Except Stop (ExecOutcome × Choices)` over iterated `stepFn`. -/
-inductive ExecOutcome where
-  | normal (state : ExecState)
-  | returned (state : ExecState)
-  | broke (state : ExecState)
-  | continued (state : ExecState)
-  deriving Repr, BEq
-
-def ExecOutcome.state : ExecOutcome → ExecState
-  | .normal state => state
-  | .returned state => state
-  | .broke state => state
-  | .continued state => state
+-- (`ExecOutcome` — the big-step era's `normal/returned/broke/continued`
+-- classification of a bare statement run — was DELETED at B4 (2026-09-05;
+-- owed since A8): the drivers return the final `ExecState` at the one
+-- terminal `.next .stop`; a signal reaching `.stop` is a refusal, not a
+-- completion class.)
 
 def Scope.lookup : Scope → String → Option Loc
   | [], _ => none

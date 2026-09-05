@@ -690,11 +690,12 @@ theorem Cont.eqbF_sound : ∀ f (a b : Cont), Cont.eqbF f a b = true → a = b :
       cases AtomicOp.eqbF_sound _ _ _ h1; cases goValues_sound h2
       cases exprs_sound f h3; cases eq_of_beq h4; cases ih _ _ h5; rfl
 
-/-! ## `Config` — the control configuration (16 constructors)
+/-! ## `Config` — the control configuration (10 constructors since B4/C5)
 
-Self-recursive through `.opDone (sched : ChoiceSite) (inner : Config)`.
-`ChoiceSite` derives `DecidableEq` and NO `BEq`, so the comparison is
-`decide (· = ·)` with `of_decide_eq_true` as its soundness. -/
+No longer self-recursive (the `.opDone` marker left `Config` at C5); the
+fuel argument stays for the tower's uniform shape. The pool-level
+`Thread` (a configuration with its boundary flag, or the abort
+tombstone) has its own `eqb` below. -/
 
 def Config.eqbF : Nat → Config → Config → Bool
   | 0, _, _ => false
@@ -709,7 +710,6 @@ def Config.eqbF : Nat → Config → Config → Bool
     | .signal sg1 k1, .signal sg2 k2 => sg1 == sg2 && Cont.eqbF f k1 k2
     | .panicking c1 k1, .panicking c2 k2 =>
         eqbListP PanicEntry.eqb c1 c2 && Cont.eqbF f k1 k2
-    | .panicked m1, .panicked m2 => m1 == m2
     | .blockedSend c1 v1 k1, .blockedSend c2 v2 k2 =>
         eqbOptionP (· == ·) c1 c2 && GoValue.eqb v1 v2 && Cont.eqbF f k1 k2
     | .blockedRecv c1 t1 el1 e1 k1, .blockedRecv c2 t2 el2 e2 k2 =>
@@ -717,8 +717,6 @@ def Config.eqbF : Nat → Config → Config → Bool
           && Ty.eqb el1 el2 && e1 == e2 && Cont.eqbF f k1 k2
     | .blockedSelect cl1 e1 k1, .blockedSelect cl2 e2 k2 =>
         eqbListP (EvClause.eqbF f) cl1 cl2 && e1 == e2 && Cont.eqbF f k1 k2
-    | .opDone s1 i1, .opDone s2 i2 =>
-        decide (s1 = s2) && Config.eqbF f i1 i2
     | .blockedSync o1 l1 e1 k1, .blockedSync o2 l2 e2 k2 =>
         SyncOp.eqbF f o1 o2 && l1 == l2 && e1 == e2 && Cont.eqbF f k1 k2
     | _, _ => false
@@ -751,8 +749,6 @@ theorem Config.eqbF_sound :
       obtain ⟨h1, h2⟩ := andSplit2 h
       cases eqbListP_sound PanicEntry.eqb_sound h1
       cases Cont.eqbF_sound _ _ _ h2; rfl
-    case panicked.panicked m1 m2 =>
-      cases eq_of_beq (show (m1 == m2) = true from h); rfl
     case blockedSend.blockedSend c1 v1 k1 c2 v2 k2 =>
       obtain ⟨h1, h2, h3⟩ := andSplit3 h
       cases eqbOptionP_sound (fun _ _ hh => eq_of_beq hh) h1
@@ -767,9 +763,6 @@ theorem Config.eqbF_sound :
       obtain ⟨h1, h2, h3⟩ := andSplit3 h
       cases eqbListP_sound (EvClause.eqbF_sound f) h1
       cases eq_of_beq h2; cases Cont.eqbF_sound _ _ _ h3; rfl
-    case opDone.opDone s1 i1 s2 i2 =>
-      obtain ⟨h1, h2⟩ := andSplit2 h
-      cases of_decide_eq_true h1; cases ih _ _ h2; rfl
     case blockedSync.blockedSync o1 l1 e1 k1 o2 l2 e2 k2 =>
       obtain ⟨h1, h2, h3, h4⟩ := andSplit4 h
       cases SyncOp.eqbF_sound _ _ _ h1; cases eq_of_beq h2
@@ -850,11 +843,29 @@ theorem RaceState.eqb_sound {a b : RaceState} (h : RaceState.eqb a b = true) :
 
 /-! ## The pool top and the certificate node -/
 
+/-- Per-goroutine state equality (B4/C5): a live goroutine by its
+configuration and boundary flag (`ChoiceSite` derives `DecidableEq` and
+NO `BEq`, so the flag compares by `decide (· = ·)`), a tombstone by its
+abort line. -/
+def Thread.eqb (f : Nat) : Thread → Thread → Bool
+  | .running c1 b1, .running c2 b2 => Config.eqbF f c1 c2 && decide (b1 = b2)
+  | .aborted m1, .aborted m2 => m1 == m2
+  | _, _ => false
+
+theorem Thread.eqb_sound (f : Nat) (a b : Thread) (h : Thread.eqb f a b = true) :
+    a = b := by
+  cases a <;> cases b <;> (try exact Bool.noConfusion h)
+  case running.running c1 b1 c2 b2 =>
+    obtain ⟨h1, h2⟩ := andSplit2 h
+    cases Config.eqbF_sound _ _ _ h1; cases of_decide_eq_true h2; rfl
+  case aborted.aborted m1 m2 =>
+    cases eq_of_beq (show (m1 == m2) = true from h); rfl
+
 /-- Structural `MultiConfig` equality, cheap-first: the running-goroutine
-index, then the per-goroutine controls, then the shared state. -/
+index, then the per-goroutine states, then the shared state. -/
 def MultiConfig.eqb (a b : MultiConfig) : Bool :=
   a.cur == b.cur
-    && eqbArrayP (Config.eqbF stateEqbFuel) a.threads b.threads
+    && eqbArrayP (Thread.eqb stateEqbFuel) a.threads b.threads
     && ExecState.eqb a.shared b.shared
 
 theorem MultiConfig.eqb_sound (a b : MultiConfig)
@@ -863,7 +874,7 @@ theorem MultiConfig.eqb_sound (a b : MultiConfig)
   obtain ⟨t2, s2, c2⟩ := b
   obtain ⟨h1, h2, h3⟩ := andSplit3 h
   cases eq_of_beq h1
-  cases eqbArrayP_sound (Config.eqbF_sound stateEqbFuel) h2
+  cases eqbArrayP_sound (Thread.eqb_sound stateEqbFuel) h2
   cases ExecState.eqb_sound _ _ h3; rfl
 
 /-- Certificate-node equality: the pool state and the detector state. -/

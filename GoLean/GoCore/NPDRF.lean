@@ -184,7 +184,7 @@ envelope the reduction compares against. -/
 def schedPickFine (m : MultiConfig) (i : Nat) : Prop :=
   i ∈ runnableIdxs m.shared m.threads
 
-/-- The FULL-interleaving pool relation: `StepM`'s six rule classes
+/-- The FULL-interleaving pool relation: `StepM`'s seven rule classes
 verbatim with `schedPickFine` in place of `schedPick`. Proof
 infrastructure for the reduction statement only — the executable
 machine and every statement carrier stay on registry-point
@@ -193,15 +193,27 @@ inductive StepMFine : MultiConfig → MultiConfig → Prop where
   | thread {m : MultiConfig} {i : Nat} {c : Config} {c' : Config} {σ' : ExecState}
       {efs : List Config} :
       schedPickFine m i →
-      m.threads[i]? = some c →
+      m.threads[i]? = some (.running c none) →
       isBlockedConfig c = false →
       arrivalCases m.shared m.threads i c = .ok .cellPath →
       StepE c m.shared c' σ' efs →
-      StepMFine m ⟨(m.threads.setIfInBounds i c') ++ efs.toArray, σ', i⟩
-  | pair {m : MultiConfig} {i : Nat} {c bc : Config} {σ'' : ExecState}
-      {cs : List (Nat × PairTarget)} {idx : Nat} {ts' : Array Config} :
+      StepMFine m ⟨(m.threads.setIfInBounds i (Thread.afterStep m.shared c c'))
+        ++ (efs.map (Thread.running · none)).toArray, σ', i⟩
+  | strip {m : MultiConfig} {i : Nat} {c : Config} {site : ChoiceSite} :
       schedPickFine m i →
-      m.threads[i]? = some c →
+      m.threads[i]? = some (.running c (some site)) →
+      StepMFine m ⟨m.threads.setIfInBounds i (.running c none), m.shared, i⟩
+  | abort {m : MultiConfig} {i : Nat} {c : Config} {first : PanicEntry}
+      {rest : List PanicEntry} {msg : String} :
+      schedPickFine m i →
+      m.threads[i]? = some (.running c none) →
+      c.abort? = some (first, rest) →
+      abortMsg m.shared first rest = .ok msg →
+      StepMFine m ⟨m.threads.setIfInBounds i (.aborted msg), m.shared, i⟩
+  | pair {m : MultiConfig} {i : Nat} {c bc : Config} {σ'' : ExecState}
+      {cs : List (Nat × PairTarget)} {idx : Nat} {ts' : Array Thread} :
+      schedPickFine m i →
+      m.threads[i]? = some (.running c none) →
       isBlockedConfig c = false →
       spawnPlan c = none →
       arrivalCases m.shared m.threads i c = .ok (.single bc cs) →
@@ -210,9 +222,9 @@ inductive StepMFine : MultiConfig → MultiConfig → Prop where
       StepMFine m ⟨ts', σ'', i⟩
   | pickPair {m : MultiConfig} {i : Nat} {c bc : Config} {σ'' : ExecState}
       {os : List ArrivalOutcome} {sel : Nat}
-      {cs : List (Nat × PairTarget)} {idx : Nat} {ts' : Array Config} :
+      {cs : List (Nat × PairTarget)} {idx : Nat} {ts' : Array Thread} :
       schedPickFine m i →
-      m.threads[i]? = some c →
+      m.threads[i]? = some (.running c none) →
       isBlockedConfig c = false →
       spawnPlan c = none →
       arrivalCases m.shared m.threads i c = .ok (.multi os) →
@@ -224,28 +236,36 @@ inductive StepMFine : MultiConfig → MultiConfig → Prop where
       {env : LocalEnv} {k : Cont} {os : List ArrivalOutcome} {sel : Nat}
       {c' : Config} {σ' : ExecState} :
       schedPickFine m i →
-      m.threads[i]? = some c →
+      m.threads[i]? = some (.running c none) →
       isBlockedConfig c = false →
       spawnPlan c = none →
       arrivalCases m.shared m.threads i c = .ok (.multi os) →
       os[sel]? = some (.commit cl env k) →
       commitClause m.shared env k cl = .ok (c', σ') →
-      StepMFine m ⟨m.threads.setIfInBounds i c', σ', i⟩
+      StepMFine m ⟨m.threads.setIfInBounds i (Thread.afterStep m.shared c c'), σ', i⟩
   | wake {m : MultiConfig} {i : Nat} {c c' : Config} {σ' : ExecState} :
       schedPickFine m i →
-      m.threads[i]? = some c →
+      m.threads[i]? = some (.running c none) →
       isBlockedConfig c = true →
       resumeThread m.shared c = .ok (c', σ') →
-      StepMFine m ⟨m.threads.setIfInBounds i c', σ', i⟩
+      StepMFine m ⟨m.threads.setIfInBounds i (Thread.completed c'), σ', i⟩
 
-/-- A finished goroutine's configuration is a registry boundary
-(goroutine exit is a registry op). -/
-theorem threadDone_atBoundary {c : Config} (h : threadDone c = true) :
-    c.atBoundary = true := by
-  -- B3: both are `Config.isTerminal` (the terminal shapes, named once).
-  unfold Config.atBoundary
-  rw [show c.isTerminal = true from h]
-  rfl
+/-- A finished goroutine is at a registry boundary (goroutine exit is a
+registry op; the abort tombstone likewise). -/
+theorem threadDone_atBoundary {t : Thread} (h : threadDone t = true) :
+    t.atBoundary = true := by
+  cases t with
+  | aborted msg => rfl
+  | running c b =>
+    cases b with
+    | some site => simp [threadDone] at h
+    | none =>
+      -- B3: both are `Config.isTerminal` (the terminal shape, named once).
+      simp only [threadDone] at h
+      simp only [Thread.atBoundary]
+      unfold Config.atBoundary
+      rw [h]
+      rfl
 
 /-- A parked goroutine's configuration is a registry boundary. -/
 theorem isBlockedConfig_atBoundary {c : Config} (h : isBlockedConfig c = true) :
@@ -265,18 +285,30 @@ theorem schedPick_le_fine {m : MultiConfig} {i : Nat}
   unfold schedPick at h
   cases hcur : m.threads[m.cur]? with
   | none => rw [hcur] at h; exact absurd h (by simp)
-  | some c =>
+  | some t =>
     rw [hcur] at h
     dsimp only at h
-    by_cases hb : c.atBoundary = true
+    by_cases hb : t.atBoundary = true
     · rwa [if_pos hb] at h
     · simp only [Bool.not_eq_true] at hb
       rw [if_neg (by simp [hb])] at h
       subst h
-      have hdone : threadDone c = false := by
-        cases hd : threadDone c
+      -- Not at a boundary: a live, unflagged goroutine whose configuration
+      -- is neither done nor blocked (both would be at a boundary) —
+      -- hence runnable.
+      obtain ⟨c, rfl⟩ : ∃ c, t = .running c none := by
+        cases t with
+        | aborted msg => simp [Thread.atBoundary] at hb
+        | running c b =>
+          cases b with
+          | some site => simp [Thread.atBoundary] at hb
+          | none => exact ⟨c, rfl⟩
+      simp only [Thread.atBoundary] at hb
+      have hdone : c.isTerminal = false := by
+        cases hd : c.isTerminal
         · rfl
-        · exact absurd (threadDone_atBoundary hd) (by simp [hb])
+        · exact absurd (threadDone_atBoundary (t := .running c none) (by simpa [threadDone] using hd))
+            (by simp [Thread.atBoundary, hb])
       have hbl : isBlockedConfig c = false := by
         cases hd : isBlockedConfig c
         · rfl
@@ -296,6 +328,10 @@ theorem stepM_le_stepMFine {m m' : MultiConfig} (h : StepM m m') :
   cases h with
   | thread hs hti hbl hplan hstep =>
       exact StepMFine.thread (schedPick_le_fine hs) hti hbl hplan hstep
+  | strip hs hti =>
+      exact StepMFine.strip (schedPick_le_fine hs) hti
+  | abort hs hti hab hmsg =>
+      exact StepMFine.abort (schedPick_le_fine hs) hti hab hmsg
   | pair hs hti hbl hsp hplan hidx hap =>
       exact StepMFine.pair (schedPick_le_fine hs) hti hbl hsp hplan hidx hap
   | pickPair hs hti hbl hsp hplan hget hidx hap =>
@@ -337,7 +373,7 @@ the driver into line). See scaffold obstruction 4 on the `.done` state
 comparison. -/
 inductive PoolResult where
   | panicked (msg : String)
-  | done (out : ExecOutcome)
+  | done (σ : ExecState)
   | deadlocked
   deriving Repr, BEq
 
@@ -381,8 +417,11 @@ data access. -/
 def RacyFine (m₀ : MultiConfig) : Prop :=
   ∃ m, StepsMFine m₀ m ∧
     ∃ (i j : Nat) (ci cj : Config), i ≠ j ∧
-      m.threads[i]? = some ci ∧ m.threads[j]? = some cj ∧
-      threadRunnable m.shared ci = true ∧ threadRunnable m.shared cj = true ∧
+      -- (C5: an unflagged live goroutine — a flagged one's next step is
+      -- its boundary clear, footprint-free.)
+      m.threads[i]? = some (.running ci none) ∧ m.threads[j]? = some (.running cj none) ∧
+      threadRunnable m.shared (.running ci none) = true
+        ∧ threadRunnable m.shared (.running cj none) = true ∧
       footprintsConflict (stepAccesses m.shared ci) (stepAccesses m.shared cj)
 
 /-- **THE NPDRF REDUCTION STATEMENT — DRAFT FORM, REFUTABLE AS

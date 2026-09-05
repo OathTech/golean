@@ -33,16 +33,16 @@ set_option linter.unusedSimpArgs false
 multi-candidate pairing shape, a SUCCESSFUL explicit-pick step `[p]`
 determines the step under every stream whose L4 draw reduces to `p` —
 same successor, same state, same event, the stream's tail returned. -/
-theorem stepThread_l4_run {s : ExecState} {ts : Array Config} {i : Nat}
+theorem stepThread_l4_run {s : ExecState} {ts : Array Thread} {i : Nat}
     {c bc : Config} {cs : List (Nat × PairTarget)}
-    (hti : ts[i]? = some c)
+    (hti : ts[i]? = some (.running c none))
     (hblc : isBlockedConfig c = false)
-    (hsc : opDoneInner c = none)
+    (hab : c.abort? = none)
     (hsp : spawnPlan c = none)
     (harr : arrivalCases s ts i c = .ok (.single bc cs))
     (hlen : 2 ≤ cs.length)
     {p : Nat} (hplt : p < cs.length)
-    {ts' : Array Config} {s' : ExecState} {ev : StepEvent}
+    {ts' : Array Thread} {s' : ExecState} {ev : StepEvent}
     (hvec : stepThread s ts i [p] = .ok (ts', s', [], ev)) :
     ∀ {ch rest : Choices}, Choices.consume ch cs.length = (p, rest) →
       stepThread s ts i ch = .ok (ts', s', rest, ev) := by
@@ -60,7 +60,7 @@ theorem stepThread_l4_run {s : ExecState} {ts : Array Config} {i : Nat}
     rw [Choices.consumeAtE_of_lt hlt, hcons]
   unfold stepThread at hvec
   rw [hti] at hvec
-  simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp] at hvec
+  simp only [hblc, Bool.false_eq_true, reduceIte, hab, hsp] at hvec
   simp only [bind_eq_ok] at hvec
   obtain ⟨⟨plan, ch₁, ps₁⟩, hplan, hvec⟩ := hvec
   rw [arrivalPlan_of_single (ch := [p]) harr] at hplan
@@ -86,7 +86,7 @@ theorem stepThread_l4_run {s : ExecState} {ts : Array Config} {i : Nat}
       subst h1; subst h2; subst h4
       unfold stepThread
       rw [hti]
-      simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp,
+      simp only [hblc, Bool.false_eq_true, reduceIte, hab, hsp,
         Bind.bind, Except.bind, arrivalPlan_of_single (ch := ch) harr]
       try dsimp only
       rw [hconsE]
@@ -175,12 +175,12 @@ theorem stepFn_append_nospill {s : ExecState} {v : GoValue}
 /-- N-APP obliviousness at the `stepThread` level: mirrors
 `stepThread_oblivious`'s conclusion for the non-spilling append apply
 shape. -/
-theorem stepThread_append_oblivious {s : ExecState} {ts : Array Config}
+theorem stepThread_append_oblivious {s : ExecState} {ts : Array Thread}
     {i : Nat} {v : GoValue} {elem : GoCore.Ty} {nt : Nat}
     {done : List GoValue} {env : LocalEnv} {k : Cont}
-    (hti : ts[i]? = some (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)))
+    (hti : ts[i]? = some (.running (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) none))
     (hns : appendApplyNoSpill s ((v :: done).reverse) = true)
-    {ch₀ : Choices} {ts' : Array Config} {s' : ExecState} {ch₀' : Choices}
+    {ch₀ : Choices} {ts' : Array Thread} {s' : ExecState} {ch₀' : Choices}
     {ev : StepEvent}
     (h : stepThread s ts i ch₀ = .ok (ts', s', ch₀', ev)) :
     ch₀' = ch₀
@@ -193,7 +193,7 @@ theorem stepThread_append_oblivious {s : ExecState} {ts : Array Config}
   clear hsel
   unfold stepThread at h
   rw [hti] at h
-  simp only [isBlockedConfig, opDoneInner, spawnPlan, Bool.false_eq_true,
+  simp only [isBlockedConfig, Config.abort?, spawnPlan, Bool.false_eq_true,
     reduceIte] at h
   rw [arrivalPlan_of_cellPath (ch := ch₀) harr] at h
   simp only [except_bind_ok] at h
@@ -217,7 +217,7 @@ theorem stepThread_append_oblivious {s : ExecState} {ts : Array Config}
     refine ⟨rfl, fun ch => ?_⟩
     unfold stepThread
     rw [hti]
-    simp only [isBlockedConfig, opDoneInner, spawnPlan, Bool.false_eq_true,
+    simp only [isBlockedConfig, Config.abort?, spawnPlan, Bool.false_eq_true,
       reduceIte]
     rw [arrivalPlan_of_cellPath (ch := ch) harr]
     simp only [except_bind_ok]
@@ -233,7 +233,7 @@ theorem stepThread_append_oblivious {s : ExecState} {ts : Array Config}
 suffixes ALL step successfully, EVERY stream's goroutine-step succeeds
 and matches one of them (same successor and event; the stream's
 unconsumed tail returned). -/
-theorem stepThread_total_covered {s : ExecState} {ts : Array Config}
+theorem stepThread_total_covered {s : ExecState} {ts : Array Thread}
     {i : Nat} {ivs : List (List Nat)}
     (hiv : innerVecs s ts i = some ivs)
     (hedges : ∀ v ∈ ivs, ∃ ts' s' ev,
@@ -253,18 +253,23 @@ theorem stepThread_total_covered {s : ExecState} {ts : Array Config}
   · rw [if_neg hobl] at hiv
     cases hti : ts[i]? with
     | none => rw [hti] at hiv; cases hiv
-    | some c =>
+    | some t =>
       rw [hti] at hiv
+      rcases t with ⟨c, b⟩ | msg
+      case aborted => simp at hiv
+      cases b with
+      | some site => simp at hiv
+      | none =>
       dsimp only at hiv
       cases hblc : isBlockedConfig c with
       | true => rw [hblc] at hiv; simp at hiv
       | false =>
         rw [hblc] at hiv
         simp only [Bool.false_eq_true, reduceIte] at hiv
-        cases hsc : opDoneInner c with
-        | some inner => rw [hsc] at hiv; simp at hiv
+        cases hab : c.abort? with
+        | some p => rw [hab] at hiv; simp at hiv
         | none =>
-          rw [hsc] at hiv
+          rw [hab] at hiv
           simp only [Option.isSome_none, Bool.false_eq_true, reduceIte] at hiv
           cases hsp : spawnPlan c with
           | some pl => rw [hsp] at hiv; simp at hiv
@@ -338,13 +343,13 @@ theorem stepThread_total_covered {s : ExecState} {ts : Array Config}
                           exact ⟨p, hplt, rfl⟩
                         obtain ⟨ts', s', ev, hv⟩ := hedges [p] hpmem
                         exact ⟨[p], hpmem, ts', s', ev, rest, hv,
-                          stepThread_l4_run hti hblc hsc hsp harr hlen
+                          stepThread_l4_run hti hblc hab hsp harr hlen
                             hplt hv hcons⟩
                       · rw [if_neg hlen] at hiv; cases hiv
 
 /-- `slotVecsAux`'s membership property: each menu position's inner
 suffixes are present, slot-prefixed. -/
-theorem slotVecsAux_mem {s : ExecState} {ts : Array Config} :
+theorem slotVecsAux_mem {s : ExecState} {ts : Array Thread} :
     ∀ {rs : List Nat} {p₀ : Nat} {out : List (List Nat)},
       slotVecsAux s ts rs p₀ = some out →
       ∀ {j i}, rs[j]? = some i →
@@ -394,12 +399,12 @@ theorem stepMulti_total_covered {m : MultiConfig} {vecs : List (List Nat)}
   unfold nodeVecs at hv
   cases hti : m.threads[m.cur]? with
   | none => rw [hti] at hv; cases hv
-  | some c =>
+  | some t =>
     rw [hti] at hv
     dsimp only at hv
-    by_cases hb : c.atBoundary = true
+    by_cases hb : t.atBoundary = true
     · rw [if_pos hb] at hv
-      cases hrs : schedSlots m.shared m.threads m.cur c.boundarySite with
+      cases hrs : schedSlots m.shared m.threads m.cur t.boundarySite with
       | nil => rw [hrs] at hv; cases hv
       | cons r0 rest =>
         rw [hrs] at hv
@@ -417,7 +422,7 @@ theorem stepMulti_total_covered {m : MultiConfig} {vecs : List (List Nat)}
             dsimp only at hsm
             rw [if_pos hb, hrs] at hsm
             dsimp only at hsm
-            rw [show Choices.consumeAtE c.boundarySite [r0].length v
+            rw [show Choices.consumeAtE t.boundarySite [r0].length v
                 = (0, v, [])
               from Choices.consumeAtE_le_one (by simp)] at hsm
             simp only [List.getElem?_cons_zero] at hsm
@@ -440,7 +445,7 @@ theorem stepMulti_total_covered {m : MultiConfig} {vecs : List (List Nat)}
             dsimp only
             rw [if_pos hb, hrs]
             dsimp only
-            rw [show Choices.consumeAtE c.boundarySite [r0].length v
+            rw [show Choices.consumeAtE t.boundarySite [r0].length v
                 = (0, v, [])
               from Choices.consumeAtE_le_one (by simp)]
             simp only [List.getElem?_cons_zero]
@@ -453,7 +458,7 @@ theorem stepMulti_total_covered {m : MultiConfig} {vecs : List (List Nat)}
             dsimp only
             rw [if_pos hb, hrs]
             dsimp only
-            rw [show Choices.consumeAtE c.boundarySite [r0].length ch
+            rw [show Choices.consumeAtE t.boundarySite [r0].length ch
                 = (0, ch, [])
               from Choices.consumeAtE_le_one (by simp)]
             simp only [List.getElem?_cons_zero]
@@ -477,10 +482,10 @@ theorem stepMulti_total_covered {m : MultiConfig} {vecs : List (List Nat)}
             List.getElem?_eq_getElem hpicklt
           obtain ⟨ivs, hivs, hpref⟩ := slotVecsAux_mem hv hget
           have hconsV : ∀ v : List Nat,
-              Choices.consumeAtE c.boundarySite
+              Choices.consumeAtE t.boundarySite
                   (r0 :: r1 :: rest').length (pick :: v)
                 = (pick, v,
-                   [⟨c.boundarySite, (r0 :: r1 :: rest').length, pick⟩]) := by
+                   [⟨t.boundarySite, (r0 :: r1 :: rest').length, pick⟩]) := by
             intro v
             have hcP : Choices.consume (pick :: v)
                 (r0 :: r1 :: rest').length = (pick, v) := by
@@ -526,7 +531,7 @@ theorem stepMulti_total_covered {m : MultiConfig} {vecs : List (List Nat)}
           refine ⟨pick :: v, hvecmem,
             ⟨ts', s', (r0 :: r1 :: rest')[pick]⟩,
             { ev with picks :=
-                ⟨c.boundarySite, (r0 :: r1 :: rest').length, pick⟩
+                ⟨t.boundarySite, (r0 :: r1 :: rest').length, pick⟩
                   :: ev.picks },
             tail, ?_, ?_⟩
           · unfold stepMulti
@@ -547,10 +552,10 @@ theorem stepMulti_total_covered {m : MultiConfig} {vecs : List (List Nat)}
             dsimp only
             rw [if_pos hb, hrs]
             dsimp only
-            rw [show Choices.consumeAtE c.boundarySite
+            rw [show Choices.consumeAtE t.boundarySite
                   (r0 :: r1 :: rest').length ch
                 = (pick, tail₀,
-                   [⟨c.boundarySite, (r0 :: r1 :: rest').length, pick⟩])
+                   [⟨t.boundarySite, (r0 :: r1 :: rest').length, pick⟩])
               from by rw [Choices.consumeAtE_of_lt hlt2, hcons]]
             dsimp only
             rw [hget]
@@ -726,56 +731,45 @@ theorem checkCert_complete_aux
         rw [hp] at hnode hobs
         try dsimp only at hnode hobs
         cases hm : m.mainOutcome? with
-        | some out =>
+        | some σf =>
           rw [hm] at hnode hobs
           try dsimp only at hnode hobs
-          cases out with
-          | normal σf =>
-            try dsimp only at hnode hobs
-            cases hload : loadMany σf resultLocs with
-            | error e =>
-              rw [hload] at hnode; cases hnode
-            | ok vs =>
-              rw [hload] at hnode
+          try dsimp only at hnode hobs
+          cases hload : loadMany σf resultLocs with
+          | error e =>
+            rw [hload] at hnode; cases hnode
+          | ok vs =>
+            rw [hload] at hnode
+            try dsimp only at hnode
+            cases hrs : runnableIdxs m.shared m.threads with
+            | nil =>
+              rw [hrs] at hnode hobs
+              try dsimp only at hnode hobs
+              simp only [obsOf?, pure_eq_ok] at hobs
+              rw [hload] at hobs
+              simp only [Option.some.injEq] at hobs
+              cases hobs
+              exact obsMem_mem hnode
+            | cons r0 rest =>
+              rw [hrs] at hnode hobs
+              try dsimp only at hnode hobs
+              try dsimp only at hobs
+              rcases hcons : Choices.consume ch 2 with ⟨pick, ch₁⟩
+              rw [hcons] at hobs
+              try dsimp only at hobs
+              try dsimp only at hobs
+              rw [Bool.and_eq_true] at hnode
               try dsimp only at hnode
-              cases hrs : runnableIdxs m.shared m.threads with
-              | nil =>
-                rw [hrs] at hnode hobs
-                try dsimp only at hnode hobs
+              obtain ⟨hmem, -⟩ := hnode
+              by_cases hpick : (pick == 0) = true
+              · rw [if_pos hpick] at hobs
                 simp only [obsOf?, pure_eq_ok] at hobs
                 rw [hload] at hobs
                 simp only [Option.some.injEq] at hobs
                 cases hobs
-                exact obsMem_mem hnode
-              | cons r0 rest =>
-                rw [hrs] at hnode hobs
-                try dsimp only at hnode hobs
-                try dsimp only at hobs
-                rcases hcons : Choices.consume ch 2 with ⟨pick, ch₁⟩
-                rw [hcons] at hobs
-                try dsimp only at hobs
-                try dsimp only at hobs
-                rw [Bool.and_eq_true] at hnode
-                try dsimp only at hnode
-                obtain ⟨hmem, -⟩ := hnode
-                by_cases hpick : (pick == 0) = true
-                · rw [if_pos hpick] at hobs
-                  simp only [obsOf?, pure_eq_ok] at hobs
-                  rw [hload] at hobs
-                  simp only [Option.some.injEq] at hobs
-                  cases hobs
-                  exact obsMem_mem hmem
-                · rw [if_neg hpick] at hobs
-                  simp [obsOf?, throw, throwThe, MonadExceptOf.throw] at hobs
-          | returned σf =>
-              try dsimp only at hnode
-              cases hnode
-          | broke σf =>
-              try dsimp only at hnode
-              cases hnode
-          | continued σf =>
-              try dsimp only at hnode
-              cases hnode
+                exact obsMem_mem hmem
+              · rw [if_neg hpick] at hobs
+                simp [obsOf?, throw, throwThe, MonadExceptOf.throw] at hobs
         | none =>
           rw [hm] at hnode hobs
           try dsimp only at hnode hobs
@@ -808,7 +802,7 @@ theorem checkCert_complete_aux
             | (m', choices', ev) => do
                 let r' ← raceUpdate m.shared m.threads ev m' r
                 execProgLoop n m' r' choices')
-           : Except Stop (ExecOutcome × Choices)) = some o →
+           : Except Stop (ExecState × Choices)) = some o →
         o ∈ cert.obsSet := by
       intro chS hstep hobs'
       obtain ⟨vecs, hv, -, hparts⟩ := checkStep_parts hstep
@@ -859,56 +853,45 @@ theorem checkCert_complete_aux
         rw [hp] at hnode hobs
         try dsimp only at hnode hobs
         cases hm : m.mainOutcome? with
-        | some out =>
+        | some σf =>
           rw [hm] at hnode hobs
           try dsimp only at hnode hobs
-          cases out with
-          | normal σf =>
-            try dsimp only at hnode hobs
-            cases hload : loadMany σf resultLocs with
-            | error e =>
-              rw [hload] at hnode; cases hnode
-            | ok vs =>
-              rw [hload] at hnode
+          try dsimp only at hnode hobs
+          cases hload : loadMany σf resultLocs with
+          | error e =>
+            rw [hload] at hnode; cases hnode
+          | ok vs =>
+            rw [hload] at hnode
+            try dsimp only at hnode
+            cases hrs : runnableIdxs m.shared m.threads with
+            | nil =>
+              rw [hrs] at hnode hobs
+              try dsimp only at hnode hobs
+              simp only [obsOf?, pure_eq_ok] at hobs
+              rw [hload] at hobs
+              simp only [Option.some.injEq] at hobs
+              cases hobs
+              exact obsMem_mem hnode
+            | cons r0 rest =>
+              rw [hrs] at hnode hobs
+              try dsimp only at hnode hobs
+              try dsimp only at hobs
+              rcases hcons : Choices.consume ch 2 with ⟨pick, ch₁⟩
+              rw [hcons] at hobs
+              try dsimp only at hobs
+              try dsimp only at hobs
+              rw [Bool.and_eq_true] at hnode
               try dsimp only at hnode
-              cases hrs : runnableIdxs m.shared m.threads with
-              | nil =>
-                rw [hrs] at hnode hobs
-                try dsimp only at hnode hobs
+              obtain ⟨hmem, hstep⟩ := hnode
+              by_cases hpick : (pick == 0) = true
+              · rw [if_pos hpick] at hobs
                 simp only [obsOf?, pure_eq_ok] at hobs
                 rw [hload] at hobs
                 simp only [Option.some.injEq] at hobs
                 cases hobs
-                exact obsMem_mem hnode
-              | cons r0 rest =>
-                rw [hrs] at hnode hobs
-                try dsimp only at hnode hobs
-                try dsimp only at hobs
-                rcases hcons : Choices.consume ch 2 with ⟨pick, ch₁⟩
-                rw [hcons] at hobs
-                try dsimp only at hobs
-                try dsimp only at hobs
-                rw [Bool.and_eq_true] at hnode
-                try dsimp only at hnode
-                obtain ⟨hmem, hstep⟩ := hnode
-                by_cases hpick : (pick == 0) = true
-                · rw [if_pos hpick] at hobs
-                  simp only [obsOf?, pure_eq_ok] at hobs
-                  rw [hload] at hobs
-                  simp only [Option.some.injEq] at hobs
-                  cases hobs
-                  exact obsMem_mem hmem
-                · rw [if_neg hpick] at hobs
-                  exact hstepArm ch₁ hstep hobs
-          | returned σf =>
-              try dsimp only at hnode
-              cases hnode
-          | broke σf =>
-              try dsimp only at hnode
-              cases hnode
-          | continued σf =>
-              try dsimp only at hnode
-              cases hnode
+                exact obsMem_mem hmem
+              · rw [if_neg hpick] at hobs
+                exact hstepArm ch₁ hstep hobs
         | none =>
           rw [hm] at hnode hobs
           try dsimp only at hnode hobs

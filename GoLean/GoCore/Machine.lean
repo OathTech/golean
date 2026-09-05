@@ -27,8 +27,11 @@ Design highlights (full rationale in the design note):
   `docs/2026-07-25_unwinding-arc.md`): a panic step starts a `.panicking`
   configuration carrying the panic CHAIN, which strips continuation
   frames one step at a time, runs each frame's defers on the way out
-  (where `recover` can cancel it), and only at `.stop` becomes the
-  terminal `.panicked` abort line. The old per-operator
+  (where `recover` can cancel it), and an unrecovered chain reaching
+  `.stop` is THE ABORT: a terminal configuration with no rule (B4 —
+  the driver classifies it as the `panic` terminal, the pool as the
+  goroutine's `aborted` tombstone; there is no k-less configuration).
+  The old per-operator
   `binPanicLeft/Right`-style propagation rules still have no analogue —
   propagation is the one generic `panicUnwind` rule.
 - **Fail closed**: unsupported/malformed forms have no rules (relation
@@ -1829,7 +1832,8 @@ Q-ATOMIC RULED [USER] 2026-09-02 option A′; design note
 THE REGISTRY ENTRY, in the sync mold (the channels-arc D2+D3 growth
 contract, one registration): each atomic op's APPLY position is (a) a
 SCHEDULING POINT — it joins `Config.atBoundary`, its proceeding outcome
-carries `.opDone .postOp` (B1), and the EXISTING L1 site is consulted
+opens the goroutine's `postOp` boundary (B1/C5: `Thread.afterStep`,
+Multi.lean), and the EXISTING L1 site is consulted
 there; the op itself consumes ZERO choices (the envelope statement at
 `applyAtomicOp`) — and (b) an HB EDGE SOURCE — `raceUpdate` (Multi.lean)
 records the op's access kind and advances the per-ADDRESS atomic clock
@@ -2701,11 +2705,10 @@ inductive Config where
   the continuation. Frames strip; call frames run their defers (which is
   where `recover` can catch it); `.stop` renders the terminal abort. -/
   | panicking (chain : List PanicEntry) (k : Cont)
-  /-- The terminal abort: Go's first `panic: ` line. No outgoing rule —
-  which is exactly what keeps `Progress`'s statement meaning "verified ⇒
-  no UNRECOVERED panic" (the unwinding arc retired panic-as-teleport;
-  `.panicking` is the recoverable, non-terminal form). -/
-  | panicked (msg : String)
+  -- (The terminal abort is `.panicking chain .stop` itself — B4: no
+  -- k-less configuration; `Config.abort?` names the shape, the drivers
+  -- and the pool render it (`abortMsg`). `.panicking` under a frame is
+  -- the recoverable, non-terminal form.)
   -- Blocked configurations (channels arc slice 1, design of record D7:
   -- "blocked goroutines are blocked-Config shapes; NO waiter queues in
   -- channel state"). NO outgoing rules in the per-goroutine relation — in
@@ -2720,52 +2723,11 @@ inductive Config where
   | blockedSend (ch : Option Loc) (v : GoValue) (k : Cont)
   | blockedRecv (ch : Option Loc) (targets : List Assignee) (elem : Ty) (env : LocalEnv) (k : Cont)
   | blockedSelect (clauses : List EvClause) (env : LocalEnv) (k : Cont)
-  /-- **The registry-op COMPLETION marker — B1's post-op scheduling
-  point, and THE ENVELOPE STATEMENT of `ChoiceSite.postOp`** (W3.2
-  slice 1 stage C, G1 ruling 2026-08-20; generalizing BUG-040's
-  post-SPAWN marker `.spawned`, which unified into this shape — the
-  audit's T-6 mold: one marker mechanism, site-tagged). Every
-  registry-op completion that PROCEEDS — channel send commit / recv
-  delivery entry / close, sync-op acquisition/release, select commit
-  (entry, arrival-`.commit`, and wake paths), the pairing ISSUER's
-  successor, a woken goroutine's completed op, and spawn completion —
-  leaves the acting goroutine HERE, wrapping its successor
-  configuration `inner`; the pool treats the marker as a registry
-  boundary (`Config.atBoundary`), so "who runs after the op" is a
-  real scheduling point. Its only step is the strip to `inner` — one
-  step, on both drivers identically (`stepFn`'s `.opDone` arm; rule
-  `Step.opDoneStrip`).
-
-  THE ENVELOPE (nondeterminism doctrine requirement 1): the spec
-  orders NOTHING between an op-completing goroutine's continuation
-  and any other runnable goroutine's progress — spec#Go_statements
-  makes goroutines *independent* threads of control, and the memory
-  model's chan rule (1) synchronizes a send before the COMPLETION OF
-  THE RECEIVE, never before anything in the sender's own continuation
-  (the inventory C3 anchor-from-absence) — so ANY runnable goroutine
-  may run next at a completion. The scheduling-semantics dossier
-  (`docs/2026-08-20_go-scheduling-semantics-dossier.md`) grounds
-  both directions: §1.1 — scheduling is deliberately unspecified
-  ("The properties of the scheduler were never defined by the
-  language", Go 1.5 notes; "there are no guarantees … Different
-  implementations may act differently", ILT), so this widening is
-  CONSERVATIVE relative to what the language licenses; §4.3 — the
-  wedge verdict: "the portable model should include the completing
-  execution and an unfair execution", which is exactly what this
-  boundary admits (gc itself exhibits the flagship added member,
-  send-then-spin exit-0, 60/60). Width bound: only
-  registry-granularity interleavings consistent with blocking + HB —
-  inside the L1 envelope's argued-maximal class.
-
-  `sched` names the scheduling SITE the boundary consults (the Q1
-  tag, carried in the configuration): new emitters tag `.postOp`
-  (slot 0 = the issuer continues — the old machine's schedule, so
-  default streams are conservative); the SPAWN emitter tags
-  `.l1Sched`, preserving BUG-040's shipped boundary bit-for-bit
-  (slot 0 = lowest-index runnable, NOT issuer-continues — one
-  untagged marker would silently change the spawn default wherever
-  the parent is not the lowest-index runnable). -/
-  | opDone (sched : ChoiceSite) (inner : Config)
+  -- (The registry-op COMPLETION marker `.opDone sched inner` LEFT this
+  -- type at C5 (2026-09-05): a scheduling annotation is not control. It
+  -- is the per-goroutine `boundary` flag of `Thread.running`
+  -- (Multi.lean), set by `Thread.afterStep` — the envelope statement of
+  -- `ChoiceSite.postOp` lives there now.)
   /-- A goroutine parked on a sync primitive (spec-parity slice 2,
   design note §6): the op it will re-attempt, the primitive's cell.
   Relation-silent per-goroutine like the channel blocked shapes; the
@@ -2777,16 +2739,37 @@ inductive Config where
   stable. -/
   | blockedSync (op : SyncOp) (loc : Loc) (env : LocalEnv) (k : Cont)
 
-/-- **The terminal shapes, named once** (B3): a goroutine with nothing
-left to do — the four unwound `.stop` terminals (only main can reach the
-non-`.next` ones; spawned goroutines run under a barrier frame) and the
-program-aborting `.panicked`. `threadDone` and the boundary predicate
-consume this; the drivers, which need the OUTCOME behind the shape, keep
-their per-shape classification. -/
+/-- **The terminal shape, named once** (B3; ONE since B4): a goroutine
+with nothing left to do is `.next .stop`. A signal at `.stop` is NOT a
+terminal (B4: every driver runs its subject under a barrier frame, so a
+`return`/`break`/`continue` reaching `.stop` is a refusal that names its
+cause — `signalRefusal`), and the unrecovered-panic abort is
+`.panicking chain .stop` (`Config.abort?`), classified by the drivers and
+the pool, never a terminal SHAPE of the goroutine. -/
 def Config.isTerminal : Config → Bool
-  | .next .stop | .signal .ret .stop | .signal .brk .stop | .signal .cont .stop => true
-  | .panicked _ => true
+  | .next .stop => true
   | _ => false
+
+/-- **THE ABORT** (B4): an unrecovered panic chain at the empty
+continuation — `some (first, rest)` at `.panicking (first :: rest) .stop`.
+The configuration has no rule; what happens next is the DRIVER's:
+`stepFn` (the sequential machine) raises the `panic` terminal there, the
+pool (`stepThread`) turns the goroutine into its `aborted` tombstone —
+both through `abortMsg`, both as ONE machine step, so the fuel accounting
+of the old `.panicked` step is exact. An empty chain at `.stop` is a
+machine-internal breach (`stepFn` refuses it by name). -/
+def Config.abort? : Config → Option (PanicEntry × List PanicEntry)
+  | .panicking (first :: rest) .stop => some (first, rest)
+  | _ => none
+
+/-- Go's first `panic: ` line for an abort, or the refusal that names why
+it cannot be rendered (BUG-004's boxing-identity collapse). Shared by
+the sequential machine's abort (`stepFn`) and the pool's (`stepThread`). -/
+def abortMsg (s : ExecState) (first : PanicEntry) (rest : List PanicEntry) :
+    Except Stop String :=
+  match renderPanicHead s first rest with
+  | some msg => return msg
+  | none => throw (.unsupported s!"panic abort rendering for payload {repr first.value}")
 
 /-! ## The signal table (B4) -/
 
@@ -3051,11 +3034,12 @@ pinned by `channels/recv-edge/*` — the drain discriminators and the
 blocks-not-panics classification). Shared verbatim by rule
 `Step.chanStApply` and `stepFn`'s `chanStK` apply arm.
 
-B1 (W3.2 slice 1 stage C): every PROCEEDING outcome is wrapped in the
-completion marker `.opDone .postOp` — the post-op scheduling point
-(envelope statement at `Config.opDone`). Blocked outcomes are not
-wrapped (a park IS a boundary shape already) and panicking outcomes
-are not (the abort window is B3, deferred — boundary-set note §2). -/
+B1 (W3.2 slice 1 stage C) / C5 (2026-09-05): every PROCEEDING outcome
+opens the goroutine's post-op scheduling point — since C5 as the pool's
+per-goroutine boundary FLAG (`Thread.afterStep`, Multi.lean, the envelope
+statement of `ChoiceSite.postOp`), not as a wrapping configuration. A
+park IS a boundary shape already; a panicking outcome opens none (the
+abort window is B3, deferred — boundary-set note §2). -/
 def applyChanOp (s : ExecState) (op : ChanStOp) (vs : List GoValue)
     (env : LocalEnv) (k : Cont) : Except Stop (Config × ExecState) := do
   match op, vs with
@@ -3072,7 +3056,7 @@ def applyChanOp (s : ExecState) (op : ChanStOp) (vs : List GoValue)
             return (.panicking [panicEntry "send on closed channel"] k, s)
           else if buf.size < capacity then do
             let s' ← storeChanPayload s loc (buf.push v') capacity closed
-            return (.opDone .postOp (.next k), s')
+            return (.next k, s')
           else
             return (.blockedSend (some loc) v' k, s)
   | .recv targets elem, [chv] => do
@@ -3087,20 +3071,20 @@ def applyChanOp (s : ExecState) (op : ChanStOp) (vs : List GoValue)
               -- with ok = true before yielding zeros (probe p06).
               let s₁ ← storeChanPayload s loc (buf.eraseIdx! 0) capacity closed
               match targets with
-              | [] => return (.opDone .postOp (.next k), s₁)
+              | [] => return (.next k, s₁)
               | _ :: _ => do
                   let (c', s₂) ← enterRecvTargets s₁ targets
                     (recvStores v true targets.length) (.seqn #[]) env k
-                  return (.opDone .postOp c', s₂)
+                  return (c', s₂)
           | none =>
               if closed then do
                 let zero ← defaultValue s elem
                 match targets with
-                | [] => return (.opDone .postOp (.next k), s)
+                | [] => return (.next k, s)
                 | _ :: _ => do
                     let (c', s₂) ← enterRecvTargets s targets
                       (recvStores zero false targets.length) (.seqn #[]) env k
-                    return (.opDone .postOp c', s₂)
+                    return (c', s₂)
               else
                 return (.blockedRecv (some loc) targets elem env k, s)
   | .close, [chv] => do
@@ -3113,7 +3097,7 @@ def applyChanOp (s : ExecState) (op : ChanStOp) (vs : List GoValue)
             return (.panicking [panicEntry "close of closed channel"] k, s)
           else do
             let s' ← storeChanPayload s loc buf capacity true
-            return (.opDone .postOp (.next k), s')
+            return (.next k, s')
   | op, vs => stuck s!"malformed channel-operator application: {repr op} on {vs.length} operand(s)"
 
 /-- **Apply a sync statement's head to its evaluated operands — the
@@ -3197,7 +3181,7 @@ def applySyncOpCore (s : ExecState) (op : SyncOp) (vs : List GoValue)
           if locked then return (.blockedSync .lock loc env k, s)
           else do
             let s' ← storeLoc s loc (.syncData (.mutex true))
-            return (.opDone .postOp (.next k), s')
+            return (.next k, s')
       | other => stuck s!"Lock on a non-mutex sync cell: {repr other}"
   | .unlock, [av] => do
       let loc ← valueAsLoc av
@@ -3205,7 +3189,7 @@ def applySyncOpCore (s : ExecState) (op : SyncOp) (vs : List GoValue)
       | .mutex locked =>
           if locked then do
             let s' ← storeLoc s loc (.syncData (.mutex false))
-            return (.opDone .postOp (.next k), s')
+            return (.next k, s')
           else throw (.fatal "sync: unlock of unlocked mutex")
       | other => stuck s!"Unlock on a non-mutex sync cell: {repr other}"
   | .rlock, [av] => do
@@ -3216,7 +3200,7 @@ def applySyncOpCore (s : ExecState) (op : SyncOp) (vs : List GoValue)
             return (.blockedSync .rlock loc env k, s)
           else do
             let s' ← storeLoc s loc (.syncData (.rwmutex writer (readers + 1) pendingW))
-            return (.opDone .postOp (.next k), s')
+            return (.next k, s')
       | other => stuck s!"RLock on a non-RWMutex sync cell: {repr other}"
   | .runlock, [av] => do
       let loc ← valueAsLoc av
@@ -3225,7 +3209,7 @@ def applySyncOpCore (s : ExecState) (op : SyncOp) (vs : List GoValue)
           match readers with
           | r + 1 => do
               let s' ← storeLoc s loc (.syncData (.rwmutex writer r pendingW))
-              return (.opDone .postOp (.next k), s')
+              return (.next k, s')
           | 0 => throw (.fatal "sync: RUnlock of unlocked RWMutex")
       | other => stuck s!"RUnlock on a non-RWMutex sync cell: {repr other}"
   | .wlock, [av] => do
@@ -3234,7 +3218,7 @@ def applySyncOpCore (s : ExecState) (op : SyncOp) (vs : List GoValue)
       | .rwmutex writer readers pendingW =>
           if !writer && readers == 0 then do
             let s' ← storeLoc s loc (.syncData (.rwmutex true 0 pendingW))
-            return (.opDone .postOp (.next k), s')
+            return (.next k, s')
           else do
             -- Park AND register as a pending writer: the documented
             -- exclusion of new readers starts at the BLOCKED Lock call
@@ -3248,7 +3232,7 @@ def applySyncOpCore (s : ExecState) (op : SyncOp) (vs : List GoValue)
       | .rwmutex writer readers pendingW =>
           if writer then do
             let s' ← storeLoc s loc (.syncData (.rwmutex false readers pendingW))
-            return (.opDone .postOp (.next k), s')
+            return (.next k, s')
           else throw (.fatal "sync: Unlock of unlocked RWMutex")
       | other => stuck s!"write-Unlock on a non-RWMutex sync cell: {repr other}"
   | .wgAdd, [av, dv] => do
@@ -3307,13 +3291,13 @@ def applySyncOpCore (s : ExecState) (op : SyncOp) (vs : List GoValue)
             -- machine's atomic ops realize as the wg-sema race or as
             -- clean runs. No arm is kept (no inert dead code); the
             -- audit fix round removed it with this record.
-            return (.opDone .postOp (.next k), s')
+            return (.next k, s')
       | other => stuck s!"Add on a non-WaitGroup sync cell: {repr other}"
   | .wgWait, [av] => do
       let loc ← valueAsLoc av
       match ← syncCell s loc with
       | .waitGroup counter waiters =>
-          if counter == 0 then return (.opDone .postOp (.next k), s)
+          if counter == 0 then return (.next k, s)
           else do
             let s' ← storeLoc s loc (.syncData (.waitGroup counter (waiters + 1)))
             return (.blockedSync .wgWait loc env k, s')
@@ -3325,10 +3309,10 @@ def applySyncOpCore (s : ExecState) (op : SyncOp) (vs : List GoValue)
           if !started then do
             let s' ← storeLoc s loc (.syncData (.once true false))
             let (c', s'') ← enterRecvTargets s' targets [.bool true] (.seqn #[]) env k
-            return (.opDone .postOp c', s'')
+            return (c', s'')
           else if done then do
             let (c', s'') ← enterRecvTargets s targets [.bool false] (.seqn #[]) env k
-            return (.opDone .postOp c', s'')
+            return (c', s'')
           else
             return (.blockedSync (.onceBegin targets) loc env k, s)
       | other => stuck s!"Once.Do begin on a non-Once sync cell: {repr other}"
@@ -3338,7 +3322,7 @@ def applySyncOpCore (s : ExecState) (op : SyncOp) (vs : List GoValue)
       | .once started _ =>
           if started then do
             let s' ← storeLoc s loc (.syncData (.once true true))
-            return (.opDone .postOp (.next k), s')
+            return (.next k, s')
           else throw (.internal "onceComplete without a matching onceBegin")
       | other => stuck s!"Once.Do complete on a non-Once sync cell: {repr other}"
   -- The TRY heads never reach the core: `applySyncOp` draws their pick
@@ -3401,14 +3385,15 @@ def tryLockAcquired (op : SyncOp) (pre post : SyncPrim) : Bool :=
 /-- A TRY head's result delivery: through `enterRecvTargets` when a target
 exists (the `onceBegin` shape), else the plain continuation — success
 depends on the TARGET LIST alone (`tryDeliver_ok_any`), never on the
-state or the value. Every outcome carries `.opDone .postOp` (B1). -/
+state or the value. Every outcome is a registry-op completion (B1/C5:
+the pool flags it `postOp`). -/
 def tryDeliver (b : Bool) (s : ExecState) (targets : List Assignee)
     (env : LocalEnv) (k : Cont) : Except Stop (Config × ExecState) :=
   match targets with
-  | [] => return (.opDone .postOp (.next k), s)
+  | [] => return (.next k, s)
   | _ :: _ => do
       let (c', s') ← enterRecvTargets s targets [.bool b] (.seqn #[]) env k
-      return (.opDone .postOp c', s')
+      return (c', s')
 
 /-- **The TRY heads' apply — THE ENVELOPE STATEMENT of
 `ChoiceSite.tryLock`** (Q-TRYLOCK, RULED [USER] 2026-08-31 —
@@ -3474,7 +3459,7 @@ The result is delivered through `enterRecvTargets` when a target exists
 (the `onceBegin` shape — a plain write of the target AFTER the op);
 with no target the value is dropped and the op still took effect (a
 bare `m.TryLock()` statement acquires, gc-exact). Every proceeding
-outcome carries `.opDone .postOp` (B1); a TRY head never parks.
+outcome is a registry-op completion (B1/C5); a TRY head never parks.
 
 FAIRNESS / TERMINATION: a `for !m.TryLock() {}` spinner is runnable
 forever under the spurious member (and under unfair schedules) —
@@ -3565,7 +3550,7 @@ carries the underlying kind — anything else is `stuck`, fail closed);
 `atomicCompute` gives the store (if any) and the result; a result
 target receives it through `enterRecvTargets` (the `onceBegin` delivery
 shape: the phase-2 store is an ordinary plain write of the target, AFTER
-the op); every proceeding outcome is wrapped in `.opDone .postOp` (B1).
+the op); every proceeding outcome is a registry-op completion (B1/C5).
 A nil address is gc's recoverable "invalid memory address or nil
 pointer dereference" (`valueAsLoc`; probed: the intrinsic faults at
 the address before any effect — no store, no HB edge, nothing recorded
@@ -3587,10 +3572,10 @@ def applyAtomicOp (s : ExecState) (op : AtomicOp) (vs : List GoValue)
             let (new?, result) ← atomicCompute op.head op.kind cur operands
             let s' ← atomicStore s loc op.kind new?
             match op.targets with
-            | [] => return (.opDone .postOp (.next k), s')
+            | [] => return (.next k, s')
             | _ :: _ => do
                 let (c', s'') ← enterRecvTargets s' op.targets [result] (.seqn #[]) env k
-                return (.opDone .postOp c', s'')
+                return (c', s'')
       | other => stuck s!"atomic {repr op.head} on a non-integer cell: {repr other}"
   | [] => stuck "malformed atomic-operator application: no address operand"
 
@@ -3602,12 +3587,12 @@ panics (probe p23 — closed counts as ready). The "unready" stuck arms
 are unreachable from `applySelect` (which commits only ready clauses) —
 fail closed, never a silent default.
 
-B1 (W3.2 slice 1 stage C): a PROCEEDING commit is a registry-op
-completion, wrapped in `.opDone .postOp` (the envelope statement at
-`Config.opDone`) — which covers all three commit paths at once (the
-entry-path `applySelect`, the arrival-path `.commit` in `stepThread`,
-and the wake path `resumeThread`); the panicking commit is not
-wrapped (B3 deferred). -/
+B1 (W3.2 slice 1 stage C) / C5: a PROCEEDING commit is a registry-op
+completion — the pool flags the goroutine `postOp` (`Thread.afterStep`,
+the envelope statement of `ChoiceSite.postOp`) on all three commit paths
+at once (the entry-path `applySelect`, the arrival-path `.commit` in
+`stepThread`, and the wake path `resumeThread`); a panicking commit
+opens no boundary (B3 deferred). -/
 def commitClause (s : ExecState) (env : LocalEnv) (k : Cont) :
     EvClause → Except Stop (Config × ExecState)
   | .sendEv chv vv elem body => do
@@ -3621,7 +3606,7 @@ def commitClause (s : ExecState) (env : LocalEnv) (k : Cont) :
           else if buf.size < capacity then do
             let v' ← normalizeValueForTy s elem vv
             let s' ← storeChanPayload s loc (buf.push v') capacity closed
-            return (.opDone .postOp (.exec body env k), s')
+            return (.exec body env k, s')
           else stuck "select committed an unready send clause"
   | .recvEv chv targets elem body => do
       let ch ← valueAsChan chv
@@ -3640,11 +3625,11 @@ def commitClause (s : ExecState) (env : LocalEnv) (k : Cont) :
                   pure (zero, false, s)
                 else stuck "select committed an unready receive clause"
           match targets with
-          | [] => return (.opDone .postOp (.exec body env k), s₁)
+          | [] => return (.exec body env k, s₁)
           | _ :: _ => do
               let (c', s₂) ← enterRecvTargets s₁ targets
                 (recvStores v ok targets.length) body env k
-              return (.opDone .postOp c', s₂)
+              return (c', s₂)
 
 /-- **The `select` READINESS step and THE L2 ENVELOPE** (spec steps
 2-3; this docstring is the envelope statement, shipped with its site —
@@ -3945,8 +3930,9 @@ theorem entryConsult?_some {σ : ExecState} {fid : FuncId} {args : List GoValue}
 malformed or unmodeled configurations: they are stuck (fail closed). A
 panic step starts UNWINDING (`.panicking` carries the chain and the
 continuation): defers run on the panic path, `recover` in a panic-run
-deferred call cancels the unwind, and only an unrecovered chain reaching
-`.stop` becomes the terminal `.panicked`. Nondeterministic steps (map
+deferred call cancels the unwind, and an unrecovered chain reaching
+`.stop` is the abort — a configuration with NO rule (B4: `Config.abort?`;
+the drivers raise the `panic` terminal there). Nondeterministic steps (map
 iteration order, append capacity) arrive at S2 with their statements. -/
 inductive Step : Config → ExecState → Config → ExecState → Prop where
   -- Every APPLY/ENTRY rule below is "apply, then deliver" (B2): the
@@ -4411,12 +4397,11 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   | panicResumeContinue {chain k s} :
       chainNewestRecovered chain = false →
       Step (.next (.panicResumeK chain k)) s (.panicking chain k) s
-  /-- An unrecovered chain at `.stop`: the terminal abort, rendered as
-  Go's first `panic: ` line (arc doc §A3). Chains whose head payload has
-  no pinned rendering have no rule — fail closed. -/
-  | panicAbort {first rest msg s} :
-      renderPanicHead s first rest = some msg →
-      Step (.panicking (first :: rest) .stop) s (.panicked msg) s
+  -- (An unrecovered chain at `.stop` — the abort — has NO rule since B4:
+  -- `Config.abort?`; the sequential driver raises the `panic` terminal
+  -- there and the pool records the goroutine's `aborted` tombstone, both
+  -- through `abortMsg`. The former `panicAbort` step to the k-less
+  -- `.panicked` is gone with that constructor.)
   -- (The seven `*Panic`/`*EnterPanic` frame-entry twins that lived here
   -- were folded into their entry rules by B2 — `enterFramePick` +
   -- `deliver`; the BUG-087 entry-panic TEXT is now the pick the rule's
@@ -4581,14 +4566,9 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       toResult (applySyncOp s ch op (v :: done).reverse env k) = .ok r →
       deliver s k (fun (c', s', _) => (c', s')) r = (c', s') →
       Step (.retV v (.syncStK op done [] env k)) s c' s'
-  /-- The registry-op completion marker's strip (W3.2 slice 1 stage C,
-  B1): one pure control step to the wrapped successor, on both drivers
-  (`stepFn`'s `.opDone` arm) — the marker exists only to BE a
-  scheduling boundary at the pool level (`Config.atBoundary`; envelope
-  statement at `Config.opDone`). Appended at the END of the inductive
-  so the correspondence proofs' positional case tags stay stable. -/
-  | opDoneStrip {sc c s} :
-      Step (.opDone sc c) s c s
+  -- (The completion marker's strip `opDoneStrip` LEFT this relation at
+  -- C5: the boundary is a per-goroutine flag of the pool (`Thread`), and
+  -- its clear is a POOL step (`StepM.strip`), never a `Config` step.)
   -- sync/atomic statements (atomics arc wave 1): the `syncStK` shape
   -- verbatim — operand entry/shift, then ONE apply step
   -- (`applyAtomicOp`: next / a result delivery entry / panicking on a
@@ -4633,7 +4613,6 @@ predicate would be the wrong edit. Its only current consumer is the
 `go_adequacy` scope prose. -/
 def Config.terminal : Config → Prop
   | .next .stop => True
-  | .panicked _ => True
   | _ => False
 
 end GoLean.GoCore.Machine

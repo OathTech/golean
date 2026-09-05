@@ -96,15 +96,17 @@ when the target's consumption shape is outside the certified fragment
 (fail closed). `[[]]` for an oblivious target (the step consumes
 nothing — `stepThread_oblivious`); one singleton vector per waiter
 pick at an N-L4 pairing. -/
-def innerVecs (s : ExecState) (ts : Array Config) (i : Nat) :
+def innerVecs (s : ExecState) (ts : Array Thread) (i : Nat) :
     Option (List (List Nat)) :=
   if poolThreadOblivious s ts i then some [[]]
   else
     match ts[i]? with
     | none => none
-    | some c =>
+    | some (.aborted _) => none
+    | some (.running _ (some _)) => none
+    | some (.running c none) =>
       if isBlockedConfig c then none
-      else if (opDoneInner c).isSome then none
+      else if c.abort?.isSome then none
       else if (spawnPlan c).isSome then none
       else if consumesSelect c then none
       else if consumesAppendSlice c then
@@ -131,7 +133,7 @@ def innerVecs (s : ExecState) (ts : Array Config) (i : Nat) :
 /-- Branch vectors for a ≥2-slot boundary menu, slot-prefixed:
 `slotVecsAux s ts rs p₀` enumerates, for the slot suffix `rs` whose
 first element is menu position `p₀`, every `pick :: innerSuffix`. -/
-def slotVecsAux (s : ExecState) (ts : Array Config) :
+def slotVecsAux (s : ExecState) (ts : Array Thread) :
     List Nat → Nat → Option (List (List Nat))
   | [], _ => some []
   | i :: rest, pick => do
@@ -145,9 +147,9 @@ coverage lemma, `EnumDedupSound.lean`), or the shape is refused. -/
 def nodeVecs (m : MultiConfig) : Option (List (List Nat)) :=
   match m.threads[m.cur]? with
   | none => none
-  | some c =>
-    if c.atBoundary then
-      match schedSlots m.shared m.threads m.cur c.boundarySite with
+  | some t =>
+    if t.atBoundary then
+      match schedSlots m.shared m.threads m.cur t.boundarySite with
       | [] => none
       | [i] => innerVecs m.shared m.threads i
       | r0 :: r1 :: rest => slotVecsAux m.shared m.threads (r0 :: r1 :: rest) 0
@@ -198,7 +200,7 @@ def checkNode (nodeEqb : DedupNode → DedupNode → Bool)
     | some msg => obsMem mems (.terminal (.panic msg))
     | none =>
       match nd.m.mainOutcome? with
-      | some (.normal σf) =>
+      | some σf =>
           (match loadMany σf resultLocs with
            | .error _ => false
            | .ok vs =>
@@ -207,7 +209,6 @@ def checkNode (nodeEqb : DedupNode → DedupNode → Bool)
               | _ :: _ =>
                   obsMem mems (.ok vs)
                     && checkStep nodeEqb mems nodes succs nd)
-      | some _ => false
       | none =>
           if (runnableIdxs nd.m.shared nd.m.threads).isEmpty then false
           else checkStep nodeEqb mems nodes succs nd

@@ -11,9 +11,10 @@ sharing the rule premises' functions verbatim (`strictPlan`,
 `.stuck`/`.unsupported`/`.internal` error, never a silent approximation
 (fail closed). Panics are in-model: a panic *step* produces a
 `.panicking` configuration (`.ok`) that unwinds — running defers, open to
-`recover` — and an unrecovered chain reaching `.stop` becomes `.panicked`,
-which the driver reports as `Stop.panic`; only out-of-model conditions
-are `Except` errors. Every apply/entry arm is "apply, then deliver"
+`recover` — and an unrecovered chain reaching `.stop` is the ABORT
+(`Config.abort?`, B4): the machine stops there with the Go `panic`
+terminal, one step, no k-less successor; otherwise only out-of-model
+conditions are `Except` errors. Every apply/entry arm is "apply, then deliver"
 (B2): the helper's outcome is classified once (`toResult`) and
 `deliverS` turns it into the step (`Machine.deliver` + the stream).
 
@@ -119,13 +120,14 @@ def stepFrameExit (s : ExecState) (targets : List (TargetShape × List Expr))
             (.frame targets tenv results ds k' w), s, choices)
       | other => throw (.stuck s!"deferred callee is not a function value: {repr other}")
 
-/-- One machine step. `.ok` is a step the relation permits (including
-steps *to* `.panicked`); `.error` means the machine is stuck here, with
-the reason. Never call on a terminal configuration (the driver guards). -/
+/-- One machine step. `.ok` is a step the relation permits; `.error` is
+either a Go TERMINAL the machine reached (the abort's `panic`, a sync
+`fatal`, a sequential `deadlock`) or a refusal that names its cause (the
+machine is stuck here). Never call on a terminal configuration (the
+driver guards). -/
 def stepFn (s : ExecState) (c : Config) (choices : Choices) :
     Except Stop (Config × ExecState × Choices) := do
   match c with
-  | .panicked _ => throw (.internal "step on terminal panicked configuration")
   | .panicking chain k =>
       match k with
       | .frame _targets _tenv _results [] k' _ => return (.panicking chain k', s, choices)
@@ -151,12 +153,14 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .panicResumeK suspended k' =>
           return (.panicking (suspended ++ chain) k', s, choices)
       | .stop =>
+          -- THE ABORT (B4, `Config.abort?`): an unrecovered chain at the
+          -- empty continuation stops the sequential machine with the Go
+          -- `panic` terminal — ONE step (the fuel the old `.panicked`
+          -- step cost), no successor configuration (there is no k-less
+          -- control form; the pool records a tombstone instead,
+          -- `stepThread`). Rendering through `abortMsg`, shared.
           match chain with
-          | first :: rest =>
-              match renderPanicHead s first rest with
-              | some msg => return (.panicked msg, s, choices)
-              | none => throw (.unsupported
-                  s!"panic abort rendering for payload {repr first.value}")
+          | first :: rest => throw (.panic (← abortMsg s first rest))
           | [] => throw (.internal "empty panic chain at stop")
       | k =>
           match panicPassthrough k with
@@ -683,15 +687,11 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
   | .blockedSend _ _ _ => throw .deadlock
   | .blockedRecv _ _ _ _ _ => throw .deadlock
   | .blockedSelect _ _ _ => throw .deadlock
-  -- The registry-op completion marker's STRIP (W3.2 slice 1 stage C,
-  -- B1; rule `Step.opDoneStrip`): one pure control step to the wrapped
-  -- successor. It runs on BOTH drivers identically — sequential runs
-  -- of completing chan/sync/select ops carry the marker too (emitted
-  -- by the applies in Machine.lean), which is what keeps
-  -- `execProg_single_eq_execStmt` step-for-step at shifted-but-equal
-  -- fuel. The marker's boundary/scheduling meaning is pool-only
-  -- (`Config.atBoundary`; envelope statement at `Config.opDone`).
-  | .opDone _ c => return (c, s, choices)
+  -- (The completion marker's strip left `stepFn` at C5: the post-op
+  -- boundary is the POOL's per-goroutine flag and its clear a pool step,
+  -- so the sequential driver takes one step fewer per completed
+  -- registry op than the one-goroutine pool — `execProg_single_eq_execStmt`
+  -- is stated with that count, `seqOpCount`.)
   -- A parked sync op with no sibling goroutine IS the deadlocked run
   -- (probes p06-p08: gc's detector fires on a single goroutine parked
   -- in Lock/Wait/Do) — the channel blocked shapes' classification.
@@ -699,14 +699,13 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
 
 /-- Fuel-bounded iteration of `stepFn` to a terminal configuration. Fuel
 counts machine steps; the terminal check precedes the fuel check so a
-finished program never reports exhaustion. `.panicked` reports as
-`Stop.panic` — the same classification surface as the big-step
-interpreter's. -/
+finished program never reports exhaustion. An unrecovered panic reports
+as `Stop.panic` from the abort step itself (`stepFn` at `Config.abort?`)
+— the same classification surface as the big-step interpreter's. -/
 def runConfig : Nat → ExecState → Config → Choices → Except Stop (ExecState × Choices)
   | fuel, s, c, choices =>
       match c with
       | .next .stop => return (s, choices)
-      | .panicked msg => throw (.panic msg)
       -- Blocked = deadlocked (slice 1, zero scheduler): classified BEFORE
       -- the fuel check, like the terminals — a blocked run must never
       -- report fuel exhaustion instead of the deadlock it reached.
@@ -744,21 +743,22 @@ def runFunctionWithContextM (fuel : Nat) (types : TypeEnv) (functions : Array Fu
 
 /-- **The `execStmt`-shaped wrapper** (F4 §2's decided Surface interface;
 `docs/2026-07-23_reshape-r1r2-machine-design.md`): fuel-bounded iteration
-of `stepFn` from a bare statement configuration, classified into the old
-big-step `ExecOutcome` at the four unwound terminals. NOT a shim — no
-big-step rule appears here; the name and result shape are kept so Surface
-statements stay recognizable. Fuel counts machine steps. The `env`
-argument replaces the old `ExecState.locals` seeding (deleted at S4 —
-env-in-config is the only name-resolution story). -/
+of `stepFn` from a bare statement configuration to the ONE terminal
+(`.next .stop`), returning the final state. NOT a shim — no big-step rule
+appears here; the name is kept so Surface statements stay recognizable.
+Since B4 the former `ExecOutcome` classification is gone: a
+`return`/`break`/`continue` reaching `.stop` is not a completion but the
+refusal `stepFn` raises for it (`signalRefusal` — every Program driver
+runs its subject under a barrier frame, so only a bare-statement run
+could reach one); an unrecovered panic is the `panic` terminal raised at
+the abort step. Fuel counts machine steps. The `env` argument replaces
+the old `ExecState.locals` seeding (deleted at S4 — env-in-config is the
+only name-resolution story). -/
 def execStmtLoop : Nat → ExecState → Config → Choices →
-    Except Stop (ExecOutcome × Choices)
+    Except Stop (ExecState × Choices)
   | fuel, σ, c, choices =>
       match c with
-      | .next .stop => return (.normal σ, choices)
-      | .signal .ret .stop => return (.returned σ, choices)
-      | .signal .brk .stop => return (.broke σ, choices)
-      | .signal .cont .stop => return (.continued σ, choices)
-      | .panicked msg => throw (.panic msg)
+      | .next .stop => return (σ, choices)
       | .blockedSend _ _ _ => throw .deadlock
       | .blockedRecv _ _ _ _ _ => throw .deadlock
       | .blockedSelect _ _ _ => throw .deadlock
@@ -772,13 +772,13 @@ def execStmtLoop : Nat → ExecState → Config → Choices →
 
 @[inherit_doc execStmtLoop]
 def execStmt (fuel : Nat) (env : LocalEnv) (σ : ExecState) (choices : Choices)
-    (prog : Stmt) : Except Stop (ExecOutcome × Choices) :=
+    (prog : Stmt) : Except Stop (ExecState × Choices) :=
   execStmtLoop fuel σ (.exec prog env .stop) choices
 
 /-- Raw `n`-fold iteration of `stepFn` — NO terminal check and no outcome
 classification (sem-adequacy arc slice 4, 2026-08-04). `stepFn` itself
-throws on every terminal configuration (`.next .stop`, the unwound
-`.stop` shapes, `.panicked`), so a successful iterate is a genuine
+throws on every terminal configuration (`.next .stop`; a signal at
+`.stop`; the abort), so a successful iterate is a genuine
 `n`-step prefix of a run, never an over-run past a terminal. This is the
 reachability carrier for the interpreter-level invariance judgment
 (`Surface.ReachableExec`): "configuration reachable by the EXECUTABLE
@@ -870,7 +870,6 @@ def runInitConfig : Nat → ExecState → Config → Choices → Except Stop (Ex
   | fuel, s, c, choices =>
       match c with
       | .next .stop => return (s, choices)
-      | .panicked msg => throw (.panic msg)
       | .blockedSend _ _ _ => throw .deadlock
       | .blockedRecv _ _ _ _ _ => throw .deadlock
       | .blockedSelect _ _ _ => throw .deadlock
@@ -888,8 +887,8 @@ def runInitConfig : Nat → ExecState → Config → Choices → Except Stop (Ex
 /-- Run `$pkginit` if the program has one: a nullary, resultless run to
 termination under a targetless barrier frame. Malformed shapes fail
 closed; a panic during initialization aborts the run (Go: a panicking
-initializer kills the program before `main`), surfacing through
-`runConfig`'s `.panicked` terminal as `Stop.panic` (message
+initializer kills the program before `main`), surfacing as the abort
+step's `Stop.panic` (message
 unmarked — it is the Go-observable abort). Diagnostic errors carry the
 `package init:` marker (`markInitPhase`). -/
 def runPkgInitM (fuel : Nat) (state : ExecState) (choices : Choices) :

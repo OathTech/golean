@@ -29,8 +29,24 @@ monotonicity, and its iteration-typing component along the step's
 types-invariance. `stepMulti_wf` is the preservation theorem the
 slice-2 scaffold owed. -/
 
--- `spawnedCont_shape` retired with the marker unification (stage C):
--- `opDoneInner_shape` (MultiSound) is the inversion now.
+-- `spawnedCont_shape` retired with the marker unification (stage C);
+-- `opDoneInner_shape` retired with the marker itself (C5).
+
+/-! ## `ThreadWf` (C5: the per-goroutine invariant over `Thread`) -/
+
+theorem ThreadWf.running {na : Nat} {types : TypeEnv} {c : Config} {b : Option ChoiceSite}
+    (hc : Config.locSup c ≤ na) (hi : Config.itersNormalized types c = true) :
+    ThreadWf na types (.running c b) :=
+  ⟨hc, hi⟩
+
+theorem ThreadWf.aborted {na : Nat} {types : TypeEnv} {msg : String} :
+    ThreadWf na types (.aborted msg) := trivial
+
+theorem ThreadWf.mono {na na' : Nat} {types : TypeEnv} {t : Thread}
+    (hmono : na ≤ na') (h : ThreadWf na types t) : ThreadWf na' types t := by
+  cases t with
+  | aborted msg => trivial
+  | running c b => exact ⟨Nat.le_trans h.1 hmono, h.2⟩
 
 /-- The spawn position's components are bounded by the configuration. -/
 theorem spawnPlan_locSup {c : Config} {cv : GoValue} {args : List GoValue}
@@ -313,38 +329,36 @@ theorem resumeThread_wf {s : ExecState} {c c' : Config} {s' : ExecState}
 
 
 /-- Indexed lookup of the pool hypothesis. -/
-theorem pool_get_wf {threads : Array Config} {j : Nat} {c : Config}
-    {na : Nat} {types : TypeEnv}
-    (hts : ∀ t (ht : t < threads.size), ConfigWf na threads[t]
-      ∧ Config.itersNormalized types threads[t] = true)
-    (hj : threads[j]? = some c) :
+theorem pool_get_wf {threads : Array Thread} {j : Nat} {c : Config}
+    {b : Option ChoiceSite} {na : Nat} {types : TypeEnv}
+    (hts : ∀ t (ht : t < threads.size), ThreadWf na types threads[t])
+    (hj : threads[j]? = some (.running c b)) :
     ConfigWf na c ∧ Config.itersNormalized types c = true := by
   obtain ⟨hlt, heq⟩ := Array.getElem?_eq_some_iff.mp hj
-  exact heq ▸ hts j hlt
+  have := hts j hlt
+  rw [heq] at this
+  exact this
 
 /-- Frame lemma for the two-index pool update every pairing performs:
 the two touched slots carry the new bounds; every other goroutine's
 `ConfigWf` transports along allocator monotonicity and its typing
 component is untouched. -/
-theorem pool_set2_wf {threads : Array Config} {i j : Nat} {a b : Config}
-    {na na' : Nat} {types : TypeEnv}
+theorem pool_set2_wf {threads : Array Thread} {i j : Nat} {a b : Config}
+    {fa fb : Option ChoiceSite} {na na' : Nat} {types : TypeEnv}
     (hmono : na ≤ na')
-    (hts : ∀ t (ht : t < threads.size), ConfigWf na threads[t]
-      ∧ Config.itersNormalized types threads[t] = true)
+    (hts : ∀ t (ht : t < threads.size), ThreadWf na types threads[t])
     (ha : Config.locSup a ≤ na') (hia : Config.itersNormalized types a = true)
     (hb : Config.locSup b ≤ na') (hib : Config.itersNormalized types b = true) :
-    ∀ t (ht : t < ((threads.setIfInBounds i a).setIfInBounds j b).size),
-      ConfigWf na' ((threads.setIfInBounds i a).setIfInBounds j b)[t]
-        ∧ Config.itersNormalized types
-            ((threads.setIfInBounds i a).setIfInBounds j b)[t] = true := by
+    ∀ t (ht : t < ((threads.setIfInBounds i (.running a fa)).setIfInBounds j (.running b fb)).size),
+      ThreadWf na' types ((threads.setIfInBounds i (.running a fa)).setIfInBounds j (.running b fb))[t] := by
   intro t ht
   have ht' : t < threads.size := by simpa using ht
   simp only [Array.getElem_setIfInBounds, Array.size_setIfInBounds, ht']
   split
-  · exact ⟨hb, hib⟩
+  · exact ThreadWf.running hb hib
   · split
-    · exact ⟨ha, hia⟩
-    · exact ⟨Nat.le_trans (hts t ht').1 hmono, (hts t ht').2⟩
+    · exact ThreadWf.running ha hia
+    · exact ThreadWf.mono hmono (hts t ht')
 
 /-- The channel loc behind a chan value is bounded by the value. -/
 theorem chanValueLoc_locSup {v : GoValue} {loc : Loc}
@@ -356,7 +370,7 @@ theorem chanValueLoc_locSup {v : GoValue} {loc : Loc}
 
 /-- The would-block shape a CHAN-OP arrival pairing carries is bounded
 and iteration-typed by the arriving operands. -/
-theorem chanArrivalPlan_wf {s : ExecState} {threads : Array Config} {i : Nat}
+theorem chanArrivalPlan_wf {s : ExecState} {threads : Array Thread} {i : Nat}
     {op : ChanStOp} {vs : List GoValue} {env : LocalEnv} {k : Cont}
     {bc : Config} {cands : List (Nat × PairTarget)} {types : TypeEnv}
     (_hw : StateWf s) (hvs : goValueListSup vs ≤ s.nextAddr)
@@ -417,7 +431,7 @@ theorem chanArrivalPlan_wf {s : ExecState} {threads : Array Config} {i : Nat}
 
 /-- The `.single` analysis' would-block shape is bounded and typed by
 the arriving configuration. -/
-theorem arrivalCases_single_wf {s : ExecState} {threads : Array Config}
+theorem arrivalCases_single_wf {s : ExecState} {threads : Array Thread}
     {i : Nat} {c bc : Config} {cs : List (Nat × PairTarget)}
     (hw : StateWf s) (hc : ConfigWf s.nextAddr c)
     (hi : Config.itersNormalized s.types c = true)
@@ -505,7 +519,7 @@ theorem arrivalCases_single_wf {s : ExecState} {threads : Array Config}
 /-- The `.multi` analysis' SELECTED outcome is bounded and typed by the
 arriving configuration: a `.pair`'s would-block shape like the single
 case, a `.commit`'s clause a member of the evaluated clause list. -/
-theorem arrivalCases_multi_wf {s : ExecState} {threads : Array Config}
+theorem arrivalCases_multi_wf {s : ExecState} {threads : Array Thread}
     {i : Nat} {c : Config} {os : List ArrivalOutcome} {sel : Nat}
     {o : ArrivalOutcome}
     (_hw : StateWf s) (hc : ConfigWf s.nextAddr c)
@@ -616,19 +630,17 @@ state wf (allocator monotone, types unchanged), preserves the pool
 size, and leaves EVERY slot bounded and iteration-typed — the two
 touched slots by the pairing outcome's own bounds, the foreign threads
 by the monotonicity frame. -/
-theorem applyPairing_wf {s : ExecState} {threads : Array Config} {i : Nat}
-    {bc : Config} {cand : Nat × PairTarget} {ts' : Array Config}
+theorem applyPairing_wf {s : ExecState} {threads : Array Thread} {i : Nat}
+    {bc : Config} {cand : Nat × PairTarget} {ts' : Array Thread}
     {s' : ExecState}
     (hw : StateWf s)
-    (hts : ∀ t (ht : t < threads.size), ConfigWf s.nextAddr threads[t]
-      ∧ Config.itersNormalized s.types threads[t] = true)
+    (hts : ∀ t (ht : t < threads.size), ThreadWf s.nextAddr s.types threads[t])
     (hbc : ConfigWf s.nextAddr bc)
     (hibc : Config.itersNormalized s.types bc = true)
     (h : applyPairing s threads i bc cand = .ok (ts', s')) :
     StateWf s' ∧ s'.types = s.types ∧ s.nextAddr ≤ s'.nextAddr
       ∧ ts'.size = threads.size
-      ∧ ∀ t (ht : t < ts'.size), ConfigWf s'.nextAddr ts'[t]
-          ∧ Config.itersNormalized s.types ts'[t] = true := by
+      ∧ ∀ t (ht : t < ts'.size), ThreadWf s'.nextAddr s.types ts'[t] := by
   have hheap := hw.heap_le
   obtain ⟨cn, ct⟩ := cand
   cases bc
@@ -649,6 +661,8 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Config} {i : Nat}
         | none => simp [hj, throw, throwThe, MonadExceptOf.throw] at h
         | some pc =>
           simp only [hj] at h
+          rcases pc with ⟨pc, bp⟩ | msg
+          case aborted => simp [throw, throwThe, MonadExceptOf.throw] at h
           cases pc <;>
             try (simp [throw, throwThe, MonadExceptOf.throw] at h)
           case blockedRecv ch2 targets elem2 envr kr =>
@@ -683,6 +697,8 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Config} {i : Nat}
         | none => simp [hj, throw, throwThe, MonadExceptOf.throw] at h
         | some pc =>
           simp only [hj] at h
+          rcases pc with ⟨pc, bp⟩ | msg
+          case aborted => simp [throw, throwThe, MonadExceptOf.throw] at h
           cases pc <;>
             try (simp [throw, throwThe, MonadExceptOf.throw] at h)
           case blockedSelect evs envs ks =>
@@ -741,6 +757,8 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Config} {i : Nat}
         | none => simp [hj, throw, throwThe, MonadExceptOf.throw] at h
         | some pc =>
           simp only [hj] at h
+          rcases pc with ⟨pc, bp⟩ | msg
+          case aborted => simp [throw, throwThe, MonadExceptOf.throw] at h
           cases pc <;>
             try (simp [throw, throwThe, MonadExceptOf.throw] at h)
           case blockedSend ch2 vs ks =>
@@ -799,6 +817,8 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Config} {i : Nat}
         | none => simp [hj, throw, throwThe, MonadExceptOf.throw] at h
         | some pc =>
           simp only [hj] at h
+          rcases pc with ⟨pc, bp⟩ | msg
+          case aborted => simp [throw, throwThe, MonadExceptOf.throw] at h
           cases pc <;>
             try (simp [throw, throwThe, MonadExceptOf.throw] at h)
           case blockedSelect evs envs ks =>
@@ -896,6 +916,8 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Config} {i : Nat}
           | none => simp [hj, throw, throwThe, MonadExceptOf.throw] at h
           | some pc =>
             simp only [hj] at h
+            rcases pc with ⟨pc, bp⟩ | msg
+            case aborted => simp [throw, throwThe, MonadExceptOf.throw] at h
             cases pc <;>
               try (simp [throw, throwThe, MonadExceptOf.throw] at h)
             case blockedSend ch2 vs ks =>
@@ -964,6 +986,8 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Config} {i : Nat}
           | none => simp [hj, throw, throwThe, MonadExceptOf.throw] at h
           | some pc =>
             simp only [hj] at h
+            rcases pc with ⟨pc, bp⟩ | msg
+            case aborted => simp [throw, throwThe, MonadExceptOf.throw] at h
             cases pc <;>
               try (simp [throw, throwThe, MonadExceptOf.throw] at h)
             case blockedRecv ch2 targetsr elemr envr kr =>
@@ -1000,45 +1024,53 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Config} {i : Nat}
 
 
 /-- Frame lemma for a single-slot pool update. -/
-theorem pool_set1_wf {threads : Array Config} {i : Nat} {a : Config}
-    {na na' : Nat} {types : TypeEnv}
+theorem pool_set1_wf {threads : Array Thread} {i : Nat} {a : Config}
+    {fa : Option ChoiceSite} {na na' : Nat} {types : TypeEnv}
     (hmono : na ≤ na')
-    (hts : ∀ t (ht : t < threads.size), ConfigWf na threads[t]
-      ∧ Config.itersNormalized types threads[t] = true)
+    (hts : ∀ t (ht : t < threads.size), ThreadWf na types threads[t])
     (ha : Config.locSup a ≤ na') (hia : Config.itersNormalized types a = true) :
-    ∀ t (ht : t < (threads.setIfInBounds i a).size),
-      ConfigWf na' (threads.setIfInBounds i a)[t]
-        ∧ Config.itersNormalized types (threads.setIfInBounds i a)[t] = true := by
+    ∀ t (ht : t < (threads.setIfInBounds i (.running a fa)).size),
+      ThreadWf na' types (threads.setIfInBounds i (.running a fa))[t] := by
   intro t ht
   have ht' : t < threads.size := by simpa using ht
   simp only [Array.getElem_setIfInBounds, Array.size_setIfInBounds, ht']
   split
-  · exact ⟨ha, hia⟩
-  · exact ⟨Nat.le_trans (hts t ht').1 hmono, (hts t ht').2⟩
+  · exact ThreadWf.running ha hia
+  · exact ThreadWf.mono hmono (hts t ht')
+
+/-- Frame lemma for the abort's pool update: one slot tombstoned (B4). -/
+theorem pool_set1_aborted_wf {threads : Array Thread} {i : Nat} {msg : String}
+    {na : Nat} {types : TypeEnv}
+    (hts : ∀ t (ht : t < threads.size), ThreadWf na types threads[t]) :
+    ∀ t (ht : t < (threads.setIfInBounds i (.aborted msg)).size),
+      ThreadWf na types (threads.setIfInBounds i (.aborted msg))[t] := by
+  intro t ht
+  have ht' : t < threads.size := by simpa using ht
+  simp only [Array.getElem_setIfInBounds, Array.size_setIfInBounds, ht']
+  split
+  · exact ThreadWf.aborted
+  · exact hts t ht'
 
 /-- Frame lemma for the spawn's pool update: one slot replaced, one
 child appended. -/
-theorem pool_set_push_wf {threads : Array Config} {i : Nat} {a b : Config}
-    {na na' : Nat} {types : TypeEnv}
+theorem pool_set_push_wf {threads : Array Thread} {i : Nat} {a b : Config}
+    {fa fb : Option ChoiceSite} {na na' : Nat} {types : TypeEnv}
     (hmono : na ≤ na')
-    (hts : ∀ t (ht : t < threads.size), ConfigWf na threads[t]
-      ∧ Config.itersNormalized types threads[t] = true)
+    (hts : ∀ t (ht : t < threads.size), ThreadWf na types threads[t])
     (ha : Config.locSup a ≤ na') (hia : Config.itersNormalized types a = true)
     (hb : Config.locSup b ≤ na') (hib : Config.itersNormalized types b = true) :
-    ∀ t (ht : t < ((threads.setIfInBounds i a).push b).size),
-      ConfigWf na' ((threads.setIfInBounds i a).push b)[t]
-        ∧ Config.itersNormalized types
-            ((threads.setIfInBounds i a).push b)[t] = true := by
+    ∀ t (ht : t < ((threads.setIfInBounds i (.running a fa)).push (.running b fb)).size),
+      ThreadWf na' types ((threads.setIfInBounds i (.running a fa)).push (.running b fb))[t] := by
   intro t ht
-  have hsz : t < (threads.setIfInBounds i a).size + 1 := by simpa using ht
+  have hsz : t < (threads.setIfInBounds i (.running a fa)).size + 1 := by simpa using ht
   rw [Array.getElem_push]
   split
   · rename_i hlt
     exact pool_set1_wf hmono hts ha hia t hlt
-  · exact ⟨hb, hib⟩
+  · exact ThreadWf.running hb hib
 
 /-- Membership in the runnable list bounds the index. -/
-theorem runnableIdxs_lt {s : ExecState} {ts : Array Config} {i : Nat}
+theorem runnableIdxs_lt {s : ExecState} {ts : Array Thread} {i : Nat}
     (h : i ∈ runnableIdxs s ts) : i < ts.size := by
   unfold runnableIdxs at h
   exact List.mem_range.mp (List.mem_filter.mp h).1
@@ -1046,22 +1078,29 @@ theorem runnableIdxs_lt {s : ExecState} {ts : Array Config} {i : Nat}
 /-- `stepThread` preservation: one goroutine-step of the pool keeps the
 shared state wf (allocator monotone, types unchanged), never shrinks
 the pool, and leaves every slot bounded and iteration-typed. -/
-theorem stepThread_wf {s : ExecState} {threads : Array Config} {i : Nat}
-    {ch ch' : Choices} {ts' : Array Config} {s' : ExecState} {ev : StepEvent}
+theorem stepThread_wf {s : ExecState} {threads : Array Thread} {i : Nat}
+    {ch ch' : Choices} {ts' : Array Thread} {s' : ExecState} {ev : StepEvent}
     (hw : StateWf s)
-    (hts : ∀ t (ht : t < threads.size), ConfigWf s.nextAddr threads[t]
-      ∧ Config.itersNormalized s.types threads[t] = true)
+    (hts : ∀ t (ht : t < threads.size), ThreadWf s.nextAddr s.types threads[t])
     (h : stepThread s threads i ch = .ok (ts', s', ch', ev)) :
     StateWf s' ∧ s'.types = s.types ∧ s.nextAddr ≤ s'.nextAddr
       ∧ threads.size ≤ ts'.size
-      ∧ ∀ t (ht : t < ts'.size), ConfigWf s'.nextAddr ts'[t]
-          ∧ Config.itersNormalized s.types ts'[t] = true := by
+      ∧ ∀ t (ht : t < ts'.size), ThreadWf s'.nextAddr s.types ts'[t] := by
   unfold stepThread at h
   cases hti : threads[i]? with
   | none => rw [hti] at h; simp [throw, throwThe, MonadExceptOf.throw] at h
-  | some c =>
+  | some t =>
     rw [hti] at h
+    rcases t with ⟨c, b⟩ | msg
+    case aborted => simp [throw, throwThe, MonadExceptOf.throw] at h
     obtain ⟨hc, hic⟩ := pool_get_wf hts hti
+    cases b with
+    | some site =>
+      -- the boundary CLEAR (C5): state and configuration untouched
+      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+      exact ⟨hw, rfl, Nat.le_refl _, by simp, pool_set1_wf (Nat.le_refl _) hts hc hic⟩
+    | none =>
     by_cases hblc : isBlockedConfig c = true
     · simp only [hblc, reduceIte, bind_eq_ok] at h
       obtain ⟨⟨c₂, s₂⟩, hres, h⟩ := h
@@ -1071,18 +1110,18 @@ theorem stepThread_wf {s : ExecState} {threads : Array Config} {i : Nat}
       exact ⟨q1, q3, q4, by simp, pool_set1_wf q4 hts q2 q5⟩
     · simp only [Bool.not_eq_true] at hblc
       simp only [hblc, Bool.false_eq_true, reduceIte] at h
-      cases hsc : opDoneInner c with
-      | some inner =>
-        rw [hsc] at h
+      cases hab : c.abort? with
+      | some p =>
+        -- THE ABORT (B4): the tombstone carries no location
+        obtain ⟨first, rest⟩ := p
+        rw [hab] at h
+        simp only [bind_eq_ok] at h
+        obtain ⟨msg, -, h⟩ := h
         simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-        obtain ⟨sc, rfl⟩ := opDoneInner_shape hsc
-        refine ⟨hw, rfl, Nat.le_refl _, by simp, ?_⟩
-        refine pool_set1_wf (Nat.le_refl _) hts ?_ ?_
-        · simpa [ConfigWf, Config.locSup] using hc
-        · simpa [Config.itersNormalized] using hic
+        exact ⟨hw, rfl, Nat.le_refl _, by simp, pool_set1_aborted_wf hts⟩
       | none =>
-        rw [hsc] at h
+        rw [hab] at h
         cases hsp : spawnPlan c with
         | some p =>
           obtain ⟨cv, args, k⟩ := p
@@ -1126,8 +1165,7 @@ theorem stepThread_wf {s : ExecState} {threads : Array Config} {i : Nat}
                 have hstepr := stepFn_sound hstep
                 obtain ⟨q1, q2, q3, q4⟩ := step_preserves_wf_loc hstepr hw hc
                 have q5 := step_preserves_iters hstepr hic
-                have hpool := pool_set1_wf (i := i) q4 hts q2 q5
-                exact ⟨q1, q3, q4, by simp, hpool⟩
+                exact ⟨q1, q3, q4, by simp, pool_set1_wf q4 hts q2 q5⟩
               | some p =>
                 obtain ⟨v, clauses, default?, done, env, k'⟩ := p
                 obtain rfl := selectApplyPlan_shape hselp
@@ -1275,22 +1313,21 @@ theorem stepMulti_wf {m m' : MultiConfig} {ch ch' : Choices} {ev : StepEvent}
     obtain ⟨q1, q2, q3, q4, q5⟩ := stepThread_wf hs hth hst
     refine ⟨q1, Nat.lt_of_lt_of_le hi q4, ?_⟩
     intro t ht
-    refine ⟨(q5 t ht).1, ?_⟩
     rw [q2]
-    exact (q5 t ht).2
+    exact q5 t ht
   unfold stepMulti at h
   cases hti : m.threads[m.cur]? with
   | none => rw [hti] at h; cases h
-  | some c =>
+  | some t =>
     rw [hti] at h
-    by_cases hb : c.atBoundary = true
+    by_cases hb : t.atBoundary = true
     · simp only [hb, reduceIte] at h
-      cases hrs : schedSlots m.shared m.threads m.cur c.boundarySite with
+      cases hrs : schedSlots m.shared m.threads m.cur t.boundarySite with
       | nil => rw [hrs] at h; cases h
       | cons r0 rest =>
         rw [hrs] at h
         dsimp only at h
-        rcases hcons : Choices.consumeAtE c.boundarySite
+        rcases hcons : Choices.consumeAtE t.boundarySite
             (r0 :: rest).length ch
           with ⟨pick, ch₁, ps⟩
         rw [hcons] at h

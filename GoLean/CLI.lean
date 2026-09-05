@@ -573,9 +573,9 @@ alarm is the executable check).
 The semantic core's consume sites and their accountant arms:
 1. `stepMulti`'s boundary scheduling pick (Multi.lean, the slot-menu
    length at a boundary with ≥ 2 menu entries — the L1 site, stage C's
-   `postOp` site at an `.opDone` completion marker, and stage D's
-   `backEdge` site at the loop re-entry shapes: same
-   `Choices.consumeAtE c.boundarySite` call, menu from `schedSlots`,
+   `postOp` site at a goroutine's open post-op boundary (C5's flag), and
+   stage D's `backEdge` site at the loop re-entry shapes: same
+   `Choices.consumeAtE t.boundarySite` call, menu from `schedSlots`,
    current-first at postOp/backEdge) → `stepNeeds`' boundary arm
    (which mirrors `schedSlots`, never bare `runnableIdxs`). The DFS
    additionally applies the per-site ENUMERATION mode at backEdge
@@ -600,7 +600,7 @@ The semantic core's consume sites and their accountant arms:
    held one) → the `.syncStK` apply arm of both accountants (via the
    same `syncCell`/`tryLockWidth`).
 Non-consuming by signature (no arm needed): `resumeThread`,
-`spawnStep`, `commitClause`, `applyPairing`, the `.opDone` strip,
+`spawnStep`, `commitClause`, `applyPairing`, the boundary clear, the abort,
 `raceUpdate` (stage B: it folds the step's emitted `StepEvent` and
 takes NO stream at all — the old consumption replication is deleted),
 and —
@@ -787,7 +787,7 @@ state, all BEFORE the fuel check) while REUSING the machine's own
 `stepMulti` and `raceUpdate` verbatim, so every pool step, every
 consumption site (L1 scheduler, L4 waiter pick, L2 select pick,
 mapIter, append spill), and the race detector are the machine's own.
-Member statuses: `"ok"` (main `.normal`, readout at the pinned result
+Member statuses: `"ok"` (main's terminal, readout at the pinned result
 locations), `"panic"` (any goroutine's unrecovered panic — the stream
 is KEPT: the panic is a member), and — lane d — `"race"` (the
 detector's refusal, also a member with its stream: for a racy case
@@ -812,7 +812,7 @@ def enumPoolRun (resultLocs : List Loc) :
         | some msg => return ("panic", errorJson (.panic msg) acc, choices)
         | none =>
             match m.mainOutcome? with
-            | some (.normal σf) =>
+            | some σf =>
                 -- THE MAIN-EXIT WINDOW (L5, BUG-044) — `execProgLoop`'s
                 -- bound-2 site, mirrored: with runnable goroutines left,
                 -- pick 0 exits now, pick 1 takes one more pool step.
@@ -841,7 +841,6 @@ def enumPoolRun (resultLocs : List Loc) :
                               return ("race", errorJson .raceDetected acc', choices')
                           | .error e => throw e
                           | .ok r' => enumPoolRun resultLocs fuel m' r' choices' acc')
-            | some _ => throw (.internal "main terminal outside its barrier frame")
             | none =>
                 if (GoCore.Machine.runnableIdxs m.shared m.threads).isEmpty then
                   throw .deadlock
@@ -866,7 +865,6 @@ def enumInitRun :
     Nat → GoCore.ExecState → GoCore.Machine.Config → GoCore.Choices →
     Except Stop (Sum (GoCore.ExecState × GoCore.Choices) (String × GoCore.Choices))
   | _, σ, .next .stop, choices => return .inl (σ, choices)
-  | _, _, .panicked msg, choices => return .inr (msg, choices)
   | _, _, .blockedSend _ _ _, _ => throw .deadlock
   | _, _, .blockedRecv _ _ _ _ _, _ => throw .deadlock
   | _, _, .blockedSelect _ _ _, _ => throw .deadlock
@@ -875,8 +873,13 @@ def enumInitRun :
       -- The init-phase print guard (stdlib slice 3): mirrors
       -- `runInitConfig` — no output fold on the sequential phase.
       if let some e := GoCore.Machine.initPrintRefusal? c then throw e
-      let (c', σ', choices') ← GoCore.Machine.stepFn σ c choices
-      enumInitRun fuel σ' c' choices'
+      -- THE ABORT (B4): the sequential machine raises the panic terminal
+      -- at the abort step (`stepFn` at `Config.abort?`); it is the run's
+      -- panic member, the stream as it stood (the abort consumes nothing).
+      match GoCore.Machine.stepFn σ c choices with
+      | .error (.panic msg) => return .inr (msg, choices)
+      | .error e => throw e
+      | .ok (c', σ', choices') => enumInitRun fuel σ' c' choices'
 
 /-- One whole-PROGRAM enumeration run under one stream: `$pkginit` (when
 present) consumes from the stream first, then the subject entry wiring
@@ -907,8 +910,8 @@ def enumRunProgram (ep : EnumProgram) (runFuel : Nat)
   -- a fresh one-thread pool over the initialized state, race detector
   -- armed from empty.
   enumPoolRun resultLocs runFuel
-    ⟨#[.exec ep.func.body frameEnv (.frame [] [] [] [] .stop)], s₃, 0⟩ {} choices₁
-    GoString.empty
+    ⟨#[.running (.exec ep.func.body frameEnv (.frame [] [] [] [] .stop)) none], s₃, 0⟩ {}
+    choices₁ GoString.empty
 
 /-- The observation `native-json-run` prints for a driver result — public
 so the driver-agreement eval tests compare the two drivers on the SAME
@@ -1179,7 +1182,7 @@ partial def poolDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
         recordLeaf ctx out path "panic" (errorJson (.panic msg) acc) path.length
     | none =>
       match m.mainOutcome? with
-      | some (.normal σf) =>
+      | some σf =>
           let exitLeaf : EnumOutcome → List Nat → Except String EnumOutcome :=
             fun o p =>
               match GoCore.Machine.loadMany σf resultLocs with
@@ -1203,7 +1206,6 @@ partial def poolDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
                       else .error "per-path fuel exhausted (raise --fuel)"
                   | fuel' + 1 =>
                       poolStepDFS ctx o (b :: path) resultLocs fuel' m r acc [])
-      | some _ => .error "main terminal outside its barrier frame"
       | none =>
         if (GoCore.Machine.runnableIdxs m.shared m.threads).isEmpty then
           .error s!"deadlock member under pick assignment {path.reverse} — deadlocking members have no membership handling (fail loud, per the design)"
@@ -1229,14 +1231,14 @@ partial def poolStepDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
   let backEdgeSched :=
     stepPicks.isEmpty &&
     (match m.threads[m.cur]? with
-     | some c => c.atBoundary && c.boundarySite == .backEdge
+     | some t => t.atBoundary && t.boundarySite == .backEdge
          -- The consult CONSUMES (and the mode applies) only when the
          -- slot menu has ≥ 2 entries; at a singleton menu the step's
          -- first consumption is an ordinary data pick (e.g. the
          -- mapIter pick at a single-goroutine `.mapIterK` re-entry),
          -- which branches exhaustively as always.
          && 2 ≤ (GoCore.Machine.schedSlots m.shared m.threads m.cur
-              c.boundarySite).length
+              t.boundarySite).length
      | none => false)
   match stepNeeds m picks with
   | some bound =>
@@ -1320,7 +1322,7 @@ partial def subjectEntry (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
       | .error e => .error s!"subject entry failed: {renderStop e}"
       | .ok resultLocs =>
           poolDFS ctx out path resultLocs ctx.runFuel
-            ⟨#[.exec ctx.ep.func.body frameEnv (.frame [] [] [] [] .stop)], s₃, 0⟩
+            ⟨#[.running (.exec ctx.ep.func.body frameEnv (.frame [] [] [] [] .stop)) none], s₃, 0⟩
             {} GoString.empty
 
 /-- DFS over the `$pkginit` phase (sequential, one pick per step at
@@ -1335,8 +1337,6 @@ partial def initDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
   else
     match c with
     | .next .stop => subjectEntry ctx out path σ
-    | .panicked msg =>
-        recordLeaf ctx out path "panic" (errorJson (.panic msg)) path.length
     | .blockedSend _ _ _ => .error "package init deadlocked (fail loud)"
     | .blockedRecv _ _ _ _ _ => .error "package init deadlocked (fail loud)"
     | .blockedSelect _ _ _ => .error "package init deadlocked (fail loud)"
@@ -1355,6 +1355,12 @@ partial def initDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
             -- draws at most one pick — checked, not assumed).
             branchSite ctx out path bound path.length fun o b =>
               match GoCore.Machine.stepFn σ c [b, 0] with
+              | .error (.panic msg) =>
+                  -- THE ABORT (B4): the step's panic terminal is the
+                  -- path's panic member (the old `.panicked` leaf, one
+                  -- step on).
+                  recordLeaf ctx { o with steps := o.steps + 1 } (b :: path) "panic"
+                    (errorJson (.panic msg)) (b :: path).length
               | .error e =>
                   .error s!"package init step failed under {(b :: path).reverse}: {renderStop e}"
               | .ok (c', σ', leftover) =>
@@ -1367,6 +1373,10 @@ partial def initDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
             -- TWO-SIDED here too (S4 audit): the sentinel must survive
             -- a step the accountant called non-consuming.
             match GoCore.Machine.stepFn σ c [0] with
+            | .error (.panic msg) =>
+                -- THE ABORT (B4): the panic member (see above).
+                recordLeaf ctx { out with steps := out.steps + 1 } path "panic"
+                  (errorJson (.panic msg)) path.length
             | .error e =>
                 .error s!"package init failed under {path.reverse}: {renderStop (GoCore.Machine.markInitPhase e)}"
             | .ok (c', σ', leftover) =>
@@ -1437,7 +1447,7 @@ def runDedupObservations (ep : EnumProgram) (cfg : EnumArgs) : IO UInt32 := do
       return 1
   | .ok resultLocs =>
     let m₀ : GoCore.Machine.MultiConfig :=
-      ⟨#[.exec ep.func.body frameEnv (.frame [] [] [] [] .stop)], s₃, 0⟩
+      ⟨#[.running (.exec ep.func.body frameEnv (.frame [] [] [] [] .stop)) none], s₃, 0⟩
     let r₀ : GoCore.Machine.RaceState := {}
     match EnumDedup.buildCert resultLocs m₀ r₀ cfg.workCap with
     | .error err =>

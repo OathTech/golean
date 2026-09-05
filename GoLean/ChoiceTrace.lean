@@ -155,11 +155,11 @@ def Acc.alarm (a : Acc) (msg : String) : Acc :=
 `i`: threads ≠ i parked on the OPPOSITE side, select clauses counted
 individually (the C5 census width: "#matches (select clauses counted
 individually)"). A deliberately plain scan over the thread shapes. -/
-def parkedPartners (threads : Array Config) (i : Nat) (loc : Loc)
+def parkedPartners (threads : Array Thread) (i : Nat) (loc : Loc)
     (arrivingSend : Bool) : Nat :=
   (List.range threads.size).foldl (init := 0) fun acc j =>
     if j == i then acc else
-    match threads[j]? with
+    match threads[j]?.bind Thread.config? with
     | some (.blockedRecv (some l) _ _ _ _) =>
         if arrivingSend && l == loc then acc + 1 else acc
     | some (.blockedSend (some l) _ _) =>
@@ -173,7 +173,7 @@ def parkedPartners (threads : Array Config) (i : Nat) (loc : Loc)
 
 /-- Partners for an op on channel value `chv` (nil channel: none; closed
 channel: none — a send panics, a receive drains/zeroes, neither pairs). -/
-def partnersFor (s : ExecState) (threads : Array Config) (i : Nat)
+def partnersFor (s : ExecState) (threads : Array Thread) (i : Nat)
     (chv : GoValue) (arrivingSend : Bool) : Option Nat :=
   match chanValueLoc chv with
   | none => some 0
@@ -195,7 +195,7 @@ def schedFacts (m : MultiConfig) (site : ChoiceSite) (menu : List Nat) : MenuFac
   let rs := runnableIdxs m.shared m.threads
   let indep := (List.range m.threads.size).filter fun j =>
     match m.threads[j]? with
-    | some c => threadRunnable m.shared c
+    | some t => threadRunnable m.shared t
     | none => false
   { specWidth := some indep.length
     invariants :=
@@ -219,7 +219,7 @@ def exitWindowFacts (m : MultiConfig) : MenuFacts :=
 /-- Waiter-pick facts (C5): the candidate list against the independent
 partner scan for the arriving op's channel/side. `chvSide` = the
 arriving clause's (isSend, chan value) when it could be determined. -/
-def waiterFacts (s : ExecState) (threads : Array Config) (i : Nat)
+def waiterFacts (s : ExecState) (threads : Array Thread) (i : Nat)
     (chvSide : Option (Bool × GoValue)) (cands : List (Nat × PairTarget)) : MenuFacts :=
   let expected := match chvSide with
     | some (isSend, chv) => partnersFor s threads i chv isSend
@@ -227,7 +227,7 @@ def waiterFacts (s : ExecState) (threads : Array Config) (i : Nat)
   { specWidth := expected
     invariants :=
       [ ("every candidate partner is a parked goroutine", cands.all fun c =>
-          match threads[c.2.partnerIdx]? with
+          match threads[c.2.partnerIdx]?.bind Thread.config? with
           | some pc => isBlockedConfig pc
           | none => false),
         ("no candidate is the arriving goroutine", cands.all fun c => c.2.partnerIdx != i),
@@ -254,7 +254,7 @@ def selectEvs (c : Config) : Option (Except Stop (List EvClause) × Nat) :=
 
 /-- Arrival-path select facts (C6, waiter-extended readiness): width =
 #clauses that are cell-ready or have a parked partner. -/
-def arrivalFacts (s : ExecState) (threads : Array Config) (i : Nat) (c : Config)
+def arrivalFacts (s : ExecState) (threads : Array Thread) (i : Nat) (c : Config)
     (os : Nat) : MenuFacts :=
   match selectEvs c with
   | some (.ok evs, n) =>
@@ -460,9 +460,9 @@ against `picks` (the machine's `schedSlots` menu). -/
 def poolTarget (m : MultiConfig) (picks : List Nat) : Option (Nat × List Nat) :=
   match m.threads[m.cur]? with
   | none => none
-  | some c₀ =>
-    let menu := schedSlots m.shared m.threads m.cur c₀.boundarySite
-    if c₀.atBoundary then
+  | some t₀ =>
+    let menu := schedSlots m.shared m.threads m.cur t₀.boundarySite
+    if t₀.atBoundary then
       match menu with
       | [] => none
       | [j] => some (j, picks)
@@ -482,7 +482,7 @@ def poolFacts (m : MultiConfig) (picks : List Nat) (site : ChoiceSite) (bound : 
   match site with
   | .l1Sched | .postOp | .backEdge =>
       match m.threads[m.cur]? with
-      | some c₀ => schedFacts m site (schedSlots m.shared m.threads m.cur c₀.boundarySite)
+      | some t₀ => schedFacts m site (schedSlots m.shared m.threads m.cur t₀.boundarySite)
       | none => { specWidth := none, invariants := [("scheduler site without a running goroutine", false)],
                   pickCheck := fun _ => [] }
   | .l5ExitWindow => exitWindowFacts m
@@ -491,7 +491,7 @@ def poolFacts (m : MultiConfig) (picks : List Nat) (site : ChoiceSite) (bound : 
       | none => { specWidth := none, invariants := [(s!"{siteName site} without a stepped goroutine", false)],
                   pickCheck := fun _ => [] }
       | some (i, ch) =>
-        match m.threads[i]? with
+        match m.threads[i]?.bind Thread.config? with
         | none => { specWidth := none, invariants := [("stepped goroutine out of range", false)],
                     pickCheck := fun _ => [] }
         | some c =>
@@ -565,7 +565,7 @@ partial def poolLoop (fuel : Nat) (m : MultiConfig) (r : RaceState) (a : Acc) :
   | some _ => return { status := "panic", acc := a }
   | none =>
     match m.mainOutcome? with
-    | some (.normal _) =>
+    | some _ =>
         match runnableIdxs m.shared m.threads with
         | [] => return { status := "ok", acc := a }
         | _ :: _ =>
@@ -576,7 +576,6 @@ partial def poolLoop (fuel : Nat) (m : MultiConfig) (r : RaceState) (a : Acc) :
               match fuel with
               | 0 => return { status := "fuel-out", acc := a }
               | fuel' + 1 => poolStep fuel' m r { a with phase := "pool" }
-    | some _ => throw "main terminal outside its barrier frame"
     | none =>
       if (runnableIdxs m.shared m.threads).isEmpty then
         return { status := "deadlock", acc := a }
@@ -615,7 +614,6 @@ partial def initLoop (fuel : Nat) (σ : ExecState) (c : Config) (a : Acc) :
     Except String (Sum (ExecState × Acc) RunOutcome) := do
   match c with
   | .next .stop => return .inl (σ, a)
-  | .panicked _ => return .inr { status := "panic", acc := a }
   | .blockedSend _ _ _ | .blockedRecv _ _ _ _ _ | .blockedSelect _ _ _ =>
       return .inr { status := "deadlock", acc := a }
   | c =>
@@ -664,7 +662,7 @@ def traceProgram (ep : CLI.EnumProgram) (fuel : Nat) (stream : List Nat) :
     match allocDecls env s₂ ep.func.results.toList with
     | .error e => return { status := e.status, acc := a₁ }
     | .ok (frameEnv, s₃) =>
-      poolLoop fuel ⟨#[.exec ep.func.body frameEnv (.frame [] [] [] [] .stop)], s₃, 0⟩ {} a₁
+      poolLoop fuel ⟨#[.running (.exec ep.func.body frameEnv (.frame [] [] [] [] .stop)) none], s₃, 0⟩ {} a₁
 
 /-! ## Streams -/
 

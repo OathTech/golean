@@ -9,10 +9,13 @@ The pool's proof kit, mirroring the sequential one:
 * **Sequential conservation** — `stepMulti_single` (the one-thread pool
   step IS `stepFn`, an `Except.map` away) lifted to
   `execProg_single_eq_execStmt`: a sequential run's `.ok`, `.fuelOut`
-  and `.panic` results transfer verbatim to the pool driver. This is
+  and `.panic` results transfer verbatim to the pool driver — at the
+  pool's fuel `fuel + seqOpCount …`, since C5: the one-goroutine pool
+  takes one boundary-clear step per completed registry op that the
+  sequential machine does not (the strip is a POOL step, G-C5). This is
   the transfer lemma that keeps every designated sequential statement
   valid unrestated (D9(a)) — and the reason the full corpus is
-  bit-identical under the pool driver.
+  bit-identical under the pool driver (the differential runs the pool).
 
 * **Correspondence** — `stepMulti_sound` (every executable pool step is
   a `StepM` step) and `stepM_complete` (every `StepM` step is realized
@@ -35,18 +38,18 @@ open GoLean
 @[simp] theorem isBlockedConfig_panicking {chain : List PanicEntry} {k : Cont} :
     isBlockedConfig (.panicking chain k) = false := rfl
 
-theorem recvSideWaiters_singleton {c : Config} {loc : Loc} :
-    recvSideWaiters #[c] 0 loc = [] := rfl
+theorem recvSideWaiters_singleton {t : Thread} {loc : Loc} :
+    recvSideWaiters #[t] 0 loc = [] := rfl
 
-theorem sendSideWaiters_singleton {c : Config} {loc : Loc} :
-    sendSideWaiters #[c] 0 loc = [] := rfl
+theorem sendSideWaiters_singleton {t : Thread} {loc : Loc} :
+    sendSideWaiters #[t] 0 loc = [] := rfl
 
 /-- With no OTHER goroutines there is never a parked partner: the
 arrival plan is a pure no-op — its waiter scans short-circuit before
 any fallible helper runs. The conservation theorem's hinge. -/
-theorem chanArrivalPlan_singleton {s : ExecState} {c : Config}
+theorem chanArrivalPlan_singleton {s : ExecState} {t : Thread}
     {op : ChanStOp} {vs : List GoValue} {env : LocalEnv} {k : Cont} :
-    chanArrivalPlan s #[c] 0 op vs env k = .ok none := by
+    chanArrivalPlan s #[t] 0 op vs env k = .ok none := by
   unfold chanArrivalPlan
   match op, vs with
   | .send elem, [] => rfl
@@ -65,12 +68,12 @@ theorem chanArrivalPlan_singleton {s : ExecState} {c : Config}
   | .close, _ => rfl
 
 @[inherit_doc chanArrivalPlan_singleton]
-theorem selectArrivalCases_singleton {s : ExecState} {c : Config}
+theorem selectArrivalCases_singleton {s : ExecState} {t : Thread}
     {clauses : List (SelectClauseHead × Stmt)} {vs : List GoValue}
     {env : LocalEnv} {k : Cont} :
-    selectArrivalCases s #[c] 0 clauses vs env k = .ok .cellPath := by
+    selectArrivalCases s #[t] 0 clauses vs env k = .ok .cellPath := by
   have hsw : ∀ sides : List (Option (Bool × Loc)),
-      sidesHaveWaiters #[c] 0 sides = false := by
+      sidesHaveWaiters #[t] 0 sides = false := by
     intro sides
     induction sides with
     | nil => rfl
@@ -90,27 +93,27 @@ theorem selectArrivalCases_singleton {s : ExecState} {c : Config}
       rfl
 
 @[inherit_doc chanArrivalPlan_singleton]
-theorem arrivalCases_singleton {s : ExecState} {c c' : Config} :
-    arrivalCases s #[c] 0 c' = .ok .cellPath := by
+theorem arrivalCases_singleton {s : ExecState} {t : Thread} {c' : Config} :
+    arrivalCases s #[t] 0 c' = .ok .cellPath := by
   unfold arrivalCases
   split
-  · rw [show chanArrivalPlan s #[c] 0 _ _ _ _ = .ok none
+  · rw [show chanArrivalPlan s #[t] 0 _ _ _ _ = .ok none
       from chanArrivalPlan_singleton]
     rfl
   · exact selectArrivalCases_singleton
   · rfl
 
 @[inherit_doc chanArrivalPlan_singleton]
-theorem arrivalPlan_singleton {s : ExecState} {c c' : Config} {ch : Choices} :
-    arrivalPlan s #[c] 0 c' ch = .ok (none, ch, []) := by
+theorem arrivalPlan_singleton {s : ExecState} {t : Thread} {c' : Config} {ch : Choices} :
+    arrivalPlan s #[t] 0 c' ch = .ok (none, ch, []) := by
   unfold arrivalPlan
-  rw [show arrivalCases s #[c] 0 c' = .ok .cellPath from arrivalCases_singleton]
+  rw [show arrivalCases s #[t] 0 c' = .ok .cellPath from arrivalCases_singleton]
   rfl
 
 /-- Wrapper computations of `arrivalPlan` from a pure analysis (the
 proofs' bridge between `arrivalCases` — the relation's carrier — and
 the consuming wrapper the executable calls). -/
-theorem arrivalPlan_of_cellPath {s : ExecState} {threads : Array Config}
+theorem arrivalPlan_of_cellPath {s : ExecState} {threads : Array Thread}
     {i : Nat} {c : Config} {ch : Choices}
     (h : arrivalCases s threads i c = .ok .cellPath) :
     arrivalPlan s threads i c ch = .ok (none, ch, []) := by
@@ -119,7 +122,7 @@ theorem arrivalPlan_of_cellPath {s : ExecState} {threads : Array Config}
   rfl
 
 @[inherit_doc arrivalPlan_of_cellPath]
-theorem arrivalPlan_of_single {s : ExecState} {threads : Array Config}
+theorem arrivalPlan_of_single {s : ExecState} {threads : Array Thread}
     {i : Nat} {c bc : Config} {cs : List (Nat × PairTarget)} {ch : Choices}
     (h : arrivalCases s threads i c = .ok (.single bc cs)) :
     arrivalPlan s threads i c ch = .ok (some (.pair bc cs), ch, []) := by
@@ -128,7 +131,7 @@ theorem arrivalPlan_of_single {s : ExecState} {threads : Array Config}
   rfl
 
 @[inherit_doc arrivalPlan_of_cellPath]
-theorem arrivalPlan_of_error {s : ExecState} {threads : Array Config}
+theorem arrivalPlan_of_error {s : ExecState} {threads : Array Thread}
     {i : Nat} {c : Config} {e : Stop} {ch : Choices}
     (h : arrivalCases s threads i c = .error e) :
     arrivalPlan s threads i c ch = .error e := by
@@ -141,7 +144,7 @@ waiter-extended-ready clause, and the `[]`/singleton readiness lists take
 `selectArrivalCases`'s other arms (`.cellPath`/`.single`). This is the
 "≥ 2 by construction" fact under which the L2 arrival consult always
 POPS under the uniform consumption rule (G-U). -/
-theorem arrivalCases_multi_length {s : ExecState} {threads : Array Config}
+theorem arrivalCases_multi_length {s : ExecState} {threads : Array Thread}
     {i : Nat} {c : Config} {os : List ArrivalOutcome}
     (h : arrivalCases s threads i c = .ok (.multi os)) : 1 < os.length := by
   unfold arrivalCases at h
@@ -192,7 +195,7 @@ theorem arrivalCases_multi_length {s : ExecState} {threads : Array Config}
   · cases h
 
 @[inherit_doc arrivalPlan_of_cellPath]
-theorem arrivalPlan_of_multi {s : ExecState} {threads : Array Config}
+theorem arrivalPlan_of_multi {s : ExecState} {threads : Array Thread}
     {i : Nat} {c : Config} {os : List ArrivalOutcome} {sel : Nat}
     {ch ch₁ : Choices}
     (h : arrivalCases s threads i c = .ok (.multi os))
@@ -214,55 +217,49 @@ theorem arrivalPlan_of_multi {s : ExecState} {threads : Array Config}
   dsimp only
   cases os[sel]? <;> rfl
 
-/-- An `opDoneInner` extraction pins the marker's shape (the
-`spawnPlan` extraction mold). -/
-theorem opDoneInner_shape {c inner : Config}
-    (h : opDoneInner c = some inner) : ∃ sc, c = .opDone sc inner := by
-  match c, h with
-  | .opDone sc i', h =>
-      simp only [opDoneInner, Option.some.injEq] at h
-      exact ⟨sc, by rw [h]⟩
+/-- No configuration SHAPE consults the `postOp` site: a completed op's
+site is the goroutine's flag (C5). -/
+theorem Config.boundarySite_ne_postOp (c : Config) : c.boundarySite ≠ .postOp := by
+  unfold Config.boundarySite
+  split <;> simp
 
-/-- The completion marker STRIPS sequentially too (stage C, B1 —
-`stepFn`'s `.opDone` arm; the old `.spawned` marker failed closed
-here, which is what made the strip pool-only pre-widening). -/
-theorem opDoneInner_stepFn_strip {c inner : Config} {σ : ExecState}
-    {ch : Choices} (h : opDoneInner c = some inner) :
-    stepFn σ c ch = .ok (inner, σ, ch) := by
-  obtain ⟨sc, rfl⟩ := opDoneInner_shape h
-  rfl
+/-- A postOp boundary site is exactly an open `postOp` flag. -/
+theorem Thread.boundarySite_postOp_shape {t : Thread}
+    (h : t.boundarySite = .postOp) :
+    ∃ c, t = .running c (some .postOp) := by
+  cases t with
+  | aborted msg => simp [Thread.boundarySite] at h
+  | running c b =>
+    cases b with
+    | some site =>
+      simp only [Thread.boundarySite] at h
+      subst h
+      exact ⟨c, rfl⟩
+    | none => exact absurd h (Config.boundarySite_ne_postOp c)
 
-/-- The sequential relation's marker rule, inverted: the strip is the
-ONLY step from a marker. -/
-theorem step_opDone_inv {sc : ChoiceSite} {c c' : Config}
-    {σ σ' : ExecState} (h : Step (.opDone sc c) σ c' σ') :
-    c' = c ∧ σ' = σ := by
-  cases h
-  exact ⟨rfl, rfl⟩
-
-/-- A postOp boundary site is exactly a postOp-tagged marker. -/
-theorem Config.boundarySite_postOp_shape {c : Config}
-    (h : Config.boundarySite c = .postOp) :
-    ∃ inner, c = .opDone .postOp inner := by
-  unfold Config.boundarySite at h
-  split at h
-  · rename_i inner; exact ⟨inner, rfl⟩
-  all_goals cases h
-
-/-- A backEdge boundary site's configuration is RUNNABLE (stage D: the
-loop re-entry shapes are neither done nor blocked — what puts the
-current goroutine at slot 0 of its own menu). -/
-theorem Config.boundarySite_backEdge_runnable {s : ExecState} {c : Config}
-    (h : Config.boundarySite c = .backEdge) :
-    threadRunnable s c = true := by
-  unfold Config.boundarySite at h
-  -- Order matters: `cases h` on the MATCHING arms' `refl` proof
-  -- succeeds vacuously and leaves the goal, so the computation goes
-  -- first.
-  split at h <;>
-    first
-    | (simp [threadRunnable, threadDone, Config.isTerminal, isBlockedConfig]; done)
-    | cases h
+/-- A backEdge boundary site's goroutine is RUNNABLE (stage D: the loop
+re-entry shapes are neither done nor blocked — what puts the current
+goroutine at slot 0 of its own menu; a flagged goroutine is runnable
+outright). -/
+theorem Thread.boundarySite_backEdge_runnable {s : ExecState} {t : Thread}
+    (h : t.boundarySite = .backEdge) :
+    threadRunnable s t = true := by
+  cases t with
+  | aborted msg => simp [Thread.boundarySite] at h
+  | running c b =>
+    cases b with
+    | some site => rfl
+    | none =>
+      simp only [Thread.boundarySite] at h
+      simp only [threadRunnable]
+      unfold Config.boundarySite at h
+      -- Order matters: `cases h` on the MATCHING arms' `refl` proof
+      -- succeeds vacuously and leaves the goal, so the computation goes
+      -- first.
+      split at h <;>
+        first
+        | (simp [Config.isTerminal, isBlockedConfig]; done)
+        | cases h
 
 /-- A `selectApplyPlan` extraction pins the configuration's shape (the
 `spawnedCont_shape` mold). -/
@@ -315,29 +312,23 @@ theorem stepFn_selectApply_inv {σ : ExecState} {v : GoValue}
         exact .inr ⟨msg, rfl, rfl, rfl, rfl⟩
 
 /-- The one-thread `stepThread` is `stepFn`, results re-wrapped with a
-step event attached (the arrival plan is a pure no-op with no other
-goroutines — `arrivalPlan_singleton`; the completion marker's pool
-strip matches `stepFn`'s own `.opDone` arm exactly — stage C's
-both-drivers strip; the select interception path lands on `stepFn`'s
-own result — one consuming definition, `applySelect`, whose commit
-identity the sequential arm projects away). -/
+step event attached and the successor flagged by the post-op boundary
+rule (the arrival plan is a pure no-op with no other goroutines —
+`arrivalPlan_singleton`; the select interception path lands on
+`stepFn`'s own result — one consuming definition, `applySelect`, whose
+commit identity the sequential arm projects away). Stated away from the
+shapes the pool handles ITSELF (a park, a spawn position, the abort). -/
 theorem stepThread_single {σ : ExecState} {c : Config} {ch : Choices}
     (hbl : isBlockedConfig c = false)
-    (hsp : spawnPlan c = none) :
-    ∃ ev, stepThread σ #[c] 0 ch
-      = (stepFn σ c ch).map (fun r => (#[r.1], r.2.1, r.2.2, ev)) := by
-  cases hsc : opDoneInner c with
-  | some inner =>
-      -- The marker strip: the pool arm and `stepFn`'s arm coincide.
-      refine ⟨⟨0, .opDoneStrip, [], []⟩, ?_⟩
-      obtain ⟨sc, rfl⟩ := opDoneInner_shape hsc
-      rfl
-  | none =>
+    (hsp : spawnPlan c = none)
+    (hab : c.abort? = none) :
+    ∃ ev, stepThread σ #[.running c none] 0 ch
+      = (stepFn σ c ch).map (fun r => (#[Thread.afterStep σ c r.1], r.2.1, r.2.2, ev)) := by
   unfold stepThread
-  have h0 : (#[c] : Array Config)[0]? = some c := rfl
+  have h0 : (#[Thread.running c none] : Array Thread)[0]? = some (.running c none) := rfl
   rw [h0]
-  simp only [hbl, Bool.false_eq_true, reduceIte, hsc, hsp]
-  rw [show arrivalPlan σ #[c] 0 c ch = .ok (none, ch, [])
+  simp only [hbl, Bool.false_eq_true, reduceIte, hab, hsp]
+  rw [show arrivalPlan σ #[Thread.running c none] 0 c ch = .ok (none, ch, [])
     from arrivalPlan_singleton]
   simp only [Bind.bind, Except.bind]
   cases hselp : selectApplyPlan c with
@@ -384,52 +375,53 @@ theorem stepThread_single {σ : ExecState} {c : Config} {ch : Choices}
           rw [hfn]
           cases_stop e <;> first | rfl | simp [Functor.map, Except.map]
 
-theorem runnableIdxs_singleton {σ : ExecState} {c : Config}
-    (h : threadRunnable σ c = true) :
-    runnableIdxs σ #[c] = [0] := by
+theorem runnableIdxs_singleton {σ : ExecState} {t : Thread}
+    (h : threadRunnable σ t = true) :
+    runnableIdxs σ #[t] = [0] := by
   simp [runnableIdxs, h]
 
 /-- A singleton pool's slot menu is `[0]` at EVERY site (postOp's
 issuer-first reordering is invisible with one goroutine). -/
-theorem schedSlots_singleton {σ : ExecState} {c : Config}
-    {site : ChoiceSite} (h : threadRunnable σ c = true) :
-    schedSlots σ #[c] 0 site = [0] := by
+theorem schedSlots_singleton {σ : ExecState} {t : Thread}
+    {site : ChoiceSite} (h : threadRunnable σ t = true) :
+    schedSlots σ #[t] 0 site = [0] := by
   unfold schedSlots
   cases site <;>
     simp [runnableIdxs_singleton h]
 
 /-- **The one-thread pool step is the sequential step** (the D2a
 consumption rule at work: a single runnable goroutine never consumes a
-scheduler choice — at the L1 site AND at stage C's postOp site, both
-by the uniform bound-≤-1 rule of `Choices.consumeAt` through the clamped
-`Config.boundarySite` — and with no partner the intercept never
-fires). -/
+scheduler choice — at the L1 site AND at stage C's postOp site, both by
+the uniform bound-≤-1 rule of `Choices.consumeAt` — and with no partner
+the intercept never fires); the successor carries the boundary the step
+opened (`Thread.afterStep`, C5). -/
 theorem stepMulti_single {σ : ExecState} {c : Config} {ch : Choices}
     (hbl : isBlockedConfig c = false)
     (hsp : spawnPlan c = none)
-    (hdone : threadDone c = false) :
-    ∃ ev, stepMulti ⟨#[c], σ, 0⟩ ch
-      = (stepFn σ c ch).map (fun r => (⟨#[r.1], r.2.1, 0⟩, r.2.2, ev)) := by
-  have hrun : threadRunnable σ c = true := by
+    (hab : c.abort? = none)
+    (hdone : c.isTerminal = false) :
+    ∃ ev, stepMulti ⟨#[.running c none], σ, 0⟩ ch
+      = (stepFn σ c ch).map (fun r => (⟨#[Thread.afterStep σ c r.1], r.2.1, 0⟩, r.2.2, ev)) := by
+  have hrun : threadRunnable σ (.running c none) = true := by
     simp [threadRunnable, hdone, hbl]
-  obtain ⟨ev, hst⟩ := stepThread_single (σ := σ) (ch := ch) hbl hsp
+  obtain ⟨ev, hst⟩ := stepThread_single (σ := σ) (ch := ch) hbl hsp hab
   refine ⟨ev, ?_⟩
-  have hinto : stepThreadInto ⟨#[c], σ, 0⟩ 0 ch
-      = (stepFn σ c ch).map (fun r => (⟨#[r.1], r.2.1, 0⟩, r.2.2, ev)) := by
+  have hinto : stepThreadInto ⟨#[.running c none], σ, 0⟩ 0 ch
+      = (stepFn σ c ch).map (fun r => (⟨#[Thread.afterStep σ c r.1], r.2.1, 0⟩, r.2.2, ev)) := by
     unfold stepThreadInto
-    show (stepThread σ #[c] 0 ch).bind _ = _
+    show (stepThread σ #[.running c none] 0 ch).bind _ = _
     rw [hst]
     cases stepFn σ c ch <;>
       simp [Bind.bind, Except.bind, Functor.map, Except.map]
   unfold stepMulti
-  have h0 : (#[c] : Array Config)[0]? = some c := rfl
+  have h0 : (#[Thread.running c none] : Array Thread)[0]? = some (.running c none) := rfl
   simp only [h0]
-  by_cases hb : Config.atBoundary c = true
+  by_cases hb : Thread.atBoundary (.running c none) = true
   · simp only [hb, reduceIte]
-    rw [show schedSlots σ #[c] 0 c.boundarySite = [0]
+    rw [show schedSlots σ #[Thread.running c none] 0 (Thread.boundarySite (.running c none)) = [0]
       from schedSlots_singleton hrun]
     dsimp only
-    rw [show Choices.consumeAtE c.boundarySite [0].length ch = (0, ch, [])
+    rw [show Choices.consumeAtE (Thread.boundarySite (.running c none)) [0].length ch = (0, ch, [])
       from Choices.consumeAtE_le_one (by simp)]
     simp only [List.getElem?_cons_zero]
     simp only [Bind.bind, Except.bind]
@@ -442,6 +434,82 @@ theorem stepMulti_single {σ : ExecState} {c : Config} {ch : Choices}
   · simp only [Bool.not_eq_true] at hb
     simp only [hb, Bool.false_eq_true, reduceIte]
     exact hinto
+
+/-- **The one-thread pool's boundary CLEAR** (C5): a flagged singleton
+goroutine's pool step clears its flag and nothing else — no scheduler
+consumption (the menu is `[0]`), no state change, the `.opDoneStrip`
+event. The step the sequential driver does not take. -/
+theorem stepMulti_flagged_single {σ : ExecState} {c : Config} {ch : Choices}
+    {site : ChoiceSite} :
+    stepMulti ⟨#[.running c (some site)], σ, 0⟩ ch
+      = .ok (⟨#[.running c none], σ, 0⟩, ch, ⟨0, .opDoneStrip, [], []⟩) := by
+  have hrun : threadRunnable σ (.running c (some site)) = true := rfl
+  unfold stepMulti
+  have h0 : (#[Thread.running c (some site)] : Array Thread)[0]?
+      = some (.running c (some site)) := rfl
+  simp only [h0]
+  simp only [Thread.atBoundary, reduceIte]
+  rw [show schedSlots σ #[Thread.running c (some site)] 0
+      (Thread.boundarySite (.running c (some site))) = [0]
+    from schedSlots_singleton hrun]
+  dsimp only
+  rw [show Choices.consumeAtE (Thread.boundarySite (.running c (some site))) [0].length ch
+      = (0, ch, [])
+    from Choices.consumeAtE_le_one (by simp)]
+  rfl
+
+/-- The sequential machine's ABORT (B4): at an unrecovered chain at
+`.stop`, `stepFn` raises the rendered `panic` terminal (or `abortMsg`'s
+refusal), whatever the stream. -/
+theorem stepFn_abort {σ : ExecState} {c : Config} {ch : Choices}
+    {first : PanicEntry} {rest : List PanicEntry}
+    (hab : c.abort? = some (first, rest)) :
+    stepFn σ c ch = (do let msg ← abortMsg σ first rest; throw (.panic msg)) := by
+  match c, hab with
+  | .panicking (f :: r) .stop, hab =>
+    simp only [Config.abort?, Option.some.injEq, Prod.mk.injEq] at hab
+    obtain ⟨rfl, rfl⟩ := hab
+    rfl
+
+/-- An abort configuration is not parked. -/
+theorem isBlockedConfig_of_abort {c : Config} {first : PanicEntry}
+    {rest : List PanicEntry} (hab : c.abort? = some (first, rest)) :
+    isBlockedConfig c = false := by
+  match c, hab with
+  | .panicking (f :: r) .stop, _ => rfl
+
+/-- An abort configuration is not a terminal. -/
+theorem isTerminal_of_abort {c : Config} {first : PanicEntry}
+    {rest : List PanicEntry} (hab : c.abort? = some (first, rest)) :
+    c.isTerminal = false := by
+  match c, hab with
+  | .panicking (f :: r) .stop, _ => rfl
+
+/-- An abort configuration is not at a boundary shape. -/
+theorem atBoundary_of_abort {c : Config} {first : PanicEntry}
+    {rest : List PanicEntry} (hab : c.abort? = some (first, rest)) :
+    c.atBoundary = false := by
+  match c, hab with
+  | .panicking (f :: r) .stop, _ => rfl
+
+/-- **The one-thread pool's ABORT** (B4): the singleton goroutine at an
+unrecovered chain at `.stop` renders into its tombstone in one pool step
+(or the render's refusal propagates) — the step the sequential machine
+takes as its `panic` terminal (`stepFn_abort`). -/
+theorem stepMulti_abort_single {σ : ExecState} {c : Config} {ch : Choices}
+    {first : PanicEntry} {rest : List PanicEntry}
+    (hab : c.abort? = some (first, rest)) :
+    stepMulti ⟨#[.running c none], σ, 0⟩ ch
+      = (abortMsg σ first rest).map
+          (fun msg => (⟨#[.aborted msg], σ, 0⟩, ch, ⟨0, .aborted, [], []⟩)) := by
+  unfold stepMulti
+  have h0 : (#[Thread.running c none] : Array Thread)[0]? = some (.running c none) := rfl
+  simp only [h0]
+  simp only [Thread.atBoundary, atBoundary_of_abort hab, Bool.false_eq_true, reduceIte]
+  unfold stepThreadInto stepThread
+  rw [h0]
+  simp only [isBlockedConfig_of_abort hab, Bool.false_eq_true, reduceIte, hab]
+  cases abortMsg σ first rest <;> simp [Bind.bind, Except.bind, Except.map]
 
 /-! ## stepFn shape inversions (the spawn/terminal refusals) -/
 
@@ -483,7 +551,7 @@ strengthening opportunity (it would need a per-step
 blocked-not-wake-ready invariant carried through the induction);
 deadlock preservation under the driver swap is validated by the
 corpus's 12 pinned deadlock cases instead. -/
-def transferable : Except Stop (ExecOutcome × Choices) → Prop
+def transferable : Except Stop (ExecState × Choices) → Prop
   | .ok _ => True
   | .error .fuelOut => True
   | .error (.panic _) => True
@@ -493,54 +561,71 @@ def transferable : Except Stop (ExecOutcome × Choices) → Prop
 (`raceUpdate`'s first branch): a single goroutine cannot race with
 itself. The conservation proof's detector hinge — sequential runs
 thread the `RaceState` through untouched. -/
-theorem raceUpdate_single {σ : ExecState} {ts : Array Config} {c : Config}
+theorem raceUpdate_single {σ : ExecState} {ts : Array Thread} {t : Thread}
     {σ' : ExecState} {i : Nat} {ev : StepEvent} {rs : RaceState} :
-    raceUpdate σ ts ev ⟨#[c], σ', i⟩ rs = .ok rs := by
+    raceUpdate σ ts ev ⟨#[t], σ', i⟩ rs = .ok rs := by
   simp [raceUpdate]
 
 /-- The singleton-pool projections of a mid-run (non-terminal,
 non-blocked) configuration. -/
 theorem singleton_pool_facts {σ : ExecState} {c : Config}
-    (h1 : c ≠ .next .stop) (h2 : c ≠ .signal .ret .stop)
-    (h3 : c ≠ .signal .brk .stop) (h4 : c ≠ .signal .cont .stop)
-    (h5 : ∀ msg, c ≠ .panicked msg)
+    (h1 : c ≠ .next .stop)
     (h6 : ∀ a b k, c ≠ .blockedSend a b k)
     (h7 : ∀ a b e env k, c ≠ .blockedRecv a b e env k)
     (h8 : ∀ cl env k, c ≠ .blockedSelect cl env k)
     (h9 : ∀ op loc env k, c ≠ .blockedSync op loc env k) :
-    MultiConfig.panicMsg? ⟨#[c], σ, 0⟩ = none
-      ∧ MultiConfig.mainOutcome? ⟨#[c], σ, 0⟩ = none
-      ∧ threadDone c = false ∧ isBlockedConfig c = false := by
-  refine ⟨?_, ?_, ?_, ?_⟩
-  · unfold MultiConfig.panicMsg?
-    have ht : (⟨#[c], σ, 0⟩ : MultiConfig).threads.toList = [c] := rfl
-    rw [ht]
-    unfold List.findSome?
-    split
-    · rename_i b heq
-      split at heq <;> simp_all
-    · rfl
+    MultiConfig.panicMsg? ⟨#[.running c none], σ, 0⟩ = none
+      ∧ MultiConfig.mainOutcome? ⟨#[.running c none], σ, 0⟩ = none
+      ∧ c.isTerminal = false ∧ isBlockedConfig c = false := by
+  refine ⟨rfl, ?_, ?_, ?_⟩
   · unfold MultiConfig.mainOutcome?
-    have h0 : ((⟨#[c], σ, 0⟩ : MultiConfig).threads[0]? : Option Config) = some c := rfl
+    have h0 : ((⟨#[.running c none], σ, 0⟩ : MultiConfig).threads[0]? : Option Thread)
+        = some (.running c none) := rfl
     rw [h0]
     split <;> simp_all
-  · unfold threadDone Config.isTerminal
+  · unfold Config.isTerminal
     split <;> simp_all
   · unfold isBlockedConfig
     split <;> try simp_all
     · exact (h7 _ _ _ _ _ rfl rfl rfl rfl rfl)
     · exact (h9 _ _ _ _ rfl rfl rfl rfl)
 
-/-- **The conservation transfer, loop level**: every sequential result
-in the `transferable` classes is the singleton pool's result verbatim
-— same outcome, same final state, same leftover stream, same fuel
-accounting. -/
+/-- **The op count** (C5): the number of registry-op completions along a
+sequential run of at most `fuel` steps from `c` — each one a boundary
+CLEAR the one-goroutine pool takes and the sequential machine does not
+(`Config.afterStepFlag`). Zero at a terminal, a park, or a refusing /
+aborting step (no boundary opened). -/
+def seqOpCount : Nat → ExecState → Config → Choices → Nat
+  | 0, _, _, _ => 0
+  | fuel + 1, σ, c, ch =>
+      if c.isTerminal || isBlockedConfig c then 0
+      else
+        match stepFn σ c ch with
+        | .error _ => 0
+        | .ok (c', σ', ch') =>
+            (if (c.afterStepFlag σ c').isSome then 1 else 0) + seqOpCount fuel σ' c' ch'
+
+/-- A tombstoned singleton pool is the panic terminal at every fuel. -/
+theorem execProgLoop_aborted {fuel : Nat} {σ : ExecState} {msg : String}
+    {rs : RaceState} {ch : Choices} :
+    execProgLoop fuel ⟨#[.aborted msg], σ, 0⟩ rs ch = .error (.panic msg) := by
+  unfold execProgLoop
+  rfl
+
+/-- **The conservation transfer, loop level** (restated at G-C5 with the
+op count): every sequential result in the `transferable` classes is the
+singleton pool's result verbatim — same outcome, same final state, same
+leftover stream — at the pool's fuel `fuel + seqOpCount fuel σ c ch`:
+the pool spends exactly one extra step per completed registry op (the
+boundary clear, `stepMulti_flagged_single`) and matches the sequential
+machine step for step otherwise (`stepMulti_single`,
+`stepMulti_abort_single`). -/
 theorem execProgLoop_single :
     ∀ {fuel : Nat} {σ : ExecState} {c : Config} {ch : Choices}
       {rs : RaceState}
-      {r : Except Stop (ExecOutcome × Choices)},
+      {r : Except Stop (ExecState × Choices)},
       execStmtLoop fuel σ c ch = r → transferable r →
-      execProgLoop fuel ⟨#[c], σ, 0⟩ rs ch = r := by
+      execProgLoop (fuel + seqOpCount fuel σ c ch) ⟨#[.running c none], σ, 0⟩ rs ch = r := by
   intro fuel
   induction fuel with
   | zero =>
@@ -548,48 +633,45 @@ theorem execProgLoop_single :
     unfold execStmtLoop at hr
     split at hr
     · subst hr; rfl
-    · subst hr; rfl
-    · subst hr; rfl
-    · subst hr; rfl
-    · subst hr; rfl
     · subst hr; simp [transferable, throw, throwThe, MonadExceptOf.throw] at htr
     · subst hr; simp [transferable, throw, throwThe, MonadExceptOf.throw] at htr
     · subst hr; simp [transferable, throw, throwThe, MonadExceptOf.throw] at htr
     · subst hr; simp [transferable, throw, throwThe, MonadExceptOf.throw] at htr
-    · rename_i harm1 harm2 harm3 harm4 harm5 harm6 harm7 harm8 harm9
+    · rename_i harm1 harm6 harm7 harm8 harm9
       subst hr
       obtain ⟨hp, hm, hd, hb⟩ := singleton_pool_facts
-        (σ := σ) harm1 harm2 harm3 harm4 harm5 harm6 harm7 harm8 harm9
-      have hrun : threadRunnable σ c = true := by
+        (σ := σ) harm1 harm6 harm7 harm8 harm9
+      have hrun : threadRunnable σ (.running c none) = true := by
         simp [threadRunnable, hd, hb]
+      simp only [seqOpCount, Nat.add_zero]
       unfold execProgLoop
       simp [hp, hm, runnableIdxs_singleton hrun]
   | succ n ih =>
     intro σ c ch rs r hr htr
     unfold execStmtLoop at hr
     split at hr
-    · subst hr; rfl
-    · subst hr; rfl
-    · subst hr; rfl
-    · subst hr; rfl
-    · subst hr; rfl
+    · subst hr
+      simp only [seqOpCount, Config.isTerminal, Bool.true_or, ↓reduceIte, Nat.add_zero]
+      rfl
     · subst hr; simp [transferable, throw, throwThe, MonadExceptOf.throw] at htr
     · subst hr; simp [transferable, throw, throwThe, MonadExceptOf.throw] at htr
     · subst hr; simp [transferable, throw, throwThe, MonadExceptOf.throw] at htr
     · subst hr; simp [transferable, throw, throwThe, MonadExceptOf.throw] at htr
-    · rename_i harm1 harm2 harm3 harm4 harm5 harm6 harm7 harm8 harm9
+    · rename_i harm1 harm6 harm7 harm8 harm9
       obtain ⟨hp, hm, hd, hb⟩ := singleton_pool_facts
-        (σ := σ) harm1 harm2 harm3 harm4 harm5 harm6 harm7 harm8 harm9
-      have hrun : threadRunnable σ c = true := by
+        (σ := σ) harm1 harm6 harm7 harm8 harm9
+      have hrun : threadRunnable σ (.running c none) = true := by
         simp [threadRunnable, hd, hb]
-      unfold execProgLoop
       simp only [Bind.bind, Except.bind] at hr
-      -- Stage C: the completion marker is NOT a special case any
-      -- more — `stepFn` strips it on the sequential driver and
-      -- `stepThread`'s marker arm does the identical strip on the
-      -- pool, so `stepMulti_single` covers it like any private step.
+      have hcnt : seqOpCount (n + 1) σ c ch
+          = (match stepFn σ c ch with
+             | .error _ => 0
+             | .ok (c', σ', ch') =>
+                 (if (c.afterStepFlag σ c').isSome then 1 else 0) + seqOpCount n σ' c' ch') := by
+        simp only [seqOpCount, hd, hb, Bool.or_self, Bool.false_eq_true, ↓reduceIte]
       cases hsp : spawnPlan c with
       | some p =>
+          -- A spawn position refuses sequentially: not transferable.
           have hcls := spawnPlan_stepFn_refuses (σ := σ) (ch := ch) hsp
           cases hstep : stepFn σ c ch with
           | ok r₂ => rw [hstep] at hcls; simp at hcls
@@ -599,14 +681,45 @@ theorem execProgLoop_single :
               subst hr
               cases_stop e <;> simp_all [transferable]
       | none =>
+      cases hab : c.abort? with
+      | some p =>
+          -- THE ABORT: the sequential machine raises the panic terminal;
+          -- the pool tombstones the goroutine and classifies it at the
+          -- next loop head — one step on both sides.
+          obtain ⟨first, rest⟩ := p
+          rw [stepFn_abort hab] at hr
+          have hmulti := stepMulti_abort_single (σ := σ) (ch := ch) hab
+          rw [hcnt, stepFn_abort hab]
+          cases hmsg : abortMsg σ first rest with
+          | error e =>
+              rw [hmsg] at hr hmulti
+              simp only [Bind.bind, Except.bind] at hr
+              subst hr
+              simp only [Bind.bind, Except.bind, Nat.add_zero]
+              unfold execProgLoop
+              simp [hp, hm, runnableIdxs_singleton hrun, hmulti, Bind.bind, Except.bind,
+                Except.map]
+          | ok msg =>
+              rw [hmsg] at hr hmulti
+              simp only [Bind.bind, Except.bind] at hr
+              subst hr
+              simp only [Bind.bind, Except.bind, throw, throwThe, MonadExceptOf.throw,
+                Nat.add_zero]
+              unfold execProgLoop
+              simp [hp, hm, runnableIdxs_singleton hrun, hmulti, Bind.bind, Except.bind,
+                Except.map, raceUpdate_single, execProgLoop_aborted]
+      | none =>
           obtain ⟨ev, hmulti⟩ :=
-            stepMulti_single (σ := σ) (ch := ch) hb hsp hd
+            stepMulti_single (σ := σ) (ch := ch) hb hsp hab hd
+          rw [hcnt]
           cases hstep : stepFn σ c ch with
           | error e =>
               rw [hstep] at hr
               subst hr
               rw [hstep] at hmulti
               simp only [Except.map] at hmulti
+              simp only [Nat.add_zero]
+              unfold execProgLoop
               simp [hp, hm, runnableIdxs_singleton hrun, hmulti,
                 Bind.bind, Except.bind]
           | ok r₂ =>
@@ -615,52 +728,80 @@ theorem execProgLoop_single :
               rw [hstep] at hmulti
               simp only [Except.map] at hmulti
               have hrec := ih (rs := rs) hr htr
-              simp [hp, hm, runnableIdxs_singleton hrun, hmulti,
-                Bind.bind, Except.bind, raceUpdate_single, hrec]
+              simp only
+              cases hflag : c.afterStepFlag σ c₂ with
+              | none =>
+                  simp only [Option.isSome_none, Bool.false_eq_true, ↓reduceIte, Nat.zero_add]
+                  rw [show n + 1 + seqOpCount n σ₂ c₂ ch₂ = (n + seqOpCount n σ₂ c₂ ch₂) + 1
+                    from by omega]
+                  unfold execProgLoop
+                  simp only [Thread.afterStep, hflag] at hmulti
+                  simp [hp, hm, runnableIdxs_singleton hrun, hmulti,
+                    Bind.bind, Except.bind, raceUpdate_single, hrec]
+              | some site =>
+                  simp only [Option.isSome_some, ↓reduceIte]
+                  rw [show n + 1 + (1 + seqOpCount n σ₂ c₂ ch₂)
+                      = ((n + seqOpCount n σ₂ c₂ ch₂) + 1) + 1 from by omega]
+                  unfold execProgLoop
+                  simp only [Thread.afterStep, hflag] at hmulti
+                  simp only [hp, hm, runnableIdxs_singleton hrun, hmulti,
+                    Bind.bind, Except.bind, raceUpdate_single]
+                  -- the boundary CLEAR: one more pool step, no consumption
+                  have hrun₂ : threadRunnable σ₂ (.running c₂ (some site)) = true := rfl
+                  unfold execProgLoop
+                  simp [runnableIdxs_singleton hrun₂, stepMulti_flagged_single,
+                    Bind.bind, Except.bind, raceUpdate_single, hrec,
+                    MultiConfig.mainOutcome?, MultiConfig.panicMsg?]
 
 /-- **`execProg_single_eq_execStmt` — THE sequential-conservation
-theorem** (machine-shape note §7; D9(a)): for every program, every
-fuel, every stream, a sequential `execStmt` result in the transferable
-classes (completion at any terminal, fuel exhaustion, panic abort) IS
-the pool driver's `execProg` result, verbatim — same outcome, same
-final state, same leftover stream, same fuel accounting. This is the
-transfer lemma that keeps every designated sequential statement valid
-unrestated on the pool carrier (D9(a)): a sequential `GoSpec`'s runs
-and the concurrent carrier's runs coincide on single-goroutine
-programs. -/
+theorem** (machine-shape note §7; D9(a); restated at G-C5 with the op
+count): for every program, every fuel, every stream, a sequential
+`execStmt` result in the transferable classes (completion at the
+terminal, fuel exhaustion, panic abort) IS the pool driver's `execProg`
+result, verbatim — same outcome, same final state, same leftover stream —
+at the pool's fuel `fuel + seqOpCount …`: the one-goroutine pool spends
+one boundary-clear step per completed registry op (C5: the strip is a
+POOL step; the sequential machine has no flag), and matches the
+sequential machine step for step otherwise. This is the transfer lemma
+that keeps every designated sequential statement valid unrestated on
+the pool carrier (D9(a)): a sequential `GoSpec`'s runs and the
+concurrent carrier's runs coincide on single-goroutine programs. The
+differential's pool driver (`runProgramPoolIntsM`) runs at the same
+fuel as before C5 — the op count is a fuel shift IN THIS THEOREM, not in
+any baseline. -/
 theorem execProg_single_eq_execStmt {fuel : Nat} {env : LocalEnv}
     {σ : ExecState} {ch : Choices} {prog : Stmt}
-    {r : Except Stop (ExecOutcome × Choices)}
+    {r : Except Stop (ExecState × Choices)}
     (hr : execStmt fuel env σ ch prog = r) (htr : transferable r) :
-    execProg fuel env σ ch prog = r :=
+    execProg (fuel + seqOpCount fuel σ (.exec prog env .stop) ch) env σ ch prog = r :=
   execProgLoop_single hr htr
 
 /-! ## Correspondence: `stepMulti` instantiates `StepM` -/
 
-/-- A successful spawn's PARENT successor is always the completion
-marker `.opDone .l1Sched (.next k)` (BUG-040: the fork's completion is
-a registry op; stage C: the `l1Sched` tag preserves the spawn
-boundary's shipped default; the marker strips at the next step). -/
+/-- A successful spawn's PARENT successor is `.next k` (BUG-040: the
+fork's completion is a registry op; the pool flags it `l1Sched` —
+`Thread.afterStep` — preserving the spawn boundary's shipped default;
+the flag clears at the next step). -/
 theorem spawnStep_shape {s : ExecState} {cv : GoValue} {args : List GoValue}
     {k : Cont} {ch : Choices} {p c : Config} {s' : ExecState} {ch' : Choices}
     (h : spawnStep s cv args k ch = .ok (p, c, s', ch')) :
-    p = .opDone .l1Sched (.next k) := by
+    p = .next k := by
   unfold spawnStep at h
   cases cv <;>
     simp_all [Bind.bind, Except.bind, throw, throwThe, MonadExceptOf.throw]
   rename_i fid captured
   split at h <;> simp_all
 
-theorem schedPick_of_boundary {m : MultiConfig} {c : Config} {i : Nat}
-    (hcur : m.threads[m.cur]? = some c) (hb : c.atBoundary = true)
+theorem schedPick_of_boundary {m : MultiConfig} {t : Thread} {i : Nat}
+    (hcur : m.threads[m.cur]? = some t) (hb : t.atBoundary = true)
     (hmem : i ∈ runnableIdxs m.shared m.threads) : schedPick m i := by
   unfold schedPick
   rw [hcur]
   simp [hb, hmem]
 
-/-- Runnable-list membership from an indexed runnable configuration. -/
-theorem mem_runnableIdxs_of {s : ExecState} {ts : Array Config} {j : Nat}
-    {c : Config} (hj : ts[j]? = some c) (hr : threadRunnable s c = true) :
+/-- Runnable-list membership from an indexed runnable goroutine. -/
+theorem mem_runnableIdxs_of {s : ExecState} {ts : Array Thread} {j : Nat}
+    {t : Thread} (hj : ts[j]? = some t) (hr : threadRunnable s t = true) :
     j ∈ runnableIdxs s ts := by
   obtain ⟨hlt, -⟩ := Array.getElem?_eq_some_iff.mp hj
   unfold runnableIdxs
@@ -670,34 +811,34 @@ theorem mem_runnableIdxs_of {s : ExecState} {ts : Array Config} {j : Nat}
 /-- The slot menu's SET is contained in the runnable set — the slot
 reordering at postOp adds no member (`schedPick`'s membership
 formulation is therefore unchanged by the widening). -/
-theorem schedSlots_mem {s : ExecState} {ts : Array Config} {cur i : Nat}
-    {c : Config} (hcur : ts[cur]? = some c)
-    (hmem : i ∈ schedSlots s ts cur c.boundarySite) :
+theorem schedSlots_mem {s : ExecState} {ts : Array Thread} {cur i : Nat}
+    {t : Thread} (hcur : ts[cur]? = some t)
+    (hmem : i ∈ schedSlots s ts cur t.boundarySite) :
     i ∈ runnableIdxs s ts := by
-  by_cases hpost : c.boundarySite = .postOp
+  by_cases hpost : t.boundarySite = .postOp
   · rw [hpost] at hmem
     unfold schedSlots at hmem
     rcases List.mem_cons.mp hmem with rfl | hmem'
-    · obtain ⟨inner, rfl⟩ := Config.boundarySite_postOp_shape hpost
+    · obtain ⟨c, rfl⟩ := Thread.boundarySite_postOp_shape hpost
       exact mem_runnableIdxs_of hcur rfl
     · exact (List.mem_filter.mp hmem').1
-  · by_cases hback : c.boundarySite = .backEdge
+  · by_cases hback : t.boundarySite = .backEdge
     · rw [hback] at hmem
       unfold schedSlots at hmem
       rcases List.mem_cons.mp hmem with rfl | hmem'
       · exact mem_runnableIdxs_of hcur
-          (Config.boundarySite_backEdge_runnable hback)
+          (Thread.boundarySite_backEdge_runnable hback)
       · exact (List.mem_filter.mp hmem').1
-    · have heq : schedSlots s ts cur c.boundarySite = runnableIdxs s ts := by
+    · have heq : schedSlots s ts cur t.boundarySite = runnableIdxs s ts := by
         unfold schedSlots
-        cases hbs : c.boundarySite <;>
+        cases hbs : t.boundarySite <;>
           first | (exact absurd hbs hpost) | (exact absurd hbs hback) | rfl
       rw [heq] at hmem
       exact hmem
 
 /-- Every runnable goroutine appears in the slot menu at every site
 (completeness direction: the menu never LOSES a member either). -/
-theorem mem_schedSlots_of_runnable {s : ExecState} {ts : Array Config}
+theorem mem_schedSlots_of_runnable {s : ExecState} {ts : Array Thread}
     {cur i : Nat} {site : ChoiceSite}
     (hmem : i ∈ runnableIdxs s ts) :
     i ∈ schedSlots s ts cur site := by
@@ -712,16 +853,58 @@ theorem mem_schedSlots_of_runnable {s : ExecState} {ts : Array Config}
     · exact List.mem_cons.mpr (Or.inr (List.mem_filter.mpr
         ⟨hmem, by simpa using hi⟩))
 
-theorem schedPick_cur {m : MultiConfig} {c : Config}
-    (hcur : m.threads[m.cur]? = some c) (hb : c.atBoundary = false) :
+theorem schedPick_cur {m : MultiConfig} {t : Thread}
+    (hcur : m.threads[m.cur]? = some t) (hb : t.atBoundary = false) :
     schedPick m m.cur := by
   unfold schedPick
   rw [hcur]
   simp [hb]
 
-/-- One goroutine-step of the executable pool is a `StepM` step (given a
-legal scheduler pick). Case-for-case with `stepThread`'s arms: wake,
-spawn, arrival pairing, partnerless step. -/
+/-- The per-goroutine relation is silent at spawn positions (the spawn
+is `StepE`'s rule, not `Step`'s). -/
+theorem step_spawnPos_elim {c : Config} {σ : ExecState} {c' : Config}
+    {σ' : ExecState} {p : GoValue × List GoValue × Cont}
+    (hsp : spawnPlan c = some p) : ¬ Step c σ c' σ' := by
+  intro h
+  match c, hsp with
+  | .retV cv (.goCalleeK [] env k), _ => cases h
+  | .retV v (.goArgsK cv vals [] env k), _ => cases h
+
+/-- A per-goroutine step never starts at an abort (B4: the abort has no
+`Step`, and a spawn position is never one). -/
+theorem abort?_none_of_stepE {c : Config} {σ : ExecState} {c' : Config}
+    {σ' : ExecState} {efs : List Config} (h : StepE c σ c' σ' efs) :
+    c.abort? = none := by
+  cases hab : c.abort? with
+  | none => rfl
+  | some p =>
+    obtain ⟨first, rest⟩ := p
+    exfalso
+    cases h with
+    | lift hstep =>
+      match c, hab with
+      | .panicking (f :: r) .stop, _ => exact step_abort_elim hstep
+    | spawn hsp _ =>
+      match c, hab, hsp with
+      | .panicking (f :: r) .stop, _, hsp => simp [spawnPlan] at hsp
+
+/-- A completed spawn position's arrival analysis is the cell path
+(a spawn is no channel/select apply). -/
+theorem arrivalCases_of_spawnPlan {s : ExecState} {ts : Array Thread} {i : Nat}
+    {c : Config} {p : GoValue × List GoValue × Cont}
+    (hsp : spawnPlan c = some p) :
+    arrivalCases s ts i c = .ok .cellPath := by
+  match c, hsp with
+  | .retV cv (.goCalleeK [] env k), _ => rfl
+  | .retV v (.goArgsK cv vals [] env k), _ => rfl
+
+/-- The children of a spawn, as fresh (unflagged) goroutines. -/
+theorem push_eq_append_running {ts : Array Thread} {child : Config} :
+    ts.push (.running child none)
+      = ts ++ (([child] : List Config).map (Thread.running · none)).toArray := by
+  rw [Array.push_eq_append]
+  rfl
+
 theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
     {m' : MultiConfig} {ev : StepEvent} (hsched : schedPick m i)
     (h : stepThreadInto m i ch = .ok (m', ch', ev)) : StepM m m' := by
@@ -737,8 +920,18 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
     unfold stepThread at hst
     cases hti : m.threads[i]? with
     | none => rw [hti] at hst; cases hst
-    | some c =>
+    | some t =>
       rw [hti] at hst
+      cases t with
+      | aborted msg => simp [throw, throwThe, MonadExceptOf.throw] at hst
+      | running c b =>
+      cases b with
+      | some site =>
+        -- The boundary CLEAR (C5): a pool step of its own.
+        simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
+        obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
+        exact StepM.strip hsched hti
+      | none =>
       by_cases hbl : isBlockedConfig c = true
       · -- WAKE
         simp only [hbl, reduceIte, Bind.bind, Except.bind] at hst
@@ -752,22 +945,21 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
           exact StepM.wake hsched hti hbl hres
       · simp only [Bool.not_eq_true] at hbl
         simp only [hbl, Bool.false_eq_true, reduceIte] at hst
-        cases hsc : opDoneInner c with
-        | some inner =>
-          -- The completion-marker STRIP (stage C): an ordinary
-          -- `.thread` step now — `Step.opDoneStrip` lifted.
-          rw [hsc] at hst
-          simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
-          obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
-          obtain ⟨sc, hcfg⟩ := opDoneInner_shape hsc
-          subst hcfg
-          have hts : m.threads.setIfInBounds i inner
-              = (m.threads.setIfInBounds i inner) ++ ([] : List Config).toArray := by
-            simp
-          rw [hts]
-          exact StepM.thread hsched hti hbl rfl (StepE.lift Step.opDoneStrip)
+        cases hab : c.abort? with
+        | some p =>
+          -- THE ABORT (B4): the tombstone step.
+          obtain ⟨first, rest⟩ := p
+          rw [hab] at hst
+          simp only [Bind.bind, Except.bind] at hst
+          cases hmsg : abortMsg m.shared first rest with
+          | error e => rw [hmsg] at hst; cases hst
+          | ok msg =>
+            rw [hmsg] at hst
+            simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
+            obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
+            exact StepM.abort hsched hti hab hmsg
         | none =>
-        rw [hsc] at hst
+        rw [hab] at hst
         cases hsp : spawnPlan c with
         | some p =>
           obtain ⟨cv, args, k⟩ := p
@@ -780,16 +972,9 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
             rw [hspawn] at hst
             simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
             obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
-            have hplanNone : arrivalCases m.shared m.threads i c
-                = .ok .cellPath := by
-              match c, hsp with
-              | .retV cv' (.goCalleeK [] env k'), _ => rfl
-              | .retV v' (.goArgsK cv' vals [] env k'), _ => rfl
-            have hts : (m.threads.setIfInBounds i parent').push child
-                = (m.threads.setIfInBounds i parent') ++ ([child] : List Config).toArray := by
-              rw [Array.push_eq_append]
-            rw [hts]
-            exact StepM.thread hsched hti hbl hplanNone (StepE.spawn hsp hspawn)
+            rw [push_eq_append_running]
+            exact StepM.thread hsched hti hbl (arrivalCases_of_spawnPlan hsp)
+              (StepE.spawn hsp hspawn)
         | none =>
           rw [hsp] at hst
           simp only [Bind.bind, Except.bind] at hst
@@ -814,8 +999,9 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
                   dsimp only at hst
                   simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
                   obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
-                  have hts : m.threads.setIfInBounds i c'
-                      = (m.threads.setIfInBounds i c') ++ ([] : List Config).toArray := by
+                  have hts : m.threads.setIfInBounds i (Thread.afterStep m.shared c c')
+                      = (m.threads.setIfInBounds i (Thread.afterStep m.shared c c'))
+                        ++ (([] : List Config).map (Thread.running · none)).toArray := by
                     simp
                   rw [hts]
                   exact StepM.thread hsched hti hbl hac (StepE.lift (stepFn_sound hstep))
@@ -835,8 +1021,9 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
                   simp only [toResult_ok, Bind.bind, Except.bind, pure_eq_ok,
                     Except.ok.injEq, Prod.mk.injEq] at hst
                   obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
-                  have hts : m.threads.setIfInBounds i c'
-                      = (m.threads.setIfInBounds i c') ++ ([] : List Config).toArray := by
+                  have hts : m.threads.setIfInBounds i (Thread.afterStep m.shared (.retV v (.selectOpsK clauses default? done [] env k')) c')
+                      = (m.threads.setIfInBounds i (Thread.afterStep m.shared (.retV v (.selectOpsK clauses default? done [] env k')) c'))
+                        ++ (([] : List Config).map (Thread.running · none)).toArray := by
                     simp
                   rw [hts]
                   exact StepM.thread hsched hti hbl hac
@@ -850,9 +1037,11 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
                       reduceCtorEq] at hst
                   case panic msg =>
                   obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
-                  have hts : m.threads.setIfInBounds i (.panicking [panicEntry msg] k')
-                      = (m.threads.setIfInBounds i (.panicking [panicEntry msg] k'))
-                        ++ ([] : List Config).toArray := by
+                  have hts : m.threads.setIfInBounds i
+                        (Thread.afterStep m.shared (.retV v (.selectOpsK clauses default? done [] env k')) (.panicking [panicEntry msg] k'))
+                      = (m.threads.setIfInBounds i
+                          (Thread.afterStep m.shared (.retV v (.selectOpsK clauses default? done [] env k')) (.panicking [panicEntry msg] k')))
+                        ++ (([] : List Config).map (Thread.running · none)).toArray := by
                     simp
                   rw [hts]
                   exact StepM.thread hsched hti hbl hac
@@ -936,20 +1125,20 @@ theorem stepMulti_sound {m : MultiConfig} {ch ch' : Choices}
   unfold stepMulti at h
   cases hcur : m.threads[m.cur]? with
   | none => rw [hcur] at h; cases h
-  | some c =>
+  | some t =>
     rw [hcur] at h
-    by_cases hb : c.atBoundary = true
+    by_cases hb : t.atBoundary = true
     · simp only [hb, reduceIte] at h
-      cases hrs : schedSlots m.shared m.threads m.cur c.boundarySite with
+      cases hrs : schedSlots m.shared m.threads m.cur t.boundarySite with
       | nil => rw [hrs] at h; cases h
       | cons r0 rest =>
         rw [hrs] at h
-        -- The boundary site (`consumeAtE c.boundarySite` — l1Sched or
-        -- stage C's postOp): one arm covers the sole slot (no pop at
-        -- bound 1 — the uniform rule, `consumeAtE_le_one`) and the
-        -- consuming pick.
+        -- The boundary site (`consumeAtE t.boundarySite` — l1Sched or
+        -- the completed op's postOp): one arm covers the sole slot (no
+        -- pop at bound 1 — the uniform rule, `consumeAtE_le_one`) and
+        -- the consuming pick.
         dsimp only at h
-        rcases hcons : Choices.consumeAtE c.boundarySite
+        rcases hcons : Choices.consumeAtE t.boundarySite
             (r0 :: rest).length ch
           with ⟨pick, ch₁, ps⟩
         rw [hcons] at h
@@ -976,62 +1165,29 @@ theorem stepMulti_sound {m : MultiConfig} {ch ch' : Choices}
 
 /-! ## Completeness: every `StepM` step is realized by `stepMulti` -/
 
-/-- The per-goroutine relation is silent at spawn positions (the spawn
-is `StepE`'s rule, not `Step`'s). -/
-theorem step_spawnPos_elim {c : Config} {σ : ExecState} {c' : Config}
-    {σ' : ExecState} {p : GoValue × List GoValue × Cont}
-    (hsp : spawnPlan c = some p) : ¬ Step c σ c' σ' := by
-  intro h
-  match c, hsp with
-  | .retV cv (.goCalleeK [] env k), _ => cases h
-  | .retV v (.goArgsK cv vals [] env k), _ => cases h
-
--- `step_spawnedMarker_elim` DELETED (stage C): the marker now HAS a
--- sequential rule (`Step.opDoneStrip`) — the strip is an ordinary
--- lifted step, no longer relation-silent.
-
-/-- A completed spawn position is not the marker (plan disjointness for
-the `stepThread` dispatch proofs). -/
-theorem opDoneInner_of_spawnPlan {c : Config}
-    {p : GoValue × List GoValue × Cont}
-    (h : spawnPlan c = some p) : opDoneInner c = none := by
-  match c, h with
-  | .retV cv (.goCalleeK [] env k), _ => rfl
-  | .retV v (.goArgsK cv vals [] env k), _ => rfl
-
-/-- A blocked configuration is not the marker. -/
-theorem opDoneInner_of_blocked {c : Config}
-    (h : isBlockedConfig c = true) : opDoneInner c = none := by
-  match c, h with
-  | .blockedSend _ _ _, _ => rfl
-  | .blockedRecv _ _ _ _ _, _ => rfl
-  | .blockedSelect _ _ _, _ => rfl
-  | .blockedSync _ _ _ _, _ => rfl
-
 /-- Compose a scheduling prefix in front of an inner `stepThread`
 realization: a legal pick is realized by the scheduler site (consumed
 only at `|runnable| > 1`, the pick index prepended to the stream). -/
 theorem stepMulti_of_inner {m : MultiConfig} {i : Nat} {chI chI' : Choices}
-    {ts : Array Config} {s' : ExecState} {evI : StepEvent}
+    {ts : Array Thread} {s' : ExecState} {evI : StepEvent}
     (hsched : schedPick m i)
     (hinner : stepThread m.shared m.threads i chI = .ok (ts, s', chI', evI)) :
     ∃ ch ch' ev, stepMulti m ch = .ok (⟨ts, s', i⟩, ch', ev) := by
   unfold schedPick at hsched
   cases hcur : m.threads[m.cur]? with
   | none => rw [hcur] at hsched; exact absurd hsched (by simp)
-  | some c₀ =>
+  | some t₀ =>
     rw [hcur] at hsched
     dsimp only at hsched
-    by_cases hbnd : c₀.atBoundary = true
+    by_cases hbnd : t₀.atBoundary = true
     · rw [if_pos hbnd] at hsched
       -- Realize the pick through the boundary's own slot menu
-      -- (`schedSlots`/`boundarySite` — stage C): every runnable
-      -- goroutine is IN the menu (`mem_schedSlots_of_runnable`), and
-      -- the site never pops at a singleton menu (the uniform rule,
-      -- `consumeAtE_le_one`).
-      have hmenu : i ∈ schedSlots m.shared m.threads m.cur c₀.boundarySite :=
+      -- (`schedSlots`/`boundarySite`): every runnable goroutine is IN
+      -- the menu (`mem_schedSlots_of_runnable`), and the site never pops
+      -- at a singleton menu (the uniform rule, `consumeAtE_le_one`).
+      have hmenu : i ∈ schedSlots m.shared m.threads m.cur t₀.boundarySite :=
         mem_schedSlots_of_runnable hsched
-      cases hrs : schedSlots m.shared m.threads m.cur c₀.boundarySite with
+      cases hrs : schedSlots m.shared m.threads m.cur t₀.boundarySite with
       | nil =>
         rw [hrs] at hmenu
         exact absurd hmenu (by simp)
@@ -1049,7 +1205,7 @@ theorem stepMulti_of_inner {m : MultiConfig} {i : Nat} {chI chI' : Choices}
             rw [hrs]
             dsimp only
             -- sole slot: the site's policy consumes nothing
-            rw [show Choices.consumeAtE c₀.boundarySite [i].length chI
+            rw [show Choices.consumeAtE t₀.boundarySite [i].length chI
                 = (0, chI, [])
               from Choices.consumeAtE_le_one (by simp)]
             simp only [List.getElem?_cons_zero]
@@ -1061,9 +1217,9 @@ theorem stepMulti_of_inner {m : MultiConfig} {i : Nat} {chI chI' : Choices}
           obtain ⟨p, hp⟩ := List.getElem?_of_mem hmenu
           have hplen : p < (r0 :: r1 :: rest').length :=
             (List.getElem?_eq_some_iff.mp hp).1
-          have hcons : Choices.consumeAtE c₀.boundarySite
+          have hcons : Choices.consumeAtE t₀.boundarySite
               (r0 :: r1 :: rest').length (p :: chI)
-              = (p, chI, [⟨c₀.boundarySite, (r0 :: r1 :: rest').length, p⟩]) := by
+              = (p, chI, [⟨t₀.boundarySite, (r0 :: r1 :: rest').length, p⟩]) := by
             rw [Choices.consumeAtE_of_lt (by simp only [List.length_cons]; omega)]
             have hcc : Choices.consume (p :: chI) (r0 :: r1 :: rest').length
                 = (p, chI) := by
@@ -1103,49 +1259,34 @@ theorem stepMulti_of_inner {m : MultiConfig} {i : Nat} {chI chI' : Choices}
 by `stepMulti` under some choice stream (scheduler pick and L4 waiter
 pick encoded in the stream; the goroutine's own step realized through
 the sequential kit's `step_complete`; the pairing path never touches
-`stepFn`, so its stream is exactly the waiter pick). -/
+`stepFn`, so its stream is exactly the waiter pick; the boundary clear
+and the abort consume nothing). -/
 theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
     ∃ ch ch' ev, stepMulti m ch = .ok (m', ch', ev) := by
   cases h with
   | thread hsched hti hblc hplan hstepE =>
     rename_i i c c' σ' efs
+    have hab : c.abort? = none := abort?_none_of_stepE hstepE
     cases hstepE with
     | lift hstep =>
       have hsp : spawnPlan c = none := by
         cases hspq : spawnPlan c with
         | none => rfl
         | some p => exact absurd hstep (step_spawnPos_elim hspq)
-      have heq : (m.threads.setIfInBounds i c') ++ ([] : List Config).toArray
-          = m.threads.setIfInBounds i c' := by
-        rw [show (([] : List Config)).toArray = #[] from rfl, Array.append_empty]
+      have heq : (m.threads.setIfInBounds i (Thread.afterStep m.shared c c'))
+            ++ (([] : List Config).map (Thread.running · none)).toArray
+          = m.threads.setIfInBounds i (Thread.afterStep m.shared c c') := by
+        simp
       rw [heq]
-      cases hsc : opDoneInner c with
-      | some inner =>
-          -- The marker strip (stage C): `Step.opDoneStrip` is the only
-          -- rule from a marker; the pool's marker arm realizes it on
-          -- the empty stream.
-          obtain ⟨sc, hcfg⟩ := opDoneInner_shape hsc
-          subst hcfg
-          obtain ⟨hc', rfl⟩ := step_opDone_inv hstep
-          rw [hc']
-          have hinner : ∃ evI, stepThread m.shared m.threads i []
-              = .ok (m.threads.setIfInBounds i inner, m.shared, [], evI) :=
-            ⟨_, by
-              unfold stepThread
-              rw [hti]
-              rfl⟩
-          obtain ⟨evI, hinner⟩ := hinner
-          exact stepMulti_of_inner hsched hinner
-      | none =>
       obtain ⟨ch₀, ch₀', hfn⟩ := step_complete hstep
       cases hselp : selectApplyPlan c with
       | none =>
         have hinner : ∃ evI, stepThread m.shared m.threads i ch₀
-            = .ok (m.threads.setIfInBounds i c', σ', ch₀', evI) :=
+            = .ok (m.threads.setIfInBounds i (Thread.afterStep m.shared c c'), σ', ch₀', evI) :=
           ⟨_, by
             unfold stepThread
             rw [hti]
-            simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp]
+            simp only [hblc, Bool.false_eq_true, reduceIte, hab, hsp]
             rw [show arrivalPlan m.shared m.threads i c ch₀ = .ok (none, ch₀, [])
               from arrivalPlan_of_cellPath hplan]
             simp only [Bind.bind, Except.bind]
@@ -1164,11 +1305,11 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
         rcases stepFn_selectApply_inv hfn with ⟨cl?, happly⟩
           | ⟨msg, happly, rfl, rfl, -⟩
         · have hinner : ∃ evI, stepThread m.shared m.threads i ch₀
-              = .ok (m.threads.setIfInBounds i c', σ', ch₀', evI) :=
+              = .ok (m.threads.setIfInBounds i (Thread.afterStep m.shared (.retV v (.selectOpsK clauses default? done [] env k')) c'), σ', ch₀', evI) :=
             ⟨_, by
               unfold stepThread
               rw [hti]
-              simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp]
+              simp only [hblc, Bool.false_eq_true, reduceIte, hab, hsp]
               rw [show arrivalPlan m.shared m.threads i
                     (.retV v (.selectOpsK clauses default? done [] env k')) ch₀
                   = .ok (none, ch₀, []) from arrivalPlan_of_cellPath hplan]
@@ -1181,12 +1322,12 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
           exact stepMulti_of_inner hsched hinner
         · have hinner : ∃ evI, stepThread m.shared m.threads i ch₀
               = .ok (m.threads.setIfInBounds i
-                    (.panicking [panicEntry msg] k'),
+                    (Thread.afterStep m.shared (.retV v (.selectOpsK clauses default? done [] env k')) (.panicking [panicEntry msg] k')),
                   m.shared, ch₀, evI) :=
             ⟨_, by
               unfold stepThread
               rw [hti]
-              simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp]
+              simp only [hblc, Bool.false_eq_true, reduceIte, hab, hsp]
               rw [show arrivalPlan m.shared m.threads i
                     (.retV v (.selectOpsK clauses default? done [] env k')) ch₀
                   = .ok (none, ch₀, []) from arrivalPlan_of_cellPath hplan]
@@ -1202,32 +1343,49 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
       -- the spawn's entry panic draws the nilValueMethodText pick).
       rename_i cv args k child chs chs'
       have hinner : ∃ evI, stepThread m.shared m.threads i chs
-          = .ok ((m.threads.setIfInBounds i c').push child, σ', chs', evI) :=
+          = .ok ((m.threads.setIfInBounds i (Thread.afterStep m.shared c c')).push
+              (.running child none), σ', chs', evI) :=
         ⟨_, by
           unfold stepThread
           rw [hti]
-          simp only [hblc, Bool.false_eq_true, reduceIte,
-            opDoneInner_of_spawnPlan hplan', hplan', Bind.bind,
+          simp only [hblc, Bool.false_eq_true, reduceIte, hab, hplan', Bind.bind,
             Except.bind]
           rw [hspawn]
           rfl⟩
       obtain ⟨evI, hinner⟩ := hinner
-      have heq : (m.threads.setIfInBounds i c') ++ ([child] : List Config).toArray
-          = (m.threads.setIfInBounds i c').push child := by
-        rw [Array.push_eq_append]
-      rw [heq]
+      rw [← push_eq_append_running]
       exact stepMulti_of_inner hsched hinner
+  | strip hsched hti =>
+    rename_i i c site
+    have hinner : ∃ evI, stepThread m.shared m.threads i []
+        = .ok (m.threads.setIfInBounds i (.running c none), m.shared, [], evI) :=
+      ⟨_, by
+        unfold stepThread
+        rw [hti]
+        rfl⟩
+    obtain ⟨evI, hinner⟩ := hinner
+    exact stepMulti_of_inner hsched hinner
+  | abort hsched hti hab hmsg =>
+    rename_i i c first rest msg
+    have hinner : ∃ evI, stepThread m.shared m.threads i []
+        = .ok (m.threads.setIfInBounds i (.aborted msg), m.shared, [], evI) :=
+      ⟨_, by
+        unfold stepThread
+        rw [hti]
+        simp only [isBlockedConfig_of_abort hab, Bool.false_eq_true, reduceIte, hab, hmsg,
+          Bind.bind, Except.bind]
+        rfl⟩
+    obtain ⟨evI, hinner⟩ := hinner
+    exact stepMulti_of_inner hsched hinner
   | pair hsched hti hblc hsp hplan hidx hap =>
     rename_i i c bc σ'' cs idx ts'
-    have hsc : opDoneInner c = none := by
-      cases hscq : opDoneInner c with
+    have hab : c.abort? = none := by
+      cases hab : c.abort? with
       | none => rfl
-      | some kk =>
-          obtain ⟨sc, hcfg⟩ := opDoneInner_shape hscq
-          subst hcfg
-          rw [show arrivalCases m.shared m.threads i (.opDone sc kk)
-            = .ok .cellPath from rfl] at hplan
-          cases hplan
+      | some p =>
+        obtain ⟨first, rest⟩ := p
+        match c, hab, hplan with
+        | .panicking (f :: r) .stop, _, hplan => cases hplan
     cases cs with
     | nil => exact absurd hidx (by simp)
     | cons cand rest =>
@@ -1244,7 +1402,7 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
           ⟨_, by
             unfold stepThread
             rw [hti]
-            simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp, Bind.bind,
+            simp only [hblc, Bool.false_eq_true, reduceIte, hab, hsp, Bind.bind,
               Except.bind]
             rw [arrivalPlan_of_single hplan]
             dsimp only
@@ -1277,7 +1435,7 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
           ⟨_, by
             unfold stepThread
             rw [hti]
-            simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp, Bind.bind,
+            simp only [hblc, Bool.false_eq_true, reduceIte, hab, hsp, Bind.bind,
               Except.bind]
             rw [arrivalPlan_of_single hplan]
             dsimp only
@@ -1291,15 +1449,13 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
         exact stepMulti_of_inner hsched hinner
   | pickPair hsched hti hblc hsp hplan hget hidx hap =>
     rename_i i c bc σ'' os sel cs idx ts'
-    have hsc : opDoneInner c = none := by
-      cases hscq : opDoneInner c with
+    have hab : c.abort? = none := by
+      cases hab : c.abort? with
       | none => rfl
-      | some kk =>
-          obtain ⟨sc, hcfg⟩ := opDoneInner_shape hscq
-          subst hcfg
-          rw [show arrivalCases m.shared m.threads i (.opDone sc kk)
-            = .ok .cellPath from rfl] at hplan
-          cases hplan
+      | some p =>
+        obtain ⟨first, rest⟩ := p
+        match c, hab, hplan with
+        | .panicking (f :: r) .stop, _, hplan => cases hplan
     have hsel : sel < os.length := (List.getElem?_eq_some_iff.mp hget).1
     have hconsS : Choices.consume [sel] os.length = (sel, []) := by
       simp only [Choices.consume]
@@ -1323,7 +1479,7 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
           ⟨_, by
             unfold stepThread
             rw [hti]
-            simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp, Bind.bind,
+            simp only [hblc, Bool.false_eq_true, reduceIte, hab, hsp, Bind.bind,
               Except.bind]
             rw [arrivalPlan_of_multi hplan hconsS, hget]
             dsimp only
@@ -1361,7 +1517,7 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
           ⟨_, by
             unfold stepThread
             rw [hti]
-            simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp, Bind.bind,
+            simp only [hblc, Bool.false_eq_true, reduceIte, hab, hsp, Bind.bind,
               Except.bind]
             rw [arrivalPlan_of_multi hplan hconsS2, hget]
             dsimp only
@@ -1375,15 +1531,13 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
         exact stepMulti_of_inner hsched hinner
   | pickCommit hsched hti hblc hsp hplan hget hcom =>
     rename_i i c cl envc kc os sel c' σ'
-    have hsc : opDoneInner c = none := by
-      cases hscq : opDoneInner c with
+    have hab : c.abort? = none := by
+      cases hab : c.abort? with
       | none => rfl
-      | some kk =>
-          obtain ⟨sc, hcfg⟩ := opDoneInner_shape hscq
-          subst hcfg
-          rw [show arrivalCases m.shared m.threads i (.opDone sc kk)
-            = .ok .cellPath from rfl] at hplan
-          cases hplan
+      | some p =>
+        obtain ⟨first, rest⟩ := p
+        match c, hab, hplan with
+        | .panicking (f :: r) .stop, _, hplan => cases hplan
     have hsel : sel < os.length := (List.getElem?_eq_some_iff.mp hget).1
     have hconsS : Choices.consume [sel] os.length = (sel, []) := by
       simp only [Choices.consume]
@@ -1392,11 +1546,11 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
       rw [hmax]
       exact Nat.mod_eq_of_lt hsel
     have hinner : ∃ evI, stepThread m.shared m.threads i [sel]
-        = .ok (m.threads.setIfInBounds i c', σ', [], evI) :=
+        = .ok (m.threads.setIfInBounds i (Thread.afterStep m.shared c c'), σ', [], evI) :=
       ⟨_, by
         unfold stepThread
         rw [hti]
-        simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp, Bind.bind,
+        simp only [hblc, Bool.false_eq_true, reduceIte, hab, hsp, Bind.bind,
           Except.bind]
         rw [arrivalPlan_of_multi hplan hconsS, hget]
         dsimp only
@@ -1407,7 +1561,7 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
   | wake hsched hti hblc hres =>
     rename_i i c c' σ'
     have hinner : ∃ evI, stepThread m.shared m.threads i []
-        = .ok (m.threads.setIfInBounds i c', σ', [], evI) :=
+        = .ok (m.threads.setIfInBounds i (Thread.completed c'), σ', [], evI) :=
       ⟨_, by
         unfold stepThread
         rw [hti]

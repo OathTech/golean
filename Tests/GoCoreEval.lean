@@ -2512,15 +2512,15 @@ def main : IO UInt32 := do
   passed := passed && (← expectTrue "GoCore accountant sentinel: an L1 site draws the sentinel (stepNeeds some 2, sentinel-run leftover [])"
     (let selB : GoCore.Machine.Config :=
       .exec (.selectStmt #[] (some (.seqn #[]))) [] .stop
-     CLI.stepNeeds ⟨#[selB, selB], {}, 0⟩ [] == some 2
-      && (match GoCore.Machine.stepMulti ⟨#[selB, selB], {}, 0⟩ [0] with
+     CLI.stepNeeds ⟨#[.running selB none, .running selB none], {}, 0⟩ [] == some 2
+      && (match GoCore.Machine.stepMulti ⟨#[.running selB none, .running selB none], {}, 0⟩ [0] with
           | .ok (_, leftover, _) => leftover.isEmpty
           | .error _ => false)))
   passed := passed && (← expectTrue "GoCore accountant sentinel: a non-site leaves the sentinel (stepNeeds none, leftover [0])"
     (let selB : GoCore.Machine.Config :=
       .exec (.selectStmt #[] (some (.seqn #[]))) [] .stop
-     CLI.stepNeeds ⟨#[selB], {}, 0⟩ [] == none
-      && (match GoCore.Machine.stepMulti ⟨#[selB], {}, 0⟩ [0] with
+     CLI.stepNeeds ⟨#[.running selB none], {}, 0⟩ [] == none
+      && (match GoCore.Machine.stepMulti ⟨#[.running selB none], {}, 0⟩ [0] with
           | .ok (_, leftover, _) => leftover == [0]
           | .error _ => false)))
   -- Audit response 2026-08-05, C6 (made NON-VACUOUS by delta-review M2 —
@@ -2951,7 +2951,8 @@ def main : IO UInt32 := do
   -- about the checker.
   let selCfg : GoCore.Machine.Config :=
     .exec (.selectStmt #[] (some (.seqn #[]))) [] .stop
-  let dedupM0 : GoCore.Machine.MultiConfig := ⟨#[selCfg, selCfg], {}, 0⟩
+  let dedupM0 : GoCore.Machine.MultiConfig :=
+    ⟨#[.running selCfg none, .running selCfg none], {}, 0⟩
   let dedupR0 : GoCore.Machine.RaceState := {}
   match GoLean.EnumDedup.buildCert [] dedupM0 dedupR0 100000 with
   | .error e =>

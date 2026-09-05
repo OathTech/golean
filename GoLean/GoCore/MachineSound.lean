@@ -180,54 +180,54 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
          (try obtain ⟨rfl, rfl, rfl⟩ := h)
          constructor <;> first | assumption | rfl | omega)
       | skip)
-  case case77 =>
+  case case75 =>
     -- A4: a global past the heap REFUSES (`.stuck`); no step is produced.
     rename_i hgid
     simp only [stepFn] at h
     rw [if_neg hgid] at h
     simp [throw, throwThe, MonadExceptOf.throw] at h
-  case case2 =>
+  case case1 =>
     simp_all only [stepFn, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨rfl, rfl, rfl⟩ := h
     exact Step.panicFrameEmpty
-  case case3 =>
+  case case2 =>
     entry_arm h Step.panicFrameDefer
-  case case144 =>
+  case case142 =>
     rename_i hrec
     simp_all only [stepFn, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨rfl, rfl, rfl⟩ := h
     exact Step.panicResumeContinue (Bool.eq_false_iff.mpr hrec)
-  case case13 =>
+  case case11 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨⟨env', s₁⟩, hd, rfl, rfl, rfl⟩ := h
     exact Step.block hd
-  case case14 =>
+  case case12 =>
     simp_all [stepFn, bind_eq_ok]
     obtain ⟨v, hd, rfl, rfl, rfl⟩ := h
     exact Step.initialization hd rfl
-  case case36 =>
+  case case34 =>
     entry_arm h (Step.callImmediate ‹_› ‹_›)
-  case case69 =>
+  case case67 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨v, hd, rfl, rfl, rfl⟩ := h
     exact Step.evalVar ‹_› hd
-  case case78 =>
+  case case76 =>
     simp_all only [stepFn, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨rfl, rfl, rfl⟩ := h
     exact Step.evalAnd
-  case case79 =>
+  case case77 =>
     simp_all only [stepFn, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨rfl, rfl, rfl⟩ := h
     exact Step.evalOr
-  case case80 =>
+  case case78 =>
     simp only [stepFn, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl⟩ := h
     exact Step.evalRecover rfl
-  case case83 =>
+  case case81 =>
     deliver_arm h (Step.evalStrictNullary ‹_›)
-  case case86 =>
+  case case84 =>
     deliver_arm h Step.strictApply
-  case case87 =>
+  case case85 =>
     simp_all only [stepFn, bind_eq_ok]
     obtain ⟨b, hb, h⟩ := h
     obtain rfl := valueAsBool_ok hb
@@ -239,7 +239,7 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
     · simp only [reduceIte, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl⟩ := h
       exact Step.andTrue
-  case case88 =>
+  case case86 =>
     simp_all only [stepFn, bind_eq_ok]
     obtain ⟨b, hb, h⟩ := h
     obtain rfl := valueAsBool_ok hb
@@ -251,12 +251,12 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
     · simp only [reduceIte, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl⟩ := h
       exact Step.orTrue
-  case case89 =>
+  case case87 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨b, hb, rfl, rfl, rfl⟩ := h
     obtain rfl := valueAsBool_ok hb
     exact Step.boolCoerce
-  case case90 =>
+  case case88 =>
     simp_all only [stepFn, bind_eq_ok]
     obtain ⟨b, hb, h⟩ := h
     obtain rfl := valueAsBool_ok hb
@@ -268,7 +268,7 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
     · simp only [reduceIte, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl⟩ := h
       exact Step.ifTrue
-  case case91 =>
+  case case89 =>
     simp_all only [stepFn, bind_eq_ok]
     obtain ⟨b, hb, h⟩ := h
     obtain rfl := valueAsBool_ok hb
@@ -280,9 +280,9 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
     · simp only [reduceIte, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl⟩ := h
       exact Step.whileTrue
-  case case93 =>
+  case case91 =>
     entry_arm h Step.callArgsDoneEnter
-  case case94 =>
+  case case92 =>
     -- The target-check arm sits under `if done.length < nt`: split the
     -- classified `valueAsLoc` result by hand.
     rename_i hlt
@@ -300,31 +300,31 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
         simp only [deliverS_panic, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl, rfl⟩ := h
         exact Step.stmtOpShiftTarget ‹_› hres rfl
-  case case95 =>
+  case case93 =>
     simp_all only [stepFn, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨rfl, rfl, rfl⟩ := h
     exact Step.stmtOpShiftPlain (Nat.le_of_not_lt ‹_›)
-  case case96 =>
+  case case94 =>
     deliver_arm h Step.stmtOpApply
-  case case97 =>
+  case case95 =>
     entry_arm h Step.callValCalleeEnter
-  case case103 =>
+  case case101 =>
     entry_arm h Step.callValArgsEnter
-  case case113 =>
+  case case111 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨bs, hd, rfl, rfl, rfl⟩ := h
     exact Step.mapRangeStart (base := bs.1) (start := bs.2) hd
-  case case116 =>
+  case case114 =>
     deliver_arm h Step.chanStApply
-  case case118 =>
+  case case116 =>
     deliver_arm h Step.selectApply
-  case case126 =>
+  case case124 =>
     deliver_arm h Step.rhsStores
-  case case133 =>
+  case case131 =>
     deliver_arm h Step.syncStApply
-  case case135 =>
+  case case133 =>
     deliver_arm h Step.atomicStApply
-  case case147 =>
+  case case145 =>
     -- BUG-005 (L): the pick arm is ONE fun_cases equation now (the
     -- candidates load precedes every split), so done/stop/pick are
     -- separated manually here.
@@ -375,73 +375,78 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
         subst hk
         subst hv
         exact Step.mapIterNext hlt hcands hd
-  case case148 =>
+  case case146 =>
     deliver_arm h Step.storeStep
-  case case41 =>
+  case case39 =>
     rename_i hplan
     simp only [stepFn] at h
     rw [hplan] at h
     simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl⟩ := h
     exact Step.chanStFirst hplan
-  case case42 =>
+  case case40 =>
     rename_i hplan
     simp only [stepFn] at h
     rw [hplan] at h
     simp [throw, throwThe, MonadExceptOf.throw] at h
-  case case43 =>
+  case case41 =>
     rename_i hplan hgt
     simp only [stepFn] at h
     rw [hplan, if_pos hgt] at h
     simp [throw, throwThe, MonadExceptOf.throw] at h
-  case case44 =>
+  case case42 =>
     rename_i hplan hgt
     simp only [stepFn] at h
     rw [hplan, if_neg hgt] at h
     simp [throw, throwThe, MonadExceptOf.throw] at h
   -- Sync statements (spec-parity slice 2): the chan handlers' shapes.
-  case case60 =>
+  case case58 =>
     rename_i hplan
     simp only [stepFn] at h
     rw [hplan] at h
     simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl⟩ := h
     exact Step.syncStFirst hplan
-  case case61 =>
+  case case59 =>
     rename_i hplan
     simp only [stepFn] at h
     rw [hplan] at h
     simp [throw, throwThe, MonadExceptOf.throw] at h
-  case case62 =>
+  case case60 =>
     rename_i hplan
     simp only [stepFn] at h
     rw [hplan] at h
     simp [throw, throwThe, MonadExceptOf.throw] at h
   -- sync/atomic statements (atomics arc wave 1): the sync handlers'
   -- shapes verbatim (entry / two throws / the apply's panic arm).
-  case case63 =>
+  case case61 =>
     rename_i hplan
     simp only [stepFn] at h
     rw [hplan] at h
     simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl⟩ := h
     exact Step.atomicStFirst hplan
-  case case64 =>
+  case case62 =>
     rename_i hplan
     simp only [stepFn] at h
     rw [hplan] at h
     simp [throw, throwThe, MonadExceptOf.throw] at h
-  case case65 =>
+  case case63 =>
     rename_i hplan
     simp only [stepFn] at h
     rw [hplan] at h
     simp [throw, throwThe, MonadExceptOf.throw] at h
 
-  case case142 =>
+  case case6 =>
+    -- B4: the ABORT raises the `panic` terminal; no `.ok` step exists.
+    simp only [stepFn, bind_eq_ok] at h
+    obtain ⟨msg, -, h⟩ := h
+    simp [throw, throwThe, MonadExceptOf.throw] at h
+  case case140 =>
     -- B4: frame exit on the fall-through entry (`stepFrameExit`).
     simp only [stepFn] at h
     exact (stepFrameExit_sound h).1
-  case case153 =>
+  case case151 =>
     -- B4: frame exit on the `return` entry — the same function, the twin
     -- rules.
     simp only [stepFn, signalStep_frame] at h
@@ -760,11 +765,10 @@ theorem runConfig_sound {fuel : Nat} {s : ExecState} {c : Config}
   | case2 => simp [throw, throwThe, MonadExceptOf.throw] at h
   | case3 => simp [throw, throwThe, MonadExceptOf.throw] at h
   | case4 => simp [throw, throwThe, MonadExceptOf.throw] at h
+  -- blockedSync (spec-parity slice 2): one more deadlock-classified arm.
   | case5 => simp [throw, throwThe, MonadExceptOf.throw] at h
   | case6 => simp [throw, throwThe, MonadExceptOf.throw] at h
-  -- blockedSync (spec-parity slice 2): one more deadlock-classified arm.
-  | case7 => simp [throw, throwThe, MonadExceptOf.throw] at h
-  | case8 =>
+  | case7 =>
       rename_i ih
       rw [bind_eq_ok] at h
       obtain ⟨⟨c', s', ch'⟩, hstep, hrun⟩ := h
@@ -777,25 +781,20 @@ to the sequential terminal. Total — the old fragment-scoped
 side-conditions (`HeapFrag`, `StInv`) are retired. -/
 theorem execStmtLoop_sound_normal {fuel : Nat} {σ : ExecState} {c : Config}
     {ch : Choices} {σf : ExecState} {chf : Choices}
-    (h : execStmtLoop fuel σ c ch = .ok (.normal σf, chf)) :
+    (h : execStmtLoop fuel σ c ch = .ok (σf, chf)) :
     Steps c σ (.next .stop) σf := by
   fun_induction execStmtLoop fuel σ c ch with
   | case1 =>
-      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq,
-        ExecOutcome.normal.injEq] at h
+      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact Steps.refl _ _
   | case2 => simp [throw, throwThe, MonadExceptOf.throw] at h
   | case3 => simp [throw, throwThe, MonadExceptOf.throw] at h
   | case4 => simp [throw, throwThe, MonadExceptOf.throw] at h
+  -- blockedSync (spec-parity slice 2): one more deadlock-classified arm.
   | case5 => simp [throw, throwThe, MonadExceptOf.throw] at h
   | case6 => simp [throw, throwThe, MonadExceptOf.throw] at h
-  | case7 => simp [throw, throwThe, MonadExceptOf.throw] at h
-  | case8 => simp [throw, throwThe, MonadExceptOf.throw] at h
-  | case9 => simp [throw, throwThe, MonadExceptOf.throw] at h
-  -- blockedSync (spec-parity slice 2): one more deadlock-classified arm.
-  | case10 => simp [throw, throwThe, MonadExceptOf.throw] at h
-  | case11 =>
+  | case7 =>
       rename_i ih
       rw [bind_eq_ok] at h
       obtain ⟨⟨c', s', ch'⟩, hstep, hrun⟩ := h
@@ -803,7 +802,7 @@ theorem execStmtLoop_sound_normal {fuel : Nat} {σ : ExecState} {c : Config}
 
 theorem execStmt_sound_normal {fuel : Nat} {env : LocalEnv} {σ : ExecState}
     {ch : Choices} {prog : Stmt} {σf : ExecState} {chf : Choices}
-    (h : execStmt fuel env σ ch prog = .ok (.normal σf, chf)) :
+    (h : execStmt fuel env σ ch prog = .ok (σf, chf)) :
     Steps (.exec prog env .stop) σ (.next .stop) σf :=
   execStmtLoop_sound_normal h
 
@@ -872,7 +871,7 @@ well-formedness side condition (locs below `nextAddr`, preserved by
 the terminal before consulting the surplus. -/
 theorem execStmtLoop_mono :
     ∀ (fuel fuel' : Nat) (σ : ExecState) (c : Config) (ch : Choices)
-      (r : ExecOutcome × Choices),
+      (r : ExecState × Choices),
     fuel ≤ fuel' → execStmtLoop fuel σ c ch = .ok r →
     execStmtLoop fuel' σ c ch = .ok r := by
   intro fuel
@@ -898,52 +897,40 @@ theorem execStmtLoop_mono :
 
 @[inherit_doc execStmtLoop_mono]
 theorem execStmt_mono {fuel fuel' : Nat} {env : LocalEnv} {σ : ExecState}
-    {ch : Choices} {prog : Stmt} {r : ExecOutcome × Choices}
+    {ch : Choices} {prog : Stmt} {r : ExecState × Choices}
     (hle : fuel ≤ fuel')
     (h : execStmt fuel env σ ch prog = .ok r) :
     execStmt fuel' env σ ch prog = .ok r :=
   execStmtLoop_mono fuel fuel' _ _ _ _ hle h
 
-/-- `.panicked` is genuinely terminal for the relation, not just for the
-driver: no rule's source configuration is `.panicked` (every conclusion
-starts from an eval/ret/exec/unwind shape), so a reachable `.panicked`
-can never be discharged by "it still steps" in a progress hypothesis. -/
-theorem step_panicked_elim {msg : String} {σ : ExecState} {c' : Config}
-    {σ' : ExecState} : ¬ Step (.panicked msg) σ c' σ' := by
+/-- The ABORT is genuinely terminal for the relation, not just for the
+driver (B4): no rule's source configuration is an unrecovered chain at
+`.stop` — the unwinding rules match a frame, the resume marker, or glue
+(`panicPassthrough` refuses `.stop`) — so a reachable abort can never be
+discharged by "it still steps" in a progress hypothesis. -/
+theorem step_abort_elim {chain : List PanicEntry} {σ : ExecState} {c' : Config}
+    {σ' : ExecState} : ¬ Step (.panicking chain .stop) σ c' σ' := by
   intro h
   cases h
+  simp [panicPassthrough, Cont.isGlue, Cont.class] at *
 
 /-! The three unwound-`.stop` terminals are ALSO genuinely terminal for
 the relation (audit response 2026-08-04; B4: ONE fact now — the signal
 table has no `.stop` row, `signalStep_stop`, and the frame-exit rules
 match a `.frame`), so no rule applies to a signal at `.stop`. With
-`step_panicked_elim` these pin `execStmtLoop_ok_or_fuelOut`'s success
-disjunct to the `.normal` terminal: under a relation-Progress hypothesis
+`step_abort_elim` these pin `execStmtLoop_ok_or_fuelOut`'s success
+disjunct to the one terminal: under a relation-Progress hypothesis
 (every reachable configuration is `.next .stop` or steps), a reachable
-unwound-`.stop` configuration is a CONTRADICTION, not a successful
-completion. -/
+unwound-`.stop` configuration is a CONTRADICTION — and since B4 the
+driver does not even classify it (a signal at `.stop` is a refusal). -/
 
-@[inherit_doc step_panicked_elim]
+@[inherit_doc step_abort_elim]
 theorem step_signal_stop_elim {sg : Signal} {σ : ExecState} {c' : Config}
     {σ' : ExecState} : ¬ Step (.signal sg .stop) σ c' σ' := by
   intro h
   cases h
   simp_all
 
-@[inherit_doc step_panicked_elim]
-theorem step_returning_stop_elim {σ : ExecState} {c' : Config}
-    {σ' : ExecState} : ¬ Step (.signal .ret .stop) σ c' σ' :=
-  step_signal_stop_elim
-
-@[inherit_doc step_panicked_elim]
-theorem step_breaking_stop_elim {σ : ExecState} {c' : Config}
-    {σ' : ExecState} : ¬ Step (.signal .brk .stop) σ c' σ' :=
-  step_signal_stop_elim
-
-@[inherit_doc step_panicked_elim]
-theorem step_continuing_stop_elim {σ : ExecState} {c' : Config}
-    {σ' : ExecState} : ¬ Step (.signal .cont .stop) σ c' σ' :=
-  step_signal_stop_elim
 
 /-! Blocked configurations (channels arc slice 1) are relation-TERMINAL:
 no rule steps a blocked goroutine — pairing is the slice-2 pool's job.
@@ -952,14 +939,14 @@ is therefore a contradiction, which keeps
 `execStmtLoop_ok_or_fuelOut`'s meaning intact: a proven sequential
 Progress still implies the run never deadlocks. -/
 
-@[inherit_doc step_panicked_elim]
+@[inherit_doc step_abort_elim]
 theorem step_blockedSend_elim {chl : Option Loc} {v : GoValue} {k : Cont}
     {σ : ExecState} {c' : Config} {σ' : ExecState} :
     ¬ Step (.blockedSend chl v k) σ c' σ' := by
   intro h
   cases h
 
-@[inherit_doc step_panicked_elim]
+@[inherit_doc step_abort_elim]
 theorem step_blockedRecv_elim {chl : Option Loc} {targets : List Assignee}
     {elem : Ty} {env : LocalEnv} {k : Cont} {σ : ExecState} {c' : Config}
     {σ' : ExecState} :
@@ -967,7 +954,7 @@ theorem step_blockedRecv_elim {chl : Option Loc} {targets : List Assignee}
   intro h
   cases h
 
-@[inherit_doc step_panicked_elim]
+@[inherit_doc step_abort_elim]
 theorem step_blockedSelect_elim {clauses : List EvClause} {env : LocalEnv}
     {k : Cont} {σ : ExecState} {c' : Config} {σ' : ExecState} :
     ¬ Step (.blockedSelect clauses env k) σ c' σ' := by
@@ -2838,30 +2825,28 @@ theorem step_complete_any_wf {c : Config} {σ : ExecState} {c' : Config}
 /-- **Interpreter-side safety from relation-Progress + well-formedness**:
 if every relation-reachable configuration from a well-formed start is
 the sequential terminal or can step, then every bounded `execStmtLoop`
-run — under EVERY choice stream — returns `.ok (.normal …)` or
+run — under EVERY choice stream — returns `.ok` at the one terminal or
 `.error .fuelOut`; never stuck, never an unrecovered panic, never
-unsupported/internal, and never a completion at a non-`.normal`
-terminal. Fuel induction carrying reachability (to keep the progress
-hypothesis applicable) and `MachineWf` (via `stepFn_preserves_wf`);
-`.panicked` is excluded by progress + `step_panicked_elim`, and the
-three non-`.stop` unwound terminals are excluded the same way
-(`step_returning_stop_elim` and siblings — audit response 2026-08-04:
-they used to return `.ok` with the outcome unconstrained, which silently
-weakened `ProgressExec`-based statements to accepting top-level
-`.returned`/`.broke`/`.continued` completions the relation-Progress
-hypothesis actually rules out). -/
+unsupported/internal. Fuel induction carrying reachability (to keep the
+progress hypothesis applicable) and `MachineWf` (via
+`stepFn_preserves_wf`); the abort and the signals at `.stop` are
+excluded by progress + `step_abort_elim`/`step_signal_stop_elim` — and
+since B4 the driver classifies NEITHER as a completion (a signal at
+`.stop` is a refusal `stepFn` raises), so the former audit-response
+concern (2026-08-04: unconstrained `.returned`/`.broke`/`.continued`
+completions silently accepted) has no shape left to arise in. -/
 theorem execStmtLoop_ok_or_fuelOut {σ₀ : ExecState} {c₀ : Config}
     (hprog : ∀ (c' : Config) (σ' : ExecState), Steps c₀ σ₀ c' σ' →
       c' = .next .stop ∨ ∃ (c'' : Config) (σ'' : ExecState), Step c' σ' c'' σ'')
     (hwf : MachineWf σ₀ c₀) :
     ∀ (fuel : Nat) (ch : Choices),
       (∃ (σf : ExecState) (ch' : Choices),
-        execStmtLoop fuel σ₀ c₀ ch = .ok (.normal σf, ch'))
+        execStmtLoop fuel σ₀ c₀ ch = .ok (σf, ch'))
       ∨ execStmtLoop fuel σ₀ c₀ ch = .error .fuelOut := by
   suffices haux : ∀ (fuel : Nat) (c : Config) (σ : ExecState),
       Steps c₀ σ₀ c σ → MachineWf σ c → ∀ ch : Choices,
       (∃ (σf : ExecState) (ch' : Choices),
-        execStmtLoop fuel σ c ch = .ok (.normal σf, ch'))
+        execStmtLoop fuel σ c ch = .ok (σf, ch'))
         ∨ execStmtLoop fuel σ c ch = .error .fuelOut by
     intro fuel ch
     exact haux fuel c₀ σ₀ (Steps.refl _ _) hwf ch
@@ -2872,19 +2857,6 @@ theorem execStmtLoop_ok_or_fuelOut {σ₀ : ExecState} {c₀ : Config}
     unfold execStmtLoop
     split
     · exact .inl ⟨_, _, rfl⟩
-    · rcases hprog _ _ hreach with hstop | ⟨c'', σ'', hstep⟩
-      · exact absurd hstop (by simp)
-      · exact absurd hstep step_returning_stop_elim
-    · rcases hprog _ _ hreach with hstop | ⟨c'', σ'', hstep⟩
-      · exact absurd hstop (by simp)
-      · exact absurd hstep step_breaking_stop_elim
-    · rcases hprog _ _ hreach with hstop | ⟨c'', σ'', hstep⟩
-      · exact absurd hstop (by simp)
-      · exact absurd hstep step_continuing_stop_elim
-    · rename_i msg
-      rcases hprog _ _ hreach with hstop | ⟨c'', σ'', hstep⟩
-      · exact absurd hstop (by simp)
-      · exact absurd hstep step_panicked_elim
     · rcases hprog _ _ hreach with hstop | ⟨c'', σ'', hstep⟩
       · exact absurd hstop (by simp)
       · exact absurd hstep step_blockedSend_elim
@@ -2905,19 +2877,6 @@ theorem execStmtLoop_ok_or_fuelOut {σ₀ : ExecState} {c₀ : Config}
     · exact .inl ⟨_, _, rfl⟩
     · rcases hprog _ _ hreach with hstop | ⟨c'', σ'', hstep⟩
       · exact absurd hstop (by simp)
-      · exact absurd hstep step_returning_stop_elim
-    · rcases hprog _ _ hreach with hstop | ⟨c'', σ'', hstep⟩
-      · exact absurd hstop (by simp)
-      · exact absurd hstep step_breaking_stop_elim
-    · rcases hprog _ _ hreach with hstop | ⟨c'', σ'', hstep⟩
-      · exact absurd hstop (by simp)
-      · exact absurd hstep step_continuing_stop_elim
-    · rename_i msg
-      rcases hprog _ _ hreach with hstop | ⟨c'', σ'', hstep⟩
-      · exact absurd hstop (by simp)
-      · exact absurd hstep step_panicked_elim
-    · rcases hprog _ _ hreach with hstop | ⟨c'', σ'', hstep⟩
-      · exact absurd hstop (by simp)
       · exact absurd hstep step_blockedSend_elim
     · rcases hprog _ _ hreach with hstop | ⟨c'', σ'', hstep⟩
       · exact absurd hstop (by simp)
@@ -2929,7 +2888,7 @@ theorem execStmtLoop_ok_or_fuelOut {σ₀ : ExecState} {c₀ : Config}
       · exact absurd hstop (by simp)
       · exact absurd hstep step_blockedSync_elim
     · rcases hprog _ _ hreach with hstop | ⟨c'', σ'', hstep⟩
-      · rename_i harm1 harm2 harm3 harm4 harm5 harm6 harm7 harm8 harm9
+      · rename_i harm1 harm2 harm3 harm4 harm5
         first
           | exact absurd hstop harm1
           | exact absurd hstop.symm harm1
@@ -3004,9 +2963,6 @@ def allStreamsOk : Nat → ExecState → Config → Bool
   | fuel + 1, σ, c =>
       match c with
       | .next .stop => true
-      | .signal .ret .stop => true
-      | .signal .brk .stop => true
-      | .signal .cont .stop => true
       | .next (.mapIterK keyVar valVar keyTy valTy body base produced start env k) =>
           -- BUG-005 (L): the branch bound moved from the CONFIGURATION
           -- (the retired snapshot's size) to the STATE (live candidates
@@ -3887,7 +3843,6 @@ theorem stepFn_syncApply_oblivious {σ : ExecState} {op : SyncOp} {done : List G
     rfl
 
 set_option maxHeartbeats 1600000 in
-set_option linter.unusedSimpArgs false in
 
 /-- Frame exit consumes the stream only at a deferred call's ENTRY, and
 there exactly as every entry does (`entryConsult?`): with the consult
@@ -3930,7 +3885,7 @@ theorem stepFrameExit_consumption_none {σ : ExecState}
          rw [hx] at h
          cases r with
          | ok a =>
-           simp only [Except.map, Bind.bind, Except.bind, pure_eq_ok, Pure.pure, Except.pure,
+           simp only [Except.map, Bind.bind, Except.bind, Pure.pure, Except.pure,
              deliverS_ok, Except.ok.injEq, Prod.mk.injEq] at h
            obtain ⟨h1, h2, h3⟩ := h
            subst h1; subst h2; subst h3
@@ -3938,7 +3893,7 @@ theorem stepFrameExit_consumption_none {σ : ExecState}
              (try simp only [List.append_assoc] at hpk' hx)
              simp [stepFrameExit, hpk', hx, Except.map, Bind.bind, Except.bind]⟩
          | panic msg =>
-           simp only [Except.map, Bind.bind, Except.bind, pure_eq_ok, Pure.pure, Except.pure,
+           simp only [Except.map, Bind.bind, Except.bind, Pure.pure, Except.pure,
              deliverS_panic, Except.ok.injEq, Prod.mk.injEq] at h
            obtain ⟨h1, h2, h3⟩ := h
            subst h1; subst h2; subst h3
@@ -3990,6 +3945,7 @@ theorem stepFrameExit_consumption_some {σ : ExecState}
      (try simp only [List.append_assoc] at hpanic hpk)
      simp [stepFrameExit, enterFramePick_panic hpanic, hpk, Bind.bind, Except.bind])
 
+set_option linter.unusedSimpArgs false in
 /-- **The consumption theorem, `none` half**: a step whose projection is
 `none` is stream-oblivious — it succeeds under EVERY stream with the same
 successor and the stream returned untouched. Sweep over `stepFn`'s case
@@ -4007,27 +3963,31 @@ theorem stepFn_consumption_none {σ : ExecState} {c : Config} {ch₀ : Choices}
   all_goals first
     | (refine ⟨?_, fun ch => ?_⟩ <;> (simp_all [stepFn]; done))
     | skip
-  case case3 =>
+  case case2 =>
     consumption_entry_none h hsc
-  case case36 =>
+  case case34 =>
     consumption_entry_none h hsc
-  case case93 =>
+  case case91 =>
     consumption_entry_none h hsc
-  case case97 =>
+  case case95 =>
     consumption_entry_none h hsc
-  case case103 =>
+  case case101 =>
     consumption_entry_none h hsc
-  case case142 =>
+  case case6 =>
+    simp only [stepFn, bind_eq_ok] at h
+    obtain ⟨msg, -, h⟩ := h
+    simp [throw, throwThe, MonadExceptOf.throw] at h
+  case case140 =>
     simp only [stepFn] at h ⊢
     exact stepFrameExit_consumption_none (.inl rfl) hsc h
-  case case153 =>
+  case case151 =>
     simp only [stepFn, signalStep_frame] at h ⊢
     exact stepFrameExit_consumption_none (.inr rfl) hsc h
-  case case96 =>
+  case case94 =>
     simp only [seqConsumption, Config.applyPos] at hsc
     obtain ⟨r, hr⟩ := applyStmtOp_of_stmtConsult?_none hsc
     exact stepFn_stmtOp_oblivious hr h
-  case case118 =>
+  case case116 =>
     rename_i v clauses default? done env k'
     simp only [seqConsumption, Config.applyPos, selectConsult?] at hsc
     cases hcore : applySelectCore σ clauses default? ((v :: done).reverse) env k' with
@@ -4062,7 +4022,7 @@ theorem stepFn_consumption_none {σ : ExecState} {c : Config} {ch₀ : Choices}
       | picks commits =>
         rw [hcore] at hsc
         simp at hsc
-  case case133 =>
+  case case131 =>
     rename_i v op done env k'
     simp only [seqConsumption, Config.applyPos, syncConsult?, Option.map_eq_none_iff] at hsc
     cases hop : op.tryTargets? with
@@ -4117,7 +4077,7 @@ theorem stepFn_consumption_none {σ : ExecState} {c : Config} {ch₀ : Choices}
             exact stepFn_syncApply_oblivious
               (r := applyTryLock σ op loc pre false targets env k')
               (fun ch => by simpa using applySyncOp_try_nopop hop hl hcell hw ch) h
-  case case147 =>
+  case case145 =>
     rename_i kv vv kt vt body base produced start env k'
     simp only [seqConsumption, mapIterConsult?] at hsc
     cases hcands : mapIterCandidates σ kt vt base produced with
@@ -4161,13 +4121,13 @@ theorem stepFn_consumption_none {σ : ExecState} {c : Config} {ch₀ : Choices}
           refine ⟨rfl, fun ch => ?_⟩
           rw [stepFn_mapIter_pick hcands hmand hemp (hcons ch) hpos, hbind]
           rfl
-  case case77 =>
+  case case75 =>
     -- A4: a global past the heap REFUSES (`.stuck`); no step is produced.
     rename_i hgid
     simp only [stepFn] at h
     rw [if_neg hgid] at h
     simp [throw, throwThe, MonadExceptOf.throw] at h
-  case case13 =>
+  case case11 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨⟨env', s₁⟩, hd, rfl, rfl, rfl⟩ := h
     refine ⟨by simp, fun ch => ?_⟩
@@ -4176,7 +4136,7 @@ theorem stepFn_consumption_none {σ : ExecState} {c : Config} {ch₀ : Choices}
     simp
   -- Channel receive entry (channels arc slice 1): the plan match needs
   -- its hypothesis rewritten in; both arms are stream-oblivious.
-  case case41 =>
+  case case39 =>
     rename_i hplan
     simp only [stepFn] at h
     rw [hplan] at h
@@ -4186,17 +4146,17 @@ theorem stepFn_consumption_none {σ : ExecState} {c : Config} {ch₀ : Choices}
     simp only [stepFn]
     rw [hplan]
     rfl
-  case case42 =>
+  case case40 =>
     rename_i hplan
     simp only [stepFn] at h
     rw [hplan] at h
     simp [throw, throwThe, MonadExceptOf.throw] at h
-  case case43 =>
+  case case41 =>
     rename_i hplan hgt
     simp only [stepFn] at h
     rw [hplan, if_pos hgt] at h
     simp [throw, throwThe, MonadExceptOf.throw] at h
-  case case44 =>
+  case case42 =>
     rename_i hplan hgt
     simp only [stepFn] at h
     rw [hplan, if_neg hgt] at h
@@ -4209,7 +4169,7 @@ theorem stepFn_consumption_none {σ : ExecState} {c : Config} {ch₀ : Choices}
   -- stream-transparent; the APPLY is stream-transparent for every
   -- non-TRY head (`hnt` excludes the TRY heads — Q-TRYLOCK's
   -- `tryLock` site; `applySyncOp_core_ok`/`_error`).
-  case case60 =>
+  case case58 =>
     rename_i hplan
     simp only [stepFn] at h
     rw [hplan] at h
@@ -4219,12 +4179,12 @@ theorem stepFn_consumption_none {σ : ExecState} {c : Config} {ch₀ : Choices}
     simp only [stepFn]
     rw [hplan]
     rfl
-  case case61 =>
+  case case59 =>
     rename_i hplan
     simp only [stepFn] at h
     rw [hplan] at h
     simp [throw, throwThe, MonadExceptOf.throw] at h
-  case case62 =>
+  case case60 =>
     rename_i hplan
     simp only [stepFn] at h
     rw [hplan] at h
@@ -4232,7 +4192,7 @@ theorem stepFn_consumption_none {σ : ExecState} {c : Config} {ch₀ : Choices}
   -- sync/atomic statements (atomics arc wave 1): the sync recipes —
   -- entry is stream-transparent (the apply consumes nothing,
   -- applyAtomicOp's envelope statement).
-  case case63 =>
+  case case61 =>
     rename_i hplan
     simp only [stepFn] at h
     rw [hplan] at h
@@ -4242,32 +4202,32 @@ theorem stepFn_consumption_none {σ : ExecState} {c : Config} {ch₀ : Choices}
     simp only [stepFn]
     rw [hplan]
     rfl
-  case case64 =>
+  case case62 =>
     rename_i hplan
     simp only [stepFn] at h
     rw [hplan] at h
     simp [throw, throwThe, MonadExceptOf.throw] at h
-  case case65 =>
+  case case63 =>
     rename_i hplan
     simp only [stepFn] at h
     rw [hplan] at h
     simp [throw, throwThe, MonadExceptOf.throw] at h
-  case case14 =>
+  case case12 =>
     simp_all [stepFn, bind_eq_ok]
     obtain ⟨v, hd, h1, h2, h3⟩ := h
     exact ⟨h3.symm, v, hd, h1, h2⟩
-  case case69 =>
+  case case67 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨v, hd, rfl, rfl, rfl⟩ := h
     refine ⟨by simp, fun ch => ?_⟩
     simp only [stepFn, bind_eq_ok]
     refine ⟨v, hd, ?_⟩
     simp
-  case case83 =>
+  case case81 =>
     oblivious_apply h
-  case case86 =>
+  case case84 =>
     oblivious_apply h
-  case case87 =>
+  case case85 =>
     simp only [stepFn, bind_eq_ok] at h
     obtain ⟨b, hb, h⟩ := h
     obtain rfl := valueAsBool_ok hb
@@ -4277,6 +4237,23 @@ theorem stepFn_consumption_none {σ : ExecState} {c : Config} {ch₀ : Choices}
        obtain ⟨rfl, rfl, rfl⟩ := h
        refine ⟨by simp, fun ch => ?_⟩
        simp [stepFn, valueAsBool, Bind.bind, Except.bind])
+  case case86 =>
+    simp only [stepFn, bind_eq_ok] at h
+    obtain ⟨b, hb, h⟩ := h
+    obtain rfl := valueAsBool_ok hb
+    cases b <;>
+      (simp only [Bool.false_eq_true, reduceIte, pure_eq_ok, Except.ok.injEq,
+         Prod.mk.injEq] at h
+       obtain ⟨rfl, rfl, rfl⟩ := h
+       refine ⟨by simp, fun ch => ?_⟩
+       simp [stepFn, valueAsBool, Bind.bind, Except.bind])
+  case case87 =>
+    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
+    obtain ⟨b, hb, rfl, rfl, rfl⟩ := h
+    refine ⟨by simp, fun ch => ?_⟩
+    simp only [stepFn, bind_eq_ok]
+    refine ⟨b, hb, ?_⟩
+    simp
   case case88 =>
     simp only [stepFn, bind_eq_ok] at h
     obtain ⟨b, hb, h⟩ := h
@@ -4288,13 +4265,6 @@ theorem stepFn_consumption_none {σ : ExecState} {c : Config} {ch₀ : Choices}
        refine ⟨by simp, fun ch => ?_⟩
        simp [stepFn, valueAsBool, Bind.bind, Except.bind])
   case case89 =>
-    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
-    obtain ⟨b, hb, rfl, rfl, rfl⟩ := h
-    refine ⟨by simp, fun ch => ?_⟩
-    simp only [stepFn, bind_eq_ok]
-    refine ⟨b, hb, ?_⟩
-    simp
-  case case90 =>
     simp only [stepFn, bind_eq_ok] at h
     obtain ⟨b, hb, h⟩ := h
     obtain rfl := valueAsBool_ok hb
@@ -4304,17 +4274,7 @@ theorem stepFn_consumption_none {σ : ExecState} {c : Config} {ch₀ : Choices}
        obtain ⟨rfl, rfl, rfl⟩ := h
        refine ⟨by simp, fun ch => ?_⟩
        simp [stepFn, valueAsBool, Bind.bind, Except.bind])
-  case case91 =>
-    simp only [stepFn, bind_eq_ok] at h
-    obtain ⟨b, hb, h⟩ := h
-    obtain rfl := valueAsBool_ok hb
-    cases b <;>
-      (simp only [Bool.false_eq_true, reduceIte, pure_eq_ok, Except.ok.injEq,
-         Prod.mk.injEq] at h
-       obtain ⟨rfl, rfl, rfl⟩ := h
-       refine ⟨by simp, fun ch => ?_⟩
-       simp [stepFn, valueAsBool, Bind.bind, Except.bind])
-  case case94 =>
+  case case92 =>
     rename_i hlt
     simp only [stepFn, if_pos hlt] at h
     (try simp only [Bind.bind, Except.bind] at h)
@@ -4330,27 +4290,27 @@ theorem stepFn_consumption_none {σ : ExecState} {c : Config} {ch₀ : Choices}
         simp only [deliverS_panic, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl, rfl⟩ := h
         exact ⟨rfl, fun ch => by simp [stepFn, if_pos hlt, hres, Bind.bind, Except.bind]⟩
-  case case95 =>
+  case case93 =>
     rename_i hlt
     simp only [stepFn, if_neg hlt, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl⟩ := h
     refine ⟨by simp, fun ch => ?_⟩
     simp only [stepFn, if_neg hlt]
     rfl
-  case case113 =>
+  case case111 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨bs, hd, rfl, rfl, rfl⟩ := h
     refine ⟨by simp, fun ch => ?_⟩
     simp only [stepFn, bind_eq_ok]
     refine ⟨bs, hd, ?_⟩
     simp
-  case case116 =>
+  case case114 =>
     oblivious_apply h
-  case case126 =>
+  case case124 =>
     oblivious_apply h
-  case case135 =>
+  case case133 =>
     oblivious_apply h
-  case case148 =>
+  case case146 =>
     oblivious_apply h
 
 set_option maxHeartbeats 1600000 in
@@ -4382,34 +4342,34 @@ theorem stepFn_consumption_some {σ : ExecState} {c : Config} {ch₀ : Choices}
     | (simp_all [stepFn]; done)
     | (simp_all [seqConsumption, Config.applyPos, entryCallSite?]; done)
     | skip
-  case case3 =>
+  case case2 =>
     consumption_entry_some h hsc
-  case case36 =>
+  case case34 =>
     consumption_entry_some h hsc
-  case case93 =>
+  case case91 =>
     consumption_entry_some h hsc
-  case case97 =>
+  case case95 =>
     consumption_entry_some h hsc
-  case case103 =>
+  case case101 =>
     consumption_entry_some h hsc
-  case case142 =>
+  case case140 =>
     simp only [stepFn] at h ⊢
     exact stepFrameExit_consumption_some (.inl rfl) hsc h
-  case case152 =>
+  case case150 =>
     -- B4: a signal the table resolves consumes nothing (no entry, no apply).
     exfalso
     simp [seqConsumption, Config.applyPos, entryCallSite?_of_signalStep ‹_›] at hsc
-  case case153 =>
+  case case151 =>
     simp only [stepFn, signalStep_frame] at h ⊢
     exact stepFrameExit_consumption_some (.inr rfl) hsc h
-  case case96 =>
+  case case94 =>
     simp only [seqConsumption, Config.applyPos] at hsc
     obtain ⟨elem, rfl, rfl, hw⟩ := stmtConsult?_some hsc
     obtain ⟨g, hg, hnp⟩ := applyStmtOp_appendSlice_spill hw
     simp only [Config.appendTargetLocal] at hloc
     obtain ⟨a, rest, hvs⟩ := hloc
     exact stepFn_stmtOp_spill hg (hnp a rest hvs) h
-  case case118 =>
+  case case116 =>
     rename_i v clauses default? done env k'
     simp only [seqConsumption, Config.applyPos, selectConsult?] at hsc
     cases hcore : applySelectCore σ clauses default? ((v :: done).reverse) env k' with
@@ -4451,7 +4411,7 @@ theorem stepFn_consumption_some {σ : ExecState} {c : Config} {ch₀ : Choices}
             dsimp only
             rw [applySelect_picks_stream hcore ch, hpk, hget]
             rfl
-  case case133 =>
+  case case131 =>
     rename_i v op done env k'
     simp only [seqConsumption, Config.applyPos, syncConsult?, Option.map_eq_some_iff,
       Prod.mk.injEq] at hsc
@@ -4513,7 +4473,7 @@ theorem stepFn_consumption_some {σ : ExecState} {c : Config} {ch₀ : Choices}
                 simp only [List.reverse_cons, List.reverse_nil, List.nil_append]
                 rw [hap ch, hpk, hat]
                 rfl
-  case case147 =>
+  case case145 =>
     rename_i kv vv kt vt body base produced start env k'
     simp only [seqConsumption, mapIterConsult?] at hsc
     cases hcands : mapIterCandidates σ kt vt base produced with
@@ -4678,11 +4638,7 @@ theorem execStmtLoop_unfold (fuel : Nat) (σ : ExecState) (c : Config)
     (ch : Choices) :
     execStmtLoop fuel σ c ch
       = (match c with
-         | .next .stop => .ok (.normal σ, ch)
-         | .signal .ret .stop => .ok (.returned σ, ch)
-         | .signal .brk .stop => .ok (.broke σ, ch)
-         | .signal .cont .stop => .ok (.continued σ, ch)
-         | .panicked msg => throw (.panic msg)
+         | .next .stop => .ok (σ, ch)
          | .blockedSend _ _ _ => throw .deadlock
          | .blockedRecv _ _ _ _ _ => throw .deadlock
          | .blockedSelect _ _ _ => throw .deadlock
@@ -4706,10 +4662,6 @@ theorem execStmtLoop_step {fuel : Nat} {σ : ExecState} {c : Config}
   rw [execStmtLoop_unfold (fuel + 1) σ c ch]
   split
   · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h
-  · simp [stepFn, signalStep, signalRefusal, throw, throwThe, MonadExceptOf.throw] at h
-  · simp [stepFn, signalStep, signalRefusal, throw, throwThe, MonadExceptOf.throw] at h
-  · simp [stepFn, signalStep, signalRefusal, throw, throwThe, MonadExceptOf.throw] at h
-  · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h
   · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h
   · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h
   · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h
@@ -4727,8 +4679,8 @@ concrete seeded program. -/
 theorem execStmtLoop_ok_of_allStreamsOk :
     ∀ {fuel : Nat} {σ : ExecState} {c : Config},
       allStreamsOk fuel σ c = true →
-      ∀ ch : Choices, ∃ (out : ExecOutcome) (ch' : Choices),
-        execStmtLoop fuel σ c ch = .ok (out, ch') := by
+      ∀ ch : Choices, ∃ (σf : ExecState) (ch' : Choices),
+        execStmtLoop fuel σ c ch = .ok (σf, ch') := by
   intro fuel
   induction fuel with
   | zero =>
@@ -4738,10 +4690,7 @@ theorem execStmtLoop_ok_of_allStreamsOk :
     intro σ c hall ch
     unfold allStreamsOk at hall
     split at hall
-    · exact ⟨.normal σ, ch, rfl⟩
-    · exact ⟨.returned σ, ch, rfl⟩
-    · exact ⟨.broke σ, ch, rfl⟩
-    · exact ⟨.continued σ, ch, rfl⟩
+    · exact ⟨σ, ch, rfl⟩
     · -- the mapIterK pick point (BUG-005 (L): candidates + stop from
       -- the STATE)
       rename_i keyVar valVar keyTy valTy body base produced start env k
@@ -4837,7 +4786,7 @@ theorem execStmtLoop_ok_of_allStreamsOk :
           rw [execStmtLoop_step (stepFn_mapIter_stop hcands hmand hne hcons')]
           exact hrun
     · -- the oblivious catch-all
-      rename_i hx1 hx2 hx3 hx4 hx5
+      rename_i hx1 hx2
       cases hnc : (consumesAppendSlice c || consumesSelect c || consumesNilValueMethod σ c || consumesTryLock c) with
       | true =>
         rw [hnc] at hall
@@ -4853,7 +4802,7 @@ theorem execStmtLoop_ok_of_allStreamsOk :
         · rename_i c₁ σ₁ ch₁ hprobe
           obtain ⟨-, hobl⟩ := stepFn_oblivious
             (fun kv vv kt vt b bs pr st e kk heq =>
-              hx5 kv vv kt vt b bs pr st e kk heq)
+              hx2 kv vv kt vt b bs pr st e kk heq)
             hnc1 hnc2 hnc3 hnc4 hprobe
           obtain ⟨out, ch', hrun⟩ := ih hall ch
           exact ⟨out, ch', by rw [execStmtLoop_step (hobl ch)]; exact hrun⟩

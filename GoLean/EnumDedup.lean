@@ -40,11 +40,9 @@ private def configTag : Config → UInt64
   | .signal (.brkTo _) _ => 8
   | .signal (.contTo _) _ => 9
   | .panicking _ _ => 10
-  | .panicked _ => 11
   | .blockedSend _ _ _ => 12
   | .blockedRecv _ _ _ _ _ => 13
   | .blockedSelect _ _ _ => 14
-  | .opDone _ _ => 15
   | .blockedSync _ _ _ _ => 16
 
 private def contDepth : Nat → Cont → Nat
@@ -68,13 +66,19 @@ private def configHash : Config → UInt64
       | .evalE _ _ k => UInt64.ofNat (contDepth 64 k)
       | .retV _ k => UInt64.ofNat (contDepth 64 k)
       | .next k => UInt64.ofNat (contDepth 64 k)
-      | .opDone _ inner => 31 + configTag inner
       | _ => 0
     tag * 131 + d
 
+/-- The per-goroutine hash (C5): a live goroutine by its configuration,
+salted by its boundary flag; the abort tombstone by a fixed tag. -/
+private def threadHash : Thread → UInt64
+  | .running c none => configHash c
+  | .running c (some _) => configHash c * 131 + 31
+  | .aborted _ => 11
+
 private def nodeHash (nd : DedupNode) : UInt64 :=
   let hThreads := nd.m.threads.foldl
-    (fun (h : UInt64) c => h * 1099511628211 + configHash c) 14695981039346656037
+    (fun (h : UInt64) t => h * 1099511628211 + threadHash t) 14695981039346656037
   let cellHash : ShadowCell → UInt64 := fun sc =>
     sc.reads.foldl (fun (h : UInt64) e =>
         h * 31 + UInt64.ofNat e.1 * 7 + UInt64.ofNat e.2) 3
@@ -112,11 +116,13 @@ private def nodeBEq (a b : DedupNode) : Bool :=
 
 /-- Engine-side refusal diagnostics (mirrors `innerVecs`' branches;
 performance/reporting only — the checker's refusal stays authoritative). -/
-private def refusalReason (s : ExecState) (ts : Array Config) (i : Nat) :
+private def refusalReason (s : ExecState) (ts : Array Thread) (i : Nat) :
     String :=
   match ts[i]? with
   | none => s!"goroutine {i}: index out of range"
-  | some c =>
+  | some (.aborted _) => s!"goroutine {i}: aborted tombstone (never steps)"
+  | some (.running _ (some _)) => s!"goroutine {i}: boundary clear pending (oblivious; unreachable refusal)"
+  | some (.running c none) =>
     if isBlockedConfig c then s!"goroutine {i}: blocked shape not wake-certified (poolThreadOblivious false)"
     else if consumesSelect c then
       match arrivalCases s ts i c with
@@ -137,9 +143,9 @@ private def refusalReason (s : ExecState) (ts : Array Config) (i : Nat) :
 private def nodeRefusal (m : MultiConfig) : String :=
   match m.threads[m.cur]? with
   | none => "running goroutine out of range"
-  | some c =>
-    if c.atBoundary then
-      match schedSlots m.shared m.threads m.cur c.boundarySite with
+  | some t =>
+    if t.atBoundary then
+      match schedSlots m.shared m.threads m.cur t.boundarySite with
       | [] => "empty scheduling menu"
       | rs =>
           String.intercalate "; " ((rs.filter
@@ -159,14 +165,13 @@ private def nodeObs (resultLocs : List Loc) (nd : DedupNode) :
     | some msg => return some (.terminal (.panic msg), false)
     | none =>
       match nd.m.mainOutcome? with
-      | some (.normal σf) =>
+      | some σf =>
           match loadMany σf resultLocs with
           | .error e => throw s!"result readout failed at a terminal: {e.message}"
           | .ok vs =>
               match runnableIdxs nd.m.shared nd.m.threads with
               | [] => return some (.ok vs, false)
               | _ :: _ => return some (.ok vs, true)
-      | some _ => throw "main terminal outside its barrier frame"
       | none =>
           if (runnableIdxs nd.m.shared nd.m.threads).isEmpty then
             throw "deadlock state reached — deadlocking members have no membership handling (fail loud)"
