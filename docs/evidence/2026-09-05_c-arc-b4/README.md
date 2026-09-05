@@ -84,6 +84,8 @@ tooling); every other row: 0 violations, 0 alarms, 0 mismatches.
 | `40fd1903` B4 (1/3) Signal | `ci --diff` **FAIL** (`transcripts/gate-c1-FAIL.txt`) — ONE failing step: «core build has GoLean/ warnings» (13 `unusedSimpArgs` warnings from a `set_option … in` left attached to a new lemma instead of `stepFn_consumption_none`; fixed in `165822ef`). The `row: FAIL … TIMED OUT after 1s` lines in the transcript are the lane-validation SELF-TESTS T1–T3 (each `ok`), present in the passing run too. | differential 3498/3498 FULL, negative 394/394, eval 153 ok | 0 | per-consumption dump byte-identical, 23115 records; status + obsHash identical on 20749 (row, stream) lines; per-site totals identical (`choice-trace/c1-diff.txt`, `c1-summary.txt`) |
 | `165822ef` B4 (2/3) + C5 | `ci --diff` **PASS** (`transcripts/gate-c2.txt`) | 3498/3498 FULL, negative 394/394, eval 153 ok, core build warning-free, reconciler 2 findings / 0 HIGH (report-only; both pre-existing cross-ledger notes — C13 off-pin Go version mentions in docs, C5 one frontier-table citation) | 0 | per-consumption dump byte-identical, 23115 records; status + obsHash identical on 20749 (row, stream) lines; per-site totals identical; 0 violations / 0 alarms / the same 6 pre-existing float-bits mismatches (`choice-trace/c2-diff.txt`, `c2-summary.txt`) |
 
+| records tip (`412832b3` pre-rebase = the branch tip's code trees byte-for-byte; rebased tip `03fae3c8` + this row's commit) | `ci --diff` **PASS** (`transcripts/gate-tip.txt`) | 3498/3498 FULL, negative 394/394, eval 153 ok, core build warning-free | 0 | (no machine change since c2) |
+
 Per-site totals at BEFORE (and at every commit): `l1Sched=9443
 appendSpill=4868 postOp=4534 backEdge=2404 mapIter=1307 l5ExitWindow=325
 tryLock=101 nilValueMethodText=84 l2Entry=24 l4Waiter=22 l2Arrival=3`. The
@@ -100,3 +102,4 @@ argument (the flag ≡ the marker at every step).
 | `excluded.tsv` | the two excluded rows (all runs) |
 | `transcripts/gate-c1-FAIL.txt` | the RED commit-1 gate, cause named |
 | `transcripts/gate-c2.txt` | the PASS commit-2 gate tail (the full `ci --diff` transcript) |
+| `transcripts/gate-tip.txt` | the PASS gate at the records tip (`412832b3`, pre-rebase; code trees identical to the branch tip) |
