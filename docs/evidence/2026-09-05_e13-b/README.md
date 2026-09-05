@@ -110,6 +110,55 @@ map-assign rule removed one — 7 funcs + 33 methods, 0 other changes).
   the `Step` rules (Machine.lean) and the catch-all `.internal` throw
   stands.
 
+## Round-17 rebase onto main 9343a310 (2026-09-05, [AGENT] reconciler; [USER] sign-off «great do the merge», relayed)
+
+Design note §11 has the composition record; ledger §8t's round-17
+paragraph the baseline chain. Files here: `twin-repin/round17-hashes.txt`
+(the fresh emit at each rebased commit), `twin-repin/round17-structural-
+diff-c{1,2,5}.txt` (order-aware structural diff of each vs main's
+a9a2e2b1…; the tip's is c5's — the later commits emit the identical
+wire), `witnesses-round17.tsv` (below), `gate-tail-round17.txt` (the
+gate at the clean rebased tip, recorded in the records commit on top).
+
+Per rebased commit (12; the lane's order kept):
+
+| # | lane commit | rebased content | twin pin (fresh emit) | baseline (composed, awk) |
+|---|---|---|---|---|
+| 1 | b2fd9f15 | core + frontend + decoder; MachineSound rebuilt on main's file with re-derived tags | 31fb50dc… (119 probes) | 3559 = 3326 / 233 |
+| 2 | bcf73396 | audit fix round; BUG-101/102 filed (inserted before main's BUG-103) | 1e32bae3… (118) | 3569 = 3327 / 242 |
+| 3–4 | 0de73ec5, d75049c0 | records | — | — |
+| 5 | 42e8bf6f | re-audit fix round; the lane's BUG-103 → BUG-104 at this commit (main's BUG-103 is c2's); StepFn's probeK comments moved to `signalRefusal`'s site; stage-only PASS→PASS regression not composed | 758110a3… (128) | 3589 = 3345 / 244 |
+| 6 | cf85243b | stage restoration (226 rows already at main's stage; 17 composed) | — | 3589 = 3345 / 244 |
+| 7 | 03f77a15 | follow-up widening (frontend emits the identical twin wire) | 758110a3… (unchanged) | 3589 = 3346 / 243 |
+| 8–9 | d9367386, bbfe673a | records | — | — |
+| 10 | 8a200b39 | final verification fix round (4 born rows) | unchanged | 3593 = 3347 / 246 |
+| 11–12 | 98af0ebf, 389f4618 | records (the last amended with the round-17 trailer) | unchanged | unchanged |
+
+The Lean build (`scripts/capped lake build`, the whole package) passed at
+every rebased commit that touched Lean (1, 2, 5); `go test
+./tools/nativefrontend/... ./tools/lowerdiag/...` at every commit that
+touched the frontend; `scripts/check-bugs.sh` at every commit that
+touched BUGS.md or the baseline.
+
+**MachineSound tags.** A `fun_cases` dump of the merged `stepFn`
+(`.tmp/CaseDump.lean`, the lane's own tool) lists 159 arms; the probe
+pick (`.panicking _ (.probeK _)`, the `if pick = 0` arm) is `case6`, the
+probe statement (`.exec (.unseqProbe _)`) `case65`, the value discard
+(`.retV _ (.probeK _)`) `case136`; main's tags map t ↦ t (t ≤ 5), t+1
+(6–63), t+2 (64–133), t+3 (≥ 134), checked against the dump's arm bodies
+(main's `case75` A4 global refusal = `case77`, `case142` recover-continue
+= `case145`, …) and by the build. Theorem statements diffed by script
+against main and against the pre-rebase tip (`refs/snapshots/r17-e13/pre`):
+vs main only `seqConsumption_none_of_flags`/`stepFn_oblivious` gain the
+`hnu` hypothesis (the lane's own change); vs the pre-rebase tip only
+b4's/c2's restatements. None weakened by the rebase.
+
+**Witness matrix re-run (`witnesses-round17.tsv`).** Every program of
+`reaudit-witnesses.tsv` (129; `.tmp/audit/re/*`, `.tmp/audit/re2/*`)
+re-emitted with the rebased frontend and enumerated with the rebased
+`golean` (`coverage-observations --function sub --max-width 2`), the
+cell compared with the recorded re-audit-tip column: **129 / 129 identical** — every observation set equal as a set (the recorded column was unsorted in two cells, `S3_addrof_vs_makeboom` and `Z2_realcall_noindex`), every refusal the same text (13 per-declaration quarantines read from the wire's `unsupported` field — the structural-allocation class, the narrowed A6 guard's `Q4_compound_call_tgt_len`, the range-target quarantine — and the two width-REFUTED enumerations `P20_tgt_append`/`b7_tgt_assert_append`, whose recorded cells were truncated); so every gc member recorded IN its set is still in it and every rowed absence (BUG-101's g1/g2/g3/g4/h2/h5, BUG-104's P3/P23) is unchanged. No regression from fr19/b4/c2. Producer: `.tmp/audit3/round17/{regen,post}.py` (the lane's tool dir; the table's header carries the method).
+
 ## gc's realization (`gc-realization.txt`, producer `probes/gc-realization.go`)
 
 32 recover-based probes at go1.26.5; `w` is an effect witness the sibling
@@ -522,6 +571,26 @@ started, was parked as a patch and re-applied after the run. That run
 certifies a worktree state, not a commit; the clean-tip gate below
 supersedes it (the same convention as 03f77a15 → d9367386 in the
 re-audit round).
+
+## The final verification fix round's gate (clean tree)
+
+`scripts/capped scripts/ci --diff` at the clean committed tip `98af0ebf`
+(`git_dirty=false`, the `git_*` lines of `latest.meta.tsv` pasted verbatim
+in `gate-tail.txt`, which this run's tail now replaces): RESULT PASS;
+baseline diff FULL 3563/3563, no regression; negative 394/394; frontend
+pins ok (twin = c358d0f4…, unchanged — no frontend/machine change this
+round); frontend unit tests and lowerdiag tables ok; bug-index cross-check
+ok (100 bugs; BUG-104 open/differential 5 rows, BUG-101 open/differential
+2 rows, BUG-102 designed reds 6 rows with `Expect: FAIL`); reconciler 3
+findings, 0 HIGH (C13, C5 FR-7 pre-existing on main; C9 this branch's —
+the step-5a `--slow` refresh owed to the train, R''-5). The baseline is
+byte-identical to the fix commit 8a200b39's, so the re-pin guard has
+nothing to judge at this tip; its verdict is the 8a200b39 run's — `0
+PASS→non-PASS flip(s), all listed in BUGS.md Cases` (that run: RESULT PASS
+on the same baseline, but `git_dirty=true`, see the history note above).
+Tally re-derived by awk from the committed baseline: PASS 3316, FAIL 247
+(3563). Born this round: 4 (3 FAIL/differential on BUG-104's line, 1 PASS
+strict); FAIL→PASS 0; PASS→non-PASS 0; lane moves 0.
 
 ## The RE-AUDIT fix round's gate (clean tree)
 

@@ -1,14 +1,18 @@
-# scripts/capped scripts/ci --diff at the CLEAN committed tip d9367386 (e13-b RE-AUDIT fix round; git_dirty=false — the artifacts/coverage/latest.meta.tsv git_* lines are pasted verbatim below). Replaces the fix-round tail (0de73ec5).
-# History of this tail: the round's gates ran at 42e8bf6f (dirty: the baseline's PASS rows had lost their lane-stage column — DRIFT of 243 stage-only cells, fixed at cf85243b), cf85243b (clean, PASS — superseded by the inline-conversion follow-up 03f77a15), 03f77a15 (PASS, but git_dirty=true: an evidence-tsv cleanup landed while it ran — d9367386 commits that cleanup), and d9367386 (this tail: clean, PASS).
-# The reconciler's three findings (C13 historical Go versions in docs, C5 FR-7's '=' citation, C9 wire schema moved since the slow-tier certification) are pre-existing on main b77f3298 and not this lane's — the C9 re-certification is the merge train's step 5a (CLAUDE.md).
+# scripts/capped scripts/ci --diff at the CLEAN committed tip 98af0ebf (e13-b FINAL VERIFICATION fix round; git_dirty=false — the artifacts/coverage/latest.meta.tsv git_* lines are pasted verbatim below). Replaces the RE-AUDIT fix round's tail (d9367386).
+# History of this tail: the round's first gate ran at 8a200b39 (the fix commit: RESULT PASS, baseline diff FULL 3563/3563, re-pin guard '0 PASS→non-PASS flip(s), all listed in BUGS.md Cases' — the ONE run at which the baseline moved vs HEAD~1 and so the ONE at which the guard had something to judge — but git_dirty=true: the doctrine's R''-4 receiver qualification sat in the tree while the run started; parked as a patch, re-applied and committed at 98af0ebf), then 98af0ebf (this tail: clean, PASS; the baseline is byte-identical to 8a200b39's, so the guard has nothing to judge here — its verdict is the 8a200b39 line, quoted below).
+# The reconciler's three findings: C13 (historical Go versions in docs) and C5 (FR-7's '=' citation) are pre-existing on main b77f3298; C9 (the wire schema moved after the slow-tier certification date — 5 commits to wire.go/NativeToIR.lean, three of them THIS lane's) is this branch's, and the step-5a `scripts/ci --slow` re-certification at the merged tip is OWED to the merge train (CLAUDE.md; evidence README R''-5). The 8a200b39 run had a fourth, C6 (4 dangling BUG ids — the renumber notes' bare spellings of c2's and fr19's numbers), reworded away at 98af0ebf.
 # --- artifacts/coverage/latest.meta.tsv (git_* lines, verbatim) ---
-# git_commit	d9367386bc6c1b52ddb55c450563febb54d0d2fd
+# git_commit	98af0ebf6e914a9e1d74242075efb0da8c0c579e
 # git_dirty	false
-# --- the baseline-diff / re-pin-guard lines (gate log line numbers) ---
-# 114:no regression: 394 case(s) run in negative-latest.tsv match baselines/negative-full.tsv
-# 117:no regression: 3559 case(s) run in latest.tsv match baselines/native-full.tsv
-# 148:  ok   negative baseline diff (no regression)
-# 149:  ok   baseline diff FULL (3559/3559, no regression)
+# --- the baseline-diff / re-pin-guard lines (gate log line numbers, this run) ---
+# 110:no regression: 394 case(s) run in negative-latest.tsv match baselines/negative-full.tsv
+# 113:no regression: 3563 case(s) run in latest.tsv match baselines/native-full.tsv
+# 139:  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+# 141:  ok   negative run completed (exit 0; set judged by baseline diff)
+# 144:  ok   negative baseline diff (no regression)
+# 145:  ok   baseline diff FULL (3563/3563, no regression)
+# --- the re-pin guard's verdict, from the 8a200b39 run (the run at which the baseline moved; gate log line number of that run) ---
+# 149:  ok   re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)
 # --- scripts/ci summary, verbatim ---
 ══ scripts/ci summary ══
   note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
@@ -35,7 +39,7 @@
   ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
   ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
   ok   negative baseline diff (no regression)
-  ok   baseline diff FULL (3559/3559, no regression)
+  ok   baseline diff FULL (3563/3563, no regression)
   note reconciler: 3 finding(s), 0 HIGH — report-only (details: tools/reconcile-records)
 
 RESULT: PASS
