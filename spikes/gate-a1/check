@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Dedicated gate. Run from any directory: bash spikes/gate-a1/check
+set -euo pipefail
+SPIKE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+REPO_ROOT="$(cd "$SPIKE_ROOT/../.." && pwd -P)"
+cd "$REPO_ROOT"
+python3 "$SPIKE_ROOT/gate_checks.py" preflight
+"$REPO_ROOT/scripts/capped" lake build
+cd "$SPIKE_ROOT"
+"$REPO_ROOT/scripts/capped" lake build
+python3 gate_checks.py dependencies
+# Re-elaborate every spike module in dependency order. Do not rely on cached
+# success messages for the new theorems or the dependency audit.
+for module in Trace Counterexamples PoolTrace ProgramTrace Language Examples Audit Probes; do
+  "$REPO_ROOT/scripts/capped" lake env lean "GateA1/$module.lean"
+done
+"$REPO_ROOT/scripts/capped" lake env lean GateA1.lean
+# The generated harness imports ALL complete spike modules before its final
+# audit command. The same harness must reject deliberately poisoned imports.
+"$REPO_ROOT/scripts/capped" lake env python3 gate_checks.py audit
+printf '%s\n' 'Gate A1: PASS'

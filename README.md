@@ -26,6 +26,12 @@ Direction:
   2026-09-05 addendum: the semantic relation and its coherence proofs stay
   HERE; this repo makes no verification claims about Go programs).
 
+The reviewed [Gate A1 consumer-contract experiment](spikes/gate-a1/README.md)
+contains executable/relation bridges and a thin Iris adapter in a separate
+Lake package, outside the default build. Its [review and proposed next phase](docs/2026-09-05_gate-a1-review-and-next-phase.md)
+record the proved scope and remaining admission, composition, and adequacy
+obligations. Run its dedicated gate with `bash spikes/gate-a1/check`.
+
 Design and roadmap docs (HISTORICAL — superseded as current direction by
 the plan of record above; kept for their design rationale):
 

@@ -1,0 +1,16 @@
+Gate A1 source/dependency-manifest fingerprint: f6138212929794384a8925c7f505b94f703a1b706df08cf69483e3db8b605814
+GoLean HEAD: 79019a74c1e1c1418293d380d1fcfbd9ae489980
+Validation mode: incremental Lake build plus fresh spike-module elaboration
+Build completed successfully (62 jobs).
+✔ [224/227] Built GateA1.Examples (7.2s)
+ℹ [225/227] Built GateA1.Audit (897ms)
+info: GateA1/Audit.lean:9:0: Gate A1: 12 required exports present; 523 constants' axiom dependencies checked (classical trio only)
+✔ [226/227] Built GateA1 (726ms)
+Build completed successfully (227 jobs).
+Gate A1: 12 required exports present; 523 constants' axiom dependencies checked (classical trio only)
+GoLean.GoValue.nil
+GoLean.GoValue.interface (GoLean.GoCore.Ty.defined 1) (GoLean.GoValue.string { bytes := #[97, 117, 100, 105, 116] })
+Except.error (GoLean.Stop.terminal (GoLean.Terminal.panic "audit"))
+Except.error (GoLean.Stop.terminal (GoLean.Terminal.panic "boom"), { bytes := #[98, 101, 102, 111, 114, 101, 10] })
+Except.ok ()
+Gate A1: PASS

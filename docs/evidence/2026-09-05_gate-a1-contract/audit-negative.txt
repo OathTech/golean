@@ -1,0 +1,4 @@
+/home/dev/projects/golean/.claude/worktrees/gate-a1-contract/.tmp/gate-a1-negative-horah5oq/AuditNegative.lean:7:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.claude/worktrees/gate-a1-contract/.tmp/gate-a1-negative-horah5oq/AuditNegative.lean:11:0: error: Gate A1: _private._stdin.0.gateA1Negative depends on forbidden axiom sorryAx
+
+EXPECTED REJECTION: private false theorem with a proof hole; exit 1. Negative gate test PASS.

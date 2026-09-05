@@ -1,0 +1,15 @@
+name = "golean-gate-a1"
+defaultTargets = ["GateA1"]
+
+[[require]]
+name = "GoLean"
+path = "../.."
+
+[[require]]
+name = "iris"
+git = "https://github.com/leanprover-community/iris-lean.git"
+rev = "e7a0a43814c4f1154ca0c8049883ca56c2288b86"
+subDir = "Iris"
+
+[[lean_lib]]
+name = "GateA1"
