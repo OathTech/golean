@@ -1606,7 +1606,53 @@ alongside every `e.lifted` rollback (both paths).
   the once-refused rows now pin the inline realization green; the
   refusal shape that survived A6 and FR-28 was RETIRED 2026-09-05 —
   the E13-b amendment above)
-- Cases: channels/recv-order/dead-recv-len-operand, channels/recv-order/dead-recv-len-embedded, bools/short-circuit-funclit/e6-recv-len-in-sc, bools/short-circuit-funclit/e6-recv-len-outside
+- Cases: channels/recv-order/dead-recv-len-operand, channels/recv-order/dead-recv-len-embedded, bools/short-circuit-funclit/e6-recv-len-in-sc, bools/short-circuit-funclit/e6-recv-len-outside, builtins/len-vs-call-order/panicky-between, builtins/len-vs-call-order/len-assert-vs-nil-operand, builtins/len-vs-call-order/len-nil-left-vs-index-operand
+- E13-b AUDIT FIX ROUND AMENDMENT (2026-09-05, [AGENT] worker; findings
+  R1/R2/R3 of the lane's adversarial audit): (i) the three len-path rows
+  the e13-b re-pin flipped FAIL→PASS (`panicky-between`, `len-assert-vs-
+  nil-operand`, `len-nil-left-vs-index-operand`) are on THIS Cases line
+  now — the re-pin's "every id on a Cases line" was false for them (they
+  sat in this entry's prose only; R3). (ii) The retirement above was
+  OVER-WIDE: the first cut deleted the whole A6 family, and the
+  composition it refused lowered as a SILENT single-member answer ≠ gc
+  wherever the left material is NOT probed — the envelope's `emitExpr`
+  hook never fires on an assignment/IncDec/compound TARGET operand
+  (`x[iv.(int)] = len(b[j]) + wit(5)`: gc the interface conversion, the
+  machine `index out of range [5]`), an address-of operand, an operand
+  containing `recover()` (`r = recover().(int) + len(b[j]) + wit(5)` in a
+  defer) or an allocating conversion (`[]byte(s)[i]`, R7). A NARROWED A6
+  guard is reinstated at exactly that boundary (emit.go
+  `hoistReordersUnprobedPanic` = `residualPanicFreeOperand` [verbatim] ×
+  `unprobedPanickyBefore` [the old census MINUS every node that carries
+  a probe, `probedNodes`] with FR-28's `nilDerefOnlyResidual`
+  transparency [verbatim]): the len/cap arm and `emitMake` refuse BY
+  NAME (`… hoisted past UNPROBED panicky material to its left …`) where
+  the hoist would realize only the events-first order the spec does not
+  fix; where the left material IS probed the two-member envelope stands.
+  The map-assign target path had been left probed against design §4 D4
+  — one rule for every target now (`m[iv.(string)] = …` refuses like a
+  slice target; the twin's `ro.acks[from] = max(…)` loses its probe). The
+  rows are red by design: `builtins/e13-sibling-panic-order/{tgt-assert-
+  vs-len-hoist,compound-assert-vs-len,map-key-assert-vs-len,recover-
+  assert-vs-len,bytes-conv-left-len-hoist,tgt-assert-vs-make}` — on
+  BUG-102's Cases line (the designed-red entry with `Expect: FAIL`; this
+  entry stays `fixed` with a PASS-only Cases line, as the check-bugs
+  invariant requires). (iii) STRUCTURAL ALLOCATIONS (R2): a `&T{…}`,
+  elided `&T`, slice or map literal, or an interface method value hoists
+  to its lexical position and evaluates its PAYLOAD there, ahead of every
+  ordered event lexically after it; gc evaluates the payload in the
+  residual, AFTER the calls (`(&T{x: s[i]}).x + wit(5)`: gc prints `wit
+  5` then panics; the machine panics before the call, on every stream —
+  the probe on `s[i]` cannot reach gc's member because the allocation
+  statement re-raises a deferred panic at the same early position).
+  Pre-existing on main (the hoist order was emission order there too),
+  undisclosed under an axis the lane declared discharged; refused by name
+  since the fix round (`structuralAllocGuard`: panicky payload + an
+  ordered event after the literal) — `{composite-ptr-payload-vs-call,
+  slice-lit-payload-vs-call}` red by design on BUG-102's line; the no-event,
+  event-inside-the-literal (`assert-composite-lit`) and variadic-pack
+  shapes lower. Design `docs/2026-09-05_e13-b-design.md` §4 D4/D5, §6;
+  ledger FR-28 (REOPENED, narrowed); inventory E6/E13.
 - Discovered: 2026-08-06 (channels-arc-s1 convergence round, verified —
   severity minor: both realized orders are spec-legal, but the
   justifying claim in BUG-023/BUG-026 and wire.go was FALSE and the
@@ -4617,6 +4663,19 @@ this entry's evidence dir, §M1.
   one member, not the target; the design note §3 has the argument.
 - Pinned-by: differential
 - Cases: builtins/len-vs-call-order/hint-panicky-between, builtins/len-vs-call-order/make-slice-panicky-between, builtins/len-vs-call-order/make-chan-cap-panicky-between, builtins/len-vs-call-order/make-index-left, builtins/len-vs-call-order/make-inner-len, builtins/len-vs-call-order/make-hint-struct-any-key, builtins/len-vs-call-order/make-hint-array-any-key, builtins/len-vs-call-order/make-hint-generic-any-key, builtins/len-vs-call-order/len-struct-any-key-left-assert
+- E13-b AUDIT FIX ROUND AMENDMENT (2026-09-05, [AGENT]; audit finding
+  R1): the retirement into E13 holds for PROBED left material only. The
+  first cut deleted the make guard whole, so `x[iv.(int)] = len(make(
+  []int, t[k]))` — a TARGET operand the envelope never probes — lowered
+  as the hint's index panic where gc raises the interface conversion: the
+  refusal this entry "fixed as" had become a silent wrong answer. The
+  NARROWED guard is back in `emitMake` over every size/hint operand
+  (BUG-032's fix-round amendment has the mechanism and the subclass list:
+  target / address-of / recover() / allocating-conversion material); its
+  row `builtins/e13-sibling-panic-order/tgt-assert-vs-make` is red by
+  design on BUG-102's Cases line (the designed-red entry). `Pinned-by:
+  differential` and the dropped `Expect: FAIL` stand here: the nine rows
+  above remain PASS/membership.
 - Discovered: 2026-09-02 (bug082-maphint pre-merge audit, M1; the
   auditor's probes `.tmp/audit-bug082/p4`, `p5`, reproduced in
   docs/evidence/2026-09-02_bug082-maphint/README.md §M1)
@@ -5818,6 +5877,126 @@ check for (c)-pins (`scripts/` reads only BUGS.md `Cases:` lines), and the
 `Status: fixed` differential entries that narrate C6 (BUG-092, BUG-018) cannot
 carry a FAIL row (check-bugs (3)). Retires only with a [USER] re-ruling of §5.1
 item 1 — never by a fix.
+
+## BUG-101 — the VALUE observable of a spec-unsequenced operand reached through the E13 (b) probe: a type assertion that SUCCEEDS early and FAILS late (`iv.(int) + len(b[j:]) + func() int { iv = "s"; return 1 }()`) — gc evaluates the assertion first (value 6), the machine's probe evaluates it early too but DISCARDS the value and the residual re-evaluation after the mutating call panics [latitude E12's known divergence, now reachable through the shape the retired A6 guard used to refuse; frontend/machine evaluation order]
+
+- Status: open ([AGENT], e13-b audit fix round 2026-09-05 — audit finding R1, value axis)
+- Pinned-by: differential
+- Cases: builtins/e13-sibling-panic-order/assert-ok-early-len-hoist
+
+WHAT: `Stmt.unseqProbe` (E13 option (b)) evaluates a panicky non-call
+operand at its lexical position and, when the evaluation YIELDS A VALUE,
+discards it — the operand is re-evaluated at its residual position after
+the sibling ordered events (design §3: the probe is the PANIC-axis
+mechanism; the value axis is E12's (b) call-first pin). When a sibling
+call MUTATES what the operand reads, the two evaluations differ: with
+`iv` holding 3, gc realizes `iv.(int)` EARLY (order.go's safe-expression
+rule for `ODOTTYPE`) and prints `mut` then `6`; the machine's early
+evaluation succeeds and is dropped, the closure sets `iv = "s"`, and the
+residual `iv.(int)` panics `interface conversion: interface {} is string,
+not int` — on EVERY stream (the probe consults only on an early PANIC, and
+here none occurs). Observed (gc) ∉ modeled: a lower-bound violation on
+this shape, deterministic. It is E12's recorded divergence (`a[i] + f()`
+with `f` repairing `i`: the operand's value read early vs late across a
+mutating call — E12 (b) pins call-first and carries the re-envelope
+obligation) reached through the `len` shape the whole A6 guard used to
+REFUSE (`iv.(int) + len(b[j:]) + f()` was `unsupported` at b77f3298 —
+BUG-032's guard, blind to whether the left material is probed); the
+e13-b retirement lowers it, so the E12 divergence is now reachable
+where a refusal stood. The auditor's twin witness WITHOUT a len
+(`iv.(int) + func() int { iv = "s"; return 1 }()`) was never refused —
+E12's territory on main all along (the `assert-vs-mutating-call` row's
+PANIC-status sibling: there iv starts as a string and both members are
+certified; here it starts as an int and the machine has one member, not
+gc's).
+
+WHY NOT REFUSED: whether the early evaluation succeeds (and the late one
+fails) is a RUN-TIME fact — the same syntax with `iv` holding a string is
+the certified two-member membership row `assert-vs-mutating-call`. A
+static guard would have to refuse every probed operand beside a call
+that MAY mutate its inputs (any call, absent an effect analysis) — the
+ordinary `a[i] + f()` idiom class, option (a) of E13's four-way
+treatment, rejected by the [USER] ruling (relayed). So: rowed, not
+guessed — a red-first row with gc's value pinned (`expected_status ok`,
+value 6, output `mut`), FAIL/differential by design until the value
+axis is enveloped.
+
+FIX DIRECTION (E12's obligation, not this lane's): realize BOTH values —
+the probe would have to CARRY its early value into the residual (a
+"value-or-not-yet" pick on the value path, consulted only when the two
+evaluations could differ, i.e. when a sibling event intervenes), which
+is a second choice site on the VALUE axis with a bound that is not
+data-dependent in the E13 way (the pick is needed even when nothing
+panics) — exactly the re-index E13's design §7 avoided and the design
+gate the brief names. Inventory E12 carries the note; §6 residual 2 of
+the e13-b design cross-references this entry.
+
+## BUG-102 — DESIGNED REDS of the E13 (b) envelope's BOUNDARY: the narrowed A6 guard's refusals (a len/cap/make hoist of a panicky operand past UNPROBED panicky left material — an assignment/IncDec/compound target, an address-of operand, `recover()`, an allocating conversion) and the structural-allocation class (a `&T{…}`/slice/map literal's panicky payload before an ordered event) refuse by name [coverage; frontend hoist/guard surface; e13-b audit fix round R1/R2; the entry exists so the refusals cannot stop firing unnoticed]
+
+- Status: open (designed reds — a refusal standing in for latitude, inventory E6 narrowed / E13 residuals 3 and 5; [AGENT], e13-b audit fix round 2026-09-05)
+- Pinned-by: none
+- Expect: FAIL
+- Cases: builtins/e13-sibling-panic-order/tgt-assert-vs-len-hoist, builtins/e13-sibling-panic-order/tgt-assert-vs-make, builtins/e13-sibling-panic-order/compound-assert-vs-len, builtins/e13-sibling-panic-order/map-key-assert-vs-len, builtins/e13-sibling-panic-order/recover-assert-vs-len, builtins/e13-sibling-panic-order/bytes-conv-left-len-hoist, builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call, builtins/e13-sibling-panic-order/slice-lit-payload-vs-call
+
+WHAT (spec#Order_of_evaluation, the OMISSION: a type assertion / index /
+slice / dereference / division / shift / interface comparison / slice-
+to-array conversion is not a call, so its order against a sibling call,
+receive or hoisted built-in is unspecified — latitude E13, enveloped by
+option (b) [USER]-ruled, relayed): the envelope realizes BOTH orders
+through an `unseq-probe` at the operand's lexical position, but the
+frontend can place that probe only where `emitExpr`'s hook fires. It
+does NOT fire on an assignment/IncDec/compound TARGET operand
+(`probeSuppress`, design §4 D4 — E2's axis), an address-of operand
+(`&a[i]` lowers to an inline `index-addr`), an operand containing
+`recover()` (double evaluation would consume it) or an allocating
+conversion (`[]byte(s)`/`[]rune(s)` — a probe would allocate twice, R7).
+Beside a hoisted `len`/`cap` (with a later ordered event) or the
+unconditional `make` hoist whose operand can panic, such material would
+see ONLY the events-first order — `x[iv.(int)] = len(b[j]) + wit(5)`: gc
+raises the interface conversion, the machine `index out of range [5]`;
+`r = recover().(int) + len(b[j]) + wit(5)` in a defer: gc's final panic
+is the index one, the machine's a recovered 3 — a silent single-member
+answer ≠ gc, which the lane tip b2fd9f15 had lowered where main b77f3298
+REFUSED (the whole A6 guard). The NARROWED A6 guard (emit.go
+`hoistReordersUnprobedPanic` = `residualPanicFreeOperand` ×
+`unprobedPanickyBefore` — the old census minus every probed node — with
+FR-28's `nilDerefOnlyResidual` transparency) refuses these BY NAME at
+the len/cap hoist and in `emitMake`; the text names the boundary (`…
+hoisted past UNPROBED panicky material to its left (<kind> at
+<file:line:col>) …`). One row is conservative: `bytes-conv-left-len-
+hoist` (gc's index operand is LATE, so gc's answer coincides with the
+machine's events-first order) — refused all the same, as the pre-e13
+guard did (BUG-083's "priced trade"): a visible red beats a hidden pin
+of gc's compiler-internal choice.
+
+THE STRUCTURAL-ALLOCATION CLASS (audit R2): a composite-literal `&T{…}` /
+elided `&T`, a slice or map literal, or an interface method value is not
+a call; it hoists to its lexical position and evaluates its payload
+THERE, ahead of every ordered event lexically after it, while gc leaves
+the literal in the residual after the call temps — `(&T{x: s[i]}).x +
+wit(5)`: gc prints `wit 5` then panics, the machine panics with no output
+on every stream (a probe on `s[i]` cannot reach gc's member: the
+allocation statement re-raises a deferred panic at the same early
+position — disposition (a) measured and rejected). Pre-existing on main
+(the hoist order was emission order there too), undisclosed under E13's
+"DISCHARGED" until the audit. `structuralAllocGuard` refuses by name
+when the payload is panicky and `sweepOrderedEventAfter(lit.End())`; the
+no-event, event-inside-the-literal (`assert-composite-lit`) and variadic-
+pack shapes lower.
+
+WHY AN ENTRY: BUG-032 and BUG-083 are `fixed` and the check-bugs
+invariant requires their Cases lines to be PASS-only; these eight rows
+are red BY DESIGN and must trip the gate if the refusal ever stops
+firing (a designed red that turns green is a retirement that skipped its
+record — the BUG-093 mold). `tools/lowerdiag` causes
+`len-hoist-panic-order` (live again) and `alloc-payload-panic-order`
+classify the texts; ledger FR-28 (CLOSED for probed material, REOPENED
+NARROWED); inventory E6 (narrowed, back in §5) and E13 residuals 3/5;
+design `docs/2026-09-05_e13-b-design.md` §4 D5/D6. RETIREMENT PATH: a
+probe that can reach a target / `recover()` / allocation-payload
+position — E2's and E12's re-envelope obligations — retires each
+subclass into the envelope; each retirement flips its rows green and
+must move them to a `fixed` entry's Cases line with the reason written.
 
 ## BUG-103 — conversions whose TARGET's resolved shape is an ARRAY (`Raw(cs)` between two defined `[3]Code` types, `[3]Code(r)` to the unnamed array type) are refused by `convertValueToTy`'s catch-all — BUG-020 added the pointer/slice/map/func arms and left the array arm out [coverage; GoCore conversions; fail-closed refusal of legal Go; surfaced by the C-arc C2 audit fix round (R11 rows), 2026-09-05]
 

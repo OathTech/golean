@@ -4653,6 +4653,18 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   -- nondeterminism where Go has it (spec#Order_of_evaluation orders
   -- neither the operand nor the sibling event first). Appended at the END
   -- so positional case tags stay stable.
+  --
+  -- REACHABILITY INVARIANT (the reason the four rules below are the ONLY
+  -- rules at a `probeK` frame): a `probeK` frame is created by exactly one
+  -- rule (`unseqProbe`, under `.evalE`), and expression evaluation reaches
+  -- a statement-level configuration only through `retV` (a value) or
+  -- `panicking` (a panic) — `.breaking`/`.continuing`/`.returning`/
+  -- `.breakingTo`/`.continuingTo` arise from `.exec` of a statement, and no
+  -- statement executes under a probe (the probed operand is an `Expr`; a
+  -- func literal called inside it runs in its OWN frame, whose travellers
+  -- stop at that `.frame`). So `.breaking (.probeK _)` and friends are
+  -- unreachable from a well-formed configuration; `stepFn` names them
+  -- `stuck` by name (never a silent default) — e13-b audit fix round R12.
   | unseqProbe {e env k s} :
       Step (.exec (.unseqProbe e) env k) s (.evalE e env (.probeK k)) s
   | probeValue {v k s} :

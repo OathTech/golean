@@ -55,3 +55,26 @@ assert-right-call	assertRightCall	-	panic	interface conversion: interface {} is 
 assert-left-min-inline	assertLeftMinInline	-	panic	interface conversion: interface {} is string, not int	interfaces,type_assertions,min,builtins,slices,indexing,panic,evaluation_order	-	-	-
 slice-left-len-call	sliceLeftCall	-	panic	slice bounds out of range [9:1]	slices,slicing,len,calls,panic,evaluation_order,print	-	-	-
 assert-left-recv-w	assertLeftRecvW	-	ok	-	interfaces,type_assertions,channels,recover,defer,evaluation_order,nondet	membership	latitude E13 option (b), lane e13-b 2026-09-05 (RULED [USER] Mike, relayed by the coordinator): `iv.(int) + <-ch` on a buffered channel holding one value, observed through the witness `len(ch)` after recover: the assertion vs the sibling RECEIVE (an ordered event like a call); the ONLY consumption site is the unseqPanic probe of the left operand (bound 2, consulted only because it panics early): RAISE = the assertion panics first, the receive never happens (len 1 — gc's member, probe g), DEFER = the receive drains the channel first (len 0). members=2	width=2,sites=8,members=2
+# --- e13-b audit fix round (2026-09-05; findings R1/R2/R7 of the adversarial audit, [AGENT] worker) — THE BOUNDARY OF
+# THE ENVELOPE. The envelope probes a panicky non-call operand only where emitExpr can; material it does NOT probe (an
+# assignment/IncDec/compound TARGET operand, an address-of operand, an operand containing recover() or an allocating
+# conversion) left of a hoisted len/cap/make whose operand panics used to be REFUSED by the whole A6 guard and, after the
+# first cut deleted that guard, lowered as a silent single-member answer ≠ gc. The NARROWED A6 guard refuses these by
+# name again (rows red by design, frontend-export; BUG-102's Cases line — the designed-red entry). A STRUCTURAL allocation (&T{…}, a
+# slice literal) with a panicky payload followed by an ordered event is refused too (R2: gc evaluates the payload in
+# the residual AFTER the call — `wit 5` then the panic — the hoisted allocation before it; no probe reaches gc's member;
+# pre-existing on main, undisclosed). assert-ok-early-len-hoist is the VALUE axis (E12) reached through the len shape —
+# not refusable statically; filed as BUG-101, red-first with gc's value pinned. addr-index-left-len-hoist is a strict
+# CONTROL: an address-of operand inside a call's ARGUMENT list is a forced position for the census (the call's
+# statement evaluates its arguments), the machine hoists len first and so does gc (`[5] with length 1` — b[j]'s panic,
+# not a[i]'s): one member, and gc's.
+tgt-assert-vs-len-hoist	tgtAssertVsLenHoist	-	panic	interface conversion: interface {} is string, not int	slices,indexing,len,calls,panic,evaluation_order,print,interfaces,type_assertions,assignment	-	-	-
+tgt-assert-vs-make	tgtAssertVsMake	-	panic	interface conversion: interface {} is string, not int	slices,indexing,len,make,panic,evaluation_order,interfaces,type_assertions,assignment	-	-	-
+compound-assert-vs-len	compoundAssertVsLen	-	panic	interface conversion: interface {} is string, not int	slices,indexing,len,calls,panic,evaluation_order,print,interfaces,type_assertions,assignment	-	-	-
+map-key-assert-vs-len	mapKeyAssertVsLen	-	panic	interface conversion: interface {} is int, not string	maps,slices,indexing,len,calls,panic,evaluation_order,print,interfaces,type_assertions,assignment	-	-	-
+recover-assert-vs-len	recoverAssertVsLen	-	panic	index out of range [5] with length 1	slices,indexing,len,calls,panic,recover,defer,evaluation_order,print,interfaces,type_assertions	-	-	-
+addr-index-left-len-hoist	addrIndexLeftLenHoist	-	panic	index out of range [5] with length 1	slices,indexing,len,calls,panic,evaluation_order,print,pointers	-	-	-
+bytes-conv-left-len-hoist	bytesConvLeftLenHoist	-	panic	index out of range [5] with length 1	slices,indexing,len,calls,panic,evaluation_order,print,conversions,strings	-	-	-
+composite-ptr-payload-vs-call	compositePtrPayloadVsCall	-	panic	index out of range [9] with length 1	slices,indexing,calls,panic,evaluation_order,print,literals,pointers,structs	-	-	-
+slice-lit-payload-vs-call	sliceLitPayloadVsCall	-	panic	index out of range [9] with length 1	slices,indexing,calls,panic,evaluation_order,print,literals	-	-	-
+assert-ok-early-len-hoist	assertOkEarlyLenHoist	-	ok	-	interfaces,type_assertions,len,slicing,calls,closures,evaluation_order,print	-	-	-

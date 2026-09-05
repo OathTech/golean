@@ -1,2 +1,4 @@
-4ee39f732d51218a792393fa3143980dfde8a2a6f587fbfaa224c5c4ba28b447  baselines/pins/twin-chdriver.wire.json
-7c545840c4707c19773846d6cae2c017f6f5119b04727653c4c39c2febe28cf8  .tmp/twin/twin.wire.json
+d531a2256e231e2f0da58c6ccbce1d37399f3cab9b994227599c77cfc36b963a  baselines/pins/twin-chdriver.wire.json
+d531a2256e231e2f0da58c6ccbce1d37399f3cab9b994227599c77cfc36b963a  .tmp/fix/twin.wire.json (fresh emit at the fix-round tip)
+4ee39f732d51218a792393fa3143980dfde8a2a6f587fbfaa224c5c4ba28b447  baselines/pins/twin-chdriver.wire.json (main b77f3298, the pin before this lane)
+7c545840c4707c19773846d6cae2c017f6f5119b04727653c4c39c2febe28cf8  baselines/pins/twin-chdriver.wire.json (b2fd9f15, the lane's first re-pin — superseded by the audit fix round: R1's map-target rule removed one probe)

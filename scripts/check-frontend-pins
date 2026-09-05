@@ -124,8 +124,8 @@
 #      RULED [USER] Mike 2026-09-05, relayed by the [AGENT] coordinator,
 #      cited as relayed: «we should do what the standard supports, and avoid
 #      over-refusal if we can. That's what (b) means right?») 4ee39f73… →
-#      11270c55…: the frontend now emits an `unseq-probe` statement at the
-#      lexical position of every panicky non-call operand (here: 119
+#      d531a225…: the frontend now emits an `unseq-probe` statement at the
+#      lexical position of every panicky non-call operand (here: 118
 #      `field-get` operands — pointer-selector reads such as `pr.Match`)
 #      that has a sibling ordered event lexically after it, so the machine
 #      realizes BOTH spec-unsequenced orders (`ChoiceSite.unseqPanic`) —
@@ -134,21 +134,30 @@
 #      diff, docs/evidence/2026-09-05_e13-b/twin-repin/). Raft's twin
 #      driver reaches no early panic on these operands, so the twin's
 #      observations are unchanged (the probe pops only on a panic).
-#      Design: docs/2026-09-05_e13-b-design.md §4/§7.
+#      History of this re-pin: the lane's first pin (b2fd9f15) was
+#      7c545840… with 119 probes (the header above it wrote 11270c55…, a
+#      wrong hash — audit finding R5); the audit fix round's R1 (map-
+#      assign TARGET operands are never probed, design §4 D4) removed the
+#      one probe on `ro.acks[from] = max(…)` (raft.readOnly.recvAck),
+#      giving d531a225… — every other entry byte-identical to 7c545840….
+#      Stripping every probe from d531a225… yields 4ee39f73… byte for
+#      byte (twin-repin/structural-diff.txt). Design:
+#      docs/2026-09-05_e13-b-design.md §4/§7.
 #      Re-pin history: 2026-09-05 (round-17 merge train, lane e13-b rebased
 #      onto main 9343a310 — round-17 rebase: e13-b probes × landed
-#      fr19/b4/c2) a9a2e2b1… → 31fb50dc…: a FRESH EMIT from the MERGED frontend
-#      over the twin assembly at this rebased commit, never a merge result
-#      (the lane's own pin above was taken from the pre-fr19/pre-c2
-#      frontend; neither side's bytes were kept). Structural diff against
-#      main's a9a2e2b1… (order-aware, docs/evidence/2026-09-05_e13-b/
-#      twin-repin/round17-*): 7 funcs + 33 methods gain `unseq-probe`
-#      statements (119 in total); stripping every probe yields main's
-#      a9a2e2b1… (structural identity incl. order); types (93 entries,
-#      fr19's display/pkg, c2's dependency order), globals, methodSets,
-#      fileOrder, package, schema IDENTICAL. Expected classes only (this
-#      lane's probes); nothing else. Later commits of the lane re-emit
-#      at each rebased commit — the entries below record each hash.
+#      fr19/b4/c2; [AGENT] reconciler). The pin at EVERY rebased commit is a
+#      FRESH EMIT from the MERGED frontend over the twin assembly, never a
+#      merge result (the lane's own pins above were emitted by the pre-fr19/
+#      pre-c2 frontend; neither side's bytes were kept). Structural diff of
+#      each against main's a9a2e2b1… (order-aware, every top-level key;
+#      docs/evidence/2026-09-05_e13-b/twin-repin/round17-*): the ONLY
+#      class is this lane's `unseq-probe` statements — stripping every
+#      probe yields main's a9a2e2b1… (structural identity incl. order);
+#      types (93 entries, fr19's display/pkg, c2's dependency order), globals,
+#      methodSets, fileOrder, package, schema IDENTICAL; 0 funcs/methods
+#      added or removed. Per rebased commit:
+#        a9a2e2b1… → 31fb50dc…: rebased commit 1 (the lane's b2fd9f15, pin 7c545840… on the lane): 119 probes, 7 funcs + 33 methods
+#        31fb50dc… → 1e32bae3…: rebased commit 2 (the lane's bcf73396 audit fix round, pin d531a225… on the lane): 118 probes (R1's map-target rule, one probe fewer), 7 funcs + 33 methods
 #
 # Fail-closed throughout: missing baseline, failed build, failed emit,
 # failed run, or any byte drift exits 1 naming the failing pin.

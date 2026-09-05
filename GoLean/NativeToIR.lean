@@ -143,6 +143,26 @@ private partial def jsonMentionsRecover : Json → Bool
   | .arr xs => xs.any jsonMentionsRecover
   | _ => false
 
+/-- Does a wire JSON subtree contain one of the two ALLOCATING strict-op
+heads — `bytes-from-string` (`[]byte(s)`) or `runes-from-string`
+(`[]rune(s)`)? These conversions allocate (`applyStrictOp`, Machine.lean:
+`.bytesFromString` / `.runesFromString` call `s.alloc`), so a probe over
+them would evaluate the allocation TWICE and advance the `Loc` counter
+before the residual — the one way a probed operand is NOT state-free
+(e13-b audit fix round R7; design §3 purity, §6 item 7). Closed
+enumeration of two; the frontend never probes such an operand
+(`containsAllocatingConversion`, emit.go), this is the fail-closed
+backstop against drift. -/
+private partial def jsonMentionsAllocatingConversion : Json → Bool
+  | .obj kvs =>
+      (match kvs.get? "expr" with
+        | some (Json.str "bytes-from-string") => true
+        | some (Json.str "runes-from-string") => true
+        | _ => false)
+      || kvs.toList.any (fun (_, v) => jsonMentionsAllocatingConversion v)
+  | .arr xs => xs.any jsonMentionsAllocatingConversion
+  | _ => false
+
 /-- Allowed key sets for statement nodes, by `stmt` tag. `for` and
 `range` are deliberately ABSENT (`none`): their decoders check keys
 themselves, so the `labeled` wrapper's direct-dispatch path is covered
@@ -1169,6 +1189,13 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let exprJ ← StrictJson.field path obj "expr"
       if jsonMentionsRecover exprJ then
         throw s!"{path}.expr: an unseq-probe operand mentions recover() — a probed operand is evaluated twice, which would consume the recover (E13 option (b), design §3 purity); refused by name"
+      -- The two ALLOCATING conversions (`[]byte(s)`, `[]rune(s)`) are the
+      -- one class of inline operand whose evaluation changes state (a
+      -- fresh cell per evaluation); a probe over one would allocate
+      -- twice. Refused by name (e13-b audit fix round R7; the frontend
+      -- never emits such a probe — `containsAllocatingConversion`).
+      if jsonMentionsAllocatingConversion exprJ then
+        throw s!"{path}.expr: an unseq-probe operand contains an allocating conversion ([]byte(s) / []rune(s): `bytes-from-string` / `runes-from-string`) — a probed operand is evaluated twice, which would allocate twice (E13 option (b), design §3 purity / §6 item 7); refused by name"
       pure (.unseqProbe (← decodeExpr s!"{path}.expr" exprJ))
   | "map-compound-assign" =>
       -- m[k] op= v with base/key pre-hoisted by the frontend: read via

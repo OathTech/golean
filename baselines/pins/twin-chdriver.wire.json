@@ -468300,43 +468300,6 @@
          "stmt": "unseq-probe"
         },
         {
-         "expr": {
-          "expr": "field-get",
-          "field": "acks",
-          "recv": {
-           "expr": "deref",
-           "ptr": {
-            "expr": "ident",
-            "name": "ro",
-            "type": {
-             "elem": {
-              "kind": "named",
-              "name": "raft.readOnly"
-             },
-             "kind": "pointer"
-            }
-           },
-           "type": {
-            "kind": "named",
-            "name": "raft.readOnly"
-           }
-          },
-          "type": {
-           "key": {
-            "int": "uint64",
-            "kind": "int"
-           },
-           "kind": "map",
-           "value": {
-            "int": "uint64",
-            "kind": "int"
-           }
-          },
-          "typeId": "raft.readOnly"
-         },
-         "stmt": "unseq-probe"
-        },
-        {
          "define": true,
          "lhs": [
           {

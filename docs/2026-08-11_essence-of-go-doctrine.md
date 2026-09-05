@@ -178,13 +178,17 @@ write a bare "#6"/"#7".
    was in this family until 2026-09-05, when it became the first of
    the family to be RE-ENVELOPED — the `unseq-probe` statement + the
    `unseqPanic` pick, both orders as a membership set, [USER] ruling
-   (b), lane `e13-b`), and hidden-dep init order to go/types' point (E7) — with
+   (b) as relayed by the [AGENT] coordinator, lane `e13-b`; the audit
+   fix round's NARROWED refusal on the material the probe cannot reach
+   stands beside it — inventory E6), and hidden-dep init order to go/types' point (E7) — with
    the known ≠ gc cases (**E3, E7, and E5** — synced 2026-08-31 to
    inventory §10's honesty-critical list, which this entry had drifted
    one short of, phase-2 finding A1-04; re-synced 2026-09-05 when E13
    LEFT that list — its sibling-panic axis was RE-ENVELOPED at lane
-   `e13-b` under the [USER] ruling (b), the `unseqPanic` choice site,
-   gc's member now certified inside the set on both former axes; §10
+   `e13-b` under the [USER] ruling (b) (relayed), the `unseqPanic` choice site,
+   gc's member now certified inside the set on both former axes where
+   the operand is probed — the unprobed subclasses REFUSE (E6, narrowed)
+   and the value axis stays E12's (BUG-101); §10
    also lists R3, a representation row outside this entry's
    evaluation-order scope) carried as standing deviation records
    queued for re-envelope (inventory §7 items 3 and 5) — EXCEPT E5,

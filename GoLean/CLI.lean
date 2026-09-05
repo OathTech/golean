@@ -604,6 +604,17 @@ The semantic core's consume sites and their accountant arms:
    `tryLockWidth op pre` — 2 at an acquirable cell, 1 = no pop at a
    held one) → the `.syncStK` apply arm of both accountants (via the
    same `syncCell`/`tryLockWidth`).
+8. `stepFn`'s unsequenced-operand probe pick (StepFn.lean, the
+   `.panicking chain (.probeK k)` arm — `ChoiceSite.unseqPanic`, latitude
+   E13 option (b) RULED [USER] 2026-09-05 relayed, lane e13-b: bound 2
+   exactly there, DEFER = `.next k` / RAISE = `.panicking chain k`; a
+   probe whose operand yields a value pops NOTHING — `.retV _ (.probeK
+   _)` is non-consuming) → the `.panicking _ (.probeK _)` arm of both
+   accountants (`stepNeeds`/`stepNeedsSeq`; the projection arm is
+   `seqConsumption`'s `.panicking _ (.probeK _) ↦ some (.unseqPanic, 2)`,
+   Machine.lean; the constructor + `canonicalSlot0` row are State.lean's).
+   Row added at the e13-b audit fix round (R9) — the LOCKSTEP obligation
+   above was owed by the commit that added the site.
 Non-consuming by signature (no arm needed): `resumeThread`,
 `spawnStep`, `commitClause`, `applyPairing`, the boundary clear, the abort,
 `raceUpdate` (stage B: it folds the step's emitted `StepEvent` and

@@ -90,6 +90,20 @@ type emitter struct {
 	// probeSuppress > 0 while an assignment TARGET (E2/E3/E4's axes, not
 	// E13's) is being emitted: no unseq-probe is appended for its operands.
 	probeSuppress int
+	// probedNodes records every AST node for which emitExpr APPENDED an
+	// unseq-probe (whether or not a later pushHoist/prune dropped it — a
+	// dropped probe means the operand sits in a FORCED position, which is
+	// covered by the event that evaluates it). The narrowed A6 guard
+	// (`unprobedPanickyBefore`, e13-b audit fix round R1) walks a sweep
+	// for panicky non-call material that is NOT in this set: material in
+	// an assignment/IncDec/compound target, an address-of or receiver
+	// operand (probeSuppress), or an operand containing recover() / an
+	// allocating conversion — the positions the E13 (b) envelope does not
+	// probe, where a len/cap/make hoist would still realize only the
+	// events-first order. Keyed by node identity; never reset (nodes are
+	// unique; stencils re-emit the same nodes with the same structural
+	// answer).
+	probedNodes map[ast.Expr]bool
 
 	// sweepStmt is the AST node whose emission owns the CURRENT hoist
 	// accumulator (the "sweep"): the statement in emitStmtList, or the

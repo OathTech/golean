@@ -3495,11 +3495,22 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 	if !define && len(st.Lhs) == 1 && len(st.Rhs) == 1 {
 		if ix, ok := st.Lhs[0].(*ast.IndexExpr); ok {
 			if m, ok := e.goTypeOf(ix.X).Underlying().(*types.Map); ok {
+				// The map-element TARGET's base and key are emitted with
+				// probing suppressed like every other target (design §4
+				// D4 — E2's axis, not E13's; e13-b audit fix round R1: this
+				// path had been left probed, so `m[iv.(string)] = len(b[j])
+				// + wit(5)` lowered as a two-member set where every sibling
+				// target shape did not — one rule for all targets, and the
+				// narrowed A6 guard then refuses the len/make hoist here
+				// exactly as it does for a slice target).
+				e.probeSuppress++
 				base, err := e.emitExpr(ix.X)
 				if err != nil {
+					e.probeSuppress--
 					return nil, err
 				}
 				index, err := e.emitExpr(ix.Index)
+				e.probeSuppress--
 				if err != nil {
 					return nil, err
 				}
@@ -5242,11 +5253,20 @@ func (e *emitter) emitExpr(x ast.Expr) (any, error) {
 	// no event after it is pruned at the sweep's capture (order-transparent).
 	// Not for assignment targets (probeSuppress — E2/E3/E4), not for an
 	// operand containing `recover()` (double evaluation would change it —
-	// the decoder refuses such a probe fail-closed), not for a hoisted node
-	// (its residual is a temp).
-	if e.probeSuppress == 0 && !isHoistedTemp(node) && e.probeKind(x) && !containsRecover(e, x) {
+	// the decoder refuses such a probe fail-closed) or an ALLOCATING
+	// conversion (`[]byte(s)`/`[]rune(s)`: a probe would allocate twice —
+	// audit fix round R7, the decoder refuses that too), not for a hoisted
+	// node (its residual is a temp). Whatever is NOT probed here is what
+	// the narrowed A6 guard (`unprobedPanickyBefore`, R1) refuses a later
+	// len/cap/make hoist against — the two rules are one boundary.
+	if e.probeSuppress == 0 && !isHoistedTemp(node) && e.probeKind(x) && !containsRecover(e, x) && !containsAllocatingConversion(e, x) {
 		e.dropTrailingProbes(start)
 		e.hoisted = append(e.hoisted, map[string]any{"stmt": "unseq-probe", "expr": node})
+		if e.probedNodes == nil {
+			e.probedNodes = map[ast.Expr]bool{}
+		}
+		e.probedNodes[x] = true
+		e.probedNodes[ast.Unparen(x)] = true
 	}
 	return node, nil
 }
@@ -5287,6 +5307,20 @@ func (e *emitter) dropTrailingProbes(start int) {
 // would only ever be a wasted pop. Probes of SIBLING operands (left of an
 // earlier hoist inside the node) are not trailing and survive:
 // `f(a[i], g())` keeps probe(a[i]) before `$g`; `f(a[i])` drops it.
+//
+// The drop is taken for STRUCTURAL hoists too (composite-literal / slice-
+// literal / map-literal allocations, the interface method value) — not
+// because their payload is a forced position (it is not: the spec orders
+// a literal's elements against nothing outside the literal) but because
+// keeping the probe would realize NOTHING new: the allocation statement
+// itself evaluates the payload at its hoisted (lexical) position, so a
+// deferred probe panics there anyway, before every later event. gc
+// evaluates such a payload in the RESIDUAL, after the later calls — a
+// member the hoist cannot reach. That composition (panicky payload + an
+// ordered event lexically after the literal) is therefore REFUSED by name
+// at the structural hoists (`structuralAllocGuard`, e13-b audit fix round
+// R2 disposition (b)); with no event after, the probe is trailing and is
+// pruned at the capture.
 func (e *emitter) pushHoist(stmts ...any) {
 	start := 0
 	if n := len(e.nodeStarts); n > 0 {
@@ -5399,6 +5433,43 @@ func containsRecover(e *emitter, x ast.Expr) bool {
 					found = true
 					return false
 				}
+			}
+		}
+		return true
+	})
+	return found
+}
+
+// containsAllocatingConversion reports whether x contains a conversion
+// from a string to `[]byte` or `[]rune` — the two inline operands whose
+// evaluation ALLOCATES (Machine.lean `applyStrictOp`: `.bytesFromString`
+// / `.runesFromString` call `s.alloc`), so a probe over them would
+// allocate twice and advance the Loc counter before the residual (e13-b
+// audit fix round R7; design §3 purity, §6 item 7). Closed enumeration of
+// two; the decoder's `unseq-probe` arm refuses such a probe as the
+// fail-closed backstop.
+func containsAllocatingConversion(e *emitter, x ast.Expr) bool {
+	found := false
+	ast.Inspect(x, func(n ast.Node) bool {
+		if found {
+			return false
+		}
+		c, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		tv, isType := e.info.Types[c.Fun]
+		if !isType || !tv.IsType() || len(c.Args) != 1 {
+			return true
+		}
+		from, ok := e.applySubst(e.goTypeOf(c.Args[0])).Underlying().(*types.Basic)
+		if !ok || from.Info()&types.IsString == 0 {
+			return true
+		}
+		if sl, ok := e.applySubst(e.goTypeOf(c)).Underlying().(*types.Slice); ok {
+			if b, ok := sl.Elem().Underlying().(*types.Basic); ok && (b.Kind() == types.Uint8 || b.Kind() == types.Int32) {
+				found = true
+				return false
 			}
 		}
 		return true
@@ -6917,6 +6988,9 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 				if err != nil {
 					return nil, err
 				}
+				if err := e.structuralAllocGuard("interface method value", sel); err != nil {
+					return nil, err
+				}
 				mvName := "$mv" + itoa(e.tmpSeq)
 				e.tmpSeq++
 				mvIdent := map[string]any{"expr": "ident", "name": mvName, "type": gty}
@@ -7224,7 +7298,7 @@ func (e *emitter) emitAddressOf(x ast.Expr) (any, error) {
 		if err != nil {
 			return nil, err
 		}
-		return e.hoistNewFromValue(val, e.goTypeOf(ex))
+		return e.hoistNewFromValue(val, e.goTypeOf(ex), ex)
 	default:
 		return nil, unsup("address-of %T", x)
 	}
@@ -7311,7 +7385,7 @@ func (e *emitter) emitCompositeLit(cl *ast.CompositeLit) (any, error) {
 		if err != nil {
 			return nil, err
 		}
-		return e.hoistNewFromValue(val, elem)
+		return e.hoistNewFromValue(val, elem, cl)
 	default:
 		return nil, unsup("composite literal of type %s", t)
 	}
@@ -7320,7 +7394,10 @@ func (e *emitter) emitCompositeLit(cl *ast.CompositeLit) (any, error) {
 // hoistNewFromValue allocates an emitted composite value and returns the
 // pointer temp (the shared lowering of explicit `&T{...}` and the elided
 // composite-literal form).
-func (e *emitter) hoistNewFromValue(val any, elem types.Type) (any, error) {
+func (e *emitter) hoistNewFromValue(val any, elem types.Type, lit ast.Expr) (any, error) {
+	if err := e.structuralAllocGuard("&composite literal", lit); err != nil {
+		return nil, err
+	}
 	elemTy, err := e.emitType(elem)
 	if err != nil {
 		return nil, err
@@ -7492,9 +7569,19 @@ func (e *emitter) emitStructLit(cl *ast.CompositeLit, t types.Type, st *types.St
 
 // hoistSliceLit hoists a slice allocation (makeSlice + per-index assign) bound
 // to a temp and returns the temp reference.
-func (e *emitter) hoistSliceLit(elems []any, elemTy any, length int64) (any, error) {
+//
+// lit is the SOURCE literal when there is one (emitSliceLit) and nil for
+// the frontend's own packs (variadic arguments, iterator yields): a pack
+// is part of the call it feeds — its elements are that call's arguments,
+// a FORCED position — so the structural-allocation guard does not apply.
+func (e *emitter) hoistSliceLit(elems []any, elemTy any, length int64, lit ast.Expr) (any, error) {
 	if e.hoistForbidden != "" {
 		return nil, unsup("slice literal in %s", e.hoistForbidden)
+	}
+	if lit != nil {
+		if err := e.structuralAllocGuard("slice literal", lit); err != nil {
+			return nil, err
+		}
 	}
 	sliceTy := map[string]any{"kind": "slice", "elem": elemTy}
 	name := "$c" + itoa(e.tmpSeq)
@@ -7541,7 +7628,7 @@ func (e *emitter) emitSliceLit(cl *ast.CompositeLit, s *types.Slice) (any, error
 		}
 		idx++
 	}
-	return e.hoistSliceLit(elems, elemTy, length)
+	return e.hoistSliceLit(elems, elemTy, length, cl)
 }
 
 // emitMapLit hoists a map literal (an allocation) into a makeMap + per-entry
@@ -7592,6 +7679,9 @@ func (e *emitter) emitMapLit(cl *ast.CompositeLit, m *types.Map) (any, error) {
 		// gap, red-pinned by maps/nil-literal-values/defined-*-element).
 		// First pinned by generics/type-aliases/nested-map (G4).
 		entries = append(entries, map[string]any{"key": k, "value": v})
+	}
+	if err := e.structuralAllocGuard("map literal", cl); err != nil {
+		return nil, err
 	}
 	name := "$c" + itoa(e.tmpSeq)
 	e.tmpSeq++
@@ -8634,7 +8724,7 @@ func (e *emitter) emitCallArgs(sig *types.Signature, c *ast.CallExpr) ([]any, er
 					}
 					elems = append(elems, map[string]any{"index": int64(i - fixed), "value": w})
 				}
-				sliceRef, err := e.hoistSliceLit(elems, elemTy, int64(len(idents)-fixed))
+				sliceRef, err := e.hoistSliceLit(elems, elemTy, int64(len(idents)-fixed), nil)
 				if err != nil {
 					return nil, err
 				}
@@ -8711,7 +8801,7 @@ func (e *emitter) emitCallArgs(sig *types.Signature, c *ast.CallExpr) ([]any, er
 		}
 		elems = append(elems, map[string]any{"index": int64(i - fixed), "value": w})
 	}
-	sliceRef, err := e.hoistSliceLit(elems, elemTy, int64(len(c.Args)-fixed))
+	sliceRef, err := e.hoistSliceLit(elems, elemTy, int64(len(c.Args)-fixed), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -9276,8 +9366,22 @@ func (e *emitter) emitBuiltin(c *ast.CallExpr, name string) (any, bool, error) {
 		// probe(iv.(int)); $l := len(b[j]); $f := f(); … whose members are
 		// gc's interface conversion (RAISE) and the index panic (DEFER).
 		// The A6 unordered-panic guard (`hoistReordersPanic`, BUG-032/
-		// BUG-083, FR-28) that REFUSED this composition is retired.
+		// BUG-083, FR-28) that REFUSED this composition is retired FOR
+		// PROBED left material only. Where the left material is NOT
+		// probed — an assignment/IncDec/compound TARGET operand
+		// (`x[iv.(int)] = len(b[j]) + wit(5)`), an address-of or receiver
+		// operand, an operand containing `recover()` or an allocating
+		// conversion — the hoist would still realize ONLY the events-first
+		// order where the spec fixes none (gc: the assertion first), so a
+		// NARROWED A6 refusal stands at exactly that boundary
+		// (`unprobedPanickyBefore`; e13-b audit fix round R1 — the
+		// retirement had silently pinned these subclasses).
 		if (e.hoistForbidden == "" || e.scHoistOK) && e.sweepOrderedEventAfter(c.End()) {
+			{
+				if reorders, what := e.hoistReordersUnprobedPanic(c.Args[0], c.Pos()); reorders {
+					return nil, false, unsup("%s of a potentially-panicking operand hoisted past UNPROBED panicky material to its left (%s) with a later ordered call/receive in the same statement — the left material sits where the E13 (b) envelope emits no unseq-probe (an assignment/IncDec/compound target, an address-of or receiver operand, or an operand containing recover() or an allocating conversion), so the hoist would realize only the events-first panic order where spec#Order_of_evaluation fixes none; refused by name (narrowed A6 guard, BUG-032/BUG-083; E13 (b) boundary, e13-b audit fix round R1)", name, what)
+				}
+			}
 			hoisted, err := e.hoist(node, e.goTypeOf(c))
 			if err != nil {
 				return nil, false, err
@@ -10087,7 +10191,7 @@ func (e *emitter) emitAppend(c *ast.CallExpr) (any, bool, error) {
 			}
 			packed = append(packed, map[string]any{"index": int64(i - 1), "value": w})
 		}
-		elems, err = e.hoistSliceLit(packed, elemTy, int64(len(c.Args)-1))
+		elems, err = e.hoistSliceLit(packed, elemTy, int64(len(c.Args)-1), nil)
 		if err != nil {
 			return nil, false, err
 		}
@@ -10151,7 +10255,20 @@ func (e *emitter) emitMake(c *ast.CallExpr) (any, bool, error) {
 	// e13-b 2026-09-05), so the machine realizes both orders — gc's
 	// interface conversion and the hint's index panic — as a membership
 	// set. The A6 guard FR-28 wired here (BUG-083 fixed AS A REFUSAL) is
-	// retired: the refusal was standing in for latitude.
+	// retired FOR PROBED left material; where the left material is NOT
+	// probed (a target/address-of/receiver operand, `recover()`, an
+	// allocating conversion — `x[iv.(int)] = len(make([]int, t[k]))`) the
+	// unconditional make hoist would realize only the hint's panic where
+	// gc realizes the assertion's, so the NARROWED refusal stands (e13-b
+	// audit fix round R1). No "event after" condition: the hoist is
+	// unconditional, so the reorder is too.
+	for _, arg := range c.Args[1:] {
+		{
+			if reorders, what := e.hoistReordersUnprobedPanic(arg, c.Pos()); reorders {
+				return nil, false, unsup("make of a potentially-panicking size/hint operand hoisted past UNPROBED panicky material to its left (%s) in the same statement — the left material sits where the E13 (b) envelope emits no unseq-probe (an assignment/IncDec/compound target, an address-of or receiver operand, or an operand containing recover() or an allocating conversion), so the unconditional make hoist would realize only the hint's panic where spec#Order_of_evaluation fixes no order; refused by name (narrowed A6 guard, BUG-032/BUG-083; E13 (b) boundary, e13-b audit fix round R1)", what)
+			}
+		}
+	}
 	t := e.goTypeOf(c.Args[0])
 	ty, err := e.emitType(t)
 	if err != nil {
@@ -10298,10 +10415,11 @@ func checkUnsafeLayoutOps(fset *token.FileSet, u *sourcePkg) error {
 // panicFreeOperand reports whether evaluating x can NEVER panic —
 // conservatively syntactic: identifiers, basic literals, parens, and
 // selector chains free of pointer indirection (an implicit nil deref
-// can panic). Used (via residualPanicFreeOperand) to keep the A6
-// len/cap hoist order-transparent (BUG-032): only a panic-free operand
-// may move ahead of panicky inline material to its left without
-// reordering a spec-unordered panic.
+// can panic). `probeKind`'s helper (the selector arm), and — via
+// `residualPanicFreeOperand` (reinstated at the e13-b audit fix round
+// R1) — the "can the hoisted operand panic at all" half of the narrowed
+// A6 guard: only an operand whose residual can panic needs the
+// unprobed-left-material check before it moves ahead of the sweep.
 func (e *emitter) panicFreeOperand(x ast.Expr) bool {
 	switch v := ast.Unparen(x).(type) {
 	case *ast.Ident:
@@ -10602,14 +10720,297 @@ func (e *emitter) runtimeOrderedCall(c *ast.CallExpr) bool {
 	return true
 }
 
-// (residualPanicFreeOperand / nilDerefOnlyResidual / hoistReordersPanic /
-// sweepPanickyInlineBeforeKinds — the A6 unordered-panic GUARD of
-// BUG-032/BUG-062/BUG-083 and FR-28 — were deleted 2026-09-05, lane e13-b:
-// the composition they refused, a panicky hoisted operand beside panicky
-// inline material to its left, is spec-UNSEQUENCED and is now realized as
-// BOTH orders through the `unseq-probe` statements emitExpr appends
-// (latitude E13 option (b), RULED [USER], relayed). Their census of the
-// panicky kinds lives on as `probeKind`.)
+// THE NARROWED A6 UNORDERED-PANIC GUARD (e13-b audit fix round R1,
+// 2026-09-05). History: `hoistReordersPanic` × `residualPanicFreeOperand`
+// × `sweepPanickyInlineBeforeKinds` (BUG-032/BUG-062/BUG-083, FR-28)
+// refused EVERY composition of a panicky hoisted operand (len/cap's, a
+// make size/hint) beside panicky inline material to its left. Lane e13-b
+// (latitude E13 option (b), RULED [USER], relayed) retired that refusal
+// for material the `unseq-probe` covers — the machine realizes both
+// orders there — and the first cut deleted the whole family, which
+// silently PINNED the events-first order on the material the envelope
+// does NOT probe (targets, address-of/receiver operands, recover(),
+// allocating conversions — formerly visible refusals). The guard is
+// reinstated on exactly that residue: `residualPanicFreeOperand`
+// (verbatim from b77f3298) decides whether the hoisted operand can panic
+// at all; `unprobedPanickyBefore` is the old census MINUS every node in
+// `probedNodes` (a probed node and its subtree are covered by the probe,
+// dropped or not — a dropped probe means a forced position). FR-28's
+// nil-deref transparency (`nilDerefOnlyResidual`, verbatim) is reinstated
+// with it: unprobed left material that can panic ONLY by nil dereference
+// (a pointer-selector assignment TARGET — `out.Data = make([]byte,
+// len(x.Data))`, raftpb's CloneMessage — the twin's own idiom) against a
+// hoisted operand that can panic only the same way is one runtime error
+// with nothing effectful between, whichever fires first (the target's
+// indirection is in fact a phase-2 store check, after the whole RHS).
+
+// residualPanicFreeOperand reports whether the RESIDUAL of operand x —
+// what remains inline after its emission hoisted the real calls out —
+// cannot panic. Same conservative-syntactic ground as panicFreeOperand,
+// plus one arm: a non-conversion, non-constant call leaves only its
+// bound temp in the residual (its own panic fires at its hoisted
+// position, the correct lexical one), so it is residual-panic-free
+// even though the source syntax is a call — retiring the F23
+// `len(f())` over-refusal. Conversions stay inline and can panic
+// (slice-to-array), so they keep the conservative answer.
+//
+// FR-28 (2026-09-04, lane fr27-fr28): an INLINE builtin — `len`/`cap` —
+// is a call whose residual is NOT a temp: it stays inline with its own
+// operand (`len(b[j])` as the size of a `make`, or as the operand of an
+// outer `len`), so the answer is its operand's. `min`/`max` and every
+// effectful builtin hoist like calls and keep the call answer.
+func (e *emitter) residualPanicFreeOperand(x ast.Expr) bool {
+	if v, ok := ast.Unparen(x).(*ast.CallExpr); ok {
+		if tv, ok := e.info.Types[v]; ok && tv.Value != nil {
+			return true // constant-folded: no runtime evaluation at all
+		}
+		if tv, ok := e.info.Types[v.Fun]; ok && tv.IsType() {
+			return false // conversion: inline, possibly panicking
+		}
+		if id, ok := ast.Unparen(v.Fun).(*ast.Ident); ok && len(v.Args) == 1 {
+			if _, isBuiltin := e.info.Uses[id].(*types.Builtin); isBuiltin && (id.Name == "len" || id.Name == "cap") {
+				return e.residualPanicFreeOperand(v.Args[0])
+			}
+		}
+		return true
+	}
+	return e.panicFreeOperand(x)
+}
+
+// nilDerefOnlyResidual reports whether the RESIDUAL of operand x can
+// panic ONLY by dereferencing a nil pointer — a selector chain (implicit
+// indirection, BUG-039's Indirect() included) or explicit `*p` chain over
+// identifiers/literals/hoisted-call temps/hash-safe map reads, with no
+// array/slice/string index, slice, type assertion, division, shift,
+// interface comparison or conversion anywhere in it. Used by the narrowed
+// A6 guard (FR-28 refinement, 2026-09-04, reinstated verbatim at the
+// e13-b audit fix round R1): two nil dereferences carry the SAME runtime
+// error ("invalid memory address or nil pointer dereference" — one
+// runtime.Error value, no site-specific text; the machine's panicking
+// family emits the same text at every deref site) and the inline material
+// between them is pure by construction (calls and receives are hoisted),
+// so swapping the order of two nil-deref panics is unobservable: some
+// nil-deref panic fires iff some pointer on the path is nil, whichever is
+// tested first. Everything with a site-specific panic text (index bounds
+// carry the index and length; assertions the types; conversions the
+// lengths) keeps the refusal. Conservative: anything not recognized
+// answers false.
+func (e *emitter) nilDerefOnlyResidual(x ast.Expr) bool {
+	switch v := ast.Unparen(x).(type) {
+	case *ast.Ident, *ast.BasicLit:
+		return true
+	case *ast.SelectorExpr:
+		// Package qualifier or field/method selection: the only panic a
+		// selection itself can raise is the nil dereference of an
+		// implicit or explicit pointer on its path (spec#Selectors);
+		// the base decides the rest.
+		return e.nilDerefOnlyResidual(v.X)
+	case *ast.StarExpr:
+		return e.nilDerefOnlyResidual(v.X)
+	case *ast.IndexExpr:
+		// A map read with a hash-safe key type panics only through its
+		// operands (hashSafeMapRead's ground); array/slice/string
+		// indexing carries a site-specific bounds text.
+		if e.hashSafeMapRead(v) != nil {
+			return e.nilDerefOnlyResidual(v.X) && e.nilDerefOnlyResidual(v.Index)
+		}
+		return false
+	case *ast.CallExpr:
+		if tv, ok := e.info.Types[v]; ok && tv.Value != nil {
+			return true // constant-folded
+		}
+		if tv, ok := e.info.Types[v.Fun]; ok && tv.IsType() {
+			return false // conversion: slice-to-array can panic with a length text
+		}
+		if id, ok := ast.Unparen(v.Fun).(*ast.Ident); ok && len(v.Args) == 1 {
+			if _, isBuiltin := e.info.Uses[id].(*types.Builtin); isBuiltin && (id.Name == "len" || id.Name == "cap") {
+				return e.nilDerefOnlyResidual(v.Args[0])
+			}
+		}
+		return true // a real call: hoisted, its residual is a temp
+	}
+	return false
+}
+
+// describeOperandKind names a probeKind node for a refusal text.
+func (e *emitter) describeOperandKind(x ast.Expr) string {
+	kind := "panicky operand"
+	switch v := ast.Unparen(x).(type) {
+	case *ast.IndexExpr:
+		kind = "index expression"
+	case *ast.SliceExpr:
+		kind = "slice expression"
+	case *ast.TypeAssertExpr:
+		kind = "type assertion"
+	case *ast.StarExpr:
+		kind = "dereference"
+	case *ast.SelectorExpr:
+		kind = "indirecting selector"
+	case *ast.BinaryExpr:
+		switch v.Op {
+		case token.QUO, token.REM:
+			kind = "integer division"
+		case token.SHL, token.SHR:
+			kind = "signed-count shift"
+		case token.EQL, token.NEQ:
+			kind = "interface comparison"
+		}
+	case *ast.CallExpr:
+		kind = "slice-to-array conversion"
+	}
+	pos := e.fset.Position(x.Pos())
+	return kind + " at " + pos.Filename[strings.LastIndex(pos.Filename, "/")+1:] + ":" + itoa(pos.Line) + ":" + itoa(pos.Column)
+}
+
+// walkUnprobedPanicky is the census behind `unprobedPanickyBefore` and
+// `unprobedPanickyWithin`: it reports the first probeKind node under root
+// that is NOT in `probedNodes` (with its subtree — a child's probe is
+// subsumed by its panicky parent's, so a probed node is pruned whole),
+// judging only nodes that END at or before `before` when `before` is
+// valid, and never entering a func-literal body, a receive, a hoisted
+// (runtime-ordered) call — whose operands evaluate at its own statement,
+// the FORCED position — or a constant-folded subtree. Conservative: a
+// node the census cannot place is judged by `probeKind` alone.
+//
+// nilOnly reports that EVERY unprobed panicky node found can panic only
+// by nil dereference (`nilDerefOnlyResidual`) — the one class whose
+// panics are indistinguishable from each other (FR-28's transparency);
+// the walk stops at the first node of any OTHER kind (the answer is then
+// fixed: found, not nilOnly).
+func (e *emitter) walkUnprobedPanicky(root ast.Node, before token.Pos) (found bool, nilOnly bool, what string) {
+	if root == nil {
+		return true, false, "nil sweep root (fail closed)"
+	}
+	foundOther := false
+	ast.Inspect(root, func(n ast.Node) bool {
+		if foundOther || n == nil {
+			return false
+		}
+		if before.IsValid() && n.Pos() >= before {
+			return false // at/after the hoisting construct: not "to its left"
+		}
+		switch nn := n.(type) {
+		case *ast.FuncLit:
+			return false
+		case *ast.UnaryExpr:
+			if nn.Op == token.ARROW {
+				return false // receive: hoisted at its own position, operand evaluated there
+			}
+		case *ast.CallExpr:
+			if e.runtimeOrderedCall(nn) {
+				return false // a hoisted call: its operands evaluate at its statement (F2)
+			}
+		}
+		x, isExpr := n.(ast.Expr)
+		if !isExpr {
+			return true
+		}
+		if tv, ok := e.typesEntry(x); ok && tv.Value != nil {
+			return false // constant-folded subtree: no run-time evaluation
+		}
+		if e.probedNodes[x] {
+			return false // covered by its probe (dropped or not)
+		}
+		if (!before.IsValid() || x.End() <= before) && e.probeKind(x) {
+			if !found || !e.nilDerefOnlyResidual(x) {
+				what = e.describeOperandKind(x)
+			}
+			found = true
+			if !e.nilDerefOnlyResidual(x) {
+				foundOther = true
+			}
+			return false
+		}
+		return true
+	})
+	return found, found && !foundOther, what
+}
+
+// unprobedPanickyBefore reports whether the current sweep contains
+// panicky non-call material strictly before pos that carries NO
+// unseq-probe — the narrowed A6 guard's census (see the header above) —
+// and whether all of it is nil-deref-only. A nil sweep root answers
+// found (fail closed).
+func (e *emitter) unprobedPanickyBefore(pos token.Pos) (found bool, nilOnly bool, what string) {
+	return e.walkUnprobedPanicky(e.sweepStmt, pos)
+}
+
+// unprobedPanickyWithin reports whether the subtree x contains panicky
+// non-call material that carries NO unseq-probe (no position bound).
+func (e *emitter) unprobedPanickyWithin(x ast.Expr) (found bool, what string) {
+	found, _, what = e.walkUnprobedPanicky(x, token.NoPos)
+	return found, what
+}
+
+// hoistReordersUnprobedPanic is the narrowed A6 guard's decision for a
+// len/cap/make hoist of operand x at position pos: TRUE means refuse by
+// name (the caller names the shape). FALSE when x's residual cannot
+// panic, when no unprobed panicky material sits to its left in the
+// sweep, or when BOTH sides can panic only by nil dereference (FR-28's
+// transparency: identical panics, unobservable order).
+func (e *emitter) hoistReordersUnprobedPanic(x ast.Expr, pos token.Pos) (bool, string) {
+	if e.residualPanicFreeOperand(x) {
+		return false, ""
+	}
+	found, nilOnly, what := e.unprobedPanickyBefore(pos)
+	if !found {
+		return false, ""
+	}
+	if nilOnly && e.nilDerefOnlyResidual(x) {
+		return false, ""
+	}
+	return true, what
+}
+
+// anyProbeSince reports whether the accumulator holds an unseq-probe at
+// or after index start (the probes appended while the current node's
+// payload was emitted — trailing or not).
+func (e *emitter) anyProbeSince(start int) bool {
+	for i := start; i < len(e.hoisted); i++ {
+		if isProbeStmt(e.hoisted[i]) {
+			return true
+		}
+	}
+	return false
+}
+
+// structuralAllocGuard is the e13-b audit fix round's R2 refusal
+// (disposition (b)): a STRUCTURAL allocation — a composite-literal
+// `&T{…}` / elided `&T`, a slice literal, a map literal, an interface
+// method value — hoists to its lexical position and evaluates its payload
+// THERE, ahead of every ordered event lexically after it; gc evaluates
+// the payload in the RESIDUAL, after those calls (`(&T{x: s[i]}).x +
+// wit(5)`: gc prints `wit 5` then panics; the machine panics before the
+// call, and a probe on the payload cannot reach gc's member because the
+// allocation statement re-raises the deferred panic at the same early
+// position — design §4 D2 note at pushHoist). Neither order is
+// spec-forced (the literal is not a call) and the machine realizes only
+// one, so the composition is refused BY NAME when (i) the payload is
+// panicky — a probe was appended while it was emitted, or it holds
+// unprobed panicky material — and (ii) an ordered event follows the
+// literal in the same sweep. Pre-existing on main (not a lost refusal):
+// the hoist order is emission order there too; the audit found it
+// undisclosed under an axis declared discharged.
+func (e *emitter) structuralAllocGuard(kind string, lit ast.Expr) error {
+	if lit == nil {
+		return nil
+	}
+	start := 0
+	if n := len(e.nodeStarts); n > 0 {
+		start = e.nodeStarts[n-1]
+	}
+	what := ""
+	panicky := false
+	if e.anyProbeSince(start) {
+		panicky, what = true, "a probed operand in the payload"
+	} else if found, w := e.unprobedPanickyWithin(lit); found {
+		panicky, what = true, w
+	}
+	if !panicky || !e.sweepOrderedEventAfter(lit.End()) {
+		return nil
+	}
+	return unsup("structural allocation (%s) with a potentially-panicking payload (%s) followed by an ordered call/receive in the same statement — the allocation hoists to its lexical position and evaluates its payload there, ahead of the later event, where gc evaluates the payload in the residual after the call; spec#Order_of_evaluation forces neither order and the machine realizes only one; refused by name (structural-allocation class, E13 (b) residual; e13-b audit fix round R2)", kind, what)
+}
 
 // chanElem resolves an expression's channel element type (substitution-
 // aware for stencils).

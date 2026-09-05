@@ -1,6 +1,24 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3559 (3326 PASS / 233 FAIL)
-#   [re-derived from the data rows at the round-17 rebase of e13-b onto main 9343a310, 2026-09-05: awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv -> PASS 3326, FAIL 233; main's 3528 = 3283 / 245 as history]
+# cases: 3569 (3327 PASS / 242 FAIL)
+#   [re-derived from the data rows at the round-17 rebase of e13-b onto main 9343a310, 2026-09-05 (audit fix round commit): awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv -> PASS 3327, FAIL 242; main's 3528 = 3283 / 245 as history]
+# re-pinned: 2026-09-05 (e13-b lane, AUDIT FIX ROUND R1-R12 — [AGENT] worker; the adversarial audit returned BLOCK on the guard
+#   retirement below: the envelope probes only what emitExpr can reach, and the deleted A6 guard had swept the WHOLE statement,
+#   so on UNPROBED left material (assignment/IncDec/compound targets, address-of operands, recover(), allocating conversions)
+#   the composition had become a SILENT single-member answer != gc. A NARROWED A6 guard is reinstated there (refuses by name),
+#   a structural allocation's panicky payload before an ordered event is refused (R2), the value axis reached through the len
+#   shape is BUG-101. drift vs the lane's first pin = EXACTLY 10 born rows in builtins/e13-sibling-panic-order/, 0 flips of
+#   pre-existing rows, 0 reorders (the rows are inserted after the family's last row): 8 FAIL/frontend-export BY DESIGN —
+#   {tgt-assert-vs-len-hoist,compound-assert-vs-len,map-key-assert-vs-len,recover-assert-vs-len,bytes-conv-left-len-hoist}
+#   (the narrowed guard), tgt-assert-vs-make (its make arm), {composite-ptr-payload-vs-call,slice-lit-payload-vs-call} (the
+#   allocation class) — all eight on BUG-102's Cases line (the designed-red entry, Expect: FAIL; BUG-032/BUG-083 stay fixed
+#   with PASS-only Cases lines); 1 FAIL/lean-observation — assert-ok-early-len-hoist (BUG-101, OPEN, differential: gc
+#   `mut` then 6, the machine the conversion panic on every stream); 1 PASS strict control — addr-index-left-len-hoist.
+#   Tally 3529 = 3295 / 234 -> 3539 = 3296 / 243. [round-17 rebase onto main 9343a310: the same rows over main's 3528 = 3283 / 245 give 3559 = 3326 / 233 -> 3569 = 3327 / 242,
+#   re-derived from the data rows by the awk above; the twin pin at this rebased commit is a FRESH EMIT from the merged frontend, a9a2e2b1 -> 1e32bae3
+#   (118 unseq-probe statements; strip-probes = a9a2e2b1 structurally) — scripts/check-frontend-pins history.] The twin wire re-pinned once more (d531a225…: one probe fewer, the map-
+#   assign TARGET rule). Evidence: docs/evidence/2026-09-05_e13-b/README.md "The audit fix round".
+#   NOTE on the previous (lane-tip) re-pin below: besides the flips it enumerates, it REORDERED ~61 pre-existing rows (a
+#   regeneration artifact; no result moved) — the header did not say so (audit R12); this re-pin moves none.
 # re-pinned: 2026-09-05 (e13-b lane — latitude E13 option (b), RULED [USER] Mike 2026-09-05, relayed by the [AGENT]
 #   coordinator, cited as relayed: «we should do what the standard supports, and avoid over-refusal if we can. That's
 #   what (b) means right?»; [AGENT] worker. The machine gains `Stmt.unseqProbe` / `Cont.probeK` / `ChoiceSite.unseqPanic`
@@ -1447,6 +1465,16 @@ PASS	builtins/e13-sibling-panic-order/assert-right-call	-
 PASS	builtins/e13-sibling-panic-order/assert-left-min-inline	-
 PASS	builtins/e13-sibling-panic-order/slice-left-len-call	-
 PASS	builtins/e13-sibling-panic-order/assert-left-recv-w	membership
+FAIL	builtins/e13-sibling-panic-order/tgt-assert-vs-len-hoist	frontend-export
+FAIL	builtins/e13-sibling-panic-order/tgt-assert-vs-make	frontend-export
+FAIL	builtins/e13-sibling-panic-order/compound-assert-vs-len	frontend-export
+FAIL	builtins/e13-sibling-panic-order/map-key-assert-vs-len	frontend-export
+FAIL	builtins/e13-sibling-panic-order/recover-assert-vs-len	frontend-export
+PASS	builtins/e13-sibling-panic-order/addr-index-left-len-hoist	-
+FAIL	builtins/e13-sibling-panic-order/bytes-conv-left-len-hoist	frontend-export
+FAIL	builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call	frontend-export
+FAIL	builtins/e13-sibling-panic-order/slice-lit-payload-vs-call	frontend-export
+FAIL	builtins/e13-sibling-panic-order/assert-ok-early-len-hoist	lean-observation
 PASS	builtins/len-cap-array-pointer	-
 PASS	builtins/len-vs-call-order/chan	-
 PASS	builtins/len-vs-call-order/slice	-

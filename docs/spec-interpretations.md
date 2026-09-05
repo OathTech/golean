@@ -89,7 +89,7 @@ Rules of the file:
   DIRECTION; a session consuming E12 must not treat its per-row F2
   sentence as already written. Both readings are recorded and UNSEQ is
   the wider, doctrine-safe direction. E13's F2 sentence IS written since
-  2026-09-05 (lane `e13-b`, [USER] ruling (b); design
+  2026-09-05 (lane `e13-b`, [USER] ruling (b) as relayed by the [AGENT] coordinator; design
   `docs/2026-09-05_e13-b-design.md` §1/§3): the machine realizes each
   probed operand independently at its lexical position or in the
   residual, so with two probed operands the set contains an

@@ -1,8 +1,8 @@
-# twin wire structural diff — pinned at main b77f3298 (sha 4ee39f73…) vs the final e13-b pin after the audit fix round (sha d531a225…; the lane's first re-pin 7c545840… at b2fd9f15 is superseded — hashes.txt)
-# Method: JSON-parse both; a function/method entry is CHANGED iff its JSON differs; 'probes-only' = stripping every
-# {"stmt":"unseq-probe"} entry from the fresh entry's statement lists makes it byte-identical to the pinned entry.
-# Producer: the python block in docs/evidence/2026-09-05_e13-b/README.md §'Twin wire re-pin' (regenerated at the fix round, R5).
-funcs: 430 pinned / 430 fresh; added []; removed []
+# round-17 rebase: structural diff of the fresh emit at rebased commit 2 vs main's a9a2e2b1… (producer: the README's python block, order-aware, all top-level keys)
+top-level keys base: ['fileOrder', 'funcs', 'globals', 'methodSets', 'methods', 'package', 'schema', 'types'] cur: ['fileOrder', 'funcs', 'globals', 'methodSets', 'methods', 'package', 'schema', 'types']
+fileOrder: identical=True
+funcs: 450 base / 450 cur; added []; removed []
+  order identical: True
   func raft.newRaft: unseq-probe statements=3 probes-only=True
   func raft.stepLeader: unseq-probe statements=29 probes-only=True
   func raft.stepCandidate: unseq-probe statements=6 probes-only=True
@@ -10,7 +10,11 @@ funcs: 430 pinned / 430 fresh; added []; removed []
   func raft.sendMsgReadIndexResponse: unseq-probe statements=2 probes-only=True
   func raft.DescribeConfState: unseq-probe statements=4 probes-only=True
   func newTwin: unseq-probe statements=2 probes-only=True
-methods: 537 pinned / 537 fresh; added []; removed []
+  changed entries: 7
+globals: identical=True
+methodSets: identical=True
+methods: 537 base / 537 cur; added []; removed []
+  order identical: True
   method {"id": "e", "type": {"elem": {"kind": "named", "name": "strconv.NumError"}, "kind": "pointer"}}.Error: unseq-probe statements=1 probes-only=True
   method {"id": "rn", "type": {"elem": {"kind": "named", "name": "raft.RawNode"}, "kind": "pointer"}}.Bootstrap: unseq-probe statements=1 probes-only=True
   method {"id": "l", "type": {"elem": {"kind": "named", "name": "raft.raftLog"}, "kind": "pointer"}}.findConflict: unseq-probe statements=1 probes-only=True
@@ -44,6 +48,9 @@ methods: 537 pinned / 537 fresh; added []; removed []
   method {"id": "ro", "type": {"elem": {"kind": "named", "name": "raft.readOnly"}, "kind": "pointer"}}.addRequest: unseq-probe statements=1 probes-only=True
   method {"id": "ro", "type": {"elem": {"kind": "named", "name": "raft.readOnly"}, "kind": "pointer"}}.recvAck: unseq-probe statements=1 probes-only=True
   method {"id": "t", "type": {"elem": {"kind": "named", "name": "main.twin"}, "kind": "pointer"}}.deliverIdx: unseq-probe statements=1 probes-only=True
-other top-level keys changed: []
-total unseq-probe statements on the fresh wire: 118
-# vs the b2fd9f15 pin (7c545840…): methods {"id": "ro", "type": {"elem": {"kind": "named", "name": "raft.readOnly"}, "kind": "pointer"}}.recvAck: probes 2->1 — the map-assign TARGET `ro.acks[from] = max(...)` (read_only.go:67) loses its probe: targets are never probed (design §4 D4, audit fix round R1); every other entry byte-identical.
+  changed entries: 33
+package: identical=True
+schema: identical=True
+types: identical=True
+total unseq-probe statements in changed entries: 118 ; in whole file: 118
+strip-probes(cur) == base (canonical re-serialization, order-aware): True

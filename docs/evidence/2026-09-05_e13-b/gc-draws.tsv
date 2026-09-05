@@ -21,8 +21,8 @@ builtins/e13-sibling-panic-order/assert-left-method	draws=32	distinct=1
 	{"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}	plain=16 race=16
 builtins/e13-sibling-panic-order/assert-left-new-call	draws=32	distinct=1
 	{"message":"interface conversion: interface {} is string, not int","output":"","status":"panic"}	plain=16 race=16
-builtins/e13-sibling-panic-order/assert-left-recv-w	draws=2	distinct=1
-	{"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}	plain=1 race=1
+builtins/e13-sibling-panic-order/assert-left-recv-w	draws=5	distinct=1
+	{"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}	plain=3 race=2
 builtins/e13-sibling-panic-order/assert-middle	draws=32	distinct=1
 	{"message":"interface conversion: interface {} is string, not int","output":"wit 1\n","status":"panic"}	plain=16 race=16
 builtins/e13-sibling-panic-order/assert-return-list	draws=32	distinct=1

@@ -98,6 +98,12 @@ def allSites : List ChoiceSite :=
   [.mapIter, .appendSpill, .l2Entry, .l2Arrival, .l4Waiter, .l1Sched,
    .l5ExitWindow, .postOp, .backEdge, .nilValueMethodText, .tryLock, .unseqPanic]
 
+/-- `allSites` is COMPLETE: every `ChoiceSite` constructor is listed (a
+new site that forgets this list fails here, not in a trace reader —
+e13-b audit fix round R12). -/
+theorem allSites_complete : ∀ s : ChoiceSite, s ∈ allSites := by
+  intro s; cases s <;> simp [allSites]
+
 /-- Pool-layer sites: the ones whose consumption the machine records in
 `StepEvent.picks` (`Choices.consumeAtE`); the sequential-machine sites
 (`mapIter`, `appendSpill`, `l2Entry`, `tryLock`) and the driver's

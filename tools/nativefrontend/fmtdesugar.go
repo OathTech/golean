@@ -301,7 +301,7 @@ func (e *emitter) emitFmtCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, bool
 				}
 				elems = append(elems, map[string]any{"index": int64(i), "value": w})
 			}
-			sliceNode, err = e.hoistSliceLit(elems, elemW, int64(len(c.Args)))
+			sliceNode, err = e.hoistSliceLit(elems, elemW, int64(len(c.Args)), nil) // a frontend pack (fmt desugar): part of the call it feeds, no structural guard
 			if err != nil {
 				return nil, false, err
 			}

@@ -248,3 +248,121 @@ func assertLeftRecvW() (r int) {
 func main() {
 	println(forcedArgOnly())
 }
+
+// --- e13-b audit fix round (2026-09-05): the boundary of the envelope ---
+//
+// R1 — panicky material the envelope does NOT probe (an assignment/IncDec/
+// compound TARGET operand, an address-of operand, an operand containing
+// recover() or an allocating conversion) left of a hoisted len/cap/make
+// whose operand panics. The first cut deleted the whole A6 guard and these
+// lowered as a SILENT single-member answer ≠ gc (gc evaluates the
+// assertion first; the machine the hoisted operand's panic). The narrowed
+// A6 guard refuses them BY NAME: rows red by design (frontend-export),
+// on BUG-102's Cases line (the designed-red entry).
+
+func sinkP(p *int, l, w int) int { return *p + l + w }
+
+// target index assertion vs a hoisted len whose operand panics — gc: the
+// interface conversion; a lowering would realize the index panic.
+func tgtAssertVsLenHoist() int {
+	x := make([]int, 1)
+	b := [][]int{{1}}
+	j := 5
+	var iv interface{} = "s"
+	x[iv.(int)] = len(b[j]) + wit(5)
+	return x[0]
+}
+
+// the same against the unconditional make hoist.
+func tgtAssertVsMake() int {
+	x := make([]int, 1)
+	t := []int{1}
+	k := 5
+	var iv interface{} = "s"
+	x[iv.(int)] = len(make([]int, t[k]))
+	return x[0]
+}
+
+// compound-assign target.
+func compoundAssertVsLen() int {
+	x := make([]int, 1)
+	b := [][]int{{1}}
+	j := 5
+	var iv interface{} = "s"
+	x[iv.(int)] += len(b[j]) + wit(5)
+	return x[0]
+}
+
+// map-element TARGET key (design §4 D4: targets are never probed — the
+// map-assign path had been left probed; one rule for every target now).
+func mapKeyAssertVsLen() int {
+	m := map[string]int{}
+	b := [][]int{{1}}
+	j := 5
+	var iv interface{} = 7
+	m[iv.(string)] = len(b[j]) + wit(5)
+	return m["a"]
+}
+
+// left material containing recover() is never probed (purity).
+func recoverAssertVsLen() (r int) {
+	defer func() {
+		b := [][]int{{1}}
+		j := 5
+		r = recover().(int) + len(b[j]) + wit(5)
+	}()
+	panic(3)
+}
+
+// an address-of operand (`&a[i]` lowers to an inline index-addr, never
+// probed) left of the hoisted len.
+func addrIndexLeftLenHoist() int {
+	a := make([]int, 1)
+	i := 9
+	b := [][]int{{1}}
+	j := 5
+	return sinkP(&a[i], len(b[j]), wit(5))
+}
+
+// an allocating conversion ([]byte(s)) is never probed (R7: a probe would
+// allocate twice).
+func bytesConvLeftLenHoist() int {
+	s := "ab"
+	b := [][]int{{1}}
+	j := 5
+	return int([]byte(s)[7]) + len(b[j]) + wit(5)
+}
+
+// R2 — a STRUCTURAL allocation (a composite-literal `&T{…}`, a slice
+// literal) whose payload panics, followed by an ordered event: the
+// allocation hoists to its lexical position and evaluates the payload
+// there, before the call; gc evaluates it in the residual AFTER the call
+// (prints `wit 5`, then panics). Neither order is spec-forced, the
+// machine realizes only one, and no probe reaches gc's member. Pre-
+// existing on main; refused by name since the audit fix round.
+
+func compositePtrPayloadVsCall() int {
+	s := make([]int, 1)
+	i := 9
+	return (&T{x: s[i]}).x + wit(5)
+}
+
+func sliceLitPayloadVsCall() int {
+	s := make([]int, 1)
+	i := 9
+	return []int{s[i]}[0] + wit(5)
+}
+
+// The VALUE axis reached through the len shape (E12's known divergence,
+// filed as an open BUG at the audit fix round): the assertion SUCCEEDS
+// early and FAILS late — gc evaluates `iv.(int)` before the sibling call
+// that replaces iv (value 6); the probe evaluates it early too but
+// DISCARDS the value, and the residual re-evaluation after the mutating
+// call panics. Not statically refusable (whether the early evaluation
+// succeeds is a run-time fact) — a red-first row, gc's value pinned.
+func assertOkEarlyLenHoist() int {
+	var iv interface{} = 3
+	b := make([]int, 2)
+	j := 0
+	return iv.(int) + len(b[j:]) + func() int { iv = "s"; println("mut"); return 1 }()
+}

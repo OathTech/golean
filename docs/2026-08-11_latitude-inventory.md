@@ -926,7 +926,7 @@ gc's early store a deviation, L-016, 2026-09-02).
   (issue43835's `g`/`h` pass on gc — its fix covers `return`); the
   deviation of this row is the ASSIGNMENT side with non-result targets.
 
-### E6. `len`/`cap` hoist discriminating shapes — (a) ENVELOPED via E13's `unseqPanic` (the REFUSED row RETIRED 2026-09-05, lane e13-b; zero sites of its own)
+### E6. `len`/`cap` hoist discriminating shapes — (a) ENVELOPED via E13's `unseqPanic` where the left material is PROBED; REFUSED (narrowed A6 guard) where it is not — the target / address-of / `recover()` / allocating-conversion subclasses (e13-b audit fix round 2026-09-05); zero sites of its own
 
 - WHERE (history): BUG-032's fix, narrowed by mini-slice A6 (2026-08-31)
   to the composition (panicky residual operand) x (panicky inline
@@ -955,6 +955,35 @@ gc's early store a deviation, L-016, 2026-09-02).
   unchanged. This row leaves §5 (it stood in for latitude; the latitude
   is now enveloped at E13). Design: `docs/2026-09-05_e13-b-design.md`
   §4 D5.
+- E13-B AUDIT FIX ROUND (2026-09-05, [AGENT]; audit findings R1/R2/R4):
+  the retirement above was OVER-WIDE. The envelope probes an operand only
+  where `emitExpr`'s hook fires; the deleted guard had swept the WHOLE
+  statement, so on the material the envelope does NOT probe the
+  composition went from a visible refusal to a SILENT single-member
+  answer ≠ gc: (i) an assignment/IncDec/compound TARGET operand
+  (`x[iv.(int)] = len(b[j]) + wit(5)`, `x[iv.(int)] += …`, `m[iv.(string)]
+  = …`, `x[iv.(int)] = len(make([]int, t[k]))` — gc the interface
+  conversion, the machine the hoisted operand's index panic); (ii) an
+  operand containing `recover()` (`r = recover().(int) + len(b[j]) +
+  wit(5)` in a defer); (iii) an address-of operand (`&a[i]`, an inline
+  `index-addr`); (iv) an operand containing an allocating conversion
+  (`[]byte(s)[i]`, never probed since R7). The NARROWED A6 guard is
+  REINSTATED on exactly that residue (emit.go
+  `hoistReordersUnprobedPanic`: `residualPanicFreeOperand` ×
+  `unprobedPanickyBefore` — the old census minus every probed node — with
+  FR-28's nil-deref transparency), at the len/cap hoist and in
+  `emitMake`, refusing BY NAME; the map-assign target path, left probed
+  against design §4 D4, is suppressed like every other target (the twin
+  loses one probe). So this row is BOTH: enveloped for probed material,
+  a refusal standing in for latitude on the unprobed subclasses — it
+  RE-ENTERS §5 as a narrowed entry. Rows red by design: `builtins/e13-
+  sibling-panic-order/{tgt-assert-vs-len-hoist,tgt-assert-vs-make,
+  compound-assert-vs-len,map-key-assert-vs-len,recover-assert-vs-len,
+  bytes-conv-left-len-hoist}` (BUG-102's Cases line — the designed-red
+  entry; BUG-032/BUG-083 stay fixed). The
+  STRUCTURAL-ALLOCATION class (E13 residual 5, R2) is a sibling refusal
+  recorded at E13. `lowerdiag`'s `len-hoist-panic-order` cause is LIVE
+  again (its 2026-09-04 texts stay a tripwire).
 
 ### E7. Hidden-dependency initialization order — (b) PINNED to go/types' conforming order, **known ≠ gc**
 
@@ -1332,8 +1361,17 @@ subexpressions of one binary operator).
   (2) a hoisted ALLOCATION's payload (`g([]int{t[k]})`) evaluates at the
   allocation's hoisted position, ahead of inline material to its left —
   a pre-existing structural departure from left-to-right among
-  non-calls, now paired with a probe on the left material, so both
-  orders are realized there too. Neither changes a value observable.
+  non-calls, paired with a probe on the LEFT material (both orders of
+  left-material-vs-payload realized). CORRECTED at the e13-b audit fix
+  round (R2): the payload vs an ordered event lexically AFTER the
+  literal (`(&T{x: s[i]}).x + wit(5)`) is NOT enveloped — the payload
+  evaluates before the call on every stream where gc evaluates it after
+  — and is REFUSED by name since the fix round (E13 residual 5). Neither
+  changes a value observable. The VALUE axis itself is reachable through
+  the len shape the retired guard used to refuse — BUG-101 (`assert-ok-
+  early-len-hoist`): the early evaluation succeeds, is discarded, and the
+  residual re-evaluation after the mutating call panics where gc has the
+  early value. This entry's obligation now has a filed witness.
   `binop-order/operand-panic-vs-call/{call-before-left,call-before-left-
   div}` moved to lane=membership at e13-b: their LEFT index panics on
   the pre-call state, so the machine offers the panic (RAISE) beside the
@@ -1486,23 +1524,49 @@ machine construct §3, the frontend §4, the residuals §6).
   grossmith's (F-5) — answered: such a row now fails at stage `nondet`
   and is routed to membership (measured at the lane: the two binop rows
   and `make-hint-call` did exactly that).
-- RESIDUAL NARROWINGS (recorded, design §6; each a (b-n) sub-axis with
-  its own note, none oracle-visible today): (1) an operand RIGHT of the
-  event (`f() + a[i]`) realizes only the lexical (events-first) order —
-  gc agrees (probe u); (2) an operand that is the hoisted event's OWN
-  operand (`len(s[i:]) + wit(5)`: the slice expression evaluates at
-  len's position) realizes only the lexical order against LATER events
-  — gc agrees (`slice-left-len-call`); (3) an operand containing
-  `recover()` is not probed; (4) the VALUE observable (E12) and the
-  assignment-target axes (E2/E3/E4) and the receiver axis (E14) are not
-  this entry's; (5) a probed operand is evaluated twice on the no-panic
-  path — a constant-factor cost, no fuel-out flips measured. Cost of
-  removing (1)–(2): a probe for every panicky operand regardless of
-  position (LOW mechanism, more pops on panicking rows).
-- RE-ENVELOPE OBLIGATION: DISCHARGED for the sibling-panic axis (this
-  entry's observable); the residuals above carry their own small notes;
-  E12's obligation (the value axis) and E2–E4's are unchanged and still
-  ride §7 item 5.
+- RESIDUAL NARROWINGS AND REFUSALS (recorded, design §6; rewritten at
+  the e13-b audit fix round 2026-09-05 — the first cut over-stated the
+  envelope, audit R4): (1) an operand RIGHT of the event (`f() + a[i]`)
+  realizes only the lexical (events-first) order — gc agrees (probe u);
+  (2) an operand that is the hoisted event's OWN operand (`len(s[i:]) +
+  wit(5)`) realizes only the lexical order against LATER events — gc
+  agrees (`slice-left-len-call`); (3) UNPROBED left material — an
+  assignment/IncDec/compound TARGET operand, an address-of operand, an
+  operand containing `recover()` or an allocating conversion (`[]byte(s)`
+  / `[]rune(s)`, R7) — beside a hoisted len/cap/make whose operand
+  panics is REFUSED by name (E6, the narrowed A6 guard; rows on
+  BUG-102); beside a plain sibling CALL it is not refused and
+  realizes the events-first member only (`x[iv.(int)] = wit(5)`: the
+  target axis E2's pin, not this entry's; `r = recover().(int) + wit(5)`:
+  the recover subclass, one member — a (b-n) narrowing, recorded); (4)
+  the VALUE observable is E12's — and is REACHABLE through the len shape
+  the retired guard used to refuse: `iv.(int) + len(b[j:]) + func() int {
+  iv = "s"; return 1 }()` with `iv` holding an int — gc 6, the machine the
+  conversion panic on every stream (the probe discards a successful early
+  value) — filed OPEN as BUG-101, red-first row `assert-ok-early-len-
+  hoist`; the receiver axis (E14) is not this entry's; (5) a STRUCTURAL
+  ALLOCATION (`&T{…}`, elided `&T`, slice/map literal, interface method
+  value) with a panicky payload followed by an ordered event is REFUSED
+  by name (R2: `(&T{x: s[i]}).x + wit(5)` — gc prints `wit 5` then panics,
+  the machine panics before the call on every stream; the allocation
+  evaluates its payload at its hoisted position and no probe reaches gc's
+  member; pre-existing on main, undisclosed here until the audit; rows
+  `composite-ptr-payload-vs-call`, `slice-lit-payload-vs-call` on
+  BUG-102); (6) a probed operand is evaluated twice on the no-panic path
+  — a constant-factor cost, no fuel-out flips measured; (7) the race
+  detector sees the early read as an ordinary read, so under DEFER the
+  operand is READ TWICE in program order — a write racing the first read
+  but happens-before the second yields a race report the residual-only
+  trajectory lacks: an OVER-approximation (fail-closed over-report, never
+  a missed race), not idempotence (design §6 item 8). Cost of removing
+  (1)–(2): a probe for every panicky operand regardless of position (LOW
+  mechanism, more pops on panicking rows).
+- RE-ENVELOPE OBLIGATION: MEASURED-DISCHARGED for the probed sibling-
+  panic axis only — the 39 membership rows' sets contain gc's draw
+  (§EVIDENCE). NOT discharged: (3) the unprobed subclasses (refused —
+  E6's narrowed guard, or E2's pin), (4) the value axis (BUG-101, E12's
+  obligation), (5) the structural-allocation class (refused). Those
+  carry their own notes; E2–E4's obligations ride §7 item 5.
 
 ## 3. Representation, runtime, and library realization
 
@@ -2207,7 +2271,13 @@ Each is honest (visible red, never a wrong answer); none is a fidelity
 achievement. E6 (len/cap hoist shapes) LEFT this list 2026-09-05 (lane
 e13-b): the refusal stood in for E13's latitude, which is now enveloped
 (`unseqPanic`) — the first refusal of this list retired into an
-envelope rather than a pin.
+envelope rather than a pin — and RE-ENTERED it the same day, NARROWED,
+at the lane's audit fix round: the envelope reaches only material the
+frontend probes, and on the unprobed subclasses (assignment targets,
+address-of operands, `recover()`, allocating conversions) the narrowed
+A6 guard refuses again (E6's fix-round bullet). The STRUCTURAL-
+ALLOCATION refusal (E13 residual 5) joins it. Count: the five items
+above + E6 (narrowed) = 6 entries.
 
 ## 6. Unknowns — suspected latitude, not yet analyzed (class (d))
 
@@ -2321,7 +2391,7 @@ concurrency-relevance (the charter: concurrency matters most),
    divergences from gc recorded and probed (unpinnable
    compiler-internal realization); needs the membership/panic-identity
    envelope treatment or linearization. **E13 LEFT this item
-   2026-09-05** (lane e13-b, [USER] ruling (b)): the sibling-panic axis
+   2026-09-05** (lane e13-b, [USER] ruling (b), relayed by the [AGENT] coordinator): the sibling-panic axis
    is the FIRST realization of exactly this treatment — an
    `unseq-probe` statement + the `unseqPanic` pick, membership rows
    certifying both panics; the same mold (a probe at the operand's
@@ -2581,7 +2651,11 @@ history block, never in a membership line.
   by the (L) surgery's delete-prune); rows carrying the tag: E1, E5
   (since 2026-09-02), E14.
 - (d) UNKNOWN: 6 (U-2 … U-7; U-1 probed and admitted at W3.2 stage C, 2026-08-20).
-- REFUSED standing in for latitude: 8 (§5; E6 left 2026-09-05).
+- REFUSED standing in for latitude: 6 (§5's listed items, re-derived at
+  the e13-b audit fix round: R6, select-with-select rendezvous, racy
+  programs, uintptr observations, `go` during `$pkginit`, and E6 —
+  narrowed — back since the fix round; the previous "9 → 8" was not
+  derivable from the list, audit R12).
 - Known-≠-oracle deterministic points (the honesty-critical list):
   E3, E5, E7, R3(escaping path). Two CLASSES inside one list, stated
   per row: E3, E7, R3 are (b)/(b-n) PINS with gc on another conforming
@@ -2598,7 +2672,16 @@ history block, never in a membership line.
 
 Nothing in this block is a class member by virtue of being named here.
 
-- **(b) 18 → 17, (a) 11 → 13 entries / 10 → 11 sites, REFUSED 9 → 8
+- **E13-b AUDIT FIX ROUND (2026-09-05, [AGENT]): E6 RE-ENTERS §5
+  narrowed** (REFUSED count re-derived: 6) — the envelope covers probed
+  material only; the target / address-of / `recover()` / allocating-
+  conversion subclasses REFUSE by name again (E6 bullet), the
+  structural-allocation class is a new named refusal (E13 residual 5),
+  and the value axis reached through the len shape is BUG-101 (E12's
+  obligation, now with a filed witness). E13 keeps (a) for the probed
+  axis; its obligation wording is "measured-discharged for the probed
+  axis", not DISCHARGED.
+- **(b) 18 → 17, (a) 11 → 13 entries / 10 → 11 sites
   (2026-09-05).** **E13 moved (b) → (a)** by [USER] ruling (option (b)
   of E13's four-way treatment, Mike 2026-09-05, relayed; lane `e13-b`):
   the sibling-panic order is the new `ChoiceSite.unseqPanic` — the

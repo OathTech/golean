@@ -1,2 +1,3 @@
 # round-17 rebase of e13-b onto main 9343a310 (2026-09-05, [AGENT] reconciler): the twin pin at each REBASED commit is a FRESH EMIT from the merged frontend over the twin assembly (scripts/check-frontend-pins §2 recipe), never a merge result. main's pin: a9a2e2b14d605273e83cd99e84c3a8b359c460581027e4d8a14f81fd5362b084.
 31fb50dcc2f826a6979dcd92dea90b5f3261c50108b40c87f684a473c0f1d241  rebased commit 1 (was b2fd9f15; lane pin 7c545840…): 119 unseq-probe statements, 7 funcs + 33 methods; strip-probes == a9a2e2b1 structurally
+1e32bae323cc6c8f58fd655694f46182013c51668a4c3ad721d94ee5672ad9ca  rebased commit 2 (was bcf73396; lane pin d531a225…): 118 unseq-probe statements (R1's map-target rule), 7 funcs + 33 methods; strip-probes == a9a2e2b1 structurally
