@@ -1,0 +1,13 @@
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+building Lean executable...
+Build completed successfully (62 jobs).
+native frontend: per-case type-check + emit (no batch export)
+PASS	adversarial/EmptyFunctions	arrays,conversions
+PASS	adversarial/InterfaceElements	arrays,conversions
+PASS	adversarial/RecursiveReferences	arrays,conversions
+PASS	adversarial/OtherReferences	arrays,conversions
+PASS	adversarial/NamedIdentity	arrays,conversions
+
+differential coverage summary: cases=5 pass=5 fail=0 export_status=0
+results: artifacts/bug103-adversarial-extra/latest.tsv
+metadata: artifacts/bug103-adversarial-extra/latest.meta.tsv

@@ -1,0 +1,1964 @@
+{
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "cap": {
+       "expr": "int",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "value": "4"
+      },
+      "elem": {
+       "int": "uint8",
+       "kind": "int"
+      },
+      "len": {
+       "expr": "int",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "value": "2"
+      },
+      "stmt": "make-slice",
+      "target": {
+       "id": "$c0",
+       "target": "declare",
+       "type": {
+        "elem": {
+         "int": "uint8",
+         "kind": "int"
+        },
+        "kind": "slice"
+       }
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "s",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "$c0",
+        "type": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "base": {
+          "expr": "ident",
+          "name": "s",
+          "type": {
+           "elem": {
+            "int": "uint8",
+            "kind": "int"
+           },
+           "kind": "slice"
+          }
+         },
+         "expr": "index-addr",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "0"
+         }
+        },
+        "target": "addr"
+       },
+       {
+        "expr": {
+         "base": {
+          "expr": "ident",
+          "name": "s",
+          "type": {
+           "elem": {
+            "int": "uint8",
+            "kind": "int"
+           },
+           "kind": "slice"
+          }
+         },
+         "expr": "index-addr",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "1"
+         }
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "uint8",
+         "kind": "int"
+        },
+        "value": "10"
+       },
+       {
+        "expr": "int",
+        "type": {
+         "int": "uint8",
+         "kind": "int"
+        },
+        "value": "20"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "a0",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "array",
+         "len": 0
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "array",
+         "len": 0
+        },
+        "type": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "array",
+         "len": 0
+        },
+        "x": {
+         "expr": "ident",
+         "name": "s",
+         "type": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "slice"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "a1",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "array",
+         "len": 1
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "array",
+         "len": 1
+        },
+        "type": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "array",
+         "len": 1
+        },
+        "x": {
+         "base": {
+          "expr": "ident",
+          "name": "s",
+          "type": {
+           "elem": {
+            "int": "uint8",
+            "kind": "int"
+           },
+           "kind": "slice"
+          }
+         },
+         "expr": "slice",
+         "high": {
+          "expr": "builtin-len",
+          "operand": {
+           "expr": "ident",
+           "name": "s",
+           "type": {
+            "elem": {
+             "int": "uint8",
+             "kind": "int"
+            },
+            "kind": "slice"
+           }
+          },
+          "operandType": {
+           "elem": {
+            "int": "uint8",
+            "kind": "int"
+           },
+           "kind": "slice"
+          }
+         },
+         "low": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "1"
+         },
+         "type": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "slice"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "a2",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "array",
+         "len": 2
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "array",
+         "len": 2
+        },
+        "type": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "array",
+         "len": 2
+        },
+        "x": {
+         "expr": "ident",
+         "name": "s",
+         "type": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "slice"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cond": {
+       "expr": "binary",
+       "op": "||",
+       "type": {
+        "kind": "bool"
+       },
+       "x": {
+        "expr": "binary",
+        "op": "||",
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "expr": "binary",
+         "op": "||",
+         "type": {
+          "kind": "bool"
+         },
+         "x": {
+          "expr": "bool",
+          "type": {
+           "kind": "bool"
+          },
+          "value": false
+         },
+         "y": {
+          "expr": "binary",
+          "op": "!=",
+          "operandType": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "type": {
+           "kind": "bool"
+          },
+          "x": {
+           "base": {
+            "expr": "ident",
+            "name": "a1",
+            "type": {
+             "elem": {
+              "int": "uint8",
+              "kind": "int"
+             },
+             "kind": "array",
+             "len": 1
+            }
+           },
+           "expr": "index-get",
+           "index": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "0"
+           },
+           "type": {
+            "int": "uint8",
+            "kind": "int"
+           }
+          },
+          "y": {
+           "expr": "int",
+           "type": {
+            "int": "uint8",
+            "kind": "int"
+           },
+           "value": "20"
+          }
+         }
+        },
+        "y": {
+         "expr": "binary",
+         "op": "!=",
+         "operandType": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "type": {
+          "kind": "bool"
+         },
+         "x": {
+          "base": {
+           "expr": "ident",
+           "name": "a2",
+           "type": {
+            "elem": {
+             "int": "uint8",
+             "kind": "int"
+            },
+            "kind": "array",
+            "len": 2
+           }
+          },
+          "expr": "index-get",
+          "index": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "0"
+          },
+          "type": {
+           "int": "uint8",
+           "kind": "int"
+          }
+         },
+         "y": {
+          "expr": "int",
+          "type": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "value": "10"
+         }
+        }
+       },
+       "y": {
+        "expr": "binary",
+        "op": "!=",
+        "operandType": {
+         "int": "uint8",
+         "kind": "int"
+        },
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "base": {
+          "expr": "ident",
+          "name": "a2",
+          "type": {
+           "elem": {
+            "int": "uint8",
+            "kind": "int"
+           },
+           "kind": "array",
+           "len": 2
+          }
+         },
+         "expr": "index-get",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "1"
+         },
+         "type": {
+          "int": "uint8",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "int",
+         "type": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "value": "20"
+        }
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "results": [
+          {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "1"
+          }
+         ],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "s0",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "array",
+          "len": 0
+         },
+         "kind": "pointer"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "elem": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "array",
+          "len": 0
+         },
+         "kind": "pointer"
+        },
+        "type": {
+         "elem": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "array",
+          "len": 0
+         },
+         "kind": "pointer"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "s",
+         "type": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "slice"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "s1",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "array",
+          "len": 1
+         },
+         "kind": "pointer"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "elem": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "array",
+          "len": 1
+         },
+         "kind": "pointer"
+        },
+        "type": {
+         "elem": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "array",
+          "len": 1
+         },
+         "kind": "pointer"
+        },
+        "x": {
+         "base": {
+          "expr": "ident",
+          "name": "s",
+          "type": {
+           "elem": {
+            "int": "uint8",
+            "kind": "int"
+           },
+           "kind": "slice"
+          }
+         },
+         "expr": "slice",
+         "high": {
+          "expr": "builtin-len",
+          "operand": {
+           "expr": "ident",
+           "name": "s",
+           "type": {
+            "elem": {
+             "int": "uint8",
+             "kind": "int"
+            },
+            "kind": "slice"
+           }
+          },
+          "operandType": {
+           "elem": {
+            "int": "uint8",
+            "kind": "int"
+           },
+           "kind": "slice"
+          }
+         },
+         "low": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "1"
+         },
+         "type": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "slice"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "s2",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "array",
+          "len": 2
+         },
+         "kind": "pointer"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "elem": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "array",
+          "len": 2
+         },
+         "kind": "pointer"
+        },
+        "type": {
+         "elem": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "array",
+          "len": 2
+         },
+         "kind": "pointer"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "s",
+         "type": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "slice"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cond": {
+       "expr": "binary",
+       "op": "||",
+       "type": {
+        "kind": "bool"
+       },
+       "x": {
+        "expr": "binary",
+        "op": "||",
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "expr": "binary",
+         "op": "==",
+         "operandType": {
+          "elem": {
+           "elem": {
+            "int": "uint8",
+            "kind": "int"
+           },
+           "kind": "array",
+           "len": 0
+          },
+          "kind": "pointer"
+         },
+         "type": {
+          "kind": "bool"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "s0",
+          "type": {
+           "elem": {
+            "elem": {
+             "int": "uint8",
+             "kind": "int"
+            },
+            "kind": "array",
+            "len": 0
+           },
+           "kind": "pointer"
+          }
+         },
+         "y": {
+          "expr": "nil"
+         }
+        },
+        "y": {
+         "expr": "binary",
+         "op": "!=",
+         "operandType": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "pointer"
+         },
+         "type": {
+          "kind": "bool"
+         },
+         "x": {
+          "base": {
+           "expr": "ident",
+           "name": "s1",
+           "type": {
+            "elem": {
+             "elem": {
+              "int": "uint8",
+              "kind": "int"
+             },
+             "kind": "array",
+             "len": 1
+            },
+            "kind": "pointer"
+           }
+          },
+          "expr": "index-addr",
+          "index": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "0"
+          },
+          "type": {
+           "elem": {
+            "int": "uint8",
+            "kind": "int"
+           },
+           "kind": "pointer"
+          }
+         },
+         "y": {
+          "base": {
+           "expr": "ident",
+           "name": "s",
+           "type": {
+            "elem": {
+             "int": "uint8",
+             "kind": "int"
+            },
+            "kind": "slice"
+           }
+          },
+          "expr": "index-addr",
+          "index": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "1"
+          },
+          "type": {
+           "elem": {
+            "int": "uint8",
+            "kind": "int"
+           },
+           "kind": "pointer"
+          }
+         }
+        }
+       },
+       "y": {
+        "expr": "binary",
+        "op": "!=",
+        "operandType": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "pointer"
+        },
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "base": {
+          "expr": "ident",
+          "name": "s2",
+          "type": {
+           "elem": {
+            "elem": {
+             "int": "uint8",
+             "kind": "int"
+            },
+            "kind": "array",
+            "len": 2
+           },
+           "kind": "pointer"
+          }
+         },
+         "expr": "index-addr",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "0"
+         },
+         "type": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "pointer"
+         }
+        },
+        "y": {
+         "base": {
+          "expr": "ident",
+          "name": "s",
+          "type": {
+           "elem": {
+            "int": "uint8",
+            "kind": "int"
+           },
+           "kind": "slice"
+          }
+         },
+         "expr": "index-addr",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "0"
+         },
+         "type": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "pointer"
+         }
+        }
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "results": [
+          {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "2"
+          }
+         ],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "base": {
+          "expr": "ident",
+          "name": "s2",
+          "type": {
+           "elem": {
+            "elem": {
+             "int": "uint8",
+             "kind": "int"
+            },
+            "kind": "array",
+            "len": 2
+           },
+           "kind": "pointer"
+          }
+         },
+         "expr": "index-addr",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "0"
+         }
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "uint8",
+         "kind": "int"
+        },
+        "value": "99"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cond": {
+       "expr": "binary",
+       "op": "!=",
+       "operandType": {
+        "int": "uint8",
+        "kind": "int"
+       },
+       "type": {
+        "kind": "bool"
+       },
+       "x": {
+        "base": {
+         "expr": "ident",
+         "name": "s",
+         "type": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "slice"
+         }
+        },
+        "expr": "index-get",
+        "index": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "0"
+        },
+        "type": {
+         "int": "uint8",
+         "kind": "int"
+        }
+       },
+       "y": {
+        "expr": "int",
+        "type": {
+         "int": "uint8",
+         "kind": "int"
+        },
+        "value": "99"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "results": [
+          {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "3"
+          }
+         ],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "decls": [
+       {
+        "id": "t",
+        "type": {
+         "elem": {
+          "kind": "string"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "t0",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "kind": "string"
+         },
+         "kind": "array",
+         "len": 0
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "elem": {
+          "kind": "string"
+         },
+         "kind": "array",
+         "len": 0
+        },
+        "type": {
+         "elem": {
+          "kind": "string"
+         },
+         "kind": "array",
+         "len": 0
+        },
+        "x": {
+         "expr": "ident",
+         "name": "t",
+         "type": {
+          "elem": {
+           "kind": "string"
+          },
+          "kind": "slice"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "t1",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "elem": {
+           "kind": "string"
+          },
+          "kind": "array",
+          "len": 0
+         },
+         "kind": "pointer"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "elem": {
+          "elem": {
+           "kind": "string"
+          },
+          "kind": "array",
+          "len": 0
+         },
+         "kind": "pointer"
+        },
+        "type": {
+         "elem": {
+          "elem": {
+           "kind": "string"
+          },
+          "kind": "array",
+          "len": 0
+         },
+         "kind": "pointer"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "t",
+         "type": {
+          "elem": {
+           "kind": "string"
+          },
+          "kind": "slice"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cond": {
+       "expr": "binary",
+       "op": "||",
+       "type": {
+        "kind": "bool"
+       },
+       "x": {
+        "expr": "bool",
+        "type": {
+         "kind": "bool"
+        },
+        "value": false
+       },
+       "y": {
+        "expr": "binary",
+        "op": "!=",
+        "operandType": {
+         "elem": {
+          "elem": {
+           "kind": "string"
+          },
+          "kind": "array",
+          "len": 0
+         },
+         "kind": "pointer"
+        },
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "t1",
+         "type": {
+          "elem": {
+           "elem": {
+            "kind": "string"
+           },
+           "kind": "array",
+           "len": 0
+          },
+          "kind": "pointer"
+         }
+        },
+        "y": {
+         "expr": "nil"
+        }
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "results": [
+          {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "4"
+          }
+         ],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "elem": {
+       "int": "uint8",
+       "kind": "int"
+      },
+      "len": {
+       "expr": "int",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "value": "0"
+      },
+      "stmt": "make-slice",
+      "target": {
+       "id": "$c1",
+       "target": "declare",
+       "type": {
+        "elem": {
+         "int": "uint8",
+         "kind": "int"
+        },
+        "kind": "slice"
+       }
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "u",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "$c1",
+        "type": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "u0",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "array",
+          "len": 0
+         },
+         "kind": "pointer"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "elem": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "array",
+          "len": 0
+         },
+         "kind": "pointer"
+        },
+        "type": {
+         "elem": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "array",
+          "len": 0
+         },
+         "kind": "pointer"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "u",
+         "type": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "slice"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cond": {
+       "expr": "binary",
+       "op": "==",
+       "operandType": {
+        "elem": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "array",
+         "len": 0
+        },
+        "kind": "pointer"
+       },
+       "type": {
+        "kind": "bool"
+       },
+       "x": {
+        "expr": "ident",
+        "name": "u0",
+        "type": {
+         "elem": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "array",
+          "len": 0
+         },
+         "kind": "pointer"
+        }
+       },
+       "y": {
+        "expr": "nil"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "results": [
+          {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "5"
+          }
+         ],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "0"
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "sliceToArrayOk",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "cap": {
+       "expr": "int",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "value": "4"
+      },
+      "elem": {
+       "int": "uint8",
+       "kind": "int"
+      },
+      "len": {
+       "expr": "int",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "value": "2"
+      },
+      "stmt": "make-slice",
+      "target": {
+       "id": "$c2",
+       "target": "declare",
+       "type": {
+        "elem": {
+         "int": "uint8",
+         "kind": "int"
+        },
+        "kind": "slice"
+       }
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "s",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "$c2",
+        "type": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "a4",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "array",
+         "len": 4
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "array",
+         "len": 4
+        },
+        "type": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "array",
+         "len": 4
+        },
+        "x": {
+         "expr": "ident",
+         "name": "s",
+         "type": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "slice"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "convert",
+        "target": {
+         "int": "int",
+         "kind": "int"
+        },
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "base": {
+          "expr": "ident",
+          "name": "a4",
+          "type": {
+           "elem": {
+            "int": "uint8",
+            "kind": "int"
+           },
+           "kind": "array",
+           "len": 4
+          }
+         },
+         "expr": "index-get",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "0"
+         },
+         "type": {
+          "int": "uint8",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "sliceToArrayShort",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "cap": {
+       "expr": "int",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "value": "4"
+      },
+      "elem": {
+       "int": "uint8",
+       "kind": "int"
+      },
+      "len": {
+       "expr": "int",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "value": "2"
+      },
+      "stmt": "make-slice",
+      "target": {
+       "id": "$c3",
+       "target": "declare",
+       "type": {
+        "elem": {
+         "int": "uint8",
+         "kind": "int"
+        },
+        "kind": "slice"
+       }
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "s",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "$c3",
+        "type": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "s4",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "array",
+          "len": 4
+         },
+         "kind": "pointer"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "elem": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "array",
+          "len": 4
+         },
+         "kind": "pointer"
+        },
+        "type": {
+         "elem": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "array",
+          "len": 4
+         },
+         "kind": "pointer"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "s",
+         "type": {
+          "elem": {
+           "int": "uint8",
+           "kind": "int"
+          },
+          "kind": "slice"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "convert",
+        "target": {
+         "int": "int",
+         "kind": "int"
+        },
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "base": {
+          "expr": "ident",
+          "name": "s4",
+          "type": {
+           "elem": {
+            "elem": {
+             "int": "uint8",
+             "kind": "int"
+            },
+            "kind": "array",
+            "len": 4
+           },
+           "kind": "pointer"
+          }
+         },
+         "expr": "index-get",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "0"
+         },
+         "type": {
+          "int": "uint8",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "sliceToArrayPtrShort",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "decls": [
+       {
+        "id": "t",
+        "type": {
+         "elem": {
+          "kind": "string"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "t2",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "elem": {
+           "kind": "string"
+          },
+          "kind": "array",
+          "len": 1
+         },
+         "kind": "pointer"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "elem": {
+          "elem": {
+           "kind": "string"
+          },
+          "kind": "array",
+          "len": 1
+         },
+         "kind": "pointer"
+        },
+        "type": {
+         "elem": {
+          "elem": {
+           "kind": "string"
+          },
+          "kind": "array",
+          "len": 1
+         },
+         "kind": "pointer"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "t",
+         "type": {
+          "elem": {
+           "kind": "string"
+          },
+          "kind": "slice"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "builtin-len",
+        "operand": {
+         "base": {
+          "expr": "ident",
+          "name": "t2",
+          "type": {
+           "elem": {
+            "elem": {
+             "kind": "string"
+            },
+            "kind": "array",
+            "len": 1
+           },
+           "kind": "pointer"
+          }
+         },
+         "expr": "index-get",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "0"
+         },
+         "type": {
+          "kind": "string"
+         }
+        },
+        "operandType": {
+         "kind": "string"
+        },
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "nilSliceToArrayPtr",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  }
+ ],
+ "methodSets": [],
+ "methods": [],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": []
+}

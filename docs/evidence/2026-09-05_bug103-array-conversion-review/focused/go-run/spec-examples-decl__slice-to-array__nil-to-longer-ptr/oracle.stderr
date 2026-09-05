@@ -1,0 +1,8 @@
+panic: runtime error: cannot convert slice with length 0 to array or pointer to array with length 1
+
+goroutine 1 [running]:
+main.nilSliceToArrayPtr(...)
+	/home/dev/projects/golean/.claude/worktrees/bug103-array-conversion/artifacts/bug103-adversarial/go-run/spec-examples-decl__slice-to-array__nil-to-longer-ptr/main.go:62
+main.main()
+	/home/dev/projects/golean/.claude/worktrees/bug103-array-conversion/artifacts/bug103-adversarial/go-run/spec-examples-decl__slice-to-array__nil-to-longer-ptr/zz_golean_harness.go:132 +0xa
+exit status 2

@@ -1,0 +1,21 @@
+key	value
+frontend	native
+manifest	/home/dev/projects/golean/.claude/worktrees/bug103-array-conversion/.tmp/bug103-review.KMnRI4/golean-coverage.jJDPbM
+manifest_sha256	7e5b82c1097521492dafb2d02231ec68bd76bfa71d8e55d809a16518cde6db7b
+manifest_cases	23
+total_corpus_cases	3598
+full_run	false
+filters	--id spec-examples-decl/slice-to-array/ok-forms --id spec-examples-decl/slice-to-array/short-array --id spec-examples-decl/slice-to-array/short-array-ptr --id spec-examples-decl/slice-to-array/nil-to-longer-ptr --id structs/decl-order-reversed/zero-values --id structs/decl-order-reversed/array-equality --id structs/decl-order-reversed/interface-box --id structs/decl-order-reversed/defined-array-values --id structs/decl-order-reversed/conversion-array-target --id structs/decl-order-reversed/conversion-unnamed-target --id structs/decl-order-reversed/conversion-nested-copy --id structs/decl-order-reversed/conversion-shared-references --id structs/decl-order-reversed/conversion-empty-eval-once --id structs/decl-order-reversed/conversion-float-elements --id structs/unnamed-conversion-targets/pointer --id structs/unnamed-conversion-targets/pointer-nil --id structs/unnamed-conversion-targets/slice --id structs/unnamed-conversion-targets/slice-to-defined --id structs/unnamed-conversion-targets/map --id structs/unnamed-conversion-targets/func --id structs/unnamed-conversion-targets/func-from-defined --id structs/unnamed-conversion-targets/slice-nil --id structs/unnamed-conversion-targets/map-nil
+git_commit	7b7bc42c3f77154099ccbb3c6f6a302a8d1987d4
+git_dirty	false
+go_toolchain	go1.26.5
+go_drift_allowed	0
+go_drift_actual	false
+depth_guard	choice-trace wideAfterExhaustion=0 on every invariance stream
+depth_seeds	1,2,3
+depth_generator	lcg31(1103515245,12345) bits16..31
+depth_trace_timeout_seconds	240
+membership_draws	32
+jobs	2
+fanout_find_exit	0
+fanout_pool_exit	0

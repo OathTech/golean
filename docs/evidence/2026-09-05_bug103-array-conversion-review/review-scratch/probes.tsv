@@ -1,0 +1,5 @@
+adversarial/NamedIdentity	.tmp/bug103-review.KMnRI4/probes	NamedIdentity	-	ok	arrays,conversions	-	strict	-	-
+adversarial/InterfaceElements	.tmp/bug103-review.KMnRI4/probes	InterfaceElements	-	ok	arrays,conversions	-	strict	-	-
+adversarial/OtherReferences	.tmp/bug103-review.KMnRI4/probes	OtherReferences	-	ok	arrays,conversions	-	strict	-	-
+adversarial/RecursiveReferences	.tmp/bug103-review.KMnRI4/probes	RecursiveReferences	-	ok	arrays,conversions	-	strict	-	-
+adversarial/EmptyFunctions	.tmp/bug103-review.KMnRI4/probes	EmptyFunctions	-	ok	arrays,conversions	-	strict	-	-

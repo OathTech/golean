@@ -1,0 +1,2 @@
+result	id	features	stage	detail
+FAIL	adversarial/TaggedArray	arrays,conversions	frontend-export	{"message":"frontend-quarantined: anonymous non-empty struct type struct{X int \"a\"}","output":"","schema":"golean-observation-v1","status":"unsupported"}

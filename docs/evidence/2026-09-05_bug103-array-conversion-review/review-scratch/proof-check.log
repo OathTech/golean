@@ -1,0 +1,5 @@
+'GoLean.GoCore.Machine.convertValueToTy_locSup' depends on axioms: [propext, Quot.sound]
+'GoLean.GoCore.Machine.normalizeValueForTy_locSup' depends on axioms: [propext, Quot.sound]
+'GoLean.GoCore.Machine.Step.preserves_wf' depends on axioms: [propext, Classical.choice, Quot.sound]
+'GoLean.GoCore.Machine.stepFn_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+'GoLean.GoCore.Machine.step_complete' depends on axioms: [propext, Classical.choice, Quot.sound]

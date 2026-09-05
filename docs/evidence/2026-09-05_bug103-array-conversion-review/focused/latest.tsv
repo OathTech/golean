@@ -1,0 +1,24 @@
+result	id	features	stage	detail
+FAIL	spec-examples-decl/slice-to-array/ok-forms	conversions,slices,arrays,pointers,nil,aliasing	lean-observation	expected status ok, got {"message":"slice-to-array value conversion (succeeding form; triage L2b frontier)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	spec-examples-decl/slice-to-array/short-array	conversions,slices,arrays,panic	-	wide=0 exhausted=none depth=fixed
+PASS	spec-examples-decl/slice-to-array/short-array-ptr	conversions,slices,arrays,pointers,panic	-	wide=0 exhausted=none depth=fixed
+PASS	spec-examples-decl/slice-to-array/nil-to-longer-ptr	conversions,slices,arrays,pointers,nil,panic	-	wide=0 exhausted=none depth=fixed
+PASS	structs/decl-order-reversed/zero-values	structs,arrays,nested,fields,zero_values,defined_type,conversions,indexing,len	-	wide=0 exhausted=none depth=fixed
+PASS	structs/decl-order-reversed/array-equality	structs,arrays,nested,equality,comparability,defined_type,literals	-	wide=0 exhausted=none depth=fixed
+PASS	structs/decl-order-reversed/interface-box	structs,arrays,interfaces,type_assertions,comma_ok,equality,defined_type,literals	-	wide=0 exhausted=none depth=fixed
+PASS	structs/decl-order-reversed/defined-array-values	arrays,defined_type,literals,value_copy,equality,zero_values,calls,indexing,len	-	wide=0 exhausted=none depth=fixed
+PASS	structs/decl-order-reversed/conversion-array-target	arrays,defined_type,conversions,indexing,len,literals	-	wide=0 exhausted=none depth=fixed
+PASS	structs/decl-order-reversed/conversion-unnamed-target	arrays,conversions,indexing,value_copy	-	wide=0 exhausted=none depth=fixed
+PASS	structs/decl-order-reversed/conversion-nested-copy	arrays,structs,defined_type,conversions,indexing,fields,value_copy	-	wide=0 exhausted=none depth=fixed
+PASS	structs/decl-order-reversed/conversion-shared-references	arrays,defined_type,conversions,pointers,slices,indexing,value_copy,aliasing	-	wide=0 exhausted=none depth=fixed
+PASS	structs/decl-order-reversed/conversion-empty-eval-once	arrays,defined_type,conversions,calls,len,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	structs/decl-order-reversed/conversion-float-elements	arrays,defined_type,conversions,floats,indexing,value_copy	-	wide=0 exhausted=none depth=fixed
+PASS	structs/unnamed-conversion-targets/pointer	conversions,pointers,structs,defined_type	-	wide=0 exhausted=none depth=fixed
+PASS	structs/unnamed-conversion-targets/pointer-nil	conversions,pointers,nil,defined_type	-	wide=0 exhausted=none depth=fixed
+PASS	structs/unnamed-conversion-targets/slice	conversions,slices,defined_type	-	wide=0 exhausted=none depth=fixed
+PASS	structs/unnamed-conversion-targets/slice-to-defined	conversions,slices,defined_type	-	wide=0 exhausted=none depth=fixed
+PASS	structs/unnamed-conversion-targets/map	conversions,maps,defined_type	-	wide=0 exhausted=none depth=fixed
+PASS	structs/unnamed-conversion-targets/func	conversions,functions,closures,defined_type	-	wide=0 exhausted=none depth=fixed
+PASS	structs/unnamed-conversion-targets/func-from-defined	conversions,functions,defined_type	-	wide=0 exhausted=none depth=fixed
+PASS	structs/unnamed-conversion-targets/slice-nil	conversions,slices,nil,bytes,append	-	wide=1 exhausted=none depth=fixed
+PASS	structs/unnamed-conversion-targets/map-nil	conversions,maps,nil,len	-	wide=0 exhausted=none depth=fixed

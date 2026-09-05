@@ -1,0 +1,2159 @@
+{
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "c",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.uctCell"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "5"
+         }
+        ],
+        "expr": "struct-lit",
+        "target": {
+         "kind": "named",
+         "name": "main.uctCell"
+        },
+        "type": {
+         "kind": "named",
+         "name": "main.uctCell"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "p",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "kind": "named",
+          "name": "main.uctCell"
+         },
+         "kind": "pointer"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "elem": {
+          "kind": "named",
+          "name": "main.uctCell"
+         },
+         "kind": "pointer"
+        },
+        "type": {
+         "elem": {
+          "kind": "named",
+          "name": "main.uctCell"
+         },
+         "kind": "pointer"
+        },
+        "x": {
+         "expr": "ref",
+         "id": "c",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "main.uctCell"
+          },
+          "kind": "pointer"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "field-get",
+        "field": "n",
+        "recv": {
+         "expr": "deref",
+         "ptr": {
+          "expr": "ident",
+          "name": "p",
+          "type": {
+           "elem": {
+            "kind": "named",
+            "name": "main.uctCell"
+           },
+           "kind": "pointer"
+          }
+         },
+         "type": {
+          "kind": "named",
+          "name": "main.uctCell"
+         }
+        },
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "typeId": "main.uctCell"
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "uctPointer",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "p",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "kind": "named",
+          "name": "main.uctCell"
+         },
+         "kind": "pointer"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "elem": {
+          "kind": "named",
+          "name": "main.uctCell"
+         },
+         "kind": "pointer"
+        },
+        "type": {
+         "elem": {
+          "kind": "named",
+          "name": "main.uctCell"
+         },
+         "kind": "pointer"
+        },
+        "x": {
+         "expr": "nil"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cond": {
+       "expr": "binary",
+       "op": "==",
+       "operandType": {
+        "elem": {
+         "kind": "named",
+         "name": "main.uctCell"
+        },
+        "kind": "pointer"
+       },
+       "type": {
+        "kind": "bool"
+       },
+       "x": {
+        "expr": "ident",
+        "name": "p",
+        "type": {
+         "elem": {
+          "kind": "named",
+          "name": "main.uctCell"
+         },
+         "kind": "pointer"
+        }
+       },
+       "y": {
+        "expr": "nil"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "results": [
+          {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "1"
+          }
+         ],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "0"
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "uctPointerNil",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "elem": {
+       "int": "int",
+       "kind": "int"
+      },
+      "elems": [
+       {
+        "index": 0,
+        "value": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "1"
+        }
+       },
+       {
+        "index": 1,
+        "value": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "2"
+        }
+       },
+       {
+        "index": 2,
+        "value": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "3"
+        }
+       }
+      ],
+      "length": 3,
+      "stmt": "slice-lit",
+      "target": {
+       "id": "$c0",
+       "target": "declare",
+       "type": {
+        "elem": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "slice"
+       }
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "xs",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.uctInts"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "$c0",
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "ys",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "slice"
+        },
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "slice"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "xs",
+         "type": {
+          "kind": "named",
+          "name": "main.uctInts"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "builtin-len",
+         "operand": {
+          "expr": "ident",
+          "name": "ys",
+          "type": {
+           "elem": {
+            "int": "int",
+            "kind": "int"
+           },
+           "kind": "slice"
+          }
+         },
+         "operandType": {
+          "elem": {
+           "int": "int",
+           "kind": "int"
+          },
+          "kind": "slice"
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "base": {
+          "expr": "ident",
+          "name": "ys",
+          "type": {
+           "elem": {
+            "int": "int",
+            "kind": "int"
+           },
+           "kind": "slice"
+          }
+         },
+         "expr": "index-get",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "2"
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "uctSlice",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "elem": {
+       "int": "int",
+       "kind": "int"
+      },
+      "elems": [
+       {
+        "index": 0,
+        "value": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "4"
+        }
+       },
+       {
+        "index": 1,
+        "value": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "5"
+        }
+       }
+      ],
+      "length": 2,
+      "stmt": "slice-lit",
+      "target": {
+       "id": "$c1",
+       "target": "declare",
+       "type": {
+        "elem": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "slice"
+       }
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "ys",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "$c1",
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "xs",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.uctInts"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "kind": "named",
+         "name": "main.uctInts"
+        },
+        "type": {
+         "kind": "named",
+         "name": "main.uctInts"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "ys",
+         "type": {
+          "elem": {
+           "int": "int",
+           "kind": "int"
+          },
+          "kind": "slice"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "builtin-len",
+         "operand": {
+          "expr": "ident",
+          "name": "xs",
+          "type": {
+           "kind": "named",
+           "name": "main.uctInts"
+          }
+         },
+         "operandType": {
+          "kind": "named",
+          "name": "main.uctInts"
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "base": {
+          "expr": "ident",
+          "name": "xs",
+          "type": {
+           "kind": "named",
+           "name": "main.uctInts"
+          }
+         },
+         "expr": "index-get",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "0"
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "uctSliceToDefined",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "entries": [
+       {
+        "key": {
+         "bytes": [
+          97
+         ],
+         "expr": "string",
+         "type": {
+          "kind": "string"
+         }
+        },
+        "value": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "7"
+        }
+       }
+      ],
+      "keyType": {
+       "kind": "string"
+      },
+      "stmt": "map-lit",
+      "target": {
+       "id": "$c2",
+       "target": "declare",
+       "type": {
+        "key": {
+         "kind": "string"
+        },
+        "kind": "map",
+        "value": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      },
+      "valueType": {
+       "int": "int",
+       "kind": "int"
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "m",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.uctM"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "$c2",
+        "type": {
+         "key": {
+          "kind": "string"
+         },
+         "kind": "map",
+         "value": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "n",
+        "target": "declare",
+        "type": {
+         "key": {
+          "kind": "string"
+         },
+         "kind": "map",
+         "value": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "key": {
+          "kind": "string"
+         },
+         "kind": "map",
+         "value": {
+          "int": "int",
+          "kind": "int"
+         }
+        },
+        "type": {
+         "key": {
+          "kind": "string"
+         },
+         "kind": "map",
+         "value": {
+          "int": "int",
+          "kind": "int"
+         }
+        },
+        "x": {
+         "expr": "ident",
+         "name": "m",
+         "type": {
+          "kind": "named",
+          "name": "main.uctM"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "base": {
+         "expr": "ident",
+         "name": "n",
+         "type": {
+          "key": {
+           "kind": "string"
+          },
+          "kind": "map",
+          "value": {
+           "int": "int",
+           "kind": "int"
+          }
+         }
+        },
+        "expr": "map-get",
+        "index": {
+         "bytes": [
+          97
+         ],
+         "expr": "string",
+         "type": {
+          "kind": "string"
+         }
+        },
+        "keyType": {
+         "kind": "string"
+        },
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "valueType": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "uctMap",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "*",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "2"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "uctFunc$lit0",
+   "params": [
+    {
+     "id": "x",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "f",
+        "target": "declare",
+        "type": {
+         "kind": "func",
+         "params": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "captured": [],
+        "expr": "func-value",
+        "func": "uctFunc$lit0",
+        "type": {
+         "kind": "func",
+         "params": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "g",
+        "target": "declare",
+        "type": {
+         "kind": "func",
+         "params": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "kind": "func",
+         "params": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        },
+        "type": {
+         "kind": "func",
+         "params": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        },
+        "x": {
+         "expr": "ident",
+         "name": "f",
+         "type": {
+          "kind": "func",
+          "params": [
+           {
+            "int": "int",
+            "kind": "int"
+           }
+          ],
+          "results": [
+           {
+            "int": "int",
+            "kind": "int"
+           }
+          ],
+          "variadic": false
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c3",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "21"
+         }
+        ],
+        "callee": {
+         "expr": "ident",
+         "name": "g",
+         "type": {
+          "kind": "func",
+          "params": [
+           {
+            "int": "int",
+            "kind": "int"
+           }
+          ],
+          "results": [
+           {
+            "int": "int",
+            "kind": "int"
+           }
+          ],
+          "variadic": false
+         }
+        },
+        "expr": "call-value",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "ident",
+        "name": "$c3",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "uctFunc",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "uctDouble",
+   "params": [
+    {
+     "id": "x",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "h",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.uctFn"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "kind": "named",
+         "name": "main.uctFn"
+        },
+        "type": {
+         "kind": "named",
+         "name": "main.uctFn"
+        },
+        "x": {
+         "captured": [],
+         "expr": "func-value",
+         "func": "uctDouble",
+         "type": {
+          "kind": "func",
+          "params": [
+           {
+            "int": "int",
+            "kind": "int"
+           }
+          ],
+          "results": [
+           {
+            "int": "int",
+            "kind": "int"
+           }
+          ],
+          "variadic": false
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "k",
+        "target": "declare",
+        "type": {
+         "kind": "func",
+         "params": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "kind": "func",
+         "params": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        },
+        "type": {
+         "kind": "func",
+         "params": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        },
+        "x": {
+         "expr": "ident",
+         "name": "h",
+         "type": {
+          "kind": "named",
+          "name": "main.uctFn"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c4",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "4"
+         }
+        ],
+        "callee": {
+         "expr": "ident",
+         "name": "k",
+         "type": {
+          "kind": "func",
+          "params": [
+           {
+            "int": "int",
+            "kind": "int"
+           }
+          ],
+          "results": [
+           {
+            "int": "int",
+            "kind": "int"
+           }
+          ],
+          "variadic": false
+         }
+        },
+        "expr": "call-value",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "ident",
+        "name": "$c4",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "uctFuncFromDefined",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "b",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "slice"
+        },
+        "type": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "slice"
+        },
+        "x": {
+         "expr": "nil"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "xs",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "slice"
+        },
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "slice"
+        },
+        "x": {
+         "expr": "nil"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "n",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "0"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cond": {
+       "expr": "binary",
+       "op": "==",
+       "operandType": {
+        "elem": {
+         "int": "uint8",
+         "kind": "int"
+        },
+        "kind": "slice"
+       },
+       "type": {
+        "kind": "bool"
+       },
+       "x": {
+        "expr": "ident",
+        "name": "b",
+        "type": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       },
+       "y": {
+        "expr": "nil"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "op": "+",
+         "read": {
+          "expr": "ident",
+          "name": "n",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "rhs": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "100"
+         },
+         "stmt": "compound-assign",
+         "target": {
+          "id": "n",
+          "target": "var"
+         }
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "cond": {
+       "expr": "binary",
+       "op": "==",
+       "operandType": {
+        "elem": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "slice"
+       },
+       "type": {
+        "kind": "bool"
+       },
+       "x": {
+        "expr": "ident",
+        "name": "xs",
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       },
+       "y": {
+        "expr": "nil"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "op": "+",
+         "read": {
+          "expr": "ident",
+          "name": "n",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "rhs": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "10"
+         },
+         "stmt": "compound-assign",
+         "target": {
+          "id": "n",
+          "target": "var"
+         }
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "elem": {
+       "int": "int",
+       "kind": "int"
+      },
+      "elems": [
+       {
+        "index": 0,
+        "value": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "5"
+        }
+       }
+      ],
+      "length": 1,
+      "stmt": "slice-lit",
+      "target": {
+       "id": "$c5",
+       "target": "declare",
+       "type": {
+        "elem": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "slice"
+       }
+      }
+     },
+     {
+      "elem": {
+       "int": "int",
+       "kind": "int"
+      },
+      "elems": {
+       "expr": "ident",
+       "name": "$c5",
+       "type": {
+        "elem": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "slice"
+       }
+      },
+      "slice": {
+       "expr": "ident",
+       "name": "xs",
+       "type": {
+        "elem": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "slice"
+       }
+      },
+      "stmt": "append",
+      "target": {
+       "id": "$c6",
+       "target": "declare",
+       "type": {
+        "elem": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "slice"
+       }
+      }
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "id": "xs",
+        "target": "var"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "$c6",
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "-",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "binary",
+         "op": "+",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "binary",
+          "op": "+",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "x": {
+           "expr": "ident",
+           "name": "n",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           }
+          },
+          "y": {
+           "expr": "builtin-len",
+           "operand": {
+            "expr": "ident",
+            "name": "b",
+            "type": {
+             "elem": {
+              "int": "uint8",
+              "kind": "int"
+             },
+             "kind": "slice"
+            }
+           },
+           "operandType": {
+            "elem": {
+             "int": "uint8",
+             "kind": "int"
+            },
+            "kind": "slice"
+           },
+           "type": {
+            "int": "int",
+            "kind": "int"
+           }
+          }
+         },
+         "y": {
+          "base": {
+           "expr": "ident",
+           "name": "xs",
+           "type": {
+            "elem": {
+             "int": "int",
+             "kind": "int"
+            },
+            "kind": "slice"
+           }
+          },
+          "expr": "index-get",
+          "index": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "0"
+          },
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         }
+        },
+        "y": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "4"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "uctSliceNil",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "m",
+        "target": "declare",
+        "type": {
+         "key": {
+          "kind": "string"
+         },
+         "kind": "map",
+         "value": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "key": {
+          "kind": "string"
+         },
+         "kind": "map",
+         "value": {
+          "int": "int",
+          "kind": "int"
+         }
+        },
+        "type": {
+         "key": {
+          "kind": "string"
+         },
+         "kind": "map",
+         "value": {
+          "int": "int",
+          "kind": "int"
+         }
+        },
+        "x": {
+         "expr": "nil"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "n",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "builtin-len",
+        "operand": {
+         "expr": "ident",
+         "name": "m",
+         "type": {
+          "key": {
+           "kind": "string"
+          },
+          "kind": "map",
+          "value": {
+           "int": "int",
+           "kind": "int"
+          }
+         }
+        },
+        "operandType": {
+         "key": {
+          "kind": "string"
+         },
+         "kind": "map",
+         "value": {
+          "int": "int",
+          "kind": "int"
+         }
+        },
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cond": {
+       "expr": "binary",
+       "op": "==",
+       "operandType": {
+        "key": {
+         "kind": "string"
+        },
+        "kind": "map",
+        "value": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       "type": {
+        "kind": "bool"
+       },
+       "x": {
+        "expr": "ident",
+        "name": "m",
+        "type": {
+         "key": {
+          "kind": "string"
+         },
+         "kind": "map",
+         "value": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       },
+       "y": {
+        "expr": "nil"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "op": "+",
+         "read": {
+          "expr": "ident",
+          "name": "n",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "rhs": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "10"
+         },
+         "stmt": "compound-assign",
+         "target": {
+          "id": "n",
+          "target": "var"
+         }
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "n",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        },
+        "y": {
+         "base": {
+          "expr": "ident",
+          "name": "m",
+          "type": {
+           "key": {
+            "kind": "string"
+           },
+           "kind": "map",
+           "value": {
+            "int": "int",
+            "kind": "int"
+           }
+          }
+         },
+         "expr": "map-get",
+         "index": {
+          "bytes": [
+           97,
+           98,
+           115,
+           101,
+           110,
+           116
+          ],
+          "expr": "string",
+          "type": {
+           "kind": "string"
+          }
+         },
+         "keyType": {
+          "kind": "string"
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "valueType": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "uctMapNil",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  }
+ ],
+ "methodSets": [
+  {
+   "coverage": "full",
+   "type": "main.uctCell"
+  },
+  {
+   "coverage": "full",
+   "type": "main.uctFn"
+  },
+  {
+   "coverage": "full",
+   "type": "main.uctInts"
+  },
+  {
+   "coverage": "full",
+   "type": "main.uctM"
+  }
+ ],
+ "methods": [],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": [
+  {
+   "def": {
+    "fields": [
+     {
+      "embedded": false,
+      "name": "n",
+      "type": {
+       "int": "int",
+       "kind": "int"
+      }
+     }
+    ],
+    "kind": "struct"
+   },
+   "display": "main.uctCell",
+   "name": "main.uctCell",
+   "pkg": "main"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "elem": {
+      "int": "int",
+      "kind": "int"
+     },
+     "kind": "slice"
+    }
+   },
+   "display": "main.uctInts",
+   "name": "main.uctInts",
+   "pkg": "main"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "key": {
+      "kind": "string"
+     },
+     "kind": "map",
+     "value": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   },
+   "display": "main.uctM",
+   "name": "main.uctM",
+   "pkg": "main"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "kind": "func",
+     "params": [
+      {
+       "int": "int",
+       "kind": "int"
+      }
+     ],
+     "results": [
+      {
+       "int": "int",
+       "kind": "int"
+      }
+     ],
+     "variadic": false
+    }
+   },
+   "display": "main.uctFn",
+   "name": "main.uctFn",
+   "pkg": "main"
+  }
+ ]
+}

@@ -1,0 +1,9 @@
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+building Lean executable...
+Build completed successfully (62 jobs).
+native frontend: per-case type-check + emit (no batch export)
+FAIL	adversarial/TaggedArray	arrays,conversions	stage=frontend-export	detail={"message":"frontend-quarantined: anonymous non-empty struct type struct{X int \"a\"}","output":"","schema":"golean-observation-v1","status":"unsupported"}
+
+differential coverage summary: cases=1 pass=0 fail=1 export_status=0
+results: artifacts/bug103-adversarial-tagged/latest.tsv
+metadata: artifacts/bug103-adversarial-tagged/latest.meta.tsv

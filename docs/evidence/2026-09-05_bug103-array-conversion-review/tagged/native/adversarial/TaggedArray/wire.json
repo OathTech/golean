@@ -1,0 +1,22 @@
+{
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "arity": 0,
+   "name": "TaggedArray",
+   "unsupported": "anonymous non-empty struct type struct{X int \"a\"}"
+  }
+ ],
+ "methodSets": [],
+ "methods": [],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": []
+}

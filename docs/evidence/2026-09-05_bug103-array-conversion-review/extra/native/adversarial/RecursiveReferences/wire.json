@@ -1,0 +1,2723 @@
+{
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "x",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "array",
+         "len": 2
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "elem": {
+         "int": "int",
+         "kind": "int"
+        },
+        "elems": [
+         {
+          "index": 0,
+          "value": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "2"
+          }
+         },
+         {
+          "index": 1,
+          "value": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "3"
+          }
+         }
+        ],
+        "expr": "array-lit",
+        "length": 2,
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "array",
+         "len": 2
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "a",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.A"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "kind": "named",
+         "name": "main.A"
+        },
+        "type": {
+         "kind": "named",
+         "name": "main.A"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "elem": {
+           "int": "int",
+           "kind": "int"
+          },
+          "kind": "array",
+          "len": 2
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "b",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.B"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "kind": "named",
+         "name": "main.B"
+        },
+        "type": {
+         "kind": "named",
+         "name": "main.B"
+        },
+        "x": {
+         "expr": "convert",
+         "target": {
+          "kind": "named",
+          "name": "main.A"
+         },
+         "type": {
+          "kind": "named",
+          "name": "main.A"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "a",
+          "type": {
+           "kind": "named",
+           "name": "main.A"
+          }
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "base": {
+          "expr": "ref",
+          "id": "b"
+         },
+         "expr": "index-addr",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "0"
+         }
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "5"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "decls": [
+       {
+        "id": "boxed",
+        "init": {
+         "dynamic": {
+          "kind": "named",
+          "name": "main.B"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "expr": "ident",
+          "name": "b",
+          "type": {
+           "kind": "named",
+           "name": "main.B"
+          }
+         },
+         "target": {
+          "kind": "interface",
+          "name": "any"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "boxed",
+       "type": {
+        "kind": "interface",
+        "name": "any"
+       }
+      },
+      "okTarget": {
+       "id": "right",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "target": "blank"
+      },
+      "targetType": {
+       "kind": "named",
+       "name": "main.B"
+      }
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "boxed",
+       "type": {
+        "kind": "interface",
+        "name": "any"
+       }
+      },
+      "okTarget": {
+       "id": "wrong",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "target": "blank"
+      },
+      "targetType": {
+       "kind": "named",
+       "name": "main.A"
+      }
+     },
+     {
+      "cond": {
+       "expr": "binary",
+       "op": "||",
+       "type": {
+        "kind": "bool"
+       },
+       "x": {
+        "expr": "unary",
+        "op": "!",
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "right",
+         "type": {
+          "kind": "bool"
+         }
+        }
+       },
+       "y": {
+        "expr": "ident",
+        "name": "wrong",
+        "type": {
+         "kind": "bool"
+        }
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "results": [
+          {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "-1"
+          }
+         ],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "binary",
+         "op": "+",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "binary",
+          "op": "*",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "x": {
+           "base": {
+            "expr": "ident",
+            "name": "x",
+            "type": {
+             "elem": {
+              "int": "int",
+              "kind": "int"
+             },
+             "kind": "array",
+             "len": 2
+            }
+           },
+           "expr": "index-get",
+           "index": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "0"
+           },
+           "type": {
+            "int": "int",
+            "kind": "int"
+           }
+          },
+          "y": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "100"
+          }
+         },
+         "y": {
+          "expr": "binary",
+          "op": "*",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "x": {
+           "base": {
+            "expr": "ident",
+            "name": "a",
+            "type": {
+             "kind": "named",
+             "name": "main.A"
+            }
+           },
+           "expr": "index-get",
+           "index": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "0"
+           },
+           "type": {
+            "int": "int",
+            "kind": "int"
+           }
+          },
+          "y": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "10"
+          }
+         }
+        },
+        "y": {
+         "base": {
+          "expr": "ident",
+          "name": "b",
+          "type": {
+           "kind": "named",
+           "name": "main.B"
+          }
+         },
+         "expr": "index-get",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "0"
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "NamedIdentity",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "decls": [
+       {
+        "id": "p",
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "pointer"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "x",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.IA"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "elem": {
+         "kind": "interface",
+         "name": "any"
+        },
+        "elems": [
+         {
+          "index": 0,
+          "value": {
+           "dynamic": {
+            "elem": {
+             "int": "int",
+             "kind": "int"
+            },
+            "kind": "pointer"
+           },
+           "expr": "to-interface",
+           "operand": {
+            "expr": "ident",
+            "name": "p",
+            "type": {
+             "elem": {
+              "int": "int",
+              "kind": "int"
+             },
+             "kind": "pointer"
+            }
+           },
+           "target": {
+            "kind": "interface",
+            "name": "any"
+           }
+          }
+         },
+         {
+          "index": 1,
+          "value": {
+           "dynamic": {
+            "kind": "named",
+            "name": "main.A"
+           },
+           "expr": "to-interface",
+           "operand": {
+            "elem": {
+             "int": "int",
+             "kind": "int"
+            },
+            "elems": [
+             {
+              "index": 0,
+              "value": {
+               "expr": "int",
+               "type": {
+                "int": "int",
+                "kind": "int"
+               },
+               "value": "2"
+              }
+             },
+             {
+              "index": 1,
+              "value": {
+               "expr": "int",
+               "type": {
+                "int": "int",
+                "kind": "int"
+               },
+               "value": "3"
+              }
+             }
+            ],
+            "expr": "array-lit",
+            "length": 2,
+            "type": {
+             "kind": "named",
+             "name": "main.A"
+            }
+           },
+           "target": {
+            "kind": "interface",
+            "name": "any"
+           }
+          }
+         }
+        ],
+        "expr": "array-lit",
+        "length": 2,
+        "type": {
+         "kind": "named",
+         "name": "main.IA"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "y",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.IB"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "kind": "named",
+         "name": "main.IB"
+        },
+        "type": {
+         "kind": "named",
+         "name": "main.IB"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "kind": "named",
+          "name": "main.IA"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "base": {
+          "expr": "ref",
+          "id": "y"
+         },
+         "expr": "index-addr",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "1"
+         }
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "dynamic": {
+         "kind": "named",
+         "name": "main.A"
+        },
+        "expr": "to-interface",
+        "operand": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "elems": [
+          {
+           "index": 0,
+           "value": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "4"
+           }
+          },
+          {
+           "index": 1,
+           "value": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "5"
+           }
+          }
+         ],
+         "expr": "array-lit",
+         "length": 2,
+         "type": {
+          "kind": "named",
+          "name": "main.A"
+         }
+        },
+        "target": {
+         "kind": "interface",
+         "name": "any"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cond": {
+       "expr": "binary",
+       "op": "==",
+       "operandType": {
+        "kind": "interface",
+        "name": "any"
+       },
+       "type": {
+        "kind": "bool"
+       },
+       "x": {
+        "base": {
+         "expr": "ident",
+         "name": "y",
+         "type": {
+          "kind": "named",
+          "name": "main.IB"
+         }
+        },
+        "expr": "index-get",
+        "index": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "0"
+        },
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       },
+       "y": {
+        "expr": "nil"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "results": [
+          {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "-1"
+          }
+         ],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "expr": {
+       "base": {
+        "expr": "ident",
+        "name": "y",
+        "type": {
+         "kind": "named",
+         "name": "main.IB"
+        }
+       },
+       "expr": "index-get",
+       "index": {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "0"
+       },
+       "type": {
+        "kind": "interface",
+        "name": "any"
+       }
+      },
+      "okTarget": {
+       "id": "ok",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "id": "q",
+       "target": "declare",
+       "type": {
+        "elem": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "pointer"
+       }
+      },
+      "targetType": {
+       "elem": {
+        "int": "int",
+        "kind": "int"
+       },
+       "kind": "pointer"
+      }
+     },
+     {
+      "cond": {
+       "expr": "binary",
+       "op": "||",
+       "type": {
+        "kind": "bool"
+       },
+       "x": {
+        "expr": "unary",
+        "op": "!",
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "ok",
+         "type": {
+          "kind": "bool"
+         }
+        }
+       },
+       "y": {
+        "expr": "binary",
+        "op": "!=",
+        "operandType": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "pointer"
+        },
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "q",
+         "type": {
+          "elem": {
+           "int": "int",
+           "kind": "int"
+          },
+          "kind": "pointer"
+         }
+        },
+        "y": {
+         "expr": "nil"
+        }
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "results": [
+          {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "-2"
+          }
+         ],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "binary",
+         "op": "*",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "base": {
+           "expr": "type-assert",
+           "operand": {
+            "base": {
+             "expr": "ident",
+             "name": "x",
+             "type": {
+              "kind": "named",
+              "name": "main.IA"
+             }
+            },
+            "expr": "index-get",
+            "index": {
+             "expr": "int",
+             "type": {
+              "int": "int",
+              "kind": "int"
+             },
+             "value": "1"
+            },
+            "type": {
+             "kind": "interface",
+             "name": "any"
+            }
+           },
+           "source": {
+            "kind": "interface",
+            "name": "any"
+           },
+           "target": {
+            "kind": "named",
+            "name": "main.A"
+           },
+           "type": {
+            "kind": "named",
+            "name": "main.A"
+           }
+          },
+          "expr": "index-get",
+          "index": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "0"
+          },
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "y": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "10"
+         }
+        },
+        "y": {
+         "base": {
+          "expr": "type-assert",
+          "operand": {
+           "base": {
+            "expr": "ident",
+            "name": "y",
+            "type": {
+             "kind": "named",
+             "name": "main.IB"
+            }
+           },
+           "expr": "index-get",
+           "index": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "1"
+           },
+           "type": {
+            "kind": "interface",
+            "name": "any"
+           }
+          },
+          "source": {
+           "kind": "interface",
+           "name": "any"
+          },
+          "target": {
+           "kind": "named",
+           "name": "main.A"
+          },
+          "type": {
+           "kind": "named",
+           "name": "main.A"
+          }
+         },
+         "expr": "index-get",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "0"
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "InterfaceElements",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "results": [
+       {
+        "expr": "deref",
+        "ptr": {
+         "expr": "ident",
+         "name": "n$cap"
+        },
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "OtherReferences$lit0",
+   "params": [
+    {
+     "id": "n$cap",
+     "type": {
+      "elem": {
+       "int": "int",
+       "kind": "int"
+      },
+      "kind": "pointer"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "n",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "2"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "entries": [
+       {
+        "key": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "0"
+        },
+        "value": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "3"
+        }
+       }
+      ],
+      "keyType": {
+       "int": "int",
+       "kind": "int"
+      },
+      "stmt": "map-lit",
+      "target": {
+       "id": "$c0",
+       "target": "declare",
+       "type": {
+        "key": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "map",
+        "value": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      },
+      "valueType": {
+       "int": "int",
+       "kind": "int"
+      }
+     },
+     {
+      "cap": {
+       "expr": "int",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "value": "1"
+      },
+      "elem": {
+       "int": "int",
+       "kind": "int"
+      },
+      "stmt": "make-chan",
+      "target": {
+       "id": "$c1",
+       "target": "declare",
+       "type": {
+        "dir": "both",
+        "elem": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "chan"
+       }
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "x",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.RA"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "elem": {
+         "kind": "named",
+         "name": "main.Ref"
+        },
+        "elems": [
+         {
+          "index": 0,
+          "value": {
+           "args": [
+            {
+             "expr": "ident",
+             "name": "$c0",
+             "type": {
+              "key": {
+               "int": "int",
+               "kind": "int"
+              },
+              "kind": "map",
+              "value": {
+               "int": "int",
+               "kind": "int"
+              }
+             }
+            },
+            {
+             "captured": [
+              {
+               "expr": "ref",
+               "id": "n"
+              }
+             ],
+             "expr": "func-value",
+             "func": "OtherReferences$lit0",
+             "type": {
+              "kind": "func",
+              "params": [],
+              "results": [
+               {
+                "int": "int",
+                "kind": "int"
+               }
+              ],
+              "variadic": false
+             }
+            },
+            {
+             "expr": "ident",
+             "name": "$c1",
+             "type": {
+              "dir": "both",
+              "elem": {
+               "int": "int",
+               "kind": "int"
+              },
+              "kind": "chan"
+             }
+            }
+           ],
+           "expr": "struct-lit",
+           "target": {
+            "kind": "named",
+            "name": "main.Ref"
+           },
+           "type": {
+            "kind": "named",
+            "name": "main.Ref"
+           }
+          }
+         }
+        ],
+        "expr": "array-lit",
+        "length": 1,
+        "type": {
+         "kind": "named",
+         "name": "main.RA"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "y",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.RB"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "kind": "named",
+         "name": "main.RB"
+        },
+        "type": {
+         "kind": "named",
+         "name": "main.RB"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "kind": "named",
+          "name": "main.RA"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "base": {
+       "expr": "field-get",
+       "field": "m",
+       "recv": {
+        "base": {
+         "expr": "ident",
+         "name": "y",
+         "type": {
+          "kind": "named",
+          "name": "main.RB"
+         }
+        },
+        "expr": "index-get",
+        "index": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "0"
+        },
+        "type": {
+         "kind": "named",
+         "name": "main.Ref"
+        }
+       },
+       "type": {
+        "key": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "map",
+        "value": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       "typeId": "main.Ref"
+      },
+      "index": {
+       "expr": "int",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "value": "0"
+      },
+      "keyType": {
+       "int": "int",
+       "kind": "int"
+      },
+      "stmt": "map-assign",
+      "value": {
+       "expr": "int",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "value": "4"
+      },
+      "valueType": {
+       "int": "int",
+       "kind": "int"
+      }
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "id": "n",
+        "target": "var"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "5"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "ch": {
+       "expr": "field-get",
+       "field": "c",
+       "recv": {
+        "base": {
+         "expr": "ident",
+         "name": "y",
+         "type": {
+          "kind": "named",
+          "name": "main.RB"
+         }
+        },
+        "expr": "index-get",
+        "index": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "0"
+        },
+        "type": {
+         "kind": "named",
+         "name": "main.Ref"
+        }
+       },
+       "type": {
+        "dir": "both",
+        "elem": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "chan"
+       },
+       "typeId": "main.Ref"
+      },
+      "elem": {
+       "int": "int",
+       "kind": "int"
+      },
+      "stmt": "chan-send",
+      "value": {
+       "expr": "int",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "value": "6"
+      }
+     },
+     {
+      "ch": {
+       "expr": "field-get",
+       "field": "c",
+       "recv": {
+        "base": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "kind": "named",
+          "name": "main.RA"
+         }
+        },
+        "expr": "index-get",
+        "index": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "0"
+        },
+        "type": {
+         "kind": "named",
+         "name": "main.Ref"
+        }
+       },
+       "type": {
+        "dir": "both",
+        "elem": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "chan"
+       },
+       "typeId": "main.Ref"
+      },
+      "elem": {
+       "int": "int",
+       "kind": "int"
+      },
+      "stmt": "chan-recv",
+      "targets": [
+       {
+        "id": "v",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ]
+     },
+     {
+      "entries": [
+       {
+        "key": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "0"
+        },
+        "value": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "7"
+        }
+       }
+      ],
+      "keyType": {
+       "int": "int",
+       "kind": "int"
+      },
+      "stmt": "map-lit",
+      "target": {
+       "id": "$c2",
+       "target": "declare",
+       "type": {
+        "key": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "map",
+        "value": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      },
+      "valueType": {
+       "int": "int",
+       "kind": "int"
+      }
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "base": {
+          "base": {
+           "expr": "ref",
+           "id": "y"
+          },
+          "expr": "index-addr",
+          "index": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "0"
+          }
+         },
+         "expr": "field-addr",
+         "field": "m",
+         "typeId": "main.Ref"
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "$c2",
+        "type": {
+         "key": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "map",
+         "value": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "expr": {
+       "expr": "field-get",
+       "field": "m",
+       "recv": {
+        "base": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "kind": "named",
+          "name": "main.RA"
+         }
+        },
+        "expr": "index-get",
+        "index": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "0"
+        },
+        "type": {
+         "kind": "named",
+         "name": "main.Ref"
+        }
+       },
+       "type": {
+        "key": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "map",
+        "value": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       "typeId": "main.Ref"
+      },
+      "stmt": "unseq-probe"
+     },
+     {
+      "expr": {
+       "expr": "field-get",
+       "field": "m",
+       "recv": {
+        "base": {
+         "expr": "ident",
+         "name": "y",
+         "type": {
+          "kind": "named",
+          "name": "main.RB"
+         }
+        },
+        "expr": "index-get",
+        "index": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "0"
+        },
+        "type": {
+         "kind": "named",
+         "name": "main.Ref"
+        }
+       },
+       "type": {
+        "key": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "map",
+        "value": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       "typeId": "main.Ref"
+      },
+      "stmt": "unseq-probe"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c3",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [],
+        "callee": {
+         "expr": "field-get",
+         "field": "f",
+         "recv": {
+          "base": {
+           "expr": "ident",
+           "name": "y",
+           "type": {
+            "kind": "named",
+            "name": "main.RB"
+           }
+          },
+          "expr": "index-get",
+          "index": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "0"
+          },
+          "type": {
+           "kind": "named",
+           "name": "main.Ref"
+          }
+         },
+         "typeId": "main.Ref"
+        },
+        "expr": "call-value",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "binary",
+         "op": "+",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "binary",
+          "op": "+",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "x": {
+           "expr": "binary",
+           "op": "*",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "x": {
+            "base": {
+             "expr": "field-get",
+             "field": "m",
+             "recv": {
+              "base": {
+               "expr": "ident",
+               "name": "x",
+               "type": {
+                "kind": "named",
+                "name": "main.RA"
+               }
+              },
+              "expr": "index-get",
+              "index": {
+               "expr": "int",
+               "type": {
+                "int": "int",
+                "kind": "int"
+               },
+               "value": "0"
+              },
+              "type": {
+               "kind": "named",
+               "name": "main.Ref"
+              }
+             },
+             "type": {
+              "key": {
+               "int": "int",
+               "kind": "int"
+              },
+              "kind": "map",
+              "value": {
+               "int": "int",
+               "kind": "int"
+              }
+             },
+             "typeId": "main.Ref"
+            },
+            "expr": "map-get",
+            "index": {
+             "expr": "int",
+             "type": {
+              "int": "int",
+              "kind": "int"
+             },
+             "value": "0"
+            },
+            "keyType": {
+             "int": "int",
+             "kind": "int"
+            },
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "valueType": {
+             "int": "int",
+             "kind": "int"
+            }
+           },
+           "y": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "1000"
+           }
+          },
+          "y": {
+           "expr": "binary",
+           "op": "*",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "x": {
+            "base": {
+             "expr": "field-get",
+             "field": "m",
+             "recv": {
+              "base": {
+               "expr": "ident",
+               "name": "y",
+               "type": {
+                "kind": "named",
+                "name": "main.RB"
+               }
+              },
+              "expr": "index-get",
+              "index": {
+               "expr": "int",
+               "type": {
+                "int": "int",
+                "kind": "int"
+               },
+               "value": "0"
+              },
+              "type": {
+               "kind": "named",
+               "name": "main.Ref"
+              }
+             },
+             "type": {
+              "key": {
+               "int": "int",
+               "kind": "int"
+              },
+              "kind": "map",
+              "value": {
+               "int": "int",
+               "kind": "int"
+              }
+             },
+             "typeId": "main.Ref"
+            },
+            "expr": "map-get",
+            "index": {
+             "expr": "int",
+             "type": {
+              "int": "int",
+              "kind": "int"
+             },
+             "value": "0"
+            },
+            "keyType": {
+             "int": "int",
+             "kind": "int"
+            },
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "valueType": {
+             "int": "int",
+             "kind": "int"
+            }
+           },
+           "y": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "100"
+           }
+          }
+         },
+         "y": {
+          "expr": "binary",
+          "op": "*",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "x": {
+           "expr": "ident",
+           "name": "$c3",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           }
+          },
+          "y": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "10"
+          }
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "v",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "OtherReferences",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "decls": [
+       {
+        "id": "x",
+        "type": {
+         "kind": "named",
+         "name": "main.Rec"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "base": {
+          "expr": "ref",
+          "id": "x"
+         },
+         "expr": "index-addr",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "0"
+         }
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ref",
+        "id": "x",
+        "type": {
+         "elem": {
+          "kind": "named",
+          "name": "main.Rec"
+         },
+         "kind": "pointer"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "y",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.RecCopy"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "kind": "named",
+         "name": "main.RecCopy"
+        },
+        "type": {
+         "kind": "named",
+         "name": "main.RecCopy"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "kind": "named",
+          "name": "main.Rec"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cond": {
+       "expr": "binary",
+       "op": "||",
+       "type": {
+        "kind": "bool"
+       },
+       "x": {
+        "expr": "binary",
+        "op": "!=",
+        "operandType": {
+         "elem": {
+          "kind": "named",
+          "name": "main.Rec"
+         },
+         "kind": "pointer"
+        },
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "base": {
+          "expr": "ident",
+          "name": "y",
+          "type": {
+           "kind": "named",
+           "name": "main.RecCopy"
+          }
+         },
+         "expr": "index-get",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "0"
+         },
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "main.Rec"
+          },
+          "kind": "pointer"
+         }
+        },
+        "y": {
+         "expr": "ref",
+         "id": "x",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "main.Rec"
+          },
+          "kind": "pointer"
+         }
+        }
+       },
+       "y": {
+        "expr": "binary",
+        "op": "!=",
+        "operandType": {
+         "elem": {
+          "kind": "named",
+          "name": "main.Rec"
+         },
+         "kind": "pointer"
+        },
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "base": {
+          "expr": "deref",
+          "ptr": {
+           "base": {
+            "expr": "ident",
+            "name": "y",
+            "type": {
+             "kind": "named",
+             "name": "main.RecCopy"
+            }
+           },
+           "expr": "index-get",
+           "index": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "0"
+           },
+           "type": {
+            "elem": {
+             "kind": "named",
+             "name": "main.Rec"
+            },
+            "kind": "pointer"
+           }
+          },
+          "type": {
+           "kind": "named",
+           "name": "main.Rec"
+          }
+         },
+         "expr": "index-get",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "0"
+         },
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "main.Rec"
+          },
+          "kind": "pointer"
+         }
+        },
+        "y": {
+         "expr": "ref",
+         "id": "x",
+         "type": {
+          "elem": {
+           "kind": "named",
+           "name": "main.Rec"
+          },
+          "kind": "pointer"
+         }
+        }
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "results": [
+          {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "-1"
+          }
+         ],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "base": {
+          "expr": "ref",
+          "id": "y"
+         },
+         "expr": "index-addr",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "0"
+         }
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "nil",
+        "type": {
+         "elem": {
+          "kind": "named",
+          "name": "main.Rec"
+         },
+         "kind": "pointer"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cond": {
+       "expr": "binary",
+       "op": "!=",
+       "operandType": {
+        "elem": {
+         "kind": "named",
+         "name": "main.Rec"
+        },
+        "kind": "pointer"
+       },
+       "type": {
+        "kind": "bool"
+       },
+       "x": {
+        "base": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "kind": "named",
+          "name": "main.Rec"
+         }
+        },
+        "expr": "index-get",
+        "index": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "0"
+        },
+        "type": {
+         "elem": {
+          "kind": "named",
+          "name": "main.Rec"
+         },
+         "kind": "pointer"
+        }
+       },
+       "y": {
+        "expr": "ref",
+        "id": "x",
+        "type": {
+         "elem": {
+          "kind": "named",
+          "name": "main.Rec"
+         },
+         "kind": "pointer"
+        }
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "results": [
+          {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "-2"
+          }
+         ],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "1"
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "RecursiveReferences",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "x",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.EF"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "elem": {
+         "kind": "func",
+         "params": [],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        },
+        "elems": [],
+        "expr": "array-lit",
+        "length": 0,
+        "type": {
+         "kind": "named",
+         "name": "main.EF"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "y",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.EG"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "kind": "named",
+         "name": "main.EG"
+        },
+        "type": {
+         "kind": "named",
+         "name": "main.EG"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "kind": "named",
+          "name": "main.EF"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "0"
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "EmptyFunctions",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  }
+ ],
+ "methodSets": [
+  {
+   "coverage": "full",
+   "type": "main.A"
+  },
+  {
+   "coverage": "full",
+   "type": "main.B"
+  },
+  {
+   "coverage": "full",
+   "type": "main.EF"
+  },
+  {
+   "coverage": "full",
+   "type": "main.EG"
+  },
+  {
+   "coverage": "full",
+   "type": "main.IA"
+  },
+  {
+   "coverage": "full",
+   "type": "main.IB"
+  },
+  {
+   "coverage": "full",
+   "type": "main.RA"
+  },
+  {
+   "coverage": "full",
+   "type": "main.RB"
+  },
+  {
+   "coverage": "full",
+   "type": "main.Rec"
+  },
+  {
+   "coverage": "full",
+   "type": "main.RecCopy"
+  },
+  {
+   "coverage": "full",
+   "type": "main.Ref"
+  }
+ ],
+ "methods": [],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": [
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "elem": {
+      "int": "int",
+      "kind": "int"
+     },
+     "kind": "array",
+     "len": 2
+    }
+   },
+   "display": "main.A",
+   "name": "main.A",
+   "pkg": "main"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "elem": {
+      "int": "int",
+      "kind": "int"
+     },
+     "kind": "array",
+     "len": 2
+    }
+   },
+   "display": "main.B",
+   "name": "main.B",
+   "pkg": "main"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "elem": {
+      "kind": "interface",
+      "name": "any"
+     },
+     "kind": "array",
+     "len": 2
+    }
+   },
+   "display": "main.IA",
+   "name": "main.IA",
+   "pkg": "main"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "elem": {
+      "kind": "interface",
+      "name": "any"
+     },
+     "kind": "array",
+     "len": 2
+    }
+   },
+   "display": "main.IB",
+   "name": "main.IB",
+   "pkg": "main"
+  },
+  {
+   "def": {
+    "fields": [
+     {
+      "embedded": false,
+      "name": "m",
+      "type": {
+       "key": {
+        "int": "int",
+        "kind": "int"
+       },
+       "kind": "map",
+       "value": {
+        "int": "int",
+        "kind": "int"
+       }
+      }
+     },
+     {
+      "embedded": false,
+      "name": "f",
+      "type": {
+       "kind": "func",
+       "params": [],
+       "results": [
+        {
+         "int": "int",
+         "kind": "int"
+        }
+       ],
+       "variadic": false
+      }
+     },
+     {
+      "embedded": false,
+      "name": "c",
+      "type": {
+       "dir": "both",
+       "elem": {
+        "int": "int",
+        "kind": "int"
+       },
+       "kind": "chan"
+      }
+     }
+    ],
+    "kind": "struct"
+   },
+   "display": "main.Ref",
+   "name": "main.Ref",
+   "pkg": "main"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "elem": {
+      "kind": "named",
+      "name": "main.Ref"
+     },
+     "kind": "array",
+     "len": 1
+    }
+   },
+   "display": "main.RA",
+   "name": "main.RA",
+   "pkg": "main"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "elem": {
+      "kind": "named",
+      "name": "main.Ref"
+     },
+     "kind": "array",
+     "len": 1
+    }
+   },
+   "display": "main.RB",
+   "name": "main.RB",
+   "pkg": "main"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "elem": {
+      "elem": {
+       "kind": "named",
+       "name": "main.Rec"
+      },
+      "kind": "pointer"
+     },
+     "kind": "array",
+     "len": 1
+    }
+   },
+   "display": "main.Rec",
+   "name": "main.Rec",
+   "pkg": "main"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "elem": {
+      "elem": {
+       "kind": "named",
+       "name": "main.Rec"
+      },
+      "kind": "pointer"
+     },
+     "kind": "array",
+     "len": 1
+    }
+   },
+   "display": "main.RecCopy",
+   "name": "main.RecCopy",
+   "pkg": "main"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "elem": {
+      "kind": "func",
+      "params": [],
+      "results": [
+       {
+        "int": "int",
+        "kind": "int"
+       }
+      ],
+      "variadic": false
+     },
+     "kind": "array",
+     "len": 0
+    }
+   },
+   "display": "main.EF",
+   "name": "main.EF",
+   "pkg": "main"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "elem": {
+      "kind": "func",
+      "params": [],
+      "results": [
+       {
+        "int": "int",
+        "kind": "int"
+       }
+      ],
+      "variadic": false
+     },
+     "kind": "array",
+     "len": 0
+    }
+   },
+   "display": "main.EG",
+   "name": "main.EG",
+   "pkg": "main"
+  }
+ ]
+}

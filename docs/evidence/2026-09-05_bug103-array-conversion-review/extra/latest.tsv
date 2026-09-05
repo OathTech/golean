@@ -1,0 +1,6 @@
+result	id	features	stage	detail
+PASS	adversarial/NamedIdentity	arrays,conversions	-	wide=0 exhausted=none depth=fixed
+PASS	adversarial/InterfaceElements	arrays,conversions	-	wide=0 exhausted=none depth=fixed
+PASS	adversarial/OtherReferences	arrays,conversions	-	wide=0 exhausted=none depth=fixed
+PASS	adversarial/RecursiveReferences	arrays,conversions	-	wide=0 exhausted=none depth=fixed
+PASS	adversarial/EmptyFunctions	arrays,conversions	-	wide=0 exhausted=none depth=fixed

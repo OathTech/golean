@@ -1,0 +1,11 @@
+semantic_input_sha256_by_file entries 70 mismatch []
+changed_file_sha256 entries 31 mismatch []
+Fingerprint matches True
+Base 3593 Counter({'PASS': 3347, 'FAIL': 246})
+Tip 3598 Counter({'PASS': 3353, 'FAIL': 245})
+Existing drift [('structs/decl-order-reversed/conversion-array-target', ('FAIL', 'lean-observation'), ('PASS', '-'))]
+Added [('structs/decl-order-reversed/conversion-empty-eval-once', ('PASS', '-')), ('structs/decl-order-reversed/conversion-float-elements', ('PASS', '-')), ('structs/decl-order-reversed/conversion-nested-copy', ('PASS', '-')), ('structs/decl-order-reversed/conversion-shared-references', ('PASS', '-')), ('structs/decl-order-reversed/conversion-unnamed-target', ('PASS', '-'))]
+Full evidence 3598 Counter({'PASS': 3353, 'FAIL': 245})
+Full vs tip [('channels/select-select/beside-loop', 'FAIL', 'lean-observation', ('FAIL', 'lean-observation|differential'))]
+Duplicate full ids 0
+The one raw stage mismatch above is the unchanged allowed-stage baseline row channels/select-select/beside-loop (lean-observation|differential). Repository coverage-baseline-diff --full passes all 3598 rows.

@@ -1,0 +1,5178 @@
+{
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "decls": [
+       {
+        "id": "g",
+        "type": {
+         "kind": "named",
+         "name": "main.Grid"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "base": {
+          "base": {
+           "base": {
+            "base": {
+             "expr": "ref",
+             "id": "g"
+            },
+            "expr": "index-addr",
+            "index": {
+             "expr": "int",
+             "type": {
+              "int": "int",
+              "kind": "int"
+             },
+             "value": "1"
+            }
+           },
+           "expr": "index-addr",
+           "index": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "0"
+           }
+          },
+          "expr": "field-addr",
+          "field": "p",
+          "typeId": "main.Cell"
+         },
+         "expr": "field-addr",
+         "field": "b",
+         "typeId": "main.Pair"
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "7"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "base": {
+          "base": {
+           "base": {
+            "base": {
+             "expr": "ref",
+             "id": "g"
+            },
+            "expr": "index-addr",
+            "index": {
+             "expr": "int",
+             "type": {
+              "int": "int",
+              "kind": "int"
+             },
+             "value": "0"
+            }
+           },
+           "expr": "index-addr",
+           "index": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "1"
+           }
+          },
+          "expr": "field-addr",
+          "field": "cs",
+          "typeId": "main.Cell"
+         },
+         "expr": "index-addr",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "2"
+         }
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "5"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "binary",
+         "op": "+",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "binary",
+          "op": "+",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "x": {
+           "expr": "binary",
+           "op": "*",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "x": {
+            "expr": "convert",
+            "target": {
+             "int": "int",
+             "kind": "int"
+            },
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "x": {
+             "expr": "field-get",
+             "field": "b",
+             "recv": {
+              "expr": "field-get",
+              "field": "p",
+              "recv": {
+               "base": {
+                "base": {
+                 "expr": "ident",
+                 "name": "g",
+                 "type": {
+                  "kind": "named",
+                  "name": "main.Grid"
+                 }
+                },
+                "expr": "index-get",
+                "index": {
+                 "expr": "int",
+                 "type": {
+                  "int": "int",
+                  "kind": "int"
+                 },
+                 "value": "1"
+                },
+                "type": {
+                 "elem": {
+                  "kind": "named",
+                  "name": "main.Cell"
+                 },
+                 "kind": "array",
+                 "len": 2
+                }
+               },
+               "expr": "index-get",
+               "index": {
+                "expr": "int",
+                "type": {
+                 "int": "int",
+                 "kind": "int"
+                },
+                "value": "0"
+               },
+               "type": {
+                "kind": "named",
+                "name": "main.Cell"
+               }
+              },
+              "type": {
+               "kind": "named",
+               "name": "main.Pair"
+              },
+              "typeId": "main.Cell"
+             },
+             "type": {
+              "kind": "named",
+              "name": "main.Code"
+             },
+             "typeId": "main.Pair"
+            }
+           },
+           "y": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "100"
+           }
+          },
+          "y": {
+           "expr": "binary",
+           "op": "*",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "x": {
+            "expr": "convert",
+            "target": {
+             "int": "int",
+             "kind": "int"
+            },
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "x": {
+             "base": {
+              "expr": "field-get",
+              "field": "cs",
+              "recv": {
+               "base": {
+                "base": {
+                 "expr": "ident",
+                 "name": "g",
+                 "type": {
+                  "kind": "named",
+                  "name": "main.Grid"
+                 }
+                },
+                "expr": "index-get",
+                "index": {
+                 "expr": "int",
+                 "type": {
+                  "int": "int",
+                  "kind": "int"
+                 },
+                 "value": "0"
+                },
+                "type": {
+                 "elem": {
+                  "kind": "named",
+                  "name": "main.Cell"
+                 },
+                 "kind": "array",
+                 "len": 2
+                }
+               },
+               "expr": "index-get",
+               "index": {
+                "expr": "int",
+                "type": {
+                 "int": "int",
+                 "kind": "int"
+                },
+                "value": "1"
+               },
+               "type": {
+                "kind": "named",
+                "name": "main.Cell"
+               }
+              },
+              "type": {
+               "kind": "named",
+               "name": "main.Codes"
+              },
+              "typeId": "main.Cell"
+             },
+             "expr": "index-get",
+             "index": {
+              "expr": "int",
+              "type": {
+               "int": "int",
+               "kind": "int"
+              },
+              "value": "2"
+             },
+             "type": {
+              "kind": "named",
+              "name": "main.Code"
+             }
+            }
+           },
+           "y": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "10"
+           }
+          }
+         },
+         "y": {
+          "expr": "convert",
+          "target": {
+           "int": "int",
+           "kind": "int"
+          },
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "x": {
+           "expr": "field-get",
+           "field": "a",
+           "recv": {
+            "expr": "field-get",
+            "field": "p",
+            "recv": {
+             "base": {
+              "base": {
+               "expr": "ident",
+               "name": "g",
+               "type": {
+                "kind": "named",
+                "name": "main.Grid"
+               }
+              },
+              "expr": "index-get",
+              "index": {
+               "expr": "int",
+               "type": {
+                "int": "int",
+                "kind": "int"
+               },
+               "value": "1"
+              },
+              "type": {
+               "elem": {
+                "kind": "named",
+                "name": "main.Cell"
+               },
+               "kind": "array",
+               "len": 2
+              }
+             },
+             "expr": "index-get",
+             "index": {
+              "expr": "int",
+              "type": {
+               "int": "int",
+               "kind": "int"
+              },
+              "value": "1"
+             },
+             "type": {
+              "kind": "named",
+              "name": "main.Cell"
+             }
+            },
+            "type": {
+             "kind": "named",
+             "name": "main.Pair"
+            },
+            "typeId": "main.Cell"
+           },
+           "type": {
+            "kind": "named",
+            "name": "main.Code"
+           },
+           "typeId": "main.Pair"
+          }
+         }
+        },
+        "y": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "3"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "declOrderZeroValues",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "decls": [
+       {
+        "id": "x",
+        "type": {
+         "kind": "named",
+         "name": "main.Grid"
+        }
+       },
+       {
+        "id": "y",
+        "type": {
+         "kind": "named",
+         "name": "main.Grid"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "base": {
+          "base": {
+           "base": {
+            "base": {
+             "expr": "ref",
+             "id": "x"
+            },
+            "expr": "index-addr",
+            "index": {
+             "expr": "int",
+             "type": {
+              "int": "int",
+              "kind": "int"
+             },
+             "value": "0"
+            }
+           },
+           "expr": "index-addr",
+           "index": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "0"
+           }
+          },
+          "expr": "field-addr",
+          "field": "cs",
+          "typeId": "main.Cell"
+         },
+         "expr": "index-addr",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "1"
+         }
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "3"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "eq1",
+        "target": "declare",
+        "type": {
+         "kind": "bool"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "binary",
+        "op": "==",
+        "operandType": {
+         "kind": "named",
+         "name": "main.Grid"
+        },
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "kind": "named",
+          "name": "main.Grid"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "y",
+         "type": {
+          "kind": "named",
+          "name": "main.Grid"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "base": {
+          "base": {
+           "base": {
+            "base": {
+             "expr": "ref",
+             "id": "y"
+            },
+            "expr": "index-addr",
+            "index": {
+             "expr": "int",
+             "type": {
+              "int": "int",
+              "kind": "int"
+             },
+             "value": "0"
+            }
+           },
+           "expr": "index-addr",
+           "index": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "0"
+           }
+          },
+          "expr": "field-addr",
+          "field": "cs",
+          "typeId": "main.Cell"
+         },
+         "expr": "index-addr",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "1"
+         }
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "3"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "eq2",
+        "target": "declare",
+        "type": {
+         "kind": "bool"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "binary",
+        "op": "==",
+        "operandType": {
+         "kind": "named",
+         "name": "main.Grid"
+        },
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "kind": "named",
+          "name": "main.Grid"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "y",
+         "type": {
+          "kind": "named",
+          "name": "main.Grid"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "base": {
+          "base": {
+           "base": {
+            "expr": "ref",
+            "id": "x"
+           },
+           "expr": "index-addr",
+           "index": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "1"
+           }
+          },
+          "expr": "index-addr",
+          "index": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "1"
+          }
+         },
+         "expr": "field-addr",
+         "field": "p",
+         "typeId": "main.Cell"
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "1"
+         },
+         {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "2"
+         }
+        ],
+        "expr": "struct-lit",
+        "target": {
+         "kind": "named",
+         "name": "main.Pair"
+        },
+        "type": {
+         "kind": "named",
+         "name": "main.Pair"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "eq3",
+        "target": "declare",
+        "type": {
+         "kind": "bool"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "binary",
+        "op": "==",
+        "operandType": {
+         "kind": "named",
+         "name": "main.Grid"
+        },
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "kind": "named",
+          "name": "main.Grid"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "y",
+         "type": {
+          "kind": "named",
+          "name": "main.Grid"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "\u0026\u0026",
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "expr": "binary",
+         "op": "\u0026\u0026",
+         "type": {
+          "kind": "bool"
+         },
+         "x": {
+          "expr": "unary",
+          "op": "!",
+          "type": {
+           "kind": "bool"
+          },
+          "x": {
+           "expr": "ident",
+           "name": "eq1",
+           "type": {
+            "kind": "bool"
+           }
+          }
+         },
+         "y": {
+          "expr": "ident",
+          "name": "eq2",
+          "type": {
+           "kind": "bool"
+          }
+         }
+        },
+        "y": {
+         "expr": "unary",
+         "op": "!",
+         "type": {
+          "kind": "bool"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "eq3",
+          "type": {
+           "kind": "bool"
+          }
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "declOrderArrayEquality",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "decls": [
+       {
+        "id": "c",
+        "type": {
+         "kind": "named",
+         "name": "main.Cell"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "base": {
+          "base": {
+           "expr": "ref",
+           "id": "c"
+          },
+          "expr": "field-addr",
+          "field": "p",
+          "typeId": "main.Cell"
+         },
+         "expr": "field-addr",
+         "field": "a",
+         "typeId": "main.Pair"
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "4"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "base": {
+          "base": {
+           "expr": "ref",
+           "id": "c"
+          },
+          "expr": "field-addr",
+          "field": "cs",
+          "typeId": "main.Cell"
+         },
+         "expr": "index-addr",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "0"
+         }
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "9"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "decls": [
+       {
+        "id": "v",
+        "init": {
+         "dynamic": {
+          "kind": "named",
+          "name": "main.Cell"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "expr": "ident",
+          "name": "c",
+          "type": {
+           "kind": "named",
+           "name": "main.Cell"
+          }
+         },
+         "target": {
+          "kind": "interface",
+          "name": "any"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "v",
+       "type": {
+        "kind": "interface",
+        "name": "any"
+       }
+      },
+      "okTarget": {
+       "id": "ok",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "id": "w",
+       "target": "declare",
+       "type": {
+        "kind": "named",
+        "name": "main.Cell"
+       }
+      },
+      "targetType": {
+       "kind": "named",
+       "name": "main.Cell"
+      }
+     },
+     {
+      "cond": {
+       "expr": "unary",
+       "op": "!",
+       "type": {
+        "kind": "bool"
+       },
+       "x": {
+        "expr": "ident",
+        "name": "ok",
+        "type": {
+         "kind": "bool"
+        }
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "results": [
+          {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "-1"
+          }
+         ],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "decls": [
+       {
+        "id": "u",
+        "init": {
+         "dynamic": {
+          "kind": "named",
+          "name": "main.Cell"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "args": [
+           {
+            "args": [
+             {
+              "expr": "int",
+              "type": {
+               "int": "int",
+               "kind": "int"
+              },
+              "value": "4"
+             },
+             {
+              "expr": "default",
+              "type": {
+               "kind": "named",
+               "name": "main.Code"
+              }
+             }
+            ],
+            "expr": "struct-lit",
+            "target": {
+             "kind": "named",
+             "name": "main.Pair"
+            },
+            "type": {
+             "kind": "named",
+             "name": "main.Pair"
+            }
+           },
+           {
+            "elem": {
+             "kind": "named",
+             "name": "main.Code"
+            },
+            "elems": [
+             {
+              "index": 0,
+              "value": {
+               "expr": "int",
+               "type": {
+                "int": "int",
+                "kind": "int"
+               },
+               "value": "9"
+              }
+             },
+             {
+              "index": 1,
+              "value": {
+               "expr": "int",
+               "type": {
+                "int": "int",
+                "kind": "int"
+               },
+               "value": "0"
+              }
+             },
+             {
+              "index": 2,
+              "value": {
+               "expr": "int",
+               "type": {
+                "int": "int",
+                "kind": "int"
+               },
+               "value": "0"
+              }
+             }
+            ],
+            "expr": "array-lit",
+            "length": 3,
+            "type": {
+             "kind": "named",
+             "name": "main.Codes"
+            }
+           }
+          ],
+          "expr": "struct-lit",
+          "target": {
+           "kind": "named",
+           "name": "main.Cell"
+          },
+          "type": {
+           "kind": "named",
+           "name": "main.Cell"
+          }
+         },
+         "target": {
+          "kind": "interface",
+          "name": "any"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "cond": {
+       "expr": "binary",
+       "op": "!=",
+       "operandType": {
+        "kind": "interface",
+        "name": "any"
+       },
+       "type": {
+        "kind": "bool"
+       },
+       "x": {
+        "expr": "ident",
+        "name": "v",
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       },
+       "y": {
+        "expr": "ident",
+        "name": "u",
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "results": [
+          {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "-2"
+          }
+         ],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "cond": {
+       "expr": "ident",
+       "name": "isPair",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "init": {
+       "expr": {
+        "expr": "ident",
+        "name": "v",
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       },
+       "okTarget": {
+        "id": "isPair",
+        "target": "declare",
+        "type": {
+         "kind": "bool"
+        }
+       },
+       "stmt": "type-assert",
+       "target": {
+        "target": "blank"
+       },
+       "targetType": {
+        "kind": "named",
+        "name": "main.Pair"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "results": [
+          {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "-3"
+          }
+         ],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "binary",
+         "op": "*",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "convert",
+          "target": {
+           "int": "int",
+           "kind": "int"
+          },
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "x": {
+           "expr": "field-get",
+           "field": "a",
+           "recv": {
+            "expr": "field-get",
+            "field": "p",
+            "recv": {
+             "expr": "ident",
+             "name": "w",
+             "type": {
+              "kind": "named",
+              "name": "main.Cell"
+             }
+            },
+            "type": {
+             "kind": "named",
+             "name": "main.Pair"
+            },
+            "typeId": "main.Cell"
+           },
+           "type": {
+            "kind": "named",
+            "name": "main.Code"
+           },
+           "typeId": "main.Pair"
+          }
+         },
+         "y": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "10"
+         }
+        },
+        "y": {
+         "expr": "convert",
+         "target": {
+          "int": "int",
+          "kind": "int"
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "base": {
+           "expr": "field-get",
+           "field": "cs",
+           "recv": {
+            "expr": "ident",
+            "name": "w",
+            "type": {
+             "kind": "named",
+             "name": "main.Cell"
+            }
+           },
+           "type": {
+            "kind": "named",
+            "name": "main.Codes"
+           },
+           "typeId": "main.Cell"
+          },
+          "expr": "index-get",
+          "index": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "0"
+          },
+          "type": {
+           "kind": "named",
+           "name": "main.Code"
+          }
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "declOrderInterfaceBox",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "cs",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.Codes"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "elem": {
+         "kind": "named",
+         "name": "main.Code"
+        },
+        "elems": [
+         {
+          "index": 0,
+          "value": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "1"
+          }
+         },
+         {
+          "index": 1,
+          "value": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "2"
+          }
+         },
+         {
+          "index": 2,
+          "value": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "3"
+          }
+         }
+        ],
+        "expr": "array-lit",
+        "length": 3,
+        "type": {
+         "kind": "named",
+         "name": "main.Codes"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "r",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.Raw"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "elem": {
+         "kind": "named",
+         "name": "main.Code"
+        },
+        "elems": [
+         {
+          "index": 0,
+          "value": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "1"
+          }
+         },
+         {
+          "index": 1,
+          "value": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "2"
+          }
+         },
+         {
+          "index": 2,
+          "value": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "3"
+          }
+         }
+        ],
+        "expr": "array-lit",
+        "length": 3,
+        "type": {
+         "kind": "named",
+         "name": "main.Raw"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "d",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.Raw"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "expr": "ident",
+          "name": "r",
+          "type": {
+           "kind": "named",
+           "name": "main.Raw"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "doubleRaw",
+        "resultTypes": [
+         {
+          "kind": "named",
+          "name": "main.Raw"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "n",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "0"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cond": {
+       "expr": "binary",
+       "op": "==",
+       "operandType": {
+        "kind": "named",
+        "name": "main.Raw"
+       },
+       "type": {
+        "kind": "bool"
+       },
+       "x": {
+        "expr": "ident",
+        "name": "r",
+        "type": {
+         "kind": "named",
+         "name": "main.Raw"
+        }
+       },
+       "y": {
+        "elem": {
+         "kind": "named",
+         "name": "main.Code"
+        },
+        "elems": [
+         {
+          "index": 0,
+          "value": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "1"
+          }
+         },
+         {
+          "index": 1,
+          "value": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "2"
+          }
+         },
+         {
+          "index": 2,
+          "value": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "3"
+          }
+         }
+        ],
+        "expr": "array-lit",
+        "length": 3,
+        "type": {
+         "kind": "named",
+         "name": "main.Raw"
+        }
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "define": false,
+         "lhs": [
+          {
+           "id": "n",
+           "target": "var"
+          }
+         ],
+         "rhs": [
+          {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "1"
+          }
+         ],
+         "stmt": "assign"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "decls": [
+       {
+        "id": "z",
+        "type": {
+         "kind": "named",
+         "name": "main.Raw"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "cond": {
+       "expr": "binary",
+       "op": "==",
+       "operandType": {
+        "kind": "named",
+        "name": "main.Raw"
+       },
+       "type": {
+        "kind": "bool"
+       },
+       "x": {
+        "expr": "ident",
+        "name": "z",
+        "type": {
+         "kind": "named",
+         "name": "main.Raw"
+        }
+       },
+       "y": {
+        "elem": {
+         "kind": "named",
+         "name": "main.Code"
+        },
+        "elems": [],
+        "expr": "array-lit",
+        "length": 3,
+        "type": {
+         "kind": "named",
+         "name": "main.Raw"
+        }
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "op": "+",
+         "read": {
+          "expr": "ident",
+          "name": "n",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "rhs": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "2"
+         },
+         "stmt": "compound-assign",
+         "target": {
+          "id": "n",
+          "target": "var"
+         }
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "binary",
+         "op": "+",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "binary",
+          "op": "+",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "x": {
+           "expr": "binary",
+           "op": "*",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "x": {
+            "expr": "convert",
+            "target": {
+             "int": "int",
+             "kind": "int"
+            },
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "x": {
+             "expr": "binary",
+             "op": "+",
+             "type": {
+              "kind": "named",
+              "name": "main.Code"
+             },
+             "x": {
+              "expr": "binary",
+              "op": "+",
+              "type": {
+               "kind": "named",
+               "name": "main.Code"
+              },
+              "x": {
+               "base": {
+                "expr": "ident",
+                "name": "d",
+                "type": {
+                 "kind": "named",
+                 "name": "main.Raw"
+                }
+               },
+               "expr": "index-get",
+               "index": {
+                "expr": "int",
+                "type": {
+                 "int": "int",
+                 "kind": "int"
+                },
+                "value": "0"
+               },
+               "type": {
+                "kind": "named",
+                "name": "main.Code"
+               }
+              },
+              "y": {
+               "base": {
+                "expr": "ident",
+                "name": "d",
+                "type": {
+                 "kind": "named",
+                 "name": "main.Raw"
+                }
+               },
+               "expr": "index-get",
+               "index": {
+                "expr": "int",
+                "type": {
+                 "int": "int",
+                 "kind": "int"
+                },
+                "value": "1"
+               },
+               "type": {
+                "kind": "named",
+                "name": "main.Code"
+               }
+              }
+             },
+             "y": {
+              "base": {
+               "expr": "ident",
+               "name": "d",
+               "type": {
+                "kind": "named",
+                "name": "main.Raw"
+               }
+              },
+              "expr": "index-get",
+              "index": {
+               "expr": "int",
+               "type": {
+                "int": "int",
+                "kind": "int"
+               },
+               "value": "2"
+              },
+              "type": {
+               "kind": "named",
+               "name": "main.Code"
+              }
+             }
+            }
+           },
+           "y": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "100"
+           }
+          },
+          "y": {
+           "expr": "binary",
+           "op": "*",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "x": {
+            "expr": "convert",
+            "target": {
+             "int": "int",
+             "kind": "int"
+            },
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "x": {
+             "base": {
+              "expr": "ident",
+              "name": "cs",
+              "type": {
+               "kind": "named",
+               "name": "main.Codes"
+              }
+             },
+             "expr": "index-get",
+             "index": {
+              "expr": "int",
+              "type": {
+               "int": "int",
+               "kind": "int"
+              },
+              "value": "2"
+             },
+             "type": {
+              "kind": "named",
+              "name": "main.Code"
+             }
+            }
+           },
+           "y": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "10"
+           }
+          }
+         },
+         "y": {
+          "expr": "ident",
+          "name": "n",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         }
+        },
+        "y": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "3"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "declOrderDefinedArrayValues",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "op": "*",
+      "read": {
+       "base": {
+        "expr": "ident",
+        "name": "r",
+        "type": {
+         "kind": "named",
+         "name": "main.Raw"
+        }
+       },
+       "expr": "index-get",
+       "index": {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "0"
+       },
+       "type": {
+        "kind": "named",
+        "name": "main.Code"
+       }
+      },
+      "rhs": {
+       "expr": "int",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "value": "2"
+      },
+      "stmt": "compound-assign",
+      "target": {
+       "expr": {
+        "base": {
+         "expr": "ref",
+         "id": "r"
+        },
+        "expr": "index-addr",
+        "index": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "0"
+        }
+       },
+       "target": "addr"
+      }
+     },
+     {
+      "op": "*",
+      "read": {
+       "base": {
+        "expr": "ident",
+        "name": "r",
+        "type": {
+         "kind": "named",
+         "name": "main.Raw"
+        }
+       },
+       "expr": "index-get",
+       "index": {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "1"
+       },
+       "type": {
+        "kind": "named",
+        "name": "main.Code"
+       }
+      },
+      "rhs": {
+       "expr": "int",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "value": "2"
+      },
+      "stmt": "compound-assign",
+      "target": {
+       "expr": {
+        "base": {
+         "expr": "ref",
+         "id": "r"
+        },
+        "expr": "index-addr",
+        "index": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "1"
+        }
+       },
+       "target": "addr"
+      }
+     },
+     {
+      "op": "*",
+      "read": {
+       "base": {
+        "expr": "ident",
+        "name": "r",
+        "type": {
+         "kind": "named",
+         "name": "main.Raw"
+        }
+       },
+       "expr": "index-get",
+       "index": {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "2"
+       },
+       "type": {
+        "kind": "named",
+        "name": "main.Code"
+       }
+      },
+      "rhs": {
+       "expr": "int",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "value": "2"
+      },
+      "stmt": "compound-assign",
+      "target": {
+       "expr": {
+        "base": {
+         "expr": "ref",
+         "id": "r"
+        },
+        "expr": "index-addr",
+        "index": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "2"
+        }
+       },
+       "target": "addr"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "ident",
+        "name": "r",
+        "type": {
+         "kind": "named",
+         "name": "main.Raw"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "doubleRaw",
+   "params": [
+    {
+     "id": "r",
+     "type": {
+      "kind": "named",
+      "name": "main.Raw"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "named",
+      "name": "main.Raw"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "cs",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.Codes"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "elem": {
+         "kind": "named",
+         "name": "main.Code"
+        },
+        "elems": [
+         {
+          "index": 0,
+          "value": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "1"
+          }
+         },
+         {
+          "index": 1,
+          "value": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "2"
+          }
+         },
+         {
+          "index": 2,
+          "value": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "3"
+          }
+         }
+        ],
+        "expr": "array-lit",
+        "length": 3,
+        "type": {
+         "kind": "named",
+         "name": "main.Codes"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "r",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.Raw"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "kind": "named",
+         "name": "main.Raw"
+        },
+        "type": {
+         "kind": "named",
+         "name": "main.Raw"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "cs",
+         "type": {
+          "kind": "named",
+          "name": "main.Codes"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "arr",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "kind": "named",
+          "name": "main.Code"
+         },
+         "kind": "array",
+         "len": 3
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "elem": {
+          "kind": "named",
+          "name": "main.Code"
+         },
+         "kind": "array",
+         "len": 3
+        },
+        "type": {
+         "elem": {
+          "kind": "named",
+          "name": "main.Code"
+         },
+         "kind": "array",
+         "len": 3
+        },
+        "x": {
+         "expr": "ident",
+         "name": "r",
+         "type": {
+          "kind": "named",
+          "name": "main.Raw"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "base": {
+          "expr": "ref",
+          "id": "r"
+         },
+         "expr": "index-addr",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "0"
+         }
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "40"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "binary",
+         "op": "+",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "binary",
+          "op": "+",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "x": {
+           "expr": "binary",
+           "op": "*",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "x": {
+            "expr": "convert",
+            "target": {
+             "int": "int",
+             "kind": "int"
+            },
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "x": {
+             "expr": "binary",
+             "op": "+",
+             "type": {
+              "kind": "named",
+              "name": "main.Code"
+             },
+             "x": {
+              "expr": "binary",
+              "op": "+",
+              "type": {
+               "kind": "named",
+               "name": "main.Code"
+              },
+              "x": {
+               "base": {
+                "expr": "ident",
+                "name": "arr",
+                "type": {
+                 "elem": {
+                  "kind": "named",
+                  "name": "main.Code"
+                 },
+                 "kind": "array",
+                 "len": 3
+                }
+               },
+               "expr": "index-get",
+               "index": {
+                "expr": "int",
+                "type": {
+                 "int": "int",
+                 "kind": "int"
+                },
+                "value": "0"
+               },
+               "type": {
+                "kind": "named",
+                "name": "main.Code"
+               }
+              },
+              "y": {
+               "base": {
+                "expr": "ident",
+                "name": "arr",
+                "type": {
+                 "elem": {
+                  "kind": "named",
+                  "name": "main.Code"
+                 },
+                 "kind": "array",
+                 "len": 3
+                }
+               },
+               "expr": "index-get",
+               "index": {
+                "expr": "int",
+                "type": {
+                 "int": "int",
+                 "kind": "int"
+                },
+                "value": "1"
+               },
+               "type": {
+                "kind": "named",
+                "name": "main.Code"
+               }
+              }
+             },
+             "y": {
+              "base": {
+               "expr": "ident",
+               "name": "arr",
+               "type": {
+                "elem": {
+                 "kind": "named",
+                 "name": "main.Code"
+                },
+                "kind": "array",
+                "len": 3
+               }
+              },
+              "expr": "index-get",
+              "index": {
+               "expr": "int",
+               "type": {
+                "int": "int",
+                "kind": "int"
+               },
+               "value": "2"
+              },
+              "type": {
+               "kind": "named",
+               "name": "main.Code"
+              }
+             }
+            }
+           },
+           "y": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "10"
+           }
+          },
+          "y": {
+           "expr": "convert",
+           "target": {
+            "int": "int",
+            "kind": "int"
+           },
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "x": {
+            "base": {
+             "expr": "ident",
+             "name": "r",
+             "type": {
+              "kind": "named",
+              "name": "main.Raw"
+             }
+            },
+            "expr": "index-get",
+            "index": {
+             "expr": "int",
+             "type": {
+              "int": "int",
+              "kind": "int"
+             },
+             "value": "0"
+            },
+            "type": {
+             "kind": "named",
+             "name": "main.Code"
+            }
+           }
+          }
+         },
+         "y": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "3"
+         }
+        },
+        "y": {
+         "expr": "convert",
+         "target": {
+          "int": "int",
+          "kind": "int"
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "base": {
+           "expr": "ident",
+           "name": "cs",
+           "type": {
+            "kind": "named",
+            "name": "main.Codes"
+           }
+          },
+          "expr": "index-get",
+          "index": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "0"
+          },
+          "type": {
+           "kind": "named",
+           "name": "main.Code"
+          }
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "declOrderConversionArrayTarget",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "x",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "array",
+         "len": 2
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "elem": {
+         "int": "int",
+         "kind": "int"
+        },
+        "elems": [
+         {
+          "index": 0,
+          "value": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "3"
+          }
+         },
+         {
+          "index": 1,
+          "value": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "5"
+          }
+         }
+        ],
+        "expr": "array-lit",
+        "length": 2,
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "array",
+         "len": 2
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "y",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "array",
+         "len": 2
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "array",
+         "len": 2
+        },
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "array",
+         "len": 2
+        },
+        "x": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "elem": {
+           "int": "int",
+           "kind": "int"
+          },
+          "kind": "array",
+          "len": 2
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "base": {
+          "expr": "ref",
+          "id": "y"
+         },
+         "expr": "index-addr",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "0"
+         }
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "9"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "binary",
+         "op": "+",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "binary",
+          "op": "*",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "x": {
+           "base": {
+            "expr": "ident",
+            "name": "x",
+            "type": {
+             "elem": {
+              "int": "int",
+              "kind": "int"
+             },
+             "kind": "array",
+             "len": 2
+            }
+           },
+           "expr": "index-get",
+           "index": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "0"
+           },
+           "type": {
+            "int": "int",
+            "kind": "int"
+           }
+          },
+          "y": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "100"
+          }
+         },
+         "y": {
+          "expr": "binary",
+          "op": "*",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "x": {
+           "base": {
+            "expr": "ident",
+            "name": "y",
+            "type": {
+             "elem": {
+              "int": "int",
+              "kind": "int"
+             },
+             "kind": "array",
+             "len": 2
+            }
+           },
+           "expr": "index-get",
+           "index": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "0"
+           },
+           "type": {
+            "int": "int",
+            "kind": "int"
+           }
+          },
+          "y": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "10"
+          }
+         }
+        },
+        "y": {
+         "base": {
+          "expr": "ident",
+          "name": "y",
+          "type": {
+           "elem": {
+            "int": "int",
+            "kind": "int"
+           },
+           "kind": "array",
+           "len": 2
+          }
+         },
+         "expr": "index-get",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "1"
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "declOrderConversionUnnamedTarget",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "decls": [
+       {
+        "id": "x",
+        "type": {
+         "kind": "named",
+         "name": "main.Grid"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "base": {
+          "base": {
+           "base": {
+            "base": {
+             "expr": "ref",
+             "id": "x"
+            },
+            "expr": "index-addr",
+            "index": {
+             "expr": "int",
+             "type": {
+              "int": "int",
+              "kind": "int"
+             },
+             "value": "1"
+            }
+           },
+           "expr": "index-addr",
+           "index": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "0"
+           }
+          },
+          "expr": "field-addr",
+          "field": "p",
+          "typeId": "main.Cell"
+         },
+         "expr": "field-addr",
+         "field": "a",
+         "typeId": "main.Pair"
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "4"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "base": {
+          "base": {
+           "base": {
+            "base": {
+             "expr": "ref",
+             "id": "x"
+            },
+            "expr": "index-addr",
+            "index": {
+             "expr": "int",
+             "type": {
+              "int": "int",
+              "kind": "int"
+             },
+             "value": "1"
+            }
+           },
+           "expr": "index-addr",
+           "index": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "0"
+           }
+          },
+          "expr": "field-addr",
+          "field": "cs",
+          "typeId": "main.Cell"
+         },
+         "expr": "index-addr",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "2"
+         }
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "7"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "y",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.GridCopy"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "kind": "named",
+         "name": "main.GridCopy"
+        },
+        "type": {
+         "kind": "named",
+         "name": "main.GridCopy"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "kind": "named",
+          "name": "main.Grid"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "base": {
+          "base": {
+           "base": {
+            "base": {
+             "expr": "ref",
+             "id": "y"
+            },
+            "expr": "index-addr",
+            "index": {
+             "expr": "int",
+             "type": {
+              "int": "int",
+              "kind": "int"
+             },
+             "value": "1"
+            }
+           },
+           "expr": "index-addr",
+           "index": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "0"
+           }
+          },
+          "expr": "field-addr",
+          "field": "p",
+          "typeId": "main.Cell"
+         },
+         "expr": "field-addr",
+         "field": "a",
+         "typeId": "main.Pair"
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "9"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "base": {
+          "base": {
+           "base": {
+            "base": {
+             "expr": "ref",
+             "id": "y"
+            },
+            "expr": "index-addr",
+            "index": {
+             "expr": "int",
+             "type": {
+              "int": "int",
+              "kind": "int"
+             },
+             "value": "1"
+            }
+           },
+           "expr": "index-addr",
+           "index": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "0"
+           }
+          },
+          "expr": "field-addr",
+          "field": "cs",
+          "typeId": "main.Cell"
+         },
+         "expr": "index-addr",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "2"
+         }
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "8"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "binary",
+         "op": "+",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "binary",
+          "op": "+",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "x": {
+           "expr": "binary",
+           "op": "*",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "x": {
+            "expr": "convert",
+            "target": {
+             "int": "int",
+             "kind": "int"
+            },
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "x": {
+             "expr": "field-get",
+             "field": "a",
+             "recv": {
+              "expr": "field-get",
+              "field": "p",
+              "recv": {
+               "base": {
+                "base": {
+                 "expr": "ident",
+                 "name": "x",
+                 "type": {
+                  "kind": "named",
+                  "name": "main.Grid"
+                 }
+                },
+                "expr": "index-get",
+                "index": {
+                 "expr": "int",
+                 "type": {
+                  "int": "int",
+                  "kind": "int"
+                 },
+                 "value": "1"
+                },
+                "type": {
+                 "elem": {
+                  "kind": "named",
+                  "name": "main.Cell"
+                 },
+                 "kind": "array",
+                 "len": 2
+                }
+               },
+               "expr": "index-get",
+               "index": {
+                "expr": "int",
+                "type": {
+                 "int": "int",
+                 "kind": "int"
+                },
+                "value": "0"
+               },
+               "type": {
+                "kind": "named",
+                "name": "main.Cell"
+               }
+              },
+              "type": {
+               "kind": "named",
+               "name": "main.Pair"
+              },
+              "typeId": "main.Cell"
+             },
+             "type": {
+              "kind": "named",
+              "name": "main.Code"
+             },
+             "typeId": "main.Pair"
+            }
+           },
+           "y": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "1000"
+           }
+          },
+          "y": {
+           "expr": "binary",
+           "op": "*",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "x": {
+            "expr": "convert",
+            "target": {
+             "int": "int",
+             "kind": "int"
+            },
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "x": {
+             "expr": "field-get",
+             "field": "a",
+             "recv": {
+              "expr": "field-get",
+              "field": "p",
+              "recv": {
+               "base": {
+                "base": {
+                 "expr": "ident",
+                 "name": "y",
+                 "type": {
+                  "kind": "named",
+                  "name": "main.GridCopy"
+                 }
+                },
+                "expr": "index-get",
+                "index": {
+                 "expr": "int",
+                 "type": {
+                  "int": "int",
+                  "kind": "int"
+                 },
+                 "value": "1"
+                },
+                "type": {
+                 "elem": {
+                  "kind": "named",
+                  "name": "main.Cell"
+                 },
+                 "kind": "array",
+                 "len": 2
+                }
+               },
+               "expr": "index-get",
+               "index": {
+                "expr": "int",
+                "type": {
+                 "int": "int",
+                 "kind": "int"
+                },
+                "value": "0"
+               },
+               "type": {
+                "kind": "named",
+                "name": "main.Cell"
+               }
+              },
+              "type": {
+               "kind": "named",
+               "name": "main.Pair"
+              },
+              "typeId": "main.Cell"
+             },
+             "type": {
+              "kind": "named",
+              "name": "main.Code"
+             },
+             "typeId": "main.Pair"
+            }
+           },
+           "y": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "100"
+           }
+          }
+         },
+         "y": {
+          "expr": "binary",
+          "op": "*",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "x": {
+           "expr": "convert",
+           "target": {
+            "int": "int",
+            "kind": "int"
+           },
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "x": {
+            "base": {
+             "expr": "field-get",
+             "field": "cs",
+             "recv": {
+              "base": {
+               "base": {
+                "expr": "ident",
+                "name": "x",
+                "type": {
+                 "kind": "named",
+                 "name": "main.Grid"
+                }
+               },
+               "expr": "index-get",
+               "index": {
+                "expr": "int",
+                "type": {
+                 "int": "int",
+                 "kind": "int"
+                },
+                "value": "1"
+               },
+               "type": {
+                "elem": {
+                 "kind": "named",
+                 "name": "main.Cell"
+                },
+                "kind": "array",
+                "len": 2
+               }
+              },
+              "expr": "index-get",
+              "index": {
+               "expr": "int",
+               "type": {
+                "int": "int",
+                "kind": "int"
+               },
+               "value": "0"
+              },
+              "type": {
+               "kind": "named",
+               "name": "main.Cell"
+              }
+             },
+             "type": {
+              "kind": "named",
+              "name": "main.Codes"
+             },
+             "typeId": "main.Cell"
+            },
+            "expr": "index-get",
+            "index": {
+             "expr": "int",
+             "type": {
+              "int": "int",
+              "kind": "int"
+             },
+             "value": "2"
+            },
+            "type": {
+             "kind": "named",
+             "name": "main.Code"
+            }
+           }
+          },
+          "y": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "10"
+          }
+         }
+        },
+        "y": {
+         "expr": "convert",
+         "target": {
+          "int": "int",
+          "kind": "int"
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "base": {
+           "expr": "field-get",
+           "field": "cs",
+           "recv": {
+            "base": {
+             "base": {
+              "expr": "ident",
+              "name": "y",
+              "type": {
+               "kind": "named",
+               "name": "main.GridCopy"
+              }
+             },
+             "expr": "index-get",
+             "index": {
+              "expr": "int",
+              "type": {
+               "int": "int",
+               "kind": "int"
+              },
+              "value": "1"
+             },
+             "type": {
+              "elem": {
+               "kind": "named",
+               "name": "main.Cell"
+              },
+              "kind": "array",
+              "len": 2
+             }
+            },
+            "expr": "index-get",
+            "index": {
+             "expr": "int",
+             "type": {
+              "int": "int",
+              "kind": "int"
+             },
+             "value": "0"
+            },
+            "type": {
+             "kind": "named",
+             "name": "main.Cell"
+            }
+           },
+           "type": {
+            "kind": "named",
+            "name": "main.Codes"
+           },
+           "typeId": "main.Cell"
+          },
+          "expr": "index-get",
+          "index": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "2"
+          },
+          "type": {
+           "kind": "named",
+           "name": "main.Code"
+          }
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "declOrderConversionNestedCopy",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "n",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "2"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "elem": {
+       "int": "int",
+       "kind": "int"
+      },
+      "elems": [
+       {
+        "index": 0,
+        "value": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "3"
+        }
+       }
+      ],
+      "length": 1,
+      "stmt": "slice-lit",
+      "target": {
+       "id": "$c0",
+       "target": "declare",
+       "type": {
+        "elem": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "slice"
+       }
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "x",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.RefArray"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "elem": {
+         "kind": "named",
+         "name": "main.RefCell"
+        },
+        "elems": [
+         {
+          "index": 0,
+          "value": {
+           "args": [
+            {
+             "expr": "ref",
+             "id": "n",
+             "type": {
+              "elem": {
+               "int": "int",
+               "kind": "int"
+              },
+              "kind": "pointer"
+             }
+            },
+            {
+             "expr": "ident",
+             "name": "$c0",
+             "type": {
+              "elem": {
+               "int": "int",
+               "kind": "int"
+              },
+              "kind": "slice"
+             }
+            }
+           ],
+           "expr": "struct-lit",
+           "target": {
+            "kind": "named",
+            "name": "main.RefCell"
+           },
+           "type": {
+            "kind": "named",
+            "name": "main.RefCell"
+           }
+          }
+         }
+        ],
+        "expr": "array-lit",
+        "length": 1,
+        "type": {
+         "kind": "named",
+         "name": "main.RefArray"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "y",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.RefArrayCopy"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "kind": "named",
+         "name": "main.RefArrayCopy"
+        },
+        "type": {
+         "kind": "named",
+         "name": "main.RefArrayCopy"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "kind": "named",
+          "name": "main.RefArray"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "expr": "field-get",
+         "field": "p",
+         "recv": {
+          "base": {
+           "expr": "ident",
+           "name": "y",
+           "type": {
+            "kind": "named",
+            "name": "main.RefArrayCopy"
+           }
+          },
+          "expr": "index-get",
+          "index": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "0"
+          },
+          "type": {
+           "kind": "named",
+           "name": "main.RefCell"
+          }
+         },
+         "type": {
+          "elem": {
+           "int": "int",
+           "kind": "int"
+          },
+          "kind": "pointer"
+         },
+         "typeId": "main.RefCell"
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "5"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "base": {
+          "expr": "field-get",
+          "field": "s",
+          "recv": {
+           "base": {
+            "expr": "ident",
+            "name": "y",
+            "type": {
+             "kind": "named",
+             "name": "main.RefArrayCopy"
+            }
+           },
+           "expr": "index-get",
+           "index": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "0"
+           },
+           "type": {
+            "kind": "named",
+            "name": "main.RefCell"
+           }
+          },
+          "type": {
+           "elem": {
+            "int": "int",
+            "kind": "int"
+           },
+           "kind": "slice"
+          },
+          "typeId": "main.RefCell"
+         },
+         "expr": "index-addr",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "0"
+         }
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "7"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "m",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "9"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "base": {
+          "base": {
+           "expr": "ref",
+           "id": "y"
+          },
+          "expr": "index-addr",
+          "index": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "0"
+          }
+         },
+         "expr": "field-addr",
+         "field": "p",
+         "typeId": "main.RefCell"
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ref",
+        "id": "m",
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "pointer"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "elem": {
+       "int": "int",
+       "kind": "int"
+      },
+      "elems": [
+       {
+        "index": 0,
+        "value": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "8"
+        }
+       }
+      ],
+      "length": 1,
+      "stmt": "slice-lit",
+      "target": {
+       "id": "$c1",
+       "target": "declare",
+       "type": {
+        "elem": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "slice"
+       }
+      }
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "base": {
+          "base": {
+           "expr": "ref",
+           "id": "y"
+          },
+          "expr": "index-addr",
+          "index": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "0"
+          }
+         },
+         "expr": "field-addr",
+         "field": "s",
+         "typeId": "main.RefCell"
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "$c1",
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "binary",
+         "op": "+",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "binary",
+          "op": "+",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "x": {
+           "expr": "binary",
+           "op": "*",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "x": {
+            "expr": "deref",
+            "ptr": {
+             "expr": "field-get",
+             "field": "p",
+             "recv": {
+              "base": {
+               "expr": "ident",
+               "name": "x",
+               "type": {
+                "kind": "named",
+                "name": "main.RefArray"
+               }
+              },
+              "expr": "index-get",
+              "index": {
+               "expr": "int",
+               "type": {
+                "int": "int",
+                "kind": "int"
+               },
+               "value": "0"
+              },
+              "type": {
+               "kind": "named",
+               "name": "main.RefCell"
+              }
+             },
+             "type": {
+              "elem": {
+               "int": "int",
+               "kind": "int"
+              },
+              "kind": "pointer"
+             },
+             "typeId": "main.RefCell"
+            },
+            "type": {
+             "int": "int",
+             "kind": "int"
+            }
+           },
+           "y": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "1000"
+           }
+          },
+          "y": {
+           "expr": "binary",
+           "op": "*",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "x": {
+            "expr": "deref",
+            "ptr": {
+             "expr": "field-get",
+             "field": "p",
+             "recv": {
+              "base": {
+               "expr": "ident",
+               "name": "y",
+               "type": {
+                "kind": "named",
+                "name": "main.RefArrayCopy"
+               }
+              },
+              "expr": "index-get",
+              "index": {
+               "expr": "int",
+               "type": {
+                "int": "int",
+                "kind": "int"
+               },
+               "value": "0"
+              },
+              "type": {
+               "kind": "named",
+               "name": "main.RefCell"
+              }
+             },
+             "type": {
+              "elem": {
+               "int": "int",
+               "kind": "int"
+              },
+              "kind": "pointer"
+             },
+             "typeId": "main.RefCell"
+            },
+            "type": {
+             "int": "int",
+             "kind": "int"
+            }
+           },
+           "y": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "100"
+           }
+          }
+         },
+         "y": {
+          "expr": "binary",
+          "op": "*",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "x": {
+           "base": {
+            "expr": "field-get",
+            "field": "s",
+            "recv": {
+             "base": {
+              "expr": "ident",
+              "name": "x",
+              "type": {
+               "kind": "named",
+               "name": "main.RefArray"
+              }
+             },
+             "expr": "index-get",
+             "index": {
+              "expr": "int",
+              "type": {
+               "int": "int",
+               "kind": "int"
+              },
+              "value": "0"
+             },
+             "type": {
+              "kind": "named",
+              "name": "main.RefCell"
+             }
+            },
+            "type": {
+             "elem": {
+              "int": "int",
+              "kind": "int"
+             },
+             "kind": "slice"
+            },
+            "typeId": "main.RefCell"
+           },
+           "expr": "index-get",
+           "index": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "0"
+           },
+           "type": {
+            "int": "int",
+            "kind": "int"
+           }
+          },
+          "y": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "10"
+          }
+         }
+        },
+        "y": {
+         "base": {
+          "expr": "field-get",
+          "field": "s",
+          "recv": {
+           "base": {
+            "expr": "ident",
+            "name": "y",
+            "type": {
+             "kind": "named",
+             "name": "main.RefArrayCopy"
+            }
+           },
+           "expr": "index-get",
+           "index": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "0"
+           },
+           "type": {
+            "kind": "named",
+            "name": "main.RefCell"
+           }
+          },
+          "type": {
+           "elem": {
+            "int": "int",
+            "kind": "int"
+           },
+           "kind": "slice"
+          },
+          "typeId": "main.RefCell"
+         },
+         "expr": "index-get",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "0"
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "declOrderConversionSharedReferences",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "op": "+",
+      "read": {
+       "expr": "deref",
+       "ptr": {
+        "expr": "ident",
+        "name": "n",
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "pointer"
+        }
+       },
+       "type": {
+        "int": "int",
+        "kind": "int"
+       }
+      },
+      "stmt": "incdec",
+      "target": {
+       "expr": {
+        "expr": "ident",
+        "name": "n",
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "pointer"
+        }
+       },
+       "target": "addr"
+      },
+      "type": {
+       "int": "int",
+       "kind": "int"
+      }
+     },
+     {
+      "results": [
+       {
+        "elem": {
+         "kind": "named",
+         "name": "main.Code"
+        },
+        "elems": [],
+        "expr": "array-lit",
+        "length": 0,
+        "type": {
+         "kind": "named",
+         "name": "main.EmptyCodes"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "emptyCodesOnce",
+   "params": [
+    {
+     "id": "n",
+     "type": {
+      "elem": {
+       "int": "int",
+       "kind": "int"
+      },
+      "kind": "pointer"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "named",
+      "name": "main.EmptyCodes"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "n",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "0"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c2",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.EmptyCodes"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "expr": "ref",
+          "id": "n",
+          "type": {
+           "elem": {
+            "int": "int",
+            "kind": "int"
+           },
+           "kind": "pointer"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "emptyCodesOnce",
+        "resultTypes": [
+         {
+          "kind": "named",
+          "name": "main.EmptyCodes"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "x",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.EmptyRaw"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "kind": "named",
+         "name": "main.EmptyRaw"
+        },
+        "type": {
+         "kind": "named",
+         "name": "main.EmptyRaw"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "$c2",
+         "type": {
+          "kind": "named",
+          "name": "main.EmptyCodes"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "binary",
+         "op": "*",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "n",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "y": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "10"
+         }
+        },
+        "y": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "0"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "declOrderConversionEmptyEvalOnce",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "x",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.FloatCodes"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "elem": {
+         "float": "float32",
+         "kind": "float"
+        },
+        "elems": [
+         {
+          "index": 0,
+          "value": {
+           "den": "2",
+           "expr": "float",
+           "num": "3",
+           "type": {
+            "float": "float32",
+            "kind": "float"
+           }
+          }
+         },
+         {
+          "index": 1,
+          "value": {
+           "den": "4",
+           "expr": "float",
+           "num": "9",
+           "type": {
+            "float": "float32",
+            "kind": "float"
+           }
+          }
+         }
+        ],
+        "expr": "array-lit",
+        "length": 2,
+        "type": {
+         "kind": "named",
+         "name": "main.FloatCodes"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "y",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.FloatRaw"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "kind": "named",
+         "name": "main.FloatRaw"
+        },
+        "type": {
+         "kind": "named",
+         "name": "main.FloatRaw"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "kind": "named",
+          "name": "main.FloatCodes"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "base": {
+          "expr": "ref",
+          "id": "y"
+         },
+         "expr": "index-addr",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "0"
+         }
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "den": "2",
+        "expr": "float",
+        "num": "7",
+        "type": {
+         "float": "float32",
+         "kind": "float"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "binary",
+         "op": "+",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "binary",
+          "op": "*",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "x": {
+           "expr": "convert",
+           "target": {
+            "int": "int",
+            "kind": "int"
+           },
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "x": {
+            "expr": "binary",
+            "op": "*",
+            "type": {
+             "float": "float32",
+             "kind": "float"
+            },
+            "x": {
+             "base": {
+              "expr": "ident",
+              "name": "x",
+              "type": {
+               "kind": "named",
+               "name": "main.FloatCodes"
+              }
+             },
+             "expr": "index-get",
+             "index": {
+              "expr": "int",
+              "type": {
+               "int": "int",
+               "kind": "int"
+              },
+              "value": "0"
+             },
+             "type": {
+              "float": "float32",
+              "kind": "float"
+             }
+            },
+            "y": {
+             "den": "1",
+             "expr": "float",
+             "num": "4",
+             "type": {
+              "float": "float32",
+              "kind": "float"
+             }
+            }
+           }
+          },
+          "y": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "100"
+          }
+         },
+         "y": {
+          "expr": "binary",
+          "op": "*",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "x": {
+           "expr": "convert",
+           "target": {
+            "int": "int",
+            "kind": "int"
+           },
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "x": {
+            "expr": "binary",
+            "op": "*",
+            "type": {
+             "float": "float32",
+             "kind": "float"
+            },
+            "x": {
+             "base": {
+              "expr": "ident",
+              "name": "y",
+              "type": {
+               "kind": "named",
+               "name": "main.FloatRaw"
+              }
+             },
+             "expr": "index-get",
+             "index": {
+              "expr": "int",
+              "type": {
+               "int": "int",
+               "kind": "int"
+              },
+              "value": "0"
+             },
+             "type": {
+              "float": "float32",
+              "kind": "float"
+             }
+            },
+            "y": {
+             "den": "1",
+             "expr": "float",
+             "num": "4",
+             "type": {
+              "float": "float32",
+              "kind": "float"
+             }
+            }
+           }
+          },
+          "y": {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "10"
+          }
+         }
+        },
+        "y": {
+         "expr": "convert",
+         "target": {
+          "int": "int",
+          "kind": "int"
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "binary",
+          "op": "*",
+          "type": {
+           "float": "float32",
+           "kind": "float"
+          },
+          "x": {
+           "base": {
+            "expr": "ident",
+            "name": "y",
+            "type": {
+             "kind": "named",
+             "name": "main.FloatRaw"
+            }
+           },
+           "expr": "index-get",
+           "index": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "1"
+           },
+           "type": {
+            "float": "float32",
+            "kind": "float"
+           }
+          },
+          "y": {
+           "den": "1",
+           "expr": "float",
+           "num": "4",
+           "type": {
+            "float": "float32",
+            "kind": "float"
+           }
+          }
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "declOrderConversionFloatElements",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  }
+ ],
+ "methodSets": [
+  {
+   "coverage": "full",
+   "type": "main.Cell"
+  },
+  {
+   "coverage": "full",
+   "type": "main.Code"
+  },
+  {
+   "coverage": "full",
+   "type": "main.Codes"
+  },
+  {
+   "coverage": "full",
+   "type": "main.EmptyCodes"
+  },
+  {
+   "coverage": "full",
+   "type": "main.EmptyRaw"
+  },
+  {
+   "coverage": "full",
+   "type": "main.FloatCodes"
+  },
+  {
+   "coverage": "full",
+   "type": "main.FloatRaw"
+  },
+  {
+   "coverage": "full",
+   "type": "main.Grid"
+  },
+  {
+   "coverage": "full",
+   "type": "main.GridCopy"
+  },
+  {
+   "coverage": "full",
+   "type": "main.Pair"
+  },
+  {
+   "coverage": "full",
+   "type": "main.Raw"
+  },
+  {
+   "coverage": "full",
+   "type": "main.RefArray"
+  },
+  {
+   "coverage": "full",
+   "type": "main.RefArrayCopy"
+  },
+  {
+   "coverage": "full",
+   "type": "main.RefCell"
+  }
+ ],
+ "methods": [],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": [
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "int": "int",
+     "kind": "int"
+    }
+   },
+   "display": "main.Code",
+   "name": "main.Code",
+   "pkg": "main"
+  },
+  {
+   "def": {
+    "fields": [
+     {
+      "embedded": false,
+      "name": "a",
+      "type": {
+       "kind": "named",
+       "name": "main.Code"
+      }
+     },
+     {
+      "embedded": false,
+      "name": "b",
+      "type": {
+       "kind": "named",
+       "name": "main.Code"
+      }
+     }
+    ],
+    "kind": "struct"
+   },
+   "display": "main.Pair",
+   "name": "main.Pair",
+   "pkg": "main"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "elem": {
+      "kind": "named",
+      "name": "main.Code"
+     },
+     "kind": "array",
+     "len": 3
+    }
+   },
+   "display": "main.Codes",
+   "name": "main.Codes",
+   "pkg": "main"
+  },
+  {
+   "def": {
+    "fields": [
+     {
+      "embedded": false,
+      "name": "p",
+      "type": {
+       "kind": "named",
+       "name": "main.Pair"
+      }
+     },
+     {
+      "embedded": false,
+      "name": "cs",
+      "type": {
+       "kind": "named",
+       "name": "main.Codes"
+      }
+     }
+    ],
+    "kind": "struct"
+   },
+   "display": "main.Cell",
+   "name": "main.Cell",
+   "pkg": "main"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "elem": {
+      "elem": {
+       "kind": "named",
+       "name": "main.Cell"
+      },
+      "kind": "array",
+      "len": 2
+     },
+     "kind": "array",
+     "len": 2
+    }
+   },
+   "display": "main.Grid",
+   "name": "main.Grid",
+   "pkg": "main"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "elem": {
+      "kind": "named",
+      "name": "main.Code"
+     },
+     "kind": "array",
+     "len": 3
+    }
+   },
+   "display": "main.Raw",
+   "name": "main.Raw",
+   "pkg": "main"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "elem": {
+      "elem": {
+       "kind": "named",
+       "name": "main.Cell"
+      },
+      "kind": "array",
+      "len": 2
+     },
+     "kind": "array",
+     "len": 2
+    }
+   },
+   "display": "main.GridCopy",
+   "name": "main.GridCopy",
+   "pkg": "main"
+  },
+  {
+   "def": {
+    "fields": [
+     {
+      "embedded": false,
+      "name": "p",
+      "type": {
+       "elem": {
+        "int": "int",
+        "kind": "int"
+       },
+       "kind": "pointer"
+      }
+     },
+     {
+      "embedded": false,
+      "name": "s",
+      "type": {
+       "elem": {
+        "int": "int",
+        "kind": "int"
+       },
+       "kind": "slice"
+      }
+     }
+    ],
+    "kind": "struct"
+   },
+   "display": "main.RefCell",
+   "name": "main.RefCell",
+   "pkg": "main"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "elem": {
+      "kind": "named",
+      "name": "main.RefCell"
+     },
+     "kind": "array",
+     "len": 1
+    }
+   },
+   "display": "main.RefArray",
+   "name": "main.RefArray",
+   "pkg": "main"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "elem": {
+      "kind": "named",
+      "name": "main.RefCell"
+     },
+     "kind": "array",
+     "len": 1
+    }
+   },
+   "display": "main.RefArrayCopy",
+   "name": "main.RefArrayCopy",
+   "pkg": "main"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "elem": {
+      "kind": "named",
+      "name": "main.Code"
+     },
+     "kind": "array",
+     "len": 0
+    }
+   },
+   "display": "main.EmptyCodes",
+   "name": "main.EmptyCodes",
+   "pkg": "main"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "elem": {
+      "kind": "named",
+      "name": "main.Code"
+     },
+     "kind": "array",
+     "len": 0
+    }
+   },
+   "display": "main.EmptyRaw",
+   "name": "main.EmptyRaw",
+   "pkg": "main"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "elem": {
+      "float": "float32",
+      "kind": "float"
+     },
+     "kind": "array",
+     "len": 2
+    }
+   },
+   "display": "main.FloatCodes",
+   "name": "main.FloatCodes",
+   "pkg": "main"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "elem": {
+      "float": "float32",
+      "kind": "float"
+     },
+     "kind": "array",
+     "len": 2
+    }
+   },
+   "display": "main.FloatRaw",
+   "name": "main.FloatRaw",
+   "pkg": "main"
+  }
+ ]
+}
