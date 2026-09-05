@@ -1555,8 +1555,8 @@ What cedar-go does NOT need and this plan therefore does not hurry:
 |---|---|---|---|---|---|
 | 0 | wave (iii) B2 + B3 + B8 (+A7) | — | 3-4 (in flight) | exact | — (ratified arc) |
 | 1 | U `consumeAtOne` uniform — LANDED 2026-09-04 | B8 | 1 + re-pin (re-pin was EMPTY) | behaviour set exact; no re-pin needed (no row indexed by a non-empty stream); realization shift recorded | G-U |
-| 2 | B4 `Signal` + `Status` (+I2) | (iii) | 2 | exact | — |
-| 3 | C5 `.opDone` → flag | B4 | 1 | exact on baselines; theorem restated | G-C5 |
+| 2 | B4 `Signal` + `Status` (+I2) — LANDED 2026-09-05 (`Status` as a VIEW over `Thread`; `Park` type OWED) | (iii) | 2 | exact (per step) | — |
+| 3 | C5 `.opDone` → flag — LANDED 2026-09-05 | B4 | 1 | exact on baselines; theorem restated with `seqOpCount` | G-C5 |
 | 4 | B7 `ProgramCtx`/`Store` (+I1, Platform threading) | (iii) | 2 | re-packaging | — |
 | 5 | C1 `Mem` + trace (+I3, I4) | B7 | 4-6 | trace-equality audit | G-C1 |
 | 6 | C2 well-founded `TypeEnv` | — (parallel lane from 2) | 4-5 | exact; twin pin | G-C2 |
@@ -1671,7 +1671,14 @@ G6-5 as recommended (`docs/2026-09-04_g6-reflect-design.md` §6).
   stays a POOL step (no baseline fuel shift); the sequential relation
   drops `Step.opDoneStrip`; `execProg_single_eq_execStmt` is restated
   with the op count.» Rec: YES, with B4. RULED [USER] 2026-09-04 — as
-  recommended (relayed).
+  recommended (relayed). **LANDED 2026-09-05** (lane `c-arc-b4`,
+  [AGENT]; design note `docs/2026-09-05_c-arc-b4-design.md`, evidence
+  `docs/evidence/2026-09-05_c-arc-b4/`): the flag is `Thread.running`'s
+  `boundary`, set by ONE rule (`Thread.afterStep`); the strip is
+  `StepM.strip`, a pool step (no baseline fuel shift — verified: no
+  baseline lane runs the sequential driver); `Step.opDoneStrip` deleted;
+  `execProg_single_eq_execStmt` restated at `fuel + seqOpCount …`; gate
+  zero drift; per-consumption trace byte-identical.
 - **G-C1.** «Adopt `Mem` with an emitted access trace as THE definition
   of a step's footprint; retire the `stepAccesses` table once
   `accesses_eq_stepAccesses` is proved arm by arm; any arm where the

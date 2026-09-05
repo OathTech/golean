@@ -240,10 +240,10 @@ The sites and their consuming definitions:
                    envelope at its docstring; bound is constant 2).
 * `postOp`       — the post-op scheduling point at a registry-op
                    COMPLETION (W3.2 slice 1 stage C, B1 — G1 ruling
-                   2026-08-20): the `.opDone` marker boundary
-                   (`Config.opDone`, Machine.lean — the envelope
-                   statement lives at the marker; consumed in
-                   `stepMulti` via `schedSlots`).
+                   2026-08-20): the goroutine's post-op boundary
+                   flag (`Thread`, Multi.lean — the envelope statement
+                   lives there since C5; consumed in `stepMulti` via
+                   `schedSlots`).
 * `backEdge`     — the preemption point at a loop back-edge (W3.2
                    slice 1 stage D, B2 — G1 ruling 2026-08-20): the
                    loop re-entry shapes `.next/.signal .cont (.loop …)`

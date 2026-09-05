@@ -138,6 +138,18 @@ cost and touches the fewest positional `fun_cases` proofs.
      thread-level `Status` (Q6); a `Chan` module; frontend-resolved
      locals (`VarId := Nat`); `ProgramCtx`/`Store` split of
      `ExecState`.
+     **B4 LANDED 2026-09-05** on lane `c-arc-b4` together with C5
+     (`docs/2026-09-05_c-arc-b4-design.md`): `Signal` + the frame×signal
+     table `signalStep` (32 rules → 2; `Step` 141 → 108 rules), the
+     k-less `.panicked` gone (the abort is `.panicking chain .stop`,
+     rendered by the drivers/pool — `Config.abort?`/`abortMsg`), ONE
+     terminal (`.next .stop`), `ExecOutcome` deleted (A8's deferral),
+     `Thread`/`Status`/`Done` at the pool. Deviations recorded in the
+     note §2/§7: `Status` is a VIEW over the stored `Thread | running c
+     boundary | aborted msg` (the consumer's `Expr` is `Config`, so
+     parked shapes stay configurations); `Park` as a named type is
+     OWED. Per-step identity on both drivers (fuel exact); evidence
+     `docs/evidence/2026-09-05_c-arc-b4/`.
 
 (v) **The big reshaping C1–C5** — [USER]-ratified IN PRINCIPLE
     2026-09-03 («eventually … the bigger breaking changes as well»);
@@ -177,6 +189,14 @@ cost and touches the fewest positional `fun_cases` proofs.
     (`docs/2026-08-11_latitude-inventory.md` E13, RULED (b)) — is a
     SEMANTICS lane, not a C-item: it is independent of the C-arc order
     and may run at any point; its design note precedes any pin change.
+    **B4 + C5 LANDED 2026-09-05** (lane `c-arc-b4`;
+    `docs/2026-09-05_c-arc-b4-design.md`): `.opDone` is the
+    per-goroutine `boundary` flag of `Thread.running`, set by ONE rule
+    (`Thread.afterStep`); the strip is a POOL step (`StepM.strip`; no
+    baseline fuel shift, as G-C5 ruled); `Step.opDoneStrip` left the
+    sequential relation; `execProg_single_eq_execStmt` restated with the
+    op count `seqOpCount`. The marker's clamp retired (reason expired at
+    G-U).
     Each C-item still
     returns to the [USER] as its own design gate when reached — a
     HARD STOP, never self-adjudicated (CLAUDE.md, autonomous arcs);
@@ -287,6 +307,7 @@ still not scheduled anywhere:
 
 | Slice | Item | Branch | Landed | Notes |
 |---|---|---|---|---|
+| 4 | B4 + C5 | `c-arc-b4` | branch-complete 2026-09-05: `40fd1903` (Signal), `165822ef` (Thread/abort/flag) + records; gate `ci --diff` at the C5 tip PASS at zero drift (tally in the evidence README); whole-corpus per-consumption trace byte-identical (23115 records) and status/obsHash identical on 20749 (row, stream) lines at both commits; not merged | design note `docs/2026-09-05_c-arc-b4-design.md`; evidence `docs/evidence/2026-09-05_c-arc-b4/`; `Config` 16 → 9 constructors, `Step` 141 → 108 rules, `StepM` 5 → 7 rule classes (`strip`, `abort`); OWED: `Park` type, the C3-time `Status`/frame-entry revisits; commit 1's own gate run was RED for one tooling reason (13 misplaced-linter warnings, fixed in commit 2) with the differential itself at zero drift — recorded, not hidden |
 | 3 | B2 + B3 + B8 (+ A7 accessor) | `hygiene-wave3` | branch-complete 2026-09-04: B2 `91c57c9e`, B3 `cd2a3474`, B8 `2e69fde0` + records; every gate `ci --diff` PASS 3365 = 3165/200 at zero drift, choice-trace delta 0 aggregate AND per consumption (23665 records); not merged | design note `docs/2026-09-04_hygiene-wave3-design.md`; evidence `docs/evidence/2026-09-04_hygiene-wave3/`; −17 rules, 41 conversion sites → 1 `deliver`, 3 entry funnels → 1, 4 walks → `Cont.rebuild` instances, 3 consumption mirrors → the machine's projection + theorem; the consumption-accounting finding (filed on this branch during B8, refuted by lemma in the fix round, never numbered on main) — filed then REFUTED and retired in the audit fix round F1–F6 (the commit after `2e69fde0` on the branch; design note §B8 + "Audit fix round") |
 | 2 | A-series A1–A10 | `hygiene-a-series` | branch-complete 2026-09-04: A1 `dfa68802`, A2 `7cba41cd`, A3 `6973354b`, A4 `bcdf04c1`, A5 `48d9aba8`, A6 `367dab2f`, A8 `7ff80223`, A9 `80b4ed89`, A10 `884e5226` + a records commit (SHA in the evidence README); every gate `ci --diff` PASS 3284 = 3085/199 at zero drift, choice-trace delta 0; not merged | design note `docs/2026-09-03_hygiene-a-series-design.md`; evidence `docs/evidence/2026-09-03_hygiene-a-series/`; A7 SKIPPED (→ B3); net core delta and per-item lemma tombstones in the note |
 | 1 | B1 stamps | `hygiene-b1-stamps` | branch-complete 2026-09-03, landing commit `f6152a6c`; audit verdict MERGE-READY, fix round `a4cf54e4` (clean-tree ci --diff PASS, 3199/3199); E9 irreflexive-key narrowing RATIFIED [USER] 2026-09-03 (relayed; record in docs/2026-08-31_qrow-rulings.md); merge sign-off pending; not merged | design note `docs/2026-09-03_hygiene-b1-stamps-design.md`; evidence `docs/evidence/2026-09-03_hygiene-b1-stamps/`; 14 defs + 14 theorems + 3 rule premises deleted, −649 lines; zero drift on 3195 rows; +4 rows `maps/nan-key-range`, `maps/nan-key-range-aggregate/{array,struct,interface}` (BUG-088, found by the bisimulation argument, fixed by construction — an E9 narrowing on irreflexive keys, DISCLOSED, [USER] ratification pending at merge) |

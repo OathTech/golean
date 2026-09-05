@@ -1,0 +1,16 @@
+# c1 (40fd1903) vs before (076f5eec): per-consumption dump cmp + same-streams diff
+cmp dump-before-sorted.tsv dump-c1-sorted.tsv
+IDENTICAL (23115 records)
+== (1) status + obsHash per (row, stream)
+IDENTICAL on 20749 (row, stream) lines
+== (2) per-site totals
+choice-trace-before: l5ExitWindow=325 mapIter=1307 l2Entry=24 l1Sched=9443 backEdge=2404 l2Arrival=3 postOp=4534 appendSpill=4868 tryLock=101 nilValueMethodText=84 l4Waiter=22 
+choice-trace-c1: l5ExitWindow=325 mapIter=1307 l2Entry=24 l1Sched=9443 backEdge=2404 l2Arrival=3 postOp=4534 appendSpill=4868 tryLock=101 nilValueMethodText=84 l4Waiter=22 
+== (3) records
+before records: 23115  after records: 23115
+width-1 mapIter records before: 0   after: 0
+(row, stream) lines whose record sequence changed: 0
+  of which on the default (empty) stream: 0
+(row, stream) lines that HAD a width-1 mapIter record: 0
+changed set == had-width-1 set: YES
+(scratch: /home/dev/projects/golean/.tmp/tmp.mu3SAG0Qxl)

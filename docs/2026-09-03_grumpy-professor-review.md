@@ -1012,6 +1012,8 @@ today's (a `Signal`-indexed family of the same conclusions);
 patterns with an obvious retraction to `Config`.
 Downstream: the `Language` instance's `to_val` is `Status.done?`.
 
+_B4 status (2026-09-05, C-arc step 2, lane `c-arc-b4`): LANDED `40fd1903` + `165822ef` — `Signal`, `Config.signal`, the table `signalStep`/`signalRefusal`, rules `signalStmt`/`signal` (32 → 2; the four frame-exit `ret` twins stay as rules, the executable shares `stepFrameExit`); `.panicked` deleted (the abort is `.panicking chain .stop`, `Config.abort?`, rendered by the drivers/pool via `abortMsg`); ONE terminal; `ExecOutcome` deleted; `Thread | running c boundary | aborted msg` with the `Status`/`Done` VIEW (`Thread.status`, agreement theorems) — NOT the stored `Array Status` with `parked (p : Park)`: the consumer's `Expr` is `Config`, so parked shapes stay configurations and `Park` as a type is OWED (design note §2/§7)._
+
 **B5. A `Chan` module.**
 Change: `GoLean/GoCore/Chan.lean`: `structure ChanState (buf cap
 closed)`; `trySend : ChanState → v → SendOutcome (enqueued st | full |
@@ -1213,6 +1215,8 @@ Go observation — but the harness's fuel-out rows and `execStmt_mono`-
 class lemmas are stated at exact fuels. Either keep the strip as a
 no-op step of the flag (then nothing changes and the win is only
 representational), or accept the fuel shift and re-pin. Flagged.
+
+_C5 status (2026-09-05, C-arc step 2, lane `c-arc-b4`, gate G-C5 RULED [USER] 2026-09-04 as recommended, relayed): LANDED `165822ef` — `Thread.running`'s `boundary : Option ChoiceSite`, set by ONE rule (`Thread.afterStep`/`Config.afterStepFlag`/`Config.registryCommits`); the strip is a POOL step (`StepM.strip`) so no baseline fuel moves; `Step.opDoneStrip` gone; `execProg_single_eq_execStmt` restated at `fuel + seqOpCount …`; `raceUpdate`'s 12 probes read the flag; the marker's clamp retired (its reason expired at G-U). Design note §3._
 
 ### Ranking by value/cost
 

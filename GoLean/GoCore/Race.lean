@@ -179,8 +179,9 @@ absence is legible as a decision, not an omission):
   even a READ-BUT-UNINSTRUMENTED row.
 
 MODEL-INTERNAL loads gc never performs (excluded on purpose):
-- the `.opDone` completion marker's strip (stage C, generalizing
-  BUG-040's `.spawned` strip): a pure control step — touches no
+- the post-op boundary CLEAR (stage C's `.opDone` marker strip, C5's
+  flag clear — generalizing BUG-040's `.spawned` strip) and the abort
+  tombstone step (B4): pure pool steps — they touch no
   memory (`stepAccesses` catch-all; the wrapped op's own accesses and
   HB edges were recorded at the APPLY step, and the spawn's edge plus
   the child's dispatch read at the FORK step, by `raceUpdate` —

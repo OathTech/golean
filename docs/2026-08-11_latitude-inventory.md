@@ -112,7 +112,7 @@ between sweeps (the reconciler's C12 checks row COUNT, not lines).
 | L4 waiter pick (`l4Waiter`) | Multi.lean:1039 | matching-candidate count | only width > 1 | lowest (goroutine order, clause order) |
 | L1 scheduler pick (`l1Sched`) | Multi.lean:1153 (via `Config.boundarySite`, :1099) | \|runnable\| | only width > 1 | lowest runnable goroutine id |
 | L5 main-exit window (`l5ExitWindow`) | Multi.lean:1628 | 2 | main terminal ∧ others runnable | 0 = exit now |
-| Post-op boundary pick (`postOp`, W3.2 stage C) | Multi.lean:1153 (via `Config.boundarySite`, :1100) | \|runnable\| (issuer-first menu, `schedSlots` :1122) | at an `.opDone .postOp` marker, only width > 1 | slot 0 = the ISSUER continues (the pre-widening schedule, literally) |
+| Post-op boundary pick (`postOp`, W3.2 stage C; C5 2026-09-05) | Multi.lean `stepMulti` (via `Thread.boundarySite`) | \|runnable\| (issuer-first menu, `schedSlots`) | at a goroutine whose `Thread.running` boundary flag is `some .postOp` (set by `Thread.afterStep` at a proceeding registry-op completion), only width > 1 | slot 0 = the ISSUER continues (the pre-widening schedule, literally) |
 | Loop back-edge pick (`backEdge`, W3.2 stage D) | Multi.lean:1153 (via `Config.boundarySite`, :1101–1103) | \|runnable\| (current-first menu, `schedSlots` :1123) | at a loop re-entry shape (`.loop`, `.mapIterK`), only width > 1 | slot 0 = the CURRENT goroutine continues |
 | Frame-entry panic TEXT pick (`nilValueMethodText`, BUG-087 / R9a, 2026-09-03) | StepFn.lean `enterFrameStep` + `enterFrameDeferPanicking`, Multi.lean `spawnStep` (envelope statement `nilValueMethodText?`, Ops.lean, beside `dynamicDispatch?`'s nil arm) | `nilValueMethodWidth` — 2 on the wrapper family, 1 elsewhere | at a frame entry in the family (value-receiver method dispatched through an interface holding a nil `*T`, target not a promotion wrapper), only width > 1 | slot 0 = the nil-dereference text (the pre-BUG-087 machine's only member) |
 | TryLock spurious failure (`tryLock`, Q-TRYLOCK 2026-09-03) | Machine.lean `applySyncOp` (the TRY-head arm; envelope statement at `applyTryLock`) | `tryLockWidth op pre` — 2 at an acquirable cell (`tryAcquire`), 1 at a held one | only width 2 (an acquirable cell; the held cell's bound-1 consult pops nothing — the uniform rule) | slot 0 = ACQUIRE (gc's realized point); slot 1 = the spurious false |
@@ -235,16 +235,20 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   unspecified, so the widening is conservative relative to what the
   language licenses.
 - MACHINE (W3.2 slice 1 stage C, G1 ruling 2026-08-20 — B1 at
-  ALL-ops scope): every registry-op completion that proceeds — chan
-  send/recv/close, sync ops, select commits on all three paths,
-  the pairing ISSUER, wakes, and spawn — leaves the acting goroutine
-  on the `.opDone` completion marker, a registry boundary of its own
-  (`Config.opDone`, the envelope statement in situ; `Config.atBoundary`;
-  site `ChoiceSite.postOp`, slot 0 = issuer-continues so the
-  default stream reproduces the pre-widening schedule literally; the
-  spawn marker keeps its `l1Sched` tag — BUG-040's shipped default
-  bit-for-bit). A woken partner can now interleave before the
-  issuer's next private segment on an explicit stream.
+  ALL-ops scope; C5 2026-09-05 moved the carrier): every registry-op
+  completion that proceeds — chan send/recv/close, sync ops, select
+  commits on all three paths, the pairing ISSUER, wakes, and spawn —
+  leaves the acting goroutine with its `Thread.running` boundary FLAG
+  set, a registry boundary of its own (`Thread`, Multi.lean — the
+  envelope statement in situ; the flag is set by ONE rule,
+  `Thread.afterStep`; `Thread.atBoundary`; site `ChoiceSite.postOp`,
+  slot 0 = issuer-continues so the default stream reproduces the
+  pre-widening schedule literally; the spawn's flag is `l1Sched` —
+  BUG-040's shipped default bit-for-bit; the flag's only step is its
+  clear, a pool step). Before C5 the carrier was the `.opDone`
+  completion marker wrapping the successor configuration. A woken
+  partner can interleave before the issuer's next private segment on
+  an explicit stream.
 - FORMER KNOWN INSTANCES, subsumed: BUG-040 (post-spawn) and BUG-044
   (wake-then-main-terminal, the L5 window, C4) were the two probed
   corners of this class; B1 is the general rule they were corners of.

@@ -54,8 +54,13 @@ each gate, per the coordinator's reading [AGENT], disclosed to the
       realization re-indexed (design note
       `docs/2026-09-04_c-arc-gu-design.md`, evidence
       `docs/evidence/2026-09-04_c-arc-gu/`)
-- [ ] B4 — `Signal` + thread `Status`
-- [ ] C5 — `.opDone` out of `Config`, into `Status` (G-C5)
+- [x] B4 — `Signal` + thread `Status` — DONE 2026-09-05 (lane `c-arc-b4`,
+      `docs/2026-09-05_c-arc-b4-design.md`; `Status` is a VIEW over the
+      stored `Thread`; OWED: `Park` as a named type)
+- [x] C5 — `.opDone` out of `Config`, into the per-goroutine `boundary`
+      flag of `Thread.running` (G-C5) — DONE 2026-09-05 (same lane; the
+      strip is `StepM.strip`, a pool step; `execProg_single_eq_execStmt`
+      restated with `seqOpCount`)
 - [ ] B7 — `ProgramCtx`/`Store` split
 - [ ] C1 — `Mem` + access trace (G-C1)
 - [ ] C2 — well-founded `TypeEnv` (G-C2, parallel lane)
