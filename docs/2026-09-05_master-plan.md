@@ -49,7 +49,13 @@ written to be CHECKED, not believed: §6.3 is the review brief.
   fresh emit at the round-17 train tip `7677865a`; the pre-e13-b pin was
   `a9a2e2b1…` at `9343a310`).
 - `e13-b` LANDED in the same train: semantics `2fb7d54d`, audit fix
-  rounds `7a5cd534` / `42893297` / `e4d785de`, records `7677865a`. Its
+  rounds `7a5cd534` / `42893297` / `e4d785de`, records `7677865a`; the
+  train's step 5a (slow-tier re-certification, set identical, C9
+  cleared) landed as `79214ab2` — records only — while this lane's
+  second gate ran; the lane was rebased onto it (second snapshot ref
+  `refs/snapshots/master-plan-0905-pre-rebase-2`). Every figure in this
+  document holds at `79214ab2` (the tree differs from `7677865a` only in
+  the certified-set header). Its
   design note is `docs/2026-09-05_e13-b-design.md` on main; where this
   document cites it at `389f4618` (the pre-rebase lane tip) the content
   is the same note.
@@ -979,13 +985,12 @@ two-draw floor as ruled). Step 5a (slow-tier re-cert
 after any train touching `wire.go`/`NativeToIR.lean`; [USER] 2026-09-04
 «Yeah, that make sense, let's adopt that», `operational-lessons.md:
 435-484`) ran at rounds 13/14/15 (`ac45aedd`, `8fce7625`, `076f5eec`).
-**Reconciler C9 at `7677865a`: the wire schema moved after the last
-certification (6 commits, incl. `21bb79f7`, `7bc0f9ca`, `249dc607` and
-e13-b's) — the round-17 tip's step 5a re-certification is OWED** (or lands with the
-train's final tip). Reconciler `tools/reconcile-records`: REPORT-ONLY
-ci step (969); 3 MEDIUM findings at `7677865a` (C13, C5, C9 — the
-last now counting 6 wire-touching commits since the 05:46Z
-certification). At `9343a310` this document had added a fourth (C6:
+Reconciler C9 at `7677865a` said the wire schema had moved after the
+last certification (6 commits, incl. `21bb79f7`, `7bc0f9ca`, `249dc607`
+and e13-b's) — the round-17 step 5a re-certification then LANDED as
+`79214ab2` (set identical, header refreshed, C9 cleared).
+Reconciler `tools/reconcile-records`: REPORT-ONLY ci step (969); 2
+MEDIUM findings at `79214ab2` (C13, C5). At `9343a310` this document had added a fourth (C6:
 its `BUG-101/102/104` references had no entry on main); it cleared at
 the rebase.
 
@@ -1001,9 +1006,10 @@ disagreement, empty stream, < 4 reports) = `nondet` FAIL, never a pass
 
 **Work items.**
 
-1. **Step 5a at the round-17/e13-b train tip** — OWED (C9 above); ci
-   `--slow`; exit: certified set identical or a FINDING (never a re-pin;
-   `CLAUDE.md` 5a).
+1. **Step 5a at the round-17/e13-b train tip** — LANDED `79214ab2`
+   (set identical; the standing rule: certified set identical or a
+   FINDING, never a re-pin; `CLAUDE.md` 5a). Nothing owed here at this
+   tip.
 2. **Periodic legs cadence** — PROPOSED [AGENT] in each report, not
    RULED (the [USER]'s 2026-09-03 «others: lower priority for now?»,
    `docs/assessment/decisions-2026-08-31.md:87, 102`, deferred them): gotest triage nightly-class + on fragment widening /
@@ -1479,7 +1485,7 @@ B  FR-1/2/3/6/7 (S, no deps) · FR-9 (raft) · FR-10 AFTER C1 · FR-13 WITH C2 (
 D  e13-b LANDED ─► E12/E2 value-axis gate (BUG-101) ─► E2 two-point envelope (E12 rides it)
    E7 site · R3 arm · E3/E4 envelope · R7 · R18/FR-30 · BUG-080 (b) · atomics w2
 
-E  step 5a at the train tip (OWED) · cadence ruling · second toolchain · reconciler C15/mirror check
+E  step 5a for round 17 DONE (79214ab2) · cadence ruling · second toolchain · reconciler C15/mirror check
 G  three-bug lane: BUG-103 (machine arm) · BUG-098/FR-31 · BUG-104 (all unblocked at 7677865a)
 H  cedar first MATCH ⇐ FR-31 + T1 + slice 4 ⇐ then FR-12 for the authorization path
    raft W4 stage 2 ⇐ [USER] restart + FR-9 + E7
@@ -1489,7 +1495,8 @@ Cross-package couplings that bite if ignored: FR-10 before C1 bakes a
 view into `Mem` twice; G6 T2 before P reads a D2 record whose meaning P
 changes; FR-31 before e13-b would have conflicted in `emit.go` (moot since the rebase); C4 before B6 has no
 `VarId` to allocate by; any wire-touching train without step 5a leaves
-the certified set stale (C9).
+the certified set stale (C9 — exactly what happened between `7677865a`
+and `79214ab2`, and was closed).
 
 ### 5.2 The recommended next wave ([AGENT] coordinator recommendation, as relayed in this lane's brief)
 
@@ -1521,8 +1528,8 @@ now; the narrowed slice 4 is an S-sized lane any time.
 - **Pin offer (G-PIN)** — after the re-run, under plan §5.3's four
   conditions; the migration-stage [USER] decisions (§3.I item 4) come
   due at the same time.
-- **Step 5a** — at the round-17 train's tip `7677865a` (reconciler C9:
-  6 wire-touching commits since the last certification; owed now).
+- **Step 5a** — done for round 17 (`79214ab2`); next due at the first
+  train that touches `wire.go`/`NativeToIR.lean` (B6, P, FR-31 all will).
 - **Decay reviews** — D-002 2026-10-31; D-001 2026-11-30.
 - **Oracle pin move** — when go1.27 ships (a runbook is owed, §4 item 7).
 
@@ -1592,8 +1599,8 @@ off `main` with `scripts/setup-deps --from <sibling checkout>`:
    `--diff`). Confirm the tail says `git_dirty=false`.
 3. **Run the checkers**: `scripts/check-bugs.sh` (expect `wrong-answer
    0/0`), `scripts/check-stdlib-register`, `scripts/check-frontend-pins`,
-   `python3 tools/reconcile-records` (read every finding; C9 tells you
-   whether step 5a is owed).
+   `python3 tools/reconcile-records` (read every finding; a C9 finding
+   means step 5a is owed at that tip).
 4. **Test the exit criteria** E1-E13 (§1.7) one by one; for each "met",
    find the evidence yourself; for each "NOT met", confirm the owning
    item in §3 and its status word.
@@ -1628,7 +1635,8 @@ off `main` with `scripts/setup-deps --from <sibling checkout>`:
   (27 lines; no live plans), so no entry was added there.
 - Effect on the tree at `9343a310`: `python3 tools/reconcile-records`
   gained one MEDIUM (C6, 16 e13-b bug cross-references in this file);
-  cleared at the rebase onto `7677865a` (3 findings, none this file's).
+  cleared at the rebase onto `7677865a` (3 findings, none this file's);
+  2 findings (C13, C5) at `79214ab2` after the 5a landing.
 - Gate: `scripts/capped scripts/ci --diff` — first run on the dirty
   tree (this file uncommitted): `RESULT: PASS`, cases=3528 pass=3283
   fail=245, baseline diff FULL 3528/3528 no regression, negative 394,
