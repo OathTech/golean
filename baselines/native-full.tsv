@@ -1,4 +1,22 @@
 # GoLean native-frontend full-corpus differential baseline
+# re-pinned: 2026-09-05 (stdlib-slice-3 lane — print/println as machine built-ins with the `output` observation
+#   (StepEvent.out, G-OUT RULED [USER]) + the `float-bits` primitive ([USER]-admitted 2026-09-04); [AGENT] worker under
+#   the ruled stdlib plan G1-G9 («(3) agree, go ahead with the plan», relayed by the coordinator, cited as relayed).
+#   The `output` field is added to EVERY observation on both sides — a comparator-visible change on all 3402 prior rows,
+#   which is why this pin comes from a FULL run (scripts/capped scripts/ci --diff at the branch tip; the --slow
+#   re-certification of the one tier=slow row ran first and its record was updated in its own commit). drift vs the
+#   previous pin = EXACTLY (a) 0 flips of existing rows (every prior row's observation gained `"output":""` on both
+#   sides and compares as before); (b) 38 born rows — 20 PASS (builtins/print/{ints,uints,bool,string,mixed,
+#   println-spacing,print-no-spacing,multiple-calls-order,values-and-output,print-then-panic,print-then-runtime-panic,
+#   print-then-recover,goroutine-ordered} + the membership row builtins/print/goroutine-interleaving (members=2, R18) +
+#   builtins/float-bits/{roundtrip-payloads,nan-semantics,literals-and-zero,frombits-arith,float32,widening}) and 18
+#   FAIL: 14 red BY DESIGN — builtins/print/refused/{float,float32,zero-operands,pointer,nil-pointer,slice,map,chan,func,
+#   interface} + builtins/print/in-init (frontend-export / lean-observation; BUGS.md BUG-093 Cases, ledger FR-29 and
+#   §5.1 item 3) and builtins/float-bits/{canonical-nan-refused,nan-arith-payload-refused,nan-arith-payload-refused/
+#   canonical-roundtrip} (lean-observation; BUG-094, latitude R7) — and 4 fidelity pins born red from the gotest
+#   re-run: generics/type-switch-interface-param{,/bound,/plain} (stage differential; BUG-095, interface embedding in
+#   type-switch satisfaction) and ints/shift-count-huge (lean-observation, the machine aborts; BUG-096). Records:
+#   docs/2026-09-04_stdlib-slice-3-design.md, docs/evidence/2026-09-04_stdlib-slice-3/.)
 # re-pinned: 2026-09-05 (fr27-fr28 lane, incl. its audit fix round F1-F7, rebased onto main cb4a6d48 at merge train round 14 — FR-27 RETIRED (explicit instantiation of a package-QUALIFIED source
 #   generic, `pkg.F[T](x)`: genericFuncUse resolves the SelectorExpr base to the inferred spelling's stencil) +
 #   FR-28 PARTIALLY CLOSED (the A6 unordered-panic guard `hoistReordersPanic` wired into the `make` hoist —
@@ -4568,3 +4586,41 @@ PASS	variadic/variadic-interface-dispatch	-
 PASS	variadic/variadic-method	-
 PASS	variadic/variadic-method-expression	-
 PASS	variadic/variadic-method-value-copy	-
+FAIL	builtins/float-bits/canonical-nan-refused	lean-observation
+PASS	builtins/float-bits/float32	-
+PASS	builtins/float-bits/frombits-arith	-
+PASS	builtins/float-bits/literals-and-zero	-
+FAIL	builtins/float-bits/nan-arith-payload-refused	lean-observation
+FAIL	builtins/float-bits/nan-arith-payload-refused/canonical-roundtrip	lean-observation
+PASS	builtins/float-bits/nan-semantics	-
+PASS	builtins/float-bits/roundtrip-payloads	-
+PASS	builtins/float-bits/widening	-
+PASS	builtins/print/bool	-
+PASS	builtins/print/goroutine-interleaving	membership
+PASS	builtins/print/goroutine-ordered	-
+FAIL	builtins/print/in-init	lean-observation
+PASS	builtins/print/ints	-
+PASS	builtins/print/mixed	-
+PASS	builtins/print/multiple-calls-order	-
+PASS	builtins/print/println-spacing	-
+PASS	builtins/print/print-no-spacing	-
+PASS	builtins/print/print-then-panic	-
+PASS	builtins/print/print-then-recover	-
+PASS	builtins/print/print-then-runtime-panic	-
+FAIL	builtins/print/refused/chan	frontend-export
+FAIL	builtins/print/refused/float32	frontend-export
+FAIL	builtins/print/refused/float	frontend-export
+FAIL	builtins/print/refused/func	frontend-export
+FAIL	builtins/print/refused/interface	frontend-export
+FAIL	builtins/print/refused/map	frontend-export
+FAIL	builtins/print/refused/nil-pointer	frontend-export
+FAIL	builtins/print/refused/pointer	frontend-export
+FAIL	builtins/print/refused/slice	frontend-export
+FAIL	builtins/print/refused/zero-operands	frontend-export
+PASS	builtins/print/string	-
+PASS	builtins/print/uints	-
+PASS	builtins/print/values-and-output	-
+FAIL	generics/type-switch-interface-param	differential
+FAIL	generics/type-switch-interface-param/bound	differential
+FAIL	generics/type-switch-interface-param/plain	differential
+FAIL	ints/shift-count-huge	lean-observation

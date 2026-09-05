@@ -549,7 +549,20 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (3434 cases, 3209 PASS /
+All numbers at the current tracked baseline (3440 cases, 3209 PASS /
+231 FAIL — the stdlib-slice-3 re-pin 2026-09-05 [AGENT], lane
+`stdlib-slice-3` off main ac45aedd, §8o): the FR-4 / row-M figure's 3402 /
+3189 / 213 + 38 born rows (20 PASS — 13 strict `builtins/print/*`, the
+membership row `builtins/print/goroutine-interleaving`, 6
+`builtins/float-bits/*`; 18 FAIL — 14 red BY DESIGN on FR-29 / §5.1 item 3
+(BUG-093) and R7 (BUG-094), 4 fidelity pins born red from the gotest
+re-run (BUG-095 ×3, BUG-096)) + 0 FAIL→PASS flips − 0 PASS→FAIL (every
+prior row's observation gained `"output":""` on both sides and compares
+as before): 3402 + 38 = 3440; 3189 + 20 = 3209; 213 + 18 = 231 —
+re-derived from the baseline's data rows, not summed by hand. The
+paragraphs below are the previous figures, kept as history:
+
+The FR-27 / FR-28 figure (3434 cases, 3209 PASS /
 225 FAIL — the FR-27 / FR-28 re-pin 2026-09-05 [AGENT], lane `fr27-fr28`
 incl. its audit fix round F1-F7, rebased onto main cb4a6d48 at merge
 train round 14, §8o, figures reconciled at the rebase [AGENT] from the
