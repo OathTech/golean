@@ -158,7 +158,15 @@ Repo-local caches for ad hoc Go probes (`GOCACHE=$PWD/artifacts/…`);
 `insufficient_access` on read) — keep scratch in `artifacts/`. On
 any sandbox denial: stop and hand the user exact commands; never
 vendor or copy around restrictions. Do not `rm -rf` scratch dirs
-without approval.
+without approval. INCIDENT (2026-09-04, lane `c-arc-gu`, [AGENT]): a
+`sort FILE > /tmp/x && mv /tmp/x FILE` chain, routed through `/tmp`
+against this rule, DESTROYED three evidence dump copies — the redirect
+was denied, but zsh ran the `mv` anyway and a cross-device `mv` whose
+source it cannot read had already unlinked the destination. The copies
+were regenerated from the intact `artifacts/` runs (the auditor
+re-verified the regeneration byte-for-byte); the lesson is the rule
+above, plus: never `mv` over a file you cannot regenerate, and keep
+sort scratch beside the output (`sort -o FILE FILE` needs no scratch).
 
 ## Huge array types: a native stack overflow presented as a process abort
 

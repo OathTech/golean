@@ -41,7 +41,10 @@ order and sizes), §5.4 (the nine gates, each now tagged RULED). Full
 ruling record: `docs/2026-08-31_qrow-rulings.md` appendix. Executes
 after wave (iii) above, in this order — each item is still its own
 [USER] design gate when reached (a HARD STOP; the 2026-09-04 ruling
-adopts the recommendation, it does not waive the per-item stop):
+adopts the recommendation, it does not waive the per-item stop —
+satisfied for G-U…G-PIN by the 2026-09-04 individual presentation of
+each gate, per the coordinator's reading [AGENT], disclosed to the
+[USER] for confirmation: `docs/2026-09-04_c-arc-gu-design.md` §0):
 
 - [x] U — `consumeAtOne` uniformization (G-U), first after wave (iii) —
       LANDED 2026-09-04 on lane `c-arc-gu` ([AGENT] under the [USER]

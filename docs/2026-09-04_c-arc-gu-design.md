@@ -8,6 +8,22 @@ firsthand), `docs/2026-09-04_reasoning-surface-plan.md` §5.4 / §3.U;
 executed [AGENT] inside that ruling. Evidence:
 `docs/evidence/2026-09-04_c-arc-gu/`.
 
+## 0. Gate provenance — the coordinator's reading, disclosed (audit fix M3)
+
+The arc plan (`docs/2026-09-03_design-hygiene-arc.md` (v); `TODO.md`'s
+C-arc list) says the 2026-09-04 blanket ruling "adopts the
+recommendation, it does not waive the per-item stop". The coordinator's
+reading [AGENT], recorded here exactly as it was made: G-U was presented
+to the [USER] INDIVIDUALLY as gate G-U — its verbatim gate text and a
+recommendation — in the coordinator's summary of the plan's nine gates,
+and the [USER] replied «Great, this sounds good - let's move ahead with
+the plan»; the coordinator takes that as the at-the-gate stop for each
+of the nine gates, since each was individually stated. This reading is
+being DISCLOSED to the [USER] for confirmation or correction; if the
+[USER] corrects it, the next lane amends this note and the arc plan.
+The lane itself did not adjudicate the gate: it executed under the
+coordinator's relayed ruling and records the reading, not a ruling.
+
 ## 1. The rule
 
 One rule, every site (`GoLean/GoCore/State.lean`):
@@ -62,9 +78,12 @@ THEOREMS, because the uniform rule makes the proofs need them:
 `one_lt_appendSpillWidth` (Machine.lean; `appendGrowthCap_ge` moved
 beside it) with `@[simp] Choices.consumeAt_appendSpill` restated at the
 `appendSpillWidth` bound, and `arrivalCases_multi_length : … = .ok (.multi os) → 1 < os.length`
-(MultiSound) under `arrivalPlan_of_multi`. `l2Entry`'s `.picks` needs
-no length fact: `applySelect_ok_or_panic_any_ch` now reasons through
-`consumeAt` abstractly (`consumeAt_fst_lt`).
+(MultiSound) under `arrivalPlan_of_multi`, and — audit fix L6 —
+`applySelectCore_picks_length : … = .ok (.picks commits) → 1 < commits.length`
+(MachineSound), so all three "≥ 2 by construction" sites have the
+theorem and every `some` of `seqConsumption`/`poolConsumption` is a
+popping consult. (`applySelect_ok_or_panic_any_ch` itself needs none of
+them: it reasons through `consumeAt` abstractly via `consumeAt_fst_lt`.)
 
 Projections (wave-(iii) B8 — the ONE account of where the stream is
 consulted): `mapIterConsult?` reports `none` at width ≤ 1 (the last
@@ -91,6 +110,11 @@ consults only, and a width-1 consult contributes one branch either way
 are stream-independent and identical. The differential's strict lane
 compares the EMPTY stream against gc; the empty stream yields pick 0 at
 every consult whether it pops or not, so no default observation moves.
+The enumerator's `--max-sites` budget (audit fix L7): a width-1 node has
+exactly one branch, so deleting it from the tree preserves the leaf set
+and can only lower the consult count — the site budget can only become
+easier to meet, never harder (measured at the two membership rows:
+sites 2 → 2 and 4 → 4).
 
 **The realization shift.** Under a FIXED non-empty stream, every
 consult after a former width-1 `mapIter` pop now reads one entry
@@ -114,7 +138,7 @@ strict row, i.e. a real finding, and the rule for that was STOP. The
 membership `members=` pins and the confluent certificates are
 enumerated sets, stream-independent. So "realized members under fixed
 streams re-pinned" reduces to: the 13 rows whose fixed-stream traces
-shift (§5) are re-certified by the bijection and by the unchanged gate,
+shift (§5; 63 lines) are re-certified by the bijection and by the unchanged gate,
 not by a baseline edit.
 
 ## 5. Evidence (all in `docs/evidence/2026-09-04_c-arc-gu/`)
@@ -130,7 +154,11 @@ not by a baseline edit.
   `(mapIter, 1)` records byte for byte — 23016 records, and status +
   observation hash identical on all 20184 (row, stream) lines. PASS.
 - **Realization shift, enumerated** (`shifted-rows.tsv`): 63 (row, stream)
-  lines = 13 rows × the 5 non-empty streams (never the default stream):
+  lines = 12 rows × the 5 non-empty streams + `noodler/membership/
+  insert-then-delete-during-range` × 3 (under `1,3,5,…` its width-1
+  draw is the run's LAST live consult, so nothing shifts after it; under
+  `rand:2:4096` its pick path never reaches a width-1 consult) = 63,
+  never the default stream:
   strict `control-flow/labeled-branch-range-map`,
   `imported-goose/semantics/allocator/allocate-distinct`,
   `imported-goose/semantics/maps/iterate-map`, `maps/added-entries-bound`,
@@ -178,3 +206,10 @@ scripts/ci --diff` PASS, 3402 = 3189/213, FULL, zero drift; no baseline,
 corpus, frontend, decoder or wire change; no new `ChoiceSite`; no
 `sorry`/`axiom`/`native_decide`; no `partial` in GoCore. Branch-complete;
 the audit ask is the coordinator's to pose; merge/push are the [USER]'s.
+
+Dirty-tree note (audit fix L9): the recorded `ci --diff` ran on the
+uncommitted lane tree (`git_dirty=true` in its meta), which differed
+from `9cece4e8` only by two dropped redundant `simp` arguments in
+`Machine.lean` (proof text, no definition). The auditor's independent
+clean-tip `ci --diff` at `3c5fb472` PASSED with the same tally and the
+tip binary is byte-identical to the evidence binary (`golean-after`).

@@ -5,6 +5,16 @@ Consuming docs: `docs/2026-09-04_c-arc-gu-design.md` (§3–§5),
 CONSUMPTION RULE bullet), `docs/2026-09-04_reasoning-surface-plan.md`
 §5.4 (G-U → LANDED), `TODO.md` item U.
 
+Regeneration note (audit fix M2): `before-dump-sorted.tsv`,
+`after-same-streams-dump-sorted.tsv` and `expected-transformed-dump-sorted.tsv`
+are REGENERATED copies — the first copies were destroyed by a `sort >
+/tmp/x && mv` chain under the sandbox's `/tmp` denial
+(`docs/operational-lessons.md`, Sandbox conventions, INCIDENT line);
+they were re-derived from the intact `artifacts/choice-trace-before`,
+`artifacts/choice-trace-after` and `artifacts/gu-expect` runs (no run was
+repeated) and the auditor re-verified the regeneration byte-for-byte
+against a fresh `ac45aedd` binary.
+
 Provenance: produced 2026-09-04 [AGENT] (C-arc step 1, worktree
 `c-arc-gu` off `main` @ `ac45aedd`), executing design gate G-U — RULED
 [USER] 2026-09-04 as recommended, relayed by the [AGENT] coordinator
@@ -79,11 +89,12 @@ neither can carry a width-1 `mapIter` consult.
 | `expected-transformed-dump-sorted.tsv` | BEFORE minus the `(mapIter, 1)` records, idx renumbered, relabelled to the transformed specs (23016 records) — the AFTER run on `transformed-batch.tsv` reproduced it byte for byte, so it is also the actual dump |
 | `bijection-stats.txt` | counts from `expect` (records deleted, lines with a realization shift) |
 | `bijection-compare.txt` | `compare`'s verdict + the `cmp` confirmation |
-| `shifted-rows.tsv` | the 63 (row, stream) lines whose realization shifts (a popped width-1 record followed by a later live read): 13 distinct rows, 11 strict + 2 membership, never the default stream |
+| `shifted-rows.tsv` | the 63 (row, stream) lines whose realization shifts (a popped width-1 record followed by a later live read): 13 distinct rows (12 rows × 5 non-empty streams + `noodler/membership/insert-then-delete-during-range` × 3 = 63), 11 strict + 2 membership, never the default stream |
 | `same-streams-diff.txt` | the same-stream comparison output |
 | `membership-realization-shift.txt` | the two membership rows whose realized member moved between streams — each new hash was already one of the row's BEFORE observations |
 | `excluded.tsv` | the two excluded rows (both runs) |
 | `ci-diff.txt` | the gate tail: `scripts/capped scripts/ci --diff` at the landed tree |
+| `ci-fast-fix-round.txt` | the fast gate (`scripts/capped scripts/ci`: build, eval tests, baseline diff of the recorded run, check-bugs, spec anchors, reconciler) at the audit-fix-round tree (M1-M3, L4-L9) — PASS, 0 HIGH |
 
 
 ## Results

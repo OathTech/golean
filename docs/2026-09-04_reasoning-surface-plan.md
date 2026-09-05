@@ -1545,7 +1545,7 @@ What cedar-go does NOT need and this plan therefore does not hurry:
 | # | Item | Depends on | Sessions | Preservation | Gate to [USER] |
 |---|---|---|---|---|---|
 | 0 | wave (iii) B2 + B3 + B8 (+A7) | — | 3-4 (in flight) | exact | — (ratified arc) |
-| 1 | U `consumeAtOne` uniform — LANDED 2026-09-04 | B8 | 1 + re-pin (re-pin was EMPTY) | behaviour set exact; realization re-pins | G-U |
+| 1 | U `consumeAtOne` uniform — LANDED 2026-09-04 | B8 | 1 + re-pin (re-pin was EMPTY) | behaviour set exact; no re-pin needed (no row indexed by a non-empty stream); realization shift recorded | G-U |
 | 2 | B4 `Signal` + `Status` (+I2) | (iii) | 2 | exact | — |
 | 3 | C5 `.opDone` → flag | B4 | 1 | exact on baselines; theorem restated | G-C5 |
 | 4 | B7 `ProgramCtx`/`Store` (+I1, Platform threading) | (iii) | 2 | re-packaging | — |

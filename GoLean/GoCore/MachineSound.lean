@@ -2474,6 +2474,45 @@ theorem mapM_ok_length {α β : Type} {f : α → Except Stop β}
       obtain ⟨y, hy, ys', hys', rfl⟩ := h
       simp [ih hys']
 
+/-- A `.picks` outcome carries ≥ 2 commits — one per ready clause, and
+the `[]`/`[c]` readiness lists take `applySelectCore`'s other arms — so
+`selectConsult?`'s `some` is exactly a POPPING consult under the uniform
+rule (G-U audit fix L6; the twin of `one_lt_appendSpillWidth` and
+`arrivalCases_multi_length`). -/
+theorem applySelectCore_picks_length {σ : ExecState}
+    {clauses : List (SelectClauseHead × Stmt)} {default? : Option Stmt}
+    {vs : List GoValue} {env : LocalEnv} {k : Cont}
+    {commits : List (EvClause × Sum (Config × ExecState) String)}
+    (h : applySelectCore σ clauses default? vs env k = .ok (.picks commits)) :
+    1 < commits.length := by
+  unfold applySelectCore at h
+  simp only [Bind.bind, Except.bind] at h
+  split at h
+  · cases h
+  · split at h
+    · cases h
+    · split at h
+      · split at h <;> cases h
+      · split at h <;> cases h
+      · rename_i hnil hsingle
+        split at h
+        · cases h
+        · rename_i cs hmap
+          simp only [pure, Except.pure, Except.ok.injEq, SelectOutcome.picks.injEq] at h
+          subst h
+          rw [mapM_ok_length hmap]
+          -- the ready list fell through `[]` and `[c]`: length ≥ 2
+          have key : ∀ l : List EvClause, (l = [] → False) → (∀ c, l = [c] → False)
+              → 1 < l.length := by
+            intro l h0 h1
+            cases l with
+            | nil => exact absurd rfl h0
+            | cons a t =>
+              cases t with
+              | nil => exact absurd rfl (h1 a)
+              | cons b t' => simp
+          exact key _ hnil hsingle
+
 /-- `applySelect`'s apply-SUCCESS is pick-independent (the ∀-choices
 kit's discipline; the mapIterNext-snapshot precedent): if the apply
 returns `.ok` or a panic under one stream, it does under EVERY stream

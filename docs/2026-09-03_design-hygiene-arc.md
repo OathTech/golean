@@ -164,7 +164,12 @@ cost and touches the fewest positional `fun_cases` proofs.
     returns to the [USER] as its own design gate when reached — a
     HARD STOP, never self-adjudicated (CLAUDE.md, autonomous arcs);
     the 2026-09-04 ruling is a recommendation ADOPTED per gate, not a
-    waiver of the per-item stop. C1 memory module
+    waiver of the per-item stop — satisfied for G-U…G-PIN by the
+    2026-09-04 INDIVIDUAL presentation of each gate's verbatim text +
+    recommendation, answered «Great, this sounds good - let's move ahead
+    with the plan» (coordinator reading [AGENT], DISCLOSED to the [USER]
+    for confirmation or correction; `docs/2026-09-04_c-arc-gu-design.md`
+    §0; if corrected, the next lane amends). C1 memory module
     with an access trace; C2 well-founded `TypeEnv` (the fuel towers
     become structural); C3 `Cont` as `List Frame` (pre-pin only —
     after the downstream repo pins the `Cont` shape it is a breaking

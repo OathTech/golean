@@ -101,9 +101,10 @@ FALSE from stage C until this fix; it is re-verified now.
 
 This list and the executable consume sites agree exactly — verified by
 the inventory's dual sweep (its §0 census table, with per-site bounds,
-consume conditions, and empty-stream defaults; one alignment nuance for
-stream authors at §9 flag 5: the map-iteration site alone consumes even
-at width 1).
+consume conditions, and empty-stream defaults). Consumption is under ONE
+rule at every site since G-U (2026-09-04): a consult pops the stream iff
+its bound is ≥ 2 — the inventory's §9 flag 5 (the map-iteration site
+alone used to pop at width 1) is RESOLVED by it.
 
 Each site carries its envelope statement in situ; enforcement is
 structural (`applyStmtOpCore` is choices-free). The old parenthetical
