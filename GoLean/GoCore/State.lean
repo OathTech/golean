@@ -66,7 +66,8 @@ way to write a cell that does not exist: `storeLoc` refuses out of range
 (BUG-085's phantom-materialization arm is unrepresentable — `Array.set`
 carries its bounds proof). -/
 abbrev Heap := Array HeapCell
-abbrev TypeEnv := List (TypeId × TypeDef)
+-- `TypeEnv` (the dependency-ordered type table) lives in `Syntax.lean`
+-- beside `TypeDef` since C2 (2026-09-05); `Program.typeDefs` IS one.
 
 /-- The machine state. Locals are NOT here (reshape S4, 2026-07-23): the
 current frame's environment lives in the control configuration
@@ -74,7 +75,11 @@ current frame's environment lives in the control configuration
 heap only. The old interpreter's `locals` field — the correspondence
 bridge `σ.locals ≈ Config.env` — is gone with the big-step cluster. -/
 structure ExecState where
-  types : TypeEnv := []
+  /-- The program's type table (`Program.typeDefs`, verbatim): dependency-
+  ordered, index-keyed (C2). Default `#[]` = no declared types; a
+  hand-built state that needs `struct{}` or the runtime-error payload
+  type prepends `TypeEnv.reserved`. -/
+  types : TypeEnv := #[]
   functions : Array Func := #[]
   methods : Array MethodInfo := #[]
   /-- Method-set records (class closure of BUG-053; contract note
@@ -153,10 +158,9 @@ theorem Heap.lookup_lt {h : Heap} {a : Addr} {c : HeapCell}
   simp only [Heap.lookup] at hl
   exact (Array.getElem?_eq_some_iff.mp hl).1
 
-def TypeEnv.lookup : TypeEnv → TypeId → Option TypeDef
-  | [], _ => none
-  | (id, defn) :: rest, needle =>
-      if id == needle then some defn else TypeEnv.lookup rest needle
+-- `TypeEnv.lookup` (name-keyed, list scan) deleted with C2: `Ty.defined`
+-- resolves by INDEX (`types[i]?`); the two name-keyed consumers use
+-- `TypeEnv.lookupName?` (Syntax.lean).
 
 def StructFields.lookup : Array (String × GoValue) → String → Option GoValue
   | fields, needle =>

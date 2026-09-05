@@ -169,48 +169,38 @@ theorem SyncPrim.beq_sound {a b : SyncPrim} (h : (a == b) = true) : a = b := by
 
 /-! ## `Ty` soundness (the existing mutual fuel eqb) -/
 
-theorem Ty.eqbFuel_sound_all :
-    ∀ f, (∀ a b : GoCore.Ty, Ty.eqbFuel f a b = true → a = b)
-       ∧ (∀ as bs : List GoCore.Ty, Ty.eqbListFuel f as bs = true → as = bs) := by
-  intro f
-  induction f with
-  | zero =>
-    constructor
-    · intro a b h
-      cases a <;> cases b <;>
-        simp_all [Ty.eqbFuel] <;>
-        first
-          | exact GoCore.IntKind.beq_sound h
-          | exact GoCore.FloatKind.beq_sound h
-          | exact GoCore.SyncKind.beq_sound h
-    · intro as bs h
-      cases as <;> cases bs <;> simp_all [Ty.eqbListFuel]
-  | succ f ih =>
-    obtain ⟨ih1, ih2⟩ := ih
-    constructor
-    · intro a b h
-      cases a <;> cases b <;>
-        simp_all [Ty.eqbFuel] <;>
-        first
-          | exact GoCore.IntKind.beq_sound h
-          | exact GoCore.FloatKind.beq_sound h
-          | exact GoCore.SyncKind.beq_sound h
-          | exact ih1 _ _ h
-          | exact ⟨ih1 _ _ h.1, ih1 _ _ h.2⟩
-          | exact ⟨GoCore.ChanDir.beq_sound h.1, ih1 _ _ h.2⟩
-          | exact ⟨ih2 _ _ h.1, ih2 _ _ h.2⟩
-          -- funcType: `v₁ == v₂ && eqbList p && eqbList r` flattens to
-          -- `(v₁ = v₂ ∧ P) ∧ R` (BUG-067 added the variadic conjunct;
-          -- the Bool equality is consumed by simp_all, the lists by ih2).
-          | exact ⟨ih2 _ _ h.1.2, ih2 _ _ h.2⟩
-          | exact ⟨ih2 _ _ h.1.2, ih2 _ _ h.2.1, h.2.2⟩
-          | exact ih1 _ _ h.2
-    · intro as bs h
-      cases as <;> cases bs <;> simp_all [Ty.eqbListFuel]
-      exact ⟨ih1 _ _ h.1, ih2 _ _ h.2⟩
+/-- Soundness of the structural `Ty` equality and its list companion, by
+the mutual functional induction the structural definition generates (C2:
+the fuel induction went with the fuel). One case per match arm, in the
+definition's order. -/
+theorem Ty.eqb_sound_all :
+    (∀ a b : GoCore.Ty, Ty.eqb a b = true → a = b)
+      ∧ (∀ as bs : List GoCore.Ty, Ty.eqbList as bs = true → as = bs) := by
+  apply Ty.eqb.mutual_induct
+  all_goals intros
+  all_goals simp only [Ty.eqb, Ty.eqbList, Bool.and_eq_true] at *
+  all_goals try rfl
+  case case2 => rename_i h; exact congrArg _ (GoCore.IntKind.beq_sound h)
+  case case3 => rename_i h; exact congrArg _ (GoCore.FloatKind.beq_sound h)
+  case case5 => rename_i ih h; rw [eq_of_beq h.1, ih h.2]
+  case case6 => rename_i ih h; exact congrArg _ (ih h)
+  case case7 => rename_i ih2 ih1 h; rw [ih2 h.1, ih1 h.2]
+  case case8 => rename_i ih h; rw [GoCore.ChanDir.beq_sound h.1, ih h.2]
+  case case9 => rename_i ih h; exact congrArg _ (ih h)
+  case case10 =>
+    rename_i ih2 ih1 h
+    obtain ⟨⟨hv, hp⟩, hr⟩ := h
+    rw [eq_of_beq hv, ih2 hp, ih1 hr]
+  case case11 => rename_i h; exact congrArg _ (eq_of_beq h)
+  case case12 => rename_i h; exact congrArg _ (eq_of_beq h)
+  case case13 => rename_i h; exact congrArg _ (eq_of_beq h)
+  case case14 => rename_i h; exact congrArg _ (GoCore.SyncKind.beq_sound h)
+  case case15 => exact Bool.noConfusion ‹false = true›
+  case case17 => rename_i ih2 ih1 h; rw [ih2 h.1, ih1 h.2]
+  case case18 => exact Bool.noConfusion ‹false = true›
 
 theorem Ty.eqb_sound {a b : GoCore.Ty} (h : Ty.eqb a b = true) : a = b :=
-  (Ty.eqbFuel_sound_all tyEqFuel).1 a b h
+  Ty.eqb_sound_all.1 a b h
 
 /-- `Ty`'s `==` IS `Ty.eqb` (the instance in `Value.lean`). -/
 theorem Ty.beq_sound {a b : GoCore.Ty} (h : (a == b) = true) : a = b :=
@@ -276,96 +266,48 @@ theorem GoValue.eqbFieldsWith_sound {f : GoValue → GoValue → Bool}
       cases eq_of_beq h1; cases hf _ _ h2
       exact congrArg _ (ih h3)
 
-theorem GoValue.eqbFuel_sound :
-    ∀ f (a b : GoValue), GoValue.eqbFuel f a b = true → a = b := by
-  intro f
-  induction f with
-  | zero =>
-    intro a b h
-    cases a <;> cases b <;> (try exact Bool.noConfusion h)
-    case unit.unit => rfl
-    case nil.nil => rfl
-    case bool.bool x y =>
-      cases eq_of_beq (show (x == y) = true from h); rfl
-    case int.int v₁ k₁ v₂ k₂ =>
-      have hxx : _ = true := (show (v₁ == v₂ && k₁ == k₂) = true from h)
-      simp only [Bool.and_eq_true] at hxx
-      obtain ⟨h1, h2⟩ := hxx
-      cases eq_of_beq h1; cases GoCore.IntKind.beq_sound h2; rfl
-    case float.float b₁ k₁ b₂ k₂ =>
-      have hxx : _ = true := (show (b₁ == b₂ && k₁ == k₂) = true from h)
-      simp only [Bool.and_eq_true] at hxx
-      obtain ⟨h1, h2⟩ := hxx
-      cases eq_of_beq h1; cases GoCore.FloatKind.beq_sound h2; rfl
-    case string.string x y =>
-      cases GoString.beq_sound (show (x == y) = true from h); rfl
-    case addr.addr x y =>
-      cases eq_of_beq (show (x == y) = true from h); rfl
-    case slice.slice x y =>
-      cases SliceValue.beq_sound (show (x == y) = true from h); rfl
-    case map.map x y =>
-      cases MapValue.beq_sound (show (x == y) = true from h); rfl
-    case chan.chan x y =>
-      cases ChanValue.beq_sound (show (x == y) = true from h); rfl
-    case syncData.syncData x y =>
-      cases SyncPrim.beq_sound (show (x == y) = true from h); rfl
-  | succ f ih =>
-    intro a b h
-    cases a <;> cases b <;> (try exact Bool.noConfusion h)
-    case unit.unit => rfl
-    case nil.nil => rfl
-    case bool.bool x y =>
-      cases eq_of_beq (show (x == y) = true from h); rfl
-    case int.int v₁ k₁ v₂ k₂ =>
-      have hxx : _ = true := (show (v₁ == v₂ && k₁ == k₂) = true from h)
-      simp only [Bool.and_eq_true] at hxx
-      obtain ⟨h1, h2⟩ := hxx
-      cases eq_of_beq h1; cases GoCore.IntKind.beq_sound h2; rfl
-    case float.float b₁ k₁ b₂ k₂ =>
-      have hxx : _ = true := (show (b₁ == b₂ && k₁ == k₂) = true from h)
-      simp only [Bool.and_eq_true] at hxx
-      obtain ⟨h1, h2⟩ := hxx
-      cases eq_of_beq h1; cases GoCore.FloatKind.beq_sound h2; rfl
-    case string.string x y =>
-      cases GoString.beq_sound (show (x == y) = true from h); rfl
-    case addr.addr x y =>
-      cases eq_of_beq (show (x == y) = true from h); rfl
-    case slice.slice x y =>
-      cases SliceValue.beq_sound (show (x == y) = true from h); rfl
-    case map.map x y =>
-      cases MapValue.beq_sound (show (x == y) = true from h); rfl
-    case chan.chan x y =>
-      cases ChanValue.beq_sound (show (x == y) = true from h); rfl
-    case syncData.syncData x y =>
-      cases SyncPrim.beq_sound (show (x == y) = true from h); rfl
-    case interface.interface t₁ v₁ t₂ v₂ =>
-      have hxx : _ = true := (show (GoCore.Ty.eqb t₁ t₂ && GoValue.eqbFuel f v₁ v₂) = true from h)
-      simp only [Bool.and_eq_true] at hxx
-      obtain ⟨h1, h2⟩ := hxx
-      cases Ty.eqb_sound h1; cases ih _ _ h2; rfl
-    case struct.struct id₁ fs₁ id₂ fs₂ =>
-      have hxx : _ = true := (show (id₁ == id₂
-          && GoValue.eqbFieldsWith (GoValue.eqbFuel f) fs₁.toList fs₂.toList)
-          = true from h)
-      simp only [Bool.and_eq_true] at hxx
-      obtain ⟨h1, h2⟩ := hxx
-      cases eq_of_beq h1
-      cases array_toList_inj (GoValue.eqbFieldsWith_sound ih h2); rfl
-    case array.array x y =>
-      cases array_toList_inj (GoValue.eqbListWith_sound ih
-        (show GoValue.eqbListWith (GoValue.eqbFuel f) x.toList y.toList = true
-          from h)); rfl
-    case funcVal.funcVal id₁ c₁ id₂ c₂ =>
-      have hxx : _ = true := (show (id₁ == id₂
-          && GoValue.eqbListWith (GoValue.eqbFuel f) c₁ c₂) = true from h)
-      simp only [Bool.and_eq_true] at hxx
-      obtain ⟨h1, h2⟩ := hxx
-      cases GoCore.FuncId.beq_sound h1
-      cases GoValue.eqbListWith_sound ih h2; rfl
+/-- Soundness of the structural `GoValue` equality and its two list
+companions, by the mutual functional induction (C2). One case per match
+arm, in the definition's order. -/
+theorem GoValue.eqb_sound_all :
+    (∀ a b : GoValue, GoValue.eqb a b = true → a = b)
+      ∧ (∀ as bs : List GoValue, GoValue.eqbList as bs = true → as = bs)
+      ∧ (∀ as bs : List (String × GoValue), GoValue.eqbFieldList as bs = true → as = bs) := by
+  apply GoValue.eqb.mutual_induct
+  all_goals intros
+  all_goals simp only [GoValue.eqb, GoValue.eqbList, GoValue.eqbFieldList, Bool.and_eq_true] at *
+  all_goals try rfl
+  case case2 => rename_i h; exact congrArg _ (eq_of_beq h)
+  case case3 =>
+    rename_i h
+    rw [eq_of_beq h.1, GoCore.IntKind.beq_sound h.2]
+  case case4 =>
+    rename_i h
+    rw [eq_of_beq h.1, GoCore.FloatKind.beq_sound h.2]
+  case case5 => rename_i h; exact congrArg _ (GoString.beq_sound h)
+  case case6 => rename_i h; exact congrArg _ (eq_of_beq h)
+  case case8 => rename_i ih h; rw [Ty.eqb_sound h.1, ih h.2]
+  case case9 =>
+    rename_i ih h
+    rw [eq_of_beq h.1, ih h.2]
+  case case10 => rename_i ih h; rw [ih h]
+  case case11 => rename_i h; exact congrArg _ (SliceValue.beq_sound h)
+  case case12 => rename_i h; exact congrArg _ (MapValue.beq_sound h)
+  case case13 => rename_i h; exact congrArg _ (ChanValue.beq_sound h)
+  case case14 =>
+    rename_i ih h
+    rw [GoCore.FuncId.beq_sound h.1, ih h.2]
+  case case15 => rename_i h; exact congrArg _ (SyncPrim.beq_sound h)
+  all_goals first
+    | exact Bool.noConfusion ‹false = true›
+    | (rename_i ih2 ih1 h; rw [ih2 h.1, ih1 h.2])
+    | (rename_i ih2 ih1 h
+       obtain ⟨⟨hn, hv⟩, hrest⟩ := h
+       rw [eq_of_beq hn, ih2 hv, ih1 hrest])
 
 theorem GoValue.eqb_sound {a b : GoValue} (h : GoValue.eqb a b = true) :
     a = b :=
-  GoValue.eqbFuel_sound valueEqbFuel a b h
+  GoValue.eqb_sound_all.1 a b h
 
 /-- `GoValue`'s `==` IS `GoValue.eqb` (the instance in `Value.lean`). -/
 theorem GoValue.beq_sound {a b : GoValue} (h : (a == b) = true) : a = b :=

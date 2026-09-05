@@ -797,7 +797,7 @@ def runFunctionWithTypesM (fuel : Nat) (types : TypeEnv) (func : Func)
 
 def runFunctionM (fuel : Nat) (func : Func) (args : Array GoValue) :
     Except Stop Readout :=
-  runFunctionWithTypesM fuel [] func args
+  runFunctionWithTypesM fuel #[] func args
 
 -- `runNamedFunctionM`/`runNamedFunctionIntsM` DELETED (delta-review N4,
 -- 2026-08-05): the Program-level non-seeding entries had zero callers
@@ -927,7 +927,7 @@ def runProgramSetupM (fuel : Nat) (program : Program) (name : String)
   if func.args.size != args.size then
     throw (.stuck s!"expected {func.args.size} argument(s), got {args.size}")
   let state : ExecState :=
-    { types := program.typeDefs.toList, functions := program.funcs
+    { types := program.typeDefs, functions := program.funcs
       methods := program.methods, methodSets := program.methodSets
       typeDisplays := program.typeDisplays }
   let s₀ ← seedGlobals state program.globals

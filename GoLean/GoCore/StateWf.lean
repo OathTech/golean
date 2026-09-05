@@ -1130,64 +1130,60 @@ theorem normalizeStructValueWith_locSup {f : Ty → GoValue → Except Stop GoVa
       obtain ⟨arr, harr, rfl⟩ := h
       simpa [GoValue.locSup] using normalizeFieldsWith_locSup hf harr
 
-theorem normalizeValueForTyFuel_locSup :
-    ∀ (fuel : Nat) {s : ExecState} {ty : Ty} {v r : GoValue},
-      normalizeValueForTyFuel fuel s ty v = .ok r →
+/-- The TYPE layer of normalization is loc-bounded by its input, given the
+same for the `.defined` callback. -/
+theorem normalizeValueForTyTy_locSup {f : TypeIdx → GoValue → Except Stop GoValue}
+    (hf : ∀ i v r, f i v = .ok r → GoValue.locSup r ≤ GoValue.locSup v) :
+    ∀ {ty : Ty} {v r : GoValue},
+      normalizeValueForTyTy f ty v = .ok r →
       GoValue.locSup r ≤ GoValue.locSup v := by
-  intro fuel
-  induction fuel with
-  | zero => intro s ty v r h; simp [normalizeValueForTyFuel] at h
-  | succ n ih =>
-    intro s ty v r h
+  intro ty
+  induction ty using Ty.arrayInduction with
+  | array length elem ih =>
+    intro v r h
+    cases v <;> try (simp [normalizeValueForTyTy] at h; done)
+    rename_i values
+    simp only [normalizeValueForTyTy] at h
+    split at h
+    · simp [Bind.bind, Except.bind] at h
+    · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, map_eq_ok] at h
+      obtain ⟨arr, harr, rfl⟩ := h
+      simpa [GoValue.locSup] using
+        normalizeListWith_locSup (fun _ _ hr => ih hr) harr
+  | leaf ty hne =>
+    intro v r h
     cases ty
+    case array => exact absurd rfl (hne _ _)
     case int kind =>
-      cases v <;> simp [normalizeValueForTyFuel] at h <;> subst h <;>
+      cases v <;> simp [normalizeValueForTyTy] at h <;> subst h <;>
         simp [GoValue.locSup]
     case float kind =>
-      cases v <;> try (simp [normalizeValueForTyFuel] at h; done)
+      cases v <;> try (simp [normalizeValueForTyTy] at h; done)
       rename_i bits k
-      simp only [normalizeValueForTyFuel] at h
+      simp only [normalizeValueForTyTy] at h
       split at h
       · simp only [pure_eq_ok, Except.ok.injEq] at h
         subst h
         simp [GoValue.locSup]
       · simp [Bind.bind, Except.bind] at h
-    case array length elem =>
-      cases v <;> try (simp [normalizeValueForTyFuel] at h; done)
-      rename_i values
-      simp only [normalizeValueForTyFuel] at h
-      split at h
-      · simp [Bind.bind, Except.bind] at h
-      · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, map_eq_ok] at h
-        obtain ⟨arr, harr, rfl⟩ := h
-        simpa [GoValue.locSup] using
-          normalizeListWith_locSup (fun _ _ hr => ih hr) harr
     case interface id =>
-      simp only [normalizeValueForTyFuel, pure_eq_ok, Except.ok.injEq] at h
+      simp only [normalizeValueForTyTy, pure_eq_ok, Except.ok.injEq] at h
       subst h
       exact Nat.le_refl _
     case funcType ps rs _ =>
-      cases v <;> simp [normalizeValueForTyFuel] at h <;> subst h <;>
+      cases v <;> simp [normalizeValueForTyTy] at h <;> subst h <;>
         exact Nat.le_refl _
-    case defined name =>
-      simp only [normalizeValueForTyFuel] at h
-      split at h
-      · exact ih h
-      · exact ih h
-      · exact normalizeStructValueWith_locSup (fun _ _ _ hr => ih hr) h
-      · simp at h
-      · simp at h
-      · simp at h
-    case unsupported f => simp [normalizeValueForTyFuel] at h
+    case defined i => exact hf _ _ _ h
+    case unsupported f => simp [normalizeValueForTyTy] at h
     case chan d elem =>
       cases v <;>
-        simp_all [normalizeValueForTyFuel, GoValue.locSup, optLocSup] <;>
+        simp_all [normalizeValueForTyTy, GoValue.locSup, optLocSup] <;>
         subst h <;>
         simp [GoValue.locSup, optLocSup]
     case sync kind =>
       -- Sync arms (spec-parity slice 2): kind-matching state passes
       -- through unchanged; everything else is stuck.
-      cases v <;> simp only [normalizeValueForTyFuel] at h
+      cases v <;> simp only [normalizeValueForTyTy] at h
       case syncData p =>
         split at h
         · simp only [pure_eq_ok, Except.ok.injEq] at h
@@ -1196,15 +1192,34 @@ theorem normalizeValueForTyFuel_locSup :
         · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
       all_goals simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
     all_goals
-      simp only [normalizeValueForTyFuel, pure_eq_ok, Except.ok.injEq] at h
+      simp only [normalizeValueForTyTy, pure_eq_ok, Except.ok.injEq] at h
       subst h
       exact Nat.le_refl _
+
+/-- The INDEX layer, by induction on the descent bound. -/
+theorem normalizeValueForTyAt_locSup (types : TypeEnv) :
+    ∀ (bound : Nat) {i : TypeIdx} {v r : GoValue},
+      normalizeValueForTyAt types bound i v = .ok r →
+      GoValue.locSup r ≤ GoValue.locSup v := by
+  intro bound
+  induction bound with
+  | zero => intro i v r h; simp [normalizeValueForTyAt, typeIndexExhausted] at h
+  | succ n ih =>
+    intro i v r h
+    simp only [normalizeValueForTyAt] at h
+    split at h
+    · exact normalizeStructValueWith_locSup
+        (fun _ _ _ hr => normalizeValueForTyTy_locSup (fun _ _ _ hh => ih hh) hr) h
+    · exact normalizeValueForTyTy_locSup (fun _ _ _ hh => ih hh) h
+    · simp at h
+    · simp at h
+    · simp at h
 
 theorem normalizeValueForTy_locSup {s : ExecState} {ty : Ty} {v r : GoValue}
     (h : normalizeValueForTy s ty v = .ok r) :
     GoValue.locSup r ≤ GoValue.locSup v := by
   unfold normalizeValueForTy at h
-  exact normalizeValueForTyFuel_locSup _ h
+  exact normalizeValueForTyTy_locSup (fun _ _ _ hh => normalizeValueForTyAt_locSup _ _ hh) h
 
 theorem defaultFieldsWith_locSup {f : Ty → Except Stop GoValue}
     (hf : ∀ ty r, f ty = .ok r → GoValue.locSup r = 0) :
@@ -1230,68 +1245,103 @@ theorem defaultFieldsWith_locSup {f : Ty → Except Stop GoValue}
     simp only [goValueFieldsSup]
     omega
 
-theorem defaultValueFuel_locSup :
-    ∀ (fuel : Nat) {s : ExecState} {ty : Ty} {v : GoValue},
-      defaultValueFuel fuel s ty = .ok v → GoValue.locSup v = 0 := by
-  intro fuel
-  induction fuel with
-  | zero => intro s ty v h; simp [defaultValueFuel] at h
-  | succ n ih =>
-    intro s ty v h
+/-- The TYPE layer of the zero value is loc-free, given the same for the
+`.defined` callback. -/
+theorem defaultValueTy_locSup {f : TypeIdx → Except Stop GoValue}
+    (hf : ∀ i r, f i = .ok r → GoValue.locSup r = 0) :
+    ∀ {ty : Ty} {v : GoValue},
+      defaultValueTy f ty = .ok v → GoValue.locSup v = 0 := by
+  intro ty
+  induction ty using Ty.arrayInduction with
+  | array length elem ih =>
+    intro v h
+    simp only [defaultValueTy] at h
+    split at h
+    · simp only [pure_eq_ok, Except.ok.injEq] at h
+      subst h
+      simp [GoValue.locSup, goValueListSup]
+    · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
+      obtain ⟨d, hd, hv⟩ := h
+      subst hv
+      have h0 := ih hd
+      simp only [GoValue.locSup, goValueListSup_eq]
+      refine Nat.le_zero.mp (supBy_le_iff.mpr fun x hx => ?_)
+      rw [Array.toList_replicate] at hx
+      rw [List.eq_of_mem_replicate hx, h0]
+      exact Nat.le_refl _
+  | leaf ty hne =>
+    intro v h
     cases ty
-    case array length elem =>
-      simp only [defaultValueFuel] at h
-      split at h
-      · simp only [pure_eq_ok, Except.ok.injEq] at h
-        subst h
-        simp [GoValue.locSup, goValueListSup]
-      · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-        obtain ⟨d, hd, hv⟩ := h
-        subst hv
-        have h0 := ih hd
-        simp only [GoValue.locSup, goValueListSup_eq]
-        refine Nat.le_zero.mp (supBy_le_iff.mpr fun x hx => ?_)
-        rw [Array.toList_replicate] at hx
-        rw [List.eq_of_mem_replicate hx, h0]
-        exact Nat.le_refl _
-    case defined name =>
-      simp only [defaultValueFuel] at h
-      split at h
-      · simp only [map_eq_ok] at h
-        obtain ⟨arr, harr, rfl⟩ := h
-        simpa [GoValue.locSup] using
-          defaultFieldsWith_locSup (fun _ _ hr => ih hr) harr
-      · exact ih h
-      · exact ih h
-      · simp at h
-      · simp at h
-      · simp at h
-    case unsupported f => simp [defaultValueFuel] at h
+    case array => exact absurd rfl (hne _ _)
+    case defined i => exact hf _ _ h
+    case unsupported f => simp [defaultValueTy] at h
     all_goals
-      simp only [defaultValueFuel, pure_eq_ok, Except.ok.injEq] at h
+      simp only [defaultValueTy, pure_eq_ok, Except.ok.injEq] at h
       subst h <;> simp [GoValue.locSup, optLocSup]
+
+/-- The INDEX layer, by induction on the descent bound. -/
+theorem defaultValueAt_locSup (types : TypeEnv) :
+    ∀ (bound : Nat) {i : TypeIdx} {v : GoValue},
+      defaultValueAt types bound i = .ok v → GoValue.locSup v = 0 := by
+  intro bound
+  induction bound with
+  | zero => intro i v h; simp [defaultValueAt, typeIndexExhausted] at h
+  | succ n ih =>
+    intro i v h
+    simp only [defaultValueAt] at h
+    split at h
+    · simp only [map_eq_ok] at h
+      obtain ⟨arr, harr, rfl⟩ := h
+      simpa [GoValue.locSup] using
+        defaultFieldsWith_locSup
+          (fun _ _ hr => defaultValueTy_locSup (fun _ _ hh => ih hh) hr) harr
+    · exact defaultValueTy_locSup (fun _ _ hh => ih hh) h
+    · simp at h
+    · simp at h
+    · simp at h
 
 theorem defaultValue_locSup {s : ExecState} {ty : Ty} {v : GoValue}
     (h : defaultValue s ty = .ok v) : GoValue.locSup v = 0 := by
   unfold defaultValue at h
-  exact defaultValueFuel_locSup _ h
+  exact defaultValueTy_locSup (fun _ _ hh => defaultValueAt_locSup _ _ hh) h
 
-theorem convertValueToTyFuel_locSup :
-    ∀ (fuel : Nat) {s : ExecState} {ty : Ty} {v r : GoValue},
-      convertValueToTyFuel fuel s ty v = .ok r →
-      GoValue.locSup r ≤ GoValue.locSup v := by
-  intro fuel
-  induction fuel with
-  | zero =>
-    intro s ty v r h
-    cases ty <;> cases v <;>
+/-- Conversion is loc-bounded by its operand: every ok result is the
+operand itself, a retagged copy of its fields, or a loc-free scalar.
+Cases on the RESOLVED target body (C2: the conversion is not recursive). -/
+theorem convertValueToTy_locSup {s : ExecState} {ty : Ty} {v r : GoValue}
+    (h : convertValueToTy s ty v = .ok r) :
+    GoValue.locSup r ≤ GoValue.locSup v := by
+  unfold convertValueToTy at h
+  generalize s.types.resolve s.types.size ty = body at h
+  match body with
+  | .error _ => simp at h
+  | .ok (.interfaceDecl _) => simp at h
+  | .ok (.opaque _ _) => simp at h
+  | .ok (.struct name targetFields) =>
+    -- struct conversion (stage 7): identity, or a retagged copy with
+    -- the SAME fields — locSup is over the fields either way.
+    cases v <;> try (simp at h; done)
+    simp only at h
+    split at h
+    · simp only [pure_eq_ok, Except.ok.injEq] at h
+      subst h
+      exact Nat.le_refl _
+    · split at h
+      · split at h
+        · simp only [pure_eq_ok, Except.ok.injEq] at h
+          subst h
+          simp [GoValue.locSup]
+        · simp at h
+      · simp at h
+  | .ok (.plain t) =>
+    cases t <;> cases v <;>
       first
-      | (simp [convertValueToTyFuel] at h; done)
-      | (simp only [convertValueToTyFuel, pure_eq_ok, Except.ok.injEq] at h;
+      | (simp at h; done)
+      | (simp only [pure_eq_ok, Except.ok.injEq] at h;
          subst h; first | exact Nat.le_refl _ | simp [GoValue.locSup])
       | -- float arms (floats slice F2): nested kind/range dispatch, every
         -- ok result a loc-free scalar
-        (simp only [convertValueToTyFuel] at h;
+        (simp only at h;
          split at h <;>
            first
            | (simp at h; done)
@@ -1307,69 +1357,13 @@ theorem convertValueToTyFuel_locSup :
     -- blocks the generic reduction; every branch is panic/unsupported,
     -- so no ok exists.
     case pointer.slice elem sl =>
-      cases elem <;> simp only [convertValueToTyFuel] at h <;>
+      cases elem <;> simp only at h <;>
         first
         | (simp at h; done)
         | (split at h <;> simp at h)
-  | succ n ih =>
-    intro s ty v r h
-    cases ty
-    case defined name =>
-      simp only [convertValueToTyFuel] at h
-      split at h
-      · exact ih h
-      · exact ih h
-      · -- struct conversion (stage 7): identity, or a retagged copy with
-        -- the SAME fields — locSup is over the fields either way.
-        split at h
-        · split at h
-          · simp only [pure_eq_ok, Except.ok.injEq] at h
-            subst h
-            exact Nat.le_refl _
-          · split at h
-            · split at h
-              · simp only [pure_eq_ok, Except.ok.injEq] at h
-                subst h
-                simp [GoValue.locSup]
-              · simp at h
-            · simp at h
-        · simp at h
-      · simp at h
-      · simp at h
-      · simp at h
-    case pointer elem =>
-      cases v <;>
-        first
-        | (simp [convertValueToTyFuel] at h; done)
-        | (simp only [convertValueToTyFuel, pure_eq_ok, Except.ok.injEq] at h;
-           subst h; first | exact Nat.le_refl _ | simp [GoValue.locSup])
-        | skip
-      -- slice operand (triage L2a): elem dispatch, no ok branch.
-      case slice sl =>
-        cases elem <;> simp only [convertValueToTyFuel] at h <;>
-          first
-          | (simp at h; done)
-          | (split at h <;> simp at h)
-    all_goals
-      cases v <;>
-        first
-        | (simp [convertValueToTyFuel] at h; done)
-        | (simp only [convertValueToTyFuel, pure_eq_ok, Except.ok.injEq] at h;
-           subst h; first | exact Nat.le_refl _ | simp [GoValue.locSup])
-        | -- float arms (floats slice F2), as in the zero case
-          (simp only [convertValueToTyFuel] at h;
-           split at h <;>
-             first
-             | (simp at h; done)
-             | (split at h <;>
-                 first
-                 | (simp at h; done)
-                 | (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
-                    simp [GoValue.locSup]))
-             | (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
-                simp [GoValue.locSup]))
 
-/-- Every ok result of the IEEE `min`/`max` selection is one of the
+/-- Every ok result of the IEEE
+ `min`/`max` selection is one of the
 `.float` operands — loc-free (triage L3). -/
 theorem floatMinMax_locSup {isMin : Bool} {l r v : GoValue}
     (h : floatMinMax isMin l r = .ok v) : GoValue.locSup v = 0 := by
@@ -1387,7 +1381,7 @@ theorem floatMinMax_locSup {isMin : Bool} {l r v : GoValue}
 
 /-! ## Soundness of the self-normalization check
 
-`isNormalForTyFuel` (Ops.lean) mirrors the normalizer arm-for-arm; here
+`isNormalForTyTy` (Ops.lean) mirrors the normalizer arm-for-arm; here
 is the direction every theorem consumes: check true ⇒ the normalizer
 returns the value UNCHANGED. Stated against an arbitrary state whose
 `types` is the checker's environment. -/
@@ -1431,91 +1425,107 @@ theorem isNormalFieldsWith_sound {f : Ty → GoValue → Bool}
       simp [normalizeFieldsWith, hfg _ _ hv, ih hrest, Bind.bind, Except.bind,
         pure, Except.pure]
 
-theorem isNormalForTyFuel_sound {σ : ExecState} :
-    ∀ (fuel : Nat) (ty : Ty) (v : GoValue),
-      isNormalForTyFuel fuel σ.types ty v = true →
-      normalizeValueForTyFuel fuel σ ty v = .ok v := by
-  intro fuel
-  induction fuel with
-  | zero => intro ty v h; simp [isNormalForTyFuel] at h
-  | succ f ih =>
-    intro ty v h
+/-- The TYPE layer: check true ⇒ the normalizer's type layer returns the
+value unchanged, given the same for the two `.defined` callbacks. -/
+theorem isNormalForTyTy_sound {f : TypeIdx → GoValue → Bool}
+    {g : TypeIdx → GoValue → Except Stop GoValue}
+    (hfg : ∀ i v, f i v = true → g i v = .ok v) :
+    ∀ {ty : Ty} {v : GoValue},
+      isNormalForTyTy f ty v = true →
+      normalizeValueForTyTy g ty v = .ok v := by
+  intro ty
+  induction ty using Ty.arrayInduction with
+  | array length elem ih =>
+    intro v h
+    cases v
+    case array values =>
+      simp only [isNormalForTyTy, Bool.and_eq_true, decide_eq_true_eq] at h
+      obtain ⟨hsz, hels⟩ := h
+      have hlist := isNormalListWith_sound (fun w hw => ih hw) hels
+      simp [normalizeValueForTyTy, hsz, hlist, Bind.bind, Except.bind,
+        Except.map, Functor.map, pure, Except.pure]
+    all_goals exact absurd h (by simp [isNormalForTyTy])
+  | leaf ty hne =>
+    intro v h
     cases ty with
+    | array => exact absurd rfl (hne _ _)
     | int kind =>
       cases v
       case int value k =>
-        simp only [isNormalForTyFuel, Bool.and_eq_true, decide_eq_true_eq] at h
+        simp only [isNormalForTyTy, Bool.and_eq_true, decide_eq_true_eq] at h
         obtain ⟨h1, h2⟩ := h
         subst h2
-        simp [normalizeValueForTyFuel, h1, pure, Except.pure]
-      all_goals exact absurd h (by simp [isNormalForTyFuel])
+        simp [normalizeValueForTyTy, h1, pure, Except.pure]
+      all_goals exact absurd h (by simp [isNormalForTyTy])
     | float kind =>
       cases v
       case float bits k =>
-        simp only [isNormalForTyFuel, Bool.and_eq_true, decide_eq_true_eq] at h
+        simp only [isNormalForTyTy, Bool.and_eq_true, decide_eq_true_eq] at h
         obtain ⟨h1, h2⟩ := h
         subst h2
-        simp only [normalizeValueForTyFuel, h1, pure, Except.pure]
+        simp only [normalizeValueForTyTy, h1, pure, Except.pure]
         have hbeq : (kind == kind) = true := by cases kind <;> rfl
         simp [hbeq, h1]
-      all_goals exact absurd h (by simp [isNormalForTyFuel])
-    | array length elem =>
-      cases v
-      case array values =>
-        simp only [isNormalForTyFuel, Bool.and_eq_true, decide_eq_true_eq] at h
-        obtain ⟨hsz, hels⟩ := h
-        have hlist := isNormalListWith_sound (fun w hw => ih elem w hw) hels
-        simp [normalizeValueForTyFuel, hsz, hlist, Bind.bind, Except.bind,
-          Except.map, Functor.map, pure, Except.pure]
-      all_goals exact absurd h (by simp [isNormalForTyFuel])
-    | interface _ => simp [normalizeValueForTyFuel, pure, Except.pure]
+      all_goals exact absurd h (by simp [isNormalForTyTy])
+    | interface _ => simp [normalizeValueForTyTy, pure, Except.pure]
     | funcType params results _ =>
       cases v
       case funcVal fid captured =>
-        simp [normalizeValueForTyFuel, pure, Except.pure]
-      case nil => simp [normalizeValueForTyFuel, pure, Except.pure]
-      all_goals exact absurd h (by simp [isNormalForTyFuel])
-    | defined name =>
-      simp only [isNormalForTyFuel] at h
-      cases hlook : TypeEnv.lookup σ.types name with
-      | none => rw [hlook] at h; exact absurd h (by simp)
-      | some td =>
-        rw [hlook] at h
-        cases td with
-        | alias target =>
-          simpa [normalizeValueForTyFuel, hlook] using ih target v h
-        | defined target =>
-          simpa [normalizeValueForTyFuel, hlook] using ih target v h
-        | struct fields =>
-          cases v
-          case struct actual fieldsValue =>
-            simp only [Bool.and_eq_true, decide_eq_true_eq] at h
-            obtain ⟨⟨hname, hsz⟩, hflds⟩ := h
-            subst hname
-            have hf := isNormalFieldsWith_sound
-              (fun t w hw => ih t w hw) hflds
-            simp [normalizeValueForTyFuel, hlook, normalizeStructValueWith,
-              hsz, hf, Bind.bind, Except.bind, Except.map, Functor.map,
-              pure, Except.pure]
-          all_goals exact absurd h (by simp)
-        | opaqueDecl _ => exact absurd h (by simp)
-        | interfaceDef _ => exact absurd h (by simp)
-    | unsupported _ => simp [isNormalForTyFuel] at h
-    | bool => simp [normalizeValueForTyFuel, pure, Except.pure]
-    | string => simp [normalizeValueForTyFuel, pure, Except.pure]
-    | slice _ => simp [normalizeValueForTyFuel, pure, Except.pure]
-    | map _ _ => simp [normalizeValueForTyFuel, pure, Except.pure]
+        simp [normalizeValueForTyTy, pure, Except.pure]
+      case nil => simp [normalizeValueForTyTy, pure, Except.pure]
+      all_goals exact absurd h (by simp [isNormalForTyTy])
+    | defined i => exact hfg _ _ h
+    | unsupported _ => simp [isNormalForTyTy] at h
+    | bool => simp [normalizeValueForTyTy, pure, Except.pure]
+    | string => simp [normalizeValueForTyTy, pure, Except.pure]
+    | slice _ => simp [normalizeValueForTyTy, pure, Except.pure]
+    | map _ _ => simp [normalizeValueForTyTy, pure, Except.pure]
     | chan _ _ =>
       cases v
-      case chan cv => simp [normalizeValueForTyFuel, pure, Except.pure]
-      all_goals exact absurd h (by simp [isNormalForTyFuel])
+      case chan cv => simp [normalizeValueForTyTy, pure, Except.pure]
+      all_goals exact absurd h (by simp [isNormalForTyTy])
     | sync kind =>
       cases v
       case syncData p =>
-        simp only [isNormalForTyFuel] at h
-        simp [normalizeValueForTyFuel, h, pure, Except.pure]
-      all_goals exact absurd h (by simp [isNormalForTyFuel])
-    | pointer _ => simp [normalizeValueForTyFuel, pure, Except.pure]
+        simp only [isNormalForTyTy] at h
+        simp [normalizeValueForTyTy, h, pure, Except.pure]
+      all_goals exact absurd h (by simp [isNormalForTyTy])
+    | pointer _ => simp [normalizeValueForTyTy, pure, Except.pure]
+
+/-- The INDEX layer, in lockstep: both descents at the same bound. -/
+theorem isNormalForTyAt_sound (types : TypeEnv) :
+    ∀ (bound : Nat) {i : TypeIdx} {v : GoValue},
+      isNormalForTyAt types bound i v = true →
+      normalizeValueForTyAt types bound i v = .ok v := by
+  intro bound
+  induction bound with
+  | zero => intro i v h; simp [isNormalForTyAt] at h
+  | succ n ih =>
+    intro i v h
+    simp only [isNormalForTyAt] at h
+    cases hlook : types[i]? with
+    | none => rw [hlook] at h; exact absurd h (by simp)
+    | some e =>
+      rw [hlook] at h
+      obtain ⟨name, td⟩ := e
+      cases td with
+      | struct fields =>
+        cases v
+        case struct actual fieldsValue =>
+          simp only [Bool.and_eq_true, decide_eq_true_eq] at h
+          obtain ⟨⟨hname, hsz⟩, hflds⟩ := h
+          subst hname
+          have hf := isNormalFieldsWith_sound
+            (fun t w hw => isNormalForTyTy_sound (fun _ _ hh => ih hh) hw) hflds
+          simp [normalizeValueForTyAt, hlook, normalizeStructValueWith,
+            hsz, hf, Bind.bind, Except.bind, Except.map, Functor.map,
+            pure, Except.pure]
+        all_goals exact absurd h (by simp)
+      | defined target =>
+        simpa [normalizeValueForTyAt, hlook] using
+          isNormalForTyTy_sound (fun _ _ hh => ih hh) h
+      | opaqueDecl _ => exact absurd h (by simp)
+      | interfaceDef _ => exact absurd h (by simp)
 
 /-- The wrapper form: check at `σ.types` ⇒ `normalizeValueForTy` is the
 identity (in `.ok`) at `σ`. -/
@@ -1524,13 +1534,7 @@ theorem isNormalForTy_sound {σ : ExecState} {ty : Ty} {v : GoValue}
     normalizeValueForTy σ ty v = .ok v := by
   unfold normalizeValueForTy
   unfold isNormalForTy at h
-  exact isNormalForTyFuel_sound _ _ _ h
-
-theorem convertValueToTy_locSup {s : ExecState} {ty : Ty} {v r : GoValue}
-    (h : convertValueToTy s ty v = .ok r) :
-    GoValue.locSup r ≤ GoValue.locSup v := by
-  unfold convertValueToTy at h
-  exact convertValueToTyFuel_locSup _ h
+  exact isNormalForTyTy_sound (fun _ _ hh => isNormalForTyAt_sound _ _ hh) h
 
 /-! ## StateWf projections -/
 
@@ -2582,43 +2586,26 @@ theorem buildStructFields_locSup {σ : ExecState} :
       simp only [goValueFieldsSup, goValueListSup] at *
       omega
 
-theorem buildStructValueFuel_locSup :
-    ∀ (fuel : Nat) {σ : ExecState} {ty : Ty} {args : Array GoValue} {r : GoValue},
-      buildStructValueFuel fuel σ ty args = .ok r →
-      GoValue.locSup r ≤ goValueListSup args.toList := by
-  intro fuel
-  induction fuel with
-  | zero =>
-    intro σ ty args r h
-    rw [buildStructValueFuel.eq_def] at h
-    split at h <;> simp_all
-  | succ n ih =>
-    intro σ ty args r h
-    rw [buildStructValueFuel.eq_def] at h
-    split at h
-    · rename_i fuel' name heq
-      obtain rfl : fuel' = n := by omega
-      split at h
-      · split at h
-        all_goals try (simp [Bind.bind, Except.bind] at h; done)
-        simp only [Bind.bind, Except.bind, pure, Except.pure] at h
-        rw [map_eq_ok] at h
-        obtain ⟨fs, hfs, rfl⟩ := h
-        simpa [GoValue.locSup] using buildStructFields_locSup hfs
-      · exact ih h
-      · simp at h
-      · simp at h
-      · simp at h
-      · simp at h
-    · simp_all
-    · simp at h
-    · simp at h
-
+/-- A struct literal's value is loc-bounded by its arguments. Cases on the
+RESOLVED type body (C2: the literal is not recursive). -/
 theorem buildStructValue_locSup {σ : ExecState} {ty : Ty} {args : Array GoValue}
     {r : GoValue} (h : buildStructValue σ ty args = .ok r) :
     GoValue.locSup r ≤ goValueListSup args.toList := by
   unfold buildStructValue at h
-  exact buildStructValueFuel_locSup _ h
+  generalize σ.types.resolve σ.types.size ty = body at h
+  match body with
+  | .error _ => simp at h
+  | .ok (.interfaceDecl _) => simp at h
+  | .ok (.opaque _ _) => simp at h
+  | .ok (.plain t) => cases t <;> simp at h
+  | .ok (.struct name fields) =>
+    simp only at h
+    split at h
+    · simp [Bind.bind, Except.bind] at h
+    · try simp only [Bind.bind, Except.bind, pure, Except.pure] at h
+      rw [map_eq_ok] at h
+      obtain ⟨fs, hfs, rfl⟩ := h
+      simpa [GoValue.locSup] using buildStructFields_locSup hfs
 
 theorem buildArrayValue_locSup {σ : ExecState} {len : Nat} {elem : Ty}
     {args : Array (Int × GoValue)} {r : GoValue}

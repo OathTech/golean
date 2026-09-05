@@ -380,7 +380,7 @@ write a bare "#6"/"#7".
    class — is MODELED, except the recorded `append` band (below).**
    Latitude inventory R16 pins gc linux/amd64's
    realization (`maxAllocBytes` 2^48, `chanHeaderBytes` 112, the gc
-   layout `tySizeAlignFuel`; the `makeSlice`/`makeChan`/`appendSlice`
+   layout `tySizeAlign`; the `makeSlice`/`makeChan`/`appendSlice`
    arms panic with gc's texts BEFORE materializing; BUG-081 filed
    with the probe matrix as witness, BUG-082 for the un-lowered map
    hint the probe exposed — frontend-side, FIXED the same day on the

@@ -47,7 +47,6 @@ structure MethodSig where
 
 inductive TypeDef where
   | struct (fields : Array FieldDef)
-  | alias (target : Ty)
   /-- An INTERFACE declaration: its FULL method set (embedded interfaces
   already flattened by the frontend). Satisfaction requirements come from
   HERE, not from the dispatch table — the dispatch table records only
@@ -63,16 +62,100 @@ inductive TypeDef where
   underlying representation (normalize/default/convert/equality resolve
   through it); the identity matters at interface boxing, type asserts,
   and method sets, where the STATIC type at the site carries it. `type
-  T = U` remains `.alias` (identity erased, correctly). Defined types
-  over STRUCT underlyings stay `.struct` (their values are
-  name-tagged); defined-over-defined-struct fails closed at the
-  consumer until a case needs it. -/
+  T = U` is identity-ERASING and never reaches the table (C2, 2026-09-05:
+  the frontend inlines aliases at every use — `types.Unalias` — and the
+  decoder refuses an `alias` TypeDef; the old `.alias` constructor,
+  reachable from no wire, is deleted). Defined types over STRUCT
+  underlyings stay `.struct` (their values are name-tagged);
+  defined-over-defined-struct fails closed at the consumer until a case
+  needs it. -/
   | defined (underlying : Ty)
   /-- A declaration the frontend marks OPAQUE by design (imported/quarantined
   types): its uses refuse by name (`reason`). Renamed from `unsupported` (A8; `opaque` itself is a Lean keyword)
   so it is not confused with `Ty.unsupported`/`Expr.unsupported`. -/
   | opaqueDecl (reason : String)
   deriving Repr, BEq
+
+/-! ## The type table and its well-foundedness (C-arc C2, 2026-09-05)
+
+Design note `docs/2026-09-05_c-arc-c2-design.md`. Gate G-C2 («Frontend
+emits typeDefs in dependency order with aliases inlined; `TypeEnv`
+becomes index-keyed and well-founded by an `Accepted` clause decided at
+decode; the fuel towers, `typeResolutionFuel` and the `irreducible` seal
+are deleted») RULED [USER] 2026-09-04 as recommended, CONFIRMED [USER]
+2026-09-05 — both relayed by the [AGENT] coordinator, cited as relayed. -/
+
+/-- The program's type table: the declared types in DEPENDENCY ORDER,
+`Ty.defined i` naming entry `i`. The `TypeId` beside each body is the
+type's key for interface identity, method-set records and every
+gc-visible text; it is never used to resolve a `Ty.defined`. -/
+abbrev TypeEnv := Array (TypeId × TypeDef)
+
+/-- The TABLE DEPENDENCIES of a type: the entries a type-directed
+recursion (`defaultValue`, `tySizeAlign`, `tyUncomparable`,
+normalization, conversion, equality — `Ops.lean`) descends into. Exactly
+`.defined` itself and `.defined` through ARRAY elements; pointer, slice,
+map, channel, function and interface types are LEAVES of every such
+recursion (Go permits recursive types only through them — `type L
+struct{ next *L }` — and their values never contain the pointee), so
+they contribute no edge. Interface method signatures are compared by
+`Ty.eqb`, never resolved, so an `.interfaceDef` has no dependencies. -/
+def Ty.deps : Ty → List TypeIdx
+  | .defined i => [i]
+  | .array _ elem => Ty.deps elem
+  | _ => []
+
+@[inherit_doc Ty.deps]
+def TypeDef.deps : TypeDef → List TypeIdx
+  | .struct fields => fields.toList.flatMap (fun f => f.typ.deps)
+  | .defined underlying => underlying.deps
+  | .interfaceDef _ => []
+  | .opaqueDecl _ => []
+
+/-- THE well-foundedness clause of `Accepted` (plan §1.9): every table
+dependency of entry `i` sits at a SMALLER index. Decided at decode
+(`NativeToIR`), refused by name when violated; on a table satisfying it
+every index descent in `Ops.lean` — seeded at `types.size`, one index
+consumed per `.defined` resolution — provably never reaches its
+exhaustion arm, because a dependency chain from index `i` has at most
+`i + 1` entries. Stated over the enumerated list so the `Decidable`
+instance is the library's (`List.decidableBAll`). -/
+def TypeEnv.WellFounded (types : TypeEnv) : Prop :=
+  ∀ e ∈ types.toList.zipIdx, ∀ j ∈ e.1.2.deps, j < e.2
+
+instance (types : TypeEnv) : Decidable types.WellFounded :=
+  inferInstanceAs (Decidable (∀ e ∈ types.toList.zipIdx, ∀ j ∈ e.1.2.deps, j < e.2))
+
+/-- The FIRST violating edge of `TypeEnv.WellFounded`, for the decoder's
+refusal text: `(i, j)` with entry `i` depending on entry `j`, `j ≥ i`
+(a forward reference or a cycle). `none` exactly when the table is
+well-founded (`TypeEnv.firstViolation?_eq_none_iff`). -/
+def TypeEnv.firstViolation? (types : TypeEnv) : Option (TypeIdx × TypeIdx) :=
+  types.toList.zipIdx.findSome? fun e =>
+    (e.1.2.deps.find? (fun j => e.2 ≤ j)).map fun j => (e.2, j)
+
+theorem TypeEnv.firstViolation?_eq_none_iff (types : TypeEnv) :
+    types.firstViolation? = none ↔ types.WellFounded := by
+  unfold TypeEnv.firstViolation? TypeEnv.WellFounded
+  simp only [List.findSome?_eq_none_iff, Option.map_eq_none_iff, List.find?_eq_none]
+  constructor
+  · intro h e he j hj
+    exact Nat.lt_of_not_le (by simpa using h e he j hj)
+  · intro h e he j hj
+    simpa using Nat.not_le.mpr (h e he j hj)
+
+/-- The entry's key, read back from an index (texts, records, the
+observation channel). `none` for an index the table does not have — the
+callers fail closed on it. -/
+def TypeEnv.nameOf? (types : TypeEnv) (idx : TypeIdx) : Option TypeId :=
+  (types[idx]?).map Prod.fst
+
+/-- Name-keyed lookup, for the two consumers whose key is a VALUE tag or
+an interface name rather than a `Ty`: struct-tag compatibility and
+interface declarations. Linear, and never on a `Ty.defined` path. -/
+def TypeEnv.lookupName? (types : TypeEnv) (needle : TypeId) : Option (TypeIdx × TypeDef) :=
+  types.toList.zipIdx.findSome? fun e =>
+    if e.1.1 == needle then some (e.2, e.1.2) else none
 
 /-- The four documented bit-reinterpretation functions of `math`
 (`Float64bits`/`Float64frombits`/`Float32bits`/`Float32frombits` —
@@ -580,7 +663,10 @@ structure TypeDisplay where
   deriving Repr, BEq
 
 structure Program where
-  typeDefs : Array (TypeId × TypeDef) := #[]
+  /-- The type table (`TypeEnv`): dependency-ordered, `Ty.defined`
+  indexes into it; the two machine-reserved entries lead
+  (`TypeEnv.reserved`). -/
+  typeDefs : TypeEnv := #[]
   funcs : Array Func
   methods : Array MethodInfo := #[]
   /-- Package-level variables, in declaration order (files in lexical
@@ -616,6 +702,74 @@ contain `.`", which package qualification falsified: a package named
 so the wire decoder can synthesize runtime-panic payloads (the
 nil-interface method-value creation check) without importing the machine. -/
 def runtimeErrorTypeId : TypeId := ⟨"$runtime.Error"⟩
+
+/-- The canonical anonymous empty struct `struct{}` — the one unnamed
+struct type the wire can carry (BUG-011; `map[K]struct{}` sets). The
+frontend references it by this key and emits no declaration; the machine
+owns its entry (`TypeEnv.reserved`, index 0). -/
+def emptyStructTypeId : TypeId := ⟨"struct{}"⟩
+
+/-- Index of `struct{}` in every accepted table (`TypeEnv.reserved`). -/
+def emptyStructTypeIdx : TypeIdx := 0
+
+/-- Index of the runtime-error payload type in every accepted table
+(`TypeEnv.reserved`); `runtimeErrorValue` boxes at `.defined` this. -/
+def runtimeErrorTypeIdx : TypeIdx := 1
+
+/-- The reason text of the runtime-error payload type's opaque entry. -/
+def runtimeErrorOpaqueReason : String :=
+  "the machine's runtime-error payload type ($runtime.Error): structural use (==, normalization or conversion at the type, default value) is unmodeled — gc realizes several runtime.Error types behind one abort text (BUG-059 kind clause), so the machine refuses rather than answers"
+
+/-- The two MACHINE-RESERVED leading entries of every accepted type table
+(C2): index 0 is `struct{}` (a real empty struct: comparable, its default
+value exists, assignable across the BUG-011 escape), index 1 is the
+runtime-error payload type as an OPAQUE declaration — every structural
+use refuses by name, which is exactly the fail-closed behaviour the
+absent declaration produced before the table was index-keyed. The
+decoder prepends them and refuses a wire declaring either key; hand-built
+programs prepend them too (`TypeEnv.reserved ++ …`). Neither entry has
+table dependencies, so the prefix is well-founded by itself. -/
+def TypeEnv.reserved : TypeEnv :=
+  #[(emptyStructTypeId, .struct #[]), (runtimeErrorTypeId, .opaqueDecl runtimeErrorOpaqueReason)]
+
+/-- The visible rendering of the machine-minted runtime-error payload
+type (`runtimeErrorTypeId`, `$runtime.Error`; reserved index
+`runtimeErrorTypeIdx`). gc has no ONE type here: a nil dereference is
+`runtime.errorString`, an index fault `runtime.boundsError`, a failed
+assert `*runtime.TypeAssertionError`, a zero divide
+`runtime.runtimeError` — the machine collapses them onto one synthetic
+entry and cannot spell the concrete one, so its display is a marker that
+NAMES that cause (fr19 audit fix round R3, 2026-09-05 [AGENT]; BUG-099).
+It is a text for refusal messages and the belt-and-suspenders reach;
+`typeAssertPanicMessage` REFUSES before this could reach an observable
+panic text. Lives beside the reserved prefix (moved from `Ops.lean` at
+the round-17 rebase, [AGENT]) because the reserved entry's display
+record carries it. -/
+def runtimeErrorDisplayMarker : String :=
+  "<runtime error payload: gc's concrete type (runtime.errorString / \
+runtime.boundsError / *runtime.TypeAssertionError / …) is not modeled — \
+one synthetic $runtime.Error id, BUG-009/BUG-053 class>"
+
+/-- The display records of the two reserved entries (`TypeDisplay`, design
+note `docs/2026-09-05_fr19-bug097-design.md` §3.1), in table order — the
+decoder leads `Program.typeDisplays` with them exactly as it leads
+`typeDefs` with `TypeEnv.reserved`, so on every decoded program record
+`i` belongs to entry `i`. `struct{}` displays as gc spells the empty
+struct, `struct {}`, with the empty pkgpath of an unnamed type; the
+runtime-error entry displays the cause-naming marker (there is no single
+gc-correct type string — BUG-099) with pkgpath `runtime`, which IS
+gc-correct for every concrete fault type (`runtime.errorString`,
+`runtime.boundsError`, `*runtime.TypeAssertionError`, … all live in
+package `runtime`). -/
+def TypeEnv.reservedDisplays : Array (TypeId × TypeDisplay) :=
+  #[(emptyStructTypeId, { name := "struct {}", pkg := "" }),
+    (runtimeErrorTypeId, { name := runtimeErrorDisplayMarker, pkg := "runtime" })]
+
+/-- Does the table lead with the two reserved entries? The second clause
+of the decoder's type-table acceptance (`TypeEnv.WellFounded` is the
+first). -/
+def TypeEnv.hasReservedPrefix (types : TypeEnv) : Bool :=
+  types.extract 0 2 == TypeEnv.reserved
 
 /-- The reserved id of the synthesized package-initialization function
 (init slice, `docs/2026-08-05_init-design.md`): the frontend emits it —

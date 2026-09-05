@@ -534,6 +534,17 @@ def TypeId.unqualified (id : TypeId) : String :=
   let head := (head.splitOn "·").headD head
   head ++ rest
 
+/-- The POSITION of a declared type in the program's type table
+(`TypeEnv := Array (TypeId × TypeDef)`, Syntax.lean; C-arc C2,
+2026-09-05, gate G-C2 RULED [USER] 2026-09-04, relayed). `Ty.defined`
+names a declared type by this index; the table is DEPENDENCY-ORDERED
+(`TypeEnv.WellFounded`: every dependency of entry `i` sits at a smaller
+index), which is what lets every type-directed recursion descend on the
+index instead of on a fuel budget. The `TypeId` of the entry stays beside
+it for interface identity, method-set records, and every gc-visible text
+(panic messages name types by their key). -/
+abbrev TypeIdx := Nat
+
 namespace GoCore
 
 /-- Go types. Lives here (not `Syntax.lean`) since the interfaces
@@ -565,7 +576,12 @@ inductive Ty where
   `func([]int)` are indistinguishable (BUG-067). -/
   | funcType (params results : List Ty) (variadic : Bool)
   | interface (id : TypeId)
-  | defined (id : TypeId)
+  /-- A DECLARED type, by its position in the program's type table
+  (`TypeIdx`; C2). Identity is positional: two `Ty.defined` are the same
+  Go type iff they name the same entry — a `Program` is a constant, so
+  positions are as stable as the names were. The entry's `TypeId` is
+  read back for texts and records (`TypeEnv.nameOf?`). -/
+  | defined (idx : TypeIdx)
   | unsupported (feature : String)
   /-- A sync-package primitive type (`sync.Mutex` / `sync.RWMutex` /
   `sync.WaitGroup` / `sync.Once`; spec-parity slice 2, design note §3).
@@ -573,12 +589,6 @@ inductive Ty where
   END of the inductive so positional case tags stay stable. -/
   | sync (kind : GoCore.SyncKind)
   deriving Repr, Inhabited
-
-/-- Fuel for structural `Ty` equality. Bounds COMBINED structural depth
-and (for `funcType`) parameter-list length; the same 1024 budget the type
-resolver uses (`typeResolutionFuel`, which lives downstream in `Ops.lean`
-and so cannot be referenced here). -/
-def tyEqFuel : Nat := 1024
 
 /-! **Why `Ty` does NOT `deriving BEq`** (quorum pilot phase 4,
 2026-07-31). `Ty` is a NESTED inductive (`funcType` carries `List Ty`), and
@@ -590,39 +600,38 @@ interface satisfaction), so with the derived instance **no dispatch fact
 was kernel-provable at all** — every interface WP law would have had an
 undischargeable premise. (It is also a `partial`-flavoured definition
 sitting in the semantic core, which the "proof-facing code is total"
-contract does not want.) The replacement is an ordinary total, transparent,
-fuel-bounded structural equality that FAILS CLOSED (`false`) on exhaustion;
-it agrees with the derived one on every type a program can write. -/
+contract does not want.) The replacement is an ordinary total, transparent
+STRUCTURAL equality: a mutual block over `Ty` and the nested `List Ty`
+(C2, 2026-09-05 — it was fuel-bounded at 1024 and failed closed on
+exhaustion until Lean's structural recursion over nested inductives made
+the fuel unnecessary; kernel-reducible, `decide`/`rfl` both work). -/
 mutual
 
-def Ty.eqbFuel : Nat → Ty → Ty → Bool
-  | _, .bool, .bool => true
-  | _, .int k₁, .int k₂ => k₁ == k₂
-  | _, .float k₁, .float k₂ => k₁ == k₂
-  | _, .string, .string => true
-  | f + 1, .array n₁ e₁, .array n₂ e₂ => n₁ == n₂ && Ty.eqbFuel f e₁ e₂
-  | f + 1, .slice e₁, .slice e₂ => Ty.eqbFuel f e₁ e₂
-  | f + 1, .map k₁ v₁, .map k₂ v₂ => Ty.eqbFuel f k₁ k₂ && Ty.eqbFuel f v₁ v₂
-  | f + 1, .chan d₁ e₁, .chan d₂ e₂ => d₁ == d₂ && Ty.eqbFuel f e₁ e₂
-  | f + 1, .pointer e₁, .pointer e₂ => Ty.eqbFuel f e₁ e₂
-  | f + 1, .funcType p₁ r₁ v₁, .funcType p₂ r₂ v₂ =>
-      v₁ == v₂ && Ty.eqbListFuel f p₁ p₂ && Ty.eqbListFuel f r₁ r₂
-  | _, .interface a, .interface b => a == b
-  | _, .defined a, .defined b => a == b
-  | _, .unsupported a, .unsupported b => a == b
-  | _, .sync a, .sync b => a == b
-  | _, _, _ => false
+def Ty.eqb : Ty → Ty → Bool
+  | .bool, .bool => true
+  | .int k₁, .int k₂ => k₁ == k₂
+  | .float k₁, .float k₂ => k₁ == k₂
+  | .string, .string => true
+  | .array n₁ e₁, .array n₂ e₂ => n₁ == n₂ && Ty.eqb e₁ e₂
+  | .slice e₁, .slice e₂ => Ty.eqb e₁ e₂
+  | .map k₁ v₁, .map k₂ v₂ => Ty.eqb k₁ k₂ && Ty.eqb v₁ v₂
+  | .chan d₁ e₁, .chan d₂ e₂ => d₁ == d₂ && Ty.eqb e₁ e₂
+  | .pointer e₁, .pointer e₂ => Ty.eqb e₁ e₂
+  | .funcType p₁ r₁ v₁, .funcType p₂ r₂ v₂ =>
+      v₁ == v₂ && Ty.eqbList p₁ p₂ && Ty.eqbList r₁ r₂
+  | .interface a, .interface b => a == b
+  | .defined a, .defined b => a == b
+  | .unsupported a, .unsupported b => a == b
+  | .sync a, .sync b => a == b
+  | _, _ => false
 
-def Ty.eqbListFuel : Nat → List Ty → List Ty → Bool
-  | _, [], [] => true
-  | f + 1, a :: as, b :: bs => Ty.eqbFuel f a b && Ty.eqbListFuel f as bs
-  | _, _, _ => false
+/-- Pairwise `Ty.eqb` over the nested parameter/result lists. -/
+def Ty.eqbList : List Ty → List Ty → Bool
+  | [], [] => true
+  | a :: as, b :: bs => Ty.eqb a b && Ty.eqbList as bs
+  | _, _ => false
 
 end
-
-/-- Structural `Ty` equality — the identity relation dispatch and type
-asserts key on. -/
-def Ty.eqb (a b : Ty) : Bool := Ty.eqbFuel tyEqFuel a b
 
 instance : BEq Ty := ⟨Ty.eqb⟩
 
@@ -631,23 +640,29 @@ OBSERVATION channel only — identity never keys on this (S3). Named types
 render UNQUALIFIED, like the struct `typeName` field beside them: the
 observation channel's stated contract is `reflect.Type.Name()`, and the
 qualified spelling contradicted it inside a single JSON object
-(pre-merge audit 2026-07-31, finding 12). -/
-def Ty.dynamicName : Ty → String
+(pre-merge audit 2026-07-31, finding 12). `nameOf` reads a declared
+type's key back from the type table (`TypeEnv.nameOf?`, defined
+downstream); an index the table does not have renders as a VISIBLE
+marker, never as a guessed name (unreachable on a decoded program). -/
+def Ty.dynamicName (nameOf : TypeIdx → Option TypeId) : Ty → String
   | .bool => "bool"
   | .int kind => kind.name
   | .float kind => kind.name
   | .string => "string"
-  | .defined id => id.unqualified
+  | .defined idx =>
+      match nameOf idx with
+      | some id => id.unqualified
+      | none => s!"<unknown type index {idx}>"
   | .interface id => id.unqualified
-  | .pointer e => "*" ++ Ty.dynamicName e
-  | .slice e => "[]" ++ Ty.dynamicName e
-  | .array n e => s!"[{n}]" ++ Ty.dynamicName e
-  | .map k v => s!"map[{Ty.dynamicName k}]{Ty.dynamicName v}"
+  | .pointer e => "*" ++ Ty.dynamicName nameOf e
+  | .slice e => "[]" ++ Ty.dynamicName nameOf e
+  | .array n e => s!"[{n}]" ++ Ty.dynamicName nameOf e
+  | .map k v => s!"map[{Ty.dynamicName nameOf k}]{Ty.dynamicName nameOf v}"
   -- reflect renders direction exactly this way ("chan int",
   -- "<-chan int", "chan<- int").
-  | .chan .both e => "chan " ++ Ty.dynamicName e
-  | .chan .send e => "chan<- " ++ Ty.dynamicName e
-  | .chan .recv e => "<-chan " ++ Ty.dynamicName e
+  | .chan .both e => "chan " ++ Ty.dynamicName nameOf e
+  | .chan .send e => "chan<- " ++ Ty.dynamicName nameOf e
+  | .chan .recv e => "<-chan " ++ Ty.dynamicName nameOf e
   | .funcType _ _ _ => "func"
   | .unsupported f => s!"<unsupported {f}>"
   -- reflect.Type.Name() on sync.Mutex is "Mutex" (package-unqualified,
@@ -871,7 +886,7 @@ inductive GoValue where
   | addr (loc : Loc)
   | nil
   /-- An interface box: the CANONICAL dynamic type (aliases resolved at
-  box time, defined-type identity kept — `canonicalDynamicTy`) plus the
+  box time, defined-type identity kept — `checkedDynamicTy`) plus the
   boxed value. Identity comparisons, type asserts, method dispatch, and
   equality-at-dynamic-type all key on `dynamic` structurally (interfaces
   campaign S3, 2026-07-30; was a rendered `String`). A nil interface is
@@ -908,19 +923,16 @@ for this project: the differential validates the compiled function while
 theorems quantify the logical one, and at any semantic use the two can
 disagree (found at `renderPanicHead`'s recovered-collapse check; same
 class `Ty.eqb` fixed for `Ty` in the interfaces campaign, whose recipe
-this mirrors). The replacement is total, transparent, fuel-structural
-(depth-only — the parameterized list helpers keep elements free, the
-de-WF recipe), kernel-reducible, and FAILS CLOSED (`false`) on depth
-exhaustion; it agrees with the derived instance's compiled behavior on
-every value a program can build. -/
+this mirrors). The replacement is total, transparent, STRUCTURAL — a
+mutual block over `GoValue` and its nested element/field lists, the
+arrays destructured in the patterns (C2, 2026-09-05; it was fuel-bounded
+at 1024 and failed closed on exhaustion until then) — kernel-reducible,
+and it agrees with the derived instance's compiled behavior on every
+value a program can build. -/
 
-/-- Depth budget for structural value equality; nesting depth, never node
-count (list helpers are parameterized). 1024 mirrors `typeResolutionFuel`
-— no real Go value nests deeper. -/
-def valueEqbFuel : Nat := 1024
-
-/-- Pairwise equality over a list with the already-decremented element
-comparator. -/
+/-- Pairwise equality over a list with an element comparator (kept for
+the map-payload triples and the heap-cell comparators of `StateEqb.lean`,
+which compare OUTSIDE `GoValue`'s own recursion). -/
 def GoValue.eqbListWith (f : GoValue → GoValue → Bool) :
     List GoValue → List GoValue → Bool
   | [], [] => true
@@ -944,33 +956,47 @@ def GoValue.eqbFieldsWith (f : GoValue → GoValue → Bool) :
       n₁ == n₂ && f v₁ v₂ && GoValue.eqbFieldsWith f as bs
   | _, _ => false
 
-def GoValue.eqbFuel : Nat → GoValue → GoValue → Bool
-  | _, .unit, .unit => true
-  | _, .bool a, .bool b => a == b
-  | _, .int v₁ k₁, .int v₂ k₂ => v₁ == v₂ && k₁ == k₂
-  -- BIT equality on purpose (note §4): NaN == NaN at identical bits,
-  -- +0 ≠ -0 — structural identity, never Go's ==.
-  | _, .float b₁ k₁, .float b₂ k₂ => b₁ == b₂ && k₁ == k₂
-  | _, .string a, .string b => a == b
-  | _, .addr a, .addr b => a == b
-  | _, .nil, .nil => true
-  | f + 1, .interface t₁ v₁, .interface t₂ v₂ =>
-      GoCore.Ty.eqb t₁ t₂ && GoValue.eqbFuel f v₁ v₂
-  | f + 1, .struct id₁ fs₁, .struct id₂ fs₂ =>
-      id₁ == id₂ && GoValue.eqbFieldsWith (GoValue.eqbFuel f) fs₁.toList fs₂.toList
-  | f + 1, .array a, .array b =>
-      GoValue.eqbListWith (GoValue.eqbFuel f) a.toList b.toList
-  | _, .slice a, .slice b => a == b
-  | _, .map a, .map b => a == b
-  | _, .chan a, .chan b => a == b
-  | f + 1, .funcVal id₁ c₁, .funcVal id₂ c₂ =>
-      id₁ == id₂ && GoValue.eqbListWith (GoValue.eqbFuel f) c₁ c₂
-  | _, .syncData a, .syncData b => a == b
-  | _, _, _ => false
+mutual
 
 /-- Structural `GoValue` equality — THE `BEq GoValue` instance (replacing
 the logically-opaque derived one). -/
-def GoValue.eqb (a b : GoValue) : Bool := GoValue.eqbFuel valueEqbFuel a b
+def GoValue.eqb : GoValue → GoValue → Bool
+  | .unit, .unit => true
+  | .bool a, .bool b => a == b
+  | .int v₁ k₁, .int v₂ k₂ => v₁ == v₂ && k₁ == k₂
+  -- BIT equality on purpose (note §4): NaN == NaN at identical bits,
+  -- +0 ≠ -0 — structural identity, never Go's ==.
+  | .float b₁ k₁, .float b₂ k₂ => b₁ == b₂ && k₁ == k₂
+  | .string a, .string b => a == b
+  | .addr a, .addr b => a == b
+  | .nil, .nil => true
+  | .interface t₁ v₁, .interface t₂ v₂ =>
+      GoCore.Ty.eqb t₁ t₂ && GoValue.eqb v₁ v₂
+  | .struct id₁ ⟨fs₁⟩, .struct id₂ ⟨fs₂⟩ =>
+      id₁ == id₂ && GoValue.eqbFieldList fs₁ fs₂
+  | .array ⟨a⟩, .array ⟨b⟩ => GoValue.eqbList a b
+  | .slice a, .slice b => a == b
+  | .map a, .map b => a == b
+  | .chan a, .chan b => a == b
+  | .funcVal id₁ c₁, .funcVal id₂ c₂ =>
+      id₁ == id₂ && GoValue.eqbList c₁ c₂
+  | .syncData a, .syncData b => a == b
+  | _, _ => false
+
+/-- Pairwise `GoValue.eqb` over element lists (array elements, closure
+captures). -/
+def GoValue.eqbList : List GoValue → List GoValue → Bool
+  | [], [] => true
+  | a :: as, b :: bs => GoValue.eqb a b && GoValue.eqbList as bs
+  | _, _ => false
+
+/-- Pairwise `GoValue.eqb` over named struct fields. -/
+def GoValue.eqbFieldList : List (String × GoValue) → List (String × GoValue) → Bool
+  | [], [] => true
+  | (n₁, a) :: as, (n₂, b) :: bs => n₁ == n₂ && GoValue.eqb a b && GoValue.eqbFieldList as bs
+  | _, _ => false
+
+end
 
 instance : BEq GoValue := ⟨GoValue.eqb⟩
 

@@ -39,8 +39,18 @@ allocator handed out next (e.g. the subject's result cell) and
 produced a silent wrong answer. Since BUG-085 (2026-09-03) `storeLoc`
 refuses `.internal` there, so the core now fails closed on its own;
 this check and the driver-level `StateWf` assert after seeding
-(`runProgramM`/`enumSetup`) remain as the earlier, louder nets. -/
-private abbrev LowerM := ReaderT Nat (Except String)
+(`runProgramM`/`enumSetup`) remain as the earlier, louder nets.
+
+The decode context: the global count (arms the `globaladdr` bound
+check) and the type-name → table-index map (C2: `Ty.defined` is an INDEX
+into the dependency-ordered type table; `named` wire references resolve
+through this map, built from the wire's `types` names — plus the two
+machine-reserved entries — BEFORE any body decodes). -/
+private structure LowerCtx where
+  nGlobals : Nat
+  typeIdx : Std.HashMap String TypeIdx
+
+private abbrev LowerM := ReaderT LowerCtx (Except String)
 
 private def fail {α} (msg : String) : LowerM α :=
   fun _ => .error s!"native lowering: {msg}"
@@ -313,7 +323,14 @@ partial def decodeTy (path : String) (json : Json) : LowerM Ty := do
       | "Once" => pure (.sync .once)
       | other => fail s!"unsupported sync kind {other} at {path}"
   | "named" =>
-      pure (.defined ⟨← StrictJson.string s!"{path}.name" (← StrictJson.field path obj "name")⟩)
+      -- A `named` reference resolves to its TABLE INDEX (C2). A name with
+      -- no TypeDef on the wire is a dangling reference the frontend's
+      -- wire-integrity check refuses before emission; refuse here too,
+      -- by name — never mint an index for it.
+      let name ← StrictJson.string s!"{path}.name" (← StrictJson.field path obj "name")
+      match (← read).typeIdx[name]? with
+      | some idx => pure (.defined idx)
+      | none => fail s!"named type {name} at {path} has no TypeDef on the wire (dangling reference; refused rather than resolved to an index)"
   | "interface" =>
       pure (.interface ⟨← StrictJson.string s!"{path}.name" (← StrictJson.field path obj "name")⟩)
   | "func" =>
@@ -449,7 +466,7 @@ partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
       -- (closed core-side by BUG-085: the store now refuses `.internal`);
       -- a malformed wire still refuses loud here, at the boundary.
       let gid ← StrictJson.nat s!"{path}.gid" (← StrictJson.field path obj "gid")
-      let nGlobals ← read
+      let nGlobals := (← read).nGlobals
       if gid < nGlobals then
         pure (.global gid)
       else
@@ -798,7 +815,7 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
         (← args.mapIdxM (fun i a => decodeExpr s!"{path}.args[{i}]" a)))
   | "panic" =>
       -- The payload's `any`-conversion: a "wrap" type wraps via the
-      -- machine's `toInterface` (its `dynamicTypeName?` fails closed on
+      -- machine's `toInterface` (its `checkedDynamicTy` fails closed on
       -- unsupported dynamics); no "wrap" means the argument is already an
       -- interface (or the untyped-nil payload).
       let value ← decodeExpr s!"{path}.value" (← StrictJson.field path obj "value")
@@ -815,7 +832,7 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
         | none => pure false
       if runtimeErr then
         pure (.panicStmt (.toInterface (.interface ⟨"any"⟩)
-          (.defined runtimeErrorTypeId) value))
+          (.defined runtimeErrorTypeIdx) value))
       else
       match obj.get? "wrap" with
       | some t =>
@@ -1698,20 +1715,24 @@ private def decodeTypeDef (path : String) (json : Json) :
   let defObj ← StrictJson.obj s!"{path}.def" (← StrictJson.field path obj "def")
   let kind ← StrictJson.string s!"{path}.def.kind" (← StrictJson.field s!"{path}.def" defObj "kind")
   -- NOTE: the def-object `kind` vocabulary is DISTINCT from the type
-  -- nodes' (`struct`/`alias`/`defined`/`interface`/`unsupported` here).
+  -- nodes' (`struct`/`defined`/`interface`/`unsupported` here). `alias`
+  -- is NOT accepted (C2): a Go alias is identity-erasing and the frontend
+  -- inlines it at every use (`types.Unalias`), so an alias declaration on
+  -- the wire is an emitter fault — refused by name, never a table entry.
   checkKindKeys s!"{path}.def" defObj
     (fun k => match k with
       | "struct" => some ["kind", "fields"]
-      | "alias" | "defined" => some ["kind", "target"]
+      | "defined" => some ["kind", "target"]
       | "interface" => some ["kind", "methods"]
       | "unsupported" => some ["kind", "feature"]
+      | "alias" => some ["kind", "target"]
       | _ => none) kind
   let td : TypeId × TypeDef ← match kind with
   | "struct" =>
       let fields ← StrictJson.array s!"{path}.def.fields" (← StrictJson.field s!"{path}.def" defObj "fields")
       pure (⟨name⟩, .struct (← fields.mapIdxM (fun i f => decodeFieldDef s!"{path}.def.fields[{i}]" f)))
   | "alias" =>
-      pure (⟨name⟩, .alias (← decodeTy s!"{path}.def.target" (← StrictJson.field s!"{path}.def" defObj "target")))
+      fail s!"alias TypeDef {name} at {path}: aliases are identity-erasing and are inlined by the frontend at every use; an alias declaration is not accepted on the wire (C2)"
   | "defined" =>
       -- Identity-bearing named type over a non-struct underlying
       -- (interfaces campaign S2): resolution stops here for identity
@@ -1848,9 +1869,10 @@ partial def decodeProgram (json : Json) : Except String Program := do
   -- comment), not shape-validated: validation without a consumer would
   -- be dead code free to drift from the emitter. When a machine
   -- consumer appears, it decodes strictly like every other read key.
+  let noCtx : LowerCtx := { nGlobals := 0, typeIdx := {} }
   let _ ← (checkAllowedKeys "program" obj
     ["schema", "package", "types", "funcs", "methods", "methodSets", "globals",
-     "fileOrder"]).run 0
+     "fileOrder"]).run noCtx
   let schema ← StrictJson.string "program.schema" (← StrictJson.field "program" obj "schema")
   if schema != "golean-native-v1" then
     throw s!"native lowering: unexpected schema {schema}"
@@ -1858,6 +1880,29 @@ partial def decodeProgram (json : Json) : Except String Program := do
   -- seeds cell i at `Loc.base ⟨i⟩`. Optional key — a globals-free wire
   -- decodes exactly as before. Duplicate names are impossible in a
   -- type-checked package; refuse anyway (boundary collision-check).
+  --
+  -- The TYPE TABLE's names come first (C2): every `named` reference in
+  -- a global's type, a body, a signature or a TypeDef body resolves to a
+  -- table INDEX, so the name → index map is built from the wire's
+  -- `types` entries before anything else decodes. The two machine-
+  -- reserved entries (`TypeEnv.reserved`: `struct{}` at 0, the runtime-
+  -- error payload type at 1) lead the table; a wire entry at position k
+  -- lands at index k + 2. A wire TypeDef spelling a reserved key, or a
+  -- duplicate TypeId, is refused (collision-check at the boundary).
+  let typesJson ← StrictJson.array "program.types" (← StrictJson.field "program" obj "types")
+  let mut typeIdx : Std.HashMap String TypeIdx := {}
+  for e in TypeEnv.reserved do
+    typeIdx := typeIdx.insert e.1.key typeIdx.size
+  for (t, k) in typesJson.toList.zipIdx do
+    let tobj ← StrictJson.obj s!"program.types[{k}]" t
+    let name ← StrictJson.string s!"program.types[{k}].name"
+      (← StrictJson.field s!"program.types[{k}]" tobj "name")
+    if TypeEnv.reserved.any (fun e => e.1.key == name) then
+      throw s!"native lowering: duplicate TypeId {name} at program.types[{k}] — it is the machine-reserved TypeId {name} (`TypeEnv.reserved` owns that entry; the wire never declares it)"
+    if typeIdx.contains name then
+      throw s!"native lowering: duplicate TypeId {name} at program.types[{k}] (two declarations would alias in the type table)"
+    typeIdx := typeIdx.insert name (k + TypeEnv.reserved.size)
+  let ctx0 : LowerCtx := { nGlobals := 0, typeIdx }
   let globals ←
     match obj.get? "globals" with
     | none => pure #[]
@@ -1865,45 +1910,55 @@ partial def decodeProgram (json : Json) : Except String Program := do
         let arr ← StrictJson.array "program.globals" gj
         arr.mapIdxM (fun i g => do
           let gobj ← StrictJson.obj s!"program.globals[{i}]" g
-          let _ ← (checkAllowedKeys s!"program.globals[{i}]" gobj ["name", "type"]).run 0
+          let _ ← (checkAllowedKeys s!"program.globals[{i}]" gobj ["name", "type"]).run ctx0
           let name ← StrictJson.string s!"program.globals[{i}].name"
             (← StrictJson.field s!"program.globals[{i}]" gobj "name")
           let typ ← (decodeTy s!"program.globals[{i}].type"
-            (← StrictJson.field s!"program.globals[{i}]" gobj "type")).run 0
+            (← StrictJson.field s!"program.globals[{i}]" gobj "type")).run ctx0
           pure ({ name, typ } : GlobalDef))
   let mut seenGlobals : Std.HashSet String := {}
   for g in globals do
     if seenGlobals.contains g.name then
       throw s!"native lowering: duplicate global {g.name} in program"
     seenGlobals := seenGlobals.insert g.name
-  let ng := globals.size
+  let ctx : LowerCtx := { nGlobals := globals.size, typeIdx }
   let funcsJson ← StrictJson.array "program.funcs" (← StrictJson.field "program" obj "funcs")
-  let funcs ← funcsJson.mapIdxM (fun i f => (decodeFunc s!"program.funcs[{i}]" f).run ng)
-  let typesJson ← StrictJson.array "program.types" (← StrictJson.field "program" obj "types")
-  let declaredEntries ← typesJson.mapIdxM (fun i t => (decodeTypeDef s!"program.types[{i}]" t).run ng)
+  let funcs ← funcsJson.mapIdxM (fun i f => (decodeFunc s!"program.funcs[{i}]" f).run ctx)
+  let declaredEntries ← typesJson.mapIdxM (fun i t => (decodeTypeDef s!"program.types[{i}]" t).run ctx)
   let declaredDefs := declaredEntries.map (·.1)
-  -- The canonical empty struct (map[K]struct{} set idiom) is always available.
-  let typeDefs := #[(⟨"struct{}"⟩, TypeDef.struct #[])] ++ declaredDefs
-  -- Collision check at the boundary (the globals / function-id /
-  -- method-set-record siblings; audit fix round R7, 2026-09-05): a
-  -- duplicate `program.types[i].name` would make `TypeEnv.lookup` answer
-  -- from whichever entry comes first — for the TypeDef, the display
-  -- record, AND the synthesized `struct{}`. The emitter refuses the
-  -- duplicate itself; a hand-edited or foreign wire must not get past
-  -- the decoder either.
-  let mut seenTypeIds : Std.HashSet String := {}
-  for (id, _) in typeDefs do
-    if seenTypeIds.contains id.key then
-      throw s!"native lowering: duplicate TypeId {id.key} in program.types"
-    seenTypeIds := seenTypeIds.insert id.key
-  -- Its display record beside it (gc spells the empty struct `struct {}`;
-  -- an unnamed type's pkgpath is empty); one record per TypeDef, in the
-  -- TypeDef order (design note 2026-09-05 §3.1).
+  -- The machine-reserved prefix leads (the canonical empty struct —
+  -- `map[K]struct{}` sets — and the runtime-error payload type).
+  -- (Duplicate TypeIds and wire entries spelling a reserved key were
+  -- refused above, when the name → index map was built — the boundary
+  -- collision check of the globals / function-id / method-set-record
+  -- siblings, fr19 audit fix round R7 composed with C2.)
+  let typeDefs : TypeEnv := TypeEnv.reserved ++ declaredDefs
+  -- The display records beside the table, ONE PER ENTRY IN TABLE ORDER
+  -- (design note 2026-09-05 §3.1 × C2): the reserved entries' records
+  -- lead (`TypeEnv.reservedDisplays` — gc spells the empty struct
+  -- `struct {}`; the runtime-error entry carries the cause-naming
+  -- marker), then each declared TypeDef's `display`/`pkg`. So the key
+  -- read back from entry `i` (`TypeEnv.nameOf?`) is the key of record
+  -- `i`, and the renderers' name-keyed record lookup resolves to the
+  -- entry the index resolves to.
   let typeDisplays : Array (TypeId × TypeDisplay) :=
-    #[(⟨"struct{}"⟩, { name := "struct {}", pkg := "" })]
-      ++ declaredEntries.map (fun e => (e.1.1, e.2))
+    TypeEnv.reservedDisplays ++ declaredEntries.map (fun e => (e.1.1, e.2))
+  -- THE ACCEPTANCE CLAUSE (C2; plan §1.9 `Accepted`): the table must be
+  -- DEPENDENCY-ORDERED — every table dependency of entry i (struct
+  -- fields and defined targets, through array elements) at a smaller
+  -- index — or every index descent in the machine would be a fuel walk
+  -- again. Decided HERE, by the core's own predicate; a violation is
+  -- refused naming the edge (a forward reference or a cycle; the
+  -- frontend orders the table and self-checks the same contract, so this
+  -- is the machine's independent, fail-closed re-decision).
+  if !typeDefs.WellFounded then
+    match typeDefs.firstViolation? with
+    | some (i, j) =>
+        let nm := fun k => match typeDefs.nameOf? k with | some n => n.key | none => "?"
+        throw s!"native lowering: program.types is not dependency-ordered — table entry {i} ({nm i}) depends on entry {j} ({nm j}) with {j} ≥ {i} (a forward reference or a cycle; indices count the two machine-reserved entries)"
+    | none => throw "native lowering: program.types failed the well-foundedness decision but no violating edge was found (internal inconsistency; fail closed)"
   let methodsJson ← StrictJson.array "program.methods" (← StrictJson.field "program" obj "methods")
-  let methodPairs ← methodsJson.mapIdxM (fun i m => (decodeMethod s!"program.methods[{i}]" m).run ng)
+  let methodPairs ← methodsJson.mapIdxM (fun i m => (decodeMethod s!"program.methods[{i}]" m).run ctx)
   -- Method bodies are executable functions (looked up by FuncId on call);
   -- MethodInfo is the dispatch table.
   let allFuncs := funcs ++ methodPairs.map Prod.fst
@@ -1928,7 +1983,7 @@ partial def decodeProgram (json : Json) : Except String Program := do
     (← StrictJson.field "program" obj "methodSets")
   let declaredRecords ← msJson.mapIdxM (fun i m => do
     let mobj ← StrictJson.obj s!"program.methodSets[{i}]" m
-    let _ ← (checkAllowedKeys s!"program.methodSets[{i}]" mobj ["type", "coverage"]).run 0
+    let _ ← (checkAllowedKeys s!"program.methodSets[{i}]" mobj ["type", "coverage"]).run noCtx
     let key ← StrictJson.string s!"program.methodSets[{i}].type"
       (← StrictJson.field s!"program.methodSets[{i}]" mobj "type")
     let covStr ← StrictJson.string s!"program.methodSets[{i}].coverage"

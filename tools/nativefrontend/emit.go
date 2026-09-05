@@ -731,6 +731,30 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 		return nil, err
 	}
 
+	// DEPENDENCY ORDER (gate G-C2, wire half; 2026-09-05; design note
+	// docs/2026-09-05_c-arc-c2-design.md; ruled [USER] 2026-09-04 as
+	// recommended, relayed by the [AGENT] coordinator — cite as relayed):
+	// every struct-field / array-elem / defined-target dependency of
+	// types[i] must sit at an index < i, so the decoder (which REFUSES a
+	// violating wire) and the machine's type-directed recursions can be
+	// structural over the table prefix. Permutation only — no entry is
+	// added, dropped or rewritten; an already-valid table keeps its
+	// order. A cycle through those edges refuses naming the path
+	// (recursion is legal only through pointer/slice/map/chan/func/
+	// interface, which are not edges). AFTER checkWireNamedTypes so a
+	// dangling name is reported by that check first; BEFORE the
+	// method-set classifier, which walks the FINAL table. The
+	// self-check is the wire-integrity assertion extended to the order
+	// contract: an ordering bug can never ship a wire the decoder rejects.
+	ordered, err := orderTypeDefsByDependency(typeDefs)
+	if err != nil {
+		return nil, err
+	}
+	typeDefs = ordered
+	if err := checkTypeDefOrder(typeDefs); err != nil {
+		return nil, err
+	}
+
 	msSet := map[string]string{}
 	for _, td := range typeDefs {
 		m, ok := td.(map[string]any)

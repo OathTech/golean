@@ -119,7 +119,10 @@ private def canonFloatObsBits (kind : GoCore.FloatKind) (bits : Nat) : Nat :=
         GoCore.FloatBits.nan32
       else bits
 
-private partial def goValueJson : GoValue → Json
+/-- The observation rendering of a value. `nameOf` reads a declared type's
+key back from the program's type table (`TypeEnv.nameOf?`; C2 made
+`Ty.defined` an index) for the `dynamic` field of an interface box. -/
+private partial def goValueJson (nameOf : TypeIdx → Option TypeId) : GoValue → Json
   | .unit => Json.mkObj [("tag", Json.str "unit")]
   | .bool value => Json.mkObj [("tag", Json.str "bool"), ("value", Lean.toJson value)]
   -- Kind-carrying integer observation (grossmith hunt F15, spec-parity
@@ -159,8 +162,8 @@ private partial def goValueJson : GoValue → Json
   | .interface dynamic value =>
       Json.mkObj [
         ("tag", Json.str "interface"),
-        ("dynamic", Json.str dynamic.dynamicName),
-        ("value", goValueJson value)
+        ("dynamic", Json.str (dynamic.dynamicName nameOf)),
+        ("value", goValueJson nameOf value)
       ]
   | .struct typeId fields =>
       -- `reflect.Type.Name()` returns "" for any NON-DEFINED type
@@ -174,12 +177,12 @@ private partial def goValueJson : GoValue → Json
         ("tag", Json.str "struct"),
         ("typeName", Json.str (if typeId.key == "struct{}" then "" else typeId.unqualified)),
         ("fields", Json.arr (fields.map (fun (name, value) =>
-          Json.mkObj [("name", Json.str name), ("value", goValueJson value)])))
+          Json.mkObj [("name", Json.str name), ("value", goValueJson nameOf value)])))
       ]
   | .array values =>
       Json.mkObj [
         ("tag", Json.str "array"),
-        ("values", Json.arr (values.map goValueJson))
+        ("values", Json.arr (values.map (goValueJson nameOf)))
       ]
   | .slice value =>
       Json.mkObj [
@@ -235,12 +238,12 @@ private def outputJson (output : GoString) : Json :=
   | none =>
       Json.mkObj [("invalidUtf8", Json.arr (output.bytes.map fun b => Lean.toJson b.toNat))]
 
-private def runJson : GoLean.GoCore.Readout → Json
+private def runJson (nameOf : TypeIdx → Option TypeId) : GoLean.GoCore.Readout → Json
   | { values, output } =>
       Json.mkObj [
         ("schema", Json.str observationSchema),
         ("status", Json.str "ok"),
-        ("values", Json.arr (values.map goValueJson)),
+        ("values", Json.arr (values.map (goValueJson nameOf))),
         ("output", outputJson output)
       ]
 
@@ -491,7 +494,7 @@ private def runNativeJsonRun (args : List String) : IO UInt32 := do
                   -- the program OUTPUT on both paths (`RunResult`).
                   match GoLean.GoCore.Machine.runProgramPoolOutIntsM cfg.fuel program functionName cfg.args cfg.choices with
                   | .ok result =>
-                      IO.println (runJson result).compress
+                      IO.println (runJson program.typeDefs.nameOf? result).compress
                       return 0
                   | .error (err, out) =>
                       IO.println (errorJson err out).compress
@@ -757,7 +760,7 @@ def enumSetup (program : GoCore.Program) (name : String)
   if func.args.size != args.size then
     throw (.stuck s!"expected {func.args.size} argument(s), got {args.size}")
   let state : GoCore.ExecState :=
-    { types := program.typeDefs.toList, functions := program.funcs
+    { types := program.typeDefs, functions := program.funcs
       methods := program.methods, methodSets := program.methodSets
       typeDisplays := program.typeDisplays }
   let σ₀ ← GoCore.Machine.seedGlobals state program.globals
@@ -827,7 +830,7 @@ def enumPoolRun (resultLocs : List Loc) :
                 -- pick 0 exits now, pick 1 takes one more pool step.
                 (match GoCore.Machine.runnableIdxs m.shared m.threads with
                 | [] =>
-                    return ("ok", runJson
+                    return ("ok", runJson m.shared.types.nameOf?
                       { values := (← (GoCore.Machine.loadMany σf resultLocs).mapError (·, acc)).toArray,
                         output := acc },
                       choices)
@@ -835,7 +838,7 @@ def enumPoolRun (resultLocs : List Loc) :
                     let (pick, choices₁) :=
                       GoCore.Choices.consumeAt .l5ExitWindow 2 choices
                     if pick == 0 then
-                      return ("ok", runJson
+                      return ("ok", runJson m.shared.types.nameOf?
                         { values := (← (GoCore.Machine.loadMany σf resultLocs).mapError (·, acc)).toArray,
                           output := acc },
                         choices₁)
@@ -935,14 +938,18 @@ def enumRunProgram (ep : EnumProgram) (runFuel : Nat)
 so the driver-agreement eval tests compare the two drivers on the SAME
 canonical JSON (audit F5). Since stdlib slice 3 the whole-run result is a
 `RunResult` (the stop carries its output prefix). -/
-def observationOfRunOut : GoCore.Machine.RunResult → Json
-  | .ok result => runJson result
+def observationOfRunOut (nameOf : TypeIdx → Option TypeId) :
+    GoCore.Machine.RunResult → Json
+  | .ok result => runJson nameOf result
   | .error (err, out) => errorJson err out
 
 /-- The `Except Stop Readout` form (the sequential drivers, which have no
-output channel — their stops carry an EMPTY prefix). -/
-def observationOfRun (r : Except Stop GoCore.Readout) : Json :=
-  observationOfRunOut (r.mapError (·, GoString.empty))
+output channel — their stops carry an EMPTY prefix). `nameOf` is the
+program's `typeDefs.nameOf?` (interface boxes render their dynamic type's
+key through it). -/
+def observationOfRun (nameOf : TypeIdx → Option TypeId)
+    (r : Except Stop GoCore.Readout) : Json :=
+  observationOfRunOut nameOf (r.mapError (·, GoString.empty))
 
 /-- The member VOCABULARY the enumeration lanes emit (audit fix F5,
 2026-09-04): normal readouts, unrecovered panics and the race refusal.
@@ -1208,7 +1215,8 @@ partial def poolDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
                   .error s!"result readout failed at a terminal: {renderStop e}"
               | .ok vals =>
                   recordLeaf ctx o p "ok"
-                    (runJson { values := vals.toArray, output := acc }) p.length
+                    (runJson ctx.ep.σ₀.types.nameOf? { values := vals.toArray, output := acc })
+                    p.length
           (match GoCore.Machine.runnableIdxs m.shared m.threads with
           | [] => exitLeaf out path
           | _ :: _ =>
@@ -1489,7 +1497,7 @@ def runDedupObservations (ep : EnumProgram) (cfg : EnumArgs) : IO UInt32 := do
         | .terminal t => t.status
       let obsJson : GoCore.Machine.Obs → Json := fun o =>
         match o with
-        | .ok vs => runJson { values := vs.toArray }
+        | .ok vs => runJson ep.σ₀.types.nameOf? { values := vs.toArray }
         | .terminal t => errorJson (.terminal t)
       -- The member vocabulary (audit fix F5): refuse by name before any
       -- status word is compared or printed.

@@ -1690,7 +1690,15 @@ G6-5 as recommended (`docs/2026-09-04_g6-reflect-design.md` §6).
   well-founded by an `Accepted` clause decided at decode; the 14 fuel
   towers, `typeResolutionFuel` and the `irreducible` seal are
   deleted.» Rec: YES, parallel lane. RULED [USER] 2026-09-04 — as
-  recommended (relayed).
+  recommended (relayed); CONFIRMED [USER] 2026-09-05 («(1) approved»,
+  relayed). **BRANCH-COMPLETE 2026-09-05** (lane `c-arc-c2`, [AGENT];
+  design note `docs/2026-09-05_c-arc-c2-design.md`, evidence
+  `docs/evidence/2026-09-05_c-arc-c2/`): frontend dependency order +
+  self-check, decoder `Accepted` clause (`TypeEnv.WellFounded` + the
+  reserved prefix), `Ty.defined (idx : TypeIdx)`, all 14 fuel families
+  + `typeResolutionFuel` + the seal deleted; twin pin moved (a pure
+  permutation of the 92 type entries); merge/push pending the audit
+  and the [USER]'s sign-off.
 - **G-P.** «Model embedded-field method promotion natively: the frontend
   stops synthesizing wrappers (D2 contract: method sets record DECLARED
   methods), the core resolves selectors and interface dispatch through

@@ -419,7 +419,7 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except Stop (G
       -- interface-typed source is an interface→interface conversion:
       -- the existing box (or nil) passes through unchanged — Go never
       -- double-boxes.
-      let dynTy ← canonicalDynamicTy s dynamic
+      let dynTy ← checkedDynamicTy dynamic
       match dynTy with
       | .interface _ => return (v, s)
       | _ => return (.interface dynTy v, s)
@@ -431,7 +431,7 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except Stop (G
         -- Go names the first UNMET requirement when the target is an
         -- interface; a nil operand has none to report.
         let missing ←
-          match resolveDefinedAliases s targetTy, v with
+          match targetTy, v with
           | .interface interfaceName, .interface dynTy _ =>
               firstUnsatisfiedMethod? s dynTy interfaceName
           | _, _ => pure none
@@ -2017,7 +2017,7 @@ structure PanicEntry where
 …): a `runtime.Error` interface value, tagged with a `TypeId` no source type
 can spell, so type asserts against user types correctly fail on it. -/
 def runtimeErrorValue (msg : String) : GoValue :=
-  .interface (.defined runtimeErrorTypeId) (.string (GoString.fromLeanString msg))
+  .interface (.defined runtimeErrorTypeIdx) (.string (GoString.fromLeanString msg))
 
 /-- The chain entry of a fresh RUNTIME panic (B2): the `runtime.Error`
 payload, not yet recovered. The one spelling behind every conversion of
@@ -2105,8 +2105,8 @@ fails CLOSED here (pre-merge audit 2026-07-31, finding 3; the unconditional
 Everything else not pinned is `none` for the same reason. -/
 def renderPanicPayload (state : ExecState) : GoValue → Option String
   | .nil => some "nil"
-  | .interface (.defined id) (.string s) =>
-      if id == runtimeErrorTypeId then asciiString? s.bytes else none
+  | .interface (.defined idx) (.string s) =>
+      if idx == runtimeErrorTypeIdx then asciiString? s.bytes else none
   | .interface .string (.string s) => asciiString? s.bytes
   | .interface (.int dkind) (.int v kind) =>
       if dkind == kind then some (toString v) else none
@@ -2115,12 +2115,13 @@ def renderPanicPayload (state : ExecState) : GoValue → Option String
   -- `printanycustomtype` shape: `main.Code(7)` (BUG-004 item 2 — the
   -- identity is modeled since the interfaces campaign; the type prints
   -- its DISPLAY record — gc's type string — never its key, design note
-  -- 2026-09-05 §3.2). Only the int-underlying form is pinned; other
-  -- underlyings stay closed.
-  | .interface (.defined name) (.int v _) =>
-      if name == runtimeErrorTypeId then
+  -- 2026-09-05 §3.2; the record is read through the table INDEX, C2).
+  -- Only the int-underlying form is pinned; other underlyings stay
+  -- closed.
+  | .interface (.defined idx) (.int v _) =>
+      if idx == runtimeErrorTypeIdx then
         none
-      else if !dynamicMethodSetRecorded state (.defined name) then
+      else if !dynamicMethodSetRecorded state (.defined idx) then
         -- BUG-053 class, renderer consumer (contract note §4,
         -- 2026-08-10): with no method-set record,
         -- `panicPayloadIsRewritten`'s "no Error()/String()" below would
@@ -2130,10 +2131,14 @@ def renderPanicPayload (state : ExecState) : GoValue → Option String
         -- exported names, so an `exported`-coverage record suffices to
         -- decide honestly.)
         none
-      else if panicPayloadIsRewritten state (.defined name) then
+      else if panicPayloadIsRewritten state (.defined idx) then
         none -- Error()/String() would have to be CALLED: fail closed
       else
-        some s!"{displayNameOf state name}({v})"
+        -- The entry is read back from the type table; an index the table
+        -- does not have is unrenderable (fail closed), never a guess. A
+        -- present entry renders its DISPLAY record (no record: the visible
+        -- marker, never the key — design note 2026-09-05 §3.2).
+        (state.types.nameOf? idx).map fun name => s!"{displayNameOfId state name}({v})"
   | _ => none
 
 /-- Go's first abort line for a panic chain. The `[recovered, repanicked]`

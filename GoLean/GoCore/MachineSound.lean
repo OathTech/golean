@@ -1047,7 +1047,7 @@ theorem applyStmtOp_ok_any_ch_core {σ : ExecState} {ch : Choices}
 The spill path's outcome CLASS (ok / panic / neither) is independent of
 the consumed capacity choice, under `StateWf` + bounded operands. The
 three previously-recorded missing lemmas are here:
-`defaultValueFuel_ok_of_normalize_ok` (padding defaults derivable from
+`defaultValue_ok_of_normalize_ok` (padding defaults derivable from
 any element's normalize success), `Heap.lookup_set_ne` +
 `loadLoc_root_congr` (load/store agreement below `nextAddr` across the
 fresh-backing alloc), and the `capCong` congruence family (normalize-ok
@@ -1455,23 +1455,42 @@ theorem normalizeFieldsWith_congr {f g : Ty → GoValue → Except Stop GoValue}
         exact ⟨rfl, hab, habs⟩
 
 set_option maxHeartbeats 3200000 in
-/-- Normalization congruence: along `capCong` values AND states agreeing
-on `types`, normalization results agree up to `capCong` (successes) or
-panic-class (errors — normalization never panics, but the statement does
-not need that fact). -/
-theorem normalizeValueForTyFuel_congr {σ₁ σ₂ : ExecState}
-    (htypes : σ₂.types = σ₁.types) :
-    ∀ (fuel : Nat) (ty : Ty) (v w : GoValue), GoValue.capCong v w →
-      exceptCong GoValue.capCong (normalizeValueForTyFuel fuel σ₁ ty v)
-        (normalizeValueForTyFuel fuel σ₂ ty w) := by
-  intro fuel
-  induction fuel with
-  | zero =>
-    intro ty v w hcc
-    simp [normalizeValueForTyFuel, exceptCong, Stop.isPanic]
-  | succ f ih =>
-    intro ty v w hcc
+/-- Normalization congruence, TYPE layer: along `capCong` values,
+normalization results agree up to `capCong` (successes) or panic-class
+(errors — normalization never panics, but the statement does not need
+that fact), given the same for the `.defined` callback. -/
+theorem normalizeValueForTyTy_congr {f : TypeIdx → GoValue → Except Stop GoValue}
+    (hf : ∀ i v w, GoValue.capCong v w →
+      exceptCong GoValue.capCong (f i v) (f i w)) :
+    ∀ (ty : Ty) (v w : GoValue), GoValue.capCong v w →
+      exceptCong GoValue.capCong (normalizeValueForTyTy f ty v)
+        (normalizeValueForTyTy f ty w) := by
+  intro ty
+  induction ty using Ty.arrayInduction with
+  | array length elem ih =>
+    intro v w hcc
+    cases v <;>
+      first
+      | (obtain ⟨b, rfl, _, _, _⟩ := GoValue.capCong_slice_left hcc
+         exact rfl)
+      | (obtain ⟨gs, rfl, _⟩ := GoValue.capCong_struct_left hcc
+         exact rfl)
+      | (obtain rfl := GoValue.capCong_eq hcc rfl
+         exact exceptCong.self fun a => GoValue.capCong_refl a)
+      | skip
+    case array vs =>
+      obtain ⟨ws, rfl, hl⟩ := GoValue.capCong_array_left hcc
+      have hlen : ws.size = vs.size := (capCongList_length hl).symm
+      simp only [normalizeValueForTyTy, hlen]
+      refine exceptCong.ite_congr (fun _ => rfl) fun _ => ?_
+      refine exceptCong.map_congr
+        (normalizeListWith_congr (fun a b hab => ih a b hab) hl)
+        fun as bs habs => ?_
+      exact habs
+  | leaf ty hne =>
+    intro v w hcc
     cases ty with
+    | array => exact absurd rfl (hne _ _)
     | int kind =>
       cases v <;>
         first
@@ -1507,25 +1526,6 @@ theorem normalizeValueForTyFuel_congr {σ₁ σ₂ : ExecState}
            exact rfl)
         | (obtain rfl := GoValue.capCong_eq hcc rfl
            exact exceptCong.self fun a => GoValue.capCong_refl a)
-    | array length elem =>
-      cases v <;>
-        first
-        | (obtain ⟨b, rfl, _, _, _⟩ := GoValue.capCong_slice_left hcc
-           exact rfl)
-        | (obtain ⟨gs, rfl, _⟩ := GoValue.capCong_struct_left hcc
-           exact rfl)
-        | (obtain rfl := GoValue.capCong_eq hcc rfl
-           exact exceptCong.self fun a => GoValue.capCong_refl a)
-        | skip
-      case array vs =>
-        obtain ⟨ws, rfl, hl⟩ := GoValue.capCong_array_left hcc
-        have hlen : ws.size = vs.size := (capCongList_length hl).symm
-        simp only [normalizeValueForTyFuel, hlen]
-        refine exceptCong.ite_congr (fun _ => rfl) fun _ => ?_
-        refine exceptCong.map_congr
-          (normalizeListWith_congr (fun a b hab => ih elem a b hab) hl)
-          fun as bs habs => ?_
-        exact habs
     | interface _ =>
       cases v <;>
         first
@@ -1548,44 +1548,7 @@ theorem normalizeValueForTyFuel_congr {σ₁ σ₂ : ExecState}
            exact rfl)
         | (obtain rfl := GoValue.capCong_eq hcc rfl
            exact exceptCong.self fun a => GoValue.capCong_refl a)
-    | defined name =>
-      simp only [normalizeValueForTyFuel, htypes]
-      cases hlook : TypeEnv.lookup σ₁.types name with
-      | none => exact rfl
-      | some td =>
-        cases td with
-        | alias target => exact ih target v w hcc
-        | defined target => exact ih target v w hcc
-        | opaqueDecl _ => exact rfl
-        | interfaceDef _ => exact rfl
-        | struct fields =>
-          cases v <;>
-            first
-            | (obtain ⟨b, rfl, _, _, _⟩ := GoValue.capCong_slice_left hcc
-               exact rfl)
-            | (obtain ⟨ws, rfl, _⟩ := GoValue.capCong_array_left hcc
-               exact rfl)
-            | (obtain rfl := GoValue.capCong_eq hcc rfl
-               exact exceptCong.self fun a => GoValue.capCong_refl a)
-            | skip
-          case struct t fs =>
-            obtain ⟨gs, rfl, hf⟩ := GoValue.capCong_struct_left hcc
-            have hlen : gs.size = fs.size := (capCongFields_length hf).symm
-            simp only [normalizeStructValueWith, emptyStructAssignable,
-              Array.isEmpty, hlen]
-            refine exceptCong.ite_congr (fun _ => ?_) fun _ => ?_
-            · -- Tag mismatch: after rewriting the sizes equal, the
-              -- assignability-escape condition is the SAME on both sides;
-              -- its ok arm returns the identical retagged empty struct and
-              -- its stuck arm the identical error.
-              refine exceptCong.ite_congr (fun _ => ?_) fun _ => rfl
-              exact exceptCong.self fun a => GoValue.capCong_refl a
-            refine exceptCong.ite_congr (fun _ => rfl) fun _ => ?_
-            refine exceptCong.map_congr
-              (normalizeFieldsWith_congr
-                (fun ty a b hab => ih ty a b hab) fields.toList hf)
-              fun as bs habs => ?_
-            exact ⟨rfl, habs⟩
+    | defined i => exact hf i v w hcc
     | unsupported _ => exact rfl
     | bool => exact hcc
     | string => exact hcc
@@ -1597,9 +1560,60 @@ theorem normalizeValueForTyFuel_congr {σ₁ σ₂ : ExecState}
       -- the cap-divergent shapes (slice/struct/array values at a chan
       -- type) fail closed on BOTH sides with the same error class.
       cases v <;> cases w <;>
-        simp_all [GoValue.capCong, normalizeValueForTyFuel, exceptCong,
+        simp_all [GoValue.capCong, normalizeValueForTyTy, exceptCong,
           Stop.isPanic]
     | pointer _ => exact hcc
+
+set_option maxHeartbeats 3200000 in
+/-- Normalization congruence, INDEX layer (by induction on the bound). -/
+theorem normalizeValueForTyAt_congr (types : TypeEnv) :
+    ∀ (bound : Nat) (i : TypeIdx) (v w : GoValue), GoValue.capCong v w →
+      exceptCong GoValue.capCong (normalizeValueForTyAt types bound i v)
+        (normalizeValueForTyAt types bound i w) := by
+  intro bound
+  induction bound with
+  | zero =>
+    intro i v w _
+    simp [normalizeValueForTyAt, typeIndexExhausted, exceptCong, Stop.isPanic]
+  | succ n ih =>
+    intro i v w hcc
+    simp only [normalizeValueForTyAt]
+    cases hlook : types[i]? with
+    | none => exact rfl
+    | some e =>
+      obtain ⟨name, td⟩ := e
+      cases td with
+      | defined target => exact normalizeValueForTyTy_congr ih target v w hcc
+      | opaqueDecl _ => exact rfl
+      | interfaceDef _ => exact rfl
+      | struct fields =>
+        cases v <;>
+          first
+          | (obtain ⟨b, rfl, _, _, _⟩ := GoValue.capCong_slice_left hcc
+             exact rfl)
+          | (obtain ⟨ws, rfl, _⟩ := GoValue.capCong_array_left hcc
+             exact rfl)
+          | (obtain rfl := GoValue.capCong_eq hcc rfl
+             exact exceptCong.self fun a => GoValue.capCong_refl a)
+          | skip
+        case struct t fs =>
+          obtain ⟨gs, rfl, hf⟩ := GoValue.capCong_struct_left hcc
+          have hlen : gs.size = fs.size := (capCongFields_length hf).symm
+          simp only [normalizeStructValueWith, emptyStructAssignable,
+            Array.isEmpty, hlen]
+          refine exceptCong.ite_congr (fun _ => ?_) fun _ => ?_
+          · -- Tag mismatch: after rewriting the sizes equal, the
+            -- assignability-escape condition is the SAME on both sides;
+            -- its ok arm returns the identical retagged empty struct and
+            -- its stuck arm the identical error.
+            refine exceptCong.ite_congr (fun _ => ?_) fun _ => rfl
+            exact exceptCong.self fun a => GoValue.capCong_refl a
+          refine exceptCong.ite_congr (fun _ => rfl) fun _ => ?_
+          refine exceptCong.map_congr
+            (normalizeFieldsWith_congr
+              (fun ty a b hab => normalizeValueForTyTy_congr ih ty a b hab) fields.toList hf)
+            fun as bs habs => ?_
+          exact ⟨rfl, habs⟩
 
 theorem normalizeValueForTy_congr {σ₁ σ₂ : ExecState}
     (htypes : σ₂.types = σ₁.types) {ty : Ty} {v w : GoValue}
@@ -1607,7 +1621,8 @@ theorem normalizeValueForTy_congr {σ₁ σ₂ : ExecState}
     exceptCong GoValue.capCong (normalizeValueForTy σ₁ ty v)
       (normalizeValueForTy σ₂ ty w) := by
   unfold normalizeValueForTy
-  exact normalizeValueForTyFuel_congr htypes _ ty v w hcc
+  rw [htypes]
+  exact normalizeValueForTyTy_congr (normalizeValueForTyAt_congr _ _) ty v w hcc
 
 /-! #### Store congruence: the final spill store cannot depend on the cap -/
 
@@ -1863,171 +1878,199 @@ theorem forIn_head_ok {α β : Type}
   obtain ⟨r, hr, _⟩ := h
   exact ⟨r, hr⟩
 
-/-- Padding defaults are derivable from any normalization success: if
-SOME value normalizes at `ty` (at the same fuel), `ty` has a default.
-The two walks refuse the same type shapes (`unsupported`/unknown
-defined/interface-def), so a normalizable type is defaultable. -/
-theorem defaultValueFuel_ok_of_normalize_ok {σ : ExecState} :
-    ∀ (fuel : Nat) (ty : Ty) (v r : GoValue),
-      normalizeValueForTyFuel fuel σ ty v = .ok r →
-      ∃ d, defaultValueFuel fuel σ ty = .ok d := by
-  intro fuel
-  induction fuel with
-  | zero => intro ty v r h; simp [normalizeValueForTyFuel] at h
-  | succ f ih =>
-    intro ty v r h
+/-- Padding defaults are derivable from any normalization success, TYPE
+layer: if SOME value normalizes at `ty`, `ty` has a default — given the
+same for the two `.defined` callbacks. The two walks refuse the same type
+shapes (`unsupported`/unknown index/interface-def), so a normalizable type
+is defaultable. -/
+theorem defaultValueTy_ok_of_normalizeTy_ok
+    {g : TypeIdx → GoValue → Except Stop GoValue} {f : TypeIdx → Except Stop GoValue}
+    (hgf : ∀ i v r, g i v = .ok r → ∃ d, f i = .ok d) :
+    ∀ (ty : Ty) (v r : GoValue),
+      normalizeValueForTyTy g ty v = .ok r →
+      ∃ d, defaultValueTy f ty = .ok d := by
+  intro ty
+  induction ty using Ty.arrayInduction with
+  | array length elem ih =>
+    intro v r h
+    by_cases hlen : length = 0
+    · exact ⟨.array #[], by
+        simp [defaultValueTy, hlen, pure, Except.pure]⟩
+    · cases v
+      case array values =>
+        simp only [normalizeValueForTyTy] at h
+        by_cases hsz : (values.size != length) = true
+        · rw [if_pos hsz] at h
+          simp [Bind.bind, Except.bind, stuck_def] at h
+        · rw [if_neg hsz] at h
+          have h' : GoValue.array <$> normalizeListWith
+              (normalizeValueForTyTy g elem) values.toList = .ok r := h
+          have hsz' : values.size = length := by simpa [bne_iff_ne] using hsz
+          cases hvl : values.toList with
+          | nil =>
+            exfalso
+            have h0 : values.size = 0 := congrArg List.length hvl
+            omega
+          | cons v₀ rest =>
+            rw [hvl] at h'
+            rw [map_eq_ok] at h'
+            obtain ⟨arr, harr, _⟩ := h'
+            simp only [normalizeListWith, bind_eq_ok] at harr
+            obtain ⟨head, hhead, _⟩ := harr
+            obtain ⟨d, hd⟩ := ih v₀ head hhead
+            exact ⟨.array (Array.replicate length d), by
+              simp [defaultValueTy, hlen, hd, Bind.bind, Except.bind, pure,
+                Except.pure]⟩
+      all_goals simp [normalizeValueForTyTy] at h
+  | leaf ty hne =>
+    intro v r h
     cases ty with
+    | array => exact absurd rfl (hne _ _)
     | int kind =>
-      exact ⟨.int 0 kind, by simp [defaultValueFuel, pure, Except.pure]⟩
+      exact ⟨.int 0 kind, by simp [defaultValueTy, pure, Except.pure]⟩
     | float kind =>
-      exact ⟨.float 0 kind, by simp [defaultValueFuel, pure, Except.pure]⟩
+      exact ⟨.float 0 kind, by simp [defaultValueTy, pure, Except.pure]⟩
     | bool =>
-      exact ⟨.bool false, by simp [defaultValueFuel, pure, Except.pure]⟩
+      exact ⟨.bool false, by simp [defaultValueTy, pure, Except.pure]⟩
     | string =>
       exact ⟨.string GoString.empty, by
-        simp [defaultValueFuel, pure, Except.pure]⟩
+        simp [defaultValueTy, pure, Except.pure]⟩
     | slice elem =>
       exact ⟨.slice { base := none, offset := 0, len := 0, cap := 0 }, by
-        simp [defaultValueFuel, pure, Except.pure]⟩
+        simp [defaultValueTy, pure, Except.pure]⟩
     | chan _ _ =>
       exact ⟨.chan { base := none }, by
-        simp [defaultValueFuel, pure, Except.pure]⟩
+        simp [defaultValueTy, pure, Except.pure]⟩
     | sync kind =>
       exact ⟨.syncData kind.zero, by
-        simp [defaultValueFuel, pure, Except.pure]⟩
+        simp [defaultValueTy, pure, Except.pure]⟩
     | map kt vt =>
       exact ⟨.map { base := none }, by
-        simp [defaultValueFuel, pure, Except.pure]⟩
+        simp [defaultValueTy, pure, Except.pure]⟩
     | pointer _ =>
-      exact ⟨.nil, by simp [defaultValueFuel, pure, Except.pure]⟩
+      exact ⟨.nil, by simp [defaultValueTy, pure, Except.pure]⟩
     | funcType _ _ _ =>
-      exact ⟨.nil, by simp [defaultValueFuel, pure, Except.pure]⟩
+      exact ⟨.nil, by simp [defaultValueTy, pure, Except.pure]⟩
     | interface _ =>
-      exact ⟨.nil, by simp [defaultValueFuel, pure, Except.pure]⟩
-    | unsupported _ => simp [normalizeValueForTyFuel] at h
-    | array length elem =>
-      by_cases hlen : length = 0
-      · exact ⟨.array #[], by
-          simp [defaultValueFuel, hlen, pure, Except.pure]⟩
-      · cases v
-        case array values =>
-          simp only [normalizeValueForTyFuel] at h
-          by_cases hsz : (values.size != length) = true
-          · rw [if_pos hsz] at h
-            simp [Bind.bind, Except.bind, stuck_def] at h
-          · rw [if_neg hsz] at h
-            have h' : GoValue.array <$> normalizeListWith
-                (normalizeValueForTyFuel f σ elem) values.toList = .ok r := h
-            have hsz' : values.size = length := by simpa [bne_iff_ne] using hsz
-            cases hvl : values.toList with
-            | nil =>
-              exfalso
-              have h0 : values.size = 0 := congrArg List.length hvl
-              omega
-            | cons v₀ rest =>
-              rw [hvl] at h'
-              rw [map_eq_ok] at h'
-              obtain ⟨arr, harr, _⟩ := h'
-              simp only [normalizeListWith, bind_eq_ok] at harr
-              obtain ⟨head, hhead, _⟩ := harr
-              obtain ⟨d, hd⟩ := ih elem v₀ head hhead
-              exact ⟨.array (Array.replicate length d), by
-                simp [defaultValueFuel, hlen, hd, Bind.bind, Except.bind, pure,
-                  Except.pure]⟩
-        all_goals simp [normalizeValueForTyFuel] at h
-    | defined name =>
-      simp only [normalizeValueForTyFuel] at h
-      cases hlook : TypeEnv.lookup σ.types name with
-      | none => rw [hlook] at h; simp at h
-      | some td =>
-        rw [hlook] at h
-        cases td with
-        | alias target =>
-          obtain ⟨d, hd⟩ := ih target v r h
-          exact ⟨d, by simp [defaultValueFuel, hlook, hd]⟩
-        | defined target =>
-          obtain ⟨d, hd⟩ := ih target v r h
-          exact ⟨d, by simp [defaultValueFuel, hlook, hd]⟩
-        | opaqueDecl _ => simp at h
-        | interfaceDef _ => simp at h
-        | struct fields =>
-          have h' : normalizeStructValueWith (normalizeValueForTyFuel f σ)
-              name fields v = .ok r := h
-          clear h
-          cases v
-          case struct actual fieldsValue =>
-            simp only [normalizeStructValueWith] at h'
-            by_cases hty : (actual != name) = true
-            · rw [if_pos hty] at h'
-              -- Tag mismatch: only the empty-struct assignability escape
-              -- succeeds, and it forces the TARGET field list empty, so the
-              -- default value exists trivially.
-              by_cases hesc :
-                  emptyStructAssignable actual name fields fieldsValue = true
-              · have h3 : fields = #[] := by
-                  simp [emptyStructAssignable, Array.isEmpty] at hesc
-                  exact hesc.1.2
-                exact ⟨.struct name #[], by
-                  simp [defaultValueFuel, hlook, h3, defaultFieldsWith,
-                    pure, Except.pure, Functor.map, Except.map]⟩
-              · rw [if_neg hesc] at h'
-                simp [Bind.bind, Except.bind, stuck_def] at h'
-            · rw [if_neg hty] at h'
-              by_cases hsz : (fieldsValue.size != fields.size) = true
-              · rw [if_pos hsz] at h'
-                simp [Bind.bind, Except.bind, stuck_def] at h'
-              · rw [if_neg hsz] at h'
-                have h'' : GoValue.struct name <$> normalizeFieldsWith
-                    (normalizeValueForTyFuel f σ) fields.toList
-                    fieldsValue.toList = .ok r := h'
-                rw [map_eq_ok] at h''
-                obtain ⟨arr, harr, _⟩ := h''
-                suffices haux : ∀ (fds : List FieldDef)
-                    (vals : List (String × GoValue))
-                    (out : Array (String × GoValue)),
-                    normalizeFieldsWith (normalizeValueForTyFuel f σ) fds vals
-                      = .ok out →
-                    vals.length = fds.length →
-                    ∃ ds, defaultFieldsWith (defaultValueFuel f σ) fds = .ok ds by
-                  have hlen : fieldsValue.toList.length = fields.toList.length :=
-                    (by simpa [bne_iff_ne] using hsz :
-                      fieldsValue.size = fields.size)
-                  obtain ⟨ds, hds⟩ := haux fields.toList fieldsValue.toList arr
-                    harr hlen
-                  exact ⟨.struct name ds, by
-                    simp [defaultValueFuel, hlook, hds, map_eq_ok]⟩
-                intro fds
-                induction fds with
-                | nil =>
-                  intro vals out _ _
-                  exact ⟨#[], by simp [defaultFieldsWith, pure, Except.pure]⟩
-                | cons fd fdRest ihf =>
-                  intro vals out hnorm hlen
-                  cases vals with
-                  | nil => simp at hlen
-                  | cons p valRest =>
-                    obtain ⟨pn, pv⟩ := p
-                    simp only [normalizeFieldsWith] at hnorm
-                    by_cases hname : (pn != fd.name) = true
-                    · rw [if_pos hname] at hnorm
-                      simp [Bind.bind, Except.bind, stuck_def] at hnorm
-                    · rw [if_neg hname] at hnorm
-                      have hnorm' : (normalizeValueForTyFuel f σ fd.typ pv >>=
-                          fun head =>
-                            normalizeFieldsWith (normalizeValueForTyFuel f σ)
-                                fdRest valRest >>= fun tail =>
-                              pure (#[(fd.name, head)] ++ tail)) = .ok out := hnorm
-                      rw [bind_eq_ok] at hnorm'
-                      obtain ⟨head, hhead, hrest⟩ := hnorm'
-                      rw [bind_eq_ok] at hrest
-                      obtain ⟨tail, htail, _⟩ := hrest
-                      obtain ⟨d, hd⟩ := ih fd.typ pv head hhead
-                      obtain ⟨ds, hds⟩ := ihf valRest tail htail
-                        (by simpa using hlen)
-                      exact ⟨#[(fd.name, d)] ++ ds, by
-                        simp [defaultFieldsWith, hd, hds, Bind.bind, Except.bind,
-                          pure, Except.pure]⟩
-          all_goals exact absurd h' (by simp [normalizeStructValueWith])
+      exact ⟨.nil, by simp [defaultValueTy, pure, Except.pure]⟩
+    | unsupported _ => simp [normalizeValueForTyTy] at h
+    | defined i => exact hgf i v r h
+
+/-- Padding defaults are derivable from any normalization success, INDEX
+layer: both descents at the same bound. -/
+theorem defaultValueAt_ok_of_normalizeAt_ok (types : TypeEnv) :
+    ∀ (bound : Nat) (i : TypeIdx) (v r : GoValue),
+      normalizeValueForTyAt types bound i v = .ok r →
+      ∃ d, defaultValueAt types bound i = .ok d := by
+  intro bound
+  induction bound with
+  | zero => intro i v r h; simp [normalizeValueForTyAt, typeIndexExhausted] at h
+  | succ n ih =>
+    intro i v r h
+    simp only [normalizeValueForTyAt] at h
+    cases hlook : types[i]? with
+    | none => rw [hlook] at h; simp at h
+    | some e =>
+      rw [hlook] at h
+      obtain ⟨name, td⟩ := e
+      cases td with
+      | defined target =>
+        obtain ⟨d, hd⟩ := defaultValueTy_ok_of_normalizeTy_ok
+          (fun i v r hh => ih i v r hh) target v r h
+        exact ⟨d, by simp [defaultValueAt, hlook, hd]⟩
+      | opaqueDecl _ => simp at h
+      | interfaceDef _ => simp at h
+      | struct fields =>
+        have h' : normalizeStructValueWith
+            (normalizeValueForTyTy (normalizeValueForTyAt types n))
+            name fields v = .ok r := h
+        clear h
+        cases v
+        case struct actual fieldsValue =>
+          simp only [normalizeStructValueWith] at h'
+          by_cases hty : (actual != name) = true
+          · rw [if_pos hty] at h'
+            -- Tag mismatch: only the empty-struct assignability escape
+            -- succeeds, and it forces the TARGET field list empty, so the
+            -- default value exists trivially.
+            by_cases hesc :
+                emptyStructAssignable actual name fields fieldsValue = true
+            · have h3 : fields = #[] := by
+                simp [emptyStructAssignable, Array.isEmpty] at hesc
+                exact hesc.1.2
+              exact ⟨.struct name #[], by
+                simp [defaultValueAt, hlook, h3, defaultFieldsWith,
+                  pure, Except.pure, Functor.map, Except.map]⟩
+            · rw [if_neg hesc] at h'
+              simp [Bind.bind, Except.bind, stuck_def] at h'
+          · rw [if_neg hty] at h'
+            by_cases hsz : (fieldsValue.size != fields.size) = true
+            · rw [if_pos hsz] at h'
+              simp [Bind.bind, Except.bind, stuck_def] at h'
+            · rw [if_neg hsz] at h'
+              have h'' : GoValue.struct name <$> normalizeFieldsWith
+                  (normalizeValueForTyTy (normalizeValueForTyAt types n)) fields.toList
+                  fieldsValue.toList = .ok r := h'
+              rw [map_eq_ok] at h''
+              obtain ⟨arr, harr, _⟩ := h''
+              suffices haux : ∀ (fds : List FieldDef)
+                  (vals : List (String × GoValue))
+                  (out : Array (String × GoValue)),
+                  normalizeFieldsWith
+                      (normalizeValueForTyTy (normalizeValueForTyAt types n)) fds vals
+                    = .ok out →
+                  vals.length = fds.length →
+                  ∃ ds, defaultFieldsWith
+                    (defaultValueTy (defaultValueAt types n)) fds = .ok ds by
+                have hlen : fieldsValue.toList.length = fields.toList.length :=
+                  (by simpa [bne_iff_ne] using hsz :
+                    fieldsValue.size = fields.size)
+                obtain ⟨ds, hds⟩ := haux fields.toList fieldsValue.toList arr
+                  harr hlen
+                exact ⟨.struct name ds, by
+                  simp [defaultValueAt, hlook, hds, map_eq_ok]⟩
+              intro fds
+              induction fds with
+              | nil =>
+                intro vals out _ _
+                exact ⟨#[], by simp [defaultFieldsWith, pure, Except.pure]⟩
+              | cons fd fdRest ihf =>
+                intro vals out hnorm hlen
+                cases vals with
+                | nil => simp at hlen
+                | cons p valRest =>
+                  obtain ⟨pn, pv⟩ := p
+                  simp only [normalizeFieldsWith] at hnorm
+                  by_cases hname : (pn != fd.name) = true
+                  · rw [if_pos hname] at hnorm
+                    simp [Bind.bind, Except.bind, stuck_def] at hnorm
+                  · rw [if_neg hname] at hnorm
+                    have hnorm' : (normalizeValueForTyTy (normalizeValueForTyAt types n) fd.typ pv >>=
+                        fun head =>
+                          normalizeFieldsWith
+                              (normalizeValueForTyTy (normalizeValueForTyAt types n))
+                              fdRest valRest >>= fun tail =>
+                            pure (#[(fd.name, head)] ++ tail)) = .ok out := hnorm
+                    rw [bind_eq_ok] at hnorm'
+                    obtain ⟨head, hhead, hrest⟩ := hnorm'
+                    rw [bind_eq_ok] at hrest
+                    obtain ⟨tail, htail, _⟩ := hrest
+                    obtain ⟨d, hd⟩ := defaultValueTy_ok_of_normalizeTy_ok
+                      (fun i v r hh => ih i v r hh) fd.typ pv head hhead
+                    obtain ⟨ds, hds⟩ := ihf valRest tail htail
+                      (by simpa using hlen)
+                    exact ⟨#[(fd.name, d)] ++ ds, by
+                      simp [defaultFieldsWith, hd, hds, Bind.bind, Except.bind,
+                        pure, Except.pure]⟩
+        all_goals exact absurd h' (by simp [normalizeStructValueWith])
+
+/-- The wrapper form: a normalization success at `ty` yields a default. -/
+theorem defaultValue_ok_of_normalize_ok {σ : ExecState} {ty : Ty} {v r : GoValue}
+    (h : normalizeValueForTy σ ty v = .ok r) : ∃ d, defaultValue σ ty = .ok d := by
+  unfold normalizeValueForTy at h
+  unfold defaultValue
+  exact defaultValueTy_ok_of_normalizeTy_ok
+    (fun i v r hh => defaultValueAt_ok_of_normalizeAt_ok _ _ i v r hh) ty v r h
 
 /-- A valid slice's visible length is below its capacity. -/
 theorem validateSlice_le {sl : SliceValue} {u : Unit}
@@ -2118,9 +2161,7 @@ theorem buildAppendBackingValue_congr {σ : ExecState} {elem : Ty}
       obtain ⟨r, hr⟩ := forIn_head_ok hout
       simp only [bind_eq_ok, pure_eq_ok] at hr
       obtain ⟨nv, hnv, _⟩ := hr
-      unfold normalizeValueForTy at hnv
-      obtain ⟨d, hd⟩ := defaultValueFuel_ok_of_normalize_ok _ _ _ _ hnv
-      exact ⟨d, by unfold defaultValue; exact hd⟩
+      exact defaultValue_ok_of_normalize_ok hnv
   · obtain ⟨rfl, hsz, d, hd⟩ := hv
     rw [if_neg (by omega), if_neg (by omega)]
     refine exceptCong.of_oks ?_ ?_ <;>
@@ -3115,35 +3156,66 @@ theorem normalizeStructValueWith_noPanic {f : Ty → GoValue → Except Stop GoV
     · (try dsimp only)
       exact NoPanic.map _ (normalizeFieldsWith_noPanic hf _ _)
 
-theorem normalizeValueForTyFuel_noPanic :
-    ∀ (fuel : Nat) (s : ExecState) (ty : Ty) (v : GoValue),
-      NoPanic (normalizeValueForTyFuel fuel s ty v) := by
-  intro fuel
-  induction fuel with
-  | zero => intro s ty v; simp only [normalizeValueForTyFuel]; exact NoPanic.unsupported _
-  | succ n ih =>
-    intro s ty v
-    unfold normalizeValueForTyFuel
+/-- The normalizer's TYPE layer never panics, given the same for the
+`.defined` callback. -/
+theorem normalizeValueForTyTy_noPanic {f : TypeIdx → GoValue → Except Stop GoValue}
+    (hf : ∀ i v, NoPanic (f i v)) :
+    ∀ (ty : Ty) (v : GoValue), NoPanic (normalizeValueForTyTy f ty v) := by
+  intro ty
+  induction ty using Ty.arrayInduction with
+  | array length elem ih =>
+    intro v
+    cases v <;> simp only [normalizeValueForTyTy]
+    all_goals (try exact NoPanic.stuck _)
+    all_goals (try dsimp only)
+    all_goals (try split)
+    all_goals (try dsimp only)
+    all_goals first
+      | exact NoPanic.map _ (normalizeListWith_noPanic (fun v => ih v) _)
+      | exact NoPanic.bind (NoPanic.stuck _) fun _ =>
+          NoPanic.map _ (normalizeListWith_noPanic (fun v => ih v) _)
+  | leaf ty hne =>
+    -- `ty` stays a variable: the match splits on every arm, and the
+    -- array arms are dismissed by `hne`.
+    intro v
+    unfold normalizeValueForTyTy
     split
     all_goals (try dsimp only)
     all_goals (try split)
     all_goals (try dsimp only)
-    all_goals (try (have hfuel := Nat.succ.inj ‹n + 1 = Nat.succ _›; subst hfuel))
     all_goals first
       | exact NoPanic.pure _
       | exact NoPanic.ok _
       | exact NoPanic.stuck _
       | exact NoPanic.unsupported _
-      | exact ih _ _ _
-      | exact normalizeStructValueWith_noPanic (fun t v => ih _ t v) _ _ _
-      | exact NoPanic.map _ (normalizeListWith_noPanic (fun v => ih _ _ v) _)
-      | exact NoPanic.bind (NoPanic.stuck _) fun _ =>
-          NoPanic.map _ (normalizeListWith_noPanic (fun v => ih _ _ v) _)
+      | exact hf _ _
+      | exact absurd rfl (hne _ _)
+
+/-- The normalizer's INDEX layer never panics (induction on the bound). -/
+theorem normalizeValueForTyAt_noPanic (types : TypeEnv) :
+    ∀ (bound : Nat) (i : TypeIdx) (v : GoValue),
+      NoPanic (normalizeValueForTyAt types bound i v) := by
+  intro bound
+  induction bound with
+  | zero =>
+    intro i v
+    simp only [normalizeValueForTyAt, typeIndexExhausted]
+    exact NoPanic.unsupported _
+  | succ n ih =>
+    intro i v
+    unfold normalizeValueForTyAt
+    split
+    · exact normalizeStructValueWith_noPanic
+        (fun t v => normalizeValueForTyTy_noPanic (fun i v => ih i v) t v) _ _ _
+    · exact normalizeValueForTyTy_noPanic (fun i v => ih i v) _ _
+    · exact NoPanic.unsupported _
+    · exact NoPanic.unsupported _
+    · exact NoPanic.unsupported _
 
 theorem normalizeValueForTy_noPanic (s : ExecState) (ty : Ty) (v : GoValue) :
     NoPanic (normalizeValueForTy s ty v) := by
   unfold normalizeValueForTy
-  exact normalizeValueForTyFuel_noPanic typeResolutionFuel s ty v
+  exact normalizeValueForTyTy_noPanic (fun i v => normalizeValueForTyAt_noPanic _ _ i v) ty v
 
 theorem defaultFieldsWith_noPanic {f : Ty → Except Stop GoValue}
     (hf : ∀ t, NoPanic (f t)) : ∀ fs, NoPanic (defaultFieldsWith f fs)
@@ -3153,30 +3225,51 @@ theorem defaultFieldsWith_noPanic {f : Ty → Except Stop GoValue}
       exact NoPanic.bind (hf _) fun _ =>
         NoPanic.bind (defaultFieldsWith_noPanic hf rest) fun _ => NoPanic.pure _
 
-theorem defaultValueFuel_noPanic :
-    ∀ (fuel : Nat) (s : ExecState) (ty : Ty), NoPanic (defaultValueFuel fuel s ty) := by
-  intro fuel
-  induction fuel with
-  | zero => intro s ty; simp only [defaultValueFuel]; exact NoPanic.unsupported _
-  | succ n ih =>
-    intro s ty
-    unfold defaultValueFuel
+/-- The zero value's TYPE layer never panics, given the same for the
+`.defined` callback. -/
+theorem defaultValueTy_noPanic {f : TypeIdx → Except Stop GoValue}
+    (hf : ∀ i, NoPanic (f i)) :
+    ∀ (ty : Ty), NoPanic (defaultValueTy f ty) := by
+  intro ty
+  induction ty using Ty.arrayInduction with
+  | array length elem ih =>
+    simp only [defaultValueTy]
+    split
+    · exact NoPanic.pure _
+    · exact NoPanic.bind ih fun _ => NoPanic.pure _
+  | leaf ty hne =>
+    unfold defaultValueTy
     split
     all_goals (try dsimp only)
-    all_goals (try split)
-    all_goals (try dsimp only)
-    all_goals (try (have hfuel := Nat.succ.inj ‹n + 1 = Nat.succ _›; subst hfuel))
     all_goals first
       | exact NoPanic.pure _
       | exact NoPanic.ok _
       | exact NoPanic.unsupported _
-      | exact ih _ _
-      | exact NoPanic.map _ (defaultFieldsWith_noPanic (fun t => ih _ t) _)
-      | exact NoPanic.bind (ih _ _) fun _ => NoPanic.pure _
+      | exact hf _
+      | exact absurd rfl (hne _ _)
+
+/-- The zero value's INDEX layer never panics (induction on the bound). -/
+theorem defaultValueAt_noPanic (types : TypeEnv) :
+    ∀ (bound : Nat) (i : TypeIdx), NoPanic (defaultValueAt types bound i) := by
+  intro bound
+  induction bound with
+  | zero =>
+    intro i
+    simp only [defaultValueAt, typeIndexExhausted]
+    exact NoPanic.unsupported _
+  | succ n ih =>
+    intro i
+    unfold defaultValueAt
+    split
+    · exact NoPanic.map _ (defaultFieldsWith_noPanic (fun t => defaultValueTy_noPanic ih t) _)
+    · exact defaultValueTy_noPanic ih _
+    · exact NoPanic.unsupported _
+    · exact NoPanic.unsupported _
+    · exact NoPanic.unsupported _
 
 theorem defaultValue_noPanic (s : ExecState) (ty : Ty) : NoPanic (defaultValue s ty) := by
   unfold defaultValue
-  exact defaultValueFuel_noPanic typeResolutionFuel s ty
+  exact defaultValueTy_noPanic (fun i => defaultValueAt_noPanic _ _ i) ty
 
 /-- A loop whose every body step is panic-free is panic-free. -/
 theorem forIn_noPanic {α β : Type} {body : α → β → Except Stop (ForInStep β)}

@@ -793,8 +793,9 @@ def traceStream (program : Program) (functionName : String) (args : Array Int)
     match CLI.enumRunProgram ep fuel stream with
     | .ok (st, j, leftover) => (st, j.compress,
         (some (if leftover.isEmpty then (none : Option Nat) else some (stream.length - leftover.length)) : Option (Option Nat)))
-    | .error (e, out) => (e.status, (CLI.observationOfRunOut (.error (e, out))).compress, none)
-  let realObs := (CLI.observationOfRunOut (runProgramPoolOutIntsM fuel program functionName args stream)).compress
+    | .error (e, out) => (e.status, (CLI.observationOfRunOut program.typeDefs.nameOf? (.error (e, out))).compress, none)
+  let realObs := (CLI.observationOfRunOut program.typeDefs.nameOf?
+    (runProgramPoolOutIntsM fuel program functionName args stream)).compress
   let mut agree : List String := []
   if enumStatus != out.status then
     agree := agree ++ [s!"status: tracer {out.status} vs enumerator {enumStatus}"]

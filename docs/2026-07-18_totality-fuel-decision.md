@@ -1,5 +1,15 @@
 # Totality strategy for the type-directed Ops (2026-07-18)
 
+> **Superseded for the TYPE-directed operations (2026-09-05, C-arc C2,
+> gate G-C2 RULED [USER] 2026-09-04, relayed):** the fuel budget this
+> note chose over "a type-environment-acyclicity well-formedness proof"
+> is gone — the type table is now DEPENDENCY-ORDERED on the wire, the
+> decoder decides its well-foundedness (`TypeEnv.WellFounded`), and the
+> type-directed walks descend the table by index (structural on a bound
+> seeded at the table's size, kernel-reducible), with `valueEq` value-
+> structural and `Ty.eqb`/`GoValue.eqb` mutual structural. `execStmt`'s
+> STEP fuel is untouched. Design note `docs/2026-09-05_c-arc-c2-design.md`.
+
 ## Context
 
 The 2026-07 design review found that the shared substrate (`GoLean/GoCore/Ops.lean`)

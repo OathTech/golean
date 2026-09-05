@@ -1519,7 +1519,7 @@ row so the axis stops being invisible, nothing more.
   BEARS here more than anywhere sequential: a 32-bit gc / tinygo lane
   would exercise the other point.
 - RE-ENVELOPE OBLIGATION + COST: a second `Platform` instance (A5 made
-  the width a record field; `tySizeAlignFuel` is parametric, the rest of
+  the width a record field; `tySizeAlign` is parametric, the rest of
   the core reads the single instantiation — threading a platform through
   `ExecState` is deferred to B7, design note §A5), plus the frontend's
   go/types Sizes config and the negative lane's acceptance — mechanical;
@@ -1956,7 +1956,7 @@ runtime observable. OPEN QUESTION as stated.
   `.chanHeaderBytes`, `.intExclusiveUpperBound`, `.wordBytes`/`.maxAlign`
   pinned at `gcAmd64` (Platform.lean, since design-hygiene A5 — the R16
   envelope statement lives there), read by Ops.lean's `maxAllocBytes`,
-  `chanHeaderBytes`, `intExclusiveUpperBound` and `tySizeAlignFuel
+  `chanHeaderBytes`, `intExclusiveUpperBound` and `tySizeAlign
   platform`, consumed at the `makeSlice` /
   `makeChan` arms of `applyStmtOpCore` and the `appendSlice` spill path
   of `applyStmtOp` (Machine.lean), each BEFORE materialization; the
@@ -1976,14 +1976,16 @@ runtime observable. OPEN QUESTION as stated.
   allocates); (iii) the ELEMENT LAYOUT (go/types `gcSizes`, WordSize 8
   / MaxAlign 8, padding included — `[]struct{int64; byte}` panics from
   2^44+1 elements because the element is 16 bytes, not 9):
-  `tySizeAlignFuel` transcribes `gcsizes.go` arm for arm, the `sync`
+  `tySizeAlign` transcribes `gcsizes.go` arm for arm, the `sync`
   primitives are `unsafe.Sizeof`-probed (8/24/16/12), and it FAILS
-  CLOSED on an unsupported or unknown type. Its fuel
-  (`typeResolutionFuel`, 1024) bounds type-nesting DEPTH only — one
-  unit per array element / defined-type indirection / struct level;
-  a struct's field list is walked by `structSizeAlignWith` at the
-  already-decremented fuel, so field COUNT is free (audit fix round F1,
-  2026-09-02: the first cut spent fuel once per FIELD and refused flat
+  CLOSED on an unsupported or unknown type. Since C2 (2026-09-05,
+  `docs/2026-09-05_c-arc-c2-design.md`) it descends the dependency-
+  ordered type table by INDEX (no fuel: the old `typeResolutionFuel`
+  1024 bound and its "type nesting too deep" refusal are gone —
+  exhaustion is unrepresentable on an accepted program); a struct's
+  field list is walked by `structSizeAlignWith` at the enclosing
+  bound, so field COUNT never touches the descent (audit fix round F1,
+  2026-09-02: an earlier cut spent fuel once per FIELD and refused flat
   structs of ≥1023 fields as "type nesting too deep" — downgrading,
   for `make([]W, -1)`, gc's `makeslice: len out of range` panic to a
   refusal; probe `fuelcliff` in the evidence dir, 1023- and 5000-field

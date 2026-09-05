@@ -408,7 +408,6 @@ theorem MethodSig.eqb_sound (a b : MethodSig) (h : MethodSig.eqb a b = true) :
 
 def TypeDef.eqb : TypeDef → TypeDef → Bool
   | .struct f1, .struct f2 => eqbArrayP FieldDef.eqb f1 f2
-  | .alias t1, .alias t2 => Ty.eqb t1 t2
   | .interfaceDef m1, .interfaceDef m2 => eqbArrayP MethodSig.eqb m1 m2
   | .defined u1, .defined u2 => Ty.eqb u1 u2
   | .opaqueDecl x, .opaqueDecl y => x == y
@@ -419,8 +418,6 @@ theorem TypeDef.eqb_sound (a b : TypeDef) (h : TypeDef.eqb a b = true) :
   cases a <;> cases b <;> (try exact Bool.noConfusion h)
   case struct.struct f1 f2 =>
     cases eqbArrayP_sound FieldDef.eqb_sound h; rfl
-  case alias.alias t1 t2 =>
-    cases Ty.eqb_sound (show Ty.eqb t1 t2 = true from h); rfl
   case interfaceDef.interfaceDef m1 m2 =>
     cases eqbArrayP_sound MethodSig.eqb_sound h; rfl
   case defined.defined u1 u2 =>

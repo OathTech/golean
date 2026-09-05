@@ -92,6 +92,34 @@
 #      diff omitted; added at the audit fix round R12, producer tracked:
 #      docs/evidence/2026-09-05_fr19-bug097/twin-repin/twin-structural-diff.py,
 #      output structural-diff.txt beside it).
+#      Re-pin history: 2026-09-05 (lane c-arc-c2, gate G-C2 — RULED
+#      [USER] 2026-09-04 as recommended, CONFIRMED [USER] 2026-09-05,
+#      both relayed by the [AGENT] coordinator, cited as relayed)
+#      4ee39f73… → d2bcb07b…: the wire's `types` table is now emitted
+#      in DEPENDENCY ORDER (struct fields / defined targets, through
+#      array elements, refer only to EARLIER entries; the decoder
+#      refuses anything else — `TypeEnv.WellFounded`, the `Accepted`
+#      clause). The SOLE change is a PERMUTATION of the 92 type entries
+#      (36 moved, same multiset, byte-equal per entry; the pinned order
+#      had 12 order-contract violations, e.g. raft.raftLog before its
+#      field type raft.entryEncodingSize); funcs, methods, methodSets,
+#      globals, fileOrder IDENTICAL (docs/evidence/2026-09-05_c-arc-c2/
+#      twin-repin/). Design note docs/2026-09-05_c-arc-c2-design.md.
+#      Re-pin history: 2026-09-05 (round-17 merge train, lane c-arc-c2
+#      rebased onto main cf858f0f — round-17 rebase: fr19 display/pkg
+#      fields × c2 dependency order) f89e1c9e… → a9a2e2b1…: a FRESH
+#      EMIT from the MERGED frontend over the twin assembly, never a
+#      merge result (the lane's own pin 4ee39f73… → d2bcb07b… above was
+#      taken from the pre-fr19 frontend; neither side's bytes were
+#      kept). Structural diff against main's f89e1c9e… (order-aware,
+#      docs/evidence/2026-09-05_c-arc-c2/twin-repin/round17-*): `types`
+#      is a PERMUTATION of the 93 entries (the fr19 92 + quorum.tup·1),
+#      36 moved — the same 36 the lane moved, quorum.tup·1 not among
+#      them — byte-equal per entry, every entry carrying fr19's
+#      display/pkg on BOTH sides (12 order-contract violations in
+#      main's table, 0 in the new one); funcs, methods, methodSets,
+#      globals, fileOrder, package, schema IDENTICAL including order.
+#      Expected classes only (fr19's fields, c2's order); nothing else.
 #
 # Fail-closed throughout: missing baseline, failed build, failed emit,
 # failed run, or any byte drift exits 1 naming the failing pin.

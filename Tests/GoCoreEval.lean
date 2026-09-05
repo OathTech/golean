@@ -57,26 +57,28 @@ private def corePointerIdentityFunction : GoCore.Func := {
     ]
 }
 
+-- Hand-built tables carry no reserved prefix (no runtime error or
+-- `struct{}` is exercised here); `cell` is index 0 (C2).
 private def coreCellTypes : GoCore.TypeEnv :=
-  [(⟨"cell"⟩, .struct #[{ name := "valA", typ := .int }])]
+  #[(⟨"cell"⟩, .struct #[{ name := "valA", typ := .int }])]
 
 private def coreStructFunction : GoCore.Func := {
   id := ⟨"struct_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "x", typ := .defined ⟨"cell"⟩ }]
+    #[{ id := "x", typ := .defined 0 }]
     #[
-      .assign (.var "x") (.structLit (.defined ⟨"cell"⟩) #[.intLit 42]),
+      .assign (.var "x") (.structLit (.defined 0) #[.intLit 42]),
       .assign (.addr (.fieldAddr (.ref "x") ⟨"cell"⟩ "valA")) (.intLit 17),
-      .assign (.var "z") (.fieldGet (.deref (.ref "x") (.defined ⟨"cell"⟩)) ⟨"cell"⟩ "valA")
+      .assign (.var "z") (.fieldGet (.deref (.ref "x") (.defined 0)) ⟨"cell"⟩ "valA")
     ]
 }
 
 private def coreSetCellFunction : GoCore.Func := {
   id := ⟨"setCell_F"⟩,
   args := #[
-    { id := "p", typ := .pointer (.defined ⟨"cell"⟩) },
+    { id := "p", typ := .pointer (.defined 0) },
     { id := "v", typ := .int }
   ],
   results := #[],
@@ -90,9 +92,9 @@ private def coreCallFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "x", typ := .defined ⟨"cell"⟩ }]
+    #[{ id := "x", typ := .defined 0 }]
     #[
-      .assign (.var "x") (.structLit (.defined ⟨"cell"⟩) #[.intLit 42]),
+      .assign (.var "x") (.structLit (.defined 0) #[.intLit 42]),
       .call #[] ⟨"setCell_F"⟩ #[.ref "x", .intLit 9],
       .assign (.var "z") (.fieldGet (.var "x") ⟨"cell"⟩ "valA")
     ]
@@ -1900,7 +1902,7 @@ private def expectDriverAgreement (name : String) (program : GoCore.Program)
       return false
   | .ok out =>
       for s in streams do
-        let obs := CLI.observationOfRun
+        let obs := CLI.observationOfRun program.typeDefs.nameOf?
           (GoCore.Machine.runProgramM 1000000 program fname #[] s)
         if !out.observations.contains obs then
           IO.eprintln s!"FAIL: {name}: driver observation under stream {s} is not in the enumerated set: {obs.compress}"
@@ -1923,7 +1925,7 @@ private def expectPoolDriverAgreement (name : String) (program : GoCore.Program)
       return false
   | .ok out =>
       for s in streams do
-        let obs := CLI.observationOfRun
+        let obs := CLI.observationOfRun program.typeDefs.nameOf?
           (GoCore.Machine.runProgramPoolM 1000000 program fname #[] s)
         if !out.observations.contains obs then
           IO.eprintln s!"FAIL: {name}: pool driver observation under stream {s} is not in the enumerated set: {obs.compress}"
@@ -2359,20 +2361,20 @@ def main : IO UInt32 := do
   -- a[1], not a[0]: 901 (operand-first, the retired order) → 91. The
   -- oracle-backed guards are multi-assign/call-write-back-order/*.
   passed := passed && (← expectIntResult "GoCore call target sequencing (BUG-052: operands read post-call)"
-    (GoCore.Machine.runFunctionWithContextM 100000 [] #[coreShiftIndexFunction, coreCallTargetSequencingFunction] coreCallTargetSequencingFunction #[]) 91)
+    (GoCore.Machine.runFunctionWithContextM 100000 #[] #[coreShiftIndexFunction, coreCallTargetSequencingFunction] coreCallTargetSequencingFunction #[]) 91)
   passed := passed && (← expectIntResult "GoCore simultaneous assignment sequencing"
     (GoCore.Machine.runFunctionM 100000 coreAssignManySequencingFunction #[]) 1200)
   passed := passed && (← expectIntResult "GoCore if return positive" (GoCore.Machine.runFunctionM 100000 coreIfReturnFunction #[.int 7]) 7)
   passed := passed && (← expectIntResult "GoCore if return negative" (GoCore.Machine.runFunctionM 100000 coreIfReturnFunction #[.int (-3)]) 103)
   passed := passed && (← expectIntResult "GoCore break continue" (GoCore.Machine.runFunctionM 100000 coreBreakContinueFunction #[]) 8)
   passed := passed && (← expectIntResult "GoCore closure shares captured cell"
-    (GoCore.Machine.runFunctionWithContextM 100000 []
+    (GoCore.Machine.runFunctionWithContextM 100000 #[]
       #[coreClosureBodyFunction, coreClosureShareFunction] coreClosureShareFunction #[]) 2)
   passed := passed && (← expectIntResult "GoCore recover catches panic-path defer"
-    (GoCore.Machine.runFunctionWithContextM 100000 []
+    (GoCore.Machine.runFunctionWithContextM 100000 #[]
       #[coreRecoverBodyFunction, coreRecoverCatchFunction] coreRecoverCatchFunction #[]) 7)
   passed := passed && (← expectIntResult "GoCore recover nil on normal drain"
-    (GoCore.Machine.runFunctionWithContextM 100000 []
+    (GoCore.Machine.runFunctionWithContextM 100000 #[]
       #[coreRecoverBodyFunction, coreRecoverNormalNilFunction] coreRecoverNormalNilFunction #[]) 5)
   passed := passed && (← expectErrorStatus "GoCore unrecovered panic aborts"
     (GoCore.Machine.runFunctionM 100000 corePanicAbortFunction #[]) "panic")
@@ -2382,7 +2384,7 @@ def main : IO UInt32 := do
   -- reports running out of fuel as being stuck). Guardrail authored
   -- BEFORE the Stop.fuelOut refinement; red against the old core.
   passed := passed && (← expectErrorStatus "GoCore fuel exhaustion is fuel-out, not stuck"
-    (GoCore.Machine.runFunctionWithContextM 1 []
+    (GoCore.Machine.runFunctionWithContextM 1 #[]
       #[coreClosureBodyFunction, coreClosureShareFunction] coreClosureShareFunction #[]) "fuel-out")
   passed := passed && (← expectErrorStatus "GoCore zero fuel is fuel-out"
     (GoCore.Machine.runFunctionM 0 corePanicAbortFunction #[]) "fuel-out")
@@ -2575,11 +2577,11 @@ def main : IO UInt32 := do
   -- channel rendered IDENTICAL (this assertion is red against the old
   -- encoder; verified red-first before the encoder change landed).
   passed := passed && (← expectTrue "F15: observation channel distinguishes right-value wrong-kind (red under the value-only channel)"
-    (CLI.observationOfRun (.ok { values := #[.int 6 .int] })
-      != CLI.observationOfRun (.ok { values := #[.int 6 .uint8] })))
+    (CLI.observationOfRun (fun _ => none) (.ok { values := #[.int 6 .int] })
+      != CLI.observationOfRun (fun _ => none) (.ok { values := #[.int 6 .uint8] })))
   -- The wire shape itself, pinned verbatim (both encoders must emit it).
   passed := passed && (← expectStrEq "F15: kind-carrying int observation shape"
-    (CLI.observationOfRun (.ok { values := #[.int 6 .uint8] })).compress
+    (CLI.observationOfRun (fun _ => none) (.ok { values := #[.int 6 .uint8] })).compress
     "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"kind\":\"uint8\",\"tag\":\"int\",\"value\":6}]}")
   -- Fail-closed decode discipline for the new fields (the float arm's
   -- mold): unknown kinds — including uintptr, which the frontend maps
@@ -2587,7 +2589,7 @@ def main : IO UInt32 := do
   -- values refuse; the machine encoder's own output round-trips.
   passed := passed && (← expectTrue "F15: decode accepts the machine encoder's kind-carrying output"
     (CLI.decodeObservation "left"
-      (CLI.observationOfRun (.ok { values := #[.int (-5) .int8, .int 255 .uint8] })).compress).isOk)
+      (CLI.observationOfRun (fun _ => none) (.ok { values := #[.int (-5) .int8, .int 255 .uint8] })).compress).isOk)
   passed := passed && (← expectTrue "F15: decode refuses an unknown integer kind (uintptr)"
     !(CLI.decodeObservation "left"
       "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"kind\":\"uintptr\",\"value\":1}]}").isOk)
@@ -2633,6 +2635,88 @@ def main : IO UInt32 := do
     (match Lean.Json.parse (sortSliceWire "clear-slice") with
      | .error _ => false
      | .ok j => (GoLean.NativeToIR.decodeProgram j).isOk))
+  -- C2 — the type-table ACCEPTANCE clause at the decoder (G-C2, 2026-09-05,
+  -- `docs/2026-09-05_c-arc-c2-design.md` §3): the wire's `types` must be
+  -- DEPENDENCY-ORDERED (struct fields / defined targets, through array
+  -- elements, refer only to EARLIER entries), aliases never reach the
+  -- table, `named` references resolve to table indices, and the two
+  -- machine-reserved entries lead every accepted table. The frontend
+  -- orders and self-checks; these pins are the machine's independent
+  -- refusal — a hand-edited wire that violates the contract must refuse
+  -- BY NAME, never decode into a table a fuel walk would have absorbed.
+  let c2Wire (types : String) : String :=
+    "{\"schema\":\"golean-native-v1\",\"funcs\":[],\"methods\":[],\"methodSets\":[],\"types\":[" ++ types ++ "]}"
+  -- (Every wire TypeDef carries its `display`/`pkg` record — REQUIRED
+  -- since the identity/display split, design note 2026-09-05 §3.1.)
+  let c2Struct (name : String) (fieldTy : String) : String :=
+    "{\"name\":\"" ++ name ++ "\",\"display\":\"" ++ name ++ "\",\"pkg\":\"main\",\"def\":{\"kind\":\"struct\",\"fields\":[{\"name\":\"x\",\"type\":" ++ fieldTy ++ ",\"embedded\":false}]}}"
+  let c2Named (n : String) : String := "{\"kind\":\"named\",\"name\":\"" ++ n ++ "\"}"
+  let c2Int : String := "{\"kind\":\"int\",\"int\":\"int\"}"
+  let c2Decode (w : String) : Except String GoCore.Program :=
+    match Lean.Json.parse w with
+    | .error e => .error e
+    | .ok j => GoLean.NativeToIR.decodeProgram j
+  let c2RefusesWith (w : String) (needle : String) : Bool :=
+    match c2Decode w with
+    | .ok _ => false
+    | .error e => (e.splitOn needle).length > 1
+  let c2Ordered := c2Wire (c2Struct "main.Inner" c2Int ++ "," ++ c2Struct "main.Outer" (c2Named "main.Inner"))
+  passed := passed && (← expectTrue "C2: a dependency-ordered wire decodes; the table leads with the two reserved entries and Outer.x is `.defined 2` (Inner behind struct{} and $runtime.Error)"
+    (match c2Decode c2Ordered with
+     | .error _ => false
+     | .ok prog =>
+        prog.typeDefs.size == 4 && prog.typeDefs.hasReservedPrefix
+          && decide prog.typeDefs.WellFounded
+          -- the display records lead with the reserved entries' and sit
+          -- in TABLE ORDER beside their TypeDefs (round-17 composition of
+          -- the fr19 display records with the C2 index-keyed table)
+          && prog.typeDisplays.size == 4
+          && (prog.typeDisplays.extract 0 2 == GoCore.TypeEnv.reservedDisplays)
+          && ((prog.typeDisplays[3]?).map (fun e => (e.1.key, e.2.name, e.2.pkg)) == some ("main.Outer", "main.Outer", "main"))
+          && (prog.typeDisplays.zipWith (fun d t => d.1 == t.1) prog.typeDefs).all id
+          && (match prog.typeDefs[3]? with
+              | some (name, GoCore.TypeDef.struct fields) =>
+                  name.key == "main.Outer" && fields.size == 1
+                    && ((fields[0]?).map (·.typ) == some (GoCore.Ty.defined 2))
+              | _ => false)))
+  passed := passed && (← expectTrue "C2: a FORWARD reference through a struct field refuses at decode, naming the edge (entry 2 → entry 3)"
+    (c2RefusesWith (c2Wire (c2Struct "main.Outer" (c2Named "main.Inner") ++ "," ++ c2Struct "main.Inner" c2Int))
+      "not dependency-ordered — table entry 2 (main.Outer) depends on entry 3 (main.Inner)"))
+  passed := passed && (← expectTrue "C2: a forward reference through an ARRAY element is an edge too (refused)"
+    (c2RefusesWith (c2Wire (c2Struct "main.Outer" ("{\"kind\":\"array\",\"len\":2,\"elem\":" ++ c2Named "main.Inner" ++ "}") ++ "," ++ c2Struct "main.Inner" c2Int))
+      "not dependency-ordered"))
+  passed := passed && (← expectTrue "C2: a forward reference through a POINTER is NOT an edge (Go's recursion channel) — decodes"
+    ((c2Decode (c2Wire (c2Struct "main.Outer" ("{\"kind\":\"pointer\",\"elem\":" ++ c2Named "main.Inner" ++ "}") ++ "," ++ c2Struct "main.Inner" c2Int))).isOk))
+  passed := passed && (← expectTrue "C2: an `alias` TypeDef is refused by name (aliases are inlined by the frontend)"
+    (c2RefusesWith (c2Wire ("{\"name\":\"main.A\",\"display\":\"main.A\",\"pkg\":\"main\",\"def\":{\"kind\":\"alias\",\"target\":" ++ c2Int ++ "}}")) "alias TypeDef main.A"))
+  passed := passed && (← expectTrue "C2: a `named` reference with no TypeDef refuses (never minted an index)"
+    (c2RefusesWith (c2Wire (c2Struct "main.Outer" (c2Named "main.Nope"))) "named type main.Nope"))
+  passed := passed && (← expectTrue "C2: a wire TypeDef spelling a machine-reserved key refuses"
+    (c2RefusesWith (c2Wire (c2Struct "struct{}" c2Int)) "machine-reserved TypeId struct{}"))
+  passed := passed && (← expectTrue "C2: a duplicate TypeId refuses at the decoder (not only at the emitter)"
+    (c2RefusesWith (c2Wire (c2Struct "main.Inner" c2Int ++ "," ++ c2Struct "main.Inner" c2Int)) "duplicate TypeId main.Inner"))
+  -- The core's own decision: `TypeEnv.WellFounded` (the Prop the decoder
+  -- decides) and `firstViolation?` (the edge it names) agree on hand
+  -- tables; the reserved prefix is well-founded by itself.
+  let c2Bad : GoCore.TypeEnv :=
+    #[(⟨"main.A"⟩, .struct #[{ name := "x", typ := .defined 1 }]), (⟨"main.B"⟩, .struct #[{ name := "x", typ := .int }])]
+  let c2Good : GoCore.TypeEnv :=
+    #[(⟨"main.B"⟩, .struct #[{ name := "x", typ := .int }]), (⟨"main.A"⟩, .struct #[{ name := "x", typ := .defined 0 }])]
+  passed := passed && (← expectTrue "C2: `TypeEnv.WellFounded` decides false on a forward reference and `firstViolation?` names (0, 1)"
+    (!decide c2Bad.WellFounded && c2Bad.firstViolation? == some (0, 1)))
+  passed := passed && (← expectTrue "C2: `TypeEnv.WellFounded` decides true on the ordered table and on the reserved prefix; no violation"
+    (decide c2Good.WellFounded && c2Good.firstViolation? == none && decide GoCore.TypeEnv.reserved.WellFounded))
+  -- Observation-channel identity through the index: a defined dynamic type
+  -- renders its UNQUALIFIED key from the table (`reflect.Type.Name()`).
+  passed := passed && (← expectTrue "C2: `Ty.dynamicName` renders a `.defined` index through the table (\"T\" for main.T at index 2)"
+    (GoCore.Ty.dynamicName
+      (GoCore.TypeEnv.reserved ++ (#[(⟨"main.T"⟩, .defined (.int .int))] : GoCore.TypeEnv)).nameOf?
+      (.defined 2) == "T"))
+  -- The reserved runtime-error index: the abort renderer recognizes the
+  -- machine's runtime-error payload by INDEX, in a state whose table is
+  -- just the reserved prefix.
+  passed := passed && (← expectTrue "C2: renderPanicPayload renders a runtime-error payload by its reserved index"
+    (GoCore.Machine.renderPanicPayload { types := GoCore.TypeEnv.reserved } (GoCore.Machine.runtimeErrorValue "boom") == some "boom"))
   passed := passed && (← expectTrue "MS: decode refuses an unknown coverage token"
     (match Lean.Json.parse "{\"schema\":\"golean-native-v1\",\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[{\"type\":\"main.T\",\"coverage\":\"partial\"}]}" with
      | .error _ => false
@@ -2730,10 +2814,12 @@ def main : IO UInt32 := do
         | .error e => .error e
         | .ok prog =>
             let state : GoCore.ExecState :=
-              { types := prog.typeDefs.toList, functions := prog.funcs
+              { types := prog.typeDefs, functions := prog.funcs
                 methods := prog.methods, methodSets := prog.methodSets }
+            -- `main.T` is the decoded wire's first declared type: index 2
+            -- behind the two reserved entries (C2).
             .ok (GoCore.dynamicImplementsInterface state
-              (.defined ⟨"main.T"⟩) ⟨"main.locker"⟩)
+              (.defined 2) ⟨"main.locker"⟩)
   passed := passed && (← expectTrue "MS: satisfaction REFUSES a method-carrying type with no record (BUG-053 class pin; TypeDef present, record absent)"
     (match msQuery "" with
      | .ok (.error err) => err.status == "unsupported"
@@ -2747,7 +2833,7 @@ def main : IO UInt32 := do
   -- declaration-only stub it answers true — exactly the BUG-053
   -- polarity, now enforced for every carrier kind by one guard.
   let syncLockerTypes : GoCore.TypeEnv :=
-    [(⟨"main.locker"⟩, .interfaceDef #[{ name := "Lock", params := #[], results := #[] }])]
+    #[(⟨"main.locker"⟩, .interfaceDef #[{ name := "Lock", params := #[], results := #[] }])]
   let syncStubFunc : GoCore.Func :=
     { id := ⟨"sync.Mutex.Lock"⟩,
       args := #[{ id := "$recv", typ := .pointer (.sync .mutex) }],
@@ -2777,15 +2863,20 @@ def main : IO UInt32 := do
   -- above exercises them). State: an interface requirement
   -- (main.speaker/Speak, interface-receiver MethodInfo) and a defined
   -- carrier main.T with NO concrete Speak — the no-method arm.
+  -- The table LEADS with the machine-reserved prefix (C2): index 1 is
+  -- the runtime-error payload type, and a hand-built table that put a
+  -- user type there would have its panic payload mistaken for a runtime
+  -- error (the renderer's first check) — main.T is index 3.
   let dispTypes : GoCore.TypeEnv :=
-    [(⟨"main.speaker"⟩, .interfaceDef #[{ name := "Speak", params := #[], results := #[] }]),
-     (⟨"main.T"⟩, .defined (.int .int))]
+    GoCore.TypeEnv.reserved ++
+    #[(⟨"main.speaker"⟩, .interfaceDef #[{ name := "Speak", params := #[], results := #[] }]),
+      (⟨"main.T"⟩, .defined (.int .int))]
   let speakIfaceFunc : GoCore.Func :=
     { id := ⟨"main.speaker.Speak"⟩,
       args := #[{ id := "$recv", typ := .interface ⟨"main.speaker"⟩ }],
       results := #[],
       body := .unsupported "test iface requirement stub" }
-  let dispBox : GoValue := .interface (.defined ⟨"main.T"⟩) (.int 7 .int)
+  let dispBox : GoValue := .interface (.defined 3) (.int 7 .int)
   let dispNoRecord : GoCore.ExecState :=
     { types := dispTypes,
       functions := #[speakIfaceFunc],
@@ -2817,8 +2908,12 @@ def main : IO UInt32 := do
   -- The same split in the type-assertion text: identity by key
   -- (red/inner.T ≠ blue/inner.T), display by record (`inner.T` both),
   -- gc's suffix chosen by the declaring package path.
+  -- (C2: the table leads with the reserved prefix; red/inner.T is index 2,
+  -- blue/inner.T index 3 — the display records stay keyed by the entry's
+  -- TypeId, which the renderers read back through the index.)
   let sameNameState : GoCore.ExecState :=
-    { types := [(⟨"red/inner.T"⟩, .defined (.int .int)), (⟨"blue/inner.T"⟩, .defined (.int .int))],
+    { types := GoCore.TypeEnv.reserved ++
+        #[(⟨"red/inner.T"⟩, .defined (.int .int)), (⟨"blue/inner.T"⟩, .defined (.int .int))],
       typeDisplays := #[(⟨"red/inner.T"⟩, { name := "inner.T", pkg := "red/inner" }),
                         (⟨"blue/inner.T"⟩, { name := "inner.T", pkg := "blue/inner" })] }
   -- `typeAssertPanicMessage` is `Except Stop String` since the audit fix
@@ -2833,19 +2928,20 @@ def main : IO UInt32 := do
     | _ => false
   passed := passed && (← expectStrEq "DISPLAY: same-name different-path assert text is gc's (types from different packages)"
     (assertText (GoCore.typeAssertPanicMessage sameNameState
-      (.interface (.defined ⟨"red/inner.T"⟩) (.int 1 .int)) (.defined ⟨"blue/inner.T"⟩) none none))
+      (.interface (.defined 2) (.int 1 .int)) (.defined 3) none none))
     "interface conversion: interface {} is inner.T, not inner.T (types from different packages)")
   let scopesState : GoCore.ExecState :=
-    { types := [(⟨"main.L·1"⟩, .defined (.int .int)), (⟨"main.L·2"⟩, .defined (.int .int))],
+    { types := GoCore.TypeEnv.reserved ++
+        #[(⟨"main.L·1"⟩, .defined (.int .int)), (⟨"main.L·2"⟩, .defined (.int .int))],
       typeDisplays := #[(⟨"main.L·1"⟩, { name := "main.L", pkg := "main" }),
                         (⟨"main.L·2"⟩, { name := "main.L", pkg := "main" })] }
   passed := passed && (← expectStrEq "DISPLAY: same-name same-package (two local scopes) assert text is gc's (types from different scopes)"
     (assertText (GoCore.typeAssertPanicMessage scopesState
-      (.interface (.defined ⟨"main.L·1"⟩) (.int 1 .int)) (.defined ⟨"main.L·2"⟩) none none))
+      (.interface (.defined 2) (.int 1 .int)) (.defined 3) none none))
     "interface conversion: interface {} is main.L, not main.L (types from different scopes)")
   passed := passed && (← expectStrEq "DISPLAY: distinct displays carry no suffix"
     (assertText (GoCore.typeAssertPanicMessage sameNameState
-      (.interface (.defined ⟨"red/inner.T"⟩) (.int 1 .int)) (.int .int) none none))
+      (.interface (.defined 2) (.int 1 .int)) (.int .int) none none))
     "interface conversion: interface {} is inner.T, not int")
   -- R10: the pkgpath of a TypeId with NO display record REFUSES by name
   -- (the retired `.getD ""` answered `""` from nothing). Pinned on
@@ -2853,17 +2949,18 @@ def main : IO UInt32 := do
   -- unreachable — a record-less type renders the no-record marker, so its
   -- display never EQUALS the other side's and no suffix is computed.
   let noRecordState : GoCore.ExecState :=
-    { types := [(⟨"red/inner.T"⟩, .defined (.int .int)), (⟨"blue/inner.T"⟩, .defined (.int .int))],
+    { types := GoCore.TypeEnv.reserved ++
+        #[(⟨"red/inner.T"⟩, .defined (.int .int)), (⟨"blue/inner.T"⟩, .defined (.int .int))],
       typeDisplays := #[(⟨"red/inner.T"⟩, { name := "inner.T", pkg := "red/inner" })] }
   passed := passed && (← expectTrue "DISPLAY/R10: typePkgForMessage of a display-less TypeId refuses by name (never a `\"\"` pkg)"
-    (assertRefuses (GoCore.typePkgForMessage noRecordState (.defined ⟨"blue/inner.T"⟩)) "has no display record"))
+    (assertRefuses (GoCore.typePkgForMessage noRecordState (.defined 3)) "has no display record"))
   passed := passed && (← expectTrue "DISPLAY/R10: typePkgForMessage of a recorded TypeId is its record's pkg (control)"
-    (match GoCore.typePkgForMessage noRecordState (.defined ⟨"red/inner.T"⟩) with
+    (match GoCore.typePkgForMessage noRecordState (.defined 2) with
      | .ok p => p == "red/inner"
      | .error _ => false))
   passed := passed && (← expectStrEq "DISPLAY/R10: a display-less side renders the marker, so the assert text carries no suffix (the arm is not reached)"
     (assertText (GoCore.typeAssertPanicMessage noRecordState
-      (.interface (.defined ⟨"red/inner.T"⟩) (.int 1 .int)) (.defined ⟨"blue/inner.T"⟩) none none))
+      (.interface (.defined 2) (.int 1 .int)) (.defined 3) none none))
     "interface conversion: interface {} is inner.T, not <TypeId blue/inner.T has no display record>")
   -- R1 (audit BLOCKER): gc's pkgpath() of `*T` is T's package iff `*T`'s
   -- method set is non-empty (reflectdata uncommonSize/typePkg; probed
@@ -2871,31 +2968,32 @@ def main : IO UInt32 := do
   -- for Q with a value OR pointer method, `(types from different scopes)`
   -- for method-less P). States: same-named Q in red/inner and blue/inner.
   let qTypes : GoCore.TypeEnv :=
-    [(⟨"red/inner.Q"⟩, .struct #[]), (⟨"blue/inner.Q"⟩, .struct #[])]
+    GoCore.TypeEnv.reserved ++ #[(⟨"red/inner.Q"⟩, .struct #[]), (⟨"blue/inner.Q"⟩, .struct #[])]
   let qDisplays : Array (TypeId × GoCore.TypeDisplay) :=
     #[(⟨"red/inner.Q"⟩, { name := "inner.Q", pkg := "red/inner" }),
       (⟨"blue/inner.Q"⟩, { name := "inner.Q", pkg := "blue/inner" })]
   let qRecords : Array GoCore.MethodSetRecord :=
     #[{ key := "red/inner.Q", coverage := .full }, { key := "blue/inner.Q", coverage := .full }]
-  let ptrQ (path : String) : GoCore.Ty := .pointer (.defined ⟨path⟩)
-  let ptrBox (path : String) : GoValue := .interface (ptrQ path) (.addr (.base ⟨0⟩))
+  -- red/inner.Q is table index 2, blue/inner.Q index 3 (C2).
+  let ptrQ (idx : Nat) : GoCore.Ty := .pointer (.defined idx)
+  let ptrBox (idx : Nat) : GoValue := .interface (ptrQ idx) (.addr (.base ⟨0⟩))
   -- (i) value-receiver method on both Q's → `*Q` inherits it → packages.
   let valueMethodState : GoCore.ExecState :=
     { types := qTypes, typeDisplays := qDisplays, methodSets := qRecords,
-      methods := #[{ name := "M", funcId := ⟨"red/inner.Q.M"⟩, recv := .defined ⟨"red/inner.Q"⟩ },
-                   { name := "M", funcId := ⟨"blue/inner.Q.M"⟩, recv := .defined ⟨"blue/inner.Q"⟩ }] }
+      methods := #[{ name := "M", funcId := ⟨"red/inner.Q.M"⟩, recv := .defined 2 },
+                   { name := "M", funcId := ⟨"blue/inner.Q.M"⟩, recv := .defined 3 }] }
   passed := passed && (← expectStrEq "R1: *Q with a VALUE-receiver method — gc's (types from different packages)"
     (assertText (GoCore.typeAssertPanicMessage valueMethodState
-      (ptrBox "red/inner.Q") (ptrQ "blue/inner.Q") none none))
+      (ptrBox 2) (ptrQ 3) none none))
     "interface conversion: interface {} is *inner.Q, not *inner.Q (types from different packages)")
   -- (ii) pointer-receiver method → the same.
   let ptrMethodState : GoCore.ExecState :=
     { valueMethodState with
-      methods := #[{ name := "M", funcId := ⟨"red/inner.Q.M"⟩, recv := ptrQ "red/inner.Q" },
-                   { name := "M", funcId := ⟨"blue/inner.Q.M"⟩, recv := ptrQ "blue/inner.Q" }] }
+      methods := #[{ name := "M", funcId := ⟨"red/inner.Q.M"⟩, recv := ptrQ 2 },
+                   { name := "M", funcId := ⟨"blue/inner.Q.M"⟩, recv := ptrQ 3 }] }
   passed := passed && (← expectStrEq "R1: *Q with a POINTER-receiver method — gc's (types from different packages)"
     (assertText (GoCore.typeAssertPanicMessage ptrMethodState
-      (ptrBox "red/inner.Q") (ptrQ "blue/inner.Q") none none))
+      (ptrBox 2) (ptrQ 3) none none))
     "interface conversion: interface {} is *inner.Q, not *inner.Q (types from different packages)")
   -- (iii) NO methods, FULL records → the sets are genuinely empty → scopes
   -- (gc: no uncommon section, pointer kind ⇒ pkgpath "").
@@ -2903,25 +3001,25 @@ def main : IO UInt32 := do
     { valueMethodState with methods := #[] }
   passed := passed && (← expectStrEq "R1: method-less *P with full records — gc's (types from different scopes)"
     (assertText (GoCore.typeAssertPanicMessage noMethodState
-      (ptrBox "red/inner.Q") (ptrQ "blue/inner.Q") none none))
+      (ptrBox 2) (ptrQ 3) none none))
     "interface conversion: interface {} is *inner.Q, not *inner.Q (types from different scopes)")
   -- (iv) NO methods and NO record → the emptiness is unknown → REFUSE by
   -- name (never a guessed suffix); (v) exported-only record, nothing
   -- exported on the wire → the same refusal.
   passed := passed && (← expectTrue "R1: method-less *T with NO method-set record refuses by name"
     (assertRefuses (GoCore.typeAssertPanicMessage { noMethodState with methodSets := #[] }
-      (ptrBox "red/inner.Q") (ptrQ "blue/inner.Q") none none) "NO method-set record"))
+      (ptrBox 2) (ptrQ 3) none none) "NO method-set record"))
   passed := passed && (← expectTrue "R1: method-less *T with an exported-only record refuses by name"
     (assertRefuses (GoCore.typeAssertPanicMessage
       { noMethodState with methodSets := #[{ key := "red/inner.Q", coverage := .exported },
                                             { key := "blue/inner.Q", coverage := .exported }] }
-      (ptrBox "red/inner.Q") (ptrQ "blue/inner.Q") none none) "UNDECIDABLE"))
+      (ptrBox 2) (ptrQ 3) none none) "UNDECIDABLE"))
   -- (vi) `[]Q` — an unnamed slice has no method set whatever Q carries →
   -- scopes (probed: `[]inner.Q, not []inner.Q (types from different scopes)`).
   passed := passed && (← expectStrEq "R1: []Q of a method-carrying Q — gc's (types from different scopes)"
     (assertText (GoCore.typeAssertPanicMessage valueMethodState
-      (.interface (.slice (.defined ⟨"red/inner.Q"⟩)) (.slice { base := none, offset := 0, len := 0, cap := 0 }))
-      (.slice (.defined ⟨"blue/inner.Q"⟩)) none none))
+      (.interface (.slice (.defined 2)) (.slice { base := none, offset := 0, len := 0, cap := 0 }))
+      (.slice (.defined 3)) none none))
     "interface conversion: interface {} is []inner.Q, not []inner.Q (types from different scopes)")
   -- R3: the machine-minted runtime-error payload has one synthetic dynamic
   -- type where gc has several concrete ones — a concrete-target assert
@@ -2935,7 +3033,13 @@ def main : IO UInt32 := do
       (GoCore.Machine.runtimeErrorValue "runtime error: index out of range [3] with length 3") (.int .int) none none)
       "recovered runtime error"))
   passed := passed && (← expectStrEq "R3: displayNameOf renders the runtime-error marker, naming its cause"
-    (GoCore.displayNameOf sameNameState GoCore.runtimeErrorTypeId) GoCore.runtimeErrorDisplayMarker)
+    (GoCore.displayNameOf sameNameState GoCore.runtimeErrorTypeIdx) GoCore.runtimeErrorDisplayMarker)
+  passed := passed && (← expectStrEq "R3 × C2: the reserved runtime-error entry's own display record IS the marker (the index check and the record agree)"
+    (GoCore.displayNameOfId { sameNameState with typeDisplays := GoCore.TypeEnv.reservedDisplays } GoCore.runtimeErrorTypeId)
+    GoCore.runtimeErrorDisplayMarker)
+  passed := passed && (← expectStrEq "C2 × display: the reserved struct{} entry displays as gc spells it (struct {}) through its index"
+    (GoCore.displayNameOf { sameNameState with typeDisplays := GoCore.TypeEnv.reservedDisplays } GoCore.emptyStructTypeIdx)
+    "struct {}")
   passed := passed && (← expectTrue "R3: the marker names the synthetic id and the BUG class (not the bare no-record text)"
     ((GoCore.runtimeErrorDisplayMarker.splitOn "$runtime.Error").length > 1
       && (GoCore.runtimeErrorDisplayMarker.splitOn "BUG-009/BUG-053").length > 1

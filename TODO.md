@@ -86,7 +86,14 @@ each gate, per the coordinator's reading [AGENT], disclosed to the
       restated with `seqOpCount`)
 - [ ] B7 — `ProgramCtx`/`Store` split
 - [ ] C1 — `Mem` + access trace (G-C1)
-- [ ] C2 — well-founded `TypeEnv` (G-C2, parallel lane)
+- [x] C2 — well-founded `TypeEnv` (G-C2, parallel lane) — BRANCH-COMPLETE
+      2026-09-05 on lane `c-arc-c2` ([AGENT] under the [USER] ruling,
+      relayed; CONFIRMED [USER] 2026-09-05): dependency-ordered
+      index-keyed type table, `Accepted` clause decided at decode, the
+      14 fuel families / `typeResolutionFuel` / the `irreducible` seal
+      deleted, twin pin moved (design note
+      `docs/2026-09-05_c-arc-c2-design.md`, evidence
+      `docs/evidence/2026-09-05_c-arc-c2/`); not merged
 - [ ] B6 — `VarId` (parallel lane)
 - [ ] P — native method promotion (G-P), after C1
 - [ ] C3 — `Cont := List Frame` via views (G-C3), after B4 and P

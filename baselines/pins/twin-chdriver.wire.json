@@ -494214,6 +494214,18 @@
   },
   {
    "def": {
+    "kind": "defined",
+    "target": {
+     "int": "int8",
+     "kind": "int"
+    }
+   },
+   "display": "bytes.readOp",
+   "name": "bytes.readOp",
+   "pkg": "bytes"
+  },
+  {
+   "def": {
     "fields": [
      {
       "embedded": false,
@@ -494247,18 +494259,6 @@
    },
    "display": "bytes.Buffer",
    "name": "bytes.Buffer",
-   "pkg": "bytes"
-  },
-  {
-   "def": {
-    "kind": "defined",
-    "target": {
-     "int": "int8",
-     "kind": "int"
-    }
-   },
-   "display": "bytes.readOp",
-   "name": "bytes.readOp",
    "pkg": "bytes"
   },
   {
@@ -494306,22 +494306,6 @@
    "def": {
     "kind": "defined",
     "target": {
-     "elem": {
-      "kind": "named",
-      "name": "quorum.MajorityConfig"
-     },
-     "kind": "array",
-     "len": 2
-    }
-   },
-   "display": "quorum.JointConfig",
-   "name": "quorum.JointConfig",
-   "pkg": "quorum"
-  },
-  {
-   "def": {
-    "kind": "defined",
-    "target": {
      "key": {
       "int": "uint64",
       "kind": "int"
@@ -494335,6 +494319,22 @@
    },
    "display": "quorum.MajorityConfig",
    "name": "quorum.MajorityConfig",
+   "pkg": "quorum"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "elem": {
+      "kind": "named",
+      "name": "quorum.MajorityConfig"
+     },
+     "kind": "array",
+     "len": 2
+    }
+   },
+   "display": "quorum.JointConfig",
+   "name": "quorum.JointConfig",
    "pkg": "quorum"
   },
   {
@@ -495082,6 +495082,18 @@
   },
   {
    "def": {
+    "kind": "defined",
+    "target": {
+     "int": "uint64",
+     "kind": "int"
+    }
+   },
+   "display": "tracker.StateType",
+   "name": "tracker.StateType",
+   "pkg": "tracker"
+  },
+  {
+   "def": {
     "fields": [
      {
       "embedded": false,
@@ -495182,18 +495194,6 @@
    },
    "display": "tracker.ProgressMap",
    "name": "tracker.ProgressMap",
-   "pkg": "tracker"
-  },
-  {
-   "def": {
-    "kind": "defined",
-    "target": {
-     "int": "uint64",
-     "kind": "int"
-    }
-   },
-   "display": "tracker.StateType",
-   "name": "tracker.StateType",
    "pkg": "tracker"
   },
   {
@@ -495377,6 +495377,84 @@
     "fields": [
      {
       "embedded": false,
+      "name": "snapshot",
+      "type": {
+       "elem": {
+        "kind": "named",
+        "name": "raftpb.Snapshot"
+       },
+       "kind": "pointer"
+      }
+     },
+     {
+      "embedded": false,
+      "name": "entries",
+      "type": {
+       "elem": {
+        "elem": {
+         "kind": "named",
+         "name": "raftpb.Entry"
+        },
+        "kind": "pointer"
+       },
+       "kind": "slice"
+      }
+     },
+     {
+      "embedded": false,
+      "name": "offset",
+      "type": {
+       "int": "uint64",
+       "kind": "int"
+      }
+     },
+     {
+      "embedded": false,
+      "name": "snapshotInProgress",
+      "type": {
+       "kind": "bool"
+      }
+     },
+     {
+      "embedded": false,
+      "name": "offsetInProgress",
+      "type": {
+       "int": "uint64",
+       "kind": "int"
+      }
+     },
+     {
+      "embedded": false,
+      "name": "logger",
+      "type": {
+       "kind": "interface",
+       "name": "raft.Logger"
+      }
+     }
+    ],
+    "kind": "struct"
+   },
+   "display": "raft.unstable",
+   "name": "raft.unstable",
+   "pkg": "raft"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "int": "uint64",
+     "kind": "int"
+    }
+   },
+   "display": "raft.entryEncodingSize",
+   "name": "raft.entryEncodingSize",
+   "pkg": "raft"
+  },
+  {
+   "def": {
+    "fields": [
+     {
+      "embedded": false,
       "name": "storage",
       "type": {
        "kind": "interface",
@@ -495457,72 +495535,6 @@
    "def": {
     "fields": [
      {
-      "embedded": false,
-      "name": "snapshot",
-      "type": {
-       "elem": {
-        "kind": "named",
-        "name": "raftpb.Snapshot"
-       },
-       "kind": "pointer"
-      }
-     },
-     {
-      "embedded": false,
-      "name": "entries",
-      "type": {
-       "elem": {
-        "elem": {
-         "kind": "named",
-         "name": "raftpb.Entry"
-        },
-        "kind": "pointer"
-       },
-       "kind": "slice"
-      }
-     },
-     {
-      "embedded": false,
-      "name": "offset",
-      "type": {
-       "int": "uint64",
-       "kind": "int"
-      }
-     },
-     {
-      "embedded": false,
-      "name": "snapshotInProgress",
-      "type": {
-       "kind": "bool"
-      }
-     },
-     {
-      "embedded": false,
-      "name": "offsetInProgress",
-      "type": {
-       "int": "uint64",
-       "kind": "int"
-      }
-     },
-     {
-      "embedded": false,
-      "name": "logger",
-      "type": {
-       "kind": "interface",
-       "name": "raft.Logger"
-      }
-     }
-    ],
-    "kind": "struct"
-   },
-   "display": "raft.unstable",
-   "name": "raft.unstable",
-   "pkg": "raft"
-  },
-  {
-   "def": {
-    "fields": [
-     {
       "embedded": true,
       "name": "Logger",
       "type": {
@@ -495557,6 +495569,18 @@
    },
    "display": "raft.SnapshotStatus",
    "name": "raft.SnapshotStatus",
+   "pkg": "raft"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "int": "uint64",
+     "kind": "int"
+    }
+   },
+   "display": "raft.StateType",
+   "name": "raft.StateType",
    "pkg": "raft"
   },
   {
@@ -495760,18 +495784,6 @@
   },
   {
    "def": {
-    "kind": "defined",
-    "target": {
-     "int": "uint64",
-     "kind": "int"
-    }
-   },
-   "display": "raft.StateType",
-   "name": "raft.StateType",
-   "pkg": "raft"
-  },
-  {
-   "def": {
     "fields": [
      {
       "embedded": false,
@@ -495924,6 +495936,52 @@
    },
    "display": "raft.Config",
    "name": "raft.Config",
+   "pkg": "raft"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "int": "uint64",
+     "kind": "int"
+    }
+   },
+   "display": "raft.entryPayloadSize",
+   "name": "raft.entryPayloadSize",
+   "pkg": "raft"
+  },
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "kind": "func",
+     "params": [
+      {
+       "elem": {
+        "kind": "named",
+        "name": "raft.raft"
+       },
+       "kind": "pointer"
+      },
+      {
+       "elem": {
+        "kind": "named",
+        "name": "raftpb.Message"
+       },
+       "kind": "pointer"
+      }
+     ],
+     "results": [
+      {
+       "kind": "interface",
+       "name": "error"
+      }
+     ],
+     "variadic": false
+    }
+   },
+   "display": "raft.stepFunc",
+   "name": "raft.stepFunc",
    "pkg": "raft"
   },
   {
@@ -496217,40 +496275,6 @@
   },
   {
    "def": {
-    "kind": "defined",
-    "target": {
-     "kind": "func",
-     "params": [
-      {
-       "elem": {
-        "kind": "named",
-        "name": "raft.raft"
-       },
-       "kind": "pointer"
-      },
-      {
-       "elem": {
-        "kind": "named",
-        "name": "raftpb.Message"
-       },
-       "kind": "pointer"
-      }
-     ],
-     "results": [
-      {
-       "kind": "interface",
-       "name": "error"
-      }
-     ],
-     "variadic": false
-    }
-   },
-   "display": "raft.stepFunc",
-   "name": "raft.stepFunc",
-   "pkg": "raft"
-  },
-  {
-   "def": {
     "fields": [
      {
       "embedded": false,
@@ -496451,47 +496475,6 @@
    "def": {
     "fields": [
      {
-      "embedded": true,
-      "name": "BasicStatus",
-      "type": {
-       "kind": "named",
-       "name": "raft.BasicStatus"
-      }
-     },
-     {
-      "embedded": false,
-      "name": "Config",
-      "type": {
-       "kind": "named",
-       "name": "tracker.Config"
-      }
-     },
-     {
-      "embedded": false,
-      "name": "Progress",
-      "type": {
-       "key": {
-        "int": "uint64",
-        "kind": "int"
-       },
-       "kind": "map",
-       "value": {
-        "kind": "named",
-        "name": "tracker.Progress"
-       }
-      }
-     }
-    ],
-    "kind": "struct"
-   },
-   "display": "raft.Status",
-   "name": "raft.Status",
-   "pkg": "raft"
-  },
-  {
-   "def": {
-    "fields": [
-     {
       "embedded": false,
       "name": "ID",
       "type": {
@@ -496539,6 +496522,47 @@
    },
    "display": "raft.BasicStatus",
    "name": "raft.BasicStatus",
+   "pkg": "raft"
+  },
+  {
+   "def": {
+    "fields": [
+     {
+      "embedded": true,
+      "name": "BasicStatus",
+      "type": {
+       "kind": "named",
+       "name": "raft.BasicStatus"
+      }
+     },
+     {
+      "embedded": false,
+      "name": "Config",
+      "type": {
+       "kind": "named",
+       "name": "tracker.Config"
+      }
+     },
+     {
+      "embedded": false,
+      "name": "Progress",
+      "type": {
+       "key": {
+        "int": "uint64",
+        "kind": "int"
+       },
+       "kind": "map",
+       "value": {
+        "kind": "named",
+        "name": "tracker.Progress"
+       }
+      }
+     }
+    ],
+    "kind": "struct"
+   },
+   "display": "raft.Status",
+   "name": "raft.Status",
    "pkg": "raft"
   },
   {
@@ -496751,30 +496775,6 @@
    },
    "display": "raft.EntryFormatter",
    "name": "raft.EntryFormatter",
-   "pkg": "raft"
-  },
-  {
-   "def": {
-    "kind": "defined",
-    "target": {
-     "int": "uint64",
-     "kind": "int"
-    }
-   },
-   "display": "raft.entryEncodingSize",
-   "name": "raft.entryEncodingSize",
-   "pkg": "raft"
-  },
-  {
-   "def": {
-    "kind": "defined",
-    "target": {
-     "int": "uint64",
-     "kind": "int"
-    }
-   },
-   "display": "raft.entryPayloadSize",
-   "name": "raft.entryPayloadSize",
    "pkg": "raft"
   },
   {

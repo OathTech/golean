@@ -5,28 +5,109 @@ namespace GoLean.GoCore
 
 open GoLean
 
-/-- Depth bound for the type-directed operations (`normalizeValueForTy`,
-`valueEq`, `defaultValue`, `Ty.mentionsUnsupported`, and — since the
-snapshot-validation slice — `isNormalForTy`, whose depth accounting must
-stay in lockstep with `normalizeValueForTyFuel`'s arm-for-arm; arc-final
-audit addition 2026-08-04). Since the de-WF
-restructure (2026-08-03, sub-branch audit wording) it is decremented once
-per NESTING LEVEL — a `.defined` resolution, an `.array` descent, or the
-leaf itself — never per element or field (siblings share the decremented
-budget through the parameterized list helpers), so it still bounds nesting
-DEPTH, not value size. Measured budget shifts vs the pre-restructure
-accounting, all fail-closed and unreachable from Go source: a pure
-`.defined` chain now supports 1023 links (was 1024); `[1]…[1]int` array
-nesting now bounded at depth 1023 (was unbounded); flat leaves at literal
-fuel 0 now fail (previously succeeded — the wrappers always seed 1024, so
-only direct fuel-0 calls see this). `Ty.mentionsUnsupported`, previously
-budget-free total recursion, now shares this budget and fails CLOSED
-(`true`) at depth 1024+ types. Go type definitions cannot form
-value-containment cycles, so any well-formed program stays far under the
-bound. Chosen over a type-environment-acyclicity well-formedness proof for
-uniformity with `execStmt`'s fuel (design decision 2026-07-18; see
-docs/2026-07-18_totality-fuel-decision.md). -/
-def typeResolutionFuel : Nat := 1024
+/-! ## Type-directed operations: the index descent (C-arc C2, 2026-09-05)
+
+Every operation below that walks a type through the type table
+(`defaultValue`, `tySizeAlign`, `tyUncomparable`, `normalizeValueForTy`,
+`isNormalForTy`, `convertValueToTy`, `buildStructValue`, `valueEq`) used
+to be a FUEL tower: structural on a `Nat` budget seeded at
+`typeResolutionFuel = 1024`, refusing on exhaustion (the 2026-07-18
+totality decision, `docs/2026-07-18_totality-fuel-decision.md`; the
+2026-08-03 de-WF restructure). Gate G-C2 (`docs/2026-09-05_c-arc-c2-
+design.md`) replaces the budget with the TABLE'S OWN STRUCTURE:
+
+* `Ty.defined i` names table entry `i`, and the table is dependency-
+  ordered (`TypeEnv.WellFounded`, decided at decode): every entry
+  depends only on SMALLER indices.
+* A type-directed recursion therefore has two layers. The `…Ty` layer is
+  STRUCTURAL on the type (only `.array` descends into a subterm; pointer/
+  slice/map/chan/func/interface are leaves) and hands `.defined i` to a
+  callback. The `…At` layer resolves an INDEX: structural on a `bound`
+  that counts the table indices still available to the descent — one is
+  consumed per resolution, and the body found is walked by the `…Ty`
+  layer with the callback at the smaller bound. Seeded at `types.size`
+  (`Ops.lean`'s public wrappers), the descent never exhausts on a well-
+  founded table: a dependency chain from index `i` has at most `i + 1`
+  entries, and `i < types.size`. The `0` arm is a NAMED refusal ("not
+  dependency-ordered"), reachable only from a hand-built table the
+  decoder would have refused — never a default.
+* `convertValueToTy` and `buildStructValue` do not recurse at all once
+  `.defined` indirections are followed (`TypeEnv.resolve`); `valueEq`
+  recurses on the VALUE (Go's `==` on interfaces compares the DYNAMIC
+  values, whose types are discovered, not walked), with `TypeEnv.resolve`
+  reading the declared body at each step.
+* The two structural equalities (`Ty.eqb`, `GoValue.eqb`, `Value.lean`)
+  are mutual structural recursions over the nested inductives.
+
+Everything is kernel-reducible (`Nat.rec`/`brecOn`, no `WellFounded.fix`),
+so `decide`/`rfl` evaluate closed instances — the property the de-WF
+restructure bought with fuel, kept without it. The elaborator seal
+(`attribute [irreducible]` on the wrappers) went with the literal budgets
+it guarded against. -/
+
+/-- The declared BODY behind a type head, `.defined` indirections
+followed through the table: a `TyBody.plain` head is never `.defined`
+(it may mention `.defined` BELOW — an array element, a pointer target —
+which the consumer resolves when it gets there). -/
+inductive TyBody where
+  /-- A non-`.defined` head. -/
+  | plain (ty : Ty)
+  /-- A declared struct: its key (the value tag) and fields. -/
+  | struct (name : TypeId) (fields : Array FieldDef)
+  /-- A `.defined` naming an interface DECLARATION (a lowering that put
+  an interface behind `named`); consumers refuse at it by name. -/
+  | interfaceDecl (name : TypeId)
+  /-- A `.defined` naming an opaque declaration; consumers refuse with
+  the recorded reason. -/
+  | opaque (name : TypeId) (reason : String)
+  deriving Repr
+
+/-- Follow `.defined` indirections to the declared body. `bound`-structural
+(the index descent; seeded at `types.size` by the callers). A
+`.defined`-over-`.defined` chain cannot arrive from the frontend
+(go/types' `Underlying()` is never a named type), so on a wire program
+this resolves in one step; the descent is what keeps it total on ANY
+table. -/
+def TypeEnv.resolve (types : TypeEnv) (bound : Nat) (ty : Ty) : Except Stop TyBody :=
+  -- The type is matched FIRST so a non-`.defined` head resolves without
+  -- inspecting `bound` (the equation `resolve types b .bool = .ok (.plain
+  -- .bool)` holds for a SYMBOLIC `b`, which is what downstream unfolding
+  -- needs); the descent on `bound` is confined to the `.defined` arm.
+  match ty with
+  | .defined i =>
+      match bound with
+      | 0 =>
+          unsupported s!"type index {i}: the defined-type chain exceeds the table size — typeDefs not dependency-ordered (refused at decode; unreachable on an accepted program)"
+      | bound + 1 =>
+          match types[i]? with
+          | none => unsupported s!"unknown type index {i} (no entry in the type table)"
+          | some (name, .struct fields) => pure (.struct name fields)
+          | some (_, .defined underlying) => TypeEnv.resolve types bound underlying
+          | some (name, .interfaceDef _) => pure (.interfaceDecl name)
+          | some (name, .opaqueDecl reason) => pure (.opaque name reason)
+  | ty => pure (.plain ty)
+
+/-- Induction on a `Ty` along its ARRAY spine — the one recursive position
+of every type layer above (`…Ty`): `.array n e` descends into `e`, every
+other constructor is a leaf (the `List Ty` inside `funcType` included).
+`Ty` is a nested inductive, which the `induction` tactic refuses; this
+is the principle the type-layer lemmas use (`induction ty using
+Ty.arrayInduction`). -/
+theorem Ty.arrayInduction {motive : Ty → Prop}
+    (array : ∀ n e, motive e → motive (.array n e))
+    (leaf : ∀ t, (∀ n e, t ≠ .array n e) → motive t) : ∀ t, motive t :=
+  Ty.rec (motive_1 := motive) (motive_2 := fun _ => True)
+    (leaf _ (by simp)) (fun _ => leaf _ (by simp)) (fun _ => leaf _ (by simp)) (leaf _ (by simp))
+    (fun n e ih => array n e ih)
+    (fun _ _ => leaf _ (by simp)) (fun _ _ _ _ => leaf _ (by simp)) (fun _ _ _ => leaf _ (by simp))
+    (fun _ _ => leaf _ (by simp)) (fun _ _ _ _ _ => leaf _ (by simp)) (fun _ => leaf _ (by simp))
+    (fun _ => leaf _ (by simp)) (fun _ => leaf _ (by simp)) (fun _ => leaf _ (by simp))
+    trivial (fun _ _ _ _ => trivial)
+
+/-- The refusal every index descent's exhaustion arm raises (unreachable
+on a well-founded table, see the section note). -/
+def typeIndexExhausted {α : Type} (what : String) (i : TypeIdx) : Except Stop α :=
+  unsupported s!"{what}: type index {i} unresolvable within the table's bound — typeDefs not dependency-ordered (refused at decode; unreachable on an accepted program)"
 
 /-! ## Float kind dispatch (floats slice F2, 2026-08-05)
 
@@ -272,11 +353,11 @@ max field alignment; a ZERO-SIZE final field at a non-zero offset
 occupies one byte (`if offs > 0 && size == 0 { size = 1 }`, so
 `struct{a int64; z struct{}}` is 16 bytes, not 8); the total is rounded
 up to the struct's alignment. `fieldSize` is the size/alignment oracle
-for a field's TYPE — the caller passes `tySizeAlignFuel fuel types`
-with the fuel already decremented ONCE for the struct's nesting level
-(the `defaultFieldsWith` recipe), so this loop is structural on the
-field list and the field COUNT never consumes fuel (audit fix round F1,
-2026-09-02: the previous shared-fuel loop refused flat structs of ≥1023
+for a field's TYPE — the caller passes the type layer at the struct's
+own index bound (`tySizeAlignTy p (tySizeAlignAt p types bound)`, the
+`defaultFieldsWith` recipe), so this loop is structural on the field
+list and the field COUNT never touches the descent (audit fix round F1,
+2026-09-02: a previous shared-fuel loop refused flat structs of ≥1023
 fields as "nesting too deep"). Accumulators: end offset of the fields
 laid so far, max alignment so far, and the LAST field's offset and size
 (the final-field rule needs both). Non-empty field lists only (the
@@ -298,56 +379,62 @@ def structSizeAlignWith (fieldSize : Ty → Except Stop (Nat × Nat)) :
 shaped types are one word, strings and interfaces two, slices three; the
 `sync` primitives are gc's struct sizes, `unsafe.Sizeof`-probed, which do
 not depend on the word size — their fields are fixed-width). The R16
-pin's LAYOUT half (envelope on `gcAmd64`, `Platform.lean`). Fuel-
-bounded STRUCTURALLY on the fuel (`typeResolutionFuel`), and the fuel
-bounds type-nesting DEPTH only — one unit per array element / defined-
-type indirection / struct level; a struct's field list is walked by
-`structSizeAlignWith` at the already-decremented fuel, so field COUNT is
-free (no real Go type nests 1024 deep, and a 1024-field struct is
-ordinary). FAIL-CLOSED: an `.unsupported` type, an unknown defined
-type, an untyped integer kind or exhausted depth fuel is a cause-naming
-refusal, never a guessed size. -/
-def tySizeAlignFuel (p : Platform) : Nat → TypeEnv → Ty → Except Stop (Nat × Nat)
-  | 0, _, _ => unsupported "allocation-size computation: type nesting too deep"
-  | fuel + 1, types, ty =>
-    match ty with
-    | .bool => pure (1, 1)
-    | .int kind =>
-        match kind.bitsAt p with
-        | some bits => pure (bits / 8, bits / 8)
-        | none => unsupported s!"allocation-size computation: untyped integer kind {kind.name}"
-    | .float kind => pure (kind.bits / 8, kind.bits / 8)
-    | .string => pure (2 * p.wordBytes, p.maxAlign)
-    | .array n elem => do
-        let (size, align) ← tySizeAlignFuel p fuel types elem
-        pure (n * size, align)
-    | .slice _ => pure (3 * p.wordBytes, p.maxAlign)
-    | .map _ _ => pure (p.wordBytes, p.maxAlign)
-    | .chan _ _ => pure (p.wordBytes, p.maxAlign)
-    | .pointer _ => pure (p.wordBytes, p.maxAlign)
-    | .funcType _ _ _ => pure (p.wordBytes, p.maxAlign)
-    | .interface _ => pure (2 * p.wordBytes, p.maxAlign)
-    | .defined id =>
-        match TypeEnv.lookup types id with
-        | some (.struct fields) =>
-            if fields.isEmpty then pure (0, 1)
-            else structSizeAlignWith (tySizeAlignFuel p fuel types) fields.toList 0 1 0 0
-        | some (.alias target) => tySizeAlignFuel p fuel types target
-        | some (.defined underlying) => tySizeAlignFuel p fuel types underlying
-        | some (.interfaceDef _) => pure (2 * p.wordBytes, p.maxAlign)
-        | some (.opaqueDecl feature) =>
-            unsupported s!"allocation-size computation: {feature}"
-        | none => unsupported s!"allocation-size computation: unknown defined type {id.key}"
-    | .unsupported feature => unsupported s!"allocation-size computation: {feature}"
-    | .sync .mutex => pure (8, 4)
-    | .sync .rwmutex => pure (24, 4)
-    | .sync .waitGroup => pure (16, 8)
-    | .sync .once => pure (12, 4)
+pin's LAYOUT half (envelope on `gcAmd64`, `Platform.lean`). The TYPE
+layer of the index descent (section note): structural on the type, a
+struct's field list walked by `structSizeAlignWith`, `.defined` handed to
+`atDefined`. FAIL-CLOSED: an `.unsupported` type, an unknown defined
+type or an untyped integer kind is a cause-naming refusal, never a
+guessed size. -/
+def tySizeAlignTy (p : Platform) (atDefined : TypeIdx → Except Stop (Nat × Nat)) :
+    Ty → Except Stop (Nat × Nat)
+  | .bool => pure (1, 1)
+  | .int kind =>
+      match kind.bitsAt p with
+      | some bits => pure (bits / 8, bits / 8)
+      | none => unsupported s!"allocation-size computation: untyped integer kind {kind.name}"
+  | .float kind => pure (kind.bits / 8, kind.bits / 8)
+  | .string => pure (2 * p.wordBytes, p.maxAlign)
+  | .array n elem => do
+      let (size, align) ← tySizeAlignTy p atDefined elem
+      pure (n * size, align)
+  | .slice _ => pure (3 * p.wordBytes, p.maxAlign)
+  | .map _ _ => pure (p.wordBytes, p.maxAlign)
+  | .chan _ _ => pure (p.wordBytes, p.maxAlign)
+  | .pointer _ => pure (p.wordBytes, p.maxAlign)
+  | .funcType _ _ _ => pure (p.wordBytes, p.maxAlign)
+  | .interface _ => pure (2 * p.wordBytes, p.maxAlign)
+  | .defined i => atDefined i
+  | .unsupported feature => unsupported s!"allocation-size computation: {feature}"
+  | .sync .mutex => pure (8, 4)
+  | .sync .rwmutex => pure (24, 4)
+  | .sync .waitGroup => pure (16, 8)
+  | .sync .once => pure (12, 4)
 
-/-- The byte size of a type under the R16 pin (`tySizeAlignFuel` at THE
-platform and the standard fuel). -/
+/-- The INDEX layer of `tySizeAlignTy`: size/alignment of the type
+declared at index `i`, descending only to smaller indices (`bound`-
+structural; section note). -/
+def tySizeAlignAt (p : Platform) (types : TypeEnv) : Nat → TypeIdx → Except Stop (Nat × Nat)
+  | 0, i => typeIndexExhausted "allocation-size computation" i
+  | bound + 1, i =>
+      match types[i]? with
+      | some (_, .struct fields) =>
+          if fields.isEmpty then pure (0, 1)
+          else structSizeAlignWith (tySizeAlignTy p (tySizeAlignAt p types bound)) fields.toList 0 1 0 0
+      | some (_, .defined underlying) => tySizeAlignTy p (tySizeAlignAt p types bound) underlying
+      | some (_, .interfaceDef _) => pure (2 * p.wordBytes, p.maxAlign)
+      | some (_, .opaqueDecl feature) =>
+          unsupported s!"allocation-size computation: {feature}"
+      | none => unsupported s!"allocation-size computation: unknown type index {i}"
+
+/-- Size and alignment under platform `p`, over the type table (the
+descent seeded at `types.size`). -/
+def tySizeAlign (p : Platform) (types : TypeEnv) (ty : Ty) : Except Stop (Nat × Nat) :=
+  tySizeAlignTy p (tySizeAlignAt p types types.size) ty
+
+/-- The byte size of a type under the R16 pin (`tySizeAlign` at THE
+platform). -/
 def tySizeBytes (types : TypeEnv) (ty : Ty) : Except Stop Nat := do
-  let (size, _) ← tySizeAlignFuel platform typeResolutionFuel types ty
+  let (size, _) ← tySizeAlign platform types ty
   pure size
 
 /-- Go's TWO-index slice-expression bounds check, with the runtime's exact
@@ -539,96 +626,49 @@ def sliceFromArray (base : Loc) (length : Nat) (low high : Int) (max : Option In
         cap := max - low
       }
 
--- Total via fuel: follows the `.defined → .alias` chain, decrementing fuel per
--- hop. On exhaustion it returns the type unresolved (a safe fixed point).
-def resolveDefinedAliasesFuel : Nat → ExecState → Ty → Ty
-  | fuel + 1, state, .defined name =>
-      match TypeEnv.lookup state.types name with
-      | some (.alias target) => resolveDefinedAliasesFuel fuel state target
-      | _ => .defined name
-  | _, _, other => other
+-- `resolveDefinedAliases` / `canonicalTy` deleted (C2, 2026-09-05): both
+-- resolved `.alias` chains, and `TypeDef.alias` is gone — the frontend
+-- inlines aliases at every use, so every `Ty` on the machine IS its own
+-- canonical form (S3's "canonical dynamic type" is now the identity).
 
-def resolveDefinedAliases (state : ExecState) (typ : Ty) : Ty :=
-  resolveDefinedAliasesFuel typeResolutionFuel state typ
-
-/-- Deep canonicalization for DYNAMIC-TYPE identity (interfaces campaign
-S3): resolve alias chains everywhere in the type structure, stopping at
-identity-bearing `.defined` names. Two types denote the same Go dynamic
-type iff their canonical forms are `BEq` — box tags, assert targets, and
-method-set receivers all compare in canonical form. EVERY arm consumes
-fuel, so the budget bounds COMBINED alias-and-structure depth, not alias
-chains alone (the docstring claimed otherwise until the pre-merge audit
-2026-07-31, finding 10, measured the real horizon at ~512 interleaved
-levels). Exhaustion yields `.unsupported`, which `canonicalDynamicTy`
-rejects at boxing time: identity must never be decided on a partly
-resolved type. -/
-def canonicalTyFuel : Nat → ExecState → Ty → Ty
-  | fuel + 1, state, .defined name =>
-      (match TypeEnv.lookup state.types name with
-       | some (.alias target) => canonicalTyFuel fuel state target
-       | _ => .defined name)
-  | fuel + 1, state, .pointer elem => .pointer (canonicalTyFuel fuel state elem)
-  | fuel + 1, state, .slice elem => .slice (canonicalTyFuel fuel state elem)
-  | fuel + 1, state, .array n elem => .array n (canonicalTyFuel fuel state elem)
-  | fuel + 1, state, .map k v =>
-      .map (canonicalTyFuel fuel state k) (canonicalTyFuel fuel state v)
-  | fuel + 1, state, .chan d e => .chan d (canonicalTyFuel fuel state e)
-  | fuel + 1, state, .funcType ps rs v =>
-      .funcType (ps.map (canonicalTyFuel fuel state))
-        (rs.map (canonicalTyFuel fuel state)) v
-  -- Fuel exhausted on a type that still needs resolving: fail closed.
-  | 0, _, .defined _ => .unsupported "canonical type: type nesting too deep"
-  | 0, _, .pointer _ => .unsupported "canonical type: type nesting too deep"
-  | 0, _, .slice _ => .unsupported "canonical type: type nesting too deep"
-  | 0, _, .array _ _ => .unsupported "canonical type: type nesting too deep"
-  | 0, _, .map _ _ => .unsupported "canonical type: type nesting too deep"
-  | 0, _, .chan _ _ => .unsupported "canonical type: type nesting too deep"
-  | 0, _, .funcType _ _ _ => .unsupported "canonical type: type nesting too deep"
-  | _, _, other => other
-
-def canonicalTy (state : ExecState) (typ : Ty) : Ty :=
-  canonicalTyFuel typeResolutionFuel state typ
-
-/-- Fuel-structural worker for `Ty.mentionsUnsupported` (de-WF restructure,
-2026-08-03: the `attach`-based nested recursion compiled well-founded, which
-the kernel cannot reduce). Recursion is structural on the fuel; exhaustion
-answers `true` — FAIL CLOSED, an unresolvable type must never become a
-boxing tag. -/
-def Ty.mentionsUnsupportedFuel : Nat → Ty → Bool
-  | 0, _ => true
-  | fuel + 1, ty =>
-    match ty with
-    | .unsupported _ => true
-    | .pointer e => Ty.mentionsUnsupportedFuel fuel e
-    | .slice e => Ty.mentionsUnsupportedFuel fuel e
-    | .array _ e => Ty.mentionsUnsupportedFuel fuel e
-    | .chan _ e => Ty.mentionsUnsupportedFuel fuel e
-    | .map k v => Ty.mentionsUnsupportedFuel fuel k || Ty.mentionsUnsupportedFuel fuel v
-    | .funcType ps rs _ =>
-        ps.any (fun t => Ty.mentionsUnsupportedFuel fuel t)
-          || rs.any (fun t => Ty.mentionsUnsupportedFuel fuel t)
-    | _ => false
-
--- Downstream-unfolding pin: the wrapper+worker+budget simp pattern every
--- proof site uses must keep working (literal offset-matching included).
-example : Ty.mentionsUnsupportedFuel 3 (.pointer .bool) = false := by
-  simp [Ty.mentionsUnsupportedFuel]
+mutual
 
 /-- Does the type mention an `.unsupported` leaf? Used to fail closed at
 boxing time (an unrenderable dynamic type must never become a tag).
-Type syntax is small, so the `typeResolutionFuel` DEPTH budget is ample
-(one unit per nesting level, siblings share); the worker fails CLOSED
-(`true`) on exhaustion. -/
-def Ty.mentionsUnsupported (ty : Ty) : Bool :=
-  Ty.mentionsUnsupportedFuel typeResolutionFuel ty
+Structural over the type and its nested parameter/result lists (C2; was
+fuel-bounded, failing CLOSED (`true`) on exhaustion). -/
+def Ty.mentionsUnsupported : Ty → Bool
+  | .unsupported _ => true
+  | .pointer e => Ty.mentionsUnsupported e
+  | .slice e => Ty.mentionsUnsupported e
+  | .array _ e => Ty.mentionsUnsupported e
+  | .chan _ e => Ty.mentionsUnsupported e
+  | .map k v => Ty.mentionsUnsupported k || Ty.mentionsUnsupported v
+  | .funcType ps rs _ => Ty.mentionsUnsupportedList ps || Ty.mentionsUnsupportedList rs
+  | _ => false
 
-/-- The canonical dynamic-type tag for boxing, fail-closed. -/
-def canonicalDynamicTy (state : ExecState) (typ : Ty) : Except Stop Ty := do
-  let c := canonicalTy state typ
-  if c.mentionsUnsupported then
+/-- `Ty.mentionsUnsupported` over a parameter/result list. -/
+def Ty.mentionsUnsupportedList : List Ty → Bool
+  | [] => false
+  | t :: ts => Ty.mentionsUnsupported t || Ty.mentionsUnsupportedList ts
+
+end
+
+-- Downstream-unfolding pin: closed instances evaluate by `decide` (the
+-- kernel-reducibility the section note promises) and unfold by `simp`.
+example : Ty.mentionsUnsupported (.pointer .bool) = false := by decide
+example : Ty.mentionsUnsupported (.funcType [.int, .unsupported "x"] [] false) = true := by
+  simp [Ty.mentionsUnsupported, Ty.mentionsUnsupportedList]
+
+/-- The dynamic-type tag for boxing, fail-closed: the static type itself
+(alias-free by construction, so canonical), refused when it mentions an
+`.unsupported` leaf — identity must never be decided on an unrenderable
+type. (Was `canonicalDynamicTy`, which also resolved aliases.) -/
+def checkedDynamicTy (typ : Ty) : Except Stop Ty := do
+  if typ.mentionsUnsupported then
     unsupported s!"interface conversion for dynamic type {repr typ}"
   else
-    return c
+    return typ
 
 /-- Is the type uncomparable in Go's runtime sense (a slice, map, or func
 anywhere in its resolved structure)? Drives the `comparing uncomparable
@@ -636,45 +676,49 @@ type` panic on interface equality and the map hash panic. Struct fields
 and array elements recurse; interfaces themselves are comparable (their
 comparison may panic deeper, at their own dynamic types).
 
-Three-valued on purpose: `none` is UNKNOWN — a `.defined` name with no
-`TypeDef` (today: any imported/stdlib named type, since the frontend emits
-declarations only for the analyzed package) or fuel exhaustion. Callers
-must fail CLOSED on `none`; the old `Bool` version answered "comparable",
-which silently accepted `m[sort.IntSlice{1,2}] = 1` where Go panics
-(pre-merge audit 2026-07-31, finding 11). -/
-def tyUncomparableFuel : Nat → ExecState → Ty → Option Bool
-  | _, _, .slice _ => some true
-  | _, _, .map _ _ => some true
-  | _, _, .funcType _ _ _ => some true
-  | fuel + 1, state, .defined name =>
-      (match TypeEnv.lookup state.types name with
-       | some (.alias t) => tyUncomparableFuel fuel state t
-       | some (.defined t) => tyUncomparableFuel fuel state t
-       | some (.struct fields) =>
-           -- Any DEFINITELY-uncomparable field decides it; otherwise an
-           -- unknown field leaves the whole struct unknown.
-           fields.foldl
-             (fun acc f =>
-               match acc, tyUncomparableFuel fuel state f.typ with
-               | some true, _ => some true
-               | _, some true => some true
-               | none, _ => none
-               | _, none => none
-               | some false, some false => some false)
-             (some false)
-       -- An interface-typed field is itself comparable (its own dynamic
-       -- type decides at comparison time), as is `.unsupported`-free
-       -- structure; an ABSENT declaration is unknown.
-       | some (.interfaceDef _) => some false
-       | some (.opaqueDecl _) => none
-       | none => none)
-  | fuel + 1, state, .array _ e => tyUncomparableFuel fuel state e
-  | 0, _, .defined _ => none
-  | 0, _, .array _ _ => none
-  | _, _, _ => some false
+Three-valued on purpose: `none` is UNKNOWN — a `.defined` index with an
+opaque declaration (today: any imported/stdlib named type, since the
+frontend emits declarations only for the analyzed program) or no entry.
+Callers must fail CLOSED on `none`; the old `Bool` version answered
+"comparable", which silently accepted `m[sort.IntSlice{1,2}] = 1` where Go
+panics (pre-merge audit 2026-07-31, finding 11). The TYPE layer of the
+index descent (section note). -/
+def tyUncomparableTy (atDefined : TypeIdx → Option Bool) : Ty → Option Bool
+  | .slice _ => some true
+  | .map _ _ => some true
+  | .funcType _ _ _ => some true
+  | .defined i => atDefined i
+  | .array _ e => tyUncomparableTy atDefined e
+  | _ => some false
+
+/-- The INDEX layer of `tyUncomparableTy` (`bound`-structural; the `0`
+arm is the fail-closed UNKNOWN). -/
+def tyUncomparableAt (types : TypeEnv) : Nat → TypeIdx → Option Bool
+  | 0, _ => none
+  | bound + 1, i =>
+      match types[i]? with
+      | some (_, .defined t) => tyUncomparableTy (tyUncomparableAt types bound) t
+      | some (_, .struct fields) =>
+          -- Any DEFINITELY-uncomparable field decides it; otherwise an
+          -- unknown field leaves the whole struct unknown.
+          fields.foldl
+            (fun acc f =>
+              match acc, tyUncomparableTy (tyUncomparableAt types bound) f.typ with
+              | some true, _ => some true
+              | _, some true => some true
+              | none, _ => none
+              | _, none => none
+              | some false, some false => some false)
+            (some false)
+      -- An interface-typed field is itself comparable (its own dynamic
+      -- type decides at comparison time); an OPAQUE declaration and an
+      -- absent entry are unknown.
+      | some (_, .interfaceDef _) => some false
+      | some (_, .opaqueDecl _) => none
+      | none => none
 
 def tyUncomparable (state : ExecState) (typ : Ty) : Option Bool :=
-  tyUncomparableFuel typeResolutionFuel state typ
+  tyUncomparableTy (tyUncomparableAt state.types state.types.size) typ
 
 /-- The canonical EMPTY interface: satisfied by every type BY DESIGN (Go's
 `any`), so it needs no wire declaration and renders as `interface {}`.
@@ -685,7 +729,14 @@ def isEmptyInterfaceName (id : TypeId) : Bool :=
   id.key == "any" || id.key == "empty_interface"
 
 /-- The display record of a `TypeId` (design note 2026-09-05 §3): a
-lookup, never a parse of the key. -/
+lookup, never a parse of the key. Since C2 the machine's type table is
+INDEX-keyed (`Ty.defined (idx : TypeIdx)`), and the record of a defined
+type is found through the key read back from its entry
+(`displayNameOf` → `TypeEnv.nameOf?` → here): the decoder builds one
+record per table entry IN TABLE ORDER and refuses duplicate TypeIds, so
+the record a key finds is the record of the entry the index resolves to.
+Interface leaves (`Ty.interface (id : TypeId)`) are name-keyed by design
+and look their record up directly. -/
 def typeDisplay? (state : ExecState) (id : TypeId) : Option TypeDisplay :=
   state.typeDisplays.foldl
     (fun found entry =>
@@ -694,88 +745,95 @@ def typeDisplay? (state : ExecState) (id : TypeId) : Option TypeDisplay :=
       | none => if entry.1 == id then some entry.2 else none)
     none
 
-/-- The visible rendering of the machine-minted runtime-error payload
-type (`runtimeErrorTypeId`, `$runtime.Error`). gc has no ONE type here:
-a nil dereference is `runtime.errorString`, an index fault
-`runtime.boundsError`, a failed assert `*runtime.TypeAssertionError`, a
-zero divide `runtime.runtimeError` — the machine collapses them onto one
-synthetic id and cannot spell the concrete one, so its display is a
-marker that NAMES that cause (audit fix round R3, 2026-09-05 [AGENT]).
-It is a text for refusal messages and the belt-and-suspenders reach;
-`typeAssertPanicMessage` REFUSES before this could reach an observable
-panic text. -/
-def runtimeErrorDisplayMarker : String :=
-  "<runtime error payload: gc's concrete type (runtime.errorString / \
-runtime.boundsError / *runtime.TypeAssertionError / …) is not modeled — \
-one synthetic $runtime.Error id, BUG-009/BUG-053 class>"
-
 /-- gc's type string for a `TypeId`, from its display record. NO record
 renders a VISIBLE marker — never the key: the key is path-qualified
 identity (`red/inner.T`) and gc prints the package NAME (`inner.T`), so
-rendering the key was exactly BUG-059's fail-open text. Reached from a
-decoded wire by exactly ONE id — the machine-minted `$runtime.Error`
-(no TypeDef, so no record; `runtimeErrorDisplayMarker`, a program that
-`recover()`s and asserts the payload reaches it inside the BUG-009/
-BUG-053 refusal text) — and otherwise only from hand-built programs,
-which must state their displays (the decoder requires a record per
-TypeDef). -/
-def displayNameOf (state : ExecState) (id : TypeId) : String :=
+rendering the key was exactly BUG-059's fail-open text. The
+machine-minted `$runtime.Error` renders `runtimeErrorDisplayMarker`
+(Syntax.lean, beside the reserved prefix whose display record carries
+the same text — a program that `recover()`s and asserts the payload
+reaches it inside the BUG-009/BUG-053 refusal text); otherwise the
+no-record arm is reachable only from hand-built programs, which must
+state their displays (the decoder requires a record per TypeDef). -/
+def displayNameOfId (state : ExecState) (id : TypeId) : String :=
   match typeDisplay? state id with
   | some d => d.name
   | none =>
       if id == runtimeErrorTypeId then runtimeErrorDisplayMarker
       else s!"<TypeId {id.key} has no display record>"
 
--- Total via fuel: recurses through both alias resolution and type subterms
--- (pointer/slice/map/array elements), so fuel bounds combined depth. Only used
--- for error-message rendering; on exhaustion it returns a placeholder.
--- Named and anonymous-interface leaves render their DISPLAY record
--- (design note 2026-09-05 §3.2), never their key.
-def goTypeNameForMessageFuel : Nat → ExecState → Ty → String
-  | fuel + 1, state, typ =>
-      match resolveDefinedAliases state typ with
-      | .bool => "bool"
-      | .int kind => kind.name
-      | .float kind => kind.name
-      | .string => "string"
-      | .pointer elem => s!"*{goTypeNameForMessageFuel fuel state elem}"
-      | .slice elem => s!"[]{goTypeNameForMessageFuel fuel state elem}"
-      | .map key value => s!"map[{goTypeNameForMessageFuel fuel state key}]{goTypeNameForMessageFuel fuel state value}"
-      | .chan .both elem => s!"chan {goTypeNameForMessageFuel fuel state elem}"
-      | .chan .send elem => s!"chan<- {goTypeNameForMessageFuel fuel state elem}"
-      | .chan .recv elem => s!"<-chan {goTypeNameForMessageFuel fuel state elem}"
-      | .interface name => if isEmptyInterfaceName name then "interface {}" else displayNameOf state name
-      | .defined name => displayNameOf state name
-      | .array length elem => s!"[{length}]{goTypeNameForMessageFuel fuel state elem}"
-      | .funcType params results variadic =>
-          -- Go renders the signature: `func()`, `func(int) bool`,
-          -- `func() (int, error)` (message-fidelity, 2026-07-30). A
-          -- variadic signature's LAST parameter renders `...E`
-          -- (`func(...int) int` — gc's failed-assert message names it;
-          -- BUG-067 carried the bit here). A variadic marker on a
-          -- non-slice last param cannot arrive from the emitter
-          -- (go/types types it []E); if it ever does, the plain render
-          -- is a message blemish, never a semantic answer.
-          let names := params.map (goTypeNameForMessageFuel fuel state)
-          let names :=
-            if variadic then
-              match params.getLast?, names.reverse with
-              | some (.slice e), _ :: front =>
-                  (s!"...{goTypeNameForMessageFuel fuel state e}" :: front).reverse
-              | _, _ => names
-            else names
-          let ps := ", ".intercalate names
-          let base := s!"func({ps})"
-          match results with
-          | [] => base
-          | [r] => s!"{base} {goTypeNameForMessageFuel fuel state r}"
-          | rs => s!"{base} ({", ".intercalate (rs.map (goTypeNameForMessageFuel fuel state))})"
-      | .unsupported feature => feature
-      | .sync kind => s!"sync.{kind.name}"
-  | 0, _, _ => "<type nesting too deep>"
+/-- gc's type string for a DEFINED type by its table index (C2 × design
+note 2026-09-05 §3.2): the reserved runtime-error index renders its
+marker FIRST (`runtimeErrorTypeIdx` is a machine constant — the same
+first check `renderPanicPayload` makes), every other index reads its
+entry's key back (`TypeEnv.nameOf?`) and renders that key's display
+record; an index the table does not have renders a visible marker, never
+a guessed name (unreachable on a decoded program). -/
+def displayNameOf (state : ExecState) (idx : TypeIdx) : String :=
+  if idx == runtimeErrorTypeIdx then runtimeErrorDisplayMarker
+  else
+    match state.types.nameOf? idx with
+    | some id => displayNameOfId state id
+    | none => s!"<unknown type index {idx}>"
 
-def goTypeNameForMessage (state : ExecState) (typ : Ty) : String :=
-  goTypeNameForMessageFuel typeResolutionFuel state typ
+mutual
+
+/-- Go's spelling of a type in a runtime panic message. Structural over
+the type and its nested lists (C2; was fuel-bounded). Named and
+anonymous-interface leaves render their DISPLAY record (design note
+2026-09-05 §3.2 — gc's type string, package-NAME qualified: `inner.T`
+for `red/inner.T`), never their key; a `.defined` reaches its record
+through the table index (`displayNameOf`); an index the table does not
+have renders as a visible marker (unreachable on a decoded program). -/
+def goTypeNameForMessage (state : ExecState) : Ty → String
+  | .bool => "bool"
+  | .int kind => kind.name
+  | .float kind => kind.name
+  | .string => "string"
+  | .pointer elem => s!"*{goTypeNameForMessage state elem}"
+  | .slice elem => s!"[]{goTypeNameForMessage state elem}"
+  | .map key value => s!"map[{goTypeNameForMessage state key}]{goTypeNameForMessage state value}"
+  | .chan .both elem => s!"chan {goTypeNameForMessage state elem}"
+  | .chan .send elem => s!"chan<- {goTypeNameForMessage state elem}"
+  | .chan .recv elem => s!"<-chan {goTypeNameForMessage state elem}"
+  | .interface name => if isEmptyInterfaceName name then "interface {}" else displayNameOfId state name
+  | .defined i => displayNameOf state i
+  | .array length elem => s!"[{length}]{goTypeNameForMessage state elem}"
+  | .funcType params results variadic =>
+      -- Go renders the signature: `func()`, `func(int) bool`,
+      -- `func() (int, error)` (message-fidelity, 2026-07-30). A
+      -- variadic signature's LAST parameter renders `...E`
+      -- (`func(...int) int` — gc's failed-assert message names it;
+      -- BUG-067 carried the bit here). A variadic marker on a
+      -- non-slice last param cannot arrive from the emitter
+      -- (go/types types it []E); if it ever does, the plain render
+      -- is a message blemish, never a semantic answer.
+      let names :=
+        if variadic then goTypeNamesForMessageVariadic state params
+        else goTypeNamesForMessage state params
+      let ps := ", ".intercalate names
+      let base := s!"func({ps})"
+      match results with
+      | [] => base
+      | [r] => s!"{base} {goTypeNameForMessage state r}"
+      | rs => s!"{base} ({", ".intercalate (goTypeNamesForMessage state rs)})"
+  | .unsupported feature => feature
+  | .sync kind => s!"sync.{kind.name}"
+
+/-- The rendered parameter/result list. -/
+def goTypeNamesForMessage (state : ExecState) : List Ty → List String
+  | [] => []
+  | t :: ts => goTypeNameForMessage state t :: goTypeNamesForMessage state ts
+
+/-- The rendered parameter list of a VARIADIC signature: the last
+parameter, a slice `[]E` by go/types' typing, renders `...E`. -/
+def goTypeNamesForMessageVariadic (state : ExecState) : List Ty → List String
+  | [] => []
+  | [.slice e] => [s!"...{goTypeNameForMessage state e}"]
+  | [t] => [goTypeNameForMessage state t]
+  | t :: ts => goTypeNameForMessage state t :: goTypeNamesForMessageVariadic state ts
+
+end
 
 def methodInfoByFuncId? (state : ExecState) (id : FuncId) : Option MethodInfo :=
   state.methods.foldl
@@ -789,16 +847,17 @@ def methodInfoByFuncId? (state : ExecState) (id : FuncId) : Option MethodInfo :=
 `MethodInfo` is a dispatch anchor (a requirement) rather than a concrete
 implementation. Used by `dynamicDispatch?`; satisfaction requirements come
 from the interface DECLARATION, not from this table. -/
-def methodRecvInterfaceName? (state : ExecState) (method : MethodInfo) : Option String :=
-  match resolveDefinedAliases state method.recv with
+def methodRecvInterfaceName? (_state : ExecState) (method : MethodInfo) : Option String :=
+  match method.recv with
   | .interface id => some id.key
   | _ => none
 
-/-- A concrete method's receiver in canonical form (Ty-keyed identity,
-interfaces campaign S3 — was a rendered name string). `none` for
-interface receivers (those are requirements, not implementations). -/
-def methodRecvDynamicTy? (state : ExecState) (method : MethodInfo) : Option Ty :=
-  match canonicalTy state method.recv with
+/-- A concrete method's receiver as the dynamic-type key (Ty-keyed
+identity, interfaces campaign S3 — was a rendered name string; alias-free
+by construction since C2, so no canonicalization). `none` for interface
+receivers (those are requirements, not implementations). -/
+def methodRecvDynamicTy? (_state : ExecState) (method : MethodInfo) : Option Ty :=
+  match method.recv with
   | .interface _ => none
   | recv => some recv
 
@@ -806,8 +865,8 @@ def methodRecvDynamicTy? (state : ExecState) (method : MethodInfo) : Option Ty :
 records no declaration for it — the distinction a `Bool`-shaped requirement
 list structurally could not make (pre-merge audit 2026-07-31, finding 0). -/
 def interfaceDeclaredMethods? (state : ExecState) (id : TypeId) : Option (Array MethodSig) :=
-  match TypeEnv.lookup state.types id with
-  | some (.interfaceDef methods) => some methods
+  match state.types.lookupName? id with
+  | some (_, .interfaceDef methods) => some methods
   | _ => none
 
 /-- Go's method-set rule: the method set of `*T` includes `T`'s value-
@@ -861,8 +920,8 @@ def concreteMethodSignature? (state : ExecState) (info : MethodInfo) :
     Option (Array Ty × Array Ty × Bool) :=
   match findFunctionIn? state.functions info.funcId with
   | some f =>
-      some ((f.args.extract 1 f.args.size).map (fun p => canonicalTy state p.typ),
-            f.results.map (fun p => canonicalTy state p.typ),
+      some ((f.args.extract 1 f.args.size).map (fun p => p.typ),
+            f.results.map (fun p => p.typ),
             f.variadic)
   | none => none
 
@@ -878,9 +937,7 @@ def satisfiesMethodSig (state : ExecState) (dynTy : Ty) (req : MethodSig) : Bool
   | some (info, _) =>
       match concreteMethodSignature? state info with
       | some (params, results, variadic) =>
-          params == req.params.map (canonicalTy state) &&
-            results == req.results.map (canonicalTy state) &&
-            variadic == req.variadic
+          params == req.params && results == req.results && variadic == req.variadic
       | none => false
   | none => false
 
@@ -904,8 +961,8 @@ def methodCarrierKey? (state : ExecState) (dynTy : Ty) : Option String :=
   let base := match dynTy with
     | .pointer elem => elem
     | other => other
-  match resolveDefinedAliases state base with
-  | .defined name => some name.key
+  match base with
+  | .defined i => (state.types.nameOf? i).map (·.key)
   | .sync kind => some s!"sync.{kind.name}"
   | _ => none
 
@@ -1026,16 +1083,14 @@ def dynamicImplementsInterface (state : ExecState) (dynTy : Ty) (interfaceName :
     Except Stop Bool := do
   return (← firstUnsatisfiedMethod? state dynTy interfaceName).isNone
 
-/-- Apply the (already fuel-decremented) element normalizer to each list
-element in order; fail-closed on the first error. Structural on the LIST and
-parameterized over `f` rather than mutually recursive — the de-WF recipe
-(2026-08-03): the old mutual block (list helpers recursing at unchanged
-fuel) had no common structural argument, so Lean compiled it well-founded,
-and `Acc.rec` reduces nowhere — which blocked kernel evaluation of the
-interpreter (`docs/2026-08-03_sem-adequacy-arc.md`, slice-1 spike).
-Crucially the fuel still bounds only NESTING DEPTH, not node count: a first
-de-WF attempt charged fuel per element and was caught making `Progress` —
-and with it the ∀-config theorem — false at configs past the budget. -/
+/-- Apply the element normalizer to each list element in order;
+fail-closed on the first error. Structural on the LIST and parameterized
+over `f` rather than mutually recursive — the de-WF recipe (2026-08-03):
+the old mutual block had no common structural argument, so Lean compiled
+it well-founded, and `Acc.rec` reduces nowhere — which blocked kernel
+evaluation of the interpreter (`docs/2026-08-03_sem-adequacy-arc.md`,
+slice-1 spike). Since C2 the parameter is the type layer of the index
+descent at the enclosing bound; element COUNT never touches the descent. -/
 def normalizeListWith (f : GoValue → Except Stop GoValue) :
     List GoValue → Except Stop (Array GoValue)
   | value :: rest => do
@@ -1044,8 +1099,8 @@ def normalizeListWith (f : GoValue → Except Stop GoValue) :
       return #[head] ++ tail
   | [] => return #[]
 
-/-- Normalize struct field values pairwise with the (already
-fuel-decremented) normalizer, checking field-name alignment. -/
+/-- Normalize struct field values pairwise with the given normalizer,
+checking field-name alignment. -/
 def normalizeFieldsWith (f : Ty → GoValue → Except Stop GoValue) :
     List FieldDef → List (String × GoValue) →
     Except Stop (Array (String × GoValue))
@@ -1073,7 +1128,7 @@ def emptyStructAssignable (actual name : TypeId)
     fields.isEmpty && fieldsValue.isEmpty
 
 /-- Struct-shape checks for normalization at a defined struct type, with the
-(already fuel-decremented) field normalizer. A mismatched tag is accepted
+given field normalizer. A mismatched tag is accepted
 only through the empty-struct ASSIGNABILITY escape (retagged copy — Go's
 assignment); anything else stays stuck. -/
 def normalizeStructValueWith (f : Ty → GoValue → Except Stop GoValue)
@@ -1089,75 +1144,87 @@ def normalizeStructValueWith (f : Ty → GoValue → Except Stop GoValue)
       .struct name <$> normalizeFieldsWith f fields.toList fieldsValue.toList
   | value => stuck s!"expected struct {name.key} value, got {repr value}"
 
--- Total via fuel, STRUCTURALLY on the fuel: recursion into child values goes
--- through the parameterized list/field helpers above at DECREMENTED fuel, so
--- the definition is plain structural recursion (kernel-reducible) while the
--- fuel still bounds nesting DEPTH only — one unit per array/struct level or
--- defined-type resolution, never per element. The public
--- `normalizeValueForTy` seeds `typeResolutionFuel` and keeps its signature.
-def normalizeValueForTyFuel : Nat → ExecState → Ty → GoValue → Except Stop GoValue
-  | 0, _, _, _ => unsupported "normalizing: type nesting too deep"
-  | _ + 1, _, .int kind, .int value _ => return .int (kind.normalize value) kind
-  | _ + 1, _, .int kind, value => stuck s!"expected {kind.name} value, got {repr value}"
+/-- Normalize a value at a type: the TYPE layer of the index descent
+(section note). Structural on the type — an array's elements are
+normalized at the element type through `normalizeListWith`, a `.defined`
+is handed to `atDefined` — and kernel-reducible. The public
+`normalizeValueForTy` seeds the descent at `types.size`. -/
+def normalizeValueForTyTy (atDefined : TypeIdx → GoValue → Except Stop GoValue) :
+    Ty → GoValue → Except Stop GoValue
+  | .int kind, .int value _ => return .int (kind.normalize value) kind
+  | .int kind, value => stuck s!"expected {kind.name} value, got {repr value}"
   -- Kind-strict (F2 header note): mask-enforce the width invariant, never
-  -- adopt a mismatched kind (LOCKSTEP with isNormalForTyFuel's arm).
-  | _ + 1, _, .float kind, .float bits k =>
+  -- adopt a mismatched kind (LOCKSTEP with isNormalForTyTy's arm).
+  | .float kind, .float bits k =>
       if k == kind then return .float (kind.normalizeBits bits) kind
       else stuck s!"expected {kind.name} value, got {k.name}"
-  | _ + 1, _, .float kind, value => stuck s!"expected {kind.name} value, got {repr value}"
-  | fuel + 1, state, .array length elem, .array values => do
+  | .float kind, value => stuck s!"expected {kind.name} value, got {repr value}"
+  | .array length elem, .array values => do
       if values.size != length then
         stuck s!"array value length mismatch: expected {length}, got {values.size}"
-      .array <$> normalizeListWith (normalizeValueForTyFuel fuel state elem) values.toList
-  | _ + 1, _, .array length _, value => stuck s!"expected array({length}) value, got {repr value}"
-  | _ + 1, _, .interface _, value => return value
+      .array <$> normalizeListWith (normalizeValueForTyTy atDefined elem) values.toList
+  | .array length _, value => stuck s!"expected array({length}) value, got {repr value}"
+  | .interface _, value => return value
   -- Func values carry their own identity; nil is the zero value.
-  | _ + 1, _, .funcType _ _ _, .funcVal fid captured => return .funcVal fid captured
-  | _ + 1, _, .funcType _ _ _, .nil => return .nil
-  | _ + 1, _, .funcType _ _ _, value => stuck s!"expected func value, got {repr value}"
+  | .funcType _ _ _, .funcVal fid captured => return .funcVal fid captured
+  | .funcType _ _ _, .nil => return .nil
+  | .funcType _ _ _, value => stuck s!"expected func value, got {repr value}"
   -- Channel cells canonicalize the nil representation (channels arc
   -- slice 1): a raw `.nil` reaching a channel-typed slot (an untyped
   -- `return nil`, a nil literal the frontend left untyped) becomes the
   -- machine's own nil channel, the same value the typed nil literal and
   -- `defaultValue` produce — the map/slice conversion-arm precedent
   -- (delta-review D3). Anything else non-channel fails closed.
-  | _ + 1, _, .chan _ _, .chan cv => return .chan cv
-  | _ + 1, _, .chan _ _, .nil => return .chan { base := none }
-  | _ + 1, _, .chan _ _, value => stuck s!"expected channel value, got {repr value}"
+  | .chan _ _, .chan cv => return .chan cv
+  | .chan _ _, .nil => return .chan { base := none }
+  | .chan _ _, value => stuck s!"expected channel value, got {repr value}"
   -- Sync cells (spec-parity slice 2): only kind-matching primitive
   -- state is normal at a sync type — there is no nil sync struct and
   -- no cross-kind coercion; anything else fails closed.
-  | _ + 1, _, .sync kind, .syncData p =>
+  | .sync kind, .syncData p =>
       if p.kind == kind then return .syncData p
       else stuck s!"expected sync.{kind.name} state, got {repr (GoValue.syncData p)}"
-  | _ + 1, _, .sync kind, value => stuck s!"expected sync.{kind.name} state, got {repr value}"
-  | fuel + 1, state, .defined name, value => do
-      match TypeEnv.lookup state.types name with
-      | some (.alias target) => normalizeValueForTyFuel fuel state target value
-      | some (.defined target) => normalizeValueForTyFuel fuel state target value
-      | some (.struct fields) =>
-          normalizeStructValueWith (normalizeValueForTyFuel fuel state) name fields value
-      | some (.opaqueDecl feature) => unsupported s!"normalizing {feature}"
-      | some (.interfaceDef _) => unsupported s!"normalizing at interface type {name.key}"
-      | none => unsupported s!"normalizing unknown defined type {name.key}"
-  | _ + 1, _, .unsupported feature, _ => unsupported s!"normalizing {feature}"
-  | _ + 1, _, _, value => return value
+  | .sync kind, value => stuck s!"expected sync.{kind.name} state, got {repr value}"
+  | .defined i, value => atDefined i value
+  | .unsupported feature, _ => unsupported s!"normalizing {feature}"
+  | _, value => return value
 
+/-- The INDEX layer of normalization: normalize a value at the type
+declared at index `i`, descending only to smaller indices (`bound`-
+structural; section note). -/
+def normalizeValueForTyAt (types : TypeEnv) : Nat → TypeIdx → GoValue → Except Stop GoValue
+  | 0, i, _ => typeIndexExhausted "normalizing" i
+  | bound + 1, i, value =>
+      match types[i]? with
+      | some (name, .struct fields) =>
+          normalizeStructValueWith (normalizeValueForTyTy (normalizeValueForTyAt types bound))
+            name fields value
+      | some (_, .defined target) =>
+          normalizeValueForTyTy (normalizeValueForTyAt types bound) target value
+      | some (_, .opaqueDecl feature) => unsupported s!"normalizing {feature}"
+      | some (name, .interfaceDef _) => unsupported s!"normalizing at interface type {name.key}"
+      | none => unsupported s!"normalizing unknown type index {i}"
 
-
-example (σ : ExecState) (kind : IntKind) :
-    normalizeValueForTyFuel 5 σ (.int kind) (.int 3 kind)
+-- Downstream-unfolding pins: the leaf arm unfolds without touching the
+-- table; a closed table walk evaluates by `decide`.
+example (f : TypeIdx → GoValue → Except Stop GoValue) (kind : IntKind) :
+    normalizeValueForTyTy f (.int kind) (.int 3 kind)
       = .ok (.int (kind.normalize 3) kind) := by
-  simp [normalizeValueForTyFuel]; rfl
+  simp [normalizeValueForTyTy]; rfl
+example :
+    normalizeValueForTyAt #[(⟨"main.T"⟩, .defined (.int .int))] 1 0 (.int 3 .int)
+      = .ok (.int 3 .int) := rfl
 
+/-- Normalize a value at a type over the state's type table (the descent
+seeded at `types.size`). -/
 def normalizeValueForTy (state : ExecState) (ty : Ty) (value : GoValue) :
     Except Stop GoValue :=
-  normalizeValueForTyFuel typeResolutionFuel state ty value
+  normalizeValueForTyTy (normalizeValueForTyAt state.types state.types.size) ty value
 
 /-! ### Self-normalization check (sem-adequacy arc slice 3, 2026-08-04)
 
-`isNormalForTyFuel types ty v` decides `normalizeValueForTyFuel fuel σ ty v
-= .ok v` (for any `σ` with `σ.types = types`) WITHOUT a generic `GoValue`
+`isNormalForTy types ty v` decides `normalizeValueForTy σ ty v = .ok v`
+(for any `σ` with `σ.types = types`) WITHOUT a generic `GoValue`
 equality: it mirrors the normalizer arm-for-arm and compares only at the
 leaves (`Int`/`IntKind`/`TypeId`/`String` — all `DecidableEq`, so the
 whole family is kernel-reducible; the derived `BEq GoValue` is
@@ -1167,14 +1234,14 @@ normalizer provably reads nothing else, and taking `TypeEnv` makes the
 well-formedness component built on this check invariant along
 types-preserving steps BY REWRITING rather than by a congruence lemma.
 
-The proved direction is soundness (`isNormalForTyFuel_sound`,
+The proved direction is soundness (`isNormalForTyTy_sound`/`isNormalForTy_sound`,
 `StateWf.lean`): check true ⇒ the normalizer returns the value UNCHANGED.
 The converse (the check never rejects a value the normalizer would fix)
 is not needed by any theorem; the machine's snapshot validation built on
 this check is differential-validated instead (arc doc, slice-3 entry). -/
 
-/-- Element-wise check, parameterized over the (already fuel-decremented)
-element checker — the de-WF recipe's shape, mirroring `normalizeListWith`. -/
+/-- Element-wise check, parameterized over the element checker — the
+de-WF recipe's shape, mirroring `normalizeListWith`. -/
 def isNormalListWith (f : GoValue → Bool) : List GoValue → Bool
   | [] => true
   | v :: rest => f v && isNormalListWith f rest
@@ -1190,52 +1257,57 @@ def isNormalFieldsWith (f : Ty → GoValue → Bool) :
         && isNormalFieldsWith f fieldRest valueRest
   | _, _ => false
 
-/-- Does `normalizeValueForTyFuel fuel σ ty v` (for `σ.types = types`)
-return `.ok v` — i.e. is `v` self-normalized at `ty`? Structural on the
-fuel, mirroring the normalizer arm-for-arm. -/
-def isNormalForTyFuel : Nat → TypeEnv → Ty → GoValue → Bool
-  | 0, _, _, _ => false
-  | _ + 1, _, .int kind, .int value k =>
+/-- Does `normalizeValueForTyTy atDefined ty v` return `.ok v` — i.e. is
+`v` self-normalized at `ty`? The TYPE layer, mirroring the normalizer
+arm-for-arm (`isNormalForTyTy_sound`, `StateWf.lean`). -/
+def isNormalForTyTy (atDefined : TypeIdx → GoValue → Bool) : Ty → GoValue → Bool
+  | .int kind, .int value k =>
       decide (kind.normalize value = value) && decide (kind = k)
-  | _ + 1, _, .int _, _ => false
-  | _ + 1, _, .float kind, .float bits k =>
+  | .int _, _ => false
+  | .float kind, .float bits k =>
       decide (kind.normalizeBits bits = bits) && decide (kind = k)
-  | _ + 1, _, .float _, _ => false
-  | fuel + 1, types, .array length elem, .array values =>
+  | .float _, _ => false
+  | .array length elem, .array values =>
       decide (values.size = length)
-        && isNormalListWith (isNormalForTyFuel fuel types elem) values.toList
-  | _ + 1, _, .array _ _, _ => false
-  | _ + 1, _, .interface _, _ => true
-  | _ + 1, _, .funcType _ _ _, .funcVal _ _ => true
-  | _ + 1, _, .funcType _ _ _, .nil => true
-  | _ + 1, _, .funcType _ _ _, _ => false
+        && isNormalListWith (isNormalForTyTy atDefined elem) values.toList
+  | .array _ _, _ => false
+  | .interface _, _ => true
+  | .funcType _ _ _, .funcVal _ _ => true
+  | .funcType _ _ _, .nil => true
+  | .funcType _ _ _, _ => false
   -- LOCKSTEP with the normalizer's chan arms: only a `.chan` value is
   -- self-normalized (a raw `.nil` normalizes to the canonical form).
-  | _ + 1, _, .chan _ _, .chan _ => true
-  | _ + 1, _, .chan _ _, _ => false
+  | .chan _ _, .chan _ => true
+  | .chan _ _, _ => false
   -- LOCKSTEP with the normalizer's sync arms.
-  | _ + 1, _, .sync kind, .syncData p => p.kind == kind
-  | _ + 1, _, .sync _, _ => false
-  | fuel + 1, types, .defined name, value =>
-      match TypeEnv.lookup types name with
-      | some (.alias target) => isNormalForTyFuel fuel types target value
-      | some (.defined target) => isNormalForTyFuel fuel types target value
-      | some (.struct fields) =>
+  | .sync kind, .syncData p => p.kind == kind
+  | .sync _, _ => false
+  | .defined i, value => atDefined i value
+  | .unsupported _, _ => false
+  | _, _ => true
+
+/-- The INDEX layer of the self-normalization check, in lockstep with
+`normalizeValueForTyAt` (`bound`-structural; the `0` arm fails closed). -/
+def isNormalForTyAt (types : TypeEnv) : Nat → TypeIdx → GoValue → Bool
+  | 0, _, _ => false
+  | bound + 1, i, value =>
+      match types[i]? with
+      | some (name, .struct fields) =>
           match value with
           | .struct actual fieldsValue =>
               decide (actual = name) && decide (fieldsValue.size = fields.size)
-                && isNormalFieldsWith (isNormalForTyFuel fuel types)
+                && isNormalFieldsWith (isNormalForTyTy (isNormalForTyAt types bound))
                     fields.toList fieldsValue.toList
           | _ => false
-      | some (.opaqueDecl _) => false
-      | some (.interfaceDef _) => false
+      | some (_, .defined target) => isNormalForTyTy (isNormalForTyAt types bound) target value
+      | some (_, .opaqueDecl _) => false
+      | some (_, .interfaceDef _) => false
       | none => false
-  | _ + 1, _, .unsupported _, _ => false
-  | _ + 1, _, _, _ => true
 
-@[inherit_doc isNormalForTyFuel]
+/-- Is `v` self-normalized at `ty` over the type table (`normalizeValueForTy
+σ ty v = .ok v` for any `σ` with `σ.types = types`)? -/
 def isNormalForTy (types : TypeEnv) (ty : Ty) (value : GoValue) : Bool :=
-  isNormalForTyFuel typeResolutionFuel types ty value
+  isNormalForTyTy (isNormalForTyAt types types.size) ty value
 
 /-- Field access at a CONVERTIBLE mint tag (triage L7, 2026-08-19 —
 spec#Conversions' struct-tag clause): a pointer conversion `(*B)(a)`
@@ -1247,8 +1319,8 @@ rule the struct VALUE-conversion arm uses; embeddedness compared,
 spec-exact per arc-final audit F20). Anything else — unknown TypeIds
 included — answers false and the access stays stuck. -/
 def structTagCompatible (state : ExecState) (actual expected : TypeId) : Bool :=
-  match TypeEnv.lookup state.types actual, TypeEnv.lookup state.types expected with
-  | some (.struct fa), some (.struct fb) => fa == fb
+  match state.types.lookupName? actual, state.types.lookupName? expected with
+  | some (_, .struct fa), some (_, .struct fb) => fa == fb
   | _, _ => false
 
 -- Total: structural recursion on the `Loc` argument (field/index bases are
@@ -1312,15 +1384,20 @@ def storeLoc (state : ExecState) : Loc → GoValue → Except Stop ExecState
 -- `lookup` deleted (reshape S4): variable reads are `Machine.Step.evalVar`
 -- (control-side env lookup + `loadLoc`), never a state-side name lookup.
 
--- Total via fuel: only the `.defined → .alias` chain recurses; fuel bounds it.
-def convertValueToTyFuel : Nat → ExecState → Ty → GoValue → Except Stop GoValue
-  | _, _, .int kind, .int value _ => return .int (kind.normalize value) kind
+/-- Go's conversion `T(v)` at runtime. NOT recursive (C2): the target's
+`.defined` indirections are followed once by `TypeEnv.resolve`, and every
+arm below is a leaf — the old fuel existed only for the alias chain. -/
+def convertValueToTy (state : ExecState) (typ : Ty) (value : GoValue) :
+    Except Stop GoValue :=
+  match state.types.resolve state.types.size typ, value with
+  | .error e, _ => .error e
+  | .ok (.plain (.int kind)), .int value _ => return .int (kind.normalize value) kind
   -- Float → int (design note §3.3, decision 4): the spec pins truncation
   -- toward zero; an out-of-range or NaN source is IMPLEMENTATION-
   -- DEPENDENT in Go (amd64 1<<63, arm64 saturates), so it FAILS CLOSED
   -- at runtime — never a modeled platform value. In-range means the
   -- exact truncation is representable in the TARGET kind unchanged.
-  | _, _, .int kind, .float bits fk =>
+  | .ok (.plain (.int kind)), .float bits fk =>
       let n? := match fk with
         | .float64 => FloatBits.f64truncInt? bits
         | .float32 => FloatBits.f32truncInt? bits
@@ -1331,68 +1408,64 @@ def convertValueToTyFuel : Nat → ExecState → Ty → GoValue → Except Stop 
             "float-to-int conversion out of range/NaN (implementation-dependent in Go)"
       | none => unsupported
           "float-to-int conversion out of range/NaN (implementation-dependent in Go)"
-  | _, _, .int kind, other => stuck s!"expected integer operand for conversion to {kind.name}, got {repr other}"
+  | .ok (.plain (.int kind)), other => stuck s!"expected integer operand for conversion to {kind.name}, got {repr other}"
   -- Float targets (floats slice F2): float↔float via the softfloat
   -- (widening exact, narrowing the ONE rounding); int→float via the
   -- rational kernel's den=1 case — the single correctly-rounded step
   -- (float32 targets NEVER round via binary64; note §6).
-  | _, _, .float kind, .float bits fk =>
+  | .ok (.plain (.float kind)), .float bits fk =>
       (match kind, fk with
        | .float64, .float64 => return .float (kind.normalizeBits bits) kind
        | .float32, .float32 => return .float (kind.normalizeBits bits) kind
        | .float64, .float32 => return .float (kind.normalizeBits (FloatBits.f32to64 bits)) kind
        | .float32, .float64 => return .float (kind.normalizeBits (FloatBits.f64to32 bits)) kind)
-  | _, _, .float kind, .int value _ =>
+  | .ok (.plain (.float kind)), .int value _ =>
       return .float (kind.normalizeBits (kind.ratToBits value 1)) kind
-  | _, _, .float kind, other =>
+  | .ok (.plain (.float kind)), other =>
       stuck s!"expected numeric operand for conversion to {kind.name}, got {repr other}"
-  | fuel + 1, state, .defined name, value =>
-      match TypeEnv.lookup state.types name with
-      | some (.alias target) => convertValueToTyFuel fuel state target value
-      | some (.defined target) => convertValueToTyFuel fuel state target value
-      | some (.struct targetFields) =>
-          -- Struct VALUE conversion (2026-08-05, slice-2 stage 7, design
-          -- note D6): legal exactly when the underlying struct types are
-          -- identical. The wire strips tags (Go's conversions IGNORE
-          -- them), so wire `FieldDef` equality is the identity rule —
-          -- with `embedded` flags compared too, which is SPEC-EXACT
-          -- (corrected, arc-final audit F20 2026-08-06: §Type identity
-          -- requires fields "either both embedded or both not embedded",
-          -- §Conversions relaxes ONLY struct tags, and go/types compares
-          -- embeddedness unconditionally even under IdenticalIgnoreTags
-          -- — the old docstring called this a "conservative narrowing
-          -- (the spec ignores embeddedness for identity)", inviting a
-          -- future relaxation that would accept conversions gc rejects).
-          -- The result is a retagged COPY, Go's value-conversion
-          -- semantics.
-          match value with
-          | .struct actual actualFields =>
-              if actual == name then
-                return value
-              else
-                match TypeEnv.lookup state.types actual with
-                | some (.struct sourceFields) =>
-                    if sourceFields == targetFields then
-                      return .struct name actualFields
-                    else
-                      unsupported s!"conversion to struct type {name.key} \
+  | .ok (.struct name targetFields), value =>
+      -- Struct VALUE conversion (2026-08-05, slice-2 stage 7, design
+      -- note D6): legal exactly when the underlying struct types are
+      -- identical. The wire strips tags (Go's conversions IGNORE
+      -- them), so wire `FieldDef` equality is the identity rule —
+      -- with `embedded` flags compared too, which is SPEC-EXACT
+      -- (corrected, arc-final audit F20 2026-08-06: §Type identity
+      -- requires fields "either both embedded or both not embedded",
+      -- §Conversions relaxes ONLY struct tags, and go/types compares
+      -- embeddedness unconditionally even under IdenticalIgnoreTags
+      -- — the old docstring called this a "conservative narrowing
+      -- (the spec ignores embeddedness for identity)", inviting a
+      -- future relaxation that would accept conversions gc rejects).
+      -- The result is a retagged COPY, Go's value-conversion
+      -- semantics. The SOURCE struct is found by its value tag (a
+      -- name-keyed lookup: the tag is a `TypeId`).
+      match value with
+      | .struct actual actualFields =>
+          if actual == name then
+            return value
+          else
+            match state.types.lookupName? actual with
+            | some (_, .struct sourceFields) =>
+                if sourceFields == targetFields then
+                  return .struct name actualFields
+                else
+                  unsupported s!"conversion to struct type {name.key} \
 from {actual.key} (non-identical underlying)"
-                | _ => unsupported s!"conversion to struct type {name.key} from {actual.key}"
-          | _ => unsupported s!"conversion to struct type {name.key}"
-      | some (.opaqueDecl feature) => unsupported s!"conversion to {feature}"
-      | some (.interfaceDef _) => unsupported s!"conversion to interface type {name.key}"
-      | none => unsupported s!"conversion to unknown defined type {name.key}"
+            | _ => unsupported s!"conversion to struct type {name.key} from {actual.key}"
+      | _ => unsupported s!"conversion to struct type {name.key}"
+  | .ok (.opaque _ feature), _ => unsupported s!"conversion to {feature}"
+  | .ok (.interfaceDecl name), _ => unsupported s!"conversion to interface type {name.key}"
   -- Identity conversions Go permits at runtime with no representation
   -- change (`string(s)` — surfaced by interfaces/error-interface's
   -- `string(e.Error())` shape, 2026-07-30).
-  | _, _, .string, .string s => return .string s
+  | .ok (.plain .string), .string s => return .string s
   -- Unnamed-composite conversion targets (BUG-020, arc-final audit F10,
   -- 2026-08-06): a conversion whose RESOLVED target shape is a pointer,
   -- slice, map, or func — the spec's own canonical examples
   -- `(*Point)(p)`, `(func() int)(x)`, `(*int)(nil)` — is legal exactly
   -- when the underlying types are identical, which go/types has already
-  -- checked (both directions through defined types resolve here via the
-  -- `.defined` arm). The runtime representation is unchanged: pass the
+  -- checked (both directions through defined types resolve here via
+  -- `TypeEnv.resolve`). The runtime representation is unchanged: pass the
   -- value through; any other value shape falls to the fail-closed
   -- catch-all (so string→[]rune/[]byte stay refused here — real
   -- conversion logic, not a retag). The pointee-retag hazard the old
@@ -1409,60 +1482,55 @@ from {actual.key} (non-identical underlying)"
   -- slice's backing segment and `Loc` has no subarray-view
   -- constructor; the value-copy form rides the same frontier row
   -- (spec-examples-decl/slice-to-array/ok-forms pins both red).
-  | _, _, .array n _, .slice slice =>
+  | .ok (.plain (.array n _)), .slice slice =>
       if slice.len < n then
         panic s!"runtime error: cannot convert slice with length {slice.len} \
 to array or pointer to array with length {n}"
       else
         unsupported "slice-to-array value conversion (succeeding form; triage L2b frontier)"
-  | _, _, .pointer (.array n _), .slice slice =>
+  | .ok (.plain (.pointer (.array n _))), .slice slice =>
       if slice.len < n then
         panic s!"runtime error: cannot convert slice with length {slice.len} \
 to array or pointer to array with length {n}"
       else
         unsupported "slice-to-array-pointer conversion (aliasing view over slice storage; triage L2b frontier)"
-  | _, _, .pointer _, value@(.addr _) => return value
-  | _, _, .pointer _, .nil => return .nil
-  | _, _, .slice _, value@(.slice _) => return value
+  | .ok (.plain (.pointer _)), value@(.addr _) => return value
+  | .ok (.plain (.pointer _)), .nil => return .nil
+  | .ok (.plain (.slice _)), value@(.slice _) => return value
   -- A nil operand at a slice/map target produces the machine's OWN
   -- nil-slice/nil-map representation — exactly what the typed nil
-  -- literal (`.nilLit`, via `defaultValueFuel`) produces — NOT the raw
+  -- literal (`.nilLit`, via `defaultValue`) produces — NOT the raw
   -- `.nil` (delta-review D3, 2026-08-06: the first arms returned raw
   -- nil, so `[]byte(nil)`/`map[K]V(nil)` still failed at first use;
   -- pointer/func targets are different — raw nil IS their
   -- representation).
-  | _, _, .slice _, .nil =>
+  | .ok (.plain (.slice _)), .nil =>
       return .slice { base := none, offset := 0, len := 0, cap := 0 }
-  | _, _, .map _ _, value@(.map _) => return value
-  | _, _, .map _ _, .nil => return .map { base := none }
+  | .ok (.plain (.map _ _)), value@(.map _) => return value
+  | .ok (.plain (.map _ _)), .nil => return .map { base := none }
   -- Channel conversions: the only runtime-legal ones change DIRECTION
   -- (or retag through a defined type) — the reference is unchanged
   -- (spec §Conversions; probe p12: a directional conversion of the same
   -- channel remains ==-equal). A nil operand produces the machine's own
   -- nil-channel representation, like the map/slice arms above.
-  | _, _, .chan _ _, value@(.chan _) => return value
-  | _, _, .chan _ _, .nil => return .chan { base := none }
-  | _, _, .funcType _ _ _, value@(.funcVal _ _) => return value
-  | _, _, .funcType _ _ _, .nil => return .nil
+  | .ok (.plain (.chan _ _)), value@(.chan _) => return value
+  | .ok (.plain (.chan _ _)), .nil => return .chan { base := none }
+  | .ok (.plain (.funcType _ _ _)), value@(.funcVal _ _) => return value
+  | .ok (.plain (.funcType _ _ _)), .nil => return .nil
   -- Conversion INTO an interface type at a machine site (map key slots,
   -- assert results): a box or nil interface passes as-is (the frontend's
   -- to-interface wrap already built the box); a raw value here is a
   -- lowering bug — fail closed, never silently box without a dynamic
   -- type (interfaces campaign, 2026-07-30).
-  | _, _, .interface _, value@(.interface _ _) => return value
-  | _, _, .interface _, .nil => return .nil
-  | _, _, .interface id, value =>
+  | .ok (.plain (.interface _)), value@(.interface _ _) => return value
+  | .ok (.plain (.interface _)), .nil => return .nil
+  | .ok (.plain (.interface id)), value =>
       stuck s!"raw value reached interface conversion to {id.key}: {repr value}"
-  | 0, _, .defined _, _ => unsupported "conversion: type nesting too deep"
-  | _, _, .unsupported feature, _ => unsupported s!"conversion to {feature}"
-  | _, _, other, _ => unsupported s!"conversion to {repr other}"
+  | .ok (.plain (.unsupported feature)), _ => unsupported s!"conversion to {feature}"
+  | .ok (.plain other), _ => unsupported s!"conversion to {repr other}"
 
-def convertValueToTy (state : ExecState) (typ : Ty) (value : GoValue) :
-    Except Stop GoValue :=
-  convertValueToTyFuel typeResolutionFuel state typ value
-
-/-- Default value for each struct field with the (already fuel-decremented)
-default builder, in declaration order. Structural on the list; part of the
+/-- Default value for each struct field with the given default builder,
+in declaration order. Structural on the list; part of the
 de-WF recipe (see `normalizeListWith`). -/
 def defaultFieldsWith (f : Ty → Except Stop GoValue) :
     List FieldDef → Except Stop (Array (String × GoValue))
@@ -1472,50 +1540,65 @@ def defaultFieldsWith (f : Ty → Except Stop GoValue) :
       return #[(field.name, head)] ++ tail
   | [] => return #[]
 
--- Total via fuel, STRUCTURALLY on the fuel (de-WF recipe — see the
--- normalize block; fuel bounds nesting DEPTH only). The array case computes
--- the element default once and replicates it (`defaultValue` is pure, so all
--- elements are equal); the `length == 0` guard preserves the original
--- behavior of not evaluating the element type for an empty array.
-def defaultValueFuel : Nat → ExecState → Ty → Except Stop GoValue
-  | 0, _, _ => unsupported "default value: type nesting too deep"
-  | _ + 1, _, .bool => return .bool false
-  | _ + 1, _, .int kind => return .int 0 kind
-  | _ + 1, _, .float kind => return .float 0 kind  -- +0 bits
-  | _ + 1, _, .string => return .string GoString.empty
-  | fuel + 1, state, .array length elem => do
+/-- The zero value of a type: the TYPE layer of the index descent
+(section note). The array case computes the element default once and
+replicates it (`defaultValue` is pure, so all elements are equal); the
+`length == 0` guard preserves the original behavior of not evaluating
+the element type for an empty array. -/
+def defaultValueTy (atDefined : TypeIdx → Except Stop GoValue) : Ty → Except Stop GoValue
+  | .bool => return .bool false
+  | .int kind => return .int 0 kind
+  | .float kind => return .float 0 kind  -- +0 bits
+  | .string => return .string GoString.empty
+  | .array length elem => do
       if length == 0 then
         return .array #[]
-      let elemDefault ← defaultValueFuel fuel state elem
+      let elemDefault ← defaultValueTy atDefined elem
       return .array (Array.replicate length elemDefault)
-  | _ + 1, _, .slice _ => return .slice { base := none, offset := 0, len := 0, cap := 0 }
-  | _ + 1, _, .map _ _ => return .map { base := none }
-  | _ + 1, _, .chan _ _ => return .chan { base := none }
+  | .slice _ => return .slice { base := none, offset := 0, len := 0, cap := 0 }
+  | .map _ _ => return .map { base := none }
+  | .chan _ _ => return .chan { base := none }
   -- The zero sync value IS the ready-to-use primitive ("The zero value
   -- for a Mutex is an unlocked mutex"; likewise RWMutex/WaitGroup/Once).
-  | _ + 1, _, .sync kind => return .syncData kind.zero
-  | _ + 1, _, .pointer _ => return .nil
-  | _ + 1, _, .funcType _ _ _ => return .nil
-  | _ + 1, _, .interface _ => return .nil
-  | fuel + 1, state, .defined name => do
-      match TypeEnv.lookup state.types name with
-      | some (.struct fields) =>
-          .struct name <$> defaultFieldsWith (defaultValueFuel fuel state) fields.toList
-      | some (.alias target) => defaultValueFuel fuel state target
-      | some (.defined target) => defaultValueFuel fuel state target
-      | some (.opaqueDecl feature) => unsupported s!"default value for {feature}"
-      | some (.interfaceDef _) => unsupported s!"default value at interface type {name.key}"
-      | none => unsupported s!"default value for unknown defined type {name.key}"
-  | _ + 1, _, .unsupported feature => unsupported s!"default value for {feature}"
+  | .sync kind => return .syncData kind.zero
+  | .pointer _ => return .nil
+  | .funcType _ _ _ => return .nil
+  | .interface _ => return .nil
+  | .defined i => atDefined i
+  | .unsupported feature => unsupported s!"default value for {feature}"
 
+/-- The INDEX layer of `defaultValueTy`: the zero value of the type
+declared at index `i` (`bound`-structural; section note). -/
+def defaultValueAt (types : TypeEnv) : Nat → TypeIdx → Except Stop GoValue
+  | 0, i => typeIndexExhausted "default value" i
+  | bound + 1, i =>
+      match types[i]? with
+      | some (name, .struct fields) =>
+          .struct name <$> defaultFieldsWith (defaultValueTy (defaultValueAt types bound)) fields.toList
+      | some (_, .defined target) => defaultValueTy (defaultValueAt types bound) target
+      | some (_, .opaqueDecl feature) => unsupported s!"default value for {feature}"
+      | some (name, .interfaceDef _) => unsupported s!"default value at interface type {name.key}"
+      | none => unsupported s!"default value for unknown type index {i}"
 
+-- Downstream-unfolding pins (leaf arm by `simp`; a closed table walk —
+-- a struct over a defined type over an array of structs — by `decide`).
+example (f : TypeIdx → Except Stop GoValue) (kind : IntKind) :
+    defaultValueTy f (.int kind) = .ok (.int 0 kind) := by
+  simp [defaultValueTy]; rfl
+example :
+    defaultValueAt
+      #[(⟨"main.P"⟩, .struct #[{ name := "x", typ := .int }]),
+        (⟨"main.A"⟩, .defined (.array 2 (.defined 0))),
+        (⟨"main.Q"⟩, .struct #[{ name := "a", typ := .defined 1 }, { name := "b", typ := .bool }])]
+      3 2
+      = .ok (.struct ⟨"main.Q"⟩
+          #[("a", .array #[.struct ⟨"main.P"⟩ #[("x", .int 0 .int)], .struct ⟨"main.P"⟩ #[("x", .int 0 .int)]]),
+            ("b", .bool false)]) := rfl
 
-example (σ : ExecState) (kind : IntKind) :
-    defaultValueFuel 5 σ (.int kind) = .ok (.int 0 kind) := by
-  simp [defaultValueFuel]; rfl
-
+/-- The zero value of a type over the state's type table (the descent
+seeded at `types.size`). -/
 def defaultValue (state : ExecState) (ty : Ty) : Except Stop GoValue :=
-  defaultValueFuel typeResolutionFuel state ty
+  defaultValueTy (defaultValueAt state.types state.types.size) ty
 
 /-- Build a struct value field-by-field from positional literal args, normalizing
 each against its field type. Not recursive with `buildStructValue` (it only calls
@@ -1528,30 +1611,23 @@ def buildStructFields (state : ExecState) :
       return #[(field.name, head)] ++ tail
   | _, _ => return #[]
 
--- Total via fuel: only the `.defined → .alias` chain recurses; fuel bounds it.
-def buildStructValueFuel : Nat → ExecState → Ty → Array GoValue → Except Stop GoValue
-  | fuel + 1, state, .defined name, args => do
-      match TypeEnv.lookup state.types name with
-      | some (.struct fields) =>
-          if fields.size != args.size then
-            stuck s!"struct {name.key} literal expected {fields.size} field value(s), got {args.size}"
-          .struct name <$> buildStructFields state fields.toList args.toList
-      | some (.alias target) => buildStructValueFuel fuel state target args
-      -- Defined-over-struct stays `.struct`; a `.defined` here would be a
-      -- struct literal at a NON-struct named type — fail closed (identity
-      -- tagging for defined-over-defined-struct is unresolved; see the
-      -- TypeDef.defined docstring).
-      | some (.defined _) => unsupported s!"struct literal for defined type {name.key} over non-struct underlying"
-      | some (.interfaceDef _) => unsupported s!"struct literal for interface type {name.key}"
-      | some (.opaqueDecl feature) => unsupported s!"struct literal for {feature}"
-      | none => unsupported s!"struct literal for unknown defined type {name.key}"
-  | 0, _, .defined _, _ => unsupported "struct literal: type nesting too deep"
-  | _, _, .unsupported feature, _ => unsupported s!"struct literal for {feature}"
-  | _, _, other, _ => unsupported s!"struct literal for non-defined type {repr other}"
-
+/-- Build a struct value from positional literal args at a struct type.
+NOT recursive (C2): the type's `.defined` indirection is followed by
+`TypeEnv.resolve`; a struct literal at a NON-struct named type fails
+closed (identity tagging for defined-over-defined-struct is unresolved;
+see the `TypeDef.defined` docstring). -/
 def buildStructValue (state : ExecState) (typ : Ty) (args : Array GoValue) :
     Except Stop GoValue :=
-  buildStructValueFuel typeResolutionFuel state typ args
+  match state.types.resolve state.types.size typ with
+  | .error e => .error e
+  | .ok (.struct name fields) => do
+      if fields.size != args.size then
+        stuck s!"struct {name.key} literal expected {fields.size} field value(s), got {args.size}"
+      .struct name <$> buildStructFields state fields.toList args.toList
+  | .ok (.interfaceDecl name) => unsupported s!"struct literal for interface type {name.key}"
+  | .ok (.opaque _ feature) => unsupported s!"struct literal for {feature}"
+  | .ok (.plain (.unsupported feature)) => unsupported s!"struct literal for {feature}"
+  | .ok (.plain other) => unsupported s!"struct literal for non-struct type {repr other}"
 
 -- Not recursive: it calls only the now-total defaultValue / normalizeValueForTy,
 -- so the for-loops are fine in a plain def.
@@ -1583,17 +1659,17 @@ def typeAssertValue (state : ExecState) (value : GoValue) (targetTy : Ty) :
   match value with
   | .nil => return (failed, false)
   | .interface dynTy inner =>
-      match resolveDefinedAliases state targetTy with
+      match targetTy with
       | .interface interfaceName =>
           if ← dynamicImplementsInterface state dynTy interfaceName then
             return (.interface dynTy inner, true)
           else
             return (failed, false)
       | _ =>
-          -- Concrete target: canonical dynamic-type identity (S3 —
-          -- structural BEq, no name rendering, so slice/map/array
-          -- dynamic types assert correctly too).
-          if dynTy == canonicalTy state targetTy then
+          -- Concrete target: dynamic-type identity (S3 — structural
+          -- BEq, no name rendering, so slice/map/array dynamic types
+          -- assert correctly too; alias-free since C2).
+          if dynTy == targetTy then
             return (inner, true)
           else
             return (failed, false)
@@ -1649,22 +1725,33 @@ def typePkgForMessage (state : ExecState) (typ : Ty) : Except Stop String :=
     | none => unsupported s!"type-assertion text: TypeId {id.key} has no display record, so its \
 declaring package path (gc's pkgpath(), the `(types from different packages|scopes)' \
 suffix) cannot be derived (design note 2026-09-05 §3.2: no record is a defect, never `\"\"')"
-  match resolveDefinedAliases state typ with
-  | .defined id | .interface id => recordPkg id
+  -- A `.defined` index reaches its record through the entry's key (C2);
+  -- an index the table does not have REFUSES by name (never `""`).
+  let entryKey (idx : TypeIdx) : Except Stop TypeId :=
+    match state.types.nameOf? idx with
+    | some id => pure id
+    | none => unsupported s!"type-assertion text: type index {idx} is not in the type table \
+(size {state.types.size}), so its declaring package path cannot be derived (unreachable on a \
+decoded program; fail closed)"
+  -- (No alias resolution: every `Ty` on the machine is its canonical form, C2.)
+  match typ with
+  | .defined idx => do recordPkg (← entryKey idx)
+  | .interface id => recordPkg id
   | .pointer elem =>
-      match resolveDefinedAliases state elem with
-      | .defined id =>
-          if pointerMethodSetNonEmpty state (.defined id) then recordPkg id
+      match elem with
+      | .defined idx => do
+          let id ← entryKey idx
+          if pointerMethodSetNonEmpty state (.defined idx) then recordPkg id
           else
             match methodSetCoverage? state id.key with
             | some .full => pure ""
             | some .exported =>
-                unsupported s!"type-assertion text: whether *{displayNameOf state id} has a method set \
+                unsupported s!"type-assertion text: whether *{displayNameOf state idx} has a method set \
 (gc's pkgpath() of a pointer type is its element's package iff the pointer's method set is \
 non-empty) is UNDECIDABLE from an exported-only method-set record with no exported method on \
 the wire — refused rather than guessed (BUG-009/BUG-053 class)"
             | none =>
-                unsupported s!"type-assertion text: *{displayNameOf state id} — {id.key} has NO \
+                unsupported s!"type-assertion text: *{displayNameOf state idx} — {id.key} has NO \
 method-set record on the wire, so whether *T's method set is empty (gc's pkgpath() rule) is \
 unknown; refused rather than guessed (BUG-009/BUG-053 class)"
       | .sync _ => pure "sync"
@@ -1697,17 +1784,18 @@ def typeAssertPanicMessage (state : ExecState) (value : GoValue) (targetTy : Ty)
   -- by name rather than print a marker as an observation (audit fix
   -- round R3, 2026-09-05 [AGENT]; the interface-target arm never gets
   -- here — satisfaction refuses first on the missing method-set record).
-  if let .interface (.defined dynId) _ := value then
-    if dynId == runtimeErrorTypeId then
+  if let .interface (.defined dynIdx) _ := value then
+    if dynIdx == runtimeErrorTypeIdx then
       unsupported s!"type-assertion panic text names the dynamic type of a recovered runtime \
-error, which the machine models as one synthetic id ({runtimeErrorTypeId.key}) where gc has a \
+error, which the machine models as one synthetic id ({runtimeErrorTypeId.key}, reserved table \
+index {runtimeErrorTypeIdx}) where gc has a \
 concrete runtime type per fault (runtime.errorString / runtime.boundsError / \
 *runtime.TypeAssertionError / …) — no byte-exact text exists (BUG-009/BUG-053 class)"
   let sourceName :=
     match sourceTy with
     | some t => goTypeNameForMessage state t
     | none => "interface {}"
-  match resolveDefinedAliases state targetTy, value with
+  match targetTy, value with
   | .interface _, .nil =>
       pure ("interface conversion: interface is nil, not " ++ goTypeNameForMessage state targetTy)
   | .interface _, _ =>
@@ -1776,188 +1864,187 @@ def valueAsLoc : GoValue → Except Stop Loc
   | .nil => panic nilDerefPanicText
   | other => stuck s!"expected address value, got {repr other}"
 
-/-- Compare list elements pairwise with the (already fuel-decremented)
-comparator; callers guarantee equal, checked lengths. Structural on the
-list; part of the de-WF recipe (see `normalizeListWith`). -/
-def valueEqListWith (f : GoValue → GoValue → Except Stop Bool) :
-    List GoValue → List GoValue → Except Stop Bool
-  | leftValue :: leftRest, rightValue :: rightRest => do
-      if ← f leftValue rightValue then
-        valueEqListWith f leftRest rightRest
-      else
-        return false
-  | _, _ => return true
+mutual
 
-/-- Compare struct fields pairwise with the (already fuel-decremented)
-comparator, checking field-name alignment on both sides. -/
-def valueEqFieldsWith (f : Ty → GoValue → GoValue → Except Stop Bool) :
-    List FieldDef → List (String × GoValue) → List (String × GoValue) →
-    Except Stop Bool
-  | field :: fieldRest, (leftName, leftValue) :: leftRest, (rightName, rightValue) :: rightRest => do
-      if leftName != field.name then
-        stuck s!"left struct equality field mismatch: expected {field.name}, got {leftName}"
-      if rightName != field.name then
-        stuck s!"right struct equality field mismatch: expected {field.name}, got {rightName}"
-      if ← f field.typ leftValue rightValue then
-        valueEqFieldsWith f fieldRest leftRest rightRest
-      else
-        return false
-  | _, _, _ => return true
-
--- Total via fuel, STRUCTURALLY on the fuel (de-WF recipe — see the
--- normalize block; fuel bounds nesting DEPTH only). The public `valueEq`
--- seeds `typeResolutionFuel`, keeping its original signature so call sites
--- are unchanged.
-def valueEqFuel : Nat → ExecState → Ty → GoValue → GoValue → Except Stop Bool
-    | 0, _, _, _, _ => unsupported "equality: type nesting too deep"
-    | _ + 1, _, .bool, .bool left, .bool right => return left == right
-    | _ + 1, _, .bool, left, right => stuck s!"bool equality expected bool operands, got {repr left} and {repr right}"
-    | _ + 1, _, .int _, .int left _, .int right _ => return left == right
-    | _ + 1, _, .int kind, left, right => stuck s!"{kind.name} equality expected int operands, got {repr left} and {repr right}"
+/-- Go's `==` at static type `ty`. Structural on the LEFT operand (C2,
+section note): array elements and struct fields are its subterms, and the
+interface arm compares the boxed DYNAMIC values — subterms too — at the
+dynamic type (a type DISCOVERED from the value, which is why this walk is
+value-directed where `normalizeValueForTy` is type-directed).
+`TypeEnv.resolve` reads the declared body behind a `.defined` at each
+step. -/
+def valueEq (state : ExecState) : Ty → GoValue → GoValue → Except Stop Bool
+  | ty, left, right =>
+    match state.types.resolve state.types.size ty, left, right with
+    | .error e, _, _ => .error e
+    | .ok (.plain .bool), .bool l, .bool r => return l == r
+    | .ok (.plain .bool), l, r => stuck s!"bool equality expected bool operands, got {repr l} and {repr r}"
+    | .ok (.plain (.int _)), .int l _, .int r _ => return l == r
+    | .ok (.plain (.int kind)), l, r => stuck s!"{kind.name} equality expected int operands, got {repr l} and {repr r}"
     -- Go == on floats is IEEE equality (note §4): NaN ≠ NaN even at
     -- identical bits, +0 == -0 across different bits — NEVER bit
     -- equality (that is `GoValue.eqb`, the structural identity).
-    | _ + 1, _, .float kind, .float lb lk, .float rb rk =>
+    | .ok (.plain (.float kind)), .float lb lk, .float rb rk =>
         if lk == kind && rk == kind then
           match kind with
           | .float64 => return FloatBits.feq64 lb rb
           | .float32 => return FloatBits.feq32 lb rb
         else
           stuck s!"{kind.name} equality on mismatched float kinds: {lk.name} and {rk.name}"
-    | _ + 1, _, .float kind, left, right => stuck s!"{kind.name} equality expected float operands, got {repr left} and {repr right}"
-    | _ + 1, _, .string, .string left, .string right => return left == right
-    | _ + 1, _, .string, left, right => stuck s!"string equality expected string operands, got {repr left} and {repr right}"
+    | .ok (.plain (.float kind)), l, r => stuck s!"{kind.name} equality expected float operands, got {repr l} and {repr r}"
+    | .ok (.plain .string), .string l, .string r => return l == r
+    | .ok (.plain .string), l, r => stuck s!"string equality expected string operands, got {repr l} and {repr r}"
     -- Go: func values are comparable only against nil.
-    | _ + 1, _, .funcType _ _ _, .nil, .nil => return true
-    | _ + 1, _, .funcType _ _ _, .funcVal _ _, .nil => return false
-    | _ + 1, _, .funcType _ _ _, .nil, .funcVal _ _ => return false
-    | _ + 1, _, .funcType _ _ _, left, right =>
-        stuck s!"func values are not comparable: {repr left} and {repr right}"
-    | _ + 1, _, .pointer _, .addr left, .addr right => return left == right
-    | _ + 1, _, .pointer _, .nil, .nil => return true
-    | _ + 1, _, .pointer _, .addr _, .nil => return false
-    | _ + 1, _, .pointer _, .nil, .addr _ => return false
-    | _ + 1, _, .pointer _, left, right => stuck s!"pointer equality expected pointer/nil operands, got {repr left} and {repr right}"
-    | fuel + 1, state, .array length elem, .array left, .array right => do
-        if left.size != length then
-          stuck s!"left array equality length mismatch: expected {length}, got {left.size}"
-        if right.size != length then
-          stuck s!"right array equality length mismatch: expected {length}, got {right.size}"
-        valueEqListWith (valueEqFuel fuel state elem) left.toList right.toList
-    | _ + 1, _, .array length _, left, right =>
-        stuck s!"array equality expected array({length}) operands, got {repr left} and {repr right}"
-    | _ + 1, _, .slice _, .slice left, .slice right => do
-        validateSlice left
-        validateSlice right
-        match left.base, right.base with
+    | .ok (.plain (.funcType _ _ _)), .nil, .nil => return true
+    | .ok (.plain (.funcType _ _ _)), .funcVal _ _, .nil => return false
+    | .ok (.plain (.funcType _ _ _)), .nil, .funcVal _ _ => return false
+    | .ok (.plain (.funcType _ _ _)), l, r =>
+        stuck s!"func values are not comparable: {repr l} and {repr r}"
+    | .ok (.plain (.pointer _)), .addr l, .addr r => return l == r
+    | .ok (.plain (.pointer _)), .nil, .nil => return true
+    | .ok (.plain (.pointer _)), .addr _, .nil => return false
+    | .ok (.plain (.pointer _)), .nil, .addr _ => return false
+    | .ok (.plain (.pointer _)), l, r => stuck s!"pointer equality expected pointer/nil operands, got {repr l} and {repr r}"
+    | .ok (.plain (.array length elem)), .array ⟨l⟩, .array ⟨r⟩ => do
+        if l.length != length then
+          stuck s!"left array equality length mismatch: expected {length}, got {l.length}"
+        if r.length != length then
+          stuck s!"right array equality length mismatch: expected {length}, got {r.length}"
+        valueEqList state elem l r
+    | .ok (.plain (.array length _)), l, r =>
+        stuck s!"array equality expected array({length}) operands, got {repr l} and {repr r}"
+    | .ok (.plain (.slice _)), .slice l, .slice r => do
+        validateSlice l
+        validateSlice r
+        match l.base, r.base with
         | none, none => return true
         | none, some _ => return false
         | some _, none => return false
         | some _, some _ => stuck "non-nil slices are not comparable"
-    | _ + 1, _, .slice _, .slice left, .nil => do
-        validateSlice left
-        return left.base.isNone
-    | _ + 1, _, .slice _, .nil, .slice right => do
-        validateSlice right
-        return right.base.isNone
-    | _ + 1, _, .slice _, left, right => stuck s!"slice equality expected slice/nil operands, got {repr left} and {repr right}"
-    | _ + 1, _, .map _ _, .map left, .map right =>
-        match left.base, right.base with
+    | .ok (.plain (.slice _)), .slice l, .nil => do
+        validateSlice l
+        return l.base.isNone
+    | .ok (.plain (.slice _)), .nil, .slice r => do
+        validateSlice r
+        return r.base.isNone
+    | .ok (.plain (.slice _)), l, r => stuck s!"slice equality expected slice/nil operands, got {repr l} and {repr r}"
+    | .ok (.plain (.map _ _)), .map l, .map r =>
+        match l.base, r.base with
         | none, none => return true
         | none, some _ => return false
         | some _, none => return false
         | some _, some _ => stuck "non-nil maps are not comparable"
-    | _ + 1, _, .map _ _, .map left, .nil => return left.base.isNone
-    | _ + 1, _, .map _ _, .nil, .map right => return right.base.isNone
-    | _ + 1, _, .map _ _, left, right => stuck s!"map equality expected map/nil operands, got {repr left} and {repr right}"
+    | .ok (.plain (.map _ _)), .map l, .nil => return l.base.isNone
+    | .ok (.plain (.map _ _)), .nil, .map r => return r.base.isNone
+    | .ok (.plain (.map _ _)), l, r => stuck s!"map equality expected map/nil operands, got {repr l} and {repr r}"
     -- Channel == is REFERENCE identity (spec: "equal if they were created
     -- by the same call to make or if both have value nil"; probe p12) —
     -- the derived ChanValue BEq is exactly base-loc equality, nil = base
     -- none. Unlike maps, non-nil channels ARE comparable.
-    | _ + 1, _, .chan _ _, .chan left, .chan right => return left == right
-    | _ + 1, _, .chan _ _, .chan left, .nil => return left.base.isNone
-    | _ + 1, _, .chan _ _, .nil, .chan right => return right.base.isNone
-    | _ + 1, _, .chan _ _, .nil, .nil => return true
-    | _ + 1, _, .chan _ _, left, right => stuck s!"channel equality expected channel/nil operands, got {repr left} and {repr right}"
-    | _ + 1, _, .interface _, .nil, .nil => return true
-    | _ + 1, _, .interface _, .nil, _ => return false
-    | _ + 1, _, .interface _, _, .nil => return false
+    | .ok (.plain (.chan _ _)), .chan l, .chan r => return l == r
+    | .ok (.plain (.chan _ _)), .chan l, .nil => return l.base.isNone
+    | .ok (.plain (.chan _ _)), .nil, .chan r => return r.base.isNone
+    | .ok (.plain (.chan _ _)), .nil, .nil => return true
+    | .ok (.plain (.chan _ _)), l, r => stuck s!"channel equality expected channel/nil operands, got {repr l} and {repr r}"
+    | .ok (.plain (.interface _)), .nil, .nil => return true
+    | .ok (.plain (.interface _)), .nil, _ => return false
+    | .ok (.plain (.interface _)), _, .nil => return false
     -- Box-vs-box (S3, Perennial `go_eq_interface` shape): different
-    -- canonical dynamic types → false, no value comparison. Same dynamic
-    -- type → Go first checks the DYNAMIC type's comparability (resolved
-    -- through defined types: slices/maps/funcs anywhere inside panic at
-    -- runtime under the DYNAMIC name — `comparing uncomparable type
-    -- main.T`), then compares the payloads AT the dynamic type.
-    | fuel + 1, state, .interface _,
-        .interface dynL innerL, .interface dynR innerR =>
-      if dynL != dynR then
-        return false
-      else
-        match tyUncomparable state dynL with
-        | some true =>
-            throw (.panic s!"runtime error: comparing uncomparable type {goTypeNameForMessage state dynL}")
-        -- UNKNOWN comparability (an undeclared defined type) falls through
-        -- to `valueEqFuel`, whose `.defined` arm already fails closed with
-        -- the precise "unknown defined type" reason.
-        | _ => valueEqFuel fuel state dynL innerL innerR
-    | _ + 1, _, .interface _, left, right => unsupported s!"interface equality for {repr left} and {repr right}"
+    -- dynamic types → false, no value comparison. Same dynamic type → Go
+    -- first checks the DYNAMIC type's comparability (resolved through
+    -- defined types: slices/maps/funcs anywhere inside panic at runtime
+    -- under the DYNAMIC name — `comparing uncomparable type main.T`),
+    -- then compares the payloads AT the dynamic type.
+    | .ok (.plain (.interface _)), .interface dynL innerL, .interface dynR innerR =>
+        if dynL != dynR then
+          return false
+        else
+          match tyUncomparable state dynL with
+          | some true =>
+              throw (.panic s!"runtime error: comparing uncomparable type {goTypeNameForMessage state dynL}")
+          -- UNKNOWN comparability (an opaque declaration) falls through
+          -- to the walk at the dynamic type, whose `.defined` handling
+          -- fails closed with the precise reason.
+          | _ => valueEq state dynL innerL innerR
+    | .ok (.plain (.interface _)), l, r => unsupported s!"interface equality for {repr l} and {repr r}"
     -- Go's == is DEFINED on the sync structs (plain comparable fields),
     -- but comparing sync primitives is copy-class misuse (they "must
     -- not be copied after first use") with no in-scope consumer — fail
     -- closed rather than pin an equality semantics nothing exercises
     -- (recorded, design note §9).
-    | _ + 1, _, .sync kind, _, _ =>
+    | .ok (.plain (.sync kind)), _, _ =>
         unsupported s!"equality at sync type sync.{kind.name} (unmodeled; sync values fail closed under ==)"
-    | fuel + 1, state, .defined name, left, right => do
-        match TypeEnv.lookup state.types name with
-        | some (.alias target) => valueEqFuel fuel state target left right
-        -- Runtime values of a defined type share the underlying
-        -- representation; static typing guarantees both sides have the
-        -- same defined type, so equality is equality at the underlying.
-        | some (.defined target) => valueEqFuel fuel state target left right
-        | some (.struct fields) =>
-            match left, right with
-            | .struct leftType leftFields, .struct rightType rightFields => do
-                -- A mixed comparison is legal exactly when one operand is
-                -- ASSIGNABLE to the other's type; the wire's only unnamed
-                -- struct is the canonical `struct{}` (BUG-011 escape).
-                -- The escape is PAIR-level (audit F4 + delta-review R1,
-                -- 2026-08-05): a mismatching operand is admitted when the
-                -- operand PAIR is Go-comparable — equal tags, or EITHER
-                -- side tagged the canonical `struct{}` (the frontend emits
-                -- the LEFT operand's static type as the context, so the
-                -- anonymous literal can sit on either side of the
-                -- mismatch). Two DIFFERENT defined types never compare,
-                -- at any context — F4's target, still held.
-                if leftType != name &&
-                    !(emptyStructAssignable leftType name fields leftFields &&
-                      (leftType == rightType || leftType.key == "struct{}" ||
-                        rightType.key == "struct{}")) then
-                  stuck s!"left struct equality type mismatch: expected {name.key}, got {leftType.key}"
-                if rightType != name &&
-                    !(emptyStructAssignable rightType name fields rightFields &&
-                      (leftType == rightType || leftType.key == "struct{}" ||
-                        rightType.key == "struct{}")) then
-                  stuck s!"right struct equality type mismatch: expected {name.key}, got {rightType.key}"
-                if leftFields.size != fields.size then
-                  stuck s!"left struct equality field count mismatch: expected {fields.size}, got {leftFields.size}"
-                if rightFields.size != fields.size then
-                  stuck s!"right struct equality field count mismatch: expected {fields.size}, got {rightFields.size}"
-                valueEqFieldsWith (valueEqFuel fuel state) fields.toList leftFields.toList rightFields.toList
-            | _, _ => stuck s!"struct equality expected struct {name.key} operands, got {repr left} and {repr right}"
-        | some (.opaqueDecl feature) => unsupported s!"equality for {feature}"
-        | some (.interfaceDef _) => unsupported s!"equality at interface type {name.key}"
-        | none => unsupported s!"equality for unknown defined type {name.key}"
-    | _ + 1, _, .unsupported feature, _, _ => unsupported s!"equality for {feature}"
+    | .ok (.struct name fields), .struct leftType ⟨leftFields⟩, .struct rightType ⟨rightFields⟩ => do
+        -- A mixed comparison is legal exactly when one operand is
+        -- ASSIGNABLE to the other's type; the wire's only unnamed
+        -- struct is the canonical `struct{}` (BUG-011 escape).
+        -- The escape is PAIR-level (audit F4 + delta-review R1,
+        -- 2026-08-05): a mismatching operand is admitted when the
+        -- operand PAIR is Go-comparable — equal tags, or EITHER
+        -- side tagged the canonical `struct{}` (the frontend emits
+        -- the LEFT operand's static type as the context, so the
+        -- anonymous literal can sit on either side of the
+        -- mismatch). Two DIFFERENT defined types never compare,
+        -- at any context — F4's target, still held.
+        if leftType != name &&
+            !(emptyStructAssignable leftType name fields ⟨leftFields⟩ &&
+              (leftType == rightType || leftType.key == "struct{}" ||
+                rightType.key == "struct{}")) then
+          stuck s!"left struct equality type mismatch: expected {name.key}, got {leftType.key}"
+        if rightType != name &&
+            !(emptyStructAssignable rightType name fields ⟨rightFields⟩ &&
+              (leftType == rightType || leftType.key == "struct{}" ||
+                rightType.key == "struct{}")) then
+          stuck s!"right struct equality type mismatch: expected {name.key}, got {rightType.key}"
+        if leftFields.length != fields.size then
+          stuck s!"left struct equality field count mismatch: expected {fields.size}, got {leftFields.length}"
+        if rightFields.length != fields.size then
+          stuck s!"right struct equality field count mismatch: expected {fields.size}, got {rightFields.length}"
+        valueEqFields state fields.toList leftFields rightFields
+    | .ok (.struct name _), l, r => stuck s!"struct equality expected struct {name.key} operands, got {repr l} and {repr r}"
+    | .ok (.opaque _ feature), _, _ => unsupported s!"equality for {feature}"
+    | .ok (.interfaceDecl name), _, _ => unsupported s!"equality at interface type {name.key}"
+    | .ok (.plain (.unsupported feature)), _, _ => unsupported s!"equality for {feature}"
+    -- `TypeEnv.resolve` never returns a `.plain (.defined _)`; the arm
+    -- exists for exhaustiveness and fails closed.
+    | .ok (.plain other), l, r => stuck s!"equality at unresolved type {repr other}: {repr l} and {repr r}"
 
+/-- Compare array elements pairwise at the element type; callers
+guarantee equal, checked lengths. -/
+def valueEqList (state : ExecState) (elem : Ty) : List GoValue → List GoValue → Except Stop Bool
+  | leftValue :: leftRest, rightValue :: rightRest => do
+      if ← valueEq state elem leftValue rightValue then
+        valueEqList state elem leftRest rightRest
+      else
+        return false
+  | _, _ => return true
 
+/-- Compare struct fields pairwise at their declared types, checking
+field-name alignment on both sides. -/
+def valueEqFields (state : ExecState) :
+    List FieldDef → List (String × GoValue) → List (String × GoValue) → Except Stop Bool
+  | field :: fieldRest, (leftName, leftValue) :: leftRest, (rightName, rightValue) :: rightRest => do
+      if leftName != field.name then
+        stuck s!"left struct equality field mismatch: expected {field.name}, got {leftName}"
+      if rightName != field.name then
+        stuck s!"right struct equality field mismatch: expected {field.name}, got {rightName}"
+      if ← valueEq state field.typ leftValue rightValue then
+        valueEqFields state fieldRest leftRest rightRest
+      else
+        return false
+  | _, _, _ => return true
 
-example (σ : ExecState) (a b : Bool) :
-    valueEqFuel 5 σ .bool (.bool a) (.bool b) = .ok (a == b) := by
-  simp [valueEqFuel]; rfl
+end
 
-def valueEq (state : ExecState) (ty : Ty) (left right : GoValue) : Except Stop Bool :=
-  valueEqFuel typeResolutionFuel state ty left right
+-- Downstream-unfolding pin: a closed comparison — struct over a defined
+-- int, through an interface box — evaluates by `decide`.
+example :
+    valueEq { types := #[(⟨"main.T"⟩, .defined (.int .int)),
+                        (⟨"main.S"⟩, .struct #[{ name := "x", typ := .defined 0 }, { name := "i", typ := .interface ⟨"any"⟩ }])] }
+      (.defined 1)
+      (.struct ⟨"main.S"⟩ #[("x", .int 3 .int), ("i", .interface (.defined 0) (.int 4 .int))])
+      (.struct ⟨"main.S"⟩ #[("x", .int 3 .int), ("i", .interface (.defined 0) (.int 4 .int))])
+      = .ok true := rfl
 
 /-- Go's `typehash` is VALUE-directed, not type-directed: it recurses into
 struct fields and array elements, so a statically COMPARABLE aggregate key
@@ -2325,10 +2412,16 @@ def panicwrapText (recvKey methodName : String) : String :=
 wrapper SYMBOL is path-qualified, `<pkgpath>.(*T).M`), pointers as `*`,
 structural leaves as the message renderer spells them. -/
 def symbolKeyForMessage (state : ExecState) (typ : Ty) : String :=
-  match resolveDefinedAliases state typ with
-  | .defined id => id.key
+  match typ with
+  | .defined idx =>
+      match state.types.nameOf? idx with
+      | some id => id.key
+      | none => goTypeNameForMessage state typ   -- the visible unknown-index marker
   | .interface id => id.key
-  | .pointer (.defined id) => s!"*{id.key}"
+  | .pointer (.defined idx) =>
+      match state.types.nameOf? idx with
+      | some id => s!"*{id.key}"
+      | none => goTypeNameForMessage state typ
   | other => goTypeNameForMessage state other
 
 /-- **The BUG-087 envelope statement** (latitude inventory R9a; [USER]
@@ -2468,42 +2561,27 @@ def sortLe {α : Type _} (le : α → α → Bool) : List α → List α
   | [] => []
   | x :: xs => insertLe le x (sortLe le xs)
 
-/-! ## Elaborator sealing of the value-walk WRAPPERS (de-WF, 2026-08-03)
+/-! ## The seal is gone (C2, 2026-09-05)
 
-The fuel families above are structurally recursive so the KERNEL can
-evaluate the interpreter (`Terminates` discharge; the old well-founded
-compilation's `Acc.rec` reduced nowhere). Left fully reducible, though, the
-ELABORATOR's `whnf`/`isDefEq` dives into 1024-literal fuel towers during
-unification — heartbeat blowups and perturbed `go_walk` matching. Sealing
-the FUEL functions is unworkable (equation-lemma generation is per-module
-and blocked by irreducibility), so the WRAPPERS are sealed instead: goals
-only ever contain wrapper applications (via `storeLoc`/`applyStrictOp`/…),
-so defeq stops before any literal budget is exposed, while
-`simp [<wrapper>, <fuel fn>, typeResolutionFuel]` still unfolds both by
-their equations. Kernel evaluation is unaffected (attributes are invisible
-to the kernel); an elaboration site that genuinely wants full reduction
-opts in with `with_unfolding_all`. -/
-attribute [irreducible] Ty.mentionsUnsupported normalizeValueForTy
-  defaultValue valueEq isNormalForTy
-
--- POST-SEAL pins: the exact wrapper+worker+budget simp pattern every
--- downstream proof site relies on (sub-branch audit, 2026-08-03 — the
--- per-family pins above exercise only the workers at small literals; these
--- exercise the sealed wrappers at the real seed, so a change to the seal
--- design or the equation-generation behavior fails HERE, in the defining
--- module, not at some distant proof).
+The value-walk wrappers used to be `@[irreducible]` (de-WF, 2026-08-03):
+left reducible, the ELABORATOR's `whnf`/`isDefEq` dove into the
+1024-literal fuel towers during unification. There is no literal budget
+any more — the descents are seeded at `types.size`, a projection of the
+state — so there is nothing for defeq to dive into and nothing to seal.
+The pins below hold the unfolding pattern downstream proofs use: the
+wrapper unfolds to its two layers by `simp`, and a closed instance
+evaluates by `rfl`/`decide`. -/
 example (σ : ExecState) (kind : IntKind) (v : Int) :
     normalizeValueForTy σ (.int kind) (.int v kind)
       = .ok (.int (kind.normalize v) kind) := by
-  simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel]
+  simp [normalizeValueForTy, normalizeValueForTyTy]
   rfl
 example (σ : ExecState) (kind : IntKind) :
     defaultValue σ (.int kind) = .ok (.int 0 kind) := by
-  simp [defaultValue, defaultValueFuel, typeResolutionFuel]
+  simp [defaultValue, defaultValueTy]
   rfl
 example (σ : ExecState) (a b : Bool) :
     valueEq σ .bool (.bool a) (.bool b) = .ok (a == b) := by
-  simp [valueEq, valueEqFuel, typeResolutionFuel]
-  rfl
-example : Ty.mentionsUnsupported (.pointer .bool) = false := by
-  simp [Ty.mentionsUnsupported, Ty.mentionsUnsupportedFuel, typeResolutionFuel]
+  unfold valueEq
+  simp [TypeEnv.resolve, pure, Except.pure]
+example : Ty.mentionsUnsupported (.pointer .bool) = false := rfl

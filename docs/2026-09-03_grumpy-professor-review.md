@@ -1120,6 +1120,8 @@ the regression.
 Downstream: the NPDRF reduction's mover lemmas quantify emitted
 accesses; the DRF hypothesis is stated over traces.
 
+_C2 status (2026-09-05, C-arc lane `c-arc-c2`, gate G-C2 RULED [USER] 2026-09-04 / CONFIRMED 2026-09-05, relayed): BRANCH-COMPLETE — `TypeEnv := Array (TypeId × TypeDef)` dependency-ordered, `Ty.defined (idx : TypeIdx)`, `TypeEnv.WellFounded` decided at decode (+ the two machine-reserved leading entries), frontend orders the table and self-checks; all 14 fuel families, `typeResolutionFuel`, `tyEqFuel`, `valueEqbFuel`, `TypeDef.alias`, `resolveDefinedAliases`, `canonicalTy` and the `irreducible` seal DELETED; the type-directed walks are two structural layers (type / index bound), `valueEq` value-structural, `Ty.eqb`/`GoValue.eqb` mutual structural. Deviation from the sketch below: `TypeEnv` keeps the `TypeId` beside each body (gc-visible texts need it; interface identity stays name-keyed). Design note `docs/2026-09-05_c-arc-c2-design.md`._
+
 **C2. A well-founded type environment; the fuel towers become
 structural.**
 Change: the frontend emits `typeDefs` in dependency order with

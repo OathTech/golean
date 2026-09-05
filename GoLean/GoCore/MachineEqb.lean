@@ -802,7 +802,7 @@ graph and expensive to walk. `&&` short-circuits, so an unequal heap
 costs nothing more. -/
 def ExecState.eqb (a b : ExecState) : Bool :=
   eqbArrayP HeapCell.eqb a.heap b.heap
-    && eqbListP (eqbProdP (· == ·) TypeDef.eqb) a.types b.types
+    && eqbArrayP (eqbProdP (· == ·) TypeDef.eqb) a.types b.types
     && eqbArrayP (Func.eqbF stateEqbFuel) a.functions b.functions
     && eqbArrayP MethodInfo.eqb a.methods b.methods
     && eqbArrayP (· == ·) a.methodSets b.methodSets
@@ -814,7 +814,7 @@ theorem ExecState.eqb_sound (a b : ExecState) (h : ExecState.eqb a b = true) :
   obtain ⟨ty2, fn2, me2, ms2, td2, hp2⟩ := b
   obtain ⟨h1, h3, h4, h5, h6, h7⟩ := andSplit6 h
   cases eqbArrayP_sound HeapCell.eqb_sound h1
-  cases eqbListP_sound
+  cases eqbArrayP_sound
     (fun _ _ hh =>
       eqbProdP_sound (fun _ _ k => eq_of_beq k) TypeDef.eqb_sound hh) h3
   cases eqbArrayP_sound (Func.eqbF_sound stateEqbFuel) h4

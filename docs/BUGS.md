@@ -4337,7 +4337,7 @@ by name. Frontend only, fail-closed-strengthening.
 - Status: fixed (2026-09-02, t5-maxalloc — fidelity decision 5(b)
   [USER] 2026-08-31 "the deterministic maxAlloc panic class modeled",
   landed as PINNED latitude R16: `maxAllocBytes` 2^48, `chanHeaderBytes`
-  112, the gc linux/amd64 layout `tySizeAlignFuel` (GoLean/GoCore/
+  112, the gc linux/amd64 layout `tySizeAlign` (GoLean/GoCore/
   Ops.lean, R16 docstrings); gc's check ORDER and message texts at the
   `makeSlice` / `makeChan` arms of `applyStmtOpCore` and the
   `appendSlice` spill path of `applyStmtOp` (GoLean/GoCore/Machine.lean),
