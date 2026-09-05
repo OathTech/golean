@@ -96,6 +96,7 @@ private def exprAllowedKeys : String → Option (List String)
   | "nil" | "recover" => some ["expr", "type"]
   | "bytes-from-string" | "string-from-bytes" | "string-from-rune"
   | "runes-from-string" | "string-from-runes" => some ["expr", "x", "type"]
+  | "float-bits" => some ["expr", "op", "x", "type"]
   | "min" | "max" => some ["expr", "args", "type"]
   | "ref" => some ["expr", "id", "type"]
   | "globaladdr" => some ["expr", "gid", "type"]
@@ -149,6 +150,7 @@ private def stmtAllowedKeys : String → Option (List String)
   | "map-delete" => some ["stmt", "base", "index", "keyType"]
   | "clear-map" => some ["stmt", "base"]
   | "clear-slice" => some ["stmt", "base", "elem"]
+  | "print" => some ["stmt", "newline", "args"]
   | "append" => some ["stmt", "target", "elem", "slice", "elems"]
   | "copy" => some ["stmt", "target", "dst", "src"]
   | "map-compound-assign" =>
@@ -420,6 +422,17 @@ partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
       pure (.runesFromString (← decodeExpr s!"{path}.x" (← StrictJson.field path obj "x")))
   | "string-from-runes" =>
       pure (.stringFromRuneSlice (← decodeExpr s!"{path}.x" (← StrictJson.field path obj "x")))
+  | "float-bits" =>
+      -- The `float-bits` primitive (stdlib slice 3): one of the four
+      -- documented math functions, by tag; anything else refuses by name.
+      let opName ← StrictJson.string s!"{path}.op" (← StrictJson.field path obj "op")
+      let op ← match opName with
+        | "f64bits" => pure FloatBitsOp.f64bits
+        | "f64frombits" => pure FloatBitsOp.f64frombits
+        | "f32bits" => pure FloatBitsOp.f32bits
+        | "f32frombits" => pure FloatBitsOp.f32frombits
+        | other => throw s!"{path}.op: unknown float-bits op {repr other} (the four are f64bits/f64frombits/f32bits/f32frombits)"
+      pure (.floatBits op (← decodeExpr s!"{path}.x" (← StrictJson.field path obj "x")))
   | "ref" =>
       pure (.ref (← StrictJson.string s!"{path}.id" (← StrictJson.field path obj "id")))
   | "globaladdr" =>
@@ -1085,6 +1098,17 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let base ← decodeExpr s!"{path}.base" (← StrictJson.field path obj "base")
       let elemTy ← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")
       pure (.clearSlice base elemTy)
+  | "print" =>
+      -- `print`/`println` (stdlib slice 3): `newline` selects println.
+      -- ZERO operands refuse here too (the frontend refuses first; the
+      -- wide-statement mold has no nullary plan — A8), so a hand-edited
+      -- wire cannot reach an unplanned statement.
+      let newline ← StrictJson.bool s!"{path}.newline" (← StrictJson.field path obj "newline")
+      let argsJ ← StrictJson.array s!"{path}.args" (← StrictJson.field path obj "args")
+      if argsJ.isEmpty then
+        throw s!"{path}.args: print/println with zero operands has no machine shape (refused by name; stdlib slice 3)"
+      let args ← argsJ.mapIdxM (fun i j => decodeExpr s!"{path}.args[{i}]" j)
+      pure (.print newline args)
   -- `sort-slice` (the quorum-pilot `sortSlice` machine op's wire node) is
   -- NOT decoded since 2026-09-04 (memo §3 row M, lane fr4-rowm audit fix
   -- round A3): the frontend never emits it — `slices.Sort` is the real

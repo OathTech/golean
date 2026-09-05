@@ -67,6 +67,55 @@ def floatBinaryResult (opName : String) (op64 op32 : Nat → Nat → Nat)
         stuck s!"mismatched {opName} float kinds: {lk.name} and {rk.name}"
   | _, _ => stuck s!"mismatched {opName} operands: {repr left} and {repr right}"
 
+/-- **The `float-bits` primitive** (stdlib slice 3, 2026-09-04; `FloatBitsOp`,
+Syntax.lean): `math.Float64bits` and its three siblings as a bit
+reinterpretation over the machine's OWN representation. A float IS its
+bit pattern (`GoValue.float bits kind`, `bits < 2^kind.bits` by
+`FloatKind.normalizeBits` at every construction site), so `*bits` is
+`.int bits .uint64`/`.uint32` and `*frombits` is `.float bits kind` — no
+arithmetic, no rounding, no canonicalization: NaN payloads (quiet AND
+signalling), the sign of zero and the infinities round-trip BIT-EXACT
+in both directions, which is the admission condition the audit
+attached (`docs/stdlib-admission-register.md`, slice-2 log: «preserve NaN
+payloads exactly (deps.go:29 builds nan() from payload
+0x7FF8000000000001) and ±0 / quiet/signaling round-trip probes»).
+
+ONE fail-closed arm, disclosed [AGENT]: `*bits` REFUSES the machine's
+CANONICAL NaN (`FloatBits.nan64` = 0x7FF8000000000000 / `nan32` =
+0x7FC00000). Latitude inventory R7 narrows every NaN the machine
+PRODUCES (arithmetic, conversion) to that one pattern — softfloat64.go's
+own rule, `return nan64` at every NaN-producing case — while the oracle
+platform (gc/amd64, SSE) realizes hardware payload propagation (first
+NaN operand's payload; 0xFFF8… "real indefinite" for invalid
+operations). R7's whole argument was "payloads are unobservable
+in-language"; this primitive makes them observable, so a canonical-NaN
+observation is exactly the point where the machine's narrowing would
+present as a wrong answer (`Float64bits(zero/zero)`: machine
+0x7FF8000000000000, gc 0xFFF8000000000000). The refusal names the cause;
+the over-refusal (`Float64bits(Float64frombits(0x7FF8000000000000))` is a
+legitimate round-trip that also refuses) is rowed
+(`builtins/float-bits/canonical-nan-refused`) and is R7's re-envelope
+obligation, not this slice's. Every NON-canonical NaN payload can only
+have entered through `*frombits` (the machine never produces one), so
+it passes through untouched. -/
+def floatBitsApply (op : FloatBitsOp) (v : GoValue) : Except Stop GoValue :=
+  match op, v with
+  | .f64bits, .float bits .float64 =>
+      if bits == FloatBits.nan64 then
+        unsupported s!"{op.name} of the machine's canonical NaN (0x7FF8000000000000): the payload of a machine-PRODUCED NaN is latitude the machine narrows (inventory R7) and gc/amd64 realizes differently — refused rather than reported (row builtins/float-bits/canonical-nan-refused)"
+      else
+        return .int (Int.ofNat bits) .uint64
+  | .f32bits, .float bits .float32 =>
+      if bits == FloatBits.nan32 then
+        unsupported s!"{op.name} of the machine's canonical NaN (0x7FC00000): the payload of a machine-PRODUCED NaN is latitude the machine narrows (inventory R7) and gc/amd64 realizes differently — refused rather than reported (row builtins/float-bits/canonical-nan-refused)"
+      else
+        return .int (Int.ofNat bits) .uint32
+  | .f64frombits, .int bits .uint64 =>
+      return .float (FloatKind.float64.normalizeBits bits.toNat) .float64
+  | .f32frombits, .int bits .uint32 =>
+      return .float (FloatKind.float32.normalizeBits bits.toNat) .float32
+  | op, other => stuck s!"{op.name}: operand {repr other} is not of the pinned kind (float64/uint64 or float32/uint32)"
+
 /-- IEEE comparison at matching float kinds: NaN is UNORDERED — every
 ordering answers false on a NaN operand (note §4; the corpus pin is
 `floats/nan-comparisons`). -/

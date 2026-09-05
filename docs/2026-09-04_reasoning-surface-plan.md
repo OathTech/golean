@@ -1424,6 +1424,15 @@ out`), folded by the driver into `Readout`, not a `Store` field;
 trace. Cost: neutral to slice 3 (the design's machine-side buffers
 become the driver's fold; same tests, same schema).
 
+**RULED [USER] (relayed) and LANDED 2026-09-04 (lane `stdlib-slice-3`,
+`docs/2026-09-04_stdlib-slice-3-design.md` §1):** `StepEvent.out : List
+GoString`, `execProgLoopOut` + `execProgLoopOut_snd`, `RunResult :=
+Except (Stop × GoString) Readout` (the terminal carries its prefix),
+`Readout.output`, the `output` observation field; one stream (`output`
+= fd 2 — the `stdout`/`stderr` pair arrives with G7). OWED to the C-arc:
+the EnumSpec `Obs` type is still output-free (the dedup engine refuses
+printing rows by name meanwhile).
+
 **The float-bits primitive** (`math.Float64bits`/`Float64frombits`-
 class; ledger FR-21 item, register `docs/stdlib-admission-register.md:
 218-222`, [USER]-gated, cap 2, currently 0/2). For the interface: a

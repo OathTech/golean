@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	printThenRuntimePanic	3	panic	index out of range	builtins,print,panic,slices

@@ -67,6 +67,11 @@ if [[ ! -x "$GOLEAN_BIN" ]]; then
 fi
 command -v go >/dev/null || { echo "membership-sampling: go not on PATH" >&2; exit 2; }
 GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
+# The harness binary, built once (stdlib slice 3): harness generation + the
+# fd-2 split (--split-stderr) that yields the `output` observation field.
+mkdir -p "$ROOT/artifacts/membership-sampling-bin"
+HARNESS_BIN="$ROOT/artifacts/membership-sampling-bin/coverageharness"
+GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go build -o "$HARNESS_BIN" ./tools/coverageharness || { echo "membership-sampling: could not build tools/coverageharness (fail closed)" >&2; exit 2; }
 if ! mkdir -p "$OUT" "$GO_BUILD_CACHE" 2>/dev/null; then
   echo "membership-sampling: --out directory is not writable: $OUT" >&2; exit 2
 fi
@@ -97,7 +102,7 @@ printf '# golean: %s (mtime %s)  go: %s  draws: %s  date: %s\n' "$GOLEAN_BIN" "$
 # One oracle run; prints the canonical observation (ok or panic) or
 # returns nonzero with the raw output.
 oracle() {  # $1 = harness dir, $2 = "" | race
-  local dir="$1" mode="$2" out rc=0
+  local dir="$1" mode="$2" out rc=0 lit split_rc=0
   local race=()
   [[ "$mode" == "race" ]] && race=(-race)
   # Multi-package cases (raft W1.1): the harness assembled the case's local
@@ -107,16 +112,27 @@ oracle() {  # $1 = harness dir, $2 = "" | race
   if [[ -d "$dir/gopath" ]]; then
     gopath_env=(GOPATH="$(cd "$dir/gopath" && pwd -P)")
   fi
-  out="$(cd "$dir" && env GO111MODULE=off GODEBUG=panicnil=0 GOCACHE="$GO_BUILD_CACHE" ${gopath_env[@]+"${gopath_env[@]}"} go run ${race[@]+"${race[@]}"} . 2>&1)" || rc=$?
+  # stdout/stderr captured SEPARATELY (stdlib slice 3): the `output`
+  # observation field is the program's fd-2 prefix, split fail-closed by
+  # the harness's --split-stderr mode exactly as scripts/diff-coverage does.
+  (cd "$dir" && env GO111MODULE=off GODEBUG=panicnil=0 GOCACHE="$GO_BUILD_CACHE" ${gopath_env[@]+"${gopath_env[@]}"} go run ${race[@]+"${race[@]}"} . > oracle.stdout 2> oracle.stderr) || rc=$?
+  out="$(cat "$dir/oracle.stdout" "$dir/oracle.stderr")"
   if [[ "$rc" -eq 0 ]]; then
-    if [[ "$out" == *'"status":"ok"'* ]]; then printf '%s' "$out"; return 0; fi
+    out="$(cat "$dir/oracle.stdout")"
+    if [[ "$out" == *'"status":"ok"'* ]]; then
+      lit="$("$HARNESS_BIN" --split-stderr "$dir/oracle.stderr" --expected-status ok 2>"$dir/oracle.split.err")" || split_rc=$?
+      if [[ "$split_rc" -ne 0 ]]; then printf 'UNCLASSIFIED (stderr split failed, exit %s): %s' "$split_rc" "$(head -c 300 "$dir/oracle.split.err")"; return 1; fi
+      printf '{"output":%s,%s' "$lit" "${out#\{}"; return 0
+    fi
     printf 'UNCLASSIFIED: %s' "$out"; return 1
   fi
   if [[ "$out" == *"panic:"* ]]; then
     local msg
     msg="$(printf '%s\n' "$out" | awk '/^panic: /{sub(/^panic: /,""); print; exit}')"
     msg="${msg//\\/\\\\}"; msg="${msg//\"/\\\"}"
-    printf '{"message":"%s","schema":"golean-observation-v1","status":"panic"}' "$msg"
+    lit="$("$HARNESS_BIN" --split-stderr "$dir/oracle.stderr" --expected-status panic 2>"$dir/oracle.split.err")" || split_rc=$?
+    if [[ "$split_rc" -ne 0 ]]; then printf 'UNCLASSIFIED (stderr split failed, exit %s): %s' "$split_rc" "$(head -c 300 "$dir/oracle.split.err")"; return 1; fi
+    printf '{"message":"%s","output":%s,"schema":"golean-observation-v1","status":"panic"}' "$msg" "$lit"
     return 0
   fi
   printf 'UNCLASSIFIED: %s' "$out"; return 1
@@ -150,7 +166,7 @@ while IFS=$'\t' read -r id go_dir fn args status features reason lane why params
     done
   fi
   # --- harness build ---
-  if ! hout="$(GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/coverageharness --input "$go_dir/main.go" --out "$row_dir/harness" --subject "$fn" --expected-status "$status" --args "$args" 2>&1)"; then
+  if ! hout="$("$HARNESS_BIN" --input "$go_dir/main.go" --out "$row_dir/harness" --subject "$fn" --expected-status "$status" --args "$args" 2>&1)"; then
     printf '%s\t-\t%s\t-\t-\t-\t-\t-\t-\t-\t-\t-\tHARNESS FAILED: %s\n' "$id" "$samples" "$(echo "$hout" | head -1)" >> "$SUMMARY"
     continue
   fi

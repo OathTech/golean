@@ -1,0 +1,42 @@
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+building Lean executable...
+Build completed successfully (62 jobs).
+native frontend: per-case type-check + emit (no batch export)
+FAIL	builtins/print/refused/chan	builtins,print,channels	stage=frontend-export	detail={"message":"frontend-quarantined: builtin println operand 1 of type chan int prints an address in gc (runtime/print.go printpointer/printslice/printeface/printiface) — the machine has no addresses; refused by name, permanently (stdlib slice 3; ledger §5.1 item 3)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+FAIL	builtins/float-bits/canonical-nan-refused	builtins,float_bits,floats,division	stage=lean-observation	detail=expected status ok, got {"message":"math.Float64bits of the machine's canonical NaN (0x7FF8000000000000): the payload of a machine-PRODUCED NaN is latitude the machine narrows (inventory R7) and gc/amd64 realizes differently — refused rather than reported (row builtins/float-bits/canonical-nan-refused)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+FAIL	builtins/print/refused/float32	builtins,print,floats	stage=frontend-export	detail={"message":"frontend-quarantined: builtin print operand 1 of type float32: floats and complex print through internal/strconv.AppendFloat ('g', -1, shortest round-trip) — not modeled this slice (stdlib slice 3; FR-29)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+FAIL	builtins/print/refused/nil-pointer	builtins,print,pointers,nil	stage=frontend-export	detail={"message":"frontend-quarantined: builtin println operand 1 of type *int prints an address in gc (runtime/print.go printpointer/printslice/printeface/printiface) — the machine has no addresses; refused by name, permanently (stdlib slice 3; ledger §5.1 item 3)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+FAIL	builtins/print/refused/func	builtins,print,functions	stage=frontend-export	detail={"message":"frontend-quarantined: builtin println operand 1 of type func() prints an address in gc (runtime/print.go printpointer/printslice/printeface/printiface) — the machine has no addresses; refused by name, permanently (stdlib slice 3; ledger §5.1 item 3)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+FAIL	builtins/print/refused/pointer	builtins,print,pointers	stage=frontend-export	detail={"message":"frontend-quarantined: builtin println operand 1 of type *int prints an address in gc (runtime/print.go printpointer/printslice/printeface/printiface) — the machine has no addresses; refused by name, permanently (stdlib slice 3; ledger §5.1 item 3)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+FAIL	builtins/float-bits/nan-arith-payload-refused/canonical-roundtrip	builtins,float_bits,floats	stage=lean-observation	detail=expected status ok, got {"message":"math.Float64bits of the machine's canonical NaN (0x7FF8000000000000): the payload of a machine-PRODUCED NaN is latitude the machine narrows (inventory R7) and gc/amd64 realizes differently — refused rather than reported (row builtins/float-bits/canonical-nan-refused)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+FAIL	builtins/print/refused/float	builtins,print,floats	stage=frontend-export	detail={"message":"frontend-quarantined: builtin println operand 1 of type float64: floats and complex print through internal/strconv.AppendFloat ('g', -1, shortest round-trip) — not modeled this slice (stdlib slice 3; FR-29)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+FAIL	builtins/print/refused/zero-operands	builtins,print,builtins	stage=frontend-export	detail={"message":"frontend-quarantined: builtin println with zero operands (no machine shape this slice — the wide-statement mold has no nullary plan; FR-29)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+FAIL	builtins/print/in-init	builtins,print,init	stage=lean-observation	detail=expected status ok, got {"message":"package init: print/println during package initialization: the init phase runs on the sequential driver, which has no output event channel (the pool driver folds StepEvent.out) — refused rather than dropping the bytes (stdlib slice 3; row builtins/print/in-init)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+FAIL	builtins/print/refused/interface	builtins,print,interfaces	stage=frontend-export	detail={"message":"frontend-quarantined: builtin println operand 1 of type any prints an address in gc (runtime/print.go printpointer/printslice/printeface/printiface) — the machine has no addresses; refused by name, permanently (stdlib slice 3; ledger §5.1 item 3)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+FAIL	builtins/float-bits/nan-arith-payload-refused	builtins,float_bits,floats	stage=lean-observation	detail=expected status ok, got {"message":"math.Float64bits of the machine's canonical NaN (0x7FF8000000000000): the payload of a machine-PRODUCED NaN is latitude the machine narrows (inventory R7) and gc/amd64 realizes differently — refused rather than reported (row builtins/float-bits/canonical-nan-refused)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+FAIL	builtins/print/refused/map	builtins,print,maps	stage=frontend-export	detail={"message":"frontend-quarantined: builtin println operand 1 of type map[int]int prints an address in gc (runtime/print.go printpointer/printslice/printeface/printiface) — the machine has no addresses; refused by name, permanently (stdlib slice 3; ledger §5.1 item 3)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+FAIL	builtins/print/refused/slice	builtins,print,slices	stage=frontend-export	detail={"message":"frontend-quarantined: builtin println operand 1 of type []int prints an address in gc (runtime/print.go printpointer/printslice/printeface/printiface) — the machine has no addresses; refused by name, permanently (stdlib slice 3; ledger §5.1 item 3)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	builtins/print/mixed	builtins,print,ints,bools,strings
+PASS	builtins/print/print-then-panic	builtins,print,panic
+PASS	builtins/print/bool	builtins,print,bools
+PASS	builtins/print/println-spacing	builtins,print,strings
+PASS	builtins/print/string	builtins,print,strings,unicode
+PASS	builtins/print/ints	builtins,print,ints
+PASS	builtins/print/print-then-runtime-panic	builtins,print,panic,slices
+PASS	builtins/float-bits/float32	builtins,float_bits,floats,multi_result
+PASS	builtins/print/uints	builtins,print,ints
+PASS	builtins/float-bits/literals-and-zero	builtins,float_bits,floats,constants,multi_result
+PASS	builtins/print/print-then-recover	builtins,print,panic,recover,defer
+PASS	builtins/print/goroutine-ordered	builtins,print,goroutines,channels
+PASS	builtins/print/multiple-calls-order	builtins,print,loops,calls
+PASS	builtins/float-bits/widening	builtins,float_bits,floats,conversions,multi_result
+PASS	builtins/float-bits/frombits-arith	builtins,float_bits,floats,conversions,multi_result
+PASS	builtins/float-bits/nan-semantics	builtins,float_bits,floats,comparisons,multi_result
+PASS	builtins/print/print-no-spacing	builtins,print,ints,strings
+PASS	builtins/print/values-and-output	builtins,print,multi_result
+PASS	builtins/float-bits/roundtrip-payloads	builtins,float_bits,floats,print,multi_result
+PASS	builtins/print/goroutine-interleaving	builtins,print,goroutines,channels,nondet	stage=membership	detail=enumerated=2 exhibited=2 draws=2 (K=32; stopped at the members=2 pin) unexhibited=0 (members in artifacts/coverage/membership/builtins/print/goroutine-interleaving)
+
+differential coverage summary: cases=34 pass=20 fail=14 export_status=0
+results: artifacts/coverage/latest.tsv
+metadata: artifacts/coverage/latest.meta.tsv

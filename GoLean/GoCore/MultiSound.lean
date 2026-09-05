@@ -329,7 +329,7 @@ theorem stepThread_single {σ : ExecState} {c : Config} {ch : Choices}
   cases hsc : opDoneInner c with
   | some inner =>
       -- The marker strip: the pool arm and `stepFn`'s arm coincide.
-      refine ⟨⟨0, .opDoneStrip, []⟩, ?_⟩
+      refine ⟨⟨0, .opDoneStrip, [], []⟩, ?_⟩
       obtain ⟨sc, rfl⟩ := opDoneInner_shape hsc
       rfl
   | none =>
@@ -342,7 +342,7 @@ theorem stepThread_single {σ : ExecState} {c : Config} {ch : Choices}
   simp only [Bind.bind, Except.bind]
   cases hselp : selectApplyPlan c with
   | none =>
-      refine ⟨⟨0, .privateStep, []⟩, ?_⟩
+      refine ⟨⟨0, .privateStep, [], (printOut? c).toList⟩, ?_⟩
       cases hstep : stepFn σ c ch with
       | error e => rfl
       | ok r =>
@@ -365,7 +365,7 @@ theorem stepThread_single {σ : ExecState} {c : Config} {ch : Choices}
             rfl
           refine ⟨⟨0, match cl? with
             | some cl => .selectCommit cl
-            | none => .selectPass, []⟩, ?_⟩
+            | none => .selectPass, [], []⟩, ?_⟩
           rw [hfn]
           simp only [Functor.map, Except.map]
           cases cl? <;> rfl
@@ -380,7 +380,7 @@ theorem stepThread_single {σ : ExecState} {c : Config} {ch : Choices}
             dsimp only
             simp only [happly]
             cases_stop e <;> rfl
-          refine ⟨⟨0, .selectPass, []⟩, ?_⟩
+          refine ⟨⟨0, .selectPass, [], []⟩, ?_⟩
           rw [hfn]
           cases_stop e <;> first | rfl | simp [Functor.map, Except.map]
 

@@ -72,6 +72,12 @@ theorem AtomicStmtOp.beq_sound {a b : AtomicStmtOp} (h : (a == b) = true) :
     | rfl
     | exact Bool.noConfusion h
 
+theorem FloatBitsOp.beq_sound {a b : FloatBitsOp} (h : (a == b) = true) :
+    a = b := by
+  cases a <;> cases b <;> first
+    | rfl
+    | exact Bool.noConfusion h
+
 theorem MethodSetCoverage.beq_sound {a b : MethodSetCoverage}
     (h : (a == b) = true) : a = b := by
   cases a <;> cases b <;> first
@@ -169,6 +175,7 @@ def Expr.eqbF : Nat → Expr → Expr → Bool
         Expr.eqbF f s1 s2 && Expr.eqbF f o1 o2
     | .runesFromString o1, .runesFromString o2 => Expr.eqbF f o1 o2
     | .stringFromRuneSlice o1, .stringFromRuneSlice o2 => Expr.eqbF f o1 o2
+    | .floatBits p1 o1, .floatBits p2 o2 => p1 == p2 && Expr.eqbF f o1 o2
     | .recoverCall, .recoverCall => true
     | .unsupported x, .unsupported y => x == y
     | _, _ => false
@@ -305,6 +312,9 @@ theorem Expr.eqbF_sound : ∀ f (a b : Expr), Expr.eqbF f a b = true → a = b :
       obtain ⟨h1, h2⟩ := andSplit2 h; cases ih _ _ h1; cases ih _ _ h2; rfl
     case runesFromString.runesFromString o1 o2 => cases ih _ _ h; rfl
     case stringFromRuneSlice.stringFromRuneSlice o1 o2 => cases ih _ _ h; rfl
+    case floatBits.floatBits p1 o1 p2 o2 =>
+      obtain ⟨h1, h2⟩ := andSplit2 h
+      cases FloatBitsOp.beq_sound h1; cases ih _ _ h2; rfl
     case recoverCall.recoverCall => rfl
     case unsupported.unsupported x y =>
       cases eq_of_beq (show (x == y) = true from h); rfl
@@ -535,6 +545,7 @@ def Stmt.eqbF : Nat → Stmt → Stmt → Bool
     | .atomicStmt o1 k1 a1 t1, .atomicStmt o2 k2 a2 t2 =>
         o1 == o2 && k1 == k2 && eqbArrayP (Expr.eqbF f) a1 a2
           && eqbArrayP (Assignee.eqbF f) t1 t2
+    | .print n1 a1, .print n2 a2 => n1 == n2 && eqbArrayP (Expr.eqbF f) a1 a2
     | _, _ => false
 
 set_option maxHeartbeats 1600000 in
@@ -683,6 +694,10 @@ theorem Stmt.eqbF_sound : ∀ f (a b : Stmt), Stmt.eqbF f a b = true → a = b :
       cases IntKind.beq_sound h2
       cases eqbArrayP_sound (Expr.eqbF_sound f) h3
       cases eqbArrayP_sound (Assignee.eqbF_sound f) h4; rfl
+    case print.print n1 a1 n2 a2 =>
+      obtain ⟨h1, h2⟩ := andSplit2 h
+      cases eq_of_beq h1
+      cases eqbArrayP_sound (Expr.eqbF_sound f) h2; rfl
 
 /-! ## `Func` -/
 

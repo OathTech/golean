@@ -299,13 +299,13 @@ drive_one() {
   if [[ "$go_rc" -eq 124 ]]; then
     printf 'INFRA\t%s\t%s\t%s\n' "$name" "$kind" "go run timed out after ${GO_TIMEOUT}s"; return
   elif [[ "$go_rc" -eq 0 ]]; then
-    go_status="ok"; go_obs='{"schema":"golean-observation-v1","status":"ok","values":[]}'
+    go_status="ok"; go_obs='{"output":"","schema":"golean-observation-v1","status":"ok","values":[]}'
     [[ -n "$go_out" ]] && { printf 'INFRA\t%s\t%s\t%s\n' "$name" "$kind" "driver printed on success (drivers must be silent): $(one_line "${go_out:0:200}")"; return; }
   elif [[ "$go_out" == *"fatal error: all goroutines are asleep - deadlock!"* ]]; then
-    go_status="deadlock"; go_obs='{"message":"all goroutines are asleep - deadlock!","schema":"golean-observation-v1","status":"deadlock"}'
+    go_status="deadlock"; go_obs='{"message":"all goroutines are asleep - deadlock!","output":"","schema":"golean-observation-v1","status":"deadlock"}'
   elif [[ "$go_out" == *"panic:"* ]]; then
     go_status="panic"; go_msg="$(printf '%s\n' "$go_out" | awk '/^panic: /{ sub(/^panic: /, ""); print; exit }')"
-    go_obs="{\"message\":$(json_string_literal "$go_msg"),\"schema\":\"golean-observation-v1\",\"status\":\"panic\"}"
+    go_obs="{\"message\":$(json_string_literal "$go_msg"),\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"panic\"}"
   else
     printf 'INFRA\t%s\t%s\t%s\n' "$name" "$kind" "go run exited $go_rc without panic: $(one_line "${go_out:0:240}")"; return
   fi

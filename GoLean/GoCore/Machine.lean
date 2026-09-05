@@ -133,6 +133,9 @@ inductive StrictOp where
   last so positional proof bullets over earlier arms stay put. -/
   | runesFromString
   | stringFromRuneSlice
+  /-- The `float-bits` primitive (stdlib slice 3; `floatBitsApply`,
+  Ops.lean): pure, one operand, appended last. -/
+  | floatBits (op : FloatBitsOp)
   deriving Repr, BEq
 
 /-- Classify an expression as a strict-operator application: the head and
@@ -190,6 +193,7 @@ def strictPlan : Expr → Option (StrictOp × List Expr)
   | .runeSizeAt s off => some (.runeSizeAt, [s, off])
   | .runesFromString e => some (.runesFromString, [e])
   | .stringFromRuneSlice e => some (.stringFromRuneSlice, [e])
+  | .floatBits op e => some (.floatBits op, [e])
   | _ => none
 
 /-- Slice-expression application, after all operands are values (base, low,
@@ -629,6 +633,11 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except Stop (G
         | .int r .int32 => str := str.append (GoString.fromCodePoint r)
         | other => stuck s!"expected rune element in string conversion, got {repr other}"
       return (.string str, s)
+  -- The `float-bits` primitive: a bit reinterpretation over the machine's
+  -- own representation (Ops.lean `floatBitsApply` — bit-exact both ways;
+  -- the canonical-NaN refusal is documented there). No state, no
+  -- footprint (Race.lean's inventory), no consumption.
+  | .floatBits op, [v] => do return ((← floatBitsApply op v), s)
   | op, vs => stuck s!"malformed strict-operator application: {repr op} on {vs.length} operand(s)"
 
 /-! ## Shared list operations (env-threading; used as rule premises and by
@@ -911,6 +920,12 @@ inductive StmtOp where
   | clearMap
   | clearSlice (elem : Ty)
   | sortSlice (elem : Ty)
+  /-- `print`/`println` (stdlib slice 3, 2026-09-04; `Stmt.print`): the
+  apply step VALIDATES the operands against gc's printable kinds
+  (`renderPrint`) and changes no state — the bytes are the pool layer's
+  OUTPUT EVENT, derived from the same `renderPrint` at the same apply
+  position (`printOut?`). Appended last. -/
+  | print (newline : Bool)
   deriving Repr, BEq
 
 /-- Classify a wide statement: the head, how many leading operands are
@@ -947,7 +962,90 @@ def stmtPlan : Stmt → Option (StmtOp × Nat × List Expr)
   | .clearMap base => return (.clearMap, 0, [base])
   | .clearSlice base elem => return (.clearSlice elem, 0, [base])
   | .sortSlice base elem => return (.sortSlice elem, 0, [base])
+  -- `print`/`println`: zero targets, the operands in source order. An
+  -- EMPTY operand list has no plan (`none` — the shape refuses at the
+  -- frontend and the decoder by name; A8: no plan is nullary).
+  | .print nl args =>
+      match args.toList with
+      | [] => none
+      | e :: rest => return (.print nl, 0, e :: rest)
   | _ => none
+
+/-! ## `print`/`println` — gc's `runtime/print.go` formats, pinned
+
+The formatting of `print`/`println` is implementation-specific by the
+spec's own sentence (spec#Bootstrapping: "formatting of arguments is
+implementation-specific") — the (b)-pin class of the latitude inventory
+(row R17, sibling of R9/R10, which the SAME runtime printing code
+realizes for panic payloads). Pinned to gc go1.26.5
+`deps/go/src/runtime/print.go`:
+
+- `printbool` (:120-126): `true` / `false`.
+- `printint` (:162-177): decimal, `-` for negatives; `printuint`
+  (:154-160): decimal. The kind decides which: a signed `IntKind`
+  prints as `printint`, an unsigned one as `printuint` (the compiler
+  selects by the operand's type; a defined type prints as its
+  underlying kind — `print` never calls methods).
+- `printstring` (:256-258): the bytes verbatim.
+- `printsp` = `" "`, `printnl` = `"\n"` (:112-118): `println` writes
+  `printsp` BETWEEN arguments and `printnl` after the last (the
+  compiler's `walkPrint`, cmd/compile/internal/walk/builtin.go);
+  `print` writes neither.
+- REFUSED by name, permanently: pointers, channels, maps, funcs,
+  slices (`[len/cap]0xaddr`, :260-264), interfaces
+  (`(0xtypeword,0xdata)`, :266-272) and unsafe.Pointer print ADDRESSES
+  the machine does not have (and gc's are not stable across runs — memo
+  §4). `nil` reaches this arm only as one of those kinds (an untyped
+  `nil` operand is a compile error), so it refuses with them.
+- REFUSED by name THIS SLICE ([AGENT] call, disclosed in the design
+  note §3.3): floats and complex. gc's `printfloat64` (:128-131) is
+  `internal/strconv.AppendFloat(v, 'g', -1, 64)` — the SHORTEST
+  round-trip decimal (Ryū-class `ftoa` + `bigFtoa`/`roundShortest`, a
+  Go 1.26 change: commit 9035f7ae "runtime: use internal/strconv";
+  1.25 printed `+1.500000e+000`), not a 40-line transcription; the
+  faithful route (source-through `internal/strconv`, now unblocked by
+  the `float-bits` primitive, CALLED from the print arm) is a new
+  machine-op shape that needs its own argument. Complex rides floats.
+
+The rendering is ONE definition consumed twice: the sequential apply
+step validates through it (a refusal at the apply position, like every
+other wide op), and the pool layer derives the emitted event from it
+at the same configuration (`printOut?`) — so the event carries exactly
+the bytes the step validated. -/
+
+/-- One operand's bytes (gc's `print*` helper selected by kind). -/
+def renderPrintOperand : GoValue → Except Stop GoString
+  | .bool b => return GoString.fromLeanString (if b then "true" else "false")
+  | .int v kind =>
+      match kind with
+      | .unbounded name =>
+          stuck s!"print of an untyped {name} constant operand (the frontend types every print operand)"
+      | _ => return GoString.fromLeanString (toString v)
+  | .string s => return s
+  | .float _ kind =>
+      unsupported s!"print of a {kind.name} operand: gc formats floats with internal/strconv.AppendFloat 'g' -1 (shortest round-trip, go1.26 commit 9035f7ae), not transcribed this slice — refused by name (row builtins/print/float-refused)"
+  | .nil => unsupported "print of a nil pointer/interface/slice/map/chan/func operand: gc prints an ADDRESS (0x0 / (0x0,0x0) / [0/0]0x0), which the machine does not model — refused by name"
+  | .addr _ => unsupported "print of a pointer operand: gc prints its address (runtime/print.go printpointer), which the machine does not model — refused by name"
+  | .interface .. => unsupported "print of an interface operand: gc prints (0xtypeword,0xdata) (runtime/print.go printeface/printiface), addresses the machine does not model — refused by name"
+  | .slice _ => unsupported "print of a slice operand: gc prints [len/cap]0xaddr (runtime/print.go printslice), an address the machine does not model — refused by name"
+  | .map _ => unsupported "print of a map operand: gc prints its address, which the machine does not model — refused by name"
+  | .chan _ => unsupported "print of a channel operand: gc prints its address, which the machine does not model — refused by name"
+  | .funcVal .. => unsupported "print of a func operand: gc prints its code address, which the machine does not model — refused by name"
+  | other => stuck s!"print of an operand gc's print does not accept: {repr other}"
+
+/-- The whole statement's bytes: `println` = operands joined by `printsp`
+with `printnl` after; `print` = the operands' bytes concatenated. -/
+def renderPrint (newline : Bool) : List GoValue → Except Stop GoString
+  | [] => return (if newline then GoString.fromLeanString "\n" else GoString.empty)
+  | v :: rest => do
+      let head ← renderPrintOperand v
+      let tail ← renderPrint newline rest
+      if newline then
+        match rest with
+        | [] => return head.append tail
+        | _ :: _ => return (head.append (GoString.fromLeanString " ")).append tail
+      else
+        return head.append tail
 
 /-- The choices-FREE core of `applyStmtOp`: every wide-op arm except
 `appendSlice` (whose spill path consumes a capacity choice; its arm HERE
@@ -1169,6 +1267,13 @@ def applyStmtOpCore (s : ExecState) (op : StmtOp)
           let tloc ← valueAsLoc tv
           return ((← storeLoc current tloc (.int (Int.ofNat count))))
       | _ => stuck "malformed copySlice operands"
+  | .print newline =>
+      -- VALIDATE only: every operand must be of a kind gc's print
+      -- renders without an address (refusals name the kind). The bytes
+      -- are the pool layer's event (`printOut?`); the state is untouched
+      -- (gc: the statement writes fd 2 and nothing else).
+      let _ ← renderPrint newline vs
+      return s
   | .appendSlice _ =>
       throw (.internal "applyStmtOpCore: appendSlice dispatches through applyStmtOp")
 
@@ -2683,6 +2788,24 @@ def Config.applyPos : Config → Option (ApplyHead × List GoValue × LocalEnv �
   | .retV v (.atomicStK op done [] env k) => some (.atomic op, (v :: done).reverse, env, k)
   | .retV v (.rhsK rop refs done [] body env k) =>
       some (.rhs rop refs body, (v :: done).reverse, env, k)
+  | _ => none
+
+/-- **The output event of a configuration** (stdlib slice 3; G-OUT): the
+bytes the step about to be taken writes to fd 2 — `some bytes` exactly at
+a `print`/`println` APPLY position whose operands render, `none`
+everywhere else. The pool layer (`stepThread`) attaches this to the
+step's `StepEvent.out`; the drivers fold the events in step order into
+the run's output (`execProgLoopOut`). Derived from the PRE-configuration
+by the same `renderPrint` the apply step validates through: when the
+step succeeds the rendering succeeded, so the event carries the validated
+bytes; when the rendering refuses, the step itself refuses and no event
+is observed. A statement that consumes no choice and touches no state —
+the event IS its whole effect. -/
+def printOut? : Config → Option GoString
+  | .retV v (.stmtOpK (.print newline) _ done [] _ _) =>
+      match renderPrint newline (v :: done).reverse with
+      | .ok bytes => some bytes
+      | .error _ => none
   | _ => none
 
 /-- The lowering contract at an `appendSlice` apply (audit fix F1): the

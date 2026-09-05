@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+-	nanArithPayloadRefused	-	ok	-	builtins,float_bits,floats
+canonical-roundtrip	canonicalRoundtripRefused	-	ok	-	builtins,float_bits,floats

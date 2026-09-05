@@ -20,8 +20,12 @@ package main
 //                    `import` rows are the consequential import
 //                    neutralizations, listed as `overlay-import`, not
 //                    counted (see the table's header)
-//   primitive        machine ops of library origin — CAP 2 (print,
-//                    println when G2's slice lands); 0 so far
+//   primitive        machine ops of library origin — CAP 2, FULL since
+//                    stdlib slice 3 (2026-09-04): `float-bits` (math's
+//                    four bit-reinterpretation functions, [USER]-admitted)
+//                    and `print-output` (print/println + the fd-2 output
+//                    observable, gate G2). Widening past 2 is a [USER]
+//                    re-ratification (an over-cap table refuses to render).
 //   shim             the RETAINED user-package injections (frozen, D-002;
 //                    since slice 2 only the fmt desugar's 6 members)
 //   shadow-type      the E5-T shadow models (importedmodel.go; since
@@ -47,9 +51,13 @@ const (
 
 // The overlay table lives in stdlib-overlay.tsv (stdlibsource.go parses
 // and APPLIES it — one source for the substitutions and for the rows
-// below). The primitive table is EMPTY (print/println is slice 3). Both
-// exist so the register's counts are derived from code, not asserted.
-var stdlibPrimitives = map[string]string{} // "<builtin>" -> reason
+// below). The primitive table names the two library-origin machine ops
+// (stdlib slice 3). Both exist so the register's counts are derived from
+// code, not asserted.
+var stdlibPrimitives = map[string]string{
+	"float-bits":   "math.Float64bits / Float64frombits / Float32bits / Float32frombits as ONE machine expression op with a direction/width tag (wire `float-bits`, GoCore `Expr.floatBits`/`floatBitsApply`; frontend floatbits.go): a bit reinterpretation the LANGUAGE has no operation for (math's bodies are `*(*uint64)(unsafe.Pointer(&f))`) over a representation that IS the bit pattern — identity both ways, NaN payloads (quiet and signalling), signed zero and the infinities BIT-EXACT (the audit's admission condition; rows builtins/float-bits/*). ADMITTED [USER] 2026-09-04 (relayed: «add this as a primitive language operation? This sounds reasonable, do it»). Anchor: deps/go/src/math/unsafe.go:21-41 @ go1.26.5 (the four doc comments — Float32bits :21-24, Float32frombits :26-30, Float64bits :32-35, Float64frombits :37-41; a file:line citation because math is NOT source-through and the pinned-manifest godoc: grammar of gate G3 covers source-through packages only — the runtime-source rows' convention). ONE fail-closed arm, [AGENT] disclosed: `*bits` of the machine's CANONICAL NaN (0x7FF8000000000000 / 0x7FC00000) refuses by name — inventory R7 narrows every machine-PRODUCED NaN to that pattern while gc/amd64 realizes hardware payloads, so the observation would be the narrowing presenting as a wrong answer (row builtins/float-bits/canonical-nan-refused; R7's re-envelope obligation). Unblocks internal/strconv's deps.go casts for a later slice.",
+	"print-output": "print / println (spec#Bootstrapping: «formatting of arguments is implementation-specific») as the `print` machine STATEMENT (wire `print`, GoCore `Stmt.print`/`StmtOp.print`/`renderPrint`; frontend emitPrintStmt) with gc's runtime/print.go @ go1.26.5 format PINNED for bool (`true`/`false`), every integer kind (decimal, `-` for negatives; a defined type prints as its underlying kind) and string (bytes verbatim); println = operands joined by ` ` + `\n`, print = concatenation. The bytes are the machine's OUTPUT EVENT (`StepEvent.out`, pool layer; folded by the driver into `Readout.output` — design gate G-OUT RULED [USER]), the differential's new `output` observation field, byte-compared against gc's fd 2 (the harness's stderr split). G2 RULED [USER] 2026-09-03 as recommended (relayed). REFUSED by name, permanently: pointer/chan/map/func/slice/interface/unsafe.Pointer operands (gc prints ADDRESSES — ledger §5.1 item 3). REFUSED by name THIS SLICE ([AGENT], disclosed): float/complex operands (gc: internal/strconv.AppendFloat 'g' -1, the shortest-repr algorithm, go1.26 commit 9035f7ae) and the zero-operand spellings (no nullary plan, A8) — ledger FR-29; print during $pkginit (the sequential init driver has no event fold — runInitConfig refuses). Latitude inventory R17 (format pin) / R18 (concurrent-print interleaving = L1, membership lane).",
+}
 
 func stdlibRegisterDump() (string, error) {
 	subs, err := parseStdlibSubstitutions(stdlibSubstitutionsTSV)

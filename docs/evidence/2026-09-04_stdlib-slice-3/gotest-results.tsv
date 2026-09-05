@@ -1,0 +1,196 @@
+category	test	detail
+MATCH	235.go	status=ok
+MATCH	abi/open_defer_1.go	status=ok
+FRONTEND-REFUSED	bigalg.go	builtin println operand 2 of type []int prints an address in gc (runtime/print.go printpointer/printslice/printeface/printiface) — the machine has no addresse
+FRONTEND-REFUSED	bigmap.go	nativefrontend: native frontend unsupported: duplicate TypeId main.T (a function-local type collides with another declaration)
+FRONTEND-REFUSED	chan/fifo.go	package-selector call os.Exit (package \
+FRONTEND-REFUSED	chan/select3.go	package-selector call time.Sleep (package \
+MATCH	chan/select.go	status=ok
+MATCH	chan/sieve1.go	status=ok
+FRONTEND-REFUSED	chan/sieve2.go	package-selector call heap.Pop (package \
+FRONTEND-REFUSED	char_lit.go	package-selector call os.Exit (package \
+FRONTEND-REFUSED	closedchan.go	package-selector call os.Exit (package \
+FRONTEND-REFUSED	const3.go	builtin println operand 2 of type float64: floats and complex print through internal/strconv.AppendFloat ('g', -1, shortest round-trip) — not modeled this sli
+MATCH	const8.go	status=ok
+FRONTEND-REFUSED	convert.go	package-selector call reflect.TypeOf (package \
+FRONTEND-REFUSED	ddd.go	anonymous non-empty struct type struct{main.I}
+MATCH	decl.go	status=ok
+MACHINE-REFUSED	divmod.go	wall-clock timeout after 30s (go: ok)
+MATCH	escape.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug006.go	package-selector call os.Exit (package \
+FRONTEND-REFUSED	fixedbugs/bug060.go	package-selector call os.Exit (package \
+MATCH	fixedbugs/bug082.go	status=ok
+MATCH	fixedbugs/bug114.go	status=ok
+MATCH	fixedbugs/bug116.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug141.go	builtin println operand 2 of type main.Empty prints an address in gc (runtime/print.go printpointer/printslice/printeface/printiface) — the machine has no add
+MATCH	fixedbugs/bug152.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug154.go	fmt.Sprintf verb %v over an argument of type float64 is outside the modeled verb/kind matrix (format \
+FRONTEND-REFUSED	fixedbugs/bug159.go	package-selector call os.Exit (package \
+MATCH	fixedbugs/bug168.go	status=ok
+MATCH	fixedbugs/bug180.go	status=ok
+MATCH	fixedbugs/bug185.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug187.go	package-selector call os.Exit (package \
+MATCH	fixedbugs/bug196.go	status=ok
+MATCH	fixedbugs/bug199.go	status=ok
+MATCH	fixedbugs/bug201.go	status=ok
+MATCH	fixedbugs/bug204.go	status=ok
+MATCH	fixedbugs/bug221.go	status=ok
+MATCH	fixedbugs/bug227.go	status=ok
+MATCH	fixedbugs/bug234.go	status=ok
+MATCH	fixedbugs/bug242.go	status=ok
+MATCH	fixedbugs/bug244.go	status=ok
+MATCH	fixedbugs/bug247.go	status=ok
+MATCH	fixedbugs/bug254.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug258.go	package-selector call math.Pow (package \
+MATCH	fixedbugs/bug261.go	status=ok
+MATCH	fixedbugs/bug272.go	status=ok
+MATCH	fixedbugs/bug281.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug286.go	wire-decode: {"message":"/home/dev/projects/golean/.claude/worktrees/stdlib-slice-3/artifacts/gotest/cases/fixedbugs__bug286/wire.json: native lowering: duplicate function id main.J.f in program","schema":"golean-observation-v1","status":"error"}
+MATCH	fixedbugs/bug291.go	status=ok
+MATCH	fixedbugs/bug293.go	status=ok
+MATCH	fixedbugs/bug296.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug312.go	builtin println operand 2 of type interface{} prints an address in gc (runtime/print.go printpointer/printslice/printeface/printiface) — the machine has no ad
+MATCH	fixedbugs/bug320.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug343.go	builtin println operand 2 of type map[string]string prints an address in gc (runtime/print.go printpointer/printslice/printeface/printiface) — the machine has
+FRONTEND-REFUSED	fixedbugs/bug346.go	package-selector call os.Exit (package \
+MISMATCH	fixedbugs/bug352.go	message/values (status=ok): go={"output":"","schema":"golean-observation-v1","status":"ok","values":[]} lean={"output":"BUG: bug352 [0]byte\nBUG: bug352 struct{}\n","schema":"golean-observation-v1","status":"ok","values":[]}
+INFRA	fixedbugs/bug356.go	no observation from native-json-run (exit 1): INTERNAL PANIC: Nat.pow exponent is too big
+FRONTEND-REFUSED	fixedbugs/bug364.go	golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time — the bound's text is at the shim call site. Unrecoverable
+MATCH	fixedbugs/bug368.go	status=ok
+MATCH	fixedbugs/bug372.go	status=ok
+MATCH	fixedbugs/bug375.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug409.go	builtin println operand 1 of type float64: floats and complex print through internal/strconv.AppendFloat ('g', -1, shortest round-trip) — not modeled this sli
+MATCH	fixedbugs/bug440_32.go	status=ok
+MATCH	fixedbugs/bug440_64.go	status=ok
+MATCH	fixedbugs/bug441.go	status=ok
+MATCH	fixedbugs/bug442.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug453.go	builtin println operand 1 of type float32: floats and complex print through internal/strconv.AppendFloat ('g', -1, shortest round-trip) — not modeled this sli
+MATCH	fixedbugs/bug454.go	status=ok
+MATCH	fixedbugs/bug456.go	status=ok
+FRONTEND-REFUSED	fixedbugs/bug491.go	basic type complex128
+MATCH	fixedbugs/issue10353.go	status=ok
+MATCH	fixedbugs/issue1304.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue15303.go	package-selector call os.Exit (package \
+MATCH	fixedbugs/issue17039.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue19246.go	package-selector call os.Exit (package \
+MATCH	fixedbugs/issue19275.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue19710.go	defer of builtin delete
+MATCH	fixedbugs/issue20530.go	status=ok
+MATCH	fixedbugs/issue21687.go	status=ok
+MATCH	fixedbugs/issue21887.go	status=ok
+MACHINE-REFUSED	fixedbugs/issue22326.go	{"message":"package init: print/println during package initialization: the init phase runs on the sequential driver, which has no output event channel (the pool driver folds StepEvent.out) — refused rather than dropping the bytes (stdlib slice 3; row builtins/print/in-init)","output":"","schema":"go (go: ok)
+MATCH	fixedbugs/issue23305.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue23522.go	package-selector call math.Copysign (package \
+MATCH	fixedbugs/issue25776.go	status=ok
+MATCH	fixedbugs/issue2615.go	status=ok
+MATCH	fixedbugs/issue26248.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue31419.go	builtin println operand 4 of type main.I prints an address in gc (runtime/print.go printpointer/printslice/printeface/printiface) — the machine has no address
+MATCH	fixedbugs/issue31782.go	status=ok
+MATCH	fixedbugs/issue32175.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue35576.go	builtin print operand 1 of type (int16, float64, string) prints an address in gc (runtime/print.go printpointer/printslice/printeface/printiface) — the machin
+MATCH	fixedbugs/issue4066.go	status=ok
+MATCH	fixedbugs/issue41780.go	status=ok
+MATCH	fixedbugs/issue4316.go	status=ok
+MACHINE-REFUSED	fixedbugs/issue43444.go	{"message":"package init: print/println during package initialization: the init phase runs on the sequential driver, which has no output event channel (the pool driver folds StepEvent.out) — refused rather than dropping the bytes (stdlib slice 3; row builtins/print/in-init)","output":"","schema":"go (go: ok)
+MATCH	fixedbugs/issue4448.go	status=ok
+MATCH	fixedbugs/issue4495.go	status=ok
+MATCH	fixedbugs/issue4518.go	status=ok
+MATCH	fixedbugs/issue4752.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue48898.go	defer of builtin panic
+MATCH	fixedbugs/issue49100b.go	status=ok
+MATCH	fixedbugs/issue49100.go	status=ok
+MATCH	fixedbugs/issue49145.go	status=ok
+MATCH	fixedbugs/issue53600.go	status=ok
+MATCH	fixedbugs/issue53653.go	status=ok
+MACHINE-REFUSED	fixedbugs/issue55122b.go	wall-clock timeout after 30s (go: ok)
+MACHINE-REFUSED	fixedbugs/issue55122.go	wall-clock timeout after 30s (go: ok)
+FRONTEND-REFUSED	fixedbugs/issue58300b.go	package-selector call runtime.FuncForPC (package \
+FRONTEND-REFUSED	fixedbugs/issue58300.go	package-selector call runtime.FuncForPC (package \
+MATCH	fixedbugs/issue59367.go	status=ok
+MATCH	fixedbugs/issue59572.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue6269.go	nativefrontend: native frontend unsupported: duplicate TypeId main.collision (a function-local type collides with another declaration)
+MATCH	fixedbugs/issue64565.go	status=ok
+MATCH	fixedbugs/issue64715.go	status=ok
+MATCH	fixedbugs/issue66066b.go	status=ok
+MACHINE-REFUSED	fixedbugs/issue66575.go	{"message":"package init: print/println during package initialization: the init phase runs on the sequential driver, which has no output event channel (the pool driver folds StepEvent.out) — refused rather than dropping the bytes (stdlib slice 3; row builtins/print/in-init)","output":"","schema":"go (go: ok)
+FRONTEND-REFUSED	fixedbugs/issue6899.go	builtin println operand 1 of type float64: floats and complex print through internal/strconv.AppendFloat ('g', -1, shortest round-trip) — not modeled this sli
+MATCH	fixedbugs/issue70481.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue71675.go	range over func(yield func(int) bool)
+MATCH	fixedbugs/issue71759.go	status=ok
+MATCH	fixedbugs/issue72860.go	status=ok
+MATCH	fixedbugs/issue73476.go	status=ok
+MATCH	fixedbugs/issue73916b.go	status=ok
+MATCH	fixedbugs/issue73916.go	status=ok
+MATCH	fixedbugs/issue73917.go	status=ok
+MATCH	fixedbugs/issue79182.go	status=ok
+MATCH	fixedbugs/issue7995.go	status=ok
+MATCH	fixedbugs/issue8011.go	status=ok
+FRONTEND-REFUSED	fixedbugs/issue8039.go	defer of builtin copy
+MATCH	fixedbugs/issue8325.go	status=ok
+MATCH	fixedbugs/issue8336.go	status=ok
+MATCH	fixedbugs/issue8961.go	status=ok
+MATCH	fixedbugs/issue9738.go	status=ok
+FRONTEND-REFUSED	float_lit.go	builtin print operand 2 of type float64: floats and complex print through internal/strconv.AppendFloat ('g', -1, shortest round-trip) — not modeled this slice
+MATCH	for.go	status=ok
+MATCH	func5.go	status=ok
+MATCH	func.go	status=ok
+MATCH	helloworld.go	status=ok
+MATCH	if.go	status=ok
+MATCH	indirect.go	status=ok
+MATCH	initcomma.go	status=ok
+MATCH	intcvt.go	status=ok
+MATCH	interface/bigdata.go	status=ok
+MATCH	interface/convert.go	status=ok
+FRONTEND-REFUSED	interface/embed.go	package-selector call os.Exit (package \
+FRONTEND-REFUSED	interface/receiver.go	method main.T.P (builtin println operand 1 of type *main.T prints an address in gc (runtime/print.go printpointer/printslice/printeface/printiface) — the mach
+MATCH	interface/returntype.go	status=ok
+FRONTEND-REFUSED	int_lit.go	package-selector call os.Exit (package \
+MATCH	iota.go	status=ok
+MATCH	ken/array.go	status=ok
+FRONTEND-REFUSED	ken/chan.go	package-selector call os.Exit (package \
+MATCH	ken/complit.go	status=ok
+FRONTEND-REFUSED	ken/convert.go	builtin println operand 3 of type main.big: floats and complex print through internal/strconv.AppendFloat ('g', -1, shortest round-trip) — not modeled this sl
+FRONTEND-REFUSED	ken/cplx0.go	builtin println operand 1 of type complex128: floats and complex print through internal/strconv.AppendFloat ('g', -1, shortest round-trip) — not modeled this 
+FRONTEND-REFUSED	ken/cplx1.go	constant kind Complex
+MATCH	ken/divmod.go	status=ok
+FRONTEND-REFUSED	ken/embed.go	method main.S.test1 (builtin println operand 2 of type *main.S prints an address in gc (runtime/print.go printpointer/printslice/printeface/printiface) — the 
+MATCH	ken/interbasic.go	status=ok
+MATCH	ken/range.go	status=ok
+MATCH	ken/rob2.go	status=ok
+MATCH	ken/robfor.go	status=ok
+MATCH	ken/robfunc.go	status=ok
+MATCH	ken/shift.go	status=ok
+FRONTEND-REFUSED	ken/slicearray.go	builtin println operand 10 of type float64: floats and complex print through internal/strconv.AppendFloat ('g', -1, shortest round-trip) — not modeled this sl
+FRONTEND-REFUSED	ken/sliceslice.go	builtin println operand 10 of type float64: floats and complex print through internal/strconv.AppendFloat ('g', -1, shortest round-trip) — not modeled this sl
+MATCH	ken/string.go	status=ok
+MATCH	literal.go	status=ok
+FRONTEND-REFUSED	method3.go	method expression (*main.T).Len over a value-receiver method (deref adapter not modeled)
+MACHINE-REFUSED	method5.go	{"message":"conversion to GoLean.GoCore.Ty.array 2 (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))","output":"","schema":"golean-observation-v1","status":"unsupported"} (go: ok)
+FRONTEND-REFUSED	method.go	method expression (*main.S).val over a value-receiver method (deref adapter not modeled)
+FRONTEND-REFUSED	nil.go	package-selector call time.Sleep (package \
+MACHINE-REFUSED	peano.go	wall-clock timeout after 30s (go: ok)
+MATCH	printbig.go	status=ok
+FRONTEND-REFUSED	print.go	builtin println operand 1 of type interface{} prints an address in gc (runtime/print.go printpointer/printslice/printeface/printiface) — the machine has no ad
+MATCH	range3.go	status=ok
+FRONTEND-REFUSED	range.go	range assignment to non-identifier target (operands evaluate per iteration)
+FRONTEND-REFUSED	recover1.go	builtin println operand 2 of type interface{} prints an address in gc (runtime/print.go printpointer/printslice/printeface/printiface) — the machine has no ad
+MACHINE-REFUSED	recover2.go	{"message":"interface satisfaction for $runtime.Error: its method set has NO record on the wire (a method-carrying type without a MethodSetRecord), so `missing method Error' would be an answer derived from no information (BUG-009/BUG-053 class)","output":"","schema":"golean-observation-v1","status": (go: ok)
+FRONTEND-REFUSED	recover3.go	builtin println operand 1 of type main.m prints an address in gc (runtime/print.go printpointer/printslice/printeface/printiface) — the machine has no address
+MATCH	reorder2.go	status=ok
+MATCH	simassign.go	status=ok
+MACHINE-REFUSED	stack.go	wall-clock timeout after 30s (go: ok)
+FRONTEND-REFUSED	typeparam/dictionaryCapture.go	method expression (*main.s[int]).g0 over a value-receiver method (deref adapter not modeled)
+FRONTEND-REFUSED	typeparam/dottype.go	builtin println operand 1 of type (int, bool) prints an address in gc (runtime/print.go printpointer/printslice/printeface/printiface) — the machine has no ad
+MATCH	typeparam/eface.go	status=ok
+MATCH	typeparam/issue51522a.go	status=ok
+MATCH	typeparam/issue51522b.go	status=ok
+FRONTEND-REFUSED	typeparam/mdempsky/14.go	method expression (*main.AnyInt[main.MyInt]).M over a value-receiver method (deref adapter not modeled)
+MATCH	typeparam/mdempsky/20.go	status=ok
+MATCH	typeparam/shape1.go	status=ok
+MISMATCH	typeparam/typeswitch3.go	message/values (status=ok): go={"output":"myint 6\nT 7\nother 8\nT 8\nother 7\nother 9\nT 10\nmyint 11\nT 12\n","schema":"golean-observation-v1","status":"ok","values":[]} lean={"output":"myint 6\nT 7\nother 8\nT 8\nother 7\nother 9\nT 10\nT 11\nT 12\n","schema":"golean-observation-v1","status":"ok","values":[]}
+MATCH	typeparam/typeswitch4.go	status=ok
+FRONTEND-REFUSED	typeparam/typeswitch5.go	builtin println operand 2 of type float64: floats and complex print through internal/strconv.AppendFloat ('g', -1, shortest round-trip) — not modeled this sli
+MATCH	typeparam/typeswitch7.go	status=ok
+FRONTEND-REFUSED	typeswitch.go	package-selector call os.Exit (package \
+MATCH	varinit.go	status=ok
+FRONTEND-REFUSED	zerosize.go	builtin print operand 2 of type *[0]int prints an address in gc (runtime/print.go printpointer/printslice/printeface/printiface) — the machine has no addresse

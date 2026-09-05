@@ -112,6 +112,11 @@ preflight() {
 
 preflight_machine() {
   [[ -x "$GOLEAN_BIN" ]] || die "no golean binary at $GOLEAN_BIN — build it first: scripts/capped lake build golean"
+  # The harness binary (stdlib slice 3): its --split-stderr mode recovers
+  # the program's fd-2 prefix (the `output` observation) — built once.
+  mkdir -p "$OUT/bin"
+  GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go build -o "$OUT/bin/coverageharness" ./tools/coverageharness || die "could not build tools/coverageharness (fail closed)"
+  HARNESS_BIN="$OUT/bin/coverageharness"
 }
 
 # Directive extraction, mirroring testdir_test.go run(): the action is the
@@ -229,12 +234,18 @@ run_one() {
 
   # --- Go oracle -------------------------------------------------------
   # Same env pins as scripts/diff-coverage's go_run_oracle: GOPATH mode,
-  # modern panic(nil) semantics, shared build cache.
+  # modern panic(nil) semantics, shared build cache. Since stdlib slice 3
+  # stdout and stderr are captured SEPARATELY (the `output` observation is
+  # the program's fd-2 prefix — print/println — recovered fail-closed by
+  # the harness's --split-stderr mode, exactly as scripts/diff-coverage
+  # does); the combined text is still what the .out comparison and the
+  # status classification read (the testdir rule compares combined output).
   local go_out go_rc
-  go_out="$(cd "$dir" && timeout "$GO_TIMEOUT" env GO111MODULE=off GODEBUG=panicnil=0 GOCACHE="$GO_BUILD_CACHE" go run main.go 2>&1)"
+  (cd "$dir" && timeout "$GO_TIMEOUT" env GO111MODULE=off GODEBUG=panicnil=0 GOCACHE="$GO_BUILD_CACHE" go run main.go > oracle.stdout 2> oracle.stderr)
   go_rc=$?
+  go_out="$(cat "$dir/oracle.stdout" "$dir/oracle.stderr")"
 
-  local go_status="" go_obs="" go_msg="" output_flag=""
+  local go_status="" go_obs="" go_msg="" output_flag="" out_lit split_rc=0
   if [[ "$go_rc" -eq 124 ]]; then
     printf 'INFRA\t%s\t%s\n' "$rel" "go run timed out after ${GO_TIMEOUT}s"
     return
@@ -246,9 +257,10 @@ run_one() {
       return
     fi
     go_status="ok"
-    go_obs='{"schema":"golean-observation-v1","status":"ok","values":[]}'
-    if [[ -n "$go_out" ]]; then
-      output_flag="output-uncompared(${#go_out}B): the machine has no stdout observable; "
+    if [[ -s "$dir/oracle.stdout" ]]; then
+      # fd 1 is outside the machine's observable (os.Stdout is gate G7,
+      # not this slice): the row is status-compared with the flag kept.
+      output_flag="output-uncompared($(wc -c < "$dir/oracle.stdout")B on stdout: no stdout observable — G7); "
     fi
   elif [[ "$go_out" == *"fatal error: all goroutines are asleep - deadlock!"* ]]; then
     go_status="deadlock"
@@ -267,6 +279,20 @@ run_one() {
     printf 'INFRA\t%s\t%s\n' "$rel" "go run exited $go_rc without panic/fatal: $(one_line "${go_out:0:200}")"
     return
   fi
+  # The `output` field: the program's fd-2 prefix (stderr split by the
+  # harness under the status' rule); an ambiguous split is an INFRA row —
+  # the observation cannot be assembled, so nothing is compared.
+  out_lit="$("$HARNESS_BIN" --split-stderr "$dir/oracle.stderr" --expected-status "$go_status" 2>"$dir/oracle.split.err")" || split_rc=$?
+  if [[ "$split_rc" -ne 0 ]]; then
+    printf 'INFRA\t%s\t%s\n' "$rel" "oracle stderr split failed (harness exit $split_rc): $(one_line "$(cat "$dir/oracle.split.err")")"
+    return
+  fi
+  if [[ "$go_status" == "ok" ]]; then
+    go_obs="{\"output\":$out_lit,\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[]}"
+  else
+    go_obs="{\"output\":$out_lit,${go_obs#\{}"
+  fi
+
 
   # --- Frontend --------------------------------------------------------
   local wire="$dir/wire.json" fe_out fe_rc
@@ -318,7 +344,9 @@ run_one() {
 
   # Same status — compare the full observations with the repo's own
   # comparator (message equality for panic/fatal/deadlock; values for ok —
-  # main returns nothing, so the ok shape is the empty-values observation).
+  # main returns nothing, so the ok shape is the empty-values observation;
+  # since stdlib slice 3 the program OUTPUT (fd 2: print/println) is
+  # compared byte-exactly on every status).
   if "$GOLEAN_BIN" observation-eq --left "$lean_out" --right "$go_obs" >/dev/null 2>&1; then
     printf 'MATCH\t%s\t%s\n' "$rel" "${output_flag}status=$go_status"
   else
@@ -385,7 +413,7 @@ case "$cmd" in
     # Pre-warm the frontend build once so parallel `go run` calls hit cache.
     env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go build -o /dev/null ./tools/nativefrontend || die "tools/nativefrontend does not build"
 
-    export GOTEST_DIR OUT GO_TIMEOUT LEAN_TIMEOUT GOLEAN_BIN GO_BUILD_CACHE ROOT
+    export GOTEST_DIR OUT GO_TIMEOUT LEAN_TIMEOUT GOLEAN_BIN HARNESS_BIN GO_BUILD_CACHE ROOT
     xargs -a "$selection" -P "$jobs" -I '{}' -- "$0" __worker '{}'
     # Assemble: one row per selected case, fail-closed on a missing row
     # (a killed worker must surface, never vanish).

@@ -1,0 +1,37 @@
+== builtins__float-bits__canonical-nan-refused
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"uint64","tag":"int","value":18444492273895866368}]}
+-- stderr:
+== builtins__float-bits__float32
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"uint32","tag":"int","value":1069547520},{"kind":"uint32","tag":"int","value":2143289345},{"kind":"uint32","tag":"int","value":2139095041},{"kind":"uint32","tag":"int","value":2147483648},{"kind":"uint32","tag":"int","value":1036831949},{"kind":"uint32","tag":"int","value":2139095040},{"tag":"bool","value":true}]}
+-- stderr:
+== builtins__float-bits__frombits-arith
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":6},{"tag":"bool","value":true},{"kind":"uint64","tag":"int","value":4612811918334230528},{"kind":"uint64","tag":"int","value":4604180019048437077}]}
+-- stderr:
+== builtins__float-bits__literals-and-zero
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"uint64","tag":"int","value":4607182418800017408},{"kind":"uint64","tag":"int","value":13836183955189006336},{"kind":"uint64","tag":"int","value":4591870180066957722},{"kind":"uint64","tag":"int","value":9094988921128908188},{"kind":"uint64","tag":"int","value":9223372036854775808},{"kind":"uint64","tag":"int","value":0},{"kind":"uint64","tag":"int","value":9218868437227405312}]}
+-- stderr:
+== builtins__float-bits__nan-arith-payload-refused
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"uint64","tag":"int","value":9221120237041090561}]}
+-- stderr:
+== builtins__float-bits__nan-arith-payload-refused__canonical-roundtrip
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"uint64","tag":"int","value":9221120237041090560}]}
+-- stderr:
+== builtins__float-bits__nan-semantics
+{"schema":"golean-observation-v1","status":"ok","values":[{"tag":"bool","value":true},{"tag":"bool","value":false},{"tag":"bool","value":false},{"kind":"uint64","tag":"int","value":9221120237041090561},{"kind":"uint64","tag":"int","value":18444492273895866369}]}
+-- stderr:
+== builtins__float-bits__roundtrip-payloads
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"uint64","tag":"int","value":9221120237041090561},{"kind":"uint64","tag":"int","value":9218868437227405313},{"kind":"uint64","tag":"int","value":18444492273895866368},{"kind":"uint64","tag":"int","value":9223372036854775808},{"kind":"uint64","tag":"int","value":0},{"kind":"uint64","tag":"int","value":9218868437227405312},{"kind":"uint64","tag":"int","value":18442240474082181120},{"kind":"uint64","tag":"int","value":1},{"kind":"uint64","tag":"int","value":9218868437227405311},{"kind":"uint64","tag":"int","value":4607182418800017408}]}
+-- stderr:
+9221120237041090561
+9218868437227405313
+18444492273895866368
+9223372036854775808
+0
+9218868437227405312
+18442240474082181120
+1
+9218868437227405311
+4607182418800017408
+== builtins__float-bits__widening
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"uint64","tag":"int","value":4609434218613702656},{"kind":"uint32","tag":"int","value":1065353216}]}
+-- stderr:

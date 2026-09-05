@@ -92,9 +92,15 @@ def ExecState.nextAddr (state : ExecState) : Nat := state.heap.size
 
 /-- The driver's READOUT: the subject's result values at its terminal
 (renamed from `Result` in wave (iii) — `Result` is now the apply-boundary
-outcome, Value.lean). -/
+outcome, Value.lean), plus the program's OUTPUT — the bytes `print`/
+`println` wrote to fd 2, folded from the pool's `StepEvent.out` events in
+step order (stdlib slice 3, 2026-09-04; design gate G-OUT RULED [USER]:
+«Program output is a per-step EVENT (`StepEvent.out`), folded by the
+driver into `Readout`, not a `Store` field»). `output` defaults to empty
+so the readout of a run that never prints is literally the old readout. -/
 structure Readout where
   values : Array GoValue
+  output : GoString := GoString.empty
   deriving Repr, BEq
 
 /-- Statement-execution outcome classification. Survives the reshape S4

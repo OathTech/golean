@@ -689,6 +689,15 @@ structure StepEvent where
   who : Nat
   action : StepAction
   picks : List PickRecord
+  /-- The bytes this step wrote to fd 2 (stdlib slice 3, 2026-09-04;
+  G-OUT): one element per `print`/`println` apply step
+  (`printOut?`, Machine.lean), empty for every other step. The drivers
+  fold these in step order (`execProgLoopOut`); the fold IS the program
+  output the differential compares. Output is a TRACE of the run, never a
+  heap cell (design note §1): for the reasoning consumer a spec about
+  printed bytes is a statement about the event trace, exactly parallel
+  to a spec about the access trace. -/
+  out : List GoString := []
 
 /-- The per-clause channel of a select's evaluated entry operands,
 extracted TOTALLY (no exceptions): `(isSend, loc)` per clause, `none`
@@ -1095,7 +1104,7 @@ def stepThread (s : ExecState) (threads : Array Config) (i : Nat)
   | some c =>
     if isBlockedConfig c then do
       let (c', s') ← resumeThread s c
-      return (threads.setIfInBounds i c', s', ch, ⟨i, .woke, []⟩)
+      return (threads.setIfInBounds i c', s', ch, ⟨i, .woke, [], []⟩)
     else
       match opDoneInner c with
       | some inner =>
@@ -1107,13 +1116,13 @@ def stepThread (s : ExecState) (threads : Array Config) (i : Nat)
           -- dedicated arm exists so the step event says
           -- `.opDoneStrip` and no waiter scan runs on a marker.
           return (threads.setIfInBounds i inner, s, ch,
-            ⟨i, .opDoneStrip, []⟩)
+            ⟨i, .opDoneStrip, [], []⟩)
       | none =>
       match spawnPlan c with
       | some (cv, args, k) => do
           let (parent', child, s', ch') ← spawnStep s cv args k ch
           return ((threads.setIfInBounds i parent').push child, s', ch',
-            ⟨i, .spawned threads.size, []⟩)
+            ⟨i, .spawned threads.size, [], []⟩)
       | none => do
           match ← arrivalPlan s threads i c ch with
           | (some (.pair bc cs), ch₁, ps₁) =>
@@ -1129,7 +1138,7 @@ def stepThread (s : ExecState) (threads : Array Config) (i : Nat)
                   | some cand => do
                       let (ts', s'') ← applyPairing s threads i bc cand
                       return (ts', s'', ch₂,
-                        ⟨i, .paired cand.2.partnerIdx, ps₁ ++ ps₂⟩)
+                        ⟨i, .paired cand.2.partnerIdx, ps₁ ++ ps₂, []⟩)
                   | none => throw (.internal "waiter pick out of range")
           | (some (.commit cl env k), ch₁, ps₁) => do
               -- The L2-picked clause is cell-only ready: commit it
@@ -1138,7 +1147,7 @@ def stepThread (s : ExecState) (threads : Array Config) (i : Nat)
               -- pick was drawn over).
               let (c', s') ← commitClause s env k cl
               return (threads.setIfInBounds i c', s', ch₁,
-                ⟨i, .selectCommit cl, ps₁⟩)
+                ⟨i, .selectCommit cl, ps₁, []⟩)
           | (none, ch₁, ps₁) =>
               match selectApplyPlan c with
               | some (v, clauses, default?, done, env, k') =>
@@ -1156,14 +1165,18 @@ def stepThread (s : ExecState) (threads : Array Config) (i : Nat)
                       return (threads.setIfInBounds i c', s', ch₂,
                         ⟨i, match cl? with
                             | some cl => .selectCommit cl
-                            | none => .selectPass, ps₁⟩)
+                            | none => .selectPass, ps₁, []⟩)
                   | .panic msg =>
                       let (c', s') := deliver s k' id (.panic msg)
-                      return (threads.setIfInBounds i c', s', ch₁, ⟨i, .selectPass, ps₁⟩)
+                      return (threads.setIfInBounds i c', s', ch₁, ⟨i, .selectPass, ps₁, []⟩)
               | none => do
                   let (c', s', ch₂) ← stepFn s c ch₁
+                  -- The OUTPUT EVENT (stdlib slice 3): a `print`/`println`
+                  -- apply position's bytes, derived from the PRE-configuration
+                  -- by the same `renderPrint` the step just validated through
+                  -- (`printOut?`); `[]` at every other configuration.
                   return (threads.setIfInBounds i c', s', ch₂,
-                    ⟨i, .privateStep, ps₁⟩)
+                    ⟨i, .privateStep, ps₁, (printOut? c).toList⟩)
 
 /-- `stepThread` lifted back into a `MultiConfig` (the stepped goroutine
 becomes the running one). -/
@@ -1912,6 +1925,120 @@ def execProgLoop : Nat → MultiConfig → RaceState → Choices →
                       let r' ← raceUpdate m.shared m.threads ev m' r
                       execProgLoop fuel m' r' choices'
 
+/-- **The output-folding driver** (stdlib slice 3, 2026-09-04; G-OUT):
+`execProgLoop` with the pool's `StepEvent.out` events folded in step
+order into `acc`, returned on BOTH paths — a Go terminal (`.error
+(.panic …)`, `.fatal`, `.deadlock`, `.raceDetected`) carries the bytes
+printed BEFORE it exactly as gc's stderr carries them before the abort
+report (G-OUT: «`Obs.terminal` carries the stderr prefix»); refusals
+and `fuelOut` carry the prefix too (the CLI prints it for diagnosis; no
+oracle compares it). Byte-identical control structure to `execProgLoop`
+— same terminal classification order, same L5 window, same detector
+ride-along — and `execProgLoopOut_snd` pins the outcome component to
+`execProgLoop` exactly, so every theorem about the old driver
+(`execProgLoop_mono`, `_single`, `_unfold`, the certificate checker's
+replay) transfers to this one's outcome unchanged. The fold is
+concatenation in step order, which IS the interleaving the membership
+lane enumerates for concurrent printers (latitude inventory R18). -/
+def execProgLoopOut : Nat → MultiConfig → RaceState → Choices → GoString →
+    GoString × Except Stop (ExecOutcome × Choices)
+  | fuel, m, r, choices, acc =>
+      if m.threads.isEmpty then
+        (acc, throw (.internal "thread pool without a main goroutine"))
+      else
+        match m.panicMsg? with
+        | some msg => (acc, throw (.panic msg))
+        | none =>
+            match m.mainOutcome? with
+            | some out =>
+                (match runnableIdxs m.shared m.threads with
+                | [] => (acc, return (out, choices))
+                | _ :: _ =>
+                    let (pick, choices₁) := Choices.consumeAt .l5ExitWindow 2 choices
+                    if pick == 0 then (acc, return (out, choices₁))
+                    else
+                      match fuel with
+                      | 0 => (acc, throw .fuelOut)
+                      | fuel + 1 =>
+                          match stepMulti m choices₁ with
+                          | .error e => (acc, throw e)
+                          | .ok (m', choices', ev) =>
+                              match raceUpdate m.shared m.threads ev m' r with
+                              | .error e => (acc, throw e)
+                              | .ok r' =>
+                                  execProgLoopOut fuel m' r' choices'
+                                    (ev.out.foldl GoString.append acc))
+            | none =>
+                if (runnableIdxs m.shared m.threads).isEmpty then
+                  (acc, throw .deadlock)
+                else
+                  match fuel with
+                  | 0 => (acc, throw .fuelOut)
+                  | fuel + 1 =>
+                      match stepMulti m choices with
+                      | .error e => (acc, throw e)
+                      | .ok (m', choices', ev) =>
+                          match raceUpdate m.shared m.threads ev m' r with
+                          | .error e => (acc, throw e)
+                          | .ok r' =>
+                              execProgLoopOut fuel m' r' choices'
+                                (ev.out.foldl GoString.append acc)
+
+/-- The outcome component of the output-folding driver IS the old
+driver: the fold changes nothing about what the run reaches. -/
+theorem execProgLoopOut_snd (fuel : Nat) (m : MultiConfig) (r : RaceState)
+    (choices : Choices) (acc : GoString) :
+    (execProgLoopOut fuel m r choices acc).2 = execProgLoop fuel m r choices := by
+  induction fuel generalizing m r choices acc with
+  | zero =>
+      unfold execProgLoopOut execProgLoop
+      split
+      · rfl
+      · split
+        · rfl
+        · split
+          · split
+            · rfl
+            · simp only
+              split
+              · rfl
+              · rfl
+          · split
+            · rfl
+            · rfl
+  | succ n ih =>
+      unfold execProgLoopOut execProgLoop
+      split
+      · rfl
+      · split
+        · rfl
+        · split
+          · split
+            · rfl
+            · simp only
+              split
+              · rfl
+              · simp only [bind, Except.bind]
+                cases hs : stepMulti m (Choices.consumeAt .l5ExitWindow 2 choices).2 with
+                | error e => rfl
+                | ok v =>
+                  obtain ⟨m', choices', ev⟩ := v
+                  dsimp only
+                  cases hr : raceUpdate m.shared m.threads ev m' r with
+                  | error e => rfl
+                  | ok r' => exact ih _ _ _ _
+          · split
+            · rfl
+            · simp only [bind, Except.bind]
+              cases hs : stepMulti m choices with
+              | error e => rfl
+              | ok v =>
+                obtain ⟨m', choices', ev⟩ := v
+                dsimp only
+                cases hr : raceUpdate m.shared m.threads ev m' r with
+                | error e => rfl
+                | ok r' => exact ih _ _ _ _
+
 /-- **The `execStmt`-shaped POOL wrapper** (D8's carrier swap): run
 `prog` as goroutine 0 of a fresh pool over `σ`, with the race detector
 armed from an empty `RaceState`. On programs that never spawn this
@@ -1926,6 +2053,14 @@ def execProg (fuel : Nat) (env : LocalEnv) (σ : ExecState) (choices : Choices)
     (prog : Stmt) : Except Stop (ExecOutcome × Choices) :=
   execProgLoop fuel ⟨#[.exec prog env .stop], σ, 0⟩ {} choices
 
+/-- A whole-program run's RESULT (stdlib slice 3; G-OUT): the readout —
+values AND output — at main's normal terminal, or the `Stop` the run
+ended on TOGETHER WITH the output folded before it (a panicking program's
+printed prefix is an observable gc's stderr carries; `Obs.terminal`
+carries the stderr prefix). The old `Except Stop Readout` shape is the
+`(·.1)` projection (`runProgramPoolM`). -/
+abbrev RunResult := Except (Stop × GoString) Readout
+
 /-- The whole-PROGRAM pool entry: `runProgramM`'s wiring (shared setup —
 subject lookup, arity, global seeding, `StateWf` assert, the SEQUENTIAL
 `$pkginit` phase, argument binding, result pinning) with the subject
@@ -1933,12 +2068,23 @@ run on the POOL. `go` during `$pkginit` stays fail-closed (the init
 phase runs on the sequential driver — the decided slice scope). Result
 readout: main's pinned result locations in the shared state at main's
 exit, exactly the sequential driver's readout. -/
+def runProgramPoolOutM (fuel : Nat) (program : Program) (name : String)
+    (args : Array GoValue) (choices : Choices := []) : RunResult :=
+  match runProgramSetupM fuel program name args choices with
+  | .error e => .error (e, GoString.empty)
+  | .ok (c₀, s₀, resultLocs, choices₁) =>
+      match execProgLoopOut fuel ⟨#[c₀], s₀, 0⟩ {} choices₁ GoString.empty with
+      | (out, .error e) => .error (e, out)
+      | (out, .ok (.normal sF, _)) =>
+          match loadMany sF resultLocs with
+          | .ok vs => .ok { values := vs.toArray, output := out }
+          | .error e => .error (e, out)
+      | (out, .ok _) => .error (.internal "main terminal outside its barrier frame", out)
+
+@[inherit_doc runProgramPoolOutM]
 def runProgramPoolM (fuel : Nat) (program : Program) (name : String)
-    (args : Array GoValue) (choices : Choices := []) : Except Stop Readout := do
-  let (c₀, s₀, resultLocs, choices₁) ← runProgramSetupM fuel program name args choices
-  match ← execProgLoop fuel ⟨#[c₀], s₀, 0⟩ {} choices₁ with
-  | (.normal sF, _) => return { values := (← loadMany sF resultLocs).toArray }
-  | _ => throw (.internal "main terminal outside its barrier frame")
+    (args : Array GoValue) (choices : Choices := []) : Except Stop Readout :=
+  (runProgramPoolOutM fuel program name args choices).mapError (·.1)
 
 /-! ## The spawn-extended per-goroutine relation (the `Step` spawn
 component, D1: the relation stays per-thread with a spawn component;
@@ -2069,5 +2215,10 @@ instance (m : MultiConfig) : Decidable (MultiWf m) := by
 def runProgramPoolIntsM (fuel : Nat) (program : Program) (name : String)
     (args : Array Int) (choices : List Nat := []) : Except Stop Readout :=
   runProgramPoolM fuel program name (args.map GoValue.int) choices
+
+@[inherit_doc runProgramPoolOutM]
+def runProgramPoolOutIntsM (fuel : Nat) (program : Program) (name : String)
+    (args : Array Int) (choices : List Nat := []) : RunResult :=
+  runProgramPoolOutM fuel program name (args.map GoValue.int) choices
 
 end GoLean.GoCore.Machine

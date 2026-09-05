@@ -1,0 +1,123 @@
+# deps/go/src/runtime/print.go @ go1.26.5 (deps/go pin c19862e5f8) — the lines the machine's renderPrint transcribes
+60:
+61:// The compiler emits calls to printlock and printunlock around
+62:// the multiple calls that implement a single Go print or println
+63:// statement. Some of the print helpers (printslice, for example)
+64:// call print recursively. There is also the problem of a crash
+65:// happening during the print routines and needing to acquire
+66:// the print lock to print information about the crash.
+67:// For both these reasons, let a thread acquire the printlock 'recursively'.
+68:
+69:func printlock() {
+70:	mp := getg().m
+71:	mp.locks++ // do not reschedule between printlock++ and lock(&debuglock).
+72:	mp.printlock++
+73:	if mp.printlock == 1 {
+74:		lock(&debuglock)
+75:	}
+76:	mp.locks-- // now we know debuglock is held and holding up mp.locks for us.
+77:}
+78:
+79:func printunlock() {
+80:	mp := getg().m
+81:	mp.printlock--
+82:	if mp.printlock == 0 {
+83:		unlock(&debuglock)
+84:	}
+85:}
+86:
+87:// write to goroutine-local buffer if diverting output,
+88:// or else standard error.
+89:func gwrite(b []byte) {
+90:	if len(b) == 0 {
+112:
+113:func printnl() {
+114:	printstring("\n")
+115:}
+116:
+117:func printbool(v bool) {
+118:	if v {
+119:		printstring("true")
+120:	} else {
+121:		printstring("false")
+122:	}
+123:}
+124:
+125:// float64 requires 1+17+1+1+1+3 = 24 bytes max (sign+digits+decimal point+e+sign+exponent digits).
+126:const float64Bytes = 24
+127:
+128:func printfloat64(v float64) {
+129:	var buf [float64Bytes]byte
+130:	gwrite(strconv.AppendFloat(buf[:0], v, 'g', -1, 64))
+131:}
+132:
+133:// float32 requires 1+9+1+1+1+2 = 15 bytes max (sign+digits+decimal point+e+sign+exponent digits).
+134:const float32Bytes = 15
+135:
+136:func printfloat32(v float32) {
+137:	var buf [float32Bytes]byte
+138:	gwrite(strconv.AppendFloat(buf[:0], float64(v), 'g', -1, 32))
+139:}
+140:
+141:// complex128 requires 24+24+1+1+1 = 51 bytes max (paren+float64+float64+i+paren).
+142:const complex128Bytes = 2*float64Bytes + 3
+143:
+144:func printcomplex128(c complex128) {
+145:	var buf [complex128Bytes]byte
+146:	gwrite(strconv.AppendComplex(buf[:0], c, 'g', -1, 128))
+147:}
+148:
+149:// complex64 requires 15+15+1+1+1 = 33 bytes max (paren+float32+float32+i+paren).
+150:const complex64Bytes = 2*float32Bytes + 3
+151:
+152:func printcomplex64(c complex64) {
+153:	var buf [complex64Bytes]byte
+154:	gwrite(strconv.AppendComplex(buf[:0], complex128(c), 'g', -1, 64))
+155:}
+156:
+157:func printuint(v uint64) {
+158:	// Note: Avoiding strconv.AppendUint so that it's clearer
+159:	// that there are no allocations in this routine.
+160:	// cmd/link/internal/ld.TestAbstractOriginSanity
+161:	// sees the append and doesn't realize it doesn't allocate.
+162:	var buf [20]byte
+163:	i := strconv.RuntimeFormatBase10(buf[:], v)
+164:	gwrite(buf[i:])
+165:}
+166:
+167:func printint(v int64) {
+168:	// Note: Avoiding strconv.AppendUint so that it's clearer
+169:	// that there are no allocations in this routine.
+170:	// cmd/link/internal/ld.TestAbstractOriginSanity
+171:	// sees the append and doesn't realize it doesn't allocate.
+172:	neg := v < 0
+173:	u := uint64(v)
+174:	if neg {
+175:		u = -u
+176:	}
+177:	var buf [20]byte
+178:	i := strconv.RuntimeFormatBase10(buf[:], u)
+249:func printpointer(p unsafe.Pointer) {
+250:	printhex(uint64(uintptr(p)))
+251:}
+252:func printuintptr(p uintptr) {
+253:	printhex(uint64(p))
+254:}
+255:
+256:func printstring(s string) {
+257:	gwrite(bytes(s))
+258:}
+259:
+260:func printslice(s []byte) {
+261:	sp := (*slice)(unsafe.Pointer(&s))
+262:	print("[", len(s), "/", cap(s), "]")
+263:	printpointer(sp.array)
+264:}
+265:
+266:func printeface(e eface) {
+267:	print("(", e._type, ",", e.data, ")")
+268:}
+269:
+270:func printiface(i iface) {
+271:	print("(", i.tab, ",", i.data, ")")
+272:}

@@ -622,6 +622,10 @@ partial def initLoop (fuel : Nat) (σ : ExecState) (c : Config) (a : Acc) :
     match fuel with
     | 0 => return .inr { status := "fuel-out", acc := a }
     | fuel' + 1 =>
+      -- The init-phase print guard (stdlib slice 3): mirrors
+      -- `runInitConfig` — no output fold on the sequential phase.
+      if let some e := initPrintRefusal? c then
+        return .inr { status := (markInitPhase e).status, acc := a }
       let tagged := seqSite σ c
       let acct := CLI.stepNeedsSeq σ c
       let a := match tagged, acct with
@@ -773,7 +777,7 @@ def traceStream (program : Program) (functionName : String) (args : Array Int)
     | .ok (st, j, leftover) => (st, j.compress,
         (some (if leftover.isEmpty then (none : Option Nat) else some (stream.length - leftover.length)) : Option (Option Nat)))
     | .error e => (e.status, (CLI.observationOfRun (.error e)).compress, none)
-  let realObs := (CLI.observationOfRun (runProgramPoolIntsM fuel program functionName args stream)).compress
+  let realObs := (CLI.observationOfRunOut (runProgramPoolOutIntsM fuel program functionName args stream)).compress
   let mut agree : List String := []
   if enumStatus != out.status then
     agree := agree ++ [s!"status: tracer {out.status} vs enumerator {enumStatus}"]

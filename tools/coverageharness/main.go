@@ -22,6 +22,10 @@ type config struct {
 	subject string
 	args    string
 	status  string
+	// splitStderr: the second mode (stdlib slice 3) — read a captured
+	// oracle stderr and print the program's OWN output prefix as a JSON
+	// string literal (split.go), exit 3 with the cause on any ambiguity.
+	splitStderr string
 }
 
 func main() {
@@ -31,7 +35,28 @@ func main() {
 	flag.StringVar(&cfg.subject, "subject", "", "subject function")
 	flag.StringVar(&cfg.args, "args", "-", "comma-separated integer args or -")
 	flag.StringVar(&cfg.status, "expected-status", "ok", "expected Go status: ok, panic, deadlock, race, or fatal")
+	flag.StringVar(&cfg.splitStderr, "split-stderr", "", "SPLIT MODE: path of a captured `go run` stderr; prints the program's output prefix for --expected-status as a JSON string literal (stdlib slice 3)")
 	flag.Parse()
+
+	if cfg.splitStderr != "" {
+		raw, err := os.ReadFile(cfg.splitStderr)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(2)
+		}
+		prefix, err := splitStderr(raw, cfg.status)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(3)
+		}
+		lit, err := outputLiteral(prefix)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(2)
+		}
+		fmt.Print(lit)
+		return
+	}
 
 	if err := run(cfg); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -475,6 +500,9 @@ func _goleanReflectValue(value _golean_reflect.Value) (any, error) {
 	}
 }
 
+// The "output" field (stdlib slice 3) is NOT written here: a process cannot
+// observe its own fd 2, so the runner captures stderr separately and splices
+// the literal in (scripts/diff-coverage inject_output, via --split-stderr).
 func _goleanPrintOk(values []any) {
 	if err := _golean_json.NewEncoder(_golean_os.Stdout).Encode(map[string]any{"schema": "golean-observation-v1", "status": "ok", "values": values}); err != nil {
 		panic(err)

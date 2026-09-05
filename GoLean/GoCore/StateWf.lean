@@ -169,6 +169,7 @@ def Expr.locSup : Expr → Nat
   | .global _ => 0
   | .convert _ e | .bytesFromString e | .stringFromByteSlice e
   | .stringFromRune e | .runesFromString e | .stringFromRuneSlice e
+  | .floatBits _ e
   | .bitNeg e | .neg e | .not e | .deref e _
   | .addrOfDeref e
   | .fieldGet e _ _ | .fieldAddr e _ _ | .toInterface _ _ e
@@ -275,6 +276,8 @@ def Stmt.locSup : Stmt → Nat
   -- loc-free.
   | .atomicStmt _ _ args targets =>
       max (exprListSup args.toList) (assigneeListSup targets.toList)
+  -- print/println (stdlib slice 3): the head is loc-free.
+  | .print _ args => exprListSup args.toList
 
 def stmtListSup : List Stmt → Nat
   | [] => 0
@@ -2892,6 +2895,21 @@ theorem zip_snd_sup_le {keys : List Int} {vs : List GoValue} :
   have hp' : p ∈ keys.zip vs := by simpa using hp
   exact supBy_mem (List.of_mem_zip hp').2
 
+/-- The `float-bits` primitive yields a scalar: no location in the result. -/
+theorem floatBitsApply_locSup {op : FloatBitsOp} {v r : GoValue}
+    (h : floatBitsApply op v = .ok r) : GoValue.locSup r = 0 := by
+  unfold floatBitsApply at h
+  split at h
+  · split at h
+    · simp [unsupported, throw, throwThe, MonadExceptOf.throw] at h
+    · simp only [pure_eq_ok, Except.ok.injEq] at h; subst h; simp [GoValue.locSup]
+  · split at h
+    · simp [unsupported, throw, throwThe, MonadExceptOf.throw] at h
+    · simp only [pure_eq_ok, Except.ok.injEq] at h; subst h; simp [GoValue.locSup]
+  · simp only [pure_eq_ok, Except.ok.injEq] at h; subst h; simp [GoValue.locSup]
+  · simp only [pure_eq_ok, Except.ok.injEq] at h; subst h; simp [GoValue.locSup]
+  · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+
 set_option maxHeartbeats 1600000 in
 theorem applyStrictOp_wf {σ : ExecState} {op : StrictOp} {vs : List GoValue}
     {v : GoValue} {σ' : ExecState}
@@ -3507,6 +3525,10 @@ theorem applyStrictOp_wf {σ : ExecState} {op : StrictOp} {vs : List GoValue}
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨sl, hsl, vals, hvals, r, hr, rfl, rfl⟩ := h
     exact strictWfSame hw (by simp [GoValue.locSup])
+  · -- floatBits (stdlib slice 3): a pure bit reinterpretation, loc-free result
+    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨r, hr, rfl, rfl⟩ := h
+    exact strictWfSame hw (by rw [floatBitsApply_locSup hr]; exact Nat.zero_le _)
   · -- catch-all
     simp at h
 
@@ -4065,6 +4087,10 @@ theorem applyStmtOpCore_wf {σ : ExecState} {op : StmtOp}
       have := valueAsLoc_locSup htloc
       omega
     · simp at h
+  · -- print (stdlib slice 3): validates the operands, state unchanged
+    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
+    obtain ⟨_, _, rfl⟩ := h
+    exact stmtOpPres_refl hw
   · -- appendSlice: dispatches through applyStmtOp
     simp only [throw, throwThe, MonadExceptOf.throw] at h
     cases h
@@ -4324,6 +4350,15 @@ theorem stmtPlan_locSup {stmt : Stmt} {op : StmtOp} {nt : Nat} {es : List Expr}
     first
     | (simp [stmtPlan] at h; done)
     | skip
+  case print newline args =>
+    simp only [stmtPlan] at h
+    split at h
+    · simp at h
+    · rename_i e rest heq
+      simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨-, -, rfl⟩ := h
+      simp only [Stmt.locSup, heq]
+      exact Nat.le_refl _
   case allocNew target value typ =>
     simp only [stmtPlan] at h
     obtain ⟨te, hte, h⟩ := Option.bind_eq_some_iff.mp h

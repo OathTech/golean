@@ -74,6 +74,36 @@ inductive TypeDef where
   | opaqueDecl (reason : String)
   deriving Repr, BEq
 
+/-- The four documented bit-reinterpretation functions of `math`
+(`Float64bits`/`Float64frombits`/`Float32bits`/`Float32frombits` —
+`deps/go/src/math/unsafe.go:21-41` @ go1.26.5; `math` is not a
+source-through package, so the `godoc:` grammar — pinned-manifest
+packages only, gate G3 — does not apply and the file:line citation is
+the one the runtime-source rows use) as ONE machine op with a
+direction/width tag — the `float-bits` PRIMITIVE (stdlib register class
+`primitive`, 1 of 2; ADMITTED [USER] 2026-09-04, relayed by the [AGENT]
+coordinator, cited as relayed: «so the question is whether to add this as
+a primitive language operation? This sounds reasonable, do it»). The
+language has no operation for "the bits of a float" — `math`'s own bodies
+are `*(*uint64)(unsafe.Pointer(&f))` — and the machine's float
+representation IS the bit pattern (`GoValue.float bits kind`,
+`FloatBits.lean`), so the op is the identity on the representation in
+both directions: NaN payloads, the sign of zero, quiet/signalling all
+round-trip BIT-EXACT (the audit's admission condition). Design note:
+`docs/2026-09-04_stdlib-slice-3-design.md` §2. -/
+inductive FloatBitsOp where
+  | f64bits
+  | f64frombits
+  | f32bits
+  | f32frombits
+  deriving Repr, BEq, Inhabited, DecidableEq
+
+def FloatBitsOp.name : FloatBitsOp → String
+  | .f64bits => "math.Float64bits"
+  | .f64frombits => "math.Float64frombits"
+  | .f32bits => "math.Float32bits"
+  | .f32frombits => "math.Float32frombits"
+
 inductive Expr where
   | var (id : String)
   | nil (typ : Option Ty)
@@ -179,6 +209,10 @@ inductive Expr where
   proofs over earlier constructors stay put. -/
   | runesFromString (operand : Expr)
   | stringFromRuneSlice (operand : Expr)
+  /-- `math.Float64bits(x)` and its three siblings (stdlib slice 3,
+  2026-09-04): the `float-bits` primitive, `FloatBitsOp` above. A pure
+  strict form appended after the rune conversions. -/
+  | floatBits (op : FloatBitsOp) (operand : Expr)
   /-- The `recover()` builtin. Not a strict operator: its value depends on
   the continuation (it recovers exactly when called directly by a deferred
   function invoked by a panic — the unwinding arc,
@@ -443,6 +477,26 @@ inductive Stmt where
   closed on drift. Appended at the END of the inductive so positional
   case tags stay stable. -/
   | atomicStmt (op : AtomicStmtOp) (kind : IntKind) (args : Array Expr) (targets : Array Assignee)
+  /-- `print(args…)` / `println(args…)` — spec#Bootstrapping's two
+  built-ins (stdlib slice 3, 2026-09-04; G2 RULED [USER] 2026-09-03 as
+  recommended, relayed by the [AGENT] coordinator: «print/println as
+  machine built-ins with a stderr observable: accept with gc's pinned
+  format for int/uint/bool/string, refuse address-printing kinds and
+  initially floats»). `newline` selects `println` (space-separated,
+  newline-terminated) over `print` (no separators). The statement writes
+  the bytes gc's `runtime/print.go` writes to fd 2 — the machine's
+  OUTPUT EVENT (`StepEvent.out`, pool layer; design gate G-OUT RULED
+  [USER]: «Program output is a per-step EVENT (`StepEvent.out`), folded
+  by the driver into `Readout`, not a `Store` field; `Obs.terminal`
+  carries the stderr prefix»). Rides the wide-statement mold
+  (`StmtOp.print`): operands evaluate left to right, then ONE apply step
+  that changes no state (gc brackets the whole statement in
+  `printlock`/`printunlock`, so one step is the exact atomicity). At
+  least one operand — the zero-operand spellings refuse at the frontend
+  by name (the mold's A8 invariant: no plan has an empty operand list).
+  Appended at the END of the inductive so positional case tags stay
+  stable. -/
+  | print (newline : Bool) (args : Array Expr)
   deriving Repr, BEq, Inhabited
 
 structure Func where

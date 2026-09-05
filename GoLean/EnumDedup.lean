@@ -264,6 +264,13 @@ private partial def explore (resultLocs : List Loc) (budget : Nat)
               | .ok (m', chRem, ev) =>
                 if !chRem.isEmpty then
                   throw s!"vector not fully consumed at node {k}: {vec} left {chRem}"
+                else if !ev.out.isEmpty then
+                  -- Output is a TRACE, not state (stdlib slice 3; G-OUT): this
+                  -- engine keys nodes on (pool, detector) alone, so two paths
+                  -- printing "ab" and "ba" would MERGE and the certified set
+                  -- would lose a member. Refuse by name; the default (path)
+                  -- enumerator carries printing rows.
+                  throw s!"output event at node {k} (a print/println step wrote {ev.out.length} chunk(s)): engine=dedup keys nodes on state and output is a trace — this row cannot use engine=dedup (use the default enumerator)"
                 else
                   let edgeStream := path ++ (if window then 1 :: vec else vec)
                   match raceUpdate nd.m.shared nd.m.threads ev m' nd.r with

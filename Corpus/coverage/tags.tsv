@@ -133,3 +133,5 @@ atomics
 unsafe
 cond
 goexit
+print
+float_bits

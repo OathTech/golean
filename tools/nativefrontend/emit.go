@@ -2968,15 +2968,21 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 						return map[string]any{"stmt": "assign", "define": false,
 							"lhs": []any{map[string]any{"target": "blank"}},
 							"rhs": []any{w}}, nil
+					case "print", "println":
+						// spec#Bootstrapping's two built-ins — the `print`
+						// machine statement since stdlib slice 3 (G2 RULED
+						// [USER]); the operand-kind refusals live in the
+						// hook, by name (emitPrintStmt).
+						return e.emitPrintStmt(call, id.Name)
 					default:
-						// Any REMAINING builtin in statement position
-						// (`print`, `println` — implementation-specific
-						// debug builtins the spec says "may be removed") has
-						// no statement lowering: refuse HERE so the decl
-						// quarantines per-function. The old fall-through
-						// emitted the builtin's EXPRESSION node inside an
-						// expr statement, which the decoder rejects as a
-						// whole-package error (found by
+						// Any REMAINING builtin in statement position has
+						// no statement lowering (spec#Expression_statements
+						// forbids append/cap/len/make/new/... there, so
+						// go/types has already rejected it): refuse HERE so
+						// the decl quarantines per-function. The old
+						// fall-through emitted the builtin's EXPRESSION node
+						// inside an expr statement, which the decoder
+						// rejects as a whole-package error (found by
 						// goroutines/spawn-edge/child-recovers, whose bare
 						// deferred recover() took its package siblings
 						// down — a fail-open, not a semantics gap; that
@@ -7925,6 +7931,11 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 		if fn, isAtomic := isAtomicFunc(e.info.Uses[sel.Sel]); isAtomic {
 			return e.emitAtomicCall(c, fn)
 		}
+		// math.Float64bits & siblings (stdlib slice 3): the `float-bits`
+		// PRIMITIVE — a pure strict op, never hoisted (floatbits.go).
+		if fn, isFB := isFloatBitsFunc(e.info.Uses[sel.Sel]); isFB {
+			return e.emitFloatBitsCall(c, fn)
+		}
 		if node, handled, err := e.emitStdlibShimCall(c, sel); handled || err != nil {
 			return node, handled, err
 		}
@@ -9145,6 +9156,71 @@ func (e *emitter) emitClearStmt(c *ast.CallExpr) (any, error) {
 	default:
 		return nil, unsup("clear on %s", e.goTypeOf(c.Args[0]))
 	}
+}
+
+// emitPrintStmt lowers `print(args…)` / `println(args…)` — spec#Bootstrapping's
+// two built-ins — to the `print` wire statement (stdlib slice 3, 2026-09-04;
+// gate G2 RULED [USER] 2026-09-03 as recommended, relayed by the [AGENT]
+// coordinator, cited as relayed: «print/println as machine built-ins with a
+// stderr observable: admit with gc's pinned format for int/uint/bool/string,
+// refuse address-printing kinds and initially floats»). The lowering ADMITS
+// exactly the operand kinds whose gc rendering is a pure function of the
+// value — bool, every integer kind (a defined type prints as its underlying
+// kind; `print` never calls methods), string — runtime/print.go's
+// printbool/printint/printuint/printstring at go1.26.5 — and refuses every
+// other operand BY NAME at the call, so the declaration quarantines
+// per-function (H-3) and the row goes red naming its cause:
+//   - pointers, channels, maps, funcs, slices, interfaces and unsafe.Pointer
+//     print ADDRESSES (printpointer / printslice `[len/cap]0xaddr` /
+//     printeface+printiface `(0xtype,0xdata)`) the machine does not have and
+//     gc does not keep stable across runs — refused PERMANENTLY (ledger §5.1
+//     item 3, re-posed at this slice);
+//   - floats and complex print through internal/strconv.AppendFloat
+//     ('g', -1: the SHORTEST round-trip decimal — a go1.26 change, commit
+//     9035f7ae "runtime: use internal/strconv"), a Ryū-class algorithm the
+//     slice does not transcribe — refused THIS SLICE (ledger FR-29; design
+//     note §3.3, [AGENT] call disclosed);
+//   - the zero-operand spellings `print()` / `println()` have no machine
+//     shape (the wide-statement mold's A8 invariant: no plan is nullary) —
+//     refused this slice (FR-29; 2 of the 195 gotest print files).
+// go/types has already converted untyped constant operands to their default
+// types (`check.assignment` with a nil target records the default type), so
+// `println(1)` arrives as `int` and `println('a')` as `int32`; an operand
+// still recorded untyped is a frontend expectation failure and refuses.
+// Operand evaluation order and hoisting are the ordinary expression
+// machinery's (calls hoist to statements before this one, left to right,
+// exactly as for every other statement's operands).
+func (e *emitter) emitPrintStmt(c *ast.CallExpr, name string) (any, error) {
+	if len(c.Args) == 0 {
+		return nil, unsup("builtin %s with zero operands (no machine shape this slice — the wide-statement mold has no nullary plan; FR-29)", name)
+	}
+	args := []any{}
+	for i, a := range c.Args {
+		t := e.goTypeOf(a)
+		if t == nil {
+			return nil, unsup("builtin %s operand %d has no recorded type (fail closed)", name, i+1)
+		}
+		b, isBasic := t.Underlying().(*types.Basic)
+		if !isBasic || b.Kind() == types.UnsafePointer {
+			return nil, unsup("builtin %s operand %d of type %s prints an address in gc (runtime/print.go printpointer/printslice/printeface/printiface) — the machine has no addresses; refused by name, permanently (stdlib slice 3; ledger §5.1 item 3)", name, i+1, t)
+		}
+		switch {
+		case b.Info()&types.IsUntyped != 0:
+			return nil, unsup("builtin %s operand %d is recorded UNTYPED (%s) — go/types was expected to record the default type; refused by name", name, i+1, t)
+		case b.Kind() == types.Bool, b.Kind() == types.String, b.Info()&types.IsInteger != 0:
+			// admitted: printbool / printint+printuint / printstring
+		case b.Info()&(types.IsFloat|types.IsComplex) != 0:
+			return nil, unsup("builtin %s operand %d of type %s: floats and complex print through internal/strconv.AppendFloat ('g', -1, shortest round-trip) — not modeled this slice (stdlib slice 3; FR-29)", name, i+1, t)
+		default:
+			return nil, unsup("builtin %s operand %d of type %s is not a kind gc's print renders without an address — refused by name (stdlib slice 3)", name, i+1, t)
+		}
+		w, err := e.emitExpr(a)
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, w)
+	}
+	return map[string]any{"stmt": "print", "newline": name == "println", "args": args}, nil
 }
 
 // deferNoopName is the synthetic function a `defer recover()` defers — a Go

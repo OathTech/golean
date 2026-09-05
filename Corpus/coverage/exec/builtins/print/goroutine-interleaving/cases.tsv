@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	goroutineInterleaving	-	ok	-	builtins,print,goroutines,channels,nondet	membership	two children each print one line; the L1 scheduling latitude orders the two statements (each atomic under gc's printlock): admitted set {"a\nb\n", "b\na\n"} (members=2) — the consumption sites are the L1 picks over at most 3 runnable goroutines (the buffered done channel never blocks a sender) — width 4 >= 3	width=4,sites=64,members=2,work=2000000

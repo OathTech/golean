@@ -1,0 +1,156 @@
+== builtins__print__bool
+-- stdout:
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+-- stderr (program output + abort report):
+true false
+truefalse
+true true false
+== builtins__print__goroutine-interleaving
+-- stdout:
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+-- stderr (program output + abort report):
+a
+b
+== builtins__print__goroutine-ordered
+-- stdout:
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+-- stderr (program output + abort report):
+first (main)
+second (child)
+third (main)
+== builtins__print__in-init
+-- stdout:
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+-- stderr (program output + abort report):
+init prints 1
+== builtins__print__ints
+-- stdout:
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+-- stderr (program output + abort report):
+0 1 -1 42 -7 9223372036854775807 -9223372036854775808
+-128 32767 -5 4611686018427387904 7 -7
+== builtins__print__mixed
+-- stdout:
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+-- stderr (program output + abort report):
+a 1 true 2 120 -3 end
+== builtins__print__multiple-calls-order
+-- stdout:
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+-- stderr (program output + abort report):
+line 0
+[0]line 1
+[1]line 2
+[2]
+== builtins__print__println-spacing
+-- stdout:
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+-- stderr (program output + abort report):
+a b
+c
+  
+ 
+de
+== builtins__print__print-no-spacing
+-- stdout:
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+-- stderr (program output + abort report):
+12xtrue-4
+== builtins__print__print-then-panic
+-- stdout:
+-- stderr (program output + abort report):
+before the panic
+no newline yet
+panic: boom
+
+goroutine 1 [running]:
+main.printThenPanic(...)
+	/home/dev/projects/golean/.claude/worktrees/stdlib-slice-3/artifacts/coverage/go-run/builtins__print__print-then-panic/main.go:9
+main.main()
+	/home/dev/projects/golean/.claude/worktrees/stdlib-slice-3/artifacts/coverage/go-run/builtins__print__print-then-panic/zz_golean_harness.go:132 +0x5d
+exit status 2
+== builtins__print__print-then-recover
+-- stdout:
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+-- stderr (program output + abort report):
+about to panic
+recovered
+== builtins__print__print-then-runtime-panic
+-- stdout:
+-- stderr (program output + abort report):
+idx 3
+panic: runtime error: index out of range [3] with length 0
+
+goroutine 1 [running]:
+main.printThenRuntimePanic(...)
+	/home/dev/projects/golean/.claude/worktrees/stdlib-slice-3/artifacts/coverage/go-run/builtins__print__print-then-runtime-panic/main.go:7
+main.main()
+	/home/dev/projects/golean/.claude/worktrees/stdlib-slice-3/artifacts/coverage/go-run/builtins__print__print-then-runtime-panic/zz_golean_harness.go:132 +0x3e
+exit status 2
+== builtins__print__refused__chan
+-- stdout:
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+-- stderr (program output + abort report):
+0x2c4c01398070
+== builtins__print__refused__float
+-- stdout:
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+-- stderr (program output + abort report):
+1.5
+== builtins__print__refused__float32
+-- stdout:
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+-- stderr (program output + abort report):
+2.5== builtins__print__refused__func
+-- stdout:
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+-- stderr (program output + abort report):
+0x4f8190
+== builtins__print__refused__interface
+-- stdout:
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+-- stderr (program output + abort report):
+(0x4ceaa0,0x4f88a0)
+== builtins__print__refused__map
+-- stdout:
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+-- stderr (program output + abort report):
+0x1efee6166f08
+== builtins__print__refused__nil-pointer
+-- stdout:
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+-- stderr (program output + abort report):
+0x0
+== builtins__print__refused__pointer
+-- stdout:
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+-- stderr (program output + abort report):
+0x18bdeb7b0f18
+== builtins__print__refused__slice
+-- stdout:
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+-- stderr (program output + abort report):
+[2/2]0xd5de64f20
+== builtins__print__refused__zero-operands
+-- stdout:
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+-- stderr (program output + abort report):
+
+== builtins__print__string
+-- stdout:
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+-- stderr (program output + abort report):
+hello  with space tab	new
+line ütf8 ✓ 日本
+rawconcat
+named ab 😀
+== builtins__print__uints
+-- stdout:
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+-- stderr (program output + abort report):
+255 65535 4294967295 18446744073709551615 12 7 200
+== builtins__print__values-and-output
+-- stdout:
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":7},{"bytes":[115,101,118,101,110],"tag":"string"}]}
+-- stderr (program output + abort report):
+side effect

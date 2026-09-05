@@ -141,6 +141,7 @@ def StrictOp.eqb : StrictOp → StrictOp → Bool
   | .runeSizeAt, .runeSizeAt => true
   | .runesFromString, .runesFromString => true
   | .stringFromRuneSlice, .stringFromRuneSlice => true
+  | .floatBits o1, .floatBits o2 => o1 == o2
   | _, _ => false
 
 set_option maxHeartbeats 1600000 in
@@ -168,6 +169,8 @@ theorem StrictOp.eqb_sound :
     cases eq_of_beq h1; cases eq_of_beq h2; rfl
   case structLit.structLit t1 t2 =>
     cases Ty.eqb_sound (show Ty.eqb t1 t2 = true from h); rfl
+  case floatBits.floatBits o1 o2 =>
+    cases FloatBitsOp.beq_sound (show (o1 == o2) = true from h); rfl
   case arrayLit.arrayLit l1 e1 k1 l2 e2 k2 =>
     obtain ⟨h1, h2, h3⟩ := andSplit3 h
     cases eq_of_beq h1; cases Ty.eqb_sound h2
@@ -209,6 +212,7 @@ def StmtOp.eqb : StmtOp → StmtOp → Bool
   | .clearMap, .clearMap => true
   | .clearSlice e1, .clearSlice e2 => Ty.eqb e1 e2
   | .sortSlice e1, .sortSlice e2 => Ty.eqb e1 e2
+  | .print n1, .print n2 => n1 == n2
   | _, _ => false
 
 theorem StmtOp.eqb_sound : ∀ (a b : StmtOp), StmtOp.eqb a b = true → a = b := by
@@ -235,6 +239,8 @@ theorem StmtOp.eqb_sound : ∀ (a b : StmtOp), StmtOp.eqb a b = true → a = b :
     cases Ty.eqb_sound (show Ty.eqb e1 e2 = true from h); rfl
   case sortSlice.sortSlice e1 e2 =>
     cases Ty.eqb_sound (show Ty.eqb e1 e2 = true from h); rfl
+  case print.print n1 n2 =>
+    cases eq_of_beq (show (n1 == n2) = true from h); rfl
 
 /-! ## Assignment targets -/
 

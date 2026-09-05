@@ -925,6 +925,41 @@ def markInitPhase : Stop → Stop
   | .internal msg => .internal s!"package init: {msg}"
   | e => e
 
+/-- `runConfig` for the `$pkginit` phase (stdlib slice 3, 2026-09-04): the
+same loop with ONE guard — a `print`/`println` apply position REFUSES by
+name. The init phase runs on the sequential driver, which has no event
+channel: stepping through the print would validate it and DROP its bytes
+(a silent fail-open of the output observable). The pool driver folds
+`StepEvent.out`; this phase does not, so it refuses instead ([AGENT]
+scoping call, disclosed in the design note §3.4; rowed
+`builtins/print/in-init`). The CLI's init mirrors (`enumInitRun`, the
+tracer's `initLoop`, `initDFS`) carry the same guard through
+`initPrintRefusal?`. -/
+def initPrintRefusal? (c : Config) : Option Stop :=
+  match printOut? c with
+  | some _ => some (.unsupported "print/println during package initialization: the init phase runs on the sequential driver, which has no output event channel (the pool driver folds StepEvent.out) — refused rather than dropping the bytes (stdlib slice 3; row builtins/print/in-init)")
+  | none => none
+
+@[inherit_doc initPrintRefusal?]
+def runInitConfig : Nat → ExecState → Config → Choices → Except Stop (ExecState × Choices)
+  | fuel, s, c, choices =>
+      match c with
+      | .next .stop => return (s, choices)
+      | .panicked msg => throw (.panic msg)
+      | .blockedSend _ _ _ => throw .deadlock
+      | .blockedRecv _ _ _ _ _ => throw .deadlock
+      | .blockedSelect _ _ _ => throw .deadlock
+      | .blockedSync _ _ _ _ => throw .deadlock
+      | c =>
+          match initPrintRefusal? c with
+          | some e => throw e
+          | none =>
+            match fuel with
+            | 0 => throw .fuelOut
+            | fuel + 1 => do
+                let (c', s', choices') ← stepFn s c choices
+                runInitConfig fuel s' c' choices'
+
 /-- Run `$pkginit` if the program has one: a nullary, resultless run to
 termination under a targetless barrier frame. Malformed shapes fail
 closed; a panic during initialization aborts the run (Go: a panicking
@@ -939,7 +974,7 @@ def runPkgInitM (fuel : Nat) (state : ExecState) (choices : Choices) :
   | some initF =>
       if initF.args.size != 0 || initF.results.size != 0 then
         throw (.stuck s!"malformed {pkgInitFuncId.key}: expected no parameters and no results")
-      match runConfig fuel state (.exec initF.body [] (.frame [] [] [] [] .stop)) choices with
+      match runInitConfig fuel state (.exec initF.body [] (.frame [] [] [] [] .stop)) choices with
       | .ok r => pure r
       | .error e => throw (markInitPhase e)
 

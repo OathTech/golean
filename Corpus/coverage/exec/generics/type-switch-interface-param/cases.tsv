@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+-	typeSwitchInterfaceParam	-	ok	-	generics,type_switch,interfaces,multi_result
+bound	typeSwitchInterfaceParamBound	-	ok	-	generics,type_switch,interfaces,methods,multi_result
+plain	typeSwitchInterfacePlain	-	ok	-	generics,type_switch,interfaces,embedding,multi_result

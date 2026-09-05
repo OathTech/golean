@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	literalsAndZero	-	ok	-	builtins,float_bits,floats,constants,multi_result

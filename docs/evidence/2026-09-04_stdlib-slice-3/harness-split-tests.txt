@@ -1,0 +1,12 @@
+=== RUN   TestSplitStderrOk
+--- PASS: TestSplitStderrOk (0.00s)
+=== RUN   TestSplitStderrPanic
+--- PASS: TestSplitStderrPanic (0.00s)
+=== RUN   TestSplitStderrFatalAndDeadlock
+--- PASS: TestSplitStderrFatalAndDeadlock (0.00s)
+=== RUN   TestSplitStderrRace
+--- PASS: TestSplitStderrRace (0.00s)
+=== RUN   TestSplitStderrUTF8AndLiteral
+--- PASS: TestSplitStderrUTF8AndLiteral (0.00s)
+PASS
+ok  	_<worktree>/tools/coverageharness	0.002s

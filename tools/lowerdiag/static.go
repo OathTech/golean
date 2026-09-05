@@ -925,7 +925,32 @@ func (a *analyzer) body(d *declReport, root ast.Node, fd *ast.FuncDecl) {
 			if name, ok := isBuiltin(a, x.Fun); ok {
 				switch name {
 				case "print", "println":
-					d.add(finding{Cause: mustCause("print-builtin"), Key: name, Pos: pos, Certain: true})
+					// Stdlib slice 3 (2026-09-04): print/println LOWER
+					// (emitPrintStmt) for bool/integer/string operands; the
+					// static verdict mirrors the emitter's refusals exactly —
+					// zero operands (FR-29), float/complex operands (FR-29),
+					// every other kind (address-printing; ledger §5.1 item 3).
+					if len(x.Args) == 0 {
+						d.add(finding{Cause: mustCause("print-zero-operands"), Key: name, Pos: pos, Certain: true})
+						break
+					}
+					for _, arg := range x.Args {
+						tv, ok := a.info.Types[arg]
+						if !ok || tv.Type == nil {
+							continue
+						}
+						b, isBasic := tv.Type.Underlying().(*types.Basic)
+						switch {
+						case !isBasic || b.Kind() == types.UnsafePointer:
+							d.add(finding{Cause: mustCause("print-builtin"), Key: name, Pos: pos, Certain: true})
+						case b.Info()&(types.IsFloat|types.IsComplex) != 0:
+							d.add(finding{Cause: mustCause("print-float"), Key: name, Pos: pos, Certain: true})
+						case b.Kind() == types.Bool, b.Kind() == types.String, b.Info()&types.IsInteger != 0:
+							// admitted
+						default:
+							d.add(finding{Cause: mustCause("print-builtin"), Key: name, Pos: pos, Certain: true})
+						}
+					}
 				case "real", "imag", "complex":
 					d.add(finding{Cause: mustCause("complex"), Key: "builtin " + name, Pos: pos, Certain: true})
 				}
