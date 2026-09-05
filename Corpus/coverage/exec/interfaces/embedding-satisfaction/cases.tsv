@@ -7,4 +7,5 @@ negative	embeddingSatisfactionNegative	-	panic	interface conversion: main.esOnly
 method-value	embeddingSatisfactionMethodValue	-	ok	-	interfaces,embedding,type_assertions,comma_ok,methods,multi_result
 method-expr	embeddingSatisfactionMethodExpr	-	ok	-	interfaces,embedding,type_assertions,comma_ok,methods,multi_result
 promoted	embeddingSatisfactionPromoted	-	ok	-	interfaces,embedding,type_assertions,comma_ok,methods,structs,multi_result
+method-expr-promoted	embeddingSatisfactionMethodExprPromoted	-	ok	-	interfaces,embedding,type_assertions,comma_ok,methods,structs,multi_result
 generic	embeddingSatisfactionGeneric	-	ok	-	interfaces,embedding,type_switch,generics,methods,multi_result

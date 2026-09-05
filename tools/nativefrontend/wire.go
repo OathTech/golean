@@ -13,6 +13,7 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"sort"
 	"strings"
 )
 
@@ -373,6 +374,28 @@ func (e *emitter) noteInterface(name string, iface *types.Interface) {
 	e.seenInterfaces[name] = iface
 }
 
+// ifaceConflictRefusal is the fail-closed half of BUG-095's fix: a wire
+// name registered with two NON-IDENTICAL method sets (ifaceConflicts)
+// refuses the export BY NAME. The list is deduplicated first — every
+// re-registration of the same pair appends one more copy (once per
+// dispatch site; audit fix R7, 2026-09-05) — and sorted, so the refusal
+// text is deterministic and names each collision once.
+func (e *emitter) ifaceConflictRefusal() error {
+	if len(e.ifaceConflicts) == 0 {
+		return nil
+	}
+	seen := map[string]bool{}
+	uniq := make([]string, 0, len(e.ifaceConflicts))
+	for _, c := range e.ifaceConflicts {
+		if !seen[c] {
+			seen[c] = true
+			uniq = append(uniq, c)
+		}
+	}
+	sort.Strings(uniq)
+	return unsup("interface wire name registered with two different method sets: %s", strings.Join(uniq, "; "))
+}
+
 // staticIfaceOf resolves the *types.Interface a STATIC interface-typed
 // operand denotes — alias-transparent and substitution-aware (a type
 // parameter under stenciling resolves to its instantiation; an
@@ -600,10 +623,17 @@ func (e *emitter) emitType(t types.Type) (any, error) {
 		// assert target, a variable type): canonical wire name from the
 		// type's own rendering — SOUND because Go interface identity is
 		// structural, so structurally identical spellings are one type
-		// (design note 2026-08-05 D3). Qualified with package NAMES like
-		// every other TypeId (the package-name collision check covers the
-		// same hazard class). Registered like named interfaces, so the
-		// declaration pass emits its full method set.
+		// (design note 2026-08-05 D3). Registered like named interfaces,
+		// so the declaration pass emits its full method set.
+		// BUG-097 (open): the qualifier here is the package NAME
+		// (`p.Name()`), NOT the import-path qualifier every other TypeId
+		// uses (`pkgQualifier`, BUG-010 — the package-name collision
+		// check this comment used to cite is RETIRED). Two same-named
+		// packages at different paths therefore render two DISTINCT
+		// anonymous interfaces (`interface{ M() inner.T }` over
+		// red/inner.T vs blue/inner.T) as ONE wire name; noteInterface's
+		// conflict guard turns that into a named refusal (pinned red:
+		// multipkg/same-name-anon-iface). Plan: pass e.pkgQualifier.
 		if !ty.IsMethodSet() {
 			return nil, unsup("non-method-set interface type %s (type constraints are not interface values)", ty)
 		}

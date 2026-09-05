@@ -1,4 +1,22 @@
 # GoLean native-frontend full-corpus differential baseline
+# re-pinned: 2026-09-05 (bug095-096 lane, AUDIT FIX ROUND R1-R7 — [AGENT] worker; drift vs the lane's first pin = EXACTLY
+#   2 born rows, 0 flips of pre-existing rows: interfaces/embedding-satisfaction/method-expr-promoted PASS (audit fix R4 —
+#   a method expression over a struct whose method is promoted from an embedded INTERFACE field now lowers to the promotion
+#   wrapper; was a per-decl quarantine on this lane, a whole-export kill on main) and multipkg/same-name-anon-iface FAIL
+#   at frontend-export BY DESIGN (BUG-097, the audit's R2 finding: the anonymous-interface wire name is package-NAME-
+#   qualified, so two same-named packages' distinct interfaces collide; on main a WRONG ANSWER, here BUG-095's conflict-guard
+#   refusal — on BUG-097's Cases line, open, plan on the entry). Tally 3419 = 3206 / 213 -> 3421 = 3207 / 214.
+#   Evidence: docs/evidence/2026-09-05_bug095-096/README.md (audit fix round paragraph).
+#   [rebased onto main 102f4dae at merge train round 15 ([AGENT] rebase reconciliation): the lane forked from main ac45aedd (the FR-4 / row-M
+#   pin) and main gained flaky-panic-wait, g6-reflect-memo, fr27-fr28, c-arc-gu and stdlib-slice-3 in between — the blocks below this lane's
+#   two are main's, kept verbatim. This is the "slice-3 merged first" arm of BUG-095/096's MERGE-TRAIN NOTE (docs/BUGS.md): stdlib-slice-3's
+#   four pins of the two bugs this lane fixes flip FAIL -> PASS here — generics/type-switch-interface-param{,/bound,/plain} (BUG-095; FAIL/differential -> PASS/-) and ints/shift-count-huge (BUG-096; FAIL/lean-observation -> PASS/-) — a non-PASS -> PASS flip
+#   (allowed; recorded by id here, the gate's reverse-direction note names them). The stage column moves to `-` because a PASS row carries the
+#   runner's strict-PASS stage, never a failure stage (differential / lean-observation are the stages at which a FAIL was decided); the four
+#   ids sit on this lane's FIXED BUG-095/096 entries' Cases lines since this rebase (slice-3's OPEN entries for the same two numbers yielded to
+#   them). Re-derived from the data rows: main's 3479 (3230 PASS / 249 FAIL) + the lane's 19 born rows (18 PASS / 1 FAIL — the two pins' 17 + 2)
+#   + 4 FAIL -> PASS − 0 PASS -> FAIL = 3498 (3252 PASS / 246 FAIL); tallied by row: `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3252 / FAIL 246.
+#   The lane's pre-rebase figure was 3421 (3207 PASS / 214 FAIL). The 'NOT on main yet' sentence in the block below is superseded by this bracket.]
 # re-pinned: 2026-09-05 (bug095-096 lane — BUG-095 (frontend: an embedding interface's wire declaration collapsed
 #   to the embedded subset at dispatch sites) and BUG-096 (machine: a shift count ≥ width formed 2^count and aborted
 #   the process) FIXED; [AGENT] worker under [USER] direction 3 (wrong answers outrank hygiene). drift vs the
@@ -9,6 +27,7 @@
 #   controls). 0 flips of pre-existing rows. The slice-3 pins (generics/type-switch-interface-param/*,
 #   ints/shift-count-huge) are NOT on main yet — they flip FAIL -> PASS when both lanes are merged (recorded on
 #   BUG-095/096). Evidence: docs/evidence/2026-09-05_bug095-096/.
+#   [pre-rebase text: the slice-3 pins ARE on main since merge train round 14 (102f4dae); they flip FAIL -> PASS at this lane's round-15 rebase — the bracket in the block above.]
 # re-pinned: 2026-09-05 (stdlib-slice-3 AUDIT FIX ROUND — A1: the float-bits guard made sign-insensitive and gc/amd64's
 #   min/max payload-OR idiom transcribed (two reported wrong answers closed); A2: the fd-2 split fail-closed on four
 #   understated shapes; [AGENT] under the same [USER] rulings as the slice). drift vs the slice's pin = EXACTLY (a) ONE
@@ -1034,8 +1053,14 @@
 #     removed row is named in prose, never left dangling on the line).
 #     NEW rows: unsafe/layout-ops/{sizeof-fixed,layout-struct}
 #     FAIL/frontend-export BY DESIGN. unsafe/boundary/pointer-roundtrip
-# cases: 3479 (3230 PASS / 249 FAIL)
+# cases: 3498 (3252 PASS / 246 FAIL)
+#   [re-derived from the data rows after the rebase of lane bug095-096 (the BUG-095/096 fix + its audit fix round R1-R7) onto main 102f4dae at merge train round 15 ([AGENT] rebase reconciliation): main's stdlib-slice-3 figure 3479 (3230 PASS / 249 FAIL) + the lane's 19 born rows — 18 PASS: interfaces/embedding-satisfaction/{typeswitch,assert,assert-ok,nested,negative,method-value,method-expr,promoted,generic,method-expr-promoted}, ints/shift-count-bound/{left-huge,right-huge-signed,right-huge-unsigned,width,width-minus-one,int-count,negative-panic,untyped-const}; 1 FAIL: multipkg/same-name-anon-iface (frontend-export, BUG-097's Cases line) — + 4 FAIL -> PASS flips of main's rows (the stdlib-slice-3 pins of the two bugs this lane fixes — generics/type-switch-interface-param{,/bound,/plain} (BUG-095; FAIL/differential -> PASS/-) and ints/shift-count-huge (BUG-096; FAIL/lean-observation -> PASS/-) — the "slice-3 merged first" arm of BUG-095/096's MERGE-TRAIN NOTE; stage `-` because that is the stage the runner emits for a strict PASS row) + 0 PASS -> FAIL = 3498 (3252 PASS / 246 FAIL): 3479 + 19 = 3498; 3230 + 18 + 4 = 3252; 249 + 1 − 4 = 246; tallied by row: `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3252 / FAIL 246; the lane's pre-rebase figure was 3421 (3207 PASS / 214 FAIL) on main ac45aedd (the lane's two figures kept as history below main's)]
+#   [the stdlib-slice-3 / round-14 figure, kept as history:] # cases: 3479 (3230 PASS / 249 FAIL)
 #   [re-derived from the data rows after the rebase of lane stdlib-slice-3 (the slice + its audit fix round A1-A3, C1-C6, D) onto main fc9bbef1 at merge train round 14 ([AGENT] rebase reconciliation): main's c-arc-gu / fr27-fr28 figure 3434 (3209 PASS / 225 FAIL) + the lane's 45 born rows — 21 PASS: builtins/print/{ints,uints,bool,string,mixed,println-spacing,print-no-spacing,multiple-calls-order,values-and-output,print-then-panic,print-then-runtime-panic,print-then-recover,goroutine-ordered,goroutine-interleaving}, builtins/float-bits/{nan-semantics,literals-and-zero,frombits-arith,float32,widening,min-max-payload,min-max-payload/float32}; 24 FAIL: builtins/print/refused/{float,float32,zero-operands,pointer,nil-pointer,slice,map,chan,func,interface,unsafe-pointer,race-with-output}, builtins/print/in-init, builtins/float-bits/{canonical-nan-refused,nan-arith-payload-refused,nan-arith-payload-refused/canonical-roundtrip,neg-canonical-refused,neg-canonical-refused/float32,min-max-canonical-refused,roundtrip-payloads}, generics/type-switch-interface-param{,/bound,/plain}, ints/shift-count-huge — + 0 FAIL -> PASS + 0 PASS -> FAIL against main's rows (the lane's ONE ruled PASS -> FAIL flip, builtins/float-bits/roundtrip-payloads, is INTERNAL to the lane: born PASS at the slice's pin, FAIL at the audit fix round's — against main it is a born FAIL on BUG-094's Cases line) = 3479 (3230 PASS / 249 FAIL); tallied by row: `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3230 / FAIL 249; the lane's pre-rebase figure was 3447 (3210 PASS / 237 FAIL) on main ac45aedd (the two lane figures kept as history below main's)]
+#   [the lane's own pre-rebase audit-fix-round figure on main ac45aedd, kept as history:] # cases: 3421 (3207 PASS / 214 FAIL)
+#   [re-derived from the data rows at the bug095-096 AUDIT FIX ROUND re-pin 2026-09-05 ([AGENT]: the lane's first figure 3419 (3206 PASS / 213 FAIL) + 2 born rows (1 PASS: interfaces/embedding-satisfaction/method-expr-promoted, R4; 1 FAIL by design: multipkg/same-name-anon-iface, BUG-097), 0 flips; awk tally of the data rows = 3421 / 3207 / 214: `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv`)]
+#   [the lane's own pre-rebase first figure on main ac45aedd, kept as history:] # cases: 3419 (3206 PASS / 213 FAIL)
+#   [re-derived from the data rows at the bug095-096 re-pin 2026-09-05 ([AGENT]: the FR-4 / row-M figure's 3402 (3189 PASS / 213 FAIL) + 17 born rows, all PASS, 0 flips; awk tally of the data rows = 3419 / 3206 / 213)]
 #   [the c-arc-gu / fr27-fr28 figure, kept as history:] # cases: 3434 (3209 PASS / 225 FAIL)
 #   [re-derived from the data rows at the fr27-fr28 re-pin 2026-09-05 (incl. its audit fix round F1-F7), rebased onto main cb4a6d48 at merge train round 14 ([AGENT] rebase reconciliation): main's flaky-panic-wait 3403 (3190 PASS / 213 FAIL) + 31 born rows (19 PASS: generics/qualified-instantiation/{call,func-value,nested,method-value,method-expr,source-through}, builtins/len-vs-call-order/{make-hint-panic-free,make-hint-call,make-hint-map-read,len-nil-only-{none,left,operand,both},make-nil-only-{none,left,operand,both},lexer-idiom,make-hint-generic-int-key}; 12 FAIL: generics/qualified-instantiation/{stdlib-refused,stdlib-refused-value}, builtins/len-vs-call-order/{make-slice-panicky-between,make-chan-cap-panicky-between,make-index-left,make-inner-len,len-assert-vs-nil-operand,len-nil-left-vs-index-operand,make-hint-struct-any-key,make-hint-array-any-key,make-hint-generic-any-key,len-struct-any-key-left-assert}) + 0 FAIL -> PASS + 0 PASS -> FAIL (ONE stage-only change on a row that stays FAIL: builtins/len-vs-call-order/hint-panicky-between differential -> frontend-export) = 3434 (3209 PASS / 225 FAIL); tallied by row: `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3209 / FAIL 225; the lane's pre-rebase figure was 3433 (3208 PASS / 225 FAIL) on main ac45aedd]
 #   [the lane's own pre-rebase audit-fix-round figure on main ac45aedd, kept as history:] # cases: 3447 (3210 PASS / 237 FAIL)
@@ -2640,6 +2665,7 @@ PASS	interfaces/embedding-satisfaction/method-value	-
 PASS	interfaces/embedding-satisfaction/negative	-
 PASS	interfaces/embedding-satisfaction/nested	-
 PASS	interfaces/embedding-satisfaction/promoted	-
+PASS	interfaces/embedding-satisfaction/method-expr-promoted	-
 PASS	interfaces/embedding-satisfaction/typeswitch	-
 PASS	interfaces/error-idioms/nil-error	-
 PASS	interfaces/error-idioms/value-equality	-
@@ -3020,6 +3046,7 @@ PASS	multipkg/mini-raft-twin/starve-node	-
 PASS	multipkg/mini-raft-twin/duel	-
 PASS	multipkg/mini-raft-twin/choice-order	membership
 PASS	multipkg/nil-value-method-text	membership
+FAIL	multipkg/same-name-anon-iface	frontend-export
 PASS	multipkg/same-name-identity/type-identity	-
 PASS	multipkg/same-name-identity/func-identity	-
 FAIL	multipkg/same-name-identity-panic	differential

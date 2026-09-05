@@ -13,6 +13,7 @@ import (
 	"go/types"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -347,5 +348,62 @@ func TestManglingSurfaceFailsClosed(t *testing.T) {
 	}
 	if key != "f[main.Inner]" {
 		t.Errorf("type-argument rendering did not path-qualify: got %q, want %q", key, "f[main.Inner]")
+	}
+}
+
+// TestRollbackUndoesInterfaceConflicts (bug095-096 audit fix R3): a
+// noteInterface CONFLICT recorded past a quarantine mark belongs to the
+// discarded body and rolls back with it — otherwise a per-decl
+// quarantined body would still refuse the WHOLE export through
+// ifaceConflictRefusal. A conflict recorded BEFORE the mark survives.
+func TestRollbackUndoesInterfaceConflicts(t *testing.T) {
+	e, _ := checkSource(t, monoTestSrc)
+	mk := func(names ...string) *types.Interface {
+		fns := []*types.Func{}
+		for _, n := range names {
+			sig := types.NewSignatureType(nil, nil, nil, nil, nil, false)
+			fns = append(fns, types.NewFunc(token.NoPos, nil, n, sig))
+		}
+		return types.NewInterfaceType(fns, nil).Complete()
+	}
+	e.noteInterface("main.Pre", mk("foo"))
+	e.noteInterface("main.Pre", mk("bar")) // pre-mark conflict: must survive
+	if len(e.ifaceConflicts) != 1 {
+		t.Fatalf("pre-mark conflict not recorded: %v", e.ifaceConflicts)
+	}
+	m := e.markMono()
+	e.noteInterface("main.Pre", mk("baz"))   // conflict inside the quarantined body
+	e.noteInterface("main.Fresh", mk("foo")) // fresh note inside it
+	e.noteInterface("main.Fresh", mk("bar")) // ... and a conflict on it
+	if len(e.ifaceConflicts) != 3 {
+		t.Fatalf("in-body conflicts not recorded: %v", e.ifaceConflicts)
+	}
+	e.rollbackMono(m)
+	if len(e.ifaceConflicts) != 1 || !strings.HasPrefix(e.ifaceConflicts[0], "main.Pre (interface{foo()} vs interface{bar()})") {
+		t.Errorf("rollback did not restore the pre-mark conflict list: %v", e.ifaceConflicts)
+	}
+	if _, ok := e.seenInterfaces["main.Fresh"]; ok {
+		t.Errorf("quarantine-scoped interface note survived rollback")
+	}
+	if err := e.ifaceConflictRefusal(); err == nil || !strings.Contains(err.Error(), "main.Pre") {
+		t.Errorf("the surviving pre-mark conflict must still refuse by name, got %v", err)
+	}
+}
+
+// TestIfaceConflictRefusalDedups (audit fix R7): one collision, re-recorded
+// at every dispatch site, is named ONCE in the refusal text.
+func TestIfaceConflictRefusalDedups(t *testing.T) {
+	e := &emitter{}
+	e.ifaceConflicts = []string{"main.B (x vs y)", "main.A (p vs q)", "main.B (x vs y)", "main.B (x vs y)"}
+	err := e.ifaceConflictRefusal()
+	if err == nil {
+		t.Fatalf("conflicts present, no refusal")
+	}
+	want := "interface wire name registered with two different method sets: main.A (p vs q); main.B (x vs y)"
+	if !strings.HasSuffix(err.Error(), want) {
+		t.Fatalf("refusal text = %q, want suffix %q", err.Error(), want)
+	}
+	if (&emitter{}).ifaceConflictRefusal() != nil {
+		t.Fatalf("no conflicts must mean no refusal")
 	}
 }

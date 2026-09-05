@@ -567,9 +567,8 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 		// the wire whichever registration came LAST, making the machine's
 		// satisfaction answers emission-order-dependent. Fail the export by
 		// name instead.
-		if len(e.ifaceConflicts) > 0 {
-			sort.Strings(e.ifaceConflicts)
-			return nil, unsup("interface wire name registered with two different method sets: %s", strings.Join(e.ifaceConflicts, "; "))
+		if err := e.ifaceConflictRefusal(); err != nil {
+			return nil, err
 		}
 		pending := []string{}
 		for k := range e.seenInterfaces {
@@ -619,6 +618,14 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 		}
 		typeDefs = append(typeDefs, lateDefs...)
 		methods = append(methods, lateStubs...)
+	}
+	// Final re-check (audit fix R5, 2026-09-05): the check above sits at
+	// the top of the INNER fixpoint, and the outer loop exits straight
+	// after an importedTypeDecls pass — whose stub signatures can note
+	// interfaces on the way out. Nothing registered after the last inner
+	// check may reach the wire unexamined.
+	if err := e.ifaceConflictRefusal(); err != nil {
+		return nil, err
 	}
 	ifaceNames := make([]string, 0, len(ifaceDefs))
 	for k := range ifaceDefs {
@@ -5887,6 +5894,9 @@ func (e *emitter) ifaceWireName(t types.Type) (string, bool) {
 		if iface.Empty() {
 			return emptyInterfaceName, true
 		}
+		// Package-NAME qualifier: the same BUG-097 hazard as emitType's
+		// anonymous-interface arm (wire.go) — the two spellings must stay
+		// byte-identical, so fix both together (plan: e.pkgQualifier).
 		name := types.TypeString(iface, func(p *types.Package) string { return p.Name() })
 		e.noteInterface(name, iface)
 		return name, true
@@ -6692,7 +6702,19 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 			}
 			sig := fn.Type().(*types.Signature)
 			recvType := sig.Recv().Type()
-			if _, isIface := recvType.Underlying().(*types.Interface); isIface {
+			// The INTERFACE arm needs the OPERAND to be an interface, not
+			// only the method's declaring receiver: `S.foo` with `type S
+			// struct{ J }` resolves to J's (or an embedded I's) foo, yet its
+			// func value takes an S — that is S's promotion WRAPPER
+			// (`main.S.foo`), the concrete arm below (the method-value arm's
+			// embedded-hop walk, in func-value form). Before the audit fix
+			// R4 (2026-09-05) that shape was refused here as `main.S: static
+			// type is not a value interface` (per-decl quarantine; on main
+			// a whole-export kill with a wrong cause). staticIfaceOf is
+			// alias-transparent and substitution-aware.
+			_, declIface := recvType.Underlying().(*types.Interface)
+			_, operandIface := e.staticIfaceOf(e.goTypeOf(sel.X))
+			if declIface && operandIface {
 				ifaceStatic := e.goTypeOf(sel.X)
 				ifaceName, ok := e.ifaceWireName(ifaceStatic)
 				if !ok {

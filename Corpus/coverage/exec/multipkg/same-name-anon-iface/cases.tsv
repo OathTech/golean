@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	sameNameAnonIface	-	ok	-	multipackage,imports,identity,interfaces,type_assertions,comma_ok,multi_result

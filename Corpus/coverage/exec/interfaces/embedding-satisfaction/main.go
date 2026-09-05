@@ -194,6 +194,21 @@ func embeddingSatisfactionPromoted() (int, bool, bool) {
 	return b.foo(), okA, okC
 }
 
+// embeddingSatisfactionMethodExprPromoted: the trigger as a METHOD
+// EXPRESSION over the EMBEDDING STRUCT (`esBox.foo` — foo declared in esI,
+// reached through esBox's embedded esJ field): the func value takes an
+// esBox and is its promotion wrapper. Before the bug095-096 audit fix R4
+// the frontend quarantined this shape (`main.esBox: static type is not a
+// value interface`). gc 1 false true.
+func embeddingSatisfactionMethodExprPromoted() (int, bool, bool) {
+	g := esBox.foo
+	var a esI = esOnlyFoo(2)
+	var c esI = esFooBar(3)
+	_, okA := a.(esJ)
+	_, okC := c.(esJ)
+	return g(esBox{esFooBar(1)}), okA, okC
+}
+
 // esWhich is $GOROOT/test/typeparam/typeswitch3.go's shape: `case T` with
 // T instantiated to the embedding interface, the bound value's method
 // called in the arm (the trigger inside the generic body).
@@ -221,5 +236,6 @@ func main() {
 	embeddingSatisfactionMethodValue()
 	embeddingSatisfactionMethodExpr()
 	embeddingSatisfactionPromoted()
+	embeddingSatisfactionMethodExprPromoted()
 	embeddingSatisfactionGeneric()
 }

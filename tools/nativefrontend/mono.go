@@ -856,20 +856,29 @@ type monoLogEntry struct {
 	key  string
 }
 
-// monoMarks snapshots the journal and both queues; take one BEFORE
-// emitting a quarantinable body.
+// monoMarks snapshots the journal, both queues and the interface
+// conflict list; take one BEFORE emitting a quarantinable body.
 type monoMarks struct {
 	log, funcQ, typeQ int
+	// len(e.ifaceConflicts) at the mark (audit fix R3, 2026-09-05): a
+	// conflict recorded by a body that is later per-decl quarantined
+	// belongs to the discarded body and must not refuse the export.
+	// Truncation, not key deletion: the list is append-only between
+	// emissions and may hold duplicates of one pair (the emitProgram
+	// check dedups), so deleting by key could drop a pre-mark record.
+	ifaceConf int
 }
 
 func (e *emitter) markMono() monoMarks {
-	return monoMarks{log: len(e.monoLog), funcQ: len(e.funcInstQueue), typeQ: len(e.typeInstQueue)}
+	return monoMarks{log: len(e.monoLog), funcQ: len(e.funcInstQueue), typeQ: len(e.typeInstQueue),
+		ifaceConf: len(e.ifaceConflicts)}
 }
 
 // rollbackMono undoes every registration journaled after the marks.
 // Queue truncation to the recorded lengths is exact: pops happen only
 // between emissions (flushFuncInsts), never inside one, so entries past
-// the mark are exactly this emission's appends.
+// the mark are exactly this emission's appends. The same holds for
+// ifaceConflicts (noteInterface only ever appends).
 func (e *emitter) rollbackMono(m monoMarks) {
 	for _, entry := range e.monoLog[m.log:] {
 		switch entry.kind {
@@ -890,6 +899,7 @@ func (e *emitter) rollbackMono(m monoMarks) {
 	e.monoLog = e.monoLog[:m.log]
 	e.funcInstQueue = e.funcInstQueue[:m.funcQ]
 	e.typeInstQueue = e.typeInstQueue[:m.typeQ]
+	e.ifaceConflicts = e.ifaceConflicts[:m.ifaceConf]
 }
 
 // registerMangledKey records key → t in the collision registry. Two

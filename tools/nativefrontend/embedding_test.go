@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"go/token"
 	"go/types"
 	"strings"
@@ -95,4 +96,60 @@ func TestNoteInterfaceConflictRecorded(t *testing.T) {
 	if e.seenInterfaces["main.X"].NumMethods() != 1 {
 		t.Fatalf("a conflicting registration must not overwrite the first")
 	}
+}
+
+// promotedMethodExprSrc: a METHOD EXPRESSION over a STRUCT whose method is
+// promoted from an EMBEDDED INTERFACE field (`S.foo`, `type S struct{ J }`).
+const promotedMethodExprSrc = `package main
+
+type I interface{ foo() int }
+type J interface {
+	I
+	bar()
+}
+type myint int
+
+func (x myint) foo() int { return int(x) }
+func (x myint) bar()     {}
+
+type S struct{ J }
+
+func viaExpr() int { f := S.foo; return f(S{myint(7)}) }
+
+func main() { println(viaExpr()) }
+`
+
+// TestPromotedMethodExpressionLowers — audit fix R4 (bug095-096,
+// 2026-09-05): the method-expression arm took its INTERFACE branch on the
+// method's DECLARING receiver alone, so `S.foo` (operand a struct, method
+// declared in the embedded interface I) was quarantined as `main.S: static
+// type is not a value interface`. The func value is S's promotion wrapper
+// `main.S.foo`; the body must lower with no `unsupported` marker.
+func TestPromotedMethodExpressionLowers(t *testing.T) {
+	program, err := emitSource(t, promotedMethodExprSrc)
+	if err != nil {
+		t.Fatalf("emit: %v", err)
+	}
+	found := false
+	for _, f := range program["funcs"].([]any) {
+		m := f.(map[string]any)
+		if m["name"] != "viaExpr" {
+			continue
+		}
+		found = true
+		if reason, quarantined := m["unsupported"]; quarantined {
+			t.Fatalf("viaExpr quarantined: %v", reason)
+		}
+		if !strings.Contains(fmtJSON(m["body"]), `"main.S.foo"`) {
+			t.Fatalf("viaExpr body does not reference the promotion wrapper main.S.foo: %s", fmtJSON(m["body"]))
+		}
+	}
+	if !found {
+		t.Fatalf("no viaExpr func on the wire")
+	}
+}
+
+func fmtJSON(v any) string {
+	b, _ := json.Marshal(v)
+	return string(b)
 }

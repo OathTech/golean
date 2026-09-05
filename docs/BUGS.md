@@ -5384,7 +5384,18 @@ carries the trigger.
   slice 3's are ONE bug under ONE number (095 was already allocated to it there; main's next free
   number, 093, belongs to other in-flight lanes) — whichever merges second keeps THIS entry's
   Status/prose and APPENDS slice 3's three Cases ids to the line above; those three rows flip
-  FAIL -> PASS at that merge (a non-PASS -> PASS flip, allowed; baseline re-pin note owed there).)
+  FAIL -> PASS at that merge (a non-PASS -> PASS flip, allowed; baseline re-pin note owed there).
+  BOTH ARMS, spelled out (audit fix round 2026-09-05 [AGENT]): (i) THIS lane merges first —
+  slice 3's three rows are BORN PASS at slice 3's merge (no flip; slice 3's rebase re-pins them
+  PASS and its OPEN entry text yields to this FIXED one); (ii) slice 3 merges first — this lane's
+  rebase re-pins them FAIL -> PASS with a baseline re-pin note naming the flip. Either arm resolves
+  the `docs/BUGS.md` conflict by keeping THIS entry's Status/prose and appending the Cases ids.
+  RESOLVED at merge train round 15 (2026-09-05, [AGENT] rebase of this lane onto main 102f4dae): arm
+  (ii) happened — `stdlib-slice-3` merged first (round 14). Slice 3 FILED this bug (its OPEN entry's
+  B1 root-cause diagnosis — `emit.go` `noteInterface(ifaceName, recvIface)` keyed by the static
+  interface but registering the declaring receiver's set, last-write-wins — agrees with this entry)
+  and this lane FIXED it; slice 3's entry text yielded to this one, its three Cases ids were appended
+  above, and the three rows were re-pinned FAIL -> PASS (stage `-`) in this lane's baseline block.)
 
 WHAT (spec#Embedded_interfaces, spec#Interface_types, spec#Method_sets): the method set of
 `J interface{ I; bar() }` is the UNION `{foo, bar}`; a type implements `J` iff its method set
@@ -5435,7 +5446,10 @@ runtime question; the identical-signature duplicate is already pinned
   exponent-difference bounded by the float format. Cost, not just abort: the coordinator's
   measurement (slice-3 audit, relayed) puts a count of `1<<31` at ~1.1 GB RSS on main —
   a `2^count` that fits under the `Nat.pow` guard is still materialized; the saturation
-  removes that too.)
+  removes that too. The [AGENT audit, 2026-09-05] ladder on main's binary: 2^24 → 76 MB,
+  2^28 → 200 MB, 2^30 → 591 MB, 2^31 → 1116 MB RSS, all answered correctly; 2^32 is the
+  FIRST abort — the abort boundary is the `Nat.pow` guard, not ~2^24 as the evidence README
+  first said (corrected at that round, finding R1).)
 - Pinned-by: differential
 - Cases: ints/shift-count-bound/left-huge, ints/shift-count-bound/right-huge-signed, ints/shift-count-bound/right-huge-unsigned, ints/shift-count-bound/int-count, ints/shift-count-bound/untyped-const, ints/shift-count-huge
 - Discovered: 2026-09-04 (stdlib slice 3's gotest triage re-run — $GOROOT/test/fixedbugs/bug356.go:
@@ -5443,7 +5457,12 @@ runtime question; the identical-signature duplicate is already pinned
   exponent is too big`. The slice-3 lane recorded this entry OPEN on its branch (a4865e66) with
   Cases ints/shift-count-huge. MERGE-TRAIN NOTE [AGENT]: same rule as BUG-095 — one bug, one
   number; the second merge keeps this entry and appends `ints/shift-count-huge`, which flips
-  FAIL -> PASS at that merge.)
+  FAIL -> PASS at that merge. BOTH ARMS (audit fix round 2026-09-05): this lane first — the row is
+  BORN PASS at slice 3's merge, no flip; slice 3 first — this lane's rebase re-pins it FAIL -> PASS
+  with a baseline re-pin note. Either arm keeps THIS entry's Status/prose in the conflict. RESOLVED at merge train
+  round 15 (2026-09-05, [AGENT] rebase onto main 102f4dae): slice 3 first — filed there, fixed here;
+  `ints/shift-count-huge` appended above and re-pinned FAIL -> PASS (stage `-`) in this lane's
+  baseline block.)
 
 WHAT (spec#Operators — "There is no upper limit on the shift count. Shifts behave as if the
 left operand is shifted n times by 1"): `12345 << (1<<32)` is 0 for an `int`, `1 << (1<<40)`
@@ -5463,3 +5482,50 @@ type (`int`, Go 1.13+) both huge and in-width; the negative-count panic text; an
 untyped-constant left operand of a non-constant shift (`var b uint8 = 1 << m` with m = 8 → 0;
 `d := 1 << big` → int → 0; `var c int32 = 1 << k`, k = 31 → MinInt32) — the type rule is
 go/types' (spec#Operators), the width that saturates is the assumed type's.
+
+## BUG-097 — the ANONYMOUS-interface wire name is qualified with package NAMES while every other TypeId is keyed by import PATH: two same-named packages at different paths fuse two DISTINCT `interface{ M() T }` types onto ONE wire name — a wrong satisfaction answer on main, a named refusal since BUG-095's conflict guard [fidelity; frontend identity; multipkg; surfaced by the bug095-096 audit (R2)]
+
+- Status: open
+- Pinned-by: differential
+- Cases: multipkg/same-name-anon-iface
+
+WHAT (spec#Type_identity: two named types are identical only if they are the same type —
+`red/inner.T` is not `blue/inner.T`; two interface types are identical iff they have the same
+method set, signatures compared under type identity — so `interface{ Get() red/inner.T }` and
+`interface{ Get() blue/inner.T }` are DIFFERENT types): `tools/nativefrontend/wire.go`
+(`emitType`'s anonymous non-empty interface arm) and `emit.go` (`ifaceWireName`'s structural
+fallback) mint the anonymous interface's wire name with
+`types.TypeString(iface, func(p *types.Package) string { return p.Name() })` — the package
+NAME — while every other TypeId qualifies by IMPORT PATH (`identity.go` `pkgQualifier`, the
+BUG-010 fix). Two packages named `inner` at `red/inner` and `blue/inner`, each with its own `T`
+and its own `interface{ Get() T }`, therefore render as one name, `interface{Get() inner.T}`.
+On main `noteInterface` was last-writer-wins, so whichever package's interface was registered
+LAST supplied the machine's requirement list for BOTH: the [AGENT audit, 2026-09-05] measured
+gc `1 4 true false` against main `1 4 false false` — red's value judged NOT to satisfy red's own
+interface: a WRONG ANSWER, emission-order-dependent. Since this lane's BUG-095 fix the collision
+is caught by `noteInterface`'s conflict record and refused by name in `emitProgram`
+(`interface wire name registered with two different method sets: interface{Get() inner.T}
+(interface{Get() red/inner.T} vs interface{Get() blue/inner.T})`) — fail-closed, never a wrong
+answer, but the row is RED. Pinned by `multipkg/same-name-anon-iface` (gc `1 4 true false`; the
+frontend refuses at `frontend-export`; the raft-W1.1 `multipkg/same-name-identity` twin (2026-08-18) already
+pins the NAMED-type half of the same hazard, green since BUG-010). Root cause: FRONTEND (wire
+identity), not the machine — the machine answers exactly what the wire declares.
+
+PLAN [AGENT]: pass `e.pkgQualifier` as the qualifier at BOTH sites (they must stay byte-identical
+spellings of one name — `emitType` for type positions, `ifaceWireName` for dispatch sites), so
+the anonymous name is path-keyed like every named TypeId (`interface{Get() red/inner.T}`); the
+key-grammar guard (`checkKeyPathGrammar`) already covers dotted paths reaching a qualifier.
+Single-package wires are byte-identical (path == name for `main`); wires mentioning a
+sub-path package's type inside an anonymous interface's method signature (`math/rand`,
+`internal/abi`) change their anonymous TypeIds — an identity change, invisible to the
+observable unless the name reaches a panic text. THAT is the one design question to settle
+first: `Ops.lean` `goTypeNameForMessage` prints an `.interface name` by its key, so a
+path-qualified anonymous name prints `interface{Get() red/inner.T}` where gc prints
+`interface { Get() inner.T }` — the display/identity split BUG-059 already records for
+`.defined` keys (`multipkg/same-name-identity-panic`); the fix should land under BUG-059's
+display rule (identity by path on the wire, rendering by name in messages), not invent a
+second one. Not fixed in the audit fix round: a two-site one-liner, but its blast radius
+(every anonymous TypeId over a sub-path package) needs its own full run and the BUG-059
+rendering decision — recorded, rowed, red. Ledger: FR-13's structural-TypeId row is the
+neighbouring frontier (anonymous STRUCT types); this entry keeps the anonymous-INTERFACE
+identity defect on its own line since it is a wrong-answer class, not a coverage gap.

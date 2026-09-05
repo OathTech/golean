@@ -27,9 +27,15 @@ of an embedding interface's own method through it, so its rows are not
 emission-order-fragile (the slice-3 audit's finding about the slice-3
 pins, relayed by the coordinator). BUG-096's root is the MACHINE:
 `intShift{Left,Right}Result` formed `2^count` over `Int` before
-normalizing; counts ≥ ~2^24 aborted the PROCESS (`INTERNAL PANIC:
-Nat.pow exponent is too big`, five of eight subjects); the fix saturates
-at the operand width first. Both fixes leave the shift wire byte-identical
+normalizing; counts ≥ 2^32 aborted the PROCESS (`INTERNAL PANIC:
+Nat.pow exponent is too big` — five of eight subjects, every one with a
+count of 1<<32 or more), while counts in ~2^24–2^31 answered CORRECTLY
+but materialized `2^count`, up to ~1.1 GB RSS (measured on main's binary
+by the [AGENT audit, 2026-09-05]: 2^24 → 76 MB, 2^28 → 200 MB, 2^30 →
+591 MB, 2^31 → 1116 MB, all correct; 2^32 = the first abort — the
+earlier "≥ ~2^24 aborted" claim here was WRONG and is corrected per
+audit finding R1); the fix saturates at the operand width first, which
+removes the abort and the materialization alike. Both fixes leave the shift wire byte-identical
 (`cmp` of the two shift wires) and the raft twin wire pin unmoved.
 
 ## gc oracle (go1.26.5 linux/amd64 = `baselines/go-oracle-pin`)
@@ -52,7 +58,31 @@ the machine transcripts equals the gc line for the same subject.
   built from that checkout's `tools/nativefrontend`.
 * fixed: this lane's worktree at the commit carrying this README (the
   frontend from `tools/nativefrontend`, the binary from `scripts/capped
-  lake build`). Lean toolchain: the repo's `lean-toolchain` pin.
+  lake build`). Lean toolchain: the repo's `lean-toolchain` pin. The
+  [AGENT audit, 2026-09-05] re-certified the lane tip (93762101) on a
+  CLEAN tree: full `ci --diff`, 3419/3419, `git_dirty=false`.
+* audit fix round (2026-09-05, findings R1–R7 + the merge-train clause):
+  records corrected here and in `docs/BUGS.md`; frontend changes (R3
+  conflict rollback, R4 promoted method expression, R5 final re-check,
+  R7 dedup) and the R6 docstring are gated by their own `ci --diff`
+  (tail in the commit message); the born rows
+  `interfaces/embedding-satisfaction/method-expr-promoted` (PASS, R4)
+  and `multipkg/same-name-anon-iface` (FAIL by design, BUG-097 — the
+  R2 finding) are on the baseline with a re-pin note.
+* merge train round 15 (2026-09-05, [AGENT] rebase reconciliation): the
+  lane (tip b283ab4c, forked from main `ac45aedd`) was rebased onto main
+  `102f4dae`, which had gained flaky-panic-wait, g6-reflect-memo,
+  fr27-fr28, c-arc-gu and stdlib-slice-3 at round 14. The "slice-3
+  merged first" arm of the BUG-095/096 MERGE-TRAIN NOTE happened:
+  slice-3's four pins of these two bugs
+  (`generics/type-switch-interface-param{,/bound,/plain}`,
+  `ints/shift-count-huge`) were re-pinned FAIL→PASS (stage `-`) and
+  appended to this lane's FIXED entries' Cases lines; the tracked
+  baseline is 3498 = 3252 PASS / 246 FAIL (main's 3479 = 3230 / 249 +
+  this lane's 19 born rows + the 4 flips), re-derived from the data rows.
+  The `ac45aedd` / 3419 figures above are the lane's pre-rebase record.
+  Gate at the rebased tip: see the commit message's `[rebased …]` trailer
+  and the ci tail reported to the merge train.
 * Host: linux/amd64 (the 32-core build box; nothing here is timing-sensitive).
 
 ## Artifacts

@@ -2028,7 +2028,11 @@ count such as `1 << 32` made Lean's `Nat.pow` guard ABORT the process
 (no observation, no refusal) where Go answers 0 (BUG-096). The width
 lookup refuses an unbounded kind by name; none reaches the machine (the
 decoder never produces one), so this is the fail-closed arm, not a
-regression. -/
+regression. ORDER IS LOAD-BEARING: `shiftCountNat` (the negative-count
+panic, `runtime error: negative shift amount`) runs BEFORE the width lookup
+and the saturation test — saturating on a `Nat` obtained from a negative
+count would answer a value where Go panics; `Tests/GoCoreEval.lean`'s
+`coreNegativeShiftFunction` pins the panic (audit fix R6, 2026-09-05). -/
 def intShiftLeftResult (left right : GoValue) : Except Stop GoValue := do
   let (leftValue, leftKind) ← valueAsIntValue left
   let count ← shiftCountNat right
