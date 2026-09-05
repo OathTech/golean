@@ -7,7 +7,7 @@ gc-visible texts byte-exact). Design of record:
 `docs/2026-09-05_fr19-bug097-design.md`. Consuming records: `docs/BUGS.md`
 (BUG-097, BUG-059, BUG-092 fixed; BUG-018 addendum; BUG-098 filed),
 `docs/language-coverage-ledger.md` (FR-19 closed, FR-31 rowed, §5.1 item
-1 narrowed, §8p), `docs/2026-09-03_cedar-go-coverage-census.md` §13,
+1 narrowed, §8s), `docs/2026-09-03_cedar-go-coverage-census.md` §13,
 `docs/2026-08-18_multipackage-identity.md` §3 (residue retired),
 `baselines/native-full.tsv` header, `scripts/check-frontend-pins` re-pin
 history.
@@ -63,9 +63,17 @@ paths):
   `score·3`: per-package), anonymous struct/func/chan spellings.
 * P5 — the unexported single-method shape across packages (`true false`;
   `inner.T is not interface { inner.get() int }: missing method get`),
-  and `%T`/`Name()` of an instantiation over a sub-path type
-  (`main.Pair[red/inner.T]` — the bracket keeps the path, so the
-  observation channel needed no change).
+  and `%T` of an instantiation over a sub-path type
+  (`main.Pair[red/inner.T]`). The reflect `Name()`/`String()` line
+  (`Name()="Pair[red/inner.T]" String()="main.Pair[red/inner.T]"`) was
+  ADDED and re-run at the audit fix round R15 — the first README, the
+  design note §3.3 and BUG-059 credited P5 with a `Name()` observation
+  it did not yet make; the bracket keeps the path, so the observation
+  channel needed no change. P3 re-recorded at R22 (Defs iterated in
+  name order; byte-reproducible).
+* R3 probe (`gc-probe-r3-recovered-runtime-error.go`, run at the audit
+  fix round; transcript in the "Audit fix round" section below) — the
+  dynamic type of a RECOVERED runtime error on both sides.
 
 The gc source read for the rules: `deps/go/src/cmd/compile/internal/types/fmt.go`
 (`tconv2`, `pkgqual`, `NameString`/`LinkString`), `noder/writer.go:1013`
@@ -110,24 +118,38 @@ The gc source read for the rules: `deps/go/src/cmd/compile/internal/types/fmt.go
 ## Twin re-pin
 
 `twin-repin/structural-diff.txt` — JSON diff of the pinned twin wire vs
-the fresh emit: 92 TypeDefs gain `display`/`pkg` (def bytes identical),
-`quorum.tup·1` born, 20 funcs born (Describe's literals + fmt shim, the
-`slices.SortFunc`/pdqsort family at `[quorum.tup·1]`, `cmp.Compare`
-at `quorum.Index` and `uint64`, `cmp.isNaN[quorum.Index]`),
-`quorum.MajorityConfig.Describe` stub → body, and 208 funcs / 203
-methods that differ ONLY by program-wide temporary renumbering (3214 +
-2802 leaf changes, all `$cN/$swfN/$swiN/$tsN`, 0 other). 0 removed, 0
-globals. `baselines/pins/twin-chdriver.wire.json` re-pinned 4ee39f73… →
-f89e1c9e…; history in `scripts/check-frontend-pins`.
+the fresh emit, produced by the TRACKED `twin-repin/twin-structural-diff.py`
+(audit fix round R12; the first diff came from an untracked inline
+script that omitted the methodSets section): 92 TypeDefs gain
+`display`/`pkg` (def bytes identical), `quorum.tup·1` born (type AND
+method-set record, 81 → 82 records), 20 funcs born (Describe's literals
++ fmt shim, the `slices.SortFunc`/pdqsort family at `[quorum.tup·1]`,
+`cmp.Compare` at `quorum.Index` and `uint64`, `cmp.isNaN[quorum.Index]`),
+`quorum.MajorityConfig.Describe` stub → body (the un-quarantine the
+re-pin carries: an H-3 stub since the cmp retirement), and 208 funcs /
+203 methods that differ ONLY by program-wide temporary renumbering
+(3214 + 2802 leaf changes, all `$cN/$swfN/$swiN/$tsN`, 0 other). 0
+removed, 0 globals, fileOrder identical. `baselines/pins/twin-chdriver.wire.json`
+re-pinned 4ee39f73… → f89e1c9e…; history in `scripts/check-frontend-pins`.
+Reproduce: `git show b77f3298:baselines/pins/twin-chdriver.wire.json >
+old.json; python3 twin-repin/twin-structural-diff.py old.json
+baselines/pins/twin-chdriver.wire.json`.
 
 ## cedar-go census
 
 `cedar-lower-diagnose-report-after.txt`, `cedar-histogram-after.tsv` —
-the static pass after the change (before = memo §12.2, unchanged tree).
-Summary in memo §13: `nodeJSONAlias` (FR-19) gone, `cedargo/internal/json`
-lowers; the BUG-098 guard kills `x/exp/schema/ast` (17 declarations) —
-1460/1569 → 1443/1569 declarations demanding nothing refused, export
-kills 2 → 17 declarations, 5 → 8 of 24 packages.
+the static AND dynamic pass after the change (before = memo §12.2,
+unchanged tree), RE-RUN at the audit fix round R8 (the first copies
+labelled the cause FR-29 from a pre-rename `causes.tsv`; the row is
+FR-31). Summary in memo §13: `nodeJSONAlias` (FR-19) gone,
+`cedargo/internal/json` lowers; the BUG-098 guard kills
+`x/exp/schema/ast` AND `x/exp/schema/resolved` symmetrically (17
+declarations, 6 more packages inherit) — 1460/1569 → 1443/1569
+declarations demanding nothing refused, export kills 2 → 17
+declarations, 5 → 8 of 24 packages. The DYNAMIC first refusal is the
+report's first line: the whole-library `all` case, which EXPORTED
+before (557 quarantined), now REFUSES whole-export on the guard — the
+first README/design/census said it still exported (withdrawn at R2).
 
 ## Gate
 
@@ -145,3 +167,59 @@ row). Full run 1 (before the shadow-model / panicwrap / fixture-split
 fixes) is the record of the three findings above: 17 atomics/race rows
 and `multipkg/nil-value-method-text` PASS→FAIL, `same-name-anon-iface-panic/{missing,source}`
 born FAIL — none of it survives to the re-pin.
+
+## Audit fix round (2026-09-05, [AGENT]; verdict FIX-FIRST, findings R1–R22)
+
+Every finding applied or recorded-owed; the disposition table is in the
+round's commit messages and the design note §7. The measurements the
+round produced:
+
+* **R1 (BLOCKER) — `*T` pkgpath.** Auditor's reproducer `.tmp/audit/p/V`
+  (gc: `*inner.P … (types from different scopes)`, `*inner.Q`/`*inner.R`
+  `… (types from different packages)`, `inner.S` packages, `[]inner.Q`
+  scopes). Fixed in `typePkgForMessage` (gc's uncommon-section rule;
+  refuses where the wire cannot decide); corpus
+  `multipkg/same-name-pointer-panic/{no-methods,value-method,pointer-method,slice-control}`
+  all PASS (`diff-one`, 11/11 with the display pins re-run).
+* **R3 / R20 — the recovered runtime error's type**
+  (`gc-probe-r3-recovered-runtime-error.go`; gc / frontend / machine):
+
+      gc:      runtime error: index out of range [3] with length 0
+               interface conversion: interface {} is runtime.boundsError, not int
+               true
+      machine: assertRecoveredToInt  -> unsupported: "type-assertion panic text names the dynamic type of a
+                 recovered runtime error, which the machine models as one synthetic id ($runtime.Error) …"
+               recoveredAsAny       -> ok: {"dynamic":"Error","tag":"interface","value":{"tag":"string",…}}
+                 (gc's observation: {"dynamic":"boundsError","value":{"tag":"struct","typeName":"boundsError",
+                  "fields":[x=3,y=0,signed=false,code=0]}} — a WRONG ANSWER, differential red)
+               recoveredErrorText   -> unsupported: "interface satisfaction for <runtime error payload: gc's
+                 concrete type (…) is not modeled — one synthetic $runtime.Error id, BUG-009/BUG-053 class>: …"
+
+  Filed as **BUG-099** (open, Pinned-by differential) with the two rows
+  `panic-recover/recovered-runtime-error-type/{observed,assert-int}`;
+  the design note's "unreachable" claim for the no-record marker is
+  corrected; `displayNameOf` renders the cause-naming marker.
+* **R4 — BUG-098's pre-lane truth is shape-dependent.** New row
+  `multipkg/unexported-method-scope/distinct-names` (`type S struct{
+  emb.E }` vs main's `interface{ get() int }`; gc `false`) refuses
+  under the guard by design; the entry now says main answered WRONG on
+  this shape and refused by accident only on the same-name one.
+* **R2 / R8** — the cedar re-run (below, this round's report) shows the
+  `all` case refusing whole-export; labels FR-31.
+* **R5 / R6 / R7** — Go tests for the three emitter refusals
+  (`identity_test.go`), Lean tests for the required `display`/`pkg`
+  fields (missing → refuse naming the field; `""` accepted) and for the
+  new `program.types` duplicate check (`Tests/GoCoreEval.lean`).
+* **R11** — `keyPathHazard`: non-ASCII / `%` / `"` / control bytes in
+  an import path refuse at the minting boundary by name (gc's
+  `PathToPrefix` escaping); unit-tested.
+* **R12 / R13** — structural diff regenerated with the methodSets
+  section from a tracked producer; the un-quarantine of
+  `quorum.MajorityConfig.Describe` written into the design §5.
+* **R19** — the C6 pin `scoping/local-type-identity/type-instantiation-refused`
+  is guarded by **BUG-100** (`Pinned-by: none`, `Expect: FAIL` — the
+  repo's mechanism for red-by-design pins; no ledger-backed check
+  exists).
+* **R18** — the gate tail below is from the CLEAN committed tip
+  (`git_dirty=false`), the full `--diff` run, not a grep'd line.
+

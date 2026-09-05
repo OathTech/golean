@@ -7,6 +7,7 @@ import (
 	"go/parser"
 	"go/token"
 	"go/types"
+	"sort"
 )
 
 const src = `package main
@@ -37,9 +38,19 @@ func main() {
 	}
 	_ = pkg
 	qf := func(p *types.Package) string { return "PATH(" + p.Path() + ")" }
+	// types.Info.Defs is a map: iterate it in NAME order so the transcript
+	// is reproducible byte for byte (audit fix round R22, 2026-09-05).
+	names := []string{}
+	vars := map[string]*types.Var{}
 	for id, obj := range info.Defs {
 		if v, ok := obj.(*types.Var); ok && len(id.Name) == 1 && id.Name >= "a" && id.Name <= "d" {
-			fmt.Printf("%s: nil-qf=%q  qf=%q\n", id.Name, types.TypeString(v.Type(), nil), types.TypeString(v.Type(), qf))
+			names = append(names, id.Name)
+			vars[id.Name] = v
 		}
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		v := vars[name]
+		fmt.Printf("%s: nil-qf=%q  qf=%q\n", name, types.TypeString(v.Type(), nil), types.TypeString(v.Type(), qf))
 	}
 }

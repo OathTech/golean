@@ -1,128 +1,134 @@
 # twin wire structural diff — lane fr19-bug097 (FR-19 scope-ordinal TypeIds, BUG-097 anonymous-interface keys, BUG-059 display records), 2026-09-05
-# producer: python3 JSON diff of baselines/pins/twin-chdriver.wire.json (old) vs a fresh emit over the
-#   check-frontend-pins twin assembly (raftsubject/{quorum,raftpb,tracker,proto,confchange,raft} + tools/raftsubject/twin-*.go)
-#   GO111MODULE=off go run ./tools/nativefrontend --dir <assembly> --out <new>
+# producer: docs/evidence/2026-09-05_fr19-bug097/twin-repin/twin-structural-diff.py (tracked since audit fix round R12)
+#   old = baselines/pins/twin-chdriver.wire.json at the lane's fork (main b77f3298); new = the re-pinned file, which
+#   scripts/check-frontend-pins certifies byte-equal to a fresh emit over the twin assembly
+#   (raftsubject/{quorum,raftpb,tracker,proto,confchange,raft} + tools/raftsubject/twin-*.go;
+#   GO111MODULE=off go run ./tools/nativefrontend --dir <assembly> --out <new>)
 old sha256 4ee39f732d51218a792393fa3143980dfde8a2a6f587fbfaa224c5c4ba28b447
 new sha256 f89e1c9e0b5b3082dc6a778f121fe6abc5b01288a4b20bf3c11126422dd735b0
 funcs: added 20 removed 0 changed 208
-  + quorum.MajorityConfig.Describe$lit0 
-  + quorum.MajorityConfig.Describe$lit1 
-  + quorum.MajorityConfig.Describe$fmt2 
-  + slices.SortFunc[[]quorum.tup·1,quorum.tup·1] 
-  + cmp.Compare[quorum.Index] 
-  + cmp.Compare[uint64] 
-  + slices.pdqsortCmpFunc[quorum.tup·1] 
-  + cmp.isNaN[quorum.Index] 
-  + slices.insertionSortCmpFunc[quorum.tup·1] 
-  + slices.heapSortCmpFunc[quorum.tup·1] 
-  + slices.breakPatternsCmpFunc[quorum.tup·1] 
-  + slices.choosePivotCmpFunc[quorum.tup·1] 
-  + slices.reverseRangeCmpFunc[quorum.tup·1] 
-  + slices.partialInsertionSortCmpFunc[quorum.tup·1] 
-  + slices.partitionEqualCmpFunc[quorum.tup·1] 
-  + slices.partitionCmpFunc[quorum.tup·1] 
-  + slices.siftDownCmpFunc[quorum.tup·1] 
-  + slices.medianAdjacentCmpFunc[quorum.tup·1] 
-  + slices.medianCmpFunc[quorum.tup·1] 
-  + slices.order2CmpFunc[quorum.tup·1] 
+  + quorum.MajorityConfig.Describe$lit0
+  + quorum.MajorityConfig.Describe$lit1
+  + quorum.MajorityConfig.Describe$fmt2
+  + slices.SortFunc[[]quorum.tup·1,quorum.tup·1]
+  + cmp.Compare[quorum.Index]
+  + cmp.Compare[uint64]
+  + slices.pdqsortCmpFunc[quorum.tup·1]
+  + cmp.isNaN[quorum.Index]
+  + slices.insertionSortCmpFunc[quorum.tup·1]
+  + slices.heapSortCmpFunc[quorum.tup·1]
+  + slices.breakPatternsCmpFunc[quorum.tup·1]
+  + slices.choosePivotCmpFunc[quorum.tup·1]
+  + slices.reverseRangeCmpFunc[quorum.tup·1]
+  + slices.partialInsertionSortCmpFunc[quorum.tup·1]
+  + slices.partitionEqualCmpFunc[quorum.tup·1]
+  + slices.partitionCmpFunc[quorum.tup·1]
+  + slices.siftDownCmpFunc[quorum.tup·1]
+  + slices.medianAdjacentCmpFunc[quorum.tup·1]
+  + slices.medianCmpFunc[quorum.tup·1]
+  + slices.order2CmpFunc[quorum.tup·1]
   change classes over all changed funcs: {'temp-renumber': 3214}
   (every changed funcs differs ONLY by program-wide temporary renumbering — $cN/$swfN/$swiN/$tsN — the downstream shift of quorum.MajorityConfig.Describe now lowering)
 methods: added 0 removed 0 changed 203
   change classes over all changed methods: {'other': 3, 'temp-renumber': 2802}
-  ~ quorum.MajorityConfig.Describe: stub->body; .body: '<absent>' -> "{'body': [{'cond': {'expr': 'binary', 'op': '==', 'operandType': {'int"; .recv.id: '$recv' -> 'c'; .unsupported: 'method quorum.MajorityConfig.Describe (function-local defined type tup' -> '<absent>'
+  ~ quorum.MajorityConfig.Describe: stub->body; .body: '<absent>' -> '{"body": [{"cond": {"expr": "binary", "op": "==", "operandType": {"int": "in..."; .recv.id: '$recv' -> 'c'; .unsupported: 'method quorum.MajorityConfig.Describe (function-local defined type tup as a ..." -> '<absent>'
 types: added 1 removed 0 changed 92
-  + quorum.tup·1 
-  ~ unicode/utf8.acceptRange (fields added: display,pkg; display='utf8.acceptRange' pkg='unicode/utf8'; def identical: True)
-  ~ internal/strconv.Error (fields added: display,pkg; display='strconv.Error' pkg='internal/strconv'; def identical: True)
-  ~ errors.errorString (fields added: display,pkg; display='errors.errorString' pkg='errors'; def identical: True)
-  ~ slices.sortedHint (fields added: display,pkg; display='slices.sortedHint' pkg='slices'; def identical: True)
-  ~ slices.xorshift (fields added: display,pkg; display='slices.xorshift' pkg='slices'; def identical: True)
-  ~ strconv.NumError (fields added: display,pkg; display='strconv.NumError' pkg='strconv'; def identical: True)
-  ~ unicode.RangeTable (fields added: display,pkg; display='unicode.RangeTable' pkg='unicode'; def identical: True)
-  ~ unicode.Range16 (fields added: display,pkg; display='unicode.Range16' pkg='unicode'; def identical: True)
-  ~ unicode.Range32 (fields added: display,pkg; display='unicode.Range32' pkg='unicode'; def identical: True)
-  ~ bytes.Buffer (fields added: display,pkg; display='bytes.Buffer' pkg='bytes'; def identical: True)
-  ~ bytes.readOp (fields added: display,pkg; display='bytes.readOp' pkg='bytes'; def identical: True)
-  ~ encoding/binary.littleEndian (fields added: display,pkg; display='binary.littleEndian' pkg='encoding/binary'; def identical: True)
-  ~ strings.Builder (fields added: display,pkg; display='strings.Builder' pkg='strings'; def identical: True)
-  ~ quorum.JointConfig (fields added: display,pkg; display='quorum.JointConfig' pkg='quorum'; def identical: True)
-  ~ quorum.MajorityConfig (fields added: display,pkg; display='quorum.MajorityConfig' pkg='quorum'; def identical: True)
-  ~ quorum.Index (fields added: display,pkg; display='quorum.Index' pkg='quorum'; def identical: True)
-  ~ quorum.mapAckIndexer (fields added: display,pkg; display='quorum.mapAckIndexer' pkg='quorum'; def identical: True)
-  ~ quorum.VoteResult (fields added: display,pkg; display='quorum.VoteResult' pkg='quorum'; def identical: True)
-  ~ raftpb.confStateError (fields added: display,pkg; display='raftpb.confStateError' pkg='raftpb'; def identical: True)
-  ~ raftpb.EntryType (fields added: display,pkg; display='raftpb.EntryType' pkg='raftpb'; def identical: True)
-  ~ raftpb.MessageType (fields added: display,pkg; display='raftpb.MessageType' pkg='raftpb'; def identical: True)
-  ~ raftpb.ConfChangeTransition (fields added: display,pkg; display='raftpb.ConfChangeTransition' pkg='raftpb'; def identical: True)
-  ~ raftpb.ConfChangeType (fields added: display,pkg; display='raftpb.ConfChangeType' pkg='raftpb'; def identical: True)
-  ~ raftpb.Entry (fields added: display,pkg; display='raftpb.Entry' pkg='raftpb'; def identical: True)
-  ~ raftpb.SnapshotMetadata (fields added: display,pkg; display='raftpb.SnapshotMetadata' pkg='raftpb'; def identical: True)
-  ~ raftpb.Snapshot (fields added: display,pkg; display='raftpb.Snapshot' pkg='raftpb'; def identical: True)
-  ~ raftpb.Message (fields added: display,pkg; display='raftpb.Message' pkg='raftpb'; def identical: True)
-  ~ raftpb.HardState (fields added: display,pkg; display='raftpb.HardState' pkg='raftpb'; def identical: True)
-  ~ raftpb.ConfState (fields added: display,pkg; display='raftpb.ConfState' pkg='raftpb'; def identical: True)
-  ~ raftpb.ConfChange (fields added: display,pkg; display='raftpb.ConfChange' pkg='raftpb'; def identical: True)
-  ~ raftpb.ConfChangeSingle (fields added: display,pkg; display='raftpb.ConfChangeSingle' pkg='raftpb'; def identical: True)
-  ~ raftpb.ConfChangeV2 (fields added: display,pkg; display='raftpb.ConfChangeV2' pkg='raftpb'; def identical: True)
-  ~ raftpb.goleanShimErrorString (fields added: display,pkg; display='raftpb.goleanShimErrorString' pkg='raftpb'; def identical: True)
-  ~ tracker.inflight (fields added: display,pkg; display='tracker.inflight' pkg='tracker'; def identical: True)
-  ~ tracker.Inflights (fields added: display,pkg; display='tracker.Inflights' pkg='tracker'; def identical: True)
-  ~ tracker.Progress (fields added: display,pkg; display='tracker.Progress' pkg='tracker'; def identical: True)
-  ~ tracker.ProgressMap (fields added: display,pkg; display='tracker.ProgressMap' pkg='tracker'; def identical: True)
-  ~ tracker.StateType (fields added: display,pkg; display='tracker.StateType' pkg='tracker'; def identical: True)
-  ~ tracker.Config (fields added: display,pkg; display='tracker.Config' pkg='tracker'; def identical: True)
-  ~ tracker.ProgressTracker (fields added: display,pkg; display='tracker.ProgressTracker' pkg='tracker'; def identical: True)
-  ~ tracker.matchAckIndexer (fields added: display,pkg; display='tracker.matchAckIndexer' pkg='tracker'; def identical: True)
-  ~ confchange.Changer (fields added: display,pkg; display='confchange.Changer' pkg='confchange'; def identical: True)
-  ~ confchange.goleanShimErrorString (fields added: display,pkg; display='confchange.goleanShimErrorString' pkg='confchange'; def identical: True)
-  ~ raft.raftLog (fields added: display,pkg; display='raft.raftLog' pkg='raft'; def identical: True)
-  ~ raft.unstable (fields added: display,pkg; display='raft.unstable' pkg='raft'; def identical: True)
-  ~ raft.DefaultLogger (fields added: display,pkg; display='raft.DefaultLogger' pkg='raft'; def identical: True)
-  ~ raft.SnapshotStatus (fields added: display,pkg; display='raft.SnapshotStatus' pkg='raft'; def identical: True)
-  ~ raft.SoftState (fields added: display,pkg; display='raft.SoftState' pkg='raft'; def identical: True)
-  ~ raft.Ready (fields added: display,pkg; display='raft.Ready' pkg='raft'; def identical: True)
-  ~ raft.Peer (fields added: display,pkg; display='raft.Peer' pkg='raft'; def identical: True)
-  ~ raft.ReadOnlyOption (fields added: display,pkg; display='raft.ReadOnlyOption' pkg='raft'; def identical: True)
-  ~ raft.lockedRand (fields added: display,pkg; display='raft.lockedRand' pkg='raft'; def identical: True)
-  ~ raft.CampaignType (fields added: display,pkg; display='raft.CampaignType' pkg='raft'; def identical: True)
-  ~ raft.StateType (fields added: display,pkg; display='raft.StateType' pkg='raft'; def identical: True)
-  ~ raft.Config (fields added: display,pkg; display='raft.Config' pkg='raft'; def identical: True)
-  ~ raft.raft (fields added: display,pkg; display='raft.raft' pkg='raft'; def identical: True)
-  ~ raft.stepFunc (fields added: display,pkg; display='raft.stepFunc' pkg='raft'; def identical: True)
-  ~ raft.RawNode (fields added: display,pkg; display='raft.RawNode' pkg='raft'; def identical: True)
-  ~ raft.ProgressType (fields added: display,pkg; display='raft.ProgressType' pkg='raft'; def identical: True)
-  ~ raft.ReadState (fields added: display,pkg; display='raft.ReadState' pkg='raft'; def identical: True)
-  ~ raft.readIndexRequest (fields added: display,pkg; display='raft.readIndexRequest' pkg='raft'; def identical: True)
-  ~ raft.readOnly (fields added: display,pkg; display='raft.readOnly' pkg='raft'; def identical: True)
-  ~ raft.TracingEvent (fields added: display,pkg; display='raft.TracingEvent' pkg='raft'; def identical: True)
-  ~ raft.Status (fields added: display,pkg; display='raft.Status' pkg='raft'; def identical: True)
-  ~ raft.BasicStatus (fields added: display,pkg; display='raft.BasicStatus' pkg='raft'; def identical: True)
-  ~ raft.inMemStorageCallStats (fields added: display,pkg; display='raft.inMemStorageCallStats' pkg='raft'; def identical: True)
-  ~ raft.MemoryStorage (fields added: display,pkg; display='raft.MemoryStorage' pkg='raft'; def identical: True)
-  ~ raft.entryID (fields added: display,pkg; display='raft.entryID' pkg='raft'; def identical: True)
-  ~ raft.logSlice (fields added: display,pkg; display='raft.logSlice' pkg='raft'; def identical: True)
-  ~ raft.EntryFormatter (fields added: display,pkg; display='raft.EntryFormatter' pkg='raft'; def identical: True)
-  ~ raft.entryEncodingSize (fields added: display,pkg; display='raft.entryEncodingSize' pkg='raft'; def identical: True)
-  ~ raft.entryPayloadSize (fields added: display,pkg; display='raft.entryPayloadSize' pkg='raft'; def identical: True)
-  ~ raft.goleanShimErrorString (fields added: display,pkg; display='raft.goleanShimErrorString' pkg='raft'; def identical: True)
-  ~ main.harnessLogger (fields added: display,pkg; display='main.harnessLogger' pkg='main'; def identical: True)
-  ~ main.twinNode (fields added: display,pkg; display='main.twinNode' pkg='main'; def identical: True)
-  ~ main.slot (fields added: display,pkg; display='main.slot' pkg='main'; def identical: True)
-  ~ main.twin (fields added: display,pkg; display='main.twin' pkg='main'; def identical: True)
-  ~ main.op (fields added: display,pkg; display='main.op' pkg='main'; def identical: True)
-  ~ main.sched (fields added: display,pkg; display='main.sched' pkg='main'; def identical: True)
-  ~ log.Logger (fields added: display,pkg; display='log.Logger' pkg='log'; def identical: True)
-  ~ error (fields added: display,pkg; display='error' pkg=''; def identical: True)
-  ~ io.Reader (fields added: display,pkg; display='io.Reader' pkg='io'; def identical: True)
-  ~ io.Writer (fields added: display,pkg; display='io.Writer' pkg='io'; def identical: True)
-  ~ proto.Message (fields added: display,pkg; display='proto.Message' pkg='proto'; def identical: True)
-  ~ quorum.AckedIndexer (fields added: display,pkg; display='quorum.AckedIndexer' pkg='quorum'; def identical: True)
-  ~ raft.Logger (fields added: display,pkg; display='raft.Logger' pkg='raft'; def identical: True)
-  ~ raft.Storage (fields added: display,pkg; display='raft.Storage' pkg='raft'; def identical: True)
-  ~ raft.TraceLogger (fields added: display,pkg; display='raft.TraceLogger' pkg='raft'; def identical: True)
-  ~ raft.goleanShimStringer (fields added: display,pkg; display='raft.goleanShimStringer' pkg='raft'; def identical: True)
-  ~ raftpb.ConfChangeI (fields added: display,pkg; display='raftpb.ConfChangeI' pkg='raftpb'; def identical: True)
-  ~ raftpb.goleanShimStringer (fields added: display,pkg; display='raftpb.goleanShimStringer' pkg='raftpb'; def identical: True)
-  ~ tracker.goleanShimStringer (fields added: display,pkg; display='tracker.goleanShimStringer' pkg='tracker'; def identical: True)
+  + quorum.tup·1
+  change classes over all changed types: {'other': 184}
+  ~ unicode/utf8.acceptRange (fields added: display,pkg; fields removed: -; display='utf8.acceptRange' pkg='unicode/utf8'; def identical: True)
+  ~ internal/strconv.Error (fields added: display,pkg; fields removed: -; display='strconv.Error' pkg='internal/strconv'; def identical: True)
+  ~ errors.errorString (fields added: display,pkg; fields removed: -; display='errors.errorString' pkg='errors'; def identical: True)
+  ~ slices.sortedHint (fields added: display,pkg; fields removed: -; display='slices.sortedHint' pkg='slices'; def identical: True)
+  ~ slices.xorshift (fields added: display,pkg; fields removed: -; display='slices.xorshift' pkg='slices'; def identical: True)
+  ~ strconv.NumError (fields added: display,pkg; fields removed: -; display='strconv.NumError' pkg='strconv'; def identical: True)
+  ~ unicode.RangeTable (fields added: display,pkg; fields removed: -; display='unicode.RangeTable' pkg='unicode'; def identical: True)
+  ~ unicode.Range16 (fields added: display,pkg; fields removed: -; display='unicode.Range16' pkg='unicode'; def identical: True)
+  ~ unicode.Range32 (fields added: display,pkg; fields removed: -; display='unicode.Range32' pkg='unicode'; def identical: True)
+  ~ bytes.Buffer (fields added: display,pkg; fields removed: -; display='bytes.Buffer' pkg='bytes'; def identical: True)
+  ~ bytes.readOp (fields added: display,pkg; fields removed: -; display='bytes.readOp' pkg='bytes'; def identical: True)
+  ~ encoding/binary.littleEndian (fields added: display,pkg; fields removed: -; display='binary.littleEndian' pkg='encoding/binary'; def identical: True)
+  ~ strings.Builder (fields added: display,pkg; fields removed: -; display='strings.Builder' pkg='strings'; def identical: True)
+  ~ quorum.JointConfig (fields added: display,pkg; fields removed: -; display='quorum.JointConfig' pkg='quorum'; def identical: True)
+  ~ quorum.MajorityConfig (fields added: display,pkg; fields removed: -; display='quorum.MajorityConfig' pkg='quorum'; def identical: True)
+  ~ quorum.Index (fields added: display,pkg; fields removed: -; display='quorum.Index' pkg='quorum'; def identical: True)
+  ~ quorum.mapAckIndexer (fields added: display,pkg; fields removed: -; display='quorum.mapAckIndexer' pkg='quorum'; def identical: True)
+  ~ quorum.VoteResult (fields added: display,pkg; fields removed: -; display='quorum.VoteResult' pkg='quorum'; def identical: True)
+  ~ raftpb.confStateError (fields added: display,pkg; fields removed: -; display='raftpb.confStateError' pkg='raftpb'; def identical: True)
+  ~ raftpb.EntryType (fields added: display,pkg; fields removed: -; display='raftpb.EntryType' pkg='raftpb'; def identical: True)
+  ~ raftpb.MessageType (fields added: display,pkg; fields removed: -; display='raftpb.MessageType' pkg='raftpb'; def identical: True)
+  ~ raftpb.ConfChangeTransition (fields added: display,pkg; fields removed: -; display='raftpb.ConfChangeTransition' pkg='raftpb'; def identical: True)
+  ~ raftpb.ConfChangeType (fields added: display,pkg; fields removed: -; display='raftpb.ConfChangeType' pkg='raftpb'; def identical: True)
+  ~ raftpb.Entry (fields added: display,pkg; fields removed: -; display='raftpb.Entry' pkg='raftpb'; def identical: True)
+  ~ raftpb.SnapshotMetadata (fields added: display,pkg; fields removed: -; display='raftpb.SnapshotMetadata' pkg='raftpb'; def identical: True)
+  ~ raftpb.Snapshot (fields added: display,pkg; fields removed: -; display='raftpb.Snapshot' pkg='raftpb'; def identical: True)
+  ~ raftpb.Message (fields added: display,pkg; fields removed: -; display='raftpb.Message' pkg='raftpb'; def identical: True)
+  ~ raftpb.HardState (fields added: display,pkg; fields removed: -; display='raftpb.HardState' pkg='raftpb'; def identical: True)
+  ~ raftpb.ConfState (fields added: display,pkg; fields removed: -; display='raftpb.ConfState' pkg='raftpb'; def identical: True)
+  ~ raftpb.ConfChange (fields added: display,pkg; fields removed: -; display='raftpb.ConfChange' pkg='raftpb'; def identical: True)
+  ~ raftpb.ConfChangeSingle (fields added: display,pkg; fields removed: -; display='raftpb.ConfChangeSingle' pkg='raftpb'; def identical: True)
+  ~ raftpb.ConfChangeV2 (fields added: display,pkg; fields removed: -; display='raftpb.ConfChangeV2' pkg='raftpb'; def identical: True)
+  ~ raftpb.goleanShimErrorString (fields added: display,pkg; fields removed: -; display='raftpb.goleanShimErrorString' pkg='raftpb'; def identical: True)
+  ~ tracker.inflight (fields added: display,pkg; fields removed: -; display='tracker.inflight' pkg='tracker'; def identical: True)
+  ~ tracker.Inflights (fields added: display,pkg; fields removed: -; display='tracker.Inflights' pkg='tracker'; def identical: True)
+  ~ tracker.Progress (fields added: display,pkg; fields removed: -; display='tracker.Progress' pkg='tracker'; def identical: True)
+  ~ tracker.ProgressMap (fields added: display,pkg; fields removed: -; display='tracker.ProgressMap' pkg='tracker'; def identical: True)
+  ~ tracker.StateType (fields added: display,pkg; fields removed: -; display='tracker.StateType' pkg='tracker'; def identical: True)
+  ~ tracker.Config (fields added: display,pkg; fields removed: -; display='tracker.Config' pkg='tracker'; def identical: True)
+  ~ tracker.ProgressTracker (fields added: display,pkg; fields removed: -; display='tracker.ProgressTracker' pkg='tracker'; def identical: True)
+  ~ tracker.matchAckIndexer (fields added: display,pkg; fields removed: -; display='tracker.matchAckIndexer' pkg='tracker'; def identical: True)
+  ~ confchange.Changer (fields added: display,pkg; fields removed: -; display='confchange.Changer' pkg='confchange'; def identical: True)
+  ~ confchange.goleanShimErrorString (fields added: display,pkg; fields removed: -; display='confchange.goleanShimErrorString' pkg='confchange'; def identical: True)
+  ~ raft.raftLog (fields added: display,pkg; fields removed: -; display='raft.raftLog' pkg='raft'; def identical: True)
+  ~ raft.unstable (fields added: display,pkg; fields removed: -; display='raft.unstable' pkg='raft'; def identical: True)
+  ~ raft.DefaultLogger (fields added: display,pkg; fields removed: -; display='raft.DefaultLogger' pkg='raft'; def identical: True)
+  ~ raft.SnapshotStatus (fields added: display,pkg; fields removed: -; display='raft.SnapshotStatus' pkg='raft'; def identical: True)
+  ~ raft.SoftState (fields added: display,pkg; fields removed: -; display='raft.SoftState' pkg='raft'; def identical: True)
+  ~ raft.Ready (fields added: display,pkg; fields removed: -; display='raft.Ready' pkg='raft'; def identical: True)
+  ~ raft.Peer (fields added: display,pkg; fields removed: -; display='raft.Peer' pkg='raft'; def identical: True)
+  ~ raft.ReadOnlyOption (fields added: display,pkg; fields removed: -; display='raft.ReadOnlyOption' pkg='raft'; def identical: True)
+  ~ raft.lockedRand (fields added: display,pkg; fields removed: -; display='raft.lockedRand' pkg='raft'; def identical: True)
+  ~ raft.CampaignType (fields added: display,pkg; fields removed: -; display='raft.CampaignType' pkg='raft'; def identical: True)
+  ~ raft.StateType (fields added: display,pkg; fields removed: -; display='raft.StateType' pkg='raft'; def identical: True)
+  ~ raft.Config (fields added: display,pkg; fields removed: -; display='raft.Config' pkg='raft'; def identical: True)
+  ~ raft.raft (fields added: display,pkg; fields removed: -; display='raft.raft' pkg='raft'; def identical: True)
+  ~ raft.stepFunc (fields added: display,pkg; fields removed: -; display='raft.stepFunc' pkg='raft'; def identical: True)
+  ~ raft.RawNode (fields added: display,pkg; fields removed: -; display='raft.RawNode' pkg='raft'; def identical: True)
+  ~ raft.ProgressType (fields added: display,pkg; fields removed: -; display='raft.ProgressType' pkg='raft'; def identical: True)
+  ~ raft.ReadState (fields added: display,pkg; fields removed: -; display='raft.ReadState' pkg='raft'; def identical: True)
+  ~ raft.readIndexRequest (fields added: display,pkg; fields removed: -; display='raft.readIndexRequest' pkg='raft'; def identical: True)
+  ~ raft.readOnly (fields added: display,pkg; fields removed: -; display='raft.readOnly' pkg='raft'; def identical: True)
+  ~ raft.TracingEvent (fields added: display,pkg; fields removed: -; display='raft.TracingEvent' pkg='raft'; def identical: True)
+  ~ raft.Status (fields added: display,pkg; fields removed: -; display='raft.Status' pkg='raft'; def identical: True)
+  ~ raft.BasicStatus (fields added: display,pkg; fields removed: -; display='raft.BasicStatus' pkg='raft'; def identical: True)
+  ~ raft.inMemStorageCallStats (fields added: display,pkg; fields removed: -; display='raft.inMemStorageCallStats' pkg='raft'; def identical: True)
+  ~ raft.MemoryStorage (fields added: display,pkg; fields removed: -; display='raft.MemoryStorage' pkg='raft'; def identical: True)
+  ~ raft.entryID (fields added: display,pkg; fields removed: -; display='raft.entryID' pkg='raft'; def identical: True)
+  ~ raft.logSlice (fields added: display,pkg; fields removed: -; display='raft.logSlice' pkg='raft'; def identical: True)
+  ~ raft.EntryFormatter (fields added: display,pkg; fields removed: -; display='raft.EntryFormatter' pkg='raft'; def identical: True)
+  ~ raft.entryEncodingSize (fields added: display,pkg; fields removed: -; display='raft.entryEncodingSize' pkg='raft'; def identical: True)
+  ~ raft.entryPayloadSize (fields added: display,pkg; fields removed: -; display='raft.entryPayloadSize' pkg='raft'; def identical: True)
+  ~ raft.goleanShimErrorString (fields added: display,pkg; fields removed: -; display='raft.goleanShimErrorString' pkg='raft'; def identical: True)
+  ~ main.harnessLogger (fields added: display,pkg; fields removed: -; display='main.harnessLogger' pkg='main'; def identical: True)
+  ~ main.twinNode (fields added: display,pkg; fields removed: -; display='main.twinNode' pkg='main'; def identical: True)
+  ~ main.slot (fields added: display,pkg; fields removed: -; display='main.slot' pkg='main'; def identical: True)
+  ~ main.twin (fields added: display,pkg; fields removed: -; display='main.twin' pkg='main'; def identical: True)
+  ~ main.op (fields added: display,pkg; fields removed: -; display='main.op' pkg='main'; def identical: True)
+  ~ main.sched (fields added: display,pkg; fields removed: -; display='main.sched' pkg='main'; def identical: True)
+  ~ log.Logger (fields added: display,pkg; fields removed: -; display='log.Logger' pkg='log'; def identical: True)
+  ~ error (fields added: display,pkg; fields removed: -; display='error' pkg=''; def identical: True)
+  ~ io.Reader (fields added: display,pkg; fields removed: -; display='io.Reader' pkg='io'; def identical: True)
+  ~ io.Writer (fields added: display,pkg; fields removed: -; display='io.Writer' pkg='io'; def identical: True)
+  ~ proto.Message (fields added: display,pkg; fields removed: -; display='proto.Message' pkg='proto'; def identical: True)
+  ~ quorum.AckedIndexer (fields added: display,pkg; fields removed: -; display='quorum.AckedIndexer' pkg='quorum'; def identical: True)
+  ~ raft.Logger (fields added: display,pkg; fields removed: -; display='raft.Logger' pkg='raft'; def identical: True)
+  ~ raft.Storage (fields added: display,pkg; fields removed: -; display='raft.Storage' pkg='raft'; def identical: True)
+  ~ raft.TraceLogger (fields added: display,pkg; fields removed: -; display='raft.TraceLogger' pkg='raft'; def identical: True)
+  ~ raft.goleanShimStringer (fields added: display,pkg; fields removed: -; display='raft.goleanShimStringer' pkg='raft'; def identical: True)
+  ~ raftpb.ConfChangeI (fields added: display,pkg; fields removed: -; display='raftpb.ConfChangeI' pkg='raftpb'; def identical: True)
+  ~ raftpb.goleanShimStringer (fields added: display,pkg; fields removed: -; display='raftpb.goleanShimStringer' pkg='raftpb'; def identical: True)
+  ~ tracker.goleanShimStringer (fields added: display,pkg; fields removed: -; display='tracker.goleanShimStringer' pkg='tracker'; def identical: True)
 globals: added 0 removed 0 changed 0
-top-level keys identical: True
+methodSets: added 1 removed 0 changed 0
+  + quorum.tup·1
+fileOrder: identical: True
+top-level keys identical: True; remaining top-level values identical: True

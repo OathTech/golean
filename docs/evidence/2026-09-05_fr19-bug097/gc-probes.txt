@@ -43,11 +43,11 @@ nil -> red anon: interface conversion: interface is nil, not interface { Get() i
 %T: inner.T inner.T
 %T anon struct: struct { F inner.T }
 anon struct assert: interface conversion: interface {} is struct { F inner.T }, not struct { F inner.T } (types from different scopes)
-# P3 (go/types TypeString qualification — unexported methods are NOT qualified even with a qualifier)
-b: nil-qf="interface{M() main.L; error}"  qf="interface{M() PATH(main).L; error}"
-d: nil-qf="interface{N(main.L, ...int) (main.L, error)}"  qf="interface{N(PATH(main).L, ...int) (PATH(main).L, error)}"
+# P3 (go/types TypeString qualification — unexported methods are NOT qualified even with a qualifier; re-recorded 2026-09-05 audit fix round R22: the probe now iterates types.Info.Defs in NAME order, so the four lines are byte-reproducible)
 a: nil-qf="interface{Get() int; get() int}"  qf="interface{Get() int; get() int}"
+b: nil-qf="interface{M() main.L; error}"  qf="interface{M() PATH(main).L; error}"
 c: nil-qf="struct{X int; Y main.L \"tag\"}"  qf="struct{X int; Y PATH(main).L \"tag\"}"
+d: nil-qf="interface{N(main.L, ...int) (main.L, error)}"  qf="interface{N(PATH(main).L, ...int) (PATH(main).L, error)}"
 # P4 (gc type strings: instantiations, ·N local counter, anonymous struct/func/chan spellings)
 main.Pair[int,string]
 main.Pair[red/inner.T,*red/inner.Q]
@@ -68,8 +68,9 @@ chan<- inner.T <-chan inner.T
 map[struct { K string }][]uint8
 uint8 int32
 interface conversion: interface {} is main.box[int], not main.box[string]
-# P5 (unexported single-method anonymous interface across same-named packages; gc %T and reflect Name() of an instantiation over a sub-path type keep the PATH in the bracket)
+# P5 (unexported single-method anonymous interface across same-named packages; gc %T, reflect Name() and String() of an instantiation over a sub-path type keep the PATH in the bracket — the Name()/String() line added and re-run 2026-09-05, audit fix round R15: the records had credited this probe with a Name() observation it did not make)
 cross unexported single: interface conversion: inner.T is not interface { inner.get() int }: missing method get
 true false
 main.Pair[red/inner.T]
+Name()="Pair[red/inner.T]" String()="main.Pair[red/inner.T]"
 pair assert: interface conversion: interface {} is main.Pair[red/inner.T], not main.Pair[blue/inner.T]

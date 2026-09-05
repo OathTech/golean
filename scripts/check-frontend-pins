@@ -87,8 +87,11 @@
 #      (3) the 208 funcs / 203 methods otherwise "changed" differ ONLY by
 #      program-wide temporary renumbering ($cN/$swfN/$swiN/$tsN — Describe's
 #      body now consumes counters ahead of them; 3214 + 2802 leaf changes,
-#      all of that class, 0 other). 0 removed, 0 globals changed (JSON
-#      diff, docs/evidence/2026-09-05_fr19-bug097/twin-repin/structural-diff.txt).
+#      all of that class, 0 other). 0 removed, 0 globals changed; +1
+#      methodSet (`quorum.tup·1`, full — a section the first structural
+#      diff omitted; added at the audit fix round R12, producer tracked:
+#      docs/evidence/2026-09-05_fr19-bug097/twin-repin/twin-structural-diff.py,
+#      output structural-diff.txt beside it).
 #
 # Fail-closed throughout: missing baseline, failed build, failed emit,
 # failed run, or any byte drift exits 1 naming the failing pin.

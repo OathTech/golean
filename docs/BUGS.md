@@ -142,7 +142,7 @@ not by running anything.
 
 ## BUG-059 — panic messages render multi-segment TypeId qualifiers as the import PATH where gc renders the package NAME
 
-- Status: fixed (2026-09-05, lane `fr19-bug097` — the structural fix this
+- Status: fixed (2026-09-05, lane `fr19-bug097` [AGENT] — the structural fix this
   entry always named, "separating DISPLAY from IDENTITY in GoCore":
   design note `docs/2026-09-05_fr19-bug097-design.md` §3. Every wire
   TypeDef carries a REQUIRED `display` (gc's `NameString` — package-NAME
@@ -160,11 +160,29 @@ not by running anything.
   quotient this row waited on is no longer needed for it. The
   observation channel (`TypeId.unqualified`, reflect `Name()`) was
   checked for a remainder and has none: gc's `Name()` keeps an
-  instantiation's PATH-qualified bracket (`Pair[red/inner.T]`, probe P5),
-  which is the key's spelling. The identity note's §3.3 residue is
-  RETIRED. `dynamicTypeName?` (key-rendering, unused) deleted.)
+  instantiation's PATH-qualified bracket (`Pair[red/inner.T]`, probe P5's
+  `Name()="Pair[red/inner.T]"` line — added at the audit fix round R15;
+  the first record cited a `Name()` observation the probe did not yet
+  make), which is the key's spelling. The identity note's §3.3 residue is
+  RETIRED. `dynamicTypeName?` (key-rendering, unused) deleted.
+  CORRECTION at the audit fix round (R1 BLOCKER, 2026-09-05 [AGENT]): the
+  first cut's `typePkgForMessage` answered `""` for EVERY non-TypeId `Ty`,
+  so `*inner.Q, not *inner.Q` carried ` (types from different scopes)`
+  where gc prints ` (types from different packages)` whenever `Q` has a
+  method — gc's `pkgpath()` (`runtime/type.go`) reads the UNCOMMON
+  section, which `*T` has exactly when its method set is non-empty
+  (`reflectdata` `uncommonSize`; `typePkg(*T)` = `T`'s package). The
+  machine now derives `*T`'s answer from the wire's method table and,
+  with no method on the wire, from the method-set record (`full` ⇒ empty
+  ⇒ `""`; `exported`-only or absent ⇒ REFUSE by name — never a guess);
+  `[]T`/`map`/`chan`/`func`/`**T`/`*I` stay `""` (no methods, not
+  struct/interface kind); a record-less TypeId REFUSES rather than
+  `.getD ""` (R10). Pinned by the four `multipkg/same-name-pointer-panic`
+  rows (`*P` no methods → scopes; `*Q` value method and `*R` pointer
+  method → packages; `[]Q` → scopes), all PASS; auditor's reproducer
+  `.tmp/audit/p/V`.)
 - Pinned-by: differential
-- Cases: multipkg/same-name-identity-panic, scoping/local-type-identity/scopes-panic, scoping/local-type-identity/shadow-panic
+- Cases: multipkg/same-name-identity-panic, scoping/local-type-identity/scopes-panic, scoping/local-type-identity/shadow-panic, multipkg/same-name-pointer-panic/no-methods, multipkg/same-name-pointer-panic/value-method, multipkg/same-name-pointer-panic/pointer-method, multipkg/same-name-pointer-panic/slice-control
 
 > **R-1 conversion state (2026-08-21, raft W4.3 item 5 —
 > docs/raft-w43-log.md).** The 2026-08-20 R-1 ruling quotients this
@@ -1921,6 +1939,24 @@ rationale comment.
 - Discovered: 2026-08-06 (arc-final audit F7; pre-existing — the old
   `unqualifiedTypeName` produced the same string)
 
+ADDENDUM 2026-09-05 (lane `fr19-bug097` audit fix round R20 [AGENT]): the same
+guard sits ONLY at the observation boundary (`CLI.lean` `goValueJson`'s struct
+arm); `Ty.dynamicName` (`GoLean/GoCore/Value.lean`) still passes every synthetic
+key through `TypeId.unqualified` — `any` → `any`, `struct{}` → `struct{}`,
+`$runtime.Error` → `Error` — into the `dynamic` field of an interface
+observation. For `any`/`struct{}`/`interface{…}` this is unreachable as a box's
+dynamic type (a dynamic type is concrete) and reachable only inside composite
+spellings (`*any`, `[]struct{}`) where the Go harness refuses first (`Name()` of
+an unnamed type is `""`, `coverageharness` fails closed) — a refusal, not a
+wrong answer. For `$runtime.Error` it IS reachable and IS wrong: a recovered
+runtime error returned as `any` observes `dynamic:"Error"` where gc's is
+`boundsError` — measured and filed as its own open bug with a red pin,
+**BUG-099** (the payload's VALUE differs too: gc's concrete struct vs the
+machine's message string). Owed here: fold the synthetic-key guard into ONE
+place both channels use (the boundary refusing by name for a synthetic
+dynamic), not a second special case in `dynamicName`; sequenced with BUG-099's
+payload model, since a correct `dynamic` needs the concrete type.
+
 `goValueJson` renders a struct's typeName as `TypeId.unqualified`, which
 for the canonical anonymous empty struct is the literal internal key
 "struct{}". The channel's stated contract is `reflect.Type.Name()`,
@@ -1944,7 +1980,7 @@ named empty structs (defined types) keep their names.
   two-instantiation shape now exports and runs;
   generics/local-type-argument stays red as M3's separate recorded
   refusal of the type-ARGUMENT direction.) (ADDENDUM 2026-09-05, lane
-  `fr19-bug097`: the key is now `main.box·N[int]` — the FR-19 scope
+  `fr19-bug097` [AGENT]: the key is now `main.box·N[int]` — the FR-19 scope
   ordinal before the instantiation bracket; `TypeId.unqualified` strips
   both the qualifier and the ordinal, so the observation stays
   `box[int]`; the display record is gc's `main.box[int]`. The
@@ -5254,7 +5290,7 @@ the affected program are byte-identical; the row stays red on FR-21.
 
 ## BUG-092 — `cmp.Compare` at a FUNCTION-LOCAL defined type argument refuses (mono.go's C6 naming rule) now that the kind-dispatch desugar is retired — a designed red BY [USER] RULING, plan on FR-19 [coverage; frontend generic instantiation at local types]
 
-- Status: fixed (2026-09-05, lane `fr19-bug097` — FR-19's plan landed,
+- Status: fixed (2026-09-05, lane `fr19-bug097` [AGENT] — FR-19's plan landed,
   design note `docs/2026-09-05_fr19-bug097-design.md` §2.2: a function-
   local type keys by SCOPE ORDINAL (`main.index·1`), and a FUNCTION
   instantiation's FuncId is identity-only (never a gc text), so
@@ -5525,7 +5561,7 @@ go/types' (spec#Operators), the width that saturates is the assumed type's.
 
 ## BUG-097 — the ANONYMOUS-interface wire name is qualified with package NAMES while every other TypeId is keyed by import PATH: two same-named packages at different paths fuse two DISTINCT `interface{ M() T }` types onto ONE wire name — a wrong satisfaction answer on main, a named refusal since BUG-095's conflict guard [fidelity; frontend identity; multipkg; surfaced by the bug095-096 audit (R2)]
 
-- Status: fixed (2026-09-05, lane `fr19-bug097`, design note
+- Status: fixed (2026-09-05, lane `fr19-bug097` [AGENT], design note
   `docs/2026-09-05_fr19-bug097-design.md` §2.3: the anonymous-interface
   key is minted by ONE constructor, `anonIfaceKey` (identity.go), used by
   both `emitType`'s interface arm and `ifaceWireName` — path-qualified
@@ -5587,9 +5623,9 @@ identity defect on its own line since it is a wrong-answer class, not a coverage
 ## BUG-098 — UNEXPORTED interface method names are package-scoped in Go but BARE on the wire: a requirement `get` declared in one package would be judged satisfied by a concrete `get` from another — a wrong satisfaction answer, refused whole-export by a guard until the names are qualified [fidelity; frontend + machine identity; multipkg; found by the fr19-bug097 gc probes (P3/P5)]
 
 - Status: open
-- Pinned-by: none (both rows are RED BY DESIGN at frontend-export: the guard `checkUnexportedMethodScopes` (identity.go) refuses `unexported interface method name(s) shared across packages: get (required by blue/inner, implemented in red/inner) …`; nothing on the wire answers)
+- Pinned-by: none (all rows are RED BY DESIGN at frontend-export: the guard `checkUnexportedMethodScopes` (identity.go) refuses `unexported interface method name(s) shared across packages: get (required by blue/inner, implemented in red/inner); get (required by red/inner, implemented in blue/inner) …`; nothing on the wire answers) [AGENT]
 - Expect: FAIL
-- Cases: multipkg/unexported-method-scope/assert-panic, multipkg/unexported-method-scope/distinct
+- Cases: multipkg/unexported-method-scope/assert-panic, multipkg/unexported-method-scope/distinct, multipkg/unexported-method-scope/distinct-names
 - Discovered: 2026-09-05 (lane `fr19-bug097`, gc probe P3: `types.TypeString` never qualifies unexported interface METHOD names, even with a qualifier — so BUG-097's planned one-liner would have left this fusion class; P5: gc answers `true false` for red's `interface{ get() int }` vs blue's on a red value)
 
 WHAT (spec#Type_identity: two interface types are identical iff they have the same
@@ -5603,33 +5639,128 @@ get`). The wire's requirement lists (`MethodSig.name`), method tables
 (`MethodInfo.name`) and dispatch anchors (`<Iface>.<method>`) carry BARE method
 names, and the machine matches requirements to concrete methods by that bare name
 — so once the two anonymous interfaces are distinct KEYS (BUG-097's fix) the
-machine answers `true true`: a WRONG ANSWER where main REFUSED (on main the two
-interfaces fused onto one name and BUG-095's conflict guard killed the export).
-Before the split main was refusing by accident; the wrong answer was one key away.
+machine answers `true true`: a WRONG ANSWER. What main did BEFORE this lane
+depends on the shape (corrected at the audit fix round R4, 2026-09-05 [AGENT] —
+the first record said "main REFUSED by accident" as if for the whole class):
+* SAME-NAME packages (`red/inner`, `blue/inner`, both named `inner`): main
+  refused by accident — the two anonymous interfaces fused onto one key and
+  BUG-095's conflict guard killed the export.
+* DISTINCT-NAME packages: main ANSWERS WRONG today. Measured by the [AGENT
+  audit, 2026-09-05]: `type S struct{ emb.E }` (package `emb` declares
+  `func (E) get() int`) against main's `type J interface{ get() int }` — gc
+  `false` (S's promoted `get` is `emb.get`, not `main.get`), main `true`; the
+  same for a main-vs-package pair. Nothing fused, so nothing tripped: the bare
+  name matched. Pinned by `multipkg/unexported-method-scope/distinct-names`
+  (red by design under the guard).
+So the branch does not "turn a refusal into a refusal": it converts a
+PRE-EXISTING SILENT WRONG-ANSWER class into a named refusal, and keeps the
+same-name shape's accidental refusal as a deliberate one.
 
-GUARD (2026-09-05, this lane, fail closed): `emitProgram` refuses the WHOLE export
-when an unexported requirement name declared in source package P has a concrete
-method of that name declared in a DIFFERENT source package Q (`noteInterface`
-records requirement names → declaring paths; `checkUnexportedMethodScopes` walks
-every unit's `Defs` for unexported methods) — the only shape on which bare-name
-tables can answer wrong. Single-package programs never trip it (P == Q);
-promoted methods keep their declaring package, so a struct embedding another
-package's type satisfying THAT package's interface is not flagged. Static twin in
-`tools/lowerdiag` (`unexported-method-scope`, FR-31). MEASURED on cedar-go
-(`docs/2026-09-03_cedar-go-coverage-census.md` §13): the guard kills
-`cedargo/x/exp/schema/ast` (`isType` required by `x/exp/schema/resolved`,
-implemented in `ast` — 17 declarations, 2 packages own/inherited) which the
-census had counted as lowering: that count was a LATENT WRONG-ANSWER class, now
-an honest red.
+GUARD (2026-09-05, this lane [AGENT], fail closed): `emitProgram` refuses the WHOLE
+export when an unexported requirement name declared in source package P has a
+concrete method of that name declared in a DIFFERENT source package Q
+(`noteInterface` records requirement names → declaring paths;
+`checkUnexportedMethodScopes` walks every unit's `Defs` for unexported methods)
+— the only shape on which bare-name tables can answer wrong. Single-package
+programs never trip it (P == Q); promoted methods keep their declaring package,
+so a struct embedding another package's type satisfying THAT package's
+interface is not flagged. Static twin in `tools/lowerdiag`
+(`unexported-method-scope`, FR-31). MEASURED on cedar-go
+(`docs/2026-09-03_cedar-go-coverage-census.md` §13; narration corrected at the
+audit fix round R17): the hazard is SYMMETRIC — `x/exp/schema/ast` and
+`x/exp/schema/resolved` EACH declare an `isType` requirement (`IsType`
+interfaces) and each implements `isType` on its own types, so the guard names
+both directions (`isType (required by …/ast, implemented in …/resolved); isType
+(required by …/resolved, implemented in …/ast)`) and kills BOTH packages on
+their own (17 declarations: 9 `ast` + 7 `resolved` methods + the 2 interface
+declarations); 6 more packages inherit the kill (8 of 24 in total, own or
+inherited). The census had counted all of it as lowering: that count was a
+LATENT WRONG-ANSWER class, now an honest red. The guard is a GUARD, not the
+fix ([AGENT] judgement, design note §2.5/§7): the fix is frontend-wide in a file
+two parallel lanes are editing, so it is rowed (FR-31) and sequenced after them.
 
-PLAN (FR-31, ledger §4 / queue 31): qualify unexported method names by declaring
+PLAN (FR-31, ledger §4 / queue 31) [AGENT]: qualify unexported method names by declaring
 package PATH wherever the wire carries a matching name — `MethodSig.name`,
 `MethodInfo.name`, the interface dispatch anchors and `calledIfaceMethods` keys,
 method-value/expression emission — leaving FuncIds (`<recv TypeId>.<name>`, whose
 receiver already carries the path) untouched; the machine's `missing method`
 text renders the bare name (display, like TypeIds). Frontend-wide but mechanical
 (one `methodWireName(*types.Func)` helper at every `"name":` site of a method
-entry); sequenced after the parallel emit.go lanes land. Fix criterion: both
-Cases rows PASS (`true false`; the gc text above), the guard retires, the
-cedar-go `ast` export revives.
+entry); sequenced after the parallel emit.go lanes land. Fix criterion: all
+three Cases rows PASS (`true false`; the gc text above; `false` for the
+distinct-names shape), the guard retires, the cedar-go `ast`/`resolved`
+exports revive.
+
+## BUG-099 — a RECOVERED runtime error's dynamic type is one synthetic id (`$runtime.Error`) where gc has a concrete type per fault: the observation channel names it `Error` (gc `boundsError`) and carries a string payload (gc a struct) — a wrong observation; the concrete-target assert text REFUSES by name [fidelity; machine runtime-error payload model; found by the fr19-bug097 audit (R3/R20) and measured at its fix round]
+
+- Status: open
+- Pinned-by: differential
+- Cases: panic-recover/recovered-runtime-error-type/observed, panic-recover/recovered-runtime-error-type/assert-int
+- Discovered: 2026-09-05 (lane `fr19-bug097` adversarial audit R3 — the `<TypeId $runtime.Error has no display record>` marker inside a `recover(); r.(error).Error()` refusal disproved the design note's "unreachable" — and R20 — `Ty.dynamicName` passes the synthetic key to the observation channel; the wrong observation measured at the fix round: `docs/evidence/2026-09-05_fr19-bug097/gc-probe-r3-recovered-runtime-error.go`, transcript in the evidence README)
+
+WHAT: gc's runtime panics carry CONCRETE types — an index fault is
+`runtime.boundsError` (a struct `{x int64; y int; signed bool; code
+boundsErrorCode}`), a nil dereference `runtime.errorString`, a failed type
+assertion `*runtime.TypeAssertionError`, an integer divide `runtime.runtimeError`
+— each with `Error()` (and `RuntimeError()`). The machine mints ONE synthetic
+`TypeId` for every runtime fault, `$runtime.Error` (`GoLean/GoCore/Syntax.lean`
+`runtimeErrorTypeId`), boxing the MESSAGE STRING as the payload
+(`Machine.lean` `runtimeErrorValue`). Two channels expose the difference:
+* the OBSERVATION channel — `recoveredRuntimeErrorAsAny` returns the recovered
+  value as `any`: gc observes `{"dynamic":"boundsError","value":{"tag":"struct",
+  "typeName":"boundsError","fields":[x=3,y=0,signed=false,code=0]}}`; the machine
+  observes `{"dynamic":"Error","value":{"tag":"string",…"runtime error: index out
+  of range [3] with length 0"}}` (`TypeId.unqualified` of `$runtime.Error`) — a
+  WRONG ANSWER at the differential stage (row `observed`, FAIL/differential).
+* a CONCRETE-TARGET assert's panic text — `r.(int)` on the recovered value: gc
+  `interface conversion: interface {} is runtime.boundsError, not int`; the
+  machine REFUSES by name since the audit fix round R3 (`typeAssertPanicMessage`:
+  «names the dynamic type of a recovered runtime error, which the machine models
+  as one synthetic id … no byte-exact text exists») — before it, the text carried
+  the display marker (row `assert-int`, FAIL/lean-observation, a designed red).
+  The interface-target forms (`r.(error)`, `r.(fmt.Stringer)`) already refused on
+  the missing method-set record (BUG-009/BUG-053 class), the marker
+  `runtimeErrorDisplayMarker` now naming the cause inside that refusal text.
+Root cause: MACHINE (payload model), not the frontend — the wire never spells
+`$runtime.Error`; the decoder synthesizes it for the nil-interface method-value
+check and the machine for every runtime fault.
+
+PLAN [AGENT]: model gc's concrete runtime-error types — a per-fault `TypeId`
+(`runtime.boundsError`, `runtime.errorString`, `runtime.runtimeError`,
+`*runtime.TypeAssertionError`, …) with the display record `runtime.<T>` /
+`*runtime.TypeAssertionError`, pkg `runtime`, a method-set record (`Error`,
+`RuntimeError`; `exported` coverage suffices — both names are exported), and a
+payload VALUE shaped as gc's (the `boundsError` fields are what the observation
+channel compares; `errorString`'s is the string). The `Error()` text stays the
+message the machine already computes. Then `r.(error)` answers (BUG-009/BUG-053's
+runtime-error face closes), the assert text renders, and both rows flip PASS.
+Scope: `Machine.lean` panic sites (`panicEntry`/`deliver`), `Syntax.lean`
+(`runtimeErrorTypeId` → a small closed table), `renderPanicPayload`'s
+`runtimeErrorTypeId` arms, `NativeToIR.lean:818`. Not a frontend change; not this
+lane's slice (a machine-model arc with its own probes of every fault's concrete
+type). Fix criterion: both Cases rows PASS; the `$runtime.Error` id is gone.
+
+## BUG-100 — C6 DESIGNED RED, pinned: a function-local defined type as a generic TYPE's argument (`box[score]`) refuses by name — gc's observable instantiation name embeds the compiler counter `decl.gen`, a ratified impossibility (ledger §5.1 item 1), not a bug [coverage; (c)-pin; the entry exists so the refusal cannot stop firing unnoticed]
+
+- Status: open
+- Pinned-by: none (the row is RED BY DESIGN at frontend-export: mono.go's C6 refusal `function-local defined type main.score as a type argument …`; `tools/lowerdiag/causes.tsv` `local-type-type-argument`) [AGENT]
+- Expect: FAIL
+- Cases: scoping/local-type-identity/type-instantiation-refused
+- Discovered: 2026-09-05 (lane `fr19-bug097` design note §2.2/§2.4 narrowed C6 to this shape and born the pin; the adversarial audit R19 found the pin on NO `Cases:` line — nothing would have tripped had the refusal stopped firing)
+
+WHAT (not a defect — the record of a ratified impossibility, in the form the
+gate can enforce): gc names the instantiated type `main.box[main.score·N]` (`%T`,
+a failed assert's text) with `N` = `decl.gen`, a per-package compiler counter
+(`noder/writer.go:1013`; probe P4: `score·1`, `other·2`, `score·3`) that is not a
+function of anything the language defines; the machine's scope ordinal is
+source-order and deliberately NOT gc's counter (design note §7). The
+FUNCTION-instantiation shape (`cmp.Compare[index]`) is ADMITTED — a FuncId is
+never a gc text (BUG-092 closed on it). This entry uses the repo's mechanism for
+a red-by-design pin (BUG-093/BUG-094 precedent; check-bugs `Expect: FAIL`): a
+`Pinned-by: none` entry whose Cases must stay FAIL, so the pin trips the gate if
+the refusal stops firing or the row stops pinning it. There is no ledger-backed
+check for (c)-pins (`scripts/` reads only BUGS.md `Cases:` lines), and the
+`Status: fixed` differential entries that narrate C6 (BUG-092, BUG-018) cannot
+carry a FAIL row (check-bugs (3)). Retires only with a [USER] re-ruling of §5.1
+item 1 — never by a fix.
 

@@ -965,14 +965,22 @@ scope as §10.3/§12.2.
   (the frontend text survives only as the boundary collision guard;
   `tools/lowerdiag` no longer finds it statically).
 * **A NEW export kill, honest: `unexported-method-scope` (FR-31, BUG-098).**
-  `cedargo/x/exp/schema/resolved` requires an unexported `isType()` in an
-  interface; `cedargo/x/exp/schema/ast` implements `isType` on nine types.
+  The hazard is SYMMETRIC (narration corrected at the lane's audit fix
+  round R17 [AGENT] — the first draft told it one-directionally and as
+  2 packages): `cedargo/x/exp/schema/ast` AND `cedargo/x/exp/schema/resolved`
+  EACH declare an interface requiring an unexported `isType()` (their
+  `IsType` types) and each implements `isType` on its own types (`ast`
+  on 9: `BoolType`, `EntityTypeRef`, `ExtensionType`, `LongType`,
+  `RecordType`, `SetType`, `StringType`, `TypeRef`, …; `resolved` on 7).
   Go keys unexported method names by package, the wire's method tables
   carry bare names, so the machine could judge an `ast` value to satisfy
-  `resolved`'s interface — a wrong-answer class the census had been
-  COUNTING AS LOWERING. The frontend guard refuses the export by name
-  (17 declarations: the 9 implementations + the requirement sites; the
-  package and `x/exp/schema/internal/json` inherit the kill).
+  `resolved`'s interface OR a `resolved` value to satisfy `ast`'s — a
+  wrong-answer class the census had been COUNTING AS LOWERING. The
+  frontend guard refuses the export by name in both directions (`isType
+  (required by …/ast, implemented in …/resolved); isType (required by
+  …/resolved, implemented in …/ast)`): 17 declarations (9 + 7 methods +
+  the 2 interface declarations), BOTH packages killed on their own, and
+  6 more inherit the kill (8 of 24 in total, own or inherited).
 
 ### 13.2 The numbers
 
@@ -982,14 +990,24 @@ refused **1460/1569 (93.1%)**, funcs+methods 980/1086 (90.2%), refused
 **1443/1569 (92.0%)**, funcs+methods 965/1086 (88.9%), refused 125,
 export kills **17 declarations / 8 of 24 packages**. Movement by cause:
 `duplicate-typeid` 2 → 0; `unexported-method-scope` 0 → 17 (17 sole, 2
-pkgs, 17 export); every other row unchanged (the head is still
+pkgs own, 17 export); every other row unchanged (the head is still
 `encoding/json` FR-14, 62 declarations / 32 sole — one more sole than
 §12.2 because a declaration `nodeJSONAlias` used to co-block is now
-blocked by FR-14 alone). Dynamic first refusal on `all`: EXPORT OK, 557
-→ 552 quarantined declarations (the five `internal/json` bodies that
-now lower). The drop in the headline number is the honest direction: a
-hidden wrong answer became a visible red; FR-31's fix (path-qualified
-unexported method names, queue 31) revives the 17 and the two packages.
+blocked by FR-14 alone). Dynamic first refusal on `all` — CORRECTED at
+the lane's audit fix round R2 [AGENT] (the first draft claimed «EXPORT
+OK, 557 → 552 quarantined declarations»; that was false): the
+whole-library case went from EXPORT OK (557 quarantined declarations,
+§12.2) to a WHOLE-EXPORT REFUSAL on the BUG-098 guard — `go run
+./tools/nativefrontend --dir artifacts/cedar/cases/all --out /dev/null`
+prints `unexported interface method name(s) shared across packages:
+isType (required by cedargo/x/exp/schema/ast, implemented in
+cedargo/x/exp/schema/resolved); isType (required by …/resolved,
+implemented in …/ast) …` (the evidence report's first-refusal line).
+That is the guard's cost, paid by the assembled `all` case as a whole;
+the per-package cases outside the kill still export. The drop in the
+headline number is the honest direction: a hidden wrong answer became a
+visible red; FR-31's fix (path-qualified unexported method names, queue
+31) revives the 17 declarations, the two packages, and `all`'s export.
 
 ### 13.3 What is next, measured
 
@@ -1001,5 +1019,9 @@ addendum, all [AGENT]: FR-19 CLOSED with scope-ordinal keys; BUG-098
 guarded whole-export rather than fixed in this lane (the fix is
 mechanical but frontend-wide; rowed FR-31 with its plan). No gate,
 baseline, corpus or trust-surface claim is made here beyond the lane's
-own landing records (ledger §8p).
+own landing records (ledger §8s — the first draft cited §8p, corrected
+at R16). The evidence report and histogram
+(`cedar-lower-diagnose-report-after.txt`, `cedar-histogram-after.tsv`)
+were re-run at the audit fix round R8: the first copies labelled the
+cause FR-29 from a pre-rename `causes.tsv`; the row is FR-31.
 

@@ -460,8 +460,12 @@ USER DIRECTION: the burden of proof is flipped; absence from the queue
 requires a written profound reason. The complete list:
 
 1. **Function-local defined types as a generic TYPE's type arguments**
-   (1 red, `scoping/local-type-identity/type-instantiation-refused` —
-   NARROWED 2026-09-05, lane `fr19-bug097`, design note §2.2/§2.4: the
+   (1 red, `scoping/local-type-identity/type-instantiation-refused`,
+   guarded since the audit fix round R19 by BUG-100's `Expect: FAIL`
+   line — NARROWED 2026-09-05 by the [AGENT] lane `fr19-bug097` (an
+   [AGENT] narrowing of a [USER]-ratified item, recorded under this
+   USER-DIRECTION heading for the arc gate's ratification, not as a
+   [USER] decision), design note §2.2/§2.4: the
    FUNCTION-instantiation shape (`generics/local-type-argument`,
    `cmp.Compare[index]`, `slices.SortFunc[[]ltup,ltup]`) is ADMITTED
    under the scope-ordinal key — a FuncId is never a gc text — and those
@@ -1607,7 +1611,7 @@ censused NOWHERE; the four-way treatment and its three options are posed
 at L:E13 for the [USER], not decided here. The refusal is honest under
 either reading.
 
-### 8s. Movement at the FR-19 / BUG-097 / BUG-059 lane (2026-09-05, lane `fr19-bug097`; on main b77f3298)
+### 8s. Movement at the FR-19 / BUG-097 / BUG-059 lane (2026-09-05, lane `fr19-bug097` [AGENT]; on main b77f3298; amended at the adversarial-audit fix round the same day [AGENT])
 
 Evidence: `docs/evidence/2026-09-05_fr19-bug097/` (gc probes, focused
 runs, twin structural diff, cedar census after, gate tail). Design of
@@ -1616,7 +1620,10 @@ rows (3252 PASS / 246 FAIL). FR-19 CLOSED (§4: function-local types key
 by scope ordinal; the display record on the wire is gc's spelling), FR-31
 ROWED (§4: unexported method names package-scoped, bare on the wire —
 guarded whole-export, BUG-098), §5.1 item 1 NARROWED (C6 is the
-type-instantiation shape only). Movement, tallied by row:
+type-instantiation shape only). Every judgement in this section is the
+[AGENT] lane's, under the relayed [USER] standing directions named in
+the design note's header. Movement, tallied by row (the audit fix
+round's rows are listed in their own block below):
 
 ```
 FLIPPED FAIL → PASS (8; 0 PASS → non-PASS, re-pin guard clean):
@@ -1630,27 +1637,48 @@ BORN PASS (+15):
   interfaces/anon-iface-display/{missing-order,unexported,unexported-satisfied,embedded-flattened,source-display,nil,slice-target,named-result}   gc's anonymous-interface spelling in every panic form
   multipkg/same-name-anon-iface-panic/{missing,source}   BUG-097's texts across same-named packages
 BORN FAIL/frontend-export, red BY DESIGN (+3):
-  scoping/local-type-identity/type-instantiation-refused   C6 — §5.1 item 1's pin ((c)-pins +1)
+  scoping/local-type-identity/type-instantiation-refused   C6 — §5.1 item 1's pin ((c)-pins +1; guarded by BUG-100 since the audit fix round)
   multipkg/unexported-method-scope/{assert-panic,distinct}   FR-31 / BUG-098's whole-export guard (frontier +2)
 STAYED GREEN (verified in the full run): every generics/*, interfaces/*, multipkg/*, atomics/*, race/atomics-* row — the atomics rows and multipkg/nil-value-method-text went red in the lane's FIRST full run (shadow-model TypeDefs without a host display record; gc's panicwrap text is symbol-derived) and were fixed before the re-pin (evidence README)
+
+AUDIT FIX ROUND (R1–R22, same day [AGENT]; 0 PASS → non-PASS):
+BORN PASS (+4):
+  multipkg/same-name-pointer-panic/{no-methods,value-method,pointer-method,slice-control}   R1 BLOCKER — gc's pkgpath() of *T is T's package iff *T has a method set: `*inner.Q, not *inner.Q (types from different packages)` (was `scopes`)
+BORN FAIL, red BY DESIGN (+2):
+  multipkg/unexported-method-scope/distinct-names   R4 — the DISTINCT-name BUG-098 shape main answered WRONG (gc false / main true); the guard refuses it (frontier +1, BUG-098 Cases)
+  panic-recover/recovered-runtime-error-type/assert-int   R3 — `r.(int)` on a recovered runtime error: the machine refuses by name (one synthetic runtime-error id where gc has a concrete type per fault; BUG-099)
+BORN FAIL/differential, an OPEN WRONG ANSWER filed (+1):
+  panic-recover/recovered-runtime-error-type/observed   R20 — the observation channel names the recovered payload `Error` (gc `boundsError`) with a string value (gc a struct): BUG-099, open, Pinned-by differential (wrong-answer class, named by its bug — not untriaged)
 ```
 
-3498 + 18 = 3516 rows = 3275 PASS / 241 FAIL (3252 + 8 + 15 / 246 − 8 + 3);
-frontier 143 − 5 + 2 = 140; the §8 closing arithmetic re-derived by row in
-the bucket table above (140 + 9 + 26 + 8 + 58 = 241). Twin wire pin MOVED
-(4ee39f73… → f89e1c9e…: `quorum.MajorityConfig.Describe` lowers — its local
-`tup` is a function instantiation's argument now — +20 funcs, +1 type
-`quorum.tup·1`; every TypeDef gains `display`/`pkg`; the rest is temporary
+Lane landing: 3498 + 18 = 3516 rows = 3275 PASS / 241 FAIL (3252 + 8 + 15
+/ 246 − 8 + 3); frontier 143 − 5 + 2 = 140; the §8 closing arithmetic
+re-derived by row in the bucket table above (140 + 9 + 26 + 8 + 58 = 241).
+After the audit fix round: 3516 + 7 = 3523 rows = 3279 PASS / 244 FAIL
+(3275 + 4 / 241 + 3); frontier 140 + 1 = 141 (the distinct-names guard
+row); the two BUG-099 rows are wrong-answer-class rows named by an open
+bug (the `assert-int` refusal is that bug's fail-closed face). Twin wire
+pin MOVED (4ee39f73… → f89e1c9e…: `quorum.MajorityConfig.Describe` lowers
+— its local `tup` is a function instantiation's argument now — +20 funcs,
++1 type `quorum.tup·1`, +1 methodSet `quorum.tup·1` (the methodSets
+section was missing from the first structural diff; producer tracked
+since R12); every TypeDef gains `display`/`pkg`; the rest is temporary
 renumbering; `scripts/check-frontend-pins` history + structural diff).
 Wire schema moved (`wire.go`, `NativeToIR.lean`): merge-protocol step 5a
 (`scripts/ci --slow` at the merged tip) applies. `tools/lowerdiag`: the
 static FR-19 rule retired (nothing to find), the BUG-098 cross-package rule
 added (`unexported-method-scope`); `causes.tsv` `duplicate-typeid` kept as a
 tripwire. cedar-go (memo §13): `nodeJSONAlias` gone, `internal/json` lowers;
-the BUG-098 guard kills `x/exp/schema/ast` — 1460/1569 → 1443/1569, export
-kills 2 → 17 declarations (an honest red replacing a latent wrong answer).
-BUGS.md: BUG-097, BUG-059, BUG-092 fixed; BUG-018 addendum; BUG-098 filed
-(Pinned-by: none, Expect: FAIL, 2 rows).
+the BUG-098 guard kills `x/exp/schema/ast` AND `x/exp/schema/resolved`
+(symmetric: each requires and implements `isType`; 6 more inherit) —
+1460/1569 → 1443/1569, export kills 2 → 17 declarations (an honest red
+replacing a latent wrong answer); the whole-library `all` case, which
+exported before, now REFUSES on the guard (the first record's "still
+exports, 557 → 552" was false — withdrawn at R2). BUGS.md: BUG-097,
+BUG-059, BUG-092 fixed; BUG-018 addendum; BUG-098 filed (Pinned-by: none,
+Expect: FAIL, 3 rows since R4); at the audit fix round BUG-099 (recovered
+runtime-error type; open, 2 rows) and BUG-100 (the C6 designed-red pin's
+`Expect: FAIL` guard) filed, BUG-019 addendum (R20).
 
 ### 8c. The re-derivation, 2026-08-22 vintage → the 2026-09-01 tip
 
