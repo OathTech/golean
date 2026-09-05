@@ -2717,6 +2717,43 @@ def main : IO UInt32 := do
   -- just the reserved prefix.
   passed := passed && (← expectTrue "C2: renderPanicPayload renders a runtime-error payload by its reserved index"
     (GoCore.Machine.renderPanicPayload { types := GoCore.TypeEnv.reserved } (GoCore.Machine.runtimeErrorValue "boom") == some "boom"))
+  -- Audit fix R1 (2026-09-05): a `.defined` index the table does not
+  -- have is a CARRIER whose key is unknown — `methodCarrierKey?` maps it
+  -- to the unrecordable marker, so the record queries answer false
+  -- (REFUSE at every consumer), where `none` had read "empty method set
+  -- by the language" (the BUG-053 mechanism the docstring forbids).
+  -- Genuine non-carriers still map to `none`.
+  passed := passed && (← expectTrue "C2/R1: an unresolvable `.defined` index is a carrier with the unrecordable marker key — NOT recorded, NOT exported-only (refuse, never `empty by the language`)"
+    (!GoCore.dynamicMethodSetRecorded { types := #[] } (.defined 99)
+      && !GoCore.dynamicMethodSetExportedOnly { types := #[] } (.defined 99)
+      && GoCore.methodCarrierKey? { types := #[] } (.defined 99) == some "$unresolved-type-index.99"
+      && GoCore.methodCarrierKey? { types := #[] } (.pointer (.defined 99)) == some "$unresolved-type-index.99"
+      && GoCore.methodCarrierKey? { types := #[] } .int == none
+      && GoCore.dynamicMethodSetRecorded { types := #[] } (.slice .int)))
+  -- Audit fix R2 (2026-09-05): `runtimeErrorTypeIdx = 1` is a machine
+  -- constant, so both driver seams refuse BY NAME a `Program` whose table
+  -- does not lead with `TypeEnv.reserved` (a user type at index 1 would
+  -- otherwise render as the runtime-error payload); the `Program` default
+  -- is the bare prefix, so a declaration-free hand-built program passes.
+  let r2Func : GoCore.Func :=
+    { id := ⟨"r2_F"⟩, args := #[], results := #[coreParam "z"], body := .assign (.var "z") (.intLit 3) }
+  let r2Prog : GoCore.Program :=
+    { typeDefs := #[(GoCore.emptyStructTypeId, .struct #[]), (⟨"main.T"⟩, .defined (.int .int))],
+      funcs := #[r2Func] }
+  let r2Needle := "does not lead with the two machine-reserved entries"
+  passed := passed && (← expectTrue "C2/R2: runProgramM refuses a Program whose table has a user type at index 1 (no reserved prefix), naming the clause"
+    (match GoCore.Machine.runProgramM 1000 r2Prog "r2_F" #[] with
+     | .error (.internal msg) => (msg.splitOn r2Needle).length > 1
+     | _ => false))
+  passed := passed && (← expectEnumFailure "C2/R2: enumSetup refuses the same Program with the same text (driver agreement on the refusal)"
+    (enumerate r2Prog "r2_F" none) r2Needle)
+  passed := passed && (← expectTrue "C2/R2: the `Program` default table is the reserved prefix (accepted); the reserved prefix alone and a decoded table pass `hasReservedPrefix`, a bare user table does not"
+    (({ funcs := #[] } : GoCore.Program).typeDefs.hasReservedPrefix
+      && GoCore.TypeEnv.reserved.hasReservedPrefix
+      && !GoCore.TypeEnv.hasReservedPrefix #[(⟨"main.T"⟩, .defined (.int .int))]
+      && !GoCore.TypeEnv.hasReservedPrefix #[]))
+  passed := passed && (← expectIntResult "C2/R2: the same function runs through runProgramM once the table leads with the prefix (control)"
+    (GoCore.Machine.runProgramM 1000 { r2Prog with typeDefs := GoCore.TypeEnv.reserved ++ #[(⟨"main.T"⟩, .defined (.int .int))] } "r2_F" #[]) 3)
   passed := passed && (← expectTrue "MS: decode refuses an unknown coverage token"
     (match Lean.Json.parse "{\"schema\":\"golean-native-v1\",\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[{\"type\":\"main.T\",\"coverage\":\"partial\"}]}" with
      | .error _ => false

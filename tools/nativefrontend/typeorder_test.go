@@ -240,6 +240,33 @@ func TestOrderTypeDefsAliasRefuses(t *testing.T) {
 	}
 }
 
+// A duplicate TypeDef name refuses in BOTH the ordering and the final
+// self-check (audit fix R12: checkTypeDefOrder overwrote index[name] and
+// judged edges against the later entry only).
+func TestOrderTypeDefsDuplicateRefuses(t *testing.T) {
+	in := []any{
+		structDef("main.Inner", map[string]any{"kind": "int", "int": "int"}),
+		structDef("main.Outer", named("main.Inner")),
+		structDef("main.Inner", map[string]any{"kind": "string"}),
+	}
+	if _, err := orderTypeDefsByDependency(in); err == nil || !strings.Contains(err.Error(), "duplicate") || !strings.Contains(err.Error(), "main.Inner") {
+		t.Fatalf("orderTypeDefsByDependency must refuse a duplicate TypeDef by name: %v", err)
+	}
+	if err := checkTypeDefOrder(in); err == nil || !strings.Contains(err.Error(), "duplicate") || !strings.Contains(err.Error(), "main.Inner") {
+		t.Fatalf("checkTypeDefOrder must refuse a duplicate TypeDef by name: %v", err)
+	}
+	// The duplicate is refused even when every edge would otherwise pass
+	// (the later entry alone satisfies Outer's edge): the check is on the
+	// table's integrity, not only on the edges.
+	ok := []any{
+		structDef("main.Inner", map[string]any{"kind": "int", "int": "int"}),
+		structDef("main.Outer", named("main.Inner")),
+	}
+	if err := checkTypeDefOrder(ok); err != nil {
+		t.Fatalf("the de-duplicated table must pass: %v", err)
+	}
+}
+
 // The determinism cases of determinism_test.go also carry types; make
 // sure the emitted wire there passes the order check as well.
 func TestDeterminismShapesPassTypeOrder(t *testing.T) {

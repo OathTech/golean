@@ -13,8 +13,9 @@ the continuation/configuration pair (`Cont`, `Config`), the state layer
 (`HeapCell`, `ExecState`), the detector state (`RaceState` and its
 components) and the pool top (`MultiConfig`, `DedupNode`).
 
-Same contract, same mould (`GoValue.eqbFuel`): fuel-structural `eqb`s
-with ONE-DIRECTIONAL soundness,
+Same contract, same mould (`GoValue.eqb`, structural since C2 — the
+`eqbFuel` mould it was cast in is gone): `eqb`s with ONE-DIRECTIONAL
+soundness,
 
     eqb a b = true → a = b
 

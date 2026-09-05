@@ -41,11 +41,16 @@ Probed 2026-08-10 (`.tmp/probes/carriers`, go1.26.5):
 - `*T` inherits `T`'s value-receiver methods (one pointer level; `**T`
   carries nothing — probed 2026-07-30, design note Q3 / audit finding 4).
 
-Mapped onto GoCore's `Ty` (after `resolveDefinedAliases` and ONE
-pointer deref, mirroring the method-set base the lookups use):
+Mapped onto GoCore's `Ty` (after ONE pointer deref, mirroring the
+method-set base the lookups use; `resolveDefinedAliases` was deleted by
+C2, 2026-09-05 — every `Ty` on the machine is alias-free since the
+frontend inlines aliases, and `.defined` is a table INDEX, `Ty.defined
+(idx : TypeIdx)`, whose key is read back from the entry):
 
-- **carriers** — `.defined name` (every user/imported/mono-stenciled
-  named type) and `.sync kind` (models the gc defined types
+- **carriers** — `.defined idx` (every user/imported/mono-stenciled
+  named type; key = the `TypeId` beside table entry `idx`, and an index
+  the table lacks maps to an UNRECORDABLE marker key so its queries
+  refuse — audit fix R1, 2026-09-05) and `.sync kind` (models the gc defined types
   `sync.Mutex`/`RWMutex`/`WaitGroup`/`Once`; key `sync.<Kind>`);
 - **non-carriers, correct by the LANGUAGE (not by registration)** —
   `.bool`/`.int`/`.float`/`.string` (the unnamed predeclared types;

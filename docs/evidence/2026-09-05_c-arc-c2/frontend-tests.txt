@@ -1,12 +1,298 @@
+# GO111MODULE=off GOCACHE="$PWD/.tmp/go-build-cache" go test -v ./tools/nativefrontend — lane c-arc-c2 audit fix round, 2026-09-05 (the FULL package test run; the earlier file was a -run 'TypeDefOrder|TypeOrder|Determin' subset — audit fix R8); tree = the fix-round tip named in ci-diff.txt
+=== RUN   TestAtomicFuncOpWave1Members
+--- PASS: TestAtomicFuncOpWave1Members (0.00s)
+=== RUN   TestAtomicFuncOpRefusalsNameTheirCause
+--- PASS: TestAtomicFuncOpRefusalsNameTheirCause (0.00s)
+=== RUN   TestAtomicIntrinsicDeclTableIsClosed
+--- PASS: TestAtomicIntrinsicDeclTableIsClosed (0.00s)
+=== RUN   TestAtomicShadowModelLowers
+--- PASS: TestAtomicShadowModelLowers (0.00s)
+=== RUN   TestAtomicShadowModelTranscribesUpstream
+--- PASS: TestAtomicShadowModelTranscribesUpstream (0.00s)
+=== RUN   TestExprHasCallOrRecv
+=== RUN   TestExprHasCallOrRecv/plain_deref,_no_events
+=== RUN   TestExprHasCallOrRecv/selector_chain,_no_events
+=== RUN   TestExprHasCallOrRecv/ordinary_call
+=== RUN   TestExprHasCallOrRecv/method-less_call_returning_the_pointer
+=== RUN   TestExprHasCallOrRecv/receive
+=== RUN   TestExprHasCallOrRecv/conversion_does_not_count
+=== RUN   TestExprHasCallOrRecv/conversion's_operand_IS_scanned
+=== RUN   TestExprHasCallOrRecv/constant_len(arr)_does_not_count
+=== RUN   TestExprHasCallOrRecv/constant_len_of_a_paren'd_operand_does_not_count
+=== RUN   TestExprHasCallOrRecv/non-constant_len_IS_a_call
+=== RUN   TestExprHasCallOrRecv/constant_min/max_of_constants_does_not_count
+=== RUN   TestExprHasCallOrRecv/func-literal_body_never_reaches_the_flag
+=== RUN   TestExprHasCallOrRecv/unsafe.Sizeof(x)_is_a_constant_builtin,_not_a_call
+=== RUN   TestExprHasCallOrRecv/unsafe.Alignof(x)_likewise
+=== RUN   TestExprHasCallOrRecv/call_inside_a_constant_unsafe.Sizeof_counts_(no_save/restore_for_Sizeof)
+=== RUN   TestExprHasCallOrRecv/call_inside_a_constant_min(...)_counts
+=== RUN   TestExprHasCallOrRecv/receive_inside_a_constant_unsafe.Sizeof_counts
+=== RUN   TestExprHasCallOrRecv/call_inside_a_Sizeof_beside_a_constant_len_still_counts
+=== RUN   TestExprHasCallOrRecv/constant_len_over_an_array-typed_call_is_NOT_constant_(call.go_sets_the_flag)
+--- PASS: TestExprHasCallOrRecv (0.01s)
+    --- PASS: TestExprHasCallOrRecv/plain_deref,_no_events (0.00s)
+    --- PASS: TestExprHasCallOrRecv/selector_chain,_no_events (0.00s)
+    --- PASS: TestExprHasCallOrRecv/ordinary_call (0.00s)
+    --- PASS: TestExprHasCallOrRecv/method-less_call_returning_the_pointer (0.00s)
+    --- PASS: TestExprHasCallOrRecv/receive (0.00s)
+    --- PASS: TestExprHasCallOrRecv/conversion_does_not_count (0.00s)
+    --- PASS: TestExprHasCallOrRecv/conversion's_operand_IS_scanned (0.00s)
+    --- PASS: TestExprHasCallOrRecv/constant_len(arr)_does_not_count (0.00s)
+    --- PASS: TestExprHasCallOrRecv/constant_len_of_a_paren'd_operand_does_not_count (0.00s)
+    --- PASS: TestExprHasCallOrRecv/non-constant_len_IS_a_call (0.00s)
+    --- PASS: TestExprHasCallOrRecv/constant_min/max_of_constants_does_not_count (0.00s)
+    --- PASS: TestExprHasCallOrRecv/func-literal_body_never_reaches_the_flag (0.00s)
+    --- PASS: TestExprHasCallOrRecv/unsafe.Sizeof(x)_is_a_constant_builtin,_not_a_call (0.00s)
+    --- PASS: TestExprHasCallOrRecv/unsafe.Alignof(x)_likewise (0.00s)
+    --- PASS: TestExprHasCallOrRecv/call_inside_a_constant_unsafe.Sizeof_counts_(no_save/restore_for_Sizeof) (0.00s)
+    --- PASS: TestExprHasCallOrRecv/call_inside_a_constant_min(...)_counts (0.00s)
+    --- PASS: TestExprHasCallOrRecv/receive_inside_a_constant_unsafe.Sizeof_counts (0.00s)
+    --- PASS: TestExprHasCallOrRecv/call_inside_a_Sizeof_beside_a_constant_len_still_counts (0.00s)
+    --- PASS: TestExprHasCallOrRecv/constant_len_over_an_array-typed_call_is_NOT_constant_(call.go_sets_the_flag) (0.00s)
 === RUN   TestEmitIsDeterministic
---- PASS: TestEmitIsDeterministic (0.47s)
+--- PASS: TestEmitIsDeterministic (0.14s)
 === RUN   TestDeterminismShapeExports
 --- PASS: TestDeterminismShapeExports (0.00s)
 === RUN   TestEmitIsDeterministicWithUnits
---- PASS: TestEmitIsDeterministicWithUnits (1.07s)
+--- PASS: TestEmitIsDeterministicWithUnits (0.35s)
+=== RUN   TestEffectIsolationAdmitsAllowlistedCallee
+--- PASS: TestEffectIsolationAdmitsAllowlistedCallee (0.00s)
+=== RUN   TestEffectIsolationRefusesEffectfulCallee
+=== RUN   TestEffectIsolationRefusesEffectfulCallee/stdout
+=== RUN   TestEffectIsolationRefusesEffectfulCallee/filesystem
+=== RUN   TestEffectIsolationRefusesEffectfulCallee/process-environment-write
+--- PASS: TestEffectIsolationRefusesEffectfulCallee (0.04s)
+    --- PASS: TestEffectIsolationRefusesEffectfulCallee/stdout (0.04s)
+    --- PASS: TestEffectIsolationRefusesEffectfulCallee/filesystem (0.00s)
+    --- PASS: TestEffectIsolationRefusesEffectfulCallee/process-environment-write (0.00s)
+=== RUN   TestEffectIsolationRefusesPanickingShapes
+=== RUN   TestEffectIsolationRefusesPanickingShapes/remainder-by-zero
+=== RUN   TestEffectIsolationRefusesPanickingShapes/negative-shift
+=== RUN   TestEffectIsolationRefusesPanickingShapes/slice-to-array-pointer
+=== RUN   TestEffectIsolationRefusesPanickingShapes/nil-pointer-deref
+=== RUN   TestEffectIsolationRefusesPanickingShapes/failed-type-assertion
+=== RUN   TestEffectIsolationRefusesPanickingShapes/uncomparable-interface
+=== RUN   TestEffectIsolationRefusesPanickingShapes/slice-to-array-conversion
+=== RUN   TestEffectIsolationRefusesPanickingShapes/index-out-of-range
+=== RUN   TestEffectIsolationRefusesPanickingShapes/slice-bounds
+=== RUN   TestEffectIsolationRefusesPanickingShapes/nil-field-deref
+=== RUN   TestEffectIsolationRefusesPanickingShapes/divide-by-zero
+--- PASS: TestEffectIsolationRefusesPanickingShapes (0.01s)
+    --- PASS: TestEffectIsolationRefusesPanickingShapes/remainder-by-zero (0.00s)
+    --- PASS: TestEffectIsolationRefusesPanickingShapes/negative-shift (0.00s)
+    --- PASS: TestEffectIsolationRefusesPanickingShapes/slice-to-array-pointer (0.00s)
+    --- PASS: TestEffectIsolationRefusesPanickingShapes/nil-pointer-deref (0.00s)
+    --- PASS: TestEffectIsolationRefusesPanickingShapes/failed-type-assertion (0.00s)
+    --- PASS: TestEffectIsolationRefusesPanickingShapes/uncomparable-interface (0.00s)
+    --- PASS: TestEffectIsolationRefusesPanickingShapes/slice-to-array-conversion (0.00s)
+    --- PASS: TestEffectIsolationRefusesPanickingShapes/index-out-of-range (0.00s)
+    --- PASS: TestEffectIsolationRefusesPanickingShapes/slice-bounds (0.00s)
+    --- PASS: TestEffectIsolationRefusesPanickingShapes/nil-field-deref (0.00s)
+    --- PASS: TestEffectIsolationRefusesPanickingShapes/divide-by-zero (0.00s)
+=== RUN   TestEffectIsolationRefusesUnknownCallShapes
+=== RUN   TestEffectIsolationRefusesUnknownCallShapes/immediately-invoked-literal
+=== RUN   TestEffectIsolationRefusesUnknownCallShapes/method-value
+--- PASS: TestEffectIsolationRefusesUnknownCallShapes (0.03s)
+    --- PASS: TestEffectIsolationRefusesUnknownCallShapes/immediately-invoked-literal (0.00s)
+    --- PASS: TestEffectIsolationRefusesUnknownCallShapes/method-value (0.03s)
+=== RUN   TestEmbeddingInterfaceDefKeepsOwnMethods
+--- PASS: TestEmbeddingInterfaceDefKeepsOwnMethods (0.00s)
+=== RUN   TestNoteInterfaceConflictRecorded
+--- PASS: TestNoteInterfaceConflictRecorded (0.00s)
+=== RUN   TestPromotedMethodExpressionLowers
+--- PASS: TestPromotedMethodExpressionLowers (0.00s)
+=== RUN   TestMethodSetCoverageKnownKinds
+--- PASS: TestMethodSetCoverageKnownKinds (0.00s)
+=== RUN   TestMethodSetCoverageUnknownKindRefuses
+--- PASS: TestMethodSetCoverageUnknownKindRefuses (0.00s)
+=== RUN   TestMethodSetCoverageEmptyKindRefuses
+--- PASS: TestMethodSetCoverageEmptyKindRefuses (0.00s)
+=== RUN   TestMethodSetCoverageEmptyNameRefuses
+--- PASS: TestMethodSetCoverageEmptyNameRefuses (0.00s)
+=== RUN   TestUnlowerableTypedGlobalPoisonsPerDeclaration
+--- PASS: TestUnlowerableTypedGlobalPoisonsPerDeclaration (0.00s)
+=== RUN   TestUnlowerableTypedGlobalWithInitializer
+--- PASS: TestUnlowerableTypedGlobalWithInitializer (0.00s)
+=== RUN   TestStructFieldOfUnlowerableTypeStillRefusesExport
+--- PASS: TestStructFieldOfUnlowerableTypeStillRefusesExport (0.00s)
+=== RUN   TestOpaqueBasicInMethodSignatureStubs
+--- PASS: TestOpaqueBasicInMethodSignatureStubs (0.00s)
+=== RUN   TestOpaqueBasicInInterfaceRequirementList
+--- PASS: TestOpaqueBasicInInterfaceRequirementList (0.00s)
+=== RUN   TestOpaqueBasicValueInBodyStillRefuses
+--- PASS: TestOpaqueBasicValueInBodyStillRefuses (0.00s)
+=== RUN   TestOpaqueBasicStructFieldStillRefusesExport
+--- PASS: TestOpaqueBasicStructFieldStillRefusesExport (0.00s)
+=== RUN   TestOpaqueBasicPackageVarIsPoisoned
+--- PASS: TestOpaqueBasicPackageVarIsPoisoned (0.00s)
+=== RUN   TestWireIntegrityRefusesDanglingNamed
+--- PASS: TestWireIntegrityRefusesDanglingNamed (0.00s)
+=== RUN   TestWireIntegrityRedFirstOnPreM1Wires
+--- PASS: TestWireIntegrityRedFirstOnPreM1Wires (0.01s)
+=== RUN   TestLateImportedNamedGetsMarker
+--- PASS: TestLateImportedNamedGetsMarker (0.03s)
+=== RUN   TestPinnedLangVersionFromEmbeddedTable
+--- PASS: TestPinnedLangVersionFromEmbeddedTable (0.00s)
+=== RUN   TestBuildConstraintRefusal
+=== RUN   TestBuildConstraintRefusal/no_constraint
+=== RUN   TestBuildConstraintRefusal/custom_tag_negated,_included_(the_raftsubject_form)
+=== RUN   TestBuildConstraintRefusal/custom_tag,_excluded_(the_ignore_fail-open,_probe_p5)
+=== RUN   TestBuildConstraintRefusal/platform_tag,_even_though_included_here
+=== RUN   TestBuildConstraintRefusal/version_directive_(probe_p7_class)
+=== RUN   TestBuildConstraintRefusal/legacy_plus-build
+=== RUN   TestBuildConstraintRefusal/reserved_tag_hidden_in_a_satisfied_OR_branch
+=== RUN   TestBuildConstraintRefusal/goexperiment_ToolTag,_negated_(audit_T3-1:_oracle_excludes,_we_lowered)
+=== RUN   TestBuildConstraintRefusal/microarch_ToolTag_(audit_T3-1,_same_class)
+=== RUN   TestBuildConstraintRefusal/microarch_ToolTag,_non-vN_capability_shape
+=== RUN   TestBuildConstraintRefusal/dotted_custom_tag_with_a_non-arch_prefix_stays_custom
+=== RUN   TestBuildConstraintRefusal/prose_mention_after_the_package_clause_is_not_a_constraint
+--- PASS: TestBuildConstraintRefusal (0.00s)
+    --- PASS: TestBuildConstraintRefusal/no_constraint (0.00s)
+    --- PASS: TestBuildConstraintRefusal/custom_tag_negated,_included_(the_raftsubject_form) (0.00s)
+    --- PASS: TestBuildConstraintRefusal/custom_tag,_excluded_(the_ignore_fail-open,_probe_p5) (0.00s)
+    --- PASS: TestBuildConstraintRefusal/platform_tag,_even_though_included_here (0.00s)
+    --- PASS: TestBuildConstraintRefusal/version_directive_(probe_p7_class) (0.00s)
+    --- PASS: TestBuildConstraintRefusal/legacy_plus-build (0.00s)
+    --- PASS: TestBuildConstraintRefusal/reserved_tag_hidden_in_a_satisfied_OR_branch (0.00s)
+    --- PASS: TestBuildConstraintRefusal/goexperiment_ToolTag,_negated_(audit_T3-1:_oracle_excludes,_we_lowered) (0.00s)
+    --- PASS: TestBuildConstraintRefusal/microarch_ToolTag_(audit_T3-1,_same_class) (0.00s)
+    --- PASS: TestBuildConstraintRefusal/microarch_ToolTag,_non-vN_capability_shape (0.00s)
+    --- PASS: TestBuildConstraintRefusal/dotted_custom_tag_with_a_non-arch_prefix_stays_custom (0.00s)
+    --- PASS: TestBuildConstraintRefusal/prose_mention_after_the_package_clause_is_not_a_constraint (0.00s)
+=== RUN   TestInstTypeIdRenderings
+--- PASS: TestInstTypeIdRenderings (0.00s)
+=== RUN   TestByteUint8ShareKey
+--- PASS: TestByteUint8ShareKey (0.00s)
+=== RUN   TestMangledKeyCollisionRefuses
+--- PASS: TestMangledKeyCollisionRefuses (0.00s)
+=== RUN   TestRegistryCapRefuses
+--- PASS: TestRegistryCapRefuses (0.00s)
+=== RUN   TestInstFuncIdRenderings
+--- PASS: TestInstFuncIdRenderings (0.00s)
+=== RUN   TestLocalTypeArgumentRefuses
+--- PASS: TestLocalTypeArgumentRefuses (0.00s)
+=== RUN   TestLocalTypeCollisionWouldBeCaught
+--- PASS: TestLocalTypeCollisionWouldBeCaught (0.00s)
+=== RUN   TestRollbackUndoesInterfaceNotes
+--- PASS: TestRollbackUndoesInterfaceNotes (0.00s)
+=== RUN   TestManglingSurfaceFailsClosed
+--- PASS: TestManglingSurfaceFailsClosed (0.00s)
+=== RUN   TestRollbackUndoesInterfaceConflicts
+--- PASS: TestRollbackUndoesInterfaceConflicts (0.00s)
+=== RUN   TestIfaceConflictRefusalDedups
+--- PASS: TestIfaceConflictRefusalDedups (0.00s)
+=== RUN   TestOpaqueSignatureStubKeepsExport
+--- PASS: TestOpaqueSignatureStubKeepsExport (0.00s)
+=== RUN   TestOpaqueInterfaceRequirementMintsSameKey
+--- PASS: TestOpaqueInterfaceRequirementMintsSameKey (0.00s)
+=== RUN   TestOpaqueNeverAdmittedInBody
+--- PASS: TestOpaqueNeverAdmittedInBody (0.00s)
+=== RUN   TestRegisterRowCalleePoisonsPerDeclaration
+--- PASS: TestRegisterRowCalleePoisonsPerDeclaration (0.00s)
+=== RUN   TestUnregisteredCalleeStillRefusesWholeExport
+--- PASS: TestUnregisteredCalleeStillRefusesWholeExport (0.00s)
+=== RUN   TestRegisterRowArgumentShapeHoles
+--- PASS: TestRegisterRowArgumentShapeHoles (0.00s)
+=== RUN   TestRegisterDumpRendersInitCalleeClass
+--- PASS: TestRegisterDumpRendersInitCalleeClass (0.00s)
+=== RUN   TestOpaqueRefusesImportedGenericWithMethods
+--- PASS: TestOpaqueRefusesImportedGenericWithMethods (0.03s)
+=== RUN   TestPrintLowersAdmittedKinds
+--- PASS: TestPrintLowersAdmittedKinds (0.00s)
+=== RUN   TestPrintRefusesByName
+--- PASS: TestPrintRefusesByName (0.00s)
+=== RUN   TestFloatBitsLowersAllFour
+--- PASS: TestFloatBitsLowersAllFour (0.01s)
+=== RUN   TestFloatBitsOtherMathMembersStillRefuse
+--- PASS: TestFloatBitsOtherMathMembersStillRefuse (0.00s)
+=== RUN   TestStdlibRegisterPrimitivesFull
+--- PASS: TestStdlibRegisterPrimitivesFull (0.00s)
+=== RUN   TestFloatBitsDotImportRefusesNamingMath
+--- PASS: TestFloatBitsDotImportRefusesNamingMath (0.00s)
+=== RUN   TestQuarantinedMethodKeepsPackageExportable
+--- PASS: TestQuarantinedMethodKeepsPackageExportable (0.00s)
+=== RUN   TestQuarantinedMethodNeverDropped
+--- PASS: TestQuarantinedMethodNeverDropped (0.00s)
+=== RUN   TestQuarantinedMethodCarriesRealSignature
+--- PASS: TestQuarantinedMethodCarriesRealSignature (0.00s)
+=== RUN   TestQuarantinedMethodUnlowerableSignatureRefuses
+--- PASS: TestQuarantinedMethodUnlowerableSignatureRefuses (0.00s)
+=== RUN   TestQuarantinedStencilKeepsExport
+--- PASS: TestQuarantinedStencilKeepsExport (0.00s)
+=== RUN   TestQuarantinedStencilNeverDropped
+--- PASS: TestQuarantinedStencilNeverDropped (0.00s)
+=== RUN   TestQuarantinedStencilSignatureOpaque
+--- PASS: TestQuarantinedStencilSignatureOpaque (0.00s)
+=== RUN   TestQuarantinedStencilRollbackKeepsSharedInstantiation
+--- PASS: TestQuarantinedStencilRollbackKeepsSharedInstantiation (0.00s)
+=== RUN   TestAnonymousTypeRefusalNamesEnqueueCause
+--- PASS: TestAnonymousTypeRefusalNamesEnqueueCause (0.00s)
+=== RUN   TestStdlibShimInjectionClosedPerEntry
+    stdlibshim_closure_test.go:127: 6 call-shape-table entries enumerated
+--- PASS: TestStdlibShimInjectionClosedPerEntry (0.00s)
+=== RUN   TestStdlibShimDepsExact
+--- PASS: TestStdlibShimDepsExact (0.00s)
+=== RUN   TestStdlibShimEachKeyClosedAlone
+--- PASS: TestStdlibShimEachKeyClosedAlone (0.00s)
+=== RUN   TestCloseShimDepsRefusesUnknownDep
+--- PASS: TestCloseShimDepsRefusesUnknownDep (0.00s)
+=== RUN   TestStdlibSourceFieldsLowersRealBodyPruned
+--- PASS: TestStdlibSourceFieldsLowersRealBodyPruned (0.04s)
+=== RUN   TestStdlibSourceJoinLowersThroughOverlaidBuilder
+--- PASS: TestStdlibSourceJoinLowersThroughOverlaidBuilder (0.04s)
+=== RUN   TestStdlibOverlayMovedBytesRefuseByName
+--- PASS: TestStdlibOverlayMovedBytesRefuseByName (0.00s)
+=== RUN   TestStdlibSourceUnsafeSiteQuarantinesByName
+--- PASS: TestStdlibSourceUnsafeSiteQuarantinesByName (0.03s)
+=== RUN   TestStdlibSourceNoLibraryImportIsByteIdenticalPath
+--- PASS: TestStdlibSourceNoLibraryImportIsByteIdenticalPath (0.00s)
+=== RUN   TestStdlibPinMismatchRefusesByPath
+--- PASS: TestStdlibPinMismatchRefusesByPath (0.00s)
+=== RUN   TestStdlibSrcRevDriftRefuses
+--- PASS: TestStdlibSrcRevDriftRefuses (0.00s)
+=== RUN   TestStdlibSubstitutionTableFailsClosed
+--- PASS: TestStdlibSubstitutionTableFailsClosed (0.00s)
+=== RUN   TestStdlibRegisterDumpCaps
+--- PASS: TestStdlibRegisterDumpCaps (0.00s)
+=== RUN   TestStdlibOverlayTableRules
+--- PASS: TestStdlibOverlayTableRules (0.00s)
+=== RUN   TestStdlibOverlayCheckTypeChecks
+--- PASS: TestStdlibOverlayCheckTypeChecks (0.09s)
+=== RUN   TestStdlibOverlayRowMustApply
+--- PASS: TestStdlibOverlayRowMustApply (0.00s)
+=== RUN   TestSlicesSortIsTheRealGenericEverywhere
+--- PASS: TestSlicesSortIsTheRealGenericEverywhere (0.03s)
+=== RUN   TestStdlibSourceErrorsWrapExports
+--- PASS: TestStdlibSourceErrorsWrapExports (0.03s)
+=== RUN   TestStdlibPinnedFileNotSelectedRefuses
+--- PASS: TestStdlibPinnedFileNotSelectedRefuses (0.00s)
+=== RUN   TestStdlibHostToolchainPinned
+--- PASS: TestStdlibHostToolchainPinned (0.00s)
+=== RUN   TestStdlibQuarantineReasonNamesSite
+--- PASS: TestStdlibQuarantineReasonNamesSite (0.03s)
+=== RUN   TestUnimplementedPanicBodyShape
+--- PASS: TestUnimplementedPanicBodyShape (0.00s)
+=== RUN   TestUnimplementedPlaceholderQuarantinesByName
+--- PASS: TestUnimplementedPlaceholderQuarantinesByName (0.00s)
+=== RUN   TestInterceptedLibraryCallFailsClosedOnListedMemberWithoutArm
+--- PASS: TestInterceptedLibraryCallFailsClosedOnListedMemberWithoutArm (0.02s)
 === RUN   TestTypeTableIsDependencyOrderedAndDeterministic
---- PASS: TestTypeTableIsDependencyOrderedAndDeterministic (0.01s)
+--- PASS: TestTypeTableIsDependencyOrderedAndDeterministic (0.00s)
+=== RUN   TestOrderTypeDefsCycleRefuses
+--- PASS: TestOrderTypeDefsCycleRefuses (0.00s)
+=== RUN   TestOrderTypeDefsDanglingRefuses
+--- PASS: TestOrderTypeDefsDanglingRefuses (0.00s)
+=== RUN   TestOrderTypeDefsAlreadyOrderedUnchanged
+--- PASS: TestOrderTypeDefsAlreadyOrderedUnchanged (0.00s)
+=== RUN   TestOrderTypeDefsReversedIsReordered
+--- PASS: TestOrderTypeDefsReversedIsReordered (0.00s)
+=== RUN   TestOrderTypeDefsIndirectRecursionIsNotACycle
+--- PASS: TestOrderTypeDefsIndirectRecursionIsNotACycle (0.00s)
+=== RUN   TestOrderTypeDefsAliasRefuses
+--- PASS: TestOrderTypeDefsAliasRefuses (0.00s)
+=== RUN   TestOrderTypeDefsDuplicateRefuses
+--- PASS: TestOrderTypeDefsDuplicateRefuses (0.00s)
 === RUN   TestDeterminismShapesPassTypeOrder
---- PASS: TestDeterminismShapesPassTypeOrder (0.02s)
+--- PASS: TestDeterminismShapesPassTypeOrder (0.00s)
 PASS
-ok  	_/home/dev/projects/golean/.claude/worktrees/c-arc-c2/tools/nativefrontend	1.590s
+ok  	_/home/dev/projects/golean/.claude/worktrees/c-arc-c2/tools/nativefrontend	1.027s

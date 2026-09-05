@@ -16,6 +16,18 @@ if diff $T/trace-before.$$ $T/trace-after.$$ > $T/trace-delta.$$; then
 else
   echo "DELTA lines:"; cat $T/trace-delta.$$; rc=1
 fi
-echo "per-site totals before: $(grep 'consumptions per site' "$b"/../$(basename "$b").log 2>/dev/null | head -1 | cut -c1-200)"
+# Per-site consumption totals of BOTH sides, untruncated (audit fix R8,
+# lane c-arc-c2, 2026-09-05: the line used to print the BEFORE side only,
+# cut at 200 characters). The totals live in the run log beside the
+# artifact dir (`<dir>.log`); a missing log is said so, never blank.
+for side in before after; do
+  if [ "$side" = before ]; then d="$b"; else d="$a"; fi
+  log="$d/../$(basename "$d").log"
+  if [ -r "$log" ]; then
+    echo "per-site totals $side: $(grep 'consumptions per site' "$log" | head -1)"
+  else
+    echo "per-site totals $side: (no run log at $log)"
+  fi
+done
 rm -rf "$T"
 exit $rc

@@ -759,6 +759,10 @@ def enumSetup (program : GoCore.Program) (name : String)
     | none => throw (.stuck s!"GoCore function not found: {name}")
   if func.args.size != args.size then
     throw (.stuck s!"expected {func.args.size} argument(s), got {args.size}")
+  -- Mirror of `runProgramSetupM`'s reserved-prefix check (C2 §2; audit
+  -- fix R2): the same text, the same position, so the drivers agree.
+  if program.typeDefs.hasReservedPrefix then pure () else
+    throw (.internal s!"program type table does not lead with the two machine-reserved entries ({GoCore.emptyStructTypeId.key} at index 0, {GoCore.runtimeErrorTypeId.key} at index 1): TypeEnv.hasReservedPrefix fails on a {program.typeDefs.size}-entry table — prepend TypeEnv.reserved (C2 acceptance clause)")
   let state : GoCore.ExecState :=
     { types := program.typeDefs, functions := program.funcs
       methods := program.methods, methodSets := program.methodSets

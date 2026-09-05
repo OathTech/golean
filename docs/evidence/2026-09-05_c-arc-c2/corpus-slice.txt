@@ -1,0 +1,7 @@
+# scripts/coverage run --prefix structs/decl-order-reversed — lane c-arc-c2 audit fix round (R11 rows), 2026-09-05, tree = the fix-round tip named in ci-diff.txt; gc values (go run main.go): 753 true 49 1236 104
+result	id	features	stage	detail
+PASS	structs/decl-order-reversed/zero-values	structs,arrays,nested,fields,zero_values,defined_type,conversions,indexing,len	-	wide=0 exhausted=none depth=fixed
+PASS	structs/decl-order-reversed/array-equality	structs,arrays,nested,equality,comparability,defined_type,literals	-	wide=0 exhausted=none depth=fixed
+PASS	structs/decl-order-reversed/interface-box	structs,arrays,interfaces,type_assertions,comma_ok,equality,defined_type,literals	-	wide=0 exhausted=none depth=fixed
+PASS	structs/decl-order-reversed/defined-array-values	arrays,defined_type,literals,value_copy,equality,zero_values,calls,indexing,len	-	wide=0 exhausted=none depth=fixed
+FAIL	structs/decl-order-reversed/conversion-array-target	arrays,defined_type,conversions,indexing,len,literals	lean-observation	expected status ok, got {"message":"conversion to GoLean.GoCore.Ty.array 3 (GoLean.GoCore.Ty.defined 2)","output":"","schema":"golean-observation-v1","status":"unsupported"}

@@ -662,35 +662,6 @@ structure TypeDisplay where
   pkg : String := ""
   deriving Repr, BEq
 
-structure Program where
-  /-- The type table (`TypeEnv`): dependency-ordered, `Ty.defined`
-  indexes into it; the two machine-reserved entries lead
-  (`TypeEnv.reserved`). -/
-  typeDefs : TypeEnv := #[]
-  funcs : Array Func
-  methods : Array MethodInfo := #[]
-  /-- Package-level variables, in declaration order (files in lexical
-  filename order). Empty for globals-free programs — every existing
-  construction site is untouched. -/
-  globals : Array GlobalDef := #[]
-  /-- The method-set records (contract note §3, 2026-08-10): REQUIRED
-  on the wire — the decoder refuses a wire without the field — and
-  defaulted `#[]` here so hand-built programs FAIL CLOSED on carrier
-  queries rather than answering from absence. -/
-  methodSets : Array MethodSetRecord := #[]
-  /-- The display records (design note 2026-09-05 §3.1), one per TypeDef
-  on a decoded wire; `#[]` for hand-built programs (no-record marker). -/
-  typeDisplays : Array (TypeId × TypeDisplay) := #[]
-  deriving Repr, BEq
-
-def findFunctionIn? (funcs : Array Func) (id : FuncId) : Option Func :=
-  funcs.foldl
-    (fun found func =>
-      match found with
-      | some f => some f
-      | none => if func.id == id then some func else none)
-    none
-
 /-- The machine-internal `TypeId` of a Go runtime error payload. `$` cannot
 appear in a Go identifier OR package name, so no source-level `TypeId` — now
 that they are package-QUALIFIED (`main.T`) — can collide with it. The old
@@ -766,10 +737,57 @@ def TypeEnv.reservedDisplays : Array (TypeId × TypeDisplay) :=
     (runtimeErrorTypeId, { name := runtimeErrorDisplayMarker, pkg := "runtime" })]
 
 /-- Does the table lead with the two reserved entries? The second clause
-of the decoder's type-table acceptance (`TypeEnv.WellFounded` is the
-first). -/
+of the type-table acceptance (`TypeEnv.WellFounded` is the first). The
+decoder does not EVALUATE this predicate — it CONSTRUCTS the prefix
+(`NativeToIR.lean`, `TypeEnv.reserved ++ declaredDefs`) and refuses a
+wire TypeDef spelling a reserved key; the predicate's consumers are the
+two driver seams (`runProgramSetupM`, `CLI.enumSetup`), which refuse a
+`Program` whose table does not lead with it before any step runs — a
+hand-built table with a user type at index 1 would otherwise render a
+user value as the runtime-error payload (audit fix R2, 2026-09-05). A
+Bool, evaluated at run time: the comparison is a long-string `==`, not
+`decide`-cheap (see the design note §8 on the owed `Accepted` Prop). -/
 def TypeEnv.hasReservedPrefix (types : TypeEnv) : Bool :=
   types.extract 0 2 == TypeEnv.reserved
+
+-- (`runtimeErrorTypeId` … `TypeEnv.hasReservedPrefix` sit ABOVE `Program`
+-- because `Program.typeDefs` defaults to `TypeEnv.reserved` — audit fix R2.)
+
+structure Program where
+  /-- The type table (`TypeEnv`): dependency-ordered, `Ty.defined`
+  indexes into it; the two machine-reserved entries lead
+  (`TypeEnv.reserved`) — the default is the bare prefix, so a hand-built
+  `Program` that declares no types is accepted by the driver seams'
+  `hasReservedPrefix` check (audit fix R2). -/
+  typeDefs : TypeEnv := TypeEnv.reserved
+  funcs : Array Func
+  methods : Array MethodInfo := #[]
+  /-- Package-level variables, in declaration order (files in lexical
+  filename order). Empty for globals-free programs — every existing
+  construction site is untouched. -/
+  globals : Array GlobalDef := #[]
+  /-- The method-set records (contract note §3, 2026-08-10): REQUIRED
+  on the wire — the decoder refuses a wire without the field — and
+  defaulted `#[]` here so hand-built programs FAIL CLOSED on carrier
+  queries rather than answering from absence. -/
+  methodSets : Array MethodSetRecord := #[]
+  /-- The display records (design note 2026-09-05 §3.1), one per TypeDef
+  on a decoded wire, in table order (the reserved entries' records lead,
+  `TypeEnv.reservedDisplays`); the default is the reserved entries'
+  records, matching `typeDefs`'s default, so a declaration-free
+  hand-built `Program` renders `struct {}` as gc does and a hand-built
+  program that declares types renders the visible no-record marker for
+  them unless it states their displays (fr19 × C2). -/
+  typeDisplays : Array (TypeId × TypeDisplay) := TypeEnv.reservedDisplays
+  deriving Repr, BEq
+
+def findFunctionIn? (funcs : Array Func) (id : FuncId) : Option Func :=
+  funcs.foldl
+    (fun found func =>
+      match found with
+      | some f => some f
+      | none => if func.id == id then some func else none)
+    none
 
 /-- The reserved id of the synthesized package-initialization function
 (init slice, `docs/2026-08-05_init-design.md`): the frontend emits it —

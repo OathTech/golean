@@ -178,6 +178,12 @@ func checkTypeDefOrder(typeDefs []any) error {
 		if err != nil {
 			return err
 		}
+		// A duplicate name would overwrite its index and let the check
+		// below judge edges against the LATER entry only (audit fix R12):
+		// refuse by name, as orderTypeDefsByDependency and emitProgram do.
+		if _, dup := index[name]; dup {
+			return unsup("type-table order: duplicate TypeDef %s in the final table (fail closed)", name)
+		}
 		index[name] = i
 		names[i] = name
 		depsOf[i] = deps

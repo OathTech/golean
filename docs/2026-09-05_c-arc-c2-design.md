@@ -14,9 +14,13 @@ Evidence: `docs/evidence/2026-09-05_c-arc-c2/`. Records touched: §10.
 G-C2 was RULED [USER] 2026-09-04 as recommended («let's move ahead with
 the plan», the nine gates individually presented — the coordinator's
 reading, disclosed in `docs/2026-09-04_c-arc-gu-design.md` §0) and
-CONFIRMED [USER] 2026-09-05 («(1) approved»). Both quotes reached this
-lane by [AGENT] coordinator relay; they are cited as relayed, never as
-firsthand. The twin-pin move is part of the ruled gate; it is still
+CONFIRMED [USER] 2026-09-05 («(1) approved» — item (1) of the
+eight-item list the coordinator put to the [USER]; the ruling record
+is `docs/2026-09-04_reasoning-surface-plan.md` §5.4, «Ruling record,
+2026-09-05 (confirmation of the gate reading)», landed on `main` at
+`426af905` by the `rulings-0905` merge, which this branch is rebased
+onto — audit fix R14). Both quotes reached this lane by [AGENT]
+coordinator relay; they are cited as relayed, never as firsthand. The twin-pin move is part of the ruled gate; it is still
 recorded as a deliberate re-pin with its structural diff and reason
 (§7, `scripts/check-frontend-pins` re-pin history). Standing directions
 applied: the disruptive change is in scope when it buys a more useful
@@ -55,8 +59,11 @@ interface name). It is never used to resolve a `Ty.defined`.
 
 Plan §1.9 names `Accepted P` as "decoder-side: no refusal marker, method
 sets complete, typeDefs well-founded (C2)". This slice lands the third
-conjunct, in two parts, both DECIDED by the decoder (`NativeToIR.lean`,
-`decodeProgram`):
+conjunct, in two parts: the first DECIDED by the decoder
+(`NativeToIR.lean`, `decodeProgram`), the second CONSTRUCTED by the
+decoder and DECIDED at the two driver seams (audit fix R2/R5a — the
+first version of this note said "both decided by the decoder"; the
+decoder never evaluated `hasReservedPrefix`, it only built the prefix):
 
 1. **Well-foundedness.** `typeDefs.WellFounded` — every table dependency
    of entry `i` sits at an index `< i`. The decoder evaluates the core's
@@ -74,7 +81,16 @@ conjunct, in two parts, both DECIDED by the decoder (`NativeToIR.lean`,
    before too), index 1 is the machine's runtime-error payload type
    (`$runtime.Error`) as an OPAQUE declaration. The decoder prepends the
    prefix, maps the wire's entry `k` to index `k + 2`, and refuses a wire
-   TypeDef that spells a reserved key or duplicates a TypeId.
+   TypeDef that spells a reserved key or duplicates a TypeId. The
+   predicate `TypeEnv.hasReservedPrefix` (a Bool) is EVALUATED by
+   `runProgramSetupM` (`StepFn.lean`) and `CLI.enumSetup` — the two
+   driver seams that already assert `StateWf` — which refuse a
+   `Program` that fails it BY NAME before any step runs (audit fix R2:
+   `runtimeErrorTypeIdx = 1` is a machine constant, so a hand-built
+   table with a user type at index 1 would otherwise have rendered a
+   user value as a runtime-error abort; pinned, `C2/R2` eval tests).
+   `Program.typeDefs` now DEFAULTS to `TypeEnv.reserved`, so a
+   declaration-free hand-built program is accepted unchanged.
 
 Why index 1 exists: `runtimeErrorValue msg` boxes at `.defined
 runtimeErrorTypeIdx` with no state in hand (`Machine.lean`), so the
@@ -96,13 +112,16 @@ only guard); a `named` reference with no TypeDef refuses at decode
 (before: an `unknown defined type` refusal at the first USE, at run
 time); an `alias` TypeDef refuses (before: decoded into `.alias`).
 
-Hand-built tables (`Tests/GoCoreEval.lean`) that exercise a runtime
-error or the abort renderer MUST lead with `TypeEnv.reserved`: the
-S6 renderer pin caught this on the first build (its `main.T` sat at
-index 1 and was mistaken for the runtime-error payload) and now
-documents the rule beside the fix. Tables that exercise neither may
-omit the prefix — a runtime error in such a state refuses on an
-out-of-range index, never mis-identifies.
+Hand-built tables (`Tests/GoCoreEval.lean`): every `Program` run
+through a driver seam MUST lead with `TypeEnv.reserved` — the seams
+refuse otherwise (R2). The S6 renderer pin caught the hazard on the
+first build (its `main.T` sat at index 1 and was mistaken for the
+runtime-error payload) and documents the rule beside the fix. The
+ExecState-level test entries (`runFunctionWithTypesM`,
+`runFunctionWithContextM` — no `Program`, no globals, no `$pkginit`)
+are NOT behind the check; the one such table (`coreCellTypes`)
+exercises neither a runtime error nor the renderer, and a runtime error
+in such a state refuses on an out-of-range index, never mis-identifies.
 
 ## 3. The dependency-order contract on the wire
 
@@ -185,7 +204,7 @@ decoder. Consequences on the machine:
   the frontend mints is the path-qualified one. An index the table does
   not have renders as a VISIBLE marker (`<unknown type index i>`) or
   fails closed (`none`), never as a guessed name; unreachable on a
-  decoded program.
+  decoded program (the marker class is itemized in §8, audit fix R10).
 - Refusal texts that `repr` a type now print `Ty.defined 3` where they
   printed `Ty.defined { key := "main.T" }`. These are diagnostics
   (stuck/unsupported reasons); no baseline or observation carries them.
@@ -205,12 +224,23 @@ body found is walked by the `…Ty` layer with the callback at the
 smaller bound. The public wrapper seeds `bound := types.size`. On a
 well-founded table the descent never exhausts — a dependency chain from
 index `i` has at most `i + 1` entries and `i < types.size` — so the `0`
-arm (`typeIndexExhausted`, a NAMED refusal: "typeDefs not
-dependency-ordered … unreachable on an accepted program") is reachable
-only from a hand-built table the decoder would have refused. The bound
-is not a budget: it is a projection of the program (`types.size`), its
-sufficiency is a theorem of `WellFounded`, and no literal appears in
-any equation. The lockstep of the two-layer shape is what keeps the
+arm is reachable only from a hand-built table the decoder would have
+refused. What the `0` arm does is per layer, and matches what the fuel
+version did at exhaustion (no regression; audit fix R5b corrects the
+first version of this paragraph, which named `typeIndexExhausted` for
+all five): `defaultValueAt`, `normalizeValueForTyAt`, `tySizeAlignAt`
+and `TypeEnv.resolve` (hence `convertValueToTy`/`buildStructValue`/
+`valueEq`) REFUSE by name (`typeIndexExhausted` — "typeDefs not
+dependency-ordered … unreachable on an accepted program" — or
+`resolve`'s own text); `tyUncomparableAt` returns `none` (UNKNOWN, its
+three-valued refusal arm) and `isNormalForTyAt` returns `false` (NOT
+normal, which every consumer treats as a refusal to accept the value).
+The bound is not a budget: it is a projection of the program
+(`types.size`) and no literal appears in any equation; its
+SUFFICIENCY on a well-founded table is an argument in this note (the
+chain-length bound above), not a kernel fact — see §8 (unproved; the
+"bound irrelevance" theorem is the owed statement; audit fix R5c). The
+lockstep of the two-layer shape is what keeps the
 cross-walk lemmas UNCONDITIONAL (`isNormalForTy_sound`,
 `defaultValue_ok_of_normalize_ok`: both descents at the same bound).
 
@@ -331,13 +361,61 @@ cannot exhibit it: the frontend orders every wire).
   Two rows excluded on both sides and recorded (`excluded.tsv`): the
   a-series' `goroutines/send-then-spin` and the red-by-design
   `strings/trimspace-repeat/repeat-bound-refused` (30 s gate timeout;
-  the tracer has none).
-- Eval tests: 165 ok, 0 fail (`eval-tests.txt`); 12 new `C2:` pins for
+  the tracer has none). **The whole-corpus identity claim is therefore
+  MINUS this one row** (audit fix R9): `repeat-bound-refused` is a
+  red-by-design refusal reached only after materializing a 16 MiB
+  string — its cost is materialization, not fuel, so a tracer with no
+  timeout cannot finish it in bounded time on either binary; its
+  consumption identity is UNMEASURED here, and its RESULT (the refusal,
+  FAIL by design) is covered by the differential gate, where it matched
+  the baseline on every run. `excluded.tsv` carries both rows' reasons.
+- Two tracer findings on the SAME wires under BOTH binaries, identical
+  before/after, NOT this lane's: (i) the 6 driver-agreement MISMATCH
+  lines on `builtins/float-bits/roundtrip-payloads` — the tracer
+  compared the enumerator's refusal with an EMPTY output field against
+  the engine's `RunResult` with its output prefix (`CLI.lean` `errorJson`
+  defaulted `output`; a fail-open comparison). ROWED AND FIXED by the
+  `c-arc-b4` lane's audit fix round (its design note
+  `docs/2026-09-05_c-arc-b4-design.md` §7 item 6, `TODO.md` C-arc
+  section, `docs/operational-lessons.md`); NOT duplicated here (audit
+  fix R7) — when b4 lands, the six `obsHash` values on both sides of
+  this lane's trace move together (the enumerator observation gains the
+  prefix), and the identity verdict is unaffected. (ii) The one tracer
+  ERROR line, `arrays/materialization-budget/over-budget`: BUG-078's
+  DESIGNED decode-time refusal (the array exceeds the materialization
+  budget), which the tracer cannot trace because there is no program to
+  run — not a mismatch, not a gap.
+- Eval tests: 170 ok, 0 fail (`eval-tests.txt`); 12 `C2:` pins for
   the decoder's acceptance clause, the core's `WellFounded`/
   `firstViolation?` agreement, the observation channel through the
-  index, and the reserved runtime-error index.
-- Frontend: `go test ./tools/nativefrontend` ok; the new
-  `typeorder_test.go` (`frontend-tests.txt`).
+  index, and the reserved runtime-error index, plus the 5 audit fix
+  pins `C2/R1` (an unresolvable index is a carrier with the unrecordable
+  key) and `C2/R2` (both driver seams refuse a prefix-less table by
+  name; the `Program` default is accepted; the control runs).
+- Frontend: `go test ./tools/nativefrontend` ok — the FULL package run
+  with its command line (`frontend-tests.txt`, audit fix R8; the first
+  record was a 5-test `-run` subset): 100 tests PASS incl. the 9
+  `typeorder_test.go` tests (the duplicate-name refusal of BOTH
+  `orderTypeDefsByDependency` and `checkTypeDefOrder` is pinned — the
+  latter overwrote `index[name]` before audit fix R12).
+- Order-change coverage (audit fix R11): `structs/decl-order-reversed/`
+  — 5 rows over six types declared in REVERSE dependency order with
+  array-element edges at two depths (`Grid [2][2]Cell`; `Codes`/`Raw
+  [3]Code`); the source-order table violates the contract and EVERY
+  entry moves (`Code, Pair, Codes, Cell, Grid, Raw` on the wire). Four
+  PASS with gc (`zero-values`, `array-equality`, `interface-box`,
+  `defined-array-values`: zero values, writes through every level,
+  array/struct equality, boxing + assertion + interface equality,
+  defined array values copied/compared/indexed); the fifth,
+  `conversion-array-target`, is RED-FIRST on **BUG-103** (filed here):
+  a conversion whose target's resolved shape is an ARRAY (`Raw(cs)`,
+  `[3]Code(r)`) falls into `convertValueToTy`'s catch-all — the array
+  arm BUG-020's fix left out, a machine gap DETECTED while writing the
+  rows and rowed at detection ([USER] 2026-09-03 direction; the ledger's
+  Conversions row names it). Not this slice's regression: the fuel
+  version had the same catch-all. Born rows in the baseline (§9). Before
+  them, 11 of 1308 emitting corpus packages moved under the reordering
+  and the twin's one `array` node was the only array-edge witness.
 - Lean line delta (`lean-line-delta.txt`): GoLean/ +1763 −1466, net
   +297 — the towers left, but the two-layer descents, `TypeEnv`'s
   predicates, `TyBody`/`resolve`, `valueEq`'s mutual block and the
@@ -398,8 +476,35 @@ Owed (rowed here; none blocks the gate):
   type layer. Not proved here; the reasoning repo's interface wave (I5)
   is where it pays.
 - **`Accepted P` as one Prop** (plan §1.9) bundling `typeDefs.
-  WellFounded ∧ typeDefs.hasReservedPrefix` with the decoder's other
-  clauses; `run_refusal_free` stays the theorem target it was.
+  WellFounded ∧ typeDefs.hasReservedPrefix = true` with the decoder's
+  other clauses; `run_refusal_free` stays the theorem target it was.
+  Note on the second conjunct (audit R15/R2): `hasReservedPrefix` is a
+  Bool whose evaluation compares a long string (the opaque entry's
+  reason text), so it is NOT `decide`-cheap — the driver seams evaluate
+  it as a Bool at run time, never by `decide`; the Prop form for the
+  bundle is `= true`, and a kernel proof of it on a concrete table
+  should go by `rfl`/`native`-free evaluation of the Bool, not by
+  `decide` on a `String` equality. Owed with the bundle.
+- **The `<unknown type index i>` marker class** (audit fix R10):
+  `goTypeNameForMessage` (Ops.lean) and `Ty.dynamicName` (Value.lean)
+  render an index the table lacks as a VISIBLE marker inside a text
+  that can reach a gc-visible message or the observation channel with
+  status `ok`. Refusing by name instead needs the two renderers to
+  become `Except` (26 call sites for the first; the observation
+  renderer `goValueJson` and its five consumers for the second) — well
+  over the 20-line budget the audit set, so it is documented, not
+  changed: the class is DECODE-UNREACHABLE (every `named` reference is
+  minted an index < `types.size`, and no step mints an index) and
+  reachable only from a hand-built `Program`; a consumer that wants the
+  refusal can assert `∀ i, (Ty.defined i) mentioned ⇒ i < types.size`
+  as part of the owed `Accepted` bundle, which is where it belongs.
+- **The `$unresolved-type-index.<i>` marker key** (audit fix R1):
+  `methodCarrierKey?` maps an unresolvable `.defined` index to this
+  key so that every record query REFUSES (no record can carry a `$`
+  key: the frontend mints record keys from Go identifiers and import
+  paths, the decoder synthesizes only `struct{}`); `none` is again
+  exactly the language's non-carriers. Same decode-unreachability;
+  pinned (`C2/R1`).
 - `TypeEnv.lookupName?` is a linear scan (two consumers, never on a
   `Ty.defined` path); an index by name is a cheap later addition.
 - The `struct{}` escapes (`emptyStructAssignable`) still compare
@@ -435,6 +540,46 @@ branch touches `tools/nativefrontend/wire.go`'s emission surface
 `GoLean/NativeToIR.lean`, so the train runs `scripts/ci --slow` at the
 merged tip and refreshes the certification record.
 
+**Twin-pin merge hazard — a rule for the train (audit fix R4).** The
+twin pin `baselines/pins/twin-chdriver.wire.json` is a 483k-line
+pretty-printed JSON. This branch's re-pin permutes the `types` table;
+the `e13-b` branch's re-pin (`d531a225…`, the probe-count change) edits
+`funcs` bodies. The two edits touch NON-OVERLAPPING regions, so `git
+merge`/`rebase` combines them CLEANLY into a syntactically valid JSON
+pin that NO frontend ever emitted (the permuted table with the other
+branch's bodies is a consistent wire only if both frontends' changes
+compose exactly — which is the thing to be checked, not assumed).
+`scripts/check-frontend-pins` catches the discrepancy only if the gate
+runs at the rebased tip and nobody "resolves" a pin FAIL by re-pinning
+without re-emitting. Rule: **after every landing that touches the pin,
+the pin is a FRESH EMIT from the merged frontend over the merged
+subject — never a merge result** — and the train records the emit's
+hash and the structural diff against the pre-merge pin (the recorded
+reason is the union of the two lanes' reasons). The same rule applies
+to any two lanes that re-pin concurrently.
+
+**Audit fix round (2026-09-05, [AGENT] worker).** The adversarial audit
+returned FIX-FIRST (no blocker; BEFORE/AFTER byte-identical on every
+probe, all 1730 corpus packages at the wire level, and the gate; twin
+pin reproduced; the decoder refuses all seven malformed classes by
+name). Dispositions: R1 core (marker key, pinned), R2 core + CLI
+(driver-seam refusal, `Program` default, pinned), R3 records (plan §1.1
+carries the two G6 facts and the landed `typeDefs` type), R4 this
+section, R5a-c this note + `Syntax.lean` docstring, R6 five stale
+references fixed (§10), R7 §7 cross-reference (no duplicate row), R8
+evidence re-recorded (`frontend-tests.txt` full run with command line;
+`ci-diff.txt` the fix-round gate tail with its `cases=` line and
+`git_dirty`; `excluded.tsv` per-row reasons; `trace-diff.sh` prints both
+sides' totals untruncated, `trace-diff.txt` re-recorded from the same
+artifacts), R9 §7, R10 §8 (documented; plumbing > 20 lines), R11 four
+born rows (§7), R12 frontend (`checkTypeDefOrder` duplicate refusal +
+unit test), R13 §10, R14 §0, R16 `StepFn.lean` (the unrenderable-abort
+refusal names the payload's dynamic type by its table key beside the
+`repr`). Incidental: BUG-103 filed (array-target conversions, a machine
+gap the R11 rows detected; red-first row, §7/§10). Rebased onto `main` @ `426af905` first (records-only ahead;
+clean). The fix-round gate tail and the tally follow in `ci-diff.txt`
+and the evidence README (recorded after the run, at the clean tip).
+
 ## 10. Records touched
 
 `docs/2026-09-04_reasoning-surface-plan.md` §5.4 (G-C2 BRANCH-COMPLETE
@@ -445,4 +590,28 @@ note for the type-directed ops); `docs/2026-08-11_latitude-inventory.md`
 (R16 text: `tySizeAlign`, no fuel); `docs/BUGS.md` and
 `docs/2026-08-11_essence-of-go-doctrine.md` (`tySizeAlign` pointer);
 `scripts/check-frontend-pins` (re-pin history); `Platform.lean`
-docstring. No BUGS.md Cases line: no row flipped.
+docstring; `docs/2026-09-04_g6-reflect-design.md` §4.5 (C2 status line
+and the pointer to where its two §1.1 facts are recorded — audit fix
+R13). Audit fix round additions: `docs/2026-09-04_reasoning-surface-plan.md`
+§1.1 (`typeDefs : Array (TypeId × TypeDef)` as landed, with the C2
+reference; the two OWED interface deltas `GoValue.typeDesc (idx :
+TypeIdx)` and `FieldDef.tag : String` recorded in the pinned document
+itself, [AGENT] 2026-09-05 — audit fix R3); the five stale references to
+deleted names fixed (audit fix R6): `GoCore/StateEqb.lean` header (cited
+`Ty.eqbFuel`/`GoValue.eqbFuel`), `GoCore/MachineEqb.lean` header and
+`GoCore/SyntaxEqb.lean` header (the `GoValue.eqbFuel` mould),
+`GoCore/Machine.lean` `snapshotEntriesSelfNormalizedList` docstring
+(`isNormalForTyFuel`), and the live contract note
+`docs/2026-08-10_method-set-record-contract.md` §2 (the method-set base
+"after `resolveDefinedAliases`" → alias-free `Ty`, `.defined idx` with
+the key read back, the R1 marker); `baselines/native-full.tsv` (5 born
+rows — 4 PASS + 1 red-first FAIL — header block; tally 3498 → 3503 =
+3256 PASS / 247 FAIL, re-derived by awk);
+`Corpus/coverage/exec/structs/decl-order-reversed/` (new); `docs/BUGS.md`
+(BUG-103 filed: array-target conversions, open, Cases line
+`structs/decl-order-reversed/conversion-array-target`; numbered after
+the unmerged `e13-b` lane's BUG-101/102 so the train has no collision);
+`docs/language-coverage-ledger.md` §2 Conversions row (BUG-103 named);
+`docs/evidence/2026-09-03_hygiene-a-series/choice-trace/trace-diff.sh`
+(both sides' totals). No PASS → non-PASS flip: the one FAIL row is BORN
+red on BUG-103's Cases line.

@@ -26,8 +26,10 @@ relayed by the coordinator and cited as relayed).
 | `twin-repin/structural-diff.txt` | JSON comparison old pin `4ee39f73…` vs fresh emit `d2bcb07b…` | `types` is a permutation of the 92 entries (36 moved; the pinned order had 12 order-contract violations, the new one 0); every other table byte-identical |
 | `twin-repin/new-pin.sha256` | sha256 of the re-pinned `baselines/pins/twin-chdriver.wire.json` | `d2bcb07b…` |
 | `choice-trace/` | `scripts/choice-trace-corpus` over the whole executable corpus × 6 streams with the PRE-change binary and with the tip binary, on the SAME (dependency-ordered) wires; `trace-diff.txt` = the a-series `trace-diff.sh` verdict | see §Readout identity below |
-| `eval-tests.txt` | `gocore-eval-tests` output | 165 ok, 0 fail (12 new `C2:` pins) |
-| `frontend-tests.txt` | `go test -v -run 'TypeDefOrder|TypeOrder|Determin' ./tools/nativefrontend` | all PASS |
+| `eval-tests.txt` | `gocore-eval-tests` output at the audit-fix-round tip | 170 ok, 0 fail (12 `C2:` pins + 5 audit fix pins `C2/R1`, `C2/R2`) |
+| `frontend-tests.txt` | the FULL `go test -v ./tools/nativefrontend` run with its command line in the header (audit fix R8; the first record was a 5-test `-run` subset) | 100 PASS, 0 FAIL, incl. the 9 `typeorder_test.go` tests |
+| `corpus-slice.txt` | `scripts/coverage run --prefix structs/decl-order-reversed` at the audit-fix-round tip (R11 rows) | 4 PASS + 1 FAIL red-first on BUG-103 (`conversion-array-target`, `unsupported: conversion to Ty.array 3 (Ty.defined 2)`; gc 104) |
+| `choice-trace/excluded.tsv` | the two rows excluded from the trace on both sides, each with its REASON (audit fix R8/R9) | `send-then-spin` (nonterm by design), `repeat-bound-refused` (16 MiB materialization; identity UNMEASURED, result gate-covered) |
 | `lean-line-delta.txt` | `git diff --numstat` per Lean file vs `main` | GoLean/ +1763 −1466 (net +297); not a reduction, not claimed as one |
 
 ## Reproduction (from the worktree root, at the SHAs above)
@@ -35,7 +37,7 @@ relayed by the coordinator and cited as relayed).
 ```sh
 scripts/capped lake build && scripts/capped lake build gocore-eval-tests
 .lake/build/bin/gocore-eval-tests > docs/evidence/2026-09-05_c-arc-c2/eval-tests.txt 2>&1
-GO111MODULE=off GOCACHE="$PWD/.tmp/go-build-cache" go test -v -run 'TypeDefOrder|TypeOrder|Determin' ./tools/nativefrontend
+GO111MODULE=off GOCACHE="$PWD/.tmp/go-build-cache" go test -v ./tools/nativefrontend
 # twin re-pin (the check-frontend-pins assembly, then the JSON comparison the file's header names)
 mkdir -p .tmp/twin/prog && for pkg in quorum raftpb tracker proto confchange raft; do cp -r raftsubject/$pkg .tmp/twin/prog/; done
 for f in twin-lib.go twin-chdriver.go twin-chdriver-main.go; do cp tools/raftsubject/$f .tmp/twin/prog/; done
@@ -83,7 +85,10 @@ row that the gate stops at `LEAN_TIMEOUT_SECONDS=30s`; the tracer has no
 timeout and ran its first stream for 30+ minutes under the old binary
 before this lane stopped it — by PID — and excluded it on both sides).
 
-`trace-diff.sh` verdict (`choice-trace/trace-diff.txt`): **20737 of 20749
+`trace-diff.sh` verdict (`choice-trace/trace-diff.txt`, re-recorded in the
+audit fix round from the SAME two artifact dirs after the script learned
+to print BOTH sides' per-site totals untruncated — audit fix R8; the
+verdict is unchanged): **20737 of 20749
 lines byte-identical on every column including `obsHash`; the 12
 differing lines are the 6 streams of two baseline-FAIL rows**
 (`panic-recover/panic-defined-payload-methods/{error,stringer}`) whose
@@ -97,9 +102,15 @@ nilValueMethodText=84 l2Entry=24 l4Waiter=22 l2Arrival=3` on both sides):
 the choice trace has ZERO delta — types consume nothing. Menu-invariant
 violations 0 and self-check alarms 0 on both sides; the 6 driver-agreement
 MISMATCH lines (`builtins/float-bits/roundtrip-payloads`) and the 1 tracer
-ERROR (`arrays/materialization-budget/over-budget`, BUG-078's decode-time
-refusal) are IDENTICAL on both binaries — pre-existing on `main`, not this
-lane's (rowed for the coordinator in the summary).
+ERROR (`arrays/materialization-budget/over-budget`, BUG-078's DESIGNED
+decode-time refusal — the tracer has no program to run) are IDENTICAL on
+both binaries — pre-existing on `main`, not this lane's. The mismatch is a
+tracer fail-open (the enumerator's refusal compared with an EMPTY output
+field), ROWED AND FIXED by the `c-arc-b4` lane's audit fix round
+(`docs/2026-09-05_c-arc-b4-design.md` §7 item 6; `TODO.md` C-arc section) —
+cross-referenced, not duplicated (audit fix R7; design note §7). The
+whole-corpus identity claim is MINUS the excluded `repeat-bound-refused`
+row (design note §7, audit fix R9).
 
 ## Provenance
 

@@ -956,13 +956,27 @@ FUTURE `Ty` kind modeling a defined Go type must join the carrier arms;
 forgetting its records then yields visible refusals, never answers —
 the inversion of the retired blanket-`true` taxonomy arm, which read
 "not `.defined` ⇒ no methods" and silently answered wrong "no"s for
-`.sync` (BUG-053's exact mechanism). -/
+`.sync` (BUG-053's exact mechanism).
+
+A `.defined i` whose index the table does not have is a CARRIER whose
+key is unknown — never a non-carrier: it maps to the marker key
+`$unresolved-type-index.<i>`, which no record can carry (`$` cannot
+appear in a Go identifier or import path, the frontend mints every
+record key from one, and the decoder's only synthesized record is
+`struct{}`), so every consumer finds NO record and REFUSES. Mapping it
+to `none` would have read "unresolvable ⇒ empty method set by the
+language" — the BUG-053 mechanism again (audit fix R1, 2026-09-05).
+Unreachable on a decoded program (every `named` reference is minted an
+index < `types.size`); the reasoning consumer constructs `Program`s. -/
 def methodCarrierKey? (state : ExecState) (dynTy : Ty) : Option String :=
   let base := match dynTy with
     | .pointer elem => elem
     | other => other
   match base with
-  | .defined i => (state.types.nameOf? i).map (·.key)
+  | .defined i =>
+      match state.types.nameOf? i with
+      | some name => some name.key
+      | none => some s!"$unresolved-type-index.{i}"
   | .sync kind => some s!"sync.{kind.name}"
   | _ => none
 
@@ -988,7 +1002,9 @@ derived from nothing — the wrong comma-ok boolean and a FABRICATED
 `missing method` panic on a program Go runs to completion (pre-merge
 audit 2026-07-31 finding 8 = BUG-008/BUG-009 for imported `.defined`
 names; BUG-053 for `.sync`, which the retired taxonomy arm waved
-through). -/
+through). A `.defined` index the table does not have is a carrier
+with the unrecordable marker key (`methodCarrierKey?`), so it answers
+`false` here — refuse, never "empty" (audit fix R1). -/
 def dynamicMethodSetRecorded (state : ExecState) (dynTy : Ty) : Bool :=
   match methodCarrierKey? state dynTy with
   | some key => (methodSetCoverage? state key).isSome

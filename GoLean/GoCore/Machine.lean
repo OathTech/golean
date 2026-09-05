@@ -1430,7 +1430,8 @@ every legitimate snapshot passes identically (differential-validated),
 while an ill-typed entry — which would make `mapIterNext`'s per-pick
 `bindIterVars` normalization succeed at one pick and fail at another —
 is rejected before any pick exists. Structural over the entry list;
-kernel-reducible (`isNormalForTyFuel`'s contract). Note the recorded
+kernel-reducible (`isNormalForTy`'s contract — the two-layer index
+descent since C2, no fuel). Note the recorded
 design named only the KEYS; the value check is forced by the same
 obstruction one constructor over — `bindIterVars` normalizes the VALUE
 at `valTy` whenever a value variable is bound, so key-only validation
@@ -2141,6 +2142,15 @@ def renderPanicPayload (state : ExecState) : GoValue → Option String
         (state.types.nameOf? idx).map fun name => s!"{displayNameOfId state name}({v})"
   | _ => none
 
+/-- The diagnostic suffix of the unrenderable-abort refusal: a boxed
+payload's dynamic type by the KEY read back from the table
+(`goTypeNameForMessage`), beside the `repr` that now prints a bare
+`Ty.defined i` (C2; audit fix R16). Diagnostic only — no baseline or
+observation carries the text. -/
+def payloadDynamicTypeNote (state : ExecState) : GoValue → String
+  | .interface dynTy _ => s!" (dynamic type {goTypeNameForMessage state dynTy})"
+  | _ => ""
+
 /-- Go's first abort line for a panic chain. The `[recovered, repanicked]`
 collapse is decided by the runtime via eface IDENTITY — a bitwise compare
 of the interface's type word AND data pointer (`preprintpanics`,
@@ -2769,12 +2779,16 @@ def Config.abort? : Config → Option (PanicEntry × List PanicEntry)
 
 /-- Go's first `panic: ` line for an abort, or the refusal that names why
 it cannot be rendered (BUG-004's boxing-identity collapse). Shared by
-the sequential machine's abort (`stepFn`) and the pool's (`stepThread`). -/
+the sequential machine's abort (`stepFn`) and the pool's (`stepThread`).
+The refusal names the payload's dynamic type by its table key beside the
+`repr`, which prints a bare `Ty.defined i` since C2 (`payloadDynamicTypeNote`,
+audit fix R16). -/
 def abortMsg (s : ExecState) (first : PanicEntry) (rest : List PanicEntry) :
     Except Stop String :=
   match renderPanicHead s first rest with
   | some msg => return msg
-  | none => throw (.unsupported s!"panic abort rendering for payload {repr first.value}")
+  | none => throw (.unsupported
+      s!"panic abort rendering for payload {repr first.value}{payloadDynamicTypeNote s first.value}")
 
 /-! ## The signal table (B4) -/
 

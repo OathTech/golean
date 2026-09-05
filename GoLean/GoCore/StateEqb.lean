@@ -10,16 +10,19 @@ theorem needs that comparison to entail PROPOSITIONAL equality. The
 derived `BEq`s on the nested inductives (`Ty`, `GoValue`, `Expr`,
 `Stmt`, `Cont`, `Config`) are logically opaque (the documented
 partial-stub class, `Value.lean`), and `deriving DecidableEq` fails on
-nested inductives — so this layer provides fuel-structural `eqb`s in
-`GoValue.eqbFuel`'s exact mold with ONE-DIRECTIONAL soundness theorems:
+nested inductives — so this layer provides structural `eqb`s in
+`GoValue.eqb`'s exact mold (mutual structural recursion over the nested
+inductives since C2, 2026-09-05; the fuel-structural `eqbFuel`s they
+replaced are gone) with ONE-DIRECTIONAL soundness theorems:
 
     eqb a b = true → a = b
 
 Completeness is deliberately NOT claimed: an `eqb` returning `false` on
-equal values (fuel exhaustion) makes the checker REFUSE — fail closed,
-never unsound. This file has the generic helpers, the flat-type
-`==`-soundness lemmas, and soundness for the two EXISTING fuel eqbs
-(`Ty.eqbFuel`, `GoValue.eqbFuel`); `SyntaxEqb.lean` and
+equal values makes the checker REFUSE — fail closed, never unsound. This
+file has the generic helpers, the flat-type `==`-soundness lemmas, and
+soundness for the two EXISTING structural eqbs of `Value.lean`
+(`Ty.eqb`, `GoValue.eqb`: `Ty.eqb_sound_all`, `GoValue.eqb_sound_all`
+by `mutual_induct`); `SyntaxEqb.lean` and
 `MachineEqb.lean` build the `Expr`/`Stmt`/`Cont`/`Config`/state layers
 on these.
 -/

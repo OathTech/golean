@@ -5764,3 +5764,37 @@ check for (c)-pins (`scripts/` reads only BUGS.md `Cases:` lines), and the
 carry a FAIL row (check-bugs (3)). Retires only with a [USER] re-ruling of §5.1
 item 1 — never by a fix.
 
+## BUG-103 — conversions whose TARGET's resolved shape is an ARRAY (`Raw(cs)` between two defined `[3]Code` types, `[3]Code(r)` to the unnamed array type) are refused by `convertValueToTy`'s catch-all — BUG-020 added the pointer/slice/map/func arms and left the array arm out [coverage; GoCore conversions; fail-closed refusal of legal Go; surfaced by the C-arc C2 audit fix round (R11 rows), 2026-09-05]
+
+- Status: open
+- Pinned-by: differential
+- Cases: structs/decl-order-reversed/conversion-array-target
+
+WHAT (spec#Conversions: a non-constant value `x` can be converted to `T` when `x`'s type
+and `T` have identical underlying types — `Codes`, `Raw` and `[3]Code` all have underlying
+type `[3]Code`, so both `Raw(cs)` and `[3]Code(r)` are legal and are the identity on the
+value): `GoLean/GoCore/Ops.lean` `convertValueToTy` matches the target's `TypeEnv.resolve`d
+body against the value and has arms for `.plain (.int _)`, `.plain (.float _)`, `.plain
+.string`, `.plain (.pointer/.slice/.map/.funcType …)` (BUG-020), `.struct`, `.opaque`,
+`.interfaceDecl`; a `.plain (.array n elem)` target falls to the catch-all —
+`unsupported "conversion to GoLean.GoCore.Ty.array 3 (GoLean.GoCore.Ty.defined 2)"` — at
+the FIRST array-shaped conversion (`Raw(cs)` here; the wire elides nothing). Fail-closed,
+never a wrong answer; gc returns `104`, the machine refuses at `lean-observation`. Detected
+[AGENT] while writing the C2 order-coverage rows (`structs/decl-order-reversed/`, audit fix
+R11): the row was meant to exercise the defined-over-array edge through a conversion and
+found the arm missing. Root cause: the MACHINE (a missing kernel arm), not the frontend or
+the type table — the same class as BUG-020, one target kind further. Per the [USER]
+2026-09-03 direction (every detected gap is rowed at detection), the row is pinned RED-FIRST
+here rather than rewritten to avoid the shape; the PASS half of the same story is
+`structs/decl-order-reversed/defined-array-values` (defined array values built, copied,
+compared and indexed without a conversion).
+
+PLAN [AGENT]: one arm — `| .ok (.plain (.array n elem)), .array values => normalizeValueForTy
+state (.array n elem) (.array values)` — legal exactly when go/types accepted the conversion
+(identical underlying types), and the machine's `.array` carries no type tag, so the
+conversion is a COPY normalized at the target's element type (arrays are values; the
+normalization re-checks length `n` and every element at `elem`, refusing a malformed value
+by name as every other arm does). Needs its own slice with a full run: the arm is reached by
+every array-shaped conversion in the corpus (the `BUG-020` fix's `structs/unnamed-conversion-targets/*`
+rows are the template: red-first, then the arm, then PASS on this Cases line). Ledger:
+`docs/language-coverage-ledger.md` §2 Conversions row names it.

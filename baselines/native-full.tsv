@@ -1,4 +1,18 @@
 # GoLean native-frontend full-corpus differential baseline
+# re-pinned: 2026-09-05 (c-arc-c2 lane, AUDIT FIX ROUND R1-R16 — [AGENT] worker; REBASED onto main cf858f0f at merge train round 17,
+#   [AGENT] reconciler): drift vs main's pin (3523 = 3279 PASS / 244 FAIL — the fr19-bug097 audit fix round's, the next block) = EXACTLY
+#   5 born rows, 0 flips of pre-existing rows, 0 reorders: structs/decl-order-reversed/{zero-values,array-equality,interface-box,
+#   defined-array-values} PASS (audit fix R11 — types declared in REVERSE dependency order so every wire `types` entry MOVES under the
+#   frontend ordering, array-element edges at two depths) and structs/decl-order-reversed/conversion-array-target FAIL at
+#   lean-observation RED-FIRST on BUG-103's Cases line (array-target conversions fall into convertValueToTy's catch-all — a missing
+#   kernel arm one target kind past BUG-020, detected while writing the rows; gc 104). Tally 3523 = 3279 / 244 -> 3528 = 3283 / 245
+#   (3279 + 4; 244 + 1), re-derived from the data rows:
+#   `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv` = PASS 3283 / FAIL 245.
+#   (The lane's own pre-rebase figure, over main 426af905's rows: 3498 = 3252 / 246 -> 3503 = 3256 / 247 — the same 5 rows, same
+#   verdicts.) The raft twin wire pin MOVED at the rebase (f89e1c9e -> a9a2e2b1: a FRESH EMIT from the merged frontend — fr19's
+#   display/pkg fields x c2's dependency order, a permutation of the 93 type entries; scripts/check-frontend-pins history).
+#   Evidence: docs/evidence/2026-09-05_c-arc-c2/README.md (audit fix round + round-17 rebase sections); design note
+#   docs/2026-09-05_c-arc-c2-design.md §9.
 # re-pinned: 2026-09-05 (fr19-bug097 lane — FR-19 CLOSED (function-local types key by scope ordinal `main.T·N`), BUG-097 FIXED
 #   (anonymous-interface keys path-qualified, incl. unexported method names), BUG-059 FIXED (identity/display split: every wire
 #   TypeDef carries gc's display + declaring path; panic texts render the record, gc's `(types from different packages|scopes)`
@@ -1075,7 +1089,9 @@
 #     removed row is named in prose, never left dangling on the line).
 #     NEW rows: unsafe/layout-ops/{sizeof-fixed,layout-struct}
 #     FAIL/frontend-export BY DESIGN. unsafe/boundary/pointer-roundtrip
-# cases: 3523 (3279 PASS / 244 FAIL)
+# cases: 3528 (3283 PASS / 245 FAIL)
+#   [re-derived from the data rows at the round-17 rebase of lane c-arc-c2 onto main cf858f0f, 2026-09-05 ([AGENT] reconciler: main's 3523 (3279 PASS / 244 FAIL) + the lane's 5 born rows — 4 PASS structs/decl-order-reversed/{zero-values,array-equality,interface-box,defined-array-values}, 1 FAIL structs/decl-order-reversed/conversion-array-target, red-first on BUG-103's Cases line — 0 PASS -> non-PASS, 0 FAIL -> PASS; the header block at the top of the file): awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv = PASS 3283 / FAIL 245]
+#   [the fr19-bug097 audit-fix-round / round-16 figure, kept as history:] # cases: 3523 (3279 PASS / 244 FAIL)
 #   [re-derived from the data rows at the fr19-bug097 audit fix round 2026-09-05 ([AGENT]: the lane's 3516 (3275 PASS / 241 FAIL) + 7 born rows — 4 PASS multipkg/same-name-pointer-panic/*, 3 FAIL: multipkg/unexported-method-scope/distinct-names and panic-recover/recovered-runtime-error-type/assert-int by design, panic-recover/recovered-runtime-error-type/observed an open wrong answer (BUG-099) — 0 flips = 3523 (3279 PASS / 244 FAIL); awk tally of the data rows = 3523 / 3279 / 244, same command as below)]
 #   [the fr19-bug097 lane figure, kept as history:] # cases: 3516 (3275 PASS / 241 FAIL)
 #   [re-derived from the data rows at the fr19-bug097 re-pin 2026-09-05 ([AGENT]: main b77f3298's 3498 (3252 PASS / 246 FAIL) + 18 born rows (15 PASS / 3 FAIL by design) + 8 FAIL -> PASS − 0 PASS -> FAIL = 3516 (3275 PASS / 241 FAIL); awk tally of the data rows = 3516 / 3275 / 241: `awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv`)]
@@ -4549,6 +4565,11 @@ PASS	structs/anonymous-field	-
 PASS	structs/blank-field	-
 PASS	structs/comparable	-
 PASS	structs/copy-value	-
+PASS	structs/decl-order-reversed/array-equality	-
+FAIL	structs/decl-order-reversed/conversion-array-target	lean-observation
+PASS	structs/decl-order-reversed/defined-array-values	-
+PASS	structs/decl-order-reversed/interface-box	-
+PASS	structs/decl-order-reversed/zero-values	-
 PASS	structs/empty-struct-literal-at-named-type/var-init	-
 PASS	structs/empty-struct-literal-at-named-type/param	-
 PASS	structs/empty-struct-literal-at-named-type/return	-

@@ -9,8 +9,9 @@ SYNTAX half — `Expr`, `Assignee`, `SelectClauseHead`, `Stmt`, and the
 declaration-level records (`Param`, `FieldDef`, `MethodSig`, `TypeDef`,
 `GlobalDef`, `MethodInfo`, `MethodSetRecord`, `Func`).
 
-Same contract, same mould (`GoValue.eqbFuel`): fuel-structural `eqb`s
-with ONE-DIRECTIONAL soundness,
+Same contract, same mould (`GoValue.eqb`, structural since C2 — the
+`eqbFuel` mould it was cast in is gone): `eqb`s with ONE-DIRECTIONAL
+soundness,
 
     eqb a b = true → a = b
 

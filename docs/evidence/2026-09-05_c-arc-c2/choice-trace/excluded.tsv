@@ -1,2 +1,2 @@
-goroutines/send-then-spin	excluded by --exclude (trace separately)
-strings/trimspace-repeat/repeat-bound-refused	excluded by --exclude (trace separately)
+goroutines/send-then-spin	excluded by --exclude on both sides — reason: nonterm=200 by design (the subject spins to the step cap under every stream; the a-series precedent, docs/evidence/2026-09-03_hygiene-a-series/choice-trace/); its 6 streams would each run to the fuel cap and add nothing to a readout-identity comparison
+strings/trimspace-repeat/repeat-bound-refused	excluded by --exclude on both sides — reason: a RED-BY-DESIGN baseline row whose refusal is reached only after materializing a 16 MiB string (BUG-089 class; the gate stops it at LEAN_TIMEOUT_SECONDS=30 s, the tracer has no timeout: its first stream ran 30+ minutes under the pre-change binary before this lane stopped it by PID); its consumption identity is UNMEASURED here (design note §7, audit fix R9) — the differential gate covers its RESULT

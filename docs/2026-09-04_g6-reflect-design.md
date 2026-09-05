@@ -553,7 +553,7 @@ Tag.Get("json")`). **G6-5** carries it.
 
 ### 4.5 Sequencing consequence
 
-_C2 status (2026-09-05, lane `c-arc-c2`, [AGENT] under the relayed [USER] ruling): BRANCH-COMPLETE — `Ty.defined (idx : TypeIdx)` over a dependency-ordered `TypeEnv` whose well-foundedness the decoder decides; the fuel towers are gone, so §4.3's "table lookups, not fuel towers" reading of the T1-T3 ops holds. The two §1.1 facts this memo asks C2 to record — `GoValue.typeDesc (idx : TypeIdx)` and `FieldDef.tag` — are recorded as OWED interface deltas in `docs/2026-09-05_c-arc-c2-design.md` §8 (not implemented there). T1 may start once C2 merges._
+_C2 status (2026-09-05, lane `c-arc-c2`, [AGENT] under the relayed [USER] ruling): BRANCH-COMPLETE — `Ty.defined (idx : TypeIdx)` over a dependency-ordered `TypeEnv` whose well-foundedness the decoder decides; the fuel towers are gone, so §4.3's "table lookups, not fuel towers" reading of the T1-T3 ops holds. The two §1.1 facts this memo asks C2 to record — `GoValue.typeDesc (idx : TypeIdx)` and `FieldDef.tag` — are recorded as OWED interface deltas in the pinned document itself, `docs/2026-09-04_reasoning-surface-plan.md` §1.1 (as this memo asked; C2's audit fix R3, 2026-09-05), and discussed in `docs/2026-09-05_c-arc-c2-design.md` §8 (not implemented in either). T1 may start once C2 merges._
 
 C2 (well-founded `TypeEnv`, ruled) → (C) `reflectlite` facility (any
 time after C2; register class ruled) → G-P (ruled, after C1) → T2/T3 +

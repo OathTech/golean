@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+# Audit fix R11 (C-arc C2, docs/2026-09-05_c-arc-c2-design.md §7): types declared in
+# reverse dependency order; every table entry MOVES under the frontend ordering;
+# array-element edges at two depths (nested array of structs; defined-over-array).
+# Four rows PASS pinned with gc; conversion-array-target is RED-FIRST on BUG-103
+# (array-target conversions fall into convertValueToTy's catch-all — detected here).
+zero-values	declOrderZeroValues	-	ok	-	structs,arrays,nested,fields,zero_values,defined_type,conversions,indexing,len
+array-equality	declOrderArrayEquality	-	ok	-	structs,arrays,nested,equality,comparability,defined_type,literals
+interface-box	declOrderInterfaceBox	-	ok	-	structs,arrays,interfaces,type_assertions,comma_ok,equality,defined_type,literals
+defined-array-values	declOrderDefinedArrayValues	-	ok	-	arrays,defined_type,literals,value_copy,equality,zero_values,calls,indexing,len
+conversion-array-target	declOrderConversionArrayTarget	-	ok	-	arrays,defined_type,conversions,indexing,len,literals

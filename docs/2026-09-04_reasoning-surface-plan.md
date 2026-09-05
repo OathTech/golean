@@ -133,7 +133,11 @@ produces it is cited in brackets.
 ```lean
 -- Syntax.lean / Value.lean, after B6 and I1 (§3)
 structure Program where
-  typeDefs   : Array TypeDef          -- indexed by TypeIdx (C2); dependency-ordered
+  typeDefs   : Array (TypeId × TypeDef)  -- indexed by TypeIdx; dependency-ordered; leads with TypeEnv.reserved
+                                         -- (C2 LANDED 2026-09-05 as `TypeEnv`, docs/2026-09-05_c-arc-c2-design.md §1/§8:
+                                         --  the entry keeps its TypeId for gc-visible texts, interface identity and
+                                         --  method-set records; never used to resolve a Ty.defined — [AGENT] correction
+                                         --  of this sketch's `Array TypeDef`, audit fix R3)
   funcs      : Array Func             -- indexed by FuncId
   methods    : Array MethodInfo
   globals    : Array GlobalDef        -- cell i ↦ Loc.base ⟨i⟩ (A4)
@@ -147,6 +151,16 @@ inductive Expr  -- 57 constructors; NO `unsupported` (I1)
 inductive Stmt  -- 39 constructors; NO `unsupported`, NO `initialization` (C4)
 inductive Ty    -- NO `unsupported`; `.defined (idx : TypeIdx)` (C2)
 inductive GoValue -- Go values only: no payload constructors (A3, done)
+                  -- OWED DELTA [AGENT] 2026-09-05 (G6 memo §4.2, recorded here by C2 as the memo asked):
+                  --   | typeDesc (idx : TypeIdx)   -- a reflect.Type is a Go value the program can hold and
+                  --                                --  compare; `==` on it is index equality (Ty.defined is
+                  --                                --  positional since C2). Not implemented; lands with the
+                  --                                --  reflectlite facility (G6-1..). The pin must admit it.
+structure FieldDef where name : FieldName; typ : Ty; embedded : Bool
+                  -- OWED DELTA [AGENT] 2026-09-05 (G6 memo §4.4, recorded here by C2): `tag : String` —
+                  --   struct tags are part of struct type identity (spec §Type identity), and
+                  --   `structTagCompatible` must then compare WITHOUT tags. A fidelity fix riding G6-5; a
+                  --   twin-pin move; on a BUGS.md Cases line when it lands. Not implemented here.
 inductive Loc | base (a : Addr) | field (base : Loc) (tid : TypeId) (f : FieldName) | index (base : Loc) (i : Int)
 abbrev VarId := Nat  -- B6
 ```

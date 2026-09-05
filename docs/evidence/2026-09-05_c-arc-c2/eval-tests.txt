@@ -140,6 +140,11 @@ ok: C2: `TypeEnv.WellFounded` decides false on a forward reference and `firstVio
 ok: C2: `TypeEnv.WellFounded` decides true on the ordered table and on the reserved prefix; no violation
 ok: C2: `Ty.dynamicName` renders a `.defined` index through the table ("T" for main.T at index 2)
 ok: C2: renderPanicPayload renders a runtime-error payload by its reserved index
+ok: C2/R1: an unresolvable `.defined` index is a carrier with the unrecordable marker key — NOT recorded, NOT exported-only (refuse, never `empty by the language`)
+ok: C2/R2: runProgramM refuses a Program whose table has a user type at index 1 (no reserved prefix), naming the clause
+ok: C2/R2: enumSetup refuses the same Program with the same text (driver agreement on the refusal)
+ok: C2/R2: the `Program` default table is the reserved prefix (accepted); the reserved prefix alone and a decoded table pass `hasReservedPrefix`, a bare user table does not
+ok: C2/R2: the same function runs through runProgramM once the table leads with the prefix (control)
 ok: MS: decode refuses an unknown coverage token
 ok: MS: decode refuses a duplicate method-set record
 ok: RET: decode accepts a two-operand return at a two-result function (control)

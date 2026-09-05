@@ -926,6 +926,14 @@ def runProgramSetupM (fuel : Nat) (program : Program) (name : String)
     | none => throw (.stuck s!"GoCore function not found: {name}")
   if func.args.size != args.size then
     throw (.stuck s!"expected {func.args.size} argument(s), got {args.size}")
+  -- The reserved-prefix clause of the table's acceptance (C2 §2; audit
+  -- fix R2): `runtimeErrorTypeIdx = 1` is a CONSTANT of the machine,
+  -- so a table whose index 1 is not the runtime-error payload type
+  -- would render a user value at that index as a runtime-error abort.
+  -- The decoder constructs the prefix; a hand-built `Program` is
+  -- refused here BY NAME before any step runs.
+  if program.typeDefs.hasReservedPrefix then pure () else
+    throw (.internal s!"program type table does not lead with the two machine-reserved entries ({emptyStructTypeId.key} at index 0, {runtimeErrorTypeId.key} at index 1): TypeEnv.hasReservedPrefix fails on a {program.typeDefs.size}-entry table — prepend TypeEnv.reserved (C2 acceptance clause)")
   let state : ExecState :=
     { types := program.typeDefs, functions := program.funcs
       methods := program.methods, methodSets := program.methodSets
