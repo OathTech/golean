@@ -418,6 +418,13 @@ else
   bad "semantic interface"
 fi
 
+step "admission checker proofs and post-import audit"
+if bash scripts/check-admission --lean-only; then
+  ok "admission checker proofs and post-import audit"
+else
+  bad "admission checker proofs and post-import audit"
+fi
+
 # 2b. Frontend pins (restored at the split audit, findings A1/A2 + B1/B8
 # — docs/2026-08-31_repo-split-plan.md fix round): the two SEMANTICS
 # pins that lived inside the parked check-golden. (1) the

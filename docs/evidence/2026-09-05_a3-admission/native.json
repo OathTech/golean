@@ -1,0 +1,113 @@
+{
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "define": false,
+      "lhs": [
+       {
+        "id": "result",
+        "target": "var"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "unary",
+        "op": "!",
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "b",
+         "type": {
+          "kind": "bool"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "Negate",
+   "params": [
+    {
+     "id": "b",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "result",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": false,
+      "lhs": [
+       {
+        "id": "result",
+        "target": "var"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "bool",
+        "type": {
+         "kind": "bool"
+        },
+        "value": true
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "Constant",
+   "params": [],
+   "results": [
+    {
+     "id": "result",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  }
+ ],
+ "methodSets": [],
+ "methods": [],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": []
+}

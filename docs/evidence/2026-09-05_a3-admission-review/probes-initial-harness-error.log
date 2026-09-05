@@ -1,0 +1,4 @@
+/home/dev/projects/golean/.tmp/a3-adversarial.04A3m2/Probes.lean:39:7: error(lean.synthInstanceFailed): failed to synthesize instance of type class
+  Decidable (actual = expected)
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.

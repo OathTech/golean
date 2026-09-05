@@ -1,0 +1,19 @@
+PASS accepted basic entry
+PASS nested map/function pointer metadata
+PASS interface method result metadata
+PASS unreachable function results
+PASS method receiver metadata
+PASS global type metadata
+PASS select send head type
+PASS select receive map target type
+PASS select default nested optional expression
+PASS type-assert source annotation
+PASS array literal child annotation
+PASS metadata names deliberately unchecked
+PASS unbound variable explicitly accepted limitation
+PASS unsupported dead helper rejected
+PASS Boolean initializer function excluded
+PASS wrong entry payload rejected
+3000-function compiled checker: Except.ok (); 0 ms
+Large unreachable unsupported tail: Except.error (GoLean.GoCore.Admission.Error.booleanSyntaxPolicy)
+Accepted unbound-variable runtime limitation: Except.error (GoLean.Stop.refusal (GoLean.Refusal.stuck "unbound GoCore variable address: unbound"))

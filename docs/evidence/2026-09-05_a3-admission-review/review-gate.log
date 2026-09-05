@@ -1,0 +1,35 @@
+946d13c6794c19cb3beb6887a7ae43eed82e08bf8eee9e7f84a1c08678e2b5f5 GoLean/GoCore/AdmissionIndices.lean
+937cae3af268310a58843495397c96fbe52576427aadb26ec6f89466633b8946 GoLean/GoCore/AdmissionPolicy.lean
+2309256e38874bd99eadc5868d8b4c2e0e0111a94e374799eb8aa09ec0f08e7f GoLean/GoCore/Admission.lean
+be5dc36efb044f20a4fa5700775bc0c92c3f266201483f92f3809911a134c9e5 Tests/GoCoreAdmissionFixture.lean
+b42083e901d02228356cdb54e1a0b79448d9c4b57e492baa01acc546f1729369 Tests/GoCoreAdmission.lean
+3679e71e9e481ef751adde2fbf44c90e9c452f7108e93d0cc0ce6d08c0ae079f Tests/GoCoreAdmissionAudit.lean
+Admission inventory: six complete modules
+Admission fresh elaboration: GoLean/GoCore/AdmissionIndices.lean
+Admission fresh elaboration: GoLean/GoCore/AdmissionPolicy.lean
+Admission fresh elaboration: GoLean/GoCore/Admission.lean
+Admission fresh elaboration: Tests/GoCoreAdmissionFixture.lean
+Admission fresh elaboration: Tests/GoCoreAdmission.lean
+Admission fresh elaboration: Tests/GoCoreAdmissionAudit.lean
+Review-owned gate scratch: /home/dev/projects/golean/.tmp/a3-adversarial.04A3m2/admission-audit-ug5hmnq6
+Admission audit: 14 required theorems present; 375 constants checked (classical trio only)
+/home/dev/projects/golean/.tmp/a3-adversarial.04A3m2/admission-audit-ug5hmnq6/AuditAll.lean:2:0: error: Admission audit: _private.Tests.GoCoreAdmissionAudit.0.admissionAuditHole depends on forbidden axiom _private.Tests.GoCoreAdmissionAudit.0.admissionAuditHole
+Admission negative audit: audit_private compiled then rejected (admissionAuditHole)
+/home/dev/projects/golean/.tmp/a3-adversarial.04A3m2/admission-audit-ug5hmnq6/AuditAll.lean:2:0: error: Admission audit: _private.GoLean.GoCore.Admission.0.admissionCoreHole depends on forbidden axiom _private.GoLean.GoCore.Admission.0.admissionCoreHole
+Admission negative audit: core_private compiled then rejected (admissionCoreHole)
+/home/dev/projects/golean/.tmp/a3-adversarial.04A3m2/admission-audit-ug5hmnq6/test_trailing/Tests/GoCoreAdmission.lean:114:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.tmp/a3-adversarial.04A3m2/admission-audit-ug5hmnq6/AuditAll.lean:2:0: error: Admission audit: _private.Tests.GoCoreAdmission.0.admissionTrailingHole depends on forbidden axiom sorryAx
+Admission negative audit: test_trailing compiled then rejected (sorryAx)
+Review-owned gate scratch: /home/dev/projects/golean/.tmp/a3-adversarial.04A3m2/admission-artifact-av1kd984
+Admission: complete fresh native GoCore matches the proof fixture
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+building Lean executable...
+Build completed successfully (68 jobs).
+native frontend: per-case type-check + emit (no batch export)
+PASS	admission/constant	admission,boolean
+
+differential coverage summary: cases=1 pass=1 fail=0 export_status=0
+results: /home/dev/projects/golean/.tmp/a3-adversarial.04A3m2/differential/latest.tsv
+metadata: /home/dev/projects/golean/.tmp/a3-adversarial.04A3m2/differential/latest.meta.tsv
+Admission fresh native wire SHA256: b72ed5518a3b3928455da2f0839c30b29c15f01d85a8922ba6d785225df259af
+Independent A3 review gate PASS

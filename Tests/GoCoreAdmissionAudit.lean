@@ -1,0 +1,47 @@
+import Tests.GoCoreAdmission
+import Lean
+
+open Lean
+
+/-- Run only after importing this complete module in an external harness.
+Module origins include private/generated/trailing declarations. -/
+def GoLeanAdmissionAudit.run : CoreM Unit := do
+  let env ← getEnv
+  let modules : List Name := [
+    `GoLean.GoCore.AdmissionIndices, `GoLean.GoCore.AdmissionPolicy,
+    `GoLean.GoCore.Admission, `Tests.GoCoreAdmissionFixture,
+    `Tests.GoCoreAdmission, `Tests.GoCoreAdmissionAudit]
+  for m in modules do
+    unless env.header.moduleNames.contains m do
+      throwError "Admission audit: missing module {m}"
+  let exports : List Name := [
+    ``GoLean.GoCore.Admission.reservedPrefix_exact,
+    ``GoLean.GoCore.Admission.boolExpr_iff,
+    ``GoLean.GoCore.Admission.boolStmt_iff,
+    ``GoLean.GoCore.Admission.checkIndices_iff,
+    ``GoLean.GoCore.Admission.checkEntry_iff,
+    ``GoLean.GoCore.Admission.checkBoolean_iff,
+    ``GoLean.GoCore.Admission.checkBoolean_sound,
+    ``GoLean.GoCore.Admission.checkBoolean_complete,
+    ``GoLean.GoCore.Admission.admitted_index_bound,
+    ``GoLean.GoCore.Admission.admitted_all_bodies,
+    ``GoLean.GoCore.Admission.admitted_no_initializer,
+    ``GoLean.GoCore.Admission.Tests.native_admission,
+    ``GoLean.GoCore.Admission.Tests.unbound_accepted,
+    ``GoLean.GoCore.Admission.Tests.unbound_refuses]
+  for n in exports do
+    let some (.thmInfo _) := env.find? n
+      | throwError "Admission audit: missing theorem {n}"
+  let ours := env.header.moduleNames.map modules.contains
+  let allowed : List Name := [``propext, ``Classical.choice, ``Quot.sound]
+  let mut checked := 0
+  for (n, _) in env.constants.toList do
+    let localModule := match env.getModuleIdxFor? n with
+      | some i => ours[i.toNat]!
+      | none => true
+    unless localModule do continue
+    for ax in (← collectAxioms n) do
+      unless allowed.contains ax do
+        throwError "Admission audit: {n} depends on forbidden axiom {ax}"
+    checked := checked + 1
+  logInfo s!"Admission audit: {exports.length} required theorems present; {checked} constants checked (classical trio only)"

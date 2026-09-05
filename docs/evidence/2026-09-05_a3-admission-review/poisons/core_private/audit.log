@@ -1,0 +1,1 @@
+/home/dev/projects/golean/.tmp/a3-adversarial.04A3m2/admission-audit-ug5hmnq6/AuditAll.lean:2:0: error: Admission audit: _private.GoLean.GoCore.Admission.0.admissionCoreHole depends on forbidden axiom _private.GoLean.GoCore.Admission.0.admissionCoreHole

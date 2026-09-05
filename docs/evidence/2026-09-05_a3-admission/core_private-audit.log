@@ -1,0 +1,1 @@
+/home/dev/projects/golean/.claude/worktrees/gate-a3-admission/.tmp/admission-audit-qc8rn1wh/AuditAll.lean:2:0: error: Admission audit: _private.GoLean.GoCore.Admission.0.admissionCoreHole depends on forbidden axiom _private.GoLean.GoCore.Admission.0.admissionCoreHole

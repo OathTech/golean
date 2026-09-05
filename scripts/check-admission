@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Semantics-owned admission check; no Iris dependency. CI runs --lean-only;
+# the full opt-in check also re-emits the fixture and compares it with Go.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+case "${1:-}" in
+  "") [[ $# = 0 ]] ;;
+  --lean-only) [[ $# = 1 ]] ;;
+  *) echo "check-admission: expected no arguments or --lean-only" >&2; exit 2 ;;
+esac
+python3 tools/admission-check.py preflight
+scripts/capped lake build AdmissionTests
+scripts/capped lake env python3 tools/admission-check.py elaborate
+scripts/capped lake env python3 tools/admission-check.py audit
+if [[ $# = 0 ]]; then
+  scripts/capped lake build
+  scripts/capped lake env python3 tools/admission-check.py artifact
+  GOLEAN_COVERAGE_ARTIFACTS=artifacts/admission \
+    scripts/diff-coverage Tests/admission-fixture/manifest.tsv
+fi
+printf '%s\n' 'Admission gate: PASS'
