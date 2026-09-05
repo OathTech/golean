@@ -4,7 +4,37 @@
 # driver-coupling pin against THIS set and its wire hash; scripts/ci
 # --slow re-enumerates and must reproduce it exactly. Update
 # deliberately, in its own commit, with the reason — never auto-written.
-# certified: 2026-09-05T05:46:32+00:00  commit: round-15 merge-train step 5a re-certification at main tip b77f3298 (round-15 train landed: bug095-096)
+# certified: 2026-09-05T17:57:01+00:00  commit: round-17 merge-train step 5a re-certification at main tip 7677865a (round-17 train landed: fr19-bug097, c-arc-b4, c-arc-c2, e13-b)
+# re-certification reason (round-17 merge train, step 5a, 2026-09-05): the
+#   standing post-train step (CLAUDE.md merge protocol 5a, [USER]
+#   2026-09-04) fired because three of the four landed lanes touched
+#   tools/nativefrontend/wire.go and/or GoLean/NativeToIR.lean (fr19-bug097:
+#   required display/pkg TypeDef fields + duplicate-TypeId refusal;
+#   c-arc-c2: dependency-ordered typeDefs, reserved prefix, WellFounded
+#   decided at decode; e13-b: the unseq-probe statement node + decoder
+#   refusals for probes over recover/bytes-from-string/runes-from-string) —
+#   6 commits to those files since the 05:46:32Z re-cert below, the last
+#   landing at committer instant 2026-09-05T17:37:49Z; the reconciler's C9
+#   at the merged tip. The step-5a --slow re-certification ran at the CLEAN
+#   merged tip 7677865a in the primary checkout (`scripts/capped scripts/ci
+#   --slow`, RESULT: PASS, exit 0; latest.meta.tsv git_commit 7677865a…
+#   git_dirty=false, manifest_cases 3593; 3593/3593 baseline diff FULL, 0
+#   flips). Delta class: NONE. Wire sha UNCHANGED (2f1d639f, sha256 of the
+#   run's own emitted wire.json — this fixture's wire has no probe
+#   statements and its typeDefs table is unmoved by the order pass); the
+#   fresh GOLEAN_SLOW=1 dedup enumeration reproduced the set AND the graph
+#   bit-for-bit: the same six members {123,132,213,231,312,321},
+#   nodes=6193933 edges=6565663 dedupHits=371731 certified=checkCert.
+#   Params unchanged. Header instant = enum-stats.txt write instant
+#   17:57:01Z (rounds 14/15 convention), after the 17:37:49Z last wire
+#   commit, so C9's `--since` test clears. K=80 exhibition: 5 of 6 members
+#   exhibited (312×60, 123×8, 213×6, 321×5, 132×1); 231 unexhibited this
+#   run (every draw ∈ the certified set; exhibition is a lower bound).
+#   Gate log ephemeral (.tmp); numbers copied from it and from
+#   artifacts/coverage/membership/imported-goose/channel/google-search/
+#   {enum-stats,observations,samples,unexhibited}.txt. [AGENT] record
+#   refresh under the step-5a rule, delta class DATE/COMMIT-ONLY.
+# previously: certified: 2026-09-05T05:46:32+00:00  commit: round-15 merge-train step 5a re-certification at main tip b77f3298 (round-15 train landed: bug095-096)
 # re-certification reason (round-15 merge train, step 5a, 2026-09-05): the
 #   standing post-train step (CLAUDE.md merge protocol 5a, [USER]
 #   2026-09-04) fired because the train merged bug095-096, which touched
