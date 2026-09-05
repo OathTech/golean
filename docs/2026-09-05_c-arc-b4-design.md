@@ -444,7 +444,18 @@ evidence dir, `docs/2026-09-03_design-hygiene-arc.md` (step (iv) B4 and
 (§5.4 G-C5 → LANDED, §5.1 table), `docs/2026-09-03_grumpy-professor-review.md`
 (B4/C5 LANDED lines), `docs/2026-08-11_latitude-inventory.md` (C3 entry +
 the `postOp` row point at `Thread`), `TODO.md` (B4/C5 items). Historical
-logs keep their period wording.
+logs keep their period wording. Audit fix round (2026-09-05): this note
+(§1, §2, §4.3, §5, §6, §7.4, §7.6, §9), the arc ledger row, the review's
+B4 status line, `TODO.md` (B4 wording + the tracer-tooling row),
+`docs/operational-lessons.md` (the comparator-projection lesson), the
+evidence README + `choice-trace/fix-summary.txt`/`fix-diff.txt`/
+`transcripts/gate-fix.txt`; code: `Machine.lean` (`signalRefusal` arms),
+`MachineSound.lean` (`step_terminal_elim`), `Multi.lean` (the two
+`Thread.status_*_iff` + `isBlockedConfig_ne_terminal`),
+`MultiSound.lean` (`stepFn_signal_stop`, `stepMulti_signal_stop_single`),
+`CLI.lean` (docstring; `enumPoolRun`/`enumRunProgram` error type;
+`probeSite`), `ChoiceTrace.lean` (header + `traceStream`),
+`Tests/GoCoreEval.lean` (F5 docstring).
 
 ## 9. Landing record
 
