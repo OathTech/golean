@@ -1,12 +1,16 @@
-# scripts/capped scripts/ci --diff at the CLEAN committed tip 0de73ec5 (e13-b audit fix round; git_dirty=false in artifacts/coverage/latest.meta.tsv). Replaces the lane-tip tail, which had been recorded on a DIRTY tree (audit R6).
-# The re-pin guard line is absent here because the baseline changed in bcf73396 (HEAD~1), not in HEAD; the guard ran in the fix round's first (dirty-tree) gate over the same baseline: 'ok   re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)' and 'note re-pin baselines/native-full.tsv: 10 born row(s)' (scripts/coverage-baseline-diff --full at that run: no regression: 3539 case(s) run in latest.tsv match baselines/native-full.tsv).
+# scripts/capped scripts/ci --diff at the CLEAN committed tip d9367386 (e13-b RE-AUDIT fix round; git_dirty=false — the artifacts/coverage/latest.meta.tsv git_* lines are pasted verbatim below). Replaces the fix-round tail (0de73ec5).
+# History of this tail: the round's gates ran at 42e8bf6f (dirty: the baseline's PASS rows had lost their lane-stage column — DRIFT of 243 stage-only cells, fixed at cf85243b), cf85243b (clean, PASS — superseded by the inline-conversion follow-up 03f77a15), 03f77a15 (PASS, but git_dirty=true: an evidence-tsv cleanup landed while it ran — d9367386 commits that cleanup), and d9367386 (this tail: clean, PASS).
 # The reconciler's three findings (C13 historical Go versions in docs, C5 FR-7's '=' citation, C9 wire schema moved since the slow-tier certification) are pre-existing on main b77f3298 and not this lane's — the C9 re-certification is the merge train's step 5a (CLAUDE.md).
-[1m── cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)[0m
-  [01] C13  MEDIUM  78 doc site(s) across 9 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
-  [02] C5  MEDIUM  1 frontier-table case citation(s) do not resolve against the baseline
-  [03] C9  MEDIUM  the wire schema moved after the certification date 2026-09-05T04:38:59+00:00 (4 commit(s) to wire.go/NativeToIR.lean) — the certified set's wire sha is only current if `scripts/ci --slow` has re-enumerated since
-
-[1m══ scripts/ci summary ══[0m
+# --- artifacts/coverage/latest.meta.tsv (git_* lines, verbatim) ---
+# git_commit	d9367386bc6c1b52ddb55c450563febb54d0d2fd
+# git_dirty	false
+# --- the baseline-diff / re-pin-guard lines (gate log line numbers) ---
+# 114:no regression: 394 case(s) run in negative-latest.tsv match baselines/negative-full.tsv
+# 117:no regression: 3559 case(s) run in latest.tsv match baselines/native-full.tsv
+# 148:  ok   negative baseline diff (no regression)
+# 149:  ok   baseline diff FULL (3559/3559, no regression)
+# --- scripts/ci summary, verbatim ---
+══ scripts/ci summary ══
   note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
   ok   oracle toolchain (go1.26.5 = pin)
   ok   escape-hatch preflight
@@ -31,7 +35,7 @@
   ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
   ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
   ok   negative baseline diff (no regression)
-  ok   baseline diff FULL (3539/3539, no regression)
+  ok   baseline diff FULL (3559/3559, no regression)
   note reconciler: 3 finding(s), 0 HIGH — report-only (details: tools/reconcile-records)
 
-[1mRESULT: PASS[0m
+RESULT: PASS

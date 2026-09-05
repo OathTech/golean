@@ -391,6 +391,26 @@ in the commit and in design §4 (D4–D6, "RE-AUDIT"), §6 items 3/7/9/10,
   re-pinned from that run (header block on the file); the CLEAN-tree gate
   is the section below.
 
+## The RE-AUDIT fix round's gate (clean tree)
+
+`scripts/capped scripts/ci --diff` at the clean committed tip `d9367386`
+(`git_dirty=false`, the `git_*` lines of `latest.meta.tsv` pasted verbatim
+in `gate-tail.txt`): RESULT PASS; baseline diff FULL 3559/3559, no
+regression; negative 394/394; frontend pins ok (twin = c358d0f4…);
+frontend unit tests (the rewritten `e13guard_test.go`) and lowerdiag
+tables ok; bug-index cross-check ok (BUG-101 open/differential 2 rows,
+BUG-102 designed reds 6 rows with `Expect: FAIL`, BUG-103 open/
+differential 2 rows, BUG-032/BUG-083 fixed with PASS-only Cases lines —
+the six retired designed reds on BUG-083's); re-pin guard `0 PASS→non-PASS
+flip(s)`; reconciler 3 findings, 0 HIGH, all pre-existing on main (C13,
+C5 FR-7, C9). Tally re-derived by awk from the committed baseline: PASS
+3315, FAIL 244 (3559). The round's earlier gates: 42e8bf6f (the baseline's
+PASS rows had lost their lane-stage column — 243 stage-only DRIFT cells,
+fixed at cf85243b), cf85243b (PASS, superseded by the inline-conversion
+follow-up 03f77a15), 03f77a15 (PASS but `git_dirty=true`: an evidence-tsv
+cleanup landed mid-run; committed at d9367386). Every PASS→non-PASS vs
+HEAD~1 of the re-pin: none; every FAIL→PASS: the six on BUG-083's line.
+
 ## The fix round's gate (clean tree)
 
 `scripts/capped scripts/ci --diff` at the clean committed tip `0de73ec5`
