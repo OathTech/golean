@@ -311,5 +311,22 @@ exponent is too big`, reduced to BUG-096.
 
 ## 8. Gate
 
-See the evidence README for the run transcript pointers; the numbers
-are filled in at the branch's final commit.
+- First full run: `scripts/capped scripts/ci --slow` on the dirty branch
+  tree (all slice work in place): every fast step green except the two
+  expected pre-re-pin ones (bug-index: Cases ids not yet in the baseline;
+  baseline diff: 38 NEW ids, 0 flips) plus one genuine finding fixed on
+  the spot — the escape-hatch preflight matched the WORD "admit" in a
+  Syntax.lean docstring (reworded). The GOLEAN_SLOW=1 re-enumeration of
+  `imported-goose/channel/google-search` reproduced the six members
+  (format-only record change, re-certified in commit bde76b1c).
+- Second full run: `scripts/capped scripts/ci --diff` — 3440 cases, 3209
+  PASS / 231 FAIL, the certified row CERTIFIED-CACHED against the new
+  record, `test-lane-validation --with-go` green (a T5 fixture pinned the
+  decoder's error ORDER — the status word must name itself before the
+  `output` check — and the S3 fixture caught a double injection; both
+  fixed), 153 eval tests, twin wire pin UNCHANGED (4ee39f732d51…), deviation
+  pin re-recorded with `"output":""`. Drift vs the previous pin: exactly
+  38 born rows, 0 flips → re-pinned in commit 1e177465 (baseline header
+  note; ledger §8o).
+- Final fast gate at the clean tip: the coordinator report carries the
+  `RESULT` line and SHA.
