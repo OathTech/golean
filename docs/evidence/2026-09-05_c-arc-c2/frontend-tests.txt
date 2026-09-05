@@ -1,0 +1,12 @@
+=== RUN   TestEmitIsDeterministic
+--- PASS: TestEmitIsDeterministic (0.47s)
+=== RUN   TestDeterminismShapeExports
+--- PASS: TestDeterminismShapeExports (0.00s)
+=== RUN   TestEmitIsDeterministicWithUnits
+--- PASS: TestEmitIsDeterministicWithUnits (1.07s)
+=== RUN   TestTypeTableIsDependencyOrderedAndDeterministic
+--- PASS: TestTypeTableIsDependencyOrderedAndDeterministic (0.01s)
+=== RUN   TestDeterminismShapesPassTypeOrder
+--- PASS: TestDeterminismShapesPassTypeOrder (0.02s)
+PASS
+ok  	_/home/dev/projects/golean/.claude/worktrees/c-arc-c2/tools/nativefrontend	1.590s

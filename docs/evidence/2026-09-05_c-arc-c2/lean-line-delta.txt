@@ -1,0 +1,20 @@
+# Lean line deltas, c-arc-c2 @ 3a229bae vs main b77f3298 (git diff --numstat; added removed path)
+3	2	GoLean/ChoiceTrace.lean
+26	18	GoLean/CLI.lean
+2	2	GoLean/GoCore/MachineEqb.lean
+12	10	GoLean/GoCore/Machine.lean
+351	258	GoLean/GoCore/MachineSound.lean
+733	676	GoLean/GoCore/Ops.lean
+1	1	GoLean/GoCore/Platform.lean
+69	127	GoLean/GoCore/StateEqb.lean
+10	6	GoLean/GoCore/State.lean
+239	252	GoLean/GoCore/StateWf.lean
+2	2	GoLean/GoCore/StepFn.lean
+0	3	GoLean/GoCore/SyntaxEqb.lean
+127	6	GoLean/GoCore/Syntax.lean
+110	84	GoLean/GoCore/Value.lean
+78	19	GoLean/NativeToIR.lean
+106	24	Tests/GoCoreEval.lean
+24	0	tools/nativefrontend/emit.go
+# new frontend files: tools/nativefrontend/typeorder.go 195 lines, typeorder_test.go 256 lines
+# GoLean/ total: +1763 -1466 (net +297): the fuel towers left (-), the two-layer descents, TypeEnv/WellFounded/reserved, TyBody/resolve, valueEq's mutual block and the restated two-layer proofs arrived (+)

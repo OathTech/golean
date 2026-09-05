@@ -1,0 +1,169 @@
+# twin wire structural diff — C-arc C2 (gate G-C2): typeDefs emitted in dependency order, lane c-arc-c2, 2026-09-05
+# producer: python3 JSON comparison of baselines/pins/twin-chdriver.wire.json (old, pinned at 4ee39f73…) vs a fresh emit over the
+#   check-frontend-pins twin assembly (raftsubject/{quorum,raftpb,tracker,proto,confchange,raft} + tools/raftsubject/twin-*.go)
+#   GO111MODULE=off go run ./tools/nativefrontend --dir <assembly> --out <new>   (tree: c-arc-c2 @ 3a229bae; frontend unchanged since the emit)
+# old sha256 4ee39f732d51218a792393fa3143980dfde8a2a6f587fbfaa224c5c4ba28b447
+# new sha256 d2bcb07bb9f64b2c26b7a730afb51f3e48cc3216cc22b4c14b89e167ec96fe94
+# verdict: funcs/methods/methodSets/globals/fileOrder/package/schema IDENTICAL; types = a PERMUTATION of the 92 entries (36 moved, 12 order-contract
+#   violations in the pinned table, 0 in the new one). The SOLE change is the order the gate ruled.
+G-C2 wire half: twin-chdriver wire, pinned vs re-emitted (2026-09-05)
+top-level keys old: ['fileOrder', 'funcs', 'globals', 'methodSets', 'methods', 'package', 'schema', 'types']  new: ['fileOrder', 'funcs', 'globals', 'methodSets', 'methods', 'package', 'schema', 'types']
+fileOrder: IDENTICAL
+funcs: IDENTICAL
+globals: IDENTICAL
+methodSets: IDENTICAL
+methods: IDENTICAL
+package: IDENTICAL
+schema: IDENTICAL
+types: old 92 entries, new 92 entries
+types is a permutation (same multiset, byte-equal per canonicalized entry): True
+entries that moved: 36 of 92
+old_idx -> new_idx  name
+  9 ->  10  bytes.Buffer
+ 10 ->   9  bytes.readOp
+ 13 ->  14  quorum.JointConfig
+ 14 ->  13  quorum.MajorityConfig
+ 35 ->  36  tracker.Progress
+ 36 ->  37  tracker.ProgressMap
+ 37 ->  35  tracker.StateType
+ 43 ->  45  raft.raftLog
+ 44 ->  43  raft.unstable
+ 45 ->  46  raft.DefaultLogger
+ 46 ->  47  raft.SnapshotStatus
+ 47 ->  49  raft.SoftState
+ 48 ->  50  raft.Ready
+ 49 ->  51  raft.Peer
+ 50 ->  52  raft.ReadOnlyOption
+ 51 ->  53  raft.lockedRand
+ 52 ->  54  raft.CampaignType
+ 53 ->  48  raft.StateType
+ 54 ->  55  raft.Config
+ 55 ->  58  raft.raft
+ 56 ->  57  raft.stepFunc
+ 57 ->  59  raft.RawNode
+ 58 ->  60  raft.ProgressType
+ 59 ->  61  raft.ReadState
+ 60 ->  62  raft.readIndexRequest
+ 61 ->  63  raft.readOnly
+ 62 ->  64  raft.TracingEvent
+ 63 ->  66  raft.Status
+ 64 ->  65  raft.BasicStatus
+ 65 ->  67  raft.inMemStorageCallStats
+ 66 ->  68  raft.MemoryStorage
+ 67 ->  69  raft.entryID
+ 68 ->  70  raft.logSlice
+ 69 ->  71  raft.EntryFormatter
+ 70 ->  44  raft.entryEncodingSize
+ 71 ->  56  raft.entryPayloadSize
+
+Order-contract violations in the PINNED table (edge types[i] -> types[j], j >= i):
+  types[9] bytes.Buffer -> types[10] bytes.readOp
+  types[13] quorum.JointConfig -> types[14] quorum.MajorityConfig
+  types[35] tracker.Progress -> types[37] tracker.StateType
+  types[43] raft.raftLog -> types[44] raft.unstable
+  types[43] raft.raftLog -> types[70] raft.entryEncodingSize
+  types[43] raft.raftLog -> types[70] raft.entryEncodingSize
+  types[47] raft.SoftState -> types[53] raft.StateType
+  types[55] raft.raft -> types[70] raft.entryEncodingSize
+  types[55] raft.raft -> types[71] raft.entryPayloadSize
+  types[55] raft.raft -> types[71] raft.entryPayloadSize
+  types[55] raft.raft -> types[56] raft.stepFunc
+  types[63] raft.Status -> types[64] raft.BasicStatus
+violations: 12
+
+Order-contract violations in the NEW table:
+violations: 0
+
+full new order:
+    0 unicode/utf8.acceptRange  (was 0)
+    1 internal/strconv.Error  (was 1)
+    2 errors.errorString  (was 2)
+    3 slices.sortedHint  (was 3)
+    4 slices.xorshift  (was 4)
+    5 strconv.NumError  (was 5)
+    6 unicode.RangeTable  (was 6)
+    7 unicode.Range16  (was 7)
+    8 unicode.Range32  (was 8)
+    9 bytes.readOp  (was 10)
+   10 bytes.Buffer  (was 9)
+   11 encoding/binary.littleEndian  (was 11)
+   12 strings.Builder  (was 12)
+   13 quorum.MajorityConfig  (was 14)
+   14 quorum.JointConfig  (was 13)
+   15 quorum.Index  (was 15)
+   16 quorum.mapAckIndexer  (was 16)
+   17 quorum.VoteResult  (was 17)
+   18 raftpb.confStateError  (was 18)
+   19 raftpb.EntryType  (was 19)
+   20 raftpb.MessageType  (was 20)
+   21 raftpb.ConfChangeTransition  (was 21)
+   22 raftpb.ConfChangeType  (was 22)
+   23 raftpb.Entry  (was 23)
+   24 raftpb.SnapshotMetadata  (was 24)
+   25 raftpb.Snapshot  (was 25)
+   26 raftpb.Message  (was 26)
+   27 raftpb.HardState  (was 27)
+   28 raftpb.ConfState  (was 28)
+   29 raftpb.ConfChange  (was 29)
+   30 raftpb.ConfChangeSingle  (was 30)
+   31 raftpb.ConfChangeV2  (was 31)
+   32 raftpb.goleanShimErrorString  (was 32)
+   33 tracker.inflight  (was 33)
+   34 tracker.Inflights  (was 34)
+   35 tracker.StateType  (was 37)
+   36 tracker.Progress  (was 35)
+   37 tracker.ProgressMap  (was 36)
+   38 tracker.Config  (was 38)
+   39 tracker.ProgressTracker  (was 39)
+   40 tracker.matchAckIndexer  (was 40)
+   41 confchange.Changer  (was 41)
+   42 confchange.goleanShimErrorString  (was 42)
+   43 raft.unstable  (was 44)
+   44 raft.entryEncodingSize  (was 70)
+   45 raft.raftLog  (was 43)
+   46 raft.DefaultLogger  (was 45)
+   47 raft.SnapshotStatus  (was 46)
+   48 raft.StateType  (was 53)
+   49 raft.SoftState  (was 47)
+   50 raft.Ready  (was 48)
+   51 raft.Peer  (was 49)
+   52 raft.ReadOnlyOption  (was 50)
+   53 raft.lockedRand  (was 51)
+   54 raft.CampaignType  (was 52)
+   55 raft.Config  (was 54)
+   56 raft.entryPayloadSize  (was 71)
+   57 raft.stepFunc  (was 56)
+   58 raft.raft  (was 55)
+   59 raft.RawNode  (was 57)
+   60 raft.ProgressType  (was 58)
+   61 raft.ReadState  (was 59)
+   62 raft.readIndexRequest  (was 60)
+   63 raft.readOnly  (was 61)
+   64 raft.TracingEvent  (was 62)
+   65 raft.BasicStatus  (was 64)
+   66 raft.Status  (was 63)
+   67 raft.inMemStorageCallStats  (was 65)
+   68 raft.MemoryStorage  (was 66)
+   69 raft.entryID  (was 67)
+   70 raft.logSlice  (was 68)
+   71 raft.EntryFormatter  (was 69)
+   72 raft.goleanShimErrorString  (was 72)
+   73 main.harnessLogger  (was 73)
+   74 main.twinNode  (was 74)
+   75 main.slot  (was 75)
+   76 main.twin  (was 76)
+   77 main.op  (was 77)
+   78 main.sched  (was 78)
+   79 log.Logger  (was 79)
+   80 error  (was 80)
+   81 io.Reader  (was 81)
+   82 io.Writer  (was 82)
+   83 proto.Message  (was 83)
+   84 quorum.AckedIndexer  (was 84)
+   85 raft.Logger  (was 85)
+   86 raft.Storage  (was 86)
+   87 raft.TraceLogger  (was 87)
+   88 raft.goleanShimStringer  (was 88)
+   89 raftpb.ConfChangeI  (was 89)
+   90 raftpb.goleanShimStringer  (was 90)
+   91 tracker.goleanShimStringer  (was 91)

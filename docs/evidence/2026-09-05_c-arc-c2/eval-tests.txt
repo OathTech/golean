@@ -1,0 +1,165 @@
+ok: FloatBits hardware-oracle vectors (33004 vectors)
+ok: GoCore float arithmetic/compare/neg (IEEE, no div panic)
+ok: GoCore float conversions (round-once paths)
+ok: GoCore float→int out-of-range refuses (fail closed)
+ok: GoCore NaN map keys are distinct entries
+ok: GoCore add function
+ok: GoCore pointer identity
+ok: GoCore struct field update
+ok: GoCore shared-heap function call
+ok: GoCore storeLoc to an ALLOCATED .base cell succeeds (positive control for the BUG-085 guard)
+ok: GoCore storeLoc to an UNALLOCATED .base address REFUSES `.internal` (BUG-085: no phantom cell, fail closed)
+ok: GoCore scalar operators
+ok: GoCore int8 wrap
+ok: GoCore byte conversion wrap
+ok: GoCore unsupported non-integer conversion
+ok: GoCore shifts
+ok: GoCore negative shift panic
+ok: GoCore bitwise operators
+ok: GoCore array indexing
+ok: GoCore array len cap
+ok: GoCore array default value
+ok: GoCore pointer-to-array indexing
+ok: GoCore nil slice len cap
+ok: GoCore array slice alias
+ok: GoCore slice reslice
+ok: GoCore slice extend to capacity
+ok: GoCore full slice
+ok: GoCore make slice
+ok: GoCore map basic
+ok: GoCore channel make/send/recv/close (FIFO, comma-ok, close-does-not-drain)
+ok: GoCore blocked channel op classifies deadlock
+ok: GoCore close of nil channel panics
+ok: GoCore select exactly-one-ready receive (nil never ready)
+ok: GoCore select default fallthrough (none ready)
+ok: GoCore pool spawn + rendezvous pairing
+ok: GoCore pool multi-goroutine deadlock (all asleep)
+ok: GoCore pool main-exit kills parked goroutine (D6)
+ok: GoCore pool close wakes parked receiver (drained zero)
+ok: GoCore pool nil spawn callee is gc's runtime fatal (triage L10; the fatal class, not a refusal)
+ok: GoCore poller family: shorter stream completes at fuel 74 (min 74 at [1]*16; stage-D re-derivation — the deferral family is [1]*n under the widened sites)
+ok: GoCore poller family: longer stream exhausts the same fuel (min 90 at [1]*32 — min fuel grows with the stream; no uniform bound)
+ok: GoCore pool waiter priority: buffered send hands off to the parked receiver (len 0; gc chansend recvq-first)
+ok: GoCore pool waiter priority: receive refills from the parked sender (len preserved; gc recv same-slot)
+ok: GoCore pool waiter-extended select: default loses to a parked sender
+ok: GoCore pool waiter-extended select: default loses to a parked receiver (send clause)
+ok: GoCore pool select default IS taken with no parked partner (envelope's other member, stream [])
+ok: GoCore pool arriving select: send clause on a CLOSED channel panics past a parked receiver (gc closed-before-dequeue)
+ok: GoCore pool arriving select recv on CLOSED past a parked plain sender is the chan-object race (BUG-045)
+ok: GoCore pool arriving select recv on CLOSED past a parked SELECT-send waiter is ALSO the chan-object race (BUG-046: selectgo's poll read)
+ok: GoCore pool select-send poll read is HB-ordered by the op-x-select pairing: receive from the parked select-send, then close, race-free (BUG-046 green twin)
+ok: GoCore sync: Add-from-0 beside a parked waiter is the wg-sema race (misuse pair; the panic is the sub-detector member)
+ok: GoCore sync: parked Lock wakes on Unlock and acquires (park -> wake -> acquire, worker-first stream)
+ok: GoCore sync: Add in the reuse window is CLEAN (gc resets the wait count in the zeroing Add; two-waiter shape, both parked)
+ok: GoCore sync: owner-free cross-goroutine unlock keeps the publish HB-ordered under the merge release (U5: TSan-red/ours-green, mutation-tested)
+ok: GoCore race: write/write refuses on the default stream
+ok: GoCore race: write/write refuses on the worker-first stream
+ok: GoCore race BUG-040 fixed: exit-no-sync refuses on the child-first stream [1] (post-spawn reschedule point live)
+ok: GoCore race BUG-040: exit-no-sync main-first stream stays a value leaf (child never runs; matches gc's dominant schedule)
+ok: GoCore race: rendezvous HB edge keeps the ordered store/read green (worker-first stream)
+ok: GoCore string basic
+ok: GoCore string byte length
+ok: GoCore string byte indexing
+ok: GoCore string byte slicing
+ok: GoCore string byte conversions
+ok: GoCore string rune conversions
+ok: GoCore new allocation
+ok: GoCore nil dereference panic
+ok: GoCore divide by zero panic
+ok: GoCore index address bounds panic
+ok: GoCore slice bounds panic
+ok: GoCore nil map assignment panic
+ok: GoCore mismatched equality stuck
+ok: GoCore call target sequencing (BUG-052: operands read post-call)
+ok: GoCore simultaneous assignment sequencing
+ok: GoCore if return positive
+ok: GoCore if return negative
+ok: GoCore break continue
+ok: GoCore closure shares captured cell
+ok: GoCore recover catches panic-path defer
+ok: GoCore recover nil on normal drain
+ok: GoCore unrecovered panic aborts
+ok: GoCore fuel exhaustion is fuel-out, not stuck
+ok: GoCore zero fuel is fuel-out
+ok: TypeId.unqualified plain qualified key
+ok: TypeId.unqualified unqualified key unchanged
+ok: TypeId.unqualified predeclared key unchanged
+ok: TypeId.unqualified mangled key, builtin arg
+ok: TypeId.unqualified mangled key, package-qualified arg
+ok: TypeId.unqualified mangled key, pointer arg
+ok: TypeId.unqualified mangled key, nested instantiation
+ok: TypeId.unqualified mangled key, two args
+ok: TypeId.unqualified mangled key, map arg with qualified value
+ok: GoCore appendGrowthCap zero-cap single elem (cap-zero window base)
+ok: GoCore appendGrowthCap zero-cap beyond floor
+ok: GoCore appendGrowthCap small doubling
+ok: GoCore appendGrowthCap doubling regime
+ok: GoCore appendGrowthCap overshoot takes newLen
+ok: GoCore appendGrowthCap large-cap 1.25x regime
+ok: GoCore enumerator rejects stream-dependent panic under expect-status ok
+ok: GoCore enumerator admits the panic member without a status expectation
+ok: GoCore enumerator first-key set is {1,2,3}
+ok: GoCore enumerator agrees with the single-run driver (append spill incl. panic path)
+ok: GoCore enumerator agrees with the single-run driver (map-range pick-next)
+ok: GoCore enumerator init-phase pick set is {1,2,3}
+ok: GoCore enumerator agrees with the whole-program driver ($pkginit map-range pick)
+ok: GoCore enumerator surfaces the $pkginit panic member
+ok: GoCore enumerator agrees with the whole-program driver ($pkginit panic)
+ok: GoCore pool enumerator: fork/join rendezvous is confluent (singleton over all schedules)
+ok: GoCore pool enumerator agrees with the pool driver (fork/join; L1 + pairing)
+ok: GoCore pool enumerator: waiter-extended select-with-default set is {7, 99} (the S2 audit envelope)
+ok: GoCore pool enumerator agrees with the pool driver (waiter-extended select-with-default; L1 + L4)
+ok: GoCore pool enumerator: every enumerated path of write/write refuses (lane d, full strength)
+ok: GoCore pool enumerator: exit-no-sync has BOTH leaves (value + race — why the class is eval-pinned, not a corpus race case)
+ok: GoCore pool wake-path head-commit: both-closed wake commits the first clause in clause order, consuming nothing
+ok: GoCore pool enumerator: wake/entry multi-ready select set is {1, 2}
+ok: GoCore accountant sentinel: an L1 site draws the sentinel (stepNeeds some 2, sentinel-run leftover [])
+ok: GoCore accountant sentinel: a non-site leaves the sentinel (stepNeeds none, leftover [0])
+ok: GoCore drivers agree on wrong-arity refusal before the init phase (panicking init — the discriminating shape)
+ok: GoCore drivers agree on wrong-arity refusal before the init phase (succeeding init)
+ok: F15: observation channel distinguishes right-value wrong-kind (red under the value-only channel)
+ok: F15: kind-carrying int observation shape
+ok: F15: decode accepts the machine encoder's kind-carrying output
+ok: F15: decode refuses an unknown integer kind (uintptr)
+ok: F15: decode refuses a kindless int observation (the retired shape)
+ok: F15: decode refuses an out-of-range unsigned value (256 at uint8)
+ok: F15: decode refuses a negative value at an unsigned kind
+ok: F15: decode refuses an out-of-range signed value (128 at int8)
+ok: MS: decode refuses a wire without methodSets (required field)
+ok: row M: decode refuses the retired sort-slice statement by name
+ok: row M: the same wire shape as clear-slice still decodes (the refusal is the node's, not the shape's)
+ok: C2: a dependency-ordered wire decodes; the table leads with the two reserved entries and Outer.x is `.defined 2` (Inner behind struct{} and $runtime.Error)
+ok: C2: a FORWARD reference through a struct field refuses at decode, naming the edge (entry 2 → entry 3)
+ok: C2: a forward reference through an ARRAY element is an edge too (refused)
+ok: C2: a forward reference through a POINTER is NOT an edge (Go's recursion channel) — decodes
+ok: C2: an `alias` TypeDef is refused by name (aliases are inlined by the frontend)
+ok: C2: a `named` reference with no TypeDef refuses (never minted an index)
+ok: C2: a wire TypeDef spelling a machine-reserved key refuses
+ok: C2: a duplicate TypeId refuses at the decoder (not only at the emitter)
+ok: C2: `TypeEnv.WellFounded` decides false on a forward reference and `firstViolation?` names (0, 1)
+ok: C2: `TypeEnv.WellFounded` decides true on the ordered table and on the reserved prefix; no violation
+ok: C2: `Ty.dynamicName` renders a `.defined` index through the table ("T" for main.T at index 2)
+ok: C2: renderPanicPayload renders a runtime-error payload by its reserved index
+ok: MS: decode refuses an unknown coverage token
+ok: MS: decode refuses a duplicate method-set record
+ok: RET: decode accepts a two-operand return at a two-result function (control)
+ok: RET: decode REFUSES a one-operand return at a two-result function, naming the arity (BLOCKER 1 — the n=1 fast path must not bypass the arity check)
+ok: RET: decode REFUSES a three-operand return at a two-result function, naming the arity
+ok: BUG-078: decode admits an array type AT the materialization budget
+ok: BUG-078: decode REFUSES an array type one past the materialization budget, naming the budget and the entry
+ok: MS: satisfaction REFUSES a method-carrying type with no record (BUG-053 class pin; TypeDef present, record absent)
+ok: MS: the same wire WITH the record answers the definite no (mutation sensitivity)
+ok: MS: a sync carrier without a record refuses (re-introduction pin)
+ok: MS: a sync carrier WITH the exported record and stub answers true
+ok: MS: dispatch on a carrier with NO record refuses unsupported (dispatch-half pin — never an answer from absence)
+ok: MS: the same dispatch WITH the record fails stuck (the invariant-break arm; mutation sensitivity — the refusal above is the record's absence, nothing else)
+ok: MS: renderPanicPayload on a defined carrier with NO record is unrenderable (renderer-half pin — never a fabricated main.T(v))
+ok: MS: the same payload WITH the record renders main.T(7) (mutation sensitivity)
+ok: DEDUP: the UNMUTATED certificate is ACCEPTED (13 nodes, 1 member — the positive control the refusals are measured against)
+ok: DEDUP: M1 dropped member REFUSED (a reachable observation missing from the claimed set)
+ok: DEDUP: M2 successor hints all redirected to node 0 REFUSED (hints are re-derived, never trusted)
+ok: DEDUP: M3 dropped node REFUSED (the state graph is no longer closed under stepMulti)
+ok: DEDUP: M5 fabricated member REFUSED (its witness does not replay to that observation)
+ok: F5: a fatal member is refused by name at the emit site
+ok: F5: a deadlock member is refused by name at the emit site
+ok: F5: ok / panic / race members pass the vocabulary guard
