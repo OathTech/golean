@@ -1,0 +1,14 @@
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+building Lean executable...
+Build completed successfully (62 jobs).
+native frontend: per-case type-check + emit (no batch export)
+FAIL	structs/decl-order-reversed/conversion-float-elements	arrays,defined_type,conversions,floats,indexing,value_copy	stage=lean-observation	detail=expected status ok, got {"message":"conversion to GoLean.GoCore.Ty.array 2 (GoLean.GoCore.Ty.float (GoLean.GoCore.FloatKind.float32))","output":"","schema":"golean-observation-v1","status":"unsupported"}
+FAIL	structs/decl-order-reversed/conversion-array-target	arrays,defined_type,conversions,indexing,len,literals	stage=lean-observation	detail=expected status ok, got {"message":"conversion to GoLean.GoCore.Ty.array 3 (GoLean.GoCore.Ty.defined 2)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+FAIL	structs/decl-order-reversed/conversion-unnamed-target	arrays,conversions,indexing,value_copy	stage=lean-observation	detail=expected status ok, got {"message":"conversion to GoLean.GoCore.Ty.array 2 (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))","output":"","schema":"golean-observation-v1","status":"unsupported"}
+FAIL	structs/decl-order-reversed/conversion-nested-copy	arrays,structs,defined_type,conversions,indexing,fields,value_copy	stage=lean-observation	detail=expected status ok, got {"message":"conversion to GoLean.GoCore.Ty.array 2 (GoLean.GoCore.Ty.array 2 (GoLean.GoCore.Ty.defined 5))","output":"","schema":"golean-observation-v1","status":"unsupported"}
+FAIL	structs/decl-order-reversed/conversion-shared-references	arrays,defined_type,conversions,pointers,slices,indexing,value_copy,aliasing	stage=lean-observation	detail=expected status ok, got {"message":"conversion to GoLean.GoCore.Ty.array 1 (GoLean.GoCore.Ty.defined 9)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+FAIL	structs/decl-order-reversed/conversion-empty-eval-once	arrays,defined_type,conversions,calls,len,evaluation_order	stage=lean-observation	detail=expected status ok, got {"message":"conversion to GoLean.GoCore.Ty.array 0 (GoLean.GoCore.Ty.defined 2)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+
+differential coverage summary: cases=6 pass=0 fail=6 export_status=0
+results: artifacts/coverage/latest.tsv
+metadata: artifacts/coverage/latest.meta.tsv

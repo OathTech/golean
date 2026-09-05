@@ -1,5 +1,13 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3593 (3347 PASS / 246 FAIL)
+# cases: 3598 (3353 PASS / 245 FAIL)
+# re-pinned: 2026-09-05, BUG-103 array conversion lane [AGENT], after full
+#   scripts/ci --diff: 3598 = 3353 PASS / 245 FAIL, exactly one existing
+#   FAIL -> PASS (structs/decl-order-reversed/conversion-array-target) and
+#   five new PASS conversion cases in that family. No other result/stage
+#   changes, no removals/reorders, no oracle or certification changes.
+#   Reason and full-run evidence: docs/2026-09-05_bug103-array-conversion.md.
+#   Earlier pin chronology below is historical; the count above is derived
+#   from the current data rows (3353 + 245 = 3598).
 #   [re-derived from the data rows at the round-17 rebase of e13-b onto main 9343a310, 2026-09-05 (final verification fix round commit): awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv -> PASS 3347, FAIL 246; main's 3528 = 3283 / 245 as history]
 #   [the previous figure, 3589 = 3346 / 243 (the rebased re-audit follow-up), was re-derived the same way; the lane's own figures — 3559 = 3315 / 244 -> 3563 = 3316 / 247 over main b77f3298's rows — are in the block below]
 # re-pinned: 2026-09-05 (e13-b lane, FINAL VERIFICATION FIX ROUND R''-1..R''-9 — [AGENT] worker; the final verification audit
@@ -4724,7 +4732,12 @@ PASS	structs/blank-field	-
 PASS	structs/comparable	-
 PASS	structs/copy-value	-
 PASS	structs/decl-order-reversed/array-equality	-
-FAIL	structs/decl-order-reversed/conversion-array-target	lean-observation
+PASS	structs/decl-order-reversed/conversion-array-target	-
+PASS	structs/decl-order-reversed/conversion-empty-eval-once	-
+PASS	structs/decl-order-reversed/conversion-float-elements	-
+PASS	structs/decl-order-reversed/conversion-nested-copy	-
+PASS	structs/decl-order-reversed/conversion-shared-references	-
+PASS	structs/decl-order-reversed/conversion-unnamed-target	-
 PASS	structs/decl-order-reversed/defined-array-values	-
 PASS	structs/decl-order-reversed/interface-box	-
 PASS	structs/decl-order-reversed/zero-values	-

@@ -6055,9 +6055,9 @@ the reason written, as the six above did.
 
 ## BUG-103 — conversions whose TARGET's resolved shape is an ARRAY (`Raw(cs)` between two defined `[3]Code` types, `[3]Code(r)` to the unnamed array type) are refused by `convertValueToTy`'s catch-all — BUG-020 added the pointer/slice/map/func arms and left the array arm out [coverage; GoCore conversions; fail-closed refusal of legal Go; surfaced by the C-arc C2 audit fix round (R11 rows), 2026-09-05]
 
-- Status: open
+- Status: fixed ([AGENT], 2026-09-05, `bug103-array-conversion`)
 - Pinned-by: differential
-- Cases: structs/decl-order-reversed/conversion-array-target
+- Cases: structs/decl-order-reversed/conversion-array-target, structs/decl-order-reversed/conversion-unnamed-target, structs/decl-order-reversed/conversion-nested-copy, structs/decl-order-reversed/conversion-shared-references, structs/decl-order-reversed/conversion-empty-eval-once, structs/decl-order-reversed/conversion-float-elements
 
 WHAT (spec#Conversions: a non-constant value `x` can be converted to `T` when `x`'s type
 and `T` have identical underlying types — `Codes`, `Raw` and `[3]Code` all have underlying
@@ -6087,6 +6087,20 @@ by name as every other arm does). Needs its own slice with a full run: the arm i
 every array-shaped conversion in the corpus (the `BUG-020` fix's `structs/unnamed-conversion-targets/*`
 rows are the template: red-first, then the arm, then PASS on this Cases line). Ledger:
 `docs/language-coverage-ledger.md` §2 Conversions row names it.
+
+FIX [AGENT], 2026-09-05: the normalizing array-value arm above is implemented.
+`Step.strictApply` shares the total `applyStrictOp` premise with the executable,
+and `convertValueToTy_locSup` uses the normalizer's existing bound theorem for
+the added case. All six Cases rows were measured red before the runtime edit
+and now PASS, covering independent nested value copies, shared pointer/slice
+referents, zero-length operand evaluation, and float32 elements. Full ordinary
+`scripts/ci --diff`: 3598 = 3353 PASS / 245 FAIL, exactly the original row's
+FAIL→PASS and five new PASS rows; no other result/stage changes. The existing
+FR-10 successful slice conversions remain refused. Clarification to the PLAN's
+wording: normalization checks representation invariants, not the full static
+source/target typing judgment; `GoValue.array` carries no source type, and
+typed admission is still owed. Design and evidence:
+`docs/2026-09-05_bug103-array-conversion.md`.
 
 ## BUG-104 — a compound-assignment target whose ADDRESS or KEY is hoisted to a temp panics at the hoist, BEFORE the RHS's ordered events (calls, receives, method calls); gc reads the target in the residual, AFTER them (`x[f()] += wit(5)`: gc `f`, `wit 5`, then `index out of range [9]`; the machine `f` then the panic — `m[t[k]] += wit(5)`: gc `wit 5` then `[5] with length 1`, the machine the panic alone — `x[f()] += <-ch`: gc receives first, the machine panics first) [frontend lowering; evaluation order; spec#Assignment_statements phase 1 vs the eval-once rewrite]
 

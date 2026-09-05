@@ -1,0 +1,21 @@
+key	value
+frontend	native
+manifest	/home/dev/projects/golean/.tmp/golean-coverage.3kVfcF
+manifest_sha256	7e5b82c1097521492dafb2d02231ec68bd76bfa71d8e55d809a16518cde6db7b
+manifest_cases	23
+total_corpus_cases	3598
+full_run	false
+filters	--prefix structs/decl-order-reversed/ --prefix structs/unnamed-conversion-targets/ --prefix spec-examples-decl/slice-to-array/
+git_commit	8db2d6dad165393f4d3cdffee63b8e7d624f39e6
+git_dirty	true
+go_toolchain	go1.26.5
+go_drift_allowed	0
+go_drift_actual	false
+depth_guard	choice-trace wideAfterExhaustion=0 on every invariance stream
+depth_seeds	1,2,3
+depth_generator	lcg31(1103515245,12345) bits16..31
+depth_trace_timeout_seconds	240
+membership_draws	32
+jobs	6
+fanout_find_exit	0
+fanout_pool_exit	0

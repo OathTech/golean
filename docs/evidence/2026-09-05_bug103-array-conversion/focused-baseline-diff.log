@@ -1,0 +1,7 @@
+DRIFT vs baselines/native-full.tsv (23 case(s) run):
+structs/decl-order-reversed/conversion-array-target	baseline[FAIL/lean-observation] -> now[PASS/-]
+structs/decl-order-reversed/conversion-empty-eval-once	NEW id (not in baseline) -> PASS/-
+structs/decl-order-reversed/conversion-float-elements	NEW id (not in baseline) -> PASS/-
+structs/decl-order-reversed/conversion-nested-copy	NEW id (not in baseline) -> PASS/-
+structs/decl-order-reversed/conversion-shared-references	NEW id (not in baseline) -> PASS/-
+structs/decl-order-reversed/conversion-unnamed-target	NEW id (not in baseline) -> PASS/-

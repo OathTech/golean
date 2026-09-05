@@ -1,0 +1,4 @@
+✔ [58/60] Built Tests.GoCoreEval (96s)
+✔ [59/60] Built Tests.GoCoreEval:c.o (8.9s)
+✔ [60/60] Built «gocore-eval-tests»:exe (533ms)
+Build completed successfully (60 jobs).

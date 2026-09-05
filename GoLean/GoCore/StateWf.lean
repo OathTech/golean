@@ -1309,7 +1309,8 @@ theorem defaultValue_locSup {s : ExecState} {ty : Ty} {v : GoValue}
   exact defaultValueTy_locSup (fun _ _ hh => defaultValueAt_locSup _ _ hh) h
 
 /-- Conversion is loc-bounded by its operand: every ok result is the
-operand itself, a retagged copy of its fields, or a loc-free scalar.
+operand itself, a normalized array copy, a retagged copy of its fields,
+or a loc-free scalar.
 Cases on the RESOLVED target body (C2: the conversion is not recursive). -/
 theorem convertValueToTy_locSup {s : ExecState} {ty : Ty} {v r : GoValue}
     (h : convertValueToTy s ty v = .ok r) :
@@ -1356,6 +1357,8 @@ theorem convertValueToTy_locSup {s : ExecState} {ty : Ty} {v r : GoValue}
            | (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
               simp [GoValue.locSup]))
       | skip
+    case array.array n elem values =>
+      exact normalizeValueForTy_locSup h
     -- pointer target × slice operand (triage L2a): the elem dispatch
     -- blocks the generic reduction; every branch is panic/unsupported,
     -- so no ok exists.

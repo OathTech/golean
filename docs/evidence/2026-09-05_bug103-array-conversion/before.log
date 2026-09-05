@@ -1,0 +1,9 @@
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+building Lean executable...
+Build completed successfully (62 jobs).
+native frontend: per-case type-check + emit (no batch export)
+FAIL	structs/decl-order-reversed/conversion-array-target	arrays,defined_type,conversions,indexing,len,literals	stage=lean-observation	detail=expected status ok, got {"message":"conversion to GoLean.GoCore.Ty.array 3 (GoLean.GoCore.Ty.defined 2)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+
+differential coverage summary: cases=1 pass=0 fail=1 export_status=0
+results: artifacts/coverage/latest.tsv
+metadata: artifacts/coverage/latest.meta.tsv

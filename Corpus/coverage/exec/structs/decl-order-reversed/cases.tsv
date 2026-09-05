@@ -1,11 +1,16 @@
 # id	subject	args	expected_status	expected_reason	features
-# Audit fix R11 (C-arc C2, docs/2026-09-05_c-arc-c2-design.md §7): types declared in
-# reverse dependency order; every table entry MOVES under the frontend ordering;
+# Audit fix R11 (C-arc C2, docs/2026-09-05_c-arc-c2-design.md §7): the original six
+# types are declared in reverse dependency order; those entries MOVE under ordering;
 # array-element edges at two depths (nested array of structs; defined-over-array).
-# Four rows PASS pinned with gc; conversion-array-target is RED-FIRST on BUG-103
-# (array-target conversions fall into convertValueToTy's catch-all — detected here).
+# BUG-103's conversion rows distinguish array value copies from the shared
+# references they contain, including nested, zero-length and float arrays.
 zero-values	declOrderZeroValues	-	ok	-	structs,arrays,nested,fields,zero_values,defined_type,conversions,indexing,len
 array-equality	declOrderArrayEquality	-	ok	-	structs,arrays,nested,equality,comparability,defined_type,literals
 interface-box	declOrderInterfaceBox	-	ok	-	structs,arrays,interfaces,type_assertions,comma_ok,equality,defined_type,literals
 defined-array-values	declOrderDefinedArrayValues	-	ok	-	arrays,defined_type,literals,value_copy,equality,zero_values,calls,indexing,len
 conversion-array-target	declOrderConversionArrayTarget	-	ok	-	arrays,defined_type,conversions,indexing,len,literals
+conversion-unnamed-target	declOrderConversionUnnamedTarget	-	ok	-	arrays,conversions,indexing,value_copy
+conversion-nested-copy	declOrderConversionNestedCopy	-	ok	-	arrays,structs,defined_type,conversions,indexing,fields,value_copy
+conversion-shared-references	declOrderConversionSharedReferences	-	ok	-	arrays,defined_type,conversions,pointers,slices,indexing,value_copy,aliasing
+conversion-empty-eval-once	declOrderConversionEmptyEvalOnce	-	ok	-	arrays,defined_type,conversions,calls,len,evaluation_order
+conversion-float-elements	declOrderConversionFloatElements	-	ok	-	arrays,defined_type,conversions,floats,indexing,value_copy

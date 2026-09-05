@@ -1,0 +1,31 @@
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+building Lean executable...
+Build completed successfully (62 jobs).
+native frontend: per-case type-check + emit (no batch export)
+PASS	structs/decl-order-reversed/conversion-array-target	arrays,defined_type,conversions,indexing,len,literals
+PASS	structs/decl-order-reversed/conversion-unnamed-target	arrays,conversions,indexing,value_copy
+PASS	spec-examples-decl/slice-to-array/short-array	conversions,slices,arrays,panic
+PASS	structs/unnamed-conversion-targets/slice-nil	conversions,slices,nil,bytes,append
+PASS	structs/decl-order-reversed/interface-box	structs,arrays,interfaces,type_assertions,comma_ok,equality,defined_type,literals
+PASS	structs/decl-order-reversed/zero-values	structs,arrays,nested,fields,zero_values,defined_type,conversions,indexing,len
+PASS	structs/decl-order-reversed/conversion-float-elements	arrays,defined_type,conversions,floats,indexing,value_copy
+PASS	structs/unnamed-conversion-targets/pointer-nil	conversions,pointers,nil,defined_type
+PASS	spec-examples-decl/slice-to-array/short-array-ptr	conversions,slices,arrays,pointers,panic
+PASS	spec-examples-decl/slice-to-array/nil-to-longer-ptr	conversions,slices,arrays,pointers,nil,panic
+PASS	structs/unnamed-conversion-targets/slice	conversions,slices,defined_type
+PASS	structs/unnamed-conversion-targets/slice-to-defined	conversions,slices,defined_type
+FAIL	spec-examples-decl/slice-to-array/ok-forms	conversions,slices,arrays,pointers,nil,aliasing	stage=lean-observation	detail=expected status ok, got {"message":"slice-to-array value conversion (succeeding form; triage L2b frontier)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	structs/unnamed-conversion-targets/func	conversions,functions,closures,defined_type
+PASS	structs/unnamed-conversion-targets/pointer	conversions,pointers,structs,defined_type
+PASS	structs/decl-order-reversed/array-equality	structs,arrays,nested,equality,comparability,defined_type,literals
+PASS	structs/unnamed-conversion-targets/map	conversions,maps,defined_type
+PASS	structs/unnamed-conversion-targets/map-nil	conversions,maps,nil,len
+PASS	structs/decl-order-reversed/conversion-nested-copy	arrays,structs,defined_type,conversions,indexing,fields,value_copy
+PASS	structs/unnamed-conversion-targets/func-from-defined	conversions,functions,defined_type
+PASS	structs/decl-order-reversed/conversion-empty-eval-once	arrays,defined_type,conversions,calls,len,evaluation_order
+PASS	structs/decl-order-reversed/conversion-shared-references	arrays,defined_type,conversions,pointers,slices,indexing,value_copy,aliasing
+PASS	structs/decl-order-reversed/defined-array-values	arrays,defined_type,literals,value_copy,equality,zero_values,calls,indexing,len
+
+differential coverage summary: cases=23 pass=22 fail=1 export_status=0
+results: artifacts/coverage/latest.tsv
+metadata: artifacts/coverage/latest.meta.tsv

@@ -31,8 +31,9 @@ design.md`) replaces the budget with the TABLE'S OWN STRUCTURE:
   entries, and `i < types.size`. The `0` arm is a NAMED refusal ("not
   dependency-ordered"), reachable only from a hand-built table the
   decoder would have refused — never a default.
-* `convertValueToTy` and `buildStructValue` do not recurse at all once
-  `.defined` indirections are followed (`TypeEnv.resolve`); `valueEq`
+* `convertValueToTy` and `buildStructValue` do not themselves recurse once
+  `.defined` indirections are followed (`TypeEnv.resolve`); array conversion
+  uses the structural normalization above for its copied elements. `valueEq`
   recurses on the VALUE (Go's `==` on interfaces compares the DYNAMIC
   values, whose types are discovered, not walked), with `TypeEnv.resolve`
   reading the declared body at each step.
@@ -1400,9 +1401,9 @@ def storeLoc (state : ExecState) : Loc → GoValue → Except Stop ExecState
 -- `lookup` deleted (reshape S4): variable reads are `Machine.Step.evalVar`
 -- (control-side env lookup + `loadLoc`), never a state-side name lookup.
 
-/-- Go's conversion `T(v)` at runtime. NOT recursive (C2): the target's
-`.defined` indirections are followed once by `TypeEnv.resolve`, and every
-arm below is a leaf — the old fuel existed only for the alias chain. -/
+/-- Go's conversion `T(v)` at runtime. The target's `.defined` indirections
+are followed once by `TypeEnv.resolve`. This function does not recurse;
+array values use `normalizeValueForTy`'s structural descent. -/
 def convertValueToTy (state : ExecState) (typ : Ty) (value : GoValue) :
     Except Stop GoValue :=
   match state.types.resolve state.types.size typ, value with
@@ -1498,6 +1499,13 @@ from {actual.key} (non-identical underlying)"
   -- slice's backing segment and `Loc` has no subarray-view
   -- constructor; the value-copy form rides the same frontier row
   -- (spec-examples-decl/slice-to-array/ok-forms pins both red).
+  -- Array→array conversion (BUG-103): Go checks identical underlying
+  -- types at admission; array values have no separate runtime type tag.
+  -- Normalize the value copy at the target's element type, retaining any
+  -- contained references. This checks length and the normalizer's element
+  -- invariants; it is not a substitute for a source/target typing judgment.
+  | .ok (.plain (.array n elem)), .array values =>
+      normalizeValueForTy state (.array n elem) (.array values)
   | .ok (.plain (.array n _)), .slice slice =>
       if slice.len < n then
         panic s!"runtime error: cannot convert slice with length {slice.len} \
