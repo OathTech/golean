@@ -29,7 +29,9 @@ def GateA1Audit.run : CoreM Unit := do
       | throwError "Gate A1: missing theorem {n}"
   let ours := env.header.moduleNames.map (fun n => n.getRoot == `GateA1 ||
       [`GoLean.GoCore.Trace, `GoLean.GoCore.PoolTrace,
-       `GoLean.GoCore.ProgramTrace, `GoLean.Interface, `Tests.InterfaceContract].contains n)
+       `GoLean.GoCore.ProgramTrace, `GoLean.Interface, `Tests.InterfaceContract,
+       `GoLean.GoCore.AdmissionIndices, `GoLean.GoCore.AdmissionPolicy,
+       `GoLean.GoCore.Admission].contains n)
   let mut checked := 0
   for (n, _) in env.constants.toList do
     let localModule := match env.getModuleIdxFor? n with

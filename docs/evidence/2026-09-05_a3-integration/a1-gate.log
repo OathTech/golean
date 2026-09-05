@@ -1,0 +1,34 @@
+Gate A1 source/dependency-manifest fingerprint: b1ec2c92eeb7c122b491ef30257e3120ab726c4eb4282ae6104fe1dcd943b6d9
+GoLean HEAD: 7c5e297185724e38cba4734fcd37346174ce060a
+Validation mode: incremental Lake build plus fresh spike-module elaboration
+Build completed successfully (76 jobs).
+✔ [220/236] Built GateA1.Trace (172ms)
+✔ [221/236] Built GateA1.Counterexamples (170ms)
+✔ [229/236] Built GateA1.PoolTrace (174ms)
+✔ [230/236] Built GateA1.ProgramTrace (169ms)
+✔ [231/236] Built GateA1.Language (903ms)
+✔ [232/236] Built GateA1.Examples (7.8s)
+ℹ [233/236] Built GateA1.Probes (694ms)
+info: GateA1/Probes.lean:3:0: GoLean.GoValue.nil
+info: GateA1/Probes.lean:4:0: GoLean.GoValue.interface (GoLean.GoCore.Ty.defined 1) (GoLean.GoValue.string { bytes := #[97, 117, 100, 105, 116] })
+info: GateA1/Probes.lean:5:0: Except.error (GoLean.Stop.terminal (GoLean.Terminal.panic "audit"))
+info: GateA1/Probes.lean:7:0: Except.error (GoLean.Stop.terminal (GoLean.Terminal.panic "boom"), { bytes := #[98, 101, 102, 111, 114, 101, 10] })
+info: GateA1/Probes.lean:8:0: Except.ok ()
+✔ [234/236] Built GateA1.Audit (828ms)
+✔ [235/236] Built GateA1 (779ms)
+Build completed successfully (236 jobs).
+GoLean.GoValue.nil
+GoLean.GoValue.interface (GoLean.GoCore.Ty.defined 1) (GoLean.GoValue.string { bytes := #[97, 117, 100, 105, 116] })
+Except.error (GoLean.Stop.terminal (GoLean.Terminal.panic "audit"))
+Except.error (GoLean.Stop.terminal (GoLean.Terminal.panic "boom"), { bytes := #[98, 101, 102, 111, 114, 101, 10] })
+Except.ok ()
+Gate A1: 12 required exports present; 862 constants' axiom dependencies checked (classical trio only)
+/home/dev/projects/golean/.claude/worktrees/gate-a3-admission/.tmp/gate-a1-audit-33jufv4v/trailing_private/AuditAll.lean:10:0: error: Gate A1: _private.GateA1.Audit.0.a1TrailingHole depends on forbidden axiom _private.GateA1.Audit.0.a1TrailingHole
+Gate A1 negative regression: trailing_private rejected (exit 1, a1TrailingHole)
+/home/dev/projects/golean/.claude/worktrees/gate-a3-admission/.tmp/gate-a1-audit-33jufv4v/aggregate_private/AuditAll.lean:10:0: error: Gate A1: _private.GateA1.0.a1RootHole depends on forbidden axiom _private.GateA1.0.a1RootHole
+Gate A1 negative regression: aggregate_private rejected (exit 1, a1RootHole)
+/home/dev/projects/golean/.claude/worktrees/gate-a3-admission/.tmp/gate-a1-audit-33jufv4v/trailing_sorry/GateA1/Audit.lean:47:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.claude/worktrees/gate-a3-admission/.tmp/gate-a1-audit-33jufv4v/trailing_sorry/AuditAll.lean:10:0: error: Gate A1: _private.GateA1.Audit.0.a1SorryHole depends on forbidden axiom sorryAx
+Gate A1 negative regression: trailing_sorry rejected (exit 1, sorryAx)
+Gate A1 audit scratch retained: /home/dev/projects/golean/.claude/worktrees/gate-a3-admission/.tmp/gate-a1-audit-33jufv4v
+Gate A1: PASS

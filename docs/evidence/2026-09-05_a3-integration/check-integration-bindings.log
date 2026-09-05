@@ -1,0 +1,7 @@
+A3 original review bindings: 118/123 unchanged; all A3 implementation/tests/fixtures/tools identical
+GoLean/GoCore/Ops.lean: exact landed-main bytes
+GoLean/GoCore/StateWf.lean: exact landed-main bytes
+GoLean.lean: exact landed-main bytes
+lakefile.toml: all landed-main content preserved plus the exact A3 addition
+scripts/ci: all landed-main content preserved plus the exact A3 addition
+Integration binding and rebase checks PASS

@@ -1,6 +1,7 @@
 import GoLean.GoCore.Trace
 import GoLean.GoCore.PoolTrace
 import GoLean.GoCore.ProgramTrace
+import GoLean.GoCore.Admission
 
 /-!
 # Experimental semantic consumer interface
@@ -22,6 +23,16 @@ It has no dependency on Iris, the frontend, or either customer package.
 These are correspondence theorems about the current machine. They do not
 establish Go frontend correctness, typed admission, termination, refusal
 freedom, scheduler completeness, generic context laws or Iris adequacy.
+
+The separate opt-in `GoCore.Admission.checkBoolean` API checks exactly
+`IndexStructure ∧ Entry ∧ BooleanSyntax`, as proved by `checkBoolean_iff`.
+It checks all syntactic type indices, Boolean entry arguments, and every
+function body against the small Boolean syntax policy. It is not invoked
+automatically by the frontend or drivers. It does not check lexical typing,
+definite return, general name validity, method-set/display metadata, or
+typed runtime states. An admitted unbound-variable program can still refuse;
+the core regression suite proves this boundary. The A2 recovery program is
+outside this first profile. There is no general `Accepted` guarantee here.
 
 The underlying `GoCore` and `GoCore.Machine` types remain representation
 dependent. This facade is experimental: B7, C1 and the composition work may

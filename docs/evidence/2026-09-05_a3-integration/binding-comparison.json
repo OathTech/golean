@@ -1,0 +1,30 @@
+{
+  "matching": 118,
+  "changed": [
+    {
+      "path": "GoLean/GoCore/Ops.lean",
+      "before": "465c53d44d1795806159fc191e5d7afcf8bfb2d6725729d0d05b049de33e6985",
+      "after": "71269d322a906055c7ec7f88876c06609b6038a60a45e0cd836059712b225e8a"
+    },
+    {
+      "path": "GoLean/GoCore/StateWf.lean",
+      "before": "3905d821fcaa84d898d292567fd77290d52c5e5ef820eb9c60f248099cf776c4",
+      "after": "dc532c707798ed6cf6c69faf036a62363a004775ffbba9865275f10bad84ff62"
+    },
+    {
+      "path": "GoLean.lean",
+      "before": "1b57a42a1d69d47ed6a0e209b9467c202d2b696ec21642ea514373bf04d12614",
+      "after": "ac3abf7741a51eae51d71a68574547fd3b8236b9734b19fce2fccf0df56b4118"
+    },
+    {
+      "path": "lakefile.toml",
+      "before": "9369ec7c4114a388ef88edec86763d8888bbf1a3a3a464e0cdb37aedb9394119",
+      "after": "35704a7cb5cada74ad0e14bb90c5246b728b2aafe30be4aab97132c4b32b749b"
+    },
+    {
+      "path": "scripts/ci",
+      "before": "629484be1647d55d84bdaeca2111d698b1169ed7db77b1ab87d815af5e191823",
+      "after": "cf5fae414d11ba32fb9a2a47838fa60f19d130ddf82d30475592caa6d22887c1"
+    }
+  ]
+}

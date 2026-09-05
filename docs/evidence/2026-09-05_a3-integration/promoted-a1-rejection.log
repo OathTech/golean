@@ -1,0 +1,3 @@
+/home/dev/projects/golean/.claude/worktrees/gate-a3-admission/.tmp/a3-integration-review-a8q7veno/integrated-admission-private/promoted_a1_rejection.lean:2:0: error: Gate A1: _private.GoLean.GoCore.Admission.0.reviewedIntegratedAdmissionHole depends on forbidden axiom _private.GoLean.GoCore.Admission.0.reviewedIntegratedAdmissionHole
+
+EXIT=1

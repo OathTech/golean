@@ -50,3 +50,27 @@ toward the actual A2 recovery artifact. General typed runtime states,
 preservation and refusal freedom remain separate obligations. The next
 work should remove the accepted-unbound counterexample under a stronger
 named predicate rather than quietly redefining this existing one.
+
+## Final combined-tree result
+
+[AGENT] The lane rebased onto main `4919b05a`, producing `7c5e2971`; the
+only conflicts were the two library/gate additions. Both complete library
+targets and both CI steps were preserved. Root then exposed the checker
+through the facade and added its three module origins to the interface,
+A1 and A2 audits. Checker/predicate/test bytes still match the independent
+review. The final integration review is PASS with no findings.
+
+Ordinary capped CI passes: 202 eval checks; interface audit 19 exports /
+526 constants; admission audit 14 / 375; all compiled poison controls;
+unchanged recorded 3598-case and 394-negative results from BUG-103's fresh
+integration run at `8d8f5487`. Those last comparisons are explicitly cached,
+not another complete Go run. The dedicated admission, A1 and A2 gates all
+pass on the final tree, freshly elaborating their modules and comparing
+both complete native artifacts. Differential witnesses pass 1/1 and 3/3.
+One isolated unused Admission axiom compiled and was then rejected by all
+four audits. The exact tested integration inputs and unmodified independent
+report are sealed under `docs/evidence/2026-09-05_a3-integration/`.
+
+This completes the authorized first A3 slice and its interface integration.
+The current plan and root handoff record A3b and the remaining Gate A work.
+The [USER] authorized this landing sequence; no push is authorized.

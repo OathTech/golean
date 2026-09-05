@@ -1,0 +1,171 @@
+diff --git a/GoLean/Interface.lean b/GoLean/Interface.lean
+index 68b1cce6..174e0979 100644
+--- a/GoLean/Interface.lean
++++ b/GoLean/Interface.lean
+@@ -1,6 +1,7 @@
+ import GoLean.GoCore.Trace
+ import GoLean.GoCore.PoolTrace
+ import GoLean.GoCore.ProgramTrace
++import GoLean.GoCore.Admission
+ 
+ /-!
+ # Experimental semantic consumer interface
+@@ -23,6 +24,16 @@ These are correspondence theorems about the current machine. They do not
+ establish Go frontend correctness, typed admission, termination, refusal
+ freedom, scheduler completeness, generic context laws or Iris adequacy.
+ 
++The separate opt-in `GoCore.Admission.checkBoolean` API checks exactly
++`IndexStructure ∧ Entry ∧ BooleanSyntax`, as proved by `checkBoolean_iff`.
++It checks all syntactic type indices, Boolean entry arguments, and every
++function body against the small Boolean syntax policy. It is not invoked
++automatically by the frontend or drivers. It does not check lexical typing,
++definite return, general name validity, method-set/display metadata, or
++typed runtime states. An admitted unbound-variable program can still refuse;
++the core regression suite proves this boundary. The A2 recovery program is
++outside this first profile. There is no general `Accepted` guarantee here.
++
+ The underlying `GoCore` and `GoCore.Machine` types remain representation
+ dependent. This facade is experimental: B7, C1 and the composition work may
+ change that representation. A customer must state any stronger domain and
+diff --git a/HANDOFF.md b/HANDOFF.md
+index ee615370..d3f215ea 100644
+--- a/HANDOFF.md
++++ b/HANDOFF.md
+@@ -1,10 +1,10 @@
+-# Integration handoff
++# Consumer-contract integration handoff
+ 
+ [AGENT], 2026-09-05. The user authorized landing the reviewed A2 customer,
+ integrating BUG-103, and continuing with the semantic interface and A3 lanes.
+ A2 landed on main at `700128f3`. BUG-103 is rebased and re-gated on that
+-tip. Fresh full CI and both A1/A2 customer gates PASS; the coordinator owns
+-the authorized final fast-forward merge.
++tip and landed at `8ad8cfc8`. The experimental semantic interface subsequently
++landed at `4919b05a`, after independent review and combined-tree gates.
+ 
+ The rebase's sole source conflict was two added lane handoffs. Both original
+ texts are preserved byte-for-byte as dated documents:
+@@ -24,3 +24,16 @@ Integration disposition and fresh combined-tree gate evidence are recorded in
+ checks and 202 eval checks pass. One slow-tier certificate remains cached.
+ The source-reviewed runtime/proof/customer bytes are unchanged by integration.
+ No push is authorized.
++
++The current next-phase work adds the independently reviewed A3a checker,
++exposed explicitly through `GoLean/Interface.lean`. It proves exactly index
++structure, Boolean entry/argument validity and a whole-program syntax policy.
++It is opt-in, does not restrict the interpreter/frontend, and does not prove
++typing or refusal freedom. An admitted unbound-variable program is proved
++to refuse; the test is a permanent record of that limitation. See
++`docs/2026-09-05_a3-admission-handoff.md` and the master plan §7.4.1.
++
++The first admission extension should add scoped variable/result typing and
++a driver setup theorem, then cover A2's calls/captures/initialization/recovery.
++B7/C1 and generic composition retain their separate contracts and gates.
++The full Gate A and a stable consumer pin remain open.
+diff --git a/Tests/InterfaceAudit.lean b/Tests/InterfaceAudit.lean
+index 7e60de23..23ad70a7 100644
+--- a/Tests/InterfaceAudit.lean
++++ b/Tests/InterfaceAudit.lean
+@@ -14,6 +14,8 @@ def InterfaceAudit.run : CoreM Unit := do
+   let modules : List Name := [
+     `GoLean.GoCore.Trace, `GoLean.GoCore.PoolTrace,
+     `GoLean.GoCore.ProgramTrace, `GoLean.Interface,
++    `GoLean.GoCore.AdmissionIndices, `GoLean.GoCore.AdmissionPolicy,
++    `GoLean.GoCore.Admission,
+     `Tests.InterfaceContract, `Tests.InterfaceAudit]
+   let exports : List Name := [
+     ``GoLean.Semantics.iter_iff_trace, ``GoLean.Semantics.Trace.erase,
+@@ -24,6 +26,9 @@ def InterfaceAudit.run : CoreM Unit := do
+     ``GoLean.Semantics.Pool.observation_iff,
+     ``GoLean.Semantics.Pool.fuel_is_not_observation,
+     ``GoLean.Semantics.Pool.refusal_is_not_observation,
++    ``GoLean.GoCore.Admission.checkBoolean_iff,
++    ``GoLean.GoCore.Admission.admitted_index_bound,
++    ``GoLean.GoCore.Admission.admitted_all_bodies,
+     ``GoLean.GateA1.recover_step_does_not_transport,
+     ``GoLean.GateA1.fixed_stream_not_existential_path,
+     ``GoLean.GateA1.address_bound_admits_ill_typed,
+diff --git a/docs/2026-09-05_master-plan.md b/docs/2026-09-05_master-plan.md
+index d9013a20..3653d043 100644
+--- a/docs/2026-09-05_master-plan.md
++++ b/docs/2026-09-05_master-plan.md
+@@ -1884,6 +1884,36 @@ refactoring … not credible assurance estimates while Gates A and D
+ remain unresolved»; they are RETAINED as refactoring estimates and
+ WITHDRAWN as assurance estimates; ranges are re-issued after Gate A.
+ 
++### 7.4.1 Executed consumer-contract increments (2026-09-05)
++
++[USER] authorized the proposed landing and next-step sequence; [AGENT]
++implemented it in separate worktrees with independent adversarial reviews.
++These bounded increments refine wave item (1); they do not close Gate A or
++authorize a stable/concurrent pin.
++
++| Increment | Delivered contract and evidence | Remaining boundary |
++|---|---|---|
++| A2 customer | Landed `700128f3`; initialized Iris ownership, recovery WP, actual entry-to-readout and three differential controls; independent review PASS | General composition and labelled/concurrent adequacy remain open |
++| BUG-103 | Landed `8ad8cfc8`; fresh full integration measurement 3598 = 3353 PASS / 245 known FAIL, with no unrelated drift; both customer gates pass | Normalization is not source/target Go convertibility or typed admission; one slow-tier certificate remains cached |
++| Experimental semantic interface | Landed `4919b05a`; `GoLean/Interface.lean` exposes the promoted `GoLean.Semantics` bridges; semantic counterexamples and dependency audit run in ordinary CI; independent review PASS | Existing machine representation and internal customer dependencies remain explicit; no stable I5/G-PIN claim |
++| A3a: first admission slice | `GoCore.Admission.checkBoolean` is sound and complete for exactly `IndexStructure ∧ Entry ∧ BooleanSyntax`; native artifact witness, 32 kernel regressions and independent review PASS; see `docs/2026-09-05_a3-admission-design.md` | Opt-in only. No lexical typing, definite return, general name validity, typed runtime states or refusal-freedom claim; the A2 recovery program is outside this Boolean profile |
++
++The next useful admission task is **A3b: scoped variable/result typing and
++an entry/setup theorem for the Boolean fragment**, with a stronger, separately
++named predicate that rejects the admitted unbound-variable counterexample.
++Then extend admission to the A2 program's calls, captures, initialization
++and recovery. Adding syntax alone does not discharge typing or preservation.
++The current checker deliberately leaves method-set/display metadata outside
++its guarantee; it does not interpret frontend key spelling as semantics.
++
++B7 then C1 retain their sequence and existing differential/detector gates.
++Both live customers must continue passing across those changes. General
++composition remains a demonstrated-contract task before C3; changing the
++continuation representation still does not supply unconditional context laws.
++The type-descriptor decision, frontend rejection leg and scoped Gate D pin
++criteria remain separate open work. See the current lane handoffs and sealed
++evidence; no old assurance estimate is reinstated by these small successes.
++
+ ### 7.5 The F10 consequence (RULED [USER], Q1) for §3.A and §3.H
+ 
+ - **In scope here, permanently:** the semantic transition relation
+diff --git a/scripts/check-interface.py b/scripts/check-interface.py
+index a03d06ab..7487953e 100644
+--- a/scripts/check-interface.py
++++ b/scripts/check-interface.py
+@@ -9,6 +9,8 @@ import tempfile
+ ROOT = Path(__file__).resolve().parent.parent
+ MODULES = ["GoLean/GoCore/Trace", "GoLean/GoCore/PoolTrace",
+            "GoLean/GoCore/ProgramTrace", "GoLean/Interface",
++           "GoLean/GoCore/AdmissionIndices", "GoLean/GoCore/AdmissionPolicy",
++           "GoLean/GoCore/Admission",
+            "Tests/InterfaceContract", "Tests/InterfaceAudit"]
+ HARNESS = "\n".join(f"import {m.replace('/', '.')}" for m in MODULES)
+ HARNESS += "\n#eval InterfaceAudit.run\n"
+diff --git a/spikes/gate-a1/GateA1/Audit.lean b/spikes/gate-a1/GateA1/Audit.lean
+index 69d71d77..e435be82 100644
+--- a/spikes/gate-a1/GateA1/Audit.lean
++++ b/spikes/gate-a1/GateA1/Audit.lean
+@@ -29,7 +29,9 @@ def GateA1Audit.run : CoreM Unit := do
+       | throwError "Gate A1: missing theorem {n}"
+   let ours := env.header.moduleNames.map (fun n => n.getRoot == `GateA1 ||
+       [`GoLean.GoCore.Trace, `GoLean.GoCore.PoolTrace,
+-       `GoLean.GoCore.ProgramTrace, `GoLean.Interface, `Tests.InterfaceContract].contains n)
++       `GoLean.GoCore.ProgramTrace, `GoLean.Interface, `Tests.InterfaceContract,
++       `GoLean.GoCore.AdmissionIndices, `GoLean.GoCore.AdmissionPolicy,
++       `GoLean.GoCore.Admission].contains n)
+   let mut checked := 0
+   for (n, _) in env.constants.toList do
+     let localModule := match env.getModuleIdxFor? n with
+diff --git a/spikes/iris-customer/GoLeanIris/Audit.lean b/spikes/iris-customer/GoLeanIris/Audit.lean
+index 03e92508..5dc8e87a 100644
+--- a/spikes/iris-customer/GoLeanIris/Audit.lean
++++ b/spikes/iris-customer/GoLeanIris/Audit.lean
+@@ -35,7 +35,9 @@ def GoLeanIrisAudit.run : CoreM Unit := do
+   let ours := env.header.moduleNames.map
+     (fun n => n.getRoot == `GoLeanIris || n.getRoot == `GateA1 ||
+       [`GoLean.GoCore.Trace, `GoLean.GoCore.PoolTrace,
+-       `GoLean.GoCore.ProgramTrace, `GoLean.Interface, `Tests.InterfaceContract].contains n)
++       `GoLean.GoCore.ProgramTrace, `GoLean.Interface, `Tests.InterfaceContract,
++       `GoLean.GoCore.AdmissionIndices, `GoLean.GoCore.AdmissionPolicy,
++       `GoLean.GoCore.Admission].contains n)
+   let mut checked := 0
+   for (n, _) in env.constants.toList do
+     let localModule := match env.getModuleIdxFor? n with

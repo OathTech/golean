@@ -1884,6 +1884,36 @@ refactoring … not credible assurance estimates while Gates A and D
 remain unresolved»; they are RETAINED as refactoring estimates and
 WITHDRAWN as assurance estimates; ranges are re-issued after Gate A.
 
+### 7.4.1 Executed consumer-contract increments (2026-09-05)
+
+[USER] authorized the proposed landing and next-step sequence; [AGENT]
+implemented it in separate worktrees with independent adversarial reviews.
+These bounded increments refine wave item (1); they do not close Gate A or
+authorize a stable/concurrent pin.
+
+| Increment | Delivered contract and evidence | Remaining boundary |
+|---|---|---|
+| A2 customer | Landed `700128f3`; initialized Iris ownership, recovery WP, actual entry-to-readout and three differential controls; independent review PASS | General composition and labelled/concurrent adequacy remain open |
+| BUG-103 | Landed `8ad8cfc8`; fresh full integration measurement 3598 = 3353 PASS / 245 known FAIL, with no unrelated drift; both customer gates pass | Normalization is not source/target Go convertibility or typed admission; one slow-tier certificate remains cached |
+| Experimental semantic interface | Landed `4919b05a`; `GoLean/Interface.lean` exposes the promoted `GoLean.Semantics` bridges; semantic counterexamples and dependency audit run in ordinary CI; independent review PASS | Existing machine representation and internal customer dependencies remain explicit; no stable I5/G-PIN claim |
+| A3a: first admission slice | `GoCore.Admission.checkBoolean` is sound and complete for exactly `IndexStructure ∧ Entry ∧ BooleanSyntax`; native artifact witness, 32 kernel regressions and independent review PASS; see `docs/2026-09-05_a3-admission-design.md` | Opt-in only. No lexical typing, definite return, general name validity, typed runtime states or refusal-freedom claim; the A2 recovery program is outside this Boolean profile |
+
+The next useful admission task is **A3b: scoped variable/result typing and
+an entry/setup theorem for the Boolean fragment**, with a stronger, separately
+named predicate that rejects the admitted unbound-variable counterexample.
+Then extend admission to the A2 program's calls, captures, initialization
+and recovery. Adding syntax alone does not discharge typing or preservation.
+The current checker deliberately leaves method-set/display metadata outside
+its guarantee; it does not interpret frontend key spelling as semantics.
+
+B7 then C1 retain their sequence and existing differential/detector gates.
+Both live customers must continue passing across those changes. General
+composition remains a demonstrated-contract task before C3; changing the
+continuation representation still does not supply unconditional context laws.
+The type-descriptor decision, frontend rejection leg and scoped Gate D pin
+criteria remain separate open work. See the current lane handoffs and sealed
+evidence; no old assurance estimate is reinstated by these small successes.
+
 ### 7.5 The F10 consequence (RULED [USER], Q1) for §3.A and §3.H
 
 - **In scope here, permanently:** the semantic transition relation

@@ -14,6 +14,8 @@ def InterfaceAudit.run : CoreM Unit := do
   let modules : List Name := [
     `GoLean.GoCore.Trace, `GoLean.GoCore.PoolTrace,
     `GoLean.GoCore.ProgramTrace, `GoLean.Interface,
+    `GoLean.GoCore.AdmissionIndices, `GoLean.GoCore.AdmissionPolicy,
+    `GoLean.GoCore.Admission,
     `Tests.InterfaceContract, `Tests.InterfaceAudit]
   let exports : List Name := [
     ``GoLean.Semantics.iter_iff_trace, ``GoLean.Semantics.Trace.erase,
@@ -24,6 +26,9 @@ def InterfaceAudit.run : CoreM Unit := do
     ``GoLean.Semantics.Pool.observation_iff,
     ``GoLean.Semantics.Pool.fuel_is_not_observation,
     ``GoLean.Semantics.Pool.refusal_is_not_observation,
+    ``GoLean.GoCore.Admission.checkBoolean_iff,
+    ``GoLean.GoCore.Admission.admitted_index_bound,
+    ``GoLean.GoCore.Admission.admitted_all_bodies,
     ``GoLean.GateA1.recover_step_does_not_transport,
     ``GoLean.GateA1.fixed_stream_not_existential_path,
     ``GoLean.GateA1.address_bound_admits_ill_typed,

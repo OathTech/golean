@@ -1,0 +1,15 @@
+promoted-compile exit 0
+
+admission-own-rejection exit 1
+/home/dev/projects/golean/.claude/worktrees/gate-a3-admission/.tmp/a3-integration-review-a8q7veno/integrated-admission-private/admission_own_rejection.lean:2:0: error: Admission audit: _private.GoLean.GoCore.Admission.0.reviewedIntegratedAdmissionHole depends on forbidden axiom _private.GoLean.GoCore.Admission.0.reviewedIntegratedAdmissionHole
+
+promoted-core-rejection exit 1
+/home/dev/projects/golean/.claude/worktrees/gate-a3-admission/.tmp/a3-integration-review-a8q7veno/integrated-admission-private/promoted_core_rejection.lean:3:0: error: Semantic interface: _private.GoLean.GoCore.Admission.0.reviewedIntegratedAdmissionHole depends on forbidden axiom _private.GoLean.GoCore.Admission.0.reviewedIntegratedAdmissionHole
+
+promoted-a1-rejection exit 1
+/home/dev/projects/golean/.claude/worktrees/gate-a3-admission/.tmp/a3-integration-review-a8q7veno/integrated-admission-private/promoted_a1_rejection.lean:2:0: error: Gate A1: _private.GoLean.GoCore.Admission.0.reviewedIntegratedAdmissionHole depends on forbidden axiom _private.GoLean.GoCore.Admission.0.reviewedIntegratedAdmissionHole
+
+promoted-a2-rejection exit 1
+/home/dev/projects/golean/.claude/worktrees/gate-a3-admission/.tmp/a3-integration-review-a8q7veno/integrated-admission-private/promoted_a2_rejection.lean:2:0: error: Iris customer: _private.GoLean.GoCore.Admission.0.reviewedIntegratedAdmissionHole depends on forbidden axiom _private.GoLean.GoCore.Admission.0.reviewedIntegratedAdmissionHole
+
+Promoted Admission unused private axiom: compiled successfully and rejected by all four post-import audits.

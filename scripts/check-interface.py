@@ -9,6 +9,8 @@ import tempfile
 ROOT = Path(__file__).resolve().parent.parent
 MODULES = ["GoLean/GoCore/Trace", "GoLean/GoCore/PoolTrace",
            "GoLean/GoCore/ProgramTrace", "GoLean/Interface",
+           "GoLean/GoCore/AdmissionIndices", "GoLean/GoCore/AdmissionPolicy",
+           "GoLean/GoCore/Admission",
            "Tests/InterfaceContract", "Tests/InterfaceAudit"]
 HARNESS = "\n".join(f"import {m.replace('/', '.')}" for m in MODULES)
 HARNESS += "\n#eval InterfaceAudit.run\n"
