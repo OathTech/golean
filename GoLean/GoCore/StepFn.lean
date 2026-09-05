@@ -71,6 +71,54 @@ theorem deliverS_deliver {α : Type} {s : ExecState} {k : Cont} {ch : Choices}
     deliver s k (fun a => ((next a).1, (next a).2.1)) r chain = (c', s') := by
   cases r <;> simp_all [deliverS, deliver]
 
+/-- **Frame EXIT** (B4): what a body's completion does at its call frame
+— whether the body FELL OFF ITS END (`.next (.frame …)`) or RETURNED
+(`.signal .ret (.frame …)`): both entries are this ONE function (a
+`return` at a frame IS a fall-through at a frame; the relation's
+`frameFall*`/`frameReturn*` rule pairs are its two entries). Drain the
+defer chain one call per step — a deferred call's results are DISCARDED
+(Go), so the inner frame reads and stores nothing; an ENTRY panic is the
+invocation's panic and starts unwinding AT THIS FRAME with its remaining
+defers (audit F1+F5); a nil deferred callee's INVOCATION panics the same
+way (registration succeeded) — then, chain empty, read the pinned
+results: a targetless, resultless frame resumes the caller in one step; a
+frame with caller-target plans enters the tgtOpK spine POST-CALL (BUG-025
++ the BUG-052 order pin: the post-call point is gc's realized order — the
+pin covers only the call-vs-operand axis; the spine's left-to-right
+inter-target walk is our spec-legal realization of an axis left OPEN,
+per the rule-site latitude block), then the per-target storeK stores. A
+targetless frame WITH pinned results is stuck-closed after the same
+result read (the frontend always supplies targets for result-bearing
+calls; the pre-BUG-025 `storeMany [] (v::vs)` refusal). -/
+def stepFrameExit (s : ExecState) (targets : List (TargetShape × List Expr))
+    (tenv : LocalEnv) (results : List Loc) (ds : List (GoValue × List GoValue))
+    (k' : Cont) (w : Bool) (choices : Choices) :
+    Except Stop (Config × ExecState × Choices) := do
+  match targets, results, ds with
+  | [], [], [] => return (.next k', s, choices)
+  | [], rl :: rls, [] => do
+      let _ ← loadMany s (rl :: rls)
+      throw (.stuck "extra GoCore assignment value")
+  | (sh, e :: ops) :: rest, results, [] => do
+      let vs ← loadMany s results
+      return (.evalE e tenv
+        (.tgtOpK sh [] ops [] rest .vals [] vs (.seqn #[]) tenv k'), s, choices)
+  | (_, []) :: _, _, [] =>
+      throw (.internal "malformed call target plan")
+  | targets, results, (cv, args) :: ds =>
+      match cv with
+      | .funcVal fid captured => do
+          let (r, ch') ← enterFramePick s fid (captured ++ args) choices
+          return deliverS s (.frame targets tenv results ds k' w) ch'
+            (fun (func, frameEnv, _, s') =>
+              (.exec func.body frameEnv
+                (.frame [] [] [] [] (.frame targets tenv results ds k' w) func.wrapper),
+                s', ch')) r
+      | .nil =>
+          return (.panicking [panicEntry nilDerefPanicText]
+            (.frame targets tenv results ds k' w), s, choices)
+      | other => throw (.stuck s!"deferred callee is not a function value: {repr other}")
+
 /-- One machine step. `.ok` is a step the relation permits (including
 steps *to* `.panicked`); `.error` means the machine is stuck here, with
 the reason. Never call on a terminal configuration (the driver guards). -/
@@ -144,13 +192,15 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               | _ => throw (.stuck "unclassified assignee")
       | .ifThenElse c t e => return (.evalE c env (.ifK t e env k), s, choices)
       | .while c b => return (.evalE c env (.whileK c b env k), s, choices)
-      | .returnStmt => return (.returning k, s, choices)
-      | .breakStmt => return (.breaking k, s, choices)
-      | .continueStmt => return (.continuing k, s, choices)
+      -- The five control transfers RAISE their signal (B4; rule
+      -- `signalStmt` — `Stmt.signal?` is the table these five arms are).
+      | .returnStmt => return (.signal .ret k, s, choices)
+      | .breakStmt => return (.signal .brk k, s, choices)
+      | .continueStmt => return (.signal .cont k, s, choices)
       | .inertLabel _ => return (.next k, s, choices)
       | .labeled name b => return (.exec b env (.labelK name k), s, choices)
-      | .breakTo name => return (.breakingTo name k, s, choices)
-      | .continueTo name => return (.continuingTo name k, s, choices)
+      | .breakTo name => return (.signal (.brkTo name) k, s, choices)
+      | .continueTo name => return (.signal (.contTo name) k, s, choices)
       | .breakable b => return (.exec b env (.breakableK k), s, choices)
       | .deferCall callee args =>
           return (.evalE callee env (.deferCalleeK args.toList env k), s, choices)
@@ -552,47 +602,11 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .seq (t :: rest) env k' => return (.exec t env (.seq rest env k'), s, choices)
       | .seq [] _ k' => return (.next k', s, choices)
       | .loop c b env k' => return (.exec (.while c b) env k', s, choices)
-      | .frame [] _ [] [] k' _ => return (.next k', s, choices)
-      | .frame [] _ (rl :: rls) [] _ _ => do
-          -- Targetless frame with pinned results: the frontend always
-          -- supplies targets for result-bearing calls; stuck-closed as
-          -- before the BUG-025 migration (the old storeMany [] (v::vs)
-          -- refusal), after the same result read.
-          let _ ← loadMany s (rl :: rls)
-          throw (.stuck "extra GoCore assignment value")
-      | .frame ((sh, e :: ops) :: rest) tenv results [] k' _ => do
-          -- BUG-025 + the BUG-052 order pin: read the pinned results,
-          -- then evaluate the caller-target operands POST-CALL through
-          -- the tgtOpK spine (the POST-CALL point is gc's realized
-          -- order — the pin covers only the call-vs-operand axis; the
-          -- spine's left-to-right INTER-TARGET walk is our spec-legal
-          -- realization of an axis left OPEN, per the rule-site
-          -- latitude block), then the per-target storeK stores.
-          let vs ← loadMany s results
-          return (.evalE e tenv
-            (.tgtOpK sh [] ops [] rest .vals [] vs (.seqn #[]) tenv k'), s, choices)
-      | .frame ((_, []) :: _) _ _ [] _ _ =>
-          throw (.internal "malformed call target plan")
-      | .frame targets tenv results ((cv, args) :: ds) k' w =>
-          match cv with
-          | .funcVal fid captured => do
-              -- A deferred call's results are DISCARDED (Go); only effects
-              -- matter, so the inner frame reads and stores nothing. An
-              -- ENTRY panic is the invocation's panic: it starts unwinding
-              -- at this frame with its remaining defers (audit F1+F5,
-              -- mirroring the .nil arm below).
-              let (r, ch') ← enterFramePick s fid (captured ++ args) choices
-              return deliverS s (.frame targets tenv results ds k' w) ch'
-                (fun (func, frameEnv, _, s') =>
-                  (.exec func.body frameEnv
-                    (.frame [] [] [] [] (.frame targets tenv results ds k' w) func.wrapper),
-                    s', ch')) r
-          | .nil =>
-              -- Registration succeeded; the INVOCATION panics (Go), and
-              -- this frame's remaining defers run on the panic path.
-              return (.panicking [panicEntry nilDerefPanicText]
-                (.frame targets tenv results ds k' w), s, choices)
-          | other => throw (.stuck s!"deferred callee is not a function value: {repr other}")
+      -- The body fell off its end at its call frame: frame EXIT
+      -- (`stepFrameExit` — the same function a `return` at the frame
+      -- takes, B4).
+      | .frame targets tenv results ds k' w =>
+          stepFrameExit s targets tenv results ds k' w choices
       | .panicResumeK chain k' =>
           if chainNewestRecovered chain then
             -- Recovered: the unwind is cancelled; the frame below resumes
@@ -645,107 +659,18 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           | [], [] => return (.exec body env k', s, choices)
           | _, _ => throw (.internal "storeK value/target arity mismatch (the shared phase-2 spine: receive delivery, assignment, comma-ok, call write-back)")
       | _ => throw (.internal "completion delivered to expression continuation")
-  | .breaking k =>
-      match k with
-      | .seq _ _ k' => return (.breaking k', s, choices)
-      | .loop _ _ _ k' => return (.next k', s, choices)
-      | .breakableK k' => return (.next k', s, choices)
-      | .labelK _ k' => return (.breaking k', s, choices)
-      | .mapIterK _ _ _ _ _ _ _ _ _ k' => return (.next k', s, choices)
-      | .frame _ _ _ _ _ _ => throw (.stuck "function body escaped with break")
-      | .stop => throw (.stuck "break outside loop")
-      | _ => throw (.internal "break delivered to expression continuation")
-  | .continuing k =>
-      match k with
-      | .seq _ _ k' => return (.continuing k', s, choices)
-      | .breakableK k' => return (.continuing k', s, choices)
-      | .labelK _ k' => return (.continuing k', s, choices)
-      | .loop c b env k' => return (.exec (.while c b) env k', s, choices)
-      | .mapIterK keyVar valVar keyTy valTy body base produced start env k' =>
-          return (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k'), s, choices)
-      | .frame _ _ _ _ _ _ => throw (.stuck "function body escaped with continue")
-      | .stop => throw (.stuck "continue outside loop")
-      | _ => throw (.internal "continue delivered to expression continuation")
-  | .returning k =>
-      match k with
-      | .seq _ _ k' => return (.returning k', s, choices)
-      | .breakableK k' => return (.returning k', s, choices)
-      | .labelK _ k' => return (.returning k', s, choices)
-      | .loop _ _ _ k' => return (.returning k', s, choices)
-      | .mapIterK _ _ _ _ _ _ _ _ _ k' => return (.returning k', s, choices)
-      | .frame [] _ [] [] k' _ => return (.next k', s, choices)
-      | .frame [] _ (rl :: rls) [] _ _ => do
-          -- Targetless frame with pinned results: the frontend always
-          -- supplies targets for result-bearing calls; stuck-closed as
-          -- before the BUG-025 migration (the old storeMany [] (v::vs)
-          -- refusal), after the same result read.
-          let _ ← loadMany s (rl :: rls)
-          throw (.stuck "extra GoCore assignment value")
-      | .frame ((sh, e :: ops) :: rest) tenv results [] k' _ => do
-          -- BUG-025 + the BUG-052 order pin: read the pinned results,
-          -- then evaluate the caller-target operands POST-CALL through
-          -- the tgtOpK spine (the POST-CALL point is gc's realized
-          -- order — the pin covers only the call-vs-operand axis; the
-          -- spine's left-to-right INTER-TARGET walk is our spec-legal
-          -- realization of an axis left OPEN, per the rule-site
-          -- latitude block), then the per-target storeK stores.
-          let vs ← loadMany s results
-          return (.evalE e tenv
-            (.tgtOpK sh [] ops [] rest .vals [] vs (.seqn #[]) tenv k'), s, choices)
-      | .frame ((_, []) :: _) _ _ [] _ _ =>
-          throw (.internal "malformed call target plan")
-      | .frame targets tenv results ((cv, args) :: ds) k' w =>
-          match cv with
-          | .funcVal fid captured => do
-              -- A deferred call's results are DISCARDED (Go); only effects
-              -- matter, so the inner frame reads and stores nothing. An
-              -- ENTRY panic is the invocation's panic: it starts unwinding
-              -- at this frame with its remaining defers (audit F1+F5,
-              -- mirroring the .nil arm below).
-              let (r, ch') ← enterFramePick s fid (captured ++ args) choices
-              return deliverS s (.frame targets tenv results ds k' w) ch'
-                (fun (func, frameEnv, _, s') =>
-                  (.exec func.body frameEnv
-                    (.frame [] [] [] [] (.frame targets tenv results ds k' w) func.wrapper),
-                    s', ch')) r
-          | .nil =>
-              -- Registration succeeded; the INVOCATION panics (Go), and
-              -- this frame's remaining defers run on the panic path.
-              return (.panicking [panicEntry nilDerefPanicText]
-                (.frame targets tenv results ds k' w), s, choices)
-          | other => throw (.stuck s!"deferred callee is not a function value: {repr other}")
-      | .stop => throw (.internal "return unwound past the entry frame")
-      | _ => throw (.internal "return delivered to expression continuation")
-  | .breakingTo L k =>
-      match k with
-      | .seq _ _ k' => return (.breakingTo L k', s, choices)
-      | .loop _ _ _ k' => return (.breakingTo L k', s, choices)
-      | .breakableK k' => return (.breakingTo L k', s, choices)
-      | .mapIterK _ _ _ _ _ _ _ _ _ k' => return (.breakingTo L k', s, choices)
-      | .labelK name k' =>
-          if name = L then return (.next k', s, choices)
-          else return (.breakingTo L k', s, choices)
-      | .frame _ _ _ _ _ _ => throw (.stuck "function body escaped with labeled break")
-      | .stop => throw (.stuck s!"labeled break escaped its label: {L}")
-      | _ => throw (.internal "labeled break delivered to expression continuation")
-  | .continuingTo L k =>
-      match k with
-      | .seq _ _ k' => return (.continuingTo L k', s, choices)
-      | .breakableK k' => return (.continuingTo L k', s, choices)
-      | .labelK name k' =>
-          if name = L then throw (.stuck s!"continue to non-loop label {L}")
-          else return (.continuingTo L k', s, choices)
-      | .loop c b env k' =>
-          if contHeadLabel k' = some L then
-            return (.exec (.while c b) env k', s, choices)
-          else return (.continuingTo L k', s, choices)
-      | .mapIterK keyVar valVar keyTy valTy body base produced start env k' =>
-          if contHeadLabel k' = some L then
-            return (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k'), s, choices)
-          else return (.continuingTo L k', s, choices)
-      | .frame _ _ _ _ _ _ => throw (.stuck "function body escaped with labeled continue")
-      | .stop => throw (.stuck s!"labeled continue escaped its label: {L}")
-      | _ => throw (.internal "labeled continue delivered to expression continuation")
+  | .signal sg k =>
+      -- The frame×signal TABLE (B4, rule `signal`): pass, catch, or —
+      -- where the table has no successor — the call frame's `ret` is the
+      -- frame EXIT (the `.next` exit's twin, `stepFrameExit`) and every
+      -- other shape is a refusal that names its cause.
+      match signalStep sg k with
+      | some c' => return (c', s, choices)
+      | none =>
+          match sg, k with
+          | .ret, .frame targets tenv results ds k' w =>
+              stepFrameExit s targets tenv results ds k' w choices
+          | _, _ => throw (signalRefusal sg k)
   -- Blocked configurations (channels arc slice 1): relation-silent — no
   -- pairing partner can exist in the sequential machine, so stepping one
   -- IS the deadlocked run (Go: "all goroutines are asleep"). Classified
@@ -830,9 +755,9 @@ def execStmtLoop : Nat → ExecState → Config → Choices →
   | fuel, σ, c, choices =>
       match c with
       | .next .stop => return (.normal σ, choices)
-      | .returning .stop => return (.returned σ, choices)
-      | .breaking .stop => return (.broke σ, choices)
-      | .continuing .stop => return (.continued σ, choices)
+      | .signal .ret .stop => return (.returned σ, choices)
+      | .signal .brk .stop => return (.broke σ, choices)
+      | .signal .cont .stop => return (.continued σ, choices)
       | .panicked msg => throw (.panic msg)
       | .blockedSend _ _ _ => throw .deadlock
       | .blockedRecv _ _ _ _ _ => throw .deadlock

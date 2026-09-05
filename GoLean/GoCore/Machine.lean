@@ -2216,15 +2216,15 @@ inductive Cont where
   2026-07-25; Go's rule). -/
   | deferArgsK (callee : GoValue) (vals : List GoValue)
       (pending : List Expr) (env : LocalEnv) (k : Cont)
-  /-- Breakable scope (`Stmt.breakable`): catches `breaking`, passes
-  `continuing`/`returning` through. -/
+  /-- Breakable scope (`Stmt.breakable`): catches the `brk` signal, passes
+  every other through (the `signalStep` table's `breakableK` row). -/
   | breakableK (k : Cont)
-  /-- Label scope (`Stmt.labeled`, control-flow slice): catches
-  `breakingTo` at a matching label; a `loop`/`mapIterK` whose IMMEDIATE
-  continuation is a matching `labelK` is the labeled loop `continuingTo`
-  targets (`contHeadLabel`). Bare `breaking`/`continuing`/`returning`
-  pass through — a bare break targets the innermost for/switch
-  regardless of labels. -/
+  /-- Label scope (`Stmt.labeled`, control-flow slice): catches `brkTo`
+  at a matching label; a `loop`/`mapIterK` whose IMMEDIATE continuation
+  is a matching `labelK` is the labeled loop `contTo` targets
+  (`contHeadLabel`). The bare signals pass through — a bare break
+  targets the innermost for/switch regardless of labels (the
+  `signalStep` table's `labelK` row). -/
   | labelK (label : String) (k : Cont)
   /-- Awaiting the CALLEE value of a value call (a `funcVal`, or `nil`
   → panic). Carries the caller-target PLANS untouched (BUG-052 — the
@@ -2565,7 +2565,7 @@ def seqCont (ss : List Stmt) (env : LocalEnv) : Cont → Cont
   | k => .seq ss env k
 
 /-- The label carried by the HEAD of a continuation, if it is a `labelK`.
-The labeled-loop test for `continuingTo`: the frontend attaches
+The labeled-loop test for the `contTo` signal: the frontend attaches
 `Stmt.labeled` directly around the loop-forming statement, so a labeled
 loop's `Cont.loop`/`Cont.mapIterK` has its `labelK` as the immediate
 continuation — and ONLY labeled loops do. -/
@@ -2649,6 +2649,36 @@ def recoverResult (k : Cont) : GoValue × Cont :=
             | none => (.nil, .frame t te r ds k' false))
       | k => some (.nil, k)) k).getD (.nil, k)
 
+/-- **The non-local control signals** (design-hygiene B4, review Q6):
+what `break`, `continue`, `return`, `break L` and `continue L` put in
+flight. ONE control form carries all five (`Config.signal`); ONE table
+says what each statement frame does with each of them (`signalStep`).
+`brkTo`/`contTo` travel to the `labelK` for `L` / the loop whose head is
+the `labelK` for `L` (`contHeadLabel` — the frontend's placement
+invariant); none of the five ever crosses a call frame except `ret`,
+which EXITS it (`go/types` guarantees enclosure — the machine fails
+closed on the rest). `goto` (FR-11/FR-20), if it ever lowers, lowers to a
+signal — never to a frame-discarding jump (the reasoning-surface plan
+§1.3: signals respect `fill`). -/
+inductive Signal where
+  | brk
+  | cont
+  | ret
+  | brkTo (label : String)
+  | contTo (label : String)
+  deriving Repr, DecidableEq
+
+/-- The signal a statement RAISES, if it is one of the five control
+transfers (the `signalStmt` rule's premise; `none` for every other
+statement). -/
+def _root_.GoLean.GoCore.Stmt.signal? : Stmt → Option Signal
+  | .returnStmt => some .ret
+  | .breakStmt => some .brk
+  | .continueStmt => some .cont
+  | .breakTo label => some (.brkTo label)
+  | .continueTo label => some (.contTo label)
+  | _ => none
+
 /-- Control configurations (the Iris `Expr` projection; the `ExecState` is
 the paired `Step` component, as before). New over the old relation:
 `evalE` (expression under evaluation) and `retV` (value delivery). The
@@ -2659,18 +2689,14 @@ inductive Config where
   | evalE (e : Expr) (env : LocalEnv) (k : Cont)
   | retV (v : GoValue) (k : Cont)
   | next (k : Cont)
-  | breaking (k : Cont)
-  | continuing (k : Cont)
-  | returning (k : Cont)
-  /-- `break L` travelling outward to the `labelK` for `L` (control-flow
-  slice). Strips statement frames like `.breaking`, but is caught only by
-  the MATCHING label; never crosses a call frame (`go/types` guarantees
-  enclosure — the machine fails closed there). -/
-  | breakingTo (label : String) (k : Cont)
-  /-- `continue L` travelling outward to the loop labeled `L`: caught by a
-  `loop`/`mapIterK` whose immediate continuation is the matching
-  `labelK` (`contHeadLabel`). -/
-  | continuingTo (label : String) (k : Cont)
+  /-- A control SIGNAL travelling outward through the continuation (B4 —
+  the former `.breaking`/`.continuing`/`.returning`/`.breakingTo`/
+  `.continuingTo` constructors, one form): each statement frame either
+  passes it on, catches it, or refuses it — the frame×signal table
+  `signalStep`; the call frame catches `ret` alone (frame exit — the
+  `.next` frame-exit rules' twins, state-touching, so they are rules of
+  their own). -/
+  | signal (sg : Signal) (k : Cont)
   /-- Unwinding: a panic (chain, arc doc §A1) travelling outward through
   the continuation. Frames strip; call frames run their defers (which is
   where `recover` can catch it); `.stop` renders the terminal abort. -/
@@ -2758,9 +2784,105 @@ program-aborting `.panicked`. `threadDone` and the boundary predicate
 consume this; the drivers, which need the OUTCOME behind the shape, keep
 their per-shape classification. -/
 def Config.isTerminal : Config → Bool
-  | .next .stop | .returning .stop | .breaking .stop | .continuing .stop => true
+  | .next .stop | .signal .ret .stop | .signal .brk .stop | .signal .cont .stop => true
   | .panicked _ => true
   | _ => false
+
+/-! ## The signal table (B4) -/
+
+/-- **THE FRAME×SIGNAL TABLE** — the one place that says what a
+statement frame does with a control signal (review Q6: ~40 longhand
+rules were this table written out). `some c'` is the successor; `none`
+means the frame does NOT resolve the signal purely — the call frame's
+`ret` (frame EXIT, state-touching: the `frameReturn*` rules /
+`stepFrameExit`), and every REFUSAL (`signalRefusal` names the cause).
+
+| frame ╲ signal | `brk`         | `cont`                | `ret` | `brkTo L`                    | `contTo L`                                   |
+|---|---|---|---|---|---|
+| `seq`          | pass          | pass                  | pass  | pass                         | pass                                         |
+| `breakableK`   | exit → `next` | pass                  | pass  | pass                         | pass                                         |
+| `labelK name`  | pass          | pass                  | pass  | name = L → `next`; else pass | name = L → REFUSE (non-loop label); else pass |
+| `loop`         | exit → `next` | re-test (`while`)     | pass  | pass                         | head label = L → re-test; else pass          |
+| `mapIterK`     | exit → `next` | re-pick (`next` frame) | pass | pass                         | head label = L → re-pick; else pass          |
+| `frame`        | REFUSE        | REFUSE                | EXIT (rules) | REFUSE                | REFUSE                                       |
+| `stop`         | REFUSE        | REFUSE                | REFUSE (past the entry frame) | REFUSE (escaped label) | REFUSE (escaped label)        |
+| expression glue | REFUSE (internal) | … | … | … | … |
+
+"pass" = `.signal sg k'` (strip the frame, keep travelling). The
+re-test of a `loop` re-enters the `while` (its condition is evaluated
+again); the re-pick of a `mapIterK` returns to the frame's pick step. -/
+def signalStep (sg : Signal) : Cont → Option Config
+  | .seq _ _ k' => some (.signal sg k')
+  | .breakableK k' =>
+      match sg with
+      | .brk => some (.next k')
+      | _ => some (.signal sg k')
+  | .labelK name k' =>
+      match sg with
+      | .brkTo L => if name = L then some (.next k') else some (.signal sg k')
+      | .contTo L => if name = L then none else some (.signal sg k')
+      | _ => some (.signal sg k')
+  | .loop c b env k' =>
+      match sg with
+      | .brk => some (.next k')
+      | .cont => some (.exec (.while c b) env k')
+      | .contTo L =>
+          if contHeadLabel k' = some L then some (.exec (.while c b) env k')
+          else some (.signal sg k')
+      | _ => some (.signal sg k')
+  | .mapIterK keyVar valVar keyTy valTy body base produced start env k' =>
+      match sg with
+      | .brk => some (.next k')
+      | .cont => some (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k'))
+      | .contTo L =>
+          if contHeadLabel k' = some L then
+            some (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k'))
+          else some (.signal sg k')
+      | _ => some (.signal sg k')
+  | _ => none
+
+/-- The table has no `.frame` row (a call frame is exited by `ret` — the
+frame-exit rules — and refuses every other signal) and no `.stop` row (a
+signal at the empty continuation is relation-terminal). -/
+@[simp] theorem signalStep_frame {sg : Signal} {targets : List (TargetShape × List Expr)}
+    {tenv : LocalEnv} {results : List Loc} {ds : List (GoValue × List GoValue)}
+    {k : Cont} {w : Bool} :
+    signalStep sg (.frame targets tenv results ds k w) = none := rfl
+
+@[simp] theorem signalStep_stop {sg : Signal} : signalStep sg .stop = none := rfl
+
+/-- The REFUSAL a signal meets where the table has no successor and the
+frame is not `ret`-at-a-call-frame — every one names its cause (fail
+closed): a signal escaping its function body or its label, `continue`
+to a non-loop label, a signal delivered to an expression frame (a
+machine-internal shape breach). Total, so `stepFn`'s signal arm has no
+absorbing default. -/
+def signalRefusal (sg : Signal) : Cont → Stop
+  | .frame .. =>
+      match sg with
+      | .brk => .stuck "function body escaped with break"
+      | .cont => .stuck "function body escaped with continue"
+      | .ret => .internal "return at a call frame is the frame exit, never a refusal"
+      | .brkTo _ => .stuck "function body escaped with labeled break"
+      | .contTo _ => .stuck "function body escaped with labeled continue"
+  | .stop =>
+      match sg with
+      | .brk => .stuck "break outside loop"
+      | .cont => .stuck "continue outside loop"
+      | .ret => .internal "return unwound past the entry frame"
+      | .brkTo L => .stuck s!"labeled break escaped its label: {L}"
+      | .contTo L => .stuck s!"labeled continue escaped its label: {L}"
+  | .labelK _ _ =>
+      match sg with
+      | .contTo L => .stuck s!"continue to non-loop label {L}"
+      | _ => .internal "signal at a label frame the table resolves"
+  | _ =>
+      match sg with
+      | .brk => .internal "break delivered to expression continuation"
+      | .cont => .internal "continue delivered to expression continuation"
+      | .ret => .internal "return delivered to expression continuation"
+      | .brkTo _ => .internal "labeled break delivered to expression continuation"
+      | .contTo _ => .internal "labeled continue delivered to expression continuation"
 
 /-- The head of an APPLY position (A7): which apply the last operand's
 arrival triggers. -/
@@ -2874,7 +2996,7 @@ def entryCallSite? : Config → Option (FuncId × List GoValue)
       some (fid, captured ++ vals ++ [v])
   | .next (.frame _ _ _ ((.funcVal fid captured, args) :: _) _ _) =>
       some (fid, captured ++ args)
-  | .returning (.frame _ _ _ ((.funcVal fid captured, args) :: _) _ _) =>
+  | .signal .ret (.frame _ _ _ ((.funcVal fid captured, args) :: _) _ _) =>
       some (fid, captured ++ args)
   | .panicking _ (.frame _ _ _ ((.funcVal fid captured, args) :: _) _ _) =>
       some (fid, captured ++ args)
@@ -3899,12 +4021,17 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       Step (.next (.seq (t :: rest) env k)) s (.exec t env (.seq rest env k)) s
   | seqDone {env k s} :
       Step (.next (.seq [] env k)) s (.next k) s
-  | seqBreak {rest env k s} :
-      Step (.breaking (.seq rest env k)) s (.breaking k) s
-  | seqContinue {rest env k s} :
-      Step (.continuing (.seq rest env k)) s (.continuing k) s
-  | seqReturn {rest env k s} :
-      Step (.returning (.seq rest env k)) s (.returning k) s
+  /-- **The signal rules** (B4): a control-transfer statement RAISES its
+  signal (`Stmt.signal?`), and a signal in flight steps by the
+  frame×signal table (`signalStep`) — pass, catch, or no rule. The one
+  state-touching catch, `ret` at a call frame, is the frame-exit rule
+  family below (`frameReturn*`, the `.next` exit rules' twins). -/
+  | signalStmt {stmt sg env k s} :
+      stmt.signal? = some sg →
+      Step (.exec stmt env k) s (.signal sg k) s
+  | signal {sg k c' s} :
+      signalStep sg k = some c' →
+      Step (.signal sg k) s c' s
   -- Blocks and declarations
   | block {decls ss env env' k s s'} :
       allocDecls env.pushScope s decls.toList = .ok (env', s') →
@@ -3936,93 +4063,29 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       Step (.retV (.bool false) (.whileK c b env k)) s (.next k) s
   | loopNext {c b env k s} :
       Step (.next (.loop c b env k)) s (.exec (.while c b) env k) s
-  | loopContinue {c b env k s} :
-      Step (.continuing (.loop c b env k)) s (.exec (.while c b) env k) s
-  | loopBreak {c b env k s} :
-      Step (.breaking (.loop c b env k)) s (.next k) s
-  | loopReturn {c b env k s} :
-      Step (.returning (.loop c b env k)) s (.returning k) s
-  -- Breakable scopes (switch/select bodies): `break` exits the scope,
-  -- everything else unwinds past it unchanged.
+  -- Breakable scopes (switch/select bodies): `break` exits the scope
+  -- (the table's `breakableK` row), everything else unwinds past it.
   | breakableEnter {b env k s} :
       Step (.exec (.breakable b) env k) s (.exec b env (.breakableK k)) s
   | breakableDone {k s} :
       Step (.next (.breakableK k)) s (.next k) s
-  | breakableBreak {k s} :
-      Step (.breaking (.breakableK k)) s (.next k) s
-  | breakableContinue {k s} :
-      Step (.continuing (.breakableK k)) s (.continuing k) s
-  | breakableReturn {k s} :
-      Step (.returning (.breakableK k)) s (.returning k) s
-  -- Control transfer
-  | returnStmt {env k s} :
-      Step (.exec .returnStmt env k) s (.returning k) s
-  | breakStmt {env k s} :
-      Step (.exec .breakStmt env k) s (.breaking k) s
-  | continueStmt {env k s} :
-      Step (.exec .continueStmt env k) s (.continuing k) s
+  -- (Control transfer — `return`/`break`/`continue`/`break L`/`continue L`
+  -- — is the `signalStmt` rule; the per-frame handling is `signal`.)
   | inertLabel {name env k s} :
       Step (.exec (.inertLabel name) env k) s (.next k) s
-  -- Labeled statements and labeled break/continue (control-flow slice,
-  -- docs/2026-08-04_control-flow-design.md). The label scope catches
-  -- `breakingTo` at a match; bare signals pass through it; `continuingTo`
-  -- is caught by a loop whose immediate continuation is the matching
-  -- label (`contHeadLabel` — the frontend's placement invariant).
+  -- Labeled statements (control-flow slice,
+  -- docs/2026-08-04_control-flow-design.md). The label scope's handling
+  -- of every signal — catching `brkTo` at a match, passing the bare
+  -- signals, never being `contTo`'s target (a MATCHING label not guarded
+  -- by a loop head has no rule: statically impossible in Go — fail
+  -- closed) — is the table's `labelK` row; `contTo` is caught by a loop
+  -- whose immediate continuation is the matching label (`contHeadLabel`
+  -- — the frontend's placement invariant), the table's `loop`/`mapIterK`
+  -- rows.
   | labeledEnter {name b env k s} :
       Step (.exec (.labeled name b) env k) s (.exec b env (.labelK name k)) s
-  | breakToStmt {name env k s} :
-      Step (.exec (.breakTo name) env k) s (.breakingTo name k) s
-  | continueToStmt {name env k s} :
-      Step (.exec (.continueTo name) env k) s (.continuingTo name k) s
   | labelDone {name k s} :
       Step (.next (.labelK name k)) s (.next k) s
-  | labelBreak {name k s} :
-      Step (.breaking (.labelK name k)) s (.breaking k) s
-  | labelContinue {name k s} :
-      Step (.continuing (.labelK name k)) s (.continuing k) s
-  | labelReturn {name k s} :
-      Step (.returning (.labelK name k)) s (.returning k) s
-  | breakToSeq {L rest env k s} :
-      Step (.breakingTo L (.seq rest env k)) s (.breakingTo L k) s
-  | breakToLoop {L c b env k s} :
-      Step (.breakingTo L (.loop c b env k)) s (.breakingTo L k) s
-  | breakToBreakable {L k s} :
-      Step (.breakingTo L (.breakableK k)) s (.breakingTo L k) s
-  | breakToMapIter {L keyVar valVar keyTy valTy body base produced start env k s} :
-      Step (.breakingTo L (.mapIterK keyVar valVar keyTy valTy body base produced start env k)) s
-        (.breakingTo L k) s
-  | breakToLabelMatch {L name k s} :
-      name = L →
-      Step (.breakingTo L (.labelK name k)) s (.next k) s
-  | breakToLabelSkip {L name k s} :
-      name ≠ L →
-      Step (.breakingTo L (.labelK name k)) s (.breakingTo L k) s
-  | continueToSeq {L rest env k s} :
-      Step (.continuingTo L (.seq rest env k)) s (.continuingTo L k) s
-  | continueToBreakable {L k s} :
-      Step (.continuingTo L (.breakableK k)) s (.continuingTo L k) s
-  /-- A `labelK` reached by `continuingTo` is never the target: `continue
-  L` targets a LOOP labeled `L`, caught one frame earlier at the loop
-  whose head is the matching label. A non-matching label is stripped; a
-  MATCHING one not guarded by a loop head has no rule (statically
-  impossible in Go — fail closed). -/
-  | continueToLabelSkip {L name k s} :
-      name ≠ L →
-      Step (.continuingTo L (.labelK name k)) s (.continuingTo L k) s
-  | continueToLoopMatch {L c b env k s} :
-      contHeadLabel k = some L →
-      Step (.continuingTo L (.loop c b env k)) s (.exec (.while c b) env k) s
-  | continueToLoopSkip {L c b env k s} :
-      contHeadLabel k ≠ some L →
-      Step (.continuingTo L (.loop c b env k)) s (.continuingTo L k) s
-  | continueToMapIterMatch {L keyVar valVar keyTy valTy body base produced start env k s} :
-      contHeadLabel k = some L →
-      Step (.continuingTo L (.mapIterK keyVar valVar keyTy valTy body base produced start env k)) s
-        (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k)) s
-  | continueToMapIterSkip {L keyVar valVar keyTy valTy body base produced start env k s} :
-      contHeadLabel k ≠ some L →
-      Step (.continuingTo L (.mapIterK keyVar valVar keyTy valTy body base produced start env k)) s
-        (.continuingTo L k) s
   -- Calls (BUG-025 spine migration; ORDER pinned at the S1 audit,
   -- BUG-052): the CALL evaluates first — arguments left-to-right, then
   -- frame entry — and the caller-target PLANS ride the frame untouched.
@@ -4159,15 +4222,8 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       mapIterMandatoryRemains cands start = false →
       Step (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k)) s
         (.next k) s
-  | mapIterContinue {keyVar valVar keyTy valTy body base produced start env k s} :
-      Step (.continuing (.mapIterK keyVar valVar keyTy valTy body base produced start env k)) s
-        (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k)) s
-  | mapIterBreak {keyVar valVar keyTy valTy body base produced start env k s} :
-      Step (.breaking (.mapIterK keyVar valVar keyTy valTy body base produced start env k)) s
-        (.next k) s
-  | mapIterReturn {keyVar valVar keyTy valTy body base produced start env k s} :
-      Step (.returning (.mapIterK keyVar valVar keyTy valTy body base produced start env k)) s
-        (.returning k) s
+  -- (`break`/`continue`/`return` at the range frame: the table's
+  -- `mapIterK` row, rule `signal`.)
   -- Call through a function VALUE (§8): targets, then the callee, then the
   -- arguments; frame entry prepends the closure's captured values, which is
   -- the whole lambda-lifting protocol. `enterFrame` is reused verbatim.
@@ -4233,12 +4289,12 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   -- result-bearing calls, and the machine stays stuck-closed on the
   -- malformed shape as it always was.)
   | frameReturn {tenv k w s} :
-      Step (.returning (.frame [] tenv [] [] k w)) s (.next k) s
+      Step (.signal .ret (.frame [] tenv [] [] k w)) s (.next k) s
   | frameFall {tenv k w s} :
       Step (.next (.frame [] tenv [] [] k w)) s (.next k) s
   | frameReturnTargets {sh e ops rest tenv results k w s vs} :
       loadMany s results = .ok vs →
-      Step (.returning (.frame ((sh, e :: ops) :: rest) tenv results [] k w)) s
+      Step (.signal .ret (.frame ((sh, e :: ops) :: rest) tenv results [] k w)) s
         (.evalE e tenv (.tgtOpK sh [] ops [] rest .vals [] vs (.seqn #[]) tenv k)) s
   | frameFallTargets {sh e ops rest tenv results k w s vs} :
       loadMany s results = .ok vs →
@@ -4267,7 +4323,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
         (.exec func.body frameEnv
           (.frame [] [] [] [] (.frame targets tenv results ds k w) func.wrapper), s')) r
         = (c', s') →
-      Step (.returning (.frame targets tenv results ((.funcVal fid captured, args) :: ds) k w)) s c' s'
+      Step (.signal .ret (.frame targets tenv results ((.funcVal fid captured, args) :: ds) k w)) s c' s'
   /-- Invoking a nil deferred call panics at DRAIN time (Go: registration
   succeeded; the panic belongs to the invocation). The panic starts
   unwinding AT THIS FRAME with its remaining defers — which run, and may
@@ -4276,7 +4332,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       Step (.next (.frame targets tenv results ((.nil, args) :: ds) k w)) s
         (.panicking [panicEntry nilDerefPanicText] (.frame targets tenv results ds k w)) s
   | frameDeferNilReturn {targets tenv results args ds k w s} :
-      Step (.returning (.frame targets tenv results ((.nil, args) :: ds) k w)) s
+      Step (.signal .ret (.frame targets tenv results ((.nil, args) :: ds) k w)) s
         (.panicking [panicEntry nilDerefPanicText] (.frame targets tenv results ds k w)) s
   -- Registering a deferred call: callee, then arguments, evaluated NOW.
   | deferStmt {callee args env k s} :

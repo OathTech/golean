@@ -1591,7 +1591,7 @@ def stepAccesses (s : ExecState) (c : Config) : List RaceAccess :=
        | .funcVal fid captured => dispatchAccesses s fid (captured ++ vals ++ [v])
        | _ => [])
   | .next (.frame _ _ _ (d :: _) _ _) => deferEntryAccesses s d
-  | .returning (.frame _ _ _ (d :: _) _ _) => deferEntryAccesses s d
+  | .signal .ret (.frame _ _ _ (d :: _) _ _) => deferEntryAccesses s d
   | .panicking _ (.frame _ _ _ (d :: _) _ _) => deferEntryAccesses s d
   | .next (.storeK (r :: _) (_ :: _) _ _ _) => storeTargetAccess s r
   -- Frame EXIT (BUG-025 spine migration): the exit step only READS the
@@ -1600,7 +1600,7 @@ def stepAccesses (s : ExecState) (c : Config) : List RaceAccess :=
   -- exactly like every other phase-2 store.
   | .next (.frame _ _ results [] _ _) =>
       results.map ((.read, ·))
-  | .returning (.frame _ _ results [] _ _) =>
+  | .signal .ret (.frame _ _ results [] _ _) =>
       results.map ((.read, ·))
   | _ => []
 

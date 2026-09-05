@@ -706,11 +706,7 @@ def Config.eqbF : Nat → Config → Config → Bool
         Expr.eqbF f x1 x2 && e1 == e2 && Cont.eqbF f k1 k2
     | .retV v1 k1, .retV v2 k2 => GoValue.eqb v1 v2 && Cont.eqbF f k1 k2
     | .next k1, .next k2 => Cont.eqbF f k1 k2
-    | .breaking k1, .breaking k2 => Cont.eqbF f k1 k2
-    | .continuing k1, .continuing k2 => Cont.eqbF f k1 k2
-    | .returning k1, .returning k2 => Cont.eqbF f k1 k2
-    | .breakingTo l1 k1, .breakingTo l2 k2 => l1 == l2 && Cont.eqbF f k1 k2
-    | .continuingTo l1 k1, .continuingTo l2 k2 => l1 == l2 && Cont.eqbF f k1 k2
+    | .signal sg1 k1, .signal sg2 k2 => sg1 == sg2 && Cont.eqbF f k1 k2
     | .panicking c1 k1, .panicking c2 k2 =>
         eqbListP PanicEntry.eqb c1 c2 && Cont.eqbF f k1 k2
     | .panicked m1, .panicked m2 => m1 == m2
@@ -748,13 +744,7 @@ theorem Config.eqbF_sound :
       obtain ⟨h1, h2⟩ := andSplit2 h
       cases GoValue.eqb_sound h1; cases Cont.eqbF_sound _ _ _ h2; rfl
     case next.next k1 k2 => cases Cont.eqbF_sound _ _ _ h; rfl
-    case breaking.breaking k1 k2 => cases Cont.eqbF_sound _ _ _ h; rfl
-    case continuing.continuing k1 k2 => cases Cont.eqbF_sound _ _ _ h; rfl
-    case returning.returning k1 k2 => cases Cont.eqbF_sound _ _ _ h; rfl
-    case breakingTo.breakingTo l1 k1 l2 k2 =>
-      obtain ⟨h1, h2⟩ := andSplit2 h
-      cases eq_of_beq h1; cases Cont.eqbF_sound _ _ _ h2; rfl
-    case continuingTo.continuingTo l1 k1 l2 k2 =>
+    case signal.signal sg1 k1 sg2 k2 =>
       obtain ⟨h1, h2⟩ := andSplit2 h
       cases eq_of_beq h1; cases Cont.eqbF_sound _ _ _ h2; rfl
     case panicking.panicking c1 k1 c2 k2 =>

@@ -519,8 +519,7 @@ def Config.locSup : Config → Nat
   | .evalE e env k =>
       max (max (Expr.locSup e) (LocalEnv.locSup env)) (Cont.locSup k)
   | .retV v k => max (GoValue.locSup v) (Cont.locSup k)
-  | .next k | .breaking k | .continuing k | .returning k => Cont.locSup k
-  | .breakingTo _ k | .continuingTo _ k => Cont.locSup k
+  | .next k | .signal _ k => Cont.locSup k
   | .panicking chain k => max (panicChainSup chain) (Cont.locSup k)
   | .panicked _ => 0
   | .blockedSend ch v k =>
@@ -538,6 +537,17 @@ def Config.locSup : Config → Nat
 
 @[simp] theorem Config.locSup_opDone {sc : ChoiceSite} {c : Config} :
     Config.locSup (.opDone sc c) = Config.locSup c := rfl
+
+/-- The signal table never mints a location: every successor it produces
+is built from the frame's own payload (B4). -/
+theorem signalStep_locSup {sg : Signal} {k : Cont} {c' : Config}
+    (h : signalStep sg k = some c') : Config.locSup c' ≤ Cont.locSup k := by
+  cases k <;> simp only [signalStep, Option.some.injEq, reduceCtorEq] at h
+  all_goals try (subst h; simp only [Config.locSup, Cont.locSup]; omega)
+  all_goals cases sg <;> simp only [Option.some.injEq, reduceCtorEq] at h
+  all_goals try (subst h; simp only [Config.locSup, Cont.locSup, Stmt.locSup]; omega)
+  all_goals split at h <;> simp only [Option.some.injEq, reduceCtorEq] at h
+  all_goals subst h; simp only [Config.locSup, Cont.locSup, Stmt.locSup]; omega
 
 /-- State sup: heap keys+values, and every stored function body
 (bodies enter the configuration at `enterFrame`). -/
@@ -604,11 +614,7 @@ def Config.itersNormalized (types : TypeEnv) : Config → Bool
   | .evalE _ _ k => Cont.itersNormalized types k
   | .retV _ k => Cont.itersNormalized types k
   | .next k => Cont.itersNormalized types k
-  | .breaking k => Cont.itersNormalized types k
-  | .continuing k => Cont.itersNormalized types k
-  | .returning k => Cont.itersNormalized types k
-  | .breakingTo _ k => Cont.itersNormalized types k
-  | .continuingTo _ k => Cont.itersNormalized types k
+  | .signal _ k => Cont.itersNormalized types k
   | .panicking _ k => Cont.itersNormalized types k
   | .blockedSend _ _ k => Cont.itersNormalized types k
   | .blockedRecv _ _ _ _ k => Cont.itersNormalized types k
@@ -5859,6 +5865,12 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       runtimeErrorValue_locSup, panicEntry_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega)
+  case signal sg k hstep =>
+    -- B4: the table's successors are built from the frame's own payload.
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
+    have hle := signalStep_locSup hstep
+    simp only [ConfigWf, Config.locSup] at hc ⊢
+    omega
   case evalGlobal =>
     -- A4: the produced address is the global's index; the rule's premise
     -- (the cell exists) is exactly its bound.

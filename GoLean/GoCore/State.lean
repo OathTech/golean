@@ -257,7 +257,7 @@ The sites and their consuming definitions:
                    `stepMulti` via `schedSlots`).
 * `backEdge`     — the preemption point at a loop back-edge (W3.2
                    slice 1 stage D, B2 — G1 ruling 2026-08-20): the
-                   loop re-entry shapes `.next/.continuing (.loop …)`
+                   loop re-entry shapes `.next/.signal .cont (.loop …)`
                    and `.next (.mapIterK …)` are boundaries
                    (`Config.atBoundary`, Multi.lean — the envelope
                    statement lives there; consumed in `stepMulti` via

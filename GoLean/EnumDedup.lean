@@ -34,11 +34,11 @@ private def configTag : Config → UInt64
   | .evalE _ _ _ => 2
   | .retV _ _ => 3
   | .next _ => 4
-  | .breaking _ => 5
-  | .continuing _ => 6
-  | .returning _ => 7
-  | .breakingTo _ _ => 8
-  | .continuingTo _ _ => 9
+  | .signal .brk _ => 5
+  | .signal .cont _ => 6
+  | .signal .ret _ => 7
+  | .signal (.brkTo _) _ => 8
+  | .signal (.contTo _) _ => 9
   | .panicking _ _ => 10
   | .panicked _ => 11
   | .blockedSend _ _ _ => 12

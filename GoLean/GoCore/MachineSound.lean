@@ -124,6 +124,48 @@ macro "oblivious_entry " h:ident hnv:ident : tactic =>
         exact ⟨rfl, fun ch => by
           simp [stepFn, enterFramePick_of_isSome_false $hnv, hx, Except.map, Bind.bind, Except.bind]⟩))
 
+/-- **Frame exit is sound for BOTH of its entries** (B4): a successful
+`stepFrameExit` is a `Step` from the fall-through configuration (`.next`
+at the frame — `frameFall`/`frameFallTargets`/`frameDeferFall`/
+`frameDeferNilFall`) AND from the return configuration (`.signal .ret` at
+the frame — the `frameReturn*` twins), with the same successor. -/
+theorem stepFrameExit_sound {s : ExecState} {targets : List (TargetShape × List Expr)}
+    {tenv : LocalEnv} {results : List Loc} {ds : List (GoValue × List GoValue)}
+    {k' : Cont} {w : Bool} {ch : Choices} {c' : Config} {s' : ExecState} {ch' : Choices}
+    (h : stepFrameExit s targets tenv results ds k' w ch = .ok (c', s', ch')) :
+    Step (.next (.frame targets tenv results ds k' w)) s c' s'
+      ∧ Step (.signal .ret (.frame targets tenv results ds k' w)) s c' s' := by
+  fun_cases stepFrameExit s targets tenv results ds k' w ch
+  · simp only [stepFrameExit, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    exact ⟨Step.frameFall, Step.frameReturn⟩
+  · simp only [stepFrameExit, bind_eq_ok] at h
+    obtain ⟨vs, _, h⟩ := h
+    simp [throw, throwThe, MonadExceptOf.throw] at h
+  · simp only [stepFrameExit, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨vs, hload, rfl, rfl, rfl⟩ := h
+    exact ⟨Step.frameFallTargets hload, Step.frameReturnTargets hload⟩
+  · simp [stepFrameExit, throw, throwThe, MonadExceptOf.throw] at h
+  · simp only [stepFrameExit, bind_eq_ok, pure_eq_ok] at h
+    obtain ⟨⟨r, ch₁⟩, hpick, h⟩ := h
+    (try simp only at h)
+    cases r with
+    | ok a =>
+      simp only [deliverS_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨h1, h2, h3⟩ := h
+      subst h1; subst h2; subst h3
+      exact ⟨Step.frameDeferFall hpick (by first | rfl | simp only [deliver_ok]),
+        Step.frameDeferReturn hpick (by first | rfl | simp only [deliver_ok])⟩
+    | panic msg =>
+      simp only [deliverS_panic, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨h1, h2, h3⟩ := h
+      subst h1; subst h2; subst h3
+      exact ⟨Step.frameDeferFall hpick rfl, Step.frameDeferReturn hpick rfl⟩
+  · simp only [stepFrameExit, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    exact ⟨Step.frameDeferNilFall, Step.frameDeferNilReturn⟩
+  · simp [stepFrameExit, throw, throwThe, MonadExceptOf.throw] at h
+
 -- The unused-simp-arg linter misfires on the shared multi-goal combinator
 -- (an argument unused in one goal is load-bearing in another).
 set_option linter.unusedSimpArgs false in
@@ -150,7 +192,7 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
     exact Step.panicFrameEmpty
   case case3 =>
     entry_arm h Step.panicFrameDefer
-  case case150 =>
+  case case144 =>
     rename_i hrec
     simp_all only [stepFn, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨rfl, rfl, rfl⟩ := h
@@ -282,19 +324,7 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
     deliver_arm h Step.syncStApply
   case case135 =>
     deliver_arm h Step.atomicStApply
-  case case143 =>
-    simp only [stepFn, bind_eq_ok] at h
-    obtain ⟨vs, _, h⟩ := h
-    simp [throw, throwThe, MonadExceptOf.throw] at h
-  case case144 =>
-    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
-    obtain ⟨vs, hload, rfl, rfl, rfl⟩ := h
-    exact Step.frameFallTargets hload
-  case case146 =>
-    entry_arm h Step.frameDeferFall
-  case case183 =>
-    entry_arm h Step.frameDeferReturn
-  case case153 =>
+  case case147 =>
     -- BUG-005 (L): the pick arm is ONE fun_cases equation now (the
     -- candidates load precedes every split), so done/stop/pick are
     -- separated manually here.
@@ -345,20 +375,8 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
         subst hk
         subst hv
         exact Step.mapIterNext hlt hcands hd
-  case case154 =>
+  case case148 =>
     deliver_arm h Step.storeStep
-  case case180 =>
-    simp only [stepFn, bind_eq_ok] at h
-    obtain ⟨vs, _, h⟩ := h
-    simp [throw, throwThe, MonadExceptOf.throw] at h
-  case case181 =>
-    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
-    obtain ⟨vs, hload, rfl, rfl, rfl⟩ := h
-    exact Step.frameReturnTargets hload
-  -- (The stmtOpK apply's ok path — formerly `case102`, threaded through
-  -- the delete-prune bind — is closed by the generic pass since the B1
-  -- stamps: the arm is a plain `return`.)
-  -- Channel statements (channels arc slice 1).
   case case41 =>
     rename_i hplan
     simp only [stepFn] at h
@@ -419,6 +437,16 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
     rw [hplan] at h
     simp [throw, throwThe, MonadExceptOf.throw] at h
 
+  case case142 =>
+    -- B4: frame exit on the fall-through entry (`stepFrameExit`).
+    simp only [stepFn] at h
+    exact (stepFrameExit_sound h).1
+  case case153 =>
+    -- B4: frame exit on the `return` entry — the same function, the twin
+    -- rules.
+    simp only [stepFn, signalStep_frame] at h
+    exact (stepFrameExit_sound h).2
+
 /-! ### Completeness -/
 
 /-- B2 APPLY rule of `step_complete`: realize the rule's classified
@@ -450,11 +478,11 @@ macro "complete_entry " hpick:ident hdel:ident ch:term:max ch':term:max : tactic
       simp only [deliver_ok, Prod.mk.injEq] at $hdel:ident
       obtain ⟨h1, h2⟩ := $hdel:ident
       subst h1; subst h2
-      exact ⟨$ch, $ch', by simp [stepFn, $hpick:ident, Bind.bind, Except.bind]⟩
+      exact ⟨$ch, $ch', by simp [stepFn, stepFrameExit, $hpick:ident, Bind.bind, Except.bind]⟩
     · subst ha
       obtain ⟨h1, h2⟩ := deliver_panic_eq $hdel:ident
       subst h1; subst h2
-      exact ⟨$ch, $ch', by simp [stepFn, $hpick:ident, Bind.bind, Except.bind]⟩))
+      exact ⟨$ch, $ch', by simp [stepFn, stepFrameExit, $hpick:ident, Bind.bind, Except.bind]⟩))
 
 set_option linter.unusedSimpArgs false in
 /-- Every relation step is realized by the executable under some choice
@@ -702,8 +730,17 @@ theorem step_complete {c : Config} {s : ExecState} {c' : Config} {s' : ExecState
       first
         | (simp_all [stepFn, atomicPlan]; done)
         | (simp only [stepFn]; rw [hplan]; rfl)
+  -- B4: the signal statements and the table (`signalStmt`/`signal`), and
+  -- the frame-exit twins through `stepFrameExit`.
+  case signalStmt =>
+    rename_i stmt sg env k hsig
+    refine ⟨[], [], ?_⟩
+    cases stmt <;> simp_all [stepFn, Stmt.signal?]
+  case signal =>
+    rename_i sg k hstep
+    exact ⟨[], [], by simp [stepFn, hstep]⟩
   all_goals
-    exact ⟨[], [], by simp_all [stepFn, Bind.bind, Except.bind, valueAsBool]⟩
+    exact ⟨[], [], by simp_all [stepFn, stepFrameExit, Bind.bind, Except.bind, valueAsBool]⟩
 
 /-! ### Driver-level soundness -/
 
@@ -877,32 +914,36 @@ theorem step_panicked_elim {msg : String} {σ : ExecState} {c' : Config}
   cases h
 
 /-! The three unwound-`.stop` terminals are ALSO genuinely terminal for
-the relation (audit response 2026-08-04): every `.returning`/`.breaking`/
-`.continuing`-source rule matches a specific non-`.stop` continuation
-constructor (`.seq`/`.loop`/`.breakableK`/`.mapIterK`/`.frame`), so none
-applies at `.stop`. With `step_panicked_elim` these pin
-`execStmtLoop_ok_or_fuelOut`'s success disjunct to the `.normal`
-terminal: under a relation-Progress hypothesis (every reachable
-configuration is `.next .stop` or steps), a reachable unwound-`.stop`
-configuration is a CONTRADICTION, not a successful completion. -/
+the relation (audit response 2026-08-04; B4: ONE fact now — the signal
+table has no `.stop` row, `signalStep_stop`, and the frame-exit rules
+match a `.frame`), so no rule applies to a signal at `.stop`. With
+`step_panicked_elim` these pin `execStmtLoop_ok_or_fuelOut`'s success
+disjunct to the `.normal` terminal: under a relation-Progress hypothesis
+(every reachable configuration is `.next .stop` or steps), a reachable
+unwound-`.stop` configuration is a CONTRADICTION, not a successful
+completion. -/
+
+@[inherit_doc step_panicked_elim]
+theorem step_signal_stop_elim {sg : Signal} {σ : ExecState} {c' : Config}
+    {σ' : ExecState} : ¬ Step (.signal sg .stop) σ c' σ' := by
+  intro h
+  cases h
+  simp_all
 
 @[inherit_doc step_panicked_elim]
 theorem step_returning_stop_elim {σ : ExecState} {c' : Config}
-    {σ' : ExecState} : ¬ Step (.returning .stop) σ c' σ' := by
-  intro h
-  cases h
+    {σ' : ExecState} : ¬ Step (.signal .ret .stop) σ c' σ' :=
+  step_signal_stop_elim
 
 @[inherit_doc step_panicked_elim]
 theorem step_breaking_stop_elim {σ : ExecState} {c' : Config}
-    {σ' : ExecState} : ¬ Step (.breaking .stop) σ c' σ' := by
-  intro h
-  cases h
+    {σ' : ExecState} : ¬ Step (.signal .brk .stop) σ c' σ' :=
+  step_signal_stop_elim
 
 @[inherit_doc step_panicked_elim]
 theorem step_continuing_stop_elim {σ : ExecState} {c' : Config}
-    {σ' : ExecState} : ¬ Step (.continuing .stop) σ c' σ' := by
-  intro h
-  cases h
+    {σ' : ExecState} : ¬ Step (.signal .cont .stop) σ c' σ' :=
+  step_signal_stop_elim
 
 /-! Blocked configurations (channels arc slice 1) are relation-TERMINAL:
 no rule steps a blocked goroutine — pairing is the slice-2 pool's job.
@@ -2767,16 +2808,21 @@ theorem step_complete_any_wf_aux {c : Config} {σ : ExecState} {c' : Config}
   case frameDeferFall targets tenv results fid captured args ds k w r ch₀ ch₁ hpick hdel =>
     obtain ⟨r₂, ch₂, hp⟩ := enterFramePick_any_ch hpick ch
     (try simp only [List.append_assoc] at hp)
-    simp [stepFn, hp, Bind.bind, Except.bind]
+    simp [stepFn, stepFrameExit, hp, Bind.bind, Except.bind]
   case frameDeferReturn targets tenv results fid captured args ds k w r ch₀ ch₁ hpick hdel =>
     obtain ⟨r₂, ch₂, hp⟩ := enterFramePick_any_ch hpick ch
     (try simp only [List.append_assoc] at hp)
-    simp [stepFn, hp, Bind.bind, Except.bind]
+    simp [stepFn, stepFrameExit, hp, Bind.bind, Except.bind]
+  -- B4: the signal statements and the table.
+  case signalStmt stmt sg env k hsig =>
+    cases stmt <;> simp_all [stepFn, Stmt.signal?]
+  case signal sg k hstep =>
+    simp [stepFn, hstep]
   case panicFrameDefer chain targets tenv results fid captured args ds k w r ch₀ ch₁ hpick hdel =>
     obtain ⟨r₂, ch₂, hp⟩ := enterFramePick_any_ch hpick ch
     (try simp only [List.append_assoc] at hp)
     simp [stepFn, hp, Bind.bind, Except.bind]
-  all_goals simp_all [stepFn, Bind.bind, Except.bind, valueAsBool]
+  all_goals simp_all [stepFn, stepFrameExit, Bind.bind, Except.bind, valueAsBool]
 
 /-- **Completeness at every stream** (the recorded kit obligation): a
 configuration the relation can step from is one the executable steps
@@ -2958,9 +3004,9 @@ def allStreamsOk : Nat → ExecState → Config → Bool
   | fuel + 1, σ, c =>
       match c with
       | .next .stop => true
-      | .returning .stop => true
-      | .breaking .stop => true
-      | .continuing .stop => true
+      | .signal .ret .stop => true
+      | .signal .brk .stop => true
+      | .signal .cont .stop => true
       | .next (.mapIterK keyVar valVar keyTy valTy body base produced start env k) =>
           -- BUG-005 (L): the branch bound moved from the CONFIGURATION
           -- (the retired snapshot's size) to the STATE (live candidates
@@ -3842,6 +3888,108 @@ theorem stepFn_syncApply_oblivious {σ : ExecState} {op : SyncOp} {done : List G
 
 set_option maxHeartbeats 1600000 in
 set_option linter.unusedSimpArgs false in
+
+/-- Frame exit consumes the stream only at a deferred call's ENTRY, and
+there exactly as every entry does (`entryConsult?`): with the consult
+`none` the exit is stream-oblivious — on BOTH its entries (B4). -/
+theorem stepFrameExit_consumption_none {σ : ExecState}
+    {targets : List (TargetShape × List Expr)} {tenv : LocalEnv} {results : List Loc}
+    {ds : List (GoValue × List GoValue)} {k' : Cont} {w : Bool} {c : Config}
+    {ch₀ : Choices} {c' : Config} {σ' : ExecState} {ch₀' : Choices}
+    (hc : c = .next (.frame targets tenv results ds k' w)
+      ∨ c = .signal .ret (.frame targets tenv results ds k' w))
+    (hsc : seqConsumption σ c = none)
+    (h : stepFrameExit σ targets tenv results ds k' w ch₀ = .ok (c', σ', ch₀')) :
+    ch₀' = ch₀ ∧ ∀ ch : Choices,
+      stepFrameExit σ targets tenv results ds k' w ch = .ok (c', σ', ch) := by
+  fun_cases stepFrameExit σ targets tenv results ds k' w ch₀
+  · simp only [stepFrameExit, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    exact ⟨rfl, fun ch => by simp [stepFrameExit]⟩
+  · simp only [stepFrameExit, bind_eq_ok] at h
+    obtain ⟨vs, _, h⟩ := h
+    simp [throw, throwThe, MonadExceptOf.throw] at h
+  · simp only [stepFrameExit, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨vs, hload, rfl, rfl, rfl⟩ := h
+    exact ⟨rfl, fun ch => by simp [stepFrameExit, hload, Bind.bind, Except.bind]⟩
+  · simp [stepFrameExit, throw, throwThe, MonadExceptOf.throw] at h
+  · -- the deferred call's ENTRY: the exit's one consult
+    rcases hc with rfl | rfl <;>
+      simp only [seqConsumption, Config.applyPos, entryCallSite?] at hsc <;>
+      simp only [stepFrameExit] at h <;>
+      rcases entryConsult?_none hsc with hnv | hnp <;>
+      (first
+        | have hpk' := enterFramePick_oblivious_of_isSome_false hnv
+        | have hpk' := enterFramePick_of_nopanic hnp) <;>
+      (rw [hpk' _] at h
+       cases hx : toResult (enterFrame _ _ _) with
+       | error e =>
+         rw [hx] at h
+         simp [Except.map, Bind.bind, Except.bind] at h
+       | ok r =>
+         rw [hx] at h
+         cases r with
+         | ok a =>
+           simp only [Except.map, Bind.bind, Except.bind, pure_eq_ok, Pure.pure, Except.pure,
+             deliverS_ok, Except.ok.injEq, Prod.mk.injEq] at h
+           obtain ⟨h1, h2, h3⟩ := h
+           subst h1; subst h2; subst h3
+           exact ⟨rfl, fun ch => by
+             (try simp only [List.append_assoc] at hpk' hx)
+             simp [stepFrameExit, hpk', hx, Except.map, Bind.bind, Except.bind]⟩
+         | panic msg =>
+           simp only [Except.map, Bind.bind, Except.bind, pure_eq_ok, Pure.pure, Except.pure,
+             deliverS_panic, Except.ok.injEq, Prod.mk.injEq] at h
+           obtain ⟨h1, h2, h3⟩ := h
+           subst h1; subst h2; subst h3
+           exact ⟨rfl, fun ch => by
+             (try simp only [List.append_assoc] at hpk' hx)
+             simp [stepFrameExit, hpk', hx, Except.map, Bind.bind, Except.bind]⟩)
+  · simp only [stepFrameExit, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    exact ⟨rfl, fun ch => by simp [stepFrameExit]⟩
+  · simp [stepFrameExit, throw, throwThe, MonadExceptOf.throw] at h
+
+/-- A signal the table resolves sits on no call frame, so it is no frame
+ENTRY (the consumption projection sees `none` there). -/
+theorem entryCallSite?_of_signalStep {sg : Signal} {k : Cont} {c' : Config}
+    (h : signalStep sg k = some c') : entryCallSite? (.signal sg k) = none := by
+  cases k <;> simp_all [entryCallSite?]
+
+/-- The `some` half for frame exit: the deferred entry's width-2 pop on
+the panic path (`entryConsult?_some`, `enterFramePick_panic`), on both
+entries (B4). -/
+theorem stepFrameExit_consumption_some {σ : ExecState}
+    {targets : List (TargetShape × List Expr)} {tenv : LocalEnv} {results : List Loc}
+    {ds : List (GoValue × List GoValue)} {k' : Cont} {w : Bool} {c : Config}
+    {ch₀ : Choices} {c' : Config} {σ' : ExecState} {ch₀' : Choices}
+    {site : ChoiceSite} {b : Nat}
+    (hc : c = .next (.frame targets tenv results ds k' w)
+      ∨ c = .signal .ret (.frame targets tenv results ds k' w))
+    (hsc : seqConsumption σ c = some (site, b))
+    (h : stepFrameExit σ targets tenv results ds k' w ch₀ = .ok (c', σ', ch₀')) :
+    ch₀' = (Choices.consumeAt site b ch₀).2 ∧ ∀ ch : Choices,
+      (Choices.consumeAt site b ch).1 = (Choices.consumeAt site b ch₀).1 →
+      stepFrameExit σ targets tenv results ds k' w ch
+        = .ok (c', σ', (Choices.consumeAt site b ch).2) := by
+  fun_cases stepFrameExit σ targets tenv results ds k' w ch₀
+  all_goals try (rcases hc with rfl | rfl <;>
+    simp [seqConsumption, Config.applyPos, entryCallSite?] at hsc; done)
+  all_goals try (simp [stepFrameExit, throw, throwThe, MonadExceptOf.throw] at h; done)
+  rcases hc with rfl | rfl <;>
+    simp only [seqConsumption, Config.applyPos, entryCallSite?] at hsc <;>
+    (obtain ⟨hsite, hb, hw, msg, hpanic⟩ := entryConsult?_some hsc
+     subst hsite; subst hb
+     simp only [stepFrameExit] at h
+     rw [enterFramePick_panic hpanic] at h
+     simp only [Bind.bind, Except.bind, Pure.pure, Except.pure, deliverS_panic,
+       Except.ok.injEq, Prod.mk.injEq] at h
+     obtain ⟨h1, h2, h3⟩ := h
+     subst h1; subst h2; subst h3
+     refine ⟨rfl, fun ch₁ hpk => ?_⟩
+     (try simp only [List.append_assoc] at hpanic hpk)
+     simp [stepFrameExit, enterFramePick_panic hpanic, hpk, Bind.bind, Except.bind])
+
 /-- **The consumption theorem, `none` half**: a step whose projection is
 `none` is stream-oblivious — it succeeds under EVERY stream with the same
 successor and the stream returned untouched. Sweep over `stepFn`'s case
@@ -3869,10 +4017,12 @@ theorem stepFn_consumption_none {σ : ExecState} {c : Config} {ch₀ : Choices}
     consumption_entry_none h hsc
   case case103 =>
     consumption_entry_none h hsc
-  case case146 =>
-    consumption_entry_none h hsc
-  case case183 =>
-    consumption_entry_none h hsc
+  case case142 =>
+    simp only [stepFn] at h ⊢
+    exact stepFrameExit_consumption_none (.inl rfl) hsc h
+  case case153 =>
+    simp only [stepFn, signalStep_frame] at h ⊢
+    exact stepFrameExit_consumption_none (.inr rfl) hsc h
   case case96 =>
     simp only [seqConsumption, Config.applyPos] at hsc
     obtain ⟨r, hr⟩ := applyStmtOp_of_stmtConsult?_none hsc
@@ -3967,7 +4117,7 @@ theorem stepFn_consumption_none {σ : ExecState} {c : Config} {ch₀ : Choices}
             exact stepFn_syncApply_oblivious
               (r := applyTryLock σ op loc pre false targets env k')
               (fun ch => by simpa using applySyncOp_try_nopop hop hl hcell hw ch) h
-  case case153 =>
+  case case147 =>
     rename_i kv vv kt vt body base produced start env k'
     simp only [seqConsumption, mapIterConsult?] at hsc
     cases hcands : mapIterCandidates σ kt vt base produced with
@@ -4200,30 +4350,8 @@ theorem stepFn_consumption_none {σ : ExecState} {c : Config} {ch₀ : Choices}
     oblivious_apply h
   case case135 =>
     oblivious_apply h
-  case case143 =>
-    simp only [stepFn, bind_eq_ok] at h
-    obtain ⟨vs, _, h⟩ := h
-    simp [throw, throwThe, MonadExceptOf.throw] at h
-  case case144 =>
-    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
-    obtain ⟨vs, hload, rfl, rfl, rfl⟩ := h
-    refine ⟨by simp, fun ch => ?_⟩
-    simp only [stepFn, bind_eq_ok]
-    refine ⟨vs, hload, ?_⟩
-    simp
-  case case154 =>
+  case case148 =>
     oblivious_apply h
-  case case180 =>
-    simp only [stepFn, bind_eq_ok] at h
-    obtain ⟨vs, _, h⟩ := h
-    simp [throw, throwThe, MonadExceptOf.throw] at h
-  case case181 =>
-    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
-    obtain ⟨vs, hload, rfl, rfl, rfl⟩ := h
-    refine ⟨by simp, fun ch => ?_⟩
-    simp only [stepFn, bind_eq_ok]
-    refine ⟨vs, hload, ?_⟩
-    simp
 
 set_option maxHeartbeats 1600000 in
 set_option linter.unusedSimpArgs false in
@@ -4264,10 +4392,16 @@ theorem stepFn_consumption_some {σ : ExecState} {c : Config} {ch₀ : Choices}
     consumption_entry_some h hsc
   case case103 =>
     consumption_entry_some h hsc
-  case case146 =>
-    consumption_entry_some h hsc
-  case case183 =>
-    consumption_entry_some h hsc
+  case case142 =>
+    simp only [stepFn] at h ⊢
+    exact stepFrameExit_consumption_some (.inl rfl) hsc h
+  case case152 =>
+    -- B4: a signal the table resolves consumes nothing (no entry, no apply).
+    exfalso
+    simp [seqConsumption, Config.applyPos, entryCallSite?_of_signalStep ‹_›] at hsc
+  case case153 =>
+    simp only [stepFn, signalStep_frame] at h ⊢
+    exact stepFrameExit_consumption_some (.inr rfl) hsc h
   case case96 =>
     simp only [seqConsumption, Config.applyPos] at hsc
     obtain ⟨elem, rfl, rfl, hw⟩ := stmtConsult?_some hsc
@@ -4379,7 +4513,7 @@ theorem stepFn_consumption_some {σ : ExecState} {c : Config} {ch₀ : Choices}
                 simp only [List.reverse_cons, List.reverse_nil, List.nil_append]
                 rw [hap ch, hpk, hat]
                 rfl
-  case case153 =>
+  case case147 =>
     rename_i kv vv kt vt body base produced start env k'
     simp only [seqConsumption, mapIterConsult?] at hsc
     cases hcands : mapIterCandidates σ kt vt base produced with
@@ -4545,9 +4679,9 @@ theorem execStmtLoop_unfold (fuel : Nat) (σ : ExecState) (c : Config)
     execStmtLoop fuel σ c ch
       = (match c with
          | .next .stop => .ok (.normal σ, ch)
-         | .returning .stop => .ok (.returned σ, ch)
-         | .breaking .stop => .ok (.broke σ, ch)
-         | .continuing .stop => .ok (.continued σ, ch)
+         | .signal .ret .stop => .ok (.returned σ, ch)
+         | .signal .brk .stop => .ok (.broke σ, ch)
+         | .signal .cont .stop => .ok (.continued σ, ch)
          | .panicked msg => throw (.panic msg)
          | .blockedSend _ _ _ => throw .deadlock
          | .blockedRecv _ _ _ _ _ => throw .deadlock
@@ -4572,9 +4706,9 @@ theorem execStmtLoop_step {fuel : Nat} {σ : ExecState} {c : Config}
   rw [execStmtLoop_unfold (fuel + 1) σ c ch]
   split
   · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h
-  · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h
-  · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h
-  · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h
+  · simp [stepFn, signalStep, signalRefusal, throw, throwThe, MonadExceptOf.throw] at h
+  · simp [stepFn, signalStep, signalRefusal, throw, throwThe, MonadExceptOf.throw] at h
+  · simp [stepFn, signalStep, signalRefusal, throw, throwThe, MonadExceptOf.throw] at h
   · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h
   · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h
   · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h

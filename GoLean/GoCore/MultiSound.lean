@@ -501,8 +501,8 @@ theorem raceUpdate_single {σ : ExecState} {ts : Array Config} {c : Config}
 /-- The singleton-pool projections of a mid-run (non-terminal,
 non-blocked) configuration. -/
 theorem singleton_pool_facts {σ : ExecState} {c : Config}
-    (h1 : c ≠ .next .stop) (h2 : c ≠ .returning .stop)
-    (h3 : c ≠ .breaking .stop) (h4 : c ≠ .continuing .stop)
+    (h1 : c ≠ .next .stop) (h2 : c ≠ .signal .ret .stop)
+    (h3 : c ≠ .signal .brk .stop) (h4 : c ≠ .signal .cont .stop)
     (h5 : ∀ msg, c ≠ .panicked msg)
     (h6 : ∀ a b k, c ≠ .blockedSend a b k)
     (h7 : ∀ a b e env k, c ≠ .blockedRecv a b e env k)

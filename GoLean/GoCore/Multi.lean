@@ -308,7 +308,7 @@ def Config.atBoundary (c : Config) : Bool :=
   -- frame, and it was ALREADY a choice-consuming position (the
   -- mapIter pick) — making it a boundary aligns the two disciplines.
   | .next (.loop _ _ _ _) => true
-  | .continuing (.loop _ _ _ _) => true
+  | .signal .cont (.loop _ _ _ _) => true
   | .next (.mapIterK _ _ _ _ _ _ _ _ _ _) => true
   | _ => false
 
@@ -1198,7 +1198,7 @@ back-edge shapes with their `backEdge` tag. -/
 def Config.boundarySite : Config → ChoiceSite
   | .opDone .postOp _ => .postOp
   | .next (.loop _ _ _ _) => .backEdge
-  | .continuing (.loop _ _ _ _) => .backEdge
+  | .signal .cont (.loop _ _ _ _) => .backEdge
   | .next (.mapIterK _ _ _ _ _ _ _ _ _ _) => .backEdge
   | _ => .l1Sched
 
@@ -1843,9 +1843,9 @@ statement idiom. -/
 def MultiConfig.mainOutcome? (m : MultiConfig) : Option ExecOutcome :=
   match (m.threads[0]? : Option Config) with
   | some (.next .stop) => some (.normal m.shared)
-  | some (.returning .stop) => some (.returned m.shared)
-  | some (.breaking .stop) => some (.broke m.shared)
-  | some (.continuing .stop) => some (.continued m.shared)
+  | some (.signal .ret .stop) => some (.returned m.shared)
+  | some (.signal .brk .stop) => some (.broke m.shared)
+  | some (.signal .cont .stop) => some (.continued m.shared)
   | _ => none
 
 /-- Fuel-bounded pool execution to the program terminals, mirroring
