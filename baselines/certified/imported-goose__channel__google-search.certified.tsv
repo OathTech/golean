@@ -4,7 +4,38 @@
 # driver-coupling pin against THIS set and its wire hash; scripts/ci
 # --slow re-enumerates and must reproduce it exactly. Update
 # deliberately, in its own commit, with the reason — never auto-written.
-# certified: 2026-09-05T00:30:00+00:00  commit: stdlib-slice-3 lane — the `output` observation field (G-OUT) added to every observation; set re-enumerated by `scripts/capped scripts/ci --slow` on the branch (see the reason block)
+# certified: 2026-09-05T04:38:59+00:00  commit: round-14 merge-train step 5a re-certification at main tip 102f4dae (round-14 train landed: flaky-panic-wait, g6-reflect-memo, fr27-fr28, c-arc-gu, stdlib-slice-3)
+# re-certification reason (round-14 merge train, step 5a, 2026-09-05): the
+#   standing post-train step (CLAUDE.md merge protocol 5a, [USER]
+#   2026-09-04) fired because the train merged stdlib-slice-3, which
+#   touched tools/nativefrontend/wire.go and GoLean/NativeToIR.lean (the
+#   `print` statement node + `float-bits` expression node; slice commit
+#   6a73d02d, rebased-landed with committer instant 2026-09-05T04:04:40Z,
+#   AFTER the lane's own 00:30:00Z re-cert below — hence the reconciler's
+#   C9 at the merged tip). The step-5a --slow re-certification ran at the
+#   CLEAN merged tip 102f4dae in the primary checkout (`scripts/capped
+#   scripts/ci --slow`, RESULT: PASS, exit 0; latest.meta.tsv git_commit
+#   102f4dae… git_dirty=false, manifest_cases 3479; 3479/3479 baseline
+#   diff FULL, 0 flips; 153 eval tests ok). Delta class: NONE. This
+#   fixture's wire sha is UNCHANGED (2f1d639f — sha256 of the run's own
+#   emitted artifacts/coverage/native/imported-goose/channel/google-search/
+#   wire.json), and the fresh GOLEAN_SLOW=1 dedup enumeration reproduced
+#   the set AND the graph bit-for-bit: the same six permutation members
+#   {123,132,213,231,312,321}, nodes=6193933 edges=6565663 dedupHits=371731
+#   certified=checkCert (enum-stats.txt). Params unchanged. Header instant
+#   = the enumeration artifact's write instant (enum-stats.txt mtime
+#   04:38:59Z; the gate log carries no start stamp this round — a
+#   deviation from round 13's start-stamp convention, disclosed), after the
+#   last wire commit (04:04:40Z), so C9's `--since` test clears. K=80
+#   exhibition (membership_draws 80): 5 of 6 members exhibited (312×53,
+#   213×10, 123×9, 321×6, 132×2); 231 unexhibited this run (unexhibited.txt;
+#   every draw ∈ the certified set — exhibition is a lower bound, the set
+#   is the enumeration's). The gate log is ephemeral (.tmp, untracked);
+#   numbers copied from it and from artifacts/coverage/membership/
+#   imported-goose/channel/google-search/{enum-stats,observations,samples,
+#   unexhibited}.txt. [AGENT] record refresh under the step-5a rule,
+#   delta class DATE/COMMIT-ONLY (set, graph, params, wire sha unchanged).
+# previously: certified: 2026-09-05T00:30:00+00:00  commit: stdlib-slice-3 lane — the `output` observation field (G-OUT) added to every observation; set re-enumerated by `scripts/capped scripts/ci --slow` on the branch (see the reason block)
 # re-certification reason (lane stdlib-slice-3, 2026-09-05, [AGENT]): stdlib slice 3
 #   added the `output` field (the program's fd-2 bytes, `StepEvent.out`
 #   folded by the driver — design gate G-OUT RULED [USER], relayed) to
