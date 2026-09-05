@@ -131,7 +131,12 @@ func orderTypeDefsByDependency(typeDefs []any) ([]any, error) {
 				}
 			}
 			cyc := append(append([]string{}, path[start:]...), names[i])
-			return unsup("type-table order: cycle through struct-field/array/defined edges: %s (G-C2 refuses; recursion is legal only through pointer/slice/map/chan/func/interface)", strings.Join(cyc, " -> "))
+			// Unreachable from valid Go (go/types rejects invalid recursive
+			// types; recursion is legal only through pointer/slice/map/chan/
+			// func/interface, none of which is an edge here) — an emitter
+			// fault, classified as a frontend invariant (tools/lowerdiag
+			// causes.tsv `frontend-invariant`: the "(fail closed)" suffix).
+			return unsup("type-table order: cycle through struct-field/array/defined edges: %s — recursion is legal only through pointer/slice/map/chan/func/interface, so a cycle here is an emitter fault (G-C2; fail closed)", strings.Join(cyc, " -> "))
 		}
 		color[i] = gray
 		path = append(path, names[i])
