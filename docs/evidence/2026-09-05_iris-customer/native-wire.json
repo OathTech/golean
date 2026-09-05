@@ -1,0 +1,272 @@
+{
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "stmt": "panic",
+      "value": {
+       "bytes": [
+        99,
+        117,
+        115,
+        116,
+        111,
+        109,
+        101,
+        114,
+        32,
+        112,
+        97,
+        110,
+        105,
+        99
+       ],
+       "expr": "string",
+       "type": {
+        "kind": "string"
+       }
+      },
+      "wrap": {
+       "kind": "string"
+      }
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "fail",
+   "params": [],
+   "results": [],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c0",
+        "target": "declare",
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "recover",
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cond": {
+       "expr": "binary",
+       "op": "!=",
+       "operandType": {
+        "kind": "interface",
+        "name": "any"
+       },
+       "type": {
+        "kind": "bool"
+       },
+       "x": {
+        "expr": "ident",
+        "name": "$c0",
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       },
+       "y": {
+        "expr": "nil"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "define": false,
+         "lhs": [
+          {
+           "expr": {
+            "expr": "ident",
+            "name": "result$cap"
+           },
+           "target": "addr"
+          }
+         ],
+         "rhs": [
+          {
+           "expr": "bool",
+           "type": {
+            "kind": "bool"
+           },
+           "value": true
+          }
+         ],
+         "stmt": "assign"
+        }
+       ],
+       "stmt": "block"
+      }
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "Recovered$lit0",
+   "params": [
+    {
+     "id": "result$cap",
+     "type": {
+      "elem": {
+       "kind": "bool"
+      },
+      "kind": "pointer"
+     }
+    }
+   ],
+   "results": [],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "args": [],
+      "callee": {
+       "captured": [
+        {
+         "expr": "ref",
+         "id": "result"
+        }
+       ],
+       "expr": "func-value",
+       "func": "Recovered$lit0",
+       "type": {
+        "kind": "func",
+        "params": [],
+        "results": [],
+        "variadic": false
+       }
+      },
+      "stmt": "defer"
+     },
+     {
+      "expr": {
+       "args": [],
+       "expr": "call",
+       "func": "fail",
+       "resultTypes": []
+      },
+      "stmt": "expr"
+     },
+     {
+      "results": [
+       {
+        "expr": "bool",
+        "type": {
+         "kind": "bool"
+        },
+        "value": false
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "Recovered",
+   "params": [],
+   "results": [
+    {
+     "id": "result",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": false,
+      "lhs": [
+       {
+        "id": "result",
+        "target": "var"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "bool",
+        "type": {
+         "kind": "bool"
+        },
+        "value": true
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "Normal",
+   "params": [],
+   "results": [
+    {
+     "id": "result",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "expr": {
+       "args": [],
+       "expr": "call",
+       "func": "fail",
+       "resultTypes": []
+      },
+      "stmt": "expr"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "Uncaught",
+   "params": [],
+   "results": [],
+   "variadic": false
+  }
+ ],
+ "methodSets": [],
+ "methods": [],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": []
+}

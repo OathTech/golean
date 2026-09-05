@@ -1,0 +1,10 @@
+panic: customer panic
+
+goroutine 1 [running]:
+main.fail(...)
+	/home/dev/projects/golean/.claude/worktrees/gate-a2-iris/artifacts/iris-customer/go-run/iris-customer__uncaught/main.go:3
+main.Uncaught(...)
+	/home/dev/projects/golean/.claude/worktrees/gate-a2-iris/artifacts/iris-customer/go-run/iris-customer__uncaught/main.go:22
+main.main()
+	/home/dev/projects/golean/.claude/worktrees/gate-a2-iris/artifacts/iris-customer/go-run/iris-customer__uncaught/zz_golean_harness.go:132 +0x25
+exit status 2

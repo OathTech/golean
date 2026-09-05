@@ -1,0 +1,3 @@
+iris-customer/recovered	spikes/iris-customer/fixtures/recovery	Recovered	-	ok	iris-customer,defer,recover	-	strict	-	-
+iris-customer/normal	spikes/iris-customer/fixtures/recovery	Normal	-	ok	iris-customer,defer,recover	-	strict	-	-
+iris-customer/uncaught	spikes/iris-customer/fixtures/recovery	Uncaught	-	panic	iris-customer,defer,recover	customer panic	strict	-	-

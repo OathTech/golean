@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Dedicated opt-in customer gate; never part of the semantics default build.
+set -euo pipefail
+CUSTOMER_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+REPO_ROOT="$(cd "$CUSTOMER_ROOT/../.." && pwd -P)"
+cd "$REPO_ROOT"
+python3 "$CUSTOMER_ROOT/gate_checks.py" preflight
+"$REPO_ROOT/scripts/capped" lake build
+cd "$CUSTOMER_ROOT"
+"$REPO_ROOT/scripts/capped" lake build
+python3 gate_checks.py dependencies
+for module in Heap Ghost Lifting Rules Adequacy Program Examples Readout Driver Audit; do
+  "$REPO_ROOT/scripts/capped" lake env lean "GoLeanIris/$module.lean"
+done
+"$REPO_ROOT/scripts/capped" lake env lean GoLeanIris.lean
+"$REPO_ROOT/scripts/capped" lake env python3 gate_checks.py audit
+"$REPO_ROOT/scripts/capped" lake env python3 gate_checks.py artifact
+cd "$REPO_ROOT"
+GOLEAN_COVERAGE_ARTIFACTS=artifacts/iris-customer \
+  scripts/diff-coverage spikes/iris-customer/fixtures/manifest.tsv
+printf '%s\n' 'Iris customer: PASS'
