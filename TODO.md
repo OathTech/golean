@@ -56,7 +56,30 @@ each gate, per the coordinator's reading [AGENT], disclosed to the
       `docs/evidence/2026-09-04_c-arc-gu/`)
 - [x] B4 — `Signal` + thread `Status` — DONE 2026-09-05 (lane `c-arc-b4`,
       `docs/2026-09-05_c-arc-b4-design.md`; `Status` is a VIEW over the
-      stored `Thread`; OWED: `Park` as a named type)
+      stored `Thread` — a definition + agreement theorems, no in-repo
+      consumer yet (the consumer is iris-lean); OWED: `Park` as a named
+      type)
+- [x] **Tracer-tooling gap, rowed at detection ([USER] 2026-09-03 «every
+      detected gap is rowed», relayed) — FIXED in the c-arc-b4 audit fix
+      round 2026-09-05 [AGENT]:** `ChoiceTrace.traceStream`'s
+      engine/enumerator observation check compared a `RunResult` (stop +
+      printed prefix) against an enumerator refusal with an EMPTY output
+      field — status + message only on every refusal path, so (a) the
+      pre-existing `builtins/float-bits/roundtrip-payloads` 6-stream
+      MISMATCH was a tracer artefact (two `println`s precede the BUG-094
+      refusal) and (b) a real pre-refusal output divergence between the
+      drivers was invisible (fail-open). Fix: `CLI.enumPoolRun`/
+      `enumRunProgram` return `Except (Stop × GoString) …` (the
+      pre-step fold, `execProgLoopOut`'s pairing); the tracer compares
+      the whole observation; `probeSite` destructures. Verification:
+      the whole-corpus trace after the fix — the float-bits row at 0
+      mismatches (its recorded enumerator observation now carries the
+      prefix, so its obsHash moved), the per-consumption dump and every
+      other results line unchanged (evidence README fix-round row,
+      `docs/evidence/2026-09-05_c-arc-b4/choice-trace/fix-*.txt`). Residual: none owed;
+      the eval-test F5 pins (`Tests/GoCoreEval.lean`) still compare the
+      `.ok` members only — a refusal-path driver-agreement EVAL pin
+      would be S and is not claimed here.
 - [x] C5 — `.opDone` out of `Config`, into the per-goroutine `boundary`
       flag of `Thread.running` (G-C5) — DONE 2026-09-05 (same lane; the
       strip is `StepM.strip`, a pool step; `execProg_single_eq_execStmt`

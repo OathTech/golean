@@ -1717,9 +1717,12 @@ old "GoCore stays bit-identical" wording was the membership slice's
 own constraint, stale as a standing fact — arc-final audit F16,
 2026-08-06; `seedGlobals` IS shared
 — stream-independent setup); these tests pin the copies against the
-originals: the single-run driver's observation (`observationOfRun ∘
-runProgramM`, the exact engine behind `native-json-run`) must be a
-member of the enumerated set, per consumption-site class (append spill;
+originals: the single-run drivers' observations (`observationOfRun ∘
+runProgramM`, the sequential driver, and `observationOfRun ∘
+runProgramPoolM`, the pool driver — `native-json-run`'s engine is the
+pool's `runProgramPoolOutIntsM`, CLI.lean, whose readout
+`runProgramPoolM` projects) must be members of the enumerated set, per
+consumption-site class (append spill;
 map-range pick-next, including the panic-observation path; the
 `$pkginit` init phase since the init slice). The go-side half of this
 pin is the harness's per-case coupling check in

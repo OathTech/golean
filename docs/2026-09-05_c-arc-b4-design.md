@@ -36,8 +36,9 @@ every (row, stream) line.
 **`Signal`.** `inductive Signal | brk | cont | ret | brkTo L | contTo L`;
 `Config.signal (sg : Signal) (k : Cont)` replaces the five constructors
 `.breaking/.continuing/.returning/.breakingTo/.continuingTo`. `Config`
-has 9 constructors (from 16 on `main`): `exec evalE retV next signal
-panicking blockedSend blockedRecv blockedSelect blockedSync`.
+has 10 constructors (from 16 on `main`): `exec evalE retV next signal
+panicking blockedSend blockedRecv blockedSelect blockedSync` (audit fix
+R1: an earlier draft said 9).
 
 **The frame×signal TABLE.** `signalStep : Signal → Cont → Option Config`
 (Machine.lean) IS the table the review's Q6 asked for — one row per
@@ -119,7 +120,12 @@ left to fire on and are gone).
 classification is the VIEW `Thread.status : Thread → Status` with
 `inductive Status | running | parked | done (d : Done)` and `inductive Done
 | normal | panicked (msg)`, proved to agree with the dispatch predicates
-(`threadDone_status`, `threadRunnable_status`). Deviation from the plan
+(`threadDone_status`, `threadRunnable_status`) and, cell by cell, with
+the shape predicates (`Thread.status_parked_iff` ↔ `isBlockedConfig`,
+`Thread.status_done_normal_iff` ↔ `Config.isTerminal`; audit fix R5).
+`Status`/`Done`/`Thread.status` have NO in-repo consumer yet — the
+consumer is iris-lean; here they are a definition plus its agreement
+theorems, and the pool dispatches on `threadDone`/`threadRunnable`. Deviation from the plan
 text (`threads : Array Status` with `parked (p : Park)` and `done` STORED)
 — reasons: (i) the consumer's `Expr` is `Config` (§1.14: `StepE` per
 thread, `to_val ⟨.next, []⟩ = some ()`, and under the LangD widening «a
@@ -253,7 +259,17 @@ fuel; the evidence (§5) is byte-identity, and the argument per item:
    `execStmt` on a bare `return`/`break`/`continue` statement now refuses
    (`.internal`/`.stuck`, cause named) where it used to return
    `.returned σ`/`.broke σ`/`.continued σ` — dead generality removed, no
-   Go program observes it.
+   Go program observes it. THIS IS A DEVIATION FROM "no deviation"
+   (audit fix R4): the theorem's domain shrank — `transferable`
+   (MultiSound.lean) moved from `Except Stop (ExecOutcome × Choices)`
+   to `Except Stop (ExecState × Choices)`, so a bare-statement run
+   ending in a signal at `.stop` was transferable and is now a refusal
+   on which `execProg_single_eq_execStmt` is silent. What replaces the
+   lost coverage: the two drivers agree on the shape by lemma —
+   `stepFn_signal_stop` and `stepMulti_signal_stop_single` (both
+   `= .error (signalRefusal sg .stop)`, MultiSound.lean) — and no
+   driver reaches it (barrier seeds at `StepFn.lean` `runPkgInitM`/
+   `runProgramSetupM`, `Multi.lean` `spawnStep`).
 4. **The flag ≡ the marker.** Emitter by emitter: `applyChanOp` wrapped
    every proceeding send commit / recv delivery entry / close and left
    parks and panics bare — `registryCommits` is `true` at the chan apply
@@ -278,8 +294,9 @@ fuel; the evidence (§5) is byte-identity, and the argument per item:
    post-configuration; it probes the flag on the post-thread — same
    truth value on every step by the previous sentence. The
    per-consumption trace's `postOp=4534` records (site, bound, stream
-   value, pick, position) are identical on all 20749 (row, stream)
-   lines — the executable form of this paragraph.
+   value, pick, position) are identical on all 20749 compared lines
+   (the count is explained once in §5) — the executable form of this
+   paragraph.
 5. **Representation only.** `Thread.eqb`/`Thread.eqb_sound` replace the
    marker's recursive `Config.eqbF` arm; `ThreadWf`; the engine hash.
    Certified sets are re-enumerated by the gate (zero drift); the
@@ -298,8 +315,14 @@ the wire, the decoder, every baseline.
 - BEFORE snapshot: `main` @ `076f5eec` binary (`golean-before`),
   `scripts/choice-trace-corpus --dump --jobs 6` over the whole executable
   corpus (3459 rows exported, 37 frontend refusals, 2 rows EXCLUDED as in
-  every trace since the A-series — `excluded.tsv`): 20748 (row, stream)
-  lines, 23115 consumption records, per-site `l1Sched=9443
+  every trace since the A-series — `excluded.tsv`): 20748 traced (row,
+  stream) lines PLUS one tracer ERROR row (`arrays/materialization-budget/
+  over-budget`: the BUG-078 decode refusal, «native lowering: array
+  type…», which the tracer cannot run and reports as ERROR — R10; its
+  one status line is compared like any other) = 20749 compared lines in
+  every `*-diff.txt` («IDENTICAL on 20749 (row, stream) lines» is the
+  comparison script's own wording for that total — audit fix R2: the
+  two figures were used interchangeably before); 23115 consumption records, per-site `l1Sched=9443
   appendSpill=4868 postOp=4534 backEdge=2404 mapIter=1307 l5ExitWindow=325
   tryLock=101 nilValueMethodText=84 l2Entry=24 l4Waiter=22 l2Arrival=3`, 0
   menu-invariant violations, 0 self-check alarms (`before-summary.txt`).
@@ -311,7 +334,7 @@ the wire, the decoder, every baseline.
   reported to the coordinator (§7), not touched here.
 - Commit 1 (`40fd1903`): trace `c1-summary.txt`; per-consumption dump
   byte-identical to BEFORE (23115 records, `c1-diff.txt`); status +
-  obsHash identical on all 20749 (row, stream) lines; the same 6
+  obsHash identical on all 20749 compared lines; the same 6
   pre-existing tracer mismatches. Gate: `scripts/capped scripts/ci --diff`
   at `40fd1903` reported RESULT: FAIL (`transcripts/gate-c1-FAIL.txt`) —
   the differential itself at ZERO drift (3498/3498 rows match
@@ -330,7 +353,7 @@ the wire, the decoder, every baseline.
 
 ## 6. What the consumer interface gains (plan §1.3 / §1.5 / §1.14)
 
-- `Config` is 9 constructors; NO k-less configuration (the `hdrain`
+- `Config` is 10 constructors; NO k-less configuration (the `hdrain`
   obstacle to `Language.Context.primStep_fill` is removed at its cause:
   `.panicking chain .stop` is a stuck terminal, `fill K` of it is the
   panic still unwinding through `K`); NO annotation to look through
@@ -343,12 +366,17 @@ the wire, the decoder, every baseline.
   (`strip`, `abort` included) — nothing sequential pretends to be a pool
   concern or vice versa.
 - `to_val ⟨.next, .stop⟩ = some ()` is the ONE terminal (`Config.isTerminal`,
-  `Config.terminal`); `Config.abort?` names the crash; `Thread.status`
-  is the value/parked/done classification the professor asked for, as a
-  view with its agreement theorems.
+  `Config.terminal`), and it is relation-terminal: `step_terminal_elim :
+  ¬ Step (.next .stop) σ c' σ'` (MachineSound.lean, beside
+  `step_abort_elim`/`step_signal_stop_elim`) is the `val_stuck`
+  obligation discharged (audit fix R6); `Config.abort?` names the crash;
+  `Thread.status` is the value/parked/done classification the professor
+  asked for — a definition with its agreement theorems, no in-repo
+  consumer yet (the consumer is iris-lean).
 - `execProg_single_eq_execStmt` with `seqOpCount`: the sequential
   refinement into the pool is exact and its cost is a defined function.
-- `Thread` is what §1.10's `Pool` needs; `Status`/`Done` are §1.3's names.
+- `Thread` is what §1.10's `Pool` needs; `Status`/`Done` are §1.3's names
+  (definitions + agreement theorems; consumed by nothing in this repo).
 
 ## 7. Owed / deviations, collected
 
@@ -369,13 +397,39 @@ the wire, the decoder, every baseline.
 4. **`ExecOutcome` deleted** (A8's B4 deferral): `execStmt` returns the
    final state; the `.returned/.broke/.continued` classes are refusals.
    A downstream statement that quantified them has no shape left (none
-   did: `execStmt` had no CLI consumer).
+   did: `execStmt` had no CLI consumer). The theorem-domain shrink this
+   implies for `transferable`/`execProg_single_eq_execStmt` is recorded
+   in §4.3 with the two driver-agreement lemmas that cover the lost
+   class (`stepFn_signal_stop`, `stepMulti_signal_stop_single`; audit
+   fix R4).
 5. **The clamp of `Config.boundarySite`** is gone (§3); the `Thread`
    docstring records why.
-6. **Pre-existing tracer finding** — `builtins/float-bits/
-   roundtrip-payloads` engine/enumerator observation mismatch on
-   `main`, 6 streams (§5). Not this lane's; reported for a frontier
-   row/plan by the owning lane (fidelity or tracer tooling).
+6. **Pre-existing tracer finding — DIAGNOSED AND FIXED in the audit fix
+   round (2026-09-05).** `builtins/float-bits/roundtrip-payloads`
+   engine/enumerator observation mismatch on `main`, 6 streams (§5).
+   The pre-merge audit classified it TRACER TOOLING: `ChoiceTrace.lean`
+   `traceStream` compared the engine's `RunResult` observation (a
+   `Stop` paired with the output printed before it — two `println`s
+   precede the BUG-094 refusal on that row) against an enumerator
+   refusal rendered with an EMPTY output field, so only status +
+   message were compared — and a genuine output divergence between the
+   drivers on ANY refusal path was invisible (fail-open). Fix
+   ([AGENT], this lane's fix round): `CLI.enumPoolRun`/`enumRunProgram`
+   return `Except (Stop × GoString) …`, pairing every refusal with the
+   pre-step fold exactly as `execProgLoopOut` does; the tracer compares
+   the whole observation on both paths; `probeSite` (the only other
+   consumer) destructures the pair. Verified by the whole-corpus trace
+   at the fix (`fix-summary.txt`/`fix-diff.txt`): mismatches 6 → 0, the
+   per-consumption dump byte-identical to c2, every other results line
+   identical; the six lines' `obsHash` moved because the recorded
+   enumerator observation now carries the prefix (= the engine's).
+   Rowed at detection (TODO.md, the C-arc section) per the [USER]
+   2026-09-03 direction; lesson recorded
+   in `docs/operational-lessons.md` and the tracer's header. Also listed
+   here (R10): the tracer's one ERROR row, `arrays/materialization-
+   budget/over-budget` (BUG-078 decode refusal — the tracer cannot run
+   the row; not a mismatch, not this lane's), present identically on
+   every trace in §5.
 7. **A11** (`sortSlice` deletion) and the A4/A8 owed items are untouched
    here, as recorded in the arc plan.
 
@@ -402,7 +456,17 @@ control half), `165822ef` (B4 terminals + C5), then the records commit
 commits, whose `GoLean/`, `Tests/`, `Corpus/`, `baselines/`, `scripts/`,
 `tools/` trees are byte-identical to the rebased ones (`git diff` empty
 — the README says which SHA ran which gate). Gates: see §5 and the evidence README's per-commit
-table. No baseline, corpus, frontend, decoder or wire change; no new
+table. **Audit fix round (2026-09-05, after the pre-merge audit's
+FIX-FIRST verdict — records + three small lemma additions + the tracer
+fix; R1–R7, R10 and the tracer finding; every judgement [AGENT]):** the
+machine, `Step`, `StepM` and every driver are unchanged except (i)
+`signalRefusal`'s four named statement-frame arms (R7 — unreachable
+from `stepFn`, text-only), (ii) the lemmas `step_terminal_elim` (R6),
+`Thread.status_parked_iff`/`_done_normal_iff` (R5),
+`stepFn_signal_stop`/`stepMulti_signal_stop_single` (R4), and (iii) the
+enumerator-driver error type (`Stop × GoString`, tracer fix — CLI
+tooling, not the trusted surface). Gate and tracer re-run: the evidence
+README's fix-round row. No baseline, corpus, frontend, decoder or wire change; no new
 `ChoiceSite`; no `sorry`/`axiom`/`native_decide`; no `partial` in
 GoCore. Branch-complete; the audit ask is the coordinator's to pose;
 merge/push are the [USER]'s.

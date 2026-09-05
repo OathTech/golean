@@ -57,6 +57,23 @@ pool-layer sites) must equal the tracer's records for those sites.
 Additionally the run's status and consumption count are checked
 against `CLI.enumRunProgram`'s leftover meter and the real engine's
 observation (`runProgramPoolIntsM`) — the driver-agreement pin.
+
+THE REFUSAL-PATH OBSERVATION (audit fix 2026-09-05, found by the
+c-arc-b4 pre-merge audit on the pre-existing
+`builtins/float-bits/roundtrip-payloads` mismatch): the engine's
+observation is a `RunResult` — a `Stop` PAIRED with the output printed
+before it — while the enumerator's refusal used to be a bare `Stop`
+rendered with an EMPTY output field. So on every refusal path the
+"observation mismatch" check compared status + message only: it fired
+on that row (two `println`s precede the BUG-094 refusal — a tracer
+artefact, not a machine finding) and, worse, it was FAIL-OPEN in the
+other direction — a genuine output divergence between the two drivers
+before a refusal was invisible. `CLI.enumRunProgram`/`enumPoolRun` now
+return `Except (Stop × GoString) …`, pairing every refusal with the
+pre-step fold exactly as `execProgLoopOut` does, and this check
+compares the whole observation on both paths. The lesson, generalized:
+a comparator that projects a field away on ONE side is fail-open on
+that field for every case that reaches the projection.
 -/
 
 namespace GoLean.ChoiceTrace
@@ -767,14 +784,16 @@ def traceStream (program : Program) (functionName : String) (args : Array Int)
   let out ← traceProgram ep fuel stream
   -- Enumerator driver: observation + leftover meter. The meter is
   -- three-valued: `none` = no leftover available (the enumerator driver
-  -- threw — deadlock/fuel-out/diagnostic — so nothing to compare);
+  -- threw — deadlock/fuel-out/diagnostic — so nothing to compare; its
+  -- OBSERVATION is still compared whole, output prefix included —
+  -- audit fix 2026-09-05, see the header);
   -- `some none` = the stream was fully consumed (count ≥ |stream|);
   -- `some (some n)` = exactly n consumed.
   let (enumStatus, enumObs, meter) :=
     match CLI.enumRunProgram ep fuel stream with
     | .ok (st, j, leftover) => (st, j.compress,
         (some (if leftover.isEmpty then (none : Option Nat) else some (stream.length - leftover.length)) : Option (Option Nat)))
-    | .error e => (e.status, (CLI.observationOfRun (.error e)).compress, none)
+    | .error (e, out) => (e.status, (CLI.observationOfRunOut (.error (e, out))).compress, none)
   let realObs := (CLI.observationOfRunOut (runProgramPoolOutIntsM fuel program functionName args stream)).compress
   let mut agree : List String := []
   if enumStatus != out.status then

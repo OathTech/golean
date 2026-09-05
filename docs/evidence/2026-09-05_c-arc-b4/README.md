@@ -39,8 +39,14 @@ certificate fixture), and the whole-corpus labeled-consumption trace
 (`scripts/choice-trace-corpus --dump`: every executable row × 6 streams)
 is byte-identical to the pre-lane snapshot on every individual consumption
 record (id, stream, idx, phase, site, bound, streamValue, pick — 23115
-records over 20748 (row, stream) lines) with status + observation hash
-identical on every (row, stream) line, at BOTH commits.
+records over 20748 traced (row, stream) lines) with status + observation
+hash identical on every (row, stream) line, at BOTH commits. THE COUNT,
+once: 20748 traced (row, stream) lines + the one tracer ERROR row
+(`arrays/materialization-budget/over-budget`, the BUG-078 decode refusal
+the tracer cannot run; its status line is compared like any other) =
+20749 compared lines — the `*-diff.txt` files' «IDENTICAL on 20749 (row,
+stream) lines» is the comparison script's wording for that total (audit
+fix R2; the tool output is kept verbatim).
 
 ## Reproduction (repo root; `deps/` set up by `scripts/setup-deps`)
 
@@ -74,17 +80,21 @@ runs): the tracer reports `driver-agreement mismatches: 6`, all on ONE
 row, `builtins/float-bits/roundtrip-payloads` (every stream: «MISMATCH:
 engine/enumerator observation mismatch»); present on `main` @ `076f5eec`'s
 binary (`choice-trace/before-summary.txt`) before any edit of this lane.
-Reported in the lane's summary for the owning lane (fidelity / tracer
-tooling); every other row: 0 violations, 0 alarms, 0 mismatches.
+Every other row: 0 violations, 0 alarms, 0 mismatches. DIAGNOSED at the
+pre-merge audit as TRACER TOOLING (the enumerator's refusal observation
+dropped the printed prefix the engine's carries) and FIXED in this lane's
+audit fix round — design note §7.6; the fix-round row below records the
+re-run (`choice-trace/fix-summary.txt`).
 
 ## Per-commit record
 
 | commit | gate | tally | drift | trace vs BEFORE |
 |---|---|---|---|---|
-| `40fd1903` B4 (1/3) Signal | `ci --diff` **FAIL** (`transcripts/gate-c1-FAIL.txt`) — ONE failing step: «core build has GoLean/ warnings» (13 `unusedSimpArgs` warnings from a `set_option … in` left attached to a new lemma instead of `stepFn_consumption_none`; fixed in `165822ef`). The `row: FAIL … TIMED OUT after 1s` lines in the transcript are the lane-validation SELF-TESTS T1–T3 (each `ok`), present in the passing run too. | differential 3498/3498 FULL, negative 394/394, eval 153 ok | 0 | per-consumption dump byte-identical, 23115 records; status + obsHash identical on 20749 (row, stream) lines; per-site totals identical (`choice-trace/c1-diff.txt`, `c1-summary.txt`) |
-| `165822ef` B4 (2/3) + C5 | `ci --diff` **PASS** (`transcripts/gate-c2.txt`) | 3498/3498 FULL, negative 394/394, eval 153 ok, core build warning-free, reconciler 2 findings / 0 HIGH (report-only; both pre-existing cross-ledger notes — C13 off-pin Go version mentions in docs, C5 one frontier-table citation) | 0 | per-consumption dump byte-identical, 23115 records; status + obsHash identical on 20749 (row, stream) lines; per-site totals identical; 0 violations / 0 alarms / the same 6 pre-existing float-bits mismatches (`choice-trace/c2-diff.txt`, `c2-summary.txt`) |
+| `40fd1903` B4 (1/3) Signal | `ci --diff` **FAIL** (`transcripts/gate-c1-FAIL.txt`) — ONE failing step: «core build has GoLean/ warnings» (13 `unusedSimpArgs` warnings from a `set_option … in` left attached to a new lemma instead of `stepFn_consumption_none`; fixed in `165822ef`). The `row: FAIL … TIMED OUT after 1s` lines in the transcript are the lane-validation SELF-TESTS T1–T3 (each `ok`), present in the passing run too. | differential 3498/3498 FULL, negative 394/394, eval 153 ok | 0 | per-consumption dump byte-identical, 23115 records; status + obsHash identical on 20749 compared lines; per-site totals identical (`choice-trace/c1-diff.txt`, `c1-summary.txt`) |
+| `165822ef` B4 (2/3) + C5 | `ci --diff` **PASS** (`transcripts/gate-c2.txt`) | 3498/3498 FULL, negative 394/394, eval 153 ok, core build warning-free, reconciler 2 findings / 0 HIGH (report-only; both pre-existing cross-ledger notes — C13 off-pin Go version mentions in docs, C5 one frontier-table citation) | 0 | per-consumption dump byte-identical, 23115 records; status + obsHash identical on 20749 compared lines; per-site totals identical; 0 violations / 0 alarms / the same 6 pre-existing float-bits mismatches (`choice-trace/c2-diff.txt`, `c2-summary.txt`) |
 
 | records tip (`412832b3` pre-rebase = the branch tip's code trees byte-for-byte; rebased tip `03fae3c8` + this row's commit) | `ci --diff` **PASS** (`transcripts/gate-tip.txt`) | 3498/3498 FULL, negative 394/394, eval 153 ok, core build warning-free | 0 | (no machine change since c2) |
+| audit fix round (SHA in the commit message that adds `transcripts/gate-fix.txt`) — R1–R7, R10, tracer fix | `ci --diff` — see `transcripts/gate-fix.txt` (tail recorded there and in the fix-round report) | see transcript | see transcript | per-consumption dump byte-identical to c2 (23115 records); results lines 20749/20749, IDENTICAL on every line except the six `builtins/float-bits/roundtrip-payloads` lines, which went MISMATCH → **ok** (driver-agreement mismatches 6 → 0) and whose `obsHash` moved because the enumerator's recorded refusal observation now carries the printed prefix (= the engine's); per-site totals, 0 violations, 0 alarms, 195 refusal ids, depth exposure identical (`choice-trace/fix-summary.txt`, `fix-diff.txt`) |
 
 Per-site totals at BEFORE (and at every commit): `l1Sched=9443
 appendSpill=4868 postOp=4534 backEdge=2404 mapIter=1307 l5ExitWindow=325

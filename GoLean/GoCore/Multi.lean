@@ -214,6 +214,36 @@ def Thread.status : Thread → Status
       else if isBlockedConfig c then .parked
       else .running
 
+/-- A blocked configuration is not the terminal (the four parked shapes
+are not `.next .stop`). -/
+theorem isBlockedConfig_ne_terminal {c : Config} (h : isBlockedConfig c = true) :
+    c.isTerminal = false := by
+  cases c <;> simp_all [isBlockedConfig, Config.isTerminal]
+
+/-- The view's `parked` IS `isBlockedConfig` on an unflagged goroutine
+(audit fix R5, 2026-09-05: the `Status` view has no in-repo consumer —
+the consumer is iris-lean — so its two content-bearing cells are pinned
+to the predicates the pool dispatches on). -/
+theorem Thread.status_parked_iff {c : Config} :
+    Thread.status (.running c none) = .parked ↔ isBlockedConfig c = true := by
+  simp only [Thread.status]
+  by_cases hb : isBlockedConfig c = true
+  · simp [hb, isBlockedConfig_ne_terminal hb]
+  · simp only [Bool.not_eq_true] at hb
+    simp only [hb, Bool.false_eq_true, reduceIte]
+    split <;> simp
+
+/-- The view's `done .normal` IS `Config.isTerminal` on an unflagged
+goroutine (audit fix R5). -/
+theorem Thread.status_done_normal_iff {c : Config} :
+    Thread.status (.running c none) = .done .normal ↔ c.isTerminal = true := by
+  simp only [Thread.status]
+  by_cases ht : c.isTerminal = true
+  · simp [ht]
+  · simp only [Bool.not_eq_true] at ht
+    simp only [ht, Bool.false_eq_true, reduceIte]
+    split <;> simp
+
 /-- The ThreadPool machine state (D1): the per-goroutine states
 (`Thread`), the ONE shared `ExecState` (heap, allocator, program
 context), and the running goroutine. `threads` is append-only — index =

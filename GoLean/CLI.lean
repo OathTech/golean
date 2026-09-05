@@ -480,11 +480,13 @@ private def runNativeJsonRun (args : List String) : IO UInt32 := do
                   -- entry is the whole-PROGRAM driver: seed globals, run
                   -- $pkginit, then the subject. Since the channels arc
                   -- slice 2 the subject phase runs on the THREAD POOL
-                  -- (`runProgramPoolM`) — identical to the sequential
-                  -- driver on programs that never spawn
-                  -- (`execProg_single_eq_execStmt` + the full-corpus
-                  -- bit-identity check), and the only driver on which
-                  -- `go` statements run.
+                  -- (`runProgramPoolM`) — on programs that never spawn
+                  -- it reaches the sequential driver's result at fuel
+                  -- + `seqOpCount` (one boundary-clear pool step per
+                  -- completed registry op, C5: `execProg_single_eq_execStmt`,
+                  -- Multi.lean's `execProg` docstring; NOT the same
+                  -- step count at the same fuel), and it is the only
+                  -- driver on which `go` statements run.
                   -- Since stdlib slice 3 the whole-run result carries
                   -- the program OUTPUT on both paths (`RunResult`).
                   match GoLean.GoCore.Machine.runProgramPoolOutIntsM cfg.fuel program functionName cfg.args cfg.choices with
@@ -795,18 +797,25 @@ EVERY enumerated path must carry it, which `--expect-status race`
 enforces; under any other expectation a race member fails the status
 discipline loudly). All other `Stop`s (stuck, unsupported,
 internal, fuel-out, and `deadlock` — a deadlocking member still has
-no membership handling) propagate and the enumeration fails loud.
-Returns (status, observation, leftover); non-`private` so the
-driver-agreement eval tests can pin it against the originals it
+no membership handling) propagate and the enumeration fails loud —
+CARRYING the output folded before them, exactly as `execProgLoopOut`
+pairs its `Stop` with the pre-step `acc` (audit fix 2026-09-05, the
+tracer's engine/enumerator comparison: a refusal's printed prefix is
+part of the observation, so an error without it compared only
+status + message and could not see an output divergence on any
+refusal path). Returns (status, observation, leftover); non-`private`
+so the driver-agreement eval tests can pin it against the originals it
 mirrors (audit F5). -/
 def enumPoolRun (resultLocs : List Loc) :
     Nat → GoCore.Machine.MultiConfig → GoCore.Machine.RaceState →
-    GoCore.Choices → GoString → Except Stop (String × Json × GoCore.Choices)
+    GoCore.Choices → GoString →
+    Except (Stop × GoString) (String × Json × GoCore.Choices)
   | fuel, m, r, choices, acc =>
       -- `acc`: the program output folded so far (stdlib slice 3) — every
-      -- member observation carries it (`execProgLoopOut`'s fold, mirrored).
+      -- member observation carries it (`execProgLoopOut`'s fold, mirrored),
+      -- and so does every refusal (`execProgLoopOut`'s `(acc, throw e)`).
       if m.threads.isEmpty then
-        throw (.internal "thread pool without a main goroutine")
+        throw (.internal "thread pool without a main goroutine", acc)
       else
         match m.panicMsg? with
         | some msg => return ("panic", errorJson (.panic msg) acc, choices)
@@ -819,7 +828,7 @@ def enumPoolRun (resultLocs : List Loc) :
                 (match GoCore.Machine.runnableIdxs m.shared m.threads with
                 | [] =>
                     return ("ok", runJson
-                      { values := (← GoCore.Machine.loadMany σf resultLocs).toArray,
+                      { values := (← (GoCore.Machine.loadMany σf resultLocs).mapError (·, acc)).toArray,
                         output := acc },
                       choices)
                 | _ :: _ =>
@@ -827,33 +836,35 @@ def enumPoolRun (resultLocs : List Loc) :
                       GoCore.Choices.consumeAt .l5ExitWindow 2 choices
                     if pick == 0 then
                       return ("ok", runJson
-                        { values := (← GoCore.Machine.loadMany σf resultLocs).toArray,
+                        { values := (← (GoCore.Machine.loadMany σf resultLocs).mapError (·, acc)).toArray,
                           output := acc },
                         choices₁)
                     else
                       match fuel with
-                      | 0 => throw .fuelOut
+                      | 0 => throw (.fuelOut, acc)
                       | fuel + 1 => do
-                          let (m', choices', ev) ← GoCore.Machine.stepMulti m choices₁
+                          let (m', choices', ev) ←
+                            (GoCore.Machine.stepMulti m choices₁).mapError (·, acc)
                           let acc' := ev.out.foldl GoString.append acc
                           match GoCore.Machine.raceUpdate m.shared m.threads ev m' r with
                           | .error .raceDetected =>
                               return ("race", errorJson .raceDetected acc', choices')
-                          | .error e => throw e
+                          | .error e => throw (e, acc)
                           | .ok r' => enumPoolRun resultLocs fuel m' r' choices' acc')
             | none =>
                 if (GoCore.Machine.runnableIdxs m.shared m.threads).isEmpty then
-                  throw .deadlock
+                  throw (.deadlock, acc)
                 else
                   match fuel with
-                  | 0 => throw .fuelOut
+                  | 0 => throw (.fuelOut, acc)
                   | fuel + 1 => do
-                      let (m', choices', ev) ← GoCore.Machine.stepMulti m choices
+                      let (m', choices', ev) ←
+                        (GoCore.Machine.stepMulti m choices).mapError (·, acc)
                       let acc' := ev.out.foldl GoString.append acc
                       match GoCore.Machine.raceUpdate m.shared m.threads ev m' r with
                       | .error .raceDetected =>
                           return ("race", errorJson .raceDetected acc', choices')
-                      | .error e => throw e
+                      | .error e => throw (e, acc)
                       | .ok r' => enumPoolRun resultLocs fuel m' r' choices' acc'
 
 /-- The `$pkginit` phase of an enumeration run (init slice):
@@ -888,9 +899,16 @@ are deterministic and choice-free, but the post-init STATE they extend
 can differ per stream, so they run here, per stream, not in setup) and
 the subject itself on the leftover. The returned leftover is the
 composite run's — init sites and subject sites are all sites of the
-run, which is what the explore loop's probe semantics count. -/
+run, which is what the explore loop's probe semantics count. A `Stop`
+carries the output folded before it (`RunResult`'s shape — empty for
+the setup and the sequential init phase, `runProgramPoolOutM`'s
+mirror), so the tracer's driver-agreement check compares the WHOLE
+refusal observation (audit fix 2026-09-05). -/
 def enumRunProgram (ep : EnumProgram) (runFuel : Nat)
-    (stream : GoCore.Choices) : Except Stop (String × Json × GoCore.Choices) := do
+    (stream : GoCore.Choices) :
+    Except (Stop × GoString) (String × Json × GoCore.Choices) := do
+  let noOut {α} (r : Except Stop α) : Except (Stop × GoString) α :=
+    r.mapError (·, GoString.empty)
   let (σ₁, choices₁) ←
     match ep.initBody? with
     | none => pure (ep.σ₀, stream)
@@ -900,12 +918,12 @@ def enumRunProgram (ep : EnumProgram) (runFuel : Nat)
         -- panic member's message stays unmarked (Go-observable).
         match enumInitRun runFuel ep.σ₀
             (.exec body [] (.frame [] [] [] [] .stop)) stream with
-        | .error e => throw (GoCore.Machine.markInitPhase e)
+        | .error e => throw (GoCore.Machine.markInitPhase e, GoString.empty)
         | .ok (.inl r) => pure r
         | .ok (.inr (msg, leftover)) => return ("panic", errorJson (.panic msg), leftover)
-  let (env, s₂) ← GoCore.Machine.bindParams [] σ₁ ep.func.args.toList ep.args.toList
-  let (frameEnv, s₃) ← GoCore.Machine.allocDecls env s₂ ep.func.results.toList
-  let resultLocs ← GoCore.Machine.pinResultLocs frameEnv ep.func.results.toList
+  let (env, s₂) ← noOut (GoCore.Machine.bindParams [] σ₁ ep.func.args.toList ep.args.toList)
+  let (frameEnv, s₃) ← noOut (GoCore.Machine.allocDecls env s₂ ep.func.results.toList)
+  let resultLocs ← noOut (GoCore.Machine.pinResultLocs frameEnv ep.func.results.toList)
   -- The subject runs on the POOL (slice 4), mirroring `runProgramPoolM`:
   -- a fresh one-thread pool over the initialized state, race detector
   -- armed from empty.
@@ -1114,7 +1132,7 @@ def probeSite (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
   let mut o := out
   for d in [bound, 2 * bound + 1, 4 * bound + 3] do
     match enumRunProgram ctx.ep ctx.runFuel (prefixPicks ++ [d]) with
-    | .error .fuelOut =>
+    | .error (.fuelOut, _) =>
         if ctx.allowNonterm.isSome then
           -- The rung aliased onto a divergent branch — the same class
           -- the DFS counts into `nonterm` under the explicit flag; it
@@ -1123,7 +1141,7 @@ def probeSite (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
           o := { o with probes := o.probes + 1 }
         else
           throw s!"alias-guard probe {prefixPicks ++ [d]} failed: the probed member's run errored — {renderStop Stop.fuelOut}. Under a correct bound this rung aliases onto an in-bound member, so this is a member-class failure (e.g. a deadlocking or fuel-out member, which has no membership handling), NOT evidence against the computed bound {bound} (audit F15; a bound refutation is a probe OBSERVATION outside the enumerated set)"
-    | .error err =>
+    | .error (err, _) =>
         throw s!"alias-guard probe {prefixPicks ++ [d]} failed: the probed member's run errored — {renderStop err}. Under a correct bound this rung aliases onto an in-bound member, so this is a member-class failure (e.g. a deadlocking or fuel-out member, which has no membership handling), NOT evidence against the computed bound {bound} (audit F15; a bound refutation is a probe OBSERVATION outside the enumerated set)"
     | .ok (_, obs, _) =>
         let pset :=

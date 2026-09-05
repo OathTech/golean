@@ -511,6 +511,28 @@ theorem stepMulti_abort_single {σ : ExecState} {c : Config} {ch : Choices}
   simp only [isBlockedConfig_of_abort hab, Bool.false_eq_true, reduceIte, hab]
   cases abortMsg σ first rest <;> simp [Bind.bind, Except.bind, Except.map]
 
+/-! ## The signal at `.stop` (B4; audit fix R4, 2026-09-05)
+
+Since B4 a signal that reaches the empty continuation is a REFUSAL, not
+a `returned/broke/continued` completion: `transferable` moved from the
+deleted `ExecOutcome` to `ExecState × Choices`, so
+`execProg_single_eq_execStmt` is silent on runs that used to end there.
+Unreachable from every Program driver (each seeds its subject under a
+barrier `.frame`), so nothing observable changed — and the two drivers
+agree on the shape anyway: both raise `signalRefusal sg .stop`, the
+sequential machine at its step, the one-goroutine pool at its
+`stepFn` call (no boundary, no park, no abort, no spawn, no arrival
+on a `.signal` configuration). -/
+
+theorem stepFn_signal_stop {σ : ExecState} {sg : Signal} {ch : Choices} :
+    stepFn σ (.signal sg .stop) ch = .error (signalRefusal sg .stop) := by
+  cases sg <;> rfl
+
+theorem stepMulti_signal_stop_single {σ : ExecState} {sg : Signal} {ch : Choices} :
+    stepMulti ⟨#[.running (.signal sg .stop) none], σ, 0⟩ ch
+      = .error (signalRefusal sg .stop) := by
+  cases sg <;> rfl
+
 /-! ## stepFn shape inversions (the spawn/terminal refusals) -/
 
 /-- A completed spawn position never steps sequentially — `stepFn`

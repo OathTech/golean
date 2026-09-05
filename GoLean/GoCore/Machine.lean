@@ -2859,6 +2859,16 @@ def signalRefusal (sg : Signal) : Cont → Stop
       match sg with
       | .contTo L => .stuck s!"continue to non-loop label {L}"
       | _ => .internal "signal at a label frame the table resolves"
+  -- The four other statement frames resolve EVERY signal in the table
+  -- (`signalStep` has a `some` in each of their cells), so these arms
+  -- are unreachable from `stepFn` today; they are stated by name (audit
+  -- fix R7, 2026-09-05) so that a table row removed in the future
+  -- refuses as "signal at a <frame> the table resolves", never as a
+  -- mis-named "delivered to expression continuation".
+  | .seq .. => .internal "signal at a seq frame the table resolves"
+  | .loop .. => .internal "signal at a loop frame the table resolves"
+  | .breakableK _ => .internal "signal at a breakable frame the table resolves"
+  | .mapIterK .. => .internal "signal at a map-iteration frame the table resolves"
   | _ =>
       match sg with
       | .brk => .internal "break delivered to expression continuation"

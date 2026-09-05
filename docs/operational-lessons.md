@@ -482,3 +482,35 @@ the train continues, never a silent re-pin. **ADOPTED [USER]
 relayed): «Yeah, that make sense, let's adopt that» — adopting the
 proposal as written. Recorded as merge protocol step 5a, `CLAUDE.md`
 "The merge protocol".
+
+## A comparator that projects a field away on one side is fail-open on that field (2026-09-05)
+
+The choice tracer's driver-agreement check (`GoLean/ChoiceTrace.lean`
+`traceStream`) compares the real engine's observation with the
+enumerator driver's. The engine's is a `RunResult` — a `Stop` paired
+with the output printed before it; the enumerator's refusal was a bare
+`Stop`, rendered through `observationOfRun` with an EMPTY output field.
+So on every refusal path the check compared status + message only. It
+showed up as a false positive — `builtins/float-bits/roundtrip-payloads`
+prints two lines before its BUG-094 refusal and was reported as an
+engine/enumerator MISMATCH on all six streams on every whole-corpus
+trace this lane ran, `main`'s own binary included, until the c-arc-b4
+pre-merge audit read the two JSONs side by side — but the false
+positive was the benign half: a REAL pre-refusal output divergence between the two
+drivers would have printed «ok». Fix: `CLI.enumPoolRun`/`enumRunProgram`
+return `Except (Stop × GoString) …`, pairing every refusal with the
+pre-step fold exactly as `execProgLoopOut` does, and the tracer compares
+the whole observation on both paths (the float-bits row went to 0
+mismatches with no other line of the whole-corpus summary moving —
+`docs/evidence/2026-09-05_c-arc-b4/choice-trace/fix-summary.txt`). Two
+lessons. (1) **When a comparator's two sides have different types, the
+conversion is part of the comparator's trust surface**: a `mapError (·,
+empty)` is a projection, and a projection on one side means the field
+is not compared — audit the conversions, not just the `!=`. (2) **A
+standing MISMATCH that "everyone knows" is a finding nobody read**: the
+row was listed as "pre-existing, not this lane's" in the lane's
+records before anyone opened the two observations; the audit's
+side-by-side read diagnosed it.
+Lane tooling ([AGENT] fix, records-only audit round); the eval-test F5
+pins still compare `.ok` members only — a refusal-path eval pin is
+noted in TODO.md, not claimed.

@@ -931,6 +931,16 @@ theorem step_signal_stop_elim {sg : Signal} {σ : ExecState} {c' : Config}
   cases h
   simp_all
 
+/-- THE terminal is relation-terminal (audit fix R6, 2026-09-05): no rule
+steps `.next .stop` — every `.next` rule matches a frame. This is the
+`val_stuck` obligation of the consumer interface for the one value
+`to_val ⟨.next, .stop⟩ = some ()` (`docs/2026-09-05_c-arc-b4-design.md`
+§6; `Config.isTerminal`/`Config.terminal` name the shape). -/
+theorem step_terminal_elim {σ : ExecState} {c' : Config} {σ' : ExecState} :
+    ¬ Step (.next .stop) σ c' σ' := by
+  intro h
+  cases h
+
 
 /-! Blocked configurations (channels arc slice 1) are relation-TERMINAL:
 no rule steps a blocked goroutine — pairing is the slice-2 pool's job.
