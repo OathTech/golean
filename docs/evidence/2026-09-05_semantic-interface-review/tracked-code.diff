@@ -1,0 +1,701 @@
+diff --git a/GoLean.lean b/GoLean.lean
+index 03177f5b..0a8481dc 100644
+--- a/GoLean.lean
++++ b/GoLean.lean
+@@ -2,6 +2,7 @@
+ -- Import modules here that should be built as part of the library.
+ import GoLean.StrictJson
+ import GoLean.GoCore
++import GoLean.Interface
+ import GoLean.NativeToIR
+ import GoLean.CLI
+ import GoLean.ChoiceTrace
+diff --git a/lakefile.toml b/lakefile.toml
+index 898d46f5..e61b4555 100644
+--- a/lakefile.toml
++++ b/lakefile.toml
+@@ -18,3 +18,8 @@ globs = ["Tests.FloatVectors"]
+ [[lean_exe]]
+ name = "gocore-eval-tests"
+ root = "Tests.GoCoreEval"
++
++[[lean_lib]]
++# Iris-free contract regressions and their post-import dependency audit.
++name = "InterfaceTests"
++globs = ["Tests.InterfaceContract", "Tests.InterfaceAudit"]
+diff --git a/scripts/ci b/scripts/ci
+index df7af872..c7e93443 100755
+--- a/scripts/ci
++++ b/scripts/ci
+@@ -411,6 +411,13 @@ else
+   ok "core build (warning-free)"
+ fi
+ 
++step "semantic interface (Iris-free correspondence regressions and dependency audit)"
++if bash scripts/check-interface; then
++  ok "semantic interface (bridges, counterexamples, compiled audit negatives)"
++else
++  bad "semantic interface"
++fi
++
+ # 2b. Frontend pins (restored at the split audit, findings A1/A2 + B1/B8
+ # — docs/2026-08-31_repo-split-plan.md fix round): the two SEMANTICS
+ # pins that lived inside the parked check-golden. (1) the
+diff --git a/spikes/gate-a1/GateA1/Audit.lean b/spikes/gate-a1/GateA1/Audit.lean
+index 1e35dd34..69d71d77 100644
+--- a/spikes/gate-a1/GateA1/Audit.lean
++++ b/spikes/gate-a1/GateA1/Audit.lean
+@@ -12,14 +12,14 @@ def GateA1Audit.run : CoreM Unit := do
+   let env ← getEnv
+   let allowed : List Name := [``propext, ``Classical.choice, ``Quot.sound]
+   let exports : List Name := [
+-    ``GoLean.GateA1.iter_iff_trace,
+-    ``GoLean.GateA1.run_ok_iff,
++    ``GoLean.Semantics.iter_iff_trace,
++    ``GoLean.Semantics.run_ok_iff,
+     ``GoLean.GateA1.recover_step_does_not_transport,
+     ``GoLean.GateA1.fixed_stream_not_existential_path,
+-    ``GoLean.GateA1.Pool.run_iff,
+-    ``GoLean.GateA1.Pool.program_run_iff,
+-    ``GoLean.GateA1.Pool.exists_program_run_iff,
+-    ``GoLean.GateA1.Pool.observation_iff,
++    ``GoLean.Semantics.Pool.run_iff,
++    ``GoLean.Semantics.Pool.program_run_iff,
++    ``GoLean.Semantics.Pool.exists_program_run_iff,
++    ``GoLean.Semantics.Pool.observation_iff,
+     ``GoLean.GateA1.both_pool_traces,
+     ``GoLean.GateA1.print_before_panic,
+     ``GoLean.GateA1.Customer.recover_check_runs,
+@@ -27,7 +27,9 @@ def GateA1Audit.run : CoreM Unit := do
+   for n in exports do
+     let some (.thmInfo _) := env.find? n
+       | throwError "Gate A1: missing theorem {n}"
+-  let ours := env.header.moduleNames.map (fun n => n.getRoot == `GateA1)
++  let ours := env.header.moduleNames.map (fun n => n.getRoot == `GateA1 ||
++      [`GoLean.GoCore.Trace, `GoLean.GoCore.PoolTrace,
++       `GoLean.GoCore.ProgramTrace, `GoLean.Interface, `Tests.InterfaceContract].contains n)
+   let mut checked := 0
+   for (n, _) in env.constants.toList do
+     let localModule := match env.getModuleIdxFor? n with
+diff --git a/spikes/gate-a1/GateA1/Counterexamples.lean b/spikes/gate-a1/GateA1/Counterexamples.lean
+index 97db1264..6e56fa67 100644
+--- a/spikes/gate-a1/GateA1/Counterexamples.lean
++++ b/spikes/gate-a1/GateA1/Counterexamples.lean
+@@ -1,90 +1,3 @@
+-import GateA1.Trace
++import Tests.InterfaceContract
+ 
+-namespace GoLean.GateA1
+-open GoCore GoCore.Machine
+-
+-def bareFrame : Cont := .frame [] [] [] [] .stop false
+-def panicFrame : Cont := .frame [] [] [] [] (.panicResumeK [panicEntry "audit"] .stop) false
+-
+-theorem recover_bare : recoverResult bareFrame = (.nil, bareFrame) := by
+-  unfold recoverResult
+-  rw [Cont.rebuild_act (by rfl)]
+-  change (match recoverThroughWrappers .stop with
+-    | some (v, k) => (v, Cont.frame [] [] [] [] k false)
+-    | none => (.nil, bareFrame)) = _
+-  unfold recoverThroughWrappers
+-  rw [Cont.rebuild_stop]
+-def recoveredFrame : Cont := .frame [] [] [] []
+-  (.panicResumeK [{ panicEntry "audit" with recovered := true }] .stop) false
+-theorem recover_handler : recoverResult panicFrame = ((panicEntry "audit").value, recoveredFrame) := by
+-  unfold recoverResult
+-  rw [Cont.rebuild_act (by rfl)]
+-  change (match recoverThroughWrappers (.panicResumeK [panicEntry "audit"] .stop) with
+-    | some (v, k) => (v, Cont.frame [] [] [] [] k false)
+-    | none => (.nil, panicFrame)) = _
+-  unfold recoverThroughWrappers
+-  rw [Cont.rebuild_act (by rfl)]
+-  rfl
+-theorem recover_changes_value : (recoverResult bareFrame).1 ≠ (recoverResult panicFrame).1 := by
+-  intro h
+-  rw [recover_bare, recover_handler] at h
+-  cases h
+-
+-theorem recover_changes_handler : (recoverResult panicFrame).2 ≠ panicFrame := by
+-  intro h
+-  rw [recover_handler] at h
+-  have hb := congrArg (fun k => match k with
+-    | .frame _ _ _ _ (.panicResumeK (e :: _) _) _ => e.recovered
+-    | _ => false) h
+-  cases hb
+-
+-theorem recover_stepFn (s : ExecState) (env : LocalEnv) (k : Cont) (ch : Choices) :
+-    stepFn s (.evalE .recoverCall env k) ch =
+-      .ok (.retV (recoverResult k).1 (recoverResult k).2, s, ch) := rfl
+-
+-/-- Transporting the bare-frame recover successor under the added handler
+-is not a step. This refutes the concrete instance of the proposed fill law. -/
+-theorem recover_step_does_not_transport (s : ExecState) :
+-    Step (.evalE .recoverCall [] bareFrame) s (.retV .nil bareFrame) s ∧
+-    ¬ Step (.evalE .recoverCall [] panicFrame) s (.retV .nil panicFrame) s := by
+-  refine ⟨.evalRecover recover_bare, ?_⟩
+-  intro h
+-  obtain ⟨ch, ch', he⟩ := step_complete h
+-  rw [recover_stepFn, recover_handler] at he
+-  have hc := (Prod.mk.inj (Except.ok.inj he)).1
+-  cases hc
+-
+-def illTyped : ExecState := { heap := #[.value .bool (.int 7)] }
+-theorem address_bound_admits_ill_typed : StateWf illTyped := by decide
+-
+-/-- An actual choice site of the current machine, not a toy transition system. -/
+-def forkPoint : Config := .panicking [panicEntry "audit"] (.probeK .stop)
+-def raised : Config := .panicking [panicEntry "audit"] .stop
+-
+-theorem choose_defer (s : ExecState) (tail : Choices) :
+-    stepFn s forkPoint (0 :: tail) = .ok (.next .stop, s, tail) := rfl
+-theorem choose_raise (s : ExecState) (tail : Choices) :
+-    stepFn s forkPoint (1 :: tail) = .ok (raised, s, tail) := rfl
+-
+-theorem both_relational_successors (s : ExecState) :
+-    Step forkPoint s (.next .stop) s ∧ Step forkPoint s raised s :=
+-  ⟨.probeDefer, .probeRaise⟩
+-
+-/-- The old fixed-stream ⇐ existential-path claim already fails at one step. -/
+-theorem fixed_stream_not_existential_path (s : ExecState) :
+-    Steps forkPoint s raised s ∧
+-      ¬ ∃ chf, stepFnIter 1 s forkPoint [0] = .ok (raised, s, chf) := by
+-  refine ⟨Steps.single (both_relational_successors s).2, ?_⟩
+-  rintro ⟨chf, h⟩
+-  have hc : Config.next .stop = raised := congrArg (fun x => x.toOption.map Prod.fst) h
+-    |> Option.some.inj
+-  cases hc
+-
+-theorem defer_trace (s : ExecState) (tail : Choices) :
+-    Trace 1 s forkPoint (0 :: tail) s (.next .stop) tail :=
+-  .step (choose_defer s tail) .done
+-theorem raise_trace (s : ExecState) (tail : Choices) :
+-    Trace 1 s forkPoint (1 :: tail) s raised tail :=
+-  .step (choose_raise s tail) .done
+-
+-end GoLean.GateA1
++/-! Compatibility import of the Iris-free semantic regressions. -/
+diff --git a/spikes/gate-a1/GateA1/Examples.lean b/spikes/gate-a1/GateA1/Examples.lean
+index 2fb0dfbd..2e84eebb 100644
+--- a/spikes/gate-a1/GateA1/Examples.lean
++++ b/spikes/gate-a1/GateA1/Examples.lean
+@@ -2,102 +2,7 @@ import GateA1.ProgramTrace
+ import GateA1.Language
+ 
+ namespace GoLean.GateA1
+-open GoCore GoCore.Machine
+-
+-def exampleState : ExecState := { types := TypeEnv.reserved }
+-def choicePool : MultiConfig := ⟨#[Thread.running forkPoint none], exampleState, 0⟩
+-
+-/-- Hand-authored GoCore; no claim of a certified Go frontend translation. -/
+-def printPanicProgram : Program := { funcs := #[{
+-  id := ⟨"main.audit"⟩, args := #[], results := #[],
+-  body := .seqn #[.print true #[.stringLit (GoString.fromLeanString "before")],
+-    .panicStmt (.toInterface (.interface ⟨"empty_interface"⟩) .string
+-      (.stringLit (GoString.fromLeanString "boom")))] }] }
+-
+-def recoverBranch (k : Cont) : Cont :=
+-  .ifK (.seqn #[]) (.unsupported "recovery did not happen") [] k
+-def recoverCompare (k : Cont) : Cont :=
+-  .strictK (.neqCmp (.interface ⟨"empty_interface"⟩)) [.nil] [] [] (recoverBranch k)
+-def recoverCheck : Config := .evalE .recoverCall [] (recoverCompare panicFrame)
+-
+-/-- An injective readout for panic results, to make kernel computation
+-avoid equality instances for unrelated successful result values. -/
+-def panicObservation : RunResult → Option (String × Array UInt8)
+-  | .error (.terminal (.panic msg), out) => some (msg, out.bytes)
+-  | _ => none
+-
+-theorem panicObservation_sound {r : RunResult} {msg : String} {bytes : Array UInt8}
+-    (h : panicObservation r = some (msg, bytes)) :
+-    r = .error (.panic msg, ⟨bytes⟩) := by
+-  cases r with
+-  | ok v => cases h
+-  | error e =>
+-    obtain ⟨stop, ⟨out⟩⟩ := e
+-    cases stop with
+-    | refusal e => cases h
+-    | fuelOut => cases h
+-    | terminal t => cases t with
+-      | panic m =>
+-        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+-        rfl
+-      | fatal m => cases h
+-      | deadlock => cases h
+-      | raceDetected => cases h
+-
+-set_option maxRecDepth 4096 in
+-/-- Full entry, actual print event, abort, and the retained byte prefix. -/
+-theorem print_before_panic :
+-    runProgramPoolOutM 20 printPanicProgram "main.audit" #[] [] =
+-      .error (.panic "boom", GoString.fromLeanString "before\n") := by
+-  apply panicObservation_sound
+-  decide +kernel
+-
+-theorem print_before_panic_trace :
+-    Pool.ProgramRun 20 printPanicProgram "main.audit" #[] []
+-      (.error (.panic "boom", GoString.fromLeanString "before\n")) :=
+-  Pool.program_run_iff.mp print_before_panic
+-
+-/-- Terminal checking precedes exhaustion. One step suffices for DEFER. -/
+-theorem defer_completes (s : ExecState) (tail : Choices) :
+-    execStmtLoop 1 s forkPoint (0 :: tail) = .ok (s, tail) :=
+-  run_ok_iff.mpr ⟨1, Nat.le_refl _, defer_trace s tail⟩
+-
+-theorem raise_needs_abort_fuel (s : ExecState) (tail : Choices) :
+-    execStmtLoop 1 s forkPoint (1 :: tail) = .error .fuelOut := by
+-  rw [execStmtLoop_step (choose_raise s tail)]
+-  rfl
+-
+-theorem raise_aborts :
+-    execStmtLoop 2 exampleState forkPoint [1] = .error (.panic "audit") := by
+-  rw [execStmtLoop_step (choose_raise exampleState [])]
+-  with_unfolding_all rfl
+-
+-/-- Both directions of the corrected bridge at the actual choice site. -/
+-theorem defer_run_iff :
+-    execStmtLoop 1 exampleState forkPoint [0] = .ok (exampleState, []) ↔
+-      ∃ n, n ≤ 1 ∧ Trace n exampleState forkPoint [0] exampleState (.next .stop) [] :=
+-  run_ok_iff
+-
+-theorem pool_defer (acc : GoString) :
+-    execProgLoopOut 2 choicePool {} [0] acc = (acc, .ok (exampleState, [])) := by
+-  with_unfolding_all rfl
+-
+-theorem pool_raise (acc : GoString) :
+-    execProgLoopOut 2 choicePool {} [1] acc = (acc, .error (.panic "audit")) := by
+-  with_unfolding_all rfl
+-
+-theorem both_pool_traces (acc : GoString) :
+-    Pool.Run 2 choicePool {} [0] acc (acc, .ok (exampleState, [])) ∧
+-    Pool.Run 2 choicePool {} [1] acc (acc, .error (.panic "audit")) :=
+-  ⟨Pool.run_iff.mp (pool_defer acc), Pool.run_iff.mp (pool_raise acc)⟩
+-
+-theorem two_choice_pool_bridge (acc : GoString) :
+-    (∃ ch, execProgLoopOut 2 choicePool {} ch acc = (acc, .error (.panic "audit"))) ∧
+-    execProgLoopOut 2 choicePool {} [0] acc ≠ (acc, .error (.panic "audit")) := by
+-  refine ⟨⟨[1], pool_raise acc⟩, ?_⟩
+-  rw [pool_defer]
+-  intro h
+-  cases (Prod.mk.inj h).2
++open GoCore GoCore.Machine Semantics
+ 
+ namespace Customer
+ open Iris Iris.ProgramLogic Iris.ProgramLogic.Language
+diff --git a/spikes/gate-a1/GateA1/Language.lean b/spikes/gate-a1/GateA1/Language.lean
+index 07f874a5..5bf0bb10 100644
+--- a/spikes/gate-a1/GateA1/Language.lean
++++ b/spikes/gate-a1/GateA1/Language.lean
+@@ -1,3 +1,4 @@
++import GoLean.Interface
+ import GateA1.Counterexamples
+ import Iris.ProgramLogic.Lifting
+ 
+diff --git a/spikes/gate-a1/GateA1/PoolTrace.lean b/spikes/gate-a1/GateA1/PoolTrace.lean
+index 60f27a68..3e850280 100644
+--- a/spikes/gate-a1/GateA1/PoolTrace.lean
++++ b/spikes/gate-a1/GateA1/PoolTrace.lean
+@@ -1,142 +1,4 @@
+-import GoLean.GoCore.MultiSound
++import GoLean.Interface
+ 
+-/-! A proof-only trace for the actual output-preserving pool driver.
+-It retains detector state, the main-exit choice, and the output prefix.
+-`front` names the driver's pre-fuel classification; `unfold_driver` checks
+-that factoring against the existing driver. Nothing here replaces it.
+--/
+-namespace GoLean.GateA1.Pool
+-open GoCore GoCore.Machine
+-
+-abbrev Result := GoString × Except Stop (ExecState × Choices)
+-
+-/-- Left = completed; right = the stream at the upcoming pool step.
+-The main-exit window can consume a choice even at zero fuel. -/
+-def front (m : MultiConfig) (ch : Choices) :
+-    Except Stop ((ExecState × Choices) ⊕ Choices) :=
+-  if m.threads.isEmpty then .error (.internal "thread pool without a main goroutine")
+-  else match m.panicMsg? with
+-  | some msg => .error (.panic msg)
+-  | none => match m.mainOutcome? with
+-    | some s => match runnableIdxs m.shared m.threads with
+-      | [] => .ok (.inl (s, ch))
+-      | _ :: _ =>
+-        let (pick, ch') := Choices.consumeAt .l5ExitWindow 2 ch
+-        if pick == 0 then .ok (.inl (s, ch')) else .ok (.inr ch')
+-    | none => if (runnableIdxs m.shared m.threads).isEmpty
+-      then .error .deadlock else .ok (.inr ch)
+-
+-theorem unfold_driver (fuel : Nat) (m : MultiConfig) (r : RaceState)
+-    (ch : Choices) (acc : GoString) :
+-    execProgLoopOut fuel m r ch acc =
+-      match front m ch with
+-      | .error e => (acc, .error e)
+-      | .ok (.inl res) => (acc, .ok res)
+-      | .ok (.inr next) => match fuel with
+-        | 0 => (acc, .error .fuelOut)
+-        | n + 1 => match stepMulti m next with
+-          | .error e => (acc, .error e)
+-          | .ok (m', ch', ev) => match raceUpdate m.shared m.threads ev m' r with
+-            | .error e => (acc, .error e)
+-            | .ok r' => execProgLoopOut n m' r' ch' (ev.out.foldl GoString.append acc) := by
+-  rw [execProgLoopOut.eq_def]
+-  unfold front
+-  dsimp only
+-  split
+-  · rfl
+-  · split
+-    · simp_all [throw, throwThe, MonadExceptOf.throw]
+-    · split
+-      · split
+-        · simp_all
+-        · split <;> simp_all [throw, throwThe, MonadExceptOf.throw] <;> cases fuel <;> rfl
+-      · split <;> simp_all [throw, throwThe, MonadExceptOf.throw] <;> cases fuel <;> rfl
+-
+-/-- Fuel is a bound, not a Go event. Failure constructors preserve the
+-existing driver's pre-step output policy, including detector rejection. -/
+-inductive Run : Nat → MultiConfig → RaceState → Choices → GoString → Result → Prop where
+-  | stop : front m ch = .error e → Run fuel m r ch acc (acc, .error e)
+-  | done : front m ch = .ok (.inl res) → Run fuel m r ch acc (acc, .ok res)
+-  | exhausted : front m ch = .ok (.inr next) → Run 0 m r ch acc (acc, .error .fuelOut)
+-  | stepError : front m ch = .ok (.inr next) → stepMulti m next = .error e →
+-      Run (n + 1) m r ch acc (acc, .error e)
+-  | raceError : front m ch = .ok (.inr next) → stepMulti m next = .ok (m', ch', ev) →
+-      raceUpdate m.shared m.threads ev m' r = .error e →
+-      Run (n + 1) m r ch acc (acc, .error e)
+-  | step : front m ch = .ok (.inr next) → stepMulti m next = .ok (m', ch', ev) →
+-      raceUpdate m.shared m.threads ev m' r = .ok r' →
+-      Run n m' r' ch' (ev.out.foldl GoString.append acc) result →
+-      Run (n + 1) m r ch acc result
+-
+-theorem run_iff {fuel m r ch acc result} :
+-    execProgLoopOut fuel m r ch acc = result ↔ Run fuel m r ch acc result := by
+-  constructor
+-  · intro h
+-    induction fuel generalizing m r ch acc with
+-    | zero =>
+-      rw [unfold_driver] at h
+-      cases hf : front m ch with
+-      | error e => simp only [hf] at h; subst result; exact .stop hf
+-      | ok v => cases v with
+-        | inl res => simp only [hf] at h; subst result; exact .done hf
+-        | inr next => simp only [hf] at h; subst result; exact .exhausted hf
+-    | succ n ih =>
+-      rw [unfold_driver] at h
+-      cases hf : front m ch with
+-      | error e => simp only [hf] at h; subst result; exact .stop hf
+-      | ok v => cases v with
+-        | inl res => simp only [hf] at h; subst result; exact .done hf
+-        | inr next =>
+-          simp only [hf] at h
+-          cases hs : stepMulti m next with
+-          | error e => simp only [hs] at h; subst result; exact .stepError hf hs
+-          | ok v =>
+-            obtain ⟨m', ch', ev⟩ := v
+-            simp only [hs] at h
+-            cases hr : raceUpdate m.shared m.threads ev m' r with
+-            | error e => simp only [hr] at h; subst result; exact .raceError hf hs hr
+-            | ok r' =>
+-              simp only [hr] at h
+-              exact .step hf hs hr (ih h)
+-  · intro h
+-    induction h with
+-    | stop hf => rw [unfold_driver, hf]
+-    | done hf => rw [unfold_driver, hf]
+-    | exhausted hf => rw [unfold_driver, hf]
+-    | stepError hf hs => rw [unfold_driver, hf]; simp only [hs]
+-    | raceError hf hs hr => rw [unfold_driver, hf]; simp only [hs, hr]
+-    | step hf hs hr _ ih => rw [unfold_driver, hf]; simpa only [hs, hr] using ih
+-
+-/-- Correct existential-stream observation contract, over this finite,
+-detector-checked, output-bearing trace rather than bare `StepsM`. -/
+-theorem exists_run_iff {m r acc result} :
+-    (∃ fuel ch, execProgLoopOut fuel m r ch acc = result) ↔
+-    ∃ fuel ch, Run fuel m r ch acc result := by
+-  simp only [run_iff]
+-
+-/-- The current core exports `StepM`, but not a named `StepsM` closure. -/
+-inductive PoolSteps : MultiConfig → MultiConfig → Prop where
+-  | refl : PoolSteps m m
+-  | head : StepM m m' → PoolSteps m' mf → PoolSteps m mf
+-
+-/-- Erase a successful detector-checked trace to current pool reachability.
+-The converse is deliberately not asserted: erasure loses the stream,
+-detector, output and exit-window policy. -/
+-theorem Run.success_reaches (h : Run fuel m r ch acc result) :
+-    ∀ sf chf, result.2 = .ok (sf, chf) →
+-      ∃ mf ch₁, PoolSteps m mf ∧ front mf ch₁ = .ok (.inl (sf, chf)) := by
+-  induction h with
+-  | stop _ => intro _ _ h; cases h
+-  | done hf =>
+-    intro sf chf h
+-    cases h
+-    exact ⟨_, _, .refl, hf⟩
+-  | exhausted _ => intro _ _ h; cases h
+-  | stepError _ _ => intro _ _ h; cases h
+-  | raceError _ _ _ => intro _ _ h; cases h
+-  | step _ hs _ _ ih =>
+-    intro sf chf h
+-    obtain ⟨mf, ch₁, steps, hf⟩ := ih sf chf h
+-    exact ⟨mf, ch₁, .head (stepMulti_sound hs) steps, hf⟩
+-
+-end GoLean.GateA1.Pool
++/-! Compatibility import path. Semantic definitions now live under
++`GoLean.Semantics` in the GoLean package. -/
+diff --git a/spikes/gate-a1/GateA1/ProgramTrace.lean b/spikes/gate-a1/GateA1/ProgramTrace.lean
+index 73a4d8d4..3e850280 100644
+--- a/spikes/gate-a1/GateA1/ProgramTrace.lean
++++ b/spikes/gate-a1/GateA1/ProgramTrace.lean
+@@ -1,84 +1,4 @@
+-import GateA1.PoolTrace
++import GoLean.Interface
+ 
+-namespace GoLean.GateA1.Pool
+-open GoCore GoCore.Machine
+-
+-/-- Complete entry/readout contract for the shipped program driver.
+-Setup is still an executable premise, not a claimed typed-admission proof.
+-It uses the SAME fuel parameter as the subject loop, just as the driver does.
+--/
+-inductive ProgramRun (fuel : Nat) (p : Program) (name : String)
+-    (args : Array GoValue) (ch : Choices) : RunResult → Prop where
+-  | setupError : runProgramSetupM fuel p name args ch = .error e →
+-      ProgramRun fuel p name args ch (.error (e, GoString.empty))
+-  | runError : runProgramSetupM fuel p name args ch = .ok (c, s, locs, ch₁) →
+-      Run fuel ⟨#[Thread.running c none], s, 0⟩ {} ch₁ GoString.empty (out, .error e) →
+-      ProgramRun fuel p name args ch (.error (e, out))
+-  | readError : runProgramSetupM fuel p name args ch = .ok (c, s, locs, ch₁) →
+-      Run fuel ⟨#[Thread.running c none], s, 0⟩ {} ch₁ GoString.empty (out, .ok (sf, chf)) →
+-      loadMany sf locs = .error e →
+-      ProgramRun fuel p name args ch (.error (e, out))
+-  | done : runProgramSetupM fuel p name args ch = .ok (c, s, locs, ch₁) →
+-      Run fuel ⟨#[Thread.running c none], s, 0⟩ {} ch₁ GoString.empty (out, .ok (sf, chf)) →
+-      loadMany sf locs = .ok vs →
+-      ProgramRun fuel p name args ch (.ok { values := vs.toArray, output := out })
+-
+-theorem program_run_iff {fuel p name args ch result} :
+-    runProgramPoolOutM fuel p name args ch = result ↔ ProgramRun fuel p name args ch result := by
+-  constructor
+-  · intro h
+-    unfold runProgramPoolOutM at h
+-    cases hs : runProgramSetupM fuel p name args ch with
+-    | error e => simp only [hs] at h; subst result; exact .setupError hs
+-    | ok v =>
+-      obtain ⟨c, s, locs, ch₁⟩ := v
+-      simp only [hs] at h
+-      cases hr : execProgLoopOut fuel ⟨#[Thread.running c none], s, 0⟩ {} ch₁ GoString.empty with
+-      | mk out r => cases r with
+-        | error e => simp only [hr] at h; subst result; exact .runError hs (run_iff.mp hr)
+-        | ok v =>
+-          obtain ⟨sf, chf⟩ := v
+-          simp only [hr] at h
+-          cases hl : loadMany sf locs with
+-          | error e => simp only [hl] at h; subst result; exact .readError hs (run_iff.mp hr) hl
+-          | ok vs => simp only [hl] at h; subst result; exact .done hs (run_iff.mp hr) hl
+-  · intro h
+-    cases h with
+-    | setupError hs => simp only [runProgramPoolOutM, hs]
+-    | runError hs hr => simp only [runProgramPoolOutM, hs, run_iff.mpr hr]
+-    | readError hs hr hl => simp only [runProgramPoolOutM, hs, run_iff.mpr hr, hl]
+-    | done hs hr hl => simp only [runProgramPoolOutM, hs, run_iff.mpr hr, hl]
+-
+-/-- Existential choices belong on BOTH sides of an observation-set bridge. -/
+-theorem exists_program_run_iff {p name args result} :
+-    (∃ fuel ch, runProgramPoolOutM fuel p name args ch = result) ↔
+-    ∃ fuel ch, ProgramRun fuel p name args ch result := by simp only [program_run_iff]
+-
+-/-- Proposed A1 observation vocabulary: keep the actual readout and the
+-terminal's byte prefix. No claim about equivalence to every Go observer. -/
+-inductive Observation where
+-  | normal (readout : Readout)
+-  | terminal (reason : Terminal) (output : GoString)
+-
+-def observationOf : RunResult → Option Observation
+-  | .ok r => some (.normal r)
+-  | .error (.terminal t, out) => some (.terminal t out)
+-  | .error (.refusal _, _) | .error (.fuelOut, _) => none
+-
+-theorem fuel_is_not_observation (out : GoString) :
+-    observationOf (.error (.fuelOut, out)) = none := rfl
+-theorem refusal_is_not_observation (r : Refusal) (out : GoString) :
+-    observationOf (.error (.refusal r, out)) = none := rfl
+-
+-/-- The corrected whole-program finite observation-set bridge. This is
+-partial correctness/may-observation infrastructure, not termination. -/
+-theorem observation_iff {p name args obs} :
+-    (∃ fuel ch, observationOf (runProgramPoolOutM fuel p name args ch) = some obs) ↔
+-      ∃ fuel ch result, ProgramRun fuel p name args ch result ∧ observationOf result = some obs := by
+-  constructor
+-  · rintro ⟨fuel, ch, h⟩
+-    exact ⟨fuel, ch, _, program_run_iff.mp rfl, h⟩
+-  · rintro ⟨fuel, ch, result, hrun, hobs⟩
+-    exact ⟨fuel, ch, (program_run_iff.mpr hrun) ▸ hobs⟩
+-
+-end GoLean.GateA1.Pool
++/-! Compatibility import path. Semantic definitions now live under
++`GoLean.Semantics` in the GoLean package. -/
+diff --git a/spikes/gate-a1/GateA1/Trace.lean b/spikes/gate-a1/GateA1/Trace.lean
+index d585b435..3e850280 100644
+--- a/spikes/gate-a1/GateA1/Trace.lean
++++ b/spikes/gate-a1/GateA1/Trace.lean
+@@ -1,88 +1,4 @@
+-import GoLean.GoCore.MachineSound
++import GoLean.Interface
+ 
+-/-! Exact, choice-threaded prefixes of the CURRENT executable step.
+-This is a proof carrier, not another executable interpreter. Erasing the
+-stream yields `Steps`; the reverse erasure needs a composition theorem.
+--/
+-namespace GoLean.GateA1
+-open GoCore GoCore.Machine
+-
+-inductive Trace : Nat → ExecState → Config → Choices →
+-    ExecState → Config → Choices → Prop where
+-  | done : Trace 0 s c ch s c ch
+-  | step : stepFn s c ch = .ok (c₁, s₁, ch₁) →
+-      Trace n s₁ c₁ ch₁ sf cf chf → Trace (n + 1) s c ch sf cf chf
+-
+-theorem iter_iff_trace {n s c ch sf cf chf} :
+-    stepFnIter n s c ch = .ok (cf, sf, chf) ↔ Trace n s c ch sf cf chf := by
+-  induction n generalizing s c ch with
+-  | zero =>
+-    simp only [stepFnIter, Except.ok.injEq, Prod.mk.injEq]
+-    constructor
+-    · rintro ⟨rfl, rfl, rfl⟩; exact .done
+-    · intro h; cases h; exact ⟨rfl, rfl, rfl⟩
+-  | succ n ih =>
+-    constructor
+-    · intro h
+-      cases hs : stepFn s c ch with
+-      | error e => simp [stepFnIter, hs, Bind.bind, Except.bind] at h
+-      | ok v =>
+-        obtain ⟨c₁, s₁, ch₁⟩ := v
+-        exact .step hs (ih.mp (by simpa [stepFnIter, hs, Bind.bind, Except.bind] using h))
+-    · intro h
+-      cases h with
+-      | step hs ht => simpa [stepFnIter, hs, Bind.bind, Except.bind] using ih.mpr ht
+-
+-theorem Trace.erase (h : Trace n s c ch sf cf chf) : Steps c s cf sf := by
+-  induction h with
+-  | done => exact .refl _ _
+-  | step hs _ ih => exact (Steps.single (stepFn_sound hs)).trans ih
+-
+-theorem exists_iter_iff {n s c sf cf} :
+-    (∃ ch chf, stepFnIter n s c ch = .ok (cf, sf, chf)) ↔
+-    ∃ ch chf, Trace n s c ch sf cf chf := by
+-  simp only [iter_iff_trace]
+-
+-theorem Trace.run (ht : Trace n s c ch sf cf chf) (hdone : cf = .next .stop) :
+-    execStmtLoop n s c ch = .ok (sf, chf) := by
+-  induction ht with
+-  | done => subst hdone; rfl
+-  | step hs _ ih => rw [execStmtLoop_step hs]; exact ih hdone
+-
+-/-- Exact successful-run bridge: one FIXED initial stream, its residual,
+-and a counted trace whose length is bounded by the supplied fuel. -/
+-theorem run_ok_iff {fuel s c ch sf chf} :
+-    execStmtLoop fuel s c ch = .ok (sf, chf) ↔
+-      ∃ n, n ≤ fuel ∧ Trace n s c ch sf (.next .stop) chf := by
+-  constructor
+-  · intro h
+-    fun_induction execStmtLoop fuel s c ch with
+-    | case1 =>
+-      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+-      obtain ⟨rfl, rfl⟩ := h
+-      exact ⟨0, Nat.zero_le _, .done⟩
+-    | case2 => simp [throw, throwThe, MonadExceptOf.throw] at h
+-    | case3 => simp [throw, throwThe, MonadExceptOf.throw] at h
+-    | case4 => simp [throw, throwThe, MonadExceptOf.throw] at h
+-    | case5 => simp [throw, throwThe, MonadExceptOf.throw] at h
+-    | case6 => simp [throw, throwThe, MonadExceptOf.throw] at h
+-    | case7 =>
+-      rename_i ih
+-      rw [bind_eq_ok] at h
+-      obtain ⟨⟨c₁, s₁, ch₁⟩, hs, hr⟩ := h
+-      obtain ⟨n, hn, ht⟩ := ih _ _ _ hr
+-      exact ⟨n + 1, Nat.succ_le_succ hn, .step hs ht⟩
+-  · rintro ⟨n, hn, ht⟩
+-    exact execStmtLoop_mono _ _ _ _ _ _ hn (ht.run rfl)
+-
+-theorem exists_run_ok_iff {s c sf} :
+-    (∃ fuel ch chf, execStmtLoop fuel s c ch = .ok (sf, chf)) ↔
+-      ∃ n ch chf, Trace n s c ch sf (.next .stop) chf := by
+-  constructor
+-  · rintro ⟨fuel, ch, chf, h⟩
+-    obtain ⟨n, _, ht⟩ := run_ok_iff.mp h
+-    exact ⟨n, ch, chf, ht⟩
+-  · rintro ⟨n, ch, chf, ht⟩
+-    exact ⟨n, ch, chf, run_ok_iff.mpr ⟨n, Nat.le_refl _, ht⟩⟩
+-
+-end GoLean.GateA1
++/-! Compatibility import path. Semantic definitions now live under
++`GoLean.Semantics` in the GoLean package. -/
+diff --git a/spikes/gate-a1/gate_checks.py b/spikes/gate-a1/gate_checks.py
+index f693403d..c254bb2d 100644
+--- a/spikes/gate-a1/gate_checks.py
++++ b/spikes/gate-a1/gate_checks.py
+@@ -49,7 +49,7 @@ def preflight():
+         if forbidden(path.read_text()):
+             raise SystemExit(f"Gate A1: forbidden proof escape in {path}")
+     dependencies(required=False)
+-    paths = sorted([*ROOT.glob("GoLean/**/*.lean"), ROOT / "lakefile.toml", ROOT / "lean-toolchain",
++    paths = sorted([ROOT / "GoLean.lean", ROOT / "Tests/InterfaceContract.lean", *ROOT.glob("GoLean/**/*.lean"), ROOT / "lakefile.toml", ROOT / "lean-toolchain",
+                     *SOURCES, SPIKE / "lakefile.toml", SPIKE / "lake-manifest.json",
+                     SPIKE / "lean-toolchain", SPIKE / "check", Path(__file__).resolve()])
+     digest = hashlib.sha256()
+diff --git a/spikes/iris-customer/GoLeanIris/Adequacy.lean b/spikes/iris-customer/GoLeanIris/Adequacy.lean
+index 0f1838ee..e1deb864 100644
+--- a/spikes/iris-customer/GoLeanIris/Adequacy.lean
++++ b/spikes/iris-customer/GoLeanIris/Adequacy.lean
+@@ -1,5 +1,5 @@
+ import GoLeanIris.Ghost
+-import GateA1.Trace
++import GoLean.Interface
+ 
+ /-! Adequacy hands the concrete initial heap to the client and extracts a
+ final-state fact. Proof pattern: archived GoLean GoLeanProofs/Adequacy.lean,
+@@ -73,7 +73,7 @@ theorem adequate_execStmtLoop {c : Config} {state final : ExecState}
+     {fuel : Nat} {choices residual : Choices} {φ : ExecState → Prop}
+     (ha : adequate .NotStuck c state (fun _ s => φ s))
+     (hr : execStmtLoop fuel state c choices = .ok (final, residual)) : φ final := by
+-  obtain ⟨n, _, ht⟩ := GateA1.run_ok_iff.mp hr
++  obtain ⟨n, _, ht⟩ := Semantics.run_ok_iff.mp hr
+   exact ha.adequate_result [] final () (steps_erased ht.erase)
+ 
+ end GoLean.IrisCustomer
+diff --git a/spikes/iris-customer/GoLeanIris/Audit.lean b/spikes/iris-customer/GoLeanIris/Audit.lean
+index a9070d1e..03e92508 100644
+--- a/spikes/iris-customer/GoLeanIris/Audit.lean
++++ b/spikes/iris-customer/GoLeanIris/Audit.lean
+@@ -33,7 +33,9 @@ def GoLeanIrisAudit.run : CoreM Unit := do
+     let some (.thmInfo _) := env.find? n
+       | throwError "Iris customer: missing theorem {n}"
+   let ours := env.header.moduleNames.map
+-    (fun n => n.getRoot == `GoLeanIris || n.getRoot == `GateA1)
++    (fun n => n.getRoot == `GoLeanIris || n.getRoot == `GateA1 ||
++      [`GoLean.GoCore.Trace, `GoLean.GoCore.PoolTrace,
++       `GoLean.GoCore.ProgramTrace, `GoLean.Interface, `Tests.InterfaceContract].contains n)
+   let mut checked := 0
+   for (n, _) in env.constants.toList do
+     let localModule := match env.getModuleIdxFor? n with
+diff --git a/spikes/iris-customer/GoLeanIris/Heap.lean b/spikes/iris-customer/GoLeanIris/Heap.lean
+index 2c9ede03..32723c60 100644
+--- a/spikes/iris-customer/GoLeanIris/Heap.lean
++++ b/spikes/iris-customer/GoLeanIris/Heap.lean
+@@ -1,3 +1,4 @@
++import GoLean.Interface
+ import GateA1.Language
+ import Iris.BI.Lib.GenHeap
+ import Iris.ProgramLogic.Adequacy
+diff --git a/spikes/iris-customer/gate_checks.py b/spikes/iris-customer/gate_checks.py
+index 364a7de0..0f1440a4 100644
+--- a/spikes/iris-customer/gate_checks.py
++++ b/spikes/iris-customer/gate_checks.py
+@@ -49,7 +49,7 @@ def preflight():
+         if forbidden(path.read_text()):
+             raise SystemExit(f"Iris customer: forbidden proof escape in {path}")
+     dependencies(required=False)
+-    paths = sorted([ROOT / "GoLean.lean", *ROOT.glob("GoLean/**/*.lean"),
++    paths = sorted([ROOT / "Tests/InterfaceContract.lean", ROOT / "GoLean.lean", *ROOT.glob("GoLean/**/*.lean"),
+                     ROOT / "lakefile.toml", ROOT / "lean-toolchain",
+                     *SOURCES, *ROOT.glob("spikes/gate-a1/GateA1/*.lean"), ROOT / "spikes/gate-a1/GateA1.lean",
+                     ROOT / "spikes/gate-a1/lakefile.toml", ROOT / "spikes/gate-a1/lake-manifest.json",

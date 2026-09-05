@@ -1,0 +1,20 @@
+Trace: exact source equality modulo namespace/import = True; old sha256=0dc54a36abcec03103f965a4670846819184354d210e23bda40c5f1160091148; new sha256=44f18eb28239728c401993719ef1ec0ce11873b18e32d19f694fdb31b97b8f4e
+PoolTrace: exact source equality modulo namespace/import = True; old sha256=90c259c0be8ecf18e4cef9c0052538b5b6ad020fa0fba1dd6cd915a4f63d050d; new sha256=feec6146f2a2202f4a0a627305f62d9d4e1af09be2fbf908685b3816e61cf3af
+ProgramTrace: exact source equality modulo namespace/import = False; old sha256=3bbec6ee002b4caefc72a6061655c2bd090e472735e478759c5b809890a8235a; new sha256=e64cd54f40cea7cdd7b9a85d279fbf15103280a600a3d98eca2dd3f07138df68
+--- expected
+
++++ new
+
+@@ -54,7 +54,7 @@
+
+     (∃ fuel ch, runProgramPoolOutM fuel p name args ch = result) ↔
+     ∃ fuel ch, ProgramRun fuel p name args ch result := by simp only [program_run_iff]
+ 
+-/-- Proposed A1 observation vocabulary: keep the actual readout and the
++/-- Experimental observation vocabulary: keep the actual readout and the
+ terminal's byte prefix. No claim about equivalence to every Go observer. -/
+ inductive Observation where
+   | normal (readout : Readout)
+Counterexamples: namespace body preserved as contiguous substring = True
+Examples: namespace body preserved as contiguous substring = False
+Existing GoLean/GoCore tracked runtime files changed = 

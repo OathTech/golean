@@ -1,0 +1,7 @@
+Trace: exact equality modulo namespace/import/comment substitution PASS
+PoolTrace: exact equality modulo namespace/import/comment substitution PASS
+ProgramTrace: exact equality modulo namespace/import/comment substitution PASS
+Counterexamples: entire namespace body preserved PASS
+Examples: all pre-Customer semantic bodies preserved PASS
+Examples: entire Customer suffix preserved PASS
+Facade transitive local source import graph: 17 modules; no Iris/GateA1/GoLeanIris/NativeToIR PASS

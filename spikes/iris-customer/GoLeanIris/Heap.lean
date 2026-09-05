@@ -1,3 +1,4 @@
+import GoLean.Interface
 import GateA1.Language
 import Iris.BI.Lib.GenHeap
 import Iris.ProgramLogic.Adequacy

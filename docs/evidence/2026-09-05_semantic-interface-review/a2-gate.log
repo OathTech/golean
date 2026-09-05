@@ -1,0 +1,45 @@
+Iris customer source/dependency-manifest fingerprint: 8d62bace9fbe4f3a15dbf9f605e26ae91b4db3670151462d79d0f335899ec6fc
+GoLean HEAD: 700128f37c60740a370ec275ff6c6d1ca6bccdf3
+Validation mode: incremental Lake build plus fresh spike-module elaboration
+Build completed successfully (70 jobs).
+ℹ [237/249] Replayed GateA1.Probes
+info: GateA1/Probes.lean:3:0: GoLean.GoValue.nil
+info: GateA1/Probes.lean:4:0: GoLean.GoValue.interface (GoLean.GoCore.Ty.defined 1) (GoLean.GoValue.string { bytes := #[97, 117, 100, 105, 116] })
+info: GateA1/Probes.lean:5:0: Except.error (GoLean.Stop.terminal (GoLean.Terminal.panic "audit"))
+info: GateA1/Probes.lean:7:0: Except.error (GoLean.Stop.terminal (GoLean.Terminal.panic "boom"), { bytes := #[98, 101, 102, 111, 114, 101, 10] })
+info: GateA1/Probes.lean:8:0: Except.ok ()
+✔ [239/249] Built GoLeanIris.Heap (745ms)
+✔ [240/249] Built GoLeanIris.Ghost (807ms)
+✔ [241/249] Built GoLeanIris.Lifting (829ms)
+✔ [242/249] Built GoLeanIris.Adequacy (886ms)
+✔ [243/249] Built GoLeanIris.Rules (7.0s)
+✔ [244/249] Built GoLeanIris.Examples (2.1s)
+✔ [245/249] Built GoLeanIris.Readout (845ms)
+✔ [246/249] Built GoLeanIris.Driver (6.2s)
+✔ [247/249] Built GoLeanIris.Audit (836ms)
+✔ [248/249] Built GoLeanIris (752ms)
+Build completed successfully (249 jobs).
+Iris customer: 18 required exports present; 941 constants' axiom dependencies checked (classical trio only)
+/home/dev/projects/golean/.claude/worktrees/semantic-interface/.tmp/iris-customer-audit-g1iab9jx/trailing_private/AuditAll.lean:12:0: error: Iris customer: _private.GoLeanIris.Audit.0.irisTrailingHole depends on forbidden axiom _private.GoLeanIris.Audit.0.irisTrailingHole
+Iris customer negative regression: trailing_private rejected (exit 1, irisTrailingHole)
+/home/dev/projects/golean/.claude/worktrees/semantic-interface/.tmp/iris-customer-audit-g1iab9jx/aggregate_private/AuditAll.lean:12:0: error: Iris customer: _private.GoLeanIris.0.irisRootHole depends on forbidden axiom _private.GoLeanIris.0.irisRootHole
+Iris customer negative regression: aggregate_private rejected (exit 1, irisRootHole)
+/home/dev/projects/golean/.claude/worktrees/semantic-interface/.tmp/iris-customer-audit-g1iab9jx/trailing_sorry/GoLeanIris/Audit.lean:51:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.claude/worktrees/semantic-interface/.tmp/iris-customer-audit-g1iab9jx/trailing_sorry/AuditAll.lean:12:0: error: Iris customer: _private.GoLeanIris.Audit.0.irisSorryHole depends on forbidden axiom sorryAx
+Iris customer negative regression: trailing_sorry rejected (exit 1, sorryAx)
+Iris customer audit scratch retained: /home/dev/projects/golean/.claude/worktrees/semantic-interface/.tmp/iris-customer-audit-g1iab9jx
+Iris customer: freshly emitted/lowered GoCore matches the proof artifact
+Fresh native wire SHA256: 5a421bbd5aba27476017ad766a9fab6a1e43dff2de58c1043647428eb62eb197
+Iris customer artifact scratch retained: /home/dev/projects/golean/.claude/worktrees/semantic-interface/.tmp/iris-customer-artifact-f8hp6gt3
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+building Lean executable...
+Build completed successfully (70 jobs).
+native frontend: per-case type-check + emit (no batch export)
+PASS	iris-customer/uncaught	iris-customer,defer,recover
+PASS	iris-customer/recovered	iris-customer,defer,recover
+PASS	iris-customer/normal	iris-customer,defer,recover
+
+differential coverage summary: cases=3 pass=3 fail=0 export_status=0
+results: artifacts/iris-customer/latest.tsv
+metadata: artifacts/iris-customer/latest.meta.tsv
+Iris customer: PASS

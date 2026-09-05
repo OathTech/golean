@@ -411,6 +411,13 @@ else
   ok "core build (warning-free)"
 fi
 
+step "semantic interface (Iris-free correspondence regressions and dependency audit)"
+if bash scripts/check-interface; then
+  ok "semantic interface (bridges, counterexamples, compiled audit negatives)"
+else
+  bad "semantic interface"
+fi
+
 # 2b. Frontend pins (restored at the split audit, findings A1/A2 + B1/B8
 # — docs/2026-08-31_repo-split-plan.md fix round): the two SEMANTICS
 # pins that lived inside the parked check-golden. (1) the

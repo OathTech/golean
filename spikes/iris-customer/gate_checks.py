@@ -49,7 +49,7 @@ def preflight():
         if forbidden(path.read_text()):
             raise SystemExit(f"Iris customer: forbidden proof escape in {path}")
     dependencies(required=False)
-    paths = sorted([ROOT / "GoLean.lean", *ROOT.glob("GoLean/**/*.lean"),
+    paths = sorted([ROOT / "Tests/InterfaceContract.lean", ROOT / "GoLean.lean", *ROOT.glob("GoLean/**/*.lean"),
                     ROOT / "lakefile.toml", ROOT / "lean-toolchain",
                     *SOURCES, *ROOT.glob("spikes/gate-a1/GateA1/*.lean"), ROOT / "spikes/gate-a1/GateA1.lean",
                     ROOT / "spikes/gate-a1/lakefile.toml", ROOT / "spikes/gate-a1/lake-manifest.json",

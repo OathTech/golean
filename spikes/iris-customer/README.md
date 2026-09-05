@@ -97,8 +97,10 @@ result cell and proves the arbitrary second cell unchanged.
 - `ContextEq` pins types, functions, methods, method sets and display metadata.
   It is satisfiable for the initialized model, but it is not Go typing.
   Heap address bounds and value normalization are not typing either.
-- The customer still imports machine internals and unfolds some operations.
-  These dependencies are recorded API work, not a stable facade promise.
+- The customer imports `GoLean.Interface` and obtains its sequential-run
+  bridge from `GoLean.Semantics.run_ok_iff`. It still uses machine internals
+  and unfolds operations; the [interface design note](../../docs/2026-09-05_semantic-interface-design.md)
+  inventories those dependencies. The facade remains experimental.
 
 ## Validation and next phase
 
@@ -111,7 +113,8 @@ The intentionally poisoned scratch files are not live source modules.
 
 See the [design and next-phase assessment](../../docs/2026-09-05_iris-customer-design.md)
 and [sealed validation evidence](../../docs/evidence/2026-09-05_iris-customer/README.md).
-The next semantic work should promote the semantics-owned A1 bridges through
-an experimental facade, define a narrow admission contract, and rebuild this
+The semantics-owned A1 bridges now live behind the experimental facade.
+The next obligations are a narrow admission contract and rebuilding this
 customer across B7/C1. A full downstream logic and general call specifications
-remain separate work.
+remain separate work. The original sealed evidence above describes the
+pre-promotion implementation; the interface lane records its own validation.

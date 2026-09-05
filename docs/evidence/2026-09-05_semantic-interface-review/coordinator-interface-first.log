@@ -1,0 +1,12 @@
+✔ [20/21] Built Tests.InterfaceAudit (778ms)
+Build completed successfully (21 jobs).
+Semantic interface source fingerprint: 9fe85e1108b12e3411f628bcbef4c8838ee7f41df85f509e6f8d19de942e1f49
+Semantic interface: 16 required exports; 193 constants checked (classical trio only)
+/home/dev/projects/golean/.claude/worktrees/semantic-interface/.tmp/interface-audit-93nx2mwi/promoted_private/AuditAll.lean:7:0: error: Semantic interface: _private.GoLean.GoCore.Trace.0.promotedTraceHole depends on forbidden axiom _private.GoLean.GoCore.Trace.0.promotedTraceHole
+Semantic interface negative: promoted_private rejected (exit 1, promotedTraceHole)
+/home/dev/projects/golean/.claude/worktrees/semantic-interface/.tmp/interface-audit-93nx2mwi/facade_private/AuditAll.lean:7:0: error: Semantic interface: _private.GoLean.Interface.0.facadeHole depends on forbidden axiom _private.GoLean.Interface.0.facadeHole
+Semantic interface negative: facade_private rejected (exit 1, facadeHole)
+/home/dev/projects/golean/.claude/worktrees/semantic-interface/.tmp/interface-audit-93nx2mwi/audit_trailing/Tests/InterfaceAudit.lean:49:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.claude/worktrees/semantic-interface/.tmp/interface-audit-93nx2mwi/audit_trailing/AuditAll.lean:7:0: error: Semantic interface: _private.Tests.InterfaceAudit.0.auditHole depends on forbidden axiom sorryAx
+Semantic interface negative: audit_trailing rejected (exit 1, sorryAx)
+Semantic interface: PASS; scratch retained at /home/dev/projects/golean/.claude/worktrees/semantic-interface/.tmp/interface-audit-93nx2mwi

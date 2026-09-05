@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Iris-free semantic correspondence gate, also called by scripts/ci.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+"$ROOT/scripts/capped" lake build GoLean.Interface InterfaceTests
+for module in GoLean/GoCore/Trace GoLean/GoCore/PoolTrace GoLean/GoCore/ProgramTrace \
+    GoLean/Interface Tests/InterfaceContract Tests/InterfaceAudit; do
+  "$ROOT/scripts/capped" lake env lean "$module.lean"
+done
+"$ROOT/scripts/capped" lake env python3 scripts/check-interface.py

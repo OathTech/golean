@@ -1,0 +1,56 @@
+{
+  "GoLean.GoCore.FloatBits": [],
+  "GoLean.GoCore.Machine": [
+    "GoLean.GoCore.Ops"
+  ],
+  "GoLean.GoCore.MachineSound": [
+    "GoLean.GoCore.StepFn",
+    "GoLean.GoCore.StateWf"
+  ],
+  "GoLean.GoCore.Multi": [
+    "GoLean.GoCore.Race"
+  ],
+  "GoLean.GoCore.MultiSound": [
+    "GoLean.GoCore.Multi",
+    "GoLean.GoCore.MachineSound"
+  ],
+  "GoLean.GoCore.Ops": [
+    "GoLean.GoCore.FloatBits",
+    "GoLean.GoCore.State"
+  ],
+  "GoLean.GoCore.Platform": [],
+  "GoLean.GoCore.PoolTrace": [
+    "GoLean.GoCore.MultiSound"
+  ],
+  "GoLean.GoCore.ProgramTrace": [
+    "GoLean.GoCore.PoolTrace"
+  ],
+  "GoLean.GoCore.Race": [
+    "GoLean.GoCore.StepFn"
+  ],
+  "GoLean.GoCore.State": [
+    "GoLean.GoCore.Syntax",
+    "GoLean.GoCore.Value"
+  ],
+  "GoLean.GoCore.StateWf": [
+    "GoLean.GoCore.Machine"
+  ],
+  "GoLean.GoCore.StepFn": [
+    "GoLean.GoCore.Machine",
+    "GoLean.GoCore.StateWf"
+  ],
+  "GoLean.GoCore.Syntax": [
+    "GoLean.GoCore.Value"
+  ],
+  "GoLean.GoCore.Trace": [
+    "GoLean.GoCore.MachineSound"
+  ],
+  "GoLean.GoCore.Value": [
+    "GoLean.GoCore.Platform"
+  ],
+  "GoLean.Interface": [
+    "GoLean.GoCore.Trace",
+    "GoLean.GoCore.PoolTrace",
+    "GoLean.GoCore.ProgramTrace"
+  ]
+}

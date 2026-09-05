@@ -1,0 +1,3 @@
+/home/dev/projects/golean/.claude/worktrees/semantic-interface/.tmp/interface-adversarial-hoaenkpx/promoted-program-private/promoted_a1_rejection.lean:2:0: error: Gate A1: _private.GoLean.GoCore.ProgramTrace.0.reviewedPromotedProgramHole depends on forbidden axiom _private.GoLean.GoCore.ProgramTrace.0.reviewedPromotedProgramHole
+
+EXIT=1

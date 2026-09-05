@@ -1,5 +1,5 @@
 import GoLeanIris.Ghost
-import GateA1.Trace
+import GoLean.Interface
 
 /-! Adequacy hands the concrete initial heap to the client and extracts a
 final-state fact. Proof pattern: archived GoLean GoLeanProofs/Adequacy.lean,
@@ -73,7 +73,7 @@ theorem adequate_execStmtLoop {c : Config} {state final : ExecState}
     {fuel : Nat} {choices residual : Choices} {φ : ExecState → Prop}
     (ha : adequate .NotStuck c state (fun _ s => φ s))
     (hr : execStmtLoop fuel state c choices = .ok (final, residual)) : φ final := by
-  obtain ⟨n, _, ht⟩ := GateA1.run_ok_iff.mp hr
+  obtain ⟨n, _, ht⟩ := Semantics.run_ok_iff.mp hr
   exact ha.adequate_result [] final () (steps_erased ht.erase)
 
 end GoLean.IrisCustomer

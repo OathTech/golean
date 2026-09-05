@@ -1,0 +1,30 @@
+# Independent adversarial review: experimental semantic interface
+
+[AGENT], 2026-09-05. Verdict: **PASS; no blocking or nonblocking introduced defects found, and no required changes.**
+
+Reviewed the uncommitted semantic-interface lane against `700128f37c60740a370ec275ff6c6d1ca6bccdf3`. The exact Lean/configuration/gate sources are bound by `reviewed-source.sha256`. Documentation was being finalized by the coordinator during this review; this verdict concerns the described implementation and its disclosed experimental scope, not an unseen later integrated tree. The reviewer changed no live source, dependency source, Git state, or primary checkout.
+
+## What was checked
+
+- `GoLean/GoCore/Trace.lean`, `PoolTrace.lean`, and `ProgramTrace.lean` are exact relocations of the reviewed A1 definitions and proofs after replacing `GoLean.GateA1` with `GoLean.Semantics`, changing the pool import, and one observation-vocabulary comment. No existing tracked GoCore runtime implementation changed. This was checked mechanically, including the complete definitions and proof bodies.
+- Every former Counterexamples namespace body and every pre-Customer semantic Example body survives in `Tests/InterfaceContract.lean`. The entire A1 `Customer` suffix survives unchanged. Fixed and residual choices, fuel bound, detector state, main-exit policy, output prefixes, setup, readout, terminal classification, and refusal/exhaustion exclusions are preserved.
+- The facade's transitive local source import graph contains 17 modules and no Iris, GateA1, GoLeanIris or NativeToIR dependency. Default CI invokes the new core audit without invoking either Iris package. The facade accurately discloses representation dependence and the lack of typed admission, scheduler completeness, general context laws, termination and general Iris adequacy.
+- Core, A1 and A2 audits select every currently promoted semantic module by origin; therefore private, generated and trailing declarations in those modules are selected even if unused. The core audit also checks the test/audit modules and required theorem exports. The checker imports complete compiled modules before invoking the audit; its poison cases require successful fixture compilation and named forbidden-axiom rejection, rather than accepting compilation failure as a negative test.
+- A2's actual initialized ownership, recovery WP, adequacy, singleton transfer and entry/readout chain are preserved. Its only proof-reference migration is to `Semantics.run_ok_iff`; explicit facade imports and widened audit origins do not weaken theorem statements. The original artifact, three Go examples and eighteen required theorem exports remain intact.
+
+## Independently executed validation
+
+All Lean invocations used `scripts/capped`, `GOLEAN_MEM_MAX=16G`, and `LEAN_NUM_THREADS=3`, sequentially after the coordinator released shared build ownership. Builds used the worktree's existing independently copied caches; this is not a clean network/bootstrap or fresh upstream-dependency elaboration claim.
+
+1. `bash spikes/gate-a1/check`: **exit 0, PASS**. Core build 70 jobs, A1 build 233 jobs; every spike module and aggregate freshly elaborated. Twelve required exports, 529 selected constants, classical trio only. All three compiled A1 poison controls rejected. Source/dependency fingerprint `8f000e4757cf4e157b1c7e794b8164a391ee53f9ab94286d0509c8b0ea508d04`.
+2. `bash spikes/iris-customer/check`: **exit 0, PASS**. Customer build 249 jobs; every customer module and aggregate freshly elaborated. Eighteen required exports, 941 selected constants, classical trio only. All three compiled customer poison controls rejected. Fresh native emission/lowering equals the checked program artifact; wire SHA256 `5a421bbd5aba27476017ad766a9fab6a1e43dff2de58c1043647428eb62eb197`. All three Go-vs-Lean examples pass. Source/dependency fingerprint `8d62bace9fbe4f3a15dbf9f605e26ae91b4db3670151462d79d0f335899ec6fc`.
+3. An additional independent isolated mutation appended `private axiom reviewedPromotedProgramHole : False` to the promoted `GoLean/GoCore/ProgramTrace.lean`. The replacement module **compiled successfully (exit 0)**. The unmodified core, A1 and A2 post-import audits **each rejected this unused promoted-origin axiom by name (exit 1)**. This directly tests the audit coverage migration, beyond the committed scripts' normal poison controls. Reproducer and four individual logs are retained.
+4. Mechanical relocation and example preservation checks, local import closure inspection, Python AST parsing, `bash -n scripts/check-interface`, and `git diff --check` passed.
+
+The coordinator's separate `.tmp/interface-ci.log` was inspected: ordinary CI reports PASS, 198 eval checks, the new interface gate (16 required exports, 193 constants and three compiled poison controls), and comparison with the explicitly marked stale recorded 3593-case executable / 394-case negative baselines from `75dcb6d`. The reviewer did not independently rerun that whole CI invocation or the full differential corpus. The fresh independent differential measurement here is the three-case A2 fixture.
+
+## Scope and remaining work
+
+This review certifies the bounded relocation/customer-preservation change, not full Go correspondence or completion of Gate A. Import shims retain old import paths but deliberately do not preserve old fully qualified bridge names; the experimental API change is documented and both in-tree customers migrate explicitly. A1/A2 still consume semantic test helpers and machine internals; the design note inventories this. Typed admission, general composition, B7/C1 migration and a stable consumer pin remain separate obligations. BUG-103 and A3 are separate lanes; their eventual combined tree requires its own integration gates.
+
+Evidence is under `.tmp/interface-adversarial-hoaenkpx/`. Preserve the report, source manifest, relocation logs, import graph, gate logs, A2 result/metadata files, mutation reproducer and textual mutation logs. The `promoted-program-private/` subtree contains copied build artifacts and should not be promoted wholesale into tracked evidence.

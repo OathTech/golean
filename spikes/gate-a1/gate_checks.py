@@ -49,7 +49,7 @@ def preflight():
         if forbidden(path.read_text()):
             raise SystemExit(f"Gate A1: forbidden proof escape in {path}")
     dependencies(required=False)
-    paths = sorted([*ROOT.glob("GoLean/**/*.lean"), ROOT / "lakefile.toml", ROOT / "lean-toolchain",
+    paths = sorted([ROOT / "GoLean.lean", ROOT / "Tests/InterfaceContract.lean", *ROOT.glob("GoLean/**/*.lean"), ROOT / "lakefile.toml", ROOT / "lean-toolchain",
                     *SOURCES, SPIKE / "lakefile.toml", SPIKE / "lake-manifest.json",
                     SPIKE / "lean-toolchain", SPIKE / "check", Path(__file__).resolve()])
     digest = hashlib.sha256()

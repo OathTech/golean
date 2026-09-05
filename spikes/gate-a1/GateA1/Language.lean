@@ -1,3 +1,4 @@
+import GoLean.Interface
 import GateA1.Counterexamples
 import Iris.ProgramLogic.Lifting
 

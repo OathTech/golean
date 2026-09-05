@@ -12,14 +12,14 @@ def GateA1Audit.run : CoreM Unit := do
   let env ← getEnv
   let allowed : List Name := [``propext, ``Classical.choice, ``Quot.sound]
   let exports : List Name := [
-    ``GoLean.GateA1.iter_iff_trace,
-    ``GoLean.GateA1.run_ok_iff,
+    ``GoLean.Semantics.iter_iff_trace,
+    ``GoLean.Semantics.run_ok_iff,
     ``GoLean.GateA1.recover_step_does_not_transport,
     ``GoLean.GateA1.fixed_stream_not_existential_path,
-    ``GoLean.GateA1.Pool.run_iff,
-    ``GoLean.GateA1.Pool.program_run_iff,
-    ``GoLean.GateA1.Pool.exists_program_run_iff,
-    ``GoLean.GateA1.Pool.observation_iff,
+    ``GoLean.Semantics.Pool.run_iff,
+    ``GoLean.Semantics.Pool.program_run_iff,
+    ``GoLean.Semantics.Pool.exists_program_run_iff,
+    ``GoLean.Semantics.Pool.observation_iff,
     ``GoLean.GateA1.both_pool_traces,
     ``GoLean.GateA1.print_before_panic,
     ``GoLean.GateA1.Customer.recover_check_runs,
@@ -27,7 +27,9 @@ def GateA1Audit.run : CoreM Unit := do
   for n in exports do
     let some (.thmInfo _) := env.find? n
       | throwError "Gate A1: missing theorem {n}"
-  let ours := env.header.moduleNames.map (fun n => n.getRoot == `GateA1)
+  let ours := env.header.moduleNames.map (fun n => n.getRoot == `GateA1 ||
+      [`GoLean.GoCore.Trace, `GoLean.GoCore.PoolTrace,
+       `GoLean.GoCore.ProgramTrace, `GoLean.Interface, `Tests.InterfaceContract].contains n)
   let mut checked := 0
   for (n, _) in env.constants.toList do
     let localModule := match env.getModuleIdxFor? n with

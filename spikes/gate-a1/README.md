@@ -1,9 +1,12 @@
 # Gate A1 — current-machine consumer contract spike
 
-This separate Lake package tests a consumer interface against GoLean at
-`79019a74c1e1c1418293d380d1fcfbd9ae489980`. It does not change the
-interpreter, frontend, default build, or semantics gate. Its dependency on
-GoLean is the enclosing checkout, not a frozen copy of an older machine.
+This separate Lake package tests a consumer interface against the enclosing
+GoLean checkout. The original reviewed experiment used
+`79019a74c1e1c1418293d380d1fcfbd9ae489980`; its sealed evidence is historical.
+The semantic bridges now live under `GoLean.Semantics`, imported through
+`GoLean/Interface.lean`. Semantic regressions live in
+`Tests/InterfaceContract.lean` and run in the ordinary Iris-free core gate.
+The Iris adapter and its examples remain opt-in here.
 
 Run from the repository root:
 
@@ -29,13 +32,11 @@ it was not a clean-room dependency bootstrap. Dependency sources were not edited
 
 | Module | Claim |
 |---|---|
-| `Trace` | Counted, choice-threaded prefixes; exact successful sequential-run bridge; erasure to `Steps` |
-| `Counterexamples` | Recovery/context refutation, real two-choice refutation, narrowness of `StateWf` |
-| `PoolTrace` | Exact pool-driver trace, including fuel, exit choices, detector state and output; successful erasure to `StepM` closure |
-| `ProgramTrace` | Entry/readout bridge to `runProgramPoolOutM`; observation projection excludes refusals and fuel exhaustion |
+| `Trace`, `PoolTrace`, `ProgramTrace` | Compatibility import paths for the promoted `GoLean.Semantics` bridges; they define no duplicate semantics |
+| `Counterexamples` | Compatibility import of the Iris-free semantic regressions |
 | `Language` | Bare sequential Iris `Language`; a continuation-sensitive recovery WP rule |
-| `Examples` | Two outcomes of the real probe choice; print-before-panic program; seven-step recovery check with Iris WP and actual-driver non-vacuity |
-| `Audit` | Post-import action checking required exports and all spike-module constants against the classical axiom trio; invoked by `gate_checks.py` |
+| `Examples` | Seven-step recovery check with Iris WP and actual-driver non-vacuity; imports core choice and terminal/output regressions |
+| `Audit` | Post-import check of required exports, all spike constants and all promoted semantic/regression modules against the classical axiom trio |
 | `Probes` | Compiled evaluations, separately labelled from proofs |
 
 The Iris example proves a pure control rule with an abstract customer resource

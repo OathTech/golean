@@ -18,3 +18,8 @@ globs = ["Tests.FloatVectors"]
 [[lean_exe]]
 name = "gocore-eval-tests"
 root = "Tests.GoCoreEval"
+
+[[lean_lib]]
+# Iris-free contract regressions and their post-import dependency audit.
+name = "InterfaceTests"
+globs = ["Tests.InterfaceContract", "Tests.InterfaceAudit"]
