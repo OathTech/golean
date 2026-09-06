@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Generic scoped Boolean invariant, all-successor preservation and progress.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+if [[ $# != 0 ]]; then
+  echo 'check-boolean-runtime: expected no arguments' >&2
+  exit 2
+fi
+modules=(
+  GoLean/GoCore/BooleanStore
+  GoLean/GoCore/BooleanControlTyping
+  GoLean/GoCore/BooleanControl
+  GoLean/GoCore/BooleanInvariant
+  GoLean/GoCore/BooleanProgress
+  GoLean/GoCore/BooleanPreservation
+  GoLean/GoCore/BooleanSafety
+  Tests/BooleanInvariant
+  Tests/BooleanSafetyAudit
+)
+for module in "${modules[@]}"; do
+  sha256sum "$module.lean"
+done
+scripts/capped lake build BooleanRuntimeTests
+for module in "${modules[@]}"; do
+  printf 'Boolean runtime fresh elaboration: %s.lean\n' "$module"
+  scripts/capped lake env lean "$module.lean"
+done
+scripts/capped lake env python3 tools/boolean-runtime-audit.py
+printf '%s\n' 'Boolean runtime contract gate: PASS'
