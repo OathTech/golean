@@ -31,3 +31,7 @@ globs = ["Tests.GoCoreAdmissionFixture", "Tests.GoCoreAdmission", "Tests.GoCoreA
 [[lean_lib]]
 name = "BooleanTypingTests"
 globs = ["Tests.BooleanTyping", "Tests.BooleanTypingFixture", "Tests.BooleanTypingAudit"]
+
+[[lean_lib]]
+name = "BooleanRuntimeTests"
+globs = ["Tests.BooleanInvariant", "Tests.BooleanSafetyAudit"]

@@ -432,6 +432,15 @@ else
   bad "Boolean scoped typing checker proofs and regressions"
 fi
 
+# Generic runtime proof closure is audited after compilation, including
+# unused/private support and compiled negative controls.
+step "Boolean structural runtime preservation and progress"
+if bash scripts/check-boolean-runtime; then
+  ok "Boolean structural runtime preservation and progress"
+else
+  bad "Boolean structural runtime preservation and progress"
+fi
+
 # 2b. Frontend pins (restored at the split audit, findings A1/A2 + B1/B8
 # — docs/2026-08-31_repo-split-plan.md fix round): the two SEMANTICS
 # pins that lived inside the parked check-golden. (1) the
