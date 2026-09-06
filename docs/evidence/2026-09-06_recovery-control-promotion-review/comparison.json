@@ -1,0 +1,399 @@
+{
+  "files": [
+    {
+      "path": "GoLean/GoCore/RecoveryDelivery.lean",
+      "comparison": "exact independently reviewed author bytes"
+    },
+    {
+      "path": "GoLean/GoCore/RecoveryControlData.lean",
+      "comparison": "exact independently reviewed author bytes"
+    },
+    {
+      "path": "GoLean/GoCore/RecoveryControl.lean",
+      "comparison": "exact independently reviewed author bytes"
+    },
+    {
+      "path": "GoLean/GoCore/RecoveryControlMono.lean",
+      "comparison": "exact independently reviewed author bytes"
+    },
+    {
+      "path": "GoLean/GoCore/RecoveryWalk.lean",
+      "comparison": "exact independently reviewed author bytes"
+    },
+    {
+      "path": "GoLean/GoCore/RecoveryExpressionProgress.lean",
+      "comparison": "exact independently reviewed author bytes"
+    },
+    {
+      "path": "GoLean/GoCore/RecoveryControlHelpers.lean",
+      "comparison": "exact independently reviewed author bytes"
+    },
+    {
+      "path": "GoLean/GoCore/RecoveryCallControl.lean",
+      "comparison": "exact independently reviewed author bytes"
+    },
+    {
+      "path": "GoLean/GoCore/RecoveryValueBasic.lean",
+      "comparison": "exact independently reviewed author bytes"
+    },
+    {
+      "path": "GoLean/GoCore/RecoveryValueCalls.lean",
+      "comparison": "exact independently reviewed author bytes"
+    },
+    {
+      "path": "GoLean/GoCore/RecoveryStatementProgress.lean",
+      "comparison": "exact independently reviewed author bytes"
+    },
+    {
+      "path": "GoLean/GoCore/RecoveryFrameProgress.lean",
+      "comparison": "exact independently reviewed author bytes"
+    },
+    {
+      "path": "GoLean/GoCore/RecoveryPanicProgress.lean",
+      "comparison": "exact independently reviewed author bytes"
+    },
+    {
+      "path": "GoLean/GoCore/RecoveryInvariant.lean",
+      "comparison": "exact independently reviewed author bytes"
+    },
+    {
+      "path": "GoLean/GoCore/RecoverySuccessfulRuns.lean",
+      "comparison": "exact independently reviewed author bytes"
+    },
+    {
+      "path": "Tests/RecoveryInvariant.lean",
+      "comparison": "exact independently reviewed author bytes"
+    },
+    {
+      "path": "Tests/RecoveryControlAudit.lean",
+      "comparison": "exact independently reviewed author bytes"
+    },
+    {
+      "path": "scripts/check-recovery-control",
+      "comparison": "exact independently reviewed author bytes"
+    },
+    {
+      "path": "tools/recovery-control-audit.py",
+      "comparison": "exact independently reviewed author bytes"
+    },
+    {
+      "path": "lakefile.toml",
+      "comparison": "exact independently reviewed author bytes"
+    },
+    {
+      "path": "scripts/ci",
+      "comparison": "exact independently reviewed author bytes"
+    }
+  ],
+  "modules": [
+    "GoLean.GoCore.Admission",
+    "GoLean.GoCore.AdmissionIndices",
+    "GoLean.GoCore.AdmissionPolicy",
+    "GoLean.GoCore.BooleanControl",
+    "GoLean.GoCore.BooleanControlTyping",
+    "GoLean.GoCore.BooleanInitialization",
+    "GoLean.GoCore.BooleanInvariant",
+    "GoLean.GoCore.BooleanPool",
+    "GoLean.GoCore.BooleanPreservation",
+    "GoLean.GoCore.BooleanProgram",
+    "GoLean.GoCore.BooleanProgress",
+    "GoLean.GoCore.BooleanSafety",
+    "GoLean.GoCore.BooleanSetup",
+    "GoLean.GoCore.BooleanStore",
+    "GoLean.GoCore.BooleanTyping",
+    "GoLean.GoCore.Machine",
+    "GoLean.GoCore.PoolTrace",
+    "GoLean.GoCore.ProgramTrace",
+    "GoLean.GoCore.RecoveryAdmission",
+    "GoLean.GoCore.RecoveryAllocation",
+    "GoLean.GoCore.RecoveryCallControl",
+    "GoLean.GoCore.RecoveryCallEntry",
+    "GoLean.GoCore.RecoveryCalls",
+    "GoLean.GoCore.RecoveryContext",
+    "GoLean.GoCore.RecoveryControl",
+    "GoLean.GoCore.RecoveryControlData",
+    "GoLean.GoCore.RecoveryControlHelpers",
+    "GoLean.GoCore.RecoveryControlMono",
+    "GoLean.GoCore.RecoveryControlTyping",
+    "GoLean.GoCore.RecoveryDelivery",
+    "GoLean.GoCore.RecoveryDiagnostics",
+    "GoLean.GoCore.RecoveryEnvironment",
+    "GoLean.GoCore.RecoveryExpressionProgress",
+    "GoLean.GoCore.RecoveryExpressions",
+    "GoLean.GoCore.RecoveryFrameProgress",
+    "GoLean.GoCore.RecoveryGraph",
+    "GoLean.GoCore.RecoveryInitialization",
+    "GoLean.GoCore.RecoveryInvariant",
+    "GoLean.GoCore.RecoveryOperators",
+    "GoLean.GoCore.RecoveryPanicProgress",
+    "GoLean.GoCore.RecoveryResultRoots",
+    "GoLean.GoCore.RecoverySetup",
+    "GoLean.GoCore.RecoverySetupReadout",
+    "GoLean.GoCore.RecoverySetupShape",
+    "GoLean.GoCore.RecoverySetupWf",
+    "GoLean.GoCore.RecoveryStatementProgress",
+    "GoLean.GoCore.RecoveryStatements",
+    "GoLean.GoCore.RecoveryStore",
+    "GoLean.GoCore.RecoverySuccessfulRuns",
+    "GoLean.GoCore.RecoveryTypingCore",
+    "GoLean.GoCore.RecoveryValueBasic",
+    "GoLean.GoCore.RecoveryValueCalls",
+    "GoLean.GoCore.RecoveryWalk",
+    "GoLean.GoCore.Trace",
+    "GoLean.Interface",
+    "Tests.BooleanProgram",
+    "Tests.BooleanRuntime",
+    "Tests.InterfaceAudit",
+    "Tests.InterfaceContract",
+    "Tests.PanicRendering",
+    "Tests.RecoveryA2Artifact",
+    "Tests.RecoveryControlAudit",
+    "Tests.RecoveryDiagnosticControls",
+    "Tests.RecoveryInvariant",
+    "Tests.RecoverySetup",
+    "Tests.RecoverySetupAudit",
+    "Tests.RecoveryStorage",
+    "Tests.RecoveryStorageAudit",
+    "Tests.RecoveryTyping",
+    "Tests.RecoveryTypingAudit",
+    "Tests.RecoveryTypingFixture"
+  ],
+  "exports": [
+    "GoLean.Semantics.iter_iff_trace",
+    "GoLean.Semantics.Trace.erase",
+    "GoLean.Semantics.run_ok_iff",
+    "GoLean.Semantics.exists_run_ok_iff",
+    "GoLean.Semantics.Pool.run_iff",
+    "GoLean.Semantics.Pool.Run.success_reaches",
+    "GoLean.Semantics.Pool.program_run_iff",
+    "GoLean.Semantics.Pool.exists_program_run_iff",
+    "GoLean.Semantics.Pool.observation_iff",
+    "GoLean.Semantics.Pool.fuel_is_not_observation",
+    "GoLean.Semantics.Pool.refusal_is_not_observation",
+    "GoLean.GoCore.Admission.checkBoolean_iff",
+    "GoLean.GoCore.Admission.admitted_index_bound",
+    "GoLean.GoCore.Admission.admitted_all_bodies",
+    "GoLean.GoCore.BooleanTyping.checkTypedBoolean_iff",
+    "GoLean.GoCore.RecoveryTyping.checkRecovery_iff",
+    "GoLean.GoCore.RecoveryTyping.checkRecovery_sound",
+    "GoLean.GoCore.RecoveryTyping.checkRecovery_complete",
+    "GoLean.GoCore.RecoveryTyping.admitted_all_bodies",
+    "GoLean.GoCore.RecoveryTyping.admitted_no_cycle",
+    "GoLean.GoCore.RecoveryTyping.Statement.in_profile",
+    "GoLean.GoCore.RecoveryTyping.Statement.placement",
+    "GoLean.GoCore.RecoveryRuntime.setup_typed",
+    "GoLean.GoCore.RecoveryRuntime.setup_typed_wf",
+    "GoLean.GoCore.RecoveryRuntime.enterFrame_typed",
+    "GoLean.GoCore.RecoveryRuntime.enterFramePick_typed",
+    "GoLean.GoCore.RecoveryRuntime.ResultRoots.load",
+    "GoLean.GoCore.RecoveryRuntime.pinResultLocs_typed",
+    "GoLean.GoCore.RecoveryRuntime.EnvTyped.pushedDecls",
+    "GoLean.GoCore.RecoveryRuntime.initialState_argument",
+    "GoLean.GoCore.RecoveryRuntime.initialState_result",
+    "GoLean.GoCore.RecoveryRuntime.initialState_readout",
+    "GoLean.GoCore.RecoveryRuntime.typedEntry_wf",
+    "GoLean.GoCore.RecoveryRuntime.ZeroValues.unique",
+    "GoLean.GoCore.RecoveryRuntime.control_progress",
+    "GoLean.GoCore.RecoveryRuntime.control_step",
+    "GoLean.GoCore.RecoveryRuntime.control_stepFn",
+    "GoLean.GoCore.RecoveryRuntime.setup_inv",
+    "GoLean.GoCore.RecoveryRuntime.Inv.step",
+    "GoLean.GoCore.RecoveryRuntime.Inv.steps",
+    "GoLean.GoCore.RecoveryRuntime.Inv.iter",
+    "GoLean.GoCore.RecoveryRuntime.Inv.progress",
+    "GoLean.GoCore.RecoveryRuntime.Inv.reachable_progress",
+    "GoLean.GoCore.RecoveryRuntime.Inv.readout",
+    "GoLean.GoCore.RecoveryRuntime.Inv.run_readout",
+    "GoLean.GoCore.RecoveryRuntime.Inv.run_choices",
+    "GoLean.GoCore.RecoveryRuntime.Inv.reachable_silent",
+    "GoLean.GoCore.RecoveryRuntime.call_entry_control",
+    "GoLean.GoCore.RecoveryRuntime.deferred_entry_control",
+    "GoLean.GoCore.RecoveryRuntime.recover_direct",
+    "GoLean.GoCore.RecoveryRuntime.recover_indirect",
+    "GoLean.GoCore.RecoveryRuntime.ReturnCont.pushDefer",
+    "GoLean.GoCore.BooleanRuntime.setup_boolean",
+    "GoLean.GoCore.BooleanRuntime.bindParams_bool",
+    "GoLean.GoCore.BooleanRuntime.allocDecls_bool",
+    "GoLean.GoCore.BooleanRuntime.store_bool",
+    "GoLean.GoCore.BooleanRuntime.pinResultLocs_bool",
+    "GoLean.GoCore.BooleanRuntime.loadMany_bool",
+    "GoLean.GoCore.BooleanRuntime.EnvRoots.lookup",
+    "GoLean.GoCore.BooleanRuntime.setup_typed_exact",
+    "GoLean.GoCore.BooleanRuntime.bindParams_exact",
+    "GoLean.GoCore.BooleanRuntime.allocDecls_exact",
+    "GoLean.GoCore.BooleanRuntime.initialEnv_argument",
+    "GoLean.GoCore.BooleanRuntime.initialEnv_result",
+    "GoLean.GoCore.BooleanRuntime.initialState_argument",
+    "GoLean.GoCore.BooleanRuntime.initialState_result",
+    "GoLean.GoCore.BooleanRuntime.initialResults_distinct",
+    "GoLean.GoCore.BooleanRuntime.booleanEntry_wf",
+    "GoLean.GoCore.BooleanRuntime.setup_typed",
+    "GoLean.GoCore.BooleanRuntime.setup_typed_exact_inv",
+    "GoLean.GoCore.BooleanRuntime.runProgram_typed",
+    "GoLean.GoCore.BooleanRuntime.Inv.step",
+    "GoLean.GoCore.BooleanRuntime.Inv.steps",
+    "GoLean.GoCore.BooleanRuntime.Inv.reachable_progress",
+    "GoLean.GoCore.BooleanRuntime.Inv.run_choices",
+    "GoLean.GoCore.BooleanRuntime.Inv.run_readout",
+    "GoLean.GoCore.BooleanRuntime.Control.singleton_step",
+    "GoLean.GoCore.BooleanRuntime.Control.no_seq_consumption",
+    "GoLean.GoCore.BooleanRuntime.Inv.pool_eq_runConfig",
+    "GoLean.GoCore.BooleanRuntime.runProgramPool_eq_sequential",
+    "GoLean.GoCore.BooleanRuntime.runProgramPool_typed",
+    "GoLean.GoCore.BooleanRuntime.runProgramPool_no_refusal",
+    "GoLean.GoCore.BooleanRuntime.Inv.success_contract",
+    "GoLean.GoCore.BooleanRuntime.ProgramTests.argument_result",
+    "GoLean.GoCore.BooleanRuntime.ProgramTests.zero_fuel_is_exhaustion",
+    "GoLean.GoCore.BooleanRuntime.ProgramTests.nested_shadow_result",
+    "GoLean.GoCore.BooleanRuntime.ProgramTests.branch_result",
+    "GoLean.GoCore.BooleanRuntime.ProgramTests.zero_local_and_result",
+    "GoLean.GoCore.BooleanRuntime.ProgramTests.terminal_at_zero_fuel",
+    "GoLean.GoCore.BooleanRuntime.Tests.paired_setup",
+    "GoLean.GoCore.BooleanRuntime.Tests.hidden_outer_binding_rejected",
+    "GoLean.GoCore.BooleanRuntime.Tests.hidden_same_scope_binding_rejected",
+    "GoLean.GoCore.BooleanRuntime.Tests.address_bounds_do_not_type_storage",
+    "GoLean.GoCore.BooleanRuntime.Tests.native_argument_setup",
+    "GoLean.GateA1.recover_step_does_not_transport",
+    "GoLean.GateA1.fixed_stream_not_existential_path",
+    "GoLean.GateA1.address_bound_admits_ill_typed",
+    "GoLean.GateA1.both_pool_traces",
+    "GoLean.GateA1.print_before_panic",
+    "GoLean.PanicRenderingTests.unicode_widths",
+    "GoLean.PanicRenderingTests.recovered_newline_suffix",
+    "GoLean.PanicRenderingTests.invalid_utf8_remains_refused"
+  ],
+  "poisons": [
+    [
+      "machine_private",
+      "GoLean/GoCore/Machine.lean",
+      "private axiom machineRendererHole : False",
+      "machineRendererHole"
+    ],
+    [
+      "rendering_trailing",
+      "Tests/PanicRendering.lean",
+      "private theorem rendererHole : False := by sorry",
+      "sorryAx"
+    ],
+    [
+      "promoted_private",
+      "GoLean/GoCore/Trace.lean",
+      "private axiom promotedTraceHole : False",
+      "promotedTraceHole"
+    ],
+    [
+      "boolean_store_private",
+      "GoLean/GoCore/BooleanStore.lean",
+      "private axiom booleanStoreHole : False",
+      "booleanStoreHole"
+    ],
+    [
+      "boolean_setup_private",
+      "GoLean/GoCore/BooleanSetup.lean",
+      "private axiom booleanSetupHole : False",
+      "booleanSetupHole"
+    ],
+    [
+      "boolean_initialization_private",
+      "GoLean/GoCore/BooleanInitialization.lean",
+      "private axiom booleanInitializationHole : False",
+      "booleanInitializationHole"
+    ],
+    [
+      "boolean_program_private",
+      "GoLean/GoCore/BooleanProgram.lean",
+      "private axiom booleanProgramHole : False",
+      "booleanProgramHole"
+    ],
+    [
+      "boolean_pool_private",
+      "GoLean/GoCore/BooleanPool.lean",
+      "private axiom booleanPoolHole : False",
+      "booleanPoolHole"
+    ],
+    [
+      "boolean_program_test_trailing",
+      "Tests/BooleanProgram.lean",
+      "private theorem booleanProgramTestHole : False := by sorry",
+      "sorryAx"
+    ],
+    [
+      "recovery_diagnostics_private",
+      "GoLean/GoCore/RecoveryDiagnostics.lean",
+      "private axiom recoveryDiagnosticsHole : False",
+      "recoveryDiagnosticsHole"
+    ],
+    [
+      "recovery_admission_private",
+      "GoLean/GoCore/RecoveryAdmission.lean",
+      "private axiom recoveryAdmissionHole : False",
+      "recoveryAdmissionHole"
+    ],
+    [
+      "recovery_test_trailing",
+      "Tests/RecoveryTyping.lean",
+      "private theorem recoveryTestHole : False := by sorry",
+      "sorryAx"
+    ],
+    [
+      "recovery_store_private",
+      "GoLean/GoCore/RecoveryStore.lean",
+      "private axiom recoveryStoreHole : False",
+      "recoveryStoreHole"
+    ],
+    [
+      "recovery_setup_private",
+      "GoLean/GoCore/RecoverySetupWf.lean",
+      "private axiom recoverySetupHole : False",
+      "recoverySetupHole"
+    ],
+    [
+      "recovery_call_private",
+      "GoLean/GoCore/RecoveryCallEntry.lean",
+      "private axiom recoveryCallHole : False",
+      "recoveryCallHole"
+    ],
+    [
+      "recovery_setup_test_trailing",
+      "Tests/RecoverySetup.lean",
+      "private theorem recoverySetupTestHole : False := by sorry",
+      "sorryAx"
+    ],
+    [
+      "recovery_control_private",
+      "GoLean/GoCore/RecoveryControl.lean",
+      "private axiom recoveryControlInterfaceHole : False",
+      "recoveryControlInterfaceHole"
+    ],
+    [
+      "recovery_invariant_private",
+      "GoLean/GoCore/RecoveryInvariant.lean",
+      "private axiom recoveryInvariantInterfaceHole : False",
+      "recoveryInvariantInterfaceHole"
+    ],
+    [
+      "recovery_control_test_trailing",
+      "Tests/RecoveryInvariant.lean",
+      "private theorem recoveryControlTestHole : False := by sorry",
+      "sorryAx"
+    ],
+    [
+      "facade_private",
+      "GoLean/Interface.lean",
+      "private axiom facadeHole : False",
+      "facadeHole"
+    ],
+    [
+      "audit_trailing",
+      "Tests/InterfaceAudit.lean",
+      "private theorem auditHole : False := by sorry",
+      "sorryAx"
+    ],
+    [
+      "runtime_test_trailing",
+      "Tests/BooleanRuntime.lean",
+      "private theorem booleanRuntimeTestHole : False := by sorry",
+      "sorryAx"
+    ]
+  ]
+}

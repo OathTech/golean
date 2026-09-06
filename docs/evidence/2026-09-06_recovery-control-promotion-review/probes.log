@@ -1,0 +1,149 @@
+GoLean.GoCore.RecoveryRuntime.control_progress {p : GoLean.GoCore.Program} {world : GoLean.GoCore.RecoveryRuntime.World}
+  {s : GoLean.GoCore.ExecState} {c : GoLean.GoCore.Machine.Config} (hp : GoLean.GoCore.RecoveryTyping.ProgramTyped p)
+  (hc : GoLean.GoCore.BooleanRuntime.SameContext (GoLean.GoCore.BooleanRuntime.programState p) s)
+  (heap : GoLean.GoCore.RecoveryRuntime.HeapTyped world s)
+  (control : GoLean.GoCore.RecoveryRuntime.Control world p.funcs c) :
+  GoLean.GoCore.RecoveryRuntime.Progress world p.funcs s c
+GoLean.GoCore.RecoveryRuntime.control_step {p : GoLean.GoCore.Program} {world : GoLean.GoCore.RecoveryRuntime.World}
+  {s : GoLean.GoCore.ExecState} {c c' : GoLean.GoCore.Machine.Config} {t : GoLean.GoCore.ExecState}
+  (hp : GoLean.GoCore.RecoveryTyping.ProgramTyped p)
+  (hc : GoLean.GoCore.BooleanRuntime.SameContext (GoLean.GoCore.BooleanRuntime.programState p) s)
+  (heap : GoLean.GoCore.RecoveryRuntime.HeapTyped world s)
+  (control : GoLean.GoCore.RecoveryRuntime.Control world p.funcs c) (step : GoLean.GoCore.Machine.Step c s c' t) :
+  ∃ next,
+    GoLean.GoCore.RecoveryRuntime.StoreExtension world next s t ∧ GoLean.GoCore.RecoveryRuntime.Control next p.funcs c'
+GoLean.GoCore.RecoveryRuntime.control_stepFn {p : GoLean.GoCore.Program} {world : GoLean.GoCore.RecoveryRuntime.World}
+  {s : GoLean.GoCore.ExecState} {c : GoLean.GoCore.Machine.Config} {ch : GoLean.GoCore.Choices}
+  {c' : GoLean.GoCore.Machine.Config} {t : GoLean.GoCore.ExecState} {ch' : GoLean.GoCore.Choices}
+  (hp : GoLean.GoCore.RecoveryTyping.ProgramTyped p)
+  (hc : GoLean.GoCore.BooleanRuntime.SameContext (GoLean.GoCore.BooleanRuntime.programState p) s)
+  (heap : GoLean.GoCore.RecoveryRuntime.HeapTyped world s)
+  (control : GoLean.GoCore.RecoveryRuntime.Control world p.funcs c)
+  (step : GoLean.GoCore.Machine.stepFn s c ch = Except.ok (c', t, ch')) :
+  ∃ next,
+    GoLean.GoCore.RecoveryRuntime.StoreExtension world next s t ∧
+      GoLean.GoCore.RecoveryRuntime.Control next p.funcs c' ∧ ch' = ch
+GoLean.GoCore.RecoveryRuntime.setup_inv {p : GoLean.GoCore.Program} {name : String} {args : Array GoLean.GoValue}
+  (h : GoLean.GoCore.RecoveryTyping.RecoveryAdmission p name args) (fuel : Nat) (ch : GoLean.GoCore.Choices) :
+  ∃ f zeros,
+    GoLean.GoCore.findFunctionIn? p.funcs { key := name } = some f ∧
+      GoLean.GoCore.RecoveryRuntime.ZeroValues f.results.toList zeros ∧
+        GoLean.GoCore.Machine.runProgramSetupM fuel p name args ch =
+            Except.ok
+              (GoLean.GoCore.Machine.Config.exec f.body (GoLean.GoCore.BooleanRuntime.initialEnv f)
+                  (GoLean.GoCore.Machine.Cont.frame [] [] [] [] GoLean.GoCore.Machine.Cont.stop),
+                GoLean.GoCore.RecoveryRuntime.initialState p f args.toList zeros,
+                GoLean.GoCore.BooleanRuntime.initialResults f, ch) ∧
+          GoLean.GoCore.RecoveryRuntime.Inv p f.results.toList (GoLean.GoCore.BooleanRuntime.initialResults f)
+            (GoLean.GoCore.RecoveryRuntime.initialState p f args.toList zeros)
+            (GoLean.GoCore.Machine.Config.exec f.body (GoLean.GoCore.BooleanRuntime.initialEnv f)
+              (GoLean.GoCore.Machine.Cont.frame [] [] [] [] GoLean.GoCore.Machine.Cont.stop))
+GoLean.GoCore.RecoveryRuntime.Inv.step {p : GoLean.GoCore.Program} {ps : List GoLean.GoCore.Param}
+  {results : List GoLean.Loc} {s : GoLean.GoCore.ExecState} {c : GoLean.GoCore.Machine.Config}
+  {t : GoLean.GoCore.ExecState} {c' : GoLean.GoCore.Machine.Config}
+  (h : GoLean.GoCore.RecoveryRuntime.Inv p ps results s c) (step : GoLean.GoCore.Machine.Step c s c' t) :
+  GoLean.GoCore.RecoveryRuntime.Inv p ps results t c'
+GoLean.GoCore.RecoveryRuntime.Inv.steps {p : GoLean.GoCore.Program} {ps : List GoLean.GoCore.Param}
+  {results : List GoLean.Loc} {s : GoLean.GoCore.ExecState} {c : GoLean.GoCore.Machine.Config}
+  {t : GoLean.GoCore.ExecState} {c' : GoLean.GoCore.Machine.Config}
+  (h : GoLean.GoCore.RecoveryRuntime.Inv p ps results s c) (steps : GoLean.GoCore.Machine.Steps c s c' t) :
+  GoLean.GoCore.RecoveryRuntime.Inv p ps results t c'
+GoLean.GoCore.RecoveryRuntime.Inv.iter {p : GoLean.GoCore.Program} {ps : List GoLean.GoCore.Param}
+  {results : List GoLean.Loc} {s : GoLean.GoCore.ExecState} {c : GoLean.GoCore.Machine.Config}
+  {t : GoLean.GoCore.ExecState} {c' : GoLean.GoCore.Machine.Config} {n : Nat} {ch ch' : GoLean.GoCore.Choices}
+  (h : GoLean.GoCore.RecoveryRuntime.Inv p ps results s c)
+  (run : GoLean.GoCore.Machine.stepFnIter n s c ch = Except.ok (c', t, ch')) :
+  GoLean.GoCore.RecoveryRuntime.Inv p ps results t c'
+GoLean.GoCore.RecoveryRuntime.Inv.progress {p : GoLean.GoCore.Program} {ps : List GoLean.GoCore.Param}
+  {results : List GoLean.Loc} {s : GoLean.GoCore.ExecState} {c : GoLean.GoCore.Machine.Config}
+  (h : GoLean.GoCore.RecoveryRuntime.Inv p ps results s c) :
+  c = GoLean.GoCore.Machine.Config.next GoLean.GoCore.Machine.Cont.stop ∨
+    (∃ first rest, c = GoLean.GoCore.Machine.Config.panicking (first :: rest) GoLean.GoCore.Machine.Cont.stop) ∨
+      ∃ c' t, GoLean.GoCore.Machine.Step c s c' t
+GoLean.GoCore.RecoveryRuntime.Inv.reachable_progress {p : GoLean.GoCore.Program} {ps : List GoLean.GoCore.Param}
+  {results : List GoLean.Loc} {s : GoLean.GoCore.ExecState} {c : GoLean.GoCore.Machine.Config}
+  {t : GoLean.GoCore.ExecState} {c' : GoLean.GoCore.Machine.Config}
+  (h : GoLean.GoCore.RecoveryRuntime.Inv p ps results s c) (steps : GoLean.GoCore.Machine.Steps c s c' t) :
+  c' = GoLean.GoCore.Machine.Config.next GoLean.GoCore.Machine.Cont.stop ∨
+    (∃ first rest, c' = GoLean.GoCore.Machine.Config.panicking (first :: rest) GoLean.GoCore.Machine.Cont.stop) ∨
+      ∃ c'' u, GoLean.GoCore.Machine.Step c' t c'' u
+GoLean.GoCore.RecoveryRuntime.Inv.readout {p : GoLean.GoCore.Program} {ps : List GoLean.GoCore.Param}
+  {results : List GoLean.Loc} {s : GoLean.GoCore.ExecState} {c : GoLean.GoCore.Machine.Config}
+  (h : GoLean.GoCore.RecoveryRuntime.Inv p ps results s c) :
+  ∃ world vs,
+    GoLean.GoCore.Machine.loadMany s results = Except.ok vs ∧
+      GoLean.GoCore.RecoveryRuntime.ParamsValues world ps vs ∧ vs.length = results.length
+GoLean.GoCore.RecoveryRuntime.Inv.run_readout {p : GoLean.GoCore.Program} {ps : List GoLean.GoCore.Param}
+  {results : List GoLean.Loc} {s : GoLean.GoCore.ExecState} {c : GoLean.GoCore.Machine.Config} {fuel : Nat}
+  {ch : GoLean.GoCore.Choices} {t : GoLean.GoCore.ExecState} {ch' : GoLean.GoCore.Choices}
+  (h : GoLean.GoCore.RecoveryRuntime.Inv p ps results s c)
+  (run : GoLean.GoCore.Machine.runConfig fuel s c ch = Except.ok (t, ch')) :
+  ∃ world vs,
+    GoLean.GoCore.Machine.loadMany t results = Except.ok vs ∧
+      GoLean.GoCore.RecoveryRuntime.ParamsValues world ps vs ∧ vs.length = results.length
+GoLean.GoCore.RecoveryRuntime.Inv.run_choices {p : GoLean.GoCore.Program} {ps : List GoLean.GoCore.Param}
+  {results : List GoLean.Loc} {s : GoLean.GoCore.ExecState} {c : GoLean.GoCore.Machine.Config} {fuel : Nat}
+  {ch : GoLean.GoCore.Choices} {t : GoLean.GoCore.ExecState} {ch' : GoLean.GoCore.Choices}
+  (h : GoLean.GoCore.RecoveryRuntime.Inv p ps results s c)
+  (run : GoLean.GoCore.Machine.runConfig fuel s c ch = Except.ok (t, ch')) : ch' = ch
+GoLean.GoCore.RecoveryRuntime.Inv.reachable_silent {p : GoLean.GoCore.Program} {ps : List GoLean.GoCore.Param}
+  {results : List GoLean.Loc} {s : GoLean.GoCore.ExecState} {c : GoLean.GoCore.Machine.Config}
+  {t : GoLean.GoCore.ExecState} {c' : GoLean.GoCore.Machine.Config}
+  (h : GoLean.GoCore.RecoveryRuntime.Inv p ps results s c) (steps : GoLean.GoCore.Machine.Steps c s c' t) :
+  GoLean.GoCore.Machine.printOut? c' = none
+GoLean.GoCore.RecoveryRuntime.call_entry_control {p : GoLean.GoCore.Program}
+  {world : GoLean.GoCore.RecoveryRuntime.World} {s : GoLean.GoCore.ExecState} {fid : GoLean.GoCore.FuncId}
+  {f : GoLean.GoCore.Func} {args : List GoLean.GoValue} {Γ : GoLean.GoCore.RecoveryTyping.Context}
+  {env : GoLean.GoCore.LocalEnv} {plans : List (GoLean.GoCore.Machine.TargetShape × List GoLean.GoCore.Expr)}
+  {k : GoLean.GoCore.Machine.Cont} (hp : GoLean.GoCore.RecoveryTyping.ProgramTyped p)
+  (hc : GoLean.GoCore.BooleanRuntime.SameContext (GoLean.GoCore.BooleanRuntime.programState p) s)
+  (heap : GoLean.GoCore.RecoveryRuntime.HeapTyped world s) (hf : GoLean.GoCore.findFunctionIn? p.funcs fid = some f)
+  (values : GoLean.GoCore.RecoveryRuntime.ParamsValues world f.args.toList args)
+  (he : GoLean.GoCore.RecoveryRuntime.EnvTyped world Γ env)
+  (ht : GoLean.GoCore.RecoveryRuntime.PlansTyped Γ plans f.results.toList)
+  (hk : GoLean.GoCore.RecoveryRuntime.ReturnCont world p.funcs k) (ch : GoLean.GoCore.Choices) :
+  ∃ next env' roots t,
+    GoLean.GoCore.Machine.enterFramePick s fid args ch = Except.ok (GoLean.Result.ok (f, env', roots, t), ch) ∧
+      GoLean.GoCore.RecoveryRuntime.StoreExtension world next s t ∧
+        f.wrapper = false ∧
+          GoLean.GoCore.RecoveryRuntime.Control next p.funcs
+            (GoLean.GoCore.Machine.Config.exec f.body env' (GoLean.GoCore.Machine.Cont.frame plans env roots [] k))
+GoLean.GoCore.RecoveryRuntime.deferred_entry_control {p : GoLean.GoCore.Program}
+  {world : GoLean.GoCore.RecoveryRuntime.World} {s : GoLean.GoCore.ExecState} {callee : GoLean.GoValue}
+  {args : List GoLean.GoValue} {k : GoLean.GoCore.Machine.Cont} (hp : GoLean.GoCore.RecoveryTyping.ProgramTyped p)
+  (hc : GoLean.GoCore.BooleanRuntime.SameContext (GoLean.GoCore.BooleanRuntime.programState p) s)
+  (heap : GoLean.GoCore.RecoveryRuntime.HeapTyped world s)
+  (pending : GoLean.GoCore.RecoveryRuntime.PendingCall world p.funcs callee args)
+  (hk : GoLean.GoCore.RecoveryRuntime.ExitCont world p.funcs k) (ch : GoLean.GoCore.Choices) :
+  ∃ fid caps f next env roots t,
+    callee = GoLean.GoValue.funcVal fid caps ∧
+      GoLean.GoCore.Machine.enterFramePick s fid (caps ++ args) ch =
+          Except.ok (GoLean.Result.ok (f, env, roots, t), ch) ∧
+        GoLean.GoCore.RecoveryRuntime.StoreExtension world next s t ∧
+          f.wrapper = false ∧
+            GoLean.GoCore.RecoveryRuntime.Control next p.funcs
+              (GoLean.GoCore.Machine.Config.exec f.body env (GoLean.GoCore.Machine.Cont.frame [] [] [] [] k))
+GoLean.GoCore.RecoveryRuntime.recover_direct {chain next : List GoLean.GoCore.Machine.PanicEntry} {v : GoLean.GoValue}
+  (hm : GoLean.GoCore.Machine.markNewestRecovered chain = some (v, next))
+  (targets : List (GoLean.GoCore.Machine.TargetShape × List GoLean.GoCore.Expr)) (env : GoLean.GoCore.LocalEnv)
+  (results : List GoLean.Loc) (ds : List (GoLean.GoValue × List GoLean.GoValue)) (k : GoLean.GoCore.Machine.Cont) :
+  GoLean.GoCore.Machine.recoverResult
+      (GoLean.GoCore.Machine.Cont.frame targets env results ds (GoLean.GoCore.Machine.Cont.panicResumeK chain k)) =
+    (v, GoLean.GoCore.Machine.Cont.frame targets env results ds (GoLean.GoCore.Machine.Cont.panicResumeK next k))
+GoLean.GoCore.RecoveryRuntime.recover_indirect {world : GoLean.GoCore.RecoveryRuntime.World}
+  {fs : Array GoLean.GoCore.Func} {k : GoLean.GoCore.Machine.Cont}
+  (hk : GoLean.GoCore.RecoveryRuntime.ReturnCont world fs k)
+  (targets : List (GoLean.GoCore.Machine.TargetShape × List GoLean.GoCore.Expr)) (env : GoLean.GoCore.LocalEnv)
+  (results : List GoLean.Loc) (ds : List (GoLean.GoValue × List GoLean.GoValue)) :
+  GoLean.GoCore.Machine.recoverResult (GoLean.GoCore.Machine.Cont.frame targets env results ds k) =
+    (GoLean.GoValue.nil, GoLean.GoCore.Machine.Cont.frame targets env results ds k)
+GoLean.GoCore.RecoveryRuntime.ReturnCont.pushDefer {world : GoLean.GoCore.RecoveryRuntime.World}
+  {fs : Array GoLean.GoCore.Func} {k : GoLean.GoCore.Machine.Cont} {d : GoLean.GoValue × List GoLean.GoValue}
+  (hk : GoLean.GoCore.RecoveryRuntime.ReturnCont world fs k)
+  (hd : GoLean.GoCore.RecoveryRuntime.PendingCall world fs d.fst d.snd) :
+  ∃ next, GoLean.GoCore.Machine.pushDefer d k = some next ∧ GoLean.GoCore.RecoveryRuntime.ReturnCont world fs next
+'GoLean.GoCore.RecoveryRuntime.setup_inv' depends on axioms: [propext, Classical.choice, Quot.sound]
+'GoLean.GoCore.RecoveryRuntime.Inv.step' depends on axioms: [propext, Classical.choice, Quot.sound]
+'GoLean.GoCore.RecoveryRuntime.Inv.reachable_progress' depends on axioms: [propext, Classical.choice, Quot.sound]
+'GoLean.GoCore.RecoveryRuntime.Inv.run_readout' depends on axioms: [propext, Classical.choice, Quot.sound]
+'GoLean.GoCore.RecoveryRuntime.Inv.run_choices' depends on axioms: [propext, Classical.choice, Quot.sound]
