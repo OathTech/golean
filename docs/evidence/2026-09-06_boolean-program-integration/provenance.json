@@ -1,0 +1,13 @@
+{
+  "utc": "2026-09-06T02:30:43.296444+00:00",
+  "parent": "761d4e2856b7ae7eb9e20229d04ea09915df8209",
+  "branch": "typed-consumer-sprint",
+  "source_scope": "Promoted O1 proofs/API/audits frozen during fresh gates; final documentation/evidence bookkeeping followed.",
+  "go_version": "go version go1.26.5 linux/amd64",
+  "lean_toolchain": "leanprover/lean4:v4.32.2",
+  "all_fresh_gate_exits": 0,
+  "full_runtime_evidence": "explicitly reused from renderer-integration source inventory",
+  "proof_review": "fadcb0c3",
+  "promotion_review": "638af8dd",
+  "source_files": 157
+}

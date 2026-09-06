@@ -1,0 +1,125 @@
+namespace GoLean.GoCore.RecoveryTyping.IndependentReview
+
+set_option maxRecDepth 8192
+set_option maxHeartbeats 800000
+
+def anyTy : Ty := .interface ⟨"any"⟩
+def unitFn (name : String) (body : Stmt := .block #[] #[]) : Func :=
+  { id := ⟨name⟩, args := #[], results := #[], body := body }
+
+-- The first binding also matters inside one scope, not only between scopes.
+theorem first_match_inside_scope :
+    checkExpr [[("p", anyTy), ("p", .pointer .bool)]] (.var "p") .root = false := by
+  with_unfolding_all rfl
+
+-- Reassigning a refined pointer parameter cannot erase its live-root fact.
+theorem pointer_cannot_receive_nil :
+    checkAssignment [[("p", .pointer .bool)]] (.var "p") (.nil none) = false := by
+  with_unfolding_all rfl
+
+-- A live root alias can be reassigned to another live Boolean cell.
+theorem pointer_can_receive_live_alias :
+    checkAssignment [[("p", .pointer .bool), ("b", .bool)]]
+      (.var "p") (.ref "b") = true := by
+  with_unfolding_all rfl
+
+theorem pointer_result_default_rejects :
+    checkFunction #[] { (unitFn "f" .returnStmt) with
+      results := #[⟨"p", .pointer .bool⟩] } = .error (.resultProfile ⟨"f"⟩) := by
+  with_unfolding_all rfl
+
+-- Payload results have an admitted zero value, and recovering need not occur
+-- directly in a deferred handler for the expression to be statically legal.
+theorem payload_result_and_nested_recovery_admit :
+    checkRecovery { funcs := #[{
+      id := ⟨"entry"⟩, args := #[], results := #[⟨"r", anyTy⟩],
+      body := .block #[] #[
+        .ifThenElse (.and (.boolLit true) (.eqCmp anyTy .recoverCall (.nil none)))
+          (.assign (.var "r") .recoverCall) (.seqn #[]), .returnStmt] }] }
+      "entry" #[] = .ok () := by
+  with_unfolding_all rfl
+
+-- Both ordinary and deferred signatures are checked even where a Boolean
+-- guard makes the malformed callee unreachable in execution.
+theorem unreachable_missing_callee_rejects :
+    checkRecovery { funcs := #[unitFn "entry"
+      (.ifThenElse (.boolLit false)
+        (.deferCall (.funcVal ⟨"missing"⟩ #[]) #[]) (.seqn #[]))] }
+      "entry" #[] = .error (.body ⟨"entry"⟩) := by
+  with_unfolding_all rfl
+
+def mixedCycle : Program := { funcs := #[
+  unitFn "entry" (.call #[] ⟨"helper"⟩ #[]),
+  unitFn "helper" (.ifThenElse (.boolLit false)
+    (.deferCall (.funcVal ⟨"entry"⟩ #[]) #[]) (.seqn #[]))] }
+
+theorem unreachable_mixed_cycle_rejects :
+    checkRecovery mixedCycle "entry" #[] = .error .recursiveOrUnresolvedGraph := by
+  with_unfolding_all rfl
+
+-- The table-size bound handles a maximal-length chain in reverse table order.
+def reversedChain : Program := { funcs := #[
+  unitFn "leaf",
+  unitFn "middle" (.deferCall (.funcVal ⟨"leaf"⟩ #[]) #[]),
+  unitFn "entry" (.callValue #[] (.funcVal ⟨"middle"⟩ #[]) #[])] }
+
+theorem mixed_chain_accepts_at_table_bound :
+    checkRecovery reversedChain "entry" #[] = .ok () := by
+  with_unfolding_all rfl
+
+theorem duplicate_functions_reject_before_graph :
+    checkRecovery { funcs := #[unitFn "entry", unitFn "entry"] } "entry" #[] =
+      .error (.boundary .duplicateFunctionKey) := by
+  with_unfolding_all rfl
+
+theorem external_pointer_parameter_is_not_an_initial_root :
+    checkRecovery { funcs := #[{ (unitFn "entry") with
+      args := #[⟨"p", .pointer .bool⟩] }] } "entry" #[.bool true] =
+      .error (.boundary .entryParameterTypes) := by
+  with_unfolding_all rfl
+
+theorem block_restores_hidden_payload_binding :
+    checkStmts #[] [[("x", anyTy)]] [
+      .block #[⟨"x", .bool⟩] #[.assign (.var "x") (.boolLit true)],
+      .assign (.var "x") .recoverCall] = true := by
+  with_unfolding_all rfl
+
+-- Every byte array is accepted in an explicit boxed panic, without running
+-- an evaluator or depending on a renderer result.
+theorem all_payload_bytes_admit (bytes : Array UInt8) :
+    checkRecovery { funcs := #[unitFn "entry"
+      (.panicStmt (.toInterface anyTy .string (.stringLit ⟨bytes⟩)))] }
+      "entry" #[] = .ok () := by
+  with_unfolding_all rfl
+
+-- Review finding: a valid Go panic with an out-of-profile payload and a
+-- malformed unbound write currently produce exactly the same diagnostic.
+theorem unsupported_and_malformed_body_diagnostics_coincide :
+    checkRecovery { funcs := #[unitFn "entry"
+      (.panicStmt (.toInterface anyTy .bool (.boolLit true)))] } "entry" #[] =
+      .error (.body ⟨"entry"⟩) ∧
+    checkRecovery { funcs := #[unitFn "entry"
+      (.assign (.var "missing") (.boolLit true))] } "entry" #[] =
+      .error (.body ⟨"entry"⟩) := by
+  constructor <;> with_unfolding_all rfl
+
+end GoLean.GoCore.RecoveryTyping.IndependentReview
+
+open Lean in
+def independentRecoveryAudit : CoreM Unit := do
+  let env ← getEnv
+  let ours := env.header.moduleNames.map fun n =>
+    n.toString.startsWith "GoLean." || n.toString.startsWith "Tests."
+  let mut checked := 0
+  for (name, _) in env.constants.toList do
+    let localModule := match env.getModuleIdxFor? name with
+      | some i => ours[i.toNat]!
+      | none => true
+    unless localModule do continue
+    for ax in (← collectAxioms name) do
+      unless [``propext, ``Classical.choice, ``Quot.sound].contains ax do
+        throwError "independent recovery audit: {name} depends on forbidden axiom {ax}"
+    checked := checked + 1
+  logInfo s!"Independent recovery static source/probes: {checked} local declarations audited"
+
+#eval independentRecoveryAudit

@@ -1,0 +1,14 @@
+{
+  "root": "/home/dev/projects/golean/.claude/worktrees/typed-preflight",
+  "source_revision": "10fefeb3e6fbb3f7cb6630b8b559a9a7e7915e97",
+  "binary_sha256": "f8b6d500483333b7b18a4581d24014223da1605cd85891fe628304db5b7d303a",
+  "manifest_sha256": "eaed42119eaa9994f11cf733210564d913e65a67672edf4577f6ca3666e37362",
+  "capture_script_sha256": "59a0c1e40cc713232eea14a98f127791c83c3f1dea2fc1178b65c6ad129a13b3",
+  "coverage_results_sha256": "44c2e2c260220b27d7bb4db0970b9bb41ebd02194ec237bb354530f72dd86014",
+  "coverage_meta_sha256": "42d392baab8f699a30567113855ec45d1255010840634792e69559ab14b94763",
+  "jobs": 2,
+  "timeout_seconds_per_invocation": 240,
+  "fuel_policy": "10,000,000 except explicit membership nonterm=N rows use N",
+  "stream_policy": "default and three fixed CI streams; strict depth=N adds the same three seeded CI streams",
+  "scope": "bounded captured paths only; full conformance result preserved separately; no all-choices proof"
+}

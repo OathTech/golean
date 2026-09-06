@@ -1,0 +1,6 @@
+panic: 􏿿
+
+goroutine 1 [running]:
+main.main()
+	/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/renderer-review.g3ml2A/maximum-scalar.go:2 +0x3b
+exit status 2

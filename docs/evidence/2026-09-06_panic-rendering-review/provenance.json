@@ -1,0 +1,38 @@
+{
+  "reviewer": "primary integrator, independent of typed_contract_review implementation",
+  "target": "/home/dev/projects/golean/.claude/worktrees/typed-panic-rendering",
+  "target_head": "5158589a83df9e54f5763f684286d35acb6b5afa",
+  "target_source": "frozen uncommitted runtime/test/gate source; author baseline/evidence finalization still in progress",
+  "sha256": {
+    "GoLean/GoCore/Machine.lean": "4bafe367252e73068ec60b8933bbe49f383215643d6468015610afa66a5cb957",
+    "GoLean/GoCore/Ops.lean": "54537cac6774fb72f1abd71e9d39f3a0e12c2895fa25623ffd3807f27de94dd4",
+    "Tests/PanicRendering.lean": "a4c82cd3a43691b86b832b30848419a0d1c184c4dd831b7a6a2a496491788741",
+    "Tests/InterfaceAudit.lean": "aa25bb4f833470f7e5cbc816456ec48baf5a3cd6faef4de9447f36b64762face",
+    "scripts/check-interface": "5203774f57d08617441be188b65d1f7932cacf6d8bc52500eeef07acff8dd202",
+    "scripts/check-interface.py": "bc976b3b8570a2cb496c665ce78e17a8f89fcdad9b17004ff5ef9eedf1fe0ce1",
+    "lakefile.toml": "7d016986a888f76fc6fcdc9c5710f1e84ea6c5e92e1ddf1bfa4c6e633a3eaae7",
+    "docs/2026-09-06_panic-rendering-repair.md": "a5f24e0c3aed873156f32f73ce4f5d93c2d1d2e8febbc3a6b9c8fd9c6d214f3b"
+  },
+  "kernel_command": "GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 scripts/capped lake env lean /home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/renderer-review.g3ml2A/Review.lean",
+  "kernel_cwd": "/home/dev/projects/golean/.claude/worktrees/typed-panic-rendering",
+  "go_version": "go version go1.26.5 linux/amd64",
+  "go_invocation": "go run <case>.go; GOCACHE=<integration>/artifacts/go-build-cache; GO111MODULE=off; stderr parsed as raw bytes",
+  "final_acceptance": {
+    "commit": "ff7173dd959435ede346c77318c29f13e16ed5f3",
+    "utc": "2026-09-06T01:24:23.340047+00:00",
+    "source_recheck": {
+      "GoLean/GoCore/Machine.lean": "4bafe367252e73068ec60b8933bbe49f383215643d6468015610afa66a5cb957",
+      "GoLean/GoCore/Ops.lean": "54537cac6774fb72f1abd71e9d39f3a0e12c2895fa25623ffd3807f27de94dd4",
+      "Tests/PanicRendering.lean": "a4c82cd3a43691b86b832b30848419a0d1c184c4dd831b7a6a2a496491788741",
+      "Tests/InterfaceAudit.lean": "aa25bb4f833470f7e5cbc816456ec48baf5a3cd6faef4de9447f36b64762face",
+      "scripts/check-interface": "5203774f57d08617441be188b65d1f7932cacf6d8bc52500eeef07acff8dd202",
+      "scripts/check-interface.py": "bc976b3b8570a2cb496c665ce78e17a8f89fcdad9b17004ff5ef9eedf1fe0ce1",
+      "lakefile.toml": "7d016986a888f76fc6fcdc9c5710f1e84ea6c5e92e1ddf1bfa4c6e633a3eaae7",
+      "docs/2026-09-06_panic-rendering-repair.md": "ef3c887de4ba11eb6b9a97c5e74e88e8ffb6b00e520f3a82c68b331f4342d532"
+    },
+    "changed_since_probes": [
+      "docs/2026-09-06_panic-rendering-repair.md"
+    ],
+    "change_review": "Read final validation, baseline, bookkeeping and independent-review additions; runtime/tests/gates unchanged. Final ordinary CI PASS with the same fresh full3607 differential run."
+  }
+}

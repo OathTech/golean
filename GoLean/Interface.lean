@@ -5,6 +5,8 @@ import GoLean.GoCore.Admission
 import GoLean.GoCore.BooleanTyping
 import GoLean.GoCore.BooleanStore
 import GoLean.GoCore.BooleanSetup
+import GoLean.GoCore.BooleanInitialization
+import GoLean.GoCore.BooleanPool
 
 /-!
 # Experimental semantic consumer interface
@@ -43,8 +45,27 @@ declarations and the stated structural return policy. It preserves A3a's
 weaker meaning. `GoCore.BooleanRuntime.setup_boolean` derives actual driver
 setup success and typed argument/result storage already from A3a; it preserves
 the choice stream and accounts for allocated cells. `loadMany_bool` proves
-typed readout from valid pinned roots. These storage facts do not yet prove
+typed readout from valid pinned roots. These storage facts alone do not prove
 typed control, preservation, progress, or refusal freedom during execution.
+
+`BooleanRuntime.setup_typed_exact` strengthens entry setup under scoped
+admission: the actual driver constructs a canonical environment/heap and
+distinct result pins, with `MachineWf` and typed storage established. The
+`initialEnv_*` and `initialState_*` lemmas expose exact argument bindings,
+argument values and initially false result cells.
+
+`BooleanRuntime.setup_typed` and `setup_typed_exact_inv` now derive the
+structural runtime `Inv` from the stronger admission. `Inv.step` preserves it
+for every relational successor, and `Inv.reachable_progress` gives a legal
+continuation or normal terminal. `runProgramPool_typed` covers the shipped
+whole-program driver: Boolean readout at the declared arity with empty output,
+or explicit fuel exhaustion with empty output, for every supplied stream.
+`Inv.pool_eq_runConfig` keeps the same fuel, store, residual choices and byte
+prefix; `Control.singleton_step` pins empty event picks/output. `Inv.run_choices`
+and `Inv.success_contract` retain the original stream in successful execution
+and counted traces. No termination bound or Iris ownership is manufactured.
+These are Boolean-profile guarantees, not general admission or recovery
+safety. See `docs/2026-09-06_boolean-program-contract.md` for their premises.
 
 The underlying `GoCore` and `GoCore.Machine` types remain representation
 dependent. This facade is experimental: B7, C1 and the composition work may

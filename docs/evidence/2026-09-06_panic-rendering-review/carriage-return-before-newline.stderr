@@ -1,0 +1,12 @@
+panic: a
+	b [recovered]
+	panic: other
+
+goroutine 1 [running]:
+main.main.func1()
+	/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/renderer-review.g3ml2A/carriage-return-before-newline.go:2 +0x26
+panic({0x4811e0?, 0x731f751c000?})
+	/usr/local/go/src/runtime/panic.go:860 +0x13a
+main.main()
+	/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/renderer-review.g3ml2A/carriage-return-before-newline.go:2 +0x59
+exit status 2

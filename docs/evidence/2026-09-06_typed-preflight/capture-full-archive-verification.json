@@ -1,0 +1,8 @@
+{
+  "archive": "capture-full.tar.gz",
+  "archive_sha256": "56d935cafba4368962d03a105dc140477a4fe5da14ea99ff4f870019afe10d84",
+  "files": 53693,
+  "uncompressed_file_bytes": 480888060,
+  "compressed_bytes": 26851540,
+  "every_member_matches_inventory": true
+}

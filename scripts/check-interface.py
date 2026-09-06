@@ -7,21 +7,29 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
-MODULES = ["GoLean/GoCore/Trace", "GoLean/GoCore/PoolTrace",
+MODULES = ["GoLean/GoCore/Machine", "GoLean/GoCore/Trace", "GoLean/GoCore/PoolTrace",
            "GoLean/GoCore/ProgramTrace", "GoLean/Interface",
            "GoLean/GoCore/AdmissionIndices", "GoLean/GoCore/AdmissionPolicy",
            "GoLean/GoCore/Admission",
            "GoLean/GoCore/BooleanTyping", "GoLean/GoCore/BooleanStore",
            "GoLean/GoCore/BooleanSetup",
-           "Tests/InterfaceContract", "Tests/BooleanRuntime", "Tests/InterfaceAudit"]
+           "GoLean/GoCore/BooleanInitialization",
+           "GoLean/GoCore/BooleanControlTyping", "GoLean/GoCore/BooleanControl",
+           "GoLean/GoCore/BooleanInvariant", "GoLean/GoCore/BooleanPreservation",
+           "GoLean/GoCore/BooleanProgress", "GoLean/GoCore/BooleanSafety",
+           "GoLean/GoCore/BooleanProgram", "GoLean/GoCore/BooleanPool",
+           "Tests/PanicRendering", "Tests/InterfaceContract", "Tests/BooleanRuntime",
+           "Tests/BooleanProgram", "Tests/InterfaceAudit"]
 HARNESS = "\n".join(f"import {m.replace('/', '.')}" for m in MODULES)
 HARNESS += "\n#eval InterfaceAudit.run\n"
 
 
 def main():
     paths = sorted([*ROOT.glob("GoLean/**/*.lean"), ROOT / "GoLean.lean",
+                    ROOT / "Tests/PanicRendering.lean",
                     ROOT / "Tests/InterfaceContract.lean", ROOT / "Tests/InterfaceAudit.lean",
                     ROOT / "Tests/BooleanRuntime.lean", ROOT / "Tests/BooleanTypingFixture.lean",
+                    ROOT / "Tests/BooleanProgram.lean",
                     ROOT / "lakefile.toml", ROOT / "lean-toolchain",
                     ROOT / "scripts/ci", ROOT / "scripts/capped",
                     ROOT / "scripts/check-interface", Path(__file__).resolve()])
@@ -52,12 +60,24 @@ def main():
     if result.returncode:
         raise SystemExit(result.returncode)
     for label, target, declaration, marker in [
+        ("machine_private", "GoLean/GoCore/Machine.lean",
+         "private axiom machineRendererHole : False", "machineRendererHole"),
+        ("rendering_trailing", "Tests/PanicRendering.lean",
+         "private theorem rendererHole : False := by sorry", "sorryAx"),
         ("promoted_private", "GoLean/GoCore/Trace.lean",
          "private axiom promotedTraceHole : False", "promotedTraceHole"),
         ("boolean_store_private", "GoLean/GoCore/BooleanStore.lean",
          "private axiom booleanStoreHole : False", "booleanStoreHole"),
         ("boolean_setup_private", "GoLean/GoCore/BooleanSetup.lean",
          "private axiom booleanSetupHole : False", "booleanSetupHole"),
+        ("boolean_initialization_private", "GoLean/GoCore/BooleanInitialization.lean",
+         "private axiom booleanInitializationHole : False", "booleanInitializationHole"),
+        ("boolean_program_private", "GoLean/GoCore/BooleanProgram.lean",
+         "private axiom booleanProgramHole : False", "booleanProgramHole"),
+        ("boolean_pool_private", "GoLean/GoCore/BooleanPool.lean",
+         "private axiom booleanPoolHole : False", "booleanPoolHole"),
+        ("boolean_program_test_trailing", "Tests/BooleanProgram.lean",
+         "private theorem booleanProgramTestHole : False := by sorry", "sorryAx"),
         ("facade_private", "GoLean/Interface.lean",
          "private axiom facadeHole : False", "facadeHole"),
         ("audit_trailing", "Tests/InterfaceAudit.lean",

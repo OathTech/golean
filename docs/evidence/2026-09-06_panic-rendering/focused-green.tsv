@@ -1,0 +1,15 @@
+result	id	features	stage	detail
+PASS	panic-recover/panic-defined-payload-methods/plain	panic,interfaces,defined_type	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-defined-payload-methods/error-forced-half	panic,recover,interfaces,defined_type,methods	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-defined-payload-methods/stringer-forced-half	panic,recover,interfaces,defined_type,methods	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-newline-abort	panic,strings	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-text/unicode-two	panic,strings	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-text/unicode-three	panic,strings	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-text/unicode-four	panic,strings	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-text/unicode-mixed	panic,strings	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-text/unicode-newline	panic,strings	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-text/trailing-newline	panic,strings	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-text/recovered-newline	panic,recover,strings	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-text/recovered-unicode	panic,recover,strings	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-text/output-prefix	panic,strings	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/repanic-same-value-abort/forced-half	panic,recover,defer,identity	-	wide=0 exhausted=none depth=fixed

@@ -1,0 +1,8 @@
+{
+  "source": "Exact json_string_literal and panic_message functions extracted from scripts/diff-coverage; shell command substitution as in its oracle paths.",
+  "go_stderr_hex": "70616e69633a2061006201630a0a676f726f7574696e652031205b72756e6e696e675d3a0a6d61696e2e6d61696e28290a092f686f6d652f6465762f70726f6a656374732f676f6c65616e2f2e636c617564652f776f726b74726565732f74797065642d70616e69632d72656e646572696e672f6172746966616374732f70616e69632d72656e646572696e672f636f6e74726f6c2d62797465732e676f3a33202b307832350a657869742073746174757320320a",
+  "shell_json_hex": "7b226d657373616765223a2261620163227d0a",
+  "shell_stderr": "bash: line 24: warning: command substitution: ignored null byte in input\n",
+  "shell_exit": 0,
+  "json_error": "Invalid control character at: line 1 column 15 (char 14)"
+}

@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+unicode-two	panicUnicodeTwo	-	panic	é	panic,strings
+unicode-three	panicUnicodeThree	-	panic	界	panic,strings
+unicode-four	panicUnicodeFour	-	panic	😀	panic,strings
+unicode-mixed	panicUnicodeMixed	-	panic	aé界😀z	panic,strings
+unicode-newline	panicUnicodeNewline	-	panic	é	panic,strings
+trailing-newline	panicTrailingNewline	-	panic	first	panic,strings
+recovered-newline	panicRecoveredNewline	-	panic	first	panic,recover,strings
+recovered-unicode	panicRecoveredUnicode	-	panic	é [recovered]	panic,recover,strings
+output-prefix	panicPrintUnicode	-	panic	é	panic,strings

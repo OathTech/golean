@@ -1,0 +1,465 @@
+{
+  "design": "docs/2026-09-06_b7-context-store-design.md",
+  "design_sha256": "dc774b8ca069edf919db5fc01a26c8cbce049c3951c625722606d7048317732a",
+  "implementation_changes": "none; documentation/evidence only",
+  "recorded_utc": "2026-09-06T01:06:55.369271+00:00",
+  "sources": {
+    "integration": {
+      "files": {
+        "GoLean/CLI.lean": {
+          "imports": [
+            "GoLean.GoCore",
+            "GoLean.EnumDedup",
+            "GoLean.NativeToIR",
+            "GoLean.StrictJson",
+            "Lean.Data.Json"
+          ],
+          "sha256": "5df0ac7c6b6902d23b997c3292d1d656e97fa9c12c424951d947dd1d4101825a"
+        },
+        "GoLean/ChoiceTrace.lean": {
+          "imports": [
+            "GoLean.CLI"
+          ],
+          "sha256": "33696257f38953bb9f1709a9093802db305f1f1a318b9e1bc5d76a5af226a436"
+        },
+        "GoLean/GoCore/Admission.lean": {
+          "imports": [
+            "GoLean.GoCore.AdmissionPolicy"
+          ],
+          "sha256": "2309256e38874bd99eadc5868d8b4c2e0e0111a94e374799eb8aa09ec0f08e7f"
+        },
+        "GoLean/GoCore/AdmissionIndices.lean": {
+          "imports": [
+            "GoLean.GoCore.Syntax"
+          ],
+          "sha256": "946d13c6794c19cb3beb6887a7ae43eed82e08bf8eee9e7f84a1c08678e2b5f5"
+        },
+        "GoLean/GoCore/AdmissionPolicy.lean": {
+          "imports": [
+            "GoLean.GoCore.AdmissionIndices"
+          ],
+          "sha256": "937cae3af268310a58843495397c96fbe52576427aadb26ec6f89466633b8946"
+        },
+        "GoLean/GoCore/BooleanInitialization.lean": {
+          "imports": [
+            "GoLean.GoCore.BooleanSetup",
+            "GoLean.GoCore.BooleanTyping"
+          ],
+          "sha256": "6530f9438425c68fb9e302142d9a0a63ddd96bc984c772b53d30e853ac6dabe5"
+        },
+        "GoLean/GoCore/BooleanSetup.lean": {
+          "imports": [
+            "GoLean.GoCore.BooleanStore",
+            "GoLean.GoCore.Admission",
+            "GoLean.GoCore.StepFn"
+          ],
+          "sha256": "fd203aaa6d97be8126d575b4dccf7a1b0e65ad56c632daf9965347a0f44e085e"
+        },
+        "GoLean/GoCore/BooleanStore.lean": {
+          "imports": [
+            "GoLean.GoCore.Machine"
+          ],
+          "sha256": "c6ac7824a6d671dab0bfb8426778a0f54ff4dc5654c843f4960701aa3aae0b5a"
+        },
+        "GoLean/GoCore/BooleanTyping.lean": {
+          "imports": [
+            "GoLean.GoCore.Admission"
+          ],
+          "sha256": "757c6d311ea025d75d66ee92017bdd9f24ba6d70c8faed5f667550329c3f6712"
+        },
+        "GoLean/GoCore/EnumDedupCheck.lean": {
+          "imports": [
+            "GoLean.GoCore.MultiStreams",
+            "GoLean.GoCore.EnumSpec",
+            "GoLean.GoCore.StateEqb"
+          ],
+          "sha256": "dd6fc4dda413479d8eaa866693a1a5231501ee02f6341535a15731cda11472af"
+        },
+        "GoLean/GoCore/EnumDedupSound.lean": {
+          "imports": [
+            "GoLean.GoCore.EnumDedupCheck",
+            "GoLean.GoCore.MachineEqb"
+          ],
+          "sha256": "f5144c9f2589cd2aeb7cb08f38f1d84ecd14d9a38d91376bb84325659884b3f0"
+        },
+        "GoLean/GoCore/EnumSpec.lean": {
+          "imports": [
+            "GoLean.GoCore.Multi"
+          ],
+          "sha256": "cb80730519e8374b0370909990c2d342765bee2147266b5590c0d14c09594bc8"
+        },
+        "GoLean/GoCore/FloatBits.lean": {
+          "imports": [],
+          "sha256": "df821d36003f67e26343eb406b02fa8a24ab46c86eda959bc242c6da8dde91ed"
+        },
+        "GoLean/GoCore/Machine.lean": {
+          "imports": [
+            "GoLean.GoCore.Ops"
+          ],
+          "sha256": "0a19430131f82c590dede017ba4a5b2e11e7f156c57e77e12f04e5cfab331bee"
+        },
+        "GoLean/GoCore/MachineEqb.lean": {
+          "imports": [
+            "GoLean.GoCore.SyntaxEqb",
+            "GoLean.GoCore.EnumDedupCheck"
+          ],
+          "sha256": "30a8838a5c084cc16c57bb75f66293fb07b59df4eed63cbc5dce2a6e2ed7afa9"
+        },
+        "GoLean/GoCore/MachineSound.lean": {
+          "imports": [
+            "GoLean.GoCore.StepFn",
+            "GoLean.GoCore.StateWf"
+          ],
+          "sha256": "21795b5c65463f5a9bf7e67a728fb6230bced7e97e5023114810a51165f14820"
+        },
+        "GoLean/GoCore/Multi.lean": {
+          "imports": [
+            "GoLean.GoCore.Race"
+          ],
+          "sha256": "738891149ac28d821c75d761a108fcfeb59c9d7fcd776af10959c74d82406f07"
+        },
+        "GoLean/GoCore/MultiSound.lean": {
+          "imports": [
+            "GoLean.GoCore.Multi",
+            "GoLean.GoCore.MachineSound"
+          ],
+          "sha256": "b8205bdc7ef1018d9f5db7ecf351a8e0974382c80aa20a8a2d670ab024cf3635"
+        },
+        "GoLean/GoCore/MultiStreams.lean": {
+          "imports": [
+            "GoLean.GoCore.MultiWfSound"
+          ],
+          "sha256": "f941a4ba11d4aaac5e889a71aa0d6efb1786309ea10ce0088003203eaba72b9a"
+        },
+        "GoLean/GoCore/MultiWfSound.lean": {
+          "imports": [
+            "GoLean.GoCore.MultiSound"
+          ],
+          "sha256": "1c4a563db1cea9fb6785a72df48aae2292778029739fa6354964ed0f18427276"
+        },
+        "GoLean/GoCore/NPDRF.lean": {
+          "imports": [
+            "GoLean.GoCore.Multi",
+            "GoLean.GoCore.MachineSound"
+          ],
+          "sha256": "e3b280e8b4c384fad2f40a074301d14fcd35d981d95a03c967c13a820449eea9"
+        },
+        "GoLean/GoCore/Ops.lean": {
+          "imports": [
+            "GoLean.GoCore.FloatBits",
+            "GoLean.GoCore.State"
+          ],
+          "sha256": "71269d322a906055c7ec7f88876c06609b6038a60a45e0cd836059712b225e8a"
+        },
+        "GoLean/GoCore/Platform.lean": {
+          "imports": [],
+          "sha256": "0f8a09c2b88ba54fcdcd0d5aee3cf718b3a7ad17fc28aa3dbe9469cf0d85d944"
+        },
+        "GoLean/GoCore/PoolTrace.lean": {
+          "imports": [
+            "GoLean.GoCore.MultiSound"
+          ],
+          "sha256": "feec6146f2a2202f4a0a627305f62d9d4e1af09be2fbf908685b3816e61cf3af"
+        },
+        "GoLean/GoCore/ProgramTrace.lean": {
+          "imports": [
+            "GoLean.GoCore.PoolTrace"
+          ],
+          "sha256": "e64cd54f40cea7cdd7b9a85d279fbf15103280a600a3d98eca2dd3f07138df68"
+        },
+        "GoLean/GoCore/Race.lean": {
+          "imports": [
+            "GoLean.GoCore.StepFn"
+          ],
+          "sha256": "1360c57876bdfcd7cc52d5e96aa6cc64bbe4c68f3745ddbbe8554c7f8d91cb90"
+        },
+        "GoLean/GoCore/State.lean": {
+          "imports": [
+            "GoLean.GoCore.Syntax",
+            "GoLean.GoCore.Value"
+          ],
+          "sha256": "299a7b166bad4784913d72d53c47976e92b648b7db0c66cff489f8011bd60dc0"
+        },
+        "GoLean/GoCore/StateEqb.lean": {
+          "imports": [
+            "GoLean.GoCore.Multi"
+          ],
+          "sha256": "8ff172a97aa464bafad3b8d7c4fc3c93392ea7776e42ba6bbed0c4ab5fa2cdd4"
+        },
+        "GoLean/GoCore/StateWf.lean": {
+          "imports": [
+            "GoLean.GoCore.Machine"
+          ],
+          "sha256": "dc532c707798ed6cf6c69faf036a62363a004775ffbba9865275f10bad84ff62"
+        },
+        "GoLean/GoCore/StepFn.lean": {
+          "imports": [
+            "GoLean.GoCore.Machine",
+            "GoLean.GoCore.StateWf"
+          ],
+          "sha256": "dcc863cf777a208d375adb0857f1ecd953c28420937e4782a35206e0770b89e7"
+        },
+        "GoLean/GoCore/Syntax.lean": {
+          "imports": [
+            "GoLean.GoCore.Value"
+          ],
+          "sha256": "d8feef5724519115d0ccb2620354ce8fcf8efddbaa7f688c189bc0d72dac8ca0"
+        },
+        "GoLean/GoCore/SyntaxEqb.lean": {
+          "imports": [
+            "GoLean.GoCore.StateEqb"
+          ],
+          "sha256": "6cf143de012e27584a92c50407e30b4379a1cb920e645c43354287822445b8f8"
+        },
+        "GoLean/GoCore/Trace.lean": {
+          "imports": [
+            "GoLean.GoCore.MachineSound"
+          ],
+          "sha256": "44f18eb28239728c401993719ef1ec0ce11873b18e32d19f694fdb31b97b8f4e"
+        },
+        "GoLean/GoCore/Value.lean": {
+          "imports": [
+            "GoLean.GoCore.Platform"
+          ],
+          "sha256": "aeded44416b5f286fc12033922cfab35d43d46c7d45fb7c6e8ea106e9eab6f8e"
+        },
+        "GoLean/Interface.lean": {
+          "imports": [
+            "GoLean.GoCore.Trace",
+            "GoLean.GoCore.PoolTrace",
+            "GoLean.GoCore.ProgramTrace",
+            "GoLean.GoCore.Admission",
+            "GoLean.GoCore.BooleanTyping",
+            "GoLean.GoCore.BooleanStore",
+            "GoLean.GoCore.BooleanSetup",
+            "GoLean.GoCore.BooleanInitialization"
+          ],
+          "sha256": "f7e7e39d6375122c304058039f2673f0f2df5d832e6f53ccdd443af198d96a55"
+        },
+        "GoLean/NativeToIR.lean": {
+          "imports": [
+            "GoLean.StrictJson",
+            "GoLean.GoCore.Syntax"
+          ],
+          "sha256": "4c285581caf0cf0d0b7b7044f7e9b478adc4c8ed2859ca717b35a2cbc55e0a7d"
+        },
+        "docs/2026-09-04_reasoning-surface-plan.md": {
+          "imports": [],
+          "sha256": "875ff961c1429268d3fc36240428d640b9968757120b68c1c183bf40b05265cc"
+        },
+        "docs/2026-09-05_c-arc-c2-design.md": {
+          "imports": [],
+          "sha256": "6fa05aa225787b70aa67bd67b57d3a9111e48d7e30de94223ade36e0944e1e9d"
+        },
+        "docs/2026-09-05_master-plan.md": {
+          "imports": [],
+          "sha256": "5b64c81107de58f0dc1812c709eeb95ef214c0d61e886270cad6bb2e2e404078"
+        },
+        "docs/2026-09-05_typed-consumer-sprint-charter.md": {
+          "imports": [],
+          "sha256": "74fd002ab771a3c8fa466a5de88d15acba1c60f1f7b2b617635194f303644c18"
+        },
+        "spikes/gate-a1/GateA1/Audit.lean": {
+          "imports": [
+            "GateA1.Examples",
+            "Lean"
+          ],
+          "sha256": "8b2e419a79b844a87d3e5b6ab997c6f6d7149d94a840f7471913c6eb1ef39181"
+        },
+        "spikes/gate-a1/GateA1/Counterexamples.lean": {
+          "imports": [
+            "Tests.InterfaceContract"
+          ],
+          "sha256": "6ace5360694a0ffbb20b2947ba220333a29592e3fe7dc2d2b8d24aa3e8b3719a"
+        },
+        "spikes/gate-a1/GateA1/Examples.lean": {
+          "imports": [
+            "GateA1.ProgramTrace",
+            "GateA1.Language"
+          ],
+          "sha256": "9a98012b39206dfecafb06eab32f104bdfef8078c7de69a9008486431225ba7f"
+        },
+        "spikes/gate-a1/GateA1/Language.lean": {
+          "imports": [
+            "GoLean.Interface",
+            "GateA1.Counterexamples",
+            "Iris.ProgramLogic.Lifting"
+          ],
+          "sha256": "5aca17ea7672d5a43832b2140b4bf1e3f5eaf801e1cbbe2dc761b28a2bb99e34"
+        },
+        "spikes/gate-a1/GateA1/PoolTrace.lean": {
+          "imports": [
+            "GoLean.Interface"
+          ],
+          "sha256": "a59fe34c84f49a0b142722f40a7ace54154c9736b7309c71be5e8b85abdcd13b"
+        },
+        "spikes/gate-a1/GateA1/Probes.lean": {
+          "imports": [
+            "GateA1.Examples"
+          ],
+          "sha256": "f1742fd386e9905b67b736f8e6d2a6ce2909ee6d3783dbdf9f3f4c4748e641e8"
+        },
+        "spikes/gate-a1/GateA1/ProgramTrace.lean": {
+          "imports": [
+            "GoLean.Interface"
+          ],
+          "sha256": "a59fe34c84f49a0b142722f40a7ace54154c9736b7309c71be5e8b85abdcd13b"
+        },
+        "spikes/gate-a1/GateA1/Trace.lean": {
+          "imports": [
+            "GoLean.Interface"
+          ],
+          "sha256": "a59fe34c84f49a0b142722f40a7ace54154c9736b7309c71be5e8b85abdcd13b"
+        },
+        "spikes/iris-customer/GoLeanIris/Adequacy.lean": {
+          "imports": [
+            "GoLeanIris.Ghost",
+            "GoLean.Interface"
+          ],
+          "sha256": "6847ee13f588d927927098668e782f2d2ef5d7065ef5c2e7a3a19ae26e35ddf3"
+        },
+        "spikes/iris-customer/GoLeanIris/Audit.lean": {
+          "imports": [
+            "GoLeanIris.Driver",
+            "GateA1",
+            "Lean"
+          ],
+          "sha256": "19aebe98c0d2a90d96ae83e488e93b6887e09772be17f4df673b240b23799ae3"
+        },
+        "spikes/iris-customer/GoLeanIris/Driver.lean": {
+          "imports": [
+            "GoLeanIris.Readout",
+            "GateA1.Examples"
+          ],
+          "sha256": "4299d35406e78b52543310b95a6f487dd66d03b43cb1b43ac78df70b99a7dcbe"
+        },
+        "spikes/iris-customer/GoLeanIris/Examples.lean": {
+          "imports": [
+            "GoLeanIris.Rules",
+            "GoLeanIris.Adequacy",
+            "GoLeanIris.Program"
+          ],
+          "sha256": "9bdd549462738f4d80c5e76516165276058925930d6071c922985ec492063af9"
+        },
+        "spikes/iris-customer/GoLeanIris/Ghost.lean": {
+          "imports": [
+            "GoLeanIris.Heap"
+          ],
+          "sha256": "f236411883ebc2ce452ff477b9ddf1270a44d6b0f92de58c2c82416a4b097462"
+        },
+        "spikes/iris-customer/GoLeanIris/Heap.lean": {
+          "imports": [
+            "GoLean.Interface",
+            "GateA1.Language",
+            "Iris.BI.Lib.GenHeap",
+            "Iris.ProgramLogic.Adequacy",
+            "Iris.Std.GenSetsInstances",
+            "Std.Data.ExtTreeMap"
+          ],
+          "sha256": "3a2c22d579ec05e70f3888979160e0a6b77c84c8accf374047b042e6e40847e3"
+        },
+        "spikes/iris-customer/GoLeanIris/Lifting.lean": {
+          "imports": [
+            "GoLeanIris.Ghost"
+          ],
+          "sha256": "274bf798cae679a20934e37dd58ed6b3c19917a47a9eb09548f5fe2f7ef0b61d"
+        },
+        "spikes/iris-customer/GoLeanIris/Program.lean": {
+          "imports": [
+            "GoLean.GoCore.Multi"
+          ],
+          "sha256": "d84a7d238aff64dde01c95db8942ecb4caf5b367a87dcdb4860bef68bf3c5420"
+        },
+        "spikes/iris-customer/GoLeanIris/Readout.lean": {
+          "imports": [
+            "GoLeanIris.Examples",
+            "GoLean.GoCore.MultiSound"
+          ],
+          "sha256": "58968e6086acecf7606d18e8fdefa18075c6f491f16f03e418d81990278d1b61"
+        },
+        "spikes/iris-customer/GoLeanIris/Rules.lean": {
+          "imports": [
+            "GoLeanIris.Lifting"
+          ],
+          "sha256": "5ed06c878cf950469f2be5726ab4f1bda8a1a649da3e14f34a981146dfdf0f0e"
+        }
+      },
+      "head": "8b0a6a227c1bc50a1768f0c503e94e21c3b14790",
+      "root": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "scope": "Read-only implementation-design input; uncommitted files are not accepted implementation or proof evidence.",
+      "status": " M GoLean/Interface.lean\n M Tests/BooleanRuntime.lean\n M Tests/InterfaceAudit.lean\n M scripts/check-interface\n M scripts/check-interface.py\n?? GoLean/GoCore/BooleanInitialization.lean\n"
+    },
+    "runtime_wip": {
+      "files": {
+        "GoLean/GoCore/BooleanControl.lean": {
+          "imports": [
+            "GoLean.GoCore.BooleanControlTyping",
+            "GoLean.GoCore.Machine"
+          ],
+          "sha256": "7bf157a0b656e0745b28ed11dd961312a67ef29c3e623d65d28196fed49a0f81"
+        },
+        "GoLean/GoCore/BooleanControlTyping.lean": {
+          "imports": [
+            "GoLean.GoCore.BooleanTyping"
+          ],
+          "sha256": "c9c5c3236284c0bf656f06fa964c67e8229608efc8049a822e55f29430af8edf"
+        },
+        "GoLean/GoCore/BooleanInvariant.lean": {
+          "imports": [
+            "GoLean.GoCore.BooleanControl",
+            "GoLean.GoCore.BooleanStore",
+            "GoLean.GoCore.MachineSound"
+          ],
+          "sha256": "b438e8894713559b432a24c7c1d1f7cf1657c228b44a422b91868f84e81476f4"
+        },
+        "GoLean/GoCore/BooleanPreservation.lean": {
+          "imports": [
+            "GoLean.GoCore.BooleanInvariant"
+          ],
+          "sha256": "fe7f463b6d92f079ec3ab269cbd136b40d280a24adc4bade35c3a6c37e5331e5"
+        },
+        "GoLean/GoCore/BooleanProgress.lean": {
+          "imports": [
+            "GoLean.GoCore.BooleanInvariant"
+          ],
+          "sha256": "c57d0ef1a9503284c3a7d72456808237d260eb4c428e324834043ca57f38ee1b"
+        },
+        "GoLean/GoCore/BooleanSafety.lean": {
+          "imports": [
+            "GoLean.GoCore.BooleanPreservation",
+            "GoLean.GoCore.BooleanProgress"
+          ],
+          "sha256": "6f43aafc404069ad188d62c945dd27d6bdce8f1c60e9ce836494b2e4ac8d2ef2"
+        },
+        "GoLean/GoCore/BooleanSetup.lean": {
+          "imports": [
+            "GoLean.GoCore.BooleanStore",
+            "GoLean.GoCore.Admission",
+            "GoLean.GoCore.StepFn"
+          ],
+          "sha256": "fd203aaa6d97be8126d575b4dccf7a1b0e65ad56c632daf9965347a0f44e085e"
+        },
+        "GoLean/GoCore/BooleanStore.lean": {
+          "imports": [
+            "GoLean.GoCore.Machine"
+          ],
+          "sha256": "c6ac7824a6d671dab0bfb8426778a0f54ff4dc5654c843f4960701aa3aae0b5a"
+        },
+        "GoLean/GoCore/BooleanTyping.lean": {
+          "imports": [
+            "GoLean.GoCore.Admission"
+          ],
+          "sha256": "757c6d311ea025d75d66ee92017bdd9f24ba6d70c8faed5f667550329c3f6712"
+        },
+        "docs/2026-09-06_boolean-runtime-invariant.md": {
+          "imports": [],
+          "sha256": "1f91a65bd7f1ec9ace38dd0d04d121f655856ea5b6880738a555a3d7353a1c20"
+        }
+      },
+      "head": "f251abcb308ac373b103bf862f4d3d4382e415e7",
+      "root": "/home/dev/projects/golean/.claude/worktrees/typed-boolean",
+      "scope": "Read-only implementation-design input; uncommitted files are not accepted implementation or proof evidence.",
+      "status": " M lakefile.toml\n M scripts/ci\n?? GoLean/GoCore/BooleanControl.lean\n?? GoLean/GoCore/BooleanControlTyping.lean\n?? GoLean/GoCore/BooleanInvariant.lean\n?? GoLean/GoCore/BooleanPreservation.lean\n?? GoLean/GoCore/BooleanProgress.lean\n?? GoLean/GoCore/BooleanSafety.lean\n?? Tests/BooleanInvariant.lean\n?? Tests/BooleanSafetyAudit.lean\n?? docs/2026-09-06_boolean-runtime-invariant.md\n?? docs/evidence/2026-09-06_boolean-runtime-invariant/\n?? scripts/check-boolean-runtime\n?? tools/boolean-runtime-audit.py\n"
+    }
+  }
+}

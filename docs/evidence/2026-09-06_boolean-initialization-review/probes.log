@@ -1,0 +1,11 @@
+'BooleanInitializationAdversarial.generic_named_argument' depends on axioms: [propext, Classical.choice, Quot.sound]
+'BooleanInitializationAdversarial.generic_named_result' depends on axioms: [propext, Classical.choice, Quot.sound]
+'BooleanInitializationAdversarial.duplicate_canonical_distinct' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+'BooleanInitializationAdversarial.duplicate_actual_pins_alias' depends on axioms: [propext]
+'BooleanInitializationAdversarial.duplicate_strongly_rejected' depends on axioms: [propext]
+'BooleanInitializationAdversarial.mismatched_argument_count_is_not_zero' depends on axioms: [propext]
+'BooleanInitializationAdversarial.binder_retains_hidden_bad_state' depends on axioms: [propext]
+'BooleanInitializationAdversarial.old_cell_not_repaired' depends on axioms: [propext]
+'GoLean.GoCore.BooleanRuntime.setup_typed_exact' depends on axioms: [propext, Classical.choice, Quot.sound]

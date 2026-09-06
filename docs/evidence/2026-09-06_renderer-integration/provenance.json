@@ -1,0 +1,11 @@
+{
+  "utc": "2026-09-06T02:07:55.416230+00:00",
+  "parent": "c7eeaf578cf92701e2e06632ef6c1d881d303b71",
+  "merge_head": "ff7173dd959435ede346c77318c29f13e16ed5f3",
+  "ci_exit": 0,
+  "interface_exit": 0,
+  "go_version": "go version go1.26.5 linux/amd64",
+  "lean_toolchain": "leanprover/lean4:v4.32.2",
+  "binary_sha256": "18783b481b5c41886fab57ab8a31fc615b11415dcd7f6c1e91fdee387e90554b",
+  "source_scope": "Frozen merged runtime and earlier public Boolean foundations; ignored new program bridge draft excluded. Handoff/evidence bookkeeping followed completion."
+}

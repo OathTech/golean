@@ -1,0 +1,17 @@
+{
+  "utc": "2026-09-06T01:28:58.309822+00:00",
+  "root": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+  "head": "c7eeaf578cf92701e2e06632ef6c1d881d303b71",
+  "status": "A  Corpus/coverage/exec/panic-recover/panic-text/cases.tsv\nA  Corpus/coverage/exec/panic-recover/panic-text/main.go\nM  GoLean/GoCore/Machine.lean\nM  GoLean/GoCore/Ops.lean\nUU Tests/InterfaceAudit.lean\nM  Tests/InterfaceContract.lean\nA  Tests/PanicRendering.lean\nM  baselines/native-full.tsv\nM  docs/2026-09-05_typed-contract-design-review.md\nA  docs/2026-09-06_panic-rendering-repair.md\nM  docs/BUGS.md\nA  docs/evidence/2026-09-06_panic-rendering/ControlBytes.lean\nA  docs/evidence/2026-09-06_panic-rendering/README.md\nA  docs/evidence/2026-09-06_panic-rendering/SHA256SUMS\nA  docs/evidence/2026-09-06_panic-rendering/ci-final.log\nA  docs/evidence/2026-09-06_panic-rendering/ci-initial.log\nA  docs/evidence/2026-09-06_panic-rendering/coherence-build.log\nA  docs/evidence/2026-09-06_panic-rendering/control-bytes-observer.json\nA  docs/evidence/2026-09-06_panic-rendering/control-bytes.go\nA  docs/evidence/2026-09-06_panic-rendering/focused-green.meta.tsv\nA  docs/evidence/2026-09-06_panic-rendering/focused-green.tsv\nA  docs/evidence/2026-09-06_panic-rendering/full.meta.tsv\nA  docs/evidence/2026-09-06_panic-rendering/full.tsv\nA  docs/evidence/2026-09-06_panic-rendering/initial-drift.log\nA  docs/evidence/2026-09-06_panic-rendering/interface.log\nA  docs/evidence/2026-09-06_panic-rendering/kernel-red.log\nA  docs/evidence/2026-09-06_panic-rendering/oracle-bytes.json\nA  docs/evidence/2026-09-06_panic-rendering/reconcile-final.log\nA  docs/evidence/2026-09-06_panic-rendering/reconciled-drift.log\nA  docs/evidence/2026-09-06_panic-rendering/red.meta.tsv\nA  docs/evidence/2026-09-06_panic-rendering/red.tsv\nA  docs/evidence/2026-09-06_panic-rendering/setup-deps.log\nA  docs/evidence/2026-09-06_panic-rendering/source.SHA256SUMS\nM  docs/language-coverage-ledger.md\nUU lakefile.toml\nUU scripts/check-interface\nUU scripts/check-interface.py\n",
+  "files": {
+    ".tmp/boolean-program.RmDTYt/Program.lean": "cf76c19a84aca7abad25dafb69bd193122c5fe4b52185618ef54e7fab8a68c88",
+    "GoLean/GoCore/BooleanInvariant.lean": "b438e8894713559b432a24c7c1d1f7cf1657c228b44a422b91868f84e81476f4",
+    "GoLean/GoCore/BooleanSafety.lean": "6f43aafc404069ad188d62c945dd27d6bdce8f1c60e9ce836494b2e4ac8d2ef2",
+    "GoLean/GoCore/BooleanInitialization.lean": "6530f9438425c68fb9e302142d9a0a63ddd96bc984c772b53d30e853ac6dabe5",
+    "GoLean/GoCore/BooleanSetup.lean": "fd203aaa6d97be8126d575b4dccf7a1b0e65ad56c632daf9965347a0f44e085e",
+    "GoLean/GoCore/BooleanTyping.lean": "757c6d311ea025d75d66ee92017bdd9f24ba6d70c8faed5f667550329c3f6712",
+    "GoLean/GoCore/BooleanControl.lean": "7bf157a0b656e0745b28ed11dd961312a67ef29c3e623d65d28196fed49a0f81",
+    "GoLean/GoCore/StepFn.lean": "dcc863cf777a208d375adb0857f1ecd953c28420937e4782a35206e0770b89e7"
+  },
+  "review_mode": "Read-only draft statement sufficiency/circularity review; no elaboration or compilation performed or claimed. Integration renderer merge ongoing."
+}
