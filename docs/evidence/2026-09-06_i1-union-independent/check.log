@@ -1,0 +1,47 @@
+{
+  "verdict": "PASS; bounded additive-union and source-identity review",
+  "parent": "414a2abe",
+  "reviewed_i1": "798e9c76",
+  "checked_live_source_hashes": 3865,
+  "source_hash_drift": [],
+  "accepted_i1_inputs": 12,
+  "only_declared_union_differences": {
+    "lakefile.toml": {
+      "accepted": "1f3d09165629e45f49a63e31235d485e7521946c7da4322e3656586abf262e6e",
+      "actual": "fa7a80aa905d695477ecd490399b64855c814756d782d3ebc3e5840584f36db0"
+    },
+    "scripts/ci": {
+      "accepted": "8e62258feebd23c95c9bf986a904e89b30d6fe97895081f05ca287b16ae84d07",
+      "actual": "ce0dafa97e19590ec6e12a4b7ac7182940eedb782bf8cf909be2ad50b8a4fe9f"
+    }
+  },
+  "parent_library_count": 11,
+  "i1_library_count": 7,
+  "integrated_library_count": 12,
+  "exact_library_union": true,
+  "parent_config_unchanged_except_added_library": true,
+  "ci_is_byte_identical_parent_plus_exact_reviewed_i1_block": true,
+  "all_existing_parent_ci_bytes_preserved": true,
+  "added_gate_failure_is_fatal": true,
+  "non_document_source_changes": [
+    "GoLean/GoCore/Declaration.lean",
+    "GoLean/NativeDeclaration.lean",
+    "Tests/DeclarationAudit.lean",
+    "Tests/DeclarationWire.lean",
+    "lakefile.toml",
+    "scripts/check-declarations",
+    "scripts/ci",
+    "spikes/i1-declarations/Prototype.lean",
+    "spikes/i1-declarations/README.md",
+    "tools/check-declaration-wire.lean",
+    "tools/declaration-audit.py",
+    "tools/lowerdiag/unclassified-formats.txt",
+    "tools/nativefrontend/declaration.go",
+    "tools/nativefrontend/declaration_fixture_test.go",
+    "tools/nativefrontend/declaration_test.go"
+  ],
+  "nonunion_source_equals_reviewed_i1": true,
+  "integrator_ordinary_ci_log_pass_confirmed": true,
+  "ci_rerun_by_reviewer": false,
+  "runtime_semantics_reaudited": false
+}
