@@ -1,0 +1,69 @@
+{
+  "verdict": "ACCEPT exact three disposition proposals; final ordinary CI, slow certification and integration remain required",
+  "proposals": {
+    "baselines/native-full.tsv": {
+      "before_sha256": "a0bf907399953ba12fdb1e1aecb354e8ca3a6e1ff539ecc06174db22a5cfd014",
+      "proposed_sha256": "010d4d3c03d78f22a93ec94696a06b8743cfc824aceb489ddb73a17743f916ee",
+      "proposal": "baseline-proposed.tsv"
+    },
+    "docs/BUGS.md": {
+      "before_sha256": "d342b437bc6a4d8c7aa223e9efb8a6a174bdb4300c7bcefa5b0b5dc149d1304f",
+      "proposed_sha256": "2ca30d4781daad1177d85cb1757fa92483570cd0154e4fd0bd597d531da18430",
+      "proposal": "bugs-proposed.md"
+    },
+    "docs/language-coverage-ledger.md": {
+      "before_sha256": "254c56550798182689cd56a88b5eeb4fabfd255c522ed9f405369384518f7f54",
+      "proposed_sha256": "837e965932649feb6634797a0c765b0b5d50259e1290bcc232f37bf50818449e",
+      "proposal": "coverage-proposed.md"
+    }
+  },
+  "case_counts": {
+    "before": 3627,
+    "after": 3635,
+    "PASS": 3390,
+    "FAIL": 245,
+    "negative_PASS": 394
+  },
+  "new_PASS_ids": [
+    "ints/uintptr-identity/aggregate-identity",
+    "ints/uintptr-identity/assertions",
+    "ints/uintptr-identity/boxed-readout",
+    "ints/uintptr-identity/direct-readout",
+    "ints/uintptr-identity/map-keys",
+    "ints/uintptr-identity/method-parameters",
+    "ints/uintptr-identity/method-results",
+    "ints/uintptr-identity/wrap"
+  ],
+  "existing_rows_preserved_in_order": true,
+  "existing_status_or_unapproved_stage_drift": [],
+  "case_removals": [],
+  "full_manifest_sha256": "606bb68e7c6079a89e3c6d04a8bfe0ab72cf41bd6042558f9d64f586f71a8837",
+  "manifest_exact_case_set": true,
+  "source_inventory_checks": {
+    "candidate-source.json": {
+      "files": 12,
+      "mismatch": [],
+      "sha256": "3ae0b88c11ebfac0b5c6d1ac47308daa2287da1c033b66272aab0d05d1cafb0c"
+    },
+    "full-ci-source.json": {
+      "files": 3851,
+      "mismatch": [],
+      "sha256": "9c5ecf580ebd9440812ad57963b73e40ec7ecaecab28799ddb42324be00a609d"
+    }
+  },
+  "actual_workers": "2",
+  "legacy_full_run_metadata": "unknown",
+  "initial_CI_exit": 1,
+  "initial_CI_failed_checks": [
+    "  FAIL imported-goose verbatim DRIFTED (a landed imported body no longer matches goose @ pin)",
+    "  FAIL baseline diff (DRIFT \u2014 see above)"
+  ],
+  "restored_goose": {
+    "path": "/home/dev/projects/golean/deps/goose",
+    "revision": "3be88bbb4982f58e5813b6f0344302d5582c8e8a",
+    "clean": true,
+    "check_imported_goose_exit": 0
+  },
+  "scope": "Read-only independent baseline/docs disposition review; no runtime review repeated and no target files modified. R1 and uintptr 3635-case manifests are different sets.",
+  "independent_unfiltered_regeneration_exact_SHA": true
+}

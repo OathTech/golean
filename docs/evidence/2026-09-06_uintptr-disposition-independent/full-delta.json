@@ -1,0 +1,79 @@
+{
+  "baseline_cases": 3627,
+  "full_cases": 3635,
+  "full_counts": {
+    "PASS": 3390,
+    "FAIL": 245
+  },
+  "added": [
+    {
+      "result": "PASS",
+      "id": "ints/uintptr-identity/aggregate-identity",
+      "features": "ints,interfaces,type_assertions,arrays,pointers,slices",
+      "stage": "-",
+      "detail": "wide=0 exhausted=none depth=fixed"
+    },
+    {
+      "result": "PASS",
+      "id": "ints/uintptr-identity/assertions",
+      "features": "ints,interfaces,type_assertions",
+      "stage": "-",
+      "detail": "wide=0 exhausted=none depth=fixed"
+    },
+    {
+      "result": "PASS",
+      "id": "ints/uintptr-identity/boxed-readout",
+      "features": "ints,interfaces",
+      "stage": "-",
+      "detail": "wide=0 exhausted=none depth=fixed"
+    },
+    {
+      "result": "PASS",
+      "id": "ints/uintptr-identity/direct-readout",
+      "features": "ints",
+      "stage": "-",
+      "detail": "wide=0 exhausted=none depth=fixed"
+    },
+    {
+      "result": "PASS",
+      "id": "ints/uintptr-identity/map-keys",
+      "features": "ints,interfaces,maps,equality",
+      "stage": "-",
+      "detail": "wide=0 exhausted=none depth=fixed"
+    },
+    {
+      "result": "PASS",
+      "id": "ints/uintptr-identity/method-parameters",
+      "features": "ints,interfaces,methods,type_assertions",
+      "stage": "-",
+      "detail": "wide=0 exhausted=none depth=fixed"
+    },
+    {
+      "result": "PASS",
+      "id": "ints/uintptr-identity/method-results",
+      "features": "ints,interfaces,methods,type_assertions",
+      "stage": "-",
+      "detail": "wide=0 exhausted=none depth=fixed"
+    },
+    {
+      "result": "PASS",
+      "id": "ints/uintptr-identity/wrap",
+      "features": "ints,bitwise,conversions",
+      "stage": "-",
+      "detail": "wide=0 exhausted=none depth=fixed"
+    }
+  ],
+  "removed": [],
+  "unexpected_existing_drift": [],
+  "manifest_sha256": "606bb68e7c6079a89e3c6d04a8bfe0ab72cf41bd6042558f9d64f586f71a8837",
+  "source_inventories_unchanged": {
+    "candidate": 12,
+    "full": 3851
+  },
+  "workers": "2",
+  "full_run_metadata": "unknown",
+  "full_scope_basis": "unfiltered scripts/coverage-manifest regenerated from unchanged source; exact SHA matches original full run metadata",
+  "initial_ci_exit": 1,
+  "other_ci_failure": "missing deps/goose checkout; dependency restoration and re-gate owed",
+  "archive_note": "The harness cleaned its temporary manifest. Initial copy failed at missing path after preserving TSV/meta/logs; regenerated full bytes match original SHA exactly."
+}
