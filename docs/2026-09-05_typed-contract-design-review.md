@@ -455,3 +455,13 @@ static/runtime/setup surface. This is an **owed integration obligation, not
 a waiver**. A branch-ready static increment can be reviewed within that
 boundary, but it must not be advertised as complete O1/O3. A source-text CI
 scan is not a substitute for the post-import dependency audit.
+
+Follow-up evidence: the static author strengthened the shadow fixture and
+ran its full dedicated gate. The reviewer inspected
+`typed-boolean/artifacts/boolean-typing/static-gate-final.log`: fresh complete
+native-artifact comparison passed, `Shadow` returned false as Go requires,
+and all three executable differential cases passed. This closes the
+initializer-scope witness request for that tested artifact; no fidelity bug
+was found there. The author is also adding a static post-import audit and
+poison controls; those later changes are outside this initial source review
+and do not remove the integrator's final combined-surface audit obligation.
