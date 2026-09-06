@@ -1,0 +1,21 @@
+{
+  "base": "04109912f28b9e8511d43e6fba7c3c158cdea76f",
+  "command": "GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 bash spikes/iris-customer/check",
+  "exit": 0,
+  "source_fingerprint": "714530c7ef4bcff3855978c45532d77d59f547ab0db3f353e317ab2a442bd0c5",
+  "fresh_core_modules": 4,
+  "fresh_customer_modules": 23,
+  "fresh_aggregate": true,
+  "required_exports": 136,
+  "audited_local_declarations": 15390,
+  "compiled_poisons": 23,
+  "fresh_focused_differential": {
+    "A2": 3,
+    "shared_and_controls": 5
+  },
+  "profile": "RecoveryAdmission, unchanged",
+  "remaining": "Independent review, facade promotion and separate unconditional O2 classification",
+  "ordinary_ci_exit": 0,
+  "ordinary_ci_command": "GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 scripts/capped scripts/ci",
+  "ordinary_differential": "cached3607/394 verified sealed renderer records"
+}

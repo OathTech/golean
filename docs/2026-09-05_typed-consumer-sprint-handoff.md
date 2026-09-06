@@ -610,3 +610,32 @@ author is repairing the inventory and preserving the superseded run as
 incomplete. B7 has a checked whole-step correspondence at its old frozen
 runtime, with driver/pool and final-runtime migration still owed. O1–O5
 remain active; no main merge, push or completion claim is made.
+
+## Shared functional customer integrated
+
+The reviewed shared customer feature `bd31dd5d` is now integrated into
+`3cdde025` with all 35 accepted inputs identical and no source conflicts.
+Ordinary CI and the full customer gate completed with exit 0 in job 44200;
+all 3,896 integration input hashes were rechecked. Fresh evidence includes
+the 136-export/15,390-declaration audit, 23 compiled poisons, both complete
+native artifacts and 3 A2 plus 5 shared/control differential cases. The
+3,627/394 full records remain explicitly cached and byte-identical.
+See `docs/evidence/2026-09-06_shared-customer-integration/`.
+
+R1's frozen v3 implementation now has independent apparatus review
+`d59b4ab1` and root Lean/model review `75da9338`. Six omitted source inputs
+(two executable roots, three embedded frontend tables and its runtime pin)
+were reproduced and repaired with compiling negative controls. Root replay
+passed the complete interface gate, nine additional kernel probes and one
+fresh invalid-after-LF row with all thirteen controls, plain/race Go and
+four model streams. R1's full CI is still running; baseline disposition is
+not yet accepted. Generic terminal/facade work is compiling in its own lane.
+
+Root scaled BUG-090 probes on `798e9c76` distinguish allocation from writes:
+4,096-byte allocation takes about 0.023 seconds; a 1,024-element write loop
+takes about 1.39 seconds; 4,096 writes and 256 repetitions of the 16-byte
+string each exceed 20 seconds. Raw probes are retained in the I1 worktree's
+`docs/evidence/2026-09-06_bug090-scaled-profile/` and unique scratch. The
+current `storeLoc` normalizes the whole backing array on every element
+write. This is a supported performance hypothesis, not yet a repaired
+runtime or completed capture. No large unchanged capture was repeated.

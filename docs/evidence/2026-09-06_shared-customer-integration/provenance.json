@@ -1,0 +1,37 @@
+{
+  "parent": "3cdde025",
+  "merged_feature": "bd31dd5d",
+  "author_implementation": "10cd6e8f",
+  "independent_review": "163d44ea",
+  "source_inputs_revalidated": 3896,
+  "reviewed_inputs_unchanged": 35,
+  "ci": {
+    "command": "GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 scripts/capped scripts/ci",
+    "exit": 0
+  },
+  "customer": {
+    "command": "GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 GOLEAN_COVERAGE_JOBS=2 bash spikes/iris-customer/check",
+    "exit": 0,
+    "exports": 136,
+    "local_declarations": 15390,
+    "compiled_poisons": 23,
+    "fresh_A2_differential": 3,
+    "fresh_shared_control_differential": 5
+  },
+  "sequential_job_session": 44200,
+  "job_exit": 0,
+  "cached_corpus": {
+    "full": 3627,
+    "pass": 3382,
+    "known_fail": 245,
+    "negative": 394,
+    "records": {
+      "latest.tsv": "8c89f553dd706f445c2b6fad9f55b0cc0518578035f8e19803fa6260088ae5cf",
+      "latest.meta.tsv": "552ca0c45f4a61de10e4a00749acd4dd301186583c585cf598d43f844be1c5aa",
+      "negative-latest.tsv": "16e489a805e7530e6d961b27620a93c416c6d91373a608fedacef5281eb8d204",
+      "negative-latest.meta.tsv": "c03edf06ad519c560a0d53a0592c1f16a9c7a3269fa90e338e268ae28be5663f"
+    },
+    "reason": "Existing executable driver/CLI/frontend source unchanged; new helper observer/pool contracts freshly audited; corpus evidence explicitly cached"
+  },
+  "cache_copy_note": "Python copytree encountered three already-existing package documentation/benchmark symlinks; all three were independently checked to equal the pinned source links. Copy had completed every regular file; following CI and fresh customer gates passed. No source, permissions or sandbox grant changed."
+}

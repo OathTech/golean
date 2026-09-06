@@ -1,0 +1,148 @@
+Iris customer source/dependency-manifest fingerprint: ea0fc2a3b416fcd1a723f6e15ca55d293ee9c84da18c8245b7c230afb28f2460
+GoLean HEAD: 3cdde025be594d15db6a7a1fcb73226d32bcb9fb
+Validation mode: incremental Lake build plus fresh spike-module elaboration
+Build completed successfully (170 jobs).
+✔ [283/311] Built GoLean.GoCore.RecoveryCallLayout (296ms)
+✔ [288/318] Built GoLeanIris.SharedProgram (195ms)
+ℹ [292/318] Replayed GateA1.Probes
+info: GateA1/Probes.lean:3:0: GoLean.GoValue.nil
+info: GateA1/Probes.lean:4:0: GoLean.GoValue.interface (GoLean.GoCore.Ty.defined 1) (GoLean.GoValue.string { bytes := #[97, 117, 100, 105, 116] })
+info: GateA1/Probes.lean:5:0: Except.error (GoLean.Stop.terminal (GoLean.Terminal.panic "audit"))
+info: GateA1/Probes.lean:7:0: Except.error (GoLean.Stop.terminal (GoLean.Terminal.panic "boom"), { bytes := #[98, 101, 102, 111, 114, 101, 10] })
+info: GateA1/Probes.lean:8:0: Except.ok ()
+✔ [294/318] Built GoLean.GoCore.RecoverySingleton (683ms)
+✔ [295/318] Built GoLeanIris.Heap (814ms)
+✔ [296/318] Built GoLean.GoCore.RecoveryPool (377ms)
+✔ [297/318] Built GoLean.GoCore.RecoveryChoices (452ms)
+✔ [298/318] Built GoLeanIris.Ghost (907ms)
+✔ [299/318] Built GoLeanIris.Lifting (920ms)
+✔ [300/318] Built GoLeanIris.Adequacy (957ms)
+✔ [301/318] Built GoLeanIris.Rules (889ms)
+✔ [302/318] Built GoLeanIris.Allocation (933ms)
+✔ [303/318] Built GoLeanIris.Return (861ms)
+✔ [304/318] Built GoLeanIris.Call (931ms)
+✔ [305/318] Built GoLeanIris.Unwind (1.3s)
+✔ [306/318] Built GoLeanIris.Examples (2.4s)
+✔ [307/318] Built GoLeanIris.Readout (963ms)
+✔ [308/318] Built GoLeanIris.SharedHelpers (1.6s)
+✔ [309/318] Built GoLeanIris.Driver (2.5s)
+✔ [310/318] Built GoLeanIris.SharedRecovery (2.5s)
+✔ [311/318] Built GoLeanIris.SharedDrain (1.1s)
+✔ [312/318] Built GoLeanIris.Shared (2.5s)
+✔ [313/318] Built GoLeanIris.SharedReadout (926ms)
+✔ [314/318] Built GoLeanIris.SharedDriver (1.5s)
+✔ [315/318] Built GoLeanIris.OwnershipTests (806ms)
+✔ [316/318] Built GoLeanIris.Audit (1.0s)
+✔ [317/318] Built GoLeanIris (825ms)
+Build completed successfully (318 jobs).
+614a6d05a7588b184a41306242f271df0025c12dd2e22a158afc6f3bd517a3c0  /home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/GoLean/GoCore/RecoveryCallLayout.lean
+146166e00d38505c4fe2b87d8267c6d9ad114cbce36ebcac427958ffe6637257  /home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/GoLean/GoCore/RecoverySingleton.lean
+6235b7f0f4fa2d97fa34aeb9725d20997ed0ae2d93c1dfa5815dedc98ca5709b  /home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/GoLean/GoCore/RecoveryPool.lean
+399878e92434687435aadf15bb54b6ea70f2b336ba37a1427917fd838f3806cf  /home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/GoLean/GoCore/RecoveryChoices.lean
+3a2c22d579ec05e70f3888979160e0a6b77c84c8accf374047b042e6e40847e3  GoLeanIris/Heap.lean
+f236411883ebc2ce452ff477b9ddf1270a44d6b0f92de58c2c82416a4b097462  GoLeanIris/Ghost.lean
+274bf798cae679a20934e37dd58ed6b3c19917a47a9eb09548f5fe2f7ef0b61d  GoLeanIris/Lifting.lean
+5ed06c878cf950469f2be5726ab4f1bda8a1a649da3e14f34a981146dfdf0f0e  GoLeanIris/Rules.lean
+6847ee13f588d927927098668e782f2d2ef5d7065ef5c2e7a3a19ae26e35ddf3  GoLeanIris/Adequacy.lean
+d84a7d238aff64dde01c95db8942ecb4caf5b367a87dcdb4860bef68bf3c5420  GoLeanIris/Program.lean
+717ad1460fc40cc14d73e7fffa046b856f93bb2b5be96c4cb3e46fd56fa79f66  GoLeanIris/Admission.lean
+2c9bba37e651681c39c50acea67f9fc3358978e512dfcb4e4e7e41e9d269d867  GoLeanIris/Allocation.lean
+9cc01d8f1cf5934541823048a1c05dfec57eb40ff3ea222317756bacac3c8435  GoLeanIris/Call.lean
+b8b668d28917a61bfc21ad3e769625e8c5ef1463f30b9a7e0107f1ecca9e1eac  GoLeanIris/Unwind.lean
+5a065041c0180ccca746bd2353463315469419984a3075a6426c4e32d96d17fb  GoLeanIris/Return.lean
+f4e8b3802e23498daa980c4dca7249664f8828e06350d7b9dbac3e96bd838d69  GoLeanIris/Examples.lean
+565c86489e5112c46d74936ffd9db0e80d94fdd42a8757ccbac4e33af16a6899  GoLeanIris/Readout.lean
+ee6fc54d07e4f9ca6f02e7b27914508545344d7a9adbea35826571d9ff00c14d  GoLeanIris/Driver.lean
+f8b3d759ebd38f28b7d051c642879cbca51d486ac36796e548ae78473747d31e  GoLeanIris/SharedProgram.lean
+df030aac07dc93a5e7fffa8cb996edf8f7b6cb6f54390aa0e8a28cc91cb9e67f  GoLeanIris/SharedHelpers.lean
+0e507eb27a2d0b67c5663e7d1e319cb3f20a4bf4eb7a7cb12e8d6226f349191a  GoLeanIris/SharedRecovery.lean
+a032dd42313609f3cf1974ebac9488f406d16b81c11b3571512667f211e20559  GoLeanIris/SharedDrain.lean
+c6fcaa0c2690b5ad14b3c82f3c3e9be79468fd4d2d60fb50fe9724366fe41c91  GoLeanIris/Shared.lean
+8e0e85c5ae9a6f5235d43bad6b5ad19da4b4e75e6df16a5d6b0692e04a610f78  GoLeanIris/SharedReadout.lean
+b129c0dc4e165d53cabedf299ad18325922143c9803831a28a9c13dbd1d4612e  GoLeanIris/SharedDriver.lean
+6135e0c9049cd2d4010f83db3974ee6e15f865683ed47a3144ea01709ce9d123  GoLeanIris/OwnershipTests.lean
+675a15bd88ad457bde3dff82a7c2dbe33c797d389a8c7662e3d71243d2ad84b8  GoLeanIris/Audit.lean
+Iris customer: 136 required exports present; 14960 constants' axiom dependencies checked (classical trio only)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/iris-customer-audit-b2d6w6rl/RecoveryCallLayout_private/AuditAll.lean:25:0: error: Iris customer: _private.GoLean.GoCore.RecoveryCallLayout.0.irisCoreHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryCallLayout.0.irisCoreHole
+Iris customer negative regression: RecoveryCallLayout_private rejected (exit 1, irisCoreHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/iris-customer-audit-b2d6w6rl/RecoverySingleton_private/AuditAll.lean:25:0: error: Iris customer: _private.GoLean.GoCore.RecoverySingleton.0.irisCoreHole depends on forbidden axiom _private.GoLean.GoCore.RecoverySingleton.0.irisCoreHole
+Iris customer negative regression: RecoverySingleton_private rejected (exit 1, irisCoreHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/iris-customer-audit-b2d6w6rl/RecoveryPool_private/AuditAll.lean:25:0: error: Iris customer: _private.GoLean.GoCore.RecoveryPool.0.irisCoreHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryPool.0.irisCoreHole
+Iris customer negative regression: RecoveryPool_private rejected (exit 1, irisCoreHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/iris-customer-audit-b2d6w6rl/RecoveryChoices_private/AuditAll.lean:25:0: error: Iris customer: _private.GoLean.GoCore.RecoveryChoices.0.irisCoreHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryChoices.0.irisCoreHole
+Iris customer negative regression: RecoveryChoices_private rejected (exit 1, irisCoreHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/iris-customer-audit-b2d6w6rl/Admission_private/AuditAll.lean:25:0: error: Iris customer: _private.GoLeanIris.Admission.0.irisHelperHole depends on forbidden axiom _private.GoLeanIris.Admission.0.irisHelperHole
+Iris customer negative regression: Admission_private rejected (exit 1, irisHelperHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/iris-customer-audit-b2d6w6rl/Allocation_private/AuditAll.lean:25:0: error: Iris customer: _private.GoLeanIris.Allocation.0.irisHelperHole depends on forbidden axiom _private.GoLeanIris.Allocation.0.irisHelperHole
+Iris customer negative regression: Allocation_private rejected (exit 1, irisHelperHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/iris-customer-audit-b2d6w6rl/Call_private/AuditAll.lean:25:0: error: Iris customer: _private.GoLeanIris.Call.0.irisHelperHole depends on forbidden axiom _private.GoLeanIris.Call.0.irisHelperHole
+Iris customer negative regression: Call_private rejected (exit 1, irisHelperHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/iris-customer-audit-b2d6w6rl/Unwind_private/AuditAll.lean:25:0: error: Iris customer: _private.GoLeanIris.Unwind.0.irisHelperHole depends on forbidden axiom _private.GoLeanIris.Unwind.0.irisHelperHole
+Iris customer negative regression: Unwind_private rejected (exit 1, irisHelperHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/iris-customer-audit-b2d6w6rl/Return_private/AuditAll.lean:25:0: error: Iris customer: _private.GoLeanIris.Return.0.irisHelperHole depends on forbidden axiom _private.GoLeanIris.Return.0.irisHelperHole
+Iris customer negative regression: Return_private rejected (exit 1, irisHelperHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/iris-customer-audit-b2d6w6rl/Examples_private/AuditAll.lean:25:0: error: Iris customer: _private.GoLeanIris.Examples.0.irisHelperHole depends on forbidden axiom _private.GoLeanIris.Examples.0.irisHelperHole
+Iris customer negative regression: Examples_private rejected (exit 1, irisHelperHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/iris-customer-audit-b2d6w6rl/Readout_private/AuditAll.lean:25:0: error: Iris customer: _private.GoLeanIris.Readout.0.irisHelperHole depends on forbidden axiom _private.GoLeanIris.Readout.0.irisHelperHole
+Iris customer negative regression: Readout_private rejected (exit 1, irisHelperHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/iris-customer-audit-b2d6w6rl/Driver_private/AuditAll.lean:25:0: error: Iris customer: _private.GoLeanIris.Driver.0.irisHelperHole depends on forbidden axiom _private.GoLeanIris.Driver.0.irisHelperHole
+Iris customer negative regression: Driver_private rejected (exit 1, irisHelperHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/iris-customer-audit-b2d6w6rl/SharedProgram_private/AuditAll.lean:25:0: error: Iris customer: _private.GoLeanIris.SharedProgram.0.irisHelperHole depends on forbidden axiom _private.GoLeanIris.SharedProgram.0.irisHelperHole
+Iris customer negative regression: SharedProgram_private rejected (exit 1, irisHelperHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/iris-customer-audit-b2d6w6rl/SharedHelpers_private/AuditAll.lean:25:0: error: Iris customer: _private.GoLeanIris.SharedHelpers.0.irisHelperHole depends on forbidden axiom _private.GoLeanIris.SharedHelpers.0.irisHelperHole
+Iris customer negative regression: SharedHelpers_private rejected (exit 1, irisHelperHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/iris-customer-audit-b2d6w6rl/SharedRecovery_private/AuditAll.lean:25:0: error: Iris customer: _private.GoLeanIris.SharedRecovery.0.irisHelperHole depends on forbidden axiom _private.GoLeanIris.SharedRecovery.0.irisHelperHole
+Iris customer negative regression: SharedRecovery_private rejected (exit 1, irisHelperHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/iris-customer-audit-b2d6w6rl/SharedDrain_private/AuditAll.lean:25:0: error: Iris customer: _private.GoLeanIris.SharedDrain.0.irisHelperHole depends on forbidden axiom _private.GoLeanIris.SharedDrain.0.irisHelperHole
+Iris customer negative regression: SharedDrain_private rejected (exit 1, irisHelperHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/iris-customer-audit-b2d6w6rl/Shared_private/AuditAll.lean:25:0: error: Iris customer: _private.GoLeanIris.Shared.0.irisHelperHole depends on forbidden axiom _private.GoLeanIris.Shared.0.irisHelperHole
+Iris customer negative regression: Shared_private rejected (exit 1, irisHelperHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/iris-customer-audit-b2d6w6rl/SharedReadout_private/AuditAll.lean:25:0: error: Iris customer: _private.GoLeanIris.SharedReadout.0.irisHelperHole depends on forbidden axiom _private.GoLeanIris.SharedReadout.0.irisHelperHole
+Iris customer negative regression: SharedReadout_private rejected (exit 1, irisHelperHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/iris-customer-audit-b2d6w6rl/SharedDriver_private/AuditAll.lean:25:0: error: Iris customer: _private.GoLeanIris.SharedDriver.0.irisHelperHole depends on forbidden axiom _private.GoLeanIris.SharedDriver.0.irisHelperHole
+Iris customer negative regression: SharedDriver_private rejected (exit 1, irisHelperHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/iris-customer-audit-b2d6w6rl/OwnershipTests_private/AuditAll.lean:25:0: error: Iris customer: _private.GoLeanIris.OwnershipTests.0.irisHelperHole depends on forbidden axiom _private.GoLeanIris.OwnershipTests.0.irisHelperHole
+Iris customer negative regression: OwnershipTests_private rejected (exit 1, irisHelperHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/iris-customer-audit-b2d6w6rl/trailing_private/AuditAll.lean:25:0: error: Iris customer: _private.GoLeanIris.Audit.0.irisTrailingHole depends on forbidden axiom _private.GoLeanIris.Audit.0.irisTrailingHole
+Iris customer negative regression: trailing_private rejected (exit 1, irisTrailingHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/iris-customer-audit-b2d6w6rl/aggregate_private/AuditAll.lean:25:0: error: Iris customer: _private.GoLeanIris.0.irisRootHole depends on forbidden axiom _private.GoLeanIris.0.irisRootHole
+Iris customer negative regression: aggregate_private rejected (exit 1, irisRootHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/iris-customer-audit-b2d6w6rl/trailing_sorry/GoLeanIris/OwnershipTests.lean:30:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/iris-customer-audit-b2d6w6rl/trailing_sorry/AuditAll.lean:25:0: error: Iris customer: _private.GoLeanIris.OwnershipTests.0.irisSorryHole depends on forbidden axiom sorryAx
+Iris customer negative regression: trailing_sorry rejected (exit 1, sorryAx)
+Iris customer audit scratch retained: /home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/iris-customer-audit-b2d6w6rl
+Iris customer: both complete fresh native artifacts match the proved programs
+Fresh native wire SHA256: recovery.json 5a421bbd5aba27476017ad766a9fab6a1e43dff2de58c1043647428eb62eb197
+Fresh native wire SHA256: shared.json e9ce56299ec508352aba26621f24c303d3b410bb6f90f2dfb1776cd1e562d470
+Iris customer artifact scratch retained: /home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/iris-customer-artifact-maajsjtf
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+building Lean executable...
+Build completed successfully (170 jobs).
+native frontend: per-case type-check + emit (no batch export)
+PASS	iris-customer/uncaught	iris-customer,defer,recover
+PASS	iris-customer/normal	iris-customer,defer,recover
+PASS	iris-customer/recovered	iris-customer,defer,recover
+
+differential coverage summary: cases=3 pass=3 fail=0 export_status=0
+results: artifacts/iris-customer/latest.tsv
+metadata: artifacts/iris-customer/latest.meta.tsv
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+building Lean executable...
+Build completed successfully (170 jobs).
+native frontend: per-case type-check + emit (no batch export)
+PASS	recovery-typing/shared-true	admission,recovery,captures
+PASS	recovery-typing/direct-true	admission,recovery,direct-control
+PASS	recovery-typing/reversed-true	admission,recovery,defer-order-control
+PASS	recovery-typing/outside	admission,recovery,outside-handler
+PASS	recovery-typing/shared-false	admission,recovery,captures
+
+differential coverage summary: cases=5 pass=5 fail=0 export_status=0
+results: artifacts/recovery-typing/differential/latest.tsv
+metadata: artifacts/recovery-typing/differential/latest.meta.tsv
+Recovery native control: shared-false returns true
+Recovery native control: shared-true returns false
+Recovery native control: outside returns true
+Recovery native control: reversed-true returns true
+Recovery native control: direct-true returns true
+Recovery native controls: input dependence, defer order, and directness all distinguish results
+Iris customer: PASS

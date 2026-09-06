@@ -1,0 +1,31 @@
+{
+  "changed_code": [
+    "GoLean/GoCore/RecoveryCallLayout.lean",
+    "GoLean/GoCore/RecoveryChoices.lean",
+    "GoLean/GoCore/RecoveryPool.lean",
+    "GoLean/GoCore/RecoverySingleton.lean",
+    "spikes/iris-customer/GoLeanIris.lean",
+    "spikes/iris-customer/GoLeanIris/Admission.lean",
+    "spikes/iris-customer/GoLeanIris/Allocation.lean",
+    "spikes/iris-customer/GoLeanIris/Audit.lean",
+    "spikes/iris-customer/GoLeanIris/Call.lean",
+    "spikes/iris-customer/GoLeanIris/Driver.lean",
+    "spikes/iris-customer/GoLeanIris/Examples.lean",
+    "spikes/iris-customer/GoLeanIris/OwnershipTests.lean",
+    "spikes/iris-customer/GoLeanIris/Readout.lean",
+    "spikes/iris-customer/GoLeanIris/Return.lean",
+    "spikes/iris-customer/GoLeanIris/Shared.lean",
+    "spikes/iris-customer/GoLeanIris/SharedDrain.lean",
+    "spikes/iris-customer/GoLeanIris/SharedDriver.lean",
+    "spikes/iris-customer/GoLeanIris/SharedHelpers.lean",
+    "spikes/iris-customer/GoLeanIris/SharedProgram.lean",
+    "spikes/iris-customer/GoLeanIris/SharedReadout.lean",
+    "spikes/iris-customer/GoLeanIris/SharedRecovery.lean",
+    "spikes/iris-customer/GoLeanIris/Unwind.lean",
+    "spikes/iris-customer/check",
+    "spikes/iris-customer/gate_checks.py",
+    "spikes/iris-customer/tools/check_artifact.lean"
+  ],
+  "reviewed_sources_identical": 35,
+  "source_count": 3896
+}

@@ -1,0 +1,1 @@
+/home/dev/projects/golean/.claude/worktrees/typed-shared-customer/.tmp/iris-customer-audit-uepe1uhf/SharedHelpers_private/AuditAll.lean:25:0: error: Iris customer: _private.GoLeanIris.SharedHelpers.0.irisHelperHole depends on forbidden axiom _private.GoLeanIris.SharedHelpers.0.irisHelperHole

@@ -1,0 +1,1 @@
+/home/dev/projects/golean/.claude/worktrees/typed-shared-customer/.tmp/iris-customer-audit-uepe1uhf/trailing_private/AuditAll.lean:25:0: error: Iris customer: _private.GoLeanIris.Audit.0.irisTrailingHole depends on forbidden axiom _private.GoLeanIris.Audit.0.irisTrailingHole
