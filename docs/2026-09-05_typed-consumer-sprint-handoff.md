@@ -308,3 +308,48 @@ separately reviewed fidelity repairs. The required equal-string repanic and
 invalid-UTF8 observations, BUG-090 full capture gap, I1 declaration/closure
 work, shared Iris rules and final O1–O5 completion packet remain open. Main
 remains clean at `47195683`; no main merge or push is authorized.
+
+## Current checkpoint: recovery storage reviewed and gated (2026-09-06)
+
+Static recovery is integrated at `77f154e0`, its promotion review at
+`0079ece9`, and the blocking old observer finding at `838adc51`.
+The six recovery helper modules passed independent review `efc2712c` and
+were committed by their author at `4f7aedef`. The clean staged integration
+into `a34bc969` passed fresh ordinary CI (session `27352`, terminal exit 0),
+including its eight compiled poison controls; seal at
+[helper integration evidence](evidence/2026-09-06_recovery-storage-integration/README.md).
+The whole runtime corpus remains explicitly cached for this proof increment.
+
+Root-owned `typed-recovery-setup` fast-forwarded to committed `4f7aedef`
+after byte-checking and preserving the original copied helpers. Seven new
+semantic modules now compile: source/address shape and distinct lookup,
+exact binder/zero allocation, result roots, actual program setup, derived
+MachineWf, exact initial readout and actual `enterFrame`/`enterFramePick`.
+The latter preserves incoming root aliases and arbitrary original choices.
+The first dedicated gate passed; adding the generalized block-scope lookup
+contract and a real heterogeneous-shadow allocation regression justifies its
+affected rerun. These new modules still need final tests/audits, ordinary CI,
+independent review and public integration. They do not prove full recovery
+control preservation or the reusable Iris customer yet.
+
+The helper author continues structural expression/control and call/unwind
+preservation in isolated scratch. B7 now compiles actual Ops, Machine,
+StateWf, StepFn, Race/Multi and sequential coherence with explicit context
+and heap-only store. Pool coherence, consumers, complete old/new transition
+and driver correspondence, and corpus capture remain incomplete.
+
+Independent observer hybrid design acceptance is integrated at `96be72c9`,
+with explicit K3 BUG-106 disposition at `a34bc969`. The exact measured
+`sync/mutex-unlock-fatal/during-panic-unwind` old PASS may be exposed as
+`go-observation` refusal because the old apparatus lacked authenticated
+message/output evidence. This neither changes fatal GoCore semantics nor
+narrows O2. Production focused evidence now has 22 PASS / that one named
+refusal across 23 rows; production source review and fresh full CI remain
+owed. The older rejected full run remains terminal 143 and partial.
+
+I1 still has only the root metadata prototype `8ea5a74b` and design/census;
+actual positive declaration facts and checked executable closure remain.
+Equal-string repanic, invalid byte-string observations, BUG-090 complete
+capture, reusable Iris proofs, final B7/I1 preservation, roadmap/migration/
+C1 handoff and the closing decision packet are still required. O1–O5 remain
+the full goal. Primary main remains clean at `47195683`.

@@ -1,0 +1,45 @@
+c7ae5099d2c7cb1aa75a588e760625c51c6b44516ff235bb30711cd1496c28f7  GoLean/GoCore/RecoveryStore.lean
+a8d073a83faa419d6c69e2cf73a1951fa0501ffeae095d8b27dcec5ab2bfe994  GoLean/GoCore/RecoveryEnvironment.lean
+7031034e932e48b3c1febca3b8de705919d04b06668b5cf3b03b4cd2bf917872  GoLean/GoCore/RecoveryAllocation.lean
+65f51ed756e833840f8c3ad841c38a60e282d58e04a6cc52ddba82366f98d533  GoLean/GoCore/RecoveryOperators.lean
+23b127e99be0684b4600ff560740b0f8ea00e6f19362a49a1bf12dce50520e52  GoLean/GoCore/RecoveryContext.lean
+bf20ea0dcaa77434472d82685060b89ce44d9af817e24ec181b040f8d31bd8f5  GoLean/GoCore/RecoveryControlTyping.lean
+4f848f439278575ac1b398d1112d5a749e700e72c5aa3f0b2bd14a9315dea858  Tests/RecoveryStorage.lean
+7226552dd6e7cb68d6f30c8591af280ff173a3edd99745127550c78ef8e6e632  Tests/RecoveryStorageAudit.lean
+✔ [17/25] Built GoLean.GoCore.RecoveryStore (247ms)
+✔ [18/25] Built GoLean.GoCore.RecoveryEnvironment (207ms)
+✔ [19/25] Built GoLean.GoCore.RecoveryContext (214ms)
+✔ [20/25] Built GoLean.GoCore.RecoveryAllocation (241ms)
+✔ [21/25] Built GoLean.GoCore.RecoveryControlTyping (253ms)
+✔ [22/25] Built GoLean.GoCore.RecoveryOperators (8.4s)
+✔ [23/25] Built Tests.RecoveryStorage (210ms)
+✔ [24/25] Built Tests.RecoveryStorageAudit (714ms)
+Build completed successfully (25 jobs).
+Recovery storage fresh elaboration: GoLean/GoCore/RecoveryStore.lean
+Recovery storage fresh elaboration: GoLean/GoCore/RecoveryEnvironment.lean
+Recovery storage fresh elaboration: GoLean/GoCore/RecoveryAllocation.lean
+Recovery storage fresh elaboration: GoLean/GoCore/RecoveryOperators.lean
+Recovery storage fresh elaboration: GoLean/GoCore/RecoveryContext.lean
+Recovery storage fresh elaboration: GoLean/GoCore/RecoveryControlTyping.lean
+Recovery storage fresh elaboration: Tests/RecoveryStorage.lean
+Recovery storage fresh elaboration: Tests/RecoveryStorageAudit.lean
+Recovery storage audit scratch retained: /home/dev/projects/golean/.tmp/recovery-storage-audit-zqux6t8j
+Recovery storage audit: 32 required theorems present; 6789 constants checked across all imported local modules (classical trio only)
+/home/dev/projects/golean/.tmp/recovery-storage-audit-zqux6t8j/AuditAll.lean:2:0: error: Recovery storage audit: _private.GoLean.GoCore.RecoveryStore.0.recoveryStorageHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryStore.0.recoveryStorageHole
+Recovery storage negative audit: RecoveryStore compiled then rejected (recoveryStorageHole)
+/home/dev/projects/golean/.tmp/recovery-storage-audit-zqux6t8j/AuditAll.lean:2:0: error: Recovery storage audit: _private.GoLean.GoCore.RecoveryEnvironment.0.recoveryStorageHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryEnvironment.0.recoveryStorageHole
+Recovery storage negative audit: RecoveryEnvironment compiled then rejected (recoveryStorageHole)
+/home/dev/projects/golean/.tmp/recovery-storage-audit-zqux6t8j/AuditAll.lean:2:0: error: Recovery storage audit: _private.GoLean.GoCore.RecoveryAllocation.0.recoveryStorageHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryAllocation.0.recoveryStorageHole
+Recovery storage negative audit: RecoveryAllocation compiled then rejected (recoveryStorageHole)
+/home/dev/projects/golean/.tmp/recovery-storage-audit-zqux6t8j/AuditAll.lean:2:0: error: Recovery storage audit: _private.GoLean.GoCore.RecoveryOperators.0.recoveryStorageHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryOperators.0.recoveryStorageHole
+Recovery storage negative audit: RecoveryOperators compiled then rejected (recoveryStorageHole)
+/home/dev/projects/golean/.tmp/recovery-storage-audit-zqux6t8j/AuditAll.lean:2:0: error: Recovery storage audit: _private.GoLean.GoCore.RecoveryContext.0.recoveryStorageHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryContext.0.recoveryStorageHole
+Recovery storage negative audit: RecoveryContext compiled then rejected (recoveryStorageHole)
+/home/dev/projects/golean/.tmp/recovery-storage-audit-zqux6t8j/AuditAll.lean:2:0: error: Recovery storage audit: _private.GoLean.GoCore.RecoveryControlTyping.0.recoveryStorageHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryControlTyping.0.recoveryStorageHole
+Recovery storage negative audit: RecoveryControlTyping compiled then rejected (recoveryStorageHole)
+/home/dev/projects/golean/.tmp/recovery-storage-audit-zqux6t8j/AuditAll.lean:2:0: error: Recovery storage audit: _private.Tests.RecoveryStorageAudit.0.recoveryStorageAuditHole depends on forbidden axiom _private.Tests.RecoveryStorageAudit.0.recoveryStorageAuditHole
+Recovery storage negative audit: audit_private compiled then rejected (recoveryStorageAuditHole)
+/home/dev/projects/golean/.tmp/recovery-storage-audit-zqux6t8j/test_trailing/Tests/RecoveryStorage.lean:104:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.tmp/recovery-storage-audit-zqux6t8j/AuditAll.lean:2:0: error: Recovery storage audit: _private.Tests.RecoveryStorage.0.recoveryStorageTrailingHole depends on forbidden axiom sorryAx
+Recovery storage negative audit: test_trailing compiled then rejected (sorryAx)
+Recovery storage supporting lemma gate: PASS

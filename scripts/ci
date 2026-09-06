@@ -450,6 +450,13 @@ else
   bad "Recovery scoped typing checker proofs and regressions"
 fi
 
+step "Recovery mixed storage and runtime supporting lemmas"
+if bash scripts/check-recovery-storage; then
+  ok "Recovery mixed storage and runtime supporting lemmas"
+else
+  bad "Recovery mixed storage and runtime supporting lemmas"
+fi
+
 # 2b. Frontend pins (restored at the split audit, findings A1/A2 + B1/B8
 # — docs/2026-08-31_repo-split-plan.md fix round): the two SEMANTICS
 # pins that lived inside the parked check-golden. (1) the

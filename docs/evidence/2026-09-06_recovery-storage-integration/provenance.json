@@ -1,0 +1,10 @@
+{
+  "parent": "a34bc9695bf107dde38c5806dcfa354f228e9853",
+  "merge_head": "4f7aedef6206f9217226647ac8c77c4b34089ceb",
+  "ci_session": 27352,
+  "ci_exit": 0,
+  "review": "efc2712c",
+  "full_runtime": "explicitly cached renderer record, no runtime/frontend source change",
+  "source_files": 185,
+  "frozen_author_files_verified": 12
+}
