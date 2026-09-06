@@ -1,0 +1,19 @@
+membership-sampling multifile-controls PASS
+membership-sampling init-panic PASS
+membership-sampling init-exit-success PASS
+membership-sampling non-verdict 124 PASS
+membership-sampling non-verdict 137 PASS
+Traceback (most recent call last):
+  File "/home/dev/projects/golean/.claude/worktrees/typed-preflight/docs/evidence/2026-09-06_observer-diagnostic-review/probe.py", line 120, in <module>
+    if __name__=="__main__": main()
+                             ^^^^^^
+  File "/home/dev/projects/golean/.claude/worktrees/typed-preflight/docs/evidence/2026-09-06_observer-diagnostic-review/probe.py", line 82, in main
+    oracle = case if tool=="membership-sampling" else Path((case/"oracle-directory.txt").read_text().strip())
+                                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1029, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1015, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/home/dev/projects/golean/.tmp/diagnostic-review-9srnw49y/gotest-triage-multifile-controls-source/oracle-directory.txt'

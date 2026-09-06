@@ -1,58 +1,82 @@
-# Diagnostic observer review: initial findings
+# Independent diagnostic observer implementation review
 
-[AGENT], `typed-preflight`, 2026-09-06 UTC. **Changes required; no diagnostic
-PASS issued.** This seals the initial source-bound review and newly found
-core classifier counterexample. A later classifier/diagnostic increment
-requires a separate reviewed source checkpoint and green evidence.
+[AGENT] `typed-preflight`, 2026-09-06 UTC. **Bounded PASS** for the frozen
+diagnostic source manifest SHA256
+`21b9d359558e74e873e624a744ba95ba22b9cd1b42600186c6c76a63e11d1d9a`
+in `typed-observer-controls`. This verdict covers the three diagnostic
+oracle paths, their dedicated controls and ordinary-CI wiring. It does not
+claim a fresh full diagnostic census or Go-versus-model conformance.
 
-The candidate diagnostic byte repairs use the frozen core file helpers in
-`membership-sampling`, `gotest-triage` and `cedar-census`. Initial hashes are
-in `provenance.json`; the copied scripts and source-extracted oracle blocks
-are archived. No complete diagnostic tool was run: those commands perform
-frontend/model/census work and can delete existing output. The review
-executes only their exact oracle blocks in private scratch directories.
+`candidate-sources.json` identifies all 16 frozen inputs. `source.tar.gz`
+retains them and the complete helper source. Every candidate hash was
+checked before and after the fresh probes. The shared helper is byte-equal
+to the separately reviewed production candidate (`1bd2022b`); the author's
+temporary borrowing must be replaced by integration of its reviewed commit
+before the diagnostic increment is committed. Final ordinary CI remains the
+author's integration gate.
 
-`review.py initial` ran under the 16 GiB cap with three Lean threads and the
-reviewer's private Go cache. **149 checks: 146 PASS, 3 FAIL**, exit 1. All
-three failures are the same real-Go fatal-during-unwind misclassification,
-one per tool. Detailed records are in `initial-results.json`; raw inputs
-and descriptor/result bytes are archived. Passed checks cover every JSON
-control byte through each oracle, raw fd identity, alternating `-race`
-forwarding in standalone sampling, exit 2/124/137/143/255 refusals,
-stdout-only markers, malformed reports/UTF-8, raw nonempty success output,
-and `.out` CRLF/NUL/trailing-LF comparisons. The checks are apparatus
-evidence, not Go-versus-Lean conformance or a fresh full test-suite/Cedar
-census. The existing independent harness binary from the preceding core
-review is reused at its recorded hash; no new build is implied.
+## Source findings
 
-The `.out` comparison was inspected directly against pinned
-`deps/go/src/cmd/internal/testdir/testdir_test.go`, `checkExpectedOutput`:
-only actual CRLF is normalized, then compared to exact expected bytes;
-missing expected output means empty. The candidate preserves the existing
-stdout-then-stderr concatenation order, which cannot reconstruct
-cross-descriptor write interleaving. Cedar's successful-driver silence check
-uses raw file size; abort output is obtained from the shared stderr
-splitter. These byte-transport changes passed the bounded checks.
+- Sampling resets paired crash/registration files for every plain or race
+  draw. Triage and Cedar create separate sibling oracle copies. Their
+  frontend input remains the original semantic directory; Cedar preserves
+  its original package GOPATH. There is no recover wrapper or semantic
+  frontend exposure to the crash helper.
+- Kind, message and output queries all receive the same two evidence
+  paths. All three tools require valid registration and an empty crash
+  report on success. Missing registration, setup exit 78, timeout and other
+  non-verdict oracle exits refuse before comparison. Raw stdout and stderr
+  remain separate files. Shell variables contain encoded JSON or quoted
+  diagnostics, not raw message/output bytes.
+- Triage's `.out` check matches the inspected pinned
+  `deps/go/src/cmd/internal/testdir/testdir_test.go` `checkExpectedOutput`
+  rule: CRLF normalization of actual bytes, otherwise exact comparison,
+  and missing expected file means empty output. Its retained concatenation
+  order is stdout then stderr; this does not reconstruct inter-descriptor
+  ordering. Successful stdout outside the model observable is explicitly
+  flagged. Cedar checks raw sizes for its silence rule; NUL and trailing
+  LF cannot disappear into command substitution.
+- Domains remain explicit: sampling accepts ok/panic, triage additionally
+  fatal/deadlock, Cedar additionally deadlock and refuses fatal. The shared
+  fatal-during-unwind ambiguity remains a named inability to observe, never
+  a panic/conformance success. This preserves the bounded K3 disposition
+  in `ab2ad4d5`; it is not B7 equivalence or an O2 admission change.
+- Invalid UTF-8 message/output encoding still refuses. No policy widening,
+  oracle/toolchain repin, baseline edit or semantic model repair is part of
+  this increment. The ordinary CI step calls the actual diagnostic gate
+  and propagates its failure.
 
-[The separate fatal-classification finding](fatal-classification-finding.md)
-records five real-Go false-panic acceptances: the three diagnostic tools,
-core strict classification expecting panic, and core sampling allowing
-panic. It also records a real multiline-payload collision that prevents
-naive fatal-marker priority from resolving the problem. The author's
-subsequent broad-substring draft has **not** received a PASS; the parent
-requires a separate line/block-aware classifier repair and controls after
-the ongoing frozen byte-transport full CI.
+## Fresh independent probes
 
-The historical core byte-transport PASS remains narrowly scoped to byte
-transport under preserved splitting policy. It does not certify terminal
-classifier completeness, and this newly found defect must not remain
-deferred debt in the final sprint disposition. Invalid-UTF-8 representation,
-R-1, and generic runtime-report parser correctness remain distinct claims.
+Command, from the reviewer's own worktree:
 
-`probes.tar.gz` contains exact initial scripts, extracted shells, generated
-Go sources, and all raw probe inputs/results. `archive-members.sha256`
-inventories every member and `archive-verification.json` records complete
-verification after writing. `SHA256SUMS` seals all top-level evidence files
-except itself. Scratch locations are historical; replay in a fresh private
-directory, leaving sealed records intact. No parent/author runtime source,
-baseline or dependency pin was edited; no main merge or push was performed.
+```sh
+GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 scripts/capped python3 docs/evidence/2026-09-06_observer-diagnostic-review/probe.py
+```
+
+`probe-2.log` records exit 0 and **15 fresh checks** using a private build
+of the frozen helper and source-extracted actual shell paths:
+
+1. Each tool executes a two-file package with NUL/SOH/CR/LF output and a
+   multiline panic. The exact first-line message and output survive; the
+   sampling execution uses `-race`. Both original Go files remain exact,
+   and removing the single oracle insertion restores each copied file.
+2. Each tool observes an authentic initializer panic before registration,
+   while initializer `os.Exit(0)` refuses missing acknowledgement. This
+   exercises the intentional raw fallback and success boundary separately.
+3. Each tool rejects oracle exits 124 and 137 even when the fake oracle
+   returns a complete previously captured panic and valid paired crash
+   evidence. Each invocation also checks that stale files were reset.
+
+`results.json` retains exact result/raw bytes, exits and scratch location.
+The initial `probe.log` is a reviewer extraction bug: a multiline
+`one_line` function was initially copied as its header alone. No product
+finding or gate failure is inferred from it; extraction was corrected and
+all checks rerun. The failed log is retained.
+
+The author's copied `hybrid-gate-final.log` records 105 focused checks
+(66 synthetic and 39 native) and five syntactically valid mutations exposing
+false acceptance. I inspected its actual extraction, checks and mutations;
+I did not rerun that suite or duplicate the full corpus. Its limits remain
+apparatus validation, and the shared core's separate full differential is
+still an independent acceptance requirement.
