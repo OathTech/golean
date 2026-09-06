@@ -1,0 +1,22 @@
+{
+  "source": {
+    "main.go": "074278ffb9c7200f03aec80fd5ee48b312065c817708227200612d76e8b88163",
+    "p/main.go": "5b0f88cfe1453767801d8ae7699cac04fb493579afc46eb56b1a85aaf5b55455",
+    "q/main.go": "c6f063b96efec6ef6d91589a580c841892bf97def67ac0e563975098ea37ef36"
+  },
+  "base_commit": "7ac3eb46",
+  "fresh_old_cli": false,
+  "base_emitter_sha256": "8fbdb2e402be3203932899e255b0af67fb47810f82184a0263820553c79d48fd",
+  "base_export_exit": 0,
+  "current_emitter_sha256": "4ada4457e3a90395cd5a769c0536d3e97ff58944e0a83a233a1f82848f5e8b35",
+  "current_export_exit": 1,
+  "old_cli_path": "/home/dev/projects/golean/.claude/worktrees/typed-i1-json/.lake/build/bin/golean",
+  "old_cli_sha256": "01e99fa9fb257df07660b818e3c0f5653841597d0b744019fd16b0d0d568a3d9",
+  "old_cli_exit": 1,
+  "old_cli_explicit16_exit": 1,
+  "current_cli_exit": 1,
+  "old_stage": "native lowering: duplicate function id main.Mix.m in program",
+  "new_stage": "native export: package declarations: empty or duplicate function identity main.Mix.m",
+  "disposition": "Existing executable refusal moves earlier for this exact fixture; no PASS claim in either version. Old CLI artifact is reused, not fresh-built.",
+  "initial_cli_probe": "The first ad hoc probe omitted explicit cap/thread variables, so wrapper default64G applied; preserved but not counted. The identical refusal was rerun with explicit16G/3threads."
+}

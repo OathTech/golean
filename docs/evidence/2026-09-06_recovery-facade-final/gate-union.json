@@ -1,0 +1,12 @@
+{
+  "fresh_elaboration_parent_counts": {
+    "renderer": 73,
+    "O2_draft": 75
+  },
+  "fresh_elaboration_union_count": 81,
+  "exact_union_no_duplicates": true,
+  "CI": "exact accepted R1 CI plus one intact typed terminal gate",
+  "initial_source_manifest_sha256": "68977163220063df93acfc0eba761b942bbd889abdc85f6ec4dee01fdb0a676f",
+  "final_source_manifest_sha256": "51a783c4bc0bce8e1cfb0fa815bf98a455316bbba6d7dfb3e235dcf509654fae",
+  "pin_refresh_affects_gate_source": false
+}

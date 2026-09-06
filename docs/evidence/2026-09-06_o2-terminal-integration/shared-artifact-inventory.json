@@ -1,0 +1,219 @@
+{
+  "source_directory": "artifacts/recovery-typing/differential",
+  "included": {
+    "go-run/recovery-typing__direct-true/main.go": {
+      "sha256": "e321f23555789e5bcea443e11ee18141783c7f78ddf3ef8cf614afda029b3c8e",
+      "bytes": 2395
+    },
+    "go-run/recovery-typing__direct-true/oracle.crash": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/recovery-typing__direct-true/oracle.read.err": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/recovery-typing__direct-true/oracle.registered": {
+      "sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+      "bytes": 11
+    },
+    "go-run/recovery-typing__direct-true/oracle.split.err": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/recovery-typing__direct-true/oracle.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/recovery-typing__direct-true/oracle.stdout": {
+      "sha256": "35d9d4b19708129cae7fd973d15014dd8b983d4e29db508cbb91766d1c7a8e22",
+      "bytes": 88
+    },
+    "go-run/recovery-typing__direct-true/zz_golean_crash.go": {
+      "sha256": "439bc1d4f475c0abc768804f521f7ccf04819612ff9bc32d25aabb248a816673",
+      "bytes": 520
+    },
+    "go-run/recovery-typing__direct-true/zz_golean_harness.go": {
+      "sha256": "fa0b417ce663a5782d66b51f074d98ec897014b722bbb0c3a37c67bc17455163",
+      "bytes": 5804
+    },
+    "go-run/recovery-typing__outside/main.go": {
+      "sha256": "e321f23555789e5bcea443e11ee18141783c7f78ddf3ef8cf614afda029b3c8e",
+      "bytes": 2395
+    },
+    "go-run/recovery-typing__outside/oracle.crash": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/recovery-typing__outside/oracle.read.err": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/recovery-typing__outside/oracle.registered": {
+      "sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+      "bytes": 11
+    },
+    "go-run/recovery-typing__outside/oracle.split.err": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/recovery-typing__outside/oracle.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/recovery-typing__outside/oracle.stdout": {
+      "sha256": "35d9d4b19708129cae7fd973d15014dd8b983d4e29db508cbb91766d1c7a8e22",
+      "bytes": 88
+    },
+    "go-run/recovery-typing__outside/zz_golean_crash.go": {
+      "sha256": "439bc1d4f475c0abc768804f521f7ccf04819612ff9bc32d25aabb248a816673",
+      "bytes": 520
+    },
+    "go-run/recovery-typing__outside/zz_golean_harness.go": {
+      "sha256": "47c15e617651d7b7ff5070849f19fc80edb36d3966349fba0f0c3aad0dfff5c0",
+      "bytes": 5801
+    },
+    "go-run/recovery-typing__reversed-true/main.go": {
+      "sha256": "e321f23555789e5bcea443e11ee18141783c7f78ddf3ef8cf614afda029b3c8e",
+      "bytes": 2395
+    },
+    "go-run/recovery-typing__reversed-true/oracle.crash": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/recovery-typing__reversed-true/oracle.read.err": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/recovery-typing__reversed-true/oracle.registered": {
+      "sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+      "bytes": 11
+    },
+    "go-run/recovery-typing__reversed-true/oracle.split.err": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/recovery-typing__reversed-true/oracle.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/recovery-typing__reversed-true/oracle.stdout": {
+      "sha256": "35d9d4b19708129cae7fd973d15014dd8b983d4e29db508cbb91766d1c7a8e22",
+      "bytes": 88
+    },
+    "go-run/recovery-typing__reversed-true/zz_golean_crash.go": {
+      "sha256": "439bc1d4f475c0abc768804f521f7ccf04819612ff9bc32d25aabb248a816673",
+      "bytes": 520
+    },
+    "go-run/recovery-typing__reversed-true/zz_golean_harness.go": {
+      "sha256": "8be18f5014c0dc505f64b08e08a1c0dbd4f2c1dc0688911e792a0f2e11bdcd5c",
+      "bytes": 5806
+    },
+    "go-run/recovery-typing__shared-false/main.go": {
+      "sha256": "e321f23555789e5bcea443e11ee18141783c7f78ddf3ef8cf614afda029b3c8e",
+      "bytes": 2395
+    },
+    "go-run/recovery-typing__shared-false/oracle.crash": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/recovery-typing__shared-false/oracle.read.err": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/recovery-typing__shared-false/oracle.registered": {
+      "sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+      "bytes": 11
+    },
+    "go-run/recovery-typing__shared-false/oracle.split.err": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/recovery-typing__shared-false/oracle.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/recovery-typing__shared-false/oracle.stdout": {
+      "sha256": "35d9d4b19708129cae7fd973d15014dd8b983d4e29db508cbb91766d1c7a8e22",
+      "bytes": 88
+    },
+    "go-run/recovery-typing__shared-false/zz_golean_crash.go": {
+      "sha256": "439bc1d4f475c0abc768804f521f7ccf04819612ff9bc32d25aabb248a816673",
+      "bytes": 520
+    },
+    "go-run/recovery-typing__shared-false/zz_golean_harness.go": {
+      "sha256": "1eacdafcc1d48da0dff6078dc79fdae1e58c0fae206a44350aca78ca3a1cc89c",
+      "bytes": 5805
+    },
+    "go-run/recovery-typing__shared-true/main.go": {
+      "sha256": "e321f23555789e5bcea443e11ee18141783c7f78ddf3ef8cf614afda029b3c8e",
+      "bytes": 2395
+    },
+    "go-run/recovery-typing__shared-true/oracle.crash": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/recovery-typing__shared-true/oracle.read.err": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/recovery-typing__shared-true/oracle.registered": {
+      "sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+      "bytes": 11
+    },
+    "go-run/recovery-typing__shared-true/oracle.split.err": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/recovery-typing__shared-true/oracle.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/recovery-typing__shared-true/oracle.stdout": {
+      "sha256": "75946e3320a84cd9ac025b11d9a781bd49dd3a80f514ad3860c73dfb26c0940a",
+      "bytes": 89
+    },
+    "go-run/recovery-typing__shared-true/zz_golean_crash.go": {
+      "sha256": "439bc1d4f475c0abc768804f521f7ccf04819612ff9bc32d25aabb248a816673",
+      "bytes": 520
+    },
+    "go-run/recovery-typing__shared-true/zz_golean_harness.go": {
+      "sha256": "e4a97a86a850a140f969f7d7363da93207385c4edcff990819e12487a965cc1a",
+      "bytes": 5804
+    },
+    "latest.meta.tsv": {
+      "sha256": "fe61d3e283fd32cdb4490c92204f6a851556afc3679c4351fde16abb899b127f",
+      "bytes": 670
+    },
+    "latest.tsv": {
+      "sha256": "b76fcd56777458867ee507d17b147864da5b77669d727fcfca5c9337997ecaf0",
+      "bytes": 540
+    },
+    "native/recovery-typing/direct-true/wire.json": {
+      "sha256": "e9ce56299ec508352aba26621f24c303d3b410bb6f90f2dfb1776cd1e562d470",
+      "bytes": 23106
+    },
+    "native/recovery-typing/outside/wire.json": {
+      "sha256": "e9ce56299ec508352aba26621f24c303d3b410bb6f90f2dfb1776cd1e562d470",
+      "bytes": 23106
+    },
+    "native/recovery-typing/reversed-true/wire.json": {
+      "sha256": "e9ce56299ec508352aba26621f24c303d3b410bb6f90f2dfb1776cd1e562d470",
+      "bytes": 23106
+    },
+    "native/recovery-typing/shared-false/wire.json": {
+      "sha256": "e9ce56299ec508352aba26621f24c303d3b410bb6f90f2dfb1776cd1e562d470",
+      "bytes": 23106
+    },
+    "native/recovery-typing/shared-true/wire.json": {
+      "sha256": "e9ce56299ec508352aba26621f24c303d3b410bb6f90f2dfb1776cd1e562d470",
+      "bytes": 23106
+    }
+  },
+  "omitted_reproducible_binaries": {
+    "bin/coverageharness": {
+      "sha256": "0827ed713a1f15965eef6b468bdb08d07b42ff2f6193622445eb44f9c7e04f25",
+      "bytes": 4404364
+    }
+  }
+}

@@ -1,0 +1,231 @@
+{
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "p"
+  },
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "q"
+  },
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "results": [
+       {
+        "expr": "bool",
+        "type": {
+         "kind": "bool"
+        },
+        "value": true
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "Inspect",
+   "params": [
+    {
+     "id": "v",
+     "type": {
+      "kind": "interface",
+      "name": "main.Mix"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  }
+ ],
+ "methodSets": [],
+ "methods": [
+  {
+   "interface": true,
+   "name": "m",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "interface",
+     "name": "p.I"
+    }
+   },
+   "recvType": "p.I",
+   "results": [],
+   "variadic": false
+  },
+  {
+   "interface": true,
+   "name": "m",
+   "params": [
+    {
+     "id": "",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "interface",
+     "name": "q.I"
+    }
+   },
+   "recvType": "q.I",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "interface": true,
+   "name": "m",
+   "params": [],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "interface",
+     "name": "main.Mix"
+    }
+   },
+   "recvType": "main.Mix",
+   "results": [],
+   "variadic": false
+  },
+  {
+   "interface": true,
+   "name": "m",
+   "params": [
+    {
+     "id": "",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "interface",
+     "name": "main.Mix"
+    }
+   },
+   "recvType": "main.Mix",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  }
+ ],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": [
+  {
+   "def": {
+    "kind": "interface",
+    "methods": [
+     {
+      "name": "m",
+      "params": [],
+      "results": [],
+      "variadic": false
+     },
+     {
+      "name": "m",
+      "params": [
+       {
+        "int": "int",
+        "kind": "int"
+       }
+      ],
+      "results": [
+       {
+        "kind": "bool"
+       }
+      ],
+      "variadic": false
+     }
+    ]
+   },
+   "display": "main.Mix",
+   "name": "main.Mix",
+   "pkg": "main"
+  },
+  {
+   "def": {
+    "kind": "interface",
+    "methods": [
+     {
+      "name": "m",
+      "params": [],
+      "results": [],
+      "variadic": false
+     }
+    ]
+   },
+   "display": "p.I",
+   "name": "p.I",
+   "pkg": "p"
+  },
+  {
+   "def": {
+    "kind": "interface",
+    "methods": [
+     {
+      "name": "m",
+      "params": [
+       {
+        "int": "int",
+        "kind": "int"
+       }
+      ],
+      "results": [
+       {
+        "kind": "bool"
+       }
+      ],
+      "variadic": false
+     }
+    ]
+   },
+   "display": "q.I",
+   "name": "q.I",
+   "pkg": "q"
+  }
+ ]
+}

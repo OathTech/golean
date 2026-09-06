@@ -1,0 +1,29 @@
+{
+  "integration_parent": "39235f658326dd26a85d0e590ff9d6e1b796c3be",
+  "feature_tip": "f3971190",
+  "selected_inputs": 3952,
+  "feature_candidate": 239,
+  "source_delta": "only additiveCI/lake+9source-onlypins",
+  "full_records": "cached acceptedR1 3635/394",
+  "pending": [],
+  "ordinary_ci_exit": 0,
+  "fresh_member_exit": 0,
+  "iris_customer_exit": 0,
+  "source_revalidated": 3952,
+  "fresh_members": 9,
+  "fresh_customer_cases": 8,
+  "fresh_whole_native_artifacts": 2,
+  "independent_union_review": "352d09f9",
+  "semantic_review_tip": "f3971190",
+  "limits": "Full 3635/394 corpus records remain cached from accepted R1. B7/I1 final migration, integrated uintptr and final full/slow sprint evidence remain owed.",
+  "resource_envelope": {
+    "GOLEAN_MEM_MAX": "16G",
+    "LEAN_NUM_THREADS": 3,
+    "GOLEAN_COVERAGE_JOBS": 2
+  },
+  "reproduction_commands": [
+    "scripts/capped scripts/ci",
+    "GOLEAN_COVERAGE_ARTIFACTS=artifacts/o2-terminal-integration-members scripts/diff-one panic-recover/repanic-same-value-abort panic-recover/string-members/controls panic-recover/string-members/equal panic-recover/string-members/invalid-after-lf panic-recover/string-members/invalid-before-lf panic-recover/string-members/invalid-recovered panic-recover/string-members/multiple panic-recover/string-members/unequal panic-recover/string-members/unicode",
+    "scripts/capped bash spikes/iris-customer/check"
+  ]
+}

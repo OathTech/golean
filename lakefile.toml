@@ -59,3 +59,7 @@ globs = ["Tests.AbortObservation", "Tests.AbortObservationAudit"]
 [[lean_lib]]
 name = "DeclarationTests"
 globs = ["Tests.DeclarationWire", "Tests.StrictJsonParse", "Tests.DeclarationAudit"]
+
+[[lean_lib]]
+name = "RecoveryTerminalTests"
+globs = ["Tests.RecoveryTerminal", "Tests.RecoveryTerminalAudit"]

@@ -1,0 +1,65 @@
+[
+  {
+    "case": "panic-recover/repanic-same-value-abort",
+    "source": "artifacts/o2-terminal-integration-members/string-members/panic-recover__repanic-same-value-abort/fresh-u0i0qary/certificate.json",
+    "certificate_sha256": "d964c69fbfda7a003674312fc48a5d39abc4b835a8aa86895c496ab136707352",
+    "pin_sha256": "e4fa7ece0993fddbf04f3e493473e20a323fd41325a26cbca2bfa354a6875def",
+    "apparatus_source_count": 172
+  },
+  {
+    "case": "panic-recover/string-members/controls",
+    "source": "artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__controls/fresh-u4juirpx/certificate.json",
+    "certificate_sha256": "31928c15023098bcd627b82713d4e8d30aa9f66d17025b053a8110c9a85aeb9d",
+    "pin_sha256": "d2f38f811342f1bbfc0314c1cbe026bcf9128a1563775e9c3bb240f80ec8d8ae",
+    "apparatus_source_count": 172
+  },
+  {
+    "case": "panic-recover/string-members/equal",
+    "source": "artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/certificate.json",
+    "certificate_sha256": "c18b50e88900875cbae08879aa2fa55d9a40000a2b3cd133136bf39126121ffd",
+    "pin_sha256": "d0e1492130fdb9074253444ff0a786a8058ee46fa54a7a31c578f067f84312ff",
+    "apparatus_source_count": 172
+  },
+  {
+    "case": "panic-recover/string-members/invalid-after-lf",
+    "source": "artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__invalid-after-lf/fresh-y8p81a9p/certificate.json",
+    "certificate_sha256": "8e5b93c782d6388297037aed605f631e4a90b29de6256c6a515f2ae8cdac2bdb",
+    "pin_sha256": "332bfffc636b15ea4dfeee75147e26b38e503734a4f13dbe1ded634ec3f8a065",
+    "apparatus_source_count": 172
+  },
+  {
+    "case": "panic-recover/string-members/invalid-before-lf",
+    "source": "artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__invalid-before-lf/fresh-w3ltx4_i/certificate.json",
+    "certificate_sha256": "5fb5fa5667f77f6717ed626ece87796a69dfde1195153aa95620cf1a07a111c8",
+    "pin_sha256": "2922eb282c1c14e1af7fd656d7fe03a291356d8dc269a7cc325c799f197d9646",
+    "apparatus_source_count": 172
+  },
+  {
+    "case": "panic-recover/string-members/invalid-recovered",
+    "source": "artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__invalid-recovered/fresh-idh9tcr5/certificate.json",
+    "certificate_sha256": "5e5dd3676ecb761e063867317eb420cd52913c6ffd06db8c31b195dd8f159a94",
+    "pin_sha256": "3bff5bc0337eb097dc8005e457f9222d4fb01f94ab5f465638a0818b1281e9f2",
+    "apparatus_source_count": 172
+  },
+  {
+    "case": "panic-recover/string-members/multiple",
+    "source": "artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__multiple/fresh-bh1rcqiw/certificate.json",
+    "certificate_sha256": "fe92ec4f18d9a9641bd13c78b90109674ef03e6a999db1b53860033085be5113",
+    "pin_sha256": "faae6b55cf84e8da18b2c8fd641211d9959f2d4db779a3cdb949f6cd585e3103",
+    "apparatus_source_count": 172
+  },
+  {
+    "case": "panic-recover/string-members/unequal",
+    "source": "artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__unequal/fresh-dbmtfk2x/certificate.json",
+    "certificate_sha256": "7a137bd378bb4210a84ca7057160a7084e3331cb545cf58c73dca69911b94bb6",
+    "pin_sha256": "c0a4a1ebb948a0006b23713166779439cf90e5dd7fc1be819c0f86382a54c387",
+    "apparatus_source_count": 172
+  },
+  {
+    "case": "panic-recover/string-members/unicode",
+    "source": "artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__unicode/fresh-phl7fbcw/certificate.json",
+    "certificate_sha256": "9b572727c56e768d3d9a9960b8abd0cef2866727147cd1d8e59c8b3b7aa48a90",
+    "pin_sha256": "5f741cbdeb34169ec64c828ce2fa280879b312b3082d47af2f105235e183857d",
+    "apparatus_source_count": 172
+  }
+]

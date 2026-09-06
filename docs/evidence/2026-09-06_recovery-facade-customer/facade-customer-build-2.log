@@ -1,0 +1,20 @@
+✔ [289/313] Built GoLeanIris.Program (208ms)
+✖ [291/318] Building Tests.PanicRendering (368ms)
+trace: .> LEAN_PATH=/home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/spikes/iris-customer/.lake/packages/Qq/.lake/build/lib/lean:/home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/spikes/iris-customer/.lake/packages/batteries/.lake/build/lib/lean:/home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.lake/build/lib/lean:/home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/spikes/gate-a1/.lake/build/lib/lean:/home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/spikes/iris-customer/.lake/packages/iris/Iris/.lake/build/lib/lean:/home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/spikes/iris-customer/.lake/build/lib/lean /home/dev/.elan/toolchains/leanprover--lean4---v4.32.2/bin/lean /home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/Tests/PanicRendering.lean -o /home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.lake/build/lib/lean/Tests/PanicRendering.olean -i /home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.lake/build/lib/lean/Tests/PanicRendering.ilean -c /home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.lake/build/ir/Tests/PanicRendering.c --setup /home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.lake/build/ir/Tests/PanicRendering.setup.json --json
+error: Tests/PanicRendering.lean:47:2: Tactic `decide` proved that the proposition
+  renderPanicHead state (entry "first\nsecond" true) [entry "first\nsecond"] = none
+is false
+error: Tests/PanicRendering.lean:56:2: Tactic `decide` proved that the proposition
+  ([#[255], #[128], #[192, 128], #[224, 128, 128], #[237, 160, 128], #[226, 130], #[240, 128, 128, 128],
+          #[244, 144, 128, 128], #[97, 10, 255]].all
+      fun bytes => (renderPanicHead state (rawEntry bytes) []).isNone) =
+    true
+is false
+error: Lean exited with code 1
+✔ [304/318] Built GateA1.ProgramTrace (187ms)
+✔ [306/318] Built GoLeanIris.Admission (4.9s)
+✔ [310/318] Built Tests.RecoveryTypingFixture (12s)
+✔ [311/318] Built GoLeanIris.SharedProgram (206ms)
+Some required targets logged failures:
+- Tests.PanicRendering
+error: build failed

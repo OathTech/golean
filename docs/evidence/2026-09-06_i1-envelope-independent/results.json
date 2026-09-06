@@ -1,0 +1,35 @@
+{
+  "status": "PASS bounded repaired Lean metadata boundary; root final acceptance separate",
+  "v1_manifest_sha256": "4b478c9f920a6a60a46fbe5f3c882e218f5bce4f8c6df9e8aa26884dc2e1dcb9",
+  "v2_manifest_sha256": "077e6267fadbb42a2c417730d294e5fdc4fac62b86d1b0b98502b19668aea235",
+  "source_inputs": 32,
+  "v1_full_base_plus_overrides_verified": 3917,
+  "v2_changed_inputs": 5,
+  "v2_source_revalidated": true,
+  "blocking_v1_findings_resolved": [
+    "I1-PKG-R1",
+    "I1-PKG-R2"
+  ],
+  "independent_v2_byte_cases": {
+    "private-same-shape": true,
+    "private-mixed-shape-permuted": true,
+    "private-duplicate-header-use": false,
+    "private-missing-header": false,
+    "duplicate-positive-member": false,
+    "duplicate-native-type-and-index": false,
+    "duplicate-native-type-distinct-index": false
+  },
+  "positive_member_identity_retention_checked": true,
+  "independent_kernel_theorems": 1,
+  "post_import_v2_declarations": 1973,
+  "post_import_v2_exit": 0,
+  "fresh_source_Go_typecheck": true,
+  "independent_full_emitter_or_corpus_campaign": false,
+  "named_Mix": "existing old lowering refusal moves earlier; exact old wire independently refused by reused CLI with source-equal7ac3 decoder",
+  "open": [
+    "full CI and slow certification",
+    "pin disposition",
+    "remaining producer/integration review and root acceptance",
+    "runtime query/closure demand/marker removal"
+  ]
+}

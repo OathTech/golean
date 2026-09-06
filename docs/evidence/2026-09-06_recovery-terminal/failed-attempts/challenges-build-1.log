@@ -1,0 +1,25 @@
+✔ [76/78] Built GoLean.GoCore.RecoveryTerminal (241ms)
+✖ [77/78] Building GoLean.GoCore.RecoveryPoolObservationTyped (316ms)
+trace: .> LEAN_PATH=/home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.lake/build/lib/lean /home/dev/.elan/toolchains/leanprover--lean4---v4.32.2/bin/lean /home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/GoLean/GoCore/RecoveryPoolObservationTyped.lean -o /home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.lake/build/lib/lean/GoLean/GoCore/RecoveryPoolObservationTyped.olean -i /home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.lake/build/lib/lean/GoLean/GoCore/RecoveryPoolObservationTyped.ilean -c /home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.lake/build/ir/GoLean/GoCore/RecoveryPoolObservationTyped.c --setup /home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.lake/build/ir/GoLean/GoCore/RecoveryPoolObservationTyped.setup.json --json
+error: GoLean/GoCore/RecoveryPoolObservationTyped.lean:221:30: Tactic `contradiction` failed
+
+case mp.inr.inr
+p : Program
+name : String
+args : Array GoValue
+admitted : RecoveryAdmission p name args
+fuel : Nat
+ch : Choices
+message : String
+run : runProgramPoolOutM fuel p name args ch = Except.error (Stop.panic message, GoString.empty)
+w✝ : Func
+left✝ : findFunctionIn? p.funcs { key := name } = some w✝
+erase : (Except.error (Stop.fuelOut, GoString.empty), none).fst = Except.error (Stop.panic message, GoString.empty)
+observed : runProgramPoolWithAbort fuel p name args ch = (Except.error (Stop.fuelOut, GoString.empty), none)
+⊢ ∃ record,
+    runProgramPoolWithAbort fuel p name args ch = (Except.error (Stop.panic message, GoString.empty), some record) ∧
+      message = stringPanicHead record.bytes record.recovered
+error: Lean exited with code 1
+Some required targets logged failures:
+- GoLean.GoCore.RecoveryPoolObservationTyped
+error: build failed

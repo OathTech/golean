@@ -1,0 +1,346 @@
+{
+  "a2/bin/coverageharness": {
+    "sha256": "36a4a53544fa2bf077a302421f55f0333e2d806d827e4ed42ca09f7e36298e97",
+    "archived": false
+  },
+  "a2/go-run/iris-customer__normal/main.go": {
+    "sha256": "5d0353e2e444c00b1d1f69831fa60d917da951a1e7f81337f7583114e27714c6",
+    "archived": true
+  },
+  "a2/go-run/iris-customer__normal/oracle.crash": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "a2/go-run/iris-customer__normal/oracle.read.err": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "a2/go-run/iris-customer__normal/oracle.registered": {
+    "sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+    "archived": true
+  },
+  "a2/go-run/iris-customer__normal/oracle.split.err": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "a2/go-run/iris-customer__normal/oracle.stderr": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "a2/go-run/iris-customer__normal/oracle.stdout": {
+    "sha256": "35d9d4b19708129cae7fd973d15014dd8b983d4e29db508cbb91766d1c7a8e22",
+    "archived": true
+  },
+  "a2/go-run/iris-customer__normal/zz_golean_crash.go": {
+    "sha256": "439bc1d4f475c0abc768804f521f7ccf04819612ff9bc32d25aabb248a816673",
+    "archived": true
+  },
+  "a2/go-run/iris-customer__normal/zz_golean_harness.go": {
+    "sha256": "1e2730ab6e9789a1236ea0513bc0421b4589e2bb6961763ce382b9657ccedb9e",
+    "archived": true
+  },
+  "a2/go-run/iris-customer__recovered/main.go": {
+    "sha256": "5d0353e2e444c00b1d1f69831fa60d917da951a1e7f81337f7583114e27714c6",
+    "archived": true
+  },
+  "a2/go-run/iris-customer__recovered/oracle.crash": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "a2/go-run/iris-customer__recovered/oracle.read.err": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "a2/go-run/iris-customer__recovered/oracle.registered": {
+    "sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+    "archived": true
+  },
+  "a2/go-run/iris-customer__recovered/oracle.split.err": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "a2/go-run/iris-customer__recovered/oracle.stderr": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "a2/go-run/iris-customer__recovered/oracle.stdout": {
+    "sha256": "35d9d4b19708129cae7fd973d15014dd8b983d4e29db508cbb91766d1c7a8e22",
+    "archived": true
+  },
+  "a2/go-run/iris-customer__recovered/zz_golean_crash.go": {
+    "sha256": "439bc1d4f475c0abc768804f521f7ccf04819612ff9bc32d25aabb248a816673",
+    "archived": true
+  },
+  "a2/go-run/iris-customer__recovered/zz_golean_harness.go": {
+    "sha256": "3840ed7010b525750352a5a19dabbdc452ce423e024f16d254154c69fe11ada2",
+    "archived": true
+  },
+  "a2/go-run/iris-customer__uncaught/main.go": {
+    "sha256": "5d0353e2e444c00b1d1f69831fa60d917da951a1e7f81337f7583114e27714c6",
+    "archived": true
+  },
+  "a2/go-run/iris-customer__uncaught/oracle.crash": {
+    "sha256": "0b3648c3ba33a994e1d4aa3bfcd06c3b07c8ec37eafb737e28c5af79309f6e73",
+    "archived": true
+  },
+  "a2/go-run/iris-customer__uncaught/oracle.message.err": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "a2/go-run/iris-customer__uncaught/oracle.registered": {
+    "sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+    "archived": true
+  },
+  "a2/go-run/iris-customer__uncaught/oracle.split.err": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "a2/go-run/iris-customer__uncaught/oracle.stderr": {
+    "sha256": "da809792ca6e0f2c903c2aefebe36e060637bb8ccd491f755030f54deceae643",
+    "archived": true
+  },
+  "a2/go-run/iris-customer__uncaught/oracle.stdout": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "a2/go-run/iris-customer__uncaught/zz_golean_crash.go": {
+    "sha256": "439bc1d4f475c0abc768804f521f7ccf04819612ff9bc32d25aabb248a816673",
+    "archived": true
+  },
+  "a2/go-run/iris-customer__uncaught/zz_golean_harness.go": {
+    "sha256": "2e65f93fcdb906d2bf3de31504582864e0c43c47a16ab2960485ac51e733390c",
+    "archived": true
+  },
+  "a2/latest.meta.tsv": {
+    "sha256": "f509af68bb3578563bfa9d544f80d1302db101313a4a946a1012ba9ff878a986",
+    "archived": true
+  },
+  "a2/latest.tsv": {
+    "sha256": "14c9aacdd09e791f5b68bce32b1c01f9df3efdbb2d4d309f3eb8d16dbe1c9c8f",
+    "archived": true
+  },
+  "a2/native/iris-customer/normal/wire.json": {
+    "sha256": "5a421bbd5aba27476017ad766a9fab6a1e43dff2de58c1043647428eb62eb197",
+    "archived": true
+  },
+  "a2/native/iris-customer/recovered/wire.json": {
+    "sha256": "5a421bbd5aba27476017ad766a9fab6a1e43dff2de58c1043647428eb62eb197",
+    "archived": true
+  },
+  "a2/native/iris-customer/uncaught/wire.json": {
+    "sha256": "5a421bbd5aba27476017ad766a9fab6a1e43dff2de58c1043647428eb62eb197",
+    "archived": true
+  },
+  "shared/bin/coverageharness": {
+    "sha256": "36a4a53544fa2bf077a302421f55f0333e2d806d827e4ed42ca09f7e36298e97",
+    "archived": false
+  },
+  "shared/go-run/recovery-typing__direct-true/main.go": {
+    "sha256": "e321f23555789e5bcea443e11ee18141783c7f78ddf3ef8cf614afda029b3c8e",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__direct-true/oracle.crash": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__direct-true/oracle.read.err": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__direct-true/oracle.registered": {
+    "sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__direct-true/oracle.split.err": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__direct-true/oracle.stderr": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__direct-true/oracle.stdout": {
+    "sha256": "35d9d4b19708129cae7fd973d15014dd8b983d4e29db508cbb91766d1c7a8e22",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__direct-true/zz_golean_crash.go": {
+    "sha256": "439bc1d4f475c0abc768804f521f7ccf04819612ff9bc32d25aabb248a816673",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__direct-true/zz_golean_harness.go": {
+    "sha256": "fa0b417ce663a5782d66b51f074d98ec897014b722bbb0c3a37c67bc17455163",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__outside/main.go": {
+    "sha256": "e321f23555789e5bcea443e11ee18141783c7f78ddf3ef8cf614afda029b3c8e",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__outside/oracle.crash": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__outside/oracle.read.err": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__outside/oracle.registered": {
+    "sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__outside/oracle.split.err": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__outside/oracle.stderr": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__outside/oracle.stdout": {
+    "sha256": "35d9d4b19708129cae7fd973d15014dd8b983d4e29db508cbb91766d1c7a8e22",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__outside/zz_golean_crash.go": {
+    "sha256": "439bc1d4f475c0abc768804f521f7ccf04819612ff9bc32d25aabb248a816673",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__outside/zz_golean_harness.go": {
+    "sha256": "47c15e617651d7b7ff5070849f19fc80edb36d3966349fba0f0c3aad0dfff5c0",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__reversed-true/main.go": {
+    "sha256": "e321f23555789e5bcea443e11ee18141783c7f78ddf3ef8cf614afda029b3c8e",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__reversed-true/oracle.crash": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__reversed-true/oracle.read.err": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__reversed-true/oracle.registered": {
+    "sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__reversed-true/oracle.split.err": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__reversed-true/oracle.stderr": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__reversed-true/oracle.stdout": {
+    "sha256": "35d9d4b19708129cae7fd973d15014dd8b983d4e29db508cbb91766d1c7a8e22",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__reversed-true/zz_golean_crash.go": {
+    "sha256": "439bc1d4f475c0abc768804f521f7ccf04819612ff9bc32d25aabb248a816673",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__reversed-true/zz_golean_harness.go": {
+    "sha256": "8be18f5014c0dc505f64b08e08a1c0dbd4f2c1dc0688911e792a0f2e11bdcd5c",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__shared-false/main.go": {
+    "sha256": "e321f23555789e5bcea443e11ee18141783c7f78ddf3ef8cf614afda029b3c8e",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__shared-false/oracle.crash": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__shared-false/oracle.read.err": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__shared-false/oracle.registered": {
+    "sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__shared-false/oracle.split.err": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__shared-false/oracle.stderr": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__shared-false/oracle.stdout": {
+    "sha256": "35d9d4b19708129cae7fd973d15014dd8b983d4e29db508cbb91766d1c7a8e22",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__shared-false/zz_golean_crash.go": {
+    "sha256": "439bc1d4f475c0abc768804f521f7ccf04819612ff9bc32d25aabb248a816673",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__shared-false/zz_golean_harness.go": {
+    "sha256": "1eacdafcc1d48da0dff6078dc79fdae1e58c0fae206a44350aca78ca3a1cc89c",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__shared-true/main.go": {
+    "sha256": "e321f23555789e5bcea443e11ee18141783c7f78ddf3ef8cf614afda029b3c8e",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__shared-true/oracle.crash": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__shared-true/oracle.read.err": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__shared-true/oracle.registered": {
+    "sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__shared-true/oracle.split.err": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__shared-true/oracle.stderr": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__shared-true/oracle.stdout": {
+    "sha256": "75946e3320a84cd9ac025b11d9a781bd49dd3a80f514ad3860c73dfb26c0940a",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__shared-true/zz_golean_crash.go": {
+    "sha256": "439bc1d4f475c0abc768804f521f7ccf04819612ff9bc32d25aabb248a816673",
+    "archived": true
+  },
+  "shared/go-run/recovery-typing__shared-true/zz_golean_harness.go": {
+    "sha256": "e4a97a86a850a140f969f7d7363da93207385c4edcff990819e12487a965cc1a",
+    "archived": true
+  },
+  "shared/latest.meta.tsv": {
+    "sha256": "92fc6900dc4c41c7d6f75c72bd4c0044d852cacd3e52d3793248de71a713787e",
+    "archived": true
+  },
+  "shared/latest.tsv": {
+    "sha256": "b76fcd56777458867ee507d17b147864da5b77669d727fcfca5c9337997ecaf0",
+    "archived": true
+  },
+  "shared/native/recovery-typing/direct-true/wire.json": {
+    "sha256": "e9ce56299ec508352aba26621f24c303d3b410bb6f90f2dfb1776cd1e562d470",
+    "archived": true
+  },
+  "shared/native/recovery-typing/outside/wire.json": {
+    "sha256": "e9ce56299ec508352aba26621f24c303d3b410bb6f90f2dfb1776cd1e562d470",
+    "archived": true
+  },
+  "shared/native/recovery-typing/reversed-true/wire.json": {
+    "sha256": "e9ce56299ec508352aba26621f24c303d3b410bb6f90f2dfb1776cd1e562d470",
+    "archived": true
+  },
+  "shared/native/recovery-typing/shared-false/wire.json": {
+    "sha256": "e9ce56299ec508352aba26621f24c303d3b410bb6f90f2dfb1776cd1e562d470",
+    "archived": true
+  },
+  "shared/native/recovery-typing/shared-true/wire.json": {
+    "sha256": "e9ce56299ec508352aba26621f24c303d3b410bb6f90f2dfb1776cd1e562d470",
+    "archived": true
+  }
+}

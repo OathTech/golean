@@ -1,0 +1,7 @@
+{
+  "source_tree": "/home/dev/projects/golean/.claude/worktrees/typed-string-members",
+  "path": "Tests/PanicRendering.lean",
+  "sha256": "98ac1be2cb22e262b515ac97408ceba095123d939bdc51ad6fec7920b327dd85",
+  "purpose": "Compile facade customer against the pending renderer instead of the superseded invalid-byte refusal test",
+  "acceptance": "pending renderer owner sealing"
+}

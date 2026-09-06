@@ -1,0 +1,182 @@
+[
+  {
+    "path": "baselines/string-members/panic-recover/repanic-same-value-abort.json",
+    "added": [
+      "GoLean/GoCore/RecoveryCallLayout.lean",
+      "GoLean/GoCore/RecoveryChoices.lean",
+      "GoLean/GoCore/RecoveryPool.lean",
+      "GoLean/GoCore/RecoveryPoolObservationTyped.lean",
+      "GoLean/GoCore/RecoverySingleton.lean",
+      "GoLean/GoCore/RecoveryTerminal.lean"
+    ],
+    "changed": [
+      "GoLean/Interface.lean",
+      "Tests/InterfaceAudit.lean",
+      "lakefile.toml",
+      "scripts/check-interface",
+      "scripts/check-interface.py",
+      "scripts/ci"
+    ],
+    "only_changed_field": "binding.apparatus_sources"
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/controls.json",
+    "added": [
+      "GoLean/GoCore/RecoveryCallLayout.lean",
+      "GoLean/GoCore/RecoveryChoices.lean",
+      "GoLean/GoCore/RecoveryPool.lean",
+      "GoLean/GoCore/RecoveryPoolObservationTyped.lean",
+      "GoLean/GoCore/RecoverySingleton.lean",
+      "GoLean/GoCore/RecoveryTerminal.lean"
+    ],
+    "changed": [
+      "GoLean/Interface.lean",
+      "Tests/InterfaceAudit.lean",
+      "lakefile.toml",
+      "scripts/check-interface",
+      "scripts/check-interface.py",
+      "scripts/ci"
+    ],
+    "only_changed_field": "binding.apparatus_sources"
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/equal.json",
+    "added": [
+      "GoLean/GoCore/RecoveryCallLayout.lean",
+      "GoLean/GoCore/RecoveryChoices.lean",
+      "GoLean/GoCore/RecoveryPool.lean",
+      "GoLean/GoCore/RecoveryPoolObservationTyped.lean",
+      "GoLean/GoCore/RecoverySingleton.lean",
+      "GoLean/GoCore/RecoveryTerminal.lean"
+    ],
+    "changed": [
+      "GoLean/Interface.lean",
+      "Tests/InterfaceAudit.lean",
+      "lakefile.toml",
+      "scripts/check-interface",
+      "scripts/check-interface.py",
+      "scripts/ci"
+    ],
+    "only_changed_field": "binding.apparatus_sources"
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/invalid-after-lf.json",
+    "added": [
+      "GoLean/GoCore/RecoveryCallLayout.lean",
+      "GoLean/GoCore/RecoveryChoices.lean",
+      "GoLean/GoCore/RecoveryPool.lean",
+      "GoLean/GoCore/RecoveryPoolObservationTyped.lean",
+      "GoLean/GoCore/RecoverySingleton.lean",
+      "GoLean/GoCore/RecoveryTerminal.lean"
+    ],
+    "changed": [
+      "GoLean/Interface.lean",
+      "Tests/InterfaceAudit.lean",
+      "lakefile.toml",
+      "scripts/check-interface",
+      "scripts/check-interface.py",
+      "scripts/ci"
+    ],
+    "only_changed_field": "binding.apparatus_sources"
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/invalid-before-lf.json",
+    "added": [
+      "GoLean/GoCore/RecoveryCallLayout.lean",
+      "GoLean/GoCore/RecoveryChoices.lean",
+      "GoLean/GoCore/RecoveryPool.lean",
+      "GoLean/GoCore/RecoveryPoolObservationTyped.lean",
+      "GoLean/GoCore/RecoverySingleton.lean",
+      "GoLean/GoCore/RecoveryTerminal.lean"
+    ],
+    "changed": [
+      "GoLean/Interface.lean",
+      "Tests/InterfaceAudit.lean",
+      "lakefile.toml",
+      "scripts/check-interface",
+      "scripts/check-interface.py",
+      "scripts/ci"
+    ],
+    "only_changed_field": "binding.apparatus_sources"
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/invalid-recovered.json",
+    "added": [
+      "GoLean/GoCore/RecoveryCallLayout.lean",
+      "GoLean/GoCore/RecoveryChoices.lean",
+      "GoLean/GoCore/RecoveryPool.lean",
+      "GoLean/GoCore/RecoveryPoolObservationTyped.lean",
+      "GoLean/GoCore/RecoverySingleton.lean",
+      "GoLean/GoCore/RecoveryTerminal.lean"
+    ],
+    "changed": [
+      "GoLean/Interface.lean",
+      "Tests/InterfaceAudit.lean",
+      "lakefile.toml",
+      "scripts/check-interface",
+      "scripts/check-interface.py",
+      "scripts/ci"
+    ],
+    "only_changed_field": "binding.apparatus_sources"
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/multiple.json",
+    "added": [
+      "GoLean/GoCore/RecoveryCallLayout.lean",
+      "GoLean/GoCore/RecoveryChoices.lean",
+      "GoLean/GoCore/RecoveryPool.lean",
+      "GoLean/GoCore/RecoveryPoolObservationTyped.lean",
+      "GoLean/GoCore/RecoverySingleton.lean",
+      "GoLean/GoCore/RecoveryTerminal.lean"
+    ],
+    "changed": [
+      "GoLean/Interface.lean",
+      "Tests/InterfaceAudit.lean",
+      "lakefile.toml",
+      "scripts/check-interface",
+      "scripts/check-interface.py",
+      "scripts/ci"
+    ],
+    "only_changed_field": "binding.apparatus_sources"
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/unequal.json",
+    "added": [
+      "GoLean/GoCore/RecoveryCallLayout.lean",
+      "GoLean/GoCore/RecoveryChoices.lean",
+      "GoLean/GoCore/RecoveryPool.lean",
+      "GoLean/GoCore/RecoveryPoolObservationTyped.lean",
+      "GoLean/GoCore/RecoverySingleton.lean",
+      "GoLean/GoCore/RecoveryTerminal.lean"
+    ],
+    "changed": [
+      "GoLean/Interface.lean",
+      "Tests/InterfaceAudit.lean",
+      "lakefile.toml",
+      "scripts/check-interface",
+      "scripts/check-interface.py",
+      "scripts/ci"
+    ],
+    "only_changed_field": "binding.apparatus_sources"
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/unicode.json",
+    "added": [
+      "GoLean/GoCore/RecoveryCallLayout.lean",
+      "GoLean/GoCore/RecoveryChoices.lean",
+      "GoLean/GoCore/RecoveryPool.lean",
+      "GoLean/GoCore/RecoveryPoolObservationTyped.lean",
+      "GoLean/GoCore/RecoverySingleton.lean",
+      "GoLean/GoCore/RecoveryTerminal.lean"
+    ],
+    "changed": [
+      "GoLean/Interface.lean",
+      "Tests/InterfaceAudit.lean",
+      "lakefile.toml",
+      "scripts/check-interface",
+      "scripts/check-interface.py",
+      "scripts/ci"
+    ],
+    "only_changed_field": "binding.apparatus_sources"
+  }
+]

@@ -35,6 +35,10 @@ for module in GoLean/GoCore/PanicText GoLean/GoCore/StringPanic \
     GoLean/GoCore/RecoveryStatementProgress GoLean/GoCore/RecoveryFrameProgress \
     GoLean/GoCore/RecoveryPanicProgress GoLean/GoCore/RecoveryInvariant \
     GoLean/GoCore/RecoverySuccessfulRuns Tests/RecoveryInvariant Tests/RecoveryControlAudit \
+    GoLean/GoCore/RecoveryCallLayout GoLean/GoCore/RecoverySingleton \
+    GoLean/GoCore/RecoveryPool GoLean/GoCore/RecoveryChoices \
+    GoLean/GoCore/RecoveryTerminal GoLean/GoCore/RecoveryPoolObservationTyped \
+    Tests/RecoveryTerminal Tests/RecoveryTerminalAudit \
     GoLean/Interface Tests/PanicRendering Tests/StringPanicMembers Tests/InterfaceContract Tests/BooleanRuntime \
     Tests/BooleanProgram Tests/InterfaceAudit; do
   "$ROOT/scripts/capped" lake env lean "$module.lean"

@@ -1,0 +1,9 @@
+{
+  "private-same-shape": true,
+  "private-mixed-shape-permuted": true,
+  "private-duplicate-header-use": false,
+  "private-missing-header": false,
+  "duplicate-positive-member": false,
+  "duplicate-native-type-and-index": false,
+  "duplicate-native-type-distinct-index": false
+}

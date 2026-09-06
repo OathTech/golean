@@ -1,0 +1,7 @@
+/home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.tmp/i1-envelope-independent-e5fgsng7/probes-v2/private-same-shape.json|ACCEPTED|p.m:0/0/false,q.m:0/0/false
+/home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.tmp/i1-envelope-independent-e5fgsng7/probes-v2/private-mixed-shape-permuted.json|ACCEPTED|p.m:1/0/false,q.m:0/1/false
+/home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.tmp/i1-envelope-independent-e5fgsng7/probes-v2/private-duplicate-header-use.json|REJECTED|declarations.interfaces: native interface header has no remaining requirement with matching name/arity/variadicness
+/home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.tmp/i1-envelope-independent-e5fgsng7/probes-v2/private-missing-header.json|REJECTED|declarations.interfaces: incomplete interface requirement set
+/home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.tmp/i1-envelope-independent-e5fgsng7/probes-v2/duplicate-positive-member.json|REJECTED|declaration: duplicate interface method 'm'
+/home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.tmp/i1-envelope-independent-e5fgsng7/probes-v2/duplicate-native-type-and-index.json|REJECTED|declarations: duplicate native type identity
+/home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.tmp/i1-envelope-independent-e5fgsng7/probes-v2/duplicate-native-type-distinct-index.json|REJECTED|declarations: duplicate native type identity

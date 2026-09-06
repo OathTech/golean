@@ -1,0 +1,11 @@
+{
+  "borrowed_artifact_root": "/home/dev/projects/golean/.claude/worktrees/typed-i1-envelope/.lake/build/lib/lean",
+  "linked_artifact_files": 460,
+  "fresh_modules": [
+    "GoLean.GoCore.DeclarationContext",
+    "GoLean.NativeDeclaration",
+    "GoLean.NativeDeclarationPackage"
+  ],
+  "scope": "Reused author/base dependency artifacts; independently checked source3917 againstGitbase+frozen32. This is not an independent full dependency build.",
+  "initial_attempt": "LEAN_PATH does not fall back beneath an existing GoLean package directory; first fresh compile rejected missing Declaration.olean. No proof failure; tool transcript retained."
+}

@@ -1,0 +1,22 @@
+{
+  "parent_lib_counts": [
+    12,
+    11
+  ],
+  "final_libraries": [
+    "GoLean",
+    "TestsData",
+    "InterfaceTests",
+    "AdmissionTests",
+    "BooleanTypingTests",
+    "BooleanRuntimeTests",
+    "RecoveryTypingTests",
+    "RecoveryStorageTests",
+    "RecoverySetupTests",
+    "RecoveryControlTests",
+    "AbortObservationTests",
+    "RecoveryTerminalTests"
+  ],
+  "exact_additive_union": true,
+  "default_and_executable_unchanged": true
+}

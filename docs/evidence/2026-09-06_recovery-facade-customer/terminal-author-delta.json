@@ -1,0 +1,11 @@
+{
+  "base_manifest_fingerprint": "3ecd4123092b3599f3faa6ff39c4283ea23012c01e355f04e8d107ead7a4f693",
+  "differences": [
+    {
+      "path": "scripts/check-recovery-terminal",
+      "before": "1d548ed5a722a0407d73d369c9fe422db3e43d3f0af3b347267bd3c78cc191ae",
+      "after": "47fa6b66e4ca01adae37bc63bc6c463e38bcde60a11cf075fc50dbf72f7a262e"
+    }
+  ],
+  "reason": "Keep Lake package metadata during fresh .olean generation; fixes later CLI initializer linkage. All semantic/test theorem sources unchanged."
+}

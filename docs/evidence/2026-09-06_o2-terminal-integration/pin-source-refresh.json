@@ -1,0 +1,173 @@
+[
+  {
+    "path": "baselines/string-members/panic-recover/repanic-same-value-abort.json",
+    "integration_parent_count": 170,
+    "feature_parent_count": 166,
+    "combined_count": 172,
+    "added_from_integration": [
+      "GoLean/GoCore/RecoveryPoolObservationTyped.lean",
+      "GoLean/GoCore/RecoveryTerminal.lean"
+    ],
+    "changed_from_integration": [
+      "GoLean/Interface.lean",
+      "Tests/InterfaceAudit.lean",
+      "lakefile.toml",
+      "scripts/check-interface",
+      "scripts/check-interface.py",
+      "scripts/ci"
+    ],
+    "every_other_field_identical_to_both_parents": true
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/controls.json",
+    "integration_parent_count": 170,
+    "feature_parent_count": 166,
+    "combined_count": 172,
+    "added_from_integration": [
+      "GoLean/GoCore/RecoveryPoolObservationTyped.lean",
+      "GoLean/GoCore/RecoveryTerminal.lean"
+    ],
+    "changed_from_integration": [
+      "GoLean/Interface.lean",
+      "Tests/InterfaceAudit.lean",
+      "lakefile.toml",
+      "scripts/check-interface",
+      "scripts/check-interface.py",
+      "scripts/ci"
+    ],
+    "every_other_field_identical_to_both_parents": true
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/equal.json",
+    "integration_parent_count": 170,
+    "feature_parent_count": 166,
+    "combined_count": 172,
+    "added_from_integration": [
+      "GoLean/GoCore/RecoveryPoolObservationTyped.lean",
+      "GoLean/GoCore/RecoveryTerminal.lean"
+    ],
+    "changed_from_integration": [
+      "GoLean/Interface.lean",
+      "Tests/InterfaceAudit.lean",
+      "lakefile.toml",
+      "scripts/check-interface",
+      "scripts/check-interface.py",
+      "scripts/ci"
+    ],
+    "every_other_field_identical_to_both_parents": true
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/invalid-after-lf.json",
+    "integration_parent_count": 170,
+    "feature_parent_count": 166,
+    "combined_count": 172,
+    "added_from_integration": [
+      "GoLean/GoCore/RecoveryPoolObservationTyped.lean",
+      "GoLean/GoCore/RecoveryTerminal.lean"
+    ],
+    "changed_from_integration": [
+      "GoLean/Interface.lean",
+      "Tests/InterfaceAudit.lean",
+      "lakefile.toml",
+      "scripts/check-interface",
+      "scripts/check-interface.py",
+      "scripts/ci"
+    ],
+    "every_other_field_identical_to_both_parents": true
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/invalid-before-lf.json",
+    "integration_parent_count": 170,
+    "feature_parent_count": 166,
+    "combined_count": 172,
+    "added_from_integration": [
+      "GoLean/GoCore/RecoveryPoolObservationTyped.lean",
+      "GoLean/GoCore/RecoveryTerminal.lean"
+    ],
+    "changed_from_integration": [
+      "GoLean/Interface.lean",
+      "Tests/InterfaceAudit.lean",
+      "lakefile.toml",
+      "scripts/check-interface",
+      "scripts/check-interface.py",
+      "scripts/ci"
+    ],
+    "every_other_field_identical_to_both_parents": true
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/invalid-recovered.json",
+    "integration_parent_count": 170,
+    "feature_parent_count": 166,
+    "combined_count": 172,
+    "added_from_integration": [
+      "GoLean/GoCore/RecoveryPoolObservationTyped.lean",
+      "GoLean/GoCore/RecoveryTerminal.lean"
+    ],
+    "changed_from_integration": [
+      "GoLean/Interface.lean",
+      "Tests/InterfaceAudit.lean",
+      "lakefile.toml",
+      "scripts/check-interface",
+      "scripts/check-interface.py",
+      "scripts/ci"
+    ],
+    "every_other_field_identical_to_both_parents": true
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/multiple.json",
+    "integration_parent_count": 170,
+    "feature_parent_count": 166,
+    "combined_count": 172,
+    "added_from_integration": [
+      "GoLean/GoCore/RecoveryPoolObservationTyped.lean",
+      "GoLean/GoCore/RecoveryTerminal.lean"
+    ],
+    "changed_from_integration": [
+      "GoLean/Interface.lean",
+      "Tests/InterfaceAudit.lean",
+      "lakefile.toml",
+      "scripts/check-interface",
+      "scripts/check-interface.py",
+      "scripts/ci"
+    ],
+    "every_other_field_identical_to_both_parents": true
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/unequal.json",
+    "integration_parent_count": 170,
+    "feature_parent_count": 166,
+    "combined_count": 172,
+    "added_from_integration": [
+      "GoLean/GoCore/RecoveryPoolObservationTyped.lean",
+      "GoLean/GoCore/RecoveryTerminal.lean"
+    ],
+    "changed_from_integration": [
+      "GoLean/Interface.lean",
+      "Tests/InterfaceAudit.lean",
+      "lakefile.toml",
+      "scripts/check-interface",
+      "scripts/check-interface.py",
+      "scripts/ci"
+    ],
+    "every_other_field_identical_to_both_parents": true
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/unicode.json",
+    "integration_parent_count": 170,
+    "feature_parent_count": 166,
+    "combined_count": 172,
+    "added_from_integration": [
+      "GoLean/GoCore/RecoveryPoolObservationTyped.lean",
+      "GoLean/GoCore/RecoveryTerminal.lean"
+    ],
+    "changed_from_integration": [
+      "GoLean/Interface.lean",
+      "Tests/InterfaceAudit.lean",
+      "lakefile.toml",
+      "scripts/check-interface",
+      "scripts/check-interface.py",
+      "scripts/ci"
+    ],
+    "every_other_field_identical_to_both_parents": true
+  }
+]

@@ -1,0 +1,153 @@
+{
+  "scope": "read-only additive union review; no Lean replay or completion claim",
+  "source_count": 3952,
+  "source_sha256": "8eff45c52710b67cc22971dc0517562cc517286854279cacb4b7d9d146a2dcd3",
+  "feature_count": 239,
+  "feature_changes": {
+    "baselines/string-members/panic-recover/repanic-same-value-abort.json": {
+      "feature": "0d848db5d2cc4187c0a99542e4720347ca5e4c6f322075147d8c4fa9fbbddc1f",
+      "integrated": "e4fa7ece0993fddbf04f3e493473e20a323fd41325a26cbca2bfa354a6875def"
+    },
+    "baselines/string-members/panic-recover/string-members/controls.json": {
+      "feature": "f75d89154502afca79da8946769f115b13b687a1de554edb949b535077597a0f",
+      "integrated": "d2f38f811342f1bbfc0314c1cbe026bcf9128a1563775e9c3bb240f80ec8d8ae"
+    },
+    "baselines/string-members/panic-recover/string-members/equal.json": {
+      "feature": "6a02c0f482159642b011d7587bd815dc951da31f004b9e5fbf8e9ea45e0dcfbc",
+      "integrated": "d0e1492130fdb9074253444ff0a786a8058ee46fa54a7a31c578f067f84312ff"
+    },
+    "baselines/string-members/panic-recover/string-members/invalid-after-lf.json": {
+      "feature": "d0287f5bd867ea0392868de862f0da8180080c3e1db51d2553d37da9d470a5fa",
+      "integrated": "332bfffc636b15ea4dfeee75147e26b38e503734a4f13dbe1ded634ec3f8a065"
+    },
+    "baselines/string-members/panic-recover/string-members/invalid-before-lf.json": {
+      "feature": "e7d5d470ee068c6a2cb2d7d9d58681dec88ecc322d71bb292d2fafd098f25c7d",
+      "integrated": "2922eb282c1c14e1af7fd656d7fe03a291356d8dc269a7cc325c799f197d9646"
+    },
+    "baselines/string-members/panic-recover/string-members/invalid-recovered.json": {
+      "feature": "db8f7a256045f70579e0e7cecd1f7ae7bafd2391cb6cc84bb5bb3b5217063610",
+      "integrated": "3bff5bc0337eb097dc8005e457f9222d4fb01f94ab5f465638a0818b1281e9f2"
+    },
+    "baselines/string-members/panic-recover/string-members/multiple.json": {
+      "feature": "f2fa35f46ba40ce8c4c11f012e53040ff156bc71c1d7c61ea5bb0f78f67d75bd",
+      "integrated": "faae6b55cf84e8da18b2c8fd641211d9959f2d4db779a3cdb949f6cd585e3103"
+    },
+    "baselines/string-members/panic-recover/string-members/unequal.json": {
+      "feature": "6c34463db9ae3d1783f42ea5e0853c2d6422b6317c84c86fe692e565abc7cdf0",
+      "integrated": "c0a4a1ebb948a0006b23713166779439cf90e5dd7fc1be819c0f86382a54c387"
+    },
+    "baselines/string-members/panic-recover/string-members/unicode.json": {
+      "feature": "ad0da22813cb9d8d6eca52c526df67013b79245e466aaae683546cac5cc8841b",
+      "integrated": "5f741cbdeb34169ec64c828ce2fa280879b312b3082d47af2f105235e183857d"
+    },
+    "lakefile.toml": {
+      "feature": "285c3d792e650daadf1ceb2356758cebe7769b07b54d113a9d70252d9c32608e",
+      "integrated": "84e3d846d9d4ee61ef784ae2554b810d4e6b1045e98fb2da27da76fe638f26c3"
+    },
+    "scripts/ci": {
+      "feature": "3bd6aeb552ae5c5c0620ab4a335404d30df6ca0f56f453b31fca6a00df152a2b",
+      "integrated": "1a92998993eb2c26824895fdcb9bb6c9d6da4a1f577560e6743a7cb4602df9b2"
+    }
+  },
+  "pins": [
+    {
+      "path": "baselines/string-members/panic-recover/repanic-same-value-abort.json",
+      "source_counts": {
+        "39235f65": 170,
+        "f3971190": 166
+      },
+      "integrated_count": 172,
+      "all_other_fields_equal_to_both_parents": true
+    },
+    {
+      "path": "baselines/string-members/panic-recover/string-members/controls.json",
+      "source_counts": {
+        "39235f65": 170,
+        "f3971190": 166
+      },
+      "integrated_count": 172,
+      "all_other_fields_equal_to_both_parents": true
+    },
+    {
+      "path": "baselines/string-members/panic-recover/string-members/equal.json",
+      "source_counts": {
+        "39235f65": 170,
+        "f3971190": 166
+      },
+      "integrated_count": 172,
+      "all_other_fields_equal_to_both_parents": true
+    },
+    {
+      "path": "baselines/string-members/panic-recover/string-members/invalid-after-lf.json",
+      "source_counts": {
+        "39235f65": 170,
+        "f3971190": 166
+      },
+      "integrated_count": 172,
+      "all_other_fields_equal_to_both_parents": true
+    },
+    {
+      "path": "baselines/string-members/panic-recover/string-members/invalid-before-lf.json",
+      "source_counts": {
+        "39235f65": 170,
+        "f3971190": 166
+      },
+      "integrated_count": 172,
+      "all_other_fields_equal_to_both_parents": true
+    },
+    {
+      "path": "baselines/string-members/panic-recover/string-members/invalid-recovered.json",
+      "source_counts": {
+        "39235f65": 170,
+        "f3971190": 166
+      },
+      "integrated_count": 172,
+      "all_other_fields_equal_to_both_parents": true
+    },
+    {
+      "path": "baselines/string-members/panic-recover/string-members/multiple.json",
+      "source_counts": {
+        "39235f65": 170,
+        "f3971190": 166
+      },
+      "integrated_count": 172,
+      "all_other_fields_equal_to_both_parents": true
+    },
+    {
+      "path": "baselines/string-members/panic-recover/string-members/unequal.json",
+      "source_counts": {
+        "39235f65": 170,
+        "f3971190": 166
+      },
+      "integrated_count": 172,
+      "all_other_fields_equal_to_both_parents": true
+    },
+    {
+      "path": "baselines/string-members/panic-recover/string-members/unicode.json",
+      "source_counts": {
+        "39235f65": 170,
+        "f3971190": 166
+      },
+      "integrated_count": 172,
+      "all_other_fields_equal_to_both_parents": true
+    }
+  ],
+  "lake_libraries": [
+    "GoLean",
+    "TestsData",
+    "InterfaceTests",
+    "AdmissionTests",
+    "BooleanTypingTests",
+    "BooleanRuntimeTests",
+    "RecoveryTypingTests",
+    "RecoveryStorageTests",
+    "RecoverySetupTests",
+    "RecoveryControlTests",
+    "AbortObservationTests",
+    "DeclarationTests",
+    "RecoveryTerminalTests"
+  ],
+  "lake_exact_parent_union": true,
+  "ci_exact_additive_parent_union": true,
+  "source_revalidated_after": true
+}

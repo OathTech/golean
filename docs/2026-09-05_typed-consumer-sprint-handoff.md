@@ -794,3 +794,54 @@ review `893a7ad2` is attached, and the evidence packet retains raw focused
 artifacts, certificates, logs and hashes. This checkpoint accompanies the
 parser merge commit. The 3,635/394 full records remain cached; this merge
 adds the strict declaration byte boundary and does not finish runtime I1.
+
+### Recovery terminal integration accepted; remaining representation evidence
+
+[AGENT], 2026-09-06. The parser integration is `39235f65`. Its merge of
+O2 author/review tip `f3971190` completed root job 81343 with numerical exit
+0 for ordinary CI, nine fresh member rows and the Iris customer gate.
+Both whole native artifacts and all eight customer cases are fresh. All
+3,952 frozen input hashes and all nine 172-source certificate inventories
+revalidated. Independent additive-union review `352d09f9` is attached.
+The packet `docs/evidence/2026-09-06_o2-terminal-integration/FINAL.md`
+retains logs, exits, certificates, native artifacts and raw focused archives.
+The full 3,635/394 records remain explicitly cached. This checkpoint
+accompanies the O2 merge; the next integration is reviewed `uintptr`
+repair `5f185fb3`, with measured combined baseline and slow gates owed.
+
+B7's v2 closure work expanded the original incomplete inventory. Its
+current boundary starts with all 4,142 public/private B7Before roots and
+traverses every reachable dependency, including twenty helpers generated
+inside frozen modules whose user names are outside that namespace. A
+broader experiment rooting every frozen-module declaration found a live
+callback in a dormant generated lemma; that failure is retained and the
+final boundary requires independent review. No complete original/new
+kernel-sharing comparison is accepted yet. Full B7 CI resumed as job
+34180 on 3,988 selected inputs, using worktree-local scratch.
+
+The byte append candidate now has an exact theorem for the entire actual
+`applyStmtOp` result for arbitrary raw states and choice tapes. Its 115
+frozen inputs await root independent review and full CI. Small runtime
+measurements improve substantially, but the 2 MiB probe still times out.
+A separate diagnostic found that growing `Builder.String()` results remain
+in heap cells. Measured small runs support a source-derived prediction of
+about 17.2 GB of distinct retained byte positions for the original case,
+before the pointer-sized array representation's overhead. This is a
+prediction, not a completed 16 MiB execution. Exact-value sharing options
+need assessment; no GC, footprint change or cap increase is authorized.
+BUG-090's original capture remains incomplete.
+
+I1 envelope full CI 73832 continues on its unchanged v2 source. The positive
+declaration query probes expose 149 disagreements with legacy queries,
+all explained by the separately repaired `uintptr` collapse. A generic
+kernel bridge and a narrow diagnostic-vocabulary proposal are preserved in
+that lane's evidence; neither substitutes for connecting production queries,
+moving markers or proving the final accepted-program contract.
+
+The user's authorized primary `.tmp` cleanup removed 68,122 files whose
+mtime and ctime were older than seven days, approximately 14.2 GiB of
+allocated files. Current job scratch and all worktree-local scratch were
+preserved; deletion and verification records are in the integration tree's
+ignored `artifacts/tmp-cleanup/`. Main remains clean. O1–O5 retain their
+original scope; final integration, full evidence and closing deliverables
+remain incomplete.

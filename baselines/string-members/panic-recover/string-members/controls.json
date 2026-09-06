@@ -1,5 +1,17 @@
 {
   "binding": {
+    "control_package": "Corpus/controls/string-members/explicit",
+    "control_sources": {
+      "Corpus/controls/string-members/explicit/controls.go": "3bc20a7c4b8704a0e718dd1f614e469a7313518d26cb666e2e555758e15c53f5",
+      "Corpus/controls/string-members/explicit/main.go": "ce78507645f5fa7c3bde4f7ef4b1667d7091addba15f17611647ad17d97d5cbe"
+    },
+    "control_wire_sha256": "83dbbd45ff8cb7de89469a2b84eec08bf8ae2a99a615727c9335c936139ada68",
+    "go_oracle_pin_sha256": "d7fc93cf6a8cc56b2bac2e3887baf871a14e0d8aaedb91c625f9a8d5f0f9fb74",
+    "go_sources": {
+      "Corpus/coverage/exec/panic-recover/string-members/main.go": "ce78507645f5fa7c3bde4f7ef4b1667d7091addba15f17611647ad17d97d5cbe"
+    },
+    "go_toolchain": "go1.26.5",
+    "native_wire_sha256": "af69d6f5fd0f3ab31b1e82138cd5baf689766ed2ccfa490e44b34b17ac51e33e",
     "apparatus_sources": {
       "GoLean.lean": "ac3abf7741a51eae51d71a68574547fd3b8236b9734b19fce2fccf0df56b4118",
       "GoLean/CLI.lean": "c0e6664f934f640c0437926997c0034d3ad083bc18f6d03f65564a37c3ee0b43",
@@ -68,6 +80,7 @@
       "GoLean/GoCore/RecoveryPanicProgress.lean": "b7fa027394b53d60ff68438d403d10aa19cfb0d6bfbd82923702bd37257c1245",
       "GoLean/GoCore/RecoveryPool.lean": "6235b7f0f4fa2d97fa34aeb9725d20997ed0ae2d93c1dfa5815dedc98ca5709b",
       "GoLean/GoCore/RecoveryPoolObservation.lean": "3f521443b0a7366618f4dcad477ec9eb37304109889e96323b39ebecfea83922",
+      "GoLean/GoCore/RecoveryPoolObservationTyped.lean": "25c7f0af8fcd335d4cbecc177c59eb378b9206297dcbd2381a45308f081a80a3",
       "GoLean/GoCore/RecoveryProgramObservation.lean": "cb1cc4c842f00547a36fcd871b20f9239b341350b472ab5813aa378ed8023b62",
       "GoLean/GoCore/RecoveryResultRoots.lean": "c0b71818ffe90a6dcace26867048836f213b216f388db8c00929af8d2513fbdb",
       "GoLean/GoCore/RecoverySetup.lean": "d3d97a9ddb3f1b968c2c226cb973af205bd25e783e2bb6d30ba71aecc855fef1",
@@ -79,6 +92,7 @@
       "GoLean/GoCore/RecoveryStatements.lean": "8af47f19b6b48760e082b4c6f8c05009f99d9d5dc2a910a1cf2ba6b1cdfd1456",
       "GoLean/GoCore/RecoveryStore.lean": "c7ae5099d2c7cb1aa75a588e760625c51c6b44516ff235bb30711cd1496c28f7",
       "GoLean/GoCore/RecoverySuccessfulRuns.lean": "853cf53c2994924ffedaedd4e3f8404201e8770d799a277ee4539f7194dbc466",
+      "GoLean/GoCore/RecoveryTerminal.lean": "84c0fea9d00f2f4db47e816d14a90265d795aea2cedcee4673091f6fc890b800",
       "GoLean/GoCore/RecoveryTypingCore.lean": "9314b0d0a71cef7c8d14146faad5d755adcdac3650269aba0ab9beeac0dd430a",
       "GoLean/GoCore/RecoveryValueBasic.lean": "d14c79064ad69303093374e5b88380efcf14060f96714550503dc2fe010cee32",
       "GoLean/GoCore/RecoveryValueCalls.lean": "92fdb6e6fe06283df2c802b2e11d58eb1498e21a659712a0ad3def4e3e32b1e5",
@@ -92,22 +106,22 @@
       "GoLean/GoCore/SyntaxEqb.lean": "6cf143de012e27584a92c50407e30b4379a1cb920e645c43354287822445b8f8",
       "GoLean/GoCore/Trace.lean": "44f18eb28239728c401993719ef1ec0ce11873b18e32d19f694fdb31b97b8f4e",
       "GoLean/GoCore/Value.lean": "aeded44416b5f286fc12033922cfab35d43d46c7d45fb7c6e8ea106e9eab6f8e",
-      "GoLean/Interface.lean": "3d3c084cc7018f8bc4c215a7c53e10f58a82c54c4bd1aab0e7afef6e26de13a2",
+      "GoLean/Interface.lean": "094d8010ad8bdd8329cf73453c66a51aaa4b82cad16890c71f960d8978273570",
       "GoLean/NativeDeclaration.lean": "c904b03e5321303a337409faf38cdc69e0efaeb4a799b4e906d922088fa33a9f",
       "GoLean/NativeToIR.lean": "4c285581caf0cf0d0b7b7044f7e9b478adc4c8ed2859ca717b35a2cbc55e0a7d",
       "GoLean/StrictJson.lean": "6b6531a7a92762066b37c717e7aadd75db55dfe36e7605430cfa7eea0902511f",
       "GoLean/StrictJsonParse.lean": "625da21980d13c56c555b6bd4e7564593f9b35517f2e6f6e8b8b89c500ca088e",
       "Main.lean": "3183fcfae553db4e5d34e3678d6f036e54894657b4505126b78759fd8925dcbb",
-      "Tests/InterfaceAudit.lean": "51aaeb341136bd59f0bd7e24d65eda098a99a09d055a23d9b499a613fc32837d",
+      "Tests/InterfaceAudit.lean": "28cd0c1c574c81f13df14836785bda2ee983ad095cadbbedb8c8c1e738517d36",
       "Tests/PanicRendering.lean": "98ac1be2cb22e262b515ac97408ceba095123d939bdc51ad6fec7920b327dd85",
       "Tests/StringPanicMembers.lean": "ff85ecbb56e1e170e84c359c332cf630d0d9ba6cf1abe062d72db52f25a273c4",
       "baselines/stdlib-pin.tsv": "e371f7206701add9b28ccbb39298e79478dd3163b4531e3790b59dc152cac81e",
-      "lakefile.toml": "da5686da0e6ac0760148c8640d05394c0d42e8496a83daca2009084085886004",
+      "lakefile.toml": "84e3d846d9d4ee61ef784ae2554b810d4e6b1045e98fb2da27da76fe638f26c3",
       "lean-toolchain": "2bdc48adfa58d0017e538a0ad117c5d73d35deec879978f909406a80c8037273",
-      "scripts/check-interface": "8030999942451a0feb0c973cb5e863ac8c0d27c9648eb37c5f37d1c11dafff7e",
-      "scripts/check-interface.py": "e05a9468c862c4b5c77d1ce5cb74d53298da0d084d8af8cd7192722450071e8e",
+      "scripts/check-interface": "4992d9cfbbac0f9bef06df057ad97a85c9028522dbfad4c7de9383ac9bbdde00",
+      "scripts/check-interface.py": "b16917103ce7da417bc40240c32ecafc7f04cd626b76b9347587364f15249d3a",
       "scripts/check-string-members.py": "0f160831fbfaf4026b265802f7ff2b29079a93e69d8704582fac3b3f1c16d9be",
-      "scripts/ci": "4ab07763523e024bce3bcbadc42734014f2f94ae35f356ba47ffe47cf55b30fb",
+      "scripts/ci": "1a92998993eb2c26824895fdcb9bb6c9d6da4a1f577560e6743a7cb4602df9b2",
       "scripts/coverage-baseline-diff": "5c1ed628e4edc0d113f2ac16a5403f26cb3811902747d07c6eb04ba9c87486ac",
       "scripts/coverage-manifest": "84af3021eb43e6575a91b831d06b9606212297d7544906764d98b4b436378c44",
       "scripts/diff-coverage": "04c48c432aed8095adfc254de05b59fb35253e27e52f0bf615d3ad22c7748e7b",
@@ -171,19 +185,7 @@
       "tools/string_member.py": "3c31a8c2f93e7064db874dc82a26aa2ae36d431e7e26edf585fbc60f70ad573a",
       "tools/string_member_runner.py": "6de377bb1a70d96bd6d66b4e018063a9a8d5a084964ed6c2041b9ca6184ce65d",
       "tools/test_string_member.py": "589984550fd580b81ba89f510504f59753469c4e3f882dc3a66d57c305788304"
-    },
-    "control_package": "Corpus/controls/string-members/explicit",
-    "control_sources": {
-      "Corpus/controls/string-members/explicit/controls.go": "3bc20a7c4b8704a0e718dd1f614e469a7313518d26cb666e2e555758e15c53f5",
-      "Corpus/controls/string-members/explicit/main.go": "ce78507645f5fa7c3bde4f7ef4b1667d7091addba15f17611647ad17d97d5cbe"
-    },
-    "control_wire_sha256": "83dbbd45ff8cb7de89469a2b84eec08bf8ae2a99a615727c9335c936139ada68",
-    "go_oracle_pin_sha256": "d7fc93cf6a8cc56b2bac2e3887baf871a14e0d8aaedb91c625f9a8d5f0f9fb74",
-    "go_sources": {
-      "Corpus/coverage/exec/panic-recover/string-members/main.go": "ce78507645f5fa7c3bde4f7ef4b1667d7091addba15f17611647ad17d97d5cbe"
-    },
-    "go_toolchain": "go1.26.5",
-    "native_wire_sha256": "af69d6f5fd0f3ab31b1e82138cd5baf689766ed2ccfa490e44b34b17ac51e33e"
+    }
   },
   "case": "panic-recover/string-members/controls",
   "controls": {

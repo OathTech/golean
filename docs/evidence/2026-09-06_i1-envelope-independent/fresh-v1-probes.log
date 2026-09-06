@@ -1,0 +1,2 @@
+ACCEPTED; interfaces=2
+REJECTED: declarations.interfaces: duplicate native interface requirement

@@ -1,0 +1,767 @@
+
+[1m── build parallelism (LEAN_NUM_THREADS scaled to the memory cap)[0m
+  LEAN_NUM_THREADS=3 (set by the caller — honoured as-is)
+
+[1m── oracle toolchain pin (baselines/go-oracle-pin)[0m
+
+[1m── escape-hatch preflight (sorry / admit / native_decide / axiom in the semantic core)[0m
+  none found
+
+[1m── meta-layer escape hatches (unsafe / opaque / @[implemented_by] outside the allowlist)[0m
+  none found
+
+[1m── escape-hatch addendum (decide +native / config-syntax native spellings — A-TRIP F4)[0m
+  none found
+
+[1m── fidelity-bug index cross-check (scripts/check-bugs.sh)[0m
+  check-bugs: ok (106 bug(s); pinned cases behave as claimed)
+  check-bugs: backlog — 14 unexplained fidelity failure(s): coverage 10/10; latitude 4/4; wrong-answer 0/0 ('scripts/check-bugs.sh --list')
+  check-bugs: 'wrong-answer' is the class that ratchets toward 0; 'coverage' retires when the feature lands and 'latitude' only by an envelope.
+
+[1m── feature-coverage cross-check (scripts/check-coverage)[0m
+    cond, goexit, real
+  check-coverage: ok (137 canonical tags; no dead tags; 3 all-failing (warn))
+
+[1m── spec-anchor citations (scripts/check-spec-anchors)[0m
+  check-spec-anchors: ok — 1444 spec# + 375 mem# + 32 godoc: citations all resolve at pin c19862e5f
+
+[1m── stdlib admission register (scripts/check-stdlib-register)[0m
+  check-stdlib-register: ok — register machine block = frontend tables (source-through=13 (uncapped); substitution=5 (uncapped; each names its upstream twin); overlay=5 / cap 12 (expr sites, stdlib-overlay.tsv; byte-checked at every load); overlay-import=5 / cap 8 (consequential import neutralizations of overlaid files; no semantics; own cap, [AGENT]-provisional pending [USER]); intercept=0 (library members whose direct call the frontend lowers to a machine op or a retained desugar instead of the library body — stdlibreach.go frontendInterceptedLibraryMembers, one predicate for reach walk and emitter); primitive=2 / cap 2; shim=6 (frozen, D-002; retired by rows of memo §3); shadow-type=5; init-callee=3 (H-11 pureUnmodeledCallees: unmodeled stdlib functions a package-level initializer may call and still be SKIPPED with its vars poisoned; each row states result-only + panic-free over the admitted argument shapes; a row is an admission, not a model))
+  check-stdlib-register: ok — overlay table verified at the pin: errors: overlaid package type-checks
+  internal/stringslite: overlaid package type-checks
+  strings: overlaid package type-checks
+  5 expr row(s) (cap 12), 5 import row(s) (cap 8): every row's bytes verified at the pinned checkout; every overlaid package type-checked
+
+[1m── membership-lane gate self-test (scripts/test-lane-validation; incl. G1-G4 no-publish)[0m
+  test-lane-validation: ok
+
+[1m── imported-goose verbatim staleness (scripts/check-imported-goose)[0m
+check-imported-goose: ok — 82 imported case(s) verbatim against goose @ 3be88bb
+
+[1m── engine-isolation lint (semantic core imports no EnumDedup — CLI-only by design)[0m
+
+[1m── core build (lake build; must be WARNING-free — GoLean/ module warnings
+# replay into the runner's stdout and corrupt the JSON observation channel,
+# the recorded ops failure mode that produced mass phantom drift 2026-07-23)[0m
+✔ [192/194] Built Main (233ms)
+✔ [194/194] Built golean:exe (1.1s)
+Build completed successfully (194 jobs).
+
+[1m── semantic interface (Iris-free correspondence regressions and dependency audit)[0m
+✔ [94/101] Built Tests.RecoveryTerminal (6.3s)
+✔ [95/101] Built Tests.PanicRendering (650ms)
+✔ [96/101] Built Tests.BooleanRuntime (7.8s)
+✔ [97/101] Built Tests.RecoveryTerminalAudit (1.1s)
+✔ [98/101] Built Tests.InterfaceContract (2.0s)
+✔ [99/101] Built Tests.BooleanProgram (12s)
+✔ [100/101] Built Tests.InterfaceAudit (867ms)
+Build completed successfully (101 jobs).
+Semantic interface source fingerprint: 1a270a4e4920de06bc31b977eacaec30f26eca3ea311efeb634dd1ae289f954d
+Semantic interface: 160 required exports; 15448 constants checked (classical trio only)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/abort_observation_private/AuditAll.lean:83:0: error: Semantic interface: _private.GoLean.GoCore.AbortObservation.0.abortObservationHole depends on forbidden axiom _private.GoLean.GoCore.AbortObservation.0.abortObservationHole
+Semantic interface negative: abort_observation_private rejected (exit 1, abortObservationHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/pool_observation_private/AuditAll.lean:83:0: error: Semantic interface: _private.GoLean.GoCore.RecoveryPoolObservation.0.poolObservationHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryPoolObservation.0.poolObservationHole
+Semantic interface negative: pool_observation_private rejected (exit 1, poolObservationHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/program_observation_private/AuditAll.lean:83:0: error: Semantic interface: _private.GoLean.GoCore.RecoveryProgramObservation.0.programObservationHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryProgramObservation.0.programObservationHole
+Semantic interface negative: program_observation_private rejected (exit 1, programObservationHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/panic_text_private/AuditAll.lean:83:0: error: Semantic interface: _private.GoLean.GoCore.PanicText.0.panicTextHole depends on forbidden axiom _private.GoLean.GoCore.PanicText.0.panicTextHole
+Semantic interface negative: panic_text_private rejected (exit 1, panicTextHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/string_panic_private/AuditAll.lean:83:0: error: Semantic interface: _private.GoLean.GoCore.StringPanic.0.stringPanicHole depends on forbidden axiom _private.GoLean.GoCore.StringPanic.0.stringPanicHole
+Semantic interface negative: string_panic_private rejected (exit 1, stringPanicHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/string_panic_trailing/Tests/StringPanicMembers.lean:65:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/string_panic_trailing/AuditAll.lean:83:0: error: Semantic interface: _private.Tests.StringPanicMembers.0.stringPanicTestHole depends on forbidden axiom sorryAx
+Semantic interface negative: string_panic_trailing rejected (exit 1, sorryAx)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/machine_private/AuditAll.lean:83:0: error: Semantic interface: _private.GoLean.GoCore.Machine.0.machineRendererHole depends on forbidden axiom _private.GoLean.GoCore.Machine.0.machineRendererHole
+Semantic interface negative: machine_private rejected (exit 1, machineRendererHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/rendering_trailing/Tests/PanicRendering.lean:61:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/rendering_trailing/AuditAll.lean:83:0: error: Semantic interface: _private.Tests.PanicRendering.0.rendererHole depends on forbidden axiom sorryAx
+Semantic interface negative: rendering_trailing rejected (exit 1, sorryAx)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/promoted_private/AuditAll.lean:83:0: error: Semantic interface: _private.GoLean.GoCore.Trace.0.promotedTraceHole depends on forbidden axiom _private.GoLean.GoCore.Trace.0.promotedTraceHole
+Semantic interface negative: promoted_private rejected (exit 1, promotedTraceHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/boolean_store_private/AuditAll.lean:83:0: error: Semantic interface: _private.GoLean.GoCore.BooleanStore.0.booleanStoreHole depends on forbidden axiom _private.GoLean.GoCore.BooleanStore.0.booleanStoreHole
+Semantic interface negative: boolean_store_private rejected (exit 1, booleanStoreHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/boolean_setup_private/AuditAll.lean:83:0: error: Semantic interface: _private.GoLean.GoCore.BooleanSetup.0.booleanSetupHole depends on forbidden axiom _private.GoLean.GoCore.BooleanSetup.0.booleanSetupHole
+Semantic interface negative: boolean_setup_private rejected (exit 1, booleanSetupHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/boolean_initialization_private/AuditAll.lean:83:0: error: Semantic interface: _private.GoLean.GoCore.BooleanInitialization.0.booleanInitializationHole depends on forbidden axiom _private.GoLean.GoCore.BooleanInitialization.0.booleanInitializationHole
+Semantic interface negative: boolean_initialization_private rejected (exit 1, booleanInitializationHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/boolean_program_private/AuditAll.lean:83:0: error: Semantic interface: _private.GoLean.GoCore.BooleanProgram.0.booleanProgramHole depends on forbidden axiom _private.GoLean.GoCore.BooleanProgram.0.booleanProgramHole
+Semantic interface negative: boolean_program_private rejected (exit 1, booleanProgramHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/boolean_pool_private/AuditAll.lean:83:0: error: Semantic interface: _private.GoLean.GoCore.BooleanPool.0.booleanPoolHole depends on forbidden axiom _private.GoLean.GoCore.BooleanPool.0.booleanPoolHole
+Semantic interface negative: boolean_pool_private rejected (exit 1, booleanPoolHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/boolean_program_test_trailing/Tests/BooleanProgram.lean:52:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/boolean_program_test_trailing/AuditAll.lean:83:0: error: Semantic interface: _private.Tests.BooleanProgram.0.booleanProgramTestHole depends on forbidden axiom sorryAx
+Semantic interface negative: boolean_program_test_trailing rejected (exit 1, sorryAx)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/recovery_diagnostics_private/AuditAll.lean:83:0: error: Semantic interface: _private.GoLean.GoCore.RecoveryDiagnostics.0.recoveryDiagnosticsHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryDiagnostics.0.recoveryDiagnosticsHole
+Semantic interface negative: recovery_diagnostics_private rejected (exit 1, recoveryDiagnosticsHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/recovery_admission_private/AuditAll.lean:83:0: error: Semantic interface: _private.GoLean.GoCore.RecoveryAdmission.0.recoveryAdmissionHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryAdmission.0.recoveryAdmissionHole
+Semantic interface negative: recovery_admission_private rejected (exit 1, recoveryAdmissionHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/recovery_test_trailing/Tests/RecoveryTyping.lean:218:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/recovery_test_trailing/AuditAll.lean:83:0: error: Semantic interface: _private.Tests.RecoveryTyping.0.recoveryTestHole depends on forbidden axiom sorryAx
+Semantic interface negative: recovery_test_trailing rejected (exit 1, sorryAx)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/recovery_store_private/AuditAll.lean:83:0: error: Semantic interface: _private.GoLean.GoCore.RecoveryStore.0.recoveryStoreHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryStore.0.recoveryStoreHole
+Semantic interface negative: recovery_store_private rejected (exit 1, recoveryStoreHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/recovery_setup_private/AuditAll.lean:83:0: error: Semantic interface: _private.GoLean.GoCore.RecoverySetupWf.0.recoverySetupHole depends on forbidden axiom _private.GoLean.GoCore.RecoverySetupWf.0.recoverySetupHole
+Semantic interface negative: recovery_setup_private rejected (exit 1, recoverySetupHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/recovery_call_private/AuditAll.lean:83:0: error: Semantic interface: _private.GoLean.GoCore.RecoveryCallEntry.0.recoveryCallHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryCallEntry.0.recoveryCallHole
+Semantic interface negative: recovery_call_private rejected (exit 1, recoveryCallHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/recovery_setup_test_trailing/Tests/RecoverySetup.lean:167:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/recovery_setup_test_trailing/AuditAll.lean:83:0: error: Semantic interface: _private.Tests.RecoverySetup.0.recoverySetupTestHole depends on forbidden axiom sorryAx
+Semantic interface negative: recovery_setup_test_trailing rejected (exit 1, sorryAx)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/recovery_control_private/AuditAll.lean:83:0: error: Semantic interface: _private.GoLean.GoCore.RecoveryControl.0.recoveryControlInterfaceHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryControl.0.recoveryControlInterfaceHole
+Semantic interface negative: recovery_control_private rejected (exit 1, recoveryControlInterfaceHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/recovery_invariant_private/AuditAll.lean:83:0: error: Semantic interface: _private.GoLean.GoCore.RecoveryInvariant.0.recoveryInvariantInterfaceHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryInvariant.0.recoveryInvariantInterfaceHole
+Semantic interface negative: recovery_invariant_private rejected (exit 1, recoveryInvariantInterfaceHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/recovery_control_test_trailing/Tests/RecoveryInvariant.lean:145:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/recovery_control_test_trailing/AuditAll.lean:83:0: error: Semantic interface: _private.Tests.RecoveryInvariant.0.recoveryControlTestHole depends on forbidden axiom sorryAx
+Semantic interface negative: recovery_control_test_trailing rejected (exit 1, sorryAx)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/recovery_layout_private/AuditAll.lean:83:0: error: Semantic interface: _private.GoLean.GoCore.RecoveryCallLayout.0.recoveryLayoutInterfaceHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryCallLayout.0.recoveryLayoutInterfaceHole
+Semantic interface negative: recovery_layout_private rejected (exit 1, recoveryLayoutInterfaceHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/recovery_singleton_private/AuditAll.lean:83:0: error: Semantic interface: _private.GoLean.GoCore.RecoverySingleton.0.recoverySingletonInterfaceHole depends on forbidden axiom _private.GoLean.GoCore.RecoverySingleton.0.recoverySingletonInterfaceHole
+Semantic interface negative: recovery_singleton_private rejected (exit 1, recoverySingletonInterfaceHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/recovery_pool_private/AuditAll.lean:83:0: error: Semantic interface: _private.GoLean.GoCore.RecoveryPool.0.recoveryPoolInterfaceHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryPool.0.recoveryPoolInterfaceHole
+Semantic interface negative: recovery_pool_private rejected (exit 1, recoveryPoolInterfaceHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/recovery_choices_private/AuditAll.lean:83:0: error: Semantic interface: _private.GoLean.GoCore.RecoveryChoices.0.recoveryChoicesInterfaceHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryChoices.0.recoveryChoicesInterfaceHole
+Semantic interface negative: recovery_choices_private rejected (exit 1, recoveryChoicesInterfaceHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/recovery_terminal_private/AuditAll.lean:83:0: error: Semantic interface: _private.GoLean.GoCore.RecoveryTerminal.0.recoveryTerminalInterfaceHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryTerminal.0.recoveryTerminalInterfaceHole
+Semantic interface negative: recovery_terminal_private rejected (exit 1, recoveryTerminalInterfaceHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/recovery_observer_typed_private/AuditAll.lean:83:0: error: Semantic interface: _private.GoLean.GoCore.RecoveryPoolObservationTyped.0.recoveryObserverTypedInterfaceHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryPoolObservationTyped.0.recoveryObserverTypedInterfaceHole
+Semantic interface negative: recovery_observer_typed_private rejected (exit 1, recoveryObserverTypedInterfaceHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/recovery_terminal_test_trailing/Tests/RecoveryTerminal.lean:117:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/recovery_terminal_test_trailing/AuditAll.lean:83:0: error: Semantic interface: _private.Tests.RecoveryTerminal.0.recoveryTerminalTestHole depends on forbidden axiom sorryAx
+Semantic interface negative: recovery_terminal_test_trailing rejected (exit 1, sorryAx)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/facade_private/AuditAll.lean:83:0: error: Semantic interface: _private.GoLean.Interface.0.facadeHole depends on forbidden axiom _private.GoLean.Interface.0.facadeHole
+Semantic interface negative: facade_private rejected (exit 1, facadeHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/audit_trailing/Tests/InterfaceAudit.lean:221:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/audit_trailing/AuditAll.lean:83:0: error: Semantic interface: _private.Tests.InterfaceAudit.0.auditHole depends on forbidden axiom sorryAx
+Semantic interface negative: audit_trailing rejected (exit 1, sorryAx)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/runtime_test_trailing/Tests/BooleanRuntime.lean:90:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf/runtime_test_trailing/AuditAll.lean:83:0: error: Semantic interface: _private.Tests.BooleanRuntime.0.booleanRuntimeTestHole depends on forbidden axiom sorryAx
+Semantic interface negative: runtime_test_trailing rejected (exit 1, sorryAx)
+Semantic interface: PASS; scratch retained at /home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/interface-audit-o_lddegf
+
+[1m── admission checker proofs and post-import audit[0m
+946d13c6794c19cb3beb6887a7ae43eed82e08bf8eee9e7f84a1c08678e2b5f5 GoLean/GoCore/AdmissionIndices.lean
+937cae3af268310a58843495397c96fbe52576427aadb26ec6f89466633b8946 GoLean/GoCore/AdmissionPolicy.lean
+2309256e38874bd99eadc5868d8b4c2e0e0111a94e374799eb8aa09ec0f08e7f GoLean/GoCore/Admission.lean
+be5dc36efb044f20a4fa5700775bc0c92c3f266201483f92f3809911a134c9e5 Tests/GoCoreAdmissionFixture.lean
+b42083e901d02228356cdb54e1a0b79448d9c4b57e492baa01acc546f1729369 Tests/GoCoreAdmission.lean
+3679e71e9e481ef751adde2fbf44c90e9c452f7108e93d0cc0ce6d08c0ae079f Tests/GoCoreAdmissionAudit.lean
+Admission inventory: six complete modules
+Build completed successfully (18 jobs).
+Admission fresh elaboration: GoLean/GoCore/AdmissionIndices.lean
+Admission fresh elaboration: GoLean/GoCore/AdmissionPolicy.lean
+Admission fresh elaboration: GoLean/GoCore/Admission.lean
+Admission fresh elaboration: Tests/GoCoreAdmissionFixture.lean
+Admission fresh elaboration: Tests/GoCoreAdmission.lean
+Admission fresh elaboration: Tests/GoCoreAdmissionAudit.lean
+Admission scratch retained: /home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/admission-audit-bvwx0y04
+Admission audit: 14 required theorems present; 375 constants checked (classical trio only)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/admission-audit-bvwx0y04/AuditAll.lean:2:0: error: Admission audit: _private.Tests.GoCoreAdmissionAudit.0.admissionAuditHole depends on forbidden axiom _private.Tests.GoCoreAdmissionAudit.0.admissionAuditHole
+Admission negative audit: audit_private compiled then rejected (admissionAuditHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/admission-audit-bvwx0y04/AuditAll.lean:2:0: error: Admission audit: _private.GoLean.GoCore.Admission.0.admissionCoreHole depends on forbidden axiom _private.GoLean.GoCore.Admission.0.admissionCoreHole
+Admission negative audit: core_private compiled then rejected (admissionCoreHole)
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/admission-audit-bvwx0y04/test_trailing/Tests/GoCoreAdmission.lean:114:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/admission-audit-bvwx0y04/AuditAll.lean:2:0: error: Admission audit: _private.Tests.GoCoreAdmission.0.admissionTrailingHole depends on forbidden axiom sorryAx
+Admission negative audit: test_trailing compiled then rejected (sorryAx)
+Admission gate: PASS
+
+[1m── Boolean scoped typing checker proofs and regressions[0m
+Build completed successfully (13 jobs).
+Boolean typing audit scratch retained: /home/dev/projects/golean/.tmp/boolean-typing-audit-8otrg9rd
+Boolean typing audit: 12 required theorems present; 3276 constants checked across all imported local modules (classical trio only)
+/home/dev/projects/golean/.tmp/boolean-typing-audit-8otrg9rd/AuditAll.lean:2:0: error: Boolean typing audit: _private.GoLean.GoCore.BooleanTyping.0.booleanTypingCoreHole depends on forbidden axiom _private.GoLean.GoCore.BooleanTyping.0.booleanTypingCoreHole
+Boolean typing negative audit: core_private compiled then rejected (booleanTypingCoreHole)
+/home/dev/projects/golean/.tmp/boolean-typing-audit-8otrg9rd/AuditAll.lean:2:0: error: Boolean typing audit: _private.Tests.BooleanTypingAudit.0.booleanTypingAuditHole depends on forbidden axiom _private.Tests.BooleanTypingAudit.0.booleanTypingAuditHole
+Boolean typing negative audit: audit_private compiled then rejected (booleanTypingAuditHole)
+/home/dev/projects/golean/.tmp/boolean-typing-audit-8otrg9rd/test_trailing/Tests/BooleanTyping.lean:186:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.tmp/boolean-typing-audit-8otrg9rd/AuditAll.lean:2:0: error: Boolean typing audit: _private.Tests.BooleanTyping.0.booleanTypingTrailingHole depends on forbidden axiom sorryAx
+Boolean typing negative audit: test_trailing compiled then rejected (sorryAx)
+Boolean typing foundation gate: PASS
+
+[1m── Boolean structural runtime preservation and progress[0m
+c6ac7824a6d671dab0bfb8426778a0f54ff4dc5654c843f4960701aa3aae0b5a  GoLean/GoCore/BooleanStore.lean
+c9c5c3236284c0bf656f06fa964c67e8229608efc8049a822e55f29430af8edf  GoLean/GoCore/BooleanControlTyping.lean
+7bf157a0b656e0745b28ed11dd961312a67ef29c3e623d65d28196fed49a0f81  GoLean/GoCore/BooleanControl.lean
+68c77e5496efdbe38cefa3558f3f96a0a57eb9f35fdef2753dd2a8ceb6a862c4  GoLean/GoCore/BooleanInvariant.lean
+c57d0ef1a9503284c3a7d72456808237d260eb4c428e324834043ca57f38ee1b  GoLean/GoCore/BooleanProgress.lean
+fe7f463b6d92f079ec3ab269cbd136b40d280a24adc4bade35c3a6c37e5331e5  GoLean/GoCore/BooleanPreservation.lean
+6f43aafc404069ad188d62c945dd27d6bdce8f1c60e9ce836494b2e4ac8d2ef2  GoLean/GoCore/BooleanSafety.lean
+fd203aaa6d97be8126d575b4dccf7a1b0e65ad56c632daf9965347a0f44e085e  GoLean/GoCore/BooleanSetup.lean
+6530f9438425c68fb9e302142d9a0a63ddd96bc984c772b53d30e853ac6dabe5  GoLean/GoCore/BooleanInitialization.lean
+5bef2c19bbf333130440d611ce7648cdb821398dbcc1a7308286580d5857e195  GoLean/GoCore/BooleanProgram.lean
+078bad607c7110a38c3c04a4150b67e6146bfdb459856da4923e7bb4c2f5c850  GoLean/GoCore/BooleanPool.lean
+86032fddf9f6809fc9b6a4bf504ca0ab8c669437b442c873edecf682b306a71f  Tests/BooleanInvariant.lean
+99277883f14547072dcb0e42926424fd610e7e7913e2799e9ecf98064c0934e2  Tests/BooleanProgram.lean
+8da8f94b91618d672c304a36e42527ce531ac48b23b01be3796a1b775495f59e  Tests/BooleanSafetyAudit.lean
+✔ [84/85] Built Tests.BooleanSafetyAudit (744ms)
+Build completed successfully (85 jobs).
+Boolean runtime fresh elaboration: GoLean/GoCore/BooleanStore.lean
+Boolean runtime fresh elaboration: GoLean/GoCore/BooleanControlTyping.lean
+Boolean runtime fresh elaboration: GoLean/GoCore/BooleanControl.lean
+Boolean runtime fresh elaboration: GoLean/GoCore/BooleanInvariant.lean
+Boolean runtime fresh elaboration: GoLean/GoCore/BooleanProgress.lean
+Boolean runtime fresh elaboration: GoLean/GoCore/BooleanPreservation.lean
+Boolean runtime fresh elaboration: GoLean/GoCore/BooleanSafety.lean
+Boolean runtime fresh elaboration: GoLean/GoCore/BooleanSetup.lean
+Boolean runtime fresh elaboration: GoLean/GoCore/BooleanInitialization.lean
+Boolean runtime fresh elaboration: GoLean/GoCore/BooleanProgram.lean
+Boolean runtime fresh elaboration: GoLean/GoCore/BooleanPool.lean
+Boolean runtime fresh elaboration: Tests/BooleanInvariant.lean
+Boolean runtime fresh elaboration: Tests/BooleanProgram.lean
+Boolean runtime fresh elaboration: Tests/BooleanSafetyAudit.lean
+Boolean runtime audit scratch retained: /home/dev/projects/golean/.tmp/boolean-runtime-audit-j0iwd28l
+Boolean runtime audit: 44 required theorems present; 15188 constants checked across all imported local modules (classical trio only)
+/home/dev/projects/golean/.tmp/boolean-runtime-audit-j0iwd28l/AuditAll.lean:2:0: error: Boolean runtime audit: _private.GoLean.GoCore.BooleanPreservation.0.booleanRuntimeCoreHole depends on forbidden axiom _private.GoLean.GoCore.BooleanPreservation.0.booleanRuntimeCoreHole
+Boolean runtime negative audit: core_private compiled then rejected (booleanRuntimeCoreHole)
+/home/dev/projects/golean/.tmp/boolean-runtime-audit-j0iwd28l/AuditAll.lean:2:0: error: Boolean runtime audit: _private.GoLean.GoCore.BooleanProgram.0.booleanRuntimeProgramHole depends on forbidden axiom _private.GoLean.GoCore.BooleanProgram.0.booleanRuntimeProgramHole
+Boolean runtime negative audit: program_private compiled then rejected (booleanRuntimeProgramHole)
+/home/dev/projects/golean/.tmp/boolean-runtime-audit-j0iwd28l/AuditAll.lean:2:0: error: Boolean runtime audit: _private.GoLean.GoCore.BooleanPool.0.booleanRuntimePoolHole depends on forbidden axiom _private.GoLean.GoCore.BooleanPool.0.booleanRuntimePoolHole
+Boolean runtime negative audit: pool_private compiled then rejected (booleanRuntimePoolHole)
+/home/dev/projects/golean/.tmp/boolean-runtime-audit-j0iwd28l/program_test_trailing/Tests/BooleanProgram.lean:52:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.tmp/boolean-runtime-audit-j0iwd28l/AuditAll.lean:2:0: error: Boolean runtime audit: _private.Tests.BooleanProgram.0.booleanRuntimeProgramTestHole depends on forbidden axiom sorryAx
+Boolean runtime negative audit: program_test_trailing compiled then rejected (sorryAx)
+/home/dev/projects/golean/.tmp/boolean-runtime-audit-j0iwd28l/AuditAll.lean:2:0: error: Boolean runtime audit: _private.Tests.BooleanSafetyAudit.0.booleanRuntimeAuditHole depends on forbidden axiom _private.Tests.BooleanSafetyAudit.0.booleanRuntimeAuditHole
+Boolean runtime negative audit: audit_private compiled then rejected (booleanRuntimeAuditHole)
+/home/dev/projects/golean/.tmp/boolean-runtime-audit-j0iwd28l/test_trailing/Tests/BooleanInvariant.lean:93:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.tmp/boolean-runtime-audit-j0iwd28l/AuditAll.lean:2:0: error: Boolean runtime audit: _private.Tests.BooleanInvariant.0.booleanRuntimeTrailingHole depends on forbidden axiom sorryAx
+Boolean runtime negative audit: test_trailing compiled then rejected (sorryAx)
+Boolean runtime contract gate: PASS
+
+[1m── Recovery scoped typing checker proofs and regressions[0m
+9314b0d0a71cef7c8d14146faad5d755adcdac3650269aba0ab9beeac0dd430a  GoLean/GoCore/RecoveryTypingCore.lean
+020ad2428a6f5ba1b2d8629431fbf5c5b7bd91e87ca34101f817f751a118d4e0  GoLean/GoCore/RecoveryExpressions.lean
+3147e2d8ee0f6d13035dc307b1d286a92bb3d0899f9a896c24be168f98e9e063  GoLean/GoCore/RecoveryCalls.lean
+8af47f19b6b48760e082b4c6f8c05009f99d9d5dc2a910a1cf2ba6b1cdfd1456  GoLean/GoCore/RecoveryStatements.lean
+e411087f7a31c79b752723eb028cc027c15bd9f2b0eeef202fd94db4177b1348  GoLean/GoCore/RecoveryGraph.lean
+0d39c353494d8126531705271affcd0ad661dfcaaf6ed3aa9e8b000c31f382c7  GoLean/GoCore/RecoveryDiagnostics.lean
+308a6d4e61b92e6c1f56790ed1c5b76e56c76334dfb2278bab129b375627a88b  GoLean/GoCore/RecoveryAdmission.lean
+8a51f162eb20532ddaeb9e27ee2f160742b3573a7b714e92d18aec8fd467ef44  Tests/RecoveryTyping.lean
+aed9764365cbe7e29d0dc4951f1d1d6259ef9c68cbaa2012306d4dc6bb883911  Tests/RecoveryTypingFixture.lean
+9be03bb7c77bd6012720ce42e98a4511d1c83ae463866331309a4bc2bce34189  Tests/RecoveryA2Artifact.lean
+f555047890ca850d6dd3b0c8a0b5751360daf8fce959d24e1d8fdb96d6a57c54  Tests/RecoveryDiagnosticControls.lean
+aaa180e2ccadab098138f2a17811c3f0bfb2dfd5ec42dafa7a412f0b3b1d3c9f  Tests/RecoveryTypingAudit.lean
+Build completed successfully (30 jobs).
+Recovery typing fresh elaboration: GoLean/GoCore/RecoveryTypingCore.lean
+Recovery typing fresh elaboration: GoLean/GoCore/RecoveryExpressions.lean
+Recovery typing fresh elaboration: GoLean/GoCore/RecoveryCalls.lean
+Recovery typing fresh elaboration: GoLean/GoCore/RecoveryStatements.lean
+Recovery typing fresh elaboration: GoLean/GoCore/RecoveryGraph.lean
+Recovery typing fresh elaboration: GoLean/GoCore/RecoveryDiagnostics.lean
+Recovery typing fresh elaboration: GoLean/GoCore/RecoveryAdmission.lean
+Recovery typing fresh elaboration: Tests/RecoveryTyping.lean
+Recovery typing fresh elaboration: Tests/RecoveryTypingFixture.lean
+Recovery typing fresh elaboration: Tests/RecoveryA2Artifact.lean
+Recovery typing fresh elaboration: Tests/RecoveryDiagnosticControls.lean
+Recovery typing fresh elaboration: Tests/RecoveryTypingAudit.lean
+Recovery typing audit scratch retained: /home/dev/projects/golean/.tmp/recovery-typing-audit-3s59p8wf
+Recovery typing audit: 46 required theorems present; 10946 constants checked across all imported local modules (classical trio only)
+/home/dev/projects/golean/.tmp/recovery-typing-audit-3s59p8wf/AuditAll.lean:2:0: error: Recovery typing audit: _private.GoLean.GoCore.RecoveryDiagnostics.0.recoveryDiagnosticHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryDiagnostics.0.recoveryDiagnosticHole
+Recovery typing negative audit: diagnostic_private compiled then rejected (recoveryDiagnosticHole)
+/home/dev/projects/golean/.tmp/recovery-typing-audit-3s59p8wf/AuditAll.lean:2:0: error: Recovery typing audit: _private.GoLean.GoCore.RecoveryCalls.0.recoveryCallHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryCalls.0.recoveryCallHole
+Recovery typing negative audit: helper_private compiled then rejected (recoveryCallHole)
+/home/dev/projects/golean/.tmp/recovery-typing-audit-3s59p8wf/AuditAll.lean:2:0: error: Recovery typing audit: _private.GoLean.GoCore.RecoveryAdmission.0.recoveryTypingCoreHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryAdmission.0.recoveryTypingCoreHole
+Recovery typing negative audit: core_private compiled then rejected (recoveryTypingCoreHole)
+/home/dev/projects/golean/.tmp/recovery-typing-audit-3s59p8wf/AuditAll.lean:2:0: error: Recovery typing audit: _private.Tests.RecoveryTypingAudit.0.recoveryTypingAuditHole depends on forbidden axiom _private.Tests.RecoveryTypingAudit.0.recoveryTypingAuditHole
+Recovery typing negative audit: audit_private compiled then rejected (recoveryTypingAuditHole)
+/home/dev/projects/golean/.tmp/recovery-typing-audit-3s59p8wf/test_trailing/Tests/RecoveryTyping.lean:218:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.tmp/recovery-typing-audit-3s59p8wf/AuditAll.lean:2:0: error: Recovery typing audit: _private.Tests.RecoveryTyping.0.recoveryTypingTrailingHole depends on forbidden axiom sorryAx
+Recovery typing negative audit: test_trailing compiled then rejected (sorryAx)
+Recovery typing static foundation gate: PASS
+
+[1m── Recovery mixed storage and runtime supporting lemmas[0m
+c7ae5099d2c7cb1aa75a588e760625c51c6b44516ff235bb30711cd1496c28f7  GoLean/GoCore/RecoveryStore.lean
+a8d073a83faa419d6c69e2cf73a1951fa0501ffeae095d8b27dcec5ab2bfe994  GoLean/GoCore/RecoveryEnvironment.lean
+7031034e932e48b3c1febca3b8de705919d04b06668b5cf3b03b4cd2bf917872  GoLean/GoCore/RecoveryAllocation.lean
+65f51ed756e833840f8c3ad841c38a60e282d58e04a6cc52ddba82366f98d533  GoLean/GoCore/RecoveryOperators.lean
+23b127e99be0684b4600ff560740b0f8ea00e6f19362a49a1bf12dce50520e52  GoLean/GoCore/RecoveryContext.lean
+bf20ea0dcaa77434472d82685060b89ce44d9af817e24ec181b040f8d31bd8f5  GoLean/GoCore/RecoveryControlTyping.lean
+4f848f439278575ac1b398d1112d5a749e700e72c5aa3f0b2bd14a9315dea858  Tests/RecoveryStorage.lean
+7226552dd6e7cb68d6f30c8591af280ff173a3edd99745127550c78ef8e6e632  Tests/RecoveryStorageAudit.lean
+Build completed successfully (26 jobs).
+Recovery storage fresh elaboration: GoLean/GoCore/RecoveryStore.lean
+Recovery storage fresh elaboration: GoLean/GoCore/RecoveryEnvironment.lean
+Recovery storage fresh elaboration: GoLean/GoCore/RecoveryAllocation.lean
+Recovery storage fresh elaboration: GoLean/GoCore/RecoveryOperators.lean
+Recovery storage fresh elaboration: GoLean/GoCore/RecoveryContext.lean
+Recovery storage fresh elaboration: GoLean/GoCore/RecoveryControlTyping.lean
+Recovery storage fresh elaboration: Tests/RecoveryStorage.lean
+Recovery storage fresh elaboration: Tests/RecoveryStorageAudit.lean
+Recovery storage audit scratch retained: /home/dev/projects/golean/.tmp/recovery-storage-audit-fo4zkbjz
+Recovery storage audit: 32 required theorems present; 6856 constants checked across all imported local modules (classical trio only)
+/home/dev/projects/golean/.tmp/recovery-storage-audit-fo4zkbjz/AuditAll.lean:2:0: error: Recovery storage audit: _private.GoLean.GoCore.RecoveryStore.0.recoveryStorageHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryStore.0.recoveryStorageHole
+Recovery storage negative audit: RecoveryStore compiled then rejected (recoveryStorageHole)
+/home/dev/projects/golean/.tmp/recovery-storage-audit-fo4zkbjz/AuditAll.lean:2:0: error: Recovery storage audit: _private.GoLean.GoCore.RecoveryEnvironment.0.recoveryStorageHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryEnvironment.0.recoveryStorageHole
+Recovery storage negative audit: RecoveryEnvironment compiled then rejected (recoveryStorageHole)
+/home/dev/projects/golean/.tmp/recovery-storage-audit-fo4zkbjz/AuditAll.lean:2:0: error: Recovery storage audit: _private.GoLean.GoCore.RecoveryAllocation.0.recoveryStorageHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryAllocation.0.recoveryStorageHole
+Recovery storage negative audit: RecoveryAllocation compiled then rejected (recoveryStorageHole)
+/home/dev/projects/golean/.tmp/recovery-storage-audit-fo4zkbjz/AuditAll.lean:2:0: error: Recovery storage audit: _private.GoLean.GoCore.RecoveryOperators.0.recoveryStorageHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryOperators.0.recoveryStorageHole
+Recovery storage negative audit: RecoveryOperators compiled then rejected (recoveryStorageHole)
+/home/dev/projects/golean/.tmp/recovery-storage-audit-fo4zkbjz/AuditAll.lean:2:0: error: Recovery storage audit: _private.GoLean.GoCore.RecoveryContext.0.recoveryStorageHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryContext.0.recoveryStorageHole
+Recovery storage negative audit: RecoveryContext compiled then rejected (recoveryStorageHole)
+/home/dev/projects/golean/.tmp/recovery-storage-audit-fo4zkbjz/AuditAll.lean:2:0: error: Recovery storage audit: _private.GoLean.GoCore.RecoveryControlTyping.0.recoveryStorageHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryControlTyping.0.recoveryStorageHole
+Recovery storage negative audit: RecoveryControlTyping compiled then rejected (recoveryStorageHole)
+/home/dev/projects/golean/.tmp/recovery-storage-audit-fo4zkbjz/AuditAll.lean:2:0: error: Recovery storage audit: _private.Tests.RecoveryStorageAudit.0.recoveryStorageAuditHole depends on forbidden axiom _private.Tests.RecoveryStorageAudit.0.recoveryStorageAuditHole
+Recovery storage negative audit: audit_private compiled then rejected (recoveryStorageAuditHole)
+/home/dev/projects/golean/.tmp/recovery-storage-audit-fo4zkbjz/test_trailing/Tests/RecoveryStorage.lean:104:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.tmp/recovery-storage-audit-fo4zkbjz/AuditAll.lean:2:0: error: Recovery storage audit: _private.Tests.RecoveryStorage.0.recoveryStorageTrailingHole depends on forbidden axiom sorryAx
+Recovery storage negative audit: test_trailing compiled then rejected (sorryAx)
+Recovery storage supporting lemma gate: PASS
+
+[1m── Recovery actual program and call entry[0m
+90d58331e62508d6144a49100eb0810f308dd23af8661ac5ce8428cd7d170eab  GoLean/GoCore/RecoverySetupShape.lean
+574092e494fc704702101c99e6c46b467ea12bdafb330f713291e7143fd474c6  GoLean/GoCore/RecoveryInitialization.lean
+c0b71818ffe90a6dcace26867048836f213b216f388db8c00929af8d2513fbdb  GoLean/GoCore/RecoveryResultRoots.lean
+d3d97a9ddb3f1b968c2c226cb973af205bd25e783e2bb6d30ba71aecc855fef1  GoLean/GoCore/RecoverySetup.lean
+c603f015a6d2c096832ce4431458bcd2fe39886cde854457bf495a8671c95a0f  GoLean/GoCore/RecoverySetupWf.lean
+3ca56702d9378277c0668f4835752b77d96814a40cb7c3c8a2bc51368a802a28  GoLean/GoCore/RecoverySetupReadout.lean
+243bcef842fd08797813bfbeb8e6c1751dccb470b36687b7ced9c9c87fb647b0  GoLean/GoCore/RecoveryCallEntry.lean
+15ae482069b5ad559dee30db4734698f8d2fa8255889d63a0b94a2fa05e57245  Tests/RecoverySetup.lean
+6cb7144dae66a658338ce1935b274d9f8385da156f36e01b4869f15b6b345407  Tests/RecoverySetupAudit.lean
+Build completed successfully (42 jobs).
+Recovery setup fresh elaboration: GoLean/GoCore/RecoverySetupShape.lean
+Recovery setup fresh elaboration: GoLean/GoCore/RecoveryInitialization.lean
+Recovery setup fresh elaboration: GoLean/GoCore/RecoveryResultRoots.lean
+Recovery setup fresh elaboration: GoLean/GoCore/RecoverySetup.lean
+Recovery setup fresh elaboration: GoLean/GoCore/RecoverySetupWf.lean
+Recovery setup fresh elaboration: GoLean/GoCore/RecoverySetupReadout.lean
+Recovery setup fresh elaboration: GoLean/GoCore/RecoveryCallEntry.lean
+Recovery setup fresh elaboration: Tests/RecoverySetup.lean
+Recovery setup fresh elaboration: Tests/RecoverySetupAudit.lean
+Recovery setup audit scratch retained: /home/dev/projects/golean/.tmp/recovery-setup-audit-2diq_pna
+Recovery setup audit: 37 required theorems present; 11308 constants checked across all imported local modules (classical trio only)
+/home/dev/projects/golean/.tmp/recovery-setup-audit-2diq_pna/AuditAll.lean:2:0: error: Recovery setup audit: _private.GoLean.GoCore.RecoverySetupShape.0.recoverySetupHole depends on forbidden axiom _private.GoLean.GoCore.RecoverySetupShape.0.recoverySetupHole
+Recovery setup negative audit: RecoverySetupShape compiled then rejected (recoverySetupHole)
+/home/dev/projects/golean/.tmp/recovery-setup-audit-2diq_pna/AuditAll.lean:2:0: error: Recovery setup audit: _private.GoLean.GoCore.RecoveryInitialization.0.recoverySetupHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryInitialization.0.recoverySetupHole
+Recovery setup negative audit: RecoveryInitialization compiled then rejected (recoverySetupHole)
+/home/dev/projects/golean/.tmp/recovery-setup-audit-2diq_pna/AuditAll.lean:2:0: error: Recovery setup audit: _private.GoLean.GoCore.RecoveryResultRoots.0.recoverySetupHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryResultRoots.0.recoverySetupHole
+Recovery setup negative audit: RecoveryResultRoots compiled then rejected (recoverySetupHole)
+/home/dev/projects/golean/.tmp/recovery-setup-audit-2diq_pna/AuditAll.lean:2:0: error: Recovery setup audit: _private.GoLean.GoCore.RecoverySetup.0.recoverySetupHole depends on forbidden axiom _private.GoLean.GoCore.RecoverySetup.0.recoverySetupHole
+Recovery setup negative audit: RecoverySetup compiled then rejected (recoverySetupHole)
+/home/dev/projects/golean/.tmp/recovery-setup-audit-2diq_pna/AuditAll.lean:2:0: error: Recovery setup audit: _private.GoLean.GoCore.RecoverySetupWf.0.recoverySetupHole depends on forbidden axiom _private.GoLean.GoCore.RecoverySetupWf.0.recoverySetupHole
+Recovery setup negative audit: RecoverySetupWf compiled then rejected (recoverySetupHole)
+/home/dev/projects/golean/.tmp/recovery-setup-audit-2diq_pna/AuditAll.lean:2:0: error: Recovery setup audit: _private.GoLean.GoCore.RecoverySetupReadout.0.recoverySetupHole depends on forbidden axiom _private.GoLean.GoCore.RecoverySetupReadout.0.recoverySetupHole
+Recovery setup negative audit: RecoverySetupReadout compiled then rejected (recoverySetupHole)
+/home/dev/projects/golean/.tmp/recovery-setup-audit-2diq_pna/AuditAll.lean:2:0: error: Recovery setup audit: _private.GoLean.GoCore.RecoveryCallEntry.0.recoverySetupHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryCallEntry.0.recoverySetupHole
+Recovery setup negative audit: RecoveryCallEntry compiled then rejected (recoverySetupHole)
+/home/dev/projects/golean/.tmp/recovery-setup-audit-2diq_pna/AuditAll.lean:2:0: error: Recovery setup audit: _private.Tests.RecoverySetupAudit.0.recoverySetupAuditHole depends on forbidden axiom _private.Tests.RecoverySetupAudit.0.recoverySetupAuditHole
+Recovery setup negative audit: audit_private compiled then rejected (recoverySetupAuditHole)
+/home/dev/projects/golean/.tmp/recovery-setup-audit-2diq_pna/test_trailing/Tests/RecoverySetup.lean:167:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.tmp/recovery-setup-audit-2diq_pna/AuditAll.lean:2:0: error: Recovery setup audit: _private.Tests.RecoverySetup.0.recoverySetupTrailingHole depends on forbidden axiom sorryAx
+Recovery setup negative audit: test_trailing compiled then rejected (sorryAx)
+Recovery actual entry/setup gate: PASS
+
+[1m── Recovery structural control preservation and progress[0m
+575cbc32cbb45f9906e6bd091ed6f1f0cb21564f033c8c1c3f08299c56585fee  GoLean/GoCore/RecoveryDelivery.lean
+710d414ced4dc9c8a7c6ad0462a57da8bda1ca5f85675eaddca801fb96bf5af7  GoLean/GoCore/RecoveryControlData.lean
+c7c354b0be44d62cced1f15b969c9a33c17cc550aecbfb604123af9172840cba  GoLean/GoCore/RecoveryControl.lean
+500f9378b703df5528345402b6d58bb177c0d1b66765941b3d39255d171cad6e  GoLean/GoCore/RecoveryControlMono.lean
+49f4da47580f6f91dc32d57a8f537233cbd44751c63cf68e62ec229863a497b3  GoLean/GoCore/RecoveryWalk.lean
+21f9a76f79645d7e822c155aad4e7c11f2e40abc91f6bb508655c27630d05f58  GoLean/GoCore/RecoveryExpressionProgress.lean
+a5a2e01b607a32126902951339c553b15a0568679d81aa5a1537a04f5be68dc5  GoLean/GoCore/RecoveryControlHelpers.lean
+e2838d0afe34df9d5e8772db2dbd5818103c8556dc98ff161fcf07b1e815760b  GoLean/GoCore/RecoveryCallControl.lean
+d14c79064ad69303093374e5b88380efcf14060f96714550503dc2fe010cee32  GoLean/GoCore/RecoveryValueBasic.lean
+92fdb6e6fe06283df2c802b2e11d58eb1498e21a659712a0ad3def4e3e32b1e5  GoLean/GoCore/RecoveryValueCalls.lean
+1f14577e1f3d2def2e9636e67be40a5ddbfbb5ea3196da7532f652eb45f2a609  GoLean/GoCore/RecoveryStatementProgress.lean
+7e4382c929e4f81e08b4f45f8ef32e30e039e12ca68c0e39e9b7234aed6aa7ff  GoLean/GoCore/RecoveryFrameProgress.lean
+b7fa027394b53d60ff68438d403d10aa19cfb0d6bfbd82923702bd37257c1245  GoLean/GoCore/RecoveryPanicProgress.lean
+a71574c21fcdb6ac872e07dd3f828536d06ce51a86ab6c8f9b00c1a35a077d46  GoLean/GoCore/RecoveryInvariant.lean
+853cf53c2994924ffedaedd4e3f8404201e8770d799a277ee4539f7194dbc466  GoLean/GoCore/RecoverySuccessfulRuns.lean
+6d581a4787daed2599889290bb53b638005c884f06f9aa0f4e8507149a4f020e  Tests/RecoveryInvariant.lean
+a4707043f42379fca9c530b90d856b975203de97aa5ba5202d3be8a4b6d950ad  Tests/RecoveryControlAudit.lean
+Build completed successfully (67 jobs).
+Recovery control fresh elaboration: GoLean/GoCore/RecoveryDelivery.lean
+Recovery control fresh elaboration: GoLean/GoCore/RecoveryControlData.lean
+Recovery control fresh elaboration: GoLean/GoCore/RecoveryControl.lean
+Recovery control fresh elaboration: GoLean/GoCore/RecoveryControlMono.lean
+Recovery control fresh elaboration: GoLean/GoCore/RecoveryWalk.lean
+Recovery control fresh elaboration: GoLean/GoCore/RecoveryExpressionProgress.lean
+Recovery control fresh elaboration: GoLean/GoCore/RecoveryControlHelpers.lean
+Recovery control fresh elaboration: GoLean/GoCore/RecoveryCallControl.lean
+Recovery control fresh elaboration: GoLean/GoCore/RecoveryValueBasic.lean
+Recovery control fresh elaboration: GoLean/GoCore/RecoveryValueCalls.lean
+Recovery control fresh elaboration: GoLean/GoCore/RecoveryStatementProgress.lean
+Recovery control fresh elaboration: GoLean/GoCore/RecoveryFrameProgress.lean
+Recovery control fresh elaboration: GoLean/GoCore/RecoveryPanicProgress.lean
+Recovery control fresh elaboration: GoLean/GoCore/RecoveryInvariant.lean
+Recovery control fresh elaboration: GoLean/GoCore/RecoverySuccessfulRuns.lean
+Recovery control fresh elaboration: Tests/RecoveryInvariant.lean
+Recovery control fresh elaboration: Tests/RecoveryControlAudit.lean
+Recovery control audit scratch retained: /home/dev/projects/golean/.tmp/recovery-control-audit-087ytvxy
+Recovery control audit: 124 required theorems present; 13891 constants checked across all imported local modules (classical trio only)
+/home/dev/projects/golean/.tmp/recovery-control-audit-087ytvxy/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryDelivery.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryDelivery.0.recoveryControlHole
+Recovery control negative audit: RecoveryDelivery compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-087ytvxy/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryControlData.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryControlData.0.recoveryControlHole
+Recovery control negative audit: RecoveryControlData compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-087ytvxy/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryControl.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryControl.0.recoveryControlHole
+Recovery control negative audit: RecoveryControl compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-087ytvxy/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryControlMono.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryControlMono.0.recoveryControlHole
+Recovery control negative audit: RecoveryControlMono compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-087ytvxy/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryWalk.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryWalk.0.recoveryControlHole
+Recovery control negative audit: RecoveryWalk compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-087ytvxy/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryExpressionProgress.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryExpressionProgress.0.recoveryControlHole
+Recovery control negative audit: RecoveryExpressionProgress compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-087ytvxy/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryControlHelpers.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryControlHelpers.0.recoveryControlHole
+Recovery control negative audit: RecoveryControlHelpers compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-087ytvxy/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryCallControl.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryCallControl.0.recoveryControlHole
+Recovery control negative audit: RecoveryCallControl compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-087ytvxy/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryValueBasic.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryValueBasic.0.recoveryControlHole
+Recovery control negative audit: RecoveryValueBasic compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-087ytvxy/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryValueCalls.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryValueCalls.0.recoveryControlHole
+Recovery control negative audit: RecoveryValueCalls compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-087ytvxy/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryStatementProgress.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryStatementProgress.0.recoveryControlHole
+Recovery control negative audit: RecoveryStatementProgress compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-087ytvxy/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryFrameProgress.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryFrameProgress.0.recoveryControlHole
+Recovery control negative audit: RecoveryFrameProgress compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-087ytvxy/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryPanicProgress.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryPanicProgress.0.recoveryControlHole
+Recovery control negative audit: RecoveryPanicProgress compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-087ytvxy/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryInvariant.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryInvariant.0.recoveryControlHole
+Recovery control negative audit: RecoveryInvariant compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-087ytvxy/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoverySuccessfulRuns.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoverySuccessfulRuns.0.recoveryControlHole
+Recovery control negative audit: RecoverySuccessfulRuns compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-087ytvxy/AuditAll.lean:2:0: error: Recovery control audit: _private.Tests.RecoveryControlAudit.0.recoveryControlAuditHole depends on forbidden axiom _private.Tests.RecoveryControlAudit.0.recoveryControlAuditHole
+Recovery control negative audit: audit_private compiled then rejected (recoveryControlAuditHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-087ytvxy/test_trailing/Tests/RecoveryInvariant.lean:145:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.tmp/recovery-control-audit-087ytvxy/AuditAll.lean:2:0: error: Recovery control audit: _private.Tests.RecoveryInvariant.0.recoveryControlTrailingHole depends on forbidden axiom sorryAx
+Recovery control negative audit: test_trailing compiled then rejected (sorryAx)
+Recovery structural control gate: PASS
+
+[1m── Actual driver abort observation and provenance[0m
+59b87eddf0b8314fb97668446901b1c8a79e4fc4dcc89a77319a2779e0699d08  GoLean/GoCore/AbortObservation.lean
+25153a32b0184e6ed09f56f13540ba5ca909763c8ebe87fdc3313ab32eecc670  GoLean/GoCore/RecoveryObservation.lean
+3f521443b0a7366618f4dcad477ec9eb37304109889e96323b39ebecfea83922  GoLean/GoCore/RecoveryPoolObservation.lean
+cb1cc4c842f00547a36fcd871b20f9239b341350b472ab5813aa378ed8023b62  GoLean/GoCore/RecoveryProgramObservation.lean
+251c1e2286f0fed345c90d286bcbb1e29c753111d1a086d7426bb6279fd87108  Tests/AbortObservation.lean
+2f4486eb7c82573fcbbbc612aa3bd041ff809b49796fa508debea276fb263d9c  Tests/AbortObservationAudit.lean
+Build completed successfully (73 jobs).
+Abort observation fresh elaboration: GoLean/GoCore/AbortObservation.lean
+Abort observation fresh elaboration: GoLean/GoCore/RecoveryObservation.lean
+Abort observation fresh elaboration: GoLean/GoCore/RecoveryPoolObservation.lean
+Abort observation fresh elaboration: GoLean/GoCore/RecoveryProgramObservation.lean
+Abort observation fresh elaboration: Tests/AbortObservation.lean
+Abort observation fresh elaboration: Tests/AbortObservationAudit.lean
+Abort observation audit scratch retained: /home/dev/projects/golean/.tmp/abort-observation-audit-8xuid9cb
+Abort observation audit: 43 required theorems present; 14596 constants checked across all imported local modules (classical trio only)
+/home/dev/projects/golean/.tmp/abort-observation-audit-8xuid9cb/AuditAll.lean:2:0: error: Abort observation audit: _private.GoLean.GoCore.AbortObservation.0.abortObservationHole depends on forbidden axiom _private.GoLean.GoCore.AbortObservation.0.abortObservationHole
+Abort observation negative audit: AbortObservation compiled then rejected (abortObservationHole)
+/home/dev/projects/golean/.tmp/abort-observation-audit-8xuid9cb/AuditAll.lean:2:0: error: Abort observation audit: _private.GoLean.GoCore.RecoveryObservation.0.abortObservationHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryObservation.0.abortObservationHole
+Abort observation negative audit: RecoveryObservation compiled then rejected (abortObservationHole)
+/home/dev/projects/golean/.tmp/abort-observation-audit-8xuid9cb/AuditAll.lean:2:0: error: Abort observation audit: _private.GoLean.GoCore.RecoveryPoolObservation.0.abortObservationHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryPoolObservation.0.abortObservationHole
+Abort observation negative audit: RecoveryPoolObservation compiled then rejected (abortObservationHole)
+/home/dev/projects/golean/.tmp/abort-observation-audit-8xuid9cb/AuditAll.lean:2:0: error: Abort observation audit: _private.GoLean.GoCore.RecoveryProgramObservation.0.abortObservationHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryProgramObservation.0.abortObservationHole
+Abort observation negative audit: RecoveryProgramObservation compiled then rejected (abortObservationHole)
+/home/dev/projects/golean/.tmp/abort-observation-audit-8xuid9cb/AuditAll.lean:2:0: error: Abort observation audit: _private.Tests.AbortObservationAudit.0.abortObservationAuditHole depends on forbidden axiom _private.Tests.AbortObservationAudit.0.abortObservationAuditHole
+Abort observation negative audit: audit_private compiled then rejected (abortObservationAuditHole)
+/home/dev/projects/golean/.tmp/abort-observation-audit-8xuid9cb/test_trailing/Tests/AbortObservation.lean:122:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.tmp/abort-observation-audit-8xuid9cb/AuditAll.lean:2:0: error: Abort observation audit: _private.Tests.AbortObservation.0.abortObservationTrailingHole depends on forbidden axiom sorryAx
+Abort observation negative audit: test_trailing compiled then rejected (sorryAx)
+Actual driver abort observation gate: PASS
+
+[1m── Typed recovery terminal classification and complete metadata[0m
+84c0fea9d00f2f4db47e816d14a90265d795aea2cedcee4673091f6fc890b800  GoLean/GoCore/RecoveryTerminal.lean
+25c7f0af8fcd335d4cbecc177c59eb378b9206297dcbd2381a45308f081a80a3  GoLean/GoCore/RecoveryPoolObservationTyped.lean
+0b26ea898300288cce6ef77005b8b8c6a19f36e75c8fe1b2307deb27c4a58fb5  Tests/RecoveryTerminal.lean
+9ffc7e702f9044f1f0bcb5ae2df5b358dffcca54e4e9525706a4a98d3cac3228  Tests/RecoveryTerminalAudit.lean
+Build completed successfully (80 jobs).
+Recovery terminal fresh elaboration: GoLean/GoCore/RecoveryTerminal.lean
+Recovery terminal fresh elaboration: GoLean/GoCore/RecoveryPoolObservationTyped.lean
+Recovery terminal fresh elaboration: Tests/RecoveryTerminal.lean
+Recovery terminal fresh elaboration: Tests/RecoveryTerminalAudit.lean
+Recovery terminal audit scratch retained: /home/dev/projects/golean/.tmp/recovery-terminal-audit-ggxcle82
+Recovery terminal audit: 32 required theorems; 15146 declarations across all imported local origins; classical trio only
+Recovery terminal exact theorem types: /home/dev/projects/golean/.tmp/recovery-terminal-audit-ggxcle82/claims.json
+/home/dev/projects/golean/.tmp/recovery-terminal-audit-ggxcle82/AuditAll.lean:2:0: error: Recovery terminal audit: _private.GoLean.GoCore.RecoveryTerminal.0.terminalUnusedHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryTerminal.0.terminalUnusedHole
+Recovery terminal negative audit: RecoveryTerminal compiled then rejected (terminalUnusedHole)
+/home/dev/projects/golean/.tmp/recovery-terminal-audit-ggxcle82/AuditAll.lean:2:0: error: Recovery terminal audit: _private.GoLean.GoCore.RecoveryPoolObservationTyped.0.terminalUnusedHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryPoolObservationTyped.0.terminalUnusedHole
+Recovery terminal negative audit: RecoveryPoolObservationTyped compiled then rejected (terminalUnusedHole)
+/home/dev/projects/golean/.tmp/recovery-terminal-audit-ggxcle82/AuditAll.lean:2:0: error: Recovery terminal audit: _private.Tests.RecoveryTerminal.0.terminalUnusedTestHole depends on forbidden axiom _private.Tests.RecoveryTerminal.0.terminalUnusedTestHole
+Recovery terminal negative audit: test_private compiled then rejected (terminalUnusedTestHole)
+/home/dev/projects/golean/.tmp/recovery-terminal-audit-ggxcle82/AuditAll.lean:2:0: error: Recovery terminal audit: _private.Tests.RecoveryTerminalAudit.0.terminalUnusedAuditHole depends on forbidden axiom _private.Tests.RecoveryTerminalAudit.0.terminalUnusedAuditHole
+Recovery terminal negative audit: audit_private compiled then rejected (terminalUnusedAuditHole)
+/home/dev/projects/golean/.tmp/recovery-terminal-audit-ggxcle82/test_trailing/Tests/RecoveryTerminal.lean:117:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.tmp/recovery-terminal-audit-ggxcle82/AuditAll.lean:2:0: error: Recovery terminal audit: _private.Tests.RecoveryTerminal.0.terminalTrailingHole depends on forbidden axiom sorryAx
+Recovery terminal negative audit: test_trailing compiled then rejected (sorryAx)
+Typed recovery terminal gate: PASS
+
+[1m── frontend pins (scripts/check-frontend-pins — deviation observation + raft twin wire)[0m
+nativefrontend: WARNING (E7 allow active): native frontend unsupported: package-level initializer of [hiddenX] reaches a method call through an interface (.ab), and a same-package method ab reads the initialized package variable hiddenA: a HIDDEN data dependency — spec#Package_initialization leaves the initialization order unspecified there, and the realized go/types InitOrder is KNOWN to differ from gc's on this shape (latitude E7; deviation record init/hidden-dep-order) — fail closed
+check-frontend-pins: ok [hidden-dep-order] — realized deviation order matches the recorded pin
+check-frontend-pins: ok [twin-wire] — fresh emit = pinned wire (758110a3f5a2…)
+check-frontend-pins: ok [stdlib-pin] — 61 lowered stdlib source files match the pinned sha256 manifest
+
+[1m── import-goose gate self-test (scripts/test-import-goose)[0m
+  test-import-goose: all fixtures behave
+
+[1m── observer byte transport (fresh harness, unit tests, shell probes and compiling mutations)[0m
+  Observer controls: PASS
+
+[1m── diagnostic observer transport and terminal classification[0m
+Diagnostic observer scratch: /home/dev/projects/golean/.tmp/observer-tools-c5yh11dy
+f530cf673f7517a24309f4248c21ddc115ef147cb371b9708fe9e87ae7892605 scripts/membership-sampling
+0d0c357b4a44eefddc5e7ed2a043e4277bda6cf323d44d1bfab53a3df0c4018a scripts/gotest-triage
+33259adf36ae63f70808686c74842cff9ca909a036f27134c8dd7b1fef6d495e scripts/cedar-census
+e1e0e3760359111222f4abe318bbcee9da1e3ddfdf4eba221499dd07f77ccedf scripts/check-observer-tools.py
+f2a5685b6c00cae4f5a7e66a9d08678e92aaa60c243ecf77d99fe21a56e2b58f tools/coverageharness/abortkind.go
+b45ca6b7aea4e3db759ea2efa7793d8186becd822c1cd503cec2053d5b52f32e tools/coverageharness/abortkind_test.go
+af3e8e08ce989c95ad2e5ea32cb5acc16230e61dcecc7103ebecaf8ed066df27 tools/coverageharness/abortrecord_test.go
+82d2d039c8ff4bdfca98fc8919bafa9fa19dd59666409ba594e00a7cf42a96fc tools/coverageharness/crashhook.go
+2626da4178a453eaef36fdbf86e5563667644606237435e828e6fa47f4aebd5f tools/coverageharness/crashhook_test.go
+3fe16af7ff08d1f9b91542da74bce2c688c56e754f6d1ef31568f8eb191d3bc0 tools/coverageharness/crashview.go
+48983f249615c1abff3fa96ccded2af94dd1c6853c819866361ae480bcf67798 tools/coverageharness/crashview_test.go
+f7b3a04f624dedd3fbe8053508ec53e6dbc6a1c7447e84623f22f019553cd644 tools/coverageharness/main.go
+b6bf7adc73c6fba527819046d1e83c00833fab46b8eb771fa04f21f95828210e tools/coverageharness/observe.go
+ecee3e1e8d6c2166834bdae924e3abe6e52656dbcff2e6eda93b033ef8d3fa4a tools/coverageharness/observe_test.go
+f9271b3338f1f99ecf4258677a24526be17b71ab10ebace3f140fdb50298d22d tools/coverageharness/split.go
+3c3262cf26fa35307a8b23b081601ed98249779ce120bf0aad6dd669f24b2a8a tools/coverageharness/split_test.go
+PASS membership-sampling/panic-controls
+PASS membership-sampling/panic-prefix
+PASS membership-sampling/invalid-utf8
+PASS membership-sampling/stdout-marker
+PASS membership-sampling/success
+PASS membership-sampling/nul-success
+PASS membership-sampling/fatal-plain
+PASS membership-sampling/fatal-unwind
+PASS membership-sampling/marker-first
+PASS membership-sampling/marker-output
+PASS membership-sampling/marker-multiline
+PASS membership-sampling/deadlock-payload
+PASS membership-sampling/glued-prefix
+PASS membership-sampling/printed-origin
+PASS membership-sampling/unknown-origin
+PASS membership-sampling/printed-continuation
+PASS membership-sampling/literal-continuation
+PASS membership-sampling/setup-exit
+PASS membership-sampling/success-no-ack
+PASS membership-sampling/success-crash
+PASS membership-sampling/malformed-ack
+Diagnostic script mutation: membership-sampling/omit-channel syntactically valid, false acceptance exposed by existing negative control
+PASS membership-sampling/native-panic
+PASS membership-sampling/native-invalid-utf8
+PASS membership-sampling/native-nul-success
+PASS membership-sampling/native-fatal-unwind
+PASS membership-sampling/native-marker-first
+PASS membership-sampling/native-marker-multiline
+PASS membership-sampling/native-marker-output
+PASS membership-sampling/native-glued-prefix
+PASS membership-sampling/native-nilgo-literal
+PASS membership-sampling/native-printed-continuation
+PASS membership-sampling/native-literal-continuation
+PASS membership-sampling/native-glued-output
+PASS membership-sampling/native-repanic
+PASS gotest-triage/panic-controls
+PASS gotest-triage/panic-prefix
+PASS gotest-triage/invalid-utf8
+PASS gotest-triage/stdout-marker
+PASS gotest-triage/success
+PASS gotest-triage/nul-success
+PASS gotest-triage/fatal-plain
+PASS gotest-triage/fatal-unwind
+PASS gotest-triage/marker-first
+PASS gotest-triage/marker-output
+PASS gotest-triage/marker-multiline
+PASS gotest-triage/deadlock-payload
+PASS gotest-triage/glued-prefix
+PASS gotest-triage/printed-origin
+PASS gotest-triage/unknown-origin
+PASS gotest-triage/printed-continuation
+PASS gotest-triage/literal-continuation
+PASS gotest-triage/setup-exit
+PASS gotest-triage/success-no-ack
+PASS gotest-triage/success-crash
+PASS gotest-triage/malformed-ack
+PASS gotest-triage/lf-not-empty
+PASS gotest-triage/crlf-normalized
+PASS gotest-triage/output-controls
+Diagnostic script mutation: gotest-triage/omit-channel syntactically valid, false acceptance exposed by existing negative control
+Diagnostic script mutation: gotest-triage/lossy-out syntactically valid, false acceptance exposed by existing negative control
+PASS gotest-triage/native-panic
+PASS gotest-triage/native-invalid-utf8
+PASS gotest-triage/native-nul-success
+PASS gotest-triage/native-fatal-unwind
+PASS gotest-triage/native-marker-first
+PASS gotest-triage/native-marker-multiline
+PASS gotest-triage/native-marker-output
+PASS gotest-triage/native-glued-prefix
+PASS gotest-triage/native-nilgo-literal
+PASS gotest-triage/native-printed-continuation
+PASS gotest-triage/native-literal-continuation
+PASS gotest-triage/native-glued-output
+PASS gotest-triage/native-repanic
+PASS cedar-census/panic-controls
+PASS cedar-census/panic-prefix
+PASS cedar-census/invalid-utf8
+PASS cedar-census/stdout-marker
+PASS cedar-census/success
+PASS cedar-census/nul-success
+PASS cedar-census/fatal-plain
+PASS cedar-census/fatal-unwind
+PASS cedar-census/marker-first
+PASS cedar-census/marker-output
+PASS cedar-census/marker-multiline
+PASS cedar-census/deadlock-payload
+PASS cedar-census/glued-prefix
+PASS cedar-census/printed-origin
+PASS cedar-census/unknown-origin
+PASS cedar-census/printed-continuation
+PASS cedar-census/literal-continuation
+PASS cedar-census/setup-exit
+PASS cedar-census/success-no-ack
+PASS cedar-census/success-crash
+PASS cedar-census/malformed-ack
+Diagnostic script mutation: cedar-census/omit-channel syntactically valid, false acceptance exposed by existing negative control
+Diagnostic script mutation: cedar-census/false-silence syntactically valid, false acceptance exposed by existing negative control
+PASS cedar-census/native-panic
+PASS cedar-census/native-invalid-utf8
+PASS cedar-census/native-nul-success
+PASS cedar-census/native-fatal-unwind
+PASS cedar-census/native-marker-first
+PASS cedar-census/native-marker-multiline
+PASS cedar-census/native-marker-output
+PASS cedar-census/native-glued-prefix
+PASS cedar-census/native-nilgo-literal
+PASS cedar-census/native-printed-continuation
+PASS cedar-census/native-literal-continuation
+PASS cedar-census/native-glued-output
+PASS cedar-census/native-repanic
+Diagnostic observer probes: 105 checks, PASS
+
+[1m── positive declaration identities (fresh Go/Lean fixture and post-import audit)[0m
+c66e53248a3786c244049ebed2266f323b88f2deb8af628188b79c252c0fe5dd  GoLean/GoCore/Declaration.lean
+625da21980d13c56c555b6bd4e7564593f9b35517f2e6f6e8b8b89c500ca088e  GoLean/StrictJsonParse.lean
+c904b03e5321303a337409faf38cdc69e0efaeb4a799b4e906d922088fa33a9f  GoLean/NativeDeclaration.lean
+1895d4778b9b3437d02b1e1f479dd0ac8c1fdf43cbe0a28c9fe458b4df85aad5  Tests/DeclarationWire.lean
+475dd67e039b2505ecfc838b180745057888843a32efedae828c79e2df6823b1  Tests/StrictJsonParse.lean
+c875c424c789d82d73fea10cee59510868180ed6e4dec645c0f815ca48f333ec  Tests/DeclarationAudit.lean
+b76d99d364f490dd987296eddbb93161b9cfafd7569630f1cacd026f85710bf4  tools/nativefrontend/declaration.go
+379e2c361673093a9cdee1fc28ae13b25a3fced9df6ac2d52ae337bbb9a532e0  tools/nativefrontend/declaration_fixture_test.go
+22baa3f394437b3270ae3263a013d4e09e1fb4b7647d19de34df6fdfe41633ac  tools/check-declaration-wire.lean
+0da04933454f326e9cdb77acdadc05f1240d90e63ca555057b84421423fb79a1  tools/declaration-audit.py
+ℹ [10/11] Replayed Tests.DeclarationAudit
+info: Tests/DeclarationAudit.lean:27:0: Declaration audit: 1712 imported/local declarations checked
+Build completed successfully (11 jobs).
+Declaration audit: 1712 imported/local declarations checked
+PASS positive empty-object
+PASS positive empty-array
+PASS positive primitive-mix
+PASS positive nested
+PASS positive same-key-other-object
+PASS positive empty-key
+PASS positive escaped-controls
+PASS positive supplementary-escape
+PASS positive supplementary-escape-uppercase
+PASS positive explicit-replacement
+PASS positive unicode-forms-distinct
+PASS positive whitespace
+PASS negative duplicate-plain
+PASS negative duplicate-escaped
+PASS negative duplicate-nested
+PASS negative duplicate-empty
+PASS negative duplicate-NUL
+PASS negative duplicate-slash
+PASS negative duplicate-supplementary
+PASS negative high-surrogate
+PASS negative low-surrogate
+PASS negative high-then-scalar
+PASS negative high-then-high
+PASS negative surrogate-object-key
+PASS negative trailing-object-comma
+PASS negative trailing-array-comma
+PASS negative unquoted-key
+PASS negative bare-control
+PASS malformed trailing-token
+PASS malformed leading-zero
+PASS malformed truncated-array
+PASS malformed truncated-object
+PASS malformed truncated-escape
+PASS malformed invalid-escape
+PASS invalid-UTF8 invalid-leading-byte
+PASS invalid-UTF8 overlong
+PASS invalid-UTF8 encoded-surrogate
+PASS invalid-UTF8 past-Unicode-limit
+PASS invalid-UTF8 truncated-UTF8
+PASS: 12 positive, 16 named refusals, 6 malformed, 5 invalid UTF-8; 2 decoded scalars and old duplicate regression
+PASS declaration byte boundary: 1 positive, 4 malformed refusals
+=== RUN   TestDeclarationDecoderFixture
+    declaration_fixture_test.go:81: checked 24 declaration identities and 576 go/types equality pairs
+--- PASS: TestDeclarationDecoderFixture (0.01s)
+PASS
+ok  	_/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/tools/nativefrontend	0.008s
+26748fff476161bf0946095a26f6aaf01b191d40f98219a42faada33ceef3f3c  /home/dev/projects/golean/.tmp/declaration-fixture.FIyyyh.json
+Declaration wire: PASS; 24 fresh Go types, 576 go/types identity pairs, 17 malformed-input controls, method-order normalization
+Declaration audit scratch retained: /home/dev/projects/golean/.tmp/declaration-audit-e8bmsw1u
+Declaration audit: 1712 imported/local declarations checked
+/home/dev/projects/golean/.tmp/declaration-audit-e8bmsw1u/AuditAll.lean:2:0: error: Declaration audit: _private.GoLean.GoCore.Declaration.0.declarationUnusedHole0 depends on forbidden axiom _private.GoLean.GoCore.Declaration.0.declarationUnusedHole0
+Declaration negative audit: GoLean.GoCore.Declaration compiled then rejected (declarationUnusedHole0)
+/home/dev/projects/golean/.tmp/declaration-audit-e8bmsw1u/AuditAll.lean:2:0: error: Declaration audit: _private.GoLean.StrictJsonParse.0.declarationUnusedHole1 depends on forbidden axiom _private.GoLean.StrictJsonParse.0.declarationUnusedHole1
+Declaration negative audit: GoLean.StrictJsonParse compiled then rejected (declarationUnusedHole1)
+/home/dev/projects/golean/.tmp/declaration-audit-e8bmsw1u/AuditAll.lean:2:0: error: Declaration audit: _private.GoLean.NativeDeclaration.0.declarationUnusedHole2 depends on forbidden axiom _private.GoLean.NativeDeclaration.0.declarationUnusedHole2
+Declaration negative audit: GoLean.NativeDeclaration compiled then rejected (declarationUnusedHole2)
+/home/dev/projects/golean/.tmp/declaration-audit-e8bmsw1u/AuditAll.lean:2:0: error: Declaration audit: _private.Tests.DeclarationWire.0.declarationUnusedHole3 depends on forbidden axiom _private.Tests.DeclarationWire.0.declarationUnusedHole3
+Declaration negative audit: Tests.DeclarationWire compiled then rejected (declarationUnusedHole3)
+/home/dev/projects/golean/.tmp/declaration-audit-e8bmsw1u/AuditAll.lean:2:0: error: Declaration audit: _private.Tests.StrictJsonParse.0.declarationUnusedHole4 depends on forbidden axiom _private.Tests.StrictJsonParse.0.declarationUnusedHole4
+Declaration negative audit: Tests.StrictJsonParse compiled then rejected (declarationUnusedHole4)
+Declaration audit: 1712 imported/local declarations checked
+/home/dev/projects/golean/.tmp/declaration-audit-e8bmsw1u/AuditAll.lean:2:0: error: Declaration audit: _private.Tests.DeclarationAudit.0.declarationUnusedHole5 depends on forbidden axiom _private.Tests.DeclarationAudit.0.declarationUnusedHole5
+Declaration negative audit: Tests.DeclarationAudit compiled then rejected (declarationUnusedHole5)
+Declaration gate: PASS; fresh fixture retained at /home/dev/projects/golean/.tmp/declaration-fixture.FIyyyh.json
+
+[1m── explicit string-member apparatus and compiling negative controls[0m
+String member apparatus PASS: fresh Go/Python tests; 4 compiled Go and 11 compiled Python mutation controls rejected
+
+[1m── frontend unit tests (go test ./tools/nativefrontend)[0m
+ok  	_/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/tools/nativefrontend	1.088s
+
+[1m── lowering-diagnostic tables (go test ./tools/lowerdiag — causes.tsv vs ledger, surface tables vs frontend, calibration)[0m
+ok  	_/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/tools/lowerdiag	0.589s
+
+[1m── interpreter eval tests (gocore-eval-tests)[0m
+  ok:202  fail:0  exit:0
+
+[1m── negative baseline diff[0m
+no regression: 394 case(s) run in negative-latest.tsv match baselines/negative-full.tsv
+
+[1m── differential baseline diff (scripts/coverage-baseline-diff)[0m
+no regression: 3635 case(s) run in latest.tsv match baselines/native-full.tsv
+
+[1m── cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)[0m
+  [01] C13  MEDIUM  78 doc site(s) across 9 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
+  [02] C5  MEDIUM  1 frontier-table case citation(s) do not resolve against the baseline
+  [03] C6  MEDIUM  6 dangling `BUG` cross-reference(s) in docs/ (the id has no definition)
+
+[1m══ scripts/ci summary ══[0m
+  note build parallelism: LEAN_NUM_THREADS=3 (set by the caller — honoured as-is)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   core build (warning-free)
+  ok   semantic interface (bridges, counterexamples, compiled audit negatives)
+  ok   admission checker proofs and post-import audit
+  ok   Boolean scoped typing checker proofs and regressions
+  ok   Boolean structural runtime preservation and progress
+  ok   Recovery scoped typing checker proofs and regressions
+  ok   Recovery mixed storage and runtime supporting lemmas
+  ok   Recovery actual program and call entry
+  ok   Recovery structural control preservation and progress
+  ok   Actual driver abort observation and provenance
+  ok   Typed recovery terminal classification and complete metadata
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   observer byte transport
+  ok   diagnostic observer transport and terminal classification
+  ok   positive declaration identities and decoder
+  ok   explicit string-member apparatus
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   eval tests (202 ok)
+  note negative baseline diff matched (394 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit [recorded at e6a9920, HEAD is 39235f6 — stale]
+  note baseline diff FULL (3635/3635, no regression) but recorded on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit [recorded at e6a9920, HEAD is 39235f6 — stale]
+  note reconciler: 3 finding(s), 0 HIGH — report-only (details: tools/reconcile-records)
+
+[1mRESULT: PASS[0m

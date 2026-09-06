@@ -1,0 +1,139 @@
+{
+  "source_directory": "artifacts/iris-customer",
+  "included": {
+    "go-run/iris-customer__normal/main.go": {
+      "sha256": "5d0353e2e444c00b1d1f69831fa60d917da951a1e7f81337f7583114e27714c6",
+      "bytes": 410
+    },
+    "go-run/iris-customer__normal/oracle.crash": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/iris-customer__normal/oracle.read.err": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/iris-customer__normal/oracle.registered": {
+      "sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+      "bytes": 11
+    },
+    "go-run/iris-customer__normal/oracle.split.err": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/iris-customer__normal/oracle.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/iris-customer__normal/oracle.stdout": {
+      "sha256": "35d9d4b19708129cae7fd973d15014dd8b983d4e29db508cbb91766d1c7a8e22",
+      "bytes": 88
+    },
+    "go-run/iris-customer__normal/zz_golean_crash.go": {
+      "sha256": "439bc1d4f475c0abc768804f521f7ccf04819612ff9bc32d25aabb248a816673",
+      "bytes": 520
+    },
+    "go-run/iris-customer__normal/zz_golean_harness.go": {
+      "sha256": "1e2730ab6e9789a1236ea0513bc0421b4589e2bb6961763ce382b9657ccedb9e",
+      "bytes": 5800
+    },
+    "go-run/iris-customer__recovered/main.go": {
+      "sha256": "5d0353e2e444c00b1d1f69831fa60d917da951a1e7f81337f7583114e27714c6",
+      "bytes": 410
+    },
+    "go-run/iris-customer__recovered/oracle.crash": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/iris-customer__recovered/oracle.read.err": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/iris-customer__recovered/oracle.registered": {
+      "sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+      "bytes": 11
+    },
+    "go-run/iris-customer__recovered/oracle.split.err": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/iris-customer__recovered/oracle.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/iris-customer__recovered/oracle.stdout": {
+      "sha256": "35d9d4b19708129cae7fd973d15014dd8b983d4e29db508cbb91766d1c7a8e22",
+      "bytes": 88
+    },
+    "go-run/iris-customer__recovered/zz_golean_crash.go": {
+      "sha256": "439bc1d4f475c0abc768804f521f7ccf04819612ff9bc32d25aabb248a816673",
+      "bytes": 520
+    },
+    "go-run/iris-customer__recovered/zz_golean_harness.go": {
+      "sha256": "3840ed7010b525750352a5a19dabbdc452ce423e024f16d254154c69fe11ada2",
+      "bytes": 5803
+    },
+    "go-run/iris-customer__uncaught/main.go": {
+      "sha256": "5d0353e2e444c00b1d1f69831fa60d917da951a1e7f81337f7583114e27714c6",
+      "bytes": 410
+    },
+    "go-run/iris-customer__uncaught/oracle.crash": {
+      "sha256": "35a69059f26a92e4ea8e45bada210b7d576e91d25cbaa139bec0ffa719b7655d",
+      "bytes": 3592
+    },
+    "go-run/iris-customer__uncaught/oracle.message.err": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/iris-customer__uncaught/oracle.registered": {
+      "sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+      "bytes": 11
+    },
+    "go-run/iris-customer__uncaught/oracle.split.err": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/iris-customer__uncaught/oracle.stderr": {
+      "sha256": "05244d525bb30a9d07b381fce06be909d7392c823d7c82156b910c6cd03b9037",
+      "bytes": 3606
+    },
+    "go-run/iris-customer__uncaught/oracle.stdout": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "go-run/iris-customer__uncaught/zz_golean_crash.go": {
+      "sha256": "439bc1d4f475c0abc768804f521f7ccf04819612ff9bc32d25aabb248a816673",
+      "bytes": 520
+    },
+    "go-run/iris-customer__uncaught/zz_golean_harness.go": {
+      "sha256": "2e65f93fcdb906d2bf3de31504582864e0c43c47a16ab2960485ac51e733390c",
+      "bytes": 5549
+    },
+    "latest.meta.tsv": {
+      "sha256": "00d7a4229b5c1caab05106dabb5d01982fdba7e78ee0358cfd8c6c2ad5b0ced0",
+      "bytes": 670
+    },
+    "latest.tsv": {
+      "sha256": "14c9aacdd09e791f5b68bce32b1c01f9df3efdbb2d4d309f3eb8d16dbe1c9c8f",
+      "bytes": 307
+    },
+    "native/iris-customer/normal/wire.json": {
+      "sha256": "5a421bbd5aba27476017ad766a9fab6a1e43dff2de58c1043647428eb62eb197",
+      "bytes": 4137
+    },
+    "native/iris-customer/recovered/wire.json": {
+      "sha256": "5a421bbd5aba27476017ad766a9fab6a1e43dff2de58c1043647428eb62eb197",
+      "bytes": 4137
+    },
+    "native/iris-customer/uncaught/wire.json": {
+      "sha256": "5a421bbd5aba27476017ad766a9fab6a1e43dff2de58c1043647428eb62eb197",
+      "bytes": 4137
+    }
+  },
+  "omitted_reproducible_binaries": {
+    "bin/coverageharness": {
+      "sha256": "0827ed713a1f15965eef6b468bdb08d07b42ff2f6193622445eb44f9c7e04f25",
+      "bytes": 4404364
+    }
+  }
+}

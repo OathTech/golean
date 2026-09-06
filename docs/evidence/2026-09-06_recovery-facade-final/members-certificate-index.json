@@ -1,0 +1,164 @@
+{
+  "panic-recover__repanic-same-value-abort": {
+    "certificate_sha256": "9f55029c26fad156f15ef64df49270257f2e2030656199787d17670929dbc92c",
+    "source_path": "artifacts/terminal/final/members/string-members/panic-recover__repanic-same-value-abort/fresh-o2hxmxnt/certificate.json",
+    "certificate_fields": [
+      "schema",
+      "envelope",
+      "case",
+      "scope",
+      "pin_sha256",
+      "bindings",
+      "binaries",
+      "controls",
+      "subject_go",
+      "subject_models",
+      "go_records",
+      "commands"
+    ]
+  },
+  "panic-recover__string-members__controls": {
+    "certificate_sha256": "094604b5894e94a0283df16590400a22348ea33fff48a0db9e056b3d44b31ad4",
+    "source_path": "artifacts/terminal/final/members/string-members/panic-recover__string-members__controls/fresh-o4fi1op3/certificate.json",
+    "certificate_fields": [
+      "schema",
+      "envelope",
+      "case",
+      "scope",
+      "pin_sha256",
+      "bindings",
+      "binaries",
+      "controls",
+      "subject_go",
+      "subject_models",
+      "go_records",
+      "commands"
+    ]
+  },
+  "panic-recover__string-members__equal": {
+    "certificate_sha256": "aae5e169f936ab18805eff7382aac1b8a85533a548a55c0da8f5d3c308a7bea7",
+    "source_path": "artifacts/terminal/final/members/string-members/panic-recover__string-members__equal/fresh-ul31_yw9/certificate.json",
+    "certificate_fields": [
+      "schema",
+      "envelope",
+      "case",
+      "scope",
+      "pin_sha256",
+      "bindings",
+      "binaries",
+      "controls",
+      "subject_go",
+      "subject_models",
+      "go_records",
+      "commands"
+    ]
+  },
+  "panic-recover__string-members__invalid-after-lf": {
+    "certificate_sha256": "4f6f7083d737b9b2b78a9966300a5d0d934c45d67e0bd38cca8c8458c971781c",
+    "source_path": "artifacts/terminal/final/members/string-members/panic-recover__string-members__invalid-after-lf/fresh-olwq3w4n/certificate.json",
+    "certificate_fields": [
+      "schema",
+      "envelope",
+      "case",
+      "scope",
+      "pin_sha256",
+      "bindings",
+      "binaries",
+      "controls",
+      "subject_go",
+      "subject_models",
+      "go_records",
+      "commands"
+    ]
+  },
+  "panic-recover__string-members__invalid-before-lf": {
+    "certificate_sha256": "e4a982b03aa2a617234499dc10c0b915747dfeb43f3e22d1050716b17f23b9cb",
+    "source_path": "artifacts/terminal/final/members/string-members/panic-recover__string-members__invalid-before-lf/fresh-w8aeqbkf/certificate.json",
+    "certificate_fields": [
+      "schema",
+      "envelope",
+      "case",
+      "scope",
+      "pin_sha256",
+      "bindings",
+      "binaries",
+      "controls",
+      "subject_go",
+      "subject_models",
+      "go_records",
+      "commands"
+    ]
+  },
+  "panic-recover__string-members__invalid-recovered": {
+    "certificate_sha256": "a53cfd625949120c4dd9dc92571bfef8b9c1040ed68f11948f6ff12920690808",
+    "source_path": "artifacts/terminal/final/members/string-members/panic-recover__string-members__invalid-recovered/fresh-2oh9qvox/certificate.json",
+    "certificate_fields": [
+      "schema",
+      "envelope",
+      "case",
+      "scope",
+      "pin_sha256",
+      "bindings",
+      "binaries",
+      "controls",
+      "subject_go",
+      "subject_models",
+      "go_records",
+      "commands"
+    ]
+  },
+  "panic-recover__string-members__multiple": {
+    "certificate_sha256": "1cfe380e15cd508e3d0f49baaf8fe6c65b34ab2489475373f14b4b686a750f46",
+    "source_path": "artifacts/terminal/final/members/string-members/panic-recover__string-members__multiple/fresh-noe45igj/certificate.json",
+    "certificate_fields": [
+      "schema",
+      "envelope",
+      "case",
+      "scope",
+      "pin_sha256",
+      "bindings",
+      "binaries",
+      "controls",
+      "subject_go",
+      "subject_models",
+      "go_records",
+      "commands"
+    ]
+  },
+  "panic-recover__string-members__unequal": {
+    "certificate_sha256": "2b57473e211f3460ad1be9c3a50b68444364adc76d5cbe3e30b73aa5177d977b",
+    "source_path": "artifacts/terminal/final/members/string-members/panic-recover__string-members__unequal/fresh-tqk39e9n/certificate.json",
+    "certificate_fields": [
+      "schema",
+      "envelope",
+      "case",
+      "scope",
+      "pin_sha256",
+      "bindings",
+      "binaries",
+      "controls",
+      "subject_go",
+      "subject_models",
+      "go_records",
+      "commands"
+    ]
+  },
+  "panic-recover__string-members__unicode": {
+    "certificate_sha256": "de90c73c6a9872551fb7a3bf7f3247fece9ec5720239737da5eb09848b7f4103",
+    "source_path": "artifacts/terminal/final/members/string-members/panic-recover__string-members__unicode/fresh-kt5s3nb9/certificate.json",
+    "certificate_fields": [
+      "schema",
+      "envelope",
+      "case",
+      "scope",
+      "pin_sha256",
+      "bindings",
+      "binaries",
+      "controls",
+      "subject_go",
+      "subject_models",
+      "go_records",
+      "commands"
+    ]
+  }
+}

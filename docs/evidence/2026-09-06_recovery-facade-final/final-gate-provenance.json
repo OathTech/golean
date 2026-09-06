@@ -1,0 +1,45 @@
+{
+  "source_manifest_sha256": "51a783c4bc0bce8e1cfb0fa815bf98a455316bbba6d7dfb3e235dcf509654fae",
+  "source_count": 239,
+  "source_only_pin_refresh": "nine binding.apparatus_sources inventories160->166; every other pin field unchanged",
+  "first_attempt": "ordinary-ci-pre-restoration.log, exit1; missing local deps/go and deps/goose plus missing cached corpus records; no proof/eval/apparatus failures",
+  "dependencies": [
+    {
+      "name": "go",
+      "reused_local_source": "/home/dev/projects/golean/deps/go",
+      "revision": "c19862e5f8415b4f24b189d065ed739517c548ba",
+      "tracked_clean": true
+    },
+    {
+      "name": "goose",
+      "reused_local_source": "/home/dev/projects/golean/deps/goose",
+      "revision": "3be88bbb4982f58e5813b6f0344302d5582c8e8a",
+      "tracked_clean": true
+    }
+  ],
+  "cached_full_records": {
+    "latest.tsv": {
+      "sha256": "5a8e77160e43eb6e801f805276e3e3ef2d2a882595faf6e92e9ad51faad1fb2a",
+      "copied_from": "/home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/latest.tsv"
+    },
+    "latest.meta.tsv": {
+      "sha256": "5f8176522a0adeebf76401bb5957f06a11d9926720d879e8bccfc90ac61e7deb",
+      "copied_from": "/home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/latest.meta.tsv"
+    },
+    "negative-latest.tsv": {
+      "sha256": "16e489a805e7530e6d961b27620a93c416c6d91373a608fedacef5281eb8d204",
+      "copied_from": "/home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/negative-latest.tsv"
+    },
+    "negative-latest.meta.tsv": {
+      "sha256": "6dbc3b117e297e67754f53383ab2897a9c3ef10059bd31ae7fb6b8151d12d095",
+      "copied_from": "/home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/negative-latest.meta.tsv"
+    }
+  },
+  "cache_policy": "Explicit reuse of accepted R1 full3635 executable/394 negative records, preserving original dirty/stale metadata; not fresh full conformance at O2",
+  "commands": [
+    "GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 GOLEAN_COVERAGE_JOBS=2 scripts/capped scripts/ci",
+    "GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 GOLEAN_COVERAGE_JOBS=2 GOLEAN_COVERAGE_ARTIFACTS=artifacts/terminal/final/members scripts/capped scripts/diff-one [nine R1 member ids]",
+    "GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 GOLEAN_COVERAGE_JOBS=2 scripts/capped bash spikes/iris-customer/check"
+  ],
+  "status": "all final author gates PASS; independent final acceptance pending"
+}

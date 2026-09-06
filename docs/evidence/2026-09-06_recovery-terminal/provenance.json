@@ -1,0 +1,63 @@
+{
+  "base": "04109912f28b9e8511d43e6fba7c3c158cdea76f",
+  "status": "draft; dependency reconciliation and independent review pending",
+  "source_fingerprint": "3ecd4123092b3599f3faa6ff39c4283ea23012c01e355f04e8d107ead7a4f693",
+  "owned_source_inputs": [
+    "GoLean/GoCore/RecoveryTerminal.lean",
+    "GoLean/GoCore/RecoveryPoolObservationTyped.lean",
+    "Tests/RecoveryTerminal.lean",
+    "Tests/RecoveryTerminalAudit.lean",
+    "scripts/check-recovery-terminal",
+    "tools/recovery-terminal-audit.py",
+    "lakefile.toml"
+  ],
+  "temporary_dependency_inputs": [
+    {
+      "source_tree": "/home/dev/projects/golean/.claude/worktrees/typed-shared-customer",
+      "path": "GoLean/GoCore/RecoveryCallLayout.lean",
+      "sha256": "614a6d05a7588b184a41306242f271df0025c12dd2e22a158afc6f3bd517a3c0"
+    },
+    {
+      "source_tree": "/home/dev/projects/golean/.claude/worktrees/typed-shared-customer",
+      "path": "GoLean/GoCore/RecoverySingleton.lean",
+      "sha256": "146166e00d38505c4fe2b87d8267c6d9ad114cbce36ebcac427958ffe6637257"
+    },
+    {
+      "source_tree": "/home/dev/projects/golean/.claude/worktrees/typed-shared-customer",
+      "path": "GoLean/GoCore/RecoveryPool.lean",
+      "sha256": "6235b7f0f4fa2d97fa34aeb9725d20997ed0ae2d93c1dfa5815dedc98ca5709b"
+    },
+    {
+      "source_tree": "/home/dev/projects/golean/.claude/worktrees/typed-shared-customer",
+      "path": "GoLean/GoCore/RecoveryChoices.lean",
+      "sha256": "399878e92434687435aadf15bb54b6ea70f2b336ba37a1427917fd838f3806cf"
+    },
+    {
+      "source_tree": "/home/dev/projects/golean/.claude/worktrees/typed-string-members",
+      "path": "GoLean/GoCore/Machine.lean",
+      "sha256": "c645f53edbabb8cc509a717bc0ed3f85c77c8347619bd2959177559f2cab501d"
+    },
+    {
+      "source_tree": "/home/dev/projects/golean/.claude/worktrees/typed-string-members",
+      "path": "GoLean/GoCore/PanicText.lean",
+      "sha256": "8c4e28c57e2851a80573e746454fdd8a2057e0cd5548b561b5307cd3d79ad7f5"
+    },
+    {
+      "source_tree": "/home/dev/projects/golean/.claude/worktrees/typed-string-members",
+      "path": "GoLean/GoCore/StringPanic.lean",
+      "sha256": "0e16be58b43be8a1b2c32d8a6956ce4cabaf00ed5f4cca163e16c092e58dddad"
+    }
+  ],
+  "gate_command": "GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 bash scripts/check-recovery-terminal",
+  "gate_exit": 0,
+  "fresh_modules": 4,
+  "kernel_theorems": 32,
+  "audited_local_declarations": 15146,
+  "compiled_poisons_rejected": 5,
+  "whole_program_executable_challenges": 3,
+  "build_command": "GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 scripts/capped lake build",
+  "build_exit": 0,
+  "build_jobs": 102,
+  "ordinary_ci": "pending dependency reconciliation",
+  "fresh_go_differential": "none in this proof increment; renderer and shared customer own fresh fidelity evidence"
+}

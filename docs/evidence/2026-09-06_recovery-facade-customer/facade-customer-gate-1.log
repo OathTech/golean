@@ -1,0 +1,63 @@
+Iris customer source/dependency-manifest fingerprint: cd03d91013bbc7664b2b27b919394e546475b07372ae1febfa9ae652f84494c2
+GoLean HEAD: 658fe3eb266c0cfa7a8db299d93031ea5b1558ec
+Validation mode: incremental Lake build plus fresh spike-module elaboration
+✔ [131/194] Built GoLean.GoCore.RecoveryCalls:c.o (161ms)
+✔ [132/194] Built GoLean.GoCore.RecoveryTypingCore:c.o (188ms)
+✔ [133/194] Built GoLean.GoCore.RecoveryExpressions:c.o (290ms)
+✔ [134/194] Built GoLean.GoCore.RecoveryGraph:c.o (152ms)
+✔ [135/194] Built GoLean.GoCore.RecoveryStatements:c.o (245ms)
+✔ [136/194] Built GoLean.GoCore.RecoveryStore:c.o (41ms)
+✔ [137/194] Built GoLean.GoCore.RecoveryEnvironment:c.o (39ms)
+✔ [138/194] Built GoLean.GoCore.RecoveryAllocation:c.o (54ms)
+✔ [139/194] Built GoLean.GoCore.RecoveryAdmission:c.o (281ms)
+✔ [140/194] Built GoLean.GoCore.RecoveryDelivery:c.o (56ms)
+✔ [141/194] Built GoLean.GoCore.RecoveryDiagnostics:c.o (458ms)
+✔ [142/194] Built GoLean.GoCore.RecoveryResultRoots:c.o (45ms)
+✔ [143/194] Built GoLean.GoCore.RecoveryContext:c.o (49ms)
+✔ [144/194] Built GoLean.GoCore.RecoveryControlTyping:c.o (44ms)
+✔ [145/194] Built GoLean.GoCore.RecoveryControlData:c.o (43ms)
+✔ [146/194] Built GoLean.GoCore.RecoveryControl:c.o (39ms)
+✔ [147/194] Built GoLean.GoCore.RecoveryControlMono:c.o (43ms)
+✔ [148/194] Built GoLean.GoCore.RecoveryWalk:c.o (83ms)
+✔ [149/194] Built GoLean.GoCore.RecoveryExpressionProgress:c.o (41ms)
+✔ [150/194] Built GoLean.GoCore.RecoveryControlHelpers:c.o (85ms)
+✔ [151/194] Built GoLean.GoCore.RecoverySetupShape:c.o (55ms)
+✔ [152/194] Built GoLean.GoCore.RecoveryInitialization:c.o (44ms)
+✔ [153/194] Built GoLean.GoCore.RecoverySetup:c.o (44ms)
+✔ [154/194] Built GoLean.GoCore.RecoverySetupWf:c.o (44ms)
+✔ [155/194] Built GoLean.GoCore.RecoverySetupReadout:c.o (41ms)
+✔ [156/194] Built GoLean.GoCore.RecoveryCallEntry:c.o (49ms)
+✔ [157/194] Built GoLean.GoCore.RecoveryCallControl:c.o (41ms)
+✔ [158/194] Built GoLean.GoCore.RecoveryValueCalls:c.o (51ms)
+✔ [159/194] Built GoLean.GoCore.RecoveryValueBasic:c.o (110ms)
+✔ [160/194] Built GoLean.GoCore.RecoveryStatementProgress:c.o (41ms)
+✔ [161/194] Built GoLean.GoCore.RecoveryPanicProgress:c.o (44ms)
+✔ [162/194] Built GoLean.GoCore.RecoveryFrameProgress:c.o (99ms)
+✔ [163/194] Built GoLean.GoCore.RecoveryCallLayout:c.o (59ms)
+✔ [164/194] Built GoLean.GoCore.AbortObservation:c.o (298ms)
+✔ [165/194] Built GoLean.GoCore.RecoveryPoolObservation:c.o (177ms)
+✔ [166/194] Built GoLean.GoCore.RecoveryProgramObservation:c.o (92ms)
+✔ [170/194] Built GoLean.GoCore.RecoveryInvariant:c.o (39ms)
+✔ [171/194] Built GoLean.GoCore.RecoverySuccessfulRuns:c.o (39ms)
+✔ [177/194] Built GoLean.GoCore.RecoveryObservation:c.o (53ms)
+✔ [178/194] Built GoLean.GoCore.RecoverySingleton:c.o (480ms)
+✔ [180/194] Built GoLean.GoCore.RecoveryPool:c.o (177ms)
+✔ [182/194] Built GoLean.GoCore.RecoveryChoices:c.o (116ms)
+✔ [184/194] Built GoLean.GoCore.RecoveryTerminal:c.o (42ms)
+✔ [186/194] Built GoLean.GoCore.RecoveryPoolObservationTyped:c.o (120ms)
+✔ [187/194] Built GoLean.Interface:c.o (42ms)
+✔ [188/194] Built GoLean (253ms)
+✔ [190/194] Built Main (257ms)
+✔ [192/194] Built GoLean.GoCore.StringPanic:c.o (3.2s)
+✔ [193/194] Built GoLean.GoCore.RecoveryOperators:c.o (8.1s)
+✖ [194/194] Building golean:exe (543ms)
+trace: .> /home/dev/.elan/toolchains/leanprover--lean4---v4.32.2/bin/clang -o /home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.lake/build/bin/golean @/home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.lake/build/bin/golean.rsp
+info: stderr:
+ld.lld: error: undefined symbol: initialize_GoLean_GoCore_RecoveryPoolObservationTyped
+>>> referenced by Interface.c
+>>>               /home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.lake/build/ir/GoLean/Interface.c.o.export:(initialize_GoLean_GoLean_Interface)
+clang: error: linker command failed with exit code 1 (use -v to see invocation)
+error: external command '/home/dev/.elan/toolchains/leanprover--lean4---v4.32.2/bin/clang' exited with code 1
+Some required targets logged failures:
+- golean:exe
+error: build failed

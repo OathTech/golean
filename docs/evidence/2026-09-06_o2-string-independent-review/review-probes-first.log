@@ -1,0 +1,98 @@
+docs/evidence/2026-09-06_o2-string-independent-review/ReviewProbes.lean:13:38: error: Application type mismatch: The argument
+  bytes
+has type
+  GoString
+but is expected to have type
+  GoLean.GoString
+in the application
+  GoLean.GoValue.string bytes
+docs/evidence/2026-09-06_o2-string-independent-review/ReviewProbes.lean:14:18: error: Type mismatch
+  ((out, ?m.22), none)
+has type
+  (GoString × ?m.21) × Option ?m.23
+but is expected to have type
+  GoLean.Semantics.Pool.Result × Option AbortRecord
+docs/evidence/2026-09-06_o2-string-independent-review/ReviewProbes.lean:14:25: error(lean.invalidDottedIdent): Invalid dotted identifier notation: The expected type of `.error` could not be determined
+
+Hint: Using one of these would be unambiguous:
+  [apply] `Except.error`
+  [apply] `MessageType.error`
+  [apply] `EST.Out.error`
+  [apply] `EStateM.Result.error`
+  [apply] `Lean.Exception.error`
+  [apply] `Lean.MessageSeverity.error`
+  [apply] `Lean.Parser.error`
+  [apply] `Lean.TraceResult.error`
+  [apply] `Lean.Lsp.DiagnosticSeverity.error`
+  [apply] `Lean.Macro.Exception.error`
+  [apply] `Lean.Server.FileWorker.FileSetupResult.error`
+  [apply] `Std.Internal.Parsec.ParseResult.error`
+  [apply] `Lean.Meta.Tactic.TryThis.SuggestionStyle.error`
+  [apply] `Std.Http.Protocol.H1.Machine.error`
+docs/evidence/2026-09-06_o2-string-independent-review/ReviewProbes.lean:15:46: error: Application type mismatch: The argument
+  bytes
+has type
+  GoString
+of sort `Type u_1` but is expected to have type
+  GoLean.GoString
+of sort `Type` in the application
+  singleton_observer_string_abort 0 s ?m.27 ?m.28 bytes
+docs/evidence/2026-09-06_o2-string-independent-review/ReviewProbes.lean:14:86: error: unsolved goals
+GoString : Type u_1
+bytes : GoString
+recovered : Bool
+s : ExecState
+ch : Choices
+out : GoString
+⊢ sorry
+docs/evidence/2026-09-06_o2-string-independent-review/ReviewProbes.lean:21:60: error: Application type mismatch: The argument
+  bytes
+has type
+  GoString
+but is expected to have type
+  GoLean.GoString
+in the application
+  GoLean.GoValue.string bytes
+docs/evidence/2026-09-06_o2-string-independent-review/ReviewProbes.lean:22:18: error: Type mismatch
+  ((out, ?m.21), none)
+has type
+  (GoString × ?m.20) × Option ?m.22
+but is expected to have type
+  GoLean.Semantics.Pool.Result × Option AbortRecord
+docs/evidence/2026-09-06_o2-string-independent-review/ReviewProbes.lean:22:25: error(lean.invalidDottedIdent): Invalid dotted identifier notation: The expected type of `.error` could not be determined
+
+Hint: Using one of these would be unambiguous:
+  [apply] `Except.error`
+  [apply] `MessageType.error`
+  [apply] `EST.Out.error`
+  [apply] `EStateM.Result.error`
+  [apply] `Lean.Exception.error`
+  [apply] `Lean.MessageSeverity.error`
+  [apply] `Lean.Parser.error`
+  [apply] `Lean.TraceResult.error`
+  [apply] `Lean.Lsp.DiagnosticSeverity.error`
+  [apply] `Lean.Macro.Exception.error`
+  [apply] `Lean.Server.FileWorker.FileSetupResult.error`
+  [apply] `Std.Internal.Parsec.ParseResult.error`
+  [apply] `Lean.Meta.Tactic.TryThis.SuggestionStyle.error`
+  [apply] `Std.Http.Protocol.H1.Machine.error`
+docs/evidence/2026-09-06_o2-string-independent-review/ReviewProbes.lean:23:2: error: Tactic `rfl` failed: The left-hand side
+  true
+is not definitionally equal to the right-hand side
+  Function.const Lean.Name ()
+    `docs.evidence.2026-09-06_o2-string-independent-review.ReviewProbes.20.4.22.48.4.48._sorry._@.docs.evidence.2026-09-06_o2-string-independent-review.ReviewProbes.704923715._hygCtx._hyg.63
+
+GoString : Type u_1
+bytes : GoString
+recovered : Bool
+s : ExecState
+ch : Choices
+out : GoString
+⊢ sorry
+docs/evidence/2026-09-06_o2-string-independent-review/ReviewProbes.lean:35:10: error: unexpected token 'prefix'; expected '⟩'
+docs/evidence/2026-09-06_o2-string-independent-review/ReviewProbes.lean:35:16: error: unexpected token ','; expected ':'
+'O2StringIndependentReview.mixed_tail_withholds_record' does not depend on any axioms
+'O2StringIndependentReview.zero_fuel_does_not_read_abort' does not depend on any axioms
+'O2StringIndependentReview.normal_cannot_have_record' depends on axioms: [propext, Classical.choice, Quot.sound]
+'O2StringIndependentReview.fuel_cannot_have_record' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound]
+docs/evidence/2026-09-06_o2-string-independent-review/ReviewProbes.lean:42:0: error: Recovery terminal audit: O2StringIndependentReview.fuel_cannot_have_record depends on forbidden axiom sorryAx

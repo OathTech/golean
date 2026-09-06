@@ -1,6 +1,5 @@
 import GoLeanIris.Examples
-import GoLean.GoCore.MultiSound
-import GoLean.GoCore.RecoveryChoices
+import GoLean.Interface
 
 namespace GoLean.IrisCustomer
 open GoCore GoCore.Machine

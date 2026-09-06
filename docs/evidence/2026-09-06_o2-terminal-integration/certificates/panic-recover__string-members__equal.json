@@ -1,0 +1,3093 @@
+{
+  "schema": "golean-string-member-certificate-v1",
+  "envelope": "golean-r1-explicit-string-v1",
+  "case": "panic-recover/string-members/equal",
+  "scope": "typed-explicit-string",
+  "pin_sha256": "d0e1492130fdb9074253444ff0a786a8058ee46fa54a7a31c578f067f84312ff",
+  "bindings": {
+    "control_package": "Corpus/controls/string-members/explicit",
+    "control_sources": {
+      "Corpus/controls/string-members/explicit/controls.go": "3bc20a7c4b8704a0e718dd1f614e469a7313518d26cb666e2e555758e15c53f5",
+      "Corpus/controls/string-members/explicit/main.go": "ce78507645f5fa7c3bde4f7ef4b1667d7091addba15f17611647ad17d97d5cbe"
+    },
+    "control_wire_sha256": "83dbbd45ff8cb7de89469a2b84eec08bf8ae2a99a615727c9335c936139ada68",
+    "go_oracle_pin_sha256": "d7fc93cf6a8cc56b2bac2e3887baf871a14e0d8aaedb91c625f9a8d5f0f9fb74",
+    "go_sources": {
+      "Corpus/coverage/exec/panic-recover/string-members/main.go": "ce78507645f5fa7c3bde4f7ef4b1667d7091addba15f17611647ad17d97d5cbe"
+    },
+    "go_toolchain": "go1.26.5",
+    "native_wire_sha256": "af69d6f5fd0f3ab31b1e82138cd5baf689766ed2ccfa490e44b34b17ac51e33e",
+    "apparatus_sources": {
+      "GoLean.lean": "ac3abf7741a51eae51d71a68574547fd3b8236b9734b19fce2fccf0df56b4118",
+      "GoLean/CLI.lean": "c0e6664f934f640c0437926997c0034d3ad083bc18f6d03f65564a37c3ee0b43",
+      "GoLean/ChoiceTrace.lean": "33696257f38953bb9f1709a9093802db305f1f1a318b9e1bc5d76a5af226a436",
+      "GoLean/EnumDedup.lean": "e803a1fded932405eaab1200499c075c7a517ddbae797c97cd87e8c3f313b0d1",
+      "GoLean/GoCore.lean": "a3182c75e486b7bf704c0fe5b126065d6c7bfbb6a8d033921e9b7abfa1a3f750",
+      "GoLean/GoCore/AbortObservation.lean": "59b87eddf0b8314fb97668446901b1c8a79e4fc4dcc89a77319a2779e0699d08",
+      "GoLean/GoCore/Admission.lean": "2309256e38874bd99eadc5868d8b4c2e0e0111a94e374799eb8aa09ec0f08e7f",
+      "GoLean/GoCore/AdmissionIndices.lean": "946d13c6794c19cb3beb6887a7ae43eed82e08bf8eee9e7f84a1c08678e2b5f5",
+      "GoLean/GoCore/AdmissionPolicy.lean": "937cae3af268310a58843495397c96fbe52576427aadb26ec6f89466633b8946",
+      "GoLean/GoCore/BooleanControl.lean": "7bf157a0b656e0745b28ed11dd961312a67ef29c3e623d65d28196fed49a0f81",
+      "GoLean/GoCore/BooleanControlTyping.lean": "c9c5c3236284c0bf656f06fa964c67e8229608efc8049a822e55f29430af8edf",
+      "GoLean/GoCore/BooleanInitialization.lean": "6530f9438425c68fb9e302142d9a0a63ddd96bc984c772b53d30e853ac6dabe5",
+      "GoLean/GoCore/BooleanInvariant.lean": "68c77e5496efdbe38cefa3558f3f96a0a57eb9f35fdef2753dd2a8ceb6a862c4",
+      "GoLean/GoCore/BooleanPool.lean": "078bad607c7110a38c3c04a4150b67e6146bfdb459856da4923e7bb4c2f5c850",
+      "GoLean/GoCore/BooleanPreservation.lean": "fe7f463b6d92f079ec3ab269cbd136b40d280a24adc4bade35c3a6c37e5331e5",
+      "GoLean/GoCore/BooleanProgram.lean": "5bef2c19bbf333130440d611ce7648cdb821398dbcc1a7308286580d5857e195",
+      "GoLean/GoCore/BooleanProgress.lean": "c57d0ef1a9503284c3a7d72456808237d260eb4c428e324834043ca57f38ee1b",
+      "GoLean/GoCore/BooleanSafety.lean": "6f43aafc404069ad188d62c945dd27d6bdce8f1c60e9ce836494b2e4ac8d2ef2",
+      "GoLean/GoCore/BooleanSetup.lean": "fd203aaa6d97be8126d575b4dccf7a1b0e65ad56c632daf9965347a0f44e085e",
+      "GoLean/GoCore/BooleanStore.lean": "c6ac7824a6d671dab0bfb8426778a0f54ff4dc5654c843f4960701aa3aae0b5a",
+      "GoLean/GoCore/BooleanTyping.lean": "757c6d311ea025d75d66ee92017bdd9f24ba6d70c8faed5f667550329c3f6712",
+      "GoLean/GoCore/Declaration.lean": "c66e53248a3786c244049ebed2266f323b88f2deb8af628188b79c252c0fe5dd",
+      "GoLean/GoCore/EnumDedupCheck.lean": "dd6fc4dda413479d8eaa866693a1a5231501ee02f6341535a15731cda11472af",
+      "GoLean/GoCore/EnumDedupSound.lean": "f5144c9f2589cd2aeb7cb08f38f1d84ecd14d9a38d91376bb84325659884b3f0",
+      "GoLean/GoCore/EnumSpec.lean": "cb80730519e8374b0370909990c2d342765bee2147266b5590c0d14c09594bc8",
+      "GoLean/GoCore/FloatBits.lean": "df821d36003f67e26343eb406b02fa8a24ab46c86eda959bc242c6da8dde91ed",
+      "GoLean/GoCore/Machine.lean": "c645f53edbabb8cc509a717bc0ed3f85c77c8347619bd2959177559f2cab501d",
+      "GoLean/GoCore/MachineEqb.lean": "30a8838a5c084cc16c57bb75f66293fb07b59df4eed63cbc5dce2a6e2ed7afa9",
+      "GoLean/GoCore/MachineSound.lean": "21795b5c65463f5a9bf7e67a728fb6230bced7e97e5023114810a51165f14820",
+      "GoLean/GoCore/Multi.lean": "738891149ac28d821c75d761a108fcfeb59c9d7fcd776af10959c74d82406f07",
+      "GoLean/GoCore/MultiSound.lean": "b8205bdc7ef1018d9f5db7ecf351a8e0974382c80aa20a8a2d670ab024cf3635",
+      "GoLean/GoCore/MultiStreams.lean": "f941a4ba11d4aaac5e889a71aa0d6efb1786309ea10ce0088003203eaba72b9a",
+      "GoLean/GoCore/MultiWfSound.lean": "1c4a563db1cea9fb6785a72df48aae2292778029739fa6354964ed0f18427276",
+      "GoLean/GoCore/NPDRF.lean": "e3b280e8b4c384fad2f40a074301d14fcd35d981d95a03c967c13a820449eea9",
+      "GoLean/GoCore/Ops.lean": "54537cac6774fb72f1abd71e9d39f3a0e12c2895fa25623ffd3807f27de94dd4",
+      "GoLean/GoCore/PanicText.lean": "8c4e28c57e2851a80573e746454fdd8a2057e0cd5548b561b5307cd3d79ad7f5",
+      "GoLean/GoCore/Platform.lean": "0f8a09c2b88ba54fcdcd0d5aee3cf718b3a7ad17fc28aa3dbe9469cf0d85d944",
+      "GoLean/GoCore/PoolTrace.lean": "feec6146f2a2202f4a0a627305f62d9d4e1af09be2fbf908685b3816e61cf3af",
+      "GoLean/GoCore/ProgramTrace.lean": "e64cd54f40cea7cdd7b9a85d279fbf15103280a600a3d98eca2dd3f07138df68",
+      "GoLean/GoCore/Race.lean": "1360c57876bdfcd7cc52d5e96aa6cc64bbe4c68f3745ddbbe8554c7f8d91cb90",
+      "GoLean/GoCore/RecoveryAdmission.lean": "308a6d4e61b92e6c1f56790ed1c5b76e56c76334dfb2278bab129b375627a88b",
+      "GoLean/GoCore/RecoveryAllocation.lean": "7031034e932e48b3c1febca3b8de705919d04b06668b5cf3b03b4cd2bf917872",
+      "GoLean/GoCore/RecoveryCallControl.lean": "e2838d0afe34df9d5e8772db2dbd5818103c8556dc98ff161fcf07b1e815760b",
+      "GoLean/GoCore/RecoveryCallEntry.lean": "243bcef842fd08797813bfbeb8e6c1751dccb470b36687b7ced9c9c87fb647b0",
+      "GoLean/GoCore/RecoveryCallLayout.lean": "614a6d05a7588b184a41306242f271df0025c12dd2e22a158afc6f3bd517a3c0",
+      "GoLean/GoCore/RecoveryCalls.lean": "3147e2d8ee0f6d13035dc307b1d286a92bb3d0899f9a896c24be168f98e9e063",
+      "GoLean/GoCore/RecoveryChoices.lean": "399878e92434687435aadf15bb54b6ea70f2b336ba37a1427917fd838f3806cf",
+      "GoLean/GoCore/RecoveryContext.lean": "23b127e99be0684b4600ff560740b0f8ea00e6f19362a49a1bf12dce50520e52",
+      "GoLean/GoCore/RecoveryControl.lean": "c7c354b0be44d62cced1f15b969c9a33c17cc550aecbfb604123af9172840cba",
+      "GoLean/GoCore/RecoveryControlData.lean": "710d414ced4dc9c8a7c6ad0462a57da8bda1ca5f85675eaddca801fb96bf5af7",
+      "GoLean/GoCore/RecoveryControlHelpers.lean": "a5a2e01b607a32126902951339c553b15a0568679d81aa5a1537a04f5be68dc5",
+      "GoLean/GoCore/RecoveryControlMono.lean": "500f9378b703df5528345402b6d58bb177c0d1b66765941b3d39255d171cad6e",
+      "GoLean/GoCore/RecoveryControlTyping.lean": "bf20ea0dcaa77434472d82685060b89ce44d9af817e24ec181b040f8d31bd8f5",
+      "GoLean/GoCore/RecoveryDelivery.lean": "575cbc32cbb45f9906e6bd091ed6f1f0cb21564f033c8c1c3f08299c56585fee",
+      "GoLean/GoCore/RecoveryDiagnostics.lean": "0d39c353494d8126531705271affcd0ad661dfcaaf6ed3aa9e8b000c31f382c7",
+      "GoLean/GoCore/RecoveryEnvironment.lean": "a8d073a83faa419d6c69e2cf73a1951fa0501ffeae095d8b27dcec5ab2bfe994",
+      "GoLean/GoCore/RecoveryExpressionProgress.lean": "21f9a76f79645d7e822c155aad4e7c11f2e40abc91f6bb508655c27630d05f58",
+      "GoLean/GoCore/RecoveryExpressions.lean": "020ad2428a6f5ba1b2d8629431fbf5c5b7bd91e87ca34101f817f751a118d4e0",
+      "GoLean/GoCore/RecoveryFrameProgress.lean": "7e4382c929e4f81e08b4f45f8ef32e30e039e12ca68c0e39e9b7234aed6aa7ff",
+      "GoLean/GoCore/RecoveryGraph.lean": "e411087f7a31c79b752723eb028cc027c15bd9f2b0eeef202fd94db4177b1348",
+      "GoLean/GoCore/RecoveryInitialization.lean": "574092e494fc704702101c99e6c46b467ea12bdafb330f713291e7143fd474c6",
+      "GoLean/GoCore/RecoveryInvariant.lean": "a71574c21fcdb6ac872e07dd3f828536d06ce51a86ab6c8f9b00c1a35a077d46",
+      "GoLean/GoCore/RecoveryObservation.lean": "25153a32b0184e6ed09f56f13540ba5ca909763c8ebe87fdc3313ab32eecc670",
+      "GoLean/GoCore/RecoveryOperators.lean": "65f51ed756e833840f8c3ad841c38a60e282d58e04a6cc52ddba82366f98d533",
+      "GoLean/GoCore/RecoveryPanicProgress.lean": "b7fa027394b53d60ff68438d403d10aa19cfb0d6bfbd82923702bd37257c1245",
+      "GoLean/GoCore/RecoveryPool.lean": "6235b7f0f4fa2d97fa34aeb9725d20997ed0ae2d93c1dfa5815dedc98ca5709b",
+      "GoLean/GoCore/RecoveryPoolObservation.lean": "3f521443b0a7366618f4dcad477ec9eb37304109889e96323b39ebecfea83922",
+      "GoLean/GoCore/RecoveryPoolObservationTyped.lean": "25c7f0af8fcd335d4cbecc177c59eb378b9206297dcbd2381a45308f081a80a3",
+      "GoLean/GoCore/RecoveryProgramObservation.lean": "cb1cc4c842f00547a36fcd871b20f9239b341350b472ab5813aa378ed8023b62",
+      "GoLean/GoCore/RecoveryResultRoots.lean": "c0b71818ffe90a6dcace26867048836f213b216f388db8c00929af8d2513fbdb",
+      "GoLean/GoCore/RecoverySetup.lean": "d3d97a9ddb3f1b968c2c226cb973af205bd25e783e2bb6d30ba71aecc855fef1",
+      "GoLean/GoCore/RecoverySetupReadout.lean": "3ca56702d9378277c0668f4835752b77d96814a40cb7c3c8a2bc51368a802a28",
+      "GoLean/GoCore/RecoverySetupShape.lean": "90d58331e62508d6144a49100eb0810f308dd23af8661ac5ce8428cd7d170eab",
+      "GoLean/GoCore/RecoverySetupWf.lean": "c603f015a6d2c096832ce4431458bcd2fe39886cde854457bf495a8671c95a0f",
+      "GoLean/GoCore/RecoverySingleton.lean": "146166e00d38505c4fe2b87d8267c6d9ad114cbce36ebcac427958ffe6637257",
+      "GoLean/GoCore/RecoveryStatementProgress.lean": "1f14577e1f3d2def2e9636e67be40a5ddbfbb5ea3196da7532f652eb45f2a609",
+      "GoLean/GoCore/RecoveryStatements.lean": "8af47f19b6b48760e082b4c6f8c05009f99d9d5dc2a910a1cf2ba6b1cdfd1456",
+      "GoLean/GoCore/RecoveryStore.lean": "c7ae5099d2c7cb1aa75a588e760625c51c6b44516ff235bb30711cd1496c28f7",
+      "GoLean/GoCore/RecoverySuccessfulRuns.lean": "853cf53c2994924ffedaedd4e3f8404201e8770d799a277ee4539f7194dbc466",
+      "GoLean/GoCore/RecoveryTerminal.lean": "84c0fea9d00f2f4db47e816d14a90265d795aea2cedcee4673091f6fc890b800",
+      "GoLean/GoCore/RecoveryTypingCore.lean": "9314b0d0a71cef7c8d14146faad5d755adcdac3650269aba0ab9beeac0dd430a",
+      "GoLean/GoCore/RecoveryValueBasic.lean": "d14c79064ad69303093374e5b88380efcf14060f96714550503dc2fe010cee32",
+      "GoLean/GoCore/RecoveryValueCalls.lean": "92fdb6e6fe06283df2c802b2e11d58eb1498e21a659712a0ad3def4e3e32b1e5",
+      "GoLean/GoCore/RecoveryWalk.lean": "49f4da47580f6f91dc32d57a8f537233cbd44751c63cf68e62ec229863a497b3",
+      "GoLean/GoCore/State.lean": "299a7b166bad4784913d72d53c47976e92b648b7db0c66cff489f8011bd60dc0",
+      "GoLean/GoCore/StateEqb.lean": "8ff172a97aa464bafad3b8d7c4fc3c93392ea7776e42ba6bbed0c4ab5fa2cdd4",
+      "GoLean/GoCore/StateWf.lean": "dc532c707798ed6cf6c69faf036a62363a004775ffbba9865275f10bad84ff62",
+      "GoLean/GoCore/StepFn.lean": "dcc863cf777a208d375adb0857f1ecd953c28420937e4782a35206e0770b89e7",
+      "GoLean/GoCore/StringPanic.lean": "0e16be58b43be8a1b2c32d8a6956ce4cabaf00ed5f4cca163e16c092e58dddad",
+      "GoLean/GoCore/Syntax.lean": "d8feef5724519115d0ccb2620354ce8fcf8efddbaa7f688c189bc0d72dac8ca0",
+      "GoLean/GoCore/SyntaxEqb.lean": "6cf143de012e27584a92c50407e30b4379a1cb920e645c43354287822445b8f8",
+      "GoLean/GoCore/Trace.lean": "44f18eb28239728c401993719ef1ec0ce11873b18e32d19f694fdb31b97b8f4e",
+      "GoLean/GoCore/Value.lean": "aeded44416b5f286fc12033922cfab35d43d46c7d45fb7c6e8ea106e9eab6f8e",
+      "GoLean/Interface.lean": "094d8010ad8bdd8329cf73453c66a51aaa4b82cad16890c71f960d8978273570",
+      "GoLean/NativeDeclaration.lean": "c904b03e5321303a337409faf38cdc69e0efaeb4a799b4e906d922088fa33a9f",
+      "GoLean/NativeToIR.lean": "4c285581caf0cf0d0b7b7044f7e9b478adc4c8ed2859ca717b35a2cbc55e0a7d",
+      "GoLean/StrictJson.lean": "6b6531a7a92762066b37c717e7aadd75db55dfe36e7605430cfa7eea0902511f",
+      "GoLean/StrictJsonParse.lean": "625da21980d13c56c555b6bd4e7564593f9b35517f2e6f6e8b8b89c500ca088e",
+      "Main.lean": "3183fcfae553db4e5d34e3678d6f036e54894657b4505126b78759fd8925dcbb",
+      "Tests/InterfaceAudit.lean": "28cd0c1c574c81f13df14836785bda2ee983ad095cadbbedb8c8c1e738517d36",
+      "Tests/PanicRendering.lean": "98ac1be2cb22e262b515ac97408ceba095123d939bdc51ad6fec7920b327dd85",
+      "Tests/StringPanicMembers.lean": "ff85ecbb56e1e170e84c359c332cf630d0d9ba6cf1abe062d72db52f25a273c4",
+      "baselines/stdlib-pin.tsv": "e371f7206701add9b28ccbb39298e79478dd3163b4531e3790b59dc152cac81e",
+      "lakefile.toml": "84e3d846d9d4ee61ef784ae2554b810d4e6b1045e98fb2da27da76fe638f26c3",
+      "lean-toolchain": "2bdc48adfa58d0017e538a0ad117c5d73d35deec879978f909406a80c8037273",
+      "scripts/check-interface": "4992d9cfbbac0f9bef06df057ad97a85c9028522dbfad4c7de9383ac9bbdde00",
+      "scripts/check-interface.py": "b16917103ce7da417bc40240c32ecafc7f04cd626b76b9347587364f15249d3a",
+      "scripts/check-string-members.py": "0f160831fbfaf4026b265802f7ff2b29079a93e69d8704582fac3b3f1c16d9be",
+      "scripts/ci": "1a92998993eb2c26824895fdcb9bb6c9d6da4a1f577560e6743a7cb4602df9b2",
+      "scripts/coverage-baseline-diff": "5c1ed628e4edc0d113f2ac16a5403f26cb3811902747d07c6eb04ba9c87486ac",
+      "scripts/coverage-manifest": "84af3021eb43e6575a91b831d06b9606212297d7544906764d98b4b436378c44",
+      "scripts/diff-coverage": "04c48c432aed8095adfc254de05b59fb35253e27e52f0bf615d3ad22c7748e7b",
+      "tools/check_string_member_fixtures.py": "6845e0f3a78d26a1c1d70f95c9c0aa81dfcd8e9e9b21aa09d146a537ae601d38",
+      "tools/coverageharness/abortkind.go": "f2a5685b6c00cae4f5a7e66a9d08678e92aaa60c243ecf77d99fe21a56e2b58f",
+      "tools/coverageharness/abortkind_test.go": "b45ca6b7aea4e3db759ea2efa7793d8186becd822c1cd503cec2053d5b52f32e",
+      "tools/coverageharness/abortrecord_test.go": "af3e8e08ce989c95ad2e5ea32cb5acc16230e61dcecc7103ebecaf8ed066df27",
+      "tools/coverageharness/crashhook.go": "82d2d039c8ff4bdfca98fc8919bafa9fa19dd59666409ba594e00a7cf42a96fc",
+      "tools/coverageharness/crashhook_test.go": "2626da4178a453eaef36fdbf86e5563667644606237435e828e6fa47f4aebd5f",
+      "tools/coverageharness/crashview.go": "3fe16af7ff08d1f9b91542da74bce2c688c56e754f6d1ef31568f8eb191d3bc0",
+      "tools/coverageharness/crashview_test.go": "48983f249615c1abff3fa96ccded2af94dd1c6853c819866361ae480bcf67798",
+      "tools/coverageharness/main.go": "f7b3a04f624dedd3fbe8053508ec53e6dbc6a1c7447e84623f22f019553cd644",
+      "tools/coverageharness/observe.go": "b6bf7adc73c6fba527819046d1e83c00833fab46b8eb771fa04f21f95828210e",
+      "tools/coverageharness/observe_test.go": "ecee3e1e8d6c2166834bdae924e3abe6e52656dbcff2e6eda93b033ef8d3fa4a",
+      "tools/coverageharness/split.go": "f9271b3338f1f99ecf4258677a24526be17b71ab10ebace3f140fdb50298d22d",
+      "tools/coverageharness/split_test.go": "3c3262cf26fa35307a8b23b081601ed98249779ce120bf0aad6dd669f24b2a8a",
+      "tools/nativefrontend/atomics.go": "5ebaba9fb25ba129bd3f8306ecb37d94fe8f3753da336df4165e5a9800f818d5",
+      "tools/nativefrontend/atomics_test.go": "c597814c746aee1abdfb0b323ea8910b0cd870f6b71dd50d8fb1c831fcfb8799",
+      "tools/nativefrontend/callorrecv_test.go": "dad5c1d999811fc677103ed258db433197fb80ea17089a3c8ca718dd29eb4083",
+      "tools/nativefrontend/declaration.go": "b76d99d364f490dd987296eddbb93161b9cfafd7569630f1cacd026f85710bf4",
+      "tools/nativefrontend/declaration_fixture_test.go": "379e2c361673093a9cdee1fc28ae13b25a3fced9df6ac2d52ae337bbb9a532e0",
+      "tools/nativefrontend/declaration_test.go": "f1adca4299dd4cc949247645e4309781ea72064ca5c0cda6b22b270cc88b6a0e",
+      "tools/nativefrontend/determinism_test.go": "dbcbe2303a1796cbb1027944464986ad136acc9f0e4f17dcde5e3ad1bea96c71",
+      "tools/nativefrontend/e13guard_test.go": "58b3eb65a198582ec73c3174e7c5585e5c33ffb334a30d1a6c08aab15605e447",
+      "tools/nativefrontend/effectisolation_test.go": "5d653d1512c7c165a82474473d08407300dc46b7343bdbbe85d77f5a8b092c47",
+      "tools/nativefrontend/embedding_test.go": "5d58efb55a89659ee939428cf8504349bb027a641090d1a84d1d2ded7bb614c3",
+      "tools/nativefrontend/emit.go": "aed973a4fa290dde791da04ea6910b6e2abab2ede5216468a274010c4e58b2f5",
+      "tools/nativefrontend/emit_test.go": "07cd0a3bd9b100102745c9005bc31fa6b72d112b44765aa7ec25f33bdef572a7",
+      "tools/nativefrontend/floatbits.go": "5a3c6c51a9fabbc2742ef81ee4ac93484796f53b60eb9642888c8de29262a80b",
+      "tools/nativefrontend/fmtcomposite.go": "5f9e3cce75f0d076b19f9e42ca844f6289b3856482b53381f1eb95d3c3c883b2",
+      "tools/nativefrontend/fmtdesugar.go": "bd53f38ceb9e8e8b8fe5eff73b6483c95b0e7608fa3d5965b6e91b004babc425",
+      "tools/nativefrontend/fr24_test.go": "7ee764db76602c296921e0552e006e488658438a1113075dbafa3da46b7b81d7",
+      "tools/nativefrontend/fr25_test.go": "745559cd7b43ba8716ef4f14573f8f02a58bd2035346025a38d5098e9694cd41",
+      "tools/nativefrontend/hiddendep.go": "869a86188ae5f1ad3a9377c5b777d66d3d00ffec0fce30e8bc2e323837e3f8f5",
+      "tools/nativefrontend/identity.go": "77140151a5b5e1c65e25eb49780f58a0742babea870e19c508045b67800409cb",
+      "tools/nativefrontend/identity_test.go": "9afbfa41e5b3a10a5eeaece512f344aa9c1b0102907b1881f7565de070018f75",
+      "tools/nativefrontend/importedmodel.go": "d916acdb61fb38bed8b9ca9ef8faf3341e2a045fcdb333c89eb93b10b47d01ec",
+      "tools/nativefrontend/inittask-std.tsv": "fc888c6f1143f5b158d0a7287b2b1872a30c022df420fd37d24a88f0c642119e",
+      "tools/nativefrontend/inittask.go": "bc59e43d13e78b29f96c2b27868699d92e31004098fb290bc71e37160b1afe58",
+      "tools/nativefrontend/langversion.go": "816972a3b0a16949b897f631b7be8f2a37db0a21daafbf5afb11b38dfe58b3f7",
+      "tools/nativefrontend/langversion_test.go": "8541245584d5471050a2a49969ba4c6e7e7560db5abb7269f05720c4bc82d4a1",
+      "tools/nativefrontend/load.go": "b06404571c6a5282b78cde05dbbdbdffb7e03c219a1d682fbda866190742d6aa",
+      "tools/nativefrontend/main.go": "b3aa58172d3845fae10c636a74fc5a3dc95e222efde0284176564f65d0a1e94e",
+      "tools/nativefrontend/mono.go": "450a8f036a7c41ad88f36a58970d3abf8930907925ee357d23fe66434018564e",
+      "tools/nativefrontend/mono_test.go": "ad6c7b102312bc68428c618bca39ee5f9937e6619e4da3f6e76a5f0335f393a2",
+      "tools/nativefrontend/perdecl_kill_test.go": "9c96930615691137b9832669741de42e80d56605015f802d76a3c90ec5d3014e",
+      "tools/nativefrontend/print_test.go": "04a4b05bdbabdf9aca5c742a0632c21fb121a4169d0b30e89107290348de2487",
+      "tools/nativefrontend/quarantine_test.go": "2c35181244fab8f42122de5010a274ebe0831086169d5fc0e7ff713044daf97c",
+      "tools/nativefrontend/resultshadow.go": "138231b46fb13f7d085536ff4e1e1cc7698640b7fdf0354d638e3ce9bfbfe055",
+      "tools/nativefrontend/stdlib-overlay.tsv": "eee848f4d11fc834bde5b7e605a77817ded4846745fec0f7bd83c04ac687edec",
+      "tools/nativefrontend/stdlib-substitutions.tsv": "9ac86a532450a99912d2304547aa19b3370cea6f0e5403328f93b031aca881d8",
+      "tools/nativefrontend/stdlibreach.go": "ac31f490a9ee84bf649aba0f15339165e679ae608788a8cabbf1dfd19a295ca2",
+      "tools/nativefrontend/stdlibregister.go": "d8284ba9472845dc25642c88db8165c1d039072304c5f4e2036a07cc0efda73a",
+      "tools/nativefrontend/stdlibshim.go": "cb242d9a8d538158062ef0285e91210d34d844fafb46299a8ea07d756c5a6ce9",
+      "tools/nativefrontend/stdlibshim_closure_test.go": "7e9d4099d945f64f58e4eeea28e5050f2099bd856cedbc35425bee1eeaa2bfde",
+      "tools/nativefrontend/stdlibsource.go": "5d878209dd4d431a8477a97a7b82c1ecd5fe460054b1c2475bb65d7ed97be9d8",
+      "tools/nativefrontend/stdlibsource_test.go": "f65bed0b1f8835721cb58320ed97e895439968baf9916a132b81b97ac0783232",
+      "tools/nativefrontend/typeorder.go": "420bb1d5dda5e2766195611b67d60cbffc8e60c4364eb47f0d79716871a8436a",
+      "tools/nativefrontend/typeorder_test.go": "0781aac60f6431ad13a45b1f5a4a7be794d2c63e84d86dbc2840efdaa0597625",
+      "tools/nativefrontend/wire.go": "ffdc907636e6bedb66a56f872a817c52efc2e071b14420b1fc76e23e1302be8f",
+      "tools/string_member.py": "3c31a8c2f93e7064db874dc82a26aa2ae36d431e7e26edf585fbc60f70ad573a",
+      "tools/string_member_runner.py": "6de377bb1a70d96bd6d66b4e018063a9a8d5a084964ed6c2041b9ca6184ce65d",
+      "tools/test_string_member.py": "589984550fd580b81ba89f510504f59753469c4e3f882dc3a66d57c305788304"
+    }
+  },
+  "binaries": {
+    "golean": "378bebb0996c17a828cd0dd59e3f81bc38b5acf93b7dc3752d90c0fac4c9c69c",
+    "harness": "0827ed713a1f15965eef6b468bdb08d07b42ff2f6193622445eb44f9c7e04f25"
+  },
+  "controls": {
+    "dynamic-kind-and-bytes": {
+      "go": {
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ],
+        "output": ""
+      },
+      "machine": {
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ]
+      },
+      "actual_chain": null
+    },
+    "normal-control": {
+      "go": {
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ],
+        "output": ""
+      },
+      "machine": {
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ]
+      },
+      "actual_chain": null
+    },
+    "direct-recovery": {
+      "go": {
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ],
+        "output": ""
+      },
+      "machine": {
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ]
+      },
+      "actual_chain": null
+    },
+    "indirect-recovery": {
+      "go": {
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ],
+        "output": ""
+      },
+      "machine": {
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ]
+      },
+      "actual_chain": null
+    },
+    "defer-order": {
+      "go": {
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "kind": "int",
+            "tag": "int",
+            "value": 21
+          }
+        ],
+        "output": ""
+      },
+      "machine": {
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "kind": "int",
+            "tag": "int",
+            "value": 21
+          }
+        ]
+      },
+      "actual_chain": null
+    },
+    "reversed-defer-control": {
+      "go": {
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "kind": "int",
+            "tag": "int",
+            "value": 12
+          }
+        ],
+        "output": ""
+      },
+      "machine": {
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "kind": "int",
+            "tag": "int",
+            "value": 12
+          }
+        ]
+      },
+      "actual_chain": null
+    },
+    "equal-repanic": {
+      "go": {
+        "schema": "golean-raw-panic-v1",
+        "status": "panic",
+        "childExit": 2,
+        "messageBytes": [
+          111,
+          114,
+          105,
+          103,
+          32,
+          91,
+          114,
+          101,
+          99,
+          111,
+          118,
+          101,
+          114,
+          101,
+          100,
+          44,
+          32,
+          114,
+          101,
+          112,
+          97,
+          110,
+          105,
+          99,
+          107,
+          101,
+          100,
+          93
+        ],
+        "outputBytes": []
+      },
+      "machine": {
+        "message": "orig [recovered]",
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "panic"
+      },
+      "actual_chain": [
+        {
+          "bytes": [
+            111,
+            114,
+            105,
+            103
+          ],
+          "recovered": true
+        },
+        {
+          "bytes": [
+            111,
+            114,
+            105,
+            103
+          ],
+          "recovered": false
+        }
+      ]
+    },
+    "unequal-repanic": {
+      "go": {
+        "schema": "golean-raw-panic-v1",
+        "status": "panic",
+        "childExit": 2,
+        "messageBytes": [
+          111,
+          114,
+          105,
+          103,
+          32,
+          91,
+          114,
+          101,
+          99,
+          111,
+          118,
+          101,
+          114,
+          101,
+          100,
+          93
+        ],
+        "outputBytes": []
+      },
+      "machine": {
+        "message": "orig [recovered]",
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "panic"
+      },
+      "actual_chain": [
+        {
+          "bytes": [
+            111,
+            114,
+            105,
+            103
+          ],
+          "recovered": true
+        },
+        {
+          "bytes": [
+            110,
+            101,
+            120,
+            116
+          ],
+          "recovered": false
+        }
+      ]
+    },
+    "multiple-repanic": {
+      "go": {
+        "schema": "golean-raw-panic-v1",
+        "status": "panic",
+        "childExit": 2,
+        "messageBytes": [
+          111,
+          114,
+          105,
+          103,
+          32,
+          91,
+          114,
+          101,
+          99,
+          111,
+          118,
+          101,
+          114,
+          101,
+          100,
+          44,
+          32,
+          114,
+          101,
+          112,
+          97,
+          110,
+          105,
+          99,
+          107,
+          101,
+          100,
+          93
+        ],
+        "outputBytes": []
+      },
+      "machine": {
+        "message": "orig [recovered]",
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "panic"
+      },
+      "actual_chain": [
+        {
+          "bytes": [
+            111,
+            114,
+            105,
+            103
+          ],
+          "recovered": true
+        },
+        {
+          "bytes": [
+            111,
+            114,
+            105,
+            103
+          ],
+          "recovered": true
+        },
+        {
+          "bytes": [
+            116,
+            104,
+            105,
+            114,
+            100
+          ],
+          "recovered": false
+        }
+      ]
+    },
+    "rethrow": {
+      "go": {
+        "schema": "golean-raw-panic-v1",
+        "status": "panic",
+        "childExit": 2,
+        "messageBytes": [
+          111,
+          114,
+          105,
+          103,
+          32,
+          91,
+          114,
+          101,
+          99,
+          111,
+          118,
+          101,
+          114,
+          101,
+          100,
+          44,
+          32,
+          114,
+          101,
+          112,
+          97,
+          110,
+          105,
+          99,
+          107,
+          101,
+          100,
+          93
+        ],
+        "outputBytes": []
+      },
+      "machine": {
+        "message": "orig [recovered]",
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "panic"
+      },
+      "actual_chain": [
+        {
+          "bytes": [
+            111,
+            114,
+            105,
+            103
+          ],
+          "recovered": true
+        },
+        {
+          "bytes": [
+            111,
+            114,
+            105,
+            103
+          ],
+          "recovered": false
+        }
+      ]
+    },
+    "computed-equal": {
+      "go": {
+        "schema": "golean-raw-panic-v1",
+        "status": "panic",
+        "childExit": 2,
+        "messageBytes": [
+          111,
+          114,
+          105,
+          103,
+          32,
+          91,
+          114,
+          101,
+          99,
+          111,
+          118,
+          101,
+          114,
+          101,
+          100,
+          93
+        ],
+        "outputBytes": []
+      },
+      "machine": {
+        "message": "orig [recovered]",
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "panic"
+      },
+      "actual_chain": [
+        {
+          "bytes": [
+            111,
+            114,
+            105,
+            103
+          ],
+          "recovered": true
+        },
+        {
+          "bytes": [
+            111,
+            114,
+            105,
+            103
+          ],
+          "recovered": false
+        }
+      ]
+    },
+    "invalid-before-lf": {
+      "go": {
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ],
+        "output": ""
+      },
+      "machine": {
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ]
+      },
+      "actual_chain": null
+    },
+    "invalid-after-lf": {
+      "go": {
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ],
+        "output": ""
+      },
+      "machine": {
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ]
+      },
+      "actual_chain": null
+    }
+  },
+  "subject_go": [
+    {
+      "schema": "golean-raw-panic-v1",
+      "status": "panic",
+      "childExit": 2,
+      "messageBytes": [
+        111,
+        114,
+        105,
+        103,
+        32,
+        91,
+        114,
+        101,
+        99,
+        111,
+        118,
+        101,
+        114,
+        101,
+        100,
+        44,
+        32,
+        114,
+        101,
+        112,
+        97,
+        110,
+        105,
+        99,
+        107,
+        101,
+        100,
+        93
+      ],
+      "outputBytes": []
+    },
+    {
+      "schema": "golean-raw-panic-v1",
+      "status": "panic",
+      "childExit": 2,
+      "messageBytes": [
+        111,
+        114,
+        105,
+        103,
+        32,
+        91,
+        114,
+        101,
+        99,
+        111,
+        118,
+        101,
+        114,
+        101,
+        100,
+        44,
+        32,
+        114,
+        101,
+        112,
+        97,
+        110,
+        105,
+        99,
+        107,
+        101,
+        100,
+        93
+      ],
+      "outputBytes": []
+    }
+  ],
+  "subject_models": [
+    {
+      "choices": [],
+      "machine": {
+        "message": "orig [recovered]",
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "panic"
+      },
+      "actual_chain": [
+        {
+          "bytes": [
+            111,
+            114,
+            105,
+            103
+          ],
+          "recovered": true
+        },
+        {
+          "bytes": [
+            111,
+            114,
+            105,
+            103
+          ],
+          "recovered": false
+        }
+      ]
+    },
+    {
+      "choices": [
+        9,
+        8,
+        7,
+        6,
+        5,
+        4,
+        3,
+        2,
+        1,
+        0
+      ],
+      "machine": {
+        "message": "orig [recovered]",
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "panic"
+      },
+      "actual_chain": [
+        {
+          "bytes": [
+            111,
+            114,
+            105,
+            103
+          ],
+          "recovered": true
+        },
+        {
+          "bytes": [
+            111,
+            114,
+            105,
+            103
+          ],
+          "recovered": false
+        }
+      ]
+    },
+    {
+      "choices": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        2,
+        4,
+        6,
+        8,
+        0
+      ],
+      "machine": {
+        "message": "orig [recovered]",
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "panic"
+      },
+      "actual_chain": [
+        {
+          "bytes": [
+            111,
+            114,
+            105,
+            103
+          ],
+          "recovered": true
+        },
+        {
+          "bytes": [
+            111,
+            114,
+            105,
+            103
+          ],
+          "recovered": false
+        }
+      ]
+    },
+    {
+      "choices": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "machine": {
+        "message": "orig [recovered]",
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "panic"
+      },
+      "actual_chain": [
+        {
+          "bytes": [
+            111,
+            114,
+            105,
+            103
+          ],
+          "recovered": true
+        },
+        {
+          "bytes": [
+            111,
+            114,
+            105,
+            103
+          ],
+          "recovered": false
+        }
+      ]
+    }
+  ],
+  "go_records": {
+    "control-dynamic-kind-and-bytes": {
+      "observation": {
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ],
+        "output": ""
+      },
+      "crash_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "registration_sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+      "crash": "control-dynamic-kind-and-bytes-oracle/oracle.crash",
+      "registration": "control-dynamic-kind-and-bytes-oracle/oracle.registered"
+    },
+    "control-normal-control": {
+      "observation": {
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ],
+        "output": ""
+      },
+      "crash_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "registration_sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+      "crash": "control-normal-control-oracle/oracle.crash",
+      "registration": "control-normal-control-oracle/oracle.registered"
+    },
+    "control-direct-recovery": {
+      "observation": {
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ],
+        "output": ""
+      },
+      "crash_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "registration_sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+      "crash": "control-direct-recovery-oracle/oracle.crash",
+      "registration": "control-direct-recovery-oracle/oracle.registered"
+    },
+    "control-indirect-recovery": {
+      "observation": {
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ],
+        "output": ""
+      },
+      "crash_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "registration_sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+      "crash": "control-indirect-recovery-oracle/oracle.crash",
+      "registration": "control-indirect-recovery-oracle/oracle.registered"
+    },
+    "control-defer-order": {
+      "observation": {
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "kind": "int",
+            "tag": "int",
+            "value": 21
+          }
+        ],
+        "output": ""
+      },
+      "crash_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "registration_sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+      "crash": "control-defer-order-oracle/oracle.crash",
+      "registration": "control-defer-order-oracle/oracle.registered"
+    },
+    "control-reversed-defer-control": {
+      "observation": {
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "kind": "int",
+            "tag": "int",
+            "value": 12
+          }
+        ],
+        "output": ""
+      },
+      "crash_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "registration_sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+      "crash": "control-reversed-defer-control-oracle/oracle.crash",
+      "registration": "control-reversed-defer-control-oracle/oracle.registered"
+    },
+    "control-equal-repanic": {
+      "observation": {
+        "schema": "golean-raw-panic-v1",
+        "status": "panic",
+        "childExit": 2,
+        "messageBytes": [
+          111,
+          114,
+          105,
+          103,
+          32,
+          91,
+          114,
+          101,
+          99,
+          111,
+          118,
+          101,
+          114,
+          101,
+          100,
+          44,
+          32,
+          114,
+          101,
+          112,
+          97,
+          110,
+          105,
+          99,
+          107,
+          101,
+          100,
+          93
+        ],
+        "outputBytes": []
+      },
+      "crash_sha256": "69ef53c5cdb060ba7aabdc354d3e9bbeece3cca0445d63e3e64c9475fdc2d982",
+      "registration_sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+      "crash": "control-equal-repanic-oracle/oracle.crash",
+      "registration": "control-equal-repanic-oracle/oracle.registered"
+    },
+    "control-unequal-repanic": {
+      "observation": {
+        "schema": "golean-raw-panic-v1",
+        "status": "panic",
+        "childExit": 2,
+        "messageBytes": [
+          111,
+          114,
+          105,
+          103,
+          32,
+          91,
+          114,
+          101,
+          99,
+          111,
+          118,
+          101,
+          114,
+          101,
+          100,
+          93
+        ],
+        "outputBytes": []
+      },
+      "crash_sha256": "9aedd90729e44d48565de864269d06469d5f4cc1a4806f2d0ee5380b6d0185f3",
+      "registration_sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+      "crash": "control-unequal-repanic-oracle/oracle.crash",
+      "registration": "control-unequal-repanic-oracle/oracle.registered"
+    },
+    "control-multiple-repanic": {
+      "observation": {
+        "schema": "golean-raw-panic-v1",
+        "status": "panic",
+        "childExit": 2,
+        "messageBytes": [
+          111,
+          114,
+          105,
+          103,
+          32,
+          91,
+          114,
+          101,
+          99,
+          111,
+          118,
+          101,
+          114,
+          101,
+          100,
+          44,
+          32,
+          114,
+          101,
+          112,
+          97,
+          110,
+          105,
+          99,
+          107,
+          101,
+          100,
+          93
+        ],
+        "outputBytes": []
+      },
+      "crash_sha256": "a8bc751ccbbb9af0b07da508be8a42ef01df9a8287fab6acb57559533ac79152",
+      "registration_sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+      "crash": "control-multiple-repanic-oracle/oracle.crash",
+      "registration": "control-multiple-repanic-oracle/oracle.registered"
+    },
+    "control-rethrow": {
+      "observation": {
+        "schema": "golean-raw-panic-v1",
+        "status": "panic",
+        "childExit": 2,
+        "messageBytes": [
+          111,
+          114,
+          105,
+          103,
+          32,
+          91,
+          114,
+          101,
+          99,
+          111,
+          118,
+          101,
+          114,
+          101,
+          100,
+          44,
+          32,
+          114,
+          101,
+          112,
+          97,
+          110,
+          105,
+          99,
+          107,
+          101,
+          100,
+          93
+        ],
+        "outputBytes": []
+      },
+      "crash_sha256": "ceb678aa16f0046b03bb04071f4ce42d1eafc94e797ee51f3d9910ccdb5d9e1d",
+      "registration_sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+      "crash": "control-rethrow-oracle/oracle.crash",
+      "registration": "control-rethrow-oracle/oracle.registered"
+    },
+    "control-computed-equal": {
+      "observation": {
+        "schema": "golean-raw-panic-v1",
+        "status": "panic",
+        "childExit": 2,
+        "messageBytes": [
+          111,
+          114,
+          105,
+          103,
+          32,
+          91,
+          114,
+          101,
+          99,
+          111,
+          118,
+          101,
+          114,
+          101,
+          100,
+          93
+        ],
+        "outputBytes": []
+      },
+      "crash_sha256": "080f956e5fbfa07e207c39c1b551408a2c762c759ae029d0ee448ba8345bba68",
+      "registration_sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+      "crash": "control-computed-equal-oracle/oracle.crash",
+      "registration": "control-computed-equal-oracle/oracle.registered"
+    },
+    "control-invalid-before-lf": {
+      "observation": {
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ],
+        "output": ""
+      },
+      "crash_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "registration_sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+      "crash": "control-invalid-before-lf-oracle/oracle.crash",
+      "registration": "control-invalid-before-lf-oracle/oracle.registered"
+    },
+    "control-invalid-after-lf": {
+      "observation": {
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ],
+        "output": ""
+      },
+      "crash_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "registration_sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+      "crash": "control-invalid-after-lf-oracle/oracle.crash",
+      "registration": "control-invalid-after-lf-oracle/oracle.registered"
+    },
+    "subject-plain": {
+      "observation": {
+        "schema": "golean-raw-panic-v1",
+        "status": "panic",
+        "childExit": 2,
+        "messageBytes": [
+          111,
+          114,
+          105,
+          103,
+          32,
+          91,
+          114,
+          101,
+          99,
+          111,
+          118,
+          101,
+          114,
+          101,
+          100,
+          44,
+          32,
+          114,
+          101,
+          112,
+          97,
+          110,
+          105,
+          99,
+          107,
+          101,
+          100,
+          93
+        ],
+        "outputBytes": []
+      },
+      "crash_sha256": "ed88bb028f427fbddffbaf0d149dfbb17be32f2c2f7f0d4c0370d7bde40fa8a6",
+      "registration_sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+      "crash": "subject-plain-oracle/oracle.crash",
+      "registration": "subject-plain-oracle/oracle.registered"
+    },
+    "subject-race": {
+      "observation": {
+        "schema": "golean-raw-panic-v1",
+        "status": "panic",
+        "childExit": 2,
+        "messageBytes": [
+          111,
+          114,
+          105,
+          103,
+          32,
+          91,
+          114,
+          101,
+          99,
+          111,
+          118,
+          101,
+          114,
+          101,
+          100,
+          44,
+          32,
+          114,
+          101,
+          112,
+          97,
+          110,
+          105,
+          99,
+          107,
+          101,
+          100,
+          93
+        ],
+        "outputBytes": []
+      },
+      "crash_sha256": "a4f2937e4e294e69635a67f8294bb9840d5aebaf1a8c347034b0b40b321e5a97",
+      "registration_sha256": "74b843d022fa6dd3ebfc7c927e1d5762b24e9b28a33ff30c545aa36d5fc04392",
+      "crash": "subject-race-oracle/oracle.crash",
+      "registration": "subject-race-oracle/oracle.registered"
+    }
+  },
+  "commands": [
+    {
+      "label": "subject-frontend",
+      "command": [
+        "go",
+        "run",
+        "./tools/nativefrontend",
+        "--dir",
+        "Corpus/coverage/exec/panic-recover/string-members",
+        "--out",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/subject-wire.json"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "subject-frontend/stdout",
+      "stderr": "subject-frontend/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "controls-frontend",
+      "command": [
+        "go",
+        "run",
+        "./tools/nativefrontend",
+        "--dir",
+        "Corpus/controls/string-members/explicit",
+        "--out",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/controls-wire.json"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "controls-frontend/stdout",
+      "stderr": "controls-frontend/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "go-version",
+      "command": [
+        "go",
+        "env",
+        "GOVERSION"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "go-version/stdout",
+      "stderr": "go-version/stderr",
+      "stdout_sha256": "d7fc93cf6a8cc56b2bac2e3887baf871a14e0d8aaedb91c625f9a8d5f0f9fb74",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-dynamic-kind-and-bytes-harness",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/Corpus/controls/string-members/explicit/main.go",
+        "--out",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-dynamic-kind-and-bytes-oracle",
+        "--subject",
+        "ControlDynamic",
+        "--args",
+        "-",
+        "--expected-status",
+        "ok"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-dynamic-kind-and-bytes-harness/stdout",
+      "stderr": "control-dynamic-kind-and-bytes-harness/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-dynamic-kind-and-bytes-go",
+      "command": [
+        "go",
+        "run",
+        "."
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-dynamic-kind-and-bytes-oracle",
+      "exit": 0,
+      "stdout": "control-dynamic-kind-and-bytes-go/stdout",
+      "stderr": "control-dynamic-kind-and-bytes-go/stderr",
+      "stdout_sha256": "35d9d4b19708129cae7fd973d15014dd8b983d4e29db508cbb91766d1c7a8e22",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-dynamic-kind-and-bytes-observe",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-dynamic-kind-and-bytes-go/stdout"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-dynamic-kind-and-bytes-observe/stdout",
+      "stderr": "control-dynamic-kind-and-bytes-observe/stderr",
+      "stdout_sha256": "35d9d4b19708129cae7fd973d15014dd8b983d4e29db508cbb91766d1c7a8e22",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-dynamic-kind-and-bytes-output",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-dynamic-kind-and-bytes-go/stderr",
+        "--expected-status",
+        "ok",
+        "--crash-report",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-dynamic-kind-and-bytes-oracle/oracle.crash",
+        "--crash-registered",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-dynamic-kind-and-bytes-oracle/oracle.registered"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-dynamic-kind-and-bytes-output/stdout",
+      "stderr": "control-dynamic-kind-and-bytes-output/stderr",
+      "stdout_sha256": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "model-control-dynamic-kind-and-bytes",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "native-json-run",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/controls-wire.json",
+        "--function",
+        "ControlDynamic",
+        "--fuel",
+        "10000000"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "model-control-dynamic-kind-and-bytes/stdout",
+      "stderr": "model-control-dynamic-kind-and-bytes/stderr",
+      "stdout_sha256": "7815a73acce20bfb0b9f79709a6ccf277b37d46bcaff69198f85d4419ef72b14",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "pin-control-dynamic-kind-and-bytes",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "observation-eq",
+        "--left",
+        "{\"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"tag\": \"bool\", \"value\": true}]}",
+        "--right",
+        "{\"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"tag\": \"bool\", \"value\": true}]}"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "pin-control-dynamic-kind-and-bytes/stdout",
+      "stderr": "pin-control-dynamic-kind-and-bytes/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "exact-control-dynamic-kind-and-bytes",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "observation-eq",
+        "--left",
+        "{\"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"tag\": \"bool\", \"value\": true}], \"output\": \"\"}",
+        "--right",
+        "{\"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"tag\": \"bool\", \"value\": true}]}"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "exact-control-dynamic-kind-and-bytes/stdout",
+      "stderr": "exact-control-dynamic-kind-and-bytes/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-normal-control-harness",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/Corpus/controls/string-members/explicit/main.go",
+        "--out",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-normal-control-oracle",
+        "--subject",
+        "ControlNormal",
+        "--args",
+        "-",
+        "--expected-status",
+        "ok"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-normal-control-harness/stdout",
+      "stderr": "control-normal-control-harness/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-normal-control-go",
+      "command": [
+        "go",
+        "run",
+        "."
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-normal-control-oracle",
+      "exit": 0,
+      "stdout": "control-normal-control-go/stdout",
+      "stderr": "control-normal-control-go/stderr",
+      "stdout_sha256": "35d9d4b19708129cae7fd973d15014dd8b983d4e29db508cbb91766d1c7a8e22",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-normal-control-observe",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-normal-control-go/stdout"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-normal-control-observe/stdout",
+      "stderr": "control-normal-control-observe/stderr",
+      "stdout_sha256": "35d9d4b19708129cae7fd973d15014dd8b983d4e29db508cbb91766d1c7a8e22",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-normal-control-output",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-normal-control-go/stderr",
+        "--expected-status",
+        "ok",
+        "--crash-report",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-normal-control-oracle/oracle.crash",
+        "--crash-registered",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-normal-control-oracle/oracle.registered"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-normal-control-output/stdout",
+      "stderr": "control-normal-control-output/stderr",
+      "stdout_sha256": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "model-control-normal-control",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "native-json-run",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/controls-wire.json",
+        "--function",
+        "ControlNormal",
+        "--fuel",
+        "10000000"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "model-control-normal-control/stdout",
+      "stderr": "model-control-normal-control/stderr",
+      "stdout_sha256": "7815a73acce20bfb0b9f79709a6ccf277b37d46bcaff69198f85d4419ef72b14",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "pin-control-normal-control",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "observation-eq",
+        "--left",
+        "{\"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"tag\": \"bool\", \"value\": true}]}",
+        "--right",
+        "{\"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"tag\": \"bool\", \"value\": true}]}"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "pin-control-normal-control/stdout",
+      "stderr": "pin-control-normal-control/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "exact-control-normal-control",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "observation-eq",
+        "--left",
+        "{\"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"tag\": \"bool\", \"value\": true}], \"output\": \"\"}",
+        "--right",
+        "{\"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"tag\": \"bool\", \"value\": true}]}"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "exact-control-normal-control/stdout",
+      "stderr": "exact-control-normal-control/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-direct-recovery-harness",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/Corpus/controls/string-members/explicit/main.go",
+        "--out",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-direct-recovery-oracle",
+        "--subject",
+        "ControlDirect",
+        "--args",
+        "-",
+        "--expected-status",
+        "ok"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-direct-recovery-harness/stdout",
+      "stderr": "control-direct-recovery-harness/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-direct-recovery-go",
+      "command": [
+        "go",
+        "run",
+        "."
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-direct-recovery-oracle",
+      "exit": 0,
+      "stdout": "control-direct-recovery-go/stdout",
+      "stderr": "control-direct-recovery-go/stderr",
+      "stdout_sha256": "35d9d4b19708129cae7fd973d15014dd8b983d4e29db508cbb91766d1c7a8e22",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-direct-recovery-observe",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-direct-recovery-go/stdout"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-direct-recovery-observe/stdout",
+      "stderr": "control-direct-recovery-observe/stderr",
+      "stdout_sha256": "35d9d4b19708129cae7fd973d15014dd8b983d4e29db508cbb91766d1c7a8e22",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-direct-recovery-output",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-direct-recovery-go/stderr",
+        "--expected-status",
+        "ok",
+        "--crash-report",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-direct-recovery-oracle/oracle.crash",
+        "--crash-registered",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-direct-recovery-oracle/oracle.registered"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-direct-recovery-output/stdout",
+      "stderr": "control-direct-recovery-output/stderr",
+      "stdout_sha256": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "model-control-direct-recovery",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "native-json-run",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/controls-wire.json",
+        "--function",
+        "ControlDirect",
+        "--fuel",
+        "10000000"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "model-control-direct-recovery/stdout",
+      "stderr": "model-control-direct-recovery/stderr",
+      "stdout_sha256": "7815a73acce20bfb0b9f79709a6ccf277b37d46bcaff69198f85d4419ef72b14",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "pin-control-direct-recovery",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "observation-eq",
+        "--left",
+        "{\"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"tag\": \"bool\", \"value\": true}]}",
+        "--right",
+        "{\"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"tag\": \"bool\", \"value\": true}]}"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "pin-control-direct-recovery/stdout",
+      "stderr": "pin-control-direct-recovery/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "exact-control-direct-recovery",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "observation-eq",
+        "--left",
+        "{\"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"tag\": \"bool\", \"value\": true}], \"output\": \"\"}",
+        "--right",
+        "{\"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"tag\": \"bool\", \"value\": true}]}"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "exact-control-direct-recovery/stdout",
+      "stderr": "exact-control-direct-recovery/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-indirect-recovery-harness",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/Corpus/controls/string-members/explicit/main.go",
+        "--out",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-indirect-recovery-oracle",
+        "--subject",
+        "ControlIndirect",
+        "--args",
+        "-",
+        "--expected-status",
+        "ok"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-indirect-recovery-harness/stdout",
+      "stderr": "control-indirect-recovery-harness/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-indirect-recovery-go",
+      "command": [
+        "go",
+        "run",
+        "."
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-indirect-recovery-oracle",
+      "exit": 0,
+      "stdout": "control-indirect-recovery-go/stdout",
+      "stderr": "control-indirect-recovery-go/stderr",
+      "stdout_sha256": "35d9d4b19708129cae7fd973d15014dd8b983d4e29db508cbb91766d1c7a8e22",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-indirect-recovery-observe",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-indirect-recovery-go/stdout"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-indirect-recovery-observe/stdout",
+      "stderr": "control-indirect-recovery-observe/stderr",
+      "stdout_sha256": "35d9d4b19708129cae7fd973d15014dd8b983d4e29db508cbb91766d1c7a8e22",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-indirect-recovery-output",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-indirect-recovery-go/stderr",
+        "--expected-status",
+        "ok",
+        "--crash-report",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-indirect-recovery-oracle/oracle.crash",
+        "--crash-registered",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-indirect-recovery-oracle/oracle.registered"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-indirect-recovery-output/stdout",
+      "stderr": "control-indirect-recovery-output/stderr",
+      "stdout_sha256": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "model-control-indirect-recovery",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "native-json-run",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/controls-wire.json",
+        "--function",
+        "ControlIndirect",
+        "--fuel",
+        "10000000"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "model-control-indirect-recovery/stdout",
+      "stderr": "model-control-indirect-recovery/stderr",
+      "stdout_sha256": "7815a73acce20bfb0b9f79709a6ccf277b37d46bcaff69198f85d4419ef72b14",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "pin-control-indirect-recovery",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "observation-eq",
+        "--left",
+        "{\"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"tag\": \"bool\", \"value\": true}]}",
+        "--right",
+        "{\"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"tag\": \"bool\", \"value\": true}]}"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "pin-control-indirect-recovery/stdout",
+      "stderr": "pin-control-indirect-recovery/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "exact-control-indirect-recovery",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "observation-eq",
+        "--left",
+        "{\"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"tag\": \"bool\", \"value\": true}], \"output\": \"\"}",
+        "--right",
+        "{\"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"tag\": \"bool\", \"value\": true}]}"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "exact-control-indirect-recovery/stdout",
+      "stderr": "exact-control-indirect-recovery/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-defer-order-harness",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/Corpus/controls/string-members/explicit/main.go",
+        "--out",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-defer-order-oracle",
+        "--subject",
+        "ControlOrder",
+        "--args",
+        "-",
+        "--expected-status",
+        "ok"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-defer-order-harness/stdout",
+      "stderr": "control-defer-order-harness/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-defer-order-go",
+      "command": [
+        "go",
+        "run",
+        "."
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-defer-order-oracle",
+      "exit": 0,
+      "stdout": "control-defer-order-go/stdout",
+      "stderr": "control-defer-order-go/stderr",
+      "stdout_sha256": "f756b1cae790700288f737e03891601d22a29fe7ffa09430c5e40255edc5cece",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-defer-order-observe",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-defer-order-go/stdout"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-defer-order-observe/stdout",
+      "stderr": "control-defer-order-observe/stderr",
+      "stdout_sha256": "f756b1cae790700288f737e03891601d22a29fe7ffa09430c5e40255edc5cece",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-defer-order-output",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-defer-order-go/stderr",
+        "--expected-status",
+        "ok",
+        "--crash-report",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-defer-order-oracle/oracle.crash",
+        "--crash-registered",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-defer-order-oracle/oracle.registered"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-defer-order-output/stdout",
+      "stderr": "control-defer-order-output/stderr",
+      "stdout_sha256": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "model-control-defer-order",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "native-json-run",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/controls-wire.json",
+        "--function",
+        "ControlOrder",
+        "--fuel",
+        "10000000"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "model-control-defer-order/stdout",
+      "stderr": "model-control-defer-order/stderr",
+      "stdout_sha256": "c71bf34ba514aebd4f858a5fea3388679c362732af7fe50d98fd1f0c14f5ae14",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "pin-control-defer-order",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "observation-eq",
+        "--left",
+        "{\"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"kind\": \"int\", \"tag\": \"int\", \"value\": 21}]}",
+        "--right",
+        "{\"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"kind\": \"int\", \"tag\": \"int\", \"value\": 21}]}"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "pin-control-defer-order/stdout",
+      "stderr": "pin-control-defer-order/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "exact-control-defer-order",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "observation-eq",
+        "--left",
+        "{\"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"kind\": \"int\", \"tag\": \"int\", \"value\": 21}], \"output\": \"\"}",
+        "--right",
+        "{\"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"kind\": \"int\", \"tag\": \"int\", \"value\": 21}]}"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "exact-control-defer-order/stdout",
+      "stderr": "exact-control-defer-order/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-reversed-defer-control-harness",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/Corpus/controls/string-members/explicit/main.go",
+        "--out",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-reversed-defer-control-oracle",
+        "--subject",
+        "ControlReversed",
+        "--args",
+        "-",
+        "--expected-status",
+        "ok"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-reversed-defer-control-harness/stdout",
+      "stderr": "control-reversed-defer-control-harness/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-reversed-defer-control-go",
+      "command": [
+        "go",
+        "run",
+        "."
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-reversed-defer-control-oracle",
+      "exit": 0,
+      "stdout": "control-reversed-defer-control-go/stdout",
+      "stderr": "control-reversed-defer-control-go/stderr",
+      "stdout_sha256": "31548895b85d3a2ebe6b4537c1ca75bd83c3dff46ee5056e6bb1dceb686207c5",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-reversed-defer-control-observe",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-reversed-defer-control-go/stdout"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-reversed-defer-control-observe/stdout",
+      "stderr": "control-reversed-defer-control-observe/stderr",
+      "stdout_sha256": "31548895b85d3a2ebe6b4537c1ca75bd83c3dff46ee5056e6bb1dceb686207c5",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-reversed-defer-control-output",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-reversed-defer-control-go/stderr",
+        "--expected-status",
+        "ok",
+        "--crash-report",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-reversed-defer-control-oracle/oracle.crash",
+        "--crash-registered",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-reversed-defer-control-oracle/oracle.registered"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-reversed-defer-control-output/stdout",
+      "stderr": "control-reversed-defer-control-output/stderr",
+      "stdout_sha256": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "model-control-reversed-defer-control",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "native-json-run",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/controls-wire.json",
+        "--function",
+        "ControlReversed",
+        "--fuel",
+        "10000000"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "model-control-reversed-defer-control/stdout",
+      "stderr": "model-control-reversed-defer-control/stderr",
+      "stdout_sha256": "3db73c54279cc4f557c8e4d7424bbd131d420b95236fcf7f201695656f463354",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "pin-control-reversed-defer-control",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "observation-eq",
+        "--left",
+        "{\"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"kind\": \"int\", \"tag\": \"int\", \"value\": 12}]}",
+        "--right",
+        "{\"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"kind\": \"int\", \"tag\": \"int\", \"value\": 12}]}"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "pin-control-reversed-defer-control/stdout",
+      "stderr": "pin-control-reversed-defer-control/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "exact-control-reversed-defer-control",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "observation-eq",
+        "--left",
+        "{\"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"kind\": \"int\", \"tag\": \"int\", \"value\": 12}], \"output\": \"\"}",
+        "--right",
+        "{\"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"kind\": \"int\", \"tag\": \"int\", \"value\": 12}]}"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "exact-control-reversed-defer-control/stdout",
+      "stderr": "exact-control-reversed-defer-control/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-equal-repanic-harness",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/Corpus/controls/string-members/explicit/main.go",
+        "--out",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-equal-repanic-oracle",
+        "--subject",
+        "Equal",
+        "--args",
+        "-",
+        "--expected-status",
+        "panic"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-equal-repanic-harness/stdout",
+      "stderr": "control-equal-repanic-harness/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-equal-repanic-go",
+      "command": [
+        "go",
+        "run",
+        "."
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-equal-repanic-oracle",
+      "exit": 1,
+      "stdout": "control-equal-repanic-go/stdout",
+      "stderr": "control-equal-repanic-go/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4eb2a0f4ea7a8ed90577e2ea2eb690c140f19e4817c9a12b376ed29d22cf7fd5"
+    },
+    {
+      "label": "control-equal-repanic-observe",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--abort-record",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-equal-repanic-go/stderr",
+        "--crash-report",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-equal-repanic-oracle/oracle.crash",
+        "--crash-registered",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-equal-repanic-oracle/oracle.registered"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-equal-repanic-observe/stdout",
+      "stderr": "control-equal-repanic-observe/stderr",
+      "stdout_sha256": "e04ca9a5adeb092d80ba28b62becdb31e705e089c0f8a58ae0ba70711fbedad2",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "model-control-equal-repanic",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "native-json-string-run",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/controls-wire.json",
+        "--function",
+        "Equal",
+        "--fuel",
+        "10000000"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 1,
+      "stdout": "model-control-equal-repanic/stdout",
+      "stderr": "model-control-equal-repanic/stderr",
+      "stdout_sha256": "7cbb9db851c56896afb768f9eb682d7a9f6db32a414d9d1fb0e3e73144640ab9",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "pin-control-equal-repanic",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "observation-eq",
+        "--left",
+        "{\"message\": \"orig [recovered]\", \"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"panic\"}",
+        "--right",
+        "{\"message\": \"orig [recovered]\", \"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"panic\"}"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "pin-control-equal-repanic/stdout",
+      "stderr": "pin-control-equal-repanic/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-unequal-repanic-harness",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/Corpus/controls/string-members/explicit/main.go",
+        "--out",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-unequal-repanic-oracle",
+        "--subject",
+        "Unequal",
+        "--args",
+        "-",
+        "--expected-status",
+        "panic"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-unequal-repanic-harness/stdout",
+      "stderr": "control-unequal-repanic-harness/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-unequal-repanic-go",
+      "command": [
+        "go",
+        "run",
+        "."
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-unequal-repanic-oracle",
+      "exit": 1,
+      "stdout": "control-unequal-repanic-go/stdout",
+      "stderr": "control-unequal-repanic-go/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "0eb8f5c53a2020311baf10f755329c7faa771a2ff7ec8b1cf2be2ea17dac6763"
+    },
+    {
+      "label": "control-unequal-repanic-observe",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--abort-record",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-unequal-repanic-go/stderr",
+        "--crash-report",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-unequal-repanic-oracle/oracle.crash",
+        "--crash-registered",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-unequal-repanic-oracle/oracle.registered"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-unequal-repanic-observe/stdout",
+      "stderr": "control-unequal-repanic-observe/stderr",
+      "stdout_sha256": "5e9fc61a2f7643151d6671c752272bbb4be7fb4920125607d81219f8afa5c9fc",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "model-control-unequal-repanic",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "native-json-string-run",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/controls-wire.json",
+        "--function",
+        "Unequal",
+        "--fuel",
+        "10000000"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 1,
+      "stdout": "model-control-unequal-repanic/stdout",
+      "stderr": "model-control-unequal-repanic/stderr",
+      "stdout_sha256": "ba8704b4ce92518c4d6f0cbdfb59d726b492c6ed6d0adcea45bb4ea1c2d9ae2f",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "pin-control-unequal-repanic",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "observation-eq",
+        "--left",
+        "{\"message\": \"orig [recovered]\", \"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"panic\"}",
+        "--right",
+        "{\"message\": \"orig [recovered]\", \"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"panic\"}"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "pin-control-unequal-repanic/stdout",
+      "stderr": "pin-control-unequal-repanic/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-multiple-repanic-harness",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/Corpus/controls/string-members/explicit/main.go",
+        "--out",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-multiple-repanic-oracle",
+        "--subject",
+        "Multiple",
+        "--args",
+        "-",
+        "--expected-status",
+        "panic"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-multiple-repanic-harness/stdout",
+      "stderr": "control-multiple-repanic-harness/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-multiple-repanic-go",
+      "command": [
+        "go",
+        "run",
+        "."
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-multiple-repanic-oracle",
+      "exit": 1,
+      "stdout": "control-multiple-repanic-go/stdout",
+      "stderr": "control-multiple-repanic-go/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "d534db121a0fa57ee310c1f82338e52757e836a247d7d93be72b5132eeadc940"
+    },
+    {
+      "label": "control-multiple-repanic-observe",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--abort-record",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-multiple-repanic-go/stderr",
+        "--crash-report",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-multiple-repanic-oracle/oracle.crash",
+        "--crash-registered",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-multiple-repanic-oracle/oracle.registered"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-multiple-repanic-observe/stdout",
+      "stderr": "control-multiple-repanic-observe/stderr",
+      "stdout_sha256": "e04ca9a5adeb092d80ba28b62becdb31e705e089c0f8a58ae0ba70711fbedad2",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "model-control-multiple-repanic",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "native-json-string-run",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/controls-wire.json",
+        "--function",
+        "Multiple",
+        "--fuel",
+        "10000000"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 1,
+      "stdout": "model-control-multiple-repanic/stdout",
+      "stderr": "model-control-multiple-repanic/stderr",
+      "stdout_sha256": "b7226a2816616d08cce49014465f16dcb18b371b7d516ad95108a980b70ca60a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "pin-control-multiple-repanic",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "observation-eq",
+        "--left",
+        "{\"message\": \"orig [recovered]\", \"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"panic\"}",
+        "--right",
+        "{\"message\": \"orig [recovered]\", \"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"panic\"}"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "pin-control-multiple-repanic/stdout",
+      "stderr": "pin-control-multiple-repanic/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-rethrow-harness",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/Corpus/controls/string-members/explicit/main.go",
+        "--out",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-rethrow-oracle",
+        "--subject",
+        "ControlRethrow",
+        "--args",
+        "-",
+        "--expected-status",
+        "panic"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-rethrow-harness/stdout",
+      "stderr": "control-rethrow-harness/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-rethrow-go",
+      "command": [
+        "go",
+        "run",
+        "."
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-rethrow-oracle",
+      "exit": 1,
+      "stdout": "control-rethrow-go/stdout",
+      "stderr": "control-rethrow-go/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "a501c9b8c9c5a9ae793d6b28ef1b8ea5469cfd88fa40867f0113a2e2d95d3387"
+    },
+    {
+      "label": "control-rethrow-observe",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--abort-record",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-rethrow-go/stderr",
+        "--crash-report",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-rethrow-oracle/oracle.crash",
+        "--crash-registered",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-rethrow-oracle/oracle.registered"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-rethrow-observe/stdout",
+      "stderr": "control-rethrow-observe/stderr",
+      "stdout_sha256": "e04ca9a5adeb092d80ba28b62becdb31e705e089c0f8a58ae0ba70711fbedad2",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "model-control-rethrow",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "native-json-string-run",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/controls-wire.json",
+        "--function",
+        "ControlRethrow",
+        "--fuel",
+        "10000000"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 1,
+      "stdout": "model-control-rethrow/stdout",
+      "stderr": "model-control-rethrow/stderr",
+      "stdout_sha256": "7cbb9db851c56896afb768f9eb682d7a9f6db32a414d9d1fb0e3e73144640ab9",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "pin-control-rethrow",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "observation-eq",
+        "--left",
+        "{\"message\": \"orig [recovered]\", \"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"panic\"}",
+        "--right",
+        "{\"message\": \"orig [recovered]\", \"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"panic\"}"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "pin-control-rethrow/stdout",
+      "stderr": "pin-control-rethrow/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-computed-equal-harness",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/Corpus/controls/string-members/explicit/main.go",
+        "--out",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-computed-equal-oracle",
+        "--subject",
+        "ControlComputed",
+        "--args",
+        "-",
+        "--expected-status",
+        "panic"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-computed-equal-harness/stdout",
+      "stderr": "control-computed-equal-harness/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-computed-equal-go",
+      "command": [
+        "go",
+        "run",
+        "."
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-computed-equal-oracle",
+      "exit": 1,
+      "stdout": "control-computed-equal-go/stdout",
+      "stderr": "control-computed-equal-go/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "39417182e79508d12273f90627d88d1a1f8c2ddfbb60a8a13f88d505e5c314cc"
+    },
+    {
+      "label": "control-computed-equal-observe",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--abort-record",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-computed-equal-go/stderr",
+        "--crash-report",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-computed-equal-oracle/oracle.crash",
+        "--crash-registered",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-computed-equal-oracle/oracle.registered"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-computed-equal-observe/stdout",
+      "stderr": "control-computed-equal-observe/stderr",
+      "stdout_sha256": "5e9fc61a2f7643151d6671c752272bbb4be7fb4920125607d81219f8afa5c9fc",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "model-control-computed-equal",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "native-json-string-run",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/controls-wire.json",
+        "--function",
+        "ControlComputed",
+        "--fuel",
+        "10000000"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 1,
+      "stdout": "model-control-computed-equal/stdout",
+      "stderr": "model-control-computed-equal/stderr",
+      "stdout_sha256": "7cbb9db851c56896afb768f9eb682d7a9f6db32a414d9d1fb0e3e73144640ab9",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "pin-control-computed-equal",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "observation-eq",
+        "--left",
+        "{\"message\": \"orig [recovered]\", \"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"panic\"}",
+        "--right",
+        "{\"message\": \"orig [recovered]\", \"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"panic\"}"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "pin-control-computed-equal/stdout",
+      "stderr": "pin-control-computed-equal/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-invalid-before-lf-harness",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/Corpus/controls/string-members/explicit/main.go",
+        "--out",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-invalid-before-lf-oracle",
+        "--subject",
+        "ControlInvalidBefore",
+        "--args",
+        "-",
+        "--expected-status",
+        "ok"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-invalid-before-lf-harness/stdout",
+      "stderr": "control-invalid-before-lf-harness/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-invalid-before-lf-go",
+      "command": [
+        "go",
+        "run",
+        "."
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-invalid-before-lf-oracle",
+      "exit": 0,
+      "stdout": "control-invalid-before-lf-go/stdout",
+      "stderr": "control-invalid-before-lf-go/stderr",
+      "stdout_sha256": "35d9d4b19708129cae7fd973d15014dd8b983d4e29db508cbb91766d1c7a8e22",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-invalid-before-lf-observe",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-invalid-before-lf-go/stdout"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-invalid-before-lf-observe/stdout",
+      "stderr": "control-invalid-before-lf-observe/stderr",
+      "stdout_sha256": "35d9d4b19708129cae7fd973d15014dd8b983d4e29db508cbb91766d1c7a8e22",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-invalid-before-lf-output",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-invalid-before-lf-go/stderr",
+        "--expected-status",
+        "ok",
+        "--crash-report",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-invalid-before-lf-oracle/oracle.crash",
+        "--crash-registered",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-invalid-before-lf-oracle/oracle.registered"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-invalid-before-lf-output/stdout",
+      "stderr": "control-invalid-before-lf-output/stderr",
+      "stdout_sha256": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "model-control-invalid-before-lf",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "native-json-run",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/controls-wire.json",
+        "--function",
+        "ControlInvalidBefore",
+        "--fuel",
+        "10000000"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "model-control-invalid-before-lf/stdout",
+      "stderr": "model-control-invalid-before-lf/stderr",
+      "stdout_sha256": "7815a73acce20bfb0b9f79709a6ccf277b37d46bcaff69198f85d4419ef72b14",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "pin-control-invalid-before-lf",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "observation-eq",
+        "--left",
+        "{\"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"tag\": \"bool\", \"value\": true}]}",
+        "--right",
+        "{\"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"tag\": \"bool\", \"value\": true}]}"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "pin-control-invalid-before-lf/stdout",
+      "stderr": "pin-control-invalid-before-lf/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "exact-control-invalid-before-lf",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "observation-eq",
+        "--left",
+        "{\"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"tag\": \"bool\", \"value\": true}], \"output\": \"\"}",
+        "--right",
+        "{\"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"tag\": \"bool\", \"value\": true}]}"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "exact-control-invalid-before-lf/stdout",
+      "stderr": "exact-control-invalid-before-lf/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-invalid-after-lf-harness",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/Corpus/controls/string-members/explicit/main.go",
+        "--out",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-invalid-after-lf-oracle",
+        "--subject",
+        "ControlInvalidAfter",
+        "--args",
+        "-",
+        "--expected-status",
+        "ok"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-invalid-after-lf-harness/stdout",
+      "stderr": "control-invalid-after-lf-harness/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-invalid-after-lf-go",
+      "command": [
+        "go",
+        "run",
+        "."
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-invalid-after-lf-oracle",
+      "exit": 0,
+      "stdout": "control-invalid-after-lf-go/stdout",
+      "stderr": "control-invalid-after-lf-go/stderr",
+      "stdout_sha256": "35d9d4b19708129cae7fd973d15014dd8b983d4e29db508cbb91766d1c7a8e22",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-invalid-after-lf-observe",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-invalid-after-lf-go/stdout"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-invalid-after-lf-observe/stdout",
+      "stderr": "control-invalid-after-lf-observe/stderr",
+      "stdout_sha256": "35d9d4b19708129cae7fd973d15014dd8b983d4e29db508cbb91766d1c7a8e22",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "control-invalid-after-lf-output",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-invalid-after-lf-go/stderr",
+        "--expected-status",
+        "ok",
+        "--crash-report",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-invalid-after-lf-oracle/oracle.crash",
+        "--crash-registered",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/control-invalid-after-lf-oracle/oracle.registered"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "control-invalid-after-lf-output/stdout",
+      "stderr": "control-invalid-after-lf-output/stderr",
+      "stdout_sha256": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "model-control-invalid-after-lf",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "native-json-run",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/controls-wire.json",
+        "--function",
+        "ControlInvalidAfter",
+        "--fuel",
+        "10000000"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "model-control-invalid-after-lf/stdout",
+      "stderr": "model-control-invalid-after-lf/stderr",
+      "stdout_sha256": "7815a73acce20bfb0b9f79709a6ccf277b37d46bcaff69198f85d4419ef72b14",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "pin-control-invalid-after-lf",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "observation-eq",
+        "--left",
+        "{\"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"tag\": \"bool\", \"value\": true}]}",
+        "--right",
+        "{\"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"tag\": \"bool\", \"value\": true}]}"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "pin-control-invalid-after-lf/stdout",
+      "stderr": "pin-control-invalid-after-lf/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "exact-control-invalid-after-lf",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "observation-eq",
+        "--left",
+        "{\"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"tag\": \"bool\", \"value\": true}], \"output\": \"\"}",
+        "--right",
+        "{\"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"ok\", \"values\": [{\"tag\": \"bool\", \"value\": true}]}"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "exact-control-invalid-after-lf/stdout",
+      "stderr": "exact-control-invalid-after-lf/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "subject-plain-harness",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/Corpus/coverage/exec/panic-recover/string-members/main.go",
+        "--out",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/subject-plain-oracle",
+        "--subject",
+        "Equal",
+        "--args",
+        "-",
+        "--expected-status",
+        "panic"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "subject-plain-harness/stdout",
+      "stderr": "subject-plain-harness/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "subject-plain-go",
+      "command": [
+        "go",
+        "run",
+        "."
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/subject-plain-oracle",
+      "exit": 1,
+      "stdout": "subject-plain-go/stdout",
+      "stderr": "subject-plain-go/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "483f8c7aa503e2e0ce7f954a04074c118e02d8f611edb8bf4124e3295b4dff1c"
+    },
+    {
+      "label": "subject-plain-observe",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--abort-record",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/subject-plain-go/stderr",
+        "--crash-report",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/subject-plain-oracle/oracle.crash",
+        "--crash-registered",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/subject-plain-oracle/oracle.registered"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "subject-plain-observe/stdout",
+      "stderr": "subject-plain-observe/stderr",
+      "stdout_sha256": "e04ca9a5adeb092d80ba28b62becdb31e705e089c0f8a58ae0ba70711fbedad2",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "subject-race-harness",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/Corpus/coverage/exec/panic-recover/string-members/main.go",
+        "--out",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/subject-race-oracle",
+        "--subject",
+        "Equal",
+        "--args",
+        "-",
+        "--expected-status",
+        "panic"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "subject-race-harness/stdout",
+      "stderr": "subject-race-harness/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "subject-race-go",
+      "command": [
+        "go",
+        "run",
+        "-race",
+        "."
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/subject-race-oracle",
+      "exit": 1,
+      "stdout": "subject-race-go/stdout",
+      "stderr": "subject-race-go/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "908079425d9c43448cc2a2825ef39f98fc054b03fa7f2089f32e713b6cefdb6e"
+    },
+    {
+      "label": "subject-race-observe",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/bin/coverageharness",
+        "--abort-record",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/subject-race-go/stderr",
+        "--crash-report",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/subject-race-oracle/oracle.crash",
+        "--crash-registered",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/subject-race-oracle/oracle.registered"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "subject-race-observe/stdout",
+      "stderr": "subject-race-observe/stderr",
+      "stdout_sha256": "e04ca9a5adeb092d80ba28b62becdb31e705e089c0f8a58ae0ba70711fbedad2",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "subject-model-0",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "native-json-string-run",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/subject-wire.json",
+        "--function",
+        "Equal",
+        "--fuel",
+        "10000000",
+        "--require-recovery-profile"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 1,
+      "stdout": "subject-model-0/stdout",
+      "stderr": "subject-model-0/stderr",
+      "stdout_sha256": "428b14e34c60264cfe4784b5769c547f6cc4188eb7108f8c2f11bd6e14259ca6",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "subject-pin-0",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "observation-eq",
+        "--left",
+        "{\"message\": \"orig [recovered]\", \"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"panic\"}",
+        "--right",
+        "{\"message\": \"orig [recovered]\", \"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"panic\"}"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "subject-pin-0/stdout",
+      "stderr": "subject-pin-0/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "subject-model-1",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "native-json-string-run",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/subject-wire.json",
+        "--function",
+        "Equal",
+        "--fuel",
+        "10000000",
+        "--choices",
+        "9,8,7,6,5,4,3,2,1,0",
+        "--require-recovery-profile"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 1,
+      "stdout": "subject-model-1/stdout",
+      "stderr": "subject-model-1/stderr",
+      "stdout_sha256": "b4b5016d70ffc7338d8e63596f838f68aceab762250b4030fa7c4cedf4f95686",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "subject-pin-1",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "observation-eq",
+        "--left",
+        "{\"message\": \"orig [recovered]\", \"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"panic\"}",
+        "--right",
+        "{\"message\": \"orig [recovered]\", \"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"panic\"}"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "subject-pin-1/stdout",
+      "stderr": "subject-pin-1/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "subject-model-2",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "native-json-string-run",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/subject-wire.json",
+        "--function",
+        "Equal",
+        "--fuel",
+        "10000000",
+        "--choices",
+        "1,3,5,7,9,2,4,6,8,0",
+        "--require-recovery-profile"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 1,
+      "stdout": "subject-model-2/stdout",
+      "stderr": "subject-model-2/stderr",
+      "stdout_sha256": "b2697038d6afd1f7409d8c3b67af11bbe0f1d122c2a9e9c600cad7a7171eb902",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "subject-pin-2",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "observation-eq",
+        "--left",
+        "{\"message\": \"orig [recovered]\", \"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"panic\"}",
+        "--right",
+        "{\"message\": \"orig [recovered]\", \"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"panic\"}"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "subject-pin-2/stdout",
+      "stderr": "subject-pin-2/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "subject-model-3",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "native-json-string-run",
+        "--input",
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/o2-terminal-integration-members/string-members/panic-recover__string-members__equal/fresh-zghsu97c/subject-wire.json",
+        "--function",
+        "Equal",
+        "--fuel",
+        "10000000",
+        "--choices",
+        "5,5,5,5,5,5,5,5",
+        "--require-recovery-profile"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 1,
+      "stdout": "subject-model-3/stdout",
+      "stderr": "subject-model-3/stderr",
+      "stdout_sha256": "425070efe1f90d922aea77793d2c228f8c327b9d998223714b42b90958ae1422",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "subject-pin-3",
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.lake/build/bin/golean",
+        "observation-eq",
+        "--left",
+        "{\"message\": \"orig [recovered]\", \"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"panic\"}",
+        "--right",
+        "{\"message\": \"orig [recovered]\", \"output\": \"\", \"schema\": \"golean-observation-v1\", \"status\": \"panic\"}"
+      ],
+      "cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+      "exit": 0,
+      "stdout": "subject-pin-3/stdout",
+      "stderr": "subject-pin-3/stderr",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

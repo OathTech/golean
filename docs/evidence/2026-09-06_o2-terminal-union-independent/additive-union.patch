@@ -1,0 +1,30 @@
+diff --git a/lakefile.toml b/lakefile.toml
+index 5876a3f9..2261a2d2 100644
+--- a/lakefile.toml
++++ b/lakefile.toml
+@@ -59,3 +59,7 @@ globs = ["Tests.AbortObservation", "Tests.AbortObservationAudit"]
+ [[lean_lib]]
+ name = "DeclarationTests"
+ globs = ["Tests.DeclarationWire", "Tests.StrictJsonParse", "Tests.DeclarationAudit"]
++
++[[lean_lib]]
++name = "RecoveryTerminalTests"
++globs = ["Tests.RecoveryTerminal", "Tests.RecoveryTerminalAudit"]
+diff --git a/scripts/ci b/scripts/ci
+index bfe5c536..2922af26 100755
+--- a/scripts/ci
++++ b/scripts/ci
+@@ -478,6 +478,13 @@ else
+   bad "Actual driver abort observation and provenance"
+ fi
+ 
++step "Typed recovery terminal classification and complete metadata"
++if bash scripts/check-recovery-terminal; then
++  ok "Typed recovery terminal classification and complete metadata"
++else
++  bad "Typed recovery terminal classification and complete metadata"
++fi
++
+ # 2b. Frontend pins (restored at the split audit, findings A1/A2 + B1/B8
+ # — docs/2026-08-31_repo-split-plan.md fix round): the two SEMANTICS
+ # pins that lived inside the parked check-golden. (1) the

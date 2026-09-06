@@ -1,0 +1,10 @@
+{
+  "old_head": "04109912f28b9e8511d43e6fba7c3c158cdea76f",
+  "new_head": "414a2abeff6eb69307205276c1b2a6e69f8095f3",
+  "mode": "fast-forward; all tracked and untracked WIP preserved",
+  "snapshot_ref": "snapshots/typed-terminal-pre-observer-20260906",
+  "source_manifest_all_14_unchanged": true,
+  "BUG107_included": false,
+  "terminal_gate_source_unchanged": true,
+  "new_gate_result_claimed": false
+}

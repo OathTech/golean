@@ -1,0 +1,38 @@
+{
+  "scope": "bounded independent I1 package Lean boundary review; source construction-point inspection, fresh Go/types probe, not full actual-emitter/corpus recertification",
+  "source32_unchanged": true,
+  "full3917_Git_plus_snapshot_verified": true,
+  "fresh_Lean_modules": 3,
+  "kernel_probe_exit": 0,
+  "audit_declarations": 1972,
+  "allowed_axioms": [
+    "propext",
+    "Classical.choice",
+    "Quot.sound"
+  ],
+  "findings": [
+    {
+      "id": "I1-PKG-R1",
+      "status": "blocking at v1; author first repair pending independent check",
+      "cause": "interface completeness compares only TypeId list, allowing duplicate native TypeDef identities to conceal repeated binding index0",
+      "reproducer": "duplicate-interface-index.json",
+      "actual": "ACCEPTED; interfaces=2",
+      "required": "exact final relevant indices plus unique nonempty relevant TypeDef identities"
+    },
+    {
+      "id": "I1-PKG-R2",
+      "status": "blocking at v1; author repair pending",
+      "cause": "complete interface matching collapses package-sensitive MemberId to bare method name",
+      "reproducer": "same-private-name.json",
+      "actual": "REJECTED: declarations.interfaces: duplicate native interface requirement",
+      "independent_Go": "Complete() has two methods p.m/q.m and IsMethodSet=true; same-private-name-go.log",
+      "required": "one-to-one wire-header multiset correspondence without discarding positive member package identity"
+    }
+  ],
+  "separate_obligations": [
+    "root independent final acceptance",
+    "all construction-point/source ABI full correspondence",
+    "final ordinary/full differential and slow certification",
+    "runtime querying/closure demand/marker removal"
+  ]
+}
