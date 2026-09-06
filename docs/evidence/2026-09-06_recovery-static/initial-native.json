@@ -1,0 +1,644 @@
+{
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "results": [
+       {
+        "expr": "unary",
+        "op": "!",
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "b",
+         "type": {
+          "kind": "bool"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "flip",
+   "params": [
+    {
+     "id": "b",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "result",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c0",
+        "target": "declare",
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "recover",
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "==",
+        "operandType": {
+         "kind": "interface",
+         "name": "any"
+        },
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "$c0",
+         "type": {
+          "kind": "interface",
+          "name": "any"
+         }
+        },
+        "y": {
+         "expr": "nil"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "indirectRecover",
+   "params": [],
+   "results": [
+    {
+     "id": "result",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "expr": "ident",
+         "name": "result$cap"
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "expr": "deref",
+          "ptr": {
+           "expr": "ident",
+           "name": "result$cap"
+          },
+          "type": {
+           "kind": "bool"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "flip",
+        "resultTypes": [
+         {
+          "kind": "bool"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "Shared$lit0",
+   "params": [
+    {
+     "id": "result$cap",
+     "type": {
+      "elem": {
+       "kind": "bool"
+      },
+      "kind": "pointer"
+     }
+    }
+   ],
+   "results": [],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "outside",
+        "target": "declare",
+        "type": {
+         "kind": "bool"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [],
+        "expr": "call",
+        "func": "indirectRecover",
+        "resultTypes": [
+         {
+          "kind": "bool"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c1",
+        "target": "declare",
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "recover",
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cond": {
+       "expr": "binary",
+       "op": "!=",
+       "operandType": {
+        "kind": "interface",
+        "name": "any"
+       },
+       "type": {
+        "kind": "bool"
+       },
+       "x": {
+        "expr": "ident",
+        "name": "$c1",
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       },
+       "y": {
+        "expr": "nil"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "define": false,
+         "lhs": [
+          {
+           "expr": {
+            "expr": "ident",
+            "name": "result$cap"
+           },
+           "target": "addr"
+          }
+         ],
+         "rhs": [
+          {
+           "expr": "ident",
+           "name": "outside",
+           "type": {
+            "kind": "bool"
+           }
+          }
+         ],
+         "stmt": "assign"
+        }
+       ],
+       "stmt": "block"
+      }
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "Shared$lit1",
+   "params": [
+    {
+     "id": "result$cap",
+     "type": {
+      "elem": {
+       "kind": "bool"
+      },
+      "kind": "pointer"
+     }
+    }
+   ],
+   "results": [],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "args": [],
+      "callee": {
+       "captured": [
+        {
+         "expr": "ref",
+         "id": "result"
+        }
+       ],
+       "expr": "func-value",
+       "func": "Shared$lit0",
+       "type": {
+        "kind": "func",
+        "params": [],
+        "results": [],
+        "variadic": false
+       }
+      },
+      "stmt": "defer"
+     },
+     {
+      "args": [],
+      "callee": {
+       "captured": [
+        {
+         "expr": "ref",
+         "id": "result"
+        }
+       ],
+       "expr": "func-value",
+       "func": "Shared$lit1",
+       "type": {
+        "kind": "func",
+        "params": [],
+        "results": [],
+        "variadic": false
+       }
+      },
+      "stmt": "defer"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "id": "result",
+        "target": "var"
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "expr": "ident",
+          "name": "b",
+          "type": {
+           "kind": "bool"
+          }
+         }
+        ],
+        "expr": "call",
+        "func": "flip",
+        "resultTypes": [
+         {
+          "kind": "bool"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cond": {
+       "expr": "ident",
+       "name": "b",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "stmt": "panic",
+         "value": {
+          "bytes": [
+           115,
+           104,
+           97,
+           114,
+           101,
+           100,
+           32,
+           114,
+           101,
+           99,
+           111,
+           118,
+           101,
+           114,
+           121
+          ],
+          "expr": "string",
+          "type": {
+           "kind": "string"
+          }
+         },
+         "wrap": {
+          "kind": "string"
+         }
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "results": [],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "Shared",
+   "params": [
+    {
+     "id": "b",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "result",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c2",
+        "target": "declare",
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "recover",
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "==",
+        "operandType": {
+         "kind": "interface",
+         "name": "any"
+        },
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "$c2",
+         "type": {
+          "kind": "interface",
+          "name": "any"
+         }
+        },
+        "y": {
+         "expr": "nil"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "Outside",
+   "params": [],
+   "results": [
+    {
+     "id": "result",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c3",
+        "target": "declare",
+        "type": {
+         "kind": "bool"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "expr": "bool",
+          "type": {
+           "kind": "bool"
+          },
+          "value": false
+         }
+        ],
+        "expr": "call",
+        "func": "Shared",
+        "resultTypes": [
+         {
+          "kind": "bool"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "ident",
+        "name": "$c3",
+        "type": {
+         "kind": "bool"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "SharedFalse",
+   "params": [],
+   "results": [
+    {
+     "id": "result",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c4",
+        "target": "declare",
+        "type": {
+         "kind": "bool"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "expr": "bool",
+          "type": {
+           "kind": "bool"
+          },
+          "value": true
+         }
+        ],
+        "expr": "call",
+        "func": "Shared",
+        "resultTypes": [
+         {
+          "kind": "bool"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "ident",
+        "name": "$c4",
+        "type": {
+         "kind": "bool"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "SharedTrue",
+   "params": [],
+   "results": [
+    {
+     "id": "result",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  }
+ ],
+ "methodSets": [],
+ "methods": [],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": []
+}
