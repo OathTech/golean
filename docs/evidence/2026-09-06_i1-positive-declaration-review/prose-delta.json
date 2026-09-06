@@ -1,0 +1,13 @@
+{
+  "checked_all_inputs": 12,
+  "changed": [
+    {
+      "file": "GoLean/NativeDeclaration.lean",
+      "before": "e4d550204ef4473f810e59b6ef11481dbf354b52e29c7c7c3ccd9088a5bd7e51",
+      "after": "c6dffb3e884ec9034635952ce4082aad61857b852f9cabbbc11fd485da5ab662",
+      "delta": "Comment only: 'admit executable demand' -> 'authorize executable demand'"
+    }
+  ],
+  "verdict": "ACCEPTED; implementation, gate and claim meaning unchanged; original e9045844 review preserved",
+  "broad_CI_claim": false
+}
