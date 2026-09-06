@@ -1,0 +1,6 @@
+result	id	features	stage	detail
+PASS	recovery-typing/shared-false	admission,recovery,captures	-	wide=0 exhausted=none depth=fixed
+PASS	recovery-typing/shared-true	admission,recovery,captures	-	wide=0 exhausted=none depth=fixed
+PASS	recovery-typing/outside	admission,recovery,outside-handler	-	wide=0 exhausted=none depth=fixed
+PASS	recovery-typing/reversed-true	admission,recovery,defer-order-control	-	wide=0 exhausted=none depth=fixed
+PASS	recovery-typing/direct-true	admission,recovery,direct-control	-	wide=0 exhausted=none depth=fixed
