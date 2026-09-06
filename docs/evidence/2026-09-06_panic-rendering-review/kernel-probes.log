@@ -1,0 +1,5 @@
+'IndependentPanicRendererReview.all_ascii_bytes_roundtrip' depends on axioms: [propext, Quot.sound]
+'IndependentPanicRendererReview.scalar_boundary_roundtrip' depends on axioms: [propext, Quot.sound]
+'IndependentPanicRendererReview.projection_preserves_carriage_return' depends on axioms: [propext, Quot.sound]
+'IndependentPanicRendererReview.output_control_bytes_preserved_in_model' depends on axioms: [propext, Quot.sound]
+'IndependentPanicRendererReview.invalid_tail_is_not_hidden' depends on axioms: [propext, Quot.sound]

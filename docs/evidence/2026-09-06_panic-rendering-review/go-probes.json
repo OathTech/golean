@@ -1,0 +1,20 @@
+[
+  {
+    "case": "carriage-return-before-newline",
+    "exit": 1,
+    "panic_first_line_hex": "610d",
+    "expected_hex": "610d"
+  },
+  {
+    "case": "control-bytes",
+    "exit": 1,
+    "panic_first_line_hex": "6100620163",
+    "expected_hex": "6100620163"
+  },
+  {
+    "case": "maximum-scalar",
+    "exit": 1,
+    "panic_first_line_hex": "f48fbfbf",
+    "expected_hex": "f48fbfbf"
+  }
+]
