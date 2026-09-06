@@ -1,0 +1,6 @@
+'GoLean.GoCore.PanicText.charList' depends on axioms: [propext, Classical.choice, Quot.sound]
+'GoLean.GoCore.PanicText.firstLine' depends on axioms: [propext, Classical.choice, Quot.sound]
+'GoLean.GoCore.PanicText.escapeAllBytes' does not depend on any axioms
+'GoLean.GoCore.PanicText.decodeEscapedBytes' depends on axioms: [propext, Classical.choice, Quot.sound]
+'GoLean.GoCore.Machine.renderStringMember' depends on axioms: [propext, Quot.sound]
+'GoLean.GoCore.Machine.firstPanicLine?' depends on axioms: [propext, Classical.choice, Quot.sound]

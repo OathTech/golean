@@ -1,0 +1,7 @@
+{
+  "manifest": "full-v3.manifest.tsv",
+  "sha256": "c2a13c0adabe351dfd570796bc46fca6e83eb1f869b2471aad1f23bbbfd122e8",
+  "cases": 3635,
+  "source_inventory": "production-candidate-source-v3.json",
+  "note": "current full executable manifest preserved before full corpus stage; not a run result"
+}

@@ -1,0 +1,12 @@
+{
+  "GoLean/GoCore/PanicText.lean": "8c4e28c57e2851a80573e746454fdd8a2057e0cd5548b561b5307cd3d79ad7f5",
+  "GoLean/GoCore/StringPanic.lean": "0e16be58b43be8a1b2c32d8a6956ce4cabaf00ed5f4cca163e16c092e58dddad",
+  "GoLean/GoCore/Machine.lean": "c645f53edbabb8cc509a717bc0ed3f85c77c8347619bd2959177559f2cab501d",
+  "GoLean/Interface.lean": "434db35141359d93b0e6271f8d16333c35679da9d903751557c0266aaeb87bd5",
+  "Tests/InterfaceAudit.lean": "e6eda16803674ce5daed464d2ab41d1676a7e8f68b8cad3752552a88cbfbbd03",
+  "Tests/PanicRendering.lean": "98ac1be2cb22e262b515ac97408ceba095123d939bdc51ad6fec7920b327dd85",
+  "Tests/StringPanicMembers.lean": "ff85ecbb56e1e170e84c359c332cf630d0d9ba6cf1abe062d72db52f25a273c4",
+  "lakefile.toml": "5d9e0399adcadf2d1485b300170abc9ed521c322cc10dfa06dc3d86836f0914e",
+  "scripts/check-interface": "929df3839f8694d4233c5658657401793c8b1767fd182a0122ca99d09f99dfd1",
+  "scripts/check-interface.py": "7e13e86cb99bac6cacb7b808d722983d9f044f2af97316d36f6a430129339ba0"
+}

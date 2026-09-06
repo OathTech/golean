@@ -1,0 +1,30 @@
+{
+  "base": "4158368f5ab873bd9ed7785e98b9c9ecee94eb01",
+  "prior_machine_sha256": "4bafe367252e73068ec60b8933bbe49f383215643d6468015610afa66a5cb957",
+  "probe_source": "import GoLean.GoCore.Machine\nopen GoLean.GoCore GoLean.GoCore.Machine\ndef state : ExecState := { types := TypeEnv.reserved }\ndef entry (bytes : Array UInt8) (recovered := false) : PanicEntry :=\n  \u27e8.interface .string (.string \u27e8bytes\u27e9), recovered\u27e9\ntheorem old_invalid_refusal : renderPanicHead state (entry #[0xff]) [] = none := by decide +kernel\ntheorem old_invalid_after_lf_refusal : renderPanicHead state (entry #[0x61,0x0a,0xff]) [] = none := by decide +kernel\ntheorem old_equal_repanic_refusal : renderPanicHead state (entry #[0x61] true) [entry #[0x61]] = none := by decide +kernel\n#print axioms old_invalid_refusal\n#print axioms old_invalid_after_lf_refusal\n#print axioms old_equal_repanic_refusal\n",
+  "scratch": "/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/string-member-red-ixcgu9bo",
+  "commands": [
+    {
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-string-members/scripts/capped",
+        "/home/dev/.elan/toolchains/leanprover--lean4---v4.32.2/bin/lean",
+        "--root=/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/string-member-red-ixcgu9bo",
+        "/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/string-member-red-ixcgu9bo/GoLean/GoCore/Machine.lean",
+        "-o",
+        "/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/string-member-red-ixcgu9bo/GoLean/GoCore/Machine.olean"
+      ],
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "command": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-string-members/scripts/capped",
+        "/home/dev/.elan/toolchains/leanprover--lean4---v4.32.2/bin/lean",
+        "--root=/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/string-member-red-ixcgu9bo",
+        "/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/string-member-red-ixcgu9bo/RedKnown.lean"
+      ],
+      "exit": 0,
+      "output": "'old_invalid_refusal' depends on axioms: [propext, Quot.sound]\n'old_invalid_after_lf_refusal' depends on axioms: [propext, Quot.sound]\n'old_equal_repanic_refusal' depends on axioms: [propext, Quot.sound]\n"
+    }
+  ]
+}

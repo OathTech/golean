@@ -1,0 +1,695 @@
+{
+  "evidence": "/home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/string-members/preparation/fresh-603gm7fl",
+  "subject_wire": "/home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/string-members/preparation/fresh-603gm7fl/subject-wire.json",
+  "control_wire": "/home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/string-members/preparation/fresh-603gm7fl/controls-wire.json",
+  "controls": {
+    "dynamic-kind-and-bytes": {
+      "function": "ControlDynamic",
+      "arguments": [],
+      "expectation": {
+        "kind": "exact",
+        "go": {
+          "schema": "golean-observation-v1",
+          "status": "ok",
+          "values": [
+            {
+              "tag": "bool",
+              "value": true
+            }
+          ],
+          "output": ""
+        },
+        "machine": {
+          "output": "",
+          "schema": "golean-observation-v1",
+          "status": "ok",
+          "values": [
+            {
+              "tag": "bool",
+              "value": true
+            }
+          ]
+        }
+      }
+    },
+    "normal-control": {
+      "function": "ControlNormal",
+      "arguments": [],
+      "expectation": {
+        "kind": "exact",
+        "go": {
+          "schema": "golean-observation-v1",
+          "status": "ok",
+          "values": [
+            {
+              "tag": "bool",
+              "value": true
+            }
+          ],
+          "output": ""
+        },
+        "machine": {
+          "output": "",
+          "schema": "golean-observation-v1",
+          "status": "ok",
+          "values": [
+            {
+              "tag": "bool",
+              "value": true
+            }
+          ]
+        }
+      }
+    },
+    "direct-recovery": {
+      "function": "ControlDirect",
+      "arguments": [],
+      "expectation": {
+        "kind": "exact",
+        "go": {
+          "schema": "golean-observation-v1",
+          "status": "ok",
+          "values": [
+            {
+              "tag": "bool",
+              "value": true
+            }
+          ],
+          "output": ""
+        },
+        "machine": {
+          "output": "",
+          "schema": "golean-observation-v1",
+          "status": "ok",
+          "values": [
+            {
+              "tag": "bool",
+              "value": true
+            }
+          ]
+        }
+      }
+    },
+    "indirect-recovery": {
+      "function": "ControlIndirect",
+      "arguments": [],
+      "expectation": {
+        "kind": "exact",
+        "go": {
+          "schema": "golean-observation-v1",
+          "status": "ok",
+          "values": [
+            {
+              "tag": "bool",
+              "value": true
+            }
+          ],
+          "output": ""
+        },
+        "machine": {
+          "output": "",
+          "schema": "golean-observation-v1",
+          "status": "ok",
+          "values": [
+            {
+              "tag": "bool",
+              "value": true
+            }
+          ]
+        }
+      }
+    },
+    "defer-order": {
+      "function": "ControlOrder",
+      "arguments": [],
+      "expectation": {
+        "kind": "exact",
+        "go": {
+          "schema": "golean-observation-v1",
+          "status": "ok",
+          "values": [
+            {
+              "kind": "int",
+              "tag": "int",
+              "value": 21
+            }
+          ],
+          "output": ""
+        },
+        "machine": {
+          "output": "",
+          "schema": "golean-observation-v1",
+          "status": "ok",
+          "values": [
+            {
+              "kind": "int",
+              "tag": "int",
+              "value": 21
+            }
+          ]
+        }
+      }
+    },
+    "reversed-defer-control": {
+      "function": "ControlReversed",
+      "arguments": [],
+      "expectation": {
+        "kind": "exact",
+        "go": {
+          "schema": "golean-observation-v1",
+          "status": "ok",
+          "values": [
+            {
+              "kind": "int",
+              "tag": "int",
+              "value": 12
+            }
+          ],
+          "output": ""
+        },
+        "machine": {
+          "output": "",
+          "schema": "golean-observation-v1",
+          "status": "ok",
+          "values": [
+            {
+              "kind": "int",
+              "tag": "int",
+              "value": 12
+            }
+          ]
+        }
+      }
+    },
+    "equal-repanic": {
+      "function": "Equal",
+      "arguments": [],
+      "expectation": {
+        "kind": "string-member",
+        "go": {
+          "status": "panic",
+          "childExit": 2,
+          "outputBytes": []
+        },
+        "machine": {
+          "message": "orig [recovered]",
+          "output": "",
+          "schema": "golean-observation-v1",
+          "status": "panic"
+        }
+      }
+    },
+    "unequal-repanic": {
+      "function": "Unequal",
+      "arguments": [],
+      "expectation": {
+        "kind": "string-member",
+        "go": {
+          "status": "panic",
+          "childExit": 2,
+          "outputBytes": []
+        },
+        "machine": {
+          "message": "orig [recovered]",
+          "output": "",
+          "schema": "golean-observation-v1",
+          "status": "panic"
+        }
+      }
+    },
+    "multiple-repanic": {
+      "function": "Multiple",
+      "arguments": [],
+      "expectation": {
+        "kind": "string-member",
+        "go": {
+          "status": "panic",
+          "childExit": 2,
+          "outputBytes": []
+        },
+        "machine": {
+          "message": "orig [recovered]",
+          "output": "",
+          "schema": "golean-observation-v1",
+          "status": "panic"
+        }
+      }
+    },
+    "rethrow": {
+      "function": "ControlRethrow",
+      "arguments": [],
+      "expectation": {
+        "kind": "string-member",
+        "go": {
+          "status": "panic",
+          "childExit": 2,
+          "outputBytes": []
+        },
+        "machine": {
+          "message": "orig [recovered]",
+          "output": "",
+          "schema": "golean-observation-v1",
+          "status": "panic"
+        }
+      }
+    },
+    "computed-equal": {
+      "function": "ControlComputed",
+      "arguments": [],
+      "expectation": {
+        "kind": "string-member",
+        "go": {
+          "status": "panic",
+          "childExit": 2,
+          "outputBytes": []
+        },
+        "machine": {
+          "message": "orig [recovered]",
+          "output": "",
+          "schema": "golean-observation-v1",
+          "status": "panic"
+        }
+      }
+    },
+    "invalid-before-lf": {
+      "function": "ControlInvalidBefore",
+      "arguments": [],
+      "expectation": {
+        "kind": "exact",
+        "go": {
+          "schema": "golean-observation-v1",
+          "status": "ok",
+          "values": [
+            {
+              "tag": "bool",
+              "value": true
+            }
+          ],
+          "output": ""
+        },
+        "machine": {
+          "output": "",
+          "schema": "golean-observation-v1",
+          "status": "ok",
+          "values": [
+            {
+              "tag": "bool",
+              "value": true
+            }
+          ]
+        }
+      }
+    },
+    "invalid-after-lf": {
+      "function": "ControlInvalidAfter",
+      "arguments": [],
+      "expectation": {
+        "kind": "exact",
+        "go": {
+          "schema": "golean-observation-v1",
+          "status": "ok",
+          "values": [
+            {
+              "tag": "bool",
+              "value": true
+            }
+          ],
+          "output": ""
+        },
+        "machine": {
+          "output": "",
+          "schema": "golean-observation-v1",
+          "status": "ok",
+          "values": [
+            {
+              "tag": "bool",
+              "value": true
+            }
+          ]
+        }
+      }
+    }
+  },
+  "subjects": {
+    "Equal": {
+      "machine": {
+        "message": "orig [recovered]",
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "panic"
+      },
+      "chain": [
+        {
+          "bytes": [
+            111,
+            114,
+            105,
+            103
+          ],
+          "recovered": true
+        },
+        {
+          "bytes": [
+            111,
+            114,
+            105,
+            103
+          ],
+          "recovered": false
+        }
+      ],
+      "go": {
+        "schema": "golean-raw-panic-v1",
+        "status": "panic",
+        "childExit": 2,
+        "messageBytes": [
+          111,
+          114,
+          105,
+          103,
+          32,
+          91,
+          114,
+          101,
+          99,
+          111,
+          118,
+          101,
+          114,
+          101,
+          100,
+          44,
+          32,
+          114,
+          101,
+          112,
+          97,
+          110,
+          105,
+          99,
+          107,
+          101,
+          100,
+          93
+        ],
+        "outputBytes": []
+      }
+    },
+    "Unequal": {
+      "machine": {
+        "message": "orig [recovered]",
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "panic"
+      },
+      "chain": [
+        {
+          "bytes": [
+            111,
+            114,
+            105,
+            103
+          ],
+          "recovered": true
+        },
+        {
+          "bytes": [
+            110,
+            101,
+            120,
+            116
+          ],
+          "recovered": false
+        }
+      ],
+      "go": {
+        "schema": "golean-raw-panic-v1",
+        "status": "panic",
+        "childExit": 2,
+        "messageBytes": [
+          111,
+          114,
+          105,
+          103,
+          32,
+          91,
+          114,
+          101,
+          99,
+          111,
+          118,
+          101,
+          114,
+          101,
+          100,
+          93
+        ],
+        "outputBytes": []
+      }
+    },
+    "Multiple": {
+      "machine": {
+        "message": "orig [recovered]",
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "panic"
+      },
+      "chain": [
+        {
+          "bytes": [
+            111,
+            114,
+            105,
+            103
+          ],
+          "recovered": true
+        },
+        {
+          "bytes": [
+            111,
+            114,
+            105,
+            103
+          ],
+          "recovered": true
+        },
+        {
+          "bytes": [
+            116,
+            104,
+            105,
+            114,
+            100
+          ],
+          "recovered": false
+        }
+      ],
+      "go": {
+        "schema": "golean-raw-panic-v1",
+        "status": "panic",
+        "childExit": 2,
+        "messageBytes": [
+          111,
+          114,
+          105,
+          103,
+          32,
+          91,
+          114,
+          101,
+          99,
+          111,
+          118,
+          101,
+          114,
+          101,
+          100,
+          44,
+          32,
+          114,
+          101,
+          112,
+          97,
+          110,
+          105,
+          99,
+          107,
+          101,
+          100,
+          93
+        ],
+        "outputBytes": []
+      }
+    },
+    "InvalidBefore": {
+      "machine": {
+        "message": "\"\\xff\\x00\\x5c\\x0a\\x5a\"",
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "panic"
+      },
+      "chain": [
+        {
+          "bytes": [
+            255,
+            0,
+            92,
+            10,
+            90
+          ],
+          "recovered": false
+        }
+      ],
+      "go": {
+        "schema": "golean-raw-panic-v1",
+        "status": "panic",
+        "childExit": 2,
+        "messageBytes": [
+          255,
+          0,
+          92
+        ],
+        "outputBytes": []
+      }
+    },
+    "InvalidAfter": {
+      "machine": {
+        "message": "\"\\x61\\x0a\\xff\"",
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "panic"
+      },
+      "chain": [
+        {
+          "bytes": [
+            97,
+            10,
+            255
+          ],
+          "recovered": false
+        }
+      ],
+      "go": {
+        "schema": "golean-raw-panic-v1",
+        "status": "panic",
+        "childExit": 2,
+        "messageBytes": [
+          97
+        ],
+        "outputBytes": []
+      }
+    },
+    "InvalidRecovered": {
+      "machine": {
+        "message": "\"\\xff\\x00\\x5c\\x0a\\x5a\" [recovered]",
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "panic"
+      },
+      "chain": [
+        {
+          "bytes": [
+            255,
+            0,
+            92,
+            10,
+            90
+          ],
+          "recovered": true
+        },
+        {
+          "bytes": [
+            111,
+            114,
+            105,
+            103
+          ],
+          "recovered": false
+        }
+      ],
+      "go": {
+        "schema": "golean-raw-panic-v1",
+        "status": "panic",
+        "childExit": 2,
+        "messageBytes": [
+          255,
+          0,
+          92
+        ],
+        "outputBytes": []
+      }
+    },
+    "Unicode": {
+      "machine": {
+        "message": "\u754c\ud83d\ude42",
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "panic"
+      },
+      "chain": [
+        {
+          "bytes": [
+            231,
+            149,
+            140,
+            240,
+            159,
+            153,
+            130
+          ],
+          "recovered": false
+        }
+      ],
+      "go": {
+        "schema": "golean-raw-panic-v1",
+        "status": "panic",
+        "childExit": 2,
+        "messageBytes": [
+          231,
+          149,
+          140,
+          240,
+          159,
+          153,
+          130
+        ],
+        "outputBytes": []
+      }
+    },
+    "Controls": {
+      "machine": {
+        "message": "a\u0000\u0001\t\r",
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "panic"
+      },
+      "chain": [
+        {
+          "bytes": [
+            97,
+            0,
+            1,
+            9,
+            13,
+            10,
+            90
+          ],
+          "recovered": false
+        }
+      ],
+      "go": {
+        "schema": "golean-raw-panic-v1",
+        "status": "panic",
+        "childExit": 2,
+        "messageBytes": [
+          97,
+          0,
+          1,
+          9,
+          13
+        ],
+        "outputBytes": []
+      }
+    }
+  }
+}

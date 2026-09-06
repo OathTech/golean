@@ -1,0 +1,70 @@
+{
+  "baselines/stdlib-pin.tsv": {
+    "old": null,
+    "new": "e371f7206701add9b28ccbb39298e79478dd3163b4531e3790b59dc152cac81e"
+  },
+  "baselines/string-members/panic-recover/repanic-same-value-abort.json": {
+    "old": "2d707903cdd9dacc34416c741b20e087951efac0a1be3daaeac3500d80f7d8d1",
+    "new": "8bb4f20a1b0b017b0f6dd27ae44c6b94695e0cc88b9c8b7bdaf3933668b85e59"
+  },
+  "baselines/string-members/panic-recover/string-members/controls.json": {
+    "old": "da54edd6482ea6eec78c1b7ec45b1df224804dc040802f4c3ff3ea3192c58d5b",
+    "new": "b400b681aceee9daf9410ed1eca3dd20125d0066b6b2f1cfc92d2846388ab6f3"
+  },
+  "baselines/string-members/panic-recover/string-members/equal.json": {
+    "old": "8f8abae3a44ccefc5650425a8cb8d8440fa6202ca853102f3be48c9f47b3ebe7",
+    "new": "570564d0e17a6d7e05cbd0c7a99005b2e865e6792220aa2d1de8aef1872974d3"
+  },
+  "baselines/string-members/panic-recover/string-members/invalid-after-lf.json": {
+    "old": "073673615e5695c29ca6fdb40c643a3f7b711b8840e819c2b78d20b88ebba372",
+    "new": "d3f2bf3e5a4528dfdfc856b3af19c28df5b8c43dca2a38585cbf65234261eb2e"
+  },
+  "baselines/string-members/panic-recover/string-members/invalid-before-lf.json": {
+    "old": "d5d1bc5cbd8048a6e1f456dbae19803048a18c06310dbf1a670f741985538e00",
+    "new": "e54385b17d4a1af164b7c038e3c9c02cd07e593bb39fa113f3665d00bd60f2af"
+  },
+  "baselines/string-members/panic-recover/string-members/invalid-recovered.json": {
+    "old": "1af7ec769bdeea5813399d354fb9de39b306dca7bd32642b5363118fe7180896",
+    "new": "633c7348a29d794e485b4efcf68384af49d2c32fe8e1c59ec65d34ec107980c1"
+  },
+  "baselines/string-members/panic-recover/string-members/multiple.json": {
+    "old": "46ae1f970180ce1d1e3c0bca486a0e6a38fbef507744e503e2cc137ed6d20a0f",
+    "new": "f160681378be15222969b6bc96dcec3c4132754a0f8e972971af7efb920e1160"
+  },
+  "baselines/string-members/panic-recover/string-members/unequal.json": {
+    "old": "1fbcc7213585e9d276b43c5c3f1f16f7db1c322640f8187caeff3406739202f4",
+    "new": "29af32dba6165cefebb2b2747577a41e279f72c6edd2b2b6045622480bc6231e"
+  },
+  "baselines/string-members/panic-recover/string-members/unicode.json": {
+    "old": "f024915abc66b4b3ded2c1f63ed3fa1524f6d19ce62850af08fb5933f3d029ae",
+    "new": "7ab7f0a01c46193163b2196cbd93def79c02241bff1431e9780ffd7e16582002"
+  },
+  "docs/2026-09-06_string-panic-member-implementation.md": {
+    "old": "580a68f0800ef7728d5b49852c71782c657ebb60118dc2e627b4e966bc6c11c0",
+    "new": "4b1f6bafa12bf8a7f8b9edc32760f5263bd799e5b5115e7090dedca29b41db12"
+  },
+  "scripts/check-string-members.py": {
+    "old": "c37389544c1fcd77a50f0d8513c069c486d09ebdcc5edebf8b23067a15a9154e",
+    "new": "0f160831fbfaf4026b265802f7ff2b29079a93e69d8704582fac3b3f1c16d9be"
+  },
+  "tools/nativefrontend/inittask-std.tsv": {
+    "old": null,
+    "new": "fc888c6f1143f5b158d0a7287b2b1872a30c022df420fd37d24a88f0c642119e"
+  },
+  "tools/nativefrontend/stdlib-overlay.tsv": {
+    "old": null,
+    "new": "eee848f4d11fc834bde5b7e605a77817ded4846745fec0f7bd83c04ac687edec"
+  },
+  "tools/nativefrontend/stdlib-substitutions.tsv": {
+    "old": null,
+    "new": "9ac86a532450a99912d2304547aa19b3370cea6f0e5403328f93b031aca881d8"
+  },
+  "tools/string_member.py": {
+    "old": "0acd70d09b07186218004aa009a536680ce7694ba236e431b8a277ffb1002dfb",
+    "new": "3c31a8c2f93e7064db874dc82a26aa2ae36d431e7e26edf585fbc60f70ad573a"
+  },
+  "tools/test_string_member.py": {
+    "old": "21576d57f4b6e3bf04bb891448487ce810ca6766be16f6ca2256f7e5a714e6f2",
+    "new": "589984550fd580b81ba89f510504f59753469c4e3f882dc3a66d57c305788304"
+  }
+}

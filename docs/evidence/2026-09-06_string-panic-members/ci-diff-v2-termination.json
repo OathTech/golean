@@ -1,0 +1,27 @@
+{
+  "status": "terminated superseded incomplete gate; no full corpus reached",
+  "reason": "independent source closure review found four omitted embedded/runtime-read frontend inputs",
+  "frozen_inputs": 180,
+  "processes": {
+    "1087594": [
+      1087187,
+      "bash scripts/capped scripts/ci --diff"
+    ],
+    "1087622": [
+      1087594,
+      "bash scripts/ci --diff"
+    ],
+    "1120908": [
+      1087622,
+      "bash scripts/check-interface"
+    ],
+    "1145313": [
+      1120908,
+      "/home/dev/.elan/toolchains/leanprover--lean4---v4.32.2/bin/lake env lean GoLean/GoCore/RecoveryOperators.lean"
+    ],
+    "1145333": [
+      1145313,
+      "lean GoLean/GoCore/RecoveryOperators.lean"
+    ]
+  }
+}

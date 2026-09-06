@@ -1,0 +1,236 @@
+[
+  {
+    "pin": "baselines/string-members/panic-recover/repanic-same-value-abort.json",
+    "reason": "independent review correction: include Main.lean and GoLean.lean and mandatory missing/changed/compiled-omission controls; no observation or subject/control/wire pin changed",
+    "delta": {
+      "GoLean.lean": {
+        "old": null,
+        "new": "ac3abf7741a51eae51d71a68574547fd3b8236b9734b19fce2fccf0df56b4118"
+      },
+      "Main.lean": {
+        "old": null,
+        "new": "3183fcfae553db4e5d34e3678d6f036e54894657b4505126b78759fd8925dcbb"
+      },
+      "scripts/check-string-members.py": {
+        "old": "312c402e22d3421a1e5de4c0a422e68c9a82a0d4967760b86cfecc033f3cc9d0",
+        "new": "c37389544c1fcd77a50f0d8513c069c486d09ebdcc5edebf8b23067a15a9154e"
+      },
+      "tools/string_member.py": {
+        "old": "8cb358b99566ab3f1224eda05c791d5868ede7ad1a6185b4c1694a92b4849900",
+        "new": "0acd70d09b07186218004aa009a536680ce7694ba236e431b8a277ffb1002dfb"
+      },
+      "tools/test_string_member.py": {
+        "old": "b4834bfa15d74d9af2a381966cda7eff060cd46d418c5870431662cc601cf83c",
+        "new": "21576d57f4b6e3bf04bb891448487ce810ca6766be16f6ca2256f7e5a714e6f2"
+      }
+    }
+  },
+  {
+    "pin": "baselines/string-members/panic-recover/string-members/controls.json",
+    "reason": "independent review correction: include Main.lean and GoLean.lean and mandatory missing/changed/compiled-omission controls; no observation or subject/control/wire pin changed",
+    "delta": {
+      "GoLean.lean": {
+        "old": null,
+        "new": "ac3abf7741a51eae51d71a68574547fd3b8236b9734b19fce2fccf0df56b4118"
+      },
+      "Main.lean": {
+        "old": null,
+        "new": "3183fcfae553db4e5d34e3678d6f036e54894657b4505126b78759fd8925dcbb"
+      },
+      "scripts/check-string-members.py": {
+        "old": "312c402e22d3421a1e5de4c0a422e68c9a82a0d4967760b86cfecc033f3cc9d0",
+        "new": "c37389544c1fcd77a50f0d8513c069c486d09ebdcc5edebf8b23067a15a9154e"
+      },
+      "tools/string_member.py": {
+        "old": "8cb358b99566ab3f1224eda05c791d5868ede7ad1a6185b4c1694a92b4849900",
+        "new": "0acd70d09b07186218004aa009a536680ce7694ba236e431b8a277ffb1002dfb"
+      },
+      "tools/test_string_member.py": {
+        "old": "b4834bfa15d74d9af2a381966cda7eff060cd46d418c5870431662cc601cf83c",
+        "new": "21576d57f4b6e3bf04bb891448487ce810ca6766be16f6ca2256f7e5a714e6f2"
+      }
+    }
+  },
+  {
+    "pin": "baselines/string-members/panic-recover/string-members/equal.json",
+    "reason": "independent review correction: include Main.lean and GoLean.lean and mandatory missing/changed/compiled-omission controls; no observation or subject/control/wire pin changed",
+    "delta": {
+      "GoLean.lean": {
+        "old": null,
+        "new": "ac3abf7741a51eae51d71a68574547fd3b8236b9734b19fce2fccf0df56b4118"
+      },
+      "Main.lean": {
+        "old": null,
+        "new": "3183fcfae553db4e5d34e3678d6f036e54894657b4505126b78759fd8925dcbb"
+      },
+      "scripts/check-string-members.py": {
+        "old": "312c402e22d3421a1e5de4c0a422e68c9a82a0d4967760b86cfecc033f3cc9d0",
+        "new": "c37389544c1fcd77a50f0d8513c069c486d09ebdcc5edebf8b23067a15a9154e"
+      },
+      "tools/string_member.py": {
+        "old": "8cb358b99566ab3f1224eda05c791d5868ede7ad1a6185b4c1694a92b4849900",
+        "new": "0acd70d09b07186218004aa009a536680ce7694ba236e431b8a277ffb1002dfb"
+      },
+      "tools/test_string_member.py": {
+        "old": "b4834bfa15d74d9af2a381966cda7eff060cd46d418c5870431662cc601cf83c",
+        "new": "21576d57f4b6e3bf04bb891448487ce810ca6766be16f6ca2256f7e5a714e6f2"
+      }
+    }
+  },
+  {
+    "pin": "baselines/string-members/panic-recover/string-members/invalid-after-lf.json",
+    "reason": "independent review correction: include Main.lean and GoLean.lean and mandatory missing/changed/compiled-omission controls; no observation or subject/control/wire pin changed",
+    "delta": {
+      "GoLean.lean": {
+        "old": null,
+        "new": "ac3abf7741a51eae51d71a68574547fd3b8236b9734b19fce2fccf0df56b4118"
+      },
+      "Main.lean": {
+        "old": null,
+        "new": "3183fcfae553db4e5d34e3678d6f036e54894657b4505126b78759fd8925dcbb"
+      },
+      "scripts/check-string-members.py": {
+        "old": "312c402e22d3421a1e5de4c0a422e68c9a82a0d4967760b86cfecc033f3cc9d0",
+        "new": "c37389544c1fcd77a50f0d8513c069c486d09ebdcc5edebf8b23067a15a9154e"
+      },
+      "tools/string_member.py": {
+        "old": "8cb358b99566ab3f1224eda05c791d5868ede7ad1a6185b4c1694a92b4849900",
+        "new": "0acd70d09b07186218004aa009a536680ce7694ba236e431b8a277ffb1002dfb"
+      },
+      "tools/test_string_member.py": {
+        "old": "b4834bfa15d74d9af2a381966cda7eff060cd46d418c5870431662cc601cf83c",
+        "new": "21576d57f4b6e3bf04bb891448487ce810ca6766be16f6ca2256f7e5a714e6f2"
+      }
+    }
+  },
+  {
+    "pin": "baselines/string-members/panic-recover/string-members/invalid-before-lf.json",
+    "reason": "independent review correction: include Main.lean and GoLean.lean and mandatory missing/changed/compiled-omission controls; no observation or subject/control/wire pin changed",
+    "delta": {
+      "GoLean.lean": {
+        "old": null,
+        "new": "ac3abf7741a51eae51d71a68574547fd3b8236b9734b19fce2fccf0df56b4118"
+      },
+      "Main.lean": {
+        "old": null,
+        "new": "3183fcfae553db4e5d34e3678d6f036e54894657b4505126b78759fd8925dcbb"
+      },
+      "scripts/check-string-members.py": {
+        "old": "312c402e22d3421a1e5de4c0a422e68c9a82a0d4967760b86cfecc033f3cc9d0",
+        "new": "c37389544c1fcd77a50f0d8513c069c486d09ebdcc5edebf8b23067a15a9154e"
+      },
+      "tools/string_member.py": {
+        "old": "8cb358b99566ab3f1224eda05c791d5868ede7ad1a6185b4c1694a92b4849900",
+        "new": "0acd70d09b07186218004aa009a536680ce7694ba236e431b8a277ffb1002dfb"
+      },
+      "tools/test_string_member.py": {
+        "old": "b4834bfa15d74d9af2a381966cda7eff060cd46d418c5870431662cc601cf83c",
+        "new": "21576d57f4b6e3bf04bb891448487ce810ca6766be16f6ca2256f7e5a714e6f2"
+      }
+    }
+  },
+  {
+    "pin": "baselines/string-members/panic-recover/string-members/invalid-recovered.json",
+    "reason": "independent review correction: include Main.lean and GoLean.lean and mandatory missing/changed/compiled-omission controls; no observation or subject/control/wire pin changed",
+    "delta": {
+      "GoLean.lean": {
+        "old": null,
+        "new": "ac3abf7741a51eae51d71a68574547fd3b8236b9734b19fce2fccf0df56b4118"
+      },
+      "Main.lean": {
+        "old": null,
+        "new": "3183fcfae553db4e5d34e3678d6f036e54894657b4505126b78759fd8925dcbb"
+      },
+      "scripts/check-string-members.py": {
+        "old": "312c402e22d3421a1e5de4c0a422e68c9a82a0d4967760b86cfecc033f3cc9d0",
+        "new": "c37389544c1fcd77a50f0d8513c069c486d09ebdcc5edebf8b23067a15a9154e"
+      },
+      "tools/string_member.py": {
+        "old": "8cb358b99566ab3f1224eda05c791d5868ede7ad1a6185b4c1694a92b4849900",
+        "new": "0acd70d09b07186218004aa009a536680ce7694ba236e431b8a277ffb1002dfb"
+      },
+      "tools/test_string_member.py": {
+        "old": "b4834bfa15d74d9af2a381966cda7eff060cd46d418c5870431662cc601cf83c",
+        "new": "21576d57f4b6e3bf04bb891448487ce810ca6766be16f6ca2256f7e5a714e6f2"
+      }
+    }
+  },
+  {
+    "pin": "baselines/string-members/panic-recover/string-members/multiple.json",
+    "reason": "independent review correction: include Main.lean and GoLean.lean and mandatory missing/changed/compiled-omission controls; no observation or subject/control/wire pin changed",
+    "delta": {
+      "GoLean.lean": {
+        "old": null,
+        "new": "ac3abf7741a51eae51d71a68574547fd3b8236b9734b19fce2fccf0df56b4118"
+      },
+      "Main.lean": {
+        "old": null,
+        "new": "3183fcfae553db4e5d34e3678d6f036e54894657b4505126b78759fd8925dcbb"
+      },
+      "scripts/check-string-members.py": {
+        "old": "312c402e22d3421a1e5de4c0a422e68c9a82a0d4967760b86cfecc033f3cc9d0",
+        "new": "c37389544c1fcd77a50f0d8513c069c486d09ebdcc5edebf8b23067a15a9154e"
+      },
+      "tools/string_member.py": {
+        "old": "8cb358b99566ab3f1224eda05c791d5868ede7ad1a6185b4c1694a92b4849900",
+        "new": "0acd70d09b07186218004aa009a536680ce7694ba236e431b8a277ffb1002dfb"
+      },
+      "tools/test_string_member.py": {
+        "old": "b4834bfa15d74d9af2a381966cda7eff060cd46d418c5870431662cc601cf83c",
+        "new": "21576d57f4b6e3bf04bb891448487ce810ca6766be16f6ca2256f7e5a714e6f2"
+      }
+    }
+  },
+  {
+    "pin": "baselines/string-members/panic-recover/string-members/unequal.json",
+    "reason": "independent review correction: include Main.lean and GoLean.lean and mandatory missing/changed/compiled-omission controls; no observation or subject/control/wire pin changed",
+    "delta": {
+      "GoLean.lean": {
+        "old": null,
+        "new": "ac3abf7741a51eae51d71a68574547fd3b8236b9734b19fce2fccf0df56b4118"
+      },
+      "Main.lean": {
+        "old": null,
+        "new": "3183fcfae553db4e5d34e3678d6f036e54894657b4505126b78759fd8925dcbb"
+      },
+      "scripts/check-string-members.py": {
+        "old": "312c402e22d3421a1e5de4c0a422e68c9a82a0d4967760b86cfecc033f3cc9d0",
+        "new": "c37389544c1fcd77a50f0d8513c069c486d09ebdcc5edebf8b23067a15a9154e"
+      },
+      "tools/string_member.py": {
+        "old": "8cb358b99566ab3f1224eda05c791d5868ede7ad1a6185b4c1694a92b4849900",
+        "new": "0acd70d09b07186218004aa009a536680ce7694ba236e431b8a277ffb1002dfb"
+      },
+      "tools/test_string_member.py": {
+        "old": "b4834bfa15d74d9af2a381966cda7eff060cd46d418c5870431662cc601cf83c",
+        "new": "21576d57f4b6e3bf04bb891448487ce810ca6766be16f6ca2256f7e5a714e6f2"
+      }
+    }
+  },
+  {
+    "pin": "baselines/string-members/panic-recover/string-members/unicode.json",
+    "reason": "independent review correction: include Main.lean and GoLean.lean and mandatory missing/changed/compiled-omission controls; no observation or subject/control/wire pin changed",
+    "delta": {
+      "GoLean.lean": {
+        "old": null,
+        "new": "ac3abf7741a51eae51d71a68574547fd3b8236b9734b19fce2fccf0df56b4118"
+      },
+      "Main.lean": {
+        "old": null,
+        "new": "3183fcfae553db4e5d34e3678d6f036e54894657b4505126b78759fd8925dcbb"
+      },
+      "scripts/check-string-members.py": {
+        "old": "312c402e22d3421a1e5de4c0a422e68c9a82a0d4967760b86cfecc033f3cc9d0",
+        "new": "c37389544c1fcd77a50f0d8513c069c486d09ebdcc5edebf8b23067a15a9154e"
+      },
+      "tools/string_member.py": {
+        "old": "8cb358b99566ab3f1224eda05c791d5868ede7ad1a6185b4c1694a92b4849900",
+        "new": "0acd70d09b07186218004aa009a536680ce7694ba236e431b8a277ffb1002dfb"
+      },
+      "tools/test_string_member.py": {
+        "old": "b4834bfa15d74d9af2a381966cda7eff060cd46d418c5870431662cc601cf83c",
+        "new": "21576d57f4b6e3bf04bb891448487ce810ca6766be16f6ca2256f7e5a714e6f2"
+      }
+    }
+  }
+]

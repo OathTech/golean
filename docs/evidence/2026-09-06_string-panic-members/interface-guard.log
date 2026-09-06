@@ -1,0 +1,73 @@
+✔ [14/25] Built GoLean.GoCore.BooleanStore (648ms)
+✔ [15/25] Built GoLean.GoCore.Race (1.3s)
+✔ [17/33] Built GoLean.GoCore.Multi (3.7s)
+✔ [19/33] Built GoLean.GoCore.BooleanSetup (4.4s)
+✔ [20/48] Built GoLean.GoCore.BooleanControl (541ms)
+✔ [31/55] Built GoLean.GoCore.BooleanInitialization (592ms)
+✔ [34/55] Built Tests.StringPanicMembers (1.0s)
+✔ [35/55] Built Tests.RecoveryA2Artifact (9.3s)
+✔ [36/55] Built Tests.RecoveryTypingFixture (17s)
+✔ [37/55] Built Tests.RecoveryTypingAudit (1.6s)
+✔ [38/55] Built GoLean.GoCore.MachineSound (73s)
+✔ [39/55] Built GoLean.GoCore.Trace (313ms)
+✔ [40/55] Built GoLean.GoCore.BooleanInvariant (281ms)
+✔ [41/55] Built GoLean.GoCore.BooleanProgress (279ms)
+✔ [42/55] Built GoLean.GoCore.BooleanPreservation (424ms)
+✔ [43/55] Built GoLean.GoCore.BooleanSafety (466ms)
+✔ [44/55] Built GoLean.GoCore.BooleanProgram (332ms)
+✔ [45/55] Built GoLean.GoCore.MultiSound (7.2s)
+✔ [46/55] Built GoLean.GoCore.PoolTrace (436ms)
+✔ [47/55] Built GoLean.GoCore.ProgramTrace (290ms)
+✔ [48/55] Built GoLean.GoCore.BooleanPool (421ms)
+✔ [49/55] Built GoLean.Interface (185ms)
+✔ [50/55] Built Tests.PanicRendering (593ms)
+✔ [51/55] Built Tests.InterfaceContract (1.6s)
+✔ [52/55] Built Tests.BooleanRuntime (6.7s)
+✔ [53/55] Built Tests.BooleanProgram (10s)
+✔ [54/55] Built Tests.InterfaceAudit (835ms)
+Build completed successfully (55 jobs).
+Semantic interface source fingerprint: 08c1aae15d039a956c910b8160008430f305215ddb7bd44ad238f7e1465684bb
+Semantic interface: 92 required exports; 13654 constants checked (classical trio only)
+/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/interface-audit-zpqdfzee/panic_text_private/AuditAll.lean:41:0: error: Semantic interface: _private.GoLean.GoCore.PanicText.0.panicTextHole depends on forbidden axiom _private.GoLean.GoCore.PanicText.0.panicTextHole
+Semantic interface negative: panic_text_private rejected (exit 1, panicTextHole)
+/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/interface-audit-zpqdfzee/string_panic_private/AuditAll.lean:41:0: error: Semantic interface: _private.GoLean.GoCore.StringPanic.0.stringPanicHole depends on forbidden axiom _private.GoLean.GoCore.StringPanic.0.stringPanicHole
+Semantic interface negative: string_panic_private rejected (exit 1, stringPanicHole)
+/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/interface-audit-zpqdfzee/string_panic_trailing/Tests/StringPanicMembers.lean:65:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/interface-audit-zpqdfzee/string_panic_trailing/AuditAll.lean:41:0: error: Semantic interface: _private.Tests.StringPanicMembers.0.stringPanicTestHole depends on forbidden axiom sorryAx
+Semantic interface negative: string_panic_trailing rejected (exit 1, sorryAx)
+/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/interface-audit-zpqdfzee/machine_private/AuditAll.lean:41:0: error: Semantic interface: _private.GoLean.GoCore.Machine.0.machineRendererHole depends on forbidden axiom _private.GoLean.GoCore.Machine.0.machineRendererHole
+Semantic interface negative: machine_private rejected (exit 1, machineRendererHole)
+/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/interface-audit-zpqdfzee/rendering_trailing/Tests/PanicRendering.lean:61:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/interface-audit-zpqdfzee/rendering_trailing/AuditAll.lean:41:0: error: Semantic interface: _private.Tests.PanicRendering.0.rendererHole depends on forbidden axiom sorryAx
+Semantic interface negative: rendering_trailing rejected (exit 1, sorryAx)
+/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/interface-audit-zpqdfzee/promoted_private/AuditAll.lean:41:0: error: Semantic interface: _private.GoLean.GoCore.Trace.0.promotedTraceHole depends on forbidden axiom _private.GoLean.GoCore.Trace.0.promotedTraceHole
+Semantic interface negative: promoted_private rejected (exit 1, promotedTraceHole)
+/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/interface-audit-zpqdfzee/boolean_store_private/AuditAll.lean:41:0: error: Semantic interface: _private.GoLean.GoCore.BooleanStore.0.booleanStoreHole depends on forbidden axiom _private.GoLean.GoCore.BooleanStore.0.booleanStoreHole
+Semantic interface negative: boolean_store_private rejected (exit 1, booleanStoreHole)
+/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/interface-audit-zpqdfzee/boolean_setup_private/AuditAll.lean:41:0: error: Semantic interface: _private.GoLean.GoCore.BooleanSetup.0.booleanSetupHole depends on forbidden axiom _private.GoLean.GoCore.BooleanSetup.0.booleanSetupHole
+Semantic interface negative: boolean_setup_private rejected (exit 1, booleanSetupHole)
+/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/interface-audit-zpqdfzee/boolean_initialization_private/AuditAll.lean:41:0: error: Semantic interface: _private.GoLean.GoCore.BooleanInitialization.0.booleanInitializationHole depends on forbidden axiom _private.GoLean.GoCore.BooleanInitialization.0.booleanInitializationHole
+Semantic interface negative: boolean_initialization_private rejected (exit 1, booleanInitializationHole)
+/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/interface-audit-zpqdfzee/boolean_program_private/AuditAll.lean:41:0: error: Semantic interface: _private.GoLean.GoCore.BooleanProgram.0.booleanProgramHole depends on forbidden axiom _private.GoLean.GoCore.BooleanProgram.0.booleanProgramHole
+Semantic interface negative: boolean_program_private rejected (exit 1, booleanProgramHole)
+/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/interface-audit-zpqdfzee/boolean_pool_private/AuditAll.lean:41:0: error: Semantic interface: _private.GoLean.GoCore.BooleanPool.0.booleanPoolHole depends on forbidden axiom _private.GoLean.GoCore.BooleanPool.0.booleanPoolHole
+Semantic interface negative: boolean_pool_private rejected (exit 1, booleanPoolHole)
+/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/interface-audit-zpqdfzee/boolean_program_test_trailing/Tests/BooleanProgram.lean:52:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/interface-audit-zpqdfzee/boolean_program_test_trailing/AuditAll.lean:41:0: error: Semantic interface: _private.Tests.BooleanProgram.0.booleanProgramTestHole depends on forbidden axiom sorryAx
+Semantic interface negative: boolean_program_test_trailing rejected (exit 1, sorryAx)
+/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/interface-audit-zpqdfzee/recovery_diagnostics_private/AuditAll.lean:41:0: error: Semantic interface: _private.GoLean.GoCore.RecoveryDiagnostics.0.recoveryDiagnosticsHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryDiagnostics.0.recoveryDiagnosticsHole
+Semantic interface negative: recovery_diagnostics_private rejected (exit 1, recoveryDiagnosticsHole)
+/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/interface-audit-zpqdfzee/recovery_admission_private/AuditAll.lean:41:0: error: Semantic interface: _private.GoLean.GoCore.RecoveryAdmission.0.recoveryAdmissionHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryAdmission.0.recoveryAdmissionHole
+Semantic interface negative: recovery_admission_private rejected (exit 1, recoveryAdmissionHole)
+/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/interface-audit-zpqdfzee/recovery_test_trailing/Tests/RecoveryTyping.lean:218:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/interface-audit-zpqdfzee/recovery_test_trailing/AuditAll.lean:41:0: error: Semantic interface: _private.Tests.RecoveryTyping.0.recoveryTestHole depends on forbidden axiom sorryAx
+Semantic interface negative: recovery_test_trailing rejected (exit 1, sorryAx)
+/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/interface-audit-zpqdfzee/facade_private/AuditAll.lean:41:0: error: Semantic interface: _private.GoLean.Interface.0.facadeHole depends on forbidden axiom _private.GoLean.Interface.0.facadeHole
+Semantic interface negative: facade_private rejected (exit 1, facadeHole)
+/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/interface-audit-zpqdfzee/audit_trailing/Tests/InterfaceAudit.lean:157:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/interface-audit-zpqdfzee/audit_trailing/AuditAll.lean:41:0: error: Semantic interface: _private.Tests.InterfaceAudit.0.auditHole depends on forbidden axiom sorryAx
+Semantic interface negative: audit_trailing rejected (exit 1, sorryAx)
+/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/interface-audit-zpqdfzee/runtime_test_trailing/Tests/BooleanRuntime.lean:90:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/interface-audit-zpqdfzee/runtime_test_trailing/AuditAll.lean:41:0: error: Semantic interface: _private.Tests.BooleanRuntime.0.booleanRuntimeTestHole depends on forbidden axiom sorryAx
+Semantic interface negative: runtime_test_trailing rejected (exit 1, sorryAx)
+Semantic interface: PASS; scratch retained at /home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/interface-audit-zpqdfzee

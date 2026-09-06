@@ -1,0 +1,22 @@
+{
+  "preserved_full_archive": "/home/dev/projects/golean/.tmp/r1-before-observer-merge.1ltzwfwr/apparatus-records-with-binaries.tar.gz",
+  "full_archive_sha256": "a272040d76b12ce56d807bd3404b6bc22c9c96050d0c65741fdff7b0148c6d3d",
+  "generated_binaries_omitted_from_tracked_archive": [
+    {
+      "path": "drop-bytes/helper",
+      "sha256": "7aa4f6e10666837b2753270d440f81211d2c243680f8e5a119866366fef47edf"
+    },
+    {
+      "path": "false-exit/helper",
+      "sha256": "0a9f22688880e7c29d1106baa45d860e3142421590af1ad3f7cc4a7f1aa4bc85"
+    },
+    {
+      "path": "ignore-kind/helper",
+      "sha256": "bd629202686aa6f740a4a9b1b85b5738a8c1cd8796e7fe34d7872358c145cd2f"
+    },
+    {
+      "path": "replace-high-byte/helper",
+      "sha256": "246fdea79b3d09cb2c2e15453b9519279170adc18da0929ddc9a2135cef7b4a7"
+    }
+  ]
+}

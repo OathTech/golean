@@ -1,0 +1,8 @@
+{
+  "review_commit": "75da9338",
+  "integrated_commit": "bb85071047fc90eacda9812580adeb8669f85416",
+  "all184_source_hashes_unchanged": true,
+  "live_full_ci_finished_before_review_cherry_pick": true,
+  "full_ci_exit": 1,
+  "sole_failure": "expected nine-row baseline drift"
+}

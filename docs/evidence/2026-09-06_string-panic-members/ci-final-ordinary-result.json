@@ -1,0 +1,8 @@
+{
+  "exit": 1,
+  "log": "ci-final-ordinary.log",
+  "only_failed_check": "BUG-004 open Cases line still includes the now-PASS historical rethrow",
+  "corrective_proposal": "bugs-case-pin-proposal.json",
+  "all184_unchanged": true,
+  "all3882_unchanged": true
+}

@@ -1,0 +1,74 @@
+[
+  {
+    "case": "panic-recover/repanic-same-value-abort",
+    "scope": "reviewed-broader-string-control",
+    "certificate_sha256": "b02e195b6cdb0d038cba4f8c9aea38383d5116c794511b76412d4e14c397986e",
+    "controls": 13,
+    "subject_models": 4,
+    "apparatus_files": 160
+  },
+  {
+    "case": "panic-recover/string-members/controls",
+    "scope": "typed-explicit-string",
+    "certificate_sha256": "6ca4d5f662c3d454a097a64298e8b844c374579523162cfd75bc0c9401ef0324",
+    "controls": 13,
+    "subject_models": 4,
+    "apparatus_files": 160
+  },
+  {
+    "case": "panic-recover/string-members/equal",
+    "scope": "typed-explicit-string",
+    "certificate_sha256": "eb92e2cb917fb29bbbb3a34142b816daa4e89a4a3d9a900b1aa12dfb97a9b620",
+    "controls": 13,
+    "subject_models": 4,
+    "apparatus_files": 160
+  },
+  {
+    "case": "panic-recover/string-members/invalid-after-lf",
+    "scope": "typed-explicit-string",
+    "certificate_sha256": "e0e8310000004947ddd35941b40230eb07a62688539e85509bd70b45048c836d",
+    "controls": 13,
+    "subject_models": 4,
+    "apparatus_files": 160
+  },
+  {
+    "case": "panic-recover/string-members/invalid-before-lf",
+    "scope": "typed-explicit-string",
+    "certificate_sha256": "3be4c511bcef024084020bacb4970d5bd0462ba67cec69f7e57dccdd2c7d1699",
+    "controls": 13,
+    "subject_models": 4,
+    "apparatus_files": 160
+  },
+  {
+    "case": "panic-recover/string-members/invalid-recovered",
+    "scope": "typed-explicit-string",
+    "certificate_sha256": "9ff304a8b0d6ddd504dad00c79fe4711a0cff81a96942e6d84aaf8cc7830917a",
+    "controls": 13,
+    "subject_models": 4,
+    "apparatus_files": 160
+  },
+  {
+    "case": "panic-recover/string-members/multiple",
+    "scope": "typed-explicit-string",
+    "certificate_sha256": "1c5ba4fc012a196348e5eed5f80af4f01c7db76e460e311116d1e65a24bbd9e5",
+    "controls": 13,
+    "subject_models": 4,
+    "apparatus_files": 160
+  },
+  {
+    "case": "panic-recover/string-members/unequal",
+    "scope": "typed-explicit-string",
+    "certificate_sha256": "48d01decf097e3cac5c736ad5d0a17a3279cdf3283964430cc34fd66f5fa3189",
+    "controls": 13,
+    "subject_models": 4,
+    "apparatus_files": 160
+  },
+  {
+    "case": "panic-recover/string-members/unicode",
+    "scope": "typed-explicit-string",
+    "certificate_sha256": "02e172228d0bda2fb6378abfa3240ec1a52aed5850a735d645ca9bcd250c10e5",
+    "controls": 13,
+    "subject_models": 4,
+    "apparatus_files": 160
+  }
+]

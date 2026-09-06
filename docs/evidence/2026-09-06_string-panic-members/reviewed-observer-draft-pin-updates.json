@@ -1,0 +1,1244 @@
+[
+  {
+    "pin": "baselines/string-members/panic-recover/repanic-same-value-abort.json",
+    "reason": "pre-acceptance draft fingerprint refresh after reviewed observer dependency merge 414a2abe; subject/control source, wire, machine and forced control observations unchanged",
+    "delta": {
+      "GoLean/GoCore/RecoveryCallControl.lean": {
+        "old": null,
+        "new": "e2838d0afe34df9d5e8772db2dbd5818103c8556dc98ff161fcf07b1e815760b"
+      },
+      "GoLean/GoCore/RecoveryCallEntry.lean": {
+        "old": null,
+        "new": "243bcef842fd08797813bfbeb8e6c1751dccb470b36687b7ced9c9c87fb647b0"
+      },
+      "GoLean/GoCore/RecoveryControl.lean": {
+        "old": null,
+        "new": "c7c354b0be44d62cced1f15b969c9a33c17cc550aecbfb604123af9172840cba"
+      },
+      "GoLean/GoCore/RecoveryControlData.lean": {
+        "old": null,
+        "new": "710d414ced4dc9c8a7c6ad0462a57da8bda1ca5f85675eaddca801fb96bf5af7"
+      },
+      "GoLean/GoCore/RecoveryControlHelpers.lean": {
+        "old": null,
+        "new": "a5a2e01b607a32126902951339c553b15a0568679d81aa5a1537a04f5be68dc5"
+      },
+      "GoLean/GoCore/RecoveryControlMono.lean": {
+        "old": null,
+        "new": "500f9378b703df5528345402b6d58bb177c0d1b66765941b3d39255d171cad6e"
+      },
+      "GoLean/GoCore/RecoveryDelivery.lean": {
+        "old": null,
+        "new": "575cbc32cbb45f9906e6bd091ed6f1f0cb21564f033c8c1c3f08299c56585fee"
+      },
+      "GoLean/GoCore/RecoveryExpressionProgress.lean": {
+        "old": null,
+        "new": "21f9a76f79645d7e822c155aad4e7c11f2e40abc91f6bb508655c27630d05f58"
+      },
+      "GoLean/GoCore/RecoveryFrameProgress.lean": {
+        "old": null,
+        "new": "7e4382c929e4f81e08b4f45f8ef32e30e039e12ca68c0e39e9b7234aed6aa7ff"
+      },
+      "GoLean/GoCore/RecoveryInitialization.lean": {
+        "old": null,
+        "new": "574092e494fc704702101c99e6c46b467ea12bdafb330f713291e7143fd474c6"
+      },
+      "GoLean/GoCore/RecoveryInvariant.lean": {
+        "old": null,
+        "new": "a71574c21fcdb6ac872e07dd3f828536d06ce51a86ab6c8f9b00c1a35a077d46"
+      },
+      "GoLean/GoCore/RecoveryObservation.lean": {
+        "old": null,
+        "new": "25153a32b0184e6ed09f56f13540ba5ca909763c8ebe87fdc3313ab32eecc670"
+      },
+      "GoLean/GoCore/RecoveryPanicProgress.lean": {
+        "old": null,
+        "new": "b7fa027394b53d60ff68438d403d10aa19cfb0d6bfbd82923702bd37257c1245"
+      },
+      "GoLean/GoCore/RecoveryResultRoots.lean": {
+        "old": null,
+        "new": "c0b71818ffe90a6dcace26867048836f213b216f388db8c00929af8d2513fbdb"
+      },
+      "GoLean/GoCore/RecoverySetup.lean": {
+        "old": null,
+        "new": "d3d97a9ddb3f1b968c2c226cb973af205bd25e783e2bb6d30ba71aecc855fef1"
+      },
+      "GoLean/GoCore/RecoverySetupReadout.lean": {
+        "old": null,
+        "new": "3ca56702d9378277c0668f4835752b77d96814a40cb7c3c8a2bc51368a802a28"
+      },
+      "GoLean/GoCore/RecoverySetupShape.lean": {
+        "old": null,
+        "new": "90d58331e62508d6144a49100eb0810f308dd23af8661ac5ce8428cd7d170eab"
+      },
+      "GoLean/GoCore/RecoverySetupWf.lean": {
+        "old": null,
+        "new": "c603f015a6d2c096832ce4431458bcd2fe39886cde854457bf495a8671c95a0f"
+      },
+      "GoLean/GoCore/RecoveryStatementProgress.lean": {
+        "old": null,
+        "new": "1f14577e1f3d2def2e9636e67be40a5ddbfbb5ea3196da7532f652eb45f2a609"
+      },
+      "GoLean/GoCore/RecoverySuccessfulRuns.lean": {
+        "old": null,
+        "new": "853cf53c2994924ffedaedd4e3f8404201e8770d799a277ee4539f7194dbc466"
+      },
+      "GoLean/GoCore/RecoveryValueBasic.lean": {
+        "old": null,
+        "new": "d14c79064ad69303093374e5b88380efcf14060f96714550503dc2fe010cee32"
+      },
+      "GoLean/GoCore/RecoveryValueCalls.lean": {
+        "old": null,
+        "new": "92fdb6e6fe06283df2c802b2e11d58eb1498e21a659712a0ad3def4e3e32b1e5"
+      },
+      "GoLean/GoCore/RecoveryWalk.lean": {
+        "old": null,
+        "new": "49f4da47580f6f91dc32d57a8f537233cbd44751c63cf68e62ec229863a497b3"
+      },
+      "GoLean/Interface.lean": {
+        "old": "8971bc3b8a8b2d056e13c228e162ac01afd94345e6c4f62af715c5c67e80bec0",
+        "new": "3d3c084cc7018f8bc4c215a7c53e10f58a82c54c4bd1aab0e7afef6e26de13a2"
+      },
+      "Tests/InterfaceAudit.lean": {
+        "old": "5ad61e7c333ef1d20472a3e98a9e8fe723f1e3a1b94523ebfb096214f743221d",
+        "new": "51aaeb341136bd59f0bd7e24d65eda098a99a09d055a23d9b499a613fc32837d"
+      },
+      "lakefile.toml": {
+        "old": "5d9e0399adcadf2d1485b300170abc9ed521c322cc10dfa06dc3d86836f0914e",
+        "new": "7fdccc5ddac58bcd7fd012604dfe6de902be6348a839e3dcd9601e094baf3f8f"
+      },
+      "scripts/check-interface": {
+        "old": "76965102fbfb1da91d709ccfc43817f4a415a932756e974e77f1a2f96156db95",
+        "new": "8030999942451a0feb0c973cb5e863ac8c0d27c9648eb37c5f37d1c11dafff7e"
+      },
+      "scripts/check-interface.py": {
+        "old": "e9fd46d756f0853f892b5e6ca48a9b1c7ef96f453b8c7c1c7942b16bbf96747a",
+        "new": "e05a9468c862c4b5c77d1ce5cb74d53298da0d084d8af8cd7192722450071e8e"
+      },
+      "scripts/check-string-members.py": {
+        "old": "e10a593a6e69a2be162241d3a2e296169c571f7725abea18d09729eea6a86659",
+        "new": "312c402e22d3421a1e5de4c0a422e68c9a82a0d4967760b86cfecc033f3cc9d0"
+      },
+      "scripts/ci": {
+        "old": "620e8b1f1251873bc3d054d03aae9d83b2a5bf853b5a80ae2d935da8ba0727a9",
+        "new": "763cfb020f5ed5545e3460513d16c760525e654c37107f6f526ba34d5044dd99"
+      },
+      "tools/check_string_member_fixtures.py": {
+        "old": null,
+        "new": "6845e0f3a78d26a1c1d70f95c9c0aa81dfcd8e9e9b21aa09d146a537ae601d38"
+      },
+      "tools/string_member.py": {
+        "old": "4ceb89dc55c8810bf227e5110e78af5591977e5708a55931c12b80a3269d604c",
+        "new": "8cb358b99566ab3f1224eda05c791d5868ede7ad1a6185b4c1694a92b4849900"
+      },
+      "tools/string_member_runner.py": {
+        "old": "b29a62c5ae7ce31bbfb1169331038fa8d9683828c4bc177e8657f9b0edd322a1",
+        "new": "6de377bb1a70d96bd6d66b4e018063a9a8d5a084964ed6c2041b9ca6184ce65d"
+      }
+    }
+  },
+  {
+    "pin": "baselines/string-members/panic-recover/string-members/controls.json",
+    "reason": "pre-acceptance draft fingerprint refresh after reviewed observer dependency merge 414a2abe; subject/control source, wire, machine and forced control observations unchanged",
+    "delta": {
+      "GoLean/GoCore/RecoveryCallControl.lean": {
+        "old": null,
+        "new": "e2838d0afe34df9d5e8772db2dbd5818103c8556dc98ff161fcf07b1e815760b"
+      },
+      "GoLean/GoCore/RecoveryCallEntry.lean": {
+        "old": null,
+        "new": "243bcef842fd08797813bfbeb8e6c1751dccb470b36687b7ced9c9c87fb647b0"
+      },
+      "GoLean/GoCore/RecoveryControl.lean": {
+        "old": null,
+        "new": "c7c354b0be44d62cced1f15b969c9a33c17cc550aecbfb604123af9172840cba"
+      },
+      "GoLean/GoCore/RecoveryControlData.lean": {
+        "old": null,
+        "new": "710d414ced4dc9c8a7c6ad0462a57da8bda1ca5f85675eaddca801fb96bf5af7"
+      },
+      "GoLean/GoCore/RecoveryControlHelpers.lean": {
+        "old": null,
+        "new": "a5a2e01b607a32126902951339c553b15a0568679d81aa5a1537a04f5be68dc5"
+      },
+      "GoLean/GoCore/RecoveryControlMono.lean": {
+        "old": null,
+        "new": "500f9378b703df5528345402b6d58bb177c0d1b66765941b3d39255d171cad6e"
+      },
+      "GoLean/GoCore/RecoveryDelivery.lean": {
+        "old": null,
+        "new": "575cbc32cbb45f9906e6bd091ed6f1f0cb21564f033c8c1c3f08299c56585fee"
+      },
+      "GoLean/GoCore/RecoveryExpressionProgress.lean": {
+        "old": null,
+        "new": "21f9a76f79645d7e822c155aad4e7c11f2e40abc91f6bb508655c27630d05f58"
+      },
+      "GoLean/GoCore/RecoveryFrameProgress.lean": {
+        "old": null,
+        "new": "7e4382c929e4f81e08b4f45f8ef32e30e039e12ca68c0e39e9b7234aed6aa7ff"
+      },
+      "GoLean/GoCore/RecoveryInitialization.lean": {
+        "old": null,
+        "new": "574092e494fc704702101c99e6c46b467ea12bdafb330f713291e7143fd474c6"
+      },
+      "GoLean/GoCore/RecoveryInvariant.lean": {
+        "old": null,
+        "new": "a71574c21fcdb6ac872e07dd3f828536d06ce51a86ab6c8f9b00c1a35a077d46"
+      },
+      "GoLean/GoCore/RecoveryObservation.lean": {
+        "old": null,
+        "new": "25153a32b0184e6ed09f56f13540ba5ca909763c8ebe87fdc3313ab32eecc670"
+      },
+      "GoLean/GoCore/RecoveryPanicProgress.lean": {
+        "old": null,
+        "new": "b7fa027394b53d60ff68438d403d10aa19cfb0d6bfbd82923702bd37257c1245"
+      },
+      "GoLean/GoCore/RecoveryResultRoots.lean": {
+        "old": null,
+        "new": "c0b71818ffe90a6dcace26867048836f213b216f388db8c00929af8d2513fbdb"
+      },
+      "GoLean/GoCore/RecoverySetup.lean": {
+        "old": null,
+        "new": "d3d97a9ddb3f1b968c2c226cb973af205bd25e783e2bb6d30ba71aecc855fef1"
+      },
+      "GoLean/GoCore/RecoverySetupReadout.lean": {
+        "old": null,
+        "new": "3ca56702d9378277c0668f4835752b77d96814a40cb7c3c8a2bc51368a802a28"
+      },
+      "GoLean/GoCore/RecoverySetupShape.lean": {
+        "old": null,
+        "new": "90d58331e62508d6144a49100eb0810f308dd23af8661ac5ce8428cd7d170eab"
+      },
+      "GoLean/GoCore/RecoverySetupWf.lean": {
+        "old": null,
+        "new": "c603f015a6d2c096832ce4431458bcd2fe39886cde854457bf495a8671c95a0f"
+      },
+      "GoLean/GoCore/RecoveryStatementProgress.lean": {
+        "old": null,
+        "new": "1f14577e1f3d2def2e9636e67be40a5ddbfbb5ea3196da7532f652eb45f2a609"
+      },
+      "GoLean/GoCore/RecoverySuccessfulRuns.lean": {
+        "old": null,
+        "new": "853cf53c2994924ffedaedd4e3f8404201e8770d799a277ee4539f7194dbc466"
+      },
+      "GoLean/GoCore/RecoveryValueBasic.lean": {
+        "old": null,
+        "new": "d14c79064ad69303093374e5b88380efcf14060f96714550503dc2fe010cee32"
+      },
+      "GoLean/GoCore/RecoveryValueCalls.lean": {
+        "old": null,
+        "new": "92fdb6e6fe06283df2c802b2e11d58eb1498e21a659712a0ad3def4e3e32b1e5"
+      },
+      "GoLean/GoCore/RecoveryWalk.lean": {
+        "old": null,
+        "new": "49f4da47580f6f91dc32d57a8f537233cbd44751c63cf68e62ec229863a497b3"
+      },
+      "GoLean/Interface.lean": {
+        "old": "8971bc3b8a8b2d056e13c228e162ac01afd94345e6c4f62af715c5c67e80bec0",
+        "new": "3d3c084cc7018f8bc4c215a7c53e10f58a82c54c4bd1aab0e7afef6e26de13a2"
+      },
+      "Tests/InterfaceAudit.lean": {
+        "old": "5ad61e7c333ef1d20472a3e98a9e8fe723f1e3a1b94523ebfb096214f743221d",
+        "new": "51aaeb341136bd59f0bd7e24d65eda098a99a09d055a23d9b499a613fc32837d"
+      },
+      "lakefile.toml": {
+        "old": "5d9e0399adcadf2d1485b300170abc9ed521c322cc10dfa06dc3d86836f0914e",
+        "new": "7fdccc5ddac58bcd7fd012604dfe6de902be6348a839e3dcd9601e094baf3f8f"
+      },
+      "scripts/check-interface": {
+        "old": "76965102fbfb1da91d709ccfc43817f4a415a932756e974e77f1a2f96156db95",
+        "new": "8030999942451a0feb0c973cb5e863ac8c0d27c9648eb37c5f37d1c11dafff7e"
+      },
+      "scripts/check-interface.py": {
+        "old": "e9fd46d756f0853f892b5e6ca48a9b1c7ef96f453b8c7c1c7942b16bbf96747a",
+        "new": "e05a9468c862c4b5c77d1ce5cb74d53298da0d084d8af8cd7192722450071e8e"
+      },
+      "scripts/check-string-members.py": {
+        "old": "e10a593a6e69a2be162241d3a2e296169c571f7725abea18d09729eea6a86659",
+        "new": "312c402e22d3421a1e5de4c0a422e68c9a82a0d4967760b86cfecc033f3cc9d0"
+      },
+      "scripts/ci": {
+        "old": "620e8b1f1251873bc3d054d03aae9d83b2a5bf853b5a80ae2d935da8ba0727a9",
+        "new": "763cfb020f5ed5545e3460513d16c760525e654c37107f6f526ba34d5044dd99"
+      },
+      "tools/check_string_member_fixtures.py": {
+        "old": null,
+        "new": "6845e0f3a78d26a1c1d70f95c9c0aa81dfcd8e9e9b21aa09d146a537ae601d38"
+      },
+      "tools/string_member.py": {
+        "old": "4ceb89dc55c8810bf227e5110e78af5591977e5708a55931c12b80a3269d604c",
+        "new": "8cb358b99566ab3f1224eda05c791d5868ede7ad1a6185b4c1694a92b4849900"
+      },
+      "tools/string_member_runner.py": {
+        "old": "b29a62c5ae7ce31bbfb1169331038fa8d9683828c4bc177e8657f9b0edd322a1",
+        "new": "6de377bb1a70d96bd6d66b4e018063a9a8d5a084964ed6c2041b9ca6184ce65d"
+      }
+    }
+  },
+  {
+    "pin": "baselines/string-members/panic-recover/string-members/equal.json",
+    "reason": "pre-acceptance draft fingerprint refresh after reviewed observer dependency merge 414a2abe; subject/control source, wire, machine and forced control observations unchanged",
+    "delta": {
+      "GoLean/GoCore/RecoveryCallControl.lean": {
+        "old": null,
+        "new": "e2838d0afe34df9d5e8772db2dbd5818103c8556dc98ff161fcf07b1e815760b"
+      },
+      "GoLean/GoCore/RecoveryCallEntry.lean": {
+        "old": null,
+        "new": "243bcef842fd08797813bfbeb8e6c1751dccb470b36687b7ced9c9c87fb647b0"
+      },
+      "GoLean/GoCore/RecoveryControl.lean": {
+        "old": null,
+        "new": "c7c354b0be44d62cced1f15b969c9a33c17cc550aecbfb604123af9172840cba"
+      },
+      "GoLean/GoCore/RecoveryControlData.lean": {
+        "old": null,
+        "new": "710d414ced4dc9c8a7c6ad0462a57da8bda1ca5f85675eaddca801fb96bf5af7"
+      },
+      "GoLean/GoCore/RecoveryControlHelpers.lean": {
+        "old": null,
+        "new": "a5a2e01b607a32126902951339c553b15a0568679d81aa5a1537a04f5be68dc5"
+      },
+      "GoLean/GoCore/RecoveryControlMono.lean": {
+        "old": null,
+        "new": "500f9378b703df5528345402b6d58bb177c0d1b66765941b3d39255d171cad6e"
+      },
+      "GoLean/GoCore/RecoveryDelivery.lean": {
+        "old": null,
+        "new": "575cbc32cbb45f9906e6bd091ed6f1f0cb21564f033c8c1c3f08299c56585fee"
+      },
+      "GoLean/GoCore/RecoveryExpressionProgress.lean": {
+        "old": null,
+        "new": "21f9a76f79645d7e822c155aad4e7c11f2e40abc91f6bb508655c27630d05f58"
+      },
+      "GoLean/GoCore/RecoveryFrameProgress.lean": {
+        "old": null,
+        "new": "7e4382c929e4f81e08b4f45f8ef32e30e039e12ca68c0e39e9b7234aed6aa7ff"
+      },
+      "GoLean/GoCore/RecoveryInitialization.lean": {
+        "old": null,
+        "new": "574092e494fc704702101c99e6c46b467ea12bdafb330f713291e7143fd474c6"
+      },
+      "GoLean/GoCore/RecoveryInvariant.lean": {
+        "old": null,
+        "new": "a71574c21fcdb6ac872e07dd3f828536d06ce51a86ab6c8f9b00c1a35a077d46"
+      },
+      "GoLean/GoCore/RecoveryObservation.lean": {
+        "old": null,
+        "new": "25153a32b0184e6ed09f56f13540ba5ca909763c8ebe87fdc3313ab32eecc670"
+      },
+      "GoLean/GoCore/RecoveryPanicProgress.lean": {
+        "old": null,
+        "new": "b7fa027394b53d60ff68438d403d10aa19cfb0d6bfbd82923702bd37257c1245"
+      },
+      "GoLean/GoCore/RecoveryResultRoots.lean": {
+        "old": null,
+        "new": "c0b71818ffe90a6dcace26867048836f213b216f388db8c00929af8d2513fbdb"
+      },
+      "GoLean/GoCore/RecoverySetup.lean": {
+        "old": null,
+        "new": "d3d97a9ddb3f1b968c2c226cb973af205bd25e783e2bb6d30ba71aecc855fef1"
+      },
+      "GoLean/GoCore/RecoverySetupReadout.lean": {
+        "old": null,
+        "new": "3ca56702d9378277c0668f4835752b77d96814a40cb7c3c8a2bc51368a802a28"
+      },
+      "GoLean/GoCore/RecoverySetupShape.lean": {
+        "old": null,
+        "new": "90d58331e62508d6144a49100eb0810f308dd23af8661ac5ce8428cd7d170eab"
+      },
+      "GoLean/GoCore/RecoverySetupWf.lean": {
+        "old": null,
+        "new": "c603f015a6d2c096832ce4431458bcd2fe39886cde854457bf495a8671c95a0f"
+      },
+      "GoLean/GoCore/RecoveryStatementProgress.lean": {
+        "old": null,
+        "new": "1f14577e1f3d2def2e9636e67be40a5ddbfbb5ea3196da7532f652eb45f2a609"
+      },
+      "GoLean/GoCore/RecoverySuccessfulRuns.lean": {
+        "old": null,
+        "new": "853cf53c2994924ffedaedd4e3f8404201e8770d799a277ee4539f7194dbc466"
+      },
+      "GoLean/GoCore/RecoveryValueBasic.lean": {
+        "old": null,
+        "new": "d14c79064ad69303093374e5b88380efcf14060f96714550503dc2fe010cee32"
+      },
+      "GoLean/GoCore/RecoveryValueCalls.lean": {
+        "old": null,
+        "new": "92fdb6e6fe06283df2c802b2e11d58eb1498e21a659712a0ad3def4e3e32b1e5"
+      },
+      "GoLean/GoCore/RecoveryWalk.lean": {
+        "old": null,
+        "new": "49f4da47580f6f91dc32d57a8f537233cbd44751c63cf68e62ec229863a497b3"
+      },
+      "GoLean/Interface.lean": {
+        "old": "8971bc3b8a8b2d056e13c228e162ac01afd94345e6c4f62af715c5c67e80bec0",
+        "new": "3d3c084cc7018f8bc4c215a7c53e10f58a82c54c4bd1aab0e7afef6e26de13a2"
+      },
+      "Tests/InterfaceAudit.lean": {
+        "old": "5ad61e7c333ef1d20472a3e98a9e8fe723f1e3a1b94523ebfb096214f743221d",
+        "new": "51aaeb341136bd59f0bd7e24d65eda098a99a09d055a23d9b499a613fc32837d"
+      },
+      "lakefile.toml": {
+        "old": "5d9e0399adcadf2d1485b300170abc9ed521c322cc10dfa06dc3d86836f0914e",
+        "new": "7fdccc5ddac58bcd7fd012604dfe6de902be6348a839e3dcd9601e094baf3f8f"
+      },
+      "scripts/check-interface": {
+        "old": "76965102fbfb1da91d709ccfc43817f4a415a932756e974e77f1a2f96156db95",
+        "new": "8030999942451a0feb0c973cb5e863ac8c0d27c9648eb37c5f37d1c11dafff7e"
+      },
+      "scripts/check-interface.py": {
+        "old": "e9fd46d756f0853f892b5e6ca48a9b1c7ef96f453b8c7c1c7942b16bbf96747a",
+        "new": "e05a9468c862c4b5c77d1ce5cb74d53298da0d084d8af8cd7192722450071e8e"
+      },
+      "scripts/check-string-members.py": {
+        "old": "e10a593a6e69a2be162241d3a2e296169c571f7725abea18d09729eea6a86659",
+        "new": "312c402e22d3421a1e5de4c0a422e68c9a82a0d4967760b86cfecc033f3cc9d0"
+      },
+      "scripts/ci": {
+        "old": "620e8b1f1251873bc3d054d03aae9d83b2a5bf853b5a80ae2d935da8ba0727a9",
+        "new": "763cfb020f5ed5545e3460513d16c760525e654c37107f6f526ba34d5044dd99"
+      },
+      "tools/check_string_member_fixtures.py": {
+        "old": null,
+        "new": "6845e0f3a78d26a1c1d70f95c9c0aa81dfcd8e9e9b21aa09d146a537ae601d38"
+      },
+      "tools/string_member.py": {
+        "old": "4ceb89dc55c8810bf227e5110e78af5591977e5708a55931c12b80a3269d604c",
+        "new": "8cb358b99566ab3f1224eda05c791d5868ede7ad1a6185b4c1694a92b4849900"
+      },
+      "tools/string_member_runner.py": {
+        "old": "b29a62c5ae7ce31bbfb1169331038fa8d9683828c4bc177e8657f9b0edd322a1",
+        "new": "6de377bb1a70d96bd6d66b4e018063a9a8d5a084964ed6c2041b9ca6184ce65d"
+      }
+    }
+  },
+  {
+    "pin": "baselines/string-members/panic-recover/string-members/invalid-after-lf.json",
+    "reason": "pre-acceptance draft fingerprint refresh after reviewed observer dependency merge 414a2abe; subject/control source, wire, machine and forced control observations unchanged",
+    "delta": {
+      "GoLean/GoCore/RecoveryCallControl.lean": {
+        "old": null,
+        "new": "e2838d0afe34df9d5e8772db2dbd5818103c8556dc98ff161fcf07b1e815760b"
+      },
+      "GoLean/GoCore/RecoveryCallEntry.lean": {
+        "old": null,
+        "new": "243bcef842fd08797813bfbeb8e6c1751dccb470b36687b7ced9c9c87fb647b0"
+      },
+      "GoLean/GoCore/RecoveryControl.lean": {
+        "old": null,
+        "new": "c7c354b0be44d62cced1f15b969c9a33c17cc550aecbfb604123af9172840cba"
+      },
+      "GoLean/GoCore/RecoveryControlData.lean": {
+        "old": null,
+        "new": "710d414ced4dc9c8a7c6ad0462a57da8bda1ca5f85675eaddca801fb96bf5af7"
+      },
+      "GoLean/GoCore/RecoveryControlHelpers.lean": {
+        "old": null,
+        "new": "a5a2e01b607a32126902951339c553b15a0568679d81aa5a1537a04f5be68dc5"
+      },
+      "GoLean/GoCore/RecoveryControlMono.lean": {
+        "old": null,
+        "new": "500f9378b703df5528345402b6d58bb177c0d1b66765941b3d39255d171cad6e"
+      },
+      "GoLean/GoCore/RecoveryDelivery.lean": {
+        "old": null,
+        "new": "575cbc32cbb45f9906e6bd091ed6f1f0cb21564f033c8c1c3f08299c56585fee"
+      },
+      "GoLean/GoCore/RecoveryExpressionProgress.lean": {
+        "old": null,
+        "new": "21f9a76f79645d7e822c155aad4e7c11f2e40abc91f6bb508655c27630d05f58"
+      },
+      "GoLean/GoCore/RecoveryFrameProgress.lean": {
+        "old": null,
+        "new": "7e4382c929e4f81e08b4f45f8ef32e30e039e12ca68c0e39e9b7234aed6aa7ff"
+      },
+      "GoLean/GoCore/RecoveryInitialization.lean": {
+        "old": null,
+        "new": "574092e494fc704702101c99e6c46b467ea12bdafb330f713291e7143fd474c6"
+      },
+      "GoLean/GoCore/RecoveryInvariant.lean": {
+        "old": null,
+        "new": "a71574c21fcdb6ac872e07dd3f828536d06ce51a86ab6c8f9b00c1a35a077d46"
+      },
+      "GoLean/GoCore/RecoveryObservation.lean": {
+        "old": null,
+        "new": "25153a32b0184e6ed09f56f13540ba5ca909763c8ebe87fdc3313ab32eecc670"
+      },
+      "GoLean/GoCore/RecoveryPanicProgress.lean": {
+        "old": null,
+        "new": "b7fa027394b53d60ff68438d403d10aa19cfb0d6bfbd82923702bd37257c1245"
+      },
+      "GoLean/GoCore/RecoveryResultRoots.lean": {
+        "old": null,
+        "new": "c0b71818ffe90a6dcace26867048836f213b216f388db8c00929af8d2513fbdb"
+      },
+      "GoLean/GoCore/RecoverySetup.lean": {
+        "old": null,
+        "new": "d3d97a9ddb3f1b968c2c226cb973af205bd25e783e2bb6d30ba71aecc855fef1"
+      },
+      "GoLean/GoCore/RecoverySetupReadout.lean": {
+        "old": null,
+        "new": "3ca56702d9378277c0668f4835752b77d96814a40cb7c3c8a2bc51368a802a28"
+      },
+      "GoLean/GoCore/RecoverySetupShape.lean": {
+        "old": null,
+        "new": "90d58331e62508d6144a49100eb0810f308dd23af8661ac5ce8428cd7d170eab"
+      },
+      "GoLean/GoCore/RecoverySetupWf.lean": {
+        "old": null,
+        "new": "c603f015a6d2c096832ce4431458bcd2fe39886cde854457bf495a8671c95a0f"
+      },
+      "GoLean/GoCore/RecoveryStatementProgress.lean": {
+        "old": null,
+        "new": "1f14577e1f3d2def2e9636e67be40a5ddbfbb5ea3196da7532f652eb45f2a609"
+      },
+      "GoLean/GoCore/RecoverySuccessfulRuns.lean": {
+        "old": null,
+        "new": "853cf53c2994924ffedaedd4e3f8404201e8770d799a277ee4539f7194dbc466"
+      },
+      "GoLean/GoCore/RecoveryValueBasic.lean": {
+        "old": null,
+        "new": "d14c79064ad69303093374e5b88380efcf14060f96714550503dc2fe010cee32"
+      },
+      "GoLean/GoCore/RecoveryValueCalls.lean": {
+        "old": null,
+        "new": "92fdb6e6fe06283df2c802b2e11d58eb1498e21a659712a0ad3def4e3e32b1e5"
+      },
+      "GoLean/GoCore/RecoveryWalk.lean": {
+        "old": null,
+        "new": "49f4da47580f6f91dc32d57a8f537233cbd44751c63cf68e62ec229863a497b3"
+      },
+      "GoLean/Interface.lean": {
+        "old": "8971bc3b8a8b2d056e13c228e162ac01afd94345e6c4f62af715c5c67e80bec0",
+        "new": "3d3c084cc7018f8bc4c215a7c53e10f58a82c54c4bd1aab0e7afef6e26de13a2"
+      },
+      "Tests/InterfaceAudit.lean": {
+        "old": "5ad61e7c333ef1d20472a3e98a9e8fe723f1e3a1b94523ebfb096214f743221d",
+        "new": "51aaeb341136bd59f0bd7e24d65eda098a99a09d055a23d9b499a613fc32837d"
+      },
+      "lakefile.toml": {
+        "old": "5d9e0399adcadf2d1485b300170abc9ed521c322cc10dfa06dc3d86836f0914e",
+        "new": "7fdccc5ddac58bcd7fd012604dfe6de902be6348a839e3dcd9601e094baf3f8f"
+      },
+      "scripts/check-interface": {
+        "old": "76965102fbfb1da91d709ccfc43817f4a415a932756e974e77f1a2f96156db95",
+        "new": "8030999942451a0feb0c973cb5e863ac8c0d27c9648eb37c5f37d1c11dafff7e"
+      },
+      "scripts/check-interface.py": {
+        "old": "e9fd46d756f0853f892b5e6ca48a9b1c7ef96f453b8c7c1c7942b16bbf96747a",
+        "new": "e05a9468c862c4b5c77d1ce5cb74d53298da0d084d8af8cd7192722450071e8e"
+      },
+      "scripts/check-string-members.py": {
+        "old": "e10a593a6e69a2be162241d3a2e296169c571f7725abea18d09729eea6a86659",
+        "new": "312c402e22d3421a1e5de4c0a422e68c9a82a0d4967760b86cfecc033f3cc9d0"
+      },
+      "scripts/ci": {
+        "old": "620e8b1f1251873bc3d054d03aae9d83b2a5bf853b5a80ae2d935da8ba0727a9",
+        "new": "763cfb020f5ed5545e3460513d16c760525e654c37107f6f526ba34d5044dd99"
+      },
+      "tools/check_string_member_fixtures.py": {
+        "old": null,
+        "new": "6845e0f3a78d26a1c1d70f95c9c0aa81dfcd8e9e9b21aa09d146a537ae601d38"
+      },
+      "tools/string_member.py": {
+        "old": "4ceb89dc55c8810bf227e5110e78af5591977e5708a55931c12b80a3269d604c",
+        "new": "8cb358b99566ab3f1224eda05c791d5868ede7ad1a6185b4c1694a92b4849900"
+      },
+      "tools/string_member_runner.py": {
+        "old": "b29a62c5ae7ce31bbfb1169331038fa8d9683828c4bc177e8657f9b0edd322a1",
+        "new": "6de377bb1a70d96bd6d66b4e018063a9a8d5a084964ed6c2041b9ca6184ce65d"
+      }
+    }
+  },
+  {
+    "pin": "baselines/string-members/panic-recover/string-members/invalid-before-lf.json",
+    "reason": "pre-acceptance draft fingerprint refresh after reviewed observer dependency merge 414a2abe; subject/control source, wire, machine and forced control observations unchanged",
+    "delta": {
+      "GoLean/GoCore/RecoveryCallControl.lean": {
+        "old": null,
+        "new": "e2838d0afe34df9d5e8772db2dbd5818103c8556dc98ff161fcf07b1e815760b"
+      },
+      "GoLean/GoCore/RecoveryCallEntry.lean": {
+        "old": null,
+        "new": "243bcef842fd08797813bfbeb8e6c1751dccb470b36687b7ced9c9c87fb647b0"
+      },
+      "GoLean/GoCore/RecoveryControl.lean": {
+        "old": null,
+        "new": "c7c354b0be44d62cced1f15b969c9a33c17cc550aecbfb604123af9172840cba"
+      },
+      "GoLean/GoCore/RecoveryControlData.lean": {
+        "old": null,
+        "new": "710d414ced4dc9c8a7c6ad0462a57da8bda1ca5f85675eaddca801fb96bf5af7"
+      },
+      "GoLean/GoCore/RecoveryControlHelpers.lean": {
+        "old": null,
+        "new": "a5a2e01b607a32126902951339c553b15a0568679d81aa5a1537a04f5be68dc5"
+      },
+      "GoLean/GoCore/RecoveryControlMono.lean": {
+        "old": null,
+        "new": "500f9378b703df5528345402b6d58bb177c0d1b66765941b3d39255d171cad6e"
+      },
+      "GoLean/GoCore/RecoveryDelivery.lean": {
+        "old": null,
+        "new": "575cbc32cbb45f9906e6bd091ed6f1f0cb21564f033c8c1c3f08299c56585fee"
+      },
+      "GoLean/GoCore/RecoveryExpressionProgress.lean": {
+        "old": null,
+        "new": "21f9a76f79645d7e822c155aad4e7c11f2e40abc91f6bb508655c27630d05f58"
+      },
+      "GoLean/GoCore/RecoveryFrameProgress.lean": {
+        "old": null,
+        "new": "7e4382c929e4f81e08b4f45f8ef32e30e039e12ca68c0e39e9b7234aed6aa7ff"
+      },
+      "GoLean/GoCore/RecoveryInitialization.lean": {
+        "old": null,
+        "new": "574092e494fc704702101c99e6c46b467ea12bdafb330f713291e7143fd474c6"
+      },
+      "GoLean/GoCore/RecoveryInvariant.lean": {
+        "old": null,
+        "new": "a71574c21fcdb6ac872e07dd3f828536d06ce51a86ab6c8f9b00c1a35a077d46"
+      },
+      "GoLean/GoCore/RecoveryObservation.lean": {
+        "old": null,
+        "new": "25153a32b0184e6ed09f56f13540ba5ca909763c8ebe87fdc3313ab32eecc670"
+      },
+      "GoLean/GoCore/RecoveryPanicProgress.lean": {
+        "old": null,
+        "new": "b7fa027394b53d60ff68438d403d10aa19cfb0d6bfbd82923702bd37257c1245"
+      },
+      "GoLean/GoCore/RecoveryResultRoots.lean": {
+        "old": null,
+        "new": "c0b71818ffe90a6dcace26867048836f213b216f388db8c00929af8d2513fbdb"
+      },
+      "GoLean/GoCore/RecoverySetup.lean": {
+        "old": null,
+        "new": "d3d97a9ddb3f1b968c2c226cb973af205bd25e783e2bb6d30ba71aecc855fef1"
+      },
+      "GoLean/GoCore/RecoverySetupReadout.lean": {
+        "old": null,
+        "new": "3ca56702d9378277c0668f4835752b77d96814a40cb7c3c8a2bc51368a802a28"
+      },
+      "GoLean/GoCore/RecoverySetupShape.lean": {
+        "old": null,
+        "new": "90d58331e62508d6144a49100eb0810f308dd23af8661ac5ce8428cd7d170eab"
+      },
+      "GoLean/GoCore/RecoverySetupWf.lean": {
+        "old": null,
+        "new": "c603f015a6d2c096832ce4431458bcd2fe39886cde854457bf495a8671c95a0f"
+      },
+      "GoLean/GoCore/RecoveryStatementProgress.lean": {
+        "old": null,
+        "new": "1f14577e1f3d2def2e9636e67be40a5ddbfbb5ea3196da7532f652eb45f2a609"
+      },
+      "GoLean/GoCore/RecoverySuccessfulRuns.lean": {
+        "old": null,
+        "new": "853cf53c2994924ffedaedd4e3f8404201e8770d799a277ee4539f7194dbc466"
+      },
+      "GoLean/GoCore/RecoveryValueBasic.lean": {
+        "old": null,
+        "new": "d14c79064ad69303093374e5b88380efcf14060f96714550503dc2fe010cee32"
+      },
+      "GoLean/GoCore/RecoveryValueCalls.lean": {
+        "old": null,
+        "new": "92fdb6e6fe06283df2c802b2e11d58eb1498e21a659712a0ad3def4e3e32b1e5"
+      },
+      "GoLean/GoCore/RecoveryWalk.lean": {
+        "old": null,
+        "new": "49f4da47580f6f91dc32d57a8f537233cbd44751c63cf68e62ec229863a497b3"
+      },
+      "GoLean/Interface.lean": {
+        "old": "8971bc3b8a8b2d056e13c228e162ac01afd94345e6c4f62af715c5c67e80bec0",
+        "new": "3d3c084cc7018f8bc4c215a7c53e10f58a82c54c4bd1aab0e7afef6e26de13a2"
+      },
+      "Tests/InterfaceAudit.lean": {
+        "old": "5ad61e7c333ef1d20472a3e98a9e8fe723f1e3a1b94523ebfb096214f743221d",
+        "new": "51aaeb341136bd59f0bd7e24d65eda098a99a09d055a23d9b499a613fc32837d"
+      },
+      "lakefile.toml": {
+        "old": "5d9e0399adcadf2d1485b300170abc9ed521c322cc10dfa06dc3d86836f0914e",
+        "new": "7fdccc5ddac58bcd7fd012604dfe6de902be6348a839e3dcd9601e094baf3f8f"
+      },
+      "scripts/check-interface": {
+        "old": "76965102fbfb1da91d709ccfc43817f4a415a932756e974e77f1a2f96156db95",
+        "new": "8030999942451a0feb0c973cb5e863ac8c0d27c9648eb37c5f37d1c11dafff7e"
+      },
+      "scripts/check-interface.py": {
+        "old": "e9fd46d756f0853f892b5e6ca48a9b1c7ef96f453b8c7c1c7942b16bbf96747a",
+        "new": "e05a9468c862c4b5c77d1ce5cb74d53298da0d084d8af8cd7192722450071e8e"
+      },
+      "scripts/check-string-members.py": {
+        "old": "e10a593a6e69a2be162241d3a2e296169c571f7725abea18d09729eea6a86659",
+        "new": "312c402e22d3421a1e5de4c0a422e68c9a82a0d4967760b86cfecc033f3cc9d0"
+      },
+      "scripts/ci": {
+        "old": "620e8b1f1251873bc3d054d03aae9d83b2a5bf853b5a80ae2d935da8ba0727a9",
+        "new": "763cfb020f5ed5545e3460513d16c760525e654c37107f6f526ba34d5044dd99"
+      },
+      "tools/check_string_member_fixtures.py": {
+        "old": null,
+        "new": "6845e0f3a78d26a1c1d70f95c9c0aa81dfcd8e9e9b21aa09d146a537ae601d38"
+      },
+      "tools/string_member.py": {
+        "old": "4ceb89dc55c8810bf227e5110e78af5591977e5708a55931c12b80a3269d604c",
+        "new": "8cb358b99566ab3f1224eda05c791d5868ede7ad1a6185b4c1694a92b4849900"
+      },
+      "tools/string_member_runner.py": {
+        "old": "b29a62c5ae7ce31bbfb1169331038fa8d9683828c4bc177e8657f9b0edd322a1",
+        "new": "6de377bb1a70d96bd6d66b4e018063a9a8d5a084964ed6c2041b9ca6184ce65d"
+      }
+    }
+  },
+  {
+    "pin": "baselines/string-members/panic-recover/string-members/invalid-recovered.json",
+    "reason": "pre-acceptance draft fingerprint refresh after reviewed observer dependency merge 414a2abe; subject/control source, wire, machine and forced control observations unchanged",
+    "delta": {
+      "GoLean/GoCore/RecoveryCallControl.lean": {
+        "old": null,
+        "new": "e2838d0afe34df9d5e8772db2dbd5818103c8556dc98ff161fcf07b1e815760b"
+      },
+      "GoLean/GoCore/RecoveryCallEntry.lean": {
+        "old": null,
+        "new": "243bcef842fd08797813bfbeb8e6c1751dccb470b36687b7ced9c9c87fb647b0"
+      },
+      "GoLean/GoCore/RecoveryControl.lean": {
+        "old": null,
+        "new": "c7c354b0be44d62cced1f15b969c9a33c17cc550aecbfb604123af9172840cba"
+      },
+      "GoLean/GoCore/RecoveryControlData.lean": {
+        "old": null,
+        "new": "710d414ced4dc9c8a7c6ad0462a57da8bda1ca5f85675eaddca801fb96bf5af7"
+      },
+      "GoLean/GoCore/RecoveryControlHelpers.lean": {
+        "old": null,
+        "new": "a5a2e01b607a32126902951339c553b15a0568679d81aa5a1537a04f5be68dc5"
+      },
+      "GoLean/GoCore/RecoveryControlMono.lean": {
+        "old": null,
+        "new": "500f9378b703df5528345402b6d58bb177c0d1b66765941b3d39255d171cad6e"
+      },
+      "GoLean/GoCore/RecoveryDelivery.lean": {
+        "old": null,
+        "new": "575cbc32cbb45f9906e6bd091ed6f1f0cb21564f033c8c1c3f08299c56585fee"
+      },
+      "GoLean/GoCore/RecoveryExpressionProgress.lean": {
+        "old": null,
+        "new": "21f9a76f79645d7e822c155aad4e7c11f2e40abc91f6bb508655c27630d05f58"
+      },
+      "GoLean/GoCore/RecoveryFrameProgress.lean": {
+        "old": null,
+        "new": "7e4382c929e4f81e08b4f45f8ef32e30e039e12ca68c0e39e9b7234aed6aa7ff"
+      },
+      "GoLean/GoCore/RecoveryInitialization.lean": {
+        "old": null,
+        "new": "574092e494fc704702101c99e6c46b467ea12bdafb330f713291e7143fd474c6"
+      },
+      "GoLean/GoCore/RecoveryInvariant.lean": {
+        "old": null,
+        "new": "a71574c21fcdb6ac872e07dd3f828536d06ce51a86ab6c8f9b00c1a35a077d46"
+      },
+      "GoLean/GoCore/RecoveryObservation.lean": {
+        "old": null,
+        "new": "25153a32b0184e6ed09f56f13540ba5ca909763c8ebe87fdc3313ab32eecc670"
+      },
+      "GoLean/GoCore/RecoveryPanicProgress.lean": {
+        "old": null,
+        "new": "b7fa027394b53d60ff68438d403d10aa19cfb0d6bfbd82923702bd37257c1245"
+      },
+      "GoLean/GoCore/RecoveryResultRoots.lean": {
+        "old": null,
+        "new": "c0b71818ffe90a6dcace26867048836f213b216f388db8c00929af8d2513fbdb"
+      },
+      "GoLean/GoCore/RecoverySetup.lean": {
+        "old": null,
+        "new": "d3d97a9ddb3f1b968c2c226cb973af205bd25e783e2bb6d30ba71aecc855fef1"
+      },
+      "GoLean/GoCore/RecoverySetupReadout.lean": {
+        "old": null,
+        "new": "3ca56702d9378277c0668f4835752b77d96814a40cb7c3c8a2bc51368a802a28"
+      },
+      "GoLean/GoCore/RecoverySetupShape.lean": {
+        "old": null,
+        "new": "90d58331e62508d6144a49100eb0810f308dd23af8661ac5ce8428cd7d170eab"
+      },
+      "GoLean/GoCore/RecoverySetupWf.lean": {
+        "old": null,
+        "new": "c603f015a6d2c096832ce4431458bcd2fe39886cde854457bf495a8671c95a0f"
+      },
+      "GoLean/GoCore/RecoveryStatementProgress.lean": {
+        "old": null,
+        "new": "1f14577e1f3d2def2e9636e67be40a5ddbfbb5ea3196da7532f652eb45f2a609"
+      },
+      "GoLean/GoCore/RecoverySuccessfulRuns.lean": {
+        "old": null,
+        "new": "853cf53c2994924ffedaedd4e3f8404201e8770d799a277ee4539f7194dbc466"
+      },
+      "GoLean/GoCore/RecoveryValueBasic.lean": {
+        "old": null,
+        "new": "d14c79064ad69303093374e5b88380efcf14060f96714550503dc2fe010cee32"
+      },
+      "GoLean/GoCore/RecoveryValueCalls.lean": {
+        "old": null,
+        "new": "92fdb6e6fe06283df2c802b2e11d58eb1498e21a659712a0ad3def4e3e32b1e5"
+      },
+      "GoLean/GoCore/RecoveryWalk.lean": {
+        "old": null,
+        "new": "49f4da47580f6f91dc32d57a8f537233cbd44751c63cf68e62ec229863a497b3"
+      },
+      "GoLean/Interface.lean": {
+        "old": "8971bc3b8a8b2d056e13c228e162ac01afd94345e6c4f62af715c5c67e80bec0",
+        "new": "3d3c084cc7018f8bc4c215a7c53e10f58a82c54c4bd1aab0e7afef6e26de13a2"
+      },
+      "Tests/InterfaceAudit.lean": {
+        "old": "5ad61e7c333ef1d20472a3e98a9e8fe723f1e3a1b94523ebfb096214f743221d",
+        "new": "51aaeb341136bd59f0bd7e24d65eda098a99a09d055a23d9b499a613fc32837d"
+      },
+      "lakefile.toml": {
+        "old": "5d9e0399adcadf2d1485b300170abc9ed521c322cc10dfa06dc3d86836f0914e",
+        "new": "7fdccc5ddac58bcd7fd012604dfe6de902be6348a839e3dcd9601e094baf3f8f"
+      },
+      "scripts/check-interface": {
+        "old": "76965102fbfb1da91d709ccfc43817f4a415a932756e974e77f1a2f96156db95",
+        "new": "8030999942451a0feb0c973cb5e863ac8c0d27c9648eb37c5f37d1c11dafff7e"
+      },
+      "scripts/check-interface.py": {
+        "old": "e9fd46d756f0853f892b5e6ca48a9b1c7ef96f453b8c7c1c7942b16bbf96747a",
+        "new": "e05a9468c862c4b5c77d1ce5cb74d53298da0d084d8af8cd7192722450071e8e"
+      },
+      "scripts/check-string-members.py": {
+        "old": "e10a593a6e69a2be162241d3a2e296169c571f7725abea18d09729eea6a86659",
+        "new": "312c402e22d3421a1e5de4c0a422e68c9a82a0d4967760b86cfecc033f3cc9d0"
+      },
+      "scripts/ci": {
+        "old": "620e8b1f1251873bc3d054d03aae9d83b2a5bf853b5a80ae2d935da8ba0727a9",
+        "new": "763cfb020f5ed5545e3460513d16c760525e654c37107f6f526ba34d5044dd99"
+      },
+      "tools/check_string_member_fixtures.py": {
+        "old": null,
+        "new": "6845e0f3a78d26a1c1d70f95c9c0aa81dfcd8e9e9b21aa09d146a537ae601d38"
+      },
+      "tools/string_member.py": {
+        "old": "4ceb89dc55c8810bf227e5110e78af5591977e5708a55931c12b80a3269d604c",
+        "new": "8cb358b99566ab3f1224eda05c791d5868ede7ad1a6185b4c1694a92b4849900"
+      },
+      "tools/string_member_runner.py": {
+        "old": "b29a62c5ae7ce31bbfb1169331038fa8d9683828c4bc177e8657f9b0edd322a1",
+        "new": "6de377bb1a70d96bd6d66b4e018063a9a8d5a084964ed6c2041b9ca6184ce65d"
+      }
+    }
+  },
+  {
+    "pin": "baselines/string-members/panic-recover/string-members/multiple.json",
+    "reason": "pre-acceptance draft fingerprint refresh after reviewed observer dependency merge 414a2abe; subject/control source, wire, machine and forced control observations unchanged",
+    "delta": {
+      "GoLean/GoCore/RecoveryCallControl.lean": {
+        "old": null,
+        "new": "e2838d0afe34df9d5e8772db2dbd5818103c8556dc98ff161fcf07b1e815760b"
+      },
+      "GoLean/GoCore/RecoveryCallEntry.lean": {
+        "old": null,
+        "new": "243bcef842fd08797813bfbeb8e6c1751dccb470b36687b7ced9c9c87fb647b0"
+      },
+      "GoLean/GoCore/RecoveryControl.lean": {
+        "old": null,
+        "new": "c7c354b0be44d62cced1f15b969c9a33c17cc550aecbfb604123af9172840cba"
+      },
+      "GoLean/GoCore/RecoveryControlData.lean": {
+        "old": null,
+        "new": "710d414ced4dc9c8a7c6ad0462a57da8bda1ca5f85675eaddca801fb96bf5af7"
+      },
+      "GoLean/GoCore/RecoveryControlHelpers.lean": {
+        "old": null,
+        "new": "a5a2e01b607a32126902951339c553b15a0568679d81aa5a1537a04f5be68dc5"
+      },
+      "GoLean/GoCore/RecoveryControlMono.lean": {
+        "old": null,
+        "new": "500f9378b703df5528345402b6d58bb177c0d1b66765941b3d39255d171cad6e"
+      },
+      "GoLean/GoCore/RecoveryDelivery.lean": {
+        "old": null,
+        "new": "575cbc32cbb45f9906e6bd091ed6f1f0cb21564f033c8c1c3f08299c56585fee"
+      },
+      "GoLean/GoCore/RecoveryExpressionProgress.lean": {
+        "old": null,
+        "new": "21f9a76f79645d7e822c155aad4e7c11f2e40abc91f6bb508655c27630d05f58"
+      },
+      "GoLean/GoCore/RecoveryFrameProgress.lean": {
+        "old": null,
+        "new": "7e4382c929e4f81e08b4f45f8ef32e30e039e12ca68c0e39e9b7234aed6aa7ff"
+      },
+      "GoLean/GoCore/RecoveryInitialization.lean": {
+        "old": null,
+        "new": "574092e494fc704702101c99e6c46b467ea12bdafb330f713291e7143fd474c6"
+      },
+      "GoLean/GoCore/RecoveryInvariant.lean": {
+        "old": null,
+        "new": "a71574c21fcdb6ac872e07dd3f828536d06ce51a86ab6c8f9b00c1a35a077d46"
+      },
+      "GoLean/GoCore/RecoveryObservation.lean": {
+        "old": null,
+        "new": "25153a32b0184e6ed09f56f13540ba5ca909763c8ebe87fdc3313ab32eecc670"
+      },
+      "GoLean/GoCore/RecoveryPanicProgress.lean": {
+        "old": null,
+        "new": "b7fa027394b53d60ff68438d403d10aa19cfb0d6bfbd82923702bd37257c1245"
+      },
+      "GoLean/GoCore/RecoveryResultRoots.lean": {
+        "old": null,
+        "new": "c0b71818ffe90a6dcace26867048836f213b216f388db8c00929af8d2513fbdb"
+      },
+      "GoLean/GoCore/RecoverySetup.lean": {
+        "old": null,
+        "new": "d3d97a9ddb3f1b968c2c226cb973af205bd25e783e2bb6d30ba71aecc855fef1"
+      },
+      "GoLean/GoCore/RecoverySetupReadout.lean": {
+        "old": null,
+        "new": "3ca56702d9378277c0668f4835752b77d96814a40cb7c3c8a2bc51368a802a28"
+      },
+      "GoLean/GoCore/RecoverySetupShape.lean": {
+        "old": null,
+        "new": "90d58331e62508d6144a49100eb0810f308dd23af8661ac5ce8428cd7d170eab"
+      },
+      "GoLean/GoCore/RecoverySetupWf.lean": {
+        "old": null,
+        "new": "c603f015a6d2c096832ce4431458bcd2fe39886cde854457bf495a8671c95a0f"
+      },
+      "GoLean/GoCore/RecoveryStatementProgress.lean": {
+        "old": null,
+        "new": "1f14577e1f3d2def2e9636e67be40a5ddbfbb5ea3196da7532f652eb45f2a609"
+      },
+      "GoLean/GoCore/RecoverySuccessfulRuns.lean": {
+        "old": null,
+        "new": "853cf53c2994924ffedaedd4e3f8404201e8770d799a277ee4539f7194dbc466"
+      },
+      "GoLean/GoCore/RecoveryValueBasic.lean": {
+        "old": null,
+        "new": "d14c79064ad69303093374e5b88380efcf14060f96714550503dc2fe010cee32"
+      },
+      "GoLean/GoCore/RecoveryValueCalls.lean": {
+        "old": null,
+        "new": "92fdb6e6fe06283df2c802b2e11d58eb1498e21a659712a0ad3def4e3e32b1e5"
+      },
+      "GoLean/GoCore/RecoveryWalk.lean": {
+        "old": null,
+        "new": "49f4da47580f6f91dc32d57a8f537233cbd44751c63cf68e62ec229863a497b3"
+      },
+      "GoLean/Interface.lean": {
+        "old": "8971bc3b8a8b2d056e13c228e162ac01afd94345e6c4f62af715c5c67e80bec0",
+        "new": "3d3c084cc7018f8bc4c215a7c53e10f58a82c54c4bd1aab0e7afef6e26de13a2"
+      },
+      "Tests/InterfaceAudit.lean": {
+        "old": "5ad61e7c333ef1d20472a3e98a9e8fe723f1e3a1b94523ebfb096214f743221d",
+        "new": "51aaeb341136bd59f0bd7e24d65eda098a99a09d055a23d9b499a613fc32837d"
+      },
+      "lakefile.toml": {
+        "old": "5d9e0399adcadf2d1485b300170abc9ed521c322cc10dfa06dc3d86836f0914e",
+        "new": "7fdccc5ddac58bcd7fd012604dfe6de902be6348a839e3dcd9601e094baf3f8f"
+      },
+      "scripts/check-interface": {
+        "old": "76965102fbfb1da91d709ccfc43817f4a415a932756e974e77f1a2f96156db95",
+        "new": "8030999942451a0feb0c973cb5e863ac8c0d27c9648eb37c5f37d1c11dafff7e"
+      },
+      "scripts/check-interface.py": {
+        "old": "e9fd46d756f0853f892b5e6ca48a9b1c7ef96f453b8c7c1c7942b16bbf96747a",
+        "new": "e05a9468c862c4b5c77d1ce5cb74d53298da0d084d8af8cd7192722450071e8e"
+      },
+      "scripts/check-string-members.py": {
+        "old": "e10a593a6e69a2be162241d3a2e296169c571f7725abea18d09729eea6a86659",
+        "new": "312c402e22d3421a1e5de4c0a422e68c9a82a0d4967760b86cfecc033f3cc9d0"
+      },
+      "scripts/ci": {
+        "old": "620e8b1f1251873bc3d054d03aae9d83b2a5bf853b5a80ae2d935da8ba0727a9",
+        "new": "763cfb020f5ed5545e3460513d16c760525e654c37107f6f526ba34d5044dd99"
+      },
+      "tools/check_string_member_fixtures.py": {
+        "old": null,
+        "new": "6845e0f3a78d26a1c1d70f95c9c0aa81dfcd8e9e9b21aa09d146a537ae601d38"
+      },
+      "tools/string_member.py": {
+        "old": "4ceb89dc55c8810bf227e5110e78af5591977e5708a55931c12b80a3269d604c",
+        "new": "8cb358b99566ab3f1224eda05c791d5868ede7ad1a6185b4c1694a92b4849900"
+      },
+      "tools/string_member_runner.py": {
+        "old": "b29a62c5ae7ce31bbfb1169331038fa8d9683828c4bc177e8657f9b0edd322a1",
+        "new": "6de377bb1a70d96bd6d66b4e018063a9a8d5a084964ed6c2041b9ca6184ce65d"
+      }
+    }
+  },
+  {
+    "pin": "baselines/string-members/panic-recover/string-members/unequal.json",
+    "reason": "pre-acceptance draft fingerprint refresh after reviewed observer dependency merge 414a2abe; subject/control source, wire, machine and forced control observations unchanged",
+    "delta": {
+      "GoLean/GoCore/RecoveryCallControl.lean": {
+        "old": null,
+        "new": "e2838d0afe34df9d5e8772db2dbd5818103c8556dc98ff161fcf07b1e815760b"
+      },
+      "GoLean/GoCore/RecoveryCallEntry.lean": {
+        "old": null,
+        "new": "243bcef842fd08797813bfbeb8e6c1751dccb470b36687b7ced9c9c87fb647b0"
+      },
+      "GoLean/GoCore/RecoveryControl.lean": {
+        "old": null,
+        "new": "c7c354b0be44d62cced1f15b969c9a33c17cc550aecbfb604123af9172840cba"
+      },
+      "GoLean/GoCore/RecoveryControlData.lean": {
+        "old": null,
+        "new": "710d414ced4dc9c8a7c6ad0462a57da8bda1ca5f85675eaddca801fb96bf5af7"
+      },
+      "GoLean/GoCore/RecoveryControlHelpers.lean": {
+        "old": null,
+        "new": "a5a2e01b607a32126902951339c553b15a0568679d81aa5a1537a04f5be68dc5"
+      },
+      "GoLean/GoCore/RecoveryControlMono.lean": {
+        "old": null,
+        "new": "500f9378b703df5528345402b6d58bb177c0d1b66765941b3d39255d171cad6e"
+      },
+      "GoLean/GoCore/RecoveryDelivery.lean": {
+        "old": null,
+        "new": "575cbc32cbb45f9906e6bd091ed6f1f0cb21564f033c8c1c3f08299c56585fee"
+      },
+      "GoLean/GoCore/RecoveryExpressionProgress.lean": {
+        "old": null,
+        "new": "21f9a76f79645d7e822c155aad4e7c11f2e40abc91f6bb508655c27630d05f58"
+      },
+      "GoLean/GoCore/RecoveryFrameProgress.lean": {
+        "old": null,
+        "new": "7e4382c929e4f81e08b4f45f8ef32e30e039e12ca68c0e39e9b7234aed6aa7ff"
+      },
+      "GoLean/GoCore/RecoveryInitialization.lean": {
+        "old": null,
+        "new": "574092e494fc704702101c99e6c46b467ea12bdafb330f713291e7143fd474c6"
+      },
+      "GoLean/GoCore/RecoveryInvariant.lean": {
+        "old": null,
+        "new": "a71574c21fcdb6ac872e07dd3f828536d06ce51a86ab6c8f9b00c1a35a077d46"
+      },
+      "GoLean/GoCore/RecoveryObservation.lean": {
+        "old": null,
+        "new": "25153a32b0184e6ed09f56f13540ba5ca909763c8ebe87fdc3313ab32eecc670"
+      },
+      "GoLean/GoCore/RecoveryPanicProgress.lean": {
+        "old": null,
+        "new": "b7fa027394b53d60ff68438d403d10aa19cfb0d6bfbd82923702bd37257c1245"
+      },
+      "GoLean/GoCore/RecoveryResultRoots.lean": {
+        "old": null,
+        "new": "c0b71818ffe90a6dcace26867048836f213b216f388db8c00929af8d2513fbdb"
+      },
+      "GoLean/GoCore/RecoverySetup.lean": {
+        "old": null,
+        "new": "d3d97a9ddb3f1b968c2c226cb973af205bd25e783e2bb6d30ba71aecc855fef1"
+      },
+      "GoLean/GoCore/RecoverySetupReadout.lean": {
+        "old": null,
+        "new": "3ca56702d9378277c0668f4835752b77d96814a40cb7c3c8a2bc51368a802a28"
+      },
+      "GoLean/GoCore/RecoverySetupShape.lean": {
+        "old": null,
+        "new": "90d58331e62508d6144a49100eb0810f308dd23af8661ac5ce8428cd7d170eab"
+      },
+      "GoLean/GoCore/RecoverySetupWf.lean": {
+        "old": null,
+        "new": "c603f015a6d2c096832ce4431458bcd2fe39886cde854457bf495a8671c95a0f"
+      },
+      "GoLean/GoCore/RecoveryStatementProgress.lean": {
+        "old": null,
+        "new": "1f14577e1f3d2def2e9636e67be40a5ddbfbb5ea3196da7532f652eb45f2a609"
+      },
+      "GoLean/GoCore/RecoverySuccessfulRuns.lean": {
+        "old": null,
+        "new": "853cf53c2994924ffedaedd4e3f8404201e8770d799a277ee4539f7194dbc466"
+      },
+      "GoLean/GoCore/RecoveryValueBasic.lean": {
+        "old": null,
+        "new": "d14c79064ad69303093374e5b88380efcf14060f96714550503dc2fe010cee32"
+      },
+      "GoLean/GoCore/RecoveryValueCalls.lean": {
+        "old": null,
+        "new": "92fdb6e6fe06283df2c802b2e11d58eb1498e21a659712a0ad3def4e3e32b1e5"
+      },
+      "GoLean/GoCore/RecoveryWalk.lean": {
+        "old": null,
+        "new": "49f4da47580f6f91dc32d57a8f537233cbd44751c63cf68e62ec229863a497b3"
+      },
+      "GoLean/Interface.lean": {
+        "old": "8971bc3b8a8b2d056e13c228e162ac01afd94345e6c4f62af715c5c67e80bec0",
+        "new": "3d3c084cc7018f8bc4c215a7c53e10f58a82c54c4bd1aab0e7afef6e26de13a2"
+      },
+      "Tests/InterfaceAudit.lean": {
+        "old": "5ad61e7c333ef1d20472a3e98a9e8fe723f1e3a1b94523ebfb096214f743221d",
+        "new": "51aaeb341136bd59f0bd7e24d65eda098a99a09d055a23d9b499a613fc32837d"
+      },
+      "lakefile.toml": {
+        "old": "5d9e0399adcadf2d1485b300170abc9ed521c322cc10dfa06dc3d86836f0914e",
+        "new": "7fdccc5ddac58bcd7fd012604dfe6de902be6348a839e3dcd9601e094baf3f8f"
+      },
+      "scripts/check-interface": {
+        "old": "76965102fbfb1da91d709ccfc43817f4a415a932756e974e77f1a2f96156db95",
+        "new": "8030999942451a0feb0c973cb5e863ac8c0d27c9648eb37c5f37d1c11dafff7e"
+      },
+      "scripts/check-interface.py": {
+        "old": "e9fd46d756f0853f892b5e6ca48a9b1c7ef96f453b8c7c1c7942b16bbf96747a",
+        "new": "e05a9468c862c4b5c77d1ce5cb74d53298da0d084d8af8cd7192722450071e8e"
+      },
+      "scripts/check-string-members.py": {
+        "old": "e10a593a6e69a2be162241d3a2e296169c571f7725abea18d09729eea6a86659",
+        "new": "312c402e22d3421a1e5de4c0a422e68c9a82a0d4967760b86cfecc033f3cc9d0"
+      },
+      "scripts/ci": {
+        "old": "620e8b1f1251873bc3d054d03aae9d83b2a5bf853b5a80ae2d935da8ba0727a9",
+        "new": "763cfb020f5ed5545e3460513d16c760525e654c37107f6f526ba34d5044dd99"
+      },
+      "tools/check_string_member_fixtures.py": {
+        "old": null,
+        "new": "6845e0f3a78d26a1c1d70f95c9c0aa81dfcd8e9e9b21aa09d146a537ae601d38"
+      },
+      "tools/string_member.py": {
+        "old": "4ceb89dc55c8810bf227e5110e78af5591977e5708a55931c12b80a3269d604c",
+        "new": "8cb358b99566ab3f1224eda05c791d5868ede7ad1a6185b4c1694a92b4849900"
+      },
+      "tools/string_member_runner.py": {
+        "old": "b29a62c5ae7ce31bbfb1169331038fa8d9683828c4bc177e8657f9b0edd322a1",
+        "new": "6de377bb1a70d96bd6d66b4e018063a9a8d5a084964ed6c2041b9ca6184ce65d"
+      }
+    }
+  },
+  {
+    "pin": "baselines/string-members/panic-recover/string-members/unicode.json",
+    "reason": "pre-acceptance draft fingerprint refresh after reviewed observer dependency merge 414a2abe; subject/control source, wire, machine and forced control observations unchanged",
+    "delta": {
+      "GoLean/GoCore/RecoveryCallControl.lean": {
+        "old": null,
+        "new": "e2838d0afe34df9d5e8772db2dbd5818103c8556dc98ff161fcf07b1e815760b"
+      },
+      "GoLean/GoCore/RecoveryCallEntry.lean": {
+        "old": null,
+        "new": "243bcef842fd08797813bfbeb8e6c1751dccb470b36687b7ced9c9c87fb647b0"
+      },
+      "GoLean/GoCore/RecoveryControl.lean": {
+        "old": null,
+        "new": "c7c354b0be44d62cced1f15b969c9a33c17cc550aecbfb604123af9172840cba"
+      },
+      "GoLean/GoCore/RecoveryControlData.lean": {
+        "old": null,
+        "new": "710d414ced4dc9c8a7c6ad0462a57da8bda1ca5f85675eaddca801fb96bf5af7"
+      },
+      "GoLean/GoCore/RecoveryControlHelpers.lean": {
+        "old": null,
+        "new": "a5a2e01b607a32126902951339c553b15a0568679d81aa5a1537a04f5be68dc5"
+      },
+      "GoLean/GoCore/RecoveryControlMono.lean": {
+        "old": null,
+        "new": "500f9378b703df5528345402b6d58bb177c0d1b66765941b3d39255d171cad6e"
+      },
+      "GoLean/GoCore/RecoveryDelivery.lean": {
+        "old": null,
+        "new": "575cbc32cbb45f9906e6bd091ed6f1f0cb21564f033c8c1c3f08299c56585fee"
+      },
+      "GoLean/GoCore/RecoveryExpressionProgress.lean": {
+        "old": null,
+        "new": "21f9a76f79645d7e822c155aad4e7c11f2e40abc91f6bb508655c27630d05f58"
+      },
+      "GoLean/GoCore/RecoveryFrameProgress.lean": {
+        "old": null,
+        "new": "7e4382c929e4f81e08b4f45f8ef32e30e039e12ca68c0e39e9b7234aed6aa7ff"
+      },
+      "GoLean/GoCore/RecoveryInitialization.lean": {
+        "old": null,
+        "new": "574092e494fc704702101c99e6c46b467ea12bdafb330f713291e7143fd474c6"
+      },
+      "GoLean/GoCore/RecoveryInvariant.lean": {
+        "old": null,
+        "new": "a71574c21fcdb6ac872e07dd3f828536d06ce51a86ab6c8f9b00c1a35a077d46"
+      },
+      "GoLean/GoCore/RecoveryObservation.lean": {
+        "old": null,
+        "new": "25153a32b0184e6ed09f56f13540ba5ca909763c8ebe87fdc3313ab32eecc670"
+      },
+      "GoLean/GoCore/RecoveryPanicProgress.lean": {
+        "old": null,
+        "new": "b7fa027394b53d60ff68438d403d10aa19cfb0d6bfbd82923702bd37257c1245"
+      },
+      "GoLean/GoCore/RecoveryResultRoots.lean": {
+        "old": null,
+        "new": "c0b71818ffe90a6dcace26867048836f213b216f388db8c00929af8d2513fbdb"
+      },
+      "GoLean/GoCore/RecoverySetup.lean": {
+        "old": null,
+        "new": "d3d97a9ddb3f1b968c2c226cb973af205bd25e783e2bb6d30ba71aecc855fef1"
+      },
+      "GoLean/GoCore/RecoverySetupReadout.lean": {
+        "old": null,
+        "new": "3ca56702d9378277c0668f4835752b77d96814a40cb7c3c8a2bc51368a802a28"
+      },
+      "GoLean/GoCore/RecoverySetupShape.lean": {
+        "old": null,
+        "new": "90d58331e62508d6144a49100eb0810f308dd23af8661ac5ce8428cd7d170eab"
+      },
+      "GoLean/GoCore/RecoverySetupWf.lean": {
+        "old": null,
+        "new": "c603f015a6d2c096832ce4431458bcd2fe39886cde854457bf495a8671c95a0f"
+      },
+      "GoLean/GoCore/RecoveryStatementProgress.lean": {
+        "old": null,
+        "new": "1f14577e1f3d2def2e9636e67be40a5ddbfbb5ea3196da7532f652eb45f2a609"
+      },
+      "GoLean/GoCore/RecoverySuccessfulRuns.lean": {
+        "old": null,
+        "new": "853cf53c2994924ffedaedd4e3f8404201e8770d799a277ee4539f7194dbc466"
+      },
+      "GoLean/GoCore/RecoveryValueBasic.lean": {
+        "old": null,
+        "new": "d14c79064ad69303093374e5b88380efcf14060f96714550503dc2fe010cee32"
+      },
+      "GoLean/GoCore/RecoveryValueCalls.lean": {
+        "old": null,
+        "new": "92fdb6e6fe06283df2c802b2e11d58eb1498e21a659712a0ad3def4e3e32b1e5"
+      },
+      "GoLean/GoCore/RecoveryWalk.lean": {
+        "old": null,
+        "new": "49f4da47580f6f91dc32d57a8f537233cbd44751c63cf68e62ec229863a497b3"
+      },
+      "GoLean/Interface.lean": {
+        "old": "8971bc3b8a8b2d056e13c228e162ac01afd94345e6c4f62af715c5c67e80bec0",
+        "new": "3d3c084cc7018f8bc4c215a7c53e10f58a82c54c4bd1aab0e7afef6e26de13a2"
+      },
+      "Tests/InterfaceAudit.lean": {
+        "old": "5ad61e7c333ef1d20472a3e98a9e8fe723f1e3a1b94523ebfb096214f743221d",
+        "new": "51aaeb341136bd59f0bd7e24d65eda098a99a09d055a23d9b499a613fc32837d"
+      },
+      "lakefile.toml": {
+        "old": "5d9e0399adcadf2d1485b300170abc9ed521c322cc10dfa06dc3d86836f0914e",
+        "new": "7fdccc5ddac58bcd7fd012604dfe6de902be6348a839e3dcd9601e094baf3f8f"
+      },
+      "scripts/check-interface": {
+        "old": "76965102fbfb1da91d709ccfc43817f4a415a932756e974e77f1a2f96156db95",
+        "new": "8030999942451a0feb0c973cb5e863ac8c0d27c9648eb37c5f37d1c11dafff7e"
+      },
+      "scripts/check-interface.py": {
+        "old": "e9fd46d756f0853f892b5e6ca48a9b1c7ef96f453b8c7c1c7942b16bbf96747a",
+        "new": "e05a9468c862c4b5c77d1ce5cb74d53298da0d084d8af8cd7192722450071e8e"
+      },
+      "scripts/check-string-members.py": {
+        "old": "e10a593a6e69a2be162241d3a2e296169c571f7725abea18d09729eea6a86659",
+        "new": "312c402e22d3421a1e5de4c0a422e68c9a82a0d4967760b86cfecc033f3cc9d0"
+      },
+      "scripts/ci": {
+        "old": "620e8b1f1251873bc3d054d03aae9d83b2a5bf853b5a80ae2d935da8ba0727a9",
+        "new": "763cfb020f5ed5545e3460513d16c760525e654c37107f6f526ba34d5044dd99"
+      },
+      "tools/check_string_member_fixtures.py": {
+        "old": null,
+        "new": "6845e0f3a78d26a1c1d70f95c9c0aa81dfcd8e9e9b21aa09d146a537ae601d38"
+      },
+      "tools/string_member.py": {
+        "old": "4ceb89dc55c8810bf227e5110e78af5591977e5708a55931c12b80a3269d604c",
+        "new": "8cb358b99566ab3f1224eda05c791d5868ede7ad1a6185b4c1694a92b4849900"
+      },
+      "tools/string_member_runner.py": {
+        "old": "b29a62c5ae7ce31bbfb1169331038fa8d9683828c4bc177e8657f9b0edd322a1",
+        "new": "6de377bb1a70d96bd6d66b4e018063a9a8d5a084964ed6c2041b9ca6184ce65d"
+      }
+    }
+  }
+]

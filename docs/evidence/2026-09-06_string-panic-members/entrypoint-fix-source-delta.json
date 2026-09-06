@@ -1,0 +1,62 @@
+{
+  "GoLean.lean": {
+    "old": null,
+    "new": "ac3abf7741a51eae51d71a68574547fd3b8236b9734b19fce2fccf0df56b4118"
+  },
+  "Main.lean": {
+    "old": null,
+    "new": "3183fcfae553db4e5d34e3678d6f036e54894657b4505126b78759fd8925dcbb"
+  },
+  "baselines/string-members/panic-recover/repanic-same-value-abort.json": {
+    "old": "264e659d89e6eb8c34bbded92d3abd1367a340fa9622185dd4a510317a702a94",
+    "new": "2d707903cdd9dacc34416c741b20e087951efac0a1be3daaeac3500d80f7d8d1"
+  },
+  "baselines/string-members/panic-recover/string-members/controls.json": {
+    "old": "f34daf520663e4a9c2c172fff8d294868c909342a009df4f3d9a97e27b1ae30f",
+    "new": "da54edd6482ea6eec78c1b7ec45b1df224804dc040802f4c3ff3ea3192c58d5b"
+  },
+  "baselines/string-members/panic-recover/string-members/equal.json": {
+    "old": "92951fb27a3a8a354e29e0513bbfad84c6d989697fb0a62d78ac2b388d9ae750",
+    "new": "8f8abae3a44ccefc5650425a8cb8d8440fa6202ca853102f3be48c9f47b3ebe7"
+  },
+  "baselines/string-members/panic-recover/string-members/invalid-after-lf.json": {
+    "old": "857ded38a16252ce94dae530fb1c03a98489622b029b4a7b50fafcffd5322ce5",
+    "new": "073673615e5695c29ca6fdb40c643a3f7b711b8840e819c2b78d20b88ebba372"
+  },
+  "baselines/string-members/panic-recover/string-members/invalid-before-lf.json": {
+    "old": "d3463265e31315a3003bae085b22c3e0af442ce6023dfa0ff66399aa5b386105",
+    "new": "d5d1bc5cbd8048a6e1f456dbae19803048a18c06310dbf1a670f741985538e00"
+  },
+  "baselines/string-members/panic-recover/string-members/invalid-recovered.json": {
+    "old": "7f870886e6f9b6accc6b2c53e5c397a683e29f1e4a084819b9a6f60aaa85d6ab",
+    "new": "1af7ec769bdeea5813399d354fb9de39b306dca7bd32642b5363118fe7180896"
+  },
+  "baselines/string-members/panic-recover/string-members/multiple.json": {
+    "old": "3ee47a7b42d1644b3e324aa06213e64742529fb45da4a20373d6133642b7ca04",
+    "new": "46ae1f970180ce1d1e3c0bca486a0e6a38fbef507744e503e2cc137ed6d20a0f"
+  },
+  "baselines/string-members/panic-recover/string-members/unequal.json": {
+    "old": "918a12e55c16bfaf63a328e7bf0853370defb0a67e4e1ced93d71f3f56d86ac4",
+    "new": "1fbcc7213585e9d276b43c5c3f1f16f7db1c322640f8187caeff3406739202f4"
+  },
+  "baselines/string-members/panic-recover/string-members/unicode.json": {
+    "old": "a3c8d3401682e5ec8f68f87a1d986183dab003d6489a6c0d45d3b488f5a3a8be",
+    "new": "f024915abc66b4b3ded2c1f63ed3fa1524f6d19ce62850af08fb5933f3d029ae"
+  },
+  "docs/2026-09-06_string-panic-member-implementation.md": {
+    "old": "41c4b9b2e382bfc295ebb0d31913817dc0ed60f7a94cab0a1259aa7d20883eba",
+    "new": "580a68f0800ef7728d5b49852c71782c657ebb60118dc2e627b4e966bc6c11c0"
+  },
+  "scripts/check-string-members.py": {
+    "old": "312c402e22d3421a1e5de4c0a422e68c9a82a0d4967760b86cfecc033f3cc9d0",
+    "new": "c37389544c1fcd77a50f0d8513c069c486d09ebdcc5edebf8b23067a15a9154e"
+  },
+  "tools/string_member.py": {
+    "old": "8cb358b99566ab3f1224eda05c791d5868ede7ad1a6185b4c1694a92b4849900",
+    "new": "0acd70d09b07186218004aa009a536680ce7694ba236e431b8a277ffb1002dfb"
+  },
+  "tools/test_string_member.py": {
+    "old": "b4834bfa15d74d9af2a381966cda7eff060cd46d418c5870431662cc601cf83c",
+    "new": "21576d57f4b6e3bf04bb891448487ce810ca6766be16f6ca2256f7e5a714e6f2"
+  }
+}

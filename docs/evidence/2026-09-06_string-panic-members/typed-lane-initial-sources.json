@@ -1,0 +1,14 @@
+{
+  "baselines/string-members/panic-recover/string-members/controls.json": "bf0477fc08b2445b334fbcdd9400f4bd3318ba802edc98750c3a0320db67c9ab",
+  "baselines/string-members/panic-recover/string-members/equal.json": "4f231fad73d698e17f5d902c0b0733c233d50e9a68c33f2218fb86f33b771e67",
+  "baselines/string-members/panic-recover/string-members/invalid-after-lf.json": "6388df1dfaf9a0de4fd1e827266b8c407b320bbc475f10b3752405cf7ece3f5e",
+  "baselines/string-members/panic-recover/string-members/invalid-before-lf.json": "64c2bba68ecf01be34174b3932264051d99725b05e08a914b84fcfcf972ef081",
+  "baselines/string-members/panic-recover/string-members/invalid-recovered.json": "249924d12eb9a12e7d35d3a08bb06f2db43c49768be8f765895246c428c248a0",
+  "baselines/string-members/panic-recover/string-members/multiple.json": "482f6920ad2f969983936aed01f03421fe0862dfd9cca187323fc2fb21c17484",
+  "baselines/string-members/panic-recover/string-members/unequal.json": "d293a6feb4016115658c4c6d16d5ff0b744ec7ce1a4c4897d44f8b4390e98f51",
+  "baselines/string-members/panic-recover/string-members/unicode.json": "8424286f1d5df4a8666c449623f6277cba55dbcf40ac58ea2b075d436188f2ec",
+  "Corpus/controls/string-members/explicit/controls.go": "3bc20a7c4b8704a0e718dd1f614e469a7313518d26cb666e2e555758e15c53f5",
+  "Corpus/controls/string-members/explicit/main.go": "ce78507645f5fa7c3bde4f7ef4b1667d7091addba15f17611647ad17d97d5cbe",
+  "Corpus/coverage/exec/panic-recover/string-members/cases.tsv": "d34c8ce6afc38f21923f2a38ccf8bfce4ad64cfb1879e2cb30013ed328742332",
+  "Corpus/coverage/exec/panic-recover/string-members/main.go": "ce78507645f5fa7c3bde4f7ef4b1667d7091addba15f17611647ad17d97d5cbe"
+}

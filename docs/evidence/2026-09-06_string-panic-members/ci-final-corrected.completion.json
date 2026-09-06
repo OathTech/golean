@@ -1,0 +1,7 @@
+{
+  "CI_terminal_result": "PASS",
+  "tracked_process_pid": 4032452,
+  "tracked_process_complete": true,
+  "result_basis": "CI final summary after tracked process completion. Original tool supervisor exit status not recovered because session id was omitted from forwarded output.",
+  "log": "docs/evidence/2026-09-06_string-panic-members/ci-final-corrected.log"
+}

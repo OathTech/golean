@@ -1,0 +1,43 @@
+{
+  "status": "COMPLETE R1 lane \u2014 independently accepted184 source and reviewed baseline/BUGS/coverage disposition; corrected ordinary CI PASS; ready for root/O2 integration",
+  "branch": "typed-string-members",
+  "head": "implementation commit containing this finalized record; validation parent91efd4ca",
+  "source_inventory": "production-candidate-source-v3.json",
+  "frozen_inputs": 184,
+  "frozen_inputs_unchanged": true,
+  "build": "PASS, 180 jobs",
+  "focused": "9/9 PASS; 8 typed + 1 broader historical; 13 controls per case; actual plain/race Go; 4 model streams",
+  "interface": "PASS; 128 required exports, 15113 constants, 28 compiled poison refusals",
+  "apparatus": "PASS; 6 raw cases, 2 fuel erasures, 9 semantic Go mutations, 4 capture/exit refusals, 6 manifest bypass refusals, 4 compiled Go helper + 11 compiled Python checker mutations including6 local input omission mutants",
+  "active_gate_command": null,
+  "reviewer": "Apparatus d59b4ab1; model/Go fidelity75da9338; baseline/ledger8e8bca46; corrective Cases review2094de72: all accepted and integrated.",
+  "baseline": "Exact independently accepted baseline59e06585\u2026 /BUGSae93d205\u2026 /language6f2ba690\u2026 applied;3635=3391PASS/244FAIL,8bornPASS+1historicalPASS only.",
+  "next": [
+    "root integrates sealed R1 implementation commit",
+    "recovery terminal lane reconciles4renderer/test inputs and closes generic O2/customer bridge",
+    "root refreshes apparatus_sources at reviewed unions and completes final sprint gates"
+  ],
+  "pending_external_integration": "recovery terminal lane owns generic O2 admission-to-terminal theorem; root owns final sprint integration",
+  "preservation": "snapshot ref + stash63593b8b + hashed77file archive retained; no main merge or push",
+  "apparatus_sources": 160,
+  "superseded_CI_runs": {
+    "31693": "exit143; original178source; before fullcorpus",
+    "49684": "exit143; v2 180source; before fullcorpus"
+  },
+  "active_exec_session": null,
+  "active_gate_log": "ci-final-corrected.log",
+  "full_result": "3635 =3391 PASS/244 existing FAIL; exactly9 expected changes;394negative PASS; no other status/stage drift or omission",
+  "future_conformance_environment": {
+    "GOLEAN_COVERAGE_JOBS": "2",
+    "GOLEAN_MEM_MAX": "16G",
+    "LEAN_NUM_THREADS": "3"
+  },
+  "final_source_inventory": "final-source-inventory.json",
+  "final_source_inputs": 3882,
+  "active_process_pid": null,
+  "completion_monitor_exec_session": null,
+  "validation_head": "91efd4cad5efa3843e61cc340657ac6659b69f28",
+  "final_gate": "PASS, all required checks; exact cached3635/394 records;202eval;0HIGH,3existing report-only medium findings",
+  "final_record": "FINAL.md",
+  "final_verification": "final-verification.json"
+}

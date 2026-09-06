@@ -1,0 +1,10 @@
+{
+  "review_commit": "8e8bca46",
+  "status": "Applied exact independently accepted bytes",
+  "targets": {
+    "baselines/native-full.tsv": "59e065858e82a04239bb53b32cdfc32bb22863165fa0cfd95276fa543b7b250a",
+    "docs/BUGS.md": "c8b820795d312b69f5137c5d634dbb3617ea1e4acedaa902171b20a55ddfeddc",
+    "docs/language-coverage-ledger.md": "6f2ba690c75253f2917d32f88a63ee9ffe7ad9cb0d3704f807f436f3d2335f58"
+  },
+  "frozen184_unchanged": true
+}

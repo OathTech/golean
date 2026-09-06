@@ -1,0 +1,26 @@
+{
+  "command": [
+    "scripts/capped",
+    "scripts/coverage",
+    "run",
+    "--id",
+    "panic-recover/string-members/equal",
+    "--id",
+    "panic-recover/string-members/unequal",
+    "--id",
+    "panic-recover/string-members/multiple",
+    "--id",
+    "panic-recover/string-members/invalid-before-lf",
+    "--id",
+    "panic-recover/string-members/invalid-after-lf",
+    "--id",
+    "panic-recover/string-members/invalid-recovered",
+    "--id",
+    "panic-recover/string-members/unicode",
+    "--id",
+    "panic-recover/string-members/controls",
+    "--id",
+    "panic-recover/repanic-same-value-abort"
+  ],
+  "initial_selection_error": "mixed --prefix and --id filters intersected, selecting zero cases; no verdict counted"
+}
