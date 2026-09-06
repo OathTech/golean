@@ -1,0 +1,49 @@
+90d58331e62508d6144a49100eb0810f308dd23af8661ac5ce8428cd7d170eab  GoLean/GoCore/RecoverySetupShape.lean
+574092e494fc704702101c99e6c46b467ea12bdafb330f713291e7143fd474c6  GoLean/GoCore/RecoveryInitialization.lean
+c0b71818ffe90a6dcace26867048836f213b216f388db8c00929af8d2513fbdb  GoLean/GoCore/RecoveryResultRoots.lean
+d3d97a9ddb3f1b968c2c226cb973af205bd25e783e2bb6d30ba71aecc855fef1  GoLean/GoCore/RecoverySetup.lean
+c603f015a6d2c096832ce4431458bcd2fe39886cde854457bf495a8671c95a0f  GoLean/GoCore/RecoverySetupWf.lean
+3ca56702d9378277c0668f4835752b77d96814a40cb7c3c8a2bc51368a802a28  GoLean/GoCore/RecoverySetupReadout.lean
+243bcef842fd08797813bfbeb8e6c1751dccb470b36687b7ced9c9c87fb647b0  GoLean/GoCore/RecoveryCallEntry.lean
+15ae482069b5ad559dee30db4734698f8d2fa8255889d63a0b94a2fa05e57245  Tests/RecoverySetup.lean
+6cb7144dae66a658338ce1935b274d9f8385da156f36e01b4869f15b6b345407  Tests/RecoverySetupAudit.lean
+✔ [33/41] Built GoLean.GoCore.RecoverySetupShape (416ms)
+✔ [34/41] Built GoLean.GoCore.RecoveryInitialization (217ms)
+✔ [35/41] Built GoLean.GoCore.RecoverySetup (323ms)
+✔ [36/41] Built GoLean.GoCore.RecoverySetupWf (245ms)
+✔ [37/41] Built GoLean.GoCore.RecoverySetupReadout (294ms)
+✔ [38/41] Built GoLean.GoCore.RecoveryCallEntry (327ms)
+✔ [39/41] Built Tests.RecoverySetup (12s)
+✔ [40/41] Built Tests.RecoverySetupAudit (760ms)
+Build completed successfully (41 jobs).
+Recovery setup fresh elaboration: GoLean/GoCore/RecoverySetupShape.lean
+Recovery setup fresh elaboration: GoLean/GoCore/RecoveryInitialization.lean
+Recovery setup fresh elaboration: GoLean/GoCore/RecoveryResultRoots.lean
+Recovery setup fresh elaboration: GoLean/GoCore/RecoverySetup.lean
+Recovery setup fresh elaboration: GoLean/GoCore/RecoverySetupWf.lean
+Recovery setup fresh elaboration: GoLean/GoCore/RecoverySetupReadout.lean
+Recovery setup fresh elaboration: GoLean/GoCore/RecoveryCallEntry.lean
+Recovery setup fresh elaboration: Tests/RecoverySetup.lean
+Recovery setup fresh elaboration: Tests/RecoverySetupAudit.lean
+Recovery setup audit scratch retained: /home/dev/projects/golean/.tmp/recovery-setup-audit-xq_eps94
+Recovery setup audit: 37 required theorems present; 11241 constants checked across all imported local modules (classical trio only)
+/home/dev/projects/golean/.tmp/recovery-setup-audit-xq_eps94/AuditAll.lean:2:0: error: Recovery setup audit: _private.GoLean.GoCore.RecoverySetupShape.0.recoverySetupHole depends on forbidden axiom _private.GoLean.GoCore.RecoverySetupShape.0.recoverySetupHole
+Recovery setup negative audit: RecoverySetupShape compiled then rejected (recoverySetupHole)
+/home/dev/projects/golean/.tmp/recovery-setup-audit-xq_eps94/AuditAll.lean:2:0: error: Recovery setup audit: _private.GoLean.GoCore.RecoveryInitialization.0.recoverySetupHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryInitialization.0.recoverySetupHole
+Recovery setup negative audit: RecoveryInitialization compiled then rejected (recoverySetupHole)
+/home/dev/projects/golean/.tmp/recovery-setup-audit-xq_eps94/AuditAll.lean:2:0: error: Recovery setup audit: _private.GoLean.GoCore.RecoveryResultRoots.0.recoverySetupHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryResultRoots.0.recoverySetupHole
+Recovery setup negative audit: RecoveryResultRoots compiled then rejected (recoverySetupHole)
+/home/dev/projects/golean/.tmp/recovery-setup-audit-xq_eps94/AuditAll.lean:2:0: error: Recovery setup audit: _private.GoLean.GoCore.RecoverySetup.0.recoverySetupHole depends on forbidden axiom _private.GoLean.GoCore.RecoverySetup.0.recoverySetupHole
+Recovery setup negative audit: RecoverySetup compiled then rejected (recoverySetupHole)
+/home/dev/projects/golean/.tmp/recovery-setup-audit-xq_eps94/AuditAll.lean:2:0: error: Recovery setup audit: _private.GoLean.GoCore.RecoverySetupWf.0.recoverySetupHole depends on forbidden axiom _private.GoLean.GoCore.RecoverySetupWf.0.recoverySetupHole
+Recovery setup negative audit: RecoverySetupWf compiled then rejected (recoverySetupHole)
+/home/dev/projects/golean/.tmp/recovery-setup-audit-xq_eps94/AuditAll.lean:2:0: error: Recovery setup audit: _private.GoLean.GoCore.RecoverySetupReadout.0.recoverySetupHole depends on forbidden axiom _private.GoLean.GoCore.RecoverySetupReadout.0.recoverySetupHole
+Recovery setup negative audit: RecoverySetupReadout compiled then rejected (recoverySetupHole)
+/home/dev/projects/golean/.tmp/recovery-setup-audit-xq_eps94/AuditAll.lean:2:0: error: Recovery setup audit: _private.GoLean.GoCore.RecoveryCallEntry.0.recoverySetupHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryCallEntry.0.recoverySetupHole
+Recovery setup negative audit: RecoveryCallEntry compiled then rejected (recoverySetupHole)
+/home/dev/projects/golean/.tmp/recovery-setup-audit-xq_eps94/AuditAll.lean:2:0: error: Recovery setup audit: _private.Tests.RecoverySetupAudit.0.recoverySetupAuditHole depends on forbidden axiom _private.Tests.RecoverySetupAudit.0.recoverySetupAuditHole
+Recovery setup negative audit: audit_private compiled then rejected (recoverySetupAuditHole)
+/home/dev/projects/golean/.tmp/recovery-setup-audit-xq_eps94/test_trailing/Tests/RecoverySetup.lean:167:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.tmp/recovery-setup-audit-xq_eps94/AuditAll.lean:2:0: error: Recovery setup audit: _private.Tests.RecoverySetup.0.recoverySetupTrailingHole depends on forbidden axiom sorryAx
+Recovery setup negative audit: test_trailing compiled then rejected (sorryAx)
+Recovery actual entry/setup gate: PASS

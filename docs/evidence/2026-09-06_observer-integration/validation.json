@@ -1,0 +1,96 @@
+{
+  "source_inputs_revalidated": 3844,
+  "full": {
+    "cases": 3627,
+    "counts": {
+      "PASS": 3382,
+      "FAIL": 245
+    },
+    "unique_complete_inventory": true,
+    "manifest_sha_matches_original_metadata": true,
+    "baseline_status_and_allowed_stage_match": true
+  },
+  "negative": {
+    "cases": 394,
+    "counts": {
+      "PASS": 394
+    },
+    "unique_complete_inventory": true,
+    "manifest_sha_matches_original_metadata": true,
+    "baseline_status_and_allowed_stage_match": true
+  },
+  "reviewed_classifier_delta": {
+    "new": {
+      "panic-recover/panic-markers/deadlock-literal": {
+        "result": "PASS",
+        "id": "panic-recover/panic-markers/deadlock-literal",
+        "stage": "-"
+      },
+      "panic-recover/panic-markers/fake-trace": {
+        "result": "PASS",
+        "id": "panic-recover/panic-markers/fake-trace",
+        "stage": "-"
+      },
+      "panic-recover/panic-markers/first-line": {
+        "result": "PASS",
+        "id": "panic-recover/panic-markers/first-line",
+        "stage": "-"
+      },
+      "panic-recover/panic-markers/glued-output": {
+        "result": "PASS",
+        "id": "panic-recover/panic-markers/glued-output",
+        "stage": "-"
+      },
+      "panic-recover/panic-markers/literal-continuation": {
+        "result": "PASS",
+        "id": "panic-recover/panic-markers/literal-continuation",
+        "stage": "-"
+      },
+      "panic-recover/panic-markers/mixed-line": {
+        "result": "PASS",
+        "id": "panic-recover/panic-markers/mixed-line",
+        "stage": "-"
+      },
+      "panic-recover/panic-markers/nil-go-literal": {
+        "result": "PASS",
+        "id": "panic-recover/panic-markers/nil-go-literal",
+        "stage": "-"
+      },
+      "panic-recover/panic-markers/output-line": {
+        "result": "PASS",
+        "id": "panic-recover/panic-markers/output-line",
+        "stage": "-"
+      },
+      "panic-recover/panic-markers/output-midline": {
+        "result": "PASS",
+        "id": "panic-recover/panic-markers/output-midline",
+        "stage": "-"
+      },
+      "panic-recover/panic-markers/printed-continuation": {
+        "result": "PASS",
+        "id": "panic-recover/panic-markers/printed-continuation",
+        "stage": "-"
+      },
+      "panic-recover/panic-markers/printed-trace": {
+        "result": "PASS",
+        "id": "panic-recover/panic-markers/printed-trace",
+        "stage": "-"
+      }
+    },
+    "removed": [],
+    "changed": {
+      "sync/mutex-unlock-fatal/during-panic-unwind": {
+        "before": {
+          "result": "PASS",
+          "id": "sync/mutex-unlock-fatal/during-panic-unwind",
+          "stage": "-"
+        },
+        "after": {
+          "result": "FAIL",
+          "id": "sync/mutex-unlock-fatal/during-panic-unwind",
+          "stage": "go-observation"
+        }
+      }
+    }
+  }
+}

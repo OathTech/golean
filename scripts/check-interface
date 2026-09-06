@@ -16,6 +16,22 @@ for module in GoLean/GoCore/Trace GoLean/GoCore/PoolTrace GoLean/GoCore/ProgramT
     GoLean/GoCore/RecoveryGraph GoLean/GoCore/RecoveryDiagnostics \
     GoLean/GoCore/RecoveryAdmission Tests/RecoveryTyping Tests/RecoveryDiagnosticControls \
     Tests/RecoveryTypingFixture Tests/RecoveryA2Artifact Tests/RecoveryTypingAudit \
+    GoLean/GoCore/RecoveryStore GoLean/GoCore/RecoveryEnvironment \
+    GoLean/GoCore/RecoveryAllocation GoLean/GoCore/RecoveryOperators \
+    GoLean/GoCore/RecoveryContext GoLean/GoCore/RecoveryControlTyping \
+    GoLean/GoCore/RecoverySetupShape GoLean/GoCore/RecoveryInitialization \
+    GoLean/GoCore/RecoveryResultRoots GoLean/GoCore/RecoverySetup \
+    GoLean/GoCore/RecoverySetupWf GoLean/GoCore/RecoverySetupReadout \
+    GoLean/GoCore/RecoveryCallEntry Tests/RecoveryStorage Tests/RecoveryStorageAudit \
+    Tests/RecoverySetup Tests/RecoverySetupAudit \
+    GoLean/GoCore/RecoveryDelivery GoLean/GoCore/RecoveryControlData \
+    GoLean/GoCore/RecoveryControl GoLean/GoCore/RecoveryControlMono \
+    GoLean/GoCore/RecoveryWalk GoLean/GoCore/RecoveryExpressionProgress \
+    GoLean/GoCore/RecoveryControlHelpers GoLean/GoCore/RecoveryCallControl \
+    GoLean/GoCore/RecoveryValueBasic GoLean/GoCore/RecoveryValueCalls \
+    GoLean/GoCore/RecoveryStatementProgress GoLean/GoCore/RecoveryFrameProgress \
+    GoLean/GoCore/RecoveryPanicProgress GoLean/GoCore/RecoveryInvariant \
+    GoLean/GoCore/RecoverySuccessfulRuns Tests/RecoveryInvariant Tests/RecoveryControlAudit \
     GoLean/Interface Tests/PanicRendering Tests/InterfaceContract Tests/BooleanRuntime \
     Tests/BooleanProgram Tests/InterfaceAudit; do
   "$ROOT/scripts/capped" lake env lean "$module.lean"

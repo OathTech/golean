@@ -1,0 +1,8 @@
+[
+  "GoLean/GoCore/AbortObservation.lean",
+  "GoLean/GoCore/RecoveryObservation.lean",
+  "GoLean/GoCore/RecoveryPoolObservation.lean",
+  "GoLean/GoCore/RecoveryProgramObservation.lean",
+  "Tests/AbortObservation.lean",
+  "Tests/AbortObservationAudit.lean"
+]

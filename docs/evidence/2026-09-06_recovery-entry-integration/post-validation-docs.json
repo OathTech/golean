@@ -1,0 +1,5 @@
+{
+  "path": "docs/2026-09-06_recovery-entry-contract.md",
+  "sha256": "3260b6b00a8691e116ba6269bdadc200d092618c24a53c4e8d7f779827bc9592",
+  "change": "Updated promotion status after terminal CI and native/spike validation; reviewed code inputs unchanged."
+}

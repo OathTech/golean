@@ -1,0 +1,41 @@
+GoLean/GoCore/RecoverySetupReadout.lean:14:45: error: unsolved goals
+p : Program
+f : Func
+args results : List GoValue
+hlen : args.length = f.args.size
+i : Nat
+hi : i < args.length
+hleft : i < (parameterCells f.args.toList args).length
+⊢ (match f.args[i]?, some args[i] with
+    | some a, some b => some (HeapCell.value a.typ b)
+    | x, x_1 => none) =
+    some (HeapCell.value f.args[i].typ args[i])
+GoLean/GoCore/RecoverySetupReadout.lean:17:6: warning: This simp argument is unused:
+  Array.getElem?_eq_getElem (by omega)
+
+Hint: Omit it from the simp argument list.
+  simp [parameterCells, List.getElem?_zipWith, List.getElem?_eq_getElem hi,̵
+  ̵ ̵ ̵ ̵ ̵ ̵ ̵A̵r̵r̵a̵y̵.̵g̵e̵t̵E̵l̵e̵m̵?̵_̵e̵q̵_̵g̵e̵t̵E̵l̵e̵m̵ ̵(̵b̵y̵ ̵o̵m̵e̵g̵a̵)̵]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+GoLean/GoCore/RecoverySetupReadout.lean:29:51: error: unsolved goals
+p : Program
+f : Func
+args results : List GoValue
+ha : args.length = f.args.size
+hr : results.length = f.results.size
+i : Nat
+hi : i < results.length
+hsize : (parameterCells f.args.toList args).length = f.args.size
+⊢ (match f.results[i]?, some results[i] with
+    | some a, some b => some (HeapCell.value a.typ b)
+    | x, x_1 => none) =
+    some (HeapCell.value f.results[i].typ results[i])
+GoLean/GoCore/RecoverySetupReadout.lean:32:6: warning: This simp argument is unused:
+  Array.getElem?_eq_getElem (by omega)
+
+Hint: Omit it from the simp argument list.
+  simp [parameterCells, List.getElem?_zipWith, List.getElem?_eq_getElem hi,̵
+  ̵ ̵ ̵ ̵ ̵ ̵ ̵A̵r̵r̵a̵y̵.̵g̵e̵t̵E̵l̵e̵m̵?̵_̵e̵q̵_̵g̵e̵t̵E̵l̵e̵m̵ ̵(̵b̵y̵ ̵o̵m̵e̵g̵a̵)̵]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`

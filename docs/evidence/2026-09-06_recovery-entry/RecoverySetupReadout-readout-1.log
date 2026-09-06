@@ -1,0 +1,117 @@
+GoLean/GoCore/RecoverySetupReadout.lean:9:73: error: unsolved goals
+p : Program
+f : Func
+args results : List GoValue
+hlen : args.length = f.args.size
+i : Nat
+hi : i < args.length
+⊢ (match
+      (List.zipWith (fun p v => HeapCell.value p.typ v) f.args.toList args ++
+          List.zipWith (fun p v => HeapCell.value p.typ v) f.results.toList results)[i]? with
+    | some (HeapCell.value declaredTy v) => Except.ok v
+    | some (HeapCell.mapPayload entries nextId) =>
+      Except.error
+        (Stop.stuck (toString "value load from a map payload cell " ++ toString (repr (Loc.base { id := i }))))
+    | some (HeapCell.chanPayload buf capacity closed) =>
+      Except.error
+        (Stop.stuck (toString "value load from a channel payload cell " ++ toString (repr (Loc.base { id := i }))))
+    | none =>
+      Except.error (Stop.stuck (toString "unbound GoCore heap location: " ++ toString (repr (Loc.base { id := i }))))) =
+    Except.ok args[i]
+GoLean/GoCore/RecoverySetupReadout.lean:10:60: warning: This simp argument is unused:
+  List.getElem?_zipWith
+
+Hint: Omit it from the simp argument list.
+  simp [loadLoc, Heap.lookup, initialState, parameterCells, L̵i̵s̵t̵.̵g̵e̵t̵E̵l̵e̵m̵?̵_̵z̵i̵p̵W̵i̵t̵h̵,̵hi, hlen, List.getElem?_append_left]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+GoLean/GoCore/RecoverySetupReadout.lean:11:4: warning: This simp argument is unused:
+  hi
+
+Hint: Omit it from the simp argument list.
+  simp [loadLoc, Heap.lookup, initialState, parameterCells, List.getElem?_zipWith,
+  ̵  ̵ ̵ ̵hi̵,̵ ̵h̵len,
+  ̲  ̲ ̲ ̲List.getElem?_append_left]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+GoLean/GoCore/RecoverySetupReadout.lean:11:8: warning: This simp argument is unused:
+  hlen
+
+Hint: Omit it from the simp argument list.
+  simp [loadLoc, Heap.lookup, initialState, parameterCells, List.getElem?_zipWith,
+  ̵  ̵ ̵ ̵hi,
+  ̲ h̵l̵e̵n̵,̵  ̲ ̲List.getElem?_append_left]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+GoLean/GoCore/RecoverySetupReadout.lean:11:14: warning: This simp argument is unused:
+  List.getElem?_append_left
+
+Hint: Omit it from the simp argument list.
+  simp [loadLoc, Heap.lookup, initialState, parameterCells, List.getElem?_zipWith, hi, h̵l̵e̵n̵,̵ ̵L̵i̵s̵t̵.̵g̵e̵t̵E̵l̵e̵m̵?̵_̵a̵p̵p̵e̵n̵d̵_̵l̵e̵f̵t̵]̵h̲l̲e̲n̲]̲
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+GoLean/GoCore/RecoverySetupReadout.lean:17:24: error: unsolved goals
+p : Program
+f : Func
+args results : List GoValue
+ha : args.length = f.args.size
+hr : results.length = f.results.size
+i : Nat
+hi : i < results.length
+⊢ (match
+      (List.zipWith (fun p v => HeapCell.value p.typ v) f.args.toList args ++
+          List.zipWith (fun p v => HeapCell.value p.typ v) f.results.toList results)[f.args.size + i]? with
+    | some (HeapCell.value declaredTy v) => Except.ok v
+    | some (HeapCell.mapPayload entries nextId) =>
+      Except.error
+        (Stop.stuck
+          (toString "value load from a map payload cell " ++ toString (repr (Loc.base { id := f.args.size + i }))))
+    | some (HeapCell.chanPayload buf capacity closed) =>
+      Except.error
+        (Stop.stuck
+          (toString "value load from a channel payload cell " ++ toString (repr (Loc.base { id := f.args.size + i }))))
+    | none =>
+      Except.error
+        (Stop.stuck
+          (toString "unbound GoCore heap location: " ++ toString (repr (Loc.base { id := f.args.size + i }))))) =
+    Except.ok results[i]
+GoLean/GoCore/RecoverySetupReadout.lean:18:60: warning: This simp argument is unused:
+  List.getElem?_zipWith
+
+Hint: Omit it from the simp argument list.
+  simp [loadLoc, Heap.lookup, initialState, parameterCells, L̵i̵s̵t̵.̵g̵e̵t̵E̵l̵e̵m̵?̵_̵z̵i̵p̵W̵i̵t̵h̵,̵hi, ha, hr]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+GoLean/GoCore/RecoverySetupReadout.lean:19:4: warning: This simp argument is unused:
+  hi
+
+Hint: Omit it from the simp argument list.
+  simp [loadLoc, Heap.lookup, initialState, parameterCells, List.getElem?_zipWith,
+  ̵  ̵ ̵ ̵hi̵,̵ ̵h̵a, hr]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+GoLean/GoCore/RecoverySetupReadout.lean:19:8: warning: This simp argument is unused:
+  ha
+
+Hint: Omit it from the simp argument list.
+  simp [loadLoc, Heap.lookup, initialState, parameterCells, List.getElem?_zipWith,
+  ̵  ̵ ̵ ̵hi, ha̵,̵ ̵h̵r]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+GoLean/GoCore/RecoverySetupReadout.lean:19:12: warning: This simp argument is unused:
+  hr
+
+Hint: Omit it from the simp argument list.
+  simp [loadLoc, Heap.lookup, initialState, parameterCells, List.getElem?_zipWith,
+  ̵  ̵ ̵ ̵hi, ha,̵ ̵h̵r̵]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+GoLean/GoCore/RecoverySetupReadout.lean:31:4: error: Type mismatch: After simplification, term
+  hr
+ has type
+  loadMany s (List.map (fun i => root (i + 1)) (List.range vs.length)) = Except.ok vs
+but is expected to have type
+  (match loadMany s (List.map (fun x => root (x + 1)) (List.range vs.length)) with
+    | Except.error err => Except.error err
+    | Except.ok v_1 => Except.ok (v :: v_1)) =
+    Except.ok (v :: vs)

@@ -1,0 +1,29 @@
+{
+  "2026-09-06_observer-classification/hybrid-final-source-addendum.json": {
+    "checked": 19,
+    "differences": {
+      "scripts/ci": {
+        "integrated": "57c25da269afe1fc05297e6c42aad23c655b01118c7576c886ee093b02fec132",
+        "reviewed": "51fc83a3fc9d2593af54a25049d3d88371238b33a847aad8329a698d7d23ccf6"
+      }
+    }
+  },
+  "2026-09-06_observer-classification/hybrid-production-sources.json": {
+    "checked": 16,
+    "differences": {
+      "scripts/ci": {
+        "integrated": "57c25da269afe1fc05297e6c42aad23c655b01118c7576c886ee093b02fec132",
+        "reviewed": "51fc83a3fc9d2593af54a25049d3d88371238b33a847aad8329a698d7d23ccf6"
+      }
+    }
+  },
+  "2026-09-06_observer-diagnostic-tools/hybrid-diagnostic-sources.json": {
+    "checked": 16,
+    "differences": {
+      "scripts/ci": {
+        "integrated": "57c25da269afe1fc05297e6c42aad23c655b01118c7576c886ee093b02fec132",
+        "reviewed": "b6300738ab02ef3267bf04ebddf7729016f17e2d26461815d873460b99ed4085"
+      }
+    }
+  }
+}

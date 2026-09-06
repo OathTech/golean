@@ -1,0 +1,20 @@
+{
+  "GoLean/Interface.lean": "9accd8415a6fa866795ba6b41cad74f84e7eab2d91764fd393bef62ac2e776bf",
+  "Tests/InterfaceAudit.lean": "a675ca9505ecff12a150c7b5aea7f31ef4bdffcf1ddc4ac164fb52f569fb76ab",
+  "scripts/check-interface": "52bebc45d97a79c893c4c6b8508b39d62300bb468acb89fb3d93a9e4ef6cad1e",
+  "scripts/check-interface.py": "17fe9b1afbb0548d4ee1990c3b948259354abb02220b1280561ba6c880422876",
+  "tools/recovery-setup-audit.py": "eb4447f4929342f5737d43301160382cd6b69a59668e46bcd361be7795d7ce8f",
+  "docs/2026-09-06_recovery-entry-contract.md": "decb6da34f5ddfff452569960ff5a3c8693ccfafd6e4ffa8d8873e2e89712864",
+  "GoLean/GoCore/RecoverySetupShape.lean": "90d58331e62508d6144a49100eb0810f308dd23af8661ac5ce8428cd7d170eab",
+  "GoLean/GoCore/RecoveryInitialization.lean": "574092e494fc704702101c99e6c46b467ea12bdafb330f713291e7143fd474c6",
+  "GoLean/GoCore/RecoveryResultRoots.lean": "c0b71818ffe90a6dcace26867048836f213b216f388db8c00929af8d2513fbdb",
+  "GoLean/GoCore/RecoverySetup.lean": "d3d97a9ddb3f1b968c2c226cb973af205bd25e783e2bb6d30ba71aecc855fef1",
+  "GoLean/GoCore/RecoverySetupWf.lean": "c603f015a6d2c096832ce4431458bcd2fe39886cde854457bf495a8671c95a0f",
+  "GoLean/GoCore/RecoverySetupReadout.lean": "3ca56702d9378277c0668f4835752b77d96814a40cb7c3c8a2bc51368a802a28",
+  "GoLean/GoCore/RecoveryCallEntry.lean": "243bcef842fd08797813bfbeb8e6c1751dccb470b36687b7ced9c9c87fb647b0",
+  "Tests/RecoverySetup.lean": "15ae482069b5ad559dee30db4734698f8d2fa8255889d63a0b94a2fa05e57245",
+  "Tests/RecoverySetupAudit.lean": "6cb7144dae66a658338ce1935b274d9f8385da156f36e01b4869f15b6b345407",
+  "scripts/check-recovery-setup": "ab3f7b815febbbb6b8a3153273acbda181897ad0291896e0d78c2964e4780175",
+  "lakefile.toml": "07537d7f498d1ff578cd1c2ac5d7962a7d23c9f41f0df0511419ea7db863fb30",
+  "scripts/ci": "8af3cd7a4b265ac4736246374a0c6a1a82fe56372cddc991fdc54d5b21b71545"
+}

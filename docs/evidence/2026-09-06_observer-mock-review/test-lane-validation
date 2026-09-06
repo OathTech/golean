@@ -1,0 +1,905 @@
+#!/usr/bin/env bash
+# Negative tests for the membership-lane shell gates (delta-review T2,
+# 2026-08-05). Repo-wide, shell gates are checked by pre-merge audit, not a
+# tamper-test framework — this script only captures the bad-shape fixtures
+# that were hand-run when the gates landed, so they stay runnable instead of
+# living in commit messages.
+#
+#   Part A (always; pure shell, no build, no go): scripts/coverage-manifest
+#   must REJECT each bad lane row shape (audit F2a + the R2 lane rules) and
+#   ACCEPT the good ones.
+#   Part A2 (always; needs go ON PATH but NO real build — G1/G2 shadow
+#   `lake` with fakes, G3/G4 die before any build; ~2s total): the
+#   gate-integrity no-publish fixtures (G1-G4, grossmith findings §2 +
+#   maint-check M2: infra failures exit 2 and leave no readable
+#   latest.tsv/meta). Hoisted out of --with-go at the channels-arc final
+#   audit (F19, 2026-08-07): these validate exactly the invariant whose
+#   absence produced a wrong-conformance statement in grossmith, and the
+#   fast gate — the one run on every commit — never exercised them. A
+#   missing go FAILS this part rather than skipping it: diff-coverage's
+#   own go check sits BELOW its up-front rm, so without go every fixture
+#   would pass VACUOUSLY (dying at the go check, not the path under test).
+#   Part A4 (always; pure shell): scripts/coverage-baseline-diff's per-row
+#   stage ALTERNATION rules ([USER] ruling (a) 2026-09-03) + check-bugs's
+#   handling of an alternation row (counted by name, never dropped).
+#   Part B (--with-go only; needs go + the built golean binary, so ci runs
+#   it under --diff): scripts/diff-coverage's IN-HARNESS lane checks — the
+#   param re-validation (F4: a sites=0 row that somehow bypasses the
+#   manifest must fail loud, never a zero-oracle pass; F4b: a retired
+#   samples= that bypasses the manifest is refused by name) and the non-native
+#   frontend guard (F6: membership under GOLEAN_FRONTEND != native fails
+#   closed at frontend-export, no native frontend shelled) — plus the
+#   B3-B5 slice-4 lane gates.
+#
+# Exit 0 = all fixtures behave; nonzero = a gate went quiet.
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+
+WITH_GO=0
+[ "${1:-}" = "--with-go" ] && WITH_GO=1
+
+TMP="$(mktemp -d "${TMPDIR:-/tmp}/golean-lane-validation.XXXXXX")"
+trap 'rm -rf "$TMP"' EXIT
+fail=0
+
+CASE_DIR="$TMP/exec/det/case"
+mkdir -p "$CASE_DIR"
+# Any real corpus source with a known subject works as the fixture body.
+cp Corpus/coverage/exec/maps/range-first-key/main.go "$CASE_DIR/main.go"
+
+HDR='# id\tsubject\targs\texpected_status\texpected_reason\tfeatures'
+
+expect_reject() {
+  local name="$1" row="$2" needle="$3" out
+  printf "$HDR\n$row\n" > "$CASE_DIR/cases.tsv"
+  if out="$(scripts/coverage-manifest --exec-root "$TMP/exec" 2>&1 >/dev/null)"; then
+    echo "FAIL: $name: coverage-manifest ACCEPTED a bad lane shape"
+    fail=1
+  elif [[ "$out" != *"$needle"* ]]; then
+    echo "FAIL: $name: rejected, but without the expected message ($needle): $out"
+    fail=1
+  else
+    echo "ok: $name"
+  fi
+}
+
+expect_accept() {
+  local name="$1" row="$2" out
+  printf "$HDR\n$row\n" > "$CASE_DIR/cases.tsv"
+  if out="$(scripts/coverage-manifest --exec-root "$TMP/exec" 2>&1 >/dev/null)"; then
+    echo "ok: $name"
+  else
+    echo "FAIL: $name: coverage-manifest REJECTED a good shape: $out"
+    fail=1
+  fi
+}
+
+# ---- Part A: manifest-level lane validation (the 8 bad shapes hand-run at
+# the lane's landing commit, plus F2a's width requirement).
+expect_reject "membership without why" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\t-\t-' \
+  "requires a why"
+expect_reject "nondet tag on a strict row" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet' \
+  "must declare lane=membership"
+expect_reject "strict row with why text" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tstrict\tsome text\t-' \
+  "must leave why as -"
+expect_reject "unknown param key" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\tbogus=3' \
+  "unknown lane param key"
+expect_reject "invalid lane value" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tfuzzy\t-\t-' \
+  "invalid lane"
+expect_reject "duplicate param key" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16,sites=8,sites=9' \
+  "duplicate lane param key"
+# samples= is RETIRED by the 2026-09-03 sampling rule ([USER]-ruled; the
+# draw budget is K by run mode in scripts/diff-coverage): a row still
+# carrying it is refused BY NAME, not as an unknown key — the refusal
+# says what replaced it.
+expect_reject "retired samples= param (2026-09-03 sampling rule)" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16,samples=1' \
+  "samples= is RETIRED"
+expect_reject "non-positive param value" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=0' \
+  "must be a positive integer"
+expect_reject "membership without the nondet tag" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tmembership\twhy text\twidth=16' \
+  "requires the nondet feature tag"
+# Tiered checking (user directive 2026-08-08; W3.2 stage C widened the
+# tier to the CONFLUENT lane — the certified-singleton record uses the
+# same cached-record discipline): tier is membership/confluent-only and
+# 'slow' is the only tier — the strict direction fails closed at the
+# manifest (the harness re-validates, F4 discipline; its cached path's
+# missing-record/stale-hash refusals are exercised by the tier=slow row
+# itself in the full run).
+expect_reject "tier on a racy row" \
+  '-\trangeFirstKey\t-\trace\t-\tmaps,race\tracy\t-\twidth=4,tier=slow' \
+  "membership/confluent-lane param"
+expect_accept "tier on a confluent row (W3.2 stage C widening)" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tconfluent\twhy text\twidth=4,tier=slow'
+expect_reject "invalid tier value" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=4,tier=fast' \
+  "tier must be 'slow'"
+expect_reject "membership without explicit width (F2a)" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\tsites=8' \
+  "explicit width"
+expect_accept "bare 6-column strict row" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps'
+expect_accept "explicit strict row" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tstrict\t-\t-'
+expect_accept "well-formed membership row" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16'
+# ---- slice-4 lane shapes (confluent / racy / members pin).
+expect_reject "confluent without why" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tconfluent\t-\twidth=4' \
+  "requires a why"
+expect_reject "confluent with the nondet tag" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tconfluent\twhy text\twidth=4' \
+  "must not carry the nondet tag"
+expect_reject "confluent without width" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tconfluent\twhy text\tsites=8' \
+  "explicit width"
+expect_reject "confluent with a members param" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tconfluent\twhy text\twidth=4,members=1' \
+  "no members param"
+expect_reject "racy on a non-race expectation" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tracy\t-\twidth=4' \
+  "requires expected_status race"
+expect_reject "racy without width" \
+  '-\trangeFirstKey\t-\trace\t-\tmaps,race\tracy\t-\t-' \
+  "explicit width"
+expect_reject "race expectation left on the strict lane" \
+  '-\trangeFirstKey\t-\trace\t-\tmaps,race\tstrict\t-\t-' \
+  "must declare lane=racy"
+expect_reject "race expectation on the membership lane" \
+  '-\trangeFirstKey\t-\trace\t-\tmaps,race,nondet\tmembership\twhy text\twidth=4' \
+  "lane=racy"
+expect_accept "well-formed confluent row" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tconfluent\twhy text\twidth=4'
+expect_accept "well-formed racy row" \
+  '-\trangeFirstKey\t-\trace\t-\tmaps,race\tracy\t-\twidth=4'
+expect_accept "membership row with a members pin" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16,members=3'
+# statuses= (status-diverse envelopes, audit F8/BUG-044; fixtures added
+# at the convergence check — the param landed with no self-test):
+expect_reject "statuses on a non-membership lane" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tconfluent\twhy text\twidth=4,statuses=ok+panic' \
+  "membership-lane param"
+expect_reject "statuses malformed entry" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16,statuses=ok+boom' \
+  "+-separated set over {ok,panic}"
+expect_reject "statuses singleton" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16,statuses=ok' \
+  "+-separated set over {ok,panic}"
+expect_reject "statuses missing expected_status" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16,statuses=panic+panic' \
+  "must include the row's expected_status"
+expect_reject "statuses duplicate entry" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16,statuses=ok+ok' \
+  "duplicate entry"
+expect_accept "membership row with a status-diverse envelope" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16,statuses=ok+panic'
+# depth= (strict-lane depth guard, membership-depth memo P1, [USER]-ruled
+# 2026-09-03): the ONLY strict-lane param, a positive integer; a category
+# error on the enumerating lanes.
+expect_accept "strict row declaring depth=N (P1)" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tstrict\t-\tdepth=64'
+expect_reject "strict row with depth=0" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tstrict\t-\tdepth=0' \
+  "may only declare depth="
+expect_reject "strict row with an enumerator param" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tstrict\t-\twidth=4' \
+  "may only declare depth="
+expect_reject "strict row with a why" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tstrict\twhy text\t-' \
+  "must leave why as -"
+expect_reject "depth= on a membership row" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16,depth=64' \
+  "strict-lane param"
+expect_reject "depth= on a confluent row" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tconfluent\twhy text\twidth=4,depth=64' \
+  "strict-lane param"
+
+# ---- Part A3 (always; pure shell): scripts/check-bugs.sh's `Expect: FAIL`
+# assertion for Pinned-by:none red-by-design pins (q-u4-gomem audit fix F4,
+# 2026-09-02). Red-first: a none-entry declaring Expect: FAIL whose case is
+# PASS in the baseline must FAIL the check (5); the same entry with the case
+# FAIL must pass; an unrecognized Expect token must fail closed (0).
+CB="$TMP/check-bugs"; mkdir -p "$CB"
+printf '# t\n' > "$CB/ids"
+printf 'coverage 0\nlatitude 0\nwrong-answer 0\n' > "$CB/ceil"
+cb_bugs() {  # $1 = Expect line (or empty), $2 = case result
+  printf '## BUG-900 — fixture\n\n- Status: fixed\n- Pinned-by: none (fixture)\n%s- Cases: fx/red-by-design\n' "$1" > "$CB/bugs.md"
+  printf 'result\tid\tstage\n%s\tfx/red-by-design\tlean-observation\n' "$2" > "$CB/baseline.tsv"
+}
+cb_run() { CHECK_BUGS_BUGS="$CB/bugs.md" CHECK_BUGS_BASELINE="$CB/baseline.tsv" CHECK_BUGS_IDS="$CB/ids" CHECK_BUGS_CEIL="$CB/ceil" scripts/check-bugs.sh 2>&1; }
+cb_bugs $'- Expect: FAIL\n' FAIL
+if out="$(cb_run)"; then echo "ok: check-bugs Expect: FAIL with a FAIL row passes"; else echo "FAIL: check-bugs rejected a correct Expect: FAIL entry: $out"; fail=1; fi
+cb_bugs $'- Expect: FAIL\n' PASS
+if out="$(cb_run)"; then echo "FAIL: check-bugs ACCEPTED an Expect: FAIL entry whose case is PASS (the F4 guard is quiet)"; fail=1
+elif [[ "$out" != *"FAIL (5)"* ]]; then echo "FAIL: check-bugs rejected, but not via (5): $out"; fail=1
+else echo "ok: check-bugs Expect: FAIL with a PASS row fails (5)"; fi
+cb_bugs "" PASS
+if out="$(cb_run)"; then echo "ok: check-bugs none-entry without Expect stays existence-only"; else echo "FAIL: check-bugs changed the none-entry existence-only rule: $out"; fail=1; fi
+cb_bugs $'- Expect: PASS\n' PASS
+if out="$(cb_run)"; then echo "FAIL: check-bugs ACCEPTED 'Expect: PASS' (must fail closed)"; fail=1
+elif [[ "$out" != *"FAIL (0)"* ]]; then echo "FAIL: check-bugs rejected Expect: PASS, but not via (0): $out"; fail=1
+else echo "ok: check-bugs unrecognized Expect token fails closed (0)"; fi
+
+# ---- Part A4 (always; pure shell): scripts/coverage-baseline-diff's per-row
+# STAGE ALTERNATION ([USER] ruling (a), 2026-09-03 — the guard fix for the
+# oracle-schedule-dependent red channels/select-select/beside-loop, whose
+# stage is `nondet` or `differential` by gc's sample). Red-first on main's
+# script (evidence: docs/evidence/2026-09-03_guard-stage-alt/red-first.txt):
+# (i) a member stage matches; (ii) a non-member stage drifts; (iii) a PASS
+# is never absorbed; (iv) an alternation on a PASS row is REFUSED (exit 2,
+# never "no drift"); (v) an unknown stage word is REFUSED; (vi) a missing
+# `# reason:` line is REFUSED; (vii) plain rows still compare exactly;
+# (viii) a `# reason:` block over a plain row is REFUSED; (ix)
+# scripts/check-alternation-survival (ci re-pin guard): a re-pin that
+# drops an alternation FAILS unless the header names the removal. Then
+# scripts/check-bugs.sh: an alternation row must stay VISIBLE to the
+# fidelity filter (an untracked one fails (4) BY NAME, not by vanishing),
+# and a fidelity/non-fidelity MIX fails (6), as does an EMPTY stage.
+BD="$TMP/baseline-diff"; mkdir -p "$BD"
+bd_base() { printf 'result\tid\tstage\n%s\n' "$1" > "$BD/baseline.tsv"; }
+bd_res()  { printf 'result\tid\tfeatures\tstage\n%s\n' "$1" > "$BD/results.tsv"; }
+bd_expect() {  # $1 name, $2 expected exit, $3 required output text
+  local name="$1" want="$2" needle="$3" out rc=0
+  out="$(scripts/coverage-baseline-diff --baseline "$BD/baseline.tsv" "$BD/results.tsv" 2>&1)" || rc=$?
+  if [ "$rc" -ne "$want" ]; then echo "FAIL: baseline-diff $name: exit $rc, expected $want: $out"; fail=1
+  elif [[ "$out" != *"$needle"* ]]; then echo "FAIL: baseline-diff $name: exit $want but without the expected text ($needle): $out"; fail=1
+  else echo "ok: baseline-diff $name"; fi
+}
+bd_base $'# reason: fixture — oracle-schedule-dependent stage\nFAIL\tfx/alt\tnondet|differential'
+bd_res $'FAIL\tfx/alt\tx\tdifferential'
+bd_expect "(i) member stage differential -> no drift" 0 "no regression"
+bd_res $'FAIL\tfx/alt\tx\tnondet'
+bd_expect "(i) member stage nondet -> no drift" 0 "no regression"
+bd_res $'FAIL\tfx/alt\tx\tfrontend-export'
+bd_expect "(ii) non-member stage -> drift" 1 $'fx/alt\tbaseline[FAIL/nondet|differential] -> now[FAIL/frontend-export]'
+bd_res $'PASS\tfx/alt\tx\t-'
+bd_expect "(iii) PASS never absorbed -> drift" 1 $'fx/alt\tbaseline[FAIL/nondet|differential] -> now[PASS/-]'
+bd_base $'# reason: fixture\nPASS\tfx/alt\tconfluent|membership'
+bd_res $'PASS\tfx/alt\tx\tconfluent'
+bd_expect "(iv) alternation on a PASS row -> REFUSED" 2 "alternation is for non-PASS rows only"
+bd_base $'# reason: fixture\nFAIL\tfx/alt\tnondet|bogus-stage'
+bd_res $'FAIL\tfx/alt\tx\tnondet'
+bd_expect "(v) unknown stage word -> REFUSED" 2 "unknown stage word 'bogus-stage'"
+bd_base $'FAIL\tfx/alt\tnondet|differential'
+bd_res $'FAIL\tfx/alt\tx\tnondet'
+bd_expect "(vi) alternation without a # reason: line -> REFUSED" 2 'without a `# reason:` line'
+bd_base $'FAIL\tfx/plain\tnondet'
+bd_res $'FAIL\tfx/plain\tx\tdifferential'
+bd_expect "(vii) plain row stays exact -> drift" 1 $'fx/plain\tbaseline[FAIL/nondet] -> now[FAIL/differential]'
+bd_base $'# reason: fixture\nFAIL\tfx/plain\tnondet'
+bd_res $'FAIL\tfx/plain\tx\tnondet'
+bd_expect "(viii) # reason: block over a NON-alternation row (regenerated plain) -> REFUSED" 2 "orphaned reason"
+# Alternation SURVIVAL across a re-pin (audit fix 4): the ci re-pin guard
+# calls scripts/check-alternation-survival OLD NEW.
+SV="$TMP/survival"; mkdir -p "$SV"
+printf 'result\tid\tstage\n# reason: fixture\nFAIL\tfx/alt\tnondet|differential\nPASS\tfx/p\t-\n' > "$SV/old.tsv"
+sv_expect() {  # $1 name, $2 expected exit, $3 required text
+  local name="$1" want="$2" needle="$3" out rc=0
+  out="$(scripts/check-alternation-survival "$SV/old.tsv" "$SV/new.tsv" 2>&1)" || rc=$?
+  if [ "$rc" -ne "$want" ]; then echo "FAIL: alternation-survival $name: exit $rc, expected $want: $out"; fail=1
+  elif [[ "$out" != *"$needle"* ]]; then echo "FAIL: alternation-survival $name: exit $want but without the expected text ($needle): $out"; fail=1
+  else echo "ok: alternation-survival $name"; fi
+}
+printf 'result\tid\tstage\nFAIL\tfx/alt\tnondet\nPASS\tfx/p\t-\n' > "$SV/new.tsv"
+sv_expect "(ix) re-pin regenerated the row plain -> FAIL" 1 $'DROPPED\tfx/alt'
+printf 'result\tid\tstage\nPASS\tfx/p\t-\n' > "$SV/new.tsv"
+sv_expect "(ix) re-pin dropped the row -> FAIL" 1 $'DROPPED\tfx/alt'
+printf '# alternation removed: fx/alt — fixture: mechanism gone\nresult\tid\tstage\nFAIL\tfx/alt\tnondet\nPASS\tfx/p\t-\n' > "$SV/new.tsv"
+sv_expect "(ix) removal named in the header -> ok with a note" 0 $'NOTE\tfx/alt'
+printf 'result\tid\tstage\n# reason: fixture\nFAIL\tfx/alt\tdifferential|nondet\nPASS\tfx/p\t-\n' > "$SV/new.tsv"
+sv_expect "(ix) alternation survives -> ok" 0 ""
+rc=0; out="$(scripts/check-alternation-survival "$SV/old.tsv" "$SV/absent.tsv" 2>&1)" || rc=$?
+if [ "$rc" -eq 2 ]; then echo "ok: alternation-survival unreadable input -> exit 2"; else echo "FAIL: alternation-survival unreadable input exited $rc, expected 2: $out"; fail=1; fi
+# check-bugs: the alternation row is counted, by name.
+printf '## BUG-901 — fixture\n\n- Status: fixed\n- Pinned-by: none (fixture)\n- Cases: fx/other\n' > "$CB/bugs.md"
+printf 'result\tid\tstage\nFAIL\tfx/other\tlean-observation\nFAIL\tfx/alt\tnondet|differential\n' > "$CB/baseline.tsv"
+if out="$(cb_run)"; then echo "FAIL: check-bugs ACCEPTED an untracked fidelity red with an alternation stage (the row fell out of the filter)"; fail=1
+elif [[ "$out" != *"FAIL (4)"* || "$out" != *"fx/alt"* ]]; then echo "FAIL: check-bugs rejected, but not via (4) naming fx/alt: $out"; fail=1
+else echo "ok: check-bugs alternation row stays in the fidelity filter (unclassified fx/alt fails (4) by name)"; fi
+printf 'result\tid\tstage\nFAIL\tfx/other\tlean-observation\nFAIL\tfx/alt\tnondet|frontend-export\n' > "$CB/baseline.tsv"
+if out="$(cb_run)"; then echo "FAIL: check-bugs ACCEPTED a fidelity/non-fidelity MIXED alternation"; fail=1
+elif [[ "$out" != *"FAIL (6)"* ]]; then echo "FAIL: check-bugs rejected a mixed alternation, but not via (6): $out"; fail=1
+else echo "ok: check-bugs mixed alternation fails (6)"; fi
+printf 'result\tid\tstage\nFAIL\tfx/other\tlean-observation\nFAIL\tfx/empty\t\n' > "$CB/baseline.tsv"
+if out="$(cb_run)"; then echo "FAIL: check-bugs ACCEPTED a FAIL row with an EMPTY stage column (audit fix 1: split(\"\")=0 made it vacuously fidelity)"; fail=1
+elif [[ "$out" != *"FAIL (6)"* || "$out" != *"fx/empty"* || "$out" != *"EMPTY stage"* ]]; then echo "FAIL: check-bugs rejected the empty-stage row, but not via (6) naming fx/empty as EMPTY stage: $out"; fail=1
+else echo "ok: check-bugs empty-stage FAIL row fails (6) by name"; fi
+
+# ---- Part A2 (always): gate-integrity no-publish fixtures (grossmith
+# findings §2, docs/2026-08-07_grossmith-findings.md; extended at the
+# maint-check M2 fix; hoisted into the fast gate at the channels-arc
+# final audit F19): EVERY diff-coverage infra death must (a) exit 2 —
+# distinguishable from exit 1's "FAIL rows exist, published results
+# authoritative" — and (b) leave NO readable latest.tsv/meta (the
+# up-front rm precedes every infra exit since M2; the first
+# placement left three pre-rm exit-2 paths with a readable stale
+# pair), so a dead run can never be judged via the previous run's
+# files ("same set = no regression" for a run that never ran; this
+# exact ambiguity produced a pre-release wrong-conformance statement
+# in grossmith). Each fixture pre-seeds a stale results/meta pair
+# and asserts both the exit code and the removal. G1/G2 cover the
+# post-build-attempt deaths (fake failing `lake` on PATH — no real
+# build ever runs; a timeout via LAKE_BUILD_TIMEOUT_SECONDS=0 is NOT
+# usable — run_with_timeout's perl alarm(0) DISABLES the timer — so
+# the timeout arm uses a sleeping fake lake under a 1s budget); G3
+# covers a formerly PRE-rm death (manifest not found); G4 the
+# empty-manifest path, which previously PUBLISHED a fabricated
+# results row and then exited 2. A missing go FAILS here, never
+# skips: diff-coverage's own go check sits below the up-front rm, so
+# without go all four fixtures would pass vacuously.
+# Shared by Part A2 (G1-G4) and Part B (G5).
+seed_stale_results() {
+  mkdir -p "$1"
+  printf 'result\tid\tfeatures\tstage\tdetail\nPASS\tstale/one\tx\t-\t-\n' > "$1/latest.tsv"
+  printf 'key\tvalue\nmanifest_sha256\tdeadbeef\n' > "$1/latest.meta.tsv"
+}
+check_no_publish() {
+  local name="$1" rc="$2" art="$3"
+  if [ "$rc" -ne 2 ]; then
+    echo "FAIL: $name: no-publish infra failure exited $rc, want 2"
+    fail=1
+  elif [ -e "$art/latest.tsv" ] || [ -e "$art/latest.meta.tsv" ]; then
+    echo "FAIL: $name: dead run left readable results/meta in $art"
+    fail=1
+  else
+    echo "ok: $name"
+  fi
+}
+if ! command -v go >/dev/null 2>&1; then
+  echo "FAIL: gate-integrity fixtures G1-G4 need go on PATH (without it they would pass vacuously at diff-coverage's own go check — failing closed instead of skipping)"
+  fail=1
+else
+  G_DIR="Corpus/coverage/exec/maps/range-first-key"
+  FAKEBIN="$TMP/fakebin-fail"
+  mkdir -p "$FAKEBIN"
+  printf '#!/bin/sh\necho "fake lake: refusing to build" >&2\nexit 1\n' > "$FAKEBIN/lake"
+  chmod +x "$FAKEBIN/lake"
+  ART_G1="$TMP/artifacts-g1"
+  seed_stale_results "$ART_G1"
+  printf 'lane-g1\t%s\trangeFirstKey\t-\tok\tmaps,range,keys,loops,nondet\t-\tmembership\twhy\twidth=16\n' "$G_DIR" > "$TMP/manifest-g1.tsv"
+  PATH="$FAKEBIN:$PATH" GOLEAN_COVERAGE_ARTIFACTS="$ART_G1" scripts/diff-coverage "$TMP/manifest-g1.tsv" >/dev/null 2>&1
+  check_no_publish "lake-build failure exits 2, no readable results (G1)" $? "$ART_G1"
+
+  FAKEBIN2="$TMP/fakebin-hang"
+  mkdir -p "$FAKEBIN2"
+  printf '#!/bin/sh\nsleep 5\n' > "$FAKEBIN2/lake"
+  chmod +x "$FAKEBIN2/lake"
+  ART_G2="$TMP/artifacts-g2"
+  seed_stale_results "$ART_G2"
+  PATH="$FAKEBIN2:$PATH" LAKE_BUILD_TIMEOUT_SECONDS=1 GOLEAN_COVERAGE_ARTIFACTS="$ART_G2" scripts/diff-coverage "$TMP/manifest-g1.tsv" >/dev/null 2>&1
+  check_no_publish "lake-build timeout exits 2, no readable results (G2)" $? "$ART_G2"
+
+  # G3: a pre-build infra death (manifest not found) — one of the
+  # three paths that previously exited 2 ABOVE the rm with the stale
+  # pair fully readable (maint-check M2, verifier-reproduced).
+  ART_G3="$TMP/artifacts-g3"
+  seed_stale_results "$ART_G3"
+  GOLEAN_COVERAGE_ARTIFACTS="$ART_G3" scripts/diff-coverage "$TMP/no-such-manifest.tsv" >/dev/null 2>&1
+  check_no_publish "manifest-not-found exits 2, no readable results (G3)" $? "$ART_G3"
+
+  # G4: an EMPTY caller-supplied manifest must not publish — the old
+  # check ran after publish_results, so it published a fabricated
+  # 'worker produced no result' row and THEN exited 2 (and died on an
+  # unbound variable with exit 1 under JOBS=1).
+  ART_G4="$TMP/artifacts-g4"
+  seed_stale_results "$ART_G4"
+  printf '# comment-only manifest\n' > "$TMP/manifest-g4.tsv"
+  GOLEAN_COVERAGE_ARTIFACTS="$ART_G4" scripts/diff-coverage "$TMP/manifest-g4.tsv" >/dev/null 2>&1
+  check_no_publish "empty manifest exits 2 without publishing (G4)" $? "$ART_G4"
+fi
+
+# ---- Part B: diff-coverage's in-harness lane checks (need go: the
+# dispatch sits after the shared go-harness generation).
+if [ "$WITH_GO" -eq 1 ]; then
+  if ! command -v go >/dev/null 2>&1; then
+    echo "FAIL: --with-go requested but go is not on PATH"
+    fail=1
+  else
+    ART="$TMP/artifacts"
+    GO_DIR="Corpus/coverage/exec/maps/range-first-key"
+
+    # F4: a samples=0 manifest row (hand-built — the manifest generator
+    # rejects it, so this exercises the harness's own re-validation).
+    printf 'lane-f4\t%s\trangeFirstKey\t-\tok\tmaps,range,keys,loops,nondet\t-\tmembership\twhy\twidth=16,sites=0\n' "$GO_DIR" > "$TMP/manifest-f4.tsv"
+    GOLEAN_COVERAGE_ARTIFACTS="$ART" scripts/diff-coverage "$TMP/manifest-f4.tsv" >/dev/null 2>&1
+    row="$(tail -1 "$ART/latest.tsv" 2>/dev/null || true)"
+    if [[ "$row" == FAIL*positive\ integer* ]]; then
+      echo "ok: harness re-validation rejects sites=0 (F4)"
+    else
+      echo "FAIL: harness re-validation did not reject sites=0 (F4); row: ${row:-<none>}"
+      fail=1
+    fi
+    # F4b: the retired samples= param bypassing the manifest is refused by
+    # the harness BY NAME (2026-09-03 sampling rule) — never read as a
+    # budget, never an unknown-key shrug.
+    printf 'lane-f4b\t%s\trangeFirstKey\t-\tok\tmaps,range,keys,loops,nondet\t-\tmembership\twhy\twidth=16,samples=1\n' "$GO_DIR" > "$TMP/manifest-f4b.tsv"
+    GOLEAN_COVERAGE_ARTIFACTS="$ART" scripts/diff-coverage "$TMP/manifest-f4b.tsv" >/dev/null 2>&1
+    row="$(tail -1 "$ART/latest.tsv" 2>/dev/null || true)"
+    if [[ "$row" == FAIL*"	manifest	"*"samples= is RETIRED"* ]]; then
+      echo "ok: harness refuses the retired samples= param by name (F4b)"
+    else
+      echo "FAIL: harness did not refuse samples= as retired (F4b); row: ${row:-<none>}"
+      fail=1
+    fi
+
+    # F6: membership under a non-native frontend fails closed at
+    # frontend-export (before any native-frontend shell-out).
+    printf 'lane-f6\t%s\trangeFirstKey\t-\tok\tmaps,range,keys,loops,nondet\t-\tmembership\twhy\twidth=16\n' "$GO_DIR" > "$TMP/manifest-f6.tsv"
+    GOLEAN_FRONTEND=other GOLEAN_COVERAGE_ARTIFACTS="$ART" scripts/diff-coverage "$TMP/manifest-f6.tsv" >/dev/null 2>&1
+    row="$(tail -1 "$ART/latest.tsv" 2>/dev/null || true)"
+    if [[ "$row" == FAIL*frontend-export* ]]; then
+      echo "ok: membership under non-native frontend fails closed (F6)"
+    else
+      echo "FAIL: membership under non-native frontend did not fail at frontend-export (F6); row: ${row:-<none>}"
+      fail=1
+    fi
+
+    # ---- slice-4 lane gates (S4 audit: the four new diff-coverage
+    # failure paths get landing-time fixtures like slice 3's two).
+    # Fixture subject: the L2 entry-path case — 2-member set, tiny tree.
+    OBS_DIR="Corpus/coverage/exec/channels/select-multi-ready/observable"
+    RACY_DIR="Corpus/coverage/exec/race/negative"
+
+    # B3: the members= cardinality pin must refuse a wrong pin.
+    printf 'lane-b3\t%s\tchannelSelectMultiReadyObservable\t-\tok\tchannels,select,make,len,nondet\t-\tmembership\twhy\twidth=2,members=99\n' "$OBS_DIR" > "$TMP/manifest-b3.tsv"
+    GOLEAN_COVERAGE_ARTIFACTS="$ART" scripts/diff-coverage "$TMP/manifest-b3.tsv" >/dev/null 2>&1
+    row="$(tail -1 "$ART/latest.tsv" 2>/dev/null || true)"
+    if [[ "$row" == FAIL*membership*"pins members=99"* ]]; then
+      echo "ok: members= cardinality pin refuses a wrong pin (B3)"
+    else
+      echo "FAIL: members=99 pin did not refuse; row: ${row:-<none>}"
+      fail=1
+    fi
+
+    # B4: the confluent lane must refuse a non-singleton observable.
+    printf 'lane-b4\t%s\tchannelSelectMultiReadyObservable\t-\tok\tchannels,select,make,len\t-\tconfluent\twhy\twidth=2\n' "$OBS_DIR" > "$TMP/manifest-b4.tsv"
+    GOLEAN_COVERAGE_ARTIFACTS="$ART" scripts/diff-coverage "$TMP/manifest-b4.tsv" >/dev/null 2>&1
+    row="$(tail -1 "$ART/latest.tsv" 2>/dev/null || true)"
+    if [[ "$row" == FAIL*confluent*"NOT schedule-confluent"* ]]; then
+      echo "ok: confluent lane refuses a non-singleton set (B4)"
+    else
+      echo "FAIL: confluent lane accepted a 2-member observable; row: ${row:-<none>}"
+      fail=1
+    fi
+
+    # B5: the racy lane's enumerator-failure path — a width below the
+    # mechanically-computed site bound must fail at stage racy (the
+    # width-cap refutation surfacing through the racy dispatch).
+    printf 'lane-b5\t%s\traceWriteWrite\t-\trace\tgoroutines,channels,race\t-\tracy\t-\twidth=1\n' "$RACY_DIR" > "$TMP/manifest-b5.tsv"
+    GOLEAN_COVERAGE_ARTIFACTS="$ART" scripts/diff-coverage "$TMP/manifest-b5.tsv" >/dev/null 2>&1
+    row="$(tail -1 "$ART/latest.tsv" 2>/dev/null || true)"
+    if [[ "$row" == FAIL*racy*"site bound"* ]]; then
+      echo "ok: racy lane fails loud on a refuted width (B5)"
+    else
+      echo "FAIL: racy lane with width=1 did not fail at the site-bound check; row: ${row:-<none>}"
+      fail=1
+    fi
+
+    # G5 (grossmith ARG_MAX finding, 2026-09-02; red-first record in
+    # docs/evidence/2026-09-02_diffcov-argmax/): "fan-out never ran =>
+    # nothing published". The old fan-out, `ls "$ROWDIR"/*.in | xargs`,
+    # died E2BIG past ARG_MAX (measured: 11,817 rows under a 130-byte
+    # TMPDIR; main's 2,526 rows were safe by accident), fed
+    # xargs EMPTY stdin, and GNU xargs without -r ran the worker ONCE
+    # with no argument: run_case "" fabricated a manifest-error row and
+    # left a stray `.out` in the repo root; the assembler then PUBLISHED
+    # case_count per-row `worker produced no result` FAILs (exit 1) —
+    # one global failure misattributed as N worker deaths. The fake
+    # xargs here reproduces exactly that xargs behaviour (drain stdin,
+    # strip the option words, exec the command once with no argument)
+    # independently of how the row list is enumerated, so the fixture
+    # bites on the assembler's global-vs-scattered check AND on
+    # run_case's empty-argument guard. Required: exit 2, nothing
+    # published, no stray `.out` in the repo root, and BOTH named
+    # causes on stderr — exit 2 + no publish alone is what every
+    # earlier infra exit also produces, so without the message check
+    # this would pass vacuously (e.g. at the missing-binary exit).
+    # Placed in Part B, not A2, for the same reason: it must get PAST
+    # the build and binary check, and the fast-gate lane step runs
+    # before the core build.
+    # ---- P1: the strict-lane DEPTH GUARD (membership-depth memo §5,
+    # [USER]-ruled 2026-09-03; red-first — D1 and D4 PASSED on the
+    # pre-guard harness, which is the leak the guard closes). Fixture
+    # subject: goroutines/pipeline's buffered-stage — 29 wide picks under
+    # the default stream, 21 served after the 8-entry stream is exhausted
+    # (memo §2.3), state graph closes under engine=dedup in ~4 s.
+    PIPE_DIR="Corpus/coverage/exec/goroutines/pipeline"
+    PIPE_FEATS="goroutines,channels,range,close"
+    run_d() {  # name manifest-row expected-glob description
+      local name="$1" rowtxt="$2" want="$3" what="$4"
+      printf '%s\n' "$rowtxt" > "$TMP/manifest-$name.tsv"
+      GOLEAN_COVERAGE_ARTIFACTS="$ART" scripts/diff-coverage "$TMP/manifest-$name.tsv" >/dev/null 2>&1
+      row="$(tail -1 "$ART/latest.tsv" 2>/dev/null || true)"
+      if [[ "$row" == $want ]]; then
+        echo "ok: $what ($name)"
+      else
+        echo "FAIL: $what ($name); row: ${row:-<none>}"
+        fail=1
+      fi
+    }
+    run_d D1 "$(printf 'lane-d1\t%s\tpipelineBufferedStage\t-\tok\t%s\t-\tstrict\t-\t-' "$PIPE_DIR" "$PIPE_FEATS")" \
+      "FAIL*nondet*strict row: *wide pick(s) served after stream*was exhausted at consumption*route to confluent, or declare depth*" \
+      "depth guard refuses a strict row whose adversarial streams are exhausted, naming the cause"
+    run_d D2 "$(printf 'lane-d2\t%s\tpipelineBufferedStage\t-\tok\t%s\t-\tconfluent\twhy\twidth=4,sites=64,work=500000,engine=dedup,backedge=full' "$PIPE_DIR" "$PIPE_FEATS")" \
+      "PASS*confluent*|set|=1 certified*" \
+      "the same row routed to confluent is certified (|set|=1)"
+    run_d D3 "$(printf 'lane-d3\t%s\tpipelineBufferedStage\t-\tok\t%s\t-\tstrict\t-\tdepth=128' "$PIPE_DIR" "$PIPE_FEATS")" \
+      "PASS*wide=*exhausted=none depth=128*" \
+      "the same row with a sufficient depth=N passes, recording wide=/depth="
+    run_d D4 "$(printf 'lane-d4\t%s\tpipelineBufferedStage\t-\tok\t%s\t-\tstrict\t-\tdepth=4' "$PIPE_DIR" "$PIPE_FEATS")" \
+      "FAIL*nondet*strict row: *wide pick(s) served after the declared depth=4 stream \[seeded:1:4\]*raise depth*" \
+      "an insufficient depth=N is refused, naming the exhausted seeded stream"
+    # D5: a refusal under a variant stream is a refusal, not a variance
+    # (P1 item 4 / P5, D-10 item 2). Subject: channels/select-select's
+    # beside-loop — ok under the default stream, `unsupported` under
+    # every adversarial stream (the tracked baseline row).
+    run_d D5 "$(printf 'lane-d5\tCorpus/coverage/exec/channels/select-select\tselectBesideSelectLoop\t-\tok\tchannels,select,goroutines\t-\tstrict\t-\t-')" \
+      "FAIL*lean-observation*variant stream*produced status 'unsupported'*a refusal under a variant stream is a refusal, not a variance*" \
+      "a variant-stream refusal is reported as a refusal (lean-observation), not as nondet"
+    # D6: depth= re-validated in the harness (F4 discipline) — a row that
+    # bypasses the manifest with a malformed depth fails loud.
+    run_d D6 "$(printf 'lane-d6\t%s\tpipelineBufferedStage\t-\tok\t%s\t-\tstrict\t-\tdepth=0' "$PIPE_DIR" "$PIPE_FEATS")" \
+      "FAIL*manifest*may only declare depth=*" \
+      "harness re-validation refuses depth=0"
+
+    FAKEBIN_G5="$TMP/fakebin-xargs-no-r"
+    mkdir -p "$FAKEBIN_G5"
+    cat > "$FAKEBIN_G5/xargs" <<'EOF'
+#!/bin/bash
+# fake xargs: GNU xargs WITHOUT -r on empty stdin — run the command
+# once with no argument (test-lane-validation G5). MUST be bash, not
+# sh: dash drops the BASH_FUNC_* exported functions from the
+# environment on exec, and the worker would then die 127
+# (run_case: command not found) before reaching the guard under test.
+cat >/dev/null
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -0|-r) shift ;;
+    -P|-n) shift 2 ;;
+    *) break ;;
+  esac
+done
+exec "$@"
+EOF
+    chmod +x "$FAKEBIN_G5/xargs"
+    ART_G5="$TMP/artifacts-g5"
+    seed_stale_results "$ART_G5"
+    printf 'lane-g5a\t%s\trangeFirstKey\t-\tok\tmaps,range,keys,loops,nondet\t-\tmembership\twhy\twidth=16\nlane-g5b\t%s\trangeFirstKey\t-\tok\tmaps,range,keys,loops,nondet\t-\tmembership\twhy\twidth=16\n' "$GO_DIR" "$GO_DIR" > "$TMP/manifest-g5.tsv"
+    if [ -e "$ROOT/.out" ]; then
+      echo "FAIL: G5 precondition: a stray $ROOT/.out already exists (run_case \"\" fabrication residue?) — remove it and re-run"
+      fail=1
+    fi
+    PATH="$FAKEBIN_G5:$PATH" GOLEAN_COVERAGE_JOBS=2 GOLEAN_COVERAGE_ARTIFACTS="$ART_G5" \
+      scripts/diff-coverage "$TMP/manifest-g5.tsv" >/dev/null 2>"$TMP/g5.stderr"
+    rc=$?
+    check_no_publish "fan-out that ran no worker exits 2 without publishing (G5)" $rc "$ART_G5"
+    if ! grep -q "fan-out produced NO results for any of 2 manifest rows" "$TMP/g5.stderr"; then
+      echo "FAIL: G5: the global fan-out refusal did not name its cause on stderr; stderr was:"
+      sed 's/^/    /' "$TMP/g5.stderr"
+      fail=1
+    elif ! grep -q "run_case invoked with an EMPTY row path" "$TMP/g5.stderr"; then
+      echo "FAIL: G5: run_case accepted an empty row path (no refusal on stderr)"
+      fail=1
+    elif [ -e "$ROOT/.out" ]; then
+      echo "FAIL: G5: run_case \"\" left a stray $ROOT/.out (fabricated row)"
+      rm -f "$ROOT/.out"
+      fail=1
+    else
+      echo "ok: G5 named both causes (global fan-out refusal + empty-row guard), no stray .out"
+    fi
+
+    # ---- T1-T4: timeouts NAME THEIR CAUSE (noodler-lane finding, fixed
+    # 2026-09-03). run_with_timeout exits 124 silently, and four consumers
+    # read the killed command's EMPTY capture as a verdict: the strict
+    # Lean run reported `expected status ok, got ` (T1, cause-blind); the
+    # oracle-invariance re-run reported "observation varies with iteration
+    # order" (T2); the membership driver-coupling pin reported
+    # "copied-driver drift" (T3); and the Go-sample membership loop raised
+    # the too-narrow soundness alarm (T4) — the last three cause-WRONG.
+    # Red-first: on the pre-fix runner every T fixture fails with exactly
+    # those texts (recorded in docs/evidence/2026-09-03_timeout-cause/).
+    #
+    # Mechanism: a FAKE ROOT — a temp dir whose scripts/diff-coverage is a
+    # symlink to the runner under test, whose tools/, Corpus/, baselines/
+    # and go-build-cache are symlinks to the real ones, and whose
+    # .lake/build/bin/golean is a bash shim that delegates every call to
+    # the REAL built binary except the ONE call the fixture targets, which
+    # `exec sleep`s past LEAN_TIMEOUT_SECONDS=1 so run_with_timeout kills
+    # it (exit 124). The runner is untouched — no binary-override knob is
+    # added to the trusted apparatus; the shim is reached only through the
+    # runner's own ROOT derivation. `exec sleep`, not `sleep`: the TERM
+    # must reach the sleeper itself, or a bash parent dies and orphans it
+    # holding the capture pipe open. The budget is the real knob at its
+    # minimum legal value (positive integer); no budget in the runner is
+    # changed.
+    #
+    # ---- T5-T8: the OTHER non-verdict exit codes name themselves (the
+    # residual owed by the T1-T4 slice's audit F1, discharged 2026-09-03).
+    # run_with_timeout maps a signal death to 128+signal, and
+    # runObservationEq (GoLean/CLI.lean) exits 2 on an observation it
+    # cannot decode; before the fix every `obs_eq` caller read 2/137/143
+    # as "not equal" (and discarded exit 2's decode message — at the two
+    # SELF-comparison sites exit 2 is the accurate "not a valid
+    # observation" verdict, which now carries that message), the strict
+    # Lean run fell through to `expected status ok, got …`, and
+    # go_run_oracle fell through to "expected Go panic, got: …". Same
+    # shim, three more modes: T5 forwards the comparator call to the
+    # REAL binary with an undecodable status (a genuine exit 2 with its
+    # genuine decode message); T6 `kill -9`s the shim on the strict
+    # default-stream run (exit 137); T7 `kill -TERM`s it on the
+    # differential-stage comparison (exit 143). T8 uses a second shim,
+    # a fake `go` that `kill -9`s itself on the oracle's `go run … .`
+    # shape only (harness generation and the native export still reach
+    # the real go). Red-first record: docs/evidence/2026-09-03_runner-
+    # exitcode/. Stage words unchanged; nothing in the runner is tuned.
+    REAL_GOLEAN="$ROOT/.lake/build/bin/golean"
+    if [ ! -x "$REAL_GOLEAN" ]; then
+      echo "FAIL: T1-T8 need the built golean binary at $REAL_GOLEAN (failing closed, not skipping)"
+      fail=1
+    else
+      FR="$TMP/fakeroot"
+      mkdir -p "$FR/scripts" "$FR/.lake/build/bin" "$FR/artifacts"
+      ln -s "$ROOT/scripts/diff-coverage" "$FR/scripts/diff-coverage"
+      for _d in tools Corpus baselines; do ln -s "$ROOT/$_d" "$FR/$_d"; done
+      ln -s "$ROOT/artifacts/go-build-cache" "$FR/artifacts/go-build-cache"
+      cat > "$FR/.lake/build/bin/golean" <<'EOF'
+#!/bin/bash
+# fake golean (test-lane-validation T1-T8): delegate to the real binary,
+# except the one call FAKE_GOLEAN_MODE selects, which (T1-T4) sleeps past
+# the 1s Lean budget so run_with_timeout kills it (exit 124), or (T5-T7)
+# exits with one of the other non-verdict codes: a real exit 2 from the
+# real comparator on an undecodable observation, a SIGKILL (137), a
+# SIGTERM (143).
+REAL="$FAKE_GOLEAN_REAL"; ST="$FAKE_GOLEAN_STATE"; sub="${1:-}"
+has_choices=0; case " $* " in *" --choices "*) has_choices=1 ;; esac
+bump() { local n; n=$(( $(cat "$ST/$1" 2>/dev/null || echo 0) + 1 )); echo "$n" > "$ST/$1"; echo "$n"; }
+case "${FAKE_GOLEAN_MODE:-}" in
+  eq-undecodable)  # T5: the strict lane's FIRST observation-eq (the Go-observation validity check) — a GENUINE exit 2
+    [ "$sub" = observation-eq ] && exec "$REAL" observation-eq \
+      --left '{"schema":"golean-observation-v1","status":"weird"}' --right '{"schema":"golean-observation-v1","status":"weird"}' ;;
+  run-kill9)       # T6: the strict lane's single default-stream run, SIGKILLed (exit 137)
+    [ "$sub" = native-json-run ] && [ "$has_choices" -eq 0 ] && { kill -9 $$; sleep 5; exit 137; } ;;
+  eq-distinct)     # S5: the sampling rule's DISTINCTNESS comparison — the first observation-eq whose two sides differ
+    # (every earlier observation-eq is a sample's self-comparison, left == right); sleeps past the 1s budget (exit 124)
+    if [ "$sub" = observation-eq ]; then
+      l=""; r=""; while [ $# -gt 0 ]; do case "$1" in --left) l="$2"; shift 2 ;; --right) r="$2"; shift 2 ;; *) shift ;; esac; done
+      [ "$l" != "$r" ] && exec sleep 30
+    fi ;;
+  eq-diff-term)    # T7: the strict lane's SECOND observation-eq (the differential stage), SIGTERMed (exit 143)
+    [ "$sub" = observation-eq ] && [ "$(bump eqs)" -ge 2 ] && { kill -TERM $$; sleep 5; exit 143; } ;;
+  run-default)  # T1: the strict lane's single default-stream run
+    [ "$sub" = native-json-run ] && [ "$has_choices" -eq 0 ] && exec sleep 30 ;;
+  trace-default-only)  # D7b: the depth guard's tracer reports every stream as "default" (an empty-stream shape)
+    [ "$sub" = choice-trace ] && { "$REAL" "$@" | awk -F'\t' 'BEGIN{OFS="\t"} NR>1{$2="default"} {print}'; exit "${PIPESTATUS[0]}"; } ;;
+  trace-three)         # D7c: the tracer returns one report too few
+    [ "$sub" = choice-trace ] && { "$REAL" "$@" | head -n -1; exit "${PIPESTATUS[0]}"; } ;;
+  run-choices)  # T2 (strict nondet re-run) / T3 (membership coupling stream)
+    [ "$sub" = native-json-run ] && [ "$has_choices" -eq 1 ] && exec sleep 30 ;;
+  eq-sample)    # T4: the first Go-sample comparison of the membership loop.
+    # After the enumerator, every native-json-run answers member #1, so
+    # each of the 4 coupling streams needs exactly ONE observation-eq
+    # (member #1 vs itself, decided by the real binary). The observation-eq
+    # after the 4th stream's single check is the first sample comparison.
+    case "$sub" in
+      coverage-observations) "$REAL" "$@" | tee "$ST/members"; exit "${PIPESTATUS[0]}" ;;
+      native-json-run) echo $(( $(cat "$ST/runs" 2>/dev/null || echo 0) + 1 )) > "$ST/runs"; head -1 "$ST/members"; exit 0 ;;
+      observation-eq)
+        if [ "$(cat "$ST/runs" 2>/dev/null || echo 0)" -ge 4 ]; then
+          eqs=$(( $(cat "$ST/eqs" 2>/dev/null || echo 0) + 1 )); echo "$eqs" > "$ST/eqs"
+          [ "$eqs" -ge 2 ] && exec sleep 30
+        fi ;;
+    esac ;;
+esac
+exec "$REAL" "$@"
+EOF
+      chmod +x "$FR/.lake/build/bin/golean"
+      FAKEBIN_T="$TMP/fakebin-lake-noop"   # the fake root has no lakefile; the binary is prebuilt
+      mkdir -p "$FAKEBIN_T"
+      printf '#!/bin/sh\nexit 0\n' > "$FAKEBIN_T/lake"
+      chmod +x "$FAKEBIN_T/lake"
+      # T8's fake go: SIGKILLs itself on the ORACLE's call shape only
+      # (`go run [-race] .` — last arg "."); harness generation and the
+      # native export (`go run ./tools/…`) reach the real go untouched.
+      FAKEBIN_GO="$TMP/fakebin-go-kill9"
+      mkdir -p "$FAKEBIN_GO"
+      cat > "$FAKEBIN_GO/go" <<EOF
+#!/bin/bash
+if [ "\${1:-}" = run ] && [ "\${@: -1}" = "." ]; then kill -9 \$\$; sleep 5; exit 137; fi
+exec "$(command -v go)" "\$@"
+EOF
+      chmod +x "$FAKEBIN_GO/go"
+      # Strict subject: a small baseline-PASS strict case (row fields read
+      # from its cases.tsv so a corpus edit cannot silently desync the row).
+      STRICT_DIR="Corpus/coverage/exec/control-flow/for-condition-eval"
+      IFS=$'\t' read -r _ strict_subj strict_args strict_status strict_reason strict_feats < <(grep -v '^#' "$ROOT/$STRICT_DIR/cases.tsv" | head -1)
+      run_t() {  # $1 name, $2 mode, $3 manifest, $4 stage, $5 must-contain, $6 must-NOT-contain, [$7 extra PATH dir]
+        local name="$1" mode="$2" manifest="$3" stage="$4" need="$5" forbid="$6" extra_bin="${7:-}" art st row
+        art="$TMP/artifacts-$name"; st="$TMP/state-$name"; mkdir -p "$st"
+        PATH="${extra_bin:+$extra_bin:}$FAKEBIN_T:$PATH" FAKE_GOLEAN_REAL="$REAL_GOLEAN" FAKE_GOLEAN_STATE="$st" FAKE_GOLEAN_MODE="$mode" \
+          LEAN_TIMEOUT_SECONDS=1 GOLEAN_COVERAGE_JOBS=1 GOLEAN_COVERAGE_ARTIFACTS="$art" \
+          "$FR/scripts/diff-coverage" "$manifest" >/dev/null 2>&1
+        row="$(tail -1 "$art/latest.tsv" 2>/dev/null || true)"
+        if [[ "$row" == FAIL*"	$stage	"*"$need"* && "$row" != *"$forbid"* ]]; then
+          echo "ok: $name: cause named at stage $stage ($need)"
+          echo "    row: $row"
+        else
+          echo "FAIL: $name: the cause was not named (want stage $stage + '$need', never '$forbid'); row: ${row:-<none>}"
+          fail=1
+        fi
+      }
+      printf 'lane-t1\t%s\t%s\t%s\t%s\t%s\t%s\tstrict\t-\t-\n' "$STRICT_DIR" "$strict_subj" "$strict_args" "$strict_status" "$strict_feats" "$strict_reason" > "$TMP/manifest-t-strict.tsv"
+      run_t T1-strict-lean-run run-default "$TMP/manifest-t-strict.tsv" lean-observation \
+        "Lean run TIMED OUT after 1s" "expected status ok, got"
+      run_t T2-nondet-rerun run-choices "$TMP/manifest-t-strict.tsv" nondet \
+        "re-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s" "varies with iteration order"
+      printf 'lane-t3\t%s\trangeFirstKey\t-\tok\tmaps,range,keys,loops,nondet\t-\tmembership\twhy\twidth=16,sites=8\n' "$GO_DIR" > "$TMP/manifest-t-member.tsv"
+      run_t T3-coupling-pin run-choices "$TMP/manifest-t-member.tsv" membership \
+        "driver-coupling pin: native-json-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s" "copied-driver drift, or"
+      run_t T4-sample-loop eq-sample "$TMP/manifest-t-member.tsv" membership \
+        "observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing a Go sample against member #1" "NOT in the machine's enumerated set"
+      # T5-T8 (exit 2 / 137 / 143 / oracle 137). T5 targets the Go-
+      # observation SELF-comparison, where exit 2 IS the decision (Go's
+      # output is not a valid observation — audit F1): the accurate
+      # wording stays and the reason must now carry the comparator's REAL
+      # decode message (`left.status: unknown observation status …`) —
+      # red on main, whose text had the verdict but not the message; and
+      # it must never read as an undecided comparison. T7's forbid is the
+      # OLD mismatch shape (detail beginning `Lean=`) at the differential
+      # stage.
+      run_t T5-comparator-undecodable eq-undecodable "$TMP/manifest-t-strict.tsv" go-observation \
+        'Go output is not a valid observation (comparator said: left.status: unknown observation status' "NOT decided"
+      run_t T6-lean-run-sigkill run-kill9 "$TMP/manifest-t-strict.tsv" lean-observation \
+        "Lean run KILLED (exit 137" "expected status ok, got"
+      run_t T7-differential-sigterm eq-diff-term "$TMP/manifest-t-strict.tsv" differential \
+        "observation-eq KILLED (exit 143" $'\tdifferential\tLean='
+      # T8 subject: a small baseline-PASS PANIC case, so the pre-fix
+      # misreading is the cause-WRONG "expected Go panic, got: " (empty).
+      PANIC_DIR="Corpus/coverage/exec/panic-recover/defer-recover-builtin"
+      IFS=$'\t' read -r _ panic_subj panic_args panic_status panic_reason panic_feats < <(grep -v '^#' "$ROOT/$PANIC_DIR/cases.tsv" | head -1)
+      printf 'lane-t8\t%s\t%s\t%s\t%s\t%s\t%s\tstrict\t-\t-\n' "$PANIC_DIR" "$panic_subj" "$panic_args" "$panic_status" "$panic_feats" "$panic_reason" > "$TMP/manifest-t-panic.tsv"
+      run_t T8-go-oracle-sigkill "" "$TMP/manifest-t-panic.tsv" go-run \
+        "go run oracle KILLED (exit 137" "expected Go panic, got" "$FAKEBIN_GO"
+      # D7 (strict-routing audit fix 7): the depth guard's own harness-
+      # defect refusals are pinned — an EMPTY invariance stream (the
+      # fixture hook GOLEAN_LANE_FIXTURE=empty-streams, which can only
+      # remove streams), a tracer that labels every stream "default",
+      # and a tracer returning too few reports. Each is a named nondet
+      # FAIL, never a PASS (the guard's first smoke passed on exactly the
+      # first shape).
+      art7="$TMP/artifacts-d7a"
+      GOLEAN_LANE_FIXTURE=empty-streams GOLEAN_COVERAGE_JOBS=1 GOLEAN_COVERAGE_ARTIFACTS="$art7" scripts/diff-coverage "$TMP/manifest-t-strict.tsv" >/dev/null 2>&1
+      row="$(tail -1 "$art7/latest.tsv" 2>/dev/null || true)"
+      if [[ "$row" == FAIL*"	nondet	"*"invariance stream #1 is EMPTY (harness defect"* ]]; then
+        echo "ok: D7a-empty-stream: an empty invariance stream is refused by name (nondet)"
+      else
+        echo "FAIL: D7a-empty-stream: row: ${row:-<none>}"; fail=1
+      fi
+      run_t D7b-trace-default-only trace-default-only "$TMP/manifest-t-strict.tsv" nondet \
+        "traced as the DEFAULT stream (empty stream — harness defect)" "wide="
+      run_t D7c-trace-three trace-three "$TMP/manifest-t-strict.tsv" nondet \
+        "expected 4 stream reports from choice-trace, got 3" "wide="
+
+      # ---- S1-S4: the membership sampling rule ([USER]-ruled 2026-09-03,
+      # docs/2026-09-01_membership-depth.md §4.3 / P2; red-first record:
+      # docs/evidence/2026-09-03_sampling-budget/). Same fake root, no
+      # golean shim mode (the real binary enumerates the real set); the
+      # ORACLE is a fake `go` that answers `go run [-race] .` itself
+      # (harness generation and the native export reach the real go) and
+      # logs one line per draw — "plain" or "race" — so the fixture can
+      # assert the draw ORDER and COUNT, not just the caption. Subject:
+      # channels/select-multi-ready/observable, certified set {101, 210}
+      # (members=2); the fake yields 101 on plain draws and 210 on -race
+      # draws (FAKE_GO_MODE=ab), 999 — outside the set — on -race
+      # (ab-outside), or SIGKILLs itself on the first -race draw
+      # (ab-kill-race). Red on main's runner: S1 (10 draws, 5 plain then 5
+      # race, no draws=) and S2 (10 draws; no unpinned note); S3/S4 are
+      # the regression guards the rule must preserve (green on main too).
+      FAKEBIN_GO_AB="$TMP/fakebin-go-ab"
+      mkdir -p "$FAKEBIN_GO_AB"
+      cat > "$FAKEBIN_GO_AB/go" <<EOF
+#!/bin/bash
+# fake go oracle (test-lane-validation S1-S4): answers the membership
+# lane's draws deterministically by build mode; everything else is real go.
+if [ "\${1:-}" = run ] && [ "\${@: -1}" = "." ]; then
+  m=plain; case " \$* " in *" -race "*) m=race ;; esac
+  echo "\$m" >> "\$FAKE_GO_LOG"
+  # Successful synthetic draws must supply the same paired evidence as a
+  # registered real subject. The runner has already reset both owned files.
+  : > oracle.crash
+  printf 'registered\n' > oracle.registered
+  A='{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":101}]}'
+  B='{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":210}]}'
+  X='{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":999}]}'
+  case "\${FAKE_GO_MODE:-ab}:\$m" in
+    ab:plain|ab-outside:plain|ab-kill-race:plain) echo "\$A"; exit 0 ;;
+    ab:race) echo "\$B"; exit 0 ;;
+    ab-outside:race) echo "\$X"; exit 0 ;;
+    ab-kill-race:race) kill -9 \$\$; sleep 5; exit 137 ;;
+    single42:*) echo '{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}'; exit 0 ;;
+  esac
+  echo "fake go: unhandled mode \$FAKE_GO_MODE" >&2; exit 3
+fi
+exec "$(command -v go)" "\$@"
+EOF
+      chmod +x "$FAKEBIN_GO_AB/go"
+      IFS=$'\t' read -r _ obs_subj obs_args obs_status obs_reason obs_feats _ obs_why _ < <(grep -v '^#' "$ROOT/$OBS_DIR/cases.tsv" | head -1)
+      run_s() {  # $1 name, $2 FAKE_GO_MODE, $3 params, $4 expected result, $5 must-contain (row), $6 must-NOT-contain (row), $7 expected draw log (newline-joined) or "", $8 must-contain (stdout) or "", [$9 FAKE_GOLEAN_MODE — set ⇒ LEAN_TIMEOUT_SECONDS=1], [$10 case dir, $11 row id within its cases.tsv — default: the observable row]
+        local name="$1" mode="$2" params="$3" want="$4" need="$5" forbid="$6" wantlog="$7" needout="$8" gmode="${9:-}" cdir="${10:-$OBS_DIR}" cid="${11:--}" art log row out
+        local s_subj="$obs_subj" s_args="$obs_args" s_status="$obs_status" s_reason="$obs_reason" s_feats="$obs_feats" s_why="$obs_why"
+        if [ "$cdir" != "$OBS_DIR" ]; then
+          IFS=$'\t' read -r _ s_subj s_args s_status s_reason s_feats _ s_why _ < <(grep -v '^#' "$ROOT/$cdir/cases.tsv" | awk -F'\t' -v id="$cid" '$1==id' | head -1)
+        fi
+        art="$TMP/artifacts-$name"; log="$TMP/drawlog-$name"; : > "$log"
+        printf 'lane-%s\t%s\t%s\t%s\t%s\t%s\t%s\tmembership\t%s\t%s\n' "$name" "$cdir" "$s_subj" "$s_args" "$s_status" "$s_feats" "$s_reason" "$s_why" "$params" > "$TMP/manifest-$name.tsv"
+        # `env` carries the optional 1s Lean budget: a ${gmode:+VAR=val}
+        # word is not an assignment prefix to bash once expanded.
+        out="$(PATH="$FAKEBIN_GO_AB:$FAKEBIN_T:$PATH" FAKE_GO_MODE="$mode" FAKE_GO_LOG="$log" FAKE_GOLEAN_REAL="$REAL_GOLEAN" FAKE_GOLEAN_STATE="$TMP/state-$name" FAKE_GOLEAN_MODE="$gmode" \
+          GOLEAN_COVERAGE_JOBS=1 GOLEAN_COVERAGE_ARTIFACTS="$art" \
+          env ${gmode:+LEAN_TIMEOUT_SECONDS=1} "$FR/scripts/diff-coverage" "$TMP/manifest-$name.tsv" 2>&1)"
+        row="$(tail -1 "$art/latest.tsv" 2>/dev/null || true)"
+        if [[ "$row" != "$want"*"	membership	"*"$need"* || "$row" == *"$forbid"* ]]; then
+          echo "FAIL: $name: want $want at stage membership containing '$need', never '$forbid'; row: ${row:-<none>}"
+          fail=1
+        elif [[ -n "$wantlog" && "$(cat "$log")" != "$wantlog" ]]; then
+          echo "FAIL: $name: draw order/count wrong — want [$(printf '%s' "$wantlog" | tr '\n' ' ')], got [$(tr '\n' ' ' < "$log")]"
+          fail=1
+        elif [[ -n "$needout" && "$out" != *"$needout"* ]]; then
+          echo "FAIL: $name: runner output lacks '$needout'"
+          fail=1
+        else
+          echo "ok: $name: $want ($need); draws logged: $(tr '\n' ' ' < "$log")"
+          echo "    row: $row"
+        fi
+      }
+      alt32="$(for ((k = 1; k <= 32; k++)); do if (( k % 2 )); then echo plain; else echo race; fi; done)"
+      run_s S1-pin-early-stop ab "width=2,members=2,sites=8" PASS \
+        "exhibited=2 draws=2 (K=32; stopped at the members=2 pin)" "samples=" $'plain\nrace' \
+        "membership sampling budget K=32"
+      run_s S2-unpinned-full-K ab "width=2,sites=8" PASS \
+        "exhibited=2 draws=32 (K=32; no members= pin — no early stop)" "samples=" "$alt32" \
+        "has NO members= pin — no early stop; drawing the full budget K=32"
+      run_s S3-race-draw-outside-set ab-outside "width=2,members=2,sites=8" FAIL \
+        "NOT in the machine's enumerated set" "exhibited=" $'plain\nrace' ""
+      run_s S4-killed-draw-is-no-observation ab-kill-race "width=2,members=2,sites=8" FAIL \
+        "draw 2/32 (race) -race go sample: go run oracle KILLED (exit 137" "exhibited=" $'plain\nrace' ""
+      # S5 (audit fix F3): the distinctness comparison itself undecided —
+      # the golean shim sleeps past the 1s budget on the first
+      # observation-eq whose sides differ (draw 2 = 210 vs draw 1 = 101);
+      # the row must fail naming the sampling rule, never read the kill as
+      # "new observation" (an early stop that never fires) or as a repeat.
+      # Red on main: no distinctness loop exists there, so main's first
+      # differing observation-eq is the driver-coupling pin's ("driver-
+      # coupling pin: observation-eq TIMED OUT … coupling NOT decided").
+      run_s S5-saturation-undecided ab "width=2,members=2,sites=8" FAIL \
+        "sampling rule: observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing draw 2/32 against an earlier distinct draw — saturation NOT decided" "NOT in the machine's enumerated set" $'plain\nrace' "" eq-distinct
+      # S6 ([USER] ruling 2026-09-03, relayed: «this is a 'spirit of the
+      # ruling' vs. 'letter of the ruling' case - we should do option A
+      # which seems like the spirit of the ruling» — option A = a floor of
+      # two draws, one plain + one -race, before the early stop may fire):
+      # a members=1 row (atomics/spin/flag-wait, singleton terminating set
+      # {42}) with a fake oracle answering 42 in both modes must take
+      # EXACTLY two draws, plain then race, and caption the floor. Red on
+      # the pre-floor branch (it stopped at draw 1: `draws=1`).
+      run_s S6-two-draw-floor single42 "width=4,sites=200,members=1,nonterm=200,backedge=1" PASS \
+        "exhibited=1 draws=2 (floor; K=32; stopped at the members=1 pin after the two-draw floor — one plain + one -race)" "draws=1 " $'plain\nrace' "" \
+        "" "Corpus/coverage/exec/atomics/spin" "flag-wait"
+    fi
+
+  fi
+fi
+
+if [ "$fail" -ne 0 ]; then
+  echo "test-lane-validation: FAIL"
+  exit 1
+fi
+echo "test-lane-validation: ok"

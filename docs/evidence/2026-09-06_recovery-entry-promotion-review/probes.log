@@ -1,0 +1,127 @@
+GoLean.GoCore.RecoveryRuntime.setup_typed {p : GoLean.GoCore.Program} {name : String} {args : Array GoLean.GoValue}
+  (h : GoLean.GoCore.RecoveryTyping.RecoveryAdmission p name args) (fuel : Nat) (ch : GoLean.GoCore.Choices) :
+  ∃ f zeros world,
+    GoLean.GoCore.findFunctionIn? p.funcs { key := name } = some f ∧
+      GoLean.GoCore.RecoveryTyping.FunctionTyped p.funcs f ∧
+        GoLean.GoCore.RecoveryRuntime.ZeroValues f.results.toList zeros ∧
+          GoLean.GoCore.Machine.runProgramSetupM fuel p name args ch =
+              Except.ok
+                (GoLean.GoCore.Machine.Config.exec f.body (GoLean.GoCore.BooleanRuntime.initialEnv f)
+                    (GoLean.GoCore.Machine.Cont.frame [] [] [] [] GoLean.GoCore.Machine.Cont.stop),
+                  GoLean.GoCore.RecoveryRuntime.initialState p f args.toList zeros,
+                  GoLean.GoCore.BooleanRuntime.initialResults f, ch) ∧
+            GoLean.GoCore.RecoveryRuntime.HeapTyped world
+                (GoLean.GoCore.RecoveryRuntime.initialState p f args.toList zeros) ∧
+              GoLean.GoCore.RecoveryRuntime.EnvTyped world (GoLean.GoCore.RecoveryTyping.initialContext f)
+                  (GoLean.GoCore.BooleanRuntime.initialEnv f) ∧
+                GoLean.GoCore.RecoveryRuntime.ResultRoots world f.results.toList
+                    (GoLean.GoCore.BooleanRuntime.initialResults f) ∧
+                  GoLean.GoCore.BooleanRuntime.SameContext (GoLean.GoCore.BooleanRuntime.programState p)
+                      (GoLean.GoCore.RecoveryRuntime.initialState p f args.toList zeros) ∧
+                    Array.size (GoLean.GoCore.RecoveryRuntime.initialState p f args.toList zeros).heap =
+                        args.size + f.results.size ∧
+                      f.args.size = args.size
+GoLean.GoCore.RecoveryRuntime.setup_typed_wf {p : GoLean.GoCore.Program} {name : String} {args : Array GoLean.GoValue}
+  (h : GoLean.GoCore.RecoveryTyping.RecoveryAdmission p name args) (fuel : Nat) (ch : GoLean.GoCore.Choices) :
+  ∃ f zeros world,
+    GoLean.GoCore.findFunctionIn? p.funcs { key := name } = some f ∧
+      GoLean.GoCore.RecoveryTyping.FunctionTyped p.funcs f ∧
+        GoLean.GoCore.RecoveryRuntime.ZeroValues f.results.toList zeros ∧
+          GoLean.GoCore.Machine.runProgramSetupM fuel p name args ch =
+              Except.ok
+                (GoLean.GoCore.Machine.Config.exec f.body (GoLean.GoCore.BooleanRuntime.initialEnv f)
+                    (GoLean.GoCore.Machine.Cont.frame [] [] [] [] GoLean.GoCore.Machine.Cont.stop),
+                  GoLean.GoCore.RecoveryRuntime.initialState p f args.toList zeros,
+                  GoLean.GoCore.BooleanRuntime.initialResults f, ch) ∧
+            GoLean.GoCore.Machine.MachineWf (GoLean.GoCore.RecoveryRuntime.initialState p f args.toList zeros)
+                (GoLean.GoCore.Machine.Config.exec f.body (GoLean.GoCore.BooleanRuntime.initialEnv f)
+                  (GoLean.GoCore.Machine.Cont.frame [] [] [] [] GoLean.GoCore.Machine.Cont.stop)) ∧
+              GoLean.GoCore.RecoveryRuntime.HeapTyped world
+                  (GoLean.GoCore.RecoveryRuntime.initialState p f args.toList zeros) ∧
+                GoLean.GoCore.RecoveryRuntime.EnvTyped world (GoLean.GoCore.RecoveryTyping.initialContext f)
+                    (GoLean.GoCore.BooleanRuntime.initialEnv f) ∧
+                  GoLean.GoCore.RecoveryRuntime.ResultRoots world f.results.toList
+                      (GoLean.GoCore.BooleanRuntime.initialResults f) ∧
+                    GoLean.GoCore.BooleanRuntime.SameContext (GoLean.GoCore.BooleanRuntime.programState p)
+                        (GoLean.GoCore.RecoveryRuntime.initialState p f args.toList zeros) ∧
+                      Array.size (GoLean.GoCore.RecoveryRuntime.initialState p f args.toList zeros).heap =
+                          args.size + f.results.size ∧
+                        f.args.size = args.size
+GoLean.GoCore.RecoveryRuntime.enterFrame_typed {p : GoLean.GoCore.Program} {world : GoLean.GoCore.RecoveryRuntime.World}
+  {s : GoLean.GoCore.ExecState} {fid : GoLean.GoCore.FuncId} {f : GoLean.GoCore.Func} {args : List GoLean.GoValue}
+  (hp : GoLean.GoCore.RecoveryTyping.ProgramTyped p)
+  (hc : GoLean.GoCore.BooleanRuntime.SameContext (GoLean.GoCore.BooleanRuntime.programState p) s)
+  (heap : GoLean.GoCore.RecoveryRuntime.HeapTyped world s) (hf : GoLean.GoCore.findFunctionIn? p.funcs fid = some f)
+  (values : GoLean.GoCore.RecoveryRuntime.ParamsValues world f.args.toList args) :
+  ∃ next env locs s',
+    GoLean.GoCore.Machine.enterFrame s fid args = Except.ok (f, env, locs, s') ∧
+      GoLean.GoCore.RecoveryRuntime.Extends world next ∧
+        GoLean.GoCore.RecoveryRuntime.HeapTyped next s' ∧
+          GoLean.GoCore.RecoveryRuntime.EnvTyped next (GoLean.GoCore.RecoveryTyping.initialContext f) env ∧
+            GoLean.GoCore.RecoveryRuntime.ResultRoots next f.results.toList locs ∧
+              GoLean.GoCore.BooleanRuntime.SameContext s s' ∧
+                Array.size s'.heap = Array.size s.heap + f.args.size + f.results.size ∧
+                  GoLean.GoCore.RecoveryTyping.FunctionTyped p.funcs f ∧ f.wrapper = false
+GoLean.GoCore.RecoveryRuntime.enterFramePick_typed {p : GoLean.GoCore.Program}
+  {world : GoLean.GoCore.RecoveryRuntime.World} {s : GoLean.GoCore.ExecState} {fid : GoLean.GoCore.FuncId}
+  {f : GoLean.GoCore.Func} {args : List GoLean.GoValue} (hp : GoLean.GoCore.RecoveryTyping.ProgramTyped p)
+  (hc : GoLean.GoCore.BooleanRuntime.SameContext (GoLean.GoCore.BooleanRuntime.programState p) s)
+  (heap : GoLean.GoCore.RecoveryRuntime.HeapTyped world s) (hf : GoLean.GoCore.findFunctionIn? p.funcs fid = some f)
+  (values : GoLean.GoCore.RecoveryRuntime.ParamsValues world f.args.toList args) (ch : GoLean.GoCore.Choices) :
+  ∃ next env locs s',
+    GoLean.GoCore.Machine.enterFramePick s fid args ch = Except.ok (GoLean.Result.ok (f, env, locs, s'), ch) ∧
+      GoLean.GoCore.RecoveryRuntime.Extends world next ∧
+        GoLean.GoCore.RecoveryRuntime.HeapTyped next s' ∧
+          GoLean.GoCore.RecoveryRuntime.EnvTyped next (GoLean.GoCore.RecoveryTyping.initialContext f) env ∧
+            GoLean.GoCore.RecoveryRuntime.ResultRoots next f.results.toList locs ∧
+              GoLean.GoCore.BooleanRuntime.SameContext s s' ∧
+                Array.size s'.heap = Array.size s.heap + f.args.size + f.results.size ∧
+                  GoLean.GoCore.RecoveryTyping.FunctionTyped p.funcs f ∧ f.wrapper = false
+GoLean.GoCore.RecoveryRuntime.ResultRoots.load {world : GoLean.GoCore.RecoveryRuntime.World}
+  {s : GoLean.GoCore.ExecState} {ps : List GoLean.GoCore.Param} {locs : List GoLean.Loc}
+  (h : GoLean.GoCore.RecoveryRuntime.ResultRoots world ps locs)
+  (heap : GoLean.GoCore.RecoveryRuntime.HeapTyped world s) :
+  ∃ vs, GoLean.GoCore.Machine.loadMany s locs = Except.ok vs ∧ GoLean.GoCore.RecoveryRuntime.ParamsValues world ps vs
+GoLean.GoCore.RecoveryRuntime.pinResultLocs_typed (ps : List GoLean.GoCore.Param)
+  {world : GoLean.GoCore.RecoveryRuntime.World} {env : GoLean.GoCore.LocalEnv}
+  (h :
+    ∀ (p : GoLean.GoCore.Param),
+      p ∈ ps → ∃ loc, env.lookup p.id = some loc ∧ GoLean.GoCore.RecoveryRuntime.AddressAt world p.typ loc) :
+  ∃ locs,
+    GoLean.GoCore.Machine.pinResultLocs env ps = Except.ok locs ∧
+      GoLean.GoCore.RecoveryRuntime.ResultRoots world ps locs
+GoLean.GoCore.RecoveryRuntime.EnvTyped.pushedDecls {world : GoLean.GoCore.RecoveryRuntime.World}
+  {Γ : GoLean.GoCore.RecoveryTyping.Context} {env : GoLean.GoCore.LocalEnv} {ps : List GoLean.GoCore.Param}
+  (h :
+    GoLean.GoCore.RecoveryRuntime.EnvTyped world
+      (GoLean.GoCore.RecoveryRuntime.declareMany (GoLean.GoCore.RecoveryTyping.push Γ #[]) ps) env)
+  (hd : (List.map GoLean.GoCore.Param.id ps).Nodup) :
+  GoLean.GoCore.RecoveryRuntime.EnvTyped world (GoLean.GoCore.RecoveryTyping.push Γ ps.toArray) env
+GoLean.GoCore.RecoveryRuntime.initialState_argument (p : GoLean.GoCore.Program) (f : GoLean.GoCore.Func)
+  (args results : List GoLean.GoValue) (hlen : args.length = f.args.size) (i : Nat) (hi : i < args.length) :
+  GoLean.GoCore.loadLoc (GoLean.GoCore.RecoveryRuntime.initialState p f args results) (GoLean.Loc.base { id := i }) =
+    Except.ok args[i]
+GoLean.GoCore.RecoveryRuntime.initialState_result (p : GoLean.GoCore.Program) (f : GoLean.GoCore.Func)
+  (args results : List GoLean.GoValue) (ha : args.length = f.args.size) (hr : results.length = f.results.size) (i : Nat)
+  (hi : i < results.length) :
+  GoLean.GoCore.loadLoc (GoLean.GoCore.RecoveryRuntime.initialState p f args results)
+      (GoLean.Loc.base { id := f.args.size + i }) =
+    Except.ok results[i]
+GoLean.GoCore.RecoveryRuntime.initialState_readout (p : GoLean.GoCore.Program) (f : GoLean.GoCore.Func)
+  (args results : List GoLean.GoValue) (ha : args.length = f.args.size) (hr : results.length = f.results.size) :
+  GoLean.GoCore.Machine.loadMany (GoLean.GoCore.RecoveryRuntime.initialState p f args results)
+      (GoLean.GoCore.BooleanRuntime.initialResults f) =
+    Except.ok results
+GoLean.GoCore.RecoveryRuntime.typedEntry_wf {p : GoLean.GoCore.Program} {world : GoLean.GoCore.RecoveryRuntime.World}
+  {s : GoLean.GoCore.ExecState} {f : GoLean.GoCore.Func} {Γ : GoLean.GoCore.RecoveryTyping.Context}
+  {env : GoLean.GoCore.LocalEnv} (hp : GoLean.GoCore.RecoveryTyping.ProgramTyped p) (hf : f ∈ p.funcs.toList)
+  (hh : GoLean.GoCore.RecoveryRuntime.HeapTyped world s) (he : GoLean.GoCore.RecoveryRuntime.EnvTyped world Γ env)
+  (hc : GoLean.GoCore.BooleanRuntime.SameContext (GoLean.GoCore.BooleanRuntime.programState p) s) :
+  GoLean.GoCore.Machine.MachineWf s
+    (GoLean.GoCore.Machine.Config.exec f.body env
+      (GoLean.GoCore.Machine.Cont.frame [] [] [] [] GoLean.GoCore.Machine.Cont.stop))
+GoLean.GoCore.RecoveryRuntime.ZeroValues.unique {ps : List GoLean.GoCore.Param} {vs ws : List GoLean.GoValue}
+  (h : GoLean.GoCore.RecoveryRuntime.ZeroValues ps vs) (h' : GoLean.GoCore.RecoveryRuntime.ZeroValues ps ws) : vs = ws
+'GoLean.GoCore.RecoveryRuntime.setup_typed_wf' depends on axioms: [propext, Classical.choice, Quot.sound]
+'GoLean.GoCore.RecoveryRuntime.enterFramePick_typed' depends on axioms: [propext, Classical.choice, Quot.sound]
+'GoLean.GoCore.RecoveryRuntime.initialState_readout' depends on axioms: [propext, Quot.sound]

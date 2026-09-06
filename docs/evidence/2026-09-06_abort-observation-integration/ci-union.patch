@@ -1,0 +1,29 @@
+diff --git a/scripts/ci b/scripts/ci
+index e40ea248..660f0705 100755
+--- a/scripts/ci
++++ b/scripts/ci
+@@ -526,6 +526,24 @@ fi
+ #     identity layer (mono.go — mangled-key renderings pinned against the
+ #     reflect probes, registry collision/cap refusals) is exercised by
+ #     `go test`, not by the differential, so it gets its own step.
++step "observer byte transport (fresh harness, unit tests, shell probes and compiling mutations)"
++if obout="$(python3 scripts/check-observer-controls.py 2>&1)"; then
++  echo "$obout" | tail -1 | sed 's/^/  /'
++  ok "observer byte transport"
++else
++  echo "$obout"
++  bad "observer byte transport (see above)"
++fi
++
++step "diagnostic observer transport and terminal classification"
++if odout="$(python3 scripts/check-observer-tools.py 2>&1)"; then
++  echo "$odout"
++  ok "diagnostic observer transport and terminal classification"
++else
++  echo "$odout"
++  bad "diagnostic observer transport and terminal classification (see above)"
++fi
++
+ step "frontend unit tests (go test ./tools/nativefrontend)"
+ if ftout="$(GO111MODULE=off GOCACHE="$PWD/artifacts/go-build-cache" go test ./tools/nativefrontend 2>&1)"; then
+   echo "$ftout" | tail -2

@@ -1,0 +1,6 @@
+{
+  "scripts/ci": {
+    "reviewed": "f4398cf7ff8fb57f43a19c9f1427ae5b2afc8deeb4165448455595830a8ee9cf",
+    "integration": "04f56093382923c949d8b3e81d6f662a095ab47cd09d73300dc45b331edd9ae0"
+  }
+}

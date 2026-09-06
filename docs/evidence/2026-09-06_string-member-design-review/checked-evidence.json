@@ -1,0 +1,53 @@
+{
+  "source_hashes": {
+    "docs/2026-09-06_string-panic-member-assessment.md": "d9c97bb87b0308c67aa37baaa452616a1b037893740588dcfff3e7495d309a99",
+    "docs/evidence/2026-09-06_observer-classification/string-member-probes.json": "bb669ed91e344a4d5c7be1d44a82594f7018b6f6971c069d8118139e5344661f",
+    "docs/2026-08-20_w32-re-envelope-charter.md": "55de04802059c063c0e0a6bb948f35129295bfe68c6ae3b4fe8db7b16f432270",
+    "deps/go/doc/go_spec.html": "e5806989624c1e9dd32bddaedd2f70a1dd208295cb6d0ff72b02625b2cd6f592"
+  },
+  "scope": "Independent inspection of existing native raw evidence; not fresh model or native execution",
+  "rows": [
+    {
+      "name": "equal-literal",
+      "rc": 1,
+      "first_stderr_line_hex": "70616e69633a206f726967205b7265636f76657265642c20726570616e69636b65645d",
+      "stdout_hex": "",
+      "source_sha256": "0e77e8d4ece01b9897d972bdd2ad6bdfdbfe23413a392767a62a9da8482a1963"
+    },
+    {
+      "name": "recovered-rethrow",
+      "rc": 1,
+      "first_stderr_line_hex": "70616e69633a206f726967205b7265636f76657265642c20726570616e69636b65645d",
+      "stdout_hex": "",
+      "source_sha256": "9591d37cb5c1d6ff4b8589c7c8bd214aa3440d1353ffcda2c3c28d1c25b18e14"
+    },
+    {
+      "name": "computed-equal",
+      "rc": 1,
+      "first_stderr_line_hex": "70616e69633a206f726967205b7265636f76657265645d",
+      "stdout_hex": "",
+      "source_sha256": "c7a74b97c07cfcac1ddc80b69cb3fe90b0d7f7f8f65255e7b6f800a8b0757361"
+    },
+    {
+      "name": "invalid-before-newline",
+      "rc": 1,
+      "first_stderr_line_hex": "70616e69633a20ff005c",
+      "stdout_hex": "",
+      "source_sha256": "0bfd680084e5d0e6e0693a026a02b2e84e277a5c403b83f8f370f1e66a85d771"
+    },
+    {
+      "name": "invalid-after-newline",
+      "rc": 1,
+      "first_stderr_line_hex": "70616e69633a2068656164",
+      "stdout_hex": "",
+      "source_sha256": "5e21d21bdfdca4bdcd199367a001f75c17e4ba50e15f656378a2d79fbc9c6e9e"
+    },
+    {
+      "name": "invalid-recovered-rethrow",
+      "rc": 0,
+      "first_stderr_line_hex": "",
+      "stdout_hex": "7b226279746573223a5b3235352c302c39322c31302c39305d2c2273616d65223a747275652c22737472696e675f6b696e64223a747275657d0a",
+      "source_sha256": "58641b6f55d513ab04eec5d0cdcd93fccec2f81f6f06663601ce58fc86d903da"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+membership-sampling multifile-controls PASS
+membership-sampling init-panic PASS
+membership-sampling init-exit-success PASS
+membership-sampling non-verdict 124 PASS
+membership-sampling non-verdict 137 PASS
+gotest-triage multifile-controls PASS
+gotest-triage init-panic PASS
+gotest-triage init-exit-success PASS
+gotest-triage non-verdict 124 PASS
+gotest-triage non-verdict 137 PASS
+cedar-census multifile-controls PASS
+cedar-census init-panic PASS
+cedar-census init-exit-success PASS
+cedar-census non-verdict 124 PASS
+cedar-census non-verdict 137 PASS
+Independent diagnostic probes: 15 PASS

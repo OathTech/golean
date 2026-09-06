@@ -1,0 +1,25 @@
+575cbc32cbb45f9906e6bd091ed6f1f0cb21564f033c8c1c3f08299c56585fee  GoLean/GoCore/RecoveryDelivery.lean
+710d414ced4dc9c8a7c6ad0462a57da8bda1ca5f85675eaddca801fb96bf5af7  GoLean/GoCore/RecoveryControlData.lean
+c7c354b0be44d62cced1f15b969c9a33c17cc550aecbfb604123af9172840cba  GoLean/GoCore/RecoveryControl.lean
+500f9378b703df5528345402b6d58bb177c0d1b66765941b3d39255d171cad6e  GoLean/GoCore/RecoveryControlMono.lean
+49f4da47580f6f91dc32d57a8f537233cbd44751c63cf68e62ec229863a497b3  GoLean/GoCore/RecoveryWalk.lean
+21f9a76f79645d7e822c155aad4e7c11f2e40abc91f6bb508655c27630d05f58  GoLean/GoCore/RecoveryExpressionProgress.lean
+a5a2e01b607a32126902951339c553b15a0568679d81aa5a1537a04f5be68dc5  GoLean/GoCore/RecoveryControlHelpers.lean
+e2838d0afe34df9d5e8772db2dbd5818103c8556dc98ff161fcf07b1e815760b  GoLean/GoCore/RecoveryCallControl.lean
+d14c79064ad69303093374e5b88380efcf14060f96714550503dc2fe010cee32  GoLean/GoCore/RecoveryValueBasic.lean
+92fdb6e6fe06283df2c802b2e11d58eb1498e21a659712a0ad3def4e3e32b1e5  GoLean/GoCore/RecoveryValueCalls.lean
+1f14577e1f3d2def2e9636e67be40a5ddbfbb5ea3196da7532f652eb45f2a609  GoLean/GoCore/RecoveryStatementProgress.lean
+7e4382c929e4f81e08b4f45f8ef32e30e039e12ca68c0e39e9b7234aed6aa7ff  GoLean/GoCore/RecoveryFrameProgress.lean
+b7fa027394b53d60ff68438d403d10aa19cfb0d6bfbd82923702bd37257c1245  GoLean/GoCore/RecoveryPanicProgress.lean
+a71574c21fcdb6ac872e07dd3f828536d06ce51a86ab6c8f9b00c1a35a077d46  GoLean/GoCore/RecoveryInvariant.lean
+853cf53c2994924ffedaedd4e3f8404201e8770d799a277ee4539f7194dbc466  GoLean/GoCore/RecoverySuccessfulRuns.lean
+6d581a4787daed2599889290bb53b638005c884f06f9aa0f4e8507149a4f020e  Tests/RecoveryInvariant.lean
+7ba7a7f8c2468d8c959a4f5d0189ee020ffff0c0c92fcc18d9e7cdd66e33c4f4  Tests/RecoveryControlAudit.lean
+✔ [64/66] Built Tests.RecoveryInvariant (3.5s)
+✖ [65/66] Building Tests.RecoveryControlAudit (780ms)
+trace: .> LEAN_PATH=/home/dev/projects/golean/.claude/worktrees/typed-recovery-runtime/.lake/build/lib/lean /home/dev/.elan/toolchains/leanprover--lean4---v4.32.2/bin/lean /home/dev/projects/golean/.claude/worktrees/typed-recovery-runtime/Tests/RecoveryControlAudit.lean -o /home/dev/projects/golean/.claude/worktrees/typed-recovery-runtime/.lake/build/lib/lean/Tests/RecoveryControlAudit.olean -i /home/dev/projects/golean/.claude/worktrees/typed-recovery-runtime/.lake/build/lib/lean/Tests/RecoveryControlAudit.ilean -c /home/dev/projects/golean/.claude/worktrees/typed-recovery-runtime/.lake/build/ir/Tests/RecoveryControlAudit.c --setup /home/dev/projects/golean/.claude/worktrees/typed-recovery-runtime/.lake/build/ir/Tests/RecoveryControlAudit.setup.json --json
+error: Tests/RecoveryControlAudit.lean:72:6: Unknown constant `GoLean.GoCore.RecoveryRuntime.goal`
+error: Lean exited with code 1
+Some required targets logged failures:
+- Tests.RecoveryControlAudit
+error: build failed

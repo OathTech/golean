@@ -1,0 +1,35 @@
+{
+  "base": "63769964",
+  "gate": {
+    "command": "GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 scripts/capped bash scripts/check-recovery-control",
+    "exit": 0,
+    "log": "gate.log",
+    "fresh_modules": 17,
+    "required_theorems": 124,
+    "audited_local_constants": 13824,
+    "compiled_poison_controls": 17
+  },
+  "first_gate": {
+    "exit": 1,
+    "cause": "Generated export inventory accidentally selected prose words theorem goal; corrected audit inventory only",
+    "log": "gate-inventory-failure.log"
+  },
+  "full_corpus": "Cached finalized renderer integration evidence, not a fresh corpus run; see runtime-reuse.json",
+  "ci": {
+    "command": "GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 scripts/capped scripts/ci",
+    "exit": 0,
+    "log": "ci.log",
+    "eval_tests": 202,
+    "corpus": "cached3607 full and394 negative; no regression, original renderer source explicitly recorded"
+  },
+  "independent_review": {
+    "verdict": "bounded PASS",
+    "commits": [
+      "9e6c4234",
+      "ba930ba2"
+    ],
+    "source_modules": 17,
+    "independent_kernel_probes": 14,
+    "audited_declarations": 13855
+  }
+}

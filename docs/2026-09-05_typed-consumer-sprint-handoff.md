@@ -353,3 +353,230 @@ Equal-string repanic, invalid byte-string observations, BUG-090 complete
 capture, reusable Iris proofs, final B7/I1 preservation, roadmap/migration/
 C1 handoff and the closing decision packet are still required. O1–O5 remain
 the full goal. Primary main remains clean at `47195683`.
+
+## Current checkpoint: actual recovery entry publicly integrated (2026-09-06)
+
+The user explicitly resumed the full charter goal after a safe readiness
+pause. The preceding readiness turn was a safe checkpoint, not a completed
+sprint. All three lanes resumed with their original responsibilities.
+
+Actual recovery setup/call entry `63769964` passed independent review
+`997d74ed` (integrated at `4158368f`). Its facade promotion passed separate
+review `29ac266d`. The pending merge into `4158368f` passed ordinary CI
+`63627`, native recovery 5/5 and all controls, A1, and Iris artifact/3/3
+differential gates. Sessions `63627`, `20187` and `22601` are terminal;
+the first spike launch in `20187` failed because the mode-100644 script was
+invoked directly, then the correct Bash invocation passed in `22601`.
+Do not repeat these completed checks without changed source or a concern.
+The [integration seal](evidence/2026-09-06_recovery-entry-integration/README.md)
+binds 196 source files, 84 public exports and nineteen compiled poisons.
+Whole runtime and compile-negative records remain explicitly cached here.
+
+The recovery runtime lane has fifteen frozen control modules proving actual
+setup-to-Inv, structural all-successor preservation, normal/semantic-abort
+progress, and typed readout/unchanged choices for successful actual drivers.
+Its dedicated gate passed with 124 exports and seventeen poison controls.
+Root independently rebuilt all seventeen core/test modules and proved
+fourteen additional adversarial checks, including actual aliased result
+writeback and typed abort-query payload kind. Review source/evidence is on
+`typed-recovery-setup` at `9e6c4234` plus reproducibility follow-up `ba930ba2`.
+Author ordinary CI `21839` is now terminal with exit 0; its source/evidence
+commit is being sealed. No control runtime commit is integrated yet.
+Shared Iris allocation/call layout is a further isolated draft.
+
+The observer implementation has bounded independent review `1bd2022b`,
+integrated at `7774739a`. Its new full CI is live in the author lane at
+session `34382`; preserve its eventual terminal result, never infer full
+success from partial rows. Diagnostic source review is `c5b83045` with
+additive packaging correction `0333f0a1`; integrate both together. The
+older rejected classifier run remains terminal 143. BUG-106's exact
+sync-unwind observation refusal remains the independently reviewed K3
+disposition. A separate arbitrary-byte/equal-string rendering repair is
+under development against existing R-1 authority and needs its own review,
+forced-half controls and actual terminal readout proof.
+
+B7 now compiles sequential/pool coherence, traces and dedup/customer
+infrastructure against explicit context. Its bounded equality guard remains
+at the certificate boundary so dropping repeated context comparisons cannot
+widen old certificate acceptance. Complete actual old/new correspondence,
+contract/customer migration and full captured byte/choice equality remain
+open. I1 still needs positive declaration metadata and checked executable
+closure beyond prototype `8ea5a74b`. BUG-090 capture completeness, final
+Go-fidelity evidence, reusable Iris proofs, B7/I1 validation, C1 handoff,
+roadmap/migration and the O1–O5 closing packet remain mandatory. Main is
+unchanged and no main merge or push is authorized.
+
+## Current checkpoint: recovery control integration (2026-09-06)
+
+Entry promotion landed on the sprint branch at `30b09c08`; independent
+promotion review is `f5f228ca`. Diagnostic review and its additive packaging
+correction are `313d1781`/`639192b2`. Root control review is integrated as
+`1078c910` plus `bfecf455`, and the independent R-1 design review is
+`4a8a8ad1`. Main remains unchanged at `47195683`.
+
+The control author sealed `f160d7ca` after dedicated gate and ordinary CI
+passed. The pending clean merge into `4a8a8ad1` has also passed ordinary CI
+`43232` and fresh A1/Iris gates `62843`, both terminal exit 0. Separate
+promotion review `62377799` approves the four public files. The
+[control integration seal](evidence/2026-09-06_recovery-control-integration/README.md)
+binds 215 sources, 102 interface exports and twenty-two compiled poisons.
+Do not restart these completed runs. Post-gate documentation/evidence
+updates do not change reviewed semantic source.
+
+`typed-shared-customer`, owned by the recovery author, now has separate
+drafts for exact arbitrary-heap call allocation, one shared Iris call rule
+covering seven actual call/defer entry forms, unwind/recovery/readout rules,
+and the A2 refactor. The second functional customer remains open. This lane
+also owns the actual reached-abort witness: the head bytes and recovered
+flag must be tied to the real driver/trace and actual abort query, with
+fuel/choices/output preserved, so the R-1 apparatus does not trust text pins
+or caller-supplied payload metadata.
+
+Observer classifier `b5dd4076` and diagnostic increment `2b679404` are
+reviewed, gated and ready for the next integration. The fresh full record
+has 3,627 rows: 3,382 PASS and 245 FAIL, exactly eleven new marker PASS rows
+plus the independently justified sync-unwind PASS-to-observation-refusal.
+Initial full CI `34382` exited 1 for that raw delta, BUG punctuation and
+registration-free old sampling mocks; all evidence is retained. The narrow
+mock repair has independent review `198aee9f`, its affected gate passed,
+and final ordinary CI `58628` passed without repeating the unchanged full
+corpus. Diagnostic CI `43806` passed with 105 controls and five mutants.
+These increments are not yet merged here.
+
+The isolated `typed-string-members` lane has constructive byte escaping/
+decoding and first-line correspondence plus actual abort-point lemmas in
+development. Its explicit membership certificate design still needs review,
+production implementation and forced-half evidence. Uniform suffix/byte
+rendering authority is the existing R-1, not a new scope ruling.
+
+Root-owned `typed-i1-declarations` still has prototype base `8ea5a74b`, plus
+uncommitted positive declaration serializer/tests and schema notes. Four
+focused tests and the full frontend unit suite passed; ordinary CI `47743`
+is live and independent review is queued. The helper is not connected to
+the emitter/lowerer: exact decoder/envelope facts, query preservation,
+guarded code closure and actual marker removal are still mandatory. B7
+continues actual old/new correspondence and consumer migration. Complete
+capture (including BUG-090), final fidelity review/gates, C1 handoff,
+roadmap/migration and closing O1–O5 decision packet remain unfinished.
+
+## Current checkpoint: observer integration and I1 foundation (2026-09-06)
+
+The explicit goal continuation resumed all three lanes after the readiness
+pause. Main was rechecked clean at `47195683`. The sprint parent is clean
+commit `99e0225d`, containing actual public control integration `b3d6fa6e`,
+its independent review `e4318e01`, and mock-protocol review `99e0225d`.
+
+Reviewed observer/diagnostic `2b679404` is merged **without committing** into
+the sprint worktree. Snapshot `snapshot/typed-sprint-before-observer-20260906`
+preserves the parent. All three reviewed production/integration manifests
+match except `scripts/ci`, whose diff only adds the two observer gates and
+retains every recovery/interface gate. The complete input inventory and
+comparison are in `docs/evidence/2026-09-06_observer-integration/`.
+Fresh capped `scripts/ci --diff` session **74005 terminated with exit 0**,
+log `artifacts/observer-integration/ci-diff.log`, archived in the evidence
+directory. All 3,627 executable rows (3,382 PASS / 245 FAIL) and 394 negative
+rows match the reviewed baseline. Original dirty-parent metadata is retained;
+regenerated full manifests exactly match its original SHA-256 values.
+`verify.py` checks complete unique inventories and allowed stages. Two HIGH
+report-only ledger findings were corrected: current totals and the additional
+BUG-106 `sync/mutex-unlock-fatal/during-panic-unwind` refusal. Historical
+counts are preserved. Fresh reconciliation has no HIGH findings. Independent
+bookkeeping/CI-union review `c8bab8a9` is PASS, including all 3,844 source
+inputs, both complete inventories/manifests, exact case/stage delta and the
+two additive CI hooks. This checkpoint accompanies the accepted merge seal.
+
+I1 serializer foundation is sealed on `typed-i1-declarations` at
+`298e4da1`, followed by independent reviews `7ae7fc0a`/`cf13789f` (original
+review commits `58cd8b69`/`08f7984f`). Four focused tests, full frontend
+tests and 324 independent pairwise identity comparisons pass. Initial CI
+`47743` exited 1 for eight new untracked diagnostic formats and absent
+local corpus records. The exact inventory update passed separate review
+and full diagnostic tests; corrected ordinary CI **1329 exited 0**. Its
+3,607/394 renderer records are explicitly cached, retaining original
+metadata and a checked source-difference inventory. The serializer has no
+production caller. It does not remove markers, admit code closure, or
+replace the future full differential/slow wire train. An ignored root-owned
+identity draft under `.tmp/i1-identity.ilDgsl` is superseded by the separate
+positive identity/decoder increment on that worktree. It proves exact total
+structural equality, decodes the closed positive schema, and checks 24 real
+Go types / 576 ordered identity comparisons, 17 actual decoder negatives and
+four compiled unused-declaration poisons. Dedicated gate **34109 exited 0**.
+Ordinary CI **31463 exited 1** solely because comment prose contained the
+scan token `admit`; changing it to `authorize` leaves code and gates intact.
+Independent review `e9045844` and exact comment-delta review `d2ed3ecd` PASS.
+Corrected ordinary CI **3794 exited 0**, including the default build and new
+declaration gate, with the original explicitly cached 3,607/394 records.
+This increment is committed at `0ff12435`, followed by review cherries
+`18f90eb9`/`798e9c76`; production envelope, executable closure, query
+preservation and actual marker removal remain mandatory I1 work.
+
+The string certificate/byte-guard design has bounded root review in
+`2026-09-06_string-member-certificate-design-review.md`, with exact input
+copies. The renderer author integrated observer source internally at
+`90128828`, preserving pre-guard source hashes. The guard now checks decoded
+bytes before selecting direct text, otherwise choosing the proved reversible
+escape; whole lane validation remains owed. A complete actual abort-chain
+record is required for broader string membership as well as the head. Go
+fidelity cannot be inferred from a string head with arbitrary tail payloads.
+The runtime author owns extraction and exact driver erasure; broader rows
+must connect to the shipped pool driver, not an unrelated sequential replay.
+
+Actual abort-observer independent review is sealed at `ad961e41`: six new
+modules freshly elaborated against audited-base compiled dependencies, ten
+additional kernel probes, and the 43-export/14,549-declaration audit PASS.
+The author's frozen gate and ordinary CI also pass, with cached provenance
+explicit. The complete record comes from an actual pool abort step and
+retains all byte/output/choice/fuel facts; integers and nonstring tails are
+refused even with equal rendering. The author selectively committed the
+unchanged observer increment at `04109912`; integration is the next action.
+Full typed terminal classification and R1 fidelity remain separate work.
+
+Both shared Iris functional proofs now compile, including arbitrary-input
+`wp_shared` with a single owned cell through both handlers and the A2
+refactor using the same call/recovery rules. Generic actual setup, Iris
+adequacy and exact empty-output bridges now compile in the author's draft,
+as does transfer of successful executions to every choice stream. Final
+audits/review and full typed normal/panic/fuel classification remain open. B7 is
+developing at `99e0225d` with its WIP retained: recovery storage/setup and
+call entry have migrated; correspondence and the rest of the customers
+remain unfinished. A capped proof exit 137 was retained and is being
+replaced by smaller explicit dependency rewrites, without raising limits.
+
+O1 survives at the current representation. Full O2 driver/customer evidence,
+R-1 membership and final O3 evidence, actual B7/I1 and complete byte/choice
+capture (including BUG-090), and the O5 closing packet/C1 handoff remain
+mandatory. No main merge, push, stable pin, or Gate A completion is claimed.
+
+## Client restart checkpoint: accepted observer seam and identity repair
+
+Observer classifier integration is committed at `563c01de`, bookkeeping
+review at `4bfeba58`, abort-observer review at `53ca910a`. The selectively
+committed observer `04109912` is accepted for integration here: ordinary
+CI 98487 has a complete terminal PASS log, exact 3,855-input source inventory
+and byte-identical cached prior 3,627/394 corpus records. The client restart
+lost its numerical process handle; no owned OS process remained on recovery.
+This checkpoint accompanies the observer merge commit, with evidence in
+`docs/evidence/2026-09-06_abort-observation-integration/`.
+
+The I1 identity/decoder foundation is ready on feature tip `798e9c76`, with
+source commit `0ff12435` and independent reviews. During the next metadata
+bridge investigation, a fresh actual probe exposed pre-existing BUG-107:
+`NativeToIR` identifies `uintptr` with `uint64`. Go 8 versus Lean 15 exposed
+two cross-type assertions and incorrect method satisfaction. The root-owned
+`typed-uintptr-identity` worktree at `53ca910a` preserves five differential
+red cases, two earlier observer refusals and an existing wrapping positive.
+The isolated distinct-kind repair builds and its 48 identity/atomic focused
+cases pass. Independent implementation review and full/slow validation are
+still owed; no repair commit, baseline re-pin or B7 equivalence across this
+wrong-answer correction is claimed.
+
+The shared customer's 35-input frozen package remains in its author's
+`typed-shared-customer` worktree at `04109912`: its dedicated gate and
+ordinary CI pass; root independent review is next. The separate
+`typed-recovery-terminal` draft now compiles unconditional typed
+normal/string-panic/fuel classification and actual pool metadata completeness,
+using explicitly hashed borrowed renderer/shared sources. It needs tests,
+audits, committed-source reconciliation and independent review. B7's latest
+completed strict/channel/select correspondence and remaining statement/driver
+work remain in its own handoff. The restarted agent team was reconstructed
+from these disk checkpoints; no completed task was restarted from scratch.

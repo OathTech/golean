@@ -1,0 +1,31 @@
+GoLean/GoCore/RecoverySetupShape.lean:60:42: error: Application type mismatch: The argument
+  he
+has type
+  ExprTyped Γ e✝ ValueSort.string
+but is expected to have type
+  ExprTyped ?m.601 (Expr.toInterface target✝ Ty.string e✝) ?m.603
+in the application
+  expr_locSup he
+GoLean/GoCore/RecoverySetupShape.lean:140:4: error: Type mismatch: After simplification, term
+  ht
+ has type
+  RecoveryTyping.lookup (RecoveryTyping.initialContext f) name = some ty
+but is expected to have type
+  scopeLookup (List.map (fun p => (p.id, p.typ)) (f.args.toList ++ f.results.toList)) name = some ty
+GoLean/GoCore/RecoverySetupShape.lean:144:2: error: Tactic `subst` failed: did not find equation for eliminating 'name'
+
+world : World
+env : LocalEnv
+f : Func
+h : EnvTyped world (declareMany [] (f.args.toList ++ f.results.toList)) env
+hd : SignatureDistinct f
+name : String
+ty : Ty
+ht : RecoveryTyping.lookup (RecoveryTyping.initialContext f) name = some ty
+hs : scopeLookup (List.map (fun p => (p.id, p.typ)) (f.args.toList ++ f.results.toList)) name = some ty
+p : Param
+hp : p ∈ f.args.toList ++ f.results.toList
+he : (p.id, p.typ) = (name, ty)
+hk : (p.id, p.typ).fst = (name, ty).fst
+hty : (p.id, p.typ).snd = (name, ty).snd
+⊢ ∃ loc, env.lookup name = some loc ∧ AddressAt world ty loc

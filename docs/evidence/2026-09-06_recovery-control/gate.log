@@ -1,0 +1,74 @@
+575cbc32cbb45f9906e6bd091ed6f1f0cb21564f033c8c1c3f08299c56585fee  GoLean/GoCore/RecoveryDelivery.lean
+710d414ced4dc9c8a7c6ad0462a57da8bda1ca5f85675eaddca801fb96bf5af7  GoLean/GoCore/RecoveryControlData.lean
+c7c354b0be44d62cced1f15b969c9a33c17cc550aecbfb604123af9172840cba  GoLean/GoCore/RecoveryControl.lean
+500f9378b703df5528345402b6d58bb177c0d1b66765941b3d39255d171cad6e  GoLean/GoCore/RecoveryControlMono.lean
+49f4da47580f6f91dc32d57a8f537233cbd44751c63cf68e62ec229863a497b3  GoLean/GoCore/RecoveryWalk.lean
+21f9a76f79645d7e822c155aad4e7c11f2e40abc91f6bb508655c27630d05f58  GoLean/GoCore/RecoveryExpressionProgress.lean
+a5a2e01b607a32126902951339c553b15a0568679d81aa5a1537a04f5be68dc5  GoLean/GoCore/RecoveryControlHelpers.lean
+e2838d0afe34df9d5e8772db2dbd5818103c8556dc98ff161fcf07b1e815760b  GoLean/GoCore/RecoveryCallControl.lean
+d14c79064ad69303093374e5b88380efcf14060f96714550503dc2fe010cee32  GoLean/GoCore/RecoveryValueBasic.lean
+92fdb6e6fe06283df2c802b2e11d58eb1498e21a659712a0ad3def4e3e32b1e5  GoLean/GoCore/RecoveryValueCalls.lean
+1f14577e1f3d2def2e9636e67be40a5ddbfbb5ea3196da7532f652eb45f2a609  GoLean/GoCore/RecoveryStatementProgress.lean
+7e4382c929e4f81e08b4f45f8ef32e30e039e12ca68c0e39e9b7234aed6aa7ff  GoLean/GoCore/RecoveryFrameProgress.lean
+b7fa027394b53d60ff68438d403d10aa19cfb0d6bfbd82923702bd37257c1245  GoLean/GoCore/RecoveryPanicProgress.lean
+a71574c21fcdb6ac872e07dd3f828536d06ce51a86ab6c8f9b00c1a35a077d46  GoLean/GoCore/RecoveryInvariant.lean
+853cf53c2994924ffedaedd4e3f8404201e8770d799a277ee4539f7194dbc466  GoLean/GoCore/RecoverySuccessfulRuns.lean
+6d581a4787daed2599889290bb53b638005c884f06f9aa0f4e8507149a4f020e  Tests/RecoveryInvariant.lean
+a4707043f42379fca9c530b90d856b975203de97aa5ba5202d3be8a4b6d950ad  Tests/RecoveryControlAudit.lean
+✔ [65/66] Built Tests.RecoveryControlAudit (773ms)
+Build completed successfully (66 jobs).
+Recovery control fresh elaboration: GoLean/GoCore/RecoveryDelivery.lean
+Recovery control fresh elaboration: GoLean/GoCore/RecoveryControlData.lean
+Recovery control fresh elaboration: GoLean/GoCore/RecoveryControl.lean
+Recovery control fresh elaboration: GoLean/GoCore/RecoveryControlMono.lean
+Recovery control fresh elaboration: GoLean/GoCore/RecoveryWalk.lean
+Recovery control fresh elaboration: GoLean/GoCore/RecoveryExpressionProgress.lean
+Recovery control fresh elaboration: GoLean/GoCore/RecoveryControlHelpers.lean
+Recovery control fresh elaboration: GoLean/GoCore/RecoveryCallControl.lean
+Recovery control fresh elaboration: GoLean/GoCore/RecoveryValueBasic.lean
+Recovery control fresh elaboration: GoLean/GoCore/RecoveryValueCalls.lean
+Recovery control fresh elaboration: GoLean/GoCore/RecoveryStatementProgress.lean
+Recovery control fresh elaboration: GoLean/GoCore/RecoveryFrameProgress.lean
+Recovery control fresh elaboration: GoLean/GoCore/RecoveryPanicProgress.lean
+Recovery control fresh elaboration: GoLean/GoCore/RecoveryInvariant.lean
+Recovery control fresh elaboration: GoLean/GoCore/RecoverySuccessfulRuns.lean
+Recovery control fresh elaboration: Tests/RecoveryInvariant.lean
+Recovery control fresh elaboration: Tests/RecoveryControlAudit.lean
+Recovery control audit scratch retained: /home/dev/projects/golean/.tmp/recovery-control-audit-9nyz47ba
+Recovery control audit: 124 required theorems present; 13824 constants checked across all imported local modules (classical trio only)
+/home/dev/projects/golean/.tmp/recovery-control-audit-9nyz47ba/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryDelivery.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryDelivery.0.recoveryControlHole
+Recovery control negative audit: RecoveryDelivery compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-9nyz47ba/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryControlData.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryControlData.0.recoveryControlHole
+Recovery control negative audit: RecoveryControlData compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-9nyz47ba/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryControl.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryControl.0.recoveryControlHole
+Recovery control negative audit: RecoveryControl compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-9nyz47ba/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryControlMono.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryControlMono.0.recoveryControlHole
+Recovery control negative audit: RecoveryControlMono compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-9nyz47ba/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryWalk.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryWalk.0.recoveryControlHole
+Recovery control negative audit: RecoveryWalk compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-9nyz47ba/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryExpressionProgress.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryExpressionProgress.0.recoveryControlHole
+Recovery control negative audit: RecoveryExpressionProgress compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-9nyz47ba/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryControlHelpers.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryControlHelpers.0.recoveryControlHole
+Recovery control negative audit: RecoveryControlHelpers compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-9nyz47ba/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryCallControl.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryCallControl.0.recoveryControlHole
+Recovery control negative audit: RecoveryCallControl compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-9nyz47ba/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryValueBasic.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryValueBasic.0.recoveryControlHole
+Recovery control negative audit: RecoveryValueBasic compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-9nyz47ba/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryValueCalls.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryValueCalls.0.recoveryControlHole
+Recovery control negative audit: RecoveryValueCalls compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-9nyz47ba/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryStatementProgress.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryStatementProgress.0.recoveryControlHole
+Recovery control negative audit: RecoveryStatementProgress compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-9nyz47ba/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryFrameProgress.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryFrameProgress.0.recoveryControlHole
+Recovery control negative audit: RecoveryFrameProgress compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-9nyz47ba/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryPanicProgress.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryPanicProgress.0.recoveryControlHole
+Recovery control negative audit: RecoveryPanicProgress compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-9nyz47ba/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryInvariant.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryInvariant.0.recoveryControlHole
+Recovery control negative audit: RecoveryInvariant compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-9nyz47ba/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoverySuccessfulRuns.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoverySuccessfulRuns.0.recoveryControlHole
+Recovery control negative audit: RecoverySuccessfulRuns compiled then rejected (recoveryControlHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-9nyz47ba/AuditAll.lean:2:0: error: Recovery control audit: _private.Tests.RecoveryControlAudit.0.recoveryControlAuditHole depends on forbidden axiom _private.Tests.RecoveryControlAudit.0.recoveryControlAuditHole
+Recovery control negative audit: audit_private compiled then rejected (recoveryControlAuditHole)
+/home/dev/projects/golean/.tmp/recovery-control-audit-9nyz47ba/test_trailing/Tests/RecoveryInvariant.lean:145:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.tmp/recovery-control-audit-9nyz47ba/AuditAll.lean:2:0: error: Recovery control audit: _private.Tests.RecoveryInvariant.0.recoveryControlTrailingHole depends on forbidden axiom sorryAx
+Recovery control negative audit: test_trailing compiled then rejected (sorryAx)
+Recovery structural control gate: PASS

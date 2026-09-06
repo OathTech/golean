@@ -1,0 +1,15 @@
+{
+  "parent": "4a8a8ad186209fa191502b05fc04a5c567368d66",
+  "merge_head": "f160d7ca65cadf886cc26cfb93a15e4d4ed4c336",
+  "ci_session": 43232,
+  "ci_exit": 0,
+  "spike_session": 62843,
+  "spike_exit": 0,
+  "source_files": 215,
+  "review_inputs_verified": 26,
+  "implementation_review": [
+    "9e6c4234",
+    "ba930ba2"
+  ],
+  "promotion_review": "62377799"
+}

@@ -8,6 +8,7 @@ import GoLean.GoCore.BooleanSetup
 import GoLean.GoCore.BooleanInitialization
 import GoLean.GoCore.BooleanPool
 import GoLean.GoCore.RecoveryAdmission
+import GoLean.GoCore.RecoverySuccessfulRuns
 
 /-!
 # Experimental semantic consumer interface
@@ -73,9 +74,31 @@ profile against an independent judgment, with soundness and completeness.
 It checks all signatures/bodies, scoped bindings, call and capture vectors,
 deferred registrations and a finite call-graph certificate. Surface/placement
 diagnostics are proved consequences of typing and do not narrow admission.
-This static contract admits the complete A2 and shared-capture native fixtures;
-it does not yet establish recovery setup, runtime safety, renderer success or
-Iris ownership. See `docs/2026-09-06_recovery-static-claims.md`.
+This static contract admits the complete A2 and shared-capture native fixtures.
+Its own claims remain those in `docs/2026-09-06_recovery-static-claims.md`.
+
+`GoCore.RecoveryRuntime.setup_typed_wf` connects that admission to actual
+program setup, canonical argument and zero-result cells, typed environments,
+result locations and structural `MachineWf`, for every setup fuel and choice
+list. `enterFramePick_typed` supplies reusable actual call/defer entry from
+typed incoming arguments and heap, preserving root aliases and the original
+choices. `ResultRoots.load` and the `initialState_*` contracts expose actual
+typed and exact initialized readout; `EnvTyped.pushedDecls` handles block
+allocation with heterogeneous shadowing. These entry/storage guarantees do
+not establish whole recovery control preservation, renderer success or Iris
+ownership. See `docs/2026-09-06_recovery-entry-contract.md`.
+
+`RecoveryRuntime.setup_inv` additionally establishes the structural recovery
+invariant from actual admitted setup. `Inv.step` preserves it for every
+relational successor; `Inv.reachable_progress` distinguishes normal terminal,
+a nonempty semantic abort, and a legal successor. Call/defer entry and actual
+direct/indirect recovery have reusable control contracts. Successful
+`runConfig` executions have typed pinned-result readout, retain their original
+choices, and traverse configurations with no print events. These successful-
+execution facts do not assert that every driver run succeeds: rendering of
+arbitrary string bytes/equal repanics and full terminal/fuel classification
+remain separate obligations. No Iris resources or functional result are
+provided by typing. See `docs/2026-09-06_recovery-control-contract.md`.
 
 The underlying `GoCore` and `GoCore.Machine` types remain representation
 dependent. This facade is experimental: B7, C1 and the composition work may

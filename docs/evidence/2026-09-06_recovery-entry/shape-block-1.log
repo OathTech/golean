@@ -1,0 +1,9 @@
+GoLean/GoCore/RecoverySetupShape.lean:152:25: error: unsolved goals
+case neg
+name : String
+rest : List (String × Ty)
+ih : scopeLookup rest name = none ↔ ¬name ∈ List.map Prod.fst rest
+key : String
+ty : Ty
+hk : ¬key = name
+⊢ (∀ (x : Ty), ¬(name, x) ∈ rest) → ¬name = key

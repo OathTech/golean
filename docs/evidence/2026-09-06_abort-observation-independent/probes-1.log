@@ -1,0 +1,7 @@
+docs/evidence/2026-09-06_abort-observation-independent/Probes.lean:76:39: error(lean.unknownIdentifier): Unknown constant `GoLean.GoCore.Machine.MultiConfig.abort?`
+docs/evidence/2026-09-06_abort-observation-independent/Probes.lean:76:59: error(lean.unknownIdentifier): Unknown constant `GoLean.GoCore.Machine.MultiConfig.isDone`
+docs/evidence/2026-09-06_abort-observation-independent/Probes.lean:75:77: error: unsolved goals
+s : ExecState
+ch : Choices
+⊢ False
+docs/evidence/2026-09-06_abort-observation-independent/Probes.lean:80:0: error: Abort observation audit: AbortObserverIndependent.stopped_pool_is_not_an_abort_record depends on forbidden axiom sorryAx
