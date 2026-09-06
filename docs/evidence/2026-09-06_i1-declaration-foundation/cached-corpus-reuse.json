@@ -1,0 +1,57 @@
+{
+  "changed_reviewed_proof_inventory": [
+    {
+      "after": "68c77e5496efdbe38cefa3558f3f96a0a57eb9f35fdef2753dd2a8ceb6a862c4",
+      "before": "b438e8894713559b432a24c7c1d1f7cf1657c228b44a422b91868f84e81476f4",
+      "path": "GoLean/GoCore/BooleanInvariant.lean"
+    },
+    {
+      "after": "0b4510434d2855f6f89463740aaace7bc53a343a269801d0303910f31ffd947b",
+      "before": "f7e7e39d6375122c304058039f2673f0f2df5d832e6f53ccdd443af198d96a55",
+      "path": "GoLean/Interface.lean"
+    },
+    {
+      "after": "8da8f94b91618d672c304a36e42527ce531ac48b23b01be3796a1b775495f59e",
+      "before": "9b5d0926a8b468451641ea29b89015b26ca1df724e92011297f1fe4040a0f383",
+      "path": "Tests/BooleanSafetyAudit.lean"
+    },
+    {
+      "after": "280d21124a611c9aef3e8ce08c8b6d27f9529271c5986eee75b133ad2bafedad",
+      "before": "344a29bff4bb7aa38fcf460d84842040244060ca75b49d2ee7df7135f1bdd289",
+      "path": "Tests/InterfaceAudit.lean"
+    },
+    {
+      "after": "ebeaecf51043a753bf985da8e87baaeb7135accfb6b6833bd4c2631b1241000a",
+      "before": "795c41c6dfbe48fa4c67dfa498c14ef4146ed2791aeee9c188a91b4cbae3d3b7",
+      "path": "lakefile.toml"
+    },
+    {
+      "after": "1b91baf6972db10106a02c97a3bd3c49c8cb51fbfd27c411483ff17de10f9679",
+      "before": "941146d7a1b2ad263125db8d31fc5f048ab0d7a4bbf82271e3370e7d4683d276",
+      "path": "scripts/check-boolean-runtime"
+    },
+    {
+      "after": "913503c8036ee9ae53b20d0df004f4cc6f730765749844680b66e02204fbe4f7",
+      "before": "f45006200a7e8c5f4412bc99f225dc9313072cb8ea20dc195490677a591de4b6",
+      "path": "scripts/check-interface"
+    },
+    {
+      "after": "3f84e274c6d205e7530e0f9a5b77a184d46b6bf300576da8d88727c6490576be",
+      "before": "3f383f043322243dbdee0d6fe1c5fa8e4902d5de6249d631aa69565fab23cf57",
+      "path": "scripts/check-interface.py"
+    }
+  ],
+  "new_unwired_inputs": {
+    "tools/lowerdiag/unclassified-formats.txt": "bf3207e47c1a49a1f0203639cfe21038819fc21180c92e7d5c691722b16a5d32",
+    "tools/nativefrontend/declaration.go": "b76d99d364f490dd987296eddbb93161b9cfafd7569630f1cacd026f85710bf4",
+    "tools/nativefrontend/declaration_test.go": "f1adca4299dd4cc949247645e4309781ea72064ca5c0cda6b22b270cc88b6a0e"
+  },
+  "records": {
+    "full.meta.tsv": "b368e3923319d3c463e9059cf7b4047dc9522a8d1781a5d1b2cd44bd11b6dfe5",
+    "full.tsv": "efefb49ec21a134458d4533c9dc4f9ddb9b138d02f508a8056fbbab08bba5658",
+    "negative.meta.tsv": "0dfb202c7a7a41e0c280469678b96d9adb76276a1fb85fcd5880315047e1a15c",
+    "negative.tsv": "16e489a805e7530e6d961b27620a93c416c6d91373a608fedacef5281eb8d204"
+  },
+  "scope": "Explicitly cached renderer full3607/negative394. Existing executable frontend/interpreter/observer and corpus unchanged; new declaration helpers have no production caller, init function or registration. New error inventory is diagnostic-only. No fresh corpus or binary identity claim.",
+  "source": "docs/evidence/2026-09-06_renderer-integration"
+}
