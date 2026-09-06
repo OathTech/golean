@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Iris-free semantic correspondence gate, also called by scripts/ci.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+"$ROOT/scripts/capped" lake build GoLean.Interface InterfaceTests
+for module in GoLean/GoCore/Trace GoLean/GoCore/PoolTrace GoLean/GoCore/ProgramTrace \
+    GoLean/GoCore/BooleanTyping GoLean/GoCore/BooleanStore GoLean/GoCore/BooleanSetup \
+    GoLean/GoCore/BooleanInitialization \
+    GoLean/GoCore/BooleanControlTyping GoLean/GoCore/BooleanControl \
+    GoLean/GoCore/BooleanInvariant GoLean/GoCore/BooleanPreservation \
+    GoLean/GoCore/BooleanProgress GoLean/GoCore/BooleanSafety \
+    GoLean/GoCore/BooleanProgram GoLean/GoCore/BooleanPool \
+    GoLean/GoCore/RecoveryTypingCore GoLean/GoCore/RecoveryExpressions \
+    GoLean/GoCore/RecoveryCalls GoLean/GoCore/RecoveryStatements \
+    GoLean/GoCore/RecoveryGraph GoLean/GoCore/RecoveryDiagnostics \
+    GoLean/GoCore/RecoveryAdmission Tests/RecoveryTyping Tests/RecoveryDiagnosticControls \
+    Tests/RecoveryTypingFixture Tests/RecoveryA2Artifact Tests/RecoveryTypingAudit \
+    GoLean/Interface Tests/PanicRendering Tests/InterfaceContract Tests/BooleanRuntime \
+    Tests/BooleanProgram Tests/InterfaceAudit; do
+  "$ROOT/scripts/capped" lake env lean "$module.lean"
+done
+"$ROOT/scripts/capped" lake env python3 scripts/check-interface.py
