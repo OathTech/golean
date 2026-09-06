@@ -1,0 +1,13 @@
+b263b068861ed1852bccd5b9c213e1155575472b130d05a8082cd062255e64bc  /home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/boolean-program.RmDTYt/Program.lean
+15639a1770983d5b505a51fdd33f0b3b8a8cbc1dcf99581566c1568b26ea400b  /home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/.tmp/boolean-program.RmDTYt/Tests.body
+5bef2c19bbf333130440d611ce7648cdb821398dbcc1a7308286580d5857e195  /home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/GoLean/GoCore/BooleanProgram.lean
+078bad607c7110a38c3c04a4150b67e6146bfdb459856da4923e7bb4c2f5c850  /home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/GoLean/GoCore/BooleanPool.lean
+99277883f14547072dcb0e42926424fd610e7e7913e2799e9ecf98064c0934e2  /home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/Tests/BooleanProgram.lean
+0b4510434d2855f6f89463740aaace7bc53a343a269801d0303910f31ffd947b  /home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/GoLean/Interface.lean
+280d21124a611c9aef3e8ce08c8b6d27f9529271c5986eee75b133ad2bafedad  /home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/Tests/InterfaceAudit.lean
+8da8f94b91618d672c304a36e42527ce531ac48b23b01be3796a1b775495f59e  /home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/Tests/BooleanSafetyAudit.lean
+913503c8036ee9ae53b20d0df004f4cc6f730765749844680b66e02204fbe4f7  /home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/scripts/check-interface
+3f84e274c6d205e7530e0f9a5b77a184d46b6bf300576da8d88727c6490576be  /home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/scripts/check-interface.py
+1b91baf6972db10106a02c97a3bd3c49c8cb51fbfd27c411483ff17de10f9679  /home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/scripts/check-boolean-runtime
+40af6cc59859397c1e84e8e8472fc3eaac18b19143ac2d50e8468572bcd6cbbd  /home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/tools/boolean-runtime-audit.py
+ebeaecf51043a753bf985da8e87baaeb7135accfb6b6833bd4c2631b1241000a  /home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/lakefile.toml

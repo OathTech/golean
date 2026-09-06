@@ -1,0 +1,49 @@
+── Boolean structural runtime preservation and progress[0m
+c6ac7824a6d671dab0bfb8426778a0f54ff4dc5654c843f4960701aa3aae0b5a  GoLean/GoCore/BooleanStore.lean
+c9c5c3236284c0bf656f06fa964c67e8229608efc8049a822e55f29430af8edf  GoLean/GoCore/BooleanControlTyping.lean
+7bf157a0b656e0745b28ed11dd961312a67ef29c3e623d65d28196fed49a0f81  GoLean/GoCore/BooleanControl.lean
+68c77e5496efdbe38cefa3558f3f96a0a57eb9f35fdef2753dd2a8ceb6a862c4  GoLean/GoCore/BooleanInvariant.lean
+c57d0ef1a9503284c3a7d72456808237d260eb4c428e324834043ca57f38ee1b  GoLean/GoCore/BooleanProgress.lean
+fe7f463b6d92f079ec3ab269cbd136b40d280a24adc4bade35c3a6c37e5331e5  GoLean/GoCore/BooleanPreservation.lean
+6f43aafc404069ad188d62c945dd27d6bdce8f1c60e9ce836494b2e4ac8d2ef2  GoLean/GoCore/BooleanSafety.lean
+fd203aaa6d97be8126d575b4dccf7a1b0e65ad56c632daf9965347a0f44e085e  GoLean/GoCore/BooleanSetup.lean
+6530f9438425c68fb9e302142d9a0a63ddd96bc984c772b53d30e853ac6dabe5  GoLean/GoCore/BooleanInitialization.lean
+5bef2c19bbf333130440d611ce7648cdb821398dbcc1a7308286580d5857e195  GoLean/GoCore/BooleanProgram.lean
+078bad607c7110a38c3c04a4150b67e6146bfdb459856da4923e7bb4c2f5c850  GoLean/GoCore/BooleanPool.lean
+86032fddf9f6809fc9b6a4bf504ca0ab8c669437b442c873edecf682b306a71f  Tests/BooleanInvariant.lean
+99277883f14547072dcb0e42926424fd610e7e7913e2799e9ecf98064c0934e2  Tests/BooleanProgram.lean
+8da8f94b91618d672c304a36e42527ce531ac48b23b01be3796a1b775495f59e  Tests/BooleanSafetyAudit.lean
+✔ [36/38] Built Tests.BooleanInvariant (342ms)
+✔ [37/38] Built Tests.BooleanSafetyAudit (785ms)
+Build completed successfully (38 jobs).
+Boolean runtime fresh elaboration: GoLean/GoCore/BooleanStore.lean
+Boolean runtime fresh elaboration: GoLean/GoCore/BooleanControlTyping.lean
+Boolean runtime fresh elaboration: GoLean/GoCore/BooleanControl.lean
+Boolean runtime fresh elaboration: GoLean/GoCore/BooleanInvariant.lean
+Boolean runtime fresh elaboration: GoLean/GoCore/BooleanProgress.lean
+Boolean runtime fresh elaboration: GoLean/GoCore/BooleanPreservation.lean
+Boolean runtime fresh elaboration: GoLean/GoCore/BooleanSafety.lean
+Boolean runtime fresh elaboration: GoLean/GoCore/BooleanSetup.lean
+Boolean runtime fresh elaboration: GoLean/GoCore/BooleanInitialization.lean
+Boolean runtime fresh elaboration: GoLean/GoCore/BooleanProgram.lean
+Boolean runtime fresh elaboration: GoLean/GoCore/BooleanPool.lean
+Boolean runtime fresh elaboration: Tests/BooleanInvariant.lean
+Boolean runtime fresh elaboration: Tests/BooleanProgram.lean
+Boolean runtime fresh elaboration: Tests/BooleanSafetyAudit.lean
+Boolean runtime audit scratch retained: /home/dev/projects/golean/.tmp/boolean-runtime-audit-rwk6a8ru
+Boolean runtime audit: 44 required theorems present; 12135 constants checked across all imported local modules (classical trio only)
+/home/dev/projects/golean/.tmp/boolean-runtime-audit-rwk6a8ru/AuditAll.lean:2:0: error: Boolean runtime audit: _private.GoLean.GoCore.BooleanPreservation.0.booleanRuntimeCoreHole depends on forbidden axiom _private.GoLean.GoCore.BooleanPreservation.0.booleanRuntimeCoreHole
+Boolean runtime negative audit: core_private compiled then rejected (booleanRuntimeCoreHole)
+/home/dev/projects/golean/.tmp/boolean-runtime-audit-rwk6a8ru/AuditAll.lean:2:0: error: Boolean runtime audit: _private.GoLean.GoCore.BooleanProgram.0.booleanRuntimeProgramHole depends on forbidden axiom _private.GoLean.GoCore.BooleanProgram.0.booleanRuntimeProgramHole
+Boolean runtime negative audit: program_private compiled then rejected (booleanRuntimeProgramHole)
+/home/dev/projects/golean/.tmp/boolean-runtime-audit-rwk6a8ru/AuditAll.lean:2:0: error: Boolean runtime audit: _private.GoLean.GoCore.BooleanPool.0.booleanRuntimePoolHole depends on forbidden axiom _private.GoLean.GoCore.BooleanPool.0.booleanRuntimePoolHole
+Boolean runtime negative audit: pool_private compiled then rejected (booleanRuntimePoolHole)
+/home/dev/projects/golean/.tmp/boolean-runtime-audit-rwk6a8ru/program_test_trailing/Tests/BooleanProgram.lean:52:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.tmp/boolean-runtime-audit-rwk6a8ru/AuditAll.lean:2:0: error: Boolean runtime audit: _private.Tests.BooleanProgram.0.booleanRuntimeProgramTestHole depends on forbidden axiom sorryAx
+Boolean runtime negative audit: program_test_trailing compiled then rejected (sorryAx)
+/home/dev/projects/golean/.tmp/boolean-runtime-audit-rwk6a8ru/AuditAll.lean:2:0: error: Boolean runtime audit: _private.Tests.BooleanSafetyAudit.0.booleanRuntimeAuditHole depends on forbidden axiom _private.Tests.BooleanSafetyAudit.0.booleanRuntimeAuditHole
+Boolean runtime negative audit: audit_private compiled then rejected (booleanRuntimeAuditHole)
+/home/dev/projects/golean/.tmp/boolean-runtime-audit-rwk6a8ru/test_trailing/Tests/BooleanInvariant.lean:93:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.tmp/boolean-runtime-audit-rwk6a8ru/AuditAll.lean:2:0: error: Boolean runtime audit: _private.Tests.BooleanInvariant.0.booleanRuntimeTrailingHole depends on forbidden axiom sorryAx
+Boolean runtime negative audit: test_trailing compiled then rejected (sorryAx)
+Boolean runtime contract gate: PASS
