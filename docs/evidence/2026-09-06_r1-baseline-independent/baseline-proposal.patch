@@ -1,0 +1,42 @@
+--- a/baselines/native-full.tsv
++++ b/baselines/native-full.tsv
+@@ -1,5 +1,20 @@
+ # GoLean native-frontend full-corpus differential baseline
+-# cases: 3627 (3382 PASS / 245 FAIL)
++# cases: 3635 (3391 PASS / 244 FAIL)
++# re-pinned: 2026-09-06, independently reviewed R1 explicit string members [AGENT].
++#   Fresh full scripts/ci --diff: 3635 = 3391 PASS / 244 existing FAIL.
++#   Eight new typed string-member rows; historical repanic-same-value-abort
++#   FAIL/lean-observation -> PASS/string-member under explicit broader-core
++#   source/control evidence (no O2-admission claim for that historical row).
++#   Exact terminal/exit/output and thirteen forced-half controls retained;
++#   PASS/string-member means the reviewed R1 member, not exact gc text.
++#   No other status/stage change, PASS regression, removal or oracle move.
++#   Existing order and stage alternations preserved. Independent reviews:
++#   d59b4ab1 (apparatus) and 75da9338 (Lean/model/Go fidelity), exact v3.
++#   Complete raw full run, source inventory and delta:
++#   docs/evidence/2026-09-06_string-panic-members/full-v3-initial-delta.json
++#   Actual run used 32 workers under the unchanged 16G cap; metadata retained.
++#   This missed earlier lane coordination; future conformance explicitly uses 2.
++# Previous pin record (historical):
+ # re-pinned: 2026-09-06, BUG-106 oracle report authentication repair [AGENT].
+ #   Fresh full scripts/ci --diff: 3627 = 3382 PASS / 245 FAIL. Exactly
+ #   eleven new PASS panic-markers rows and sync/mutex-unlock-fatal/
+@@ -3958,8 +3973,16 @@
+ FAIL	panic-recover/recovered-runtime-error-type/observed	differential
+ FAIL	panic-recover/recovered-runtime-error-type/assert-int	lean-observation
+ PASS	panic-recover/repanic-recovered-by-outer	-
+-FAIL	panic-recover/repanic-same-value-abort	lean-observation
++PASS	panic-recover/repanic-same-value-abort	string-member
+ PASS	panic-recover/repanic-same-value-abort/forced-half	-
++PASS	panic-recover/string-members/equal	string-member
++PASS	panic-recover/string-members/unequal	string-member
++PASS	panic-recover/string-members/multiple	string-member
++PASS	panic-recover/string-members/invalid-before-lf	string-member
++PASS	panic-recover/string-members/invalid-after-lf	string-member
++PASS	panic-recover/string-members/invalid-recovered	string-member
++PASS	panic-recover/string-members/unicode	string-member
++PASS	panic-recover/string-members/controls	string-member
+ PASS	panic-recover/return-expression-panic-recovered	-
+ PASS	panic-recover/self-recovered-defer-panic	-
+ PASS	panic-recover/shim-refusal-unrecoverable/parse-recover	-
