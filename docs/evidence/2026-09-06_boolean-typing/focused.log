@@ -1,0 +1,26 @@
+Build completed successfully (13 jobs).
+Boolean typing audit scratch retained: /home/dev/projects/golean/.tmp/boolean-typing-audit-xfm30xwp
+Boolean typing audit: 12 required theorems present; 3276 constants checked across all imported local modules (classical trio only)
+/home/dev/projects/golean/.tmp/boolean-typing-audit-xfm30xwp/AuditAll.lean:2:0: error: Boolean typing audit: _private.GoLean.GoCore.BooleanTyping.0.booleanTypingCoreHole depends on forbidden axiom _private.GoLean.GoCore.BooleanTyping.0.booleanTypingCoreHole
+Boolean typing negative audit: core_private compiled then rejected (booleanTypingCoreHole)
+/home/dev/projects/golean/.tmp/boolean-typing-audit-xfm30xwp/AuditAll.lean:2:0: error: Boolean typing audit: _private.Tests.BooleanTypingAudit.0.booleanTypingAuditHole depends on forbidden axiom _private.Tests.BooleanTypingAudit.0.booleanTypingAuditHole
+Boolean typing negative audit: audit_private compiled then rejected (booleanTypingAuditHole)
+/home/dev/projects/golean/.tmp/boolean-typing-audit-xfm30xwp/test_trailing/Tests/BooleanTyping.lean:186:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.tmp/boolean-typing-audit-xfm30xwp/AuditAll.lean:2:0: error: Boolean typing audit: _private.Tests.BooleanTyping.0.booleanTypingTrailingHole depends on forbidden axiom sorryAx
+Boolean typing negative audit: test_trailing compiled then rejected (sorryAx)
+Build completed successfully (76 jobs).
+Boolean typing scratch retained: /home/dev/projects/golean/.tmp/boolean-typing-artifact.oSkkno
+Boolean typing: complete fresh native GoCore matches the proof fixture
+dbf75176f3577b472ccfa61d5445004cb80d0b742f5b182c0bc14d1b9852f099  /home/dev/projects/golean/.tmp/boolean-typing-artifact.oSkkno/native.json
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+building Lean executable...
+Build completed successfully (76 jobs).
+native frontend: per-case type-check + emit (no batch export)
+PASS	boolean-typing/zero	admission,boolean,initialization
+PASS	boolean-typing/shadow	admission,boolean,scopes
+PASS	boolean-typing/branches	admission,boolean,branches
+
+differential coverage summary: cases=3 pass=3 fail=0 export_status=0
+results: artifacts/boolean-typing/latest.tsv
+metadata: artifacts/boolean-typing/latest.meta.tsv
+Boolean typing foundation gate: PASS
