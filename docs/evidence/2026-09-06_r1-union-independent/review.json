@@ -1,0 +1,235 @@
+{
+  "status": "PASS bounded source and additive union review; final gate result separate",
+  "reviewed_root": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+  "root_HEAD": "b34cee6767de3e39f064cc5c8c2214568b332e86",
+  "accepted_R1": "819182b5898f565f2488d706ef160319453e2f1d",
+  "source_manifest_sha256": "fe3033c822f3a5ee79f72470c072aa95bd6699ae6e3f7cb4e0dd05090ea4f5f8",
+  "source_count": 3923,
+  "all_source_hashes_valid": true,
+  "original184_delta": [
+    "baselines/string-members/panic-recover/repanic-same-value-abort.json",
+    "baselines/string-members/panic-recover/string-members/controls.json",
+    "baselines/string-members/panic-recover/string-members/equal.json",
+    "baselines/string-members/panic-recover/string-members/invalid-after-lf.json",
+    "baselines/string-members/panic-recover/string-members/invalid-before-lf.json",
+    "baselines/string-members/panic-recover/string-members/invalid-recovered.json",
+    "baselines/string-members/panic-recover/string-members/multiple.json",
+    "baselines/string-members/panic-recover/string-members/unequal.json",
+    "baselines/string-members/panic-recover/string-members/unicode.json",
+    "lakefile.toml",
+    "scripts/ci"
+  ],
+  "inventory_count": 169,
+  "library_count": 12,
+  "exact_lake_union": true,
+  "CI": "byte-identical accepted R1 after removing one exact parent declaration gate; no removed gate",
+  "pins": {
+    "baselines/string-members/panic-recover/repanic-same-value-abort.json": {
+      "before_sha256": "8bb4f20a1b0b017b0f6dd27ae44c6b94695e0cc88b9c8b7bdaf3933668b85e59",
+      "after_sha256": "ac9793efe472c5efcf6a017208529a4a6822cca713ff57d464ebf46abff60781",
+      "only_change": "binding.apparatus_sources",
+      "old_count": 160,
+      "new_count": 169,
+      "added": [
+        "GoLean/GoCore/Declaration.lean",
+        "GoLean/GoCore/RecoveryCallLayout.lean",
+        "GoLean/GoCore/RecoveryChoices.lean",
+        "GoLean/GoCore/RecoveryPool.lean",
+        "GoLean/GoCore/RecoverySingleton.lean",
+        "GoLean/NativeDeclaration.lean",
+        "tools/nativefrontend/declaration.go",
+        "tools/nativefrontend/declaration_fixture_test.go",
+        "tools/nativefrontend/declaration_test.go"
+      ],
+      "removed": [],
+      "changed": {
+        "lakefile.toml": "31932ce0c4880fc681113cb6916e2b56e788681482c6ab38507372adb416391e",
+        "scripts/ci": "4ab07763523e024bce3bcbadc42734014f2f94ae35f356ba47ffe47cf55b30fb"
+      }
+    },
+    "baselines/string-members/panic-recover/string-members/controls.json": {
+      "before_sha256": "b400b681aceee9daf9410ed1eca3dd20125d0066b6b2f1cfc92d2846388ab6f3",
+      "after_sha256": "5700480e2c4b842ac9ed92531150006f894f58a44fce12f17d7a45c58ee04ac0",
+      "only_change": "binding.apparatus_sources",
+      "old_count": 160,
+      "new_count": 169,
+      "added": [
+        "GoLean/GoCore/Declaration.lean",
+        "GoLean/GoCore/RecoveryCallLayout.lean",
+        "GoLean/GoCore/RecoveryChoices.lean",
+        "GoLean/GoCore/RecoveryPool.lean",
+        "GoLean/GoCore/RecoverySingleton.lean",
+        "GoLean/NativeDeclaration.lean",
+        "tools/nativefrontend/declaration.go",
+        "tools/nativefrontend/declaration_fixture_test.go",
+        "tools/nativefrontend/declaration_test.go"
+      ],
+      "removed": [],
+      "changed": {
+        "lakefile.toml": "31932ce0c4880fc681113cb6916e2b56e788681482c6ab38507372adb416391e",
+        "scripts/ci": "4ab07763523e024bce3bcbadc42734014f2f94ae35f356ba47ffe47cf55b30fb"
+      }
+    },
+    "baselines/string-members/panic-recover/string-members/equal.json": {
+      "before_sha256": "570564d0e17a6d7e05cbd0c7a99005b2e865e6792220aa2d1de8aef1872974d3",
+      "after_sha256": "a915e2c87aca5675b0e609a72582bb6dc977aa60cc99d3d91c6e23b44d953549",
+      "only_change": "binding.apparatus_sources",
+      "old_count": 160,
+      "new_count": 169,
+      "added": [
+        "GoLean/GoCore/Declaration.lean",
+        "GoLean/GoCore/RecoveryCallLayout.lean",
+        "GoLean/GoCore/RecoveryChoices.lean",
+        "GoLean/GoCore/RecoveryPool.lean",
+        "GoLean/GoCore/RecoverySingleton.lean",
+        "GoLean/NativeDeclaration.lean",
+        "tools/nativefrontend/declaration.go",
+        "tools/nativefrontend/declaration_fixture_test.go",
+        "tools/nativefrontend/declaration_test.go"
+      ],
+      "removed": [],
+      "changed": {
+        "lakefile.toml": "31932ce0c4880fc681113cb6916e2b56e788681482c6ab38507372adb416391e",
+        "scripts/ci": "4ab07763523e024bce3bcbadc42734014f2f94ae35f356ba47ffe47cf55b30fb"
+      }
+    },
+    "baselines/string-members/panic-recover/string-members/invalid-after-lf.json": {
+      "before_sha256": "d3f2bf3e5a4528dfdfc856b3af19c28df5b8c43dca2a38585cbf65234261eb2e",
+      "after_sha256": "7d357856c0fd17e896b92db2b7a4d4f1b8856bb8a1567ee5c62f49c3025e60a7",
+      "only_change": "binding.apparatus_sources",
+      "old_count": 160,
+      "new_count": 169,
+      "added": [
+        "GoLean/GoCore/Declaration.lean",
+        "GoLean/GoCore/RecoveryCallLayout.lean",
+        "GoLean/GoCore/RecoveryChoices.lean",
+        "GoLean/GoCore/RecoveryPool.lean",
+        "GoLean/GoCore/RecoverySingleton.lean",
+        "GoLean/NativeDeclaration.lean",
+        "tools/nativefrontend/declaration.go",
+        "tools/nativefrontend/declaration_fixture_test.go",
+        "tools/nativefrontend/declaration_test.go"
+      ],
+      "removed": [],
+      "changed": {
+        "lakefile.toml": "31932ce0c4880fc681113cb6916e2b56e788681482c6ab38507372adb416391e",
+        "scripts/ci": "4ab07763523e024bce3bcbadc42734014f2f94ae35f356ba47ffe47cf55b30fb"
+      }
+    },
+    "baselines/string-members/panic-recover/string-members/invalid-before-lf.json": {
+      "before_sha256": "e54385b17d4a1af164b7c038e3c9c02cd07e593bb39fa113f3665d00bd60f2af",
+      "after_sha256": "ff77036e1d62f83a89b2c9a4848becfce1ba9da1040c8c137b1925663961aced",
+      "only_change": "binding.apparatus_sources",
+      "old_count": 160,
+      "new_count": 169,
+      "added": [
+        "GoLean/GoCore/Declaration.lean",
+        "GoLean/GoCore/RecoveryCallLayout.lean",
+        "GoLean/GoCore/RecoveryChoices.lean",
+        "GoLean/GoCore/RecoveryPool.lean",
+        "GoLean/GoCore/RecoverySingleton.lean",
+        "GoLean/NativeDeclaration.lean",
+        "tools/nativefrontend/declaration.go",
+        "tools/nativefrontend/declaration_fixture_test.go",
+        "tools/nativefrontend/declaration_test.go"
+      ],
+      "removed": [],
+      "changed": {
+        "lakefile.toml": "31932ce0c4880fc681113cb6916e2b56e788681482c6ab38507372adb416391e",
+        "scripts/ci": "4ab07763523e024bce3bcbadc42734014f2f94ae35f356ba47ffe47cf55b30fb"
+      }
+    },
+    "baselines/string-members/panic-recover/string-members/invalid-recovered.json": {
+      "before_sha256": "633c7348a29d794e485b4efcf68384af49d2c32fe8e1c59ec65d34ec107980c1",
+      "after_sha256": "90b838f5b4f9ed9dfdf2278f4eb7f61fd111f9e9ef0a9d1fb3e7f8f44e3dfb65",
+      "only_change": "binding.apparatus_sources",
+      "old_count": 160,
+      "new_count": 169,
+      "added": [
+        "GoLean/GoCore/Declaration.lean",
+        "GoLean/GoCore/RecoveryCallLayout.lean",
+        "GoLean/GoCore/RecoveryChoices.lean",
+        "GoLean/GoCore/RecoveryPool.lean",
+        "GoLean/GoCore/RecoverySingleton.lean",
+        "GoLean/NativeDeclaration.lean",
+        "tools/nativefrontend/declaration.go",
+        "tools/nativefrontend/declaration_fixture_test.go",
+        "tools/nativefrontend/declaration_test.go"
+      ],
+      "removed": [],
+      "changed": {
+        "lakefile.toml": "31932ce0c4880fc681113cb6916e2b56e788681482c6ab38507372adb416391e",
+        "scripts/ci": "4ab07763523e024bce3bcbadc42734014f2f94ae35f356ba47ffe47cf55b30fb"
+      }
+    },
+    "baselines/string-members/panic-recover/string-members/multiple.json": {
+      "before_sha256": "f160681378be15222969b6bc96dcec3c4132754a0f8e972971af7efb920e1160",
+      "after_sha256": "7ccdae1e6a8e7c49b70d05012525d6f71f0f12b528049fa8db1eb42543576187",
+      "only_change": "binding.apparatus_sources",
+      "old_count": 160,
+      "new_count": 169,
+      "added": [
+        "GoLean/GoCore/Declaration.lean",
+        "GoLean/GoCore/RecoveryCallLayout.lean",
+        "GoLean/GoCore/RecoveryChoices.lean",
+        "GoLean/GoCore/RecoveryPool.lean",
+        "GoLean/GoCore/RecoverySingleton.lean",
+        "GoLean/NativeDeclaration.lean",
+        "tools/nativefrontend/declaration.go",
+        "tools/nativefrontend/declaration_fixture_test.go",
+        "tools/nativefrontend/declaration_test.go"
+      ],
+      "removed": [],
+      "changed": {
+        "lakefile.toml": "31932ce0c4880fc681113cb6916e2b56e788681482c6ab38507372adb416391e",
+        "scripts/ci": "4ab07763523e024bce3bcbadc42734014f2f94ae35f356ba47ffe47cf55b30fb"
+      }
+    },
+    "baselines/string-members/panic-recover/string-members/unequal.json": {
+      "before_sha256": "29af32dba6165cefebb2b2747577a41e279f72c6edd2b2b6045622480bc6231e",
+      "after_sha256": "779d4db18b97083fe565200413b0cf23570ef5e17858d5a0c12412be2c22da96",
+      "only_change": "binding.apparatus_sources",
+      "old_count": 160,
+      "new_count": 169,
+      "added": [
+        "GoLean/GoCore/Declaration.lean",
+        "GoLean/GoCore/RecoveryCallLayout.lean",
+        "GoLean/GoCore/RecoveryChoices.lean",
+        "GoLean/GoCore/RecoveryPool.lean",
+        "GoLean/GoCore/RecoverySingleton.lean",
+        "GoLean/NativeDeclaration.lean",
+        "tools/nativefrontend/declaration.go",
+        "tools/nativefrontend/declaration_fixture_test.go",
+        "tools/nativefrontend/declaration_test.go"
+      ],
+      "removed": [],
+      "changed": {
+        "lakefile.toml": "31932ce0c4880fc681113cb6916e2b56e788681482c6ab38507372adb416391e",
+        "scripts/ci": "4ab07763523e024bce3bcbadc42734014f2f94ae35f356ba47ffe47cf55b30fb"
+      }
+    },
+    "baselines/string-members/panic-recover/string-members/unicode.json": {
+      "before_sha256": "7ab7f0a01c46193163b2196cbd93def79c02241bff1431e9780ffd7e16582002",
+      "after_sha256": "3596453f2777497e1de202802c13fec2de5ac0ed53e54816397dd060e82133fe",
+      "only_change": "binding.apparatus_sources",
+      "old_count": 160,
+      "new_count": 169,
+      "added": [
+        "GoLean/GoCore/Declaration.lean",
+        "GoLean/GoCore/RecoveryCallLayout.lean",
+        "GoLean/GoCore/RecoveryChoices.lean",
+        "GoLean/GoCore/RecoveryPool.lean",
+        "GoLean/GoCore/RecoverySingleton.lean",
+        "GoLean/NativeDeclaration.lean",
+        "tools/nativefrontend/declaration.go",
+        "tools/nativefrontend/declaration_fixture_test.go",
+        "tools/nativefrontend/declaration_test.go"
+      ],
+      "removed": [],
+      "changed": {
+        "lakefile.toml": "31932ce0c4880fc681113cb6916e2b56e788681482c6ab38507372adb416391e",
+        "scripts/ci": "4ab07763523e024bce3bcbadc42734014f2f94ae35f356ba47ffe47cf55b30fb"
+      }
+    }
+  }
+}
