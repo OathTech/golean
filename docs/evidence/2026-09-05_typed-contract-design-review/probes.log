@@ -1,0 +1,13 @@
+'GoLean.TypedContractDesignReview.sequence_splices' depends on axioms: [propext]
+'GoLean.TypedContractDesignReview.normalization_accepts_integer_at_bool' depends on axioms: [propext]
+'GoLean.TypedContractDesignReview.nonAscii_unrenderable' depends on axioms: [propext]
+'GoLean.TypedContractDesignReview.newline_unrenderable' depends on axioms: [propext]
+'GoLean.TypedContractDesignReview.invalidUtf8_unrenderable' depends on axioms: [propext]
+'GoLean.TypedContractDesignReview.equal_repanic_unrenderable' depends on axioms: [propext]
+'GoLean.TypedContractDesignReview.unrenderable_has_abort_shape' depends on axioms: [propext]
+'GoLean.TypedContractDesignReview.nonAscii_abort_has_no_message' depends on axioms: [propext, Quot.sound]
+'GoLean.TypedContractDesignReview.empty_chain_is_not_abort' depends on axioms: [propext]
+'GoLean.TypedContractDesignReview.hidden_binding_has_visible_root' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+'GoLean.TypedContractDesignReview.hidden_binding_violates_bound' does not depend on any axioms

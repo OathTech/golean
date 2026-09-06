@@ -1,0 +1,32 @@
+[
+  {
+    "name": "unicode",
+    "exit": 1,
+    "first_line_hex": "70616e69633a20c3a9",
+    "first_line_utf8": "panic: \u00e9"
+  },
+  {
+    "name": "newline",
+    "exit": 1,
+    "first_line_hex": "70616e69633a2061",
+    "first_line_utf8": "panic: a"
+  },
+  {
+    "name": "invalid-utf8",
+    "exit": 1,
+    "first_line_hex": "70616e69633a20ff",
+    "first_line_utf8": "panic: \\xff"
+  },
+  {
+    "name": "repanic",
+    "exit": 1,
+    "first_line_hex": "70616e69633a2073616d65205b7265636f76657265642c20726570616e69636b65645d",
+    "first_line_utf8": "panic: same [recovered, repanicked]"
+  },
+  {
+    "name": "newline-repanic",
+    "exit": 1,
+    "first_line_hex": "70616e69633a2061",
+    "first_line_utf8": "panic: a"
+  }
+]
