@@ -1,0 +1,1 @@
+/home/dev/projects/golean/.tmp/abort-observation-audit-ehtj62de/AuditAll.lean:2:0: error: Abort observation audit: _private.GoLean.GoCore.RecoveryPoolObservation.0.abortObservationHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryPoolObservation.0.abortObservationHole

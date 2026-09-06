@@ -1,0 +1,26 @@
+{
+  "parent": "53ca910abb16d9c7804b9e322eef523bfb2841a7",
+  "merged_feature": "04109912f28b9e8511d43e6fba7c3c158cdea76f",
+  "review": "ad961e41",
+  "gate": "GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 scripts/capped scripts/ci",
+  "client_session_before_restart": 98487,
+  "result": "PASS in completed terminal CI log; no remaining owned OS job after restart",
+  "os_exit_handle": "Lost with client restart; no numerical status reconstructed",
+  "inputs_revalidated": 3855,
+  "cached_corpus": {
+    "scope": "Exact original 3627/394 source-bound observer full records reused, not fresh differential.",
+    "source_changes": [
+      "GoLean/GoCore/AbortObservation.lean",
+      "GoLean/GoCore/RecoveryObservation.lean",
+      "GoLean/GoCore/RecoveryPoolObservation.lean",
+      "GoLean/GoCore/RecoveryProgramObservation.lean",
+      "Tests/AbortObservation.lean",
+      "Tests/AbortObservationAudit.lean",
+      "lakefile.toml",
+      "scripts/check-abort-observation",
+      "scripts/ci",
+      "tools/abort-observation-audit.py"
+    ],
+    "argument": "Existing interpreter/CLI/frontend unchanged; new modules expose separately proved optional instrumentation, with universal erasure to the original driver; dedicated gate freshly checks all new modules."
+  }
+}

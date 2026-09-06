@@ -546,3 +546,37 @@ O1 survives at the current representation. Full O2 driver/customer evidence,
 R-1 membership and final O3 evidence, actual B7/I1 and complete byte/choice
 capture (including BUG-090), and the O5 closing packet/C1 handoff remain
 mandatory. No main merge, push, stable pin, or Gate A completion is claimed.
+
+## Client restart checkpoint: accepted observer seam and identity repair
+
+Observer classifier integration is committed at `563c01de`, bookkeeping
+review at `4bfeba58`, abort-observer review at `53ca910a`. The selectively
+committed observer `04109912` is accepted for integration here: ordinary
+CI 98487 has a complete terminal PASS log, exact 3,855-input source inventory
+and byte-identical cached prior 3,627/394 corpus records. The client restart
+lost its numerical process handle; no owned OS process remained on recovery.
+This checkpoint accompanies the observer merge commit, with evidence in
+`docs/evidence/2026-09-06_abort-observation-integration/`.
+
+The I1 identity/decoder foundation is ready on feature tip `798e9c76`, with
+source commit `0ff12435` and independent reviews. During the next metadata
+bridge investigation, a fresh actual probe exposed pre-existing BUG-107:
+`NativeToIR` identifies `uintptr` with `uint64`. Go 8 versus Lean 15 exposed
+two cross-type assertions and incorrect method satisfaction. The root-owned
+`typed-uintptr-identity` worktree at `53ca910a` preserves five differential
+red cases, two earlier observer refusals and an existing wrapping positive.
+The isolated distinct-kind repair builds and its 48 identity/atomic focused
+cases pass. Independent implementation review and full/slow validation are
+still owed; no repair commit, baseline re-pin or B7 equivalence across this
+wrong-answer correction is claimed.
+
+The shared customer's 35-input frozen package remains in its author's
+`typed-shared-customer` worktree at `04109912`: its dedicated gate and
+ordinary CI pass; root independent review is next. The separate
+`typed-recovery-terminal` draft now compiles unconditional typed
+normal/string-panic/fuel classification and actual pool metadata completeness,
+using explicitly hashed borrowed renderer/shared sources. It needs tests,
+audits, committed-source reconciliation and independent review. B7's latest
+completed strict/channel/select correspondence and remaining statement/driver
+work remain in its own handoff. The restarted agent team was reconstructed
+from these disk checkpoints; no completed task was restarted from scratch.

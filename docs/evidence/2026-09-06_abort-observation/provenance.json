@@ -1,0 +1,15 @@
+{
+  "base": "f160d7ca65cadf886cc26cfb93a15e4d4ed4c336",
+  "command": "GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 bash scripts/check-abort-observation",
+  "exit": 0,
+  "fresh_source_modules": 6,
+  "required_theorems": 43,
+  "local_declarations": 14529,
+  "compiled_poisons": 6,
+  "kernel_regressions": 21,
+  "renderer_scope": "committed pre-R1 Machine; no later source or borrowed olean",
+  "ordinary_ci_exit": 0,
+  "ordinary_ci_command": "GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 scripts/capped scripts/ci",
+  "independent_review": "ad961e41",
+  "independent_review_scope": "six freshly compiled frozen modules, ten additional kernel probes,14549 audited local declarations; bounded PASS"
+}
