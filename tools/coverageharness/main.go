@@ -25,7 +25,10 @@ type config struct {
 	// splitStderr: the second mode (stdlib slice 3) — read a captured
 	// oracle stderr and print the program's OWN output prefix as a JSON
 	// string literal (split.go), exit 3 with the cause on any ambiguity.
-	splitStderr string
+	splitStderr     string
+	abortMessage    string
+	readObservation string
+	quoteFile       string
 }
 
 func main() {
@@ -36,7 +39,44 @@ func main() {
 	flag.StringVar(&cfg.args, "args", "-", "comma-separated integer args or -")
 	flag.StringVar(&cfg.status, "expected-status", "ok", "expected Go status: ok, panic, deadlock, race, or fatal")
 	flag.StringVar(&cfg.splitStderr, "split-stderr", "", "SPLIT MODE: path of a captured `go run` stderr; prints the program's output prefix for --expected-status as a JSON string literal (stdlib slice 3)")
+	flag.StringVar(&cfg.abortMessage, "abort-message", "", "path of raw oracle stderr; prints the actual first panic/fatal message as a JSON string literal after validating the report split")
+	flag.StringVar(&cfg.readObservation, "read-observation", "", "path of raw oracle stdout; validates UTF-8 and JSON before shell transport")
+	flag.StringVar(&cfg.quoteFile, "quote-file", "", "diagnostics only: print file bytes as an ASCII Go-quoted string; never an observation")
 	flag.Parse()
+
+	modePath, modes := "", 0
+	for _, p := range []string{cfg.splitStderr, cfg.abortMessage, cfg.readObservation, cfg.quoteFile} {
+		if p != "" {
+			modePath = p
+			modes++
+		}
+	}
+	if modes > 1 {
+		fmt.Fprintln(os.Stderr, "only one file-reading mode may be selected")
+		os.Exit(2)
+	}
+	if modes == 1 && cfg.splitStderr == "" {
+		raw, err := os.ReadFile(modePath)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(2)
+		}
+		var text string
+		switch {
+		case cfg.abortMessage != "":
+			text, err = abortMessageLiteral(raw, cfg.status)
+		case cfg.readObservation != "":
+			text, err = observationText(raw)
+		case cfg.quoteFile != "":
+			text = strconv.QuoteToASCII(string(raw))
+		}
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(3)
+		}
+		fmt.Print(text)
+		return
+	}
 
 	if cfg.splitStderr != "" {
 		raw, err := os.ReadFile(cfg.splitStderr)

@@ -1,0 +1,20 @@
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+building Lean executable...
+Build completed successfully (76 jobs).
+native frontend: per-case type-check + emit (no batch export)
+environment: line 98: warning: command substitution: ignored null byte in input
+environment: line 98: warning: command substitution: ignored null byte in input
+FAIL	panic-recover/panic-controls/output-prefix	panic,strings	stage=differential	detail=observation-eq could not decode the observation (exit 2 — did not decide; comparator said: offset 47: unexpected character in string) — Lean/Go equality NOT decided (not a mismatch): Lean={"message":"a\u0000\u0001b","output":"out\u0000\u0001\u0009\r\n","schema":"golean-observation-v1","status":"panic"} Go={"output":"out\u0000\u0001\t\r\n","message":"ab","schema":"golean-observation-v1","status":"panic"}
+FAIL	panic-recover/panic-controls/newline	panic,strings	stage=differential	detail=observation-eq could not decode the observation (exit 2 — did not decide; comparator said: offset 26: unexpected character in string) — Lean/Go equality NOT decided (not a mismatch): Lean={"message":"a\u0000\u0001\u0009\r","output":"","schema":"golean-observation-v1","status":"panic"} Go={"output":"","message":"a\t\r","schema":"golean-observation-v1","status":"panic"}
+FAIL	panic-recover/panic-controls/soh	panic,strings	stage=differential	detail=observation-eq could not decode the observation (exit 2 — did not decide; comparator said: offset 26: unexpected character in string) — Lean/Go equality NOT decided (not a mismatch): Lean={"message":"a\u0001b","output":"","schema":"golean-observation-v1","status":"panic"} Go={"output":"","message":"ab","schema":"golean-observation-v1","status":"panic"}
+PASS	panic-recover/panic-controls/cr	panic,strings
+environment: line 98: warning: command substitution: ignored null byte in input
+FAIL	panic-recover/panic-controls/nul	panic,strings	stage=differential	detail=Lean={"message":"a\u0000b","output":"","schema":"golean-observation-v1","status":"panic"} Go={"output":"","message":"ab","schema":"golean-observation-v1","status":"panic"} left:  {"message":"a\u0000b","output":"","schema":"golean-observation-v1","status":"panic"}\nright: {"message":"ab","output":"","schema":"golean-observation-v1","status":"panic"}
+PASS	panic-recover/panic-controls/tab	panic,strings
+environment: line 98: warning: command substitution: ignored null byte in input
+FAIL	panic-recover/panic-controls/recovered-newline	panic,recover,strings	stage=differential	detail=observation-eq could not decode the observation (exit 2 — did not decide; comparator said: offset 26: unexpected character in string) — Lean/Go equality NOT decided (not a mismatch): Lean={"message":"a\u0000\u0001\u0009\r","output":"","schema":"golean-observation-v1","status":"panic"} Go={"output":"","message":"a\t\r","schema":"golean-observation-v1","status":"panic"}
+PASS	panic-recover/panic-controls/output-ok	strings
+
+differential coverage summary: cases=8 pass=3 fail=5 export_status=0
+results: artifacts/coverage/latest.tsv
+metadata: artifacts/coverage/latest.meta.tsv

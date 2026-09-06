@@ -564,7 +564,15 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (3607 cases, 3363 PASS /
+All numbers at the current tracked baseline (3616 cases, 3372 PASS /
+244 FAIL — [AGENT], 2026-09-06, `typed-observer-controls`), measured by the
+full ordinary differential run and derived from the baseline rows.
+Nine `panic-recover/panic-controls/*` rows are born PASS. No existing
+result or unapproved stage changes; all red buckets remain unchanged:
+137 + 9 + 26 + 7 + 65 = 244. Source-bound evidence and bounded claim:
+`docs/2026-09-06_observer-controls-repair.md`; movement §8x below.
+
+Previous tracked baseline (3607 cases, 3363 PASS /
 244 FAIL — [AGENT], 2026-09-06, `typed-panic-rendering`), measured by the
 full ordinary differential run and derived from the baseline rows.
 Exactly A7's `panic-recover/panic-newline-abort` changes FAIL→PASS, and nine
@@ -1961,6 +1969,18 @@ Source hashes, red-first cases, raw full results and reconciliation are in
 `docs/2026-09-06_panic-rendering-repair.md` and its evidence directory.
 This is the existing `--diff` policy, including cached `tier=slow` records;
 no new stable pin or complete O2 claim follows.
+
+### 8x. Movement at the valid-control-byte observer repair (2026-09-06)
+
+Baseline before: 3607 = 3363 PASS / 244 FAIL. Exactly nine new
+`panic-recover/panic-controls/*` rows pass after the BUG-105 byte-transport
+repair: 3607 + 9 = 3616; 3363 + 9 = 3372; 244 reds unchanged. No existing
+result/unapproved-stage changes or case removals. The interpreter is
+unchanged. Full source-bound dirty-worktree evidence and independent
+byte-transport review are recorded in
+`docs/2026-09-06_observer-controls-repair.md`. The separately discovered
+fatal-unwind classifier defect requires its own repair/review/full run;
+this increment does not establish complete observer correctness or O2.
 
 ### 8c. The re-derivation, 2026-08-22 vintage → the 2026-09-01 tip
 

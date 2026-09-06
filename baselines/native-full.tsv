@@ -1,5 +1,15 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3607 (3363 PASS / 244 FAIL)
+# cases: 3616 (3372 PASS / 244 FAIL)
+# re-pinned: 2026-09-06, BUG-105 observer byte-transport repair [AGENT].
+#   Fresh full scripts/ci --diff: 3616 = 3372 PASS / 244 FAIL. Exactly
+#   nine new PASS panic-recover/panic-controls rows; no existing result
+#   or unapproved stage changes, no removals. Existing row order and
+#   stage-alternation declarations are preserved. No oracle pin change.
+#   Initial raw drift and complete source-bound dirty-worktree evidence:
+#   docs/2026-09-06_observer-controls-repair.md and its evidence directory.
+#   This validates byte transport; the separately discovered fatal-unwind
+#   classifier defect has a separately reviewed follow-on, not a waiver.
+# Previous pin record (historical):
 # re-pinned: 2026-09-06, typed panic-rendering K3 repair [AGENT], after full
 #   scripts/ci --diff: 3607 = 3363 PASS / 244 FAIL. Exactly one existing
 #   FAIL -> PASS (panic-recover/panic-newline-abort), nine new PASS rows
@@ -3894,6 +3904,15 @@ PASS	panic-recover/panic-named-type-abort	-
 PASS	panic-recover/panic-newline-abort	-
 PASS	panic-recover/panic-nil-abort	-
 PASS	panic-recover/panic-nil-recover	-
+PASS	panic-recover/panic-controls/nul	-
+PASS	panic-recover/panic-controls/soh	-
+PASS	panic-recover/panic-controls/tab	-
+PASS	panic-recover/panic-controls/cr	-
+PASS	panic-recover/panic-controls/newline	-
+PASS	panic-recover/panic-controls/recovered-newline	-
+PASS	panic-recover/panic-controls/output-prefix	-
+PASS	panic-recover/panic-controls/output-ok	-
+PASS	panic-recover/panic-controls/child-confluent	confluent
 PASS	panic-recover/panic-text/unicode-two	-
 PASS	panic-recover/panic-text/unicode-three	-
 PASS	panic-recover/panic-text/unicode-four	-

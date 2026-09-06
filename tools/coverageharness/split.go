@@ -174,6 +174,9 @@ func splitStderr(stderr []byte, status string) ([]byte, error) {
 // outputLiteral renders the prefix as a JSON string literal (no trailing
 // newline, HTML escaping off — the Lean decoder parses either).
 func outputLiteral(prefix []byte) (string, error) {
+	if !utf8.Valid(prefix) {
+		return "", fmt.Errorf("observation string is not valid UTF-8 (%d bytes), refused", len(prefix))
+	}
 	var sb strings.Builder
 	enc := json.NewEncoder(&sb)
 	enc.SetEscapeHTML(false)

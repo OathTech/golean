@@ -6187,3 +6187,33 @@ this also retires `emitMapCompound`'s unforced `probeSuppress`). Until
 then the compound-call target beside a hoisted len refuses by name
 (BUG-102's `compound-call-target-vs-len`) and these five rows are
 red-first with gc's output pinned.
+
+## BUG-105 — raw panic bytes pass through Bash command substitution and incomplete JSON escaping: NUL disappears and SOH makes the oracle observation invalid [apparatus; panic/output observation transport]
+
+- Status: fixed ([AGENT], 2026-09-06, `typed-observer-controls`; independent byte-transport review PASS, full 3616-row differential completed with only nine new PASS rows; final ordinary CI exit 0)
+- Pinned-by: differential
+- Cases: panic-recover/panic-controls/nul, panic-recover/panic-controls/soh, panic-recover/panic-controls/newline, panic-recover/panic-controls/recovered-newline, panic-recover/panic-controls/output-prefix, panic-recover/panic-controls/tab, panic-recover/panic-controls/cr, panic-recover/panic-controls/output-ok, panic-recover/panic-controls/child-confluent
+
+Go and the Lean model preserve the bytes in explicit string panic payloads.
+The previous strict and membership/confluent observer captured raw panic
+stderr with `$(...)`, which removes NUL, then escaped only backslash, quote,
+LF, CR and TAB. Other JSON controls such as SOH made invalid JSON. Native
+red-first evidence: `nul` FAIL/differential (Go observation wrongly `ab`,
+Lean correctly `a\u0000b`); `soh`, `newline`, `recovered-newline`, and
+`output-prefix` FAIL/differential with comparator exit 2 (undecodable Go
+observation, not decided inequality). TAB, CR and successful stderr-output
+controls already passed. The fixed focused slice is 9/9 PASS, including a
+new child-confluent case exercising sampling.
+
+Repair: read raw descriptor files in the Go harness, validate the existing
+stderr split, select the actual first panic/fatal message, and encode it
+with the JSON encoder. Check raw success stdout before Bash transport.
+Keep stderr output and stdout separate; quote diagnostics byte-exactly.
+The model is unchanged. Invalid-UTF-8 representation and BUG-004/R-1 are
+separate obligations; no observer policy or boxing identity is chosen here.
+The ordinary CI gate includes source hashes, fresh Go builds/unit tests,
+26 strict/sampling apparatus probes and four compiled corruption mutants.
+
+Record and exact before/after evidence:
+`docs/2026-09-06_observer-controls-repair.md` and
+`docs/evidence/2026-09-06_observer-controls/`.
