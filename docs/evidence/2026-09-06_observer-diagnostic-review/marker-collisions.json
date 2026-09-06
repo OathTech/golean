@@ -1,0 +1,46 @@
+{
+  "go_version": "go version go1.26.5 linux/amd64",
+  "leading_lines_equal": [
+    "multiline-payload",
+    "actual-fatal"
+  ],
+  "equal_prefix_hex": "70616e69633a206f726967696e616c0a09666174616c206572726f723a2073796e633a20756e6c6f636b206f6620756e6c6f636b6564206d75746578",
+  "scope": "Real Go reports; indistinguishable leading lines, not a claim that complete stack reports are byte-identical.",
+  "records": [
+    {
+      "label": "first-line",
+      "exit": 1,
+      "report_leading_lines": "panic: fatal error: user payload",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "c17569d7e86eeb73dd8cfa30f59e3de19b429162b3d4bc141f374640b59eb682"
+    },
+    {
+      "label": "prefix-midline",
+      "exit": 1,
+      "report_leading_lines": "prefix fatal error: user output\npanic: original",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "ef4a2f6ae2ec3778de35a1d79a80246572766d35f66f33f4b64a09820765f22b"
+    },
+    {
+      "label": "prefix-line-start",
+      "exit": 1,
+      "report_leading_lines": "fatal error: user output\npanic: original",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "97f665766bd07a3c9c4a0e374ec481c7a3bcb34c2ee0a5a7549125c96c519230"
+    },
+    {
+      "label": "multiline-payload",
+      "exit": 1,
+      "report_leading_lines": "panic: original\n\tfatal error: sync: unlock of unlocked mutex",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "3122b80afba018abd06ea3b690373e72e5bbfa653363d54eb075cd058d739727"
+    },
+    {
+      "label": "actual-fatal",
+      "exit": 1,
+      "report_leading_lines": "panic: original\n\tfatal error: sync: unlock of unlocked mutex",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "752099eba6a7308cd2c37d2b382a40a0d716cc3985c81d69fa0f8ccd9691f7b1"
+    }
+  ]
+}

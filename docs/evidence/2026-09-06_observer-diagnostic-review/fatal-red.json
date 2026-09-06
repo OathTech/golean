@@ -1,0 +1,23 @@
+[
+  {
+    "tool": "membership-sampling",
+    "exit": 0,
+    "stdout": "{\"message\":\"original\",\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"panic\"}",
+    "stderr": "",
+    "oracle_stderr": "panic: original\n\tfatal error: sync: unlock of unlocked mutex\n\ngoroutine 1 [running]:\ninternal/sync.fatal({0x493d2a?, 0x1a73c4604680?})\n\t/usr/local/go/src/runtime/panic.go:1191 +0x18\ninternal/sync.(*Mutex).unlockSlow(0x1a73c45581e8, 0xffffffff)\n\t/usr/local/go/src/internal/sync/mutex.go:204 +0x35\ninternal/sync.(*Mutex).Unlock(...)\n\t/usr/local/go/src/internal/sync/mutex.go:198\nsync.(*Mutex).Unlock(...)\n\t/usr/local/go/src/sync/mutex.go:65\npanic({0x481240?, 0x498100?})\n\t/usr/local/go/src/runtime/panic.go:860 +0x13a\nmain.main()\n\t/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-diagnostic-review-caok4869/membership-sampling-fatal-unwind/main.go:3 +0x59\nexit status 2\n"
+  },
+  {
+    "tool": "gotest-triage",
+    "exit": 0,
+    "stdout": "{\"output\":\"\",\"message\":\"original\",\"schema\":\"golean-observation-v1\",\"status\":\"panic\"}",
+    "stderr": "",
+    "oracle_stderr": "panic: original\n\tfatal error: sync: unlock of unlocked mutex\n\ngoroutine 1 [running]:\ninternal/sync.fatal({0x493d2a?, 0x9735c888680?})\n\t/usr/local/go/src/runtime/panic.go:1191 +0x18\ninternal/sync.(*Mutex).unlockSlow(0x9735c7e01d8, 0xffffffff)\n\t/usr/local/go/src/internal/sync/mutex.go:204 +0x35\ninternal/sync.(*Mutex).Unlock(...)\n\t/usr/local/go/src/internal/sync/mutex.go:198\nsync.(*Mutex).Unlock(...)\n\t/usr/local/go/src/sync/mutex.go:65\npanic({0x481240?, 0x498100?})\n\t/usr/local/go/src/runtime/panic.go:860 +0x13a\nmain.main()\n\t/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-diagnostic-review-caok4869/gotest-triage-fatal-unwind/main.go:3 +0x59\nexit status 2\n"
+  },
+  {
+    "tool": "cedar-census",
+    "exit": 0,
+    "stdout": "{\"output\":\"\",\"message\":\"original\",\"schema\":\"golean-observation-v1\",\"status\":\"panic\"}",
+    "stderr": "",
+    "oracle_stderr": "panic: original\n\tfatal error: sync: unlock of unlocked mutex\n\ngoroutine 1 [running]:\ninternal/sync.fatal({0x493d2a?, 0x78fa38c4680?})\n\t/usr/local/go/src/runtime/panic.go:1191 +0x18\ninternal/sync.(*Mutex).unlockSlow(0x78fa391a000, 0xffffffff)\n\t/usr/local/go/src/internal/sync/mutex.go:204 +0x35\ninternal/sync.(*Mutex).Unlock(...)\n\t/usr/local/go/src/internal/sync/mutex.go:198\nsync.(*Mutex).Unlock(...)\n\t/usr/local/go/src/sync/mutex.go:65\npanic({0x481240?, 0x498100?})\n\t/usr/local/go/src/runtime/panic.go:860 +0x13a\nmain.main()\n\t/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-diagnostic-review-caok4869/cedar-census-fatal-unwind/main.go:3 +0x59\nexit status 2\n"
+  }
+]

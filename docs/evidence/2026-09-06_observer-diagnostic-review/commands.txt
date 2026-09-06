@@ -1,0 +1,7 @@
+From /home/dev/projects/golean/.claude/worktrees/typed-preflight:
+GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 scripts/capped python3 docs/evidence/2026-09-06_observer-diagnostic-review/review.py initial
+Terminal exit1,149checks146PASS3FAIL.
+
+Additional capped Python drivers executed archived core-strict.sh/core-sampling.sh against generated main.go with expected_status=panic, expected_reason=original, statuses=panic. Both observer blocks exit0; underlying real go run exits1/child2.
+Marker-collision capped Python driver ran go run . in each archived native-marker-collisions subdirectory; all underlying go runs exit1.
+Environment and reused harness hash in provenance.json. No full census/frontend/model test was run.

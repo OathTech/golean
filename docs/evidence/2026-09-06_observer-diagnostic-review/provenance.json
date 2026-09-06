@@ -1,0 +1,22 @@
+{
+  "candidate_root": "/home/dev/projects/golean/.claude/worktrees/typed-observer-controls",
+  "scratch": "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-diagnostic-review-caok4869",
+  "files": {
+    "scripts/membership-sampling": "7fe8b3a30bfb565e2b98d4c7cfaa2a30df0b3b8243ce77579dee2f5a7006562f",
+    "scripts/gotest-triage": "306cf7f25d80d9d444b120c696125ac12ffc4d98ac04c950cb52b1c8596b8e91",
+    "scripts/cedar-census": "be49bc806001660c13ae7f7a5620011f056b7badc01f86b1db8c143ecd91c7c5",
+    "scripts/check-observer-tools.py": "ed75e3295337d607e41cece26ab835fe0a76815a94ff0743bd1422847e7f5c61"
+  },
+  "sealed_utc": "2026-09-06T01:53:59.233802+00:00",
+  "result": "CHANGES REQUIRED; initial diagnostic149checks146PASS3FAIL; core strict/sampling false-panic confirmed",
+  "source_scope": "initial diagnostic snapshot only, before broad fatal-priority draft; no diagnostic PASS",
+  "base_commit": "ff7173dd959435ede346c77318c29f13e16ed5f3",
+  "core_runner_sha256": "0c545a40ac6a71cac8ede219437482c93210eec8f3dc75ab01660b3f48037a81",
+  "go_version": "go version go1.26.5 linux/amd64",
+  "harness_sha256": "8cb9566689b372615b0ab6af636d0a311f088785fb202e5c18b7e1e6d35c97dc",
+  "harness_origin": "preceding independent core observer build; reused unchanged",
+  "GOLEAN_MEM_MAX": "16G",
+  "LEAN_NUM_THREADS": "3",
+  "GO111MODULE": "off",
+  "GOCACHE": "/home/dev/projects/golean/.claude/worktrees/typed-preflight/artifacts/go-build-cache"
+}
