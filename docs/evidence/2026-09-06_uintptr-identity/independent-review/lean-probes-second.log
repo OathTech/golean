@@ -1,0 +1,6 @@
+/home/dev/projects/golean/.tmp/uintptr-independent-review.du3rifxj/Probes.lean:12:115: error: failed to synthesize
+  Decidable
+    (atomicCompute AtomicStmtOp.add IntKind.uintptr 18446744073709551615 [GoValue.int 1 IntKind.uintptr] =
+      Except.ok (some 0, GoValue.int 0 IntKind.uintptr))
+
+Hint: Additional diagnostic information may be available using the `set_option diagnostics true` command.

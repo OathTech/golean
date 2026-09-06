@@ -1,0 +1,6 @@
+{
+  "path": "deps/goose",
+  "target": "/home/dev/projects/golean/deps/goose",
+  "git_head": "3be88bbb4982f58e5813b6f0344302d5582c8e8a",
+  "reason": "Initial full CI guard refused missing pinned checkout; no tracked source change"
+}

@@ -1,0 +1,36 @@
+/home/dev/projects/golean/.tmp/uintptr-independent-review.du3rifxj/Probes.lean:10:10: error: Function expected at
+  atomicKindOk
+but this term has type
+  ?m.1
+
+Note: Expected a function because this term is being applied to the argument
+  .uintptr
+
+Hint: The identifier `atomicKindOk` is unknown, and Lean's `autoImplicit` option causes an unknown identifier to be treated as an implicitly bound variable with an unknown type. However, the unknown type cannot be a function, and a function is what Lean expects here. This is often the result of a typo or a missing `import` or `open` statement.
+/home/dev/projects/golean/.tmp/uintptr-independent-review.du3rifxj/Probes.lean:11:10: error: Function expected at
+  atomicKindOk
+but this term has type
+  ?m.1
+
+Note: Expected a function because this term is being applied to the argument
+  .uint8
+
+Hint: The identifier `atomicKindOk` is unknown, and Lean's `autoImplicit` option causes an unknown identifier to be treated as an implicitly bound variable with an unknown type. However, the unknown type cannot be a function, and a function is what Lean expects here. This is often the result of a typo or a missing `import` or `open` statement.
+/home/dev/projects/golean/.tmp/uintptr-independent-review.du3rifxj/Probes.lean:12:10: error: Function expected at
+  atomicCompute
+but this term has type
+  ?m.1
+
+Note: Expected a function because this term is being applied to the argument
+  .add
+
+Hint: The identifier `atomicCompute` is unknown, and Lean's `autoImplicit` option causes an unknown identifier to be treated as an implicitly bound variable with an unknown type. However, the unknown type cannot be a function, and a function is what Lean expects here. This is often the result of a typo or a missing `import` or `open` statement.
+/home/dev/projects/golean/.tmp/uintptr-independent-review.du3rifxj/Probes.lean:12:79: error(lean.invalidDottedIdent): Invalid dotted identifier notation: The expected type of `.ok` could not be determined
+
+Hint: Using one of these would be unambiguous:
+  [apply] `Except.ok`
+  [apply] `EST.Out.ok`
+  [apply] `EStateM.Result.ok`
+  [apply] `Result.ok`
+  [apply] `Machine.NoPanic.ok`
+  [apply] `Machine.Obs.ok`

@@ -15,6 +15,7 @@ inductive IntKind where
   | uint32
   | int64
   | uint64
+  | uintptr
   | unbounded (name : String)
   deriving Repr, BEq, Inhabited, DecidableEq
 
@@ -29,6 +30,7 @@ def IntKind.name : IntKind → String
   | .uint32 => "uint32"
   | .int64 => "int64"
   | .uint64 => "uint64"
+  | .uintptr => "uintptr"
   | .unbounded name => name
 
 /-- The bit width of an integer kind on platform `p`: `int`/`uint` take
@@ -46,6 +48,7 @@ def IntKind.bitsAt (p : Platform) : IntKind → Option Nat
   | .uint32 => some 32
   | .int64 => some 64
   | .uint64 => some 64
+  | .uintptr => some (8 * p.wordBytes)
   | .unbounded _ => none
 
 /-- The bit width at THE pinned platform (`platform = gcAmd64`: 64-bit
@@ -63,6 +66,7 @@ def IntKind.signed : IntKind → Bool
   | .uint32 => false
   | .int64 => true
   | .uint64 => false
+  | .uintptr => false
   | .unbounded _ => true
 
 def IntKind.normalize (kind : IntKind) (value : Int) : Int :=

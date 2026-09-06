@@ -2606,15 +2606,24 @@ def main : IO UInt32 := do
     (CLI.observationOfRun (fun _ => none) (.ok { values := #[.int 6 .uint8] })).compress
     "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"kind\":\"uint8\",\"tag\":\"int\",\"value\":6}]}")
   -- Fail-closed decode discipline for the new fields (the float arm's
-  -- mold): unknown kinds — including uintptr, which the frontend maps
-  -- to uint64 so the machine can never answer it — and out-of-range
+  -- mold): unknown kinds and out-of-range
   -- values refuse; the machine encoder's own output round-trips.
   passed := passed && (← expectTrue "F15: decode accepts the machine encoder's kind-carrying output"
     (CLI.decodeObservation "left"
       (CLI.observationOfRun (fun _ => none) (.ok { values := #[.int (-5) .int8, .int 255 .uint8] })).compress).isOk)
-  passed := passed && (← expectTrue "F15: decode refuses an unknown integer kind (uintptr)"
+  passed := passed && (← expectTrue "F15: decode refuses an unknown integer kind (uint128)"
     !(CLI.decodeObservation "left"
-      "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"kind\":\"uintptr\",\"value\":1}]}").isOk)
+      "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"kind\":\"uint128\",\"value\":1}]}").isOk)
+  passed := passed && (← expectTrue "BUG-107: uintptr observation is accepted with its distinct identity"
+    ((CLI.decodeObservation "left"
+      (CLI.observationOfRun (fun _ => none) (.ok { values := #[.int 7 .uintptr] })).compress).isOk &&
+      CLI.observationOfRun (fun _ => none) (.ok { values := #[.int 7 .uintptr] }) !=
+      CLI.observationOfRun (fun _ => none) (.ok { values := #[.int 7 .uint64] })))
+  passed := passed && (← expectTrue "BUG-107: uintptr observation rejects negative and overflowing values"
+    (!(CLI.decodeObservation "left"
+      "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"kind\":\"uintptr\",\"value\":-1}]}").isOk &&
+     !(CLI.decodeObservation "left"
+      "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"kind\":\"uintptr\",\"value\":18446744073709551616}]}").isOk))
   passed := passed && (← expectTrue "F15: decode refuses a kindless int observation (the retired shape)"
     !(CLI.decodeObservation "left"
       "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":1}]}").isOk)

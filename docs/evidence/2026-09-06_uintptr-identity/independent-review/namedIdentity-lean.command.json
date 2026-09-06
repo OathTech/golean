@@ -1,0 +1,1 @@
+{"args": ["scripts/capped", ".lake/build/bin/golean", "native-json-run", "--input", "/home/dev/projects/golean/.tmp/uintptr-independent-review.du3rifxj/wire.json", "--function", "namedIdentity"], "exit": 0}

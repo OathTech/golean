@@ -1,0 +1,66 @@
+[
+  {
+    "function": "aliasIdentity",
+    "go_exit": 1,
+    "lean_exit": 0,
+    "equal": false,
+    "go": "",
+    "lean": "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"bool\",\"value\":true}]}\n"
+  },
+  {
+    "function": "namedIdentity",
+    "go_exit": 1,
+    "lean_exit": 0,
+    "equal": false,
+    "go": "",
+    "lean": "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"bool\",\"value\":true}]}\n"
+  },
+  {
+    "function": "functionIdentity",
+    "go_exit": 1,
+    "lean_exit": 0,
+    "equal": false,
+    "go": "",
+    "lean": "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"bool\",\"value\":true}]}\n"
+  },
+  {
+    "function": "channelIdentity",
+    "go_exit": 1,
+    "lean_exit": 0,
+    "equal": false,
+    "go": "",
+    "lean": "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"bool\",\"value\":true}]}\n"
+  },
+  {
+    "function": "mapIdentity",
+    "go_exit": 1,
+    "lean_exit": 0,
+    "equal": false,
+    "go": "",
+    "lean": "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"bool\",\"value\":true}]}\n"
+  },
+  {
+    "function": "conversion",
+    "go_exit": 1,
+    "lean_exit": 0,
+    "equal": false,
+    "go": "",
+    "lean": "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"bool\",\"value\":true}]}\n"
+  },
+  {
+    "function": "atomicIdentity",
+    "go_exit": 1,
+    "lean_exit": 0,
+    "equal": false,
+    "go": "",
+    "lean": "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"bool\",\"value\":true}]}\n"
+  },
+  {
+    "function": "highReadout",
+    "go_exit": 1,
+    "lean_exit": 0,
+    "equal": false,
+    "go": "",
+    "lean": "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"kind\":\"uintptr\",\"tag\":\"int\",\"value\":18446744073709551615}]}\n"
+  }
+]

@@ -306,12 +306,10 @@ private partial def decodeGoValueObservation (path : String) (json : Json) : Exc
       pure ()
   | "int" =>
       -- Kind-carrying shape (F15, the float arm's discipline): exact
-      -- keys, kind restricted to the ten concrete integer kinds, value
+      -- keys, kind restricted to the eleven concrete integer kinds, value
       -- range-checked per the kind's width/signedness — fail closed on
-      -- anything else. `uintptr` is deliberately ABSENT: the frontend
-      -- maps uintptr to uint64 (`intKindOfName`), so the machine could
-      -- never emit it and a Go-side uintptr observation must refuse
-      -- here rather than alias into uint64.
+      -- anything else. `uintptr` has its own kind and the pinned target's
+      -- 64-bit unsigned width; it is never aliased into uint64.
       StrictJson.requireExactKeys path obj ["kind", "tag", "value"]
       let kind ← StrictJson.string s!"{path}.kind" (← StrictJson.field path obj "kind")
       let value ← StrictJson.int s!"{path}.value" (← StrictJson.field path obj "value")
@@ -326,6 +324,7 @@ private partial def decodeGoValueObservation (path : String) (json : Json) : Exc
         | "uint32" => pure (32, false)
         | "int64" => pure (64, true)
         | "uint64" => pure (64, false)
+        | "uintptr" => pure (64, false)
         | other => throw s!"{path}.kind: unknown integer kind {repr other}"
       let inRange :=
         if signed then

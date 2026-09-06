@@ -1,0 +1,10 @@
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+building Lean executable...
+Build completed successfully (170 jobs).
+native frontend: per-case type-check + emit (no batch export)
+FAIL	ints/uintptr-identity/direct-readout	ints	stage=go-observation	detail=expected status ok, got {"output":"","message":"unsupported Go observation kind uintptr (the frontend maps uintptr to uint64; a kind-visible channel must not alias them)","schema":"golean-observation-v1","status":"error"}
+FAIL	ints/uintptr-identity/boxed-readout	ints,interfaces	stage=go-observation	detail=expected status ok, got {"output":"","message":"unsupported Go observation kind uintptr (the frontend maps uintptr to uint64; a kind-visible channel must not alias them)","schema":"golean-observation-v1","status":"error"}
+
+differential coverage summary: cases=2 pass=0 fail=2 export_status=0
+results: artifacts/coverage/latest.tsv
+metadata: artifacts/coverage/latest.meta.tsv

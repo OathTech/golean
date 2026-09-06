@@ -1,5 +1,16 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3627 (3382 PASS / 245 FAIL)
+# cases: 3635 (3390 PASS / 245 FAIL)
+# re-pinned: 2026-09-06, BUG-107 uintptr identity repair [AGENT].
+#   Full scripts/ci --diff: 3635 = 3390 PASS / 245 FAIL, two workers.
+#   Exactly eight new PASS ints/uintptr-identity rows; no existing result
+#   or unapproved stage changes, no removals. Prior row order and allowed
+#   stage alternations preserved. This is the isolated BUG-107 manifest,
+#   before integration with independent R1 string-member work. No pin move.
+#   Initial CI also refused a missing pinned goose checkout; restoration
+#   and final gate are recorded separately from the measured corpus delta.
+#   Source-bound full TSV/meta, exact manifest and independent review:
+#   docs/evidence/2026-09-06_uintptr-identity/.
+# Previous pin record (historical):
 # re-pinned: 2026-09-06, BUG-106 oracle report authentication repair [AGENT].
 #   Fresh full scripts/ci --diff: 3627 = 3382 PASS / 245 FAIL. Exactly
 #   eleven new PASS panic-markers rows and sync/mutex-unlock-fatal/
@@ -5012,3 +5023,11 @@ FAIL	builtins/float-bits/neg-canonical-refused	lean-observation
 FAIL	builtins/float-bits/neg-canonical-refused/float32	lean-observation
 FAIL	builtins/print/refused/race-with-output	go-observation
 FAIL	builtins/print/refused/unsafe-pointer	frontend-export
+PASS	ints/uintptr-identity/aggregate-identity	-
+PASS	ints/uintptr-identity/assertions	-
+PASS	ints/uintptr-identity/boxed-readout	-
+PASS	ints/uintptr-identity/direct-readout	-
+PASS	ints/uintptr-identity/map-keys	-
+PASS	ints/uintptr-identity/method-parameters	-
+PASS	ints/uintptr-identity/method-results	-
+PASS	ints/uintptr-identity/wrap	-

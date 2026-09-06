@@ -66,8 +66,8 @@ import (
 const atomicPkgPath = "sync/atomic"
 
 // atomicIntSuffixes maps the function-name suffix to the wire integer
-// kind. `Uintptr` maps to `uintptr`, which the decoder (and the whole
-// frontend, wire.go `emitBasic`) realizes as uint64 — the R1 pin.
+// kind. `Uintptr` retains its distinct `uintptr` identity through the
+// decoder; its unsigned pointer-sized width is a separate platform fact.
 var atomicIntSuffixes = map[string]string{
 	"Int32":   "int32",
 	"Int64":   "int64",

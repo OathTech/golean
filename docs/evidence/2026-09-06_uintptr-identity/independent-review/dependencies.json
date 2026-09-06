@@ -1,0 +1,7 @@
+{
+  ".lake/build/bin/golean": "2241b760ac06afb604ccc79d5ad4d09466133355f3aaa3316f74e3954ea230db",
+  ".lake/build/lib/lean/GoLean/GoCore/Value.olean": "3505a87d466d3d6c0f94cfb0ae500309a9367dff3ec537dd337369a0731258d7",
+  ".lake/build/lib/lean/GoLean/GoCore/Machine.olean": "4f00cb55f3b26af7ae083afee7068548cb72c6fea46f680231e1ec36fb330799",
+  ".lake/build/lib/lean/GoLean/CLI.olean": "5af8650fb8528d72ff2a1d1a3e56b4d6339e0a907283bf678e4e665c84005114",
+  "deps/go/doc/go_spec.html": "e5806989624c1e9dd32bddaedd2f70a1dd208295cb6d0ff72b02625b2cd6f592"
+}

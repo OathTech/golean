@@ -1,0 +1,1 @@
+{"args": ["/home/dev/projects/golean/.tmp/uintptr-independent-review.du3rifxj/coverageharness", "--input", "/home/dev/projects/golean/.tmp/uintptr-independent-review.du3rifxj/package/main.go", "--out", "/home/dev/projects/golean/.tmp/uintptr-independent-review.du3rifxj/oracle-mapIdentity", "--subject", "mapIdentity"], "exit": 0}

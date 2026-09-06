@@ -1,0 +1,1345 @@
+{
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "results": [
+       {
+        "expr": "ident",
+        "name": "x",
+        "type": {
+         "int": "uintptr",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "takesPointer",
+   "params": [
+    {
+     "id": "x",
+     "type": {
+      "int": "uintptr",
+      "kind": "int"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "uintptr",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "decls": [
+       {
+        "id": "a",
+        "init": {
+         "dynamic": {
+          "int": "uintptr",
+          "kind": "int"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "expr": "int",
+          "type": {
+           "int": "uintptr",
+           "kind": "int"
+          },
+          "value": "7"
+         },
+         "target": {
+          "kind": "interface",
+          "name": "any"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "a",
+       "type": {
+        "kind": "interface",
+        "name": "any"
+       }
+      },
+      "okTarget": {
+       "id": "ok",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "target": "blank"
+      },
+      "targetType": {
+       "int": "uintptr",
+       "kind": "int"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "ident",
+        "name": "ok",
+        "type": {
+         "kind": "bool"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "aliasIdentity",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "decls": [
+       {
+        "id": "a",
+        "init": {
+         "dynamic": {
+          "kind": "named",
+          "name": "main.Named"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "expr": "int",
+          "type": {
+           "int": "uintptr",
+           "kind": "int"
+          },
+          "value": "7"
+         },
+         "target": {
+          "kind": "interface",
+          "name": "any"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "a",
+       "type": {
+        "kind": "interface",
+        "name": "any"
+       }
+      },
+      "okTarget": {
+       "id": "bad",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "target": "blank"
+      },
+      "targetType": {
+       "int": "uintptr",
+       "kind": "int"
+      }
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "a",
+       "type": {
+        "kind": "interface",
+        "name": "any"
+       }
+      },
+      "okTarget": {
+       "id": "good",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "target": "blank"
+      },
+      "targetType": {
+       "kind": "named",
+       "name": "main.Named"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "\u0026\u0026",
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "good",
+         "type": {
+          "kind": "bool"
+         }
+        },
+        "y": {
+         "expr": "unary",
+         "op": "!",
+         "type": {
+          "kind": "bool"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "bad",
+          "type": {
+           "kind": "bool"
+          }
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "namedIdentity",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "decls": [
+       {
+        "id": "a",
+        "init": {
+         "dynamic": {
+          "kind": "func",
+          "params": [
+           {
+            "int": "uintptr",
+            "kind": "int"
+           }
+          ],
+          "results": [
+           {
+            "int": "uintptr",
+            "kind": "int"
+           }
+          ],
+          "variadic": false
+         },
+         "expr": "to-interface",
+         "operand": {
+          "captured": [],
+          "expr": "func-value",
+          "func": "takesPointer",
+          "type": {
+           "kind": "func",
+           "params": [
+            {
+             "int": "uintptr",
+             "kind": "int"
+            }
+           ],
+           "results": [
+            {
+             "int": "uintptr",
+             "kind": "int"
+            }
+           ],
+           "variadic": false
+          }
+         },
+         "target": {
+          "kind": "interface",
+          "name": "any"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "a",
+       "type": {
+        "kind": "interface",
+        "name": "any"
+       }
+      },
+      "okTarget": {
+       "id": "bad",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "target": "blank"
+      },
+      "targetType": {
+       "kind": "func",
+       "params": [
+        {
+         "int": "uint64",
+         "kind": "int"
+        }
+       ],
+       "results": [
+        {
+         "int": "uint64",
+         "kind": "int"
+        }
+       ],
+       "variadic": false
+      }
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "a",
+       "type": {
+        "kind": "interface",
+        "name": "any"
+       }
+      },
+      "okTarget": {
+       "id": "good",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "target": "blank"
+      },
+      "targetType": {
+       "kind": "func",
+       "params": [
+        {
+         "int": "uintptr",
+         "kind": "int"
+        }
+       ],
+       "results": [
+        {
+         "int": "uintptr",
+         "kind": "int"
+        }
+       ],
+       "variadic": false
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "\u0026\u0026",
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "good",
+         "type": {
+          "kind": "bool"
+         }
+        },
+        "y": {
+         "expr": "unary",
+         "op": "!",
+         "type": {
+          "kind": "bool"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "bad",
+          "type": {
+           "kind": "bool"
+          }
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "functionIdentity",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "elem": {
+       "int": "uintptr",
+       "kind": "int"
+      },
+      "stmt": "make-chan",
+      "target": {
+       "id": "$c0",
+       "target": "declare",
+       "type": {
+        "dir": "both",
+        "elem": {
+         "int": "uintptr",
+         "kind": "int"
+        },
+        "kind": "chan"
+       }
+      }
+     },
+     {
+      "decls": [
+       {
+        "id": "a",
+        "init": {
+         "dynamic": {
+          "dir": "both",
+          "elem": {
+           "int": "uintptr",
+           "kind": "int"
+          },
+          "kind": "chan"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "expr": "ident",
+          "name": "$c0",
+          "type": {
+           "dir": "both",
+           "elem": {
+            "int": "uintptr",
+            "kind": "int"
+           },
+           "kind": "chan"
+          }
+         },
+         "target": {
+          "kind": "interface",
+          "name": "any"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "a",
+       "type": {
+        "kind": "interface",
+        "name": "any"
+       }
+      },
+      "okTarget": {
+       "id": "bad",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "target": "blank"
+      },
+      "targetType": {
+       "dir": "both",
+       "elem": {
+        "int": "uint64",
+        "kind": "int"
+       },
+       "kind": "chan"
+      }
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "a",
+       "type": {
+        "kind": "interface",
+        "name": "any"
+       }
+      },
+      "okTarget": {
+       "id": "good",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "target": "blank"
+      },
+      "targetType": {
+       "dir": "both",
+       "elem": {
+        "int": "uintptr",
+        "kind": "int"
+       },
+       "kind": "chan"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "\u0026\u0026",
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "good",
+         "type": {
+          "kind": "bool"
+         }
+        },
+        "y": {
+         "expr": "unary",
+         "op": "!",
+         "type": {
+          "kind": "bool"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "bad",
+          "type": {
+           "kind": "bool"
+          }
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "channelIdentity",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "entries": [
+       {
+        "key": {
+         "expr": "int",
+         "type": {
+          "int": "uintptr",
+          "kind": "int"
+         },
+         "value": "7"
+        },
+        "value": {
+         "expr": "int",
+         "type": {
+          "int": "uintptr",
+          "kind": "int"
+         },
+         "value": "8"
+        }
+       }
+      ],
+      "keyType": {
+       "int": "uintptr",
+       "kind": "int"
+      },
+      "stmt": "map-lit",
+      "target": {
+       "id": "$c1",
+       "target": "declare",
+       "type": {
+        "key": {
+         "int": "uintptr",
+         "kind": "int"
+        },
+        "kind": "map",
+        "value": {
+         "int": "uintptr",
+         "kind": "int"
+        }
+       }
+      },
+      "valueType": {
+       "int": "uintptr",
+       "kind": "int"
+      }
+     },
+     {
+      "decls": [
+       {
+        "id": "a",
+        "init": {
+         "dynamic": {
+          "key": {
+           "int": "uintptr",
+           "kind": "int"
+          },
+          "kind": "map",
+          "value": {
+           "int": "uintptr",
+           "kind": "int"
+          }
+         },
+         "expr": "to-interface",
+         "operand": {
+          "expr": "ident",
+          "name": "$c1",
+          "type": {
+           "key": {
+            "int": "uintptr",
+            "kind": "int"
+           },
+           "kind": "map",
+           "value": {
+            "int": "uintptr",
+            "kind": "int"
+           }
+          }
+         },
+         "target": {
+          "kind": "interface",
+          "name": "any"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "a",
+       "type": {
+        "kind": "interface",
+        "name": "any"
+       }
+      },
+      "okTarget": {
+       "id": "bad",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "target": "blank"
+      },
+      "targetType": {
+       "key": {
+        "int": "uint64",
+        "kind": "int"
+       },
+       "kind": "map",
+       "value": {
+        "int": "uint64",
+        "kind": "int"
+       }
+      }
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "a",
+       "type": {
+        "kind": "interface",
+        "name": "any"
+       }
+      },
+      "okTarget": {
+       "id": "good",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "target": "blank"
+      },
+      "targetType": {
+       "key": {
+        "int": "uintptr",
+        "kind": "int"
+       },
+       "kind": "map",
+       "value": {
+        "int": "uintptr",
+        "kind": "int"
+       }
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "\u0026\u0026",
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "good",
+         "type": {
+          "kind": "bool"
+         }
+        },
+        "y": {
+         "expr": "unary",
+         "op": "!",
+         "type": {
+          "kind": "bool"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "bad",
+          "type": {
+           "kind": "bool"
+          }
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "mapIdentity",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "x",
+        "target": "declare",
+        "type": {
+         "int": "int64",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int64",
+         "kind": "int"
+        },
+        "value": "-1"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "y",
+        "target": "declare",
+        "type": {
+         "int": "uintptr",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "convert",
+        "target": {
+         "int": "uintptr",
+         "kind": "int"
+        },
+        "type": {
+         "int": "uintptr",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "int": "int64",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "\u0026\u0026",
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "expr": "binary",
+         "op": "\u0026\u0026",
+         "type": {
+          "kind": "bool"
+         },
+         "x": {
+          "expr": "binary",
+          "op": "==",
+          "operandType": {
+           "int": "uintptr",
+           "kind": "int"
+          },
+          "type": {
+           "kind": "bool"
+          },
+          "x": {
+           "expr": "ident",
+           "name": "y",
+           "type": {
+            "int": "uintptr",
+            "kind": "int"
+           }
+          },
+          "y": {
+           "expr": "int",
+           "type": {
+            "int": "uintptr",
+            "kind": "int"
+           },
+           "value": "18446744073709551615"
+          }
+         },
+         "y": {
+          "expr": "binary",
+          "op": "==",
+          "operandType": {
+           "int": "int64",
+           "kind": "int"
+          },
+          "type": {
+           "kind": "bool"
+          },
+          "x": {
+           "expr": "convert",
+           "target": {
+            "int": "int64",
+            "kind": "int"
+           },
+           "type": {
+            "int": "int64",
+            "kind": "int"
+           },
+           "x": {
+            "expr": "ident",
+            "name": "y",
+            "type": {
+             "int": "uintptr",
+             "kind": "int"
+            }
+           }
+          },
+          "y": {
+           "expr": "int",
+           "type": {
+            "int": "int64",
+            "kind": "int"
+           },
+           "value": "-1"
+          }
+         }
+        },
+        "y": {
+         "expr": "binary",
+         "op": "==",
+         "operandType": {
+          "int": "uint64",
+          "kind": "int"
+         },
+         "type": {
+          "kind": "bool"
+         },
+         "x": {
+          "expr": "convert",
+          "target": {
+           "int": "uint64",
+           "kind": "int"
+          },
+          "type": {
+           "int": "uint64",
+           "kind": "int"
+          },
+          "x": {
+           "expr": "ident",
+           "name": "y",
+           "type": {
+            "int": "uintptr",
+            "kind": "int"
+           }
+          }
+         },
+         "y": {
+          "expr": "int",
+          "type": {
+           "int": "uint64",
+           "kind": "int"
+          },
+          "value": "18446744073709551615"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "conversion",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "decls": [
+       {
+        "id": "x",
+        "type": {
+         "int": "uintptr",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "expr": {
+       "args": [
+        {
+         "expr": "ref",
+         "id": "x",
+         "type": {
+          "elem": {
+           "int": "uintptr",
+           "kind": "int"
+          },
+          "kind": "pointer"
+         }
+        },
+        {
+         "expr": "int",
+         "type": {
+          "int": "uintptr",
+          "kind": "int"
+         },
+         "value": "18446744073709551615"
+        }
+       ],
+       "expr": "atomic-op",
+       "kind": {
+        "int": "uintptr",
+        "kind": "int"
+       },
+       "op": "store",
+       "resultTypes": []
+      },
+      "stmt": "expr"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "$c2",
+        "target": "declare",
+        "type": {
+         "int": "uintptr",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "expr": "ref",
+          "id": "x",
+          "type": {
+           "elem": {
+            "int": "uintptr",
+            "kind": "int"
+           },
+           "kind": "pointer"
+          }
+         },
+         {
+          "expr": "int",
+          "type": {
+           "int": "uintptr",
+           "kind": "int"
+          },
+          "value": "1"
+         }
+        ],
+        "expr": "atomic-op",
+        "kind": {
+         "int": "uintptr",
+         "kind": "int"
+        },
+        "op": "add",
+        "resultTypes": [
+         {
+          "int": "uintptr",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "decls": [
+       {
+        "id": "a",
+        "init": {
+         "dynamic": {
+          "int": "uintptr",
+          "kind": "int"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "expr": "ident",
+          "name": "$c2",
+          "type": {
+           "int": "uintptr",
+           "kind": "int"
+          }
+         },
+         "target": {
+          "kind": "interface",
+          "name": "any"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "a",
+       "type": {
+        "kind": "interface",
+        "name": "any"
+       }
+      },
+      "okTarget": {
+       "id": "bad",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "target": "blank"
+      },
+      "targetType": {
+       "int": "uint64",
+       "kind": "int"
+      }
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "a",
+       "type": {
+        "kind": "interface",
+        "name": "any"
+       }
+      },
+      "okTarget": {
+       "id": "good",
+       "target": "declare",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "type-assert",
+      "target": {
+       "id": "v",
+       "target": "declare",
+       "type": {
+        "int": "uintptr",
+        "kind": "int"
+       }
+      },
+      "targetType": {
+       "int": "uintptr",
+       "kind": "int"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "\u0026\u0026",
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "expr": "binary",
+         "op": "\u0026\u0026",
+         "type": {
+          "kind": "bool"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "good",
+          "type": {
+           "kind": "bool"
+          }
+         },
+         "y": {
+          "expr": "unary",
+          "op": "!",
+          "type": {
+           "kind": "bool"
+          },
+          "x": {
+           "expr": "ident",
+           "name": "bad",
+           "type": {
+            "kind": "bool"
+           }
+          }
+         }
+        },
+        "y": {
+         "expr": "binary",
+         "op": "==",
+         "operandType": {
+          "int": "uintptr",
+          "kind": "int"
+         },
+         "type": {
+          "kind": "bool"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "v",
+          "type": {
+           "int": "uintptr",
+           "kind": "int"
+          }
+         },
+         "y": {
+          "expr": "int",
+          "type": {
+           "int": "uintptr",
+           "kind": "int"
+          },
+          "value": "0"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "atomicIdentity",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "results": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "uintptr",
+         "kind": "int"
+        },
+        "value": "18446744073709551615"
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "highReadout",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "uintptr",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  }
+ ],
+ "methodSets": [
+  {
+   "coverage": "full",
+   "type": "main.Named"
+  }
+ ],
+ "methods": [],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": [
+  {
+   "def": {
+    "kind": "defined",
+    "target": {
+     "int": "uintptr",
+     "kind": "int"
+    }
+   },
+   "display": "main.Named",
+   "name": "main.Named",
+   "pkg": "main"
+  }
+ ]
+}

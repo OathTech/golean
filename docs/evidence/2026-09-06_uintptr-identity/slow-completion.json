@@ -1,0 +1,29 @@
+{
+  "ci_exit": 0,
+  "supervisor_session": 57432,
+  "source_files_revalidated": 3851,
+  "candidate_files_revalidated": 12,
+  "full_rows": 3635,
+  "full_counts": {
+    "PASS": 3390,
+    "FAIL": 245
+  },
+  "negative_rows": 394,
+  "status_stage_drift_from_initial_full": [],
+  "manifest_sha256": "606bb68e7c6079a89e3c6d04a8bfe0ab72cf41bd6042558f9d64f586f71a8837",
+  "scope_note": "unfiltered manifest and exact full row inventory establish full scope; original metadata full_run=unknown retained",
+  "slow_rows": [
+    {
+      "result": "PASS",
+      "id": "imported-goose/channel/google-search",
+      "features": "imported_goose,channels,goroutines,nondet",
+      "stage": "membership",
+      "detail": "enumerated=6 exhibited=6 draws=28 (K=80; stopped at the members=6 pin) unexhibited=0 (members in artifacts/coverage/membership/imported-goose/channel/google-search)"
+    }
+  ],
+  "slow_certified_set_change": false,
+  "all_completed_under": "16G/3threads/2workers",
+  "full_diff_exit": 1,
+  "full_diff_exit_meaning": "known 245 failing rows; exact accepted failing set passes CI; failures are not conformance",
+  "integration": "pending; combined full/slow runtime revalidation owed"
+}

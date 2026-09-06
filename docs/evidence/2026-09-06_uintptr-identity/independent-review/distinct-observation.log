@@ -1,0 +1,2 @@
+left:  {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"uintptr","tag":"int","value":7}]}
+right: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"uint64","tag":"int","value":7}]}

@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+assertions	assertions	-	ok	-	ints,interfaces,type_assertions
+method-parameters	methodParameters	-	ok	-	ints,interfaces,methods,type_assertions
+method-results	methodResults	-	ok	-	ints,interfaces,methods,type_assertions
+aggregate-identity	aggregateIdentity	-	ok	-	ints,interfaces,type_assertions,arrays,pointers,slices
+map-keys	mapKeys	-	ok	-	ints,interfaces,maps,equality
+wrap	wrap	-	ok	-	ints,bitwise,conversions
+direct-readout	directReadout	-	ok	-	ints
+boxed-readout	boxedReadout	-	ok	-	ints,interfaces

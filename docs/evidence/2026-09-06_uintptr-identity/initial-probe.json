@@ -1,0 +1,44 @@
+{
+  "root": "/home/dev/projects/golean/.claude/worktrees/typed-i1-declarations",
+  "source_sha256": "bfab4d99d073b679ce3d2f8949a92f4278453ffaa26002cff1357a327af9c10b",
+  "records": [
+    {
+      "command": [
+        "go",
+        "run",
+        "/home/dev/projects/golean/.tmp/uintptr-identity-9suuijge/main.go"
+      ],
+      "exit": 0,
+      "stdout": "",
+      "stderr": "8\n"
+    },
+    {
+      "command": [
+        "go",
+        "run",
+        "./tools/nativefrontend",
+        "--dir",
+        "/home/dev/projects/golean/.tmp/uintptr-identity-9suuijge",
+        "--out",
+        "/home/dev/projects/golean/.tmp/uintptr-identity-9suuijge/wire.json"
+      ],
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "scripts/capped",
+        "/home/dev/projects/golean/.claude/worktrees/typed-i1-declarations/.lake/build/bin/golean",
+        "native-json-run",
+        "--input",
+        "/home/dev/projects/golean/.tmp/uintptr-identity-9suuijge/wire.json",
+        "--function",
+        "identity"
+      ],
+      "exit": 0,
+      "stdout": "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"kind\":\"int\",\"tag\":\"int\",\"value\":15}]}\n",
+      "stderr": ""
+    }
+  ]
+}

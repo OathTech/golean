@@ -1,0 +1,56 @@
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+building Lean executable...
+Build completed successfully (170 jobs).
+native frontend: per-case type-check + emit (no batch export)
+PASS	atomics/typed/int32-wrap	sync,atomics,ints,methods,overflow
+PASS	atomics/counter/plain-read-after-join	sync,atomics,ints,goroutines,waitgroup,race	stage=confluent	detail=|set|=1 certified over all schedules; coverage-observations: observations=1 steps=2642 probes=0 sites=2121 leaves=0 maxdepth=0 width=4 engine=dedup nodes=2121 edges=2642 dedupHits=522 certified=checkCert
+PASS	atomics/ops/load-store-int64	sync,atomics,ints
+PASS	atomics/ops/load-store-uintptr	sync,atomics,ints
+PASS	atomics/counter/typed	sync,atomics,ints,goroutines,waitgroup,methods,closures	stage=confluent	detail=|set|=1 certified over all schedules; coverage-observations: observations=1 steps=17366 probes=0 sites=15747 leaves=0 maxdepth=0 width=4 engine=dedup nodes=15747 edges=17366 dedupHits=1620 certified=checkCert
+PASS	ints/uintptr-identity/map-keys	ints,interfaces,maps,equality
+PASS	atomics/ops/load-store-uint64	sync,atomics,ints
+PASS	atomics/ops/swap-uint32	sync,atomics,ints
+PASS	atomics/ops/cas-uintptr	sync,atomics,ints
+PASS	atomics/typed/uint64	sync,atomics,ints,methods
+PASS	atomics/ops/swap-uint64	sync,atomics,ints
+PASS	atomics/ops/nil-address	sync,atomics,ints,nil,panic
+PASS	atomics/ops/discarded-result	sync,atomics,ints
+PASS	ints/uintptr-identity/aggregate-identity	ints,interfaces,type_assertions,arrays,pointers,slices
+PASS	atomics/ops/add-uint64	sync,atomics,ints
+PASS	ints/uintptr-identity/direct-readout	ints
+PASS	atomics/ops/in-expression	sync,atomics,ints
+PASS	atomics/ops/cas-int64	sync,atomics,ints
+PASS	atomics/counter/swap-claim	sync,atomics,ints,goroutines,waitgroup,closures	stage=confluent	detail=|set|=1 certified over all schedules; coverage-observations: observations=1 steps=17887 probes=0 sites=15268 leaves=0 maxdepth=0 width=4 engine=dedup nodes=15268 edges=17887 dedupHits=2620 certified=checkCert
+PASS	atomics/typed/int64	sync,atomics,ints,methods
+PASS	atomics/counter/cas-loop	sync,atomics,ints,goroutines,waitgroup,loops,closures	stage=confluent	detail=|set|=1 certified over all schedules; coverage-observations: observations=1 steps=20601 probes=0 sites=17535 leaves=0 maxdepth=0 width=4 engine=dedup nodes=17535 edges=20601 dedupHits=3067 certified=checkCert
+PASS	atomics/ops/cas-uint32-fail	sync,atomics,ints
+PASS	ints/uintptr-identity/assertions	ints,interfaces,type_assertions
+PASS	atomics/ops/swap-uintptr	sync,atomics,ints
+PASS	atomics/typed/struct-field	sync,atomics,ints,methods,structs,pointers
+PASS	atomics/counter/add	sync,atomics,ints,goroutines,waitgroup	stage=confluent	detail=|set|=1 certified over all schedules; coverage-observations: observations=1 steps=3378 probes=0 sites=2761 leaves=0 maxdepth=0 width=4 engine=dedup nodes=2761 edges=3378 dedupHits=618 certified=checkCert
+PASS	atomics/ops/operand-order	sync,atomics,ints,closures,evaluation_order
+PASS	ints/uintptr-identity/method-results	ints,interfaces,methods,type_assertions
+PASS	ints/uintptr-identity/method-parameters	ints,interfaces,methods,type_assertions
+PASS	atomics/ops/swap-int32	sync,atomics,ints
+PASS	atomics/ops/load-store-int32	sync,atomics,ints
+PASS	atomics/ops/add-uintptr	sync,atomics,ints,overflow
+PASS	atomics/ops/cas-uint64	sync,atomics,ints
+PASS	atomics/typed/zero-and-copy	sync,atomics,ints,methods,structs
+PASS	ints/uintptr-identity/wrap	ints,bitwise,conversions
+PASS	atomics/ops/add-int32-wrap	sync,atomics,ints,overflow
+PASS	ints/uintptr-identity/boxed-readout	ints,interfaces
+PASS	atomics/typed/empty-literal	sync,atomics,ints,methods,structs,pointers
+PASS	atomics/ops/swap-int64	sync,atomics,ints
+PASS	atomics/ops/add-uint32-decrement	sync,atomics,ints,overflow
+PASS	atomics/typed/uintptr	sync,atomics,ints,methods
+PASS	atomics/ops/add-int64	sync,atomics,ints
+PASS	atomics/typed/uint32	sync,atomics,ints,methods,overflow
+PASS	atomics/ops/defined-underlying	sync,atomics,ints,defined_type,pointers
+PASS	atomics/spin/flag-wait	sync,atomics,ints,goroutines,channels,loops,closures,race,nondet	stage=membership	detail=enumerated=1 exhibited=1 draws=2 (floor; K=32; stopped at the members=1 pin after the two-draw floor — one plain + one -race) unexhibited=0 (members in artifacts/coverage/membership/atomics/spin/flag-wait)
+PASS	atomics/typed/nil-receiver	sync,atomics,ints,methods,nil,panic
+PASS	atomics/ops/nil-address-recovered	sync,atomics,ints,nil,panic,recover,defer,closures
+PASS	atomics/ops/load-store-uint32	sync,atomics,ints
+
+differential coverage summary: cases=48 pass=48 fail=0 export_status=0
+results: artifacts/coverage/latest.tsv
+metadata: artifacts/coverage/latest.meta.tsv

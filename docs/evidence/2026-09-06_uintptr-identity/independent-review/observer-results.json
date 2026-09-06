@@ -1,0 +1,86 @@
+[
+  {
+    "name": "min-uintptr",
+    "args": [
+      "scripts/capped",
+      ".lake/build/bin/golean",
+      "observation-eq",
+      "--left",
+      "{\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"kind\":\"uintptr\",\"value\":0}],\"output\":\"\"}",
+      "--right",
+      "{\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"kind\":\"uintptr\",\"value\":0}],\"output\":\"\"}"
+    ],
+    "expected_exit": 0,
+    "actual_exit": 0
+  },
+  {
+    "name": "max-uintptr",
+    "args": [
+      "scripts/capped",
+      ".lake/build/bin/golean",
+      "observation-eq",
+      "--left",
+      "{\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"kind\":\"uintptr\",\"value\":18446744073709551615}],\"output\":\"\"}",
+      "--right",
+      "{\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"kind\":\"uintptr\",\"value\":18446744073709551615}],\"output\":\"\"}"
+    ],
+    "expected_exit": 0,
+    "actual_exit": 0
+  },
+  {
+    "name": "negative-uintptr",
+    "args": [
+      "scripts/capped",
+      ".lake/build/bin/golean",
+      "observation-eq",
+      "--left",
+      "{\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"kind\":\"uintptr\",\"value\":-1}],\"output\":\"\"}",
+      "--right",
+      "{\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"kind\":\"uintptr\",\"value\":-1}],\"output\":\"\"}"
+    ],
+    "expected_exit": 2,
+    "actual_exit": 2
+  },
+  {
+    "name": "overflow-uintptr",
+    "args": [
+      "scripts/capped",
+      ".lake/build/bin/golean",
+      "observation-eq",
+      "--left",
+      "{\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"kind\":\"uintptr\",\"value\":18446744073709551616}],\"output\":\"\"}",
+      "--right",
+      "{\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"kind\":\"uintptr\",\"value\":18446744073709551616}],\"output\":\"\"}"
+    ],
+    "expected_exit": 2,
+    "actual_exit": 2
+  },
+  {
+    "name": "unknown-kind",
+    "args": [
+      "scripts/capped",
+      ".lake/build/bin/golean",
+      "observation-eq",
+      "--left",
+      "{\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"kind\":\"uint128\",\"value\":1}],\"output\":\"\"}",
+      "--right",
+      "{\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"kind\":\"uint128\",\"value\":1}],\"output\":\"\"}"
+    ],
+    "expected_exit": 2,
+    "actual_exit": 2
+  },
+  {
+    "name": "distinct-observation",
+    "args": [
+      "scripts/capped",
+      ".lake/build/bin/golean",
+      "observation-eq",
+      "--left",
+      "{\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"kind\":\"uintptr\",\"value\":7}],\"output\":\"\"}",
+      "--right",
+      "{\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"kind\":\"uint64\",\"value\":7}],\"output\":\"\"}"
+    ],
+    "expected_exit": 1,
+    "actual_exit": 1
+  }
+]

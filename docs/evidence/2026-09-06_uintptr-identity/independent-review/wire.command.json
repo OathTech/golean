@@ -1,0 +1,1 @@
+{"args": ["go", "run", "./tools/nativefrontend", "--dir", "/home/dev/projects/golean/.tmp/uintptr-independent-review.du3rifxj/package", "--out", "/home/dev/projects/golean/.tmp/uintptr-independent-review.du3rifxj/wire.json"], "exit": 0}

@@ -1,0 +1,330 @@
+# Certified observation set — tier=slow membership row (tiered checking,
+# user directive 2026-08-08; docs/2026-08-04_membership-lane-design.md
+# addendum of the same date). Quick runs verify samples + the
+# driver-coupling pin against THIS set and its wire hash; scripts/ci
+# --slow re-enumerates and must reproduce it exactly. Update
+# deliberately, in its own commit, with the reason — never auto-written.
+# certified: 2026-09-05T17:57:01+00:00  commit: round-17 merge-train step 5a re-certification at main tip 7677865a (round-17 train landed: fr19-bug097, c-arc-b4, c-arc-c2, e13-b)
+# re-certification reason (round-17 merge train, step 5a, 2026-09-05): the
+#   standing post-train step (CLAUDE.md merge protocol 5a, [USER]
+#   2026-09-04) fired because three of the four landed lanes touched
+#   tools/nativefrontend/wire.go and/or GoLean/NativeToIR.lean (fr19-bug097:
+#   required display/pkg TypeDef fields + duplicate-TypeId refusal;
+#   c-arc-c2: dependency-ordered typeDefs, reserved prefix, WellFounded
+#   decided at decode; e13-b: the unseq-probe statement node + decoder
+#   refusals for probes over recover/bytes-from-string/runes-from-string) —
+#   6 commits to those files since the 05:46:32Z re-cert below, the last
+#   landing at committer instant 2026-09-05T17:37:49Z; the reconciler's C9
+#   at the merged tip. The step-5a --slow re-certification ran at the CLEAN
+#   merged tip 7677865a in the primary checkout (`scripts/capped scripts/ci
+#   --slow`, RESULT: PASS, exit 0; latest.meta.tsv git_commit 7677865a…
+#   git_dirty=false, manifest_cases 3593; 3593/3593 baseline diff FULL, 0
+#   flips). Delta class: NONE. Wire sha UNCHANGED (2f1d639f, sha256 of the
+#   run's own emitted wire.json — this fixture's wire has no probe
+#   statements and its typeDefs table is unmoved by the order pass); the
+#   fresh GOLEAN_SLOW=1 dedup enumeration reproduced the set AND the graph
+#   bit-for-bit: the same six members {123,132,213,231,312,321},
+#   nodes=6193933 edges=6565663 dedupHits=371731 certified=checkCert.
+#   Params unchanged. Header instant = enum-stats.txt write instant
+#   17:57:01Z (rounds 14/15 convention), after the 17:37:49Z last wire
+#   commit, so C9's `--since` test clears. K=80 exhibition: 5 of 6 members
+#   exhibited (312×60, 123×8, 213×6, 321×5, 132×1); 231 unexhibited this
+#   run (every draw ∈ the certified set; exhibition is a lower bound).
+#   Gate log ephemeral (.tmp); numbers copied from it and from
+#   artifacts/coverage/membership/imported-goose/channel/google-search/
+#   {enum-stats,observations,samples,unexhibited}.txt. [AGENT] record
+#   refresh under the step-5a rule, delta class DATE/COMMIT-ONLY.
+# previously: certified: 2026-09-05T05:46:32+00:00  commit: round-15 merge-train step 5a re-certification at main tip b77f3298 (round-15 train landed: bug095-096)
+# re-certification reason (round-15 merge train, step 5a, 2026-09-05): the
+#   standing post-train step (CLAUDE.md merge protocol 5a, [USER]
+#   2026-09-04) fired because the train merged bug095-096, which touched
+#   tools/nativefrontend/wire.go (the BUG-095 noteInterface conflict guard,
+#   the BUG-097 stale-comment rewrite and refusal dedup; 2 commits
+#   3d0dac2a + b77f3298, committer instant 2026-09-05T05:33:59Z, after the
+#   round-14 04:38:59Z re-cert below — the reconciler's C9 at the merged
+#   tip). GoLean/NativeToIR.lean: no schema change (no new nodes). The
+#   step-5a --slow re-certification ran at the CLEAN merged tip b77f3298
+#   in the primary checkout (`scripts/capped scripts/ci --slow`, RESULT:
+#   PASS, exit 0; latest.meta.tsv git_commit b77f3298… git_dirty=false,
+#   manifest_cases 3498; 3498/3498 baseline diff FULL, 0 flips). Delta
+#   class: NONE. Wire sha UNCHANGED (2f1d639f, sha256 of the run's own
+#   emitted wire.json); the fresh GOLEAN_SLOW=1 dedup enumeration
+#   reproduced the set AND the graph bit-for-bit: the same six members
+#   {123,132,213,231,312,321}, nodes=6193933 edges=6565663
+#   dedupHits=371731 certified=checkCert. Params unchanged. Header
+#   instant = enum-stats.txt write instant 05:46:32Z (same convention as
+#   round 14; after the 05:33:59Z wire commits, so C9's `--since` clears).
+#   K=80 exhibition: 6 of 6 members exhibited in 26 draws (312×20, 213×2,
+#   123/132/231/321 ×1 each; stopped at the members=6 pin; unexhibited
+#   empty). Gate log ephemeral (.tmp); numbers copied from it and from
+#   artifacts/coverage/membership/imported-goose/channel/google-search/
+#   {enum-stats,observations,samples,unexhibited}.txt. [AGENT] record
+#   refresh under the step-5a rule, delta class DATE/COMMIT-ONLY.
+# previously: certified: 2026-09-05T04:38:59+00:00  commit: round-14 merge-train step 5a re-certification at main tip 102f4dae (round-14 train landed: flaky-panic-wait, g6-reflect-memo, fr27-fr28, c-arc-gu, stdlib-slice-3)
+# re-certification reason (round-14 merge train, step 5a, 2026-09-05): the
+#   standing post-train step (CLAUDE.md merge protocol 5a, [USER]
+#   2026-09-04) fired because the train merged stdlib-slice-3, which
+#   touched tools/nativefrontend/wire.go and GoLean/NativeToIR.lean (the
+#   `print` statement node + `float-bits` expression node; slice commit
+#   6a73d02d, rebased-landed with committer instant 2026-09-05T04:04:40Z,
+#   AFTER the lane's own 00:30:00Z re-cert below — hence the reconciler's
+#   C9 at the merged tip). The step-5a --slow re-certification ran at the
+#   CLEAN merged tip 102f4dae in the primary checkout (`scripts/capped
+#   scripts/ci --slow`, RESULT: PASS, exit 0; latest.meta.tsv git_commit
+#   102f4dae… git_dirty=false, manifest_cases 3479; 3479/3479 baseline
+#   diff FULL, 0 flips; 153 eval tests ok). Delta class: NONE. This
+#   fixture's wire sha is UNCHANGED (2f1d639f — sha256 of the run's own
+#   emitted artifacts/coverage/native/imported-goose/channel/google-search/
+#   wire.json), and the fresh GOLEAN_SLOW=1 dedup enumeration reproduced
+#   the set AND the graph bit-for-bit: the same six permutation members
+#   {123,132,213,231,312,321}, nodes=6193933 edges=6565663 dedupHits=371731
+#   certified=checkCert (enum-stats.txt). Params unchanged. Header instant
+#   = the enumeration artifact's write instant (enum-stats.txt mtime
+#   04:38:59Z; the gate log carries no start stamp this round — a
+#   deviation from round 13's start-stamp convention, disclosed), after the
+#   last wire commit (04:04:40Z), so C9's `--since` test clears. K=80
+#   exhibition (membership_draws 80): 5 of 6 members exhibited (312×53,
+#   213×10, 123×9, 321×6, 132×2); 231 unexhibited this run (unexhibited.txt;
+#   every draw ∈ the certified set — exhibition is a lower bound, the set
+#   is the enumeration's). The gate log is ephemeral (.tmp, untracked);
+#   numbers copied from it and from artifacts/coverage/membership/
+#   imported-goose/channel/google-search/{enum-stats,observations,samples,
+#   unexhibited}.txt. [AGENT] record refresh under the step-5a rule,
+#   delta class DATE/COMMIT-ONLY (set, graph, params, wire sha unchanged).
+# previously: certified: 2026-09-05T00:30:00+00:00  commit: stdlib-slice-3 lane — the `output` observation field (G-OUT) added to every observation; set re-enumerated by `scripts/capped scripts/ci --slow` on the branch (see the reason block)
+# re-certification reason (lane stdlib-slice-3, 2026-09-05, [AGENT]): stdlib slice 3
+#   added the `output` field (the program's fd-2 bytes, `StepEvent.out`
+#   folded by the driver — design gate G-OUT RULED [USER], relayed) to
+#   EVERY observation on both sides, so the six member observations gain
+#   `"output":""` — a FORMAT change of the record, not a set change: the
+#   fresh GOLEAN_SLOW=1 dedup enumeration on the branch reproduced the same
+#   six permutation members {123,132,213,231,312,321} (google-search prints
+#   nothing; the dedup engine refuses printing rows by name). The wire sha
+#   is UNCHANGED (2f1d639f… — the `print`/`float-bits` wire nodes do not
+#   appear in this fixture); params unchanged. The run: the slice's first
+#   full `--slow` gate (artifacts transcript in the coordinator report),
+#   which reported exactly this row as "re-certification DIFFERS" on the
+#   old record and 0 flips elsewhere; the record is updated in its own
+#   commit per the header rule. The merge train's step 5a re-certifies at
+#   the merged tip as usual.
+# re-certification reason (round-13 merge train, step 5a, 2026-09-04): the
+#   standing post-train step (CLAUDE.md merge protocol 5a, [USER]
+#   2026-09-04) fired because the train merged fr4-rowm, which touched
+#   GoLean/NativeToIR.lean (1 commit since the 19:43:31 re-cert, rebased-
+#   landed at 22:01:06Z: the fr4-rowm audit fix round 65272847 — the
+#   retired `sort-slice` decoder arm DELETED and the node refused by name;
+#   no wire schema change by its own description; wire.go untouched this
+#   round). The reconciler's C9 fired accordingly at 67d1ba4f/56982423.
+#   The step-5a --slow re-certification ran at the CLEAN merged tip
+#   56982423 in the primary checkout (`scripts/capped scripts/ci --slow`,
+#   RESULT: PASS, exit 0, 585 s wall 22:41:00Z -> 22:50:45Z, load avg
+#   40.0 four minutes in / 4.53 at end on the shared 32-core box;
+#   3402/3402 baseline diff FULL, 0 flips; 153 eval tests ok). Delta
+#   class: NONE. This fixture's wire sha is UNCHANGED (2f1d639f — the
+#   run's own emitted wire at artifacts/coverage/native/imported-goose/
+#   channel/google-search/wire.json, sha256 bit-identical to the record),
+#   and the fresh GOLEAN_SLOW=1 dedup enumeration reproduced the set AND
+#   the graph bit-for-bit: the same six permutation members {123,132,213,
+#   231,312,321}, nodes=6193933 edges=6565663 dedupHits=371731
+#   certified=checkCert. Params unchanged. Header instant = the run's
+#   START stamp (22:41:00Z), after the last wire commit (22:01:06Z), so
+#   C9's `--since` test clears. K=80 exhibition: 6 of 6 members exhibited
+#   in 12 draws (stopped at the members=6 pin; unexhibited empty). The
+#   gate log is ephemeral (.tmp, untracked); the numbers above are copied
+#   from it and from artifacts/coverage/membership/imported-goose/channel/
+#   google-search/{enum-stats,observations,samples,unexhibited}.txt.
+#   [AGENT] record refresh under the step-5a rule, delta class
+#   DATE/COMMIT-ONLY (set, graph, params, wire sha all unchanged).
+# previously: certified: 2026-09-04T19:43:31+00:00  commit: round-12 merge-train step 5a re-certification at main tip e6b2f442 (round-12 train landed: slow-recert-2, slow-rule, fr24)
+# re-certification reason (round-12 merge train, step 5a, 2026-09-04): the
+#   FIRST run of the standing post-train step adopted this round (CLAUDE.md
+#   merge protocol 5a, [USER] 2026-09-04, landed by slow-rule 3e5acf9b).
+#   The train merged fr24, which touched tools/nativefrontend/wire.go
+#   (3 commits since the 17:24:37 re-cert, all rebased-landed at
+#   19:28:06Z: FR-24 checkpoint A ecbbaadd, FR-25 checkpoint B b146dff2,
+#   the fr24 audit round 67e0686b — per-declaration quarantine + the
+#   wire-integrity assertion; no wire schema change by their own
+#   description). The reconciler's C9 fired accordingly at e6b2f442. The
+#   step-5a --slow re-certification ran at the CLEAN merged tip e6b2f442
+#   in the primary checkout (`scripts/capped scripts/ci --slow`, RESULT:
+#   PASS, exit 0, 542 s wall 19:43:31Z -> 19:52:33Z; 3382/3382 baseline
+#   diff FULL, 0 flips). Delta class: NONE. This fixture's wire sha is
+#   UNCHANGED (2f1d639f — the run's own emitted wire, sha256
+#   bit-identical to the record; the --diff gate's CERTIFIED-CACHED
+#   check at the fr24 tip had already confirmed the same), and the fresh
+#   GOLEAN_SLOW=1 dedup enumeration reproduced the set AND the graph
+#   bit-for-bit: the same six permutation members {123,132,213,231,312,
+#   321}, nodes=6193933 edges=6565663 dedupHits=371731 certified=checkCert.
+#   Params unchanged. Header instant = the run's START stamp (19:43:31Z),
+#   after the last wire commit (19:28:06Z), so C9's `--since` test clears.
+#   K=80 exhibition: 6 of 6 members exhibited in 54 draws (stopped at the
+#   members=6 pin; unexhibited empty). The gate log is ephemeral (.tmp,
+#   untracked); the numbers above are copied from it and from
+#   artifacts/coverage/membership/imported-goose/channel/google-search/.
+#   [AGENT] record refresh under the step-5a rule, delta class
+#   DATE/COMMIT-ONLY (set, graph, params, wire sha all unchanged).
+# previously: certified: 2026-09-04T17:24:37+00:00  commit: slow-recert-2 re-certification at main tip aceb0dcb (round-11 train landed: hygiene A3/A4/A8, fr22-fr23 + its audit round, lower-diagnose)
+# re-certification reason (slow-recert-2, 2026-09-04): the reconciler's
+#   C9 fired again after the round-11 train — "wire schema moved after
+#   the certification date 2026-09-04T01:02:30" — 5 commits to wire.go /
+#   NativeToIR.lean since the 01:02 re-cert (A3 payload cells 7857a414,
+#   A4 Expr.global e046feb2, A8 dead-generality 07ec0588, FR-22/FR-23
+#   $poisoned + signature-opaque markers 977b92e5, its audit round
+#   7ab1c7b8; the last at 16:40:23Z). Three of the five are MACHINE-side
+#   moves (HeapCell payload cells, address-free globals) that a wire-sha
+#   cache key cannot see — exactly the case the 01:02 block below names
+#   as the reason the re-cert is owed on every wire move. The owed
+#   --slow re-certification ran at the CLEAN tip aceb0dcb (`scripts/capped
+#   scripts/ci --slow`, RESULT: PASS, exit 0, 516 s wall 17:24:37Z ->
+#   17:33:13Z, load avg 5.10 at start / 10.83 at end, 1-min peak 54.6
+#   mid-run on the shared 32-core box; 3365/3365 baseline diff FULL, 0
+#   flips). Delta class: NONE. This fixture's wire sha is UNCHANGED
+#   (2f1d639f — fresh frontend emit at the tip before the run, sha256
+#   bit-identical to the record; the fixture imports nothing and none
+#   of the moved node kinds occurs in its wire), and the fresh
+#   GOLEAN_SLOW=1 dedup enumeration reproduced the set AND the graph
+#   bit-for-bit: the same six permutation members, nodes=6193933
+#   edges=6565663 dedupHits=371731 certified=checkCert. Params
+#   unchanged. Header instant = the run's START stamp (17:24:37Z), after
+#   the last wire commit, so C9's `--since` test clears. K=80
+#   exhibition: 5 of 6 members exhibited in 80 draws (231 unexhibited;
+#   pin NOT reached) vs 6 of 6 at the 01:02 run — sampling variance on a
+#   6-member row, recorded, not a finding (the RESULT does not depend
+#   on exhibition). Evidence: docs/evidence/2026-09-04_slow-recert-2/.
+#   [AGENT] record refresh, delta class DATE/COMMIT-ONLY (set, graph,
+#   params, wire sha all unchanged).
+# previously: certified: 2026-09-04T01:02:30+00:00  commit: slow-recert re-certification at main tip 1b8401c0 (round-9 train landed: bug087-paniktext, q-trylock, cedar-census)
+# re-certification reason (slow-recert, 2026-09-04): the reconciler's
+#   C9 reported "wire schema moved after the certification date
+#   2026-09-01" on every gate since — 13 commits to wire.go /
+#   NativeToIR.lean (exact-key discipline f6f84f31, gotest-harvest
+#   BUG-074..078, BUG-082 make-map hint 8c3aa6ae, storeLoc df6bcc8f,
+#   atomics-w1 atomic-op 1b3796c6/201b6145, stdlib source-through
+#   9acf0f43, q-trylock sync-op 46f86334/4baa53c7). The owed --slow
+#   re-certification ran at the CLEAN tip 1b8401c0 (`scripts/capped
+#   scripts/ci --slow`, RESULT: PASS, 709 s wall, load avg 5.75 at
+#   start / 6.49 at end on the shared 32-core box). Delta class:
+#   NONE. This fixture's wire sha is UNCHANGED (2f1d639f — none of
+#   the moved node kinds occurs in google-search's wire; verified by
+#   a fresh frontend emit at the tip, sha256 bit-identical to the
+#   record), and the fresh GOLEAN_SLOW=1 dedup enumeration reproduced
+#   the set AND the graph bit-for-bit: the same six permutation
+#   members, nodes=6193933 edges=6565663 dedupHits=371731
+#   certified=checkCert. Params unchanged. The header now carries a
+#   full ISO instant, not a bare date: C9's staleness test is `git
+#   log --since <certified>` over the two wire files, and the last
+#   wire commit (4baa53c7, 2026-09-04T00:26:08Z) landed on the same
+#   calendar day as this run, so a bare date would keep C9 firing on
+#   a record that IS current. (A wire-sha cache key cannot see
+#   interpreter-side moves at all — only re-enumeration does; that is
+#   why the re-cert is owed on every wire move even when, as here,
+#   the cached fixture's own sha did not move.) K=80 exhibition (the
+#   first --slow run under the 2026-09-03 sampling rule): 6 of 6
+#   members exhibited, pin reached at draw 40 (K=32 gate runs: 4 of
+#   6 at this tip, 5 of 6 on 2026-09-03). Evidence: docs/evidence/2026-09-04_slow-recert/. [AGENT]
+#   record refresh, delta class DATE/COMMIT-ONLY (set, graph, params,
+#   wire sha all unchanged).
+# previously: certified: 2026-09-01  commit: T1 fidelity round, dc122857 (E8 fileOrder wire record)
+# re-certification reason (T1 round, E8): the wire sha moved
+#   (11aedfa0 -> 2f1d639f) because the program object now carries the
+#   wire-level `fileOrder` record (T1 item 3, commit dc122857; latitude
+#   inventory §E8) — schema widening ONLY, the exact class of the
+#   2026-08-10 methodSets and BUG-067 variadic precedents. Verified
+#   directly, not inferred: the merge-base frontend (main @ 95627141)
+#   re-run on the unchanged fixture reproduces the OLD sha 11aedfa0
+#   bit-for-bit, and the structural diff (jq -S) between that wire and
+#   this branch's is EXACTLY the fileOrder addition
+#   ({"package":"main","files":["main.go"]}) — nine lines, nothing
+#   else; the A6 evaluation-order hoist does not touch this wire. The
+#   fresh GOLEAN_SLOW=1 dedup enumeration reproduced the set AND the
+#   graph bit-for-bit: the same six permutation members,
+#   nodes=6193933 edges=6565663 dedupHits=371731, certified=checkCert.
+#   Params unchanged. [AGENT] re-pin, delta class WIRE-SHA-ONLY.
+# previously: certified: 2026-08-21  commit: holes arc BUG-067 (wire func types carry variadic)
+# re-certification reason (holes arc, BUG-067): the wire sha moved
+#   because EVERY func TYPE node now carries the required `variadic`
+#   field (spec#Type_identity; docs/BUGS.md BUG-067) — schema widening
+#   only, the 2026-08-10 methodSets precedent's exact class. The fresh
+#   GOLEAN_SLOW=1 dedup enumeration reproduced the set AND the graph
+#   bit-for-bit: the same six permutation members, nodes=6193933
+#   edges=6565663 dedupHits=371731, certified=checkCert.
+# width= NOTE — CORRECTED 2026-08-21 at the audit fix round (F4). The
+#   text that stood here called the `width=` move from 16 to 4 "a
+#   report-shape difference only". That was WRONG, and it explained away
+#   the one thing worth reading. `width=` in the enum-stats line is the
+#   enumerator's ECHO of the width it ran under. The PREVIOUS record
+#   (the POR engine=dedup certification, `802a32de`, carried unchanged
+#   through `9f307641`) declared `params: width=4` and echoed
+#   `width=16` — so its enum-stats line was NOT produced by a run at
+#   its own declared params. Every one of the seven pre-arc versions of
+#   this record declares `width=4` in the params column; only those two
+#   echo 16. This arc's re-certification RESOLVED the inconsistency:
+#   the fresh run declares 4, echoes 4, and reproduces the previous
+#   record's set AND graph counts bit-for-bit (re-verified here), so the
+#   record is now self-consistent and its content is unchanged.
+#   OPEN QUESTION, recorded honestly as moot-but-noted: what the OLD
+#   record was actually certified under cannot be recovered from the
+#   file — the echo says 16, the params say 4, and only one of them can
+#   be what ran. It is MOOT because the current record was produced by a
+#   run whose declared and echoed params agree and which reproduced the
+#   graph exactly; it is NOTED because a params/echo mismatch is
+#   precisely the shape a stale or mis-parameterized record takes, and
+#   nothing in the gate compared those two fields at the time. (Under
+#   engine=dedup the B-INFO note below is still right that `width=`
+#   does not BOUND the claim — but "does not bound the claim" is not
+#   "may disagree with the params it was run under", which is what had
+#   happened.)
+# previously: certified: 2026-08-21  commit: w32-por engine=dedup re-certification (atop 4f3036f5)
+# re-certification reason (POR slice, docs/2026-08-21_w32-por-design.md):
+#   the row moves to engine=dedup — the state-graph dedup engine + THE
+#   VERIFIED CHECKER (checkCertM_slowObs), so this set is theorem-backed
+#   EQUAL to SlowObs (the ∃-fuel ∃-stream image of execProgLoop) rather
+#   than accountant/sentinel/ladder-guarded. The set is UNCHANGED: the
+#   same six permutation members, reproduced by the dedup enumeration
+#   (6,193,933 nodes / 6,565,663 edges, ~157 s dev-box wall vs the
+#   pre-B1 DFS's 39.9M steps / 94 s; the post-B1 DFS tree was >900M
+#   steps and INTRACTABLE — BUG-065, resolved for this row here). The
+#   stage-C recorded witness streams for all six members cross-check.
+#   Wire sha unchanged. Params: +engine=dedup (tier=slow retained: the
+#   fast lane stays on this cached record; --slow re-certifies).
+# previously: certified: 2026-08-10  commit: spec-parity arc-end class-closure round
+# re-certification reason (class-closure round, 2026-08-10): the wire
+#   sha moved because EVERY wire now carries the required methodSets
+#   field (BUG-053 class closure,
+#   docs/2026-08-10_method-set-record-contract.md) — schema widening
+#   only; the fresh enumeration reproduced the set AND the stats
+#   bit-for-bit (observations=6, steps=39976295).
+# previously: certified: 2026-08-09  commit: spec-parity-s1 audit-fix round (assignment-spine step growth; work cap raised)
+# re-certification reason (S1 audit major, gates dimension): the
+#   BUG-034/037/025 spine migrations alone had already pushed the
+#   enumeration past the old work=40000000 cap (the audit reproduced
+#   the breach at 390ed13c, BEFORE the BUG-052 reorder; the reorder
+#   only re-times existing steps) (fail-loud abort with
+#   subtrees unexplored — the default gate's CERTIFIED-CACHED path
+#   could not see it). Cap raised to 60000000 in cases.tsv (same
+#   commit); re-enumerated FULLY under GOLEAN_SLOW=1 at the new cap:
+#   the set is COMPLETE and still exactly the six permutation members
+#   with identical values (cardinality re-checked, not assumed — the
+#   spine adds steps but no scheduling sites, and the fresh
+#   enumeration confirms it). Wire sha unchanged. Prior re-cert
+#   (same date): F15 kind-carrying observation shape.
+# case: imported-goose/channel/google-search
+# params-note (2026-08-21, audit finding B-INFO): under `engine=dedup`
+#   the `width=`/`sites=` figures below DO NOT BOUND THE CLAIM. They are
+#   DFS-path parameters (per-site menu width and the site budget of a
+#   bounded tree walk); the dedup certification covers the CLOSED STATE
+#   GRAPH, and the accepted certificate's member set is theorem-backed
+#   EQUAL to `SlowObs` — the full ∃-fuel ∃-stream image of
+#   `execProgLoop` — with no width or site restriction. They are kept in
+#   the row so a revert to the DFS engine has its parameters, and
+#   `work=` still bounds the dedup run (it fails loud on breach).
+#   Standard: docs/2026-08-21_w32-por-design.md §1/§3/§4.
+# params: width=4,sites=48,work=60000000,members=6,engine=dedup,tier=slow
+# wire-sha256: 2f1d639f2042466f50b61ab117db5b39629c425f733650b9be992c0b85beefcc
+# enum-stats: observations=6 steps=6565663 probes=0 sites=6193933 leaves=0 maxdepth=0 width=4 engine=dedup nodes=6193933 edges=6565663 dedupHits=371731 certified=checkCert
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":123}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":132}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":213}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":231}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":312}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":321}]}

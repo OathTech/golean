@@ -1,0 +1,1 @@
+{"args": ["go", "build", "-o", "/home/dev/projects/golean/.tmp/uintptr-independent-review.du3rifxj/coverageharness", "./tools/coverageharness"], "exit": 0}

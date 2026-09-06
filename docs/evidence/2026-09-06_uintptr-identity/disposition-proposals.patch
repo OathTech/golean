@@ -1,0 +1,120 @@
+--- a/baselines/native-full.tsv
++++ b/baselines/native-full.tsv
+@@ -1,5 +1,16 @@
+ # GoLean native-frontend full-corpus differential baseline
+-# cases: 3627 (3382 PASS / 245 FAIL)
++# cases: 3635 (3390 PASS / 245 FAIL)
++# re-pinned: 2026-09-06, BUG-107 uintptr identity repair [AGENT].
++#   Full scripts/ci --diff: 3635 = 3390 PASS / 245 FAIL, two workers.
++#   Exactly eight new PASS ints/uintptr-identity rows; no existing result
++#   or unapproved stage changes, no removals. Prior row order and allowed
++#   stage alternations preserved. This is the isolated BUG-107 manifest,
++#   before integration with independent R1 string-member work. No pin move.
++#   Initial CI also refused a missing pinned goose checkout; restoration
++#   and final gate are recorded separately from the measured corpus delta.
++#   Source-bound full TSV/meta, exact manifest and independent review:
++#   docs/evidence/2026-09-06_uintptr-identity/.
++# Previous pin record (historical):
+ # re-pinned: 2026-09-06, BUG-106 oracle report authentication repair [AGENT].
+ #   Fresh full scripts/ci --diff: 3627 = 3382 PASS / 245 FAIL. Exactly
+ #   eleven new PASS panic-markers rows and sync/mutex-unlock-fatal/
+@@ -5012,3 +5023,11 @@
+ FAIL	builtins/float-bits/neg-canonical-refused/float32	lean-observation
+ FAIL	builtins/print/refused/race-with-output	go-observation
+ FAIL	builtins/print/refused/unsafe-pointer	frontend-export
++PASS	ints/uintptr-identity/aggregate-identity	-
++PASS	ints/uintptr-identity/assertions	-
++PASS	ints/uintptr-identity/boxed-readout	-
++PASS	ints/uintptr-identity/direct-readout	-
++PASS	ints/uintptr-identity/map-keys	-
++PASS	ints/uintptr-identity/method-parameters	-
++PASS	ints/uintptr-identity/method-results	-
++PASS	ints/uintptr-identity/wrap	-
+--- a/docs/BUGS.md
++++ b/docs/BUGS.md
+@@ -6305,3 +6305,36 @@
+ Design, precise installed-source argument and durable evidence:
+ `docs/2026-09-06_observer-terminal-classification-design.md` and
+ `docs/evidence/2026-09-06_observer-classification/`.
++
++## BUG-107 — uintptr is lowered as uint64, merging distinct Go type identities [fidelity; integer identity]
++
++- Status: fixed in the isolated candidate; final integration and slow certification pending ([AGENT], 2026-09-06)
++- Pinned-by: differential
++- Cases: ints/uintptr-identity/assertions, ints/uintptr-identity/method-parameters, ints/uintptr-identity/method-results, ints/uintptr-identity/aggregate-identity, ints/uintptr-identity/map-keys, ints/uintptr-identity/direct-readout, ints/uintptr-identity/boxed-readout, ints/uintptr-identity/wrap
++
++`NativeToIR.intKindOfName` mapped `uintptr` to `.uint64`. Equal widths do
++not imply equal Go types: a fresh Go/native/model probe returned 8 in Go
++and 15 in the model because cross-type assertions and method satisfaction
++incorrectly succeeded. Five regression rows failed differentially; two
++direct/boxed readout rows were refused by the old Go observer. The unsigned
++wrapping control already passed. Raw red evidence precedes the repair.
++
++The pinned specification's Numeric_types, Type_identity, Method_sets and
++Type_assertions rules determine the repair: a distinct `IntKind.uintptr`,
++whose unsigned width is `8 * Platform.wordBytes`. The pinned platform remains
++64-bit. Atomic classification and both observation encodings preserve this
++identity. Generic integer operations and the shared relational atomic plan
++cover the new constructor; no evaluator-only semantic rule is introduced.
++
++The focused native run passes all 48 identity/atomic rows. Independent review
++adds eight Go/native/model checks, observation range/identity challenges and
++ten kernel probes. The full differential run is 3,635 = 3,390 PASS / 245 FAIL:
++exactly eight new PASS rows, no existing result or unapproved stage changes,
++and no removals. All 3,851 source inputs and the 12 reviewed candidate inputs
++were unchanged. The initial CI also refused a missing pinned `deps/goose`
++checkout; that dependency has been restored, with a clean gate still owed.
++
++This is a separate K3 fidelity repair, not B7 representation equivalence.
++B7 must explicitly adopt the accepted repaired reference before comparison.
++Source-bound records: `docs/2026-09-06_uintptr-identity-repair.md` and
++`docs/evidence/2026-09-06_uintptr-identity/`.
+--- a/docs/language-coverage-ledger.md
++++ b/docs/language-coverage-ledger.md
+@@ -564,7 +564,15 @@
+ 
+ ## 8. Counts and the closing arithmetic
+ 
+-All numbers at the current tracked baseline (3627 cases, 3382 PASS /
++All numbers at the current tracked baseline (3635 cases, 3390 PASS /
++245 FAIL — [AGENT], 2026-09-06, `typed-uintptr-identity`), measured by the
++full differential run and derived from its data rows. Eight uintptr identity
++and readout rows are born PASS; no existing result or allowed-stage changes.
++All red buckets remain unchanged: 137 + 9 + 26 + 7 + 66 = 245. This isolated
++measurement precedes the independent R1 branch integration; movement
++§8z-uintptr records its exact scope and outstanding gates.
++
++Previous tracked baseline (3627 cases, 3382 PASS /
+ 245 FAIL — [AGENT], 2026-09-06, `typed-consumer-sprint`), measured by the
+ full ordinary differential run and derived from the baseline rows.
+ Eleven new observer regression rows pass. The existing fatal-unwind row
+@@ -2010,6 +2018,29 @@
+ full-run policy, including explicitly cached slow rows; it does not claim
+ complete observer correctness, a stable pin, or O2 completion.
+ 
++### 8z-uintptr. Movement at the uintptr identity repair (2026-09-06)
++
++[AGENT] `typed-uintptr-identity`: the isolated full differential run moves
++3,627 = 3,382 PASS / 245 FAIL to 3,635 = 3,390 PASS / 245 FAIL. Exactly eight
++`ints/uintptr-identity/*` rows are born PASS; existing rows retain their
++results and allowed stages. No existing red bucket changes: 137 + 9 + 26 +
++7 + 66 = 245. This measurement predates integration with the independent R1
++string-member work; their two 3,635-row manifests are different sets.
++
++BUG-107 preserves a red-first type-identity mismatch and the readout observer
++refusals. The fix retains distinct uintptr identity even at the same width
++as uint64; it does not widen the supported platform claim. The full run used
++two workers and the pinned Go toolchain. Its unfiltered regenerated manifest
++matches the original metadata SHA exactly; original `full_run=unknown` is
++preserved, not relabeled. The initial CI also failed its required goose guard
++because that worktree lacked the pinned reference checkout. Restoring the
++dependency and passing the remaining gate are separate from this measured
++case delta. Slow certification and final integration remain owed.
++
++Evidence: `docs/evidence/2026-09-06_uintptr-identity/full-delta.json`, complete
++TSV/meta, manifest, initial CI log and independent implementation review.
++
++
+ ### 8c. The re-derivation, 2026-08-22 vintage → the 2026-09-01 tip
+ 
+ Method: §8b's, re-run against this tip's baseline (re-pinned

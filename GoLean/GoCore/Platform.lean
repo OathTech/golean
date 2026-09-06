@@ -24,10 +24,11 @@ namespace GoLean.GoCore
 
 /-- The implementation-specific layout parameters of a Go target. -/
 structure Platform where
-  /-- Width of `int`/`uint` (and `uintptr`) in bits — spec#Numeric_types
+  /-- Width of `int`/`uint` in bits — spec#Numeric_types
   makes it "either 32 or 64 bits" (latitude inventory R1). -/
   intBits : Nat
-  /-- The machine word / pointer size in bytes (go/types `Sizes.WordSize`). -/
+  /-- The machine word / pointer size in bytes (go/types `Sizes.WordSize`).
+  `uintptr` uses this unsigned width, preserving its distinct identity. -/
   wordBytes : Nat
   /-- The maximum alignment (go/types `Sizes.MaxAlign`). -/
   maxAlign : Nat

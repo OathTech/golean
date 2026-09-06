@@ -564,7 +564,15 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (3627 cases, 3382 PASS /
+All numbers at the current tracked baseline (3635 cases, 3390 PASS /
+245 FAIL — [AGENT], 2026-09-06, `typed-uintptr-identity`), measured by the
+full differential run and derived from its data rows. Eight uintptr identity
+and readout rows are born PASS; no existing result or allowed-stage changes.
+All red buckets remain unchanged: 137 + 9 + 26 + 7 + 66 = 245. This isolated
+measurement precedes the independent R1 branch integration; movement
+§8z-uintptr records its exact scope and outstanding gates.
+
+Previous tracked baseline (3627 cases, 3382 PASS /
 245 FAIL — [AGENT], 2026-09-06, `typed-consumer-sprint`), measured by the
 full ordinary differential run and derived from the baseline rows.
 Eleven new observer regression rows pass. The existing fatal-unwind row
@@ -2009,6 +2017,29 @@ Source-bound records, original metadata, raw log, and exact row comparison
 are in `docs/evidence/2026-09-06_observer-integration/`. This is the ordinary
 full-run policy, including explicitly cached slow rows; it does not claim
 complete observer correctness, a stable pin, or O2 completion.
+
+### 8z-uintptr. Movement at the uintptr identity repair (2026-09-06)
+
+[AGENT] `typed-uintptr-identity`: the isolated full differential run moves
+3,627 = 3,382 PASS / 245 FAIL to 3,635 = 3,390 PASS / 245 FAIL. Exactly eight
+`ints/uintptr-identity/*` rows are born PASS; existing rows retain their
+results and allowed stages. No existing red bucket changes: 137 + 9 + 26 +
+7 + 66 = 245. This measurement predates integration with the independent R1
+string-member work; their two 3,635-row manifests are different sets.
+
+BUG-107 preserves a red-first type-identity mismatch and the readout observer
+refusals. The fix retains distinct uintptr identity even at the same width
+as uint64; it does not widen the supported platform claim. The full run used
+two workers and the pinned Go toolchain. Its unfiltered regenerated manifest
+matches the original metadata SHA exactly; original `full_run=unknown` is
+preserved, not relabeled. The initial CI also failed its required goose guard
+because that worktree lacked the pinned reference checkout. Restoring the
+dependency and passing the remaining gate are separate from this measured
+case delta. Slow certification and final integration remain owed.
+
+Evidence: `docs/evidence/2026-09-06_uintptr-identity/full-delta.json`, complete
+TSV/meta, manifest, initial CI log and independent implementation review.
+
 
 ### 8c. The re-derivation, 2026-08-22 vintage → the 2026-09-01 tip
 

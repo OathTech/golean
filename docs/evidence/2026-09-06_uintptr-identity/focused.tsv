@@ -1,0 +1,49 @@
+result	id	features	stage	detail
+PASS	atomics/counter/add	sync,atomics,ints,goroutines,waitgroup	confluent	|set|=1 certified over all schedules; coverage-observations: observations=1 steps=3378 probes=0 sites=2761 leaves=0 maxdepth=0 width=4 engine=dedup nodes=2761 edges=3378 dedupHits=618 certified=checkCert
+PASS	atomics/counter/typed	sync,atomics,ints,goroutines,waitgroup,methods,closures	confluent	|set|=1 certified over all schedules; coverage-observations: observations=1 steps=17366 probes=0 sites=15747 leaves=0 maxdepth=0 width=4 engine=dedup nodes=15747 edges=17366 dedupHits=1620 certified=checkCert
+PASS	atomics/counter/cas-loop	sync,atomics,ints,goroutines,waitgroup,loops,closures	confluent	|set|=1 certified over all schedules; coverage-observations: observations=1 steps=20601 probes=0 sites=17535 leaves=0 maxdepth=0 width=4 engine=dedup nodes=17535 edges=20601 dedupHits=3067 certified=checkCert
+PASS	atomics/counter/swap-claim	sync,atomics,ints,goroutines,waitgroup,closures	confluent	|set|=1 certified over all schedules; coverage-observations: observations=1 steps=17887 probes=0 sites=15268 leaves=0 maxdepth=0 width=4 engine=dedup nodes=15268 edges=17887 dedupHits=2620 certified=checkCert
+PASS	atomics/counter/plain-read-after-join	sync,atomics,ints,goroutines,waitgroup,race	confluent	|set|=1 certified over all schedules; coverage-observations: observations=1 steps=2642 probes=0 sites=2121 leaves=0 maxdepth=0 width=4 engine=dedup nodes=2121 edges=2642 dedupHits=522 certified=checkCert
+PASS	atomics/ops/load-store-int32	sync,atomics,ints	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/ops/load-store-int64	sync,atomics,ints	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/ops/load-store-uint32	sync,atomics,ints	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/ops/load-store-uint64	sync,atomics,ints	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/ops/load-store-uintptr	sync,atomics,ints	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/ops/add-int32-wrap	sync,atomics,ints,overflow	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/ops/add-int64	sync,atomics,ints	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/ops/add-uint32-decrement	sync,atomics,ints,overflow	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/ops/add-uint64	sync,atomics,ints	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/ops/swap-int32	sync,atomics,ints	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/ops/swap-uint64	sync,atomics,ints	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/ops/cas-int64	sync,atomics,ints	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/ops/cas-uint32-fail	sync,atomics,ints	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/ops/add-uintptr	sync,atomics,ints,overflow	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/ops/swap-uintptr	sync,atomics,ints	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/ops/swap-int64	sync,atomics,ints	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/ops/swap-uint32	sync,atomics,ints	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/ops/cas-uint64	sync,atomics,ints	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/ops/cas-uintptr	sync,atomics,ints	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/ops/discarded-result	sync,atomics,ints	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/ops/in-expression	sync,atomics,ints	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/ops/operand-order	sync,atomics,ints,closures,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/ops/defined-underlying	sync,atomics,ints,defined_type,pointers	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/ops/nil-address	sync,atomics,ints,nil,panic	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/ops/nil-address-recovered	sync,atomics,ints,nil,panic,recover,defer,closures	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/spin/flag-wait	sync,atomics,ints,goroutines,channels,loops,closures,race,nondet	membership	enumerated=1 exhibited=1 draws=2 (floor; K=32; stopped at the members=1 pin after the two-draw floor — one plain + one -race) unexhibited=0 (members in artifacts/coverage/membership/atomics/spin/flag-wait)
+PASS	atomics/typed/int64	sync,atomics,ints,methods	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/typed/int32-wrap	sync,atomics,ints,methods,overflow	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/typed/uint32	sync,atomics,ints,methods,overflow	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/typed/uint64	sync,atomics,ints,methods	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/typed/uintptr	sync,atomics,ints,methods	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/typed/zero-and-copy	sync,atomics,ints,methods,structs	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/typed/empty-literal	sync,atomics,ints,methods,structs,pointers	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/typed/struct-field	sync,atomics,ints,methods,structs,pointers	-	wide=0 exhausted=none depth=fixed
+PASS	atomics/typed/nil-receiver	sync,atomics,ints,methods,nil,panic	-	wide=0 exhausted=none depth=fixed
+PASS	ints/uintptr-identity/assertions	ints,interfaces,type_assertions	-	wide=0 exhausted=none depth=fixed
+PASS	ints/uintptr-identity/method-parameters	ints,interfaces,methods,type_assertions	-	wide=0 exhausted=none depth=fixed
+PASS	ints/uintptr-identity/method-results	ints,interfaces,methods,type_assertions	-	wide=0 exhausted=none depth=fixed
+PASS	ints/uintptr-identity/aggregate-identity	ints,interfaces,type_assertions,arrays,pointers,slices	-	wide=0 exhausted=none depth=fixed
+PASS	ints/uintptr-identity/map-keys	ints,interfaces,maps,equality	-	wide=0 exhausted=none depth=fixed
+PASS	ints/uintptr-identity/wrap	ints,bitwise,conversions	-	wide=0 exhausted=none depth=fixed
+PASS	ints/uintptr-identity/direct-readout	ints	-	wide=0 exhausted=none depth=fixed
+PASS	ints/uintptr-identity/boxed-readout	ints,interfaces	-	wide=0 exhausted=none depth=fixed

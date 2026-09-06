@@ -1,0 +1,1 @@
+{"args": ["go", "run", "/home/dev/projects/golean/.tmp/uintptr-independent-review.du3rifxj/oracle-aliasIdentity/main.go", "/home/dev/projects/golean/.tmp/uintptr-independent-review.du3rifxj/oracle-aliasIdentity/zz_golean_crash.go", "/home/dev/projects/golean/.tmp/uintptr-independent-review.du3rifxj/oracle-aliasIdentity/zz_golean_harness.go"], "exit": 1}

@@ -249,7 +249,7 @@ private def intKindOfName (name : String) : LowerM IntKind :=
   | "uint64" => pure .uint64
   | "byte" => pure .uint8
   | "rune" => pure .int32
-  | "uintptr" => pure .uint64
+  | "uintptr" => pure .uintptr
   | other => fail s!"unsupported integer kind {other}"
 
 /-- The array-type materialization budget (BUG-078): the largest array
@@ -750,8 +750,8 @@ private def asCall? (json : Json) : LowerM (Option (String × Array Json)) := do
 
 /-- Recognize a `sync/atomic` op node (the atomics arc, wave 1 —
 tools/nativefrontend/atomics.go) in a CALL position: the head, the
-addressed cell's integer kind (one of the four wave-1 kinds — `uintptr`
-already arrives as uint64 from the type table; anything else refuses by
+addressed cell's integer kind (one of the five wave-1 kinds, including
+the distinct pointer-sized unsigned `uintptr`; anything else refuses by
 name), and the operand array (address first). Strict keys; arity is
 checked here AND again by `atomicPlan` (fail closed twice, the sync-op
 discipline). -/
@@ -770,8 +770,8 @@ private def asAtomicOp? (json : Json) : LowerM (Option (AtomicStmtOp × IntKind 
         | other => fail s!"unsupported atomic op {other} (wave 1 lowers load/store/add/swap/cas)"
       let kindTy ← decodeTy "atomic-op.kind" (← StrictJson.field "atomic-op" obj "kind")
       let kind ← match kindTy with
-        | .int k@.int32 | .int k@.int64 | .int k@.uint32 | .int k@.uint64 => pure k
-        | other => fail s!"unsupported atomic operand kind {repr other} (wave 1 models int32/int64/uint32/uint64; uintptr arrives as uint64)"
+        | .int k@.int32 | .int k@.int64 | .int k@.uint32 | .int k@.uint64 | .int k@.uintptr => pure k
+        | other => fail s!"unsupported atomic operand kind {repr other} (wave 1 models int32/int64/uint32/uint64/uintptr)"
       let args ← StrictJson.array "atomic-op.args" (← StrictJson.field "atomic-op" obj "args")
       let arity := match op with
         | .load => 1 | .store => 2 | .add => 2 | .swap => 2 | .cas => 3

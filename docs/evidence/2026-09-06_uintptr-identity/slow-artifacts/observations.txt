@@ -1,0 +1,6 @@
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":123}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":132}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":213}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":231}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":312}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":321}]}

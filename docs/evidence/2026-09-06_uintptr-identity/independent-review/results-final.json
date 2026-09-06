@@ -1,0 +1,220 @@
+[
+  {
+    "function": "aliasIdentity",
+    "go_exit": 0,
+    "equal": true,
+    "go": {
+      "schema": "golean-observation-v1",
+      "status": "ok",
+      "values": [
+        {
+          "tag": "bool",
+          "value": true
+        }
+      ],
+      "output": ""
+    },
+    "lean": {
+      "output": "",
+      "schema": "golean-observation-v1",
+      "status": "ok",
+      "values": [
+        {
+          "tag": "bool",
+          "value": true
+        }
+      ]
+    }
+  },
+  {
+    "function": "namedIdentity",
+    "go_exit": 0,
+    "equal": true,
+    "go": {
+      "schema": "golean-observation-v1",
+      "status": "ok",
+      "values": [
+        {
+          "tag": "bool",
+          "value": true
+        }
+      ],
+      "output": ""
+    },
+    "lean": {
+      "output": "",
+      "schema": "golean-observation-v1",
+      "status": "ok",
+      "values": [
+        {
+          "tag": "bool",
+          "value": true
+        }
+      ]
+    }
+  },
+  {
+    "function": "functionIdentity",
+    "go_exit": 0,
+    "equal": true,
+    "go": {
+      "schema": "golean-observation-v1",
+      "status": "ok",
+      "values": [
+        {
+          "tag": "bool",
+          "value": true
+        }
+      ],
+      "output": ""
+    },
+    "lean": {
+      "output": "",
+      "schema": "golean-observation-v1",
+      "status": "ok",
+      "values": [
+        {
+          "tag": "bool",
+          "value": true
+        }
+      ]
+    }
+  },
+  {
+    "function": "channelIdentity",
+    "go_exit": 0,
+    "equal": true,
+    "go": {
+      "schema": "golean-observation-v1",
+      "status": "ok",
+      "values": [
+        {
+          "tag": "bool",
+          "value": true
+        }
+      ],
+      "output": ""
+    },
+    "lean": {
+      "output": "",
+      "schema": "golean-observation-v1",
+      "status": "ok",
+      "values": [
+        {
+          "tag": "bool",
+          "value": true
+        }
+      ]
+    }
+  },
+  {
+    "function": "mapIdentity",
+    "go_exit": 0,
+    "equal": true,
+    "go": {
+      "schema": "golean-observation-v1",
+      "status": "ok",
+      "values": [
+        {
+          "tag": "bool",
+          "value": true
+        }
+      ],
+      "output": ""
+    },
+    "lean": {
+      "output": "",
+      "schema": "golean-observation-v1",
+      "status": "ok",
+      "values": [
+        {
+          "tag": "bool",
+          "value": true
+        }
+      ]
+    }
+  },
+  {
+    "function": "conversion",
+    "go_exit": 0,
+    "equal": true,
+    "go": {
+      "schema": "golean-observation-v1",
+      "status": "ok",
+      "values": [
+        {
+          "tag": "bool",
+          "value": true
+        }
+      ],
+      "output": ""
+    },
+    "lean": {
+      "output": "",
+      "schema": "golean-observation-v1",
+      "status": "ok",
+      "values": [
+        {
+          "tag": "bool",
+          "value": true
+        }
+      ]
+    }
+  },
+  {
+    "function": "atomicIdentity",
+    "go_exit": 0,
+    "equal": true,
+    "go": {
+      "schema": "golean-observation-v1",
+      "status": "ok",
+      "values": [
+        {
+          "tag": "bool",
+          "value": true
+        }
+      ],
+      "output": ""
+    },
+    "lean": {
+      "output": "",
+      "schema": "golean-observation-v1",
+      "status": "ok",
+      "values": [
+        {
+          "tag": "bool",
+          "value": true
+        }
+      ]
+    }
+  },
+  {
+    "function": "highReadout",
+    "go_exit": 0,
+    "equal": true,
+    "go": {
+      "schema": "golean-observation-v1",
+      "status": "ok",
+      "values": [
+        {
+          "kind": "uintptr",
+          "tag": "int",
+          "value": 18446744073709551615
+        }
+      ],
+      "output": ""
+    },
+    "lean": {
+      "output": "",
+      "schema": "golean-observation-v1",
+      "status": "ok",
+      "values": [
+        {
+          "kind": "uintptr",
+          "tag": "int",
+          "value": 18446744073709551615
+        }
+      ]
+    }
+  }
+]

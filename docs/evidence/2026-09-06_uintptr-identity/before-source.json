@@ -1,0 +1,10 @@
+{
+  "GoLean/GoCore/Value.lean": "aeded44416b5f286fc12033922cfab35d43d46c7d45fb7c6e8ea106e9eab6f8e",
+  "GoLean/GoCore/Platform.lean": "0f8a09c2b88ba54fcdcd0d5aee3cf718b3a7ad17fc28aa3dbe9469cf0d85d944",
+  "GoLean/GoCore/Machine.lean": "4bafe367252e73068ec60b8933bbe49f383215643d6468015610afa66a5cb957",
+  "GoLean/GoCore/Syntax.lean": "d8feef5724519115d0ccb2620354ce8fcf8efddbaa7f688c189bc0d72dac8ca0",
+  "GoLean/NativeToIR.lean": "4c285581caf0cf0d0b7b7044f7e9b478adc4c8ed2859ca717b35a2cbc55e0a7d",
+  "GoLean/CLI.lean": "5df0ac7c6b6902d23b997c3292d1d656e97fa9c12c424951d947dd1d4101825a",
+  "tools/coverageharness/main.go": "77344a07bb6f6f7211714e32db4a8115468b30a50b2593a76df7e4aa5aaf3899",
+  "Tests/GoCoreEval.lean": "7866db39b2d8551962cc878d9c22d56a4c31f05ad88958e67ee956e0f6a717b8"
+}

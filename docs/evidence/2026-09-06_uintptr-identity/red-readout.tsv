@@ -1,0 +1,3 @@
+result	id	features	stage	detail
+FAIL	ints/uintptr-identity/direct-readout	ints	go-observation	expected status ok, got {"output":"","message":"unsupported Go observation kind uintptr (the frontend maps uintptr to uint64; a kind-visible channel must not alias them)","schema":"golean-observation-v1","status":"error"}
+FAIL	ints/uintptr-identity/boxed-readout	ints,interfaces	go-observation	expected status ok, got {"output":"","message":"unsupported Go observation kind uintptr (the frontend maps uintptr to uint64; a kind-visible channel must not alias them)","schema":"golean-observation-v1","status":"error"}

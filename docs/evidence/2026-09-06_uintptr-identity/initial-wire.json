@@ -1,0 +1,512 @@
+{
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "out",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "0"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "decls": [
+       {
+        "id": "a",
+        "init": {
+         "dynamic": {
+          "int": "uintptr",
+          "kind": "int"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "expr": "int",
+          "type": {
+           "int": "uintptr",
+           "kind": "int"
+          },
+          "value": "7"
+         },
+         "target": {
+          "kind": "interface",
+          "name": "any"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "cond": {
+       "expr": "ident",
+       "name": "ok",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "init": {
+       "expr": {
+        "expr": "ident",
+        "name": "a",
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       },
+       "okTarget": {
+        "id": "ok",
+        "target": "declare",
+        "type": {
+         "kind": "bool"
+        }
+       },
+       "stmt": "type-assert",
+       "target": {
+        "target": "blank"
+       },
+       "targetType": {
+        "int": "uint64",
+        "kind": "int"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "op": "+",
+         "read": {
+          "expr": "ident",
+          "name": "out",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "rhs": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "1"
+         },
+         "stmt": "compound-assign",
+         "target": {
+          "id": "out",
+          "target": "var"
+         }
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "decls": [
+       {
+        "id": "b",
+        "init": {
+         "dynamic": {
+          "int": "uint64",
+          "kind": "int"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "expr": "int",
+          "type": {
+           "int": "uint64",
+           "kind": "int"
+          },
+          "value": "7"
+         },
+         "target": {
+          "kind": "interface",
+          "name": "any"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "cond": {
+       "expr": "ident",
+       "name": "ok",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "init": {
+       "expr": {
+        "expr": "ident",
+        "name": "b",
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       },
+       "okTarget": {
+        "id": "ok",
+        "target": "declare",
+        "type": {
+         "kind": "bool"
+        }
+       },
+       "stmt": "type-assert",
+       "target": {
+        "target": "blank"
+       },
+       "targetType": {
+        "int": "uintptr",
+        "kind": "int"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "op": "+",
+         "read": {
+          "expr": "ident",
+          "name": "out",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "rhs": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "2"
+         },
+         "stmt": "compound-assign",
+         "target": {
+          "id": "out",
+          "target": "var"
+         }
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "decls": [
+       {
+        "id": "u",
+        "init": {
+         "dynamic": {
+          "kind": "named",
+          "name": "main.U"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "args": [],
+          "expr": "struct-lit",
+          "target": {
+           "kind": "named",
+           "name": "main.U"
+          },
+          "type": {
+           "kind": "named",
+           "name": "main.U"
+          }
+         },
+         "target": {
+          "kind": "interface",
+          "name": "any"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "cond": {
+       "expr": "ident",
+       "name": "ok",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "init": {
+       "expr": {
+        "expr": "ident",
+        "name": "u",
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       },
+       "okTarget": {
+        "id": "ok",
+        "target": "declare",
+        "type": {
+         "kind": "bool"
+        }
+       },
+       "stmt": "type-assert",
+       "target": {
+        "target": "blank"
+       },
+       "targetType": {
+        "kind": "interface",
+        "name": "main.Wants64"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "op": "+",
+         "read": {
+          "expr": "ident",
+          "name": "out",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "rhs": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "4"
+         },
+         "stmt": "compound-assign",
+         "target": {
+          "id": "out",
+          "target": "var"
+         }
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "cond": {
+       "expr": "ident",
+       "name": "ok",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "init": {
+       "expr": {
+        "expr": "ident",
+        "name": "a",
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       },
+       "okTarget": {
+        "id": "ok",
+        "target": "declare",
+        "type": {
+         "kind": "bool"
+        }
+       },
+       "stmt": "type-assert",
+       "target": {
+        "target": "blank"
+       },
+       "targetType": {
+        "int": "uintptr",
+        "kind": "int"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "op": "+",
+         "read": {
+          "expr": "ident",
+          "name": "out",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "rhs": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "8"
+         },
+         "stmt": "compound-assign",
+         "target": {
+          "id": "out",
+          "target": "var"
+         }
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "ident",
+        "name": "out",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "identity",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  }
+ ],
+ "methodSets": [
+  {
+   "coverage": "full",
+   "type": "main.U"
+  }
+ ],
+ "methods": [
+  {
+   "body": {
+    "body": [],
+    "stmt": "block"
+   },
+   "name": "M",
+   "params": [
+    {
+     "id": "x",
+     "type": {
+      "int": "uintptr",
+      "kind": "int"
+     }
+    }
+   ],
+   "recv": {
+    "id": "",
+    "type": {
+     "kind": "named",
+     "name": "main.U"
+    }
+   },
+   "recvType": "main.U",
+   "results": [],
+   "variadic": false
+  },
+  {
+   "interface": true,
+   "name": "M",
+   "params": [
+    {
+     "id": "",
+     "type": {
+      "int": "uint64",
+      "kind": "int"
+     }
+    }
+   ],
+   "recv": {
+    "id": "$recv",
+    "type": {
+     "kind": "interface",
+     "name": "main.Wants64"
+    }
+   },
+   "recvType": "main.Wants64",
+   "results": [],
+   "variadic": false
+  }
+ ],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": [
+  {
+   "def": {
+    "fields": [],
+    "kind": "struct"
+   },
+   "display": "main.U",
+   "name": "main.U",
+   "pkg": "main"
+  },
+  {
+   "def": {
+    "kind": "interface",
+    "methods": [
+     {
+      "name": "M",
+      "params": [
+       {
+        "int": "uint64",
+        "kind": "int"
+       }
+      ],
+      "results": [],
+      "variadic": false
+     }
+    ]
+   },
+   "display": "main.Wants64",
+   "name": "main.Wants64",
+   "pkg": "main"
+  }
+ ]
+}

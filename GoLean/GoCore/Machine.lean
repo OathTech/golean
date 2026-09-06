@@ -1862,11 +1862,11 @@ def atomicArity : AtomicStmtOp → Nat
   | .cas => 3
 
 /-- The integer kinds the wave-1 op family is defined over — exactly
-the `sync/atomic` integer functions' operand types (`uintptr` arrives
-as `uint64` from the frontend, the R1 pin). Any other kind is a
+the `sync/atomic` integer functions' operand types, including the distinct
+pointer-sized unsigned `uintptr`. Any other kind is a
 malformed statement (fail closed at the plan). -/
 def atomicKindOk : IntKind → Bool
-  | .int32 | .int64 | .uint32 | .uint64 => true
+  | .int32 | .int64 | .uint32 | .uint64 | .uintptr => true
   | _ => false
 
 /-- Classify an atomic statement (`atomicPlan`): op + kind + result
