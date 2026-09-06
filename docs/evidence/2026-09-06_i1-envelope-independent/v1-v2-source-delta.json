@@ -1,0 +1,22 @@
+{
+  "GoLean/NativeDeclarationPackage.lean": {
+    "before": "edf2240652d140c031bdd76e0920d6210e45b41e4e6ef680dabd624ce4ebd32e",
+    "after": "78631dabaca5b4fc119eba7ed38f9445a060cdb3e9a062671a1ace01d01f8066"
+  },
+  "Tests/DeclarationPackage.lean": {
+    "before": "a0c74704bf6b64ff6bc54f47dbebb1f114f497f04c72fd5c5ef3f49e7f833c30",
+    "after": "17f6210c3801297eecb50d902b220315def768329dbd71c2b52b2b8bc0ab884f"
+  },
+  "docs/2026-09-06_i1-package-envelope.md": {
+    "before": "de6996139a4b6a133c68bc7235f7eb7359b2a7da18ec469bead03d9e4223f4cd",
+    "after": "dfc723b8777210b634abdfc6f3e5388753233842fd5b347b6b039dfcd147bd1a"
+  },
+  "tools/declaration-package-check.py": {
+    "before": "ae88a80edfe0a6c3e43766c51d0fbdf4787ae2704c4d6d82c46e5e5a98760368",
+    "after": "e3f3d512023799cd5a179ec38db168620156c359163a5b837298255e89b52463"
+  },
+  "tools/nativefrontend/declaration_package_test.go": {
+    "before": "d2611829f3439b7cc5f4ec4d94e58cc8109c5acd0276df2994607e20572a82db",
+    "after": "e80c03f0c4c25b1558ccb7358ad0199b56eaa1e0f1c2b3e319ce58a8085b3c2e"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "base": "7ac3eb46bb3e2fe9c15b86b509569ef086327453",
+  "source32_manifest_sha256": "4b478c9f920a6a60a46fbe5f3c882e218f5bce4f8c6df9e8aa26884dc2e1dcb9",
+  "frozen32_verified": true,
+  "full3917_verified_against_Git_base_plus_frozen32": true,
+  "failed_checkout": "ENOSPC; branch typed-i1-envelope-review preserved, checkout did not survive",
+  "review_method": "unique copied-source scratch; no author candidate changes; cached author Lean imports explicitly reused for stdin probe"
+}

@@ -1,0 +1,8 @@
+{
+  "input_sha256": "0d9bcd2baf4f68b5d91a0252c626134fc2743b05a598ef6ad708b76fb3c29e87",
+  "current_decoder_source_equal_exact7ac3": true,
+  "decoder_sha256": "4c285581caf0cf0d0b7b7044f7e9b478adc4c8ed2859ca717b35a2cbc55e0a7d",
+  "reviewer_cli_sha256": "378bebb0996c17a828cd0dd59e3f81bc38b5acf93b7dc3752d90c0fac4c9c69c",
+  "reviewer_cli": "already built and all ordinary CI gated at sealed O2 source7bd32ad6; reused, not a fresh base binary build",
+  "purpose": "independent observation of unchanged native lowering boundary on exact author base-emitted wire"
+}
