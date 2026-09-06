@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+-	repanicSameValueAbort	-	panic	-	panic,recover,defer	string-member	R1 historical recovered-string rethrow with actual complete chain and broader exact controls	-
+forced-half	repanicSameValueForcedHalf	-	ok	-	panic,recover,defer,identity
