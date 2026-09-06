@@ -1,0 +1,14 @@
+{
+  "GoLean/GoCore/Value.lean": "17e9c7aa73ee3f9f8392e9b218e36fa5e48e14d4e1d9f045b967428c48461e36",
+  "GoLean/GoCore/Platform.lean": "9d84947fd1adfab7b6e072c1b6e1fbbdaf40a5fecce94a66a2d5c785a42a452a",
+  "GoLean/GoCore/Machine.lean": "1ca4c929eefe70d336f38a05c7343ec7934b90f0308702ec165d95d89632af0d",
+  "GoLean/GoCore/Syntax.lean": "83edd966e99578143d5fd858c1b5538026646cb8b0fd10f87c585664e6d79235",
+  "GoLean/NativeToIR.lean": "0bd2950db475df8acc46858a672c82f451a36410ceb3fa8faa7d92cc3586d960",
+  "GoLean/CLI.lean": "d95ddce6ce484341e3b16ab5898b52014f4b24980e94176257f355ae0b0f37b8",
+  "tools/coverageharness/main.go": "7e33092909961db6860fcbbdba195ed80cab5d04dac9034b428aa501e7668184",
+  "tools/nativefrontend/atomics.go": "103ccd4fec1b9f13612c2fb70783300028735fc8b7a0bd36a7c62ed28fa1cda5",
+  "Tests/GoCoreEval.lean": "9334feb760f29ced0cf72ce30eac9d7e9ec8c5c2bae47acb825c1eb30014aef4",
+  "Corpus/coverage/exec/ints/uintptr-identity/main.go": "237dfe6018090116f4161acaf48b6ee5ecc4bc438189a753bc4fef286d82d368",
+  "Corpus/coverage/exec/ints/uintptr-identity/cases.tsv": "b43c0a354c737576c7f4c29a3e37bb7ec6dfe57068f54913f62833f3bf25f541",
+  "docs/2026-09-06_uintptr-identity-repair.md": "091821338083ad03aebb6625ce53c067e83394007b39ce8cfd0aa248f529cf33"
+}

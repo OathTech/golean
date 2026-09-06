@@ -1,0 +1,17 @@
+{
+  "baselines/native-full.tsv": {
+    "before_sha256": "a0bf907399953ba12fdb1e1aecb354e8ca3a6e1ff539ecc06174db22a5cfd014",
+    "proposed_sha256": "010d4d3c03d78f22a93ec94696a06b8743cfc824aceb489ddb73a17743f916ee",
+    "proposal": "baseline-proposed.tsv"
+  },
+  "docs/BUGS.md": {
+    "before_sha256": "d342b437bc6a4d8c7aa223e9efb8a6a174bdb4300c7bcefa5b0b5dc149d1304f",
+    "proposed_sha256": "2ca30d4781daad1177d85cb1757fa92483570cd0154e4fd0bd597d531da18430",
+    "proposal": "bugs-proposed.md"
+  },
+  "docs/language-coverage-ledger.md": {
+    "before_sha256": "254c56550798182689cd56a88b5eeb4fabfd255c522ed9f405369384518f7f54",
+    "proposed_sha256": "837e965932649feb6634797a0c765b0b5d50259e1290bcc232f37bf50818449e",
+    "proposal": "coverage-proposed.md"
+  }
+}
