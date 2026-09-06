@@ -1,5 +1,5 @@
 import GoLeanIris.Program
-import GoLean.GoCore.RecoveryInvariant
+import GoLean.Interface
 
 namespace GoLean.IrisCustomer
 open GoCore GoCore.Machine GoCore.RecoveryTyping

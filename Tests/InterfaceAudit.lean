@@ -6,6 +6,7 @@ import Tests.RecoveryStorageAudit
 import Tests.RecoverySetupAudit
 import Tests.RecoveryControlAudit
 import Tests.StringPanicMembers
+import Tests.RecoveryTerminalAudit
 import Lean
 
 /-! The command runs from a separate harness after complete imports. Origin
@@ -58,6 +59,10 @@ def InterfaceAudit.run : CoreM Unit := do
     `GoLean.GoCore.RecoveryStatementProgress, `GoLean.GoCore.RecoveryFrameProgress,
     `GoLean.GoCore.RecoveryPanicProgress, `GoLean.GoCore.RecoveryInvariant,
     `GoLean.GoCore.RecoverySuccessfulRuns,
+    `GoLean.GoCore.RecoveryCallLayout, `GoLean.GoCore.RecoverySingleton,
+    `GoLean.GoCore.RecoveryPool, `GoLean.GoCore.RecoveryChoices,
+    `GoLean.GoCore.RecoveryTerminal, `GoLean.GoCore.RecoveryPoolObservationTyped,
+    `Tests.RecoveryTerminal, `Tests.RecoveryTerminalAudit,
     `Tests.RecoveryInvariant, `Tests.RecoveryControlAudit,
     `Tests.PanicRendering, `Tests.InterfaceContract, `Tests.BooleanRuntime,
     `Tests.BooleanProgram, `Tests.InterfaceAudit]
@@ -185,7 +190,7 @@ def InterfaceAudit.run : CoreM Unit := do
     ``GoLean.StringPanicMembersTests.invalid_after_lf,
     ``GoLean.StringPanicMembersTests.non_string_boundary,
     ``GoLean.StringPanicMembersTests.rendered_text_does_not_identify_bytes,
-    ``GoLean.StringPanicMembersTests.actual_abort_pin]
+    ``GoLean.StringPanicMembersTests.actual_abort_pin] ++ RecoveryTerminalAudit.exports
   for m in modules do
     unless env.header.moduleNames.contains m do
       throwError "Semantic interface: missing module {m}"

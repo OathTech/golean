@@ -1,5 +1,5 @@
 import GoLeanIris.Allocation
-import GoLean.GoCore.RecoveryCallLayout
+import GoLean.Interface
 
 /-! The adapter inventories all seven actual frame-entry shapes. The one
 allocation rule is shared by ordinary calls, known closures and both defer

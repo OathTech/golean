@@ -1,0 +1,13 @@
+{
+  "base_before_R1": "658fe3eb266c0cfa7a8db299d93031ea5b1558ec",
+  "accepted_shared": "bd31dd5d7dca445d39a01bd711ca20bbf6ee69ed",
+  "accepted_renderer": "819182b5898f565f2488d706ef160319453e2f1d",
+  "renderer_merge": "ccf826cbfefde651f1c75eee34579f43701b562d",
+  "preserved_stash": "d8d6c19cdbe571a72affef114c4f56eaa89f22d6",
+  "prior_151_snapshot": "artifacts/terminal/pre-accepted-renderer",
+  "source_scope": "Union of frozen O2 draft151 and accepted R1 production184 inventories",
+  "four_renderer_imports": "exact accepted Git source bytes; no temporary semantic dependency remains",
+  "status": "all final author gates PASS; independent final acceptance pending",
+  "final_source_manifest_sha256": "51a783c4bc0bce8e1cfb0fa815bf98a455316bbba6d7dfb3e235dcf509654fae",
+  "source_only_pin_refresh": "pin-source-refresh.json"
+}

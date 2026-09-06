@@ -1,0 +1,24 @@
+84c0fea9d00f2f4db47e816d14a90265d795aea2cedcee4673091f6fc890b800  GoLean/GoCore/RecoveryTerminal.lean
+25c7f0af8fcd335d4cbecc177c59eb378b9206297dcbd2381a45308f081a80a3  GoLean/GoCore/RecoveryPoolObservationTyped.lean
+0b26ea898300288cce6ef77005b8b8c6a19f36e75c8fe1b2307deb27c4a58fb5  Tests/RecoveryTerminal.lean
+9ffc7e702f9044f1f0bcb5ae2df5b358dffcca54e4e9525706a4a98d3cac3228  Tests/RecoveryTerminalAudit.lean
+Build completed successfully (80 jobs).
+Recovery terminal fresh elaboration: GoLean/GoCore/RecoveryTerminal.lean
+Recovery terminal fresh elaboration: GoLean/GoCore/RecoveryPoolObservationTyped.lean
+Recovery terminal fresh elaboration: Tests/RecoveryTerminal.lean
+Recovery terminal fresh elaboration: Tests/RecoveryTerminalAudit.lean
+Recovery terminal audit scratch retained: /home/dev/projects/golean/.tmp/recovery-terminal-audit-2uj57hyo
+Recovery terminal audit: 32 required theorems; 15146 declarations across all imported local origins; classical trio only
+Recovery terminal exact theorem types: /home/dev/projects/golean/.tmp/recovery-terminal-audit-2uj57hyo/claims.json
+/home/dev/projects/golean/.tmp/recovery-terminal-audit-2uj57hyo/AuditAll.lean:2:0: error: Recovery terminal audit: _private.GoLean.GoCore.RecoveryTerminal.0.terminalUnusedHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryTerminal.0.terminalUnusedHole
+Recovery terminal negative audit: RecoveryTerminal compiled then rejected (terminalUnusedHole)
+/home/dev/projects/golean/.tmp/recovery-terminal-audit-2uj57hyo/AuditAll.lean:2:0: error: Recovery terminal audit: _private.GoLean.GoCore.RecoveryPoolObservationTyped.0.terminalUnusedHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryPoolObservationTyped.0.terminalUnusedHole
+Recovery terminal negative audit: RecoveryPoolObservationTyped compiled then rejected (terminalUnusedHole)
+/home/dev/projects/golean/.tmp/recovery-terminal-audit-2uj57hyo/AuditAll.lean:2:0: error: Recovery terminal audit: _private.Tests.RecoveryTerminal.0.terminalUnusedTestHole depends on forbidden axiom _private.Tests.RecoveryTerminal.0.terminalUnusedTestHole
+Recovery terminal negative audit: test_private compiled then rejected (terminalUnusedTestHole)
+/home/dev/projects/golean/.tmp/recovery-terminal-audit-2uj57hyo/AuditAll.lean:2:0: error: Recovery terminal audit: _private.Tests.RecoveryTerminalAudit.0.terminalUnusedAuditHole depends on forbidden axiom _private.Tests.RecoveryTerminalAudit.0.terminalUnusedAuditHole
+Recovery terminal negative audit: audit_private compiled then rejected (terminalUnusedAuditHole)
+/home/dev/projects/golean/.tmp/recovery-terminal-audit-2uj57hyo/test_trailing/Tests/RecoveryTerminal.lean:117:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.tmp/recovery-terminal-audit-2uj57hyo/AuditAll.lean:2:0: error: Recovery terminal audit: _private.Tests.RecoveryTerminal.0.terminalTrailingHole depends on forbidden axiom sorryAx
+Recovery terminal negative audit: test_trailing compiled then rejected (sorryAx)
+Typed recovery terminal gate: PASS

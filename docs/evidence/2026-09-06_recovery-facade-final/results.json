@@ -1,0 +1,60 @@
+{
+  "status": "AUTHOR GATES PASS; independent final acceptance pending",
+  "source_manifest_sha256": "51a783c4bc0bce8e1cfb0fa815bf98a455316bbba6d7dfb3e235dcf509654fae",
+  "source_count": 239,
+  "source_unchanged_through_final_gates": true,
+  "ordinary_CI": {
+    "exit": 0,
+    "default_build_jobs": 194,
+    "interface_build_jobs": 101,
+    "eval_cases": 202,
+    "full_corpus": "explicit cached accepted R1 full3635 executable/394 negative records; no fresh full claim"
+  },
+  "interface": {
+    "required_exports": 160,
+    "audited_declarations": 15448,
+    "compiled_poisons": 35,
+    "fresh_claim_types": 160
+  },
+  "terminal": {
+    "required_exports": 32,
+    "audited_declarations": 15146,
+    "compiled_poisons": 5,
+    "fresh_kernel_types_match_original32": true
+  },
+  "renderer_members": {
+    "exit": 0,
+    "fresh_rows": 9,
+    "apparatus_source_inventory": 166,
+    "certificates": 9,
+    "raw_artifact_files": 2614,
+    "scope": "R1 selected member, exact forced fields; gc text equality not claimed"
+  },
+  "customer": {
+    "exit": 0,
+    "build_jobs": 327,
+    "fresh_core_helpers": 6,
+    "fresh_customer_modules": 24,
+    "fresh_aggregate": true,
+    "required_exports": 143,
+    "audited_declarations": 15605,
+    "compiled_poisons": 26,
+    "fresh_kernel_types_match_draft143": true,
+    "whole_native_artifact_equalities": 2,
+    "fresh_native_rows": 8,
+    "controls": "input dependence, defer order, direct versus indirect recover"
+  },
+  "unchanged_claims": [
+    "A2 normal and recovered true at fuel60, every choices, empty output",
+    "Shared !b at fuel200, every Boolean input and choices, empty output",
+    "uncaught remains actual panic; no universal Iris NotStuck claim",
+    "admitted no-refusal and terminal classification every fuel/choice; typed metadata complete",
+    "broader computed metadata member correctness carries actual output; no broader completeness"
+  ],
+  "deferred": [
+    "independent final acceptance",
+    "B7/I1 and final sprint integration",
+    "stable facade/C1/concurrent adequacy",
+    "full Go-source compiler correctness or generic termination bound"
+  ]
+}

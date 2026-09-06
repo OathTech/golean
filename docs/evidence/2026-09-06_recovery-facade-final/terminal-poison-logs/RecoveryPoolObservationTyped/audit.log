@@ -1,0 +1,1 @@
+/home/dev/projects/golean/.tmp/recovery-terminal-audit-n0fw5wj2/AuditAll.lean:2:0: error: Recovery terminal audit: _private.GoLean.GoCore.RecoveryPoolObservationTyped.0.terminalUnusedHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryPoolObservationTyped.0.terminalUnusedHole

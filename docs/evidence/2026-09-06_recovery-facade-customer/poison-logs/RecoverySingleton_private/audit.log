@@ -1,0 +1,1 @@
+/home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.tmp/iris-customer-audit-dr6lhkv8/RecoverySingleton_private/AuditAll.lean:26:0: error: Iris customer: _private.GoLean.GoCore.RecoverySingleton.0.irisCoreHole depends on forbidden axiom _private.GoLean.GoCore.RecoverySingleton.0.irisCoreHole

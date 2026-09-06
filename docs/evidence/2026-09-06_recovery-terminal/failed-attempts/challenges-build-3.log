@@ -1,0 +1,28 @@
+✖ [78/78] Building Tests.RecoveryTerminal (4.6s)
+trace: .> LEAN_PATH=/home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.lake/build/lib/lean /home/dev/.elan/toolchains/leanprover--lean4---v4.32.2/bin/lean /home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/Tests/RecoveryTerminal.lean -o /home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.lake/build/lib/lean/Tests/RecoveryTerminal.olean -i /home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.lake/build/lib/lean/Tests/RecoveryTerminal.ilean -c /home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.lake/build/ir/Tests/RecoveryTerminal.c --setup /home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.lake/build/ir/Tests/RecoveryTerminal.setup.json --json
+error: Tests/RecoveryTerminal.lean:36:42: unsolved goals
+bytes : GoString
+recovered : Bool
+tail : List AbortHead
+s : ExecState
+ch : Choices
+out : GoString
+⊢ ((stringPanicEntries? (List.map AbortHead.entry tail)).bind fun tail =>
+      some { bytes := bytes, recovered := recovered, tail := tail }) =
+    some { bytes := bytes, recovered := recovered, tail := tail }
+warning: Tests/RecoveryTerminal.lean:41:4: This simp argument is unused:
+  stringPanicEntries?_typed
+
+Hint: Omit it from the simp argument list.
+  simp [abortRecord?, Config.abort?, stringPanicEntry?, AbortHead.entry,̵
+  ̵ ̵ ̵ ̵ ̵s̵t̵r̵i̵n̵g̵P̵a̵n̵i̵c̵E̵n̵t̵r̵i̵e̵s̵?̵_̵t̵y̵p̵e̵d̵]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+error: Tests/RecoveryTerminal.lean:88:22: unexpected token 'prefix'; expected '_' or identifier
+error: Tests/RecoveryTerminal.lean:88:30: unexpected identifier; expected prec
+error: Tests/RecoveryTerminal.lean:89:67: unexpected token ')'; expected ':'
+error: Tests/RecoveryTerminal.lean:89:81: unexpected token ':='; expected ':'
+error: Lean exited with code 1
+Some required targets logged failures:
+- Tests.RecoveryTerminal
+error: build failed

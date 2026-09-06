@@ -1,0 +1,5 @@
+info: iris: cloning https://github.com/leanprover-community/iris-lean.git
+info: stderr:
+Cloning into '/home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/spikes/iris-customer/.lake/packages/iris'...
+fatal: unable to access 'https://github.com/leanprover-community/iris-lean.git/': CONNECT tunnel failed, response 403
+error: external command 'git' exited with code 128

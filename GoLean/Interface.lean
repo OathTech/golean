@@ -11,6 +11,8 @@ import GoLean.GoCore.RecoveryAdmission
 import GoLean.GoCore.RecoverySuccessfulRuns
 import GoLean.GoCore.StringPanic
 import GoLean.GoCore.RecoveryProgramObservation
+import GoLean.GoCore.RecoveryCallLayout
+import GoLean.GoCore.RecoveryPoolObservationTyped
 
 /-!
 # Experimental semantic consumer interface
@@ -97,10 +99,35 @@ a nonempty semantic abort, and a legal successor. Call/defer entry and actual
 direct/indirect recovery have reusable control contracts. Successful
 `runConfig` executions have typed pinned-result readout, retain their original
 choices, and traverse configurations with no print events. These successful-
-execution facts do not assert that every driver run succeeds: rendering of
-arbitrary string bytes/equal repanics and full terminal/fuel classification
-remain separate obligations. No Iris resources or functional result are
-provided by typing. See `docs/2026-09-06_recovery-control-contract.md`.
+execution facts remain separate from termination. No Iris resources or
+functional result are provided by typing.
+See `docs/2026-09-06_recovery-control-contract.md`.
+
+`RecoveryRuntime.setup_layout` and `enterFramePick_layout` expose the actual
+argument/result allocation, environments and result pins used by both
+customers. Captured pointers preserve root identity; allocating their slots
+does not supply ownership of the pointee. `Inv.pool_eq_runConfig` gives the
+same-fuel singleton driver correspondence with unchanged output prefix, and
+`Inv.loop_all_choices` transfers a successful run to every original list.
+
+`RecoveryRuntime.runProgramPool_typed` now classifies the actual admitted
+program driver for every fuel and supplied choice list: typed result readout,
+explicit string panic, or fuel exhaustion, each with empty output. Setup and
+the structural invariant are derived from admission. The corresponding
+`*_no_refusal` theorems require no future-success or renderability premise.
+The actual existing default platform and unbounded model heap are retained;
+this contract supplies no generic sufficient-fuel or termination bound.
+
+`runProgramPoolWithAbort_typed` additionally computes complete panic metadata
+on every admitted panic and none on normal completion or exhaustion.
+`runProgramPoolWithAbort_panic_iff` connects that metadata to the actual
+shipped outcome, and `runProgramPoolWithAbort_member` proves its selected
+string member even for broader subjects when their observer emits a record.
+Generic observer erasure and source-bound pool witnesses preserve actual
+choices and output; metadata completeness and silence are typed-profile
+guarantees. Panic stays distinct from model refusal and fuel exhaustion.
+These statements do not imply universal Iris NotStuck for uncaught panic.
+See `docs/2026-09-06_recovery-terminal-contract.md`.
 
 The underlying `GoCore` and `GoCore.Machine` types remain representation
 dependent. This facade is experimental: B7, C1 and the composition work may

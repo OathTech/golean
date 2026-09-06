@@ -1,0 +1,41 @@
+{
+  "trees": [
+    {
+      "source": "/home/dev/projects/golean/.claude/worktrees/typed-shared-customer/spikes/iris-customer/.lake/packages/iris",
+      "destination": "/home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/spikes/iris-customer/.lake/packages/iris",
+      "revision": "e7a0a43814c4f1154ca0c8049883ca56c2288b86",
+      "clean": true
+    },
+    {
+      "source": "/home/dev/projects/golean/.claude/worktrees/typed-shared-customer/spikes/iris-customer/.lake/packages/batteries",
+      "destination": "/home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/spikes/iris-customer/.lake/packages/batteries",
+      "revision": "023ce7d62a0531e22a5331e20b587817a80d49ff",
+      "clean": true
+    },
+    {
+      "source": "/home/dev/projects/golean/.claude/worktrees/typed-shared-customer/spikes/iris-customer/.lake/packages/Qq",
+      "destination": "/home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/spikes/iris-customer/.lake/packages/Qq",
+      "revision": "38d591e778f100aec9762bb582f9c7f55f50e9dc",
+      "clean": true
+    },
+    {
+      "source": "/home/dev/projects/golean/.claude/worktrees/typed-shared-customer/spikes/gate-a1/.lake/packages/iris",
+      "destination": "/home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/spikes/gate-a1/.lake/packages/iris",
+      "revision": "e7a0a43814c4f1154ca0c8049883ca56c2288b86",
+      "clean": true
+    },
+    {
+      "source": "/home/dev/projects/golean/.claude/worktrees/typed-shared-customer/spikes/gate-a1/.lake/packages/batteries",
+      "destination": "/home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/spikes/gate-a1/.lake/packages/batteries",
+      "revision": "023ce7d62a0531e22a5331e20b587817a80d49ff",
+      "clean": true
+    },
+    {
+      "source": "/home/dev/projects/golean/.claude/worktrees/typed-shared-customer/spikes/gate-a1/.lake/packages/Qq",
+      "destination": "/home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/spikes/gate-a1/.lake/packages/Qq",
+      "revision": "38d591e778f100aec9762bb582f9c7f55f50e9dc",
+      "clean": true
+    }
+  ],
+  "retained_failure": "First local iris copy dereferenced two tracked symlinks; destination-only git restore from pinned HEAD recreated their exact source form before clean checks. Subsequent copies preserve symlinks."
+}

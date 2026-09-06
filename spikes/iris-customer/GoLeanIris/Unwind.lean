@@ -1,5 +1,5 @@
 import GoLeanIris.Rules
-import GoLean.GoCore.RecoveryWalk
+import GoLean.Interface
 
 /-! Context-sensitive recovery and unwind rules. Every rule names the actual
 continuation or local machine walk. None is an evaluation-context bind law. -/

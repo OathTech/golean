@@ -1,0 +1,54 @@
+{
+  "base": "658fe3eb266c0cfa7a8db299d93031ea5b1558ec",
+  "status": "draft; renderer reconciliation, ordinary CI and independent union review pending",
+  "borrowed_renderer": [
+    {
+      "source_tree": "/home/dev/projects/golean/.claude/worktrees/typed-string-members",
+      "path": "GoLean/GoCore/Machine.lean",
+      "sha256": "c645f53edbabb8cc509a717bc0ed3f85c77c8347619bd2959177559f2cab501d"
+    },
+    {
+      "source_tree": "/home/dev/projects/golean/.claude/worktrees/typed-string-members",
+      "path": "GoLean/GoCore/PanicText.lean",
+      "sha256": "8c4e28c57e2851a80573e746454fdd8a2057e0cd5548b561b5307cd3d79ad7f5"
+    },
+    {
+      "source_tree": "/home/dev/projects/golean/.claude/worktrees/typed-string-members",
+      "path": "GoLean/GoCore/StringPanic.lean",
+      "sha256": "0e16be58b43be8a1b2c32d8a6956ce4cabaf00ed5f4cca163e16c092e58dddad"
+    },
+    {
+      "source_tree": "/home/dev/projects/golean/.claude/worktrees/typed-string-members",
+      "path": "Tests/PanicRendering.lean",
+      "sha256": "98ac1be2cb22e262b515ac97408ceba095123d939bdc51ad6fec7920b327dd85",
+      "purpose": "Compile facade customer against the pending renderer instead of the superseded invalid-byte refusal test",
+      "acceptance": "pending renderer owner sealing"
+    }
+  ],
+  "interface": {
+    "command": "GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 bash scripts/check-interface",
+    "exit": 0,
+    "required_exports": 134,
+    "audited_local_declarations": 15427,
+    "compiled_poisons": 29
+  },
+  "customer": {
+    "command": "GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 bash spikes/iris-customer/check",
+    "exit": 0,
+    "fresh_core_modules": 6,
+    "fresh_customer_modules": 24,
+    "fresh_aggregate": true,
+    "required_exports": 143,
+    "audited_local_declarations": 15605,
+    "compiled_poisons": 26,
+    "fresh_native_cases": 8,
+    "exact_native_artifacts": 2
+  },
+  "terminal": {
+    "command": "GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 bash scripts/check-recovery-terminal",
+    "exit": 0,
+    "required_exports": 32,
+    "compiled_poisons": 5
+  },
+  "final_union_claim": false
+}

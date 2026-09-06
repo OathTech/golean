@@ -1,0 +1,1 @@
+/home/dev/projects/golean/.tmp/recovery-terminal-audit-is5zsk17/AuditAll.lean:2:0: error: Recovery terminal audit: _private.Tests.RecoveryTerminal.0.terminalUnusedTestHole depends on forbidden axiom _private.Tests.RecoveryTerminal.0.terminalUnusedTestHole

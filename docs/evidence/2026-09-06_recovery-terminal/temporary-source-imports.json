@@ -1,0 +1,37 @@
+[
+  {
+    "source_tree": "/home/dev/projects/golean/.claude/worktrees/typed-shared-customer",
+    "path": "GoLean/GoCore/RecoveryCallLayout.lean",
+    "sha256": "614a6d05a7588b184a41306242f271df0025c12dd2e22a158afc6f3bd517a3c0"
+  },
+  {
+    "source_tree": "/home/dev/projects/golean/.claude/worktrees/typed-shared-customer",
+    "path": "GoLean/GoCore/RecoverySingleton.lean",
+    "sha256": "146166e00d38505c4fe2b87d8267c6d9ad114cbce36ebcac427958ffe6637257"
+  },
+  {
+    "source_tree": "/home/dev/projects/golean/.claude/worktrees/typed-shared-customer",
+    "path": "GoLean/GoCore/RecoveryPool.lean",
+    "sha256": "6235b7f0f4fa2d97fa34aeb9725d20997ed0ae2d93c1dfa5815dedc98ca5709b"
+  },
+  {
+    "source_tree": "/home/dev/projects/golean/.claude/worktrees/typed-shared-customer",
+    "path": "GoLean/GoCore/RecoveryChoices.lean",
+    "sha256": "399878e92434687435aadf15bb54b6ea70f2b336ba37a1427917fd838f3806cf"
+  },
+  {
+    "source_tree": "/home/dev/projects/golean/.claude/worktrees/typed-string-members",
+    "path": "GoLean/GoCore/Machine.lean",
+    "sha256": "c645f53edbabb8cc509a717bc0ed3f85c77c8347619bd2959177559f2cab501d"
+  },
+  {
+    "source_tree": "/home/dev/projects/golean/.claude/worktrees/typed-string-members",
+    "path": "GoLean/GoCore/PanicText.lean",
+    "sha256": "8c4e28c57e2851a80573e746454fdd8a2057e0cd5548b561b5307cd3d79ad7f5"
+  },
+  {
+    "source_tree": "/home/dev/projects/golean/.claude/worktrees/typed-string-members",
+    "path": "GoLean/GoCore/StringPanic.lean",
+    "sha256": "0e16be58b43be8a1b2c32d8a6956ce4cabaf00ed5f4cca163e16c092e58dddad"
+  }
+]

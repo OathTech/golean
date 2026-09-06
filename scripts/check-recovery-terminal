@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Every-fuel typed recovery classification, actual metadata and output.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+[[ $# = 0 ]] || { echo 'check-recovery-terminal: expected no arguments' >&2; exit 2; }
+modules=(
+  GoLean/GoCore/RecoveryTerminal
+  GoLean/GoCore/RecoveryPoolObservationTyped
+  Tests/RecoveryTerminal
+  Tests/RecoveryTerminalAudit
+)
+for module in "${modules[@]}"; do sha256sum "$module.lean"; done
+scripts/capped lake build RecoveryTerminalTests
+for module in "${modules[@]}"; do
+  printf 'Recovery terminal fresh elaboration: %s.lean\n' "$module"
+  # Retain Lake's package/import metadata when refreshing its actual artifact.
+  # Omitting --setup changes initializer names and breaks later native linking.
+  scripts/capped lake env lean --setup ".lake/build/ir/$module.setup.json" \
+    -o ".lake/build/lib/lean/$module.olean" "$module.lean"
+done
+scripts/capped lake env python3 tools/recovery-terminal-audit.py
+printf '%s\n' 'Typed recovery terminal gate: PASS'

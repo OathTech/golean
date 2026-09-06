@@ -1,0 +1,8 @@
+{
+  "comparison_base": "731beb0ba290cdb12fa89b6c55d198ef5381aa4f",
+  "every_non_documentation_WIP_path_in_manifest": true,
+  "non_documentation_WIP_count": 31,
+  "unbound_non_documentation_paths": [],
+  "manifest_sha256": "51a783c4bc0bce8e1cfb0fa815bf98a455316bbba6d7dfb3e235dcf509654fae",
+  "unchanged_tracked_dependencies": "Bound by committed accepted integration base and unchanged Git blobs"
+}

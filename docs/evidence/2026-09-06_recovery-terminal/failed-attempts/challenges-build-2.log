@@ -1,0 +1,7 @@
+✔ [77/78] Built GoLean.GoCore.RecoveryPoolObservationTyped (343ms)
+✖ [78/78] Building Tests.RecoveryTerminal (40s)
+trace: .> LEAN_PATH=/home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.lake/build/lib/lean /home/dev/.elan/toolchains/leanprover--lean4---v4.32.2/bin/lean /home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/Tests/RecoveryTerminal.lean -o /home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.lake/build/lib/lean/Tests/RecoveryTerminal.olean -i /home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.lake/build/lib/lean/Tests/RecoveryTerminal.ilean -c /home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.lake/build/ir/Tests/RecoveryTerminal.c --setup /home/dev/projects/golean/.claude/worktrees/typed-recovery-terminal/.lake/build/ir/Tests/RecoveryTerminal.setup.json --json
+error: Lean exited with code 137
+Some required targets logged failures:
+- Tests.RecoveryTerminal
+error: build failed
