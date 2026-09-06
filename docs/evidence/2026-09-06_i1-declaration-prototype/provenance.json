@@ -1,0 +1,8 @@
+{
+  "utc": "2026-09-06T02:58:57.051755+00:00",
+  "source_parent": "f3913e0686393fb196d9c89d64f7087a4e76a5e4",
+  "build_exit": 0,
+  "prototype_exit": 0,
+  "axiom_audit_declarations": 3347,
+  "status": "Experimental declaration/query projection; no live runtime or I1 admission claim. Independent review and final I1 remain owed."
+}
