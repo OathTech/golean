@@ -1,0 +1,52 @@
+{
+  "record": "docs/evidence/2026-09-06_renderer-integration",
+  "record_seal_verified": true,
+  "changed_inventory_members": [
+    {
+      "path": "GoLean/GoCore/BooleanInvariant.lean",
+      "recorded": "b438e8894713559b432a24c7c1d1f7cf1657c228b44a422b91868f84e81476f4",
+      "current": "68c77e5496efdbe38cefa3558f3f96a0a57eb9f35fdef2753dd2a8ceb6a862c4"
+    },
+    {
+      "path": "GoLean/Interface.lean",
+      "recorded": "f7e7e39d6375122c304058039f2673f0f2df5d832e6f53ccdd443af198d96a55",
+      "current": "0b4510434d2855f6f89463740aaace7bc53a343a269801d0303910f31ffd947b"
+    },
+    {
+      "path": "Tests/BooleanSafetyAudit.lean",
+      "recorded": "9b5d0926a8b468451641ea29b89015b26ca1df724e92011297f1fe4040a0f383",
+      "current": "8da8f94b91618d672c304a36e42527ce531ac48b23b01be3796a1b775495f59e"
+    },
+    {
+      "path": "Tests/InterfaceAudit.lean",
+      "recorded": "344a29bff4bb7aa38fcf460d84842040244060ca75b49d2ee7df7135f1bdd289",
+      "current": "280d21124a611c9aef3e8ce08c8b6d27f9529271c5986eee75b133ad2bafedad"
+    },
+    {
+      "path": "lakefile.toml",
+      "recorded": "795c41c6dfbe48fa4c67dfa498c14ef4146ed2791aeee9c188a91b4cbae3d3b7",
+      "current": "a2ed887b0248506f5c852d22d92757cc9dc6a6c498639f466d65a4ad0eaee89a"
+    },
+    {
+      "path": "scripts/check-boolean-runtime",
+      "recorded": "941146d7a1b2ad263125db8d31fc5f048ab0d7a4bbf82271e3370e7d4683d276",
+      "current": "1b91baf6972db10106a02c97a3bd3c49c8cb51fbfd27c411483ff17de10f9679"
+    },
+    {
+      "path": "scripts/check-interface",
+      "recorded": "f45006200a7e8c5f4412bc99f225dc9313072cb8ea20dc195490677a591de4b6",
+      "current": "913503c8036ee9ae53b20d0df004f4cc6f730765749844680b66e02204fbe4f7"
+    },
+    {
+      "path": "scripts/check-interface.py",
+      "recorded": "3f383f043322243dbdee0d6fe1c5fa8e4902d5de6249d631aa69565fab23cf57",
+      "current": "3f84e274c6d205e7530e0f9a5b77a184d46b6bf300576da8d88727c6490576be"
+    },
+    {
+      "path": "scripts/ci",
+      "recorded": "1b338c1b140a7c37abc54256f75609a310d891e2652ec8fff114bda08f863b71",
+      "current": "5747e66c2c25e47e8c1f89cbceccb32e1bdf589c2dca8965b5260de9f925632b"
+    }
+  ],
+  "scope": "Proof-only recovery helper increment. Interpreter, frontend and differential harness source inventory unchanged. Broad records explicitly cached; no fresh full claim."
+}
