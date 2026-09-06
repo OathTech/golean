@@ -1,0 +1,40 @@
+{
+  "verdict": "PASS \u2014 exact bounded R1 baseline/BUGS/current-language-ledger disposition",
+  "accepted": [
+    {
+      "path": "baselines/native-full.tsv",
+      "before_sha256": "a0bf907399953ba12fdb1e1aecb354e8ca3a6e1ff539ecc06174db22a5cfd014",
+      "accepted_sha256": "59e065858e82a04239bb53b32cdfc32bb22863165fa0cfd95276fa543b7b250a",
+      "proposal": "baseline-proposed.tsv",
+      "patch_sha256": "931d1f652664a6945c3ff26e13b32ff1bc6d2423d85efbcca768df0540392d2d"
+    },
+    {
+      "path": "docs/BUGS.md",
+      "before_sha256": "d342b437bc6a4d8c7aa223e9efb8a6a174bdb4300c7bcefa5b0b5dc149d1304f",
+      "accepted_sha256": "c8b820795d312b69f5137c5d634dbb3617ea1e4acedaa902171b20a55ddfeddc",
+      "proposal": "bugs-ledger-proposed.md",
+      "patch_sha256": "0a0085836caa8df16337d997e68f258689e9fa3c3a9cd8a155871e9b749cb77c"
+    },
+    {
+      "path": "docs/language-coverage-ledger.md",
+      "before_sha256": "254c56550798182689cd56a88b5eeb4fabfd255c522ed9f405369384518f7f54",
+      "accepted_sha256": "6f2ba690c75253f2917d32f88a63ee9ffe7ad9cb0d3704f807f436f3d2335f58",
+      "proposal": "language-ledger-proposed.md",
+      "patch_sha256": "196f17eeeba4ca56b8a51c520db615e45e3fdc63750afde0d7608d2fc99a3115"
+    }
+  ],
+  "baseline_cases": 3635,
+  "counts": {
+    "PASS": 3391,
+    "FAIL": 244
+  },
+  "existing_row_order_and_stage_alternations_preserved": true,
+  "sole_existing_movement": "panic-recover/repanic-same-value-abort FAIL/lean-observation -> PASS/string-member",
+  "new_rows": 8,
+  "ci_failures": [
+    "  FAIL baseline diff (DRIFT \u2014 see above)"
+  ],
+  "actual_full_workers": 32,
+  "future_workers_required": 2,
+  "remaining": "author applies exact accepted bytes, ordinary CI on unchanged runtime and complete full records; final integration/terminal work separate"
+}

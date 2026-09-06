@@ -1,0 +1,149 @@
+String member scratch retained: /home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/string-member-gate-6kpuzt0q
+{"scripts/check-string-members.py": "e10a593a6e69a2be162241d3a2e296169c571f7725abea18d09729eea6a86659", "tools/coverageharness/abortkind.go": "f2a5685b6c00cae4f5a7e66a9d08678e92aaa60c243ecf77d99fe21a56e2b58f", "tools/coverageharness/abortkind_test.go": "b45ca6b7aea4e3db759ea2efa7793d8186becd822c1cd503cec2053d5b52f32e", "tools/coverageharness/abortrecord_test.go": "af3e8e08ce989c95ad2e5ea32cb5acc16230e61dcecc7103ebecaf8ed066df27", "tools/coverageharness/crashhook.go": "82d2d039c8ff4bdfca98fc8919bafa9fa19dd59666409ba594e00a7cf42a96fc", "tools/coverageharness/crashhook_test.go": "2626da4178a453eaef36fdbf86e5563667644606237435e828e6fa47f4aebd5f", "tools/coverageharness/crashview.go": "3fe16af7ff08d1f9b91542da74bce2c688c56e754f6d1ef31568f8eb191d3bc0", "tools/coverageharness/crashview_test.go": "48983f249615c1abff3fa96ccded2af94dd1c6853c819866361ae480bcf67798", "tools/coverageharness/main.go": "f7b3a04f624dedd3fbe8053508ec53e6dbc6a1c7447e84623f22f019553cd644", "tools/coverageharness/observe.go": "b6bf7adc73c6fba527819046d1e83c00833fab46b8eb771fa04f21f95828210e", "tools/coverageharness/observe_test.go": "ecee3e1e8d6c2166834bdae924e3abe6e52656dbcff2e6eda93b033ef8d3fa4a", "tools/coverageharness/split.go": "f9271b3338f1f99ecf4258677a24526be17b71ab10ebace3f140fdb50298d22d", "tools/coverageharness/split_test.go": "3c3262cf26fa35307a8b23b081601ed98249779ce120bf0aad6dd669f24b2a8a", "tools/string_member.py": "862d12d1562191f7349acd813584a4587a7204741085e271785a2129ac107490", "tools/string_member_runner.py": "b58ad75ad19ce501721db3aac64f4fd2bd6510518180c3808ee9a22d684e73dc", "tools/test_string_member.py": "b4834bfa15d74d9af2a381966cda7eff060cd46d418c5870431662cc601cf83c"}
+ok  	_/home/dev/projects/golean/.claude/worktrees/typed-string-members/tools/coverageharness	0.006s
+test_duplicate_keys_and_integer_typing (test_string_member.StringMemberContracts.test_duplicate_keys_and_integer_typing) ... ok
+test_exact_bytes_and_member_forms (test_string_member.StringMemberContracts.test_exact_bytes_and_member_forms) ... ok
+test_inventory_is_complete_and_content_bound (test_string_member.StringMemberContracts.test_inventory_is_complete_and_content_bound) ... ok
+test_matrix_and_schema_refusals (test_string_member.StringMemberContracts.test_matrix_and_schema_refusals) ... ok
+test_no_kind_exit_output_or_chain_waiver (test_string_member.StringMemberContracts.test_no_kind_exit_output_or_chain_waiver) ... ok
+test_positive_matrix (test_string_member.StringMemberContracts.test_positive_matrix) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.002s
+
+OK
+--- FAIL: TestRawPanicRecordEveryByte (0.00s)
+    abortrecord_test.go:30: changed bytes for 0: {"schema":"golean-raw-panic-v1","status":"panic","childExit":2,"messageBytes":[],"outputBytes":[112,97,110,105,99,58,32,102,111,114,103,101,100,10,9,0,1,231,149,140]}
+FAIL
+FAIL	_/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/string-member-gate-6kpuzt0q/drop-bytes	0.002s
+FAIL
+String member negative: drop-bytes compiled then rejected
+--- FAIL: TestRawPanicRecordEveryByte (0.00s)
+    abortrecord_test.go:30: changed bytes for 0: {"schema":"golean-raw-panic-v1","status":"panic","childExit":2,"messageBytes":[97,0,0,1,13],"outputBytes":[112,97,110,105,99,58,32,102,111,114,103,101,100,10,9,0,1,65533,65533,65533]}
+FAIL
+FAIL	_/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/string-member-gate-6kpuzt0q/replace-high-byte	0.002s
+FAIL
+String member negative: replace-high-byte compiled then rejected
+--- FAIL: TestRawPanicRecordEveryByte (0.00s)
+    abortrecord_test.go:26: wrong terminal fields: {Schema:golean-raw-panic-v1 Status:panic ChildExit:1 MessageBytes:[97 0 0 1 13] OutputBytes:[112 97 110 105 99 58 32 102 111 114 103 101 100 10 9 0 1 231 149 140]}
+FAIL
+FAIL	_/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/string-member-gate-6kpuzt0q/false-exit	0.002s
+FAIL
+String member negative: false-exit compiled then rejected
+--- FAIL: TestRawPanicRecordEmptyAndRefusals (0.00s)
+    abortrecord_test.go:66: invalid/nonpanic record accepted: {"schema":"golean-raw-panic-v1","status":"panic","childExit":2,"messageBytes":[115,121,110,99,58,32,117,110,108,111,99,107,32,111,102,32,117,110,108,111,99,107,101,100,32,109,117,116,101,120],"outputBytes":[]}
+FAIL
+FAIL	_/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/string-member-gate-6kpuzt0q/ignore-kind	0.004s
+FAIL
+String member negative: ignore-kind compiled then rejected
+F..F..
+======================================================================
+FAIL: test_duplicate_keys_and_integer_typing (contracts.StringMemberContracts.test_duplicate_keys_and_integer_typing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/dev/projects/golean/.claude/worktrees/typed-string-members/tools/test_string_member.py", line 118, in test_duplicate_keys_and_integer_typing
+    with self.assertRaises(check.Refusal):
+AssertionError: Refusal not raised
+
+======================================================================
+FAIL: test_matrix_and_schema_refusals (contracts.StringMemberContracts.test_matrix_and_schema_refusals) (mutation=0)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/dev/projects/golean/.claude/worktrees/typed-string-members/tools/test_string_member.py", line 74, in test_matrix_and_schema_refusals
+    with self.assertRaises(check.Refusal):
+AssertionError: Refusal not raised
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.003s
+
+FAILED (failures=2)
+String member negative: allow-unknown-keys compiled then rejected
+....F.
+======================================================================
+FAIL: test_no_kind_exit_output_or_chain_waiver (contracts.StringMemberContracts.test_no_kind_exit_output_or_chain_waiver) (mutation=3)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/dev/projects/golean/.claude/worktrees/typed-string-members/tools/test_string_member.py", line 109, in test_no_kind_exit_output_or_chain_waiver
+    with self.subTest(mutation=i), self.assertRaises(check.Refusal):
+AssertionError: Refusal not raised
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.002s
+
+FAILED (failures=1)
+String member negative: ignore-output compiled then rejected
+.FFFF..F.
+======================================================================
+FAIL: test_exact_bytes_and_member_forms (contracts.StringMemberContracts.test_exact_bytes_and_member_forms) (wrong='a')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/dev/projects/golean/.claude/worktrees/typed-string-members/tools/test_string_member.py", line 85, in test_exact_bytes_and_member_forms
+    with self.subTest(wrong=wrong), self.assertRaises(check.Refusal):
+AssertionError: Refusal not raised
+
+======================================================================
+FAIL: test_exact_bytes_and_member_forms (contracts.StringMemberContracts.test_exact_bytes_and_member_forms) (wrong='"\\x61\\x0a\\xef\\xbf\\xbd" [recovered]')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/dev/projects/golean/.claude/worktrees/typed-string-members/tools/test_string_member.py", line 85, in test_exact_bytes_and_member_forms
+    with self.subTest(wrong=wrong), self.assertRaises(check.Refusal):
+AssertionError: Refusal not raised
+
+======================================================================
+FAIL: test_exact_bytes_and_member_forms (contracts.StringMemberContracts.test_exact_bytes_and_member_forms) (wrong='"\\x61\\x0a\\xff"')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/dev/projects/golean/.claude/worktrees/typed-string-members/tools/test_string_member.py", line 85, in test_exact_bytes_and_member_forms
+    with self.subTest(wrong=wrong), self.assertRaises(check.Refusal):
+AssertionError: Refusal not raised
+
+======================================================================
+FAIL: test_exact_bytes_and_member_forms (contracts.StringMemberContracts.test_exact_bytes_and_member_forms) (wrong='any text')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/dev/projects/golean/.claude/worktrees/typed-string-members/tools/test_string_member.py", line 85, in test_exact_bytes_and_member_forms
+    with self.subTest(wrong=wrong), self.assertRaises(check.Refusal):
+AssertionError: Refusal not raised
+
+======================================================================
+FAIL: test_no_kind_exit_output_or_chain_waiver (contracts.StringMemberContracts.test_no_kind_exit_output_or_chain_waiver) (mutation=8)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/dev/projects/golean/.claude/worktrees/typed-string-members/tools/test_string_member.py", line 109, in test_no_kind_exit_output_or_chain_waiver
+    with self.subTest(mutation=i), self.assertRaises(check.Refusal):
+AssertionError: Refusal not raised
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.002s
+
+FAILED (failures=5)
+String member negative: ignore-member compiled then rejected
+...F..
+======================================================================
+FAIL: test_matrix_and_schema_refusals (contracts.StringMemberContracts.test_matrix_and_schema_refusals) (mutation=6)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/dev/projects/golean/.claude/worktrees/typed-string-members/tools/test_string_member.py", line 74, in test_matrix_and_schema_refusals
+    with self.assertRaises(check.Refusal):
+AssertionError: Refusal not raised
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.002s
+
+FAILED (failures=1)
+String member negative: ignore-duplicate-role compiled then rejected
+..F...
+======================================================================
+FAIL: test_inventory_is_complete_and_content_bound (contracts.StringMemberContracts.test_inventory_is_complete_and_content_bound)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/dev/projects/golean/.claude/worktrees/typed-string-members/tools/test_string_member.py", line 133, in test_inventory_is_complete_and_content_bound
+    with self.assertRaises(check.Refusal):
+AssertionError: Refusal not raised
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.002s
+
+FAILED (failures=1)
+String member negative: ignore-source-hash compiled then rejected
+String member apparatus PASS: fresh Go/Python tests; 4 compiled Go and 5 compiled Python mutation controls rejected

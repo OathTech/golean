@@ -1,0 +1,32 @@
+{
+  "status": "terminated superseded incomplete gate; no full-run verdict",
+  "reason": "independent review found missing Main.lean and GoLean.lean apparatus binding; freeze source before repair",
+  "frozen_inputs": 178,
+  "source_archive": "production-candidate-before-entrypoint-fix.tar.gz",
+  "processes": {
+    "957536": [
+      957534,
+      "bash scripts/capped scripts/ci --diff"
+    ],
+    "957544": [
+      957536,
+      "bash scripts/ci --diff"
+    ],
+    "1001215": [
+      957544,
+      "bash scripts/check-admission --lean-only"
+    ],
+    "1005408": [
+      1001215,
+      "/home/dev/.elan/toolchains/leanprover--lean4---v4.32.2/bin/lake env python3 tools/admission-check.py audit"
+    ],
+    "1005411": [
+      1005408,
+      "python3 tools/admission-check.py audit"
+    ],
+    "1005463": [
+      1005411,
+      "lean -o /home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/admission-audit-s5gclumh/test_trailing/Tests/GoCoreAdmission.olean /home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/admission-audit-s5gclumh/test_trailing/Tests/GoCoreAdmission.lean"
+    ]
+  }
+}

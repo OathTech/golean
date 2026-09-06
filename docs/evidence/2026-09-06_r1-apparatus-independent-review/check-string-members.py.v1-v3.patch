@@ -1,0 +1,21 @@
+--- v1/scripts/check-string-members.py
++++ v3/scripts/check-string-members.py
+@@ -67,6 +67,12 @@
+     print(f"String member negative: {label} compiled then rejected", flush=True)
+ 
+ python_mutations = [
++    ("omit-main-entrypoint", '    "Main.lean",\n', ""),
++    ("omit-golean-aggregator", '    "GoLean.lean",\n', ""),
++    ("omit-inittask-table", '    "tools/nativefrontend/inittask-std.tsv",\n', ""),
++    ("omit-stdlib-substitutions", '    "tools/nativefrontend/stdlib-substitutions.tsv",\n', ""),
++    ("omit-stdlib-overlay", '    "tools/nativefrontend/stdlib-overlay.tsv",\n', ""),
++    ("omit-stdlib-pin", '    "baselines/stdlib-pin.tsv",\n', ""),
+     ("allow-unknown-keys", "require(set(obj) == set(wanted),", "require(set(wanted) <= set(obj),"),
+     ("ignore-output", 'require(text(machine["output"], "machine output") == bytes(raw_go["outputBytes"]),', 'require(True,'),
+     ("ignore-member", 'require(machine["message"] in selected_members(bytes(head["bytes"]), head["recovered"]),', 'require(True,'),
+@@ -96,4 +102,4 @@
+     print(f"String member negative: {label} compiled then rejected", flush=True)
+ if hashes != {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in files}:
+     raise SystemExit("apparatus source changed during its gate")
+-print("String member apparatus PASS: fresh Go/Python tests; 4 compiled Go and 5 compiled Python mutation controls rejected", flush=True)
++print("String member apparatus PASS: fresh Go/Python tests; 4 compiled Go and 11 compiled Python mutation controls rejected", flush=True)

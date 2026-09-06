@@ -1,0 +1,15 @@
+{
+  "scope": "Exact four renderer/test files temporarily borrowed by recovery terminal lane; reconcile to the implementation commit carrying this record before final O2 integration.",
+  "reviewed_source_inventory": "production-candidate-source-v3.json",
+  "implementation_reviews": [
+    "d59b4ab1",
+    "75da9338"
+  ],
+  "files": {
+    "GoLean/GoCore/Machine.lean": "c645f53edbabb8cc509a717bc0ed3f85c77c8347619bd2959177559f2cab501d",
+    "GoLean/GoCore/PanicText.lean": "8c4e28c57e2851a80573e746454fdd8a2057e0cd5548b561b5307cd3d79ad7f5",
+    "GoLean/GoCore/StringPanic.lean": "0e16be58b43be8a1b2c32d8a6956ce4cabaf00ed5f4cca163e16c092e58dddad",
+    "Tests/PanicRendering.lean": "98ac1be2cb22e262b515ac97408ceba095123d939bdc51ad6fec7920b327dd85"
+  },
+  "generic_terminal_claim": "Owned by recovery terminal lane, not established by R1 renderer commit"
+}

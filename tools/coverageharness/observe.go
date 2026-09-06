@@ -32,6 +32,43 @@ func observedAbortMessage(stderr []byte, status string, e crashEvidence) (string
 	return outputLiteral(view.message)
 }
 
+// rawPanicRecord is a transport record for the explicit R-1 string-member
+// checker, not a golean-observation-v1 value or a dynamic-type certificate.
+// The shared view authenticates the same-run report and its exit-2 trailer;
+// the runner separately checks the actual outer process exit and stdout.
+// Integer arrays deliberately avoid both UTF-8 replacement and []byte's
+// encoding/json base64 representation. Empty byte sequences are always [].
+type rawPanicRecord struct {
+	Schema       string `json:"schema"`
+	Status       string `json:"status"`
+	ChildExit    int    `json:"childExit"`
+	MessageBytes []int  `json:"messageBytes"`
+	OutputBytes  []int  `json:"outputBytes"`
+}
+
+func byteIntegers(raw []byte) []int {
+	values := make([]int, len(raw))
+	for i, b := range raw {
+		values[i] = int(b)
+	}
+	return values
+}
+
+func observedAbortRecord(stderr []byte, e crashEvidence) (string, error) {
+	view, err := checkedAbortView(stderr, e)
+	if err != nil {
+		return "", err
+	}
+	if view.kind != "panic" {
+		return "", fmt.Errorf("raw panic record: actual %s report is not panic", view.kind)
+	}
+	encoded, err := json.Marshal(rawPanicRecord{
+		Schema: "golean-raw-panic-v1", Status: "panic", ChildExit: 2,
+		MessageBytes: byteIntegers(view.message), OutputBytes: byteIntegers(view.output),
+	})
+	return string(encoded), err
+}
+
 // observationText validates the untouched stdout file before shell capture.
 // The Lean comparator still validates the observation schema and values.
 // Rejecting invalid UTF-8 explicitly avoids encoding/json's replacement

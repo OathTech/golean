@@ -1,0 +1,49 @@
+
+[1m── build parallelism (LEAN_NUM_THREADS scaled to the memory cap)[0m
+  LEAN_NUM_THREADS=3 (set by the caller — honoured as-is)
+
+[1m── oracle toolchain pin (baselines/go-oracle-pin)[0m
+
+[1m── escape-hatch preflight (sorry / admit / native_decide / axiom in the semantic core)[0m
+  none found
+
+[1m── meta-layer escape hatches (unsafe / opaque / @[implemented_by] outside the allowlist)[0m
+  none found
+
+[1m── escape-hatch addendum (decide +native / config-syntax native spellings — A-TRIP F4)[0m
+  none found
+
+[1m── fidelity-bug index cross-check (scripts/check-bugs.sh)[0m
+  check-bugs: ok (106 bug(s); pinned cases behave as claimed)
+  check-bugs: backlog — 14 unexplained fidelity failure(s): coverage 10/10; latitude 4/4; wrong-answer 0/0 ('scripts/check-bugs.sh --list')
+  check-bugs: 'wrong-answer' is the class that ratchets toward 0; 'coverage' retires when the feature lands and 'latitude' only by an envelope.
+
+[1m── feature-coverage cross-check (scripts/check-coverage)[0m
+    cond, goexit, real
+  check-coverage: ok (137 canonical tags; no dead tags; 3 all-failing (warn))
+
+[1m── spec-anchor citations (scripts/check-spec-anchors)[0m
+  check-spec-anchors: ok — 843 spec# + 255 mem# + 26 godoc: citations all resolve at pin c19862e5f
+
+[1m── stdlib admission register (scripts/check-stdlib-register)[0m
+  check-stdlib-register: ok — register machine block = frontend tables (source-through=13 (uncapped); substitution=5 (uncapped; each names its upstream twin); overlay=5 / cap 12 (expr sites, stdlib-overlay.tsv; byte-checked at every load); overlay-import=5 / cap 8 (consequential import neutralizations of overlaid files; no semantics; own cap, [AGENT]-provisional pending [USER]); intercept=0 (library members whose direct call the frontend lowers to a machine op or a retained desugar instead of the library body — stdlibreach.go frontendInterceptedLibraryMembers, one predicate for reach walk and emitter); primitive=2 / cap 2; shim=6 (frozen, D-002; retired by rows of memo §3); shadow-type=5; init-callee=3 (H-11 pureUnmodeledCallees: unmodeled stdlib functions a package-level initializer may call and still be SKIPPED with its vars poisoned; each row states result-only + panic-free over the admitted argument shapes; a row is an admission, not a model))
+  check-stdlib-register: ok — overlay table verified at the pin: errors: overlaid package type-checks
+  internal/stringslite: overlaid package type-checks
+  strings: overlaid package type-checks
+  5 expr row(s) (cap 12), 5 import row(s) (cap 8): every row's bytes verified at the pinned checkout; every overlaid package type-checked
+
+[1m── membership-lane gate self-test (scripts/test-lane-validation; incl. G1-G4 no-publish)[0m
+  test-lane-validation: ok
+
+[1m── imported-goose verbatim staleness (scripts/check-imported-goose)[0m
+check-imported-goose: ok — 82 imported case(s) verbatim against goose @ 3be88bb
+
+[1m── engine-isolation lint (semantic core imports no EnumDedup — CLI-only by design)[0m
+
+[1m── core build (lake build; must be WARNING-free — GoLean/ module warnings
+# replay into the runner's stdout and corrupt the JSON observation channel,
+# the recorded ops failure mode that produced mass phantom drift 2026-07-23)[0m
+Build completed successfully (180 jobs).
+
+[1m── semantic interface (Iris-free correspondence regressions and dependency audit)[0m
+Build completed successfully (92 jobs).

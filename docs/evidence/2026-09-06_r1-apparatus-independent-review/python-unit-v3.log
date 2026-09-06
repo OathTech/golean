@@ -1,0 +1,12 @@
+test_duplicate_keys_and_integer_typing (test_string_member.StringMemberContracts.test_duplicate_keys_and_integer_typing) ... ok
+test_entrypoints_and_frontend_tables_are_content_bound_and_required (test_string_member.StringMemberContracts.test_entrypoints_and_frontend_tables_are_content_bound_and_required) ... ok
+test_exact_bytes_and_member_forms (test_string_member.StringMemberContracts.test_exact_bytes_and_member_forms) ... ok
+test_inventory_is_complete_and_content_bound (test_string_member.StringMemberContracts.test_inventory_is_complete_and_content_bound) ... ok
+test_matrix_and_schema_refusals (test_string_member.StringMemberContracts.test_matrix_and_schema_refusals) ... ok
+test_no_kind_exit_output_or_chain_waiver (test_string_member.StringMemberContracts.test_no_kind_exit_output_or_chain_waiver) ... ok
+test_positive_matrix (test_string_member.StringMemberContracts.test_positive_matrix) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.017s
+
+OK

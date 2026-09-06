@@ -1,0 +1,48 @@
+{
+  "old_baseline_sha256": "a0bf907399953ba12fdb1e1aecb354e8ca3a6e1ff539ecc06174db22a5cfd014",
+  "full_result_sha256": "5a8e77160e43eb6e801f805276e3e3ef2d2a882595faf6e92e9ad51faad1fb2a",
+  "triage_source_sha256": "603cce23661a3367bbe4fe7447a08d535e7c31aaefb0412ce9541eb224149786",
+  "triage_L12_row": "| L12 | BUG-004: eface boxing IDENTITY and `preprintpanics`' method-rewrite are not decidable from the machine's value-level state \u2014 `renderPanicHead` returns none | `GoCore/Ops.lean` (`renderPanicPayload` / `renderPanicHead`) \u2014 `unsupported \"panic abort rendering for payload \u2026\"` | `spec#Handling_panics` (+ gc runtime, spec-silent) | `panic-recover/{repanic-same-value-abort,panic-defined-payload-methods/error,panic-defined-payload-methods/stringer}` (3) | **(c)** C4 |",
+  "before": {
+    "cases": 3627,
+    "PASS": 3382,
+    "FAIL": 245
+  },
+  "after": {
+    "cases": 3635,
+    "PASS": 3391,
+    "FAIL": 244
+  },
+  "retired_failure_ids": [
+    "panic-recover/repanic-same-value-abort"
+  ],
+  "new_failure_ids": [],
+  "new_PASS_ids": [
+    "panic-recover/string-members/controls",
+    "panic-recover/string-members/equal",
+    "panic-recover/string-members/invalid-after-lf",
+    "panic-recover/string-members/invalid-before-lf",
+    "panic-recover/string-members/invalid-recovered",
+    "panic-recover/string-members/multiple",
+    "panic-recover/string-members/unequal",
+    "panic-recover/string-members/unicode"
+  ],
+  "previous_buckets": {
+    "frontier": 137,
+    "design_questions": 9,
+    "c_pins": 25,
+    "unsafe_marker": 1,
+    "a_queued": 7,
+    "post_vintage": 66
+  },
+  "current_buckets": {
+    "frontier": 137,
+    "design_questions": 9,
+    "c_pins": 24,
+    "unsafe_marker": 1,
+    "a_queued": 7,
+    "post_vintage": 66
+  },
+  "method": "Exact old/new failure-set comparison identifies one retired C4 row using historical triage L12. Apply only that delta to the current documented buckets; no other failure movement occurs.",
+  "tracked_ledger_unchanged": true
+}

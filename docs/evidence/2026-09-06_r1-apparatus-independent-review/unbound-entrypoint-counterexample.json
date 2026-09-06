@@ -1,0 +1,10 @@
+{
+  "same_apparatus_inventory_after_entrypoint_behavior_change": true,
+  "inventoried_files": 154,
+  "unbound_runtime_sources": [
+    "Main.lean",
+    "GoLean.lean"
+  ],
+  "mutated_Main": "import GoLean\ndef main (_ : List String) : IO UInt32 := pure 0\n",
+  "scope": "Source-inventory predicate counterexample; no changed runtime executable built or used as conformance."
+}

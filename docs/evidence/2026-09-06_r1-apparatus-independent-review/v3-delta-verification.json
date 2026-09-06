@@ -1,0 +1,6 @@
+{
+  "candidate_inputs": 184,
+  "source_still_frozen": true,
+  "pin_refresh": "all nine differ only in binding.apparatus_sources",
+  "omission_mutations_reached_assertions": 6
+}

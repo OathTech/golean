@@ -1,0 +1,16 @@
+{
+  "expected_prior_lane_workers": 2,
+  "actual_full_run_workers": 32,
+  "actual_author_post_restart_focused_workers": {
+    "entrypoint-fix-focused.meta.tsv": "32",
+    "post-observer-focused.meta.tsv": "32",
+    "table-fix-focused.meta.tsv": "32"
+  },
+  "memory_limit": "16G unchanged",
+  "explanation": "After the client restart the author omitted explicit GOLEAN_COVERAGE_JOBS=2 from full/focused invocations, using the runner default. Complete run has exactly expected9 changes and no unexpected drift. Root directed retaining actual attribution and no repeat merely to relabel concurrency.",
+  "future_conformance_environment": {
+    "GOLEAN_COVERAGE_JOBS": "2",
+    "GOLEAN_MEM_MAX": "16G",
+    "LEAN_NUM_THREADS": "3"
+  }
+}

@@ -1,0 +1,7 @@
+docs/evidence/2026-09-06_r1-production-independent/Probe.lean:12:3: error: unexpected token 'prefix'; expected identifier
+docs/evidence/2026-09-06_r1-production-independent/Probe.lean:35:36: error: unexpected token 'prefix'; expected ':=', 'where' or '|'
+docs/evidence/2026-09-06_r1-production-independent/Probe.lean:35:43: error: unexpected token '='; expected ':'
+docs/evidence/2026-09-06_r1-production-independent/Probe.lean:35:54: error: unexpected token ','; expected ':'
+docs/evidence/2026-09-06_r1-production-independent/Probe.lean:39:36: error: unexpected token 'prefix'; expected ':=', 'where' or '|'
+docs/evidence/2026-09-06_r1-production-independent/Probe.lean:39:43: error: unexpected token '='; expected ':'
+docs/evidence/2026-09-06_r1-production-independent/Probe.lean:40:14: error: unexpected token ','; expected ':'

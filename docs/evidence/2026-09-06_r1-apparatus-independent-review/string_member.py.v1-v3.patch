@@ -1,0 +1,15 @@
+--- v1/tools/string_member.py
++++ v3/tools/string_member.py
+@@ -23,6 +23,12 @@
+ )
+ ABORT_ROLES = {"equal-repanic", "unequal-repanic", "multiple-repanic", "rethrow", "computed-equal"}
+ APPARATUS_FILES = (
++    "Main.lean",
++    "GoLean.lean",
++    "tools/nativefrontend/inittask-std.tsv",
++    "tools/nativefrontend/stdlib-substitutions.tsv",
++    "tools/nativefrontend/stdlib-overlay.tsv",
++    "baselines/stdlib-pin.tsv",
+     "scripts/diff-coverage", "scripts/coverage-manifest", "tools/string_member.py",
+     "tools/string_member_runner.py", "scripts/check-string-members.py",
+     "scripts/coverage-baseline-diff", "scripts/ci", "tools/test_string_member.py",

@@ -1,0 +1,57 @@
+Tests/StringPanicMembersRed.lean:10:2: error: Tactic `decide` failed for proposition
+  renderPanicHead state (entry #[255]) [] = some "\"\\xff\""
+because its `Decidable` instance
+  (renderPanicHead state (entry #[255]) []).instDecidableEq (some "\"\\xff\"")
+did not reduce to `isTrue` or `isFalse`.
+
+Reduction got stuck at the `Decidable` instance
+  match renderPanicHead state (entry #[255]) [] with
+  | none =>
+    match some "\"\\xff\"" with
+    | none => isTrue ⋯
+    | some val => isFalse ⋯
+  | some a =>
+    match some "\"\\xff\"" with
+    | none => isFalse ⋯
+    | some b =>
+      match instDecidableEqString a b with
+      | isTrue h => isTrue ⋯
+      | isFalse n => isFalse ⋯
+Tests/StringPanicMembersRed.lean:13:2: error: Tactic `decide` failed for proposition
+  renderPanicHead state (entry #[97, 10, 255]) [] = some "\"\\x61\\x0a\\xff\""
+because its `Decidable` instance
+  (renderPanicHead state (entry #[97, 10, 255]) []).instDecidableEq (some "\"\\x61\\x0a\\xff\"")
+did not reduce to `isTrue` or `isFalse`.
+
+Reduction got stuck at the `Decidable` instance
+  match renderPanicHead state (entry #[97, 10, 255]) [] with
+  | none =>
+    match some "\"\\x61\\x0a\\xff\"" with
+    | none => isTrue ⋯
+    | some val => isFalse ⋯
+  | some a =>
+    match some "\"\\x61\\x0a\\xff\"" with
+    | none => isFalse ⋯
+    | some b =>
+      match instDecidableEqString a b with
+      | isTrue h => isTrue ⋯
+      | isFalse n => isFalse ⋯
+Tests/StringPanicMembersRed.lean:16:2: error: Tactic `decide` failed for proposition
+  renderPanicHead state (entry #[97] true) [entry #[97]] = some "a [recovered]"
+because its `Decidable` instance
+  (renderPanicHead state (entry #[97] true) [entry #[97]]).instDecidableEq (some "a [recovered]")
+did not reduce to `isTrue` or `isFalse`.
+
+Reduction got stuck at the `Decidable` instance
+  match renderPanicHead state (entry #[97] true) [entry #[97]] with
+  | none =>
+    match some "a [recovered]" with
+    | none => isTrue ⋯
+    | some val => isFalse ⋯
+  | some a =>
+    match some "a [recovered]" with
+    | none => isFalse ⋯
+    | some b =>
+      match instDecidableEqString a b with
+      | isTrue h => isTrue ⋯
+      | isFalse n => isFalse ⋯

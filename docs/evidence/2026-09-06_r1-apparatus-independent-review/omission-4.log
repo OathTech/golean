@@ -1,0 +1,21 @@
+FF
+======================================================================
+FAIL: test_entrypoints_and_frontend_tables_are_content_bound_and_required (contracts.StringMemberContracts.test_entrypoints_and_frontend_tables_are_content_bound_and_required) (source='tools/nativefrontend/stdlib-overlay.tsv', mutation='changed')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/dev/projects/golean/.tmp/golean-r1-apparatus-review-v3-kkf4dq2j/tools/test_string_member.py", line 160, in test_entrypoints_and_frontend_tables_are_content_bound_and_required
+    with self.assertRaises(check.Refusal):
+AssertionError: Refusal not raised
+
+======================================================================
+FAIL: test_entrypoints_and_frontend_tables_are_content_bound_and_required (contracts.StringMemberContracts.test_entrypoints_and_frontend_tables_are_content_bound_and_required) (source='tools/nativefrontend/stdlib-overlay.tsv', mutation='missing')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/dev/projects/golean/.tmp/golean-r1-apparatus-review-v3-kkf4dq2j/tools/test_string_member.py", line 166, in test_entrypoints_and_frontend_tables_are_content_bound_and_required
+    with self.assertRaises(check.Refusal):
+AssertionError: Refusal not raised
+
+----------------------------------------------------------------------
+Ran 1 test in 0.014s
+
+FAILED (failures=2)

@@ -1,0 +1,247 @@
+[
+  {
+    "label": "all-nine-pins",
+    "result": "valid",
+    "roles_each": 13,
+    "streams": [
+      [],
+      [
+        9,
+        8,
+        7,
+        6,
+        5,
+        4,
+        3,
+        2,
+        1,
+        0
+      ],
+      [
+        1,
+        3,
+        5,
+        7,
+        9,
+        2,
+        4,
+        6,
+        8,
+        0
+      ],
+      [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ]
+    ]
+  },
+  {
+    "label": "missing-role",
+    "result": "refused",
+    "cause": "mandatory controls: exact keys required; missing=['invalid-after-lf'], unknown=[]"
+  },
+  {
+    "label": "foreign-role",
+    "result": "refused",
+    "cause": "mandatory controls: exact keys required; missing=[], unknown=['waived']"
+  },
+  {
+    "label": "duplicate-invocation",
+    "result": "refused",
+    "cause": "mandatory roles duplicate the same invocation"
+  },
+  {
+    "label": "missing-exit",
+    "result": "refused",
+    "cause": "control equal-repanic forced Go fields: exact keys required; missing=['childExit'], unknown=[]"
+  },
+  {
+    "label": "bool-exit",
+    "result": "refused",
+    "cause": "control equal-repanic: wrong Go terminal/exit pin"
+  },
+  {
+    "label": "typed-bool-argument",
+    "result": "refused",
+    "cause": "control normal-control arguments: unsupported argument type"
+  },
+  {
+    "label": "escaping-control-package",
+    "result": "refused",
+    "cause": "control package: noncanonical/escaping path"
+  },
+  {
+    "label": "noncanonical-control-package",
+    "result": "refused",
+    "cause": "control package: noncanonical/escaping path"
+  },
+  {
+    "label": "unknown-scope",
+    "result": "refused",
+    "cause": "pin: unknown evidence scope"
+  },
+  {
+    "label": "forged-verdict-field",
+    "result": "refused",
+    "cause": "pin: exact keys required; missing=[], unknown=['forced_half_ok']"
+  },
+  {
+    "label": "synthetic-wire-source-binding-positive",
+    "result": "valid"
+  },
+  {
+    "label": "missing-go-source",
+    "result": "refused",
+    "cause": "subject Go inventory: expected nonempty inventory"
+  },
+  {
+    "label": "changed-go-source",
+    "result": "refused",
+    "cause": "subject Go inventory: missing, extra or changed source (pin is stale)"
+  },
+  {
+    "label": "missing-apparatus",
+    "result": "refused",
+    "cause": "apparatus inventory: missing, extra or changed source (pin is stale)"
+  },
+  {
+    "label": "changed-apparatus",
+    "result": "refused",
+    "cause": "apparatus inventory: missing, extra or changed source (pin is stale)"
+  },
+  {
+    "label": "missing-control-copy",
+    "result": "refused",
+    "cause": "control Go inventory: missing, extra or changed source (pin is stale)"
+  },
+  {
+    "label": "stale-subject-wire",
+    "result": "refused",
+    "cause": "fresh native subject/control wire differs from pin"
+  },
+  {
+    "label": "stale-control-wire",
+    "result": "refused",
+    "cause": "fresh native subject/control wire differs from pin"
+  },
+  {
+    "label": "stale-oracle-pin",
+    "result": "refused",
+    "cause": "Go toolchain/oracle pin differs"
+  },
+  {
+    "label": "forged-rationale",
+    "result": "refused",
+    "cause": "reviewed rationale changed"
+  },
+  {
+    "label": "absent-rationale-section",
+    "result": "refused",
+    "cause": "rationale section is missing or ambiguous"
+  },
+  {
+    "label": "wrong-live-toolchain",
+    "result": "refused",
+    "cause": "Go toolchain/oracle pin differs"
+  },
+  {
+    "label": "missing-chain",
+    "result": "refused",
+    "cause": "actual driver record: exact keys required; missing=['chain'], unknown=[]"
+  },
+  {
+    "label": "null-chain",
+    "result": "refused",
+    "cause": "actual terminal witness: missing nonempty string chain"
+  },
+  {
+    "label": "empty-chain",
+    "result": "refused",
+    "cause": "actual terminal witness: missing nonempty string chain"
+  },
+  {
+    "label": "incomplete-later-chain-entry",
+    "result": "refused",
+    "cause": "actual string chain entry: exact keys required; missing=['bytes'], unknown=[]"
+  },
+  {
+    "label": "bool-payload-byte",
+    "result": "refused",
+    "cause": "actual payload: expected integer byte array (Booleans are not bytes)"
+  },
+  {
+    "label": "non-byte-payload",
+    "result": "refused",
+    "cause": "actual payload: expected integer byte array (Booleans are not bytes)"
+  },
+  {
+    "label": "numeric-recovered-flag",
+    "result": "refused",
+    "cause": "actual recovered flag: expected Boolean"
+  },
+  {
+    "label": "wrong-member",
+    "result": "refused",
+    "cause": "machine text is not a prescribed member of the actual payload/flag"
+  },
+  {
+    "label": "changed-output",
+    "result": "refused",
+    "cause": "program output changed across R-1 membership"
+  },
+  {
+    "label": "admission-refused",
+    "result": "refused",
+    "cause": "actual driver did not admit typed subject"
+  },
+  {
+    "label": "numeric-admitted",
+    "result": "refused",
+    "cause": "actual driver did not admit typed subject"
+  },
+  {
+    "label": "different-fuel",
+    "result": "refused",
+    "cause": "actual driver record: fuel/choices differ from execution"
+  },
+  {
+    "label": "different-choices",
+    "result": "refused",
+    "cause": "actual driver record: fuel/choices differ from execution"
+  },
+  {
+    "label": "foreign-record-field",
+    "result": "refused",
+    "cause": "actual driver record: exact keys required; missing=[], unknown=['trusted']"
+  },
+  {
+    "label": "witness-process-exit-0",
+    "result": "refused",
+    "cause": "parser-control: exit 0, expected 1; no verdict: b''"
+  },
+  {
+    "label": "witness-process-exit-124",
+    "result": "refused",
+    "cause": "parser-control: exit 124, expected 1; no verdict: b''"
+  },
+  {
+    "label": "witness-process-exit-137",
+    "result": "refused",
+    "cause": "parser-control: exit 137, expected 1; no verdict: b''"
+  },
+  {
+    "label": "witness-process-exit-143",
+    "result": "refused",
+    "cause": "parser-control: exit 143, expected 1; no verdict: b''"
+  },
+  {
+    "label": "metadata-member-parser-positive",
+    "result": "valid"
+  }
+]

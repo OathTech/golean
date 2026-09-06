@@ -8,6 +8,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
 MODULES = ["GoLean/GoCore/Machine", "GoLean/GoCore/Trace", "GoLean/GoCore/PoolTrace",
+           "GoLean/GoCore/PanicText", "GoLean/GoCore/StringPanic", "Tests/StringPanicMembers",
            "GoLean/GoCore/ProgramTrace", "GoLean/Interface",
            "GoLean/GoCore/AdmissionIndices", "GoLean/GoCore/AdmissionPolicy",
            "GoLean/GoCore/Admission",
@@ -51,6 +52,7 @@ HARNESS += "\n#eval InterfaceAudit.run\n"
 def main():
     paths = sorted([*ROOT.glob("GoLean/**/*.lean"), ROOT / "GoLean.lean",
                     ROOT / "Tests/PanicRendering.lean",
+                    ROOT / "Tests/StringPanicMembers.lean",
                     ROOT / "Tests/InterfaceContract.lean", ROOT / "Tests/InterfaceAudit.lean",
                     ROOT / "Tests/BooleanRuntime.lean", ROOT / "Tests/BooleanTypingFixture.lean",
                     ROOT / "Tests/BooleanProgram.lean",
@@ -90,6 +92,18 @@ def main():
     if result.returncode:
         raise SystemExit(result.returncode)
     for label, target, declaration, marker in [
+        ("abort_observation_private", "GoLean/GoCore/AbortObservation.lean",
+         "private axiom abortObservationHole : False", "abortObservationHole"),
+        ("pool_observation_private", "GoLean/GoCore/RecoveryPoolObservation.lean",
+         "private axiom poolObservationHole : False", "poolObservationHole"),
+        ("program_observation_private", "GoLean/GoCore/RecoveryProgramObservation.lean",
+         "private axiom programObservationHole : False", "programObservationHole"),
+        ("panic_text_private", "GoLean/GoCore/PanicText.lean",
+         "private axiom panicTextHole : False", "panicTextHole"),
+        ("string_panic_private", "GoLean/GoCore/StringPanic.lean",
+         "private axiom stringPanicHole : False", "stringPanicHole"),
+        ("string_panic_trailing", "Tests/StringPanicMembers.lean",
+         "private theorem stringPanicTestHole : False := by sorry", "sorryAx"),
         ("machine_private", "GoLean/GoCore/Machine.lean",
          "private axiom machineRendererHole : False", "machineRendererHole"),
         ("rendering_trailing", "Tests/PanicRendering.lean",

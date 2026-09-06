@@ -1,4 +1,5 @@
 import GoLean.GoCore
+import GoLean.GoCore.RecoveryProgramObservation
 import GoLean.EnumDedup
 import GoLean.NativeToIR
 import GoLean.StrictJson
@@ -31,6 +32,7 @@ structure RunArgs where
 private def usage : String :=
   "usage:\n" ++
   "  golean native-json-run --input <file> --function <name> [--arg-int <n> ...] [--fuel <n>] [--choices <n,n,...>]\n" ++
+  "  golean native-json-string-run --input <file> --function <name> [--arg-int <n> ...] [--fuel <n>] [--choices <n,n,...>] [--require-recovery-profile]\n" ++
   "  golean observation-eq --left <json> --right <json>\n" ++
   "  golean coverage-observations --input <file> --function <name> [--arg-int <n> ...] [--fuel <n>] [--engine dedup]\n" ++
   "      [--max-width <B>] [--max-sites <D>] [--cap <N>] [--work-cap <W>] [--expect-status <ok|panic|ok,panic|race>]
@@ -499,6 +501,73 @@ private def runNativeJsonRun (args : List String) : IO UInt32 := do
                   | .error (err, out) =>
                       IO.println (errorJson err out).compress
                       return 1
+      | _, _ =>
+          IO.eprintln s!"provide --input <file> and --function <name>\n{usage}"
+          return 2
+
+private def abortHeadJson (head : GoLean.GoCore.RecoveryRuntime.AbortHead) : Json :=
+  Json.mkObj [
+    ("bytes", Json.arr (head.bytes.bytes.map fun b => Lean.toJson b.toNat)),
+    ("recovered", Lean.toJson head.recovered)]
+
+private def abortChainJson (record : Option GoLean.GoCore.RecoveryRuntime.AbortRecord) : Json :=
+  match record with
+  | none => Json.null
+  | some record =>
+      Json.arr (((GoLean.GoCore.RecoveryRuntime.AbortHead.mk record.bytes record.recovered) ::
+        record.tail).toArray.map abortHeadJson)
+
+/-- R-1 apparatus entry. The computed instrumentation has an all-input
+erasure theorem to the SAME pool/program/Ints driver used above. Its chain
+comes only from a reached Config.abort? and the selected real abort step;
+this command never takes payload bytes or a type assertion from a sidecar.
+Admission is an additional checked fact, not inferred from terminal text. -/
+private def runNativeJsonStringRun (args : List String) : IO UInt32 := do
+  let profileFlags := args.filter (· == "--require-recovery-profile")
+  if profileFlags.length > 1 then
+    IO.eprintln "duplicate --require-recovery-profile"
+    return 2
+  let requireProfile := !profileFlags.isEmpty
+  let args := args.filter (· != "--require-recovery-profile")
+  let cwd ← IO.currentDir
+  match parseRunArgs args {} with
+  | .error err =>
+      IO.eprintln err
+      return 2
+  | .ok cfg =>
+      match cfg.input, cfg.functionName with
+      | some input, some functionName =>
+          let contents ← IO.FS.readFile (absoluteFrom cwd input)
+          match Lean.Json.parse contents with
+          | .error err =>
+              IO.println (cliErrorJson s!"JSON parse error: {err}").compress
+              return 1
+          | .ok json =>
+              match GoLean.NativeToIR.decodeProgram json with
+              | .error err =>
+                  IO.println (cliErrorJson err).compress
+                  return 1
+              | .ok program =>
+                  let admission := GoLean.GoCore.RecoveryTyping.checkRecovery program functionName
+                    (cfg.args.map GoLean.GoValue.int)
+                  let admitted := match admission with | .ok () => true | .error _ => false
+                  if requireProfile then
+                    match admission with
+                    | .error err =>
+                        IO.println (cliErrorJson s!"recovery admission: {err.message}").compress
+                        return 1
+                    | .ok () => pure ()
+                  let (result, record) := GoLean.GoCore.RecoveryRuntime.runProgramPoolWithAbortInts
+                    cfg.fuel program functionName cfg.args cfg.choices
+                  let (observation, exitCode) := match result with
+                    | .ok result => (runJson program.typeDefs.nameOf? result, (0 : UInt32))
+                    | .error (err, out) => (errorJson err out, (1 : UInt32))
+                  IO.println (Json.mkObj [
+                    ("schema", Lean.toJson "golean-string-abort-witness-v1"),
+                    ("observation", observation), ("chain", abortChainJson record),
+                    ("admitted", Lean.toJson admitted), ("fuel", Lean.toJson cfg.fuel),
+                    ("choices", Lean.toJson cfg.choices)]).compress
+                  return exitCode
       | _, _ =>
           IO.eprintln s!"provide --input <file> and --function <name>\n{usage}"
           return 2
@@ -1599,6 +1668,7 @@ def main (args : List String) : IO UInt32 := do
       IO.println usage
       return 0
   | "native-json-run" :: rest => runNativeJsonRun rest
+  | "native-json-string-run" :: rest => runNativeJsonStringRun rest
   | "observation-eq" :: rest => runObservationEq rest
   | "coverage-observations" :: rest => runCoverageObservations rest
   | [] =>

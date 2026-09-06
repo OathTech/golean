@@ -1,0 +1,241 @@
+{
+  "scratch": "/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/string-matrix-cptnglql",
+  "records": [
+    {
+      "function": "ControlDynamic",
+      "goExit": 0,
+      "go": {
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ],
+        "output": ""
+      },
+      "modelExit": 0,
+      "model": {
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ]
+      },
+      "modelStderr": "",
+      "exact": true
+    },
+    {
+      "function": "ControlNormal",
+      "goExit": 0,
+      "go": {
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ],
+        "output": ""
+      },
+      "modelExit": 0,
+      "model": {
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ]
+      },
+      "modelStderr": "",
+      "exact": true
+    },
+    {
+      "function": "ControlDirect",
+      "goExit": 0,
+      "go": {
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ],
+        "output": ""
+      },
+      "modelExit": 0,
+      "model": {
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ]
+      },
+      "modelStderr": "",
+      "exact": true
+    },
+    {
+      "function": "ControlIndirect",
+      "goExit": 0,
+      "go": {
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ],
+        "output": ""
+      },
+      "modelExit": 0,
+      "model": {
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ]
+      },
+      "modelStderr": "",
+      "exact": true
+    },
+    {
+      "function": "ControlOrder",
+      "goExit": 0,
+      "go": {
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "kind": "int",
+            "tag": "int",
+            "value": 21
+          }
+        ],
+        "output": ""
+      },
+      "modelExit": 0,
+      "model": {
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "kind": "int",
+            "tag": "int",
+            "value": 21
+          }
+        ]
+      },
+      "modelStderr": "",
+      "exact": true
+    },
+    {
+      "function": "ControlReversed",
+      "goExit": 0,
+      "go": {
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "kind": "int",
+            "tag": "int",
+            "value": 12
+          }
+        ],
+        "output": ""
+      },
+      "modelExit": 0,
+      "model": {
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "kind": "int",
+            "tag": "int",
+            "value": 12
+          }
+        ]
+      },
+      "modelStderr": "",
+      "exact": true
+    },
+    {
+      "function": "ControlInvalidBefore",
+      "goExit": 0,
+      "go": {
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ],
+        "output": ""
+      },
+      "modelExit": 0,
+      "model": {
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ]
+      },
+      "modelStderr": "",
+      "exact": true
+    },
+    {
+      "function": "ControlInvalidAfter",
+      "goExit": 0,
+      "go": {
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ],
+        "output": ""
+      },
+      "modelExit": 0,
+      "model": {
+        "output": "",
+        "schema": "golean-observation-v1",
+        "status": "ok",
+        "values": [
+          {
+            "tag": "bool",
+            "value": true
+          }
+        ]
+      },
+      "modelStderr": "",
+      "exact": true
+    }
+  ]
+}

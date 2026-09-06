@@ -1,0 +1,20 @@
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+building Lean executable...
+✔ [115/124] Built GoLean.Interface:c.o (39ms)
+✔ [120/124] Built GoLean (230ms)
+✔ [122/124] Built Main (224ms)
+✔ [124/124] Built golean:exe (529ms)
+Build completed successfully (124 jobs).
+native frontend: per-case type-check + emit (no batch export)
+PASS	panic-recover/string-members/invalid-after-lf	panic,strings	stage=string-member	detail=string-member evidence: /home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/string-members/panic-recover__string-members__invalid-after-lf/fresh-vsv71liq\nPASS string-member: golean-r1-explicit-string-v1; exact forced fields and typed-explicit-string evidence; gc text equality is not claimed
+PASS	panic-recover/string-members/unicode	panic,strings,unicode	stage=string-member	detail=string-member evidence: /home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/string-members/panic-recover__string-members__unicode/fresh-pl4pbzxh\nPASS string-member: golean-r1-explicit-string-v1; exact forced fields and typed-explicit-string evidence; gc text equality is not claimed
+PASS	panic-recover/string-members/unequal	panic,recover,defer,strings	stage=string-member	detail=string-member evidence: /home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/string-members/panic-recover__string-members__unequal/fresh-wktq6a7m\nPASS string-member: golean-r1-explicit-string-v1; exact forced fields and typed-explicit-string evidence; gc text equality is not claimed
+PASS	panic-recover/string-members/invalid-before-lf	panic,strings	stage=string-member	detail=string-member evidence: /home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/string-members/panic-recover__string-members__invalid-before-lf/fresh-u8ea_xo_\nPASS string-member: golean-r1-explicit-string-v1; exact forced fields and typed-explicit-string evidence; gc text equality is not claimed
+PASS	panic-recover/string-members/multiple	panic,recover,defer,strings	stage=string-member	detail=string-member evidence: /home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/string-members/panic-recover__string-members__multiple/fresh-tdmx0_zl\nPASS string-member: golean-r1-explicit-string-v1; exact forced fields and typed-explicit-string evidence; gc text equality is not claimed
+PASS	panic-recover/string-members/equal	panic,recover,defer,strings	stage=string-member	detail=string-member evidence: /home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/string-members/panic-recover__string-members__equal/fresh-4se6jzl7\nPASS string-member: golean-r1-explicit-string-v1; exact forced fields and typed-explicit-string evidence; gc text equality is not claimed
+PASS	panic-recover/string-members/invalid-recovered	panic,recover,defer,strings	stage=string-member	detail=string-member evidence: /home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/string-members/panic-recover__string-members__invalid-recovered/fresh-x3q8s26l\nPASS string-member: golean-r1-explicit-string-v1; exact forced fields and typed-explicit-string evidence; gc text equality is not claimed
+PASS	panic-recover/string-members/controls	panic,strings	stage=string-member	detail=string-member evidence: /home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/string-members/panic-recover__string-members__controls/fresh-f48rwhq3\nPASS string-member: golean-r1-explicit-string-v1; exact forced fields and typed-explicit-string evidence; gc text equality is not claimed
+
+differential coverage summary: cases=8 pass=8 fail=0 export_status=0
+results: artifacts/coverage/latest.tsv
+metadata: artifacts/coverage/latest.meta.tsv

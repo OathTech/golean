@@ -1,0 +1,793 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+
+EXEC_ROOT="Corpus/coverage/exec"
+TAGS_FILE="Corpus/coverage/tags.tsv"
+ARTIFACT_ROOT="${GOLEAN_COVERAGE_ARTIFACTS:-artifacts/coverage}"
+LIST_ONLY=0
+STATUS_FILTER=""
+# Repeated --prefix flags ACCUMULATE (union): the old single variable
+# silently kept only the LAST one, so `--prefix a --prefix b` ran b
+# alone while looking like it ran both (audit fix round F-B5 — and it
+# bit that round's own guardrail run before the fix).
+PREFIX_FILTERS=()
+PREFIX_FILTER_COUNT=0
+TAG_FILTERS=()
+EXACT_IDS=()
+TAG_FILTER_COUNT=0
+EXACT_ID_COUNT=0
+LAST_FAILED=0
+
+usage() {
+  cat >&2 <<'EOF'
+usage: scripts/coverage-manifest [options] [<id> ...]
+
+Options:
+  --list              print ids and metadata instead of normalized manifest rows
+  --id <id>           include one exact id
+  --prefix <prefix>   include ids under a prefix
+  --tag <tag>         require a feature tag; repeat for intersection
+  --status <status>   include rows with expected Go status: ok or panic
+  --last-failed       include ids that failed in artifacts/coverage/latest.tsv
+  --exec-root <dir>   executable corpus root
+  --tags-file <file>  canonical feature tag list
+  --artifact-root <dir>
+                      artifact root used for latest.tsv and runner artifacts
+EOF
+}
+
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    --list)
+      LIST_ONLY=1
+      shift
+      ;;
+    --id)
+      if [[ "$#" -lt 2 ]]; then
+        echo "coverage-manifest: --id requires an argument" >&2
+        exit 2
+      fi
+      EXACT_IDS+=("$2")
+      EXACT_ID_COUNT=$((EXACT_ID_COUNT + 1))
+      shift 2
+      ;;
+    --prefix)
+      if [[ "$#" -lt 2 ]]; then
+        echo "coverage-manifest: --prefix requires an argument" >&2
+        exit 2
+      fi
+      PREFIX_FILTERS+=("$2")
+      PREFIX_FILTER_COUNT=$((PREFIX_FILTER_COUNT + 1))
+      shift 2
+      ;;
+    --tag)
+      if [[ "$#" -lt 2 ]]; then
+        echo "coverage-manifest: --tag requires an argument" >&2
+        exit 2
+      fi
+      TAG_FILTERS+=("$2")
+      TAG_FILTER_COUNT=$((TAG_FILTER_COUNT + 1))
+      shift 2
+      ;;
+    --status)
+      if [[ "$#" -lt 2 ]]; then
+        echo "coverage-manifest: --status requires an argument" >&2
+        exit 2
+      fi
+      STATUS_FILTER="$2"
+      shift 2
+      ;;
+    --last-failed)
+      LAST_FAILED=1
+      shift
+      ;;
+    --exec-root)
+      if [[ "$#" -lt 2 ]]; then
+        echo "coverage-manifest: --exec-root requires an argument" >&2
+        exit 2
+      fi
+      EXEC_ROOT="$2"
+      shift 2
+      ;;
+    --tags-file)
+      if [[ "$#" -lt 2 ]]; then
+        echo "coverage-manifest: --tags-file requires an argument" >&2
+        exit 2
+      fi
+      TAGS_FILE="$2"
+      shift 2
+      ;;
+    --artifact-root)
+      if [[ "$#" -lt 2 ]]; then
+        echo "coverage-manifest: --artifact-root requires an argument" >&2
+        exit 2
+      fi
+      ARTIFACT_ROOT="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      while [[ "$#" -gt 0 ]]; do
+        EXACT_IDS+=("$1")
+        EXACT_ID_COUNT=$((EXACT_ID_COUNT + 1))
+        shift
+      done
+      ;;
+    -*)
+      echo "coverage-manifest: unknown option $1" >&2
+      usage
+      exit 2
+      ;;
+    *)
+      EXACT_IDS+=("$1")
+      EXACT_ID_COUNT=$((EXACT_ID_COUNT + 1))
+      shift
+      ;;
+  esac
+done
+
+case "$STATUS_FILTER" in
+  ""|ok|panic|deadlock|race|fatal) ;;
+  *)
+    echo "coverage-manifest: invalid --status $STATUS_FILTER; use ok, panic, deadlock, race, or fatal" >&2
+    exit 2
+    ;;
+esac
+
+if [[ "$LAST_FAILED" -eq 1 ]]; then
+  latest="$ARTIFACT_ROOT/latest.tsv"
+  if [[ ! -f "$latest" ]]; then
+    echo "coverage-manifest: --last-failed requires $latest" >&2
+    exit 2
+  fi
+  while IFS=$'\t' read -r result id _features _stage _detail _extra || [[ -n "${result:-}" ]]; do
+    if [[ "$result" == "FAIL" && -n "$id" ]]; then
+      EXACT_IDS+=("$id")
+      EXACT_ID_COUNT=$((EXACT_ID_COUNT + 1))
+    fi
+  done < "$latest"
+  if [[ "$EXACT_ID_COUNT" -eq 0 ]]; then
+    echo "coverage-manifest: no failed cases in $latest" >&2
+    exit 1
+  fi
+fi
+
+if [[ ! -d "$EXEC_ROOT" ]]; then
+  echo "coverage-manifest: executable corpus root not found: $EXEC_ROOT" >&2
+  exit 2
+fi
+if [[ ! -f "$TAGS_FILE" ]]; then
+  echo "coverage-manifest: tag vocabulary not found: $TAGS_FILE" >&2
+  exit 2
+fi
+
+known_tags=""
+while IFS= read -r tag || [[ -n "${tag:-}" ]]; do
+  if [[ -z "$tag" || "$tag" == \#* ]]; then
+    continue
+  fi
+  if [[ ! "$tag" =~ ^[a-z][a-z0-9_-]*$ ]]; then
+    echo "coverage-manifest: invalid canonical tag in $TAGS_FILE: $tag" >&2
+    exit 2
+  fi
+  if [[ " $known_tags " == *" $tag "* ]]; then
+    echo "coverage-manifest: duplicate canonical tag in $TAGS_FILE: $tag" >&2
+    exit 2
+  fi
+  known_tags="$known_tags $tag"
+done < "$TAGS_FILE"
+
+if [[ "$TAG_FILTER_COUNT" -gt 0 ]]; then
+  for tag in "${TAG_FILTERS[@]}"; do
+    if [[ ! "$tag" =~ ^[a-z][a-z0-9_-]*$ ]]; then
+      echo "coverage-manifest: invalid --tag syntax: $tag" >&2
+      exit 2
+    fi
+    if [[ " $known_tags " != *" $tag "* ]]; then
+      echo "coverage-manifest: unknown --tag: $tag" >&2
+      exit 2
+    fi
+  done
+fi
+
+contains_exact_id() {
+  local wanted="$1"
+  if [[ "$EXACT_ID_COUNT" -eq 0 ]]; then
+    return 0
+  fi
+  local id
+  for id in "${EXACT_IDS[@]}"; do
+    if [[ "$id" == "$wanted" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+has_tag() {
+  local features="$1"
+  local tag="$2"
+  [[ ",$features," == *",$tag,"* ]]
+}
+
+validate_path_id() {
+  local value="$1"
+  local part
+  # A literal "__" in any id is refused: per-id artifact paths flatten id
+  # slashes to "__" (diff-coverage go-run dirs, negative-lane binaries), so
+  # an id containing "__" could alias another id's flattened path
+  # (audit response n7 — closes the class; no current id uses "__").
+  if [[ "$value" == *__* ]]; then
+    return 1
+  fi
+  IFS='/' read -r -a parts <<< "$value"
+  for part in "${parts[@]}"; do
+    if [[ ! "$part" =~ ^[a-z0-9][a-z0-9_-]*$ ]]; then
+      return 1
+    fi
+  done
+  return 0
+}
+
+# Membership-lane params (docs/2026-08-04_membership-lane-design.md): "-" or
+# comma-separated key=value overrides of the enumerator/sampler defaults.
+#   width   = B, the pick alphabet [0,B) (REQUIRED for membership rows —
+#             audit F2a, no silent default; author-asserted to cover every
+#             consumption-site bound in the case, argued in why)
+#   sites   = D, max consumption sites per run (default 8)
+#   cap     = N, max distinct observations (default 64)
+#   samples = RETIRED (2026-09-03, [USER]-ruled sampling rule — docs/
+#             2026-09-01_membership-depth.md §4.3 / P2): the Go-side draw
+#             budget is set by RUN MODE in scripts/diff-coverage
+#             (MEMBERSHIP_DRAWS: K=32 on the gate path, K=80 under
+#             --slow; draws alternate plain/-race and stop early at the
+#             members= pin). A row carrying samples= is REFUSED here and
+#             again by the harness — a per-row count the budget no
+#             longer reads would be a silent no-op.
+#   work    = enumerator work cap (default 200000; since the slice-4
+#             stepwise engine the unit is machine STEPS + probe runs
+#             over the shared-prefix exploration tree, not whole runs)
+#   members = exact expected |enumerated set| (optional; a mechanical
+#             set-cardinality pin — e.g. sb-chan's {1,10,11} pins 3 and
+#             the SC-forbidden 00 cannot hide inside a passing run)
+#   statuses = the declared STATUS SET of a status-diverse envelope
+#             (membership lane ONLY; audit F8/BUG-044: gc realizes
+#             {ok, panic} envelopes via the main-exit window). `+`-
+#             separated subset of {ok, panic} that must include the
+#             row's expected_status (the default/plain-run status);
+#             e.g. statuses=ok+panic. Absent = the singleton
+#             {expected_status}, the pre-F8 discipline.
+validate_lane_params() {
+  local cases_file="$1"
+  local params="$2"
+  local lane_ctx="${3:-}"
+  local expected_status_ctx="${4:-}"
+  local kv key value seen=""
+  if [[ "$params" == "-" ]]; then
+    return 0
+  fi
+  IFS=',' read -r -a kvs <<< "$params"
+  for kv in "${kvs[@]}"; do
+    if [[ "$kv" != *=* ]]; then
+      echo "coverage-manifest: $cases_file: lane param is not key=value: $kv" >&2
+      return 1
+    fi
+    key="${kv%%=*}"
+    value="${kv#*=}"
+    case "$key" in
+      width|sites|cap|work|members|statuses|tier|backedge|nonterm|engine) ;;
+      depth)
+        # depth=N is the STRICT lane's declaration (memo P1); the
+        # enumerating lanes certify the whole tree — a category error.
+        echo "coverage-manifest: $cases_file: depth= is a strict-lane param (the enumerating lanes certify the whole tree): $kv (lane=$lane_ctx)" >&2
+        return 1
+        ;;
+      samples)
+        echo "coverage-manifest: $cases_file: samples= is RETIRED (2026-09-03 sampling rule: the membership draw budget is K by run mode — 32 on the gate path, 80 under --slow — alternating plain/-race with early stop at the members= pin; a per-row sample count is no longer read): remove $kv" >&2
+        return 1
+        ;;
+      *)
+        echo "coverage-manifest: $cases_file: unknown lane param key: $kv" >&2
+        return 1
+        ;;
+    esac
+    if [[ " $seen " == *" $key "* ]]; then
+      echo "coverage-manifest: $cases_file: duplicate lane param key: $key" >&2
+      return 1
+    fi
+    seen="$seen $key"
+    if [[ "$key" == "tier" ]]; then
+      # Tiered checking (user directive 2026-08-08; membership-lane note
+      # addendum of the same date): tier=slow marks a row whose full
+      # certification exceeds the ~30 s budget. Quick/per-commit runs
+      # verify against the row's TRACKED certified-set record
+      # (baselines/certified/) and report CERTIFIED-CACHED; only
+      # `scripts/ci --slow` (or GOLEAN_SLOW=1) re-enumerates. Membership
+      # and (since W3.2 stage C) confluent rows — the other lanes have
+      # no cached path, so the param fails closed there.
+      if [[ "$value" != "slow" ]]; then
+        echo "coverage-manifest: $cases_file: tier must be 'slow' (the only tier): $kv" >&2
+        return 1
+      fi
+      # Membership OR confluent (W3.2 stage C: the confluent lane
+      # gained the same cached-certification path — the record is a
+      # certified singleton; scripts/diff-coverage's rule widened in
+      # the same commit).
+      if [[ "$lane_ctx" != "membership" && "$lane_ctx" != "confluent" ]]; then
+        echo "coverage-manifest: $cases_file: tier=slow is a membership/confluent-lane param (lane=$lane_ctx has no cached certification path): $kv" >&2
+        return 1
+      fi
+      # A cached MEMBERSHIP row's only machine-cardinality constraint
+      # is the members= pin against the recorded set (pre-merge audit,
+      # 2026-08-08) — require it explicitly. (A confluent row's
+      # cardinality is the lane itself: |set| = 1.)
+      if [[ "$lane_ctx" != "membership" ]]; then
+        continue
+      fi
+      case ",$params," in
+        *,members=*) ;;
+        *)
+          echo "coverage-manifest: $cases_file: tier=slow requires an explicit members=<n> pin (the cached path's cardinality constraint): $kv" >&2
+          return 1
+          ;;
+      esac
+      continue
+    fi
+    if [[ "$key" == "statuses" ]]; then
+      # Status-diverse envelope declaration (audit F8) — its own shape,
+      # not an integer. Membership-only: the other lanes' claims are
+      # single-status by construction.
+      if [[ "$lane_ctx" != "membership" ]]; then
+        echo "coverage-manifest: $cases_file: statuses= is a membership-lane param (lane=$lane_ctx cannot declare a status-diverse envelope): $kv" >&2
+        return 1
+      fi
+      if [[ ! "$value" =~ ^(ok|panic)(\+(ok|panic))+$ ]]; then
+        echo "coverage-manifest: $cases_file: statuses must be a +-separated set over {ok,panic} with >=2 entries (a singleton is just expected_status): $kv" >&2
+        return 1
+      fi
+      if [[ "+$value+" != *"+$expected_status_ctx+"* ]]; then
+        echo "coverage-manifest: $cases_file: statuses must include the row's expected_status ($expected_status_ctx — the default-stream status): $kv" >&2
+        return 1
+      fi
+      if [[ "$value" == *ok*ok* || "$value" == *panic*panic* ]]; then
+        echo "coverage-manifest: $cases_file: statuses has a duplicate entry: $kv" >&2
+        return 1
+      fi
+      continue
+    fi
+    if [[ "$key" == "engine" ]]; then
+      # engine=dedup (POR slice 2026-08-21): the verified dedup
+      # certifier; enumerating lanes only, value fixed.
+      if [[ "$lane_ctx" == "strict" ]]; then
+        echo "coverage-manifest: $cases_file: engine= is an enumerating-lane param (lane=$lane_ctx): $kv" >&2
+        return 1
+      fi
+      if [[ "$value" != "dedup" ]]; then
+        echo "coverage-manifest: $cases_file: engine= must be 'dedup': $kv" >&2
+        return 1
+      fi
+      continue
+    fi
+    if [[ "$key" == "backedge" ]]; then
+      # backEdge per-site enumeration mode (W3.2 stage D §5d):
+      # 'full' or a NON-negative k (0 = canonical slot only — the
+      # declared narrowest tree). Enumerating lanes only.
+      if [[ "$lane_ctx" == "strict" ]]; then
+        echo "coverage-manifest: $cases_file: backedge= is an enumerating-lane param (lane=$lane_ctx): $kv" >&2
+        return 1
+      fi
+      if [[ "$value" != "full" && ! "$value" =~ ^(0|[1-9][0-9]*)$ ]]; then
+        echo "coverage-manifest: $cases_file: backedge= must be 'full' or a non-negative integer: $kv" >&2
+        return 1
+      fi
+      continue
+    fi
+    if [[ "$key" == "nonterm" ]]; then
+      # allow-nonterm (stage D §5d): membership-only per-branch fuel;
+      # fuel-exhausted branches counted, never members.
+      if [[ "$lane_ctx" != "membership" ]]; then
+        echo "coverage-manifest: $cases_file: nonterm= is a membership-lane param (lane=$lane_ctx): $kv" >&2
+        return 1
+      fi
+      if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then
+        echo "coverage-manifest: $cases_file: nonterm= must be a positive integer (the per-branch fuel): $kv" >&2
+        return 1
+      fi
+      continue
+    fi
+    if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then
+      echo "coverage-manifest: $cases_file: lane param $key must be a positive integer: $kv" >&2
+      return 1
+    fi
+  done
+  return 0
+}
+
+validate_features() {
+  local cases_file="$1"
+  local features="$2"
+  local tag
+  IFS=',' read -r -a tags <<< "$features"
+  for tag in "${tags[@]}"; do
+    if [[ -z "$tag" ]]; then
+      echo "coverage-manifest: $cases_file: empty feature tag" >&2
+      return 1
+    fi
+    if [[ ! "$tag" =~ ^[a-z][a-z0-9_-]*$ ]]; then
+      echo "coverage-manifest: $cases_file: invalid feature tag syntax: $tag" >&2
+      return 1
+    fi
+    if [[ " $known_tags " != *" $tag "* ]]; then
+      echo "coverage-manifest: $cases_file: unknown feature tag: $tag" >&2
+      return 1
+    fi
+  done
+  return 0
+}
+
+include_case() {
+  local full_id="$1"
+  local status="$2"
+  local features="$3"
+
+  contains_exact_id "$full_id" || return 1
+  if [[ "$PREFIX_FILTER_COUNT" -gt 0 ]]; then
+    local prefix matched=0
+    for prefix in "${PREFIX_FILTERS[@]}"; do
+      if [[ "$full_id" == "$prefix"* ]]; then
+        matched=1
+        break
+      fi
+    done
+    [[ "$matched" -eq 1 ]] || return 1
+  fi
+  if [[ -n "$STATUS_FILTER" && "$status" != "$STATUS_FILTER" ]]; then
+    return 1
+  fi
+  local tag
+  if [[ "$TAG_FILTER_COUNT" -gt 0 ]]; then
+    for tag in "${TAG_FILTERS[@]}"; do
+      has_tag "$features" "$tag" || return 1
+    done
+  fi
+  return 0
+}
+
+seen_ids=""
+emitted=0
+bad=0
+
+while IFS= read -r cases_file; do
+  rel="${cases_file#"$EXEC_ROOT"/}"
+  rel="${rel%/cases.tsv}"
+  go_dir="$EXEC_ROOT/$rel"
+  if ! validate_path_id "$rel"; then
+    echo "coverage-manifest: invalid executable case path id: $rel" >&2
+    bad=1
+    continue
+  fi
+  if [[ ! -f "$go_dir/main.go" ]]; then
+    echo "coverage-manifest: missing $go_dir/main.go" >&2
+    bad=1
+    continue
+  fi
+
+  while IFS=$'\t' read -r row_id subject args expected_status expected_reason features lane why params extra || [[ -n "${row_id:-}" ]]; do
+    if [[ -z "${row_id:-}" || "$row_id" == \#* ]]; then
+      continue
+    fi
+    if [[ -n "${extra:-}" ]]; then
+      echo "coverage-manifest: $cases_file: too many tab-separated fields" >&2
+      bad=1
+      continue
+    fi
+    if [[ -z "${subject:-}" || -z "${args:-}" || -z "${expected_status:-}" || -z "${expected_reason:-}" || -z "${features:-}" ]]; then
+      echo "coverage-manifest: $cases_file: expected 6 tab-separated fields (plus optional lane/why/params)" >&2
+      bad=1
+      continue
+    fi
+    if [[ "$row_id" != "-" && ( ! "$row_id" =~ ^[a-z0-9][a-z0-9_-]*$ || "$row_id" == *__* ) ]]; then
+      # "__" refused for the same flattened-path aliasing reason as in
+      # validate_path_id (audit response n7).
+      echo "coverage-manifest: $cases_file: invalid row id: $row_id" >&2
+      bad=1
+      continue
+    fi
+    if [[ ! "$subject" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+      echo "coverage-manifest: $cases_file: invalid subject identifier: $subject" >&2
+      bad=1
+      continue
+    fi
+    if [[ "$args" != "-" && ! "$args" =~ ^-?[0-9]+(,-?[0-9]+)*$ ]]; then
+      echo "coverage-manifest: $cases_file: invalid integer args: $args" >&2
+      bad=1
+      continue
+    fi
+    if ! validate_features "$cases_file" "$features"; then
+      bad=1
+      continue
+    fi
+    # Lane classification (membership lane, arc slice 3,
+    # docs/2026-08-04_membership-lane-design.md): optional columns 7-9 are
+    # lane / why / params. Absent or "-" lane is strict (the default
+    # equality lane). Fail closed BOTH ways: lane=membership requires the
+    # nondet feature tag and a free-text why (which observable depends on
+    # which consumption site); a nondet-tagged case requires
+    # lane=membership (the strict equality lane cannot oracle it — this
+    # replaces the old GOLEAN_ALLOW_NONDET rejection, which predates the
+    # membership oracle).
+    lane="${lane:--}"
+    why="${why:--}"
+    params="${params:--}"
+    if [[ "$lane" == "-" ]]; then
+      lane="strict"
+    fi
+    case "$lane" in
+      string-member)
+        if [[ "$expected_status" != "panic" || "$expected_reason" != "-" || "$why" == "-" || "$params" != "-" ]]; then
+          echo "coverage-manifest: $cases_file: string-member requires panic, reason -, explicit why, and params -; the fixed source-bound pin replaces a text substring" >&2
+          bad=1
+          continue
+        fi
+        if has_tag "$features" "nondet"; then
+          echo "coverage-manifest: $cases_file: string-member does not certify schedule membership" >&2
+          bad=1
+          continue
+        fi
+        ;;
+      strict)
+        # Strict-lane params (depth guard, membership-depth memo P1,
+        # [USER]-ruled 2026-09-03): '-' or exactly depth=<N> — the
+        # length of the three SEEDED invariance streams the gate runs
+        # IN ADDITION TO the fixed 10/10/8-entry ones, for a row whose
+        # bound->=2 consumptions outrun the fixed streams
+        # (docs/coverage-suite-structure.md "Lane assignment"). Nothing
+        # else: a strict row has no why and no enumerator params.
+        if [[ "$why" != "-" ]]; then
+          echo "coverage-manifest: $cases_file: strict-lane rows must leave why as -" >&2
+          bad=1
+          continue
+        fi
+        if [[ "$params" != "-" && ! "$params" =~ ^depth=[1-9][0-9]*$ ]]; then
+          echo "coverage-manifest: $cases_file: strict-lane params may only declare depth=<N> (the depth guard's seeded-stream length; N a positive integer): $params" >&2
+          bad=1
+          continue
+        fi
+        if has_tag "$features" "nondet"; then
+          echo "coverage-manifest: $cases_file: nondet-tagged case must declare lane=membership (strict equality against one go run cannot oracle it)" >&2
+          bad=1
+          continue
+        fi
+        ;;
+      membership)
+        if [[ "$why" == "-" ]]; then
+          echo "coverage-manifest: $cases_file: lane=membership requires a why (which observable depends on which consumption site)" >&2
+          bad=1
+          continue
+        fi
+        if ! has_tag "$features" "nondet"; then
+          echo "coverage-manifest: $cases_file: lane=membership requires the nondet feature tag" >&2
+          bad=1
+          continue
+        fi
+        if [[ "$expected_status" == "deadlock" || "$expected_status" == "race" || "$expected_status" == "fatal" ]]; then
+          # Fail closed: the membership enumerator has no deadlock-member
+          # handling (a blocked run fails its enumeration loudly), and
+          # race-expectation rows have their OWN full-strength lane
+          # (lane=racy, D9(d): every enumerated path refuses). Fatal
+          # members (spec-parity slice 2) likewise have no membership
+          # handling — fatal rows are strict-only.
+          echo "coverage-manifest: $cases_file: deadlock/fatal cases are strict-lane only; race-expectation cases use lane=racy" >&2
+          bad=1
+          continue
+        fi
+        if ! validate_lane_params "$cases_file" "$params" "$lane" "$expected_status"; then
+          bad=1
+          continue
+        fi
+        # Audit F2a: the enumerator's coverage claim is certified only by
+        # the author-asserted width (>= every consumption-site bound in
+        # the case). No silent default: every membership case declares
+        # width explicitly, and its why must argue the bound. (Since the
+        # slice-4 stepwise engine the assertion is checked MECHANICALLY
+        # at every explored site; the declaration discipline stands.)
+        case ",$params," in
+          *,width=*) ;;
+          *)
+            echo "coverage-manifest: $cases_file: lane=membership requires an explicit width=<B> in params (author-asserted >= every consumption-site bound; argue the bound in why)" >&2
+            bad=1
+            continue
+            ;;
+        esac
+        ;;
+      confluent)
+        # D9(b), slice 4: the enumerator certifies |set| = 1 over ALL
+        # schedules, then the ordinary strict pipeline runs — full-
+        # strength differential verification for deterministic
+        # concurrent programs. The observable is deterministic, so the
+        # nondet tag is FORBIDDEN (that is the membership lane), and
+        # the why records why the schedule latitude leaves it fixed.
+        if [[ "$why" == "-" ]]; then
+          echo "coverage-manifest: $cases_file: lane=confluent requires a why (why the schedule latitude leaves the observable fixed)" >&2
+          bad=1
+          continue
+        fi
+        if has_tag "$features" "nondet"; then
+          echo "coverage-manifest: $cases_file: confluent-lane rows must not carry the nondet tag (a nondeterministic observable is the membership lane)" >&2
+          bad=1
+          continue
+        fi
+        if [[ "$expected_status" == "deadlock" || "$expected_status" == "race" || "$expected_status" == "fatal" ]]; then
+          echo "coverage-manifest: $cases_file: deadlock/race/fatal-expectation cases cannot be confluent-lane" >&2
+          bad=1
+          continue
+        fi
+        if ! validate_lane_params "$cases_file" "$params" "$lane" "$expected_status"; then
+          bad=1
+          continue
+        fi
+        case ",$params," in
+          *,members=*)
+            echo "coverage-manifest: $cases_file: confluent-lane rows take no members param (|set|=1 is the lane's claim; the strict oracle is one go run)" >&2
+            bad=1
+            continue
+            ;;
+        esac
+        case ",$params," in
+          *,width=*) ;;
+          *)
+            echo "coverage-manifest: $cases_file: lane=confluent requires an explicit width=<B> in params" >&2
+            bad=1
+            continue
+            ;;
+        esac
+        ;;
+      racy)
+        # D9(d), slice 4 FULL STRENGTH: the enumerator proves "every
+        # enumerated path refuses" (--expect-status race — one value
+        # member anywhere fails loud), replacing the per-stream
+        # refusal approximation. Requires the race expectation.
+        if [[ "$expected_status" != "race" ]]; then
+          echo "coverage-manifest: $cases_file: lane=racy requires expected_status race" >&2
+          bad=1
+          continue
+        fi
+        if ! validate_lane_params "$cases_file" "$params" "$lane" "$expected_status"; then
+          bad=1
+          continue
+        fi
+        case ",$params," in
+          *,members=*)
+            echo "coverage-manifest: $cases_file: racy-lane rows take no members param (the refusal set is the singleton claim; the oracle is one -race red)" >&2
+            bad=1
+            continue
+            ;;
+        esac
+        case ",$params," in
+          *,width=*) ;;
+          *)
+            echo "coverage-manifest: $cases_file: lane=racy requires an explicit width=<B> in params" >&2
+            bad=1
+            continue
+            ;;
+        esac
+        ;;
+      *)
+        echo "coverage-manifest: $cases_file: invalid lane: $lane (use strict, membership, confluent, racy, or string-member)" >&2
+        bad=1
+        continue
+        ;;
+    esac
+    # Slice 4: every race-expectation row must be lane=racy — the
+    # full-strength refusal lane exists, so the strict per-stream
+    # approximation is no longer an acceptable classification.
+    if [[ "$expected_status" == "race" && "$lane" != "racy" ]]; then
+      echo "coverage-manifest: $cases_file: race-expectation rows must declare lane=racy (full-strength: every enumerated path refuses)" >&2
+      bad=1
+      continue
+    fi
+    # deadlock (channels arc slice 1): the subject blocks with every
+    # goroutine asleep — Go's runtime detector aborts with the FIXED
+    # message "fatal error: all goroutines are asleep - deadlock!" (exit
+    # status 2), so no per-case expected_reason exists (leave it "-").
+    # These cases must never run under -race: the detector does not fire
+    # there (probed; ground-truth note §5) — and race-expectation cases
+    # are exactly the -race lane, so the two statuses are mutually
+    # exclusive BY CONSTRUCTION (one status column).
+    # race (channels arc slice 3, lane d): the subject has a data race on
+    # every interleaving — the machine must refuse (raceDetected) on
+    # every tested stream, and the Go oracle is `go run -race` (exit 66,
+    # "WARNING: DATA RACE"; no per-case expected_reason).
+    # fatal (spec-parity slice 2, sync design note §2): gc's
+    # UNRECOVERABLE runtime throws (`fatal error: <msg>` — the sync
+    # misuse class, probed: recover does not intervene). Unlike
+    # deadlock the message is per-case: expected_reason GATES the run
+    # (must appear in gc's output) and the compared observation carries
+    # gc's ACTUAL leading fatal line (audit fix round 2026-08-10 — the
+    # panic path's actual-message discipline). Strict-lane only; never
+    # run under -race (same detector-suppression caution as deadlock).
+    case "$expected_status" in
+      ok|panic|deadlock|race|fatal) ;;
+      *)
+        echo "coverage-manifest: $cases_file: invalid expected Go status $expected_status; use ok, panic, deadlock, race, or fatal" >&2
+        bad=1
+        continue
+        ;;
+    esac
+    case "$expected_status" in
+      panic|fatal)
+        if [[ "$expected_reason" == "-" && "$lane" != "string-member" ]]; then
+          echo "coverage-manifest: $cases_file: $expected_status requires expected_reason" >&2
+          bad=1
+          continue
+        fi
+        ;;
+      *)
+        if [[ "$expected_reason" != "-" ]]; then
+          echo "coverage-manifest: $cases_file: unexpected expected_reason for $expected_status" >&2
+          bad=1
+          continue
+        fi
+        ;;
+    esac
+
+    if [[ "$row_id" == "-" ]]; then
+      full_id="$rel"
+    else
+      full_id="$rel/$row_id"
+    fi
+    if [[ " $seen_ids " == *" $full_id "* ]]; then
+      echo "coverage-manifest: duplicate executable case id $full_id" >&2
+      bad=1
+      continue
+    fi
+    seen_ids="$seen_ids $full_id"
+    include_case "$full_id" "$expected_status" "$features" || continue
+
+    emitted=$((emitted + 1))
+    if [[ "$LIST_ONLY" -eq 1 ]]; then
+      printf '%s\t%s\t%s\t%s\t%s\n' "$full_id" "$expected_status" "$features" "$go_dir" "$subject"
+    else
+      printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+        "$full_id" \
+        "$go_dir" \
+        "$subject" \
+        "$args" \
+        "$expected_status" \
+        "$features" \
+        "$expected_reason" \
+        "$lane" \
+        "$why" \
+        "$params"
+    fi
+  done < "$cases_file"
+done < <(find "$EXEC_ROOT" -name cases.tsv -print | sort)
+
+if [[ "$bad" -ne 0 ]]; then
+  exit 2
+fi
+
+missing=0
+if [[ "$EXACT_ID_COUNT" -gt 0 ]]; then
+  for id in "${EXACT_IDS[@]}"; do
+    if [[ " $seen_ids " != *" $id "* ]]; then
+      echo "coverage-manifest: no executable case id $id" >&2
+      missing=1
+    fi
+  done
+fi
+if [[ "$missing" -ne 0 ]]; then
+  exit 2
+fi
+
+if [[ "$emitted" -eq 0 ]]; then
+  echo "coverage-manifest: no executable cases matched filters" >&2
+  exit 1
+fi
