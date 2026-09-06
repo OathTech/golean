@@ -1,0 +1,4 @@
+result	id	features	stage	detail
+PASS	boolean-typing/shadow	admission,boolean,scopes	-	wide=0 exhausted=none depth=fixed
+PASS	boolean-typing/branches	admission,boolean,branches	-	wide=0 exhausted=none depth=fixed
+PASS	boolean-typing/zero	admission,boolean,initialization	-	wide=0 exhausted=none depth=fixed

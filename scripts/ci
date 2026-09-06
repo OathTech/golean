@@ -425,6 +425,13 @@ else
   bad "admission checker proofs and post-import audit"
 fi
 
+step "Boolean scoped typing checker proofs and regressions"
+if bash scripts/check-boolean-typing --lean-only; then
+  ok "Boolean scoped typing checker proofs and regressions"
+else
+  bad "Boolean scoped typing checker proofs and regressions"
+fi
+
 # 2b. Frontend pins (restored at the split audit, findings A1/A2 + B1/B8
 # — docs/2026-08-31_repo-split-plan.md fix round): the two SEMANTICS
 # pins that lived inside the parked check-golden. (1) the

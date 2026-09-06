@@ -27,3 +27,7 @@ globs = ["Tests.InterfaceContract", "Tests.InterfaceAudit"]
 [[lean_lib]]
 name = "AdmissionTests"
 globs = ["Tests.GoCoreAdmissionFixture", "Tests.GoCoreAdmission", "Tests.GoCoreAdmissionAudit"]
+
+[[lean_lib]]
+name = "BooleanTypingTests"
+globs = ["Tests.BooleanTyping", "Tests.BooleanTypingFixture", "Tests.BooleanTypingAudit"]

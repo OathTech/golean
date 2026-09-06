@@ -1,0 +1,3 @@
+boolean-typing/shadow	Tests/boolean-typing-fixture	Shadow	-	ok	admission,boolean,scopes	-	strict	-	-
+boolean-typing/branches	Tests/boolean-typing-fixture	Branches	-	ok	admission,boolean,branches	-	strict	-	-
+boolean-typing/zero	Tests/boolean-typing-fixture	Zero	-	ok	admission,boolean,initialization	-	strict	-	-

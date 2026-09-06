@@ -1,0 +1,392 @@
+{
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "define": false,
+      "lhs": [
+       {
+        "id": "result",
+        "target": "var"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "binary",
+        "op": "\u0026\u0026",
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "b",
+         "type": {
+          "kind": "bool"
+         }
+        },
+        "y": {
+         "expr": "bool",
+         "type": {
+          "kind": "bool"
+         },
+         "value": true
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "Argument",
+   "params": [
+    {
+     "id": "b",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "result",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "x",
+        "target": "declare",
+        "type": {
+         "kind": "bool"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "bool",
+        "type": {
+         "kind": "bool"
+        },
+        "value": true
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "body": [
+       {
+        "define": true,
+        "lhs": [
+         {
+          "id": "$c0",
+          "target": "declare",
+          "type": {
+           "kind": "bool"
+          }
+         }
+        ],
+        "rhs": [
+         {
+          "expr": "unary",
+          "op": "!",
+          "type": {
+           "kind": "bool"
+          },
+          "x": {
+           "expr": "ident",
+           "name": "x",
+           "type": {
+            "kind": "bool"
+           }
+          }
+         }
+        ],
+        "stmt": "assign"
+       },
+       {
+        "define": true,
+        "lhs": [
+         {
+          "id": "x",
+          "target": "declare",
+          "type": {
+           "kind": "bool"
+          }
+         }
+        ],
+        "rhs": [
+         {
+          "expr": "ident",
+          "name": "$c0",
+          "type": {
+           "kind": "bool"
+          }
+         }
+        ],
+        "stmt": "assign"
+       },
+       {
+        "define": false,
+        "lhs": [
+         {
+          "id": "result",
+          "target": "var"
+         }
+        ],
+        "rhs": [
+         {
+          "expr": "ident",
+          "name": "x",
+          "type": {
+           "kind": "bool"
+          }
+         }
+        ],
+        "stmt": "assign"
+       }
+      ],
+      "stmt": "block"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "id": "result",
+        "target": "var"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "binary",
+        "op": "\u0026\u0026",
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "result",
+         "type": {
+          "kind": "bool"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "kind": "bool"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "Shadow",
+   "params": [],
+   "results": [
+    {
+     "id": "result",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "decls": [
+       {
+        "id": "b",
+        "type": {
+         "kind": "bool"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "cond": {
+       "expr": "ident",
+       "name": "b",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "else": {
+       "body": [
+        {
+         "define": false,
+         "lhs": [
+          {
+           "id": "result",
+           "target": "var"
+          }
+         ],
+         "rhs": [
+          {
+           "expr": "bool",
+           "type": {
+            "kind": "bool"
+           },
+           "value": false
+          }
+         ],
+         "stmt": "assign"
+        },
+        {
+         "results": [],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "define": false,
+         "lhs": [
+          {
+           "id": "result",
+           "target": "var"
+          }
+         ],
+         "rhs": [
+          {
+           "expr": "bool",
+           "type": {
+            "kind": "bool"
+           },
+           "value": true
+          }
+         ],
+         "stmt": "assign"
+        },
+        {
+         "results": [],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      }
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "Branches",
+   "params": [],
+   "results": [
+    {
+     "id": "result",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "decls": [
+       {
+        "id": "zero",
+        "type": {
+         "kind": "bool"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "id": "result",
+        "target": "var"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "binary",
+        "op": "||",
+        "type": {
+         "kind": "bool"
+        },
+        "x": {
+         "expr": "ident",
+         "name": "result",
+         "type": {
+          "kind": "bool"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "zero",
+         "type": {
+          "kind": "bool"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "Zero",
+   "params": [],
+   "results": [
+    {
+     "id": "result",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  }
+ ],
+ "methodSets": [],
+ "methods": [],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": []
+}
