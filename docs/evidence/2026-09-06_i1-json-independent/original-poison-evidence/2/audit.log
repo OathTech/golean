@@ -1,0 +1,1 @@
+/home/dev/projects/golean/.tmp/declaration-audit-_t38cr_b/AuditAll.lean:2:0: error: Declaration audit: _private.GoLean.NativeDeclaration.0.declarationUnusedHole2 depends on forbidden axiom _private.GoLean.NativeDeclaration.0.declarationUnusedHole2

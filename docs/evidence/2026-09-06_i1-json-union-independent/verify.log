@@ -1,0 +1,3 @@
+fatal: path 'GoLean/StrictJsonParse.lean' exists on disk, but not in 'c969079a13bcdbbb39c06b85824249340b348e43'
+fatal: path 'Tests/StrictJsonParse.lean' exists on disk, but not in 'c969079a13bcdbbb39c06b85824249340b348e43'
+PASS: 3926 exact inputs, 14 reviewed candidate inputs, exact additive Lake union, unchanged CI, 9 complete 170-source pins with no policy changes

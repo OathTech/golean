@@ -1,0 +1,119 @@
+[
+  {
+    "path": "baselines/string-members/panic-recover/repanic-same-value-abort.json",
+    "old_entries": 169,
+    "new_entries": 170,
+    "added": [
+      "GoLean/StrictJsonParse.lean"
+    ],
+    "changed": [
+      "GoLean/NativeDeclaration.lean",
+      "lakefile.toml"
+    ],
+    "other_fields_identical": true
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/controls.json",
+    "old_entries": 169,
+    "new_entries": 170,
+    "added": [
+      "GoLean/StrictJsonParse.lean"
+    ],
+    "changed": [
+      "GoLean/NativeDeclaration.lean",
+      "lakefile.toml"
+    ],
+    "other_fields_identical": true
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/equal.json",
+    "old_entries": 169,
+    "new_entries": 170,
+    "added": [
+      "GoLean/StrictJsonParse.lean"
+    ],
+    "changed": [
+      "GoLean/NativeDeclaration.lean",
+      "lakefile.toml"
+    ],
+    "other_fields_identical": true
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/invalid-after-lf.json",
+    "old_entries": 169,
+    "new_entries": 170,
+    "added": [
+      "GoLean/StrictJsonParse.lean"
+    ],
+    "changed": [
+      "GoLean/NativeDeclaration.lean",
+      "lakefile.toml"
+    ],
+    "other_fields_identical": true
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/invalid-before-lf.json",
+    "old_entries": 169,
+    "new_entries": 170,
+    "added": [
+      "GoLean/StrictJsonParse.lean"
+    ],
+    "changed": [
+      "GoLean/NativeDeclaration.lean",
+      "lakefile.toml"
+    ],
+    "other_fields_identical": true
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/invalid-recovered.json",
+    "old_entries": 169,
+    "new_entries": 170,
+    "added": [
+      "GoLean/StrictJsonParse.lean"
+    ],
+    "changed": [
+      "GoLean/NativeDeclaration.lean",
+      "lakefile.toml"
+    ],
+    "other_fields_identical": true
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/multiple.json",
+    "old_entries": 169,
+    "new_entries": 170,
+    "added": [
+      "GoLean/StrictJsonParse.lean"
+    ],
+    "changed": [
+      "GoLean/NativeDeclaration.lean",
+      "lakefile.toml"
+    ],
+    "other_fields_identical": true
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/unequal.json",
+    "old_entries": 169,
+    "new_entries": 170,
+    "added": [
+      "GoLean/StrictJsonParse.lean"
+    ],
+    "changed": [
+      "GoLean/NativeDeclaration.lean",
+      "lakefile.toml"
+    ],
+    "other_fields_identical": true
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/unicode.json",
+    "old_entries": 169,
+    "new_entries": 170,
+    "added": [
+      "GoLean/StrictJsonParse.lean"
+    ],
+    "changed": [
+      "GoLean/NativeDeclaration.lean",
+      "lakefile.toml"
+    ],
+    "other_fields_identical": true
+  }
+]

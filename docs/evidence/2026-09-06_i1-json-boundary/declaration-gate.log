@@ -1,0 +1,81 @@
+c66e53248a3786c244049ebed2266f323b88f2deb8af628188b79c252c0fe5dd  GoLean/GoCore/Declaration.lean
+625da21980d13c56c555b6bd4e7564593f9b35517f2e6f6e8b8b89c500ca088e  GoLean/StrictJsonParse.lean
+c904b03e5321303a337409faf38cdc69e0efaeb4a799b4e906d922088fa33a9f  GoLean/NativeDeclaration.lean
+1895d4778b9b3437d02b1e1f479dd0ac8c1fdf43cbe0a28c9fe458b4df85aad5  Tests/DeclarationWire.lean
+475dd67e039b2505ecfc838b180745057888843a32efedae828c79e2df6823b1  Tests/StrictJsonParse.lean
+c875c424c789d82d73fea10cee59510868180ed6e4dec645c0f815ca48f333ec  Tests/DeclarationAudit.lean
+b76d99d364f490dd987296eddbb93161b9cfafd7569630f1cacd026f85710bf4  tools/nativefrontend/declaration.go
+379e2c361673093a9cdee1fc28ae13b25a3fced9df6ac2d52ae337bbb9a532e0  tools/nativefrontend/declaration_fixture_test.go
+22baa3f394437b3270ae3263a013d4e09e1fb4b7647d19de34df6fdfe41633ac  tools/check-declaration-wire.lean
+0da04933454f326e9cdb77acdadc05f1240d90e63ca555057b84421423fb79a1  tools/declaration-audit.py
+✔ [7/11] Built GoLean.NativeDeclaration (352ms)
+✔ [8/11] Built Tests.StrictJsonParse (299ms)
+✔ [9/11] Built Tests.DeclarationWire (369ms)
+ℹ [10/11] Built Tests.DeclarationAudit (3.6s)
+info: Tests/DeclarationAudit.lean:27:0: Declaration audit: 1712 imported/local declarations checked
+Build completed successfully (11 jobs).
+Declaration audit: 1712 imported/local declarations checked
+PASS positive empty-object
+PASS positive empty-array
+PASS positive primitive-mix
+PASS positive nested
+PASS positive same-key-other-object
+PASS positive empty-key
+PASS positive escaped-controls
+PASS positive supplementary-escape
+PASS positive supplementary-escape-uppercase
+PASS positive explicit-replacement
+PASS positive unicode-forms-distinct
+PASS positive whitespace
+PASS negative duplicate-plain
+PASS negative duplicate-escaped
+PASS negative duplicate-nested
+PASS negative duplicate-empty
+PASS negative duplicate-NUL
+PASS negative duplicate-slash
+PASS negative duplicate-supplementary
+PASS negative high-surrogate
+PASS negative low-surrogate
+PASS negative high-then-scalar
+PASS negative high-then-high
+PASS negative surrogate-object-key
+PASS negative trailing-object-comma
+PASS negative trailing-array-comma
+PASS negative unquoted-key
+PASS negative bare-control
+PASS malformed trailing-token
+PASS malformed leading-zero
+PASS malformed truncated-array
+PASS malformed truncated-object
+PASS malformed truncated-escape
+PASS malformed invalid-escape
+PASS invalid-UTF8 invalid-leading-byte
+PASS invalid-UTF8 overlong
+PASS invalid-UTF8 encoded-surrogate
+PASS invalid-UTF8 past-Unicode-limit
+PASS invalid-UTF8 truncated-UTF8
+PASS: 12 positive, 16 named refusals, 6 malformed, 5 invalid UTF-8; 2 decoded scalars and old duplicate regression
+PASS declaration byte boundary: 1 positive, 4 malformed refusals
+=== RUN   TestDeclarationDecoderFixture
+    declaration_fixture_test.go:81: checked 24 declaration identities and 576 go/types equality pairs
+--- PASS: TestDeclarationDecoderFixture (0.01s)
+PASS
+ok  	_/home/dev/projects/golean/.claude/worktrees/typed-i1-json/tools/nativefrontend	0.011s
+26748fff476161bf0946095a26f6aaf01b191d40f98219a42faada33ceef3f3c  /home/dev/projects/golean/.tmp/declaration-fixture.wn9iBk.json
+Declaration wire: PASS; 24 fresh Go types, 576 go/types identity pairs, 17 malformed-input controls, method-order normalization
+Declaration audit scratch retained: /home/dev/projects/golean/.tmp/declaration-audit-qfgli_15
+Declaration audit: 1712 imported/local declarations checked
+/home/dev/projects/golean/.tmp/declaration-audit-qfgli_15/AuditAll.lean:2:0: error: Declaration audit: _private.GoLean.GoCore.Declaration.0.declarationUnusedHole0 depends on forbidden axiom _private.GoLean.GoCore.Declaration.0.declarationUnusedHole0
+Declaration negative audit: GoLean.GoCore.Declaration compiled then rejected (declarationUnusedHole0)
+/home/dev/projects/golean/.tmp/declaration-audit-qfgli_15/AuditAll.lean:2:0: error: Declaration audit: _private.GoLean.StrictJsonParse.0.declarationUnusedHole1 depends on forbidden axiom _private.GoLean.StrictJsonParse.0.declarationUnusedHole1
+Declaration negative audit: GoLean.StrictJsonParse compiled then rejected (declarationUnusedHole1)
+/home/dev/projects/golean/.tmp/declaration-audit-qfgli_15/AuditAll.lean:2:0: error: Declaration audit: _private.GoLean.NativeDeclaration.0.declarationUnusedHole2 depends on forbidden axiom _private.GoLean.NativeDeclaration.0.declarationUnusedHole2
+Declaration negative audit: GoLean.NativeDeclaration compiled then rejected (declarationUnusedHole2)
+/home/dev/projects/golean/.tmp/declaration-audit-qfgli_15/AuditAll.lean:2:0: error: Declaration audit: _private.Tests.DeclarationWire.0.declarationUnusedHole3 depends on forbidden axiom _private.Tests.DeclarationWire.0.declarationUnusedHole3
+Declaration negative audit: Tests.DeclarationWire compiled then rejected (declarationUnusedHole3)
+/home/dev/projects/golean/.tmp/declaration-audit-qfgli_15/AuditAll.lean:2:0: error: Declaration audit: _private.Tests.StrictJsonParse.0.declarationUnusedHole4 depends on forbidden axiom _private.Tests.StrictJsonParse.0.declarationUnusedHole4
+Declaration negative audit: Tests.StrictJsonParse compiled then rejected (declarationUnusedHole4)
+Declaration audit: 1712 imported/local declarations checked
+/home/dev/projects/golean/.tmp/declaration-audit-qfgli_15/AuditAll.lean:2:0: error: Declaration audit: _private.Tests.DeclarationAudit.0.declarationUnusedHole5 depends on forbidden axiom _private.Tests.DeclarationAudit.0.declarationUnusedHole5
+Declaration negative audit: Tests.DeclarationAudit compiled then rejected (declarationUnusedHole5)
+Declaration gate: PASS; fresh fixture retained at /home/dev/projects/golean/.tmp/declaration-fixture.wn9iBk.json

@@ -1,0 +1,91 @@
+{
+  "apparatus_entries": 170,
+  "candidate_delta": {
+    "lakefile.toml": {
+      "feature": "a5ee315ea9abb43d5ee86e42ac0a9b18245ce0b94a3207c7ca599649cdb95c7e",
+      "integration": "da5686da0e6ac0760148c8640d05394c0d42e8496a83daca2009084085886004"
+    }
+  },
+  "candidate_inputs": 14,
+  "ci_identical_to_parent": true,
+  "execution_validation": "Owned by root; pending separately, no new conformance claimed by this review.",
+  "feature_tip": "7ac3eb46bb3e2fe9c15b86b509569ef086327453",
+  "integration_parent": "c969079a13bcdbbb39c06b85824249340b348e43",
+  "lake_union_exact_from_both_parents": true,
+  "member_checker_unchanged": true,
+  "pins": 9,
+  "selected_hash_mismatches": {},
+  "selected_inputs": 3926,
+  "selected_product_delta": {
+    "GoLean/NativeDeclaration.lean": {
+      "integration": "c904b03e5321303a337409faf38cdc69e0efaeb4a799b4e906d922088fa33a9f",
+      "parent": "c6dffb3e884ec9034635952ce4082aad61857b852f9cabbbc11fd485da5ab662"
+    },
+    "GoLean/StrictJsonParse.lean": {
+      "integration": "625da21980d13c56c555b6bd4e7564593f9b35517f2e6f6e8b8b89c500ca088e",
+      "parent": null
+    },
+    "Tests/DeclarationAudit.lean": {
+      "integration": "c875c424c789d82d73fea10cee59510868180ed6e4dec645c0f815ca48f333ec",
+      "parent": "45d8983c9d20d425aba28aec8fa41a75511f809b8135ebdcefe2771794c27d41"
+    },
+    "Tests/DeclarationWire.lean": {
+      "integration": "1895d4778b9b3437d02b1e1f479dd0ac8c1fdf43cbe0a28c9fe458b4df85aad5",
+      "parent": "3c29908fb4b672a3952a0b76f9a5118b9592bee1872bf10a532c56efbc90bc09"
+    },
+    "Tests/StrictJsonParse.lean": {
+      "integration": "475dd67e039b2505ecfc838b180745057888843a32efedae828c79e2df6823b1",
+      "parent": null
+    },
+    "baselines/string-members/panic-recover/repanic-same-value-abort.json": {
+      "integration": "9a6d307dc8734b0cc39c39f27cd70a227887dcd1cc835e421a84c4faafaa567f",
+      "parent": "ac9793efe472c5efcf6a017208529a4a6822cca713ff57d464ebf46abff60781"
+    },
+    "baselines/string-members/panic-recover/string-members/controls.json": {
+      "integration": "0d43246720b282033f3cebf550ab3b61a9bd9605c46c296c46890dd912543de1",
+      "parent": "5700480e2c4b842ac9ed92531150006f894f58a44fce12f17d7a45c58ee04ac0"
+    },
+    "baselines/string-members/panic-recover/string-members/equal.json": {
+      "integration": "090cb750b4ce7bb530535680c39d38516dd321fcea9dadcdc6248bcaa2b17674",
+      "parent": "a915e2c87aca5675b0e609a72582bb6dc977aa60cc99d3d91c6e23b44d953549"
+    },
+    "baselines/string-members/panic-recover/string-members/invalid-after-lf.json": {
+      "integration": "636f1fd111c615deb26230e5718ffa94116849c26b17c59d0a6de2ee64f587b9",
+      "parent": "7d357856c0fd17e896b92db2b7a4d4f1b8856bb8a1567ee5c62f49c3025e60a7"
+    },
+    "baselines/string-members/panic-recover/string-members/invalid-before-lf.json": {
+      "integration": "5cc39396ad403174e65dedc5491ee4f601b2953a50ff1c15fda35e46e5345c56",
+      "parent": "ff77036e1d62f83a89b2c9a4848becfce1ba9da1040c8c137b1925663961aced"
+    },
+    "baselines/string-members/panic-recover/string-members/invalid-recovered.json": {
+      "integration": "da00d79cecf98d717b577acfc9411f1f10c9f8468ebe717b623b1721f386bd77",
+      "parent": "90b838f5b4f9ed9dfdf2278f4eb7f61fd111f9e9ef0a9d1fb3e7f8f44e3dfb65"
+    },
+    "baselines/string-members/panic-recover/string-members/multiple.json": {
+      "integration": "6220cb4a7d94f43ea9630e6a11ea9ca46e871cd43470fee93d5efd05b628bbc2",
+      "parent": "7ccdae1e6a8e7c49b70d05012525d6f71f0f12b528049fa8db1eb42543576187"
+    },
+    "baselines/string-members/panic-recover/string-members/unequal.json": {
+      "integration": "3aa8ccd96ec34c471d22c298702c0778fd9f0cef7f5bd44303370ba7330b2389",
+      "parent": "779d4db18b97083fe565200413b0cf23570ef5e17858d5a0c12412be2c22da96"
+    },
+    "baselines/string-members/panic-recover/string-members/unicode.json": {
+      "integration": "c6c125ecc69eb3e35739624117e19157bbb312871dbbf99d0b97389b6829ab62",
+      "parent": "3596453f2777497e1de202802c13fec2de5ac0ed53e54816397dd060e82133fe"
+    },
+    "lakefile.toml": {
+      "integration": "da5686da0e6ac0760148c8640d05394c0d42e8496a83daca2009084085886004",
+      "parent": "31932ce0c4880fc681113cb6916e2b56e788681482c6ab38507372adb416391e"
+    },
+    "scripts/check-declarations": {
+      "integration": "3b00ceb88cd33500de4cf43049413dd54de3b464668831c3810750a1efcb9e72",
+      "parent": "83eceddc0d92d4270c18c515154b2ee9fa7d1e7549a80a43796a50fbdded9eae"
+    },
+    "tools/declaration-audit.py": {
+      "integration": "0da04933454f326e9cdb77acdadc05f1240d90e63ca555057b84421423fb79a1",
+      "parent": "668556d31ab9ab6ad40c744e117019e3c033072e785b8b32c44786c7e09c6a54"
+    }
+  },
+  "source_sha256": "c7e73d086aba51bd91d43902adbdbc63774512c01c08bc37c6a2a07f7ddee0d7",
+  "verdict": "PASS for the bounded additive source union"
+}

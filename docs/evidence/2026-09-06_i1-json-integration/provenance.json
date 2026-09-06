@@ -1,0 +1,15 @@
+{
+  "integration_parent": "c969079a13bcdbbb39c06b85824249340b348e43",
+  "feature_tip": "7ac3eb46bb3e2fe9c15b86b509569ef086327453",
+  "selected_inputs": 3926,
+  "candidate_delta": "lakefile additive StringMemberTests entry only",
+  "member_source_refresh": "nine169->170; addedStrictJsonParse; changedNativeDeclaration+lakefile; everyotherfieldidentical",
+  "full_records": "cachedR1 3635/394; no fresh full claim",
+  "fresh_pending": [],
+  "ordinary_ci_exit": 0,
+  "fresh_member_exit": 0,
+  "fresh_rows": 9,
+  "source_revalidated": 3926,
+  "independent_union_review": "893a7ad2",
+  "archive_exclusion": "bin/coverageharness only; exact hash retained"
+}

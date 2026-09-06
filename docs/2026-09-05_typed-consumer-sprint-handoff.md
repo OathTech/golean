@@ -722,3 +722,75 @@ implementation `b9136a05` and independent I1 review `8051028b` attached.
 That review passed 107 adversarial inputs and an extra imported-helper
 poison. Its source inputs are unchanged. Integration is a separate next
 step and must refresh the member source inventories for the new parser.
+
+## Model interruption recovery and sealed isolated repair
+
+[AGENT] The accepted R1 merge is `c969079a`. The parser merge of `7ac3eb46`
+is now pending on that tip, with 3,926 frozen inputs in
+`docs/evidence/2026-09-06_i1-json-integration/`. Its nine member pins refresh
+only source inventories (169 to 170): add StrictJsonParse and change the
+NativeDeclaration/lake hashes. Ordinary CI followed by nine member rows
+continues in root job 21926. A separate agent reviews the additive union.
+
+The user reported a model interruption. The old three agent identities were
+no longer live; replacement owners `b7_resume`, `i1_resume` and `byte_runtime`
+recovered the existing worktrees and disk checkpoints. No completed work
+was restarted merely because its supervisor disappeared. The earlier ENOSPC
+failures remain recorded; the filesystem now has about 500 GiB available.
+
+The isolated `uintptr` repair is clean at `5f185fb3`, with final `--slow`
+CI job 57432 numerically returning 0. All 3,851 inputs and twelve candidate
+files revalidated. The exact full 3,635-row results remain 3,390 PASS/245 FAIL,
+with all 394 negative rows PASS and no status/stage change from the reviewed
+first full run. The sole slow row, imported Google Search, was freshly
+re-certified with unchanged set/wire/parameters. Complete evidence is in
+`docs/evidence/2026-09-06_uintptr-identity/FINAL.md`. Combined integration,
+its measured baseline union and final slow train are still owed.
+
+O2 author candidate `7bd32ad6` has completed ordinary CI, nine fresh member
+rows and the complete customer gate. Independent review is attached in the
+clean author worktree at `f3971190`: exact 239-input revalidation, four
+additional kernel challenges, fresh semantic elaboration and additive union
+checks. Both native artifacts and all eight customer rows are fresh; full
+3,635/394 records remain cached. Root integration is the next O2 step.
+
+I1's package-envelope author tree is at docs-only `090ae32c` with runtime
+candidate WIP preserved. Independent v2 review (`23362c6d`/`4d492cea`) found
+and checked repairs for an interface-index bijection gap and private method
+requirements from distinct packages sharing a spelling. All 32 candidate
+and 3,917 selected source hashes revalidate. Previous CI ran out of disk
+before conformance; resumed full CI is job 73832. The actual source/query
+bridge and marker removal remain owed. Read that lane's HANDOFF for its
+defined-Mix dispatch collision limitation and unchanged 85-wire checks.
+
+B7 has a frozen structural cleanup checkpoint with 413 inputs (manifest
+`69a7710a87506fb3d4df77e5387cd8c2d56da8eb001c5d6c4da33b8d93275ec3`),
+warning-free reference/customer builds and a final dedicated customer gate.
+The incomplete kernel inventory requires expansion: pinned Lean's
+`getUsedConstantsAsSet` does not traverse every metadata name or recursor
+rule body; its expression traversal also omits projection structure names.
+Six additional project names already occur in `details.all`. Equality of
+the original 2,117 records is bounded evidence, not complete closure. A
+separate v2 apparatus will expand all these references and receive a new
+independent review; the original packet remains unchanged. Root's older
+409-input reconstruction and both successful build logs remain in
+`typed-b7-kernel-review`; numerical build handles were lost, not fabricated.
+
+The consuming byte-store extension now has independent review `631b883f`:
+twenty unchanged inputs, four fresh kernel challenges and 3,492 audited
+declarations. Actual caller work is in `typed-byte-runtime`. The relevant
+path is Repeat → Builder.WriteString → appendSlice's per-byte storeLoc loop.
+It also exposes quadratic array construction inside normalizeListWith.
+Exact local normalization/certificate improvements are being proved and
+measured; these are not yet production changes or completed BUG-090 capture.
+O1–O5 and final review/closing deliverables remain active and incomplete.
+
+### Strict JSON integration accepted
+
+Parser integration job 21926 completed with numerical exit 0 for ordinary
+CI and the nine fresh string-member rows. All 3,926 input hashes and all
+nine 170-source certificate inventories revalidated. Independent union
+review `893a7ad2` is attached, and the evidence packet retains raw focused
+artifacts, certificates, logs and hashes. This checkpoint accompanies the
+parser merge commit. The 3,635/394 full records remain cached; this merge
+adds the strict declaration byte boundary and does not finish runtime I1.

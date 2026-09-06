@@ -1,0 +1,8 @@
+{
+  "module": "GoLean.StrictJson",
+  "compiled_exit": 0,
+  "audit_exit": 1,
+  "marker": "independentStrictJsonHelperHole",
+  "source_sha256": "f8a37f63236a15444fb0bae492700d0cfca297c2260bb7133dad42f22adb0d22",
+  "scope": "Additional audit-closure control for imported StrictJson helper, outside six original poison targets; exact candidate/helper source otherwise preserved."
+}

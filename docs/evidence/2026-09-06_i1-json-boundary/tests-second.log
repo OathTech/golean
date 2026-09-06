@@ -1,0 +1,10 @@
+Tests/StrictJsonParse.lean:84:24: error: Type mismatch
+  require (message == "JSON input is not valid UTF-8")
+has type
+  String → IO Unit
+but is expected to have type
+  IO Unit
+Tests/StrictJsonParse.lean:83:4: error: Missing cases:
+(Except.ok _)
+Tests/StrictJsonParse.lean:85:41: error(lean.unknownIdentifier): Unknown identifier `message`
+Tests/StrictJsonParse.lean:86:4: error: unexpected token '|'; expected command

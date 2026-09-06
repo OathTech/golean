@@ -1,0 +1,128 @@
+[
+  {
+    "added": [
+      "GoLean/StrictJsonParse.lean"
+    ],
+    "changed": [
+      "GoLean/NativeDeclaration.lean",
+      "lakefile.toml"
+    ],
+    "integration_sha256": "9a6d307dc8734b0cc39c39f27cd70a227887dcd1cc835e421a84c4faafaa567f",
+    "other_fields_identical": true,
+    "parent_sha256": "ac9793efe472c5efcf6a017208529a4a6822cca713ff57d464ebf46abff60781",
+    "path": "baselines/string-members/panic-recover/repanic-same-value-abort.json",
+    "removed": []
+  },
+  {
+    "added": [
+      "GoLean/StrictJsonParse.lean"
+    ],
+    "changed": [
+      "GoLean/NativeDeclaration.lean",
+      "lakefile.toml"
+    ],
+    "integration_sha256": "0d43246720b282033f3cebf550ab3b61a9bd9605c46c296c46890dd912543de1",
+    "other_fields_identical": true,
+    "parent_sha256": "5700480e2c4b842ac9ed92531150006f894f58a44fce12f17d7a45c58ee04ac0",
+    "path": "baselines/string-members/panic-recover/string-members/controls.json",
+    "removed": []
+  },
+  {
+    "added": [
+      "GoLean/StrictJsonParse.lean"
+    ],
+    "changed": [
+      "GoLean/NativeDeclaration.lean",
+      "lakefile.toml"
+    ],
+    "integration_sha256": "090cb750b4ce7bb530535680c39d38516dd321fcea9dadcdc6248bcaa2b17674",
+    "other_fields_identical": true,
+    "parent_sha256": "a915e2c87aca5675b0e609a72582bb6dc977aa60cc99d3d91c6e23b44d953549",
+    "path": "baselines/string-members/panic-recover/string-members/equal.json",
+    "removed": []
+  },
+  {
+    "added": [
+      "GoLean/StrictJsonParse.lean"
+    ],
+    "changed": [
+      "GoLean/NativeDeclaration.lean",
+      "lakefile.toml"
+    ],
+    "integration_sha256": "636f1fd111c615deb26230e5718ffa94116849c26b17c59d0a6de2ee64f587b9",
+    "other_fields_identical": true,
+    "parent_sha256": "7d357856c0fd17e896b92db2b7a4d4f1b8856bb8a1567ee5c62f49c3025e60a7",
+    "path": "baselines/string-members/panic-recover/string-members/invalid-after-lf.json",
+    "removed": []
+  },
+  {
+    "added": [
+      "GoLean/StrictJsonParse.lean"
+    ],
+    "changed": [
+      "GoLean/NativeDeclaration.lean",
+      "lakefile.toml"
+    ],
+    "integration_sha256": "5cc39396ad403174e65dedc5491ee4f601b2953a50ff1c15fda35e46e5345c56",
+    "other_fields_identical": true,
+    "parent_sha256": "ff77036e1d62f83a89b2c9a4848becfce1ba9da1040c8c137b1925663961aced",
+    "path": "baselines/string-members/panic-recover/string-members/invalid-before-lf.json",
+    "removed": []
+  },
+  {
+    "added": [
+      "GoLean/StrictJsonParse.lean"
+    ],
+    "changed": [
+      "GoLean/NativeDeclaration.lean",
+      "lakefile.toml"
+    ],
+    "integration_sha256": "da00d79cecf98d717b577acfc9411f1f10c9f8468ebe717b623b1721f386bd77",
+    "other_fields_identical": true,
+    "parent_sha256": "90b838f5b4f9ed9dfdf2278f4eb7f61fd111f9e9ef0a9d1fb3e7f8f44e3dfb65",
+    "path": "baselines/string-members/panic-recover/string-members/invalid-recovered.json",
+    "removed": []
+  },
+  {
+    "added": [
+      "GoLean/StrictJsonParse.lean"
+    ],
+    "changed": [
+      "GoLean/NativeDeclaration.lean",
+      "lakefile.toml"
+    ],
+    "integration_sha256": "6220cb4a7d94f43ea9630e6a11ea9ca46e871cd43470fee93d5efd05b628bbc2",
+    "other_fields_identical": true,
+    "parent_sha256": "7ccdae1e6a8e7c49b70d05012525d6f71f0f12b528049fa8db1eb42543576187",
+    "path": "baselines/string-members/panic-recover/string-members/multiple.json",
+    "removed": []
+  },
+  {
+    "added": [
+      "GoLean/StrictJsonParse.lean"
+    ],
+    "changed": [
+      "GoLean/NativeDeclaration.lean",
+      "lakefile.toml"
+    ],
+    "integration_sha256": "3aa8ccd96ec34c471d22c298702c0778fd9f0cef7f5bd44303370ba7330b2389",
+    "other_fields_identical": true,
+    "parent_sha256": "779d4db18b97083fe565200413b0cf23570ef5e17858d5a0c12412be2c22da96",
+    "path": "baselines/string-members/panic-recover/string-members/unequal.json",
+    "removed": []
+  },
+  {
+    "added": [
+      "GoLean/StrictJsonParse.lean"
+    ],
+    "changed": [
+      "GoLean/NativeDeclaration.lean",
+      "lakefile.toml"
+    ],
+    "integration_sha256": "c6c125ecc69eb3e35739624117e19157bbb312871dbbf99d0b97389b6829ab62",
+    "other_fields_identical": true,
+    "parent_sha256": "3596453f2777497e1de202802c13fec2de5ac0ed53e54816397dd060e82133fe",
+    "path": "baselines/string-members/panic-recover/string-members/unicode.json",
+    "removed": []
+  }
+]

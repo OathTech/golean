@@ -1,0 +1,7 @@
+{
+  "source_worktree": "/home/dev/projects/golean/.claude/worktrees/typed-i1-json",
+  "source_base": "b34cee6767de3e39f064cc5c8c2214568b332e86",
+  "review_worktree": "/home/dev/projects/golean/.claude/worktrees/typed-i1-json-review-string",
+  "copied_frozen_inputs": 14,
+  "cache": "Copied .lake/build for unchanged dependencies; fresh declaration gate elaborates all touched modules and test driver against exact copied sources. Root worktree read-only."
+}

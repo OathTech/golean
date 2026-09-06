@@ -1,0 +1,29 @@
+{
+  "independent_input_cases": 107,
+  "PASS": 107,
+  "valid_exact_JSON_tree_checks": 21,
+  "duplicate_refusals": 13,
+  "invalid_UTF8_refusals": 10,
+  "text_API_scope": "All 10 malformed UTF8 strings refuse parseBytes. A deliberately lossy Python conversion outside the candidate creates replacement-containing String inputs that parse accepts; parse cannot validate erased byte provenance.",
+  "parsed_API_scope": "Old parsed duplicate basic and replacement nominal are accepted by decode; strict decodeBytes refuses the original malformed inputs. Explicit U+FFFD is accepted.",
+  "fresh_gate": "PASS: 47 original checks; 24 Go types; 576 identity pairs; 1712 declaration audit; 6 compiled poisons rejected",
+  "whole_fixture_controls": {
+    "valid-fixture": {
+      "exit": 0,
+      "sha256": "26748fff476161bf0946095a26f6aaf01b191d40f98219a42faada33ceef3f3c"
+    },
+    "duplicate-schema": {
+      "exit": 1,
+      "sha256": "f3915f0edad5a2858c0970f95e36ca84b59069c23efb8ae3d479880366023106"
+    },
+    "escaped-duplicate-schema": {
+      "exit": 1,
+      "sha256": "384f540d407728eeda0118a78fb0c8a7ed85a5f78f9036fed668454e6de4c930"
+    },
+    "duplicate-types": {
+      "exit": 1,
+      "sha256": "67b25af424586246de19e27fc6117487d137e5c0ea865764c5bced331c0c4e2a"
+    }
+  },
+  "harness_corrections": "Initial independent harness used String.fromUTF8! for malformed bytes and emitted its own panic diagnostics; preserved separately, replaced by explicitly generated lossy companion files. JSONL split now uses LF only to retain valid literal U+2028/U+2029 inside JSON strings. No candidate source changed."
+}

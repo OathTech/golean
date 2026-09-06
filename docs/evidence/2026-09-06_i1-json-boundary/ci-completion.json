@@ -1,0 +1,43 @@
+{
+  "exit_code": 0,
+  "supervisor_session": 85137,
+  "candidate_files": 14,
+  "candidate_revalidated": true,
+  "ci_log_sha256": "bc5c3f7f56809a467fe1c2a17db364093fb9c12a730f566bb835b75c8ac55c0f",
+  "selected_source_count": 3899,
+  "selected_source_status": "post-run reconstruction of parent shared-customer inventory plus 14 frozen candidate files; not a pre-run full-source freeze",
+  "parent_inventory_sha256": "efd8f37c19a9427053b18501dd55572375a273bc8a125bec326ef380d587f8a0",
+  "parent_input_delta": {
+    "GoLean/NativeDeclaration.lean": {
+      "parent": "c6dffb3e884ec9034635952ce4082aad61857b852f9cabbbc11fd485da5ab662",
+      "current": "c904b03e5321303a337409faf38cdc69e0efaeb4a799b4e906d922088fa33a9f"
+    },
+    "Tests/DeclarationAudit.lean": {
+      "parent": "45d8983c9d20d425aba28aec8fa41a75511f809b8135ebdcefe2771794c27d41",
+      "current": "c875c424c789d82d73fea10cee59510868180ed6e4dec645c0f815ca48f333ec"
+    },
+    "Tests/DeclarationWire.lean": {
+      "parent": "3c29908fb4b672a3952a0b76f9a5118b9592bee1872bf10a532c56efbc90bc09",
+      "current": "1895d4778b9b3437d02b1e1f479dd0ac8c1fdf43cbe0a28c9fe458b4df85aad5"
+    },
+    "lakefile.toml": {
+      "parent": "fa7a80aa905d695477ecd490399b64855c814756d782d3ebc3e5840584f36db0",
+      "current": "a5ee315ea9abb43d5ee86e42ac0a9b18245ce0b94a3207c7ca599649cdb95c7e"
+    },
+    "scripts/check-declarations": {
+      "parent": "83eceddc0d92d4270c18c515154b2ee9fa7d1e7549a80a43796a50fbdded9eae",
+      "current": "3b00ceb88cd33500de4cf43049413dd54de3b464668831c3810750a1efcb9e72"
+    },
+    "tools/declaration-audit.py": {
+      "parent": "668556d31ab9ab6ad40c744e117019e3c033072e785b8b32c44786c7e09c6a54",
+      "current": "0da04933454f326e9cdb77acdadc05f1240d90e63ca555057b84421423fb79a1"
+    }
+  },
+  "added_selected_paths": [
+    "GoLean/StrictJsonParse.lean",
+    "Tests/StrictJsonParse.lean",
+    "docs/2026-09-06_i1-json-boundary.md"
+  ],
+  "fresh_full_conformance": false,
+  "independent_review": "8051028b16bc3274d1d8875fc1103a24412ebadd (I1 packet only)"
+}
