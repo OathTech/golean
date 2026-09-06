@@ -1,0 +1,52 @@
+package main
+
+import (
+	"strings"
+	"testing"
+)
+
+const syncUnwindHead = "panic: original\n\tfatal error: sync: unlock of unlocked mutex"
+const syncUnwindTrace = "\n\ngoroutine 1 [running]:\ninternal/sync.fatal({0x493d2a?, 0x123?})\n\t/usr/local/go/src/runtime/panic.go:1191 +0x18\ninternal/sync.(*Mutex).unlockSlow(0x123, 0xffffffff)\n\t/usr/local/go/src/internal/sync/mutex.go:204 +0x35\nexit status 2\n"
+
+func TestAbortKind(t *testing.T) {
+	for _, tc := range []struct{ raw, want string }{
+		{"panic: ordinary" + trace, "panic"},
+		{"panic: fatal error: harmless payload" + trace, "panic"},
+		{"prefix fatal error: harmless\npanic: original" + trace, "panic"},
+		{"fatal error: harmless prefix\npanic: original" + trace, "panic"},
+		{"panic: original\n\ttext mentioning fatal error: harmless" + trace, "panic"},
+		{"fatal error: sync: unlock of unlocked mutex" + syncUnwindTrace, "fatal"},
+		{syncUnwindHead + syncUnwindTrace, "fatal"},
+		{"out\x00\x01\n" + syncUnwindHead + syncUnwindTrace, "fatal"},
+		{"fatal error: all goroutines are asleep - deadlock!" + trace, "deadlock"},
+	} {
+		got, err := abortKind([]byte(tc.raw))
+		if err != nil || got != tc.want {
+			t.Fatalf("%q: got %q, want %q: %v", tc.raw, got, tc.want, err)
+		}
+	}
+}
+
+func TestAbortKindRefusals(t *testing.T) {
+	// A payload can imitate message lines, but printindented prevents it
+	// forging the unindented header and first frame used by the discriminator.
+	fakePayload := syncUnwindHead + "\n\t\n\tgoroutine 1 [running]:\n\tinternal/sync.fatal({0x1})\n\t\t/usr/local/go/src/runtime/panic.go:1191 +0x18"
+	for _, tc := range []struct{ raw, cause string }{
+		{"panic: printed fake\n\ngoroutine 1 [running]:\nmain.main()\nfatal error: sync: unlock of unlocked mutex" + syncUnwindTrace, "report boundary"},
+		{"panic: printed fake\n\ngoroutine 1 [running]:\nmain.main()\nprint without newlinefatal error: sync: unlock of unlocked mutex" + syncUnwindTrace, "report boundary"},
+		{syncUnwindHead + trace, "ambiguous mixed"},
+		{fakePayload + trace, "ambiguous mixed"},
+		{syncUnwindHead + strings.Replace(syncUnwindTrace, "internal/sync.fatal(", "\tinternal/sync.fatal(", 1), "ambiguous mixed"},
+		{syncUnwindHead + strings.Replace(syncUnwindTrace, "\t/usr/local/go/", "\t\t/usr/local/go/", 1), "ambiguous mixed"},
+		{syncUnwindHead + strings.Replace(syncUnwindTrace, "panic.go:1191", "panic.go:1192", 1), "ambiguous mixed"},
+		{syncUnwindHead + strings.Replace(syncUnwindTrace, "/src/runtime/panic.go", "/src/main/panic.go", 1), "ambiguous mixed"},
+		{strings.Replace(syncUnwindHead, "unlock of unlocked mutex", "unknown sync fatal", 1) + syncUnwindTrace, "ambiguous mixed"},
+		{"panic: fake\npanic: real" + trace, "ambiguous"},
+		{"panic: original" + strings.Replace(trace, "exit status 2", "exit status 3", 1), "exit status 2"},
+	} {
+		got, err := abortKind([]byte(tc.raw))
+		if err == nil || !strings.Contains(err.Error(), tc.cause) {
+			t.Fatalf("%q: got %q/%v, want %s refusal", tc.raw, got, err, tc.cause)
+		}
+	}
+}

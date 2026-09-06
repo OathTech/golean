@@ -1,0 +1,189 @@
+8bc8895102bfa8db61230255abe8ec25313b488b0bb2c1e07d84e211ecc1e215 Corpus/coverage/exec/panic-recover/panic-controls/cases.tsv
+658c056e4ef53b8ee603e36eec2129443488d8c83c865a2ad879c9e8d740e842 Corpus/coverage/exec/panic-recover/panic-controls/main.go
+afd9a29b98299c71d2e51a83da4e18e78d430a4dd6efc23321d0a3cfcfb7db8b Corpus/coverage/exec/panic-recover/panic-markers/cases.tsv
+eee48edf4c5d8c0c99ea04a7a09dbab96145344ffa5b6b2ee9d916ffd9d10c94 Corpus/coverage/exec/panic-recover/panic-markers/main.go
+6015b154f95ce1671a56e30d11b91e4993b81ca63e2ff0b3bc7917ab6306656a scripts/check-observer-controls.py
+51fc83a3fc9d2593af54a25049d3d88371238b33a847aad8329a698d7d23ccf6 scripts/ci
+a6f57861234accf971a39cb4a63d4be3458cfb6988753429d9a936ce8cf963c4 scripts/diff-coverage
+f2a5685b6c00cae4f5a7e66a9d08678e92aaa60c243ecf77d99fe21a56e2b58f tools/coverageharness/abortkind.go
+b45ca6b7aea4e3db759ea2efa7793d8186becd822c1cd503cec2053d5b52f32e tools/coverageharness/abortkind_test.go
+82d2d039c8ff4bdfca98fc8919bafa9fa19dd59666409ba594e00a7cf42a96fc tools/coverageharness/crashhook.go
+2626da4178a453eaef36fdbf86e5563667644606237435e828e6fa47f4aebd5f tools/coverageharness/crashhook_test.go
+3fe16af7ff08d1f9b91542da74bce2c688c56e754f6d1ef31568f8eb191d3bc0 tools/coverageharness/crashview.go
+48983f249615c1abff3fa96ccded2af94dd1c6853c819866361ae480bcf67798 tools/coverageharness/crashview_test.go
+77344a07bb6f6f7211714e32db4a8115468b30a50b2593a76df7e4aa5aaf3899 tools/coverageharness/main.go
+834852d9892230a19835a6c8c2bbd56ed07d8e982947887c139037231fe68292 tools/coverageharness/observe.go
+ecee3e1e8d6c2166834bdae924e3abe6e52656dbcff2e6eda93b033ef8d3fa4a tools/coverageharness/observe_test.go
+f9271b3338f1f99ecf4258677a24526be17b71ab10ebace3f140fdb50298d22d tools/coverageharness/split.go
+3c3262cf26fa35307a8b23b081601ed98249779ce120bf0aad6dd669f24b2a8a tools/coverageharness/split_test.go
+Observer scratch: /home/dev/projects/golean/.tmp/observer-controls-ll8ju1nk
+=== RUN   TestRawPrintedContinuationRefused
+--- PASS: TestRawPrintedContinuationRefused (0.00s)
+=== RUN   TestAbortKind
+--- PASS: TestAbortKind (0.00s)
+=== RUN   TestAbortKindRefusals
+--- PASS: TestAbortKindRefusals (0.00s)
+=== RUN   TestAbortMessageKindGuard
+--- PASS: TestAbortMessageKindGuard (0.00s)
+=== RUN   TestOracleCopyPreservesSemanticSources
+--- PASS: TestOracleCopyPreservesSemanticSources (0.00s)
+=== RUN   TestOracleCopyRefusals
+--- PASS: TestOracleCopyRefusals (0.00s)
+=== RUN   TestOwnedPanicPartition
+--- PASS: TestOwnedPanicPartition (0.00s)
+=== RUN   TestCrashEvidenceRefusals
+--- PASS: TestCrashEvidenceRefusals (0.00s)
+=== RUN   TestCrashEvidenceSuccessAndFiles
+--- PASS: TestCrashEvidenceSuccessAndFiles (0.00s)
+=== RUN   TestFatalUnwindRemainsExplicitRefusal
+--- PASS: TestFatalUnwindRemainsExplicitRefusal (0.00s)
+=== RUN   TestAbortMessageBytes
+--- PASS: TestAbortMessageBytes (0.00s)
+=== RUN   TestObservationAllControls
+--- PASS: TestObservationAllControls (0.00s)
+=== RUN   TestAbortMessageRefusals
+--- PASS: TestAbortMessageRefusals (0.00s)
+=== RUN   TestRawStdoutRefusals
+--- PASS: TestRawStdoutRefusals (0.00s)
+=== RUN   TestSplitStderrOk
+--- PASS: TestSplitStderrOk (0.00s)
+=== RUN   TestSplitStderrPanic
+--- PASS: TestSplitStderrPanic (0.00s)
+=== RUN   TestSplitStderrFatalAndDeadlock
+--- PASS: TestSplitStderrFatalAndDeadlock (0.00s)
+=== RUN   TestSplitStderrRace
+--- PASS: TestSplitStderrRace (0.00s)
+=== RUN   TestSplitStderrUTF8AndLiteral
+--- PASS: TestSplitStderrUTF8AndLiteral (0.00s)
+PASS
+ok  	_/home/dev/projects/golean/.claude/worktrees/typed-observer-classification/tools/coverageharness	0.004s
+{"message":"a\u0000\u0001\t\r","output":"out\u0000\u0001\n","schema":"golean-observation-v1","status":"panic"}Shell observer probe: sampling-panic-controls PASS
+{"message":"a\u0000\u0001\t\r","output":"","schema":"golean-observation-v1","status":"panic"}Shell observer probe: sampling-mixed-status-panic PASS
+{"output":"a\u0000\u0001\t\r\n","schema":"golean-observation-v1","status":"ok","values":[]}Shell observer probe: sampling-ok-controls PASS
+Shell observer probe: sampling-nul-stdout PASS
+Shell observer probe: sampling-soh-stdout PASS
+Shell observer probe: sampling-invalid-utf8-stdout PASS
+Shell observer probe: sampling-stdout-marker PASS
+Shell observer probe: sampling-stdout-reason PASS
+Shell observer probe: sampling-nul-reason PASS
+Shell observer probe: sampling-ambiguous PASS
+Shell observer probe: sampling-invalid-utf8-panic PASS
+Shell observer probe: sampling-killed PASS
+{"output":"out\u0000\u0001\n","message":"a\u0000\u0001\t\r","schema":"golean-observation-v1","status":"panic"}Shell observer probe: strict-panic-controls PASS
+{"output":"a\u0000\u0001\t\r\n","schema":"golean-observation-v1","status":"ok","values":[]}Shell observer probe: strict-ok-controls PASS
+Shell observer probe: strict-nul-stdout PASS
+Shell observer probe: strict-soh-stdout PASS
+Shell observer probe: strict-invalid-utf8-stdout PASS
+Shell observer probe: strict-stdout-marker PASS
+Shell observer probe: strict-stdout-reason PASS
+Shell observer probe: strict-nul-reason PASS
+Shell observer probe: strict-ambiguous PASS
+Shell observer probe: strict-invalid-utf8-panic PASS
+Shell observer probe: strict-killed PASS
+{"output":"","message":"a\u0000\u0001\t\r","schema":"golean-observation-v1","status":"fatal"}Shell observer probe: strict-fatal-controls PASS
+Shell observer probe: strict-fatal-continuation PASS
+Shell observer probe: strict-fatal-wrong-exit PASS
+Shell observer probe: strict-sync-fatal PASS
+Shell observer probe: strict-fatal-not-panic PASS
+Shell observer probe: sampling-fatal-not-panic PASS
+Shell observer probe: strict-mixed-unknown PASS
+Shell observer probe: sampling-mixed-unknown PASS
+{"output":"","message":"original","schema":"golean-observation-v1","status":"panic"}Shell observer probe: strict-literal-mixed PASS
+Shell observer probe: strict-glued-sync-prefix PASS
+Shell observer probe: strict-glued-nilgo-prefix PASS
+Shell observer probe: strict-printed-origin PASS
+Shell observer probe: strict-later-unknown-runtime PASS
+{"output":"panic: forged\n\t","message":"actual","schema":"golean-observation-v1","status":"panic"}Shell observer probe: strict-printed-continuation PASS
+{"output":"","message":"forged","schema":"golean-observation-v1","status":"panic"}Shell observer probe: strict-literal-continuation PASS
+Shell observer probe: strict-hook-setup-exit PASS
+{"message":"original","output":"","schema":"golean-observation-v1","status":"panic"}Shell observer probe: sampling-literal-mixed PASS
+Shell observer probe: sampling-glued-sync-prefix PASS
+Shell observer probe: sampling-glued-nilgo-prefix PASS
+Shell observer probe: sampling-printed-origin PASS
+Shell observer probe: sampling-later-unknown-runtime PASS
+{"message":"actual","output":"panic: forged\n\t","schema":"golean-observation-v1","status":"panic"}Shell observer probe: sampling-printed-continuation PASS
+{"message":"forged","output":"","schema":"golean-observation-v1","status":"panic"}Shell observer probe: sampling-literal-continuation PASS
+Shell observer probe: sampling-hook-setup-exit PASS
+Native observer probe: controls PASS
+Native observer probe: repanic PASS
+Native observer probe: first-line PASS
+Native observer probe: nil-go-literal PASS
+Native observer probe: mixed-line PASS
+Native observer probe: payload-origin PASS
+Native observer probe: output-marker PASS
+Native observer probe: control-output PASS
+Native observer probe: sync-fatal PASS
+Native observer probe: sync-unwind PASS
+Native observer probe: nil-go-fatal PASS
+Native observer probe: deadlock PASS
+Native observer probe: glued-sync PASS
+Native observer probe: glued-nil-go PASS
+Native observer probe: printed-origin PASS
+Native observer probe: printed-origin-glued PASS
+Native observer probe: source-line-forgery PASS
+Native observer probe: printed-continuation PASS
+Native observer probe: literal-continuation PASS
+Native observer probe: printed-panic-origin PASS
+Native observer probe: glued-panic PASS
+Native observer probe: all-ascii-output PASS
+Native observer probe: init-simple PASS
+Native observer probe: init-forgery PASS
+Native observer probe: init-literal PASS
+Native observer probe: traceback-lower PASS
+Native observer probe: disabled-hook-simple PASS
+Native observer probe: disabled-hook-forgery PASS
+Native setup refusal: oracle.crash PASS
+Native setup refusal: oracle.registered PASS
+--- FAIL: TestAbortMessageBytes (0.00s)
+    observe_test.go:29: "panic: a\x00b\x01c\t\r\n\ngoroutine 1 gp=0x123 m=0 mp=0x456 [running]:\npanic({0x123?, 0x456?})\n\t/usr/local/go/src/runtime/panic.go:879 +0x16f fp=0x1 sp=0x2 pc=0x3\nmain.main()\n\t/tmp/x.go:5 +0x1d fp=0x1 sp=0x2 pc=0x3\nexit status 2\n": literal "\"ab\\u0001c\\t\\r\"" decoded "ab\x01c\t\r", want bytes "a\x00b\x01c\t\r": <nil>
+FAIL
+Observer mutation: drop-nul rejected after successful compile
+--- FAIL: TestAbortMessageBytes (0.00s)
+    observe_test.go:29: "panic: a\x00b\x01c\t\r\n\ngoroutine 1 gp=0x123 m=0 mp=0x456 [running]:\npanic({0x123?, 0x456?})\n\t/usr/local/go/src/runtime/panic.go:879 +0x16f fp=0x1 sp=0x2 pc=0x3\nmain.main()\n\t/tmp/x.go:5 +0x1d fp=0x1 sp=0x2 pc=0x3\nexit status 2\n": literal "\"a\\u0000b\x01c\\t\\r\"" decoded "", want bytes "a\x00b\x01c\t\r": invalid character '\x01' in string literal
+FAIL
+Observer mutation: raw-soh rejected after successful compile
+--- FAIL: TestAbortMessageBytes (0.00s)
+    observe_test.go:29: "panic: a\x00b\x01c\t\r\n\ngoroutine 1 gp=0x123 m=0 mp=0x456 [running]:\npanic({0x123?, 0x456?})\n\t/usr/local/go/src/runtime/panic.go:879 +0x16f fp=0x1 sp=0x2 pc=0x3\nmain.main()\n\t/tmp/x.go:5 +0x1d fp=0x1 sp=0x2 pc=0x3\nexit status 2\n": literal "\"a\\u0000b\\u0001c\"" decoded "a\x00b\x01c", want bytes "a\x00b\x01c\t\r": <nil>
+FAIL
+Observer mutation: trim-cr rejected after successful compile
+--- FAIL: TestRawStdoutRefusals (0.00s)
+    observe_test.go:85: accepted malformed stdout "\x00{}" as "{}"
+FAIL
+Observer mutation: mask-stdout-nul rejected after successful compile
+--- FAIL: TestAbortKind (0.00s)
+    abortkind_test.go:47: "fatal error: sync: unlock of unlocked mutex\n\ngoroutine 1 gp=0x123 m=0 mp=0x456 [running]:\nruntime.fatal({0x123, 0x456})\n\t/usr/local/go/src/runtime/panic.go:1253 +0x74 fp=0x1 sp=0x2 pc=0x3\nmain.main()\n\t/tmp/x.go:5 +0x1d fp=0x1 sp=0x2 pc=0x3\nexit status 2\n": got "", want "fatal": abort classification: panic origin without initial message marker, refused
+FAIL
+Observer mutation: assume-panic rejected after successful compile
+--- FAIL: TestAbortMessageKindGuard (0.00s)
+    abortkind_test.go:85: actual fatal accepted as panic: "\"sync: unlock of unlocked mutex\"" / <nil>
+FAIL
+Observer mutation: ignore-actual-kind rejected after successful compile
+--- FAIL: TestAbortKindRefusals (0.00s)
+    abortkind_test.go:77: "panic: ordinary\n\ngoroutine 1 gp=0x123 m=0 mp=0x456 [running]:\n\tpanic({0x123?, 0x456?})\n\t/usr/local/go/src/runtime/panic.go:879 +0x16f fp=0x1 sp=0x2 pc=0x3\nmain.main()\n\t/tmp/x.go:5 +0x1d fp=0x1 sp=0x2 pc=0x3\nexit status 2\n": got "panic"/<nil>, want unknown first refusal
+FAIL
+Observer mutation: normalize-frame rejected after successful compile
+--- FAIL: TestCrashEvidenceRefusals (0.00s)
+    crashview_test.go:61: corrupt evidence accepted: {kind:panic message:[97 99 116 117 97 108] output:[112 114 101 102 105]}
+FAIL
+Observer mutation: skip-suffix rejected after successful compile
+--- FAIL: TestOwnedPanicPartition (0.00s)
+    crashview_test.go:36: exact partition failed: {kind:panic message:[97 99 116 117 97 108] output:[]}/<nil>; want {output:panic: forged
+        	 report:panic: actual
+        
+        goroutine 1 gp=0x123 m=0 mp=0x456 [running]:
+        panic({0x123?, 0x456?})
+        	/usr/local/go/src/runtime/panic.go:879 +0x16f fp=0x1 sp=0x2 pc=0x3
+        main.main()
+        	/tmp/x.go:5 +0x1d fp=0x1 sp=0x2 pc=0x3
+         message:actual}
+FAIL
+Observer mutation: drop-output rejected after successful compile
+--- FAIL: TestCrashEvidenceRefusals (0.00s)
+    crashview_test.go:61: corrupt evidence accepted: {kind:panic message:[97 99 116 117 97 108] output:[112 114 101 102 105 120]}
+FAIL
+Observer mutation: missing-ack rejected after successful compile
+--- FAIL: TestCrashEvidenceSuccessAndFiles (0.00s)
+    crashview_test.go:91: success accepted without valid empty channel
+FAIL
+Observer mutation: missing-success-ack rejected after successful compile
+Observer controls: PASS

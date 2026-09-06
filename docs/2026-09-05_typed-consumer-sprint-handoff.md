@@ -458,3 +458,91 @@ guarded code closure and actual marker removal are still mandatory. B7
 continues actual old/new correspondence and consumer migration. Complete
 capture (including BUG-090), final fidelity review/gates, C1 handoff,
 roadmap/migration and closing O1–O5 decision packet remain unfinished.
+
+## Current checkpoint: observer integration and I1 foundation (2026-09-06)
+
+The explicit goal continuation resumed all three lanes after the readiness
+pause. Main was rechecked clean at `47195683`. The sprint parent is clean
+commit `99e0225d`, containing actual public control integration `b3d6fa6e`,
+its independent review `e4318e01`, and mock-protocol review `99e0225d`.
+
+Reviewed observer/diagnostic `2b679404` is merged **without committing** into
+the sprint worktree. Snapshot `snapshot/typed-sprint-before-observer-20260906`
+preserves the parent. All three reviewed production/integration manifests
+match except `scripts/ci`, whose diff only adds the two observer gates and
+retains every recovery/interface gate. The complete input inventory and
+comparison are in `docs/evidence/2026-09-06_observer-integration/`.
+Fresh capped `scripts/ci --diff` session **74005 terminated with exit 0**,
+log `artifacts/observer-integration/ci-diff.log`, archived in the evidence
+directory. All 3,627 executable rows (3,382 PASS / 245 FAIL) and 394 negative
+rows match the reviewed baseline. Original dirty-parent metadata is retained;
+regenerated full manifests exactly match its original SHA-256 values.
+`verify.py` checks complete unique inventories and allowed stages. Two HIGH
+report-only ledger findings were corrected: current totals and the additional
+BUG-106 `sync/mutex-unlock-fatal/during-panic-unwind` refusal. Historical
+counts are preserved. Fresh reconciliation has no HIGH findings. Independent
+bookkeeping/CI-union review `c8bab8a9` is PASS, including all 3,844 source
+inputs, both complete inventories/manifests, exact case/stage delta and the
+two additive CI hooks. This checkpoint accompanies the accepted merge seal.
+
+I1 serializer foundation is sealed on `typed-i1-declarations` at
+`298e4da1`, followed by independent reviews `7ae7fc0a`/`cf13789f` (original
+review commits `58cd8b69`/`08f7984f`). Four focused tests, full frontend
+tests and 324 independent pairwise identity comparisons pass. Initial CI
+`47743` exited 1 for eight new untracked diagnostic formats and absent
+local corpus records. The exact inventory update passed separate review
+and full diagnostic tests; corrected ordinary CI **1329 exited 0**. Its
+3,607/394 renderer records are explicitly cached, retaining original
+metadata and a checked source-difference inventory. The serializer has no
+production caller. It does not remove markers, admit code closure, or
+replace the future full differential/slow wire train. An ignored root-owned
+identity draft under `.tmp/i1-identity.ilDgsl` is superseded by the separate
+positive identity/decoder increment on that worktree. It proves exact total
+structural equality, decodes the closed positive schema, and checks 24 real
+Go types / 576 ordered identity comparisons, 17 actual decoder negatives and
+four compiled unused-declaration poisons. Dedicated gate **34109 exited 0**.
+Ordinary CI **31463 exited 1** solely because comment prose contained the
+scan token `admit`; changing it to `authorize` leaves code and gates intact.
+Independent review `e9045844` and exact comment-delta review `d2ed3ecd` PASS.
+Corrected ordinary CI **3794 exited 0**, including the default build and new
+declaration gate, with the original explicitly cached 3,607/394 records.
+This increment is committed at `0ff12435`, followed by review cherries
+`18f90eb9`/`798e9c76`; production envelope, executable closure, query
+preservation and actual marker removal remain mandatory I1 work.
+
+The string certificate/byte-guard design has bounded root review in
+`2026-09-06_string-member-certificate-design-review.md`, with exact input
+copies. The renderer author integrated observer source internally at
+`90128828`, preserving pre-guard source hashes. The guard now checks decoded
+bytes before selecting direct text, otherwise choosing the proved reversible
+escape; whole lane validation remains owed. A complete actual abort-chain
+record is required for broader string membership as well as the head. Go
+fidelity cannot be inferred from a string head with arbitrary tail payloads.
+The runtime author owns extraction and exact driver erasure; broader rows
+must connect to the shipped pool driver, not an unrelated sequential replay.
+
+Actual abort-observer independent review is sealed at `ad961e41`: six new
+modules freshly elaborated against audited-base compiled dependencies, ten
+additional kernel probes, and the 43-export/14,549-declaration audit PASS.
+The author's frozen gate and ordinary CI also pass, with cached provenance
+explicit. The complete record comes from an actual pool abort step and
+retains all byte/output/choice/fuel facts; integers and nonstring tails are
+refused even with equal rendering. The author selectively committed the
+unchanged observer increment at `04109912`; integration is the next action.
+Full typed terminal classification and R1 fidelity remain separate work.
+
+Both shared Iris functional proofs now compile, including arbitrary-input
+`wp_shared` with a single owned cell through both handlers and the A2
+refactor using the same call/recovery rules. Generic actual setup, Iris
+adequacy and exact empty-output bridges now compile in the author's draft,
+as does transfer of successful executions to every choice stream. Final
+audits/review and full typed normal/panic/fuel classification remain open. B7 is
+developing at `99e0225d` with its WIP retained: recovery storage/setup and
+call entry have migrated; correspondence and the rest of the customers
+remain unfinished. A capped proof exit 137 was retained and is being
+replaced by smaller explicit dependency rewrites, without raising limits.
+
+O1 survives at the current representation. Full O2 driver/customer evidence,
+R-1 membership and final O3 evidence, actual B7/I1 and complete byte/choice
+capture (including BUG-090), and the O5 closing packet/C1 handoff remain
+mandatory. No main merge, push, stable pin, or Gate A completion is claimed.

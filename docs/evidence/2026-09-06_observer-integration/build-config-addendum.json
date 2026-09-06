@@ -1,0 +1,7 @@
+{
+  "scope": "Added after terminal CI; both files byte-identical to parent HEAD and unchanged throughout integration. Original pre-run inventory retained.",
+  "sources": {
+    "lakefile.toml": "e583697792a6a980576c6d852e3a59c7a795fe83d8f6310afc14c7e802eef038",
+    "lake-manifest.json": "0a9a22ded8ef8946c7123f865d00781c87a2bed6a754dc65b5d612a61b226987"
+  }
+}

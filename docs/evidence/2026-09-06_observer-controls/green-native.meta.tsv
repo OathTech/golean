@@ -1,0 +1,21 @@
+key	value
+frontend	native
+manifest	/home/dev/projects/golean/.tmp/golean-coverage.TgW0lA
+manifest_sha256	eaced638806f59f64c754bc65b0909b4cc9fa4e5a87167c89136f2a1d4406e46
+manifest_cases	9
+total_corpus_cases	3616
+full_run	false
+filters	--prefix panic-recover/panic-controls
+git_commit	ff7173dd959435ede346c77318c29f13e16ed5f3
+git_dirty	true
+go_toolchain	go1.26.5
+go_drift_allowed	0
+go_drift_actual	false
+depth_guard	choice-trace wideAfterExhaustion=0 on every invariance stream
+depth_seeds	1,2,3
+depth_generator	lcg31(1103515245,12345) bits16..31
+depth_trace_timeout_seconds	240
+membership_draws	32
+jobs	2
+fanout_find_exit	0
+fanout_pool_exit	0

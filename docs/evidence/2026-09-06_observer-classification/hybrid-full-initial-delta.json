@@ -1,0 +1,102 @@
+{
+  "cases": 3627,
+  "pass": 3382,
+  "fail": 245,
+  "new": [
+    {
+      "result": "PASS",
+      "id": "panic-recover/panic-markers/first-line",
+      "features": "panic,strings",
+      "stage": "-",
+      "detail": "wide=0 exhausted=none depth=fixed"
+    },
+    {
+      "result": "PASS",
+      "id": "panic-recover/panic-markers/nil-go-literal",
+      "features": "panic,strings",
+      "stage": "-",
+      "detail": "wide=0 exhausted=none depth=fixed"
+    },
+    {
+      "result": "PASS",
+      "id": "panic-recover/panic-markers/deadlock-literal",
+      "features": "panic,strings",
+      "stage": "-",
+      "detail": "wide=0 exhausted=none depth=fixed"
+    },
+    {
+      "result": "PASS",
+      "id": "panic-recover/panic-markers/output-midline",
+      "features": "panic,strings",
+      "stage": "-",
+      "detail": "wide=0 exhausted=none depth=fixed"
+    },
+    {
+      "result": "PASS",
+      "id": "panic-recover/panic-markers/output-line",
+      "features": "panic,strings",
+      "stage": "-",
+      "detail": "wide=0 exhausted=none depth=fixed"
+    },
+    {
+      "result": "PASS",
+      "id": "panic-recover/panic-markers/mixed-line",
+      "features": "panic,strings",
+      "stage": "-",
+      "detail": "wide=0 exhausted=none depth=fixed"
+    },
+    {
+      "result": "PASS",
+      "id": "panic-recover/panic-markers/fake-trace",
+      "features": "panic,strings",
+      "stage": "-",
+      "detail": "wide=0 exhausted=none depth=fixed"
+    },
+    {
+      "result": "PASS",
+      "id": "panic-recover/panic-markers/printed-continuation",
+      "features": "panic,strings,print",
+      "stage": "-",
+      "detail": "wide=0 exhausted=none depth=fixed"
+    },
+    {
+      "result": "PASS",
+      "id": "panic-recover/panic-markers/literal-continuation",
+      "features": "panic,strings",
+      "stage": "-",
+      "detail": "wide=0 exhausted=none depth=fixed"
+    },
+    {
+      "result": "PASS",
+      "id": "panic-recover/panic-markers/glued-output",
+      "features": "panic,strings,print",
+      "stage": "-",
+      "detail": "wide=0 exhausted=none depth=fixed"
+    },
+    {
+      "result": "PASS",
+      "id": "panic-recover/panic-markers/printed-trace",
+      "features": "panic,strings,print",
+      "stage": "-",
+      "detail": "wide=0 exhausted=none depth=fixed"
+    }
+  ],
+  "changed": [
+    {
+      "before": {
+        "result": "PASS",
+        "id": "sync/mutex-unlock-fatal/during-panic-unwind",
+        "stage": "-"
+      },
+      "after": {
+        "result": "FAIL",
+        "id": "sync/mutex-unlock-fatal/during-panic-unwind",
+        "features": "sync,mutex,defer,panic",
+        "stage": "go-observation",
+        "detail": "could not extract Go fatal message: abort classification: ambiguous fatal message/output before m.dying, refused; stdout=\"\" stderr=\"panic: boom\\n\\tfatal error: sync: unlock of unlocked mutex\\n\\ngoroutine 1 gp=0x1cc207b9e1e0 m=0 mp=0x5cdac0 [running]:\\nruntime.fatal({0x4f3e66, 0x1e})\\n\\t/usr/local/go/src/runtime/panic.go:1253 +0x74 fp=0x1cc207cbad80 sp=0x1cc207cbad40 pc=0x4471f4\\ninternal/sync.fatal({0x4f3e66?, 0x1cc207cbae10?})\\n\\t/usr/local/go/src/runtime/panic.go:1191 +0x18 fp=0x1cc207cbada0 sp=0x1cc207cbad80 pc=0x47b798\\ninternal/sync.(*Mutex).unlockSlow(0x1cc207bac1c8, 0xffffffff)\\n\\t/usr/local/go/src/internal/sync/mutex.go:204 +0x35 fp=0x1cc207cbadc8 sp=0x1cc207cbada0 pc=0x485155\\ninternal/sync.(*Mutex).Unlock(...)\\n\\t/usr/local/go/src/internal/sync/mutex.go:198\\nsync.(*Mutex).Unlock(...)\\n\\t/usr/local/go/src/sync/mutex.go:65\\nmain.unlockDuringUnwind.deferwrap1()\\n\\t/home/dev/projects/golean/.claude/worktrees/typed-observer-classification/artifacts/coverage/go-run/sync__mutex-unlock-fatal__during-panic-unwind/main.go:42 +0x29 fp=0x1cc207cbade8 sp=0x1cc207cbadc8 pc=0x4c1e29\\npanic({0x4cf820?, 0x4fa060?})\\n\\t/usr/local/go/src/runtime/panic.go:860 +0x13a fp=0x1cc207cbae98 sp=0x1cc207cbade8 pc=0x47b49a\\nmain.unlockDuringUnwind()\\n\\t/home/dev/projects/golean/.claude/worktrees/typed-observer-classification/artifacts/coverage/go-run/sync__mutex-unlock-fatal__during-panic-unwind/main.go:43 +0x65 fp=0x1cc207cbaee0 sp=0x1cc207cbae98 pc=0x4c1de5\\nmain.main()\\n\\t/home/dev/projects/golean/.claude/worktrees/typed-observer-classification/artifacts/coverage/go-run/sync__mutex-unlock-fatal__during-panic-unwind/zz_golean_harness.go:133 +0x1c fp=0x1cc207cbaf48 sp=0x1cc207cbaee0 pc=0x4c38fc\\nruntime.main()\\n\\t/usr/local/go/src/runtime/proc.go:290 +0x2d5 fp=0x1cc207cbafe0 sp=0x1cc207cbaf48 pc=0x44aab5\\nruntime.goexit({})\\n\\t/usr/local/go/src/runtime/asm_amd64.s:1771 +0x1 fp=0x1cc207cbafe8 sp=0x1cc207cbafe0 pc=0x481aa1\\n\\ngoroutine 2 gp=0x1cc207b9e780 m=nil [force gc (idle)]:\\nruntime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)\\n\\t/usr/local/go/src/runtime/proc.go:462 +0xce fp=0x1cc207c8afa8 sp=0x1cc207c8af88 pc=0x47b96e\\nruntime.goparkunlock(...)\\n\\t/usr/local/go/src/runtime/proc.go:468\\nruntime.forcegchelper()\\n\\t/usr/local/go/src/runtime/proc.go:375 +0xb3 fp=0x1cc207c8afe0 sp=0x1cc207c8afa8 pc=0x44add3\\nruntime.goexit({})\\n\\t/usr/local/go/src/runtime/asm_amd64.s:1771 +0x1 fp=0x1cc207c8afe8 sp=0x1cc207c8afe0 pc=0x481aa1\\ncreated by runtime.init.7 in goroutine 1\\n\\t/usr/local/go/src/runtime/proc.go:363 +0x1a\\n\\ngoroutine 3 gp=0x1cc207b9ed20 m=nil [GC sweep wait]:\\nruntime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)\\n\\t/usr/local/go/src/runtime/proc.go:462 +0xce fp=0x1cc207c8b788 sp=0x1cc207c8b768 pc=0x47b96e\\nruntime.goparkunlock(...)\\n\\t/usr/local/go/src/runtime/proc.go:468\\nruntime.bgsweep(0x1cc207bbe100)\\n\\t/usr/local/go/src/runtime/mgcsweep.go:279 +0x94 fp=0x1cc207c8b7c8 sp=0x1cc207c8b788 pc=0x435e74\\nruntime.gcenable.gowrap1()\\n\\t/usr/local/go/src/runtime/mgc.go:214 +0x17 fp=0x1cc207c8b7e0 sp=0x1cc207c8b7c8 pc=0x427497\\nruntime.goexit({})\\n\\t/usr/local/go/src/runtime/asm_amd64.s:1771 +0x1 fp=0x1cc207c8b7e8 sp=0x1cc207c8b7e0 pc=0x481aa1\\ncreated by runtime.gcenable in goroutine 1\\n\\t/usr/local/go/src/runtime/mgc.go:214 +0x66\\n\\ngoroutine 4 gp=0x1cc207b9ef00 m=nil [GC scavenge wait]:\\nruntime.gopark(0x1cc207bbe100?, 0x4f9918?, 0x1?, 0x0?, 0x1cc207b9ef00?)\\n\\t/usr/local/go/src/runtime/proc.go:462 +0xce fp=0x1cc207c8bf78 sp=0x1cc207c8bf58 pc=0x47b96e\\nruntime.goparkunlock(...)\\n\\t/usr/local/go/src/runtime/proc.go:468\\nruntime.(*scavengerState).park(0x5ccac0)\\n\\t/usr/local/go/src/runtime/mgcscavenge.go:425 +0x49 fp=0x1cc207c8bfa8 sp=0x1cc207c8bf78 pc=0x4339a9\\nruntime.bgscavenge(0x1cc207bbe100)\\n\\t/usr/local/go/src/runtime/mgcscavenge.go:653 +0x3c fp=0x1cc207c8bfc8 sp=0x1cc207c8bfa8 pc=0x433f1c\\nruntime.gcenable.gowrap2()\\n\\t/usr/local/go/src/runtime/mgc.go:215 +0x17 fp=0x1cc207c8bfe0 sp=0x1cc207c8bfc8 pc=0x427457\\nruntime.goexit({})\\n\\t/usr/local/go/src/runtime/asm_amd64.s:1771 +0x1 fp=0x1cc207c8bfe8 sp=0x1cc207c8bfe0 pc=0x481aa1\\ncreated by runtime.gcenable in goroutine 1\\n\\t/usr/local/go/src/runtime/mgc.go:215 +0xa5\\n\\ngoroutine 5 gp=0x1cc207b9f4a0 m=nil [finalizer wait]:\\nruntime.gopark(0x45a215?, 0x0?, 0x0?, 0x0?, 0x0?)\\n\\t/usr/local/go/src/runtime/proc.go:462 +0xce fp=0x1cc207c8a620 sp=0x1cc207c8a600 pc=0x47b96e\\nruntime.runFinalizers()\\n\\t/usr/local/go/src/runtime/mfinal.go:210 +0x107 fp=0x1cc207c8a7e0 sp=0x1cc207c8a620 pc=0x4264a7\\nruntime.goexit({})\\n\\t/usr/local/go/src/runtime/asm_amd64.s:1771 +0x1 fp=0x1cc207c8a7e8 sp=0x1cc207c8a7e0 pc=0x481aa1\\ncreated by runtime.createfing in goroutine 1\\n\\t/usr/local/go/src/runtime/mfinal.go:172 +0x3d\\nexit status 2\\n\""
+      }
+    }
+  ],
+  "removed": [],
+  "production_source_manifest_verified": true
+}

@@ -1,0 +1,30 @@
+[
+  {
+    "path": "tools/coverageharness/abortkind.go",
+    "sha256": "3d3ca0aac0ce3620c8d749ac7baf5fdd27262e5c22ed6d07a45a360e12dbd1d2"
+  },
+  {
+    "path": "tools/coverageharness/abortkind_test.go",
+    "sha256": "5c0b64ac5ab42f56454a933e6f23dfde1bd8d727121fbc54e336b35ada491509"
+  },
+  {
+    "path": "tools/coverageharness/main.go",
+    "sha256": "bef743b1b2283717d48f03072f0a021d4f21379eae3dd6d22976332bfa52bc32"
+  },
+  {
+    "path": "tools/coverageharness/observe.go",
+    "sha256": "0efb5fb57213705e3ea4ce23d4a01844401cc9cdf66a1a00dd6112275f759892"
+  },
+  {
+    "path": "tools/coverageharness/observe_test.go",
+    "sha256": "a4afeac59615ec2da5b9f1a9d9f61c2b828dbaab0edd7925202cf83d9d341673"
+  },
+  {
+    "path": "tools/coverageharness/split.go",
+    "sha256": "cb55a875bcd60c8585d6a91d85cd7ad3a3753eeb779add836a47d52f73a8532e"
+  },
+  {
+    "path": "tools/coverageharness/split_test.go",
+    "sha256": "1fcfd98abdea4f751916483708411b7e5228fcd0cc172c230df3e458e68cf801"
+  }
+]

@@ -1,0 +1,36 @@
+{
+  "mode": "existing frontend/model boundary probes, not a proof against arbitrary unsupported Go or hostile filesystem mutation",
+  "scratch": "/home/dev/projects/golean/.tmp/crash-hook-source-boundary-wrff2f0y",
+  "rows": [
+    {
+      "name": "override",
+      "source": "package main\nimport \"runtime/debug\"\nfunc Attack() int { debug.SetCrashOutput(nil, debug.CrashOptions{}); return 1 }\nfunc main(){}\n",
+      "frontend_rc": 0,
+      "frontend_stdout": "",
+      "frontend_stderr": "",
+      "model_rc": 1,
+      "model_stdout": "{\"message\":\"frontend-quarantined: package-selector call debug.SetCrashOutput (package \\\"runtime/debug\\\" surface not modeled)\",\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"unsupported\"}\n",
+      "model_stderr": ""
+    },
+    {
+      "name": "file-write",
+      "source": "package main\nimport \"os\"\nfunc Attack() int { os.WriteFile(\"oracle.crash\", []byte(\"forged\"), 0600); return 1 }\nfunc main(){}\n",
+      "frontend_rc": 0,
+      "frontend_stdout": "",
+      "frontend_stderr": "",
+      "model_rc": 1,
+      "model_stdout": "{\"message\":\"frontend-quarantined: package-selector call os.WriteFile (package \\\"os\\\" surface not modeled)\",\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"unsupported\"}\n",
+      "model_stderr": ""
+    },
+    {
+      "name": "traceback",
+      "source": "package main\nimport \"runtime/debug\"\nfunc Attack() int { debug.SetTraceback(\"none\"); return 1 }\nfunc main(){}\n",
+      "frontend_rc": 0,
+      "frontend_stdout": "",
+      "frontend_stderr": "",
+      "model_rc": 1,
+      "model_stdout": "{\"message\":\"frontend-quarantined: package-selector call debug.SetTraceback (package \\\"runtime/debug\\\" surface not modeled)\",\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"unsupported\"}\n",
+      "model_stderr": ""
+    }
+  ]
+}

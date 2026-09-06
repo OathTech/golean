@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features
+first-line	panicMarkerFirstLine	-	panic	fatal error: harmless payload	panic,strings
+nil-go-literal	panicMarkerNilGoLiteral	-	panic	fakefatal error: go of nil func value	panic,strings
+deadlock-literal	panicMarkerDeadlockLiteral	-	panic	fatal error: all goroutines are asleep - deadlock!	panic,strings
+output-midline	panicMarkerOutput	-	panic	original	panic,strings
+output-line	panicMarkerOutputLine	-	panic	original	panic,strings
+# Runtime-origin evidence preserves these legal multiline string payloads.
+mixed-line	panicMarkerMixed	-	panic	original	panic,strings
+fake-trace	panicMarkerFakeTrace	-	panic	original	panic,strings
+printed-continuation	panicMarkerPrintedContinuation	-	panic	actual	panic,strings,print
+literal-continuation	panicMarkerLiteralContinuation	-	panic	forged	panic,strings
+glued-output	panicMarkerGluedOutput	-	panic	actual	panic,strings,print
+printed-trace	panicMarkerPrintedTrace	-	panic	actual	panic,strings,print

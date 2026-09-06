@@ -1,0 +1,10 @@
+{
+  "base_commit": "ff7173dd959435ede346c77318c29f13e16ed5f3",
+  "go_version": "go version go1.26.5 linux/amd64",
+  "worktree": "/home/dev/projects/golean/.claude/worktrees/typed-observer-controls",
+  "scope": "source-bound dirty feature worktree; no main merge, no stable pin claim",
+  "red_case_count": 8,
+  "green_case_count": 9,
+  "red_raw_stream_note": "Initial raw stream files were overwritten by the green focused rerun; preserved initial red log/TSV/meta are exact. green-native-raw-streams.json records the later green run only.",
+  "lean_model_changed": false
+}

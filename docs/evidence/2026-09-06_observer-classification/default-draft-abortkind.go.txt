@@ -1,0 +1,82 @@
+package main
+
+import (
+	"bytes"
+	"fmt"
+	"regexp"
+	"runtime"
+)
+
+// This discriminator is deliberately tied to the inspected Go 1.26.5
+// runtime wrapper and its source position. It is not a general stack parser.
+var syncFatalFrame = regexp.MustCompile(`^internal/sync\.fatal\([^\n]*\)$`)
+var syncFatalSource = regexp.MustCompile(`^\t/[^\t\r\n]*/src/runtime/panic\.go:1191(?: \+0x[0-9a-f]+)?$`)
+
+func pinnedSyncFatalTrace(trace []byte) bool {
+	if runtime.Version() != "go1.26.5" {
+		return false
+	}
+	// `trace` starts at the validated UNINDENTED goroutine header. Do not
+	// TrimSpace: printindented prefixes every payload line with TAB, so a
+	// payload's fake header/frame/path must remain distinguishable here.
+	lines := bytes.Split(trace, []byte{'\n'})
+	return len(lines) >= 3 && bytes.HasPrefix(lines[0], []byte("goroutine ")) &&
+		syncFatalFrame.Match(lines[1]) && syncFatalSource.Match(lines[2])
+}
+
+// abortKind classifies the validated report, not arbitrary marker text in
+// program output, the first payload line, or stack diagnostics. An unknown
+// mixed panic/fatal message region refuses: declared expected status cannot
+// supply the missing terminal evidence.
+func abortKind(stderr []byte) (string, error) {
+	if !bytes.HasSuffix(stderr, []byte("\nexit status 2\n")) {
+		return "", fmt.Errorf("abort classification: expected the child's exact exit status 2 trailer")
+	}
+	body, err := stripTrailer(stderr)
+	if err != nil {
+		return "", err
+	}
+	if prefix, err := splitStderr(stderr, "panic"); err == nil {
+		report := body[len(prefix):]
+		header := goroutineHeaderRe.FindIndex(report) // guaranteed by splitStderr
+		if header == nil {
+			return "", fmt.Errorf("abort classification: missing goroutine header")
+		}
+		// Arbitrary program output can forge a panic marker AND trace header
+		// before a real fatal report. Payload indentation authenticates neither
+		// of those printed bytes. A later fatal marker means the selected
+		// boundary is untrusted; never classify that stream as panic. This
+		// deliberately also refuses marker-bearing stack diagnostics, whose
+		// frame grammar is outside this narrow observer contract.
+		if bytes.Contains(report[header[0]:], []byte("fatal error: ")) {
+			return "", fmt.Errorf("abort classification: fatal marker after selected trace header; report boundary is ambiguous, refused")
+		}
+		messageLines := bytes.Split(report[:header[0]], []byte{'\n'})
+		var fatalLines [][]byte
+		for _, line := range messageLines[1:] {
+			if bytes.HasPrefix(line, []byte("\tfatal error: ")) || bytes.HasPrefix(line, []byte("fatal error: ")) {
+				fatalLines = append(fatalLines, line)
+			}
+		}
+		if len(fatalLines) == 0 {
+			return "panic", nil
+		}
+		if len(fatalLines) == 1 && bytes.Equal(fatalLines[0], []byte("\tfatal error: sync: unlock of unlocked mutex")) &&
+			pinnedSyncFatalTrace(report[header[0]+2:]) {
+			return "fatal", nil
+		}
+		return "", fmt.Errorf("abort classification: ambiguous mixed panic/fatal message region; no supported pinned stack discriminator, refused")
+	}
+	prefix, err := splitStderr(stderr, "fatal")
+	if err != nil {
+		return "", err
+	}
+	line := bytes.SplitN(body[len(prefix):], []byte{'\n'}, 2)[0]
+	if !bytes.HasPrefix(line, []byte("fatal error: ")) {
+		return "", fmt.Errorf("abort classification: no leading fatal report, refused")
+	}
+	if bytes.Equal(line, []byte("fatal error: all goroutines are asleep - deadlock!")) {
+		return "deadlock", nil
+	}
+	return "fatal", nil
+}

@@ -1,0 +1,30 @@
+{
+  "go_version": "go version go1.26.5 linux/amd64",
+  "source_note": "Actual installed pinned runtime, not reference deps/go checkout",
+  "files": [
+    {
+      "path": "/usr/local/go/src/runtime/panic.go",
+      "sha256": "4951c11983710ee957881d230290aa8cb130a873d83c55c86a0e4c7ecd35d190"
+    },
+    {
+      "path": "/usr/local/go/src/runtime/error.go",
+      "sha256": "138957e6d2a126af0d6b2d032466fbe2bc3c95bb57b058a00987e814b2385e1f"
+    },
+    {
+      "path": "/usr/local/go/src/runtime/traceback.go",
+      "sha256": "5e36274d9f72398d5d5287d8baffc94570719ec639ff0c2ef3a2ed0266f3e350"
+    },
+    {
+      "path": "/usr/local/go/src/runtime/runtime1.go",
+      "sha256": "e9aea0b82b76931e2181563cc967112de12416a90c5467da8f2e178bbb04b8b2"
+    },
+    {
+      "path": "/usr/local/go/src/runtime/extern.go",
+      "sha256": "1afbe8b480e8c6b6a4d54b0f88f07606077a061f653198fa150e5d2a45e2bc8a"
+    },
+    {
+      "path": "/usr/local/go/src/internal/sync/mutex.go",
+      "sha256": "0535ca03e44cb62cf3e4a511b989ffd0f08ec899d864e2a817b77c4025bec48c"
+    }
+  ]
+}

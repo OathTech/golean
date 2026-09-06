@@ -10,7 +10,7 @@ import (
 // four shapes the first cut UNDERSTATED (they returned a prefix where gc's
 // stream is ambiguous) — each failed against the first cut before the fix.
 
-const trace = "\n\ngoroutine 1 [running]:\nmain.main()\n\t/tmp/x.go:5 +0x1d\nexit status 2\n"
+const trace = panicTrace
 
 func refuses(t *testing.T, stderr, status, want string) {
 	t.Helper()
@@ -42,8 +42,9 @@ func TestSplitStderrPanic(t *testing.T) {
 	accepts(t, "panic: boom"+trace, "panic", "")
 	// a payload with a newline: the block is still one marker + header
 	accepts(t, "p\npanic: first line\n\tsecond line"+trace, "panic", "p\n")
-	// the repanic chain: the continuation `\n\tpanic: ` does not count
-	accepts(t, "x\npanic: a [recovered]\n\tpanic: b"+trace, "panic", "x\n")
+	// Raw repanic has the same marker shape as a printed prefix. Only
+	// the owned channel accepts this shape (TestOwnedPanicPartition).
+	refuses(t, "x\npanic: a [recovered]\n\tpanic: b"+trace, "panic", "ambiguous")
 	// A2 shape 1: the program printed the marker text without a newline —
 	// gc's block is glued to it (`panic: fakepanic: real`): two occurrences
 	refuses(t, "panic: fakepanic: real"+trace, "panic", "ambiguous")
@@ -57,13 +58,13 @@ func TestSplitStderrPanic(t *testing.T) {
 }
 
 func TestSplitStderrFatalAndDeadlock(t *testing.T) {
-	dl := "tick\nfatal error: all goroutines are asleep - deadlock!\n\ngoroutine 1 [chan receive]:\nexit status 2\n"
+	dl := "tick\nfatal error: all goroutines are asleep - deadlock!" + runtimeFatalTrace
 	accepts(t, dl, "deadlock", "tick\n")
 	// the unwinding shape: panic line first, tab-indented fatal continuation
-	unw := "p\npanic: v [recovered]\n\tfatal error: sync: unlock of unlocked mutex"+trace
-	accepts(t, unw, "fatal", "p\n")
+	unw := "p\npanic: v [recovered]\n\tfatal error: sync: unlock of unlocked mutex" + fatalTrace
+	refuses(t, unw, "fatal", "before m.dying")
 	// A2 shape 3: a printed `panic: …` line beside a real deadlock block
-	refuses(t, "panic: hello\nfatal error: all goroutines are asleep - deadlock!\n\ngoroutine 1 [chan receive]:\nexit status 2\n", "deadlock", "ambiguous")
+	refuses(t, "panic: hello\nfatal error: all goroutines are asleep - deadlock!"+runtimeFatalTrace, "deadlock", "ambiguous")
 	// A2 shape 4: the marker text printed without a newline, glued to the block
 	refuses(t, "fatal error: minefatal error: all goroutines are asleep - deadlock!\n\ngoroutine 1 [chan receive]:\nexit status 2\n", "deadlock", "ambiguous")
 	refuses(t, "fatal error: a\nfatal error: b\n\ngoroutine 1 [running]:\nexit status 2\n", "fatal", "ambiguous")
