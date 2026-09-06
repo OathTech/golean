@@ -1,0 +1,11 @@
+{
+  "base": "99e0225d9aa235ff999150ea07fdaf8fc4355e98",
+  "independent_build": "Six new modules freshly elaborated against copied compiled dependencies from audited 99e0225d integration source; all inventoried dependency sources hash-match. Not a clean rebuild of the full base.",
+  "fresh_build_session": 86950,
+  "fresh_build_exit": 0,
+  "independent_probes_session": 54677,
+  "independent_probes_exit": 0,
+  "author_ci_session": 62948,
+  "author_ci_exit": 0,
+  "author_ci_scope": "Ordinary CI, original cached 3607 executable / 394 negative provenance retained; not fresh full differential."
+}
