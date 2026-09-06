@@ -1,0 +1,52 @@
+Tests/RecoverySetup.lean:23:26: error: failed to synthesize
+  Decidable (checkRecovery mixedProgram "mixed" #[GoValue.bool false, GoValue.bool false] = Except.ok ())
+
+Hint: Additional diagnostic information may be available using the `set_option diagnostics true` command.
+Tests/RecoverySetup.lean:23:26: error: failed to synthesize
+  Decidable (checkRecovery mixedProgram "mixed" #[GoValue.bool false, GoValue.bool true] = Except.ok ())
+
+Hint: Additional diagnostic information may be available using the `set_option diagnostics true` command.
+Tests/RecoverySetup.lean:23:26: error: failed to synthesize
+  Decidable (checkRecovery mixedProgram "mixed" #[GoValue.bool true, GoValue.bool false] = Except.ok ())
+
+Hint: Additional diagnostic information may be available using the `set_option diagnostics true` command.
+Tests/RecoverySetup.lean:23:26: error: failed to synthesize
+  Decidable (checkRecovery mixedProgram "mixed" #[GoValue.bool true, GoValue.bool true] = Except.ok ())
+
+Hint: Additional diagnostic information may be available using the `set_option diagnostics true` command.
+Tests/RecoverySetup.lean:32:80: error: failed to synthesize
+  Decidable (findFunctionIn? mixedProgram.funcs { key := "mixed" } = some mixed)
+
+Hint: Additional diagnostic information may be available using the `set_option diagnostics true` command.
+Tests/RecoverySetup.lean:45:49: error: Expected type must not contain free variables
+  0 < [GoValue.bool x, GoValue.bool y].length
+
+Hint: Use the `+revert` option to automatically clean up and revert free variables
+Tests/RecoverySetup.lean:46:44: error: Expected type must not contain free variables
+  1 < [GoValue.bool x, GoValue.bool y].length
+
+Hint: Use the `+revert` option to automatically clean up and revert free variables
+Tests/RecoverySetup.lean:56:2: error: failed to synthesize
+  Decidable
+    (checkRecovery mixedProgram "mixed" #[GoValue.addr (Loc.base { id := 0 }), GoValue.bool true] ≠ Except.ok ())
+
+Hint: Additional diagnostic information may be available using the `set_option diagnostics true` command.
+Tests/RecoverySetup.lean:62:2: error: failed to synthesize
+  Decidable
+    (checkRecovery
+        (let __src := mixedProgram;
+        { typeDefs := __src.typeDefs,
+          funcs :=
+            #[let __src := mixed;
+              { id := __src.id, args := __src.args, results := #[{ id := "x", typ := Ty.bool }], body := __src.body,
+                variadic := __src.variadic, wrapper := __src.wrapper }],
+          methods := __src.methods, globals := __src.globals, methodSets := __src.methodSets,
+          typeDisplays := __src.typeDisplays })
+        "mixed" #[GoValue.bool false, GoValue.bool true] ≠
+      Except.ok ())
+
+Hint: Additional diagnostic information may be available using the `set_option diagnostics true` command.
+Tests/RecoverySetup.lean:98:41: error: failed to synthesize
+  Decidable (checkRecovery emptyProgram "empty" #[] = Except.ok ())
+
+Hint: Additional diagnostic information may be available using the `set_option diagnostics true` command.

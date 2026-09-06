@@ -1,0 +1,14 @@
+GoLean/GoCore/RecoverySetupShape.lean:140:4: error: Type mismatch: After simplification, term
+  ht
+ has type
+  (match
+      scopeLookup
+        (List.map (fun p => (p.id, p.typ)) f.args.toList ++ List.map (fun p => (p.id, p.typ)) f.results.toList)
+        name with
+    | some ty => some ty
+    | none => none) =
+    some ty
+but is expected to have type
+  scopeLookup (List.map (fun p => (p.id, p.typ)) f.args.toList ++ List.map (fun p => (p.id, p.typ)) f.results.toList)
+      name =
+    some ty

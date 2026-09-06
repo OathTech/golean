@@ -1,0 +1,37 @@
+GoLean/GoCore/RecoveryResultRoots.lean:31:20: error: unsolved goals
+world : World
+s : ExecState
+ps : List Param
+locs : List Loc
+heap : HeapTyped world s
+p✝ : Param
+ps✝ : List Param
+loc✝ : Loc
+locs✝ : List Loc
+a✝ : ResultRoots world ps✝ locs✝
+sort : ValueSort
+ht : TypeClass p✝.typ sort
+hl : AddressTyped world sort loc✝
+v : GoValue
+hv : loadLoc s loc✝ = Except.ok v
+hvtype : ValueTyped world sort v
+vs : List GoValue
+hvs : loadMany s locs✝ = Except.ok vs
+htypes : ParamsValues world ps✝ vs
+⊢ pure (v :: vs) = Except.ok (v :: vs)
+GoLean/GoCore/RecoveryResultRoots.lean:42:24: error: unsolved goals
+world : World
+env : LocalEnv
+p : Param
+ps : List Param
+ih :
+  (∀ (p : Param), p ∈ ps → ∃ loc, env.lookup p.id = some loc ∧ AddressAt world p.typ loc) →
+    ∃ locs, pinResultLocs env ps = Except.ok locs ∧ ResultRoots world ps locs
+h : ∀ (p_1 : Param), p_1 ∈ p :: ps → ∃ loc, env.lookup p_1.id = some loc ∧ AddressAt world p_1.typ loc
+loc : Loc
+hl : env.lookup p.id = some loc
+ht : AddressAt world p.typ loc
+locs : List Loc
+hls : pinResultLocs env ps = Except.ok locs
+hts : ResultRoots world ps locs
+⊢ pure (loc :: locs) = Except.ok (loc :: locs)

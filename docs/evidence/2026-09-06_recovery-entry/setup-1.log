@@ -1,0 +1,180 @@
+GoLean/GoCore/RecoverySetup.lean:44:24: error: unsolved goals
+world : World
+env : LocalEnv
+p : Param
+ps : List Param
+ih :
+  (∀ (p : Param), p ∈ ps → ∃ loc, env.lookup p.id = some loc ∧ AddressAt world p.typ loc) →
+    ∃ locs, pinResultLocs env ps = Except.ok locs ∧ ResultRoots world ps locs
+h : ∀ (p_1 : Param), p_1 ∈ p :: ps → ∃ loc, env.lookup p_1.id = some loc ∧ AddressAt world p_1.typ loc
+loc : Loc
+hl : env.lookup p.id = some loc
+ht : AddressAt world p.typ loc
+locs : List Loc
+hls : pinResultLocs env ps = Except.ok locs
+hts : ResultRoots world ps locs
+⊢ (do
+      let __do_lift ← Except.ok locs
+      Except.ok (loc :: __do_lift)) =
+    Except.ok (loc :: locs)
+GoLean/GoCore/RecoverySetup.lean:130:4: error: unsolved goals
+case some.refine_1
+p : Program
+name : String
+args : Array GoValue
+h : RecoveryAdmission p name args
+fuel : Nat
+ch : Choices
+hentry : Admission.Entry p name args
+hp : ProgramTyped p
+f : Func
+hf : findFunctionIn? p.funcs { key := name } = some f
+harity : f.args.size = args.size
+hargs : Admission.BoolParams f.args
+hvalues : Admission.InitialArguments args
+ht : FunctionTyped p.funcs f
+bs : List Bool
+hbs : args.toList = List.map GoValue.bool bs
+hlen : f.args.toList.length = bs.length
+values : ParamsValues #[] f.args.toList args.toList
+zeros : List GoValue
+hz : ZeroValues f.results.toList zeros
+w₁ : World
+ext₁ : Extends #[] w₁
+he₁ :
+  EnvTyped w₁ (declareMany [] f.args.toList)
+    (BooleanRuntime.declareRoots [] (Array.size (BooleanRuntime.programState p).heap) (List.map Param.id f.args.toList))
+hh₁ :
+  HeapTyped w₁
+    { types := (BooleanRuntime.programState p).types, functions := (BooleanRuntime.programState p).functions,
+      methods := (BooleanRuntime.programState p).methods, methodSets := (BooleanRuntime.programState p).methodSets,
+      typeDisplays := (BooleanRuntime.programState p).typeDisplays,
+      heap := (BooleanRuntime.programState p).heap ++ (parameterCells f.args.toList args.toList).toArray }
+hc₁ :
+  BooleanRuntime.SameContext (BooleanRuntime.programState p)
+    { types := (BooleanRuntime.programState p).types, functions := (BooleanRuntime.programState p).functions,
+      methods := (BooleanRuntime.programState p).methods, methodSets := (BooleanRuntime.programState p).methodSets,
+      typeDisplays := (BooleanRuntime.programState p).typeDisplays,
+      heap := (BooleanRuntime.programState p).heap ++ (parameterCells f.args.toList args.toList).toArray }
+hs₁ :
+  Array.size
+      { types := (BooleanRuntime.programState p).types, functions := (BooleanRuntime.programState p).functions,
+          methods := (BooleanRuntime.programState p).methods, methodSets := (BooleanRuntime.programState p).methodSets,
+          typeDisplays := (BooleanRuntime.programState p).typeDisplays,
+          heap := (BooleanRuntime.programState p).heap ++ (parameterCells f.args.toList args.toList).toArray }.heap =
+    Array.size (BooleanRuntime.programState p).heap + f.args.toList.length
+hb :
+  bindParams []
+      { types := p.typeDefs, functions := p.funcs, methods := p.methods, methodSets := p.methodSets,
+        typeDisplays := p.typeDisplays }
+      f.args.toList args.toList =
+    Except.ok
+      (BooleanRuntime.declareRoots [] #[].size (List.map Param.id f.args.toList),
+        { types := p.typeDefs, functions := p.funcs, methods := p.methods, methodSets := p.methodSets,
+          typeDisplays := p.typeDisplays, heap := #[] ++ (parameterCells f.args.toList args.toList).toArray })
+hbe :
+  (BooleanRuntime.declareRoots [] (Array.size (BooleanRuntime.programState p).heap) (List.map Param.id f.args.toList),
+      { types := (BooleanRuntime.programState p).types, functions := (BooleanRuntime.programState p).functions,
+        methods := (BooleanRuntime.programState p).methods, methodSets := (BooleanRuntime.programState p).methodSets,
+        typeDisplays := (BooleanRuntime.programState p).typeDisplays,
+        heap := (BooleanRuntime.programState p).heap ++ (parameterCells f.args.toList args.toList).toArray }) =
+    (BooleanRuntime.declareRoots [] (Array.size (BooleanRuntime.programState p).heap) (List.map Param.id f.args.toList),
+      { types := (BooleanRuntime.programState p).types, functions := (BooleanRuntime.programState p).functions,
+        methods := (BooleanRuntime.programState p).methods, methodSets := (BooleanRuntime.programState p).methodSets,
+        typeDisplays := (BooleanRuntime.programState p).typeDisplays,
+        heap := (BooleanRuntime.programState p).heap ++ (parameterCells f.args.toList args.toList).toArray })
+world : World
+ext₂ : Extends w₁ world
+hae :
+  allocDecls
+      (BooleanRuntime.declareRoots [] (Array.size (BooleanRuntime.programState p).heap)
+        (List.map Param.id f.args.toList))
+      (let __src := BooleanRuntime.programState p;
+      { types := __src.types, functions := __src.functions, methods := __src.methods, methodSets := __src.methodSets,
+        typeDisplays := __src.typeDisplays,
+        heap := (BooleanRuntime.programState p).heap ++ (parameterCells f.args.toList args.toList).toArray })
+      f.results.toList =
+    Except.ok (BooleanRuntime.initialEnv f, initialState p f args.toList zeros)
+he₂ : EnvTyped world (declareMany (declareMany [] f.args.toList) f.results.toList) (BooleanRuntime.initialEnv f)
+hh₂ : HeapTyped world (initialState p f args.toList zeros)
+hc₂ :
+  BooleanRuntime.SameContext
+    { types := (BooleanRuntime.programState p).types, functions := (BooleanRuntime.programState p).functions,
+      methods := (BooleanRuntime.programState p).methods, methodSets := (BooleanRuntime.programState p).methodSets,
+      typeDisplays := (BooleanRuntime.programState p).typeDisplays,
+      heap := (BooleanRuntime.programState p).heap ++ (parameterCells f.args.toList args.toList).toArray }
+    (initialState p f args.toList zeros)
+hs₂ :
+  Array.size (initialState p f args.toList zeros).heap =
+    Array.size
+        { types := (BooleanRuntime.programState p).types, functions := (BooleanRuntime.programState p).functions,
+            methods := (BooleanRuntime.programState p).methods,
+            methodSets := (BooleanRuntime.programState p).methodSets,
+            typeDisplays := (BooleanRuntime.programState p).typeDisplays,
+            heap := (BooleanRuntime.programState p).heap ++ (parameterCells f.args.toList args.toList).toArray }.heap +
+      f.results.toList.length
+ha :
+  allocDecls
+      (BooleanRuntime.declareRoots [] (Array.size (BooleanRuntime.programState p).heap)
+        (List.map Param.id f.args.toList))
+      { types := (BooleanRuntime.programState p).types, functions := (BooleanRuntime.programState p).functions,
+        methods := (BooleanRuntime.programState p).methods, methodSets := (BooleanRuntime.programState p).methodSets,
+        typeDisplays := (BooleanRuntime.programState p).typeDisplays,
+        heap := (BooleanRuntime.programState p).heap ++ (parameterCells f.args.toList args.toList).toArray }
+      f.results.toList =
+    Except.ok (BooleanRuntime.initialEnv f, initialState p f args.toList zeros)
+hae' :
+  (BooleanRuntime.initialEnv f, initialState p f args.toList zeros) =
+    (BooleanRuntime.initialEnv f, initialState p f args.toList zeros)
+hdecl : EnvTyped world (declareMany [] (f.args.toList ++ f.results.toList)) (BooleanRuntime.initialEnv f)
+henv : EnvTyped world (initialContext f) (BooleanRuntime.initialEnv f)
+hpinexact hpin :
+  pinResultLocs (BooleanRuntime.initialEnv f) f.results.toList = Except.ok (BooleanRuntime.initialResults f)
+hroots : ResultRoots world f.results.toList (BooleanRuntime.initialResults f)
+hg : p.globals = #[]
+hreserved : p.typeDefs.hasReservedPrefix = true
+hw :
+  StateWf
+    { types := p.typeDefs, functions := p.funcs, methods := p.methods, methodSets := p.methodSets,
+      typeDisplays := p.typeDisplays }
+hinit : findFunctionIn? p.funcs pkgInitFuncId = none
+hseed :
+  seedGlobals
+      { types := p.typeDefs, functions := p.funcs, methods := p.methods, methodSets := p.methodSets,
+        typeDisplays := p.typeDisplays }
+      #[] =
+    Except.ok
+      { types := p.typeDefs, functions := p.funcs, methods := p.methods, methodSets := p.methodSets,
+        typeDisplays := p.typeDisplays }
+⊢ (match
+      allocDecls (BooleanRuntime.declareRoots [] 0 (List.map Param.id f.args.toList))
+        { types := p.typeDefs, functions := p.funcs, methods := p.methods, methodSets := p.methodSets,
+          typeDisplays := p.typeDisplays, heap := (parameterCells f.args.toList args.toList).toArray }
+        f.results.toList with
+    | Except.error err => Except.error err
+    | Except.ok v =>
+      match pinResultLocs v.fst f.results.toList with
+      | Except.error err => Except.error err
+      | Except.ok v_1 => Except.ok (Config.exec f.body v.fst (Cont.frame [] [] [] [] Cont.stop), v.snd, v_1, ch)) =
+    Except.ok
+      (Config.exec f.body (BooleanRuntime.initialEnv f) (Cont.frame [] [] [] [] Cont.stop),
+        initialState p f args.toList zeros, BooleanRuntime.initialResults f, ch)
+GoLean/GoCore/RecoverySetup.lean:131:32: warning: This simp argument is unused:
+  hae
+
+Hint: Omit it from the simp argument list.
+  simp [runProgramSetupM, hf, harity, hreserved, hg, hseed, hw,
+  ̵  ̵ ̵ ̵ ̵ ̵ ̵ ̵runPkgInitM, hinit, hb,
+  ̲ h̵a̵e̵,̵  ̲ ̲ ̲ ̲hpinexact,
+  ̵  ̵ ̵ ̵ ̵ ̵ ̵ ̵Bind.bind, Except.bind, Pure.pure, Except.pure]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+GoLean/GoCore/RecoverySetup.lean:131:37: warning: This simp argument is unused:
+  hpinexact
+
+Hint: Omit it from the simp argument list.
+  simp [runProgramSetupM, hf, harity, hreserved, hg, hseed, hw,
+  ̵  ̵ ̵ ̵ ̵ ̵ ̵ ̵runPkgInitM, hinit, hb, hae, ̵h̵p̵i̵n̵e̵x̵a̵c̵t̵,̵
+         ̵ ̵Bind.bind, Except.bind, Pure.pure, Except.pure]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`

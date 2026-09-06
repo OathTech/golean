@@ -1,0 +1,5 @@
+GoLean/GoCore/RecoveryInitialization.lean:24:6: error: Dependent elimination failed: Failed to solve equation
+  p.2 = Ty.bool
+GoLean/GoCore/RecoveryInitialization.lean:68:72: error: No goals to be solved
+GoLean/GoCore/RecoveryInitialization.lean:75:52: error: Dependent elimination failed: Failed to solve equation
+  p.2 = Ty.bool
