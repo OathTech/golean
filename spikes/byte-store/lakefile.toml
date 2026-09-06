@@ -1,0 +1,12 @@
+name = "golean-byte-store-proof"
+defaultTargets = ["ByteStoreAudit"]
+
+[[require]]
+name = "GoLean"
+path = "../.."
+
+[[lean_lib]]
+name = "ByteStore"
+
+[[lean_lib]]
+name = "ByteStoreAudit"
