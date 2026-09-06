@@ -1,5 +1,6 @@
 import Tests.InterfaceContract
 import Tests.BooleanRuntime
+import Tests.BooleanProgram
 import Lean
 
 /-! The command runs from a separate harness after complete imports. Origin
@@ -22,8 +23,12 @@ def InterfaceAudit.run : CoreM Unit := do
     `GoLean.GoCore.BooleanTyping, `GoLean.GoCore.BooleanStore,
     `GoLean.GoCore.BooleanSetup,
     `GoLean.GoCore.BooleanInitialization,
+    `GoLean.GoCore.BooleanControlTyping, `GoLean.GoCore.BooleanControl,
+    `GoLean.GoCore.BooleanInvariant, `GoLean.GoCore.BooleanPreservation,
+    `GoLean.GoCore.BooleanProgress, `GoLean.GoCore.BooleanSafety,
+    `GoLean.GoCore.BooleanProgram, `GoLean.GoCore.BooleanPool,
     `Tests.PanicRendering, `Tests.InterfaceContract, `Tests.BooleanRuntime,
-    `Tests.InterfaceAudit]
+    `Tests.BooleanProgram, `Tests.InterfaceAudit]
   let exports : List Name := [
     ``GoLean.Semantics.iter_iff_trace, ``GoLean.Semantics.Trace.erase,
     ``GoLean.Semantics.run_ok_iff, ``GoLean.Semantics.exists_run_ok_iff,
@@ -53,6 +58,27 @@ def InterfaceAudit.run : CoreM Unit := do
     ``GoLean.GoCore.BooleanRuntime.initialState_result,
     ``GoLean.GoCore.BooleanRuntime.initialResults_distinct,
     ``GoLean.GoCore.BooleanRuntime.booleanEntry_wf,
+    ``GoLean.GoCore.BooleanRuntime.setup_typed,
+    ``GoLean.GoCore.BooleanRuntime.setup_typed_exact_inv,
+    ``GoLean.GoCore.BooleanRuntime.runProgram_typed,
+    ``GoLean.GoCore.BooleanRuntime.Inv.step,
+    ``GoLean.GoCore.BooleanRuntime.Inv.steps,
+    ``GoLean.GoCore.BooleanRuntime.Inv.reachable_progress,
+    ``GoLean.GoCore.BooleanRuntime.Inv.run_choices,
+    ``GoLean.GoCore.BooleanRuntime.Inv.run_readout,
+    ``GoLean.GoCore.BooleanRuntime.Control.singleton_step,
+    ``GoLean.GoCore.BooleanRuntime.Control.no_seq_consumption,
+    ``GoLean.GoCore.BooleanRuntime.Inv.pool_eq_runConfig,
+    ``GoLean.GoCore.BooleanRuntime.runProgramPool_eq_sequential,
+    ``GoLean.GoCore.BooleanRuntime.runProgramPool_typed,
+    ``GoLean.GoCore.BooleanRuntime.runProgramPool_no_refusal,
+    ``GoLean.GoCore.BooleanRuntime.Inv.success_contract,
+    ``GoLean.GoCore.BooleanRuntime.ProgramTests.argument_result,
+    ``GoLean.GoCore.BooleanRuntime.ProgramTests.zero_fuel_is_exhaustion,
+    ``GoLean.GoCore.BooleanRuntime.ProgramTests.nested_shadow_result,
+    ``GoLean.GoCore.BooleanRuntime.ProgramTests.branch_result,
+    ``GoLean.GoCore.BooleanRuntime.ProgramTests.zero_local_and_result,
+    ``GoLean.GoCore.BooleanRuntime.ProgramTests.terminal_at_zero_fuel,
     ``GoLean.GoCore.BooleanRuntime.Tests.paired_setup,
     ``GoLean.GoCore.BooleanRuntime.Tests.hidden_outer_binding_rejected,
     ``GoLean.GoCore.BooleanRuntime.Tests.hidden_same_scope_binding_rejected,

@@ -35,6 +35,12 @@ log = run([str(ROOT / "scripts/capped"), "lean", str(harness)])
 mutations = [
     ("core_private", "GoLean.GoCore.BooleanPreservation", "booleanRuntimeCoreHole",
      "\nprivate axiom booleanRuntimeCoreHole : False\n"),
+    ("program_private", "GoLean.GoCore.BooleanProgram", "booleanRuntimeProgramHole",
+     "\nprivate axiom booleanRuntimeProgramHole : False\n"),
+    ("pool_private", "GoLean.GoCore.BooleanPool", "booleanRuntimePoolHole",
+     "\nprivate axiom booleanRuntimePoolHole : False\n"),
+    ("program_test_trailing", "Tests.BooleanProgram", "sorryAx",
+     "\nprivate theorem booleanRuntimeProgramTestHole : False := by sorry\n"),
     ("audit_private", "Tests.BooleanSafetyAudit", "booleanRuntimeAuditHole",
      "\nprivate axiom booleanRuntimeAuditHole : False\n"),
     ("test_trailing", "Tests.BooleanInvariant", "sorryAx",

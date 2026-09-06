@@ -1,4 +1,5 @@
 import Tests.BooleanInvariant
+import Tests.BooleanProgram
 import Lean
 
 open Lean
@@ -13,7 +14,9 @@ def BooleanSafetyAudit.run : CoreM Unit := do
     `GoLean.GoCore.BooleanControlTyping, `GoLean.GoCore.BooleanControl,
     `GoLean.GoCore.BooleanInvariant, `GoLean.GoCore.BooleanProgress,
     `GoLean.GoCore.BooleanPreservation, `GoLean.GoCore.BooleanSafety,
-    `Tests.BooleanInvariant, `Tests.BooleanSafetyAudit]
+    `GoLean.GoCore.BooleanInitialization, `GoLean.GoCore.BooleanProgram,
+    `GoLean.GoCore.BooleanPool,
+    `Tests.BooleanInvariant, `Tests.BooleanProgram, `Tests.BooleanSafetyAudit]
   for m in requiredModules do
     unless env.header.moduleNames.contains m do
       throwError "Boolean runtime audit: missing module {m}"
@@ -39,6 +42,22 @@ def BooleanSafetyAudit.run : CoreM Unit := do
     ``GoLean.GoCore.BooleanRuntime.Inv.run_readout,
     ``GoLean.GoCore.BooleanRuntime.Inv.run_choices,
     ``GoLean.GoCore.BooleanRuntime.Inv.reachable_silent,
+    ``GoLean.GoCore.BooleanRuntime.setup_typed,
+    ``GoLean.GoCore.BooleanRuntime.setup_typed_exact_inv,
+    ``GoLean.GoCore.BooleanRuntime.runProgram_typed,
+    ``GoLean.GoCore.BooleanRuntime.Control.singleton_step,
+    ``GoLean.GoCore.BooleanRuntime.Control.no_seq_consumption,
+    ``GoLean.GoCore.BooleanRuntime.Inv.pool_eq_runConfig,
+    ``GoLean.GoCore.BooleanRuntime.runProgramPool_eq_sequential,
+    ``GoLean.GoCore.BooleanRuntime.runProgramPool_typed,
+    ``GoLean.GoCore.BooleanRuntime.runProgramPool_no_refusal,
+    ``GoLean.GoCore.BooleanRuntime.Inv.success_contract,
+    ``GoLean.GoCore.BooleanRuntime.ProgramTests.argument_result,
+    ``GoLean.GoCore.BooleanRuntime.ProgramTests.zero_fuel_is_exhaustion,
+    ``GoLean.GoCore.BooleanRuntime.ProgramTests.nested_shadow_result,
+    ``GoLean.GoCore.BooleanRuntime.ProgramTests.branch_result,
+    ``GoLean.GoCore.BooleanRuntime.ProgramTests.zero_local_and_result,
+    ``GoLean.GoCore.BooleanRuntime.ProgramTests.terminal_at_zero_fuel,
     ``GoLean.GoCore.BooleanRuntime.Tests.staged_initialization_inv,
     ``GoLean.GoCore.BooleanRuntime.Tests.staged_successor,
     ``GoLean.GoCore.BooleanRuntime.Tests.staged_no_refusal,

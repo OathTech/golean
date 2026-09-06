@@ -15,7 +15,12 @@ modules=(
   GoLean/GoCore/BooleanProgress
   GoLean/GoCore/BooleanPreservation
   GoLean/GoCore/BooleanSafety
+  GoLean/GoCore/BooleanSetup
+  GoLean/GoCore/BooleanInitialization
+  GoLean/GoCore/BooleanProgram
+  GoLean/GoCore/BooleanPool
   Tests/BooleanInvariant
+  Tests/BooleanProgram
   Tests/BooleanSafetyAudit
 )
 for module in "${modules[@]}"; do

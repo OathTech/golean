@@ -8,20 +8,22 @@ standing user approval. The [charter](2026-09-05_typed-consumer-sprint-charter.m
 records the exact ruling. This sprint has standing internal integration and
 independent-review approval, but no approval to merge to main or push.
 
-[AGENT] Status: **IN PROGRESS — BOOLEAN FOUNDATION**, updated 2026-09-06.
-No full numbered outcome is complete. Main remains clean at `47195683`.
-The sprint integration branch is `typed-consumer-sprint`, currently based on
-`a392fab0` (reviewed static admission integrated); the current helper work is
-described below and will be bound by its own evidence record.
+[AGENT] Status: **IN PROGRESS — O1 PUBLIC CONTRACT VALIDATED**, updated
+2026-09-06. Main remains clean at `47195683`. The sprint integration branch
+is `typed-consumer-sprint`; the current public-program increment is based on
+`761d4e28` and bound by its own source/evidence inventory. O1's current
+representation has the reviewed generic contract; its B7 transport and
+the remaining O2–O5 outcomes are still required. Later dated checkpoints
+supersede earlier process handles and branch tips retained below.
 
 ## Required outcomes
 
 | Outcome | Status | Next evidence |
 |---|---|---|
-| O1 typed Boolean contract | Static judgment/checker reviewed and integrated; storage/setup increment under validation | Structural control invariant, all-successor preservation, progress; exact generic initial bindings/values and driver readout |
-| O2 typed recovery customer | Pending | O1 foundations, shared recovery/call contracts and second fixture |
-| O3 evidence/reviews | Fresh preflight gates passed; static admission and candidate runtime statement reviews complete | Seal supplementary whole-corpus observations/choices; review helper implementation and final integrated contracts |
-| O4 B7/I1 | Pending | Reviewed O1 contract; pure representation correspondence kept separate from I1 |
+| O1 typed Boolean contract | Independently reviewed judgment/checker, exact setup-to-invariant, all-successor preservation/progress and actual shipped-driver typed readout; fresh public/customer gates pass | Transport the complete contract through B7 and review final integration |
+| O2 typed recovery customer | Separate static judgment/checker and both native fixtures validated; independent review requests diagnostic separation; mixed-store runtime work started | Generic setup, call/capture/return/defer/panic/recover preservation and reusable Iris proofs for both fixtures |
+| O3 evidence/reviews | Original preflight and fresh renderer integration full CI sealed; O1 implementation/promotion reviewed; observer transport reviewed with separate classifier finding | Close diagnostic/classifier findings, complete observation/choice capture and final independent reviews |
+| O4 B7/I1 | B7 old-model/store correspondence prototype started in a separate worktree; independent I1 declaration census/design complete | Whole fixed-context migration/correspondence; separate I1 support/closure implementation with no convenience PASS-to-refusal changes |
 | O5 closing branch/packet | Pending | All mandatory outcomes, final gates, final independent review |
 
 ## Decision ledger
@@ -203,3 +205,58 @@ would therefore break supported cases; 70 PASS rows also have syntactic
 call-closure hits on quarantined guard/dead-path declarations. This is an
 engineering obligation for clean signature/type facts and code availability,
 with no waiver or descriptor-algebra policy inferred from the census.
+
+## Current checkpoint: public Boolean contract validated (2026-09-06)
+
+The renderer merge is committed at `82e177c7`; its formerly live full-CI
+session `67619` finished exit 0 and must not be restarted. The B7 design,
+statement review and complete O1 implementation review are integrated
+through `761d4e28`.
+
+The public O1 program modules now pass all required increment gates. Sessions
+`37399` (interface), `93172` (ordinary CI) and `21278` (full admission,
+native Boolean, A1, A2) are terminal with exit 0. Exact source, logs and
+focused observations are sealed in
+[public-program evidence](evidence/2026-09-06_boolean-program-integration/README.md).
+The separate promotion review `638af8dd` verifies unchanged theorem/test
+bodies and all new audit/poison selection. The new source remains frozen for
+its integration commit. No runtime/observer source changed in this increment;
+ordinary CI explicitly reused the preceding source-bound 3,607-case record.
+
+Current parallel work:
+
+- `typed-recovery`: static recovery judgment/checker, all A2 entries and the
+  corrected second native fixture pass their full dedicated gate and ordinary
+  CI. The root independent review freshly elaborated all six source bodies
+  plus thirteen new probes. Finding RS-1 requests distinct outside-profile
+  versus malformed-body diagnostics without changing admission; the author
+  is fixing it. The generic mixed store/runtime module has started. Static
+  acceptance alone is not O2 runtime/customer completion.
+- `typed-context-store`: B7 implementation off `761d4e28`; the actual frozen
+  old state, new heap-only store, default-context fiber isomorphism and
+  allocator/update correspondence prototype compile. Whole-machine/drivers,
+  live explicit platform, both consumer migrations and final measurements
+  remain. Bring the public O1 commit before migrating consumers.
+- `typed-observer-controls`: reviewed core byte-transport commit `d0dbd469`
+  is ready with source-bound full 3,616-case evidence (nine new PASS cases,
+  no other drift). Its independent review `83c177c2` accepts only transport.
+  The separate classifier finding in `0e3f7e2` remains blocking: panic-looking
+  output can precede a real fatal error. Default-trace classifier drafts are
+  explicitly rejected. Root independently checked the proposed pinned
+  `GOTRACEBACK=system` design against installed runtime source: it supplies
+  terminal evidence from the same oracle execution without wrapper changes
+  or a semantic-policy change. Implementation, adversarial review and fresh
+  full CI are still owed in `typed-observer-classification`. BUG-106 is
+  reserved for that finding. Do not narrow O2 string admission as a remedy.
+- I1: the full independent design/census `02abf956` has been read. Root owns
+  follow-through on exact declaration facts, clean bodies and checked
+  support/closure. Keep it separate from B7 and from any fidelity expansion;
+  the census does not establish a descriptor-algebra blocker or authorize
+  blanket declaration rejection.
+
+Next commit the gated public O1 increment and integrate its promotion review,
+seal RS-1 independently, continue recovery runtime and B7, then integrate
+the separately reviewed observer repairs with their exact measurement scope.
+Complete whole-corpus observation/choice capture still has the explicit
+BUG-090 gap; no byte-identity claim is available for that case. O1–O5 remain
+the goal, with no main merge or push authority.

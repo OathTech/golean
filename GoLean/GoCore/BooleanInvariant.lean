@@ -4,7 +4,8 @@ import GoLean.GoCore.MachineSound
 
 /-! Boolean machine invariant and local memory preservation facts. The
 control predicate is structural, with actual lookups and typed root cells.
-`MachineWf` is an independently checkable location/integer-bound field. -/
+`MachineWf` supplies address bounds and the existing vacuous iterator
+normalization field; it is not an integer-normalization invariant. -/
 namespace GoLean.GoCore.BooleanRuntime
 open BooleanTyping Admission Machine
 
