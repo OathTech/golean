@@ -1,0 +1,21 @@
+Tests/PanicRendering.lean:17:2: error: Tactic `decide` proved that the proposition
+  renderPanicHead state (entry "aé界😀�z") [] = some "aé界😀�z"
+is false
+Tests/PanicRendering.lean:21:2: error: Tactic `decide` proved that the proposition
+  renderPanicHead state (entry "é\n界") [] = some "é"
+is false
+Tests/PanicRendering.lean:27:2: error: Tactic `decide` proved that the proposition
+  renderPanicHead state (entry "") [] = some "" ∧
+    renderPanicHead state (entry "\nsecond") [] = some "" ∧ renderPanicHead state (entry "first\n") [] = some "first"
+is false
+Tests/PanicRendering.lean:32:2: error: Tactic `decide` proved that the proposition
+  renderPanicHead state (entry "first\nsecond" true) [entry "other"] = some "first" ∧
+    renderPanicHead state (entry "é\n界" true) [] = some "é"
+is false
+Tests/PanicRendering.lean:37:2: error: Tactic `decide` proved that the proposition
+  renderPanicHead state (entry "é" true) [entry "other"] = some "é [recovered]" ∧
+    renderPanicHead state (entry "first" true) [] = some "first [recovered]"
+is false
+Tests/PanicRendering.lean:41:2: error: Tactic `decide` proved that the proposition
+  renderPanicHead state (panicEntry "é\n界") [] = some "é"
+is false

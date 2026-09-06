@@ -1,0 +1,19 @@
+✔ [22/25] Built Tests.PanicRendering (414ms)
+✔ [23/25] Built Tests.InterfaceContract (1.5s)
+✔ [24/25] Built Tests.InterfaceAudit (792ms)
+Build completed successfully (25 jobs).
+Semantic interface source fingerprint: 5d32e835f03d74524841814c94fd54ab9904b1605ce2041a5a04d109e42cb33f
+Semantic interface: 22 required exports; 2377 constants checked (classical trio only)
+/home/dev/projects/golean/.claude/worktrees/typed-panic-rendering/.tmp/interface-audit-or7r8ve1/machine_private/AuditAll.lean:12:0: error: Semantic interface: _private.GoLean.GoCore.Machine.0.machineRendererHole depends on forbidden axiom _private.GoLean.GoCore.Machine.0.machineRendererHole
+Semantic interface negative: machine_private rejected (exit 1, machineRendererHole)
+/home/dev/projects/golean/.claude/worktrees/typed-panic-rendering/.tmp/interface-audit-or7r8ve1/rendering_trailing/Tests/PanicRendering.lean:60:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.claude/worktrees/typed-panic-rendering/.tmp/interface-audit-or7r8ve1/rendering_trailing/AuditAll.lean:12:0: error: Semantic interface: _private.Tests.PanicRendering.0.rendererHole depends on forbidden axiom sorryAx
+Semantic interface negative: rendering_trailing rejected (exit 1, sorryAx)
+/home/dev/projects/golean/.claude/worktrees/typed-panic-rendering/.tmp/interface-audit-or7r8ve1/promoted_private/AuditAll.lean:12:0: error: Semantic interface: _private.GoLean.GoCore.Trace.0.promotedTraceHole depends on forbidden axiom _private.GoLean.GoCore.Trace.0.promotedTraceHole
+Semantic interface negative: promoted_private rejected (exit 1, promotedTraceHole)
+/home/dev/projects/golean/.claude/worktrees/typed-panic-rendering/.tmp/interface-audit-or7r8ve1/facade_private/AuditAll.lean:12:0: error: Semantic interface: _private.GoLean.Interface.0.facadeHole depends on forbidden axiom _private.GoLean.Interface.0.facadeHole
+Semantic interface negative: facade_private rejected (exit 1, facadeHole)
+/home/dev/projects/golean/.claude/worktrees/typed-panic-rendering/.tmp/interface-audit-or7r8ve1/audit_trailing/Tests/InterfaceAudit.lean:65:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.claude/worktrees/typed-panic-rendering/.tmp/interface-audit-or7r8ve1/audit_trailing/AuditAll.lean:12:0: error: Semantic interface: _private.Tests.InterfaceAudit.0.auditHole depends on forbidden axiom sorryAx
+Semantic interface negative: audit_trailing rejected (exit 1, sorryAx)
+Semantic interface: PASS; scratch retained at /home/dev/projects/golean/.claude/worktrees/typed-panic-rendering/.tmp/interface-audit-or7r8ve1

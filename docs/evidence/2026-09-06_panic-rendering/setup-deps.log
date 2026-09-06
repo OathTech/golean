@@ -1,0 +1,5 @@
+setup-deps: cloning   goose from /home/dev/projects/golean/deps/goose
+setup-deps: pinned    goose @ 3be88bb
+setup-deps: cloning   go from /home/dev/projects/golean/deps/go
+setup-deps: pinned    go @ c19862e5f8
+setup-deps: complete

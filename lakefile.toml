@@ -22,7 +22,7 @@ root = "Tests.GoCoreEval"
 [[lean_lib]]
 # Iris-free contract regressions and their post-import dependency audit.
 name = "InterfaceTests"
-globs = ["Tests.InterfaceContract", "Tests.InterfaceAudit"]
+globs = ["Tests.InterfaceContract", "Tests.InterfaceAudit", "Tests.PanicRendering"]
 
 [[lean_lib]]
 name = "AdmissionTests"
