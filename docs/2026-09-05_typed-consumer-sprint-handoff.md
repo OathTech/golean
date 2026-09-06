@@ -639,3 +639,86 @@ string each exceed 20 seconds. Raw probes are retained in the I1 worktree's
 current `storeLoc` normalizes the whole backing array on every element
 write. This is a supported performance hypothesis, not yet a repaired
 runtime or completed capture. No large unchanged capture was repeated.
+
+## Restart recovery: final R1 integration and remaining lanes (2026-09-06)
+
+[AGENT] Main remains clean at `47195683`. Integration parent `b34cee67` has
+a pending merge of reviewed R1 `819182b5`, after snapshot
+`snapshot/typed-sprint-before-r1-20260906`. Only CI had a source conflict;
+the resolution retains both complete gates. All nine member pins changed
+only apparatus source inventories (160 to 169); other fields are unchanged.
+Independent union review `731beb0b` checked all 3,923 integration inputs.
+Ordinary CI then nine fresh member rows are running as job 40908; frozen
+inputs and evidence are in `docs/evidence/2026-09-06_r1-integration/`.
+This pending merge is not yet an accepted integrated runtime.
+
+R1's completed author full run has 3,635 rows: 3,391 PASS/244 FAIL, plus
+394 negative PASS. Exactly eight new rows and the historical same-value
+repanic member row account for the movement. Baseline review `8e8bca46`
+and follow-up `2094de72` retain the intermediate stale BUG-004 Cases failure
+and narrow correction. The full run's 32-worker deviation is recorded;
+subsequent conformance uses two. Final ordinary CI has a complete PASS log
+but a lost numerical supervisor handle. Integration uses these full records
+as cached evidence, separate from the fresh nine rows.
+
+The root `typed-uintptr-identity` repair remains runtime WIP at docs-only
+`169ec3c3`. Initial full CI returned 1: eight new PASS rows (3,635 total,
+3,390 PASS/245 FAIL; 394 negative PASS) and missing pinned `deps/goose`.
+Independent disposition reviewed the narrow baseline/ledger movement and
+verified the restored dependency. Job 57432 runs final `scripts/ci --slow`
+on 3,851 frozen inputs with two workers. Seal, integration and measured
+combined baseline remain owed; its row set differs from R1's same-size set.
+
+Root `typed-i1-json` adds strict byte/JSON input before positive declaration
+decoding. Its 14-input candidate passed focused checks and ordinary CI 85137
+with exit 0: 47 inputs, 24 fresh Go types/576 identity pairs, 17 malformed
+declarations, 1,712 audited declarations and six compiled poisons. The
+3,627/394 full records are cached. Its 3,899-input post-run reconstruction
+is explicitly separate from the pre-run 14-input freeze. Independent review
+is being sealed. Production lowering is unchanged: complete declarations,
+metadata-query and demand preservation, runtime-error context and actual
+marker relocation remain mandatory I1 work.
+
+B7 now proves whole-step, setup, driver, pool/event/choice/output, race and
+Step/Steps/StepE/StepM correspondence to original `761d4e28`. Root review
+`2831473d` reconstructed 345 inputs and checked four generic kernel probes,
+17,617 declarations and an unused-axiom poison. Customer migration review
+`0f5ae41f` separately reconstructs 409 inputs, with a fresh 320-job build,
+five kernel challenges, a 135-export/15,005-declaration audit and rejection
+of a wrong-context use. The author compared all 2,117 transitively borrowed
+GoLean kernel bindings against a fresh original environment with zero
+differences. The durable closure checker/controls, final repaired-runtime
+basis, warning cleanup and full trace capture still need completion/review.
+No equivalence claim silently spans the `uintptr` wrong-answer repair.
+
+O2 terminal/facade reconciliation with committed R1 is in
+`typed-recovery-terminal`. Initial union CI preserves missing local
+dependency/cached-record failures. Exact pinned input restoration and
+source-only member inventory refresh precede a new final freeze; theorem
+sources are unchanged by this reconciliation. Root final review and gates
+remain owed.
+
+BUG-090's original large capture remains incomplete. The local byte-store
+proof `39add7fd` has root review `8e50c38e`; consuming extension `68590160`
+awaits independent review. Both are opt-in spikes. Exact local refinement
+and six small measurements do not establish runtime certificate handling
+or close BUG-090. No cap increase, timeout waiver or runtime optimization
+has occurred. O1–O5 remain mandatory; final integration, claims ledger,
+roadmap/C1 handoff and closing decision packet remain incomplete.
+
+### R1 integration accepted; strict JSON candidate sealed
+
+The pending R1 union above completed ordinary CI and all nine fresh member
+rows with numerical exit 0 (job 40908). All 3,923 frozen inputs and all
+nine 169-source certificate inventories were rechecked. Independent union
+review `731beb0b` accepts the exact additive changes. Fresh certificates,
+full raw focused artifacts (excluding the hash-inventoried harness binary),
+logs and source hashes are retained in the integration evidence packet.
+This checkpoint accompanies the R1 merge commit; full 3,635/394 evidence
+remains explicitly cached from the accepted author run.
+
+The strict JSON candidate is clean at `7ac3eb46` in `typed-i1-json`, with
+implementation `b9136a05` and independent I1 review `8051028b` attached.
+That review passed 107 adversarial inputs and an extra imported-helper
+poison. Its source inputs are unchanged. Integration is a separate next
+step and must refresh the member source inventories for the new parser.

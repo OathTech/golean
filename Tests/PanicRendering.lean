@@ -1,8 +1,8 @@
 import GoLean.Interface
 
-/-! Kernel regressions for the existing valid-UTF-8, first-panic-line
-observation boundary. These do not choose an observer for invalid UTF-8 or
-resolve the independent R-1 equal-value/boxing quotient. -/
+/-! Kernel regressions for the first-panic-line observation boundary and
+R-1's explicit-string members. Invalid bytes remain exact semantic bytes;
+their reversible rendered member is not claimed to equal gc's raw text. -/
 namespace GoLean.PanicRenderingTests
 open GoCore GoCore.Machine
 
@@ -40,19 +40,20 @@ theorem runtime_error_newline :
     renderPanicHead state (panicEntry "é\n界") [] = some "é" := by
   decide +kernel
 
-/-- Refusal ordering remains intact even when projection would hide the
-ambiguous recovered/repanicked suffix. R-1 completion is a separate change. -/
-theorem equal_repanic_remains_refused :
-    renderPanicHead state (entry "first\nsecond" true) [entry "first\nsecond"] = none := by
+/-- The selected R-1 suffix is formatted before first-line projection. -/
+theorem equal_repanic_member :
+    renderPanicHead state (entry "first\nsecond" true) [entry "first\nsecond"] = some "first" ∧
+    renderPanicHead state (entry "same" true) [entry "same"] = some "same [recovered]" := by
   decide +kernel
 
-/-- Invalid bytes do not silently become replacement characters, including
-invalid bytes after the newline. U+FFFD encoded correctly is covered above. -/
-theorem invalid_utf8_remains_refused :
+/-- Invalid bytes are escaped in full, including bytes after the newline.
+U+FFFD encoded correctly is covered above and is not confused with ff. -/
+theorem invalid_utf8_member :
     [#[0xff], #[0x80], #[0xc0, 0x80], #[0xe0, 0x80, 0x80],
       #[0xed, 0xa0, 0x80], #[0xe2, 0x82], #[0xf0, 0x80, 0x80, 0x80],
       #[0xf4, 0x90, 0x80, 0x80], #[0x61, 0x0a, 0xff]].all
-      (fun bytes => (renderPanicHead state (rawEntry bytes) []).isNone) = true := by
+      (fun bytes => renderPanicHead state (rawEntry bytes) [] ==
+        some (PanicText.escapeAllBytes ⟨bytes⟩)) = true := by
   decide +kernel
 
 end GoLean.PanicRenderingTests

@@ -1,0 +1,44 @@
+[
+  {
+    "input": "Main.lean",
+    "compiled": true,
+    "exit": 1,
+    "rejected_by": "independent required-input assertions",
+    "mutated_checker_sha256": "95640c0e2bfe84e819ebc15ce26b5ffb3c5148382da3b007eaada79d3f6f7d7d"
+  },
+  {
+    "input": "GoLean.lean",
+    "compiled": true,
+    "exit": 1,
+    "rejected_by": "independent required-input assertions",
+    "mutated_checker_sha256": "6aeaf9f9fa80cb31cf93d98b6fb46ac0d9dc482c25d9c8f37d9037d7eea6a58d"
+  },
+  {
+    "input": "tools/nativefrontend/inittask-std.tsv",
+    "compiled": true,
+    "exit": 1,
+    "rejected_by": "independent required-input assertions",
+    "mutated_checker_sha256": "8103904af55fab62ce9bf8eb933719182de0b2382c213fdb14d7f4a28362a56e"
+  },
+  {
+    "input": "tools/nativefrontend/stdlib-substitutions.tsv",
+    "compiled": true,
+    "exit": 1,
+    "rejected_by": "independent required-input assertions",
+    "mutated_checker_sha256": "fe4bd8bc1f00631bd5b5d0192204276a38b840957e8c9bf722a80afce36fb887"
+  },
+  {
+    "input": "tools/nativefrontend/stdlib-overlay.tsv",
+    "compiled": true,
+    "exit": 1,
+    "rejected_by": "independent required-input assertions",
+    "mutated_checker_sha256": "eb62f81bdd0365c17a20d1249ce2994a75c912b1460b9ce9e31b5da236bc9b4d"
+  },
+  {
+    "input": "baselines/stdlib-pin.tsv",
+    "compiled": true,
+    "exit": 1,
+    "rejected_by": "independent required-input assertions",
+    "mutated_checker_sha256": "7707cdb2c69116d4782e07fd019eaefe4d7d6bf3daea601c6e4698a5ccb6310d"
+  }
+]

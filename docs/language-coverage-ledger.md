@@ -564,7 +564,19 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (3627 cases, 3382 PASS /
+All numbers at the current tracked baseline (3635 cases, 3391 PASS /
+244 FAIL — [AGENT], 2026-09-06, `typed-string-members`), measured by the
+full ordinary differential run and derived from its exact 3635-case set.
+Eight new explicit-string member rows pass. The existing
+`panic-recover/repanic-same-value-abort` moves FAIL/lean-observation to
+PASS/string-member under explicitly broader concrete source/control evidence.
+It leaves the (c) C4 bucket: 25 + 1 → 24 + 1; the other buckets are unchanged,
+137 + 9 + 25 + 7 + 66 = 244. This is the bounded R1 rendered-text member
+contract, with exact forced fields; it does not establish exact gc text
+identity, complete BUG-004 coverage, or O2 admission of the historical row.
+Evidence: `docs/evidence/2026-09-06_string-panic-members/`; movement §8z.
+
+Previous tracked baseline (3627 cases, 3382 PASS /
 245 FAIL — [AGENT], 2026-09-06, `typed-consumer-sprint`), measured by the
 full ordinary differential run and derived from the baseline rows.
 Eleven new observer regression rows pass. The existing fatal-unwind row
@@ -1131,10 +1143,10 @@ bucket's BUG-041 red changed ROW, not count):**
 | --- | --- |
 | frontier FR-1…FR-31 (§4) | 137 |
 | design questions Q-* (§6) | 9 |
-| (c) profound-reason pins (triage §4 + §5.1 item 3's 8 address-printing `print` refusals + R7's 7 default-NaN refusals — stdlib slice 3 and its audit fix round A1, movement §8p/§8q; §5.1 item 1's C6 pin is `scoping/local-type-identity/type-instantiation-refused` since 2026-09-05, replacing `generics/local-type-argument`, which flipped green — §8s) + the unsafe marker | 25 + 1 |
+| (c) profound-reason pins (triage §4 + §5.1 item 3's 8 address-printing `print` refusals + R7's 7 default-NaN refusals — stdlib slice 3 and its audit fix round A1, movement §8p/§8q; §5.1 item 1's C6 pin is `scoping/local-type-identity/type-instantiation-refused` since 2026-09-05, replacing `generics/local-type-argument`, which flipped green — §8s; C4 loses `panic-recover/repanic-same-value-abort` under the bounded R1 member contract, §8z) + the unsafe marker | 24 + 1 |
 | (a)-queued fixes (triage §3.2: A3 5, A4 1, A5 1; A7 fixed 2026-09-06, §8w) | 7 |
 | post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) + the gotest-fixes BUG-078 budget refusal pin (`arrays/materialization-budget/over-budget`, on BUG-078's Cases line since the audit fix round) + the bug082-maphint audit-round BUG-083 hoist-order pin (`builtins/len-vs-call-order/hint-panicky-between`, 2026-09-02) + the q-u4-gomem BUG-084 designed-divergence pins (`race/gomem-only/*`, 5 rows: go_mem-racy / TSan-green shapes REFUSED by [USER] ruling Q-U4RESIDUAL (A), 2026-09-02) + the noodler lane's 23 born-FAIL probe rows (2026-09-03, `docs/2026-09-03_noodler-report.md`: 3 on BUG-087's Cases line (RETIRED 2026-09-03 by the `bug087-paniktext` fix — all three PASS/membership under the R9a two-member envelope, not counted here), 2 on BUG-086's (RETIRED 2026-09-03 by the `bug086-shim-closure` fix — both PASS, not counted here), 11 FG-1..FG-5 frontier candidates (MOVED OUT 2026-09-03 to their own rows FR-16..FR-20 — counted in the frontier bucket above, §8e), 2 BUG-068 red-by-design re-hits, 1 FR-3 re-hit, 3 triage-F6/A3 re-hits, 1 FR-10 value-copy witness in untriaged-ids — 7 noodler reds remain in this bucket) − the shim-surface refusal pins flipped green by `stdlib-source-1` (7, 2026-09-03; movement below) + BUG-089's designed ParseUint error-path reds (4 pre-existing rows flipped + 5 born; Cases line — ALL NINE GREEN since `stdlib-source-2`, 2026-09-03: the Clone overlay; BUG-089 fixed) − the two W4.3 SortFunc/cmp bound pins `slices/sortfunc-cmp/{named-slice-bound,float-compare-bound}` flipped green by the real `slices`/`cmp` source (`stdlib-source-2`); the BUG-073 pin `strings/trimspace-repeat/repeat-bound-refused` stays (a runner-budget red since `stdlib-source-2`, ; BUG-090's Cases-line budget pin since its audit fix round) − `slices/sortfunc-cmp/sortfunc-local-type` MOVED to FR-19's line (fr24 audit fix round L5, 2026-09-04: the identical C6 naming refusal, now with FR-19's plan) + the stdlib-slice-3 gotest-surfaced fidelity pins (2026-09-04: `generics/type-switch-interface-param{,/bound,/plain}` on BUG-095's Cases line, `ints/shift-count-huge` on BUG-096's — ALL FOUR GREEN since the `bug095-096` fix landed at merge train round 15, 2026-09-05: re-pinned FAIL→PASS at the rebase, the ids moved to the FIXED entries' Cases lines; not counted here) + the bug095-096 audit-round BUG-097 pin (`multipkg/same-name-anon-iface`, 2026-09-05: the anonymous-interface wire name is package-NAME-qualified, two same-named packages fuse two interfaces — a wrong answer on main, refused by name since BUG-095's conflict guard; open, plan on the entry — FIXED 2026-09-05 by `fr19-bug097`, GREEN, not counted here) − BUG-059's W1.1 pin `multipkg/same-name-identity-panic` (red since 2026-08-18 in this bucket; FIXED 2026-09-05 by `fr19-bug097`, GREEN — §8s) + the fr19-bug097 audit-round BUG-099 pins (`panic-recover/recovered-runtime-error-type/{observed,assert-int}`, 2026-09-05: the recovered runtime error's ONE synthetic type vs gc's concrete type per fault — `observed` an open WRONG ANSWER at the differential stage, `assert-int` its fail-closed face; open, plan on the entry) + the c-arc-c2 audit-round BUG-103 pin (`structs/decl-order-reversed/conversion-array-target`, 2026-09-05: a conversion whose target's resolved shape is an ARRAY falls into `convertValueToTy`'s catch-all — the arm BUG-020's fix left out; a fail-closed refusal of legal Go, gc 104; open, plan on the entry; §8u) − the two A6-residual pins `builtins/len-vs-call-order/{panicky-between,hint-panicky-between}` flipped green at lane `e13-b` 2026-09-05 (the refusal retired into latitude E13; panicky-between strict, hint-panicky-between membership; §8t) + the e13-b audit-round BUG-101 pin (`builtins/e13-sibling-panic-order/assert-ok-early-len-hoist`, 2026-09-05: the VALUE axis reached through the len shape — an assertion that succeeds early and fails late across a mutating call; open, E12's obligation; §8t) + the e13-b re-audit-round BUG-101 pin `builtins/e13-sibling-panic-order/slice-value-early-len-hoist` (the value axis, slice kind) + the e13-b re-audit-round BUG-104 pins (`builtins/e13-sibling-panic-order/{compound-call-target-vs-call,map-compound-index-key-vs-call}`, 2026-09-05: a compound target's hoisted address/key temp panics BEFORE the RHS call, gc after — pre-existing on main b77f3298; open, plan on the entry; the lane's BUG-103, renumbered BUG-104 at the round-17 rebase; §8t) + the e13-b final-verification-round BUG-104 pins (`builtins/e13-sibling-panic-order/{compound-call-target-vs-recv,map-compound-index-key-vs-recv,map-compound-index-key-vs-method}`, 2026-09-05: the receive and method-call spellings of the same hoisted-temp class; §8t) − BUG-103's array-value conversion pin (FIXED 2026-09-05, §8v; its original row now PASS) + BUG-106's fatal-unwind observer refusal (`sync/mutex-unlock-fatal/during-panic-unwind`, formerly unsound PASS, now `go-observation`; §8y) | 66 |
-| **total** | **245** |
+| **total** | **244** |
 
 *(Movement at the e13-b FINAL VERIFICATION FIX ROUND 2026-09-05 (lane `e13-b`, §8t continued; [AGENT] worker; the final verification audit returned FIX-FIRST, records only — no rule/gate change; tracked figure 3559 = 3315 / 244 → 3563 = 3316 / 247): 4 rows BORN in `builtins/e13-sibling-panic-order/` (1 PASS strict — `bytes-conv-value-vs-mutating-call`, gc's 98 for `int([]byte(s)[0]) + func() int { s = "zz"; return 1 }()`, the hoisted allocating conversion's value-axis by-product, recorded as E12's exception (R''-8); 3 FAIL/differential red-first on BUG-104's Cases line — `{compound-call-target-vs-recv,map-compound-index-key-vs-recv,map-compound-index-key-vs-method}`, the receive and method-call spellings of the compound target's hoisted temp, the class generalized from calls to every ordered event (R''-2)), 0 flips, 0 lane moves, 0 PASS→FAIL — frontier 139 unchanged; post-vintage 62 → 65 (BUG-104 +3). BUG-104 is the lane's entry RENUMBERED (branch `c-arc-c2` filed the former number and merges first; the entry's merge-train note). Zero unmapped. [round-17 rebase onto main 9343a310 ([AGENT] reconciler): the same rows over main's 3528 = 3283 / 245 give 3589 = 3346 / 243 → 3593 = 3347 / 246 (+4 born: 1 PASS, 3 FAIL); frontier 137, post-vintage 63 → 66 (BUG-104 +3); 137 + 9 + 26 + 8 + 66 = 246 ✓ — re-derived from the composed rows by the header's awk.])*
 
@@ -2009,6 +2021,47 @@ Source-bound records, original metadata, raw log, and exact row comparison
 are in `docs/evidence/2026-09-06_observer-integration/`. This is the ordinary
 full-run policy, including explicitly cached slow rows; it does not claim
 complete observer correctness, a stable pin, or O2 completion.
+
+### 8z. Movement at the bounded explicit-string member repair (2026-09-06)
+
+Baseline before: 3627 = 3382 PASS / 245 FAIL. Eight new
+`panic-recover/string-members/{equal,unequal,multiple,invalid-before-lf,invalid-after-lf,invalid-recovered,unicode,controls}`
+rows are born PASS/string-member. The existing
+`panic-recover/repanic-same-value-abort` changes FAIL/lean-observation to
+PASS/string-member. No other existing status/stage changes, PASS regressions,
+or case removals occur: 3627 + 8 = 3635; 3382 + 8 + 1 = 3391;
+245 − 1 = 244. The exact old/new failure-set difference is this one row.
+
+The historical row is triage §2.2's L12 / (c) C4, as recorded in
+`docs/2026-08-19_triage-table.md`. Its retirement reduces the profound-reason
+pins from 25 to 24; the unsafe marker remains 1. Frontier 137, design
+questions 9, (a)-queued fixes 7 and post-vintage reds 66 are unchanged:
+137 + 9 + (24 + 1) + 7 + 66 = 244. The two defined-payload Error/String-method
+refusals remain red. BUG-004 remains open for those and the non-string
+identity boundary; this movement does not retire the whole C4 class.
+
+The eight new subjects have typed explicit-string admission artifacts. The
+historical rethrow uses separately reviewed broader concrete source/control
+evidence and is outside the O2 literal grammar. Each of the nine certificates
+checks thirteen fixed control roles, actual plain/race Go runs and four model
+streams, with exact panic/exit/output fields and a rendered-text member from
+the actual all-string AbortRecord chain. This bounded R1 acceptance does not
+claim exact gc text equality, injectivity of the whole renderer, or completion
+of the generic O2 admission-to-terminal proof.
+
+The full capped `scripts/ci --diff` completed on the independently reviewed
+184-input v3 source with 3635 executable and 394 negative results. Its only
+failed check was the nine expected baseline changes disposed here. Original
+TSV, metadata, log, exact full-manifest/case-set verification and nine raw
+certificates are preserved in
+`docs/evidence/2026-09-06_string-panic-members/`; the independent implementation
+reviews are `d59b4ab1` and `75da9338`. Ordinary slow rows used the existing
+cached policy; this is not slow-tier re-certification. The direct legacy
+runner's `full_run` metadata is unknown; the exact manifest hash and complete
+case-set equality establish full scope separately. Actual concurrency was
+32 workers under the unchanged 16 GiB cap: the author missed the coordinated
+two-worker setting after restart. That completed evidence is preserved
+unchanged; every future conformance invocation explicitly sets two workers.
 
 ### 8c. The re-derivation, 2026-08-22 vintage → the 2026-09-01 tip
 

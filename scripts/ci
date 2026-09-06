@@ -551,6 +551,15 @@ else
   bad "positive declaration identities and decoder (see above)"
 fi
 
+step "explicit string-member apparatus and compiling negative controls"
+if smout="$(python3 scripts/check-string-members.py 2>&1)"; then
+  echo "$smout" | tail -1
+  ok "explicit string-member apparatus"
+else
+  echo "$smout"
+  bad "explicit string-member apparatus (see above)"
+fi
+
 step "frontend unit tests (go test ./tools/nativefrontend)"
 if ftout="$(GO111MODULE=off GOCACHE="$PWD/artifacts/go-build-cache" go test ./tools/nativefrontend 2>&1)"; then
   echo "$ftout" | tail -2

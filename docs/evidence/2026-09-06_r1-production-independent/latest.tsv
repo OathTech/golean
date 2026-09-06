@@ -1,0 +1,2 @@
+result	id	features	stage	detail
+PASS	panic-recover/string-members/invalid-after-lf	panic,strings	string-member	string-member evidence: /home/dev/projects/golean/.claude/worktrees/typed-r1-production-review/artifacts/coverage/string-members/panic-recover__string-members__invalid-after-lf/fresh-5gi8_mny\nPASS string-member: golean-r1-explicit-string-v1; exact forced fields and typed-explicit-string evidence; gc text equality is not claimed

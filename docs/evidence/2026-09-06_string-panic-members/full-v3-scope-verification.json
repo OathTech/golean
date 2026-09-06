@@ -1,0 +1,12 @@
+{
+  "full_manifest_sha256": "c2a13c0adabe351dfd570796bc46fca6e83eb1f869b2471aad1f23bbbfd122e8",
+  "exact_manifest_match": true,
+  "expected_unique_cases": 3635,
+  "actual_unique_cases": 3635,
+  "full_case_set_equal": true,
+  "native_metadata_full_run": "unknown",
+  "native_metadata_total_corpus_cases": "unknown",
+  "scope_explanation": "Existing scripts/ci --diff invokes diff-smoke directly, whose native metadata leaves full_run/total_corpus_cases unknown; complete scope is independently established by byte-identical current full manifest and exact unique case-set comparison, matching CI full-baseline checks. Original metadata preserved unchanged.",
+  "actual_jobs": "32",
+  "all184_frozen_inputs_unchanged": true
+}

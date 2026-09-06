@@ -1,0 +1,11 @@
+{
+  "status": "unapplied proposed final-CI records repair; independent disposition required",
+  "before_sha256": "c8b820795d312b69f5137c5d634dbb3617ea1e4acedaa902171b20a55ddfeddc",
+  "proposed_sha256": "ae93d205330448bae81b60d3d63bf0fc3315589ebe01f1ba38f60507664d328f",
+  "patch_sha256": "06e93976985b3c24a964c2f17aaefa6761114edd29db1fc85f05b1bbb02210ee",
+  "scope": "Remove only the newly passing historical rethrow from open BUG-004 Cases. Preserve its bounded R1 progress in the body, keep BUG-004 open with its two live Error/String-method failure pins. Do not change gate, baseline, or runtime.",
+  "check_bugs_fixture_override_exit": 0,
+  "initial_final_ordinary_CI_exit": 1,
+  "initial_final_ordinary_CI_only_failed_check": "bug-index cross-check; historical member now PASS but remains on open differential Cases line",
+  "all_other_required_checks": "PASS, including exact cached3635/394 baseline checks"
+}

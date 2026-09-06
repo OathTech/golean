@@ -1,4 +1,5 @@
 import GoLean.GoCore.Ops
+import GoLean.GoCore.PanicText
 
 /-!
 # The fine-grained machine (reshape R1, `docs/2026-07-23_reshape-r1r2-machine-design.md`)
@@ -2080,12 +2081,21 @@ def utf8String? (bytes : Array UInt8) : Option String :=
   utf8StringAux? ⟨bytes⟩ 0 ""
 
 /-- The existing observer retains the first panic line, after `panic: `.
-Go's `printindented` only changes text AFTER a newline, so taking this
-byte prefix after formatting produces exactly that line. The prefix of a
-valid UTF-8 string ending before an ASCII newline is itself valid UTF-8;
-the strict decoder preserves a visible refusal rather than assuming this. -/
+Use the total character projection whose exact UTF-8 byte-prefix
+correspondence is `PanicText.firstLine_bytes`. This removes a redundant
+decoding/refusal seam without changing the valid-string line boundary. -/
 def firstPanicLine? (text : String) : Option String :=
-  utf8String? (text.toUTF8.data.takeWhile (· != 0x0A))
+  some (PanicText.firstLine text)
+
+/-- R-1's selected member for explicit string payloads: decoded text is
+retained only after an exact byte roundtrip check; otherwise every byte
+is represented by a reversible `\\xHH` escape inside quotes. The check
+does not assume an unproved postcondition of the custom UTF-8 decoder.
+Go values and recovered bytes remain unchanged. -/
+def renderStringMember (s : GoString) : String :=
+  match utf8String? s.bytes with
+  | some text => if text.toUTF8.data == s.bytes then text else PanicText.escapeAllBytes s
+  | none => PanicText.escapeAllBytes s
 
 /-- Does `dynTy` carry `name() string` — the shape of BOTH interfaces Go's
 `preprintpanics` consults (`error`'s `Error() string` and `stringer`'s
@@ -2122,7 +2132,7 @@ def renderPanicPayload (state : ExecState) : GoValue → Option String
   | .nil => some "nil"
   | .interface (.defined idx) (.string s) =>
       if idx == runtimeErrorTypeIdx then utf8String? s.bytes else none
-  | .interface .string (.string s) => utf8String? s.bytes
+  | .interface .string (.string s) => some (renderStringMember s)
   | .interface (.int dkind) (.int v kind) =>
       if dkind == kind then some (toString v) else none
   | .interface .bool (.bool b) => some (if b then "true" else "false")
@@ -2165,8 +2175,11 @@ def payloadDynamicTypeNote (state : ExecState) : GoValue → String
   | .interface dynTy _ => s!" (dynamic type {goTypeNameForMessage state dynTy})"
   | _ => ""
 
-/-- Go's first abort line for a panic chain. The `[recovered, repanicked]`
-collapse is decided by the runtime via eface IDENTITY — a bitwise compare
+/-- The first abort-line member for a panic chain. For explicit strings,
+R-1 authorizes a uniform ` [recovered]` suffix; this selected member does
+not claim gc's allocation-dependent collapse. Suffix formatting precedes
+first-line projection. All other payload families retain the prior boundary:
+the `[recovered, repanicked]` collapse is decided via eface IDENTITY — a bitwise compare
 of the interface's type word AND data pointer (`preprintpanics`,
 runtime/panic.go), NOT semantic equality (pre-merge audit 2026-07-25;
 the §A3 probe that suggested otherwise was constant-folded — `"or"+"ig"`
@@ -2180,13 +2193,16 @@ def renderPanicHead (state : ExecState) (first : PanicEntry) (rest : List PanicE
     Option String :=
   (renderPanicPayload state first.value).bind fun base =>
     (if first.recovered then
-      match rest with
-      | e :: _ =>
-          if e.value == first.value then
-            none -- boxing identity unmodeled: collapse undecidable (BUG-004)
-          else
-            some (base ++ " [recovered]")
-      | [] => some (base ++ " [recovered]")
+      match first.value with
+      | .interface .string (.string _) => some (base ++ " [recovered]")
+      | _ =>
+          match rest with
+          | e :: _ =>
+              if e.value == first.value then
+                none -- non-string boxing identity remains outside this R-1 slice
+              else
+                some (base ++ " [recovered]")
+          | [] => some (base ++ " [recovered]")
     else
       some base).bind firstPanicLine?
 

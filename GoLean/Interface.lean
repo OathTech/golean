@@ -9,6 +9,8 @@ import GoLean.GoCore.BooleanInitialization
 import GoLean.GoCore.BooleanPool
 import GoLean.GoCore.RecoveryAdmission
 import GoLean.GoCore.RecoverySuccessfulRuns
+import GoLean.GoCore.StringPanic
+import GoLean.GoCore.RecoveryProgramObservation
 
 /-!
 # Experimental semantic consumer interface

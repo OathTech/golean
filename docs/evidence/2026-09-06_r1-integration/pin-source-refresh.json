@@ -1,0 +1,254 @@
+[
+  {
+    "path": "baselines/string-members/panic-recover/repanic-same-value-abort.json",
+    "old_entries": 160,
+    "new_entries": 169,
+    "added": [
+      "GoLean/GoCore/Declaration.lean",
+      "GoLean/GoCore/RecoveryCallLayout.lean",
+      "GoLean/GoCore/RecoveryChoices.lean",
+      "GoLean/GoCore/RecoveryPool.lean",
+      "GoLean/GoCore/RecoverySingleton.lean",
+      "GoLean/NativeDeclaration.lean",
+      "tools/nativefrontend/declaration.go",
+      "tools/nativefrontend/declaration_fixture_test.go",
+      "tools/nativefrontend/declaration_test.go"
+    ],
+    "removed": [],
+    "changed": {
+      "scripts/ci": {
+        "before": "763cfb020f5ed5545e3460513d16c760525e654c37107f6f526ba34d5044dd99",
+        "after": "4ab07763523e024bce3bcbadc42734014f2f94ae35f356ba47ffe47cf55b30fb"
+      },
+      "lakefile.toml": {
+        "before": "7fdccc5ddac58bcd7fd012604dfe6de902be6348a839e3dcd9601e094baf3f8f",
+        "after": "31932ce0c4880fc681113cb6916e2b56e788681482c6ab38507372adb416391e"
+      }
+    },
+    "new_sha256": "ac9793efe472c5efcf6a017208529a4a6822cca713ff57d464ebf46abff60781"
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/controls.json",
+    "old_entries": 160,
+    "new_entries": 169,
+    "added": [
+      "GoLean/GoCore/Declaration.lean",
+      "GoLean/GoCore/RecoveryCallLayout.lean",
+      "GoLean/GoCore/RecoveryChoices.lean",
+      "GoLean/GoCore/RecoveryPool.lean",
+      "GoLean/GoCore/RecoverySingleton.lean",
+      "GoLean/NativeDeclaration.lean",
+      "tools/nativefrontend/declaration.go",
+      "tools/nativefrontend/declaration_fixture_test.go",
+      "tools/nativefrontend/declaration_test.go"
+    ],
+    "removed": [],
+    "changed": {
+      "scripts/ci": {
+        "before": "763cfb020f5ed5545e3460513d16c760525e654c37107f6f526ba34d5044dd99",
+        "after": "4ab07763523e024bce3bcbadc42734014f2f94ae35f356ba47ffe47cf55b30fb"
+      },
+      "lakefile.toml": {
+        "before": "7fdccc5ddac58bcd7fd012604dfe6de902be6348a839e3dcd9601e094baf3f8f",
+        "after": "31932ce0c4880fc681113cb6916e2b56e788681482c6ab38507372adb416391e"
+      }
+    },
+    "new_sha256": "5700480e2c4b842ac9ed92531150006f894f58a44fce12f17d7a45c58ee04ac0"
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/equal.json",
+    "old_entries": 160,
+    "new_entries": 169,
+    "added": [
+      "GoLean/GoCore/Declaration.lean",
+      "GoLean/GoCore/RecoveryCallLayout.lean",
+      "GoLean/GoCore/RecoveryChoices.lean",
+      "GoLean/GoCore/RecoveryPool.lean",
+      "GoLean/GoCore/RecoverySingleton.lean",
+      "GoLean/NativeDeclaration.lean",
+      "tools/nativefrontend/declaration.go",
+      "tools/nativefrontend/declaration_fixture_test.go",
+      "tools/nativefrontend/declaration_test.go"
+    ],
+    "removed": [],
+    "changed": {
+      "scripts/ci": {
+        "before": "763cfb020f5ed5545e3460513d16c760525e654c37107f6f526ba34d5044dd99",
+        "after": "4ab07763523e024bce3bcbadc42734014f2f94ae35f356ba47ffe47cf55b30fb"
+      },
+      "lakefile.toml": {
+        "before": "7fdccc5ddac58bcd7fd012604dfe6de902be6348a839e3dcd9601e094baf3f8f",
+        "after": "31932ce0c4880fc681113cb6916e2b56e788681482c6ab38507372adb416391e"
+      }
+    },
+    "new_sha256": "a915e2c87aca5675b0e609a72582bb6dc977aa60cc99d3d91c6e23b44d953549"
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/invalid-after-lf.json",
+    "old_entries": 160,
+    "new_entries": 169,
+    "added": [
+      "GoLean/GoCore/Declaration.lean",
+      "GoLean/GoCore/RecoveryCallLayout.lean",
+      "GoLean/GoCore/RecoveryChoices.lean",
+      "GoLean/GoCore/RecoveryPool.lean",
+      "GoLean/GoCore/RecoverySingleton.lean",
+      "GoLean/NativeDeclaration.lean",
+      "tools/nativefrontend/declaration.go",
+      "tools/nativefrontend/declaration_fixture_test.go",
+      "tools/nativefrontend/declaration_test.go"
+    ],
+    "removed": [],
+    "changed": {
+      "scripts/ci": {
+        "before": "763cfb020f5ed5545e3460513d16c760525e654c37107f6f526ba34d5044dd99",
+        "after": "4ab07763523e024bce3bcbadc42734014f2f94ae35f356ba47ffe47cf55b30fb"
+      },
+      "lakefile.toml": {
+        "before": "7fdccc5ddac58bcd7fd012604dfe6de902be6348a839e3dcd9601e094baf3f8f",
+        "after": "31932ce0c4880fc681113cb6916e2b56e788681482c6ab38507372adb416391e"
+      }
+    },
+    "new_sha256": "7d357856c0fd17e896b92db2b7a4d4f1b8856bb8a1567ee5c62f49c3025e60a7"
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/invalid-before-lf.json",
+    "old_entries": 160,
+    "new_entries": 169,
+    "added": [
+      "GoLean/GoCore/Declaration.lean",
+      "GoLean/GoCore/RecoveryCallLayout.lean",
+      "GoLean/GoCore/RecoveryChoices.lean",
+      "GoLean/GoCore/RecoveryPool.lean",
+      "GoLean/GoCore/RecoverySingleton.lean",
+      "GoLean/NativeDeclaration.lean",
+      "tools/nativefrontend/declaration.go",
+      "tools/nativefrontend/declaration_fixture_test.go",
+      "tools/nativefrontend/declaration_test.go"
+    ],
+    "removed": [],
+    "changed": {
+      "scripts/ci": {
+        "before": "763cfb020f5ed5545e3460513d16c760525e654c37107f6f526ba34d5044dd99",
+        "after": "4ab07763523e024bce3bcbadc42734014f2f94ae35f356ba47ffe47cf55b30fb"
+      },
+      "lakefile.toml": {
+        "before": "7fdccc5ddac58bcd7fd012604dfe6de902be6348a839e3dcd9601e094baf3f8f",
+        "after": "31932ce0c4880fc681113cb6916e2b56e788681482c6ab38507372adb416391e"
+      }
+    },
+    "new_sha256": "ff77036e1d62f83a89b2c9a4848becfce1ba9da1040c8c137b1925663961aced"
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/invalid-recovered.json",
+    "old_entries": 160,
+    "new_entries": 169,
+    "added": [
+      "GoLean/GoCore/Declaration.lean",
+      "GoLean/GoCore/RecoveryCallLayout.lean",
+      "GoLean/GoCore/RecoveryChoices.lean",
+      "GoLean/GoCore/RecoveryPool.lean",
+      "GoLean/GoCore/RecoverySingleton.lean",
+      "GoLean/NativeDeclaration.lean",
+      "tools/nativefrontend/declaration.go",
+      "tools/nativefrontend/declaration_fixture_test.go",
+      "tools/nativefrontend/declaration_test.go"
+    ],
+    "removed": [],
+    "changed": {
+      "scripts/ci": {
+        "before": "763cfb020f5ed5545e3460513d16c760525e654c37107f6f526ba34d5044dd99",
+        "after": "4ab07763523e024bce3bcbadc42734014f2f94ae35f356ba47ffe47cf55b30fb"
+      },
+      "lakefile.toml": {
+        "before": "7fdccc5ddac58bcd7fd012604dfe6de902be6348a839e3dcd9601e094baf3f8f",
+        "after": "31932ce0c4880fc681113cb6916e2b56e788681482c6ab38507372adb416391e"
+      }
+    },
+    "new_sha256": "90b838f5b4f9ed9dfdf2278f4eb7f61fd111f9e9ef0a9d1fb3e7f8f44e3dfb65"
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/multiple.json",
+    "old_entries": 160,
+    "new_entries": 169,
+    "added": [
+      "GoLean/GoCore/Declaration.lean",
+      "GoLean/GoCore/RecoveryCallLayout.lean",
+      "GoLean/GoCore/RecoveryChoices.lean",
+      "GoLean/GoCore/RecoveryPool.lean",
+      "GoLean/GoCore/RecoverySingleton.lean",
+      "GoLean/NativeDeclaration.lean",
+      "tools/nativefrontend/declaration.go",
+      "tools/nativefrontend/declaration_fixture_test.go",
+      "tools/nativefrontend/declaration_test.go"
+    ],
+    "removed": [],
+    "changed": {
+      "scripts/ci": {
+        "before": "763cfb020f5ed5545e3460513d16c760525e654c37107f6f526ba34d5044dd99",
+        "after": "4ab07763523e024bce3bcbadc42734014f2f94ae35f356ba47ffe47cf55b30fb"
+      },
+      "lakefile.toml": {
+        "before": "7fdccc5ddac58bcd7fd012604dfe6de902be6348a839e3dcd9601e094baf3f8f",
+        "after": "31932ce0c4880fc681113cb6916e2b56e788681482c6ab38507372adb416391e"
+      }
+    },
+    "new_sha256": "7ccdae1e6a8e7c49b70d05012525d6f71f0f12b528049fa8db1eb42543576187"
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/unequal.json",
+    "old_entries": 160,
+    "new_entries": 169,
+    "added": [
+      "GoLean/GoCore/Declaration.lean",
+      "GoLean/GoCore/RecoveryCallLayout.lean",
+      "GoLean/GoCore/RecoveryChoices.lean",
+      "GoLean/GoCore/RecoveryPool.lean",
+      "GoLean/GoCore/RecoverySingleton.lean",
+      "GoLean/NativeDeclaration.lean",
+      "tools/nativefrontend/declaration.go",
+      "tools/nativefrontend/declaration_fixture_test.go",
+      "tools/nativefrontend/declaration_test.go"
+    ],
+    "removed": [],
+    "changed": {
+      "scripts/ci": {
+        "before": "763cfb020f5ed5545e3460513d16c760525e654c37107f6f526ba34d5044dd99",
+        "after": "4ab07763523e024bce3bcbadc42734014f2f94ae35f356ba47ffe47cf55b30fb"
+      },
+      "lakefile.toml": {
+        "before": "7fdccc5ddac58bcd7fd012604dfe6de902be6348a839e3dcd9601e094baf3f8f",
+        "after": "31932ce0c4880fc681113cb6916e2b56e788681482c6ab38507372adb416391e"
+      }
+    },
+    "new_sha256": "779d4db18b97083fe565200413b0cf23570ef5e17858d5a0c12412be2c22da96"
+  },
+  {
+    "path": "baselines/string-members/panic-recover/string-members/unicode.json",
+    "old_entries": 160,
+    "new_entries": 169,
+    "added": [
+      "GoLean/GoCore/Declaration.lean",
+      "GoLean/GoCore/RecoveryCallLayout.lean",
+      "GoLean/GoCore/RecoveryChoices.lean",
+      "GoLean/GoCore/RecoveryPool.lean",
+      "GoLean/GoCore/RecoverySingleton.lean",
+      "GoLean/NativeDeclaration.lean",
+      "tools/nativefrontend/declaration.go",
+      "tools/nativefrontend/declaration_fixture_test.go",
+      "tools/nativefrontend/declaration_test.go"
+    ],
+    "removed": [],
+    "changed": {
+      "scripts/ci": {
+        "before": "763cfb020f5ed5545e3460513d16c760525e654c37107f6f526ba34d5044dd99",
+        "after": "4ab07763523e024bce3bcbadc42734014f2f94ae35f356ba47ffe47cf55b30fb"
+      },
+      "lakefile.toml": {
+        "before": "7fdccc5ddac58bcd7fd012604dfe6de902be6348a839e3dcd9601e094baf3f8f",
+        "after": "31932ce0c4880fc681113cb6916e2b56e788681482c6ab38507372adb416391e"
+      }
+    },
+    "new_sha256": "3596453f2777497e1de202802c13fec2de5ac0ed53e54816397dd060e82133fe"
+  }
+]

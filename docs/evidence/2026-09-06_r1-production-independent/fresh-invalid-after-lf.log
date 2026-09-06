@@ -1,0 +1,9 @@
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+building Lean executable...
+Build completed successfully (180 jobs).
+native frontend: per-case type-check + emit (no batch export)
+PASS	panic-recover/string-members/invalid-after-lf	panic,strings	stage=string-member	detail=string-member evidence: /home/dev/projects/golean/.claude/worktrees/typed-r1-production-review/artifacts/coverage/string-members/panic-recover__string-members__invalid-after-lf/fresh-5gi8_mny\nPASS string-member: golean-r1-explicit-string-v1; exact forced fields and typed-explicit-string evidence; gc text equality is not claimed
+
+differential coverage summary: cases=1 pass=1 fail=0 export_status=0
+results: artifacts/coverage/latest.tsv
+metadata: artifacts/coverage/latest.meta.tsv

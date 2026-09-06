@@ -1,0 +1,9 @@
+{
+  "status": "development source copies; independent review/audit and final accepted source integration still required",
+  "source_tree": "/home/dev/projects/golean/.claude/worktrees/typed-shared-customer",
+  "sources": {
+    "AbortObservation": "59b87eddf0b8314fb97668446901b1c8a79e4fc4dcc89a77319a2779e0699d08",
+    "RecoveryPoolObservation": "3f521443b0a7366618f4dcad477ec9eb37304109889e96323b39ebecfea83922",
+    "RecoveryProgramObservation": "cb1cc4c842f00547a36fcd871b20f9239b341350b472ab5813aa378ed8023b62"
+  }
+}

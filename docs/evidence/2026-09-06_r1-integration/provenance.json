@@ -1,0 +1,20 @@
+{
+  "integration_parent": "b34cee6767de3e39f064cc5c8c2214568b332e86",
+  "feature_tip": "819182b5898f565f2488d706ef160319453e2f1d",
+  "reviewed_inputs": 184,
+  "source_inputs": 3923,
+  "base_source_delta": [
+    "lakefile.toml",
+    "scripts/ci"
+  ],
+  "additional_refresh": "9 source-only apparatus inventories160->169; everyotherpinfield unchanged",
+  "ci_full_records": "exact cached R1 full3635/negative394 TSV/meta; not a fresh full run",
+  "pending": [],
+  "ordinary_ci_exit": 0,
+  "fresh_member_exit": 0,
+  "fresh_cases": 9,
+  "source_revalidated": 3923,
+  "independent_union_review": "731beb0ba290cdb12fa89b6c55d198ef5381aa4f",
+  "artifact_archive": "all focused artifacts except bin/coverageharness; excluded binary hash retained in inventory",
+  "full_scope": "cached3635/394 author records, ordinary slow tier cached"
+}

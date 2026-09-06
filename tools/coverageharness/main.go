@@ -27,6 +27,7 @@ type config struct {
 	// string literal (split.go), exit 3 with the cause on any ambiguity.
 	splitStderr     string
 	abortMessage    string
+	abortRecord     string
 	readObservation string
 	quoteFile       string
 	abortStatus     string
@@ -44,6 +45,7 @@ func main() {
 	flag.StringVar(&cfg.status, "expected-status", "ok", "expected Go status: ok, panic, deadlock, race, or fatal")
 	flag.StringVar(&cfg.splitStderr, "split-stderr", "", "SPLIT MODE: path of a captured `go run` stderr; prints the program's output prefix for --expected-status as a JSON string literal (stdlib slice 3)")
 	flag.StringVar(&cfg.abortMessage, "abort-message", "", "path of raw oracle stderr; prints the actual first panic/fatal message as a JSON string literal after validating the report split")
+	flag.StringVar(&cfg.abortRecord, "abort-record", "", "path of raw oracle stderr; prints a checked panic/child-exit record with exact message/output byte arrays (not an ordinary observation)")
 	flag.StringVar(&cfg.readObservation, "read-observation", "", "path of raw oracle stdout; validates UTF-8 and JSON before shell transport")
 	flag.StringVar(&cfg.quoteFile, "quote-file", "", "diagnostics only: print file bytes as an ASCII Go-quoted string; never an observation")
 	flag.StringVar(&cfg.abortStatus, "abort-status", "", "path of raw oracle stderr; classify its validated abort report or refuse an ambiguous terminal kind")
@@ -53,7 +55,7 @@ func main() {
 	flag.Parse()
 
 	modePath, modes := "", 0
-	for _, p := range []string{cfg.splitStderr, cfg.abortMessage, cfg.readObservation, cfg.quoteFile, cfg.abortStatus} {
+	for _, p := range []string{cfg.splitStderr, cfg.abortMessage, cfg.abortRecord, cfg.readObservation, cfg.quoteFile, cfg.abortStatus} {
 		if p != "" {
 			modePath = p
 			modes++
@@ -75,7 +77,7 @@ func main() {
 		return
 	}
 	if (cfg.crashReport != "" || cfg.crashRegistered != "") &&
-		cfg.splitStderr == "" && cfg.abortMessage == "" && cfg.abortStatus == "" {
+		cfg.splitStderr == "" && cfg.abortMessage == "" && cfg.abortRecord == "" && cfg.abortStatus == "" {
 		fmt.Fprintln(os.Stderr, "crash evidence is valid only with an abort or stderr-output query")
 		os.Exit(2)
 	}
@@ -92,6 +94,8 @@ func main() {
 		}
 		var text string
 		switch {
+		case cfg.abortRecord != "":
+			text, err = observedAbortRecord(raw, evidence)
 		case cfg.abortStatus != "":
 			var view abortView
 			view, err = checkedAbortView(raw, evidence)

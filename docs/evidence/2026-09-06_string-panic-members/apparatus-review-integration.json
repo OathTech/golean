@@ -1,0 +1,7 @@
+{
+  "author_review_commit": "d59b4ab1",
+  "integrated_review_commit": "e6a9920359b60d2cc5ddd47ea4b4fb39615863de",
+  "frozen_inputs_unchanged": 184,
+  "review": "docs/evidence/2026-09-06_r1-apparatus-independent-review/REVIEW.md",
+  "disposition": "bounded v3 apparatus accepted; full CI and separate Lean/model review remain required"
+}

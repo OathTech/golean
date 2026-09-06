@@ -11,14 +11,11 @@ func main() {
 	repanicSameValueAbort()
 }
 
-// W4.3 item 5: the R-1 forced-half proof row. The [recovered,
-// repanicked] collapse is eface IDENTITY — undecidable at the
-// machine's value level (the C4 impossibility) — but the IDENTITY
-// itself is in-language: recover the repanic in an outer frame and
-// compare with == against the original value. The abort row above
-// stays red awaiting the machine's quotient member; this row proves
-// the forced half (panic, repanic, same-value identity, deferred-call
-// order) exactly.
+// W4.3 item 5: a concrete R-1 forced-half control. The [recovered,
+// repanicked] collapse depends on eface data identity. This Go == test
+// checks VALUE equality; it does not expose or establish that runtime
+// boxing identity. The abort row's explicit string-member certificate
+// separately checks actual abort, full model chain and exact controls.
 func repanicSameValueForcedHalf() string {
 	orig := "orig"
 	out := ""

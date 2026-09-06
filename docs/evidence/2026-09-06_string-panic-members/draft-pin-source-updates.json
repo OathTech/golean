@@ -1,0 +1,82 @@
+[
+  {
+    "pin": "baselines/string-members/panic-recover/string-members/controls.json",
+    "reason": "pre-acceptance correction: reuse exact existing three strict tapes; initial prefix selector ran no case",
+    "delta": {
+      "tools/string_member_runner.py": {
+        "old": "16b49fb10fe4a845a1e0c261e95978e2e94216ac54a2abb8b4e863714ee77abd",
+        "new": "b29a62c5ae7ce31bbfb1169331038fa8d9683828c4bc177e8657f9b0edd322a1"
+      }
+    }
+  },
+  {
+    "pin": "baselines/string-members/panic-recover/string-members/equal.json",
+    "reason": "pre-acceptance correction: reuse exact existing three strict tapes; initial prefix selector ran no case",
+    "delta": {
+      "tools/string_member_runner.py": {
+        "old": "16b49fb10fe4a845a1e0c261e95978e2e94216ac54a2abb8b4e863714ee77abd",
+        "new": "b29a62c5ae7ce31bbfb1169331038fa8d9683828c4bc177e8657f9b0edd322a1"
+      }
+    }
+  },
+  {
+    "pin": "baselines/string-members/panic-recover/string-members/invalid-after-lf.json",
+    "reason": "pre-acceptance correction: reuse exact existing three strict tapes; initial prefix selector ran no case",
+    "delta": {
+      "tools/string_member_runner.py": {
+        "old": "16b49fb10fe4a845a1e0c261e95978e2e94216ac54a2abb8b4e863714ee77abd",
+        "new": "b29a62c5ae7ce31bbfb1169331038fa8d9683828c4bc177e8657f9b0edd322a1"
+      }
+    }
+  },
+  {
+    "pin": "baselines/string-members/panic-recover/string-members/invalid-before-lf.json",
+    "reason": "pre-acceptance correction: reuse exact existing three strict tapes; initial prefix selector ran no case",
+    "delta": {
+      "tools/string_member_runner.py": {
+        "old": "16b49fb10fe4a845a1e0c261e95978e2e94216ac54a2abb8b4e863714ee77abd",
+        "new": "b29a62c5ae7ce31bbfb1169331038fa8d9683828c4bc177e8657f9b0edd322a1"
+      }
+    }
+  },
+  {
+    "pin": "baselines/string-members/panic-recover/string-members/invalid-recovered.json",
+    "reason": "pre-acceptance correction: reuse exact existing three strict tapes; initial prefix selector ran no case",
+    "delta": {
+      "tools/string_member_runner.py": {
+        "old": "16b49fb10fe4a845a1e0c261e95978e2e94216ac54a2abb8b4e863714ee77abd",
+        "new": "b29a62c5ae7ce31bbfb1169331038fa8d9683828c4bc177e8657f9b0edd322a1"
+      }
+    }
+  },
+  {
+    "pin": "baselines/string-members/panic-recover/string-members/multiple.json",
+    "reason": "pre-acceptance correction: reuse exact existing three strict tapes; initial prefix selector ran no case",
+    "delta": {
+      "tools/string_member_runner.py": {
+        "old": "16b49fb10fe4a845a1e0c261e95978e2e94216ac54a2abb8b4e863714ee77abd",
+        "new": "b29a62c5ae7ce31bbfb1169331038fa8d9683828c4bc177e8657f9b0edd322a1"
+      }
+    }
+  },
+  {
+    "pin": "baselines/string-members/panic-recover/string-members/unequal.json",
+    "reason": "pre-acceptance correction: reuse exact existing three strict tapes; initial prefix selector ran no case",
+    "delta": {
+      "tools/string_member_runner.py": {
+        "old": "16b49fb10fe4a845a1e0c261e95978e2e94216ac54a2abb8b4e863714ee77abd",
+        "new": "b29a62c5ae7ce31bbfb1169331038fa8d9683828c4bc177e8657f9b0edd322a1"
+      }
+    }
+  },
+  {
+    "pin": "baselines/string-members/panic-recover/string-members/unicode.json",
+    "reason": "pre-acceptance correction: reuse exact existing three strict tapes; initial prefix selector ran no case",
+    "delta": {
+      "tools/string_member_runner.py": {
+        "old": "16b49fb10fe4a845a1e0c261e95978e2e94216ac54a2abb8b4e863714ee77abd",
+        "new": "b29a62c5ae7ce31bbfb1169331038fa8d9683828c4bc177e8657f9b0edd322a1"
+      }
+    }
+  }
+]

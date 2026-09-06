@@ -1,0 +1,10 @@
+{
+  "lakefile.toml": {
+    "before": "7fdccc5ddac58bcd7fd012604dfe6de902be6348a839e3dcd9601e094baf3f8f",
+    "integrated": "31932ce0c4880fc681113cb6916e2b56e788681482c6ab38507372adb416391e"
+  },
+  "scripts/ci": {
+    "before": "763cfb020f5ed5545e3460513d16c760525e654c37107f6f526ba34d5044dd99",
+    "integrated": "4ab07763523e024bce3bcbadc42734014f2f94ae35f356ba47ffe47cf55b30fb"
+  }
+}

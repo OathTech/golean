@@ -1,0 +1,20 @@
+{
+  "before_head": "90128828b10168b875fcfe61c773e069db98d58c",
+  "dependency": "414a2abeff6eb69307205276c1b2a6e69f8095f3",
+  "merged_head": "620489c9502b8e8ab86f93053775c95a6259f030",
+  "stash": "63593b8b4866fbadb4bf2882d6b3e5fee5be9964",
+  "archive": "/home/dev/projects/golean/.tmp/r1-before-observer-merge.1ltzwfwr/wip.tar.gz",
+  "archive_sha256": "210494184223cc386c0f86e3d1c2798eb9b28d77ba6721d3fd903fc8307a269e",
+  "original_wip_files": 77,
+  "unchanged_before_document_update": 71,
+  "union_files": [
+    "GoLean/Interface.lean",
+    "Tests/InterfaceAudit.lean",
+    "lakefile.toml",
+    "scripts/check-interface",
+    "scripts/check-interface.py",
+    "scripts/ci"
+  ],
+  "generic_observer_copy_hashes_unchanged": true,
+  "all_subject_control_wire_and_observation_pins_unchanged": true
+}

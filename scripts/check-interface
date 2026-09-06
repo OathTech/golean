@@ -4,7 +4,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 "$ROOT/scripts/capped" lake build GoLean.Interface InterfaceTests
-for module in GoLean/GoCore/Trace GoLean/GoCore/PoolTrace GoLean/GoCore/ProgramTrace \
+for module in GoLean/GoCore/PanicText GoLean/GoCore/StringPanic \
+    GoLean/GoCore/Trace GoLean/GoCore/PoolTrace GoLean/GoCore/ProgramTrace \
+    GoLean/GoCore/AbortObservation GoLean/GoCore/RecoveryPoolObservation \
+    GoLean/GoCore/RecoveryProgramObservation \
     GoLean/GoCore/BooleanTyping GoLean/GoCore/BooleanStore GoLean/GoCore/BooleanSetup \
     GoLean/GoCore/BooleanInitialization \
     GoLean/GoCore/BooleanControlTyping GoLean/GoCore/BooleanControl \
@@ -32,7 +35,7 @@ for module in GoLean/GoCore/Trace GoLean/GoCore/PoolTrace GoLean/GoCore/ProgramT
     GoLean/GoCore/RecoveryStatementProgress GoLean/GoCore/RecoveryFrameProgress \
     GoLean/GoCore/RecoveryPanicProgress GoLean/GoCore/RecoveryInvariant \
     GoLean/GoCore/RecoverySuccessfulRuns Tests/RecoveryInvariant Tests/RecoveryControlAudit \
-    GoLean/Interface Tests/PanicRendering Tests/InterfaceContract Tests/BooleanRuntime \
+    GoLean/Interface Tests/PanicRendering Tests/StringPanicMembers Tests/InterfaceContract Tests/BooleanRuntime \
     Tests/BooleanProgram Tests/InterfaceAudit; do
   "$ROOT/scripts/capped" lake env lean "$module.lean"
 done

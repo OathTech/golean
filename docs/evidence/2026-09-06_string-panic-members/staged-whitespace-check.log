@@ -1,0 +1,144 @@
+docs/evidence/2026-09-06_string-panic-members/bugs-case-pin-proposal.patch:4: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/bugs-case-pin-proposal.patch:9: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/bugs-ledger-proposal.patch:6: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/bugs-ledger-proposal.patch:41: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/bugs-ledger-proposal.patch:45: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/bugs-ledger-proposal.patch:51: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/language-ledger-proposal.patch:4: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/language-ledger-proposal.patch:6: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/language-ledger-proposal.patch:34: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/language-ledger-proposal.patch:36: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/language-ledger-proposal.patch:40: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/language-ledger-proposal.patch:83: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/post-observer-unions.patch:11: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/post-observer-unions.patch:24: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/post-observer-unions.patch:92: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/post-observer-unions.patch:125: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/post-observer-unions.patch:166: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:15: space before tab in indent.
++ 	repanicSameValueAbort()
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:17: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:32: space before tab in indent.
++ 	orig := "orig"
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:33: space before tab in indent.
++ 	out := ""
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:55: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:124: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:141: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:146: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:168: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:183: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:217: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:228: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:241: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:305: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:314: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:318: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:328: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:342: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:354: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:387: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:428: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:451: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:536: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:570: space before tab in indent.
++ 	// string literal (split.go), exit 3 with the cause on any ambiguity.
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:571: space before tab in indent.
++ 	splitStderr     string
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:572: space before tab in indent.
++ 	abortMessage    string
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:574: space before tab in indent.
++ 	readObservation string
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:575: space before tab in indent.
++ 	quoteFile       string
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:576: space before tab in indent.
++ 	abortStatus     string
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:578: space before tab in indent.
++ 	flag.StringVar(&cfg.status, "expected-status", "ok", "expected Go status: ok, panic, deadlock, race, or fatal")
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:579: space before tab in indent.
++ 	flag.StringVar(&cfg.splitStderr, "split-stderr", "", "SPLIT MODE: path of a captured `go run` stderr; prints the program's output prefix for --expected-status as a JSON string literal (stdlib slice 3)")
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:580: space before tab in indent.
++ 	flag.StringVar(&cfg.abortMessage, "abort-message", "", "path of raw oracle stderr; prints the actual first panic/fatal message as a JSON string literal after validating the report split")
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:582: space before tab in indent.
++ 	flag.StringVar(&cfg.readObservation, "read-observation", "", "path of raw oracle stdout; validates UTF-8 and JSON before shell transport")
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:583: space before tab in indent.
++ 	flag.StringVar(&cfg.quoteFile, "quote-file", "", "diagnostics only: print file bytes as an ASCII Go-quoted string; never an observation")
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:584: space before tab in indent.
++ 	flag.StringVar(&cfg.abortStatus, "abort-status", "", "path of raw oracle stderr; classify its validated abort report or refuse an ambiguous terminal kind")
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:586: space before tab in indent.
++ 	flag.Parse()
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:587: trailing whitespace.
++ 
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:588: space before tab in indent.
++ 	modePath, modes := "", 0
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:591: space before tab in indent.
++ 		if p != "" {
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:592: space before tab in indent.
++ 			modePath = p
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:593: space before tab in indent.
++ 			modes++
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:595: space before tab in indent.
++ 		return
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:596: space before tab in indent.
++ 	}
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:597: space before tab in indent.
++ 	if (cfg.crashReport != "" || cfg.crashRegistered != "") &&
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:600: space before tab in indent.
++ 		fmt.Fprintln(os.Stderr, "crash evidence is valid only with an abort or stderr-output query")
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:601: space before tab in indent.
++ 		os.Exit(2)
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:602: space before tab in indent.
++ 	}
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:604: space before tab in indent.
++ 		}
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:605: space before tab in indent.
++ 		var text string
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:606: space before tab in indent.
++ 		switch {
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:609: space before tab in indent.
++ 		case cfg.abortStatus != "":
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:610: space before tab in indent.
++ 			var view abortView
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:611: space before tab in indent.
++ 			view, err = checkedAbortView(raw, evidence)
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:617: space before tab in indent.
++ 	return outputLiteral(view.message)
+docs/evidence/2026-09-06_string-panic-members/production-candidate.patch:619: trailing whitespace.
++ 

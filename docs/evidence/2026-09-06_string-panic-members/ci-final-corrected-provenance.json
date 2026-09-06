@@ -1,0 +1,28 @@
+{
+  "command": "GOLEAN_COVERAGE_JOBS=2 GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 scripts/capped scripts/ci",
+  "head": "91efd4cad5efa3843e61cc340657ac6659b69f28",
+  "policy": "Ordinary CI explicitly reuses the completed source-bound 3635 executable /394 negative results. Full differential evidence was recorded on v3 unchanged184; only reviewed baseline/docs disposition and review artifacts changed. Original dirty/stale metadata retained. No slow-tier recertification claimed.",
+  "cached_records": {
+    "artifacts/coverage/latest.tsv": {
+      "sha256": "5a8e77160e43eb6e801f805276e3e3ef2d2a882595faf6e92e9ad51faad1fb2a",
+      "reused_from": "docs/evidence/2026-09-06_string-panic-members/full-v3.latest.tsv"
+    },
+    "artifacts/coverage/latest.meta.tsv": {
+      "sha256": "5f8176522a0adeebf76401bb5957f06a11d9926720d879e8bccfc90ac61e7deb",
+      "reused_from": "docs/evidence/2026-09-06_string-panic-members/full-v3.latest.meta.tsv"
+    },
+    "artifacts/coverage/negative-latest.tsv": {
+      "sha256": "16e489a805e7530e6d961b27620a93c416c6d91373a608fedacef5281eb8d204",
+      "reused_from": "docs/evidence/2026-09-06_string-panic-members/full-v3.negative-latest.tsv"
+    },
+    "artifacts/coverage/negative-latest.meta.tsv": {
+      "sha256": "6dbc3b117e297e67754f53383ab2897a9c3ef10059bd31ae7fb6b8151d12d095",
+      "reused_from": "docs/evidence/2026-09-06_string-panic-members/full-v3.negative-latest.meta.tsv"
+    }
+  },
+  "runtime_inventory": "production-candidate-source-v3.json",
+  "disposition_review": "8e8bca46",
+  "additional_disposition_review": "2094de72",
+  "previous_final_CI": "ci-final-ordinary.log; exit1 solely BUG-004 open Cases mismatch; all other required checks passed",
+  "log": "ci-final-corrected.log"
+}

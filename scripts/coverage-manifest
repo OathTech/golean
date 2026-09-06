@@ -530,6 +530,18 @@ while IFS= read -r cases_file; do
       lane="strict"
     fi
     case "$lane" in
+      string-member)
+        if [[ "$expected_status" != "panic" || "$expected_reason" != "-" || "$why" == "-" || "$params" != "-" ]]; then
+          echo "coverage-manifest: $cases_file: string-member requires panic, reason -, explicit why, and params -; the fixed source-bound pin replaces a text substring" >&2
+          bad=1
+          continue
+        fi
+        if has_tag "$features" "nondet"; then
+          echo "coverage-manifest: $cases_file: string-member does not certify schedule membership" >&2
+          bad=1
+          continue
+        fi
+        ;;
       strict)
         # Strict-lane params (depth guard, membership-depth memo P1,
         # [USER]-ruled 2026-09-03): '-' or exactly depth=<N> — the
@@ -668,7 +680,7 @@ while IFS= read -r cases_file; do
         esac
         ;;
       *)
-        echo "coverage-manifest: $cases_file: invalid lane: $lane (use strict, membership, confluent, or racy)" >&2
+        echo "coverage-manifest: $cases_file: invalid lane: $lane (use strict, membership, confluent, racy, or string-member)" >&2
         bad=1
         continue
         ;;
@@ -711,7 +723,7 @@ while IFS= read -r cases_file; do
     esac
     case "$expected_status" in
       panic|fatal)
-        if [[ "$expected_reason" == "-" ]]; then
+        if [[ "$expected_reason" == "-" && "$lane" != "string-member" ]]; then
           echo "coverage-manifest: $cases_file: $expected_status requires expected_reason" >&2
           bad=1
           continue

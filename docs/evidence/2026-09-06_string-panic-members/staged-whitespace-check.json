@@ -1,0 +1,7 @@
+{
+  "all_staged_exit": 2,
+  "all_flags": "Archived unified-diff context lines only (leading context space before blank/tab lines). Exact reviewed/evidence patch bytes preserved.",
+  "archived_patch_diagnostics": 72,
+  "excluding_archived_evidence_patch_exit": 0,
+  "runtime_or_document_whitespace_errors": 0
+}

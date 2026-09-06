@@ -1,0 +1,118 @@
+{
+  "counts": {
+    "PASS": 3391,
+    "FAIL": 244
+  },
+  "cases": 3635,
+  "missing": [],
+  "delta": [
+    {
+      "id": "panic-recover/repanic-same-value-abort",
+      "before": [
+        "FAIL",
+        "lean-observation"
+      ],
+      "after": [
+        "PASS",
+        "string-member"
+      ],
+      "detail": "string-member evidence: /home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/string-members/panic-recover__repanic-same-value-abort/fresh-q4gtsn24\\nPASS string-member: golean-r1-explicit-string-v1; exact forced fields and reviewed-broader-string-control evidence; gc text equality is not claimed"
+    },
+    {
+      "id": "panic-recover/string-members/equal",
+      "before": null,
+      "after": [
+        "PASS",
+        "string-member"
+      ],
+      "detail": "string-member evidence: /home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/string-members/panic-recover__string-members__equal/fresh-ape_oxom\\nPASS string-member: golean-r1-explicit-string-v1; exact forced fields and typed-explicit-string evidence; gc text equality is not claimed"
+    },
+    {
+      "id": "panic-recover/string-members/unequal",
+      "before": null,
+      "after": [
+        "PASS",
+        "string-member"
+      ],
+      "detail": "string-member evidence: /home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/string-members/panic-recover__string-members__unequal/fresh-qo73pyb0\\nPASS string-member: golean-r1-explicit-string-v1; exact forced fields and typed-explicit-string evidence; gc text equality is not claimed"
+    },
+    {
+      "id": "panic-recover/string-members/multiple",
+      "before": null,
+      "after": [
+        "PASS",
+        "string-member"
+      ],
+      "detail": "string-member evidence: /home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/string-members/panic-recover__string-members__multiple/fresh-q5gw9r1x\\nPASS string-member: golean-r1-explicit-string-v1; exact forced fields and typed-explicit-string evidence; gc text equality is not claimed"
+    },
+    {
+      "id": "panic-recover/string-members/invalid-before-lf",
+      "before": null,
+      "after": [
+        "PASS",
+        "string-member"
+      ],
+      "detail": "string-member evidence: /home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/string-members/panic-recover__string-members__invalid-before-lf/fresh-9p3esd1e\\nPASS string-member: golean-r1-explicit-string-v1; exact forced fields and typed-explicit-string evidence; gc text equality is not claimed"
+    },
+    {
+      "id": "panic-recover/string-members/invalid-after-lf",
+      "before": null,
+      "after": [
+        "PASS",
+        "string-member"
+      ],
+      "detail": "string-member evidence: /home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/string-members/panic-recover__string-members__invalid-after-lf/fresh-g87wdf_m\\nPASS string-member: golean-r1-explicit-string-v1; exact forced fields and typed-explicit-string evidence; gc text equality is not claimed"
+    },
+    {
+      "id": "panic-recover/string-members/invalid-recovered",
+      "before": null,
+      "after": [
+        "PASS",
+        "string-member"
+      ],
+      "detail": "string-member evidence: /home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/string-members/panic-recover__string-members__invalid-recovered/fresh-ydv9d1gm\\nPASS string-member: golean-r1-explicit-string-v1; exact forced fields and typed-explicit-string evidence; gc text equality is not claimed"
+    },
+    {
+      "id": "panic-recover/string-members/unicode",
+      "before": null,
+      "after": [
+        "PASS",
+        "string-member"
+      ],
+      "detail": "string-member evidence: /home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/string-members/panic-recover__string-members__unicode/fresh-keqlopk1\\nPASS string-member: golean-r1-explicit-string-v1; exact forced fields and typed-explicit-string evidence; gc text equality is not claimed"
+    },
+    {
+      "id": "panic-recover/string-members/controls",
+      "before": null,
+      "after": [
+        "PASS",
+        "string-member"
+      ],
+      "detail": "string-member evidence: /home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/string-members/panic-recover__string-members__controls/fresh-m6aiae6l\\nPASS string-member: golean-r1-explicit-string-v1; exact forced fields and typed-explicit-string evidence; gc text equality is not claimed"
+    }
+  ],
+  "meta": {
+    "frontend": "native",
+    "manifest": "/home/dev/projects/golean/.tmp/golean-coverage-manifest.VR8uNX",
+    "manifest_sha256": "c2a13c0adabe351dfd570796bc46fca6e83eb1f869b2471aad1f23bbbfd122e8",
+    "manifest_cases": "3635",
+    "total_corpus_cases": "unknown",
+    "full_run": "unknown",
+    "filters": "unknown",
+    "git_commit": "e6a9920359b60d2cc5ddd47ea4b4fb39615863de",
+    "git_dirty": "true",
+    "go_toolchain": "go1.26.5",
+    "go_traceback": "system",
+    "go_crash_channel": "same-run-setcrashoutput-v1",
+    "go_drift_allowed": "0",
+    "go_drift_actual": "false",
+    "depth_guard": "choice-trace wideAfterExhaustion=0 on every invariance stream",
+    "depth_seeds": "1,2,3",
+    "depth_generator": "lcg31(1103515245,12345) bits16..31",
+    "depth_trace_timeout_seconds": "240",
+    "membership_draws": "32",
+    "jobs": "32",
+    "fanout_find_exit": "0",
+    "fanout_pool_exit": "0"
+  }
+}

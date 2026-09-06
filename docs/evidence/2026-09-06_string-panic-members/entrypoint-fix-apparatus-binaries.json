@@ -1,0 +1,58 @@
+[
+  {
+    "path": "/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/string-member-gate-co_11g98/drop-bytes/helper",
+    "sha256": "4cd454d07887f3dc3e0392998da9af823de98e30181d0e0049a13954ee5f0a60"
+  },
+  {
+    "path": "/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/string-member-gate-co_11g98/false-exit/helper",
+    "sha256": "cbe921fb67d388cdf87d72b96b47b154007c993cb7ed1226e5339b33abfd8df2"
+  },
+  {
+    "path": "/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/string-member-gate-co_11g98/ignore-kind/helper",
+    "sha256": "78b77da5fd78de6576dc925e03e42fd09137f65f6d01c19dc9f16e85f8b62d69"
+  },
+  {
+    "path": "/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/string-member-gate-co_11g98/replace-high-byte/helper",
+    "sha256": "65ed74e0f86e73f0588d375ef324dd0a7f425991d13f2871495cee204255fdd8"
+  },
+  {
+    "path": "/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/string-member-fixtures-seiyq3ak/bypass-artifacts/bin/coverageharness",
+    "sha256": "70412feefa9d84b7704946d8f28b2c00063c2ce7dab382cb14a9efd40dcd151f"
+  },
+  {
+    "path": "/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/string-member-fixtures-seiyq3ak/change-output/program",
+    "sha256": "1f4ef88fb70a3e0dd5f7905d5b513cc059c7a9c34e49717db934b197e0b9a0cf"
+  },
+  {
+    "path": "/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/string-member-fixtures-seiyq3ak/coverageharness",
+    "sha256": "70412feefa9d84b7704946d8f28b2c00063c2ce7dab382cb14a9efd40dcd151f"
+  },
+  {
+    "path": "/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/string-member-fixtures-seiyq3ak/direct-indirect/program",
+    "sha256": "0fd4db8797841f64dfc75146492c0280627b3bc4120c4f2929a23bb3cd62af35"
+  },
+  {
+    "path": "/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/string-member-fixtures-seiyq3ak/drop-invalid-after-lf/program",
+    "sha256": "725010dc77dcbf548b08786fa61377f55a32eed2f85bf89d8a672febdf1fc28c"
+  },
+  {
+    "path": "/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/string-member-fixtures-seiyq3ak/drop-nul/program",
+    "sha256": "dbf488c6fcae1e9e42f0376166c5b1d0a7d47ee70d0541c945f570cfe721dc2e"
+  },
+  {
+    "path": "/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/string-member-fixtures-seiyq3ak/duplicate-defer/program",
+    "sha256": "5f7d4d037f215668276589abb34ea240e278558d2579de46dd40058a9f1e4fc9"
+  },
+  {
+    "path": "/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/string-member-fixtures-seiyq3ak/replace-invalid-byte/program",
+    "sha256": "fcff46beca5a5e9a14c5ca111d4ba4b407d80858fa8ce85dd74f095a7ac5612f"
+  },
+  {
+    "path": "/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/string-member-fixtures-seiyq3ak/reverse-defers/program",
+    "sha256": "0bfbe7effac4e87f2f2ac4c75e78b709410402af41db14c476e736bc086dd29a"
+  },
+  {
+    "path": "/home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/string-member-fixtures-seiyq3ak/suppress-final-panic/program",
+    "sha256": "743ed5e86c64e361df4afe227a9aaf97311e1cafd120360400682cdf4ce3ab80"
+  }
+]

@@ -5,6 +5,7 @@ import Tests.RecoveryTypingAudit
 import Tests.RecoveryStorageAudit
 import Tests.RecoverySetupAudit
 import Tests.RecoveryControlAudit
+import Tests.StringPanicMembers
 import Lean
 
 /-! The command runs from a separate harness after complete imports. Origin
@@ -20,6 +21,9 @@ def InterfaceAudit.run : CoreM Unit := do
   let allowed : List Name := [``propext, ``Classical.choice, ``Quot.sound]
   let modules : List Name := [
     `GoLean.GoCore.Machine,
+    `GoLean.GoCore.PanicText, `GoLean.GoCore.StringPanic, `Tests.StringPanicMembers,
+    `GoLean.GoCore.AbortObservation, `GoLean.GoCore.RecoveryPoolObservation,
+    `GoLean.GoCore.RecoveryProgramObservation,
     `GoLean.GoCore.Trace, `GoLean.GoCore.PoolTrace,
     `GoLean.GoCore.ProgramTrace, `GoLean.Interface,
     `GoLean.GoCore.AdmissionIndices, `GoLean.GoCore.AdmissionPolicy,
@@ -155,7 +159,33 @@ def InterfaceAudit.run : CoreM Unit := do
     ``GoLean.GateA1.both_pool_traces, ``GoLean.GateA1.print_before_panic,
     ``GoLean.PanicRenderingTests.unicode_widths,
     ``GoLean.PanicRenderingTests.recovered_newline_suffix,
-    ``GoLean.PanicRenderingTests.invalid_utf8_remains_refused]
+    ``GoLean.PanicRenderingTests.invalid_utf8_member,
+    ``GoLean.PanicRenderingTests.equal_repanic_member,
+    ``GoLean.GoCore.PanicText.lfPrefix_valid,
+    ``GoLean.GoCore.PanicText.firstLine_bytes,
+    ``GoLean.GoCore.PanicText.decodeEscapedBytes_escapeAllBytes,
+    ``GoLean.GoCore.PanicText.escapeAllBytes_injective,
+    ``GoLean.GoCore.Machine.firstPanicLine_total,
+    ``GoLean.GoCore.Machine.firstPanicLine_bytes,
+    ``GoLean.GoCore.Machine.renderStringMember_of_utf8,
+    ``GoLean.GoCore.Machine.renderStringMember_of_invalid,
+    ``GoLean.GoCore.Machine.renderStringMember_bytes_or_escape,
+    ``GoLean.GoCore.RecoveryRuntime.runConfigWithAbort_erasure,
+    ``GoLean.GoCore.RecoveryRuntime.stepAbortRecord?_some,
+    ``GoLean.GoCore.RecoveryRuntime.execPoolWithAbort_erasure,
+    ``GoLean.GoCore.RecoveryRuntime.runProgramPoolWithAbortInts_erasure,
+    ``GoLean.GoCore.RecoveryRuntime.runProgramPoolWithAbort_witness,
+    ``GoLean.GoCore.RecoveryRuntime.checkedRunProgramPoolWithAbort_sound,
+    ``GoLean.GoCore.Machine.renderPanicHead_string,
+    ``GoLean.GoCore.Machine.abortMsg_string,
+    ``GoLean.GoCore.Machine.abortMsg_string_total,
+    ``GoLean.GoCore.Machine.stepFn_string_abort,
+    ``GoLean.GoCore.Machine.runConfig_string_abort,
+    ``GoLean.StringPanicMembersTests.generic_actual_abort,
+    ``GoLean.StringPanicMembersTests.invalid_after_lf,
+    ``GoLean.StringPanicMembersTests.non_string_boundary,
+    ``GoLean.StringPanicMembersTests.rendered_text_does_not_identify_bytes,
+    ``GoLean.StringPanicMembersTests.actual_abort_pin]
   for m in modules do
     unless env.header.moduleNames.contains m do
       throwError "Semantic interface: missing module {m}"
@@ -165,7 +195,9 @@ def InterfaceAudit.run : CoreM Unit := do
   -- The new renderer keeps the constructive machine-helper boundary,
   -- although the public correspondence layer admits the classical trio.
   for n in [``GoLean.GoCore.Machine.utf8StringAux?,
-      ``GoLean.GoCore.Machine.utf8String?, ``GoLean.GoCore.Machine.firstPanicLine?] do
+      ``GoLean.GoCore.Machine.utf8String?, ``GoLean.GoCore.Machine.firstPanicLine?,
+      ``GoLean.GoCore.Machine.renderStringMember, ``GoLean.GoCore.PanicText.firstLine,
+      ``GoLean.GoCore.PanicText.escapeAllBytes, ``GoLean.GoCore.PanicText.decodeEscapedBytes] do
     for ax in (← collectAxioms n) do
       unless [``propext, ``Quot.sound].contains ax do
         throwError "Semantic interface: constructive renderer {n} depends on forbidden axiom {ax}"

@@ -2741,15 +2741,38 @@ without re-running `step_complete_any_wf`'s mapIterNext case.
 
 - Status: open
 - Pinned-by: differential
-- Cases: panic-recover/repanic-same-value-abort, panic-recover/panic-defined-payload-methods/error, panic-recover/panic-defined-payload-methods/stringer
+- Cases: panic-recover/panic-defined-payload-methods/error, panic-recover/panic-defined-payload-methods/stringer
 
-**Partial fix, 2026-09-06:** item 3 is now fixed, together with valid UTF-8
+**Partial R-1 string member, 2026-09-06:** the explicit boxed-string arm now
+selects byte-exact decoded text or a reversible all-byte escape, followed by
+its recovered suffix and first-LF projection. The historical
+`repanic-same-value-abort` row changes FAIL/lean-observation →
+PASS/string-member. Its source is outside the literal-only O2 grammar and
+uses explicitly broader source/control evidence, not O2 admission. Eight
+new typed string-member rows also pass. The complete run is 3635 cases =
+3391 PASS / 244 existing FAIL, with exactly these nine changes and no other
+status/stage drift or omission. Each member certificate retains actual
+panic/exit/output, the complete model string chain, and thirteen fresh
+kind/byte/recovery/order controls. Rendered text is not equated to gc's text.
+Independent implementation reviews: `d59b4ab1` and `75da9338`; exact source,
+full results and delta: `docs/evidence/2026-09-06_string-panic-members/`.
+This is bounded progress, not completion of BUG-004: non-string equal-payload
+refusal and Error/String-method rendering remain open.
+
+**Correction to the historical quotation below:** Go `r == orig` checks
+value equality; it does not expose or prove the eface data-pointer identity
+used by gc's rendering collapse. The original forced-half row remains an
+exact concrete value/recovery control. The member certificate's separate
+actual-abort and kind/byte/order controls supply the bounded evidence for
+this specific historical source. No generic boxing-identity theorem is claimed.
+
+**Earlier partial fix, 2026-09-06:** item 3 is now fixed, together with valid UTF-8
 payload decoding. `panic-newline-abort` changed FAIL/lean-observation → PASS;
 nine new `panic-text/*` rows passed after first failing on the old renderer.
 The full run measured 3607 cases = 3363 PASS / 244 FAIL, with exactly these ten
 improvements. [Repair and red-first evidence](2026-09-06_panic-rendering-repair.md).
-The three remaining R-1 cases above stay red; this is not completion of the
-rendering quotient. Valid UTF-8 control-byte transport through the shell
+At that earlier checkpoint the three R-1 cases above stayed red; it was not
+completion of the rendering quotient. Valid UTF-8 control-byte transport through the shell
 oracle is a separate reproduced observer obligation, recorded in that note.
 
 > **R-1 conversion state (2026-08-21, raft W4.3 item 5 —
@@ -2774,8 +2797,8 @@ oracle is a separate reproduced observer obligation, recorded in that note.
 - Discovered: 2026-07-25 (pre-merge adversarial audit of `unwinding-arc`)
 
 The original audits identified four rendering issues. Items 2 and 3 are
-fixed as recorded below; items 1 and 4 still refuse pending their R-1
-observer/member implementation:
+fixed as recorded below. Item 1 now has the explicit string member above;
+its non-string equal-payload boundary and item 4 remain open:
 
 1. **`[recovered, repanicked]` collapse is eface IDENTITY** (a bitwise
    type-word + data-pointer compare in `preprintpanics`), not semantic
@@ -2783,8 +2806,10 @@ observer/member implementation:
    box and collapse; runtime-computed equal values do not (the arc's §A3
    probe was constant-folded — `"or"+"ig"` is one static eface). Unequal
    payloads certainly render ` [recovered]`; EQUAL payloads are
-   undecidable without an allocation-identity model, so `renderPanicHead`
-   returns none there. This turned `repanic-same-value-abort`
+   undecidable without an allocation-identity model, so the old renderer
+   returned none there. The explicit string arm now selects the reviewed
+   R-1 member; non-string equal-payload refusal remains. The old refusal
+   turned `repanic-same-value-abort`
    PASS→FAIL (intentional, recorded here per the re-pin guard): the
    collapse it pins is real Go behavior our chain cannot decide.
 2. **Defined-type payloads print qualified**: `panic(Code(7))` renders
@@ -2797,7 +2822,8 @@ observer/member implementation:
    int-underlying defined payloads (other underlyings stay closed).
    `panic-recover/panic-named-type-abort` flipped red→PASS with this.
    Items 1 (eface identity) and 4 (the `preprintpanics` rewrite) remain
-   open under R-1; their pins stay red. Item 3 was fixed on 2026-09-06.
+   open beyond the explicit string member above; the method rows stay red.
+   Item 3 was fixed on 2026-09-06.
 3. **Multi-line string payloads**: Go's first line stops at an embedded
    `\n` (`printindented`); the old `asciiString?` rejected the newline
    byte. **FIXED 2026-09-06:** strict valid-UTF-8 decoding retains the
@@ -2805,7 +2831,8 @@ observer/member implementation:
    formats the recovered suffix, and only then projects to the first
    line. `panic-newline-abort` is green, as are nine new `panic-text/*`
    rows for Unicode widths, mixed text, newlines, recovered suffixes
-   and a retained print prefix. Invalid UTF-8 is still refused.
+   and a retained print prefix. That earlier repair still refused invalid
+   UTF-8; explicit strings now use the reversible member described above.
 4. **`preprintpanics` REWRITES the payload before printing**: a payload
    implementing `error` prints `v.Error()`, one implementing
    `fmt.Stringer` prints `v.String()`, and `printanycustomtype`'s

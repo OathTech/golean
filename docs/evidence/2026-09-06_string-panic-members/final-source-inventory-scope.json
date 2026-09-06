@@ -1,0 +1,24 @@
+{
+  "head": "f082909193ed659c316e225e40a816fd84236528",
+  "scope": "Selective source inventory: tracked plus nonignored untracked files under GoLean, Tests, Corpus, scripts, tools, baselines, and listed root inputs; excludes evidence/logs and generated build artifacts. Candidate184 remains separately frozen and independently reviewed.",
+  "roots": [
+    "GoLean/",
+    "Tests/",
+    "Corpus/",
+    "scripts/",
+    "tools/",
+    "baselines/"
+  ],
+  "root_files": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "GoLean.lean",
+    "Main.lean",
+    "lake-manifest.json",
+    "lakefile.toml",
+    "lean-toolchain"
+  ],
+  "files": 3882,
+  "inventory_sha256": "9df6331b2329a714c9e39f7b33aafcd4c62c2517f872cbcfa4ff1de3fb2aa1f7",
+  "baseline_disposition_review": "8e8bca46"
+}

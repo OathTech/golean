@@ -1,0 +1,20 @@
+{
+  "status": "proposed; tracked baseline unchanged pending independent disposition",
+  "old_baseline_sha256": "a0bf907399953ba12fdb1e1aecb354e8ca3a6e1ff539ecc06174db22a5cfd014",
+  "proposed_baseline_sha256": "59e065858e82a04239bb53b32cdfc32bb22863165fa0cfd95276fa543b7b250a",
+  "actual_full_cases": 3635,
+  "PASS": 3391,
+  "FAIL": 244,
+  "new_rows": 8,
+  "existing_changed_rows": 1,
+  "PASS_regressions": 0,
+  "other_drift": 0,
+  "missing_rows": 0,
+  "preserved_alternations": true,
+  "old_ci_exit": 1,
+  "old_ci_only_failed_check": "baseline diff (exact nine expected changes)",
+  "independent_implementation_reviews": [
+    "d59b4ab1",
+    "75da9338"
+  ]
+}

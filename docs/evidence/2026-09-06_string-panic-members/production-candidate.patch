@@ -1,0 +1,659 @@
+diff --git a/Corpus/coverage/exec/panic-recover/repanic-same-value-abort/cases.tsv b/Corpus/coverage/exec/panic-recover/repanic-same-value-abort/cases.tsv
+index ad814fbb..18fffd5b 100644
+--- a/Corpus/coverage/exec/panic-recover/repanic-same-value-abort/cases.tsv
++++ b/Corpus/coverage/exec/panic-recover/repanic-same-value-abort/cases.tsv
+@@ -1,3 +1,3 @@
+ # id	subject	args	expected_status	expected_reason	features
+--	repanicSameValueAbort	-	panic	orig	panic,recover,defer
++-	repanicSameValueAbort	-	panic	-	panic,recover,defer	string-member	R1 historical recovered-string rethrow with actual complete chain and broader exact controls	-
+ forced-half	repanicSameValueForcedHalf	-	ok	-	panic,recover,defer,identity
+diff --git a/Corpus/coverage/exec/panic-recover/repanic-same-value-abort/main.go b/Corpus/coverage/exec/panic-recover/repanic-same-value-abort/main.go
+index 9b4f1620..4404a05c 100644
+--- a/Corpus/coverage/exec/panic-recover/repanic-same-value-abort/main.go
++++ b/Corpus/coverage/exec/panic-recover/repanic-same-value-abort/main.go
+@@ -11,14 +11,11 @@ func main() {
+ 	repanicSameValueAbort()
+ }
+ 
+-// W4.3 item 5: the R-1 forced-half proof row. The [recovered,
+-// repanicked] collapse is eface IDENTITY — undecidable at the
+-// machine's value level (the C4 impossibility) — but the IDENTITY
+-// itself is in-language: recover the repanic in an outer frame and
+-// compare with == against the original value. The abort row above
+-// stays red awaiting the machine's quotient member; this row proves
+-// the forced half (panic, repanic, same-value identity, deferred-call
+-// order) exactly.
++// W4.3 item 5: a concrete R-1 forced-half control. The [recovered,
++// repanicked] collapse depends on eface data identity. This Go == test
++// checks VALUE equality; it does not expose or establish that runtime
++// boxing identity. The abort row's explicit string-member certificate
++// separately checks actual abort, full model chain and exact controls.
+ func repanicSameValueForcedHalf() string {
+ 	orig := "orig"
+ 	out := ""
+diff --git a/GoLean/CLI.lean b/GoLean/CLI.lean
+index 280b08a1..b4cac5b1 100644
+--- a/GoLean/CLI.lean
++++ b/GoLean/CLI.lean
+@@ -1,4 +1,5 @@
+ import GoLean.GoCore
++import GoLean.GoCore.RecoveryProgramObservation
+ import GoLean.EnumDedup
+ import GoLean.NativeToIR
+ import GoLean.StrictJson
+@@ -31,6 +32,7 @@ structure RunArgs where
+ private def usage : String :=
+   "usage:\n" ++
+   "  golean native-json-run --input <file> --function <name> [--arg-int <n> ...] [--fuel <n>] [--choices <n,n,...>]\n" ++
++  "  golean native-json-string-run --input <file> --function <name> [--arg-int <n> ...] [--fuel <n>] [--choices <n,n,...>] [--require-recovery-profile]\n" ++
+   "  golean observation-eq --left <json> --right <json>\n" ++
+   "  golean coverage-observations --input <file> --function <name> [--arg-int <n> ...] [--fuel <n>] [--engine dedup]\n" ++
+   "      [--max-width <B>] [--max-sites <D>] [--cap <N>] [--work-cap <W>] [--expect-status <ok|panic|ok,panic|race>]
+@@ -503,6 +505,73 @@ private def runNativeJsonRun (args : List String) : IO UInt32 := do
+           IO.eprintln s!"provide --input <file> and --function <name>\n{usage}"
+           return 2
+ 
++private def abortHeadJson (head : GoLean.GoCore.RecoveryRuntime.AbortHead) : Json :=
++  Json.mkObj [
++    ("bytes", Json.arr (head.bytes.bytes.map fun b => Lean.toJson b.toNat)),
++    ("recovered", Lean.toJson head.recovered)]
++
++private def abortChainJson (record : Option GoLean.GoCore.RecoveryRuntime.AbortRecord) : Json :=
++  match record with
++  | none => Json.null
++  | some record =>
++      Json.arr (((GoLean.GoCore.RecoveryRuntime.AbortHead.mk record.bytes record.recovered) ::
++        record.tail).toArray.map abortHeadJson)
++
++/-- R-1 apparatus entry. The computed instrumentation has an all-input
++erasure theorem to the SAME pool/program/Ints driver used above. Its chain
++comes only from a reached Config.abort? and the selected real abort step;
++this command never takes payload bytes or a type assertion from a sidecar.
++Admission is an additional checked fact, not inferred from terminal text. -/
++private def runNativeJsonStringRun (args : List String) : IO UInt32 := do
++  let profileFlags := args.filter (· == "--require-recovery-profile")
++  if profileFlags.length > 1 then
++    IO.eprintln "duplicate --require-recovery-profile"
++    return 2
++  let requireProfile := !profileFlags.isEmpty
++  let args := args.filter (· != "--require-recovery-profile")
++  let cwd ← IO.currentDir
++  match parseRunArgs args {} with
++  | .error err =>
++      IO.eprintln err
++      return 2
++  | .ok cfg =>
++      match cfg.input, cfg.functionName with
++      | some input, some functionName =>
++          let contents ← IO.FS.readFile (absoluteFrom cwd input)
++          match Lean.Json.parse contents with
++          | .error err =>
++              IO.println (cliErrorJson s!"JSON parse error: {err}").compress
++              return 1
++          | .ok json =>
++              match GoLean.NativeToIR.decodeProgram json with
++              | .error err =>
++                  IO.println (cliErrorJson err).compress
++                  return 1
++              | .ok program =>
++                  let admission := GoLean.GoCore.RecoveryTyping.checkRecovery program functionName
++                    (cfg.args.map GoLean.GoValue.int)
++                  let admitted := match admission with | .ok () => true | .error _ => false
++                  if requireProfile then
++                    match admission with
++                    | .error err =>
++                        IO.println (cliErrorJson s!"recovery admission: {err.message}").compress
++                        return 1
++                    | .ok () => pure ()
++                  let (result, record) := GoLean.GoCore.RecoveryRuntime.runProgramPoolWithAbortInts
++                    cfg.fuel program functionName cfg.args cfg.choices
++                  let (observation, exitCode) := match result with
++                    | .ok result => (runJson program.typeDefs.nameOf? result, (0 : UInt32))
++                    | .error (err, out) => (errorJson err out, (1 : UInt32))
++                  IO.println (Json.mkObj [
++                    ("schema", Lean.toJson "golean-string-abort-witness-v1"),
++                    ("observation", observation), ("chain", abortChainJson record),
++                    ("admitted", Lean.toJson admitted), ("fuel", Lean.toJson cfg.fuel),
++                    ("choices", Lean.toJson cfg.choices)]).compress
++                  return exitCode
++      | _, _ =>
++          IO.eprintln s!"provide --input <file> and --function <name>\n{usage}"
++          return 2
++
+ /-! ## `coverage-observations` — the membership lane's machine-side enumerator
+ 
+ CLI layer ONLY (arc slice 3, `docs/2026-08-04_membership-lane-design.md`):
+@@ -1599,6 +1668,7 @@ def main (args : List String) : IO UInt32 := do
+       IO.println usage
+       return 0
+   | "native-json-run" :: rest => runNativeJsonRun rest
++  | "native-json-string-run" :: rest => runNativeJsonStringRun rest
+   | "observation-eq" :: rest => runObservationEq rest
+   | "coverage-observations" :: rest => runCoverageObservations rest
+   | [] =>
+diff --git a/GoLean/GoCore/Machine.lean b/GoLean/GoCore/Machine.lean
+index 8d044a19..cb4cad1f 100644
+--- a/GoLean/GoCore/Machine.lean
++++ b/GoLean/GoCore/Machine.lean
+@@ -1,4 +1,5 @@
+ import GoLean.GoCore.Ops
++import GoLean.GoCore.PanicText
+ 
+ /-!
+ # The fine-grained machine (reshape R1, `docs/2026-07-23_reshape-r1r2-machine-design.md`)
+@@ -2080,12 +2081,21 @@ def utf8String? (bytes : Array UInt8) : Option String :=
+   utf8StringAux? ⟨bytes⟩ 0 ""
+ 
+ /-- The existing observer retains the first panic line, after `panic: `.
+-Go's `printindented` only changes text AFTER a newline, so taking this
+-byte prefix after formatting produces exactly that line. The prefix of a
+-valid UTF-8 string ending before an ASCII newline is itself valid UTF-8;
+-the strict decoder preserves a visible refusal rather than assuming this. -/
++Use the total character projection whose exact UTF-8 byte-prefix
++correspondence is `PanicText.firstLine_bytes`. This removes a redundant
++decoding/refusal seam without changing the valid-string line boundary. -/
+ def firstPanicLine? (text : String) : Option String :=
+-  utf8String? (text.toUTF8.data.takeWhile (· != 0x0A))
++  some (PanicText.firstLine text)
++
++/-- R-1's selected member for explicit string payloads: decoded text is
++retained only after an exact byte roundtrip check; otherwise every byte
++is represented by a reversible `\\xHH` escape inside quotes. The check
++does not assume an unproved postcondition of the custom UTF-8 decoder.
++Go values and recovered bytes remain unchanged. -/
++def renderStringMember (s : GoString) : String :=
++  match utf8String? s.bytes with
++  | some text => if text.toUTF8.data == s.bytes then text else PanicText.escapeAllBytes s
++  | none => PanicText.escapeAllBytes s
+ 
+ /-- Does `dynTy` carry `name() string` — the shape of BOTH interfaces Go's
+ `preprintpanics` consults (`error`'s `Error() string` and `stringer`'s
+@@ -2122,7 +2132,7 @@ def renderPanicPayload (state : ExecState) : GoValue → Option String
+   | .nil => some "nil"
+   | .interface (.defined idx) (.string s) =>
+       if idx == runtimeErrorTypeIdx then utf8String? s.bytes else none
+-  | .interface .string (.string s) => utf8String? s.bytes
++  | .interface .string (.string s) => some (renderStringMember s)
+   | .interface (.int dkind) (.int v kind) =>
+       if dkind == kind then some (toString v) else none
+   | .interface .bool (.bool b) => some (if b then "true" else "false")
+@@ -2165,8 +2175,11 @@ def payloadDynamicTypeNote (state : ExecState) : GoValue → String
+   | .interface dynTy _ => s!" (dynamic type {goTypeNameForMessage state dynTy})"
+   | _ => ""
+ 
+-/-- Go's first abort line for a panic chain. The `[recovered, repanicked]`
+-collapse is decided by the runtime via eface IDENTITY — a bitwise compare
++/-- The first abort-line member for a panic chain. For explicit strings,
++R-1 authorizes a uniform ` [recovered]` suffix; this selected member does
++not claim gc's allocation-dependent collapse. Suffix formatting precedes
++first-line projection. All other payload families retain the prior boundary:
++the `[recovered, repanicked]` collapse is decided via eface IDENTITY — a bitwise compare
+ of the interface's type word AND data pointer (`preprintpanics`,
+ runtime/panic.go), NOT semantic equality (pre-merge audit 2026-07-25;
+ the §A3 probe that suggested otherwise was constant-folded — `"or"+"ig"`
+@@ -2180,13 +2193,16 @@ def renderPanicHead (state : ExecState) (first : PanicEntry) (rest : List PanicE
+     Option String :=
+   (renderPanicPayload state first.value).bind fun base =>
+     (if first.recovered then
+-      match rest with
+-      | e :: _ =>
+-          if e.value == first.value then
+-            none -- boxing identity unmodeled: collapse undecidable (BUG-004)
+-          else
+-            some (base ++ " [recovered]")
+-      | [] => some (base ++ " [recovered]")
++      match first.value with
++      | .interface .string (.string _) => some (base ++ " [recovered]")
++      | _ =>
++          match rest with
++          | e :: _ =>
++              if e.value == first.value then
++                none -- non-string boxing identity remains outside this R-1 slice
++              else
++                some (base ++ " [recovered]")
++          | [] => some (base ++ " [recovered]")
+     else
+       some base).bind firstPanicLine?
+ 
+diff --git a/GoLean/Interface.lean b/GoLean/Interface.lean
+index 09c82f08..bc477811 100644
+--- a/GoLean/Interface.lean
++++ b/GoLean/Interface.lean
+@@ -9,6 +9,8 @@ import GoLean.GoCore.BooleanInitialization
+ import GoLean.GoCore.BooleanPool
+ import GoLean.GoCore.RecoveryAdmission
+ import GoLean.GoCore.RecoverySuccessfulRuns
++import GoLean.GoCore.StringPanic
++import GoLean.GoCore.RecoveryProgramObservation
+ 
+ /-!
+ # Experimental semantic consumer interface
+diff --git a/Tests/InterfaceAudit.lean b/Tests/InterfaceAudit.lean
+index d722d7fe..4931e067 100644
+--- a/Tests/InterfaceAudit.lean
++++ b/Tests/InterfaceAudit.lean
+@@ -5,6 +5,7 @@ import Tests.RecoveryTypingAudit
+ import Tests.RecoveryStorageAudit
+ import Tests.RecoverySetupAudit
+ import Tests.RecoveryControlAudit
++import Tests.StringPanicMembers
+ import Lean
+ 
+ /-! The command runs from a separate harness after complete imports. Origin
+@@ -20,6 +21,9 @@ def InterfaceAudit.run : CoreM Unit := do
+   let allowed : List Name := [``propext, ``Classical.choice, ``Quot.sound]
+   let modules : List Name := [
+     `GoLean.GoCore.Machine,
++    `GoLean.GoCore.PanicText, `GoLean.GoCore.StringPanic, `Tests.StringPanicMembers,
++    `GoLean.GoCore.AbortObservation, `GoLean.GoCore.RecoveryPoolObservation,
++    `GoLean.GoCore.RecoveryProgramObservation,
+     `GoLean.GoCore.Trace, `GoLean.GoCore.PoolTrace,
+     `GoLean.GoCore.ProgramTrace, `GoLean.Interface,
+     `GoLean.GoCore.AdmissionIndices, `GoLean.GoCore.AdmissionPolicy,
+@@ -155,7 +159,33 @@ def InterfaceAudit.run : CoreM Unit := do
+     ``GoLean.GateA1.both_pool_traces, ``GoLean.GateA1.print_before_panic,
+     ``GoLean.PanicRenderingTests.unicode_widths,
+     ``GoLean.PanicRenderingTests.recovered_newline_suffix,
+-    ``GoLean.PanicRenderingTests.invalid_utf8_remains_refused]
++    ``GoLean.PanicRenderingTests.invalid_utf8_member,
++    ``GoLean.PanicRenderingTests.equal_repanic_member,
++    ``GoLean.GoCore.PanicText.lfPrefix_valid,
++    ``GoLean.GoCore.PanicText.firstLine_bytes,
++    ``GoLean.GoCore.PanicText.decodeEscapedBytes_escapeAllBytes,
++    ``GoLean.GoCore.PanicText.escapeAllBytes_injective,
++    ``GoLean.GoCore.Machine.firstPanicLine_total,
++    ``GoLean.GoCore.Machine.firstPanicLine_bytes,
++    ``GoLean.GoCore.Machine.renderStringMember_of_utf8,
++    ``GoLean.GoCore.Machine.renderStringMember_of_invalid,
++    ``GoLean.GoCore.Machine.renderStringMember_bytes_or_escape,
++    ``GoLean.GoCore.RecoveryRuntime.runConfigWithAbort_erasure,
++    ``GoLean.GoCore.RecoveryRuntime.stepAbortRecord?_some,
++    ``GoLean.GoCore.RecoveryRuntime.execPoolWithAbort_erasure,
++    ``GoLean.GoCore.RecoveryRuntime.runProgramPoolWithAbortInts_erasure,
++    ``GoLean.GoCore.RecoveryRuntime.runProgramPoolWithAbort_witness,
++    ``GoLean.GoCore.RecoveryRuntime.checkedRunProgramPoolWithAbort_sound,
++    ``GoLean.GoCore.Machine.renderPanicHead_string,
++    ``GoLean.GoCore.Machine.abortMsg_string,
++    ``GoLean.GoCore.Machine.abortMsg_string_total,
++    ``GoLean.GoCore.Machine.stepFn_string_abort,
++    ``GoLean.GoCore.Machine.runConfig_string_abort,
++    ``GoLean.StringPanicMembersTests.generic_actual_abort,
++    ``GoLean.StringPanicMembersTests.invalid_after_lf,
++    ``GoLean.StringPanicMembersTests.non_string_boundary,
++    ``GoLean.StringPanicMembersTests.rendered_text_does_not_identify_bytes,
++    ``GoLean.StringPanicMembersTests.actual_abort_pin]
+   for m in modules do
+     unless env.header.moduleNames.contains m do
+       throwError "Semantic interface: missing module {m}"
+@@ -165,7 +195,9 @@ def InterfaceAudit.run : CoreM Unit := do
+   -- The new renderer keeps the constructive machine-helper boundary,
+   -- although the public correspondence layer admits the classical trio.
+   for n in [``GoLean.GoCore.Machine.utf8StringAux?,
+-      ``GoLean.GoCore.Machine.utf8String?, ``GoLean.GoCore.Machine.firstPanicLine?] do
++      ``GoLean.GoCore.Machine.utf8String?, ``GoLean.GoCore.Machine.firstPanicLine?,
++      ``GoLean.GoCore.Machine.renderStringMember, ``GoLean.GoCore.PanicText.firstLine,
++      ``GoLean.GoCore.PanicText.escapeAllBytes, ``GoLean.GoCore.PanicText.decodeEscapedBytes] do
+     for ax in (← collectAxioms n) do
+       unless [``propext, ``Quot.sound].contains ax do
+         throwError "Semantic interface: constructive renderer {n} depends on forbidden axiom {ax}"
+diff --git a/Tests/PanicRendering.lean b/Tests/PanicRendering.lean
+index 46c9b3c1..2b12ee90 100644
+--- a/Tests/PanicRendering.lean
++++ b/Tests/PanicRendering.lean
+@@ -1,8 +1,8 @@
+ import GoLean.Interface
+ 
+-/-! Kernel regressions for the existing valid-UTF-8, first-panic-line
+-observation boundary. These do not choose an observer for invalid UTF-8 or
+-resolve the independent R-1 equal-value/boxing quotient. -/
++/-! Kernel regressions for the first-panic-line observation boundary and
++R-1's explicit-string members. Invalid bytes remain exact semantic bytes;
++their reversible rendered member is not claimed to equal gc's raw text. -/
+ namespace GoLean.PanicRenderingTests
+ open GoCore GoCore.Machine
+ 
+@@ -40,19 +40,20 @@ theorem runtime_error_newline :
+     renderPanicHead state (panicEntry "é\n界") [] = some "é" := by
+   decide +kernel
+ 
+-/-- Refusal ordering remains intact even when projection would hide the
+-ambiguous recovered/repanicked suffix. R-1 completion is a separate change. -/
+-theorem equal_repanic_remains_refused :
+-    renderPanicHead state (entry "first\nsecond" true) [entry "first\nsecond"] = none := by
++/-- The selected R-1 suffix is formatted before first-line projection. -/
++theorem equal_repanic_member :
++    renderPanicHead state (entry "first\nsecond" true) [entry "first\nsecond"] = some "first" ∧
++    renderPanicHead state (entry "same" true) [entry "same"] = some "same [recovered]" := by
+   decide +kernel
+ 
+-/-- Invalid bytes do not silently become replacement characters, including
+-invalid bytes after the newline. U+FFFD encoded correctly is covered above. -/
+-theorem invalid_utf8_remains_refused :
++/-- Invalid bytes are escaped in full, including bytes after the newline.
++U+FFFD encoded correctly is covered above and is not confused with ff. -/
++theorem invalid_utf8_member :
+     [#[0xff], #[0x80], #[0xc0, 0x80], #[0xe0, 0x80, 0x80],
+       #[0xed, 0xa0, 0x80], #[0xe2, 0x82], #[0xf0, 0x80, 0x80, 0x80],
+       #[0xf4, 0x90, 0x80, 0x80], #[0x61, 0x0a, 0xff]].all
+-      (fun bytes => (renderPanicHead state (rawEntry bytes) []).isNone) = true := by
++      (fun bytes => renderPanicHead state (rawEntry bytes) [] ==
++        some (PanicText.escapeAllBytes ⟨bytes⟩)) = true := by
+   decide +kernel
+ 
+ end GoLean.PanicRenderingTests
+diff --git a/lakefile.toml b/lakefile.toml
+index b3e618b7..f165e332 100644
+--- a/lakefile.toml
++++ b/lakefile.toml
+@@ -22,7 +22,7 @@ root = "Tests.GoCoreEval"
+ [[lean_lib]]
+ # Iris-free contract regressions and their post-import dependency audit.
+ name = "InterfaceTests"
+-globs = ["Tests.InterfaceContract", "Tests.BooleanRuntime", "Tests.BooleanProgram", "Tests.InterfaceAudit", "Tests.PanicRendering"]
++globs = ["Tests.InterfaceContract", "Tests.BooleanRuntime", "Tests.BooleanProgram", "Tests.InterfaceAudit", "Tests.PanicRendering", "Tests.StringPanicMembers"]
+ 
+ [[lean_lib]]
+ name = "AdmissionTests"
+diff --git a/scripts/check-interface b/scripts/check-interface
+index 9451fa0e..929c306b 100644
+--- a/scripts/check-interface
++++ b/scripts/check-interface
+@@ -4,7 +4,10 @@ set -euo pipefail
+ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+ cd "$ROOT"
+ "$ROOT/scripts/capped" lake build GoLean.Interface InterfaceTests
+-for module in GoLean/GoCore/Trace GoLean/GoCore/PoolTrace GoLean/GoCore/ProgramTrace \
++for module in GoLean/GoCore/PanicText GoLean/GoCore/StringPanic \
++    GoLean/GoCore/Trace GoLean/GoCore/PoolTrace GoLean/GoCore/ProgramTrace \
++    GoLean/GoCore/AbortObservation GoLean/GoCore/RecoveryPoolObservation \
++    GoLean/GoCore/RecoveryProgramObservation \
+     GoLean/GoCore/BooleanTyping GoLean/GoCore/BooleanStore GoLean/GoCore/BooleanSetup \
+     GoLean/GoCore/BooleanInitialization \
+     GoLean/GoCore/BooleanControlTyping GoLean/GoCore/BooleanControl \
+@@ -32,7 +35,7 @@ for module in GoLean/GoCore/Trace GoLean/GoCore/PoolTrace GoLean/GoCore/ProgramT
+     GoLean/GoCore/RecoveryStatementProgress GoLean/GoCore/RecoveryFrameProgress \
+     GoLean/GoCore/RecoveryPanicProgress GoLean/GoCore/RecoveryInvariant \
+     GoLean/GoCore/RecoverySuccessfulRuns Tests/RecoveryInvariant Tests/RecoveryControlAudit \
+-    GoLean/Interface Tests/PanicRendering Tests/InterfaceContract Tests/BooleanRuntime \
++    GoLean/Interface Tests/PanicRendering Tests/StringPanicMembers Tests/InterfaceContract Tests/BooleanRuntime \
+     Tests/BooleanProgram Tests/InterfaceAudit; do
+   "$ROOT/scripts/capped" lake env lean "$module.lean"
+ done
+diff --git a/scripts/check-interface.py b/scripts/check-interface.py
+index 95bbd197..b905e19d 100644
+--- a/scripts/check-interface.py
++++ b/scripts/check-interface.py
+@@ -8,6 +8,7 @@ import tempfile
+ 
+ ROOT = Path(__file__).resolve().parent.parent
+ MODULES = ["GoLean/GoCore/Machine", "GoLean/GoCore/Trace", "GoLean/GoCore/PoolTrace",
++           "GoLean/GoCore/PanicText", "GoLean/GoCore/StringPanic", "Tests/StringPanicMembers",
+            "GoLean/GoCore/ProgramTrace", "GoLean/Interface",
+            "GoLean/GoCore/AdmissionIndices", "GoLean/GoCore/AdmissionPolicy",
+            "GoLean/GoCore/Admission",
+@@ -51,6 +52,7 @@ HARNESS += "\n#eval InterfaceAudit.run\n"
+ def main():
+     paths = sorted([*ROOT.glob("GoLean/**/*.lean"), ROOT / "GoLean.lean",
+                     ROOT / "Tests/PanicRendering.lean",
++                    ROOT / "Tests/StringPanicMembers.lean",
+                     ROOT / "Tests/InterfaceContract.lean", ROOT / "Tests/InterfaceAudit.lean",
+                     ROOT / "Tests/BooleanRuntime.lean", ROOT / "Tests/BooleanTypingFixture.lean",
+                     ROOT / "Tests/BooleanProgram.lean",
+@@ -90,6 +92,18 @@ def main():
+     if result.returncode:
+         raise SystemExit(result.returncode)
+     for label, target, declaration, marker in [
++        ("abort_observation_private", "GoLean/GoCore/AbortObservation.lean",
++         "private axiom abortObservationHole : False", "abortObservationHole"),
++        ("pool_observation_private", "GoLean/GoCore/RecoveryPoolObservation.lean",
++         "private axiom poolObservationHole : False", "poolObservationHole"),
++        ("program_observation_private", "GoLean/GoCore/RecoveryProgramObservation.lean",
++         "private axiom programObservationHole : False", "programObservationHole"),
++        ("panic_text_private", "GoLean/GoCore/PanicText.lean",
++         "private axiom panicTextHole : False", "panicTextHole"),
++        ("string_panic_private", "GoLean/GoCore/StringPanic.lean",
++         "private axiom stringPanicHole : False", "stringPanicHole"),
++        ("string_panic_trailing", "Tests/StringPanicMembers.lean",
++         "private theorem stringPanicTestHole : False := by sorry", "sorryAx"),
+         ("machine_private", "GoLean/GoCore/Machine.lean",
+          "private axiom machineRendererHole : False", "machineRendererHole"),
+         ("rendering_trailing", "Tests/PanicRendering.lean",
+diff --git a/scripts/ci b/scripts/ci
+index 660f0705..48d20624 100755
+--- a/scripts/ci
++++ b/scripts/ci
+@@ -544,6 +544,15 @@ else
+   bad "diagnostic observer transport and terminal classification (see above)"
+ fi
+ 
++step "explicit string-member apparatus and compiling negative controls"
++if smout="$(python3 scripts/check-string-members.py 2>&1)"; then
++  echo "$smout" | tail -1
++  ok "explicit string-member apparatus"
++else
++  echo "$smout"
++  bad "explicit string-member apparatus (see above)"
++fi
++
+ step "frontend unit tests (go test ./tools/nativefrontend)"
+ if ftout="$(GO111MODULE=off GOCACHE="$PWD/artifacts/go-build-cache" go test ./tools/nativefrontend 2>&1)"; then
+   echo "$ftout" | tail -2
+diff --git a/scripts/coverage-baseline-diff b/scripts/coverage-baseline-diff
+index 954ed680..aa9670a1 100755
+--- a/scripts/coverage-baseline-diff
++++ b/scripts/coverage-baseline-diff
+@@ -63,7 +63,7 @@ RESULTS="${1:-artifacts/coverage/latest.tsv}"
+ # Only alternation MEMBERS are checked against it; plain rows compare
+ # exactly and need no vocabulary. `-` (the PASS stage) is deliberately
+ # absent: an alternation is non-PASS by rule.
+-STAGE_VOCAB="manifest go-source go-harness go-run go-observation frontend-export lean-observation lean-run differential confluent membership racy nondet litmus-contract"
++STAGE_VOCAB="manifest go-source go-harness go-run go-observation frontend-export lean-observation lean-run differential confluent membership string-member racy nondet litmus-contract"
+ 
+ # Baseline columns: result,id,stage. Results columns: result,id,features,stage.
+ # Single awk pass, no temp files (sandbox-safe): load baseline (result/stage keyed
+diff --git a/scripts/coverage-manifest b/scripts/coverage-manifest
+index fb3bf461..d738dc09 100755
+--- a/scripts/coverage-manifest
++++ b/scripts/coverage-manifest
+@@ -530,6 +530,18 @@ while IFS= read -r cases_file; do
+       lane="strict"
+     fi
+     case "$lane" in
++      string-member)
++        if [[ "$expected_status" != "panic" || "$expected_reason" != "-" || "$why" == "-" || "$params" != "-" ]]; then
++          echo "coverage-manifest: $cases_file: string-member requires panic, reason -, explicit why, and params -; the fixed source-bound pin replaces a text substring" >&2
++          bad=1
++          continue
++        fi
++        if has_tag "$features" "nondet"; then
++          echo "coverage-manifest: $cases_file: string-member does not certify schedule membership" >&2
++          bad=1
++          continue
++        fi
++        ;;
+       strict)
+         # Strict-lane params (depth guard, membership-depth memo P1,
+         # [USER]-ruled 2026-09-03): '-' or exactly depth=<N> — the
+@@ -668,7 +680,7 @@ while IFS= read -r cases_file; do
+         esac
+         ;;
+       *)
+-        echo "coverage-manifest: $cases_file: invalid lane: $lane (use strict, membership, confluent, or racy)" >&2
++        echo "coverage-manifest: $cases_file: invalid lane: $lane (use strict, membership, confluent, racy, or string-member)" >&2
+         bad=1
+         continue
+         ;;
+@@ -711,7 +723,7 @@ while IFS= read -r cases_file; do
+     esac
+     case "$expected_status" in
+       panic|fatal)
+-        if [[ "$expected_reason" == "-" ]]; then
++        if [[ "$expected_reason" == "-" && "$lane" != "string-member" ]]; then
+           echo "coverage-manifest: $cases_file: $expected_status requires expected_reason" >&2
+           bad=1
+           continue
+diff --git a/scripts/diff-coverage b/scripts/diff-coverage
+index 28600afd..34dc4bea 100755
+--- a/scripts/diff-coverage
++++ b/scripts/diff-coverage
+@@ -527,9 +527,9 @@ run_case_rows() {
+     return 0
+   fi
+   case "$lane" in
+-    strict|membership|confluent|racy) ;;
++    strict|membership|confluent|racy|string-member) ;;
+     *)
+-      report_fail "$id" "$features" "manifest" "invalid lane: $lane (use strict, membership, confluent, or racy)"
++      report_fail "$id" "$features" "manifest" "invalid lane: $lane (use strict, membership, confluent, racy, or string-member)"
+       return 0
+       ;;
+   esac
+@@ -538,6 +538,12 @@ run_case_rows() {
+   # bypasses the manifest must fail loud, never fall through to the
+   # fixed streams).
+   local depth=""
++  if [[ "$lane" == "string-member" ]]; then
++    if [[ "$expected_status" != "panic" || "$expected_reason" != "-" || "$why" == "-" || "$params" != "-" || ",$features," == *,nondet,* ]]; then
++      report_fail "$id" "$features" "manifest" "string-member requires panic, reason -, explicit why, params -, and no nondet tag; no arbitrary text/schedule predicate"
++      return 0
++    fi
++  fi
+   if [[ "$lane" == "strict" ]]; then
+     if [[ "$why" != "-" ]]; then
+       report_fail "$id" "$features" "manifest" "strict-lane rows must leave why as -"
+@@ -610,7 +616,7 @@ run_case_rows() {
+   esac
+   case "$expected_status" in
+     panic|fatal)
+-      if [[ "$expected_reason" == "-" ]]; then
++      if [[ "$expected_reason" == "-" && "$lane" != "string-member" ]]; then
+         report_fail "$id" "$features" "manifest" "$expected_status requires an expected_reason"
+         return 0
+       fi
+@@ -639,6 +645,31 @@ run_case_rows() {
+     return 0
+   fi
+ 
++  # R-1's fixed rendered-text envelope is a separate finite certificate.
++  # The runner emits native artifacts afresh, binds all sources before pins,
++  # executes mandatory exact controls and actual abort witnesses, and owns
++  # its Go capture files. Ordinary equality/schedule lanes remain separate.
++  if [[ "$lane" == "string-member" ]]; then
++    if [[ "$FRONTEND" != "native" ]]; then
++      report_fail "$id" "$features" "frontend-export" "string-member requires the native frontend"
++      return 0
++    fi
++    local sm_dir="$OUT/string-members/${id//\//__}" sm_rc=0 sm_detail
++    mkdir -p "$sm_dir"
++    python3 tools/string_member_runner.py --case "$id" --go-dir "$go_dir" \
++      --function "$function_name" --args "$arg_ints" --out "$sm_dir" \
++      --golean "$GOLEAN_BIN" --harness "$HARNESS_BIN" \
++      --go-timeout "$GO_TIMEOUT_SECONDS" --lean-timeout "$LEAN_TIMEOUT_SECONDS" \
++      > "$sm_dir/run.log" 2>&1 || sm_rc=$?
++    sm_detail="$(one_line "$(cat "$sm_dir/run.log")")"
++    if [[ "$sm_rc" -ne 0 ]]; then
++      report_fail "$id" "$features" "string-member" "certificate refused (exit $sm_rc): $sm_detail"
++    else
++      report_pass_lane "$id" "$features" "string-member" "$sm_detail"
++    fi
++    return 0
++  fi
++
+   # FLATTENED per-id dir (id slashes -> __, like the negative runner's
+   # binary names): the harness RemoveAll-s this dir per case, and with
+   # id-shaped NESTED paths a parent id's harness deletes a child id's dir
+diff --git a/tools/coverageharness/main.go b/tools/coverageharness/main.go
+index a1a85e6d..5d2c9316 100644
+--- a/tools/coverageharness/main.go
++++ b/tools/coverageharness/main.go
+@@ -27,6 +27,7 @@ type config struct {
+ 	// string literal (split.go), exit 3 with the cause on any ambiguity.
+ 	splitStderr     string
+ 	abortMessage    string
++	abortRecord     string
+ 	readObservation string
+ 	quoteFile       string
+ 	abortStatus     string
+@@ -44,6 +45,7 @@ func main() {
+ 	flag.StringVar(&cfg.status, "expected-status", "ok", "expected Go status: ok, panic, deadlock, race, or fatal")
+ 	flag.StringVar(&cfg.splitStderr, "split-stderr", "", "SPLIT MODE: path of a captured `go run` stderr; prints the program's output prefix for --expected-status as a JSON string literal (stdlib slice 3)")
+ 	flag.StringVar(&cfg.abortMessage, "abort-message", "", "path of raw oracle stderr; prints the actual first panic/fatal message as a JSON string literal after validating the report split")
++	flag.StringVar(&cfg.abortRecord, "abort-record", "", "path of raw oracle stderr; prints a checked panic/child-exit record with exact message/output byte arrays (not an ordinary observation)")
+ 	flag.StringVar(&cfg.readObservation, "read-observation", "", "path of raw oracle stdout; validates UTF-8 and JSON before shell transport")
+ 	flag.StringVar(&cfg.quoteFile, "quote-file", "", "diagnostics only: print file bytes as an ASCII Go-quoted string; never an observation")
+ 	flag.StringVar(&cfg.abortStatus, "abort-status", "", "path of raw oracle stderr; classify its validated abort report or refuse an ambiguous terminal kind")
+@@ -53,7 +55,7 @@ func main() {
+ 	flag.Parse()
+ 
+ 	modePath, modes := "", 0
+-	for _, p := range []string{cfg.splitStderr, cfg.abortMessage, cfg.readObservation, cfg.quoteFile, cfg.abortStatus} {
++	for _, p := range []string{cfg.splitStderr, cfg.abortMessage, cfg.abortRecord, cfg.readObservation, cfg.quoteFile, cfg.abortStatus} {
+ 		if p != "" {
+ 			modePath = p
+ 			modes++
+@@ -75,7 +77,7 @@ func main() {
+ 		return
+ 	}
+ 	if (cfg.crashReport != "" || cfg.crashRegistered != "") &&
+-		cfg.splitStderr == "" && cfg.abortMessage == "" && cfg.abortStatus == "" {
++		cfg.splitStderr == "" && cfg.abortMessage == "" && cfg.abortRecord == "" && cfg.abortStatus == "" {
+ 		fmt.Fprintln(os.Stderr, "crash evidence is valid only with an abort or stderr-output query")
+ 		os.Exit(2)
+ 	}
+@@ -92,6 +94,8 @@ func main() {
+ 		}
+ 		var text string
+ 		switch {
++		case cfg.abortRecord != "":
++			text, err = observedAbortRecord(raw, evidence)
+ 		case cfg.abortStatus != "":
+ 			var view abortView
+ 			view, err = checkedAbortView(raw, evidence)
+diff --git a/tools/coverageharness/observe.go b/tools/coverageharness/observe.go
+index d070b652..746e5012 100644
+--- a/tools/coverageharness/observe.go
++++ b/tools/coverageharness/observe.go
+@@ -32,6 +32,43 @@ func observedAbortMessage(stderr []byte, status string, e crashEvidence) (string
+ 	return outputLiteral(view.message)
+ }
+ 
++// rawPanicRecord is a transport record for the explicit R-1 string-member
++// checker, not a golean-observation-v1 value or a dynamic-type certificate.
++// The shared view authenticates the same-run report and its exit-2 trailer;
++// the runner separately checks the actual outer process exit and stdout.
++// Integer arrays deliberately avoid both UTF-8 replacement and []byte's
++// encoding/json base64 representation. Empty byte sequences are always [].
++type rawPanicRecord struct {
++	Schema       string `json:"schema"`
++	Status       string `json:"status"`
++	ChildExit    int    `json:"childExit"`
++	MessageBytes []int  `json:"messageBytes"`
++	OutputBytes  []int  `json:"outputBytes"`
++}
++
++func byteIntegers(raw []byte) []int {
++	values := make([]int, len(raw))
++	for i, b := range raw {
++		values[i] = int(b)
++	}
++	return values
++}
++
++func observedAbortRecord(stderr []byte, e crashEvidence) (string, error) {
++	view, err := checkedAbortView(stderr, e)
++	if err != nil {
++		return "", err
++	}
++	if view.kind != "panic" {
++		return "", fmt.Errorf("raw panic record: actual %s report is not panic", view.kind)
++	}
++	encoded, err := json.Marshal(rawPanicRecord{
++		Schema: "golean-raw-panic-v1", Status: "panic", ChildExit: 2,
++		MessageBytes: byteIntegers(view.message), OutputBytes: byteIntegers(view.output),
++	})
++	return string(encoded), err
++}
++
+ // observationText validates the untouched stdout file before shell capture.
+ // The Lean comparator still validates the observation schema and values.
+ // Rejecting invalid UTF-8 explicitly avoids encoding/json's replacement

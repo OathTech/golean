@@ -1,0 +1,6 @@
+{
+  "old_sha256": "d342b437bc6a4d8c7aa223e9efb8a6a174bdb4300c7bcefa5b0b5dc149d1304f",
+  "proposed_sha256": "c8b820795d312b69f5137c5d634dbb3617ea1e4acedaa902171b20a55ddfeddc",
+  "scope": "BUG-004 only: exact bounded string-member progress; preserve open non-string/defined-method boundary and correct historical == vs eface data-identity claim",
+  "tracked_ledger_unchanged": true
+}

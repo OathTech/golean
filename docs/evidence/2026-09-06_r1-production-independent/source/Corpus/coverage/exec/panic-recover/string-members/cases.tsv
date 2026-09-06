@@ -1,0 +1,9 @@
+# id	function	args	expected-status	expected-reason	features	lane	why	params
+equal	Equal	-	panic	-	panic,recover,defer,strings	string-member	R1 explicit equal-string replacement with complete typed chain and exact controls	-
+unequal	Unequal	-	panic	-	panic,recover,defer,strings	string-member	R1 unequal replacement keeps the original recovered head and exact active payload controls	-
+multiple	Multiple	-	panic	-	panic,recover,defer,strings	string-member	R1 repeated recovery and replacement with complete ordered chain and exact controls	-
+invalid-before-lf	InvalidBefore	-	panic	-	panic,strings	string-member	R1 reversible bytes retain ff NUL backslash LF and final byte	-
+invalid-after-lf	InvalidAfter	-	panic	-	panic,strings	string-member	R1 reversible bytes retain invalid tail beyond the native first-line projection	-
+invalid-recovered	InvalidRecovered	-	panic	-	panic,recover,defer,strings	string-member	R1 byte-exact invalid original and explicit recovered suffix with exact companion	-
+unicode	Unicode	-	panic	-	panic,strings,unicode	string-member	R1 direct member byte round trip with exact dynamic string companion	-
+controls	Controls	-	panic	-	panic,strings	string-member	R1 NUL SOH TAB CR preservation and first LF projection with complete-byte companion	-

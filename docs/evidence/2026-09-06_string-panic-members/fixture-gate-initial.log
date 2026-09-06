@@ -1,0 +1,9 @@
+String fixture negative: replace-invalid-byte compiled; exact control changed
+String fixture negative: drop-nul compiled; exact control changed
+String fixture negative: drop-invalid-after-lf compiled; exact control changed
+String fixture negative: direct-indirect compiled; exact control changed
+String fixture negative: reverse-defers compiled; exact control changed
+String fixture negative: duplicate-defer compiled; exact control changed
+String fixture negative: change-output compiled; exact control changed
+String fixture negative: suppress-final-panic compiled; exact control changed
+String fixtures PASS: 6 raw-native/actual-driver controls, 2 zero-fuel erasures, 9 compiling semantic mutations; evidence /home/dev/projects/golean/.claude/worktrees/typed-string-members/.tmp/string-member-fixtures-623tpvcn

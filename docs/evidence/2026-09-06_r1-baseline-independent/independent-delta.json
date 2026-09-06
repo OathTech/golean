@@ -1,0 +1,160 @@
+{
+  "actual_jobs": "32",
+  "added": {
+    "panic-recover/string-members/controls": {
+      "detail": "string-member evidence: /home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/string-members/panic-recover__string-members__controls/fresh-m6aiae6l\\nPASS string-member: golean-r1-explicit-string-v1; exact forced fields and typed-explicit-string evidence; gc text equality is not claimed",
+      "features": "panic,strings",
+      "id": "panic-recover/string-members/controls",
+      "result": "PASS",
+      "stage": "string-member"
+    },
+    "panic-recover/string-members/equal": {
+      "detail": "string-member evidence: /home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/string-members/panic-recover__string-members__equal/fresh-ape_oxom\\nPASS string-member: golean-r1-explicit-string-v1; exact forced fields and typed-explicit-string evidence; gc text equality is not claimed",
+      "features": "panic,recover,defer,strings",
+      "id": "panic-recover/string-members/equal",
+      "result": "PASS",
+      "stage": "string-member"
+    },
+    "panic-recover/string-members/invalid-after-lf": {
+      "detail": "string-member evidence: /home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/string-members/panic-recover__string-members__invalid-after-lf/fresh-g87wdf_m\\nPASS string-member: golean-r1-explicit-string-v1; exact forced fields and typed-explicit-string evidence; gc text equality is not claimed",
+      "features": "panic,strings",
+      "id": "panic-recover/string-members/invalid-after-lf",
+      "result": "PASS",
+      "stage": "string-member"
+    },
+    "panic-recover/string-members/invalid-before-lf": {
+      "detail": "string-member evidence: /home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/string-members/panic-recover__string-members__invalid-before-lf/fresh-9p3esd1e\\nPASS string-member: golean-r1-explicit-string-v1; exact forced fields and typed-explicit-string evidence; gc text equality is not claimed",
+      "features": "panic,strings",
+      "id": "panic-recover/string-members/invalid-before-lf",
+      "result": "PASS",
+      "stage": "string-member"
+    },
+    "panic-recover/string-members/invalid-recovered": {
+      "detail": "string-member evidence: /home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/string-members/panic-recover__string-members__invalid-recovered/fresh-ydv9d1gm\\nPASS string-member: golean-r1-explicit-string-v1; exact forced fields and typed-explicit-string evidence; gc text equality is not claimed",
+      "features": "panic,recover,defer,strings",
+      "id": "panic-recover/string-members/invalid-recovered",
+      "result": "PASS",
+      "stage": "string-member"
+    },
+    "panic-recover/string-members/multiple": {
+      "detail": "string-member evidence: /home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/string-members/panic-recover__string-members__multiple/fresh-q5gw9r1x\\nPASS string-member: golean-r1-explicit-string-v1; exact forced fields and typed-explicit-string evidence; gc text equality is not claimed",
+      "features": "panic,recover,defer,strings",
+      "id": "panic-recover/string-members/multiple",
+      "result": "PASS",
+      "stage": "string-member"
+    },
+    "panic-recover/string-members/unequal": {
+      "detail": "string-member evidence: /home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/string-members/panic-recover__string-members__unequal/fresh-qo73pyb0\\nPASS string-member: golean-r1-explicit-string-v1; exact forced fields and typed-explicit-string evidence; gc text equality is not claimed",
+      "features": "panic,recover,defer,strings",
+      "id": "panic-recover/string-members/unequal",
+      "result": "PASS",
+      "stage": "string-member"
+    },
+    "panic-recover/string-members/unicode": {
+      "detail": "string-member evidence: /home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/string-members/panic-recover__string-members__unicode/fresh-keqlopk1\\nPASS string-member: golean-r1-explicit-string-v1; exact forced fields and typed-explicit-string evidence; gc text equality is not claimed",
+      "features": "panic,strings,unicode",
+      "id": "panic-recover/string-members/unicode",
+      "result": "PASS",
+      "stage": "string-member"
+    }
+  },
+  "changed": {
+    "panic-recover/repanic-same-value-abort": {
+      "new": {
+        "detail": "string-member evidence: /home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/coverage/string-members/panic-recover__repanic-same-value-abort/fresh-q4gtsn24\\nPASS string-member: golean-r1-explicit-string-v1; exact forced fields and reviewed-broader-string-control evidence; gc text equality is not claimed",
+        "features": "panic,recover,defer",
+        "id": "panic-recover/repanic-same-value-abort",
+        "result": "PASS",
+        "stage": "string-member"
+      },
+      "old": {
+        "id": "panic-recover/repanic-same-value-abort",
+        "result": "FAIL",
+        "stage": "lean-observation"
+      }
+    }
+  },
+  "counts": {
+    "FAIL": 244,
+    "PASS": 3391
+  },
+  "frozen_inputs_revalidated": 184,
+  "full_cases": 3635,
+  "full_manifest_sha256": "c2a13c0adabe351dfd570796bc46fca6e83eb1f869b2471aad1f23bbbfd122e8",
+  "member_certificate_inventory": [
+    {
+      "archive_path": "panic-recover__repanic-same-value-abort/fresh-q4gtsn24/certificate.json",
+      "case": "panic-recover/repanic-same-value-abort",
+      "controls": 13,
+      "go_subject_runs": 2,
+      "model_streams": 4,
+      "scope": "reviewed-broader-string-control"
+    },
+    {
+      "archive_path": "panic-recover__string-members__equal/fresh-ape_oxom/certificate.json",
+      "case": "panic-recover/string-members/equal",
+      "controls": 13,
+      "go_subject_runs": 2,
+      "model_streams": 4,
+      "scope": "typed-explicit-string"
+    },
+    {
+      "archive_path": "panic-recover__string-members__unequal/fresh-qo73pyb0/certificate.json",
+      "case": "panic-recover/string-members/unequal",
+      "controls": 13,
+      "go_subject_runs": 2,
+      "model_streams": 4,
+      "scope": "typed-explicit-string"
+    },
+    {
+      "archive_path": "panic-recover__string-members__multiple/fresh-q5gw9r1x/certificate.json",
+      "case": "panic-recover/string-members/multiple",
+      "controls": 13,
+      "go_subject_runs": 2,
+      "model_streams": 4,
+      "scope": "typed-explicit-string"
+    },
+    {
+      "archive_path": "panic-recover__string-members__invalid-before-lf/fresh-9p3esd1e/certificate.json",
+      "case": "panic-recover/string-members/invalid-before-lf",
+      "controls": 13,
+      "go_subject_runs": 2,
+      "model_streams": 4,
+      "scope": "typed-explicit-string"
+    },
+    {
+      "archive_path": "panic-recover__string-members__invalid-after-lf/fresh-g87wdf_m/certificate.json",
+      "case": "panic-recover/string-members/invalid-after-lf",
+      "controls": 13,
+      "go_subject_runs": 2,
+      "model_streams": 4,
+      "scope": "typed-explicit-string"
+    },
+    {
+      "archive_path": "panic-recover__string-members__invalid-recovered/fresh-ydv9d1gm/certificate.json",
+      "case": "panic-recover/string-members/invalid-recovered",
+      "controls": 13,
+      "go_subject_runs": 2,
+      "model_streams": 4,
+      "scope": "typed-explicit-string"
+    },
+    {
+      "archive_path": "panic-recover__string-members__unicode/fresh-keqlopk1/certificate.json",
+      "case": "panic-recover/string-members/unicode",
+      "controls": 13,
+      "go_subject_runs": 2,
+      "model_streams": 4,
+      "scope": "typed-explicit-string"
+    },
+    {
+      "archive_path": "panic-recover__string-members__controls/fresh-m6aiae6l/certificate.json",
+      "case": "panic-recover/string-members/controls",
+      "controls": 13,
+      "go_subject_runs": 2,
+      "model_streams": 4,
+      "scope": "typed-explicit-string"
+    }
+  ],
+  "original_metadata_full_run": "unknown",
+  "removed": []
+}

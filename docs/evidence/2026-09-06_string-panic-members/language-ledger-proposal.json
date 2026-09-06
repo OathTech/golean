@@ -1,0 +1,9 @@
+{
+  "status": "proposed; do not apply before independent disposition",
+  "old_sha256": "254c56550798182689cd56a88b5eeb4fabfd255c522ed9f405369384518f7f54",
+  "proposed_sha256": "6f2ba690c75253f2917d32f88a63ee9ffe7ad9cb0d3704f807f436f3d2335f58",
+  "patch_sha256": "196f17eeeba4ca56b8a51c520db615e45e3fdc63750afde0d7608d2fc99a3115",
+  "derivation_sha256": "667a72f5c7886887eeb696f40994d50912992082d5cd8542f421a8587f56447f",
+  "scope": "Current count paragraph, current C4/total table, and dated movement after section 8y. Preserve every historical count and movement elsewhere.",
+  "tracked_ledger_unchanged": true
+}

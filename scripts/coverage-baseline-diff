@@ -63,7 +63,7 @@ RESULTS="${1:-artifacts/coverage/latest.tsv}"
 # Only alternation MEMBERS are checked against it; plain rows compare
 # exactly and need no vocabulary. `-` (the PASS stage) is deliberately
 # absent: an alternation is non-PASS by rule.
-STAGE_VOCAB="manifest go-source go-harness go-run go-observation frontend-export lean-observation lean-run differential confluent membership racy nondet litmus-contract"
+STAGE_VOCAB="manifest go-source go-harness go-run go-observation frontend-export lean-observation lean-run differential confluent membership string-member racy nondet litmus-contract"
 
 # Baseline columns: result,id,stage. Results columns: result,id,features,stage.
 # Single awk pass, no temp files (sandbox-safe): load baseline (result/stage keyed

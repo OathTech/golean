@@ -527,9 +527,9 @@ run_case_rows() {
     return 0
   fi
   case "$lane" in
-    strict|membership|confluent|racy) ;;
+    strict|membership|confluent|racy|string-member) ;;
     *)
-      report_fail "$id" "$features" "manifest" "invalid lane: $lane (use strict, membership, confluent, or racy)"
+      report_fail "$id" "$features" "manifest" "invalid lane: $lane (use strict, membership, confluent, racy, or string-member)"
       return 0
       ;;
   esac
@@ -538,6 +538,12 @@ run_case_rows() {
   # bypasses the manifest must fail loud, never fall through to the
   # fixed streams).
   local depth=""
+  if [[ "$lane" == "string-member" ]]; then
+    if [[ "$expected_status" != "panic" || "$expected_reason" != "-" || "$why" == "-" || "$params" != "-" || ",$features," == *,nondet,* ]]; then
+      report_fail "$id" "$features" "manifest" "string-member requires panic, reason -, explicit why, params -, and no nondet tag; no arbitrary text/schedule predicate"
+      return 0
+    fi
+  fi
   if [[ "$lane" == "strict" ]]; then
     if [[ "$why" != "-" ]]; then
       report_fail "$id" "$features" "manifest" "strict-lane rows must leave why as -"
@@ -610,7 +616,7 @@ run_case_rows() {
   esac
   case "$expected_status" in
     panic|fatal)
-      if [[ "$expected_reason" == "-" ]]; then
+      if [[ "$expected_reason" == "-" && "$lane" != "string-member" ]]; then
         report_fail "$id" "$features" "manifest" "$expected_status requires an expected_reason"
         return 0
       fi
@@ -636,6 +642,31 @@ run_case_rows() {
   # universally present or preflighted like `go` is at the top of this script.
   if ! grep -Eq "func[[:space:]]+$function_name[[:space:]]*\\(" "$go_file"; then
     report_fail "$id" "$features" "litmus-contract" "manifest function $function_name is not defined in $go_file"
+    return 0
+  fi
+
+  # R-1's fixed rendered-text envelope is a separate finite certificate.
+  # The runner emits native artifacts afresh, binds all sources before pins,
+  # executes mandatory exact controls and actual abort witnesses, and owns
+  # its Go capture files. Ordinary equality/schedule lanes remain separate.
+  if [[ "$lane" == "string-member" ]]; then
+    if [[ "$FRONTEND" != "native" ]]; then
+      report_fail "$id" "$features" "frontend-export" "string-member requires the native frontend"
+      return 0
+    fi
+    local sm_dir="$OUT/string-members/${id//\//__}" sm_rc=0 sm_detail
+    mkdir -p "$sm_dir"
+    python3 tools/string_member_runner.py --case "$id" --go-dir "$go_dir" \
+      --function "$function_name" --args "$arg_ints" --out "$sm_dir" \
+      --golean "$GOLEAN_BIN" --harness "$HARNESS_BIN" \
+      --go-timeout "$GO_TIMEOUT_SECONDS" --lean-timeout "$LEAN_TIMEOUT_SECONDS" \
+      > "$sm_dir/run.log" 2>&1 || sm_rc=$?
+    sm_detail="$(one_line "$(cat "$sm_dir/run.log")")"
+    if [[ "$sm_rc" -ne 0 ]]; then
+      report_fail "$id" "$features" "string-member" "certificate refused (exit $sm_rc): $sm_detail"
+    else
+      report_pass_lane "$id" "$features" "string-member" "$sm_detail"
+    fi
     return 0
   fi
 

@@ -1,0 +1,23 @@
+key	value
+frontend	native
+manifest	/home/dev/projects/golean/.tmp/golean-coverage.djX4eY
+manifest_sha256	8b1ff940e11f77c303cf223aff4513da5921bf0632bb5d3c1fb0122b1ccf8440
+manifest_cases	9
+total_corpus_cases	3635
+full_run	false
+filters	--id panic-recover/string-members/equal --id panic-recover/string-members/unequal --id panic-recover/string-members/multiple --id panic-recover/string-members/invalid-before-lf --id panic-recover/string-members/invalid-after-lf --id panic-recover/string-members/invalid-recovered --id panic-recover/string-members/unicode --id panic-recover/string-members/controls --id panic-recover/repanic-same-value-abort
+git_commit	620489c9502b8e8ab86f93053775c95a6259f030
+git_dirty	true
+go_toolchain	go1.26.5
+go_traceback	system
+go_crash_channel	same-run-setcrashoutput-v1
+go_drift_allowed	0
+go_drift_actual	false
+depth_guard	choice-trace wideAfterExhaustion=0 on every invariance stream
+depth_seeds	1,2,3
+depth_generator	lcg31(1103515245,12345) bits16..31
+depth_trace_timeout_seconds	240
+membership_draws	32
+jobs	32
+fanout_find_exit	0
+fanout_pool_exit	0

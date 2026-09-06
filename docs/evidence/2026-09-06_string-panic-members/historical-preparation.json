@@ -1,0 +1,68 @@
+{
+  "evidence": "/home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/string-members/historical-preparation/fresh-5suk5bgv",
+  "subject_wire": "/home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/string-members/historical-preparation/fresh-5suk5bgv/subject-wire.json",
+  "control_wire": "/home/dev/projects/golean/.claude/worktrees/typed-string-members/artifacts/string-members/historical-preparation/fresh-5suk5bgv/controls-wire.json",
+  "machine": {
+    "message": "orig [recovered]",
+    "output": "",
+    "schema": "golean-observation-v1",
+    "status": "panic"
+  },
+  "actual_chain": [
+    {
+      "bytes": [
+        111,
+        114,
+        105,
+        103
+      ],
+      "recovered": true
+    },
+    {
+      "bytes": [
+        111,
+        114,
+        105,
+        103
+      ],
+      "recovered": false
+    }
+  ],
+  "go": {
+    "schema": "golean-raw-panic-v1",
+    "status": "panic",
+    "childExit": 2,
+    "messageBytes": [
+      111,
+      114,
+      105,
+      103,
+      32,
+      91,
+      114,
+      101,
+      99,
+      111,
+      118,
+      101,
+      114,
+      101,
+      100,
+      44,
+      32,
+      114,
+      101,
+      112,
+      97,
+      110,
+      105,
+      99,
+      107,
+      101,
+      100,
+      93
+    ],
+    "outputBytes": []
+  },
+  "scope": "broader concrete controls; no typed-profile claim"
+}

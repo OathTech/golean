@@ -1,0 +1,6 @@
+{
+  "independent_review": "2094de72",
+  "supersedes_BUGS_Cases_acceptance": "8e8bca46",
+  "applied_sha256": "ae93d205330448bae81b60d3d63bf0fc3315589ebe01f1ba38f60507664d328f",
+  "scope": "One-line open failure Cases correction; no source/baseline/coverage change"
+}

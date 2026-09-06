@@ -1,0 +1,38 @@
+{
+  "base": "620489c9",
+  "initial_source_scope": "180 v2 inputs; final184 v3 inputs linked by exact delta",
+  "source_inputs_revalidated": 184,
+  "interface": {
+    "command": "GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 scripts/capped bash scripts/check-interface",
+    "session": 68402,
+    "exit": 0,
+    "source_fingerprint": "7bec18ab05862e8d07384075611367c1271e0cc2504af7c83d956829200744b1",
+    "exports": 128,
+    "declarations": 15113,
+    "compiled_poison_refusals": 28
+  },
+  "kernel_probes": {
+    "command": "GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 scripts/capped lake env lean docs/evidence/2026-09-06_r1-production-independent/Probe.lean",
+    "exit": 0,
+    "theorems": 9
+  },
+  "fresh_differential": {
+    "command": "GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 GOLEAN_COVERAGE_JOBS=2 scripts/capped scripts/diff-one panic-recover/string-members/invalid-after-lf",
+    "exit": 0,
+    "cases": 1,
+    "exact_controls": 8,
+    "abort_member_controls": 5,
+    "subject_go_runs": [
+      "plain",
+      "race"
+    ],
+    "model_streams": 4,
+    "binary_fingerprints": {
+      "golean": "bdac90061689cf1208c6570cde09c795fdde06e809c6ea9e45fea60f4b5ed823",
+      "harness": "96e8ef6161c163e7c6c9560cf867fd51f4bc36d0397e868a97b04e95dfc24e74"
+    },
+    "certificate_sha256": "b4e8cf967c18030edab8af7aba8e4c7349935f5583b322961aea56c7128ade54"
+  },
+  "apparatus_review": "Independent b7_context report d59b4ab1; six omissions repaired, seven Python groups and six compiling omission controls accepted",
+  "limits": "Bounded implementation acceptance; complete source-bound full CI and baseline disposition, generic O2 terminal/facade and final B7/I1 integration still owed"
+}
