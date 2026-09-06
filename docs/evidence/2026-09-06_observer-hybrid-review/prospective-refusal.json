@@ -1,0 +1,15 @@
+{
+  "id": "sync/mutex-unlock-fatal/during-panic-unwind",
+  "old": {
+    "result": "PASS",
+    "id": "sync/mutex-unlock-fatal/during-panic-unwind",
+    "stage": "-"
+  },
+  "expected": "fatal",
+  "rc": 1,
+  "registered": true,
+  "crash_bytes": 4157,
+  "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/32",
+  "wrapper_sha256": "663c1c232cbb1ddd0264b9dc33eaf22c0574745892d6ddf8263b59d9b12cf83f",
+  "refusal": "fatal message/output not authenticated before m.dying"
+}

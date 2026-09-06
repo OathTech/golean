@@ -1,0 +1,34 @@
+[
+  {
+    "path": "/home/dev/projects/golean/.claude/worktrees/typed-observer-classification/docs/evidence/2026-09-06_observer-classification/hybrid-prototype.py",
+    "sha256": "da69f6cb6d249cb501a3bb7bde3b15cf463831b3c7744ced3a3900fd262877e2"
+  },
+  {
+    "path": "/home/dev/projects/golean/.claude/worktrees/typed-observer-classification/docs/evidence/2026-09-06_observer-classification/hybrid-current-rows.json",
+    "sha256": "a2a88084458db168be7b7b9cfce25e6389fa4a6f3cf073dcb9ac942b38e9ce61"
+  },
+  {
+    "path": "/home/dev/projects/golean/.claude/worktrees/typed-observer-classification/docs/evidence/2026-09-06_observer-classification/hybrid-challenges.json",
+    "sha256": "c77ecda5cd3f76b3b608d6819214619efd8270101a8f7b71c071277654a815b9"
+  },
+  {
+    "path": "/home/dev/projects/golean/.claude/worktrees/typed-observer-classification/docs/evidence/2026-09-06_observer-classification/hook-source-boundary.json",
+    "sha256": "c6bb53d52ef913435bbf4da64976717322d89b87ec4f251dcd832a844b2b2166"
+  },
+  {
+    "path": "/home/dev/projects/golean/.claude/worktrees/typed-observer-classification/docs/2026-09-06_observer-crash-channel-design.md",
+    "sha256": "9fceb84ac2d9ff4964d4d49f7500cb4bf4d0a02ea7eedec8d32623f8842f5526"
+  },
+  {
+    "path": "/usr/local/go/src/runtime/runtime.go",
+    "sha256": "fe478d164989b5cd5783c9820d99879623780ba353f836f499238e76efb24fd8"
+  },
+  {
+    "path": "/usr/local/go/src/runtime/panic.go",
+    "sha256": "4951c11983710ee957881d230290aa8cb130a873d83c55c86a0e4c7ecd35d190"
+  },
+  {
+    "path": "/usr/local/go/src/runtime/debug/stack.go",
+    "sha256": "aeb59fb3082f229b5539234976e8bf34646cb2cec9a76d7e0264c8774480ce36"
+  }
+]

@@ -1,0 +1,19 @@
+minimal-print PASS
+literal-pair PASS
+Traceback (most recent call last):
+  File "/home/dev/projects/golean/.claude/worktrees/typed-preflight/docs/evidence/2026-09-06_observer-hybrid-review/probe.py", line 59, in main
+    got = m.observe(r.stderr, crash, ack == b"registered\n", r.returncode)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/dev/projects/golean/.claude/worktrees/typed-observer-classification/docs/evidence/2026-09-06_observer-classification/hybrid-prototype.py", line 67, in observe
+    raise Refusal("oracle/setup exit is not child exit 2")
+reviewed.Refusal: oracle/setup exit is not child exit 2
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/dev/projects/golean/.claude/worktrees/typed-preflight/docs/evidence/2026-09-06_observer-hybrid-review/probe.py", line 85, in <module>
+    main()
+  File "/home/dev/projects/golean/.claude/worktrees/typed-preflight/docs/evidence/2026-09-06_observer-hybrid-review/probe.py", line 64, in main
+    assert message is None, row
+           ^^^^^^^^^^^^^^^
+AssertionError: {'name': 'byte-output', 'source': 'package main\nimport(_golean_os "os";_golean_debug "runtime/debug")\n\nfunc main(){\n _goleanCrash, _goleanCrashErr := _golean_os.OpenFile("oracle.crash", _golean_os.O_WRONLY|_golean_os.O_TRUNC, 0600)\n if _goleanCrashErr != nil { _golean_os.Exit(78) }\n if _goleanCrashErr = _golean_debug.SetCrashOutput(_goleanCrash, _golean_debug.CrashOptions{}); _goleanCrashErr != nil { _golean_os.Exit(78) }\n _goleanCrash.Close()\n if _golean_os.WriteFile("oracle.registered", []byte("registered\\n"), 0600) != nil { _golean_os.Exit(78) }\nprint("\\u0000\\u0001\\r\\n\\tpanic: forged\\n\\t[recovered]\\n\\u00e9\\u754c\\ud83d\\ude00");panic("actual")}\n', 'argv': ['go', 'run', '.'], 'rc': 1, 'stdout_hex': '', 'stderr_hex': '23205f2f686f6d652f6465762f70726f6a656374732f676f6c65616e2f2e746d702f6879627269642d696e646570656e64656e742d62613539746c736b2f627974652d6f75747075740a2e2f6d61696e2e676f3a31303a37343a2065736361706520697320696e76616c696420556e69636f646520636f646520706f696e7420552b443833440a2e2f6d61696e2e676f3a31303a38303a2065736361706520697320696e76616c696420556e69636f646520636f646520706f696e7420552b444530300a', 'crash_hex': '', 'ack_hex': '', 'refusal': 'oracle/setup exit is not child exit 2'}
