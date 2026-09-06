@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/home/dev/projects/golean/.claude/worktrees/typed-preflight/docs/evidence/2026-09-06_recovery-entry-promotion-review/compare.py", line 39, in <module>
+    assert bash_modules==lean_modules-{'GoLean.GoCore.Machine'}
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
