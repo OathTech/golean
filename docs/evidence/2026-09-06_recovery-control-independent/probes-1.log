@@ -1,0 +1,24 @@
+docs/evidence/2026-09-06_recovery-control-independent/Probes.lean:60:39: error: unsolved goals
+n : Int
+kind : IntKind
+rest : List PanicEntry
+h : ChainTyped ({ value := GoValue.interface (Ty.int kind) (GoValue.int n kind), recovered := false } :: rest)
+⊢ ?m.7 = { value := GoValue.interface (Ty.int kind) (GoValue.int n kind), recovered := false } ∨ ?m.7 ∈ rest
+docs/evidence/2026-09-06_recovery-control-independent/Probes.lean:61:2: error: Dependent elimination failed: Failed to solve equation
+  GoValue.interface Ty.string (GoValue.string bytes) = ?m.7.1
+docs/evidence/2026-09-06_recovery-control-independent/Probes.lean:89:26: warning: This simp argument is unused:
+  Config.abort?
+
+Hint: Omit it from the simp argument list.
+  simp [̵C̵o̵n̵f̵i̵g̵.̵a̵b̵o̵r̵t̵?̵]̵ ̵at ha
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+docs/evidence/2026-09-06_recovery-control-independent/Probes.lean:93:17: warning: This simp argument is unused:
+  Config.abort?
+
+Hint: Omit it from the simp argument list.
+  simp only [C̵o̵n̵f̵i̵g̵.̵a̵b̵o̵r̵t̵?̵,̵ ̵Option.some.injEq, Prod.mk.injEq] at ha
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+docs/evidence/2026-09-06_recovery-control-independent/Probes.lean:119:0: error: Recovery control audit: RecoveryControlIndependent.no_runtime_integer_in_typed_chain depends on forbidden axiom sorryAx
+docs/evidence/2026-09-06_recovery-control-independent/Probes.lean:137:0: error: Independent control review: RecoveryControlIndependent.no_runtime_integer_in_typed_chain depends on forbidden axiom sorryAx

@@ -1,0 +1,13 @@
+{
+  "reviewer_base": "6376996453a1361bc9939afe66af36dbf5b83b59",
+  "author_base": "6376996453a1361bc9939afe66af36dbf5b83b59",
+  "source_files": 21,
+  "fresh_source_session": 28591,
+  "fresh_source_exit": 0,
+  "probe_session": 85037,
+  "probe_exit": 0,
+  "probe_theorems": 14,
+  "audit_constants": 13855,
+  "author_ordinary_ci": "21839 live at review; no terminal claim",
+  "scratch": "/home/dev/projects/golean/.claude/worktrees/typed-recovery-setup/.tmp/control-independent-35jiquy3"
+}
