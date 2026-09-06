@@ -228,6 +228,12 @@ runtime author while the draft was still being developed. The initial
 not exact initial-value/identity/order/distinctness facts; the full setup
 contract needs those additional facts.
 
+Before this review was finalized, the runtime author strengthened `EnvRoots`
+to every binding occurrence in every scope and proved a separate
+`EnvRoots.lookup` consequence. The reviewer inspected that revised definition
+and lookup lemma. This resolves R7's predicate/comment defect at design level;
+the complete `inv_machineWf` theorem is still an implementation obligation.
+
 ## Minimum precise contract statements
 
 The following are schematic interfaces, not claims that these Lean names
