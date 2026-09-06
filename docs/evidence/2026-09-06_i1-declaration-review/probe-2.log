@@ -1,0 +1,10 @@
+=== RUN   TestIndependentDeclarationIdentity
+    independent_declaration_test.go:36: 324 pairwise identity comparisons
+--- PASS: TestIndependentDeclarationIdentity (0.00s)
+=== RUN   TestIndependentDeclarationReceiverAndSubstitution
+--- PASS: TestIndependentDeclarationReceiverAndSubstitution (0.00s)
+=== RUN   TestIndependentDeclarationLocalStencil
+    independent_declaration_test.go:71: {"args":[],"id":"main.Local·1[int]","kind":"named"} {"args":[],"id":"main.Local·1[bool]","kind":"named"}
+--- PASS: TestIndependentDeclarationLocalStencil (0.00s)
+PASS
+ok  	_/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/i1-declaration-review.yhuqb19e/nativefrontend	0.005s
