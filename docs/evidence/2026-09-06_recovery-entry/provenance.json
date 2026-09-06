@@ -1,0 +1,13 @@
+{
+  "base": "4f7aedef6206f9217226647ac8c77c4b34089ceb",
+  "review": "997d74ed",
+  "gate_session": 14984,
+  "gate_exit": 0,
+  "ci_session": 38639,
+  "ci_exit": 0,
+  "go_version": "go version go1.26.5 linux/amd64",
+  "lean_toolchain": "leanprover/lean4:v4.32.2",
+  "source_files": 196,
+  "frozen_source_inputs": 13,
+  "scope": "Actual program/call setup; no public facade/control/Iris completion; full runtime explicitly cached."
+}

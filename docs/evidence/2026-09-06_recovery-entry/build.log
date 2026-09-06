@@ -1,0 +1,6 @@
+✔ [94/100] Built GoLean.Interface (142ms)
+✔ [95/100] Built GoLean.Interface:c.o (40ms)
+✔ [96/100] Built GoLean (238ms)
+✔ [98/100] Built Main (210ms)
+✔ [100/100] Built golean:exe (526ms)
+Build completed successfully (100 jobs).

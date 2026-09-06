@@ -1,0 +1,29 @@
+{
+  "parent": "4158368f5ab873bd9ed7785e98b9c9ecee94eb01",
+  "merge_head": "6376996453a1361bc9939afe66af36dbf5b83b59",
+  "entry_review": "997d74ed",
+  "promotion_review": "29ac266d",
+  "ci": {
+    "session": 63627,
+    "exit": 0
+  },
+  "recovery_native": {
+    "session": 20187,
+    "gate_pass": true,
+    "cases": 5,
+    "pass": 5
+  },
+  "first_spike_launch": {
+    "session": 20187,
+    "exit": 126,
+    "cause": "Direct execution of tracked mode100644 script; native gate had already passed."
+  },
+  "spikes": {
+    "session": 22601,
+    "exit": 0,
+    "invocation": "scripts/capped bash spikes/{gate-a1,iris-customer}/check"
+  },
+  "source_files": 196,
+  "review_inputs_verified": 18,
+  "script_eof_fix": "one LF removed; AST identical; independently reviewed"
+}

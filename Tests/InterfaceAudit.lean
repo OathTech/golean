@@ -2,6 +2,8 @@ import Tests.InterfaceContract
 import Tests.BooleanRuntime
 import Tests.BooleanProgram
 import Tests.RecoveryTypingAudit
+import Tests.RecoveryStorageAudit
+import Tests.RecoverySetupAudit
 import Lean
 
 /-! The command runs from a separate harness after complete imports. Origin
@@ -34,6 +36,15 @@ def InterfaceAudit.run : CoreM Unit := do
     `GoLean.GoCore.RecoveryAdmission,
     `Tests.RecoveryTyping, `Tests.RecoveryDiagnosticControls,
     `Tests.RecoveryTypingFixture, `Tests.RecoveryA2Artifact, `Tests.RecoveryTypingAudit,
+    `GoLean.GoCore.RecoveryStore, `GoLean.GoCore.RecoveryEnvironment,
+    `GoLean.GoCore.RecoveryAllocation, `GoLean.GoCore.RecoveryOperators,
+    `GoLean.GoCore.RecoveryContext, `GoLean.GoCore.RecoveryControlTyping,
+    `GoLean.GoCore.RecoverySetupShape, `GoLean.GoCore.RecoveryInitialization,
+    `GoLean.GoCore.RecoveryResultRoots, `GoLean.GoCore.RecoverySetup,
+    `GoLean.GoCore.RecoverySetupWf, `GoLean.GoCore.RecoverySetupReadout,
+    `GoLean.GoCore.RecoveryCallEntry,
+    `Tests.RecoveryStorage, `Tests.RecoveryStorageAudit,
+    `Tests.RecoverySetup, `Tests.RecoverySetupAudit,
     `Tests.PanicRendering, `Tests.InterfaceContract, `Tests.BooleanRuntime,
     `Tests.BooleanProgram, `Tests.InterfaceAudit]
   let exports : List Name := [
@@ -56,6 +67,18 @@ def InterfaceAudit.run : CoreM Unit := do
     ``GoLean.GoCore.RecoveryTyping.admitted_no_cycle,
     ``GoLean.GoCore.RecoveryTyping.Statement.in_profile,
     ``GoLean.GoCore.RecoveryTyping.Statement.placement,
+    ``GoLean.GoCore.RecoveryRuntime.setup_typed,
+    ``GoLean.GoCore.RecoveryRuntime.setup_typed_wf,
+    ``GoLean.GoCore.RecoveryRuntime.enterFrame_typed,
+    ``GoLean.GoCore.RecoveryRuntime.enterFramePick_typed,
+    ``GoLean.GoCore.RecoveryRuntime.ResultRoots.load,
+    ``GoLean.GoCore.RecoveryRuntime.pinResultLocs_typed,
+    ``GoLean.GoCore.RecoveryRuntime.EnvTyped.pushedDecls,
+    ``GoLean.GoCore.RecoveryRuntime.initialState_argument,
+    ``GoLean.GoCore.RecoveryRuntime.initialState_result,
+    ``GoLean.GoCore.RecoveryRuntime.initialState_readout,
+    ``GoLean.GoCore.RecoveryRuntime.typedEntry_wf,
+    ``GoLean.GoCore.RecoveryRuntime.ZeroValues.unique,
     ``GoLean.GoCore.BooleanRuntime.setup_boolean,
     ``GoLean.GoCore.BooleanRuntime.bindParams_bool,
     ``GoLean.GoCore.BooleanRuntime.allocDecls_bool,

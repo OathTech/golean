@@ -353,3 +353,55 @@ Equal-string repanic, invalid byte-string observations, BUG-090 complete
 capture, reusable Iris proofs, final B7/I1 preservation, roadmap/migration/
 C1 handoff and the closing decision packet are still required. O1–O5 remain
 the full goal. Primary main remains clean at `47195683`.
+
+## Current checkpoint: actual recovery entry publicly integrated (2026-09-06)
+
+The user explicitly resumed the full charter goal after a safe readiness
+pause. The preceding readiness turn was a safe checkpoint, not a completed
+sprint. All three lanes resumed with their original responsibilities.
+
+Actual recovery setup/call entry `63769964` passed independent review
+`997d74ed` (integrated at `4158368f`). Its facade promotion passed separate
+review `29ac266d`. The pending merge into `4158368f` passed ordinary CI
+`63627`, native recovery 5/5 and all controls, A1, and Iris artifact/3/3
+differential gates. Sessions `63627`, `20187` and `22601` are terminal;
+the first spike launch in `20187` failed because the mode-100644 script was
+invoked directly, then the correct Bash invocation passed in `22601`.
+Do not repeat these completed checks without changed source or a concern.
+The [integration seal](evidence/2026-09-06_recovery-entry-integration/README.md)
+binds 196 source files, 84 public exports and nineteen compiled poisons.
+Whole runtime and compile-negative records remain explicitly cached here.
+
+The recovery runtime lane has fifteen frozen control modules proving actual
+setup-to-Inv, structural all-successor preservation, normal/semantic-abort
+progress, and typed readout/unchanged choices for successful actual drivers.
+Its dedicated gate passed with 124 exports and seventeen poison controls.
+Root independently rebuilt all seventeen core/test modules and proved
+fourteen additional adversarial checks, including actual aliased result
+writeback and typed abort-query payload kind. Review source/evidence is on
+`typed-recovery-setup` at `9e6c4234` plus reproducibility follow-up `ba930ba2`.
+Author ordinary CI `21839` is now terminal with exit 0; its source/evidence
+commit is being sealed. No control runtime commit is integrated yet.
+Shared Iris allocation/call layout is a further isolated draft.
+
+The observer implementation has bounded independent review `1bd2022b`,
+integrated at `7774739a`. Its new full CI is live in the author lane at
+session `34382`; preserve its eventual terminal result, never infer full
+success from partial rows. Diagnostic source review is `c5b83045` with
+additive packaging correction `0333f0a1`; integrate both together. The
+older rejected classifier run remains terminal 143. BUG-106's exact
+sync-unwind observation refusal remains the independently reviewed K3
+disposition. A separate arbitrary-byte/equal-string rendering repair is
+under development against existing R-1 authority and needs its own review,
+forced-half controls and actual terminal readout proof.
+
+B7 now compiles sequential/pool coherence, traces and dedup/customer
+infrastructure against explicit context. Its bounded equality guard remains
+at the certificate boundary so dropping repeated context comparisons cannot
+widen old certificate acceptance. Complete actual old/new correspondence,
+contract/customer migration and full captured byte/choice equality remain
+open. I1 still needs positive declaration metadata and checked executable
+closure beyond prototype `8ea5a74b`. BUG-090 capture completeness, final
+Go-fidelity evidence, reusable Iris proofs, B7/I1 validation, C1 handoff,
+roadmap/migration and the O1–O5 closing packet remain mandatory. Main is
+unchanged and no main merge or push is authorized.

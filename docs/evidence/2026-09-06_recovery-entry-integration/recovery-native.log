@@ -1,0 +1,67 @@
+9314b0d0a71cef7c8d14146faad5d755adcdac3650269aba0ab9beeac0dd430a  GoLean/GoCore/RecoveryTypingCore.lean
+020ad2428a6f5ba1b2d8629431fbf5c5b7bd91e87ca34101f817f751a118d4e0  GoLean/GoCore/RecoveryExpressions.lean
+3147e2d8ee0f6d13035dc307b1d286a92bb3d0899f9a896c24be168f98e9e063  GoLean/GoCore/RecoveryCalls.lean
+8af47f19b6b48760e082b4c6f8c05009f99d9d5dc2a910a1cf2ba6b1cdfd1456  GoLean/GoCore/RecoveryStatements.lean
+e411087f7a31c79b752723eb028cc027c15bd9f2b0eeef202fd94db4177b1348  GoLean/GoCore/RecoveryGraph.lean
+0d39c353494d8126531705271affcd0ad661dfcaaf6ed3aa9e8b000c31f382c7  GoLean/GoCore/RecoveryDiagnostics.lean
+308a6d4e61b92e6c1f56790ed1c5b76e56c76334dfb2278bab129b375627a88b  GoLean/GoCore/RecoveryAdmission.lean
+8a51f162eb20532ddaeb9e27ee2f160742b3573a7b714e92d18aec8fd467ef44  Tests/RecoveryTyping.lean
+aed9764365cbe7e29d0dc4951f1d1d6259ef9c68cbaa2012306d4dc6bb883911  Tests/RecoveryTypingFixture.lean
+9be03bb7c77bd6012720ce42e98a4511d1c83ae463866331309a4bc2bce34189  Tests/RecoveryA2Artifact.lean
+f555047890ca850d6dd3b0c8a0b5751360daf8fce959d24e1d8fdb96d6a57c54  Tests/RecoveryDiagnosticControls.lean
+aaa180e2ccadab098138f2a17811c3f0bfb2dfd5ec42dafa7a412f0b3b1d3c9f  Tests/RecoveryTypingAudit.lean
+Build completed successfully (29 jobs).
+Recovery typing fresh elaboration: GoLean/GoCore/RecoveryTypingCore.lean
+Recovery typing fresh elaboration: GoLean/GoCore/RecoveryExpressions.lean
+Recovery typing fresh elaboration: GoLean/GoCore/RecoveryCalls.lean
+Recovery typing fresh elaboration: GoLean/GoCore/RecoveryStatements.lean
+Recovery typing fresh elaboration: GoLean/GoCore/RecoveryGraph.lean
+Recovery typing fresh elaboration: GoLean/GoCore/RecoveryDiagnostics.lean
+Recovery typing fresh elaboration: GoLean/GoCore/RecoveryAdmission.lean
+Recovery typing fresh elaboration: Tests/RecoveryTyping.lean
+Recovery typing fresh elaboration: Tests/RecoveryTypingFixture.lean
+Recovery typing fresh elaboration: Tests/RecoveryA2Artifact.lean
+Recovery typing fresh elaboration: Tests/RecoveryDiagnosticControls.lean
+Recovery typing fresh elaboration: Tests/RecoveryTypingAudit.lean
+Recovery typing audit scratch retained: /home/dev/projects/golean/.tmp/recovery-typing-audit-zh7h43be
+Recovery typing audit: 46 required theorems present; 10879 constants checked across all imported local modules (classical trio only)
+/home/dev/projects/golean/.tmp/recovery-typing-audit-zh7h43be/AuditAll.lean:2:0: error: Recovery typing audit: _private.GoLean.GoCore.RecoveryDiagnostics.0.recoveryDiagnosticHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryDiagnostics.0.recoveryDiagnosticHole
+Recovery typing negative audit: diagnostic_private compiled then rejected (recoveryDiagnosticHole)
+/home/dev/projects/golean/.tmp/recovery-typing-audit-zh7h43be/AuditAll.lean:2:0: error: Recovery typing audit: _private.GoLean.GoCore.RecoveryCalls.0.recoveryCallHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryCalls.0.recoveryCallHole
+Recovery typing negative audit: helper_private compiled then rejected (recoveryCallHole)
+/home/dev/projects/golean/.tmp/recovery-typing-audit-zh7h43be/AuditAll.lean:2:0: error: Recovery typing audit: _private.GoLean.GoCore.RecoveryAdmission.0.recoveryTypingCoreHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryAdmission.0.recoveryTypingCoreHole
+Recovery typing negative audit: core_private compiled then rejected (recoveryTypingCoreHole)
+/home/dev/projects/golean/.tmp/recovery-typing-audit-zh7h43be/AuditAll.lean:2:0: error: Recovery typing audit: _private.Tests.RecoveryTypingAudit.0.recoveryTypingAuditHole depends on forbidden axiom _private.Tests.RecoveryTypingAudit.0.recoveryTypingAuditHole
+Recovery typing negative audit: audit_private compiled then rejected (recoveryTypingAuditHole)
+/home/dev/projects/golean/.tmp/recovery-typing-audit-zh7h43be/test_trailing/Tests/RecoveryTyping.lean:218:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.tmp/recovery-typing-audit-zh7h43be/AuditAll.lean:2:0: error: Recovery typing audit: _private.Tests.RecoveryTyping.0.recoveryTypingTrailingHole depends on forbidden axiom sorryAx
+Recovery typing negative audit: test_trailing compiled then rejected (sorryAx)
+Build completed successfully (134 jobs).
+Recovery typing scratch retained: /home/dev/projects/golean/.tmp/recovery-typing-artifact.4054KG
+Recovery typing: proof artifact is an exact copy of the existing complete A2 definition
+Recovery typing: complete fresh native GoCore matches complete existing A2
+Recovery typing: complete fresh native GoCore matches second shared-capture fixture
+Recovery diagnostics: fresh typechecked Go panic(true) is outside the string-payload profile
+5a421bbd5aba27476017ad766a9fab6a1e43dff2de58c1043647428eb62eb197  /home/dev/projects/golean/.tmp/recovery-typing-artifact.4054KG/a2.json
+e9ce56299ec508352aba26621f24c303d3b410bb6f90f2dfb1776cd1e562d470  /home/dev/projects/golean/.tmp/recovery-typing-artifact.4054KG/native.json
+de5abe627497c56db8156fbbb39b7686987e2688e4012c675179ed146f61dbde  /home/dev/projects/golean/.tmp/recovery-typing-artifact.4054KG/outside.json
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+building Lean executable...
+Build completed successfully (134 jobs).
+native frontend: per-case type-check + emit (no batch export)
+PASS	recovery-typing/shared-false	admission,recovery,captures
+PASS	recovery-typing/shared-true	admission,recovery,captures
+PASS	recovery-typing/outside	admission,recovery,outside-handler
+PASS	recovery-typing/reversed-true	admission,recovery,defer-order-control
+PASS	recovery-typing/direct-true	admission,recovery,direct-control
+
+differential coverage summary: cases=5 pass=5 fail=0 export_status=0
+results: artifacts/recovery-typing/differential/latest.tsv
+metadata: artifacts/recovery-typing/differential/latest.meta.tsv
+Recovery native control: shared-false returns true
+Recovery native control: shared-true returns false
+Recovery native control: outside returns true
+Recovery native control: reversed-true returns true
+Recovery native control: direct-true returns true
+Recovery native controls: input dependence, defer order, and directness all distinguish results
+Recovery typing static foundation gate: PASS
