@@ -1,0 +1,19 @@
+{
+  "review_base": "04109912f28b9e8511d43e6fba7c3c158cdea76f",
+  "author_source_fingerprint": "714530c7ef4bcff3855978c45532d77d59f547ab0db3f353e317ab2a442bd0c5",
+  "reviewed_and_revalidated_inputs": 35,
+  "fresh_gate": {
+    "command": "GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 bash spikes/iris-customer/check",
+    "session": 25812,
+    "exit": 0
+  },
+  "extra_probes": {
+    "command": "GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 ../../scripts/capped lake env lean IndependentReview.lean",
+    "cwd": "spikes/iris-customer",
+    "session": 61866,
+    "exit": 0,
+    "count": 6
+  },
+  "dependency_scope": "Owned copies of pinned built dependencies; fresh increment modules, not complete clean-room dependency build",
+  "review_verdict": "PASS bounded functional-customer increment; O2 terminal/facade and B7/I1/final integration remain"
+}
