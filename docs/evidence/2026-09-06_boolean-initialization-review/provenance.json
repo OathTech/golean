@@ -1,0 +1,32 @@
+{
+  "utc": "2026-09-06T01:13:06.714899+00:00",
+  "root": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+  "head": "8b0a6a227c1bc50a1768f0c503e94e21c3b14790",
+  "source_status": " M GoLean/Interface.lean\n M Tests/BooleanRuntime.lean\n M Tests/InterfaceAudit.lean\n M scripts/check-interface\n M scripts/check-interface.py\n?? GoLean/GoCore/BooleanInitialization.lean\n?? docs/evidence/2026-09-06_panic-rendering-review/\n",
+  "files": {
+    "GoLean/GoCore/BooleanInitialization.lean": "6530f9438425c68fb9e302142d9a0a63ddd96bc984c772b53d30e853ac6dabe5",
+    "GoLean/GoCore/BooleanStore.lean": "c6ac7824a6d671dab0bfb8426778a0f54ff4dc5654c843f4960701aa3aae0b5a",
+    "GoLean/GoCore/BooleanSetup.lean": "fd203aaa6d97be8126d575b4dccf7a1b0e65ad56c632daf9965347a0f44e085e",
+    "GoLean/GoCore/BooleanTyping.lean": "757c6d311ea025d75d66ee92017bdd9f24ba6d70c8faed5f667550329c3f6712",
+    "GoLean/GoCore/Admission.lean": "2309256e38874bd99eadc5868d8b4c2e0e0111a94e374799eb8aa09ec0f08e7f",
+    "GoLean/GoCore/AdmissionPolicy.lean": "937cae3af268310a58843495397c96fbe52576427aadb26ec6f89466633b8946",
+    "GoLean/GoCore/StepFn.lean": "dcc863cf777a208d375adb0857f1ecd953c28420937e4782a35206e0770b89e7",
+    "GoLean/GoCore/StateWf.lean": "dc532c707798ed6cf6c69faf036a62363a004775ffbba9865275f10bad84ff62",
+    "Tests/BooleanRuntime.lean": "d159731e01b47c9146f8f73dd46f5968e0edac248731e82aaf2f7d4f075cb43b",
+    "GoLean/Interface.lean": "f7e7e39d6375122c304058039f2673f0f2df5d832e6f53ccdd443af198d96a55",
+    "Tests/InterfaceAudit.lean": "60192b59a2109f95131d309afe9e0cf0d595e592d85e0bdc1e021bbf0b2f61ec",
+    "scripts/check-interface": "7e8a1dc1a36ea2a179705b3c84bc3504343039ecd93aa4044e39b98f21b167e3",
+    "scripts/check-interface.py": "d5fe55c0a04d1b910687a41053d7f84e9837dcf91f55b368bf0ea512553b3a8f",
+    "artifacts/boolean-runtime/initialization-interface-green.log": "4ea9eb2276f31436d1a1df2dc4f35ef3ce98976e78aa7487be4c22db0710f8af",
+    "lean-toolchain": "2bdc48adfa58d0017e538a0ad117c5d73d35deec879978f909406a80c8037273",
+    "lakefile.toml": "84863744cd612c3c66ba19b6c9da7a785791599838a398df5e41a647f476bad2",
+    "artifacts/boolean-runtime/initialization-ci.log": "34960aea75cc54d03b6ac40d41906d5951058d09af1cb5a48c53ef80fc10fd86",
+    "docs/2026-09-06_boolean-initialization.md": "ca82b67d9e059cc9baea812d59cfa63eb7cf31c303a60aff62375af6a22bd493"
+  },
+  "command": "GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 scripts/capped lake env lean /home/dev/projects/golean/.claude/worktrees/typed-preflight/docs/evidence/2026-09-06_boolean-initialization-review/Adversarial.lean",
+  "command_cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+  "build_mode": "Fresh independent probe elaboration against read-only integration imports; no output olean requested.",
+  "scope": "Exact initialization source, appended paired regressions, facade and audit changes; no full runtime invariant acceptance.",
+  "final_source_recheck_utc": "2026-09-06T01:15:28.622785+00:00",
+  "changed_since_review": []
+}
