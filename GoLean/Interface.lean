@@ -5,6 +5,7 @@ import GoLean.GoCore.Admission
 import GoLean.GoCore.BooleanTyping
 import GoLean.GoCore.BooleanStore
 import GoLean.GoCore.BooleanSetup
+import GoLean.GoCore.BooleanInitialization
 
 /-!
 # Experimental semantic consumer interface
@@ -45,6 +46,13 @@ setup success and typed argument/result storage already from A3a; it preserves
 the choice stream and accounts for allocated cells. `loadMany_bool` proves
 typed readout from valid pinned roots. These storage facts do not yet prove
 typed control, preservation, progress, or refusal freedom during execution.
+
+`BooleanRuntime.setup_typed_exact` strengthens entry setup under scoped
+admission: the actual driver constructs a canonical environment/heap and
+distinct result pins, with `MachineWf` and typed storage established. The
+`initialEnv_*` and `initialState_*` lemmas expose exact argument bindings,
+argument values and initially false result cells. These facts still require
+a separate control invariant and execution proof for a program result.
 
 The underlying `GoCore` and `GoCore.Machine` types remain representation
 dependent. This facade is experimental: B7, C1 and the composition work may

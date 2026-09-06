@@ -54,4 +54,35 @@ theorem duplicate_readout_preserves_alias (b : Bool) :
     loadMany { heap := #[.value .bool (.bool b)] } [.base ⟨0⟩, .base ⟨0⟩] =
       .ok [.bool b, .bool b] := by rfl
 
+def paired : Func := {
+  id := ⟨"Pair"⟩,
+  args := #[⟨"first", .bool⟩, ⟨"second", .bool⟩],
+  results := #[⟨"left", .bool⟩, ⟨"right", .bool⟩], body := .returnStmt }
+
+set_option maxRecDepth 4096 in
+/-- Different argument values distinguish declaration order from heap order;
+two initially false results must have separate pins after both arguments. -/
+theorem paired_setup (first second : Bool) (fuel : Nat) (ch : Choices) :
+    runProgramSetupM fuel { funcs := #[paired] } "Pair" #[.bool first, .bool second] ch =
+      .ok (.exec .returnStmt
+        [[("right", .base ⟨3⟩), ("left", .base ⟨2⟩),
+          ("second", .base ⟨1⟩), ("first", .base ⟨0⟩)]]
+        (.frame [] [] [] [] .stop),
+        {programState { funcs := #[paired] } with
+          heap := #[.value .bool (.bool first), .value .bool (.bool second),
+            .value .bool (.bool false), .value .bool (.bool false)]},
+        [.base ⟨2⟩, .base ⟨3⟩], ch) := by
+  cases first <;> cases second <;> with_unfolding_all rfl
+
+set_option maxRecDepth 4096 in
+theorem paired_admitted (first second : Bool) :
+    TypedBooleanAdmission {funcs := #[paired]} "Pair" #[.bool first, .bool second] := by
+  apply checkTypedBoolean_sound
+  cases first <;> cases second <;> with_unfolding_all rfl
+
+theorem paired_named_result_zero (first second : Bool) :
+    loadLoc (initialState {funcs := #[paired]} paired [first, second]) (.base ⟨3⟩) =
+      .ok (.bool false) :=
+  initialState_result _ paired [first, second] rfl 1 (by decide +kernel)
+
 end GoLean.GoCore.BooleanRuntime.Tests

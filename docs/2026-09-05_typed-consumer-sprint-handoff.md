@@ -105,3 +105,29 @@ value/result-zero loads, result-pin distinctness, and `setup_typed_exact`
 with canonical actual setup, all typed storage/context premises and derived
 `MachineWf`. Promote to an audited public module after this helper commit;
 scratch elaboration alone is not an accepted public contract.
+
+## Integrated checkpoint update (2026-09-06)
+
+This update supersedes the earlier live-lane status above. The reviewed
+storage/setup increment is committed at `f251abcb`, the sealed preflight at
+`8b0a6a22`, and independent exact-initialization review at `815227ad`.
+The exact setup increment is now `GoLean/GoCore/BooleanInitialization.lean`,
+exposed and audited through the facade. Its unchanged reviewed source passed
+fresh interface checks (41 exports, seven compiled poison controls), ordinary
+CI and eight independent kernel challenges. See the
+[source-bound evidence](evidence/2026-09-06_boolean-initialization/README.md)
+and [claim ledger](2026-09-06_boolean-initialization.md). This checkpoint
+derives exact setup and machine bounds; it does not yet compose setup with
+the structural runtime invariant or establish the complete O1 driver chain.
+
+Next integrate the separately reviewed runtime commit `8717b974`, derive the
+generic admitted initial invariant, and expose actual driver safety/readout.
+The O2 agent is implementing the separately reviewed recovery typing design
+in `typed-recovery`. The observer agent has preserved red valid-UTF8 NUL and
+control-byte regressions in `typed-observer-controls` and is repairing raw
+byte transport under the existing observation policy. The separate renderer
+repair is committed at `ff7173dd`, with complete differential evidence and
+final ordinary CI; its bounded independent review precedes integration.
+B7 design is available at `45f7955e`, with representation edits still pending
+the generic setup/invariant checkpoint. All O1–O5 outcomes remain in scope.
+Main remains clean at `47195683`; no main merge or push is authorized.

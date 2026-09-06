@@ -13,6 +13,7 @@ MODULES = ["GoLean/GoCore/Trace", "GoLean/GoCore/PoolTrace",
            "GoLean/GoCore/Admission",
            "GoLean/GoCore/BooleanTyping", "GoLean/GoCore/BooleanStore",
            "GoLean/GoCore/BooleanSetup",
+           "GoLean/GoCore/BooleanInitialization",
            "Tests/InterfaceContract", "Tests/BooleanRuntime", "Tests/InterfaceAudit"]
 HARNESS = "\n".join(f"import {m.replace('/', '.')}" for m in MODULES)
 HARNESS += "\n#eval InterfaceAudit.run\n"
@@ -58,6 +59,8 @@ def main():
          "private axiom booleanStoreHole : False", "booleanStoreHole"),
         ("boolean_setup_private", "GoLean/GoCore/BooleanSetup.lean",
          "private axiom booleanSetupHole : False", "booleanSetupHole"),
+        ("boolean_initialization_private", "GoLean/GoCore/BooleanInitialization.lean",
+         "private axiom booleanInitializationHole : False", "booleanInitializationHole"),
         ("facade_private", "GoLean/Interface.lean",
          "private axiom facadeHole : False", "facadeHole"),
         ("audit_trailing", "Tests/InterfaceAudit.lean",

@@ -6,6 +6,7 @@ cd "$ROOT"
 "$ROOT/scripts/capped" lake build GoLean.Interface InterfaceTests
 for module in GoLean/GoCore/Trace GoLean/GoCore/PoolTrace GoLean/GoCore/ProgramTrace \
     GoLean/GoCore/BooleanTyping GoLean/GoCore/BooleanStore GoLean/GoCore/BooleanSetup \
+    GoLean/GoCore/BooleanInitialization \
     GoLean/Interface Tests/InterfaceContract Tests/BooleanRuntime Tests/InterfaceAudit; do
   "$ROOT/scripts/capped" lake env lean "$module.lean"
 done
