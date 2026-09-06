@@ -1,0 +1,19 @@
+{
+  "docs/evidence/2026-09-06_observer-integration/README.md": "9709f7b6608cdcc2e4ed7a6aa6e7efb2d59247c66e22b8c56994ae07a86a336c",
+  "docs/evidence/2026-09-06_observer-integration/verify.py": "74fd0e1e58147987eb8f071f5604a9ab7ffab279c6c8395fff9ed746e6e9cae8",
+  "docs/evidence/2026-09-06_observer-integration/validation.json": "92fd7918cc78699e0f6c6da77808054226dc6e9f512186af8984f264fcb43a68",
+  "docs/evidence/2026-09-06_observer-integration/sources.json": "d7de3da61f0e15e671500bdba5cc96b8c0a61099cee61e9017a3cac152e28d99",
+  "docs/evidence/2026-09-06_observer-integration/full.tsv": "8c89f553dd706f445c2b6fad9f55b0cc0518578035f8e19803fa6260088ae5cf",
+  "docs/evidence/2026-09-06_observer-integration/full.meta.tsv": "552ca0c45f4a61de10e4a00749acd4dd301186583c585cf598d43f844be1c5aa",
+  "docs/evidence/2026-09-06_observer-integration/full.manifest.tsv": "5fb20e8dda7479f417d86be309a915306c238bf2201c0ee670bac09194413fc6",
+  "docs/evidence/2026-09-06_observer-integration/negative.tsv": "16e489a805e7530e6d961b27620a93c416c6d91373a608fedacef5281eb8d204",
+  "docs/evidence/2026-09-06_observer-integration/negative.meta.tsv": "c03edf06ad519c560a0d53a0592c1f16a9c7a3269fa90e338e268ae28be5663f",
+  "docs/evidence/2026-09-06_observer-integration/negative.manifest.tsv": "21f456f4d3788469d3c42fed6ad8625d06cd2656211e3418c7bc7ffc0a1823f8",
+  "docs/evidence/2026-09-06_observer-integration/ci-diff.log": "6ed34db9f3a0b0109dad1bb605241c62edf26ef2eb336b99947460ae1156f6a5",
+  "docs/evidence/2026-09-06_observer-integration/reviewed-source-comparison.json": "e8907d3327197f84b418757d96620752a45437e30f50763a6f7d00c4bf962d82",
+  "docs/evidence/2026-09-06_observer-integration/ci-hooks.patch": "569b83d7bd9ca635e4dcd6e5f3ba2aca273d73587cc9b9e245feb87f9d6a590e",
+  "docs/evidence/2026-09-06_observer-integration/build-config-addendum.json": "70fe18e5ccd5243d10b00290756f263c073054b1c2b3949146f79be07c7fb6ff",
+  "docs/evidence/2026-09-06_observer-integration/reconciler-final.json": "f5e0f49d953690257e950864fe2bc607b8f127b2704fd9cd7df85d0ac02d3ff8",
+  "scripts/ci": "57c25da269afe1fc05297e6c42aad23c655b01118c7576c886ee093b02fec132",
+  "docs/language-coverage-ledger.md": "254c56550798182689cd56a88b5eeb4fabfd255c522ed9f405369384518f7f54"
+}

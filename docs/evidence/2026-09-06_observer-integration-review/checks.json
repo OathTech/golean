@@ -1,0 +1,26 @@
+{
+  "verify_readonly_replay": true,
+  "write_replaced_with_exact_validation_assertion": true,
+  "ci_exact_additive_union_over": "99e0225d",
+  "build_config_matches_parent": true,
+  "terminal_CI": "RESULT: PASS; exit0 reported by root",
+  "full": {
+    "cases": 3627,
+    "pass": 3382,
+    "fail": 245
+  },
+  "negative": 394,
+  "delta": {
+    "newPASS": 11,
+    "existingPASS_to_go_observation_refusal": 1,
+    "removed": 0
+  },
+  "wide_scope_claim": false,
+  "reviewed_manifests_checked": {
+    "2026-09-06_observer-classification/hybrid-final-source-addendum.json": 19,
+    "2026-09-06_observer-classification/hybrid-production-sources.json": 16,
+    "2026-09-06_observer-diagnostic-tools/hybrid-diagnostic-sources.json": 16
+  },
+  "only_manifest_delta": "scripts/ci, separately verified exact additive union",
+  "ledger_typo_corrected": true
+}
