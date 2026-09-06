@@ -1,0 +1,9 @@
+{
+  "reviewer": "root",
+  "author": "typed_boolean",
+  "review_worktree_base": "212842a9b221a2174c332c0841a960085620dce1",
+  "source_compile_exit": 0,
+  "final_probe_exit": 0,
+  "fresh_challenges": 11,
+  "full_runtime_scope": "inspected author cached source-bound evidence; no fresh whole-corpus claim"
+}

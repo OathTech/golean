@@ -1,0 +1,17 @@
+.tmp/recovery-storage-review/Review.lean:67:73: error: Application type mismatch: The argument
+  bytes
+has type
+  GoString
+but is expected to have type
+  GoLean.GoString
+in the application
+  GoLean.GoValue.string bytes
+.tmp/recovery-storage-review/Review.lean:68:39: error: Application type mismatch: The argument
+  bytes
+has type
+  GoString
+but is expected to have type
+  GoLean.GoString
+in the application
+  GoLean.GoValue.string bytes
+.tmp/recovery-storage-review/Review.lean:80:0: error: Independent storage review: RecoveryStorageIndependent.strict_box_preserves_arbitrary_bytes uses sorryAx
