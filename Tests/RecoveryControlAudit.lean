@@ -1,0 +1,172 @@
+import Tests.RecoveryInvariant
+import Lean
+
+open Lean
+
+/-- Post-import audit of the complete supporting closure, including unused
+private declarations and declarations after this audit's definition. -/
+def RecoveryControlAudit.run : CoreM Unit := do
+  let env ← getEnv
+  let modules : List Name := [
+    `GoLean.GoCore.RecoveryDelivery,
+    `GoLean.GoCore.RecoveryControlData,
+    `GoLean.GoCore.RecoveryControl,
+    `GoLean.GoCore.RecoveryControlMono,
+    `GoLean.GoCore.RecoveryWalk,
+    `GoLean.GoCore.RecoveryExpressionProgress,
+    `GoLean.GoCore.RecoveryControlHelpers,
+    `GoLean.GoCore.RecoveryCallControl,
+    `GoLean.GoCore.RecoveryValueBasic,
+    `GoLean.GoCore.RecoveryValueCalls,
+    `GoLean.GoCore.RecoveryStatementProgress,
+    `GoLean.GoCore.RecoveryFrameProgress,
+    `GoLean.GoCore.RecoveryPanicProgress,
+    `GoLean.GoCore.RecoveryInvariant,
+    `GoLean.GoCore.RecoverySuccessfulRuns,
+    `Tests.RecoveryInvariant,
+    `Tests.RecoveryControlAudit]
+  for m in modules do
+    unless env.header.moduleNames.contains m do
+      throwError "Recovery control audit: missing module {m}"
+  let exports : List Name := [
+    ``GoLean.GoCore.RecoveryRuntime.Delivered.mono,
+    ``GoLean.GoCore.RecoveryRuntime.Delivered.coerce,
+    ``GoLean.GoCore.RecoveryRuntime.DeliveryList.mono,
+    ``GoLean.GoCore.RecoveryRuntime.DeliveryList.length,
+    ``GoLean.GoCore.RecoveryRuntime.DeliveryList.append,
+    ``GoLean.GoCore.RecoveryRuntime.DeliveryList.reverse,
+    ``GoLean.GoCore.RecoveryRuntime.DeliveryList.values,
+    ``GoLean.GoCore.RecoveryRuntime.DeliveryList.params,
+    ``GoLean.GoCore.RecoveryRuntime.Operator.apply,
+    ``GoLean.GoCore.RecoveryRuntime.Expressions.arguments,
+    ``GoLean.GoCore.RecoveryRuntime.RefTyped.mono,
+    ``GoLean.GoCore.RecoveryRuntime.RefsTyped.mono,
+    ``GoLean.GoCore.RecoveryRuntime.RefsTyped.append,
+    ``GoLean.GoCore.RecoveryRuntime.PendingCall.mono,
+    ``GoLean.GoCore.RecoveryRuntime.DefersTyped.mono,
+    ``GoLean.GoCore.RecoveryRuntime.AssignmentSource.mono,
+    ``GoLean.GoCore.RecoveryRuntime.ReturnCont.not_stop,
+    ``GoLean.GoCore.RecoveryRuntime.Control.not_return_stop,
+    ``GoLean.GoCore.RecoveryRuntime.Control.initialization_environment,
+    ``GoLean.GoCore.RecoveryRuntime.Control.initialization_not_frame,
+    ``GoLean.GoCore.RecoveryRuntime.ReturnCont.mono,
+    ``GoLean.GoCore.RecoveryRuntime.ExitCont.mono,
+    ``GoLean.GoCore.RecoveryRuntime.ValueCont.mono,
+    ``GoLean.GoCore.RecoveryRuntime.UnwindCont.mono,
+    ``GoLean.GoCore.RecoveryRuntime.Control.mono,
+    ``GoLean.GoCore.RecoveryRuntime.ChainTyped.single,
+    ``GoLean.GoCore.RecoveryRuntime.ChainTyped.append,
+    ``GoLean.GoCore.RecoveryRuntime.markNewest_typed,
+    ``GoLean.GoCore.RecoveryRuntime.ReturnCont.recoverThrough_none,
+    ``GoLean.GoCore.RecoveryRuntime.ExitCont.recoverThrough,
+    ``GoLean.GoCore.RecoveryRuntime.recoverResult_eq_walk,
+    ``GoLean.GoCore.RecoveryRuntime.recoverWalk_descend,
+    ``GoLean.GoCore.RecoveryRuntime.ReturnCont.recoverWalk,
+    ``GoLean.GoCore.RecoveryRuntime.ValueCont.recoverWalk,
+    ``GoLean.GoCore.RecoveryRuntime.ValueCont.recover,
+    ``GoLean.GoCore.RecoveryRuntime.recover_indirect,
+    ``GoLean.GoCore.RecoveryRuntime.recover_direct,
+    ``GoLean.GoCore.RecoveryRuntime.pushDefer_seq,
+    ``GoLean.GoCore.RecoveryRuntime.ReturnCont.pushDefer,
+    ``GoLean.GoCore.RecoveryRuntime.StoreExtension.refl,
+    ``GoLean.GoCore.RecoveryRuntime.advances_same,
+    ``GoLean.GoCore.RecoveryRuntime.expression_value_advances,
+    ``GoLean.GoCore.RecoveryRuntime.expression_advances,
+    ``GoLean.GoCore.RecoveryRuntime.ParamsValues.append,
+    ``GoLean.GoCore.RecoveryRuntime.arguments_split,
+    ``GoLean.GoCore.RecoveryRuntime.expression_root_spine,
+    ``GoLean.GoCore.RecoveryRuntime.target_plan_typed,
+    ``GoLean.GoCore.RecoveryRuntime.targets_plan_typed,
+    ``GoLean.GoCore.RecoveryRuntime.assignment_typed,
+    ``GoLean.GoCore.RecoveryRuntime.Expression.weaken,
+    ``GoLean.GoCore.RecoveryRuntime.ControlStmt.neutral_false,
+    ``GoLean.GoCore.RecoveryRuntime.ReturnCont.seqCont_neutral,
+    ``GoLean.GoCore.RecoveryRuntime.RefTyped.store,
+    ``GoLean.GoCore.RecoveryRuntime.store_advances,
+    ``GoLean.GoCore.RecoveryRuntime.call_entry_control,
+    ``GoLean.GoCore.RecoveryRuntime.deferred_entry_control,
+    ``GoLean.GoCore.RecoveryRuntime.strict_advances,
+    ``GoLean.GoCore.RecoveryRuntime.and_advances,
+    ``GoLean.GoCore.RecoveryRuntime.or_advances,
+    ``GoLean.GoCore.RecoveryRuntime.bool_advances,
+    ``GoLean.GoCore.RecoveryRuntime.branch_advances,
+    ``GoLean.GoCore.RecoveryRuntime.rhs_advances,
+    ``GoLean.GoCore.RecoveryRuntime.target_advances,
+    ``GoLean.GoCore.RecoveryRuntime.panic_advances,
+    ``GoLean.GoCore.RecoveryRuntime.call_args_advances,
+    ``GoLean.GoCore.RecoveryRuntime.call_callee_advances,
+    ``GoLean.GoCore.RecoveryRuntime.call_value_args_advances,
+    ``GoLean.GoCore.RecoveryRuntime.defer_callee_advances,
+    ``GoLean.GoCore.RecoveryRuntime.defer_args_advances,
+    ``GoLean.GoCore.RecoveryRuntime.value_advances,
+    ``GoLean.GoCore.RecoveryRuntime.block_advances,
+    ``GoLean.GoCore.RecoveryRuntime.assign_advances,
+    ``GoLean.GoCore.RecoveryRuntime.direct_call_advances,
+    ``GoLean.GoCore.RecoveryRuntime.closure_call_advances,
+    ``GoLean.GoCore.RecoveryRuntime.defer_call_advances,
+    ``GoLean.GoCore.RecoveryRuntime.exec_neutral_advances,
+    ``GoLean.GoCore.RecoveryRuntime.exec_frame_advances,
+    ``GoLean.GoCore.RecoveryRuntime.initialization_advances,
+    ``GoLean.GoCore.RecoveryRuntime.exec_seq_advances,
+    ``GoLean.GoCore.RecoveryRuntime.frame_exit_progress,
+    ``GoLean.GoCore.RecoveryRuntime.frame_next_advances,
+    ``GoLean.GoCore.RecoveryRuntime.frame_return_advances,
+    ``GoLean.GoCore.RecoveryRuntime.returning_advances,
+    ``GoLean.GoCore.RecoveryRuntime.return_next_advances,
+    ``GoLean.GoCore.RecoveryRuntime.exit_next_progress,
+    ``GoLean.GoCore.RecoveryRuntime.panic_value_advances,
+    ``GoLean.GoCore.RecoveryRuntime.panic_return_advances,
+    ``GoLean.GoCore.RecoveryRuntime.panic_progress,
+    ``GoLean.GoCore.RecoveryRuntime.control_progress,
+    ``GoLean.GoCore.RecoveryRuntime.control_stepFn,
+    ``GoLean.GoCore.RecoveryRuntime.control_step,
+    ``GoLean.GoCore.RecoveryRuntime.Inv.step,
+    ``GoLean.GoCore.RecoveryRuntime.Inv.steps,
+    ``GoLean.GoCore.RecoveryRuntime.Inv.iter,
+    ``GoLean.GoCore.RecoveryRuntime.Inv.progress,
+    ``GoLean.GoCore.RecoveryRuntime.Inv.reachable_progress,
+    ``GoLean.GoCore.RecoveryRuntime.Inv.readout,
+    ``GoLean.GoCore.RecoveryRuntime.initial_control,
+    ``GoLean.GoCore.RecoveryRuntime.setup_inv,
+    ``GoLean.GoCore.RecoveryRuntime.ValueCont.silent,
+    ``GoLean.GoCore.RecoveryRuntime.Control.silent,
+    ``GoLean.GoCore.RecoveryRuntime.Inv.reachable_silent,
+    ``GoLean.GoCore.RecoveryRuntime.Inv.loop_readout,
+    ``GoLean.GoCore.RecoveryRuntime.Inv.run_readout,
+    ``GoLean.GoCore.RecoveryRuntime.Inv.loop_choices,
+    ``GoLean.GoCore.RecoveryRuntime.Inv.run_choices,
+    ``GoLean.GoCore.RecoveryRuntime.ControlTests.writeback_to_stop_rejected,
+    ``GoLean.GoCore.RecoveryRuntime.ControlTests.writeback_to_resume_rejected,
+    ``GoLean.GoCore.RecoveryRuntime.ControlTests.root_return_rejected,
+    ``GoLean.GoCore.RecoveryRuntime.ControlTests.empty_panic_chain_rejected,
+    ``GoLean.GoCore.RecoveryRuntime.ControlTests.foreign_initialization_environment_rejected,
+    ``GoLean.GoCore.RecoveryRuntime.ControlTests.dangling_target_address_rejected,
+    ``GoLean.GoCore.RecoveryRuntime.ControlTests.boxed_panic_excludes_nil,
+    ``GoLean.GoCore.RecoveryRuntime.ControlTests.registration_is_lifo,
+    ``GoLean.GoCore.RecoveryRuntime.ControlTests.direct_recovery_marks_newest,
+    ``GoLean.GoCore.RecoveryRuntime.ControlTests.indirect_recovery_is_nil,
+    ``GoLean.GoCore.RecoveryRuntime.ControlTests.equal_repanic_keeps_history,
+    ``GoLean.GoCore.RecoveryRuntime.ControlTests.invalid_utf8_chain_remains_typed,
+    ``GoLean.GoCore.RecoveryRuntime.ControlTests.scoped_admitted,
+    ``GoLean.GoCore.RecoveryRuntime.ControlTests.scope_and_zero_execution,
+    ``GoLean.GoCore.RecoveryRuntime.ControlTests.whole_native_shared_invariant,
+    ``GoLean.GoCore.RecoveryRuntime.ControlTests.whole_a2_recovered_invariant,
+    ``GoLean.GoCore.RecoveryRuntime.ControlTests.whole_a2_uncaught_invariant,
+    ``GoLean.GoCore.RecoveryRuntime.ControlTests.whole_a2_normal_invariant]
+  for n in exports do
+    let some (.thmInfo _) := env.find? n
+      | throwError "Recovery control audit: missing theorem {n}"
+  let ours := env.header.moduleNames.map fun n =>
+    n.toString.startsWith "GoLean." || n.toString.startsWith "Tests."
+  let allowed : List Name := [``propext, ``Classical.choice, ``Quot.sound]
+  let mut checked := 0
+  for (n, _) in env.constants.toList do
+    let localModule := match env.getModuleIdxFor? n with
+      | some i => ours[i.toNat]!
+      | none => true
+    unless localModule do continue
+    for ax in (← collectAxioms n) do
+      unless allowed.contains ax do
+        throwError "Recovery control audit: {n} depends on forbidden axiom {ax}"
+    checked := checked + 1
+  logInfo s!"Recovery control audit: {exports.length} required theorems present; {checked} constants checked across all imported local modules (classical trio only)"

@@ -1,0 +1,1 @@
+/home/dev/projects/golean/.tmp/recovery-control-audit-9nyz47ba/AuditAll.lean:2:0: error: Recovery control audit: _private.GoLean.GoCore.RecoveryControlData.0.recoveryControlHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryControlData.0.recoveryControlHole

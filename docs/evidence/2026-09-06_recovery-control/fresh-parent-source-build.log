@@ -1,0 +1,8 @@
+✔ [28/34] Built GoLean.GoCore.RecoveryResultRoots (212ms)
+✔ [29/34] Built GoLean.GoCore.RecoverySetupShape (321ms)
+✔ [30/34] Built GoLean.GoCore.RecoveryInitialization (240ms)
+✔ [31/34] Built GoLean.GoCore.RecoverySetup (280ms)
+✔ [32/34] Built GoLean.GoCore.RecoverySetupWf (223ms)
+✔ [33/34] Built GoLean.GoCore.RecoverySetupReadout (276ms)
+✔ [34/34] Built GoLean.GoCore.RecoveryCallEntry (257ms)
+Build completed successfully (34 jobs).

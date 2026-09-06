@@ -464,6 +464,13 @@ else
   bad "Recovery actual program and call entry"
 fi
 
+step "Recovery structural control preservation and progress"
+if bash scripts/check-recovery-control; then
+  ok "Recovery structural control preservation and progress"
+else
+  bad "Recovery structural control preservation and progress"
+fi
+
 # 2b. Frontend pins (restored at the split audit, findings A1/A2 + B1/B8
 # — docs/2026-08-31_repo-split-plan.md fix round): the two SEMANTICS
 # pins that lived inside the parked check-golden. (1) the

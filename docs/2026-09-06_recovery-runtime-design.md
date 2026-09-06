@@ -1,5 +1,12 @@
 # Recovery runtime contract design
 
+Current bounded control milestone: the generic setup/invariant,
+all-successor preservation and terminal-aware progress implementation is
+described in [the control contract](2026-09-06_recovery-control-contract.md)
+and its reviewed evidence. The design discussion below retains the earlier
+storage-increment checkpoint; the shared Iris and renderer/driver obligations
+remain open as described in the newer note.
+
 [AGENT] 2026-09-06. Development checkpoint; this document does not claim O2
 completion. Static admission is the reviewed `e8a665e9` increment. This lane
 integrated the committed public O1 source and static profile at `212842a9`,

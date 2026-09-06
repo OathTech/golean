@@ -1,0 +1,9 @@
+Tests/RecoveryInvariant.lean:100:21: error(lean.unknownIdentifier): Unknown constant `GoLean.GoString.ofString`
+
+Note: Inferred this name from the expected resulting type of `.ofString`:
+  GoString
+Tests/RecoveryInvariant.lean:118:16: error: unexpected identifier; expected ','
+Tests/RecoveryInvariant.lean:124:16: error: unexpected identifier; expected ','
+Tests/RecoveryInvariant.lean:129:16: error: unexpected identifier; expected ','
+Tests/RecoveryInvariant.lean:134:16: error: unexpected identifier; expected ','
+Tests/RecoveryInvariant.lean:139:16: error: unexpected identifier; expected ','
