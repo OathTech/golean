@@ -1,0 +1,43 @@
+--- v1/tools/test_string_member.py
++++ v3/tools/test_string_member.py
+@@ -133,6 +133,40 @@
+             with self.assertRaises(check.Refusal):
+                 check.check_inventory(actual, bad, "source")
+ 
++    def test_entrypoints_and_frontend_tables_are_content_bound_and_required(self):
++        root = Path(__file__).resolve().parents[1]
++        directory = Path(tempfile.mkdtemp(prefix="string-entrypoints-", dir=root/".tmp"))
++        for name, suffix in check.APPARATUS_ROOTS.items():
++            source = directory / name / ("InventoryProbe" + suffix)
++            source.parent.mkdir(parents=True, exist_ok=True)
++            source.write_text("inventory probe\n")
++        # These obligations are independent of the implementation's
++        # list, so removing an entry from APPARATUS_FILES cannot remove
++        # its negative control as well.
++        required_sources = ("Main.lean", "GoLean.lean",
++                            "tools/nativefrontend/inittask-std.tsv",
++                            "tools/nativefrontend/stdlib-substitutions.tsv",
++                            "tools/nativefrontend/stdlib-overlay.tsv",
++                            "baselines/stdlib-pin.tsv")
++        for name in set(check.APPARATUS_FILES) | set(required_sources):
++            source = directory / name
++            source.parent.mkdir(parents=True, exist_ok=True)
++            source.write_text("original source\n")
++        pinned = check.apparatus_inventory(directory)
++        for name in required_sources:
++            source = directory / name
++            with self.subTest(source=name, mutation="changed"):
++                source.write_text("changed executable input\n")
++                with self.assertRaises(check.Refusal):
++                    check.check_inventory(check.apparatus_inventory(directory), pinned, "apparatus")
++                source.write_text("original source\n")
++            with self.subTest(source=name, mutation="missing"):
++                retained = source.with_suffix(".retained")
++                source.rename(retained)
++                with self.assertRaises(check.Refusal):
++                    check.apparatus_inventory(directory)
++                retained.rename(source)
++
+ 
+ if __name__ == "__main__":
+     unittest.main()
