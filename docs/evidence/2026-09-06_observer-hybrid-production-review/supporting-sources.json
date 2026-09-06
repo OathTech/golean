@@ -1,0 +1,18 @@
+[
+  {
+    "source": "/home/dev/projects/golean/.claude/worktrees/typed-observer-classification/docs/evidence/2026-09-06_observer-classification/hybrid-gate-final.log",
+    "sha256": "8dca9329dcbcc506319f7de946bff125c1ce517df0140c2d7abfa967180b20fd"
+  },
+  {
+    "source": "/home/dev/projects/golean/.claude/worktrees/typed-observer-classification/docs/evidence/2026-09-06_observer-classification/focused-hybrid.tsv",
+    "sha256": "b9291ffdfb84aac711ada10a12f0423f680efd93ade65303ee7fc782f0a6a2b2"
+  },
+  {
+    "source": "/home/dev/projects/golean/.claude/worktrees/typed-observer-classification/docs/2026-09-06_observer-classifier-repair.md",
+    "sha256": "2de9ef118c20d6752137cd91c733baa3e763669a79bf76afc1fdf5f91194a0e1"
+  },
+  {
+    "source": "/home/dev/projects/golean/.claude/worktrees/typed-observer-classification/docs/2026-09-06_observer-crash-channel-design.md",
+    "sha256": "9fceb84ac2d9ff4964d4d49f7500cb4bf4d0a02ea7eedec8d32623f8842f5526"
+  }
+]
