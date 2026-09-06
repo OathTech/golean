@@ -1,0 +1,31 @@
+{
+  "utc": "2026-09-06T00:52:17.006071+00:00",
+  "root": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+  "head": "a392fab02b72f7edc4035fb103cf2285d7f5b9a1",
+  "source_status": " M GoLean/Interface.lean\n M Tests/InterfaceAudit.lean\n M docs/2026-09-05_boolean-runtime-contract-design.md\n M docs/2026-09-05_typed-consumer-sprint-handoff.md\n M lakefile.toml\n M scripts/check-interface\n M scripts/check-interface.py\n M spikes/gate-a1/GateA1/Audit.lean\n M spikes/iris-customer/GoLeanIris/Audit.lean\n?? GoLean/GoCore/BooleanSetup.lean\n?? GoLean/GoCore/BooleanStore.lean\n?? Tests/BooleanRuntime.lean\n?? docs/2026-09-06_boolean-storage-setup.md\n?? docs/evidence/2026-09-06_boolean-storage-setup/\n",
+  "files": {
+    "GoLean/GoCore/BooleanStore.lean": "c6ac7824a6d671dab0bfb8426778a0f54ff4dc5654c843f4960701aa3aae0b5a",
+    "GoLean/GoCore/BooleanSetup.lean": "fd203aaa6d97be8126d575b4dccf7a1b0e65ad56c632daf9965347a0f44e085e",
+    "Tests/BooleanRuntime.lean": "2d4447f3e457b3dfcbbb3bda16ac19ead887e53b5f759a7636f98a4f665be50a",
+    "GoLean/Interface.lean": "18ab644e56261add126f7fb8d540c93c023f395f6d79edf79e80d3e2018eb9eb",
+    "Tests/InterfaceAudit.lean": "631712fc4ce947485fee277f42febe3896d3d244dcacde3b2b80dbab1314c946",
+    "scripts/check-interface": "11c4b877b5a0a04f275cb85e067211fd4c4e6e834427c2bbc1dbaef0df603905",
+    "scripts/check-interface.py": "8570275b9f7d7c59438ec398012c9d12272da01838840b46faf8ff14e6d49046",
+    "spikes/gate-a1/GateA1/Audit.lean": "8b2e419a79b844a87d3e5b6ab997c6f6d7149d94a840f7471913c6eb1ef39181",
+    "spikes/iris-customer/GoLeanIris/Audit.lean": "19aebe98c0d2a90d96ae83e488e93b6887e09772be17f4df673b240b23799ae3",
+    "docs/2026-09-06_boolean-storage-setup.md": "227f1e2fef3c2dc5c9d742cd3c9d16661eaea947d2ce53b98c20cc93eac3810b",
+    "GoLean/GoCore/Admission.lean": "2309256e38874bd99eadc5868d8b4c2e0e0111a94e374799eb8aa09ec0f08e7f",
+    "GoLean/GoCore/Machine.lean": "0a19430131f82c590dede017ba4a5b2e11e7f156c57e77e12f04e5cfab331bee",
+    "GoLean/GoCore/StepFn.lean": "dcc863cf777a208d375adb0857f1ecd953c28420937e4782a35206e0770b89e7",
+    "GoLean/GoCore/BooleanTyping.lean": "757c6d311ea025d75d66ee92017bdd9f24ba6d70c8faed5f667550329c3f6712",
+    "lakefile.toml": "84863744cd612c3c66ba19b6c9da7a785791599838a398df5e41a647f476bad2",
+    "lean-toolchain": "2bdc48adfa58d0017e538a0ad117c5d73d35deec879978f909406a80c8037273",
+    "artifacts/boolean-runtime/ci.log": "ca7c9a0d3d66f5d6a411a38e049954bb6f2190f62097b6e346d0aa8bf2933a0a",
+    "artifacts/boolean-runtime/interface-green.log": "2b7e7ce4379047cfc8bd7cafc4244e33b5e95b890b43a52c1a7ab33c3ea99018",
+    "artifacts/boolean-runtime/a1.log": "5cf7010c3c7a5beac7edca3450bcb12ff3f48744698b3be32cd430110e7cb775",
+    "artifacts/boolean-runtime/a2.log": "57670152b0281d63ae55875d9d20be7c0e5863e0fd2aa024c9680d53ea021ed4"
+  },
+  "command": "GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 scripts/capped lake env lean /home/dev/projects/golean/.claude/worktrees/typed-preflight/docs/evidence/2026-09-06_boolean-helper-review/Adversarial.lean",
+  "command_cwd": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+  "build_mode": "Fresh Lean elaboration of independent scratch; read-only imports from integration build; no output olean requested."
+}

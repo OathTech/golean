@@ -1,0 +1,6 @@
+'BooleanHelperAdversarial.unbound_admitted' depends on axioms: [propext]
+'BooleanHelperAdversarial.unbound_setup_zero_fuel' depends on axioms: [propext, Classical.choice, Quot.sound]
+'BooleanHelperAdversarial.duplicate_results_admitted' depends on axioms: [propext]
+'BooleanHelperAdversarial.duplicate_results_setup' depends on axioms: [propext, Classical.choice, Quot.sound]
+'BooleanHelperAdversarial.false_alias_readout' depends on axioms: [propext]
+'BooleanHelperAdversarial.aliased_write_readout' depends on axioms: [propext]

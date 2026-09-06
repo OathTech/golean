@@ -1,0 +1,8 @@
+/home/dev/projects/golean/.claude/worktrees/typed-preflight/docs/evidence/2026-09-06_boolean-helper-review/Adversarial.lean:14:2: error(lean.unknownIdentifier): Unknown constant `GoLean.GoCore.Admission.checkBoolean_iff.mp`
+/home/dev/projects/golean/.claude/worktrees/typed-preflight/docs/evidence/2026-09-06_boolean-helper-review/Adversarial.lean:30:2: error(lean.unknownIdentifier): Unknown constant `GoLean.GoCore.Admission.checkBoolean_iff.mp`
+'BooleanHelperAdversarial.unbound_admitted' depends on axioms: [propext, sorryAx]
+'BooleanHelperAdversarial.unbound_setup_zero_fuel' depends on axioms: [propext, Classical.choice, Quot.sound]
+'BooleanHelperAdversarial.duplicate_results_admitted' depends on axioms: [propext, sorryAx]
+'BooleanHelperAdversarial.duplicate_results_setup' depends on axioms: [propext, Classical.choice, Quot.sound]
+'BooleanHelperAdversarial.false_alias_readout' depends on axioms: [propext]
+'BooleanHelperAdversarial.aliased_write_readout' depends on axioms: [propext]
