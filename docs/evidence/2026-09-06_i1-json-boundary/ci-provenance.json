@@ -1,0 +1,20 @@
+{
+  "parent": "b34cee6767de3e39f064cc5c8c2214568b332e86",
+  "runtime_scope": "Production CLI/NativeToIR/GoCore runtime unchanged; new parser consumed only by positive declaration adapter and gate",
+  "cached_full_records": {
+    "latest.tsv": "8c89f553dd706f445c2b6fad9f55b0cc0518578035f8e19803fa6260088ae5cf",
+    "latest.meta.tsv": "552ca0c45f4a61de10e4a00749acd4dd301186583c585cf598d43f844be1c5aa",
+    "negative-latest.tsv": "16e489a805e7530e6d961b27620a93c416c6d91373a608fedacef5281eb8d204",
+    "negative-latest.meta.tsv": "c03edf06ad519c560a0d53a0592c1f16a9c7a3269fa90e338e268ae28be5663f"
+  },
+  "cached_record_source": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint/artifacts/coverage",
+  "full_scope": "3627 executable/394 negative original observer records, not fresh conformance",
+  "command": [
+    "env",
+    "GOLEAN_MEM_MAX=16G",
+    "LEAN_NUM_THREADS=3",
+    "GOLEAN_COVERAGE_JOBS=2",
+    "scripts/capped",
+    "scripts/ci"
+  ]
+}

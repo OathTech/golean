@@ -1,12 +1,13 @@
-import GoLean.StrictJson
+import GoLean.StrictJsonParse
 import GoLean.GoCore.Declaration
 
 /-! I1 declaration-wire decoding, separate from executable lowering.
 
 This consumes already parsed JSON objects and checks their exact schema.
 It does not validate source-level Go typing, authorize executable demand, or
-provide missing layouts/bodies. Raw JSON duplicate-key rejection belongs to
-the enclosing package parser; a `Json` object has already lost that information.
+provide missing layouts/bodies. `decodeBytes` rejects raw duplicate keys and
+malformed Unicode before parsing; `decode` alone consumes an already parsed
+`Json` object, which has already lost duplicate-key information.
 The production emitter and NativeToIR do not yet use this separate channel.
 -/
 namespace GoLean.NativeDeclaration
@@ -177,5 +178,11 @@ This is declaration parsing; it supplies no executable admission evidence. -/
 def decode (ns : Nominals) (json : Json) : Except String Ty := do
   checkNominals ns
   decodeType ns "declaration" json
+
+/-- A standalone positive declaration's checked byte-input boundary.
+Package envelopes must use the same strict parser before projecting fields.
+This still supplies no source-typing, layout or executable admission fact. -/
+def decodeBytes (ns : Nominals) (input : ByteArray) : Except String Ty := do
+  decode ns (← GoLean.StrictJson.parseBytes input)
 
 end GoLean.NativeDeclaration

@@ -9,7 +9,7 @@ private def failCheck (msg : String) : IO α := throw (IO.userError msg)
 private def check (condition : Bool) (msg : String) : IO Unit :=
   unless condition do failCheck msg
 
-private def parsed (text : String) : IO Json := IO.ofExcept (Json.parse text)
+private def parsed (text : String) : IO Json := IO.ofExcept (GoLean.StrictJson.parse text)
 
 private def refused (value : Except String α) : Bool :=
   match value with
@@ -23,7 +23,7 @@ private def reject (name text : String) (ns : Nominals := []) : IO Unit := do
 
 def main (args : List String) : IO UInt32 := do
   let [path] := args | failCheck "expected the fresh Go declaration fixture path"
-  let json ← parsed (← IO.FS.readFile path)
+  let json ← IO.ofExcept (GoLean.StrictJson.parseBytes (← IO.FS.readBinFile path))
   let o ← IO.ofExcept (obj "fixture" json)
   IO.ofExcept (requireExactKeys "fixture" o ["schema", "nominals", "types", "pairs"])
   check ((← IO.ofExcept do string "schema" (← field "fixture" o "schema")) ==

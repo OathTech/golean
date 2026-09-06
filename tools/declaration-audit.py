@@ -27,8 +27,8 @@ harness = directory / "AuditAll.lean"
 harness.write_text("import Tests.DeclarationAudit\n#eval auditDeclarations\n")
 (directory / "audit.log").write_text(run([str(ROOT / "scripts/capped"), "lean", str(harness)]))
 
-modules = ["GoLean.GoCore.Declaration", "GoLean.NativeDeclaration",
-           "Tests.DeclarationWire", "Tests.DeclarationAudit"]
+modules = ["GoLean.GoCore.Declaration", "GoLean.StrictJsonParse", "GoLean.NativeDeclaration",
+           "Tests.DeclarationWire", "Tests.StrictJsonParse", "Tests.DeclarationAudit"]
 for index, module in enumerate(modules):
     fixture = directory / str(index)
     package = module.split(".")[0]
