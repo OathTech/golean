@@ -1,0 +1,39 @@
+{
+  "candidate_count": 239,
+  "ci_delta": "exactly one additional complete seven-line terminal gate; parent CI otherwise byte-identical",
+  "lake_delta": "one added terminal test library; all parent libraries/settings unchanged",
+  "interface_modules": {
+    "before": 74,
+    "after": 82,
+    "added": [
+      "GoLean/GoCore/RecoveryCallLayout",
+      "GoLean/GoCore/RecoveryChoices",
+      "GoLean/GoCore/RecoveryPool",
+      "GoLean/GoCore/RecoveryPoolObservationTyped",
+      "GoLean/GoCore/RecoverySingleton",
+      "GoLean/GoCore/RecoveryTerminal",
+      "Tests/RecoveryTerminal",
+      "Tests/RecoveryTerminalAudit"
+    ]
+  },
+  "compiled_poison_roles": {
+    "before": 28,
+    "after": 35,
+    "added": [
+      "recovery_choices_private",
+      "recovery_layout_private",
+      "recovery_observer_typed_private",
+      "recovery_pool_private",
+      "recovery_singleton_private",
+      "recovery_terminal_private",
+      "recovery_terminal_test_trailing"
+    ]
+  },
+  "fresh_probes": 4,
+  "fresh_terminal_audit_declarations": 15228,
+  "fresh_source_elaborations": [
+    "GoLean/GoCore/RecoveryTerminal.lean",
+    "GoLean/GoCore/RecoveryPoolObservationTyped.lean"
+  ],
+  "scope": "Independent bounded semantic/facade and additive union review; imported dependency artifacts reused after exact source rehash. No new full Go-vs-Lean or whole poison-suite recertification."
+}

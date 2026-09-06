@@ -1,0 +1,5 @@
+'O2StringIndependentReview.mixed_tail_withholds_record' depends on axioms: [propext, Classical.choice, Quot.sound]
+'O2StringIndependentReview.zero_fuel_does_not_read_abort' depends on axioms: [propext, Classical.choice, Quot.sound]
+'O2StringIndependentReview.normal_cannot_have_record' depends on axioms: [propext, Classical.choice, Quot.sound]
+'O2StringIndependentReview.fuel_cannot_have_record' depends on axioms: [propext, Classical.choice, Quot.sound]
+Recovery terminal audit: 32 required theorems; 15228 declarations across all imported local origins; classical trio only

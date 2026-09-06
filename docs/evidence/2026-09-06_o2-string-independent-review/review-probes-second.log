@@ -1,0 +1,20 @@
+docs/evidence/2026-09-06_o2-string-independent-review/ReviewProbes.lean:36:2: error: Tactic `contradiction` failed
+
+fuel : Nat
+p : Program
+name : String
+args : Array GoValue
+ch : Choices
+out : GoString
+record : AbortRecord
+observed : runProgramPoolWithAbort fuel p name args ch = (Except.error (Stop.fuelOut, out), some record)
+actualOut : GoString
+h :
+  Except.error (Stop.fuelOut, out) =
+    Except.error (Stop.panic (stringPanicHead record.bytes record.recovered), actualOut)
+⊢ False
+'O2StringIndependentReview.mixed_tail_withholds_record' depends on axioms: [propext, Classical.choice, Quot.sound]
+'O2StringIndependentReview.zero_fuel_does_not_read_abort' depends on axioms: [propext, Classical.choice, Quot.sound]
+'O2StringIndependentReview.normal_cannot_have_record' depends on axioms: [propext, Classical.choice, Quot.sound]
+'O2StringIndependentReview.fuel_cannot_have_record' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound]
+docs/evidence/2026-09-06_o2-string-independent-review/ReviewProbes.lean:42:0: error: Recovery terminal audit: O2StringIndependentReview.fuel_cannot_have_record depends on forbidden axiom sorryAx
