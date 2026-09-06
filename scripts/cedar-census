@@ -106,6 +106,8 @@ preflight() {
 
 preflight_machine() {
   [[ -x "$GOLEAN_BIN" ]] || die "no golean binary at $GOLEAN_BIN — build it first: scripts/capped lake build golean"
+  HARNESS_BIN="$OUT/coverageharness"
+  env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go build -o "$HARNESS_BIN" ./tools/coverageharness || die "tools/coverageharness does not build"
 }
 
 # Copy one module's non-test .go files under $SRC/<alias>/, rewriting the
@@ -266,9 +268,6 @@ cases() {
 }
 
 one_line() { local v="$1"; v="${v//$'\t'/ }"; v="${v//$'\r'/\\r}"; v="${v//$'\n'/\\n}"; printf '%s' "$v"; }
-json_string_literal() {
-  local v="$1"; v="${v//\\/\\\\}"; v="${v//\"/\\\"}"; v="${v//$'\n'/\\n}"; v="${v//$'\r'/\\r}"; v="${v//$'\t'/\\t}"; printf '"%s"' "$v"
-}
 normalize_cause() { head -1 | sed -E 's#(/[^ :]+/)?([A-Za-z0-9_]+\.go):[0-9]+(:[0-9]+)?: ?#\2: #g' | cut -c1-240; }
 
 # Drive one case. Emits one results row: category \t case \t kind \t detail.
@@ -293,21 +292,60 @@ drive_one() {
   fi
   # --- Go oracle (functional drivers only) ------------------------------
   local go_out go_rc go_status go_obs go_msg
-  go_out="$(cd "$dir" && timeout "$GO_TIMEOUT" env GO111MODULE=off GODEBUG=panicnil=0 GOCACHE="$GO_BUILD_CACHE" GOPATH="$dir/gopath" go run . 2>&1)"
+  local oracle_parent oracle_dir
+  if ! oracle_parent="$(mktemp -d "${dir}.oracle.XXXXXX")"; then
+    printf 'INFRA\t%s\t%s\t%s\n' "$name" "$kind" "oracle setup could not create isolated source directory"; return
+  fi
+  oracle_dir="$oracle_parent/package"
+  printf '%s\n' "$oracle_dir" > "$dir/oracle-directory.txt"
+  if ! "$HARNESS_BIN" --copy-oracle "$dir" --out "$oracle_dir" > "$dir/oracle-copy.stdout" 2> "$dir/oracle-copy.stderr"; then
+    printf 'INFRA\t%s\t%s\t%s\n' "$name" "$kind" "oracle source copy refused: $(cat "$dir/oracle-copy.stderr")"; return
+  fi
+  local evidence=(--crash-report "$oracle_dir/oracle.crash" --crash-registered "$oracle_dir/oracle.registered")
+  if ! { : > "$oracle_dir/oracle.crash" && : > "$oracle_dir/oracle.registered"; }; then
+    printf 'INFRA\t%s\t%s\t%s\n' "$name" "$kind" "oracle setup could not reset crash evidence"; return
+  fi
+  (cd "$oracle_dir" && timeout "$GO_TIMEOUT" env GO111MODULE=off GOFLAGS= GODEBUG=panicnil=0 GOTRACEBACK=system GOCACHE="$GO_BUILD_CACHE" GOPATH="$dir/gopath" go run .) > "$dir/oracle.stdout" 2> "$dir/oracle.stderr"
   go_rc=$?
-  printf '%s\n' "$go_out" > "$dir/go.out"
+  cat "$dir/oracle.stdout" "$dir/oracle.stderr" > "$dir/go.out"
+  go_out="stdout=$("$HARNESS_BIN" --quote-file "$dir/oracle.stdout") stderr=$("$HARNESS_BIN" --quote-file "$dir/oracle.stderr")"
   if [[ "$go_rc" -eq 124 ]]; then
     printf 'INFRA\t%s\t%s\t%s\n' "$name" "$kind" "go run timed out after ${GO_TIMEOUT}s"; return
   elif [[ "$go_rc" -eq 0 ]]; then
     go_status="ok"; go_obs='{"output":"","schema":"golean-observation-v1","status":"ok","values":[]}'
-    [[ -n "$go_out" ]] && { printf 'INFRA\t%s\t%s\t%s\n' "$name" "$kind" "driver printed on success (drivers must be silent): $(one_line "${go_out:0:200}")"; return; }
-  elif [[ "$go_out" == *"fatal error: all goroutines are asleep - deadlock!"* ]]; then
-    go_status="deadlock"; go_obs='{"message":"all goroutines are asleep - deadlock!","output":"","schema":"golean-observation-v1","status":"deadlock"}'
-  elif [[ "$go_out" == *"panic:"* ]]; then
-    go_status="panic"; go_msg="$(printf '%s\n' "$go_out" | awk '/^panic: /{ sub(/^panic: /, ""); print; exit }')"
-    go_obs="{\"message\":$(json_string_literal "$go_msg"),\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"panic\"}"
+    if [[ -s "$dir/oracle.stdout" || -s "$dir/oracle.stderr" ]]; then
+      printf 'INFRA\t%s\t%s\t%s\n' "$name" "$kind" "driver printed on success (drivers must be silent): $(one_line "${go_out:0:200}")"; return
+    fi
+    if ! "$HARNESS_BIN" --split-stderr "$dir/oracle.stderr" --expected-status ok "${evidence[@]}" > "$dir/oracle.success.json" 2> "$dir/oracle.split.err"; then
+      printf 'INFRA\t%s\t%s\t%s\n' "$name" "$kind" "oracle success evidence refused: $(cat "$dir/oracle.split.err")"; return
+    fi
+  elif [[ "$go_rc" -ne 1 ]]; then
+    printf 'INFRA\t%s\t%s\t%s\n' "$name" "$kind" "go run exited $go_rc without a runtime verdict: $(one_line "${go_out:0:240}")"; return
+  elif tail -c 15 "$dir/oracle.stderr" | cmp -s - <(printf 'exit status 78\n'); then
+    printf 'INFRA\t%s\t%s\t%s\n' "$name" "$kind" "oracle crash-hook setup failed (child exit 78)"; return
+  elif ! go_status="$("$HARNESS_BIN" --abort-status "$dir/oracle.stderr" "${evidence[@]}" 2>"$dir/oracle.kind.err")"; then
+    printf 'INFRA\t%s\t%s\t%s\n' "$name" "$kind" "oracle terminal classification refused: $(cat "$dir/oracle.kind.err")"; return
+  elif [[ "$go_status" == deadlock ]]; then
+    go_status="deadlock"; go_obs='{"message":"all goroutines are asleep - deadlock!","schema":"golean-observation-v1","status":"deadlock"}'
+  elif [[ "$go_status" == fatal ]]; then
+    printf 'INFRA\t%s\t%s\t%s\n' "$name" "$kind" "fatal report outside this tool's ok/panic/deadlock observation domain: $(one_line "${go_out:0:240}")"; return
+  elif [[ "$go_status" == panic ]]; then
+    go_status="panic"
+    if ! go_msg="$("$HARNESS_BIN" --abort-message "$dir/oracle.stderr" --expected-status panic "${evidence[@]}" 2>"$dir/oracle.message.err")"; then
+      printf 'INFRA\t%s\t%s\t%s\n' "$name" "$kind" "oracle panic message refused: $(cat "$dir/oracle.message.err")"; return
+    fi
+    go_obs="{\"message\":$go_msg,\"schema\":\"golean-observation-v1\",\"status\":\"panic\"}"
   else
     printf 'INFRA\t%s\t%s\t%s\n' "$name" "$kind" "go run exited $go_rc without panic: $(one_line "${go_out:0:240}")"; return
+  fi
+  # Preserve fd-2 program output before an abort, just as the core observer
+  # does; no empty-output fabrication and no raw bytes in shell variables.
+  if [[ "$go_status" != "ok" ]]; then
+    local out_lit
+    if ! out_lit="$("$HARNESS_BIN" --split-stderr "$dir/oracle.stderr" --expected-status "$go_status" "${evidence[@]}" 2>"$dir/oracle.split.err")"; then
+      printf 'INFRA\t%s\t%s\t%s\n' "$name" "$kind" "oracle stderr split refused: $(cat "$dir/oracle.split.err")"; return
+    fi
+    go_obs="{\"output\":$out_lit,${go_obs#\{}"
   fi
   # --- Machine -----------------------------------------------------------
   local lean_out lean_rc lean_status
@@ -393,6 +431,8 @@ report() {
     printf 'cedar_go\t%s@%s\n' "$CEDAR_GO_DIR" "$(git -C "$CEDAR_GO_DIR" rev-parse HEAD)"
     printf 'cedar_k8s\t%s@%s\n' "$CEDAR_K8S_DIR" "$(git -C "$CEDAR_K8S_DIR" rev-parse HEAD)"
     printf 'go_toolchain\t%s\n' "$(go version | awk '{print $3}')"
+    printf 'go_traceback\tsystem\n'
+    printf 'go_crash_channel\tsame-run-setcrashoutput-v1\n'
     printf 'golean_bin\t%s\n' "$GOLEAN_BIN"
     printf 'pass\t%s\n' "$([[ -f "$OUT/PASS-B-RELAXED" ]] && echo "B (RELAX patches applied to the census copy: $(ls "$RELAX"/*.sed | xargs -n1 basename | tr '\n' ' '))" || echo "A (unpatched copy — today's coverage)")"
     printf 'date\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"

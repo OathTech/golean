@@ -1,0 +1,13 @@
+{
+  "reviewed_dependency": "b5dd407624741d4df78252f14f72650a07b06caa",
+  "review_manifest_verified": true,
+  "production_sources_except_diagnostic_ci_equal": true,
+  "coverage_records": {
+    "latest.tsv": "b9d672e2287282c7f7063dff3ee587f6fcab85a6db969256e7c2b3aa6b7a66cc",
+    "latest.meta.tsv": "3c3bbb61b93253c0a295a42d73d3b7524b04c64ed82d8785c770e3a3d9d47f25",
+    "negative-latest.tsv": "16e489a805e7530e6d961b27620a93c416c6d91373a608fedacef5281eb8d204",
+    "negative-latest.meta.tsv": "f599fe2f49d290aa4e755eaa5d720f4f5803ec16316b023799bcf958fad8dfc3"
+  },
+  "coverage_source_worktree": "/home/dev/projects/golean/.claude/worktrees/typed-observer-classification",
+  "reason": "Only the three diagnostic tools and their dedicated gate/CI wiring differ; none participates in executable corpus observations."
+}

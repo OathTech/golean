@@ -1,0 +1,31 @@
+Diagnostic observer scratch: /home/dev/projects/golean/.tmp/observer-tools-rb452oq5
+aa93e17e766f3a83ea40c0da320969e1316478a8cb92e099ea8c07c8e000d3ae scripts/membership-sampling
+b61c3638457d558b9ab9a45c27d1b1c3c25a2aeff531d74263ae2297ff42a81d scripts/gotest-triage
+de34290f2ab9411980753dc8667e577f1bf9b5122d90f2fcea5eba5daa7ee315 scripts/cedar-census
+6d361a7e7df8b74aa906365fa0fa56bd603c2c063542ce2ce3f720444110db0f scripts/check-observer-tools.py
+f1a32c8f6eafad70c8c07269355fd405528856d171f9d3253a45faba2c623a72 tools/coverageharness/main.go
+323db44d68c8ef5279d09c73b6214561445c16230a0ca930ed7ee0b7dfbaeeae tools/coverageharness/observe.go
+7a204c704711009c8c53bbd31812a5a0caf3f264b1b0beb5e17b16f942aabf68 tools/coverageharness/observe_test.go
+cb55a875bcd60c8585d6a91d85cd7ad3a3753eeb779add836a47d52f73a8532e tools/coverageharness/split.go
+1fcfd98abdea4f751916483708411b7e5228fcd0cc172c230df3e458e68cf801 tools/coverageharness/split_test.go
+FAIL membership-sampling/panic-controls: exit=0 stdout=b'{"message":"a\x01\t\r","output":"","schema":"golean-observation-v1","status":"panic"}' stderr=b'/home/dev/projects/golean/.tmp/observer-tools-rb452oq5/membership-sampling.sh: line 18: warning: command substitution: ignored null byte in input\n'
+FAIL membership-sampling/panic-prefix: exit=0 stdout=b'{"message":"a","output":"out\\u0000\\u0001\\n","schema":"golean-observation-v1","status":"panic"}' stderr=b'/home/dev/projects/golean/.tmp/observer-tools-rb452oq5/membership-sampling.sh: line 18: warning: command substitution: ignored null byte in input\n'
+FAIL membership-sampling/invalid-utf8: exit=0 stdout=b'{"message":"a\xff","output":"","schema":"golean-observation-v1","status":"panic"}' stderr=b''
+PASS membership-sampling/stdout-marker
+PASS membership-sampling/success
+FAIL membership-sampling/nul-success: exit=0 stdout=b'{"output":"","schema":"golean-observation-v1","status":"ok","values":[]}' stderr=b'/home/dev/projects/golean/.tmp/observer-tools-rb452oq5/membership-sampling.sh: line 18: warning: command substitution: ignored null byte in input\n/home/dev/projects/golean/.tmp/observer-tools-rb452oq5/membership-sampling.sh: line 20: warning: command substitution: ignored null byte in input\n'
+FAIL gotest-triage/panic-controls: exit=0 stdout=b'{"output":"","message":"a\x01\\t\\r","schema":"golean-observation-v1","status":"panic"}' stderr=b'/home/dev/projects/golean/.tmp/observer-tools-rb452oq5/gotest-triage.sh: line 36: warning: command substitution: ignored null byte in input\n'
+FAIL gotest-triage/panic-prefix: exit=0 stdout=b'{"output":"out\\u0000\\u0001\\n","message":"a","schema":"golean-observation-v1","status":"panic"}' stderr=b'/home/dev/projects/golean/.tmp/observer-tools-rb452oq5/gotest-triage.sh: line 36: warning: command substitution: ignored null byte in input\n'
+FAIL gotest-triage/invalid-utf8: exit=0 stdout=b'{"output":"","message":"a\xff","schema":"golean-observation-v1","status":"panic"}' stderr=b''
+PASS gotest-triage/stdout-marker
+PASS gotest-triage/success
+FAIL gotest-triage/nul-success: exit=0 stdout=b'{"output":"","schema":"golean-observation-v1","status":"ok","values":[]}' stderr=b'/home/dev/projects/golean/.tmp/observer-tools-rb452oq5/gotest-triage.sh: line 36: warning: command substitution: ignored null byte in input\n'
+FAIL gotest-triage/lf-not-empty: exit=0 stdout=b'{"output":"","schema":"golean-observation-v1","status":"ok","values":[]}' stderr=b''
+FAIL gotest-triage/crlf-normalized: exit=0 stdout=b'INFRA\tsubject.go\tgo output != expected .out on the pinned toolchain: a\\r\n' stderr=b''
+FAIL gotest-triage/output-controls: exit=0 stdout=b'{"output":"a\\u0000\\u0001\\n","schema":"golean-observation-v1","status":"ok","values":[]}' stderr=b'/home/dev/projects/golean/.tmp/observer-tools-rb452oq5/gotest-triage.sh: line 22: warning: command substitution: ignored null byte in input\n/home/dev/projects/golean/.tmp/observer-tools-rb452oq5/gotest-triage.sh: line 36: warning: command substitution: ignored null byte in input\n'
+FAIL cedar-census/panic-controls: exit=0 stdout=b'{"message":"a\x01\\t\\r","output":"","schema":"golean-observation-v1","status":"panic"}' stderr=b'/home/dev/projects/golean/.tmp/observer-tools-rb452oq5/cedar-census.sh: line 9: warning: command substitution: ignored null byte in input\n'
+FAIL cedar-census/panic-prefix: exit=0 stdout=b'{"message":"a","output":"","schema":"golean-observation-v1","status":"panic"}' stderr=b'/home/dev/projects/golean/.tmp/observer-tools-rb452oq5/cedar-census.sh: line 9: warning: command substitution: ignored null byte in input\n'
+FAIL cedar-census/invalid-utf8: exit=0 stdout=b'{"message":"a\xff","output":"","schema":"golean-observation-v1","status":"panic"}' stderr=b''
+FAIL cedar-census/stdout-marker: exit=0 stdout=b'{"message":"a","output":"","schema":"golean-observation-v1","status":"panic"}' stderr=b''
+PASS cedar-census/success
+FAIL cedar-census/nul-success: exit=0 stdout=b'{"output":"","schema":"golean-observation-v1","status":"ok","values":[]}' stderr=b'/home/dev/projects/golean/.tmp/observer-tools-rb452oq5/cedar-census.sh: line 9: warning: command substitution: ignored null byte in input\n'

@@ -1,0 +1,18 @@
+{
+  "scripts/membership-sampling": "f530cf673f7517a24309f4248c21ddc115ef147cb371b9708fe9e87ae7892605",
+  "scripts/gotest-triage": "0d0c357b4a44eefddc5e7ed2a043e4277bda6cf323d44d1bfab53a3df0c4018a",
+  "scripts/cedar-census": "33259adf36ae63f70808686c74842cff9ca909a036f27134c8dd7b1fef6d495e",
+  "scripts/check-observer-tools.py": "e1e0e3760359111222f4abe318bbcee9da1e3ddfdf4eba221499dd07f77ccedf",
+  "scripts/ci": "b6300738ab02ef3267bf04ebddf7729016f17e2d26461815d873460b99ed4085",
+  "tools/coverageharness/abortkind.go": "f2a5685b6c00cae4f5a7e66a9d08678e92aaa60c243ecf77d99fe21a56e2b58f",
+  "tools/coverageharness/abortkind_test.go": "b45ca6b7aea4e3db759ea2efa7793d8186becd822c1cd503cec2053d5b52f32e",
+  "tools/coverageharness/crashhook.go": "82d2d039c8ff4bdfca98fc8919bafa9fa19dd59666409ba594e00a7cf42a96fc",
+  "tools/coverageharness/crashhook_test.go": "2626da4178a453eaef36fdbf86e5563667644606237435e828e6fa47f4aebd5f",
+  "tools/coverageharness/crashview.go": "3fe16af7ff08d1f9b91542da74bce2c688c56e754f6d1ef31568f8eb191d3bc0",
+  "tools/coverageharness/crashview_test.go": "48983f249615c1abff3fa96ccded2af94dd1c6853c819866361ae480bcf67798",
+  "tools/coverageharness/main.go": "77344a07bb6f6f7211714e32db4a8115468b30a50b2593a76df7e4aa5aaf3899",
+  "tools/coverageharness/observe.go": "834852d9892230a19835a6c8c2bbd56ed07d8e982947887c139037231fe68292",
+  "tools/coverageharness/observe_test.go": "ecee3e1e8d6c2166834bdae924e3abe6e52656dbcff2e6eda93b033ef8d3fa4a",
+  "tools/coverageharness/split.go": "f9271b3338f1f99ecf4258677a24526be17b71ab10ebace3f140fdb50298d22d",
+  "tools/coverageharness/split_test.go": "3c3262cf26fa35307a8b23b081601ed98249779ce120bf0aad6dd669f24b2a8a"
+}

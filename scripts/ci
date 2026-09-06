@@ -482,6 +482,15 @@ else
   bad "observer byte transport (see above)"
 fi
 
+step "diagnostic observer transport and terminal classification"
+if odout="$(python3 scripts/check-observer-tools.py 2>&1)"; then
+  echo "$odout"
+  ok "diagnostic observer transport and terminal classification"
+else
+  echo "$odout"
+  bad "diagnostic observer transport and terminal classification (see above)"
+fi
+
 step "frontend unit tests (go test ./tools/nativefrontend)"
 if ftout="$(GO111MODULE=off GOCACHE="$PWD/artifacts/go-build-cache" go test ./tools/nativefrontend 2>&1)"; then
   echo "$ftout" | tail -2
