@@ -1,0 +1,18 @@
+[
+  {
+    "path": "/home/dev/projects/golean/.claude/worktrees/typed-recovery-setup/docs/2026-09-06_recovery-entry-contract.md",
+    "sha256": "b8ee099e5d0c17f3eb75eef9383c28fef4666941f77dfca338ec63b3f47fc8fd"
+  },
+  {
+    "path": "/home/dev/projects/golean/.claude/worktrees/typed-recovery-setup/artifacts/recovery-setup/setup-gate-2.log",
+    "sha256": "b8c496efe749d1e616496658b7113c16809749fb87f07b5497656be8f44eb690"
+  },
+  {
+    "path": "/home/dev/projects/golean/.claude/worktrees/typed-recovery-setup/artifacts/recovery-setup/ci.log",
+    "sha256": "d254ab4eceee83aa63bdf2b9789d307f2c1257112fa74e74638bc4acf250d883"
+  },
+  {
+    "path": "/home/dev/projects/golean/.claude/worktrees/typed-recovery-setup/artifacts/recovery-setup/runtime-reuse.json",
+    "sha256": "e0eb42503edec87bb0e62f3a640c2c849fe0189dc9bb923820c57b8ce565bdd1"
+  }
+]

@@ -1,0 +1,10 @@
+'GoLean.GoCore.RecoveryRuntime.EntryReview.aliases_preserved' depends on axioms: [propext, Classical.choice, Quot.sound]
+'GoLean.GoCore.RecoveryRuntime.EntryReview.alias_slots_are_distinct' depends on axioms: [propext]
+'GoLean.GoCore.RecoveryRuntime.EntryReview.root_nil_rejected' does not depend on any axioms
+'GoLean.GoCore.RecoveryRuntime.EntryReview.dangling_capture_rejected' depends on axioms: [propext]
+'GoLean.GoCore.RecoveryRuntime.EntryReview.incomplete_vector_rejected' depends on axioms: [propext]
+'GoLean.GoCore.RecoveryRuntime.EntryReview.pointer_zero_rejected' does not depend on any axioms
+'GoLean.GoCore.RecoveryRuntime.EntryReview.hidden_dangling_binding_rejected' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+'GoLean.GoCore.RecoveryRuntime.EntryReview.initial_readout_is_not_true' depends on axioms: [propext, Quot.sound]
