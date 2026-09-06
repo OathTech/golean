@@ -813,6 +813,10 @@ EOF
 if [ "\${1:-}" = run ] && [ "\${@: -1}" = "." ]; then
   m=plain; case " \$* " in *" -race "*) m=race ;; esac
   echo "\$m" >> "\$FAKE_GO_LOG"
+  # Successful synthetic draws must supply the same paired evidence as a
+  # registered real subject. The runner has already reset both owned files.
+  : > oracle.crash
+  printf 'registered\n' > oracle.registered
   A='{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":101}]}'
   B='{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":210}]}'
   X='{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":999}]}'

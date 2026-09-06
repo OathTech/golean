@@ -1,0 +1,74 @@
+8bc8895102bfa8db61230255abe8ec25313b488b0bb2c1e07d84e211ecc1e215 Corpus/coverage/exec/panic-recover/panic-controls/cases.tsv
+658c056e4ef53b8ee603e36eec2129443488d8c83c865a2ad879c9e8d740e842 Corpus/coverage/exec/panic-recover/panic-controls/main.go
+4a577fe890fa9883a07aad7c1cd11348dd6e637cfdc96b85ebe04741e437f04a scripts/check-observer-controls.py
+51fc83a3fc9d2593af54a25049d3d88371238b33a847aad8329a698d7d23ccf6 scripts/ci
+0c545a40ac6a71cac8ede219437482c93210eec8f3dc75ab01660b3f48037a81 scripts/diff-coverage
+f1a32c8f6eafad70c8c07269355fd405528856d171f9d3253a45faba2c623a72 tools/coverageharness/main.go
+323db44d68c8ef5279d09c73b6214561445c16230a0ca930ed7ee0b7dfbaeeae tools/coverageharness/observe.go
+7a204c704711009c8c53bbd31812a5a0caf3f264b1b0beb5e17b16f942aabf68 tools/coverageharness/observe_test.go
+cb55a875bcd60c8585d6a91d85cd7ad3a3753eeb779add836a47d52f73a8532e tools/coverageharness/split.go
+1fcfd98abdea4f751916483708411b7e5228fcd0cc172c230df3e458e68cf801 tools/coverageharness/split_test.go
+Observer scratch: /home/dev/projects/golean/.tmp/observer-controls-e08vcjnu
+=== RUN   TestAbortMessageBytes
+--- PASS: TestAbortMessageBytes (0.00s)
+=== RUN   TestObservationAllControls
+--- PASS: TestObservationAllControls (0.00s)
+=== RUN   TestAbortMessageRefusals
+--- PASS: TestAbortMessageRefusals (0.00s)
+=== RUN   TestRawStdoutRefusals
+--- PASS: TestRawStdoutRefusals (0.00s)
+=== RUN   TestSplitStderrOk
+--- PASS: TestSplitStderrOk (0.00s)
+=== RUN   TestSplitStderrPanic
+--- PASS: TestSplitStderrPanic (0.00s)
+=== RUN   TestSplitStderrFatalAndDeadlock
+--- PASS: TestSplitStderrFatalAndDeadlock (0.00s)
+=== RUN   TestSplitStderrRace
+--- PASS: TestSplitStderrRace (0.00s)
+=== RUN   TestSplitStderrUTF8AndLiteral
+--- PASS: TestSplitStderrUTF8AndLiteral (0.00s)
+PASS
+ok  	_/home/dev/projects/golean/.claude/worktrees/typed-observer-controls/tools/coverageharness	0.002s
+{"message":"a\u0000\u0001\t\r","output":"out\u0000\u0001\n","schema":"golean-observation-v1","status":"panic"}Shell observer probe: sampling-panic-controls PASS
+{"message":"a\u0000\u0001\t\r","output":"","schema":"golean-observation-v1","status":"panic"}Shell observer probe: sampling-mixed-status-panic PASS
+{"output":"a\u0000\u0001\t\r\n","schema":"golean-observation-v1","status":"ok","values":[]}Shell observer probe: sampling-ok-controls PASS
+Shell observer probe: sampling-nul-stdout PASS
+Shell observer probe: sampling-soh-stdout PASS
+Shell observer probe: sampling-invalid-utf8-stdout PASS
+Shell observer probe: sampling-stdout-marker PASS
+Shell observer probe: sampling-stdout-reason PASS
+Shell observer probe: sampling-nul-reason PASS
+Shell observer probe: sampling-ambiguous PASS
+Shell observer probe: sampling-invalid-utf8-panic PASS
+Shell observer probe: sampling-killed PASS
+{"output":"out\u0000\u0001\n","message":"a\u0000\u0001\t\r","schema":"golean-observation-v1","status":"panic"}Shell observer probe: strict-panic-controls PASS
+{"output":"a\u0000\u0001\t\r\n","schema":"golean-observation-v1","status":"ok","values":[]}Shell observer probe: strict-ok-controls PASS
+Shell observer probe: strict-nul-stdout PASS
+Shell observer probe: strict-soh-stdout PASS
+Shell observer probe: strict-invalid-utf8-stdout PASS
+Shell observer probe: strict-stdout-marker PASS
+Shell observer probe: strict-stdout-reason PASS
+Shell observer probe: strict-nul-reason PASS
+Shell observer probe: strict-ambiguous PASS
+Shell observer probe: strict-invalid-utf8-panic PASS
+Shell observer probe: strict-killed PASS
+{"output":"","message":"a\u0000\u0001\t\r","schema":"golean-observation-v1","status":"fatal"}Shell observer probe: strict-fatal-controls PASS
+{"output":"out\u0000\n","message":"a\u0000\u0001\t\r","schema":"golean-observation-v1","status":"fatal"}Shell observer probe: strict-fatal-continuation PASS
+Shell observer probe: strict-fatal-wrong-exit PASS
+--- FAIL: TestAbortMessageBytes (0.00s)
+    observe_test.go:24: "panic: a\x00b\x01c\t\r\n\ngoroutine 1 [running]:\nmain.main()\n\t/tmp/x.go:5 +0x1d\nexit status 2\n": literal "\"ab\\u0001c\\t\\r\"" decoded "ab\x01c\t\r", want bytes "a\x00b\x01c\t\r": <nil>
+FAIL
+Observer mutation: drop-nul rejected after successful compile
+--- FAIL: TestAbortMessageBytes (0.00s)
+    observe_test.go:24: "panic: a\x00b\x01c\t\r\n\ngoroutine 1 [running]:\nmain.main()\n\t/tmp/x.go:5 +0x1d\nexit status 2\n": literal "\"a\\u0000b\x01c\\t\\r\"" decoded "", want bytes "a\x00b\x01c\t\r": invalid character '\x01' in string literal
+FAIL
+Observer mutation: raw-soh rejected after successful compile
+--- FAIL: TestAbortMessageBytes (0.00s)
+    observe_test.go:24: "panic: a\x00b\x01c\t\r\n\ngoroutine 1 [running]:\nmain.main()\n\t/tmp/x.go:5 +0x1d\nexit status 2\n": literal "\"a\\u0000b\\u0001c\"" decoded "a\x00b\x01c", want bytes "a\x00b\x01c\t\r": <nil>
+FAIL
+Observer mutation: trim-cr rejected after successful compile
+--- FAIL: TestRawStdoutRefusals (0.00s)
+    observe_test.go:79: accepted malformed stdout "\x00{}" as "{}"
+FAIL
+Observer mutation: mask-stdout-nul rejected after successful compile
+Observer controls: PASS

@@ -1,0 +1,2 @@
+'observer_nul_soh_model' depends on axioms: [propext, Quot.sound]
+'observer_controls_first_line' depends on axioms: [propext, Quot.sound]

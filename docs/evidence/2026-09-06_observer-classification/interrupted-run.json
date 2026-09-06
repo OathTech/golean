@@ -1,0 +1,11 @@
+{
+  "time_utc": "2026-09-06T02:40:39.428580+00:00",
+  "session": 40113,
+  "pid": 551304,
+  "pgid": 551304,
+  "action": "SIGTERM owned complete process group",
+  "cause": "independent real printed panic origin followed by TAB-prefixed actual panic falsely observed forged payload/output",
+  "finalized_rows_at_stop": 256,
+  "complete_full_run": false,
+  "observed_exec_exit": 143
+}

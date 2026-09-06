@@ -178,16 +178,6 @@ one_line() {
   printf '%s' "$value"
 }
 
-json_string_literal() {
-  local value="$1"
-  value="${value//\\/\\\\}"
-  value="${value//\"/\\\"}"
-  value="${value//$'\n'/\\n}"
-  value="${value//$'\r'/\\r}"
-  value="${value//$'\t'/\\t}"
-  printf '"%s"' "$value"
-}
-
 # Frontend refusal cause, normalized for counting: first error line,
 # file positions stripped, so identical causes aggregate.
 normalize_cause() {
@@ -227,10 +217,7 @@ run_one() {
   printf '\nfunc main() { gotestMain() }\n' >> "$dir/main.go"
 
   # Expected Go-side output per the testdir rule: <name>.out or empty.
-  local expected="" out_file="${src%.go}.out"
-  if [[ -f "$out_file" ]]; then
-    expected="$(cat "$out_file")"
-  fi
+  local out_file="${src%.go}.out"
 
   # --- Go oracle -------------------------------------------------------
   # Same env pins as scripts/diff-coverage's go_run_oracle: GOPATH mode,
@@ -238,19 +225,43 @@ run_one() {
   # stdout and stderr are captured SEPARATELY (the `output` observation is
   # the program's fd-2 prefix — print/println — recovered fail-closed by
   # the harness's --split-stderr mode, exactly as scripts/diff-coverage
-  # does); the combined text is still what the .out comparison and the
-  # status classification read (the testdir rule compares combined output).
+  # does). The .out comparison reads concatenated descriptor BYTES, while
+  # status classification reads stderr alone. Bash never carries raw bytes.
   local go_out go_rc
-  (cd "$dir" && timeout "$GO_TIMEOUT" env GO111MODULE=off GOFLAGS= GODEBUG=panicnil=0 GOCACHE="$GO_BUILD_CACHE" go run main.go > oracle.stdout 2> oracle.stderr)
+  local oracle_parent oracle_dir
+  if ! oracle_parent="$(mktemp -d "${dir}.oracle.XXXXXX")"; then
+    printf 'INFRA\t%s\t%s\n' "$rel" "oracle setup could not create isolated source directory"; return
+  fi
+  oracle_dir="$oracle_parent/package"
+  printf '%s\n' "$oracle_dir" > "$dir/oracle-directory.txt"
+  if ! "$HARNESS_BIN" --copy-oracle "$dir" --out "$oracle_dir" > "$dir/oracle-copy.stdout" 2> "$dir/oracle-copy.stderr"; then
+    printf 'INFRA\t%s\t%s\n' "$rel" "oracle source copy refused: $(cat "$dir/oracle-copy.stderr")"; return
+  fi
+  local evidence=(--crash-report "$oracle_dir/oracle.crash" --crash-registered "$oracle_dir/oracle.registered")
+  if ! { : > "$oracle_dir/oracle.crash" && : > "$oracle_dir/oracle.registered"; }; then
+    printf 'INFRA\t%s\t%s\n' "$rel" "oracle setup could not reset crash evidence"; return
+  fi
+  (cd "$oracle_dir" && timeout "$GO_TIMEOUT" env GO111MODULE=off GOFLAGS= GODEBUG=panicnil=0 GOTRACEBACK=system GOCACHE="$GO_BUILD_CACHE" go run .) > "$dir/oracle.stdout" 2> "$dir/oracle.stderr"
   go_rc=$?
-  go_out="$(cat "$dir/oracle.stdout" "$dir/oracle.stderr")"
+  go_out="stdout=$("$HARNESS_BIN" --quote-file "$dir/oracle.stdout") stderr=$("$HARNESS_BIN" --quote-file "$dir/oracle.stderr")"
 
   local go_status="" go_obs="" go_msg="" output_flag="" out_lit split_rc=0
   if [[ "$go_rc" -eq 124 ]]; then
     printf 'INFRA\t%s\t%s\n' "$rel" "go run timed out after ${GO_TIMEOUT}s"
     return
   elif [[ "$go_rc" -eq 0 ]]; then
-    if [[ "$go_out" != "$expected" ]]; then
+    # Pinned cmd/internal/testdir/testdir_test.go checkExpectedOutput:
+    # normalize CRLF on actual bytes, then exact equality with .out (or
+    # empty when absent). No NUL deletion or trailing-newline trimming.
+    if ! python3 - "$dir/oracle.stdout" "$dir/oracle.stderr" "$out_file" <<'PY'
+from pathlib import Path
+import sys
+stdout, stderr, expected = map(Path, sys.argv[1:])
+actual = (stdout.read_bytes() + stderr.read_bytes()).replace(b'\r\n', b'\n')
+want = expected.read_bytes() if expected.exists() else b''
+raise SystemExit(0 if actual == want else 1)
+PY
+    then
       # The pinned toolchain itself deviates from the suite's expectation
       # — environment- or flag-dependent test; not a machine verdict.
       printf 'INFRA\t%s\t%s\n' "$rel" "go output != expected .out on the pinned toolchain: $(one_line "${go_out:0:200}")"
@@ -262,17 +273,29 @@ run_one() {
       # not this slice): the row is status-compared with the flag kept.
       output_flag="output-uncompared($(wc -c < "$dir/oracle.stdout")B on stdout: no stdout observable — G7); "
     fi
-  elif [[ "$go_out" == *"fatal error: all goroutines are asleep - deadlock!"* ]]; then
-    go_status="deadlock"
+  elif [[ "$go_rc" -ne 1 ]]; then
+    printf 'INFRA\t%s\t%s\n' "$rel" "go run exited $go_rc without a runtime verdict: $(one_line "${go_out:0:200}")"
+    return
+  elif tail -c 15 "$dir/oracle.stderr" | cmp -s - <(printf 'exit status 78\n'); then
+    printf 'INFRA\t%s\t%s\n' "$rel" "oracle crash-hook setup failed (child exit 78)"; return
+  elif ! go_status="$("$HARNESS_BIN" --abort-status "$dir/oracle.stderr" "${evidence[@]}" 2>"$dir/oracle.kind.err")"; then
+    printf 'INFRA\t%s\t%s\n' "$rel" "oracle terminal classification refused: $(cat "$dir/oracle.kind.err")"; return
+  elif [[ "$go_status" == deadlock ]]; then
     go_obs='{"message":"all goroutines are asleep - deadlock!","schema":"golean-observation-v1","status":"deadlock"}'
-  elif [[ "$go_out" == *"panic:"* ]]; then
-    go_status="panic"
-    go_msg="$(printf '%s\n' "$go_out" | awk '/^panic: /{ sub(/^panic: /, ""); print; exit }')"
-    go_obs="{\"message\":$(json_string_literal "$go_msg"),\"schema\":\"golean-observation-v1\",\"status\":\"panic\"}"
-  elif [[ "$go_out" == *"fatal error: "* ]]; then
+  elif [[ "$go_status" == fatal ]]; then
+    # A runtime fatal during panic unwinding terminates as fatal: the
+    # initial panic line cannot determine the final terminal status.
     go_status="fatal"
-    go_msg="$(printf '%s\n' "$go_out" | awk '/^\t?fatal error: /{ sub(/^\t?fatal error: /, ""); print; exit }')"
-    go_obs="{\"message\":$(json_string_literal "$go_msg"),\"schema\":\"golean-observation-v1\",\"status\":\"fatal\"}"
+    if ! go_msg="$("$HARNESS_BIN" --abort-message "$dir/oracle.stderr" --expected-status fatal "${evidence[@]}" 2>"$dir/oracle.message.err")"; then
+      printf 'INFRA\t%s\t%s\n' "$rel" "oracle fatal message refused: $(cat "$dir/oracle.message.err")"; return
+    fi
+    go_obs="{\"message\":$go_msg,\"schema\":\"golean-observation-v1\",\"status\":\"fatal\"}"
+  elif [[ "$go_status" == panic ]]; then
+    go_status="panic"
+    if ! go_msg="$("$HARNESS_BIN" --abort-message "$dir/oracle.stderr" --expected-status panic "${evidence[@]}" 2>"$dir/oracle.message.err")"; then
+      printf 'INFRA\t%s\t%s\n' "$rel" "oracle panic message refused: $(cat "$dir/oracle.message.err")"; return
+    fi
+    go_obs="{\"message\":$go_msg,\"schema\":\"golean-observation-v1\",\"status\":\"panic\"}"
   else
     # Compile error, unsatisfied build constraints, os.Exit(1), ... — no
     # comparable runtime verdict from the oracle side.
@@ -282,7 +305,7 @@ run_one() {
   # The `output` field: the program's fd-2 prefix (stderr split by the
   # harness under the status' rule); an ambiguous split is an INFRA row —
   # the observation cannot be assembled, so nothing is compared.
-  out_lit="$("$HARNESS_BIN" --split-stderr "$dir/oracle.stderr" --expected-status "$go_status" 2>"$dir/oracle.split.err")" || split_rc=$?
+  out_lit="$("$HARNESS_BIN" --split-stderr "$dir/oracle.stderr" --expected-status "$go_status" "${evidence[@]}" 2>"$dir/oracle.split.err")" || split_rc=$?
   if [[ "$split_rc" -ne 0 ]]; then
     printf 'INFRA\t%s\t%s\n' "$rel" "oracle stderr split failed (harness exit $split_rc): $(one_line "$(cat "$dir/oracle.split.err")")"
     return
@@ -433,6 +456,8 @@ case "$cmd" in
       printf 'scope\t%s\n' "$scope_note"
       printf 'cases\t%s\n' "$total"
       printf 'go_toolchain\t%s\n' "$(go version | awk '{print $3}')"
+      printf 'go_traceback\tsystem\n'
+      printf 'go_crash_channel\tsame-run-setcrashoutput-v1\n'
       printf 'git_commit\t%s\n' "$(git rev-parse HEAD 2>/dev/null || echo unknown)"
       printf 'date\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
       printf 'go_timeout_s\t%s\n' "$GO_TIMEOUT"

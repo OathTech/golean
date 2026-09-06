@@ -1,0 +1,17 @@
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+building Lean executable...
+Build completed successfully (76 jobs).
+native frontend: per-case type-check + emit (no batch export)
+PASS	panic-recover/panic-controls/output-prefix	panic,strings
+PASS	panic-recover/panic-controls/newline	panic,strings
+PASS	panic-recover/panic-controls/soh	panic,strings
+PASS	panic-recover/panic-controls/child-confluent	panic,strings,goroutines,channels	stage=confluent	detail=|set|=1 certified over all schedules; coverage-observations: observations=1 steps=50 probes=6 sites=2 leaves=3 maxdepth=2 width=4
+PASS	panic-recover/panic-controls/cr	panic,strings
+PASS	panic-recover/panic-controls/tab	panic,strings
+PASS	panic-recover/panic-controls/nul	panic,strings
+PASS	panic-recover/panic-controls/recovered-newline	panic,recover,strings
+PASS	panic-recover/panic-controls/output-ok	strings
+
+differential coverage summary: cases=9 pass=9 fail=0 export_status=0
+results: artifacts/coverage/latest.tsv
+metadata: artifacts/coverage/latest.meta.tsv

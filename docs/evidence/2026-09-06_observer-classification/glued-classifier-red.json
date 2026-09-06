@@ -1,0 +1,29 @@
+{
+  "label": "KNOWN UNSOUND DEFAULT-TRACE DRAFT: both actual fatal executions accepted as panic",
+  "rows": [
+    {
+      "case": "sync-glued",
+      "source": "package main\nimport \"sync\"\nfunc main(){ print(\"panic: fake\"); var m sync.Mutex; m.Unlock() }\n",
+      "helper_rc": 0,
+      "helper_stdout": "panic",
+      "helper_stderr": "",
+      "source_sha256": "ebd8345b2efa11622ec27e856b31d4d08c2f8624125569f470eb56549aa7115d"
+    },
+    {
+      "case": "nil-go-glued",
+      "source": "package main\nfunc main(){ print(\"panic: fake\"); var f func(); go f() }\n",
+      "helper_rc": 0,
+      "helper_stdout": "panic",
+      "helper_stderr": "",
+      "source_sha256": "98ac1e0f08c1a9a3a53c9ac97f38b66ac3c20d3fb8a7c886111a8ac27d444deb"
+    },
+    {
+      "case": "literal",
+      "source": "package main\nfunc main(){ panic(\"fakefatal error: go of nil func value\") }\n",
+      "helper_rc": 0,
+      "helper_stdout": "panic",
+      "helper_stderr": "",
+      "source_sha256": "4bf7f20edf2d7bcfa0d927f7dc83241d899ca83c55ccf67be914e7e09460b854"
+    }
+  ]
+}

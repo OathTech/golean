@@ -1,0 +1,10 @@
+{
+  "go_version": "go version go1.26.5 linux/amd64",
+  "base_commit": "ff7173dd959435ede346c77318c29f13e16ed5f3",
+  "red_fake_probes": 21,
+  "red_failures": 16,
+  "red_passes": 5,
+  "green_fake_probes": 21,
+  "green_real_go_probes": 9,
+  "scope": "diagnostic oracle transport blocks only; not full census or model differential"
+}

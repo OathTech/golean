@@ -1,0 +1,10 @@
+DRIFT vs baselines/native-full.tsv (3616 case(s) run):
+panic-recover/panic-controls/child-confluent	NEW id (not in baseline) -> PASS/confluent
+panic-recover/panic-controls/cr	NEW id (not in baseline) -> PASS/-
+panic-recover/panic-controls/newline	NEW id (not in baseline) -> PASS/-
+panic-recover/panic-controls/nul	NEW id (not in baseline) -> PASS/-
+panic-recover/panic-controls/output-ok	NEW id (not in baseline) -> PASS/-
+panic-recover/panic-controls/output-prefix	NEW id (not in baseline) -> PASS/-
+panic-recover/panic-controls/recovered-newline	NEW id (not in baseline) -> PASS/-
+panic-recover/panic-controls/soh	NEW id (not in baseline) -> PASS/-
+panic-recover/panic-controls/tab	NEW id (not in baseline) -> PASS/-

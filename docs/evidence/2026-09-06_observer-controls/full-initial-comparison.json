@@ -1,0 +1,82 @@
+{
+  "cases": 3616,
+  "results": {
+    "PASS": 3372,
+    "FAIL": 244
+  },
+  "removed": [],
+  "changes": [
+    {
+      "id": "panic-recover/panic-controls/nul",
+      "before": null,
+      "after": [
+        "PASS",
+        "-"
+      ]
+    },
+    {
+      "id": "panic-recover/panic-controls/soh",
+      "before": null,
+      "after": [
+        "PASS",
+        "-"
+      ]
+    },
+    {
+      "id": "panic-recover/panic-controls/tab",
+      "before": null,
+      "after": [
+        "PASS",
+        "-"
+      ]
+    },
+    {
+      "id": "panic-recover/panic-controls/cr",
+      "before": null,
+      "after": [
+        "PASS",
+        "-"
+      ]
+    },
+    {
+      "id": "panic-recover/panic-controls/newline",
+      "before": null,
+      "after": [
+        "PASS",
+        "-"
+      ]
+    },
+    {
+      "id": "panic-recover/panic-controls/recovered-newline",
+      "before": null,
+      "after": [
+        "PASS",
+        "-"
+      ]
+    },
+    {
+      "id": "panic-recover/panic-controls/output-prefix",
+      "before": null,
+      "after": [
+        "PASS",
+        "-"
+      ]
+    },
+    {
+      "id": "panic-recover/panic-controls/output-ok",
+      "before": null,
+      "after": [
+        "PASS",
+        "-"
+      ]
+    },
+    {
+      "id": "panic-recover/panic-controls/child-confluent",
+      "before": null,
+      "after": [
+        "PASS",
+        "confluent"
+      ]
+    }
+  ]
+}

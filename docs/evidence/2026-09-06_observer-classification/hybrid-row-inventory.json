@@ -1,0 +1,314 @@
+{
+  "mode": "inventory only; no result or conformance prediction is a measured outcome",
+  "counts": {
+    "fatal": 9,
+    "deadlock": 27,
+    "panic": 2
+  },
+  "rows": [
+    {
+      "id": "channels/deadlock/range-open-drained",
+      "expected": "deadlock",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/channels/deadlock/cases.tsv"
+    },
+    {
+      "id": "channels/deadlock/recv-empty-open",
+      "expected": "deadlock",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/channels/deadlock/cases.tsv"
+    },
+    {
+      "id": "channels/deadlock/recv-nil",
+      "expected": "deadlock",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/channels/deadlock/cases.tsv"
+    },
+    {
+      "id": "channels/deadlock/select-all-nil",
+      "expected": "deadlock",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/channels/deadlock/cases.tsv"
+    },
+    {
+      "id": "channels/deadlock/select-empty",
+      "expected": "deadlock",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/channels/deadlock/cases.tsv"
+    },
+    {
+      "id": "channels/deadlock/send-full",
+      "expected": "deadlock",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/channels/deadlock/cases.tsv"
+    },
+    {
+      "id": "channels/deadlock/send-nil",
+      "expected": "deadlock",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/channels/deadlock/cases.tsv"
+    },
+    {
+      "id": "channels/deadlock/send-unbuffered",
+      "expected": "deadlock",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/channels/deadlock/cases.tsv"
+    },
+    {
+      "id": "channels/recv-edge/bad-target-blocks",
+      "expected": "deadlock",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/channels/recv-edge/cases.tsv"
+    },
+    {
+      "id": "goroutines/deadlock/after-progress",
+      "expected": "deadlock",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/goroutines/deadlock/cases.tsv"
+    },
+    {
+      "id": "goroutines/deadlock/chain",
+      "expected": "deadlock",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/goroutines/deadlock/cases.tsv"
+    },
+    {
+      "id": "goroutines/deadlock/mutual",
+      "expected": "deadlock",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/goroutines/deadlock/cases.tsv"
+    },
+    {
+      "id": "goroutines/deadlock/with-select",
+      "expected": "deadlock",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/goroutines/deadlock/cases.tsv"
+    },
+    {
+      "id": "goroutines/spawn-edge/nil-func-fatal",
+      "expected": "fatal",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/goroutines/spawn-edge/cases.tsv"
+    },
+    {
+      "id": "init/init-panic/-",
+      "expected": "panic",
+      "old_result": "NEW",
+      "old_stage": "NEW",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/init/init-panic/cases.tsv"
+    },
+    {
+      "id": "init/quarantined-var-panicking/sibling",
+      "expected": "panic",
+      "old_result": "FAIL",
+      "old_stage": "frontend-export",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/init/quarantined-var-panicking/cases.tsv"
+    },
+    {
+      "id": "noodler/goroutines/mutex-double-lock-deadlock",
+      "expected": "deadlock",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/noodler/goroutines/cases.tsv"
+    },
+    {
+      "id": "noodler/goroutines/waitgroup-deadlock",
+      "expected": "deadlock",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/noodler/goroutines/cases.tsv"
+    },
+    {
+      "id": "noodler/initpanic/deadlock/-",
+      "expected": "deadlock",
+      "old_result": "NEW",
+      "old_stage": "NEW",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/noodler/initpanic/deadlock/cases.tsv"
+    },
+    {
+      "id": "noodler/select/all-nil-deadlock",
+      "expected": "deadlock",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/noodler/select/cases.tsv"
+    },
+    {
+      "id": "noodler/syncmisuse/mutex-copy-carries-state",
+      "expected": "deadlock",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/noodler/syncmisuse/cases.tsv"
+    },
+    {
+      "id": "noodler/syncmisuse/once-nested-deadlock",
+      "expected": "deadlock",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/noodler/syncmisuse/cases.tsv"
+    },
+    {
+      "id": "noodler/syncmisuse/rlock-while-write-locked",
+      "expected": "deadlock",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/noodler/syncmisuse/cases.tsv"
+    },
+    {
+      "id": "noodler/syncmisuse/runlock-of-unlocked",
+      "expected": "fatal",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/noodler/syncmisuse/cases.tsv"
+    },
+    {
+      "id": "noodler/syncmisuse/unlock-of-unlocked-rw",
+      "expected": "fatal",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/noodler/syncmisuse/cases.tsv"
+    },
+    {
+      "id": "spec-examples-decl/select-forms/block-forever",
+      "expected": "deadlock",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/spec-examples-decl/select-forms/cases.tsv"
+    },
+    {
+      "id": "sync/iface-dispatch/locker-double-lock",
+      "expected": "deadlock",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/sync/iface-dispatch/cases.tsv"
+    },
+    {
+      "id": "sync/mutex-double-lock/double-lock",
+      "expected": "deadlock",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/sync/mutex-double-lock/cases.tsv"
+    },
+    {
+      "id": "sync/mutex-unlock-fatal/during-panic-unwind",
+      "expected": "fatal",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/sync/mutex-unlock-fatal/cases.tsv"
+    },
+    {
+      "id": "sync/mutex-unlock-fatal/unlock-of-unlocked",
+      "expected": "fatal",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/sync/mutex-unlock-fatal/cases.tsv"
+    },
+    {
+      "id": "sync/mutex-unlock-fatal/unlock-recover-attempt",
+      "expected": "fatal",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/sync/mutex-unlock-fatal/cases.tsv"
+    },
+    {
+      "id": "sync/once-nested-do/nested-do",
+      "expected": "deadlock",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/sync/once-nested-do/cases.tsv"
+    },
+    {
+      "id": "sync/rwmutex-misuse-fatal/runlock-of-unlocked",
+      "expected": "fatal",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/sync/rwmutex-misuse-fatal/cases.tsv"
+    },
+    {
+      "id": "sync/rwmutex-misuse-fatal/runlock-while-write-locked",
+      "expected": "fatal",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/sync/rwmutex-misuse-fatal/cases.tsv"
+    },
+    {
+      "id": "sync/rwmutex-misuse-fatal/wunlock-of-unlocked",
+      "expected": "fatal",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/sync/rwmutex-misuse-fatal/cases.tsv"
+    },
+    {
+      "id": "sync/rwmutex-rlock-then-lock/rlock-then-lock",
+      "expected": "deadlock",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/sync/rwmutex-rlock-then-lock/cases.tsv"
+    },
+    {
+      "id": "sync/waitgroup-negative-after-recover/negative-after-recover",
+      "expected": "deadlock",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/sync/waitgroup-negative-after-recover/cases.tsv"
+    },
+    {
+      "id": "sync/waitgroup-wait-deadlock/wait-deadlock",
+      "expected": "deadlock",
+      "old_result": "PASS",
+      "old_stage": "-",
+      "assessment": "REQUIRES REPLAY; message/output authentication not inferred from metadata",
+      "source": "Corpus/coverage/exec/sync/waitgroup-wait-deadlock/cases.tsv"
+    }
+  ]
+}

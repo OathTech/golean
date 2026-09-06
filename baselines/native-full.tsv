@@ -1,5 +1,25 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3607 (3363 PASS / 244 FAIL)
+# cases: 3627 (3382 PASS / 245 FAIL)
+# re-pinned: 2026-09-06, BUG-106 oracle report authentication repair [AGENT].
+#   Fresh full scripts/ci --diff: 3627 = 3382 PASS / 245 FAIL. Exactly
+#   eleven new PASS panic-markers rows and sync/mutex-unlock-fatal/
+#   during-panic-unwind PASS -> FAIL/go-observation: unauthenticated fatal
+#   message/output before m.dying is now explicitly refused. K3 disposition
+#   ab2ad4d5; bounded production review 1bd2022b. Never conformance success.
+#   No other existing result/stage changes or removals; prior order and
+#   stage alternations preserved. Raw initial baseline/full delta retained:
+#   docs/evidence/2026-09-06_observer-classification/hybrid-full-initial-delta.json
+# Previous pin record (historical):
+# re-pinned: 2026-09-06, BUG-105 observer byte-transport repair [AGENT].
+#   Fresh full scripts/ci --diff: 3616 = 3372 PASS / 244 FAIL. Exactly
+#   nine new PASS panic-recover/panic-controls rows; no existing result
+#   or unapproved stage changes, no removals. Existing row order and
+#   stage-alternation declarations are preserved. No oracle pin change.
+#   Initial raw drift and complete source-bound dirty-worktree evidence:
+#   docs/2026-09-06_observer-controls-repair.md and its evidence directory.
+#   This validates byte transport; the separately discovered fatal-unwind
+#   classifier defect has a separately reviewed follow-on, not a waiver.
+# Previous pin record (historical):
 # re-pinned: 2026-09-06, typed panic-rendering K3 repair [AGENT], after full
 #   scripts/ci --diff: 3607 = 3363 PASS / 244 FAIL. Exactly one existing
 #   FAIL -> PASS (panic-recover/panic-newline-abort), nine new PASS rows
@@ -3894,6 +3914,26 @@ PASS	panic-recover/panic-named-type-abort	-
 PASS	panic-recover/panic-newline-abort	-
 PASS	panic-recover/panic-nil-abort	-
 PASS	panic-recover/panic-nil-recover	-
+PASS	panic-recover/panic-controls/nul	-
+PASS	panic-recover/panic-controls/soh	-
+PASS	panic-recover/panic-controls/tab	-
+PASS	panic-recover/panic-controls/cr	-
+PASS	panic-recover/panic-controls/newline	-
+PASS	panic-recover/panic-controls/recovered-newline	-
+PASS	panic-recover/panic-controls/output-prefix	-
+PASS	panic-recover/panic-controls/output-ok	-
+PASS	panic-recover/panic-controls/child-confluent	confluent
+PASS	panic-recover/panic-markers/first-line	-
+PASS	panic-recover/panic-markers/nil-go-literal	-
+PASS	panic-recover/panic-markers/deadlock-literal	-
+PASS	panic-recover/panic-markers/output-midline	-
+PASS	panic-recover/panic-markers/output-line	-
+PASS	panic-recover/panic-markers/mixed-line	-
+PASS	panic-recover/panic-markers/fake-trace	-
+PASS	panic-recover/panic-markers/printed-continuation	-
+PASS	panic-recover/panic-markers/literal-continuation	-
+PASS	panic-recover/panic-markers/glued-output	-
+PASS	panic-recover/panic-markers/printed-trace	-
 PASS	panic-recover/panic-text/unicode-two	-
 PASS	panic-recover/panic-text/unicode-three	-
 PASS	panic-recover/panic-text/unicode-four	-
@@ -4854,7 +4894,7 @@ PASS	sync/mutex-protected/counter	confluent
 PASS	sync/mutex-protected/visible	confluent
 PASS	sync/mutex-unlock-fatal/unlock-of-unlocked	-
 PASS	sync/mutex-unlock-fatal/unlock-recover-attempt	-
-PASS	sync/mutex-unlock-fatal/during-panic-unwind	-
+FAIL	sync/mutex-unlock-fatal/during-panic-unwind	go-observation
 PASS	sync/once-basic/runs-once	-
 PASS	sync/once-basic/panicking-f	-
 PASS	sync/once-basic/across-goroutines	confluent

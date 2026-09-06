@@ -1,0 +1,5 @@
+--- FAIL: TestAbortKindRefusals (0.00s)
+    abortkind_test.go:47: "panic: original\n\tfatal error: sync: unlock of unlocked mutex\n\ngoroutine 1 [running]:\ninternal/sync.fatal({0x493d2a?, 0x123?})\n\t\t/usr/local/go/src/runtime/panic.go:1191 +0x18\ninternal/sync.(*Mutex).unlockSlow(0x123, 0xffffffff)\n\t/usr/local/go/src/internal/sync/mutex.go:204 +0x35\nexit status 2\n": got "fatal"/<nil>, want ambiguous mixed refusal
+FAIL
+FAIL	_/home/dev/projects/golean/.claude/worktrees/typed-observer-classification/tools/coverageharness	0.002s
+FAIL
