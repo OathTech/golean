@@ -1,0 +1,43 @@
+{
+  "utc": "2026-09-06T01:33:48.457086+00:00",
+  "candidate_root": "/home/dev/projects/golean/.claude/worktrees/typed-observer-controls",
+  "head": "ff7173dd959435ede346c77318c29f13e16ed5f3",
+  "status": " M docs/BUGS.md\n M scripts/ci\n M scripts/diff-coverage\n M tools/coverageharness/main.go\n M tools/coverageharness/split.go\n?? Corpus/coverage/exec/panic-recover/panic-controls/\n?? docs/2026-09-06_observer-controls-repair.md\n?? docs/evidence/2026-09-06_observer-controls/\n?? scripts/check-observer-controls.py\n?? tools/coverageharness/observe.go\n?? tools/coverageharness/observe_test.go\n",
+  "files": {
+    "tools/coverageharness/split.go": "cb55a875bcd60c8585d6a91d85cd7ad3a3753eeb779add836a47d52f73a8532e",
+    "tools/coverageharness/main.go": "f1a32c8f6eafad70c8c07269355fd405528856d171f9d3253a45faba2c623a72",
+    "tools/coverageharness/split_test.go": "1fcfd98abdea4f751916483708411b7e5228fcd0cc172c230df3e458e68cf801",
+    "tools/coverageharness/observe_test.go": "7a204c704711009c8c53bbd31812a5a0caf3f264b1b0beb5e17b16f942aabf68",
+    "tools/coverageharness/observe.go": "323db44d68c8ef5279d09c73b6214561445c16230a0ca930ed7ee0b7dfbaeeae",
+    "Corpus/coverage/exec/panic-recover/panic-controls/main.go": "658c056e4ef53b8ee603e36eec2129443488d8c83c865a2ad879c9e8d740e842",
+    "Corpus/coverage/exec/panic-recover/panic-controls/cases.tsv": "8bc8895102bfa8db61230255abe8ec25313b488b0bb2c1e07d84e211ecc1e215",
+    "scripts/diff-coverage": "0c545a40ac6a71cac8ede219437482c93210eec8f3dc75ab01660b3f48037a81",
+    "scripts/ci": "51fc83a3fc9d2593af54a25049d3d88371238b33a847aad8329a698d7d23ccf6",
+    "scripts/check-observer-controls.py": "4a577fe890fa9883a07aad7c1cd11348dd6e637cfdc96b85ebe04741e437f04a"
+  },
+  "scratch": "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5",
+  "scope": "Core raw-file observer candidate only; diagnostic scripts outside this candidate require separate follow-on.",
+  "sealed_utc": "2026-09-06T01:42:45.907112+00:00",
+  "source_recheck": "all reviewed executable/fixture hashes unchanged",
+  "reviewer_branch_base": "6489c986ff87dc63d2564c3d6a448d59b3bd2aef",
+  "go_version": "go version go1.26.5 linux/amd64",
+  "reviewer_harness_sha256": "8cb9566689b372615b0ab6af636d0a311f088785fb202e5c18b7e1e6d35c97dc",
+  "comparator_path": "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.lake/build/bin/golean",
+  "comparator_sha256": "f8b6d500483333b7b18a4581d24014223da1605cd85891fe628304db5b7d303a",
+  "comparator_model_source_base": "10fefeb3; reviewer preflight executable, used only for unchanged observation comparator",
+  "resource_environment": {
+    "GOLEAN_MEM_MAX": "16G",
+    "LEAN_NUM_THREADS": "3",
+    "GO111MODULE": "off",
+    "GOCACHE": "/home/dev/projects/golean/.claude/worktrees/typed-preflight/artifacts/go-build-cache"
+  },
+  "full_ci_scope": "author full scripts/ci --diff remains live; independent review does not certify its result",
+  "result": {
+    "independent_checks": 324,
+    "exit": 0,
+    "unit_suite_exit": 0
+  },
+  "excluded_binary_paths": [
+    "scratch/coverageharness"
+  ]
+}

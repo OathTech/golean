@@ -1,0 +1,10 @@
+# Exact fresh reviewer commands. Shell: bash, login=false.
+# Work directory: /home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/source
+GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 /home/dev/projects/golean/.claude/worktrees/typed-preflight/scripts/capped env GO111MODULE=off GOCACHE=/home/dev/projects/golean/.claude/worktrees/typed-preflight/artifacts/go-build-cache go build -o ../coverageharness .
+GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 /home/dev/projects/golean/.claude/worktrees/typed-preflight/scripts/capped env GO111MODULE=off GOCACHE=/home/dev/projects/golean/.claude/worktrees/typed-preflight/artifacts/go-build-cache go test -count=1 -v .
+# Unit stdout/stderr preserved as unit.log; terminal exit 0 as unit.exit.
+
+# Work directory: /home/dev/projects/golean/.claude/worktrees/typed-preflight
+GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 scripts/capped python3 docs/evidence/2026-09-06_observer-review/review.py > docs/evidence/2026-09-06_observer-review/review.log 2>&1
+# Terminal exit 0 preserved as review.exit. Per-probe argv/output hashes in results.json.
+# Scratch: /home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5; copied exact source before build, no shared writable build cache.

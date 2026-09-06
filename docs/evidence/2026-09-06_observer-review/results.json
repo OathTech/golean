@@ -1,0 +1,4120 @@
+{
+  "checks": 324,
+  "records": [
+    {
+      "label": "message-000",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-000/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "6a4ed068a7915f8bc904ac4b8129bd8ec8a4c9d4801ae35b72becf18d9f78163",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-000",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-000/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "3bdc31c332900d7c696363f1931d287f1455d95c4e4fc2d6a09feed522fdc3fa",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-001",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-001/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "eeef81596b2e4a7404e4ef27ab678aefb41259931ccb610f39223b129dac1223",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-001",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-001/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "296f40a5818e934ba5cecc3d4e2e20d19edcfda38644722f0953f4e292eac520",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-002",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-002/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "dc08da145c971d9059e7cb1a196bd99db3dfc6673810bbeeee5bb24b6a0e2c97",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-002",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-002/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "8d69fc8b34596ba16f739fbc99682c71686614492bb3c4ebe60e00cda93619f4",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-003",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-003/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "1dbdddfffd2a808b2885ce0d615a98345f79e747dcac988f0056786a063f7c47",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-003",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-003/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "2f5c6bc1ddb4b328db72a99203ab40dc602478942120d421ba81fabe68a8bdc5",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-004",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-004/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "cb6c5a419d72e5a1ffb5423c98b7c1360cba672fb74c281304e9d761277035f1",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-004",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-004/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "159f436d4dd09607e92c82b965db8e9ccbd8393a549d33aab9de1bfc22df6c4a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-005",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-005/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "fef4e42f831f5260a75b17d5a8471be45c1fed031ee6a710649cf6cf604f8989",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-005",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-005/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "043a06c6a29c967b7d4e77f94438239b82d1482af79fb375fd77cb0c7ec4e5ad",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-006",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-006/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "a82860d2a80f734ec045682f7925763c9fa2066175e6d2b9481796029df8971a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-006",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-006/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "a6d96feb283f75327c9f69acea7dbfc9fc2298920879bf71d030820b046888e3",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-007",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-007/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "89e5a29592956ab18ad3befcdd82dff268342c6269c0d1004b35aeed10da694d",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-007",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-007/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "77b52ca331dcb8cb5ae28713fecc958b3f071a25ab647f89114d53999a45ae6a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-008",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-008/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "a1bd0b32c50fe5ab0cbafcec93c52c537d1bf91cbc6d3db50e7307ad10c7dca6",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-008",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-008/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "157cc07e2f75c92ae57c5fdfdd803c8f35398e52fccf5eb43f740a57583a438e",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-009",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-009/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "d872edbb4c71cab70b1005abc3bb13e383d73a559a344c750f65f3ff9b5ea347",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-009",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-009/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "53916595d4bae40e6ddf6f260d3df171907764c903a92fb657003395440b3ee1",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-010",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-010/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "798640599597df7a8daa32b1132f07850a68b5e71bd295650399a38074f52804",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-010",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-010/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "a6a4b2a296839185570d3f146c4731ee5117f82a066e8a6687ff6c1e17061701",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-011",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-011/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "e4ff8e9ed48d6a885fbca5eca5918ada067bd53f91d63e7e01e872dbc78217f6",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-011",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-011/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "430327e732095a240d700ba86fb39bceeb1f6ff94917c21d7385da44660db671",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-012",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-012/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "e6bfde2b96d412c5acc3fbec0906f8bb5498ab96b18583ba7c376e3c5bf38494",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-012",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-012/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "34609e99120be18088a1c259b53db1e5b90dfbfb43fd8226ab7cf03d56f5a1bd",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-013",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-013/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "42197650c63b52db837996d79a0f466f0fb69412625778b39e56507693c22959",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-013",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-013/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "98fdab54f9063d7fc8f875848abe60ad8e0667f9595d8bc0d9c90faa5c46daad",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-014",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-014/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "9bf208f6facf2abeb44232cefc9b4fe80ed487f380d6697586f5f762769b0568",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-014",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-014/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "3ab3085507e356b1825086d954f7d5bc2027ae146f5aa3e0d526f70f41f999ba",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-015",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-015/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "35762a13c9f8b67108fdbc69f4b0b84f95538bdcdf8cf9e9112abb7dfc6dd6f1",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-015",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-015/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "c2e10f405fcf27547cbe37e1ae15d2db8c0c73aa0ae5842bd4c0e6408a2f644a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-016",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-016/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "d91ef925c65be4018db51c587905c257a26fd8271a54b475d4aa88bd04904538",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-016",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-016/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "29cdc005a78d5903e3cb9cf7da8125ba35274bce3661214616a257de3a5d629a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-017",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-017/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "e1165646c613f922a69a29b3189cbebfae9ae6dbc3ffc904de3ec3195ed28e4a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-017",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-017/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "1416f08013f8889fac4bd701fb3f396c1dbf738971b44df1fff83dae87baa7f2",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-018",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-018/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "b421a28ed5c1252ad7bd720e5c01a58df75a5e1503ae884648ff27e684898838",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-018",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-018/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "e19fde92ea8221dbd79b1cadad26ab2c63782fad32c2a5b2588334d82c926842",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-019",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-019/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "4774e309cbee302261e49de83156defb4bc5d9b7b3533dc66007254732222d0a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-019",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-019/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "de5340b562eb8a4b85e9e1918ecdfb94c24e603b10c5c63ef94cb6f8dbcd272f",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-020",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-020/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "2e1473e50f235a33b18aba39d7064caf17bd21d9cde17d28b95ac3658349ab68",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-020",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-020/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "aef2abf556645321427c5867b7ae886ef5e2495a6f388e43a5c3a04f4f670b13",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-021",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-021/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "4fcbc36619f90ae171e05734ab62406f6958809db57d90eabbe5063caf9d5537",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-021",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-021/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "41ec4e37bb174b7ad1cd278e716be63a2990b34443ef6b75fbe7097679631516",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-022",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-022/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "7d544370f49604b530580039ee6a98ab9640294309c234175786b81e0e520d94",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-022",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-022/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "3595988449d62c3e26d21bc93bda912cc5db486eba17028fc2677505e354492a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-023",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-023/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "55a69b8bd5873078877b4fb0198071b885d03778dae37d4a04be1a7ddc874804",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-023",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-023/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "efba29d36dd0eca48218d73292bc31028c1962a8405c01cd9d11b7aec6be4ba8",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-024",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-024/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "8952927b11296dcaca29cb9307b94835c03260b90484401176b3edfa1e97e5a4",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-024",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-024/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "4c4ee389314bafb941ce26d03159ee3c62aef73f89da61cc8ac208f7661c72c7",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-025",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-025/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "db377c02e2c37a7d41d303b0843beb4ee82db298e4b6843aea287ff39a9e94c7",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-025",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-025/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "41f9392d631af3b54915e0c8ca015047984960418d47ce540a138157e529230b",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-026",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-026/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "0b549d0a9c16bb151cc0a410603ef28f7cdea5f9be55a23ccc4ebf3380399965",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-026",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-026/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "0168d8ee7fb1735fae71418f045a17271858fe14ddb81d57c45a848f4de01857",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-027",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-027/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "a6a4f800370532997e355222057090b13f793e69304980b14a49d6d98eab579a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-027",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-027/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "1358f390eb091df7cfcfd467d10ae7c2e55849adbe18a5fe20f960b8fda386a5",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-028",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-028/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "92979df304f149e1ddeb4fc068c04a1a78569d77a76d81a0b8c4c2d679206091",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-028",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-028/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "b99a3699e5fb9655a50919976e5b6042b2df375281a271072d5aae5edabab51f",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-029",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-029/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "66b81c56a59bec9b3c3192c1a6956e7f7bd605b309b07c393a49556d7238fbaa",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-029",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-029/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "58245589843ffe748e502a3077c76e864aa695576d30958a0c9dcacb65cdfb60",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-030",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-030/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "e9af3ea7a79c998ee5507004e8d961fe7192b5d54c68ae2df13f22d54680ab85",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-030",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-030/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "57b920ec55dc7271f9ef68da28c5ee72b9551b4a4f625d47dcf1a4080efe8f56",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-031",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-031/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "b96b3166ae0d32a2a7c7d9aafaa9f8810266715e16eb179aee0617b37905c23a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-031",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-031/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "71349a34cd236b93783025a56300830597d0b798bc542ee18fff154e95d9493e",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-032",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-032/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "ecf690581d8d8fd402264dae753f67f9fad1518a4958c631b31e0f01a673388c",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-032",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-032/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "ebda4b453a5f967524c377b7edbecf54e0ca34fcb4f3f80c2c50a5650ff3b477",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-033",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-033/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "a561ec840f48bde32cf996e75b1b68ccefe25342d3f3a325f1c71802aa3182fd",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-033",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-033/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "f01d57473ee45746fbbedb0ebab85296c542b3b70e0c170e619d64823c487056",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-034",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-034/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "02cef2a5182be0800ca35977ae53a55509bcb47f4708bba1bf847ae2ae03fa59",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-034",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-034/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "bc70fb9246f46b5ce2f85d600add6244a4a9a394c6c8f3a543ad1ddf5339ec37",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-035",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-035/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "0369bde5ffdd76365a375ae066572b7dc945e1fd014284965e442318201bc1ae",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-035",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-035/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "fe31686f4900a03f28cc6a3af8c17799cc5ac0336556a839ad0b8ee99c58f8ae",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-036",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-036/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "648797d5f2b7a2ed1043d25eaf86153ea25380a4577bffa36e79e1a83d1d3daf",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-036",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-036/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "68b59cf0bf76cecd2764ddce584719941e5f7469fe00e1dbebd0da56b3d070c1",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-037",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-037/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "ee31012c7a2443e9d2f8a4621448aaf1738f07161e665757492f6a4dc7b1f38a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-037",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-037/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "4328e0d27c9cddfb19969229a343d5d54be31a8f0242c953ab5af6c1b83aa29a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-038",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-038/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "240d0be0430be6b02de426b4cef5d9ce2bc1ebc62e5c740101e793f69711e2ea",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-038",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-038/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "f69e2c91ec470567f71739dbc1137473303bd5082baa1b87807977380ec663ad",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-039",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-039/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "ae460a73c2573a39c977ba7665ef09531517bc3ed9467c33d49e29765c2aae75",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-039",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-039/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "049d892241ed09b6a7f10e2b1bbf1d14b6250e958119913af3c3f8f93b6a005e",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-040",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-040/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "517ed9de135dcde737d2ca16f1d76a4b9f7274c979dc8544d5442925440eaf17",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-040",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-040/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "daec32658ce1bc21f37e2210738eae5c3c8cf5cdeb8933411bb3c1d288be9396",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-041",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-041/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "4f9e41c890584d7ac149e38d5c92104abe1f11d27678dd8e889cd4ee688a3712",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-041",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-041/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "698127a9a9b635cea2fc231eb736e04b5b0bca435d02f328474746b2912725ae",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-042",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-042/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "0cb306f6c1f958f0c3a47983bcd85e0e3c2933353828e084882ae4ac1f1d93a2",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-042",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-042/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "730dcc1a2d8eb6c5afa4c6aeb6787955a2c98d8fbad502bee8c2fcbd22e77e88",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-043",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-043/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "e14cfd48845dd2171970a6061a224f982f5ec5ddd839e7d6e5dd667efc0780c7",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-043",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-043/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "f9316a409afae2ae9a6634cd4662b0ba1dbe83de49acd4e4b231266fa89df9fb",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-044",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-044/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "fe30e8829a29548d6a5d339d9504e2d5592177f87d53583ebad0493b27850c50",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-044",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-044/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "58252d4c416ee16ee7f797025ab9deda2f46b71be1792126da0cac21ddab5542",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-045",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-045/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "e86a549898b2801ec39b29a2ba41caa24a015d8653df92cc1412d3d2d397faca",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-045",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-045/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "0b572389e44b2c2232b7d968a51e37800e304d433b9b26d1f4671247bb974bbd",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-046",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-046/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "71973858091def1625a62f4b1e98f001794ce244c48d26302952f47869184a10",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-046",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-046/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "90147a4ca761a1aeb83435ae3e5a389a6de4a6f2ef654b81cdb42249b300e747",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-047",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-047/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "92790ab73e3f0fde7e4c23018b214e5cf9d56c0ad2d500deebcefac8926d8363",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-047",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-047/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "bf55bf54b41ad7a21773022c44f3231c4b92efc501fa329b6a84146f622aa36c",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-048",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-048/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "893edf05b08adaed0e629ed85a5285df06d829b2fc03e51948fdc5f850432d3e",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-048",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-048/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "5b2d9271f1c429a0d734af74e490d00174d4e2b0ebf3f536adc300f4c4fd084c",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-049",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-049/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "72aee8da888ad5ef49395684a9f28e6ddb1d009a683f2dde92b08bae59705e23",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-049",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-049/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "28bec43933ce70c2f01fb03d3c96795fb7ea3e1382e27f5d535278a4681a15c9",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-050",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-050/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "8162cb3c6a3b6edcac5e7dea86b0960ae83f2e9cfa380c6ffc19e21e779f7bf4",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-050",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-050/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "84232617f46f8dc1ee951d21f213ce2c785662cf724e2cb04cf7ee5c98986d20",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-051",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-051/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "f22771b0b9d32b8c904424de9507695336675ca3fe6827eb08ebb942fe311368",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-051",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-051/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "6b4c4ef70ebcae87fe31ad7ddd7d1e70d83ca5ecd46879904116af74fe4424d9",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-052",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-052/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "8ffcd6008921d7bee6342d8c0c7fea1dade4467f322125a83ef42879abb4330c",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-052",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-052/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "e8414569225e4561530d1a38febf1daf3881ff82ba9568192ca563f84265fa6a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-053",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-053/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "dce6ce7b9cd6652376a00d9295a643a2c9e94e9787a1b9a62ea8b0d6fb7eddad",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-053",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-053/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "50b092e6ec8469c4cec19795baf99c579131f1d233ce4e644676caaa2d982994",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-054",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-054/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "5f26c24df87354ffc528565b3021c9d11328b4da18207a6d9bcbc9def28ba9cb",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-054",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-054/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "389cbe414b237e4f7210666704a650d51b4733f6e982cc99dd9682781aec02ee",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-055",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-055/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "a14f05739ee3cfa93c4611364c90032d173c1b96735c95b9e87566bfbc9a27b5",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-055",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-055/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "fc535b79b3a67c2e96e0ec933c61a7fa40f04fc3a91a54cefaf1648c9d268688",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-056",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-056/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "7e7957c6d20cff2431170ed50fa241a52717e641bd793bc13d3e28e35ccd93e1",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-056",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-056/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "55ea22ec9f4a78a46f9019dea744cf668459bfabbf35e79a924b3f25fcc33156",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-057",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-057/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "22f8ae4b4332e795bec7b077887809d44270db2fec7e6978c5ff1ed70340eb22",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-057",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-057/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "4bf2dca82eae0a206766709632edda7f2da8ebc3593e95db5a9a2f4bd61d1659",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-058",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-058/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "74323629c4d8febd9cbb819e9e326254718b504e1b0987d3703c2e7108648a34",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-058",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-058/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "6ff0a4a2a86f6776fde120033ee07dafc5fb84b82a2a4c3d38e2c316674d280f",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-059",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-059/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "0cb1f8e27c076593fb98a147d7ac7d470b27e31900478ef2049b31362f56eafa",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-059",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-059/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "4dca71081019d8105263ac2967d03ea03dd22547a38da43e8450c477a6574e9e",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-060",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-060/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "a83368bd928dca1540316f53140a297ac807313766e0f18747caa60ef23ecc3b",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-060",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-060/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "4cacea4af7631229db8532b45b3d9945832839be78627710486bedeb1619660b",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-061",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-061/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "85e5ffda65123a7f6cf1215e889f6ddc698793c1cf908617501482fe638811f3",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-061",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-061/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "ca80a9d2ee0e38e46da6351f522d4cb383eea32aecebd1ce87816aa8ed23fb3d",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-062",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-062/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "6d1ba3836c3e50ba8a14bd6c7299333a3eac0aac388c628ad7ca187023879ddf",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-062",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-062/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "32dc2f8e7dbf947503ec165fafdc446f1cc91a4c112a9f6d917a619aa64f2daf",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-063",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-063/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "80a58bfe31dd98e4fac28c8db00a99584b12f9645d6405641c4a02948c54b001",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-063",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-063/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "363b7ae5d8b34232260caf935442ab96d5f2cea5cee369c98103545e7243b23d",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-064",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-064/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "1362cb1c21c93682c72a7f43a2ec6f54d4e7e53c908e69d5ec5c1d9b3be2f4fb",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-064",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-064/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "375b896fb018730ebd7053dbda27be54a16b764c2c6ab6bec922f0959ef60688",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-065",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-065/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "47ac124432caed8505c5e8fdc050b9f3f588a89ee2450720acaed84d5357ad96",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-065",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-065/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "4d530bb9964ca5e1e7e814c5b18319ca0532239cd3dca1ee827244552a786236",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-066",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-066/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "196186f98dba7b5b75f9513b4a3b3a307aff516eb0f111095633510d1fee25f8",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-066",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-066/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "a043022d61c4002b29ea7cf4ecf85baacb45e3323ad7157cebeb5760fc8196e4",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-067",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-067/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "2a516284e6c7b41729362b714f62dfb86f84230b3e60201d5d3164e3cbde8717",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-067",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-067/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "5ac4f4ffe9010b612f575dd39cbb180624614544cc88004273e9f188d51d4fd6",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-068",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-068/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "3dc2616580092525c5317f94d4d48e0ef03be7298f317b748dfcaf8be6162842",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-068",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-068/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "781cf51668e95a93499c27c3565082ef7f52a025177a0ccc4a9d32b38d0c3773",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-069",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-069/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "209d8f1c40c2609dff5a814be114c502d54a9ce82039e39a7aac21a621619ba7",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-069",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-069/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "cb3ad97f748a5e964370e1c97858e0ae73459a01e5f4ab65976b42d16451a42e",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-070",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-070/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "6493a0bd1e7aafa9c99a10aa4773c943e107fbe20ecca0a56b2591424c49b51e",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-070",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-070/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "1a892bbb722987a7019e503bb1e832856679df76ed262099e959d4188f323d12",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-071",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-071/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "bb2b314841e91cb712b493c3494e7769e8a858c663316483002291e96344ed6e",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-071",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-071/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "fc9b9fda4acc109b144a98a30081ec63a99bf12eb46cbb7eb99517ef516ecfc6",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-072",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-072/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "6b2905dfcadbd92f242e0590bde59d3b075621e7760ef3cf462b1bbdd150a033",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-072",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-072/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "03df25703f7a8df25d3c883d0ddace9e652c2f5732160b3861d8c928f32335fe",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-073",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-073/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "7e41de8d15f5c3639c39b7cacc1ccdf8926c3d2a8f17e7197d9499d1b0c2c2a0",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-073",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-073/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "8da477e43580f98f893618956fa336e2dfa5914cf15f016693fe159de6c17b65",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-074",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-074/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "452a5ab3174c538667fd0cc4cd8f5776b5ab789296d45ecd676d8a28c5079b2a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-074",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-074/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "722916a9df94804d0b823642f747848a4584780c6b1c15ba8926e1583945e2fc",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-075",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-075/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "1fc6e01612189049f6f796cff4a764613413a495dbda93c02c316087554e2836",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-075",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-075/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "a608c4109a8f176e910f9a178a47ac16878c9e480ccf3b42a997f0bba264481c",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-076",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-076/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "93d7812fa5e58b098f33e30651096b0449f8abcc6058e0efc331fa216140447f",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-076",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-076/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "761954060aefe4ccf7014b282bf57b31a0000e7069968ae4da6783a6eb6ddcae",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-077",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-077/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "4d9e135b81570e52685c2888336188ac9a64e7a3b7287632b37fcef9e688e9ba",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-077",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-077/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "b69c47a14f116c1871814db4a41ac35cc2c1ead97007b2a5b395e4737f254b97",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-078",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-078/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "6fa9be71e06374d572c12e42f057934c163f968e799626540134db87a8f13bb3",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-078",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-078/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "7114e7845109ba290c7e637910c7a1d2d5ed1daf8946108e4a1829b42de97e8c",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-079",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-079/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "43909e7995705e0b126a470eccf064810555c0127aa68d52b57e57db31b6d1e5",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-079",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-079/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "1781ff73e638bf67a9b11370d2c2c08c13b55483a490cd03aa27268dc70766ff",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-080",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-080/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "5f29ffb2ab238144ee54c8b65484b685c48d95025479317835174d6658ced1e1",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-080",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-080/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "130218f800b2df0380e92195f804dec936cb672ca7669f3e1c0b16dbcd117c21",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-081",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-081/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "74fe185b8204964a103f69b3f8b36e6327e6d21acc8236f08b419d16283b35d9",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-081",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-081/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "65923ab7072d1ddd2d3133fe4191934a5dfbffeeed2c4439a17747b4faf92e7e",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-082",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-082/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "9ad8b6a77684357d771e034b15176e15c9c988cfebc0d5207df695eb9886db48",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-082",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-082/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "b68475794c3de0c568f51eba9205ebc1580719886bbd0c0bc7bf063c572bc404",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-083",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-083/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "9db8a7f78b20dba0a998682bd91ad94c0e02fb4c599d10874262ee6e1c052e7b",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-083",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-083/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "fd3fe8b6384d37ba50a67bf208bd01e5a6a2f244e459583e450a9d52a468df56",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-084",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-084/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "f4b29fb96e4d30e3775a7bd5c60c851d6422a0e2f20a69cb3b5ae86b962d0ccf",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-084",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-084/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "fd88e7d8c3409ab7737d1b7c2228f2089194132b4f6eca4770b80735e36545df",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-085",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-085/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "52f29d5cde8efdf2f74bf8b7724f4d77adabc07fafbcc9d73a0fbc42da2d359a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-085",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-085/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "e18f56046cbb2e6f456306f0e1c13eca15a19664e136f8774c2acfa9067f41fd",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-086",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-086/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "6b0ef3a08b2edae905dab61311168e6d931da3f4037baeee65f49c97abde8c11",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-086",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-086/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "387e661ffc71b6b5183ba99f184a9494c3081738591adccbb366d646a866f165",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-087",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-087/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "6c03dffd43f47e9836f73a929f26790d016a85eed3ce281fefa4b2c274446c12",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-087",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-087/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "a0788b56ffb32538671e05b1fc824db28b9a72947d391ddf4e45fe6ae155a869",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-088",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-088/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "c25d1ea46dd2ab8f8b3202c176095923afe174858fbbca9eb03298509261cd55",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-088",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-088/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "3b12147aec0b83b40814ca21171f5d614ac44be0878152f62f8ddb116dc5fb42",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-089",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-089/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "43b7225595d6b30ce33949be5af99066ac228d633ab5c3e796957f77c2b2e0ed",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-089",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-089/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "42ee7b76a9d66756d4662a8c5f01475d0183f3733d917b0701bfc1ef2422fd40",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-090",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-090/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "5e68d7e0b3d11698324cc03cbc8e5220ff3652ab07028b0983dbc17ad4bc2617",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-090",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-090/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "56dcc5553c03ceca2c697781884a6bbf617523cbb251aa2eb0a0342c0a369373",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-091",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-091/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "51658623722070ba89d2bd34b091fc1a1be768b636be8e2b3c28a5dd3e167c93",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-091",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-091/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "88f76fc22e221195a844b5116d47cfe6ba9f0ac641fb6beb8a9d4614d9b6aec6",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-092",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-092/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "2e861eeba55fff801d0592663796877ec3b57f5ecac8ff88bc933376c7d80ed0",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-092",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-092/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "e51e1872a828a67ff60b859eb8654185a51d79dc03245fd790c393be9ab4be8e",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-093",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-093/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "a852e42779986cc7fb1ace0f4077d7aa73b24098dcffce46667d0b2d81830e73",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-093",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-093/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "ca62fe2f72f36e2872af7d265c96015123ff3d0eeb53853eb0c504aca5d95a73",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-094",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-094/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "2ef7aa61119f845154ac5c018e53ddaea21d50898fe183b2313dbb4c1d585d80",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-094",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-094/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "c89075aacd362d8bf8cb72a8124289405987c6668d7f0d8e7feb5f6235cec057",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-095",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-095/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "182cba9a553b9c547a98d64f708baa138d1d4c8336135724b8cc2e7fd2a8543f",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-095",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-095/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "f57c2d16d651847f1ea487e4ebd4a7bdf82efe2b771c9634e71b1cf7565832d8",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-096",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-096/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "002c7aa51bee390e31135705551cfc4d981277de94b3391c865ef6043ab41e3b",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-096",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-096/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "78a6573ccd0adf9d54761c98839e8be9d9d78808698a479ab98ca6e3520305c8",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-097",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-097/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "f117ccdf00304458c9f259e469e4dd23ae159e5821daf7e5ba4053c0eff8fded",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-097",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-097/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "7235b59b2ab4d1a38001bf0b68efa707958c040d83c72ca49e116494354c349a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-098",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-098/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "3b57068af833ea2e80cbe0e0273850561dce3c11298eacc0d4cb93635149dd53",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-098",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-098/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "d7e319235f1e8c2a4e3d3b30d0de3aae99b5d62465b5fa14c51aabbcc7ab55d6",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-099",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-099/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "36bd4160debdcaae3a8ff4e0f6bc78b81e7d1faa3ab5298b82d40e5f8d383941",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-099",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-099/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "dba8fd479020d66df1062fa001a1fbee8bd44e6a4901b5415346e1c561d3d8b9",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-100",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-100/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "cef796a40b7da6cb2a84079aef7ad9c02a633e798e62ad844a29621499494312",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-100",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-100/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "26661d87bf8a1c7cc940f54deeb56e6e8e8af37a5829149d805eb4a5e2576ced",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-101",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-101/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "12c8f3d2e9538ab3839248417f400bb7dfea5511e803a4db61880788ecd380ef",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-101",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-101/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "ca7039a13e2028c8813d0a89b18222d66b2bb3f8869c55663af3ff9174b87f74",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-102",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-102/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "46b18fbad9978acedaeb2e214a9258d5dc519c188bd5911440849d603c788f61",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-102",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-102/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "a88648020c5be7b645f2265d95f4ad643f0c3b04ed62e9d7e871a6aab8547490",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-103",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-103/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "b97c9ac25e1bb7aff47b8c71f9694ea3fc2ac4afbd150b8a6a440962a8caf865",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-103",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-103/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "07018c522b8d10006b784c3af9aaba1f8146218f6bced736a2934a189d291145",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-104",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-104/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "e00b8027da007b0aeadca70fd1218a69ee3403ed923a3a3de7ec34f71ea9c937",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-104",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-104/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "758e2b26968bd77232143ead542067533619ab9e3ac60fa9dd45a49104ab94ba",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-105",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-105/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "a6ab38acb21ba857ba6279f0b8682b9644e3a3be8d8df5035b1e8cd7f4aa2294",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-105",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-105/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "3e2457b6762b8d02c0a969c4aadaf97b0590d9b020ad72a0b8c49a8f50ef6128",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-106",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-106/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "cefff1d960410329f6c4da4414e29602b26d5a38e25b08a966314d584ed1f475",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-106",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-106/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "90018780f6057dd6fc03472de22baa2a9d23d54faea7a8ca3cb0a7dc93846e00",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-107",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-107/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "3bde625f3fa0a050fec0f5d62e1961f59315d77e4af372e20efb09fbe06eac7c",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-107",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-107/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "94b94fe8b9e5ce1b4f85240e22389c6737c021f033e60ea58298c4c40ff55669",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-108",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-108/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "1f3afc1cb466f0c85e231487ac7456e7574f16fe9eb923494c8afa8214cfc51b",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-108",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-108/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "3dbb9a19ab602bb10d41965f7eeda17cb0eef659739ea8b35600930bf97ba5c6",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-109",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-109/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "f9df34a81ccc6bddfaee2d401f2a899bfb285125e7712e62d6cd221b985ef2f6",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-109",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-109/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "4beec413b7c43816f6fcc918730bd43f60a0215b200120ee2476682a3bab3bbe",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-110",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-110/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "459d35b089d703a0644d634fc7fd2db7242e99b922215f87409816d5b93f0618",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-110",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-110/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "28d26e8b7d6fecdb13e9ea7b2f711b4ac295e7b6e8f28421b8f1f580e778a348",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-111",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-111/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "45957cc2b5a295035aaa8a19c8551b5db7c3a1177fc17b6b7f8e0570846a5e5c",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-111",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-111/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "c3786751989104342bfd74c3f9fdbe57f5bcdf96e4325db5c7639e7532964ddb",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-112",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-112/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "124a23b4afacef4a83966e67e546c63aee9c43ec1c5077243fb190b1f1535aad",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-112",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-112/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "67fbd01324b23e745f683e7085717b5c02695d1c5e481c74e6881438039dd96e",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-113",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-113/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "5371ff6177aef0469e422ddbac563cf85ad346acda60b4c05b2a37d0a4430a08",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-113",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-113/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "100740628c0bc400b6a98b1b3e302141018a09500d58ebbbe2934cb029e0e9f1",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-114",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-114/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "fe42506e7656015a74b017a506c8eee9e55b284262f9a57afe524bcb691554f6",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-114",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-114/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "7ead18c6365606a593a5f1b6662c152680590652b62e4cef218f606987bb6f23",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-115",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-115/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "27948cec733c9aabfec9be298d268d6db98304ed89e8bc1b25cb5041511bba39",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-115",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-115/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "1f3b4442b41e6ed0dfc888657e0d27c632d1f07d521e51e6892ea0acc4373485",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-116",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-116/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "8cb50d56a31d16ed956e9d2951dd0c2530c5a023ebe8c0891f4a4639de86720f",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-116",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-116/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "ef7e4756f09b40234a0db042e9d37281f95b5c249a025624e878b279e7dbd213",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-117",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-117/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "146d0ac7d92d4377999087b96516382b8f5b6e1e152a6bdccf62146a017f8e50",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-117",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-117/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "2b601627172b11fe4a778f948b0206ac3386c134a0086f9adb8be258cd7d2fb3",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-118",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-118/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "7ec23e158723d4792f3fc76b456b8795e8fc208c99e3e4b576ae7ce80ef4afe5",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-118",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-118/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "fa13f52a30c065fb4bbb547893bc29209c55183b070e81e49c0a9b1afbc5a301",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-119",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-119/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "09ae3dd211f86cecbe3d3999b1db58a484087eef30441f945e79fe3ac62878b6",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-119",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-119/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "18d282ac2499b6c6ed8834dafeeb48b6fda16fb33fb057a71f931e7843c9b693",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-120",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-120/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "149a548f54aef305673d1d77e256a63d615804df78ed6d5c1fcf8cfc781c9aa9",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-120",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-120/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "1786bf1d1a812d4fc7ca2bc2803d21e7af49e33fe305caf263e788bf7eacfe3d",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-121",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-121/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "4845eaadae44d14b893e5317eef66c3d6db4a96e978d1e365a6469af745425c3",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-121",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-121/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "9e23211daf15307d3dfebe383447c3a7e490a2cb79612b34b4b7ba08489230d4",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-122",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-122/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "bf0713e02885439b6625e4cf71bbeb8876446dc2572a9bf5c57f459ff4c25063",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-122",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-122/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "a26b5756793400f582943e8a410ce5f792dc3b054d4ce3ab5711fc5746ea80f9",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-123",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-123/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "dde9ecacfc76651570743514614ce5bcfdc6c389fbf5e86eded46784757ffda3",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-123",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-123/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "68f67e43eb9ddf4a14a35618c939bae43af1311fa3f2d009b7f64fefc158db52",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-124",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-124/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "bf85bde809b002cf0595c5ed77027b6ed1b12b05f80de02d5b00f9c95a1c7b0c",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-124",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-124/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "abf685b9ee673b4714c4fa8e6dd963eed046737556ef6bffd407ebd5878bfcba",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-125",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-125/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "4a89bbc3cac6cdda9a6f4c6490c82b38c51c9bd62be575c2fd4d422cf5b1b213",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-125",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-125/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "8c26fdce0990d0fd62ccc8f0c64a2adeb0a4aec8c22f339feb34c787cb6376e2",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-126",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-126/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "3a5e98f2391d1288d6a922140edd1169d0bcf83ef022cb9c2892d324a83465d4",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-126",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-126/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "a67e118502b425e7de20ee6077ea65eaa35c4cfeecba52b235c7036eccbef259",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "message-127",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/message-127/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "272ec2d2afbbca97c7db0558b30c53da31b9a8931b71686c6c933e33411be69b",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "prefix-127",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/prefix-127/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "b49f442a573adef0489e506da03f350535b3d2b7272b1e444a33d122e430e617",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "unicode-0",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/unicode-0/input",
+        "--expected-status",
+        "fatal"
+      ],
+      "exit": 0,
+      "stdout_sha256": "0284b7e9ca9515226759f6f66b1e2a8202b102da776ba92bccb2cb37f38aeee8",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "unicode-1",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/unicode-1/input",
+        "--expected-status",
+        "fatal"
+      ],
+      "exit": 0,
+      "stdout_sha256": "b36c0076c7e28a52a8a9cb89306b164f887df89d715680d7b1ca8a858a8f3d33",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "unicode-2",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/unicode-2/input",
+        "--expected-status",
+        "fatal"
+      ],
+      "exit": 0,
+      "stdout_sha256": "843bf7ed58b00a489e8bbfb111b6fdc7298d92e1b7c41be1a10910a40ec901e7",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "unicode-3",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/unicode-3/input",
+        "--expected-status",
+        "fatal"
+      ],
+      "exit": 0,
+      "stdout_sha256": "15e7e320907b2dade16b8d45d2ad5070f622bee118421e4ba5fe4bc362c6bedf",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "invalid-message-0",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-message-0/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "47ee7232edf10f633c40acd373ed16ac7b2cac42f6b21d07dd428c2b5c45c014"
+    },
+    {
+      "label": "invalid-output-0",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-output-0/input",
+        "--expected-status",
+        "ok"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "50655cc14c99ab0b8536ad26bb461e3eae1ddb53efe659c23d686bc9f3deebda"
+    },
+    {
+      "label": "invalid-json-utf8-0",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-utf8-0/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "aa92ea5c9b3d952e397464f673fe29970ba79d5950a3f54da6be41a5a2d57adc"
+    },
+    {
+      "label": "invalid-message-1",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-message-1/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "6f70d9f591a2ded01a77e0393f162d6139945ebb66e3eca8a8892205768258bf"
+    },
+    {
+      "label": "invalid-output-1",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-output-1/input",
+        "--expected-status",
+        "ok"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "15c3e33364f6f69ebfb1a0a58827a06cc6827be6bbd3d7b8a2ec43582f932dca"
+    },
+    {
+      "label": "invalid-json-utf8-1",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-utf8-1/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "aa92ea5c9b3d952e397464f673fe29970ba79d5950a3f54da6be41a5a2d57adc"
+    },
+    {
+      "label": "invalid-message-2",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-message-2/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "eea7b5c04773a203b3b16a015144dccc588b9c44553ccb0f019f8c3d996d69c4"
+    },
+    {
+      "label": "invalid-output-2",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-output-2/input",
+        "--expected-status",
+        "ok"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "7346384d58ebe10174ded1556e52d5725362238d8c333d85481016f01a98b6fa"
+    },
+    {
+      "label": "invalid-json-utf8-2",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-utf8-2/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "aa92ea5c9b3d952e397464f673fe29970ba79d5950a3f54da6be41a5a2d57adc"
+    },
+    {
+      "label": "invalid-message-3",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-message-3/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "835a83b4189e9f2c5dfeff163979a64863dabf276c944aedafbd3331817bf5a6"
+    },
+    {
+      "label": "invalid-output-3",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-output-3/input",
+        "--expected-status",
+        "ok"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "feee40694356364e1f659f54a7d73a0a251ffeff38f83c838109f88649a2c9be"
+    },
+    {
+      "label": "invalid-json-utf8-3",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-utf8-3/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "aa92ea5c9b3d952e397464f673fe29970ba79d5950a3f54da6be41a5a2d57adc"
+    },
+    {
+      "label": "invalid-json-control-000",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-000/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-001",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-001/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-002",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-002/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-003",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-003/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-004",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-004/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-005",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-005/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-006",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-006/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-007",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-007/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-008",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-008/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-009",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-009/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-010",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-010/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-011",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-011/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-012",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-012/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-013",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-013/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-014",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-014/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-015",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-015/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-016",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-016/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-017",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-017/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-018",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-018/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-019",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-019/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-020",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-020/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-021",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-021/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-022",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-022/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-023",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-023/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-024",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-024/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-025",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-025/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-026",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-026/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-027",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-027/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-028",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-028/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-029",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-029/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-030",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-030/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "invalid-json-control-031",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/invalid-json-control-031/input"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4c47a42d8f74011a698bf0b936dab4749de58ccefa9b4e673b6cb365ac865479"
+    },
+    {
+      "label": "json-numbers-not-reencoded",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--read-observation",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/json-numbers-not-reencoded/input"
+      ],
+      "exit": 0,
+      "stdout_sha256": "579a8abf5060448df19607bebfee65f2def043abfad7b6c54ddc972a18bee40b",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "diagnostic-all-bytes",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--quote-file",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/diagnostic-all-bytes/input"
+      ],
+      "exit": 0,
+      "stdout_sha256": "0fc77a8a1561fa1ec27ee14f4b2c0617e95011fb37dd0a43161a69a17c99af9c",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "sampling-0",
+      "argv": [
+        "bash",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/sampling.sh"
+      ],
+      "exit": 0,
+      "stdout_sha256": "61f17c84be1d4df5738eaad505ff72a444b2a2c29a6a91abe2370c316ed47b58",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "sampling-1",
+      "argv": [
+        "bash",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/sampling.sh"
+      ],
+      "exit": 0,
+      "stdout_sha256": "080c07ef84c36ab48cfc7d7785eec1db5a7100741f300cd948a16ee0d4ca19c0",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "sampling-2",
+      "argv": [
+        "bash",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/sampling.sh"
+      ],
+      "exit": 1,
+      "stdout_sha256": "82cf33e875ac41059a75e7c5f40681cdb12658b346a194530a593de2e924bb58",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "sampling-3",
+      "argv": [
+        "bash",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/sampling.sh"
+      ],
+      "exit": 1,
+      "stdout_sha256": "c53efe92a2597549b60a3c8afe87cb2d26f619ace85ef9b58e4354d305f37239",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "sampling-4",
+      "argv": [
+        "bash",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/sampling.sh"
+      ],
+      "exit": 1,
+      "stdout_sha256": "b49ba605170a4f0cafd28cfea66f79785fcc16eea24435fc6d38a20a90b70e4d",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "sampling-5",
+      "argv": [
+        "bash",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/sampling.sh"
+      ],
+      "exit": 0,
+      "stdout_sha256": "d42e1240fd4888067883c5676233ca3050d809ec04af5118f90b932c4a44a41e",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "native-plain",
+      "argv": [
+        "go",
+        "run",
+        ".",
+        "plain"
+      ],
+      "exit": 1,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "da79ecb937f8edc951ad245b54e0e933f7e8dd01749967603390ec8245da49e3"
+    },
+    {
+      "label": "native-message-plain",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/native-message-plain/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "b74eb1e8774d19c28f72b350f0380be53878fca363d2b2c15d497e3a49a222bd",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "native-prefix-plain",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/native-prefix-plain/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "e6dc88e1ee93fb3dc65c609a23975ffa879e8b4bca7f79373e10f2b43856f926",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "native-repanic",
+      "argv": [
+        "go",
+        "run",
+        ".",
+        "repanic"
+      ],
+      "exit": 1,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "6fc02c456e627350c244445d295cf491d7081d3a1c9ee25caae6c7a4779192cd"
+    },
+    {
+      "label": "native-message-repanic",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/native-message-repanic/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "b74eb1e8774d19c28f72b350f0380be53878fca363d2b2c15d497e3a49a222bd",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "native-prefix-repanic",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/native-prefix-repanic/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "e6dc88e1ee93fb3dc65c609a23975ffa879e8b4bca7f79373e10f2b43856f926",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "native-fatal",
+      "argv": [
+        "go",
+        "run",
+        ".",
+        "fatal"
+      ],
+      "exit": 1,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "7e3f3f5fe45d3fc2612feeeca32af5c44ee34da389949401273923272dc7539c"
+    },
+    {
+      "label": "native-message-fatal",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/native-message-fatal/input",
+        "--expected-status",
+        "fatal"
+      ],
+      "exit": 0,
+      "stdout_sha256": "a820de650395f01b853bf4940b680d90caf8a9b9c6d7c25dd70c713205838b42",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "native-prefix-fatal",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/native-prefix-fatal/input",
+        "--expected-status",
+        "fatal"
+      ],
+      "exit": 0,
+      "stdout_sha256": "e6dc88e1ee93fb3dc65c609a23975ffa879e8b4bca7f79373e10f2b43856f926",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "native-invalid",
+      "argv": [
+        "go",
+        "run",
+        ".",
+        "invalid"
+      ],
+      "exit": 1,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4b2ba8c17974534af441a04976fd23263d584e3ee0005caee77f39d0a15b961e"
+    },
+    {
+      "label": "native-message-invalid",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--abort-message",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/native-message-invalid/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 3,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "47ee7232edf10f633c40acd373ed16ac7b2cac42f6b21d07dd428c2b5c45c014"
+    },
+    {
+      "label": "native-prefix-invalid",
+      "argv": [
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/coverageharness",
+        "--split-stderr",
+        "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-review-0tsp7qq5/native-prefix-invalid/input",
+        "--expected-status",
+        "panic"
+      ],
+      "exit": 0,
+      "stdout_sha256": "e6dc88e1ee93fb3dc65c609a23975ffa879e8b4bca7f79373e10f2b43856f926",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "scope": "Raw-byte/descriptor/helper fidelity checks; synthetic shell probes are not Go conformance."
+}
