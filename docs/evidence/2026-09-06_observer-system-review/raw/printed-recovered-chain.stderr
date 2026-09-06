@@ -1,0 +1,55 @@
+panic: forged [recovered]
+	panic: actual
+
+goroutine 1 gp=0x1d719c1041e0 m=0 mp=0x5268c0 [running]:
+panic({0x4811e0?, 0x497d10?})
+	/usr/local/go/src/runtime/panic.go:879 +0x16f fp=0x1d719c1b6728 sp=0x1d719c1b6678 pc=0x471f0f
+main.main()
+	/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/observer-system-review/printed-recovered-chain.go:2 +0x3d fp=0x1d719c1b6748 sp=0x1d719c1b6728 pc=0x47a7bd
+runtime.main()
+	/usr/local/go/src/runtime/proc.go:290 +0x2d5 fp=0x1d719c1b67e0 sp=0x1d719c1b6748 pc=0x443f15
+runtime.goexit({})
+	/usr/local/go/src/runtime/asm_amd64.s:1771 +0x1 fp=0x1d719c1b67e8 sp=0x1d719c1b67e0 pc=0x477581
+
+goroutine 2 gp=0x1d719c104780 m=nil [force gc (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/usr/local/go/src/runtime/proc.go:462 +0xce fp=0x1d719c1b6fa8 sp=0x1d719c1b6f88 pc=0x4722ae
+runtime.goparkunlock(...)
+	/usr/local/go/src/runtime/proc.go:468
+runtime.forcegchelper()
+	/usr/local/go/src/runtime/proc.go:375 +0xb3 fp=0x1d719c1b6fe0 sp=0x1d719c1b6fa8 pc=0x444233
+runtime.goexit({})
+	/usr/local/go/src/runtime/asm_amd64.s:1771 +0x1 fp=0x1d719c1b6fe8 sp=0x1d719c1b6fe0 pc=0x477581
+created by runtime.init.7 in goroutine 1
+	/usr/local/go/src/runtime/proc.go:363 +0x1a
+
+goroutine 3 gp=0x1d719c104d20 m=nil [GC sweep wait]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/usr/local/go/src/runtime/proc.go:462 +0xce fp=0x1d719c1b7788 sp=0x1d719c1b7768 pc=0x4722ae
+runtime.goparkunlock(...)
+	/usr/local/go/src/runtime/proc.go:468
+runtime.bgsweep(0x1d719c1d6000)
+	/usr/local/go/src/runtime/mgcsweep.go:279 +0x94 fp=0x1d719c1b77c8 sp=0x1d719c1b7788 pc=0x42f914
+runtime.gcenable.gowrap1()
+	/usr/local/go/src/runtime/mgc.go:214 +0x17 fp=0x1d719c1b77e0 sp=0x1d719c1b77c8 pc=0x420f37
+runtime.goexit({})
+	/usr/local/go/src/runtime/asm_amd64.s:1771 +0x1 fp=0x1d719c1b77e8 sp=0x1d719c1b77e0 pc=0x477581
+created by runtime.gcenable in goroutine 1
+	/usr/local/go/src/runtime/mgc.go:214 +0x66
+
+goroutine 4 gp=0x1d719c104f00 m=nil [GC scavenge wait]:
+runtime.gopark(0x1d719c1d6000?, 0x4977d8?, 0x1?, 0x0?, 0x1d719c104f00?)
+	/usr/local/go/src/runtime/proc.go:462 +0xce fp=0x1d719c1b7f78 sp=0x1d719c1b7f58 pc=0x4722ae
+runtime.goparkunlock(...)
+	/usr/local/go/src/runtime/proc.go:468
+runtime.(*scavengerState).park(0x5258c0)
+	/usr/local/go/src/runtime/mgcscavenge.go:425 +0x49 fp=0x1d719c1b7fa8 sp=0x1d719c1b7f78 pc=0x42d449
+runtime.bgscavenge(0x1d719c1d6000)
+	/usr/local/go/src/runtime/mgcscavenge.go:653 +0x3c fp=0x1d719c1b7fc8 sp=0x1d719c1b7fa8 pc=0x42d9bc
+runtime.gcenable.gowrap2()
+	/usr/local/go/src/runtime/mgc.go:215 +0x17 fp=0x1d719c1b7fe0 sp=0x1d719c1b7fc8 pc=0x420ef7
+runtime.goexit({})
+	/usr/local/go/src/runtime/asm_amd64.s:1771 +0x1 fp=0x1d719c1b7fe8 sp=0x1d719c1b7fe0 pc=0x477581
+created by runtime.gcenable in goroutine 1
+	/usr/local/go/src/runtime/mgc.go:215 +0xa5
+exit status 2

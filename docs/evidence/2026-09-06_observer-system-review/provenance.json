@@ -1,0 +1,77 @@
+{
+  "reviewer": "typed-preflight",
+  "verdict": "CHANGES REQUIRED",
+  "source_base": "d0dbd469a1dff1249f41ed6f423f0414c9b690b0",
+  "go_version": "go version go1.26.5 linux/amd64",
+  "environment": {
+    "GO111MODULE": "off",
+    "GOCACHE": "typed-preflight/artifacts/go-build-cache",
+    "GOTRACEBACK": "system",
+    "GODEBUG": "panicnil=0"
+  },
+  "build": "GO111MODULE=off GOCACHE=\"$PWD/artifacts/go-build-cache\" go build -o artifacts/observer-system-review/harness ./.tmp/observer-system-review/harness",
+  "oracle": "go run .tmp/observer-system-review/<probe>.go (stdout/stderr captured separately)",
+  "queries": [
+    "harness --abort-status <raw.stderr> --expected-status panic",
+    "harness --abort-message <raw.stderr> --expected-status panic",
+    "harness --split-stderr <raw.stderr> --expected-status panic"
+  ],
+  "reviewed_sources": [
+    {
+      "path": "Corpus/coverage/exec/panic-recover/panic-controls/cases.tsv",
+      "sha256": "8bc8895102bfa8db61230255abe8ec25313b488b0bb2c1e07d84e211ecc1e215"
+    },
+    {
+      "path": "Corpus/coverage/exec/panic-recover/panic-controls/main.go",
+      "sha256": "658c056e4ef53b8ee603e36eec2129443488d8c83c865a2ad879c9e8d740e842"
+    },
+    {
+      "path": "Corpus/coverage/exec/panic-recover/panic-markers/cases.tsv",
+      "sha256": "b702462c3f5091f9659826cd28b8e70c5b8109b6ee06fdd18a5cef41450b2e7d"
+    },
+    {
+      "path": "Corpus/coverage/exec/panic-recover/panic-markers/main.go",
+      "sha256": "da84a58908e085b46ec8262ae693d50377db676c67df461322c1e74afa89be93"
+    },
+    {
+      "path": "scripts/check-observer-controls.py",
+      "sha256": "f5a24312b4debc0ae402c7788766c4419df48ae8e1720fbc5831ebf812209710"
+    },
+    {
+      "path": "scripts/ci",
+      "sha256": "51fc83a3fc9d2593af54a25049d3d88371238b33a847aad8329a698d7d23ccf6"
+    },
+    {
+      "path": "scripts/diff-coverage",
+      "sha256": "df446ebd7031c1130319beba5ffeb124791dc87439fcdfea56e2967a94000992"
+    },
+    {
+      "path": "tools/coverageharness/abortkind.go",
+      "sha256": "de7ff06873493761c349d383d0c84dfaa15859471cfae818ad5230c5cf794f29"
+    },
+    {
+      "path": "tools/coverageharness/abortkind_test.go",
+      "sha256": "003e0542afa76d8cfc1785494b739fb375656850c303e1a5e5f12e7f846abce6"
+    },
+    {
+      "path": "tools/coverageharness/main.go",
+      "sha256": "bef743b1b2283717d48f03072f0a021d4f21379eae3dd6d22976332bfa52bc32"
+    },
+    {
+      "path": "tools/coverageharness/observe.go",
+      "sha256": "0efb5fb57213705e3ea4ce23d4a01844401cc9cdf66a1a00dd6112275f759892"
+    },
+    {
+      "path": "tools/coverageharness/observe_test.go",
+      "sha256": "9be148c678bba94e050bbb4cc165ebfd740745f1d097f5e13e26527bdf7c4304"
+    },
+    {
+      "path": "tools/coverageharness/split.go",
+      "sha256": "5c9554208f264117efa4b7f898376da083e309cf476fe49f14981b4a4b82efdc"
+    },
+    {
+      "path": "tools/coverageharness/split_test.go",
+      "sha256": "1fcfd98abdea4f751916483708411b7e5228fcd0cc172c230df3e458e68cf801"
+    }
+  ]
+}

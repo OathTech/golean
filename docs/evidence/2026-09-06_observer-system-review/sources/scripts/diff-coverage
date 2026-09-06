@@ -1,0 +1,2115 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+
+MANIFEST="${1:-}"
+OUT="${GOLEAN_COVERAGE_ARTIFACTS:-artifacts/coverage}"
+RESULTS_TSV="${GOLEAN_COVERAGE_RESULTS:-$OUT/latest.tsv}"
+META_TSV="${GOLEAN_COVERAGE_META:-$OUT/latest.meta.tsv}"
+FRONTEND="${GOLEAN_FRONTEND:-native}"
+GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
+LAKE_BUILD_TIMEOUT_SECONDS="${LAKE_BUILD_TIMEOUT_SECONDS:-120}"
+GO_TIMEOUT_SECONDS="${GO_TIMEOUT_SECONDS:-30}"
+LEAN_TIMEOUT_SECONDS="${LEAN_TIMEOUT_SECONDS:-30}"
+# The depth guard's tracer (`golean choice-trace`, memo P1) replays the
+# default stream and the three invariance streams in lockstep with the
+# accountant AND runs the enumerator driver on each — eight interpreter
+# passes where native-json-run makes one — so its wall budget is 8x the
+# single-run budget by default. Named in the cause when it fires.
+LEAN_TRACE_TIMEOUT_SECONDS="${LEAN_TRACE_TIMEOUT_SECONDS:-$(( LEAN_TIMEOUT_SECONDS * 8 ))}"
+# The membership/confluent/racy-lane enumerator explores the whole
+# schedule tree in one process (up to millions of pool steps on the
+# 3-goroutine litmus shapes), so it gets its own, larger budget.
+LEAN_ENUM_TIMEOUT_SECONDS="${LEAN_ENUM_TIMEOUT_SECONDS:-300}"
+# tier=slow re-certification gets a larger budget still. The biggest slow
+# row (imported-goose/channel/google-search, ~40M pool steps) measures
+# 94 s single-core on the dev box; a hosted 2-core runner plausibly lands
+# near ~300 s (ESTIMATED — inferred from the flake itself, not measured),
+# so the shared 300 s default sat on the cliff and flipped with runner
+# speed: the 2026-08-13 nightly FAIL vs the 08-14 PASS on the SAME commit
+# is best explained by this timeout — the enumeration is a deterministic
+# DFS over a wire-hash-pinned input, so a semantic failure could not flip
+# between runs; an enumerator OOM kill (exit 137) is the one load-
+# dependent alternative, which the exit-code-naming below now makes
+# distinguishable (docs/2026-08-14_ci-runner-death-and-slow-tier-
+# timeout.md). Still a hard bound — the guard stays fail-closed, it just
+# no longer sits inside normal runner variance. Quick-lane enumerations
+# keep 300 s.
+# Slow-tier wall clock raised 1200 -> 3600 (W3.2 slice 1 stage C,
+# 2026-08-20): B1's post-op boundaries grew the certified slow trees —
+# the largest still-tractable row (goroutines/buffered-wake/fifo,
+# 114.4M steps+probes) measures ~4.5 min single-core on the dev box,
+# ~760 s at a hosted 2-core runner's ~150k steps/s; 3600 keeps the
+# 2026-08-14 post-mortem's ~4x headroom rule. Still a hard bound —
+# fail-closed unchanged. Composition caveat (same post-mortem): the
+# nightly job timeout must cover the slow rows' sum; see the stage-C
+# log entry for the measured per-row costs.
+LEAN_ENUM_SLOW_TIMEOUT_SECONDS="${LEAN_ENUM_SLOW_TIMEOUT_SECONDS:-3600}"
+
+# STRICT-LANE DEPTH GUARD (membership-depth memo P1, §5 — [USER]-ruled
+# 2026-09-03; docs/coverage-suite-structure.md "Lane assignment").
+# A strict PASS is a two-part claim: Go equality on the default
+# trajectory AND invariance across the adversarial choice streams. The
+# second part is only made when the streams COVER every bound->=2
+# consumption: `Choices.consume` yields slot 0 once a stream is
+# exhausted, so a row that outruns its stream is compared with its own
+# default trajectory. The tracer (`golean choice-trace`, the lockstep
+# accountant) reports per stream `wideAfterExhaustion` — bound->=2
+# consumptions served after exhaustion — and that is the observable the
+# guard reads. `depth=N` (strict-lane param) replaces the three fixed
+# streams by three SEEDED streams of length N (seeds below; generator
+# recorded in the run meta) which must themselves report 0.
+# Scalars, space-separated (NOT arrays): per-case workers are fresh
+# `bash -c` processes that see exported functions and exported scalars
+# only — an array here would be silently EMPTY in every worker (the
+# first smoke of this guard passed every fixture for exactly that
+# reason: empty streams = the default stream, four times).
+export DEPTH_GUARD_SEEDS="1 2 3"
+export DEPTH_FIXED_STREAMS="9,8,7,6,5,4,3,2,1,0 1,3,5,7,9,2,4,6,8,0 5,5,5,5,5,5,5,5"
+# seeded_stream <seed> <N>: a 31-bit LCG (glibc constants
+# 1103515245/12345), value = bits 16..31 (0..65535), printed as the
+# explicit comma list both `--choices` and `--stream` accept — the two
+# tools see byte-identical streams, so nothing depends on a shared
+# generator.
+seeded_stream() {
+  local x="$1" n="$2" i out=""
+  for ((i = 0; i < n; i++)); do
+    x=$(( (x * 1103515245 + 12345) & 0x7fffffff ))
+    out+="${out:+,}$(( (x >> 16) & 0xffff ))"
+  done
+  printf '%s' "$out"
+}
+# The membership lane's oracle-draw budget K ([USER]-ruled gate change,
+# Mike 2026-09-03, relayed by the coordinator: "yeah, agree on the
+# sampling budget, go ahead as you propose" — adopting
+# docs/2026-09-01_membership-depth.md §4.3 / P2). Per membership row the
+# lane draws `go run` observations ALTERNATING plain and -race (plain,
+# race, plain, race, …), stops early once the distinct observations
+# reach the row's members= pin, else stops at K; rows without a pin
+# draw the full K. K is set by the RUN MODE, not a knob: 32 on the gate
+# path (scripts/ci --diff / default) and 80 under scripts/ci --slow
+# (GOLEAN_SLOW=1 — the same mode variable that selects tier=slow
+# re-certification). Measured basis (memo §4.2-§4.3, two 80-draw runs):
+# the old "5 plain then 5 race" order was a point-mass at the gate
+# budget on 6 of 22 ten-draw rows (the second member almost always
+# comes from -race, which that order reached only at draw 6);
+# alternating + K=32 reaches 21 of the 22 reachable pinned samples at
+# +6.5 min measured. The rule never decides PASS/FAIL — membership is
+# still every draw ∈ enumerated set — it bounds how far the
+# `exhibited=` caption may under-report, and records the budget spent
+# as `draws=`. The per-row `samples=` param is RETIRED by this rule
+# (parse_lane_params refuses it: a param the budget no longer reads
+# would be a silent no-op).
+if [[ "${GOLEAN_SLOW:-0}" == "1" ]]; then
+  MEMBERSHIP_DRAWS=80
+else
+  MEMBERSHIP_DRAWS=32
+fi
+
+# GATE INTEGRITY (grossmith findings §2,
+# docs/2026-08-07_grossmith-findings.md; hoisted ABOVE every infra exit
+# at the maint-check M2 fix — the first placement sat below three exit-2
+# paths, leaving a stale pair readable on them): invalidate the previous
+# run's published results FIRST. Any run of this script that dies before
+# publish_results — missing go, manifest generation failure, manifest
+# not found, empty manifest, lake build failure/timeout, missing binary,
+# killed pool — leaves NO readable results/meta pair, so a consumer
+# (scripts/ci's baseline diff; any programmatic caller) can never judge
+# the previous run's file as if fresh ("same set = no regression" for a
+# run that never ran — the exact ambiguity that produced a pre-release
+# wrong-conformance statement in grossmith). Exit code discipline:
+# 1 = FAIL rows exist and published results ARE authoritative;
+# >=2 = infrastructure, nothing published, nothing readable.
+rm -f "$RESULTS_TSV" "$META_TSV"
+
+# Timeout knobs must be positive integers (audit F1, 2026-08-15): the
+# perl wrapper below hands the value to `alarm`, and perl numifies a
+# non-numeric string to 0 — `alarm 0` CANCELS the alarm, so a plausible
+# operator value like "20m" (or this repo's own "=none" opt-out idiom)
+# would silently DISABLE the guard instead of failing loud. Same
+# fail-loud standard the lane params already get in parse_lane_params.
+# Placed after the rm above so a run dying here leaves no readable
+# stale results pair (the gate-integrity invariant).
+for _tvar in LAKE_BUILD_TIMEOUT_SECONDS GO_TIMEOUT_SECONDS \
+    LEAN_TIMEOUT_SECONDS LEAN_ENUM_TIMEOUT_SECONDS \
+    LEAN_ENUM_SLOW_TIMEOUT_SECONDS; do
+  if [[ ! "${!_tvar}" =~ ^[1-9][0-9]*$ ]]; then
+    echo "diff-coverage: $_tvar must be a positive integer (seconds), got '${!_tvar}' — refusing to run with a disabled or malformed timeout" >&2
+    exit 2
+  fi
+done
+unset _tvar
+
+# Exit 124 = the wall clock fired. EVERY consumer must test 124 BEFORE
+# reading the killed command's (empty or partial) output as a verdict —
+# cause-naming fix 2026-09-03 (noodler-lane finding): four consumers
+# read a timeout as `expected status ok, got ` (empty), as "observation
+# varies with iteration order", as "copied-driver drift", and as the
+# too-narrow soundness alarm — fail-closed but cause-BLIND, and three of
+# them cause-WRONG. Belt and braces: the alarm handler also announces
+# itself on stderr, so any consumer that captures 2>&1 carries the
+# cause in its detail even if it forgets the exit-code test.
+run_with_timeout() {
+  local seconds="$1"
+  shift
+  perl -e 'my $t = shift @ARGV; my $pid = fork(); die "fork failed\n" unless defined $pid; if ($pid == 0) { exec @ARGV; exit 127 } $SIG{ALRM} = sub { print STDERR "run_with_timeout: TIMED OUT after ${t}s — killing: @ARGV\n"; kill "TERM", $pid; select undef, undef, undef, 1; kill "KILL", $pid; exit 124 }; alarm $t; waitpid $pid, 0; my $s = $?; exit($s == -1 ? 127 : ($s & 127 ? 128 + ($s & 127) : $s >> 8));' "$seconds" "$@"
+}
+
+# Invokes the ONCE-BUILT golean binary directly: `lake exe` per case pays
+# lake's startup (and a possible package lock) ~4x per case across the
+# nondet-oracle re-runs — resolved after the up-front `lake build`.
+GOLEAN_BIN="$ROOT/.lake/build/bin/golean"
+lean() {
+  run_with_timeout "$LEAN_TIMEOUT_SECONDS" "$GOLEAN_BIN" "$@"
+}
+
+# A NON-VERDICT exit code names itself (cause-naming slice 2, 2026-09-03,
+# discharging the residual owed at the first slice's audit F1 —
+# docs/operational-lessons.md "A killed command has decided nothing").
+# Prints a cause phrase and returns 0 for every code that decided
+# NOTHING: 124 (the wall clock — the wrapper's own code), 137/143 (a
+# SIGKILL/SIGTERM through the wrapper's 128+signal: a cgroup/OOM kill or
+# an external kill), any other 128+signal death, and any other code the
+# caller does not own. Prints nothing and returns 1 for the VERDICT codes
+# 0 and 1, which the CALLER interprets (equal / not equal; ok / error
+# observation; go run green / red). $1 = rc, $2 = what ran, $3 = its
+# budget in seconds, $4 = the budget's knob. Callers test this BEFORE
+# reading the capture and report at the stage of the check that could
+# not complete — never a pass, never a skip, never a mis-attribution.
+undecided_cause() {
+  local rc="$1" what="$2" seconds="$3" knob="$4"
+  case "$rc" in
+    0|1) return 1 ;;
+    124) printf '%s TIMED OUT after %ss (%s)' "$what" "$seconds" "$knob" ;;
+    *)   signal_cause "$rc" "$what" || printf '%s failed with exit %s (did not decide)' "$what" "$rc" ;;
+  esac
+}
+# The signal-death subset alone, for the `go run ./tools/…` invocations
+# and the enumerator, whose non-signal codes are their own business: `go
+# run` collapses every child exit (a panic, the harness's os.Exit(2), any
+# os.Exit(n)) to 1 and reports the child's code as a trailing "exit
+# status N" line — only a `go` tool usage error yields 2 — so codes 2..128
+# from those sites are a tool refusal with its message, not a kill; the
+# enumerator names its exit code itself. 137 and 143 spelled out because
+# they are the ones a cgroup/OOM kill or scripts/capped's kill produce;
+# any other 128+n (n in 1..64, the real signal range) is a crash that
+# decided nothing either. Prints nothing and returns 1 otherwise.
+signal_cause() {
+  local rc="$1" what="$2"
+  case "$rc" in
+    137) printf '%s KILLED (exit 137 — SIGKILL: cgroup/OOM or an external kill; did not decide)' "$what" ;;
+    143) printf '%s KILLED (exit 143 — SIGTERM: an external kill; did not decide)' "$what" ;;
+    *)   if (( rc > 128 && rc <= 192 )); then
+           printf '%s KILLED (exit %s — died on signal %s; did not decide)' "$what" "$rc" "$((rc - 128))"
+         else
+           return 1
+         fi ;;
+  esac
+}
+
+# Observation equality under the Lean budget. Exit codes: 0 = equal;
+# 1 = not equal (runObservationEq's contract, GoLean/CLI.lean — the
+# codes are documented there and NOT changed here); everything else
+# decided NOTHING — 124 = killed by the wall clock, 2 = runObservationEq's
+# undecodable-observation refusal (its decode message on stderr),
+# 137/143 = SIGKILL/SIGTERM via the wrapper's 128+signal. The
+# comparator's stderr is KEPT in OBS_EQ_STDERR (the first slice's
+# `>/dev/null 2>&1` discarded exit 2's decode message — the cause) and
+# stdout dropped; callers pass the code to obs_eq_cause and report the
+# phrase it names BEFORE interpreting 1 as "not equal". The old
+# `if ! lean observation-eq …` shape read every one of these as
+# "differs" and mis-attributed it (nondet variance, coupling drift, the
+# soundness alarm).
+OBS_EQ_STDERR=""
+obs_eq() {
+  local rc=0
+  OBS_EQ_STDERR="$(lean observation-eq --left "$1" --right "$2" 2>&1 >/dev/null)" || rc=$?
+  return "$rc"
+}
+# Names obs_eq's non-verdict codes (returns 1, prints nothing, for 0/1).
+# Exit 2 is named as what it is — the comparator could not decode an
+# observation — with the decode message; the other codes carry the
+# captured stderr when there is any (124 does not: the wrapper's own
+# announcement is the phrase itself).
+obs_eq_cause() {
+  local rc="$1" said
+  said="$(one_line "$OBS_EQ_STDERR")"
+  case "$rc" in
+    0|1) return 1 ;;
+    2)   printf 'observation-eq could not decode the observation (exit 2 — did not decide; comparator said: %s)' "$said" ;;
+    124) undecided_cause 124 observation-eq "$LEAN_TIMEOUT_SECONDS" LEAN_TIMEOUT_SECONDS ;;
+    *)   undecided_cause "$rc" observation-eq "$LEAN_TIMEOUT_SECONDS" LEAN_TIMEOUT_SECONDS
+         if [[ -n "$said" ]]; then printf ' (comparator said: %s)' "$said"; fi ;;
+  esac
+  # The status is the CLASSIFICATION, never the last printf's: a SIGKILL
+  # leaves an empty stderr, and `[[ -n … ]] && printf` as the last
+  # command returned 1 — the kill read as a verdict (caught red by T7).
+  return 0
+}
+
+if ! command -v go >/dev/null 2>&1; then
+  echo "go not found on PATH; install Go or expose it in the shell to run differential coverage" >&2
+  exit 2
+fi
+
+# THE HARNESS BINARY, built ONCE per run (stdlib slice 3, 2026-09-04): it is
+# invoked twice per case now — harness generation and the oracle's fd-2
+# SPLIT (`--split-stderr`, tools/coverageharness/split.go) — so a per-case
+# `go run` would double the link cost across ~3400 rows. A build failure is
+# a fail-closed exit, never a silent fallback to a stale binary.
+HARNESS_BIN="$OUT/bin/coverageharness"
+mkdir -p "$OUT/bin"
+if ! GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go build -o "$HARNESS_BIN" ./tools/coverageharness; then
+  echo "diff-coverage: could not build tools/coverageharness (fail closed)" >&2
+  exit 2
+fi
+
+# ORACLE VERSION PIN (launch audit D10-F4, 2026-08-22): every fidelity
+# claim is against the pinned oracle. Nothing checked this mechanically
+# — CI enforced it only by environment construction, and the failure
+# mode already happened once (the '1.26.x' float let go1.26.6 move the
+# oracle under the nightly, 2026-08-21). The pin lives in ONE tracked
+# file; docs/spec-sources.md is the prose record. Override loudly with
+# GOLEAN_ALLOW_GO_DRIFT=1 (probing a candidate toolchain is legitimate;
+# recording a run against it as the oracle is not).
+GO_PIN_FILE="$ROOT/baselines/go-oracle-pin"
+if [[ -f "$GO_PIN_FILE" ]]; then
+  go_pin="$(head -1 "$GO_PIN_FILE" | tr -d '[:space:]')"
+  go_live="$(go version | awk '{print $3}')"
+  if [[ "$go_live" != "$go_pin" ]]; then
+    if [[ "${GOLEAN_ALLOW_GO_DRIFT:-0}" = 1 ]]; then
+      echo "WARNING: live toolchain $go_live != pinned oracle $go_pin (GOLEAN_ALLOW_GO_DRIFT=1 — this run is NOT against the oracle of record)" >&2
+    else
+      echo "diff-coverage: live toolchain $go_live != pinned oracle $go_pin (baselines/go-oracle-pin); refusing — set GOLEAN_ALLOW_GO_DRIFT=1 to probe a non-oracle toolchain loudly" >&2
+      exit 2
+    fi
+  fi
+else
+  echo "diff-coverage: baselines/go-oracle-pin missing — the oracle pin is unverifiable; refusing" >&2
+  exit 2
+fi
+
+GENERATED_MANIFEST=""
+if [[ -z "$MANIFEST" ]]; then
+  GENERATED_MANIFEST="$(mktemp "${TMPDIR:-/tmp}/golean-coverage-manifest.XXXXXX")"
+  if ! scripts/coverage-manifest --artifact-root "$OUT" > "$GENERATED_MANIFEST"; then
+    exit 2
+  fi
+  MANIFEST="$GENERATED_MANIFEST"
+fi
+
+if [[ ! -f "$MANIFEST" ]]; then
+  echo "differential manifest not found: $MANIFEST" >&2
+  exit 2
+fi
+
+mkdir -p artifacts "$OUT" "$GO_BUILD_CACHE"
+
+RESULTS_DIR="$(dirname "$RESULTS_TSV")"
+RESULTS_BASE="$(basename "$RESULTS_TSV")"
+META_DIR="$(dirname "$META_TSV")"
+META_BASE="$(basename "$META_TSV")"
+mkdir -p "$RESULTS_DIR" "$META_DIR"
+RESULTS_TMP="$(mktemp "$RESULTS_DIR/.${RESULTS_BASE}.XXXXXX")"
+META_TMP="$(mktemp "$META_DIR/.${META_BASE}.XXXXXX")"
+printf 'result\tid\tfeatures\tstage\tdetail\n' > "$RESULTS_TMP"
+
+manifest_sha="$(shasum -a 256 "$MANIFEST" | awk '{ print $1 }')"
+manifest_cases="$(awk -F $'\t' 'NF > 0 && $1 !~ /^#/ { count += 1 } END { print count + 0 }' "$MANIFEST")"
+# An EMPTY manifest is an infra refusal, decided BEFORE the build and
+# BEFORE publish (maint-check M2: the old check sat after
+# publish_results, so a caller-supplied empty manifest published a
+# results file and THEN exited 2 — and under JOBS=1 died on an unbound
+# variable with exit 1; the auto-generated path never gets here,
+# coverage-manifest refuses an empty selection upstream).
+if [[ "$manifest_cases" -eq 0 ]]; then
+  echo "no differential cases found in $MANIFEST (nothing published)" >&2
+  exit 2
+fi
+git_commit="$(git rev-parse HEAD 2>/dev/null || printf 'unknown')"
+# Untracked files count as dirty (audit T3-7): `git diff` sees only
+# tracked content, so a run with an untracked corpus dir/case recorded
+# git_dirty=false. Porcelain -unormal covers tracked AND untracked;
+# a failed git probe records dirty (fail closed).
+if _gstatus="$(git status --porcelain -unormal -- . 2>/dev/null)" && [[ -z "$_gstatus" ]]; then
+  git_dirty=false
+else
+  git_dirty=true
+fi
+unset _gstatus
+# go_drift_allowed / go_drift_actual (audit T3-6) — flag vs measured
+# bit; rationale in scripts/coverage-negative's twin block. Readers
+# prefer go_drift_actual, falling back to legacy go_drift records.
+go_drift_actual=false
+if [[ "$go_live" != "$go_pin" ]]; then
+  go_drift_actual=true
+fi
+{
+  printf 'key\tvalue\n'
+  printf 'frontend\t%s\n' "$FRONTEND"
+  printf 'manifest\t%s\n' "$MANIFEST"
+  printf 'manifest_sha256\t%s\n' "$manifest_sha"
+  printf 'manifest_cases\t%s\n' "$manifest_cases"
+  printf 'total_corpus_cases\t%s\n' "${GOLEAN_COVERAGE_TOTAL_CASES:-unknown}"
+  printf 'full_run\t%s\n' "${GOLEAN_COVERAGE_RUN_FULL:-unknown}"
+  printf 'filters\t%s\n' "${GOLEAN_COVERAGE_FILTERS:-unknown}"
+  printf 'git_commit\t%s\n' "$git_commit"
+  printf 'git_dirty\t%s\n' "$git_dirty"
+  # Durable oracle provenance (delta-review DR1 MEDIUM-3): a run under
+  # GOLEAN_ALLOW_GO_DRIFT=1 must not be indistinguishable from an
+  # oracle-of-record run in the artifact a re-pin consumes.
+  printf 'go_toolchain\t%s\n' "$(go version 2>/dev/null | awk '{print $3}' || printf 'unknown')"
+  printf 'go_traceback\tsystem\n'
+  printf 'go_drift_allowed\t%s\n' "${GOLEAN_ALLOW_GO_DRIFT:-0}"
+  printf 'go_drift_actual\t%s\n' "$go_drift_actual"
+  # Strict-lane depth guard (memo P1): the observable, the seeded-stream
+  # generator and its seeds — so a depth=N row's PASS is reproducible
+  # from this record alone.
+  printf 'depth_guard\t%s\n' "choice-trace wideAfterExhaustion=0 on every invariance stream"
+  printf 'depth_seeds\t%s\n' "${DEPTH_GUARD_SEEDS// /,}"
+  printf 'depth_generator\t%s\n' "lcg31(1103515245,12345) bits16..31"
+  printf 'depth_trace_timeout_seconds\t%s\n' "$LEAN_TRACE_TIMEOUT_SECONDS"
+  # The membership draw budget the run used (the sampling rule above):
+  # the `draws=` captions in the results are read against it.
+  printf 'membership_draws\t%s\n' "$MEMBERSHIP_DRAWS"
+} > "$META_TMP"
+echo "diff-coverage: membership sampling budget K=$MEMBERSHIP_DRAWS (mode: $([[ "${GOLEAN_SLOW:-0}" == "1" ]] && echo --slow || echo gate); alternate plain/-race, early stop at members=)"
+
+cleanup() {
+  rm -f "$RESULTS_TMP" "$META_TMP"
+  if [[ -n "$GENERATED_MANIFEST" ]]; then
+    rm -f "$GENERATED_MANIFEST"
+  fi
+}
+trap cleanup EXIT
+
+publish_results() {
+  # Meta FIRST (audit T3-5; this instance PRE-DATED the negative
+  # runner's copy and is fixed as a ride-along). The invariant
+  # consumers rely on is "results present ⇒ attributable meta
+  # present": each mv is atomic but the pair is two of them, and the
+  # old results-first order had a kill window that left results
+  # WITHOUT meta — exactly the unattributable state scripts/ci
+  # refuses. Meta-first leaves at worst meta-without-results, which no
+  # consumer reads as a run.
+  mv "$META_TMP" "$META_TSV"
+  mv "$RESULTS_TMP" "$RESULTS_TSV"
+}
+
+echo "building Lean executable..."
+# Exit 2, not 1, on the no-publish paths (grossmith findings §2): a
+# build failure/timeout or missing binary is an INFRASTRUCTURE failure —
+# nothing was classified, nothing was published — and must be
+# distinguishable from exit 1 ("FAIL rows exist; published results are
+# authoritative"), like the other infra exits in this script.
+build_rc=0
+run_with_timeout "$LAKE_BUILD_TIMEOUT_SECONDS" lake build || build_rc=$?
+if [[ "$build_rc" -eq 124 ]]; then
+  echo "lake build TIMED OUT after ${LAKE_BUILD_TIMEOUT_SECONDS}s (LAKE_BUILD_TIMEOUT_SECONDS; no results published)" >&2
+  exit 2
+elif build_cause="$(signal_cause "$build_rc" "lake build")"; then
+  echo "$build_cause — no results published" >&2
+  exit 2
+elif [[ "$build_rc" -ne 0 ]]; then
+  echo "lake build failed (exit $build_rc; no results published)" >&2
+  exit 2
+fi
+if [[ ! -x "$GOLEAN_BIN" ]]; then
+  echo "built golean binary not found at $GOLEAN_BIN (no results published)" >&2
+  exit 2
+fi
+
+export_status=0
+if [[ "$FRONTEND" == "native" ]]; then
+  echo "native frontend: per-case type-check + emit (no batch export)"
+else
+  echo "unsupported frontend '$FRONTEND' (only 'native' is supported); continuing to classify every manifest row." >&2
+  export_status=2
+fi
+
+
+report_pass() {
+  local id="$1"
+  local features="$2"
+  # Optional detail (strict-lane depth guard, memo P1 2026-09-03): the
+  # stage stays '-'; the detail records the derivation-anchoring numbers
+  # (wide=, exhausted=, depth=) — metadata, never a pass criterion.
+  local detail="${3:--}"
+  local flat_detail
+  flat_detail="$(one_line "$detail")"
+  printf 'PASS\t%s\t%s\n' "$id" "$features"
+  printf 'PASS\t%s\t%s\t-\t%s\n' "$id" "$features" "$flat_detail" >> "$CASE_OUT"
+}
+
+
+# Membership-lane PASS rows carry stage "membership" (the baseline records
+# result+stage, so the lane classification is part of the regression
+# signal) and a detail with the WIDTH SIGNAL — |enumerated set|,
+# |Go-exhibited subset| — which is recorded METADATA, never a pass
+# criterion (docs/2026-08-04_membership-lane-design.md).
+report_pass_lane() {
+  local id="$1"
+  local features="$2"
+  local stage="$3"
+  local detail="$4"
+  local flat_detail
+  flat_detail="$(one_line "$detail")"
+  printf 'PASS\t%s\t%s\tstage=%s\tdetail=%s\n' "$id" "$features" "$stage" "$flat_detail"
+  printf 'PASS\t%s\t%s\t%s\t%s\n' "$id" "$features" "$stage" "$flat_detail" >> "$CASE_OUT"
+}
+
+one_line() {
+  local value="$1"
+  value="${value//$'\t'/ }"
+  value="${value//$'\r'/\\r}"
+  value="${value//$'\n'/\\n}"
+  printf '%s' "$value"
+}
+
+report_fail() {
+  local id="$1"
+  local features="$2"
+  local stage="$3"
+  local detail="$4"
+  local flat_detail
+  flat_detail="$(one_line "$detail")"
+  printf 'FAIL\t%s\t%s\tstage=%s\tdetail=%s\n' "$id" "$features" "$stage" "$flat_detail"
+  printf 'FAIL\t%s\t%s\t%s\t%s\n' "$id" "$features" "$stage" "$flat_detail" >> "$CASE_OUT"
+}
+
+# One manifest row, classified end to end. Writes its TSV row(s) to
+# $CASE_OUT; progress goes to stdout (interleaved under parallelism —
+# the assembled TSV is manifest-ordered regardless).
+# ATOMIC PUBLISH (2026-07-30 pre-merge audit finding): rows accumulate in
+# a .out.tmp and land at .out in one mv only after classification
+# completes. A worker killed mid-case (OOM/kill under the nproc-wide
+# pool) leaves NO .out, so the assembler's fail-closed fallback fires —
+# previously the file was created empty up front and a dead worker's
+# case vanished from the TSV silently.
+run_case() {
+  local rowfile="${1:-}"
+  # Refuse an empty or non-file row path BY NAME (grossmith ARG_MAX
+  # finding, 2026-09-02, docs/evidence/2026-09-02_diffcov-argmax/):
+  # when the old `ls "$ROWDIR"/*.in | xargs` fan-out died E2BIG, GNU
+  # xargs (no -r) still ran the command ONCE on its empty stdin, so this
+  # function ran as run_case "" — CASE_OUT became ".out.tmp" in the CWD
+  # (the repo root), the read of "" failed, a manifest-error row for
+  # id "" was FABRICATED and mv'd to a stray `.out` beside the sources.
+  # A row path that is not a readable file is a fan-out defect, never a
+  # case result: write nothing, return nonzero so the pool's exit
+  # status carries it (the assembler then refuses to publish a
+  # result-less run).
+  if [[ -z "$rowfile" || ! -f "$rowfile" ]]; then
+    echo "diff-coverage: run_case invoked with ${rowfile:+a non-file row path '$rowfile'}${rowfile:-an EMPTY row path} — refusing (fan-out defect, not a case result; no row written)" >&2
+    return 2
+  fi
+  CASE_OUT="${rowfile%.in}.out.tmp"
+  : > "$CASE_OUT"
+  run_case_rows "$rowfile"
+  mv "$CASE_OUT" "${rowfile%.in}.out"
+}
+
+run_case_rows() {
+  local rowfile="$1"
+  local id go_dir function_name arg_ints expected_status features expected_reason lane why params extra
+  IFS=$'\t' read -r id go_dir function_name arg_ints expected_status features expected_reason lane why params extra < "$rowfile"
+  local failed=0
+
+  if [[ -n "${extra:-}" ]]; then
+    report_fail "$id" "${features:-unknown}" "manifest" "too many tab-separated fields"
+    return 0
+  fi
+  if [[ -z "${go_dir:-}" || -z "${function_name:-}" || -z "${arg_ints:-}" || -z "${expected_status:-}" || -z "${features:-}" || -z "${expected_reason:-}" || -z "${lane:-}" || -z "${why:-}" || -z "${params:-}" ]]; then
+    report_fail "$id" "${features:-unknown}" "manifest" "expected 10 tab-separated fields"
+    return 0
+  fi
+  case "$lane" in
+    strict|membership|confluent|racy) ;;
+    *)
+      report_fail "$id" "$features" "manifest" "invalid lane: $lane (use strict, membership, confluent, or racy)"
+      return 0
+      ;;
+  esac
+  # Strict-lane params (depth guard, memo P1): '-' or exactly depth=<N>.
+  # Re-validated here like every lane param (F4's discipline: a row that
+  # bypasses the manifest must fail loud, never fall through to the
+  # fixed streams).
+  local depth=""
+  if [[ "$lane" == "strict" ]]; then
+    if [[ "$why" != "-" ]]; then
+      report_fail "$id" "$features" "manifest" "strict-lane rows must leave why as -"
+      return 0
+    fi
+    if [[ "$params" != "-" ]]; then
+      if [[ "$params" =~ ^depth=([1-9][0-9]*)$ ]]; then
+        depth="${BASH_REMATCH[1]}"
+      else
+        report_fail "$id" "$features" "manifest" "strict-lane params may only declare depth=<N> (the depth guard's seeded-stream length): $params"
+        return 0
+      fi
+    fi
+  fi
+  # PER-LANE EPISTEMIC CAPTIONS — compact copy; the record is the
+  # nondeterminism doctrine's "Per-lane epistemic captions" section
+  # (docs/2026-08-04_nondeterminism-doctrine.md; evidence base:
+  # validation research note §4). What a PASS means / cannot show:
+  #   strict     go-run equality + 3-stream invariance. Structurally
+  #              BLIND to scheduling: says nothing about interleaving.
+  #   confluent  |set|=1 certified over all registry-point schedules,
+  #              then strict equality on the singleton. Nothing past
+  #              the fail-loud caps or outside the certified program.
+  #   membership every go sample (plain AND -race) is in the
+  #              enumerated set. Does NOT show unexhibited members are
+  #              Go-realizable — width metadata + the standing
+  #              envelope-width review police that; too-wide has no
+  #              oracle.
+  #   racy       every enumerated path refuses + one -race red sample
+  #              (see the race block below; scope = registry-point
+  #              paths and the Race.lean inventory's U1-U3).
+  # Litmus pairs are a corpus discipline over lanes b/c + d (SC set
+  # inside DRF, refusal outside); deadlock is strict-only (below);
+  # leak classification is model-internal, never differential
+  # evidence.
+  # deadlock (channels arc slice 1): Go's whole-program detector aborts
+  # with the FIXED "fatal error: all goroutines are asleep - deadlock!"
+  # (exit status 2); expected_reason stays "-" (nothing case-specific to
+  # pin). NEVER combine these cases with -race builds — the detector does
+  # not fire there (probed; ground-truth note §5).
+  # race (channels arc slice 3, racy-negative lane): the Go oracle is
+  # `go run -race` (TSan; exit 66, "WARNING: DATA RACE" — no false
+  # positives, so one red sample proves the race), and the machine must
+  # refuse with status "race" under the default AND every adversarial
+  # stream (the invariance loop below enforces per-stream refusal — the
+  # slice-4 schedule enumerator will strengthen this to "every
+  # enumerated path refuses"). Race and deadlock expectations are
+  # mutually exclusive by construction (one status column): the -race
+  # runtime suppresses the deadlock detector (ground-truth note §5).
+  # THE THREE-WAY INVESTIGATION RULE (validation note §2.7/lane d): if
+  # the machine refuses but every `-race` sample stays green, that is
+  # NOT a pass — it is an investigation with exactly three outcomes:
+  # (a) our race check is too eager (model bug — fix); (b) the race
+  # needs a schedule the sampler never hits (strengthen with directed
+  # sampling; record the conclusion in the case's why); (c) the program
+  # is race-free and misclassified (model bug — fix).
+  # fatal (spec-parity slice 2, sync design note §2): gc's UNRECOVERABLE
+  # runtime throws (`fatal error: <msg>` — the sync misuse class;
+  # probed: recover does not intervene, so this is a terminal like
+  # deadlock, never a panic). The message is per-case: expected_reason
+  # GATES the run, and the compared observation carries gc's ACTUAL
+  # leading fatal line (audit fix round 2026-08-10, the panic path's
+  # actual-message discipline). Strict-lane only.
+  case "$expected_status" in
+    ok|panic|deadlock|race|fatal) ;;
+    *)
+      report_fail "$id" "$features" "manifest" "invalid expected Go status: $expected_status; use ok, panic, deadlock, race, or fatal"
+      return 0
+      ;;
+  esac
+  case "$expected_status" in
+    panic|fatal)
+      if [[ "$expected_reason" == "-" ]]; then
+        report_fail "$id" "$features" "manifest" "$expected_status requires an expected_reason"
+        return 0
+      fi
+      ;;
+    *)
+      if [[ "$expected_reason" != "-" ]]; then
+        report_fail "$id" "$features" "manifest" "unexpected expected_reason for status $expected_status: $expected_reason"
+        return 0
+      fi
+      ;;
+  esac
+
+  go_file="$go_dir/main.go"
+  if [[ ! -f "$go_file" ]]; then
+    report_fail "$id" "$features" "go-source" "missing $go_file"
+    return 0
+  fi
+  # grep -E, not rg (2026-08-02): ripgrep is absent on the GitHub runner, and
+  # a missing tool's exit 127 was inverted into "no match" — every case
+  # reported FAIL/litmus-contract and the nightly differential never actually
+  # ran (12+ red nightlies misattributed to corpus drift). grep is in POSIX;
+  # the pattern is plain ERE. A tool this check depends on must either be
+  # universally present or preflighted like `go` is at the top of this script.
+  if ! grep -Eq "func[[:space:]]+$function_name[[:space:]]*\\(" "$go_file"; then
+    report_fail "$id" "$features" "litmus-contract" "manifest function $function_name is not defined in $go_file"
+    return 0
+  fi
+
+  # FLATTENED per-id dir (id slashes -> __, like the negative runner's
+  # binary names): the harness RemoveAll-s this dir per case, and with
+  # id-shaped NESTED paths a parent id's harness deletes a child id's dir
+  # in flight under the parallel runner (first hit: generics/generic-closure
+  # vs generics/generic-closure/shared-capture, 2026-08-05 — a spurious
+  # go-run FAIL). Flattening removes the hazard class.
+  go_run_dir="$OUT/go-run/${id//\//__}"
+  local harness_rc=0 harness_cause
+  harness_output="$(run_with_timeout "$GO_TIMEOUT_SECONDS" "$HARNESS_BIN" \
+      --input "$go_file" \
+      --out "$go_run_dir" \
+      --subject "$function_name" \
+      --expected-status "$expected_status" \
+      --args "$arg_ints" 2>&1)" || harness_rc=$?
+  if [[ "$harness_rc" -eq 124 ]]; then
+    report_fail "$id" "$features" "go-harness" "harness generation TIMED OUT after ${GO_TIMEOUT_SECONDS}s (GO_TIMEOUT_SECONDS) — no harness produced; captured output: $harness_output"
+    return 0
+  elif harness_cause="$(signal_cause "$harness_rc" "harness generation")"; then
+    report_fail "$id" "$features" "go-harness" "$harness_cause — no harness produced; captured output: $harness_output"
+    return 0
+  elif [[ "$harness_rc" -ne 0 ]]; then
+    report_fail "$id" "$features" "go-harness" "$harness_output"
+    return 0
+  fi
+
+  # Membership lane: for observables that genuinely depend on the Choices
+  # stream, equality against one go run is the wrong oracle — dispatch to
+  # the membership path (enumerated machine set ⊇ every Go sample). The
+  # strict path below, INCLUDING its three-stream invariance check, is
+  # untouched. Audit F6: the non-native-frontend fail-closed guard applies
+  # to this lane exactly like the strict one, BEFORE the dispatch — the
+  # membership path shells the native frontend and must never do so under
+  # an unsupported frontend.
+  if [[ "$lane" == "membership" ]]; then
+    if [[ "$FRONTEND" != "native" ]]; then
+      report_fail "$id" "$features" "frontend-export" "unsupported frontend '$FRONTEND' (only 'native' is supported)"
+      return 0
+    fi
+    if [[ "$expected_status" == "deadlock" || "$expected_status" == "fatal" ]]; then
+      report_fail "$id" "$features" "manifest" "deadlock/fatal-expectation cases are strict-lane only"
+      return 0
+    fi
+    run_membership_case_rows
+    return 0
+  fi
+
+  local go_rc=0 go_valid_rc=0 go_cause go_valid_cause
+  if go_run_oracle; then
+    if ! go_observation="$("$HARNESS_BIN" --read-observation "$go_run_dir/oracle.stdout" 2>"$go_run_dir/oracle.read.err")"; then
+      report_fail "$id" "$features" "go-observation" "$(cat "$go_run_dir/oracle.read.err"): $(go_diagnostics)"
+      failed=1
+    elif [[ "$expected_status" == "race" ]]; then
+      report_fail "$id" "$features" "go-observation" "expected a -race report, but go run -race exited green: $go_observation (three-way investigation: too-eager check / schedule-hidden race / misclassified case)"
+      failed=1
+    elif [[ "$expected_status" == "panic" || "$expected_status" == "deadlock" || "$expected_status" == "fatal" ]]; then
+      report_fail "$id" "$features" "go-observation" "expected $expected_status, but Go exited successfully: $go_observation"
+      failed=1
+    elif ! attach_output ok; then
+      failed=1
+    else
+      obs_eq "$go_observation" "$go_observation"; go_valid_rc=$?
+      # SELF-comparison (audit F1 on the exit-code slice): here exit 2 IS
+      # the decision — runObservationEq could not decode the one
+      # observation it was handed, i.e. Go's output is not a valid
+      # observation (CLI.lean; the arg parser cannot fire on this fixed
+      # flag pair). Accurate wording kept, the decode message added;
+      # 124/137/143/other are still the undecided codes.
+      if [[ "$go_valid_rc" -eq 2 ]]; then
+        report_fail "$id" "$features" "go-observation" "Go output is not a valid observation (comparator said: $(one_line "$OBS_EQ_STDERR")): $go_observation"
+        failed=1
+      elif go_valid_cause="$(obs_eq_cause "$go_valid_rc")"; then
+        report_fail "$id" "$features" "go-observation" "$go_valid_cause validating the Go observation — validity NOT decided: $go_observation"
+        failed=1
+      elif [[ "$go_valid_rc" -ne 0 ]]; then
+        report_fail "$id" "$features" "go-observation" "Go output is not a valid observation: $go_observation"
+        failed=1
+      elif [[ "$go_observation" != *"\"status\":\"$expected_status\""* ]]; then
+        report_fail "$id" "$features" "go-observation" "expected status $expected_status, got $go_observation"
+        failed=1
+      fi
+    fi
+  else
+    go_rc=$?
+    go_observation="$(go_diagnostics)"
+    if go_cause="$(undecided_cause "$go_rc" "go run oracle" "$GO_TIMEOUT_SECONDS" GO_TIMEOUT_SECONDS)"; then
+      # Named BEFORE the status-specific branches: a killed oracle (wall
+      # clock, SIGKILL/SIGTERM, any non-verdict code — `go run` itself
+      # reports a red program as exit 1) has produced no verdict, and
+      # its partial output used to be read as "expected Go panic, got: …"
+      # / a bare go-run detail.
+      report_fail "$id" "$features" "go-run" "$go_cause — no Go observation produced (not a $expected_status verdict); captured output: $go_observation"
+      failed=1
+    elif [[ "$expected_status" == "deadlock" ]]; then
+      # The detector's message is FIXED; the observation both sides
+      # compare carries it verbatim (the Lean machine's deadlocked
+      # terminal renders the identical status/message).
+      if ! grep -aqF -- 'fatal error: all goroutines are asleep - deadlock!' "$go_run_dir/oracle.stderr"; then
+        report_fail "$id" "$features" "go-run" "expected Go deadlock fatal error, got: $go_observation"
+        failed=1
+      elif ! actual_abort_status="$("$HARNESS_BIN" --abort-status "$go_run_dir/oracle.stderr" 2>"$go_run_dir/oracle.message.err")"; then
+        report_fail "$id" "$features" "go-observation" "could not classify Go deadlock report: $(cat "$go_run_dir/oracle.message.err"); $go_observation"
+        failed=1
+      elif [[ "$actual_abort_status" != deadlock ]]; then
+        report_fail "$id" "$features" "go-observation" "actual Go $actual_abort_status report cannot be observed as deadlock: $go_observation"
+        failed=1
+      else
+        go_observation="{\"message\":\"all goroutines are asleep - deadlock!\",\"schema\":\"golean-observation-v1\",\"status\":\"deadlock\"}"
+        attach_output deadlock || failed=1
+      fi
+    elif [[ "$expected_status" == "race" ]]; then
+      # TSan's report text is diagnostic detail (addresses, stacks); the
+      # observation both sides compare is the FIXED refusal — the Lean
+      # machine's raceDetected terminal renders the identical
+      # status/message, deterministic per stream so the invariance loop
+      # below doubles as the per-stream refusal check.
+      if ! grep -aqF -- 'WARNING: DATA RACE' "$go_run_dir/oracle.stderr"; then
+        report_fail "$id" "$features" "go-run" "expected a go run -race data-race report, got: $go_observation"
+        failed=1
+      else
+        go_observation="{\"message\":\"data race detected\",\"schema\":\"golean-observation-v1\",\"status\":\"race\"}"
+        attach_output race || failed=1
+      fi
+    elif [[ "$expected_status" == "fatal" ]]; then
+      # The throw's message is per-case: expected_reason GATES the run
+      # (the manifest pin must appear in gc's output), and the compared
+      # observation carries gc's ACTUAL leading fatal line — extracted
+      # symmetrically with the panic path (audit fix round 2026-08-10:
+      # synthesizing from expected_reason let extended gc text or a
+      # truncated manifest pin pass green with stale text substituted).
+      if ! grep -aqF -- "fatal error: $expected_reason" "$go_run_dir/oracle.stderr"; then
+        report_fail "$id" "$features" "go-run" "expected Go fatal error '$expected_reason', got: $go_observation"
+        failed=1
+      elif ! grep -aqFx -- 'exit status 2' "$go_run_dir/oracle.stderr"; then
+        # Runtime fatals exit 2 (delta-review round 2: the design note
+        # claimed the exit-status pin; now CHECKED rather than claimed.
+        # `go run` itself exits 1 and reports the child's status as a
+        # trailing "exit status N" line — that line is the checkable
+        # signal, measured here).
+        report_fail "$id" "$features" "go-run" "expected the child's 'exit status 2' report for the runtime fatal: $go_observation"
+        failed=1
+      elif ! escaped_reason="$("$HARNESS_BIN" --abort-message "$go_run_dir/oracle.stderr" --expected-status fatal 2>"$go_run_dir/oracle.message.err")"; then
+        report_fail "$id" "$features" "go-observation" "could not extract Go fatal message: $(cat "$go_run_dir/oracle.message.err"); $go_observation"
+        failed=1
+      else
+        go_observation="{\"message\":$escaped_reason,\"schema\":\"golean-observation-v1\",\"status\":\"fatal\"}"
+        attach_output fatal || failed=1
+      fi
+    elif [[ "$expected_status" == "panic" ]]; then
+      if ! grep -aqF -- 'panic:' "$go_run_dir/oracle.stderr"; then
+        report_fail "$id" "$features" "go-run" "expected Go panic, got: $go_observation"
+        failed=1
+      elif ! grep -aqF -- "$expected_reason" "$go_run_dir/oracle.stderr"; then
+        report_fail "$id" "$features" "go-observation" "Go panic did not contain expected reason $expected_reason: $go_observation"
+        failed=1
+      elif ! escaped_reason="$("$HARNESS_BIN" --abort-message "$go_run_dir/oracle.stderr" --expected-status panic 2>"$go_run_dir/oracle.message.err")"; then
+        report_fail "$id" "$features" "go-observation" "could not extract Go panic message: $(cat "$go_run_dir/oracle.message.err"); $go_observation"
+        failed=1
+      else
+        go_observation="{\"message\":$escaped_reason,\"schema\":\"golean-observation-v1\",\"status\":\"panic\"}"
+        attach_output panic || failed=1
+      fi
+    else
+      report_fail "$id" "$features" "go-run" "$go_observation"
+      failed=1
+    fi
+  fi
+  if [[ "$failed" -ne 0 ]]; then
+    return 0
+  fi
+
+  if [[ "$FRONTEND" != "native" ]]; then
+    report_fail "$id" "$features" "frontend-export" "unsupported frontend '$FRONTEND' (only 'native' is supported)"
+    return 0
+  fi
+  # Native Go frontend: type-check + emit the native wire JSON, then run it
+  # through the native lowering. Multi-file packages are allowed (go/types
+  # resolves them); no batch export step is needed.
+  wire_json="$OUT/native/$id/wire.json"
+  mkdir -p "$(dirname "$wire_json")"
+  # E7 apparatus allow (tools/nativefrontend/hiddendep.go): ONLY the
+  # recorded deviation case lowers past the hidden-dep init-order
+  # detector, with the finding downgraded to a visible warning. The
+  # allow is keyed to the exact case id HERE, in the apparatus — a new
+  # hidden-dep case cannot opt itself in from source.
+  fe_flags=()
+  if [[ "$id" == "init/hidden-dep-order" ]]; then
+    fe_flags+=(--allow-hidden-dep-init-order)
+  fi
+  local native_rc=0 native_cause
+  native_export="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/nativefrontend ${fe_flags[@]+"${fe_flags[@]}"} --dir "$go_dir" --out "$wire_json" 2>&1)" || native_rc=$?
+  if [[ "$native_rc" -eq 124 ]]; then
+    report_fail "$id" "$features" "frontend-export" "native frontend TIMED OUT after ${GO_TIMEOUT_SECONDS}s (GO_TIMEOUT_SECONDS) — no wire produced; captured output: $native_export"
+    return 0
+  elif native_cause="$(signal_cause "$native_rc" "native frontend")"; then
+    report_fail "$id" "$features" "frontend-export" "$native_cause — no wire produced; captured output: $native_export"
+    return 0
+  elif [[ "$native_rc" -ne 0 ]]; then
+    report_fail "$id" "$features" "frontend-export" "native frontend: $native_export"
+    return 0
+  fi
+  # A successful export can still carry frontend stderr (the E7 allow's
+  # WARNING, hiddendep.go) — keep it visible in the gate, never swallowed.
+  if [[ -n "$native_export" ]]; then
+    printf '%s: %s\n' "$id" "$native_export" >&2
+  fi
+
+  # CONFLUENT lane (D9(b), slice 4): certify |set| = 1 over ALL
+  # schedules FIRST — the strict pipeline below then verifies the one
+  # member against the go oracle at full differential strength. The
+  # certified member is additionally pinned against the strict path's
+  # own observation further down.
+  confluent_member=""
+  confluent_detail=""
+  if [[ "$lane" == "confluent" ]]; then
+    local width sites obs_cap work members statuses tier backedge nonterm engine
+    parse_lane_params || return 0
+    local conf_dir="$OUT/membership/$id"
+    mkdir -p "$conf_dir"
+    # tier=slow (confluent; W3.2 stage C): the same cached-record
+    # discipline as the membership lane — quick runs verify against the
+    # tracked certified record (fail-closed on a missing record, a
+    # stale wire sha, or moved params); scripts/ci --slow re-certifies
+    # the singleton fully. The driver observation-eq check below still
+    # runs on the CACHED member, so machine drift against the certified
+    # singleton is caught per-commit.
+    local conf_cert="baselines/certified/${id//\//__}.certified.tsv"
+    local conf_wire_sha conf_rec_sha conf_rec_params
+    if [[ "$tier" == "slow" && "${GOLEAN_SLOW:-0}" != "1" ]]; then
+      if [[ ! -f "$conf_cert" ]]; then
+        report_fail "$id" "$features" "confluent" "tier=slow but no certified record at $conf_cert — certify with scripts/ci --slow and commit the record"
+        return 0
+      fi
+      conf_wire_sha="$(sha256sum "$wire_json" | cut -d' ' -f1)"
+      conf_rec_sha="$(sed -n 's/^# wire-sha256: //p' "$conf_cert" | head -1)"
+      if [[ -z "$conf_rec_sha" || "$conf_wire_sha" != "$conf_rec_sha" ]]; then
+        report_fail "$id" "$features" "confluent" "certified record is STALE (wire sha ${conf_wire_sha:0:12} != recorded ${conf_rec_sha:0:12}) — re-certify with scripts/ci --slow"
+        return 0
+      fi
+      conf_rec_params="$(sed -n 's/^# params: //p' "$conf_cert" | head -1)"
+      if [[ -z "$conf_rec_params" || "$conf_rec_params" != "$params" ]]; then
+        report_fail "$id" "$features" "confluent" "certified record was certified under params '$conf_rec_params' but the row now declares '$params' — re-certify with scripts/ci --slow"
+        return 0
+      fi
+      grep -v '^#' "$conf_cert" | grep . > "$conf_dir/observations.txt" || true
+      echo "CERTIFIED-CACHED $(sed -n 's/^# certified: //p' "$conf_cert" | head -1)" > "$conf_dir/enum-stats.txt"
+    else
+    local conf_args=(coverage-observations --input "$wire_json" --function "$function_name"
+      --max-width "$width" --max-sites "$sites" --cap "$obs_cap" --work-cap "$work"
+      --expect-status "$expected_status")
+    if [[ -n "$backedge" ]]; then
+      conf_args+=(--backedge "$backedge")
+    fi
+    if [[ -n "$engine" ]]; then
+      conf_args+=(--engine "$engine")
+    fi
+    if [[ "$arg_ints" != "-" ]]; then
+      local v2
+      IFS=',' read -r -a ints2 <<< "$arg_ints"
+      for v2 in "${ints2[@]}"; do
+        conf_args+=(--arg-int "$v2")
+      done
+    fi
+    local conf_rc=0 conf_timeout="$LEAN_ENUM_TIMEOUT_SECONDS" conf_what_sig
+    if [[ "$tier" == "slow" ]]; then
+      conf_timeout="$LEAN_ENUM_SLOW_TIMEOUT_SECONDS"
+    fi
+    run_with_timeout "$conf_timeout" "$GOLEAN_BIN" "${conf_args[@]}" \
+        > "$conf_dir/observations.txt" 2> "$conf_dir/enum-stats.txt" || conf_rc=$?
+    if [[ "$conf_rc" -ne 0 ]]; then
+      # Timeouts NAMED here too (audit F4, 2026-08-15): the empty-detail-
+      # on-timeout nit was originally RECORDED against this lane
+      # (goose-parity-parked.md, muxer/make-greeting) yet the first fix
+      # round named timeouts only in the membership lane.
+      local conf_what="enumerator failed (exit $conf_rc; schedule-confluence not certified)"
+      if [[ "$conf_rc" -eq 124 ]]; then
+        conf_what="enumerator TIMED OUT after ${conf_timeout}s (schedule-confluence not certified)"
+      elif conf_what_sig="$(signal_cause "$conf_rc" enumerator)"; then
+        conf_what="$conf_what_sig (schedule-confluence not certified)"
+      fi
+      report_fail "$id" "$features" "confluent" "$conf_what: $(cat "$conf_dir/enum-stats.txt")"
+      return 0
+    fi
+    if [[ "$tier" == "slow" ]]; then
+      # --slow re-certification: fresh singleton must equal the tracked
+      # record at the current wire hash (the membership lane's rule).
+      conf_wire_sha="$(sha256sum "$wire_json" | cut -d' ' -f1)"
+      if [[ ! -f "$conf_cert" ]]; then
+        report_fail "$id" "$features" "confluent" "tier=slow re-certified but no tracked record exists — create $conf_cert from $conf_dir/observations.txt (header: '# certified: <date>  commit: <rev>', '# params: $params', '# wire-sha256: $conf_wire_sha') and commit it"
+        return 0
+      fi
+      conf_rec_sha="$(sed -n 's/^# wire-sha256: //p' "$conf_cert" | head -1)"
+      conf_rec_params="$(sed -n 's/^# params: //p' "$conf_cert" | head -1)"
+      if [[ "$conf_wire_sha" != "$conf_rec_sha" || "$conf_rec_params" != "$params" ]] \
+         || ! diff <(grep -v '^#' "$conf_cert" | grep . | sort) \
+                   <(sort "$conf_dir/observations.txt") > /dev/null; then
+        report_fail "$id" "$features" "confluent" "re-certification DIFFERS from the tracked record $conf_cert (set, params, or wire hash moved) — update the record deliberately in this commit (fresh singleton in $conf_dir/observations.txt, wire-sha256 $conf_wire_sha)"
+        return 0
+      fi
+    fi
+    fi
+    local conf_count
+    conf_count="$(grep -c . "$conf_dir/observations.txt" || true)"
+    if [[ "$conf_count" -ne 1 ]]; then
+      report_fail "$id" "$features" "confluent" "enumerated observation set has $conf_count member(s) — the observable is NOT schedule-confluent (declare membership with the admitted set, or fix the machine)"
+      return 0
+    fi
+    confluent_member="$(head -1 "$conf_dir/observations.txt")"
+    confluent_detail="$(one_line "$(cat "$conf_dir/enum-stats.txt")")"
+  fi
+  lean_args=(native-json-run --input "$wire_json" --function "$function_name")
+  if [[ "$arg_ints" != "-" ]]; then
+    IFS=',' read -r -a ints <<< "$arg_ints"
+    for value in "${ints[@]}"; do
+      if [[ ! "$value" =~ ^-?[0-9]+$ ]]; then
+        report_fail "$id" "$features" "manifest" "invalid integer argument: $value"
+        failed=1
+      else
+        lean_args+=(--arg-int "$value")
+      fi
+    done
+  fi
+  if [[ "$failed" -ne 0 ]]; then
+    return 0
+  fi
+
+  if lean_observation="$(lean "${lean_args[@]}" 2>&1)"; then
+    lean_status=0
+  else
+    lean_status=$?
+  fi
+  # A NON-VERDICT exit is NAMED before the observation is read (cause-
+  # naming fixes 2026-09-03: 124 first, then 137/143 and the rest): the
+  # killed run's captured output is empty or partial, so the status
+  # check below reported `expected status ok, got ` — fail-closed,
+  # cause-blind. native-json-run's verdict codes are 0 (ok observation)
+  # and 1 (error observation, JSON on stdout); anything else produced no
+  # observation. Stage stays lean-observation on purpose: a Lean run
+  # that cannot finish is a machine-side fidelity failure
+  # (scripts/check-bugs.sh and tools/reconcile-records count that stage;
+  # lean-run is outside their fidelity set).
+  local lean_cause
+  if lean_cause="$(undecided_cause "$lean_status" "Lean run" "$LEAN_TIMEOUT_SECONDS" LEAN_TIMEOUT_SECONDS)"; then
+    report_fail "$id" "$features" "lean-observation" "$lean_cause — no observation produced (expected status $expected_status); captured output: $lean_observation"
+    return 0
+  fi
+  if [[ "$lean_observation" != *"\"status\":\"$expected_status\""* ]]; then
+    # A call into a frontend-QUARANTINED stub (per-decl fail-closed for
+    # declarations the frontend cannot lower) is a frontend coverage gap,
+    # not a machine-fidelity failure — classify it as the export stage so
+    # the untriaged ledger keeps meaning "machine gaps".
+    if [[ "$lean_observation" == *'"status":"unsupported"'* && "$lean_observation" == *"frontend-quarantined: "* ]]; then
+      report_fail "$id" "$features" "frontend-export" "$lean_observation"
+      return 0
+    fi
+    report_fail "$id" "$features" "lean-observation" "expected status $expected_status, got $lean_observation"
+    return 0
+  fi
+  if [[ "$expected_status" == "ok" && "$lean_status" -ne 0 ]]; then
+    report_fail "$id" "$features" "lean-run" "nonzero exit $lean_status despite ok observation: $lean_observation"
+    return 0
+  fi
+
+  local diff_rc=0 conf_eq_rc=0 diff_cause conf_eq_cause
+  obs_eq "$lean_observation" "$go_observation"; diff_rc=$?
+  observation_diff="$OBS_EQ_STDERR"
+  if diff_cause="$(obs_eq_cause "$diff_rc")"; then
+    report_fail "$id" "$features" "differential" "$diff_cause — Lean/Go equality NOT decided (not a mismatch): Lean=$lean_observation Go=$go_observation"
+    return 0
+  elif [[ "$diff_rc" -ne 0 ]]; then
+    report_fail "$id" "$features" "differential" "Lean=$lean_observation Go=$go_observation $observation_diff"
+    return 0
+  fi
+  if [[ "$lane" == "confluent" ]]; then
+    obs_eq "$confluent_member" "$lean_observation"; conf_eq_rc=$?
+    if conf_eq_cause="$(obs_eq_cause "$conf_eq_rc")"; then
+      report_fail "$id" "$features" "confluent" "$conf_eq_cause — certified member vs driver observation NOT decided (not enumerator/driver drift): member=$confluent_member driver=$lean_observation"
+      return 0
+    elif [[ "$conf_eq_rc" -ne 0 ]]; then
+      report_fail "$id" "$features" "confluent" "the certified singleton member differs from the driver's observation (enumerator/driver drift): member=$confluent_member driver=$lean_observation"
+      return 0
+    fi
+  fi
+
+  # RACY lane (D9(d), slice 4 FULL STRENGTH): the enumerator proves
+  # "every enumerated path refuses" — one value member anywhere fails
+  # the expect-status check loudly — REPLACING the per-stream refusal
+  # approximation (the old adversarial-stream loop is subsumed: every
+  # stream's path is in the enumerated tree).
+  if [[ "$lane" == "racy" ]]; then
+    local width sites obs_cap work members statuses tier backedge nonterm engine
+    parse_lane_params || return 0
+    local racy_dir="$OUT/membership/$id"
+    mkdir -p "$racy_dir"
+    local racy_args=(coverage-observations --input "$wire_json" --function "$function_name"
+      --max-width "$width" --max-sites "$sites" --cap "$obs_cap" --work-cap "$work"
+      --expect-status race)
+    if [[ -n "$backedge" ]]; then
+      racy_args+=(--backedge "$backedge")
+    fi
+    if [[ -n "$engine" ]]; then
+      racy_args+=(--engine "$engine")
+    fi
+    if [[ "$arg_ints" != "-" ]]; then
+      local v3
+      IFS=',' read -r -a ints3 <<< "$arg_ints"
+      for v3 in "${ints3[@]}"; do
+        racy_args+=(--arg-int "$v3")
+      done
+    fi
+    local racy_rc=0
+    run_with_timeout "$LEAN_ENUM_TIMEOUT_SECONDS" "$GOLEAN_BIN" "${racy_args[@]}" \
+        > "$racy_dir/observations.txt" 2> "$racy_dir/enum-stats.txt" || racy_rc=$?
+    if [[ "$racy_rc" -ne 0 ]]; then
+      local racy_what="enumerator failed (exit $racy_rc) — 'every enumerated path refuses' not certified" racy_what_sig
+      if [[ "$racy_rc" -eq 124 ]]; then
+        racy_what="enumerator TIMED OUT after ${LEAN_ENUM_TIMEOUT_SECONDS}s — 'every enumerated path refuses' not certified"
+      elif racy_what_sig="$(signal_cause "$racy_rc" enumerator)"; then
+        racy_what="$racy_what_sig — 'every enumerated path refuses' not certified"
+      fi
+      report_fail "$id" "$features" "racy" "$racy_what: $(cat "$racy_dir/enum-stats.txt")"
+      return 0
+    fi
+    report_pass_lane "$id" "$features" "racy" \
+      "every enumerated path refuses: $(one_line "$(cat "$racy_dir/enum-stats.txt")")"
+    return 0
+  fi
+
+  # Oracle-invariance check: re-run under several nondeterminism choice streams.
+  # A deterministic-lane-eligible program has an observation that does not vary
+  # with the oracle (e.g. map iteration order). Variance means the program is
+  # genuinely nondeterministic and must not be a strict-lane pass. Only the
+  # native path threads choices today.
+  if [[ "$FRONTEND" == "native" ]]; then
+    nondet=0
+    local variant_rc eq_rc variant_cause eq_cause variant_status
+    # The invariance streams: ALWAYS the three fixed adversarial
+    # streams (skewed prefixes — they probe corners a uniform draw
+    # rarely hits: memo §2.4's beside-loop is ok under the default and
+    # both long random streams yet refuses under all three fixed ones),
+    # PLUS — for a strict row declaring depth=N — three SEEDED streams
+    # of length N (depth guard, memo P1; seeds DEPTH_GUARD_SEEDS,
+    # generator seeded_stream, both in the run meta; UNIFORM RANDOM
+    # over 0..65535, reduced mod the bound by the machine — not
+    # adversarial). depth= ADDS the seeded streams, it never replaces
+    # the fixed ones (audit fix 1, 2026-09-03: the first shape replaced
+    # them — a weakening). The tracer below then checks coverage: the
+    # seeded streams must report wideAfterExhaustion=0; the fixed ones
+    # on a depth row are prefix probes and are not required to.
+    local -a inv_streams=() inv_labels=() inv_kinds=()
+    read -r -a inv_streams <<< "$DEPTH_FIXED_STREAMS"
+    read -r -a inv_labels <<< "$DEPTH_FIXED_STREAMS"
+    inv_kinds=(fixed fixed fixed)
+    if [[ -n "$depth" ]]; then
+      local dseed
+      for dseed in $DEPTH_GUARD_SEEDS; do
+        inv_streams+=("$(seeded_stream "$dseed" "$depth")")
+        inv_labels+=("seeded:$dseed:$depth")
+        inv_kinds+=(seeded)
+      done
+    fi
+    if [[ "${GOLEAN_LANE_FIXTURE:-}" == "empty-streams" ]]; then
+      # Fixture hook (scripts/test-lane-validation D7): can only REMOVE
+      # streams, i.e. only turn a PASS into the refusal below — never
+      # the other way. Any other value is ignored.
+      inv_streams=("" "" ""); inv_labels=("" "" "")
+    fi
+    local inv_want=3
+    [[ -n "$depth" ]] && inv_want=6
+    if [[ "${#inv_streams[@]}" -ne "$inv_want" ]]; then
+      report_fail "$id" "$features" "nondet" "invariance stream set has ${#inv_streams[@]} stream(s), want exactly $inv_want (3 fixed${depth:++ 3 seeded for depth=$depth}) — harness defect; invariance NOT certified"
+      return 0
+    fi
+    local si oracle olabel
+    for ((si = 0; si < inv_want; si++)); do
+      oracle="${inv_streams[$si]:-}"; olabel="${inv_labels[$si]:-}"
+      if [[ -z "$oracle" ]]; then
+        # Fail closed on a harness defect: an empty stream IS the default
+        # stream, and a default-vs-default comparison certifies nothing.
+        report_fail "$id" "$features" "nondet" "invariance stream #$((si + 1)) is EMPTY (harness defect: DEPTH_FIXED_STREAMS/seeded_stream unavailable in this worker) — invariance NOT certified"
+        nondet=1
+        break
+      fi
+      # A killed re-run is NOT an observed variance (cause-naming fix
+      # 2026-09-03): the old shape compared the empty capture against
+      # the default observation and reported "varies with iteration
+      # order". Stage stays nondet — invariance is what was NOT
+      # certified — with the wall clock named as the cause.
+      variant_rc=0
+      variant_obs="$(lean "${lean_args[@]}" --choices "$oracle" 2>&1)" || variant_rc=$?
+      if variant_cause="$(undecided_cause "$variant_rc" "oracle-invariance re-run under stream [$olabel]" "$LEAN_TIMEOUT_SECONDS" LEAN_TIMEOUT_SECONDS)"; then
+        report_fail "$id" "$features" "nondet" "$variant_cause — invariance NOT certified (a killed run is not an observed variance); captured output: $variant_obs"
+        nondet=1
+        break
+      fi
+      # A REFUSAL under a variant stream is a refusal, not a variance
+      # (memo P1 item 4 / P5, assessment D-10 item 2): the default run
+      # produced the expected status, this stream produced a different
+      # one (unsupported/stuck/error/fatal/panic where ok was expected,
+      # or ok where a panic was) — reported at the refusal's own stage,
+      # never as "varies with iteration order".
+      variant_status="$(printf '%s' "$variant_obs" | sed -n 's/.*"status":"\([^"]*\)".*/\1/p' | head -1)"
+      if [[ "$variant_status" != "$expected_status" ]]; then
+        report_fail "$id" "$features" "lean-observation" "variant stream [$olabel]: the machine produced status '${variant_status:-<none>}' where the default run produced '$expected_status' — a refusal under a variant stream is a refusal, not a variance (invariance NOT certified): $variant_obs"
+        nondet=1
+        break
+      fi
+      obs_eq "$lean_observation" "$variant_obs"; eq_rc=$?
+      if eq_cause="$(obs_eq_cause "$eq_rc")"; then
+        report_fail "$id" "$features" "nondet" "$eq_cause comparing the default observation against stream [$olabel] — invariance NOT decided: default=$lean_observation variant=$variant_obs"
+        nondet=1
+        break
+      elif [[ "$eq_rc" -ne 0 ]]; then
+        report_fail "$id" "$features" "nondet" "observation varies with iteration order (oracle [$olabel]): default=$lean_observation variant=$variant_obs"
+        nondet=1
+        break
+      fi
+    done
+    if [[ "$nondet" -ne 0 ]]; then
+      return 0
+    fi
+  fi
+
+  # THE DEPTH GUARD (strict lane only; memo P1 §5 items 1-3). The
+  # confluent lane's certificate is the enumerator's, so the streams'
+  # coverage is not load-bearing there. One tracer call replays the
+  # default stream and the three invariance streams that just ran, in
+  # lockstep with the consumption accountant, and reports per stream
+  # the bound->=2 consumptions served AFTER exhaustion.
+  local guard_detail="-"
+  if [[ "$FRONTEND" == "native" && "$lane" == "strict" ]]; then
+    local trace_args=(choice-trace --input "$wire_json" --function "$function_name")
+    local tv
+    if [[ "$arg_ints" != "-" ]]; then
+      IFS=',' read -r -a ints4 <<< "$arg_ints"
+      for tv in "${ints4[@]}"; do
+        trace_args+=(--arg-int "$tv")
+      done
+    fi
+    trace_args+=(--stream default)
+    for ((si = 0; si < inv_want; si++)); do
+      trace_args+=(--stream "${inv_streams[$si]}")
+    done
+    local trace_rc=0 trace_out trace_cause
+    trace_out="$(run_with_timeout "$LEAN_TRACE_TIMEOUT_SECONDS" "$GOLEAN_BIN" "${trace_args[@]}" 2>&1)" || trace_rc=$?
+    if trace_cause="$(undecided_cause "$trace_rc" "depth guard (choice-trace)" "$LEAN_TRACE_TIMEOUT_SECONDS" LEAN_TRACE_TIMEOUT_SECONDS)"; then
+      report_fail "$id" "$features" "nondet" "$trace_cause — stream coverage NOT established (the strict PASS's invariance half is unproven); captured output: $trace_out"
+      return 0
+    fi
+    if [[ "$trace_rc" -ne 0 ]]; then
+      # Exit 1 = the accountant disagreed with the machine (menu-invariant
+      # violation, alarm, or driver disagreement) or a stream failed to
+      # parse. Fail closed: a consumption the accountant cannot mirror
+      # is exactly the kind of latitude the guard exists to expose.
+      report_fail "$id" "$features" "nondet" "depth guard: choice-trace reported a violation/alarm/driver disagreement (exit 1) — stream coverage NOT established: $(one_line "$trace_out")"
+      return 0
+    fi
+    # TSV: id stream status consumed wide exhaustedAt wideAfterExhaustion ...
+    local w_default="" line stream_col wide_col exh_col wae_col nlines=0
+    local guard_refusal="" fixed_probe=""
+    # Reports come back in --stream order: #1 the default stream (its
+    # `wide` is w), #2-#4 the three invariance streams that just ran.
+    # Positional, NOT keyed on the tracer's stream label: an empty
+    # stream is labelled "default" too, and keying on the label would
+    # skip it silently (the first smoke's leak).
+    while IFS=$'\t' read -r _tid stream_col _tstatus _tconsumed wide_col exh_col wae_col _rest; do
+      [[ "$_tid" == "id" ]] && continue
+      nlines=$((nlines + 1))
+      if [[ "$nlines" -eq 1 ]]; then
+        if [[ "$stream_col" != "default" ]]; then
+          guard_refusal="depth guard: choice-trace's first report is not the default stream ('$stream_col') — stream coverage NOT established"
+          break
+        fi
+        w_default="$wide_col"
+        continue
+      fi
+      if [[ "$stream_col" == "default" ]]; then
+        guard_refusal="depth guard: invariance stream #$((nlines - 1)) traced as the DEFAULT stream (empty stream — harness defect) — stream coverage NOT established"
+        break
+      fi
+      if [[ ! "$wae_col" =~ ^[0-9]+$ ]]; then
+        guard_refusal="depth guard: could not read wideAfterExhaustion for stream #$nlines from choice-trace ('$wae_col') — stream coverage NOT established"
+        break
+      fi
+      # Label the stream the way the row declared it.
+      local sidx=$((nlines - 2)) slabel skind
+      slabel="${inv_labels[$sidx]:-$stream_col}"; skind="${inv_kinds[$sidx]:-?}"
+      if [[ -n "$depth" && "$skind" == "fixed" ]]; then
+        # On a depth row the fixed streams are prefix probes (they ran
+        # and were compared above); their coverage is recorded, not
+        # required — the declared seeded streams carry the coverage.
+        fixed_probe="$fixed_probe${fixed_probe:+,}$wae_col"
+        continue
+      fi
+      if [[ "$wae_col" -gt 0 ]]; then
+        if [[ -n "$depth" ]]; then
+          guard_refusal="strict row: $wae_col wide pick(s) served after the declared depth=$depth stream [$slabel] was exhausted at consumption $exh_col — the seeded invariance streams did not cover this row; raise depth (default-stream wide count w=$w_default)"
+        else
+          guard_refusal="strict row: $wae_col wide pick(s) served after stream [$slabel] was exhausted at consumption $exh_col — the 3-stream invariance check did not cover this row; route to confluent, or declare depth (default-stream wide count w=$w_default)"
+        fi
+        break
+      fi
+    done <<< "$trace_out"
+    if [[ -z "$guard_refusal" && "$nlines" -ne $((inv_want + 1)) ]]; then
+      guard_refusal="depth guard: expected $((inv_want + 1)) stream reports from choice-trace, got $nlines — stream coverage NOT established: $(one_line "$trace_out")"
+    fi
+    if [[ -n "$guard_refusal" ]]; then
+      report_fail "$id" "$features" "nondet" "$guard_refusal"
+      return 0
+    fi
+    guard_detail="wide=${w_default:-?} exhausted=none depth=${depth:-fixed}${depth:+ fixed-probes-after=$fixed_probe}"
+  fi
+
+  if [[ "$lane" == "confluent" ]]; then
+    report_pass_lane "$id" "$features" "confluent" \
+      "|set|=1 certified over all schedules; $confluent_detail"
+  else
+    report_pass "$id" "$features" "$guard_detail"
+  fi
+}
+
+# The go-run oracle invocation for the CURRENT case (uses run_case_rows'
+# local go_run_dir). Arc-final audit F19 (2026-08-06): with an ABSOLUTE
+# $OUT (GOLEAN_COVERAGE_ARTIFACTS set to an absolute path — exactly
+# scripts/test-lane-validation's mktemp configuration), the old
+# `go run $go_run_pkg` passed an absolute path, which GOPATH mode rejects
+# with "cannot import absolute path": every case reaching this stage
+# failed at stage go-run regardless of the property under test (and a
+# panic-expected case reported the misleading "expected Go panic, got:
+# ... cannot import absolute path"). Run from inside the package dir
+# instead — `go run .` resolves in GOPATH mode for both path shapes.
+# GODEBUG=panicnil=0 (arc-final audit F21, 2026-08-06): the machine
+# models the MODERN (Go 1.21+) panic(nil) semantics — recover() returns
+# *runtime.PanicNilError — while GOPATH mode defaults to the legacy
+# behavior; the knob aligns the oracle with the model instead of
+# agreeing by config coincidence (unwinding arc §A2's recorded knob).
+go_run_oracle() {
+  # Race-expectation cases build with -race (the TSan second oracle);
+  # everything else runs plain — except that membership SAMPLING may
+  # force a -race build ($1 = race): the slice-4 doctrine update makes
+  # -race a default membership sample source (its runtime perturbs
+  # scheduling — plain go run is a point-mass on schedule-dependent
+  # shapes; probes: 0/700 vs 6/6 orderings). The two oracle MODES still
+  # never mix in one deadlock case: -race suppresses the deadlock
+  # detector (ground-truth note §5), and membership excludes deadlock.
+  local race_flag=()
+  if [[ "$expected_status" == "race" || "${1:-}" == "race" ]]; then
+    race_flag=(-race)
+  fi
+  # Multi-package cases (raft W1.1): the harness assembled the case's
+  # local packages under <go_run_dir>/gopath; hand that tree (ABSOLUTE —
+  # GOPATH rejects relative entries) to Go's own resolution. Absent for
+  # single-package cases, whose environment stays byte-identical.
+  local gopath_env=()
+  if [[ -d "$go_run_dir/gopath" ]]; then
+    gopath_env=(GOPATH="$(cd "$go_run_dir/gopath" && pwd -P)")
+  fi
+  # THE FD SPLIT (stdlib slice 3): stdout (the harness's observation JSON)
+  # and stderr (the program's print output, then gc's abort report, then
+  # go run's `exit status N` trailer) are captured to SEPARATE files —
+  # the `output` field is the program's stderr prefix, recovered
+  # fail-closed by the harness's --split-stderr mode (attach_output). The
+  # files never travel through shell substitution as raw bytes: Bash
+  # drops NUL. Callers classify stderr directly and ask coverageharness
+  # to encode messages/output or validate stdout before shell transport.
+  # The run's exit code is returned unchanged.
+  local rc=0
+  # GOFLAGS is SCRUBBED (audit fix round C3, 2026-09-05): an inherited
+  # `GOFLAGS=-x`/`-v` writes build chatter to the child's stderr, which
+  # is now a COMPARED channel (the `output` field), like GODEBUG already
+  # was pinned for panicnil.
+  # The terminal discriminator consumes runtime frames from THIS execution.
+  # system adds diagnostics without the crash bit or a recover wrapper.
+  run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOFLAGS= GODEBUG=panicnil=0 GOTRACEBACK=system GOCACHE="$GO_BUILD_CACHE" \
+    ${gopath_env[@]+"${gopath_env[@]}"} \
+    bash -c 'cd "$1" && shift && exec go run "$@" .' go-run-oracle "$go_run_dir" ${race_flag[@]+"${race_flag[@]}"} \
+    > "$go_run_dir/oracle.stdout" 2> "$go_run_dir/oracle.stderr" || rc=$?
+  return "$rc"
+}
+
+# Diagnostics only: each descriptor is quoted separately, with every byte
+# preserved in an ASCII representation. This text is never an observation
+# or a source of status/message classification.
+go_diagnostics() {
+  printf 'stdout='
+  "$HARNESS_BIN" --quote-file "$go_run_dir/oracle.stdout"
+  printf ' stderr='
+  "$HARNESS_BIN" --quote-file "$go_run_dir/oracle.stderr"
+}
+
+# attach_output <status> — splice the `output` field into $go_observation
+# (stdlib slice 3): the program's fd-2 prefix from the LAST go_run_oracle
+# call's stderr file, split by the harness under <status>'s rule
+# (split.go: ok = the whole stream; panic/fatal/deadlock = up to the unique
+# line-start abort marker; race = must be empty). Any ambiguity is a
+# fail-closed refusal — reported at stage go-observation with the
+# harness's cause, and the row does not compare. The literal is spliced
+# textually (the harness JSON's numbers are never re-encoded).
+attach_output() {
+  local lit rc=0
+  lit="$("$HARNESS_BIN" --split-stderr "$go_run_dir/oracle.stderr" --expected-status "$1" 2>"$go_run_dir/oracle.split.err")" || rc=$?
+  if [[ "$rc" -ne 0 ]]; then
+    report_fail "$id" "$features" "go-observation" "the oracle's stderr could not be split into program output + abort report (harness exit $rc): $(one_line "$(cat "$go_run_dir/oracle.split.err")")"
+    return 1
+  fi
+  go_observation="{\"output\":$lit,${go_observation#\{}"
+}
+
+# One `go run` of the generated harness, classified under the SAME status /
+# panic policy as the strict lane — generalized (audit F8/BUG-044) to the
+# case's declared STATUS SET (`statuses`, +-separated; defaults to the
+# singleton expected_status): a sample is classified by what actually
+# happened (success -> ok observation; a panic exit -> canonical panic
+# observation) and accepted iff that status is in the declared set — the
+# sample-in-enumerated-set check downstream then pins the VALUE/message.
+# On success prints the sample's canonical observation JSON and returns 0;
+# on any failure prints the error detail and returns 1. Uses
+# run_membership_case_rows' locals (go_run_dir, expected_status,
+# expected_reason, statuses).
+membership_go_observation() {
+  local out rc=0 valid_rc=0 go_cause valid_cause
+  go_run_oracle "${1:-}" || rc=$?
+  out="$(go_diagnostics)"
+  if go_cause="$(undecided_cause "$rc" "go run oracle" "$GO_TIMEOUT_SECONDS" GO_TIMEOUT_SECONDS)"; then
+    # Named before any status reading: a killed oracle (wall clock,
+    # SIGKILL/SIGTERM, any non-verdict code) is no sample, and its
+    # partial output used to surface as "status outside the declared
+    # set" / "expected Go panic, got: …".
+    printf 'go sample: %s — no sample produced (not a status verdict); captured output: %s' "$go_cause" "$out"
+    return 1
+  fi
+  if [[ "$rc" -eq 0 ]]; then
+    if ! member_status_allowed ok; then
+      printf 'go sample: declared status set (%s) excludes ok, but Go exited successfully: %s' "$statuses" "$out"
+      return 1
+    fi
+    if ! out="$("$HARNESS_BIN" --read-observation "$go_run_dir/oracle.stdout" 2>"$go_run_dir/oracle.read.err")"; then
+      printf 'go sample: %s: %s' "$(cat "$go_run_dir/oracle.read.err")" "$(go_diagnostics)"
+      return 1
+    fi
+    # The `output` field (stdlib slice 3): the sample's fd-2 bytes, split
+    # fail-closed like the strict lane's (attach_output's rule, inlined —
+    # this function reports through its stdout, not report_fail).
+    local lit split_rc=0
+    lit="$("$HARNESS_BIN" --split-stderr "$go_run_dir/oracle.stderr" --expected-status ok 2>"$go_run_dir/oracle.split.err")" || split_rc=$?
+    if [[ "$split_rc" -ne 0 ]]; then
+      printf 'go sample: the oracle stderr could not be split into program output (harness exit %s): %s' "$split_rc" "$(one_line "$(cat "$go_run_dir/oracle.split.err")")"
+      return 1
+    fi
+    out="{\"output\":$lit,${out#\{}"
+    obs_eq "$out" "$out"; valid_rc=$?
+    # Self-comparison: exit 2 IS the decision (see the strict lane's
+    # validity check) — accurate wording + the decode message.
+    if [[ "$valid_rc" -eq 2 ]]; then
+      printf 'go sample is not a valid observation (comparator said: %s): %s' "$(one_line "$OBS_EQ_STDERR")" "$out"
+      return 1
+    elif valid_cause="$(obs_eq_cause "$valid_rc")"; then
+      printf 'go sample: %s validating the sample — validity NOT decided: %s' "$valid_cause" "$out"
+      return 1
+    elif [[ "$valid_rc" -ne 0 ]]; then
+      printf 'go sample is not a valid observation: %s' "$out"
+      return 1
+    fi
+    if [[ "$out" != *"\"status\":\"ok\""* ]]; then
+      printf 'go sample: expected an ok observation from a successful run, got %s' "$out"
+      return 1
+    fi
+    printf '%s' "$out"
+    return 0
+  fi
+  if grep -aqF -- 'panic:' "$go_run_dir/oracle.stderr" && member_status_allowed panic; then
+    if [[ "$expected_status" == "panic" ]] && ! grep -aqF -- "$expected_reason" "$go_run_dir/oracle.stderr"; then
+      printf 'go sample: Go panic did not contain expected reason %s: %s' "$expected_reason" "$out"
+      return 1
+    fi
+    local escaped
+    if ! escaped="$("$HARNESS_BIN" --abort-message "$go_run_dir/oracle.stderr" --expected-status panic 2>"$go_run_dir/oracle.message.err")"; then
+      printf 'go sample: could not extract Go panic message: %s; %s' "$(cat "$go_run_dir/oracle.message.err")" "$out"
+      return 1
+    fi
+    local lit split_rc=0
+    lit="$("$HARNESS_BIN" --split-stderr "$go_run_dir/oracle.stderr" --expected-status panic 2>"$go_run_dir/oracle.split.err")" || split_rc=$?
+    if [[ "$split_rc" -ne 0 ]]; then
+      printf 'go sample: the oracle stderr could not be split into program output + panic report (harness exit %s): %s' "$split_rc" "$(one_line "$(cat "$go_run_dir/oracle.split.err")")"
+      return 1
+    fi
+    printf '{"message":%s,"output":%s,"schema":"golean-observation-v1","status":"panic"}' "$escaped" "$lit"
+    return 0
+  fi
+  if [[ "$expected_status" == "panic" ]]; then
+    printf 'go sample: expected Go panic, got: %s' "$out"
+    return 1
+  fi
+  printf 'go sample run failed (status outside the declared set %s): %s' "$statuses" "$out"
+  return 1
+}
+
+# The membership lane (arc slice 3, docs/2026-08-04_membership-lane-design.md).
+# PASS = every Go sample ∈ the machine's enumerated observation set
+# (possibilistic membership — the nondeterminism doctrine's testing half).
+# Fail-closed guards: enumerator failure (width/depth/cap/work — coverage
+# not certified) fails the case; a SINGLETON enumerated set fails
+# classification (the case belongs in the strict lane); a Go sample outside
+# the set is the too-narrow soundness alarm. The width signal
+# (|enumerated|, |exhibited|, the unexhibited members) is recorded as
+# metadata in the PASS detail and under $OUT/membership/<id>/ — never a
+# pass criterion. Runs inside run_case_rows' scope (uses its locals).
+# Parse the lane params into width/sites/obs_cap/work/members.
+# Validated by coverage-manifest AND re-validated here (audit F4: a value
+# that reaches the harness malformed — e.g. sites=0 — must fail loud,
+# never degrade to a zero-oracle pass). Width has NO default (audit F2a),
+# and since slice 4 the assertion is checked MECHANICALLY per site by the
+# enumerator. `samples=` is RETIRED (the 2026-09-03 sampling rule sets
+# the draw budget by run mode — see MEMBERSHIP_DRAWS) and refused here
+# by name, so a row that still carries it cannot pass with a budget it
+# did not get. Returns nonzero after reporting on a bad shape.
+parse_lane_params() {
+  width="" sites=8 obs_cap=64 work=200000 members="" statuses="$expected_status" tier="" backedge="" nonterm="" engine=""
+  if [[ "$params" != "-" ]]; then
+    local kv key value
+    IFS=',' read -r -a kvs <<< "$params"
+    for kv in "${kvs[@]}"; do
+      key="${kv%%=*}"
+      value="${kv#*=}"
+      if [[ "$key" == "statuses" ]]; then
+        # Status-diverse envelope declaration (audit F8/BUG-044) —
+        # membership-only, its own shape; re-validated here like every
+        # param (F4's discipline: a malformed value that bypasses the
+        # manifest must fail loud).
+        if [[ "$lane" != "membership" ]]; then
+          report_fail "$id" "$features" "manifest" "statuses= is a membership-lane param (lane=$lane)"
+          return 1
+        fi
+        if [[ ! "$value" =~ ^(ok|panic)(\+(ok|panic))+$ ]]; then
+          report_fail "$id" "$features" "manifest" "statuses must be a +-separated set over {ok,panic} with >=2 entries: $kv"
+          return 1
+        fi
+        if [[ "+$value+" != *"+$expected_status+"* ]]; then
+          report_fail "$id" "$features" "manifest" "statuses must include the row's expected_status ($expected_status): $kv"
+          return 1
+        fi
+        if [[ "$value" == *ok*ok* || "$value" == *panic*panic* ]]; then
+          # Lockstep with coverage-manifest's duplicate arm (convergence
+          # check: this copy had shipped without it; a bypassing ok+ok
+          # was backstopped only by the enumerator's own duplicate
+          # refusal downstream).
+          report_fail "$id" "$features" "manifest" "statuses has a duplicate entry: $kv"
+          return 1
+        fi
+        statuses="$value"
+        continue
+      fi
+      if [[ "$key" == "tier" ]]; then
+        # Re-validated like every param (F4's discipline); members= is
+        # required for the membership lane (the cached path's
+        # cardinality constraint — pre-merge audit 2026-08-08). W3.2
+        # stage C widened the tier to the CONFLUENT lane: B1's post-op
+        # boundaries grew several confluent rows' certification trees
+        # past the fast-lane wall-clock budget, and the tiering design's
+        # cached-record discipline (certified record + nightly/--slow
+        # re-certification, fail-closed on sha/params drift) applies to
+        # a certified singleton exactly as to a certified set.
+        if [[ "$value" != "slow" ]]            || [[ "$lane" != "membership" && "$lane" != "confluent" ]]; then
+          report_fail "$id" "$features" "manifest" "tier=slow is the only tier and is membership/confluent-only: $kv (lane=$lane)"
+          return 1
+        fi
+        if [[ "$lane" == "membership" ]]; then
+          case ",$params," in
+            *,members=*) ;;
+            *)
+              report_fail "$id" "$features" "manifest" "tier=slow requires an explicit members=<n> pin"
+              return 1
+              ;;
+          esac
+        fi
+        tier="slow"
+        continue
+      fi
+      if [[ "$key" == "backedge" ]]; then
+        # backEdge per-site enumeration mode (W3.2 stage D §5d):
+        # 'full' = exhaustive (loop-length-exponential — a row saying
+        # so pays for it), <k> = canonical slot + k anti-progress
+        # slots per occurrence (k may be 0; the enumerator prints the
+        # capped-occurrence count into the run record so the claim
+        # states exactly which tree it certified). Enumerating lanes
+        # only (membership/confluent/racy).
+        if [[ "$lane" == "strict" ]]; then
+          report_fail "$id" "$features" "manifest" "backedge= is an enumerating-lane param: $kv (lane=$lane)"
+          return 1
+        fi
+        if [[ "$value" != "full" && ! "$value" =~ ^(0|[1-9][0-9]*)$ ]]; then
+          report_fail "$id" "$features" "manifest" "backedge= must be 'full' or a non-negative integer: $kv"
+          return 1
+        fi
+        backedge="$value"
+        continue
+      fi
+      if [[ "$key" == "nonterm" ]]; then
+        # allow-nonterm (stage D §5d): per-branch pool fuel N with
+        # fuel-exhausted branches counted (never members; membership =
+        # oracle observation ∈ TERMINATING members). Membership-only:
+        # a confluent/racy claim has no honest divergent-branch
+        # reading.
+        if [[ "$lane" != "membership" ]]; then
+          report_fail "$id" "$features" "manifest" "nonterm= is a membership-lane param: $kv (lane=$lane)"
+          return 1
+        fi
+        if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then
+          report_fail "$id" "$features" "manifest" "nonterm= must be a positive integer (the per-branch fuel): $kv"
+          return 1
+        fi
+        nonterm="$value"
+        continue
+      fi
+      if [[ "$key" == "depth" ]]; then
+        # depth=N is the STRICT lane's declaration (memo P1): the
+        # enumerating lanes certify the whole tree, so a depth there
+        # is a category error — refuse, never ignore.
+        report_fail "$id" "$features" "manifest" "depth= is a strict-lane param (the enumerating lanes certify the whole tree): $kv (lane=$lane)"
+        return 1
+      fi
+      if [[ "$key" == "engine" ]]; then
+        # engine=dedup (POR slice, docs/2026-08-21_w32-por-design.md):
+        # certify via the state-graph dedup engine + THE VERIFIED
+        # CHECKER (checkCertM_slowObs) instead of the DFS — the row's
+        # certified set is then theorem-backed equal to SlowObs.
+        # Enumerating lanes only; refused shapes fail loud in the
+        # engine (never a silent DFS fallback).
+        if [[ "$lane" == "strict" ]]; then
+          report_fail "$id" "$features" "manifest" "engine= is an enumerating-lane param: $kv (lane=$lane)"
+          return 1
+        fi
+        if [[ "$value" != "dedup" ]]; then
+          report_fail "$id" "$features" "manifest" "engine= must be 'dedup': $kv"
+          return 1
+        fi
+        engine="$value"
+        continue
+      fi
+      if [[ "$key" == "samples" ]]; then
+        report_fail "$id" "$features" "manifest" "samples= is RETIRED (2026-09-03 sampling rule: the membership draw budget is K=$MEMBERSHIP_DRAWS by run mode — 32 on the gate path, 80 under --slow — alternating plain/-race with early stop at the members= pin; a per-row sample count is no longer read): remove $kv"
+        return 1
+      fi
+      if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then
+        report_fail "$id" "$features" "manifest" "lane param $key must be a positive integer: $kv"
+        return 1
+      fi
+      case "$key" in
+        width) width="$value" ;;
+        sites) sites="$value" ;;
+        cap) obs_cap="$value" ;;
+        work) work="$value" ;;
+        members) members="$value" ;;
+        *)
+          report_fail "$id" "$features" "manifest" "unknown lane param key: $kv"
+          return 1
+          ;;
+      esac
+    done
+  fi
+  if [[ -z "$width" ]]; then
+    report_fail "$id" "$features" "manifest" "$lane case must declare an explicit width=<B> (author-asserted >= every consumption-site bound; mechanically checked per site)"
+    return 1
+  fi
+  return 0
+}
+
+# Is status $1 in the case's declared status set (`statuses`, +-separated;
+# defaults to the singleton expected_status)?
+member_status_allowed() {
+  [[ "+$statuses+" == *"+$1+"* ]]
+}
+
+run_membership_case_rows() {
+  local width sites obs_cap work members statuses tier backedge nonterm engine
+  parse_lane_params || return 0
+
+  local mem_dir="$OUT/membership/$id"
+  mkdir -p "$mem_dir"
+
+  # Go side — the sampling rule (MEMBERSHIP_DRAWS, [USER]-ruled
+  # 2026-09-03): draws ALTERNATE plain and -race (odd draws plain, even
+  # draws -race; the -race runtime perturbs goroutine scheduling and is
+  # the only perturbation source on the scheduling rows, so it comes
+  # second, not sixth), and STOP EARLY once the distinct observations
+  # reach the row's members= pin, else at K. Distinctness is decided by
+  # the comparator (obs_eq) against the representatives drawn so far —
+  # byte-identical text short-circuits (obs_eq is reflexive: the sample's
+  # own self-comparison validated it) — and an undecided comparison
+  # (timeout/kill/exit 2) fails the row: saturation is NOT decided.
+  # Every draw is recorded whether or not the row stops early; the
+  # membership (soundness) check below runs on EVERY recorded draw. A
+  # draw that did not decide (timeout, kill, non-verdict exit) fails the
+  # row on the spot — it is not an observation and never counts toward
+  # saturation. Rows without a members= pin have no early stop and draw
+  # the full K (noted in the progress log and the PASS detail).
+  # TWO-DRAW FLOOR ([USER] ruling, Mike 2026-09-03, relayed by the
+  # coordinator: «this is a 'spirit of the ruling' vs. 'letter of the
+  # ruling' case - we should do option A which seems like the spirit of
+  # the ruling» — option A = a floor of two draws, one plain + one -race,
+  # before the early stop may fire): a members=1 row otherwise stopped at
+  # draw 1 and never saw a -race draw at all. The early stop needs
+  # draws >= 2 AND distinct >= members; K is unchanged; a row whose pin
+  # was reached before the floor captions `draws=2 (floor; …)`.
+  local i sample mode draws=0 distinct=0 rep new_obs eq_rc eq_undecided floor_stop=0
+  local -a reps=()
+  : > "$mem_dir/samples.txt"
+  : > "$mem_dir/draws.txt"
+  if [[ -z "$members" ]]; then
+    echo "membership: $id has NO members= pin — no early stop; drawing the full budget K=$MEMBERSHIP_DRAWS"
+  fi
+  for ((i = 1; i <= MEMBERSHIP_DRAWS; i++)); do
+    if (( i % 2 == 1 )); then mode=""; else mode="race"; fi
+    if ! sample="$(membership_go_observation "$mode")"; then
+      report_fail "$id" "$features" "membership" "draw $i/$MEMBERSHIP_DRAWS (${mode:-plain}) ${mode:+-race }$sample"
+      return 0
+    fi
+    draws="$i"
+    printf '%s\n' "$sample" >> "$mem_dir/samples.txt"
+    printf '%s\t%s\n' "${mode:-plain}" "$sample" >> "$mem_dir/draws.txt"
+    new_obs=1
+    for rep in ${reps[@]+"${reps[@]}"}; do
+      if [[ "$rep" == "$sample" ]]; then
+        new_obs=0
+        break
+      fi
+      obs_eq "$rep" "$sample"; eq_rc=$?
+      if eq_undecided="$(obs_eq_cause "$eq_rc")"; then
+        report_fail "$id" "$features" "membership" "sampling rule: $eq_undecided comparing draw $i/$MEMBERSHIP_DRAWS against an earlier distinct draw — saturation NOT decided (a killed comparator is neither a new observation nor a repeat): draw=$sample earlier=$rep"
+        return 0
+      elif [[ "$eq_rc" -eq 0 ]]; then
+        new_obs=0
+        break
+      fi
+    done
+    if [[ "$new_obs" -eq 1 ]]; then
+      reps+=("$sample")
+      distinct=$((distinct + 1))
+    fi
+    if [[ -n "$members" && "$distinct" -ge "$members" ]]; then
+      if [[ "$draws" -ge 2 ]]; then
+        break
+      fi
+      floor_stop=1
+    fi
+  done
+  # Audit F4: never pass with zero oracle — however the loop above was
+  # reached, an empty samples file means no Go observation constrains the
+  # machine set, and the case must fail loud, not report a lane PASS.
+  if ! grep -q . "$mem_dir/samples.txt"; then
+    report_fail "$id" "$features" "membership" "no Go samples produced (draws=$draws of K=$MEMBERSHIP_DRAWS) — refusing to pass with zero oracle"
+    return 0
+  fi
+
+  # Machine side: export the wire and enumerate the observation set.
+  local wire_json="$OUT/native/$id/wire.json"
+  mkdir -p "$(dirname "$wire_json")"
+  local native_export
+  # E7 apparatus allow — same keyed exception as the strict lane above.
+  local mem_fe_flags=()
+  if [[ "$id" == "init/hidden-dep-order" ]]; then
+    mem_fe_flags+=(--allow-hidden-dep-init-order)
+  fi
+  local mem_native_rc=0 mem_native_cause
+  native_export="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/nativefrontend ${mem_fe_flags[@]+"${mem_fe_flags[@]}"} --dir "$go_dir" --out "$wire_json" 2>&1)" || mem_native_rc=$?
+  if [[ "$mem_native_rc" -eq 124 ]]; then
+    report_fail "$id" "$features" "frontend-export" "native frontend TIMED OUT after ${GO_TIMEOUT_SECONDS}s (GO_TIMEOUT_SECONDS) — no wire produced; captured output: $native_export"
+    return 0
+  elif mem_native_cause="$(signal_cause "$mem_native_rc" "native frontend")"; then
+    report_fail "$id" "$features" "frontend-export" "$mem_native_cause — no wire produced; captured output: $native_export"
+    return 0
+  elif [[ "$mem_native_rc" -ne 0 ]]; then
+    report_fail "$id" "$features" "frontend-export" "native frontend: $native_export"
+    return 0
+  fi
+  # Same as the strict lane: surface the E7 allow's WARNING (and any
+  # other frontend stderr) on a SUCCESSFUL export too.
+  if [[ -n "$native_export" ]]; then
+    printf '%s: %s\n' "$id" "$native_export" >&2
+  fi
+  local int_flags=()
+  if [[ "$arg_ints" != "-" ]]; then
+    local ints value
+    IFS=',' read -r -a ints <<< "$arg_ints"
+    for value in "${ints[@]}"; do
+      if [[ ! "$value" =~ ^-?[0-9]+$ ]]; then
+        report_fail "$id" "$features" "manifest" "invalid integer argument: $value"
+        return 0
+      fi
+      int_flags+=(--arg-int "$value")
+    done
+  fi
+  # --expect-status (audit F1; SET-valued since audit F8): a member
+  # whose status is OUTSIDE the case's declared status set is a machine
+  # bug — the enumerator fails loud on it instead of burying it in the
+  # set. Status-diverse envelopes (BUG-044's main-exit window) declare
+  # statuses=ok+panic and pass the whole set.
+  # Tiered checking (tier=slow; user directive 2026-08-08, membership-lane
+  # note addendum): quick/per-commit runs verify against the row's TRACKED
+  # certified-set record instead of re-enumerating; scripts/ci --slow
+  # (GOLEAN_SLOW=1) re-certifies fully. Fail-closed everywhere: no record,
+  # a stale wire hash, or a --slow set/hash mismatch all fail loud. NO
+  # silent skip: the cached path reports a visible CERTIFIED-CACHED
+  # detail, and the machine is still exercised by the driver-coupling
+  # pin's four single runs below (only the full-envelope enumeration is
+  # deferred to the --slow path — machine-side envelope drift is caught
+  # there, and coupling drift is caught here).
+  local cert_file="baselines/certified/${id//\//__}.certified.tsv" cached=0
+  local wire_sha rec_sha cert_stamp rec_params
+  if [[ "$tier" == "slow" && "${GOLEAN_SLOW:-0}" != "1" ]]; then
+    if [[ ! -f "$cert_file" ]]; then
+      report_fail "$id" "$features" "membership" "tier=slow but no certified-set record at $cert_file — certify with scripts/ci --slow and commit the record"
+      return 0
+    fi
+    wire_sha="$(sha256sum "$wire_json" | cut -d' ' -f1)"
+    rec_sha="$(sed -n 's/^# wire-sha256: //p' "$cert_file" | head -1)"
+    if [[ -z "$rec_sha" || "$wire_sha" != "$rec_sha" ]]; then
+      report_fail "$id" "$features" "membership" "certified-set record is STALE (wire sha ${wire_sha:0:12} != recorded ${rec_sha:0:12}) — the case or frontend moved since certification; re-certify with scripts/ci --slow"
+      return 0
+    fi
+    # Params guard (pre-merge audit, 2026-08-08): the wire hash covers the
+    # SOURCE but not the CLAIM — the cases.tsv row's lane params are
+    # outside it. The record's `# params:` header must equal the row's
+    # current params string exactly; a row edit without re-certification
+    # fails loud instead of silently re-labeling a cached set.
+    rec_params="$(sed -n 's/^# params: //p' "$cert_file" | head -1)"
+    if [[ -z "$rec_params" || "$rec_params" != "$params" ]]; then
+      report_fail "$id" "$features" "membership" "certified-set record was certified under params '$rec_params' but the row now declares '$params' — re-certify with scripts/ci --slow"
+      return 0
+    fi
+    grep -v '^#' "$cert_file" | grep . > "$mem_dir/observations.txt" || true
+    cert_stamp="$(sed -n 's/^# certified: //p' "$cert_file" | head -1)"
+    cached=1
+  else
+    local enum_args=(coverage-observations --input "$wire_json" --function "$function_name"
+      --max-width "$width" --max-sites "$sites" --cap "$obs_cap" --work-cap "$work"
+      --expect-status "${statuses//+/,}" ${int_flags+"${int_flags[@]}"})
+    if [[ -n "$backedge" ]]; then
+      enum_args+=(--backedge "$backedge")
+    fi
+    if [[ -n "$engine" ]]; then
+      enum_args+=(--engine "$engine")
+    fi
+    if [[ -n "$nonterm" ]]; then
+      enum_args+=(--allow-nonterm "$nonterm")
+    fi
+    # tier=slow re-enumeration gets the slow budget (see the two constants
+    # at the top). Capture the exit code and NAME a timeout in the detail:
+    # the 2026-08-13 nightly flake was undiagnosable from CI logs because
+    # the generic "enumerator failed" detail (with an empty stats file)
+    # never said the guard that fired was wall-clock.
+    local enum_timeout="$LEAN_ENUM_TIMEOUT_SECONDS" enum_rc=0 enum_what_sig
+    if [[ "$tier" == "slow" ]]; then
+      enum_timeout="$LEAN_ENUM_SLOW_TIMEOUT_SECONDS"
+    fi
+    run_with_timeout "$enum_timeout" "$GOLEAN_BIN" "${enum_args[@]}" \
+        > "$mem_dir/observations.txt" 2> "$mem_dir/enum-stats.txt" || enum_rc=$?
+    if [[ "$enum_rc" -ne 0 ]]; then
+      local enum_what="enumerator failed (exit $enum_rc; coverage not certified)"
+      if [[ "$enum_rc" -eq 124 ]]; then
+        enum_what="enumerator TIMED OUT after ${enum_timeout}s (coverage not certified)"
+      elif enum_what_sig="$(signal_cause "$enum_rc" enumerator)"; then
+        enum_what="$enum_what_sig (coverage not certified)"
+      fi
+      report_fail "$id" "$features" "membership" "$enum_what: $(cat "$mem_dir/enum-stats.txt")"
+      return 0
+    fi
+    if [[ "$tier" == "slow" ]]; then
+      # --slow re-certification: the freshly enumerated set must equal the
+      # tracked record (as a set) at the current wire hash. Any mismatch
+      # fails loud — the record is a TRACKED baseline, updated
+      # deliberately in its own commit, never auto-written by a run.
+      wire_sha="$(sha256sum "$wire_json" | cut -d' ' -f1)"
+      if [[ ! -f "$cert_file" ]]; then
+        report_fail "$id" "$features" "membership" "tier=slow re-certified but no tracked record exists — create $cert_file from $mem_dir/observations.txt (header: '# certified: <date>  commit: <rev>', '# params: $params', '# wire-sha256: $wire_sha') and commit it"
+        return 0
+      fi
+      rec_sha="$(sed -n 's/^# wire-sha256: //p' "$cert_file" | head -1)"
+      rec_params="$(sed -n 's/^# params: //p' "$cert_file" | head -1)"
+      if [[ "$wire_sha" != "$rec_sha" || "$rec_params" != "$params" ]] \
+         || ! diff <(grep -v '^#' "$cert_file" | grep . | sort) \
+                   <(sort "$mem_dir/observations.txt") > /dev/null; then
+        report_fail "$id" "$features" "membership" "re-certification DIFFERS from the tracked record $cert_file (set, params, or wire hash moved: row params '$params' vs recorded '$rec_params') — update the record deliberately in this commit (fresh set in $mem_dir/observations.txt, wire-sha256 $wire_sha)"
+        return 0
+      fi
+    fi
+  fi
+
+  local member_count
+  member_count="$(grep -c . "$mem_dir/observations.txt" || true)"
+  if [[ "$member_count" -le 1 && -z "$nonterm" ]]; then
+    report_fail "$id" "$features" "membership" "enumerated observation set is a singleton ($member_count member) — the case belongs in the strict or confluent lane"
+    return 0
+  fi
+  if [[ "$member_count" -lt 1 ]]; then
+    report_fail "$id" "$features" "membership" "enumerated TERMINATING observation set is empty — nothing for the oracle to be a member of"
+    return 0
+  fi
+  # The set-cardinality pin (slice 4, members=<n>): the certified set's
+  # SIZE is part of the claim — e.g. sb-chan's {1,10,11} pins 3, so the
+  # SC-forbidden 00 cannot appear without failing the case.
+  if [[ -n "$members" && "$member_count" -ne "$members" ]]; then
+    report_fail "$id" "$features" "membership" "enumerated set has $member_count member(s), the case pins members=$members — the certified set moved (widen/narrow deliberately or fix the machine)"
+    return 0
+  fi
+
+  # Driver-coupling pin (audit F5): the enumerator COPIES native-json-run's
+  # driver layer (entry wiring + run loop, see GoLean/CLI.lean). Pin the
+  # copy against the original on every run: the single-run driver's
+  # observation under the default and the three adversarial streams must
+  # be a member of the enumerated set. A miss is copied-driver drift (or a
+  # width the enumeration missed) — fail loud either way.
+  local cs coupling_obs member m_found coupling_rc eq_rc eq_undecided coupling_cause
+  for cs in "" "9,8,7,6,5,4,3,2,1,0" "1,3,5,7,9,2,4,6,8,0" "5,5,5,5,5,5,5,5"; do
+    local run_args=(native-json-run --input "$wire_json" --function "$function_name" ${int_flags+"${int_flags[@]}"})
+    if [[ -n "$cs" ]]; then
+      run_args+=(--choices "$cs")
+    fi
+    # A killed driver run is NOT copied-driver drift (cause-naming fix
+    # 2026-09-03): the old shape searched the set for the empty capture
+    # and reported drift. Coupling is what was NOT certified; the wall
+    # clock is the cause.
+    coupling_rc=0
+    coupling_obs="$(lean "${run_args[@]}" 2>&1)" || coupling_rc=$?
+    if coupling_cause="$(undecided_cause "$coupling_rc" "driver-coupling pin: native-json-run under stream [$cs]" "$LEAN_TIMEOUT_SECONDS" LEAN_TIMEOUT_SECONDS)"; then
+      report_fail "$id" "$features" "membership" "$coupling_cause — coupling NOT certified (a killed run is not copied-driver drift); captured output: $coupling_obs"
+      return 0
+    fi
+    if [[ -n "$nonterm" && "$coupling_obs" == *'"status":"fuel-out"'* ]]; then
+      # Declared-nonterm row (stage D §5d): a coupling stream landing
+      # on a DIVERGENT branch is the counted-nonterm class, not a
+      # member — the same honest bucket the enumeration reports
+      # (`nonterm=` in the run record). Terminating coupling
+      # observations still must be members.
+      continue
+    fi
+    m_found=0
+    eq_undecided=""
+    while IFS= read -r member; do
+      obs_eq "$member" "$coupling_obs"; eq_rc=$?
+      if eq_undecided="$(obs_eq_cause "$eq_rc")"; then
+        break
+      elif [[ "$eq_rc" -eq 0 ]]; then
+        m_found=1
+        break
+      fi
+    done < "$mem_dir/observations.txt"
+    if [[ -n "$eq_undecided" ]]; then
+      report_fail "$id" "$features" "membership" "driver-coupling pin: $eq_undecided comparing the stream [$cs] observation against member $member — coupling NOT decided (not copied-driver drift): $coupling_obs"
+      return 0
+    fi
+    if [[ "$m_found" -ne 1 ]]; then
+      report_fail "$id" "$features" "membership" "driver-coupling pin: native-json-run observation under stream [$cs] is NOT in the enumerated set (copied-driver drift, or a behavior the enumeration missed): $coupling_obs"
+      return 0
+    fi
+  done
+
+  # Membership check: every Go sample must be a member. Track which members
+  # Go exhibited (by member line number) for the width signal.
+  # Memoized per byte-identical sample (audit fix F1, 2026-09-03): the
+  # sampling rule raised draws from 10 to K, and this loop spawned one
+  # `observation-eq` per (draw, member) up to the matching member — on
+  # slices/append-spill-size-class (gc's observation is member #124 of
+  # 300) ~248 → ~3,968 spawns, 1:57 for the row; the old samples=1 had
+  # been an unstated cost cap on exactly that row. A sample whose bytes
+  # equal an already-DECIDED sample has the same member (obs_eq is a
+  # function of its two arguments; the earlier decision was reached by
+  # the comparator on identical bytes), so its member index is reused
+  # and nothing is re-spawned. The verdict is unchanged: every draw is
+  # still checked against the set — the check for a repeat IS the
+  # decision recorded for its first occurrence; an undecided comparison
+  # is never memoized (it fails the row on the spot), and a not-found
+  # sample fails before any memo is written.
+  local exhibited="" n member found
+  local -A member_of=()
+  while IFS= read -r sample; do
+    if [[ -n "${member_of[$sample]:-}" ]]; then
+      continue
+    fi
+    found=0
+    n=0
+    eq_undecided=""
+    while IFS= read -r member; do
+      n=$((n + 1))
+      obs_eq "$member" "$sample"; eq_rc=$?
+      if eq_undecided="$(obs_eq_cause "$eq_rc")"; then
+        break
+      elif [[ "$eq_rc" -eq 0 ]]; then
+        found=1
+        case " $exhibited " in
+          *" $n "*) ;;
+          *) exhibited="$exhibited $n" ;;
+        esac
+        break
+      fi
+    done < "$mem_dir/observations.txt"
+    # A killed (or refusing) comparator is NOT the too-narrow soundness
+    # alarm (cause-naming fixes 2026-09-03): the old loop read exit 124
+    # — and then 2/137/143 — as "not this member" and, having matched
+    # nothing, raised the alarm.
+    if [[ -n "$eq_undecided" ]]; then
+      report_fail "$id" "$features" "membership" "membership check: $eq_undecided comparing a Go sample against member #$n — membership NOT decided (a killed comparator is not the too-narrow soundness alarm): sample=$sample member=$member"
+      return 0
+    fi
+    if [[ "$found" -ne 1 ]]; then
+      report_fail "$id" "$features" "membership" "Go observation is NOT in the machine's enumerated set (the too-narrow soundness alarm): $sample enumerated=$member_count"
+      return 0
+    fi
+    member_of["$sample"]="$n"
+  done < "$mem_dir/samples.txt"
+
+  local exhibited_count unexhibited_count
+  exhibited_count="$(printf '%s\n' $exhibited | grep -c . || true)"
+  n=0
+  : > "$mem_dir/unexhibited.txt"
+  while IFS= read -r member; do
+    n=$((n + 1))
+    case " $exhibited " in
+      *" $n "*) ;;
+      *) printf '%s\n' "$member" >> "$mem_dir/unexhibited.txt" ;;
+    esac
+  done < "$mem_dir/observations.txt"
+  unexhibited_count="$(grep -c . "$mem_dir/unexhibited.txt" || true)"
+
+  # Caption metadata (never a pass criterion): draws= is the budget SPENT
+  # under the sampling rule beside the K it was allowed and, for a pinned
+  # row, whether the stop was the pin or the cap; an unpinned row says so.
+  local budget_note
+  if [[ -n "$members" ]]; then
+    if [[ "$distinct" -ge "$members" && "$floor_stop" -eq 1 ]]; then
+      budget_note="draws=$draws (floor; K=$MEMBERSHIP_DRAWS; stopped at the members=$members pin after the two-draw floor — one plain + one -race)"
+    elif [[ "$distinct" -ge "$members" ]]; then
+      budget_note="draws=$draws (K=$MEMBERSHIP_DRAWS; stopped at the members=$members pin)"
+    else
+      budget_note="draws=$draws (K=$MEMBERSHIP_DRAWS; pin members=$members NOT reached — $distinct distinct drawn)"
+    fi
+  else
+    budget_note="draws=$draws (K=$MEMBERSHIP_DRAWS; no members= pin — no early stop)"
+  fi
+  if [[ "$cached" -eq 1 ]]; then
+    report_pass_lane "$id" "$features" "membership" \
+      "CERTIFIED-CACHED (certified $cert_stamp; samples + driver-coupling checked against the tracked set; full re-certification via scripts/ci --slow): members=$member_count exhibited=$exhibited_count $budget_note unexhibited=$unexhibited_count"
+  else
+    report_pass_lane "$id" "$features" "membership" \
+      "enumerated=$member_count exhibited=$exhibited_count $budget_note unexhibited=$unexhibited_count (members in $mem_dir)"
+  fi
+}
+
+# ---- the parallel driver: one row file per manifest case, a worker pool
+# over them, results assembled in manifest order (byte-identical to the
+# sequential runner's output). GOLEAN_COVERAGE_JOBS=1 restores strictly
+# sequential execution.
+if [[ -z "${GOLEAN_COVERAGE_JOBS:-}" ]]; then
+  GOLEAN_COVERAGE_JOBS="$( (command -v nproc >/dev/null && nproc) || sysctl -n hw.ncpu 2>/dev/null || echo 4)"
+fi
+ROWDIR="$(mktemp -d "${TMPDIR:-/tmp}/golean-coverage-rows.XXXXXX")"
+row_i=0
+while IFS= read -r line; do
+  if [[ -z "$line" || "$line" == \#* ]]; then
+    continue
+  fi
+  row_i=$((row_i + 1))
+  printf '%s\n' "$line" > "$ROWDIR/$(printf '%06d' "$row_i").in"
+done < "$MANIFEST"
+case_count="$row_i"
+
+export CASE_OUT ROOT OUT FRONTEND GO_BUILD_CACHE GOLEAN_BIN HARNESS_BIN LEAN_TRACE_TIMEOUT_SECONDS \
+  GO_TIMEOUT_SECONDS LEAN_TIMEOUT_SECONDS LEAN_ENUM_TIMEOUT_SECONDS \
+  LEAN_ENUM_SLOW_TIMEOUT_SECONDS MEMBERSHIP_DRAWS
+export -f run_case run_case_rows run_with_timeout lean obs_eq obs_eq_cause undecided_cause signal_cause \
+  report_pass report_pass_lane report_fail one_line \
+  membership_go_observation run_membership_case_rows go_run_oracle go_diagnostics attach_output \
+  parse_lane_params member_status_allowed seeded_stream
+
+# Record the concurrency the run used (audit finding: a load-induced
+# timeout drift was indistinguishable from a real one after the fact).
+printf 'jobs\t%s\n' "$GOLEAN_COVERAGE_JOBS" >> "$META_TMP"
+
+# Fan-out exit statuses are CAPTURED, not discarded (grossmith ARG_MAX
+# finding, 2026-09-02, docs/evidence/2026-09-02_diffcov-argmax/). The
+# previous shape, `ls "$ROWDIR"/*.in | xargs -P N -n 1 …`, expanded the
+# glob inside bash but handed it to `ls` as ONE execve argument vector:
+# past ARG_MAX (2 MiB here) execve failed E2BIG — `ls: Argument list too
+# long` — at 11,817 rows under a 130-byte TMPDIR (168-byte per-file
+# paths; measured by bisection, docs/evidence/2026-09-02_diffcov-argmax/
+# mechanism.log) and ≈27k (derived 27,235 = ARG_MAX/77; measured 27,166 at audit) at this box's 68-byte per-file paths (derived
+# from ARG_MAX/(path+1+8)); the cliff moves with TMPDIR length and
+# nothing checked it. xargs then saw EMPTY stdin and, lacking -r, ran the
+# command once as run_case "" (see the guard there); `|| echo WARNING`
+# absorbed the nonzero pool exit; the assembler wrote case_count
+# per-row `worker produced no result` FAILs and PUBLISHED them — one
+# global failure misattributed row-for-row as N independent worker
+# deaths. `find -print0` streams the names (no argv bound at all);
+# `xargs -0 -r` runs nothing on empty input; the statuses are recorded
+# in the meta and the assembler below distinguishes "no results at all"
+# (infrastructure, exit 2, nothing published) from scattered deaths
+# (per-row fail-closed, as before). The serial path (bash for-loop, no
+# execve of the list) was never exposed; it records its statuses too.
+enum_status=0
+pool_status=0
+if [[ "$GOLEAN_COVERAGE_JOBS" -le 1 ]]; then
+  for f in "$ROWDIR"/*.in; do
+    run_case "$f" || pool_status=$?
+  done
+else
+  find "$ROWDIR" -maxdepth 1 -name '*.in' -print0 \
+    | xargs -0 -r -P "$GOLEAN_COVERAGE_JOBS" -n 1 bash -c 'run_case "$1"' _
+  _ps=("${PIPESTATUS[@]}")
+  enum_status="${_ps[0]}"
+  pool_status="${_ps[1]}"
+  unset _ps
+fi
+if [[ "$enum_status" -ne 0 || "$pool_status" -ne 0 ]]; then
+  echo "diff-coverage: WARNING — row fan-out exited nonzero (find=$enum_status xargs=$pool_status; xargs 123 = a worker exited 1-125, 125 = a worker was killed by a signal, 1 = xargs itself failed); rows without a result fail closed below, and a run with NO results at all refuses to publish" >&2
+fi
+printf 'fanout_find_exit\t%s\nfanout_pool_exit\t%s\n' "$enum_status" "$pool_status" >> "$META_TMP"
+
+# Global-vs-scattered (same finding): NO row with a result while the
+# manifest had rows is ONE failure of the fan-out (enumerator or pool
+# never ran a worker), not case_count independent worker deaths — the
+# old assembler published it as case_count per-row `worker produced no
+# result` FAILs, row-for-row indistinguishable from real scattered
+# deaths. Zero results is an INFRASTRUCTURE state: exit 2 before
+# publish, keeping "exit >= 2 => nothing published". Scattered deaths
+# (some rows have results) keep the per-row fail-closed rows below.
+result_count=0
+for f in "$ROWDIR"/*.in; do
+  if [[ -s "${f%.in}.out" ]]; then
+    result_count=$((result_count + 1))
+  fi
+done
+if [[ "$case_count" -gt 0 && "$result_count" -eq 0 ]]; then
+  echo "diff-coverage: fan-out produced NO results for any of $case_count manifest rows (find=$enum_status xargs=$pool_status jobs=$GOLEAN_COVERAGE_JOBS) — a single global fan-out failure, not $case_count worker deaths; nothing published" >&2
+  rm -rf "$ROWDIR"
+  exit 2
+fi
+
+pass_count=0
+fail_count=0
+for f in "$ROWDIR"/*.in; do
+  outf="${f%.in}.out"
+  if [[ -s "$outf" ]]; then
+    cat "$outf" >> "$RESULTS_TMP"
+  else
+    # No published result (worker died before its atomic mv) or an empty
+    # one (no classification path can produce it) — fail closed, never
+    # silent. The row itself carries the id in field 1.
+    printf 'FAIL\t%s\tunknown\tharness\tworker produced no result\n' \
+      "$(cut -f1 "$f")" >> "$RESULTS_TMP"
+  fi
+done
+pass_count="$(awk -F '\t' '$1=="PASS"' "$RESULTS_TMP" | wc -l | tr -d ' ')"
+fail_count="$(awk -F '\t' '$1=="FAIL"' "$RESULTS_TMP" | wc -l | tr -d ' ')"
+rm -rf "$ROWDIR"
+
+# Defense in depth (maint-check M2): unreachable after the up-front
+# manifest_cases check, but a zero-case state must never publish —
+# exit BEFORE publish_results, keeping "exit >= 2 => nothing published".
+if [[ "$case_count" -eq 0 ]]; then
+  echo "no differential cases found in $MANIFEST (nothing published)" >&2
+  exit 2
+fi
+echo
+echo "differential coverage summary: cases=$case_count pass=$pass_count fail=$fail_count export_status=$export_status"
+publish_results
+echo "results: $RESULTS_TSV"
+echo "metadata: $META_TSV"
+
+if [[ "${GOLEAN_COVERAGE_RUN_FULL:-unknown}" == "true" ]]; then
+  cp "$RESULTS_TSV" "$OUT/latest-full.tsv"
+  cp "$META_TSV" "$OUT/latest-full.meta.tsv"
+fi
+
+if [[ "$fail_count" -ne 0 || "$export_status" -ne 0 ]]; then
+  exit 1
+fi

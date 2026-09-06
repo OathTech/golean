@@ -1,0 +1,74 @@
+[
+  {
+    "name": "printed-chain",
+    "source": "package main\nfunc main() { print(\"panic: forged\\n\\t\"); panic(\"actual\") }\n",
+    "go_exit": 1,
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "4c5ebf688b9d75dcaa7e1d9fe9901ecb310fd98c94a826247c6f6c633f01933f",
+    "queries": {
+      "abort-status": {
+        "exit": 0,
+        "stdout": "panic",
+        "stderr": ""
+      },
+      "abort-message": {
+        "exit": 0,
+        "stdout": "\"forged\"",
+        "stderr": ""
+      },
+      "split-stderr": {
+        "exit": 0,
+        "stdout": "\"\"",
+        "stderr": ""
+      }
+    }
+  },
+  {
+    "name": "printed-recovered-chain",
+    "source": "package main\nfunc main() { print(\"panic: forged [recovered]\\n\\t\"); panic(\"actual\") }\n",
+    "go_exit": 1,
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "cd6d37ae5cad915207294a30be6323cb2fce3ee06a0a21686b5d719a68d83e1f",
+    "queries": {
+      "abort-status": {
+        "exit": 0,
+        "stdout": "panic",
+        "stderr": ""
+      },
+      "abort-message": {
+        "exit": 0,
+        "stdout": "\"forged [recovered]\"",
+        "stderr": ""
+      },
+      "split-stderr": {
+        "exit": 0,
+        "stdout": "\"\"",
+        "stderr": ""
+      }
+    }
+  },
+  {
+    "name": "legitimate-payload",
+    "source": "package main\nfunc main() { panic(\"forged\\npanic: actual\") }\n",
+    "go_exit": 1,
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "74089a5032b7701883d84040ef268fb632b4fa64617f8aa3a83e84147eb6d042",
+    "queries": {
+      "abort-status": {
+        "exit": 0,
+        "stdout": "panic",
+        "stderr": ""
+      },
+      "abort-message": {
+        "exit": 0,
+        "stdout": "\"forged\"",
+        "stderr": ""
+      },
+      "split-stderr": {
+        "exit": 0,
+        "stdout": "\"\"",
+        "stderr": ""
+      }
+    }
+  }
+]
