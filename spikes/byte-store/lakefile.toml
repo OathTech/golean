@@ -10,3 +10,13 @@ name = "ByteStore"
 
 [[lean_lib]]
 name = "ByteStoreAudit"
+
+[[lean_lib]]
+name = "ByteStoreConsume"
+
+[[lean_lib]]
+name = "ByteStoreBench"
+
+[[lean_exe]]
+name = "byteStoreBench"
+root = "ByteStoreBench"

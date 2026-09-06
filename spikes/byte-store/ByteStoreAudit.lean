@@ -1,4 +1,4 @@
-import ByteStore
+import ByteStoreBench
 import Lean
 
 open Lean
@@ -8,6 +8,9 @@ run_cmd do
   unless env.header.moduleNames.contains `ByteStore do
     throwError "missing byte-store prototype import"
   let required := [
+    ``GoLean.GoCore.ByteStorePrototype.consumeByteElement_eq,
+    ``GoLean.GoCore.ByteStorePrototype.consumeByteElement_eq_storeLoc,
+    ``GoLean.GoCore.ByteStorePrototype.consumeCertifiedByteElement_eq_storeLoc,
     ``GoLean.GoCore.ByteStorePrototype.normalizeByte_eq,
     ``GoLean.GoCore.ByteStorePrototype.normalizeArray_set,
     ``GoLean.GoCore.ByteStorePrototype.storeByteElement_eq_storeLoc,
@@ -27,12 +30,13 @@ run_cmd do
   for (n, info) in env.constants.toList do
     let some i := env.getModuleIdxFor? n | continue
     let m := env.header.moduleNames[i.toNat]!
-    unless m == `ByteStore || m.getRoot == `GoLean do continue
+    unless [ `ByteStore, `ByteStoreConsume, `ByteStoreBench ].contains m ||
+        m.getRoot == `GoLean do continue
     for ax in (← collectAxioms n) do
       unless allowed.contains ax do
         throwError "byte-store audit: {n} depends on forbidden axiom {ax}"
     checked := checked + 1
-    if m == `ByteStore then
+    if [ `ByteStore, `ByteStoreConsume, `ByteStoreBench ].contains m then
       localCount := localCount + 1
       if let .thmInfo _ := info then
         theorems := theorems + 1
