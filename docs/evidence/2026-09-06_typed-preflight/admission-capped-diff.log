@@ -1,0 +1,9 @@
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+building Lean executable...
+Build completed successfully (76 jobs).
+native frontend: per-case type-check + emit (no batch export)
+PASS	admission/constant	admission,boolean
+
+differential coverage summary: cases=1 pass=1 fail=0 export_status=0
+results: artifacts/admission-capped/latest.tsv
+metadata: artifacts/admission-capped/latest.meta.tsv

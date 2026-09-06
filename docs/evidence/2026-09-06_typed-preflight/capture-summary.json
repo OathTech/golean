@@ -1,0 +1,583 @@
+{
+  "source_revision": "10fefeb3e6fbb3f7cb6630b8b559a9a7e7915e97",
+  "manifest_cases": 3598,
+  "unique_ids": 3598,
+  "capture_status_counts": {
+    "RECORDED": 3558,
+    "RECORDED_WITH_FINDINGS": 1,
+    "NO_WIRE": 38,
+    "INCOMPLETE": 1
+  },
+  "full_result_counts": {
+    "PASS": 3353,
+    "FAIL": 245
+  },
+  "commands": 17926,
+  "command_timeout_count": 5,
+  "command_verdict_counts": {
+    "exit 1": 2360,
+    "exit 0": 15561,
+    "timeout": 5
+  },
+  "observation_command_count": 14366,
+  "completed_observation_command_count": 14362,
+  "trace_batch_command_count": 3560,
+  "completed_trace_batch_count": 3559,
+  "fuel_exceptions": [
+    {
+      "id": "atomics/spin/flag-wait",
+      "fuel": 200
+    },
+    {
+      "id": "goroutines/send-then-spin",
+      "fuel": 200
+    },
+    {
+      "id": "race/atomics-free/cas-failure-acquires",
+      "fuel": 200
+    },
+    {
+      "id": "sync/trylock/spin-until-trylock",
+      "fuel": 200
+    }
+  ],
+  "incomplete_cases": [
+    {
+      "id": "strings/trimspace-repeat/repeat-bound-refused",
+      "full_result": {
+        "result": "FAIL",
+        "id": "strings/trimspace-repeat/repeat-bound-refused",
+        "features": "stdlib,strings",
+        "stage": "lean-observation",
+        "detail": "Lean run TIMED OUT after 30s (LEAN_TIMEOUT_SECONDS) \u2014 no observation produced (expected status ok); captured output: run_with_timeout: TIMED OUT after 30s \u2014 killing: /home/dev/projects/golean/.claude/worktrees/typed-preflight/.lake/build/bin/golean native-json-run --input artifacts/coverage/native/strings/trimspace-repeat/repeat-bound-refused/wire.json --function repeatBoundRefused"
+      },
+      "commands": [
+        {
+          "name": "observation-0",
+          "argv": [
+            "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.lake/build/bin/golean",
+            "native-json-run",
+            "--input",
+            "/home/dev/projects/golean/.claude/worktrees/typed-preflight/artifacts/coverage/native/strings/trimspace-repeat/repeat-bound-refused/wire.json",
+            "--function",
+            "repeatBoundRefused",
+            "--fuel",
+            "10000000"
+          ],
+          "exit": null,
+          "timeout": true
+        },
+        {
+          "name": "observation-1",
+          "argv": [
+            "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.lake/build/bin/golean",
+            "native-json-run",
+            "--input",
+            "/home/dev/projects/golean/.claude/worktrees/typed-preflight/artifacts/coverage/native/strings/trimspace-repeat/repeat-bound-refused/wire.json",
+            "--function",
+            "repeatBoundRefused",
+            "--fuel",
+            "10000000",
+            "--choices",
+            "9,8,7,6,5,4,3,2,1,0"
+          ],
+          "exit": null,
+          "timeout": true
+        },
+        {
+          "name": "observation-2",
+          "argv": [
+            "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.lake/build/bin/golean",
+            "native-json-run",
+            "--input",
+            "/home/dev/projects/golean/.claude/worktrees/typed-preflight/artifacts/coverage/native/strings/trimspace-repeat/repeat-bound-refused/wire.json",
+            "--function",
+            "repeatBoundRefused",
+            "--fuel",
+            "10000000",
+            "--choices",
+            "1,3,5,7,9,2,4,6,8,0"
+          ],
+          "exit": null,
+          "timeout": true
+        },
+        {
+          "name": "observation-3",
+          "argv": [
+            "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.lake/build/bin/golean",
+            "native-json-run",
+            "--input",
+            "/home/dev/projects/golean/.claude/worktrees/typed-preflight/artifacts/coverage/native/strings/trimspace-repeat/repeat-bound-refused/wire.json",
+            "--function",
+            "repeatBoundRefused",
+            "--fuel",
+            "10000000",
+            "--choices",
+            "5,5,5,5,5,5,5,5"
+          ],
+          "exit": null,
+          "timeout": true
+        },
+        {
+          "name": "trace",
+          "argv": [
+            "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.lake/build/bin/golean",
+            "choice-trace",
+            "--batch",
+            "/home/dev/projects/golean/.claude/worktrees/typed-preflight/artifacts/typed-preflight/capture-full/003415/trace-batch.tsv",
+            "--out",
+            "/home/dev/projects/golean/.claude/worktrees/typed-preflight/artifacts/typed-preflight/capture-full/003415/trace.tsv",
+            "--dump",
+            "/home/dev/projects/golean/.claude/worktrees/typed-preflight/artifacts/typed-preflight/capture-full/003415/consumptions.tsv",
+            "--fuel",
+            "10000000"
+          ],
+          "exit": null,
+          "timeout": true
+        }
+      ],
+      "diagnostic_incomplete_commands": 6
+    }
+  ],
+  "no_wire_cases": [
+    {
+      "id": "builtins/print/refused/race-with-output",
+      "result": {
+        "result": "FAIL",
+        "id": "builtins/print/refused/race-with-output",
+        "features": "builtins,print,race,goroutines",
+        "stage": "go-observation",
+        "detail": "the oracle's stderr could not be split into program output + abort report (harness exit 3): stderr split: 7 byte(s) of program output before the TSan report \u2014 race rows with program output are not comparable (the report interleaves asynchronously with the program's prints), refused"
+      }
+    },
+    {
+      "id": "complex/defined-type-ops",
+      "result": {
+        "result": "FAIL",
+        "id": "complex/defined-type-ops",
+        "features": "complex,typed,comparisons,conversions",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: basic type complex128\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/complex/defined-type-ops\\nexit status 1"
+      }
+    },
+    {
+      "id": "complex/generic-type-set/defined-complex64-sum",
+      "result": {
+        "result": "FAIL",
+        "id": "complex/generic-type-set/defined-complex64-sum",
+        "features": "complex,generics,type_sets,typed",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: basic type complex64\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/complex/generic-type-set\\nexit status 1"
+      }
+    },
+    {
+      "id": "complex/generic-type-set/defined-complex128-sum",
+      "result": {
+        "result": "FAIL",
+        "id": "complex/generic-type-set/defined-complex128-sum",
+        "features": "complex,generics,type_sets,typed",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: basic type complex64\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/complex/generic-type-set\\nexit status 1"
+      }
+    },
+    {
+      "id": "complex/generic-type-set/compound-assign",
+      "result": {
+        "result": "FAIL",
+        "id": "complex/generic-type-set/compound-assign",
+        "features": "complex,generics,type_sets,assignment",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: basic type complex64\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/complex/generic-type-set\\nexit status 1"
+      }
+    },
+    {
+      "id": "complex/generic-type-set/division",
+      "result": {
+        "result": "FAIL",
+        "id": "complex/generic-type-set/division",
+        "features": "complex,generics,type_sets,division",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: basic type complex64\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/complex/generic-type-set\\nexit status 1"
+      }
+    },
+    {
+      "id": "complex/generic-type-set/equality",
+      "result": {
+        "result": "FAIL",
+        "id": "complex/generic-type-set/equality",
+        "features": "complex,generics,type_sets,equality,comparisons",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: basic type complex64\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/complex/generic-type-set\\nexit status 1"
+      }
+    },
+    {
+      "id": "complex/generic-type-set/explicit-constant",
+      "result": {
+        "result": "FAIL",
+        "id": "complex/generic-type-set/explicit-constant",
+        "features": "complex,generics,type_sets,constants,untyped,conversions",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: basic type complex64\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/complex/generic-type-set\\nexit status 1"
+      }
+    },
+    {
+      "id": "complex/generic-type-set/conversion",
+      "result": {
+        "result": "FAIL",
+        "id": "complex/generic-type-set/conversion",
+        "features": "complex,generics,type_sets,conversions,typed",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: basic type complex64\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/complex/generic-type-set\\nexit status 1"
+      }
+    },
+    {
+      "id": "complex/generic-type-set/inference",
+      "result": {
+        "result": "FAIL",
+        "id": "complex/generic-type-set/inference",
+        "features": "complex,generics,type_sets,inference",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: basic type complex64\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/complex/generic-type-set\\nexit status 1"
+      }
+    },
+    {
+      "id": "complex/generic-type-set/zero-value",
+      "result": {
+        "result": "FAIL",
+        "id": "complex/generic-type-set/zero-value",
+        "features": "complex,generics,type_sets,zero_values",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: basic type complex64\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/complex/generic-type-set\\nexit status 1"
+      }
+    },
+    {
+      "id": "complex/real-imag-defined",
+      "result": {
+        "result": "FAIL",
+        "id": "complex/real-imag-defined",
+        "features": "complex,builtins,typed,floats",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: basic type complex64\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/complex/real-imag-defined\\nexit status 1"
+      }
+    },
+    {
+      "id": "constants/typed-complex-binary",
+      "result": {
+        "result": "FAIL",
+        "id": "constants/typed-complex-binary",
+        "features": "constants,complex,typed,untyped",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: basic type complex64\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/constants/typed-complex-binary\\nexit status 1"
+      }
+    },
+    {
+      "id": "fmt/formatter-box-crosspkg/cross-package",
+      "result": {
+        "result": "FAIL",
+        "id": "fmt/formatter-box-crosspkg/cross-package",
+        "features": "stdlib,strings,methods,defined_type,interfaces,multipackage,imports",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: type fmtypes.Both implements fmt.Formatter and is boxed into any (var declaration at Corpus/coverage/exec/fmt/formatter-box-crosspkg/main.go:20:14) while the dynamic fmt shim is injected: gc consults Format ahead of error/Stringer for EVERY verb at dynamic fmt sites, and the dyn shim cannot see Formatter at runtime (fmt.State unmodeled) \u2014 the boxed value reaching any dyn site would render wrongly, so the export fails closed (audit R1-F2 / assessment A3-S3; key = boxing sites, narrowed 2026-09-01)\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/fmt/formatter-box-crosspkg\\nexit status 1"
+      }
+    },
+    {
+      "id": "fmt/formatter-box-generic/generic-body",
+      "result": {
+        "result": "FAIL",
+        "id": "fmt/formatter-box-generic/generic-body",
+        "features": "stdlib,strings,methods,defined_type,interfaces,generics",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: type parameter T is boxed into any (return value at Corpus/coverage/exec/fmt/formatter-box-generic/main.go:22:36) inside a generic body while the dynamic fmt shim is injected and a fmt.Formatter implementor is declared in the program: whether T's instantiations implement fmt.Formatter is undecidable at this site (types.Implements is false for a type parameter), and an implementor instantiation would reach the Formatter-blind dyn shim \u2014 conservative fail-closed HIT (audit BLOCKER-1(c), fix round 2026-09-01)\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/fmt/formatter-box-generic\\nexit status 1"
+      }
+    },
+    {
+      "id": "fmt/formatter-box-range/range-assign",
+      "result": {
+        "result": "FAIL",
+        "id": "fmt/formatter-box-range/range-assign",
+        "features": "stdlib,strings,methods,defined_type,interfaces,slices,range",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: type main.both implements fmt.Formatter and is boxed into any (range assignment (value) at Corpus/coverage/exec/fmt/formatter-box-range/main.go:23:9) while the dynamic fmt shim is injected: gc consults Format ahead of error/Stringer for EVERY verb at dynamic fmt sites, and the dyn shim cannot see Formatter at runtime (fmt.State unmodeled) \u2014 the boxed value reaching any dyn site would render wrongly, so the export fails closed (audit R1-F2 / assessment A3-S3; key = boxing sites, narrowed 2026-09-01)\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/fmt/formatter-box-range\\nexit status 1"
+      }
+    },
+    {
+      "id": "fmt/formatter-dyn-hole/dyn-boxed",
+      "result": {
+        "result": "FAIL",
+        "id": "fmt/formatter-dyn-hole/dyn-boxed",
+        "features": "stdlib,strings,methods,defined_type,interfaces",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: type main.both implements fmt.Formatter and is boxed into any (var declaration at Corpus/coverage/exec/fmt/formatter-dyn-hole/main.go:35:14) while the dynamic fmt shim is injected: gc consults Format ahead of error/Stringer for EVERY verb at dynamic fmt sites, and the dyn shim cannot see Formatter at runtime (fmt.State unmodeled) \u2014 the boxed value reaching any dyn site would render wrongly, so the export fails closed (audit R1-F2 / assessment A3-S3; key = boxing sites, narrowed 2026-09-01)\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/fmt/formatter-dyn-hole\\nexit status 1"
+      }
+    },
+    {
+      "id": "generics/stencil-residual-field-iterseq/healthy",
+      "result": {
+        "result": "FAIL",
+        "id": "generics/stencil-residual-field-iterseq/healthy",
+        "features": "generics,methods,structs,stdlib,len",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: instantiation of imported generic type iter.Seq[int] in healthy (FR-23: no source to stencil an imported generic from \u2014 a value of this type never lowers; in a declaration signature it is an opaque marker and the declaration a fail-closed stub)\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/generics/stencil-residual-field-iterseq\\nexit status 1"
+      }
+    },
+    {
+      "id": "generics/stencil-residual-sig-anon-struct/sibling",
+      "result": {
+        "result": "FAIL",
+        "id": "generics/stencil-residual-sig-anon-struct/sibling",
+        "features": "generics,methods,structs,stdlib",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: method main.box[int].bad is unsupported (FR-4: method stencil at this instantiation does not lower \u2014 anonymous non-empty struct type struct{x int}) and its own SIGNATURE does not lower either (native frontend unsupported: anonymous non-empty struct type struct{x int}): no signature-carrying stub exists, so the export refuses rather than record an incomplete method set\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/generics/stencil-residual-sig-anon-struct\\nexit status 1"
+      }
+    },
+    {
+      "id": "init/hidden-dep-refused",
+      "result": {
+        "result": "FAIL",
+        "id": "init/hidden-dep-refused",
+        "features": "init,globals,interfaces,methods",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: package-level initializer of [hdB] reaches a method call through an interface (.v), and a same-package method v reads the initialized package variable hdA: a HIDDEN data dependency \u2014 spec#Package_initialization leaves the initialization order unspecified there, and the realized go/types InitOrder is KNOWN to differ from gc's on this shape (latitude E7; deviation record init/hidden-dep-order) \u2014 fail closed\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/init/hidden-dep-refused\\nexit status 1"
+      }
+    },
+    {
+      "id": "init/quarantined-var-callee/sibling",
+      "result": {
+        "result": "FAIL",
+        "id": "init/quarantined-var-callee/sibling",
+        "features": "init,globals,calls",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: package initialization reaches quarantined function h11Helper (package-selector call os.Getenv (package \"os\" surface not modeled))\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/init/quarantined-var-callee\\nexit status 1"
+      }
+    },
+    {
+      "id": "init/quarantined-var-impure/counter",
+      "result": {
+        "result": "FAIL",
+        "id": "init/quarantined-var-impure/counter",
+        "features": "init,globals,calls,evaluation_order",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: package-level initializer of impureMix does not lower (package-selector call os.Getenv (package \"os\" surface not modeled)) and is not H-11 effect-isolated \u2014 skipping it cannot be argued unobservable, so the WHOLE export refuses (FR-22: per-declaration poisoning covers only initializers whose every call is a direct call to an init-callee register row [pureUnmodeledCallees, rendered in docs/stdlib-admission-register.md] with effect- and panic-free argument shapes)\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/init/quarantined-var-impure\\nexit status 1"
+      }
+    },
+    {
+      "id": "init/quarantined-var-panicking/sibling",
+      "result": {
+        "result": "FAIL",
+        "id": "init/quarantined-var-panicking/sibling",
+        "features": "init,globals,conversions,arrays,slices,panic",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: package-level initializer of quarPanicBad does not lower (package-selector call os.Getenv (package \"os\" surface not modeled)) and is not H-11 effect-isolated \u2014 skipping it cannot be argued unobservable, so the WHOLE export refuses (FR-22: per-declaration poisoning covers only initializers whose every call is a direct call to an init-callee register row [pureUnmodeledCallees, rendered in docs/stdlib-admission-register.md] with effect- and panic-free argument shapes)\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/init/quarantined-var-panicking\\nexit status 1"
+      }
+    },
+    {
+      "id": "init/quarantined-var-syscall/sibling",
+      "result": {
+        "result": "FAIL",
+        "id": "init/quarantined-var-syscall/sibling",
+        "features": "init,globals,stdlib",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: package-level initializer of quarMkdirErr does not lower (package-selector call os.Mkdir (package \"os\" surface not modeled)) and is not H-11 effect-isolated \u2014 skipping it cannot be argued unobservable, so the WHOLE export refuses (FR-22: per-declaration poisoning covers only initializers whose every call is a direct call to an init-callee register row [pureUnmodeledCallees, rendered in docs/stdlib-admission-register.md] with effect- and panic-free argument shapes)\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/init/quarantined-var-syscall\\nexit status 1"
+      }
+    },
+    {
+      "id": "init/quarantined-var-writer/read",
+      "result": {
+        "result": "FAIL",
+        "id": "init/quarantined-var-writer/read",
+        "features": "init,globals,structs,pointers,imports",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: package-level initializer of quarWriter does not lower (package-selector call log.New (package \"log\" surface not modeled)) and is not H-11 effect-isolated \u2014 skipping it cannot be argued unobservable, so the WHOLE export refuses (FR-22: per-declaration poisoning covers only initializers whose every call is a direct call to an init-callee register row [pureUnmodeledCallees, rendered in docs/stdlib-admission-register.md] with effect- and panic-free argument shapes)\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/init/quarantined-var-writer\\nexit status 1"
+      }
+    },
+    {
+      "id": "init/stdlib-initializer-dependent",
+      "result": {
+        "result": "FAIL",
+        "id": "init/stdlib-initializer-dependent",
+        "features": "init,globals,stdlib,methods",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: package-level initializer of maxYear does not lower (package-level var maxDatetime: its initializer does not lower (package-selector call time.Date (package \"time\" surface not modeled)) \u2014 H-11 poison: the cell is seeded as the `$poisoned` placeholder and every reference (read, write, address-of) refuses by name; reference refused) and is not H-11 effect-isolated \u2014 skipping it cannot be argued unobservable, so the WHOLE export refuses (FR-22: per-declaration poisoning covers only initializers whose every call is a direct call to an init-callee register row [pureUnmodeledCallees, rendered in docs/stdlib-admission-register.md] with effect- and panic-free argument shapes)\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/init/stdlib-initializer-dependent\\nexit status 1"
+      }
+    },
+    {
+      "id": "init/stdlib-initializer-unregistered",
+      "result": {
+        "result": "FAIL",
+        "id": "init/stdlib-initializer-unregistered",
+        "features": "init,globals,stdlib",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: package-level initializer of pid does not lower (package-selector call os.Getpid (package \"os\" surface not modeled)) and is not H-11 effect-isolated \u2014 skipping it cannot be argued unobservable, so the WHOLE export refuses (FR-22: per-declaration poisoning covers only initializers whose every call is a direct call to an init-callee register row [pureUnmodeledCallees, rendered in docs/stdlib-admission-register.md] with effect- and panic-free argument shapes)\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/init/stdlib-initializer-unregistered\\nexit status 1"
+      }
+    },
+    {
+      "id": "init/user-var-struct-field-unlowerable",
+      "result": {
+        "result": "FAIL",
+        "id": "init/user-var-struct-field-unlowerable",
+        "features": "init,globals,sync,structs",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: sync.Map (only Mutex/RWMutex/WaitGroup/Once are modeled)\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/init/user-var-struct-field-unlowerable\\nexit status 1"
+      }
+    },
+    {
+      "id": "interfaces/comma-ok-into-interface/global-form",
+      "result": {
+        "result": "FAIL",
+        "id": "interfaces/comma-ok-into-interface/global-form",
+        "features": "interfaces,type_assertions,globals,init,nil",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: package-level initializer of a, b does not lower (implicit interface conversion in multi-value assignment (interfaces campaign, deferred)) and is not H-11 effect-isolated \u2014 skipping it cannot be argued unobservable, so the WHOLE export refuses (FR-22: per-declaration poisoning covers only initializers whose every call is a direct call to an init-callee register row [pureUnmodeledCallees, rendered in docs/stdlib-admission-register.md] with effect- and panic-free argument shapes)\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/interfaces/comma-ok-into-interface\\nexit status 1"
+      }
+    },
+    {
+      "id": "interfaces/comma-ok-into-interface/local-assign-form",
+      "result": {
+        "result": "FAIL",
+        "id": "interfaces/comma-ok-into-interface/local-assign-form",
+        "features": "interfaces,type_assertions",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: package-level initializer of a, b does not lower (implicit interface conversion in multi-value assignment (interfaces campaign, deferred)) and is not H-11 effect-isolated \u2014 skipping it cannot be argued unobservable, so the WHOLE export refuses (FR-22: per-declaration poisoning covers only initializers whose every call is a direct call to an init-callee register row [pureUnmodeledCallees, rendered in docs/stdlib-admission-register.md] with effect- and panic-free argument shapes)\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/interfaces/comma-ok-into-interface\\nexit status 1"
+      }
+    },
+    {
+      "id": "multipkg/unexported-method-scope/assert-panic",
+      "result": {
+        "result": "FAIL",
+        "id": "multipkg/unexported-method-scope/assert-panic",
+        "features": "multipackage,imports,identity,interfaces,type_assertions,panic",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: unexported interface method name(s) shared across packages: get (required by blue/inner, implemented in emb); get (required by blue/inner, implemented in red/inner); get (required by main, implemented in blue/inner); get (required by main, implemented in emb); get (required by main, implemented in red/inner); get (required by red/inner, implemented in blue/inner); get (required by red/inner, implemented in emb) \u2014 an unexported method name is package-scoped (spec#Type_identity) but the wire's method tables carry bare names, so satisfaction could answer wrong; refused (BUG-098, docs/2026-09-05_fr19-bug097-design.md \u00a72.5)\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/multipkg/unexported-method-scope\\nexit status 1"
+      }
+    },
+    {
+      "id": "multipkg/unexported-method-scope/distinct",
+      "result": {
+        "result": "FAIL",
+        "id": "multipkg/unexported-method-scope/distinct",
+        "features": "multipackage,imports,identity,interfaces,type_assertions,comma_ok,multi_result",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: unexported interface method name(s) shared across packages: get (required by blue/inner, implemented in emb); get (required by blue/inner, implemented in red/inner); get (required by main, implemented in blue/inner); get (required by main, implemented in emb); get (required by main, implemented in red/inner); get (required by red/inner, implemented in blue/inner); get (required by red/inner, implemented in emb) \u2014 an unexported method name is package-scoped (spec#Type_identity) but the wire's method tables carry bare names, so satisfaction could answer wrong; refused (BUG-098, docs/2026-09-05_fr19-bug097-design.md \u00a72.5)\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/multipkg/unexported-method-scope\\nexit status 1"
+      }
+    },
+    {
+      "id": "multipkg/unexported-method-scope/distinct-names",
+      "result": {
+        "result": "FAIL",
+        "id": "multipkg/unexported-method-scope/distinct-names",
+        "features": "multipackage,imports,identity,interfaces,embedding,type_assertions,comma_ok",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: unexported interface method name(s) shared across packages: get (required by blue/inner, implemented in emb); get (required by blue/inner, implemented in red/inner); get (required by main, implemented in blue/inner); get (required by main, implemented in emb); get (required by main, implemented in red/inner); get (required by red/inner, implemented in blue/inner); get (required by red/inner, implemented in emb) \u2014 an unexported method name is package-scoped (spec#Type_identity) but the wire's method tables carry bare names, so satisfaction could answer wrong; refused (BUG-098, docs/2026-09-05_fr19-bug097-design.md \u00a72.5)\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/multipkg/unexported-method-scope\\nexit status 1"
+      }
+    },
+    {
+      "id": "spec-examples-decl/struct-tag-conversion",
+      "result": {
+        "result": "FAIL",
+        "id": "spec-examples-decl/struct-tag-conversion",
+        "features": "conversions,structs,tags,pointers,nil,fields",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: anonymous non-empty struct type struct{Street string; City string}\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/spec-examples-decl/struct-tag-conversion\\nexit status 1"
+      }
+    },
+    {
+      "id": "structs/tag-nested-conversion",
+      "result": {
+        "result": "FAIL",
+        "id": "structs/tag-nested-conversion",
+        "features": "structs,tags,nested,conversions",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: anonymous non-empty struct type struct{X int \"tag:\\\"a\\\"\"}\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/structs/tag-nested-conversion\\nexit status 1"
+      }
+    },
+    {
+      "id": "unsafe/dot-import/sizeof-bare",
+      "result": {
+        "result": "FAIL",
+        "id": "unsafe/dot-import/sizeof-bare",
+        "features": "unsafe,constants,structs",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: import . \"unsafe\" at Corpus/coverage/exec/unsafe/dot-import/main.go:3:8: a dot-import makes the unsafe layout operators (Sizeof/Offsetof/Alignof) bare identifiers, outside the selector-based scan that polices them \u2014 refused outright (fail closed; out-of-language boundary, ledger row Package_unsafe)\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/unsafe/dot-import\\nexit status 1"
+      }
+    },
+    {
+      "id": "unsafe/layout-ops/sizeof-fixed",
+      "result": {
+        "result": "FAIL",
+        "id": "unsafe/layout-ops/sizeof-fixed",
+        "features": "unsafe,constants",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: unsafe.Sizeof at Corpus/coverage/exec/unsafe/layout-ops/main.go:32:13: its folded value is gc's IMPLEMENTATION-SPECIFIC memory layout (spec#Size_and_alignment_guarantees forces only the fixed-width types), which must not enter the model as an anonymous constant \u2014 fail closed (out-of-language boundary, ledger row Package_unsafe)\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/unsafe/layout-ops\\nexit status 1"
+      }
+    },
+    {
+      "id": "unsafe/layout-ops/layout-struct",
+      "result": {
+        "result": "FAIL",
+        "id": "unsafe/layout-ops/layout-struct",
+        "features": "unsafe,constants,structs",
+        "stage": "frontend-export",
+        "detail": "native frontend: nativefrontend: native frontend unsupported: unsafe.Sizeof at Corpus/coverage/exec/unsafe/layout-ops/main.go:32:13: its folded value is gc's IMPLEMENTATION-SPECIFIC memory layout (spec#Size_and_alignment_guarantees forces only the fixed-width types), which must not enter the model as an anonymous constant \u2014 fail closed (out-of-language boundary, ledger row Package_unsafe)\\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/unsafe/layout-ops\\nexit status 1"
+      }
+    }
+  ],
+  "recorded_findings": [
+    {
+      "id": "arrays/materialization-budget/over-budget",
+      "findings": [
+        {
+          "id": "arrays/materialization-budget/over-budget",
+          "stream": "-",
+          "status": "ERROR",
+          "consumed": "-",
+          "wide": "-",
+          "exhaustedAt": "-",
+          "wideAfterExhaustion": "-",
+          "perSite": "-",
+          "maxBound": "-",
+          "violations": "0",
+          "firstViolation": "/home/dev/projects/golean/.claude/worktrees/typed-preflight/artifacts/coverage/native/arrays/materialization-budget/over-budget/wire.json: native lowering: array type of 2097152 elements exceeds the interpreter's materialization budget (65536 elements; BUG-078 idealization boundary) at program.globals[0].type",
+          "alarms": "0",
+          "firstAlarm": "-",
+          "obsHash": "-",
+          "driverAgreement": "-"
+        }
+      ]
+    }
+  ],
+  "completed_observation_status_counts": {
+    "panic": 1298,
+    "ok": 12002,
+    "error": 4,
+    "unsupported": 727,
+    "deadlock": 108,
+    "race": 164,
+    "fuel-out": 3,
+    "fatal": 36,
+    "stuck": 20
+  },
+  "completed_observation_parse_failures": [],
+  "trace_files": 3560,
+  "trace_rows": 14359,
+  "trace_status_counts": {
+    "panic": 1298,
+    "ok": 12002,
+    "ERROR": 1,
+    "unsupported": 727,
+    "deadlock": 108,
+    "race": 164,
+    "fuel-out": 3,
+    "fatal": 36,
+    "stuck": 20
+  },
+  "trace_driver_agreement_counts": {
+    "ok": 14358,
+    "-": 1
+  },
+  "trace_violation_total": 0,
+  "trace_alarm_total": 0,
+  "consumption_rows": 21326,
+  "timeout_policy": "240 seconds per native observation invocation and per full per-case tracer batch; 10,000,000 fuel except explicit four nonterm=200 manifest rows; no rerun or reduced-fuel substitute for timeout case",
+  "collector_exit_meaning": "exit 0 means all requested capture attempts produced case records, not that all observations or traces were captured",
+  "comparison_status": "Full self-comparison fails deliberately on the one INCOMPLETE case; no prefix is a full observation or full choice trace."
+}

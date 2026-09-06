@@ -1,0 +1,11 @@
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+building Lean executable...
+Build completed successfully (76 jobs).
+native frontend: per-case type-check + emit (no batch export)
+PASS	iris-customer/uncaught	iris-customer,defer,recover
+PASS	iris-customer/normal	iris-customer,defer,recover
+PASS	iris-customer/recovered	iris-customer,defer,recover
+
+differential coverage summary: cases=3 pass=3 fail=0 export_status=0
+results: artifacts/a2-capped/latest.tsv
+metadata: artifacts/a2-capped/latest.meta.tsv

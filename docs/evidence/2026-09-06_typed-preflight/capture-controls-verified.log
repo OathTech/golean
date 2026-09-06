@@ -1,0 +1,6 @@
+intact: expected exit 0; 0 finding(s)
+observation-byte: expected exit 1; 2 finding(s)
+consumption-byte: expected exit 1; 2 finding(s)
+missing-case: expected exit 1; 2 finding(s)
+missing-dump: expected exit 1; 2 finding(s)
+Control evidence retained at /home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/capture-controls-69e60psl

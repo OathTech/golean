@@ -1,0 +1,10 @@
+key	value
+lane	negative
+manifest	/home/dev/projects/golean/.tmp/golean-negative-coverage.MlbwPy
+manifest_sha256	21f456f4d3788469d3c42fed6ad8625d06cd2656211e3418c7bc7ffc0a1823f8
+manifest_cases	394
+git_commit	10fefeb3e6fbb3f7cb6630b8b559a9a7e7915e97
+git_dirty	false
+go_toolchain	go1.26.5
+go_drift_allowed	0
+go_drift_actual	false

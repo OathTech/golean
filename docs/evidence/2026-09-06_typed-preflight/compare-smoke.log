@@ -1,0 +1,7 @@
+{
+  "result": "IDENTICAL",
+  "case_ids": 3,
+  "compared_files": 30,
+  "scope": "exact captured bytes and verdicts only, not conformance or all-choice equivalence",
+  "findings": []
+}

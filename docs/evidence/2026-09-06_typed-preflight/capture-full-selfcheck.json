@@ -1,0 +1,12 @@
+{
+  "result": "DIFFERENT_OR_INCOMPLETE",
+  "case_ids": 3598,
+  "compared_files": 35852,
+  "scope": "exact captured bytes and verdicts only, not conformance or all-choice equivalence",
+  "findings": [
+    {
+      "scope": "strings/trimspace-repeat/repeat-bound-refused",
+      "field": "incomplete capture"
+    }
+  ]
+}

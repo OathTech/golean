@@ -1,0 +1,4 @@
+cgroup=/user.slice/user-1000.slice/user@1000.service/app.slice/capped-3103177-1788652558143681962
+17179869184
+0
+LEAN_NUM_THREADS=3

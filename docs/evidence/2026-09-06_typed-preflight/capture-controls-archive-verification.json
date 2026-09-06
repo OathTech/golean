@@ -1,0 +1,8 @@
+{
+  "archive": "capture-controls.tar.gz",
+  "archive_sha256": "4fe06e83f699e8dbd31dd313068b5eb8e57a9bb91a5963306ee69fdbe33a13d0",
+  "files": 245,
+  "uncompressed_file_bytes": 163454,
+  "compressed_bytes": 15885,
+  "every_member_matches_inventory": true
+}
