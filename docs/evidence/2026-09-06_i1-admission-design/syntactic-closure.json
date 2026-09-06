@@ -1,0 +1,4845 @@
+{
+  "basis": "Syntactic func-key transitive closure from manifest entry plus $pkginit; interface anchors expand to every concrete method of same name, as existing checkInitQuarantine. This is an exploratory overapproximation, not a proven call-target analysis or executable-admission verdict.",
+  "cases": 522,
+  "with_quarantine_hits": 70,
+  "with_missing_func_refs": 0,
+  "reports": [
+    {
+      "id": "atomics/counter/add",
+      "entry": "counterAdd",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "atomics/counter/cas-loop",
+      "entry": "casLoopIncrement",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "atomics/counter/plain-read-after-join",
+      "entry": "plainReadAfterJoin",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "atomics/counter/swap-claim",
+      "entry": "swapClaim",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "atomics/counter/typed",
+      "entry": "counterTyped",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 5
+    },
+    {
+      "id": "atomics/typed/empty-literal",
+      "entry": "typedEmptyLiteral",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 5
+    },
+    {
+      "id": "atomics/typed/int32-wrap",
+      "entry": "typedInt32Wrap",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "atomics/typed/int64",
+      "entry": "typedInt64",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 6
+    },
+    {
+      "id": "atomics/typed/nil-receiver",
+      "entry": "typedNilReceiver",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "atomics/typed/struct-field",
+      "entry": "typedStructField",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 5
+    },
+    {
+      "id": "atomics/typed/uint32",
+      "entry": "typedUint32",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "atomics/typed/uint64",
+      "entry": "typedUint64",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "atomics/typed/uintptr",
+      "entry": "typedUintptr",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "atomics/typed/zero-and-copy",
+      "entry": "typedZeroAndCopy",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/addr-assert-left-call",
+      "entry": "addrAssertLeftCall",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/addr-index-left-len-hoist",
+      "entry": "addrIndexLeftLenHoist",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/array-base-target-vs-len",
+      "entry": "arrayBaseTargetVsLen",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/assert-arg-sibling",
+      "entry": "assertArgSibling",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/assert-composite-lit",
+      "entry": "assertCompositeLit",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/assert-left-append",
+      "entry": "assertLeftAppend",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/assert-left-call",
+      "entry": "assertLeftCall",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/assert-left-copy",
+      "entry": "assertLeftCopy",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/assert-left-len-slice-call",
+      "entry": "assertLeftLenSliceCall",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/assert-left-make-slice",
+      "entry": "assertLeftMakeSlice",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/assert-left-method",
+      "entry": "assertLeftMethod",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/assert-left-min-inline",
+      "entry": "assertLeftMinInline",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/assert-left-new-call",
+      "entry": "assertLeftNewCall",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/assert-left-recv-w",
+      "entry": "assertLeftRecvW",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/assert-middle",
+      "entry": "assertMiddle",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/assert-return-list",
+      "entry": "assertReturnList",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/assert-right-call",
+      "entry": "assertRightCall",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/assert-vs-mutating-call",
+      "entry": "assertVsMutatingCall",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/bytes-conv-left-len-hoist",
+      "entry": "bytesConvLeftLenHoist",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/bytes-conv-payload-vs-call",
+      "entry": "bytesConvPayloadVsCall",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/bytes-conv-value-vs-mutating-call",
+      "entry": "bytesConvValueVsMutatingCall",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/composite-ptr-in-arg-then-call",
+      "entry": "compositePtrInArgThenCall",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/compound-assert-vs-len",
+      "entry": "compoundAssertVsLen",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/compound-index-vs-len",
+      "entry": "compoundIndexVsLen",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/conv-left-call",
+      "entry": "convLeftCall",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/deref-left-call",
+      "entry": "derefLeftCall",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/deref-left-index-arg-call",
+      "entry": "derefLeftIndexArgCall",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/div-left-call",
+      "entry": "divLeftCall",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/forced-arg-only",
+      "entry": "forcedArgOnly",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/iface-cmp-left-call",
+      "entry": "ifaceCmpLeftCall",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/index-arg-sibling",
+      "entry": "indexArgSibling",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/index-assert-left-call",
+      "entry": "indexAssertLeftCall",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/index-composite-lit",
+      "entry": "indexCompositeLit",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/index-left-call",
+      "entry": "indexLeftCall",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/index-left-call-arg-panics",
+      "entry": "indexLeftCallArgPanics",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/index-middle",
+      "entry": "indexMiddle",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/map-key-assert-vs-len",
+      "entry": "mapKeyAssertVsLen",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/map-lit-payload-vs-call",
+      "entry": "mapLitPayloadVsCall",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/map-tgt-assert-vs-call",
+      "entry": "mapTgtAssertVsCall",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/recover-assert-vs-call-w",
+      "entry": "recoverAssertVsCallW",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 5
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/recover-assert-vs-len",
+      "entry": "recoverAssertVsLen",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/send-chan-index",
+      "entry": "sendChanIndex",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/shift-left-call",
+      "entry": "shiftLeftCall",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/slice-left-len-call",
+      "entry": "sliceLeftCall",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/tgt-assert-vs-append",
+      "entry": "tgtAssertVsAppend",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/tgt-assert-vs-call",
+      "entry": "tgtAssertVsCall",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/tgt-assert-vs-copy-call",
+      "entry": "tgtAssertVsCopyCall",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/tgt-assert-vs-len-hoist",
+      "entry": "tgtAssertVsLenHoist",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/tgt-assert-vs-make",
+      "entry": "tgtAssertVsMake",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/tgt-assert-vs-min-call",
+      "entry": "tgtAssertVsMinCall",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/tgt-assert-vs-recv-w",
+      "entry": "tgtAssertVsRecvW",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "builtins/e13-sibling-panic-order/two-index-left-call",
+      "entry": "twoIndexLeftCall",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "bytes/buffer-model/len-reset",
+      "entry": "bufLenReset",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 10
+    },
+    {
+      "id": "bytes/buffer-model/nil-receiver-string",
+      "entry": "bufNilReceiverString",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "bytes/buffer-model/pointer-use",
+      "entry": "bufPointerUse",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 11
+    },
+    {
+      "id": "bytes/buffer-model/write-paths",
+      "entry": "bufWritePaths",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 13
+    },
+    {
+      "id": "bytes/buffer-model/zero-value",
+      "entry": "bufZeroValue",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "channels/recv-short-circuit/and-lhs",
+      "entry": "rscAndLhs",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "channels/recv-short-circuit/funclit-rhs",
+      "entry": "rscFuncLitRhs",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "fmt/errorf/fresh",
+      "entry": "errorfFresh",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 8
+    },
+    {
+      "id": "fmt/errorf/sentinel-classify",
+      "entry": "errorfSentinelClassify",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 8
+    },
+    {
+      "id": "fmt/errorf/text",
+      "entry": "errorfText",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 10
+    },
+    {
+      "id": "fmt/errorf/vs-errors-new",
+      "entry": "errorfVsErrorsNew",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 7
+    },
+    {
+      "id": "fmt/fprint-writers/buffer-single",
+      "entry": "fprintBufferSingle",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 11
+    },
+    {
+      "id": "fmt/fprint-writers/builder-single",
+      "entry": "fprintBuilderSingle",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 6
+    },
+    {
+      "id": "fmt/fprint-writers/fprintf-buffer-shape",
+      "entry": "fprintfBufferShape",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 14
+    },
+    {
+      "id": "fmt/fprintf-builder/describe-shape",
+      "entry": "fprintfDescribeShape",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "fprintfDescribeShape",
+            "fprintfDescribeShape$fmt2",
+            "goleanShimFmtQuoteBytes",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 20
+    },
+    {
+      "id": "fmt/fprintf-builder/returns",
+      "entry": "fprintfReturns",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 8
+    },
+    {
+      "id": "fmt/sprintf-dyn/logger-shape",
+      "entry": "dynLoggerShape",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "dynLoggerShape",
+            "main.miniLogger.Infof",
+            "main.recLog.Infof",
+            "goleanShimFmtSprintfDyn",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 31
+    },
+    {
+      "id": "fmt/sprintf-dyn/slice-int",
+      "entry": "dynSliceInt",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "dynSliceInt",
+            "dynLogfHelper",
+            "goleanShimFmtSprintfDyn",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 30
+    },
+    {
+      "id": "fmt/sprintf-dyn/slice-string",
+      "entry": "dynSliceString",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "dynSliceString",
+            "dynLogfHelper",
+            "goleanShimFmtSprintfDyn",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 30
+    },
+    {
+      "id": "fmt/sprintf-dyn/sprint-fixed-arity",
+      "entry": "dynSprintFixedArity",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "dynSprintFixedArity",
+            "goleanShimFmtSprintDyn",
+            "goleanShimFmtDynVerb",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 29
+    },
+    {
+      "id": "fmt/sprintf-dyn/sprint-nil",
+      "entry": "dynSprintNil",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "dynSprintNil",
+            "dynSprintNil$lit0",
+            "goleanShimFmtSprintDyn",
+            "goleanShimFmtDynVerb",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 30
+    },
+    {
+      "id": "fmt/sprintf-dyn/sprint-space-rule",
+      "entry": "dynSprintSpaceRule",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "dynSprintSpaceRule",
+            "dynSprintSpaceRule$lit0",
+            "goleanShimFmtSprintDyn",
+            "goleanShimFmtDynVerb",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 30
+    },
+    {
+      "id": "fmt/sprintf-dyn/sprintln",
+      "entry": "dynSprintln",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "dynSprintln",
+            "dynSprintln$lit0",
+            "goleanShimFmtSprintlnDyn",
+            "goleanShimFmtDynVerb",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 30
+    },
+    {
+      "id": "fmt/sprintf-dyn/sprintln-fixed-arity",
+      "entry": "dynSprintlnFixedArity",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "dynSprintlnFixedArity",
+            "goleanShimFmtSprintlnDyn",
+            "goleanShimFmtDynVerb",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 29
+    },
+    {
+      "id": "fmt/sprintf-dyn/stringer-error",
+      "entry": "dynStringerError",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "dynStringerError",
+            "dynStringerError$lit0",
+            "goleanShimFmtSprintfDyn",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 31
+    },
+    {
+      "id": "fmt/sprintf-dyn/stringer-panic",
+      "entry": "dynStringerPanic",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "dynStringerPanic",
+            "dynStringerPanic$lit0",
+            "goleanShimFmtSprintfDyn",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 30
+    },
+    {
+      "id": "fmt/sprintf-dyn/verb-kinds",
+      "entry": "dynVerbKinds",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "dynVerbKinds",
+            "dynVerbKinds$lit0",
+            "goleanShimFmtSprintfDyn",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 30
+    },
+    {
+      "id": "fmt/sprintf-verbs/d-enum",
+      "entry": "sprintfDEnum",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 5
+    },
+    {
+      "id": "fmt/sprintf-verbs/d-int",
+      "entry": "sprintfDInt",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 5
+    },
+    {
+      "id": "fmt/sprintf-verbs/d-uint",
+      "entry": "sprintfDUint",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "fmt/sprintf-verbs/d-width",
+      "entry": "sprintfDWidth",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 8
+    },
+    {
+      "id": "fmt/sprintf-verbs/decision-path",
+      "entry": "sprintfDecisionPath",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "fmt/sprintf-verbs/eval-order",
+      "entry": "sprintfEvalOrder",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "sprintfEvalOrder",
+            "sprintfEvalOrder$fmt0",
+            "goleanShimFmtRender",
+            "goleanShimFmtStringVerb",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 15
+    },
+    {
+      "id": "fmt/sprintf-verbs/literal-only",
+      "entry": "sprintfLiteralOnly",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "fmt/sprintf-verbs/percent",
+      "entry": "sprintfPercent",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 5
+    },
+    {
+      "id": "fmt/sprintf-verbs/plusv-nil-ptr",
+      "entry": "sprintfPlusVNilPtr",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "sprintfPlusVNilPtr",
+            "sprintfPlusVNilPtr$fmt0",
+            "goleanShimFmtRender",
+            "goleanShimFmtStringVerb",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 14
+    },
+    {
+      "id": "fmt/sprintf-verbs/plusv-ptr-stringer",
+      "entry": "sprintfPlusVPtrStringer",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "sprintfPlusVPtrStringer",
+            "sprintfPlusVPtrStringer$fmt0",
+            "goleanShimFmtRender",
+            "goleanShimFmtStringVerb",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 14
+    },
+    {
+      "id": "fmt/sprintf-verbs/q-bytes",
+      "entry": "sprintfQBytes",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "sprintfQBytes",
+            "sprintfQBytes$fmt0",
+            "goleanShimFmtQuoteBytes",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 6
+    },
+    {
+      "id": "fmt/sprintf-verbs/q-bytes-empty",
+      "entry": "sprintfQBytesEmpty",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "sprintfQBytesEmpty",
+            "sprintfQBytesEmpty$fmt0",
+            "goleanShimFmtQuoteBytes",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 6
+    },
+    {
+      "id": "fmt/sprintf-verbs/q-string",
+      "entry": "sprintfQString",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "sprintfQString",
+            "sprintfQString$fmt0",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 5
+    },
+    {
+      "id": "fmt/sprintf-verbs/q-string-empty",
+      "entry": "sprintfQStringEmpty",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "sprintfQStringEmpty",
+            "sprintfQStringEmpty$fmt0",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 5
+    },
+    {
+      "id": "fmt/sprintf-verbs/q-stringer",
+      "entry": "sprintfQStringer",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "sprintfQStringer",
+            "sprintfQStringer$fmt0",
+            "goleanShimFmtRender",
+            "goleanShimFmtStringVerb",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 14
+    },
+    {
+      "id": "fmt/sprintf-verbs/q-stringer-panic",
+      "entry": "sprintfQStringerPanic",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "sprintfQStringerPanic",
+            "sprintfQStringerPanic$fmt0",
+            "goleanShimFmtRender",
+            "goleanShimFmtStringVerb",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 14
+    },
+    {
+      "id": "fmt/sprintf-verbs/s-error",
+      "entry": "sprintfSError",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "sprintfSError",
+            "sprintfSError$fmt1",
+            "goleanShimFmtError",
+            "goleanShimFmtStringVerb",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 17
+    },
+    {
+      "id": "fmt/sprintf-verbs/s-nil-error",
+      "entry": "sprintfSNilError",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "sprintfSNilError",
+            "sprintfSNilError$fmt0",
+            "goleanShimFmtError",
+            "goleanShimFmtStringVerb",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 13
+    },
+    {
+      "id": "fmt/sprintf-verbs/s-string",
+      "entry": "sprintfSString",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "fmt/sprintf-verbs/s-stringer",
+      "entry": "sprintfSStringer",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "sprintfSStringer",
+            "sprintfSStringer$fmt0",
+            "goleanShimFmtRender",
+            "goleanShimFmtStringVerb",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 14
+    },
+    {
+      "id": "fmt/sprintf-verbs/s-stringer-panic",
+      "entry": "sprintfSStringerPanic",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "sprintfSStringerPanic",
+            "sprintfSStringerPanic$fmt0",
+            "goleanShimFmtRender",
+            "goleanShimFmtStringVerb",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 14
+    },
+    {
+      "id": "fmt/sprintf-verbs/t-bool",
+      "entry": "sprintfTBool",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "fmt/sprintf-verbs/v-kinds",
+      "entry": "sprintfVKinds",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 6
+    },
+    {
+      "id": "fmt/sprintf-verbs/v-nil-error",
+      "entry": "sprintfVNilError",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "sprintfVNilError",
+            "sprintfVNilError$fmt0",
+            "goleanShimFmtError",
+            "goleanShimFmtStringVerb",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 13
+    },
+    {
+      "id": "fmt/sprintf-verbs/v-stringer-panic",
+      "entry": "sprintfVStringerPanic",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "sprintfVStringerPanic",
+            "sprintfVStringerPanic$fmt0",
+            "goleanShimFmtRender",
+            "goleanShimFmtStringVerb",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 14
+    },
+    {
+      "id": "fmt/sprintf-verbs/x-error",
+      "entry": "sprintfXError",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "sprintfXError",
+            "sprintfXError$fmt1",
+            "goleanShimFmtError",
+            "goleanShimFmtStringVerb",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 17
+    },
+    {
+      "id": "fmt/sprintf-verbs/x-nil-error",
+      "entry": "sprintfXNilError",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "sprintfXNilError",
+            "sprintfXNilError$fmt0",
+            "goleanShimFmtError",
+            "goleanShimFmtStringVerb",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 13
+    },
+    {
+      "id": "fmt/sprintf-verbs/x-stringer",
+      "entry": "sprintfXStringer",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "sprintfXStringer",
+            "sprintfXStringer$fmt0",
+            "goleanShimFmtRender",
+            "goleanShimFmtStringVerb",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 14
+    },
+    {
+      "id": "fmt/sprintf-verbs/x-stringer-panic",
+      "entry": "sprintfXStringerPanic",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "sprintfXStringerPanic",
+            "sprintfXStringerPanic$fmt0",
+            "goleanShimFmtRender",
+            "goleanShimFmtStringVerb",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 14
+    },
+    {
+      "id": "fmt/sprintf-verbs/x-uint",
+      "entry": "sprintfXUint",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "fmt/v-composites/emb-exported-slice",
+      "entry": "vEmbedExportedSlice",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "vEmbedExportedSlice",
+            "vEmbedExportedSlice$fmt2",
+            "vEmbedExportedSlice$fmtc0",
+            "vEmbedExportedSlice$fmtsl1",
+            "goleanShimFmtRender",
+            "goleanShimFmtStringVerb",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 14
+    },
+    {
+      "id": "fmt/v-composites/emb-method-at-level",
+      "entry": "vEmbedMethodAtLevel",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "vEmbedMethodAtLevel",
+            "vEmbedMethodAtLevel$fmt1",
+            "vEmbedMethodAtLevel$fmtc0",
+            "goleanShimFmtRender",
+            "goleanShimFmtStringVerb",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 13
+    },
+    {
+      "id": "fmt/v-composites/emb-mid",
+      "entry": "vEmbedMid",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "vEmbedMid",
+            "vEmbedMid$fmt1",
+            "vEmbedMid$fmtc0",
+            "goleanShimFmtRender",
+            "goleanShimFmtStringVerb",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 13
+    },
+    {
+      "id": "fmt/v-composites/emb-named-slice-type",
+      "entry": "vEmbedNamedSliceType",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 6
+    },
+    {
+      "id": "fmt/v-composites/emb-sticky-over-embed",
+      "entry": "vEmbedStickyOverEmbed",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 5
+    },
+    {
+      "id": "fmt/v-composites/emb-stringer-field",
+      "entry": "vEmbedStringerField",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "vEmbedStringerField",
+            "vEmbedStringerField$fmt2",
+            "vEmbedStringerField$fmtc0",
+            "goleanShimFmtRender",
+            "goleanShimFmtStringVerb",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 14
+    },
+    {
+      "id": "fmt/v-composites/emb-two-level",
+      "entry": "vEmbedTwoLevel",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "vEmbedTwoLevel",
+            "vEmbedTwoLevel$fmt1",
+            "vEmbedTwoLevel$fmtc0",
+            "goleanShimFmtRender",
+            "goleanShimFmtStringVerb",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 13
+    },
+    {
+      "id": "fmt/v-composites/emb-unexported-leaf",
+      "entry": "vEmbedUnexportedLeaf",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 5
+    },
+    {
+      "id": "fmt/v-composites/plusv-slice-struct",
+      "entry": "plusVSliceStruct",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 6
+    },
+    {
+      "id": "fmt/v-composites/plusv-stringer-field",
+      "entry": "plusVStringerField",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "plusVStringerField",
+            "plusVStringerField$fmt2",
+            "plusVStringerField$fmtc0",
+            "goleanShimFmtRender",
+            "goleanShimFmtStringVerb",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 14
+    },
+    {
+      "id": "fmt/v-composites/plusv-struct",
+      "entry": "plusVStruct",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "fmt/v-composites/v-conf-state-shape",
+      "entry": "vConfStateShape",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 12
+    },
+    {
+      "id": "fmt/v-composites/v-named-slice",
+      "entry": "vNamedSlice",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 5
+    },
+    {
+      "id": "fmt/v-composites/v-nested-struct",
+      "entry": "vNestedStruct",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "fmt/v-composites/v-slice-struct-bytes",
+      "entry": "vSliceStructBytes",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 6
+    },
+    {
+      "id": "fmt/v-composites/v-slice-uint64",
+      "entry": "vSliceUint64",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 11
+    },
+    {
+      "id": "fmt/v-composites/v-stringer-elem-panic",
+      "entry": "vStringerElemPanic",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "vStringerElemPanic",
+            "vStringerElemPanic$fmt2",
+            "vStringerElemPanic$fmtc0",
+            "vStringerElemPanic$fmtsl1",
+            "goleanShimFmtRender",
+            "goleanShimFmtStringVerb",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 14
+    },
+    {
+      "id": "fmt/v-composites/v-stringer-elems",
+      "entry": "vStringerElems",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "vStringerElems",
+            "vStringerElems$fmt4",
+            "vStringerElems$fmtc0",
+            "vStringerElems$fmtsl1",
+            "goleanShimFmtRender",
+            "goleanShimFmtStringVerb",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 16
+    },
+    {
+      "id": "fmt/v-composites/v-struct",
+      "entry": "vStruct",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "fmt/v-composites/v-unexported-slice-taint",
+      "entry": "vUnexportedSliceTaint",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 8
+    },
+    {
+      "id": "fmt/v-composites/v-unexported-stringer-field",
+      "entry": "vUnexportedStringerField",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "vUnexportedStringerField",
+            "vUnexportedStringerField$fmt2",
+            "vUnexportedStringerField$fmtc0",
+            "goleanShimFmtRender",
+            "goleanShimFmtStringVerb",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 16
+    },
+    {
+      "id": "fmt/v-composites/v-unexported-subtree-taint",
+      "entry": "vUnexportedSubtreeTaint",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "vUnexportedSubtreeTaint",
+            "vUnexportedSubtreeTaint$fmt2",
+            "vUnexportedSubtreeTaint$fmtc0",
+            "goleanShimFmtRender",
+            "goleanShimFmtStringVerb",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 16
+    },
+    {
+      "id": "generics/imported-generic-in-signature",
+      "entry": "unrelatedToTheIterators",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "generics/imported-generic-sig-calls/satisfies",
+      "entry": "satisfies",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "generics/imported-generic-sig-calls/satisfies-embedded",
+      "entry": "satisfiesEmbedded",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "generics/imported-generic-sig-calls/sibling",
+      "entry": "sibling",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "generics/qualified-instantiation/call",
+      "entry": "qualCall",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 6
+    },
+    {
+      "id": "generics/qualified-instantiation/func-value",
+      "entry": "qualFuncValue",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 7
+    },
+    {
+      "id": "generics/qualified-instantiation/method-expr",
+      "entry": "qualMethodExpr",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "generics/qualified-instantiation/method-value",
+      "entry": "qualMethodValue",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 6
+    },
+    {
+      "id": "generics/qualified-instantiation/nested",
+      "entry": "qualNested",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 5
+    },
+    {
+      "id": "generics/qualified-instantiation/source-through",
+      "entry": "qualSourceThrough",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 5
+    },
+    {
+      "id": "generics/stencil-quarantine/dedup-second-body",
+      "entry": "dedupSecondBody",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "generics/stencil-quarantine/iface-satisfied",
+      "entry": "ifaceSatisfied",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "generics/stencil-quarantine/sibling",
+      "entry": "stencilSibling",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "generics/stencil-quarantine/transitive-lowers",
+      "entry": "transitiveLowers",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "generics/stencil-quarantine-iterseq/satisfies",
+      "entry": "satisfies",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "generics/stencil-quarantine-iterseq/sibling",
+      "entry": "sibling",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "generics/type-aliases/func-type",
+      "entry": "genericAliasFuncType",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "generics/type-aliases/map-literal",
+      "entry": "genericAliasMapLiteral",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "generics/type-aliases/nested-map",
+      "entry": "genericAliasNestedMap",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "generics/type-aliases/slice-same-type",
+      "entry": "genericAliasSliceSameType",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "imported-goose/channel/parallel-search-replace/search-replace",
+      "entry": "goleanSearchReplace",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "imported-goose/semantics/multiple-assign/assign-three",
+      "entry": "goleanTestAssignThree",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "imported-goose/semantics/multiple-assign/assign-two",
+      "entry": "goleanTestAssignTwo",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "init/library-var-type-poisoned/sibling",
+      "entry": "sibling",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "init/library-var-type-unlowerable",
+      "entry": "unrelatedToTheLibraryVar",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "init/quarantined-var/siblings",
+      "entry": "quarVarSiblings",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "init/stdlib-initializer-call",
+      "entry": "unrelatedToTheInitializer",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "init/stdlib-initializer-poison/order-kept",
+      "entry": "orderKept",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "init/stdlib-initializer-poison/sibling",
+      "entry": "sibling",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "init/user-var-type-unlowerable/order-kept",
+      "entry": "orderKept",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "init/user-var-type-unlowerable/unused",
+      "entry": "unused",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "interfaces/imported-package-name-collision",
+      "entry": "importedPackageNameCollision",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "interfaces/quarantined-dispatch-teeth/installed",
+      "entry": "teethInstalled",
+      "quarantined_reached": [
+        {
+          "target": "main.fancyLog.Infof",
+          "path": [
+            "teethInstalled",
+            "main.miniLog.Infof",
+            "main.fancyLog.Infof"
+          ],
+          "reason": "method main.fancyLog.Infof (package-selector call reflect.TypeOf (package \"reflect\" surface not modeled); satisfaction answers, calls fail closed)"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "methods/quarantine-embedded/promoted-good",
+      "entry": "quarantinePromotedGood",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "methods/quarantine-embedded/promoted-satisfies",
+      "entry": "quarantinePromotedSatisfies",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "methods/quarantine-imported-type-residue/unrelated",
+      "entry": "unrelated",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "methods/quarantine-interface/dispatch-good",
+      "entry": "quarantineIfaceDispatchGood",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "methods/quarantine-interface/satisfies",
+      "entry": "quarantineIfaceSatisfies",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "methods/quarantine-pointer-receiver/pointer-satisfies",
+      "entry": "quarantinePtrSatisfies",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "methods/quarantine-pointer-receiver/value-not-satisfies",
+      "entry": "quarantinePtrValueNotSatisfies",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "methods/quarantine-sibling/good-method",
+      "entry": "quarantineSiblingMethod",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "methods/quarantine-sibling/plain-func",
+      "entry": "quarantineSiblingPlain",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "methods/signature-basic-unlowerable/func-uncalled",
+      "entry": "funcUncalled",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "methods/signature-basic-unlowerable/iface-uncalled",
+      "entry": "ifaceUncalled",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "methods/signature-basic-unlowerable/method-uncalled",
+      "entry": "methodUncalled",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "new/new-expr/composite-operand",
+      "entry": "newExprCompositeOperand",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "new/new-expr/distinct-pointers",
+      "entry": "newExprDistinctPointers",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "new/new-expr/eval-once",
+      "entry": "newExprEvalOnce",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "new/new-expr/generic-operand",
+      "entry": "newExprGeneric",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "new/new-expr/typed-value",
+      "entry": "newExprTypedValue",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/closures/capture-by-reference",
+      "entry": "captureByReference",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/closures/closure-if-init",
+      "entry": "closureCapturesIfInit",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/closures/closure-modifies-own",
+      "entry": "closureModifiesOwnIteration",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/closures/closure-named-result-return",
+      "entry": "closureWritesNamedResultInReturn",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/closures/closure-switch-clause",
+      "entry": "closureInSwitchClause",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/closures/condition-closure",
+      "entry": "conditionClosure",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/closures/continue-per-iteration",
+      "entry": "continueWithPerIteration",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/closures/defer-modifies-loopvar",
+      "entry": "deferModifiesLoopVar",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/closures/defers-per-iteration",
+      "entry": "defersCapturePerIteration",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/closures/goroutines-loopvar",
+      "entry": "goroutinesCaptureLoopVar",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/closures/immediate-invocation",
+      "entry": "immediateInvocation",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/closures/independent-generators",
+      "entry": "independentGenerators",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/closures/range-int-body-assign",
+      "entry": "rangeIntBodyAssign",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/closures/range-once-append",
+      "entry": "rangeEvaluatedOnceAppend",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/closures/range-string-capture",
+      "entry": "rangeStringCapture",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/closures/recursive-closure",
+      "entry": "recursiveClosure",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/closures/shared-outer-variable",
+      "entry": "sharedOuterVariable",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/closures/three-clause-body-count",
+      "entry": "threeClauseBodyAssignCount",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/closures/three-clause-body-mod",
+      "entry": "threeClauseBodyModification",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/closures/variadic-closure",
+      "entry": "variadicClosure",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/defers/defer-args-vs-closure",
+      "entry": "deferArgsVsClosure",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "noodler/defers/deferred-close",
+      "entry": "deferredClose",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/defers/deferred-method-recovers",
+      "entry": "deferredMethodRecovers",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/defers/deferred-method-value-recovers",
+      "entry": "deferredMethodValueRecovers",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/defers/goroutine-panic-aborts",
+      "entry": "goroutinePanicAborts",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/defers/goroutine-recovers-own",
+      "entry": "goroutineRecoversOwnPanic",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/defers/nested-recover-levels",
+      "entry": "nestedRecoverLevels",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 5
+    },
+    {
+      "id": "noodler/defers/panic-custom-error",
+      "entry": "panicCustomErrorPayload",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "noodler/defers/panic-inside-deferred-defer",
+      "entry": "panicInsideDeferredDefer",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 5
+    },
+    {
+      "id": "noodler/defers/panic-nil-recovered",
+      "entry": "panicNilRecovered",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/defers/panic-not-cross-goroutine",
+      "entry": "panicNotCrossGoroutine",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/defers/panic-pointer-payload",
+      "entry": "panicPointerPayload",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/defers/panic-struct-payload",
+      "entry": "panicStructPayload",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/defers/recover-in-loop",
+      "entry": "recoverInLoopContinues",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/defers/recover-via-func-value",
+      "entry": "recoverViaFuncValueIndirect",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/defers/recover-via-immediate-literal",
+      "entry": "recoverViaImmediateLiteral",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/defers/second-defer-sees-nil",
+      "entry": "secondDeferSeesNil",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "noodler/frontier/defer-go-splat",
+      "entry": "deferGoSplat",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 6
+    },
+    {
+      "id": "noodler/goroutines/child-blocked-nil-channel",
+      "entry": "childBlockedOnNilChannel",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/goroutines/close-broadcast",
+      "entry": "closeBroadcast",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/goroutines/directional-params",
+      "entry": "directionalParams",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/goroutines/fifo-one-sender",
+      "entry": "fifoFromOneSender",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/goroutines/goroutine-panic-under-wait",
+      "entry": "goroutinePanicUnderWait",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/goroutines/goroutine-panic-under-wait-no-done",
+      "entry": "goroutinePanicUnderWaitNoDone",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/goroutines/handoff-write-before-send",
+      "entry": "handoffWriteBeforeSend",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/goroutines/leaked-goroutine",
+      "entry": "leakedGoroutineOnReturn",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/goroutines/lockstep-transcript",
+      "entry": "lockstepTranscript",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/goroutines/mutex-counter",
+      "entry": "mutexCounter",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/goroutines/mutex-double-lock-deadlock",
+      "entry": "mutexDoubleLockDeadlock",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/goroutines/once-across-goroutines",
+      "entry": "onceAcrossGoroutines",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 6
+    },
+    {
+      "id": "noodler/goroutines/pipeline-three-stages",
+      "entry": "pipelineThreeStages",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 5
+    },
+    {
+      "id": "noodler/goroutines/rwmutex-readers",
+      "entry": "rwMutexReaders",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "noodler/goroutines/semaphore-total",
+      "entry": "semaphoreTotal",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/goroutines/waitgroup-deadlock",
+      "entry": "waitGroupDeadlock",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/goroutines/worker-pool-sum",
+      "entry": "workerPoolSum",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/gostmt/arg-panics-in-parent",
+      "entry": "goArgPanicsInParent",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/gostmt/args-evaluated-at-spawn",
+      "entry": "goArgsEvaluatedAtSpawn",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/gostmt/closure-reads-after-sync",
+      "entry": "goClosureReadsAfterSync",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/gostmt/from-map",
+      "entry": "goFromMap",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/gostmt/func-value-at-spawn",
+      "entry": "goFuncValueAtSpawn",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/gostmt/method-receiver-at-spawn",
+      "entry": "goMethodReceiverAtSpawn",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/gostmt/pointer-method",
+      "entry": "goPointerMethod",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/gostmt/splat-args",
+      "entry": "goSplatArgs",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "noodler/maps/array-key-nan",
+      "entry": "arrayKeyWithNaN",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/maps/compound-call-deletes",
+      "entry": "mapCompoundCallDeletes",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/maps/compound-call-mutates",
+      "entry": "mapCompoundCallMutates",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/maps/delete-nan-key",
+      "entry": "deleteNaNKey",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/maps/element-copy",
+      "entry": "mapElementCopy",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/maps/extreme-int-keys",
+      "entry": "extremeIntKeys",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/maps/interface-key-nan",
+      "entry": "interfaceKeyNaN",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/maps/invalid-byte-keys",
+      "entry": "invalidByteStringKeys",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/maps/map-of-arrays",
+      "entry": "mapOfArrays",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/maps/map-of-funcs",
+      "entry": "mapOfFuncs",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/maps/map-of-funcs-missing",
+      "entry": "mapOfFuncsMissingKeyCall",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/maps/map-of-slices-append",
+      "entry": "mapOfSlicesAppend",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/maps/method-on-element",
+      "entry": "methodOnMapElement",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/maps/nil-inner-map-read",
+      "entry": "nilInnerMapRead",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/maps/nil-inner-map-write",
+      "entry": "nilInnerMapWrite",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/maps/nil-map-incdec",
+      "entry": "nilMapIncDec",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/maps/single-entry-range",
+      "entry": "singleEntryRange",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/maps/slice-compound-call-mutates",
+      "entry": "sliceCompoundCallMutates",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/maps/string-key-from-bytes",
+      "entry": "stringKeyFromBytesIndependent",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/maps/struct-key-nan",
+      "entry": "structKeyWithNaN",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/maps/zero-size-keys",
+      "entry": "zeroSizeKeys",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/strings/byte-equal-strings",
+      "entry": "byteEqualStrings",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/strings/byte-inside-rune",
+      "entry": "byteInsideRune",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/strings/concat-loop",
+      "entry": "concatLoop",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/strings/errors-new-errorf",
+      "entry": "errorsNewAndErrorf",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 22
+    },
+    {
+      "id": "noodler/strings/fields-unicode-spaces",
+      "entry": "fieldsUnicodeSpaces",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 9
+    },
+    {
+      "id": "noodler/strings/invalid-bytes-preserved",
+      "entry": "invalidBytesPreserved",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/strings/join-repeat-edges",
+      "entry": "joinRepeatEdges",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 16
+    },
+    {
+      "id": "noodler/strings/parse-uint-edges",
+      "entry": "parseUintEdges",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 41
+    },
+    {
+      "id": "noodler/strings/range-indices-multibyte",
+      "entry": "rangeIndicesMultibyte",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/strings/rune-count-vs-len",
+      "entry": "runeCountVsLen",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/strings/split-edges",
+      "entry": "splitEdges",
+      "quarantined_reached": [
+        {
+          "target": "internal/bytealg.Cutover",
+          "path": [
+            "splitEdges",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.Cutover"
+          ],
+          "reason": "internal/bytealg.Cutover: stdlib source-through: internal/bytealg.Cutover's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        },
+        {
+          "target": "internal/bytealg.IndexString",
+          "path": [
+            "splitEdges",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.IndexString"
+          ],
+          "reason": "internal/bytealg.IndexString: stdlib source-through: internal/bytealg.IndexString's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 19
+    },
+    {
+      "id": "noodler/strings/sprint-spacing",
+      "entry": "sprintSpacing",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "sprintSpacing",
+            "goleanShimFmtSprintDyn",
+            "goleanShimFmtDynVerb",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 45
+    },
+    {
+      "id": "noodler/strings/sprintf-verbs",
+      "entry": "sprintfVerbs",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "sprintfVerbs",
+            "sprintfVerbs$fmt0",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 9
+    },
+    {
+      "id": "noodler/strings/sprintln-basics",
+      "entry": "sprintlnBasics",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "sprintlnBasics",
+            "goleanShimFmtSprintlnDyn",
+            "goleanShimFmtDynVerb",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 45
+    },
+    {
+      "id": "noodler/strings/string-from-bytes-copies",
+      "entry": "stringFromBytesCopies",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/strings/string-ordering",
+      "entry": "stringOrdering",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/strings/stringer-rendering",
+      "entry": "stringerRendering",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "stringerRendering",
+            "goleanShimFmtSprintDyn",
+            "goleanShimFmtDynVerb",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 46
+    },
+    {
+      "id": "noodler/strings/substring-then-bytes",
+      "entry": "substringThenBytes",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "noodler/strings/trimspace-unicode",
+      "entry": "trimSpaceUnicode",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 17
+    },
+    {
+      "id": "noodler/syncmisuse/defer-unlock-during-panic",
+      "entry": "deferUnlockDuringPanic",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "noodler/syncmisuse/mutex-copy-carries-state",
+      "entry": "mutexCopyCarriesState",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/syncmisuse/mutex-copy-independent",
+      "entry": "mutexCopyIndependent",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/syncmisuse/once-different-funcs",
+      "entry": "onceDifferentFuncs",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 10
+    },
+    {
+      "id": "noodler/syncmisuse/once-nested-deadlock",
+      "entry": "onceNestedDeadlock",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 7
+    },
+    {
+      "id": "noodler/syncmisuse/recursive-read-lock",
+      "entry": "recursiveReadLock",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/syncmisuse/rlock-while-write-locked",
+      "entry": "rlockWhileWriteLocked",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/syncmisuse/runlock-of-unlocked",
+      "entry": "rUnlockOfUnlocked",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/syncmisuse/unlock-from-other-goroutine",
+      "entry": "unlockFromOtherGoroutine",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "noodler/syncmisuse/unlock-of-unlocked-rw",
+      "entry": "unlockOfUnlockedRW",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/syncmisuse/wait-on-zero-counter",
+      "entry": "waitOnZeroCounter",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "noodler/syncmisuse/waitgroup-reuse",
+      "entry": "waitGroupReuse",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 5
+    },
+    {
+      "id": "panic-recover/shim-refusal-unrecoverable/parse-recover",
+      "entry": "parseRecover",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 28
+    },
+    {
+      "id": "panic-recover/shim-refusal-unrecoverable/render-recover",
+      "entry": "renderRecover",
+      "quarantined_reached": [
+        {
+          "target": "goleanShimUnsupported",
+          "path": [
+            "renderRecover",
+            "renderRecover$fmt0",
+            "goleanShimFmtRender",
+            "goleanShimFmtStringVerb",
+            "goleanShimFmtQuoteString",
+            "goleanShimUnsupported"
+          ],
+          "reason": "golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time \u2014 the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers"
+        },
+        {
+          "target": "internal/bytealg.Cutover",
+          "path": [
+            "renderRecover",
+            "main.splitter.String",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.Cutover"
+          ],
+          "reason": "internal/bytealg.Cutover: stdlib source-through: internal/bytealg.Cutover's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        },
+        {
+          "target": "internal/bytealg.IndexString",
+          "path": [
+            "renderRecover",
+            "main.splitter.String",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.IndexString"
+          ],
+          "reason": "internal/bytealg.IndexString: stdlib source-through: internal/bytealg.IndexString's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 50
+    },
+    {
+      "id": "panic-recover/shim-refusal-unrecoverable/split-recover",
+      "entry": "splitRecover",
+      "quarantined_reached": [
+        {
+          "target": "internal/bytealg.Cutover",
+          "path": [
+            "splitRecover",
+            "safeChars",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.Cutover"
+          ],
+          "reason": "internal/bytealg.Cutover: stdlib source-through: internal/bytealg.Cutover's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        },
+        {
+          "target": "internal/bytealg.IndexString",
+          "path": [
+            "splitRecover",
+            "safeChars",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.IndexString"
+          ],
+          "reason": "internal/bytealg.IndexString: stdlib source-through: internal/bytealg.IndexString's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 24
+    },
+    {
+      "id": "race/atomics-free/atomic-vs-atomic",
+      "entry": "atomicVsAtomic",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "race/atomics-free/cas-failure-acquires",
+      "entry": "casFailureAcquires",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "race/atomics-free/plain-read-vs-load",
+      "entry": "plainReadVsLoad",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "race/atomics-free/publish-acquire",
+      "entry": "publishAcquire",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "race/atomics-free/rmw-acquire",
+      "entry": "rmwAcquire",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "race/atomics-free/sibling-words",
+      "entry": "siblingWords",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "race/atomics-free/typed-sibling-field",
+      "entry": "typedSiblingField",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "race/atomics-misuse/plain-read-vs-failed-cas",
+      "entry": "plainReadVsFailedCas",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "race/atomics-misuse/plain-read-vs-store",
+      "entry": "plainReadVsStore",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "race/atomics-misuse/plain-read-vs-swap",
+      "entry": "plainReadVsSwap",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "race/atomics-misuse/plain-write-vs-add",
+      "entry": "plainWriteVsAdd",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "race/atomics-misuse/struct-copy-vs-typed-add",
+      "entry": "structCopyVsTypedAdd",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "race/free-sync/disjoint-prims",
+      "entry": "freeSyncDisjointPrims",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "race/free-sync/mutex",
+      "entry": "freeSyncMutex",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "race/free-sync/mutex-siblings",
+      "entry": "freeSyncMutexSiblings",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "race/free-sync/once-edge",
+      "entry": "freeSyncOnceEdge",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 8
+    },
+    {
+      "id": "race/free-sync/rw-copy-beside-lock",
+      "entry": "freeSyncRwCopyBesideLock",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "race/free-sync/rw-copy-beside-rlock",
+      "entry": "freeSyncRwCopyBesideRLock",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "race/free-sync/rw-trylock-publish",
+      "entry": "freeSyncRwTryLockPublish",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "race/free-sync/rw-tryrlock-acquire",
+      "entry": "freeSyncRwTryRLockAcquire",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "race/free-sync/rw-writers",
+      "entry": "freeSyncRwWriters",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "race/free-sync/trylock-publish",
+      "entry": "freeSyncTryLockPublish",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "race/free-sync/wg-edge",
+      "entry": "freeSyncWgEdge",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "race/negative-sync/failed-trylock-no-edge",
+      "entry": "raceSyncFailedTryLockNoEdge",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "race/negative-sync/mutex-copy",
+      "entry": "raceSyncMutexCopy",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "race/negative-sync/once-copy",
+      "entry": "raceSyncOnceCopy",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 5
+    },
+    {
+      "id": "race/negative-sync/one-side",
+      "entry": "raceSyncOneSide",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "race/negative-sync/overwrite-vs-trylock",
+      "entry": "raceSyncOverwriteVsTryLock",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "race/negative-sync/rlock-serialized",
+      "entry": "raceSyncRlockSerialized",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "race/negative-sync/rw-overwrite",
+      "entry": "raceSyncRwOverwrite",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "race/negative-sync/wg-no-edge",
+      "entry": "raceSyncWgNoEdge",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "race/negative-sync/wg-overwrite",
+      "entry": "raceSyncWgOverwrite",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "scoping/local-type-identity/anon-iface-missing",
+      "entry": "localAnonIfaceMissing",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "scoping/local-type-identity/anon-ifaces-distinct",
+      "entry": "localAnonIfacesDistinct",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 5
+    },
+    {
+      "id": "scoping/local-type-identity/scopes-panic",
+      "entry": "localScopesPanic",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 5
+    },
+    {
+      "id": "scoping/local-type-identity/shadow-identity",
+      "entry": "localShadowIdentity",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "scoping/local-type-identity/shadow-panic",
+      "entry": "localShadowPanic",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "scoping/named-result-shadow/bare-return",
+      "entry": "shadowThenBareReturn",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "scoping/named-result-shadow/closure-read",
+      "entry": "shadowCapturedRead",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "scoping/named-result-shadow/closure-write",
+      "entry": "shadowCapturedWrite",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "scoping/named-result-shadow/commaok-assert",
+      "entry": "commaOkAssertShadow",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "scoping/named-result-shadow/commaok-map",
+      "entry": "commaOkMapShadow",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "scoping/named-result-shadow/commaok-recv",
+      "entry": "commaOkRecvShadow",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "scoping/named-result-shadow/deferred-write",
+      "entry": "shadowWithDeferredWrite",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "scoping/named-result-shadow/enterjoint-shape",
+      "entry": "enterJointShape",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "scoping/named-result-shadow/loopvar-capture",
+      "entry": "shadowLoopVarCaptured",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "scoping/named-result-shadow/short-decl",
+      "entry": "shadowShortDecl",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "spec-examples-decl/assign-tuple-order/exchange",
+      "entry": "exchange",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "spec-examples-decl/assign-tuple-order/index-then-var",
+      "entry": "indexThenVar",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "spec-examples-decl/assign-tuple-order/panic-nil-field",
+      "entry": "panicNilField",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "spec-examples-decl/assign-tuple-order/panic-second-target",
+      "entry": "panicSecondTarget",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "spec-examples-decl/const-complex/typed",
+      "entry": "constComplexTyped",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/after-goto",
+      "entry": "commaOkAfterGoto",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/after-goto-assert",
+      "entry": "commaOkAfterGotoAssert",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/after-goto-recv",
+      "entry": "commaOkAfterGotoRecv",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/assert-typed",
+      "entry": "assertTyped",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/assert-typed-blank-ok",
+      "entry": "assertTypedBlankOk",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/assert-typed-blank-value",
+      "entry": "assertTypedBlankValue",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/assert-untyped",
+      "entry": "assertUntyped",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/assert-untyped-blank-ok",
+      "entry": "assertUntypedBlankOk",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/assert-untyped-blank-value",
+      "entry": "assertUntypedBlankValue",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/func-literal",
+      "entry": "commaOkInFuncLit",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 5
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/grouped-spec",
+      "entry": "commaOkGroupedSpec",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/iface-value",
+      "entry": "commaOkIfaceValue",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/index-typed",
+      "entry": "indexTyped",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/index-typed-blank-ok",
+      "entry": "indexTypedBlankOk",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/index-typed-blank-value",
+      "entry": "indexTypedBlankValue",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/index-untyped",
+      "entry": "indexUntyped",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/index-untyped-blank-ok",
+      "entry": "indexUntypedBlankOk",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/index-untyped-blank-value",
+      "entry": "indexUntypedBlankValue",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/pkg-assert-typed",
+      "entry": "pkgAssertTyped",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/pkg-assert-typed-blank-ok",
+      "entry": "pkgAssertTypedBlankOk",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/pkg-assert-typed-blank-value",
+      "entry": "pkgAssertTypedBlankValue",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/pkg-assert-untyped",
+      "entry": "pkgAssertUntyped",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/pkg-assert-untyped-blank-ok",
+      "entry": "pkgAssertUntypedBlankOk",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/pkg-assert-untyped-blank-value",
+      "entry": "pkgAssertUntypedBlankValue",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/pkg-index-typed",
+      "entry": "pkgIndexTyped",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/pkg-index-typed-blank-ok",
+      "entry": "pkgIndexTypedBlankOk",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/pkg-index-typed-blank-value",
+      "entry": "pkgIndexTypedBlankValue",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/pkg-index-untyped",
+      "entry": "pkgIndexUntyped",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/pkg-index-untyped-blank-ok",
+      "entry": "pkgIndexUntypedBlankOk",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/pkg-index-untyped-blank-value",
+      "entry": "pkgIndexUntypedBlankValue",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/pkg-recv-typed",
+      "entry": "pkgRecvTyped",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/pkg-recv-typed-blank-ok",
+      "entry": "pkgRecvTypedBlankOk",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/pkg-recv-typed-blank-value",
+      "entry": "pkgRecvTypedBlankValue",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/pkg-recv-untyped",
+      "entry": "pkgRecvUntyped",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/pkg-recv-untyped-blank-ok",
+      "entry": "pkgRecvUntypedBlankOk",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/pkg-recv-untyped-blank-value",
+      "entry": "pkgRecvUntypedBlankValue",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/recv-typed",
+      "entry": "recvTyped",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/recv-typed-blank-ok",
+      "entry": "recvTypedBlankOk",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/recv-typed-blank-value",
+      "entry": "recvTypedBlankValue",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/recv-untyped",
+      "entry": "recvUntyped",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/recv-untyped-blank-ok",
+      "entry": "recvUntypedBlankOk",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/recv-untyped-blank-value",
+      "entry": "recvUntypedBlankValue",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/tuple-call-blank",
+      "entry": "tupleCallBlank",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 5
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/tuple-call-three",
+      "entry": "tupleCallThree",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 5
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/tuple-call-typed",
+      "entry": "tupleCallTyped",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 5
+    },
+    {
+      "id": "spec-examples-decl/var-comma-ok-matrix/tuple-call-untyped",
+      "entry": "tupleCallUntyped",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 5
+    },
+    {
+      "id": "spec-examples-lexical/method-expressions/pointer-receiver-expr",
+      "entry": "methodExprPointerReceiver",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "spec-examples-lexical/method-expressions/value-receiver-expr",
+      "entry": "methodExprValueReceiver",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "spec-examples-stmt/operator-precedence/add-sub",
+      "entry": "opPrecAddSub",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "spec-examples-stmt/operator-precedence/cmp-call",
+      "entry": "opPrecCmpCall",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "spec-examples-stmt/operator-precedence/mul-index",
+      "entry": "opPrecMulIndex",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "spec-examples-stmt/operator-precedence/not-shift",
+      "entry": "opPrecNotShift",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "spec-examples-stmt/operator-precedence/or-calls",
+      "entry": "opPrecOrCalls",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "spec-examples-stmt/operator-precedence/unary-plus",
+      "entry": "opPrecUnaryPlus",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "stdlib-source/bytes-buffer/available-buffer",
+      "entry": "bufAvailableBuffer",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 13
+    },
+    {
+      "id": "stdlib-source/bytes-buffer/bytes-others",
+      "entry": "bytesOthers",
+      "quarantined_reached": [
+        {
+          "target": "internal/bytealg.Cutover",
+          "path": [
+            "bytesOthers",
+            "bytes.Index",
+            "internal/bytealg.Cutover"
+          ],
+          "reason": "internal/bytealg.Cutover: stdlib source-through: internal/bytealg.Cutover's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        },
+        {
+          "target": "internal/bytealg.Index",
+          "path": [
+            "bytesOthers",
+            "bytes.Index",
+            "internal/bytealg.Index"
+          ],
+          "reason": "internal/bytealg.Index: stdlib source-through: internal/bytealg.Index's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 29
+    },
+    {
+      "id": "stdlib-source/bytes-buffer/grow-contract",
+      "entry": "bufGrowContract",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 14
+    },
+    {
+      "id": "stdlib-source/bytes-buffer/grow-negative",
+      "entry": "bufGrowNegative",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 10
+    },
+    {
+      "id": "stdlib-source/bytes-buffer/next-bytes-truncate",
+      "entry": "bufNextBytesTruncate",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 14
+    },
+    {
+      "id": "stdlib-source/bytes-buffer/nil-receiver-string",
+      "entry": "bufNilReceiverString",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "stdlib-source/bytes-buffer/reset-reuse",
+      "entry": "bufResetReuse",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 12
+    },
+    {
+      "id": "stdlib-source/bytes-buffer/truncate-out-of-range",
+      "entry": "bufTruncateOutOfRange",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 11
+    },
+    {
+      "id": "stdlib-source/bytes-buffer/unread-byte-error",
+      "entry": "bufUnreadByteError",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 13
+    },
+    {
+      "id": "stdlib-source/bytes-buffer/write-side",
+      "entry": "bufWriteSide",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 16
+    },
+    {
+      "id": "stdlib-source/errors-wrap/unwrap",
+      "entry": "errorsUnwrap",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 24
+    },
+    {
+      "id": "stdlib-source/frontier/atoi-error-path-clone",
+      "entry": "atoiErrorPathClone",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 25
+    },
+    {
+      "id": "stdlib-source/strings-split/both-empty",
+      "entry": "splitBothEmpty",
+      "quarantined_reached": [
+        {
+          "target": "internal/bytealg.Cutover",
+          "path": [
+            "splitBothEmpty",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.Cutover"
+          ],
+          "reason": "internal/bytealg.Cutover: stdlib source-through: internal/bytealg.Cutover's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        },
+        {
+          "target": "internal/bytealg.IndexString",
+          "path": [
+            "splitBothEmpty",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.IndexString"
+          ],
+          "reason": "internal/bytealg.IndexString: stdlib source-through: internal/bytealg.IndexString's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 18
+    },
+    {
+      "id": "stdlib-source/strings-split/empty-s",
+      "entry": "splitEmptyS",
+      "quarantined_reached": [
+        {
+          "target": "internal/bytealg.Cutover",
+          "path": [
+            "splitEmptyS",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.Cutover"
+          ],
+          "reason": "internal/bytealg.Cutover: stdlib source-through: internal/bytealg.Cutover's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        },
+        {
+          "target": "internal/bytealg.IndexString",
+          "path": [
+            "splitEmptyS",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.IndexString"
+          ],
+          "reason": "internal/bytealg.IndexString: stdlib source-through: internal/bytealg.IndexString's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 19
+    },
+    {
+      "id": "stdlib-source/strings-split/empty-sep-invalid-utf8",
+      "entry": "splitEmptySepInvalidUTF8",
+      "quarantined_reached": [
+        {
+          "target": "internal/bytealg.Cutover",
+          "path": [
+            "splitEmptySepInvalidUTF8",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.Cutover"
+          ],
+          "reason": "internal/bytealg.Cutover: stdlib source-through: internal/bytealg.Cutover's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        },
+        {
+          "target": "internal/bytealg.IndexString",
+          "path": [
+            "splitEmptySepInvalidUTF8",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.IndexString"
+          ],
+          "reason": "internal/bytealg.IndexString: stdlib source-through: internal/bytealg.IndexString's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 18
+    },
+    {
+      "id": "stdlib-source/strings-split/empty-sep-multibyte",
+      "entry": "splitEmptySepMultibyte",
+      "quarantined_reached": [
+        {
+          "target": "internal/bytealg.Cutover",
+          "path": [
+            "splitEmptySepMultibyte",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.Cutover"
+          ],
+          "reason": "internal/bytealg.Cutover: stdlib source-through: internal/bytealg.Cutover's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        },
+        {
+          "target": "internal/bytealg.IndexString",
+          "path": [
+            "splitEmptySepMultibyte",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.IndexString"
+          ],
+          "reason": "internal/bytealg.IndexString: stdlib source-through: internal/bytealg.IndexString's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 19
+    },
+    {
+      "id": "stdlib-source/strings-split/rabin-karp-path",
+      "entry": "splitRabinKarpPath",
+      "quarantined_reached": [
+        {
+          "target": "internal/bytealg.Cutover",
+          "path": [
+            "splitRabinKarpPath",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.Cutover"
+          ],
+          "reason": "internal/bytealg.Cutover: stdlib source-through: internal/bytealg.Cutover's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        },
+        {
+          "target": "internal/bytealg.IndexString",
+          "path": [
+            "splitRabinKarpPath",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.IndexString"
+          ],
+          "reason": "internal/bytealg.IndexString: stdlib source-through: internal/bytealg.IndexString's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 19
+    },
+    {
+      "id": "stdlib-source/strings-split/sep-equals-s",
+      "entry": "splitSepEqualsS",
+      "quarantined_reached": [
+        {
+          "target": "internal/bytealg.Cutover",
+          "path": [
+            "splitSepEqualsS",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.Cutover"
+          ],
+          "reason": "internal/bytealg.Cutover: stdlib source-through: internal/bytealg.Cutover's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        },
+        {
+          "target": "internal/bytealg.IndexString",
+          "path": [
+            "splitSepEqualsS",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.IndexString"
+          ],
+          "reason": "internal/bytealg.IndexString: stdlib source-through: internal/bytealg.IndexString's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 19
+    },
+    {
+      "id": "stdlib-source/strings-split/sep-longer-than-s",
+      "entry": "splitSepLongerThanS",
+      "quarantined_reached": [
+        {
+          "target": "internal/bytealg.Cutover",
+          "path": [
+            "splitSepLongerThanS",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.Cutover"
+          ],
+          "reason": "internal/bytealg.Cutover: stdlib source-through: internal/bytealg.Cutover's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        },
+        {
+          "target": "internal/bytealg.IndexString",
+          "path": [
+            "splitSepLongerThanS",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.IndexString"
+          ],
+          "reason": "internal/bytealg.IndexString: stdlib source-through: internal/bytealg.IndexString's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 19
+    },
+    {
+      "id": "stdlib-source/strings-split/single-byte-many",
+      "entry": "splitSingleByteMany",
+      "quarantined_reached": [
+        {
+          "target": "internal/bytealg.Cutover",
+          "path": [
+            "splitSingleByteMany",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.Cutover"
+          ],
+          "reason": "internal/bytealg.Cutover: stdlib source-through: internal/bytealg.Cutover's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        },
+        {
+          "target": "internal/bytealg.IndexString",
+          "path": [
+            "splitSingleByteMany",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.IndexString"
+          ],
+          "reason": "internal/bytealg.IndexString: stdlib source-through: internal/bytealg.IndexString's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 19
+    },
+    {
+      "id": "stdlib-source/strings-split/splitn-and-after",
+      "entry": "splitNAndAfter",
+      "quarantined_reached": [
+        {
+          "target": "internal/bytealg.Cutover",
+          "path": [
+            "splitNAndAfter",
+            "strings.SplitAfter",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.Cutover"
+          ],
+          "reason": "internal/bytealg.Cutover: stdlib source-through: internal/bytealg.Cutover's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        },
+        {
+          "target": "internal/bytealg.IndexString",
+          "path": [
+            "splitNAndAfter",
+            "strings.SplitAfter",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.IndexString"
+          ],
+          "reason": "internal/bytealg.IndexString: stdlib source-through: internal/bytealg.IndexString's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 20
+    },
+    {
+      "id": "stdlib-source/strings-split/trailing-and-consecutive",
+      "entry": "splitTrailingAndConsecutive",
+      "quarantined_reached": [
+        {
+          "target": "internal/bytealg.Cutover",
+          "path": [
+            "splitTrailingAndConsecutive",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.Cutover"
+          ],
+          "reason": "internal/bytealg.Cutover: stdlib source-through: internal/bytealg.Cutover's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        },
+        {
+          "target": "internal/bytealg.IndexString",
+          "path": [
+            "splitTrailingAndConsecutive",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.IndexString"
+          ],
+          "reason": "internal/bytealg.IndexString: stdlib source-through: internal/bytealg.IndexString's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 19
+    },
+    {
+      "id": "stdlib-source/strings-split/unicode-sep",
+      "entry": "splitUnicodeSep",
+      "quarantined_reached": [
+        {
+          "target": "internal/bytealg.Cutover",
+          "path": [
+            "splitUnicodeSep",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.Cutover"
+          ],
+          "reason": "internal/bytealg.Cutover: stdlib source-through: internal/bytealg.Cutover's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        },
+        {
+          "target": "internal/bytealg.IndexString",
+          "path": [
+            "splitUnicodeSep",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.IndexString"
+          ],
+          "reason": "internal/bytealg.IndexString: stdlib source-through: internal/bytealg.IndexString's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 19
+    },
+    {
+      "id": "strings/shim-value-refused/shimmed-value",
+      "entry": "shimmedValue",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 8
+    },
+    {
+      "id": "strings/shim-value-refused/unmodeled-value",
+      "entry": "unmodeledValue",
+      "quarantined_reached": [
+        {
+          "target": "internal/bytealg.Cutover",
+          "path": [
+            "unmodeledValue",
+            "strings.Contains",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.Cutover"
+          ],
+          "reason": "internal/bytealg.Cutover: stdlib source-through: internal/bytealg.Cutover's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        },
+        {
+          "target": "internal/bytealg.IndexString",
+          "path": [
+            "unmodeledValue",
+            "strings.Contains",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.IndexString"
+          ],
+          "reason": "internal/bytealg.IndexString: stdlib source-through: internal/bytealg.IndexString's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 11
+    },
+    {
+      "id": "strings/split-conformance/basic",
+      "entry": "splitBasic",
+      "quarantined_reached": [
+        {
+          "target": "internal/bytealg.Cutover",
+          "path": [
+            "splitBasic",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.Cutover"
+          ],
+          "reason": "internal/bytealg.Cutover: stdlib source-through: internal/bytealg.Cutover's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        },
+        {
+          "target": "internal/bytealg.IndexString",
+          "path": [
+            "splitBasic",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.IndexString"
+          ],
+          "reason": "internal/bytealg.IndexString: stdlib source-through: internal/bytealg.IndexString's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 19
+    },
+    {
+      "id": "strings/split-conformance/confchange-shape",
+      "entry": "splitConfChangeShape",
+      "quarantined_reached": [
+        {
+          "target": "internal/bytealg.Cutover",
+          "path": [
+            "splitConfChangeShape",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.Cutover"
+          ],
+          "reason": "internal/bytealg.Cutover: stdlib source-through: internal/bytealg.Cutover's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        },
+        {
+          "target": "internal/bytealg.IndexString",
+          "path": [
+            "splitConfChangeShape",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.IndexString"
+          ],
+          "reason": "internal/bytealg.IndexString: stdlib source-through: internal/bytealg.IndexString's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 31
+    },
+    {
+      "id": "strings/split-conformance/empty-input",
+      "entry": "splitEmptyInput",
+      "quarantined_reached": [
+        {
+          "target": "internal/bytealg.Cutover",
+          "path": [
+            "splitEmptyInput",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.Cutover"
+          ],
+          "reason": "internal/bytealg.Cutover: stdlib source-through: internal/bytealg.Cutover's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        },
+        {
+          "target": "internal/bytealg.IndexString",
+          "path": [
+            "splitEmptyInput",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.IndexString"
+          ],
+          "reason": "internal/bytealg.IndexString: stdlib source-through: internal/bytealg.IndexString's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 19
+    },
+    {
+      "id": "strings/split-conformance/empty-sep",
+      "entry": "splitEmptySep",
+      "quarantined_reached": [
+        {
+          "target": "internal/bytealg.Cutover",
+          "path": [
+            "splitEmptySep",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.Cutover"
+          ],
+          "reason": "internal/bytealg.Cutover: stdlib source-through: internal/bytealg.Cutover's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        },
+        {
+          "target": "internal/bytealg.IndexString",
+          "path": [
+            "splitEmptySep",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.IndexString"
+          ],
+          "reason": "internal/bytealg.IndexString: stdlib source-through: internal/bytealg.IndexString's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 19
+    },
+    {
+      "id": "strings/split-conformance/multi-byte-sep",
+      "entry": "splitMultiByteSep",
+      "quarantined_reached": [
+        {
+          "target": "internal/bytealg.Cutover",
+          "path": [
+            "splitMultiByteSep",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.Cutover"
+          ],
+          "reason": "internal/bytealg.Cutover: stdlib source-through: internal/bytealg.Cutover's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        },
+        {
+          "target": "internal/bytealg.IndexString",
+          "path": [
+            "splitMultiByteSep",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.IndexString"
+          ],
+          "reason": "internal/bytealg.IndexString: stdlib source-through: internal/bytealg.IndexString's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 19
+    },
+    {
+      "id": "strings/split-conformance/overlap",
+      "entry": "splitOverlap",
+      "quarantined_reached": [
+        {
+          "target": "internal/bytealg.Cutover",
+          "path": [
+            "splitOverlap",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.Cutover"
+          ],
+          "reason": "internal/bytealg.Cutover: stdlib source-through: internal/bytealg.Cutover's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        },
+        {
+          "target": "internal/bytealg.IndexString",
+          "path": [
+            "splitOverlap",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.IndexString"
+          ],
+          "reason": "internal/bytealg.IndexString: stdlib source-through: internal/bytealg.IndexString's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 19
+    },
+    {
+      "id": "strings/split-conformance/single-byte-sep",
+      "entry": "splitSingleByteSep",
+      "quarantined_reached": [
+        {
+          "target": "internal/bytealg.Cutover",
+          "path": [
+            "splitSingleByteSep",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.Cutover"
+          ],
+          "reason": "internal/bytealg.Cutover: stdlib source-through: internal/bytealg.Cutover's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        },
+        {
+          "target": "internal/bytealg.IndexString",
+          "path": [
+            "splitSingleByteSep",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.IndexString"
+          ],
+          "reason": "internal/bytealg.IndexString: stdlib source-through: internal/bytealg.IndexString's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 19
+    },
+    {
+      "id": "strings/split-conformance/whole-match",
+      "entry": "splitWholeMatch",
+      "quarantined_reached": [
+        {
+          "target": "internal/bytealg.Cutover",
+          "path": [
+            "splitWholeMatch",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.Cutover"
+          ],
+          "reason": "internal/bytealg.Cutover: stdlib source-through: internal/bytealg.Cutover's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        },
+        {
+          "target": "internal/bytealg.IndexString",
+          "path": [
+            "splitWholeMatch",
+            "strings.Split",
+            "strings.genSplit",
+            "strings.Index",
+            "internal/stringslite.Index",
+            "internal/bytealg.IndexString"
+          ],
+          "reason": "internal/bytealg.IndexString: stdlib source-through: internal/bytealg.IndexString's body is solely panic(\"unimplemented\") \u2014 a portable-twin placeholder, not an implementation (stdlib-substitutions.tsv must keep every call to it dead; fail closed)"
+        }
+      ],
+      "missing_refs": [],
+      "syntactic_closure_size": 19
+    },
+    {
+      "id": "sync/atomic-frontier/add-load-store",
+      "entry": "atomicAddLoadStore",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/atomic-frontier/cas",
+      "entry": "atomicCas",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/atomic-frontier/mp-litmus",
+      "entry": "atomicMpLitmus",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "sync/atomic-frontier/swap",
+      "entry": "atomicSwap",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/composite-literal/lit-in-composite",
+      "entry": "syncLitInComposite",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/composite-literal/mutex-addr-lit",
+      "entry": "mutexAddrLit",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/composite-literal/once-value-lit",
+      "entry": "onceValueLit",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 7
+    },
+    {
+      "id": "sync/composite-literal/rwmutex-addr-lit",
+      "entry": "rwMutexAddrLit",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/composite-literal/waitgroup-value-lit",
+      "entry": "waitGroupValueLit",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/escapes/defer-embedded",
+      "entry": "escapeDeferEmbedded",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "sync/escapes/go-stmt",
+      "entry": "escapeGoStmt",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "sync/escapes/method-value",
+      "entry": "escapeMethodValue",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "sync/escapes/method-value-add-arg",
+      "entry": "escapeMethodValueAdd",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "sync/escapes/method-value-negative-panic",
+      "entry": "escapeMethodValueNegative",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "sync/escapes/once-do-method-value",
+      "entry": "escapeOnceDoValue",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 5
+    },
+    {
+      "id": "sync/escapes/paren-forms",
+      "entry": "escapeParenForms",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 5
+    },
+    {
+      "id": "sync/escapes/passed-callback",
+      "entry": "escapePassedCallback",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "sync/escapes/promoted",
+      "entry": "escapePromoted",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/escapes/promoted-method-value",
+      "entry": "escapePromotedMethodValue",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "sync/iface-dispatch/locker-box-dispatch",
+      "entry": "lockerBoxDispatch",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 7
+    },
+    {
+      "id": "sync/iface-dispatch/locker-double-lock",
+      "entry": "lockerDoubleLock",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "sync/iface-dispatch/mutex-user-iface",
+      "entry": "mutexUserIface",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 7
+    },
+    {
+      "id": "sync/iface-dispatch/once-iface-dispatch",
+      "entry": "onceIfaceDispatch",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 6
+    },
+    {
+      "id": "sync/iface-dispatch/rw-locker-dispatch",
+      "entry": "rwLockerDispatch",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 7
+    },
+    {
+      "id": "sync/iface-dispatch/wg-user-iface",
+      "entry": "wgUserIface",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "sync/promoted-mutex/counter",
+      "entry": "promotedCounter",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "sync/promoted-mutex/defer-unlock",
+      "entry": "promotedDefer",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "sync/promoted-mutex/stmt",
+      "entry": "promotedStmt",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "sync/promoted-mutex/trylock-expr",
+      "entry": "promotedTryLockExpr",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/promoted-mutex/value-var",
+      "entry": "promotedValueVar",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/rwmutex-basic/rlock-twice",
+      "entry": "rlockTwice",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/rwmutex-basic/write-then-read-ordered",
+      "entry": "writeThenReadOrdered",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "sync/rwmutex-misuse-fatal/runlock-of-unlocked",
+      "entry": "runlockOfUnlocked",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/rwmutex-misuse-fatal/runlock-while-write-locked",
+      "entry": "runlockWhileWriteLocked",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/rwmutex-misuse-fatal/wunlock-of-unlocked",
+      "entry": "wunlockOfUnlocked",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/rwmutex-order/acquisition",
+      "entry": "rwOrder",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "sync/rwmutex-rlock-then-lock/rlock-then-lock",
+      "entry": "rlockThenLock",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/satisfaction/assert-negative-missing",
+      "entry": "assertNegativeMissing",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/satisfaction/assert-ok-mutex",
+      "entry": "assertOkMutex",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/satisfaction/assert-ok-once",
+      "entry": "assertOkOnce",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/satisfaction/assert-ok-waitgroup",
+      "entry": "assertOkWaitGroup",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/satisfaction/bare-assert-missing-panics",
+      "entry": "bareAssertMissingPanics",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/satisfaction/bare-assert-mutex",
+      "entry": "bareAssertMutex",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/satisfaction/trylock-sig-satisfies",
+      "entry": "tryLockSigSatisfies",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/satisfaction/type-switch-mutex",
+      "entry": "typeSwitchMutex",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/satisfaction-locker-sig/assert-ok-rwmutex",
+      "entry": "assertOkRWMutex",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/stub-satisfaction/satisfies",
+      "entry": "stubSatisfaction",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/trylock/defer-trylock",
+      "entry": "deferTryLockDiscarded",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "sync/trylock/discarded-acquires",
+      "entry": "tryLockDiscarded",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/trylock/locked-false",
+      "entry": "tryLockLocked",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/trylock/rw-try-writer-held",
+      "entry": "rwTryWriterHeld",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/trylock/rw-trylock-reader-held",
+      "entry": "rwTryLockReaderHeld",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/trylock/rw-trylock-unlocked",
+      "entry": "rwTryLockUnlocked",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/trylock/rw-tryrlock-pending-writer",
+      "entry": "rwTryRLockPendingWriter",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "sync/trylock/rw-tryrlock-reader-held",
+      "entry": "rwTryRLockReaderHeld",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/trylock/rw-tryrlock-unlocked",
+      "entry": "rwTryRLockUnlocked",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/trylock/spin-until-trylock",
+      "entry": "spinUntilTryLock",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "sync/trylock/trylock-false-then-lock",
+      "entry": "tryLockFalseThenLock",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "sync/trylock/unlock-after-trylock-success",
+      "entry": "unlockAfterTryLockSuccess",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/trylock/unlocked-acquire",
+      "entry": "tryLockUnlocked",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/waitgroup-basic/add-done-wait",
+      "entry": "addDoneWait",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    },
+    {
+      "id": "sync/waitgroup-basic/batch-done",
+      "entry": "batchDone",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/waitgroup-basic/recovered-negative-continue",
+      "entry": "recoveredNegativeContinue",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "sync/waitgroup-int32/add-overflow-panics",
+      "entry": "addOverflowPanics",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/waitgroup-int32/add-wrap-noop",
+      "entry": "addWrapNoop",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/waitgroup-negative-after-recover/negative-after-recover",
+      "entry": "negativeAfterRecover",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 4
+    },
+    {
+      "id": "sync/waitgroup-negative-panic/negative-counter",
+      "entry": "negativeCounter",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/waitgroup-panic-payload/payload-is-string",
+      "entry": "payloadIsString",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 3
+    },
+    {
+      "id": "sync/waitgroup-wait-deadlock/wait-deadlock",
+      "entry": "waitDeadlock",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 1
+    },
+    {
+      "id": "sync/waitgroup-workers-join/workers-join",
+      "entry": "workersJoin",
+      "quarantined_reached": [],
+      "missing_refs": [],
+      "syntactic_closure_size": 2
+    }
+  ]
+}

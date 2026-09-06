@@ -1,0 +1,97 @@
+{
+  "archive_sha256": "75ce7a61e8c7846770b5b50f083276f9a9887528fb0981e95dd01c3dc70f34c6",
+  "parent_census_sha256": "c1affee52cda086de943800b5b1f418f30e94241f2ceef459f05800b5bbd348a",
+  "independent_exact_record_comparison": "all696records equal, including wire hash/path/name/kind/reason",
+  "counts": {
+    "PASS": 522,
+    "FAIL": 174
+  },
+  "unique_wires": {
+    "PASS": 80,
+    "FAIL": 101
+  },
+  "marker_counts": [
+    {
+      "status": "FAIL",
+      "category": "$.funcs",
+      "markers": 482
+    },
+    {
+      "status": "FAIL",
+      "category": "$.methods",
+      "markers": 1195
+    },
+    {
+      "status": "FAIL",
+      "category": "$.types",
+      "markers": 114
+    },
+    {
+      "status": "PASS",
+      "category": "$.funcs",
+      "markers": 1120
+    },
+    {
+      "status": "PASS",
+      "category": "$.methods",
+      "markers": 1461
+    },
+    {
+      "status": "PASS",
+      "category": "$.types",
+      "markers": 98
+    }
+  ],
+  "case_category_sets": [
+    {
+      "status": "FAIL",
+      "categories": "$.funcs",
+      "cases": 129
+    },
+    {
+      "status": "FAIL",
+      "categories": "$.funcs+$.methods",
+      "cases": 19
+    },
+    {
+      "status": "FAIL",
+      "categories": "$.funcs+$.methods+$.types",
+      "cases": 15
+    },
+    {
+      "status": "FAIL",
+      "categories": "$.methods",
+      "cases": 10
+    },
+    {
+      "status": "FAIL",
+      "categories": "$.methods+$.types",
+      "cases": 1
+    },
+    {
+      "status": "PASS",
+      "categories": "$.funcs",
+      "cases": 281
+    },
+    {
+      "status": "PASS",
+      "categories": "$.funcs+$.methods",
+      "cases": 40
+    },
+    {
+      "status": "PASS",
+      "categories": "$.funcs+$.methods+$.types",
+      "cases": 13
+    },
+    {
+      "status": "PASS",
+      "categories": "$.methods",
+      "cases": 185
+    },
+    {
+      "status": "PASS",
+      "categories": "$.methods+$.types",
+      "cases": 3
+    }
+  ]
+}

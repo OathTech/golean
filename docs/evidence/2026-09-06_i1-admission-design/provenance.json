@@ -1,0 +1,41 @@
+{
+  "utc": "2026-09-06T02:07:50.026864+00:00",
+  "scope": "bounded source/census/design assessment; no executable admission implementation or proof; no fresh Lean/model/conformance run",
+  "parent_source_commit": "c7eeaf578cf92701e2e06632ef6c1d881d303b71",
+  "parent_root": "/home/dev/projects/golean/.claude/worktrees/typed-consumer-sprint",
+  "corpus_source_commit": "10fefeb3e6fbb3f7cb6630b8b559a9a7e7915e97",
+  "sources": {
+    "GoLean/NativeToIR.lean": "4c285581caf0cf0d0b7b7044f7e9b478adc4c8ed2859ca717b35a2cbc55e0a7d",
+    "GoLean/GoCore/Syntax.lean": "d8feef5724519115d0ccb2620354ce8fcf8efddbaa7f688c189bc0d72dac8ca0",
+    "GoLean/GoCore/Value.lean": "aeded44416b5f286fc12033922cfab35d43d46c7d45fb7c6e8ea106e9eab6f8e",
+    "GoLean/GoCore/State.lean": "299a7b166bad4784913d72d53c47976e92b648b7db0c66cff489f8011bd60dc0",
+    "GoLean/GoCore/Ops.lean": "54537cac6774fb72f1abd71e9d39f3a0e12c2895fa25623ffd3807f27de94dd4",
+    "GoLean/GoCore/Machine.lean": "4bafe367252e73068ec60b8933bbe49f383215643d6468015610afa66a5cb957",
+    "tools/nativefrontend/emit.go": "aed973a4fa290dde791da04ea6910b6e2abab2ede5216468a274010c4e58b2f5",
+    "tools/nativefrontend/wire.go": "ffdc907636e6bedb66a56f872a817c52efc2e071b14420b1fc76e23e1302be8f",
+    "tools/nativefrontend/stdlibshim.go": "cb242d9a8d538158062ef0285e91210d34d844fafb46299a8ea07d756c5a6ce9",
+    "tools/nativefrontend/stdlib-substitutions.tsv": "9ac86a532450a99912d2304547aa19b3370cea6f0e5403328f93b031aca881d8",
+    "docs/2026-09-05_master-plan.md": "5b64c81107de58f0dc1812c709eeb95ef214c0d61e886270cad6bb2e2e404078",
+    "docs/2026-09-05_typed-consumer-sprint-charter.md": "74fd002ab771a3c8fa466a5de88d15acba1c60f1f7b2b617635194f303644c18",
+    "deps/go/src/internal/stringslite/strings.go": "764f3227e30300d0227b8c971aa718032232aa16370535476dd8e7e830fa4985",
+    "deps/go/src/internal/bytealg/index_generic.go": "cd913184953a606d5944083d2a69e5f54112fa65446675d4b065c5dd930fbd7b",
+    "deps/go/src/internal/bytealg/bytealg.go": "d13371f1998de1505505052cfdf98f27e7bd8840ce5aa4736235ec3f629a9ba1"
+  },
+  "representative_ids": [
+    "atomics/counter/add",
+    "generics/imported-generic-in-signature",
+    "generics/imported-generic-sig-calls/satisfies",
+    "methods/signature-basic-unlowerable/iface-uncalled",
+    "builtins/e13-sibling-panic-order/addr-assert-left-call",
+    "init/library-var-type-poisoned/sibling",
+    "interfaces/imported-package-name-collision",
+    "stdlib-source/errors-wrap/unwrap",
+    "interfaces/quarantined-dispatch-teeth/installed",
+    "fmt/fprintf-builder/describe-shape",
+    "noodler/strings/split-edges",
+    "stdlib-source/bytes-buffer/bytes-others"
+  ],
+  "scratch": "/home/dev/projects/golean/.claude/worktrees/typed-preflight/.tmp/i1-admission-evidence-8swu93g0",
+  "design_note_sha256": "c80207e1654abb86c616202cf11ce495d27b28e8ae4c59930b34793f9a19b39c",
+  "reproduction": "python3 docs/evidence/2026-09-06_i1-admission-design/check.py (exit0; source-bound data check only)"
+}
