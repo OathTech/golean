@@ -6217,3 +6217,91 @@ The ordinary CI gate includes source hashes, fresh Go builds/unit tests,
 Record and exact before/after evidence:
 `docs/2026-09-06_observer-controls-repair.md` and
 `docs/evidence/2026-09-06_observer-controls/`.
+
+## BUG-106 — a fatal error during panic unwinding is accepted as a panic observation; printed panic prefixes can also forge the default report kind [apparatus; terminal classification]
+
+- Status: open (authenticated fatal-unwind observation remains unavailable; replacement classifier has bounded independent implementation PASS and fresh full differential evidence; [AGENT], 2026-09-06, `typed-observer-classification`)
+- Pinned-by: differential
+- Cases: sync/mutex-unlock-fatal/during-panic-unwind
+
+The Cases pin is the remaining failed observation. Passing regression
+controls are `panic-recover/panic-markers/{first-line,nil-go-literal,
+deadlock-literal,output-midline,output-line,mixed-line,fake-trace,
+printed-continuation,literal-continuation,glued-output,printed-trace}`.
+Their fresh results and independent classifier checks are recorded below;
+they are not claimed to be failing fidelity pins for the remaining limit.
+
+An actual fatal `Mutex.Unlock` during panic unwinding prints both a panic
+and a fatal line. The inherited expected-panic and sampled-panic observers
+accepted its first panic line as the terminal kind. The ordinary fatal
+manifest row already passed: this is a false acceptance exposed by an
+adversarial wrong-kind request, not a previously red model case. Independent
+review `0e3f7e20276cbac6d45e409a151d179f6f3ef280` preserves the actual red
+strict/sampling/diagnostic executions.
+
+Marker priority alone is wrong: legal strings and program output may contain
+`fatal error:`. A default-trace sync-only discriminator was also insufficient:
+`print("panic: fake"); var f func(); go f()` prints a panic-looking first
+line and only `main.main` in the default trace, like an explicit string
+panic of that text. The complete reports differ; no full-byte identity is
+claimed. The rejected draft and exact raw Go evidence remain preserved.
+
+The rejected system-only candidate obtained runtime origin evidence from the **same** execution
+with scoped `GOTRACEBACK=system`. The pinned runtime call paths distinguish
+gopanic/fatalpanic from fatal-or-throw/fatalthrow without a recover wrapper.
+Actual kind is checked before first-line extraction and JSON encoding.
+Its claim to have authenticated raw report boundaries was falsified by the
+printed-prefix counterexample below. Runtime frames and source positions
+alone in arbitrary printed text are not trusted.
+
+Historical rejected-candidate focused result: all 19 cases passed (seven new marker rows plus nine existing
+control-byte and three existing sync-fatal rows); this did not cover the
+stronger independent forgery and is not acceptance evidence. The
+separate diagnostic tool increment must adopt the same shared helper and
+oracle setting; its earlier substring draft is not approved. BUG-105's
+historical byte-transport PASS remains scoped to that earlier repair.
+
+Independent review found a stronger false observation despite an authentic
+system panic origin: `print("panic: forged\n\t"); panic("actual")` is
+observed as message `forged`, output empty. The complete message region
+matches an ordinary multiline literal payload; a later-marker guard alone
+cannot fix the boundary. The known-unsound full run was terminated with
+exit 143 and 256 finalized partial rows preserved, never called a full
+baseline.
+
+The reviewed replacement design (`aafe225b`, explicit row disposition
+`ab2ad4d5`) installs `SetCrashOutput` in the oracle only, before the subject,
+without a recovery handler. One shared checked view consumes its owned,
+same-execution report plus registration acknowledgement and validates the
+entire raw report as an exact stderr suffix. This authenticates ordinary
+panic message/output separation, including the minimal forgery, arbitrary
+valid-UTF-8 marker text, multiline/repanic payloads and glued output. Raw
+fallback counts every marker and has no continuation exemption. Missing,
+malformed or inconsistent evidence refuses explicitly. Diagnostic oracle
+copies preserve the exact semantic frontend sources.
+
+`SetCrashOutput` omits the fatal messages emitted before `m.dying`; main
+also cannot register before dependency initialization. The exact corrected
+case delta is `sync/mutex-unlock-fatal/during-panic-unwind`: previous
+PASS/stage `-` → FAIL/stage `go-observation`, cause `ambiguous fatal
+message/output before m.dying`. This loses an unauthenticated observation,
+not a GoCore transition or a valid conformance claim. Root and independent
+review explicitly endorse this K3 fail-closed correction; the refusal is
+never counted as conformance, and O2 string admission is unchanged.
+
+Fresh focused production run: 23 rows = 22 PASS and exactly that one
+FAIL/go-observation. All eleven marker rows, nine existing byte controls
+and two simple sync fatals pass. The corresponding raw log, complete
+focused TSV and source bindings are retained. Independent production review
+`1bd2022b` is PASS for the exact core/helper/runner source. Fresh full
+differential: 3,627 = 3,382 PASS / 245 FAIL, exactly eleven new marker PASS
+rows and this one existing PASS-to-refusal correction, no other result or
+unapproved stage changes and no removals. The initial raw baseline, full
+TSV/meta and delta are durable; the baseline was then narrowly reconciled
+to precisely these twelve measured rows. Initial CI also exposed stale
+successful sampling mocks without registration evidence; those test mocks
+are corrected separately, without changing the frozen production source.
+
+Design, precise installed-source argument and durable evidence:
+`docs/2026-09-06_observer-terminal-classification-design.md` and
+`docs/evidence/2026-09-06_observer-classification/`.

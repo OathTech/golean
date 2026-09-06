@@ -1,0 +1,803 @@
+{
+  "mode": "DESIGN PROTOTYPE; actual same-run Go, no Lean run or full conformance claim",
+  "go_version": "go version go1.26.5 linux/amd64",
+  "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz",
+  "script_sha256": "da69f6cb6d249cb501a3bb7bde3b15cf463831b3c7744ced3a3900fd262877e2",
+  "rows": [
+    {
+      "id": "channels/deadlock/send-nil",
+      "old": {
+        "result": "PASS",
+        "id": "channels/deadlock/send-nil",
+        "stage": "-"
+      },
+      "expected": "deadlock",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 4622,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/0",
+      "wrapper_sha256": "c96a1d7728224db679a6adaca70dfb3f86f410a854cea2f1b9cd8efbff3a22d8",
+      "observation": {
+        "status": "deadlock",
+        "message": "all goroutines are asleep - deadlock!",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "channels/deadlock/recv-nil",
+      "old": {
+        "result": "PASS",
+        "id": "channels/deadlock/recv-nil",
+        "stage": "-"
+      },
+      "expected": "deadlock",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 4573,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/1",
+      "wrapper_sha256": "adab1f167bbc0a7d0aff1690ee79cdbaa78e023e3cf09ce459befb423ff93211",
+      "observation": {
+        "status": "deadlock",
+        "message": "all goroutines are asleep - deadlock!",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "channels/deadlock/select-empty",
+      "old": {
+        "result": "PASS",
+        "id": "channels/deadlock/select-empty",
+        "stage": "-"
+      },
+      "expected": "deadlock",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 4406,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/2",
+      "wrapper_sha256": "8d3f4ee426417b087fe061f72944dc5b2e986e498d6f17ba256355a77fe42703",
+      "observation": {
+        "status": "deadlock",
+        "message": "all goroutines are asleep - deadlock!",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "channels/deadlock/select-all-nil",
+      "old": {
+        "result": "PASS",
+        "id": "channels/deadlock/select-all-nil",
+        "stage": "-"
+      },
+      "expected": "deadlock",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 4534,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/3",
+      "wrapper_sha256": "45e896a084e6c45cccf57392e44bf105492d329d0e80a4cce1e9232fa04bec29",
+      "observation": {
+        "status": "deadlock",
+        "message": "all goroutines are asleep - deadlock!",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "channels/deadlock/send-unbuffered",
+      "old": {
+        "result": "PASS",
+        "id": "channels/deadlock/send-unbuffered",
+        "stage": "-"
+      },
+      "expected": "deadlock",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 4644,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/4",
+      "wrapper_sha256": "1c6b0b0125dcd49d563c21bbae2daba851a896a0d4f6e764b578251bc6a1fa65",
+      "observation": {
+        "status": "deadlock",
+        "message": "all goroutines are asleep - deadlock!",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "channels/deadlock/recv-empty-open",
+      "old": {
+        "result": "PASS",
+        "id": "channels/deadlock/recv-empty-open",
+        "stage": "-"
+      },
+      "expected": "deadlock",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 4646,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/5",
+      "wrapper_sha256": "53a8fd3c45657d655f48114fc146e15c728283bf27a0859d2e7116f345c066c7",
+      "observation": {
+        "status": "deadlock",
+        "message": "all goroutines are asleep - deadlock!",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "channels/deadlock/send-full",
+      "old": {
+        "result": "PASS",
+        "id": "channels/deadlock/send-full",
+        "stage": "-"
+      },
+      "expected": "deadlock",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 4625,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/6",
+      "wrapper_sha256": "00cf7eafeda20c65733eaefc2533c061356e0d2423a5c30ec50e7a160889892b",
+      "observation": {
+        "status": "deadlock",
+        "message": "all goroutines are asleep - deadlock!",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "channels/deadlock/range-open-drained",
+      "old": {
+        "result": "PASS",
+        "id": "channels/deadlock/range-open-drained",
+        "stage": "-"
+      },
+      "expected": "deadlock",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 4588,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/7",
+      "wrapper_sha256": "901ef724a6c1d8e36f74102dfa725fad13c3ee93fa2044dcdbfd1754345704e1",
+      "observation": {
+        "status": "deadlock",
+        "message": "all goroutines are asleep - deadlock!",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "channels/recv-edge/bad-target-blocks",
+      "old": {
+        "result": "PASS",
+        "id": "channels/recv-edge/bad-target-blocks",
+        "stage": "-"
+      },
+      "expected": "deadlock",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 4644,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/8",
+      "wrapper_sha256": "5c18de44e58fee690500a2dba6789b09c34167f19fd4c79791f195cc144fb1fb",
+      "observation": {
+        "status": "deadlock",
+        "message": "all goroutines are asleep - deadlock!",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "goroutines/deadlock/mutual",
+      "old": {
+        "result": "PASS",
+        "id": "goroutines/deadlock/mutual",
+        "stage": "-"
+      },
+      "expected": "deadlock",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 5445,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/9",
+      "wrapper_sha256": "4fac2fc628b73a7350cf2d39735d980f2c8a0c9092f19979642f379efaf316d9",
+      "observation": {
+        "status": "deadlock",
+        "message": "all goroutines are asleep - deadlock!",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "goroutines/deadlock/chain",
+      "old": {
+        "result": "PASS",
+        "id": "goroutines/deadlock/chain",
+        "stage": "-"
+      },
+      "expected": "deadlock",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 6415,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/10",
+      "wrapper_sha256": "7691ad1743a352e3ae4c9330878fbd7f64032ec7d16b1f201ce11b96303cd2d3",
+      "observation": {
+        "status": "deadlock",
+        "message": "all goroutines are asleep - deadlock!",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "goroutines/deadlock/after-progress",
+      "old": {
+        "result": "PASS",
+        "id": "goroutines/deadlock/after-progress",
+        "stage": "-"
+      },
+      "expected": "deadlock",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 5596,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/11",
+      "wrapper_sha256": "eef5a98f5982d2ad0629b56e9d55bb3d6bbfb986824dbfc2d0218b2242d2ddd6",
+      "observation": {
+        "status": "deadlock",
+        "message": "all goroutines are asleep - deadlock!",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "goroutines/deadlock/with-select",
+      "old": {
+        "result": "PASS",
+        "id": "goroutines/deadlock/with-select",
+        "stage": "-"
+      },
+      "expected": "deadlock",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 5362,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/12",
+      "wrapper_sha256": "ee807b2143a762063b32c1acca77da7dbfe8d7af039f0f35eab58e37a8b69837",
+      "observation": {
+        "status": "deadlock",
+        "message": "all goroutines are asleep - deadlock!",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "goroutines/spawn-edge/nil-func-fatal",
+      "old": {
+        "result": "PASS",
+        "id": "goroutines/spawn-edge/nil-func-fatal",
+        "stage": "-"
+      },
+      "expected": "fatal",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 4084,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/13",
+      "wrapper_sha256": "53a044b365f86acf86f132ac6a4cdeae1d1f9d28d9ecadfa4c65ae3f158479e0",
+      "observation": {
+        "status": "fatal",
+        "message": "go of nil func value",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "init/init-panic",
+      "old": {
+        "result": "PASS",
+        "id": "init/init-panic",
+        "stage": "-"
+      },
+      "expected": "panic",
+      "rc": 1,
+      "registered": false,
+      "crash_bytes": 0,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/14",
+      "wrapper_sha256": "16bf45474e4e0da3eb29ed6f90ace8a8b2ca191bb818825d37610e34d116e086",
+      "observation": {
+        "status": "panic",
+        "message": "init boom",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "init/quarantined-var-panicking/sibling",
+      "old": {
+        "result": "FAIL",
+        "id": "init/quarantined-var-panicking/sibling",
+        "stage": "frontend-export"
+      },
+      "expected": "panic",
+      "rc": 1,
+      "registered": false,
+      "crash_bytes": 0,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/15",
+      "wrapper_sha256": "5f31ec4c1461e71640010df1662ee581820379cfb9f88a8371fd4dde49b670af",
+      "observation": {
+        "status": "panic",
+        "message": "runtime error: cannot convert slice with length 2 to array or pointer to array with length 4",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "noodler/goroutines/waitgroup-deadlock",
+      "old": {
+        "result": "PASS",
+        "id": "noodler/goroutines/waitgroup-deadlock",
+        "stage": "-"
+      },
+      "expected": "deadlock",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 4853,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/16",
+      "wrapper_sha256": "1bd0bc8cdce22eacdaf28f7f3ea61894deb20ab603b2422ee5651a6fc83285d3",
+      "observation": {
+        "status": "deadlock",
+        "message": "all goroutines are asleep - deadlock!",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "noodler/goroutines/mutex-double-lock-deadlock",
+      "old": {
+        "result": "PASS",
+        "id": "noodler/goroutines/mutex-double-lock-deadlock",
+        "stage": "-"
+      },
+      "expected": "deadlock",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 5001,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/17",
+      "wrapper_sha256": "019b8402da655d0bf6b85ccf056aefd2775b65f7639a01e1ca44ec78e8bcf571",
+      "observation": {
+        "status": "deadlock",
+        "message": "all goroutines are asleep - deadlock!",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "noodler/initpanic/deadlock",
+      "old": {
+        "result": "PASS",
+        "id": "noodler/initpanic/deadlock",
+        "stage": "-"
+      },
+      "expected": "deadlock",
+      "rc": 1,
+      "registered": false,
+      "crash_bytes": 0,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/18",
+      "wrapper_sha256": "6382dd876fa78c04db20fc5dd70b13e94c67ffe93de4a5fc7fd3490700b52b42",
+      "observation": {
+        "status": "deadlock",
+        "message": "all goroutines are asleep - deadlock!",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "noodler/initpanic/panic",
+      "old": {
+        "result": "PASS",
+        "id": "noodler/initpanic/panic",
+        "stage": "-"
+      },
+      "expected": "panic",
+      "rc": 1,
+      "registered": false,
+      "crash_bytes": 0,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/19",
+      "wrapper_sha256": "6382dd876fa78c04db20fc5dd70b13e94c67ffe93de4a5fc7fd3490700b52b42",
+      "observation": {
+        "status": "panic",
+        "message": "init-boom",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "noodler/initpanic/var-panic",
+      "old": {
+        "result": "PASS",
+        "id": "noodler/initpanic/var-panic",
+        "stage": "-"
+      },
+      "expected": "panic",
+      "rc": 1,
+      "registered": false,
+      "crash_bytes": 0,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/20",
+      "wrapper_sha256": "6382dd876fa78c04db20fc5dd70b13e94c67ffe93de4a5fc7fd3490700b52b42",
+      "observation": {
+        "status": "panic",
+        "message": "runtime error: index out of range [5] with length 2",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "noodler/select/all-nil-deadlock",
+      "old": {
+        "result": "PASS",
+        "id": "noodler/select/all-nil-deadlock",
+        "stage": "-"
+      },
+      "expected": "deadlock",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 4580,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/21",
+      "wrapper_sha256": "1e58310d2a1b72f9babae19199386eb3ade80a79959d3f6a05f9ad4e4ee27273",
+      "observation": {
+        "status": "deadlock",
+        "message": "all goroutines are asleep - deadlock!",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "noodler/syncmisuse/runlock-of-unlocked",
+      "old": {
+        "result": "PASS",
+        "id": "noodler/syncmisuse/runlock-of-unlocked",
+        "stage": "-"
+      },
+      "expected": "fatal",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 3760,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/22",
+      "wrapper_sha256": "617225bf95660ba8ecf991c33f46ec28ca6c0c57c32357c8fd7beec4c36c2b38",
+      "observation": {
+        "status": "fatal",
+        "message": "sync: RUnlock of unlocked RWMutex",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "noodler/syncmisuse/unlock-of-unlocked-rw",
+      "old": {
+        "result": "PASS",
+        "id": "noodler/syncmisuse/unlock-of-unlocked-rw",
+        "stage": "-"
+      },
+      "expected": "fatal",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 3631,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/23",
+      "wrapper_sha256": "3a528597c440943ef5a2d327f1cfa6b8725d2aebbf6f13c2eab007f24e0289a1",
+      "observation": {
+        "status": "fatal",
+        "message": "sync: Unlock of unlocked RWMutex",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "noodler/syncmisuse/once-nested-deadlock",
+      "old": {
+        "result": "PASS",
+        "id": "noodler/syncmisuse/once-nested-deadlock",
+        "stage": "-"
+      },
+      "expected": "deadlock",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 5620,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/24",
+      "wrapper_sha256": "8111a5424281d7cc3da622da2bdf77987bb5a0997c823b01eab3be807380d0c2",
+      "observation": {
+        "status": "deadlock",
+        "message": "all goroutines are asleep - deadlock!",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "noodler/syncmisuse/mutex-copy-carries-state",
+      "old": {
+        "result": "PASS",
+        "id": "noodler/syncmisuse/mutex-copy-carries-state",
+        "stage": "-"
+      },
+      "expected": "deadlock",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 5057,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/25",
+      "wrapper_sha256": "487a612f63d5ad9d6f864656e7246a93b2fb0d1d553c022d68a45be77c3528ad",
+      "observation": {
+        "status": "deadlock",
+        "message": "all goroutines are asleep - deadlock!",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "noodler/syncmisuse/rlock-while-write-locked",
+      "old": {
+        "result": "PASS",
+        "id": "noodler/syncmisuse/rlock-while-write-locked",
+        "stage": "-"
+      },
+      "expected": "deadlock",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 4862,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/26",
+      "wrapper_sha256": "56a454987a00b82141a13c5588217310460dac931d62522536890e8fb2031c13",
+      "observation": {
+        "status": "deadlock",
+        "message": "all goroutines are asleep - deadlock!",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "spec-examples-decl/select-forms/block-forever",
+      "old": {
+        "result": "PASS",
+        "id": "spec-examples-decl/select-forms/block-forever",
+        "stage": "-"
+      },
+      "expected": "deadlock",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 4464,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/27",
+      "wrapper_sha256": "fa2582ffc43f1012ea2d485be606db9122671c10049d922c7744d337a36cfe75",
+      "observation": {
+        "status": "deadlock",
+        "message": "all goroutines are asleep - deadlock!",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "sync/iface-dispatch/locker-double-lock",
+      "old": {
+        "result": "PASS",
+        "id": "sync/iface-dispatch/locker-double-lock",
+        "stage": "-"
+      },
+      "expected": "deadlock",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 5052,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/28",
+      "wrapper_sha256": "ffe06082c48b1a37ebb161bf3ffcbd433575036bb9d92fd0629b3360f1ecccad",
+      "observation": {
+        "status": "deadlock",
+        "message": "all goroutines are asleep - deadlock!",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "sync/mutex-double-lock/double-lock",
+      "old": {
+        "result": "PASS",
+        "id": "sync/mutex-double-lock/double-lock",
+        "stage": "-"
+      },
+      "expected": "deadlock",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 5046,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/29",
+      "wrapper_sha256": "e5b73445d59fe0d4bdfad8b3952df8d6137207cf0f8eff159bbe65f3103263d7",
+      "observation": {
+        "status": "deadlock",
+        "message": "all goroutines are asleep - deadlock!",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "sync/mutex-unlock-fatal/unlock-of-unlocked",
+      "old": {
+        "result": "PASS",
+        "id": "sync/mutex-unlock-fatal/unlock-of-unlocked",
+        "stage": "-"
+      },
+      "expected": "fatal",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 3862,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/30",
+      "wrapper_sha256": "f8770073923e7398f5f90c140dfc07bc7d934caac1c01450d591969fb30acb49",
+      "observation": {
+        "status": "fatal",
+        "message": "sync: unlock of unlocked mutex",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "sync/mutex-unlock-fatal/unlock-recover-attempt",
+      "old": {
+        "result": "PASS",
+        "id": "sync/mutex-unlock-fatal/unlock-recover-attempt",
+        "stage": "-"
+      },
+      "expected": "fatal",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 4040,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/31",
+      "wrapper_sha256": "d0cf629cfb7c3fbbead5668154cf7e8f55e96c0ac4fc09ff9efbbb67b3f34e4c",
+      "observation": {
+        "status": "fatal",
+        "message": "sync: unlock of unlocked mutex",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "sync/mutex-unlock-fatal/during-panic-unwind",
+      "old": {
+        "result": "PASS",
+        "id": "sync/mutex-unlock-fatal/during-panic-unwind",
+        "stage": "-"
+      },
+      "expected": "fatal",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 4157,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/32",
+      "wrapper_sha256": "663c1c232cbb1ddd0264b9dc33eaf22c0574745892d6ddf8263b59d9b12cf83f",
+      "refusal": "fatal message/output not authenticated before m.dying"
+    },
+    {
+      "id": "sync/once-nested-do/nested-do",
+      "old": {
+        "result": "PASS",
+        "id": "sync/once-nested-do/nested-do",
+        "stage": "-"
+      },
+      "expected": "deadlock",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 5502,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/33",
+      "wrapper_sha256": "662a6478993cf91b952c209a42f8d053aaff55232328107ac5c781dba9c47a54",
+      "observation": {
+        "status": "deadlock",
+        "message": "all goroutines are asleep - deadlock!",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "sync/rwmutex-misuse-fatal/wunlock-of-unlocked",
+      "old": {
+        "result": "PASS",
+        "id": "sync/rwmutex-misuse-fatal/wunlock-of-unlocked",
+        "stage": "-"
+      },
+      "expected": "fatal",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 3630,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/34",
+      "wrapper_sha256": "dfee974a071d12562ef2a566bff9e35a529277448053c5ee68175c17d2183336",
+      "observation": {
+        "status": "fatal",
+        "message": "sync: Unlock of unlocked RWMutex",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "sync/rwmutex-misuse-fatal/runlock-of-unlocked",
+      "old": {
+        "result": "PASS",
+        "id": "sync/rwmutex-misuse-fatal/runlock-of-unlocked",
+        "stage": "-"
+      },
+      "expected": "fatal",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 3767,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/35",
+      "wrapper_sha256": "10306a6436fb36c5bf5e8c03c4a0bc817eeff916665cfbe4b32000c9df201d90",
+      "observation": {
+        "status": "fatal",
+        "message": "sync: RUnlock of unlocked RWMutex",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "sync/rwmutex-misuse-fatal/runlock-while-write-locked",
+      "old": {
+        "result": "PASS",
+        "id": "sync/rwmutex-misuse-fatal/runlock-while-write-locked",
+        "stage": "-"
+      },
+      "expected": "fatal",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 3773,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/36",
+      "wrapper_sha256": "2c506bf4678a6e17cc2812cbc06a79fdc87f6178200eefe5b03e62048f542fda",
+      "observation": {
+        "status": "fatal",
+        "message": "sync: RUnlock of unlocked RWMutex",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "sync/rwmutex-rlock-then-lock/rlock-then-lock",
+      "old": {
+        "result": "PASS",
+        "id": "sync/rwmutex-rlock-then-lock/rlock-then-lock",
+        "stage": "-"
+      },
+      "expected": "deadlock",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 4907,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/37",
+      "wrapper_sha256": "8c526712829a998fbf148817eba116b03abad127ff5153341abef47e52b072e9",
+      "observation": {
+        "status": "deadlock",
+        "message": "all goroutines are asleep - deadlock!",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "sync/waitgroup-negative-after-recover/negative-after-recover",
+      "old": {
+        "result": "PASS",
+        "id": "sync/waitgroup-negative-after-recover/negative-after-recover",
+        "stage": "-"
+      },
+      "expected": "deadlock",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 5711,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/38",
+      "wrapper_sha256": "eb5beba9098ef384a109170a0329ff70754ba908ad59b3963b6ea380ec406030",
+      "observation": {
+        "status": "deadlock",
+        "message": "all goroutines are asleep - deadlock!",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    },
+    {
+      "id": "sync/waitgroup-wait-deadlock/wait-deadlock",
+      "old": {
+        "result": "PASS",
+        "id": "sync/waitgroup-wait-deadlock/wait-deadlock",
+        "stage": "-"
+      },
+      "expected": "deadlock",
+      "rc": 1,
+      "registered": true,
+      "crash_bytes": 4908,
+      "scratch": "/home/dev/projects/golean/.tmp/observer-hybrid-lnspf5fz/39",
+      "wrapper_sha256": "2f3dbf477ef5e530e103ae6771d8dac646f320cbba6dda50e71c5859be53a8bb",
+      "observation": {
+        "status": "deadlock",
+        "message": "all goroutines are asleep - deadlock!",
+        "output": "",
+        "mode": "strict single-marker fallback"
+      }
+    }
+  ]
+}

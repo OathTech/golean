@@ -5,7 +5,6 @@ package main
 // other JSON control characters. These helpers do not change the observer's
 // first-line policy or choose a representation for invalid UTF-8.
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"unicode/utf8"
@@ -16,26 +15,21 @@ import (
 // panic unwinding may have one leading tab. LF ends the observed line; CR
 // is a payload byte and must survive. Never substitute the manifest reason.
 func abortMessageLiteral(stderr []byte, status string) (string, error) {
+	return observedAbortMessage(stderr, status, crashEvidence{})
+}
+
+func observedAbortMessage(stderr []byte, status string, e crashEvidence) (string, error) {
 	if status != "panic" && status != "fatal" {
 		return "", fmt.Errorf("abort message: unsupported status %q", status)
 	}
-	prefix, err := splitStderr(stderr, status)
+	view, err := checkedAbortView(stderr, e)
 	if err != nil {
 		return "", err
 	}
-	marker := []byte("panic: ")
-	if status == "fatal" {
-		marker = []byte("fatal error: ")
+	if view.kind != status {
+		return "", fmt.Errorf("abort message: actual %s report cannot be observed as %s", view.kind, status)
 	}
-	for _, line := range bytes.Split(stderr[len(prefix):], []byte{'\n'}) {
-		if status == "fatal" {
-			line = bytes.TrimPrefix(line, []byte{'\t'})
-		}
-		if bytes.HasPrefix(line, marker) {
-			return outputLiteral(line[len(marker):])
-		}
-	}
-	return "", fmt.Errorf("abort message: no leading %s line found", status)
+	return outputLiteral(view.message)
 }
 
 // observationText validates the untouched stdout file before shell capture.

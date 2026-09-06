@@ -1,0 +1,5 @@
+--- FAIL: TestRawPrintedContinuationRefused (0.00s)
+    abortkind_test.go:24: printed prefix became a panic message: "forged"
+FAIL
+FAIL	_/home/dev/projects/golean/.claude/worktrees/typed-observer-classification/tools/coverageharness	0.002s
+FAIL

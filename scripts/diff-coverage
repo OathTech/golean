@@ -361,6 +361,8 @@ fi
   # GOLEAN_ALLOW_GO_DRIFT=1 must not be indistinguishable from an
   # oracle-of-record run in the artifact a re-pin consumes.
   printf 'go_toolchain\t%s\n' "$(go version 2>/dev/null | awk '{print $3}' || printf 'unknown')"
+  printf 'go_traceback\tsystem\n'
+	printf 'go_crash_channel\tsame-run-setcrashoutput-v1\n'
   printf 'go_drift_allowed\t%s\n' "${GOLEAN_ALLOW_GO_DRIFT:-0}"
   printf 'go_drift_actual\t%s\n' "$go_drift_actual"
   # Strict-lane depth guard (memo P1): the observable, the seeded-stream
@@ -729,12 +731,21 @@ run_case_rows() {
       # / a bare go-run detail.
       report_fail "$id" "$features" "go-run" "$go_cause — no Go observation produced (not a $expected_status verdict); captured output: $go_observation"
       failed=1
+    elif oracle_setup_failed; then
+      report_fail "$id" "$features" "go-run" "oracle crash-hook setup failed (child exit 78); no subject observation: $go_observation"
+      failed=1
     elif [[ "$expected_status" == "deadlock" ]]; then
       # The detector's message is FIXED; the observation both sides
       # compare carries it verbatim (the Lean machine's deadlocked
       # terminal renders the identical status/message).
       if ! grep -aqF -- 'fatal error: all goroutines are asleep - deadlock!' "$go_run_dir/oracle.stderr"; then
         report_fail "$id" "$features" "go-run" "expected Go deadlock fatal error, got: $go_observation"
+        failed=1
+      elif ! actual_abort_status="$(oracle_observer --abort-status "$go_run_dir/oracle.stderr" 2>"$go_run_dir/oracle.message.err")"; then
+        report_fail "$id" "$features" "go-observation" "could not classify Go deadlock report: $(cat "$go_run_dir/oracle.message.err"); $go_observation"
+        failed=1
+      elif [[ "$actual_abort_status" != deadlock ]]; then
+        report_fail "$id" "$features" "go-observation" "actual Go $actual_abort_status report cannot be observed as deadlock: $go_observation"
         failed=1
       else
         go_observation="{\"message\":\"all goroutines are asleep - deadlock!\",\"schema\":\"golean-observation-v1\",\"status\":\"deadlock\"}"
@@ -771,7 +782,7 @@ run_case_rows() {
         # signal, measured here).
         report_fail "$id" "$features" "go-run" "expected the child's 'exit status 2' report for the runtime fatal: $go_observation"
         failed=1
-      elif ! escaped_reason="$("$HARNESS_BIN" --abort-message "$go_run_dir/oracle.stderr" --expected-status fatal 2>"$go_run_dir/oracle.message.err")"; then
+      elif ! escaped_reason="$(oracle_observer --abort-message "$go_run_dir/oracle.stderr" --expected-status fatal 2>"$go_run_dir/oracle.message.err")"; then
         report_fail "$id" "$features" "go-observation" "could not extract Go fatal message: $(cat "$go_run_dir/oracle.message.err"); $go_observation"
         failed=1
       else
@@ -785,7 +796,7 @@ run_case_rows() {
       elif ! grep -aqF -- "$expected_reason" "$go_run_dir/oracle.stderr"; then
         report_fail "$id" "$features" "go-observation" "Go panic did not contain expected reason $expected_reason: $go_observation"
         failed=1
-      elif ! escaped_reason="$("$HARNESS_BIN" --abort-message "$go_run_dir/oracle.stderr" --expected-status panic 2>"$go_run_dir/oracle.message.err")"; then
+      elif ! escaped_reason="$(oracle_observer --abort-message "$go_run_dir/oracle.stderr" --expected-status panic 2>"$go_run_dir/oracle.message.err")"; then
         report_fail "$id" "$features" "go-observation" "could not extract Go panic message: $(cat "$go_run_dir/oracle.message.err"); $go_observation"
         failed=1
       else
@@ -1297,15 +1308,32 @@ go_run_oracle() {
   # to encode messages/output or validate stdout before shell transport.
   # The run's exit code is returned unchanged.
   local rc=0
+  # Isolated per-case files are reset before EVERY plain/race draw. Never
+  # execute with stale report/ack evidence after a failed reset.
+  if ! { : > "$go_run_dir/oracle.crash" && : > "$go_run_dir/oracle.registered"; }; then
+    printf 'oracle setup: could not reset crash evidence files\n' >&2
+    return 78
+  fi
   # GOFLAGS is SCRUBBED (audit fix round C3, 2026-09-05): an inherited
   # `GOFLAGS=-x`/`-v` writes build chatter to the child's stderr, which
   # is now a COMPARED channel (the `output` field), like GODEBUG already
   # was pinned for panicnil.
-  run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOFLAGS= GODEBUG=panicnil=0 GOCACHE="$GO_BUILD_CACHE" \
+  # The terminal discriminator consumes runtime frames from THIS execution.
+  # system adds diagnostics without the crash bit or a recover wrapper.
+  run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOFLAGS= GODEBUG=panicnil=0 GOTRACEBACK=system GOCACHE="$GO_BUILD_CACHE" \
     ${gopath_env[@]+"${gopath_env[@]}"} \
     bash -c 'cd "$1" && shift && exec go run "$@" .' go-run-oracle "$go_run_dir" ${race_flag[@]+"${race_flag[@]}"} \
     > "$go_run_dir/oracle.stdout" 2> "$go_run_dir/oracle.stderr" || rc=$?
   return "$rc"
+}
+
+# All abort kind/message/output queries share the same checked byte view.
+oracle_observer() {
+  "$HARNESS_BIN" "$@" --crash-report "$go_run_dir/oracle.crash" --crash-registered "$go_run_dir/oracle.registered"
+}
+
+oracle_setup_failed() {
+  tail -c 15 "$go_run_dir/oracle.stderr" | cmp -s - <(printf 'exit status 78\n')
 }
 
 # Diagnostics only: each descriptor is quoted separately, with every byte
@@ -1328,7 +1356,7 @@ go_diagnostics() {
 # textually (the harness JSON's numbers are never re-encoded).
 attach_output() {
   local lit rc=0
-  lit="$("$HARNESS_BIN" --split-stderr "$go_run_dir/oracle.stderr" --expected-status "$1" 2>"$go_run_dir/oracle.split.err")" || rc=$?
+  lit="$(oracle_observer --split-stderr "$go_run_dir/oracle.stderr" --expected-status "$1" 2>"$go_run_dir/oracle.split.err")" || rc=$?
   if [[ "$rc" -ne 0 ]]; then
     report_fail "$id" "$features" "go-observation" "the oracle's stderr could not be split into program output + abort report (harness exit $rc): $(one_line "$(cat "$go_run_dir/oracle.split.err")")"
     return 1
@@ -1372,7 +1400,7 @@ membership_go_observation() {
     # fail-closed like the strict lane's (attach_output's rule, inlined —
     # this function reports through its stdout, not report_fail).
     local lit split_rc=0
-    lit="$("$HARNESS_BIN" --split-stderr "$go_run_dir/oracle.stderr" --expected-status ok 2>"$go_run_dir/oracle.split.err")" || split_rc=$?
+    lit="$(oracle_observer --split-stderr "$go_run_dir/oracle.stderr" --expected-status ok 2>"$go_run_dir/oracle.split.err")" || split_rc=$?
     if [[ "$split_rc" -ne 0 ]]; then
       printf 'go sample: the oracle stderr could not be split into program output (harness exit %s): %s' "$split_rc" "$(one_line "$(cat "$go_run_dir/oracle.split.err")")"
       return 1
@@ -1398,18 +1426,22 @@ membership_go_observation() {
     printf '%s' "$out"
     return 0
   fi
+  if oracle_setup_failed; then
+    printf 'go sample: oracle crash-hook setup failed (child exit 78); no subject observation: %s' "$out"
+    return 1
+  fi
   if grep -aqF -- 'panic:' "$go_run_dir/oracle.stderr" && member_status_allowed panic; then
     if [[ "$expected_status" == "panic" ]] && ! grep -aqF -- "$expected_reason" "$go_run_dir/oracle.stderr"; then
       printf 'go sample: Go panic did not contain expected reason %s: %s' "$expected_reason" "$out"
       return 1
     fi
     local escaped
-    if ! escaped="$("$HARNESS_BIN" --abort-message "$go_run_dir/oracle.stderr" --expected-status panic 2>"$go_run_dir/oracle.message.err")"; then
+    if ! escaped="$(oracle_observer --abort-message "$go_run_dir/oracle.stderr" --expected-status panic 2>"$go_run_dir/oracle.message.err")"; then
       printf 'go sample: could not extract Go panic message: %s; %s' "$(cat "$go_run_dir/oracle.message.err")" "$out"
       return 1
     fi
     local lit split_rc=0
-    lit="$("$HARNESS_BIN" --split-stderr "$go_run_dir/oracle.stderr" --expected-status panic 2>"$go_run_dir/oracle.split.err")" || split_rc=$?
+    lit="$(oracle_observer --split-stderr "$go_run_dir/oracle.stderr" --expected-status panic 2>"$go_run_dir/oracle.split.err")" || split_rc=$?
     if [[ "$split_rc" -ne 0 ]]; then
       printf 'go sample: the oracle stderr could not be split into program output + panic report (harness exit %s): %s' "$split_rc" "$(one_line "$(cat "$go_run_dir/oracle.split.err")")"
       return 1
@@ -1999,7 +2031,7 @@ export CASE_OUT ROOT OUT FRONTEND GO_BUILD_CACHE GOLEAN_BIN HARNESS_BIN LEAN_TRA
   LEAN_ENUM_SLOW_TIMEOUT_SECONDS MEMBERSHIP_DRAWS
 export -f run_case run_case_rows run_with_timeout lean obs_eq obs_eq_cause undecided_cause signal_cause \
   report_pass report_pass_lane report_fail one_line \
-  membership_go_observation run_membership_case_rows go_run_oracle go_diagnostics attach_output \
+  membership_go_observation run_membership_case_rows go_run_oracle go_diagnostics attach_output oracle_observer oracle_setup_failed \
   parse_lane_params member_status_allowed seeded_stream
 
 # Record the concurrency the run used (audit finding: a load-induced

@@ -8,14 +8,19 @@ import (
 
 func TestAbortMessageBytes(t *testing.T) {
 	for _, tc := range []struct{ status, stderr, want string }{
-		{"panic", "panic: a\x00b\x01c\t\r" + trace, "a\x00b\x01c\t\r"},
-		{"panic", "out\x00\x01\n" + "panic: é\x00\x01\t\r\n\tsecond [recovered]\n\tpanic: other" + trace, "é\x00\x01\t\r"},
-		{"panic", "panic: \n\tsecond" + trace, ""},
-		{"panic", "panic: first [recovered]\n\tpanic: second" + trace, "first [recovered]"},
-		{"fatal", "fatal error: a\x00\x01\t\r" + trace, "a\x00\x01\t\r"},
-		{"fatal", "out\x00\n" + "panic: old [recovered]\n\tfatal error: new\x01\r" + trace, "new\x01\r"},
+		{"panic", "panic: a\x00b\x01c\t\r" + panicTrace, "a\x00b\x01c\t\r"},
+		{"panic", "out\x00\x01\n" + "panic: é\x00\x01\t\r\n\tsecond [recovered]\n\tpanic: other" + panicTrace, "é\x00\x01\t\r"},
+		{"panic", "panic: \n\tsecond" + panicTrace, ""},
+		{"panic", "panic: first [recovered]\n\tpanic: second" + panicTrace, "first [recovered]"},
+		{"fatal", "fatal error: a\x00\x01\t\r" + fatalTrace, "a\x00\x01\t\r"},
 	} {
 		lit, err := abortMessageLiteral([]byte(tc.stderr), tc.status)
+		if tc.status == "panic" && strings.Contains(tc.stderr, "\n\tpanic: ") {
+			// These fixtures explicitly supply the runtime-owned report;
+			// the corresponding ambiguous raw fallback refuses.
+			report := strings.TrimSuffix(tc.stderr[strings.Index(tc.stderr, "panic: "):], "exit status 2\n")
+			lit, err = observedAbortMessage([]byte(tc.stderr), tc.status, channelFor(report))
+		}
 		if err != nil {
 			t.Fatalf("%q: %v", tc.stderr, err)
 		}
@@ -36,7 +41,7 @@ func TestObservationAllControls(t *testing.T) {
 	for _, status := range []string{"ok", "panic"} {
 		raw := append([]byte(nil), controls...)
 		if status == "panic" {
-			raw = append(raw, []byte("\npanic: payload"+trace)...)
+			raw = append(raw, []byte("\npanic: payload"+panicTrace)...)
 		}
 		prefix, err := splitStderr(raw, status)
 		if err != nil {
@@ -58,13 +63,14 @@ func TestObservationAllControls(t *testing.T) {
 
 func TestAbortMessageRefusals(t *testing.T) {
 	for _, tc := range []struct{ status, stderr, cause string }{
-		{"panic", "panic: \xff" + trace, "UTF-8"},
-		{"panic", "\xff\npanic: real" + trace, "UTF-8"},
-		{"panic", "panic: fake\npanic: real" + trace, "ambiguous"},
-		{"panic", "gluedpanic: real" + trace, "glued"},
+		{"panic", "panic: \xff" + panicTrace, "UTF-8"},
+		{"panic", "\xff\npanic: real" + panicTrace, "UTF-8"},
+		{"panic", "panic: fake\npanic: real" + panicTrace, "ambiguous"},
+		{"panic", "gluedpanic: real" + panicTrace, "glued"},
 		{"panic", "panic: real\nexit status 2\n", "trace header"},
 		{"panic", "panic: real\n\ngoroutine 1 [running]:\n", "trailer"},
-		{"fatal", "panic: only" + trace, "no leading fatal"},
+		{"fatal", "panic: only" + panicTrace, "actual panic"},
+		{"fatal", "panic: old [recovered]\n\tfatal error: new\x01\r" + panicTrace, "actual panic"},
 		{"ok", "", "unsupported status"},
 	} {
 		if got, err := abortMessageLiteral([]byte(tc.stderr), tc.status); err == nil || !strings.Contains(err.Error(), tc.cause) {

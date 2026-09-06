@@ -1,0 +1,20 @@
+result	id	features	stage	detail
+PASS	panic-recover/panic-controls/nul	panic,strings	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-controls/soh	panic,strings	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-controls/tab	panic,strings	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-controls/cr	panic,strings	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-controls/newline	panic,strings	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-controls/recovered-newline	panic,recover,strings	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-controls/output-prefix	panic,strings	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-controls/output-ok	strings	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-controls/child-confluent	panic,strings,goroutines,channels	confluent	|set|=1 certified over all schedules; coverage-observations: observations=1 steps=50 probes=6 sites=2 leaves=3 maxdepth=2 width=4
+PASS	panic-recover/panic-markers/first-line	panic,strings	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-markers/nil-go-literal	panic,strings	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-markers/deadlock-literal	panic,strings	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-markers/output-midline	panic,strings	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-markers/output-line	panic,strings	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-markers/mixed-line	panic,strings	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-markers/fake-trace	panic,strings	-	wide=0 exhausted=none depth=fixed
+PASS	sync/mutex-unlock-fatal/unlock-of-unlocked	sync,mutex	-	wide=0 exhausted=none depth=fixed
+PASS	sync/mutex-unlock-fatal/unlock-recover-attempt	sync,mutex,recover	-	wide=0 exhausted=none depth=fixed
+PASS	sync/mutex-unlock-fatal/during-panic-unwind	sync,mutex,defer,panic	-	wide=0 exhausted=none depth=fixed

@@ -29,6 +29,10 @@ type config struct {
 	abortMessage    string
 	readObservation string
 	quoteFile       string
+	abortStatus     string
+	crashReport     string
+	crashRegistered string
+	copyOracle      string
 }
 
 func main() {
@@ -42,10 +46,14 @@ func main() {
 	flag.StringVar(&cfg.abortMessage, "abort-message", "", "path of raw oracle stderr; prints the actual first panic/fatal message as a JSON string literal after validating the report split")
 	flag.StringVar(&cfg.readObservation, "read-observation", "", "path of raw oracle stdout; validates UTF-8 and JSON before shell transport")
 	flag.StringVar(&cfg.quoteFile, "quote-file", "", "diagnostics only: print file bytes as an ASCII Go-quoted string; never an observation")
+	flag.StringVar(&cfg.abortStatus, "abort-status", "", "path of raw oracle stderr; classify its validated abort report or refuse an ambiguous terminal kind")
+	flag.StringVar(&cfg.crashReport, "crash-report", "", "same-run owned runtime crash report file (paired with --crash-registered)")
+	flag.StringVar(&cfg.crashRegistered, "crash-registered", "", "same-run hook acknowledgement file (paired with --crash-report)")
+	flag.StringVar(&cfg.copyOracle, "copy-oracle", "", "copy Go package to fresh --out and instrument only that oracle copy's main entry")
 	flag.Parse()
 
 	modePath, modes := "", 0
-	for _, p := range []string{cfg.splitStderr, cfg.abortMessage, cfg.readObservation, cfg.quoteFile} {
+	for _, p := range []string{cfg.splitStderr, cfg.abortMessage, cfg.readObservation, cfg.quoteFile, cfg.abortStatus} {
 		if p != "" {
 			modePath = p
 			modes++
@@ -55,6 +63,27 @@ func main() {
 		fmt.Fprintln(os.Stderr, "only one file-reading mode may be selected")
 		os.Exit(2)
 	}
+	if cfg.copyOracle != "" {
+		if modes != 0 || cfg.input != "" || cfg.subject != "" || cfg.crashReport != "" || cfg.crashRegistered != "" {
+			fmt.Fprintln(os.Stderr, "--copy-oracle cannot be combined with other modes")
+			os.Exit(2)
+		}
+		if err := copyOraclePackage(cfg.copyOracle, cfg.out); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(2)
+		}
+		return
+	}
+	if (cfg.crashReport != "" || cfg.crashRegistered != "") &&
+		cfg.splitStderr == "" && cfg.abortMessage == "" && cfg.abortStatus == "" {
+		fmt.Fprintln(os.Stderr, "crash evidence is valid only with an abort or stderr-output query")
+		os.Exit(2)
+	}
+	evidence, evidenceErr := readCrashEvidence(cfg.crashReport, cfg.crashRegistered)
+	if evidenceErr != nil {
+		fmt.Fprintln(os.Stderr, evidenceErr)
+		os.Exit(3)
+	}
 	if modes == 1 && cfg.splitStderr == "" {
 		raw, err := os.ReadFile(modePath)
 		if err != nil {
@@ -63,8 +92,12 @@ func main() {
 		}
 		var text string
 		switch {
+		case cfg.abortStatus != "":
+			var view abortView
+			view, err = checkedAbortView(raw, evidence)
+			text = view.kind
 		case cfg.abortMessage != "":
-			text, err = abortMessageLiteral(raw, cfg.status)
+			text, err = observedAbortMessage(raw, cfg.status, evidence)
 		case cfg.readObservation != "":
 			text, err = observationText(raw)
 		case cfg.quoteFile != "":
@@ -84,7 +117,7 @@ func main() {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(2)
 		}
-		prefix, err := splitStderr(raw, cfg.status)
+		prefix, err := observedOutput(raw, cfg.status, evidence)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(3)
@@ -139,9 +172,15 @@ func run(cfg config) error {
 	var subject *ast.FuncDecl
 	parsed := []parsedFile{}
 	for _, inputFile := range inputFiles {
+		if filepath.Base(inputFile) == crashHelperName {
+			return fmt.Errorf("oracle hook: reserved helper filename collision: %s", inputFile)
+		}
 		file, err := parser.ParseFile(fset, inputFile, nil, parser.ParseComments)
 		if err != nil {
 			return err
+		}
+		if hasCrashHookIdentifier(file) {
+			return fmt.Errorf("oracle hook: reserved helper identifier collision in %s", inputFile)
 		}
 
 		decls := file.Decls[:0]
@@ -196,7 +235,10 @@ func run(cfg config) error {
 	if err := copyLocalPackages(fset, inputDir, cfg.out); err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(cfg.out, "zz_golean_harness.go"), harness, 0o644)
+	if err := os.WriteFile(filepath.Join(cfg.out, "zz_golean_harness.go"), harness, 0o644); err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(cfg.out, crashHelperName), []byte(crashHelperSource), 0o644)
 }
 
 // copyLocalPackages walks the main package's imports transitively: an
@@ -556,6 +598,7 @@ func _goleanPrintError(message string) {
 }
 
 func main() {
+	_goleanSetupCrash()
 %s}
 `, call.String())
 	return format.Source([]byte(source))

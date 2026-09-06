@@ -1,0 +1,256 @@
+PASS	atomics/ops/load-store-uint32	sync,atomics,ints	-	wide=0 exhausted=none depth=fixed
+PASS	binop-order/operand-panic-vs-call/left-first	indexing,division,panic,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	bools/generic-type-set/and-or	bools,generics,type_sets	-	wide=0 exhausted=none depth=fixed
+PASS	bools/short-circuit-effects/count-left-false	bools,calls,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	bools/short-circuit-effects/nested-inner-left	bools,calls,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	bools/short-circuit-funclit/capture-three	bools,closures,evaluation_order,make,append,slices,loops,range	-	wide=2 exhausted=none depth=fixed
+PASS	bools/short-circuit-funclit/admit-new	bools,closures,evaluation_order,new,pointers	-	wide=0 exhausted=none depth=fixed
+PASS	bools/short-circuit-funclit/admit-elided-in-lit	bools,closures,evaluation_order,literals,pointers,structs,slices	-	wide=0 exhausted=none depth=fixed
+PASS	builtins/clear-delete-edge/delete-map-expr-panic-before-key	builtins,delete,maps,evaluation_order,panic	-	wide=0 exhausted=none depth=fixed
+PASS	builtins/clear-map	clear,maps,len,comma_ok	-	wide=0 exhausted=none depth=fixed
+PASS	builtins/e13-sibling-panic-order/assert-left-call	interfaces,type_assertions,calls,panic,evaluation_order,print,nondet	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-left-call)
+PASS	builtins/e13-sibling-panic-order/assert-left-copy	interfaces,type_assertions,copy,slices,slicing,indexing,panic,evaluation_order,nondet	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-left-copy)
+PASS	builtins/e13-sibling-panic-order/addr-assert-left-call	slices,indexing,calls,panic,evaluation_order,print,pointers,interfaces,type_assertions,nondet	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/addr-assert-left-call)
+PASS	builtins/float-bits/literals-and-zero	builtins,float_bits,floats,constants,multi_result	-	wide=0 exhausted=none depth=fixed
+PASS	builtins/float-bits/min-max-payload	builtins,float_bits,floats,min,max,multi_result	-	wide=0 exhausted=none depth=fixed
+PASS	builtins/len-vs-call-order/make-slice-panicky-between	slices,make,len,evaluation_order,panic,indexing,interfaces,type_assertions,nondet	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/len-vs-call-order/make-slice-panicky-between)
+PASS	builtins/len-vs-call-order/make-nil-only-none	pointers,structs,make,len,evaluation_order,slices,nil	-	wide=0 exhausted=none depth=fixed
+PASS	builtins/len-vs-call-order/make-hint-generic-int-key	maps,make,len,evaluation_order,panic,interfaces,type_assertions,indexing,generics	-	wide=1 exhausted=none depth=fixed
+PASS	builtins/make-maxalloc/slice-len-over-byte	slices,make,panic	-	wide=0 exhausted=none depth=fixed
+PASS	builtins/make-maxalloc/recover-chan-size-over	channels,make,panic,recover,defer	-	wide=0 exhausted=none depth=fixed
+PASS	builtins/min-max-edge/defined-string	builtins,min,max,typed,strings	-	wide=0 exhausted=none depth=fixed
+PASS	builtins/min-max-vs-call-order/min-arg-panic	builtins,min,max,evaluation_order,calls,panic,recover	-	wide=0 exhausted=none depth=fixed
+FAIL	builtins/print/in-init	builtins,print,init	lean-observation	expected status ok, got {"message":"package init: print/println during package initialization: the init phase runs on the sequential driver, which has no output event channel (the pool driver folds StepEvent.out) — refused rather than dropping the bytes (stdlib slice 3; row builtins/print/in-init)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	builtins/print/multiple-calls-order	builtins,print,loops,calls	-	wide=0 exhausted=none depth=fixed
+PASS	builtins/print/string	builtins,print,strings,unicode	-	wide=0 exhausted=none depth=fixed
+FAIL	builtins/real-imag	real,imag,complex,floats	frontend-export	{"message":"frontend-quarantined: basic type complex64","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	builtins/statement-position/copy-stmt-string-source	builtins,copy,strings,bytes	-	wide=0 exhausted=none depth=fixed
+PASS	channels/close-edge/recover-send-closed	channels,close,panic,recover,defer	-	wide=0 exhausted=none depth=fixed
+PASS	channels/comparison/chan-of-chan	channels,comparisons,identity,nested	-	wide=0 exhausted=none depth=fixed
+PASS	channels/deadlock/select-empty	channels,select,deadlock	-	wide=0 exhausted=none depth=fixed
+PASS	channels/recv-edge/nil-index-base-second	channels,pointers,slices,indexing,multi_assign,panic,recover,evaluation_order	-	wide=1 exhausted=none depth=fixed
+PASS	channels/recv-order/call-arg	channels,calls,len,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	channels/recv-order/for-cond	channels,loops,len,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	channels/select-deterministic/send-closed-panic	channels,select,close,panic	-	wide=0 exhausted=none depth=fixed
+PASS	channels/select-ready-receive	channels,select,default,make,len	-	wide=0 exhausted=none depth=fixed
+PASS	comparisons/short-circuit/struct-skips-interface-panic	comparisons,comparability,structs,interfaces,slices,panic,evaluation_order	-	wide=0 exhausted=none depth=fixed
+FAIL	complex/builtin-untyped-args	complex,builtins,untyped,conversions	frontend-export	{"message":"frontend-quarantined: basic type complex64","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	constants/shift-width-boundaries	constants,shifts,representability,ints,widths	-	wide=0 exhausted=none depth=fixed
+PASS	constants/string-escape-constant	constants,strings,literals,escapes,len,indexing	-	wide=0 exhausted=none depth=fixed
+PASS	control-flow/for-loopvar-escape	control_flow,loops,closures,scoping	-	wide=0 exhausted=none depth=fixed
+PASS	control-flow/for-loopvar-ptr-recv	control_flow,loops,structs,methods,pointers,escapes,scoping	-	wide=1 exhausted=none depth=fixed
+PASS	control-flow/labeled-continue-range-map-block	control_flow,labels,loops,continue,maps,range	-	wide=3 exhausted=none depth=fixed
+PASS	control-flow/labeled-cross-inner-labeled	control_flow,labels,loops,break,continue	-	wide=0 exhausted=none depth=fixed
+PASS	control-flow/switch-basic	control_flow,switch,cases,default	-	wide=0 exhausted=none depth=fixed
+PASS	control-flow/switch-return-in-clause	control_flow,switch,cases,loops,returns	-	wide=0 exhausted=none depth=fixed
+PASS	defer/defer-arg-eval	defer,calls,evaluation_order,named-results	-	wide=0 exhausted=none depth=fixed
+PASS	defer/defer-named-return	defer,returns,named-results	-	wide=0 exhausted=none depth=fixed
+PASS	errors/new-sentinel/classify	stdlib,interfaces,equality,identity,globals,init	-	wide=0 exhausted=none depth=fixed
+PASS	examples/binsearch/found-first	slices,indexing,loops,if	-	wide=0 exhausted=none depth=fixed
+PASS	examples/binsearch/absent-below	slices,indexing,loops,if	-	wide=0 exhausted=none depth=fixed
+PASS	examples/binsearch/absent-gap	slices,indexing,loops,if	-	wide=0 exhausted=none depth=fixed
+PASS	examples/binsearch/harness-found	slices,indexing,loops,if	-	wide=0 exhausted=none depth=fixed
+PASS	examples/binsearch/harness-empty	slices,indexing,loops,if	-	wide=0 exhausted=none depth=fixed
+PASS	examples/dedup/four-pairs	slices,indexing,loops,bools,if	-	wide=0 exhausted=none depth=fixed
+PASS	examples/dotprod/harness-r-wrap-62	slices,indexing,loops,if,arrays,widths	-	wide=0 exhausted=none depth=fixed
+PASS	examples/histogram/harness-r-seven	slices,maps,range,loops,if,arrays	-	wide=2 exhausted=none depth=fixed
+PASS	examples/histogram/harness-r-one	slices,maps,range,loops,if,arrays	-	wide=0 exhausted=none depth=fixed
+PASS	examples/minmax/four-desc	slices,indexing,loops,if	-	wide=0 exhausted=none depth=fixed
+PASS	examples/minmax/four-big	slices,indexing,loops,if	-	wide=0 exhausted=none depth=fixed
+PASS	examples/palin/harness-r-eight	slices,indexing,loops,if,arrays	-	wide=0 exhausted=none depth=fixed
+PASS	examples/powmod/mod-one	ints,widths,loops,if	-	wide=0 exhausted=none depth=fixed
+PASS	examples/reverse/harness-wrapping	slices,indexing,loops,multi_assign	-	wide=0 exhausted=none depth=fixed
+PASS	examples/rle/four-alternating	slices,indexing,loops,if,bools	-	wide=2 exhausted=none depth=fixed
+PASS	examples/rle/four-first-same	slices,indexing,loops,if,bools	-	wide=2 exhausted=none depth=fixed
+PASS	examples/rle/harness-r-empty	slices,indexing,loops,if,bools,arrays	-	wide=0 exhausted=none depth=fixed
+PASS	examples/selsort/four-sorted	slices,indexing,loops,if,multi_assign	-	wide=0 exhausted=none depth=fixed
+PASS	examples/sieve/composite	slices,indexing,loops,bools,if,ints	-	wide=0 exhausted=none depth=fixed
+PASS	examples/sieve/beyond	slices,indexing,loops,bools,if,ints	-	wide=0 exhausted=none depth=fixed
+PASS	examples/stack/lifo-dup	slices,indexing,multi_assign	-	wide=1 exhausted=none depth=fixed
+PASS	examples/stein/zero-zero	ints,widths,loops,bools,if,multi_assign	-	wide=0 exhausted=none depth=fixed
+PASS	examples/twosum/four-last	slices,indexing,loops,if	-	wide=0 exhausted=none depth=fixed
+PASS	examples/wordcount/mode-three	slices,maps,range,loops,if	-	wide=1 exhausted=none depth=fixed
+PASS	floats/defined-incdec	floats,defined_type,assignment,comparisons	-	wide=0 exhausted=none depth=fixed
+PASS	floats/defined-type-ops	floats,typed,comparisons	-	wide=0 exhausted=none depth=fixed
+PASS	floats/float32-specials	floats,overflow,comparisons	-	wide=0 exhausted=none depth=fixed
+PASS	floats/generic-type-set/defined-float64-sum	floats,generics,type_sets,typed	-	wide=0 exhausted=none depth=fixed
+FAIL	fmt/fprint-writers/non-string	stdlib,strings,ints	frontend-export	{"message":"frontend-quarantined: fmt.Fprint operand of type int is outside the modeled subset (modeled: string kinds)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	fmt/sprintf-dyn/logger-shape	stdlib,strings,variadic,interfaces,methods	-	wide=14 exhausted=none depth=64 fixed-probes-after=4,4,6
+PASS	fmt/sprintf-dyn/stringer-panic	stdlib,strings,variadic,methods,panic,recover	-	wide=0 exhausted=none depth=fixed
+PASS	fmt/sprintf-dyn/sprint-fixed-arity	stdlib,strings,variadic	-	wide=2 exhausted=none depth=fixed
+PASS	fmt/sprintf-verbs/decision-path	stdlib,strings,ints,if	-	wide=4 exhausted=none depth=fixed
+PASS	fmt/v-composites/v-stringer-elems	stdlib,strings,slices,methods,defined_type	-	wide=0 exhausted=none depth=fixed
+PASS	fmt/v-composites/emb-exported-slice	stdlib,strings,structs,slices,methods,defined_type,embedding	-	wide=0 exhausted=none depth=fixed
+PASS	functions/closure-two-vars-one-closure	functions,closures,scoping	-	wide=0 exhausted=none depth=fixed
+PASS	functions/nil-function-call-panic	functions,nil,panic,calls	-	wide=0 exhausted=none depth=fixed
+PASS	functions/untyped-nil-sinks/struct-lit-field	nil,untyped,structs,literals,slices,len	-	wide=0 exhausted=none depth=fixed
+PASS	generics/generic-map-type	generics,maps,keys,literals,indexing	-	wide=0 exhausted=none depth=fixed
+PASS	generics/identity	generics,functions,calls	-	wide=0 exhausted=none depth=fixed
+PASS	generics/instantiated-method-value	generics,methods,functions,calls	-	wide=0 exhausted=none depth=fixed
+PASS	generics/method-and-type-set-constraint	generics,type_sets,constraints,methods,calls	-	wide=0 exhausted=none depth=fixed
+PASS	generics/qualified-instantiation/call	generics,multipackage,imports,calls,methods,variadic	-	wide=0 exhausted=none depth=fixed
+PASS	generics/qualified-instantiation/method-value	generics,multipackage,imports,methods,maps,comma_ok	-	wide=0 exhausted=none depth=fixed
+PASS	generics/type-switch-interface-param/bound	generics,type_switch,interfaces,methods,multi_result	-	wide=0 exhausted=none depth=fixed
+PASS	goroutines/close-wake/sender-full-buffer	goroutines,channels,close,recover,race	racy	every enumerated path refuses: coverage-observations: observations=1 steps=200 probes=42 sites=14 leaves=15 maxdepth=5 width=4
+FAIL	goroutines/go-builtin/close	goroutines,channels,close,comma_ok	frontend-export	{"message":"frontend-quarantined: go of builtin close","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	goroutines/pipeline/two-stage	goroutines,channels,range,close	confluent	|set|=1 certified over all schedules; coverage-observations: observations=1 steps=954907 probes=0 sites=866780 leaves=0 maxdepth=0 width=4 engine=dedup nodes=866780 edges=954907 dedupHits=88128 certified=checkCert
+PASS	goroutines/select-arrival-multi	goroutines,channels,select,nondet	membership	enumerated=2 exhibited=2 draws=2 (K=32; stopped at the members=2 pin) unexhibited=0 (members in artifacts/coverage/membership/goroutines/select-arrival-multi)
+PASS	if/else-if-first-match	if,evaluation_order,calls	-	wide=0 exhausted=none depth=fixed
+PASS	imported-goose/semantics/multiple-return/return-two	imported_goose,multi_result	-	wide=0 exhausted=none depth=fixed
+PASS	imported-goose/semantics/nil/interface-nil-with-type	imported_goose,nil,comparisons	-	wide=0 exhausted=none depth=fixed
+PASS	imported-goose/semantics/precedence/and-compare	imported_goose,ints,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	imported-goose/semantics/slices/slice-ref	imported_goose,slices	-	wide=0 exhausted=none depth=fixed
+PASS	imported-goose/semantics/structs/store-composite	imported_goose,structs	-	wide=0 exhausted=none depth=fixed
+PASS	imported-goose/unittest/comments	imported_goose,functions,structs	-	wide=0 exhausted=none depth=fixed
+PASS	imported-goose/unittest/conversions/u32-newtype-len	imported_goose,conversions,strings,defined_type	-	wide=0 exhausted=none depth=fixed
+PASS	imported-goose/unittest/nil	imported_goose,nil,slices,pointers	-	wide=0 exhausted=none depth=fixed
+PASS	imported-goose/unittest/rune	imported_goose,runes,conversions	-	wide=0 exhausted=none depth=fixed
+PASS	init/init-sees-var-values	init,globals	-	wide=0 exhausted=none depth=fixed
+PASS	init/user-var-type-unlowerable/order-kept	init,globals,sync	-	wide=1 exhausted=none depth=fixed
+PASS	interfaces/anon-iface-display/missing-order	interfaces,type_assertions,panic,identity	-	wide=0 exhausted=none depth=fixed
+PASS	interfaces/assert-imported-method-set/comma-ok	interfaces,type_assertions,comma_ok,methods,imports	-	wide=0 exhausted=none depth=fixed
+PASS	interfaces/mixed-compare/eq-int-lit-reversed	interfaces,comparisons,equality	-	wide=0 exhausted=none depth=fixed
+PASS	interfaces/mixed-compare/neq-miss	interfaces,comparisons,equality	-	wide=0 exhausted=none depth=fixed
+PASS	interfaces/nil-interface	interfaces,nil,pointers,methods	-	wide=0 exhausted=none depth=fixed
+PASS	interfaces/quarantined-dispatch-teeth/installed	interfaces,methods,variadic,stdlib	-	wide=0 exhausted=none depth=fixed
+PASS	interfaces/tuple-forward-boxing/concrete-control	calls,multi_result,strings	-	wide=0 exhausted=none depth=fixed
+PASS	interfaces/type-switch-eval-once	interfaces,type_switch,switch,evaluation_order,calls	-	wide=0 exhausted=none depth=fixed
+PASS	interfaces/type-switch-labeled-break/self	interfaces,type_switch,switch,labels,break,strings	-	wide=0 exhausted=none depth=fixed
+PASS	interfaces/typed-nil-slice	interfaces,nil,slices,type_assertions	-	wide=0 exhausted=none depth=fixed
+PASS	ints/bitwise	ints,widths,bitwise	-	wide=0 exhausted=none depth=fixed
+PASS	ints/defined-incdec/inc-signed-wrap	ints,defined_type,assignment,overflow	-	wide=0 exhausted=none depth=fixed
+PASS	ints/defined-incdec/dec-signed-wrap	ints,defined_type,assignment,overflow	-	wide=0 exhausted=none depth=fixed
+PASS	ints/defined-incdec/dec-unsigned-wrap	ints,defined_type,assignment,overflow	-	wide=0 exhausted=none depth=fixed
+PASS	ints/negative-shift	ints,shifts,panic	-	wide=0 exhausted=none depth=fixed
+PASS	ints/observation-kind/defined-uint8	ints,defined_type	-	wide=0 exhausted=none depth=fixed
+PASS	maps/cross-goroutine-delete-noreadd/clear	maps,clear,range,goroutines,channels	confluent	|set|=1 certified over all schedules; coverage-observations: observations=1 steps=13917 probes=2949 sites=983 leaves=990 maxdepth=13 width=4 backedge=full
+PASS	maps/defined-map-value	maps,defined_type,comma_ok,len,conversions,quorum	-	wide=0 exhausted=none depth=fixed
+PASS	maps/interface-key-hash-phrasing/delete-nonempty	maps,keys,interfaces,comparability,panic,delete	-	wide=0 exhausted=none depth=fixed
+PASS	maps/interface-key-nested-unhashable/access-empty	maps,keys,interfaces,structs,comparability,panic	-	wide=0 exhausted=none depth=fixed
+PASS	maps/interface-slice-key-panic	maps,interfaces,keys,comparability,panic,slices	-	wide=0 exhausted=none depth=fixed
+PASS	maps/map-bool-values	maps,bools,zero_values	-	wide=0 exhausted=none depth=fixed
+PASS	maps/map-literal-interface-key-panic	maps,literals,keys,interfaces,comparability,panic,slices	-	wide=0 exhausted=none depth=fixed
+PASS	maps/nil-literal-values/pointer-element	maps,literals,nil,pointers	-	wide=0 exhausted=none depth=fixed
+PASS	maps/slice-value-element-write	maps,slices,indexing,assignment,aliasing	-	wide=0 exhausted=none depth=fixed
+PASS	methods/alias-promoted-method-expression/direct	methods,aliases,functions	-	wide=0 exhausted=none depth=fixed
+PASS	methods/embedded-interface-satisfaction	methods,embedding,interfaces,calls	-	wide=0 exhausted=none depth=fixed
+PASS	methods/method-expr-call-position/promoted	methods,embedding,structs,calls	-	wide=0 exhausted=none depth=fixed
+PASS	methods/pointer-method-value-live	methods,pointers,functions,calls	-	wide=0 exhausted=none depth=fixed
+PASS	methods/quarantine-embedded/promoted-good	embedding,methods,calls	-	wide=0 exhausted=none depth=fixed
+FAIL	methods/quarantine-imported-type-residue/uses-reflect	methods,stdlib,slices	frontend-export	{"message":"frontend-quarantined: package-selector call reflect.ValueOf (package \"reflect\" surface not modeled)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	methods/recv-implicit-addr-deref/explicit-call-nil	methods,pointers,nil,panic,recover,calls	-	wide=0 exhausted=none depth=fixed
+PASS	multi-assign/blank-dep-index	multi_assign,slices,indexing,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	multi-assign/call-write-back-order/global-index	multi_assign,multi_result,calls,indexing,globals,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	multi-assign/chain-field-over-index	multi_assign,slices,structs,indexing,panic,recover,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	multi-assign/store-order-plain	multi_assign,pointers,panic,recover,evaluation_order	-	wide=0 exhausted=none depth=fixed
+FAIL	multipkg/init-order-staticinit/seq	multipackage,imports,init,globals,evaluation_order	differential	Lean={"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":21}]} Go={"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":12}]} left:  {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":21}]}\nright: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":12}]}
+PASS	multipkg/init-order-tiebreak/seq	multipackage,imports,init,globals,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	multipkg/mini-raft-twin/perturb-rev	multipackage,structs,maps,slices,methods,loops	-	wide=23 exhausted=none depth=128 fixed-probes-after=11,11,13
+FAIL	multipkg/unexported-method-scope/distinct-names	multipackage,imports,identity,interfaces,embedding,type_assertions,comma_ok	frontend-export	native frontend: nativefrontend: native frontend unsupported: unexported interface method name(s) shared across packages: get (required by blue/inner, implemented in emb); get (required by blue/inner, implemented in red/inner); get (required by main, implemented in blue/inner); get (required by main, implemented in emb); get (required by main, implemented in red/inner); get (required by red/inner, implemented in blue/inner); get (required by red/inner, implemented in emb) — an unexported method name is package-scoped (spec#Type_identity) but the wire's method tables carry bare names, so satisfaction could answer wrong; refused (BUG-098, docs/2026-09-05_fr19-bug097-design.md §2.5)\nfor the full blocker picture run scripts/lower-diagnose Corpus/coverage/exec/multipkg/unexported-method-scope\nexit status 1
+FAIL	new/new-expr/untyped-defaults	new,pointers,untyped,conversions,ints,bools,strings,runes,floats,complex	frontend-export	{"message":"frontend-quarantined: basic type complex128","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	noodler/arith/mul-overflow	ints,overflow	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/bounds/string-slice-high-past-len	strings,slicing,panic	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/builtins/clear-slice-kinds	builtins,clear,slices,strings,structs	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/builtins/min-max-integer-boundaries	builtins,min,max,ints,widths	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/closures/defers-per-iteration	closures,defer,loops,named-results	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/closures/goroutines-loopvar	closures,goroutines,sync,waitgroup,mutex,loops	-	wide=40 exhausted=none depth=256 fixed-probes-after=26,30,29
+PASS	noodler/closures/closure-if-init	closures,if,scoping	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/conversions/empty-string-nonnil	conversions,bytes,runes,nil	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/conversions/float-to-int-trunc	conversions,floats,ints	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/defers/deferred-close	defer,builtins,close,channels	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/defers/panic-nil-recovered	panic,recover,nil	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/frontier/closure-in-switch-case-expr	switch,closures,calls	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/frontier/for-tuple-post	loops,multi_assign,calls	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/frontier/pointer-to-pointer-chains	pointers,structs,methods,assignment	-	wide=0 exhausted=none depth=fixed
+FAIL	noodler/frontier/short-circuit-iface-method-value	bools,interfaces,methods,evaluation_order	frontend-export	{"message":"normalizing frontend-quarantined: interface method value in short-circuit operand","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	noodler/frontier/type-switch-guard-call	type_switch,calls,interfaces	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/frontier2/defer-interface-method	defer,interfaces,methods,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/gostmt/arg-panics-in-parent	goroutines,panic,recover,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/gotchas/defer-in-loop-with-break	defer,loops,break,named-results	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/gotchas/shared-pointer-via-map	maps,pointers,structs,aliasing	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/ifaces/promoted-value-nil	embedding,methods,pointers,nil,panic	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/ifaces/iface-dispatch-value-nil-recovered	interfaces,methods,nil,pointers,recover	-	wide=1 exhausted=none depth=fixed
+PASS	noodler/ifaces/global-iface-value-nil	interfaces,methods,nil,pointers,globals,panic,nondet	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/noodler/ifaces/global-iface-value-nil)
+PASS	noodler/ifaces/spawn-iface-value-nil	interfaces,methods,nil,pointers,goroutines,panic,nondet	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/noodler/ifaces/spawn-iface-value-nil)
+PASS	noodler/init/package-method-value	init,globals,methods,value_copy	-	wide=3 exhausted=none depth=fixed
+PASS	noodler/initpanic/deadlock	init,channels,deadlock	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/initpanic/recovered	init,panic,recover,defer	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/latitude/concat-var-vs-call	evaluation_order,strings,concat,calls	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/latitude/rhs-list-index-call-index	evaluation_order,multi_assign,indexing,calls	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/local-types/distinct	defined_type,identity,interfaces,scoping	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/misc/embedded-interface-shadowed	embedding,interfaces,methods,shadowing	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/ranges/array-pointer-sees-writes	range,arrays,pointers,aliasing	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/select/send-closed	select,channels,close,panic	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/select/ping-pong	channels,goroutines,range,close	confluent	|set|=1 certified over all schedules; coverage-observations: observations=1 steps=18694 probes=0 sites=17705 leaves=0 maxdepth=0 width=4 engine=dedup nodes=17705 edges=18694 dedupHits=990 certified=checkCert
+PASS	noodler/strings/fields-unicode-spaces	strings,stdlib,unicode	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/strings/sprintf-verbs	strings,stdlib	-	wide=4 exhausted=none depth=fixed
+PASS	noodler/structs/channel-equality	channels,equality,nil	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/typeswitch/switch-on-named-interface	type_switch,interfaces,methods	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/defer-panic-recovered-after-return	panic,recover,defer,returns,named-results	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/nil-defer-during-unwind	panic,recover,defer,nil,named-results	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-defined-payload-methods/error-forced-half	panic,recover,interfaces,defined_type,methods	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-int-abort	panic	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-markers/nil-go-literal	panic,strings	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-text/unicode-three	panic,strings	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-text/trailing-newline	panic,strings	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/recover-outside-defer	panic,recover	-	wide=0 exhausted=none depth=fixed
+PASS	quorum/vote-result/lost	quorum,maps,range,comma_ok,methods	-	wide=2 exhausted=none depth=fixed
+PASS	race/atomics-free/plain-read-vs-load	sync,atomics,ints,goroutines,channels,closures,race	confluent	|set|=1 certified over all schedules; coverage-observations: observations=1 steps=1168 probes=207 sites=69 leaves=70 maxdepth=9 width=4
+PASS	race/atomics-misuse/plain-read-vs-store	sync,atomics,ints,goroutines,channels,closures,race	racy	every enumerated path refuses: coverage-observations: observations=1 steps=138 probes=21 sites=7 leaves=8 maxdepth=4 width=4
+PASS	race/free-sync/mutex	sync,mutex,goroutines,channels,globals,race	confluent	|set|=1 certified over all schedules; coverage-observations: observations=1 steps=113257 probes=13206 sites=4402 leaves=4403 maxdepth=19 width=4
+PASS	race/litmus/mp-sync	goroutines,channels,race	confluent	|set|=1 certified over all schedules; coverage-observations: observations=1 steps=440 probes=99 sites=33 leaves=34 maxdepth=8 width=4
+PASS	range/range-not-evaluated/conversion-no-var	range,arrays,slices,conversions,pointers	-	wide=0 exhausted=none depth=fixed
+PASS	returns/multi-result-method	returns,multi_result,methods,structs,calls	-	wide=0 exhausted=none depth=fixed
+PASS	scoping/for-init-scope	scoping,loops,short_decl,shadowing	-	wide=0 exhausted=none depth=fixed
+PASS	scoping/local-type-identity/anon-iface-missing	defined_type,identity,scoping,interfaces,type_assertions,panic	-	wide=0 exhausted=none depth=fixed
+FAIL	scoping/local-type-identity/type-instantiation-refused	defined_type,identity,scoping,generics	frontend-export	{"message":"frontend-quarantined: function-local defined type score as a type argument (gc renders these with a compiler-internal unique suffix, e.g. score·1 — refused rather than guessed)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	scoping/named-result-shadow/commaok-assert	scoping,shadowing,named-results,interfaces	-	wide=0 exhausted=none depth=fixed
+PASS	slices/array-to-slice-conditional	slices,arrays,indexing,len,calls,quorum	-	wide=0 exhausted=none depth=fixed
+PASS	slices/slices-sort-kinds/init-sort	stdlib,slices,sort,generics,strings,init,globals,concat	-	wide=0 exhausted=none depth=fixed
+PASS	slices/sortfunc-cmp/named-slice-bound	stdlib,sort,slices,defined_type	-	wide=0 exhausted=none depth=fixed
+PASS	spec-examples-decl/addr-deref-nil-matrix/alias-non-nil	pointers,addressability,aliasing	-	wide=0 exhausted=none depth=fixed
+PASS	spec-examples-decl/address-op-nil-indirection/forms	pointers,addressability,arrays,indexing,structs,literals,calls	-	wide=0 exhausted=none depth=fixed
+PASS	spec-examples-decl/generic-conversion/f32	generics,conversions,constants,floats,defined_type,representability	-	wide=0 exhausted=none depth=fixed
+PASS	spec-examples-decl/init-call-order/values	init,globals,evaluation_order,calls	-	wide=0 exhausted=none depth=fixed
+PASS	spec-examples-decl/method-sets-defined-types/promotion	methods,defined_type,embedding,structs,pointers	-	wide=0 exhausted=none depth=fixed
+PASS	spec-examples-decl/selectors-embedding-depth/fields	embedding,fields,structs,pointers	-	wide=0 exhausted=none depth=fixed
+PASS	spec-examples-decl/string-from-runes	conversions,strings,runes,slices,defined_type,unicode	-	wide=0 exhausted=none depth=fixed
+PASS	spec-examples-decl/var-comma-ok-matrix/index-typed-blank-value	maps,comma_ok,typed,indexing,bools	-	wide=0 exhausted=none depth=fixed
+PASS	spec-examples-decl/var-comma-ok-matrix/assert-untyped-blank-ok	type_assertions,comma_ok,untyped,interfaces	-	wide=0 exhausted=none depth=fixed
+PASS	spec-examples-decl/var-comma-ok-matrix/assert-typed	type_assertions,comma_ok,typed,interfaces,bools,multi_result	-	wide=0 exhausted=none depth=fixed
+PASS	spec-examples-decl/var-comma-ok-matrix/pkg-recv-typed-blank-ok	channels,comma_ok,typed,globals,bools	-	wide=0 exhausted=none depth=fixed
+PASS	spec-examples-decl/var-comma-ok-matrix/tuple-call-blank	calls,multi_result,untyped	-	wide=0 exhausted=none depth=fixed
+FAIL	spec-examples-decl/var-comma-ok-matrix/tuple-call-iface	calls,multi_result,interfaces,typed	frontend-export	{"message":"frontend-quarantined: implicit interface conversion in multi-value assignment (interfaces campaign, deferred)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	spec-examples-decl/var-decl-forms	globals,zero_values,floats,maps,comma_ok,multi_result,untyped,shadowing	-	wide=0 exhausted=none depth=fixed
+PASS	spec-examples-stmt/complit-paren-ambiguity/match	literals,arrays,indexing,if,comparisons	-	wide=0 exhausted=none depth=fixed
+PASS	spec-examples-stmt/for-forms-equiv/cond-pair	loops,closures,control_flow	-	wide=0 exhausted=none depth=fixed
+PASS	spec-examples-stmt/go-statements/params-at-go	goroutines,channels,evaluation_order,closures	-	wide=3 exhausted=none depth=fixed
+PASS	spec-examples-stmt/init-hoist-relatives/for-init-cond-reads-init	control_flow,closures,evaluation_order,loops,break,scoping	-	wide=0 exhausted=none depth=fixed
+PASS	spec-examples-stmt/min-max-strings/assoc	min,max,builtins,strings,comparisons	-	wide=0 exhausted=none depth=fixed
+PASS	spec-examples-stmt/short-var-decl	short_decl,multi_assign,multi_result,closures,channels,make,len	-	wide=0 exhausted=none depth=fixed
+PASS	spec-examples-stmt/type-switch-equiv-if/agree-float64	type_switch,type_assertions,interfaces,equality	-	wide=0 exhausted=none depth=fixed
+PASS	spec-examples-stmt/type-switch-equiv-if/agree-bool	type_switch,type_assertions,interfaces,equality	-	wide=0 exhausted=none depth=fixed
+PASS	stdlib-source/builder-overlay/string-stable-in-place	stdlib,strings,methods,aliasing,cap	-	wide=1 exhausted=none depth=fixed
+PASS	stdlib-source/builder-overlay/repeat-1k	stdlib,strings,shifts	-	wide=1 exhausted=none depth=fixed
+PASS	stdlib-source/bytes-buffer/available-buffer	stdlib,bytes,methods,append,cap	-	wide=0 exhausted=none depth=fixed
+PASS	stdlib-source/errors-wrap/unwrap	stdlib,strings,interfaces,methods	-	wide=2 exhausted=none depth=fixed
+FAIL	stdlib-source/frontier/bytes-toupper-makenozero	stdlib,bytes,unicode	frontend-export	{"message":"normalizing frontend-quarantined: internal/bytealg.MakeNoZero: stdlib source-through: internal/bytealg.MakeNoZero is a body-less declaration — assembly or runtime linkname, no portable substitution row in tools/nativefrontend/stdlib-substitutions.tsv (fail closed)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	stdlib-source/slices-sortfunc/sortfunc-large	stdlib,sort,slices,generics,closures,loops	-	wide=1 exhausted=none depth=fixed
+PASS	stdlib-source/slices-sortfunc/sortfunc-strings-by-len	stdlib,sort,slices,generics,strings,len	-	wide=1 exhausted=none depth=fixed
+PASS	stdlib-source/strconv-parseuint/numerror-type	stdlib,strings,ints,type_assertions,interfaces	-	wide=0 exhausted=none depth=fixed
+PASS	stdlib-source/strings-trimspace/empty-and-single	stdlib,strings,empty	-	wide=0 exhausted=none depth=fixed
+PASS	strings/join-conformance/basic	stdlib,strings,slices	-	wide=1 exhausted=none depth=fixed
+PASS	strings/literal-edge/raw-multiline-literal	strings,literals,escapes,bytes	-	wide=0 exhausted=none depth=fixed
+PASS	strings/no-normalization	strings,unicode,equality,len,bytes	-	wide=0 exhausted=none depth=fixed
+PASS	strings/rune-string-conversion	strings,conversions,runes,unicode,bytes	-	wide=0 exhausted=none depth=fixed
+PASS	strings/shim-value-refused/unmodeled-value	stdlib,strings,closures	-	wide=0 exhausted=none depth=fixed
+PASS	strings/split-conformance/single-byte-sep	stdlib,strings,slices	-	wide=0 exhausted=none depth=fixed
+PASS	strings/string-index-panic-eval-order	strings,indexing,evaluation_order,panic,recover	-	wide=0 exhausted=none depth=fixed
+PASS	structs/empty-struct-literal-at-named-type/return	structs,assignment,returns	-	wide=0 exhausted=none depth=fixed
+FAIL	sync/out-of-scope-cond/cond-signal-no-waiter	sync	frontend-export	{"message":"frontend-quarantined: sync.Cond (only Mutex/RWMutex/WaitGroup/Once are modeled)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	sync/promoted-mutex/stmt	sync,mutex,embedding,methods	-	wide=0 exhausted=none depth=fixed
+PASS	sync/rwmutex-order/acquisition	sync,rwmutex,goroutines,channels,globals,nondet	membership	enumerated=2 exhibited=2 draws=4 (K=32; stopped at the members=2 pin) unexhibited=0 (members in artifacts/coverage/membership/sync/rwmutex-order/acquisition)
+PASS	sync/satisfaction/assert-negative-missing	sync,mutex,interfaces	-	wide=0 exhausted=none depth=fixed
+PASS	sync/waitgroup-negative-panic/negative-counter	sync,waitgroup,panic	-	wide=0 exhausted=none depth=fixed
+FAIL	unsafe/boundary/pointer-roundtrip	unsafe,pointers	frontend-export	{"message":"frontend-quarantined: basic type unsafe.Pointer","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	variadic/multi-result-into-fixed-variadic	variadic,multi_result,calls,slices	-	wide=0 exhausted=none depth=fixed
