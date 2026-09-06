@@ -4,6 +4,7 @@ import Tests.BooleanProgram
 import Tests.RecoveryTypingAudit
 import Tests.RecoveryStorageAudit
 import Tests.RecoverySetupAudit
+import Tests.RecoveryControlAudit
 import Lean
 
 /-! The command runs from a separate harness after complete imports. Origin
@@ -45,6 +46,15 @@ def InterfaceAudit.run : CoreM Unit := do
     `GoLean.GoCore.RecoveryCallEntry,
     `Tests.RecoveryStorage, `Tests.RecoveryStorageAudit,
     `Tests.RecoverySetup, `Tests.RecoverySetupAudit,
+    `GoLean.GoCore.RecoveryDelivery, `GoLean.GoCore.RecoveryControlData,
+    `GoLean.GoCore.RecoveryControl, `GoLean.GoCore.RecoveryControlMono,
+    `GoLean.GoCore.RecoveryWalk, `GoLean.GoCore.RecoveryExpressionProgress,
+    `GoLean.GoCore.RecoveryControlHelpers, `GoLean.GoCore.RecoveryCallControl,
+    `GoLean.GoCore.RecoveryValueBasic, `GoLean.GoCore.RecoveryValueCalls,
+    `GoLean.GoCore.RecoveryStatementProgress, `GoLean.GoCore.RecoveryFrameProgress,
+    `GoLean.GoCore.RecoveryPanicProgress, `GoLean.GoCore.RecoveryInvariant,
+    `GoLean.GoCore.RecoverySuccessfulRuns,
+    `Tests.RecoveryInvariant, `Tests.RecoveryControlAudit,
     `Tests.PanicRendering, `Tests.InterfaceContract, `Tests.BooleanRuntime,
     `Tests.BooleanProgram, `Tests.InterfaceAudit]
   let exports : List Name := [
@@ -79,6 +89,24 @@ def InterfaceAudit.run : CoreM Unit := do
     ``GoLean.GoCore.RecoveryRuntime.initialState_readout,
     ``GoLean.GoCore.RecoveryRuntime.typedEntry_wf,
     ``GoLean.GoCore.RecoveryRuntime.ZeroValues.unique,
+    ``GoLean.GoCore.RecoveryRuntime.control_progress,
+    ``GoLean.GoCore.RecoveryRuntime.control_step,
+    ``GoLean.GoCore.RecoveryRuntime.control_stepFn,
+    ``GoLean.GoCore.RecoveryRuntime.setup_inv,
+    ``GoLean.GoCore.RecoveryRuntime.Inv.step,
+    ``GoLean.GoCore.RecoveryRuntime.Inv.steps,
+    ``GoLean.GoCore.RecoveryRuntime.Inv.iter,
+    ``GoLean.GoCore.RecoveryRuntime.Inv.progress,
+    ``GoLean.GoCore.RecoveryRuntime.Inv.reachable_progress,
+    ``GoLean.GoCore.RecoveryRuntime.Inv.readout,
+    ``GoLean.GoCore.RecoveryRuntime.Inv.run_readout,
+    ``GoLean.GoCore.RecoveryRuntime.Inv.run_choices,
+    ``GoLean.GoCore.RecoveryRuntime.Inv.reachable_silent,
+    ``GoLean.GoCore.RecoveryRuntime.call_entry_control,
+    ``GoLean.GoCore.RecoveryRuntime.deferred_entry_control,
+    ``GoLean.GoCore.RecoveryRuntime.recover_direct,
+    ``GoLean.GoCore.RecoveryRuntime.recover_indirect,
+    ``GoLean.GoCore.RecoveryRuntime.ReturnCont.pushDefer,
     ``GoLean.GoCore.BooleanRuntime.setup_boolean,
     ``GoLean.GoCore.BooleanRuntime.bindParams_bool,
     ``GoLean.GoCore.BooleanRuntime.allocDecls_bool,

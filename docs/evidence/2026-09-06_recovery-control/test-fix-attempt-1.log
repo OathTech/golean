@@ -1,0 +1,157 @@
+Tests/RecoveryInvariant.lean:68:2: error: Type mismatch
+  recover_direct ?m.21
+has type
+  ∀ (targets : List (TargetShape × List Expr)) (env : LocalEnv) (results : List Loc)
+    (ds : List (GoValue × List GoValue)) (k : Cont),
+    recoverResult (Cont.frame targets env results ds (Cont.panicResumeK ?m.16 k)) =
+      (?m.18, Cont.frame targets env results ds (Cont.panicResumeK ?m.17 k))
+but is expected to have type
+  recoverResult (Cont.frame [] [] [] [] (Cont.panicResumeK (active bytes) barrier)) =
+    (GoValue.interface Ty.string (GoValue.string bytes),
+      Cont.frame [] [] [] []
+        (Cont.panicResumeK [{ value := GoValue.interface Ty.string (GoValue.string bytes), recovered := true }]
+          barrier))
+Tests/RecoveryInvariant.lean:68:17: error: Application type mismatch: The argument
+  rfl
+has type
+  ?m.20 = ?m.20
+but is expected to have type
+  markNewestRecovered ?m.16 = some (?m.18, ?m.17)
+in the application
+  recover_direct rfl
+Tests/RecoveryInvariant.lean:78:8: error: don't know how to synthesize implicit argument `fs`
+  @ReturnCont.frame #[] ?m.64 [] [] [] [] [] [] (Cont.panicResumeK (active bytes) barrier) (EnvTyped.empty #[])
+    PlansTyped.nil ResultRoots.nil
+    (of_eq_true
+      (Eq.trans
+        (forall_congr fun d =>
+          Eq.trans (implies_congr List.not_mem_nil._simp_1 (Eq.refl (PendingCall #[] ?m.64 d.fst d.snd)))
+            (false_implies (PendingCall #[] ?m.64 d.fst d.snd)))
+        (implies_true (GoValue × List GoValue))))
+    (ExitCont.resume (ChainTyped.single bytes false)
+      (ReturnCont.frame (EnvTyped.empty #[]) PlansTyped.nil ResultRoots.nil
+        (of_eq_true
+          (Eq.trans
+            (forall_congr fun d =>
+              Eq.trans (implies_congr List.not_mem_nil._simp_1 (Eq.refl (PendingCall #[] ?m.64 d.fst d.snd)))
+                (false_implies (PendingCall #[] ?m.64 d.fst d.snd)))
+            (implies_true (GoValue × List GoValue))))
+        ExitCont.stop
+        (of_eq_true
+          (Eq.trans
+            (implies_congr (Eq.trans (congrArg Not (eq_self [])) not_true_eq_false)
+              (Eq.refl (ReturnCont #[] ?m.64 Cont.stop)))
+            (false_implies (ReturnCont #[] ?m.64 Cont.stop))))))
+    (of_eq_true
+      (Eq.trans
+        (implies_congr (Eq.trans (congrArg Not (eq_self [])) not_true_eq_false)
+          (Eq.refl (ReturnCont #[] ?m.64 (Cont.panicResumeK (active bytes) barrier))))
+        (false_implies (ReturnCont #[] ?m.64 (Cont.panicResumeK (active bytes) barrier)))))
+context:
+bytes : GoString
+⊢ Array Func
+Tests/RecoveryInvariant.lean:79:5: error: don't know how to synthesize implicit argument `fs`
+  @ExitCont.resume #[] ?m.64 (active bytes) barrier (ChainTyped.single bytes false)
+    (ReturnCont.frame (EnvTyped.empty #[]) PlansTyped.nil ResultRoots.nil
+      (of_eq_true
+        (Eq.trans
+          (forall_congr fun d =>
+            Eq.trans (implies_congr List.not_mem_nil._simp_1 (Eq.refl (PendingCall #[] ?m.64 d.fst d.snd)))
+              (false_implies (PendingCall #[] ?m.64 d.fst d.snd)))
+          (implies_true (GoValue × List GoValue))))
+      ExitCont.stop
+      (of_eq_true
+        (Eq.trans
+          (implies_congr (Eq.trans (congrArg Not (eq_self [])) not_true_eq_false)
+            (Eq.refl (ReturnCont #[] ?m.64 Cont.stop)))
+          (false_implies (ReturnCont #[] ?m.64 Cont.stop)))))
+context:
+bytes : GoString
+⊢ Array Func
+Tests/RecoveryInvariant.lean:80:7: error: don't know how to synthesize implicit argument `fs`
+  @ReturnCont.frame #[] ?m.64 [] [] [] [] [] [] Cont.stop (EnvTyped.empty #[]) PlansTyped.nil ResultRoots.nil
+    (of_eq_true
+      (Eq.trans
+        (forall_congr fun d =>
+          Eq.trans (implies_congr List.not_mem_nil._simp_1 (Eq.refl (PendingCall #[] ?m.64 d.fst d.snd)))
+            (false_implies (PendingCall #[] ?m.64 d.fst d.snd)))
+        (implies_true (GoValue × List GoValue))))
+    ExitCont.stop
+    (of_eq_true
+      (Eq.trans
+        (implies_congr (Eq.trans (congrArg Not (eq_self [])) not_true_eq_false)
+          (Eq.refl (ReturnCont #[] ?m.64 Cont.stop)))
+        (false_implies (ReturnCont #[] ?m.64 Cont.stop))))
+context:
+bytes : GoString
+⊢ Array Func
+Tests/RecoveryInvariant.lean:80:69: error: don't know how to synthesize implicit argument `fs`
+  @ExitCont.stop #[] ?m.64
+context:
+bytes : GoString
+⊢ Array Func
+Tests/RecoveryInvariant.lean:76:84: error: unsolved goals
+case hk
+bytes : GoString
+⊢ ReturnCont #[] ?m.64 (Cont.frame [] [] [] [] (Cont.panicResumeK (active bytes) barrier))
+Tests/RecoveryInvariant.lean:95:3: error: unexpected token 'scoped'; expected identifier
+Tests/RecoveryInvariant.lean:99:80: error: Application type mismatch: The argument
+  "shadow"
+has type
+  String
+but is expected to have type
+  GoString
+in the application
+  Expr.stringLit "shadow"
+Tests/RecoveryInvariant.lean:104:74: error: unexpected token 'scoped'; expected ']'
+Tests/RecoveryInvariant.lean:104:80: error: unexpected token ']'; expected 'binder_predicate', 'builtin_cbv_simproc', 'builtin_dsimproc', 'builtin_simproc', 'cbv_simproc', 'dsimproc', 'elab', 'elab_rules', 'grind_pattern', 'infix', 'infixl', 'infixr', 'instance', 'macro', 'macro_rules', 'notation', 'postfix', 'prefix', 'simproc', 'syntax' or 'unif_hint'
+Tests/RecoveryInvariant.lean:107:33: error: Tactic `rfl` failed: The left-hand side
+  checkRecovery scopedProgram "scoped" #[GoValue.bool false]
+is not definitionally equal to the right-hand side
+  Except.ok ()
+
+case false
+⊢ checkRecovery scopedProgram "scoped" #[GoValue.bool false] = Except.ok ()
+Tests/RecoveryInvariant.lean:107:33: error: Tactic `rfl` failed: The left-hand side
+  checkRecovery scopedProgram "scoped" #[GoValue.bool true]
+is not definitionally equal to the right-hand side
+  Except.ok ()
+
+case true
+⊢ checkRecovery scopedProgram "scoped" #[GoValue.bool true] = Except.ok ()
+Tests/RecoveryInvariant.lean:112:62: error: Insufficient number of fields for `⟨...⟩` constructor: Constructor `GoLean.GoCore.Readout.mk` has 2 explicit field, but only 1 was provided
+Tests/RecoveryInvariant.lean:118:12: error(lean.invalidField): Invalid field notation: Type of
+  f
+is not known; cannot resolve field `results`
+
+Hint: Consider replacing the field projection with a call to one of the following:
+  • `Func.results`
+  • `MethodSig.results`
+Tests/RecoveryInvariant.lean:124:54: error(lean.invalidField): Invalid field notation: Type of
+  f
+is not known; cannot resolve field `results`
+
+Hint: Consider replacing the field projection with a call to one of the following:
+  • `Func.results`
+  • `MethodSig.results`
+Tests/RecoveryInvariant.lean:129:49: error(lean.invalidField): Invalid field notation: Type of
+  f
+is not known; cannot resolve field `results`
+
+Hint: Consider replacing the field projection with a call to one of the following:
+  • `Func.results`
+  • `MethodSig.results`
+Tests/RecoveryInvariant.lean:134:49: error(lean.invalidField): Invalid field notation: Type of
+  f
+is not known; cannot resolve field `results`
+
+Hint: Consider replacing the field projection with a call to one of the following:
+  • `Func.results`
+  • `MethodSig.results`
+Tests/RecoveryInvariant.lean:139:49: error(lean.invalidField): Invalid field notation: Type of
+  f
+is not known; cannot resolve field `results`
+
+Hint: Consider replacing the field projection with a call to one of the following:
+  • `Func.results`
+  • `MethodSig.results`

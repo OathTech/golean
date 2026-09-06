@@ -1,0 +1,5 @@
+{
+  "path": "docs/2026-09-06_recovery-control-contract.md",
+  "sha256": "b52d3145cd84e84f13327b2b3d570b5bec897f8aea8a89d556656afbed7c7bad",
+  "change": "Added public integration status after terminal gates; reviewed code unchanged."
+}

@@ -47,3 +47,7 @@ globs = ["Tests.RecoveryStorage", "Tests.RecoveryStorageAudit"]
 [[lean_lib]]
 name = "RecoverySetupTests"
 globs = ["Tests.RecoverySetup", "Tests.RecoverySetupAudit"]
+
+[[lean_lib]]
+name = "RecoveryControlTests"
+globs = ["Tests.RecoveryInvariant", "Tests.RecoveryControlAudit"]

@@ -405,3 +405,56 @@ closure beyond prototype `8ea5a74b`. BUG-090 capture completeness, final
 Go-fidelity evidence, reusable Iris proofs, B7/I1 validation, C1 handoff,
 roadmap/migration and the O1–O5 closing packet remain mandatory. Main is
 unchanged and no main merge or push is authorized.
+
+## Current checkpoint: recovery control integration (2026-09-06)
+
+Entry promotion landed on the sprint branch at `30b09c08`; independent
+promotion review is `f5f228ca`. Diagnostic review and its additive packaging
+correction are `313d1781`/`639192b2`. Root control review is integrated as
+`1078c910` plus `bfecf455`, and the independent R-1 design review is
+`4a8a8ad1`. Main remains unchanged at `47195683`.
+
+The control author sealed `f160d7ca` after dedicated gate and ordinary CI
+passed. The pending clean merge into `4a8a8ad1` has also passed ordinary CI
+`43232` and fresh A1/Iris gates `62843`, both terminal exit 0. Separate
+promotion review `62377799` approves the four public files. The
+[control integration seal](evidence/2026-09-06_recovery-control-integration/README.md)
+binds 215 sources, 102 interface exports and twenty-two compiled poisons.
+Do not restart these completed runs. Post-gate documentation/evidence
+updates do not change reviewed semantic source.
+
+`typed-shared-customer`, owned by the recovery author, now has separate
+drafts for exact arbitrary-heap call allocation, one shared Iris call rule
+covering seven actual call/defer entry forms, unwind/recovery/readout rules,
+and the A2 refactor. The second functional customer remains open. This lane
+also owns the actual reached-abort witness: the head bytes and recovered
+flag must be tied to the real driver/trace and actual abort query, with
+fuel/choices/output preserved, so the R-1 apparatus does not trust text pins
+or caller-supplied payload metadata.
+
+Observer classifier `b5dd4076` and diagnostic increment `2b679404` are
+reviewed, gated and ready for the next integration. The fresh full record
+has 3,627 rows: 3,382 PASS and 245 FAIL, exactly eleven new marker PASS rows
+plus the independently justified sync-unwind PASS-to-observation-refusal.
+Initial full CI `34382` exited 1 for that raw delta, BUG punctuation and
+registration-free old sampling mocks; all evidence is retained. The narrow
+mock repair has independent review `198aee9f`, its affected gate passed,
+and final ordinary CI `58628` passed without repeating the unchanged full
+corpus. Diagnostic CI `43806` passed with 105 controls and five mutants.
+These increments are not yet merged here.
+
+The isolated `typed-string-members` lane has constructive byte escaping/
+decoding and first-line correspondence plus actual abort-point lemmas in
+development. Its explicit membership certificate design still needs review,
+production implementation and forced-half evidence. Uniform suffix/byte
+rendering authority is the existing R-1, not a new scope ruling.
+
+Root-owned `typed-i1-declarations` still has prototype base `8ea5a74b`, plus
+uncommitted positive declaration serializer/tests and schema notes. Four
+focused tests and the full frontend unit suite passed; ordinary CI `47743`
+is live and independent review is queued. The helper is not connected to
+the emitter/lowerer: exact decoder/envelope facts, query preservation,
+guarded code closure and actual marker removal are still mandatory. B7
+continues actual old/new correspondence and consumer migration. Complete
+capture (including BUG-090), final fidelity review/gates, C1 handoff,
+roadmap/migration and closing O1–O5 decision packet remain unfinished.

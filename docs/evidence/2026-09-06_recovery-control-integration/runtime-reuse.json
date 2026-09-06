@@ -1,0 +1,58 @@
+{
+  "prior_record": "docs/evidence/2026-09-06_renderer-integration",
+  "changed_inventory_members": [
+    {
+      "path": "GoLean/GoCore/BooleanInvariant.lean",
+      "before": "b438e8894713559b432a24c7c1d1f7cf1657c228b44a422b91868f84e81476f4",
+      "after": "68c77e5496efdbe38cefa3558f3f96a0a57eb9f35fdef2753dd2a8ceb6a862c4"
+    },
+    {
+      "path": "GoLean/Interface.lean",
+      "before": "f7e7e39d6375122c304058039f2673f0f2df5d832e6f53ccdd443af198d96a55",
+      "after": "a0b8ed103120ae22eaac2a5de9ed6cf8d4ee0a70a99143e41d1d163d157c5fee"
+    },
+    {
+      "path": "Tests/BooleanSafetyAudit.lean",
+      "before": "9b5d0926a8b468451641ea29b89015b26ca1df724e92011297f1fe4040a0f383",
+      "after": "8da8f94b91618d672c304a36e42527ce531ac48b23b01be3796a1b775495f59e"
+    },
+    {
+      "path": "Tests/InterfaceAudit.lean",
+      "before": "344a29bff4bb7aa38fcf460d84842040244060ca75b49d2ee7df7135f1bdd289",
+      "after": "dcdb9723594adddbaf132f4d9f143ce18ccb0068ff7b7bcc60b99a5e58ea1e16"
+    },
+    {
+      "path": "lakefile.toml",
+      "before": "795c41c6dfbe48fa4c67dfa498c14ef4146ed2791aeee9c188a91b4cbae3d3b7",
+      "after": "e583697792a6a980576c6d852e3a59c7a795fe83d8f6310afc14c7e802eef038"
+    },
+    {
+      "path": "scripts/check-boolean-runtime",
+      "before": "941146d7a1b2ad263125db8d31fc5f048ab0d7a4bbf82271e3370e7d4683d276",
+      "after": "1b91baf6972db10106a02c97a3bd3c49c8cb51fbfd27c411483ff17de10f9679"
+    },
+    {
+      "path": "scripts/check-interface",
+      "before": "f45006200a7e8c5f4412bc99f225dc9313072cb8ea20dc195490677a591de4b6",
+      "after": "235dcc84ed78f910c88c004881cacc8abbe0cd1b1f47712f3c41c865892d673c"
+    },
+    {
+      "path": "scripts/check-interface.py",
+      "before": "3f383f043322243dbdee0d6fe1c5fa8e4902d5de6249d631aa69565fab23cf57",
+      "after": "b6c282b3286be886e0dfae9de8c0e69a9ed2dce3b0c77885c7abe2e8e8fe744b"
+    },
+    {
+      "path": "scripts/ci",
+      "before": "1b338c1b140a7c37abc54256f75609a310d891e2652ec8fff114bda08f863b71",
+      "after": "464ea988b35c036e9788372cd69a9a1eec82af32aa133940130cf1cdd921ffb1"
+    }
+  ],
+  "scope": "Explicitly cached full3607 and negative394 renderer evidence. The executable model/frontend/observer are unchanged; the new control layer is proof infrastructure. No fresh whole-corpus or binary identity claim.",
+  "records": {
+    "full.tsv": "efefb49ec21a134458d4533c9dc4f9ddb9b138d02f508a8056fbbab08bba5658",
+    "full.meta.tsv": "b368e3923319d3c463e9059cf7b4047dc9522a8d1781a5d1b2cd44bd11b6dfe5",
+    "negative.tsv": "16e489a805e7530e6d961b27620a93c416c6d91373a608fedacef5281eb8d204",
+    "negative.meta.tsv": "0dfb202c7a7a41e0c280469678b96d9adb76276a1fb85fcd5880315047e1a15c"
+  },
+  "second_fixture_native": "Entry integration recovery-native.tsv,5/5, explicitly reused for unchanged native/static fixture inputs; actual setup/control instantiation freshly checked by control gate."
+}
