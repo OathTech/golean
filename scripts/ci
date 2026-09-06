@@ -441,6 +441,15 @@ else
   bad "Boolean structural runtime preservation and progress"
 fi
 
+# The recovery profile has its own independent static judgment/checker;
+# this gate does not claim that the O2 runtime/customer obligation is done.
+step "Recovery scoped typing checker proofs and regressions"
+if bash scripts/check-recovery-typing --lean-only; then
+  ok "Recovery scoped typing checker proofs and regressions"
+else
+  bad "Recovery scoped typing checker proofs and regressions"
+fi
+
 # 2b. Frontend pins (restored at the split audit, findings A1/A2 + B1/B8
 # — docs/2026-08-31_repo-split-plan.md fix round): the two SEMANTICS
 # pins that lived inside the parked check-golden. (1) the

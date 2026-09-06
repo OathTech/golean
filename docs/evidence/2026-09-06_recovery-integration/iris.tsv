@@ -1,0 +1,4 @@
+result	id	features	stage	detail
+PASS	iris-customer/recovered	iris-customer,defer,recover	-	wide=0 exhausted=none depth=fixed
+PASS	iris-customer/normal	iris-customer,defer,recover	-	wide=0 exhausted=none depth=fixed
+PASS	iris-customer/uncaught	iris-customer,defer,recover	-	wide=0 exhausted=none depth=fixed

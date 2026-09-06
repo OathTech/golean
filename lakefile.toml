@@ -35,3 +35,7 @@ globs = ["Tests.BooleanTyping", "Tests.BooleanTypingFixture", "Tests.BooleanTypi
 [[lean_lib]]
 name = "BooleanRuntimeTests"
 globs = ["Tests.BooleanInvariant", "Tests.BooleanSafetyAudit"]
+
+[[lean_lib]]
+name = "RecoveryTypingTests"
+globs = ["Tests.RecoveryTyping", "Tests.RecoveryTypingFixture", "Tests.RecoveryA2Artifact", "Tests.RecoveryDiagnosticControls", "Tests.RecoveryTypingAudit"]

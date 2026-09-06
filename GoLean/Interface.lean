@@ -7,6 +7,7 @@ import GoLean.GoCore.BooleanStore
 import GoLean.GoCore.BooleanSetup
 import GoLean.GoCore.BooleanInitialization
 import GoLean.GoCore.BooleanPool
+import GoLean.GoCore.RecoveryAdmission
 
 /-!
 # Experimental semantic consumer interface
@@ -66,6 +67,15 @@ and `Inv.success_contract` retain the original stream in successful execution
 and counted traces. No termination bound or Iris ownership is manufactured.
 These are Boolean-profile guarantees, not general admission or recovery
 safety. See `docs/2026-09-06_boolean-program-contract.md` for their premises.
+
+`GoCore.RecoveryTyping.checkRecovery` checks the separate, bounded recovery
+profile against an independent judgment, with soundness and completeness.
+It checks all signatures/bodies, scoped bindings, call and capture vectors,
+deferred registrations and a finite call-graph certificate. Surface/placement
+diagnostics are proved consequences of typing and do not narrow admission.
+This static contract admits the complete A2 and shared-capture native fixtures;
+it does not yet establish recovery setup, runtime safety, renderer success or
+Iris ownership. See `docs/2026-09-06_recovery-static-claims.md`.
 
 The underlying `GoCore` and `GoCore.Machine` types remain representation
 dependent. This facade is experimental: B7, C1 and the composition work may

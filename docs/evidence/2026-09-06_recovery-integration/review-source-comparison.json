@@ -1,0 +1,82 @@
+[
+  {
+    "path": "GoLean/GoCore/RecoveryAdmission.lean",
+    "sha256": "308a6d4e61b92e6c1f56790ed1c5b76e56c76334dfb2278bab129b375627a88b",
+    "matches": "e8a665e9"
+  },
+  {
+    "path": "GoLean/GoCore/RecoveryCalls.lean",
+    "sha256": "3147e2d8ee0f6d13035dc307b1d286a92bb3d0899f9a896c24be168f98e9e063",
+    "matches": "e8a665e9"
+  },
+  {
+    "path": "GoLean/GoCore/RecoveryDiagnostics.lean",
+    "sha256": "0d39c353494d8126531705271affcd0ad661dfcaaf6ed3aa9e8b000c31f382c7",
+    "matches": "e8a665e9"
+  },
+  {
+    "path": "GoLean/GoCore/RecoveryExpressions.lean",
+    "sha256": "020ad2428a6f5ba1b2d8629431fbf5c5b7bd91e87ca34101f817f751a118d4e0",
+    "matches": "e8a665e9"
+  },
+  {
+    "path": "GoLean/GoCore/RecoveryGraph.lean",
+    "sha256": "e411087f7a31c79b752723eb028cc027c15bd9f2b0eeef202fd94db4177b1348",
+    "matches": "e8a665e9"
+  },
+  {
+    "path": "GoLean/GoCore/RecoveryStatements.lean",
+    "sha256": "8af47f19b6b48760e082b4c6f8c05009f99d9d5dc2a910a1cf2ba6b1cdfd1456",
+    "matches": "e8a665e9"
+  },
+  {
+    "path": "GoLean/GoCore/RecoveryTypingCore.lean",
+    "sha256": "9314b0d0a71cef7c8d14146faad5d755adcdac3650269aba0ab9beeac0dd430a",
+    "matches": "e8a665e9"
+  },
+  {
+    "path": "Tests/RecoveryA2Artifact.lean",
+    "sha256": "9be03bb7c77bd6012720ce42e98a4511d1c83ae463866331309a4bc2bce34189",
+    "matches": "e8a665e9"
+  },
+  {
+    "path": "Tests/RecoveryDiagnosticControls.lean",
+    "sha256": "f555047890ca850d6dd3b0c8a0b5751360daf8fce959d24e1d8fdb96d6a57c54",
+    "matches": "e8a665e9"
+  },
+  {
+    "path": "Tests/RecoveryTyping.lean",
+    "sha256": "8a51f162eb20532ddaeb9e27ee2f160742b3573a7b714e92d18aec8fd467ef44",
+    "matches": "e8a665e9"
+  },
+  {
+    "path": "Tests/RecoveryTypingAudit.lean",
+    "sha256": "aaa180e2ccadab098138f2a17811c3f0bfb2dfd5ec42dafa7a412f0b3b1d3c9f",
+    "matches": "e8a665e9"
+  },
+  {
+    "path": "Tests/RecoveryTypingFixture.lean",
+    "sha256": "aed9764365cbe7e29d0dc4951f1d1d6259ef9c68cbaa2012306d4dc6bb883911",
+    "matches": "e8a665e9"
+  },
+  {
+    "path": "GoLean/Interface.lean",
+    "sha256": "e0c43021f928485b5536e71e9f1eed9023e006ad832b5051c48bfd6cf9bdd3b7",
+    "matches": "f569eb7f"
+  },
+  {
+    "path": "Tests/InterfaceAudit.lean",
+    "sha256": "4d291fa466112a3ee1d28bfdaba9f400ac5ee62c92393c997ef25b03052084e1",
+    "matches": "f569eb7f"
+  },
+  {
+    "path": "scripts/check-interface",
+    "sha256": "9d2a5df759ce39ee8cabc31df59cc21418f37100819515874975875c5950a37c",
+    "matches": "f569eb7f"
+  },
+  {
+    "path": "scripts/check-interface.py",
+    "sha256": "779f7ac15fe148aece11c1cd987faf2cb99a44e520ac44fc5d7d92dcb0479843",
+    "matches": "f569eb7f"
+  }
+]

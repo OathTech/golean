@@ -1,0 +1,8 @@
+✔ [22/29] Built GoLean.GoCore.RecoveryDiagnostics (839ms)
+✔ [23/29] Built GoLean.GoCore.RecoveryAdmission (501ms)
+✔ [24/29] Built Tests.RecoveryA2Artifact (4.7s)
+✔ [25/29] Built Tests.RecoveryTyping (9.5s)
+✔ [26/29] Built Tests.RecoveryTypingFixture (11s)
+✔ [27/29] Built Tests.RecoveryDiagnosticControls (5.0s)
+✔ [28/29] Built Tests.RecoveryTypingAudit (692ms)
+Build completed successfully (29 jobs).

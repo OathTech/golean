@@ -1,0 +1,12 @@
+{
+  "utc": "2026-09-06T03:08:26.679224+00:00",
+  "parent": "c2057e78a40d2a60cb0e9f06b04694b9f5cf45a2",
+  "merge_head": "e8a665e9cb1e5b6b7d88cb912d0440955e4e6785",
+  "branch": "typed-consumer-sprint",
+  "go_version": "go version go1.26.5 linux/amd64",
+  "lean_toolchain": "leanprover/lean4:v4.32.2",
+  "ci_exit": 0,
+  "recovery_a1_a2_exit": 0,
+  "source_scope": "Frozen reviewed static source and four promotion files during gates; evidence/documentation bookkeeping followed.",
+  "source_files": 175
+}

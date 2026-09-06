@@ -1,0 +1,41 @@
+{
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "stmt": "panic",
+      "value": {
+       "expr": "bool",
+       "type": {
+        "kind": "bool"
+       },
+       "value": true
+      },
+      "wrap": {
+       "kind": "bool"
+      }
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "panicBoolAbort",
+   "params": [],
+   "results": [],
+   "variadic": false
+  }
+ ],
+ "methodSets": [],
+ "methods": [],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": []
+}

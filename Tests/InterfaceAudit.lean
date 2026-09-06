@@ -1,6 +1,7 @@
 import Tests.InterfaceContract
 import Tests.BooleanRuntime
 import Tests.BooleanProgram
+import Tests.RecoveryTypingAudit
 import Lean
 
 /-! The command runs from a separate harness after complete imports. Origin
@@ -27,6 +28,12 @@ def InterfaceAudit.run : CoreM Unit := do
     `GoLean.GoCore.BooleanInvariant, `GoLean.GoCore.BooleanPreservation,
     `GoLean.GoCore.BooleanProgress, `GoLean.GoCore.BooleanSafety,
     `GoLean.GoCore.BooleanProgram, `GoLean.GoCore.BooleanPool,
+    `GoLean.GoCore.RecoveryTypingCore, `GoLean.GoCore.RecoveryExpressions,
+    `GoLean.GoCore.RecoveryCalls, `GoLean.GoCore.RecoveryStatements,
+    `GoLean.GoCore.RecoveryGraph, `GoLean.GoCore.RecoveryDiagnostics,
+    `GoLean.GoCore.RecoveryAdmission,
+    `Tests.RecoveryTyping, `Tests.RecoveryDiagnosticControls,
+    `Tests.RecoveryTypingFixture, `Tests.RecoveryA2Artifact, `Tests.RecoveryTypingAudit,
     `Tests.PanicRendering, `Tests.InterfaceContract, `Tests.BooleanRuntime,
     `Tests.BooleanProgram, `Tests.InterfaceAudit]
   let exports : List Name := [
@@ -42,6 +49,13 @@ def InterfaceAudit.run : CoreM Unit := do
     ``GoLean.GoCore.Admission.admitted_index_bound,
     ``GoLean.GoCore.Admission.admitted_all_bodies,
     ``GoLean.GoCore.BooleanTyping.checkTypedBoolean_iff,
+    ``GoLean.GoCore.RecoveryTyping.checkRecovery_iff,
+    ``GoLean.GoCore.RecoveryTyping.checkRecovery_sound,
+    ``GoLean.GoCore.RecoveryTyping.checkRecovery_complete,
+    ``GoLean.GoCore.RecoveryTyping.admitted_all_bodies,
+    ``GoLean.GoCore.RecoveryTyping.admitted_no_cycle,
+    ``GoLean.GoCore.RecoveryTyping.Statement.in_profile,
+    ``GoLean.GoCore.RecoveryTyping.Statement.placement,
     ``GoLean.GoCore.BooleanRuntime.setup_boolean,
     ``GoLean.GoCore.BooleanRuntime.bindParams_bool,
     ``GoLean.GoCore.BooleanRuntime.allocDecls_bool,

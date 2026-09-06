@@ -260,3 +260,51 @@ the separately reviewed observer repairs with their exact measurement scope.
 Complete whole-corpus observation/choice capture still has the explicit
 BUG-090 gap; no byte-identity claim is available for that case. O1–O5 remain
 the goal, with no main merge or push authority.
+
+## Current checkpoint: recovery static integration validated (2026-09-06)
+
+O1 public promotion and its independent review are committed at `26f0dc09`
+and `8b5ce690`. Root subsequently integrated the independent observer
+transport/classifier findings and I1 census/design through `c2057e78`.
+The pending merge of static recovery `e8a665e9` into that parent is clean and
+fully gated for this proof/API increment. Sessions `36327` (ordinary CI) and
+`84146` (full recovery typing, A1, Iris customer) are terminal with exit 0;
+do not restart them. Exact evidence is in
+[recovery integration](evidence/2026-09-06_recovery-integration/README.md).
+The original recovery diagnostic finding RS-1 is independently closed by
+`c2057e78`; the independent promotion review is `f569eb7f`. Static admission
+does not discharge the recovery runtime/customer obligations.
+
+Current responsibilities and remaining work:
+
+- `typed-recovery-runtime`, committed base `212842a9`: the author is proving
+  mixed storage, expression and structural control/call/unwind contracts.
+  Its focused helper gate passed; helpers are still drafts pending their
+  own ordinary CI and independent review. Root takes actual generic entry
+  setup in a separate worktree using frozen store/environment/allocation
+  helpers. No setup-success or future-safety premise may replace the proof.
+- `typed-context-store`: actual Ops, Machine/Step and StateWf compile with
+  explicit ProgramCtx and a heap-only Store. StepFn, pools, coherence,
+  customers and complete old/new correspondence remain unfinished. The
+  whole worktree is not green, and no B7 runtime commit is accepted yet.
+- `typed-observer-classification`: independent review `80bf1251` found a
+  printed-prefix forgery even with system tracebacks. Its unsound full run
+  was stopped at exit 143 with 256 partial rows retained. A bounded
+  same-execution crash-channel prototype is under independent review; no
+  production hook is accepted. Of 40 relevant current oracle rows, exactly
+  `sync/mutex-unlock-fatal/during-panic-unwind` would expose an apparatus
+  refusal because fatal messages precede crash-channel duplication. That
+  stage change requires an explicit independently reviewed BUG-106
+  disposition. Do not narrow the required recovery profile to fix this.
+- `typed-i1-declarations`, root-owned, `8ea5a74b`: a bounded prototype proves
+  actual method-signature and satisfaction queries factor through exact
+  declaration metadata independently of bodies. Build and fresh dependency
+  audit passed; independent review and actual I1 implementation remain.
+  It neither removes the four IR markers nor solves checked code closure.
+
+Next seal/commit the static integration and its promotion review, continue
+generic recovery setup and control in parallel with B7, then integrate only
+separately reviewed fidelity repairs. The required equal-string repanic and
+invalid-UTF8 observations, BUG-090 full capture gap, I1 declaration/closure
+work, shared Iris rules and final O1–O5 completion packet remain open. Main
+remains clean at `47195683`; no main merge or push is authorized.
