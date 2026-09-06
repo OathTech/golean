@@ -1,0 +1,14 @@
+{
+  "GoLean/GoCore/Declaration.lean": "c66e53248a3786c244049ebed2266f323b88f2deb8af628188b79c252c0fe5dd",
+  "GoLean/NativeDeclaration.lean": "c6dffb3e884ec9034635952ce4082aad61857b852f9cabbbc11fd485da5ab662",
+  "Tests/DeclarationAudit.lean": "45d8983c9d20d425aba28aec8fa41a75511f809b8135ebdcefe2771794c27d41",
+  "Tests/DeclarationWire.lean": "3c29908fb4b672a3952a0b76f9a5118b9592bee1872bf10a532c56efbc90bc09",
+  "docs/2026-09-06_i1-positive-declarations.md": "28da83f70b66ee27efea061006821c969e2817c038c23fab80c56a977fa29c13",
+  "lakefile.toml": "1f3d09165629e45f49a63e31235d485e7521946c7da4322e3656586abf262e6e",
+  "scripts/check-declarations": "83eceddc0d92d4270c18c515154b2ee9fa7d1e7549a80a43796a50fbdded9eae",
+  "scripts/ci": "8e62258feebd23c95c9bf986a904e89b30d6fe97895081f05ca287b16ae84d07",
+  "tools/check-declaration-wire.lean": "22baa3f394437b3270ae3263a013d4e09e1fb4b7647d19de34df6fdfe41633ac",
+  "tools/declaration-audit.py": "668556d31ab9ab6ad40c744e117019e3c033072e785b8b32c44786c7e09c6a54",
+  "tools/nativefrontend/declaration.go": "b76d99d364f490dd987296eddbb93161b9cfafd7569630f1cacd026f85710bf4",
+  "tools/nativefrontend/declaration_fixture_test.go": "379e2c361673093a9cdee1fc28ae13b25a3fced9df6ac2d52ae337bbb9a532e0"
+}
