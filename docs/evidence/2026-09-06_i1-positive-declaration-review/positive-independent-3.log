@@ -1,0 +1,2 @@
+'GoLean.GoCore.Declaration.equality_exact' depends on axioms: [propext, Classical.choice, Quot.sound]
+Independent I1 decoder: 15 nested/order/alias/schema challenges PASS

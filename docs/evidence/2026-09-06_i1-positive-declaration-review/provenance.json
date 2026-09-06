@@ -1,0 +1,11 @@
+{
+  "source_rechecked": true,
+  "fresh_compilation": [
+    "GoLean.GoCore.Declaration",
+    "GoLean.NativeDeclaration"
+  ],
+  "probe_command": "GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 scripts/capped lake env bash -c 'export LEAN_PATH=\"$PWD/.tmp/i1-positive-review.qecdml22:$LEAN_PATH\"; lean --run .tmp/i1-positive-review.qecdml22/Probe.lean'",
+  "probe_exit": 0,
+  "initial_failures": "Reviewer probe syntax only: reserved structure identifier, then an extra parenthesis. Both preserved. Frozen source compilation succeeded before either probe error.",
+  "scope": "Unwired positive declaration identity and decoder only; no CI completion or I1 production acceptance claim."
+}

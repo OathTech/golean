@@ -1,0 +1,9 @@
+.tmp/i1-positive-review.qecdml22/Probe.lean:39:2: error: Type mismatch
+  ensure
+    (rejects [] (Json.mkObj [("kind", Json.str "basic"), ("basic", Json.str "bool"), ("supported", Json.bool true)]))
+has type
+  String → IO Unit
+but is expected to have type
+  IO Unit
+.tmp/i1-positive-review.qecdml22/Probe.lean:39:105: error: unexpected token ')'; expected command
+'GoLean.GoCore.Declaration.equality_exact' depends on axioms: [propext, Classical.choice, Quot.sound]
