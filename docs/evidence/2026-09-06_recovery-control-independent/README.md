@@ -40,8 +40,20 @@ order. Its older dependencies are copied from the reviewer's own
 `typed-recovery-setup` build at `63769964`; no compiled control module is
 borrowed from the author. `source-2.log` completed with exit 0.
 `sources.tar.gz` preserves every frozen input. `base-sources.sha256`
-records the reviewer's semantic source and pins. The reviewer also ran the
+records the reviewer's semantic/test source and pins. The reviewer also ran the
 default capped `lake build` (`build.log`).
+
+To reproduce, use a separate checkout of `63769964` and this evidence
+directory. Verify `base-sources.sha256` against that checkout. Build its
+`RecoverySetupTests` target with the stated cap, then copy its compiled
+`GoLean` and `Tests` package directories into a unique scratch directory.
+Extract `sources.tar.gz` there and copy `compile.py` and `modules.json`
+beside the extracted source. From the base checkout, run
+`GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 scripts/capped lake env python3
+<scratch>/compile.py`. Finally run capped `lake env env
+LEAN_PATH=<scratch> lean <evidence>/Probes.lean`. The scratch contains all
+package imports, and its new control objects were compiled from the frozen
+source. No author build directory is required.
 
 Fourteen additional kernel probes in `Probes.lean` completed with exit 0:
 
