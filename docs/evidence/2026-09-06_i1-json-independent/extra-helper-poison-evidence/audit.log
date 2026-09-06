@@ -1,0 +1,1 @@
+/home/dev/projects/golean/.claude/worktrees/typed-i1-json-review-string/docs/evidence/2026-09-06_i1-json-independent/extra-helper-poison/AuditAll.lean:2:0: error: Declaration audit: _private.GoLean.StrictJson.0.independentStrictJsonHelperHole depends on forbidden axiom _private.GoLean.StrictJson.0.independentStrictJsonHelperHole

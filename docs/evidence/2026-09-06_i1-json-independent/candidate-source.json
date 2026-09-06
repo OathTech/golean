@@ -1,0 +1,16 @@
+{
+  "GoLean/StrictJson.lean": "6b6531a7a92762066b37c717e7aadd75db55dfe36e7605430cfa7eea0902511f",
+  "GoLean/StrictJsonParse.lean": "625da21980d13c56c555b6bd4e7564593f9b35517f2e6f6e8b8b89c500ca088e",
+  "GoLean/NativeDeclaration.lean": "c904b03e5321303a337409faf38cdc69e0efaeb4a799b4e906d922088fa33a9f",
+  "Tests/StrictJsonParse.lean": "475dd67e039b2505ecfc838b180745057888843a32efedae828c79e2df6823b1",
+  "Tests/DeclarationWire.lean": "1895d4778b9b3437d02b1e1f479dd0ac8c1fdf43cbe0a28c9fe458b4df85aad5",
+  "Tests/DeclarationAudit.lean": "c875c424c789d82d73fea10cee59510868180ed6e4dec645c0f815ca48f333ec",
+  "scripts/check-declarations": "3b00ceb88cd33500de4cf43049413dd54de3b464668831c3810750a1efcb9e72",
+  "tools/declaration-audit.py": "0da04933454f326e9cdb77acdadc05f1240d90e63ca555057b84421423fb79a1",
+  "tools/check-declaration-wire.lean": "22baa3f394437b3270ae3263a013d4e09e1fb4b7647d19de34df6fdfe41633ac",
+  "tools/nativefrontend/declaration.go": "b76d99d364f490dd987296eddbb93161b9cfafd7569630f1cacd026f85710bf4",
+  "tools/nativefrontend/declaration_fixture_test.go": "379e2c361673093a9cdee1fc28ae13b25a3fced9df6ac2d52ae337bbb9a532e0",
+  "lakefile.toml": "a5ee315ea9abb43d5ee86e42ac0a9b18245ce0b94a3207c7ca599649cdb95c7e",
+  "lean-toolchain": "2bdc48adfa58d0017e538a0ad117c5d73d35deec879978f909406a80c8037273",
+  "docs/2026-09-06_i1-json-boundary.md": "6b1a30e8eaff9c3406b3579a1dfe50ccf9985fcb6a5ac85ba6f010ecf942ab24"
+}

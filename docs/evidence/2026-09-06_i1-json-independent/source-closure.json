@@ -1,0 +1,35 @@
+{
+  "candidate14_unchanged_in_writer_and_reviewer": true,
+  "local_imports": {
+    "Tests.DeclarationAudit": "c875c424c789d82d73fea10cee59510868180ed6e4dec645c0f815ca48f333ec",
+    "Tests.StrictJsonParse": "475dd67e039b2505ecfc838b180745057888843a32efedae828c79e2df6823b1",
+    "GoLean.NativeDeclaration": "c904b03e5321303a337409faf38cdc69e0efaeb4a799b4e906d922088fa33a9f",
+    "GoLean.GoCore.Declaration": "c66e53248a3786c244049ebed2266f323b88f2deb8af628188b79c252c0fe5dd",
+    "GoLean.GoCore.Value": "aeded44416b5f286fc12033922cfab35d43d46c7d45fb7c6e8ea106e9eab6f8e",
+    "GoLean.GoCore.Platform": "0f8a09c2b88ba54fcdcd0d5aee3cf718b3a7ad17fc28aa3dbe9469cf0d85d944",
+    "GoLean.StrictJsonParse": "625da21980d13c56c555b6bd4e7564593f9b35517f2e6f6e8b8b89c500ca088e",
+    "GoLean.StrictJson": "6b6531a7a92762066b37c717e7aadd75db55dfe36e7605430cfa7eea0902511f",
+    "Tests.DeclarationWire": "1895d4778b9b3437d02b1e1f479dd0ac8c1fdf43cbe0a28c9fe458b4df85aad5"
+  },
+  "gate_driver_and_scope_inputs": {
+    "scripts/check-declarations": "3b00ceb88cd33500de4cf43049413dd54de3b464668831c3810750a1efcb9e72",
+    "tools/declaration-audit.py": "0da04933454f326e9cdb77acdadc05f1240d90e63ca555057b84421423fb79a1",
+    "tools/check-declaration-wire.lean": "22baa3f394437b3270ae3263a013d4e09e1fb4b7647d19de34df6fdfe41633ac",
+    "tools/nativefrontend/declaration.go": "b76d99d364f490dd987296eddbb93161b9cfafd7569630f1cacd026f85710bf4",
+    "tools/nativefrontend/declaration_fixture_test.go": "379e2c361673093a9cdee1fc28ae13b25a3fced9df6ac2d52ae337bbb9a532e0",
+    "GoLean/CLI.lean": "5df0ac7c6b6902d23b997c3292d1d656e97fa9c12c424951d947dd1d4101825a",
+    "GoLean/NativeToIR.lean": "4c285581caf0cf0d0b7b7044f7e9b478adc4c8ed2859ca717b35a2cbc55e0a7d",
+    "GoLean.lean": "ac3abf7741a51eae51d71a68574547fd3b8236b9734b19fce2fccf0df56b4118",
+    "scripts/ci": "ce0dafa97e19590ec6e12a4b7ac7182940eedb782bf8cf909be2ad50b8a4fe9f",
+    "lakefile.toml": "a5ee315ea9abb43d5ee86e42ac0a9b18245ce0b94a3207c7ca599649cdb95c7e",
+    "lake-manifest.json": "0a9a22ded8ef8946c7123f865d00781c87a2bed6a754dc65b5d612a61b226987",
+    "lean-toolchain": "2bdc48adfa58d0017e538a0ad117c5d73d35deec879978f909406a80c8037273"
+  },
+  "pinned_Lean_primitive_sources": {
+    "Lean/Data/Json/Parser.lean": "545c261e44696dacf0d07b78805a2ec22a913bd262f0133109382b291c1945e3",
+    "Std/Internal/Parsec/String.lean": "e04894bf2e55d93785c2294a9447910c436c205b4ecefe889fc67bc5d202e24e",
+    "Init/Data/String/Basic.lean": "e506c9300ac508cc1391b9de50c7eaf2dc32cda3fa114ef809d4c9bcc870379e"
+  },
+  "production_scope": "CLI/NativeToIR/GoCore executable source unchanged by candidate; NativeDeclaration decodeBytes and whole fixture reader only. Parsed decode cannot restore duplicate or Unicode provenance already lost upstream.",
+  "resource_scope": "Recursive adapter and pinned number parser; finite tested inputs, no unbounded size/time/depth guarantee."
+}
