@@ -1,0 +1,31 @@
+59b87eddf0b8314fb97668446901b1c8a79e4fc4dcc89a77319a2779e0699d08  GoLean/GoCore/AbortObservation.lean
+25153a32b0184e6ed09f56f13540ba5ca909763c8ebe87fdc3313ab32eecc670  GoLean/GoCore/RecoveryObservation.lean
+3f521443b0a7366618f4dcad477ec9eb37304109889e96323b39ebecfea83922  GoLean/GoCore/RecoveryPoolObservation.lean
+cb1cc4c842f00547a36fcd871b20f9239b341350b472ab5813aa378ed8023b62  GoLean/GoCore/RecoveryProgramObservation.lean
+251c1e2286f0fed345c90d286bcbb1e29c753111d1a086d7426bb6279fd87108  Tests/AbortObservation.lean
+2f4486eb7c82573fcbbbc612aa3bd041ff809b49796fa508debea276fb263d9c  Tests/AbortObservationAudit.lean
+✔ [70/72] Built Tests.AbortObservation (6.7s)
+✔ [71/72] Built Tests.AbortObservationAudit (740ms)
+Build completed successfully (72 jobs).
+Abort observation fresh elaboration: GoLean/GoCore/AbortObservation.lean
+Abort observation fresh elaboration: GoLean/GoCore/RecoveryObservation.lean
+Abort observation fresh elaboration: GoLean/GoCore/RecoveryPoolObservation.lean
+Abort observation fresh elaboration: GoLean/GoCore/RecoveryProgramObservation.lean
+Abort observation fresh elaboration: Tests/AbortObservation.lean
+Abort observation fresh elaboration: Tests/AbortObservationAudit.lean
+Abort observation audit scratch retained: /home/dev/projects/golean/.tmp/abort-observation-audit-ehtj62de
+Abort observation audit: 43 required theorems present; 14529 constants checked across all imported local modules (classical trio only)
+/home/dev/projects/golean/.tmp/abort-observation-audit-ehtj62de/AuditAll.lean:2:0: error: Abort observation audit: _private.GoLean.GoCore.AbortObservation.0.abortObservationHole depends on forbidden axiom _private.GoLean.GoCore.AbortObservation.0.abortObservationHole
+Abort observation negative audit: AbortObservation compiled then rejected (abortObservationHole)
+/home/dev/projects/golean/.tmp/abort-observation-audit-ehtj62de/AuditAll.lean:2:0: error: Abort observation audit: _private.GoLean.GoCore.RecoveryObservation.0.abortObservationHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryObservation.0.abortObservationHole
+Abort observation negative audit: RecoveryObservation compiled then rejected (abortObservationHole)
+/home/dev/projects/golean/.tmp/abort-observation-audit-ehtj62de/AuditAll.lean:2:0: error: Abort observation audit: _private.GoLean.GoCore.RecoveryPoolObservation.0.abortObservationHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryPoolObservation.0.abortObservationHole
+Abort observation negative audit: RecoveryPoolObservation compiled then rejected (abortObservationHole)
+/home/dev/projects/golean/.tmp/abort-observation-audit-ehtj62de/AuditAll.lean:2:0: error: Abort observation audit: _private.GoLean.GoCore.RecoveryProgramObservation.0.abortObservationHole depends on forbidden axiom _private.GoLean.GoCore.RecoveryProgramObservation.0.abortObservationHole
+Abort observation negative audit: RecoveryProgramObservation compiled then rejected (abortObservationHole)
+/home/dev/projects/golean/.tmp/abort-observation-audit-ehtj62de/AuditAll.lean:2:0: error: Abort observation audit: _private.Tests.AbortObservationAudit.0.abortObservationAuditHole depends on forbidden axiom _private.Tests.AbortObservationAudit.0.abortObservationAuditHole
+Abort observation negative audit: audit_private compiled then rejected (abortObservationAuditHole)
+/home/dev/projects/golean/.tmp/abort-observation-audit-ehtj62de/test_trailing/Tests/AbortObservation.lean:122:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.tmp/abort-observation-audit-ehtj62de/AuditAll.lean:2:0: error: Abort observation audit: _private.Tests.AbortObservation.0.abortObservationTrailingHole depends on forbidden axiom sorryAx
+Abort observation negative audit: test_trailing compiled then rejected (sorryAx)
+Actual driver abort observation gate: PASS
