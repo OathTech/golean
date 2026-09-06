@@ -2,6 +2,9 @@ import GoLean.GoCore.Trace
 import GoLean.GoCore.PoolTrace
 import GoLean.GoCore.ProgramTrace
 import GoLean.GoCore.Admission
+import GoLean.GoCore.BooleanTyping
+import GoLean.GoCore.BooleanStore
+import GoLean.GoCore.BooleanSetup
 
 /-!
 # Experimental semantic consumer interface
@@ -21,7 +24,7 @@ It has no dependency on Iris, the frontend, or either customer package.
   normal readout or terminal output. Refusal and exhaustion are not observations.
 
 These are correspondence theorems about the current machine. They do not
-establish Go frontend correctness, typed admission, termination, refusal
+establish Go frontend correctness, termination, refusal
 freedom, scheduler completeness, generic context laws or Iris adequacy.
 
 The separate opt-in `GoCore.Admission.checkBoolean` API checks exactly
@@ -33,6 +36,15 @@ definite return, general name validity, method-set/display metadata, or
 typed runtime states. An admitted unbound-variable program can still refuse;
 the core regression suite proves this boundary. The A2 recovery program is
 outside this first profile. There is no general `Accepted` guarantee here.
+
+`GoCore.BooleanTyping.checkTypedBoolean` is a separate, stronger opt-in
+profile. Its sound/complete checker enforces Boolean lexical typing, scoped
+declarations and the stated structural return policy. It preserves A3a's
+weaker meaning. `GoCore.BooleanRuntime.setup_boolean` derives actual driver
+setup success and typed argument/result storage already from A3a; it preserves
+the choice stream and accounts for allocated cells. `loadMany_bool` proves
+typed readout from valid pinned roots. These storage facts do not yet prove
+typed control, preservation, progress, or refusal freedom during execution.
 
 The underlying `GoCore` and `GoCore.Machine` types remain representation
 dependent. This facade is experimental: B7, C1 and the composition work may

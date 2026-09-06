@@ -1922,6 +1922,19 @@ then B7/I1, with C1 handed off to a subsequent block. **APPROVED [USER],
 branch merges under standing approval. Merges to main always require explicit
 user approval. Other named design-gate rulings remain unchanged.
 
+**Internal sprint checkpoint, 2026-09-06 [AGENT]:** the separately named
+`BooleanTyping.TypedBooleanAdmission` judgment/checker is reviewed and
+integrated on the sprint branch. The
+[Boolean storage/setup increment](2026-09-06_boolean-storage-setup.md) derives
+actual driver setup and typed storage, exposes it through the semantic
+facade, and passed the expanded audits and both customer gates. A3a retains
+its accepted-unbound counterexample and weaker meaning. These are bounded
+increments: exact generic initial bindings, integrated runtime preservation/
+progress, recovery reuse, B7/I1 and the final closing review remain owed.
+No Gate A completion or stable-pin claim follows from this checkpoint.
+Current state and evidence are in the
+[sprint handoff](2026-09-05_typed-consumer-sprint-handoff.md).
+
 ### 7.5 The F10 consequence (RULED [USER], Q1) for §3.A and §3.H
 
 - **In scope here, permanently:** the semantic transition relation

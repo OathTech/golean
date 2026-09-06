@@ -33,11 +33,7 @@ def GoLeanIrisAudit.run : CoreM Unit := do
     let some (.thmInfo _) := env.find? n
       | throwError "Iris customer: missing theorem {n}"
   let ours := env.header.moduleNames.map
-    (fun n => n.getRoot == `GoLeanIris || n.getRoot == `GateA1 ||
-      [`GoLean.GoCore.Trace, `GoLean.GoCore.PoolTrace,
-       `GoLean.GoCore.ProgramTrace, `GoLean.Interface, `Tests.InterfaceContract,
-       `GoLean.GoCore.AdmissionIndices, `GoLean.GoCore.AdmissionPolicy,
-       `GoLean.GoCore.Admission].contains n)
+    (fun n => [`GoLeanIris, `GateA1, `GoLean, `Tests].contains n.getRoot)
   let mut checked := 0
   for (n, _) in env.constants.toList do
     let localModule := match env.getModuleIdxFor? n with

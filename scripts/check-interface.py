@@ -11,7 +11,9 @@ MODULES = ["GoLean/GoCore/Trace", "GoLean/GoCore/PoolTrace",
            "GoLean/GoCore/ProgramTrace", "GoLean/Interface",
            "GoLean/GoCore/AdmissionIndices", "GoLean/GoCore/AdmissionPolicy",
            "GoLean/GoCore/Admission",
-           "Tests/InterfaceContract", "Tests/InterfaceAudit"]
+           "GoLean/GoCore/BooleanTyping", "GoLean/GoCore/BooleanStore",
+           "GoLean/GoCore/BooleanSetup",
+           "Tests/InterfaceContract", "Tests/BooleanRuntime", "Tests/InterfaceAudit"]
 HARNESS = "\n".join(f"import {m.replace('/', '.')}" for m in MODULES)
 HARNESS += "\n#eval InterfaceAudit.run\n"
 
@@ -19,6 +21,7 @@ HARNESS += "\n#eval InterfaceAudit.run\n"
 def main():
     paths = sorted([*ROOT.glob("GoLean/**/*.lean"), ROOT / "GoLean.lean",
                     ROOT / "Tests/InterfaceContract.lean", ROOT / "Tests/InterfaceAudit.lean",
+                    ROOT / "Tests/BooleanRuntime.lean", ROOT / "Tests/BooleanTypingFixture.lean",
                     ROOT / "lakefile.toml", ROOT / "lean-toolchain",
                     ROOT / "scripts/ci", ROOT / "scripts/capped",
                     ROOT / "scripts/check-interface", Path(__file__).resolve()])
@@ -51,10 +54,16 @@ def main():
     for label, target, declaration, marker in [
         ("promoted_private", "GoLean/GoCore/Trace.lean",
          "private axiom promotedTraceHole : False", "promotedTraceHole"),
+        ("boolean_store_private", "GoLean/GoCore/BooleanStore.lean",
+         "private axiom booleanStoreHole : False", "booleanStoreHole"),
+        ("boolean_setup_private", "GoLean/GoCore/BooleanSetup.lean",
+         "private axiom booleanSetupHole : False", "booleanSetupHole"),
         ("facade_private", "GoLean/Interface.lean",
          "private axiom facadeHole : False", "facadeHole"),
         ("audit_trailing", "Tests/InterfaceAudit.lean",
          "private theorem auditHole : False := by sorry", "sorryAx"),
+        ("runtime_test_trailing", "Tests/BooleanRuntime.lean",
+         "private theorem booleanRuntimeTestHole : False := by sorry", "sorryAx"),
     ]:
         fixture = scratch / label
         for tree in ["GoLean", "Tests"]:

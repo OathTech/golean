@@ -1,4 +1,5 @@
 import Tests.InterfaceContract
+import Tests.BooleanRuntime
 import Lean
 
 /-! The command runs from a separate harness after complete imports. Origin
@@ -8,7 +9,8 @@ open Lean
 def InterfaceAudit.run : CoreM Unit := do
   let env ← getEnv
   for m in env.header.moduleNames do
-    if [`Iris, `GateA1, `GoLeanIris].contains m.getRoot then
+    if [`Iris, `GateA1, `GoLeanIris].contains m.getRoot ||
+        [`GoLean.NativeToIR, `GoLean.CLI].contains m then
       throwError "Semantic interface: forbidden customer dependency {m}"
   let allowed : List Name := [``propext, ``Classical.choice, ``Quot.sound]
   let modules : List Name := [
@@ -16,7 +18,9 @@ def InterfaceAudit.run : CoreM Unit := do
     `GoLean.GoCore.ProgramTrace, `GoLean.Interface,
     `GoLean.GoCore.AdmissionIndices, `GoLean.GoCore.AdmissionPolicy,
     `GoLean.GoCore.Admission,
-    `Tests.InterfaceContract, `Tests.InterfaceAudit]
+    `GoLean.GoCore.BooleanTyping, `GoLean.GoCore.BooleanStore,
+    `GoLean.GoCore.BooleanSetup,
+    `Tests.InterfaceContract, `Tests.BooleanRuntime, `Tests.InterfaceAudit]
   let exports : List Name := [
     ``GoLean.Semantics.iter_iff_trace, ``GoLean.Semantics.Trace.erase,
     ``GoLean.Semantics.run_ok_iff, ``GoLean.Semantics.exists_run_ok_iff,
@@ -29,6 +33,18 @@ def InterfaceAudit.run : CoreM Unit := do
     ``GoLean.GoCore.Admission.checkBoolean_iff,
     ``GoLean.GoCore.Admission.admitted_index_bound,
     ``GoLean.GoCore.Admission.admitted_all_bodies,
+    ``GoLean.GoCore.BooleanTyping.checkTypedBoolean_iff,
+    ``GoLean.GoCore.BooleanRuntime.setup_boolean,
+    ``GoLean.GoCore.BooleanRuntime.bindParams_bool,
+    ``GoLean.GoCore.BooleanRuntime.allocDecls_bool,
+    ``GoLean.GoCore.BooleanRuntime.store_bool,
+    ``GoLean.GoCore.BooleanRuntime.pinResultLocs_bool,
+    ``GoLean.GoCore.BooleanRuntime.loadMany_bool,
+    ``GoLean.GoCore.BooleanRuntime.EnvRoots.lookup,
+    ``GoLean.GoCore.BooleanRuntime.Tests.hidden_outer_binding_rejected,
+    ``GoLean.GoCore.BooleanRuntime.Tests.hidden_same_scope_binding_rejected,
+    ``GoLean.GoCore.BooleanRuntime.Tests.address_bounds_do_not_type_storage,
+    ``GoLean.GoCore.BooleanRuntime.Tests.native_argument_setup,
     ``GoLean.GateA1.recover_step_does_not_transport,
     ``GoLean.GateA1.fixed_stream_not_existential_path,
     ``GoLean.GateA1.address_bound_admits_ill_typed,
@@ -42,7 +58,7 @@ def InterfaceAudit.run : CoreM Unit := do
   let mut checked := 0
   for (n, _) in env.constants.toList do
     let selected := match env.getModuleIdxFor? n with
-      | some i => modules.contains env.header.moduleNames[i.toNat]!
+      | some i => [`GoLean, `Tests].contains env.header.moduleNames[i.toNat]!.getRoot
       | none => true
     unless selected do continue
     for ax in (← collectAxioms n) do

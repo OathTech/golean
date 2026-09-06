@@ -28,17 +28,20 @@ No identifier spelling has special runtime typing meaning.
 `BooleanRuntime.BoolRoot s l` means there exist `a : Nat` and `b : Bool`
 such that `l = Loc.base ⟨a⟩` and the actual heap at `a` is
 `HeapCell.value Ty.bool (GoValue.bool b)`. `BoolHeap s` says this of every
-allocated cell. `EnvRoots s env` says every successful actual lookup yields
-such a root. `NamesPresent ids env` states the existence of lookup locations
-for those names. These inspect storage, not evaluator success.
+allocated cell. `EnvRoots s env` says every stored binding occurrence,
+including shadowed entries, contains such a root; `EnvRoots.lookup` derives
+the corresponding fact for successful lookup. `NamesPresent ids env` states
+the existence of lookup locations for those names. These inspect storage,
+not evaluator success.
 
 The static/runtime link `EnvCovers Γ env s` must combine actual bindings for
 every statically bound name with typed roots. The source typing context and
 runtime environment need not list bindings in the same order: `declare`
 prepends names, whereas source parameter lists retain declaration order.
-Bounds for all saved scopes, including hidden bindings, must additionally
-be sufficient to derive `ConfigWf`; lookup coverage alone does not imply
-that hidden locations are in range.
+Bounds derived from the structural `EnvRoots` must cover all saved scopes,
+including hidden bindings, when establishing `ConfigWf`. This strengthened
+predicate incorporates the independent review's dangling-hidden-binding
+counterexample; lookup coverage alone would not suffice.
 
 Allocation lemmas must establish fresh initialized roots, preserved old
 roots, heap typing, bound names, exact allocation count, and unchanged
@@ -144,8 +147,12 @@ The independent reviewer has produced kernel and Go probes exposing Unicode,
 newline and invalid-UTF8 payload refusals and equal-payload recovered/repanic
 boxing ambiguity. These are **not discharged** by the new type checker.
 UTF8/newline rendering repairs should be evaluated under the existing
-first-panic-line policy, preserving suffix placement. Raw invalid bytes and
-boxing identity may need critical representation/policy decisions. Do not
+first-panic-line policy, preserving suffix placement. **Authority correction,
+2026-09-06:** [R-1](2026-08-20_w32-re-envelope-charter.md) already permits a
+quotient over rendered panic text with the forced panic/kind/control half
+preserved. Equal-payload rendering therefore does not automatically require
+a new identity decision. Raw invalid bytes remain an investigation against
+that existing policy and the String terminal representation. Do not
 add an ASCII-only or no-repanic restriction to the approved minimum profile
 to conceal them. Record the precise scope and alternatives in the sprint
 decision ledger, freeze only work depending on an unresolved decision, and

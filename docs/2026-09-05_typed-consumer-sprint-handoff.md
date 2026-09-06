@@ -8,18 +8,19 @@ standing user approval. The [charter](2026-09-05_typed-consumer-sprint-charter.m
 records the exact ruling. This sprint has standing internal integration and
 independent-review approval, but no approval to merge to main or push.
 
-[AGENT] Status: **IN PROGRESS — PREFLIGHT**. No new semantic/proof outcome
-is complete. Source baseline is main `47195683`; drafting commit `5a4aca9e`
-changes documentation only. Main is parked clean. The coordinator will use
-a dedicated sprint integration worktree and separate one-writer lanes.
+[AGENT] Status: **IN PROGRESS — BOOLEAN FOUNDATION**, updated 2026-09-06.
+No full numbered outcome is complete. Main remains clean at `47195683`.
+The sprint integration branch is `typed-consumer-sprint`, currently based on
+`a392fab0` (reviewed static admission integrated); the current helper work is
+described below and will be bound by its own evidence record.
 
 ## Required outcomes
 
 | Outcome | Status | Next evidence |
 |---|---|---|
-| O1 typed Boolean contract | Pending | Constructor/profile matrix, candidate theorem statements and adversarial statement review |
+| O1 typed Boolean contract | Static judgment/checker reviewed and integrated; storage/setup increment under validation | Structural control invariant, all-successor preservation, progress; exact generic initial bindings/values and driver readout |
 | O2 typed recovery customer | Pending | O1 foundations, shared recovery/call contracts and second fixture |
-| O3 evidence/reviews | Preflight | Fresh baseline and existing admission/interface/A1/A2 gates |
+| O3 evidence/reviews | Fresh preflight gates passed; static admission and candidate runtime statement reviews complete | Seal supplementary whole-corpus observations/choices; review helper implementation and final integrated contracts |
 | O4 B7/I1 | Pending | Reviewed O1 contract; pure representation correspondence kept separate from I1 |
 | O5 closing branch/packet | Pending | All mandatory outcomes, final gates, final independent review |
 
@@ -39,36 +40,68 @@ in drafting. Runtime results in the prior A3 handoff are historical and must
 not be reported as fresh sprint preflight. Record commands, exact tested
 sources, toolchain pins, logs, failures and evidence hashes here as they run.
 
-## Live lane state (2026-09-05)
+## Live lane state (2026-09-06)
 
 - Integration: `.claude/worktrees/typed-consumer-sprint`, branch
-  `typed-consumer-sprint`, base `10fefeb3`; coordinator owns BooleanStore,
-  generic setup and integration documents. New BooleanStore helper proofs
-  compile under the cap; this is not yet a complete O1 runtime invariant.
+  `typed-consumer-sprint`, tip `a392fab0`; coordinator owns BooleanStore,
+  generic setup and integration documents. The helper increment passed the
+  expanded interface audit, ordinary CI, A1 and A2 (fresh artifact, 3/3
+  differentials), and independent implementation review. This is not yet a
+  complete O1 runtime invariant. See the
+  [helper claim ledger](2026-09-06_boolean-storage-setup.md).
 - Static typing: `.claude/worktrees/typed-boolean`, branch `typed-boolean`;
-  independent judgments/checkers compile; tests and ordinary CI pending.
-- Preflight: `.claude/worktrees/typed-preflight`; full CI differential is
-  running. A1/A2 gates passed fresh, including A2 native artifact and 3/3
-  differentials. Full admission gate and corpus baseline remain pending.
-- Statement review: `.claude/worktrees/typed-contract-review`; kernel/Go
-  counterexamples and candidate-contract review, no implementation signoff.
+  reviewed static increment `c7a439f7` is integrated, with 38 kernel tests,
+  whole native artifact equality and 3/3 differentials. The agent now owns
+  structural control typing, preservation and progress in that worktree.
+  Its runtime modules now elaborate, including all-successor preservation and
+  bounded run safety/readout with choices unchanged; source integration,
+  final dependency audit and independent implementation review remain owed.
+- Preflight: `.claude/worktrees/typed-preflight`; fresh full CI differential
+  passed at `10fefeb3`: 3598 executable cases (3353 PASS, 245 known FAIL),
+  394 negative Go-oracle checks, 202 eval checks. Existing admission,
+  interface, A1 and A2 gates passed. One slow certificate is explicitly
+  cached. Supplementary complete observation/choice capture is being sealed.
+- Statement review: `.claude/worktrees/typed-contract-review`, `71183a62`,
+  integrated. Kernel/Go counterexamples and candidate-contract review;
+  this is not final implementation signoff. That reviewer now owns a separate
+  narrow Unicode/newline panic repair in `typed-panic-rendering`, to receive
+  independent implementation review before integration.
 
 The [runtime design](2026-09-05_boolean-runtime-contract-design.md) records
 candidate statements, constructor obligations and actual-vs-static context
 issues. `seqCont` declaration splicing was found during review and corrected
 in the static design before its checker proof was finalized.
 
-## New decision candidates (not yet ruled)
+## Investigations and existing authority
 
 - O2 abort rendering: valid Unicode/newline/invalid-UTF8 string payloads can
   reach abort but be refused by the current renderer. The reviewer preserved
-  kernel and Go witnesses. Determine repairs justified by the current
-  first-line observation policy; invalid bytes exceed the current String
-  terminal representation and may require a critical decision.
+  kernel and Go witnesses. A separate K3 repair preserves the existing
+  first-line observation policy for valid UTF-8/newlines. Invalid bytes remain
+  under investigation against existing R-1 authority and the current String
+  terminal representation; no new policy has been selected.
 - O2 equal recovered/repanicked string payloads: rendering refuses the
-  unresolved boxing-identity case (existing BUG-004). Preserve the witness;
-  no equality-implies-same-box assumption and no silent profile narrowing.
+  boxing-identity case (existing BUG-004). **Dated correction, 2026-09-06:**
+  [R-1](2026-08-20_w32-re-envelope-charter.md) already authorizes a quotient
+  over the rendered panic text while preserving the forced panic/kind/control
+  half. Completing that existing rendering contract need not choose a new
+  identity policy. Preserve the witness; do not assume equal strings imply
+  identical boxes or narrow O2. The sealed earlier review is historical;
+  this correction records authority found after that review.
 
 These are open investigations, not permission to weaken O2 or stop independent
-O1 work. Next: finish generic Boolean setup helpers, review the concrete
-runtime statement matrix, complete static tests and preflight evidence.
+O1 work. Next: commit the reviewed helper increment, connect actual setup to
+structural control typing, and seal preflight observation/choice capture.
+The preflight recorded all 3598 cases; existing BUG-090's model timeout is an
+explicit incomplete observation/trace capture, with no prefix substituted as
+a complete observation. The B7 sufficiency of this bounded capture remains
+an evidence-review obligation. B7 is still pending the
+first generic setup/invariant contract; its before/after baseline must be
+rebased after any separately justified semantic repair.
+
+Coordinator follow-on: `.tmp/boolean-exact.6TBh5u/Exact.lean` contains compiled
+generic exact binder/allocator equations, distinct-name lookup, parameter
+value/result-zero loads, result-pin distinctness, and `setup_typed_exact`
+with canonical actual setup, all typed storage/context premises and derived
+`MachineWf`. Promote to an audited public module after this helper commit;
+scratch elaboration alone is not an accepted public contract.
