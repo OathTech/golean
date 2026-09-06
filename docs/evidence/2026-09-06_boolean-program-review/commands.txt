@@ -1,0 +1,12 @@
+Working directory: /home/dev/projects/golean/.claude/worktrees/typed-recovery
+Committed import/source base: 8717b9748d6732d7aa5f27a4efc0dfb6e4896c06
+
+GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 scripts/capped lake env lean /home/dev/projects/golean/.tmp/o1-bridge-review.y2kfmuq1/Review.lean > /home/dev/projects/golean/.tmp/o1-bridge-review.y2kfmuq1/compile.log 2>&1
+Observed tool process exit: 0. Before adding the independent probes.
+
+GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 scripts/capped lake env lean /home/dev/projects/golean/.tmp/o1-bridge-review.y2kfmuq1/Review.lean > /home/dev/projects/golean/.tmp/o1-bridge-review.y2kfmuq1/probes-final.log 2>&1
+Observed tool process exit: 0. Includes all six independent theorem probes.
+
+Review.lean is the final complete source snapshot. Its imported modules came
+from this worktree's independent cache copied at committed 8717b974, with no
+temporary parent helper olean used for this independent compilation.
