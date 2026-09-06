@@ -7,7 +7,7 @@ cd "$ROOT"
 for module in GoLean/GoCore/Trace GoLean/GoCore/PoolTrace GoLean/GoCore/ProgramTrace \
     GoLean/GoCore/BooleanTyping GoLean/GoCore/BooleanStore GoLean/GoCore/BooleanSetup \
     GoLean/GoCore/BooleanInitialization \
-    GoLean/Interface Tests/InterfaceContract Tests/BooleanRuntime Tests/InterfaceAudit; do
+    GoLean/Interface Tests/PanicRendering Tests/InterfaceContract Tests/BooleanRuntime Tests/InterfaceAudit; do
   "$ROOT/scripts/capped" lake env lean "$module.lean"
 done
 "$ROOT/scripts/capped" lake env python3 scripts/check-interface.py

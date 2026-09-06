@@ -7,20 +7,22 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
-MODULES = ["GoLean/GoCore/Trace", "GoLean/GoCore/PoolTrace",
+MODULES = ["GoLean/GoCore/Machine", "GoLean/GoCore/Trace", "GoLean/GoCore/PoolTrace",
            "GoLean/GoCore/ProgramTrace", "GoLean/Interface",
            "GoLean/GoCore/AdmissionIndices", "GoLean/GoCore/AdmissionPolicy",
            "GoLean/GoCore/Admission",
            "GoLean/GoCore/BooleanTyping", "GoLean/GoCore/BooleanStore",
            "GoLean/GoCore/BooleanSetup",
            "GoLean/GoCore/BooleanInitialization",
-           "Tests/InterfaceContract", "Tests/BooleanRuntime", "Tests/InterfaceAudit"]
+           "Tests/PanicRendering", "Tests/InterfaceContract", "Tests/BooleanRuntime",
+           "Tests/InterfaceAudit"]
 HARNESS = "\n".join(f"import {m.replace('/', '.')}" for m in MODULES)
 HARNESS += "\n#eval InterfaceAudit.run\n"
 
 
 def main():
     paths = sorted([*ROOT.glob("GoLean/**/*.lean"), ROOT / "GoLean.lean",
+                    ROOT / "Tests/PanicRendering.lean",
                     ROOT / "Tests/InterfaceContract.lean", ROOT / "Tests/InterfaceAudit.lean",
                     ROOT / "Tests/BooleanRuntime.lean", ROOT / "Tests/BooleanTypingFixture.lean",
                     ROOT / "lakefile.toml", ROOT / "lean-toolchain",
@@ -53,6 +55,10 @@ def main():
     if result.returncode:
         raise SystemExit(result.returncode)
     for label, target, declaration, marker in [
+        ("machine_private", "GoLean/GoCore/Machine.lean",
+         "private axiom machineRendererHole : False", "machineRendererHole"),
+        ("rendering_trailing", "Tests/PanicRendering.lean",
+         "private theorem rendererHole : False := by sorry", "sorryAx"),
         ("promoted_private", "GoLean/GoCore/Trace.lean",
          "private axiom promotedTraceHole : False", "promotedTraceHole"),
         ("boolean_store_private", "GoLean/GoCore/BooleanStore.lean",

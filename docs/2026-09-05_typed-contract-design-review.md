@@ -1,5 +1,12 @@
 # Typed-consumer sprint: independent contract design review
 
+**2026-09-06 corrigendum:** the existing R-1 user ruling already supplies
+authority for a conforming rendering member; the boxing discussion below
+overstates the need for a new policy decision. See the
+[dated correction and separate renderer repair](2026-09-06_panic-rendering-repair.md)
+for that disposition and the additional control-byte observer evidence.
+The original kernel/Go probes below remain historical evidence unchanged.
+
 [AGENT] independent reviewer `typed_contract_review`, 2026-09-05.
 Baseline: `10fefeb3e6fbb3f7cb6630b8b559a9a7e7915e97`, whose runtime is
 unchanged from main `471956831251e428df3a64c5b8fc7fb79cbebbfc`.

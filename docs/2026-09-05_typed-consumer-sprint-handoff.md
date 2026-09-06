@@ -131,3 +131,75 @@ final ordinary CI; its bounded independent review precedes integration.
 B7 design is available at `45f7955e`, with representation edits still pending
 the generic setup/invariant checkpoint. All O1–O5 outcomes remain in scope.
 Main remains clean at `47195683`; no main merge or push is authorized.
+
+## Current continuation checkpoint (2026-09-06, 01:45 UTC)
+
+- Exact initialization is committed at `354ef7f2`; runtime `8717b974` has
+  been merged. The independently accepted renderer review is `c7eeaf57`.
+  The renderer merge itself is staged with all four test/audit conflicts
+  resolved by retaining both lanes. Do not restart or abort that merge:
+  its fresh full CI is running before the merge commit is finalized.
+- Parent process: unified exec session `67619`, command
+  `GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 GOLEAN_COVERAGE_JOBS=2 scripts/capped scripts/ci --diff`,
+  log `artifacts/boolean-runtime/renderer-integration-ci.log`. It passed
+  the default warning-free build, 44-export/all-nine-poison interface gate,
+  admission and Boolean gates, frontend checks and 202 eval tests; the
+  full corpus is still running. Poll this existing handle. The full runner
+  publishes `latest.tsv` only on completion; an absent published table is
+  not evidence that the live run died. The separately run combined interface
+  gate also passed (`renderer-integration-interface.log`).
+- The complete next O1 increment is compiled in
+  `.tmp/boolean-program.RmDTYt/Program.lean`: generic setup-to-`Inv`, exact
+  canonical setup-to-`Inv`, sequential typed readout, same-fuel singleton
+  output-driver correspondence, exact private events with no output/picks,
+  shipped `runProgramPoolOutM` typed readout or explicit fuel exhaustion,
+  and a successful-run contract retaining the original choices in both
+  `Trace` and `Pool.Run`. `Tests.body` supplies seven concrete kernel
+  consumers; `CombinedTests.lean` compiled warning-free. `Ledger.md` is the
+  accompanying draft claim ledger. These draft files remain frozen for
+  review while the preceding runtime gate runs. They are not yet public.
+- Independent O1 bridge review by `typed_boolean` returned bounded PASS,
+  independently elaborating the exact-initialization and full new draft
+  against its own committed imports, all seven supplied tests and six
+  additional fuel/output/choice/safety challenges. It is sealing a tracked
+  report; public promotion, expanded audits and A1/A2 integration are still
+  required. The earlier statement-only review is `6489c986` on preflight.
+- Observer core byte transport has source-bound independent review
+  `83c177c2`. Its author is completing a separate full CI in
+  `typed-observer-controls`. Review of three diagnostic copies discovered
+  an inherited false acceptance of fatal-during-unwind as panic, then found
+  the related strict/sampling core path. This is a blocking follow-on
+  classifier repair, with red controls and a new reviewed increment; it is
+  not waived by the earlier bounded byte-transport PASS. Preserve the
+  original frozen CI and add fresh full evidence after the classifier fix.
+- O2's separate static judgment/checker now compiles through whole-program
+  admission and acyclic calls/deferred calls, with no fixture or generic
+  recovery-runtime completion claim yet. Its agent is working on the
+  complete A2 and second native fixture/adversarial checks. B7/I1 remain
+  pending the clean initial contract checkpoint; preserve correspondence
+  separately from R-1/invalidUTF8 and observer repairs. The BUG-090 complete
+  before/after capture gap remains open, unchanged.
+
+Next finish and seal the current renderer integration CI/merge, promote the
+reviewed O1 draft into audited public modules and validate its actual-source
+interface/customer chain, then begin B7 in a separate worktree alongside O2.
+Do not present the current milestones as all O1–O5 complete.
+
+### Renderer integration gate complete
+
+The previously live session `67619` is now terminal, exit 0. Fresh full CI
+passed: 3607 executable cases (3363 PASS / 244 known FAIL), 394 negative
+cases, 202 evals and all standing gates. Every executable result/stage
+matches the reviewed renderer full run. Source-bound logs/tables and hashes
+are sealed in [renderer integration evidence](evidence/2026-09-06_renderer-integration/README.md).
+The resolved merge can now be committed; do not restart that completed run.
+
+The complete O1 draft and seven consumer tests have a sealed independent
+implementation review at `fadcb0c3`, to integrate with public promotion.
+Preflight has additionally verified a declaration-marker census from the
+sealed original corpus: 522 PASS / 174 FAIL rows contain wire quarantine
+markers, all at declaration boundaries. A blanket I1 lowerer rejection
+would therefore break supported cases; 70 PASS rows also have syntactic
+call-closure hits on quarantined guard/dead-path declarations. This is an
+engineering obligation for clean signature/type facts and code availability,
+with no waiver or descriptor-algebra policy inferred from the census.

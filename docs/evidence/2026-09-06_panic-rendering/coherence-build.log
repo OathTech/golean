@@ -1,0 +1,13 @@
+✔ [10/21] Built GoLean.GoCore.Ops (6.7s)
+✔ [11/21] Built GoLean.GoCore.Machine (4.6s)
+✔ [12/21] Built GoLean.GoCore.StateWf (19s)
+✔ [13/21] Built GoLean.GoCore.StepFn (817ms)
+✔ [14/21] Built GoLean.GoCore.Race (835ms)
+✔ [15/21] Built GoLean.GoCore.Multi (2.8s)
+✔ [16/21] Built GoLean.GoCore.MachineSound (70s)
+✔ [17/21] Built GoLean.GoCore.Trace (212ms)
+✔ [18/21] Built GoLean.GoCore.MultiSound (6.8s)
+✔ [19/21] Built GoLean.GoCore.PoolTrace (431ms)
+✔ [20/21] Built GoLean.GoCore.ProgramTrace (273ms)
+✔ [21/21] Built GoLean.Interface (163ms)
+Build completed successfully (21 jobs).

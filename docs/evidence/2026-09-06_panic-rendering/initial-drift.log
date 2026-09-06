@@ -1,0 +1,11 @@
+DRIFT vs baselines/native-full.tsv (3607 case(s) run):
+panic-recover/panic-newline-abort	baseline[FAIL/lean-observation] -> now[PASS/-]
+panic-recover/panic-text/output-prefix	NEW id (not in baseline) -> PASS/-
+panic-recover/panic-text/recovered-newline	NEW id (not in baseline) -> PASS/-
+panic-recover/panic-text/recovered-unicode	NEW id (not in baseline) -> PASS/-
+panic-recover/panic-text/trailing-newline	NEW id (not in baseline) -> PASS/-
+panic-recover/panic-text/unicode-four	NEW id (not in baseline) -> PASS/-
+panic-recover/panic-text/unicode-mixed	NEW id (not in baseline) -> PASS/-
+panic-recover/panic-text/unicode-newline	NEW id (not in baseline) -> PASS/-
+panic-recover/panic-text/unicode-three	NEW id (not in baseline) -> PASS/-
+panic-recover/panic-text/unicode-two	NEW id (not in baseline) -> PASS/-

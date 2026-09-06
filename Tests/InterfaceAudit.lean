@@ -14,6 +14,7 @@ def InterfaceAudit.run : CoreM Unit := do
       throwError "Semantic interface: forbidden customer dependency {m}"
   let allowed : List Name := [``propext, ``Classical.choice, ``Quot.sound]
   let modules : List Name := [
+    `GoLean.GoCore.Machine,
     `GoLean.GoCore.Trace, `GoLean.GoCore.PoolTrace,
     `GoLean.GoCore.ProgramTrace, `GoLean.Interface,
     `GoLean.GoCore.AdmissionIndices, `GoLean.GoCore.AdmissionPolicy,
@@ -21,7 +22,8 @@ def InterfaceAudit.run : CoreM Unit := do
     `GoLean.GoCore.BooleanTyping, `GoLean.GoCore.BooleanStore,
     `GoLean.GoCore.BooleanSetup,
     `GoLean.GoCore.BooleanInitialization,
-    `Tests.InterfaceContract, `Tests.BooleanRuntime, `Tests.InterfaceAudit]
+    `Tests.PanicRendering, `Tests.InterfaceContract, `Tests.BooleanRuntime,
+    `Tests.InterfaceAudit]
   let exports : List Name := [
     ``GoLean.Semantics.iter_iff_trace, ``GoLean.Semantics.Trace.erase,
     ``GoLean.Semantics.run_ok_iff, ``GoLean.Semantics.exists_run_ok_iff,
@@ -59,13 +61,23 @@ def InterfaceAudit.run : CoreM Unit := do
     ``GoLean.GateA1.recover_step_does_not_transport,
     ``GoLean.GateA1.fixed_stream_not_existential_path,
     ``GoLean.GateA1.address_bound_admits_ill_typed,
-    ``GoLean.GateA1.both_pool_traces, ``GoLean.GateA1.print_before_panic]
+    ``GoLean.GateA1.both_pool_traces, ``GoLean.GateA1.print_before_panic,
+    ``GoLean.PanicRenderingTests.unicode_widths,
+    ``GoLean.PanicRenderingTests.recovered_newline_suffix,
+    ``GoLean.PanicRenderingTests.invalid_utf8_remains_refused]
   for m in modules do
     unless env.header.moduleNames.contains m do
       throwError "Semantic interface: missing module {m}"
   for n in exports do
     let some (.thmInfo _) := env.find? n
       | throwError "Semantic interface: missing theorem {n}"
+  -- The new renderer keeps the constructive machine-helper boundary,
+  -- although the public correspondence layer admits the classical trio.
+  for n in [``GoLean.GoCore.Machine.utf8StringAux?,
+      ``GoLean.GoCore.Machine.utf8String?, ``GoLean.GoCore.Machine.firstPanicLine?] do
+    for ax in (← collectAxioms n) do
+      unless [``propext, ``Quot.sound].contains ax do
+        throwError "Semantic interface: constructive renderer {n} depends on forbidden axiom {ax}"
   let mut checked := 0
   for (n, _) in env.constants.toList do
     let selected := match env.getModuleIdxFor? n with

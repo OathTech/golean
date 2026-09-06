@@ -413,10 +413,11 @@ WITHOUT renumbering the rows below (numbers stay stable as ids):
 **Stage 0 (this arc's open obligations, triage table §6):** mini-slices
 A3 (map multi-assign targets), A4 (chan type args), A5
 (shadow-capture tuple), A6 (ordered-event hoist predicate — now owns
-BUG-062, guardrails landed this slice), **A7 (multi-line panic payload
-— 1 red, `panic-recover/panic-newline-abort`; added 2026-08-20 by the
-user's C4 split, triage §7/L12b)**; the (c)-list ratification —
+BUG-062, guardrails landed this slice); the (c)-list ratification —
 **DONE 2026-08-20**, C1–C8 ratified with that split taken.
+**A7 (multi-line panic payload), added by the user's 2026-08-20 C4 split,
+is FIXED 2026-09-06:** `panic-recover/panic-newline-abort` is PASS after
+the separately reviewed UTF-8/first-line renderer repair (§8w).
 
 | # | arc | FR | reds retired | est. |
 | --- | --- | --- | --- | --- |
@@ -563,7 +564,16 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (3598 cases, 3353 PASS /
+All numbers at the current tracked baseline (3607 cases, 3363 PASS /
+244 FAIL — [AGENT], 2026-09-06, `typed-panic-rendering`), measured by the
+full ordinary differential run and derived from the baseline rows.
+Exactly A7's `panic-recover/panic-newline-abort` changes FAIL→PASS, and nine
+`panic-recover/panic-text/*` cases are born PASS. The (a)-queued bucket
+decreases 8→7; all others are unchanged: 137 + 9 + 26 + 7 + 65 = 244.
+Evidence and exact dirty-worktree source scope:
+`docs/2026-09-06_panic-rendering-repair.md`; movement §8w below.
+
+Previous tracked baseline (3598 cases, 3353 PASS /
 245 FAIL — [AGENT], 2026-09-05, `bug103-array-conversion`), measured by the
 full ordinary differential run and derived from the baseline rows.
 BUG-103's original row changes
@@ -1105,9 +1115,9 @@ bucket's BUG-041 red changed ROW, not count):**
 | frontier FR-1…FR-31 (§4) | 137 |
 | design questions Q-* (§6) | 9 |
 | (c) profound-reason pins (triage §4 + §5.1 item 3's 8 address-printing `print` refusals + R7's 7 default-NaN refusals — stdlib slice 3 and its audit fix round A1, movement §8p/§8q; §5.1 item 1's C6 pin is `scoping/local-type-identity/type-instantiation-refused` since 2026-09-05, replacing `generics/local-type-argument`, which flipped green — §8s) + the unsafe marker | 25 + 1 |
-| (a)-queued fixes (triage §3.2: A3 5, A4 1, A5 1, A7 1) | 8 |
+| (a)-queued fixes (triage §3.2: A3 5, A4 1, A5 1; A7 fixed 2026-09-06, §8w) | 7 |
 | post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) + the gotest-fixes BUG-078 budget refusal pin (`arrays/materialization-budget/over-budget`, on BUG-078's Cases line since the audit fix round) + the bug082-maphint audit-round BUG-083 hoist-order pin (`builtins/len-vs-call-order/hint-panicky-between`, 2026-09-02) + the q-u4-gomem BUG-084 designed-divergence pins (`race/gomem-only/*`, 5 rows: go_mem-racy / TSan-green shapes REFUSED by [USER] ruling Q-U4RESIDUAL (A), 2026-09-02) + the noodler lane's 23 born-FAIL probe rows (2026-09-03, `docs/2026-09-03_noodler-report.md`: 3 on BUG-087's Cases line (RETIRED 2026-09-03 by the `bug087-paniktext` fix — all three PASS/membership under the R9a two-member envelope, not counted here), 2 on BUG-086's (RETIRED 2026-09-03 by the `bug086-shim-closure` fix — both PASS, not counted here), 11 FG-1..FG-5 frontier candidates (MOVED OUT 2026-09-03 to their own rows FR-16..FR-20 — counted in the frontier bucket above, §8e), 2 BUG-068 red-by-design re-hits, 1 FR-3 re-hit, 3 triage-F6/A3 re-hits, 1 FR-10 value-copy witness in untriaged-ids — 7 noodler reds remain in this bucket) − the shim-surface refusal pins flipped green by `stdlib-source-1` (7, 2026-09-03; movement below) + BUG-089's designed ParseUint error-path reds (4 pre-existing rows flipped + 5 born; Cases line — ALL NINE GREEN since `stdlib-source-2`, 2026-09-03: the Clone overlay; BUG-089 fixed) − the two W4.3 SortFunc/cmp bound pins `slices/sortfunc-cmp/{named-slice-bound,float-compare-bound}` flipped green by the real `slices`/`cmp` source (`stdlib-source-2`); the BUG-073 pin `strings/trimspace-repeat/repeat-bound-refused` stays (a runner-budget red since `stdlib-source-2`, ; BUG-090's Cases-line budget pin since its audit fix round) − `slices/sortfunc-cmp/sortfunc-local-type` MOVED to FR-19's line (fr24 audit fix round L5, 2026-09-04: the identical C6 naming refusal, now with FR-19's plan) + the stdlib-slice-3 gotest-surfaced fidelity pins (2026-09-04: `generics/type-switch-interface-param{,/bound,/plain}` on BUG-095's Cases line, `ints/shift-count-huge` on BUG-096's — ALL FOUR GREEN since the `bug095-096` fix landed at merge train round 15, 2026-09-05: re-pinned FAIL→PASS at the rebase, the ids moved to the FIXED entries' Cases lines; not counted here) + the bug095-096 audit-round BUG-097 pin (`multipkg/same-name-anon-iface`, 2026-09-05: the anonymous-interface wire name is package-NAME-qualified, two same-named packages fuse two interfaces — a wrong answer on main, refused by name since BUG-095's conflict guard; open, plan on the entry — FIXED 2026-09-05 by `fr19-bug097`, GREEN, not counted here) − BUG-059's W1.1 pin `multipkg/same-name-identity-panic` (red since 2026-08-18 in this bucket; FIXED 2026-09-05 by `fr19-bug097`, GREEN — §8s) + the fr19-bug097 audit-round BUG-099 pins (`panic-recover/recovered-runtime-error-type/{observed,assert-int}`, 2026-09-05: the recovered runtime error's ONE synthetic type vs gc's concrete type per fault — `observed` an open WRONG ANSWER at the differential stage, `assert-int` its fail-closed face; open, plan on the entry) + the c-arc-c2 audit-round BUG-103 pin (`structs/decl-order-reversed/conversion-array-target`, 2026-09-05: a conversion whose target's resolved shape is an ARRAY falls into `convertValueToTy`'s catch-all — the arm BUG-020's fix left out; a fail-closed refusal of legal Go, gc 104; open, plan on the entry; §8u) − the two A6-residual pins `builtins/len-vs-call-order/{panicky-between,hint-panicky-between}` flipped green at lane `e13-b` 2026-09-05 (the refusal retired into latitude E13; panicky-between strict, hint-panicky-between membership; §8t) + the e13-b audit-round BUG-101 pin (`builtins/e13-sibling-panic-order/assert-ok-early-len-hoist`, 2026-09-05: the VALUE axis reached through the len shape — an assertion that succeeds early and fails late across a mutating call; open, E12's obligation; §8t) + the e13-b re-audit-round BUG-101 pin `builtins/e13-sibling-panic-order/slice-value-early-len-hoist` (the value axis, slice kind) + the e13-b re-audit-round BUG-104 pins (`builtins/e13-sibling-panic-order/{compound-call-target-vs-call,map-compound-index-key-vs-call}`, 2026-09-05: a compound target's hoisted address/key temp panics BEFORE the RHS call, gc after — pre-existing on main b77f3298; open, plan on the entry; the lane's BUG-103, renumbered BUG-104 at the round-17 rebase; §8t) + the e13-b final-verification-round BUG-104 pins (`builtins/e13-sibling-panic-order/{compound-call-target-vs-recv,map-compound-index-key-vs-recv,map-compound-index-key-vs-method}`, 2026-09-05: the receive and method-call spellings of the same hoisted-temp class; §8t) − BUG-103's array-value conversion pin (FIXED 2026-09-05, §8v; its original row now PASS) | 65 |
-| **total** | **245** |
+| **total** | **244** |
 
 *(Movement at the e13-b FINAL VERIFICATION FIX ROUND 2026-09-05 (lane `e13-b`, §8t continued; [AGENT] worker; the final verification audit returned FIX-FIRST, records only — no rule/gate change; tracked figure 3559 = 3315 / 244 → 3563 = 3316 / 247): 4 rows BORN in `builtins/e13-sibling-panic-order/` (1 PASS strict — `bytes-conv-value-vs-mutating-call`, gc's 98 for `int([]byte(s)[0]) + func() int { s = "zz"; return 1 }()`, the hoisted allocating conversion's value-axis by-product, recorded as E12's exception (R''-8); 3 FAIL/differential red-first on BUG-104's Cases line — `{compound-call-target-vs-recv,map-compound-index-key-vs-recv,map-compound-index-key-vs-method}`, the receive and method-call spellings of the compound target's hoisted temp, the class generalized from calls to every ordered event (R''-2)), 0 flips, 0 lane moves, 0 PASS→FAIL — frontier 139 unchanged; post-vintage 62 → 65 (BUG-104 +3). BUG-104 is the lane's entry RENUMBERED (branch `c-arc-c2` filed the former number and merges first; the entry's merge-train note). Zero unmapped. [round-17 rebase onto main 9343a310 ([AGENT] reconciler): the same rows over main's 3528 = 3283 / 245 give 3589 = 3346 / 243 → 3593 = 3347 / 246 (+4 born: 1 PASS, 3 FAIL); frontier 137, post-vintage 63 → 66 (BUG-104 +3); 137 + 9 + 26 + 8 + 66 = 246 ✓ — re-derived from the composed rows by the header's awk.])*
 
@@ -1934,6 +1944,23 @@ remain red, and short-slice panics are unchanged. Ordinary `--diff` used one
 cached slow-tier certification; this is not a re-certification or a claim
 that normalization establishes static typing. Design and complete evidence:
 `docs/2026-09-05_bug103-array-conversion.md`.
+
+### 8w. Movement at the valid UTF-8 / first-line renderer repair (2026-09-06)
+
+Baseline before: 3598 cases = 3353 PASS / 245 FAIL. The K3 repair changes
+exactly `panic-recover/panic-newline-abort` from FAIL/lean-observation to
+PASS, and adds nine PASS rows in `panic-recover/panic-text`. The full run is
+3607 = 3363 PASS / 244 FAIL: 3598 + 9 = 3607; 3353 + 1 + 9 = 3363;
+245 − 1 = 244. No other result/stage change, row deletion or lane move.
+
+A7 leaves the (a)-queued bucket: 8→7. All other buckets are unchanged,
+137 + 9 + 26 + 7 + 65 = 244. BUG-004's three R-1 rendering pins remain
+red. The separate valid-control-byte shell observer defect and remaining
+R-1/invalid-UTF-8 obligations are recorded without weakening any case.
+Source hashes, red-first cases, raw full results and reconciliation are in
+`docs/2026-09-06_panic-rendering-repair.md` and its evidence directory.
+This is the existing `--diff` policy, including cached `tier=slow` records;
+no new stable pin or complete O2 claim follows.
 
 ### 8c. The re-derivation, 2026-08-22 vintage → the 2026-09-01 tip
 

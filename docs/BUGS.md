@@ -2741,7 +2741,16 @@ without re-running `step_complete_any_wf`'s mapIterNext case.
 
 - Status: open
 - Pinned-by: differential
-- Cases: panic-recover/repanic-same-value-abort, panic-recover/panic-newline-abort, panic-recover/panic-defined-payload-methods/error, panic-recover/panic-defined-payload-methods/stringer
+- Cases: panic-recover/repanic-same-value-abort, panic-recover/panic-defined-payload-methods/error, panic-recover/panic-defined-payload-methods/stringer
+
+**Partial fix, 2026-09-06:** item 3 is now fixed, together with valid UTF-8
+payload decoding. `panic-newline-abort` changed FAIL/lean-observation → PASS;
+nine new `panic-text/*` rows passed after first failing on the old renderer.
+The full run measured 3607 cases = 3363 PASS / 244 FAIL, with exactly these ten
+improvements. [Repair and red-first evidence](2026-09-06_panic-rendering-repair.md).
+The three remaining R-1 cases above stay red; this is not completion of the
+rendering quotient. Valid UTF-8 control-byte transport through the shell
+oracle is a separate reproduced observer obligation, recorded in that note.
 
 > **R-1 conversion state (2026-08-21, raft W4.3 item 5 —
 > docs/raft-w43-log.md).** The 2026-08-20 R-1 ruling quotients the
@@ -2764,9 +2773,9 @@ without re-running `step_complete_any_wf`'s mapIterNext case.
 > relaxed; the conversion completes when the member lands.
 - Discovered: 2026-07-25 (pre-merge adversarial audit of `unwinding-arc`)
 
-Go's abort output makes four demands the machine's value-level state
-cannot meet, all found by audits and now FAILING CLOSED instead of
-printing a wrong first line:
+The original audits identified four rendering issues. Items 2 and 3 are
+fixed as recorded below; items 1 and 4 still refuse pending their R-1
+observer/member implementation:
 
 1. **`[recovered, repanicked]` collapse is eface IDENTITY** (a bitwise
    type-word + data-pointer compare in `preprintpanics`), not semantic
@@ -2787,11 +2796,16 @@ printing a wrong first line:
    `renderPanicPayload` renders the `main.Code(7)` form for
    int-underlying defined payloads (other underlyings stay closed).
    `panic-recover/panic-named-type-abort` flipped red→PASS with this.
-   Items 1 (eface identity), 3 (multi-line payloads) and 4 (the
-   `preprintpanics` rewrite) remain open; their pins stay red.
+   Items 1 (eface identity) and 4 (the `preprintpanics` rewrite) remain
+   open under R-1; their pins stay red. Item 3 was fixed on 2026-09-06.
 3. **Multi-line string payloads**: Go's first line stops at an embedded
-   `\n` (`printindented`); `asciiString?` rejects the newline byte
-   (`panic-newline-abort` is the red pin).
+   `\n` (`printindented`); the old `asciiString?` rejected the newline
+   byte. **FIXED 2026-09-06:** strict valid-UTF-8 decoding retains the
+   payload text; `renderPanicHead` keeps the existing refusal checks,
+   formats the recovered suffix, and only then projects to the first
+   line. `panic-newline-abort` is green, as are nine new `panic-text/*`
+   rows for Unicode widths, mixed text, newlines, recovered suffixes
+   and a retained print prefix. Invalid UTF-8 is still refused.
 4. **`preprintpanics` REWRITES the payload before printing**: a payload
    implementing `error` prints `v.Error()`, one implementing
    `fmt.Stringer` prints `v.String()`, and `printanycustomtype`'s
@@ -2811,10 +2825,12 @@ printing a wrong first line:
    `/stringer` are the red ones).
 
 RECOVERING any of these payloads is fully supported — only the terminal
-abort line is restricted. The remaining fixes, if ever needed, are an
-allocation identity on boxed payloads (1), the multi-line `printindented`
-shape (3), and a way to render the `preprintpanics` rewrite without
-calling a method at abort time (4). (Corrected 2026-07-31, final
+abort line is restricted. The remaining work for items 1 and 4 is the
+existing R-1 ruling's conforming observer/member, pinned text and membership
+evidence, with forced payload kind and control flow kept exact. The ruling
+does not require introducing allocation identity solely to reproduce gc's
+text. Item 3's first-line rendering is fixed. (Historical correction
+2026-07-31, final
 pre-merge audit finding 15: this sentence used to offer "a
 package-qualification story (2)" as outstanding — item 2 SHIPPED on
 2026-07-30, as the body says and the baseline's PASS on
@@ -2835,9 +2851,10 @@ build queue: gc's first abort line stops at an embedded `\n`
 abort-time-method demand behind it. A7's binding constraint is the
 CHECK ORDER — the item-1/item-4 refusals must keep returning `none`
 first, or the fix re-opens the unconditional-arm regression class this
-entry already paid for once (2026-07-31 finding 3, above). Status and
-Cases are unchanged: all four cases remain open and red under this
-entry until A7 lands.
+entry already paid for once (2026-07-31 finding 3, above). A7 landed on
+2026-09-06 in the separately reviewed K3 renderer repair: Status remains
+open for the three R-1 cases, and the fixed multiline case is removed from
+the open Cases line. No refusal check was bypassed to make it green.
 
 ## BUG-003 — for-clause per-iteration loop variables (Go 1.22) are not lowered
 

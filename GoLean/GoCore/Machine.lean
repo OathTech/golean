@@ -2058,20 +2058,34 @@ def panicPayload : GoValue → GoValue
   | .nil => runtimeErrorValue "panic called with nil argument"
   | v => v
 
-/-- Constructive ASCII decode for abort rendering. Core's
-`String.fromUTF8?` depends on `Classical.choice` (its validation proofs),
-and the machine-correspondence theorems are pinned constructive
-(`proofs/Audit.lean`) — so abort rendering covers single-line ASCII
-payloads and fails closed on any byte ≥ 0x80 AND on an embedded newline
-(Go routes string payloads through `printindented`, so its FIRST abort
-line stops at a `\n` — a multi-line payload has no one-line rendering to
-pin; pre-merge audit 2026-07-25, BUG-004): a rejected payload aborting is
-a visible unsupported, never a wrong message. -/
-def asciiString? (bytes : Array UInt8) : Option String :=
-  bytes.foldl
-    (fun acc b => acc.bind fun out =>
-      if b < 0x80 && b != 0x0A then some (out.push (Char.ofNat b.toNat)) else none)
-    (some "")
+/-- Strict, constructive UTF-8 decoding for the String-valued abort
+observer. Reuse the same total decoder as string range/conversion. Its
+invalid-encoding sentinel is U+FFFD with width 1; a correctly encoded
+U+FFFD has width 3 and is retained. No replacement of invalid bytes is
+silently introduced. The offset strictly advances, as in `runesOfStringAux`.
+Newlines are preserved here: first-line projection must FOLLOW suffix
+formatting, otherwise a recovered multiline payload gets the wrong line. -/
+def utf8StringAux? (s : GoString) (off : Nat) (acc : String) : Option String :=
+  if _h : off < s.length then
+    let (rune, width) := decodeRuneAt s off
+    if rune == 0xFFFD && width == 1 then none
+    else utf8StringAux? s (off + max 1 width) (acc.push (Char.ofNat rune.toNat))
+  else some acc
+termination_by s.length - off
+decreasing_by
+  have : 1 ≤ max 1 (decodeRuneAt s off).2 := Nat.le_max_left _ _
+  omega
+
+def utf8String? (bytes : Array UInt8) : Option String :=
+  utf8StringAux? ⟨bytes⟩ 0 ""
+
+/-- The existing observer retains the first panic line, after `panic: `.
+Go's `printindented` only changes text AFTER a newline, so taking this
+byte prefix after formatting produces exactly that line. The prefix of a
+valid UTF-8 string ending before an ASCII newline is itself valid UTF-8;
+the strict decoder preserves a visible refusal rather than assuming this. -/
+def firstPanicLine? (text : String) : Option String :=
+  utf8String? (text.toUTF8.data.takeWhile (· != 0x0A))
 
 /-- Does `dynTy` carry `name() string` — the shape of BOTH interfaces Go's
 `preprintpanics` consults (`error`'s `Error() string` and `stringer`'s
@@ -2093,8 +2107,8 @@ def hasNoArgStringMethod (state : ExecState) (dynTy : Ty) (name : String) : Bool
 def panicPayloadIsRewritten (state : ExecState) (dynTy : Ty) : Bool :=
   hasNoArgStringMethod state dynTy "Error" || hasNoArgStringMethod state dynTy "String"
 
-/-- Render a panic payload as Go's first abort line renders it (after
-`panic: `).
+/-- Render the payload text, before recovered suffixes and first-line
+projection. String payloads retain their newlines at this stage.
 
 Go's `preprintpanics` REWRITES the payload to `v.Error()` / `v.String()`
 before `printpanicval` runs, so `printanycustomtype`'s `main.T(v)` shape
@@ -2107,8 +2121,8 @@ Everything else not pinned is `none` for the same reason. -/
 def renderPanicPayload (state : ExecState) : GoValue → Option String
   | .nil => some "nil"
   | .interface (.defined idx) (.string s) =>
-      if idx == runtimeErrorTypeIdx then asciiString? s.bytes else none
-  | .interface .string (.string s) => asciiString? s.bytes
+      if idx == runtimeErrorTypeIdx then utf8String? s.bytes else none
+  | .interface .string (.string s) => utf8String? s.bytes
   | .interface (.int dkind) (.int v kind) =>
       if dkind == kind then some (toString v) else none
   | .interface .bool (.bool b) => some (if b then "true" else "false")
@@ -2165,7 +2179,7 @@ literals do, runtime-computed equal values do not) — fail closed
 def renderPanicHead (state : ExecState) (first : PanicEntry) (rest : List PanicEntry) :
     Option String :=
   (renderPanicPayload state first.value).bind fun base =>
-    if first.recovered then
+    (if first.recovered then
       match rest with
       | e :: _ =>
           if e.value == first.value then
@@ -2174,7 +2188,7 @@ def renderPanicHead (state : ExecState) (first : PanicEntry) (rest : List PanicE
             some (base ++ " [recovered]")
       | [] => some (base ++ " [recovered]")
     else
-      some base
+      some base).bind firstPanicLine?
 
 /-- Mark the newest (last) chain entry recovered, returning its payload —
 what `recover()` yields. `none` if the chain is empty or the newest entry
