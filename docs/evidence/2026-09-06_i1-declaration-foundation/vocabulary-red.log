@@ -1,0 +1,70 @@
+=== RUN   TestVocabularyCoverageIsTracked
+    lowerdiag_test.go:731: unclassified-formats.txt != the measured unclassified set (regenerate with `lowerdiag vocabulary tools/nativefrontend`):
+        want:
+        &composite (elided) in X
+        &composite in X
+        TypeDef X has no display record — its key was minted outside the identity boundary constructors (docs/2026-09-05_fr19-bug097-design.md §3.1)
+        TypeDef entry of unexpected shape X
+        TypeId registered with two different display records: X
+        X
+        X with X arguments
+        builtin X in statement position
+        declaration array has unknown length
+        declaration channel has invalid direction X
+        declaration identity has no local type ordinal: X
+        declaration interface has non-method type-set terms
+        declaration signature has uninstantiated type parameters
+        declaration type X has uninstantiated type parameters
+        declaration type is not a closed runtime type: X (X)
+        function-local type(s) X reached a TypeId without a scope ordinal (not among the loaded units' declarations — docs/2026-09-05_fr19-bug097-design.md §2.2)
+        interface method call on X: static type is not a value interface
+        interface method selector on X: static type is not a value interface
+        interface method substitution produced non-signature for X
+        interface wire name registered with two different method sets: X
+        invalid or untyped declaration basic X
+        map literal in X
+        method X not found on substituted receiver X
+        method expression (*X).X over a value-receiver method (deref adapter not modeled)
+        package-level initializer of X does not lower (X) and is not H-11 effect-isolated — skipping it cannot be argued unobservable, so the WHOLE export refuses (FR-22: per-declaration poisoning covers only initializers whose every call is a direct call to an init-callee register row [pureUnmodeledCallees, rendered in docs/stdlib-admission-register.md] with effect- and panic-free argument shapes)
+        package-level initializer with no declaration site
+        package-level var X: its initializer does not lower (X) — H-11 poison: the cell is seeded as the `$poisoned` placeholder and every reference (read, write, address-of) refuses by name; reference refused
+        slice literal in X
+        substitution into X (X)
+        sync.Once.Do argument is not a func()
+        sync.Once.Do with X arguments
+        sync.WaitGroup.Add with X arguments
+        sync.X.X with X arguments
+        unexported interface method X with no declaring package
+        variadic parameter of non-slice type X
+        have:
+        &composite (elided) in X
+        &composite in X
+        TypeDef X has no display record — its key was minted outside the identity boundary constructors (docs/2026-09-05_fr19-bug097-design.md §3.1)
+        TypeDef entry of unexpected shape X
+        TypeId registered with two different display records: X
+        X
+        X with X arguments
+        builtin X in statement position
+        function-local type(s) X reached a TypeId without a scope ordinal (not among the loaded units' declarations — docs/2026-09-05_fr19-bug097-design.md §2.2)
+        interface method call on X: static type is not a value interface
+        interface method selector on X: static type is not a value interface
+        interface method substitution produced non-signature for X
+        interface wire name registered with two different method sets: X
+        map literal in X
+        method X not found on substituted receiver X
+        method expression (*X).X over a value-receiver method (deref adapter not modeled)
+        package-level initializer of X does not lower (X) and is not H-11 effect-isolated — skipping it cannot be argued unobservable, so the WHOLE export refuses (FR-22: per-declaration poisoning covers only initializers whose every call is a direct call to an init-callee register row [pureUnmodeledCallees, rendered in docs/stdlib-admission-register.md] with effect- and panic-free argument shapes)
+        package-level initializer with no declaration site
+        package-level var X: its initializer does not lower (X) — H-11 poison: the cell is seeded as the `$poisoned` placeholder and every reference (read, write, address-of) refuses by name; reference refused
+        slice literal in X
+        substitution into X (X)
+        sync.Once.Do argument is not a func()
+        sync.Once.Do with X arguments
+        sync.WaitGroup.Add with X arguments
+        sync.X.X with X arguments
+        unexported interface method X with no declaring package
+        variadic parameter of non-slice type X
+--- FAIL: TestVocabularyCoverageIsTracked (0.04s)
+FAIL
+FAIL	_/home/dev/projects/golean/.claude/worktrees/typed-i1-declarations/tools/lowerdiag	0.042s
+FAIL

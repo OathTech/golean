@@ -1,0 +1,9 @@
+{
+  "reviewer": "typed_preflight",
+  "candidate_head": "8ea5a74bd8a310d2236a903acc54ca67e44f48c1",
+  "candidate_manifest_sha256": "f805e0215fca1e7ec5ceefc3b10806a0112f8005a741d47f6d0e4bedc2e98fde",
+  "command": "GOCACHE=\"$PWD/artifacts/go-build-cache\" GO111MODULE=off go test ./.tmp/i1-declaration-review.yhuqb19e/nativefrontend -run '^TestIndependentDeclaration' -count=1 -v",
+  "exit_code": 0,
+  "candidate_mutations": false,
+  "scope": "Unwired positive declaration serializer only; no integration CI or whole-corpus claim."
+}

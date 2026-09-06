@@ -1,0 +1,21 @@
+{
+  "source_head": "8ea5a74bd8a310d2236a903acc54ca67e44f48c1",
+  "inventory_sha256": "bf3207e47c1a49a1f0203639cfe21038819fc21180c92e7d5c691722b16a5d32",
+  "added": [
+    "declaration array has unknown length",
+    "declaration channel has invalid direction X",
+    "declaration identity has no local type ordinal: X",
+    "declaration interface has non-method type-set terms",
+    "declaration signature has uninstantiated type parameters",
+    "declaration type X has uninstantiated type parameters",
+    "declaration type is not a closed runtime type: X (X)",
+    "invalid or untyped declaration basic X"
+  ],
+  "removed": [],
+  "all_added_match_new_serializer_literal_formats": true,
+  "original_three_frozen_inputs_unchanged": true,
+  "tracked_changed_paths": [
+    "tools/lowerdiag/unclassified-formats.txt"
+  ],
+  "fresh_test_run": false
+}

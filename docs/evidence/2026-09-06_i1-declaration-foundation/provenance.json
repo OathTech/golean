@@ -1,0 +1,17 @@
+{
+  "base": "8ea5a74bd8a310d2236a903acc54ca67e44f48c1",
+  "reviews": [
+    "58cd8b69",
+    "08f7984f"
+  ],
+  "initial_ci": {
+    "session": 47743,
+    "exit": 1
+  },
+  "final_ci": {
+    "session": 1329,
+    "exit": 0
+  },
+  "runtime_semantics": "unchanged; no emitter/lowerer connection",
+  "future_identity_scratch": "not accepted by this increment; isolated under ignored .tmp/i1-identity.ilDgsl"
+}

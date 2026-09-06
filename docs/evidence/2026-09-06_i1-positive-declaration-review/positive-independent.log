@@ -1,0 +1,6 @@
+.tmp/i1-positive-review.qecdml22/Probe.lean:11:3: error: unexpected token 'structure'; expected identifier
+.tmp/i1-positive-review.qecdml22/Probe.lean:31:35: error: unexpected token 'structure'; expected ')' or term
+.tmp/i1-positive-review.qecdml22/Probe.lean:31:44: error: unexpected token '#['; expected identifier
+.tmp/i1-positive-review.qecdml22/Probe.lean:35:54: error: unexpected token '#['; expected identifier
+.tmp/i1-positive-review.qecdml22/Probe.lean:36:31: error: unexpected token '#['; expected identifier
+'GoLean.GoCore.Declaration.equality_exact' depends on axioms: [propext, Classical.choice, Quot.sound]

@@ -1,0 +1,31 @@
+c66e53248a3786c244049ebed2266f323b88f2deb8af628188b79c252c0fe5dd  GoLean/GoCore/Declaration.lean
+e4d550204ef4473f810e59b6ef11481dbf354b52e29c7c7c3ccd9088a5bd7e51  GoLean/NativeDeclaration.lean
+3c29908fb4b672a3952a0b76f9a5118b9592bee1872bf10a532c56efbc90bc09  Tests/DeclarationWire.lean
+45d8983c9d20d425aba28aec8fa41a75511f809b8135ebdcefe2771794c27d41  Tests/DeclarationAudit.lean
+b76d99d364f490dd987296eddbb93161b9cfafd7569630f1cacd026f85710bf4  tools/nativefrontend/declaration.go
+379e2c361673093a9cdee1fc28ae13b25a3fced9df6ac2d52ae337bbb9a532e0  tools/nativefrontend/declaration_fixture_test.go
+22baa3f394437b3270ae3263a013d4e09e1fb4b7647d19de34df6fdfe41633ac  tools/check-declaration-wire.lean
+668556d31ab9ab6ad40c744e117019e3c033072e785b8b32c44786c7e09c6a54  tools/declaration-audit.py
+ℹ [8/9] Replayed Tests.DeclarationAudit
+info: Tests/DeclarationAudit.lean:24:0: Declaration audit: 1687 imported/local declarations checked
+Build completed successfully (9 jobs).
+Declaration audit: 1687 imported/local declarations checked
+=== RUN   TestDeclarationDecoderFixture
+    declaration_fixture_test.go:81: checked 24 declaration identities and 576 go/types equality pairs
+--- PASS: TestDeclarationDecoderFixture (0.01s)
+PASS
+ok  	_/home/dev/projects/golean/.claude/worktrees/typed-i1-declarations/tools/nativefrontend	0.008s
+26748fff476161bf0946095a26f6aaf01b191d40f98219a42faada33ceef3f3c  /home/dev/projects/golean/.tmp/declaration-fixture.ixjSFm.json
+Declaration wire: PASS; 24 fresh Go types, 576 go/types identity pairs, 17 malformed-input controls, method-order normalization
+Declaration audit scratch retained: /home/dev/projects/golean/.tmp/declaration-audit-wgii652j
+Declaration audit: 1687 imported/local declarations checked
+/home/dev/projects/golean/.tmp/declaration-audit-wgii652j/AuditAll.lean:2:0: error: Declaration audit: _private.GoLean.GoCore.Declaration.0.declarationUnusedHole0 depends on forbidden axiom _private.GoLean.GoCore.Declaration.0.declarationUnusedHole0
+Declaration negative audit: GoLean.GoCore.Declaration compiled then rejected (declarationUnusedHole0)
+/home/dev/projects/golean/.tmp/declaration-audit-wgii652j/AuditAll.lean:2:0: error: Declaration audit: _private.GoLean.NativeDeclaration.0.declarationUnusedHole1 depends on forbidden axiom _private.GoLean.NativeDeclaration.0.declarationUnusedHole1
+Declaration negative audit: GoLean.NativeDeclaration compiled then rejected (declarationUnusedHole1)
+/home/dev/projects/golean/.tmp/declaration-audit-wgii652j/AuditAll.lean:2:0: error: Declaration audit: _private.Tests.DeclarationWire.0.declarationUnusedHole2 depends on forbidden axiom _private.Tests.DeclarationWire.0.declarationUnusedHole2
+Declaration negative audit: Tests.DeclarationWire compiled then rejected (declarationUnusedHole2)
+Declaration audit: 1687 imported/local declarations checked
+/home/dev/projects/golean/.tmp/declaration-audit-wgii652j/AuditAll.lean:2:0: error: Declaration audit: _private.Tests.DeclarationAudit.0.declarationUnusedHole3 depends on forbidden axiom _private.Tests.DeclarationAudit.0.declarationUnusedHole3
+Declaration negative audit: Tests.DeclarationAudit compiled then rejected (declarationUnusedHole3)
+Declaration gate: PASS; fresh fixture retained at /home/dev/projects/golean/.tmp/declaration-fixture.ixjSFm.json

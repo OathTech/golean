@@ -580,3 +580,33 @@ audits, committed-source reconciliation and independent review. B7's latest
 completed strict/channel/select correspondence and remaining statement/driver
 work remain in its own handoff. The restarted agent team was reconstructed
 from these disk checkpoints; no completed task was restarted from scratch.
+
+## Declaration integration and customer acceptance after restart
+
+The reviewed I1 positive declaration foundation `798e9c76` is integrated
+with the actual-abort observer at parent `414a2abe`. All 3,865 source inputs
+were revalidated after ordinary CI 80248 completed with exit 0. Independent
+union review `60f541c6` confirms the exact additive build/CI union; the
+remaining accepted inputs are unchanged. Evidence lives in
+`docs/evidence/2026-09-06_i1-positive-integration/`. Full 3,627/394 corpus
+records are explicitly cached and byte-identical to their sealed originals;
+the positive declaration channel has no production caller yet. Actual I1
+admission/query preservation/marker relocation remain incomplete.
+
+The shared Iris functional increment now has independent review `163d44ea`
+and sealed feature tip `bd31dd5d`: a separate-worktree complete gate, six
+additional kernel challenges, exact 35-input revalidation and bounded PASS.
+The extra customer proves framing of an arbitrary unrelated heap cell while
+both handlers share one owned result root. Recovery directness, invalid
+payload bytes, ownership exclusivity and all-choice empty output are also
+checked. Root integration and facade/terminal work remain separate steps.
+
+BUG-107's isolated full CI is still running in `typed-uintptr-identity`
+(session 35064); its 48 focused identity/atomic cases and 204 eval checks
+passed, with independent source review and additional Go/kernel probes.
+No baseline repin or repair merge is yet justified by the unfinished full
+run. R1 production review has found missing apparatus source inputs; the
+author is repairing the inventory and preserving the superseded run as
+incomplete. B7 has a checked whole-step correspondence at its old frozen
+runtime, with driver/pool and final-runtime migration still owed. O1–O5
+remain active; no main merge, push or completion claim is made.

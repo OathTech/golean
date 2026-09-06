@@ -1,0 +1,32 @@
+spikes/i1-declarations/Prototype.lean:63:4: error: Type mismatch: After simplification, term
+  declaration_fold fs.toList id none
+ has type
+  @Eq (Option FunctionDecl)
+    (List.foldl
+      (fun previous d =>
+        match previous with
+        | some hit => some hit
+        | none => if (d.id == id) = true then some d else none)
+      none (List.map FunctionDecl.ofFunction fs.toList))
+    (Option.map FunctionDecl.ofFunction
+      (List.foldl
+        (fun previous f =>
+          match previous with
+          | some hit => some hit
+          | none => if (f.id == id) = true then some f else none)
+        none fs.toList))
+but is expected to have type
+  @Eq (Option FunctionDecl)
+    (List.foldl
+      (fun found d =>
+        match found with
+        | some previous => some previous
+        | none => if (d.id == id) = true then some d else none)
+      none (List.map FunctionDecl.ofFunction fs.toList))
+    (Option.map FunctionDecl.ofFunction
+      (List.foldl
+        (fun found func =>
+          match found with
+          | some f => some f
+          | none => if (func.id == id) = true then some func else none)
+        none fs.toList))

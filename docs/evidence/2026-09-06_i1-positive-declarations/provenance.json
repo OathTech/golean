@@ -1,0 +1,21 @@
+{
+  "parent": "cf13789f",
+  "standalone_gate": {
+    "session": 34109,
+    "exit": 0
+  },
+  "initial_ci": {
+    "session": 31463,
+    "exit": 1,
+    "cause": "Only existing preflight scanner matched prose admit at NativeDeclaration.lean:7."
+  },
+  "final_ci": {
+    "session": 3794,
+    "exit": 0,
+    "source_delta": "Only reviewed one-word comment correction; no gate change.",
+    "corpus_scope": "Original cached renderer records: 3607 executable and 394 negative; see ../2026-09-06_i1-declaration-foundation/cached-corpus-reuse.json."
+  },
+  "independent_review": "e9045844",
+  "independent_comment_delta_review": "d2ed3ecd",
+  "production_scope": "Unwired positive declaration channel; no accepted executable meaning/marker or production frontend path changed."
+}

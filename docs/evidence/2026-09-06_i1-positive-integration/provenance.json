@@ -1,0 +1,59 @@
+{
+  "parent": "414a2abeff6eb69307205276c1b2a6e69f8095f3",
+  "merged_feature": "798e9c76",
+  "source_count": 3865,
+  "gate": "GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 scripts/capped scripts/ci",
+  "session": 80248,
+  "exit": 0,
+  "reviewed_source_delta": {
+    "lakefile.toml": {
+      "reviewed": "1f3d09165629e45f49a63e31235d485e7521946c7da4322e3656586abf262e6e",
+      "integrated": "fa7a80aa905d695477ecd490399b64855c814756d782d3ebc3e5840584f36db0"
+    },
+    "scripts/ci": {
+      "reviewed": "8e62258feebd23c95c9bf986a904e89b30d6fe97895081f05ca287b16ae84d07",
+      "integrated": "ce0dafa97e19590ec6e12a4b7ac7182940eedb782bf8cf909be2ad50b8a4fe9f"
+    }
+  },
+  "cached_corpus": {
+    "full": 3627,
+    "pass": 3382,
+    "fail": 245,
+    "negative": 394,
+    "scope": "Cached sealed observer integration records, not fresh differential",
+    "reason": "Positive declaration serializer and decoder are opt-in and have no production caller; shipped emission/lowering/interpreter/CLI unchanged",
+    "archived_records": [
+      {
+        "archived": "docs/evidence/2026-09-06_observer-integration/negative.meta.tsv",
+        "sha256": "c03edf06ad519c560a0d53a0592c1f16a9c7a3269fa90e338e268ae28be5663f"
+      },
+      {
+        "archived": "docs/evidence/2026-09-06_observer-integration/full.tsv",
+        "sha256": "8c89f553dd706f445c2b6fad9f55b0cc0518578035f8e19803fa6260088ae5cf"
+      },
+      {
+        "archived": "docs/evidence/2026-09-06_observer-integration/negative.tsv",
+        "sha256": "16e489a805e7530e6d961b27620a93c416c6d91373a608fedacef5281eb8d204"
+      },
+      {
+        "archived": "docs/evidence/2026-09-06_observer-integration/full.meta.tsv",
+        "sha256": "552ca0c45f4a61de10e4a00749acd4dd301186583c585cf598d43f844be1c5aa"
+      },
+      {
+        "archived": "docs/evidence/2026-09-06_observer-integration/negative.manifest.tsv",
+        "sha256": "21f456f4d3788469d3c42fed6ad8625d06cd2656211e3418c7bc7ffc0a1823f8"
+      },
+      {
+        "archived": "docs/evidence/2026-09-06_observer-integration/full.manifest.tsv",
+        "sha256": "5fb20e8dda7479f417d86be309a915306c238bf2201c0ee670bac09194413fc6"
+      }
+    ],
+    "live_records_revalidated": {
+      "latest.tsv": "8c89f553dd706f445c2b6fad9f55b0cc0518578035f8e19803fa6260088ae5cf",
+      "latest.meta.tsv": "552ca0c45f4a61de10e4a00749acd4dd301186583c585cf598d43f844be1c5aa",
+      "negative-latest.tsv": "16e489a805e7530e6d961b27620a93c416c6d91373a608fedacef5281eb8d204",
+      "negative-latest.meta.tsv": "c03edf06ad519c560a0d53a0592c1f16a9c7a3269fa90e338e268ae28be5663f"
+    }
+  },
+  "independent_union_review": "60f541c6"
+}

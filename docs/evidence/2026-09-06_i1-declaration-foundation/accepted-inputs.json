@@ -1,0 +1,6 @@
+{
+  "docs/2026-09-06_i1-declaration-wire.md": "292b215e49c90d9e426744e70bb1d3fa738ddbd17faf29b7176ed024ad0ae4d7",
+  "tools/lowerdiag/unclassified-formats.txt": "bf3207e47c1a49a1f0203639cfe21038819fc21180c92e7d5c691722b16a5d32",
+  "tools/nativefrontend/declaration.go": "b76d99d364f490dd987296eddbb93161b9cfafd7569630f1cacd026f85710bf4",
+  "tools/nativefrontend/declaration_test.go": "f1adca4299dd4cc949247645e4309781ea72064ca5c0cda6b22b270cc88b6a0e"
+}

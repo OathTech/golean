@@ -1,0 +1,71 @@
+spikes/i1-declarations/Prototype.lean:58:74: error: unexpected token 'set_option'; expected '#guard_msgs', 'abbrev', 'add_decl_doc', 'axiom', 'binder_predicate', 'builtin_cbv_simproc', 'builtin_cbv_simproc_decl', 'builtin_dsimproc', 'builtin_dsimproc_decl', 'builtin_grind_propagator', 'builtin_initialize', 'builtin_simproc', 'builtin_simproc_decl', 'cbv_simproc', 'cbv_simproc_decl', 'class', 'coinductive', 'declare_simp_like_tactic', 'declare_syntax_cat', 'def', 'dsimproc', 'dsimproc_decl', 'elab', 'elab_rules', 'example', 'grind_propagator', 'inductive', 'infix', 'infixl', 'infixr', 'initialize', 'instance', 'macro', 'macro_rules', 'notation', 'opaque', 'postfix', 'prefix', 'recommended_spelling', 'register_error_explanation', 'register_tactic_tag', 'register_try?_tactic', 'simproc', 'simproc_decl', 'structure', 'syntax', 'tactic_extension', 'theorem' or 'unif_hint'
+spikes/i1-declarations/Prototype.lean:64:4: error: Type mismatch: After simplification, term
+  _private.spikes.«i1-declarations».Prototype.0.GoLean.I1Prototype.declaration_fold
+    (@Array.toList.{0} GoLean.GoCore.Func fs) id (@Option.none.{0} GoLean.GoCore.Func)
+ has type
+  @Eq.{1} (Option.{0} GoLean.I1Prototype.FunctionDecl)
+    (@List.foldl.{0, 0} (Option.{0} GoLean.I1Prototype.FunctionDecl) GoLean.I1Prototype.FunctionDecl
+      (fun (previous : Option.{0} GoLean.I1Prototype.FunctionDecl) (d : GoLean.I1Prototype.FunctionDecl) =>
+        GoLean.I1Prototype.findDeclaration.match_1.{1}
+          (fun (previous : Option.{0} GoLean.I1Prototype.FunctionDecl) => Option.{0} GoLean.I1Prototype.FunctionDecl)
+          previous (fun (hit : GoLean.I1Prototype.FunctionDecl) => @Option.some.{0} GoLean.I1Prototype.FunctionDecl hit)
+          fun (_ : Unit) =>
+          @ite.{1} (Option.{0} GoLean.I1Prototype.FunctionDecl)
+            (@Eq.{1} Bool
+              (@BEq.beq.{0} GoLean.GoCore.FuncId GoLean.GoCore.instBEqFuncId (GoLean.I1Prototype.FunctionDecl.id d) id)
+              Bool.true)
+            (instDecidableEqBool
+              (@BEq.beq.{0} GoLean.GoCore.FuncId GoLean.GoCore.instBEqFuncId (GoLean.I1Prototype.FunctionDecl.id d) id)
+              Bool.true)
+            (@Option.some.{0} GoLean.I1Prototype.FunctionDecl d) (@Option.none.{0} GoLean.I1Prototype.FunctionDecl))
+      (@Option.none.{0} GoLean.I1Prototype.FunctionDecl)
+      (@List.map.{0, 0} GoLean.GoCore.Func GoLean.I1Prototype.FunctionDecl GoLean.I1Prototype.FunctionDecl.ofFunction
+        (@Array.toList.{0} GoLean.GoCore.Func fs)))
+    (@Option.map.{0, 0} GoLean.GoCore.Func GoLean.I1Prototype.FunctionDecl GoLean.I1Prototype.FunctionDecl.ofFunction
+      (@List.foldl.{0, 0} (Option.{0} GoLean.GoCore.Func) GoLean.GoCore.Func
+        (fun (previous : Option.{0} GoLean.GoCore.Func) (f : GoLean.GoCore.Func) =>
+          _private.spikes.«i1-declarations».Prototype.0.GoLean.I1Prototype.declaration_fold.match_1.{1}
+            (fun (previous : Option.{0} GoLean.GoCore.Func) => Option.{0} GoLean.GoCore.Func) previous
+            (fun (hit : GoLean.GoCore.Func) => @Option.some.{0} GoLean.GoCore.Func hit) fun (_ : Unit) =>
+            @ite.{1} (Option.{0} GoLean.GoCore.Func)
+              (@Eq.{1} Bool (@BEq.beq.{0} GoLean.GoCore.FuncId GoLean.GoCore.instBEqFuncId (GoLean.GoCore.Func.id f) id)
+                Bool.true)
+              (instDecidableEqBool
+                (@BEq.beq.{0} GoLean.GoCore.FuncId GoLean.GoCore.instBEqFuncId (GoLean.GoCore.Func.id f) id) Bool.true)
+              (@Option.some.{0} GoLean.GoCore.Func f) (@Option.none.{0} GoLean.GoCore.Func))
+        (@Option.none.{0} GoLean.GoCore.Func) (@Array.toList.{0} GoLean.GoCore.Func fs)))
+but is expected to have type
+  @Eq.{1} (Option.{0} GoLean.I1Prototype.FunctionDecl)
+    (@List.foldl.{0, 0} (Option.{0} GoLean.I1Prototype.FunctionDecl) GoLean.I1Prototype.FunctionDecl
+      (fun (found : Option.{0} GoLean.I1Prototype.FunctionDecl) (d : GoLean.I1Prototype.FunctionDecl) =>
+        GoLean.I1Prototype.findDeclaration.match_1.{1}
+          (fun (found : Option.{0} GoLean.I1Prototype.FunctionDecl) => Option.{0} GoLean.I1Prototype.FunctionDecl) found
+          (fun (previous : GoLean.I1Prototype.FunctionDecl) =>
+            @Option.some.{0} GoLean.I1Prototype.FunctionDecl previous)
+          fun (_ : Unit) =>
+          @ite.{1} (Option.{0} GoLean.I1Prototype.FunctionDecl)
+            (@Eq.{1} Bool
+              (@BEq.beq.{0} GoLean.GoCore.FuncId GoLean.GoCore.instBEqFuncId (GoLean.I1Prototype.FunctionDecl.id d) id)
+              Bool.true)
+            (instDecidableEqBool
+              (@BEq.beq.{0} GoLean.GoCore.FuncId GoLean.GoCore.instBEqFuncId (GoLean.I1Prototype.FunctionDecl.id d) id)
+              Bool.true)
+            (@Option.some.{0} GoLean.I1Prototype.FunctionDecl d) (@Option.none.{0} GoLean.I1Prototype.FunctionDecl))
+      (@Option.none.{0} GoLean.I1Prototype.FunctionDecl)
+      (@List.map.{0, 0} GoLean.GoCore.Func GoLean.I1Prototype.FunctionDecl GoLean.I1Prototype.FunctionDecl.ofFunction
+        (@Array.toList.{0} GoLean.GoCore.Func fs)))
+    (@Option.map.{0, 0} GoLean.GoCore.Func GoLean.I1Prototype.FunctionDecl GoLean.I1Prototype.FunctionDecl.ofFunction
+      (@List.foldl.{0, 0} (Option.{0} GoLean.GoCore.Func) GoLean.GoCore.Func
+        (fun (found : Option.{0} GoLean.GoCore.Func) (func : GoLean.GoCore.Func) =>
+          GoLean.GoCore.findFunctionIn?.match_1.{1}
+            (fun (found : Option.{0} GoLean.GoCore.Func) => Option.{0} GoLean.GoCore.Func) found
+            (fun (f : GoLean.GoCore.Func) => @Option.some.{0} GoLean.GoCore.Func f) fun (_ : Unit) =>
+            @ite.{1} (Option.{0} GoLean.GoCore.Func)
+              (@Eq.{1} Bool
+                (@BEq.beq.{0} GoLean.GoCore.FuncId GoLean.GoCore.instBEqFuncId (GoLean.GoCore.Func.id func) id)
+                Bool.true)
+              (instDecidableEqBool
+                (@BEq.beq.{0} GoLean.GoCore.FuncId GoLean.GoCore.instBEqFuncId (GoLean.GoCore.Func.id func) id)
+                Bool.true)
+              (@Option.some.{0} GoLean.GoCore.Func func) (@Option.none.{0} GoLean.GoCore.Func))
+        (@Option.none.{0} GoLean.GoCore.Func) (@Array.toList.{0} GoLean.GoCore.Func fs)))

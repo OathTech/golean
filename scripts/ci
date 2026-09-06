@@ -544,6 +544,13 @@ else
   bad "diagnostic observer transport and terminal classification (see above)"
 fi
 
+step "positive declaration identities (fresh Go/Lean fixture and post-import audit)"
+if bash scripts/check-declarations; then
+  ok "positive declaration identities and decoder"
+else
+  bad "positive declaration identities and decoder (see above)"
+fi
+
 step "frontend unit tests (go test ./tools/nativefrontend)"
 if ftout="$(GO111MODULE=off GOCACHE="$PWD/artifacts/go-build-cache" go test ./tools/nativefrontend 2>&1)"; then
   echo "$ftout" | tail -2

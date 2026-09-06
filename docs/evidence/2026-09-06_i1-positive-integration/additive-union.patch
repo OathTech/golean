@@ -1,0 +1,30 @@
+diff --git a/lakefile.toml b/lakefile.toml
+index b3e618b7..903c6b0e 100644
+--- a/lakefile.toml
++++ b/lakefile.toml
+@@ -55,3 +55,7 @@ globs = ["Tests.RecoveryInvariant", "Tests.RecoveryControlAudit"]
+ [[lean_lib]]
+ name = "AbortObservationTests"
+ globs = ["Tests.AbortObservation", "Tests.AbortObservationAudit"]
++
++[[lean_lib]]
++name = "DeclarationTests"
++globs = ["Tests.DeclarationWire", "Tests.DeclarationAudit"]
+diff --git a/scripts/ci b/scripts/ci
+index 660f0705..0e6df62b 100755
+--- a/scripts/ci
++++ b/scripts/ci
+@@ -544,6 +544,13 @@ else
+   bad "diagnostic observer transport and terminal classification (see above)"
+ fi
+ 
++step "positive declaration identities (fresh Go/Lean fixture and post-import audit)"
++if bash scripts/check-declarations; then
++  ok "positive declaration identities and decoder"
++else
++  bad "positive declaration identities and decoder (see above)"
++fi
++
+ step "frontend unit tests (go test ./tools/nativefrontend)"
+ if ftout="$(GO111MODULE=off GOCACHE="$PWD/artifacts/go-build-cache" go test ./tools/nativefrontend 2>&1)"; then
+   echo "$ftout" | tail -2
