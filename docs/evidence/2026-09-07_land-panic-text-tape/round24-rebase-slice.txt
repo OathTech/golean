@@ -1,0 +1,41 @@
+Round-24 rebase of land/panic-text-tape onto main dd636996 (L4 land/observer-terminal landed first) — 2026-09-07, [AGENT] rebase-reconciliation worker.
+
+The focused slice: scripts/capped scripts/diff-one <65 ids> at the rebased tree (git_commit a0d5807f = the rebased L3 tip before this reconciliation commit; git_dirty true = this round's record edits and the three ratification-flip docstrings, no code change), jobs 12, membership_draws 32, go1.26.5, go_traceback system, go_crash_channel same-run-setcrashoutput-v1. The 65 ids = every baseline row either lane touched: L3's 38 (panic-text/* 14, repanic-collapse/* 22, panic-newline-abort, repanic-same-value-abort) + L4's 26 (panic-controls/* 9, panic-markers/* 11, init/init-panic, init/quarantined-var-panicking/sibling, noodler/initpanic/{deadlock,panic,var-panic}, sync/mutex-unlock-fatal/during-panic-unwind) + noodler/initpanic/recovered (prefix neighbour).
+
+differential coverage summary: cases=65 pass=56 fail=9 export_status=0
+
+scripts/coverage-baseline-diff against the COMPOSED rows (main's 3618 + L3's 36 born + L3's 2 flips = 3654 = 3397 / 257, before this re-pin):
+
+DRIFT vs baselines/native-full.tsv (65 case(s) run):
+panic-recover/panic-controls/child-confluent	baseline[FAIL/confluent] -> now[PASS/confluent]
+panic-recover/panic-controls/newline	baseline[FAIL/lean-observation] -> now[PASS/-]
+panic-recover/panic-controls/recovered-newline	baseline[FAIL/lean-observation] -> now[PASS/-]
+panic-recover/panic-markers/fake-trace	baseline[FAIL/lean-observation] -> now[PASS/-]
+panic-recover/panic-markers/literal-continuation	baseline[FAIL/lean-observation] -> now[PASS/-]
+panic-recover/panic-markers/mixed-line	baseline[FAIL/lean-observation] -> now[PASS/-]
+panic-recover/panic-text/invalid-first-line	baseline[FAIL/lean-observation] -> now[FAIL/go-observation]
+panic-recover/panic-text/invalid-recovered-equal	baseline[FAIL/lean-observation] -> now[FAIL/go-observation]
+panic-recover/panic-text/invalid-single	baseline[FAIL/lean-observation] -> now[FAIL/go-observation]
+
+After the re-pin of exactly these nine rows (6 FAIL -> PASS, 3 FAIL -> FAIL stage): no regression: 65 case(s) run in latest.tsv match baselines/native-full.tsv. Tally by the header's awk: PASS 3403, FAIL 251.
+
+The nine rows' result/stage/detail columns from artifacts/coverage/latest.tsv (detail truncated at the trace):
+PASS	panic-recover/panic-controls/newline	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-controls/recovered-newline	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-controls/child-confluent	confluent	|set|=1 certified over all schedules; coverage-observations: observations=1 steps=50 probes=6 sites=2 leaves=3 maxdepth=2 width=4
+PASS	panic-recover/panic-markers/mixed-line	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-markers/fake-trace	-	wide=0 exhausted=none depth=fixed
+PASS	panic-recover/panic-markers/literal-continuation	-	wide=0 exhausted=none depth=fixed
+FAIL	panic-recover/panic-text/invalid-single	go-observation	could not extract Go panic message: observation string is not valid UTF-8 (2 bytes), refused; stdout="" stderr="panic: \xffZ…
+FAIL	panic-recover/panic-text/invalid-first-line	go-observation	could not extract Go panic message: observation string is not valid UTF-8 (2 bytes), refused; stdout="" stderr="panic: \xffZ\n\tY…
+FAIL	panic-recover/panic-text/invalid-recovered-equal	go-observation	could not extract Go panic message: observation string is not valid UTF-8 (26 bytes), refused; stdout="" stderr="panic: \xffZ [recovered, repanicked]…
+
+gc's FIRST abort line for the six flipped rows (artifacts/coverage/go-run/<id>/oracle.stderr, the bytes after `panic: ` up to the first LF, `od -c`) — the strict/confluent PASS means the machine's rendered first line equals it byte-for-byte (first-line scope: docs/2026-07-25_unwinding-arc.md §A3, the 2026-09-07 rule; ledger FR-32):
+panic-controls/newline:  a \0 001 \t \r \n 
+panic-controls/recovered-newline:  a \0 001 \t \r \n 
+panic-controls/child-confluent:  a \0 001 \t \r \n 
+panic-markers/mixed-line:  o r i g i n a l \n 
+panic-markers/fake-trace:  o r i g i n a l \n 
+panic-markers/literal-continuation:  f o r g e d \n 
+
+Reading: the three panic-controls rows carry the retired string-member lane's `Controls` payload shape (a NUL, SOH, TAB, CR, then the LF) — all five bytes reach the comparison through L4's byte transport (the old bash capture dropped the NUL: controls-asymmetry.txt) and the machine renders the same five (`stringFirstLine?`), so ledger FR-33 retires. The three panic-text/invalid-* rows now fail at go-observation: L4's `coverageharness --abort-message` refuses an invalid-UTF-8 first line by name before the machine's D5 refusal (`abortRefusal`) is reached — the same cause named on both sides; red until a byte channel is ruled (D5 RULED (i) at this round: none).

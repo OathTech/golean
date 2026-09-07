@@ -7,7 +7,10 @@ package main
 // the `[recovered…]` suffix after the WHOLE payload — so the first abort
 // line of a multi-line payload is the bytes before its first LF, with no
 // suffix. The invalid-UTF-8 subjects pin BUG-004 item 3's residue under
-// landing decision D5 (no byte channel): a first line that is not valid
+// landing decision D5 (no byte channel — an [AGENT] default at the lane's
+// tip, RULED [USER] 2026-09-07 at merge train round 24, «Go ahead with the
+// merge», relayed by the [AGENT] coordinator, the merge-ask naming D5 among
+// the four items ratified): a first line that is not valid
 // UTF-8 REFUSES by name (red rows); a first line that is valid renders
 // even when a later line is not (invalid-after-lf); the recovered VALUE of
 // an invalid payload is compared in-language (invalid-recovered-value, the

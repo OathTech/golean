@@ -54,6 +54,11 @@ load-bearing.
 - `ci-diff-tail-fixround.txt` — the verbatim gate tail of `scripts/capped
   scripts/ci --diff` at the fix round's clean committed tip (zero drift
   expected: records, statement tightenings and one dead-arm fix only).
+- `round24-rebase-slice.txt` — the merge-train round-24 rebase onto main
+  dd636996 (L4 landed first): the focused 65-row slice's drift list vs the
+  composed rows, the nine re-pinned rows' detail columns, and gc's first
+  abort line (od -c) for the six L4 rows that flipped green under L3's
+  renderer — lane note §7.2.
 
 ## Reproduction (repo root; `deps/` via `scripts/setup-deps`)
 

@@ -2741,7 +2741,7 @@ without re-running `step_complete_any_wf`'s mapIterNext case.
 
 - Status: open
 - Pinned-by: differential
-- Cases: panic-recover/panic-text/invalid-single, panic-recover/panic-text/invalid-first-line, panic-recover/panic-text/invalid-recovered-equal, panic-recover/panic-defined-payload-methods/error, panic-recover/panic-defined-payload-methods/stringer, panic-recover/panic-controls/newline, panic-recover/panic-controls/recovered-newline, panic-recover/panic-controls/child-confluent, panic-recover/panic-markers/mixed-line, panic-recover/panic-markers/fake-trace, panic-recover/panic-markers/literal-continuation
+- Cases: panic-recover/panic-text/invalid-single, panic-recover/panic-text/invalid-first-line, panic-recover/panic-text/invalid-recovered-equal, panic-recover/panic-defined-payload-methods/error, panic-recover/panic-defined-payload-methods/stringer
 
 **Landing chunk L3, 2026-09-07 ([AGENT] lane `land-panic-text`,
 `docs/2026-09-07_land-panic-text-tape.md`; the typed-consumer sprint's
@@ -2761,7 +2761,7 @@ Three of this entry's four items move; the Cases line above is the result.**
   NOT for this marker — to a demonic choice where gc's realization is
   toolchain-internal, under R-1's re-envelope authority (the rendered text
   is spec-silent, quotiented via membership; KIND and control flow stay
-  exact); [USER] ratification PENDING at the merge gate (L3's
+  exact); [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (L3's
   adversarial-audit fix round, 2026-09-07, R2 — the earlier wording "Ruling
   followed: BUG-087's" overclaimed). WHY latitude and not a pin, from gc at the pin
   (`runtime/panic.go:715`, `preprintpanics`): the marker is eface IDENTITY —
@@ -2780,9 +2780,8 @@ Three of this entry's four items move; the Cases line above is the result.**
   there; its `expected_reason` `orig` is kept — the substring both members
   share) and LEAVES this Cases line — a (c)→(a) re-classification by
   [AGENT] under R-1 that touches a [USER]-ratified C4 pin (triage §7,
-  2026-08-20, whose re-colorable list names C1/C5/E7/R6, not C4); [USER]
-  ratification PENDING at the merge gate (fix round R3; the move is kept
-  pending the ruling); the new
+  2026-08-20, whose re-colorable list names C1/C5/E7/R6, not C4); [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (fix round R3; the move was kept
+  pending the ruling and STANDS under it); the new
   `panic-recover/repanic-collapse/*` family (18 membership rows, gc drawing
   slot 0 on 11 and slot 1 on 7, both members gc-certified on the string,
   int, defined-int and `runtime.Error` families; 4 strict controls) is the
@@ -2810,7 +2809,7 @@ Three of this entry's four items move; the Cases line above is the result.**
   observation holds no invalid byte; tagged `first_line_scope`, fix round
   R4d).
 - **Item 3's RESIDUE is the new red class, by name (landing decision D5 —
-  [AGENT] default applied per the coordinator's brief; [USER] ratification PENDING at the merge gate (plan §4 D5),
+  [AGENT] default applied per the coordinator's brief; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (plan §4 D5),
   `docs/2026-09-07_typed-sprint-landing-plan.md` §4):** a string payload
   whose FIRST LINE is not valid UTF-8. gc writes the raw bytes
   (`printindented`; w35/w36/w37) and the `String`-valued
@@ -2835,7 +2834,7 @@ Three of this entry's four items move; the Cases line above is the result.**
   {error,stringer}` stay red here.
 - The sprint's `string-member` lane (a third comparison mode over the
   collapse and the escape member) is RETIRED unlanded (landing decision D2
-  — the plan's default; [AGENT] default applied per the coordinator's brief; [USER] ratification PENDING at the merge gate (plan §4 D2)): its
+  — the plan's default; [AGENT] default applied per the coordinator's brief; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (plan §4 D2)): its
   functions are the membership lane, the strict lane and the named refusal
   above — EXCEPT its `Controls` role (control-byte payloads,
   `panic("a\x00\x01\t\r\nZ")`: NUL/SOH/TAB/CR preserved through the
@@ -2882,6 +2881,35 @@ contract of the observation — a first-line match then IS the claim, and the
 tail is outside it by record, not by accident. L3's audit is checking which;
 a flip under neither is a green that compares less than it appears to
 (`docs/2026-09-07_land-observer-terminal.md` §2, the same paragraph).
+
+**Round-24 reconciliation, 2026-09-07 ([AGENT] rebase-reconciliation worker;
+chunk L3 `land/panic-text-tape` rebased onto main dd636996 = L4 landed):**
+the six L4 witnesses LEAVE the Cases line above — all six PASS at the
+rebased tip (`panic-controls/{newline,recovered-newline}` and
+`panic-markers/{mixed-line,fake-trace,literal-continuation}` strict,
+`panic-controls/child-confluent` confluent with |set|=1), measured on the
+focused 65-row slice of every row either lane touched
+(`docs/evidence/2026-09-07_land-panic-text-tape/round24-rebase-slice.txt`;
+the full gate at the committed tip is the whole-corpus statement). The flip
+is under the hazard paragraph's option (ii): the first-line scope is a
+DOCUMENTED standing contract (`docs/2026-07-25_unwinding-arc.md` §A3, the
+2026-09-07 rule; ledger FR-32), so a first-line match IS the claim and the
+tail is outside it by record, not by accident; on every row the machine's
+first line equals gc's — gc's first lines (from `oracle.stderr`): the five
+control bytes `a\0\001\t\r` on the three `panic-controls` rows (NUL
+included, carried by L4's byte transport), `original` on
+`mixed-line`/`fake-trace`, `forged` on `literal-continuation`. The three D5
+rows on this line CHANGE STAGE, lean-observation → go-observation: L4's
+harness refuses the oracle's invalid-UTF-8 first line by name (`could not
+extract Go panic message: observation string is not valid UTF-8 (2 bytes),
+refused`; 26 bytes on `invalid-recovered-equal`) before the machine's own D5
+refusal is reached — the same cause on both sides (the first line is not
+valid UTF-8 and the `String`-valued observation cannot carry it), both
+refusing by name; the rows stay red here (D5 RULED option (i) at this round:
+no byte channel). The `Controls` role the L3 block calls DEFERRED (FR-33) is
+covered by those three `panic-controls` rows — NUL/SOH/TAB/CR survive the
+first-LF projection on both sides and compare equal — so FR-33 RETIRES in
+the ledger.
 
 > **R-1 conversion state (2026-08-21, raft W4.3 item 5 —
 > docs/raft-w43-log.md).** The 2026-08-20 R-1 ruling quotients the
@@ -6349,7 +6377,9 @@ payload is single-line. The family's three multi-line rows (`newline`,
 `recovered-newline`, `child-confluent`) have their oracle side decided by this
 repair but are refused by main's renderer (BUG-004 item 3, chunk L3's fix) —
 they sit red on BUG-004's Cases line, not here, so this entry's status is
-exactly the transport claim and nothing more. Invalid-UTF-8 payload
+exactly the transport claim and nothing more [round-24, 2026-09-07: all
+three PASS once chunk L3's renderer sits on this pin — BUG-004's round-24
+paragraph]. Invalid-UTF-8 payload
 REPRESENTATION (BUG-004/R-1) is a separate obligation; no observer policy or
 boxing identity is chosen here.
 
@@ -6405,7 +6435,8 @@ panic("actual")` → message `actual`, output `panic: forged\n\t`; glued
 output; a complete printed fake system trace before a real panic). The
 family's three multi-line rows (`mixed-line`, `fake-trace`,
 `literal-continuation`) are decided on the oracle side (message `original` /
-`forged`) but red at main's renderer — BUG-004's line. The two simple sync
+`forged`) but red at main's renderer — BUG-004's line [green since round
+24, 2026-09-07, L3's renderer — BUG-004's round-24 paragraph]. The two simple sync
 fatals (`sync/mutex-unlock-fatal/{unlock-of-unlocked,unlock-recover-attempt}`)
 stay PASS under the strict fatal rule.
 

@@ -18,8 +18,11 @@ func main() {
 // compare with == against the original value. The abort row above
 // was red until landing chunk L3 (2026-09-07) put the collapse on the
 // tape (`ChoiceSite.repanicCollapse`, both members enumerated, gc's
-// draw checked ∈ set — PASS/membership; the (c)→(a) move awaits [USER]
-// ratification at the merge gate); this row proves the forced half
+// draw checked ∈ set — PASS/membership; the (c)→(a) move awaited [USER]
+// ratification at the merge gate — RULED [USER] 2026-09-07 at merge train
+// round 24, «Go ahead with the merge», relayed by the [AGENT] coordinator,
+// the merge-ask naming the C4 (c)→(a) move among the four items ratified);
+// this row proves the forced half
 // (panic, repanic, same-value identity, deferred-call order) exactly,
 // as it did before.
 func repanicSameValueForcedHalf() string {

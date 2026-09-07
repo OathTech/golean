@@ -2083,7 +2083,7 @@ instance of R2.
   [USER] owns (a bytes variant of `golean-observation-v1`), not a machine
   envelope.
 
-### R10a. The abort line's `[recovered, repanicked]` collapse on an equal re-panic — a two-member TEXT set, (a) ENVELOPED at width 2 (BUG-004 item 1; landing chunk L3, 2026-09-07 — an [AGENT] extension of BUG-087's ruling SHAPE under R-1, [USER] ratification PENDING at the merge gate), each member (b)-pinned to a gc realization
+### R10a. The abort line's `[recovered, repanicked]` collapse on an equal re-panic — a two-member TEXT set, (a) ENVELOPED at width 2 (BUG-004 item 1; landing chunk L3, 2026-09-07 — an [AGENT] extension of BUG-087's ruling SHAPE under R-1, [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off)), each member (b)-pinned to a gc realization
 
 - WHERE: the same spec point as R10 (spec#Handling_panics says only that
   the program terminates with "an error report including the panic
@@ -2125,7 +2125,7 @@ instance of R2.
   admitted», [USER] 2026-09-03, relayed — `docs/2026-08-31_qrow-rulings.md`;
   that ruling covers ONE demonic choice at the nil arm/R9a, not this
   marker) extended to this marker by the [AGENT] under R-1's re-envelope
-  authority — [USER] ratification PENDING at the merge gate (L3's
+  authority — [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (L3's
   adversarial-audit fix round, 2026-09-07, R2).
 - MACHINE: `ChoiceSite.repanicCollapse` (State.lean) — width
   `repanicCollapseWidth first rest` (2 on the family, 1 elsewhere: unequal
@@ -2153,8 +2153,7 @@ instance of R2.
   `staticuint64s` layout — a (b)-pin, not the weakest machine.
 - ROWS: `panic-recover/repanic-same-value-abort` (FAIL → PASS/membership —
   a (c)→(a) re-classification by [AGENT] under R-1 that touches a
-  [USER]-ratified C4 pin, triage §7 2026-08-20; [USER] ratification PENDING
-  at the merge gate, fix round R3; the move is kept pending the ruling)
+  [USER]-ratified C4 pin, triage §7 2026-08-20; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off), fix round R3; the move was kept pending the ruling and STANDS under it)
   and `panic-recover/repanic-collapse/*` — `lane=membership`,
   `members=2`, `width=2`; gc's draw per row at K=32 alternating
   plain/`-race` (`docs/evidence/2026-09-07_land-panic-text-tape/gc-draws.tsv`):
@@ -2172,7 +2171,7 @@ instance of R2.
   `first` — the suffix lands on the payload's LAST line — so the set is a
   singleton and the strict invariance check certifies it).
 - The `string-member` lane the sprint built around this point is
-  RETIRED unlanded (landing decision D2 — [AGENT] default applied per the coordinator's brief; [USER] ratification PENDING at the merge gate (plan §4 D2);
+  RETIRED unlanded (landing decision D2 — [AGENT] default applied per the coordinator's brief; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (plan §4 D2);
   `docs/2026-09-07_land-panic-text-tape.md` §2.4): its function is this
   membership envelope plus the strict lane — except its `Controls` role
   (control-byte payloads), DEFERRED to L4's `panic-controls` rows and
@@ -2970,7 +2969,8 @@ Nothing in this block is a class member by virtue of being named here.
   statement tightenings, no envelope or count change):** R10a's authority
   relabelled — an [AGENT] extension of BUG-087's ruling SHAPE under R-1,
   [USER] ratification PENDING (R2); its (c)→(a) move marked PENDING (R3);
-  D2/D5 marked as [AGENT] defaults pending ratification (R1); the first-line
+  D2/D5 marked as [AGENT] defaults pending ratification (R1) — all four
+  RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off); the first-line
   observation scope recorded and measured (R4; ledger FR-32); control-byte
   payloads rowed (R5; FR-33). Counts unchanged: (a) 13 sites / 15 entries.
 

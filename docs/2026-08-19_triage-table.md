@@ -450,9 +450,9 @@ L3's adversarial-audit fix round, R3):** `repanic-same-value-abort` was
 re-classified (c)→(a) ENVELOPED by the [AGENT] under R-1 (the 2026-09-07
 block below). The row was [USER]-ratified as a (c) pin in §7 (2026-08-20)
 and §7's re-colorable list names C1/C5/E7/R6 — not C4 — so the move
-touches a ratified pin and awaits [USER] ratification at the merge gate.
-Until then read this row as "3 ratified, 1 provisionally moved"; the move
-is kept pending the ruling.
+touches a ratified pin and awaited [USER] ratification at the merge gate.
+Until the ruling this row read "3 ratified, 1 provisionally moved", the move
+kept pending it. RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off): the move STANDS and the count 3 → 2 is no longer provisional.
 
 Two distinct impossibilities, both in gc's abort-line output (which the
 spec does not describe at all — this is `preprintpanics` behavior):
@@ -483,17 +483,15 @@ draws the marker at the abort (bound 2 on the recovered-equal shape; slot 0
 = collapse, slot 1 = the two-line form), as an [AGENT] extension of
 BUG-087's ruling SHAPE («demonic choice so both are admitted», [USER]
 2026-09-03, relayed — ruled for ONE choice at the nil arm/R9a, not this
-marker) under R-1's re-envelope authority — [USER] ratification PENDING at
-the merge gate (fix round R2);
+marker) under R-1's re-envelope authority — [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (fix round R2);
 gc's draw is eface identity the machine does not model (`runtime/panic.go:715`),
 and both members are gc-realized at the pin (`panic(r)` vs `panic(r.(string))`;
 every go ≤ 1.24 printed the two-line form). `repanic-same-value-abort` leaves
 this row for the membership lane (PASS) — a (c)→(a) re-classification by
-[AGENT] under R-1 that touches this [USER]-ratified pin; [USER] ratification
-PENDING at the merge gate (fix round R3, the dated line above); C4 keeps
+[AGENT] under R-1 that touches this [USER]-ratified pin; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (fix round R3, the dated line above); C4 keeps
 impossibility 2's two rows.
 A7 (L12b) is FIXED in the same chunk; its residue — a first line that is not
-valid UTF-8 — is RED by name under landing decision D5 ([AGENT] default applied per the coordinator's brief; [USER] ratification PENDING at the merge gate (plan §4 D5); three
+valid UTF-8 — is RED by name under landing decision D5 ([AGENT] default applied per the coordinator's brief; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (plan §4 D5); three
 `panic-recover/panic-text/invalid-*` rows on BUG-004's Cases line), not a
 (c) claim: it is an observation-channel limit, not a machine impossibility.
 

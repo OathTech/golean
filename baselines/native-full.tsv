@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3654 (3397 PASS / 257 FAIL)
+# cases: 3654 (3403 PASS / 251 FAIL)
 # re-pinned: 2026-09-07, landing chunk L3 `land/panic-text-tape` [AGENT] (docs/2026-09-07_land-panic-text-tape.md), after full
 #   scripts/capped scripts/ci --diff (jobs 12) on this tree: 3634 = 3388 PASS / 246 FAIL. Drift vs the previous pin = EXACTLY
 #   36 born rows + 2 FAIL -> PASS flips, 0 PASS -> non-PASS, 0 removals, 0 reorders (born rows inserted at their families'
@@ -18,11 +18,23 @@
 #   `repanic-collapse/{unequal,unrecovered-equal,equal-pair-not-head}` — count corrected at L3's audit fix round, L7, [AGENT];
 #   this header comment is the only change to this file in that round, no row moved). Frontend/NativeToIR untouched; twin pin
 #   unmoved; tier=slow rows verified against their cached certified records (--diff), no --slow re-certification claimed.
-#   Tally by the awk below at the lane's own tip: PASS 3388, FAIL 246. [round-24 rebase onto main dd636996 ([AGENT] reconciler, 2026-09-07):
-#   the same rows over main's 3618 = 3362 / 256 (chunk L4 `land/observer-terminal`'s pin, the block below) give 3654 = 3397 / 257
-#   (3618 + 36 born, 0 removed, 0 reorders; 3362 + 33 born PASS + 2 FAIL -> PASS; 256 + 3 born FAIL - 2), re-derived from the
-#   composed data rows by the awk below; 0 PASS -> non-PASS vs main; the lane's figures above are its pre-rebase measurement over
-#   main 90bc3e06's 3598. Tally by the awk below: PASS 3397, FAIL 257.]
+#   Tally by the awk below at the lane's own tip: PASS 3388, FAIL 246. [round-24 rebase onto main dd636996 ([AGENT] reconciler,
+#   2026-09-07): the same rows over main's 3618 = 3362 / 256 (chunk L4 `land/observer-terminal`'s pin, the block below) compose to
+#   3654 = 3397 / 257 (3618 + 36 born, 0 removed, 0 reorders; 3362 + 33 born PASS + 2 FAIL -> PASS; 256 + 3 born FAIL - 2). The
+#   focused slice at the rebased tip (scripts/diff-one over the 65 rows either lane touched; jobs 12, membership_draws 32;
+#   scripts/coverage-baseline-diff vs the composed rows — docs/evidence/2026-09-07_land-panic-text-tape/round24-rebase-slice.txt)
+#   then moved EXACTLY 9 of them, re-pinned here: 6 FAIL -> PASS — L4's embedded-LF rows panic-recover/panic-controls/{newline,
+#   recovered-newline} and panic-recover/panic-markers/{mixed-line,fake-trace,literal-continuation} (lean-observation -> PASS strict)
+#   and panic-recover/panic-controls/child-confluent (FAIL/confluent -> PASS/confluent, |set|=1): main's asciiString? refused their
+#   multi-line payloads, L3's strict first-line renderer reaches them, and the flip is under option (ii) of L4's hazard note — the
+#   first-line scope is a DOCUMENTED standing contract (docs/2026-07-25_unwinding-arc.md §A3, the 2026-09-07 rule; ledger FR-32),
+#   so a first-line match IS the claim; the machine's first line equals gc's on every row (gc first lines from oracle.stderr:
+#   `a\0\001\t\r` x3 — the five control bytes before the LF, NUL included, through L4's byte transport — `original` x2, `forged`).
+#   3 FAIL -> FAIL stage changes — panic-recover/panic-text/{invalid-single,invalid-first-line,invalid-recovered-equal}
+#   lean-observation -> go-observation: L4's harness refuses the oracle's invalid-UTF-8 first line BY NAME (`could not extract Go
+#   panic message: observation string is not valid UTF-8 (N bytes), refused`) before the machine's own D5 refusal is reached; the
+#   same cause, still red by name on BUG-004's Cases line (D5 RULED (i), no byte channel). 0 PASS -> non-PASS vs main. Tally
+#   3654 = 3397 / 257 -> 3654 = 3403 / 251 (3397 + 6; 257 - 6), re-derived from the data rows by the awk below: PASS 3403, FAIL 251.]
 # re-pinned: 2026-09-07, landing chunk L4 `land/observer-terminal` [AGENT] — the typed-consumer
 #   sprint's same-run crash-channel observer + pinned terminal classifier + byte-exact transport
 #   (tools/coverageharness, scripts/diff-coverage and the three diagnostic oracle copies), landed by
@@ -36,6 +48,7 @@
 #     panic-markers/{mixed-line,fake-trace,literal-continuation}) — every one a multi-line string
 #     payload that main's asciiString? refuses by name (BUG-004 item 3; the renderer repair is chunk
 #     L3's), red-first on BUG-004's Cases line. Their ORACLE side is decided by the new observer.
+#     [round-24, 2026-09-07 ([AGENT] reconciler): all six PASS once L3's renderer sits on this pin — the L3 block above.]
 #   * 5 PASS -> FAIL/go-observation, all APPARATUS refusals of trusted surface #2's new classifier,
 #     never a machine verdict: sync/mutex-unlock-fatal/during-panic-unwind (BUG-106: the fatal's
 #     message precedes m.dying, so the same-run crash channel cannot authenticate the panic/fatal
@@ -3932,11 +3945,11 @@ PASS	panic-recover/panic-controls/nul	-
 PASS	panic-recover/panic-controls/soh	-
 PASS	panic-recover/panic-controls/tab	-
 PASS	panic-recover/panic-controls/cr	-
-FAIL	panic-recover/panic-controls/newline	lean-observation
-FAIL	panic-recover/panic-controls/recovered-newline	lean-observation
+PASS	panic-recover/panic-controls/newline	-
+PASS	panic-recover/panic-controls/recovered-newline	-
 PASS	panic-recover/panic-controls/output-prefix	-
 PASS	panic-recover/panic-controls/output-ok	-
-FAIL	panic-recover/panic-controls/child-confluent	confluent
+PASS	panic-recover/panic-controls/child-confluent	confluent
 PASS	panic-recover/panic-defer-order	-
 FAIL	panic-recover/panic-defined-payload-methods/error	lean-observation
 FAIL	panic-recover/panic-defined-payload-methods/stringer	lean-observation
@@ -3949,10 +3962,10 @@ PASS	panic-recover/panic-markers/nil-go-literal	-
 PASS	panic-recover/panic-markers/deadlock-literal	-
 PASS	panic-recover/panic-markers/output-midline	-
 PASS	panic-recover/panic-markers/output-line	-
-FAIL	panic-recover/panic-markers/mixed-line	lean-observation
-FAIL	panic-recover/panic-markers/fake-trace	lean-observation
+PASS	panic-recover/panic-markers/mixed-line	-
+PASS	panic-recover/panic-markers/fake-trace	-
 PASS	panic-recover/panic-markers/printed-continuation	-
-FAIL	panic-recover/panic-markers/literal-continuation	lean-observation
+PASS	panic-recover/panic-markers/literal-continuation	-
 PASS	panic-recover/panic-markers/glued-output	-
 PASS	panic-recover/panic-markers/printed-trace	-
 PASS	panic-recover/panic-named-type-abort	-
@@ -3969,9 +3982,9 @@ PASS	panic-recover/panic-text/recovered-newline	-
 PASS	panic-recover/panic-text/recovered-unicode	-
 PASS	panic-recover/panic-text/output-prefix	-
 PASS	panic-recover/panic-text/invalid-after-lf	-
-FAIL	panic-recover/panic-text/invalid-single	lean-observation
-FAIL	panic-recover/panic-text/invalid-first-line	lean-observation
-FAIL	panic-recover/panic-text/invalid-recovered-equal	lean-observation
+FAIL	panic-recover/panic-text/invalid-single	go-observation
+FAIL	panic-recover/panic-text/invalid-first-line	go-observation
+FAIL	panic-recover/panic-text/invalid-recovered-equal	go-observation
 PASS	panic-recover/panic-text/invalid-recovered-value	-
 PASS	panic-recover/panic-typed-nil-recover	-
 PASS	panic-recover/recover-direct	-

@@ -330,3 +330,56 @@ each is reached, per the plan's §5.1 order. Consuming records:
 `docs/2026-09-03_design-hygiene-arc.md` step (v) and its "not this
 arc's to decide" list, `docs/assessment/decisions-2026-08-31.md`
 2026-09-04 addendum, `TODO.md` (the C-arc section).
+
+### The merge-train round-24 ruling record (2026-09-07) — the tracked record behind «Go ahead with the merge» (chunk L3 `land/panic-text-tape`: D2, D5, the BUG-087-shape extension, the C4 (c)→(a) move)
+
+[AGENT] record (the round-24 rebase-reconciliation worker, lane
+`land-panic-text`). Provenance chain: the [USER] quote was received by
+the [AGENT] coordinator in-session and RELAYED to this worker in its
+brief; the worker did not receive it firsthand (citation, never bare
+assertion — the U0-incident convention). Context, as relayed: the
+coordinator's merge-ask for landing chunk L3 (`docs/2026-09-07_land-
+panic-text-tape.md`; branch `land/panic-text-tape` at `9e3c54f0`, the
+adversarial-audit fix round applied) listed FOUR items tagged «[USER]
+ratification PENDING at the merge gate» for ratification: (1) D2 — the
+sprint's `string-member` lane RETIRED unlanded (landing plan
+`docs/2026-09-07_typed-sprint-landing-plan.md` §4 D2; the [AGENT]
+applied the plan's default); (2) D5 — no byte-level observation
+channel now, a string payload whose FIRST LINE is not valid UTF-8 is
+REFUSED by name and its three `panic-recover/panic-text/invalid-*` rows
+stay red on BUG-004's `Cases:` line (plan §4 D5 option (i); the [AGENT]
+applied the default); (3) the BUG-087-shape extension — the
+`[recovered, repanicked]` marker of an equal re-panic reified as
+`ChoiceSite.repanicCollapse` (bound 2), an [AGENT] extension of this
+sheet's 2026-09-03 BUG-087 ruling's SHAPE («demonic choice so both are
+admitted», ruled for ONE choice at the nil arm/R9a) to a second marker
+under R-1's re-envelope authority (latitude inventory R10a); (4) the C4
+(c)→(a) re-classification — `panic-recover/repanic-same-value-abort`,
+a [USER]-ratified category-(c) pin (triage §7, 2026-08-20), moved to
+the membership lane (PASS, `members=2`). Mike replied, verbatim as
+relayed:
+
+«Go ahead with the merge»
+
+— read by the coordinator, and recorded here, as RATIFYING all four
+items (the merge-ask named exactly these four as what the sign-off
+would ratify). Effect: every PENDING tag the lane wrote now reads
+«[USER] ratification — PENDING at the lane's tip, RULED [USER]
+2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed
+by the [AGENT] coordinator; the merge-ask listed D2, D5, the
+BUG-087-shape extension and the C4 (c)→(a) move as the four items
+ratified by this sign-off)», with the [AGENT]-default history left
+visible (they WERE applied as defaults first). Consuming records: the
+lane note §2.3/§2.4/§2.5/§6/§7 (+ §7.2, the ruling and the round-24
+rebase), `docs/BUGS.md` BUG-004 (the L3 block), the latitude inventory
+R10a + §10, the triage table C4 (the dated line + the L3 block),
+`docs/language-coverage-ledger.md` §8 bucket table + §8w,
+`GoLean/Interface.lean`, `GoLean/GoCore/Machine.lean` and
+`GoLean/CLI.lean` docstrings, `Corpus/coverage/exec/panic-recover/
+{panic-text,repanic-collapse,repanic-same-value-abort}/main.go` and the
+19 `why` fields (18 `repanic-collapse` + `repanic-same-value-abort`).
+Still OWED after this ruling: the `canonicalSlot0` row string in
+`GoLean/GoCore/State.lean` (a core literal the fix round did not touch;
+lane note §7 R2). Not ruled here: D4 (ratified by L4's own sign-off,
+`docs/2026-09-07_land-observer-terminal.md` §3), BUG-107's three
+options (open, L4), D1/L5 (held).

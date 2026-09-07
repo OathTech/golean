@@ -2232,7 +2232,7 @@ LATITUDE relative to its state and is reified on the tape (an [AGENT]
 extension of BUG-087's ruling SHAPE — «demonic choice so both are
 admitted», [USER] 2026-09-03 relayed, ruled for ONE choice at the nil
 arm/R9a — to this marker under R-1's re-envelope authority: the rendered
-text is spec-silent; [USER] ratification PENDING at the merge gate), never
+text is spec-silent; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off)), never
 decided in evaluator recursion and never a single hard-coded member. -/
 def repanicEqualNext (first : PanicEntry) (rest : List PanicEntry) : Bool :=
   first.recovered && (match rest with

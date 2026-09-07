@@ -24,7 +24,7 @@ choice where gc's realization is toolchain-internal) to that marker under
 R-1's re-envelope authority (`docs/2026-08-20_w32-re-envelope-charter.md`:
 the rendered TEXT is spec-silent latitude quotiented via membership; the
 payload's KIND and the control flow stay forced and exact). That extension
-is the [AGENT]'s; [USER] ratification is PENDING at the merge gate
+is the [AGENT]'s; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off)
 (adversarial audit R2 — §7 below; the wording "under BUG-087's ruling" in
 earlier drafts of these records overclaimed and is relabelled everywhere).
 
@@ -251,7 +251,7 @@ against gc's actual first line by the unchanged strict comparator.
   `fun_cases` tags are untouched because the `.stop` arm gains a plain
   `let`, not a new match arm (verified against the built `stepFn`, §4).
 
-### 2.3 (c) Invalid UTF-8 — REFUSE by name (D5 default (i) — [AGENT] default applied per the coordinator's brief; [USER] ratification PENDING at the merge gate (plan §4 D5))
+### 2.3 (c) Invalid UTF-8 — REFUSE by name (D5 default (i) — [AGENT] default applied per the coordinator's brief; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (plan §4 D5))
 
 The compared observation is `golean-observation-v1` with a `String`
 message; a Lean `String` cannot carry the bytes gc writes, and a bytes
@@ -269,7 +269,7 @@ L1 consumer-free) is DELETED here: with D5(i) the escape form is never a
 member and a definition of a rejected member has no purpose in the
 semantic core (the interface audit's two export lines go with it).
 
-### 2.4 (d) The `string-member` lane — RETIRED ([AGENT] default applied per the coordinator's brief; [USER] ratification PENDING at the merge gate (plan §4 D2))
+### 2.4 (d) The `string-member` lane — RETIRED ([AGENT] default applied per the coordinator's brief; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (plan §4 D2))
 
 Decision: RETIRE (the plan's recommended default; the [AGENT] applies it
 as the default because the brief delegates the choice and asks for the
@@ -315,7 +315,7 @@ the semantics'). Recorded; nothing landed.
 ### 2.5 (e) D5 default
 
 `invalid-*` rows red; the escape-form member is never a member; no byte
-channel is added by this chunk. Provenance class: [AGENT] default applied per the coordinator's brief; [USER] ratification PENDING at the merge gate (plan §4 D5).
+channel is added by this chunk. Provenance class: [AGENT] default applied per the coordinator's brief; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (plan §4 D5).
 
 ## 3. Rows by class, deferred-module restatements (the plan; measured in §4)
 
@@ -639,16 +639,16 @@ citations, one frontier-table citation) — 0 HIGH, as at L1. `git status
 
 ## 6. Dispositions, deferred-module restatements, records, credits
 
-- **D2 (the `string-member` lane): RETIRED, unlanded — [AGENT] default applied per the coordinator's brief; [USER] ratification PENDING at the merge gate (plan §4 D2).**
+- **D2 (the `string-member` lane): RETIRED, unlanded — [AGENT] default applied per the coordinator's brief; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (plan §4 D2).**
   Reason in §2.4. Nothing of it exists on main; the archive branch keeps
   it. The `Controls` role is DEFERRED to L4 (§2.4 correction; FR-33).
-- **D5 (byte channel): default (i) — [AGENT] default applied per the coordinator's brief; [USER] ratification PENDING at the merge gate (plan §4 D5)** —
+- **D5 (byte channel): default (i) — [AGENT] default applied per the coordinator's brief; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) (plan §4 D5)** —
   no byte channel; `invalid-*` rows red by name; the escape-form member is
   never a member (§2.3, §2.5).
 - **BUG-087 shape (audit fix round R2):** the envelope's authority is an
   [AGENT] extension of BUG-087's ruling SHAPE (a demonic choice where gc's
   realization is toolchain-internal) under R-1's re-envelope authority;
-  [USER] ratification PENDING at the merge gate — relabelled on all 18
+  [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off) — relabelled on all 18
   `repanic-collapse` `why` fields, `repanic-same-value-abort`'s, R10a, the
   triage table, BUGS.md, the corpus `main.go` header and the code docstrings
   (Machine.lean's envelope statement, CLI.lean's inventory row; the
@@ -658,9 +658,9 @@ citations, one frontier-table citation) — 0 HIGH, as at L1. `git status
   was a [USER]-ratified category-(c) pin (triage §7, 2026-08-20; §7's
   re-colorable list names C1/C5/E7/R6 — not C4). Its (c)→(a) move to the
   membership lane is by [AGENT] under R-1 and touches a ratified pin —
-  [USER] ratification PENDING at the merge gate; marked so in the triage
+  [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off); marked so in the triage
   table (a dated line under the C4 entry), the ledger (§8 bucket table,
-  §8w) and R10a. The move itself is KEPT pending the ruling.
+  §8w) and R10a. The move itself was KEPT pending the ruling and STANDS under it (§7.2).
 - **The brief's hard stop (implement exactly vs a site): a SITE.** The
   marker is deterministic in gc but in a quantity — eface identity — the
   machine does not and should not carry (§1.1). Said explicitly there.
@@ -726,6 +726,12 @@ this round makes PENDING (verbatim tags as written in the records):
 - C4: «(c)→(a) re-classification by [AGENT] under R-1; touches a ratified
   (c) pin — [USER] ratification PENDING at the merge gate».
 
+All four were RULED at merge train round 24 (§7.2 below). The three tags
+above are the fix round's wording, kept verbatim here as history; every
+live record now reads «[USER] ratification — PENDING at the lane's tip,
+RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the
+merge» (…)» with the [AGENT]-default history left visible.
+
 | item | disposition |
 |---|---|
 | R1 authority (D2/D5 applied as defaults) | FIXED — tagged PENDING in this note (§2.3, §2.4, §2.5, §6), BUGS.md, the inventory (R10a), the ledger (§8w), the triage table (:481), `Interface.lean`, `panic-text/main.go`. No ruling claimed; left PENDING (none relayed before this round closed). |
@@ -747,8 +753,170 @@ this round makes PENDING (verbatim tags as written in the records):
 | L13 provenance classes | FIXED — D5's disposition, the doctrine re-sync block, the triage C4 block, ledger §8w carry [AGENT] tags. |
 | L14 `printPreFatalDeferPanic` | FIXED — 1259–1276. |
 
-Owed (recorded, not done here): the State.lean `canonicalSlot0` wording (R2); the opt-in spike gate re-run (R7); FR-32 and FR-33 (rowed with queue slots, L4-dependent); the [USER] rulings D2, D5, C4 and the BUG-087-shape extension.
+Owed (recorded, not done here): the State.lean `canonicalSlot0` wording (R2); the opt-in spike gate re-run (R7); FR-32 and FR-33 (rowed with queue slots, L4-dependent); the [USER] rulings D2, D5, C4 and the BUG-087-shape extension — RULED at merge train round 24 (§7.2).
 
 ### 7.1 Gate at the fix round's clean committed tip
 
-(filled after the run — `docs/evidence/2026-09-07_land-panic-text-tape/ci-diff-tail-fixround.txt`)
+Run at `0ccefe3f726dc9346cbacb3020fbc36baf47066f` (this round's single
+code+records commit; the commit that follows differs from it ONLY by this
+subsection and `ci-diff-tail-fixround.txt` — the documentation-only amend of
+the landing practice, §5.5). Envelope `GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=4
+GOLEAN_COVERAGE_JOBS=12`; `latest.meta.tsv`: `git_commit 0ccefe3f…`,
+`git_dirty false`, `jobs 12`, `membership_draws 32`. Verbatim lines (full
+tail: `ci-diff-tail-fixround.txt`):
+
+```
+differential coverage summary: cases=3634 pass=3388 fail=246 export_status=0
+  ok:207  fail:0  exit:0
+  ok: lake-build failure exits 2, no readable results (G1)
+  ok: lake-build timeout exits 2, no readable results (G2)
+  ok: manifest-not-found exits 2, no readable results (G3)
+  ok: empty manifest exits 2 without publishing (G4)
+  ok: harness re-validation rejects sites=0 (F4)
+  ok: harness refuses the retired samples= param by name (F4b)
+  ok: membership under non-native frontend fails closed (F6)
+  ok: members= cardinality pin refuses a wrong pin (B3)
+  ok: confluent lane refuses a non-singleton set (B4)
+  ok: racy lane fails loud on a refuted width (B5)
+  ok: depth guard refuses a strict row whose adversarial streams are exhausted, naming the cause (D1)
+  ok: the same row routed to confluent is certified (|set|=1) (D2)
+  ok: the same row with a sufficient depth=N passes, recording wide=/depth= (D3)
+  ok: an insufficient depth=N is refused, naming the exhausted seeded stream (D4)
+  ok: a variant-stream refusal is reported as a refusal (lean-observation), not as nondet (D5)
+  ok: harness re-validation refuses depth=0 (D6)
+  ok: fan-out that ran no worker exits 2 without publishing (G5)
+  ok: G5 named both causes (global fan-out refusal + empty-row guard), no stray .out
+  ok: T1-strict-lean-run: cause named at stage lean-observation (Lean run TIMED OUT after 1s)
+  ok: T2-nondet-rerun: cause named at stage nondet (re-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s)
+  ok: T3-coupling-pin: cause named at stage membership (driver-coupling pin: native-json-run under stream [9,8,7,6,5,4,3,2,1,0] TIMED OUT after 1s)
+  ok: T4-sample-loop: cause named at stage membership (observation-eq TIMED OUT after 1s (LEAN_TIMEOUT_SECONDS) comparing a Go sample against member #1)
+  ok: T5-comparator-undecodable: cause named at stage go-observation (Go output is not a valid observation (comparator said: left.status: unknown observation status)
+  ok: T6-lean-run-sigkill: cause named at stage lean-observation (Lean run KILLED (exit 137)
+  ok: T7-differential-sigterm: cause named at stage differential (observation-eq KILLED (exit 143)
+  ok: T8-go-oracle-sigkill: cause named at stage go-run (go run oracle KILLED (exit 137)
+  note build parallelism: LEAN_NUM_THREADS=4 (set by the caller — honoured as-is)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   evidence-on-main size gate
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   core build (warning-free)
+  ok   semantic interface (bridges, counterexamples, compiled audit negatives)
+  ok   admission checker proofs and post-import audit
+  ok   typed recovery terminal classification
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   eval tests (207 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  ok   negative baseline diff (no regression)
+  ok   baseline diff FULL (3634/3634, no regression)
+  ok   re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)
+  note reconciler: 3 finding(s), 0 HIGH — report-only (details: tools/reconcile-records)
+RESULT: PASS
+```
+
+Drift: ZERO (`baseline diff FULL (3634/3634, no regression)`;
+`scripts/coverage-baseline-diff` → `no regression: 3634 case(s)`; the re-pin
+guard 0 PASS→non-PASS; no re-pin note — the baseline's data rows are
+untouched, only its header comment changed, L7). The reconciler's 3
+report-only findings are the standing classes (off-pin Go-version cites, the
+FR-7 `=` citation, dangling BUG-105/106/107 references — the BUG-105 count
+grew because this round names L4's filing on purpose). `git status --short`
+at the tip: empty. `scripts/ci --slow` is NOT owed (no `wire.go`/
+`NativeToIR.lean` change).
+
+### 7.2 The merge-gate ruling and the round-24 rebase onto main dd636996 (2026-09-07, [AGENT] rebase-reconciliation worker)
+
+**The ruling.** The coordinator's merge-ask for this chunk (branch tip
+`9e3c54f0`, the fix round applied) listed the four items §7 tags PENDING —
+D2 (the `string-member` lane retired unlanded), D5 (option (i): no byte
+channel, the `invalid-*` first lines refused by name), the BUG-087-shape
+extension (the `repanicCollapse` envelope under R-1) and the C4 (c)→(a)
+move of `repanic-same-value-abort` — as what the sign-off would ratify.
+[USER] Mike, 2026-09-07, verbatim as relayed by the [AGENT] coordinator
+(this worker did not receive it firsthand — cite as relayed): «Go ahead
+with the merge». The coordinator reads the sign-off as ratifying all four;
+this worker records it so. Every PENDING tag this lane wrote now reads
+«[USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at
+merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT]
+coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and
+the C4 (c)→(a) move as the four items ratified by this sign-off)», the
+[AGENT]-default history left visible (they WERE applied as defaults first):
+this note (§1 ruling context, §2.3, §2.4, §2.5, §6; §7's three quoted tags
+are kept verbatim as the fix round's wording), `docs/BUGS.md` BUG-004 (the
+L3 block, 4 tags + "the move STANDS"), the latitude inventory (R10a heading
++ body + ROWS + the D2 line; §10's history line), the triage table (the C4
+dated line — the count 3 → 2 is no longer provisional — and the L3 block,
+3 tags), the ledger (§8 bucket table's C4 note, §8w's D2 line and its
+fix-round paragraph), `GoLean/Interface.lean`, `GoLean/GoCore/Machine.lean`
+(the `repanicEqualNext` docstring) and `GoLean/CLI.lean` (inventory row 9)
+docstrings, `Corpus/coverage/exec/panic-recover/{panic-text,repanic-collapse,
+repanic-same-value-abort}/main.go` and the 19 `why` fields (18
+`repanic-collapse` + `repanic-same-value-abort`). The tracked ruling record
+is `docs/2026-08-31_qrow-rulings.md`, "The merge-train round-24 ruling
+record". Still OWED: the `canonicalSlot0` row string in State.lean (§7 R2).
+
+**The rebase.** `git rebase main` from `90bc3e06` onto `dd636996` (main
+gained chunk L4 `land/observer-terminal`: the same-run crash-channel
+harness, the 20 `panic-controls`/`panic-markers` rows, BUG-105 fixed,
+BUG-106/BUG-107 open, baseline 3618 = 3362 / 256, ledger §8x). Snapshot
+`refs/snapshots/r24-l3/pre` = `9e3c54f0`. Conflicts ONLY in the three
+record files, resolved keep-both: `baselines/native-full.tsv` (header
+blocks, this lane's on top, re-derived; the data rows auto-merged — the two
+lanes' rows are disjoint, 0 duplicate ids), `docs/BUGS.md` (BUG-004's Cases
+line composed; L3's block then L4's two paragraphs), the ledger (§8 head
+paragraph, the bucket table, §8w before §8x — no letter collision, no
+re-lettering). `scripts/ci` auto-merged with BOTH lanes' steps present (L3's
+`typed recovery terminal classification`, L4's `coverage-harness unit
+tests`). No `wire.go`/`NativeToIR.lean` change on either side — no
+`scripts/ci --slow` (5a) owed. Composition: 3618 + 36 born = 3654 = 3397 /
+257 (3362 + 33 + 2; 256 + 3 − 2).
+
+**The focused slice at the rebased tip, and the re-pin.** `scripts/capped
+scripts/diff-one` over the 65 rows either lane touched (jobs 12, K=32;
+`docs/evidence/2026-09-07_land-panic-text-tape/round24-rebase-slice.txt`):
+56 PASS / 9 FAIL; `scripts/coverage-baseline-diff` vs the composed rows
+moved EXACTLY nine, all re-pinned with the reason in the baseline header:
+
+| row | composed | rebased tip | why |
+|---|---|---|---|
+| `panic-recover/panic-controls/{newline,recovered-newline}`, `panic-recover/panic-markers/{mixed-line,fake-trace,literal-continuation}` | FAIL/lean-observation | PASS strict | main's `asciiString?` refused the embedded-LF payload; this chunk's strict first-line renderer reaches L4's rows |
+| `panic-recover/panic-controls/child-confluent` | FAIL/confluent | PASS/confluent, \|set\|=1 | same, inside the schedule enumerator's alias-guard probe |
+| `panic-recover/panic-text/{invalid-single,invalid-first-line,invalid-recovered-equal}` | FAIL/lean-observation | FAIL/go-observation | L4's harness refuses the oracle's invalid-UTF-8 first line BY NAME (`could not extract Go panic message: observation string is not valid UTF-8 (N bytes), refused`) before the machine's D5 refusal is reached — the same cause, both sides refusing by name; still red on BUG-004's Cases line (D5 RULED (i): no channel) |
+
+The six flips are under option (ii) of L4's hazard note (BUG-004, L4 note
+§2): the first-line scope is a DOCUMENTED standing contract of the
+observation — this chunk's §A3 rule (`docs/2026-07-25_unwinding-arc.md`,
+2026-09-07; ledger FR-32) — so a first-line match IS the claim, and on every
+row the machine's first line equals gc's: gc's first lines from
+`oracle.stderr` (od -c, the evidence file) are `a\0\001\t\r` on the three
+`panic-controls` rows — the five control bytes before the LF, NUL included,
+carried by L4's byte transport — `original` on `mixed-line`/`fake-trace`,
+`forged` on `literal-continuation`. That is also the retired lane's
+`Controls` role (§2.4 correction): covered now by L4's rows, so FR-33
+RETIRES in the ledger (0 reds; FR-32's implementation site is on main).
+Tracked figure 3654 = 3403 / 251 (3397 + 6; 257 − 6), re-derived from the
+data rows by the header's awk; 0 PASS→non-PASS vs main; buckets 137 + 9 +
+(24 + 1) + 7 + 73 = 251 (ledger §8, §8w's round-24 note). BUG-004's Cases
+line loses the six L4 ids (its round-24 paragraph); BUG-105/BUG-106 carry a
+dated note that their multi-line rows are green. `scripts/check-bugs.sh`
+ok; `tools/reconcile-records` 0 HIGH at this tip.
+
+**What this subsection does not contain:** the full `scripts/capped
+scripts/ci --diff` at THIS clean committed tip — run by this worker after
+this commit is written and reported verbatim to the coordinator in the
+round-24 merge report (the tip is the gated tree; recording that tail in a
+follow-up records-only commit, as §7.1 did, is the coordinator's call).

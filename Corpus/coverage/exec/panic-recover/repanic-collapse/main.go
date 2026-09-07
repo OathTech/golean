@@ -4,8 +4,7 @@ package main
 // docs/2026-09-07_land-panic-text-tape.md §2.2; BUG-004 item 1; an [AGENT]
 // extension of BUG-087's ruling SHAPE — «demonic choice so both are
 // admitted», [USER] 2026-09-03 relayed, ruled for ONE choice at the nil
-// arm/R9a — to this marker under R-1's re-envelope authority; [USER]
-// ratification PENDING at the merge gate). When a RECOVERED panic value is re-panicked with an
+// arm/R9a — to this marker under R-1's re-envelope authority; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off)). When a RECOVERED panic value is re-panicked with an
 // EQUAL payload, gc decides by eface IDENTITY (runtime/panic.go:715 at the
 // pin) whether the two abort lines COLLAPSE into one
 // `… [recovered, repanicked]` (the recovered box passed through: panic(r))

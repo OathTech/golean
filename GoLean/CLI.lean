@@ -619,7 +619,7 @@ The semantic core's consume sites and their accountant arms:
    arm and Multi.lean's `stepThread` tombstone arm, both through
    `abortConsult`/`repanicCollapseWidth` — BUG-004 item 1, landing chunk
    L3 2026-09-07, an [AGENT] extension of BUG-087's ruling SHAPE under
-   R-1 ([USER] ratification PENDING at the merge gate): bound 2 exactly at
+   R-1 ([USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off)): bound 2 exactly at
    an abort whose head is a recovered entry with an EQUAL successor
    payload, COLLAPSE = ` [recovered, repanicked]` / two-line form =
    ` [recovered]`; bound 1 — no pop — at every other abort) → the

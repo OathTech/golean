@@ -133,7 +133,7 @@ theorems additionally tie the record to the driver's own
 `runProgramSetupM`); the NAMED refusal `Stop.unsupported
 (Machine.abortRefusal …)` of a string payload whose FIRST LINE is not valid
 UTF-8 (landing decision D5 — an [AGENT] default applied per the
-coordinator's brief, [USER] ratification PENDING at the merge gate, landing
+coordinator's brief, [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off), landing
 plan §4: gc writes the raw bytes and the `String`-valued observation cannot
 carry them); or fuel exhaustion. What is NOT proved, stated so the customer
 does not read it in: nothing about the payload's continuation lines (the
