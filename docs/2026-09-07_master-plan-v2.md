@@ -26,6 +26,14 @@ for some 'refinedC' like reasoning vs. golean, while making it a
 faithful Go semantics? Can you put that together, along with a log of
 what we have at hand (eg. on branches) that might be adapted.»
 
+The same day, on the external prover track this document's §4.4 serves
+([USER] Mike, 2026-09-07, verbatim as relayed by the [AGENT] coordinator
+— cite as relayed): «I've been experimenting with running a codex agent
+in parallel. This tends to work well on highly ambitious work that is
+resistent to goal-drift. Eg. deep theorems with clear specs. Ideally this
+would be separated from the main line work». This document is the
+tracked home of both quotes.
+
 Three readers: (a) the [USER]; (b) future review and prover agents,
 including an external Codex agent given deep, drift-resistant theorem
 work (§4.4 names those items with exact acceptance criteria); (c) the
@@ -126,8 +134,10 @@ marked "(not re-derived)".
 - The core: `ls GoLean/GoCore/*.lean | wc -l` = 88 modules; `cat
   GoLean/GoCore/*.lean | wc -l` = 45,018 lines; `find GoLean -name
   '*.lean' | xargs cat | wc -l` = 50,363; `Tests/` 39,661. Of the 88
-  modules, 57 were added by landing chunk L1 (the typed layer: Boolean
-  12, recovery 44 incl. `Declaration`/`PanicText`, per
+  modules, 57 were added by landing chunk L1 (the typed layer — v1
+  §7.8.2's breakdown: Boolean profile 12; recovery static 7,
+  storage/setup 13, control/preservation/progress 15, pool/choices 4;
+  generic abort observer 4; `Declaration`, `PanicText`; per
   `docs/2026-09-07_land-typed-core-proofs.md`).
 - The relation: `inductive Step` at `GoLean/GoCore/Machine.lean:4149`
   has **112** constructors (`sed -n '4150,4842p' … | grep -c -E
@@ -1179,11 +1189,18 @@ this document; the order within the wave is a coordinator call.
 
 ### 4.4 The Codex-suitable deep-theorem list — statements and acceptance criteria
 
+The track exists by [USER] direction (§0.1's second quote: deep theorems
+with clear specs, resistant to goal-drift, separated from the mainline).
 Discipline for any external prover agent (drift-resistant by
-construction; PROPOSED [AGENT], a [USER] decision — N2): the STATEMENT
+construction; the discipline itself is PROPOSED [AGENT] — the
+coordinator's reading, relayed: «exact theorem statements, additive
+modules only, no edits to mainline-owned definitions, kernel-checked
+acceptance, own branch, ordinary audit+train; write a one-page spec per
+item before handing it over» — and a [USER] decision, N2): the STATEMENT
 is fixed in the brief by definition names + `file:line` at a named main
-SHA, and may not be weakened; work in its own worktree/branch off
-`main`; NO edits to the trusted surface (`GoLean/GoCore/StepFn.lean`,
+SHA, and may not be weakened; ADDITIVE modules only (new files beside the
+core, never edits to mainline-owned definitions); work in its own
+worktree/branch off `main`; NO edits to the trusted surface (`GoLean/GoCore/StepFn.lean`,
 the `Step`/`StepM` rules in `Machine.lean`/`Multi.lean`, `NativeToIR.lean`,
 `tools/nativefrontend/`, `scripts/`, `baselines/`) unless the item says
 so — a counterexample to a statement is a BUG entry or a finding, never
@@ -1199,7 +1216,7 @@ over only after the worktree contains every file it names (§3.3 item 8).
 | 2 | **go_mem HB detector soundness/completeness** | `def GoMemRace : Trace → Prop` — go_mem's happens-before over the memory model's synchronization rules (spec pin go1.26.5, `docs/spec-sources.md`) on C1's emitted trace; `theorem detector_sound : RaceState.fold tr = .refused → GoMemRace tr` and `theorem detector_complete : GoMemRace tr → RaceState.fold tr = .refused` for the in-scope kinds (data, mutex, RWMutex, chan send/recv/close, WaitGroup, atomics per `Race.lean`'s inventory), with U2 and BUG-041 as EXPLICIT exclusions and BUG-084's UNION rule as a NAMED widening | both directions for the supported kinds; a table mapping each go_mem synchronization rule to the lemma that realizes it; `scripts/detector-soundness --select in-scope` still HOLE 0 | C1 (before C1 the statement is over `stepAccesses` and is about the TABLE — obstruction 5) |
 | 3 | **Checker fragment widening** | `checkCert_slowObs` (`GoLean/GoCore/EnumDedupSound.lean:915`) restated over `Pool.Observation` INCLUDING the output prefix and terminal (today the engine refuses output-bearing execution rather than certify it — gate audit "Scope and evidence") | the widened theorem; the engine REFUSES BY NAME outside the widened fragment; `scripts/ci --slow` at the tip: certified set identical or a FINDING (never a re-pin) | none |
 | 4 | **`FloatBits` vs IEEE 754** | a Lean specification of IEEE-754 binary64/binary32 round-to-nearest-even (`roundRNE : ℚ → Bits` for finite results; overflow/underflow/subnormal per the standard; NaN/∞/signed-zero policy STATED per latitude rows R4 per-op rounding and R7 canonical NaN) and `theorem FloatBits.add_spec : finite a → finite b → add a b = roundRNE (toRat a + toRat b)` (likewise `sub`, `mul`, `div`, `sqrt`, the int↔float conversions) against `GoLean/GoCore/FloatBits.lean`'s definitions UNCHANGED | the theorems for the five basic ops + conversions; `Tests/FloatVectors.lean` (33,004 hardware-oracle vectors, seed 20260805; regenerated by `scripts/ci`'s derived-artifacts step) unchanged; a counterexample = a BUG entry (BUG-094's canonical-NaN refusal is a LATITUDE row, not a target) | none |
-| 5 | **Named-cases refactor of `MachineSound`** | `stepFn_sound` (`MachineSound.lean:172`), `step_complete` (:506), `stepMulti_sound`/`stepM_complete` (`MultiSound.lean:1172/1316`) re-proved with NAMED cases (or a per-constructor lemma table) so that adding a `Step` rule adds exactly one obligation — the `.probeK` traveller-arm debt (v1 §3.A "Owed") is the motivating instance («every added arm shifts `MachineSound`'s positional case tags; three theorems broke») | `git diff` shows NO statement change; the proofs compile; a documented scratch experiment (not landed) adds a dummy rule and breaks exactly one new obligation; `Machine.lean`/`StepFn.lean` untouched (the coherence proof is editable, the interpreter is not) | none |
+| 5 | **Named-cases refactor of `MachineSound`** | `stepFn_sound` (`MachineSound.lean:172`), `step_complete` (:506), `stepMulti_sound`/`stepM_complete` (`MultiSound.lean:1172/1316`) re-proved with NAMED cases (or a per-constructor lemma table) so that adding a `Step` rule adds exactly one obligation — the `.probeK` traveller-arm debt (v1 §3.A "Owed") is the motivating instance («every added arm shifts `MachineSound`'s positional case tags; three theorems broke») | `git diff` shows NO statement change; the proofs compile; a documented scratch experiment (not landed) adds a dummy rule and breaks exactly one new obligation; `Machine.lean`/`StepFn.lean` untouched (the coherence proof is editable, the interpreter is not) | **after B7** (the coordinator's sequencing, relayed: B7 restates every `MachineSound` theorem over `ProgramCtx`/`Store`; refactoring the cases before it would be redone). Note this item EDITS `MachineSound.lean`, an existing module — an exception to "additive only" that the brief must grant explicitly |
 | 6 | **Typed admission for the named profile** (§2.1 A3) | in order: `WireWellFormed` + the decoder theorem; `ProgramWellTyped` + `Inv.step` preservation over ALL 112 rules restricted to the profile; progress; `run_refusal_named` for the profile | the typed-contract review's anti-tautology rules (`docs/2026-09-05_typed-contract-design-review.md`: the invariant is not "reachability"; refusal is not a fourth success class; bounds are not circular); checker soundness AND completeness as the two profiles have; the NO-RULE table (§3.3 item 9) published with the profile | N5 (profile named); the type-system design note; I1; B7 |
 | 7 | **F2 relation→driver bridge, after B7** (§2.1 A1) | `∀` labelled `StepsM` trace (picks + accesses + out) from `init P e a` reaching a `Pool.Observation` o, `∃ ch fuel, run P e a fuel ch = .obs o` — with the composition argument for per-step stream witnesses (the audit's explicit warning), initialization, terminal priority, main-exit and output accounted; the TYPED two-choice bridge on `Tests/RecoveryTyping.lean`'s `repanicProgram` as the regression | proved for `StepM` including `StepM.abort`'s pick; `Interface.lean`'s «no converse to erasure is supplied» sentence DELETED as a consequence, not edited | B7 (state type), C1 (`Event.access`) |
 | S | small, statements fixed now | A4 `step_det_of_choiceFree` (RSP §1.4 shape); R8's bound-irrelevance (`types.WellFounded → i < b → i < b' → defaultValueAt types b i = defaultValueAt types b' i`); C2's bound theorem (`c-arc-c2` §8); after C1: `Mem.load_after_disjoint_store`, `Mem.store_store_disjoint` at PATH level (the sibling-normalization pitfall in the statement) | compile; `Tests/` regressions; no statement drift | B8 (landed); C2 (landed); C1 |
@@ -1252,7 +1269,7 @@ New, raised by this document (PROPOSED [AGENT]; each a [USER] call):
 | # | decision | [AGENT] recommendation |
 |---|---|---|
 | **N1** | B7: resume from the UNCOMMITTED `typed-context-store` working tree (first action: commit it to a branch, records-only, so it exists) or restart from the design note; and whether the I1-V2 and `ByteArrayStore` trees are committed for the record before any storage maintenance | commit all three to branches now (a records action; touches other lanes' worktrees, hence the ask); then restart B7 from the design note using the committed tree as a quarry and `IndependentB7Review.lean` as acceptance |
-| **N2** | Codex engagement: which of §4.4's items, in what order, under the discipline stated there; who reviews (fresh eyes, never the author) | items 5 and 4 first (statements fixed, no deps, trusted surface untouched), then S and 1(a)–(c); items 2, 6, 7 after their deps |
+| **N2** | Codex engagement: which of §4.4's items, in what order, under the discipline stated there (one-page spec per item, handed over only when the worktree contains every file it names); who reviews (fresh eyes, never the author) | item 4 (FloatBits — statement fixed, no deps, purely additive) and the S items first, then 1(a)–(c) (the statement repair, additive beside the draft); item 5 after B7; items 2, 6, 7 after their deps |
 | **N3** | Whether the in-repo spike may grow toward a RefinedGo PROTOTYPE (types-as-Iris-predicates over `GoValue` + a `go_walk`-lineage engine over the A2 customer's rules) as the «thin enough customer layer» test, or whether the reasoning repo is created now | grow the spike ONE step (a refinement type for `bool`/`int64` + one ownership type for a struct, typed through a bind-free rule set over the Boolean and recovery profiles) — the smallest test of whether the interface fits a RefinedC-shaped customer; the repo decision stays at the pin |
 | **N4** | Is A1's relation→driver direction REQUIRED for the sequential pin, or may the sequential pin ship with the driver-side bridges + the `∀ ch` typed theorems and the converse as a NAMED assumption? | required for the pin; permitted as a named assumption for a labelled experimental snapshot before it |
 | **N5** | The first named profile (F1 predicate 2; A3's domain). Proposal **SEQ-1**: single goroutine (no `go`, channels, `sync`, atomics), allocation-succeeding runs, `gcAmd64`, no `unsafe`/`reflect`/cgo/complex/`goto`, source-through stdlib only (no shims), panics observed at the first line, membership rows' sets as the only latitude assumptions | ratify or edit; every §2 row then says whether it is inside SEQ-1 |
@@ -1337,3 +1354,28 @@ re-stated. When a landing note and this document disagree, the landing
 note wins and the disagreement is an addendum here. When v1 and v2
 disagree on a §0.5-superseded item, v2 wins; on anything else, v1 wins
 and the disagreement is filed.
+
+**Addendum 2026-09-07 ([AGENT], lane `master-plan-0907`) — the gate.**
+`TMPDIR=$PWD/.tmp/ci GOLEAN_COVERAGE_JOBS=12 scripts/capped scripts/ci
+--diff` was started at the committed tip `3b56809a` (this file + the v1
+pointer over `main` @ `da0a9c2c`); while it ran, this file received the
+docs-only edits recorded in the follow-up commit (§0.1's second [USER]
+quote, §4.4's discipline paragraph and item-5 sequencing, N2, the §0.4
+L1 breakdown), so the gate CERTIFIED THE WORKTREE STATE, NOT A COMMIT —
+its own words, verbatim: `note baseline diff FULL (3654/3654, no
+regression) but recorded on a DIRTY tree (git_dirty=true) — certifies
+that worktree state, not a commit`. The tree it certified differs from
+`3b56809a` only in this document's prose. Tail, verbatim where quoted:
+`RESULT: PASS`, `exit=0`; 27 steps `ok`, 0 `FAIL`; `differential
+coverage summary: cases=3654 pass=3403 fail=251 export_status=0`;
+`baseline diff FULL (3654/3654, no regression)` (dirty note above);
+negative baseline diff matched (394); `check-frontend-pins: ok
+[hidden-dep-order]`, `ok [twin-wire] — fresh emit = pinned wire
+(758110a3f5a2…)`, `ok [stdlib-pin] — 61 lowered stdlib source files
+match`; `check-stdlib-register: ok`; interpreter eval tests `ok:207
+fail:0`; semantic-interface, admission and recovery-terminal negative
+audits all rejected their poisoned controls by name; `reconciler: 2
+finding(s), 0 HIGH — report-only` (C13, C5 — unchanged from main);
+`jobs 12`. Log: the lane's `.tmp/ci-diff.log` (untracked). A clean-tip
+re-run is the coordinator's/train's call: the merge train re-gates a
+docs-only branch at the merged tip in any case.
