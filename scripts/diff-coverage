@@ -249,55 +249,6 @@ obs_eq_cause() {
   return 0
 }
 
-json_string_literal() {
-  local value="$1"
-  value="${value//\\/\\\\}"
-  value="${value//\"/\\\"}"
-  value="${value//$'\n'/\\n}"
-  value="${value//$'\r'/\\r}"
-  value="${value//$'\t'/\\t}"
-  printf '"%s"' "$value"
-}
-
-panic_message() {
-  awk '
-    /^panic: / {
-      sub(/^panic: /, "")
-      print
-      found = 1
-      exit
-    }
-    END {
-      if (!found) exit 1
-    }
-  '
-}
-
-# The fatal twin (audit fix round 2026-08-10: the fatal branch used to
-# synthesize the compared observation from the manifest's
-# expected_reason, so a gc message that extended or a manifest pin that
-# truncated the real text passed green with stale text substituted —
-# asymmetric with the panic path, which compares gc's ACTUAL message).
-# A single leading TAB is accepted (arc-end fix round 2026-08-10): a
-# fatal raised DURING PANIC UNWINDING (`defer m.Unlock()` in a
-# panicking frame) leads with `panic: <value>` and carries the fatal on
-# a tab-indented continuation line — the FIRST `fatal error:` line,
-# indented or not, is the throw's message (pinned by
-# sync/mutex-unlock-fatal/during-panic-unwind).
-fatal_message() {
-  awk '
-    /^\t?fatal error: / {
-      sub(/^\t?fatal error: /, "")
-      print
-      found = 1
-      exit
-    }
-    END {
-      if (!found) exit 1
-    }
-  '
-}
-
 if ! command -v go >/dev/null 2>&1; then
   echo "go not found on PATH; install Go or expose it in the shell to run differential coverage" >&2
   exit 2
@@ -410,6 +361,8 @@ fi
   # GOLEAN_ALLOW_GO_DRIFT=1 must not be indistinguishable from an
   # oracle-of-record run in the artifact a re-pin consumes.
   printf 'go_toolchain\t%s\n' "$(go version 2>/dev/null | awk '{print $3}' || printf 'unknown')"
+  printf 'go_traceback\tsystem\n'
+  printf 'go_crash_channel\tsame-run-setcrashoutput-v1\n'
   printf 'go_drift_allowed\t%s\n' "${GOLEAN_ALLOW_GO_DRIFT:-0}"
   printf 'go_drift_actual\t%s\n' "$go_drift_actual"
   # Strict-lane depth guard (memo P1): the observable, the seeded-stream
@@ -661,6 +614,17 @@ run_case_rows() {
         report_fail "$id" "$features" "manifest" "$expected_status requires an expected_reason"
         return 0
       fi
+      # A-R8 (landing review 2026-09-07, [AGENT]): the reason is matched
+      # below with `grep -F`, which reads an embedded NEWLINE in its
+      # pattern as ALTERNATION (a multi-line reason would weaken from
+      # conjunction to disjunction) and matches everything on an EMPTY
+      # pattern. Neither shape is producible by a TSV row today; this
+      # guard makes the fixed-string match exact by construction rather
+      # than by accident of the manifest format — refused by name.
+      if [[ -z "$expected_reason" || "$expected_reason" == *$'\n'* || "$expected_reason" == *$'\r'* ]]; then
+        report_fail "$id" "$features" "manifest" "expected_reason must be one non-empty line (an empty or multi-line reason would relax the grep -F match)"
+        return 0
+      fi
       ;;
     *)
       if [[ "$expected_reason" != "-" ]]; then
@@ -733,8 +697,11 @@ run_case_rows() {
   fi
 
   local go_rc=0 go_valid_rc=0 go_cause go_valid_cause
-  if go_observation="$(go_run_oracle 2>&1)"; then
-    if [[ "$expected_status" == "race" ]]; then
+  if go_run_oracle; then
+    if ! go_observation="$("$HARNESS_BIN" --read-observation "$go_run_dir/oracle.stdout" 2>"$go_run_dir/oracle.read.err")"; then
+      report_fail "$id" "$features" "go-observation" "$(cat "$go_run_dir/oracle.read.err"): $(go_diagnostics)"
+      failed=1
+    elif [[ "$expected_status" == "race" ]]; then
       report_fail "$id" "$features" "go-observation" "expected a -race report, but go run -race exited green: $go_observation (three-way investigation: too-eager check / schedule-hidden race / misclassified case)"
       failed=1
     elif [[ "$expected_status" == "panic" || "$expected_status" == "deadlock" || "$expected_status" == "fatal" ]]; then
@@ -766,6 +733,7 @@ run_case_rows() {
     fi
   else
     go_rc=$?
+    go_observation="$(go_diagnostics)"
     if go_cause="$(undecided_cause "$go_rc" "go run oracle" "$GO_TIMEOUT_SECONDS" GO_TIMEOUT_SECONDS)"; then
       # Named BEFORE the status-specific branches: a killed oracle (wall
       # clock, SIGKILL/SIGTERM, any non-verdict code — `go run` itself
@@ -774,12 +742,21 @@ run_case_rows() {
       # / a bare go-run detail.
       report_fail "$id" "$features" "go-run" "$go_cause — no Go observation produced (not a $expected_status verdict); captured output: $go_observation"
       failed=1
+    elif oracle_setup_failed; then
+      report_fail "$id" "$features" "go-run" "oracle crash-hook setup failed (child exit 78); no subject observation: $go_observation"
+      failed=1
     elif [[ "$expected_status" == "deadlock" ]]; then
       # The detector's message is FIXED; the observation both sides
       # compare carries it verbatim (the Lean machine's deadlocked
       # terminal renders the identical status/message).
-      if [[ "$go_observation" != *"fatal error: all goroutines are asleep - deadlock!"* ]]; then
+      if ! grep -aqF -- 'fatal error: all goroutines are asleep - deadlock!' "$go_run_dir/oracle.stderr"; then
         report_fail "$id" "$features" "go-run" "expected Go deadlock fatal error, got: $go_observation"
+        failed=1
+      elif ! actual_abort_status="$(oracle_observer --abort-status "$go_run_dir/oracle.stderr" 2>"$go_run_dir/oracle.message.err")"; then
+        report_fail "$id" "$features" "go-observation" "could not classify Go deadlock report: $(cat "$go_run_dir/oracle.message.err"); $go_observation"
+        failed=1
+      elif [[ "$actual_abort_status" != deadlock ]]; then
+        report_fail "$id" "$features" "go-observation" "actual Go $actual_abort_status report cannot be observed as deadlock: $go_observation"
         failed=1
       else
         go_observation="{\"message\":\"all goroutines are asleep - deadlock!\",\"schema\":\"golean-observation-v1\",\"status\":\"deadlock\"}"
@@ -791,7 +768,7 @@ run_case_rows() {
       # machine's raceDetected terminal renders the identical
       # status/message, deterministic per stream so the invariance loop
       # below doubles as the per-stream refusal check.
-      if [[ "$go_observation" != *"WARNING: DATA RACE"* ]]; then
+      if ! grep -aqF -- 'WARNING: DATA RACE' "$go_run_dir/oracle.stderr"; then
         report_fail "$id" "$features" "go-run" "expected a go run -race data-race report, got: $go_observation"
         failed=1
       else
@@ -805,10 +782,10 @@ run_case_rows() {
       # symmetrically with the panic path (audit fix round 2026-08-10:
       # synthesizing from expected_reason let extended gc text or a
       # truncated manifest pin pass green with stale text substituted).
-      if [[ "$go_observation" != *"fatal error: $expected_reason"* ]]; then
+      if ! grep -aqF -- "fatal error: $expected_reason" "$go_run_dir/oracle.stderr"; then
         report_fail "$id" "$features" "go-run" "expected Go fatal error '$expected_reason', got: $go_observation"
         failed=1
-      elif [[ "$go_observation" != *"exit status 2"* ]]; then
+      elif ! grep -aqFx -- 'exit status 2' "$go_run_dir/oracle.stderr"; then
         # Runtime fatals exit 2 (delta-review round 2: the design note
         # claimed the exit-status pin; now CHECKED rather than claimed.
         # `go run` itself exits 1 and reports the child's status as a
@@ -816,26 +793,24 @@ run_case_rows() {
         # signal, measured here).
         report_fail "$id" "$features" "go-run" "expected the child's 'exit status 2' report for the runtime fatal: $go_observation"
         failed=1
-      elif ! actual_fatal_message="$(printf '%s\n' "$go_observation" | fatal_message)"; then
-        report_fail "$id" "$features" "go-observation" "could not extract Go fatal message: $go_observation"
+      elif ! escaped_reason="$(oracle_observer --abort-message "$go_run_dir/oracle.stderr" --expected-status fatal 2>"$go_run_dir/oracle.message.err")"; then
+        report_fail "$id" "$features" "go-observation" "could not extract Go fatal message: $(cat "$go_run_dir/oracle.message.err"); $go_observation"
         failed=1
       else
-        escaped_reason="$(json_string_literal "$actual_fatal_message")"
         go_observation="{\"message\":$escaped_reason,\"schema\":\"golean-observation-v1\",\"status\":\"fatal\"}"
         attach_output fatal || failed=1
       fi
     elif [[ "$expected_status" == "panic" ]]; then
-      if [[ "$go_observation" != *"panic:"* ]]; then
+      if ! grep -aqF -- 'panic:' "$go_run_dir/oracle.stderr"; then
         report_fail "$id" "$features" "go-run" "expected Go panic, got: $go_observation"
         failed=1
-      elif [[ "$go_observation" != *"$expected_reason"* ]]; then
+      elif ! grep -aqF -- "$expected_reason" "$go_run_dir/oracle.stderr"; then
         report_fail "$id" "$features" "go-observation" "Go panic did not contain expected reason $expected_reason: $go_observation"
         failed=1
-      elif ! actual_panic_message="$(printf '%s\n' "$go_observation" | panic_message)"; then
-        report_fail "$id" "$features" "go-observation" "could not extract Go panic message: $go_observation"
+      elif ! escaped_reason="$(oracle_observer --abort-message "$go_run_dir/oracle.stderr" --expected-status panic 2>"$go_run_dir/oracle.message.err")"; then
+        report_fail "$id" "$features" "go-observation" "could not extract Go panic message: $(cat "$go_run_dir/oracle.message.err"); $go_observation"
         failed=1
       else
-        escaped_reason="$(json_string_literal "$actual_panic_message")"
         go_observation="{\"message\":$escaped_reason,\"schema\":\"golean-observation-v1\",\"status\":\"panic\"}"
         attach_output panic || failed=1
       fi
@@ -1339,28 +1314,47 @@ go_run_oracle() {
   # go run's `exit status N` trailer) are captured to SEPARATE files —
   # the `output` field is the program's stderr prefix, recovered
   # fail-closed by the harness's --split-stderr mode (attach_output). The
-  # concatenation is still printed for the callers' status classification
-  # (byte-identical text to the old 2>&1 capture, stdout first), and the
-  # run's exit code is returned unchanged.
+  # files never travel through shell substitution as raw bytes: Bash
+  # drops NUL. Callers classify stderr directly and ask coverageharness
+  # to encode messages/output or validate stdout before shell transport.
+  # The run's exit code is returned unchanged.
   local rc=0
+  # Isolated per-case files are reset before EVERY plain/race draw. Never
+  # execute with stale report/ack evidence after a failed reset.
+  if ! { : > "$go_run_dir/oracle.crash" && : > "$go_run_dir/oracle.registered"; }; then
+    printf 'oracle setup: could not reset crash evidence files\n' >&2
+    return 78
+  fi
   # GOFLAGS is SCRUBBED (audit fix round C3, 2026-09-05): an inherited
   # `GOFLAGS=-x`/`-v` writes build chatter to the child's stderr, which
   # is now a COMPARED channel (the `output` field), like GODEBUG already
   # was pinned for panicnil.
-  run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOFLAGS= GODEBUG=panicnil=0 GOCACHE="$GO_BUILD_CACHE" \
+  # The terminal discriminator consumes runtime frames from THIS execution.
+  # system adds diagnostics without the crash bit or a recover wrapper.
+  run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOFLAGS= GODEBUG=panicnil=0 GOTRACEBACK=system GOCACHE="$GO_BUILD_CACHE" \
     ${gopath_env[@]+"${gopath_env[@]}"} \
     bash -c 'cd "$1" && shift && exec go run "$@" .' go-run-oracle "$go_run_dir" ${race_flag[@]+"${race_flag[@]}"} \
     > "$go_run_dir/oracle.stdout" 2> "$go_run_dir/oracle.stderr" || rc=$?
-  # A green run's verdict is the harness JSON on stdout ALONE — the program's
-  # own stderr (its prints) rides the split, never the JSON channel; a red
-  # run has no JSON, and its stderr (abort report + trailer) is the text the
-  # classification branches read.
-  if [[ "$rc" -eq 0 ]]; then
-    cat "$go_run_dir/oracle.stdout"
-  else
-    cat "$go_run_dir/oracle.stdout" "$go_run_dir/oracle.stderr"
-  fi
   return "$rc"
+}
+
+# All abort kind/message/output queries share the same checked byte view.
+oracle_observer() {
+  "$HARNESS_BIN" "$@" --crash-report "$go_run_dir/oracle.crash" --crash-registered "$go_run_dir/oracle.registered"
+}
+
+oracle_setup_failed() {
+  tail -c 15 "$go_run_dir/oracle.stderr" | cmp -s - <(printf 'exit status 78\n')
+}
+
+# Diagnostics only: each descriptor is quoted separately, with every byte
+# preserved in an ASCII representation. This text is never an observation
+# or a source of status/message classification.
+go_diagnostics() {
+  printf 'stdout='
+  "$HARNESS_BIN" --quote-file "$go_run_dir/oracle.stdout"
+  printf ' stderr='
+  "$HARNESS_BIN" --quote-file "$go_run_dir/oracle.stderr"
 }
 
 # attach_output <status> — splice the `output` field into $go_observation
@@ -1373,7 +1367,7 @@ go_run_oracle() {
 # textually (the harness JSON's numbers are never re-encoded).
 attach_output() {
   local lit rc=0
-  lit="$("$HARNESS_BIN" --split-stderr "$go_run_dir/oracle.stderr" --expected-status "$1" 2>"$go_run_dir/oracle.split.err")" || rc=$?
+  lit="$(oracle_observer --split-stderr "$go_run_dir/oracle.stderr" --expected-status "$1" 2>"$go_run_dir/oracle.split.err")" || rc=$?
   if [[ "$rc" -ne 0 ]]; then
     report_fail "$id" "$features" "go-observation" "the oracle's stderr could not be split into program output + abort report (harness exit $rc): $(one_line "$(cat "$go_run_dir/oracle.split.err")")"
     return 1
@@ -1394,7 +1388,8 @@ attach_output() {
 # expected_reason, statuses).
 membership_go_observation() {
   local out rc=0 valid_rc=0 go_cause valid_cause
-  out="$(go_run_oracle "${1:-}" 2>&1)" || rc=$?
+  go_run_oracle "${1:-}" || rc=$?
+  out="$(go_diagnostics)"
   if go_cause="$(undecided_cause "$rc" "go run oracle" "$GO_TIMEOUT_SECONDS" GO_TIMEOUT_SECONDS)"; then
     # Named before any status reading: a killed oracle (wall clock,
     # SIGKILL/SIGTERM, any non-verdict code) is no sample, and its
@@ -1408,11 +1403,15 @@ membership_go_observation() {
       printf 'go sample: declared status set (%s) excludes ok, but Go exited successfully: %s' "$statuses" "$out"
       return 1
     fi
+    if ! out="$("$HARNESS_BIN" --read-observation "$go_run_dir/oracle.stdout" 2>"$go_run_dir/oracle.read.err")"; then
+      printf 'go sample: %s: %s' "$(cat "$go_run_dir/oracle.read.err")" "$(go_diagnostics)"
+      return 1
+    fi
     # The `output` field (stdlib slice 3): the sample's fd-2 bytes, split
     # fail-closed like the strict lane's (attach_output's rule, inlined —
     # this function reports through its stdout, not report_fail).
     local lit split_rc=0
-    lit="$("$HARNESS_BIN" --split-stderr "$go_run_dir/oracle.stderr" --expected-status ok 2>"$go_run_dir/oracle.split.err")" || split_rc=$?
+    lit="$(oracle_observer --split-stderr "$go_run_dir/oracle.stderr" --expected-status ok 2>"$go_run_dir/oracle.split.err")" || split_rc=$?
     if [[ "$split_rc" -ne 0 ]]; then
       printf 'go sample: the oracle stderr could not be split into program output (harness exit %s): %s' "$split_rc" "$(one_line "$(cat "$go_run_dir/oracle.split.err")")"
       return 1
@@ -1438,19 +1437,22 @@ membership_go_observation() {
     printf '%s' "$out"
     return 0
   fi
-  if [[ "$out" == *"panic:"* ]] && member_status_allowed panic; then
-    if [[ "$expected_status" == "panic" && "$out" != *"$expected_reason"* ]]; then
+  if oracle_setup_failed; then
+    printf 'go sample: oracle crash-hook setup failed (child exit 78); no subject observation: %s' "$out"
+    return 1
+  fi
+  if grep -aqF -- 'panic:' "$go_run_dir/oracle.stderr" && member_status_allowed panic; then
+    if [[ "$expected_status" == "panic" ]] && ! grep -aqF -- "$expected_reason" "$go_run_dir/oracle.stderr"; then
       printf 'go sample: Go panic did not contain expected reason %s: %s' "$expected_reason" "$out"
       return 1
     fi
-    local msg escaped
-    if ! msg="$(printf '%s\n' "$out" | panic_message)"; then
-      printf 'go sample: could not extract Go panic message: %s' "$out"
+    local escaped
+    if ! escaped="$(oracle_observer --abort-message "$go_run_dir/oracle.stderr" --expected-status panic 2>"$go_run_dir/oracle.message.err")"; then
+      printf 'go sample: could not extract Go panic message: %s; %s' "$(cat "$go_run_dir/oracle.message.err")" "$out"
       return 1
     fi
-    escaped="$(json_string_literal "$msg")"
     local lit split_rc=0
-    lit="$("$HARNESS_BIN" --split-stderr "$go_run_dir/oracle.stderr" --expected-status panic 2>"$go_run_dir/oracle.split.err")" || split_rc=$?
+    lit="$(oracle_observer --split-stderr "$go_run_dir/oracle.stderr" --expected-status panic 2>"$go_run_dir/oracle.split.err")" || split_rc=$?
     if [[ "$split_rc" -ne 0 ]]; then
       printf 'go sample: the oracle stderr could not be split into program output + panic report (harness exit %s): %s' "$split_rc" "$(one_line "$(cat "$go_run_dir/oracle.split.err")")"
       return 1
@@ -2038,9 +2040,9 @@ case_count="$row_i"
 export CASE_OUT ROOT OUT FRONTEND GO_BUILD_CACHE GOLEAN_BIN HARNESS_BIN LEAN_TRACE_TIMEOUT_SECONDS \
   GO_TIMEOUT_SECONDS LEAN_TIMEOUT_SECONDS LEAN_ENUM_TIMEOUT_SECONDS \
   LEAN_ENUM_SLOW_TIMEOUT_SECONDS MEMBERSHIP_DRAWS
-export -f run_case run_case_rows run_with_timeout lean obs_eq obs_eq_cause undecided_cause signal_cause json_string_literal \
-  panic_message fatal_message report_pass report_pass_lane report_fail one_line \
-  membership_go_observation run_membership_case_rows go_run_oracle attach_output \
+export -f run_case run_case_rows run_with_timeout lean obs_eq obs_eq_cause undecided_cause signal_cause \
+  report_pass report_pass_lane report_fail one_line \
+  membership_go_observation run_membership_case_rows go_run_oracle go_diagnostics attach_output oracle_observer oracle_setup_failed \
   parse_lane_params member_status_allowed seeded_stream
 
 # Record the concurrency the run used (audit finding: a load-induced

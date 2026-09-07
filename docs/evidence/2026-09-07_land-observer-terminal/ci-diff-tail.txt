@@ -1,0 +1,73 @@
+# scripts/ci --diff tail for landing chunk L4 `land/observer-terminal` (2026-09-07)
+# command: GOLEAN_COVERAGE_JOBS=16 scripts/capped scripts/ci --diff   (worktree .claude/worktrees/land-observer, clean tree)
+# tested commit: 8a71caf62a7b5d75b32daf71673b704c5a0e0108 = refs/snapshots/land-observer-terminal-gated
+# below: the log from the cross-ledger reconciliation step through RESULT (ANSI stripped), then the run meta (artifacts/coverage/latest.meta.tsv, selected keys),
+# then the whole-corpus movement vs MAIN's pin (scripts/coverage-baseline-diff --full --baseline <main:baselines/native-full.tsv> artifacts/coverage/latest.tsv).
+── cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)
+  [01] C4  HIGH    §8's bucket total 245 != §8's own claimed FAIL count 256
+  [02] C4  HIGH    §8's red buckets account for 245 reds; the baseline at this tip has 256 — 11 red(s) are NOT on a named row at the current tip (the §8 invariant 'zero unmapped' does not hold as written)
+  [03] C13  MEDIUM  78 doc site(s) across 9 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
+  [04] C5  MEDIUM  1 frontier-table case citation(s) do not resolve against the baseline
+
+══ scripts/ci summary ══
+  note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   evidence-on-main size gate
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   core build (warning-free)
+  ok   semantic interface (bridges, counterexamples, compiled audit negatives)
+  ok   admission checker proofs and post-import audit
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   coverage-harness unit tests
+  ok   eval tests (202 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  ok   negative baseline diff (no regression)
+  ok   baseline diff FULL (3618/3618, no regression)
+  ok   re-pin guard (5 PASS→non-PASS flip(s), all listed in BUGS.md Cases)
+  note reconciler: 4 finding(s), 2 HIGH — report-only (details: tools/reconcile-records)
+
+RESULT: PASS
+EXIT=0
+
+# --- artifacts/coverage/latest.meta.tsv (selected keys) ---
+manifest_sha256	dc08c096ab4ee297de32eecada162a8d5e55b737e477744ebc5fa3793867d6d7
+git_commit	8a71caf62a7b5d75b32daf71673b704c5a0e0108
+git_dirty	false
+go_toolchain	go1.26.5
+go_traceback	system
+go_crash_channel	same-run-setcrashoutput-v1
+go_drift_actual	false
+jobs	16
+
+# --- full run tally (awk over latest.tsv) ---
+PASS	3362
+FAIL	256
+
+# --- movement of the FULL run vs main 90bc3e06's pin (NEW ids = the 20 born rows) ---
+DRIFT vs .tmp/main-baseline.tsv (3618 case(s) run):
+init/init-panic	baseline[PASS/-] -> now[FAIL/go-observation]
+init/quarantined-var-panicking/sibling	baseline[FAIL/frontend-export] -> now[FAIL/go-observation]
+noodler/initpanic/deadlock	baseline[PASS/-] -> now[FAIL/go-observation]
+noodler/initpanic/panic	baseline[PASS/-] -> now[FAIL/go-observation]
+noodler/initpanic/var-panic	baseline[PASS/-] -> now[FAIL/go-observation]
+sync/mutex-unlock-fatal/during-panic-unwind	baseline[PASS/-] -> now[FAIL/go-observation]
+NEW ids: 20
+
+# --- certified-cached row ---
+PASS	imported-goose/channel/google-search	membership	CERTIFIED-CACHED (certified 2026-09-05T17:57:01+00:00  commit: round-17 merge-train step 5a re-certification at main tip

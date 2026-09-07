@@ -1,5 +1,36 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3598 (3353 PASS / 245 FAIL)
+# cases: 3618 (3362 PASS / 256 FAIL)
+# re-pinned: 2026-09-07, landing chunk L4 `land/observer-terminal` [AGENT] — the typed-consumer
+#   sprint's same-run crash-channel observer + pinned terminal classifier + byte-exact transport
+#   (tools/coverageharness, scripts/diff-coverage and the three diagnostic oracle copies), landed by
+#   path selection from prep/observer-terminal-harness b1407cc5 (sprint 7edc298f) onto main 90bc3e06;
+#   note docs/2026-09-07_land-observer-terminal.md. NO machine/frontend change (GoLean/ byte-identical
+#   to main; twin wire untouched). drift vs the previous pin = EXACTLY 20 born rows + 6 moved rows,
+#   0 removals, 0 reorders, no oracle-pin move (go1.26.5), no certified-set change:
+#   * 20 born rows in panic-recover/panic-controls/ (9) and panic-recover/panic-markers/ (11), inserted
+#     after panic-recover/panic-bool-abort in manifest order: 14 PASS; 6 FAIL at the MACHINE
+#     (lean-observation x5, confluent x1: panic-controls/{newline,recovered-newline,child-confluent},
+#     panic-markers/{mixed-line,fake-trace,literal-continuation}) — every one a multi-line string
+#     payload that main's asciiString? refuses by name (BUG-004 item 3; the renderer repair is chunk
+#     L3's), red-first on BUG-004's Cases line. Their ORACLE side is decided by the new observer.
+#   * 5 PASS -> FAIL/go-observation, all APPARATUS refusals of trusted surface #2's new classifier,
+#     never a machine verdict: sync/mutex-unlock-fatal/during-panic-unwind (BUG-106: the fatal's
+#     message precedes m.dying, so the same-run crash channel cannot authenticate the panic/fatal
+#     boundary — `ambiguous fatal message/output before m.dying (1 panic/1 fatal markers precede the
+#     authenticated trace)`); init/init-panic, noodler/initpanic/{panic,var-panic,deadlock} (BUG-107:
+#     pre-main abort — no crash-channel acknowledgement can exist because the hook is main's first
+#     statement; the [USER] may rule a named pre-main exception, written into BUG-107 as the plan).
+#   * 1 FAIL stage change: init/quarantined-var-panicking/sibling frontend-export -> go-observation
+#     (BUG-107's cause; the oracle side now refuses before frontend export is reached).
+#   Tally 3598 = 3353 / 245 -> 3618 = 3362 / 256 (3353 - 5 + 14; 245 + 5 + 6), re-derived from the
+#   data rows by the awk below. Measured first on the focused slice (76 rows = the two new families +
+#   every init/, noodler/initpanic/ and sync/mutex-unlock-fatal/ row; jobs 16; the prep branch had
+#   measured all 410 non-ok rows with the same six moves), then by the full scripts/capped scripts/ci
+#   --diff at the committed tip (docs/evidence/2026-09-07_land-observer-terminal/ci-diff-tail.txt).
+#   D4 (observation policy, landing plan §4): the [USER]'s sign-off on this chunk ratifies the
+#   "authenticated crash observation" policy stated in the landing note §3.
+#   [re-derived: awk -F'\t' '!/^#/ && $1!="result"{c[$1]++} END{for(k in c) print k, c[k]}' baselines/native-full.tsv -> PASS 3362, FAIL 256]
+# Previous pin record (historical):
 # re-pinned: 2026-09-05, BUG-103 array conversion lane [AGENT], after full
 #   scripts/ci --diff: 3598 = 3353 PASS / 245 FAIL, exactly one existing
 #   FAIL -> PASS (structs/decl-order-reversed/conversion-array-target) and
@@ -2793,7 +2824,7 @@ PASS	init/global-zero-before-init	-
 FAIL	init/hidden-dep-order	differential
 FAIL	init/hidden-dep-refused	frontend-export
 PASS	init/init-defer-recover	-
-PASS	init/init-panic	-
+FAIL	init/init-panic	go-observation
 PASS	init/init-sees-var-values	-
 PASS	init/library-var-type-poisoned/sibling	-
 FAIL	init/library-var-type-poisoned/size-int	frontend-export
@@ -2814,7 +2845,7 @@ FAIL	init/quarantined-var/write	frontend-export
 FAIL	init/quarantined-var/addr	frontend-export
 FAIL	init/quarantined-var/multi	frontend-export
 FAIL	init/quarantined-var-impure/counter	frontend-export
-FAIL	init/quarantined-var-panicking/sibling	frontend-export
+FAIL	init/quarantined-var-panicking/sibling	go-observation
 FAIL	init/quarantined-var-syscall/sibling	frontend-export
 FAIL	init/quarantined-var-writer/read	frontend-export
 PASS	init/spec-dependency-example	-
@@ -3615,10 +3646,10 @@ PASS	noodler/init/init-func-order	-
 PASS	noodler/init/trace-recorded	-
 PASS	noodler/init/composite-globals	-
 PASS	noodler/init/package-method-value	-
-PASS	noodler/initpanic/deadlock	-
-PASS	noodler/initpanic/panic	-
+FAIL	noodler/initpanic/deadlock	go-observation
+FAIL	noodler/initpanic/panic	go-observation
 PASS	noodler/initpanic/recovered	-
-PASS	noodler/initpanic/var-panic	-
+FAIL	noodler/initpanic/var-panic	go-observation
 PASS	noodler/latitude/slice-literal-index-vs-call	-
 PASS	noodler/latitude/struct-literal-var-vs-call	-
 PASS	noodler/latitude/map-literal-key-vs-call	-
@@ -3874,6 +3905,15 @@ PASS	panic-recover/nested-frame-recover	-
 PASS	panic-recover/nil-defer-during-unwind-abort	-
 PASS	panic-recover/nil-defer-during-unwind	-
 PASS	panic-recover/panic-bool-abort	-
+PASS	panic-recover/panic-controls/nul	-
+PASS	panic-recover/panic-controls/soh	-
+PASS	panic-recover/panic-controls/tab	-
+PASS	panic-recover/panic-controls/cr	-
+FAIL	panic-recover/panic-controls/newline	lean-observation
+FAIL	panic-recover/panic-controls/recovered-newline	lean-observation
+PASS	panic-recover/panic-controls/output-prefix	-
+PASS	panic-recover/panic-controls/output-ok	-
+FAIL	panic-recover/panic-controls/child-confluent	confluent
 PASS	panic-recover/panic-defer-order	-
 FAIL	panic-recover/panic-defined-payload-methods/error	lean-observation
 FAIL	panic-recover/panic-defined-payload-methods/stringer	lean-observation
@@ -3881,6 +3921,17 @@ PASS	panic-recover/panic-defined-payload-methods/plain	-
 PASS	panic-recover/panic-defined-payload-methods/error-forced-half	-
 PASS	panic-recover/panic-defined-payload-methods/stringer-forced-half	-
 PASS	panic-recover/panic-int-abort	-
+PASS	panic-recover/panic-markers/first-line	-
+PASS	panic-recover/panic-markers/nil-go-literal	-
+PASS	panic-recover/panic-markers/deadlock-literal	-
+PASS	panic-recover/panic-markers/output-midline	-
+PASS	panic-recover/panic-markers/output-line	-
+FAIL	panic-recover/panic-markers/mixed-line	lean-observation
+FAIL	panic-recover/panic-markers/fake-trace	lean-observation
+PASS	panic-recover/panic-markers/printed-continuation	-
+FAIL	panic-recover/panic-markers/literal-continuation	lean-observation
+PASS	panic-recover/panic-markers/glued-output	-
+PASS	panic-recover/panic-markers/printed-trace	-
 PASS	panic-recover/panic-named-type-abort	-
 FAIL	panic-recover/panic-newline-abort	lean-observation
 PASS	panic-recover/panic-nil-abort	-
@@ -4836,7 +4887,7 @@ PASS	sync/mutex-protected/counter	confluent
 PASS	sync/mutex-protected/visible	confluent
 PASS	sync/mutex-unlock-fatal/unlock-of-unlocked	-
 PASS	sync/mutex-unlock-fatal/unlock-recover-attempt	-
-PASS	sync/mutex-unlock-fatal/during-panic-unwind	-
+FAIL	sync/mutex-unlock-fatal/during-panic-unwind	go-observation
 PASS	sync/once-basic/runs-once	-
 PASS	sync/once-basic/panicking-f	-
 PASS	sync/once-basic/across-goroutines	confluent

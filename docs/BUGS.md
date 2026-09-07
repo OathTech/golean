@@ -2741,7 +2741,24 @@ without re-running `step_complete_any_wf`'s mapIterNext case.
 
 - Status: open
 - Pinned-by: differential
-- Cases: panic-recover/repanic-same-value-abort, panic-recover/panic-newline-abort, panic-recover/panic-defined-payload-methods/error, panic-recover/panic-defined-payload-methods/stringer
+- Cases: panic-recover/repanic-same-value-abort, panic-recover/panic-newline-abort, panic-recover/panic-defined-payload-methods/error, panic-recover/panic-defined-payload-methods/stringer, panic-recover/panic-controls/newline, panic-recover/panic-controls/recovered-newline, panic-recover/panic-controls/child-confluent, panic-recover/panic-markers/mixed-line, panic-recover/panic-markers/fake-trace, panic-recover/panic-markers/literal-continuation
+
+**Six more item-3 witnesses, 2026-09-07 (landing chunk L4 `land/observer-terminal`, [AGENT]):**
+the observer chunk lands the sprint's `panic-recover/panic-controls/*` and
+`panic-recover/panic-markers/*` rows AHEAD of the renderer repair (chunk L3,
+`land/panic-text-tape`, in parallel). The six rows appended to the Cases line
+above are the ones whose string payload embeds `\n`: they reach the machine
+and are refused by `asciiString?` exactly as `panic-newline-abort` is —
+`panic abort rendering for payload … (dynamic type string)`, status
+`unsupported` — at stage `lean-observation` (`panic-controls/child-confluent`
+at `confluent`: the same refusal inside the schedule enumerator's alias-guard
+probe). Their ORACLE side is decided by the new observer (the byte transport
+and the same-run crash channel authenticate gc's message and output for every
+one of these shapes — `docs/2026-09-07_land-observer-terminal.md` §2), so each
+red is this entry's item 3, not the apparatus's. They flip with L3's
+first-line renderer repair, which removes them from this line; until then they
+are red-first here. The sprint's record of that repair (not landed by L4):
+`docs/2026-09-06_panic-rendering-repair.md` on branch `typed-consumer-sprint`.
 
 > **R-1 conversion state (2026-08-21, raft W4.3 item 5 —
 > docs/raft-w43-log.md).** The 2026-08-20 R-1 ruling quotients the
@@ -6170,3 +6187,178 @@ this also retires `emitMapCompound`'s unforced `probeSuppress`). Until
 then the compound-call target beside a hoisted len refuses by name
 (BUG-102's `compound-call-target-vs-len`) and these five rows are
 red-first with gc's output pinned.
+
+## BUG-105 — raw panic bytes passed through Bash command substitution and incomplete JSON escaping: NUL disappeared from the oracle's observed message and SOH made the oracle observation invalid JSON [apparatus; panic/output observation transport; trusted surface #2]
+
+- Status: fixed ([AGENT], landing chunk L4 `land/observer-terminal` 2026-09-07 — the sprint's byte-transport repair (`d0dbd469`, lane `typed-observer-controls`, 2026-09-06; independent byte-transport review `83c177c2` on the sprint) landed on main by path selection from `prep/observer-terminal-harness` b1407cc5; the six Cases rows PASS on main, measured focused + full — `docs/2026-09-07_land-observer-terminal.md`)
+- Pinned-by: differential
+- Cases: panic-recover/panic-controls/nul, panic-recover/panic-controls/soh, panic-recover/panic-controls/tab, panic-recover/panic-controls/cr, panic-recover/panic-controls/output-prefix, panic-recover/panic-controls/output-ok
+
+MERGE-TRAIN NOTE ([AGENT] L4 worker, 2026-09-07): numbered against main's
+top at cut time (BUG-104, main 90bc3e06). Chunk L3 (`land/panic-text-tape`)
+runs in parallel and may file entries of its own; the train renumbers
+whichever lands second. The sprint used 105/106 for exactly these two
+apparatus entries, so a collision can only be with a NEW number L3 takes.
+
+Go and the Lean model both preserve the bytes of an explicit string panic
+payload. The previous strict and membership/confluent observer
+(`scripts/diff-coverage` on main up to 90bc3e06) captured the oracle's raw
+stderr with `$(...)` — which drops NUL — and then escaped only backslash,
+quote, LF, CR and TAB by hand, so any other JSON control byte (SOH, …)
+produced an INVALID oracle observation. Red-first on the sprint (2026-09-06,
+`docs/2026-09-06_observer-controls-repair.md`): `nul` FAIL/differential (Go
+observation wrongly `ab`, Lean correctly `a b`); `soh`, `newline`,
+`recovered-newline`, `output-prefix` FAIL/differential with comparator exit 2
+(an undecodable Go observation, not a decided inequality); `tab`, `cr`,
+`output-ok` PASS as pre-existing controls.
+
+Repair (landed here): `tools/coverageharness` reads the raw descriptor FILES
+(`--abort-message`, `--split-stderr`, `--read-observation`), validates the
+report split against the same-run crash channel (BUG-106 and BUG-107 for what
+that channel does and does not authenticate), selects the actual first
+panic/fatal line and encodes it with Go's JSON encoder; the runner never
+carries raw oracle bytes in a shell variable, and stdout is validated (UTF-8,
+one complete JSON value) before shell transport. Invalid UTF-8 refuses by
+name rather than being replaced. The model is unchanged.
+
+Scope of `fixed` on MAIN: the six Cases rows are the transport controls whose
+payload is single-line. The family's three multi-line rows (`newline`,
+`recovered-newline`, `child-confluent`) have their oracle side decided by this
+repair but are refused by main's renderer (BUG-004 item 3, chunk L3's fix) —
+they sit red on BUG-004's Cases line, not here, so this entry's status is
+exactly the transport claim and nothing more. Invalid-UTF-8 payload
+REPRESENTATION (BUG-004/R-1) is a separate obligation; no observer policy or
+boxing identity is chosen here.
+
+## BUG-106 — a fatal error raised DURING PANIC UNWINDING cannot be authenticated as an observation: gc prints `panic: <v>\n\tfatal error: <msg>` BEFORE `m.dying`, so the same-run crash channel carries only the trace and the panic/fatal message boundary is unauthenticated — refused by name where main's classifier previously accepted the first line [apparatus; terminal classification; trusted surface #2]
+
+- Status: open ([AGENT], landing chunk L4 `land/observer-terminal` 2026-09-07 — the sprint's finding `0e3f7e20` and classifier `b5dd4076` on `typed-consumer-sprint`, landed from `prep/observer-terminal-harness` b1407cc5 with the channel MANDATORY (landing review finding A-R6); the Cases row flipped PASS -> FAIL/go-observation at this re-pin, measured focused + full)
+- Pinned-by: differential
+- Cases: sync/mutex-unlock-fatal/during-panic-unwind
+
+MERGE-TRAIN NOTE ([AGENT] L4 worker, 2026-09-07): see BUG-105's note —
+numbered against main's top BUG-104; renumber at the train if L3 lands a
+105/106 first.
+
+What the row does: `defer m.Unlock()` in a panicking frame — the runtime's
+`sync.fatal` throws while the panic is being printed, and gc's stderr reads
+`panic: boom\n\tfatal error: sync: unlock of unlocked mutex\n\ngoroutine 1 …`.
+Main's classifier (before this chunk) took the tab-indented `fatal error:`
+continuation as the throw's message and passed the row. The sprint's
+independent review (`0e3f7e20`) showed that classifier also accepts a fatal
+unwind as a PANIC observation under an adversarial wrong-kind request, and
+that program output can forge the default report kind
+(`print("panic: forged\n\t"); panic("actual")` was observed as message
+`forged`, output empty —
+`docs/2026-09-06_observer-terminal-classification-design.md`).
+
+Why it is red now, and why that is the honest verdict: the landed observer
+authenticates an abort from the SAME oracle execution. `runtime/debug.
+SetCrashOutput` is installed as `main`'s first statement; the channel copy
+must be the byte-identical suffix of stderr (minus `go run`'s trailer), and
+its first runtime frame is pinned (`panic` @ `panic.go:879`, `runtime.fatal`
+@ `:1253`, `runtime.throw` @ `:1229` under `GOTRACEBACK=system`, go1.26.5).
+For an ordinary panic the copy begins at `panic: ` (the chain is printed
+after `m.dying`), so message and program output are an exact partition. For a
+fatal, `runtime.fatal` prints its message BEFORE `fatalthrow/startpanic_m`
+sets `m.dying` (`runtime/runtime.go:writeErrData` copies only after), so the
+copy holds the trace only and the message is recovered from the raw bytes
+under one strict rule: exactly one `fatal error: ` marker at a line start and
+NO `panic: ` marker anywhere before the authenticated trace. This row has one
+of each — `ambiguous fatal message/output before m.dying (1 panic/1 fatal
+markers precede the authenticated trace), refused` → FAIL/go-observation. A
+refusal is never conformance; the row's PASS was a classification made from
+bytes the runtime did not authenticate, and the doctrine prefers the visible
+red.
+
+Regression controls landed WITH this entry, green — the classifier does not
+over-refuse legal panics that merely LOOK like fatals or traces:
+`panic-recover/panic-markers/{first-line,nil-go-literal,deadlock-literal,
+output-midline,output-line,printed-continuation,glued-output,printed-trace}`
+(a payload equal to a fatal message; a payload equal to the deadlock text;
+`fatal error:` printed as program output mid-line and on its own line; the
+minimal forgery pair's printed half — `print("panic: forged\n\t");
+panic("actual")` → message `actual`, output `panic: forged\n\t`; glued
+output; a complete printed fake system trace before a real panic). The
+family's three multi-line rows (`mixed-line`, `fake-trace`,
+`literal-continuation`) are decided on the oracle side (message `original` /
+`forged`) but red at main's renderer — BUG-004's line. The two simple sync
+fatals (`sync/mutex-unlock-fatal/{unlock-of-unlocked,unlock-recover-attempt}`)
+stay PASS under the strict fatal rule.
+
+Fix plan (none chosen; each needs its own design and a [USER] ruling):
+(i) a pre-`m.dying` message channel — the installed runtime has no public
+one (`printBacklog` is private and lossy; goroutine writebuf diversion is
+test infrastructure; `docs/2026-09-06_observer-crash-channel-design.md`,
+"Actual bounded evidence"); (ii) an oracle-side runtime patch or tracer — a
+new trusted dependency, outside K3; (iii) accept the row's red as the
+standing pin of this limit. Until ruled, (iii) holds.
+
+## BUG-107 — a PRE-`main` abort (a package-level initializer or `init()` panicking or deadlocking before `main`'s first statement) has no crash-channel acknowledgement and is refused by name — five rows red where main's classifier previously read the report from unauthenticated bytes [apparatus; terminal classification; trusted surface #2; awaiting a [USER] ruling on a named pre-main exception]
+
+- Status: open ([AGENT], landing chunk L4 `land/observer-terminal` 2026-09-07 — the uniform-R6 consequence measured on the prep branch (`docs/2026-09-07_land-gate-tooling.md` §6) and re-measured here, focused + full; the [USER] direction relayed for this chunk: DEFAULT keep them red, fail-closed, pending a ruling)
+- Pinned-by: differential
+- Cases: init/init-panic, noodler/initpanic/panic, noodler/initpanic/var-panic, noodler/initpanic/deadlock, init/quarantined-var-panicking/sibling
+
+MERGE-TRAIN NOTE ([AGENT] L4 worker, 2026-09-07): numbered against main's
+top BUG-104 at cut time. The landing plan (§4 D1) SUGGESTED reserving 107 for
+the HELD `uintptr` chunk L5; numbers are allocated at landing, so L5 takes
+the next free number when (if) it lands, and L3 likewise. Renumber at the
+train if a concurrent chunk lands a 107 first.
+
+Cause: the crash hook (`_goleanSetupCrash()` — `runtime/debug.SetCrashOutput`
+plus the `oracle.registered` acknowledgement) is the FIRST STATEMENT OF
+`main`; Go initializes package-level variables and runs every `init()` before
+`main` begins, so a subject that aborts during initialization aborts before
+the hook exists: both owned files stay empty. Since the channel is MANDATORY
+on every classification path (landing review A-R6 — the sprint's first cut
+fell through to a raw-marker fallback when ack AND report were both empty,
+which made "authenticated" a best-effort claim), the observer refuses:
+`crash evidence: no hook registration acknowledgement — the oracle's
+_goleanSetupCrash never ran (the subject aborted before main's first
+statement, or the hook was not installed); an unauthenticated run is
+refused` → FAIL/go-observation. Rows: `init/init-panic` (`init()` panics),
+`noodler/initpanic/panic` (same), `noodler/initpanic/var-panic` (a
+package-level initializer indexes out of range), `noodler/initpanic/deadlock`
+(a deadlock during `init()`); `init/quarantined-var-panicking/sibling` was
+already red (FAIL/frontend-export: the frontend refuses the quarantined
+panicking initializer) and now fails on the oracle side FIRST, before
+frontend export is reached — same cause, a stage change only. The machine's
+verdicts on these programs are unchanged and unexamined by the red: an
+apparatus refusal never counts as conformance, and never as a machine wrong
+answer.
+
+Why red rather than a fallback (the [AGENT] default the brief set, pending
+the ruling): the fallback the sprint carried classified pre-`main` aborts
+from the raw stderr alone, i.e. from bytes the runtime did not authenticate.
+It is stricter than main's old classifier (it counts every marker, with no
+continuation exemption) but it is still an unauthenticated read, and a
+fallback that fires only when the acknowledgement is empty is exactly the
+silent degradation A-R6 named. Fail-closed says: no acknowledgement, no
+classification.
+
+The option the [USER] may rule (written here as the plan, per the brief):
+**a NAMED pre-`main` exception.** An EMPTY acknowledgement is itself a
+reliable pre-`main` signal — once `main` starts the hook cannot fail to write
+it silently (a failure to open, register or write exits the child with 78
+before the subject runs, and the runner checks that trailer first), so
+"acknowledgement empty AND report empty AND the exit-2 trailer AND a pinned
+runtime trace" positively identifies "the runtime aborted before `main`". The
+exception would (a) require exactly that state, (b) classify from the raw
+bytes under the strict rule (one marker at a line start, no second marker
+before the trace, the pinned first frame), (c) name itself in the run detail
+(`pre-main abort (no hook acknowledgement): raw-marker classification under
+the strict rule`), and (d) be a distinct, tested path — not the fallback the
+sprint had. Ruling it flips these five rows: the four `init`/`noodler` rows
+back to PASS and `sibling` back to its frontend-export red, with no other
+movement (this chunk's focused measurement ran every `init/`,
+`noodler/initpanic/` and `sync/mutex-unlock-fatal/` row). The alternative —
+registering the hook from a package `init()` — does NOT close the gap: the
+hook's own initializer cannot be ordered before the subject's other
+initializers (Go's initialization order is dependency order; ledger L-011
+records it as optimizer-dependent latitude), so an initializer abort could
+still precede it. The rows outside the admitted domain that could ALSO leave
+the acknowledgement empty (a subject deleting/rewriting the owned files) are
+already `unsupported/frontend-quarantined` at the frontend
+(`docs/2026-09-06_observer-crash-channel-design.md`, "Ownership and
+configuration boundary").

@@ -523,6 +523,23 @@ else
   bad "lowering-diagnostic tables (causes.tsv / machine-surface.tsv / library-refusals.tsv drifted, or the static pass disagrees with a wire)"
 fi
 
+# 3c. Coverage-harness unit tests (landing chunk L4 `land/observer-terminal`,
+#     2026-09-07 [AGENT]): the oracle observer — the same-run crash channel,
+#     the pinned terminal classifier, the runtime chain-shape pin, byte-exact
+#     transport, and the crash hook's inertness on the observation (landing
+#     review A-R9) — is exercised by `go test`, not by the differential (which
+#     consumes its verdicts), so it gets its own step. -count=1: the inertness
+#     test execs the pinned `go run`, whose effects the test cache cannot key.
+#     Additive: this block can only add a red.
+step "coverage-harness unit tests (go test ./tools/coverageharness — crash channel, terminal classifier, byte transport, hook inertness)"
+if chout="$(GO111MODULE=off GOCACHE="$PWD/artifacts/go-build-cache" go test -count=1 ./tools/coverageharness 2>&1)"; then
+  echo "$chout" | tail -2
+  ok "coverage-harness unit tests"
+else
+  echo "$chout" | tail -20
+  bad "coverage-harness unit tests (the oracle observer's own tests failed — see above)"
+fi
+
 # 4. Interpreter unit tests.
 step "interpreter eval tests (gocore-eval-tests)"
 evout="$(lake exe gocore-eval-tests 2>&1)"; evrc=$?

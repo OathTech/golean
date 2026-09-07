@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+nul	panicNUL	-	panic	a	panic,strings
+soh	panicSOH	-	panic	a	panic,strings
+tab	panicTAB	-	panic	a	panic,strings
+cr	panicCR	-	panic	a	panic,strings
+newline	panicControlsNewline	-	panic	a	panic,strings
+recovered-newline	panicControlsRecovered	-	panic	a	panic,recover,strings
+output-prefix	panicControlsOutput	-	panic	a	panic,strings
+output-ok	controlsOutput	-	ok	-	strings
+child-confluent	panicControlsChild	-	panic	a	panic,strings,goroutines,channels	confluent	the child panics with the same control bytes on every schedule while the caller waits	width=4,sites=8

@@ -97,12 +97,13 @@ SUMMARY="$OUT/summary.tsv"
 if [[ ! -f "$SUMMARY" ]]; then
   printf 'id\tenumerated\tsamplesParam\tdrawsAtGate\tdistinctAtGate\tdrawsHere\tdistinctHere\tdistinctPlain\tdistinctRace\tfirstDrawOfLastNew\tsecPerDraw\tenumSource\tnote\n' > "$SUMMARY"
 fi
-printf '# golean: %s (mtime %s)  go: %s  draws: %s  date: %s\n' "$GOLEAN_BIN" "$(date -r "$GOLEAN_BIN" -Iseconds)" "$(go version | awk '{print $3}')" "$DRAWS" "$(date -Iseconds)" >> "$OUT/provenance.txt"
+printf '# golean: %s (mtime %s)  go: %s  draws: %s  date: %s  GOTRACEBACK=system crash-channel=same-run-setcrashoutput-v1\n' "$GOLEAN_BIN" "$(date -r "$GOLEAN_BIN" -Iseconds)" "$(go version | awk '{print $3}')" "$DRAWS" "$(date -Iseconds)" >> "$OUT/provenance.txt"
 
 # One oracle run; prints the canonical observation (ok or panic) or
-# returns nonzero with the raw output.
+# returns nonzero with quoted diagnostic output. Raw bytes stay in files.
 oracle() {  # $1 = harness dir, $2 = "" | race
   local dir="$1" mode="$2" out rc=0 lit split_rc=0
+  local evidence=(--crash-report "$dir/oracle.crash" --crash-registered "$dir/oracle.registered")
   local race=()
   [[ "$mode" == "race" ]] && race=(-race)
   # Multi-package cases (raft W1.1): the harness assembled the case's local
@@ -115,24 +116,40 @@ oracle() {  # $1 = harness dir, $2 = "" | race
   # stdout/stderr captured SEPARATELY (stdlib slice 3): the `output`
   # observation field is the program's fd-2 prefix, split fail-closed by
   # the harness's --split-stderr mode exactly as scripts/diff-coverage does.
-  (cd "$dir" && env GO111MODULE=off GOFLAGS= GODEBUG=panicnil=0 GOCACHE="$GO_BUILD_CACHE" ${gopath_env[@]+"${gopath_env[@]}"} go run ${race[@]+"${race[@]}"} . > oracle.stdout 2> oracle.stderr) || rc=$?
-  out="$(cat "$dir/oracle.stdout" "$dir/oracle.stderr")"
+  if ! { : > "$dir/oracle.crash" && : > "$dir/oracle.registered"; }; then
+    printf 'UNCLASSIFIED: oracle setup could not reset crash evidence'; return 1
+  fi
+  (cd "$dir" && env GO111MODULE=off GOFLAGS= GODEBUG=panicnil=0 GOTRACEBACK=system GOCACHE="$GO_BUILD_CACHE" ${gopath_env[@]+"${gopath_env[@]}"} go run ${race[@]+"${race[@]}"} . > oracle.stdout 2> oracle.stderr) || rc=$?
+  out="stdout=$("$HARNESS_BIN" --quote-file "$dir/oracle.stdout") stderr=$("$HARNESS_BIN" --quote-file "$dir/oracle.stderr")"
   if [[ "$rc" -eq 0 ]]; then
-    out="$(cat "$dir/oracle.stdout")"
+    if ! out="$("$HARNESS_BIN" --read-observation "$dir/oracle.stdout" 2>"$dir/oracle.read.err")"; then
+      printf 'UNCLASSIFIED: %s' "$(cat "$dir/oracle.read.err")"; return 1
+    fi
     if [[ "$out" == *'"status":"ok"'* ]]; then
-      lit="$("$HARNESS_BIN" --split-stderr "$dir/oracle.stderr" --expected-status ok 2>"$dir/oracle.split.err")" || split_rc=$?
+      lit="$("$HARNESS_BIN" --split-stderr "$dir/oracle.stderr" --expected-status ok "${evidence[@]}" 2>"$dir/oracle.split.err")" || split_rc=$?
       if [[ "$split_rc" -ne 0 ]]; then printf 'UNCLASSIFIED (stderr split failed, exit %s): %s' "$split_rc" "$(head -c 300 "$dir/oracle.split.err")"; return 1; fi
       printf '{"output":%s,%s' "$lit" "${out#\{}"; return 0
     fi
     printf 'UNCLASSIFIED: %s' "$out"; return 1
   fi
-  if [[ "$out" == *"panic:"* ]]; then
+  if [[ "$rc" -eq 1 ]]; then
+    if tail -c 15 "$dir/oracle.stderr" | cmp -s - <(printf 'exit status 78\n'); then
+      printf 'UNCLASSIFIED: oracle crash-hook setup failed (child exit 78)'; return 1
+    fi
+    local actual_kind
+    if ! actual_kind="$("$HARNESS_BIN" --abort-status "$dir/oracle.stderr" "${evidence[@]}" 2>"$dir/oracle.kind.err")"; then
+      printf 'UNCLASSIFIED: %s' "$(cat "$dir/oracle.kind.err")"; return 1
+    fi
+    if [[ "$actual_kind" != panic ]]; then
+      printf 'UNCLASSIFIED: actual %s report outside the ok/panic observation domain: %s' "$actual_kind" "$out"; return 1
+    fi
     local msg
-    msg="$(printf '%s\n' "$out" | awk '/^panic: /{sub(/^panic: /,""); print; exit}')"
-    msg="${msg//\\/\\\\}"; msg="${msg//\"/\\\"}"
-    lit="$("$HARNESS_BIN" --split-stderr "$dir/oracle.stderr" --expected-status panic 2>"$dir/oracle.split.err")" || split_rc=$?
+    if ! msg="$("$HARNESS_BIN" --abort-message "$dir/oracle.stderr" --expected-status panic "${evidence[@]}" 2>"$dir/oracle.message.err")"; then
+      printf 'UNCLASSIFIED: %s' "$(cat "$dir/oracle.message.err")"; return 1
+    fi
+    lit="$("$HARNESS_BIN" --split-stderr "$dir/oracle.stderr" --expected-status panic "${evidence[@]}" 2>"$dir/oracle.split.err")" || split_rc=$?
     if [[ "$split_rc" -ne 0 ]]; then printf 'UNCLASSIFIED (stderr split failed, exit %s): %s' "$split_rc" "$(head -c 300 "$dir/oracle.split.err")"; return 1; fi
-    printf '{"message":"%s","output":%s,"schema":"golean-observation-v1","status":"panic"}' "$msg" "$lit"
+    printf '{"message":%s,"output":%s,"schema":"golean-observation-v1","status":"panic"}' "$msg" "$lit"
     return 0
   fi
   printf 'UNCLASSIFIED: %s' "$out"; return 1
