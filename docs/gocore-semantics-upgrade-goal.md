@@ -89,7 +89,7 @@ Do not use destructive git commands such as `git reset --hard` or
 
 Read these before starting implementation:
 
-- `AGENTS.md`: project operating context.
+- `docs/architecture-rules.md` (formerly `AGENTS.md`): project operating context.
 - `docs/archive/semantics-cleanup-plan.md`: cleanup inventory and phase order.
 - `docs/semantics.md`: current GoCore semantic design.
 - `docs/iris-lean-review.md`: Iris-Lean compatibility notes.

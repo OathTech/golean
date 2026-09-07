@@ -71,8 +71,9 @@ selects it via `GOLEAN_FRONTEND=native` (switch already exists in
 
 The success criterion is not "runs quorum" — it is **the native frontend covers
 what Gobra covered so Gobra can be deleted**. Gobra was always a temporary
-frontend accelerator (roadmap, AGENTS.md); GoCore is Gobra-free, the corpus is
-frontend-independent, and proof infra is planned on top of GoCore, not via
+frontend accelerator (roadmap, `docs/architecture-rules.md` — formerly
+AGENTS.md); GoCore is Gobra-free, the corpus is frontend-independent, and
+proof infra is planned on top of GoCore, not via
 Gobra. Removing it drops ~780 MB of Scala/SBT/JVM dependencies plus four Lean
 modules, scripts, and CLI surface, and it deletes the per-fixture export
 bottleneck.

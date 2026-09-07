@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+# Self-test for scripts/check-agents-alias against SCRATCH git repos under the
+# checkout's .tmp/ (never /tmp — docs/agent-sandbox.md). Every case asserts
+# the exit code AND that the verdict names its shape or its cause; the scratch
+# dir is left in place for inspection (no rm — replaced files are mv'd aside).
+# Runs as the first half of the ci step so a broken checker is a red, not a
+# silent pass.
+set -uo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+CHECK="$ROOT/scripts/check-agents-alias"
+mkdir -p "$ROOT/.tmp"
+SCRATCH="$(mktemp -d "$ROOT/.tmp/check-agents-alias-test.XXXXXX")" || { echo "self-test: cannot create scratch dir under $ROOT/.tmp" >&2; exit 2; }
+REPO="$SCRATCH/repo"
+git init -q "$REPO" || exit 2
+g() { git -C "$REPO" "$@"; }
+# repo-LOCAL identity for the scratch commits (never the user's global config)
+g config user.email agents-alias-selftest@localhost && g config user.name agents-alias-selftest || exit 2
+printf '# CLAUDE.md — the working charter\n\nrules live here.\n' > "$REPO/CLAUDE.md"
+g add CLAUDE.md && g commit -qm init || exit 2
+
+pass=0; fail=0
+# expect <exit> <label> <must-contain|-> [<must-not-contain>] -- <cmd...>
+expect() {
+  local want="$1" label="$2" must="$3"; shift 3
+  local mustnot="-"; if [[ "$1" != -- ]]; then mustnot="$1"; shift; fi; shift
+  local out rc=0; out="$("$@" 2>&1)" || rc=$?
+  if [[ "$rc" != "$want" ]]; then
+    echo "FAIL $label: exit $rc, want $want"; printf '%s\n' "$out" | sed 's/^/    /'; fail=$((fail+1)); return
+  fi
+  if [[ "$must" != "-" ]] && ! grep -qF -- "$must" <<<"$out"; then
+    echo "FAIL $label: output lacks '$must'"; printf '%s\n' "$out" | sed 's/^/    /'; fail=$((fail+1)); return
+  fi
+  if [[ "$mustnot" != "-" ]] && grep -qF -- "$mustnot" <<<"$out"; then
+    echo "FAIL $label: output must not mention '$mustnot'"; printf '%s\n' "$out" | sed 's/^/    /'; fail=$((fail+1)); return
+  fi
+  pass=$((pass+1))
+}
+run() { "$CHECK" --repo "$REPO"; }
+
+# 1. no AGENTS.md at all is a refusal that says so
+expect 1 absent "AGENTS.md is absent" -- run
+# 2. a correct symlink that is NOT tracked is refused (the alias must be git-tracked)
+ln -s CLAUDE.md "$REPO/AGENTS.md"
+expect 1 untracked "not tracked by git" -- run
+# 3. tracked symlink, target exactly CLAUDE.md: PASS, names the SYMLINK shape (staged, then committed)
+g add AGENTS.md
+expect 0 symlink-staged "shape SYMLINK" "COPY" -- run
+g commit -qm alias
+expect 0 symlink-committed "mode 120000" -- run
+# 4-6. wrong targets: another file, a ./-qualified path, an absolute path
+ln -sfn README.md "$REPO/AGENTS.md"; g add AGENTS.md
+expect 1 wrong-target "symlink to 'README.md'" -- run
+ln -sfn ./CLAUDE.md "$REPO/AGENTS.md"; g add AGENTS.md
+expect 1 dotted-target "symlink to './CLAUDE.md'" -- run
+ln -sfn "$REPO/CLAUDE.md" "$REPO/AGENTS.md"; g add AGENTS.md
+expect 1 absolute-target "must be exactly 'CLAUDE.md'" -- run
+# 7. working tree fixed but the index still holds the bad target: refused until re-staged
+ln -sfn CLAUDE.md "$REPO/AGENTS.md"
+expect 1 index-stale-target "index symlink target is" -- run
+g add AGENTS.md
+expect 0 restaged "shape SYMLINK" -- run
+# 8. a regular file with different bytes (unstaged, then staged) is refused, naming the divergence
+mv "$REPO/AGENTS.md" "$SCRATCH/aside-symlink-1"
+printf 'not the charter\n' > "$REPO/AGENTS.md"
+expect 1 divergent-unstaged "bytes DIFFER" -- run
+g add AGENTS.md
+expect 1 divergent-staged "bytes DIFFER" -- run
+# 9. a byte-identical tracked COPY passes and names the COPY shape
+cp "$REPO/CLAUDE.md" "$REPO/AGENTS.md"; g add AGENTS.md
+expect 0 copy-ok "shape COPY" "SYMLINK" -- run
+# 10. copy shape: CLAUDE.md edited and mirrored, but only CLAUDE.md staged — refused until both are
+printf 'more.\n' >> "$REPO/CLAUDE.md"; cp "$REPO/CLAUDE.md" "$REPO/AGENTS.md"; g add CLAUDE.md
+expect 1 copy-half-staged "staged blobs differ" -- run
+g add AGENTS.md
+expect 0 copy-both-staged "shape COPY" -- run
+# 11. copy shape: CLAUDE.md edited WITHOUT mirroring — drift is refused
+printf 'drift.\n' >> "$REPO/CLAUDE.md"
+expect 1 copy-drift "bytes DIFFER" -- run
+cp "$REPO/CLAUDE.md" "$REPO/AGENTS.md"; g add CLAUDE.md AGENTS.md
+expect 0 copy-remirrored "shape COPY" -- run
+# 12. a plain file holding just the target path = a symlink checked out with core.symlinks=false
+printf 'CLAUDE.md' > "$REPO/AGENTS.md"
+expect 1 symlink-as-file "core.symlinks" -- run
+# 13. working tree is a good copy but the index still records a symlink: refused (stage it)
+ln -sfn CLAUDE.md "$REPO/AGENTS.md"; g add AGENTS.md
+mv "$REPO/AGENTS.md" "$SCRATCH/aside-symlink-2"; cp "$REPO/CLAUDE.md" "$REPO/AGENTS.md"
+expect 1 copy-vs-index-symlink "index records AGENTS.md at mode 120000" -- run
+# 14. CLAUDE.md itself missing: no target, refused
+REPO2="$SCRATCH/repo-no-charter"; git init -q "$REPO2" || exit 2
+ln -s CLAUDE.md "$REPO2/AGENTS.md"; git -C "$REPO2" add AGENTS.md
+expect 1 no-charter "CLAUDE.md is missing" -- "$CHECK" --repo "$REPO2"
+# 15-17. cannot-judge cases are exit 2, never a pass: missing dir, a non-root dir, a bad flag
+expect 2 missing-repo "not a directory" -- "$CHECK" --repo "$SCRATCH/nope"
+mkdir -p "$REPO/sub"
+expect 2 not-top "not the top of a git checkout" -- "$CHECK" --repo "$REPO/sub"
+expect 2 bad-flag "unknown argument" -- "$CHECK" --bogus
+
+if [[ "$fail" -ne 0 ]]; then
+  echo "check-agents-alias self-test: FAIL ($fail failed, $pass passed; scratch $SCRATCH)"; exit 1
+fi
+echo "check-agents-alias self-test: PASS ($pass cases; scratch $SCRATCH)"

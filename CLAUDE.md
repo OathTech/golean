@@ -1,5 +1,11 @@
 # CLAUDE.md — the working charter
 
+`AGENTS.md` is a git-tracked symlink alias of this file so that agents
+looking for `AGENTS.md` find the working charter; edit `CLAUDE.md` only —
+the architecture rules formerly in `AGENTS.md` are
+`docs/architecture-rules.md`. ([USER] 2026-09-07, relayed; the alias
+shape is gate-checked by `scripts/check-agents-alias`.)
+
 This file is the charter: what we build, what is trusted, and the
 gates. It is deliberately short; details live in the pointed-to
 documents. Amend only when a practice proves its worth or its cost.
@@ -30,11 +36,11 @@ customer layer that we can feel confident we are building the right
 thing». So: the semantic transition relation, its observations, the
 invariants stating its domain, and the executable↔relation coherence
 proofs LIVE HERE, co-designed with the executable core (the merge
-invariant in `AGENTS.md`). Iris resources, WP rules, program proofs,
-tactics, and consumer ghost state are the customer's, downstream. A
-thin customer adapter (an iris-lean `Language` instance + toy facts)
-may be built in-repo as a SPIKE, outside the default build and the
-gate's dependency graph, to validate the interface.
+invariant in `docs/architecture-rules.md`). Iris resources, WP rules,
+program proofs, tactics, and consumer ghost state are the customer's,
+downstream. A thin customer adapter (an iris-lean `Language` instance
++ toy facts) may be built in-repo as a SPIKE, outside the default
+build and the gate's dependency graph, to validate the interface.
 
 Top-level goals ([USER], Mike, 2026-09-04, verbatim, relayed by the
 [AGENT] coordinator — cite as relayed): «(1) to be a highly accurate
@@ -95,8 +101,8 @@ Everything else is untrusted tooling.
   hidden wrong answer.
 - **No semantic choice hides in evaluator recursion.** Latitude Go
   permits is reified (the choice tape), not baked in; frontend
-  concerns stay in the lowering and fail closed (`AGENTS.md` has
-  the architecture rules).
+  concerns stay in the lowering and fail closed
+  (`docs/architecture-rules.md` has the architecture rules).
 - **Honest measurement.** Differential results are reported with
   their scope (full vs. partial, cached vs. re-certified); bounds
   as bounds; numbers derivation-anchored.
@@ -110,8 +116,10 @@ Everything else is untrusted tooling.
   and a written reason (PASS→non-PASS flips must be on a BUGS.md
   Cases: line). The gate also runs `scripts/check-evidence-size`:
   bulky or duplicated evidence under `docs/evidence/` fails closed
-  (caps and the archive-branch convention: `AGENTS.md`, "Evidence
-  on main").
+  (caps and the archive-branch convention:
+  `docs/architecture-rules.md`, "Evidence on main"), and
+  `scripts/check-agents-alias`: `AGENTS.md` must be the alias of this
+  file (note at the top).
 - The pre-merge adversarial audit: the ask is unconditional; scope
   and waiver are the user's.
 
@@ -163,4 +171,5 @@ truth pins: `docs/spec-sources.md` · Coverage structure:
 (`docs/coverage-ledger.md`, `docs/language-coverage-ledger.md`) ·
 Fidelity bugs: `docs/BUGS.md` · Operational lessons (build/OOM/tool
 incidents, measured remedies): `docs/operational-lessons.md` ·
-Architecture rules: `AGENTS.md`.
+Architecture rules: `docs/architecture-rules.md` (`AGENTS.md` is an
+alias of this file, not a separate document).

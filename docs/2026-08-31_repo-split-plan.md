@@ -215,8 +215,9 @@ Consequences for this document:
   plan items. `Machine`, `MachineSound`, `Multi`, `MultiSound`,
   `MultiWfSound`, `MultiStreams`, `NPDRF`, `Race` and the
   `StateEqb`/`SyntaxEqb`/`MachineEqb` seam stay in `GoLean/GoCore/`
-  as part of the semantics product, bound by `AGENTS.md`'s merge
-  invariant. The text above is left as written (history).
+  as part of the semantics product, bound by the merge invariant in
+  `docs/architecture-rules.md` (`AGENTS.md` when this was written).
+  The text above is left as written (history).
 - What remains TRUE of the split: the Iris layer (resources, WP
   rules, program proofs, tactics, consumer ghost state, the
   designated theorem set, the judge/audit apparatus) is downstream —

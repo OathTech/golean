@@ -48,7 +48,8 @@ behind a written claim. The standard is the outsider's question:
 
 9. **Size and provenance caps** (gate-enforced since 2026-09-07 by
    `scripts/check-evidence-size`, a `scripts/ci` step — [USER] ruling
-   relayed in `AGENTS.md`, "Evidence on main"): no file over 256 KiB,
+   relayed in `docs/architecture-rules.md`, "Evidence on main"): no
+   file over 256 KiB,
    no directory over 4 MiB, no archives, no byte-identical copies of
    tracked files; pre-existing offenders are frozen in
    `SIZE-ALLOWLIST.tsv` beside this file (shrink-only). Bulky records

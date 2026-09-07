@@ -26,7 +26,8 @@ import (
 //
 // It runs `go run` on the pinned toolchain; a missing `go` is a failure, not
 // a skip (a gate that cannot run fails). GOCACHE follows the repo convention
-// (AGENTS.md): the environment's, else <repo>/artifacts/go-build-cache.
+// (docs/architecture-rules.md, formerly AGENTS.md): the environment's, else
+// <repo>/artifacts/go-build-cache.
 
 const inertFixture = `package main
 

@@ -25,8 +25,8 @@ Pre-existing offenders on main at the day of the ruling are listed in the
 ALLOWLIST (rule, path, reason, date). The allowlist may only SHRINK: every
 entry must carry the freeze date, must still match a live violation (a stale
 entry is refused — remove it), and anything not listed fails. New evidence
-that needs more room goes to an archive branch (AGENTS.md, "Evidence on
-main"), never onto main via a new allowlist row.
+that needs more room goes to an archive branch (docs/architecture-rules.md,
+"Evidence on main"), never onto main via a new allowlist row.
 
 Exit 0 = clean (or every violation allowlisted); 1 = violation(s); 2 = the
 check could not run (git failure, malformed allowlist) — a red, never a skip.
@@ -152,7 +152,7 @@ def read_allowlist(path):
                 die(f"{path}:{n}: empty reason")
             if date != ALLOWLIST_FREEZE_DATE:
                 die(f"{path}:{n}: entry dated {date!r} — the allowlist may only shrink; every entry must carry "
-                    f"the freeze date {ALLOWLIST_FREEZE_DATE} (new offenders go to an archive branch, AGENTS.md)", code=1)
+                    f"the freeze date {ALLOWLIST_FREEZE_DATE} (new offenders go to an archive branch, docs/architecture-rules.md)", code=1)
             key = (rule, apath)
             if key in seen:
                 die(f"{path}:{n}: duplicate entry {rule} {apath}")
@@ -195,7 +195,7 @@ def main():
     if new:
         where = allow_path if allow is not None else f"{allow_path} (absent)"
         print(f"check-evidence-size: {len(new)} offender(s) not in {where} — bulky evidence belongs on an archive "
-              f"branch with a MANIFEST.tsv on main (AGENTS.md, Evidence on main)", file=sys.stderr)
+              f"branch with a MANIFEST.tsv on main (docs/architecture-rules.md, Evidence on main)", file=sys.stderr)
         failed = True
     if failed:
         sys.exit(1)

@@ -93,7 +93,9 @@ qualification table.
 
 ### 0.4 The review agent's entry points
 
-1. `CLAUDE.md` (the charter), then `AGENTS.md` (architecture rules).
+1. `CLAUDE.md` (the charter), then `docs/architecture-rules.md`
+   (architecture rules; formerly `AGENTS.md`, which since 2026-09-07 is a
+   git-tracked symlink alias of the charter).
 2. §1.7 below — the exit-criteria checklist. Each line is testable.
 3. §2 — every number with its derivation; re-run each command.
 4. §3 — the packages; each has a "what the reviewer should probe" list.
@@ -1596,7 +1598,8 @@ an addendum here.
 
 ### 6.3 Brief for the whole-project review agent
 
-Read `CLAUDE.md`, `AGENTS.md`, this document; then, in a fresh worktree
+Read `CLAUDE.md`, `docs/architecture-rules.md` (formerly `AGENTS.md`),
+this document; then, in a fresh worktree
 off `main` with `scripts/setup-deps --from <sibling checkout>`:
 
 1. **Re-derive the snapshot** (§0.2, §2.1): the awk tally; `cat
@@ -1929,7 +1932,8 @@ superseded by that section and are not landed.]
   `stepFn_sound`/`step_complete`, `MultiSound`, `MultiWfSound`,
   `execProg_single_eq_execStmt`, the corrected bridges, the dedup
   checker's `checkCert_slowObs`) — co-designed with the executable
-  core under `AGENTS.md`'s merge invariant. `NPDRF.lean` and `Race.lean`
+  core under the merge invariant (`docs/architecture-rules.md`, formerly
+  `AGENTS.md`). `NPDRF.lean` and `Race.lean`
   stay here as the domain statements for the concurrent pin (Gate D).
 - **Downstream (the customer's):** Iris resources, WP rules, program
   proofs (including `cedarGo_refines`, §3.H), tactics, consumer ghost
@@ -2258,8 +2262,9 @@ RULED there and in the L3 note §7.2.
 
 #### 7.8.8 The standing rule this landing leaves behind
 
-`docs/evidence/` holds RECORDS, not copies (`AGENTS.md`, "Evidence on
-main"): gate tails, transcripts, small probe outputs and the commit SHA;
+`docs/evidence/` holds RECORDS, not copies (`docs/architecture-rules.md`,
+formerly `AGENTS.md`, "Evidence on main"): gate tails, transcripts, small
+probe outputs and the commit SHA;
 `scripts/check-evidence-size` in `scripts/ci` refuses a tracked evidence
 file over 256 KiB, a top-level evidence dir over 4 MiB, any archive
 extension, and any evidence blob byte-identical to a tracked non-evidence

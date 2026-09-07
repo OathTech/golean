@@ -34,7 +34,9 @@ No merge to main or push is authorized by the kickoff approval.
 
 **Starting point:** `main` at `47195683`. Plan of record:
 [master plan §7.4.1](2026-09-05_master-plan.md#741-executed-consumer-contract-increments-2026-09-05).
-Standing authority: [CLAUDE.md](../CLAUDE.md) and [AGENTS.md](../AGENTS.md).
+Standing authority: [CLAUDE.md](../CLAUDE.md) and the
+[architecture rules](architecture-rules.md) (`AGENTS.md` when this was
+written; since 2026-09-07 `AGENTS.md` is a symlink alias of `CLAUDE.md`).
 
 ## 1. Mission and outcome
 

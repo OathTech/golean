@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# check-agents-alias — refuse unless AGENTS.md is an alias of CLAUDE.md.
+#
+# [USER] direction (Mike, 2026-09-07, relayed by the [AGENT] coordinator —
+# cite as relayed): «can you make AGENTS.md a git-tracked alias for CLAUDE.md
+# (add a note in CLAUDE.md to this effect) - this is so other agents can find
+# our working instructions». The architecture rules AGENTS.md used to hold
+# moved verbatim to docs/architecture-rules.md.
+#
+# Two shapes are accepted, and the verdict NAMES which one it found:
+#   SYMLINK  AGENTS.md is a symlink whose target is exactly `CLAUDE.md`
+#            (relative, same directory, no `./`), tracked at mode 120000 with
+#            that same target as the staged blob — the shape on main.
+#   COPY     AGENTS.md is a regular file byte-identical to CLAUDE.md in the
+#            working tree AND in the index (equal staged blobs) — the fallback
+#            if raw-URL fetches ever need real content, see
+#            docs/architecture-rules.md "Alias caveat".
+# Anything else is refused WITH ITS CAUSE: absent, untracked, wrong target,
+# divergent bytes, working tree and index disagreeing, or a symlink that was
+# checked out as a plain file (core.symlinks=false).
+#
+# Exit 0 = alias OK (shape named); 1 = not an alias (cause named); 2 = could
+# not judge (bad arguments, not the top of a git checkout, git failure) — a
+# red, never a skip.
+#
+#   scripts/check-agents-alias [--repo <checkout-root>]
+set -uo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+REPO="$ROOT"
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --repo) [[ $# -ge 2 ]] || { echo "check-agents-alias: --repo needs a directory" >&2; exit 2; }
+            REPO="$2"; shift 2 ;;
+    *) echo "check-agents-alias: unknown argument '$1' (expected --repo <dir>)" >&2; exit 2 ;;
+  esac
+done
+die()    { echo "check-agents-alias: CANNOT JUDGE — $*" >&2; exit 2; }
+refuse() { echo "check-agents-alias: REFUSED — $*" >&2; exit 1; }
+
+[[ -d "$REPO" ]] || die "--repo $REPO: not a directory"
+cd "$REPO" || die "cannot cd to $REPO"
+top="$(git rev-parse --show-toplevel 2>/dev/null)" || die "$REPO is not inside a git checkout (the alias must be git-TRACKED; nothing to judge)"
+[[ "$(cd "$top" && pwd -P)" == "$(pwd -P)" ]] || die "$REPO is not the top of a git checkout (git's top is $top)"
+
+[[ -f CLAUDE.md && ! -L CLAUDE.md ]] || refuse "CLAUDE.md is missing or not a regular file — the alias has no target"
+[[ -e AGENTS.md || -L AGENTS.md ]] || refuse "AGENTS.md is absent — expected a symlink to CLAUDE.md (ln -sf CLAUDE.md AGENTS.md && git add AGENTS.md)"
+
+idx="$(git ls-files -s --error-unmatch -- AGENTS.md 2>/dev/null)" || refuse "AGENTS.md is not tracked by git (stage it: git add AGENTS.md)"
+read -r mode sha _stage _path <<<"$idx"
+
+if [[ -L AGENTS.md ]]; then
+  target="$(readlink AGENTS.md)" || die "readlink AGENTS.md failed"
+  [[ "$target" == "CLAUDE.md" ]] || refuse "AGENTS.md is a symlink to '$target'; the target must be exactly 'CLAUDE.md' (relative, same directory)"
+  [[ "$mode" == "120000" ]] || refuse "working tree has the symlink but the index records AGENTS.md at mode $mode (stage it: git add AGENTS.md)"
+  staged="$(git cat-file -p "$sha")" || die "git cat-file $sha failed"
+  [[ "$staged" == "CLAUDE.md" ]] || refuse "index symlink target is '$staged', want exactly 'CLAUDE.md' (stage it: git add AGENTS.md)"
+  echo "agents-alias: PASS — shape SYMLINK: AGENTS.md -> CLAUDE.md, tracked at mode 120000 (edit CLAUDE.md only; architecture rules: docs/architecture-rules.md)"
+  exit 0
+fi
+
+[[ -f AGENTS.md ]] || refuse "AGENTS.md is neither a symlink nor a regular file"
+if ! cmp -s AGENTS.md CLAUDE.md; then
+  # A symlink checked out under core.symlinks=false is a plain file whose bytes ARE the target path.
+  if [[ "$(wc -c < AGENTS.md)" -le 16 && "$(cat AGENTS.md)" == "CLAUDE.md" ]]; then
+    refuse "AGENTS.md is a plain file containing only 'CLAUDE.md' — a symlink checked out as a file (core.symlinks=false?); re-check-out with symlinks enabled, or adopt the copy shape (docs/architecture-rules.md, Alias caveat)"
+  fi
+  refuse "AGENTS.md is a regular file whose bytes DIFFER from CLAUDE.md — restore the symlink (ln -sf CLAUDE.md AGENTS.md && git add AGENTS.md) or, in the copy shape, cp CLAUDE.md AGENTS.md && git add AGENTS.md"
+fi
+[[ "$mode" == "100644" || "$mode" == "100755" ]] || refuse "working tree has a regular-file copy but the index records AGENTS.md at mode $mode (stage it: git add AGENTS.md)"
+cidx="$(git ls-files -s --error-unmatch -- CLAUDE.md 2>/dev/null)" || refuse "CLAUDE.md is not tracked by git (stage it: git add CLAUDE.md)"
+read -r _cmode csha _cstage _cpath <<<"$cidx"
+[[ "$sha" == "$csha" ]] || refuse "working-tree copy matches CLAUDE.md but the staged blobs differ (AGENTS.md ${sha:0:12}, CLAUDE.md ${csha:0:12}) — stage both: git add CLAUDE.md AGENTS.md"
+echo "agents-alias: PASS — shape COPY: AGENTS.md is a regular file byte-identical to CLAUDE.md (working tree and index); mirror every CLAUDE.md edit with: cp CLAUDE.md AGENTS.md"

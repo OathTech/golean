@@ -1,8 +1,10 @@
 # GoLean
 
 **Plan of record: `docs/2026-09-05_master-plan.md` (+ its §7 addendum,
-the 2026-09-05 review dispositions); charter: `CLAUDE.md`.** The
-pointers further down are historical unless they say otherwise.
+the 2026-09-05 review dispositions); charter: `CLAUDE.md` (`AGENTS.md`
+is a git-tracked symlink alias of it); architecture rules:
+`docs/architecture-rules.md`.** The pointers further down are
+historical unless they say otherwise.
 
 This is the project repo for the Go-to-Lean tool.
 

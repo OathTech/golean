@@ -353,11 +353,37 @@ if evtest="$(./scripts/test-check-evidence-size 2>&1)"; then
     ok "evidence-on-main size gate"
   else
     echo "$evout"
-    bad "evidence-on-main size gate (offender(s) outside docs/evidence/SIZE-ALLOWLIST.tsv — see above; bulky evidence goes to an archive branch, AGENTS.md)"
+    bad "evidence-on-main size gate (offender(s) outside docs/evidence/SIZE-ALLOWLIST.tsv — see above; bulky evidence goes to an archive branch, docs/architecture-rules.md)"
   fi
 else
   echo "$evtest"
   bad "evidence-on-main size gate SELF-TEST (the checker itself is broken — see above)"
+fi
+
+# 1c3c. AGENTS.md alias gate. [USER] direction (Mike, 2026-09-07, relayed by
+# the [AGENT] coordinator): «can you make AGENTS.md a git-tracked alias for
+# CLAUDE.md (add a note in CLAUDE.md to this effect) - this is so other
+# agents can find our working instructions». AGENTS.md must be a git-tracked
+# symlink whose target is exactly CLAUDE.md — or, if the copy shape is ever
+# adopted for raw-URL readers (docs/architecture-rules.md, "Alias caveat"),
+# a regular file byte-identical to CLAUDE.md — in the WORKING TREE and the
+# INDEX; the checker names the shape it found. The architecture rules that
+# AGENTS.md used to hold are docs/architecture-rules.md. The checker's
+# SELF-TEST runs first against scratch repos under .tmp/ so a broken checker
+# is a red, never a quiet pass.
+step "AGENTS.md alias of CLAUDE.md (scripts/check-agents-alias; self-test first)"
+if altest="$(./scripts/test-check-agents-alias 2>&1)"; then
+  echo "$altest" | tail -1 | sed 's/^/  /'
+  if alout="$(./scripts/check-agents-alias 2>&1)"; then
+    echo "$alout" | tail -1 | sed 's/^/  /'
+    ok "AGENTS.md alias of CLAUDE.md"
+  else
+    echo "$alout"
+    bad "AGENTS.md alias of CLAUDE.md (see above; the symlink shape is restored by: ln -sf CLAUDE.md AGENTS.md && git add AGENTS.md)"
+  fi
+else
+  echo "$altest"
+  bad "AGENTS.md alias SELF-TEST (the checker itself is broken — see above)"
 fi
 
 # 1c4. Imported-goose verbatim staleness (goose-parity phase-A checkpoint,

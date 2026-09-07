@@ -8,8 +8,9 @@
 # ([AGENT] census, landing chunk L2, docs/2026-09-07_land-gate-tooling.md).
 # THE LIST MAY ONLY SHRINK: every entry carries the freeze date 2026-09-07;
 # the checker refuses any other date and any entry that no longer matches a
-# live offender. Moving an entry's bytes to an archive branch (AGENTS.md,
-# "Evidence on main") means deleting its row here.
+# live offender. Moving an entry's bytes to an archive branch
+# (docs/architecture-rules.md, "Evidence on main") means deleting its row
+# here.
 #
 # Columns: rule <TAB> path <TAB> reason <TAB> date
 dir-size	docs/evidence/2026-09-04_c-arc-gu/	10.4 MB: four whole-corpus choice-trace dumps (below); README has a regeneration note; pre-existing on main 47195683 at the freeze; archive-branch candidate	2026-09-07
