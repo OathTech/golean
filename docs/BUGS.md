@@ -6458,7 +6458,14 @@ MERGE-TRAIN NOTE ([AGENT] L4 worker, 2026-09-07): numbered against main's
 top BUG-104 at cut time. The landing plan (§4 D1) SUGGESTED reserving 107 for
 the HELD `uintptr` chunk L5; numbers are allocated at landing, so L5 takes
 the next free number when (if) it lands, and L3 likewise. Renumber at the
-train if a concurrent chunk lands a 107 first.
+train if a concurrent chunk lands a 107 first. RECONCILED at L6
+(`land/sprint-records`, 2026-09-07, [AGENT]): no concurrent chunk landed a
+107 (L3 allocates no number) — THIS entry holds 107; the sprint branch's
+"BUG-107" (the `uintptr` repair, `typed-uintptr-identity` @ `5f185fb3`)
+exists only in the sprint worktree's staged index and in two whole-file
+ledger copies on the archive branch, never on main; it takes the next free
+number when (if) L5 is ruled and lands (`docs/2026-09-05_typed-consumer-sprint-handoff.md`,
+"BUG numbering reconciliation").
 
 Cause: the crash hook (`_goleanSetupCrash()` — `runtime/debug.SetCrashOutput`
 plus the `oracle.registered` acknowledgement) is the FIRST STATEMENT OF

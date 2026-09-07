@@ -6,6 +6,32 @@ this document.** Every chunk below is built from the sprint tip by path
 selection, gated on a clean tree, audited, and merged only on a separate
 at-that-moment [USER] sign-off (`CLAUDE.md`, the merge protocol).
 
+> **Status addendum (2026-09-07, [AGENT] `land-sprint-records`, chunk L6):
+> rounds 20–24 EXECUTED.** L1 `f70ea4bf`; L2 `74245e1d` + `90bc3e06`
+> (the stale allowlist row dropped at the round-22 rebase gate); L4
+> `60bbf466` + `dd636996` (audit fix round); L3 `a6a068ce` + `25c665b7` +
+> `29f77b43` (round 24; rebased onto `dd636996`, nine rows re-pinned at the
+> rebased tip — 3654 = 3403 / 251, 0 PASS→non-PASS; L3 note §7.2); L6 =
+> this chunk. Each merged
+> to main on a separate at-that-moment [USER] sign-off, relayed by the
+> coordinator («Go ahead and merge it» ×2, «go ahead and merge», «Go ahead
+> with the merge» — the last, round 24, also ratifying D2, D5, the
+> BUG-087-shape extension and the C4 re-classification). L5 remains HELD
+> (D1 pending). Deviations from this plan, each disclosed in the chunk
+> notes and summarized in `docs/2026-09-05_master-plan.md` §7.8: the
+> harness moved L2 → L4 with BUG-106's flip (L2 note §6); L4 landed 14 PASS
+> + 6 red-first born rows and six moves, and allocated **BUG-107 to the
+> pre-`main` abort** — §2.5/§4 D1's "reserve 107 for `uintptr`" is
+> superseded, the `uintptr` item takes the next free number at landing;
+> L1b (the I1 declaration wire) did not land with L1 and is an owed chunk;
+> L4 did not land the sprint's two observer gate scripts (owed); L6's
+> manifest is at `docs/evidence/2026-09-05_typed-consumer-sprint/`, not
+> `2026-09-07_typed-sprint-landing/`, and is SPLIT per source directory
+> under the 256 KiB cap rather than allowlisted (the brief's ruling); the
+> two landing audits are landed as `docs/2026-09-07_landing-audit-{A,B}.md`
+> with prefaces; 32 sprint design/contract notes were landed by no chunk
+> (owed records chunk). Nothing else in this document is rewritten.
+
 Subject: branch `typed-consumer-sprint`, tip `7edc298f`
 (`7edc298f257519652646b7a59bca959671d33063`), 96 commits over main
 `47195683`; 2,410 changed paths = 251 non-evidence + 2,159 under

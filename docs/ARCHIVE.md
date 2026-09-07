@@ -36,6 +36,16 @@ and resolve locally.
   found the payload and the semantic blockers are landed by the plan's
   L6 chunk as `docs/2026-09-07_landing-audit-{A,B}.md`. Snapshot ref
   `snapshot/typed-sprint-before-uintptr-20260906` names the same tip.
+  **MANIFEST of the payload (L6, 2026-09-07):**
+  `docs/evidence/2026-09-05_typed-consumer-sprint/` — `MANIFEST.tsv` (one
+  row per source dir) + `manifest/<dir>.tsv` (one row per file: path,
+  sha256, bytes, origin commit, class) + `source-copies.tsv`; 2,159 files
+  / 114,156,315 B / 78 dirs, none on main. The sprint's outcome and
+  corrected ledger: `docs/2026-09-05_typed-consumer-sprint-handoff.md`;
+  roadmap disposition: `docs/2026-09-05_master-plan.md` §7.8. Landed in
+  rounds 20–24 (L1 `f70ea4bf`, L2 `74245e1d`+`90bc3e06`, L4
+  `60bbf466`+`dd636996`, L3 `a6a068ce`+`25c665b7`+`29f77b43`, L6); L5
+  `uintptr` HELD.
   The staged, uncommitted `uintptr` merge in the sprint worktree is NOT
   part of this archive (its source is branch `typed-uintptr-identity`
   @ `5f185fb3`; plan §2.5, HELD). [AGENT] `landing-plan-0907`,
@@ -55,4 +65,7 @@ Older pipeline-history notes for the SEMANTICS product live in
 Bulky evidence stays off main (`AGENTS.md`, "Evidence on main",
 [USER] ruling 2026-09-07 relayed): each `archive/evidence-<date>_<slug>`
 branch is listed here with the main-side directory that carries its
-README and `MANIFEST.tsv`. None yet (2026-09-07).
+README and `MANIFEST.tsv`. No `archive/evidence-*` branch yet (2026-09-07);
+the first payload kept off main under this rule is the typed-consumer
+sprint's, whose archive is the sprint branch itself (above) and whose
+manifest is `docs/evidence/2026-09-05_typed-consumer-sprint/`.

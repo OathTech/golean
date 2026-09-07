@@ -1755,10 +1755,10 @@ decision is the [USER]'s, named.
 | # | finding (one line) | review's change | disposition | maps to |
 |---|---|---|---|---|
 | F1 | §1.7 promotes accounting results (E2's `wrong-answer 0/0` counts UNTRIAGED rows; open BUG-099/101/104 are wrong answers; 10 differential reds) into an E1–E7 "fidelity floor" | three separate release predicates; count open + guarded wrong answers with untriaged; label the current state a conditional research snapshot | ACCEPTED [AGENT] (E-table + snapshot label, §7.3, §0.2 note); the predicates are PROPOSED [AGENT]; **naming the supported profile** is PENDING [USER] | §7.3; §3.G's guarded-wrong-answer marker (already at §5.4 "adopt/decline") |
-| F2 | RSP §1.6's `run_ok_iff_stepsM` fixes `ch` on the left and quantifies the path existentially on the right — a two-result program refutes ⇐; fuel bound, `RaceState`, output prefix omitted | separate bridges: fixed-stream run ↔ stream-labelled trace; `∃ fuel ch` ↔ suitable finite detector-valid observation-bearing trace; prove a two-choice example each way before scheduling I5 | ACCEPTED [AGENT] | wave item (1), Gate A; RSP §1.6 annotated REJECTED AS SKETCHED, §5.4 addendum |
-| F3 | RSP §1.7: `List Frame` + `fill = append` does not give unconditional `step_fill`/`step_fill_inv` — `recoverResult` reads the continuation (evidence `ContractProbes.lean`); an `EctxLanguage` instance with a recover side condition is not the pinned Iris class | consumer-contract spike now: restrict the admissible context class, or continuation-sensitive bind rules, or redesign; a basic `Language` instance without generic `EctxLanguage`; adapter kept outside the shipped dependency graph | ACCEPTED [AGENT]; G-C3 stays RULED as a representation change (§3.A item 5) but is no longer claimed to yield the instance | wave item (1), Gate A; RSP §1.7 annotated |
+| F2 | RSP §1.6's `run_ok_iff_stepsM` fixes `ch` on the left and quantifies the path existentially on the right — a two-result program refutes ⇐; fuel bound, `RaceState`, output prefix omitted | separate bridges: fixed-stream run ↔ stream-labelled trace; `∃ fuel ch` ↔ suitable finite detector-valid observation-bearing trace; prove a two-choice example each way before scheduling I5 | ACCEPTED [AGENT] [2026-09-07 addendum: the typed-consumer sprint's answer, auditor B's verdict verbatim and what the landed tree realizes — §7.8.5] | wave item (1), Gate A; RSP §1.6 annotated REJECTED AS SKETCHED, §5.4 addendum |
+| F3 | RSP §1.7: `List Frame` + `fill = append` does not give unconditional `step_fill`/`step_fill_inv` — `recoverResult` reads the continuation (evidence `ContractProbes.lean`); an `EctxLanguage` instance with a recover side condition is not the pinned Iris class | consumer-contract spike now: restrict the admissible context class, or continuation-sensitive bind rules, or redesign; a basic `Language` instance without generic `EctxLanguage`; adapter kept outside the shipped dependency graph | ACCEPTED [AGENT]; G-C3 stays RULED as a representation change (§3.A item 5) but is no longer claimed to yield the instance [2026-09-07 addendum: the typed-consumer sprint's answer, auditor B's verdict verbatim and what the landed tree realizes — §7.8.5] | wave item (1), Gate A; RSP §1.7 annotated |
 | F4 | concurrent proof readiness rests on NPDRF's draft reduction, `schedPick` boundaries and the reconstructed access table; HOLE 0 ≠ go_mem exactness | scoped reference step/event model at access granularity; prove the reduction for the observable projection or expose it as an explicit transfer assumption; decide before a concurrent pin; sequential milestone independent | ACCEPTED [AGENT] as framing (Gate D splits the sequential and concurrent pin offers; E7's "met" re-read per §7.3); the concurrent-pin scoping and the NPDRF proof investment are PENDING [USER] (already §5.4 "at G-PIN") | Gate D; C1 (G-C1, RULED) continues as wave item (2) |
-| F5 | `StateWf` is `locSup ≤ nextAddr` only (an ill-typed cell satisfies it); `Accepted`/`run_refusal_free` vary between RSP §1.5/§1.9 and lack a typed entry/argument boundary; quarantine admits partial exports | define `WireWellFormed`, `ProgramWellTyped`, valid entry/arguments, feature/extern support contract separately; decoding yields the structural invariants; runtime typing preserved or a checked boundary; state the strongest justified refusal-free result | ACCEPTED [AGENT] | wave item (1), Gate A (typed entry/admission predicates); the owed `Accepted P` bundle, allocation normalization and the C2 bound theorem (§3.A "Owed") are pulled forward into it |
+| F5 | `StateWf` is `locSup ≤ nextAddr` only (an ill-typed cell satisfies it); `Accepted`/`run_refusal_free` vary between RSP §1.5/§1.9 and lack a typed entry/argument boundary; quarantine admits partial exports | define `WireWellFormed`, `ProgramWellTyped`, valid entry/arguments, feature/extern support contract separately; decoding yields the structural invariants; runtime typing preserved or a checked boundary; state the strongest justified refusal-free result | ACCEPTED [AGENT] [2026-09-07 addendum: the typed-consumer sprint's answer, auditor B's verdict verbatim and what the landed tree realizes — §7.8.5] | wave item (1), Gate A (typed entry/admission predicates); the owed `Accepted P` bundle, allocation normalization and the C2 bound theorem (§3.A "Owed") are pulled forward into it |
 | F6 | evaluation-order repair is a chain of hoisting patches (`probeK` discards an early value, BUG-101; BUG-104 hoist/panic order); ~12k-line `emit.go` carries semantics with no translation validation | specify expression evaluation as a dependency/ordering relation over values, effects, failure; bounded prototype (calls, receives, short-circuit, multiassign, mutation, multiple panics); generated interaction tests; one small translation certificate | ACCEPTED [AGENT]; the E2/E12 value-axis gate (§5.4 "now") is to be POSED WITH the design note, not before it | wave item (5), design note before any lane; §3.D item 2; BUG-101 resolved inside the design (Gate B) |
 | F7 | `TypeId.unqualified` parses the minted key; `keyPathHazard` rejects dotted module paths (vendor at a dot-free path); C6 "impossibility" over-broad (`box[score]` returning 4 observes no gc name) | opaque/interned semantic IDs with package/scope/instantiation structure; display metadata separate; refuse display operations at their observation point; revisit C6's permanent exclusion; module-aware source manifest | ACCEPTED [AGENT]; the C6 §5.1-item-1 narrowing ratification (§5.4 "now") is PENDING [USER] and is now to be posed WITH the F7 note (recommendation: revisit, not ratify as-is) | wave item (5), design note; §3.B item 18; Gate B ("replace key-grammar restrictions with semantic identity metadata") |
 | F8 | slow-tier `CERTIFIED-CACHED` sets are keyed on wire hash + row parameters + 4 sampled streams; a `StepFn`/`Ops`/`Multi`/checker change leaves a stale certificate until the nightly slow run | bind certificates to a semantic-source/build fingerprint, toolchain, observation schema, checker/enumerator version; stale certification release-blocking | ACCEPTED [AGENT] | wave item (3), fix-lane item 5; §3.E; merge protocol 5a's trigger set widens when it lands (a charter edit, at landing) |
@@ -1914,6 +1914,11 @@ The type-descriptor decision, frontend rejection leg and scoped Gate D pin
 criteria remain separate open work. See the current lane handoffs and sealed
 evidence; no old assurance estimate is reinstated by these small successes.
 
+[2026-09-07 addendum, [AGENT] L6: A3b and the recovery extension were
+executed by the typed-consumer sprint and landed on main in chunks — §7.8;
+the sprint's own +21 checkpoint lines that stood here on its branch are
+superseded by that section and are not landed.]
+
 ### 7.5 The F10 consequence (RULED [USER], Q1) for §3.A and §3.H
 
 - **In scope here, permanently:** the semantic transition relation
@@ -2002,3 +2007,264 @@ Carried from the review's own scope statement and this lane's reading:
 - Whether G-PIN's revised criteria (Gate D) are accepted, and which
   supported profile predicate 2 names, are [USER] decisions not yet
   posed.
+
+### 7.8 The typed-consumer sprint: landed in chunks (rounds 20–24, 2026-09-07)
+
+[AGENT] record (lane `land-sprint-records`, landing chunk L6, records
+only, off `main` @ `dd636996`). Per §6.1 a dated addendum: nothing above
+is rewritten except the three bracketed pointers added to §7.2's F2/F3/F5
+rows and the note at the end of §7.4.1. The [USER] statements below were
+received by the [AGENT] coordinator and RELAYED to this lane — cite as
+relayed, not firsthand. Everything not so marked is [AGENT].
+
+#### 7.8.1 The ruling, the plan, the sign-offs
+
+The sprint chartered on 2026-09-05 (`docs/2026-09-05_typed-consumer-sprint-charter.md`,
+K1–K5 «Agree with all 5», relayed) ran on branch `typed-consumer-sprint`
+(96 commits over `47195683`, tip `7edc298f`) and was PAUSED BY THE USER on
+2026-09-06 (`docs/2026-09-06_typed-sprint-pause-state.md`). Two independent
+landing audits (`docs/2026-09-07_landing-audit-{A,B}.md`) returned
+DO-NOT-LAND as one train step: one semantic BLOCKER (A-R1, the
+`string-member` lane green on rows divergent from gc), a records BLOCKER
+(B-R7, the 114 MB evidence payload), the dirty tip (A-R7/B-R1), a latitude
+override (B-R13) and a standing-permission hunk (B-R5). The [USER] ruled
+(Mike, 2026-09-07, verbatim as relayed): «The evidence blob should not land,
+and generally we should not dump big evidence bundles on main (they can't
+be easily hosted on GH for one). Can you make a plan to land this work
+cleanly? We'll want to decompose and land in sane chunks that can be
+reviewed. And where appropriate fix some of the issues, eg. the choice tape
+stuff». The plan of record for the landing is
+`docs/2026-09-07_typed-sprint-landing-plan.md` (chunks L1–L6, L5 held;
+principles: the committed tip is the artifact, path selection never merge,
+one squashed commit per chunk crediting sprint SHAs, evidence per chunk =
+gate tails + small witnesses, no gate weakened). Rounds 20–24 executed it;
+each chunk merged to main on a separate at-that-moment [USER] sign-off,
+relayed — «Go ahead and merge it» (×2), «go ahead and merge», «Go ahead
+with the merge» (the last, round 24 = L3, also ruling D2, D5, the
+BUG-087-shape extension and the C4 re-classification as the L3 note posed
+them — tracked in `docs/2026-08-31_qrow-rulings.md`, "The merge-train
+round-24 ruling record").
+
+#### 7.8.2 What landed, per chunk (main commits; gate line as recorded in each note)
+
+| chunk | main commit(s) | what | fixes by finding id | gate (verbatim from the note) |
+|---|---|---|---|---|
+| **L1** `land/typed-core-proofs` — `docs/2026-09-07_land-typed-core-proofs.md` | `f70ea4bf` (gated tip `bfcd3d77`, docs-only amend) | the ADDITIVE typed layer: 57 new `GoLean/GoCore/` modules (Boolean profile 12; recovery static 7, storage/setup 13, control/preservation/progress 15, pool/choices 4; generic abort observer 4; `Declaration`, `PanicText`), 20 test modules + 2 native fixtures, `GoLean/Interface.lean` restated (choice-free paragraph; terminal claims removed), `Tests/InterfaceAudit.lean`, 7 test libs, the Iris customer's shared-recovery rules and fixture, `spikes/gate-a1` audit strengthening, three design notes | B-R2 (the `∀ ch` vacuity sentence); the L1-T coupling DETECTED and deferred (`RecoveryTerminal`/`RecoveryPoolObservationTyped`/`StringPanic` → L3) | `ok   baseline diff FULL (3598/3598, no regression)` · `RESULT: PASS` · `git_dirty false`, `jobs 2`; spike gates `Gate A1: PASS`, `Iris customer: PASS` |
+| **L2** `land/gate-tooling` — `docs/2026-09-07_land-gate-tooling.md` | `74245e1d` (+ `90bc3e06`, the stale allowlist row dropped at the round-22 rebase gate — the shrink-only rule refusing it, as designed) | `scripts/check-evidence-size` (+ 18-case self-test), `docs/evidence/SIZE-ALLOWLIST.tsv` (main's pre-existing offenders, frozen, shrink-only), the `evidence-on-main size gate` ci step, `AGENTS.md` "Evidence on main", `CLAUDE.md` one sentence, `docs/evidence/README.md` rule 9, `docs/ARCHIVE.md` archive-branch section. NO sprint code: the harness was measured to flip rows and moved to L4 (L2 note §6) | B-R12 (rule 9); A-R6/A-R8 + a new chain-shape pin FIXED on the prep branch `prep/observer-terminal-harness` `b1407cc5` (landed by L4); A-R9/A-R10 disclosed | `RESULT: PASS`, `baseline diff FULL (3598/3598, no regression)` at `485c5b7f`, `git_dirty false`, `jobs 2`; baseline UNMOVED |
+| **L4** `land/observer-terminal` — `docs/2026-09-07_land-observer-terminal.md` | `60bbf466` + `dd636996` (audit fix round, records only) | the same-run crash-channel observer (`tools/coverageharness/{crashhook,crashview,abortkind,observe}.go`, the channel MANDATORY), the `scripts/diff-coverage` rework and the three diagnostic oracle copies, `GOTRACEBACK=system` (provenanced in the run meta), 20 corpus rows (`panic-controls` 9, `panic-markers` 11: 14 PASS, 6 red-first at the machine on BUG-004's line), BUG-105 FIXED, BUG-106 open (fatal-during-unwind), BUG-107 open (pre-`main` abort, THREE options), re-pin 3598→3618 = 3362/256, ledger §8x, a `coverage-harness unit tests` ci step, the five observer design notes with prefaces | A-R6 (mandatory channel, `TestMissingRegistrationRefusedByName`), A-R8, A-R9 (`hookinert_test.go`: inert on the observation), A-R10, B-R14 (the D4 packet, §3); fix round R1 (the ownership boundary + the auditor's working forgery), R2 (BUG-107's init-order premise corrected), R4 (first-LF truncation hazard → L3), R5 (lost gate-script coverage → owed) | `ok   baseline diff FULL (3618/3618, no regression)` · `ok   re-pin guard (5 PASS→non-PASS flip(s), all listed in BUGS.md Cases)` · `RESULT: PASS` at `8a71caf6`, `git_dirty false`, `jobs 16` |
+| **L3** `land/panic-text-tape` — `docs/2026-09-07_land-panic-text-tape.md` | `a6a068ce` + `25c665b7` + `29f77b43` (round 24, rebased onto `dd636996` by the reconciliation worker — L3 note §7.2; pre-rebase gated tip `0ccefe3f` on main `90bc3e06`) | the abort-line renderer REDONE per doctrine: `asciiString?` deleted, `utf8String?` (strict, byte round-trip by construction) + `stringFirstLine?` (byte-level first line, the suffix only when no LF — gc-verified against `printindented`), **`ChoiceSite.repanicCollapse`** (the 13th site: width 2 exactly at a recovered head with an equal successor payload, slot 0 ` [recovered, repanicked]`, slot 1 ` [recovered]`, consumed at THE ABORT through one `abortConsult`, recorded in the pool's abort `StepEvent`, total rule shape in `StepM.abort`/`StepMFine.abort`, lockstep mirrors in `ChoiceTrace`/`EnumDedup`/`CLI` row 9/doctrine/latitude census), the NAMED refusal for an invalid-UTF-8 first line (D5(i)), 36 born rows (`panic-text/` 14, `repanic-collapse/` 22 — 18 membership with BOTH members gc-certified on the string, int, defined-int and `runtime.Error` families, 4 strict controls), `repanic-same-value-abort` → PASS/membership, 38 gc witness programs, the L1-T slice RESTATED (`RecoveryTerminal.Inv.run_classified` four disjuncts, `*_refusal_named` in place of `*_no_refusal`, `RecoveryPoolObservationTyped` over the recorded pick, `StringPanic.stringPanicHead : Option String`, spike `Terminal.lean`), `scripts/check-recovery-terminal` ci step, BUG-004 (item 1 RE-ENVELOPED, item 3 FIXED with its D5 residue red), latitude inventory R10 revised + R10a, doctrine site mirror re-synced (`tools/reconcile-records` C12 now checks it), triage C4, ledger §8w + FR-32/FR-33, the `string-member` lane RETIRED (nothing of it lands) | A-R1 (no comparison mode skips gc's text), A-R2 (the collapse is on the tape, never a hard-coded member), A-R3 (the fail-closed `none` restored by name; no escape member), A-R4 (no `baselines/string-members/` pin class), B-R3 (R-1 not stretched); fix round R1–R7, L1–L14 (provenance PENDING tags, observation scope measured and rowed, typed terminal statements anchored, the `.nil` arm fails closed) | pre-rebase: `ok   baseline diff FULL (3634/3634, no regression)` · `ok   re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)` · `RESULT: PASS` at `0ccefe3f`, `git_dirty false`, `jobs 12`. At the MERGED tip (L3 note §7.2): composition 3618 + 36 born = 3654; the focused slice over the 65 rows either lane touched moved EXACTLY nine — six of L4's embedded-LF rows FAIL→PASS under L3's strict first-line renderer (`panic-controls/{newline,recovered-newline,child-confluent}`, `panic-markers/{mixed-line,fake-trace,literal-continuation}`; gc's first lines `a\0\001\t\r`, `original`, `forged` — the retired lane's `Controls` role, so FR-33 RETIRES) and the three `panic-text/invalid-*` rows changed STAGE only (lean-observation → go-observation: L4's harness refuses the invalid-UTF-8 oracle line by name before the machine's D5 refusal is reached; still red on BUG-004's line); **re-pin 3654 = 3403 PASS / 251 FAIL, 0 PASS→non-PASS vs main** (re-derived here from main `29f77b43`'s data rows by awk: n=3654, PASS 3403, FAIL 251); the full `ci --diff` at that tip was reported to the coordinator by the reconciliation worker, not recorded in the note; L6's own gate below runs on top of it |
+| **L6** `land/sprint-records` — `docs/2026-09-07_land-sprint-records.md` | this chunk | this addendum; the charter verbatim (+ preface); the handoff TRIMMED with the CORRECTED decision ledger and the FINAL O1–O5 table; the pause-state and C1-handoff records tracked; the two landing audits verbatim; the evidence MANIFEST (`docs/evidence/2026-09-05_typed-consumer-sprint/`, 2,159 rows in 78 per-dir files under the caps); `docs/ARCHIVE.md` pointer; BUG-107's numbering note; the landing plan's status line | B-R6, B-R15, B-R16, B-R17, B-R18, B-R23; B-R20 (one bracketed correction in the B7 design note) and B-R21 (a dated note above the in-place corrigendum) | docs-only; `scripts/capped scripts/ci --diff` at the chunk's tip, `scripts/check-evidence-size` PASS 0 new — the L6 note §gate |
+
+Deviations from the plan, all disclosed in the chunk notes: the harness
+moved L2 → L4 (L2 note §6) and with it BUG-106's flip; L4 measured 14/6 born
+rows and six moves (not "20 born, 0 flips"), allocated **BUG-107 to the
+pre-`main` abort** (the plan's D1 had SUGGESTED reserving 107 for `uintptr`;
+numbers are allocated at landing — the `uintptr` item takes the next free
+number, recorded on the entry and in the handoff), and did not land the
+sprint's two observer gate scripts; the plan's L1b (the I1 declaration
+wire) did not land with L1; L1 landed `PanicText`'s escape half
+consumer-free (the plan's §2.3(a) said it does not land) and L3 DELETED it
+under D5; L6's manifest is
+at `docs/evidence/2026-09-05_typed-consumer-sprint/` (not the plan's
+`2026-09-07_typed-sprint-landing/`) and is SPLIT per source directory under
+the 256 KiB cap instead of allowlisted.
+
+#### 7.8.3 What did NOT land
+
+- **The evidence payload** — 2,159 files / 114,156,315 B / 78 dirs / 36
+  `.tar.gz` / 268 blob-identical source copies: on the archive branch
+  `typed-consumer-sprint` @ `7edc298f` (unmodified), inventoried row by row
+  with sha256, bytes, origin commit and class in
+  `docs/evidence/2026-09-05_typed-consumer-sprint/MANIFEST.tsv` +
+  `manifest/<dir>.tsv` (+ `source-copies.tsv`). Two of its review dirs
+  record no commit hash (B-R11); six are whole-file ledger copies (B-R17);
+  none is on main.
+- **`uintptr` (L5)** — HELD on D1; branch `typed-uintptr-identity` @
+  `5f185fb3`; the sprint worktree's staged, uncommitted merge is not an
+  artifact; no BUG number reserved.
+- **The sprint's two observer gate scripts** (`scripts/check-observer-controls.py`,
+  `scripts/check-observer-tools.py` and their ci steps) — written against
+  the sprint's fall-through harness; under the mandatory channel they fail
+  by construction, not by a defect they catch (L4 note §1.6) → owed chunk.
+- **The I1 declaration wire** (plan L1b: 16 of 19 paths — `declaration.go`
+  + tests, `NativeDeclaration`/`StrictJsonParse`, their tests and audit,
+  `scripts/check-declarations`, the four `i1-*` notes) — only
+  `Declaration.lean` and the `spikes/i1-declarations` prototype landed →
+  owed chunk with its own gate and the A-R11/A-R12 fixes.
+- **The `string-member` lane** — RETIRED (D2, ratified round 24): its 9 JSON
+  pins, 13 control roles, `tools/string_member*.py`, `check-string-members.py`,
+  the CLI's `native-json-string-run`; the `Controls` role — the one
+  function nothing else covered (FR-33) — is covered by L4's
+  `panic-controls` rows under L3's renderer since round 24 (FR-33 RETIRED,
+  L3 note §7.2).
+- **The sprint's `CLAUDE.md` retitle** (B-R4; D6 default not landed), its
+  `AGENTS.md` sprint pointer (no pointer is needed on main: the records are
+  indexed from `docs/ARCHIVE.md` and this section), the uncommitted
+  `AGENTS.md` standing-approval hunk (REJECTED, plan §1), its +21
+  master-plan checkpoint lines (superseded by this section), the
+  storage-maintenance overlay (out of scope, plan §5).
+- **32 sprint design/contract notes** — no chunk landed them (L1 landed
+  three; L3 wrote its own); four are cited by `GoLean/Interface.lean` on
+  main. Listed in the handoff ("Where everything else lives") → owed
+  records chunk, each with a preface stating what of it landed and what was
+  reworked or retired.
+- `tools/check-recovery-fixture-controls.py` (L1 excluded it with `tools/**`;
+  its check was reproduced by hand in L1 §7.4).
+
+#### 7.8.4 Outcome against the charter (O1–O5)
+
+O1 LANDED (L1); O2 LANDED (L1 + L3's restated terminal slice; refusal-
+freedom is now conditional and NAMED, never total; Gate C's "no unfolding
+of internals" exit criterion is NOT met — `spikes/iris-customer/README.md:101`);
+O3 PARTIAL (small files landed; the payload manifest-only); O4 NOT
+IMPLEMENTED (B7 design only; `grep ProgramCtx GoLean/` → one deferral
+comment, `Platform.lean:19`; the work on `typed-context-store` @ `ca1e01d5`,
+`typed-i1-envelope` @ `3d49e9e9`, unmerged); O5 realized as the landing
+records, not as the sprint's own closing packet. Main's baseline after
+round 24: **3654 = 3403 PASS / 251 FAIL** (`baselines/native-full.tsv` at
+`29f77b43`, re-derived from the data rows by awk). Full table with the
+landed theorem names and boundaries:
+`docs/2026-09-05_typed-consumer-sprint-handoff.md`. §7.4.1's "next useful
+admission task **A3b**" is realized by O1. No "Gate A complete" and no
+stable-pin claim follows from any of it.
+
+#### 7.8.5 F2 / F3 / F5 — auditor B's answer table, VERBATIM, and what L3 adds
+
+Copied unchanged from `docs/2026-09-07_landing-audit-B.md` §1 (auditor B,
+2026-09-07, over tip `7edc298f` — i.e. over the SPRINT's code, before the
+landing reworked the renderer):
+
+| Finding | What the branch actually proves | Domain / premises | Verdict |
+|---|---|---|---|
+| **F2** driver↔relation bridge | *Nothing new.* The stream-quantified bridge is **pre-existing on `main`**: `GoLean/GoCore/PoolTrace.lean:71 run_iff`, `GoLean/GoCore/ProgramTrace.lean:26 program_run_iff`, `:53 exists_program_run_iff`, `:75 observation_iff` (`∃ fuel ch` on **both** sides), with the two-outcome example at `Tests/InterfaceContract.lean:164–185` (`two_choice_pool_bridge`). The branch adds `Tests/InterfaceContract.lean` +1 line. | The branch's *typed* readouts (`BooleanPool.lean:161`, `RecoveryTerminal.lean:83`) are `∀ fuel, ∀ ch` but over profiles with **no choice sites**: `Control.no_spawn/no_select/no_seq_consumption`, `Inv.run_choices : chf = ch`, `Choices.consumeAtE … = (0, ch, [])`. | **Partially answered, but not by this branch, and not for the typed profile.** The `∀ ch` quantifier on the typed theorems is *vacuously uniform* — the profiles are deterministic. The reverse direction (relation → driver) for the true Prop-level relation is still absent: `Trace.erase` gives `Steps`, and `GoLean/Interface.lean` states "no converse to erasure is supplied". `ProgramRun`/`Pool.Run` are *mirrors of the driver*, not `Machine.Step`. See R2. |
+| **F3** context laws / `EctxLanguage` | The branch does **not** attempt `step_fill`. It **sidesteps legitimately**: `spikes/gate-a1/GateA1/Language.lean:28` gives a plain `instance : Language Config ExecState Empty Unit` (PrimStep = `Step`), and the recover rule keeps the continuation explicit in **both** parameters and postcondition — `pure_recover (env) (k) : PurePrimStep (Config.evalE .recoverCall env k) (.retV (recoverResult k).1 (recoverResult k).2)` (`:53`), `wp_recover` (`:64`). Header, `:6`: "This has no `EctxLanguage` instance". This file is **also pre-existing on `main`**; the branch adds the customer proofs above it. | Sequential, `Unit` terminal, empty observations, uncaught panic is stuck. | **Answered, honestly, by the "basic `Language` without `EctxLanguage`" route the audit itself allowed.** It is **not** an `EctxLanguage` instance and does not claim to be. `spikes/iris-customer/README.md:85` repeats "There is no unconditional `EctxLanguage` or continuation-transport law." **Reviewer's counterexample reproduced UNCHANGED on the branch** (I re-ran `docs/evidence/2026-09-05_project-gate-audit/ContractProbes.lean` at the tip): `recoverResult bareFrame = nil`, `recoverResult panicFrame = interface (defined 1) (string "audit")`. It is neither excluded by admission nor side-conditioned — it is *made irrelevant* by parameterising every rule on `k`. That is the correct design, and the sprint says so. |
+| **F5** typed admission / refusal freedom | **Real and substantial.** Two independently defined judgments with total checkers and soundness **and** completeness: `GoLean/GoCore/BooleanTyping.lean:336 TypedBooleanAdmission`, `:379 checkTypedBoolean`, `:392 checkTypedBoolean_iff`; `GoLean/GoCore/RecoveryAdmission.lean:83 RecoveryAdmission`, `:155 checkRecovery`, `:166 checkRecovery_iff`. All-successor preservation over the **Prop-level relation**: `BooleanPreservation.lean:150 Inv.step (hstep : Step c s c' t) : Inv … t c'` and `RecoveryInvariant.lean:43` (same shape); progress `BooleanSafety.lean:16 Inv.reachable_progress`, `RecoveryInvariant.lean:70` (normal terminal ∨ nonempty abort ∨ legal successor). Driver refusal-freedom, universally quantified over fuel and stream: `BooleanPool.lean:175 runProgramPool_no_refusal`, `RecoveryTerminal.lean:99/107`. | `TypedBooleanAdmission = BooleanAdmission ∧ ProgramTyped p`, checked over **every** function in the program (`ProgramTyped`, `:331`). Boolean profile grammar is `var/boolLit/not/and/or` + `seqn/block/initialization/assign(var)/ifThenElse/return` — **no calls, no loops**. Recovery profile adds direct/closure calls, defers, string panic, recover, finite call-graph certificate. | **Answered *within two deliberately tiny profiles*, and stated as such.** The reviewer's ill-typed cell is now excluded — I proved `¬ BooleanRuntime.BoolHeap illTyped` at the tip (`BooleanStore.lean:15` requires `.value .bool (.bool b)`). **But `StateWf` itself is unchanged**: `decide (StateWf illTyped)` still returns `true` at the tip. The exclusion is profile-local, not machine-wide, and F5's general `Accepted`/`WireWellFormed`/`ProgramWellTyped` programme is untouched. |
+
+**What the LANDED tree realizes of that table** (L1 note §2.1, L3 note §6 —
+no stronger claim):
+
+- **F2 — NOT answered for the typed contract, with one new fact.** At L1
+  both profiles were choice-free on every step, so the `∀ ch` on every
+  landed typed theorem was uniform by vacuity (B-R2; the `Interface.lean`
+  docstring says so). L3 changed one thing: the recovery profile's ABORT
+  now DRAWS — on the recovered-equal re-panic shape
+  (`Tests/RecoveryTyping.lean`'s `repanicProgram`) the abort consults
+  `repanicCollapse` at width 2, and the same admitted program at the same
+  fuel yields two different abort texts from two streams (`[]` → `hi
+  [recovered, repanicked]`, `[1]` → `hi [recovered]`;
+  `Tests/RecoveryTerminal.lean`'s `equal_repanic_two_members_at_frontier`,
+  kernel-checked, and the executable `checkPanic` challenges through the
+  actual pool observer). That is **the first TYPED two-outcome DRIVER
+  demonstration**: the typed theorems' stream quantifier is no longer
+  vacuous on that shape, and `Inv.observed_abort_member` ties the rendered
+  member to the RECORD's chain at the STREAM's pick. What it does NOT
+  establish: (i) F2's missing DIRECTION — relation → driver for the true
+  Prop-level relation: `Trace.erase` still gives `Steps` with «no converse
+  to erasure», `ProgramRun`/`Pool.Run` remain mirrors of the driver, not
+  `Machine.Step` (the sequential relation has no abort rule, B4, so
+  `stepFn_sound`/`step_complete` are unchanged in statement; the POOL
+  relation's `StepM.abort` quantifies the pick with a total premise and
+  `stepM_complete` realizes it with the singleton stream — a pool-level
+  completeness for the abort step, not the converse F2 asks for); (ii) a
+  typed two-choice bridge — the only driver↔relation two-outcome bridge is
+  still the untyped `two_choice_pool_bridge` (`Tests/InterfaceContract.lean`);
+  (iii) any nondeterminism on a NON-abort step of either profile
+  (`Control.no_seq_consumption` is `seqConsumption s c = none ∨
+  consumesRepanicCollapse c`; `Inv.step_no_seq_consumption`: a SUCCESSFUL
+  step consults nothing). F2 stays OPEN for the typed contract; wave item
+  (1)'s corrected bridge statements remain owed by Gate A.
+- **F3 — answered via a basic `Language` WITHOUT `EctxLanguage`**, on the
+  pre-existing `spikes/gate-a1` instance; L1 landed the customer proofs above
+  it (`Call`, `Unwind`, `Return`, `Shared*`), L3 restated the spike's
+  `Terminal.lean`. No `step_fill`, no continuation-transport law, none
+  claimed; the reviewer's `recoverResult` counterexample stands unchanged.
+- **F5 — answered within two deliberately tiny profiles; the general
+  `Accepted`/`WireWellFormed`/`ProgramWellTyped` programme is UNTOUCHED.**
+  `¬ BooleanRuntime.BoolHeap illTyped` is proved; `StateWf illTyped` still
+  decides `true` (the machine's `StateWf` is unchanged). The recovery-side
+  refusal-freedom entries the table cites (`RecoveryTerminal.lean:99/107`,
+  `runProgramPool_no_refusal`) do NOT exist on main in that form: L3
+  restated them as `*_refusal_named` — the only refusal an admitted
+  recovery program reaches is the named invalid-first-line abort (D5). The
+  Boolean `runProgramPool_no_refusal` (L1) stands.
+
+#### 7.8.6 Owed follow-up chunks (recorded, not scheduled; each its own gate and audit ask)
+
+1. **`land/observer-fd-channel`** — the runner-owned crash channel passed as
+   an inherited descriptor (no path in the subject's namespace); the hook
+   as a package-level VARIABLE initializer in an alphabetically-first file
+   with a generation-time filename guard **= BUG-107 option (c)**, if ruled
+   (L4 note §3, §9 items 2–3). Closes the auditor's working forgery
+   (documented as a BOUNDARY today) and retires the `main()` splice.
+2. **`land/observer-gate-scripts`** — re-cut the sprint's two Python gate
+   scripts for the R6-uniform contract (every empty-ack/empty-report probe
+   expects the NAMED refusal; mutation anchors on the landed `crashview.go`)
+   — L4 fix round R5, the lost negative coverage of ~900 lines of shell glue.
+3. **FR-32** — abort-message TAIL widening: compare the whole message region
+   (gc: to the report boundary with `printindented`'s TAB-after-LF
+   un-wrapped; machine: render the full payload deterministically) at L4's
+   byte view (`crashview.go`); until then the tail is unmodelled and
+   unobserved on both sides, by record (L3 fix round R4; L4 note §2 hazard).
+4. **FR-33** — the `Controls` role (control-byte payloads, `panic("a\x00\x01\t\r\nZ")`)
+   — RETIRED at round 24, nothing owed: L4's `panic-controls` rows carry the
+   bytes through the byte view and L3's renderer reaches them (gc's first
+   line `a\0\001\t\r`, NUL included, on the three rows — L3 note §7.2).
+   Kept in this list so it matches the L3 fix round's owed set.
+5. **`GoLean/GoCore/State.lean` `canonicalSlot0` docstring** for
+   `repanicCollapse` — still says "under BUG-087's ruling"; every other
+   record was relabelled "extension of BUG-087's ruling SHAPE … PENDING"
+   (L3 fix round R2; a core string literal, owed).
+6. **The opt-in spike gate re-run** (`spikes/iris-customer/check`) at the
+   merged tip after L3's `Terminal.lean` restatement (L3 fix round R7).
+7. **The I1 declaration wire (plan L1b)** with A-R11 (track the fixture
+   hashes or rename the step) and A-R12 (the serializer's `badLocalTypes`
+   side effect; the nil-package silent default); gate: `check-frontend-pins`
+   unchanged, certified set byte-identical.
+8. **`uintptr` (L5)** — on D1; if (b): its own chunk after a third-lane
+   review of the latitude override, amending w7 J-8 and latitude row R1, a
+   REAL full + `--slow` run (5a), the next free BUG number.
+9. **The 32 unlanded sprint design/contract notes** (records; §7.8.3).
+10. **`tools/check-recovery-fixture-controls.py`** (or its check folded into
+    the spike gate).
+11. At the train — DONE by the round-24 reconciliation worker (L3 note
+    §7.2): §8w before §8x, no letter collision, no re-lettering; L3's
+    figures re-derived at the merged tip (3654 = 3403 / 251).
+
+#### 7.8.7 Decisions — PENDING [USER], and ratified
+
+PENDING (each named in the landing plan §4 or a chunk note; none is
+presumed):
+
+| # | decision | default in force | where posed |
+|---|---|---|---|
+| D1 | `uintptr`: (a) record per w7 J-8 / latitude R1, red-first rows, observations stay refused; (b) fix with the records amended, third-lane review, real full + `--slow` | HELD — nothing built | plan §2.5, §4; handoff ledger #2 |
+| BUG-107 option | (a) keep the four pre-`main` rows RED; (b) a named pre-`main` exception classifying from raw bytes (auditor recommends against); (c) the variable-initializer hook over the fd-passed channel (RECOMMENDED [AGENT]) | (a) | `docs/BUGS.md` BUG-107; L4 note §3 |
+| D3 | the coverage worker count — no verbatim ruling of "2 workers" exists in any tracked file; the chunks ran at jobs 2 / 2 / 16 / 12 / ≤ 12 and recorded it | ≤ nproc/2, recorded per run | plan §4 |
+| D6 | record K4 («merges to main are always user-approved …») in `CLAUDE.md` at all? | not landed | plan §4; handoff ledger #7 |
+| D7 | the evidence caps: 256 KiB / file, 4 MiB / dir, no archives, no source copies — PROPOSED [AGENT] | in force as proposed (gate-enforced) | `scripts/check-evidence-size` header; L2 note §4 |
+
+RATIFIED / RULED by the merge sign-offs (relayed): **D4** — the
+"Authenticated crash observation" policy (L4 note §3), by the sign-off that
+merged L4; **D2** (the `string-member` lane retired), **D5** (no byte
+channel; invalid first lines red by name; the escape form never a member),
+**the BUG-087-SHAPE extension** (a demonic choice where gc's realization is
+toolchain-internal, applied to the `[recovered, repanicked]` marker under
+R-1) and **the C4 (c)→(a) re-classification** of `repanic-same-value-abort`
+— RULED [USER] 2026-09-07 at merge-train round 24, «Go ahead with the
+merge» (relayed; the merge-ask listed exactly those four items). The
+tracked ruling record is `docs/2026-08-31_qrow-rulings.md`, "The
+merge-train round-24 ruling record"; every PENDING tag L3 wrote now reads
+RULED there and in the L3 note §7.2.
+
+#### 7.8.8 The standing rule this landing leaves behind
+
+`docs/evidence/` holds RECORDS, not copies (`AGENTS.md`, "Evidence on
+main"): gate tails, transcripts, small probe outputs and the commit SHA;
+`scripts/check-evidence-size` in `scripts/ci` refuses a tracked evidence
+file over 256 KiB, a top-level evidence dir over 4 MiB, any archive
+extension, and any evidence blob byte-identical to a tracked non-evidence
+file; main's pre-existing offenders are frozen in a shrink-only allowlist;
+bulky evidence lives on an archive branch listed in `docs/ARCHIVE.md` with
+a `MANIFEST.tsv` on main. The sprint's payload is the first case: 114 MB on
+the branch, ≈0.5 MB of manifest on main. The caps are [AGENT]-proposed
+(D7); the rule is the [USER]'s.

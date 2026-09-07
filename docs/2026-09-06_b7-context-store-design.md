@@ -133,6 +133,13 @@ Keep Go1.26.5/Lean4.32.2 pins, frontend `go/types` sizing and the default CLI
 behavior fixed. A second supported architecture still needs its own coherent
 platform, frontend/oracle setup and differential evidence. A `gc386` fidelity
 claim is outside this migration and the existing host-capability ruling.
+[Correction, 2026-09-07, [AGENT] landing chunk L6, landing audit B R20: no
+host-capability RULING exists — the host-capability decision remains OPEN
+and [USER]-owned (`docs/2026-09-05_master-plan.md` §3.E, "Decision: host
+capability — a machine-global matter the [USER] owns"; `docs/assessment/
+decisions-2026-08-31.md:43` "deferred, needs a host-capability call"). The
+sentence excludes a claim, so its direction is conservative; the citation
+is what was wrong.]
 
 ## Kernel correspondence and reviewable implementation order
 

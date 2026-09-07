@@ -1,5 +1,22 @@
 # Typed-consumer sprint: independent contract design review
 
+> [Landing note, 2026-09-07, [AGENT] chunk L6 — landing audit B R21.] The
+> "2026-09-06 corrigendum" paragraph immediately below was written INTO this
+> sealed review artifact by the same lane that raised the finding it
+> retracts (charter §6: the implementer cannot waive its own finding; a
+> retraction belongs in a separate dated disposition, not in the sealed
+> text). It is kept as landed by L1 so the artifact's history is visible,
+> and is to be read as the sprint lane's later opinion, not as the
+> reviewer's finding. The DISPOSITION of the boxing-identity item is landing
+> chunk L3's (`docs/2026-09-07_land-panic-text-tape.md` §1.1, §2.2): the
+> `[recovered, repanicked]` marker is deterministic in gc's eface identity,
+> which the machine does not carry, so it is reified as `ChoiceSite.repanicCollapse`
+> with both members gc-certified — an [AGENT] extension of BUG-087's ruling
+> SHAPE under R-1, RULED [USER] 2026-09-07 at the round-24 merge sign-off
+> (relayed; `docs/2026-08-31_qrow-rulings.md`). The
+> corrigendum's link `2026-09-06_panic-rendering-repair.md` is a sprint note
+> not on main (archive branch `typed-consumer-sprint` @ `7edc298f`).
+
 **2026-09-06 corrigendum:** the existing R-1 user ruling already supplies
 authority for a conforming rendering member; the boxing discussion below
 overstates the need for a new policy decision. See the
