@@ -32,6 +32,21 @@ every hunk read; never a merge. Branch `land/observer-terminal` off main
 `90bc3e06`, worktree `.claude/worktrees/land-observer`, ONE squashed landing
 commit (sprint authorship credited in §8).
 
+Audit fix round (2026-09-07, [AGENT] fix-round worker, the commit after
+`60bbf466`; RECORDS ONLY — no code, corpus, baseline or gate script changed,
+the differential NOT re-run, §7): the pre-merge adversarial audit returned
+FIX-FIRST with two required records corrections and two items to record.
+R1 (HIGH, claim accuracy) — §3's policy sentence overstated what the channel
+authenticates; rewritten to carry the ownership boundary, the auditor's
+working forgery, and the owed fd-passing hardening (§9 item 2). R2 (HIGH,
+false premise) — BUG-107 rejected an `init()`-registered hook on an
+incomplete statement of Go's initialization order; corrected on the entry,
+with the auditor's measurement and THREE options for the [USER] (§3 has the
+summary). R4 (MED, cross-chunk hazard) — the first-LF truncation of the
+oracle message, recorded for L3 in §2 and on BUG-004. R5 — the lost negative
+coverage of the two excluded gate scripts, recorded as an owed chunk (§9
+item 1).
+
 ## 1. What landed
 
 ### 1.1 The harness (`tools/coverageharness/`, from the prep branch, byte-identical to `b1407cc5`)
@@ -88,8 +103,10 @@ counted them at the sprint tip, where L3's renderer repair was already in.
   terminal-classification-design,classifier-repair,controls-repair,diagnostic-tools}.md`.
 - `docs/BUGS.md`: BUG-105 (fixed — transport), BUG-106 (open — the fatal-unwind
   boundary), BUG-107 (open — the pre-`main` abort; the named-exception plan
-  written in), BUG-004's `Cases:` line +6 (§5); each new entry carries a
-  MERGE-TRAIN NOTE on numbering.
+  written in, then THREE options for the ruling after the audit fix round's
+  R2 correction — §3), BUG-004's `Cases:` line +6 (§5; plus the fix round's
+  R4 hazard paragraph); each new entry carries a MERGE-TRAIN NOTE on
+  numbering.
 - `docs/language-coverage-ledger.md`: the §8 head paragraph and movement §8x
   (lettered to leave §8w to L3's renderer movement; the train re-letters).
 - `baselines/native-full.tsv`: the re-pin (§5).
@@ -111,7 +128,7 @@ the worse outcome. `-count=1` because the inertness test execs the pinned
 
 | path(s) | disposition |
 |---|---|
-| `scripts/check-observer-controls.py`, `scripts/check-observer-tools.py` and their two `scripts/ci` steps (the L2 note assigned them here) | NOT landed. Both were written against the sprint's harness, whose empty-ack/empty-report state fell through to a raw fallback. Under the mandatory channel (A-R6, the prep branch) they fail by construction, not by a bug they would catch: in `check-observer-controls.py` the shell probes `ambiguous`, `invalid-utf8-panic`, `fatal-continuation`, `sync-fatal`, `fatal-not-panic`, `mixed-unknown` (synthetic `crash` empty → the landed harness answers `runtime wrote no crash report`, not the expected text), the native probes `init-simple`/`init-forgery`/`init-literal` (expect a classified init panic / `ambiguous`; landed: `no hook registration acknowledgement`) and `disabled-hook-simple`/`disabled-hook-forgery` (expect a fallback verdict), and the mutation anchors `missing-ack` and `missing-success-ack` name lines that no longer exist in `crashview.go`; in `check-observer-tools.py` the string-expected probes with an empty synthetic report (`invalid-utf8`, `glued-prefix`, `printed-origin`, `unknown-origin`, `fatal-unwind`) hit the same `no crash report` refusal first. Re-cutting them is authoring new probe expectations for the R6-uniform contract — a follow-up chunk (`land/observer-gate-scripts`), not a hunk review. Until then the harness's Go tests are the gate (§1.5); the shell-level probes those scripts add (fake oracle through the REAL exported `diff-coverage` functions; compiled mutants) are owed. |
+| `scripts/check-observer-controls.py`, `scripts/check-observer-tools.py` and their two `scripts/ci` steps (the L2 note assigned them here) | NOT landed. Both were written against the sprint's harness, whose empty-ack/empty-report state fell through to a raw fallback. Under the mandatory channel (A-R6, the prep branch) they fail by construction, not by a bug they would catch: in `check-observer-controls.py` the shell probes `ambiguous`, `invalid-utf8-panic`, `fatal-continuation`, `sync-fatal`, `fatal-not-panic`, `mixed-unknown` (synthetic `crash` empty → the landed harness answers `runtime wrote no crash report`, not the expected text), the native probes `init-simple`/`init-forgery`/`init-literal` (expect a classified init panic / `ambiguous`; landed: `no hook registration acknowledgement`) and `disabled-hook-simple`/`disabled-hook-forgery` (expect a fallback verdict), and the mutation anchors `missing-ack` and `missing-success-ack` name lines that no longer exist in `crashview.go`; in `check-observer-tools.py` the string-expected probes with an empty synthetic report (`invalid-utf8`, `glued-prefix`, `printed-origin`, `unknown-origin`, `fatal-unwind`) hit the same `no crash report` refusal first. Re-cutting them is authoring new probe expectations for the R6-uniform contract — a follow-up chunk (`land/observer-gate-scripts`), not a hunk review. Until then the harness's Go tests are the gate (§1.5); the shell-level probes those scripts add (fake oracle through the REAL exported `diff-coverage` functions; compiled mutants) are owed — R5, §9 item 1. |
 | the `string-member` vocabulary of `scripts/diff-coverage` (lane line, manifest block, `tools/string_member_runner.py` dispatch, the `expected_reason == "-"` exemption), `scripts/coverage-manifest`/`coverage-baseline-diff` hunks | L3's; the prep branch already carried none of it (`grep -i string.member` over the landed code paths hits only the `observe.go` comment naming `--abort-record`'s consumer) |
 | `Corpus/controls/` | the brief said "minus `string-members`"; on the sprint tip `Corpus/controls/` contains ONLY `string-members/` and main has no `Corpus/controls/` at all — the set is empty |
 | `docs/evidence/2026-09-06_observer-*`, `docs/evidence/2026-09-07_observer-terminal-prep/` | archive branch / prep branch; the design notes' links to them dangle (stated in each preface) |
@@ -194,6 +211,28 @@ prep branch had measured the same six over all 410 non-ok rows of main's
 corpus (L2 note §6). The brief's hard stop ("any sixth moved row") was read
 as "any moved row beyond these six named rows"; none appeared.
 
+**Hazard for L3 (audit fix round R4, 2026-09-07, [AGENT] — recorded, not
+fixed; pre-existing on main).** `tools/coverageharness/crashview.go:137`
+takes the oracle `message` as the report's FIRST LINE only —
+`bytes.SplitN(report[len(marker):], []byte{'\n'}, 2)[0]` — and the `output`
+field is the bytes BEFORE the authenticated report, so the message's tail
+after its first LF lands in NEITHER compared field: `panic("head\nTAILA")`
+and `panic("head\nTAILB")` produce the same observation. Main's
+marker-search classifier projected the first line the same way (the
+auditor's finding; this chunk changed the transport and the authentication,
+not the projection). The consequence is L3's, not this chunk's: the six
+BUG-004 rows §5 declares red-first (`panic-controls/{newline,
+recovered-newline,child-confluent}`, `panic-markers/{mixed-line,fake-trace,
+literal-continuation}` — every one an embedded-LF payload) may only flip
+GREEN if either (i) the compared surface widens to the whole message region
+(the `printindented` TAB-unwrap of every payload line after the first,
+carried in `message`), or (ii) the machine's first-line-only rendering is a
+DOCUMENTED standing contract of the observation — a first-line match then IS
+the claim, and the tail is outside it by record, not by accident. The L3
+audit is checking which; a flip under neither is a green that compares less
+than it appears to. The same paragraph is on BUG-004 (its six-witness
+paragraph).
+
 ## 3. D4 — the observation policy this chunk asks the [USER] to ratify
 
 Auditor B (R14) is right that this is a change to how trusted surface #2
@@ -201,11 +240,27 @@ classifies aborts, not a K3 apparatus repair adjudicable by the implementer.
 Stated precisely, the policy the [USER] ratifies by signing off this chunk:
 
 > **Authenticated crash observation.** An oracle abort is observed only from
-> evidence the Go runtime itself wrote in the SAME execution: a
+> evidence written to a RUNNER-OWNED crash channel in the SAME execution — a
 > `runtime/debug.SetCrashOutput` report installed as `main`'s first
 > statement, acknowledged by a registration file, whose bytes are the exact
 > suffix of the captured stderr and whose first runtime frame is the pinned
-> `gopanic`/`fatal`/`throw` origin under `GOTRACEBACK=system` on go1.26.5.
+> `gopanic`/`fatal`/`throw` origin under `GOTRACEBACK=system` on go1.26.5 —
+> GIVEN that the accepted subject does not rewrite that channel. The
+> validator authenticates a partition against an owned channel; it does NOT
+> detect a chosen matching suffix, and the claim is not that the Go runtime
+> is the only possible writer of the bytes. What keeps a forging subject out
+> is the ADMITTED-SOURCE boundary, not the byte check: writing the channel
+> file, reconfiguring crash output or writing to stderr needs
+> `os`/`runtime/debug` operations that are outside the modeled surface, and
+> every such program is `unsupported` at the frontend — red, never PASS.
+> Verification: the crash-channel design note's fresh probes of
+> `os.WriteFile`, `debug.SetCrashOutput`, `debug.SetTraceback` →
+> `unsupported/frontend-quarantined`; the audit's forgery probes (`os.Stderr`
+> included) checked against the pinned frontend, every forging row
+> `unsupported`; the tracked tripwire `init/quarantined-var-writer/read`
+> (FAIL/frontend-export, `os.Stderr` failing `isolatedType` one of its three
+> axes). Those probes are evidence over named operations, not a theorem about
+> all unsupported Go or a hostile filesystem (the design note's own words).
 > (a) For a runtime panic the report IS the panic chain, so message and
 > program output are an exact partition — program output may contain any
 > bytes, including `panic:`/`fatal error:` text and fake traces. (b) For a
@@ -233,13 +288,54 @@ byte transport's own tests depend on the checked view and the direction of
 the policy is the doctrine's (a visible red beats a classification from
 unauthenticated bytes).
 
-The [USER] may later rule the **named pre-`main` exception** (BUG-107's plan
-paragraph): an empty acknowledgement + empty report + exit-2 trailer + a
-pinned runtime trace positively identifies "aborted before `main`", and a
-distinct, tested, self-naming path may then classify under the strict raw
-rule. That flips the four `init`/`noodler` rows to PASS and `sibling` back
-to its frontend-export red, with no other movement. Not built here: the
-default the brief set is red, fail-closed.
+**The boundary, and why the sentence now carries it (audit fix round R1,
+2026-09-07, [AGENT]).** The audit built a WORKING forgery against the
+previous wording («evidence the Go runtime itself wrote in the SAME
+execution»): the hook opens the RELATIVE path `oracle.crash`
+(`tools/coverageharness/crashhook.go:108-114`) and `go_run_oracle` runs the
+subject with `cd "$go_run_dir"` (`scripts/diff-coverage:1334-1336`), so the
+channel AND its acknowledgement live in the subject's own working directory;
+a subject that writes a forged report to the channel file, the same bytes to
+stderr, and calls `os.Exit(2)` is classified `panic` / `"FORGED PANIC"` by
+the checked view. It is NOT a blocker: every primitive the forgery needs
+(`os.WriteFile`, `debug.SetCrashOutput`, `debug.SetTraceback`, `os.Stderr`)
+is outside the modeled surface, the auditor verified against the pinned
+frontend that every forging row is `unsupported` there — red, never PASS —
+and the landed path is strictly HARDER to forge than main's (main's
+classifier needed only printed bytes; this one needs the owned file
+rewritten as well). The crash-channel design note already carried the
+boundary (`docs/2026-09-06_observer-crash-channel-design.md`, "Ownership and
+configuration boundary": «A caller able to replace captured files can
+fabricate matching evidence; do not claim the byte validator detects every
+chosen matching suffix»); the policy sentence above now carries it too, and
+the reachability argument it rests on is the admitted-source one, stated as
+a boundary — not a property of the byte check. OWED, its own chunk (§9 item
+2; proposed name `land/observer-fd-channel`, [AGENT]): the runner opens the
+channel file and passes it to the child as an INHERITED descriptor; the hook
+does `os.NewFile(3, …)` + `debug.SetCrashOutput` + close — the channel then
+has no path in the subject's namespace, so a subject cannot name it even if
+`os` were admitted; the acknowledgement moves onto the same mechanism. That
+hardening is also the channel BUG-107's option (c) assumes.
+
+The pre-`main` rows' ruling is BUG-107's, posed as THREE options after the
+fix round's R2 (the entry's paragraph is the record; here the summary):
+(a) keep RED — the default the brief set, honest, four rows; (b) the named
+pre-`main` exception as first written — an empty acknowledgement + empty
+report + exit-2 trailer + a pinned runtime trace, classified from the raw
+bytes under the strict rule — which the auditor RECOMMENDS AGAINST ([AGENT]):
+it classifies from unauthenticated bytes and re-couples the classifier's
+correctness to the modeled-surface reachability argument this section has
+just bounded; (c) RECOMMENDED ([AGENT] — auditor + coordinator; the ruling is
+the [USER]'s): register the hook as a package-level VARIABLE initializer in
+an alphabetically-first file, over the fd-passed channel, with a
+generation-time filename guard — Go initializes EVERY package-level variable
+before ANY `init()` runs (spec#Package_initialization), so all four
+`init`/`noodler` shapes become fully AUTHENTICATED observations with no
+exception and no raw-bytes path (the auditor measured all four on go1.26.5),
+`sibling` returns to its frontend-export red, and the `main()` splice and
+A-R9's residual (§4) retire with it; honest residual, an IMPORTED package's
+initializer abort still precedes the main package's variable initialization
+and still refuses by name. Not built here: records only.
 
 ## 4. A-R9 disposition — the oracle program is rewritten before compilation: KEPT, with an observation-level proof
 
@@ -393,6 +489,32 @@ No 5a: `tools/nativefrontend/wire.go` and `GoLean/NativeToIR.lean` are
 byte-identical to main (`git diff --stat main -- …` empty); `GoLean/` is
 untouched entirely.
 
+**Audit fix round (the commit after `60bbf466`; RECORDS ONLY).** The
+differential was NOT re-run, by the coordinator's brief: no code, corpus,
+baseline, gate script or evidence file changed — `git diff 60bbf466 HEAD
+--stat` is three documentation files (this note, `docs/BUGS.md`, one
+sentence of `docs/language-coverage-ledger.md` §8x). The gate steps that
+read those files were re-run at this tip, verbatim (each exit 0):
+
+```
+$ scripts/check-evidence-size
+evidence-size gate: PASS — 1441 tracked files / 26561310 bytes in 82 evidence dirs; caps file 262144 B, dir 4194304 B, no archives, no source copies; 17 pre-existing offender(s) allowlisted (frozen 2026-09-07), 0 new
+$ python3 tools/reconcile-records
+baseline            3618 cases  3362 PASS  256 FAIL
+baseline header     [3618, 3362, 256]  matches the rows
+bugs                107 entries  17 open  90 fixed
+untriaged           14 tracked  {'coverage': 10, 'latitude': 4}  ceilings {'coverage': 10, 'latitude': 4, 'wrong-answer': 0}
+[01] C13  MEDIUM  78 doc site(s) across 9 file(s) name a patch-level Go version other than the pin …
+[02] C5   MEDIUM  1 frontier-table case citation(s) do not resolve against the baseline (FR-7 cites `=`)
+2 finding(s).
+$ scripts/check-bugs.sh
+check-bugs: ok (107 bug(s); pinned cases behave as claimed)
+check-bugs: backlog — 14 unexplained fidelity failure(s): coverage 10/10; latitude 4/4; wrong-answer 0/0
+```
+
+0 HIGH; the two MEDIUMs are the pre-existing ones named above (C13, C5),
+unchanged by this round.
+
 ## 8. Provenance
 
 Squashed from `typed-consumer-sprint` (archive; `docs/ARCHIVE.md`) via
@@ -411,3 +533,42 @@ candidate), `aafe225b`/`ab2ad4d5` (crash-channel design + row disposition),
 TAB cosmetic; the five design-note prefaces; BUG-004's line and paragraph;
 BUG-105/106/107; the ledger head + §8x + the §8 reds table (the amend); the
 baseline header; this note and the evidence directory. Not merged, not pushed.
+Audit fix round (2026-09-07, [AGENT] fix-round worker, records only): this
+note (the preface, §1.4, §1.6, the §2 hazard, §3, §7's fix-round block, §9),
+BUG-107's header and ruling paragraph, BUG-004's hazard paragraph, one
+sentence of the ledger's §8x — nothing else.
+
+## 9. Owed follow-ups (audit fix round, 2026-09-07, [AGENT])
+
+Each is its own chunk; none is built here; each names the audit item it
+discharges. Recording them here is the brief's requirement, not a schedule.
+
+1. **`land/observer-gate-scripts` (R5 — lost negative coverage).** The two
+   sprint gate scripts §1.6 excluded (`scripts/check-observer-controls.py`,
+   `scripts/check-observer-tools.py`) exercised the EXPORTED `diff-coverage`
+   shell functions against a fake oracle and ran compiled mutants of the
+   harness. With them out, roughly 900 lines of shell glue
+   (`go_run_oracle`, `oracle_observer`, `attach_output`, the strict/
+   membership/confluent readers of the stderr file) are covered only by
+   `scripts/test-lane-validation`'s synthetic draws; the harness's Go tests
+   (§1.5) cover the harness alone, not the shell that calls it. The re-cut
+   authors probe expectations for the R6-uniform contract (every empty-ack /
+   empty-report probe expects the NAMED refusal) and re-anchors the mutation
+   probes on the landed `crashview.go`.
+2. **`land/observer-fd-channel` (R1 — the owned channel with no path in the
+   subject's namespace; proposed name).** The runner opens `oracle.crash`
+   (and the acknowledgement) and passes them as inherited descriptors; the
+   hook does `os.NewFile(3, …)` + `debug.SetCrashOutput` + close; the
+   relative path leaves `crashHelperSource`; `hookinert_test.go` and the
+   crashview fixtures follow the transport. §3 has the forgery this closes.
+3. **BUG-107 option (c), if the [USER] rules it — folds into item 2.** The
+   hook becomes a package-level variable initializer
+   (`var _goleanCrashInstalled = _goleanSetupCrash()`) in an
+   alphabetically-first helper file (replacing `zz_golean_crash.go`; the
+   `main()` splice goes), with a generation-time guard that REFUSES unless
+   the helper filename sorts strictly before every other file of the package
+   — the `go` command presents files in lexical name order, a tool property
+   the spec only ENCOURAGES of build systems, so it is pinned and checked,
+   fail closed (note `aa.go` sorts before `aa_golean_crash.go`: the name is
+   the chunk's to choose, the guard is not optional). Retires A-R9's residual
+   (§4) outright; the imported-package residual stays red by name.

@@ -2760,6 +2760,24 @@ first-line renderer repair, which removes them from this line; until then they
 are red-first here. The sprint's record of that repair (not landed by L4):
 `docs/2026-09-06_panic-rendering-repair.md` on branch `typed-consumer-sprint`.
 
+**Hazard for L3 on these six rows (L4 audit fix round, 2026-09-07, [AGENT] —
+R4; pre-existing on main, recorded, not fixed):** the oracle `message` these
+rows compare against is the report's FIRST LINE only
+(`tools/coverageharness/crashview.go:137`, `bytes.SplitN(…, '\n', 2)[0]`),
+and the `output` field is the bytes BEFORE the authenticated report, so the
+payload's tail after its first LF is in NEITHER compared field —
+`panic("head\nTAILA")` and `panic("head\nTAILB")` yield the same observation
+(main's marker-search classifier projected the first line the same way). A
+first-line renderer therefore matches the oracle on every embedded-LF
+payload regardless of the tail. These six may flip GREEN only if either (i)
+the compared surface widens to the whole message region (the `printindented`
+TAB-unwrap of every payload line after the first, carried in `message`), or
+(ii) the machine's first-line-only rendering is a DOCUMENTED standing
+contract of the observation — a first-line match then IS the claim, and the
+tail is outside it by record, not by accident. L3's audit is checking which;
+a flip under neither is a green that compares less than it appears to
+(`docs/2026-09-07_land-observer-terminal.md` §2, the same paragraph).
+
 > **R-1 conversion state (2026-08-21, raft W4.3 item 5 —
 > docs/raft-w43-log.md).** The 2026-08-20 R-1 ruling quotients the
 > abort-line TEXT of the three (c) rows here (the spec describes none
@@ -6294,7 +6312,7 @@ test infrastructure; `docs/2026-09-06_observer-crash-channel-design.md`,
 new trusted dependency, outside K3; (iii) accept the row's red as the
 standing pin of this limit. Until ruled, (iii) holds.
 
-## BUG-107 — a PRE-`main` abort (a package-level initializer or `init()` panicking or deadlocking before `main`'s first statement) has no crash-channel acknowledgement and is refused by name — five rows red where main's classifier previously read the report from unauthenticated bytes [apparatus; terminal classification; trusted surface #2; awaiting a [USER] ruling on a named pre-main exception]
+## BUG-107 — a PRE-`main` abort (a package-level initializer or `init()` panicking or deadlocking before `main`'s first statement) has no crash-channel acknowledgement and is refused by name — five rows red where main's classifier previously read the report from unauthenticated bytes [apparatus; terminal classification; trusted surface #2; awaiting a [USER] ruling among THREE options — keep red / named exception / variable-initializer hook (L4 audit fix round 2026-09-07, R2)]
 
 - Status: open ([AGENT], landing chunk L4 `land/observer-terminal` 2026-09-07 — the uniform-R6 consequence measured on the prep branch (`docs/2026-09-07_land-gate-tooling.md` §6) and re-measured here, focused + full; the [USER] direction relayed for this chunk: DEFAULT keep them red, fail-closed, pending a ruling)
 - Pinned-by: differential
@@ -6337,28 +6355,98 @@ fallback that fires only when the acknowledgement is empty is exactly the
 silent degradation A-R6 named. Fail-closed says: no acknowledgement, no
 classification.
 
-The option the [USER] may rule (written here as the plan, per the brief):
-**a NAMED pre-`main` exception.** An EMPTY acknowledgement is itself a
-reliable pre-`main` signal — once `main` starts the hook cannot fail to write
-it silently (a failure to open, register or write exits the child with 78
-before the subject runs, and the runner checks that trailer first), so
-"acknowledgement empty AND report empty AND the exit-2 trailer AND a pinned
-runtime trace" positively identifies "the runtime aborted before `main`". The
-exception would (a) require exactly that state, (b) classify from the raw
-bytes under the strict rule (one marker at a line start, no second marker
-before the trace, the pinned first frame), (c) name itself in the run detail
-(`pre-main abort (no hook acknowledgement): raw-marker classification under
-the strict rule`), and (d) be a distinct, tested path — not the fallback the
-sprint had. Ruling it flips these five rows: the four `init`/`noodler` rows
-back to PASS and `sibling` back to its frontend-export red, with no other
-movement (this chunk's focused measurement ran every `init/`,
-`noodler/initpanic/` and `sync/mutex-unlock-fatal/` row). The alternative —
-registering the hook from a package `init()` — does NOT close the gap: the
-hook's own initializer cannot be ordered before the subject's other
+The ruling the [USER] is asked for — THREE options (L4 audit fix round,
+2026-09-07; the first cut of this paragraph posed only (b) and rejected the
+alternative on a false premise — corrected at the end, the auditor's R2):
+
+**(a) Keep RED** — the current default ([USER] direction relayed for L4):
+the four `init`/`noodler` rows stay FAIL/go-observation on this line with
+the cause written; `sibling` stays red on the oracle side. Honest and
+fail-closed; its cost is four authenticated observations Go can in fact
+give (see (c)).
+
+**(b) A NAMED pre-`main` exception** — as first written here: an EMPTY
+acknowledgement is itself a reliable pre-`main` signal — once `main` starts
+the hook cannot fail to write it silently (a failure to open, register or
+write exits the child with 78 before the subject runs, and the runner checks
+that trailer first), so "acknowledgement empty AND report empty AND the
+exit-2 trailer AND a pinned runtime trace" positively identifies "the
+runtime aborted before `main`". The exception would (i) require exactly that
+state, (ii) classify from the raw bytes under the strict rule (one marker at
+a line start, no second marker before the trace, the pinned first frame),
+(iii) name itself in the run detail (`pre-main abort (no hook
+acknowledgement): raw-marker classification under the strict rule`), and
+(iv) be a distinct, tested path — not the fallback the sprint had. It flips
+these five rows: the four `init`/`noodler` rows back to PASS and `sibling`
+back to its frontend-export red, with no other movement (this chunk's
+focused measurement ran every `init/`, `noodler/initpanic/` and
+`sync/mutex-unlock-fatal/` row). The auditor RECOMMENDS AGAINST it ([AGENT],
+auditor + coordinator): it classifies from raw, UNAUTHENTICATED bytes, and it
+re-couples the classifier's correctness to the modeled-surface reachability
+argument (a subject cannot forge because `os` is not admitted) that the
+landing note §3 now states as a BOUNDARY rather than as a property of the
+byte check — the exact coupling the mandatory channel (A-R6) was built to
+remove.
+
+**(c) RECOMMENDED ([AGENT] — auditor + coordinator; the ruling is the
+[USER]'s): register the hook as a package-level VARIABLE initializer in an
+alphabetically-first file, over the fd-passed channel (landing note §3, R1;
+§9 item 2), with a generation-time filename guard.** The mechanism, stated
+accurately (spec#Package_initialization): «The entire package is initialized
+by assigning initial values to all its package-level variables followed by
+calling all init functions in the order they appear in the source, possibly
+in multiple files, as presented to the compiler» — EVERY package-level
+variable of a package is initialized before ANY of its `init()` functions
+runs. Among the variables, «initialization proceeds stepwise, with each step
+selecting the variable earliest in declaration order which has no
+dependencies on uninitialized variables», and «the declaration order of
+variables declared in multiple files is determined by the order in which the
+files are presented to the compiler» — the `go` command presents them in
+lexical filename order, which the spec ENCOURAGES of build systems and does
+not guarantee as language. So `var _goleanCrashInstalled =
+_goleanSetupCrash()` in an alphabetically-first helper file, whose
+initializer depends on no other variable of the package (the hook body
+references only its two imports; the identifier is reserved and a collision
+refuses), is the FIRST step of the main package's initialization: before the
+subject's own variable initializers, and before every `init()`. The auditor
+MEASURED it on go1.26.5 (helper `aa_golean_crash.go`): `ack=registered` and
+a real runtime-written report for all four shapes on this line — a
+package-level initializer panicking (`noodler/initpanic/var-panic` → `panic`
+`"init boom"`), an `init()` panicking (`init/init-panic`,
+`noodler/initpanic/panic` → `panic`), an `init()` deadlocking
+(`noodler/initpanic/deadlock` → `deadlock`). All four become FULLY
+AUTHENTICATED observations — no exception, no raw-bytes path, no change to
+the classifier's contract — and `init/quarantined-var-panicking/sibling`
+returns to its frontend-export red (the frontend's refusal is reached
+again). The filename guard: generation REFUSES unless the helper filename
+sorts strictly before every other file of the package (`aa.go`, `A.go` and
+`00.go` all sort before `aa_golean_crash.go`; a subject file that sorts
+first is a named refusal, never a silent reorder) — a `go` command property
+pinned and checked, fail closed. Option (c) also RETIRES the `main()` splice
+and A-R9's residual outright (landing note §4: the oracle copy then differs
+from the semantic input by one added file and no edited byte). HONEST
+RESIDUAL: an IMPORTED package's initializer abort still precedes the main
+package's variable initialization («the imported packages are initialized
+before initializing the package itself») and still refuses with no
+acknowledgement — a smaller, exactly nameable class, none of this line's
+five rows in it; it stays red by name.
+
+CORRECTION of the first cut ([AGENT], the auditor's R2): this paragraph
+previously rejected "registering the hook from a package `init()`" with
+«the hook's own initializer cannot be ordered before the subject's other
 initializers (Go's initialization order is dependency order; ledger L-011
 records it as optimizer-dependent latitude), so an initializer abort could
-still precede it. The rows outside the admitted domain that could ALSO leave
-the acknowledgement empty (a subject deleting/rewriting the owned files) are
-already `unsupported/frontend-quarantined` at the frontend
+still precede it». Incomplete on two counts: (1) it considered only an
+`init()` FUNCTION — which indeed cannot precede the subject's variable
+initializers, since all variables precede all `init()`s — and missed the
+variable-initializer placement above, which the same order rule puts FIRST;
+(2) L-011 records gc's staticinit PRUNING of the package schedule (an
+initializer with no observable effect may be dropped — the
+optimizer-dependent latitude), which cannot move a variable initializer
+after an `init()`, so it was cited for a claim it does not support. The
+rows outside the admitted domain that could ALSO leave the acknowledgement
+empty (a subject deleting/rewriting the owned files) remain
+`unsupported/frontend-quarantined` at the frontend
 (`docs/2026-09-06_observer-crash-channel-design.md`, "Ownership and
-configuration boundary").
+configuration boundary"); under the fd-passed channel they also lose the
+path.

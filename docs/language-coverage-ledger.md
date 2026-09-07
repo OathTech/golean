@@ -1980,9 +1980,12 @@ byte-identical to main, and the machine's verdicts on the eleven moved or
 red-first rows are unexamined by their reds (an apparatus refusal is never
 conformance and never a wrong answer). The "authenticated crash observation"
 policy these refusals implement is D4 of the landing plan, ratified by the
-[USER]'s sign-off on this chunk (landing note §3); the named pre-`main`
-exception BUG-107 describes would move the four `init`/`noodler` rows back to
-PASS and `sibling` back to frontend-export. Evidence and the row table:
+[USER]'s sign-off on this chunk (landing note §3 — restated with its
+ownership boundary by the L4 audit fix round, R1); BUG-107 now poses THREE
+options (fix round R2): (b) the named pre-`main` exception or (c) the
+variable-initializer hook — the [AGENT] recommendation, fully authenticated —
+would each move the four `init`/`noodler` rows back to PASS and `sibling`
+back to frontend-export. Evidence and the row table:
 `docs/evidence/2026-09-07_land-observer-terminal/`.
 
 ### 8c. The re-derivation, 2026-08-22 vintage → the 2026-09-01 tip
