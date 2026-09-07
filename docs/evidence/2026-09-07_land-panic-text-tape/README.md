@@ -15,8 +15,9 @@ load-bearing.
 
 ## Files (records only — no full-corpus tables, no archives, no source copies)
 
-- `witness/w*.go` — the 37 gc witness programs of the note's §1 (one
-  `package main` each; run with `go build -o bin ./wNN && ./bin`).
+- `witness/w*.go` — the 38 gc witness programs of the note's §1 (w01–w37
+  plus w06b; one `package main` each; run with `go build -o bin ./wNN &&
+  ./bin`). [Count corrected at the audit fix round, L7: the note said 37.]
 - `witness/table.tsv` — byte-exact first abort line per witness (escaped
   `\xHH` for non-printables), its hex, a sha256 prefix of the whole stderr,
   the stderr line count. Produced by the L3 worker's table script over the
@@ -38,13 +39,29 @@ load-bearing.
 - `ci-diff-tail.txt` — the verbatim tail of `scripts/capped scripts/ci --diff`
   at the clean committed tip (the gate record), with the awk tally of the
   re-pinned baseline.
+- `first-line-scope.txt` — the adversarial-audit fix round's MEASUREMENT
+  (2026-09-07, R4e): `panic("head\nTAILA")` vs `panic("head\nTAILB")` —
+  gc's full stderr differs, the harness's compared first line is identical
+  (`head`), and the machine's `stringFirstLine?` agrees on both; the
+  payload's tail is unmodelled and unobserved (unwinding-arc rule of
+  2026-09-07; ledger FR-32).
+- `controls-asymmetry.txt` — the fix round's R5 record: the retired
+  string-member lane's `Controls` payload (`a\x00\x01\t\r\nZ`) — gc writes
+  five first-line bytes, bash command substitution in the harness keeps
+  four (the NUL is dropped), the machine renders all five; a red-by-accident
+  if rowed strictly today, so DEFERRED to L4's byte view (ledger FR-33).
+  Also carries the L4 (`.nil` arm fails closed) probe lines.
+- `ci-diff-tail-fixround.txt` — the verbatim gate tail of `scripts/capped
+  scripts/ci --diff` at the fix round's clean committed tip (zero drift
+  expected: records, statement tightenings and one dead-arm fix only).
 
 ## Reproduction (repo root; `deps/` via `scripts/setup-deps`)
 
 ```sh
-# gc witnesses (each program):
-GOCACHE="$PWD/artifacts/go-build-cache" GOFLAGS= GODEBUG=panicnil=0 GOTRACEBACK=none \
-  go build -o /tmp/w ./docs/evidence/2026-09-07_land-panic-text-tape/witness/w01_panic_r.go ; /tmp/w
+# gc witnesses (each program) — scratch stays repo-local (.tmp/ or artifacts/, never /tmp:
+# docs/operational-lessons.md "Sandbox conventions"; corrected at the audit fix round, R8):
+mkdir -p .tmp/witness && GOCACHE="$PWD/artifacts/go-build-cache" GOFLAGS= GODEBUG=panicnil=0 GOTRACEBACK=none \
+  go build -o .tmp/witness/w ./docs/evidence/2026-09-07_land-panic-text-tape/witness/w01_panic_r.go ; .tmp/witness/w
 # (the table's escaping: od -An -c on the first stderr line; sha256sum on the whole stderr)
 # the rows:
 scripts/diff-one panic-recover/repanic-same-value-abort $(awk -F'\t' '!/^#/{print "panic-recover/repanic-collapse/"$1}' Corpus/coverage/exec/panic-recover/repanic-collapse/cases.tsv) \

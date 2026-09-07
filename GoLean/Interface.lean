@@ -116,15 +116,33 @@ same-fuel singleton driver correspondence with unchanged output prefix, and
 The recovery profile's whole-driver TERMINAL classification
 (`RecoveryRuntime.Inv.run_classified`, `runProgram_typed`,
 `runProgramPool_typed`; landing chunk L3,
-`docs/2026-09-07_land-panic-text-tape.md`) has FOUR outcomes for every
+`docs/2026-09-07_land-panic-text-tape.md`; statements TIGHTENED at L3's
+adversarial-audit fix round, 2026-09-07 R7 — the panic disjunct used to bind
+its bytes and collapse bit existentially) has FOUR outcomes for every
 admitted run, fuel and stream: typed readout with empty output; a `panic`
-terminal whose text is `Machine.stringPanicHead` — the explicit-string
-MEMBER function — at the collapse bit the stream's `repanicCollapse` pick
-selects; the NAMED refusal `Stop.unsupported (Machine.abortRefusal …)` of a
-string payload whose FIRST LINE is not valid UTF-8 (landing decision D5: gc
-writes the raw bytes and the `String`-valued observation cannot carry them);
-or fuel exhaustion. `Inv.run_refusal_named` / `runProgramPool_refusal_named`
-say the third outcome is the ONLY refusal the profile reaches — the sprint's
+terminal ANCHORED through the computed observer's record — `runConfigWithAbort`
+(which erases to the driver, `*_erasure`) returns the `AbortRecord` of the
+REACHED abort configuration, its provenance witness (`Inv.observed_abort`)
+ties `record.bytes`/`record.chain` to that configuration's chain and the
+residual stream to the original `ch`, and the text is
+`Machine.stringPanicHead record.bytes record.recovered (collapseBit first
+rest (abortConsult first rest ch).1)` for `first :: rest = record.chain` —
+the explicit-string MEMBER function at the collapse bit the stream's
+`repanicCollapse` pick selects on the reached chain (the whole-program
+theorems additionally tie the record to the driver's own
+`runProgramSetupM`); the NAMED refusal `Stop.unsupported
+(Machine.abortRefusal …)` of a string payload whose FIRST LINE is not valid
+UTF-8 (landing decision D5 — an [AGENT] default applied per the
+coordinator's brief, [USER] ratification PENDING at the merge gate, landing
+plan §4: gc writes the raw bytes and the `String`-valued observation cannot
+carry them); or fuel exhaustion. What is NOT proved, stated so the customer
+does not read it in: nothing about the payload's continuation lines (the
+member is the FIRST line; `stringFirstLine?` keeps only a multi-line flag —
+unwinding-arc rule of 2026-09-07, ledger FR-32), and the `runProgram*_typed`
+theorems expose the setup state/configuration existentially (they are the
+driver's by `runProgramSetupM`; the statement does not re-derive their
+shape). `Inv.run_refusal_named` / `runProgramPool_refusal_named` say the
+third outcome is the ONLY refusal the profile reaches — the sprint's
 `*_no_refusal` theorems were true only of a total renderer that emitted a
 `"\xHH"` form Go never prints, and are not restated. The computed observer
 (`runConfigWithAbort`, `execPoolWithAbort`, `runProgramPoolWithAbort`)
@@ -132,14 +150,20 @@ erases exactly to the shipped drivers for every input (`*_erasure`), every
 emitted record has a source-bound provenance witness (`*_witness`) carrying
 the abort event's own recorded pick (`abortEventPick?`), every actual panic
 result in the typed recovery domain receives a record
-(`Inv.observation_complete`), and every record's text is the member at some
-collapse bit (`Inv.observed_abort_member`, `stepAbortRecord?_member`,
-`runProgramPoolWithAbort_member`). The member's bytes are the payload's
-first line (`utf8String?_bytes`, `stringFirstLine?_bytes`).
+(`Inv.observation_complete`), and every record's text is the member ON THE
+RECORD'S CHAIN at the recorded pick — `stepAbortRecord?_member` (`collapseBit
+first rest pick` with `first :: rest = record.chain` and `abortEventPick?
+event = some pick`), `PoolAbortWitness.string_member` and
+`runProgramPoolWithAbort_member` (the pick existential there, the event being
+inside the witness), `Inv.observed_abort_member` (the stream's pick) — so an
+unrecovered or unequal head forces the bit false. The member's bytes are the
+payload's first line (`utf8String?_bytes`, `stringFirstLine?_bytes`).
 
 Both typed profiles are CHOICE-FREE on every STEP: `Control.no_spawn`,
 `Control.no_select`, `Control.no_seq_consumption` (a `none` projection, or
-an ABORT) and `Inv.run_choices` (in `BooleanRuntime` and `RecoveryRuntime`
+a CONSUMING abort — `consumesRepanicCollapse c`, the recovered-equal
+re-panic shape at bound 2; tightened from `c.abort?.isSome` at the fix
+round, L5) and `Inv.run_choices` (in `BooleanRuntime` and `RecoveryRuntime`
 alike) mean a successful execution retains its stream verbatim. The
 recovery profile's ABORT is not choice-free since landing chunk L3: on the
 recovered-equal re-panic shape (`Tests/RecoveryTyping.lean`'s

@@ -29,7 +29,7 @@ sprint charter §2–§3 and the three design notes landed here.
 | Recovery profile, control/preservation/progress (15) | `RecoveryDelivery`, `RecoveryControlData`, `RecoveryControl`, `RecoveryControlMono`, `RecoveryWalk`, `RecoveryExpressionProgress`, `RecoveryControlHelpers`, `RecoveryCallControl`, `RecoveryValueBasic`, `RecoveryValueCalls`, `RecoveryStatementProgress`, `RecoveryFrameProgress`, `RecoveryPanicProgress`, `RecoveryInvariant`, `RecoverySuccessfulRuns` |
 | Recovery profile, pool/choices (4) | `RecoveryCallLayout`, `RecoverySingleton`, `RecoveryPool`, `RecoveryChoices` |
 | Generic abort observer (4) | `AbortObservation`, `RecoveryPoolObservation`, `RecoveryProgramObservation`, `RecoveryObservation` |
-| Consumer-free helpers (2) | `Declaration` (positive closed Go declaration identities + `LawfulBEq`), `PanicText` (total constructive text helpers: `firstLine`, `escapeAllBytes`, `decodeEscapedBytes`, round-trip/injectivity) |
+| Consumer-free helpers (2) | `Declaration` (positive closed Go declaration identities + `LawfulBEq`), `PanicText` (total constructive text helpers: `firstLine`, `escapeAllBytes`, `decodeEscapedBytes`, round-trip/injectivity — [the `escapeAllBytes`/`decodeEscapedBytes` half was DELETED by landing chunk L3, 2026-09-07, landing decision D5: the escape form is never a member; `firstLine`/`firstLine_bytes`/`lfPrefix_valid` remain — noted at L3's audit fix round, L3]) |
 
 All 57 are under `GoLean/GoCore/`; none is `partial`; none imports
 `EnumDedup`, `NativeToIR` or `CLI`.

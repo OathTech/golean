@@ -1,0 +1,44 @@
+# Control-byte payloads: the measured gc-capture asymmetry (L3 adversarial-audit fix round, 2026-09-07, R5; [AGENT])
+#
+# The retired string-member lane's `Controls` role (sprint branch 7edc298f, Corpus/controls/string-members/explicit/controls.go
+# catchControls/Controls: payload "a\x00\x01\t\r\nZ" — NUL SOH TAB CR preserved, first-LF projection) has NO landed row at this
+# tip. Its shape is DEFERRED to L4's panic-recover/panic-controls rows (BUG-105, filed by L4 — not on this branch); rowed here
+# as ledger FR-33 so the gap is visible regardless. This file records why a plain strict row would be a RED-BY-ACCIDENT today.
+# Toolchain: go version go1.26.5 linux/amd64; GODEBUG=panicnil=0 GOTRACEBACK=none. Scratch: .tmp/first-line-scope/controls/.
+
+$ cat controls/main.go
+package main
+
+func main() { panic("a\x00\x01\t\r\nZ") }
+$ go build ... && GODEBUG=panicnil=0 GOTRACEBACK=none controls/bin 2> controls/stderr; od -An -c controls/stderr
+   p   a   n   i   c   :       a  \0 001  \t  \r  \n  \t   Z  \n
+exit code: rc=2
+
+## gc's first line, read to a FILE (what gc actually wrote after 'panic: ', hex)
+$ pm < controls/stderr | od -An -tx1
+ 61 00 01 09 0d 0a
+
+## the same first line through bash command substitution — the harness's capture path (scripts/diff-coverage is #!/usr/bin/env bash)
+$ bash -c 'c=$(pm < controls/stderr); printf "%s" "$c" | od -An -tx1; printf "%s" "$c" | wc -c'
+bash: line 1: warning: command substitution: ignored null byte in input
+ 61 01 09 0d
+4
+=> bash DROPS the NUL ("warning: command substitution: ignored null byte in input"): 4 bytes survive of gc's 5.
+   (zsh, for contrast, keeps all 5 — the loss is the capture shell's, not gc's.)
+
+## machine side (Probe.lean)
+#eval stringFirstLine? #[0x61, 0x00, 0x01, 0x09, 0x0d, 0x0a, 0x5a]
+some ("a\x00\x01\t\x0d", true)
+#eval (stringFirstLine? #[0x61, 0x00, 0x01, 0x09, 0x0d, 0x0a, 0x5a]).map fun (t, _) => t.toUTF8.data.toList
+some [97, 0, 1, 9, 13]
+=> the machine renders the first line with all five bytes (61 00 01 09 0d) — the honest gc text; a strict row
+   comparing it against bash's 4-byte capture would go RED for the harness's reason, not the semantics' (a
+   red-by-accident). The fix is transport-side (L4's byte view), not a machine change. Recorded; no row landed here.
+
+## L4 (same probe): the raw-nil arm now fails closed; panic(nil) as raised still renders gc's text
+#eval renderPanicPayload { types := TypeEnv.reserved } .nil
+none
+#eval abortMsg { types := TypeEnv.reserved } ⟨.nil, false⟩ [] 0
+Except.error (GoLean.Stop.refusal (GoLean.Refusal.unsupported "panic abort rendering for payload GoLean.GoValue.nil"))
+#eval renderPanicPayload { types := TypeEnv.reserved } (panicPayload .nil)
+some ("panic called with nil argument", false)

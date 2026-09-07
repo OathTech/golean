@@ -248,6 +248,26 @@ dynamic-name match.
   added it must first decide the package-qualification story.
 - Chain rendering: first line only, ` [recovered]` suffix from the
   entry's flag; deeper lines never observed by the harness.
+  - **2026-09-07 — first-line-only now covers a single payload's
+    CONTINUATION LINES too** ([AGENT], landing chunk L3's adversarial-audit
+    fix round, R4 — a SCOPE EXTENSION of the rule above, which was stated
+    for deeper CHAIN entries; not a ruling). gc's `printindented`
+    (`runtime/error.go:306–318` at the pin) writes a string payload's raw
+    bytes with a TAB after every LF and puts the `[recovered…]` suffix
+    after the WHOLE payload; the machine renders `(firstLine,
+    multilineFlag)` (`stringFirstLine?`/`renderPanicPayload`,
+    Machine.lean) and the harness compares gc's first line only
+    (`scripts/diff-coverage` `panic_message()` awk). MEASURED, not
+    asserted: `panic("head\nTAILA")` and `panic("head\nTAILB")` are
+    byte-identical compared observations on BOTH sides —
+    `docs/evidence/2026-09-07_land-panic-text-tape/first-line-scope.txt`.
+    Honest consequence: the tail is UNMODELLED (the renderer keeps only
+    the flag) and UNOBSERVED (gc's tail is never read); no green row says
+    anything about it, and `panic-text/invalid-after-lf`,
+    `panic-text/trailing-newline`, `repanic-collapse/multiline-passthrough`
+    are first-line-scope CONTROLS, not coverage of their tails. Widening
+    the observation to the whole message region is rowed as ledger FR-32
+    (implementation site: L4's byte-view machinery).
 - **`[recovered, repanicked]` (probe 2026-07-25) — CORRECTED by the
   pre-merge audit:** the collapse is decided by eface IDENTITY (bitwise
   type-word + data-pointer compare in `preprintpanics`), NOT semantic
@@ -309,7 +329,11 @@ dynamic-name match.
   defined-type identity — frontend now fails closed at emit, machine
   name-checks as defense in depth (`panic-named-type-abort` red pin);
   (3) MEDIUM — multi-line string payloads have no one-line rendering
-  (`asciiString?` rejects `\n`; `panic-newline-abort` red pin);
+  (`asciiString?` rejects `\n`; `panic-newline-abort` red pin) [STALE
+  since landing chunk L3, 2026-09-07: `asciiString?` is DELETED,
+  `stringFirstLine?` projects gc's first line at the byte level, and
+  `panic-newline-abort` is a strict PASS — BUGS.md BUG-004 item 3, with
+  the first-line scope rule above; noted at L3's audit fix round, R4f];
   (4) MEDIUM — stale PanicNilError comment at the emit.go lowering site
   (the exact knob §A2 warns about) corrected. The audit's verifiers
   compiled probes both ways; the two silent-wrong-answer HIGHs are again

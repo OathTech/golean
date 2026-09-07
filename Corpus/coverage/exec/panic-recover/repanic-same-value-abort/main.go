@@ -16,9 +16,12 @@ func main() {
 // machine's value level (the C4 impossibility) — but the IDENTITY
 // itself is in-language: recover the repanic in an outer frame and
 // compare with == against the original value. The abort row above
-// stays red awaiting the machine's quotient member; this row proves
-// the forced half (panic, repanic, same-value identity, deferred-call
-// order) exactly.
+// was red until landing chunk L3 (2026-09-07) put the collapse on the
+// tape (`ChoiceSite.repanicCollapse`, both members enumerated, gc's
+// draw checked ∈ set — PASS/membership; the (c)→(a) move awaits [USER]
+// ratification at the merge gate); this row proves the forced half
+// (panic, repanic, same-value identity, deferred-call order) exactly,
+// as it did before.
 func repanicSameValueForcedHalf() string {
 	orig := "orig"
 	out := ""

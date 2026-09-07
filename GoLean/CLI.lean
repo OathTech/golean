@@ -618,7 +618,8 @@ The semantic core's consume sites and their accountant arms:
 9. THE ABORT's `repanicCollapse` pick (StepFn.lean's `.panicking _ .stop`
    arm and Multi.lean's `stepThread` tombstone arm, both through
    `abortConsult`/`repanicCollapseWidth` — BUG-004 item 1, landing chunk
-   L3 2026-09-07 under the BUG-087 panic-text ruling: bound 2 exactly at
+   L3 2026-09-07, an [AGENT] extension of BUG-087's ruling SHAPE under
+   R-1 ([USER] ratification PENDING at the merge gate): bound 2 exactly at
    an abort whose head is a recovered entry with an EQUAL successor
    payload, COLLAPSE = ` [recovered, repanicked]` / two-line form =
    ` [recovered]`; bound 1 — no pop — at every other abort) → the

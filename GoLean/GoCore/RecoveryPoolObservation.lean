@@ -12,7 +12,14 @@ open GoLean.Semantics
 /-- The `repanicCollapse` pick an abort event RECORDED (landing chunk L3):
 `[]` at a bound-1 consult (the forced pick 0), the one labeled record at
 bound 2; any other picks shape is not an abort event's and yields `none`
-(fail closed — the observer never guesses a pick). -/
+(fail closed — the observer never guesses a pick). Why no other shape is
+an abort event's: the tombstone arm (`stepThread`, Multi.lean) is the only
+emitter of an `.aborted` event and records exactly the picks of its
+`Choices.consumeAtE .repanicCollapse` consult (`abortEventPick?_consumeAtE`
+below); an abort configuration is neither a terminal nor a boundary shape
+(`isTerminal_of_abort`, `atBoundary_of_abort`, MultiSound.lean), so no
+scheduler, boundary or waiter pick shares the event (audit fix round
+2026-09-07, L11). -/
 def abortEventPick? (event : StepEvent) : Option Nat :=
   match event.picks with
   | [] => some 0

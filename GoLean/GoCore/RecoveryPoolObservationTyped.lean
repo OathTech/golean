@@ -5,47 +5,59 @@ import GoLean.GoCore.RecoveryProgramObservation
 member correctness for every emitted record, over the `repanicCollapse`
 tape (landing chunk L3; the sprint's `RecoveryPoolObservationTyped` of
 `7bd32ad6`, RESTATED). Every member statement is indexed by the collapse
-bit the abort EVENT recorded (`abortEventPick?`): the observer re-derives
-the rendered member from the event's own pick, never from a guess. -/
+bit ON THE RECORD'S CHAIN (`first :: rest = record.chain`) at the pick the
+abort EVENT recorded (`abortEventPick?`) — the observer re-derives the
+rendered member from the event's own pick, never from a guess. Audit fix
+round 2026-09-07 (R7, [AGENT]): the statements used to bind `collapsed`
+existentially; now the bit is `collapseBit first rest pick` on the record's
+own chain, so an unrecovered or unequal head forces it false. -/
 namespace GoLean.GoCore.RecoveryRuntime
 open Machine RecoveryTyping
 open GoLean.Semantics
 
 /-- The checked actual abort transition determines the member from the
-complete head bytes, the recovered flag and the event's recorded pick; no
-typing premise is needed. -/
+complete head bytes, the recovered flag, the record's chain and the event's
+recorded pick; no typing premise is needed. -/
 theorem stepAbortRecord?_member {before after event message record}
     (h : stepAbortRecord? before after event message = some record) :
-    ∃ pick, abortEventPick? event = some pick ∧
-      ∃ collapsed, stringPanicHead record.bytes record.recovered collapsed = some message := by
+    ∃ (pick : Nat) (first : PanicEntry) (rest : List PanicEntry),
+      abortEventPick? event = some pick ∧ first :: rest = record.chain ∧
+      stringPanicHead record.bytes record.recovered (collapseBit first rest pick) = some message := by
   obtain ⟨c, flag, first, rest, pick, _, _, _, query, hpick, chain, render⟩ :=
     stepAbortRecord?_some h
   have head : first = (AbortHead.mk record.bytes record.recovered).entry := (List.cons.inj chain).1
   have value : first.value = .interface .string (.string record.bytes) := by rw [head]; rfl
   have member := abortMsg_string_ok before.shared first rest record.bytes pick message value render
   rw [show first.recovered = record.recovered from congrArg PanicEntry.recovered head] at member
-  exact ⟨pick, hpick, _, member⟩
+  exact ⟨pick, first, rest, hpick, chain, member⟩
 
+/-- The witnessed pool abort's text is the member on the record's chain at
+the pick the witnessed abort EVENT recorded (`stepAbortRecord?_member`; the
+event is inside the witness). -/
 theorem PoolAbortWitness.string_member {fuel m r ch out result record}
     (witness : PoolAbortWitness fuel m r ch out result record) :
-    ∃ finalOut collapsed msg, stringPanicHead record.bytes record.recovered collapsed = some msg ∧
+    ∃ finalOut pick first rest msg,
+      first :: rest = record.chain ∧
+      stringPanicHead record.bytes record.recovered (collapseBit first rest pick) = some msg ∧
       result = (finalOut, .error (.panic msg)) := by
   obtain ⟨spent, remaining, before, beforeRace, beforeCh, beforeOut, next,
     after, afterCh, event, afterRace, finalOut, message,
     _, _, _, _, _, metadata, _, result⟩ := witness.reached
-  obtain ⟨_, _, collapsed, member⟩ := stepAbortRecord?_member metadata
-  exact ⟨finalOut, collapsed, message, member, result⟩
+  obtain ⟨pick, first, rest, _, chain, member⟩ := stepAbortRecord?_member metadata
+  exact ⟨finalOut, pick, first, rest, message, chain, member, result⟩
 
 theorem runProgramPoolWithAbort_member {fuel p name args ch result record}
     (observed : runProgramPoolWithAbort fuel p name args ch = (result, some record)) :
-    ∃ out collapsed msg, stringPanicHead record.bytes record.recovered collapsed = some msg ∧
+    ∃ out pick first rest msg,
+      first :: rest = record.chain ∧
+      stringPanicHead record.bytes record.recovered (collapseBit first rest pick) = some msg ∧
       result = .error (.panic msg, out) := by
   obtain ⟨c, s, locs, initial, out, message, _, witness, result⟩ :=
     runProgramPoolWithAbort_witness observed
-  obtain ⟨out', collapsed, msg, member, h⟩ := witness.string_member
+  obtain ⟨out', pick, first, rest, msg, chain, member, h⟩ := witness.string_member
   obtain ⟨-, hmsg⟩ := Prod.mk.inj h
   have message_eq : message = msg := by simpa using hmsg
-  exact ⟨out, collapsed, msg, member, by simpa only [message_eq] using result⟩
+  exact ⟨out, pick, first, rest, msg, chain, member, by simpa only [message_eq] using result⟩
 
 theorem Control.singleton_front {world fs c} (control : Control world fs c)
     (hn : c ≠ .next .stop) (s : ExecState) (ch : Choices) :
@@ -221,25 +233,27 @@ theorem runConfigWithAbort_nonpanic {fuel s c ch result}
     exact False.elim (hn message hp)
 
 /-- Unconditional classification with computed metadata on every typed
-panic (the member at some collapse bit), and none on success, the named
-refusal or exhaustion. All records retain whole chains. -/
+panic (the member at the collapse bit the STREAM selects on the record's
+chain), and none on success, the named refusal or exhaustion. All records
+retain whole chains. -/
 theorem Inv.observer_classified {p ps roots s c} (inv : Inv p ps roots s c)
     (fuel : Nat) (ch : Choices) :
     (∃ final, runConfigWithAbort fuel s c ch = (.ok (final, ch), none)) ∨
-    (∃ record collapsed msg, stringPanicHead record.bytes record.recovered collapsed = some msg ∧
+    (∃ (record : AbortRecord) (first : PanicEntry) (rest : List PanicEntry) (msg : String),
+      first :: rest = record.chain ∧
+      stringPanicHead record.bytes record.recovered
+        (collapseBit first rest (abortConsult first rest ch).1) = some msg ∧
       runConfigWithAbort fuel s c ch = (.error (.panic msg), some record)) ∨
     (∃ (t : ExecState) (first : PanicEntry) (bytes : GoString),
       first.value = .interface .string (.string bytes) ∧
       stringFirstLine? bytes.bytes = none ∧
       runConfigWithAbort fuel s c ch = (.error (.unsupported (abortRefusal t first)), none)) ∨
     runConfigWithAbort fuel s c ch = (.error .fuelOut, none) := by
-  rcases inv.run_classified fuel ch with ⟨final, run⟩ | ⟨bytes, recovered, collapsed, msg, hm, run⟩
+  rcases inv.run_classified fuel ch with ⟨final, run⟩
+    | ⟨record, first, rest, msg, observed, chain, member, run⟩
     | ⟨t, first, bytes, hv, hnone, run⟩ | run
   · exact .inl ⟨final, runConfigWithAbort_nonpanic run (by intro message; simp)⟩
-  · obtain ⟨record, observed⟩ := inv.observation_complete run
-    obtain ⟨collapsed', msg', member, hres⟩ := inv.observed_abort_member observed
-    have hmsg : msg' = msg := by simpa using hres.symm
-    exact .inr (.inl ⟨record, collapsed', msg, hmsg ▸ member, observed⟩)
+  · exact .inr (.inl ⟨record, first, rest, msg, chain, member, observed⟩)
   · exact .inr (.inr (.inl ⟨t, first, bytes, hv, hnone,
       runConfigWithAbort_nonpanic run (by intro message; simp)⟩))
   · exact .inr (.inr (.inr (runConfigWithAbort_nonpanic run (by intro message; simp))))
@@ -250,7 +264,10 @@ theorem runProgramPoolWithAbort_typed {p : Program} {name : String} {args : Arra
       ((∃ world values, ParamsValues world f.results.toList values ∧
         values.length = f.results.size ∧ runProgramPoolWithAbort fuel p name args ch =
           (.ok {values := values.toArray, output := GoString.empty}, none)) ∨
-       (∃ record collapsed msg, stringPanicHead record.bytes record.recovered collapsed = some msg ∧
+       (∃ (record : AbortRecord) (first : PanicEntry) (rest : List PanicEntry) (msg : String),
+          first :: rest = record.chain ∧
+          stringPanicHead record.bytes record.recovered
+            (collapseBit first rest (abortConsult first rest ch).1) = some msg ∧
           runProgramPoolWithAbort fuel p name args ch =
             (.error (.panic msg, GoString.empty), some record)) ∨
        (∃ (t : ExecState) (first : PanicEntry) (bytes : GoString),
@@ -262,14 +279,15 @@ theorem runProgramPoolWithAbort_typed {p : Program} {name : String} {args : Arra
   obtain ⟨f, zeros, find, zero, setup, inv⟩ := setup_inv admitted fuel ch
   refine ⟨f, find, ?_⟩
   rcases inv.observer_classified fuel ch with ⟨final, observed⟩
-    | ⟨record, collapsed, msg, member, observed⟩ | ⟨t, first, bytes, hv, hnone, observed⟩ | observed
+    | ⟨record, first, rest, msg, chain, member, observed⟩
+    | ⟨t, first, bytes, hv, hnone, observed⟩ | observed
   · have run : runConfig fuel (initialState p f args.toList zeros)
         (.exec f.body (BooleanRuntime.initialEnv f) (.frame [] [] [] [] .stop)) ch = .ok (final, ch) := by
       rw [← runConfigWithAbort_erasure, observed]
     obtain ⟨world, values, load, typed, length⟩ := inv.run_readout run
     exact .inl ⟨world, values, typed, by simpa using typed.length.symm, by
       simp [runProgramPoolWithAbort, setup, inv.pool_observation_eq, observed, load]⟩
-  · exact .inr (.inl ⟨record, collapsed, msg, member, by
+  · exact .inr (.inl ⟨record, first, rest, msg, chain, member, by
       simp [runProgramPoolWithAbort, setup, inv.pool_observation_eq, observed]⟩)
   · exact .inr (.inr (.inl ⟨t, first, bytes, hv, hnone, by
       simp [runProgramPoolWithAbort, setup, inv.pool_observation_eq, observed]⟩))
@@ -277,26 +295,29 @@ theorem runProgramPoolWithAbort_typed {p : Program} {name : String} {args : Arra
       simp [runProgramPoolWithAbort, setup, inv.pool_observation_eq, observed])))
 
 /-- Typed actual-program metadata is complete in both directions: a panic
-result has a record whose head bytes and flag render the message at some
-collapse bit, and a record's run is that panic. -/
+result has a record whose head bytes and flag render the message at the
+collapse bit the stream selects on the record's chain, and a record's run
+is that panic. -/
 theorem runProgramPoolWithAbort_panic_iff {p : Program} {name : String}
     {args : Array GoValue} (admitted : RecoveryAdmission p name args)
     (fuel : Nat) (ch : Choices) (message : String) :
     runProgramPoolOutM fuel p name args ch = .error (.panic message, GoString.empty) ↔
       ∃ record, runProgramPoolWithAbort fuel p name args ch =
         (.error (.panic message, GoString.empty), some record) ∧
-        ∃ collapsed, stringPanicHead record.bytes record.recovered collapsed = some message := by
+        ∃ (first : PanicEntry) (rest : List PanicEntry), first :: rest = record.chain ∧
+          stringPanicHead record.bytes record.recovered
+            (collapseBit first rest (abortConsult first rest ch).1) = some message := by
   constructor
   · intro run
     obtain ⟨_, _, outcome⟩ := runProgramPoolWithAbort_typed admitted fuel ch
     have erase := runProgramPoolWithAbort_erasure fuel p name args ch
     rw [run] at erase
-    rcases outcome with ⟨_, _, _, _, observed⟩ | ⟨record, collapsed, msg, member, observed⟩
+    rcases outcome with ⟨_, _, _, _, observed⟩ | ⟨record, first, rest, msg, chain, member, observed⟩
       | ⟨_, _, _, _, _, observed⟩ | observed
     · rw [observed] at erase; simp at erase
     · rw [observed] at erase
       have message_eq : msg = message := by simpa using erase
-      exact ⟨record, by simpa only [message_eq] using observed, collapsed,
+      exact ⟨record, by simpa only [message_eq] using observed, first, rest, chain,
         by simpa only [message_eq] using member⟩
     · rw [observed] at erase; simp at erase
     · rw [observed] at erase; simp at erase
@@ -315,7 +336,7 @@ theorem runProgramPoolWithAbort_refusal_named {p : Program} {name : String}
       stringFirstLine? bytes.bytes = none ∧
       reason = .unsupported (abortRefusal t first) ∧ out = GoString.empty ∧ record = none := by
   obtain ⟨_, _, outcome⟩ := runProgramPoolWithAbort_typed admitted fuel ch
-  rcases outcome with ⟨_, _, _, _, h⟩ | ⟨_, _, _, _, h⟩ | ⟨t, first, bytes, hv, hnone, h⟩ | h <;>
+  rcases outcome with ⟨_, _, _, _, h⟩ | ⟨_, _, _, _, _, _, h⟩ | ⟨t, first, bytes, hv, hnone, h⟩ | h <;>
     rw [h] at observed
   · cases observed
   · cases observed

@@ -12,8 +12,11 @@
 #   lean-observation on BUG-004's Cases line — invalid-single, invalid-first-line, invalid-recovered-equal: a first line that is
 #   not valid UTF-8 cannot ride the String observation; gc's bytes recorded in the entry) and panic-recover/repanic-collapse/*
 #   22 rows (18 PASS/membership — both collapse members enumerated on every row, gc's draw in the set: member 0 on 11, member 1
-#   on 7 — and 4 PASS strict controls). The whole-corpus consumption trace vs main 90bc3e06's binary moved ONLY on these 38
-#   rows (docs/evidence/2026-09-07_land-panic-text-tape/choice-trace-compare.txt). Frontend/NativeToIR untouched; twin pin
+#   on 7 — and 4 PASS strict controls). The whole-corpus consumption trace vs main 90bc3e06's binary moved ONLY on 34 of these
+#   38 born/flipped rows (docs/evidence/2026-09-07_land-panic-text-tape/choice-trace-compare.txt; the four that did not move are
+#   identical on both binaries: `panic-text/invalid-recovered-value`, an in-language `ok` row, and the strict controls
+#   `repanic-collapse/{unequal,unrecovered-equal,equal-pair-not-head}` — count corrected at L3's audit fix round, L7, [AGENT];
+#   this header comment is the only change to this file in that round, no row moved). Frontend/NativeToIR untouched; twin pin
 #   unmoved; tier=slow rows verified against their cached certified records (--diff), no --slow re-certification claimed.
 #   Tally by the awk below at the lane's own tip: PASS 3388, FAIL 246. [round-24 rebase onto main dd636996 ([AGENT] reconciler, 2026-09-07):
 #   the same rows over main's 3618 = 3362 / 256 (chunk L4 `land/observer-terminal`'s pin, the block below) give 3654 = 3397 / 257

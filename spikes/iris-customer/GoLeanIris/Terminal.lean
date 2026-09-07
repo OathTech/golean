@@ -21,7 +21,7 @@ theorem observed_normal_of_program {p : Program} {name : String}
   obtain ⟨_, _, outcome⟩ := RecoveryRuntime.runProgramPoolWithAbort_typed admitted fuel ch
   have erase := RecoveryRuntime.runProgramPoolWithAbort_erasure fuel p name args ch
   rw [run] at erase
-  rcases outcome with ⟨_, _, _, _, observed⟩ | ⟨_, _, _, _, observed⟩
+  rcases outcome with ⟨_, _, _, _, observed⟩ | ⟨_, _, _, _, _, _, observed⟩
     | ⟨_, _, _, _, _, observed⟩ | observed
   · rw [observed] at erase
     have result_eq := Except.ok.inj erase
@@ -47,12 +47,16 @@ theorem shared_observed_all_choices (b : Bool) (ch : Choices) :
 
 /-- The existing uncaught semantic control obtains computed metadata from
 the generic admitted-program theorem: the record's head renders
-`customer panic` at some collapse bit (an unrecovered head — the bit is
-inert). No Iris NotStuck claim is made. -/
+`customer panic` at the collapse bit the (empty) stream selects on the
+record's own chain (an unrecovered head — `collapseBit` is false there).
+No Iris NotStuck claim is made. (Restated at the L3 audit fix round
+2026-09-07, R7: the bit is no longer existential.) -/
 theorem uncaught_has_actual_record :
     ∃ record, RecoveryRuntime.runProgramPoolWithAbort 60 recoveryProgram "Uncaught" #[] [] =
       (.error (.panic "customer panic", GoString.empty), some record) ∧
-      ∃ collapsed, stringPanicHead record.bytes record.recovered collapsed = some "customer panic" :=
+      ∃ (first : PanicEntry) (rest : List PanicEntry), first :: rest = record.chain ∧
+        stringPanicHead record.bytes record.recovered
+          (collapseBit first rest (abortConsult first rest []).1) = some "customer panic" :=
   (RecoveryRuntime.runProgramPoolWithAbort_panic_iff uncaught_admitted 60 [] "customer panic").mp
     uncaught_program
 

@@ -915,7 +915,9 @@ def check_latitude_counts():
 
 
 # ---------------------------------------------------------------------------
-# C12 — the choice-site census: doc table vs the ChoiceSite datatype
+# C12 — the choice-site census: doc table vs the ChoiceSite datatype, PLUS
+# (since the L3 audit fix round, 2026-09-07) the nondeterminism doctrine's
+# site list and `ChoiceTrace.allSites`, both name-level.
 #
 # The inventory says "THE CHOICE-SITE CENSUS IS CODE ... this table below is a
 # reader's mirror, no longer a hand-synced record". A mirror that has drifted
@@ -958,6 +960,67 @@ def check_choice_sites():
     # The table's rows are prose names, not constructor names, so a name-level
     # match is not available; the row COUNT is the honest signal, and the two
     # sites added by the W3.2 stages (postOp, backEdge) are the likely delta.
+    #
+    # (b) The nondeterminism DOCTRINE's site list is a second reader's mirror
+    # (docs/2026-08-04_nondeterminism-doctrine.md, "READER'S MIRROR"), and
+    # `ChoiceTrace.allSites` a third (its completeness is a theorem, but the
+    # doc is not). L3's adversarial audit (2026-09-07, R6): the doctrine list
+    # had drifted two sites behind for four days with nothing watching. Since
+    # that fix round every doctrine entry names its constructor in backticks,
+    # so a NAME-level compare is available there: fail HIGH on any drift.
+    doctrine = p("docs", "2026-08-04_nondeterminism-doctrine.md")
+    if not os.path.exists(doctrine):
+        finding("C12", "high", f"{doctrine} not found; the doctrine's site mirror cannot be checked")
+    else:
+        dtxt = read(doctrine)
+        start = dtxt.find("READER'S MIRROR")
+        end = dtxt.find("**Mirror re-synced", start)
+        if start < 0 or end < 0:
+            finding("C12", "high", "could not locate the doctrine's site list (between "
+                    "\"READER'S MIRROR\" and the first \"**Mirror re-synced\" block)")
+        else:
+            block = dtxt[start:end]
+            # top-level bullets only: a line starting with "- " (continuations
+            # are indented); split the block into entries on those.
+            entries = re.split(r"\n- ", "\n" + block)[1:]
+            named = []
+            unnamed = []
+            for e in entries:
+                toks = [t for t in re.findall(r"`([A-Za-z0-9_]+)`", e) if t in ctors]
+                if not toks:
+                    unnamed.append(e.strip().splitlines()[0][:80])
+                named.extend(toks)
+            doc_sites = set(named)
+            out["doctrine_entries"] = len(entries)
+            out["doctrine_sites"] = sorted(doc_sites)
+            if unnamed:
+                finding("C12", "high", f"{len(unnamed)} doctrine site-list entr(y/ies) name no `ChoiceSite` "
+                        "constructor — the name-level mirror check cannot judge them (fail closed: "
+                        "put the constructor name in backticks)", unnamed)
+            missing = sorted(ctors - doc_sites)
+            if missing:
+                finding("C12", "high", f"the nondeterminism doctrine's site list is missing {len(missing)} "
+                        f"`ChoiceSite` constructor(s): {', '.join(missing)} — a census short of a site is a "
+                        "census of a different machine")
+            dups = sorted(k for k, v in Counter(named).items() if v > 1)
+            if dups:
+                finding("C12", "medium", f"{len(dups)} constructor(s) named by more than one doctrine entry: "
+                        f"{', '.join(dups)} — one entry per site, or the count lies")
+    trace = p("GoLean", "ChoiceTrace.lean")
+    if not os.path.exists(trace):
+        finding("C12", "high", f"{trace} not found; `ChoiceTrace.allSites` cannot be checked")
+    else:
+        tm = re.search(r"def allSites : List ChoiceSite :=\s*\[(.*?)\]", read(trace), re.S)
+        if not tm:
+            finding("C12", "high", "could not parse `ChoiceTrace.allSites` from " + trace)
+        else:
+            listed = re.findall(r"\.(\w+)", tm.group(1))
+            out["allSites"] = listed
+            lset = set(listed)
+            if lset != ctors or len(listed) != len(lset):
+                finding("C12", "high", "`ChoiceTrace.allSites` does not match the `ChoiceSite` datatype: "
+                        f"missing {sorted(ctors - lset) or 'none'}, unknown {sorted(lset - ctors) or 'none'}, "
+                        f"duplicates {sorted(k for k, v in Counter(listed).items() if v > 1) or 'none'}")
     return out
 
 

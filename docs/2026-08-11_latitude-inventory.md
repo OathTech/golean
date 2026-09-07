@@ -2083,7 +2083,7 @@ instance of R2.
   [USER] owns (a bytes variant of `golean-observation-v1`), not a machine
   envelope.
 
-### R10a. The abort line's `[recovered, repanicked]` collapse on an equal re-panic — a two-member TEXT set, (a) ENVELOPED at width 2 (BUG-004 item 1; landing chunk L3, 2026-09-07, under the BUG-087 panic-text ruling), each member (b)-pinned to a gc realization
+### R10a. The abort line's `[recovered, repanicked]` collapse on an equal re-panic — a two-member TEXT set, (a) ENVELOPED at width 2 (BUG-004 item 1; landing chunk L3, 2026-09-07 — an [AGENT] extension of BUG-087's ruling SHAPE under R-1, [USER] ratification PENDING at the merge gate), each member (b)-pinned to a gc realization
 
 - WHERE: the same spec point as R10 (spec#Handling_panics says only that
   the program terminates with "an error report including the panic
@@ -2121,8 +2121,12 @@ instance of R2.
   modelling the bits would be a gc-specific allocation/layout model of
   exactly the address-exposing kind doctrine register #6 forbids the
   observation surface to depend on — hence the demonic choice, the
-  BUG-087 shape («(2) panic-text, agree, demonic choice so both are
-  admitted», [USER] 2026-09-03, relayed — `docs/2026-08-31_qrow-rulings.md`).
+  BUG-087 SHAPE («(2) panic-text, agree, demonic choice so both are
+  admitted», [USER] 2026-09-03, relayed — `docs/2026-08-31_qrow-rulings.md`;
+  that ruling covers ONE demonic choice at the nil arm/R9a, not this
+  marker) extended to this marker by the [AGENT] under R-1's re-envelope
+  authority — [USER] ratification PENDING at the merge gate (L3's
+  adversarial-audit fix round, 2026-09-07, R2).
 - MACHINE: `ChoiceSite.repanicCollapse` (State.lean) — width
   `repanicCollapseWidth first rest` (2 on the family, 1 elsewhere: unequal
   adjacent payloads cannot share a box, so ` [recovered]` stays forced
@@ -2147,7 +2151,10 @@ instance of R2.
   there, but it is a CONFORMING rendering (go ≤ 1.24 prints it for that
   exact program); narrowing bools to width 1 would encode gc's
   `staticuint64s` layout — a (b)-pin, not the weakest machine.
-- ROWS: `panic-recover/repanic-same-value-abort` (FAIL → PASS/membership)
+- ROWS: `panic-recover/repanic-same-value-abort` (FAIL → PASS/membership —
+  a (c)→(a) re-classification by [AGENT] under R-1 that touches a
+  [USER]-ratified C4 pin, triage §7 2026-08-20; [USER] ratification PENDING
+  at the merge gate, fix round R3; the move is kept pending the ruling)
   and `panic-recover/repanic-collapse/*` — `lane=membership`,
   `members=2`, `width=2`; gc's draw per row at K=32 alternating
   plain/`-race` (`docs/evidence/2026-09-07_land-panic-text-tape/gc-draws.tsv`):
@@ -2165,8 +2172,14 @@ instance of R2.
   `first` — the suffix lands on the payload's LAST line — so the set is a
   singleton and the strict invariance check certifies it).
 - The `string-member` lane the sprint built around this point is
-  RETIRED unlanded (landing decision D2, `docs/2026-09-07_land-panic-text-tape.md`
-  §2.4): its function is this membership envelope plus the strict lane.
+  RETIRED unlanded (landing decision D2 — [AGENT] default applied per the coordinator's brief; [USER] ratification PENDING at the merge gate (plan §4 D2);
+  `docs/2026-09-07_land-panic-text-tape.md` §2.4): its function is this
+  membership envelope plus the strict lane — except its `Controls` role
+  (control-byte payloads), DEFERRED to L4's `panic-controls` rows and
+  rowed as ledger FR-33 (fix round R5). The first-line observation SCOPE
+  this envelope sits inside (a payload's continuation lines are unmodelled
+  and unobserved) is the unwinding arc's dated 2026-09-07 rule; the
+  widening is ledger FR-32 (fix round R4).
 
 ### R11. Sync misuse fatal class — (b) PINNED to gc's throw realization
 
@@ -2952,6 +2965,14 @@ Nothing in this block is a class member by virtue of being named here.
   since 2026-09-03 (`bug087-paniktext`) without a membership line — an
   omission the reading rule above forbids, found while adding R10a. The
   (a) count moves 11 sites / 13 entries → 13 sites / 15 entries.
+
+- **L3's adversarial-audit fix round (2026-09-07, [AGENT]; records and
+  statement tightenings, no envelope or count change):** R10a's authority
+  relabelled — an [AGENT] extension of BUG-087's ruling SHAPE under R-1,
+  [USER] ratification PENDING (R2); its (c)→(a) move marked PENDING (R3);
+  D2/D5 marked as [AGENT] defaults pending ratification (R1); the first-line
+  observation scope recorded and measured (R4; ledger FR-32); control-byte
+  payloads rowed (R5; FR-33). Counts unchanged: (a) 13 sites / 15 entries.
 
 - **E13-b FINAL VERIFICATION FIX ROUND (2026-09-05, [AGENT]; records
   only, no rule change): E2's value axis, BUG-101 and BUG-104 JOIN the

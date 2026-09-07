@@ -2158,7 +2158,13 @@ A string whose FIRST LINE is not valid UTF-8 is `none` (D5: no byte
 channel — `utf8String?`). Everything else not pinned is `none` for the
 same reason. -/
 def renderPanicPayload (state : ExecState) : GoValue → Option (String × Bool)
-  | .nil => some ("nil", false)
+  -- A RAW nil payload never reaches a chain: `panicPayload` maps
+  -- `panic(nil)` to the `*runtime.PanicNilError` runtime error under the
+  -- pinned `GODEBUG=panicnil=0` (the only raise site, `.panicArgK`), and
+  -- gc prints `panic called with nil argument` there — never `nil`. The
+  -- arm is dead; it fails CLOSED rather than stand as a latent wrong
+  -- answer (audit fix round 2026-09-07, L4, [AGENT]; was `some ("nil", false)`).
+  | .nil => none
   | .interface (.defined idx) (.string s) =>
       if idx == runtimeErrorTypeIdx then stringFirstLine? s.bytes else none
   | .interface .string (.string s) => stringFirstLine? s.bytes
@@ -2222,9 +2228,11 @@ runtime-computed string — a fresh allocation), and collapse or not by
 LINKER dedup when both are literal constants — and every go ≤ 1.24
 printed the two-line form for all of them (the collapse is CL 645916,
 go1.25). The machine has no boxing identity, so here the marker is
-LATITUDE relative to its state and is reified on the tape (the BUG-087
-panic-text ruling «demonic choice so both are admitted», [USER]
-2026-09-03 relayed; R-1: the rendered text is spec-silent), never
+LATITUDE relative to its state and is reified on the tape (an [AGENT]
+extension of BUG-087's ruling SHAPE — «demonic choice so both are
+admitted», [USER] 2026-09-03 relayed, ruled for ONE choice at the nil
+arm/R9a — to this marker under R-1's re-envelope authority: the rendered
+text is spec-silent; [USER] ratification PENDING at the merge gate), never
 decided in evaluator recursion and never a single hard-coded member. -/
 def repanicEqualNext (first : PanicEntry) (rest : List PanicEntry) : Bool :=
   first.recovered && (match rest with

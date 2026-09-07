@@ -41,31 +41,39 @@ theorem ValueCont.no_seq_consumption {world fs kind k} (h : ValueCont world fs k
     rename_i Γ env p before after refs done pending k he hr hd ha hk
     cases pending <;> rfl
 
-/-- An unwinding configuration consults nothing — except at the ABORT
-(`.stop` under a nonempty chain), the one place the `repanicCollapse` pick
-may be drawn. -/
+/-- An unwinding configuration consults nothing — except at a CONSUMING
+abort (`.stop` under a chain whose recovered head is re-panicked with an
+equal payload, `consumesRepanicCollapse`), the one place the
+`repanicCollapse` pick is drawn at bound 2; every other abort projects
+`none` (a bound-1 consult, G-U). Audit fix round 2026-09-07 (L5): the
+disjunct was the weaker `c.abort?.isSome`. -/
 theorem UnwindCont.no_seq_consumption {world fs k} (h : UnwindCont world fs k)
     {s : ExecState} (hm : s.methods = #[]) (chain : List PanicEntry) :
-    seqConsumption s (.panicking chain k) = none ∨ (Config.panicking chain k).abort?.isSome := by
+    seqConsumption s (.panicking chain k) = none ∨
+      consumesRepanicCollapse (.panicking chain k) = true := by
   cases h with
   | exit h =>
     cases h with
     | stop =>
       cases chain with
       | nil => exact .inl rfl
-      | cons first rest => exact .inr rfl
+      | cons first rest =>
+        by_cases heq : repanicEqualNext first rest = true
+        · exact .inr heq
+        · exact .inl (by simp [seqConsumption, heq])
     | stmt h => cases h <;> first | exact .inl rfl | exact .inl (entryConsult_match_no_methods hm _)
     | resume => exact .inl rfl
   | value h =>
     left
     induction h <;> first | assumption | rfl
 
-/-- Every configuration of the control grammar consults nothing — except an
-abort, where the `repanicCollapse` pick may be drawn (the profile's
-`repanicProgram` realizes that shape). -/
+/-- Every configuration of the control grammar consults nothing — except a
+CONSUMING abort (`consumesRepanicCollapse`), where the `repanicCollapse`
+pick is drawn at bound 2 (the profile's `repanicProgram` realizes that
+shape). -/
 theorem Control.no_seq_consumption {world fs c} (h : Control world fs c)
     {s : ExecState} (hm : s.methods = #[]) :
-    seqConsumption s c = none ∨ c.abort?.isSome := by
+    seqConsumption s c = none ∨ consumesRepanicCollapse c = true := by
   cases h <;> try exact .inl rfl
   case next hk =>
     cases hk with
@@ -84,7 +92,7 @@ theorem Control.no_seq_consumption {world fs c} (h : Control world fs c)
   case panicking hc hk => exact hk.no_seq_consumption hm _
 
 theorem Inv.no_seq_consumption {p ps roots s c} (inv : Inv p ps roots s c) :
-    seqConsumption s c = none ∨ c.abort?.isSome := by
+    seqConsumption s c = none ∨ consumesRepanicCollapse c = true := by
   obtain ⟨world, heap, control, pins⟩ := inv.typed
   apply control.no_seq_consumption
   exact (congrArg ExecState.methods inv.sameContext).symm.trans
@@ -98,7 +106,8 @@ theorem Inv.step_no_seq_consumption {p ps roots s c ch next t residual}
     seqConsumption s c = none := by
   rcases inv.no_seq_consumption with h | h
   · exact h
-  · rw [stepFn_success_no_abort step] at h
+  · unfold consumesRepanicCollapse at h
+    rw [stepFn_success_no_abort step] at h
     cases h
 
 /-- A successful execution on one supplied stream executes to the same

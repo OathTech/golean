@@ -1310,7 +1310,9 @@ by `stepMulti` under some choice stream (scheduler pick and L4 waiter
 pick encoded in the stream; the goroutine's own step realized through
 the sequential kit's `step_complete`; the pairing path never touches
 `stepFn`, so its stream is exactly the waiter pick; the boundary clear
-and the abort consume nothing). -/
+consumes nothing; the abort's `repanicCollapse` consult is realized by
+the stream `[]` at bound 1 and `[pick]` at bound 2 — landing chunk L3;
+comment corrected at the audit fix round 2026-09-07, L2). -/
 theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
     ∃ ch ch' ev, stepMulti m ch = .ok (m', ch', ev) := by
   cases h with

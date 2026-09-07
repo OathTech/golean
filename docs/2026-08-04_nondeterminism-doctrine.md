@@ -71,13 +71,13 @@ exhaustiveness; the list below is a READER'S MIRROR of that datatype
 (historical note: brought current by hand at the arc-final audit F16,
 2026-08-08, when the census was doc-resident):
 
-- map iteration pick (`StepFn.lean`);
-- append spill capacity (`Machine.lean`, `appendSpillWidth` envelope);
-- L2 select-commit pick, entry path (`applySelect`, `Machine.lean`);
-- L2 select-commit pick, arrival path (`arrivalPlan`, `Multi.lean`);
-- L4 waiter pick (`stepThread`, `Multi.lean`);
-- L1 scheduler pick (`stepMulti`, `Multi.lean`);
-- L5 main-exit window (`execProgLoop`, `Multi.lean` — BUG-044, audit
+- map iteration pick (`mapIter`, `StepFn.lean`);
+- append spill capacity (`appendSpill`, `Machine.lean`, `appendSpillWidth` envelope);
+- L2 select-commit pick, entry path (`l2Entry`, `applySelect`, `Machine.lean`);
+- L2 select-commit pick, arrival path (`l2Arrival`, `arrivalPlan`, `Multi.lean`);
+- L4 waiter pick (`l4Waiter`, `stepThread`, `Multi.lean`);
+- L1 scheduler pick (`l1Sched`, `stepMulti`, `Multi.lean`);
+- L5 main-exit window (`l5ExitWindow`, `execProgLoop`, `Multi.lean` — BUG-044, audit
   F2: exit-now vs one-more-runnable-goroutine-step at main's terminal);
 - post-op boundary pick (`postOp`, W3.2 stage C — `stepMulti` via
   `Config.boundarySite`, `Multi.lean`: the reschedule offered at an
@@ -105,11 +105,23 @@ exhaustiveness; the list below is a READER'S MIRROR of that datatype
   line, slot 1 = the two-line form's ` [recovered]`; gc decides by eface
   identity the machine does not model).
 
-**Mirror re-synced 2026-09-07** (landing chunk L3): the `tryLock` and
-`unseqPanic` entries were missing from this list — their lanes added the
-constructors (`ChoiceSite`, the census as code) without touching this
-prose mirror, which nothing watches — and `repanicCollapse` is added with
-them. The list now agrees with `ChoiceTrace.allSites` (13 constructors).
+**Mirror re-synced 2026-09-07** ([AGENT] landing worker, chunk L3): the
+`tryLock` and `unseqPanic` entries were missing from this list — their
+lanes added the constructors (`ChoiceSite`, the census as code) without
+touching this prose mirror, which nothing watched — and `repanicCollapse`
+is added with them. The list now agrees with `ChoiceTrace.allSites` (13
+constructors).
+
+**Mirror made MACHINE-CHECKED 2026-09-07** ([AGENT], L3's adversarial-audit
+fix round, R6 — "doctrine mirror unenforced"): every entry above now names
+its constructor in backticks (the seven pre-W3.2 entries carried only prose
+names), and `tools/reconcile-records` C12 compares THIS list, the latitude
+inventory's census table and `ChoiceTrace.allSites` against the
+`ChoiceSite` datatype — a constructor missing from any mirror, a mirror
+entry naming no constructor, or a name that is not a constructor is a HIGH
+finding (the reconciler is a report-only `scripts/ci` step; its HIGH count
+is the line the merge train reads). The two hand re-syncs above are the
+last of their kind: the obligation is now a check, not a sweep.
 
 **Mirror re-synced 2026-08-22** (settlement branch,
 `reconcile-records` C12): the last two entries were missing — the

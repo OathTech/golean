@@ -42,6 +42,11 @@ func panicPrintUnicode() {
 
 // gc: `panic: a⏎⇥\xff⏎` — the first line is the valid byte `a`; the invalid
 // byte is on the second line, which the first-line observation never sees.
+// A FIRST-LINE-SCOPE CONTROL, not invalid-UTF-8 coverage (audit fix round
+// 2026-09-07, R4d, [AGENT]): the compared observation contains no invalid
+// byte on either side — the tail is unmodelled by the machine and
+// unobserved by the harness (`docs/2026-07-25_unwinding-arc.md`, the
+// 2026-09-07 first-line rule; ledger FR-32). Tagged `first_line_scope`.
 func panicInvalidAfterLF() { panic("a\n\xff") }
 
 // gc: `panic: \xffZ⏎` — raw bytes; no String can carry them (RED, BUG-004).

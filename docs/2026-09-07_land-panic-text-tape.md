@@ -15,12 +15,18 @@ choice tape stuff». Doctrine applied (CLAUDE.md): no semantic choice hides
 in evaluator recursion — latitude is reified on the choice tape; fail
 closed BY NAME where the model cannot render; gc-visible texts are
 observations and are byte-exact when deterministic. The panic-text
-latitude ruling this chunk follows is BUG-087's: «(2) panic-text, agree,
-demonic choice so both are admitted» ([USER] 2026-09-03, relayed —
-`docs/2026-08-31_qrow-rulings.md`), and R-1
-(`docs/2026-08-20_w32-re-envelope-charter.md`: the rendered TEXT is
-spec-silent latitude quotiented via membership; the payload's KIND and the
-control flow stay forced and exact).
+latitude precedent this chunk EXTENDS is BUG-087's ruling «(2) panic-text,
+agree, demonic choice so both are admitted» ([USER] 2026-09-03, relayed —
+`docs/2026-08-31_qrow-rulings.md`) — whose scope is ONE demonic choice at
+the nil arm (`nilValueMethodText`/R9a; it does not cover the `[recovered,
+repanicked]` marker): this chunk applies the ruling's SHAPE (a demonic
+choice where gc's realization is toolchain-internal) to that marker under
+R-1's re-envelope authority (`docs/2026-08-20_w32-re-envelope-charter.md`:
+the rendered TEXT is spec-silent latitude quotiented via membership; the
+payload's KIND and the control flow stay forced and exact). That extension
+is the [AGENT]'s; [USER] ratification is PENDING at the merge gate
+(adversarial audit R2 — §7 below; the wording "under BUG-087's ruling" in
+earlier drafts of these records overclaimed and is relabelled everywhere).
 
 Inputs read in full: `CLAUDE.md`, `AGENTS.md`, the essence-of-Go doctrine,
 the landing plan (§2.3, §4, Appendix B), both landing audits (A-R1–R4,
@@ -33,7 +39,7 @@ deferred list, `deps/go/src/runtime/{panic.go,error.go,iface.go}` and
 
 Every cite below is a line in `deps/go/src/runtime/` at the pin; every
 behaviour claim has a witness program in
-`docs/evidence/2026-09-07_land-panic-text-tape/witness/` (37 programs,
+`docs/evidence/2026-09-07_land-panic-text-tape/witness/` (38 programs — w01–w37 plus w06b,
 byte-exact stderr recorded in `table.tsv`; `go version go1.26.5
 linux/amd64`, `GODEBUG=panicnil=0` as the differential oracle sets it).
 
@@ -54,7 +60,7 @@ linux/amd64`, `GODEBUG=panicnil=0` as the differential oracle sets it).
   `printpanicval(p.arg)` (747–748) + **` [recovered, repanicked]` iff
   `p.recovered && p.repanicked` (749–750), else ` [recovered]` iff
   `p.recovered` (751–752)**, then `\n`.
-- `printPreFatalDeferPanic` (1260–1275) applies the same identity marking
+- `printPreFatalDeferPanic` (1259–1276) applies the same identity marking
   on the fatal-during-defer path, without the `Error()`/`String()`
   rewrite (BUG-106's shape; L4's territory).
 - `gorecover` (1068–1150) sets `p.recovered = true` (1149) on the NEWEST
@@ -148,7 +154,18 @@ sharpened in one place:
   payload whose FIRST LINE is valid UTF-8 renders byte-exactly even if a
   later line is not (`a\n\xff` → `a`, w16) — the observation compared IS
   the first line, and its bytes are gc's bytes; nothing about the unseen
-  tail is claimed. The String-level `PanicText.firstLine` is kept (an
+  tail is claimed. [Audit fix round R4, [AGENT]: this silently EXTENDED the
+  unwinding arc's first-line-only contract — stated there for deeper CHAIN
+  entries — to a single payload's CONTINUATION lines. It is now a dated
+  rule in `docs/2026-07-25_unwinding-arc.md` §A3, MEASURED rather than
+  asserted (`docs/evidence/2026-09-07_land-panic-text-tape/first-line-scope.txt`:
+  `panic("head\nTAILA")` ≡ `panic("head\nTAILB")` byte-identically on both
+  sides), with the honest consequence that the tail is unmodelled
+  (`renderPanicPayload` returns `(firstLine, multilineFlag)`) and
+  unobserved; the widening is rowed as ledger FR-32, pointed at L4's
+  byte-view machinery. `panic-text/invalid-after-lf` is accordingly a
+  first-line-SCOPE control, not invalid-UTF-8 coverage — retagged
+  `first_line_scope` (R4d).] The String-level `PanicText.firstLine` is kept (an
   L1-landed constructive helper the interface audit pins) but the
   renderer no longer needs it.
 - The `runtime.Error` arm decodes through the same `stringFirstLine?`.
@@ -176,9 +193,11 @@ against gc's actual first line by the unchanged strict comparator.
   carries no suffix whether or not a later duplicate is suppressed — w25).
 - **Consumption point:** THE ABORT — the only transition that observes
   the marker (`stepFn`'s `.panicking (first :: rest) .stop` arm and the
-  pool's `stepThread` tombstone arm), through ONE shared consult
+  pool's `stepThread` tombstone arm), through one shared consult FUNCTION
   `abortConsult first rest ch := Choices.consumeAt .repanicCollapse
-  (repanicCollapseWidth first rest) ch` under the G-U uniform rule (pop
+  (repanicCollapseWidth first rest) ch`, called from exactly those two
+  arms (L6: "ONE shared consult" overstated — two call sites, one
+  definition), under the G-U uniform rule (pop
   iff bound ≥ 2). Drawing at the re-raise would need a `repanicked` field
   on `PanicEntry` (gc's own data structure) and would pop on re-panics that
   are later recovered and never print — a dead pick on every stream; the
@@ -232,7 +251,7 @@ against gc's actual first line by the unchanged strict comparator.
   `fun_cases` tags are untouched because the `.stop` arm gains a plain
   `let`, not a new match arm (verified against the built `stepFn`, §4).
 
-### 2.3 (c) Invalid UTF-8 — REFUSE by name (D5 default (i))
+### 2.3 (c) Invalid UTF-8 — REFUSE by name (D5 default (i) — [AGENT] default applied per the coordinator's brief; [USER] ratification PENDING at the merge gate (plan §4 D5))
 
 The compared observation is `golean-observation-v1` with a `String`
 message; a Lean `String` cannot carry the bytes gc writes, and a bytes
@@ -250,10 +269,13 @@ L1 consumer-free) is DELETED here: with D5(i) the escape form is never a
 member and a definition of a rejected member has no purpose in the
 semantic core (the interface audit's two export lines go with it).
 
-### 2.4 (d) The `string-member` lane — RETIRED ([AGENT])
+### 2.4 (d) The `string-member` lane — RETIRED ([AGENT] default applied per the coordinator's brief; [USER] ratification PENDING at the merge gate (plan §4 D2))
 
-Decision: RETIRE (the plan's recommended default; the [AGENT] takes it
-because the brief delegates the choice and asks for the reason). Its
+Decision: RETIRE (the plan's recommended default; the [AGENT] applies it
+as the default because the brief delegates the choice and asks for the
+reason — it is NOT a ruling: D2 is a `[USER]` decision in the landing plan
+§4 with `blocks: L3`, and the coordinator is putting it to the [USER]; audit
+fix round R1). Its
 three functions are covered by ordinary lanes after (a)–(c): the collapse
 is a MEMBERSHIP row (both members enumerated, gc's draw checked ∈ set —
 A-R1's exact defect is impossible by construction there); valid text is a
@@ -273,10 +295,27 @@ lands as the strict `ok` row `panic-recover/panic-text/invalid-recovered-value`
 `recover-*` rows. The sprint's `string-members/{equal,multiple,unequal}`
 shapes land as ordinary rows of `panic-recover/repanic-collapse/`.
 
+CORRECTION (audit fix round R5, [AGENT]): the sentence "its three functions
+are covered by ordinary lanes" is FALSE for one role. The `Controls` role
+(sprint branch `7edc298f`, `Corpus/controls/string-members/explicit/controls.go`
+`catchControls`/`Controls`: `panic("a\x00\x01\t\r\nZ")` — embedded
+NUL/SOH/TAB/CR preserved through the first-LF projection) has NO landed row
+at this tip; the corpus holds zero control-byte panic payloads. It is the
+one role DEFERRED, conditional on L4 landing its `panic-recover/panic-controls`
+rows (9 rows, BUG-105 — filed by L4 on `land/observer-terminal`, NOT on this
+branch: a merge-train dependency, deliberately not filed here), and rowed
+in the ledger as FR-33 so the gap is visible regardless of the train order.
+Measured asymmetry (`docs/evidence/2026-09-07_land-panic-text-tape/controls-asymmetry.txt`):
+the machine renders the first line with all five bytes (`61 00 01 09 0d`,
+valid UTF-8 — `stringFirstLine?`), while the gc side LOSES the NUL through
+bash command substitution in `scripts/diff-coverage` (four bytes survive) —
+a plain strict row today would be a red-by-accident (the harness's, not
+the semantics'). Recorded; nothing landed.
+
 ### 2.5 (e) D5 default
 
 `invalid-*` rows red; the escape-form member is never a member; no byte
-channel is added by this chunk.
+channel is added by this chunk. Provenance class: [AGENT] default applied per the coordinator's brief; [USER] ratification PENDING at the merge gate (plan §4 D5).
 
 ## 3. Rows by class, deferred-module restatements (the plan; measured in §4)
 
@@ -284,7 +323,9 @@ channel is added by this chunk.
 `panic-recover/panic-text/{unicode-two,unicode-three,unicode-four,
 unicode-mixed,unicode-newline,trailing-newline,recovered-newline,
 recovered-unicode,output-prefix}` (the sprint's rows, credited);
-`panic-text/invalid-after-lf` (first line `a`, w16) and
+`panic-text/invalid-after-lf` (first line `a`, w16 — a first-line-SCOPE
+control, not invalid-UTF-8 coverage: its compared observation holds no
+invalid byte; tagged `first_line_scope` at the audit fix round, R4d) and
 `invalid-recovered-value` (ok); the controls `repanic-collapse/
 {unequal,unrecovered-equal,equal-pair-not-head,multiline-passthrough}`
 (strict — the last is a width-2 consult whose two members render the same
@@ -406,7 +447,7 @@ the C2/C3 `native-json-string-run` driver is NOT landed — D2);
 `Tests/GoCoreEval.lean` (the four `renderPanicPayload` checks retyped + five
 L3 checks); `Tests/PanicRendering.lean`, `Tests/StringPanicMembers.lean`
 (choice-indexed kernel checks), `Tests/RecoveryTerminal.lean` +
-`Tests/RecoveryTerminalAudit.lean` (48 exports; three D5-refusal challenges,
+`Tests/RecoveryTerminalAudit.lean` (44 exports — the count read "48" before the audit fix round; three D5-refusal challenges,
 the multi-line challenge, and the equal re-panic's TWO members from two
 streams on an admitted program); `Tests/InterfaceContract.lean` (import);
 `Tests/InterfaceAudit.lean` (exports; the constructive-helper check now
@@ -477,7 +518,7 @@ toolchain: evidence README.
   interface: PASS` (InterfaceTests incl. `Tests/PanicRendering`,
   `Tests/StringPanicMembers`; the post-import audit; compiled poison
   controls); `scripts/check-recovery-terminal` → `Typed recovery terminal
-  gate: PASS` (48 exports, five compiled poisons rejected);
+  gate: PASS` (44 exports, five compiled poisons rejected);
   `gocore-eval-tests` → 207 ok (202 on main + the five L3 checks);
   the opt-in spike gate `spikes/iris-customer/check` → `Iris customer: PASS`
   (the spike's `.lake/packages` seeded by copy from a sibling worktree —
@@ -517,10 +558,12 @@ streams, once with the binary built at main `90bc3e06` in a detached
 worktree and once with this tip's (`choice-trace-compare.txt`):
 
 - (row, stream) lines: 21,565 = 21,565. Status/obsHash DIFFERENT on 408
-  lines, all on the 34 rows this chunk added or re-laned (the 14
-  `panic-text/*`, the 18 membership + `multiline-passthrough` of
-  `repanic-collapse/`, `repanic-same-value-abort`, `panic-newline-abort`);
-  NO other row moved on any stream.
+  lines, all on the 34 rows this chunk added or re-laned (13 of the 14
+  `panic-text/*` — `invalid-recovered-value`, an in-language `ok` row, is
+  identical on both binaries — the 18 membership + `multiline-passthrough`
+  of `repanic-collapse/`, `repanic-same-value-abort`, `panic-newline-abort`;
+  the three strict controls `unequal`/`unrecovered-equal`/`equal-pair-not-head`
+  are likewise identical on both); NO other row moved on any stream.
 - Per-site consumption totals: every pre-existing site IDENTICAL
   (`l5ExitWindow=325 mapIter=1307 l2Entry=24 l1Sched=9443 backEdge=2404
   l2Arrival=3 postOp=4534 unseqPanic=417 appendSpill=4874 tryLock=101
@@ -596,10 +639,28 @@ citations, one frontier-table citation) — 0 HIGH, as at L1. `git status
 
 ## 6. Dispositions, deferred-module restatements, records, credits
 
-- **D2 (the `string-member` lane): RETIRED, unlanded — [AGENT].** Reason in
-  §2.4. Nothing of it exists on main; the archive branch keeps it.
-- **D5 (byte channel): default (i)** — no byte channel; `invalid-*` rows
-  red by name; the escape-form member is never a member (§2.3, §2.5).
+- **D2 (the `string-member` lane): RETIRED, unlanded — [AGENT] default applied per the coordinator's brief; [USER] ratification PENDING at the merge gate (plan §4 D2).**
+  Reason in §2.4. Nothing of it exists on main; the archive branch keeps
+  it. The `Controls` role is DEFERRED to L4 (§2.4 correction; FR-33).
+- **D5 (byte channel): default (i) — [AGENT] default applied per the coordinator's brief; [USER] ratification PENDING at the merge gate (plan §4 D5)** —
+  no byte channel; `invalid-*` rows red by name; the escape-form member is
+  never a member (§2.3, §2.5).
+- **BUG-087 shape (audit fix round R2):** the envelope's authority is an
+  [AGENT] extension of BUG-087's ruling SHAPE (a demonic choice where gc's
+  realization is toolchain-internal) under R-1's re-envelope authority;
+  [USER] ratification PENDING at the merge gate — relabelled on all 18
+  `repanic-collapse` `why` fields, `repanic-same-value-abort`'s, R10a, the
+  triage table, BUGS.md, the corpus `main.go` header and the code docstrings
+  (Machine.lean's envelope statement, CLI.lean's inventory row; the
+  `canonicalSlot0` string in State.lean is OWED — a core string literal this
+  round does not touch).
+- **C4 re-classification (audit fix round R3):** `repanic-same-value-abort`
+  was a [USER]-ratified category-(c) pin (triage §7, 2026-08-20; §7's
+  re-colorable list names C1/C5/E7/R6 — not C4). Its (c)→(a) move to the
+  membership lane is by [AGENT] under R-1 and touches a ratified pin —
+  [USER] ratification PENDING at the merge gate; marked so in the triage
+  table (a dated line under the C4 entry), the ledger (§8 bucket table,
+  §8w) and R10a. The move itself is KEPT pending the ruling.
 - **The brief's hard stop (implement exactly vs a site): a SITE.** The
   marker is deterministic in gc but in a quantity — eface identity — the
   machine does not and should not carry (§1.1). Said explicitly there.
@@ -648,3 +709,46 @@ citations, one frontier-table citation) — 0 HIGH, as at L1. `git status
   this chunk adds no control-byte rows); the spike gate's fixture-controls
   tool of the sprint (`tools/check-recovery-fixture-controls.py`, not on
   main — L2/L4's).
+
+## 7. Adversarial audit fix round (2026-09-07, [AGENT] fix-round worker, same lane)
+
+Verdict received (the pre-merge adversarial audit of `bf925590`): **the
+envelope is sound — no gc realization outside the set, no baked-in
+choice — FIX-FIRST on provenance and records.** Applied here, every
+judgement [AGENT]-tagged; nothing below is a ruling. The [USER] rulings
+this round makes PENDING (verbatim tags as written in the records):
+
+- D2 / D5: «[AGENT] default applied per the coordinator's brief; [USER]
+  ratification PENDING at the merge gate (plan §4 D2/D5)».
+- BUG-087 shape: «[AGENT] extension of BUG-087's ruling SHAPE (a demonic
+  choice where gc's realization is toolchain-internal), under R-1's
+  re-envelope authority; [USER] ratification PENDING».
+- C4: «(c)→(a) re-classification by [AGENT] under R-1; touches a ratified
+  (c) pin — [USER] ratification PENDING at the merge gate».
+
+| item | disposition |
+|---|---|
+| R1 authority (D2/D5 applied as defaults) | FIXED — tagged PENDING in this note (§2.3, §2.4, §2.5, §6), BUGS.md, the inventory (R10a), the ledger (§8w), the triage table (:481), `Interface.lean`, `panic-text/main.go`. No ruling claimed; left PENDING (none relayed before this round closed). |
+| R2 BUG-087 over-extension | FIXED — the 18 `repanic-collapse` `why` fields, `repanic-same-value-abort`'s `why`, `repanic-collapse/main.go`, R10a (heading + body), the triage C4 block, BUGS.md, this note's ruling context, Machine.lean's envelope docstring, CLI.lean row 9 all relabelled "extension of BUG-087's ruling SHAPE … PENDING". OWED: the `canonicalSlot0` row string in State.lean (core code literal; this round does not touch it). |
+| R3 C4 re-classification | FIXED — move kept; marked PENDING in the triage table (dated line under C4 + the L3 block), the ledger (§8 bucket table, §8w), R10a (ROWS), `repanic-same-value-abort/cases.tsv` and `main.go`. |
+| R4 observation scope | FIXED — (a) dated rule in `docs/2026-07-25_unwinding-arc.md` §A3 (continuation lines; tail unmodelled/unobserved); (b) BUGS.md item 3 softened to "fixed as far as the observed surface reaches"; (c) ledger FR-32 + queue 32 (whole-message widening; L4's `crashview.go` as the site — not on this branch); (d) `invalid-after-lf` retagged `first_line_scope` (new vocabulary tag), its `main.go` comment and every "born PASS" mention say first-line-scope control; (e) `first-line-scope.txt` measured (`head`/`head` identical through the harness awk; `stringFirstLine?` identical on the machine); (f) `unwinding-arc.md` (3) marked STALE with the L3 facts. |
+| R5 D2 mapping | FIXED — `Controls` named as the one role DEFERRED (§2.4 correction), conditional on L4's `panic-controls` rows / BUG-105 (NOT filed here — a train dependency); ledger FR-33 + queue 33; asymmetry measured and recorded (`controls-asymmetry.txt`: machine 5 bytes `61 00 01 09 0d`, bash capture 4 — the NUL dropped). Note: the audit's phrase "the machine emits `"a b"`" is not what the probe shows — the machine's String carries the five raw bytes; the record states the measurement. |
+| R6 doctrine mirror | FIXED (CODE, tooling) — `tools/reconcile-records` C12 now compares the doctrine's site list (every entry names its constructor in backticks; the seven pre-W3.2 entries were tagged) and `ChoiceTrace.allSites` against the `ChoiceSite` datatype, HIGH on drift; negative-tested (removing one constructor name → two HIGH findings; restored → none); 0 HIGH at this tip; obligation recorded in the doctrine's history block. |
+| R7 Interface overclaim | FIXED (CODE, statements) — `Inv.observed_abort_member` now yields the member on the RECORD's chain at the STREAM's pick (`Inv.observed_abort` supplies `residual = ch` and `first :: rest = record.chain`); `Inv.run_classified`'s panic disjunct carries the computed record + that anchored member (the induction moved to `Inv.run_outcomes`); `runProgram_typed`/`runProgramPool_typed` additionally tie the record to the driver's own `runProgramSetupM`; observer twins `stepAbortRecord?_member`, `PoolAbortWitness.string_member`, `runProgramPoolWithAbort_member`, `Inv.observer_classified`, `runProgramPoolWithAbort_typed`, `_panic_iff` anchored to `collapseBit first rest pick` on `record.chain`. All proofs close; axioms unchanged (classical trio; `stepAbortRecord?_member` constructive). `Interface.lean` says exactly what is proved and what is NOT (the tail; the setup exposed existentially). Spike `Terminal.lean` restated (opt-in gate not re-run this round — OWED at the train). |
+| R8 `/tmp` in README | FIXED — `.tmp/witness/` per operational-lessons. |
+| L1 stale `main.go` comment | FIXED. |
+| L2 MultiSound comment | FIXED (comment only). |
+| L3 `land-typed-core-proofs.md:32` | FIXED (the note is on this branch; bracketed correction). |
+| L4 `.nil` arm | FIXED (CODE, one arm → `none`); probe: `renderPanicPayload {} .nil = none`, the refusal names the payload, `panicPayload .nil` still renders gc's text; build + 207 eval ok. |
+| L5 `no_seq_consumption` | FIXED (CODE) — `∨ consumesRepanicCollapse c = true` in `UnwindCont`/`Control`/`Inv.no_seq_consumption`; the sole consumer `Inv.step_no_seq_consumption` closes with one `unfold`. |
+| L6 "ONE shared consult" | FIXED — one shared consult FUNCTION, two call sites. |
+| L7 counts | FIXED — 38 witnesses (note + README), 13 of 14 `panic-text/*` moved (§5.3), baseline header "38 rows" → 34 of 38, "48 exports" → 44. |
+| L11 `abortEventPick?` docstring | FIXED — cites `isTerminal_of_abort`/`atBoundary_of_abort` and `abortEventPick?_consumeAtE` for the `none` arm. |
+| L13 provenance classes | FIXED — D5's disposition, the doctrine re-sync block, the triage C4 block, ledger §8w carry [AGENT] tags. |
+| L14 `printPreFatalDeferPanic` | FIXED — 1259–1276. |
+
+Owed (recorded, not done here): the State.lean `canonicalSlot0` wording (R2); the opt-in spike gate re-run (R7); FR-32 and FR-33 (rowed with queue slots, L4-dependent); the [USER] rulings D2, D5, C4 and the BUG-087-shape extension.
+
+### 7.1 Gate at the fix round's clean committed tip
+
+(filled after the run — `docs/evidence/2026-09-07_land-panic-text-tape/ci-diff-tail-fixround.txt`)

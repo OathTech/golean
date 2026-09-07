@@ -44,6 +44,7 @@ evaluation_order
 fallthrough
 fatal
 fields
+first_line_scope
 floats
 full_slice
 functions

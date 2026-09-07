@@ -1,9 +1,11 @@
 package main
 
 // THE `repanicCollapse` ENVELOPE (landing chunk L3,
-// docs/2026-09-07_land-panic-text-tape.md §2.2; BUG-004 item 1; the
-// BUG-087 panic-text ruling «demonic choice so both are admitted», [USER]
-// 2026-09-03 relayed). When a RECOVERED panic value is re-panicked with an
+// docs/2026-09-07_land-panic-text-tape.md §2.2; BUG-004 item 1; an [AGENT]
+// extension of BUG-087's ruling SHAPE — «demonic choice so both are
+// admitted», [USER] 2026-09-03 relayed, ruled for ONE choice at the nil
+// arm/R9a — to this marker under R-1's re-envelope authority; [USER]
+// ratification PENDING at the merge gate). When a RECOVERED panic value is re-panicked with an
 // EQUAL payload, gc decides by eface IDENTITY (runtime/panic.go:715 at the
 // pin) whether the two abort lines COLLAPSE into one
 // `… [recovered, repanicked]` (the recovered box passed through: panic(r))

@@ -1,0 +1,48 @@
+# First-line observation scope — measured, not asserted (L3 adversarial-audit fix round, 2026-09-07, R4(e); [AGENT])
+#
+# Claim under test: the compared observation is gc's FIRST abort line only, so two payloads that differ
+# only past their first LF are byte-identical to the harness on BOTH sides. Toolchain: go version go1.26.5 linux/amd64;
+# GODEBUG=panicnil=0 GOTRACEBACK=none (as scripts/diff-coverage sets the oracle); machine = the golean library
+# at this fix round's tip (`scripts/capped lake env lean` on the probe below). Scratch: .tmp/first-line-scope/.
+
+## gc side
+
+$ cat taila/main.go
+package main
+
+func main() { panic("head\nTAILA") }
+$ cat tailb/main.go
+package main
+
+func main() { panic("head\nTAILB") }
+$ go build -o taila/bin taila/main.go && GODEBUG=panicnil=0 GOTRACEBACK=none taila/bin 2> taila/stderr; od -An -c taila/stderr
+   p   a   n   i   c   :       h   e   a   d  \n  \t   T   A   I
+   L   A  \n
+$ ... tailb ...; od -An -c tailb/stderr
+   p   a   n   i   c   :       h   e   a   d  \n  \t   T   A   I
+   L   B  \n
+exit codes: taila rc=2, tailb rc=2
+
+$ cmp taila/stderr tailb/stderr
+.tmp/first-line-scope/taila/stderr .tmp/first-line-scope/tailb/stderr differ: byte 18, line 2
+
+## the harness's compared observation (scripts/diff-coverage panic_message(): the awk below, verbatim)
+
+$ pm() { awk '/^panic: / { sub(/^panic: /, ""); print; found = 1; exit } END { if (!found) exit 1 }'; }
+$ pm < taila/stderr; pm < tailb/stderr
+head
+head
+=> IDENTICAL ("head" / "head"): the tail (LF, printindented's TAB, TAILA/TAILB, LF) is never compared.
+
+## machine side (Probe.lean, the relevant lines)
+
+#eval stringFirstLine? "head
+TAILA".toUTF8.data
+some ("head", true)
+#eval stringFirstLine? "head
+TAILB".toUTF8.data
+some ("head", true)
+=> IDENTICAL: ("head", multiline := true) — the renderer returns the first line and a multi-line FLAG; the tail
+   bytes are not rendered (unmodelled), and on the gc side they are not read (unobserved). Both sides agree on
+   `head`, byte-exactly; nothing about TAILA vs TAILB is claimed by any green row. Rule: docs/2026-07-25_unwinding-arc.md
+   (the 2026-09-07 first-line rule); the widening is rowed as ledger FR-32.

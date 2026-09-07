@@ -445,6 +445,15 @@ stringer}`. The fourth, `panic-newline-abort`, is now row L12b, category
 (a), mini-slice A7 — the user took the split this row flagged (§7).
 Ledger: latitude inventory R10.*
 
+**2026-09-07 — the red count 3 → 2 is PROVISIONAL ([AGENT], landing chunk
+L3's adversarial-audit fix round, R3):** `repanic-same-value-abort` was
+re-classified (c)→(a) ENVELOPED by the [AGENT] under R-1 (the 2026-09-07
+block below). The row was [USER]-ratified as a (c) pin in §7 (2026-08-20)
+and §7's re-colorable list names C1/C5/E7/R6 — not C4 — so the move
+touches a ratified pin and awaits [USER] ratification at the merge gate.
+Until then read this row as "3 ratified, 1 provisionally moved"; the move
+is kept pending the ruling.
+
 Two distinct impossibilities, both in gc's abort-line output (which the
 spec does not describe at all — this is `preprintpanics` behavior):
 
@@ -471,14 +480,20 @@ stops at an embedded `\n` — used to sit in this row. It is no longer a
 **2026-09-07, landing chunk L3 (`docs/2026-09-07_land-panic-text-tape.md`):
 impossibility 1 is RE-ENVELOPED, not decided** — `ChoiceSite.repanicCollapse`
 draws the marker at the abort (bound 2 on the recovered-equal shape; slot 0
-= collapse, slot 1 = the two-line form), under BUG-087's panic-text ruling
-«demonic choice so both are admitted» ([USER] 2026-09-03, relayed) and R-1;
+= collapse, slot 1 = the two-line form), as an [AGENT] extension of
+BUG-087's ruling SHAPE («demonic choice so both are admitted», [USER]
+2026-09-03, relayed — ruled for ONE choice at the nil arm/R9a, not this
+marker) under R-1's re-envelope authority — [USER] ratification PENDING at
+the merge gate (fix round R2);
 gc's draw is eface identity the machine does not model (`runtime/panic.go:715`),
 and both members are gc-realized at the pin (`panic(r)` vs `panic(r.(string))`;
 every go ≤ 1.24 printed the two-line form). `repanic-same-value-abort` leaves
-this row for the membership lane (PASS); C4 keeps impossibility 2's two rows.
+this row for the membership lane (PASS) — a (c)→(a) re-classification by
+[AGENT] under R-1 that touches this [USER]-ratified pin; [USER] ratification
+PENDING at the merge gate (fix round R3, the dated line above); C4 keeps
+impossibility 2's two rows.
 A7 (L12b) is FIXED in the same chunk; its residue — a first line that is not
-valid UTF-8 — is RED by name under landing decision D5 (three
+valid UTF-8 — is RED by name under landing decision D5 ([AGENT] default applied per the coordinator's brief; [USER] ratification PENDING at the merge gate (plan §4 D5); three
 `panic-recover/panic-text/invalid-*` rows on BUG-004's Cases line), not a
 (c) claim: it is an observation-channel limit, not a machine impossibility.
 

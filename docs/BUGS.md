@@ -2754,11 +2754,16 @@ Three of this entry's four items move; the Cases line above is the result.**
   (`repanicCollapseWidth`, Machine.lean), drawn at THE ABORT by both drivers
   (`abortConsult`; `stepFn`'s `.panicking _ .stop` arm, the pool's tombstone
   arm) — slot 0 = the collapsed `… [recovered, repanicked]`, slot 1 = the
-  two-line form's `… [recovered]`. Ruling followed: BUG-087's panic-text
-  ruling «(2) panic-text, agree, demonic choice so both are admitted»
-  ([USER] 2026-09-03, relayed — `docs/2026-08-31_qrow-rulings.md`) and R-1
-  (the rendered text is spec-silent, quotiented via membership; KIND and
-  control flow stay exact). WHY latitude and not a pin, from gc at the pin
+  two-line form's `… [recovered]`. Authority: an [AGENT] extension of
+  BUG-087's ruling SHAPE — «(2) panic-text, agree, demonic choice so both
+  are admitted» ([USER] 2026-09-03, relayed — `docs/2026-08-31_qrow-rulings.md`),
+  ruled for ONE demonic choice at the nil arm (`nilValueMethodText`/R9a),
+  NOT for this marker — to a demonic choice where gc's realization is
+  toolchain-internal, under R-1's re-envelope authority (the rendered text
+  is spec-silent, quotiented via membership; KIND and control flow stay
+  exact); [USER] ratification PENDING at the merge gate (L3's
+  adversarial-audit fix round, 2026-09-07, R2 — the earlier wording "Ruling
+  followed: BUG-087's" overclaimed). WHY latitude and not a pin, from gc at the pin
   (`runtime/panic.go:715`, `preprintpanics`): the marker is eface IDENTITY —
   `panic(r)` passes the recovered box through and collapses (witness w01);
   a re-boxed equal value (`panic(r.(string))`, a runtime-computed string, a
@@ -2773,12 +2778,23 @@ Three of this entry's four items move; the Cases line above is the result.**
   forbids. `panic-recover/repanic-same-value-abort` moves
   FAIL/lean-observation → PASS/**membership** (`members=2`, gc draws slot 0
   there; its `expected_reason` `orig` is kept — the substring both members
-  share) and LEAVES this Cases line; the new
+  share) and LEAVES this Cases line — a (c)→(a) re-classification by
+  [AGENT] under R-1 that touches a [USER]-ratified C4 pin (triage §7,
+  2026-08-20, whose re-colorable list names C1/C5/E7/R6, not C4); [USER]
+  ratification PENDING at the merge gate (fix round R3; the move is kept
+  pending the ruling); the new
   `panic-recover/repanic-collapse/*` family (18 membership rows, gc drawing
   slot 0 on 11 and slot 1 on 7, both members gc-certified on the string,
   int, defined-int and `runtime.Error` families; 4 strict controls) is the
   envelope's corpus. Latitude inventory R10a; census row in State.lean.
-- **Item 3 (multi-line payloads) is FIXED** — the sprint's strict UTF-8
+- **Item 3 (multi-line payloads) is FIXED as far as the observed surface
+  reaches** (fix round R4: the compared observation is gc's FIRST abort
+  line; a payload's TAIL is UNMODELLED — `renderPanicPayload` returns
+  `(firstLine, multilineFlag)` — and UNOBSERVED on both sides, measured in
+  `docs/evidence/2026-09-07_land-panic-text-tape/first-line-scope.txt`
+  (`panic("head\nTAILA")` ≡ `panic("head\nTAILB")` byte-identically); the
+  rule is dated in `docs/2026-07-25_unwinding-arc.md` §A3 and the
+  whole-message widening is ledger FR-32) — the sprint's strict UTF-8
   first-line widening (`ff7173dd`, credited), sharpened: `asciiString?` is
   gone; `utf8String?` decodes strictly WITH a byte round-trip
   (`utf8String?_bytes`); the first-line projection is at the BYTE level
@@ -2789,8 +2805,12 @@ Three of this entry's four items move; the Cases line above is the result.**
   `panic-recover/panic-text/{unicode-*,trailing-newline,recovered-newline,
   recovered-unicode,output-prefix}` rows are born PASS (strict, real gc text
   comparison); `panic-text/invalid-after-lf` (`a\n\xff`) is born PASS: its
-  FIRST line is the valid byte `a`, byte-exact with gc (w16).
-- **Item 3's RESIDUE is the new red class, by name (landing decision D5,
+  FIRST line is the valid byte `a`, byte-exact with gc (w16) — a
+  first-line-SCOPE control, not invalid-UTF-8 coverage (its compared
+  observation holds no invalid byte; tagged `first_line_scope`, fix round
+  R4d).
+- **Item 3's RESIDUE is the new red class, by name (landing decision D5 —
+  [AGENT] default applied per the coordinator's brief; [USER] ratification PENDING at the merge gate (plan §4 D5),
   `docs/2026-09-07_typed-sprint-landing-plan.md` §4):** a string payload
   whose FIRST LINE is not valid UTF-8. gc writes the raw bytes
   (`printindented`; w35/w36/w37) and the `String`-valued
@@ -2814,9 +2834,19 @@ Three of this entry's four items move; the Cases line above is the result.**
   question (`renderPanicPayload`); `panic-defined-payload-methods/
   {error,stringer}` stay red here.
 - The sprint's `string-member` lane (a third comparison mode over the
-  collapse and the escape member) is RETIRED unlanded ([AGENT], landing
-  decision D2 — the plan's default): its functions are the membership lane,
-  the strict lane and the named refusal above.
+  collapse and the escape member) is RETIRED unlanded (landing decision D2
+  — the plan's default; [AGENT] default applied per the coordinator's brief; [USER] ratification PENDING at the merge gate (plan §4 D2)): its
+  functions are the membership lane, the strict lane and the named refusal
+  above — EXCEPT its `Controls` role (control-byte payloads,
+  `panic("a\x00\x01\t\r\nZ")`: NUL/SOH/TAB/CR preserved through the
+  first-LF projection), which has NO landed row at this tip and is DEFERRED
+  to L4's `panic-recover/panic-controls` rows (BUG-105 — L4's filing on
+  `land/observer-terminal`, a merge-train dependency, not filed here);
+  ledger FR-33 rows the gap; the measured harness asymmetry (the machine
+  renders all five first-line bytes, bash command substitution in
+  `scripts/diff-coverage` drops the NUL) is
+  `docs/evidence/2026-09-07_land-panic-text-tape/controls-asymmetry.txt`
+  (fix round R5).
 
 **Six more item-3 witnesses, 2026-09-07 (landing chunk L4 `land/observer-terminal`, [AGENT]):**
 the observer chunk lands the sprint's `panic-recover/panic-controls/*` and

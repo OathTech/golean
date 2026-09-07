@@ -8,7 +8,7 @@ trailing-newline	panicTrailingNewline	-	panic	first	panic,strings
 recovered-newline	panicRecoveredNewline	-	panic	first	panic,recover,defer,strings
 recovered-unicode	panicRecoveredUnicode	-	panic	é [recovered]	panic,recover,defer,strings,unicode
 output-prefix	panicPrintUnicode	-	panic	é	panic,strings,unicode,print
-invalid-after-lf	panicInvalidAfterLF	-	panic	a	panic,strings,invalid_utf8
+invalid-after-lf	panicInvalidAfterLF	-	panic	a	panic,strings,first_line_scope
 invalid-single	panicInvalidSingle	-	panic	Z	panic,strings,invalid_utf8
 invalid-first-line	panicInvalidFirstLine	-	panic	Z	panic,strings,invalid_utf8
 invalid-recovered-equal	panicInvalidRecoveredEqual	-	panic	Z	panic,recover,defer,strings,invalid_utf8
