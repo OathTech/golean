@@ -46,5 +46,14 @@ behind a written claim. The standard is the outsider's question:
 8. **Bidirectional citation**: the README names the consuming doc;
    the doc cites the dir.
 
-Nothing here is gate-enforced (this is a working convention, not a
-fortress); the reconciler and future audits read against it.
+9. **Size and provenance caps** (gate-enforced since 2026-09-07 by
+   `scripts/check-evidence-size`, a `scripts/ci` step — [USER] ruling
+   relayed in `AGENTS.md`, "Evidence on main"): no file over 256 KiB,
+   no directory over 4 MiB, no archives, no byte-identical copies of
+   tracked files; pre-existing offenders are frozen in
+   `SIZE-ALLOWLIST.tsv` beside this file (shrink-only). Bulky records
+   go to an archive branch with a `MANIFEST.tsv` here.
+
+Rules 1–8 are not gate-enforced (a working convention, not a
+fortress); the reconciler and future audits read against them. Rule 9
+is.

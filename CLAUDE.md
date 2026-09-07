@@ -108,7 +108,10 @@ Everything else is untrusted tooling.
   see `docs/operational-lessons.md`). Runtime changes add the
   differential (`--diff`); baseline re-pins only with a full run
   and a written reason (PASS→non-PASS flips must be on a BUGS.md
-  Cases: line).
+  Cases: line). The gate also runs `scripts/check-evidence-size`:
+  bulky or duplicated evidence under `docs/evidence/` fails closed
+  (caps and the archive-branch convention: `AGENTS.md`, "Evidence
+  on main").
 - The pre-merge adversarial audit: the ask is unconditional; scope
   and waiver are the user's.
 

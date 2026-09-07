@@ -1,0 +1,51 @@
+tip: 485c5b7f8864cb366b52382e0ec0c9bad60c3367  started: 2026-09-07T01:35:37Z  GOLEAN_COVERAGE_JOBS=2
+
+## differential / negative baseline diff steps
+── negative baseline diff
+no regression: 394 case(s) run in negative-latest.tsv match baselines/negative-full.tsv
+
+── differential baseline diff (scripts/coverage-baseline-diff)
+no regression: 3598 case(s) run in latest.tsv match baselines/native-full.tsv
+
+## recorded run provenance (artifacts/coverage/latest.meta.tsv)
+manifest_sha256	36a5e284415fd7bf1fce7bce3794576fb9e3d0507a7211be0d1acb2a1d4e890e
+git_commit	485c5b7f8864cb366b52382e0ec0c9bad60c3367
+git_dirty	false
+go_toolchain	go1.26.5
+go_drift_actual	false
+jobs	2
+
+## summary
+══ scripts/ci summary ══
+  note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   evidence-on-main size gate
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   core build (warning-free)
+  ok   semantic interface (bridges, counterexamples, compiled audit negatives)
+  ok   admission checker proofs and post-import audit
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   eval tests (202 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  ok   negative baseline diff (no regression)
+  ok   baseline diff FULL (3598/3598, no regression)
+  note reconciler: 3 finding(s), 0 HIGH — report-only (details: tools/reconcile-records)
+
+RESULT: PASS
+EXIT=0  finished: 2026-09-07T02:11:27Z

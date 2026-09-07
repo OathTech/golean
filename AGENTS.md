@@ -93,6 +93,35 @@ lane `HANDOFF.md` + design-note pattern it describes.
 - Runtime panics belong in executable differential tests. Static invalid Go
   belongs under `Corpus/coverage/negative/compile`.
 
+## Evidence on main
+
+[USER] ruling (Mike, 2026-09-07, relayed by the [AGENT] coordinator — cite
+as relayed): «The evidence blob should not land, and generally we should
+not dump big evidence bundles on main (they can't be easily hosted on GH
+for one). … We'll want to decompose and land in sane chunks that can be
+reviewed. And where appropriate fix some of the issues, eg. the choice
+tape stuff».
+
+- `docs/evidence/` holds RECORDS, not copies: gate tails, transcripts,
+  small probe outputs, and the commit SHA the run was at
+  (`docs/evidence/README.md`). Caps, gate-enforced by
+  `scripts/check-evidence-size` (a `scripts/ci` step; the caps are
+  PROPOSED [AGENT] 2026-09-07 and defined once at the top of that
+  script): no tracked evidence file over 256 KiB; no top-level
+  `docs/evidence/<dir>/` over 4 MiB; no archive extension (`.tar .tgz
+  .gz .zip .xz .zst .7z`); no evidence blob byte-identical to a tracked
+  file outside `docs/evidence/`.
+- Pre-existing offenders on main are frozen in
+  `docs/evidence/SIZE-ALLOWLIST.tsv` (rule, path, reason, date). The
+  list may only SHRINK: the checker refuses entries dated after the
+  freeze and entries that no longer match an offender.
+- Bulky evidence (full-run result tables, wire dumps, source trees,
+  archives) stays on an ARCHIVE BRANCH — `archive/evidence-<date>_<slug>`,
+  listed in `docs/ARCHIVE.md` — and main keeps the directory's README
+  plus a `MANIFEST.tsv` (`sha256`, `bytes`, `origin-commit`, `path`, one
+  row per file left on the branch), so the record stays auditable
+  without the bytes.
+
 ## Sandbox And Scratch Files
 
 - See `docs/agent-sandbox.md` before using temp files in agent sessions.

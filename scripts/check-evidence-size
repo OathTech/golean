@@ -1,0 +1,208 @@
+#!/usr/bin/env python3
+"""Evidence-on-main size gate — refuse bulky or duplicated evidence in the index.
+
+[USER] ruling (Mike, 2026-09-07, relayed by the [AGENT] coordinator — cite as
+relayed): «The evidence blob should not land, and generally we should not dump
+big evidence bundles on main (they can't be easily hosted on GH for one). …
+We'll want to decompose and land in sane chunks that can be reviewed. And
+where appropriate fix some of the issues, eg. the choice tape stuff».
+
+This check judges the INDEX (what `git commit` would record) of the tracked
+tree under docs/evidence/ and refuses, naming each offender and its rule:
+
+  file-size    a tracked evidence file larger than FILE_CAP
+  dir-size     a top-level evidence directory (docs/evidence/<dir>/) whose
+               tracked bytes exceed DIR_CAP
+  archive-ext  any evidence file with an archive extension (pre-compressed
+               bundles cost ~their full size in pack storage forever)
+  source-copy  an evidence blob byte-identical to a tracked blob OUTSIDE
+               docs/evidence/ (a copy of the repo, not a record — record the
+               commit SHA instead; docs/evidence/README.md rule 4). The EMPTY
+               blob is exempt: an empty file has no content to be a copy of.
+  not-a-file   a symlink or gitlink under docs/evidence/ (not checkable)
+
+Pre-existing offenders on main at the day of the ruling are listed in the
+ALLOWLIST (rule, path, reason, date). The allowlist may only SHRINK: every
+entry must carry the freeze date, must still match a live violation (a stale
+entry is refused — remove it), and anything not listed fails. New evidence
+that needs more room goes to an archive branch (AGENTS.md, "Evidence on
+main"), never onto main via a new allowlist row.
+
+Exit 0 = clean (or every violation allowlisted); 1 = violation(s); 2 = the
+check could not run (git failure, malformed allowlist) — a red, never a skip.
+"""
+import argparse
+import os
+import subprocess
+import sys
+
+# ---- Caps — PROPOSED [AGENT] 2026-09-07 (landing chunk L2), pending the
+# ---- user's ratification; change them here and nowhere else. -------------
+FILE_CAP = 256 * 1024            # bytes, per tracked file under docs/evidence/
+DIR_CAP = 4 * 1024 * 1024        # bytes, per top-level docs/evidence/<dir>/
+ARCHIVE_EXTS = (".tar", ".tgz", ".gz", ".zip", ".xz", ".zst", ".7z")
+EVIDENCE = "docs/evidence/"
+ALLOWLIST = "docs/evidence/SIZE-ALLOWLIST.tsv"
+ALLOWLIST_FREEZE_DATE = "2026-09-07"   # the only date an entry may carry
+EMPTY_BLOB = "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+RULES = ("file-size", "dir-size", "archive-ext", "source-copy", "not-a-file")
+
+
+def die(msg, code=2):
+    print(f"check-evidence-size: {msg}", file=sys.stderr)
+    sys.exit(code)
+
+
+def git(repo, *args, binary=False):
+    try:
+        out = subprocess.run(["git", "-C", repo, *args], capture_output=True, check=True)
+    except FileNotFoundError:
+        die("git not found on PATH")
+    except subprocess.CalledProcessError as e:
+        die(f"git {' '.join(args)} failed (exit {e.returncode}): {e.stderr.decode(errors='replace').strip()}")
+    return out.stdout if binary else out.stdout.decode()
+
+
+def tracked_index(repo):
+    """(mode, sha, path) for every index entry, NUL-safe."""
+    raw = git(repo, "ls-files", "-s", "-z", binary=True)
+    entries = []
+    for rec in raw.split(b"\0"):
+        if not rec:
+            continue
+        meta, path = rec.split(b"\t", 1)
+        mode, sha, _stage = meta.decode().split(" ")
+        entries.append((mode, sha, path.decode("utf-8", errors="surrogateescape")))
+    return entries
+
+
+def blob_sizes(repo, shas):
+    if not shas:
+        return {}
+    proc = subprocess.run(["git", "-C", repo, "cat-file", "--batch-check=%(objectname) %(objecttype) %(objectsize)"],
+                          input="\n".join(shas).encode() + b"\n", capture_output=True)
+    if proc.returncode != 0:
+        die(f"git cat-file --batch-check failed (exit {proc.returncode}): {proc.stderr.decode(errors='replace').strip()}")
+    sizes = {}
+    for line in proc.stdout.decode().splitlines():
+        parts = line.split(" ")
+        if len(parts) != 3 or parts[1] != "blob":
+            die(f"cannot size object: {line!r} (missing or non-blob index entry)")
+        sizes[parts[0]] = int(parts[2])
+    missing = [s for s in shas if s not in sizes]
+    if missing:
+        die(f"{len(missing)} index blob(s) not found in the object store, e.g. {missing[0]}")
+    return sizes
+
+
+def find_violations(repo):
+    entries = tracked_index(repo)
+    evidence = [(m, s, p) for m, s, p in entries if p.startswith(EVIDENCE)]
+    outside = {}
+    for m, s, p in entries:
+        if not p.startswith(EVIDENCE) and m in ("100644", "100755") and s != EMPTY_BLOB:
+            outside.setdefault(s, p)
+    violations = []  # (rule, path, detail)
+    for mode, sha, path in evidence:
+        if mode not in ("100644", "100755"):
+            violations.append(("not-a-file", path, f"mode {mode} (symlink/gitlink) is not a checkable evidence file"))
+    regular = [(m, s, p) for m, s, p in evidence if m in ("100644", "100755")]
+    sizes = blob_sizes(repo, sorted({s for _, s, _ in regular}))
+    dir_bytes = {}
+    for _mode, sha, path in regular:
+        size = sizes[sha]
+        rel = path[len(EVIDENCE):]
+        if "/" in rel:
+            top = rel.split("/", 1)[0]
+            dir_bytes[top] = dir_bytes.get(top, 0) + size
+        if size > FILE_CAP:
+            violations.append(("file-size", path, f"{size} bytes > cap {FILE_CAP}"))
+        lower = path.lower()
+        if any(lower.endswith(ext) for ext in ARCHIVE_EXTS):
+            violations.append(("archive-ext", path, "archive extension"))
+        if sha != EMPTY_BLOB and sha in outside:
+            violations.append(("source-copy", path, f"byte-identical to tracked {outside[sha]} (blob {sha[:12]})"))
+    for top, total in sorted(dir_bytes.items()):
+        if total > DIR_CAP:
+            violations.append(("dir-size", EVIDENCE + top + "/", f"{total} bytes > cap {DIR_CAP}"))
+    stats = {"files": len(evidence), "bytes": sum(sizes[s] for _, s, _ in regular), "dirs": len(dir_bytes)}
+    return violations, stats
+
+
+def read_allowlist(path):
+    """rows of (rule, path, reason, date); refuse anything malformed."""
+    if not os.path.exists(path):
+        return None
+    rows = []
+    seen = set()
+    with open(path, encoding="utf-8") as f:
+        for n, line in enumerate(f, 1):
+            line = line.rstrip("\n")
+            if not line or line.startswith("#"):
+                continue
+            fields = line.split("\t")
+            if len(fields) != 4:
+                die(f"{path}:{n}: expected 4 tab-separated fields (rule, path, reason, date), got {len(fields)}")
+            rule, apath, reason, date = fields
+            if rule not in RULES:
+                die(f"{path}:{n}: unknown rule {rule!r} (one of {', '.join(RULES)})")
+            if not apath.startswith(EVIDENCE):
+                die(f"{path}:{n}: path must be under {EVIDENCE}: {apath!r}")
+            if not reason.strip():
+                die(f"{path}:{n}: empty reason")
+            if date != ALLOWLIST_FREEZE_DATE:
+                die(f"{path}:{n}: entry dated {date!r} — the allowlist may only shrink; every entry must carry "
+                    f"the freeze date {ALLOWLIST_FREEZE_DATE} (new offenders go to an archive branch, AGENTS.md)", code=1)
+            key = (rule, apath)
+            if key in seen:
+                die(f"{path}:{n}: duplicate entry {rule} {apath}")
+            seen.add(key)
+            rows.append((rule, apath, reason, date))
+    return rows
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--repo", default=os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")),
+                    help="repository root (default: the checkout this script lives in)")
+    ap.add_argument("--allowlist", default=None, help=f"allowlist path (default: <repo>/{ALLOWLIST})")
+    ap.add_argument("--verbose", action="store_true", help="also list allowlisted offenders")
+    args = ap.parse_args()
+    repo = os.path.abspath(args.repo)
+    if not os.path.isdir(repo):
+        die(f"--repo {repo}: not a directory")
+    allow_path = args.allowlist or os.path.join(repo, ALLOWLIST)
+    violations, stats = find_violations(repo)
+    allow = read_allowlist(allow_path)
+    allowed = {(r, p): (reason, date) for r, p, reason, date in (allow or [])}
+    live = {(r, p) for r, p, _ in violations}
+    failed = False
+    for key in sorted(allowed):
+        if key not in live:
+            print(f"check-evidence-size: stale allowlist entry {key[0]} {key[1]} — no longer an offender; remove it "
+                  f"(the allowlist may only shrink)", file=sys.stderr)
+            failed = True
+    new = []
+    for rule, path, detail in violations:
+        if (rule, path) in allowed:
+            if args.verbose:
+                reason, date = allowed[(rule, path)]
+                print(f"  allowlisted {rule} {path} ({detail}; {reason}; {date})")
+        else:
+            new.append((rule, path, detail))
+    for rule, path, detail in new:
+        print(f"check-evidence-size: {rule}: {path}: {detail}", file=sys.stderr)
+    if new:
+        where = allow_path if allow is not None else f"{allow_path} (absent)"
+        print(f"check-evidence-size: {len(new)} offender(s) not in {where} — bulky evidence belongs on an archive "
+              f"branch with a MANIFEST.tsv on main (AGENTS.md, Evidence on main)", file=sys.stderr)
+        failed = True
+    if failed:
+        sys.exit(1)
+    print(f"evidence-size gate: PASS — {stats['files']} tracked files / {stats['bytes']} bytes in {stats['dirs']} "
+          f"evidence dirs; caps file {FILE_CAP} B, dir {DIR_CAP} B, no archives, no source copies; "
+          f"{len(allowed)} pre-existing offender(s) allowlisted (frozen {ALLOWLIST_FREEZE_DATE}), 0 new")
+
+
+if __name__ == "__main__":
+    main()

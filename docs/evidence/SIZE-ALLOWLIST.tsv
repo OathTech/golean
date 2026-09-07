@@ -1,0 +1,32 @@
+# docs/evidence/SIZE-ALLOWLIST.tsv — pre-existing offenders of the evidence
+# size gate (scripts/check-evidence-size), frozen at the ruling.
+#
+# [USER] ruling (Mike 2026-09-07, relayed by the [AGENT] coordinator — cite as
+# relayed): «The evidence blob should not land, and generally we should not
+# dump big evidence bundles on main (they can't be easily hosted on GH for
+# one)». These 18 entries are what main 47195683 already carried on that day
+# ([AGENT] census, landing chunk L2, docs/2026-09-07_land-gate-tooling.md).
+# THE LIST MAY ONLY SHRINK: every entry carries the freeze date 2026-09-07;
+# the checker refuses any other date and any entry that no longer matches a
+# live offender. Moving an entry's bytes to an archive branch (AGENTS.md,
+# "Evidence on main") means deleting its row here.
+#
+# Columns: rule <TAB> path <TAB> reason <TAB> date
+dir-size	docs/evidence/2026-09-04_c-arc-gu/	10.4 MB: four whole-corpus choice-trace dumps (below); README has a regeneration note; pre-existing on main 47195683 at the freeze; archive-branch candidate	2026-09-07
+file-size	docs/evidence/2026-09-04_c-arc-gu/after-same-streams-dump-sorted.tsv	AFTER per-consumption choice-trace dump, whole corpus (23016 records); pre-existing on main 47195683 at the freeze; archive-branch candidate	2026-09-07
+file-size	docs/evidence/2026-09-04_c-arc-gu/before-dump-sorted.tsv	BEFORE per-consumption choice-trace dump, whole corpus (23715 records); pre-existing on main 47195683 at the freeze; archive-branch candidate	2026-09-07
+file-size	docs/evidence/2026-09-04_c-arc-gu/expected-transformed-dump-sorted.tsv	expected transformed choice-trace dump (BEFORE relabelled), whole corpus; pre-existing on main 47195683 at the freeze; archive-branch candidate	2026-09-07
+file-size	docs/evidence/2026-09-04_c-arc-gu/transformed-batch.tsv	tracer batch for the bijection run (every row x six transformed streams); pre-existing on main 47195683 at the freeze; archive-branch candidate	2026-09-07
+file-size	docs/evidence/2026-09-04_fr24-fr25/m1-red-first/init_library-var-type-poisoned.pre.wire.json	native-frontend wire emit of one init/ row at checkpoint M1 (README names the command); pre-existing on main 47195683 at the freeze; archive-branch candidate	2026-09-07
+file-size	docs/evidence/2026-09-04_fr24-fr25/m1-red-first/init_library-var-type-unlowerable.pre.wire.json	native-frontend wire emit of one init/ row at checkpoint M1 (README names the command); pre-existing on main 47195683 at the freeze; archive-branch candidate	2026-09-07
+file-size	docs/evidence/2026-09-04_fr24-fr25/wires-B/init_library-var-type-poisoned.wire.json	native-frontend wire emit of one init/ row at checkpoint B (README names the command); pre-existing on main 47195683 at the freeze; archive-branch candidate	2026-09-07
+file-size	docs/evidence/2026-09-04_fr24-fr25/wires-B/init_library-var-type-unlowerable.wire.json	native-frontend wire emit of one init/ row at checkpoint B (README names the command); pre-existing on main 47195683 at the freeze; archive-branch candidate	2026-09-07
+file-size	docs/evidence/2026-09-04_hygiene-wave3/choice-trace/dump-before-sorted.tsv	whole-corpus choice-trace dump (BEFORE) for the wave-(iii) identity check; pre-existing on main 47195683 at the freeze; archive-branch candidate	2026-09-07
+file-size	docs/evidence/2026-09-04_lower-diagnose/cedar-go/report.json	lowering-diagnostic report over cedar-go (DIAGNOSTIC, not a lowering); pre-existing on main 47195683 at the freeze; archive-branch candidate	2026-09-07
+file-size	docs/evidence/2026-09-04_slow-recert/slow-latest.tsv	published full result table of the --slow re-certification at main 1b8401c0; pre-existing on main 47195683 at the freeze; archive-branch candidate	2026-09-07
+file-size	docs/evidence/2026-09-04_slow-recert-2/slow-latest.tsv	published full result table of the --slow re-certification at main aceb0dcb; pre-existing on main 47195683 at the freeze; archive-branch candidate	2026-09-07
+file-size	docs/evidence/2026-09-05_bug103-array-conversion/full.tsv	full differential result table for the BUG-103 validation run; pre-existing on main 47195683 at the freeze; archive-branch candidate	2026-09-07
+file-size	docs/evidence/2026-09-05_bug103-integration/full.tsv	full differential result table for the BUG-103 combined-tree run; pre-existing on main 47195683 at the freeze; archive-branch candidate	2026-09-07
+file-size	docs/evidence/2026-09-05_bug103-integration/source-bindings.json	SHA256 inventory of 3,691 tracked inputs for the BUG-103 combined tree; pre-existing on main 47195683 at the freeze; archive-branch candidate	2026-09-07
+file-size	docs/evidence/2026-09-05_c-arc-b4/choice-trace/dump-before-sorted.tsv	whole-corpus choice-trace dump (BEFORE) for the B4+C5 identity check; pre-existing on main 47195683 at the freeze; archive-branch candidate	2026-09-07
+source-copy	docs/evidence/2026-09-05_iris-customer-review/Examples.lean.txt	byte copy of spikes/iris-customer/GoLeanIris/Examples.lean (the unchanged proof source the A2 review mutated against) — a commit SHA would do; pre-existing on main 47195683 at the freeze; archive-branch candidate	2026-09-07

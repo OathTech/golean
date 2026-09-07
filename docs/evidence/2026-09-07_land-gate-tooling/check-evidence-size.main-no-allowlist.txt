@@ -1,0 +1,20 @@
+check-evidence-size: file-size: docs/evidence/2026-09-04_c-arc-gu/after-same-streams-dump-sorted.tsv: 1699839 bytes > cap 262144
+check-evidence-size: file-size: docs/evidence/2026-09-04_c-arc-gu/before-dump-sorted.tsv: 1749213 bytes > cap 262144
+check-evidence-size: file-size: docs/evidence/2026-09-04_c-arc-gu/expected-transformed-dump-sorted.tsv: 6205426 bytes > cap 262144
+check-evidence-size: file-size: docs/evidence/2026-09-04_c-arc-gu/transformed-batch.tsv: 661294 bytes > cap 262144
+check-evidence-size: file-size: docs/evidence/2026-09-04_fr24-fr25/m1-red-first/init_library-var-type-poisoned.pre.wire.json: 654725 bytes > cap 262144
+check-evidence-size: file-size: docs/evidence/2026-09-04_fr24-fr25/m1-red-first/init_library-var-type-unlowerable.pre.wire.json: 643959 bytes > cap 262144
+check-evidence-size: file-size: docs/evidence/2026-09-04_fr24-fr25/wires-B/init_library-var-type-poisoned.wire.json: 736141 bytes > cap 262144
+check-evidence-size: file-size: docs/evidence/2026-09-04_fr24-fr25/wires-B/init_library-var-type-unlowerable.wire.json: 725375 bytes > cap 262144
+check-evidence-size: file-size: docs/evidence/2026-09-04_hygiene-wave3/choice-trace/dump-before-sorted.tsv: 1745236 bytes > cap 262144
+check-evidence-size: file-size: docs/evidence/2026-09-04_lower-diagnose/cedar-go/report.json: 574121 bytes > cap 262144
+check-evidence-size: file-size: docs/evidence/2026-09-04_slow-recert-2/slow-latest.tsv: 452130 bytes > cap 262144
+check-evidence-size: file-size: docs/evidence/2026-09-04_slow-recert/slow-latest.tsv: 435752 bytes > cap 262144
+check-evidence-size: file-size: docs/evidence/2026-09-05_bug103-array-conversion/full.tsv: 515986 bytes > cap 262144
+check-evidence-size: file-size: docs/evidence/2026-09-05_bug103-integration/full.tsv: 515949 bytes > cap 262144
+check-evidence-size: file-size: docs/evidence/2026-09-05_bug103-integration/source-bindings.json: 505656 bytes > cap 262144
+check-evidence-size: file-size: docs/evidence/2026-09-05_c-arc-b4/choice-trace/dump-before-sorted.tsv: 1707301 bytes > cap 262144
+check-evidence-size: source-copy: docs/evidence/2026-09-05_iris-customer-review/Examples.lean.txt: byte-identical to tracked spikes/iris-customer/GoLeanIris/Examples.lean (blob fd56da89b9c9)
+check-evidence-size: dir-size: docs/evidence/2026-09-04_c-arc-gu/: 10410369 bytes > cap 4194304
+check-evidence-size: 18 offender(s) not in .tmp/no-such-allowlist (absent) — bulky evidence belongs on an archive branch with a MANIFEST.tsv on main (AGENTS.md, Evidence on main)
+exit=1

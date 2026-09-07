@@ -49,3 +49,10 @@ and resolve locally.
 
 Older pipeline-history notes for the SEMANTICS product live in
 `docs/archive/` (a directory, unrelated to these branches).
+
+## Evidence archive branches
+
+Bulky evidence stays off main (`AGENTS.md`, "Evidence on main",
+[USER] ruling 2026-09-07 relayed): each `archive/evidence-<date>_<slug>`
+branch is listed here with the main-side directory that carries its
+README and `MANIFEST.tsv`. None yet (2026-09-07).

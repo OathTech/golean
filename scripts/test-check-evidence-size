@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+# Self-test for scripts/check-evidence-size against a SCRATCH git repo under
+# the checkout's .tmp/ (never /tmp — docs/agent-sandbox.md). Every case
+# asserts the exit code AND that a refusal names its rule and path; the
+# scratch dir is left in place for inspection (no rm). Runs as the first
+# half of the ci step so a broken checker is a red, not a silent pass.
+set -uo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+CHECK="$ROOT/scripts/check-evidence-size"
+mkdir -p "$ROOT/.tmp"
+SCRATCH="$(mktemp -d "$ROOT/.tmp/check-evidence-size-test.XXXXXX")" || { echo "self-test: cannot create scratch dir under $ROOT/.tmp" >&2; exit 2; }
+REPO="$SCRATCH/repo"
+git init -q "$REPO" || exit 2
+g() { git -C "$REPO" "$@"; }
+# repo-LOCAL identity for the scratch commits (never the user's global config)
+g config user.email evidence-size-selftest@localhost && g config user.name evidence-size-selftest || exit 2
+EV="$REPO/docs/evidence"
+CASE="$EV/2026-01-01_case"
+mkdir -p "$CASE" "$REPO/src"
+printf 'package src\n' > "$REPO/src/file.go"
+printf 'small\n' > "$CASE/small.txt"
+: > "$CASE/empty.log"
+: > "$REPO/src/empty-too"
+g add -A && g commit -qm init || exit 2
+
+pass=0; fail=0
+# expect <exit> <label> <must-contain|-> [<must-not-contain>] -- <cmd...>
+expect() {
+  local want="$1" label="$2" must="$3"; shift 3
+  local mustnot="-"; if [[ "$1" != -- ]]; then mustnot="$1"; shift; fi; shift
+  local out rc=0; out="$("$@" 2>&1)" || rc=$?
+  if [[ "$rc" != "$want" ]]; then
+    echo "FAIL $label: exit $rc, want $want"; printf '%s\n' "$out" | sed 's/^/    /'; fail=$((fail+1)); return
+  fi
+  if [[ "$must" != "-" ]] && ! grep -qF -- "$must" <<<"$out"; then
+    echo "FAIL $label: output lacks '$must'"; printf '%s\n' "$out" | sed 's/^/    /'; fail=$((fail+1)); return
+  fi
+  if [[ "$mustnot" != "-" ]] && grep -qF -- "$mustnot" <<<"$out"; then
+    echo "FAIL $label: output must not mention '$mustnot'"; printf '%s\n' "$out" | sed 's/^/    /'; fail=$((fail+1)); return
+  fi
+  pass=$((pass+1))
+}
+AL="$SCRATCH/allow.tsv"   # absent until the allowlist cases
+run() { "$CHECK" --repo "$REPO" --allowlist "$AL" "$@"; }
+
+# 1. a clean tree passes and says so
+expect 0 clean "0 new" -- run
+# 2. usage: a missing repo is a refusal to run (exit 2), not a pass
+expect 2 missing-repo "not a directory" -- "$CHECK" --repo "$SCRATCH/nope" --allowlist "$AL"
+# 3. file-size: FILE_CAP + 1 byte; UNTRACKED is not judged (the index is), tracked is
+head -c 262145 /dev/zero | tr '\0' x > "$CASE/big.tsv"
+expect 0 untracked-not-judged "0 new" "big.tsv" -- run
+g add -A
+expect 1 file-size "file-size: docs/evidence/2026-01-01_case/big.tsv" -- run
+# 4. archive-ext (case-insensitive), 5. source-copy (empty blob exempt)
+printf 'not really an archive\n' > "$CASE/bundle.tar.gz"
+printf 'zip\n' > "$CASE/upper.ZIP"
+cp "$REPO/src/file.go" "$CASE/file.go.txt"
+g add -A
+expect 1 archive-ext "archive-ext: docs/evidence/2026-01-01_case/bundle.tar.gz" -- run
+expect 1 archive-ext-upper "archive-ext: docs/evidence/2026-01-01_case/upper.ZIP" -- run
+expect 1 source-copy "source-copy: docs/evidence/2026-01-01_case/file.go.txt: byte-identical to tracked src/file.go" "empty.log" -- run
+# 6. dir-size: five 1 MiB files (random, so no copies) in one top-level dir
+BIG="$EV/2026-01-02_bulk"; mkdir -p "$BIG/sub"
+for i in 1 2 3 4 5; do head -c 1048576 /dev/urandom > "$BIG/sub/part$i.bin"; done
+g add -A
+expect 1 dir-size "dir-size: docs/evidence/2026-01-02_bulk/: 5242880 bytes" -- run
+# 7. not-a-file: a symlink under evidence
+ln -s small.txt "$CASE/link"
+g add -A
+expect 1 not-a-file "not-a-file: docs/evidence/2026-01-01_case/link" -- run
+# 8. offenders are counted and the absent allowlist is named
+expect 1 count "offender(s) not in $AL (absent)" -- run
+# 9. a complete allowlist (freeze date) turns the same tree green; --verbose lists entries
+{
+  printf '# rule\tpath\treason\tdate\n'
+  printf 'file-size\tdocs/evidence/2026-01-01_case/big.tsv\tfixture\t2026-09-07\n'
+  for i in 1 2 3 4 5; do printf 'file-size\tdocs/evidence/2026-01-02_bulk/sub/part%s.bin\tfixture\t2026-09-07\n' "$i"; done
+  printf 'dir-size\tdocs/evidence/2026-01-02_bulk/\tfixture\t2026-09-07\n'
+  printf 'archive-ext\tdocs/evidence/2026-01-01_case/bundle.tar.gz\tfixture\t2026-09-07\n'
+  printf 'archive-ext\tdocs/evidence/2026-01-01_case/upper.ZIP\tfixture\t2026-09-07\n'
+  printf 'source-copy\tdocs/evidence/2026-01-01_case/file.go.txt\tfixture\t2026-09-07\n'
+  printf 'not-a-file\tdocs/evidence/2026-01-01_case/link\tfixture\t2026-09-07\n'
+} > "$AL"
+expect 0 allowlisted "11 pre-existing offender(s) allowlisted" -- run
+expect 0 allowlisted-verbose "allowlisted dir-size docs/evidence/2026-01-02_bulk/" -- run --verbose
+# 10. the allowlist may only SHRINK: a stale entry, a new-dated entry, a malformed row
+cp "$AL" "$AL.good"
+printf 'file-size\tdocs/evidence/2026-01-01_case/small.txt\tnot an offender\t2026-09-07\n' >> "$AL"
+expect 1 stale-entry "stale allowlist entry file-size docs/evidence/2026-01-01_case/small.txt" -- run
+cp "$AL.good" "$AL"; sed -i 's/\t2026-09-07$/\t2026-09-08/' "$AL"
+expect 1 later-date "may only shrink" -- run
+cp "$AL.good" "$AL"; printf 'file-size\tdocs/evidence/x\tno date\n' >> "$AL"
+expect 2 malformed "expected 4 tab-separated fields" -- run
+cp "$AL.good" "$AL"; printf 'bogus-rule\tdocs/evidence/x\tr\t2026-09-07\n' >> "$AL"
+expect 2 unknown-rule "unknown rule" -- run
+cp "$AL.good" "$AL"; printf 'file-size\tsrc/file.go\tr\t2026-09-07\n' >> "$AL"
+expect 2 outside-path "path must be under docs/evidence/" -- run
+# 11. removing an offender while its entry remains is a stale entry (shrink obligation)
+cp "$AL.good" "$AL"
+g rm -q --cached "$CASE/link"
+expect 1 removed-offender-stale "stale allowlist entry not-a-file docs/evidence/2026-01-01_case/link" -- run
+
+if [[ "$fail" -ne 0 ]]; then
+  echo "check-evidence-size self-test: FAIL ($fail failed, $pass passed; scratch $SCRATCH)"; exit 1
+fi
+echo "check-evidence-size self-test: PASS ($pass cases; scratch $SCRATCH)"

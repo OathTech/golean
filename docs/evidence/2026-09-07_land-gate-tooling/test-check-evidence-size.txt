@@ -1,0 +1,2 @@
+check-evidence-size self-test: PASS (18 cases; scratch /home/dev/projects/golean/.claude/worktrees/land-gate-tooling/.tmp/check-evidence-size-test.wIbIwg)
+exit=0

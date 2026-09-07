@@ -335,6 +335,31 @@ else
   bad "lane-validation fixtures (a lane gate went quiet — see above)"
 fi
 
+# 1c3b. Evidence-on-main size gate (landing chunk L2, 2026-09-07). [USER]
+# ruling (Mike 2026-09-07, relayed): «The evidence blob should not land, and
+# generally we should not dump big evidence bundles on main (they can't be
+# easily hosted on GH for one)». Caps ([AGENT]-proposed, defined ONCE at the
+# top of scripts/check-evidence-size): file 256 KiB, top-level evidence dir
+# 4 MiB, no archive extensions, no blob byte-identical to a tracked file
+# outside docs/evidence/. Pre-existing offenders are frozen in
+# docs/evidence/SIZE-ALLOWLIST.tsv (shrink-only). The checker's SELF-TEST
+# runs first against a scratch repo under .tmp/ so a broken checker is a
+# red, never a quiet pass; then the tracked index is judged.
+step "evidence-on-main size gate (scripts/check-evidence-size; self-test first)"
+if evtest="$(./scripts/test-check-evidence-size 2>&1)"; then
+  echo "$evtest" | tail -1 | sed 's/^/  /'
+  if evout="$(./scripts/check-evidence-size 2>&1)"; then
+    echo "$evout" | tail -1 | sed 's/^/  /'
+    ok "evidence-on-main size gate"
+  else
+    echo "$evout"
+    bad "evidence-on-main size gate (offender(s) outside docs/evidence/SIZE-ALLOWLIST.tsv — see above; bulky evidence goes to an archive branch, AGENTS.md)"
+  fi
+else
+  echo "$evtest"
+  bad "evidence-on-main size gate SELF-TEST (the checker itself is broken — see above)"
+fi
+
 # 1c4. Imported-goose verbatim staleness (goose-parity phase-A checkpoint,
 # 2026-08-08; check-golden mold — re-verify the LANDED artifact against
 # its source): every imported-goose main.go's above-marker region must be
