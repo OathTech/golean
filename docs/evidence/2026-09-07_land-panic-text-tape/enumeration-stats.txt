@@ -1,0 +1,20 @@
+# enumerator stats per membership row of landing chunk L3 (the first line of artifacts/coverage/membership/<id>/enum-stats.txt after scripts/diff-one at the landing tip; every row: observations=2, sites=1, width=2)
+panic-recover/repanic-collapse/bool-reboxed	coverage-observations: observations=2 steps=68 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+panic-recover/repanic-collapse/defined-passthrough	coverage-observations: observations=2 steps=64 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+panic-recover/repanic-collapse/defined-reboxed	coverage-observations: observations=2 steps=68 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+panic-recover/repanic-collapse/empty-literals	coverage-observations: observations=2 steps=66 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+panic-recover/repanic-collapse/empty-reboxed	coverage-observations: observations=2 steps=68 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+panic-recover/repanic-collapse/global-var	coverage-observations: observations=2 steps=70 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+panic-recover/repanic-collapse/index-two-faults	coverage-observations: observations=2 steps=140 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+panic-recover/repanic-collapse/int-literals	coverage-observations: observations=2 steps=66 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+panic-recover/repanic-collapse/int-reboxed	coverage-observations: observations=2 steps=68 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+panic-recover/repanic-collapse/multiple	coverage-observations: observations=2 steps=107 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+panic-recover/repanic-collapse/nil-passthrough	coverage-observations: observations=2 steps=62 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+panic-recover/repanic-collapse/passthrough-var	coverage-observations: observations=2 steps=64 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+panic-recover/repanic-collapse/reboxed-string	coverage-observations: observations=2 steps=68 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+panic-recover/repanic-collapse/runtime-computed	coverage-observations: observations=2 steps=136 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+panic-recover/repanic-collapse/runtime-error-passthrough	coverage-observations: observations=2 steps=81 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+panic-recover/repanic-collapse/runtime-error-two-faults	coverage-observations: observations=2 steps=100 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+panic-recover/repanic-collapse/two-literals	coverage-observations: observations=2 steps=66 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+panic-recover/repanic-collapse/unicode-literals	coverage-observations: observations=2 steps=66 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+panic-recover/repanic-same-value-abort	coverage-observations: observations=2 steps=37 probes=3 sites=1 leaves=2 maxdepth=1 width=2

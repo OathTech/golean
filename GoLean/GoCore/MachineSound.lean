@@ -3056,7 +3056,7 @@ def allStreamsOk : Nat → ExecState → Config → Bool
                   | .error _ => false
       | c =>
           if consumesAppendSlice c || consumesSelect c || consumesNilValueMethod σ c || consumesTryLock c
-              || consumesUnseqPanic c then false
+              || consumesUnseqPanic c || consumesRepanicCollapse c then false
           else
             match stepFn σ c [0] with
             | .ok (c', σ', _) => allStreamsOk fuel σ' c'
@@ -4489,6 +4489,14 @@ theorem stepFn_consumption_some {σ : ExecState} {c : Config} {ch₀ : Choices}
     consumption_entry_some h hsc
   case case103 =>
     consumption_entry_some h hsc
+  case case7 =>
+    -- THE ABORT: the `repanicCollapse` consult's step is the `panic`
+    -- terminal (or the render's refusal) — it never returns `.ok`, so the
+    -- `some` half is vacuous here (the pool's `stepMulti_sound` carries
+    -- the pick into the relation).
+    simp only [stepFn, bind_eq_ok] at h
+    obtain ⟨msg, -, h⟩ := h
+    simp [throw, throwThe, MonadExceptOf.throw] at h
   case case143 =>
     simp only [stepFn] at h ⊢
     exact stepFrameExit_consumption_some (.inl rfl) hsc h
@@ -4707,8 +4715,10 @@ theorem applyPos_sync {c : Config} {op : SyncOp} {vs : List GoValue}
   obtain ⟨rfl, rfl, rfl, rfl⟩ := h
   exact ⟨_, _, rfl⟩
 
-/-- The six hand flags of the retired sweep entail a `none` projection
-(the sixth, `hnu`, is E13 option (b)'s `unseqPanic` probe consult). -/
+/-- The seven hand flags of the retired sweep entail a `none` projection
+(the sixth, `hnu`, is E13 option (b)'s `unseqPanic` probe consult; the
+seventh, `hnr`, is the abort's `repanicCollapse` consult — landing chunk
+L3). -/
 theorem seqConsumption_none_of_flags {σ : ExecState} {c : Config}
     (hmi : ∀ (kv vv : Option String) (kt vt : Ty) (body : Stmt)
       (base : Option Loc) (produced start : Array Nat)
@@ -4718,13 +4728,16 @@ theorem seqConsumption_none_of_flags {σ : ExecState} {c : Config}
     (hns : consumesSelect c = false)
     (hnv : consumesNilValueMethod σ c = false)
     (hnt : consumesTryLock c = false)
-    (hnu : consumesUnseqPanic c = false) :
+    (hnu : consumesUnseqPanic c = false)
+    (hnr : consumesRepanicCollapse c = false) :
     seqConsumption σ c = none := by
-  revert hmi hnc hns hnv hnt hnu
+  revert hmi hnc hns hnv hnt hnu hnr
   unfold seqConsumption
-  split <;> intro hmi hnc hns hnv hnt hnu
+  split <;> intro hmi hnc hns hnv hnt hnu hnr
   · exact absurd rfl (hmi _ _ _ _ _ _ _ _ _ _)
   · simp [consumesUnseqPanic] at hnu
+  · simp only [consumesRepanicCollapse, Config.abort?] at hnr
+    simp [hnr]
   · split
     all_goals first
       | rfl
@@ -4755,10 +4768,14 @@ a select apply position — excluded by `hns` — a frame entry in BUG-087's
 wrapper family — excluded by `hnv` — a TRY head's sync apply — excluded
 by `hnt` — and a panic reaching an unsequenced-operand probe frame,
 `.panicking _ (.probeK _)`, E13 option (b)'s `unseqPanic` consult —
-excluded by `hnu`), a step that succeeds under one stream succeeds under
-EVERY stream, with the SAME successor and the stream returned untouched.
-Its consumers (`allStreamsOk`'s soundness, the pool-level
-`stepThread_oblivious`) are unchanged. -/
+excluded by `hnu` — and an abort whose head is a recovered entry with an
+equal successor payload, the `repanicCollapse` consult — excluded by
+`hnr`; an abort never returns `.ok`, so that flag is vacuous here and
+load-bearing only in the pool's `poolThreadOblivious`), a step that
+succeeds under one stream succeeds under EVERY stream, with the SAME
+successor and the stream returned untouched. Its consumers
+(`allStreamsOk`'s soundness, the pool-level `stepThread_oblivious`) are
+unchanged. -/
 theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
     {c' : Config} {σ' : ExecState} {ch₀' : Choices}
     (hmi : ∀ (kv vv : Option String) (kt vt : Ty) (body : Stmt)
@@ -4770,9 +4787,10 @@ theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
     (hnv : consumesNilValueMethod σ c = false)
     (hnt : consumesTryLock c = false)
     (hnu : consumesUnseqPanic c = false)
+    (hnr : consumesRepanicCollapse c = false)
     (h : stepFn σ c ch₀ = .ok (c', σ', ch₀')) :
     ch₀' = ch₀ ∧ ∀ ch : Choices, stepFn σ c ch = .ok (c', σ', ch) :=
-  stepFn_consumption_none (seqConsumption_none_of_flags hmi hnc hns hnv hnt hnu) h
+  stepFn_consumption_none (seqConsumption_none_of_flags hmi hnc hns hnv hnt hnu hnr) h
 
 /-- The one-layer unfolding of `execStmtLoop`, as an EQUATION (the loop
 is fuel-structural, so the definitional unfolding needs the fuel
@@ -4931,23 +4949,24 @@ theorem execStmtLoop_ok_of_allStreamsOk :
     · -- the oblivious catch-all
       rename_i hx1 hx2
       cases hnc : (consumesAppendSlice c || consumesSelect c || consumesNilValueMethod σ c || consumesTryLock c
-          || consumesUnseqPanic c) with
+          || consumesUnseqPanic c || consumesRepanicCollapse c) with
       | true =>
         rw [hnc] at hall
         simp at hall
       | false =>
         rw [hnc] at hall
         simp only [Bool.false_eq_true, if_false] at hall
-        obtain ⟨⟨⟨⟨hnc1, hnc2⟩, hnc3⟩, hnc4⟩, hnc5⟩ : (((consumesAppendSlice c = false
+        obtain ⟨⟨⟨⟨⟨hnc1, hnc2⟩, hnc3⟩, hnc4⟩, hnc5⟩, hnc6⟩ : ((((consumesAppendSlice c = false
             ∧ consumesSelect c = false) ∧ consumesNilValueMethod σ c = false)
-            ∧ consumesTryLock c = false) ∧ consumesUnseqPanic c = false := by
+            ∧ consumesTryLock c = false) ∧ consumesUnseqPanic c = false)
+            ∧ consumesRepanicCollapse c = false := by
           simpa using hnc
         split at hall
         · rename_i c₁ σ₁ ch₁ hprobe
           obtain ⟨-, hobl⟩ := stepFn_oblivious
             (fun kv vv kt vt b bs pr st e kk heq =>
               hx2 kv vv kt vt b bs pr st e kk heq)
-            hnc1 hnc2 hnc3 hnc4 hnc5 hprobe
+            hnc1 hnc2 hnc3 hnc4 hnc5 hnc6 hprobe
           obtain ⟨out, ch', hrun⟩ := ih hall ch
           exact ⟨out, ch', by rw [execStmtLoop_step (hobl ch)]; exact hrun⟩
         · exact absurd hall (by simp)

@@ -1,5 +1,25 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3618 (3362 PASS / 256 FAIL)
+# cases: 3654 (3397 PASS / 257 FAIL)
+# re-pinned: 2026-09-07, landing chunk L3 `land/panic-text-tape` [AGENT] (docs/2026-09-07_land-panic-text-tape.md), after full
+#   scripts/capped scripts/ci --diff (jobs 12) on this tree: 3634 = 3388 PASS / 246 FAIL. Drift vs the previous pin = EXACTLY
+#   36 born rows + 2 FAIL -> PASS flips, 0 PASS -> non-PASS, 0 removals, 0 reorders (born rows inserted at their families'
+#   alphabetical positions, as latest.tsv orders them). The machine CHANGED (trusted surface #1): the abort renderer decodes
+#   strict UTF-8 and projects gc's first line at the byte level, and the `[recovered, repanicked]` collapse of an equal
+#   re-panic is a new choice site (`ChoiceSite.repanicCollapse`, bound 2 at that abort shape) — BUG-004 item 1 re-enveloped,
+#   item 3 fixed, item 3's invalid-first-line residue red BY NAME (landing decision D5). FLIPS: panic-recover/panic-newline-abort
+#   FAIL/lean-observation -> PASS (strict; gc `first line`), panic-recover/repanic-same-value-abort FAIL/lean-observation ->
+#   PASS/membership (members=2; gc draws the collapse). BORN: panic-recover/panic-text/* 14 rows (11 PASS strict, 3 FAIL/
+#   lean-observation on BUG-004's Cases line — invalid-single, invalid-first-line, invalid-recovered-equal: a first line that is
+#   not valid UTF-8 cannot ride the String observation; gc's bytes recorded in the entry) and panic-recover/repanic-collapse/*
+#   22 rows (18 PASS/membership — both collapse members enumerated on every row, gc's draw in the set: member 0 on 11, member 1
+#   on 7 — and 4 PASS strict controls). The whole-corpus consumption trace vs main 90bc3e06's binary moved ONLY on these 38
+#   rows (docs/evidence/2026-09-07_land-panic-text-tape/choice-trace-compare.txt). Frontend/NativeToIR untouched; twin pin
+#   unmoved; tier=slow rows verified against their cached certified records (--diff), no --slow re-certification claimed.
+#   Tally by the awk below at the lane's own tip: PASS 3388, FAIL 246. [round-24 rebase onto main dd636996 ([AGENT] reconciler, 2026-09-07):
+#   the same rows over main's 3618 = 3362 / 256 (chunk L4 `land/observer-terminal`'s pin, the block below) give 3654 = 3397 / 257
+#   (3618 + 36 born, 0 removed, 0 reorders; 3362 + 33 born PASS + 2 FAIL -> PASS; 256 + 3 born FAIL - 2), re-derived from the
+#   composed data rows by the awk below; 0 PASS -> non-PASS vs main; the lane's figures above are its pre-rebase measurement over
+#   main 90bc3e06's 3598. Tally by the awk below: PASS 3397, FAIL 257.]
 # re-pinned: 2026-09-07, landing chunk L4 `land/observer-terminal` [AGENT] — the typed-consumer
 #   sprint's same-run crash-channel observer + pinned terminal classifier + byte-exact transport
 #   (tools/coverageharness, scripts/diff-coverage and the three diagnostic oracle copies), landed by
@@ -3933,9 +3953,23 @@ FAIL	panic-recover/panic-markers/literal-continuation	lean-observation
 PASS	panic-recover/panic-markers/glued-output	-
 PASS	panic-recover/panic-markers/printed-trace	-
 PASS	panic-recover/panic-named-type-abort	-
-FAIL	panic-recover/panic-newline-abort	lean-observation
+PASS	panic-recover/panic-newline-abort	-
 PASS	panic-recover/panic-nil-abort	-
 PASS	panic-recover/panic-nil-recover	-
+PASS	panic-recover/panic-text/unicode-two	-
+PASS	panic-recover/panic-text/unicode-three	-
+PASS	panic-recover/panic-text/unicode-four	-
+PASS	panic-recover/panic-text/unicode-mixed	-
+PASS	panic-recover/panic-text/unicode-newline	-
+PASS	panic-recover/panic-text/trailing-newline	-
+PASS	panic-recover/panic-text/recovered-newline	-
+PASS	panic-recover/panic-text/recovered-unicode	-
+PASS	panic-recover/panic-text/output-prefix	-
+PASS	panic-recover/panic-text/invalid-after-lf	-
+FAIL	panic-recover/panic-text/invalid-single	lean-observation
+FAIL	panic-recover/panic-text/invalid-first-line	lean-observation
+FAIL	panic-recover/panic-text/invalid-recovered-equal	lean-observation
+PASS	panic-recover/panic-text/invalid-recovered-value	-
 PASS	panic-recover/panic-typed-nil-recover	-
 PASS	panic-recover/recover-direct	-
 PASS	panic-recover/recover-in-defer-args	-
@@ -3948,10 +3982,32 @@ PASS	panic-recover/recover-repanic	-
 PASS	panic-recover/recover-store-local	-
 PASS	panic-recover/recover-twice	-
 PASS	panic-recover/recover-value	-
+PASS	panic-recover/repanic-collapse/passthrough-var	membership
+PASS	panic-recover/repanic-collapse/two-literals	membership
+PASS	panic-recover/repanic-collapse/empty-literals	membership
+PASS	panic-recover/repanic-collapse/multiple	membership
+PASS	panic-recover/repanic-collapse/bool-reboxed	membership
+PASS	panic-recover/repanic-collapse/int-literals	membership
+PASS	panic-recover/repanic-collapse/defined-passthrough	membership
+PASS	panic-recover/repanic-collapse/runtime-error-passthrough	membership
+PASS	panic-recover/repanic-collapse/nil-passthrough	membership
+PASS	panic-recover/repanic-collapse/unicode-literals	membership
+PASS	panic-recover/repanic-collapse/runtime-error-two-faults	membership
+PASS	panic-recover/repanic-collapse/reboxed-string	membership
+PASS	panic-recover/repanic-collapse/runtime-computed	membership
+PASS	panic-recover/repanic-collapse/global-var	membership
+PASS	panic-recover/repanic-collapse/empty-reboxed	membership
+PASS	panic-recover/repanic-collapse/int-reboxed	membership
+PASS	panic-recover/repanic-collapse/defined-reboxed	membership
+PASS	panic-recover/repanic-collapse/index-two-faults	membership
+PASS	panic-recover/repanic-collapse/unequal	-
+PASS	panic-recover/repanic-collapse/unrecovered-equal	-
+PASS	panic-recover/repanic-collapse/equal-pair-not-head	-
+PASS	panic-recover/repanic-collapse/multiline-passthrough	-
 FAIL	panic-recover/recovered-runtime-error-type/observed	differential
 FAIL	panic-recover/recovered-runtime-error-type/assert-int	lean-observation
 PASS	panic-recover/repanic-recovered-by-outer	-
-FAIL	panic-recover/repanic-same-value-abort	lean-observation
+PASS	panic-recover/repanic-same-value-abort	membership
 PASS	panic-recover/repanic-same-value-abort/forced-half	-
 PASS	panic-recover/return-expression-panic-recovered	-
 PASS	panic-recover/self-recovered-defer-panic	-

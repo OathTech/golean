@@ -1358,8 +1358,16 @@ def stepThread (s : ExecState) (threads : Array Thread) (i : Nat)
           -- `.panicked` configuration step cost); the driver's first
           -- classification (`panicMsg?`) ends the program at the next
           -- loop head, exactly as it did on the old tombstone shape.
-          let msg ← abortMsg s first rest
-          return (threads.setIfInBounds i (.aborted msg), s, ch, ⟨i, .aborted, [], []⟩)
+          -- THE `repanicCollapse` CONSULT (landing chunk L3): the same
+          -- draw `stepFn`'s abort arm makes (`abortConsult`), RECORDED in
+          -- the abort event's picks (`consumeAtE` — `[]` at bound 1, the
+          -- labeled pick at bound 2) so the abort observer re-derives the
+          -- rendered member from the event itself; the popped stream is
+          -- returned (the pool goes on to classify the tombstone).
+          let (pick, ch', ps) :=
+            Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch
+          let msg ← abortMsg s first rest pick
+          return (threads.setIfInBounds i (.aborted msg), s, ch', ⟨i, .aborted, ps, []⟩)
       | none =>
       match spawnPlan c with
       | some (cv, args, k) => do
@@ -1552,7 +1560,13 @@ def poolConsumption (m : MultiConfig) (picks : Choices) : Option (ChoiceSite × 
         | some (.running _ (some _)) => none
         | some (.running c none) =>
           if isBlockedConfig c then none
-          else if c.abort?.isSome then none
+          else if c.abort?.isSome then
+            -- THE ABORT's `repanicCollapse` consult (landing chunk L3):
+            -- a pop exactly on the recovered-equal shape, with no picks
+            -- already supplied for it (the abort draws at most one).
+            match ch with
+            | [] => seqConsumption m.shared c
+            | _ :: _ => none
           else
             match spawnPlan c with
             | some _ =>
@@ -2407,13 +2421,18 @@ inductive StepM : MultiConfig → MultiConfig → Prop where
       StepM m ⟨m.threads.setIfInBounds i (.running c none), m.shared, i⟩
   /-- The ABORT (B4): an unrecovered chain at `.stop` renders into the
   goroutine's tombstone (`abortMsg`; a chain with no pinned rendering has
-  no rule — fail closed). -/
+  no rule — fail closed). The `repanicCollapse` pick is QUANTIFIED below
+  its width (landing chunk L3): on the `repanicEqualNext` shape both
+  members are legal successors (the total premise `pick <
+  repanicCollapseWidth first rest`); elsewhere the width is 1 and the
+  pick is the forced 0. -/
   | abort {m : MultiConfig} {i : Nat} {c : Config} {first : PanicEntry}
-      {rest : List PanicEntry} {msg : String} :
+      {rest : List PanicEntry} {pick : Nat} {msg : String} :
       schedPick m i →
       m.threads[i]? = some (.running c none) →
       c.abort? = some (first, rest) →
-      abortMsg m.shared first rest = .ok msg →
+      pick < repanicCollapseWidth first rest →
+      abortMsg m.shared first rest pick = .ok msg →
       StepM m ⟨m.threads.setIfInBounds i (.aborted msg), m.shared, i⟩
   | pair {m : MultiConfig} {i : Nat} {c bc : Config} {σ'' : ExecState}
       {cs : List (Nat × PairTarget)} {idx : Nat} {ts' : Array Thread} :

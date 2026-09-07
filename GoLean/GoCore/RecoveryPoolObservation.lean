@@ -9,16 +9,26 @@ namespace GoLean.GoCore.RecoveryRuntime
 open Machine
 open GoLean.Semantics
 
+/-- The `repanicCollapse` pick an abort event RECORDED (landing chunk L3):
+`[]` at a bound-1 consult (the forced pick 0), the one labeled record at
+bound 2; any other picks shape is not an abort event's and yields `none`
+(fail closed — the observer never guesses a pick). -/
+def abortEventPick? (event : StepEvent) : Option Nat :=
+  match event.picks with
+  | [] => some 0
+  | [⟨.repanicCollapse, _, pick⟩] => some pick
+  | _ => none
+
 def stepAbortRecord? (before after : MultiConfig) (event : StepEvent) (message : String) :
     Option AbortRecord :=
   match event.action, before.threads[event.who]?, after.threads[event.who]? with
   | .aborted, some (.running c _), some (.aborted actual) =>
     if actual != message then none else
-      match c.abort? with
-      | some (first, rest) => match abortMsg before.shared first rest with
+      match c.abort?, abortEventPick? event with
+      | some (first, rest), some pick => match abortMsg before.shared first rest pick with
         | .ok rendered => if rendered != message then none else abortRecord? c
         | .error _ => none
-      | none => none
+      | _, _ => none
   | _, _, _ => none
 
 def attachAbort (before after : MultiConfig) (event : StepEvent)
@@ -31,16 +41,32 @@ def attachAbort (before after : MultiConfig) (event : StepEvent)
 
 theorem stepAbortRecord?_some {before after event message record}
     (h : stepAbortRecord? before after event message = some record) :
-    ∃ (c : Config) (flag : Option ChoiceSite) (first : PanicEntry) (rest : List PanicEntry),
+    ∃ (c : Config) (flag : Option ChoiceSite) (first : PanicEntry) (rest : List PanicEntry)
+      (pick : Nat),
       event.action = .aborted ∧ before.threads[event.who]? = some (.running c flag) ∧
       after.threads[event.who]? = some (.aborted message) ∧ c.abort? = some (first, rest) ∧
-      first :: rest = record.chain ∧ abortMsg before.shared first rest = .ok message := by
+      abortEventPick? event = some pick ∧
+      first :: rest = record.chain ∧ abortMsg before.shared first rest pick = .ok message := by
   fun_cases stepAbortRecord? before after event message <;>
     simp_all [stepAbortRecord?]
-  rename_i c flag actual first rest rendered hafter hbefore haction hactual query render hrender
+  rename_i c flag actual first rest pick rendered hafter hbefore haction hactual hevpick query
+    render hrender
   obtain ⟨first', rest', query', _, _, chain⟩ := abortRecord?_some h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj (query.symm.trans query'))
   exact ⟨first, rest, ⟨rfl, rfl⟩, chain, render⟩
+
+/-- The abort event the pool's tombstone arm emits records exactly the pick
+its consult drew: `consumeAtE`'s `[]` at bound 1 is the forced 0, its
+labeled record at bound 2 carries the pick — so `abortEventPick?` reads the
+consult's own answer back (landing chunk L3). -/
+theorem abortEventPick?_consumeAtE (i : Nat) (bound : Nat) (ch : Choices) (out : List GoString) :
+    abortEventPick? ⟨i, .aborted, (Choices.consumeAtE .repanicCollapse bound ch).2.2, out⟩
+      = some (Choices.consumeAtE .repanicCollapse bound ch).1 := by
+  unfold Choices.consumeAtE
+  by_cases hb : bound ≤ 1
+  · rw [Choices.consumeAt_le_one hb]
+    simp [abortEventPick?, hb]
+  · simp [abortEventPick?, hb]
 
 def execPoolWithAbort : Nat → MultiConfig → RaceState → Choices → GoString →
     Pool.Result × Option AbortRecord

@@ -1028,7 +1028,7 @@ UTF-8 byte is an ASCII upper-case letter. Core's char-level String APIs
 (`toList`/`front`/`get`) depend on `Classical.choice` through their UTF-8
 decoding proofs, and the machine-correspondence theorems are pinned
 constructive (proofs/Audit.lean) — the same constraint the abort renderer
-records at `asciiString?`. Recorded narrowing: a NON-ASCII exported
+records at `utf8String?` (Machine.lean). Recorded narrowing: a NON-ASCII exported
 method name (Unicode upper-case first rune) answers `false` here, which
 makes the imported-marker satisfaction guard REFUSE rather than answer —
 fail-closed, never wrong. -/

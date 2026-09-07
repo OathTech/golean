@@ -2738,7 +2738,40 @@ def main : IO UInt32 := do
   -- machine's runtime-error payload by INDEX, in a state whose table is
   -- just the reserved prefix.
   passed := passed && (← expectTrue "C2: renderPanicPayload renders a runtime-error payload by its reserved index"
-    (GoCore.Machine.renderPanicPayload { types := GoCore.TypeEnv.reserved } (GoCore.Machine.runtimeErrorValue "boom") == some "boom"))
+    (GoCore.Machine.renderPanicPayload { types := GoCore.TypeEnv.reserved } (GoCore.Machine.runtimeErrorValue "boom") == some ("boom", false)))
+  -- Landing chunk L3 (docs/2026-09-07_land-panic-text-tape.md): the abort
+  -- renderer over the `repanicCollapse` tape and the strict UTF-8 first
+  -- line — the gc witness table's shapes at the machine's own renderer.
+  let l3State : GoCore.ExecState := { types := GoCore.TypeEnv.reserved }
+  let l3Str := fun (t : String) (r : Bool) =>
+    (⟨GoCore.Machine.stringPanicValue t, r⟩ : GoCore.Machine.PanicEntry)
+  passed := passed && (← expectTrue "L3: an equal re-panic of a recovered head renders BOTH members by pick (slot 0 = collapse, slot 1 = the two-line form)"
+    (GoCore.Machine.renderPanicHead l3State (l3Str "orig" true) [l3Str "orig" false] 0 == some "orig [recovered, repanicked]"
+      && GoCore.Machine.renderPanicHead l3State (l3Str "orig" true) [l3Str "orig" false] 1 == some "orig [recovered]"
+      && GoCore.Machine.repanicCollapseWidth (l3Str "orig" true) [l3Str "orig" false] == 2))
+  passed := passed && (← expectTrue "L3: unequal adjacent payloads are the forced ` [recovered]` (width 1, pick inert); an unrecovered head carries no suffix"
+    (GoCore.Machine.renderPanicHead l3State (l3Str "orig" true) [l3Str "next" false] 1 == some "orig [recovered]"
+      && GoCore.Machine.repanicCollapseWidth (l3Str "orig" true) [l3Str "next" false] == 1
+      && GoCore.Machine.renderPanicHead l3State (l3Str "a" false) [l3Str "a" false] 0 == some "a"
+      && GoCore.Machine.repanicCollapseWidth (l3Str "a" false) [l3Str "a" false] == 1))
+  passed := passed && (← expectTrue "L3: valid UTF-8 renders byte-exactly; the first line stops at the first LF and a multi-line payload's first line carries no suffix (gc witnesses w12/w14/w15)"
+    (GoCore.Machine.renderPanicHead l3State (l3Str "aé界😀z" false) [] 0 == some "aé界😀z"
+      && GoCore.Machine.renderPanicHead l3State (l3Str "first\nsecond" true) [l3Str "other" false] 0 == some "first"
+      && GoCore.Machine.renderPanicHead l3State (l3Str "first\n" false) [] 0 == some "first"))
+  passed := passed && (← expectTrue "L3/D5: a first line that is not valid UTF-8 has no member (both picks) and the abort REFUSES by name; a valid first line renders even when a later line is invalid (w16)"
+    (let bad : GoCore.Machine.PanicEntry := ⟨.interface .string (.string ⟨#[0xff, 0x5a]⟩), true⟩
+     let badTail : GoCore.Machine.PanicEntry := ⟨.interface .string (.string ⟨#[0x61, 0x0a, 0xff]⟩), false⟩
+     (GoCore.Machine.renderPanicHead l3State bad [bad] 0).isNone
+      && (GoCore.Machine.renderPanicHead l3State bad [bad] 1).isNone
+      && (GoCore.Machine.abortMsg l3State bad [bad] 0 matches .error (.unsupported _))
+      && (GoCore.Machine.abortRefusal l3State bad).startsWith "panic abort rendering: the string payload's first line is not valid UTF-8"
+      && GoCore.Machine.renderPanicHead l3State badTail [] 0 == some "a"))
+  passed := passed && (← expectTrue "L3: the abort consult pops exactly on the recovered-equal shape (G-U: bound 2 pops, bound 1 is inert) and `abortLeftover` mirrors it"
+    (GoCore.Machine.abortConsult (l3Str "orig" true) [l3Str "orig" false] [1, 7] == (1, [7])
+      && GoCore.Machine.abortConsult (l3Str "orig" true) [l3Str "next" false] [1, 7] == (0, [1, 7])
+      && GoCore.Machine.abortLeftover (.panicking [l3Str "orig" true, l3Str "orig" false] .stop) [1, 7] == [7]
+      && GoCore.Machine.seqConsumption l3State (.panicking [l3Str "orig" true, l3Str "orig" false] .stop) == some (.repanicCollapse, 2)
+      && GoCore.Machine.seqConsumption l3State (.panicking [l3Str "orig" true, l3Str "next" false] .stop) == none))
   -- Audit fix R1 (2026-09-05): a `.defined` index the table does not
   -- have is a CARRIER whose key is unknown — `methodCarrierKey?` maps it
   -- to the unrecordable marker, so the record queries answer false
@@ -2956,14 +2989,14 @@ def main : IO UInt32 := do
   passed := passed && (← expectTrue "MS: renderPanicPayload on a defined carrier with NO record is unrenderable (renderer-half pin — never a fabricated main.T(v))"
     (GoCore.Machine.renderPanicPayload dispNoRecord dispBox).isNone)
   passed := passed && (← expectTrue "MS: the same payload WITH the record renders main.T(7) (mutation sensitivity)"
-    (GoCore.Machine.renderPanicPayload dispWithRecord dispBox == some "main.T(7)"))
+    (GoCore.Machine.renderPanicPayload dispWithRecord dispBox == some ("main.T(7)", false)))
   -- Identity vs display (design note 2026-09-05 §3.2): the renderer reads
   -- the DISPLAY record, never the key — with the record present but no
   -- display, the payload renders the visible no-record marker, not the key.
   let dispRecordNoDisplay : GoCore.ExecState :=
     { dispNoRecord with methodSets := #[{ key := "main.T", coverage := .full }] }
   passed := passed && (← expectTrue "DISPLAY: a defined-type payload with a method-set record but NO display record renders the marker, never the key"
-    (GoCore.Machine.renderPanicPayload dispRecordNoDisplay dispBox == some "<TypeId main.T has no display record>(7)"))
+    (GoCore.Machine.renderPanicPayload dispRecordNoDisplay dispBox == some ("<TypeId main.T has no display record>(7)", false)))
   -- The same split in the type-assertion text: identity by key
   -- (red/inner.T ≠ blue/inner.T), display by record (`inner.T` both),
   -- gc's suffix chosen by the declaring package path.

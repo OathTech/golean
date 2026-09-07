@@ -2058,20 +2058,68 @@ def panicPayload : GoValue → GoValue
   | .nil => runtimeErrorValue "panic called with nil argument"
   | v => v
 
-/-- Constructive ASCII decode for abort rendering. Core's
-`String.fromUTF8?` depends on `Classical.choice` (its validation proofs),
-and the machine-correspondence theorems are pinned constructive
-(`proofs/Audit.lean`) — so abort rendering covers single-line ASCII
-payloads and fails closed on any byte ≥ 0x80 AND on an embedded newline
-(Go routes string payloads through `printindented`, so its FIRST abort
-line stops at a `\n` — a multi-line payload has no one-line rendering to
-pin; pre-merge audit 2026-07-25, BUG-004): a rejected payload aborting is
-a visible unsupported, never a wrong message. -/
-def asciiString? (bytes : Array UInt8) : Option String :=
-  bytes.foldl
-    (fun acc b => acc.bind fun out =>
-      if b < 0x80 && b != 0x0A then some (out.push (Char.ofNat b.toNat)) else none)
-    (some "")
+/-- Strict, constructive UTF-8 decode for abort rendering (landing chunk
+L3, `docs/2026-09-07_land-panic-text-tape.md` §2.1; the decoder is the
+sprint's `ff7173dd`, credited). Core's `String.fromUTF8?` depends on
+`Classical.choice` (its validation proofs) and the machine-correspondence
+theorems are pinned constructive, so this reuses the machine's own total
+`decodeRuneAt` (the decoder string range/conversion already use): its
+invalid-encoding sentinel is U+FFFD with width 1; a correctly encoded
+U+FFFD has width 3 and is kept. The offset strictly advances, as in
+`runesOfStringAux`. Newlines are preserved here — the first-line
+projection is `stringFirstLine?`'s, at the BYTE level. -/
+def utf8StringAux? (s : GoString) (off : Nat) (acc : String) : Option String :=
+  if _h : off < s.length then
+    let (rune, width) := decodeRuneAt s off
+    if rune == 0xFFFD && width == 1 then none
+    else utf8StringAux? s (off + max 1 width) (acc.push (Char.ofNat rune.toNat))
+  else some acc
+termination_by s.length - off
+decreasing_by
+  have : 1 ≤ max 1 (decodeRuneAt s off).2 := Nat.le_max_left _ _
+  omega
+
+/-- The decoded text of a byte string, or `none` unless the bytes are
+valid UTF-8 — checked by the decoder AND by the byte round trip
+`text.toUTF8.data == bytes`, so a `some` answer's UTF-8 bytes ARE the
+payload bytes (`utf8String?_bytes`, a theorem of this definition, not a
+trust in the custom decoder). Every invalid encoding (a stray
+continuation byte, an overlong form, a surrogate, a code point above
+U+10FFFF, a truncated sequence) is `none`: gc writes such bytes raw
+(`printindented` byte-copies) and a Lean `String` cannot carry them, so
+the abort REFUSES by name rather than print a form Go never prints
+(BUG-004 item 3 / landing decision D5). -/
+def utf8String? (bytes : Array UInt8) : Option String :=
+  match utf8StringAux? ⟨bytes⟩ 0 "" with
+  | some text => if text.toUTF8.data == bytes then some text else none
+  | none => none
+
+theorem utf8String?_bytes {bytes : Array UInt8} {text : String}
+    (h : utf8String? bytes = some text) : text.toUTF8.data = bytes := by
+  unfold utf8String? at h
+  split at h
+  · split at h
+    · rename_i hb
+      cases h
+      exact eq_of_beq hb
+    · contradiction
+  · contradiction
+
+/-- gc's FIRST abort line for a string payload's bytes, with whether the
+payload continues past it. `printindented` (runtime/error.go:306–318 at
+the pin) writes the payload's raw bytes, a `\t` after every `\n`, and the
+`[recovered…]` suffix follows the WHOLE payload (panic.go:748–752) — on
+its LAST line. So the first line is the bytes BEFORE the first LF,
+decoded strictly, and a multi-line payload's first line carries NO
+suffix (`panic("first\nsecond")` recovered then re-panicked prints
+`panic: first⏎⇥second [recovered]…`; gc witness w14). A payload whose
+first line is valid UTF-8 renders even if a later line is not: the
+observation compared IS the first line, and its bytes are gc's bytes
+(witness w16: `panic("a\n\xff")` → `a`). Nothing is claimed about the
+unseen tail. -/
+def stringFirstLine? (bytes : Array UInt8) : Option (String × Bool) :=
+  let line := bytes.takeWhile (· != 0x0A)
+  (utf8String? line).map fun text => (text, line.size < bytes.size)
 
 /-- Does `dynTy` carry `name() string` — the shape of BOTH interfaces Go's
 `preprintpanics` consults (`error`'s `Error() string` and `stringer`'s
@@ -2094,7 +2142,10 @@ def panicPayloadIsRewritten (state : ExecState) (dynTy : Ty) : Bool :=
   hasNoArgStringMethod state dynTy "Error" || hasNoArgStringMethod state dynTy "String"
 
 /-- Render a panic payload as Go's first abort line renders it (after
-`panic: `).
+`panic: `): the payload's TEXT and whether the payload continues onto a
+second line (string payloads only — `stringFirstLine?`; every other
+family is single-line). The recovered-suffix and first-line rule is
+`renderPanicHead`'s.
 
 Go's `preprintpanics` REWRITES the payload to `v.Error()` / `v.String()`
 before `printpanicval` runs, so `printanycustomtype`'s `main.T(v)` shape
@@ -2103,15 +2154,17 @@ would require CALLING a method at abort time — which the terminal rule
 cannot do — so a payload whose dynamic type implements either interface
 fails CLOSED here (pre-merge audit 2026-07-31, finding 3; the unconditional
 `main.T(v)` arm this replaces was a fail-closed → wrong-answer regression).
-Everything else not pinned is `none` for the same reason. -/
-def renderPanicPayload (state : ExecState) : GoValue → Option String
-  | .nil => some "nil"
+A string whose FIRST LINE is not valid UTF-8 is `none` (D5: no byte
+channel — `utf8String?`). Everything else not pinned is `none` for the
+same reason. -/
+def renderPanicPayload (state : ExecState) : GoValue → Option (String × Bool)
+  | .nil => some ("nil", false)
   | .interface (.defined idx) (.string s) =>
-      if idx == runtimeErrorTypeIdx then asciiString? s.bytes else none
-  | .interface .string (.string s) => asciiString? s.bytes
+      if idx == runtimeErrorTypeIdx then stringFirstLine? s.bytes else none
+  | .interface .string (.string s) => stringFirstLine? s.bytes
   | .interface (.int dkind) (.int v kind) =>
-      if dkind == kind then some (toString v) else none
-  | .interface .bool (.bool b) => some (if b then "true" else "false")
+      if dkind == kind then some (toString v, false) else none
+  | .interface .bool (.bool b) => some (if b then "true" else "false", false)
   -- A DEFINED-type payload renders qualified with Go's
   -- `printanycustomtype` shape: `main.Code(7)` (BUG-004 item 2 — the
   -- identity is modeled since the interfaces campaign; the type prints
@@ -2139,7 +2192,7 @@ def renderPanicPayload (state : ExecState) : GoValue → Option String
         -- does not have is unrenderable (fail closed), never a guess. A
         -- present entry renders its DISPLAY record (no record: the visible
         -- marker, never the key — design note 2026-09-05 §3.2).
-        (state.types.nameOf? idx).map fun name => s!"{displayNameOfId state name}({v})"
+        (state.types.nameOf? idx).map fun name => (s!"{displayNameOfId state name}({v})", false)
   | _ => none
 
 /-- The diagnostic suffix of the unrenderable-abort refusal: a boxed
@@ -2151,30 +2204,74 @@ def payloadDynamicTypeNote (state : ExecState) : GoValue → String
   | .interface dynTy _ => s!" (dynamic type {goTypeNameForMessage state dynTy})"
   | _ => ""
 
-/-- Go's first abort line for a panic chain. The `[recovered, repanicked]`
-collapse is decided by the runtime via eface IDENTITY — a bitwise compare
-of the interface's type word AND data pointer (`preprintpanics`,
-runtime/panic.go), NOT semantic equality (pre-merge audit 2026-07-25;
-the §A3 probe that suggested otherwise was constant-folded — `"or"+"ig"`
-shares a static eface, `mk("or","ig")` at runtime does not). Value-level
-state decides only one direction: structurally UNEQUAL payloads can never
-share a box, so ` [recovered]` is certain there; structurally EQUAL
-payloads may or may not collapse (`panic(recover())` and constant
-literals do, runtime-computed equal values do not) — fail closed
-(BUG-004). -/
-def renderPanicHead (state : ExecState) (first : PanicEntry) (rest : List PanicEntry) :
-    Option String :=
-  (renderPanicPayload state first.value).bind fun base =>
-    if first.recovered then
-      match rest with
-      | e :: _ =>
-          if e.value == first.value then
-            none -- boxing identity unmodeled: collapse undecidable (BUG-004)
-          else
-            some (base ++ " [recovered]")
-      | [] => some (base ++ " [recovered]")
-    else
-      some base
+/-- **The `repanicCollapse` envelope statement** (`ChoiceSite.repanicCollapse`,
+State.lean; landing chunk L3, `docs/2026-09-07_land-panic-text-tape.md`
+§2.2): the abort's head entry is RECOVERED and its successor carries an
+EQUAL payload — a recovered panic value re-panicked. gc decides whether the
+two lines COLLAPSE into one `… [recovered, repanicked]` by eface IDENTITY —
+a bitwise compare of the interface's type word AND data pointer
+(`preprintpanics`, runtime/panic.go:715 at the pin), NOT semantic
+equality (pre-merge audit 2026-07-25; the §A3 probe that suggested
+otherwise was constant-folded — `"or"+"ig"` shares a static eface,
+`mk("or","ig")` at runtime does not). Value-level state decides only one
+direction: structurally UNEQUAL payloads can never share a box, so
+` [recovered]` is forced there; structurally EQUAL payloads collapse when
+the recovered box is passed through (`panic(r)`, `panic(recover())`),
+do NOT collapse when the value is re-boxed (`panic(r.(string))`, a
+runtime-computed string — a fresh allocation), and collapse or not by
+LINKER dedup when both are literal constants — and every go ≤ 1.24
+printed the two-line form for all of them (the collapse is CL 645916,
+go1.25). The machine has no boxing identity, so here the marker is
+LATITUDE relative to its state and is reified on the tape (the BUG-087
+panic-text ruling «demonic choice so both are admitted», [USER]
+2026-09-03 relayed; R-1: the rendered text is spec-silent), never
+decided in evaluator recursion and never a single hard-coded member. -/
+def repanicEqualNext (first : PanicEntry) (rest : List PanicEntry) : Bool :=
+  first.recovered && (match rest with
+    | e :: _ => e.value == first.value
+    | [] => false)
+
+/-- The site's width at an abort: 2 exactly on the `repanicEqualNext`
+shape (slot 0 = COLLAPSE, slot 1 = the two-line form's first line), 1
+everywhere else — a bound-1 consult pops nothing (G-U), so every other
+abort consumes exactly as before. Decided by the chain SHAPE alone, never
+by renderability: a chain the renderer then refuses consults too, and the
+refusal is the same under either pick. -/
+def repanicCollapseWidth (first : PanicEntry) (rest : List PanicEntry) : Nat :=
+  if repanicEqualNext first rest then 2 else 1
+
+/-- THE abort's consult — the ONE place the `repanicCollapse` pick is
+drawn (shared by `stepFn`'s `.panicking _ .stop` arm and the pool's
+tombstone arm, `stepThread`): `Choices.consumeAt` at
+`repanicCollapseWidth`, under the uniform rule. The abort is the only
+transition that observes the marker, so the draw is observable exactly
+when it exists (a draw at the re-raise would pop on re-panics that are
+later recovered and never print). -/
+def abortConsult (first : PanicEntry) (rest : List PanicEntry) (ch : Choices) :
+    Nat × Choices :=
+  Choices.consumeAt .repanicCollapse (repanicCollapseWidth first rest) ch
+
+/-- The suffix gc appends to the payload (panic.go:749–752 at the pin):
+` [recovered, repanicked]` iff the head is recovered AND its duplicate
+successor line is suppressed — the `repanicCollapse` pick 0 on the
+`repanicEqualNext` shape; ` [recovered]` iff recovered otherwise; nothing
+for an unrecovered head (gc's oldest line carries no suffix whether or
+not a later duplicate is suppressed — witness w25). -/
+def recoveredSuffix (first : PanicEntry) (rest : List PanicEntry) (pick : Nat) : String :=
+  if !first.recovered then ""
+  else if repanicEqualNext first rest && pick == 0 then " [recovered, repanicked]"
+  else " [recovered]"
+
+/-- Go's first abort line for a panic chain, given the `repanicCollapse`
+pick: the payload's first line (`renderPanicPayload`), then the suffix —
+appended ONLY when the payload is single-line, because gc writes the
+suffix after the WHOLE payload, i.e. on its last line (`stringFirstLine?`;
+witnesses w14/w15/w34). `none` exactly where the payload refuses
+(`renderPanicPayload`'s fail-closed arms). -/
+def renderPanicHead (state : ExecState) (first : PanicEntry) (rest : List PanicEntry)
+    (pick : Nat) : Option String :=
+  (renderPanicPayload state first.value).map fun (base, multiline) =>
+    if multiline then base else base ++ recoveredSuffix first rest pick
 
 /-- Mark the newest (last) chain entry recovered, returning its payload —
 what `recover()` yields. `none` if the chain is empty or the newest entry
@@ -2796,18 +2893,48 @@ def Config.abort? : Config → Option (PanicEntry × List PanicEntry)
   | .panicking (first :: rest) .stop => some (first, rest)
   | _ => none
 
-/-- Go's first `panic: ` line for an abort, or the refusal that names why
-it cannot be rendered (BUG-004's boxing-identity collapse). Shared by
-the sequential machine's abort (`stepFn`) and the pool's (`stepThread`).
-The refusal names the payload's dynamic type by its table key beside the
-`repr`, which prints a bare `Ty.defined i` since C2 (`payloadDynamicTypeNote`,
-audit fix R16). -/
-def abortMsg (s : ExecState) (first : PanicEntry) (rest : List PanicEntry) :
+/-- The cause a refused abort rendering NAMES (fail closed BY NAME, CLAUDE.md):
+a string or `runtime.Error` payload whose FIRST LINE is not valid UTF-8 is
+the D5 refusal — gc writes the raw bytes and the `String`-valued
+observation cannot carry them (BUG-004 item 3, `docs/2026-09-07_land-panic-
+text-tape.md` §2.3); everything else is the standing payload refusal
+(BUG-004 item 4's `Error()`/`String()` rewrite, an unpinned family, a
+carrier without a method-set record), named by the payload's dynamic type
+key beside the `repr`, which prints a bare `Ty.defined i` since C2
+(`payloadDynamicTypeNote`, audit fix R16). -/
+def abortRefusal (s : ExecState) (first : PanicEntry) : String :=
+  let invalidFirstLine : Option (Array UInt8) := match first.value with
+    | .interface .string (.string gs) =>
+        if (stringFirstLine? gs.bytes).isNone then some gs.bytes else none
+    | .interface (.defined idx) (.string gs) =>
+        if idx == runtimeErrorTypeIdx && (stringFirstLine? gs.bytes).isNone then some gs.bytes
+        else none
+    | _ => none
+  match invalidFirstLine with
+  | some bytes =>
+      s!"panic abort rendering: the string payload's first line is not valid UTF-8 ({bytes.size} payload byte(s), first line {(bytes.takeWhile (· != 0x0A)).toList.map (·.toNat)}) — gc prints the raw bytes and the String-valued observation cannot carry them (BUG-004 item 3 / landing decision D5: no byte channel)"
+  | none =>
+      s!"panic abort rendering for payload {repr first.value}{payloadDynamicTypeNote s first.value}"
+
+/-- Go's first `panic: ` line for an abort under the `repanicCollapse`
+pick, or the refusal that names why it cannot be rendered. Shared by the
+sequential machine's abort (`stepFn`) and the pool's (`stepThread`); both
+draw the pick through `abortConsult` first. -/
+def abortMsg (s : ExecState) (first : PanicEntry) (rest : List PanicEntry) (pick : Nat) :
     Except Stop String :=
-  match renderPanicHead s first rest with
+  match renderPanicHead s first rest pick with
   | some msg => return msg
-  | none => throw (.unsupported
-      s!"panic abort rendering for payload {repr first.value}{payloadDynamicTypeNote s first.value}")
+  | none => throw (.unsupported (abortRefusal s first))
+
+/-- The stream after an abort's consult, from the configuration: what the
+pool returns and the sequential driver DROPS (the machine stops at its
+`panic` terminal — no leftover is returned on any error path), exposed so
+enumerators that replay `stepFn` can account for the pop exactly. `ch`
+itself at a non-abort configuration. -/
+def abortLeftover (c : Config) (ch : Choices) : Choices :=
+  match c.abort? with
+  | some (first, rest) => (abortConsult first rest ch).2
+  | none => ch
 
 /-! ## The signal table (B4) -/
 
@@ -3923,19 +4050,36 @@ def consumesUnseqPanic : Config → Bool
   | .panicking _ (.probeK _) => true
   | _ => false
 
+/-- Does this configuration's abort draw the `repanicCollapse` pick
+(BUG-004 item 1, landing chunk L3)? `true` exactly at an abort
+(`Config.abort?`) whose head is recovered with an equal successor payload
+— `repanicCollapseWidth = 2`; every other abort consults at bound 1 and
+pops nothing. The stream-obliviousness checkers exclude exactly this
+(`stepFn_oblivious`' `hnr`, `poolThreadOblivious`, `innerVecs`) — a
+fail-closed flag like `consumesUnseqPanic`. -/
+def consumesRepanicCollapse (c : Config) : Bool :=
+  match c.abort? with
+  | some (first, rest) => repanicEqualNext first rest
+  | none => false
+
 /-- **The sequential consumption projection**: the site and bound the next
 `stepFn` step draws — `some` exactly when the consult POPS (a bound-≤-1
-consult is `none` at every site — the uniform rule, G-U). Six sites, one
+consult is `none` at every site — the uniform rule, G-U). Seven sites, one
 consult function each: `mapIter` at a live range frame, `appendSpill` at
 a spilling append, `l2Entry` at a multi-ready select, `tryLock` at an
 acquirable TRY head, `nilValueMethodText` at a panicking frame entry in
 the wrapper family, `unseqPanic` at a panic that reached an
-unsequenced-operand probe frame (bound 2, constant). -/
+unsequenced-operand probe frame (bound 2, constant), `repanicCollapse` at
+an ABORT whose head is recovered with an equal successor payload (bound 2
+there, `repanicCollapseWidth`; the abort's step is the `panic` terminal,
+so this is the one projection arm whose step never returns `.ok`). -/
 def seqConsumption (σ : ExecState) (c : Config) : Option (ChoiceSite × Nat) :=
   match c with
   | .next (.mapIterK _ _ keyTy valTy _ base produced start _ _) =>
       mapIterConsult? σ keyTy valTy base produced start
   | .panicking _ (.probeK _) => some (.unseqPanic, 2)
+  | .panicking (first :: rest) .stop =>
+      if repanicEqualNext first rest then some (.repanicCollapse, 2) else none
   | c =>
     match c.applyPos with
     | some (.stmt op _, vs, _, _) => stmtConsult? σ op vs

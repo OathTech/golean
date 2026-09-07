@@ -1,0 +1,15 @@
+# id	subject	args	expected_status	expected_reason	features
+unicode-two	panicUnicodeTwo	-	panic	é	panic,strings,unicode
+unicode-three	panicUnicodeThree	-	panic	界	panic,strings,unicode
+unicode-four	panicUnicodeFour	-	panic	😀	panic,strings,unicode
+unicode-mixed	panicUnicodeMixed	-	panic	aé界😀z	panic,strings,unicode
+unicode-newline	panicUnicodeNewline	-	panic	é	panic,strings,unicode
+trailing-newline	panicTrailingNewline	-	panic	first	panic,strings
+recovered-newline	panicRecoveredNewline	-	panic	first	panic,recover,defer,strings
+recovered-unicode	panicRecoveredUnicode	-	panic	é [recovered]	panic,recover,defer,strings,unicode
+output-prefix	panicPrintUnicode	-	panic	é	panic,strings,unicode,print
+invalid-after-lf	panicInvalidAfterLF	-	panic	a	panic,strings,invalid_utf8
+invalid-single	panicInvalidSingle	-	panic	Z	panic,strings,invalid_utf8
+invalid-first-line	panicInvalidFirstLine	-	panic	Z	panic,strings,invalid_utf8
+invalid-recovered-equal	panicInvalidRecoveredEqual	-	panic	Z	panic,recover,defer,strings,invalid_utf8
+invalid-recovered-value	invalidRecoveredValue	-	ok	-	panic,recover,defer,strings,invalid_utf8,identity

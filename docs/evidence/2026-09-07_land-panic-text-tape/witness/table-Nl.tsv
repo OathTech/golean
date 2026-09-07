@@ -1,0 +1,8 @@
+w04_two_literals	-N -l	 o r i g [ r e c o v e r e d , r e p a n i c k e d ] \n 
+w06b_empty_two_literals	-N -l	 [ r e c o v e r e d , r e p a n i c k e d ] \n 
+w11_int_large_two_literals	-N -l	 1 0 0 0 [ r e c o v e r e d , r e p a n i c k e d ] \n 
+w26_unequal_multiline_recovered	-N -l	 303 251 [ r e c o v e r e d , r e p a n i c k e d ] \n 
+w29_string_var_literal	-N -l	 o r i g [ r e c o v e r e d , r e p a n i c k e d ] \n 
+w09_int_small_dyn	-N -l	 7 [ r e c o v e r e d ] \n 
+w08_bool_dyn	-N -l	 t r u e [ r e c o v e r e d , r e p a n i c k e d ] \n 
+w01_panic_r	-N -l	 o r i g [ r e c o v e r e d , r e p a n i c k e d ] \n 

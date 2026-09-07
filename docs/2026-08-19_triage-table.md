@@ -468,6 +468,20 @@ spec does not describe at all — this is `preprintpanics` behavior):
 stops at an embedded `\n` — used to sit in this row. It is no longer a
 (c) claim: see the split below.)
 
+**2026-09-07, landing chunk L3 (`docs/2026-09-07_land-panic-text-tape.md`):
+impossibility 1 is RE-ENVELOPED, not decided** — `ChoiceSite.repanicCollapse`
+draws the marker at the abort (bound 2 on the recovered-equal shape; slot 0
+= collapse, slot 1 = the two-line form), under BUG-087's panic-text ruling
+«demonic choice so both are admitted» ([USER] 2026-09-03, relayed) and R-1;
+gc's draw is eface identity the machine does not model (`runtime/panic.go:715`),
+and both members are gc-realized at the pin (`panic(r)` vs `panic(r.(string))`;
+every go ≤ 1.24 printed the two-line form). `repanic-same-value-abort` leaves
+this row for the membership lane (PASS); C4 keeps impossibility 2's two rows.
+A7 (L12b) is FIXED in the same chunk; its residue — a first line that is not
+valid UTF-8 — is RED by name under landing decision D5 (three
+`panic-recover/panic-text/invalid-*` rows on BUG-004's Cases line), not a
+(c) claim: it is an observation-channel limit, not a machine impossibility.
+
 **Why (c) and not (b):** items 1 and 2 are not missing features; they
 are demands that the machine's own structure cannot satisfy without
 changing what the machine IS (allocation identity; evaluation inside a

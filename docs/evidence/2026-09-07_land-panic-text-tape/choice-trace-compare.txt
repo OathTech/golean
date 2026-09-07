@@ -1,0 +1,86 @@
+== (1) status + obsHash per (row, stream)
+lines before: 21565  after: 21565
+DIFFERENT lines: 408 (< before, > after); distinct rows:
+panic-recover/panic-newline-abort
+panic-recover/panic-text/invalid-after-lf
+panic-recover/panic-text/invalid-first-line
+panic-recover/panic-text/invalid-recovered-equal
+panic-recover/panic-text/invalid-single
+panic-recover/panic-text/output-prefix
+panic-recover/panic-text/recovered-newline
+panic-recover/panic-text/recovered-unicode
+panic-recover/panic-text/trailing-newline
+panic-recover/panic-text/unicode-four
+panic-recover/panic-text/unicode-mixed
+panic-recover/panic-text/unicode-newline
+panic-recover/panic-text/unicode-three
+panic-recover/panic-text/unicode-two
+panic-recover/repanic-collapse/bool-reboxed
+panic-recover/repanic-collapse/defined-passthrough
+panic-recover/repanic-collapse/defined-reboxed
+panic-recover/repanic-collapse/empty-literals
+panic-recover/repanic-collapse/empty-reboxed
+panic-recover/repanic-collapse/global-var
+panic-recover/repanic-collapse/index-two-faults
+panic-recover/repanic-collapse/int-literals
+panic-recover/repanic-collapse/int-reboxed
+panic-recover/repanic-collapse/multiline-passthrough
+panic-recover/repanic-collapse/multiple
+panic-recover/repanic-collapse/nil-passthrough
+panic-recover/repanic-collapse/passthrough-var
+panic-recover/repanic-collapse/reboxed-string
+panic-recover/repanic-collapse/runtime-computed
+panic-recover/repanic-collapse/runtime-error-passthrough
+panic-recover/repanic-collapse/runtime-error-two-faults
+panic-recover/repanic-collapse/two-literals
+panic-recover/repanic-collapse/unicode-literals
+panic-recover/repanic-same-value-abort
+== (2) per-site consumption totals
+choice-trace-before: l5ExitWindow=325 mapIter=1307 l2Entry=24 l1Sched=9443 backEdge=2404 l2Arrival=3 postOp=4534 unseqPanic=417 appendSpill=4874 tryLock=101 nilValueMethodText=84 l4Waiter=22 
+choice-trace-after: l5ExitWindow=325 mapIter=1307 l2Entry=24 l1Sched=9443 backEdge=2404 l2Arrival=3 postOp=4534 unseqPanic=417 repanicCollapse=126 appendSpill=4874 tryLock=101 nilValueMethodText=84 l4Waiter=22 
+== (3) per (row, stream) record sequences
+(row, stream) lines whose record sequence changed: 126
+distinct rows with changed records:
+panic-recover/panic-text/invalid-recovered-equal
+panic-recover/repanic-collapse/bool-reboxed
+panic-recover/repanic-collapse/defined-passthrough
+panic-recover/repanic-collapse/defined-reboxed
+panic-recover/repanic-collapse/empty-literals
+panic-recover/repanic-collapse/empty-reboxed
+panic-recover/repanic-collapse/global-var
+panic-recover/repanic-collapse/index-two-faults
+panic-recover/repanic-collapse/int-literals
+panic-recover/repanic-collapse/int-reboxed
+panic-recover/repanic-collapse/multiline-passthrough
+panic-recover/repanic-collapse/multiple
+panic-recover/repanic-collapse/nil-passthrough
+panic-recover/repanic-collapse/passthrough-var
+panic-recover/repanic-collapse/reboxed-string
+panic-recover/repanic-collapse/runtime-computed
+panic-recover/repanic-collapse/runtime-error-passthrough
+panic-recover/repanic-collapse/runtime-error-two-faults
+panic-recover/repanic-collapse/two-literals
+panic-recover/repanic-collapse/unicode-literals
+panic-recover/repanic-same-value-abort
+== (4) repanicCollapse records after (bound 2 only — width-1 consults pop nothing and leave no record)
+      6 panic-recover/panic-text/invalid-recovered-equal
+      6 panic-recover/repanic-collapse/bool-reboxed
+      6 panic-recover/repanic-collapse/defined-passthrough
+      6 panic-recover/repanic-collapse/defined-reboxed
+      6 panic-recover/repanic-collapse/empty-literals
+      6 panic-recover/repanic-collapse/empty-reboxed
+      6 panic-recover/repanic-collapse/global-var
+      6 panic-recover/repanic-collapse/index-two-faults
+      6 panic-recover/repanic-collapse/int-literals
+      6 panic-recover/repanic-collapse/int-reboxed
+      6 panic-recover/repanic-collapse/multiline-passthrough
+      6 panic-recover/repanic-collapse/multiple
+      6 panic-recover/repanic-collapse/nil-passthrough
+      6 panic-recover/repanic-collapse/passthrough-var
+      6 panic-recover/repanic-collapse/reboxed-string
+      6 panic-recover/repanic-collapse/runtime-computed
+      6 panic-recover/repanic-collapse/runtime-error-passthrough
+      6 panic-recover/repanic-collapse/runtime-error-two-faults
+      6 panic-recover/repanic-collapse/two-literals
+      6 panic-recover/repanic-collapse/unicode-literals
+      6 panic-recover/repanic-same-value-abort

@@ -9,11 +9,11 @@ python3 "$CUSTOMER_ROOT/gate_checks.py" preflight
 cd "$CUSTOMER_ROOT"
 "$REPO_ROOT/scripts/capped" lake build
 python3 gate_checks.py dependencies
-for module in RecoveryCallLayout RecoverySingleton RecoveryPool RecoveryChoices; do
+for module in RecoveryCallLayout RecoverySingleton RecoveryPool RecoveryChoices StringPanic RecoveryTerminal RecoveryPoolObservationTyped; do
   sha256sum "$REPO_ROOT/GoLean/GoCore/$module.lean"
   "$REPO_ROOT/scripts/capped" lake env lean "$REPO_ROOT/GoLean/GoCore/$module.lean"
 done
-for module in Heap Ghost Lifting Rules Adequacy Program Admission Allocation Call Unwind Return Examples Readout Driver SharedProgram SharedHelpers SharedRecovery SharedDrain Shared SharedReadout SharedDriver OwnershipTests Audit; do
+for module in Heap Ghost Lifting Rules Adequacy Program Admission Allocation Call Unwind Return Examples Readout Driver SharedProgram SharedHelpers SharedRecovery SharedDrain Shared SharedReadout SharedDriver OwnershipTests Terminal Audit; do
   sha256sum "GoLeanIris/$module.lean"
   "$REPO_ROOT/scripts/capped" lake env lean "GoLeanIris/$module.lean"
 done

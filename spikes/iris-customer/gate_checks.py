@@ -11,8 +11,8 @@ import tempfile
 
 SPIKE = Path(__file__).resolve().parent
 ROOT = SPIKE.parents[1]
-MODULES = ["Heap","Ghost","Lifting","Rules","Adequacy","Program","Admission","Allocation","Call","Unwind","Return","Examples","Readout","Driver","SharedProgram","SharedHelpers","SharedRecovery","SharedDrain","Shared","SharedReadout","SharedDriver","OwnershipTests","Audit"]
-CORE_MODULES = ["RecoveryCallLayout","RecoverySingleton","RecoveryPool","RecoveryChoices"]
+MODULES = ["Heap","Ghost","Lifting","Rules","Adequacy","Program","Admission","Allocation","Call","Unwind","Return","Examples","Readout","Driver","SharedProgram","SharedHelpers","SharedRecovery","SharedDrain","Shared","SharedReadout","SharedDriver","OwnershipTests","Terminal","Audit"]
+CORE_MODULES = ["RecoveryCallLayout","RecoverySingleton","RecoveryPool","RecoveryChoices","StringPanic","RecoveryTerminal","RecoveryPoolObservationTyped"]
 SOURCES = [SPIKE / "GoLeanIris" / f"{name}.lean" for name in MODULES] + [SPIKE / "GoLeanIris.lean"]
 
 

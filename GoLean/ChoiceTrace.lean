@@ -93,10 +93,12 @@ def siteName : ChoiceSite → String
   | .nilValueMethodText => "nilValueMethodText"
   | .tryLock => "tryLock"
   | .unseqPanic => "unseqPanic"
+  | .repanicCollapse => "repanicCollapse"
 
 def allSites : List ChoiceSite :=
   [.mapIter, .appendSpill, .l2Entry, .l2Arrival, .l4Waiter, .l1Sched,
-   .l5ExitWindow, .postOp, .backEdge, .nilValueMethodText, .tryLock, .unseqPanic]
+   .l5ExitWindow, .postOp, .backEdge, .nilValueMethodText, .tryLock, .unseqPanic,
+   .repanicCollapse]
 
 /-- `allSites` is COMPLETE: every `ChoiceSite` constructor is listed (a
 new site that forgets this list fails here, not in a trace reader —
@@ -107,9 +109,13 @@ theorem allSites_complete : ∀ s : ChoiceSite, s ∈ allSites := by
 /-- Pool-layer sites: the ones whose consumption the machine records in
 `StepEvent.picks` (`Choices.consumeAtE`); the sequential-machine sites
 (`mapIter`, `appendSpill`, `l2Entry`, `tryLock`) and the driver's
-`l5ExitWindow` consume through `Choices.consumeAt` and emit no record. -/
+`l5ExitWindow` consume through `Choices.consumeAt` and emit no record.
+The abort's `repanicCollapse` consult (landing chunk L3) is RECORDED when
+the pool's tombstone arm draws it (`stepThread`, `consumeAtE`); the
+sequential `$pkginit` phase's abort has no event to record into and this
+tracer's `initLoop` compares no records there. -/
 def isPoolRecorded : ChoiceSite → Bool
-  | .l1Sched | .postOp | .backEdge | .l2Arrival | .l4Waiter => true
+  | .l1Sched | .postOp | .backEdge | .l2Arrival | .l4Waiter | .repanicCollapse => true
   | _ => false
 
 /-- The menu facts for one consumption, computed from the PRE-STATE
@@ -418,6 +424,28 @@ def unseqPanicFacts (c : Config) : MenuFacts :=
            invariants := [("unseqPanic site at a configuration that is not a panic at a probe frame", false)],
            pickCheck := fun _ => [] }
 
+/-- The `repanicCollapse` site's menu facts (BUG-004 item 1, landing chunk
+L3): the pick exists ONLY at an abort — `.panicking (first :: rest) .stop`
+— whose head is recovered and whose successor carries an equal payload,
+where the width is the constant 2 (COLLAPSE / two-line form); the
+invariants recompute that shape from the chain by a second, direct
+reading (the head's `recovered` flag; `BEq` on the two payloads); any
+other configuration reporting the site is a violation. -/
+def repanicCollapseFacts (c : Config) : MenuFacts :=
+  match c with
+  | .panicking (first :: rest) .stop =>
+      let equalNext := match rest with
+        | e :: _ => e.value == first.value
+        | [] => false
+      { specWidth := some (if first.recovered && equalNext then 2 else 1)
+        invariants :=
+          [ ("head entry is recovered", first.recovered),
+            ("successor payload equals the head payload (BEq)", equalNext) ]
+        pickCheck := fun p => if p ≥ 2 then [s!"pick {p} outside the two renderings"] else [] }
+  | _ => { specWidth := none,
+           invariants := [("repanicCollapse site at a configuration that is not an abort", false)],
+           pickCheck := fun _ => [] }
+
 /-- TryLock facts (Q-TRYLOCK, `ChoiceSite.tryLock`): the width is
 recomputed through the machine's own `tryLockWidth` over the receiver
 cell (2 iff `tryAcquire` says acquirable, else 1 — and a width-1 consult
@@ -478,6 +506,7 @@ def seqFacts (σ : ExecState) (c : Config) : ChoiceSite → MenuFacts
   | .appendSpill => spillFacts σ c
   | .tryLock => tryLockFacts σ c
   | .unseqPanic => unseqPanicFacts c
+  | .repanicCollapse => repanicCollapseFacts c
   | .nilValueMethodText =>
       match entryCallSite? c with
       | some (fid, args) => nilTextFacts σ fid args

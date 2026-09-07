@@ -1,4 +1,5 @@
 import GoLean.Interface
+import Tests.PanicRendering
 
 namespace GoLean.GateA1
 open GoCore GoCore.Machine Semantics

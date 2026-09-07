@@ -114,14 +114,18 @@ theorem Control.singleton_step {world fs c} (h : Control world fs c)
     simp only [hb, Bool.false_eq_true, reduceIte]
     exact hinto
 
+/-- The singleton pool's abort step, under the stream's `repanicCollapse`
+pick (landing chunk L3): the tombstone, the popped stream, the recorded
+pick — `MultiSound.stepMulti_abort_single` at the syntactic abort shape. -/
 theorem singleton_abort_step (s : ExecState) (first : PanicEntry) (rest : List PanicEntry)
     (ch : Choices) :
     stepMulti ⟨#[.running (.panicking (first :: rest) .stop) none], s, 0⟩ ch =
-      (abortMsg s first rest).map (fun msg =>
-        (⟨#[.aborted msg], s, 0⟩, ch, ⟨0, .aborted, [], []⟩)) := by
-  simp only [stepMulti, Thread.atBoundary, Config.atBoundary, stepThreadInto, stepThread,
-    Config.abort?, isBlockedConfig, Bool.false_eq_true, reduceIte,
-    Array.getElem?_singleton, Except.map, Bind.bind, Except.bind]
-  cases abortMsg s first rest <;> rfl
+      (abortMsg s first rest
+          (Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch).1).map
+        (fun msg => (⟨#[.aborted msg], s, 0⟩,
+          (Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch).2.1,
+          ⟨0, .aborted,
+            (Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch).2.2, []⟩)) :=
+  stepMulti_abort_single rfl
 
 end GoLean.GoCore.RecoveryRuntime

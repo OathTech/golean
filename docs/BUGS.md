@@ -2741,7 +2741,82 @@ without re-running `step_complete_any_wf`'s mapIterNext case.
 
 - Status: open
 - Pinned-by: differential
-- Cases: panic-recover/repanic-same-value-abort, panic-recover/panic-newline-abort, panic-recover/panic-defined-payload-methods/error, panic-recover/panic-defined-payload-methods/stringer, panic-recover/panic-controls/newline, panic-recover/panic-controls/recovered-newline, panic-recover/panic-controls/child-confluent, panic-recover/panic-markers/mixed-line, panic-recover/panic-markers/fake-trace, panic-recover/panic-markers/literal-continuation
+- Cases: panic-recover/panic-text/invalid-single, panic-recover/panic-text/invalid-first-line, panic-recover/panic-text/invalid-recovered-equal, panic-recover/panic-defined-payload-methods/error, panic-recover/panic-defined-payload-methods/stringer, panic-recover/panic-controls/newline, panic-recover/panic-controls/recovered-newline, panic-recover/panic-controls/child-confluent, panic-recover/panic-markers/mixed-line, panic-recover/panic-markers/fake-trace, panic-recover/panic-markers/literal-continuation
+
+**Landing chunk L3, 2026-09-07 ([AGENT] lane `land-panic-text`,
+`docs/2026-09-07_land-panic-text-tape.md`; the typed-consumer sprint's
+rendering work REDONE per doctrine — the sprint's own hunks never landed).
+Three of this entry's four items move; the Cases line above is the result.**
+
+- **Item 1 (the `[recovered, repanicked]` collapse) is RE-ENVELOPED, not
+  decided:** `ChoiceSite.repanicCollapse` (State.lean), bound 2 exactly at
+  an abort whose head is a recovered entry with an EQUAL successor payload
+  (`repanicCollapseWidth`, Machine.lean), drawn at THE ABORT by both drivers
+  (`abortConsult`; `stepFn`'s `.panicking _ .stop` arm, the pool's tombstone
+  arm) — slot 0 = the collapsed `… [recovered, repanicked]`, slot 1 = the
+  two-line form's `… [recovered]`. Ruling followed: BUG-087's panic-text
+  ruling «(2) panic-text, agree, demonic choice so both are admitted»
+  ([USER] 2026-09-03, relayed — `docs/2026-08-31_qrow-rulings.md`) and R-1
+  (the rendered text is spec-silent, quotiented via membership; KIND and
+  control flow stay exact). WHY latitude and not a pin, from gc at the pin
+  (`runtime/panic.go:715`, `preprintpanics`): the marker is eface IDENTITY —
+  `panic(r)` passes the recovered box through and collapses (witness w01);
+  a re-boxed equal value (`panic(r.(string))`, a runtime-computed string, a
+  package var, `panic(r.(int))`) gets a fresh `convTstring`/`convT64`
+  allocation and prints the two-line form (w03/w05/w30/w09); two literal
+  constants collapse or not by LINKER dedup (w04/w11); bools always collapse
+  (`staticuint64s`, w08); two nil-dereference faults collapse (the runtime's
+  shared `memoryError`, w31) while two index faults do not (w32); and every
+  go ≤ 1.24 printed the two-line form for ALL of them (CL 645916, go1.25).
+  The machine has no boxing identity; modelling gc's would be a gc-specific
+  allocation/layout model of exactly the address-exposing kind register #6
+  forbids. `panic-recover/repanic-same-value-abort` moves
+  FAIL/lean-observation → PASS/**membership** (`members=2`, gc draws slot 0
+  there; its `expected_reason` `orig` is kept — the substring both members
+  share) and LEAVES this Cases line; the new
+  `panic-recover/repanic-collapse/*` family (18 membership rows, gc drawing
+  slot 0 on 11 and slot 1 on 7, both members gc-certified on the string,
+  int, defined-int and `runtime.Error` families; 4 strict controls) is the
+  envelope's corpus. Latitude inventory R10a; census row in State.lean.
+- **Item 3 (multi-line payloads) is FIXED** — the sprint's strict UTF-8
+  first-line widening (`ff7173dd`, credited), sharpened: `asciiString?` is
+  gone; `utf8String?` decodes strictly WITH a byte round-trip
+  (`utf8String?_bytes`); the first-line projection is at the BYTE level
+  before decoding (`stringFirstLine?`, mirroring `printindented`), and the
+  suffix is appended only when the payload has no LF (gc writes it after the
+  WHOLE payload — witnesses w14/w15/w34). `panic-recover/panic-newline-abort`
+  FAIL → PASS (strict) and LEAVES this Cases line; the nine
+  `panic-recover/panic-text/{unicode-*,trailing-newline,recovered-newline,
+  recovered-unicode,output-prefix}` rows are born PASS (strict, real gc text
+  comparison); `panic-text/invalid-after-lf` (`a\n\xff`) is born PASS: its
+  FIRST line is the valid byte `a`, byte-exact with gc (w16).
+- **Item 3's RESIDUE is the new red class, by name (landing decision D5,
+  `docs/2026-09-07_typed-sprint-landing-plan.md` §4):** a string payload
+  whose FIRST LINE is not valid UTF-8. gc writes the raw bytes
+  (`printindented`; w35/w36/w37) and the `String`-valued
+  `golean-observation-v1` message cannot carry them; a bytes variant is an
+  observation-schema change the [USER] owns. The machine REFUSES with a
+  message that names the cause (`abortRefusal`: «the string payload's first
+  line is not valid UTF-8 … the String-valued observation cannot carry
+  them (BUG-004 item 3 / landing decision D5)»), and the sprint's `"\xHH"`
+  escape member — a rendering no Go toolchain prints — is never emitted
+  (landing audits A-R3/B-R3). Rows born RED here, FAIL/lean-observation, gc
+  bytes recorded: `panic-recover/panic-text/invalid-single`
+  (`panic("\xffZ")` → gc `ff 5a`), `invalid-first-line` (`"\xffZ\nY"` →
+  first line `ff 5a`), `invalid-recovered-equal` (`panic(r)` of `"\xffZ"` →
+  gc `ff 5a 20 [recovered, repanicked]`; the refusal is stream-invariant
+  under both collapse picks). The forced half beside them is the strict
+  `ok` row `panic-text/invalid-recovered-value` (the recovered VALUE of an
+  invalid payload compared in-language). If a byte channel is ever ruled,
+  these flip in a strict BYTE comparison, not a membership quotient.
+- **Item 4 (the `Error()`/`String()` rewrite) is UNCHANGED**: the method-set
+  refusal still returns `none` first, before any suffix or collapse
+  question (`renderPanicPayload`); `panic-defined-payload-methods/
+  {error,stringer}` stay red here.
+- The sprint's `string-member` lane (a third comparison mode over the
+  collapse and the escape member) is RETIRED unlanded ([AGENT], landing
+  decision D2 — the plan's default): its functions are the membership lane,
+  the strict lane and the named refusal above.
 
 **Six more item-3 witnesses, 2026-09-07 (landing chunk L4 `land/observer-terminal`, [AGENT]):**
 the observer chunk lands the sprint's `panic-recover/panic-controls/*` and

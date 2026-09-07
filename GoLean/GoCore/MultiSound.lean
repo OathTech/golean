@@ -460,11 +460,14 @@ theorem stepMulti_flagged_single {σ : ExecState} {c : Config} {ch : Choices}
 
 /-- The sequential machine's ABORT (B4): at an unrecovered chain at
 `.stop`, `stepFn` raises the rendered `panic` terminal (or `abortMsg`'s
-refusal), whatever the stream. -/
+refusal) under the stream's `repanicCollapse` pick (`abortConsult`,
+landing chunk L3 — the forced 0 at every abort outside the
+recovered-equal shape). -/
 theorem stepFn_abort {σ : ExecState} {c : Config} {ch : Choices}
     {first : PanicEntry} {rest : List PanicEntry}
     (hab : c.abort? = some (first, rest)) :
-    stepFn σ c ch = (do let msg ← abortMsg σ first rest; throw (.panic msg)) := by
+    stepFn σ c ch = (do let msg ← abortMsg σ first rest (abortConsult first rest ch).1
+                        throw (.panic msg)) := by
   match c, hab with
   | .panicking (f :: r) .stop, hab =>
     simp only [Config.abort?, Option.some.injEq, Prod.mk.injEq] at hab
@@ -495,13 +498,19 @@ theorem atBoundary_of_abort {c : Config} {first : PanicEntry}
 /-- **The one-thread pool's ABORT** (B4): the singleton goroutine at an
 unrecovered chain at `.stop` renders into its tombstone in one pool step
 (or the render's refusal propagates) — the step the sequential machine
-takes as its `panic` terminal (`stepFn_abort`). -/
+takes as its `panic` terminal (`stepFn_abort`) — under the same
+`repanicCollapse` pick, the popped stream returned and the pick recorded
+in the event (`consumeAtE`; `[]` at bound 1). -/
 theorem stepMulti_abort_single {σ : ExecState} {c : Config} {ch : Choices}
     {first : PanicEntry} {rest : List PanicEntry}
     (hab : c.abort? = some (first, rest)) :
     stepMulti ⟨#[.running c none], σ, 0⟩ ch
-      = (abortMsg σ first rest).map
-          (fun msg => (⟨#[.aborted msg], σ, 0⟩, ch, ⟨0, .aborted, [], []⟩)) := by
+      = (abortMsg σ first rest
+            (Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch).1).map
+          (fun msg => (⟨#[.aborted msg], σ, 0⟩,
+            (Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch).2.1,
+            ⟨0, .aborted,
+              (Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch).2.2, []⟩)) := by
   unfold stepMulti
   have h0 : (#[Thread.running c none] : Array Thread)[0]? = some (.running c none) := rfl
   simp only [h0]
@@ -509,7 +518,9 @@ theorem stepMulti_abort_single {σ : ExecState} {c : Config} {ch : Choices}
   unfold stepThreadInto stepThread
   rw [h0]
   simp only [isBlockedConfig_of_abort hab, Bool.false_eq_true, reduceIte, hab]
-  cases abortMsg σ first rest <;> simp [Bind.bind, Except.bind, Except.map]
+  cases abortMsg σ first rest
+      (Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch).1 <;>
+    simp [Bind.bind, Except.bind, Except.map]
 
 /-! ## The signal at `.stop` (B4; audit fix R4, 2026-09-05)
 
@@ -711,8 +722,15 @@ theorem execProgLoop_single :
           obtain ⟨first, rest⟩ := p
           rw [stepFn_abort hab] at hr
           have hmulti := stepMulti_abort_single (σ := σ) (ch := ch) hab
+          -- Both drivers draw the same `repanicCollapse` pick (the pool's
+          -- record-emitting consult projects onto the sequential one).
+          have hpick : (Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch).1
+              = (abortConsult first rest ch).1 := by
+            unfold abortConsult
+            rw [← Choices.consumeAtE_fst_snd]
+          rw [hpick] at hmulti
           rw [hcnt, stepFn_abort hab]
-          cases hmsg : abortMsg σ first rest with
+          cases hmsg : abortMsg σ first rest (abortConsult first rest ch).1 with
           | error e =>
               rw [hmsg] at hr hmulti
               simp only [Bind.bind, Except.bind] at hr
@@ -969,17 +987,27 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
         simp only [hbl, Bool.false_eq_true, reduceIte] at hst
         cases hab : c.abort? with
         | some p =>
-          -- THE ABORT (B4): the tombstone step.
+          -- THE ABORT (B4): the tombstone step, under the stream's
+          -- `repanicCollapse` pick (below its width: `consumeAt_fst_lt`).
           obtain ⟨first, rest⟩ := p
           rw [hab] at hst
           simp only [Bind.bind, Except.bind] at hst
-          cases hmsg : abortMsg m.shared first rest with
+          have hpick : (Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch).1
+              < repanicCollapseWidth first rest := by
+            have := @Choices.consumeAtE_fst_snd .repanicCollapse (repanicCollapseWidth first rest) ch
+            have hlt := Choices.consumeAt_fst_lt (site := .repanicCollapse) (ch := ch)
+              (bound := repanicCollapseWidth first rest)
+              (by unfold repanicCollapseWidth; split <;> omega)
+            rw [← this] at hlt
+            exact hlt
+          cases hmsg : abortMsg m.shared first rest
+              (Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch).1 with
           | error e => rw [hmsg] at hst; cases hst
           | ok msg =>
             rw [hmsg] at hst
             simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
             obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
-            exact StepM.abort hsched hti hab hmsg
+            exact StepM.abort hsched hti hab hpick hmsg
         | none =>
         rw [hab] at hst
         cases hsp : spawnPlan c with
@@ -1387,15 +1415,42 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
         rfl⟩
     obtain ⟨evI, hinner⟩ := hinner
     exact stepMulti_of_inner hsched hinner
-  | abort hsched hti hab hmsg =>
-    rename_i i c first rest msg
-    have hinner : ∃ evI, stepThread m.shared m.threads i []
+  | abort hsched hti hab hpick hmsg =>
+    rename_i i c first rest pick msg
+    -- The `repanicCollapse` pick is realized by a stream the consult
+    -- exhausts exactly: the empty stream at bound 1 (the pick is the
+    -- forced 0 and nothing is popped), the singleton `[pick]` at bound 2.
+    have hcons : ∃ s : Choices,
+        Choices.consumeAt .repanicCollapse (repanicCollapseWidth first rest) s = (pick, []) := by
+      by_cases hb : repanicCollapseWidth first rest ≤ 1
+      · refine ⟨[], ?_⟩
+        rw [Choices.consumeAt_le_one hb]
+        have h0 : pick = 0 := by omega
+        subst h0
+        rfl
+      · have hw : repanicCollapseWidth first rest = 2 := by
+          revert hb
+          unfold repanicCollapseWidth
+          split <;> intro hb <;> omega
+        rw [hw] at hpick ⊢
+        refine ⟨[pick], ?_⟩
+        rw [Choices.consumeAt_of_lt (by omega)]
+        simp [Choices.consume, Nat.mod_eq_of_lt hpick]
+    obtain ⟨s, hcons⟩ := hcons
+    have hE : ∃ ps, Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) s
+        = (pick, [], ps) := by
+      unfold Choices.consumeAtE
+      rw [hcons]
+      dsimp only
+      split <;> exact ⟨_, rfl⟩
+    obtain ⟨ps, hE⟩ := hE
+    have hinner : ∃ evI, stepThread m.shared m.threads i s
         = .ok (m.threads.setIfInBounds i (.aborted msg), m.shared, [], evI) :=
       ⟨_, by
         unfold stepThread
         rw [hti]
-        simp only [isBlockedConfig_of_abort hab, Bool.false_eq_true, reduceIte, hab, hmsg,
-          Bind.bind, Except.bind]
+        simp only [isBlockedConfig_of_abort hab, Bool.false_eq_true, reduceIte, hab,
+          hE, hmsg, Bind.bind, Except.bind]
         rfl⟩
     obtain ⟨evI, hinner⟩ := hinner
     exact stepMulti_of_inner hsched hinner

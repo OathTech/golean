@@ -20,4 +20,5 @@ import GoLeanIris.Shared
 import GoLeanIris.SharedReadout
 import GoLeanIris.SharedDriver
 import GoLeanIris.OwnershipTests
+import GoLeanIris.Terminal
 import GoLeanIris.Audit

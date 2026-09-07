@@ -173,9 +173,19 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           -- `panic` terminal — ONE step (the fuel the old `.panicked`
           -- step cost), no successor configuration (there is no k-less
           -- control form; the pool records a tombstone instead,
-          -- `stepThread`). Rendering through `abortMsg`, shared.
+          -- `stepThread`). Rendering through `abortMsg`, shared — after
+          -- THE `repanicCollapse` CONSULT (`abortConsult`, landing chunk
+          -- L3): bound 2 exactly when the head is a recovered entry whose
+          -- successor carries an equal payload (slot 0 = the collapsed
+          -- `[recovered, repanicked]` line, slot 1 = the two-line form's
+          -- `[recovered]`), bound 1 — no pop — at every other abort. The
+          -- popped stream is dropped here (the machine stops; the pool
+          -- returns it, enumerators read `abortLeftover`). A plain `let`,
+          -- not a match arm, so `fun_cases`' positional tags stand.
           match chain with
-          | first :: rest => throw (.panic (← abortMsg s first rest))
+          | first :: rest =>
+              let pick := (abortConsult first rest choices).1
+              throw (.panic (← abortMsg s first rest pick))
           | [] => throw (.internal "empty panic chain at stop")
       | k =>
           match panicPassthrough k with

@@ -162,8 +162,7 @@ def InterfaceAudit.run : CoreM Unit := do
     ``GoLean.GateA1.both_pool_traces, ``GoLean.GateA1.print_before_panic,
     ``GoLean.GoCore.PanicText.lfPrefix_valid,
     ``GoLean.GoCore.PanicText.firstLine_bytes,
-    ``GoLean.GoCore.PanicText.decodeEscapedBytes_escapeAllBytes,
-    ``GoLean.GoCore.PanicText.escapeAllBytes_injective,
+    ``GoLean.GoCore.Machine.utf8String?_bytes,
     ``GoLean.GoCore.RecoveryRuntime.runConfigWithAbort_erasure,
     ``GoLean.GoCore.RecoveryRuntime.stepAbortRecord?_some,
     ``GoLean.GoCore.RecoveryRuntime.execPoolWithAbort_erasure,
@@ -178,11 +177,14 @@ def InterfaceAudit.run : CoreM Unit := do
   for n in exports do
     let some (.thmInfo _) := env.find? n
       | throwError "Semantic interface: missing theorem {n}"
-  -- The PanicText helpers keep the constructive machine-helper boundary,
-  -- although the public correspondence layer admits the classical trio.
-  -- (The renderer that consumes them is not in this tree; see GoLean/Interface.lean.)
+  -- The text helpers keep the constructive machine-helper boundary,
+  -- although the public correspondence layer admits the classical trio:
+  -- the String-level first-line bridge and the renderer's own strict
+  -- decoder / byte-level first-line projection / member function
+  -- (landing chunk L3 — `docs/2026-09-07_land-panic-text-tape.md`).
   for n in [``GoLean.GoCore.PanicText.firstLine,
-      ``GoLean.GoCore.PanicText.escapeAllBytes, ``GoLean.GoCore.PanicText.decodeEscapedBytes] do
+      ``GoLean.GoCore.Machine.utf8String?, ``GoLean.GoCore.Machine.stringFirstLine?,
+      ``GoLean.GoCore.Machine.renderPanicHead, ``GoLean.GoCore.Machine.abortMsg] do
     for ax in (← collectAxioms n) do
       unless [``propext, ``Quot.sound].contains ax do
         throwError "Semantic interface: constructive text helper {n} depends on forbidden axiom {ax}"

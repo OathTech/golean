@@ -204,11 +204,12 @@ inductive StepMFine : MultiConfig → MultiConfig → Prop where
       m.threads[i]? = some (.running c (some site)) →
       StepMFine m ⟨m.threads.setIfInBounds i (.running c none), m.shared, i⟩
   | abort {m : MultiConfig} {i : Nat} {c : Config} {first : PanicEntry}
-      {rest : List PanicEntry} {msg : String} :
+      {rest : List PanicEntry} {pick : Nat} {msg : String} :
       schedPickFine m i →
       m.threads[i]? = some (.running c none) →
       c.abort? = some (first, rest) →
-      abortMsg m.shared first rest = .ok msg →
+      pick < repanicCollapseWidth first rest →
+      abortMsg m.shared first rest pick = .ok msg →
       StepMFine m ⟨m.threads.setIfInBounds i (.aborted msg), m.shared, i⟩
   | pair {m : MultiConfig} {i : Nat} {c bc : Config} {σ'' : ExecState}
       {cs : List (Nat × PairTarget)} {idx : Nat} {ts' : Array Thread} :
@@ -330,8 +331,8 @@ theorem stepM_le_stepMFine {m m' : MultiConfig} (h : StepM m m') :
       exact StepMFine.thread (schedPick_le_fine hs) hti hbl hplan hstep
   | strip hs hti =>
       exact StepMFine.strip (schedPick_le_fine hs) hti
-  | abort hs hti hab hmsg =>
-      exact StepMFine.abort (schedPick_le_fine hs) hti hab hmsg
+  | abort hs hti hab hpick hmsg =>
+      exact StepMFine.abort (schedPick_le_fine hs) hti hab hpick hmsg
   | pair hs hti hbl hsp hplan hidx hap =>
       exact StepMFine.pair (schedPick_le_fine hs) hti hbl hsp hplan hidx hap
   | pickPair hs hti hbl hsp hplan hget hidx hap =>

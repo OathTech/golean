@@ -450,6 +450,17 @@ else
   bad "admission checker proofs and post-import audit"
 fi
 
+# Landing chunk L3 (docs/2026-09-07_land-panic-text-tape.md): the recovery
+# profile's terminal classification over the repanicCollapse tape and the
+# D5 refusal — fresh elaboration of the two semantic modules and the tests,
+# the post-import axiom audit, and its compiled poison controls.
+step "typed recovery terminal classification (repanicCollapse members, named D5 refusal, post-import audit)"
+if bash scripts/check-recovery-terminal; then
+  ok "typed recovery terminal classification"
+else
+  bad "typed recovery terminal classification (scripts/check-recovery-terminal)"
+fi
+
 # 2b. Frontend pins (restored at the split audit, findings A1/A2 + B1/B8
 # — docs/2026-08-31_repo-split-plan.md fix round): the two SEMANTICS
 # pins that lived inside the parked check-golden. (1) the

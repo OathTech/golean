@@ -92,7 +92,10 @@ def poolThreadOblivious (s : ExecState) (ts : Array Thread) (i : Nat) : Bool :=
   | some (.running _ (some _)) => true
   | some (.running c none) =>
     if isBlockedConfig c then true
-    else if c.abort?.isSome then true
+    -- THE ABORT (B4) is oblivious exactly outside the `repanicCollapse`
+    -- shape (landing chunk L3): a recovered head with an equal successor
+    -- payload draws the collapse pick at bound 2 — fail closed.
+    else if c.abort?.isSome then !consumesRepanicCollapse c
     else if (spawnPlan c).isSome then !consumesNilValueMethod s c
     else if consumesSelect c then
       (match arrivalCases s ts i c with
@@ -251,17 +254,24 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Thread} {i : Nat}
       simp only [hblc, Bool.false_eq_true, reduceIte] at h hobl
       cases hab : c.abort? with
       | some p =>
-        -- THE ABORT (B4): the render reads no stream
+        -- THE ABORT (B4): outside the `repanicCollapse` shape (`hobl`) the
+        -- consult is at bound 1 — no pop, no record — so the render reads
+        -- no stream (landing chunk L3).
         obtain ⟨first, rest⟩ := p
-        rw [hab] at h
-        simp only [bind_eq_ok] at h
+        rw [hab] at h hobl
+        simp only [Option.isSome_some, reduceIte, Bool.not_eq_true'] at hobl
+        have hw : repanicCollapseWidth first rest ≤ 1 := by
+          simp only [consumesRepanicCollapse, hab] at hobl
+          simp [repanicCollapseWidth, hobl]
+        simp only [Choices.consumeAtE_le_one hw, bind_eq_ok] at h
         obtain ⟨msg, hmsg, h⟩ := h
         simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl, rfl, rfl⟩ := h
         refine ⟨rfl, fun ch => ?_⟩
         unfold stepThread
         rw [hti]
-        simp only [hblc, Bool.false_eq_true, reduceIte, hab, hmsg, Bind.bind, Except.bind]
+        simp only [hblc, Bool.false_eq_true, reduceIte, hab, Choices.consumeAtE_le_one hw, hmsg,
+          Bind.bind, Except.bind]
         rfl
       | none =>
         rw [hab] at h hobl
@@ -396,7 +406,8 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Thread} {i : Nat}
               simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
               obtain ⟨rfl, rfl, rfl, rfl⟩ := h
               obtain ⟨rfl, hall⟩ := stepFn_oblivious
-                (isMapIterNext_false_elim hnmi) hnapp hnsel hnnv hntl hnup hstep
+                (isMapIterNext_false_elim hnmi) hnapp hnsel hnnv hntl hnup
+                (by simp [consumesRepanicCollapse, hab]) hstep
               refine ⟨rfl, fun ch => ?_⟩
               unfold stepThread
               rw [hti]

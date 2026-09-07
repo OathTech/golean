@@ -615,8 +615,22 @@ The semantic core's consume sites and their accountant arms:
    Machine.lean; the constructor + `canonicalSlot0` row are State.lean's).
    Row added at the e13-b audit fix round (R9) — the LOCKSTEP obligation
    above was owed by the commit that added the site.
+9. THE ABORT's `repanicCollapse` pick (StepFn.lean's `.panicking _ .stop`
+   arm and Multi.lean's `stepThread` tombstone arm, both through
+   `abortConsult`/`repanicCollapseWidth` — BUG-004 item 1, landing chunk
+   L3 2026-09-07 under the BUG-087 panic-text ruling: bound 2 exactly at
+   an abort whose head is a recovered entry with an EQUAL successor
+   payload, COLLAPSE = ` [recovered, repanicked]` / two-line form =
+   ` [recovered]`; bound 1 — no pop — at every other abort) → the
+   `Config.abort?` arm of both projections (`seqConsumption`'s
+   `.panicking (first :: rest) .stop ↦ some (.repanicCollapse, 2)` when
+   `repanicEqualNext`, Machine.lean; `poolConsumption`'s abort arm reads
+   it, Multi.lean); the sequential DFS records the panic LEAF per branch
+   (the abort's step is the `panic` terminal and returns no leftover —
+   the pool's does, and `abortLeftover` exposes it for `enumInitRun`).
+   The constructor + `canonicalSlot0` row are State.lean's.
 Non-consuming by signature (no arm needed): `resumeThread`,
-`spawnStep`, `commitClause`, `applyPairing`, the boundary clear, the abort,
+`spawnStep`, `commitClause`, `applyPairing`, the boundary clear,
 `raceUpdate` (stage B: it folds the step's emitted `StepEvent` and
 takes NO stream at all — the old consumption replication is deleted),
 and —
@@ -904,9 +918,11 @@ def enumInitRun :
       if let some e := GoCore.Machine.initPrintRefusal? c then throw e
       -- THE ABORT (B4): the sequential machine raises the panic terminal
       -- at the abort step (`stepFn` at `Config.abort?`); it is the run's
-      -- panic member, the stream as it stood (the abort consumes nothing).
+      -- panic member, with the stream AFTER the abort's `repanicCollapse`
+      -- consult (`abortLeftover` — the sequential step itself returns no
+      -- leftover on its error path; landing chunk L3).
       match GoCore.Machine.stepFn σ c choices with
-      | .error (.panic msg) => return .inr (msg, choices)
+      | .error (.panic msg) => return .inr (msg, GoCore.Machine.abortLeftover c choices)
       | .error e => throw e
       | .ok (c', σ', choices') => enumInitRun fuel σ' c' choices'
 

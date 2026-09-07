@@ -11,9 +11,11 @@ theorem stepFn_success_no_abort {s c ch next t residual}
   fun_cases Config.abort? c
   · rename_i first rest
     have h : stepFn s (.panicking (first :: rest) .stop) ch =
-        (abortMsg s first rest).bind (fun msg => .error (.panic msg)) := rfl
+        (abortMsg s first rest (abortConsult first rest ch).1).bind
+          (fun msg => .error (.panic msg)) := rfl
     rw [h] at step
-    cases hm : abortMsg s first rest <;> simp [hm, Except.bind] at step
+    cases hm : abortMsg s first rest (abortConsult first rest ch).1 <;>
+      simp [hm, Except.bind] at step
   · rfl
 
 theorem singleton_abort_driver (fuel : Nat) (s : ExecState)
@@ -27,7 +29,14 @@ theorem singleton_abort_driver (fuel : Nat) (s : ExecState)
   simp only [show (#[Thread.running (.panicking (first :: rest) .stop) none] : Array Thread).isEmpty = false from rfl,
     Bool.false_eq_true, reduceIte, MultiConfig.panicMsg?, MultiConfig.mainOutcome?,
     runnableIdxs_singleton hrun, singleton_abort_step]
-  cases hm : abortMsg s first rest with
+  -- Both drivers draw the same `repanicCollapse` pick (`consumeAtE`
+  -- projects onto `consumeAt`, which `abortConsult` is).
+  have hpick : (Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch).1
+      = (abortConsult first rest ch).1 := by
+    unfold abortConsult
+    rw [← Choices.consumeAtE_fst_snd]
+  rw [hpick]
+  cases hm : abortMsg s first rest (abortConsult first rest ch).1 with
   | error e =>
     simp [hm, runConfig, stepFn, Bind.bind, Except.bind, Except.map,
       throw, throwThe, MonadExceptOf.throw]

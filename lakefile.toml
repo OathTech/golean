@@ -22,7 +22,7 @@ root = "Tests.GoCoreEval"
 [[lean_lib]]
 # Iris-free contract regressions and their post-import dependency audit.
 name = "InterfaceTests"
-globs = ["Tests.InterfaceContract", "Tests.BooleanRuntime", "Tests.BooleanProgram", "Tests.InterfaceAudit"]
+globs = ["Tests.InterfaceContract", "Tests.BooleanRuntime", "Tests.BooleanProgram", "Tests.InterfaceAudit", "Tests.PanicRendering", "Tests.StringPanicMembers"]
 
 [[lean_lib]]
 name = "AdmissionTests"
@@ -55,3 +55,9 @@ globs = ["Tests.RecoveryInvariant", "Tests.RecoveryControlAudit"]
 [[lean_lib]]
 name = "AbortObservationTests"
 globs = ["Tests.AbortObservation", "Tests.AbortObservationAudit"]
+
+[[lean_lib]]
+# The recovery profile's terminal classification over the repanicCollapse
+# tape and the D5 refusal (landing chunk L3), with its post-import audit.
+name = "RecoveryTerminalTests"
+globs = ["Tests.RecoveryTerminal", "Tests.RecoveryTerminalAudit"]

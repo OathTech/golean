@@ -1160,7 +1160,7 @@ start; class per the entry's own tag where it has one, else [AGENT]).
 | BUG | line | class | what | plan | lane / slot |
 |---|---|---|---|---|---|
 | 002 | 2804 | latent unsoundness (Prop relation) | expression-step atomicity coarser than Go | small-step expression machine (likely) — the concurrency-granularity arc | TODO backlog (re-homed [USER] 2026-08-31 decision 6); Q-ATOMICITY held |
-| 004 | 2673 | rendering: 3 (c)-pins + 1 queued | panic abort-line rendering (eface identity, `preprintpanics`, multi-line payload) | item 3 `panic-newline-abort` = mini-slice A7; items 1/4 ratified pins under R-1 | TODO re-homed obligations |
+| 004 | 2673 | rendering: 2 (c)-pins + 3 D5 reds (since L3, 2026-09-07) | panic abort-line rendering (eface identity, `preprintpanics`, multi-line payload) | item 1 RE-ENVELOPED at landing chunk L3 (`ChoiceSite.repanicCollapse`, membership rows), item 3 FIXED (strict UTF-8 first line) with its invalid-first-line residue RED by name under D5; item 4 the ratified (c) pin under R-1 — `docs/2026-09-07_land-panic-text-tape.md` | TODO re-homed obligations |
 | 008 | 2385 | refusal of legal Go | imported named types have no wire TypeDef → map-key hash precheck refuses | emit real declarations for imported non-interface named types (FR-9's plan) | none; FR-9 queue 9 |
 | 041 | 981 | over-refusal (NARROWED 2026-09-02) | detector records whole-cell reads for dynamic-index array reads | option (B) deferred-footprint recording; re-open trigger = a real target | Q-RACEPATH ruled; Tier-4 detector lane |
 | 061 | 37 | init-order (L-011 latitude) | staticinit pruning under-approximates gc's | mini-staticinit predicate for 10/11 flavours; `callinit` needs a ruling at L-011 | none — **BLOCKED-ON-USER** (L-011 ruling) |

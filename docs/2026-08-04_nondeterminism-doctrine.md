@@ -89,7 +89,27 @@ exhaustiveness; the list below is a READER'S MIRROR of that datatype
   inventory R9a, 2026-09-03 — `enterFrameStep`/`enterFrameDeferPanicking`,
   `StepFn.lean`; width 2 exactly when a value-receiver method is
   dispatched through an interface holding a nil `*T` outside promotion,
-  slot 0 = the nil-dereference text, slot 1 = gc's `panicwrap` text).
+  slot 0 = the nil-dereference text, slot 1 = gc's `panicwrap` text);
+- TryLock spurious failure (`tryLock`, Q-TRYLOCK 2026-09-03 —
+  `applySyncOp`'s TRY-head arm, `Machine.lean`; width 2 at an acquirable
+  cell, slot 0 = acquire);
+- unsequenced sibling panic order (`unseqPanic`, latitude E13 option (b),
+  lane e13-b 2026-09-05 — `stepFn`'s `.panicking _ (.probeK _)` arm,
+  `StepFn.lean`; width 2 exactly there, slot 0 = DEFER, slot 1 = RAISE);
+- the abort line's `[recovered, repanicked]` collapse (`repanicCollapse`,
+  BUG-004 item 1 / latitude inventory R10a, landing chunk L3 2026-09-07 —
+  `abortConsult`, drawn at THE ABORT by `stepFn`'s `.panicking _ .stop` arm
+  and the pool's tombstone arm (`stepThread`, `Multi.lean`); width 2
+  exactly when the abort's head is a recovered entry with an equal
+  successor payload, slot 0 = the collapsed ` [recovered, repanicked]`
+  line, slot 1 = the two-line form's ` [recovered]`; gc decides by eface
+  identity the machine does not model).
+
+**Mirror re-synced 2026-09-07** (landing chunk L3): the `tryLock` and
+`unseqPanic` entries were missing from this list — their lanes added the
+constructors (`ChoiceSite`, the census as code) without touching this
+prose mirror, which nothing watches — and `repanicCollapse` is added with
+them. The list now agrees with `ChoiceTrace.allSites` (13 constructors).
 
 **Mirror re-synced 2026-08-22** (settlement branch,
 `reconcile-records` C12): the last two entries were missing — the

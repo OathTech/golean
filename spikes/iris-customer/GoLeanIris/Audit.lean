@@ -1,4 +1,5 @@
 import GoLeanIris.OwnershipTests
+import GoLeanIris.Terminal
 import GateA1
 import Lean
 
@@ -33,15 +34,27 @@ def GoLeanIrisAudit.run : CoreM Unit := do
     `GoLeanIris.SharedReadout,
     `GoLeanIris.SharedDriver,
     `GoLeanIris.OwnershipTests,
+    `GoLeanIris.Terminal,
     `GoLeanIris.Audit,
     `GoLean.GoCore.RecoveryCallLayout,
     `GoLean.GoCore.RecoverySingleton,
     `GoLean.GoCore.RecoveryPool,
-    `GoLean.GoCore.RecoveryChoices]
+    `GoLean.GoCore.RecoveryChoices,
+    `GoLean.GoCore.StringPanic,
+    `GoLean.GoCore.RecoveryTerminal,
+    `GoLean.GoCore.RecoveryPoolObservationTyped]
   for m in modules do
     unless env.header.moduleNames.contains m do
       throwError "Iris customer: missing supporting module {m}"
   let exports : List Name := [
+    ``GoLean.IrisCustomer.observed_normal_of_program,
+    ``GoLean.IrisCustomer.recovered_observed_all_choices,
+    ``GoLean.IrisCustomer.normal_observed_all_choices,
+    ``GoLean.IrisCustomer.shared_observed_all_choices,
+    ``GoLean.IrisCustomer.uncaught_has_actual_record,
+    ``GoLean.IrisCustomer.a2_entries_refusal_named,
+    ``GoLean.IrisCustomer.shared_refusal_named,
+    ``GoLean.IrisCustomer.fixtures_not_refused_at_fuel,
     ``GoLean.IrisCustomer.cellsToMap_below,
     ``GoLean.IrisCustomer.get?_cellsToMap,
     ``GoLean.IrisCustomer.get?_heapToMap,

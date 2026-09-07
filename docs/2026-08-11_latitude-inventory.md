@@ -117,6 +117,7 @@ between sweeps (the reconciler's C12 checks row COUNT, not lines).
 | Frame-entry panic TEXT pick (`nilValueMethodText`, BUG-087 / R9a, 2026-09-03) | StepFn.lean `enterFrameStep` + `enterFrameDeferPanicking`, Multi.lean `spawnStep` (envelope statement `nilValueMethodText?`, Ops.lean, beside `dynamicDispatch?`'s nil arm) | `nilValueMethodWidth` — 2 on the wrapper family, 1 elsewhere | at a frame entry in the family (value-receiver method dispatched through an interface holding a nil `*T`, target not a promotion wrapper), only width > 1 | slot 0 = the nil-dereference text (the pre-BUG-087 machine's only member) |
 | TryLock spurious failure (`tryLock`, Q-TRYLOCK 2026-09-03) | Machine.lean `applySyncOp` (the TRY-head arm; envelope statement at `applyTryLock`) | `tryLockWidth op pre` — 2 at an acquirable cell (`tryAcquire`), 1 at a held one | only width 2 (an acquirable cell; the held cell's bound-1 consult pops nothing — the uniform rule) | slot 0 = ACQUIRE (gc's realized point); slot 1 = the spurious false |
 | Unsequenced sibling panic order (`unseqPanic`, E13 option (b), lane e13-b 2026-09-05) | StepFn.lean, the `.panicking chain (.probeK k)` arm (the envelope statement is `Stmt.unseqProbe`'s docstring, Syntax.lean; projection arm in `seqConsumption`, Machine.lean) | 2, constant — and ONLY at a panic that reached an unsequenced-operand probe frame; a probe whose operand yields a value consults nothing | only when a probed operand PANICS at its lexical position ahead of a sibling ordered event (an `a[i] + f()` row whose `a[i]` never panics early pops nothing) | slot 0 = DEFER (the sibling events first; the operand is re-evaluated in the residual — the pre-change machine's only member, gc's for index/deref/division/shift/conversion); slot 1 = RAISE (the operand's panic first — gc's for type assertions, slice expressions, interface comparisons) |
+| Abort-line `[recovered, repanicked]` collapse (`repanicCollapse`, BUG-004 item 1 / R10a, landing chunk L3 2026-09-07) | Machine.lean `abortConsult` (the envelope statement is `repanicEqualNext`/`renderPanicHead`'s docstring), drawn by StepFn.lean's `.panicking _ .stop` arm and Multi.lean's `stepThread` tombstone arm (recorded in the abort `StepEvent`); projection arms in `seqConsumption` and `poolConsumption` | `repanicCollapseWidth` — 2 exactly at an abort whose head is recovered with an EQUAL successor payload, 1 at every other abort | only at THE ABORT of a recovered value re-panicked with an equal payload (a bound-1 consult pops nothing — every other abort consumes exactly as before) | slot 0 = COLLAPSE, the first line ends ` [recovered, repanicked]` (gc's line for `panic(r)`; the member the corpus pinned); slot 1 = ` [recovered]`, the two-line form's first line (gc's for a re-boxed equal value; every go ≤ 1.24's only form) |
 
 The race detector consumes NOTHING and replays nothing (stage B, Q2:
 `raceUpdate` folds the step's emitted `StepEvent` — the old
@@ -2064,15 +2065,108 @@ instance of R2.
 
 - WHERE: not spec at all — pure gc runtime realization (the spec does
   not define abort output). Machine: `renderPanicHead`/
-  `renderPanicPayload` (Machine.lean:1607/:1564) render gc's exact
-  shapes and FAIL CLOSED where the machine cannot decide gc's answer:
-  eface identity for `[recovered]` collapse (needs allocation identity
-  — unmodeled), Error()/String() rewrite (needs a method call at abort
-  time), multi-line/non-ASCII payloads (BUG-004 items 1/3/4, open with
-  red pins).
+  `renderPanicPayload` (Machine.lean) render gc's exact shapes and FAIL
+  CLOSED where the machine cannot decide gc's answer — since landing
+  chunk L3 (2026-09-07, `docs/2026-09-07_land-panic-text-tape.md`): the
+  Error()/String() rewrite (needs a method call at abort time; BUG-004
+  item 4, two red pins) and a string payload whose FIRST LINE is not
+  valid UTF-8 (gc writes the raw bytes and the String-valued observation
+  cannot carry them — landing decision D5, three red pins, refused BY
+  NAME). The two edges that stood here before L3 have moved: the eface
+  identity of the `[recovered, repanicked]` collapse is ENVELOPED as its
+  own row, **R10a**; multi-line and non-ASCII (valid UTF-8) payloads are
+  FIXED (strict decode, byte-level first-line projection, suffix after
+  the whole payload — `utf8String?`/`stringFirstLine?`).
 - The fail-closed edges are the honest form; the re-envelope obligation
-  is really BUG-004's fix list (allocation identity being the deep
-  one — see C11).
+  that remains is BUG-004 item 4 (rendering the rewrite without calling a
+  method at abort time) and, for D5, an observation-channel decision the
+  [USER] owns (a bytes variant of `golean-observation-v1`), not a machine
+  envelope.
+
+### R10a. The abort line's `[recovered, repanicked]` collapse on an equal re-panic — a two-member TEXT set, (a) ENVELOPED at width 2 (BUG-004 item 1; landing chunk L3, 2026-09-07, under the BUG-087 panic-text ruling), each member (b)-pinned to a gc realization
+
+- WHERE: the same spec point as R10 (spec#Handling_panics says only that
+  the program terminates with "an error report including the panic
+  argument's value"; it fixes none of the text — R-1). The family: an
+  ABORT whose head entry is RECOVERED and whose successor carries an
+  EQUAL payload (`repanicEqualNext`, Machine.lean — `BEq` on `GoValue`,
+  any payload family the renderer covers: string, `runtime.Error`, the
+  `panic(nil)` error, int, bool, defined int).
+- THE TWO MEMBERS (the KIND and the control flow are forced and agreed
+  on every row — R-1's exact half): member 0 = the first line ends
+  ` [recovered, repanicked]` (the newer duplicate line SUPPRESSED —
+  `printpanics` at `runtime/panic.go:737` at the pin); member 1 = the
+  first line ends ` [recovered]` and the duplicate prints on line two
+  (the form every go ≤ 1.24 printed for every same-value re-panic: the
+  collapse is CL 645916, `478ad013f9` 2025-01-31, go1.25, renamed
+  `repanicked` by `d365f2266d`).
+- gc's DECISION at the pin (`preprintpanics`, `panic.go:715`:
+  `*efaceOf(&p.link.arg) == *efaceOf(&p.arg)` — the type word AND the
+  data pointer) is a function of the interface BOX, which the machine's
+  value-level state does not carry: `panic(r)`/`panic(recover())` passes
+  the recovered box through → member 0 (witnesses w01/w02, w19 for a
+  `runtime.Error`, w20 `panic(r.(error))`, w22 `panic(nil)`, w27 a
+  defined int, w36 invalid bytes); re-boxing an equal value
+  (`panic(r.(string))`, a runtime-computed string, a package-level var,
+  `panic(r.(int))`, `panic(r.(Code))`) is a fresh `convTstring`/
+  `convT64` allocation → member 1 (w03/w05/w30/w06/w09/w10/w28/w33);
+  two independent literal constants → per-site read-only static boxes
+  the LINKER dedups → member 0 at the pin, layout-dependent
+  (w04/w06b/w11/w26/w29; `-N -l` agrees); bools → `staticuint64s` at
+  every site → member 0 always (w08); two nil-dereference faults → the
+  runtime's shared `memoryError` → member 0 (w31); two index faults →
+  a fresh `boundsError` each → member 1 (w32). Table:
+  `docs/evidence/2026-09-07_land-panic-text-tape/witness/table.tsv`.
+  There is no single gc answer at the machine's level of description, and
+  modelling the bits would be a gc-specific allocation/layout model of
+  exactly the address-exposing kind doctrine register #6 forbids the
+  observation surface to depend on — hence the demonic choice, the
+  BUG-087 shape («(2) panic-text, agree, demonic choice so both are
+  admitted», [USER] 2026-09-03, relayed — `docs/2026-08-31_qrow-rulings.md`).
+- MACHINE: `ChoiceSite.repanicCollapse` (State.lean) — width
+  `repanicCollapseWidth first rest` (2 on the family, 1 elsewhere: unequal
+  adjacent payloads cannot share a box, so ` [recovered]` stays forced
+  there, and an unrecovered head carries no suffix — w25), drawn at THE
+  ABORT and nowhere else through `abortConsult` (Machine.lean): `stepFn`'s
+  `.panicking _ .stop` arm (StepFn.lean; the popped stream is dropped —
+  the machine stops — and `abortLeftover` exposes it to enumerators) and
+  the pool's tombstone arm (`stepThread`, Multi.lean — `consumeAtE`, the
+  pick RECORDED in the abort `StepEvent` so the abort observer re-derives
+  the member from the event's own pick, `abortEventPick?`). Slot 0 = the
+  collapse, the member the corpus pinned at `repanic-same-value-abort`.
+  The pool relation's `StepM.abort` (and NPDRF's `StepMFine.abort`)
+  quantifies the pick below the width; the sequential relation has no
+  abort rule (B4: the abort is the driver's terminal). Projections:
+  `seqConsumption`'s `.panicking (first :: rest) .stop` arm,
+  `poolConsumption`'s abort arm; obliviousness flags
+  `consumesRepanicCollapse` (`stepFn_oblivious`'s `hnr`,
+  `poolThreadOblivious`); tracer facts `repanicCollapseFacts`; the dedup
+  checker refuses the site by name (`EnumDedup.refusalReason`).
+  Uniform across payload families BY DESIGN: gc's draw is forced to slot
+  0 at the pin for bools (`staticuint64s`), so slot 1 is never drawn
+  there, but it is a CONFORMING rendering (go ≤ 1.24 prints it for that
+  exact program); narrowing bools to width 1 would encode gc's
+  `staticuint64s` layout — a (b)-pin, not the weakest machine.
+- ROWS: `panic-recover/repanic-same-value-abort` (FAIL → PASS/membership)
+  and `panic-recover/repanic-collapse/*` — `lane=membership`,
+  `members=2`, `width=2`; gc's draw per row at K=32 alternating
+  plain/`-race` (`docs/evidence/2026-09-07_land-panic-text-tape/gc-draws.tsv`):
+  member 0 on `{passthrough-var, two-literals, empty-literals, multiple,
+  bool-reboxed, int-literals, defined-passthrough,
+  runtime-error-passthrough, nil-passthrough, unicode-literals,
+  runtime-error-two-faults}` and the moved row; member 1 on
+  `{reboxed-string, runtime-computed, global-var, empty-reboxed,
+  int-reboxed, defined-reboxed, index-two-faults}` — both members
+  gc-certified on the string, int, defined-int and `runtime.Error`
+  families. Strict controls in the same dir: `unequal` (forced
+  ` [recovered]`), `unrecovered-equal` (no suffix), `equal-pair-not-head`
+  (the collapse of a LATER pair is on line two), `multiline-passthrough`
+  (a width-2 consult whose two members render the same first line
+  `first` — the suffix lands on the payload's LAST line — so the set is a
+  singleton and the strict invariance check certifies it).
+- The `string-member` lane the sprint built around this point is
+  RETIRED unlanded (landing decision D2, `docs/2026-09-07_land-panic-text-tape.md`
+  §2.4): its function is this membership envelope plus the strict lane.
 
 ### R11. Sync misuse fatal class — (b) PINNED to gc's throw realization
 
@@ -2801,11 +2895,11 @@ had LEFT the class — C2/C3 inside the (b) list and E9 inside the
 mention, so the mentions moved out. Keep it that way: put prose in the
 history block, never in a membership line.
 
-- (a) ENVELOPED: 11 sites / 13 entries — C1, C2, C3, C4, C5, C6, C8, C12, E6
+- (a) ENVELOPED: 13 sites / 15 entries — C1, C2, C3, C4, C5, C6, C8, C12, E6
   (via E13's `unseqPanic`, zero sites of its own — the retired len/cap
   refusal row, kept as the history of what stood in for the latitude), E9,
-  E13, R2, R18 (via L1, zero new sites; its statement-granularity
-  obligation is live).
+  E13, R2, R9a (`nilValueMethodText`), R10a (`repanicCollapse`), R18 (via
+  L1, zero new sites; its statement-granularity obligation is live).
 - (b) PINNED: **17 entries** — concurrency: C9; sequential order: E2,
   E3, E4, E7, E10, E11, E12; representation/runtime: R1, R8,
   R9, R10, R11, R12, R15, R16, R17.
@@ -2847,6 +2941,17 @@ history block, never in a membership line.
 ### 10.1 Movement and history (NOT membership)
 
 Nothing in this block is a class member by virtue of being named here.
+
+- **Landing chunk L3 (2026-09-07, [AGENT] lane `land-panic-text`,
+  `docs/2026-09-07_land-panic-text-tape.md`): R10a JOINS the (a) list** —
+  BUG-004 item 1's `[recovered, repanicked]` collapse, enveloped as
+  `ChoiceSite.repanicCollapse` (the 13th constructor); R10 loses that
+  edge and its multi-line/non-ASCII edge (FIXED) and keeps item 4 plus
+  the D5 invalid-first-line refusal. **R9a is ADDED to the (a) list in
+  the same edit**: it had carried the (a) ENVELOPED tag in its heading
+  since 2026-09-03 (`bug087-paniktext`) without a membership line — an
+  omission the reading rule above forbids, found while adding R10a. The
+  (a) count moves 11 sites / 13 entries → 13 sites / 15 entries.
 
 - **E13-b FINAL VERIFICATION FIX ROUND (2026-09-05, [AGENT]; records
   only, no rule change): E2's value axis, BUG-101 and BUG-104 JOIN the

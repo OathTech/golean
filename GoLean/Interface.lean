@@ -13,6 +13,9 @@ import GoLean.GoCore.RecoveryChoices
 import GoLean.GoCore.RecoveryProgramObservation
 import GoLean.GoCore.RecoveryCallLayout
 import GoLean.GoCore.RecoveryObservation
+import GoLean.GoCore.StringPanic
+import GoLean.GoCore.RecoveryTerminal
+import GoLean.GoCore.RecoveryPoolObservationTyped
 
 /-!
 # Experimental semantic consumer interface
@@ -110,32 +113,42 @@ does not supply ownership of the pointee. `Inv.pool_eq_runConfig` gives the
 same-fuel singleton driver correspondence with unchanged output prefix, and
 `Inv.loop_all_choices` transfers a successful run to every original list.
 
-The recovery profile's whole-driver TERMINAL classification is NOT in this
-tree. The sprint's `RecoveryTerminal`/`RecoveryPoolObservationTyped` modules
-(typed readout, explicit string panic, or exhaustion for every admitted run,
-and the recovery `*_no_refusal` theorems) depend on a total string-payload
-renderer and an unconditional ` [recovered]` suffix in
-`Machine.renderPanicHead`. The shipped machine has neither: string payloads
-render through `asciiString?` (refusing any byte >= 0x80 and any embedded
-newline) and the equal-value repanic collapse still refuses (BUG-004), so an
-admitted recovery program CAN reach a renderer refusal at its abort. Those
-theorems are owed with the rendering chunk, in whatever form the pending
-[USER] decision on that renderer permits; see
-`docs/2026-09-07_land-typed-core-proofs.md`. What IS here is the generic
-computed observer: `runConfigWithAbort`, `execPoolWithAbort` and
-`runProgramPoolWithAbort` erase exactly to the shipped drivers for every
-input (`*_erasure`), every emitted record has a source-bound provenance
-witness (`*_witness`), and in the typed recovery domain every actual panic
-result receives a record (`Inv.observation_complete`). No selected rendered
-member is proved here.
+The recovery profile's whole-driver TERMINAL classification
+(`RecoveryRuntime.Inv.run_classified`, `runProgram_typed`,
+`runProgramPool_typed`; landing chunk L3,
+`docs/2026-09-07_land-panic-text-tape.md`) has FOUR outcomes for every
+admitted run, fuel and stream: typed readout with empty output; a `panic`
+terminal whose text is `Machine.stringPanicHead` — the explicit-string
+MEMBER function — at the collapse bit the stream's `repanicCollapse` pick
+selects; the NAMED refusal `Stop.unsupported (Machine.abortRefusal …)` of a
+string payload whose FIRST LINE is not valid UTF-8 (landing decision D5: gc
+writes the raw bytes and the `String`-valued observation cannot carry them);
+or fuel exhaustion. `Inv.run_refusal_named` / `runProgramPool_refusal_named`
+say the third outcome is the ONLY refusal the profile reaches — the sprint's
+`*_no_refusal` theorems were true only of a total renderer that emitted a
+`"\xHH"` form Go never prints, and are not restated. The computed observer
+(`runConfigWithAbort`, `execPoolWithAbort`, `runProgramPoolWithAbort`)
+erases exactly to the shipped drivers for every input (`*_erasure`), every
+emitted record has a source-bound provenance witness (`*_witness`) carrying
+the abort event's own recorded pick (`abortEventPick?`), every actual panic
+result in the typed recovery domain receives a record
+(`Inv.observation_complete`), and every record's text is the member at some
+collapse bit (`Inv.observed_abort_member`, `stepAbortRecord?_member`,
+`runProgramPoolWithAbort_member`). The member's bytes are the payload's
+first line (`utf8String?_bytes`, `stringFirstLine?_bytes`).
 
-Both typed profiles are CHOICE-FREE: `Control.no_spawn`, `Control.no_select`,
-`Control.no_seq_consumption` and `Inv.run_choices` (in `BooleanRuntime` and
-`RecoveryRuntime` alike) mean the `∀ ch` in their theorems is uniform by
-vacuity. It carries no evidence about nondeterminism; the only two-outcome
-driver↔relation demonstration remains the untyped `two_choice_pool_bridge`
-in `Tests/InterfaceContract.lean`, and the 2026-09-05 gate audit's F2 stays
-OPEN for the typed contract.
+Both typed profiles are CHOICE-FREE on every STEP: `Control.no_spawn`,
+`Control.no_select`, `Control.no_seq_consumption` (a `none` projection, or
+an ABORT) and `Inv.run_choices` (in `BooleanRuntime` and `RecoveryRuntime`
+alike) mean a successful execution retains its stream verbatim. The
+recovery profile's ABORT is not choice-free since landing chunk L3: on the
+recovered-equal re-panic shape (`Tests/RecoveryTyping.lean`'s
+`repanicProgram`) the abort draws the `repanicCollapse` pick and the
+terminal text is genuinely two-valued (`Tests/RecoveryTerminal.lean`'s
+`equal_repanic_two_members`) — the first TYPED two-outcome driver
+demonstration; the untyped `two_choice_pool_bridge` in
+`Tests/InterfaceContract.lean` remains the driver↔relation one, and the
+2026-09-05 gate audit's F2 stays OPEN for the typed contract in that sense.
 
 The profiles' grammars (exactly what each admission judgment admits, and
 what it excludes) are stated in `docs/2026-09-07_land-typed-core-proofs.md`

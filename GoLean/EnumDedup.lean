@@ -124,6 +124,7 @@ private def refusalReason (s : ExecState) (ts : Array Thread) (i : Nat) :
   | some (.running _ (some _)) => s!"goroutine {i}: boundary clear pending (oblivious; unreachable refusal)"
   | some (.running c none) =>
     if isBlockedConfig c then s!"goroutine {i}: blocked shape not wake-certified (poolThreadOblivious false)"
+    else if consumesRepanicCollapse c then s!"goroutine {i}: abort-line collapse pick (repanicCollapse, BUG-004 item 1 — a recovered head with an equal successor payload; outside the dedup checker's certified fragment; use the default enumerator)"
     else if consumesSelect c then
       match arrivalCases s ts i c with
       | .ok .cellPath => s!"goroutine {i}: consuming select apply (multi-ready .picks — L2 entry pick)"
