@@ -11,8 +11,8 @@ import tempfile
 
 SPIKE = Path(__file__).resolve().parent
 ROOT = SPIKE.parents[1]
-MODULES = ["Heap", "Ghost", "Lifting", "Rules", "Adequacy", "Program",
-           "Examples", "Readout", "Driver", "Audit"]
+MODULES = ["Heap","Ghost","Lifting","Rules","Adequacy","Program","Admission","Allocation","Call","Unwind","Return","Examples","Readout","Driver","SharedProgram","SharedHelpers","SharedRecovery","SharedDrain","Shared","SharedReadout","SharedDriver","OwnershipTests","Audit"]
+CORE_MODULES = ["RecoveryCallLayout","RecoverySingleton","RecoveryPool","RecoveryChoices"]
 SOURCES = [SPIKE / "GoLeanIris" / f"{name}.lean" for name in MODULES] + [SPIKE / "GoLeanIris.lean"]
 
 
@@ -49,7 +49,9 @@ def preflight():
         if forbidden(path.read_text()):
             raise SystemExit(f"Iris customer: forbidden proof escape in {path}")
     dependencies(required=False)
-    paths = sorted([ROOT / "Tests/InterfaceContract.lean", ROOT / "GoLean.lean", *ROOT.glob("GoLean/**/*.lean"),
+    paths = sorted([ROOT / "Tests/InterfaceContract.lean", ROOT / "Tests/RecoveryTypingFixture.lean",
+                    ROOT / "Tests/recovery-typing-fixture/main.go", ROOT / "Tests/recovery-typing-fixture/manifest.tsv",
+                    ROOT / "GoLean.lean", *ROOT.glob("GoLean/**/*.lean"),
                     ROOT / "lakefile.toml", ROOT / "lean-toolchain",
                     *SOURCES, *ROOT.glob("spikes/gate-a1/GateA1/*.lean"), ROOT / "spikes/gate-a1/GateA1.lean",
                     ROOT / "spikes/gate-a1/lakefile.toml", ROOT / "spikes/gate-a1/lake-manifest.json",
@@ -102,11 +104,17 @@ def audit():
     # Compile real replacement modules in isolated search paths. A bad axiom
     # compiles in Lean; the post-import audit must reject it even when unused.
     # No live source or build output is edited. Leave scratch for inspection.
-    for label, target, declaration in [
-        ("trailing_private", "GoLeanIris/Audit.lean", "private axiom irisTrailingHole : False"),
-        ("aggregate_private", "GoLeanIris.lean", "private axiom irisRootHole : False"),
-        ("trailing_sorry", "GoLeanIris/Audit.lean", "private theorem irisSorryHole : False := by sorry"),
-    ]:
+    mutations = [(name + "_private", ROOT, "GoLean/GoCore/" + name + ".lean",
+                  "private axiom irisCoreHole : False", "irisCoreHole") for name in CORE_MODULES]
+    mutations += [(name + "_private", SPIKE, "GoLeanIris/" + name + ".lean",
+                   "private axiom irisHelperHole : False", "irisHelperHole")
+                  for name in MODULES if name not in ["Heap", "Ghost", "Lifting", "Rules", "Adequacy", "Program", "Audit"]]
+    mutations += [
+        ("trailing_private", SPIKE, "GoLeanIris/Audit.lean", "private axiom irisTrailingHole : False", "irisTrailingHole"),
+        ("aggregate_private", SPIKE, "GoLeanIris.lean", "private axiom irisRootHole : False", "irisRootHole"),
+        ("trailing_sorry", SPIKE, "GoLeanIris/OwnershipTests.lean", "private theorem irisSorryHole : False := by sorry", "sorryAx"),
+    ]
+    for label, source_root, target, declaration, marker in mutations:
         if not forbidden(declaration):
             raise SystemExit(f"Iris customer: lexical negative test escaped: {label}")
         fixture = scratch / label
@@ -114,10 +122,13 @@ def audit():
         # through per missing child module. Copy the complete compiled tree;
         # only the selected module and aggregate are overwritten below.
         shutil.copytree(SPIKE / ".lake/build/lib/lean/GoLeanIris", fixture / "GoLeanIris")
+        if source_root == ROOT:
+            shutil.copytree(ROOT / ".lake/build/lib/lean/GoLean", fixture / "GoLean")
         source = fixture / target
         source.parent.mkdir(parents=True, exist_ok=True)
-        source.write_text((SPIKE / target).read_text() + "\n" + declaration + "\n")
+        source.write_text((source_root / target).read_text() + "\n" + declaration + "\n")
         result = lean(source, fixture=fixture, output=source.with_suffix(".olean"))
+        (fixture / "compile.log").write_text(result.stdout)
         if result.returncode:
             raise SystemExit(f"Iris customer: {label} fixture failed to compile; not an audit rejection")
         if target != "GoLeanIris.lean":
@@ -128,8 +139,7 @@ def audit():
         external = fixture / "AuditAll.lean"
         external.write_text(harness_text)
         result = lean(external, fixture=fixture)
-        marker = {"trailing_private": "irisTrailingHole", "aggregate_private": "irisRootHole",
-                  "trailing_sorry": "sorryAx"}[label]
+        (fixture / "audit.log").write_text(result.stdout)
         if result.returncode != 1 or "forbidden axiom" not in result.stdout or marker not in result.stdout:
             raise SystemExit(f"Iris customer: expected named audit rejection for {label}")
         print(f"Iris customer negative regression: {label} rejected (exit 1, {marker})", flush=True)
@@ -143,18 +153,22 @@ def artifact():
     scratch_root.mkdir(exist_ok=True)
     scratch = Path(tempfile.mkdtemp(prefix="iris-customer-artifact-", dir=scratch_root))
     wire = scratch / "recovery.json"
+    shared_wire = scratch / "shared.json"
     env = os.environ.copy()
     env["GO111MODULE"] = "off"
     env["GOCACHE"] = str(ROOT / "artifacts/go-build-cache")
     commands = [
         (["go", "run", "./tools/nativefrontend", "--dir",
           str(SPIKE / "fixtures/recovery"), "--out", str(wire)], ROOT),
+        (["go", "run", "./tools/nativefrontend", "--dir",
+          str(ROOT / "Tests/recovery-typing-fixture"), "--out", str(shared_wire)], ROOT),
         ([str(ROOT / "scripts/capped"), "lean", "--run",
-          "tools/check_artifact.lean", str(wire)], SPIKE),
+          "tools/check_artifact.lean", str(wire), str(shared_wire)], SPIKE),
     ]
     for args, cwd in commands:
         subprocess.run(args, cwd=cwd, env=env, check=True, timeout=120)
-    print("Fresh native wire SHA256:", hashlib.sha256(wire.read_bytes()).hexdigest(), flush=True)
+    for path in [wire, shared_wire]:
+        print("Fresh native wire SHA256:", path.name, hashlib.sha256(path.read_bytes()).hexdigest(), flush=True)
     print(f"Iris customer artifact scratch retained: {scratch}", flush=True)
 
 

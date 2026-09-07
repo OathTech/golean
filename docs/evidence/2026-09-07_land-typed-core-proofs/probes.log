@@ -1,0 +1,161 @@
+===== .tmp/land/build-main.log =====
+== main cold: scripts/capped lake build (default target) ==
+✔ [74/76] Built GoLean.CLI:c.o (1.7s)
+✔ [75/76] Built GoLean.ChoiceTrace:c.o (1.4s)
+✔ [76/76] Built golean:exe (500ms)
+Build completed successfully (76 jobs).
+WALL 109.05 s  USER 297.43 s  MAXRSS 1876600 KB
+== main incremental: lake build GoLean.Interface InterfaceTests AdmissionTests ==
+✔ [24/28] Built Tests.InterfaceAudit (852ms)
+✔ [26/28] Built Tests.GoCoreAdmission (30s)
+✔ [27/28] Built Tests.GoCoreAdmissionAudit (651ms)
+Build completed successfully (28 jobs).
+WALL 31.66 s  USER 86.29 s  MAXRSS 3205232 KB
+== done 2026-09-07T01:13:10+00:00 ==
+
+===== .tmp/land/build-tip.log =====
+== tip cold: scripts/capped lake build (default target) ==
+✔ [183/186] Built Main:c.o (45ms)
+✔ [184/186] Built GoLean.CLI:c.o (1.8s)
+✔ [185/186] Built GoLean.ChoiceTrace:c.o (1.4s)
+✔ [186/186] Built golean:exe (508ms)
+Build completed successfully (186 jobs).
+WALL 117.17 s  USER 381.41 s  MAXRSS 1852692 KB
+== tip incremental: lake build GoLean.Interface InterfaceTests AdmissionTests + 7 new test libs ==
+✔ [106/111] Built Tests.GoCoreAdmission (38s)
+✔ [107/111] Built Tests.GoCoreAdmissionAudit (689ms)
+✔ [109/111] Built Tests.BooleanTyping (39s)
+✔ [110/111] Built Tests.BooleanTypingAudit (676ms)
+Build completed successfully (111 jobs).
+WALL 40.70 s  USER 324.51 s  MAXRSS 3370700 KB
+== done 2026-09-07T01:20:01+00:00 ==
+
+===== .tmp/land/probe/build-wired.log =====
+== tip incremental after GoCore.lean wiring: scripts/capped lake build (default) ==
+✔ [188/190] Built Main (272ms)
+✔ [190/190] Built golean:exe (545ms)
+Build completed successfully (190 jobs).
+WALL 6.19 s  USER 8.07 s  MAXRSS 877588 KB
+== all test libs (should be no-op / small) ==
+Build completed successfully (111 jobs).
+WALL 0.15 s
+
+===== .tmp/land/probe/axioms.log =====
+'GoLean.GoCore.BooleanTyping.checkTypedBoolean_iff' depends on axioms: [propext, Quot.sound]
+'GoLean.GoCore.RecoveryTyping.checkRecovery_iff' depends on axioms: [propext, Quot.sound]
+'GoLean.GoCore.BooleanRuntime.runProgramPool_no_refusal' depends on axioms: [propext, Classical.choice, Quot.sound]
+'GoLean.GoCore.RecoveryRuntime.Inv.reachable_progress' depends on axioms: [propext, Classical.choice, Quot.sound]
+'GoLean.GoCore.RecoveryRuntime.Inv.observation_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+'GoLean.GoCore.BooleanRuntime.Inv.step' depends on axioms: [propext, Classical.choice, Quot.sound]
+'GoLean.GoCore.RecoveryRuntime.Inv.step' depends on axioms: [propext, Classical.choice, Quot.sound]
+@GoLean.GoCore.Machine.stepFn_sound : ∀ {s : GoLean.GoCore.ExecState} {c : GoLean.GoCore.Machine.Config}
+  {ch : GoLean.GoCore.Choices} {c' : GoLean.GoCore.Machine.Config} {s' : GoLean.GoCore.ExecState}
+  {ch' : GoLean.GoCore.Choices},
+  GoLean.GoCore.Machine.stepFn s c ch = Except.ok (c', s', ch') → GoLean.GoCore.Machine.Step c s c' s'
+@GoLean.GoCore.Machine.step_complete : ∀ {c : GoLean.GoCore.Machine.Config} {s : GoLean.GoCore.ExecState}
+  {c' : GoLean.GoCore.Machine.Config} {s' : GoLean.GoCore.ExecState},
+  GoLean.GoCore.Machine.Step c s c' s' → ∃ ch ch', GoLean.GoCore.Machine.stepFn s c ch = Except.ok (c', s', ch')
+axioms exit=0
+
+===== .tmp/land/probe/nonvacuity.log =====
+Except.ok ()
+Except.ok ()
+Except.ok ()
+Except.ok ()
+Except.ok ()
+Except.ok ()
+Except.ok ()
+Except.ok ()
+Except.ok ()
+Except.ok ()
+Except.ok ()
+Except.ok ()
+Except.ok ()
+BooleanTyping.Tests.old_unbound_rejected : BooleanTyping.checkTypedBoolean
+    {
+      funcs :=
+        #[{ id := { key := "F" }, args := #[], results := #[{ id := "result", typ := Ty.bool }],
+            body := Stmt.assign (Assignee.var "result") (Expr.var "missing") }] }
+    "F" #[] =
+  Except.error (BooleanTyping.Error.scopedBody { key := "F" })
+Except.error (GoLean.GoCore.RecoveryTyping.Error.boundary (GoLean.GoCore.Admission.Error.initialArgumentTypes))
+Except.error (GoLean.GoCore.BooleanTyping.Error.boundary (GoLean.GoCore.Admission.Error.missingEntry "NoSuchFunction"))
+Except.ok { values := #[GoLean.GoValue.bool false], output := { bytes := #[] } }
+Except.ok { values := #[GoLean.GoValue.bool true], output := { bytes := #[] } }
+Except.ok { values := #[GoLean.GoValue.bool true], output := { bytes := #[] } }
+Except.ok { values := #[GoLean.GoValue.bool true], output := { bytes := #[] } }
+Except.error (GoLean.Stop.terminal (GoLean.Terminal.panic "customer panic"), { bytes := #[] })
+some { bytes := { bytes := #[99, 117, 115, 116, 111, 109, 101, 114, 32, 112, 97, 110, 105, 99] },
+  recovered := false,
+  tail := [] }
+none
+exit=0
+
+===== .tmp/land/probe/compare-artifacts.log =====
+.tmp/land/probe/boolean.json: fresh lowered GoCore == pinned proof artifact (4 funcs)
+.tmp/land/probe/recovery.json: fresh lowered GoCore == pinned proof artifact (16 funcs)
+.tmp/land/probe/a2.json: fresh lowered GoCore == pinned proof artifact (5 funcs)
+exit=
+
+===== .tmp/land/probe/diff-boolean-fixture.log =====
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+building Lean executable...
+Build completed successfully (190 jobs).
+native frontend: per-case type-check + emit (no batch export)
+PASS	boolean-typing/zero	admission,boolean,initialization
+PASS	boolean-typing/branches	admission,boolean,branches
+PASS	boolean-typing/shadow	admission,boolean,scopes
+
+differential coverage summary: cases=3 pass=3 fail=0 export_status=0
+results: artifacts/landing-boolean-fixture/latest.tsv
+metadata: artifacts/landing-boolean-fixture/latest.meta.tsv
+boolean exit=0
+
+===== .tmp/land/probe/diff-recovery-fixture.log =====
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+building Lean executable...
+Build completed successfully (190 jobs).
+native frontend: per-case type-check + emit (no batch export)
+PASS	recovery-typing/shared-true	admission,recovery,captures
+PASS	recovery-typing/direct-true	admission,recovery,direct-control
+PASS	recovery-typing/outside	admission,recovery,outside-handler
+PASS	recovery-typing/reversed-true	admission,recovery,defer-order-control
+PASS	recovery-typing/shared-false	admission,recovery,captures
+
+differential coverage summary: cases=5 pass=5 fail=0 export_status=0
+results: artifacts/landing-recovery-fixture/latest.tsv
+metadata: artifacts/landing-recovery-fixture/latest.meta.tsv
+recovery exit=0
+
+===== .tmp/land/probe/audit-AbortObservationAudit.log =====
+Abort observation audit: 43 required theorems present; 14518 constants checked across all imported local modules (classical trio only)
+exit=0
+
+===== .tmp/land/probe/audit-BooleanSafetyAudit.log =====
+Boolean runtime audit: 44 required theorems present; 14821 constants checked across all imported local modules (classical trio only)
+exit=0
+
+===== .tmp/land/probe/audit-BooleanTypingAudit.log =====
+Boolean typing audit: 12 required theorems present; 3276 constants checked across all imported local modules (classical trio only)
+exit=0
+
+===== .tmp/land/probe/audit-InterfaceAudit.log =====
+Semantic interface: 111 required exports; 15114 constants checked (classical trio only)
+exit=0
+
+===== .tmp/land/probe/audit-RecoveryControlAudit.log =====
+Recovery control audit: 124 required theorems present; 13813 constants checked across all imported local modules (classical trio only)
+exit=0
+
+===== .tmp/land/probe/audit-RecoverySetupAudit.log =====
+Recovery setup audit: 37 required theorems present; 11230 constants checked across all imported local modules (classical trio only)
+exit=0
+
+===== .tmp/land/probe/audit-RecoveryStorageAudit.log =====
+Recovery storage audit: 32 required theorems present; 6778 constants checked across all imported local modules (classical trio only)
+exit=0
+
+===== .tmp/land/probe/audit-RecoveryTypingAudit.log =====
+Recovery typing audit: 46 required theorems present; 10868 constants checked across all imported local modules (classical trio only)
+exit=0
+

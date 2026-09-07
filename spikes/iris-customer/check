@@ -9,7 +9,12 @@ python3 "$CUSTOMER_ROOT/gate_checks.py" preflight
 cd "$CUSTOMER_ROOT"
 "$REPO_ROOT/scripts/capped" lake build
 python3 gate_checks.py dependencies
-for module in Heap Ghost Lifting Rules Adequacy Program Examples Readout Driver Audit; do
+for module in RecoveryCallLayout RecoverySingleton RecoveryPool RecoveryChoices; do
+  sha256sum "$REPO_ROOT/GoLean/GoCore/$module.lean"
+  "$REPO_ROOT/scripts/capped" lake env lean "$REPO_ROOT/GoLean/GoCore/$module.lean"
+done
+for module in Heap Ghost Lifting Rules Adequacy Program Admission Allocation Call Unwind Return Examples Readout Driver SharedProgram SharedHelpers SharedRecovery SharedDrain Shared SharedReadout SharedDriver OwnershipTests Audit; do
+  sha256sum "GoLeanIris/$module.lean"
   "$REPO_ROOT/scripts/capped" lake env lean "GoLeanIris/$module.lean"
 done
 "$REPO_ROOT/scripts/capped" lake env lean GoLeanIris.lean
@@ -18,4 +23,6 @@ done
 cd "$REPO_ROOT"
 GOLEAN_COVERAGE_ARTIFACTS=artifacts/iris-customer \
   scripts/diff-coverage spikes/iris-customer/fixtures/manifest.tsv
+GOLEAN_COVERAGE_ARTIFACTS=artifacts/recovery-typing/differential \
+  scripts/diff-coverage Tests/recovery-typing-fixture/manifest.tsv
 printf '%s\n' 'Iris customer: PASS'

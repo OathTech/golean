@@ -22,8 +22,36 @@ root = "Tests.GoCoreEval"
 [[lean_lib]]
 # Iris-free contract regressions and their post-import dependency audit.
 name = "InterfaceTests"
-globs = ["Tests.InterfaceContract", "Tests.InterfaceAudit"]
+globs = ["Tests.InterfaceContract", "Tests.BooleanRuntime", "Tests.BooleanProgram", "Tests.InterfaceAudit"]
 
 [[lean_lib]]
 name = "AdmissionTests"
 globs = ["Tests.GoCoreAdmissionFixture", "Tests.GoCoreAdmission", "Tests.GoCoreAdmissionAudit"]
+
+[[lean_lib]]
+name = "BooleanTypingTests"
+globs = ["Tests.BooleanTyping", "Tests.BooleanTypingFixture", "Tests.BooleanTypingAudit"]
+
+[[lean_lib]]
+name = "BooleanRuntimeTests"
+globs = ["Tests.BooleanInvariant", "Tests.BooleanSafetyAudit"]
+
+[[lean_lib]]
+name = "RecoveryTypingTests"
+globs = ["Tests.RecoveryTyping", "Tests.RecoveryTypingFixture", "Tests.RecoveryA2Artifact", "Tests.RecoveryDiagnosticControls", "Tests.RecoveryTypingAudit"]
+
+[[lean_lib]]
+name = "RecoveryStorageTests"
+globs = ["Tests.RecoveryStorage", "Tests.RecoveryStorageAudit"]
+
+[[lean_lib]]
+name = "RecoverySetupTests"
+globs = ["Tests.RecoverySetup", "Tests.RecoverySetupAudit"]
+
+[[lean_lib]]
+name = "RecoveryControlTests"
+globs = ["Tests.RecoveryInvariant", "Tests.RecoveryControlAudit"]
+
+[[lean_lib]]
+name = "AbortObservationTests"
+globs = ["Tests.AbortObservation", "Tests.AbortObservationAudit"]

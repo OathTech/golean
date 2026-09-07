@@ -1,5 +1,5 @@
 import GoLeanIris.Examples
-import GoLean.GoCore.MultiSound
+import GoLean.Interface
 
 namespace GoLean.IrisCustomer
 open GoCore GoCore.Machine
@@ -100,5 +100,38 @@ theorem adequate_program_result {program : Program} {name : String} {args : Arra
   dsimp only at he
   subst result
   exact ⟨out, by simp only [runProgramPoolOutM, hsetup, hout, hread]⟩
+
+/-- Shared functional-customer bridge. Admission supplies actual setup and
+pool invariants internally; Iris adequacy supplies the result. A separate
+successful sequential witness supplies termination. The same fuel and
+original choices reach the shipped driver, with proved empty output. -/
+theorem adequate_typed_program_result {program : Program} {name : String} {args : Array GoValue}
+    {fuel : Nat} {choices initial residual : Choices} {c : Config}
+    {state final : ExecState} {locs : List Loc} {values : List GoValue}
+    (admitted : RecoveryTyping.RecoveryAdmission program name args)
+    (hsetup : runProgramSetupM fuel program name args choices = .ok (c, state, locs, initial))
+    (ha : adequate .NotStuck c state (fun _ final => loadMany final locs = .ok values))
+    (hr : execStmtLoop fuel state c initial = .ok (final, residual)) :
+    runProgramPoolOutM fuel program name args choices =
+      .ok {values := values.toArray, output := GoString.empty} := by
+  have hread := adequate_execStmtLoop ha hr
+  rw [RecoveryRuntime.runProgramPool_eq_sequential admitted]
+  simp [runProgramM, hsetup, BooleanRuntime.runConfig_eq_loop, hr, hread,
+    Bind.bind, Except.bind, Except.mapError]
+
+/-- One separate bounded termination witness suffices for every supplied
+choice stream. The semantic invariant proves this profile never consults
+the stream; no existentially reselected choices enter the customer result. -/
+theorem adequate_typed_program_all_choices {program : Program} {name : String}
+    {args : Array GoValue} {fuel : Nat} {residual : Choices} {c : Config}
+    {state final : ExecState} {locs : List Loc} {values : List GoValue}
+    (admitted : RecoveryTyping.RecoveryAdmission program name args)
+    (setup : ∀ ch, runProgramSetupM fuel program name args ch = .ok (c, state, locs, ch))
+    (ha : adequate .NotStuck c state (fun _ final => loadMany final locs = .ok values))
+    (run : execStmtLoop fuel state c [] = .ok (final, residual)) (ch : Choices) :
+    runProgramPoolOutM fuel program name args ch =
+      .ok {values := values.toArray, output := GoString.empty} := by
+  obtain ⟨_, f, _, inv⟩ := RecoveryRuntime.setup_result_inv admitted (setup [])
+  exact adequate_typed_program_result admitted (setup ch) ha (inv.loop_all_choices run ch)
 
 end GoLean.IrisCustomer

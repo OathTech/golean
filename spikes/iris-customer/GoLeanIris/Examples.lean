@@ -1,9 +1,13 @@
 import GoLeanIris.Rules
 import GoLeanIris.Adequacy
 import GoLeanIris.Program
+import GoLeanIris.Admission
+import GoLeanIris.Call
+import GoLeanIris.Unwind
 
 namespace GoLean.IrisCustomer
 open GoCore GoCore.Machine
+open GoCore.RecoveryTyping GoCore.RecoveryRuntime
 open Iris Iris.ProgramLogic Iris.Std Iris.Std.PartialMap
 
 def programState (heap : Heap := #[]) : ExecState :=
@@ -57,7 +61,12 @@ def recoveredConfig (a : Nat) : Config :=
 theorem enter_fail (heap : Heap) :
     enterFrame (programState heap) ⟨"fail"⟩ [] =
       .ok (recoveryProgram.funcs[0], [], [], programState heap) := by
-  with_unfolding_all rfl
+  simpa only [show callEnv recoveryProgram.funcs[0] (programState heap).heap.size = [] from rfl,
+    show callResults recoveryProgram.funcs[0] (programState heap).heap.size = [] from rfl,
+    show callCells recoveryProgram.funcs[0] [] [] = [] from rfl,
+    show ([] : List HeapCell).toArray = #[] from rfl, Array.append_empty] using
+    (enterFrame_layout (world := #[]) (s := programState heap)
+      (f := recoveryProgram.funcs[0]) (zeros := []) recovery_typed rfl (by rfl) .nil .nil)
 
 theorem wp_call_fail {GF : BundledGFunctors} [GoGS GF] {heap : Heap}
     (hctx : GoGS.context GF = programState heap) {env : LocalEnv} {k : Cont}
@@ -65,12 +74,16 @@ theorem wp_call_fail {GF : BundledGFunctors} [GoGS GF] {heap : Heap}
     (▷ WP (Config.exec recoveryProgram.funcs[0].body [] (.frame [] env [] [] k false))
       @ Stuckness.NotStuck; ⊤ {{ Φ }}) ⊢
     WP (Config.exec (.call #[] ⟨"fail"⟩ #[]) env k) @ Stuckness.NotStuck; ⊤ {{ Φ }} := by
-  apply wp_context_step rfl
-  intro state h choices
-  unfold ContextEq at h
-  rw [hctx] at h
-  rw [h]
-  with_unfolding_all rfl
+  iintro Hcont
+  iapply wp_call (world := #[]) (f := recoveryProgram.funcs[0]) (zeros := [])
+    recovery_typed (by rw [hctx]; rfl) (by rfl) .nil .nil (.direct rfl)
+  inext
+  iintro %base _
+  have henv : callEnv recoveryProgram.funcs[0] base = [] := rfl
+  have hroots : callResults recoveryProgram.funcs[0] base = [] := rfl
+  rw [henv, hroots]
+  simp only [List.reverse_nil, show recoveryProgram.funcs[0].wrapper = false from rfl]
+  iexact Hcont
 
 def handlerConfig (p : Nat) (chain : List PanicEntry) : Config :=
   .exec recoveryProgram.funcs[1].body [[("result$cap", .base ⟨p⟩)]]
@@ -87,12 +100,22 @@ theorem wp_enter_deferred {GF : BundledGFunctors} [GoGS GF] {heap : Heap}
     WP (Config.panicking chain (.frame [] [] []
       [(.funcVal ⟨"Recovered$lit0"⟩ [.addr (.base ⟨a⟩)], [])] .stop false))
       @ Stuckness.NotStuck; ⊤ {{ Φ }} := by
-  apply wp_alloc_step (handlerConfig · chain) rfl
-  intro state h choices
-  unfold ContextEq at h
-  rw [hctx] at h
-  rw [h]
-  with_unfolding_all rfl
+  have values : ParamsValues (Array.replicate (a + 1) .boolean)
+      recoveryProgram.funcs[1].args.toList [.addr (.base ⟨a⟩)] :=
+    .cons ⟨.root, .root, .root (by simp)⟩ .nil
+  iintro Hcont
+  iapply wp_call (fid := ⟨"Recovered$lit0"⟩) (f := recoveryProgram.funcs[1]) (zeros := [])
+    recovery_typed (by rw [hctx]; rfl) (by rfl) values .nil
+    (.deferPanic (caps := [.addr (.base ⟨a⟩)]) (args := []))
+  inext
+  iintro %p
+  rw [show callCells recoveryProgram.funcs[1] [.addr (.base ⟨a⟩)] [] =
+    [.value (.pointer .bool) (.addr (.base ⟨a⟩))] from rfl]
+  simp only [ownsCells]
+  iintro ⟨Hp, _⟩
+  rw [show callEnv recoveryProgram.funcs[1] p = [[("result$cap", .base ⟨p⟩)]] from rfl]
+  simp only [show recoveryProgram.funcs[1].wrapper = false from rfl, handlerConfig]
+  iapply Hcont $$ %p Hp
 
 theorem wp_recovered {GF : BundledGFunctors} [GoGS GF]
     {heap : Heap} (hctx : GoGS.context GF = programState heap)
@@ -116,7 +139,7 @@ theorem wp_recovered {GF : BundledGFunctors} [GoGS GF]
   customer_pure hctx
   customer_pure hctx
   customer_pure hctx
-  iapply wp_recover_assignment
+  iapply wp_recover_rhs (by rfl)
   inext
   customer_pure hctx
   simp only [List.nil_append, List.reverse_cons, List.reverse_nil]

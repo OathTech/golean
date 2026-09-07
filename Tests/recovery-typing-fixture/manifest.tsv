@@ -1,0 +1,5 @@
+recovery-typing/shared-false	Tests/recovery-typing-fixture	SharedFalse	-	ok	admission,recovery,captures	-	strict	-	-
+recovery-typing/shared-true	Tests/recovery-typing-fixture	SharedTrue	-	ok	admission,recovery,captures	-	strict	-	-
+recovery-typing/outside	Tests/recovery-typing-fixture	Outside	-	ok	admission,recovery,outside-handler	-	strict	-	-
+recovery-typing/reversed-true	Tests/recovery-typing-fixture	ReversedTrue	-	ok	admission,recovery,defer-order-control	-	strict	-	-
+recovery-typing/direct-true	Tests/recovery-typing-fixture	DirectTrue	-	ok	admission,recovery,direct-control	-	strict	-	-

@@ -1,4 +1,4 @@
-import GoLean.GoCore.Multi
+import GoLean.Interface
 
 /-! GoCore artifact emitted and lowered from fixtures/recovery/main.go.
 The dedicated check compares this value with fresh native lowering. That

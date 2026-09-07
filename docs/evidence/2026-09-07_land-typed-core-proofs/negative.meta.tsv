@@ -1,0 +1,10 @@
+key	value
+lane	negative
+manifest	/home/dev/projects/golean/.tmp/golean-negative-coverage.Q3vQfD
+manifest_sha256	45683e60767c612e4fbb9d9d80e89229aa7d0c8c9b305758d0aba913d1cecbf6
+manifest_cases	394
+git_commit	bfcd3d77d9b0b2fae58ca182bed56966aa1cc5f5
+git_dirty	false
+go_toolchain	go1.26.5
+go_drift_allowed	0
+go_drift_actual	false
