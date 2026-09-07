@@ -115,8 +115,58 @@ L1–L5 own.
 
 ## 5. Gate
 
-Filled in at the run (documentation-only amend, the landing practice):
-see `docs/evidence/2026-09-07_land-sprint-records/`.
+`GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=4 GOLEAN_COVERAGE_JOBS=8 scripts/capped
+scripts/ci --diff` at the CLEAN committed tip
+`0c9c6d6ae062955ddaac238e1cbb2af581a3502e` (this chunk's records commit,
+rebased onto main `29f77b43` after round 24 landed): **RESULT: PASS**.
+Verbatim lines (the whole block and the run meta:
+`docs/evidence/2026-09-07_land-sprint-records/ci-diff-tail.txt`):
+
+```
+differential coverage summary: cases=3654 pass=3403 fail=251 export_status=0
+  ok   evidence-on-main size gate
+  ok   core build (warning-free)
+  ok   typed recovery terminal classification
+  ok   coverage-harness unit tests
+  ok   eval tests (207 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   negative baseline diff (no regression)
+  ok   baseline diff FULL (3654/3654, no regression)
+  note reconciler: 2 finding(s), 0 HIGH — report-only (details: tools/reconcile-records)
+RESULT: PASS
+```
+
+Run meta (`artifacts/coverage/latest.meta.tsv`): `git_commit 0c9c6d6a…`,
+`git_dirty false`, `go_toolchain go1.26.5`, `go_drift_actual false`,
+`go_traceback system`, `go_crash_channel same-run-setcrashoutput-v1`,
+`membership_draws 32`, `jobs 8`. Baseline drift: ZERO — 3654 = 3403 / 251
+is exactly main `29f77b43`'s pin (re-derived from the data rows by awk);
+no row moved; no re-pin owed; `scripts/ci --slow` not owed (no
+`wire.go`/`NativeToIR.lean` change). `git status --short` at the tip: empty.
+
+Two earlier attempts are recorded honestly in the evidence README: run 1 at
+`ee23f302` (main `dd636996`) PASSED on that main's pin (3618/3618) but on a
+DIRTY tree — this worker edited three records during the run, so the ci
+demoted its baseline lines to «certifies that worktree state, not a
+commit» — superseded; run 2 at `b06df2c2` was STOPPED by task id (never by
+pattern) when round 24 landed, since the gate had to run at the rebased tip.
+
+The final landing commit differs from the gated `0c9c6d6a` ONLY by
+`docs/evidence/2026-09-07_land-sprint-records/` and this section (the
+documentation-only amend of the landing practice). The gate was not re-run
+at the amended tip; the three steps that read those files were, verbatim:
+
+```
+$ scripts/check-evidence-size
+evidence-size gate: PASS — 1574 tracked files / 27162635 bytes in 85 evidence dirs; caps file 262144 B, dir 4194304 B, no archives, no source copies; 17 pre-existing offender(s) allowlisted (frozen 2026-09-07), 0 new
+$ scripts/check-bugs.sh
+check-bugs: ok (107 bug(s); pinned cases behave as claimed)
+$ python3 tools/reconcile-records
+[01] C13  MEDIUM  78 doc site(s) across 9 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
+[02] C5  MEDIUM  1 frontier-table case citation(s) do not resolve against the baseline
+2 finding(s).
+```
 
 ## 6. Provenance
 

@@ -1,0 +1,46 @@
+# scripts/capped scripts/ci --diff at the clean committed tip 0c9c6d6ae062955ddaac238e1cbb2af581a3502e (branch land/sprint-records on main 29f77b43), 2026-09-07
+# envelope: GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=4 GOLEAN_COVERAGE_JOBS=8; ANSI colour stripped; the step lines in the order the ci printed them, then the run meta
+differential coverage summary: cases=3654 pass=3403 fail=251 export_status=0
+  note build parallelism: LEAN_NUM_THREADS=4 (set by the caller — honoured as-is)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   evidence-on-main size gate
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   core build (warning-free)
+  ok   semantic interface (bridges, counterexamples, compiled audit negatives)
+  ok   admission checker proofs and post-import audit
+  ok   typed recovery terminal classification
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   coverage-harness unit tests
+  ok   eval tests (207 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  ok   negative baseline diff (no regression)
+  ok   baseline diff FULL (3654/3654, no regression)
+  note reconciler: 2 finding(s), 0 HIGH — report-only (details: tools/reconcile-records)
+RESULT: PASS
+exit=0
+
+# artifacts/coverage/latest.meta.tsv (selected keys)
+git_commit	0c9c6d6ae062955ddaac238e1cbb2af581a3502e
+git_dirty	false
+go_toolchain	go1.26.5
+go_traceback	system
+go_crash_channel	same-run-setcrashoutput-v1
+go_drift_actual	false
+membership_draws	32
+jobs	8
