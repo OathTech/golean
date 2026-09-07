@@ -1,5 +1,7 @@
 # The GoLean master plan — the whole roadmap to a "good" Go semantics, as understood on 2026-09-05
 
+> **Note 2026-09-07 ([AGENT], lane `master-plan-0907`, [USER]-commissioned, relayed):** the reasoning-surface line of this plan is continued by **v2 — `docs/2026-09-07_master-plan-v2.md`** (what a RefinedC-like layer needs from GoLean, the checklist of what is missing, the branch asset log, and the revised sequencing). v2 SUPERSEDES this document's **§3.A** (status table and work items), **§5.1–§5.4** (dependency graph, next wave, calendar, decisions) and **§7.4's revised-wave table**, and RSP §5.1's I5/pin placement — exactly those parts, listed in v2 §0.5. Packages **§3.B–§3.I**, **§4**, the E-table reading of §7.3, and every ruling recorded here remain in force and are indexed by v2, not restated.
+
 Status: PLAN OF RECORD (index), docs only. [AGENT]-authored (lane
 `master-plan-0905`, worktree off `main` @ `9343a310`, rebased onto
 `7677865a` when the `e13-b` train landed mid-gate — §0.2 addendum);
