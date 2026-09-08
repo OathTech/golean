@@ -1,9 +1,10 @@
 # I1 declaration type boundary — first review response
 
-[AGENT] Current disposition, 2026-09-08: **SECOND REVIEW MERGE-CLEAN;
-MERGE AUTHORIZED.** The second-review disposition below supersedes this
-record's historical pause. Its remaining required documentation issue is
-fixed; runtime code and fixture pins are unchanged.
+[AGENT] Current disposition, 2026-09-08: **LANDED ON MAIN at `960ee230`**
+after the MERGE-CLEAN second review and explicit [USER] sign-off. Its
+remaining required documentation issue is fixed; runtime code and fixture
+pins are unchanged. The [landing record](2026-09-08_i1-declaration-landing.md)
+supersedes this record's historical pauses and records the completed merge.
 
 [AGENT] 2026-09-08, `land/i1-declarations`, responding to the coordinator's
 independent review of `8b4a1aec`. [USER], firsthand in this session: “Can you

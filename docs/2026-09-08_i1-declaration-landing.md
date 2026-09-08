@@ -4,6 +4,18 @@
 [user-authorized charter](2026-09-08_i1-declaration-landing-charter.md).
 The committed-source certification and audit disposition are recorded below.
 
+[AGENT] **LANDED**, 2026-09-08: the primary checkout on `main` was
+fast-forwarded from `ae9c807923f371a7349430a443a635a754ef816f` to
+`960ee230b876f536f83efd0eb62a31b27b598607`, after the second-review fix
+and explicit [USER] authorization below. Pre-merge refs were saved as
+`refs/snapshots/i1-landing/2026-09-08/main-before-merge` and
+`refs/snapshots/i1-landing/2026-09-08/approved-branch`. Evidence-size and
+AGENTS-alias checks also pass on main. The tracked tree is clean; the
+pre-existing untracked `docs/2026-09-06_disk-growth-review.md` is retained
+unchanged. This follow-up records the completed merge and updates statuses;
+it changes documentation only. No push was performed. L1b is complete;
+production I1 and the explicitly queued re-pin guard remain owed.
+
 [AGENT] Current disposition, 2026-09-08: the [second review](evidence/2026-09-08_i1-declarations/coordinator-review-update.md)
 at `4eb2ab1c` is **MERGE-CLEAN**. Its sole required follow-up, N5, is fixed
 by master-plan-v2 §2.2 R10, which queues the fixture re-pin authorization

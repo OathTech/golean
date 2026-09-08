@@ -711,6 +711,15 @@ consumer. This records a follow-up, not source-validity certification.
 |---|---|---|---|---|---|---|---|
 | R10 | **Declaration fixture re-pin authorization guard** | gate changes to `Tests/declaration-fixture/SHA256SUMS` on an explicit re-pin record with written reason, fresh fixture output and review of the changed identity matrix; reject an unrecorded producer-plus-pin change in a negative control | L1b; define the re-pin record contract | S | mainline, W3 follow-up before the first declaration fixture re-pin | **OWED** — the current byte check detects producer drift but has no dedicated authorization guard | second review N5 / first review R10; `Tests/declaration-fixture/README.md`; [review response](2026-09-08_i1-review-response.md) |
 
+**Landing addendum 2026-09-08 ([AGENT]) — R7/L1b.**
+[USER] signed off the N5 fix and merge; main fast-forwarded from `ae9c8079`
+to `960ee230`. **L1b is LANDED**: the separate declaration type producer,
+strict parser/decoder and gate, including the reviewed corrections.
+R7 overall remains **PARTIAL**: production I1 integration, declaration-set
+closure and refusal-marker removal are outstanding. R10 remains **OWED**.
+The [landing record](2026-09-08_i1-declaration-landing.md) binds the reviews,
+unchanged runtime's clean full gate and fresh documentation checks to source.
+
 ### 2.3 Fidelity families, identity, open bugs (Gate B)
 
 | # | item | owed | dep | size | who | status | evidence |
@@ -940,6 +949,11 @@ the core declaration module already on main is unchanged. No whole branch
 or dirty prototype overlay is merged. The four selected design notes carry
 historical headers. See the [source selection and validation
 record](2026-09-08_i1-declaration-landing.md); production I1 remains outstanding.
+
+**Landing addendum 2026-09-08 ([AGENT]) — T3.**
+The L1b selection and review corrections are **LANDED** at `960ee230`;
+§2.2's landing addendum and its evidence supersede the earlier branch status.
+The remainder of the prototype is still outside this landing.
 
 ### 3.2 What to lift, concretely — by layer of the target (§1.2)
 
@@ -1254,6 +1268,11 @@ this document; the order within the wave is a coordinator call.
 instruction. L1b is implemented on its worktree branch with a green full
 candidate gate; final certification and review disposition are recorded in
 the linked landing note. No other W3 chunk or production I1 work is included.
+
+**Landing addendum 2026-09-08 ([AGENT]) — W3.**
+The I1 declaration-boundary chunk L1b is **LANDED** at `960ee230` after
+two independent reviews and explicit [USER] sign-off (see §2.2). The other
+W3 chunks retain their statuses; R10 is the newly queued fixture-pin follow-up.
 
 ### 4.4 The Codex-suitable deep-theorem list — statements and acceptance criteria
 

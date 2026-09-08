@@ -1,7 +1,7 @@
 # I1 declaration boundary — landing charter
 
-[AGENT] 2026-09-08. Status: SECOND REVIEW MERGE-CLEAN; MERGE AUTHORIZED.
-The final review follow-up is documentation only. Branch `land/i1-declarations`, worktree
+[AGENT] 2026-09-08. Status: LANDED ON MAIN at `960ee230` after the
+MERGE-CLEAN second review and explicit [USER] sign-off. Branch `land/i1-declarations`, worktree
 `.claude/worktrees/land-i1-declarations`, starting main
 `ae9c807923f371a7349430a443a635a754ef816f`.
 
@@ -143,3 +143,8 @@ you fix the remaining minor issue, then land it on main?” This supersedes
 the prior second-review stop and authorizes the fast-forward merge after
 the documentation checks. Push remains a separate sign-off. The
 [review response](2026-09-08_i1-review-response.md) records this disposition.
+
+[AGENT] Landing completed by fast-forward from `ae9c8079` to `960ee230`
+on 2026-09-08. The [landing record](2026-09-08_i1-declaration-landing.md)
+records checkpoints, validation scope and retained follow-ups. This closes
+L1b; production I1 and master-plan R10 remain owed. No push was performed.
