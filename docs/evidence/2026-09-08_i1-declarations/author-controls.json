@@ -1,0 +1,42 @@
+[
+  {
+    "control": "duplicate-schema",
+    "exit": 1,
+    "reason": "duplicate JSON object key"
+  },
+  {
+    "control": "escaped-duplicate-schema",
+    "exit": 1,
+    "reason": "duplicate JSON object key"
+  },
+  {
+    "control": "invalid-utf8",
+    "exit": 1,
+    "reason": "JSON input is not valid UTF-8"
+  },
+  {
+    "control": "uintptr-collapse",
+    "exit": 1,
+    "reason": "Go/Lean declaration identity differs"
+  },
+  {
+    "control": "generic-argument-collapse",
+    "exit": 1,
+    "reason": "Go/Lean declaration identity differs"
+  },
+  {
+    "control": "raw-tag-collapse",
+    "exit": 1,
+    "reason": "Go/Lean declaration identity differs"
+  },
+  {
+    "control": "repeated-pair",
+    "exit": 1,
+    "reason": "duplicate, missing or reordered identity pair"
+  },
+  {
+    "control": "missing-nominals",
+    "exit": 1,
+    "reason": "unknown nominal declaration"
+  }
+]

@@ -1,0 +1,18 @@
+# Source selections from 7ac3eb46bb3e2fe9c15b86b509569ef086327453
+# [AGENT] 2026-09-08; original blobs, before landing fixes.
+blob	path
+87d77ed09ea43803a5372bddc95628080eb9cd82	GoLean/NativeDeclaration.lean
+e7e266be02af90d65f907f9232bf6d3c06d3bbbf	GoLean/StrictJsonParse.lean
+38c40e4e1f5dcd535e5bbb7638333dd5374c3c47	Tests/DeclarationWire.lean
+e82a65110c86300192fb7ea3f45e4f18938c7c12	Tests/StrictJsonParse.lean
+e4d40515df71e2b7952c2cd8131312444bd93454	Tests/DeclarationAudit.lean
+626edbb82fdf32d09452c6aaf3f900b5f5d2e84f	scripts/check-declarations
+f17c3060501b6d0457bf6015abe6f114be77a7b5	tools/check-declaration-wire.lean
+619d3514d863456f6063ddfca22a6b8cea5b6ffb	tools/declaration-audit.py
+6cc8cff7c5d1ac3dd419e1a2572fde703cf38d7b	tools/nativefrontend/declaration.go
+654fe4be2917235ab82bd2445d8fc1f95cb11f03	tools/nativefrontend/declaration_test.go
+c51a0d548aebf86838c562516f99fcd0a07b561b	tools/nativefrontend/declaration_fixture_test.go
+1cce471206937af96f0ebf0f9300453d02c547c6	docs/2026-09-06_i1-admission-design.md
+550b2847e52a94d2238c57db91c6276a35ba0342	docs/2026-09-06_i1-declaration-wire.md
+8cecf54a18b4a0e5b60a8dc1c6f19d3a6f4e52c5	docs/2026-09-06_i1-json-boundary.md
+adb71186db1208bc094fe920455d852fabff2c23	docs/2026-09-06_i1-positive-declarations.md

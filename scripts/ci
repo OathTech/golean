@@ -476,6 +476,15 @@ else
   bad "admission checker proofs and post-import audit"
 fi
 
+# I1/L1b: fresh Go declarations through the strict byte decoder, an enforced
+# fixture pin, malformed-input controls and compiling dependency-audit poisons.
+step "declaration boundary (Go identity, strict JSON, fixture pin, dependency audit)"
+if bash scripts/check-declarations; then
+  ok "declaration boundary"
+else
+  bad "declaration boundary (scripts/check-declarations)"
+fi
+
 # Landing chunk L3 (docs/2026-09-07_land-panic-text-tape.md): the recovery
 # profile's terminal classification over the repanicCollapse tape and the
 # D5 refusal — fresh elaboration of the two semantic modules and the tests,

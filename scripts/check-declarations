@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+[[ $# = 0 ]] || { echo 'check-declarations: expected no arguments' >&2; exit 2; }
+modules=(GoLean/GoCore/Declaration GoLean/StrictJsonParse GoLean/NativeDeclaration Tests/DeclarationWire Tests/StrictJsonParse Tests/DeclarationAudit)
+for module in "${modules[@]}"; do sha256sum "$module.lean"; done
+sha256sum tools/nativefrontend/declaration.go tools/nativefrontend/declaration_fixture_test.go tools/check-declaration-wire.lean tools/declaration-audit.py
+scripts/capped lake build DeclarationTests
+for module in "${modules[@]}"; do
+  scripts/capped lake env lean --setup ".lake/build/ir/$module.setup.json" \
+    -o ".lake/build/lib/lean/$module.olean" "$module.lean"
+done
+scripts/capped lake env lean --run Tests/StrictJsonParse.lean
+scratch_root="${TMPDIR:-$ROOT/.tmp}"
+mkdir -p "$scratch_root"
+scratch_dir="$(mktemp -d "${scratch_root%/}/declaration-fixture.XXXXXX")"
+fixture="$scratch_dir/declarations.json"
+GOLEAN_DECLARATION_FIXTURE="$fixture" GOCACHE="$ROOT/artifacts/go-build-cache" GO111MODULE=off \
+  go test ./tools/nativefrontend -run '^TestDeclarationDecoderFixture$' -count=1 -v
+[[ -s "$fixture" ]] || { echo 'declaration fixture producer wrote no artifact' >&2; exit 1; }
+check_fixture() {
+  if ! (cd "$1" && sha256sum --strict -c "$ROOT/Tests/declaration-fixture/SHA256SUMS"); then
+    echo 'check-declarations: declaration fixture pin mismatch or invalid expectation' >&2
+    return 1
+  fi
+}
+check_fixture "$scratch_dir"
+# The same check must reject changed raw bytes even when JSON still parses.
+mkdir "$scratch_dir/corrupt"
+cp "$fixture" "$scratch_dir/corrupt/declarations.json"
+printf ' ' >> "$scratch_dir/corrupt/declarations.json"
+if check_fixture "$scratch_dir/corrupt" > "$scratch_dir/corrupt.log" 2>&1; then
+  echo 'check-declarations: corrupt fixture unexpectedly passed its pin' >&2
+  exit 1
+fi
+echo 'Declaration fixture negative control: changed bytes rejected'
+scripts/capped lake env lean --run tools/check-declaration-wire.lean "$fixture"
+scripts/capped lake env python3 tools/declaration-audit.py
+printf 'Declaration gate: PASS; fresh fixture retained at %s\n' "$fixture"

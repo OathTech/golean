@@ -658,6 +658,17 @@ estimates); **who** = mainline (a worker lane under the merge protocol)
 | R8 | **Owed small items from landed C-arc steps** | `Park` as a type (~150 sites, 14 files); bound-irrelevance theorem (`types.WellFounded → i < b → i < b' → defaultValueAt types b i = defaultValueAt types b' i`); `Accepted P` as one Prop; `itersNormalized` deletion (216 refs); program-text `locSup` deletion; `EnumSpec.Obs` output; `canonicalSlot0` docstring for `repanicCollapse` (still "under BUG-087's ruling") | — | S each | mainline (bound-irrelevance: Codex) | OWED | v1 §3.A "Owed"; v1 §7.8.6 item 5 |
 | R9 | **B5 `Chan` module** | equational module; may follow the pin | — | 1–2 sessions | mainline | PROPOSED, optional | RSP §5.1 row 11 |
 
+**Addendum 2026-09-08 ([AGENT], `land/i1-declarations`) — R7/L1b.**
+The declaration producer, strict byte parser, decoder and dedicated CI gate
+are implemented on this branch, with A-R11 fixture-pin enforcement, A-R12
+query isolation and the named-constraint refusal correction. The full
+3,654-row differential and 394-row negative baselines match on the frozen
+candidate. This is branch implementation, pending committed-tip certification,
+the mandatory audit ask and explicit merge sign-off; no main-side LANDED
+status is claimed. Production I1 integration and refusal-marker removal still
+depend on B7. Scope and fresh evidence:
+[landing record](2026-09-08_i1-declaration-landing.md).
+
 ### 2.3 Fidelity families, identity, open bugs (Gate B)
 
 | # | item | owed | dep | size | who | status | evidence |
@@ -879,6 +890,14 @@ in-tree. "park" = `7440bf70` (= `park/reasoning-2026-08-31`).
 | T10 | `review/project-audit-20260905` | @ `75dcb6d1` | 0 ahead | **LANDED** (ancestor; content = `docs/2026-09-05_project-gate-audit.md` + its evidence dir) | nothing | retire the branch pointer once `docs/ARCHIVE.md` names it (N7) |
 | T11 | `storage-maintenance-20260906` / `-main-20260906` | @ `0560484e` (100 ahead; 2,551 files) / `521f4eca` (3 ahead) | — | **NOT REVIEWED (note only)** | — | landing plan §5: out of scope; both carry an `AGENTS.md` standing-deletion assertion rejected on the global no-standing-permission rule |
 | T12 | housekeeping | `spec-parity-s1..s6` (stale slices of the MERGED `spec-parity`; `-s6` +18,268 over `2927085f`), `prep/observer-terminal-harness` (behind main), `typed-i1-json` = `typed-i1-envelope-review` | — | **SUPERSEDED** | nothing | delete candidates — a destructive records action → N7 |
+
+**Addendum 2026-09-08 ([AGENT], `land/i1-declarations`) — T3.**
+The L1b declaration boundary is assembled from fifteen selected committed
+source/doc blobs at `typed-i1-json` @ `7ac3eb46`, with repairs and controls;
+the core declaration module already on main is unchanged. No whole branch
+or dirty prototype overlay is merged. The four selected design notes carry
+historical headers. See the [source selection and validation
+record](2026-09-08_i1-declaration-landing.md); production I1 remains outstanding.
 
 ### 3.2 What to lift, concretely — by layer of the target (§1.2)
 
@@ -1186,6 +1205,13 @@ this document; the order within the wave is a coordinator call.
 | W5 | **Design notes before lanes** | F6 (with BUG-101's value axis decided inside), F7 (with C6 revisited), A7 the type-descriptor algebra, the profile-naming proposal (N5), the D1 statement-repair note (§4.4 item 1, deliverable 1) | each a note + a posed [USER] gate; no lane launches on a note that has not been ruled |
 | W6 | **Codex deep theorems** (§4.4) | the items whose statements are FIXED now: A4, R8's bound-irrelevance, C2's bound theorem, §4.4 items 4 and 5; after C1: the `Mem` frame lemmas, D2; after D1's ruling: the reduction proof | per-item criteria in §4.4 |
 | HOLD | G6 T1 (pending A7 — PENDING [USER] confirmation); raft W4 stage 2 (PENDING [USER]); P/C3/C4 (after C1); B6 (coordinator/[USER] slot); B5 (any time) | | |
+
+**Addendum 2026-09-08 ([AGENT], `land/i1-declarations`) — W3.**
+[USER] authorized the I1 declaration-boundary chunk in this session; the
+[charter](2026-09-08_i1-declaration-landing-charter.md) records the firsthand
+instruction. L1b is implemented on its worktree branch with a green full
+candidate gate; final certification and review disposition are recorded in
+the linked landing note. No other W3 chunk or production I1 work is included.
 
 ### 4.4 The Codex-suitable deep-theorem list — statements and acceptance criteria
 

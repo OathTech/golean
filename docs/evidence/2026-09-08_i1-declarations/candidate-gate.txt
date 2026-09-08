@@ -1,0 +1,38 @@
+══ scripts/ci summary ══
+  note build parallelism: LEAN_NUM_THREADS=3 (set by the caller — honoured as-is)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   evidence-on-main size gate
+  ok   AGENTS.md alias of CLAUDE.md
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   core build (warning-free)
+  ok   semantic interface (bridges, counterexamples, compiled audit negatives)
+  ok   admission checker proofs and post-import audit
+  ok   declaration boundary
+  ok   typed recovery terminal classification
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   coverage-harness unit tests
+  ok   eval tests (207 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  note negative baseline diff matched (394 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  note baseline diff FULL (3654/3654, no regression) but recorded on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  note reconciler: 2 finding(s), 0 HIGH — report-only (details: tools/reconcile-records)
+
+RESULT: PASS
+Captured gate exit: 0
+Owned build lock released

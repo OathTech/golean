@@ -1,0 +1,46 @@
+{
+  "source_head": "31ecd39d87c93d708dd62ba352f3c88ce011d42a",
+  "frozen_index_tree": "91c21fbbc0773ad375561adc478c9a7a5dbbe83f",
+  "git_dirty": true,
+  "mode": "--diff (slow rows use cached certified records)",
+  "captured_gate_exit": 0,
+  "oracle": "go1.26.5",
+  "memory_max": "32G",
+  "lean_threads": 3,
+  "coverage_workers": 8,
+  "lanes": {
+    "native": {
+      "rows": 3654,
+      "results": {
+        "PASS": 3403,
+        "FAIL": 251
+      },
+      "result_or_allowed_stage_drift": [],
+      "existing_stage_alternations_observed": {
+        "channels/select-select/beside-loop": {
+          "allowed": "lean-observation|differential",
+          "observed": "lean-observation"
+        }
+      }
+    },
+    "negative": {
+      "rows": 394,
+      "results": {
+        "PASS": 394
+      },
+      "result_or_allowed_stage_drift": [],
+      "existing_stage_alternations_observed": {}
+    }
+  },
+  "sha256": {
+    "baselines/native-full.tsv": "9235f071fcd9407a6c2b66866e4f53b120235dbd977833955fa82700a846f9bc",
+    "baselines/negative-full.tsv": "21a0e9bd9776fe9321da90ba25195126dc0d581dd0a2abdc7789d9cd72646a27",
+    "artifacts/i1-landing/ci-diff-corrected.log": "59710b7d033cfcd6f30ce288f24faf2c8660ebc052d026e3a0938a327e14f07c",
+    "artifacts/i1-landing/frontend-and-diagnostics-final.log": "bbc6948cdd0abad7f29295fc576eb0b2cb9a23dbb336b742eedb85c0e302383a",
+    "artifacts/i1-landing/red-first.log": "789a533fc7ea28652afeb6fbcb2aba709cca1cbb0ea0466703f533defee727c1",
+    "artifacts/i1-landing/named-constraint-probe.log": "d7d47856b039d9fb392dc6a839a6159ec94238d4f76f87e8170e92bb7c00a384",
+    "artifacts/i1-landing/reader-challenges.log": "e48d74c4d94a20fc054f673b1f693eabf5532d85b482efde39f402738873aa06",
+    "artifacts/i1-landing/declarations.json": "26748fff476161bf0946095a26f6aaf01b191d40f98219a42faada33ceef3f3c",
+    "GoLean/GoCore/Declaration.lean": "c66e53248a3786c244049ebed2266f323b88f2deb8af628188b79c252c0fe5dd"
+  }
+}
