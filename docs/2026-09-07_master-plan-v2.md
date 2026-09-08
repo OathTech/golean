@@ -687,6 +687,13 @@ and R8–R10 scope/accounting/remaining pin-policy limitations. This supersedes
 the pending first-audit disposition above; L1b remains unmerged, with fresh
 correction gates and the second review owed before sign-off.
 
+**Correction completion addendum 2026-09-08 ([AGENT], `land/i1-declarations`).**
+Fixes at `061904f0` passed the candidate and clean committed-source full
+`--diff` gates, actual exit 0, with 3,654 executable and 394 negative rows
+matching their baselines. The linked review response records each disposition
+and the evidence. The branch is paused for the user-directed second review;
+L1b is still unmerged and production I1 remains outstanding.
+
 ### 2.3 Fidelity families, identity, open bugs (Gate B)
 
 | # | item | owed | dep | size | who | status | evidence |

@@ -7,6 +7,10 @@ improvements if they are obviously needed in the light of the review comments”
 The end state for this round is a fixed, validated branch awaiting that second
 review. No merge or push is authorized by this request.
 
+[AGENT] Completion status: fixes committed at `061904f0`, candidate and
+clean committed-tip full `--diff` gates PASS. Paused for the user-directed
+second review; no merge sign-off is requested or assumed in this round.
+
 The [supplied review](evidence/2026-09-08_i1-declarations/coordinator-review.md)
 is retained verbatim, SHA256
 `11e316483ec9dbb337796faa390c0998f3fd5d5b9e0134ef2d9d272de43ddf36`.
@@ -56,3 +60,33 @@ See the [candidate gate](evidence/2026-09-08_i1-declarations/review-candidate-ga
 and [measurements](evidence/2026-09-08_i1-declarations/review-candidate-measurements.json).
 Only these documentation/evidence additions follow the validated candidate;
 the clean committed-tip gate is next.
+
+**Clean committed gate and second-review handoff, [AGENT] 2026-09-08.**
+`scripts/capped scripts/ci --diff` passed, actual exit 0, at
+`061904f08dee9d5a5e2fdf2ce5e3186e20e52bec` (tree
+`bfa37562ca61ac41e8d8f7ca9f3656c15d3b6d29`). Both native and negative
+metadata name that commit with `git_dirty=false`; the worktree stayed clean
+throughout. Scope: 3,654 executable rows (3,403 PASS / 251 expected FAIL),
+394 negative PASS, 207 eval PASS, no baseline result/stage drift, no oracle
+drift, no new reconciler findings. Slow rows used their cached certified
+records; the earlier `--slow` certification remains historical.
+
+The final declaration audit checked 1,744 imported/local constants, rejected
+all eight compiling private axiom controls, and passed a clean import after
+the last poison. Its 6,947,764 bytes of private regular-file contents were
+removed on success (this excludes symlink and filesystem metadata overhead).
+The [failure-path control](evidence/2026-09-08_i1-declarations/review-audit-failure-control.json)
+also ran at clean `061904f0`: expected script exit 1, audit and failure logs
+retained in this worktree, foreign TMPDIR unused. The complete Unicode
+comparison and all new decoder/parser regressions passed; the original
+declaration fixture hash remains unchanged.
+
+Evidence: [committed gate](evidence/2026-09-08_i1-declarations/review-committed-gate.txt)
+and [measurements](evidence/2026-09-08_i1-declarations/review-committed-measurements.json).
+This final handoff is documentation/evidence only; no runtime source changed
+after the clean gate. The second reviewer can inspect
+`git diff 8b4a1aec..061904f0` with this finding table, particularly the
+Unicode export boundary, repeated blank fields, adapter limits and symlink
+overlay lifecycle. R8/R10 remain explicitly scoped/deferred; no acceptance
+of them is attributed to the second reviewer. **Pause here for that review.**
+No second review, merge or push has been performed by this author.

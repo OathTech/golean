@@ -12,6 +12,43 @@ its source SHA is recorded in that response. Initial validation below remains
 bound to its historical source. New correction-gate records are identified
 separately when complete.
 
+Correction records, [AGENT] 2026-09-08:
+
+- `review-candidate-{gate.txt,measurements.json}`: full `--diff` PASS on
+  frozen dirty index tree `da44f64574e6b959a64bb8923f669a58013a708d` at `8b4a1aec`.
+- `review-committed-{gate.txt,measurements.json}`: full `--diff` PASS on
+  clean `061904f08dee9d5a5e2fdf2ce5e3186e20e52bec`, actual exit 0. Both
+  correction runs use 32 GiB, three Lean threads and twelve workers, with
+  cached slow certification. They are separate from the older `--slow` run.
+- `review-audit-failure-control.json`: the intentional missing-import control
+  at clean `061904f0`, expected exit 1, with local failure logs retained and
+  foreign TMPDIR ignored. Success cleanup and owned regular-file byte counts
+  are in the correction gate measurements.
+
+These correction gates reproduce with the same box-wide lock procedure below
+and `GOLEAN_COVERAGE_JOBS=12 scripts/capped scripts/ci --diff`; use the
+corrected source commit and preserve the actual exit and metadata. The new
+focused checks run through `scripts/capped scripts/check-declarations`,
+including fresh Unicode table regeneration, all-code-point comparison, member
+identity/field/resource controls and eight compiled poisons. The declaration
+fixture bytes remain at the original pin. To reproduce the expected failure
+path, choose unused local paths for the two variables below and run:
+
+```sh
+TMPDIR="$PWD/.tmp/i1/foreign-scratch-control" \
+  LEAN_PATH="$PWD/.tmp/i1/absent-lean-library" \
+  GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=3 \
+  scripts/capped python3 tools/declaration-audit.py
+```
+
+Expect exit 1 and a retained scratch directory under this worktree's `.tmp`,
+with `audit.log` naming the missing imported module and a `failure.txt`.
+The nominated foreign TMPDIR must remain absent. The measurement records
+are derived from the published native/negative TSV counts, their result and
+allowed-stage comparison, metadata and captured gate output; hashes are
+`sha256sum` of the named files. These records are author validation of the
+fixes, not the pending second review.
+
 Toolchains: `go version go1.26.5 linux/amd64`; Lean pinned by
 `lean-toolchain` to `leanprover/lean4:v4.32.2`. Gates ran on linux/amd64 with
 a verified 32 GiB cgroup cap, three Lean threads, eight differential workers

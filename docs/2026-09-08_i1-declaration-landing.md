@@ -11,6 +11,12 @@ supersedes the pending first-audit disposition and the original readiness
 statement below; previous gate results remain evidence only for their named
 source commits.
 
+[AGENT] Correction completion, 2026-09-08: fixes at `061904f0` passed both
+the candidate and clean committed-source full `--diff` gates, with unchanged
+3,654 executable / 394 negative baselines. The review response contains the
+final evidence and handoff. The branch is **paused for the second review**;
+the earlier readiness statement does not authorize a merge.
+
 ## Result and scope
 
 The separate native declaration producer, strict raw-byte JSON parser and

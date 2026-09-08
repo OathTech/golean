@@ -1,7 +1,7 @@
 # I1 declaration boundary — landing charter
 
-[AGENT] 2026-09-08. Status: FIRST REVIEW FIXES IN PROGRESS; pause for a
-second review before merge sign-off. Branch `land/i1-declarations`, worktree
+[AGENT] 2026-09-08. Status: FIXES COMPLETE; PAUSED FOR SECOND REVIEW
+before merge sign-off. Branch `land/i1-declarations`, worktree
 `.claude/worktrees/land-i1-declarations`, starting main
 `ae9c807923f371a7349430a443a635a754ef816f`.
 
@@ -122,3 +122,9 @@ in force. A fresh candidate `--diff` gate precedes the code commit, followed
 by a clean committed-tip `--diff` run for the second reviewer. The previous
 `--slow` record stays historical; this round does not edit either production
 wire entry point that would trigger merge-protocol 5a.
+
+[AGENT] Correction round complete at `061904f0`: the full candidate and
+clean committed-source `--diff` gates both passed, exit 0. All 3,654 executable
+and 394 negative rows match their baselines. The updated review response and
+compact evidence form the second-review handoff. Follow-up records are docs
+only; the branch is paused, with no second review, merge or push performed.

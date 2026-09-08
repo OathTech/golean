@@ -1,0 +1,16 @@
+{
+  "source_commit": "061904f08dee9d5a5e2fdf2ce5e3186e20e52bec",
+  "git_dirty": false,
+  "control": "missing imported Tests package via isolated LEAN_PATH; foreign TMPDIR",
+  "expected_script_exit": 1,
+  "actual_script_exit": 1,
+  "failure_retained": true,
+  "audit_log_retained": true,
+  "failure_reason_retained": true,
+  "foreign_tmpdir_unused": true,
+  "scratch": ".tmp/declaration-audit-kjlimzua",
+  "sha256": {
+    "artifacts/i1-landing/review-audit-failure-committed.log": "7befb50ba757f3caa46b6136577ca39da7a476cdcb831ce6a512b3da82ba4275",
+    "tools/declaration-audit.py": "ce1ee554cee52707e8b3b31cb30bf2f24df1d584d22e3ee5022d2c254efcc01f"
+  }
+}

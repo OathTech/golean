@@ -1,0 +1,64 @@
+{
+  "date_utc": "2026-09-08T02:41:44.478489+00:00",
+  "source_commit": "061904f08dee9d5a5e2fdf2ce5e3186e20e52bec",
+  "mode": "--diff (slow rows use cached certified records)",
+  "git_dirty": "false",
+  "captured_gate_exit": 0,
+  "memory_max": "32G",
+  "lean_threads": 3,
+  "coverage_workers": 12,
+  "lanes": {
+    "native": {
+      "rows": 3654,
+      "results": {
+        "PASS": 3403,
+        "FAIL": 251
+      },
+      "result_or_allowed_stage_drift": [],
+      "metadata": {
+        "git_commit": "061904f08dee9d5a5e2fdf2ce5e3186e20e52bec",
+        "git_dirty": "false",
+        "manifest_cases": "3654",
+        "manifest_sha256": "700744eeb2479510c4e2e48ccbd8c80d8716ed8ecc877d9da52a934cb28e9f97",
+        "go_toolchain": "go1.26.5",
+        "go_drift_actual": "false"
+      }
+    },
+    "negative": {
+      "rows": 394,
+      "results": {
+        "PASS": 394
+      },
+      "result_or_allowed_stage_drift": [],
+      "metadata": {
+        "git_commit": "061904f08dee9d5a5e2fdf2ce5e3186e20e52bec",
+        "git_dirty": "false",
+        "manifest_cases": "394",
+        "manifest_sha256": "21f456f4d3788469d3c42fed6ad8625d06cd2656211e3418c7bc7ffc0a1823f8",
+        "go_toolchain": "go1.26.5",
+        "go_drift_actual": "false"
+      }
+    }
+  },
+  "sha256": {
+    "artifacts/i1-landing/review-ci-diff-committed.log": "ee5422b5cd1cace3ddc71cab725b465c079beb447742f6fe999cb56fe149b209",
+    "baselines/native-full.tsv": "9235f071fcd9407a6c2b66866e4f53b120235dbd977833955fa82700a846f9bc",
+    "baselines/negative-full.tsv": "21a0e9bd9776fe9321da90ba25195126dc0d581dd0a2abdc7789d9cd72646a27"
+  },
+  "source_tree": "bfa37562ca61ac41e8d8f7ca9f3656c15d3b6d29",
+  "declaration_fixture_sha256": "26748fff476161bf0946095a26f6aaf01b191d40f98219a42faada33ceef3f3c",
+  "post_import_audit_constants": 1744,
+  "compiled_poison_controls": 8,
+  "audit_owned_regular_file_bytes": 6947764,
+  "successful_audit_scratch_removed": true,
+  "unicode_code_points_compared": 1114112,
+  "eval_pass": 207,
+  "reconciler": {
+    "findings": 2,
+    "high": 0,
+    "existing": [
+      "C13",
+      "C5"
+    ]
+  }
+}
