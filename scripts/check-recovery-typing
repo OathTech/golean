@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# O2 static foundation only; no claim of completed recovery runtime safety.
+set -Eeuo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+. "$ROOT/scripts/typed-gate-scratch.sh"
+case "${1:-}" in
+  "") [[ $# = 0 ]] ;;
+  --lean-only) [[ $# = 1 ]] ;;
+  *) echo 'check-recovery-typing: expected no arguments or --lean-only' >&2; exit 2 ;;
+esac
+modules=(
+  GoLean/GoCore/RecoveryTypingCore GoLean/GoCore/RecoveryExpressions
+  GoLean/GoCore/RecoveryCalls GoLean/GoCore/RecoveryStatements
+  GoLean/GoCore/RecoveryGraph GoLean/GoCore/RecoveryDiagnostics GoLean/GoCore/RecoveryAdmission
+  Tests/RecoveryTyping Tests/RecoveryTypingFixture Tests/RecoveryA2Artifact
+  Tests/RecoveryDiagnosticControls Tests/RecoveryTypingAudit
+)
+for module in "${modules[@]}"; do sha256sum "$module.lean"; done
+scripts/capped lake build RecoveryTypingTests
+for module in "${modules[@]}"; do
+  printf 'Recovery typing fresh elaboration: %s.lean\n' "$module"
+  scripts/capped lake env lean --setup ".lake/build/ir/$module.setup.json" \
+    -o ".lake/build/lib/lean/$module.olean" "$module.lean"
+done
+scripts/capped lake env python3 tools/recovery-typing-audit.py
+if [[ $# = 0 ]]; then
+  scripts/capped lake build
+  scratch_dir="$gate_scratch/fixture"
+  mkdir "$scratch_dir"
+  GOLEAN_RECOVERY_SCRATCH="$scratch_dir" python3 - <<'PY'
+from pathlib import Path
+original = Path('spikes/iris-customer/GoLeanIris/Program.lean').read_text()
+copy = Path('Tests/RecoveryA2Artifact.lean').read_text()
+original = original.split('def recoveryProgram : Program :=', 1)[1].split('\nend ', 1)[0].strip()
+copy = copy.split('def a2Program : Program :=', 1)[1].split('\nend ', 1)[0].strip()
+if original != copy:
+    raise SystemExit('recovery typing: A2 proof fixture is not the complete existing artifact')
+print('Recovery typing: proof artifact is an exact copy of the existing complete A2 definition')
+PY
+  GO111MODULE=off GOCACHE="$ROOT/artifacts/go-build-cache" \
+    go run ./tools/nativefrontend --dir "$ROOT/spikes/iris-customer/fixtures/recovery" \
+      --out "$scratch_dir/a2.json"
+  GO111MODULE=off GOCACHE="$ROOT/artifacts/go-build-cache" \
+    go run ./tools/nativefrontend --dir "$ROOT/Tests/recovery-typing-fixture" \
+      --out "$scratch_dir/native.json"
+  GO111MODULE=off GOCACHE="$ROOT/artifacts/go-build-cache" \
+    go run ./tools/nativefrontend --dir "$ROOT/Corpus/coverage/exec/panic-recover/panic-bool-abort" \
+      --out "$scratch_dir/outside.json"
+  scripts/capped lake env lean --run tools/check-recovery-typing-artifact.lean \
+    "$scratch_dir/a2.json" "$scratch_dir/native.json" "$scratch_dir/outside.json"
+  sha256sum "$scratch_dir/a2.json" "$scratch_dir/native.json" "$scratch_dir/outside.json"
+  GOLEAN_COVERAGE_ARTIFACTS=artifacts/recovery-typing/differential \
+    scripts/diff-coverage Tests/recovery-typing-fixture/manifest.tsv
+  python3 tools/check-recovery-fixture-controls.py
+fi
+printf '%s\n' 'Recovery typing static foundation gate: PASS'

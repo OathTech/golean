@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Exact observer erasure/provenance; no Iris or complete O2 claim.
+set -Eeuo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+. "$ROOT/scripts/typed-gate-scratch.sh"
+[[ $# = 0 ]] || { echo 'check-abort-observation: expected no arguments' >&2; exit 2; }
+modules=(
+  GoLean/GoCore/AbortObservation
+  GoLean/GoCore/RecoveryObservation
+  GoLean/GoCore/RecoveryPoolObservation
+  GoLean/GoCore/RecoveryProgramObservation
+  Tests/AbortObservation
+  Tests/AbortObservationAudit
+)
+for module in "${modules[@]}"; do sha256sum "$module.lean"; done
+scripts/capped lake build AbortObservationTests
+for module in "${modules[@]}"; do
+  printf 'Abort observation fresh elaboration: %s.lean\n' "$module"
+  scripts/capped lake env lean --setup ".lake/build/ir/$module.setup.json" \
+    -o ".lake/build/lib/lean/$module.olean" "$module.lean"
+done
+scripts/capped lake env python3 tools/abort-observation-audit.py
+printf '%s\n' 'Actual driver abort observation gate: PASS'

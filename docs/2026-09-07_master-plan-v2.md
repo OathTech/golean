@@ -810,6 +810,19 @@ NEW, this document (§3.1 T8): `land/typed-test-gates` — four declared
 step — land the sprint's `scripts/check-boolean-{typing,runtime}` (and
 the sibling steps so every declared test library has a named step).
 
+**Addendum 2026-09-08 ([AGENT], `land/typed-test-gates`) — T8/W3/N6.**
+[USER] authorized the typed-gate completion with no `GoLean/` edits, no
+`Tests` theorem statement changes, worktree-local scratch removed on success,
+compiled private-axiom/proof-hole controls, and bidirectional ownership/build
+coverage. Seven gate families are restored against landed main `dc83782d`;
+all 35 Lean test modules now have library ownership, and all 14 libraries
+are assigned to 13 executed named CI steps. There are no exceptions.
+The initial focused gates pass; full validation and cost measurement are in
+progress. This is **IN FLIGHT**, not LANDED. N6's implementation is authorized;
+the measured CI cost and adversarial review remain the user's acceptance
+decisions. [Charter](2026-09-08_typed-test-gates-charter.md) and
+[implementation record](2026-09-08_typed-test-gates-landing.md).
+
 ### 2.7 Tally by status
 
 Rows in §2.1–§2.5 (31 rows; §2.3's per-bug and §2.6's per-chunk lists

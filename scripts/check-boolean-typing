@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Static O1 typing foundation. No interpreter-success premise and no Iris.
+set -Eeuo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+. "$ROOT/scripts/typed-gate-scratch.sh"
+case "${1:-}" in
+  "") [[ $# = 0 ]] ;;
+  --lean-only) [[ $# = 1 ]] ;;
+  *) echo 'check-boolean-typing: expected no arguments or --lean-only' >&2; exit 2 ;;
+esac
+scripts/capped lake build BooleanTypingTests
+for module in GoLean/GoCore/BooleanTyping Tests/BooleanTyping Tests/BooleanTypingFixture Tests/BooleanTypingAudit; do
+  scripts/capped lake env lean --setup ".lake/build/ir/$module.setup.json" \
+    -o ".lake/build/lib/lean/$module.olean" "$module.lean"
+done
+scripts/capped lake env python3 tools/boolean-typing-audit.py
+if [[ $# = 0 ]]; then
+  scripts/capped lake build
+  scratch_dir="$gate_scratch/fixture"
+  mkdir "$scratch_dir"
+  GO111MODULE=off GOCACHE="$ROOT/artifacts/go-build-cache" \
+    go run ./tools/nativefrontend --dir "$ROOT/Tests/boolean-typing-fixture" \
+      --out "$scratch_dir/native.json"
+  scripts/capped lake env lean --run tools/check-boolean-typing-artifact.lean \
+    "$scratch_dir/native.json"
+  sha256sum "$scratch_dir/native.json"
+  GOLEAN_COVERAGE_ARTIFACTS=artifacts/boolean-typing \
+    scripts/diff-coverage Tests/boolean-typing-fixture/manifest.tsv
+fi
+printf '%s\n' 'Boolean typing foundation gate: PASS'

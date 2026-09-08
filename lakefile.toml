@@ -20,6 +20,11 @@ name = "gocore-eval-tests"
 root = "Tests.GoCoreEval"
 
 [[lean_lib]]
+# Every Tests module has library ownership, including the eval executable root.
+name = "EvalTests"
+globs = ["Tests.GoCoreEval"]
+
+[[lean_lib]]
 # Iris-free contract regressions and their post-import dependency audit.
 name = "InterfaceTests"
 globs = ["Tests.InterfaceContract", "Tests.BooleanRuntime", "Tests.BooleanProgram", "Tests.InterfaceAudit", "Tests.PanicRendering", "Tests.StringPanicMembers"]

@@ -95,6 +95,33 @@ step() { printf '\n\033[1m── %s\033[0m\n' "$1"; }
 ok()   { RESULTS+=("  ok   $1"); }
 bad()  { RESULTS+=("  FAIL $1"); fail=1; }
 
+# [USER] 2026-09-08: every Tests module has a library, and every library
+# has an executed named CI build. Receipts are fresh to this invocation.
+CI_STARTED_SECONDS=$SECONDS
+library_run="$(python3 tools/ci_libraries.py init)"; library_init_rc=$?
+finish_library_run() {
+  local rc=$?
+  trap - EXIT
+  if [[ $library_init_rc = 0 ]]; then
+    python3 tools/ci_libraries.py close "$library_run" "$rc" || rc=1
+  fi
+  printf 'CI total wall seconds: %s\n' "$((SECONDS - CI_STARTED_SECONDS))"
+  exit "$rc"
+}
+trap finish_library_run EXIT
+library_step() {
+  [[ $library_init_rc = 0 ]] || { echo 'Library coverage initialization failed' >&2; return 1; }
+  local name=$1
+  shift
+  python3 tools/ci_libraries.py run "$library_run" "$name" "$@"
+}
+step "Tests/library ownership, executed-build and audit scratch self-tests"
+if [[ $library_init_rc = 0 ]] && python3 tools/ci_libraries.py selftests; then
+  ok "Tests/library ownership (no exceptions; executed builds checked at exit)"
+else
+  bad "Tests/library ownership or coverage self-tests"
+fi
+
 # 0b. BUILD PARALLELISM, SCALED TO THE MEMORY CAP (examples phase-2 slice 0,
 #     lever 1, 2026-08-14). Lean's task-scheduler pool size (LEAN_NUM_THREADS)
 #     bounds BOTH the number of `lean` workers Lake runs concurrently AND the
@@ -447,7 +474,7 @@ fi
 step "core build (lake build; must be WARNING-free — GoLean/ module warnings
 # replay into the runner's stdout and corrupt the JSON observation channel,
 # the recorded ops failure mode that produced mass phantom drift 2026-07-23)"
-core_out="$(lake build 2>&1)"
+core_out="$(library_step core 2>&1)"
 core_rc=$?
 echo "$core_out" | tail -3
 # Root modules included in the warning watch (split audit A8, 2026-08-31):
@@ -463,14 +490,14 @@ else
 fi
 
 step "semantic interface (Iris-free correspondence regressions and dependency audit)"
-if bash scripts/check-interface; then
+if library_step interface bash scripts/check-interface; then
   ok "semantic interface (bridges, counterexamples, compiled audit negatives)"
 else
   bad "semantic interface"
 fi
 
 step "admission checker proofs and post-import audit"
-if bash scripts/check-admission --lean-only; then
+if library_step admission bash scripts/check-admission --lean-only; then
   ok "admission checker proofs and post-import audit"
 else
   bad "admission checker proofs and post-import audit"
@@ -479,18 +506,38 @@ fi
 # I1/L1b: fresh Go declarations through the strict byte decoder, an enforced
 # fixture pin, malformed-input controls and compiling dependency-audit poisons.
 step "declaration boundary (Go identity, strict JSON, fixture pin, dependency audit)"
-if bash scripts/check-declarations; then
+if library_step declarations bash scripts/check-declarations; then
   ok "declaration boundary"
 else
   bad "declaration boundary (scripts/check-declarations)"
 fi
+
+# [AGENT] Seven restored typed-contract gates, selected against landed
+# modules. Each receipt measures its actual library build plus complete check.
+typed_step() {
+  local name=$1
+  shift
+  step "typed contract: $name (fresh elaboration, post-import audit, compiled negatives)"
+  if library_step "$name" bash "scripts/check-$name" "$@"; then
+    ok "typed contract: $name"
+  else
+    bad "typed contract: $name"
+  fi
+}
+typed_step boolean-typing --lean-only
+typed_step boolean-runtime
+typed_step recovery-typing --lean-only
+typed_step recovery-storage
+typed_step recovery-setup
+typed_step recovery-control
+typed_step abort-observation
 
 # Landing chunk L3 (docs/2026-09-07_land-panic-text-tape.md): the recovery
 # profile's terminal classification over the repanicCollapse tape and the
 # D5 refusal — fresh elaboration of the two semantic modules and the tests,
 # the post-import axiom audit, and its compiled poison controls.
 step "typed recovery terminal classification (repanicCollapse members, named D5 refusal, post-import audit)"
-if bash scripts/check-recovery-terminal; then
+if library_step recovery-terminal bash scripts/check-recovery-terminal; then
   ok "typed recovery terminal classification"
 else
   bad "typed recovery terminal classification (scripts/check-recovery-terminal)"
@@ -588,7 +635,7 @@ fi
 
 # 4. Interpreter unit tests.
 step "interpreter eval tests (gocore-eval-tests)"
-evout="$(lake exe gocore-eval-tests 2>&1)"; evrc=$?
+evout="$(library_step eval lake exe gocore-eval-tests 2>&1)"; evrc=$?
 evok="$(printf '%s\n' "$evout" | grep -c '^ok:')"
 evbad="$(printf '%s\n' "$evout" | grep -icE '^(not ok|fail)')"
 echo "  ok:$evok  fail:$evbad  exit:$evrc"
@@ -1089,6 +1136,13 @@ if [ -x tools/reconcile-records ]; then
 else
   echo "  tools/reconcile-records missing or not executable"
   RESULTS+=("  note reconciler ABSENT (tools/reconcile-records missing) — report-only step, findings unavailable")
+fi
+
+step "executed library coverage (all named build receipts from this CI invocation)"
+if [[ $library_init_rc = 0 ]] && python3 tools/ci_libraries.py verify "$library_run"; then
+  ok "executed library coverage (all declared libraries; all Tests modules)"
+else
+  bad "executed library coverage (a named step is absent, stale or failed)"
 fi
 
 # Summary

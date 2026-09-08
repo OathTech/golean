@@ -1,0 +1,15 @@
+{
+  "core": {"libraries": ["GoLean"], "executables": ["golean"]},
+  "interface": {"libraries": ["InterfaceTests"], "executables": []},
+  "admission": {"libraries": ["AdmissionTests"], "executables": []},
+  "declarations": {"libraries": ["DeclarationTests"], "executables": []},
+  "boolean-typing": {"libraries": ["BooleanTypingTests"], "executables": []},
+  "boolean-runtime": {"libraries": ["BooleanRuntimeTests"], "executables": []},
+  "recovery-typing": {"libraries": ["RecoveryTypingTests"], "executables": []},
+  "recovery-storage": {"libraries": ["RecoveryStorageTests"], "executables": []},
+  "recovery-setup": {"libraries": ["RecoverySetupTests"], "executables": []},
+  "recovery-control": {"libraries": ["RecoveryControlTests"], "executables": []},
+  "abort-observation": {"libraries": ["AbortObservationTests"], "executables": []},
+  "recovery-terminal": {"libraries": ["RecoveryTerminalTests"], "executables": []},
+  "eval": {"libraries": ["TestsData", "EvalTests"], "executables": ["gocore-eval-tests"]}
+}

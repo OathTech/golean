@@ -1,0 +1,152 @@
+{
+  "date_utc": "2026-09-08T19:04:18.165855+00:00",
+  "source_commit": "03570a9f4605042b7dbbba5bf98b026aecd760bd",
+  "git_dirty": "true",
+  "mode": "fast CI; native/negative results reused from initial full candidate",
+  "actual_exit": 0,
+  "memory_max": "32G",
+  "lean_threads": 3,
+  "coverage_workers": 12,
+  "cache": "warm worktree; compiled poison modules freshly built",
+  "lanes": {
+    "native": {
+      "rows": 3654,
+      "results": {
+        "PASS": 3403,
+        "FAIL": 251
+      },
+      "result_or_allowed_stage_drift": [],
+      "metadata": {
+        "git_commit": "03570a9f4605042b7dbbba5bf98b026aecd760bd",
+        "git_dirty": "true",
+        "manifest_cases": "3654",
+        "manifest_sha256": "700744eeb2479510c4e2e48ccbd8c80d8716ed8ecc877d9da52a934cb28e9f97",
+        "go_toolchain": "go1.26.5",
+        "go_drift_actual": "false"
+      }
+    },
+    "negative": {
+      "rows": 394,
+      "results": {
+        "PASS": 394
+      },
+      "result_or_allowed_stage_drift": [],
+      "metadata": {
+        "git_commit": "03570a9f4605042b7dbbba5bf98b026aecd760bd",
+        "git_dirty": "true",
+        "manifest_cases": "394",
+        "manifest_sha256": "21f456f4d3788469d3c42fed6ad8625d06cd2656211e3418c7bc7ffc0a1823f8",
+        "go_toolchain": "go1.26.5",
+        "go_drift_actual": "false"
+      }
+    }
+  },
+  "hashes": {
+    "artifacts/typed-test-gates/ci-fast-final-candidate.log": "76c17bd3dee8847cf2a9ee07812621eaf185ed00115c3fc23dd9eb87b61efb5c",
+    "baselines/native-full.tsv": "9235f071fcd9407a6c2b66866e4f53b120235dbd977833955fa82700a846f9bc",
+    "baselines/negative-full.tsv": "21a0e9bd9776fe9321da90ba25195126dc0d581dd0a2abdc7789d9cd72646a27",
+    "artifacts/ci-library-timings/d8ad575455bc48749425e6c80b4c5117.json": "709daa26e80575d5100bfdc6b4b2a9bfd0c84c131ca2ab387fbe062c552a7690"
+  },
+  "frozen_index_tree": "274dbb7d8bc2d3fdea23cc1125985b882f5d7aaa",
+  "compiled_controls": {
+    "boolean-typing": 3,
+    "boolean-runtime": 6,
+    "recovery-typing": 5,
+    "recovery-storage": 8,
+    "recovery-setup": 9,
+    "recovery-control": 17,
+    "abort-observation": 6
+  },
+  "successful_audit_scratch_removed": true,
+  "audit_owned_bytes": {
+    "boolean-typing": 2858765,
+    "boolean-runtime": 2314700,
+    "recovery-typing": 4219045,
+    "recovery-storage": 16484579,
+    "recovery-setup": 2302978,
+    "recovery-control": 6590863,
+    "abort-observation": 3839664
+  },
+  "coverage": {
+    "libraries": 14,
+    "test_modules": 35,
+    "steps": 13,
+    "fingerprint": "383907c103b0a00210b88076fba5e57bdbf6cab1f16dedf4aada77a594ebfc3f"
+  },
+  "new_steps_seconds": {
+    "boolean-typing": {
+      "build_seconds": 0.133,
+      "check_seconds": 76.04,
+      "elapsed_seconds": 76.173
+    },
+    "boolean-runtime": {
+      "build_seconds": 0.132,
+      "check_seconds": 29.534,
+      "elapsed_seconds": 29.666
+    },
+    "recovery-typing": {
+      "build_seconds": 0.132,
+      "check_seconds": 48.286,
+      "elapsed_seconds": 48.418
+    },
+    "recovery-storage": {
+      "build_seconds": 0.131,
+      "check_seconds": 26.587,
+      "elapsed_seconds": 26.718
+    },
+    "recovery-setup": {
+      "build_seconds": 0.131,
+      "check_seconds": 28.594,
+      "elapsed_seconds": 28.725
+    },
+    "recovery-control": {
+      "build_seconds": 0.132,
+      "check_seconds": 28.8,
+      "elapsed_seconds": 28.932
+    },
+    "abort-observation": {
+      "build_seconds": 0.13,
+      "check_seconds": 22.676,
+      "elapsed_seconds": 22.806
+    }
+  },
+  "new_steps_total_seconds": 261.439,
+  "coverage_action_seconds": {
+    "init": 0.005,
+    "selftests": 0.378,
+    "verify": 0.005,
+    "close": 0.009
+  },
+  "new_steps_plus_coverage_seconds": 261.836,
+  "all_named_steps_seconds": {
+    "core": 0.132,
+    "interface": 7.599,
+    "admission": 67.073,
+    "declarations": 38.408,
+    "boolean-typing": 76.173,
+    "boolean-runtime": 29.666,
+    "recovery-typing": 48.418,
+    "recovery-storage": 26.718,
+    "recovery-setup": 28.725,
+    "recovery-control": 28.932,
+    "abort-observation": 22.806,
+    "recovery-terminal": 20.629,
+    "eval": 0.465
+  },
+  "ci_total_wall_seconds": 457,
+  "gate_outer_wall_seconds": 457.165,
+  "eval_pass": 207,
+  "reconciler": {
+    "findings": 2,
+    "high": 0,
+    "existing": [
+      "C13",
+      "C5"
+    ]
+  },
+  "boundary": {
+    "GoLean_unchanged": true,
+    "Tests_unchanged": true,
+    "baselines_unchanged": true
+  }
+}

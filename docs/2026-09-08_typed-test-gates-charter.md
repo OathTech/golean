@@ -70,3 +70,15 @@ total wall time, clearly separating cold/warm and cached slow certification.
 The endpoint is a clean, committed, validated branch with the review handoff
 posed to the user. The user conducts the adversarial review, as for I1;
 the author does not commission a substitute review or merge/push.
+
+## Validation refinement after author finding F1
+
+[AGENT] The first full `--diff` candidate passed at frozen index tree
+`91148c13`. An isolated compiler probe then confirmed that a bare library
+build can succeed without checking modules when `defaultFacets=[]`.
+Explicit `:leanArts` targets and a real compiler regression close that gap;
+all semantic/frontend/Test sources remain unchanged. Validate the corrected
+gate sequence in full fast mode using the already measured differential
+records, then run a fresh `--diff` at the clean committed implementation.
+Record each source and mode separately. This avoids misrepresenting the
+first candidate as certification of the later gate correction.

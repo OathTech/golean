@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Actual program/call setup; whole recovery control preservation remains separate.
+set -Eeuo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+. "$ROOT/scripts/typed-gate-scratch.sh"
+[[ $# = 0 ]] || { echo 'check-recovery-setup: expected no arguments' >&2; exit 2; }
+modules=(
+  GoLean/GoCore/RecoverySetupShape GoLean/GoCore/RecoveryInitialization
+  GoLean/GoCore/RecoveryResultRoots GoLean/GoCore/RecoverySetup
+  GoLean/GoCore/RecoverySetupWf GoLean/GoCore/RecoverySetupReadout
+  GoLean/GoCore/RecoveryCallEntry Tests/RecoverySetup Tests/RecoverySetupAudit
+)
+for module in "${modules[@]}"; do sha256sum "$module.lean"; done
+scripts/capped lake build RecoverySetupTests
+for module in "${modules[@]}"; do
+  printf 'Recovery setup fresh elaboration: %s.lean\n' "$module"
+  scripts/capped lake env lean --setup ".lake/build/ir/$module.setup.json" \
+    -o ".lake/build/lib/lean/$module.olean" "$module.lean"
+done
+scripts/capped lake env python3 tools/recovery-setup-audit.py
+printf '%s\n' 'Recovery actual entry/setup gate: PASS'

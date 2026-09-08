@@ -1,0 +1,22 @@
+{
+  "author": "[AGENT]",
+  "date": "2026-09-08",
+  "finding": "F1",
+  "pinned_lean": "leanprover/lean4:v4.32.2",
+  "source": "isolated Tests.Hidden: def broken : Nat := \"not a natural number\"; library defaultFacets=[]",
+  "runs": [
+    {
+      "target": "FixtureTests",
+      "exit_code": 0,
+      "seconds": 0.1796501849894412,
+      "log": "artifacts/typed-test-gates/facet-bare.log"
+    },
+    {
+      "target": "FixtureTests:leanArts",
+      "exit_code": 1,
+      "seconds": 0.26807859900873154,
+      "log": "artifacts/typed-test-gates/facet-explicit.log"
+    }
+  ],
+  "disposition": "Runner explicitly requests library:leanArts; standing real compiler regression in tools/test_ci_libraries.py. Invocation probe removed after success; logs retained."
+}

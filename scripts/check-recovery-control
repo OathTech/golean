@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Structural preservation/progress and successful-run facts; no renderer or Iris completion claim.
+set -Eeuo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+. "$ROOT/scripts/typed-gate-scratch.sh"
+[[ $# = 0 ]] || { echo 'check-recovery-control: expected no arguments' >&2; exit 2; }
+modules=(
+  GoLean/GoCore/RecoveryDelivery
+  GoLean/GoCore/RecoveryControlData
+  GoLean/GoCore/RecoveryControl
+  GoLean/GoCore/RecoveryControlMono
+  GoLean/GoCore/RecoveryWalk
+  GoLean/GoCore/RecoveryExpressionProgress
+  GoLean/GoCore/RecoveryControlHelpers
+  GoLean/GoCore/RecoveryCallControl
+  GoLean/GoCore/RecoveryValueBasic
+  GoLean/GoCore/RecoveryValueCalls
+  GoLean/GoCore/RecoveryStatementProgress
+  GoLean/GoCore/RecoveryFrameProgress
+  GoLean/GoCore/RecoveryPanicProgress
+  GoLean/GoCore/RecoveryInvariant
+  GoLean/GoCore/RecoverySuccessfulRuns
+  Tests/RecoveryInvariant
+  Tests/RecoveryControlAudit
+)
+for module in "${modules[@]}"; do sha256sum "$module.lean"; done
+scripts/capped lake build RecoveryControlTests
+for module in "${modules[@]}"; do
+  printf 'Recovery control fresh elaboration: %s.lean\n' "$module"
+  scripts/capped lake env lean --setup ".lake/build/ir/$module.setup.json" \
+    -o ".lake/build/lib/lean/$module.olean" "$module.lean"
+done
+scripts/capped lake env python3 tools/recovery-control-audit.py
+printf '%s\n' 'Recovery structural control gate: PASS'

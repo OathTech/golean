@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Bounded runtime supporting lemmas, not the completed O2 runtime contract.
+set -Eeuo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+. "$ROOT/scripts/typed-gate-scratch.sh"
+[[ $# = 0 ]] || { echo 'check-recovery-storage: expected no arguments' >&2; exit 2; }
+modules=(
+  GoLean/GoCore/RecoveryStore GoLean/GoCore/RecoveryEnvironment
+  GoLean/GoCore/RecoveryAllocation GoLean/GoCore/RecoveryOperators
+  GoLean/GoCore/RecoveryContext GoLean/GoCore/RecoveryControlTyping
+  Tests/RecoveryStorage Tests/RecoveryStorageAudit
+)
+for module in "${modules[@]}"; do sha256sum "$module.lean"; done
+scripts/capped lake build RecoveryStorageTests
+for module in "${modules[@]}"; do
+  printf 'Recovery storage fresh elaboration: %s.lean\n' "$module"
+  scripts/capped lake env lean --setup ".lake/build/ir/$module.setup.json" \
+    -o ".lake/build/lib/lean/$module.olean" "$module.lean"
+done
+scripts/capped lake env python3 tools/recovery-storage-audit.py
+printf '%s\n' 'Recovery storage supporting lemma gate: PASS'

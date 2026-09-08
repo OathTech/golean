@@ -1,0 +1,33 @@
+{
+  "source_commit": "03570a9f4605042b7dbbba5bf98b026aecd760bd",
+  "git_dirty": "true",
+  "mode": "--diff; slow rows use cached certification",
+  "actual_exit": 0,
+  "frozen_index_tree": "91148c133529a557b14b15998c13901899d83c83",
+  "compiled_controls": {
+    "boolean-typing": 3,
+    "boolean-runtime": 6,
+    "recovery-typing": 5,
+    "recovery-storage": 8,
+    "recovery-setup": 9,
+    "recovery-control": 17,
+    "abort-observation": 6
+  },
+  "new_steps_total_seconds": 267.953,
+  "ci_total_wall_seconds": 956,
+  "gate_outer_wall_seconds": 956.046,
+  "hashes": {
+    "artifacts/typed-test-gates/ci-diff-candidate.log": "816b73d26889c96f7d0fc6402626af4705f51be874083d8dad45e21fe41fc945",
+    "baselines/native-full.tsv": "9235f071fcd9407a6c2b66866e4f53b120235dbd977833955fa82700a846f9bc",
+    "baselines/negative-full.tsv": "21a0e9bd9776fe9321da90ba25195126dc0d581dd0a2abdc7789d9cd72646a27",
+    "artifacts/ci-library-timings/b9f86fc254da43e28639ee75f8ce5e6c.json": "d8bb0f7a2a0db62243f7de2b8067272277a8e5fdb326f6ef75063f3e2b2a5f7c"
+  },
+  "scope": "Initial full candidate before the explicit leanArts facet correction; not certification of the correction.",
+  "native_results": {
+    "PASS": 3403,
+    "FAIL": 251
+  },
+  "negative_results": {
+    "PASS": 394
+  }
+}
