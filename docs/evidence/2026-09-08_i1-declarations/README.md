@@ -5,6 +5,15 @@
 The [landing record](../../2026-09-08_i1-declaration-landing.md) consumes this
 evidence. These are compact records, not source or corpus copies.
 
+[AGENT] Second review, 2026-09-08: [coordinator-review-update.md](coordinator-review-update.md)
+is the supplied MERGE-CLEAN delta at `4eb2ab1c`, copied byte-exactly;
+SHA256 `a9f6b194a5b1edb39fd25961c73f6525badd103ebfb19aa8bc4e5ed35108ba78`.
+Its full `--diff` gate and corpus-wire comparison are independent reviewer
+evidence at that source. The sole required follow-up N5 is now master-plan-v2
+§2.2 R10; the [review response](../../2026-09-08_i1-review-response.md)
+records the disposition and [USER] landing authorization. Older review
+stops below are historical. This final follow-up changes documentation only.
+
 [AGENT] First-review correction round: the [review response](../../2026-09-08_i1-review-response.md)
 records the new work and second-review stop. `coordinator-review.md` is the
 supplied independent FIX-FIRST report at `8b4a1aec`, copied byte-exactly;

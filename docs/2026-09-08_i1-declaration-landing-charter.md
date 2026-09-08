@@ -1,7 +1,7 @@
 # I1 declaration boundary — landing charter
 
-[AGENT] 2026-09-08. Status: FIXES COMPLETE; PAUSED FOR SECOND REVIEW
-before merge sign-off. Branch `land/i1-declarations`, worktree
+[AGENT] 2026-09-08. Status: SECOND REVIEW MERGE-CLEAN; MERGE AUTHORIZED.
+The final review follow-up is documentation only. Branch `land/i1-declarations`, worktree
 `.claude/worktrees/land-i1-declarations`, starting main
 `ae9c807923f371a7349430a443a635a754ef816f`.
 
@@ -128,3 +128,18 @@ clean committed-source `--diff` gates both passed, exit 0. All 3,654 executable
 and 394 negative rows match their baselines. The updated review response and
 compact evidence form the second-review handoff. Follow-up records are docs
 only; the branch is paused, with no second review, merge or push performed.
+
+### Second review and landing authority
+
+[AGENT] 2026-09-08. The supplied [second review](evidence/2026-09-08_i1-declarations/coordinator-review-update.md)
+at `4eb2ab1c` is MERGE-CLEAN. Its only required follow-up, N5, is resolved
+by the master plan's new R10 owed row for a declaration fixture re-pin
+authorization guard. The optional N1 acceptance-boundary residual is named
+under R7 for resolution before a production consumer. Runtime code and pins
+are identical to the independently reviewed and gated source.
+
+[USER] 2026-09-08, firsthand in this session: “updated review landed. can
+you fix the remaining minor issue, then land it on main?” This supersedes
+the prior second-review stop and authorizes the fast-forward merge after
+the documentation checks. Push remains a separate sign-off. The
+[review response](2026-09-08_i1-review-response.md) records this disposition.

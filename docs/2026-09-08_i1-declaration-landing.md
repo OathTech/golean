@@ -4,6 +4,27 @@
 [user-authorized charter](2026-09-08_i1-declaration-landing-charter.md).
 The committed-source certification and audit disposition are recorded below.
 
+[AGENT] Current disposition, 2026-09-08: the [second review](evidence/2026-09-08_i1-declarations/coordinator-review-update.md)
+at `4eb2ab1c` is **MERGE-CLEAN**. Its sole required follow-up, N5, is fixed
+by master-plan-v2 §2.2 R10, which queues the fixture re-pin authorization
+guard; N1 is carried explicitly with R7's production boundary. [USER]
+authorized this documentation fix and landing on main. This supersedes
+the historical pauses below. Runtime source remains `061904f0`, independently
+reviewed and gated at `4eb2ab1c`; no fixture or executable pin changes.
+
+[AGENT] Final review-follow-up validation, 2026-09-08: `git diff --check`,
+`scripts/check-evidence-size` and `scripts/check-agents-alias` pass; the
+tracked second review compares byte-identically with the supplied file.
+`tools/reconcile-records` reports the same two existing C13/C5 findings,
+zero HIGH. Diff against `4eb2ab1c` outside `docs/` is empty. These are
+fresh documentation checks; the full runtime `--diff` certification is
+the clean second-review run at `4eb2ab1c`, whose log SHA256 is
+`a608287bc37c7cdea3c6fb4d537b98d01c45fe050c99a74e7fa092cc25cf1090`
+(`.tmp/review2/ci-diff.log`, PASS, captured `EXIT=0`). No fresh full runtime
+run is claimed for this documentation-only follow-up. The whole branch
+leaves both merge-protocol 5a paths unchanged, so no merged-tip `--slow`
+re-certification is owed.
+
 [AGENT] Review-status addendum, 2026-09-08: the coordinator supplied an
 independent **FIX-FIRST** review at `8b4a1aec`. The user authorized corrections
 and a pause for a second review. The [review response](2026-09-08_i1-review-response.md)

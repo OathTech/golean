@@ -1,5 +1,10 @@
 # I1 declaration type boundary — first review response
 
+[AGENT] Current disposition, 2026-09-08: **SECOND REVIEW MERGE-CLEAN;
+MERGE AUTHORIZED.** The second-review disposition below supersedes this
+record's historical pause. Its remaining required documentation issue is
+fixed; runtime code and fixture pins are unchanged.
+
 [AGENT] 2026-09-08, `land/i1-declarations`, responding to the coordinator's
 independent review of `8b4a1aec`. [USER], firsthand in this session: “Can you
 review, make fixes, then pause for a second review. You can also make other
@@ -90,3 +95,35 @@ Unicode export boundary, repeated blank fields, adapter limits and symlink
 overlay lifecycle. R8/R10 remain explicitly scoped/deferred; no acceptance
 of them is attributed to the second reviewer. **Pause here for that review.**
 No second review, merge or push has been performed by this author.
+
+## Second review and final disposition
+
+[AGENT] 2026-09-08. The supplied [second review](evidence/2026-09-08_i1-declarations/coordinator-review-update.md)
+is retained verbatim, SHA256
+`a9f6b194a5b1edb39fd25961c73f6525badd103ebfb19aa8bc4e5ed35108ba78`.
+It independently closes R1–R7 and R11 at `4eb2ab1c`, returns MERGE-CLEAN,
+and reports a clean full `--diff` gate PASS with 3,654 executable and
+394 negative rows unchanged. The review's fresh 1,823-directory frontend
+sweep found zero wire differences. These are the coordinator auditor's
+results; this author did not conduct that second review.
+
+N5 is fixed: [master-plan-v2 §2.2 R10](2026-09-07_master-plan-v2.md)
+now queues the missing fixture re-pin authorization guard with a concrete
+artifact, negative control, dependency and owner class, before the first
+fixture re-pin. No waiver or new pin is introduced. N1 is recorded with
+R7: the decoder accepts `struct{ p.t; q.t }` as distinct private identities,
+as `go/types` does, though checked source cannot produce that field set.
+Source-image restriction/provenance remains owed before production use.
+N2 is informational (a named refusal with an imprecise numeric label),
+N3 belongs to the existing coordinator-owned diagnostic classification,
+and N4 records small successful-fixture scratch retention. The reviewer
+requests no code change for these; this landing preserves the reviewed code.
+
+[USER] 2026-09-08, firsthand: “updated review landed. can you fix the
+remaining minor issue, then land it on main?” This authorizes the
+fast-forward after the N5 documentation fix and its checks, superseding
+the prior pause. Existing clean full gates certify the unchanged runtime;
+the final documentation checks and actual merge are recorded in the
+[landing record](2026-09-08_i1-declaration-landing.md). Merge-protocol 5a
+is not triggered: neither `tools/nativefrontend/wire.go` nor
+`GoLean/NativeToIR.lean` changed in this branch. Push is not authorized.

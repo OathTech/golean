@@ -694,6 +694,23 @@ matching their baselines. The linked review response records each disposition
 and the evidence. The branch is paused for the user-directed second review;
 L1b is still unmerged and production I1 remains outstanding.
 
+**Second-review addendum 2026-09-08 ([AGENT], `land/i1-declarations`).**
+The [coordinator's second review](evidence/2026-09-08_i1-declarations/coordinator-review-update.md)
+at `4eb2ab1c` is MERGE-CLEAN, with R1–R7/R11 independently closed and a
+clean full `--diff` gate PASS (3,654 executable / 394 negative rows,
+no baseline regression). [USER] authorized fixing its remaining minor
+issue and landing on main. Its sole required change, N5, is the owed row
+below; the existing pin is unchanged. R7's production scope still includes
+declaration-set/nominal-inventory closure and source provenance. Review N1
+adds a named residual there: the decoder accepts distinct-package private
+fields such as `struct{ p.t; q.t }`, matching `go/types` identity but wider
+than checked source; resolve that acceptance boundary before a production
+consumer. This records a follow-up, not source-validity certification.
+
+| # | item | owed | dep | size | who | status | evidence |
+|---|---|---|---|---|---|---|---|
+| R10 | **Declaration fixture re-pin authorization guard** | gate changes to `Tests/declaration-fixture/SHA256SUMS` on an explicit re-pin record with written reason, fresh fixture output and review of the changed identity matrix; reject an unrecorded producer-plus-pin change in a negative control | L1b; define the re-pin record contract | S | mainline, W3 follow-up before the first declaration fixture re-pin | **OWED** — the current byte check detects producer drift but has no dedicated authorization guard | second review N5 / first review R10; `Tests/declaration-fixture/README.md`; [review response](2026-09-08_i1-review-response.md) |
+
 ### 2.3 Fidelity families, identity, open bugs (Gate B)
 
 | # | item | owed | dep | size | who | status | evidence |
