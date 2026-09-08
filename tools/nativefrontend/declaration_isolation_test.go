@@ -51,8 +51,39 @@ func main() { f(); println(n) }
 			obj := types.NewTypeName(token.NoPos, pkg, "Named", nil)
 			pkg.Scope().Insert(obj)
 			return types.NewNamed(obj, types.Typ[types.Bool], nil)
-		}, ""},
+		}, "import path(s) unusable as wire identity qualifiers"},
 	}
+	for _, path := range []string{"a·b", "pkgs/naïve", "foreign/path"} {
+		refusal := "import path(s) unusable as wire identity qualifiers"
+		if path == "foreign/path" {
+			refusal = ""
+		}
+		queries = append(queries, struct {
+			name      string
+			query     func(*emitter) types.Type
+			wantError string
+		}{path, func(*emitter) types.Type {
+			pkg := types.NewPackage(path, "foreign")
+			obj := types.NewTypeName(token.NoPos, pkg, "Named", nil)
+			pkg.Scope().Insert(obj)
+			return types.NewPointer(types.NewNamed(obj, types.Typ[types.Bool], nil))
+		}, refusal})
+	}
+	queries = append(queries, struct {
+		name      string
+		query     func(*emitter) types.Type
+		wantError string
+	}{"display-conflict", func(*emitter) types.Type {
+		var fields []*types.Var
+		for _, name := range []string{"A", "B"} {
+			pkg := types.NewPackage("same", name)
+			obj := types.NewTypeName(token.NoPos, pkg, "Named", nil)
+			pkg.Scope().Insert(obj)
+			fields = append(fields, types.NewField(token.NoPos, nil, name,
+				types.NewNamed(obj, types.Typ[types.Bool], nil), false))
+		}
+		return types.NewStruct(fields, nil)
+	}, "TypeId registered with two different display records"})
 	for _, q := range queries {
 		t.Run(q.name, func(t *testing.T) {
 			plain, plainFiles := declarationSource(t, src)

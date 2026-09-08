@@ -1,7 +1,7 @@
 # I1 declaration boundary — landing charter
 
-[AGENT] 2026-09-08. Status: IMPLEMENTATION COMPLETE; audit disposition,
-merge and push await separate sign-off. Branch `land/i1-declarations`, worktree
+[AGENT] 2026-09-08. Status: FIRST REVIEW FIXES IN PROGRESS; pause for a
+second review before merge sign-off. Branch `land/i1-declarations`, worktree
 `.claude/worktrees/land-i1-declarations`, starting main
 `ae9c807923f371a7349430a443a635a754ef816f`.
 
@@ -109,3 +109,16 @@ decision remains pending. No independent review or merge approval is implied.
 The [completion record](2026-09-08_i1-declaration-landing.md) names source,
 evidence, limitations and follow-up scope. This closes the authorized
 branch-ready implementation goal, not a merge or completion of all I1 work.
+
+### First review correction round
+
+[USER] 2026-09-08 authorized fixes to the supplied coordinator review and
+obvious related improvements, then a pause for a second review. This supersedes
+the earlier pending first-audit choice. [AGENT] R1–R4 and the related parser
+budget/diagnostic/scratch fixes are tracked in the
+[review response](2026-09-08_i1-review-response.md). The production boundary,
+unchanged baselines, worktree discipline and merge/push prohibitions remain
+in force. A fresh candidate `--diff` gate precedes the code commit, followed
+by a clean committed-tip `--diff` run for the second reviewer. The previous
+`--slow` record stays historical; this round does not edit either production
+wire entry point that would trigger merge-protocol 5a.

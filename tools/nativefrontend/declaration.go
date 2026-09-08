@@ -27,7 +27,19 @@ func (e *emitter) emitDeclarationType(t types.Type) (any, error) {
 		curSubst: maps.Clone(e.curSubst), curTargs: slices.Clone(e.curTargs),
 		curInstDecl: e.curInstDecl, substErr: e.substErr,
 	}}
-	return d.emitDeclarationType(t)
+	value, err := d.emitDeclarationType(t)
+	if err != nil {
+		return nil, err
+	}
+	// Isolation must not discard alarms raised while minting an identity,
+	// including identities nested in a composite or active substitution.
+	if err := d.checkKeyPathGrammar(); err != nil {
+		return nil, err
+	}
+	if err := d.displayConflictRefusal(); err != nil {
+		return nil, err
+	}
+	return value, nil
 }
 
 // A Go identifier's package participates in identity only when unexported.

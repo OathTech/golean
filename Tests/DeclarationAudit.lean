@@ -1,5 +1,7 @@
 import Tests.DeclarationWire
 import Tests.StrictJsonParse
+import GoLean.DeclarationUnicode
+import Tests.DeclarationUnicode
 import Lean
 
 open Lean in
@@ -10,6 +12,8 @@ def auditDeclarations : CoreM Unit := do
       ``GoLean.NativeDeclaration.decode,
       ``GoLean.NativeDeclaration.decodeBytes,
       ``GoLean.StrictJson.parse, ``GoLean.StrictJson.parseBytes,
+      ``GoLean.DeclarationUnicode.isUpperCode,
+      ``GoLean.DeclarationUnicodeTests.main,
       ``GoLean.DeclarationWireTests.main] do
     unless env.contains required do throwError "Declaration audit: missing {required}"
   let mut checked := 0

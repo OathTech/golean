@@ -679,6 +679,14 @@ with a documentation-only completion record following the validated source.
 The R7 main status and remaining production I1 scope do not change until
 their respective landings.
 
+**Review addendum 2026-09-08 ([AGENT], `land/i1-declarations`).**
+The coordinator's independent review of `8b4a1aec` returned FIX-FIRST.
+[USER] then authorized fixes and a pause for a second review. The
+[review response](2026-09-08_i1-review-response.md) records R1–R7/R11 fixes
+and R8–R10 scope/accounting/remaining pin-policy limitations. This supersedes
+the pending first-audit disposition above; L1b remains unmerged, with fresh
+correction gates and the second review owed before sign-off.
+
 ### 2.3 Fidelity families, identity, open bugs (Gate B)
 
 | # | item | owed | dep | size | who | status | evidence |

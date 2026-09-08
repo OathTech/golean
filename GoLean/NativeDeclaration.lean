@@ -1,5 +1,6 @@
 import GoLean.StrictJsonParse
 import GoLean.GoCore.Declaration
+import GoLean.DeclarationUnicode
 
 /-! I1 declaration-wire decoding, separate from executable lowering.
 
@@ -47,8 +48,13 @@ private def memberId (path : String) (json : Json) : Except String MemberId := d
   let o ← obj path json
   requireExactKeys path o ["name", "package"]
   let name ← stringField path o "name"
-  if name.isEmpty then throw s!"{path}: empty member name"
-  return ⟨name, ← stringField path o "package"⟩
+  let some first := name.toList.head? | throw s!"{path}: empty member name"
+  let pkg ← stringField path o "package"
+  if DeclarationUnicode.isUpperCode first.toNat then
+    unless pkg.isEmpty do throw s!"{path}: exported member carries a package identity"
+  else
+    if pkg.isEmpty then throw s!"{path}: unexported member has no package identity"
+  return ⟨name, pkg⟩
 
 private def bytes (path : String) (json : Json) : Except String (Array UInt8) := do
   mapArrayIdx (← array path json) fun i value => do
@@ -65,6 +71,14 @@ private def checkVariadic (path : String) (params : List Ty) (variadic : Bool) :
 
 private def methodId : Method → MemberId
   | .mk id _ _ _ => id
+
+private def uniqueFields (path : String) (fields : Array Field) : Except String Unit := do
+  let mut seen : List MemberId := []
+  for .mk id _ _ _ in fields do
+    -- Go allows repeated blank fields; retain their order and type/tag facts.
+    if id.name != "_" then
+      if seen.contains id then throw s!"{path}: duplicate struct field '{id.name}'"
+      seen := id :: seen
 
 /-- Method-set order is semantically irrelevant. Normalize by the exact
 package/name pair; do not depend on Go emitter enumeration order. -/
@@ -98,15 +112,17 @@ private def checkNominals (ns : Nominals) : Except String Unit := do
 /- Like NativeToIR's existing JSON descent, this adapter is outside the
 total semantic core. The resulting declaration operations are total and
 their equality is kernel-checked in GoCore.Declaration. -/
-private partial def decodeType (ns : Nominals) (path : String) (json : Json) :
+private partial def decodeType (remaining : Nat) (ns : Nominals) (path : String) (json : Json) :
     Except String Ty := do
+  let remaining + 1 := remaining
+    | throw s!"{path}: declaration nesting deeper than {maxNestingDepth}"
   let o ← obj path json
   let kind ← stringField path o "kind"
   let listField := fun key => do
     let values ← array (path ++ "." ++ key) (← field path o key)
     return (← mapArrayIdx values fun i value =>
-      decodeType ns s!"{path}.{key}[{i}]" value).toList
-  let elem := fun key => do decodeType ns (path ++ "." ++ key) (← field path o key)
+      decodeType remaining ns s!"{path}.{key}[{i}]" value).toList
+  let elem := fun key => do decodeType remaining ns (path ++ "." ++ key) (← field path o key)
   match kind with
   | "basic" =>
       requireExactKeys path o ["kind", "basic"]
@@ -154,9 +170,10 @@ private partial def decodeType (ns : Nominals) (path : String) (json : Json) :
         let fo ← obj fp value
         requireExactKeys fp fo ["id", "type", "embedded", "tagBytes"]
         return Field.mk (← memberId (fp ++ ".id") (← field fp fo "id"))
-          (← decodeType ns (fp ++ ".type") (← field fp fo "type"))
+          (← decodeType remaining ns (fp ++ ".type") (← field fp fo "type"))
           (← boolField fp fo "embedded")
           (← bytes (fp ++ ".tagBytes") (← field fp fo "tagBytes"))
+      uniqueFields (path ++ ".fields") fields
       return .structureType fields.toList
   | "interface" =>
       requireExactKeys path o ["kind", "methods"]
@@ -166,7 +183,7 @@ private partial def decodeType (ns : Nominals) (path : String) (json : Json) :
         let mo ← obj mp value
         requireExactKeys mp mo ["id", "signature"]
         let id ← memberId (mp ++ ".id") (← field mp mo "id")
-        let sig ← decodeType ns (mp ++ ".signature") (← field mp mo "signature")
+        let sig ← decodeType remaining ns (mp ++ ".signature") (← field mp mo "signature")
         match sig with
         | .function ps rs v => return Method.mk id ps rs v
         | _ => throw s!"{mp}: method signature is not a function"
@@ -177,7 +194,7 @@ private partial def decodeType (ns : Nominals) (path : String) (json : Json) :
 This is declaration parsing; it supplies no executable admission evidence. -/
 def decode (ns : Nominals) (json : Json) : Except String Ty := do
   checkNominals ns
-  decodeType ns "declaration" json
+  decodeType maxNestingDepth ns "declaration" json
 
 /-- A standalone positive declaration's checked byte-input boundary.
 Package envelopes must use the same strict parser before projecting fields.

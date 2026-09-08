@@ -5,6 +5,13 @@
 The [landing record](../../2026-09-08_i1-declaration-landing.md) consumes this
 evidence. These are compact records, not source or corpus copies.
 
+[AGENT] First-review correction round: the [review response](../../2026-09-08_i1-review-response.md)
+records the new work and second-review stop. `coordinator-review.md` is the
+supplied independent FIX-FIRST report at `8b4a1aec`, copied byte-exactly;
+its source SHA is recorded in that response. Initial validation below remains
+bound to its historical source. New correction-gate records are identified
+separately when complete.
+
 Toolchains: `go version go1.26.5 linux/amd64`; Lean pinned by
 `lean-toolchain` to `leanprover/lean4:v4.32.2`. Gates ran on linux/amd64 with
 a verified 32 GiB cgroup cap, three Lean threads, eight differential workers

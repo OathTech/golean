@@ -3,9 +3,13 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 [[ $# = 0 ]] || { echo 'check-declarations: expected no arguments' >&2; exit 2; }
-modules=(GoLean/GoCore/Declaration GoLean/StrictJsonParse GoLean/NativeDeclaration Tests/DeclarationWire Tests/StrictJsonParse Tests/DeclarationAudit)
+# Do not inherit another worktree's scratch sink. All artifacts of this gate
+# (including subprocess scratch) belong to this checkout.
+export TMPDIR="$ROOT/.tmp"
+mkdir -p "$TMPDIR"
+modules=(GoLean/GoCore/Declaration GoLean/DeclarationUnicode GoLean/StrictJsonParse GoLean/NativeDeclaration Tests/DeclarationWire Tests/StrictJsonParse Tests/DeclarationUnicode Tests/DeclarationAudit)
 for module in "${modules[@]}"; do sha256sum "$module.lean"; done
-sha256sum tools/nativefrontend/declaration.go tools/nativefrontend/declaration_fixture_test.go tools/check-declaration-wire.lean tools/declaration-audit.py
+sha256sum tools/nativefrontend/declaration.go tools/nativefrontend/declaration_fixture_test.go tools/check-declaration-wire.lean tools/declaration-audit.py tools/declaration-unicode/main.go
 scripts/capped lake build DeclarationTests
 for module in "${modules[@]}"; do
   scripts/capped lake env lean --setup ".lake/build/ir/$module.setup.json" \
@@ -16,6 +20,15 @@ scratch_root="${TMPDIR:-$ROOT/.tmp}"
 mkdir -p "$scratch_root"
 scratch_dir="$(mktemp -d "${scratch_root%/}/declaration-fixture.XXXXXX")"
 fixture="$scratch_dir/declarations.json"
+GOCACHE="$ROOT/artifacts/go-build-cache" GO111MODULE=off \
+  go run ./tools/declaration-unicode > "$scratch_dir/DeclarationUnicode.lean"
+if ! cmp -s "$scratch_dir/DeclarationUnicode.lean" GoLean/DeclarationUnicode.lean; then
+  echo 'check-declarations: Unicode export table differs from the pinned Go oracle' >&2
+  exit 1
+fi
+GOCACHE="$ROOT/artifacts/go-build-cache" GO111MODULE=off \
+  go run ./tools/declaration-unicode --oracle > "$scratch_dir/uppercase.bin"
+scripts/capped lake env lean --run tools/check-declaration-wire.lean --unicode "$scratch_dir/uppercase.bin"
 GOLEAN_DECLARATION_FIXTURE="$fixture" GOCACHE="$ROOT/artifacts/go-build-cache" GO111MODULE=off \
   go test ./tools/nativefrontend -run '^TestDeclarationDecoderFixture$' -count=1 -v
 [[ -s "$fixture" ]] || { echo 'declaration fixture producer wrote no artifact' >&2; exit 1; }

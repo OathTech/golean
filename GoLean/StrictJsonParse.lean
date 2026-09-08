@@ -20,6 +20,61 @@ namespace GoLean.StrictJson
 
 open Lean Std.Internal.Parsec Std.Internal.Parsec.String
 
+/-- Adapter resource limits, not restrictions on Go semantic types. -/
+def maxNestingDepth : Nat := 64
+def maxNumberChars : Nat := 256
+def maxNumberExponent : Nat := 1024
+
+private def numberDelimiter (c : Char) : Bool :=
+  c.isWhitespace || c == ',' || c == ']' || c == '}' || c == ':' ||
+    c == '[' || c == '{' || c == '"'
+
+private partial def numberToken (path : String) (acc : String := "") : Parser String := do
+  if ← isEof then return acc
+  let c ← peek!
+  if numberDelimiter c then return acc
+  if acc.length >= maxNumberChars then
+    fail s!"{path}: JSON number exceeds {maxNumberChars} characters"
+  skip
+  numberToken path (acc.push c)
+
+-- Check grammar and exponent magnitude BEFORE Lean's numeric constructor
+-- materializes any power of ten. Token collection is itself bounded.
+private def checkNumber (path token : String) : Except String Unit := do
+  let chars := token.toList
+  let chars := if chars.head? == some '-' then chars.tail else chars
+  let whole := chars.takeWhile Char.isDigit
+  if whole.isEmpty then throw s!"{path}: invalid JSON number: expected integer digit"
+  if whole.length > 1 && whole.head? == some '0' then
+    throw s!"{path}: leading zero in JSON number"
+  let rest := chars.drop whole.length
+  let rest ← if rest.head? == some '.' then do
+      let fraction := rest.tail.takeWhile Char.isDigit
+      if fraction.isEmpty then throw s!"{path}: JSON number fraction needs a digit"
+      pure (rest.tail.drop fraction.length)
+    else pure rest
+  if rest.isEmpty then return ()
+  unless rest.head? == some 'e' || rest.head? == some 'E' do
+    throw s!"{path}: invalid character in JSON number"
+  let digits := rest.tail
+  let digits := if digits.head? == some '+' || digits.head? == some '-' then
+      digits.tail else digits
+  if digits.isEmpty || !digits.all Char.isDigit then
+    throw s!"{path}: JSON number exponent needs decimal digits"
+  let some exponent := (String.ofList digits).toNat?
+    | throw s!"{path}: invalid JSON number exponent"
+  if exponent > maxNumberExponent then
+    throw s!"{path}: JSON number exponent exceeds {maxNumberExponent} in magnitude"
+
+private def boundedNumber (path : String) : Parser JsonNumber := do
+  let token ← numberToken path
+  match checkNumber path token with
+  | .error message => fail message
+  | .ok () =>
+    match Parser.run (do let n ← Lean.Json.Parser.num; eof; pure n) token with
+    | .ok n => return n
+    | .error message => fail s!"{path}: invalid JSON number: {message}"
+
 private def losslessEscape : Parser Char := do
   if (← peek!) != 'u' then
     return ← Lean.Json.Parser.escapedChar
@@ -53,22 +108,24 @@ private partial def losslessString (acc : String := "") : Parser String := do
 
 mutual
 
-private partial def inputValue (path : String) : Parser Json := do
+private partial def inputValue (remaining : Nat) (path : String) : Parser Json := do
   let c ← peek!
+  if (c == '[' || c == '{') && remaining == 0 then
+    fail s!"{path}: JSON nesting deeper than {maxNestingDepth}"
   if c == '[' then
     skip; ws
     if (← peek!) == ']' then
       skip; ws
       return .arr #[]
     else
-      return .arr (← inputArray path #[])
+      return .arr (← inputArray (remaining - 1) path #[])
   else if c == '{' then
     skip; ws
     if (← peek!) == '}' then
       skip; ws
       return .obj ∅
     else
-      return .obj (← inputObject path ∅)
+      return .obj (← inputObject (remaining - 1) path ∅)
   else if c == '"' then
     skip
     let value ← losslessString
@@ -83,16 +140,16 @@ private partial def inputValue (path : String) : Parser Json := do
   else if c == 'n' then
     skipString "null"; ws
     return .null
-  else if c == '-' || ('0' <= c && c <= '9') then
-    let value ← Lean.Json.Parser.num
+  else if c == '-' || c == '+' || c == '.' || c == 'N' || c == 'I' || c.isDigit then
+    let value ← boundedNumber path
     ws
     return .num value
   else
     fail s!"{path}: expected JSON value"
 
-private partial def inputArray (path : String) (values : Array Json) :
+private partial def inputArray (remaining : Nat) (path : String) (values : Array Json) :
     Parser (Array Json) := do
-  let value ← inputValue s!"{path}[{values.size}]"
+  let value ← inputValue remaining s!"{path}[{values.size}]"
   let values := values.push value
   let separator ← any
   if separator == ']' then
@@ -100,11 +157,11 @@ private partial def inputArray (path : String) (values : Array Json) :
     return values
   else if separator == ',' then
     ws
-    inputArray path values
+    inputArray remaining path values
   else
     fail s!"{path}: expected ',' or ']'"
 
-private partial def inputObject (path : String) (values : Obj) : Parser Obj := do
+private partial def inputObject (remaining : Nat) (path : String) (values : Obj) : Parser Obj := do
   Lean.Json.Parser.lookahead (fun c => c == '"') "object key"
   skip
   let key ← losslessString
@@ -113,7 +170,7 @@ private partial def inputObject (path : String) (values : Obj) : Parser Obj := d
   ws
   Lean.Json.Parser.lookahead (fun c => c == ':') ":"
   skip; ws
-  let value ← inputValue s!"{path}[{repr key}]"
+  let value ← inputValue remaining s!"{path}[{repr key}]"
   let values := values.insert key value
   let separator ← any
   if separator == '}' then
@@ -121,7 +178,7 @@ private partial def inputObject (path : String) (values : Obj) : Parser Obj := d
     return values
   else if separator == ',' then
     ws
-    inputObject path values
+    inputObject remaining path values
   else
     fail s!"{path}: expected ',' or '}}'"
 
@@ -132,7 +189,7 @@ malformed Unicode escapes. This does not check a declaration schema. -/
 def parse (input : String) : Except String Json :=
   Parser.run (do
     ws
-    let value ← inputValue "$"
+    let value ← inputValue maxNestingDepth "$"
     eof
     return value) input
 

@@ -98,3 +98,37 @@ def main : IO Unit := do
       "actual declaration boundary accepted malformed input"
   IO.println "PASS: 12 positive, 16 named refusals, 6 malformed, 5 invalid UTF-8; 2 decoded scalars and old duplicate regression"
   IO.println "PASS declaration byte boundary: 1 positive, 4 malformed refusals"
+
+  let depth := GoLean.StrictJson.maxNestingDepth
+  let nested := fun n => "".pushn '[' n ++ "0" ++ "".pushn ']' n
+  positive "nesting-at-limit" (nested depth)
+  negative "nesting-above-limit" (nested (depth + 1)) "JSON nesting deeper than"
+  negative "adversarial-depth" (nested 10000) "JSON nesting deeper than"
+  positive "exponent-at-limit" "1e1024"
+  positive "negative-exponent-at-limit" "1e-1024"
+  positive "number-length-at-limit" ("".pushn '1' GoLean.StrictJson.maxNumberChars)
+  for (label, input, reason) in [
+      ("oversized-number", "".pushn '1' (GoLean.StrictJson.maxNumberChars + 1), "JSON number exceeds"),
+      ("exponent-above-limit", "1e1025", "JSON number exponent exceeds"),
+      ("negative-exponent-above-limit", "1e-1025", "JSON number exponent exceeds"),
+      ("huge-exponent", "1e10000000000", "JSON number exponent exceeds"),
+      ("nested-leading-zero", "[01]", "leading zero"),
+      ("leading-dot", "[.1]", "invalid JSON number"),
+      ("leading-plus", "[+1]", "invalid JSON number"),
+      ("NaN", "[NaN]", "invalid JSON number"),
+      ("fraction-without-digit", "[1.]", "fraction needs a digit"),
+      ("exponent-without-digit", "[1e]", "exponent needs decimal digits") ] do
+    negative label input reason
+  -- Public decode(Json) must also bound descent when a caller bypasses bytes.
+  let mut deepType := Json.mkObj [("kind", .str "basic"), ("basic", .str "bool")]
+  for _ in [:depth - 1] do
+    deepType := Json.mkObj [("kind", .str "pointer"), ("elem", deepType)]
+  require (GoLean.NativeDeclaration.decode [] deepType).toOption.isSome
+    "declaration depth at limit refused"
+  deepType := Json.mkObj [("kind", .str "pointer"), ("elem", deepType)]
+  match GoLean.NativeDeclaration.decode [] deepType with
+  | .ok _ => throw (IO.userError "unbounded parsed declaration accepted")
+  | .error message =>
+      require ((message.splitOn "declaration nesting deeper than").length > 1)
+        s!"wrong declaration budget refusal: {message}"
+  IO.println "PASS review parser controls: bounded depth/numbers, named numeric grammar, direct-decoder depth"

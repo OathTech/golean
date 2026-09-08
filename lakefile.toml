@@ -31,7 +31,7 @@ globs = ["Tests.GoCoreAdmissionFixture", "Tests.GoCoreAdmission", "Tests.GoCoreA
 [[lean_lib]]
 # Separate I1 declaration schema; no production lowering or Iris dependency.
 name = "DeclarationTests"
-globs = ["Tests.DeclarationWire", "Tests.StrictJsonParse", "Tests.DeclarationAudit"]
+globs = ["Tests.DeclarationWire", "Tests.StrictJsonParse", "Tests.DeclarationUnicode", "Tests.DeclarationAudit"]
 
 [[lean_lib]]
 name = "BooleanTypingTests"

@@ -4,6 +4,13 @@
 [user-authorized charter](2026-09-08_i1-declaration-landing-charter.md).
 The committed-source certification and audit disposition are recorded below.
 
+[AGENT] Review-status addendum, 2026-09-08: the coordinator supplied an
+independent **FIX-FIRST** review at `8b4a1aec`. The user authorized corrections
+and a pause for a second review. The [review response](2026-09-08_i1-review-response.md)
+supersedes the pending first-audit disposition and the original readiness
+statement below; previous gate results remain evidence only for their named
+source commits.
+
 ## Result and scope
 
 The separate native declaration producer, strict raw-byte JSON parser and

@@ -21,7 +21,50 @@ private def reject (name text : String) (ns : Nominals := []) : IO Unit := do
   | .error _ => pure ()
   | .ok value => failCheck s!"{name}: malformed declaration accepted as {repr value}"
 
+private def reviewControls : IO Unit := do
+  let basic := Json.mkObj [("kind", .str "basic"), ("basic", .str "bool")]
+  let signature := Json.mkObj [("kind", .str "func"), ("params", .arr #[]),
+    ("results", .arr #[]), ("variadic", .bool false)]
+  let member := fun name pkg => Json.mkObj [("name", .str name), ("package", .str pkg)]
+  let field := fun name pkg => Json.mkObj [("id", member name pkg), ("type", basic),
+    ("embedded", .bool false), ("tagBytes", .arr #[])]
+  let structWire := fun fields => Json.mkObj [("kind", .str "struct"), ("fields", .arr fields)]
+  let iface := fun name pkg => Json.mkObj [("kind", .str "interface"), ("methods", .arr #[
+    Json.mkObj [("id", member name pkg), ("signature", signature)]])]
+  let rejectNamed := fun value reason => do
+    match decodeBytes [] value.compress.toUTF8 with
+    | .ok _ => failCheck s!"review control accepted: {value.compress}"
+    | .error message =>
+        check ((message.splitOn reason).length > 1) s!"wrong review refusal: {message}"
+  for (name, pkg, reason) in [
+      ("x", "", "unexported member has no package identity"),
+      ("X", "p", "exported member carries a package identity"),
+      ("é", "", "unexported member has no package identity"),
+      ("ǅ", "", "unexported member has no package identity"),
+      ("É", "p", "exported member carries a package identity"),
+      ("𐐀", "p", "exported member carries a package identity") ] do
+    rejectNamed (structWire #[field name pkg]) reason
+    rejectNamed (iface name pkg) reason
+  for (name, pkg) in [("X", ""), ("É", ""), ("Σ", ""), ("𐐀", ""),
+      ("x", "p"), ("é", "p"), ("ǅ", "p"), ("_", "p")] do
+    check (decode [] (structWire #[field name pkg])).toOption.isSome
+      s!"valid field identity refused: {name}"
+    if name != "_" then
+      check (decode [] (iface name pkg)).toOption.isSome
+        s!"valid method identity refused: {name}"
+  rejectNamed (structWire #[field "X" "", field "X" ""]) "duplicate struct field"
+  rejectNamed (structWire #[field "x" "p", field "x" "p"]) "duplicate struct field"
+  check (decode [] (structWire #[field "_" "p", field "_" "p"])).toOption.isSome
+    "Go permits repeated blank fields"
+  check (decode [] (structWire #[field "x" "p", field "x" "q"])).toOption.isSome
+    "different private field identities collapsed"
+  let forward ← IO.ofExcept (decode [] (structWire #[field "A" "", field "B" ""]))
+  let backward ← IO.ofExcept (decode [] (structWire #[field "B" "", field "A" ""]))
+  check (forward != backward) "struct fields reordered during duplicate check"
+  IO.println "Declaration review controls: PASS; member export/package agreement and ordered unique nonblank fields"
+
 def main (args : List String) : IO UInt32 := do
+  reviewControls
   let [path] := args | failCheck "expected the fresh Go declaration fixture path"
   let json ← IO.ofExcept (GoLean.StrictJson.parseBytes (← IO.FS.readBinFile path))
   let o ← IO.ofExcept (obj "fixture" json)
