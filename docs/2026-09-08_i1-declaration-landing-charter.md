@@ -1,7 +1,7 @@
 # I1 declaration boundary — landing charter
 
-[AGENT] 2026-09-08. Status: IMPLEMENTATION AUTHORIZED; merge and push await
-separate sign-off. Branch `land/i1-declarations`, worktree
+[AGENT] 2026-09-08. Status: IMPLEMENTATION COMPLETE; audit disposition,
+merge and push await separate sign-off. Branch `land/i1-declarations`, worktree
 `.claude/worktrees/land-i1-declarations`, starting main
 `ae9c807923f371a7349430a443a635a754ef816f`.
 
@@ -98,5 +98,14 @@ their recorded success is never presented as fresh validation here.
 
 ## Completion record
 
-[AGENT] Pending implementation and fresh validation. The goal is branch-ready
-completion of this charter, not a merge and not completion of all I1 work.
+[AGENT] 2026-09-08. Implementation is complete at
+`3e393be5d7f72d3be2dd57e45872e9fcc4a90518`, with the corrected full candidate
+`--diff` gate and clean committed-source `--slow` gate both PASS, actual
+exit 0. The 3,654 executable and 394 negative baselines match; fresh slow
+enumeration reproduces the six-member certified set and its wire exactly.
+A-R11/A-R12 and author finding I1-R1 are repaired with discriminating controls.
+The mandatory independent-audit ask was posed; the user's scope/waiver
+decision remains pending. No independent review or merge approval is implied.
+The [completion record](2026-09-08_i1-declaration-landing.md) names source,
+evidence, limitations and follow-up scope. This closes the authorized
+branch-ready implementation goal, not a merge or completion of all I1 work.

@@ -1,0 +1,71 @@
+{
+  "date_utc": "2026-09-08T01:23:00.924897+00:00",
+  "source_commit": "3e393be5d7f72d3be2dd57e45872e9fcc4a90518",
+  "source_tree": "c55319ea2d19064fe5988666df2de952a2b2c273",
+  "mode": "--slow",
+  "captured_gate_exit": 0,
+  "git_clean_before_and_after": true,
+  "memory_max": "32G",
+  "lean_threads": 3,
+  "coverage_workers": 8,
+  "lanes": {
+    "native": {
+      "rows": 3654,
+      "results": {
+        "PASS": 3403,
+        "FAIL": 251
+      },
+      "result_or_allowed_stage_drift": [],
+      "metadata": {
+        "manifest_cases": "3654",
+        "manifest_sha256": "700744eeb2479510c4e2e48ccbd8c80d8716ed8ecc877d9da52a934cb28e9f97",
+        "git_commit": "3e393be5d7f72d3be2dd57e45872e9fcc4a90518",
+        "git_dirty": "false",
+        "go_toolchain": "go1.26.5",
+        "go_drift_actual": "false"
+      }
+    },
+    "negative": {
+      "rows": 394,
+      "results": {
+        "PASS": 394
+      },
+      "result_or_allowed_stage_drift": [],
+      "metadata": {
+        "manifest_cases": "394",
+        "manifest_sha256": "21f456f4d3788469d3c42fed6ad8625d06cd2656211e3418c7bc7ffc0a1823f8",
+        "git_commit": "3e393be5d7f72d3be2dd57e45872e9fcc4a90518",
+        "git_dirty": "false",
+        "go_toolchain": "go1.26.5",
+        "go_drift_actual": "false"
+      }
+    }
+  },
+  "slow_certification": {
+    "case": "imported-goose/channel/google-search",
+    "observation_set_byte_exact": true,
+    "members": [
+      123,
+      132,
+      213,
+      231,
+      312,
+      321
+    ],
+    "observations_sha256": "e40ba07d11827b48aa8c9246bd84d6c21849159983d46c47b793b5759cfbbfd8",
+    "wire_sha256": "2f1d639f2042466f50b61ab117db5b39629c425f733650b9be992c0b85beefcc",
+    "statistics": "coverage-observations: observations=6 steps=6565663 probes=0 sites=6193933 leaves=0 maxdepth=0 width=4 engine=dedup nodes=6193933 edges=6565663 dedupHits=371731 certified=checkCert",
+    "statistics_written_utc": "2026-09-08T01:17:23.430150+00:00"
+  },
+  "declaration_fixture_sha256": "26748fff476161bf0946095a26f6aaf01b191d40f98219a42faada33ceef3f3c",
+  "gate_log_sha256": "23217de9d47f201ac4a4f68afc4660b6d01ed6f16500f8d673970a8a4144a72d",
+  "eval_pass": 207,
+  "reconciler": {
+    "findings": 2,
+    "high": 0,
+    "existing": [
+      "C13",
+      "C5"
+    ]
+  }
+}

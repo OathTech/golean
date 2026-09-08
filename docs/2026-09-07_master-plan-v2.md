@@ -669,6 +669,16 @@ status is claimed. Production I1 integration and refusal-marker removal still
 depend on B7. Scope and fresh evidence:
 [landing record](2026-09-08_i1-declaration-landing.md).
 
+**Completion addendum 2026-09-08 ([AGENT], `land/i1-declarations`).**
+Clean implementation commit `3e393be5` passed `scripts/capped scripts/ci
+--slow`, actual exit 0: 3,654 executable rows and 394 negative rows match
+the baselines, and fresh slow enumeration reproduces the certified set and
+wire exactly. The mandatory independent-audit ask is posed, its disposition
+pending; explicit merge sign-off is still required. L1b is branch-complete,
+with a documentation-only completion record following the validated source.
+The R7 main status and remaining production I1 scope do not change until
+their respective landings.
+
 ### 2.3 Fidelity families, identity, open bugs (Gate B)
 
 | # | item | owed | dep | size | who | status | evidence |

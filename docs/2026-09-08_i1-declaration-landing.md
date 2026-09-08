@@ -117,6 +117,42 @@ All core build warnings are absent; the logged `sorry` warnings come from
 deliberately poisoned temporary controls which the audits reject.
 
 Compact records: [evidence index](evidence/2026-09-08_i1-declarations/README.md).
-Full logs stay in ignored `artifacts/i1-landing/`. Final committed-source
-certification and the mandatory independent-audit ask remain pending at this
-implementation commit. Merge and push have not been authorized.
+Full logs stay in ignored `artifacts/i1-landing/`.
+
+## Committed-source certification and completion
+
+[AGENT] 2026-09-08. `scripts/capped scripts/ci --slow` completed **PASS,
+actual exit 0**, at clean implementation commit
+`3e393be5d7f72d3be2dd57e45872e9fcc4a90518` (tree
+`c55319ea2d19064fe5988666df2de952a2b2c273`). Both published metadata files
+name that commit, `git_dirty=false`, Go 1.26.5 and no oracle drift. The
+worktree stayed clean throughout the gate. Full scope: 3,654 executable rows
+(3,403 PASS / 251 expected FAIL), 394 negative PASS, 207 eval PASS. Results
+and stages match their baselines, respecting the existing `beside-loop`
+stage alternation. Reconciler findings remain C13/C5, two total, zero HIGH.
+
+Fresh `GOLEAN_SLOW=1` enumeration of `imported-goose/channel/google-search`
+reproduced the exact six observations `{123,132,213,231,312,321}` and the
+same wire SHA `2f1d639f2042466f50b61ab117db5b39629c425f733650b9be992c0b85beefcc`.
+Graph: 6,193,933 nodes, 6,565,663 edges, 371,731 dedup hits,
+`certified=checkCert`. The enumeration statistics were written at
+2026-09-08 01:17:23 UTC. No baseline or certification-set re-pin was made.
+The final declaration fixture also reproduces its enforced SHA exactly.
+See the [committed gate tail](evidence/2026-09-08_i1-declarations/committed-slow-gate.txt)
+and [measurements](evidence/2026-09-08_i1-declarations/committed-slow-measurements.json).
+This completion record is a documentation-only follow-up; no runtime source
+changed after that clean committed-source gate.
+
+**Review disposition.** Author checks resolved A-R11, A-R12 and I1-R1;
+missing-package regressions and the eight whole-reader challenges also pass.
+The required adversarial audit ask was posed to the user against committed
+`3e393be5`: run an independent agent audit of the declaration boundary,
+query isolation, fixture pin and gate, or waive that independent review.
+No answer or waiver has been received as of this record, and no independent
+audit is claimed. This follows `CLAUDE.md`'s unconditional audit ask; its
+scope/waiver and the explicit at-that-moment merge approval remain the user's.
+
+The authorized L1b implementation arc is complete and ready for that review
+and merge-sign-off process on `land/i1-declarations`. Production I1, B7 and
+refusal-marker removal remain subsequent work. The primary checkout remains
+on `main`; this lane has neither merged nor pushed.
