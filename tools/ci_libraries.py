@@ -155,10 +155,11 @@ def run_step(root, directory, step, command, *, runner=subprocess.run):
     finished = time.monotonic()
     receipt = {"run_id": state["run_id"], "fingerprint": state["fingerprint"],
                "step": step, "libraries": entry["libraries"], "targets": targets,
+               "command": command,
                "exit_code": code, "build_seconds": built-started,
                "check_seconds": finished-built, "elapsed_seconds": finished-started}
     path.write_text(json.dumps(receipt, indent=2) + "\n")
-    print(f"CI library step {step}: exit={code}, seconds={finished-started:.3f}", flush=True)
+    print(f"CI library step {step}: exit={code}, seconds={finished-started:.3f}, command={command}", flush=True)
     return code
 
 

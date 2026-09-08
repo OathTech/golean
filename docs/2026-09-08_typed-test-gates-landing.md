@@ -4,8 +4,10 @@
 charter](2026-09-08_typed-test-gates-charter.md). Branch
 `land/typed-test-gates`, base main `dc83782d`; no merge or push.
 Clean implementation `76f81a7d` passes full capped `--diff` CI. Only
-documentation/evidence updates follow that validated source. The user's
-adversarial review and measured-cost acceptance are pending.
+documentation/evidence updates follow that validated source. The
+2026-09-08 adversarial review returned MERGE-CLEAN with small fixes and
+[USER] pre-authorized landing with those fixes (see "Residual gaps (rowed)"
+below); the merge and its hash are the train's.
 
 ## Problem and implemented boundary
 
@@ -193,3 +195,73 @@ Suggested review scope:
 
 The branch is committed and ready for that review. Merge requires a subsequent
 explicit sign-off after the review; no merge or push has occurred.
+
+## Residual gaps (rowed)
+
+[AGENT] 2026-09-08. The mandatory adversarial review of tip `35fab3e3`
+([AGENT] coordinator's independent Opus auditor, relayed by the coordinator;
+the ids R1-R7 below are the review's) returned **MERGE-CLEAN with small
+fixes**. [USER] pre-authorized «land with small fixes» (relayed). This
+section records the fixes applied here (one non-behavioural tooling line
+plus records) and rows every residual the review named; the master plan
+carries them as one combined owed row (`docs/2026-09-07_master-plan-v2.md`
+§2.6 row T8.1). No gate-scope, `GoLean/`, `Tests/`, production-frontend or
+baseline change is made in this commit; review item 4 (the optional gate
+widening) is recorded under R2 as PROPOSED, not applied.
+
+- **R1 — receipt provenance (fixed here; enforcement OWED).** Until this
+  fix a step receipt recorded the build targets and exit code but not the
+  check command it ran, so a `scripts/ci` edit turning a `--lean-only` typed
+  step (or any step) into a bare `library_step` would still have minted a
+  green receipt with no audit. `tools/ci_libraries.py` `run_step` now
+  writes `"command"` into the receipt and prints it
+  (`CI library step <step>: exit=<code>, seconds=<s>, command=[...]`). This
+  is provenance only: `verify()` is unchanged and does not compare the
+  command, so the bypass above is recorded, not refused. Enforcement — a
+  per-step `check` field in `scripts/ci-libraries.json` compared against the
+  receipt's command in `verify`, with a negative control — is OWED. The 18
+  coverage self-tests and 5 scratch controls pass unchanged with the extra
+  field.
+- **R2 — `Tests/` outside the escape-hatch scans (PROPOSED widening, not
+  applied).** `Tests/StringPanicMembers.lean` (library `InterfaceTests`,
+  `lakefile.toml:30`) is built by the `interface` step but imported by no
+  post-import audit closure. More generally `Tests/` lies outside the three
+  `scripts/ci` escape-hatch scans, whose `find` sets are `GoLean GoLean.lean
+  Main.lean` (the token scan, the meta-layer scan and the native-decision
+  addendum; at this tip `scripts/ci:239`, `:284`, `:310` — the review cites
+  `:239/:285/:315`). The reviewer verified that adding `Tests` to those three
+  `find` sets is green today with zero hits. That is a gate WIDENING, hence
+  the [USER]'s call: recorded as PROPOSED, not applied in this landing.
+- **R3 — timings growth (OWED, small).** `tools/ci_libraries.py verify`
+  writes `artifacts/ci-library-timings/<run_id>.json` once per successful
+  gate run; the directory is gitignored (`/artifacts`) and never pruned.
+  Owed: a header note that it grows one file per run, or keep-last-N pruning
+  at `verify`.
+- **R4 — fixture tools reachable from no gate step (OWED for `--slow`).**
+  `tools/check-boolean-typing-artifact.lean`,
+  `tools/check-recovery-typing-artifact.lean` and
+  `tools/check-recovery-fixture-controls.py` run only in the full
+  (non-`--lean-only`) forms of `scripts/check-boolean-typing` and
+  `scripts/check-recovery-typing`; `scripts/ci` invokes both with
+  `--lean-only`, so no gate step executes them. They were validated once in
+  this lane (the optional fixture checks above: Boolean 3/3, recovery 5/5,
+  `native-fixture-checks.json`). Owed: run the full forms on the `--slow`
+  path (merge protocol 5a) with their receipts.
+- **R7 — scratch hygiene, in the branch's favour (OWED retrofit).** The
+  reviewer measured that main's three incumbent audit gates —
+  `scripts/check-interface` (`scripts/check-interface.py`),
+  `scripts/check-admission` (`tools/admission-check.py audit`) and
+  `scripts/check-recovery-terminal` (`tools/recovery-terminal-audit.py`);
+  the review's `interface-audit`/`admission-audit`/`recovery-terminal-audit`
+  — leak about 1.6 GB of scratch per gate run, while the seven new gates
+  leak zero (success-only cleanup, owned bytes reported at cleanup). Owed:
+  retrofit `typed_audit.scratch()`/`link_package()` onto those three
+  helpers as its own small chunk; they are unchanged here by the charter's
+  boundary.
+
+**Measured cost as the reviewer measured it.** At this tip the seven new
+steps took 272.98 s of a 920.06 s full gate (29.7 %); the derived
+main-equivalent is about 646.7 s, so the widening is about +42 %. The
+author's measurement above (266.96 s of 911.32 s) reproduces within 2 %.
+Neither is a paired main run. The [USER] accepts this cost by the merge
+sign-off.
