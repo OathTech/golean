@@ -1,9 +1,11 @@
 # Typed-contract CI gates — implementation and review record
 
-[AGENT] 2026-09-08. IN PROGRESS under the [user-authorized
+[AGENT] 2026-09-08. BRANCH COMPLETE under the [user-authorized
 charter](2026-09-08_typed-test-gates-charter.md). Branch
 `land/typed-test-gates`, base main `dc83782d`; no merge or push.
-The user supplies the adversarial review after this implementation handoff.
+Clean implementation `76f81a7d` passes full capped `--diff` CI. Only
+documentation/evidence updates follow that validated source. The user's
+adversarial review and measured-cost acceptance are pending.
 
 ## Problem and implemented boundary
 
@@ -98,50 +100,96 @@ control record: `facet-control.json` in that directory.
 
 ## Validation and cost
 
-[AGENT] Initial focused proof gates all pass against main without changing
-any theorem or semantic source. The six gates after Boolean typing took
-183.960 seconds together on a warm copied build cache, 32 GiB cap and three
-Lean threads; this is a preliminary standalone measurement, not CI overhead.
-The full native fixture checks and integrated full `--diff` runs are next.
-Per-step receipts report build, check and combined seconds, and CI reports
-total wall time. Final measurements and source-bound results will replace
-this in-progress status before the user review handoff. Cost acceptance is
-reserved to the user; no timing is silently treated as approved.
+[AGENT] The clean implementation `76f81a7d807a9b619be909ccb76e7695966fba9f`
+passed `scripts/capped scripts/ci --diff`, actual exit 0. Native and negative
+metadata both identify this commit with `git_dirty=false` and the pinned
+`go1.26.5`, with no toolchain drift. The 3,654 executable rows reproduce
+3,403 PASS / 251 expected FAIL; all 394 negative cases pass. Results and
+allowed stages match the unchanged baselines. All 207 eval tests, 54 compiled
+poisons, 18 coverage controls and five scratch controls pass. The existing
+reconciler reports C13/C5, zero HIGH; those report-only findings are unchanged.
 
-Hard boundary checks compare against `dc83782d`: no `GoLean/` changes, no
-`Tests/` statement changes (currently no changes at all), and unchanged
-3,654-row executable / 394-row negative baselines. Full gates use the
-box-wide lock, the verified cap, three Lean threads and twelve differential
-workers. Cached slow-row certification is labeled; neither merge-protocol
-5a path changes in this lane. Full logs live in ignored
-`artifacts/typed-test-gates/`; tracked evidence stays compact.
+Evidence: [clean gate summary](evidence/2026-09-08_typed-test-gates/committed-gate.txt)
+and [source-bound measurements](evidence/2026-09-08_typed-test-gates/committed-measurements.json).
+Measurements use the box-wide lock, a 32 GiB cap, three Lean threads and
+twelve differential workers. The worktree build cache is warm; every poison
+module is freshly compiled. The seven new named steps include their explicit
+library builds and checks:
 
-[AGENT] Initial full candidate `--diff` gate PASS, actual exit 0, at frozen
-index tree `91148c133529a557b14b15998c13901899d83c83` over `03570a9f`.
-All 3,654 executable / 394 negative results and allowed stages match;
-207 eval PASS, 54 new compiled controls, two unchanged reconciler findings
-(C13/C5), zero HIGH. The new steps took 267.953 seconds in total; the full
-gate took 956.046 seconds externally. This records the first candidate,
-before F1's explicit-facet correction, and does not certify that correction.
+| New CI step | Seconds |
+|---|---:|
+| Boolean typing | 79.069 |
+| Boolean runtime | 30.225 |
+| Recovery typing | 49.306 |
+| Recovery storage | 27.361 |
+| Recovery setup | 29.409 |
+| Recovery control | 28.915 |
+| Abort observation | 22.679 |
+| **Seven steps combined** | **266.964** |
+| Coverage initialization, self-tests, verification and cleanup | 0.416 |
+| **New steps plus coverage actions** | **267.380** |
+| **Entire full CI, external wall clock** | **911.316** |
 
-The F1 correction and auxiliary timing output are now covered by 18 coverage
-and five scratch controls. Next: the complete corrected CI sequence in fast
-mode (reusing the initial run's differential records against byte-identical
-semantic/frontend sources), then a fresh full `--diff` at the clean committed
-implementation. This separates new gate integration from fresh runtime
-certification, rather than relabeling cached results. Auxiliary coverage
-initialization, self-tests, verification and cleanup have their own measured
-times in addition to the seven named proof/audit steps.
+The new work therefore occupies about **4m 27s** in a **15m 11s** full run.
+These are measured step durations, not a paired before/after performance
+comparison or a cold-cache benchmark. Coverage helper timings exclude Python
+process startup; total CI wall time includes it. Per-step build/check splits
+and individual auxiliary action times are in the JSON record. Cost acceptance
+remains the user's decision. This `--diff` run visibly reuses tracked slow-row
+certification; it makes no fresh `--slow` claim. Neither merge-protocol 5a
+path changes. `GoLean/`, `Tests/`, the production frontend and baselines are
+byte-identical to base `dc83782d`.
 
-[AGENT] Corrected candidate fast gate PASS, actual exit 0, at frozen index
-tree `274dbb7d8bc2d3fdea23cc1125985b882f5d7aaa` over `03570a9f`.
-All 13 named steps, 54 compiled audit controls, 18 coverage and five scratch
-controls passed. The seven new gates took 261.439 seconds; coverage actions
-took 0.397 seconds combined; total fast CI took 457.165 seconds externally.
-These measurements use a warm cache and fresh poison compilation. The
-native/negative results are the initial full run's records, compared again
-against unchanged baselines; this was not a new corpus run. Evidence:
-[candidate fast gate](evidence/2026-09-08_typed-test-gates/candidate-fast-gate.txt)
-and [measurements](evidence/2026-09-08_typed-test-gates/candidate-fast-measurements.json).
-Only these documentation/evidence additions follow that frozen candidate.
-The implementation commit and its clean full `--diff` run are next.
+The optional full native fixture checks also pass: Boolean 3/3 and recovery
+5/5, including complete artifact equality, the named `panic(true)` profile
+refusal, and functional input/defer-order/directness controls. Their separate
+[fixture record](evidence/2026-09-08_typed-test-gates/native-fixture-checks.json)
+identifies the dirty candidate over `03570a9f`, with the semantic, Tests and
+production frontend sources unchanged. This is separately scoped evidence;
+ordinary CI uses the two `--lean-only` forms. These optional checks took
+87.377 and 57.840 seconds respectively and are excluded from the CI totals.
+
+Earlier validation is retained with its actual source and mode:
+
+- Initial full candidate: frozen tree `91148c13` over `03570a9f`, exit 0,
+  3,654 / 394 baseline rows match; full gate 956.046 seconds. This precedes
+  F1's explicit-facet correction and does not certify that correction.
+- Corrected candidate fast CI: frozen tree `274dbb7d` over `03570a9f`,
+  exit 0; seven new gates 261.439 seconds, coverage actions 0.397 seconds,
+  full fast gate 457.165 seconds. It reuses the first run's corpus records.
+- The clean committed full run above certifies the final implementation;
+  the following commit changes only documentation and compact evidence.
+
+Full logs and generated fixtures remain ignored under `artifacts/`.
+All successful new audit scratch and the CI receipt directory were removed;
+the measurement record includes each family's owned regular-file bytes at
+cleanup, excluding symlinked dependencies and filesystem metadata. This
+landing changes the seven restored families' scratch lifecycle; existing
+interface/admission/terminal helpers retain their landed behavior.
+
+[AGENT] Completion-record checks pass: staged changes are documentation only,
+local links resolve, clean-source/log/baseline hashes and timing sums verify,
+and protected source paths have no delta. The evidence-size gate passes with
+zero new exceptions; this lane's evidence directory is 25,012 bytes. The
+AGENTS alias gate and `git diff --check` also pass.
+
+## User review handoff
+
+[AGENT] The mandatory adversarial-review ask is posed to the user, who
+reserved this review in the authorization. No independent verdict is claimed.
+Suggested review scope:
+
+- Compare `dc83782d..land/typed-test-gates`: no semantic, Tests, production
+  frontend or baseline delta; current L1 interface and L3 terminal statements
+  and their gates remain intact.
+- Challenge bidirectional coverage: nested/untracked Tests modules, source
+  aliases, missing mappings or steps, failed builds/checks, stale receipts,
+  configuration changes and empty `defaultFacets` must fail closed.
+- Check that all 54 mutations compile, then fail their importing audits by
+  declaration and forbidden-axiom name, followed by each family's clean import.
+- Check symlink/sidecar isolation, foreign TMPDIR, success cleanup and retained
+  failure output/reason, without deleting pre-existing scratch.
+- Accept or revise the measured CI cost above.
+
+The branch is committed and ready for that review. Merge requires a subsequent
+explicit sign-off after the review; no merge or push has occurred.

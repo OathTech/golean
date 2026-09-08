@@ -823,6 +823,22 @@ the measured CI cost and adversarial review remain the user's acceptance
 decisions. [Charter](2026-09-08_typed-test-gates-charter.md) and
 [implementation record](2026-09-08_typed-test-gates-landing.md).
 
+**Completion addendum 2026-09-08 ([AGENT], `land/typed-test-gates`).**
+T8's implementation is **BRANCH COMPLETE**, unmerged, at `76f81a7d`.
+The clean capped full `--diff` gate passed, actual exit 0: all 3,654
+executable and 394 negative baseline rows match, 207 eval checks pass,
+54 compiled audit negatives pass, and executed coverage accounts for every
+Tests module and declared library without exceptions. The 18 coverage and
+five scratch controls pass, including an actual compiler control against a
+bare library build with empty `defaultFacets`; the runner explicitly requests
+`:leanArts`. No `GoLean/`, `Tests/`, production frontend or baseline changes.
+Seven new steps plus coverage actions took 267.380 seconds; total full CI
+took 911.316 seconds with a warm cache and fresh poison compilation. Slow
+certification is cached. Only records follow the validated implementation.
+The linked landing record supplies source-bound evidence, per-step costs
+and the mandatory review ask. The user owns the adversarial review and N6's
+cost acceptance; T8 is not marked LANDED and no merge or push is authorized.
+
 ### 2.7 Tally by status
 
 Rows in §2.1–§2.5 (31 rows; §2.3's per-bug and §2.6's per-chunk lists

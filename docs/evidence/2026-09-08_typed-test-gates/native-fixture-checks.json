@@ -1,0 +1,83 @@
+{
+  "provenance": "[AGENT] 2026-09-08",
+  "scope": "Optional full native fixture checks on the dirty implementation over charter commit 03570a9f. Semantic, Tests and production frontend sources match main dc83782d; this is separate from clean committed --diff certification. CI invokes the --lean-only forms.",
+  "cache": "Warm copied worktree build cache; fresh native fixtures and compiled poison controls",
+  "runs": [
+    {
+      "step": "boolean-typing",
+      "exit_code": 0,
+      "elapsed_seconds": 87.377,
+      "log": "artifacts/typed-test-gates/boolean-typing-fixture.log",
+      "log_sha256": "0a5cc79305758ad9da511ba595aa25536d53834b733130a83e36dcac1d78681e",
+      "metadata": {
+        "frontend": "native",
+        "manifest": "Tests/boolean-typing-fixture/manifest.tsv",
+        "manifest_sha256": "c4ccdd3d87d9fc261d2ca38bbfcb67cd513fc336718c7cae3ebcbcf7da299978",
+        "manifest_cases": "3",
+        "total_corpus_cases": "unknown",
+        "full_run": "unknown",
+        "filters": "unknown",
+        "git_commit": "03570a9f4605042b7dbbba5bf98b026aecd760bd",
+        "git_dirty": "true",
+        "go_toolchain": "go1.26.5",
+        "go_traceback": "system",
+        "go_crash_channel": "same-run-setcrashoutput-v1",
+        "go_drift_allowed": "0",
+        "go_drift_actual": "false",
+        "depth_guard": "choice-trace wideAfterExhaustion=0 on every invariance stream",
+        "depth_seeds": "1,2,3",
+        "depth_generator": "lcg31(1103515245,12345) bits16..31",
+        "depth_trace_timeout_seconds": "240",
+        "membership_draws": "32",
+        "jobs": "12",
+        "fanout_find_exit": "0",
+        "fanout_pool_exit": "0"
+      },
+      "validated_diagnostics": [
+        "Boolean typing: complete fresh native GoCore matches the proof fixture",
+        "cases=3 pass=3 fail=0",
+        "Boolean typing foundation gate: PASS"
+      ]
+    },
+    {
+      "step": "recovery-typing",
+      "exit_code": 0,
+      "elapsed_seconds": 57.84,
+      "log": "artifacts/typed-test-gates/recovery-typing-fixture.log",
+      "log_sha256": "10159dab27bcf75117bbbd4dadd0ae66fd51b0ed5b4c61b8017df5c2ed29f8ba",
+      "metadata": {
+        "frontend": "native",
+        "manifest": "Tests/recovery-typing-fixture/manifest.tsv",
+        "manifest_sha256": "1b2a5c0d37c820d6df565a0395390e278b4490886a31018d8a53845678f2b98a",
+        "manifest_cases": "5",
+        "total_corpus_cases": "unknown",
+        "full_run": "unknown",
+        "filters": "unknown",
+        "git_commit": "03570a9f4605042b7dbbba5bf98b026aecd760bd",
+        "git_dirty": "true",
+        "go_toolchain": "go1.26.5",
+        "go_traceback": "system",
+        "go_crash_channel": "same-run-setcrashoutput-v1",
+        "go_drift_allowed": "0",
+        "go_drift_actual": "false",
+        "depth_guard": "choice-trace wideAfterExhaustion=0 on every invariance stream",
+        "depth_seeds": "1,2,3",
+        "depth_generator": "lcg31(1103515245,12345) bits16..31",
+        "depth_trace_timeout_seconds": "240",
+        "membership_draws": "32",
+        "jobs": "12",
+        "fanout_find_exit": "0",
+        "fanout_pool_exit": "0"
+      },
+      "validated_diagnostics": [
+        "Recovery typing: proof artifact is an exact copy of the existing complete A2 definition",
+        "Recovery typing: complete fresh native GoCore matches complete existing A2",
+        "Recovery typing: complete fresh native GoCore matches second shared-capture fixture",
+        "Recovery diagnostics: fresh typechecked Go panic(true) is outside the string-payload profile",
+        "cases=5 pass=5 fail=0",
+        "Recovery native controls: input dependence, defer order, and directness all distinguish results",
+        "Recovery typing static foundation gate: PASS"
+      ]
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 # Typed-contract CI gates — work charter
 
-[AGENT] 2026-09-08. Status: IN PROGRESS. Branch `land/typed-test-gates`,
+[AGENT] 2026-09-08. Status: BRANCH COMPLETE; awaiting the user's
+adversarial review and measured-cost acceptance. Branch `land/typed-test-gates`,
 worktree `.claude/worktrees/land-typed-test-gates`, from main
 `dc83782dadc27f6a90eda4493a3b6cfa2e5d9697`. Plan: master-plan-v2
 §2.6, T8, W3 and N6. Source quarry: committed `typed-consumer-sprint`
@@ -82,3 +83,22 @@ gate sequence in full fast mode using the already measured differential
 records, then run a fresh `--diff` at the clean committed implementation.
 Record each source and mode separately. This avoids misrepresenting the
 first candidate as certification of the later gate correction.
+
+## Completion and review handoff
+
+[AGENT] Clean implementation `76f81a7d` passed the full capped `--diff`
+gate, actual exit 0. All 3,654 executable and 394 negative baseline rows
+match, 207 eval checks pass, and all 54 compiled audit negatives pass.
+The 18 coverage and five scratch controls pass. All 35 Tests modules have
+library ownership; all 14 libraries have successful builds in 13 named steps.
+`GoLean/`, `Tests/`, the production frontend and baselines are byte-identical
+to base main. No theorem statement adjustment or baseline re-pin occurred.
+
+Seven new steps took 266.964 seconds, coverage actions 0.416 seconds,
+and the full gate 911.316 seconds externally, with a warm cache and fresh
+poison compilation. These are measured step durations, not a paired estimate
+of before/after CI cost. The [landing record](2026-09-08_typed-test-gates-landing.md)
+contains per-step numbers, source-bound evidence and the proposed review scope.
+Only documentation/evidence updates follow the clean validated implementation.
+The audit ask and cost acceptance are posed to the user; neither an independent
+review verdict nor merge/push authorization is claimed.

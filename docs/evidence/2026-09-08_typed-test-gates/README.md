@@ -3,8 +3,9 @@
 [AGENT] 2026-09-08, `land/typed-test-gates`, base main `dc83782d`.
 This directory contains compact source/measurement records for the
 [landing note](../../2026-09-08_typed-test-gates-landing.md) and
-[charter](../../2026-09-08_typed-test-gates-charter.md). Validation is in
-progress; no independent review or merge is claimed.
+[charter](../../2026-09-08_typed-test-gates-charter.md). Clean implementation
+`76f81a7d` passes full capped `--diff` CI. The user's adversarial review and
+measured-cost acceptance are pending; no independent verdict or merge is claimed.
 
 `source-selection.tsv` pins the 21 selected blobs from committed
 `typed-consumer-sprint` at `7edc298f`. Scripts and audit wrappers are
@@ -44,5 +45,23 @@ Candidate records, [AGENT] 2026-09-08:
   fast run: 457.165 seconds. This is warm-cache measurement with freshly
   compiled poisons, not a fresh corpus run or an estimate of cold CI cost.
 
-All candidate records identify a dirty worktree state over `03570a9f`;
-the clean committed implementation's full `--diff` record is still owed.
+All candidate records identify a dirty worktree state over `03570a9f`.
+
+Completion records, [AGENT] 2026-09-08:
+
+- `committed-gate.txt`: clean full `--diff` PASS at `76f81a7d`, actual exit 0.
+- `committed-measurements.json`: clean source and tree identities, log and
+  baseline hashes, 3,654 executable / 394 negative results with zero drift,
+  all 54 compiled controls, all 14 libraries / 35 Tests modules / 13 named
+  steps, per-step costs, successful audit cleanup and owned regular-file bytes.
+  New steps plus auxiliary coverage actions: 267.380 seconds; whole full CI:
+  911.316 seconds externally. Warm cache, fresh poisons, cached slow records.
+- `native-fixture-checks.json`: optional Boolean 3/3 and recovery 5/5 fixture
+  checks, complete artifact comparisons and functional controls; real exits,
+  log hashes, times and dirty-candidate metadata. These are separate from the
+  clean implementation's ordinary `--lean-only` CI steps.
+
+Only documentation/evidence updates follow the clean validated implementation.
+The [landing note's review handoff](../../2026-09-08_typed-test-gates-landing.md#user-review-handoff)
+states the requested adversarial scope and cost decision. No review by an
+author-commissioned agent, merge or push is claimed.
