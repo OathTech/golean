@@ -3,6 +3,10 @@
 from typed_audit import audit_main
 
 mutations = [
+    ('ops_private', 'GoLean.GoCore.Ops', 'methodIdentityOpsPoison',
+     '\nprivate axiom methodIdentityOpsPoison : False\n'),
+    ('syntax_private', 'GoLean.GoCore.Syntax', 'methodIdentitySyntaxPoison',
+     '\nprivate axiom methodIdentitySyntaxPoison : False\n'),
     ('member_private', 'GoLean.NativeDeclaration', 'methodIdentityMemberPoison',
      '\nprivate axiom methodIdentityMemberPoison : False\n'),
     ('decoder_private', 'GoLean.NativeToIR', 'methodIdentityDecoderPoison',

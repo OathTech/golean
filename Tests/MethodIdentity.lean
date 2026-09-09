@@ -1,3 +1,4 @@
+import GoLean.GoCore.Ops
 import GoLean.NativeToIR
 import GoLean.GoCore.SyntaxEqb
 
@@ -47,7 +48,81 @@ theorem method_identity_is_semantic :
     MethodInfo.eqb ⟨⟨"m", "p"⟩, ⟨"body"⟩, .int⟩ ⟨⟨"m", "q"⟩, ⟨"body"⟩, .int⟩ = false := by
   decide +kernel
 
+-- [AGENT] Full-identity satisfaction controls, independent of the frontend guard.
+private def signature (id : Declaration.MemberId) (params : Array Ty := #[]) (variadic := false) : MethodSig :=
+  { id, params, results := #[.int .int], variadic }
+
+private def implementing (req : MethodSig) (recv : Ty := .defined 2) : ExecState :=
+  let target : Func :=
+    { id := ⟨"body"⟩,
+      args := #[{ id := "$recv", typ := recv }] ++ req.params.map (fun t => { id := "arg", typ := t }),
+      results := req.results.map (fun t => { id := "result", typ := t }),
+      variadic := req.variadic, body := .unsupported "signature-only control" }
+  { types := TypeEnv.reserved ++ #[(⟨"main.T"⟩, .struct #[])],
+    functions := #[target],
+    methods := #[{ id := req.id, funcId := ⟨"body"⟩, recv }],
+    methodSets := #[{ key := "main.T", coverage := .full }],
+    typeDisplays := #[(⟨"main.T"⟩, { name := "main.T", pkg := "main" })] }
+
+private def privateP := signature ⟨"m", "red/inner"⟩
+private def privateQ := signature ⟨"m", "blue/inner"⟩
+
+theorem private_same_package_accepted :
+    satisfiesMethodSig (implementing privateP) (.defined 2) privateP = true := by decide +kernel
+
+theorem private_cross_package_rejected :
+    satisfiesMethodSig (implementing privateP) (.defined 2) privateQ = false := by decide +kernel
+
+theorem pointer_inherits_private_value :
+    satisfiesMethodSig (implementing privateP) (.pointer (.defined 2)) privateP = true := by decide +kernel
+
+theorem value_does_not_inherit_private_pointer :
+    satisfiesMethodSig (implementing privateP (.pointer (.defined 2))) (.defined 2) privateP = false := by decide +kernel
+
+theorem variadic_is_part_of_signature :
+    satisfiesMethodSig (implementing (signature ⟨"m", "p"⟩ #[.slice (.int .int)] true))
+      (.defined 2) (signature ⟨"m", "p"⟩ #[.slice (.int .int)] false) = false := by decide +kernel
+
+private def satisfactionControls : IO Unit := do
+  let ids : List Declaration.MemberId := [⟨"m", "red/inner"⟩, ⟨"m", "blue/inner"⟩,
+    ⟨"M", ""⟩, ⟨"é", "red/inner"⟩, ⟨"é", "blue/inner"⟩, ⟨"É", ""⟩,
+    ⟨"ǅ", "red/inner"⟩, ⟨"ǅ", "blue/inner"⟩, ⟨"𐐀", ""⟩]
+  for a in ids do
+    for b in ids do
+      for pointerImpl in [false, true] do
+        for pointerQuery in [false, true] do
+          let recv := if pointerImpl then Ty.pointer (.defined 2) else .defined 2
+          let dyn := if pointerQuery then Ty.pointer (.defined 2) else .defined 2
+          for shape in [0:5] do
+            let impl := signature a #[.slice (.int .int)] true
+            let req := match shape with
+              | 0 => signature b #[.slice (.int .int)] true
+              | 1 => signature b #[.slice (.int .int)] false
+              | 2 => signature b #[.slice .bool] true
+              | 3 => { signature b #[.slice (.int .int)] true with results := #[.bool] }
+              | _ => signature b #[] false
+            let want := a == b && (!pointerImpl || pointerQuery) && shape == 0
+            check (satisfiesMethodSig (implementing impl recv) dyn req == want)
+              s!"identity/signature/receiver matrix: {repr a}/{repr b}/{pointerImpl}/{pointerQuery}/{shape}"
+  -- Coverage and rendering both consume the same requirement record.
+  for req in [privateQ, signature ⟨"É", ""⟩, signature ⟨"ǅ", "blue/inner"⟩] do
+    let base := implementing privateP
+    let withIface := { base with types := base.types ++ #[(⟨"main.I"⟩, .interfaceDef #[req])] }
+    match firstUnsatisfiedMethod? withIface (.defined 2) ⟨"main.I"⟩ with
+    | .ok name => check (name == some req.name) "missing-method display contains package identity"
+    | .error e => throw (IO.userError s!"full coverage refused: {repr e}")
+    let unknown := { withIface with methodSets := #[] }
+    match firstUnsatisfiedMethod? unknown (.defined 2) ⟨"main.I"⟩ with
+    | .error e => check (e.status == "unsupported") "absent coverage did not refuse"
+    | .ok _ => throw (IO.userError "absent coverage answered from no record")
+    let exportedOnly := { withIface with methodSets := #[{ key := "main.T", coverage := .exported }] }
+    match firstUnsatisfiedMethod? exportedOnly (.defined 2) ⟨"main.I"⟩ with
+    | .ok name => check (req.id.package.isEmpty && name == some req.name) "private exported-only query answered"
+    | .error e => check (!req.id.package.isEmpty && e.status == "unsupported") "public Unicode requirement refused"
+  IO.println "Method satisfaction: PASS; 1620 identity/signature/receiver cells; full/exported/absent coverage and bare display"
+
 def main (args : List String) : IO Unit := do
+  satisfactionControls
   let [fixture] := args | throw (IO.userError "expected fresh executable member fixture")
   let p ← IO.ofExcept (NativeToIR.decodeProgram (← IO.ofExcept
     (StrictJson.parseBytes (← IO.FS.readBinFile fixture))))

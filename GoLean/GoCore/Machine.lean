@@ -2121,14 +2121,14 @@ def stringFirstLine? (bytes : Array UInt8) : Option (String × Bool) :=
   let line := bytes.takeWhile (· != 0x0A)
   (utf8String? line).map fun text => (text, line.size < bytes.size)
 
-/-- Does `dynTy` carry `name() string` — the shape of BOTH interfaces Go's
+/-- Does `dynTy` carry `member() string` — the shape of BOTH interfaces Go's
 `preprintpanics` consults (`error`'s `Error() string` and `stringer`'s
 `String() string`)? Checked against the METHOD SET directly rather than
 through a wire interface declaration: those two interfaces are built into
 the runtime, so the rewrite applies whether or not the program ever
 mentions `error`/`fmt.Stringer`. -/
-def hasNoArgStringMethod (state : ExecState) (dynTy : Ty) (name : String) : Bool :=
-  match concreteMethodForDynamic? state dynTy name with
+def hasNoArgStringMethod (state : ExecState) (dynTy : Ty) (member : Declaration.MemberId) : Bool :=
+  match concreteMethodForDynamic? state dynTy member with
   | some (info, _) =>
       match concreteMethodSignature? state info with
       | some (params, results, variadic) =>
@@ -2139,7 +2139,7 @@ def hasNoArgStringMethod (state : ExecState) (dynTy : Ty) (name : String) : Bool
 /-- The payload rewrite Go performs before printing: `v.Error()` for an
 `error`, `v.String()` for a `fmt.Stringer`. -/
 def panicPayloadIsRewritten (state : ExecState) (dynTy : Ty) : Bool :=
-  hasNoArgStringMethod state dynTy "Error" || hasNoArgStringMethod state dynTy "String"
+  hasNoArgStringMethod state dynTy ⟨"Error", ""⟩ || hasNoArgStringMethod state dynTy ⟨"String", ""⟩
 
 /-- Render a panic payload as Go's first abort line renders it (after
 `panic: `): the payload's TEXT and whether the payload continues onto a

@@ -45,7 +45,7 @@ structure MethodSig where
   variadic : Bool := false
   deriving Repr, BEq
 
-/-- Display spelling; stage 1 retains the guarded legacy name-only matcher. -/
+/-- Display spelling, projected from the single member identity. -/
 def MethodSig.name (m : MethodSig) : String := m.id.name
 
 inductive TypeDef where

@@ -875,17 +875,18 @@ receiver methods (the reverse is FALSE — a value box never satisfies a
 pointer-receiver method; probed 2026-07-30, design note Q3). The method set
 of `*T` exists only when `T` is a defined non-pointer, non-interface type —
 `**T` has an EMPTY method set, so the fallback declines a pointer pointee
-(pre-merge audit 2026-07-31, finding 4). The lookup result records whether
+(pre-merge audit 2026-07-31, finding 4). Lookup keys on I1 member identity,
+including the original declaring package of a private method. The lookup result records whether
 the receiver must be auto-dereferenced (a pointer box dispatching to a
 value-receiver method). -/
-def concreteMethodForDynamic? (state : ExecState) (dynTy : Ty) (methodName : String) :
+def concreteMethodForDynamic? (state : ExecState) (dynTy : Ty) (member : Declaration.MemberId) :
     Option (MethodInfo × Bool) :=
   let direct := state.methods.foldl
     (fun found method =>
       match found with
       | some _ => found
       | none =>
-          if method.name == methodName &&
+          if method.id == member &&
               methodRecvDynamicTy? state method == some dynTy then
             some (method, false)
           else none)
@@ -902,21 +903,22 @@ def concreteMethodForDynamic? (state : ExecState) (dynTy : Ty) (methodName : Str
           match found with
           | some _ => found
           | none =>
-              if method.name == methodName &&
+              if method.id == member &&
                   methodRecvDynamicTy? state method == some elem then
                 some (method, true)
               else none)
         none
   | none, _ => none
 
-def hasConcreteMethod (state : ExecState) (dynTy : Ty) (methodName : String) : Bool :=
-  (concreteMethodForDynamic? state dynTy methodName).isSome
+def hasConcreteMethod (state : ExecState) (dynTy : Ty) (member : Declaration.MemberId) : Bool :=
+  (concreteMethodForDynamic? state dynTy member).isSome
 
 /-- A concrete method's declared signature: its executable `Func`'s
 parameters MINUS the receiver, its results (both canonicalized), and its
-VARIADIC marker. `none` when no body is recorded (a dispatch anchor or a
-quarantined declaration) — which is a failure to match, never a silent
-pass. -/
+VARIADIC marker. A quarantined `Func` still records its real signature and
+can establish satisfaction; calls refuse at its body. `none` means the
+target Func is missing — a failure to match, never a silent pass. Interface
+anchors are excluded by the concrete receiver lookup. -/
 def concreteMethodSignature? (state : ExecState) (info : MethodInfo) :
     Option (Array Ty × Array Ty × Bool) :=
   match findFunctionIn? state.functions info.funcId with
@@ -926,15 +928,15 @@ def concreteMethodSignature? (state : ExecState) (info : MethodInfo) :
             f.variadic)
   | none => none
 
-/-- Does `dynTy` carry a method matching this REQUIREMENT — name AND full
-signature? Comparing names alone accepted a differently typed method
+/-- Does `dynTy` carry a method matching this REQUIREMENT — package/name identity
+AND full signature? Comparing names alone accepted a differently typed method
 (pre-merge audit 2026-07-31, finding 2); comparing only the param/result
 TYPES accepted `M(xs []int)` for a required `M(xs ...int)` and vice versa,
 since both render the param as `[]int` — Go treats them as different
 methods, so the machine ran a dispatch on a program Go aborts (pre-merge
 audit 2026-07-31, finding 0). -/
 def satisfiesMethodSig (state : ExecState) (dynTy : Ty) (req : MethodSig) : Bool :=
-  match concreteMethodForDynamic? state dynTy req.name with
+  match concreteMethodForDynamic? state dynTy req.id with
   | some (info, _) =>
       match concreteMethodSignature? state info with
       | some (params, results, variadic) =>
@@ -1012,9 +1014,9 @@ def dynamicMethodSetRecorded (state : ExecState) (dynTy : Ty) : Bool :=
   | none => true
 
 /-- Is `dynTy` recorded at EXPORTED-only coverage (D5 imported markers,
-the sync primitives)? Cross-package UNEXPORTED method identity is
-inexpressible on the name-keyed wire, so a definite-"no" that hinges on
-an unexported requirement refuses instead of answering. Keyed on the
+the sync primitives)? Their private methods remain unrecorded even though
+member identity is now exact, so a definite-"no" that hinges on an
+unexported requirement refuses instead of answering. Keyed on the
 RECORD's coverage — the old check sniffed the TypeDef kind
 (`.unsupported` marker), which could not see carriers without TypeDefs
 at all. -/
@@ -1023,22 +1025,8 @@ def dynamicMethodSetExportedOnly (state : ExecState) (dynTy : Ty) : Bool :=
   | some key => methodSetCoverage? state key == some .exported
   | none => false
 
-/-- Go exportedness, decided CONSTRUCTIVELY at the byte level: the first
-UTF-8 byte is an ASCII upper-case letter. Core's char-level String APIs
-(`toList`/`front`/`get`) depend on `Classical.choice` through their UTF-8
-decoding proofs, and the machine-correspondence theorems are pinned
-constructive (proofs/Audit.lean) — the same constraint the abort renderer
-records at `utf8String?` (Machine.lean). Recorded narrowing: a NON-ASCII exported
-method name (Unicode upper-case first rune) answers `false` here, which
-makes the imported-marker satisfaction guard REFUSE rather than answer —
-fail-closed, never wrong. -/
-def isExportedName (s : String) : Bool :=
-  match s.toUTF8[0]? with
-  | some b => 65 ≤ b && b ≤ 90
-  | none => false
-
 /-- The FIRST requirement of `interfaceName` that `dynTy` does not meet, in
-the interface's own (name-sorted) method order — `none` means it satisfies
+the interface's own gc method order — `none` means it satisfies
 the interface. Go names exactly this method in its assert-panic message.
 
 Fails CLOSED, never vacuously true, in two situations:
@@ -1069,11 +1057,12 @@ def firstUnsatisfiedMethod? (state : ExecState) (dynTy : Ty) (interfaceName : Ty
         (fun found req =>
           match found with
           | some _ => found
-          | none => if satisfiesMethodSig state dynTy req then none else some req.name)
+          | none => if satisfiesMethodSig state dynTy req then none else some req)
         none
       match missing with
       | none => return none
-      | some name =>
+      | some req =>
+          let name := req.name
           if !dynamicMethodSetRecorded state dynTy then
             -- The CLASS refusal (BUG-053 closure, contract note §3): a
             -- method-CARRYING type with no method-set record on the
@@ -1085,7 +1074,7 @@ def firstUnsatisfiedMethod? (state : ExecState) (dynTy : Ty) (interfaceName : Ty
 its method set has NO record on the wire (a method-carrying type without \
 a MethodSetRecord), so `missing method {name}' would be an answer derived \
 from no information (BUG-009/BUG-053 class)"
-          else if dynamicMethodSetExportedOnly state dynTy && !isExportedName name then
+          else if dynamicMethodSetExportedOnly state dynTy && !req.id.package.isEmpty then
             -- EXPORTED-only coverage (D5 markers, sync primitives): an
             -- unexported requirement could still be met inside the
             -- type's own package — refuse rather than answer (D5).
@@ -2489,7 +2478,7 @@ def nilValueMethodText? (state : ExecState) (fid : FuncId) (args : List GoValue)
           | some _ =>
               match args.head? with
               | some (GoValue.interface dynTy .nil) =>
-                  match concreteMethodForDynamic? state dynTy method.name with
+                  match concreteMethodForDynamic? state dynTy method.id with
                   | some (concrete, true) =>
                       match findFunctionIn? state.functions concrete.funcId with
                       | some target =>
@@ -2510,7 +2499,7 @@ def dynamicDispatch? (state : ExecState) (func : Func) (argValues : Array GoValu
       | some _ =>
           match argValues[0]? with
           | some (GoValue.interface dynTy inner) =>
-              match concreteMethodForDynamic? state dynTy method.name with
+              match concreteMethodForDynamic? state dynTy method.id with
               | some (concrete, needsDeref) =>
                   let targetFunc ←
                     match findFunctionIn? state.functions concrete.funcId with

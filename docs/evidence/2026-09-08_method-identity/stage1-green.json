@@ -1,0 +1,312 @@
+{
+  "provenance": "[AGENT] 2026-09-09, exact staged tree committed after successful full run",
+  "source_commit": "ac8231fd7273faf230773fed07a23e787bf9c101",
+  "source_tree": "fba2bc92bc74e3b871217f9c03767f591f6d5520",
+  "dirty_at_run": true,
+  "command": "scripts/capped scripts/ci --slow",
+  "captured_exit": 0,
+  "wall_seconds": 1390.1,
+  "cache": "warm build; fresh full differential, slow certification, twin, compiled audit poisons",
+  "log_sha256": "4d91d6abf6a7326d3e4a8b0f458d56cf06595251c349e3eaefdcd5b8f1dfadf4",
+  "exec": {
+    "rows": 3654,
+    "pass": 3403,
+    "fail": 251,
+    "drift": 0
+  },
+  "negative": {
+    "rows": 394,
+    "pass": 394,
+    "drift": 0
+  },
+  "slow": {
+    "members": 6,
+    "nodes": 6193933,
+    "edges": 6565663,
+    "dedup_hits": 371731,
+    "certified_set_changed": false
+  },
+  "twin_sha256": "a225ea8a40a78dc3e83241520706f6a85e0675cdedab49de2b5f973ca0c7a46c",
+  "timings": {
+    "run_id": "90c8cd7e4379427ebd3c2938b9a0e4f6",
+    "started": 1788912711.2429402,
+    "libraries": 15,
+    "test_modules": 37,
+    "steps": 14,
+    "fingerprint": "95f834145b36c859ca4da7299eb15ecece240984662b24cac34b9199dc760bb9",
+    "elapsed_wall_seconds": 1389.9678916931152,
+    "receipts": [
+      {
+        "run_id": "90c8cd7e4379427ebd3c2938b9a0e4f6",
+        "fingerprint": "95f834145b36c859ca4da7299eb15ecece240984662b24cac34b9199dc760bb9",
+        "step": "core",
+        "libraries": [
+          "GoLean"
+        ],
+        "targets": [
+          "GoLean:leanArts",
+          "golean"
+        ],
+        "command": [],
+        "exit_code": 0,
+        "build_seconds": 103.79739158801385,
+        "check_seconds": 1.6429985407739878e-06,
+        "elapsed_seconds": 103.79739323101239
+      },
+      {
+        "run_id": "90c8cd7e4379427ebd3c2938b9a0e4f6",
+        "fingerprint": "95f834145b36c859ca4da7299eb15ecece240984662b24cac34b9199dc760bb9",
+        "step": "interface",
+        "libraries": [
+          "InterfaceTests"
+        ],
+        "targets": [
+          "InterfaceTests:leanArts"
+        ],
+        "command": [
+          "bash",
+          "scripts/check-interface"
+        ],
+        "exit_code": 0,
+        "build_seconds": 27.850901554018492,
+        "check_seconds": 7.303151042986428,
+        "elapsed_seconds": 35.15405259700492
+      },
+      {
+        "run_id": "90c8cd7e4379427ebd3c2938b9a0e4f6",
+        "fingerprint": "95f834145b36c859ca4da7299eb15ecece240984662b24cac34b9199dc760bb9",
+        "step": "admission",
+        "libraries": [
+          "AdmissionTests"
+        ],
+        "targets": [
+          "AdmissionTests:leanArts"
+        ],
+        "command": [
+          "bash",
+          "scripts/check-admission",
+          "--lean-only"
+        ],
+        "exit_code": 0,
+        "build_seconds": 30.247355750994757,
+        "check_seconds": 64.0606293210003,
+        "elapsed_seconds": 94.30798507199506
+      },
+      {
+        "run_id": "90c8cd7e4379427ebd3c2938b9a0e4f6",
+        "fingerprint": "95f834145b36c859ca4da7299eb15ecece240984662b24cac34b9199dc760bb9",
+        "step": "declarations",
+        "libraries": [
+          "DeclarationTests"
+        ],
+        "targets": [
+          "DeclarationTests:leanArts"
+        ],
+        "command": [
+          "bash",
+          "scripts/check-declarations"
+        ],
+        "exit_code": 0,
+        "build_seconds": 0.13077247398905456,
+        "check_seconds": 38.785770306014456,
+        "elapsed_seconds": 38.91654278000351
+      },
+      {
+        "run_id": "90c8cd7e4379427ebd3c2938b9a0e4f6",
+        "fingerprint": "95f834145b36c859ca4da7299eb15ecece240984662b24cac34b9199dc760bb9",
+        "step": "boolean-typing",
+        "libraries": [
+          "BooleanTypingTests"
+        ],
+        "targets": [
+          "BooleanTypingTests:leanArts"
+        ],
+        "command": [
+          "bash",
+          "scripts/check-boolean-typing",
+          "--lean-only"
+        ],
+        "exit_code": 0,
+        "build_seconds": 31.554729924013373,
+        "check_seconds": 74.75133927399293,
+        "elapsed_seconds": 106.3060691980063
+      },
+      {
+        "run_id": "90c8cd7e4379427ebd3c2938b9a0e4f6",
+        "fingerprint": "95f834145b36c859ca4da7299eb15ecece240984662b24cac34b9199dc760bb9",
+        "step": "boolean-runtime",
+        "libraries": [
+          "BooleanRuntimeTests"
+        ],
+        "targets": [
+          "BooleanRuntimeTests:leanArts"
+        ],
+        "command": [
+          "bash",
+          "scripts/check-boolean-runtime"
+        ],
+        "exit_code": 0,
+        "build_seconds": 1.0350362900062464,
+        "check_seconds": 28.744240429979982,
+        "elapsed_seconds": 29.77927671998623
+      },
+      {
+        "run_id": "90c8cd7e4379427ebd3c2938b9a0e4f6",
+        "fingerprint": "95f834145b36c859ca4da7299eb15ecece240984662b24cac34b9199dc760bb9",
+        "step": "recovery-typing",
+        "libraries": [
+          "RecoveryTypingTests"
+        ],
+        "targets": [
+          "RecoveryTypingTests:leanArts"
+        ],
+        "command": [
+          "bash",
+          "scripts/check-recovery-typing",
+          "--lean-only"
+        ],
+        "exit_code": 0,
+        "build_seconds": 0.13452790200244635,
+        "check_seconds": 47.290881098015234,
+        "elapsed_seconds": 47.42540900001768
+      },
+      {
+        "run_id": "90c8cd7e4379427ebd3c2938b9a0e4f6",
+        "fingerprint": "95f834145b36c859ca4da7299eb15ecece240984662b24cac34b9199dc760bb9",
+        "step": "recovery-storage",
+        "libraries": [
+          "RecoveryStorageTests"
+        ],
+        "targets": [
+          "RecoveryStorageTests:leanArts"
+        ],
+        "command": [
+          "bash",
+          "scripts/check-recovery-storage"
+        ],
+        "exit_code": 0,
+        "build_seconds": 0.13206315899151377,
+        "check_seconds": 26.290072469011648,
+        "elapsed_seconds": 26.42213562800316
+      },
+      {
+        "run_id": "90c8cd7e4379427ebd3c2938b9a0e4f6",
+        "fingerprint": "95f834145b36c859ca4da7299eb15ecece240984662b24cac34b9199dc760bb9",
+        "step": "recovery-setup",
+        "libraries": [
+          "RecoverySetupTests"
+        ],
+        "targets": [
+          "RecoverySetupTests:leanArts"
+        ],
+        "command": [
+          "bash",
+          "scripts/check-recovery-setup"
+        ],
+        "exit_code": 0,
+        "build_seconds": 0.1351235159963835,
+        "check_seconds": 28.053713965025963,
+        "elapsed_seconds": 28.188837481022347
+      },
+      {
+        "run_id": "90c8cd7e4379427ebd3c2938b9a0e4f6",
+        "fingerprint": "95f834145b36c859ca4da7299eb15ecece240984662b24cac34b9199dc760bb9",
+        "step": "recovery-control",
+        "libraries": [
+          "RecoveryControlTests"
+        ],
+        "targets": [
+          "RecoveryControlTests:leanArts"
+        ],
+        "command": [
+          "bash",
+          "scripts/check-recovery-control"
+        ],
+        "exit_code": 0,
+        "build_seconds": 0.13045145801152103,
+        "check_seconds": 27.938520592986606,
+        "elapsed_seconds": 28.068972050998127
+      },
+      {
+        "run_id": "90c8cd7e4379427ebd3c2938b9a0e4f6",
+        "fingerprint": "95f834145b36c859ca4da7299eb15ecece240984662b24cac34b9199dc760bb9",
+        "step": "abort-observation",
+        "libraries": [
+          "AbortObservationTests"
+        ],
+        "targets": [
+          "AbortObservationTests:leanArts"
+        ],
+        "command": [
+          "bash",
+          "scripts/check-abort-observation"
+        ],
+        "exit_code": 0,
+        "build_seconds": 0.1323967459902633,
+        "check_seconds": 22.028896033996716,
+        "elapsed_seconds": 22.16129277998698
+      },
+      {
+        "run_id": "90c8cd7e4379427ebd3c2938b9a0e4f6",
+        "fingerprint": "95f834145b36c859ca4da7299eb15ecece240984662b24cac34b9199dc760bb9",
+        "step": "recovery-terminal",
+        "libraries": [
+          "RecoveryTerminalTests"
+        ],
+        "targets": [
+          "RecoveryTerminalTests:leanArts"
+        ],
+        "command": [
+          "bash",
+          "scripts/check-recovery-terminal"
+        ],
+        "exit_code": 0,
+        "build_seconds": 4.736961977992905,
+        "check_seconds": 19.47567787198932,
+        "elapsed_seconds": 24.212639849982224
+      },
+      {
+        "run_id": "90c8cd7e4379427ebd3c2938b9a0e4f6",
+        "fingerprint": "95f834145b36c859ca4da7299eb15ecece240984662b24cac34b9199dc760bb9",
+        "step": "eval",
+        "libraries": [
+          "TestsData",
+          "EvalTests"
+        ],
+        "targets": [
+          "TestsData:leanArts",
+          "EvalTests:leanArts",
+          "gocore-eval-tests"
+        ],
+        "command": [
+          "lake",
+          "exe",
+          "gocore-eval-tests"
+        ],
+        "exit_code": 0,
+        "build_seconds": 124.12223612700473,
+        "check_seconds": 0.3352637449861504,
+        "elapsed_seconds": 124.45749987199088
+      },
+      {
+        "run_id": "90c8cd7e4379427ebd3c2938b9a0e4f6",
+        "fingerprint": "95f834145b36c859ca4da7299eb15ecece240984662b24cac34b9199dc760bb9",
+        "step": "method-identity",
+        "libraries": [
+          "MethodIdentityTests"
+        ],
+        "targets": [
+          "MethodIdentityTests:leanArts"
+        ],
+        "command": [
+          "bash",
+          "scripts/check-method-identity"
+        ],
+        "exit_code": 0,
+        "build_seconds": 1.0342374080209993,
+        "check_seconds": 17.47768789800466,
+        "elapsed_seconds": 18.51192530602566
+      }
+    ]
+  }
+}

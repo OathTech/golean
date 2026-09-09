@@ -652,7 +652,7 @@ def dispatchAccesses (s : ExecState) (fid : FuncId) (args : List GoValue) :
           | some _ =>
               match args.head? with
               | some (.interface dynTy inner) =>
-                  match concreteMethodForDynamic? s dynTy method.name with
+                  match concreteMethodForDynamic? s dynTy method.id with
                   | some (concrete, needsDeref) =>
                       if needsDeref then
                         match inner with

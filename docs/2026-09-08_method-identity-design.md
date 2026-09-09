@@ -98,3 +98,37 @@ are the old twin pin, the two eval assertions blocked by their old fixture
 schema, and the resulting failed eval library receipt. Full evidence:
 [initial run](evidence/2026-09-08_method-identity/stage1-before-repin.json).
 The corrected candidate owes a green full run before the stage-1 commit.
+
+## Stage 2 — full-identity matching
+
+[AGENT] 2026-09-09. Stage 1 source commit `ac8231fd` is exactly the staged
+candidate tree `fba2bc92bc74e3b871217f9c03767f591f6d5520` that passed the
+full capped `scripts/ci --slow` in **1390.100 seconds**. Its 3,654 executable
+and 394 negative rows have no result/stage drift; the fresh slow run has the
+same six certified observations. The source-bound receipt is
+[`stage1-green.json`](evidence/2026-09-08_method-identity/stage1-green.json).
+
+The shared concrete-method lookup now accepts `Declaration.MemberId`.
+Satisfaction compares that identity and the complete signature, including
+variadicness. Dispatch callers pass the same record id because there is one
+lookup primitive, including race access accounting. Panic payload checks name
+the exported `Error` and `String` members with empty package identity. The
+complete dispatch claim still awaits stage 3's target
+keys, wrapper deduplication and guard retirement. No second transitional
+bare-name lookup is introduced.
+
+Missing-method selection preserves the first unsatisfied requirement record
+until coverage is decided, then renders its bare `name` projection. The
+validated package field decides exported-only coverage: a nonempty package
+marks a private requirement whose absence from an exported-only table is
+unknown and must refuse. The previous ASCII-only classifier is removed.
+Pinned Go `go/types/object.go` and compiler `types/sym.go` order interface
+methods exported first, then name, then private package path; the emitter's
+`Interface.NumMethods` order is already correct and is preserved.
+
+Five kernel regressions and 1,620 runtime cells cover package/name identity,
+signature shape, variadicness, and pointer/value inheritance. Additional
+controls distinguish full, exported-only and absent method-set records and
+require bare missing-method display, including Unicode names. The imported
+audit now pins six compiled poisons, adding the core lookup and syntax modules.
+The decoder and frontend BUG-098 guard are unchanged in this stage.

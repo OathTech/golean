@@ -5,7 +5,12 @@ open Lean in
 def MethodIdentityAudit.run : CoreM Unit := do
   let env ← getEnv
   for required in [``GoLean.MethodIdentityTests.requirement_identity_is_semantic,
-      ``GoLean.MethodIdentityTests.method_identity_is_semantic] do
+      ``GoLean.MethodIdentityTests.method_identity_is_semantic,
+      ``GoLean.MethodIdentityTests.private_same_package_accepted,
+      ``GoLean.MethodIdentityTests.private_cross_package_rejected,
+      ``GoLean.MethodIdentityTests.pointer_inherits_private_value,
+      ``GoLean.MethodIdentityTests.value_does_not_inherit_private_pointer,
+      ``GoLean.MethodIdentityTests.variadic_is_part_of_signature] do
     let some (.thmInfo _) := env.find? required
       | throwError "Method identity audit: missing theorem {required}"
   for required in [``GoLean.NativeDeclaration.decodeMemberId,
