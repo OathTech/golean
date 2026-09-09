@@ -85,7 +85,9 @@ def resolve_entries(wire, entries):
         matches = [key for key, label in labels.items() if label == entry]
         if len(matches) > 1:
             raise ValueError("ambiguous method entry " + entry + "; use a full target id")
-        resolved.append(matches[0] if matches else entry)
+        if not matches:
+            raise ValueError("entry " + entry + " is not on the wire")
+        resolved.append(matches[0])
     return resolved
 
 
@@ -142,7 +144,7 @@ def reach(bodies, entries):
             pred[e] = None
             q.append(e)
         else:
-            sys.stderr.write("reachability.py: NOTE: entry %s is not on the wire\n" % e)
+            raise ValueError("entry " + e + " is not on the wire")
     while q:
         n = q.popleft()
         for c in sorted(bodies.get(n, ())):

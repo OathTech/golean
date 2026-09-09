@@ -1080,8 +1080,8 @@ from no information (BUG-009/BUG-053 class)"
             -- type's own package — refuse rather than answer (D5).
             unsupported s!"interface satisfaction for {goTypeNameForMessage state dynTy}: \
 requirement {name} is UNEXPORTED and the dynamic type's record covers \
-exported methods only — cross-package unexported method identity is not \
-modeled"
+exported methods only — this record cannot decide whether the private \
+requirement is satisfied"
           else
             return (some name)
 

@@ -1,0 +1,101 @@
+{
+  "provenance": "[AGENT] 2026-09-09, full measured audit-fix run before additive baseline update",
+  "parent_commit": "f97b972f60add706ec790da8459965701cb4cbb1",
+  "source_tree": "038e116ead4b8edad23117057f326f99e1e01fe9",
+  "dirty_at_run": true,
+  "command": "GOLEAN_SLOW=1 scripts/capped scripts/coverage all",
+  "captured_exit": 1,
+  "wall_seconds": 537.649,
+  "expected_exit_reason": "248 tracked FAIL rows; full comparisons establish zero existing drift",
+  "executable": {
+    "rows": 3665,
+    "pass": 3417,
+    "fail": 248,
+    "new_pass": {
+      "multipkg/private-method-dispatch/nil-private-value": "membership",
+      "multipkg/private-method-dispatch/nil-promoted-pointer": "-",
+      "multipkg/private-method-dispatch/missing-method-order": "-"
+    },
+    "removed": [],
+    "existing_result_stage_drift": 0,
+    "metadata": {
+      "frontend": "native",
+      "manifest": "/home/dev/projects/golean/.claude/worktrees/fix-package-method-identity/.tmp/golean-coverage.2SnOqa",
+      "manifest_sha256": "9dc67e7391f1082ed7f39f3bc1a7b206fb6346f0c15466a650b9bae1d0a9b710",
+      "manifest_cases": "3665",
+      "total_corpus_cases": "3665",
+      "full_run": "true",
+      "filters": "-",
+      "git_commit": "f97b972f60add706ec790da8459965701cb4cbb1",
+      "git_dirty": "true",
+      "go_toolchain": "go1.26.5",
+      "go_traceback": "system",
+      "go_crash_channel": "same-run-setcrashoutput-v1",
+      "go_drift_allowed": "0",
+      "go_drift_actual": "false",
+      "depth_guard": "choice-trace wideAfterExhaustion=0 on every invariance stream",
+      "depth_seeds": "1,2,3",
+      "depth_generator": "lcg31(1103515245,12345) bits16..31",
+      "depth_trace_timeout_seconds": "240",
+      "membership_draws": "80",
+      "jobs": "12",
+      "fanout_find_exit": "0",
+      "fanout_pool_exit": "0"
+    }
+  },
+  "negative": {
+    "rows": 394,
+    "pass": 394,
+    "drift": 0
+  },
+  "comparisons": [
+    {
+      "command": [
+        "scripts/coverage-baseline-diff",
+        "--full",
+        "--baseline",
+        "baselines/native-full.tsv",
+        "artifacts/method-identity-audit-fixes/prepin-existing.tsv"
+      ],
+      "exit": 0,
+      "output": "no regression: 3662 case(s) run in prepin-existing.tsv match baselines/native-full.tsv"
+    },
+    {
+      "command": [
+        "scripts/coverage-baseline-diff",
+        "--full",
+        "--baseline",
+        "baselines/negative-full.tsv",
+        "artifacts/method-identity-audit-fixes/prepin/negative-latest.tsv"
+      ],
+      "exit": 0,
+      "output": "no regression: 394 case(s) run in negative-latest.tsv match baselines/negative-full.tsv"
+    }
+  ],
+  "baseline_before_sha256": "e24ff195b7efa8975e15c809871cad3f8b7b7d5081413ca8c48823ce654ddc89",
+  "results_sha256": "1096f81b4ea033033bdf9fb64443ec4bdb3c05aacc6902d9a1946557391b66bd",
+  "negative_results_sha256": "16e489a805e7530e6d961b27620a93c416c6d91373a608fedacef5281eb8d204",
+  "log_sha256": "3bd3a04927c4a0fd5b92e20908ef8612539bfa0de58ed7976346ca844cb0f20c",
+  "slow": {
+    "observation_set_unchanged": true,
+    "observations_sha256": "e40ba07d11827b48aa8c9246bd84d6c21849159983d46c47b793b5759cfbbfd8",
+    "enum_stats": "coverage-observations: observations=6 steps=6565663 probes=0 sites=6193933 leaves=0 maxdepth=0 width=4 engine=dedup nodes=6193933 edges=6565663 dedupHits=371731 certified=checkCert",
+    "wire_sha256": "2f1d639f2042466f50b61ab117db5b39629c425f733650b9be992c0b85beefcc"
+  },
+  "twin_sha256": "13d8b659b115a68f62d47ece7654ebb1baf0de4dd8c72b3b26fee09621e9eb04",
+  "review": {
+    "provenance": "[AGENT] 2026-09-09, independent audit delivered by user; retained unchanged in worktree",
+    "reviewed_commit": "f97b972f60add706ec790da8459965701cb4cbb1",
+    "review_path": ".tmp/review/2026-09-09_coordinator-review.md",
+    "review_sha256": "026fc340a13962c329cd5778a881234fa3504be5af67a44ab89e3508504b0769"
+  },
+  "focused_controls": {
+    "rows": 11,
+    "pass": 11,
+    "source_order_and_reversed_order_trace": "2 nilValueMethodText choices each; zero violations, driverAgreement=ok",
+    "negative_control_log_sha256": "5bb25f0ab1feb4fd2403eaff93486c66bc0fb5afd38e9e5a811ecdab1302bd80",
+    "old_validator": "compiled; reversed otherwise-identical method table makes both choices report the wrong-wrapper invariant",
+    "renamed_go_test": "compiles; standalone gate rejects three instead of four named PASS receipts",
+    "initial_negative_control": "Original source emission orders the ordinary method before promotion wrappers, so the first control did not trigger the old validator; its retained failure is a control-construction finding. Reversing method-table order exposes the drift without changing the program."
+  }
+}

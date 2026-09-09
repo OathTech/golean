@@ -68,3 +68,24 @@ func constrainedMethods() (int, int, int, int) {
 	x := Mix{A: 11, B: 22}
 	return ri.GenericRead(x), bi.GenericRead(x), ri.GenericValue(x), bi.GenericValue(x)
 }
+
+// Audit R1: both nil promoted-pointer dispatch and the nil value-method
+// envelope retain the declaring package when the method spelling collides.
+func nilPromotedPointer() int { return ri.Read((*PtrMix)(nil)) }
+func nilPrivateValue() int    { return ri.Read((*ri.NilMix)(nil)) }
+
+// Audit R9: gc chooses an exported requirement before any private one,
+// including when its spelling sorts after the private name by code point.
+type Ordered interface {
+	ri.I
+	É() int
+	Zz() int
+}
+type OnlyZz int
+
+func (OnlyZz) Zz() int { return 1 }
+func missingMethodOrder() int {
+	var x any = OnlyZz(0)
+	_ = x.(Ordered)
+	return 0
+}

@@ -1,5 +1,7 @@
 package inner
 
+import bi "blue/inner"
+
 type A int
 
 func (a A) m() int { return 100 + int(a) }
@@ -31,3 +33,9 @@ type G[T ~int] struct{ V T }
 func (g G[T]) m() int                              { f := func() int { return 700 + int(g.V) }; return f() }
 func GenericRead[T interface{ m() int }](x T) int  { return x.m() }
 func GenericValue[T interface{ m() int }](x T) int { f := x.m; return f() }
+
+// Audit R1: blue/inner.m is a promotion wrapper, red/inner.m an ordinary
+// value method. A nil *NilMix dispatch to the latter draws R9a's text choice.
+type NilMix struct{ bi.B }
+
+func (NilMix) m() int { return 17 }

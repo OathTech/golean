@@ -1,6 +1,6 @@
 # Package-correct method identity — work charter
 
-[AGENT] 2026-09-09. READY FOR USER ADVERSARIAL REVIEW on `fix/package-method-identity`, worktree
+[AGENT] 2026-09-09. AUDIT FIXES IN PROGRESS on `fix/package-method-identity`, worktree
 `.claude/worktrees/fix-package-method-identity`, from main
 `f54753fa91ed125fd600ffd11fcd5b10d4a5fe02`. Proposal: commit `b12b4a31`,
 `docs/2026-09-08_next-increment-method-identity.md` on
@@ -137,3 +137,12 @@ is outstanding in this charter's boundary. The independent user audit and
 any eventual merge/push remain pending. The [design record](2026-09-08_method-identity-design.md)
 contains the measured costs, final census, exact source receipts and review
 boundaries; the final documentation commit changes records only.
+
+
+[USER] 2026-09-09, firsthand: "The independent audit has landed with some
+required fixes". [AGENT] The delivered audit of `f97b972f` is FIX-FIRST with
+no design blocker. Its R1–R7 corrections and the bounded R8/R9 controls are
+inside this charter. Re-offer only after the required full gates and clean
+committed-source CI. The three additional corpus controls require additive
+baseline rows after full measurement; existing rows and pin bytes must not
+drift. No merge or push is authorized.

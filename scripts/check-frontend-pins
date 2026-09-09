@@ -216,7 +216,9 @@ cd "$ROOT"
 # [AGENT] 2026-09-09 FR-31 final-stage twin re-pin: callable method targets
 # derive from receiver + I1 MemberId. Fresh full differential/slow run records
 # exactly 3 BUG-098 greens + 8 new controls, no regressions. Wire structural
-# comparison: 1316 call targets + 46 lifted names, no other values/order changes.
+# comparison OF THIS TWIN: 1316 call targets + 46 lifted names, no other
+# values/order changes. Three other corpus dirs reorder synthesized anchors
+# deterministically; recorded in the design note (audit R5).
 # Fresh twin SHA256: 13d8b659b115a68f62d47ece7654ebb1baf0de4dd8c72b3b26fee09621e9eb04.
 # Design/evidence: docs/2026-09-08_method-identity-design.md.
 # [AGENT] 2026-09-09, FR-31 stage 1: 758110a3… -> a225ea8a….

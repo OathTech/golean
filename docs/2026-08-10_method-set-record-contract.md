@@ -205,3 +205,24 @@ inversion of the old blanket `true`).
   identity on the wire, or refusing promotion of unexported imported
   methods — a frontend capability decision, not a record-contract
   change.
+
+
+## 6. Package-identity addendum (2026-09-09, FR-31 audit R4)
+
+[AGENT] The package-identity limitation in §3's D5 bullet and §5's promoted
+private-method bullet is discharged on `fix/package-method-identity`, pending
+independent re-review and merge. Executable requirements and methods carry
+I1 `Declaration.MemberId` (declaring package plus name); callable targets
+derive from the receiver and that record. Satisfaction, dispatch and the
+choice-trace validator retain the full identity. Promotion depth and
+ambiguity are resolved within each package-scoped member identity.
+
+The `MethodSetRecord` contract itself remains type-keyed. D5 and modeled
+sync carriers still advertise exported-only coverage: a private requirement
+can be undecidable because its implementation is absent from that record,
+even though the wire can express the member identity exactly. No new
+imported private-method implementation or full-coverage claim follows from
+this change. The old bullets above describe the pre-FR-31 name-keyed wire;
+this addendum supersedes their proposed identity repair, not their coverage
+boundary or the downstream proof-seed obligations. G-P may replace frontend
+promotion wrappers while retaining this member/coverage contract.

@@ -1,3 +1,4 @@
+import GoLean.ChoiceTrace
 import GoLean.GoCore.Ops
 import GoLean.NativeToIR
 import GoLean.GoCore.SyntaxEqb
@@ -83,6 +84,36 @@ theorem variadic_is_part_of_signature :
     satisfiesMethodSig (implementing (signature ⟨"m", "p"⟩ #[.slice (.int .int)] true))
       (.defined 2) (signature ⟨"m", "p"⟩ #[.slice (.int .int)] false) = false := by decide +kernel
 
+-- [AGENT] Audit R1: the independent nil-text validator must not borrow
+-- another package's wrapper bit, or invent a target from its bare spelling.
+private def nilTextState (members : Array MethodInfo) : ExecState :=
+  let target := fun (id : String) (recv : Ty) (wrapper : Bool) =>
+    ({ id := ⟨id⟩, args := #[{ id := "$recv", typ := recv }], results := #[],
+       body := .unsupported "validator-only control", wrapper } : Func)
+  { types := TypeEnv.reserved ++ #[(⟨"main.T"⟩, .struct #[])],
+    functions := #[target "anchor" (.interface ⟨"main.I"⟩) false,
+      target "plain" (.defined 2) false, target "wrapper" (.defined 2) true],
+    methods := #[{ id := privateP.id, funcId := ⟨"anchor"⟩, recv := .interface ⟨"main.I"⟩ }] ++ members }
+
+private def nilTextChecks (members : Array MethodInfo) : List Bool :=
+  (ChoiceTrace.nilTextFacts (nilTextState members) ⟨"anchor"⟩
+    [.interface (.pointer (.defined 2)) .nil]).invariants.map Prod.snd
+
+private def nilTarget (id : Declaration.MemberId) (body : String) : MethodInfo :=
+  { id, funcId := ⟨body⟩, recv := .defined 2 }
+
+theorem nil_text_ignores_foreign_wrapper :
+    nilTextChecks #[nilTarget privateQ.id "wrapper", nilTarget privateP.id "plain"] =
+      [true, true, true, true] := by decide +kernel
+
+theorem nil_text_does_not_borrow_foreign_body :
+    nilTextChecks #[nilTarget privateQ.id "plain", nilTarget privateP.id "wrapper"] =
+      [true, true, true, false] := by decide +kernel
+
+theorem nil_text_requires_matching_package :
+    nilTextChecks #[nilTarget privateQ.id "plain"] =
+      [true, true, false, false] := by decide +kernel
+
 private def satisfactionControls : IO Unit := do
   let ids : List Declaration.MemberId := [⟨"m", "red/inner"⟩, ⟨"m", "blue/inner"⟩,
     ⟨"M", ""⟩, ⟨"é", "red/inner"⟩, ⟨"é", "blue/inner"⟩, ⟨"É", ""⟩,
@@ -118,7 +149,10 @@ private def satisfactionControls : IO Unit := do
     let exportedOnly := { withIface with methodSets := #[{ key := "main.T", coverage := .exported }] }
     match firstUnsatisfiedMethod? exportedOnly (.defined 2) ⟨"main.I"⟩ with
     | .ok name => check (req.id.package.isEmpty && name == some req.name) "private exported-only query answered"
-    | .error e => check (!req.id.package.isEmpty && e.status == "unsupported") "public Unicode requirement refused"
+    | .error e =>
+        check (!req.id.package.isEmpty && e.status == "unsupported") "public Unicode requirement refused"
+        check (e.message == s!"interface satisfaction for main.T: requirement {req.name} is UNEXPORTED and the dynamic type's record covers exported methods only — this record cannot decide whether the private requirement is satisfied")
+          "exported-only refusal does not describe the record's coverage limit"
   IO.println "Method satisfaction: PASS; 1620 identity/signature/receiver cells; full/exported/absent coverage and bare display"
 
 theorem private_targets_are_distinct :

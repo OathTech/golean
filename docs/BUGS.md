@@ -5920,8 +5920,8 @@ identity defect on its own line since it is a wrong-answer class, not a coverage
 ## BUG-098 — UNEXPORTED interface method names are package-scoped in Go but BARE on the wire: a requirement `get` declared in one package would be judged satisfied by a concrete `get` from another — a wrong satisfaction answer, refused whole-export by a guard until the names are qualified [fidelity; frontend + machine identity; multipkg; found by the fr19-bug097 gc probes (P3/P5)]
 
 - Status: fixed (2026-09-09, `fix/package-method-identity` [AGENT]; I1 member identity from emission through matching and callable target ids)
-- Pinned-by: differential (three original rows plus eight `multipkg/private-method-dispatch/*` controls)
-- Cases: multipkg/unexported-method-scope/assert-panic, multipkg/unexported-method-scope/distinct, multipkg/unexported-method-scope/distinct-names, multipkg/private-method-dispatch/promoted-bodies, multipkg/private-method-dispatch/deep-alias, multipkg/private-method-dispatch/embedded-interfaces, multipkg/private-method-dispatch/pointer-sets, multipkg/private-method-dispatch/generic-bodies, multipkg/private-method-dispatch/unicode, multipkg/private-method-dispatch/concrete-values, multipkg/private-method-dispatch/constrained-methods
+- Pinned-by: differential (three original rows plus eleven `multipkg/private-method-dispatch/*` controls (eight initial, three audit controls))
+- Cases: multipkg/unexported-method-scope/assert-panic, multipkg/unexported-method-scope/distinct, multipkg/unexported-method-scope/distinct-names, multipkg/private-method-dispatch/promoted-bodies, multipkg/private-method-dispatch/deep-alias, multipkg/private-method-dispatch/embedded-interfaces, multipkg/private-method-dispatch/pointer-sets, multipkg/private-method-dispatch/generic-bodies, multipkg/private-method-dispatch/unicode, multipkg/private-method-dispatch/concrete-values, multipkg/private-method-dispatch/constrained-methods, multipkg/private-method-dispatch/missing-method-order, multipkg/private-method-dispatch/nil-private-value, multipkg/private-method-dispatch/nil-promoted-pointer
 - Discovered: 2026-09-05 (lane `fr19-bug097`, gc probe P3: `types.TypeString` never qualifies unexported interface METHOD names, even with a qualifier — so BUG-097's planned one-liner would have left this fusion class; P5: gc answers `true false` for red's `interface{ get() int }` vs blue's on a red value)
 
 [AGENT] 2026-09-09 repair: executable `MethodSig.id` and `MethodInfo.id` use
@@ -5935,6 +5935,12 @@ diagnostic twin are retired. Pointer/value sets, nested promotion, embedded
 interfaces, generic closures, Unicode and method values/expressions are pinned.
 Design, source-bound full/slow gates, twin reasons and Cedar scope:
 `docs/2026-09-08_method-identity-design.md`.
+
+[AGENT] Independent-audit fixes (2026-09-09): ChoiceTrace now retains full
+member identity too; refusal contexts separate display from callable targets.
+Three further rows cover nil promoted-pointer dispatch, the private nil-value
+method envelope and mixed Unicode missing-method order. Existing cases and
+pin bytes are unchanged.
 
 The historical proposed repair below was insufficient: receiver identity alone
 cannot distinguish two different private members promoted onto ONE receiver.

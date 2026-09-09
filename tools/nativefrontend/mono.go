@@ -46,6 +46,7 @@ import (
 // argument), and the mangled FuncId it emits under.
 type funcInstWork struct {
 	mangled string
+	display string // Declaration spelling, independent of the callable target.
 	decl    *ast.FuncDecl
 	env     map[*types.TypeParam]types.Type
 	// The instantiation's type arguments IN DECLARATION ORDER (the env is
@@ -417,7 +418,7 @@ func (e *emitter) registerFuncInst(mangled string, fn *types.Func, targs []types
 	if e.srcPkgSet != nil {
 		unit = e.srcPkgSet[fn.Pkg()]
 	}
-	work := &funcInstWork{mangled: mangled, decl: decl, env: env, targs: targs, unit: unit}
+	work := &funcInstWork{mangled: mangled, display: mangled, decl: decl, env: env, targs: targs, unit: unit}
 	e.funcInsts[mangled] = work
 	e.funcInstQueue = append(e.funcInstQueue, work)
 	e.monoLog = append(e.monoLog, monoLogEntry{monoLogFuncInst, mangled})
@@ -610,10 +611,10 @@ func (e *emitter) quarantinedStencilStub(work *typeInstWork, d *ast.FuncDecl, u 
 	if err != nil {
 		return nil, err
 	}
-	savedSubst, savedName, savedErr, savedTargs, savedDecl := e.curSubst, e.curFuncName, e.substErr, e.curTargs, e.curInstDecl
-	e.curSubst, e.curFuncName, e.substErr, e.curTargs, e.curInstDecl = env, methodFuncKey(work.key, member), nil, targs, d
+	savedSubst, savedID, savedName, savedErr, savedTargs, savedDecl := e.curSubst, e.curFuncID, e.curFuncName, e.substErr, e.curTargs, e.curInstDecl
+	e.curSubst, e.curFuncID, e.curFuncName, e.substErr, e.curTargs, e.curInstDecl = env, methodFuncKey(work.key, member), work.key+"."+member.Name, nil, targs, d
 	defer func() {
-		e.curSubst, e.curFuncName, e.substErr, e.curTargs, e.curInstDecl = savedSubst, savedName, savedErr, savedTargs, savedDecl
+		e.curSubst, e.curFuncID, e.curFuncName, e.substErr, e.curTargs, e.curInstDecl = savedSubst, savedID, savedName, savedErr, savedTargs, savedDecl
 	}()
 	named := unsupported{what: "FR-4: method stencil at this instantiation does not lower — " + u.what}
 	stub, err := e.quarantinedMethodStub(d, named)
@@ -668,7 +669,7 @@ func (e *emitter) emitMethodInst(work *typeInstWork, d *ast.FuncDecl) (map[strin
 		return nil, err
 	}
 	return e.emitFuncInst(&funcInstWork{
-		mangled: methodFuncKey(work.key, member), decl: d, env: env,
+		mangled: methodFuncKey(work.key, member), display: work.key + "." + member.Name, decl: d, env: env,
 		targs: targsList, unit: work.unit})
 }
 
@@ -747,13 +748,13 @@ func (e *emitter) flushFuncInsts(funcs []any) ([]any, error) {
 
 // emitFuncInst emits one stencil: the generic declaration's body under the
 // work item's substitution, named by the mangled FuncId. Lifted literals
-// inherit the mangled name (curFuncName), so `outer[int]$lit0` and
+// inherit the mangled name (curFuncID), so `outer[int]$lit0` and
 // `outer[string]$lit0` stay distinct program-wide. On failure every
 // half-registered artifact of the stencil (lifted literals, local type
 // defs, wrapper candidates) rolls back, exactly like the per-decl
 // quarantine in emitProgram.
 func (e *emitter) emitFuncInst(work *funcInstWork) (map[string]any, error) {
-	savedSubst, savedName, savedErr := e.curSubst, e.curFuncName, e.substErr
+	savedSubst, savedID, savedName, savedErr := e.curSubst, e.curFuncID, e.curFuncName, e.substErr
 	savedTargs, savedDecl := e.curTargs, e.curInstDecl
 	// Stencil bodies emit under their DECLARING unit's type-checker
 	// record (multi-package W1.1): the body's AST nodes are keyed there.
@@ -761,7 +762,7 @@ func (e *emitter) emitFuncInst(work *funcInstWork) (map[string]any, error) {
 	if work.unit != nil {
 		e.setUnit(work.unit)
 	}
-	e.curSubst, e.curFuncName, e.substErr = work.env, work.mangled, nil
+	e.curSubst, e.curFuncID, e.curFuncName, e.substErr = work.env, work.mangled, work.display, nil
 	e.curTargs, e.curInstDecl = work.targs, work.decl
 	e.liftSeq = 0
 	liftedMark := len(e.lifted)
@@ -778,7 +779,7 @@ func (e *emitter) emitFuncInst(work *funcInstWork) (map[string]any, error) {
 		// swallowed by an emission path: refuse anyway (fail closed).
 		err = e.substErr
 	}
-	e.curSubst, e.curFuncName, e.substErr = savedSubst, savedName, savedErr
+	e.curSubst, e.curFuncID, e.curFuncName, e.substErr = savedSubst, savedID, savedName, savedErr
 	e.curTargs, e.curInstDecl = savedTargs, savedDecl
 	e.pkg, e.info = savedPkg, savedInfo
 	if err != nil {

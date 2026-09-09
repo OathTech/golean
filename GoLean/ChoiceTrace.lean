@@ -3,9 +3,10 @@ import GoLean.CLI
 /-!
 # `choice-trace` — the labeled-consumption tracer and menu-invariant validator
 
-LANE TOOLING (membership-depth lane, 2026-09-01; assessment findings
-B4/B13, C3-F3, D-10, E-D8). NOT a gate, NOT part of the trusted surface:
-it reads the machine, it never changes it.
+DIFFERENTIAL APPARATUS (membership-depth lane, 2026-09-01; assessment
+findings B4/B13, C3-F3, D-10, E-D8). Its invariant verdicts are consumed by
+`scripts/ci --diff`; it reads the machine without changing its semantics.
+[AGENT] 2026-09-09, audit R1: the earlier "NOT a gate" label was stale.
 
 Two questions the differential apparatus could not answer before this
 module existed:
@@ -397,7 +398,7 @@ def nilTextFacts (s : ExecState) (fid : FuncId) (args : List GoValue) : MenuFact
         | some (.interface (.pointer elem) _) => some elem
         | _ => none
       let target := s.methods.find? fun m =>
-        m.name == method.name && (pointee.map fun e => methodRecvDynamicTy? s m == some e).getD false
+        m.id == method.id && (pointee.map fun e => methodRecvDynamicTy? s m == some e).getD false
       let valueRecvOfPointee := target.isSome
       let notWrapper := match target >>= fun m => findFunctionIn? s.functions m.funcId with
         | some f => !f.wrapper

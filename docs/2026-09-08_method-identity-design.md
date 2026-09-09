@@ -236,7 +236,7 @@ update preserves every existing alternation and its reason block.
 
 The fresh twin changes exactly **1,316 call targets and 46 generated child
 function names**. Each changed value decodes back to its old receiver/name
-form; all other values, structure and ordering are unchanged. Its SHA-256
+form; all other values, structure and ordering of this twin are unchanged. Its SHA-256
 moves from `a225ea8a40a78dc3e83241520706f6a85e0675cdedab49de2b5f973ca0c7a46c`
 to `13d8b659b115a68f62d47ece7654ebb1baf0de4dd8c72b3b26fee09621e9eb04`.
 The I1 declaration fixture and the slow wire/set pins remain unchanged.
@@ -332,3 +332,68 @@ version mentions are byte-identical text inherited from main (nine untouched
 documents for C13). They do not weaken any executed gate or change this
 branch's oracle pin. The independent adversarial review is the user's and
 has not yet happened; this branch pauses for that review.
+
+
+## Independent audit fixes (2026-09-09)
+
+[AGENT] The user delivered the independent audit of `f97b972f` at
+`.tmp/review/2026-09-09_coordinator-review.md`: FIX-FIRST, one major and a
+bounded minor set, with no design blocker. This section supersedes the
+pre-audit readiness statement above. Required R1–R7 and optional R8/R9 are
+being addressed; source-bound gates and the next review handoff follow.
+
+- R1: ChoiceTrace's independent nil-value-method check compares full member
+  identity. Three kernel controls distinguish a foreign wrapper, a foreign
+  ordinary body and a missing local target. Source rows cover nil promoted
+  pointer dispatch and the actual R9a choice on an ordinary private value
+  method beside a foreign same-spelled wrapper. The standing tracer checks
+  both choices under source and reversed method-table order; that table
+  order has no dispatch semantics, and reversal exposes the old validator.
+- R2: `curFuncID` prefixes generated children; `curFuncName` is display from
+  the declaration record. Save/restore and ordinary/stenciled/interface/init
+  contexts carry both. The three reported fixtures pin the display of all
+  five affected refusal records; callable target identities remain unchanged.
+- R3: exported-only coverage refuses because that record cannot decide a
+  private requirement. It no longer claims package identity is unmodeled;
+  the exact reason is a standing control.
+- R4/R5: the method-set contract has a dated addendum. The zero-order-change
+  claim applies to the twin. Across the earlier whole-corpus wire migration,
+  anchors reordered deterministically in `multipkg/same-name-anon-iface`,
+  `stdlib-source/errors-join` and `stdlib-source/errors-wrap` because their
+  serialized target keys sort differently; content, observations and gc's
+  missing-method selection are unchanged. These reorderings are recorded,
+  not undone.
+- R6: the standalone gate requires exactly the four named top-level Go test
+  PASS receipts. A missing/skipped/renamed test cannot yield a green gate.
+- R7: the frontier row sum of 135 included C6's one refusal on FR-19 even
+  though that cell and §8 already assign it to the (c) bucket. Main's stale
+  FR-31 count of two instead of three hid that duplicate. FR-31 correctly
+  stays zero; FR-19's frontier count becomes zero, with its C6 citation and
+  ownership retained in the feature column and §5.1. The actual disjoint
+  frontier count is 134; the baseline and other bucket counts do not change.
+- R8: both entry-label resolution and BFS reject an absent wire entry by
+  name before any sweep can treat declarations as unreachable.
+- R9: a mixed exported/private interface with a non-ASCII exported method
+  pins gc's choice of the first missing method.
+
+G-P alignment: promotion depth and ambiguity are resolved within each full
+package-scoped member identity. G-P must preserve that separation while
+replacing forwarding wrappers with native path resolution.
+
+The review's request for additional rows necessarily grows the baseline
+manifest. This fix round adds three controls only; every existing result and
+stage, the twin wire bytes and all certified observation sets must stay
+unchanged. A fresh full run precedes the additive baseline update. No
+expected observation is changed to accept a failure.
+
+
+[AGENT] The full pre-pin audit-fix run completed in **537.649 seconds**:
+**3665 = 3417 PASS / 248 FAIL**, all **394 negatives PASS**. Process exit 1
+is the tracked-red result; a full comparison of the 3662 prior rows returns
+0, and the only additions are the three named PASS controls. The slow set
+and graph are unchanged (six observations, 6,193,933 nodes, 6,565,663 edges);
+the twin remains `13d8b659…`. The [pre-pin receipt](evidence/2026-09-08_method-identity/audit-fix-prepin.json)
+records the frozen tree, actual exits, row delta and negative controls.
+The additive baseline update preserves existing row order and alternations.
+Full CI is required before the source commit and again at the clean source
+before re-offering this fix round.

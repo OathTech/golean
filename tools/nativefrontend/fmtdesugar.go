@@ -458,7 +458,7 @@ func (e *emitter) emitFmtCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, bool
 		// (with %% folded); no lift is emitted.
 		formatted = concat
 	} else {
-		liftName := e.curFuncName + "$fmt" + itoa(e.liftSeq)
+		liftName := e.curFuncID + "$fmt" + itoa(e.liftSeq)
 		e.liftSeq++
 		stmts = append(stmts, map[string]any{"stmt": "return", "results": []any{concat}})
 		e.lifted = append(e.lifted, map[string]any{

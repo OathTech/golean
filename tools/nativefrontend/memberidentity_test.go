@@ -5,6 +5,7 @@ import (
 	"go/token"
 	"go/types"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -35,6 +36,7 @@ func TestMemberIdentityCheckedObjects(t *testing.T) {
 }
 
 func TestExecutableMemberIdentityFixture(t *testing.T) {
+	t.Run("refusal-display", checkMethodRefusalDisplay)
 	program, err := emitSource(t, `package main
  type T int
  func (T) m() int { return 11 }
@@ -120,5 +122,34 @@ func TestInitQuarantinePreservesMemberIdentity(t *testing.T) {
 		if anchorMember == q && (err == nil || !strings.Contains(err.Error(), "identity control quarantine")) {
 			t.Fatalf("matching private quarantine did not block init: %v", err)
 		}
+	}
+}
+
+// [AGENT] Audit R2: fixture reasons must name declarations, while callable
+// targets and lifted children keep their separate package-correct ids.
+func checkMethodRefusalDisplay(t *testing.T) {
+	fixtures := map[string][][2]string{
+		"imported-generic-in-signature": {{"main.Bag", "All"}, {"main.Bag", "Indexed"}},
+		"imported-generic-sig-calls":    {{"main.Bag", "All"}, {"main.Bag", "Sum"}},
+		"stencil-quarantine-iterseq":    {{"main.set[int]", "All"}},
+	}
+	for fixture, methods := range fixtures {
+		t.Run(fixture, func(t *testing.T) {
+			program, err := lowerProgramDir(t, filepath.Join("../../Corpus/coverage/exec/generics", fixture))
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, method := range methods {
+				record := findMethod(program, method[0], method[1])
+				if record == nil {
+					t.Fatalf("missing method %v", method)
+				}
+				reason, ok := record["unsupported"].(string)
+				want := " in " + method[0] + "." + method[1] + " (FR-23:"
+				if !ok || !strings.Contains(reason, want) || strings.Contains(reason, "$method$") {
+					t.Fatalf("method display %v: want %q, got %q", method, want, reason)
+				}
+			}
+		})
 	}
 }

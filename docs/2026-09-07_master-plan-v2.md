@@ -1241,7 +1241,7 @@ A3 WireWellFormed / ProgramWellTyped / entry / support; Inv.step machine-wide �
 A4 step_det_of_choiceFree ───────────────────────────────────────────────────────────► sequential refinement ("some run → every run"; cedarGo_refines)
 A1 F2 relation→driver bridge ────────────────────────────────────────────────────────► adequacy through `run`, ∀ ch
 A6 observation contract (FR-32; Iris-level Obs) ─────────────────────────────────────► panic/output postconditions
-B1 F6 eval-order model · B2 F7 identity · BUG-098/099/101/104 ───────────────────────► "zero known wrong answers in the profile" (Gate B)
+B1 F6 eval-order model · B2 F7 identity · BUG-099/101/104 ───────────────────────► "zero known wrong answers in the profile" (Gate B)
 A7 typeDesc algebra ─► P3 G6 T1 ─► T2 (after P) ─► G6-4 fmt (needs G7) ─► T3 ─► G6-5 json ─► P4 cedar driver (Gate C)
 P1 F8 · P2 F9 ───────────────────────────────────────────────────────────────────────► Gate C evidence
 A8 Gate D SEQUENTIAL criteria (PENDING [USER]) ═════════════════════════════════════► SEQUENTIAL PIN OFFER
@@ -1271,7 +1271,7 @@ not the source of any law.
    live test (its five `IndependentB7Review` theorems as acceptance).
 5. **F5 for the named profile** (A3) — the long pole; XL; Codex-suitable
    once the type system is designed.
-6. **Gate B** for the profile — BUG-098/104 fix lane, BUG-099 owned,
+6. **Gate B** for the profile — BUG-104 fix lane, BUG-099 owned,
    BUG-101 decided inside the F6 note, F7's identity metadata if the
    profile includes multi-package code.
 7. **P, C3, C4** as RULED (representation; C3 «before the pin, never
@@ -1515,3 +1515,23 @@ finding(s), 0 HIGH — report-only` (C13, C5 — unchanged from main);
 `jobs 12`. Log: the lane's `.tmp/ci-diff.log` (untracked). A clean-tip
 re-run is the coordinator's/train's call: the merge train re-gates a
 docs-only branch at the merged tip in any case.
+
+
+### FR-31 audit follow-ups (2026-09-09)
+
+[AGENT] The independent audit of `fix/package-method-identity` found no
+remaining gc mismatch in its adversarial source constructions. FR-31's
+bounded audit fixes and re-review remain on that branch; this is not a
+mainline landing claim. The following pre-existing or broader obligations
+remain owned by their roadmap lanes rather than blocking that increment:
+
+| Finding | Owner / next check |
+| --- | --- |
+| Blank-identifier method target collisions currently reach the decoder's duplicate-target refusal | B2/F7: define non-callable declaration identity and add a source regression before changing admission |
+| Twin `raft.DefaultLogger` wrapper references absent `log.Logger.output` body | Raft restart / imported-method coverage: establish the reachable demand and close or refuse the missing body; keep the current twin pin |
+| `anonIfaceKey` still spells package-qualified members in the separate TypeId grammar | B2/F7 TypeId design: consume the member record without introducing another classifier |
+| Hand-built core programs are not checked for exported-name iff empty-package agreement | B2 + admission boundary: state the core-domain invariant and preserve decoder/consumer separation |
+
+Promotion depth/ambiguity remains package-scoped under G-P. An eventual
+FR-31 landing still owes merge protocol 5a (`ci --slow`) at the merged tip;
+these follow-ups do not waive any gate or authorize merge/push.

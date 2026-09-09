@@ -91,7 +91,7 @@ func (e *emitter) fmtCompositeTopLift(fn string, plus bool, t types.Type) (strin
 	if err != nil {
 		return "", err
 	}
-	name := e.curFuncName + "$fmtc" + itoa(e.liftSeq)
+	name := e.curFuncID + "$fmtc" + itoa(e.liftSeq)
 	e.liftSeq++
 	val := map[string]any{"expr": "ident", "name": "$x", "type": tw}
 	tmp := 0
@@ -350,7 +350,7 @@ func (e *emitter) fmtSliceLift(fn string, plus bool, sliceT types.Type, elemT ty
 	if err != nil {
 		return "", err
 	}
-	name := e.curFuncName + "$fmtsl" + itoa(e.liftSeq)
+	name := e.curFuncID + "$fmtsl" + itoa(e.liftSeq)
 	e.liftSeq++
 
 	sRef := map[string]any{"expr": "ident", "name": "$s", "type": sliceW}

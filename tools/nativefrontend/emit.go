@@ -157,7 +157,7 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 				if d.Recv == nil && d.Name.Name == "init" {
 					mangled := e.initFuncWireName(unit, len(unit.initNames))
 					unit.initNames = append(unit.initNames, mangled)
-					e.curFuncName = mangled
+					e.curFuncID, e.curFuncName = mangled, mangled
 					e.liftSeq = 0
 					fn, err := e.emitFuncDecl(d)
 					if err != nil {
@@ -198,9 +198,9 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 				if fo, isFn := e.info.Defs[d.Name].(*types.Func); isFn {
 					declObj = fo
 				}
-				e.curFuncName = d.Name.Name
+				e.curFuncID, e.curFuncName = d.Name.Name, d.Name.Name
 				if d.Recv == nil && declObj != nil {
-					e.curFuncName = e.funcWireName(declObj)
+					e.curFuncID, e.curFuncName = e.funcWireName(declObj), e.funcWireName(declObj)
 				}
 				if d.Recv != nil && len(d.Recv.List) > 0 {
 					rt := e.info.Defs[d.Name].Type().(*types.Signature).Recv().Type()
@@ -212,7 +212,7 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 						if err != nil {
 							return nil, err
 						}
-						e.curFuncName = methodFuncKey(rn, member)
+						e.curFuncID, e.curFuncName = methodFuncKey(rn, member), rn+"."+member.Name
 					}
 				}
 				e.liftSeq = 0
@@ -430,9 +430,9 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 		// Emit the anchor signature under the CALL SITE's stencil
 		// substitution (arc-final audit F5): the key is
 		// substitution-aware, the recorded origin sig is not.
-		savedSubst, savedName, savedErr := e.curSubst, e.curFuncName, e.substErr
+		savedSubst, savedID, savedName, savedErr := e.curSubst, e.curFuncID, e.curFuncName, e.substErr
 		savedTargs, savedDecl := e.curTargs, e.curInstDecl
-		e.curSubst, e.curFuncName, e.substErr = cm.subst, k, nil
+		e.curSubst, e.curFuncID, e.curFuncName, e.substErr = cm.subst, k, cm.ifaceName+"."+cm.method.Name(), nil
 		e.curTargs, e.curInstDecl = nil, nil
 		params, err := e.emitParams(cm.sig.Params())
 		if err == nil {
@@ -441,7 +441,7 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 				err = rerr
 			}
 		}
-		e.curSubst, e.curFuncName, e.substErr = savedSubst, savedName, savedErr
+		e.curSubst, e.curFuncID, e.curFuncName, e.substErr = savedSubst, savedID, savedName, savedErr
 		e.curTargs, e.curInstDecl = savedTargs, savedDecl
 		if err != nil {
 			return nil, err
@@ -1095,10 +1095,10 @@ func (e *emitter) quarantineUnlowerableGlobals() error {
 	}
 	savedPkg, savedInfo := e.pkg, e.info
 	savedUnit := e.curUnit
-	savedFn, savedSeq, savedResults := e.curFuncName, e.liftSeq, e.curResults
+	savedID, savedFn, savedSeq, savedResults := e.curFuncID, e.curFuncName, e.liftSeq, e.curResults
 	defer func() {
 		e.pkg, e.info, e.curUnit = savedPkg, savedInfo, savedUnit
-		e.curFuncName, e.liftSeq, e.curResults = savedFn, savedSeq, savedResults
+		e.curFuncID, e.curFuncName, e.liftSeq, e.curResults = savedID, savedFn, savedSeq, savedResults
 	}()
 	for _, u := range e.units {
 		e.setUnit(u)
@@ -1112,7 +1112,7 @@ func (e *emitter) quarantineUnlowerableGlobals() error {
 			}
 			// Dry-run context: same knobs synthesizePkgInit sets, so
 			// "lowers here" and "lowers there" are the same question.
-			e.curFuncName = "$pkginit"
+			e.curFuncID, e.curFuncName = "$pkginit", "$pkginit"
 			e.liftSeq = 0
 			// localRenames rides WITH curResults (resultshadow.go): the
 			// pkginit body has no result slots, so it must have no
@@ -1778,7 +1778,7 @@ func (e *emitter) synthesizePkgInit() (map[string]any, error) {
 	if !work {
 		return nil, nil
 	}
-	e.curFuncName = "$pkginit"
+	e.curFuncID, e.curFuncName = "$pkginit", "$pkginit"
 	e.liftSeq = 0
 	// localRenames rides WITH curResults — see quarantineUnlowerableGlobals
 	// above for why clearing only one of the pair is a latent alias trap.
@@ -7878,7 +7878,7 @@ func (e *emitter) emitFuncLit(lit *ast.FuncLit) (any, error) {
 	}
 	captures := e.freeCaptures(lit)
 
-	name := e.curFuncName + "$lit" + itoa(e.liftSeq)
+	name := e.curFuncID + "$lit" + itoa(e.liftSeq)
 	e.liftSeq++
 
 	// Parameters: captured pointers first, then the literal's own.
@@ -7937,7 +7937,7 @@ func (e *emitter) emitFuncLit(lit *ast.FuncLit) (any, error) {
 	// wrongly-`unsupported` case just looks like an expected coverage gap.
 	// The restriction is restored on the way out, so the ENCLOSING
 	// expression keeps its refusal exactly as before.
-	savedCapture, savedHoisted, savedName := e.captureParam, e.hoisted, e.curFuncName
+	savedCapture, savedHoisted, savedID, savedName := e.captureParam, e.hoisted, e.curFuncID, e.curFuncName
 	savedResults := e.curResults
 	savedRenames := e.localRenames
 	savedBranch, savedGoto := e.branchLabels, e.gotoLabels
@@ -7951,7 +7951,7 @@ func (e *emitter) emitFuncLit(lit *ast.FuncLit) (any, error) {
 	// Named-result shadow renaming for the LIT's own body (its frame,
 	// its result slots — resultshadow.go); restored with curResults.
 	if err := e.resultShadowScan(lit.Body); err != nil {
-		e.captureParam, e.hoisted, e.curFuncName = savedCapture, savedHoisted, savedName
+		e.captureParam, e.hoisted, e.curFuncID, e.curFuncName = savedCapture, savedHoisted, savedID, savedName
 		e.curResults, e.localRenames = savedResults, savedRenames
 		e.hoistForbidden, e.scHoistOK = savedForbidden, savedSCHoistOK
 		return nil, err
@@ -7966,7 +7966,7 @@ func (e *emitter) emitFuncLit(lit *ast.FuncLit) (any, error) {
 	} else {
 		body, berr = e.emitBlock(lit.Body)
 	}
-	e.captureParam, e.hoisted, e.curFuncName = savedCapture, savedHoisted, savedName
+	e.captureParam, e.hoisted, e.curFuncID, e.curFuncName = savedCapture, savedHoisted, savedID, savedName
 	e.curResults = savedResults
 	e.localRenames = savedRenames
 	e.branchLabels, e.gotoLabels = savedBranch, savedGoto
@@ -9314,7 +9314,7 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 					// memo's overlay class (slice 2) — name it as such
 					// so the quarantine stub's reason says what is owed.
 					hint := ""
-					if e.curFuncName == "internal/stringslite.Clone" {
+					if e.curFuncID == "internal/stringslite.Clone" {
 						hint = " — reached by every strconv Parse* error path (strconv.ParseUint/ParseInt/Atoi via syntaxError/rangeError): the ParseUint shim was RETIRED by [USER] ruling (D-002 exception denied, 2026-09-03; BUG-089), so these error paths refuse here pending the slice-2 overlay for stringslite.Clone"
 					}
 					return nil, false, unsup("stdlib source-through: %s needs unsafe.%s (out of language — ledger row Package_unsafe; a library overlay is the planned remedy, memo §2.3.2 — slice 2)%s",
@@ -9855,7 +9855,7 @@ func (e *emitter) emitDeferClose(c *ast.CallExpr) (any, error) {
 	// Qualified by the enclosing function like every lifted literal
 	// (BUG-027: liftSeq resets per function, so the bare name collided
 	// across two functions and killed the whole package).
-	name := e.curFuncName + "$deferClose" + itoa(e.liftSeq)
+	name := e.curFuncID + "$deferClose" + itoa(e.liftSeq)
 	e.liftSeq++
 	e.lifted = append(e.lifted, map[string]any{
 		"name": name,
@@ -10133,8 +10133,8 @@ func (e *emitter) emitOnceDo(call *ast.CallExpr, recvW any) (any, bool, error) {
 	e.liftSeq++
 	// Both synthetics are per-site and qualified by the enclosing
 	// function (the deferClose/BUG-027 discipline).
-	doneName := e.curFuncName + "$onceDone" + itoa(seq)
-	doName := e.curFuncName + "$onceDo" + itoa(seq)
+	doneName := e.curFuncID + "$onceDone" + itoa(seq)
+	doName := e.curFuncID + "$onceDo" + itoa(seq)
 	onceParam := map[string]any{"expr": "ident", "name": "$once", "type": oncePtrTyW}
 	e.lifted = append(e.lifted, map[string]any{
 		"name":     doneName,
@@ -10232,7 +10232,7 @@ func (e *emitter) emitDeferSyncOp(call *ast.CallExpr) (any, bool, error) {
 	}
 	primTyW := map[string]any{"kind": "sync", "sync": prim}
 	ptrTyW := map[string]any{"kind": "pointer", "elem": primTyW}
-	name := e.curFuncName + "$deferSync" + itoa(e.liftSeq)
+	name := e.curFuncID + "$deferSync" + itoa(e.liftSeq)
 	e.liftSeq++
 	opArgs := []any{map[string]any{"expr": "ident", "name": "$sync", "type": ptrTyW}}
 	opArgs = append(opArgs, extraArgs...)

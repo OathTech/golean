@@ -67,7 +67,8 @@ type emitter struct {
 	// lifted body, so references to it become derefs.
 	lifted       []any
 	liftSeq      int
-	curFuncName  string
+	curFuncID    string // Internal target; prefixes all generated child ids.
+	curFuncName  string // Display from the declaration record; diagnostics only.
 	captureParam map[types.Object]string
 	// The enclosing function's result tuple, for the return-site
 	// interface-conversion wrap.

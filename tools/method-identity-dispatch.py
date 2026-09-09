@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """[AGENT] Fresh dispatch sentinels and compiled producer corruption controls."""
+import csv
+import io
 import json
 import os
 import sys
@@ -48,6 +50,24 @@ def main():
                     or tags != expected_tags or observation.get('output') != ''):
                 raise RuntimeError(f'{subject}: wrong clean observation {observation}')
         print('Method dispatch: eight clean subjects match pinned-Go sentinels', flush=True)
+        # Method table order carries no dispatch semantics. Exercise both
+        # source order and its reversal: the old bare-name validator borrows
+        # a foreign wrapper bit on the reversed, otherwise identical wire.
+        reordered = work / 'method-order-reversed.json'
+        reordered_program = json.loads(wire.read_text())
+        reordered_program['methods'].reverse()
+        reordered.write_text(json.dumps(reordered_program))
+        for variant in [wire, reordered]:
+            raw = run_logged([str(ROOT / 'scripts/capped'), str(cli), 'choice-trace',
+                              '--input', str(variant), '--function', 'nilPrivateValue',
+                              '--stream', '0', '--stream', '1'], work / (variant.stem + '-nil-trace.log'))
+            traces = list(csv.DictReader(io.StringIO(raw), delimiter='\t'))
+            if (len(traces) != 2 or {r['stream'] for r in traces} != {'0', '1'}
+                    or any(r['status'] != 'panic' or r['perSite'] != 'nilValueMethodText=1'
+                           or r['maxBound'] != '2' or r['violations'] != '0'
+                           or r['alarms'] != '0' or r['driverAgreement'] != 'ok' for r in traces)):
+                raise RuntimeError('private nil-value choice lost its package identity: ' + raw)
+        print('Method choice trace: both nil-value text choices, both method orders, zero invariant violations', flush=True)
         # The graph reader must derive exactly the same target keys, and its
         # conservative interface expansion must not fuse private members.
         sys.dont_write_bytecode = True
@@ -74,7 +94,16 @@ def main():
                 raise
         else:
             raise RuntimeError('ambiguous method display label selected a target')
-        print('Method graph: package-exact edges; ambiguous display entry rejected', flush=True)
+        for resolve in [lambda: reachability.resolve_entries(program, ['missingEntry']),
+                        lambda: reachability.reach(bodies, ['missingEntry'])]:
+            try:
+                resolve()
+            except ValueError as error:
+                if str(error) != 'entry missingEntry is not on the wire':
+                    raise
+            else:
+                raise RuntimeError('absent graph entry was silently accepted')
+        print('Method graph: package-exact edges; ambiguous and absent entries rejected', flush=True)
 
         controls = [
             ('erase-package', 'declaration.go', 'pkg = obj.Pkg().Path()', 'pkg = ""',
