@@ -5,11 +5,10 @@
 // names are package-scoped, so red's T does NOT implement blue's
 // interface (gc probe P5: `true false`; the failed assert says
 // `interface conversion: inner.T is not interface { inner.get() int }:
-// missing method get`). The wire's method tables carry BARE names, so the
-// machine could answer `true true`: the frontend REFUSES the export by
-// name (`unexported interface method name(s) shared across packages: get
-// (required by blue/inner, implemented in red/inner); …`). RED BY DESIGN
-// at frontend-export until FR-31 qualifies the names.
+// missing method get`). FR-31 now carries I1 package/name identity through
+// the wire, matching and generated function ids. The three assertions below
+// retain their original gc observations; the former export guard is retired.
+
 package main
 
 import (
@@ -21,9 +20,8 @@ import (
 // DISTINCT-NAME shape (audit fix round R4, 2026-09-05): S promotes emb's
 // unexported `get` — that is `emb.get`, not `main.get` — so S does NOT
 // implement main's `interface{ get() int }`. gc: false. On main before this
-// lane the bare-name tables matched and the machine answered TRUE (a
-// silent wrong answer — the same-name shape above was refused by accident,
-// this one was not); the guard now refuses the export by name.
+// identity work the bare-name tables matched and the machine answered TRUE.
+// The interim guard refused by name; full member identity now answers false.
 type S struct{ emb.E }
 
 type J interface{ get() int }

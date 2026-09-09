@@ -631,6 +631,12 @@ structure Func where
   wrapper : Bool := false
   deriving Repr, BEq
 
+/-- Internal callable target, derived from a receiver key and I1 member.
+UTF-8 byte lengths make the two leading fields independently recoverable;
+this serialization is shared with the native producer, never with display. -/
+def methodFuncId (recv : String) (id : Declaration.MemberId) : FuncId :=
+  ⟨s!"$method${recv.utf8ByteSize}:{recv}{id.package.utf8ByteSize}:{id.package}{id.name}"⟩
+
 structure MethodInfo where
   id : Declaration.MemberId
   funcId : FuncId

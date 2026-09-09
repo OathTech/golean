@@ -189,7 +189,7 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 					}
 				}
 				// Lifted-literal names must be unique program-wide: methods
-				// qualify by receiver type (A.go1$lit0 vs B.go1$lit0 — the
+				// qualify by receiver and full member identity (the
 				// pre-merge audit found same-named methods colliding and the
 				// wrong body executing), plain functions by their package's
 				// import path (funcWireName; main stays bare). The decoder
@@ -208,7 +208,11 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 						rt = ptr.Elem()
 					}
 					if rn, ok := e.namedTypeName(rt); ok {
-						e.curFuncName = rn + "." + d.Name.Name
+						member, err := declarationObjectName(declObj)
+						if err != nil {
+							return nil, err
+						}
+						e.curFuncName = methodFuncKey(rn, member)
 					}
 				}
 				e.liftSeq = 0
@@ -409,7 +413,7 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	declaredIface := map[string]bool{}
 	for _, m := range methods {
 		if mm, ok := m.(map[string]any); ok && mm["interface"] == true {
-			declaredIface[mm["recvType"].(string)+"."+mm["id"].(memberID).Name] = true
+			declaredIface[methodFuncKey(mm["recvType"].(string), mm["id"].(memberID))] = true
 		}
 	}
 	calledKeys := make([]string, 0, len(e.calledIfaceMethods))
@@ -693,13 +697,6 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	// carries gc's display and its declaring package path beside its
 	// key; a key with no registered display refuses.
 	if err := e.attachTypeDisplays(typeDefs); err != nil {
-		return nil, err
-	}
-	// BUG-098 (design note §2.5): an UNEXPORTED interface method name is
-	// package-scoped, but the wire's method tables carry bare names — a
-	// requirement `get` from one package and a concrete `get` from
-	// another would be judged satisfied. Refuse the export, by name.
-	if err := e.checkUnexportedMethodScopes(); err != nil {
 		return nil, err
 	}
 
@@ -1632,9 +1629,9 @@ func collectCalledFuncs(node any, out map[string]bool) {
 // quarantined declaration (audit response 2026-08-05, C3). This is full
 // STATIC reachability — a quarantined function on a branch init never
 // takes at runtime still refuses the export (deliberate over-closure,
-// recorded in the design note). An interface-dispatch anchor `I.M` in
-// the graph (a bodyless method-table entry) expands conservatively to
-// EVERY emitted concrete method named `M`, whatever its receiver
+// recorded in the design note). An interface-dispatch anchor in the
+// graph (a bodyless method-table entry) expands conservatively to EVERY
+// concrete method with the same package/name member, whatever its receiver
 // (delta-review M1, 2026-08-05: the BFS previously stored the anchor's
 // nil body and never visited any implementation, so an
 // interface-dispatched initializer reaching a quarantined function
@@ -1642,11 +1639,11 @@ func collectCalledFuncs(node any, out map[string]bool) {
 func checkInitQuarantine(funcs, methods []any) error {
 	bodies := map[string]any{}
 	quarantined := map[string]string{}
-	// Interface dispatch anchors: "I.M" -> method name M; and per method
-	// NAME, every CONCRETE method-table key ("T.M"), body-bearing or
-	// quarantined-stub, an anchor expands to.
-	anchors := map[string]string{}
-	methodKeysByName := map[string][]string{}
+	// Interface target -> full member identity; each member expands to
+	// every concrete target, whether body-bearing or quarantined. Both
+	// indices derive from the same method record.
+	anchors := map[string]memberID{}
+	methodKeysByMember := map[memberID][]string{}
 	record := func(key string, m map[string]any) {
 		if reason, ok := m["unsupported"].(string); ok {
 			quarantined[key] = reason
@@ -1663,17 +1660,21 @@ func checkInitQuarantine(funcs, methods []any) error {
 	}
 	for _, f := range methods {
 		if m, ok := f.(map[string]any); ok {
-			name := m["id"].(memberID).Name
+			member, ok := m["id"].(memberID)
+			if !ok {
+				return unsup("method table entry has no member identity")
+			}
+			name := member.Name
 			rt, _ := m["recvType"].(string)
 			if name == "" || rt == "" {
-				continue
+				return unsup("method table entry has empty member or receiver identity")
 			}
-			key := rt + "." + name
+			key := methodFuncKey(rt, member)
 			if isIface, _ := m["interface"].(bool); isIface {
-				anchors[key] = name
+				anchors[key] = member
 				continue
 			}
-			methodKeysByName[name] = append(methodKeysByName[name], key)
+			methodKeysByMember[member] = append(methodKeysByMember[member], key)
 			record(key, m)
 		}
 	}
@@ -1699,8 +1700,8 @@ func checkInitQuarantine(funcs, methods []any) error {
 			}
 			if mname, isAnchor := anchors[name]; isAnchor {
 				// Conservative dispatch expansion: every concrete method
-				// with the anchor's name is a candidate implementation.
-				for _, key := range methodKeysByName[mname] {
+				// with the anchor's full member id is a candidate implementation.
+				for _, key := range methodKeysByMember[mname] {
 					if reason, bad := quarantined[key]; bad {
 						return unsup("package initialization reaches quarantined method %s via interface dispatch %s (%s)", key, name, reason)
 					}
@@ -6000,7 +6001,11 @@ func (e *emitter) synthesizePromotionWrappers() ([]any, error) {
 			if !ok {
 				return nil, unsup("promoted method-set entry %s is not a func", msel.Obj().Name())
 			}
-			key := tName + "." + mfn.Name()
+			member, err := declarationObjectName(mfn)
+			if err != nil {
+				return nil, err
+			}
+			key := methodFuncKey(tName, member)
 			if seen[key] {
 				continue
 			}
@@ -6094,6 +6099,10 @@ func (e *emitter) syncPromotedStub(named *types.Named, tName string, mfn *types.
 // embedded interface field's value), return its results.
 func (e *emitter) synthesizeWrapper(named *types.Named, tName string, msel *types.Selection, recvIsPtr bool) (map[string]any, error) {
 	mfn := msel.Obj().(*types.Func)
+	id, err := declarationObjectName(mfn)
+	if err != nil {
+		return nil, err
+	}
 	sig := mfn.Type().(*types.Signature)
 	index := msel.Index()
 	hops := index[:len(index)-1]
@@ -6157,11 +6166,11 @@ func (e *emitter) synthesizeWrapper(named *types.Named, tName string, msel *type
 			return nil, unsup("promotion from embedded field %s of %s: static type is not a value interface", ifaceName, tName)
 		}
 		e.noteInterface(ifaceName, staticIface)
-		e.noteCalledIfaceMethod(ifaceName+"."+mfn.Name(), calledIfaceMethod{
+		e.noteCalledIfaceMethod(methodFuncKey(ifaceName, id), calledIfaceMethod{
 			ifaceName: ifaceName, method: mfn, sig: sig,
 			subst: e.curSubst,
 		})
-		innerFunc = ifaceName + "." + mfn.Name()
+		innerFunc = methodFuncKey(ifaceName, id)
 		innerRecvArg = node
 	} else {
 		defType := origRecv
@@ -6174,7 +6183,7 @@ func (e *emitter) synthesizeWrapper(named *types.Named, tName string, msel *type
 		if !ok {
 			return nil, e.anonymousTypeRefusal("promoted method", defType)
 		}
-		innerFunc = defName + "." + mfn.Name()
+		innerFunc = methodFuncKey(defName, id)
 		ft, err := hopFinalType(rootT, hops)
 		if err != nil {
 			return nil, err
@@ -6237,10 +6246,6 @@ func (e *emitter) synthesizeWrapper(named *types.Named, tName string, msel *type
 		bodyStmts = append(bodyStmts,
 			map[string]any{"stmt": "assign", "define": true, "lhs": lhs, "rhs": []any{callNode}},
 			map[string]any{"stmt": "return", "results": rets})
-	}
-	id, err := declarationObjectName(mfn)
-	if err != nil {
-		return nil, err
 	}
 	return map[string]any{
 		"id":       id,
@@ -6344,6 +6349,7 @@ func hopFinalType(t types.Type, hops []int) (types.Type, error) {
 // methodReceiverArg; with hops the receiver is adjusted through the
 // embedded path AT THIS MOMENT (design note D1.2 — the faithful evaluation
 // order for calls, and the faithful capture moment for method values):
+//
 //   pointer receiver reached at a pointer field  -> the field's VALUE
 //   pointer receiver reached at a value field    -> the field's ADDRESS
 //   value receiver reached at a pointer field    -> deref of the VALUE
@@ -6387,10 +6393,10 @@ func (e *emitter) promotedReceiverArg(sel *ast.SelectorExpr, hops []int, pointer
 // polarity) while structural use and CALLS keep failing closed. A type
 // with any un-emittable exported signature is skipped WHOLE (no marker,
 // no stubs): the machine then keeps refusing satisfaction for it, never
-// answering from a partial set. Unexported methods are skipped — the
-// wire cannot express cross-package unexported method identity — and the
-// machine fails closed when an UNEXPORTED requirement would decide
-// satisfaction against a marker type (Ops.firstUnsatisfiedMethod?).
+// answering from a partial set. Unexported methods remain outside this
+// imported-model contract even though their identity is now expressible.
+// The exported-only record makes the machine refuse when an UNEXPORTED
+// requirement would decide satisfaction (Ops.firstUnsatisfiedMethod?).
 // Runs to fixpoint: a stub's signature may itself mention fresh imported
 // types.
 func (e *emitter) importedTypeDecls() ([]any, []any) {
@@ -6643,9 +6649,9 @@ func (e *emitter) syncMethodStubs() ([]any, []any, error) {
 				return nil, nil, unsup("sync method-set entry %s.%s is not a func", qname, ptrSet.At(i).Obj().Name())
 			}
 			if !mfn.Exported() {
-				// Cross-package unexported identity can never satisfy a
-				// user requirement (Go's package-scoped method identity),
-				// so skipping is the CORRECT answer, not a hole.
+				// The modeled sync surface records exported methods only.
+				// Its coverage record makes private absence unknown; the
+				// core refuses such a query rather than inferring a no.
 				continue
 			}
 			sig := mfn.Type().(*types.Signature)
@@ -6995,6 +7001,10 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 					fn, index = m, idx
 				}
 			}
+			member, err := declarationObjectName(fn)
+			if err != nil {
+				return nil, err
+			}
 			recvType := fn.Type().(*types.Signature).Recv().Type()
 			if _, isIface := recvType.Underlying().(*types.Interface); isIface {
 				// Interface METHOD VALUE (design note D6): capture the BOX
@@ -7036,7 +7046,7 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 					return nil, unsup("interface method selector on %s: static type is not a value interface", ifaceStatic)
 				}
 				e.noteInterface(ifaceName, staticIface)
-				e.noteCalledIfaceMethod(ifaceName+"."+fn.Name(), calledIfaceMethod{
+				e.noteCalledIfaceMethod(methodFuncKey(ifaceName, member), calledIfaceMethod{
 					ifaceName: ifaceName, method: fn,
 					sig:   fn.Type().(*types.Signature),
 					subst: e.curSubst,
@@ -7069,7 +7079,7 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 						"then": map[string]any{"stmt": "panic", "runtimeError": true,
 							"value": stringLitNode("runtime error: invalid memory address or nil pointer dereference")}})
 				return map[string]any{"expr": "func-value",
-					"func": ifaceName + "." + fn.Name(), "captured": []any{mvIdent}}, nil
+					"func": methodFuncKey(ifaceName, member), "captured": []any{mvIdent}}, nil
 			}
 			defType := recvType
 			pointerRecv := false
@@ -7089,7 +7099,7 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 				return nil, err
 			}
 			return map[string]any{"expr": "func-value",
-				"func": name + "." + fn.Name(), "captured": []any{recvArg}}, nil
+				"func": methodFuncKey(name, member), "captured": []any{recvArg}}, nil
 		}
 		if seln.Kind() == types.MethodExpr {
 			// A METHOD EXPRESSION `T.M` / `I.M` (design note D6): the
@@ -7099,6 +7109,10 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 			fn, ok := seln.Obj().(*types.Func)
 			if !ok {
 				return nil, unsup("method expression %s is not a func", sel.Sel.Name)
+			}
+			member, err := declarationObjectName(fn)
+			if err != nil {
+				return nil, err
 			}
 			sig := fn.Type().(*types.Signature)
 			recvType := sig.Recv().Type()
@@ -7130,12 +7144,12 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 					return nil, unsup("interface method selector on %s: static type is not a value interface", ifaceStatic)
 				}
 				e.noteInterface(ifaceName, staticIface)
-				e.noteCalledIfaceMethod(ifaceName+"."+fn.Name(), calledIfaceMethod{
+				e.noteCalledIfaceMethod(methodFuncKey(ifaceName, member), calledIfaceMethod{
 					ifaceName: ifaceName, method: fn, sig: sig,
 					subst: e.curSubst,
 				})
 				return map[string]any{"expr": "func-value",
-					"func": ifaceName + "." + fn.Name(), "captured": []any{}}, nil
+					"func": methodFuncKey(ifaceName, member), "captured": []any{}}, nil
 			}
 			// Concrete receiver: the wire Func's receiver form must match
 			// the expression's first parameter. Declared methods carry
@@ -7173,7 +7187,7 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 				return nil, unsup("method expression (*%s).%s over a value-receiver method (deref adapter not modeled)", name, fn.Name())
 			}
 			return map[string]any{"expr": "func-value",
-				"func": name + "." + fn.Name(), "captured": []any{}}, nil
+				"func": methodFuncKey(name, member), "captured": []any{}}, nil
 		}
 		return nil, unsup("non-field selector %s (method/expr)", sel.Sel.Name)
 	}
@@ -9340,6 +9354,10 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 			fn, index = m, idx
 		}
 	}
+	member, err := declarationObjectName(fn)
+	if err != nil {
+		return nil, false, err
+	}
 	recvType := fn.Type().(*types.Signature).Recv().Type()
 	// Interface-receiver call: dynamic dispatch through the method-table
 	// entry "<InterfaceName>.<Method>", the interface value itself as the
@@ -9392,7 +9410,7 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 			return nil, false, unsup("interface method call on %s: static type is not a value interface", ifaceStatic)
 		}
 		e.noteInterface(ifaceName, staticIface)
-		e.noteCalledIfaceMethod(ifaceName+"."+sel.Sel.Name, calledIfaceMethod{
+		e.noteCalledIfaceMethod(methodFuncKey(ifaceName, member), calledIfaceMethod{
 			ifaceName: ifaceName, method: fn,
 			sig:   fn.Type().(*types.Signature),
 			subst: e.curSubst,
@@ -9406,7 +9424,7 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 		if err != nil {
 			return nil, false, err
 		}
-		return map[string]any{"expr": "call", "func": ifaceName + "." + sel.Sel.Name,
+		return map[string]any{"expr": "call", "func": methodFuncKey(ifaceName, member),
 			"args": all, "resultTypes": resultTypes}, true, nil
 	}
 	// Defining type name (strip a pointer receiver) for the FuncId.
@@ -9435,7 +9453,7 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 	if err != nil {
 		return nil, false, err
 	}
-	return map[string]any{"expr": "call", "func": name + "." + sel.Sel.Name, "args": all, "resultTypes": resultTypes}, true, nil
+	return map[string]any{"expr": "call", "func": methodFuncKey(name, member), "args": all, "resultTypes": resultTypes}, true, nil
 }
 
 // emitBuiltin handles Go builtin calls. len/cap are pure expressions; the

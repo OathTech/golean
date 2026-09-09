@@ -10,7 +10,9 @@ def MethodIdentityAudit.run : CoreM Unit := do
       ``GoLean.MethodIdentityTests.private_cross_package_rejected,
       ``GoLean.MethodIdentityTests.pointer_inherits_private_value,
       ``GoLean.MethodIdentityTests.value_does_not_inherit_private_pointer,
-      ``GoLean.MethodIdentityTests.variadic_is_part_of_signature] do
+      ``GoLean.MethodIdentityTests.variadic_is_part_of_signature,
+      ``GoLean.MethodIdentityTests.private_targets_are_distinct,
+      ``GoLean.MethodIdentityTests.utf8_target_vector] do
     let some (.thmInfo _) := env.find? required
       | throwError "Method identity audit: missing theorem {required}"
   for required in [``GoLean.NativeDeclaration.decodeMemberId,

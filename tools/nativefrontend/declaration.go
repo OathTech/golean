@@ -11,6 +11,7 @@ import (
 	"maps"
 	"slices"
 	"sort"
+	"strconv"
 )
 
 // A declaration query borrows only checked source facts and the current
@@ -48,6 +49,14 @@ func (e *emitter) emitDeclarationType(t types.Type) (any, error) {
 type memberID struct {
 	Name    string `json:"name"`
 	Package string `json:"package"`
+}
+
+// methodFuncKey is a callable target derived from I1 member identity.
+// Byte lengths delimit arbitrary receiver and package keys; the final member
+// identifier cannot contain a synthetic $ suffix. This representation is
+// internal and is never used for Go-visible type or missing-method text.
+func methodFuncKey(recv string, id memberID) string {
+	return "$method$" + strconv.Itoa(len(recv)) + ":" + recv + strconv.Itoa(len(id.Package)) + ":" + id.Package + id.Name
 }
 
 func declarationObjectName(obj types.Object) (memberID, error) {

@@ -725,7 +725,7 @@ unchanged runtime's clean full gate and fresh documentation checks to source.
 | # | item | owed | dep | size | who | status | evidence |
 |---|---|---|---|---|---|---|---|
 | B1 | **F6 — the evaluation-order family model** | a design note specifying expression evaluation as a dependency/ordering relation over value production, effects and failure; a bounded prototype (calls, receives, short-circuit, multiassign, mutation, multiple panics); generated interaction tests; ONE translation certificate; BUG-101's value axis and BUG-104 decided INSIDE it | none | L | design → mainline | **OWED (v1 §7.4 item (5a)); not started.** BUG-101 (2 rows) and BUG-104 (5 rows) open red-first; the E2/E12 value-axis gate is to be posed WITH the note | gate audit F6; v1 §3.D items 2–3 |
-| B2 | **F7 — semantic identity metadata** | opaque/interned IDs with package/scope/instantiation structure; display separate; `keyPathHazard` and `TypeId.unqualified` parsing retired; C6 revisited (not ratified as-is); module-aware source manifest | none | M–L | design → mainline (frontend) | **OWED (v1 §7.4 item (5b)); not started.** FR-31/BUG-098 guard in force (`methodWireName` fix S–M); C6 narrowing PENDING [USER] with the note | gate audit F7; v1 §3.B items 17–18 |
+| B2 | **F7 — semantic identity metadata** | opaque/interned IDs with package/scope/instantiation structure; display separate; `keyPathHazard` and `TypeId.unqualified` parsing retired; C6 revisited (not ratified as-is); module-aware source manifest | none | M–L | design → mainline (frontend) | **OWED (v1 §7.4 item (5b)); not started.** FR-31/BUG-098 repaired on `fix/package-method-identity` (2026-09-09 [AGENT], awaiting review); broader identity design and C6 narrowing PENDING [USER] with the note | gate audit F7; v1 §3.B items 17–18 |
 | B3 | **Open bugs at the tip — 17** (`awk '/^## BUG-/{h=$0} /^- Status: open/{print h}' docs/BUGS.md`) | each: a plan and a lane or queue slot; wrong answers → zero within the named profile | per bug | — | mainline | see the table below | `docs/BUGS.md` |
 
 The 17 open entries by class (class = the heading's bracketed tag where
@@ -742,7 +742,7 @@ present, else [ANALYST]; line = entry start at `da0a9c2c`):
 | 090 | 5495 | PERFORMANCE | interpreter | assoc-list heap cost (A2 landed dense heap; re-measure OWED) | hygiene follow-up |
 | 093 | 5633 | coverage | stdlib + float formatting | `print` residuals (float/complex, zero-operand, `$pkginit`) | FR-29 |
 | 094 | 5680 | latitude (R7) | FloatBits | `Float64bits` of canonical NaN refuses | R7 re-envelope; §4.4 FloatBits item |
-| 098 | 5920 | wrong-answer class GUARDED as refusal | frontend + identity | unexported method names bare on the wire | FR-31 `methodWireName` (B2) |
+| 098 | BUGS.md entry | **FIXED on branch, awaiting review** (2026-09-09 [AGENT]) | frontend + decoder + core identity | I1 package/name identity through matching and distinct promoted function ids | FR-31; `docs/2026-09-08_method-identity-design.md`; broader B2 remains owed |
 | 099 | 5991 | wrong-answer (observed) | interpreter/terminal | one synthetic `$runtime.Error` type for every recovered runtime error | **unowned** (Gate B: "give BUG-099 a concrete owner") |
 | 100 | 6040 | designed (c)-pin | frontend | C6: function-local type as generic TYPE argument | ratification PENDING [USER] with B2's note |
 | 101 | 6064 | wrong-answer at a forced VALUE point (red-first, 2 rows) | frontend + core eval order | E13 probe discards the early value | inside B1 |
@@ -752,7 +752,8 @@ present, else [ANALYST]; line = entry start at `da0a9c2c`):
 | 107 | 6451 | apparatus (terminal classification) | observer | pre-`main` abort has no crash-channel acknowledgement (4 rows) | **PENDING [USER]** option (a)/(b)/(c) |
 
 Wrong answers OPEN (F1's predicate 2 counts these): BUG-099, BUG-101,
-BUG-104; GUARDED wrong-answer class: BUG-098. The untriaged ratchet
+BUG-104. BUG-098 is fixed on `fix/package-method-identity`, awaiting the
+user’s adversarial review (2026-09-09 [AGENT]); no merge is claimed. The untriaged ratchet
 (`scripts/check-bugs.sh`) is a separate counter that stays 0/0 for
 wrong-answer; its blind spot (a guard moves a row out of its filter) is
 v1 §2.6/§3.G; the guarded-wrong-answer marker is PENDING [USER].
@@ -1305,7 +1306,7 @@ this document; the order within the wave is a coordinator call.
 | W1 | **Gate A bridge spike** | A2's `Admissible` class DEFINED (starting from `Bind.lean:170`'s three premises; check `mapIterFree` against main) and `step_fill_adm`/`step_fill_inv_adm` PROVED over the 112 rules, the recover counterexample as the first negative test, nested defer/recover + labelled control + frame-local allocation as worked examples; A4 `step_det_of_choiceFree`; the STATEMENT of A1's relation→driver bridge fixed (proof deferred to after B7 if the state type would move under it) | theorems compile in the core build; `Tests/InterfaceContract.lean` gains the class's negative and positive regressions; `Interface.lean`'s docstring updated; no `EctxLanguage` claimed |
 | W2 | **B7** | N1 decided; then the design note's target API implemented at ZERO baseline drift and byte-identical whole-corpus consumption trace; both spike gates green; T1's five review theorems proved against the landed API | `grep ProgramCtx GoLean/` is the API, not a comment; `htypes` hypotheses gone; `Platform` threaded; both customers rebuilt |
 | W3 | **Owed small chunks** (§2.6 + T8) | `land/typed-test-gates` (N6) — **LANDED (round 28, 2026-09-08 — pending merge)**, the I1 wire (L1b, with A-R11/A-R12), `observer-gate-scripts`, `observer-fd-channel` (if BUG-107 (c)), the spike gate re-run, the `canonicalSlot0` docstring, the 32 sprint notes (records) | each its own gate; 5a where `NativeToIR.lean` moves |
-| W4 | **Fix lane** (v1 §7.4 item (3), retained) | BUG-098/FR-31 `methodWireName`; BUG-104 `safeExpr`-style decomposition; the decoder `.getD .int` fallback (`NativeToIR.lean:1507,1584`); F8's certificate fingerprint | the 3 + 5 rows PASS; the BUG-098 guard retires; cedar `all` revives; stale certification is release-blocking |
+| W4 | **Fix lane** (v1 §7.4 item (3), retained) | **FR-31/BUG-098 DONE on branch, awaiting review** (2026-09-09 [AGENT]; I1 member identity + matching + distinct promoted targets, three reds green, fresh Cedar census); BUG-104 `safeExpr`-style decomposition; the decoder `.getD .int` fallback (`NativeToIR.lean:1507,1584`); F8's certificate fingerprint | the 3 + 5 rows PASS; the BUG-098 guard retires; cedar `all` revives; stale certification is release-blocking |
 | W5 | **Design notes before lanes** | F6 (with BUG-101's value axis decided inside), F7 (with C6 revisited), A7 the type-descriptor algebra, the profile-naming proposal (N5), the D1 statement-repair note (§4.4 item 1, deliverable 1) | each a note + a posed [USER] gate; no lane launches on a note that has not been ruled |
 | W6 | **Codex deep theorems** (§4.4) | the items whose statements are FIXED now: A4, R8's bound-irrelevance, C2's bound theorem, §4.4 items 4 and 5; after C1: the `Mem` frame lemmas, D2; after D1's ruling: the reduction proof | per-item criteria in §4.4 |
 | HOLD | G6 T1 (pending A7 — PENDING [USER] confirmation); raft W4 stage 2 (PENDING [USER]); P/C3/C4 (after C1); B6 (coordinator/[USER] slot); B5 (any time) | | |

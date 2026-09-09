@@ -124,7 +124,7 @@ func main() { println(viaExpr()) }
 // method's DECLARING receiver alone, so `S.foo` (operand a struct, method
 // declared in the embedded interface I) was quarantined as `main.S: static
 // type is not a value interface`. The func value is S's promotion wrapper
-// `main.S.foo`; the body must lower with no `unsupported` marker.
+// `methodFuncKey(main.S, main.foo)`; the body must lower with no `unsupported` marker.
 func TestPromotedMethodExpressionLowers(t *testing.T) {
 	program, err := emitSource(t, promotedMethodExprSrc)
 	if err != nil {
@@ -140,8 +140,8 @@ func TestPromotedMethodExpressionLowers(t *testing.T) {
 		if reason, quarantined := m["unsupported"]; quarantined {
 			t.Fatalf("viaExpr quarantined: %v", reason)
 		}
-		if !strings.Contains(fmtJSON(m["body"]), `"main.S.foo"`) {
-			t.Fatalf("viaExpr body does not reference the promotion wrapper main.S.foo: %s", fmtJSON(m["body"]))
+		if !strings.Contains(fmtJSON(m["body"]), fmtJSON(methodFuncKey("main.S", memberID{Name: "foo", Package: "main"}))) {
+			t.Fatalf("viaExpr body does not reference the promotion wrapper for main.S/main.foo: %s", fmtJSON(m["body"]))
 		}
 	}
 	if !found {

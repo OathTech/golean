@@ -175,18 +175,6 @@ func TestLocalTypeKeysAndDisplays(t *testing.T) {
 	}
 }
 
-// TestUnexportedMethodScopeGuardSinglePackage: the BUG-098 guard is
-// silent within one package (requirement and implementation share the
-// declaring package).
-func TestUnexportedMethodScopeGuardSinglePackage(t *testing.T) {
-	e, _ := checkSource(t, identityTestSrc)
-	iface := types.Unalias(varType(t, e, "vUnexp")).(*types.Interface)
-	e.noteInterface("k", iface)
-	if err := e.checkUnexportedMethodScopes(); err != nil {
-		t.Fatalf("single-package unexported requirement must not refuse: %v", err)
-	}
-}
-
 // ---- the emitter's fail-closed refusals at the identity/display boundary
 // (audit fix round R5, 2026-09-05: three refusals shipped with no test) ----
 

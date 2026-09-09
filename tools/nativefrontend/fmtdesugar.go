@@ -112,26 +112,33 @@ var fmtDesugarFuncs = map[string]bool{
 // static type's WriteString FuncId, or "" (refuse). *strings.Builder
 // (W4.1's E5-T) and *bytes.Buffer (W4.3's — describeMessageWithIndent,
 // DescribeEntries).
-func fmtWriterWriteString(wTy types.Type) string {
+func fmtWriterWriteString(wTy types.Type) (string, error) {
 	ptr, ok := types.Unalias(wTy).(*types.Pointer)
 	if !ok {
-		return ""
+		return "", nil
 	}
 	n, ok := types.Unalias(ptr.Elem()).(*types.Named)
 	if !ok {
-		return ""
+		return "", nil
 	}
 	obj := n.Obj()
 	if obj.Pkg() == nil {
-		return ""
+		return "", nil
 	}
-	switch obj.Pkg().Path() + "." + obj.Name() {
-	case "strings.Builder":
-		return "strings.Builder.WriteString"
-	case "bytes.Buffer":
-		return "bytes.Buffer.WriteString"
+	receiver := obj.Pkg().Path() + "." + obj.Name()
+	if receiver != "strings.Builder" && receiver != "bytes.Buffer" {
+		return "", nil
 	}
-	return ""
+	selected, _, _ := types.LookupFieldOrMethod(wTy, false, nil, "WriteString")
+	method, ok := selected.(*types.Func)
+	if !ok {
+		return "", unsup("imported-type model: modeled fmt writer %s has no WriteString method", receiver)
+	}
+	member, err := declarationObjectName(method)
+	if err != nil {
+		return "", err
+	}
+	return methodFuncKey(receiver, member), nil
 }
 
 // fmtStringerIface is fmt.Stringer's shape, constructed rather than
@@ -325,7 +332,10 @@ func (e *emitter) emitFmtCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, bool
 		if len(c.Args) != 2 {
 			return nil, false, unsup("fmt.Fprint with %d operand(s) is outside the modeled subset (modeled: exactly one operand of string kind)", len(c.Args)-1)
 		}
-		writeFn := fmtWriterWriteString(e.goTypeOf(c.Args[0]))
+		writeFn, err := fmtWriterWriteString(e.goTypeOf(c.Args[0]))
+		if err != nil {
+			return nil, false, err
+		}
 		if writeFn == "" {
 			return nil, false, unsup("fmt.Fprint writer of type %s is outside the modeled subset (modeled: *strings.Builder, *bytes.Buffer)", e.goTypeOf(c.Args[0]))
 		}
@@ -373,11 +383,14 @@ func (e *emitter) emitFmtCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, bool
 	var recvNode any
 	writerWriteFn := ""
 	if fn == "Fprintf" {
-		writerWriteFn = fmtWriterWriteString(e.goTypeOf(c.Args[0]))
+		var err error
+		writerWriteFn, err = fmtWriterWriteString(e.goTypeOf(c.Args[0]))
+		if err != nil {
+			return nil, false, err
+		}
 		if writerWriteFn == "" {
 			return nil, false, unsup("fmt.Fprintf writer of type %s is outside the modeled subset (modeled: *strings.Builder, *bytes.Buffer)", e.goTypeOf(c.Args[0]))
 		}
-		var err error
 		recvNode, err = e.emitExpr(c.Args[0])
 		if err != nil {
 			return nil, false, err
@@ -508,7 +521,6 @@ func (e *emitter) emitFmtCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, bool
 	}
 	return nil, false, unsup("fmt.%s (internal: unreachable dispatch)", fn)
 }
-
 
 // fmtFormatterIface returns fmt.Formatter's interface type from the
 // TYPE-CHECKED fmt package among the current package's imports (audit
@@ -1036,6 +1048,10 @@ func (e *emitter) fmtVerbArg(fn, format string, v fmtVerb, arg ast.Expr, k int) 
 		if !okFn || len(index) != 1 {
 			return nil, unsup("fmt.%s verb %s: %s's %s method is promoted or missing (outside the modeled subset)", fn, verbName, argTy, methodName)
 		}
+		member, err := declarationObjectName(mfn)
+		if err != nil {
+			return nil, err
+		}
 		recvT := mfn.Type().(*types.Signature).Recv().Type()
 		_, pointerRecv := recvT.(*types.Pointer)
 		defType := recvT
@@ -1078,7 +1094,7 @@ func (e *emitter) fmtVerbArg(fn, format string, v fmtVerb, arg ast.Expr, k int) 
 			}
 			nilCmp := map[string]any{"expr": "binary", "op": "==",
 				"x": tmp, "y": map[string]any{"expr": "nil"}, "operandType": ptrW}
-			mv := map[string]any{"expr": "func-value", "func": typeName + "." + methodName,
+			mv := map[string]any{"expr": "func-value", "func": methodFuncKey(typeName, member),
 				"captured": []any{tmp}}
 			nname := "$nil" + itoa(k)
 			boolTyW := map[string]any{"kind": "bool"}
@@ -1094,7 +1110,7 @@ func (e *emitter) fmtVerbArg(fn, format string, v fmtVerb, arg ast.Expr, k int) 
 		if argIsPtr {
 			return nil, unsup("fmt.%s verb %s: value-receiver %s reached through a pointer argument is outside the modeled subset (capture-time vs render-time deref)", fn, verbName, methodName)
 		}
-		mv := map[string]any{"expr": "func-value", "func": typeName + "." + methodName,
+		mv := map[string]any{"expr": "func-value", "func": methodFuncKey(typeName, member),
 			"captured": []any{node}}
 		return &fmtArgPlan{
 			callArgs: []any{mv},

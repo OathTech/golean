@@ -174,12 +174,9 @@ type emitter struct {
 	// outside the table is recorded for the fail-closed refusal.
 	localOrdinals map[*types.TypeName]int
 	badLocalTypes map[string]bool
-	// BUG-098 guard input: unexported requirement name -> declaring
-	// package paths (identity.go noteUnexportedRequirements).
-	unexportedReqs map[string]map[string]bool
 
 	// Interface-receiver methods CALLED somewhere in the package, keyed
-	// "<IfaceName>.<Method>" (the exact func id the call emits). Interfaces
+	// by methodFuncKey (the exact target id the call emits). Interfaces
 	// declared in the package anchor their methods via emitGenDeclTypes;
 	// predeclared ones (error) and, later, imported ones have no decl here,
 	// so emitProgram synthesizes their table entries from this record.
@@ -287,7 +284,7 @@ type emitter struct {
 	// generic function object to its declaration for the worklist;
 	// funcInsts/funcInstQueue are the dedup map and pending queue of
 	// stencils; monoCtxt is the shared types.Instantiate context.
-	curSubst         map[*types.TypeParam]types.Type
+	curSubst map[*types.TypeParam]types.Type
 	// curTargs mirrors curSubst as the ORDERED argument list of the
 	// active instantiation (nil outside stenciling) — consumed by
 	// qualifiedTypeName to parameterize TypeIds of function-local type
@@ -299,7 +296,7 @@ type emitter struct {
 	// function-local type the stencil body mentions — a local type
 	// passed AS a type argument (`cmp.Compare[main.score·1]`, FR-19) is
 	// declared outside and keeps its own key (lane fr19-bug097).
-	curInstDecl *ast.FuncDecl
+	curInstDecl      *ast.FuncDecl
 	substErr         error
 	genericFuncDecls map[*types.Func]*ast.FuncDecl
 	funcInsts        map[string]*funcInstWork
@@ -420,7 +417,6 @@ func (e *emitter) noteInterface(name string, iface *types.Interface) {
 	if e.seenInterfaces == nil {
 		e.seenInterfaces = map[string]*types.Interface{}
 	}
-	e.noteUnexportedRequirements(iface)
 	if prev, seen := e.seenInterfaces[name]; seen {
 		// Same name, different method set: recorded here, refused by
 		// emitProgram's declaration pass (BUG-095: the dispatch sites used

@@ -1854,8 +1854,19 @@ private def decodeFunc (path : String) (json : Json) : LowerM Func := do
   let body ← decodeStmt res s!"{path}.body" (← StrictJson.field path obj "body")
   pure { id := ⟨name⟩, args, results := res, body, variadic }
 
-/-- A method lowers to a receiver-scoped GoCore function (`RecvType.method`,
-receiver as the first parameter) plus a `MethodInfo` dispatch-table entry. -/
+/-- The receiver key used to derive a callable target and the receiver type
+used by method resolution must denote the same carrier. This checks the
+supported outer shapes, not general Go source typing. -/
+private def methodReceiverAgrees (ctx : LowerCtx) (key : String) : Ty → Bool
+  | .defined idx => ctx.typeIdx[key]? == some idx
+  | .pointer (.defined idx) => ctx.typeIdx[key]? == some idx
+  | .interface id => key == id.key
+  | .sync kind => key == "sync." ++ kind.name
+  | .pointer (.sync kind) => key == "sync." ++ kind.name
+  | _ => false
+
+/-- A method lowers to a receiver/member-derived GoCore function (receiver
+as the first parameter) plus a `MethodInfo` dispatch-table entry. -/
 private def decodeMethod (path : String) (json : Json) : LowerM (Func × MethodInfo) := do
   let obj ← StrictJson.obj path json
   -- Union of the four emitter method shapes (declared / promotion
@@ -1867,14 +1878,14 @@ private def decodeMethod (path : String) (json : Json) : LowerM (Func × MethodI
   let id ← NativeDeclaration.decodeMemberId s!"{path}.id" (← StrictJson.field path obj "id")
   let recvType ← StrictJson.string s!"{path}.recvType" (← StrictJson.field path obj "recvType")
   let recv ← decodeParam s!"{path}.recv" (← StrictJson.field path obj "recv")
+  unless methodReceiverAgrees (← read) recvType recv.typ do
+    fail s!"method receiver identity disagrees at {path}.recvType / {path}.recv.type: {recvType}"
   let params ← StrictJson.array s!"{path}.params" (← StrictJson.field path obj "params")
   let results ← StrictJson.array s!"{path}.results" (← StrictJson.field path obj "results")
   let variadic ← StrictJson.bool s!"{path}.variadic" (← StrictJson.field path obj "variadic")
   let args ← params.mapIdxM (fun i p => decodeParam s!"{path}.params[{i}]" p)
   let res ← results.mapIdxM (fun i p => decodeParam s!"{path}.results[{i}]" p)
-  -- Stage 1 only: target keys remain legacy until the stage-3 migration;
-  -- the frontend BUG-098 guard stays in force throughout that interval.
-  let funcId : FuncId := ⟨s!"{recvType}.{id.name}"⟩
+  let funcId := methodFuncId recvType id
   let info : MethodInfo := { id, funcId, recv := recv.typ }
   -- Declared schema addition (arc-final audit F1 / BUG-015): the
   -- synthesized-promotion-wrapper marker. Decoded STRICTLY when present

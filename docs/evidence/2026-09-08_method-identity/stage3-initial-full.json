@@ -1,0 +1,51 @@
+{
+  "provenance": "[AGENT] 2026-09-09, first complete stage-3 full differential/slow run; regression finding, no repin",
+  "source_tree": "4ddad9337ee9656e3a8b23449d88e5cb1f74a3af",
+  "head": "35bea1e8ddedb2a429af4d7413481eafcbf413db",
+  "dirty": true,
+  "command": "GOLEAN_SLOW=1 scripts/capped scripts/coverage all",
+  "captured_exit": 1,
+  "wall_seconds": 540.596,
+  "executable": {
+    "rows": 3662,
+    "pass": 3409,
+    "fail": 253,
+    "new_pass_rows": 8,
+    "original_bug098_flips": 3
+  },
+  "negative": {
+    "rows": 394,
+    "pass": 394
+  },
+  "slow": {
+    "members": 6,
+    "nodes": 6193933,
+    "edges": 6565663,
+    "dedup_hits": 371731,
+    "certified_set_changed": false
+  },
+  "regressions": [
+    {
+      "id": "fmt/fprint-writers/builder-single",
+      "detail": "expected status ok, got {\"message\":\"GoCore function not found: strings.Builder.WriteString\",\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"stuck\"}"
+    },
+    {
+      "id": "fmt/fprint-writers/buffer-single",
+      "detail": "expected status ok, got {\"message\":\"GoCore function not found: bytes.Buffer.WriteString\",\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"stuck\"}"
+    },
+    {
+      "id": "fmt/fprint-writers/fprintf-buffer-shape",
+      "detail": "expected status ok, got {\"message\":\"GoCore function not found: bytes.Buffer.WriteString\",\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"stuck\"}"
+    },
+    {
+      "id": "fmt/fprintf-builder/describe-shape",
+      "detail": "expected status ok, got {\"message\":\"GoCore function not found: strings.Builder.WriteString\",\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"stuck\"}"
+    },
+    {
+      "id": "fmt/fprintf-builder/returns",
+      "detail": "expected status ok, got {\"message\":\"GoCore function not found: strings.Builder.WriteString\",\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"stuck\"}"
+    }
+  ],
+  "log_sha256": "d1d24873da403bd24a4bcb462546bb8c05357e662476cb687167505ca52c398b",
+  "cause": "fmtWriterWriteString still returned literal strings.Builder.WriteString / bytes.Buffer.WriteString target ids; five existing PASS cases stopped at missing function"
+}

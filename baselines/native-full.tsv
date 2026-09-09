@@ -1,5 +1,14 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3654 (3403 PASS / 251 FAIL)
+# cases: 3662 (3414 PASS / 248 FAIL)
+# re-pinned: 2026-09-09 [AGENT], fix/package-method-identity, after a fresh full
+#   GOLEAN_SLOW=1 scripts/capped scripts/coverage all: 3662 = 3414 PASS / 248 FAIL.
+#   FR-31 / BUG-098: three original multipkg/unexported-method-scope rows flip
+#   FAIL/frontend-export -> PASS; eight multipkg/private-method-dispatch rows born
+#   PASS. No PASS -> non-PASS, no removed rows, no other result/stage movement.
+#   I1 member identity reaches matching and receiver/member-derived function ids;
+#   the whole-export guard retires. Original gc observations/text are unchanged.
+#   Full source-bound evidence and twin reason: docs/2026-09-08_method-identity-design.md.
+# Previous pin history follows:
 # re-pinned: 2026-09-07, landing chunk L3 `land/panic-text-tape` [AGENT] (docs/2026-09-07_land-panic-text-tape.md), after full
 #   scripts/capped scripts/ci --diff (jobs 12) on this tree: 3634 = 3388 PASS / 246 FAIL. Drift vs the previous pin = EXACTLY
 #   36 born rows + 2 FAIL -> PASS flips, 0 PASS -> non-PASS, 0 removals, 0 reorders (born rows inserted at their families'
@@ -3329,6 +3338,14 @@ PASS	multipkg/mini-raft-twin/starve-node	-
 PASS	multipkg/mini-raft-twin/duel	-
 PASS	multipkg/mini-raft-twin/choice-order	membership
 PASS	multipkg/nil-value-method-text	membership
+PASS	multipkg/private-method-dispatch/concrete-values	-
+PASS	multipkg/private-method-dispatch/constrained-methods	-
+PASS	multipkg/private-method-dispatch/deep-alias	-
+PASS	multipkg/private-method-dispatch/embedded-interfaces	-
+PASS	multipkg/private-method-dispatch/generic-bodies	-
+PASS	multipkg/private-method-dispatch/pointer-sets	-
+PASS	multipkg/private-method-dispatch/promoted-bodies	-
+PASS	multipkg/private-method-dispatch/unicode	-
 PASS	multipkg/same-name-anon-iface	-
 PASS	multipkg/same-name-anon-iface-panic/missing	-
 PASS	multipkg/same-name-anon-iface-panic/source	-
@@ -3340,9 +3357,9 @@ PASS	multipkg/same-name-pointer-panic/no-methods	-
 PASS	multipkg/same-name-pointer-panic/value-method	-
 PASS	multipkg/same-name-pointer-panic/pointer-method	-
 PASS	multipkg/same-name-pointer-panic/slice-control	-
-FAIL	multipkg/unexported-method-scope/assert-panic	frontend-export
-FAIL	multipkg/unexported-method-scope/distinct	frontend-export
-FAIL	multipkg/unexported-method-scope/distinct-names	frontend-export
+PASS	multipkg/unexported-method-scope/assert-panic	-
+PASS	multipkg/unexported-method-scope/distinct	-
+PASS	multipkg/unexported-method-scope/distinct-names	-
 PASS	multipkg/wire-codec/roundtrip	-
 PASS	multipkg/wire-codec/size	-
 PASS	multipkg/wire-codec/golden	-

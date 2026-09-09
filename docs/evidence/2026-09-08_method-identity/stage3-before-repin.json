@@ -1,0 +1,52 @@
+{
+  "provenance": "[AGENT] 2026-09-09, corrected complete full differential and fresh slow run BEFORE repin",
+  "head": "35bea1e8ddedb2a429af4d7413481eafcbf413db",
+  "source_tree": "3974d53b53f6d0055bf17f6fb2408fcdeb3f2e6e",
+  "dirty": true,
+  "command": "GOLEAN_SLOW=1 scripts/capped scripts/coverage all",
+  "captured_exit": 1,
+  "exit_reason": "248 designed baseline FAILs; complete comparison verified before updating pins",
+  "wall_seconds": 543.844,
+  "executable": {
+    "rows": 3662,
+    "pass": 3414,
+    "fail": 248,
+    "original_flips": [
+      "multipkg/unexported-method-scope/assert-panic",
+      "multipkg/unexported-method-scope/distinct",
+      "multipkg/unexported-method-scope/distinct-names"
+    ],
+    "born_pass": [
+      "multipkg/private-method-dispatch/concrete-values",
+      "multipkg/private-method-dispatch/constrained-methods",
+      "multipkg/private-method-dispatch/deep-alias",
+      "multipkg/private-method-dispatch/embedded-interfaces",
+      "multipkg/private-method-dispatch/generic-bodies",
+      "multipkg/private-method-dispatch/pointer-sets",
+      "multipkg/private-method-dispatch/promoted-bodies",
+      "multipkg/private-method-dispatch/unicode"
+    ],
+    "other_drift": 0
+  },
+  "negative": {
+    "rows": 394,
+    "pass": 394,
+    "drift": 0
+  },
+  "slow_stats": "coverage-observations: observations=6 steps=6565663 probes=0 sites=6193933 leaves=0 maxdepth=0 width=4 engine=dedup nodes=6193933 edges=6565663 dedupHits=371731 certified=checkCert",
+  "log_sha256": "46d302f565d416b16a0e75e45aec4f08e4ccbb8c0d5395bd5816588466a127a9",
+  "result_sha256": "a12ef9f533da073eaae499dc2edd97b53113de1e0c3dbff9f6057c49ac94ac73",
+  "old_baseline_sha256": "9235f071fcd9407a6c2b66866e4f53b120235dbd977833955fa82700a846f9bc",
+  "new_baseline_sha256": "e24ff195b7efa8975e15c809871cad3f8b7b7d5081413ca8c48823ce654ddc89",
+  "twin": {
+    "provenance": "[AGENT] 2026-09-09, fresh source emission through invocation-owned symlink assembly",
+    "old_sha256": "a225ea8a40a78dc3e83241520706f6a85e0675cdedab49de2b5f973ca0c7a46c",
+    "new_sha256": "13d8b659b115a68f62d47ece7654ebb1baf0de4dd8c72b3b26fee09621e9eb04",
+    "methods": 537,
+    "changes": {
+      "call_targets": 1316,
+      "lifted_function_names": 46
+    },
+    "other_values_or_structure_changed": false
+  }
+}

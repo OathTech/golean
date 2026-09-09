@@ -177,21 +177,21 @@ func TestClassifyTextVocabulary(t *testing.T) {
 		`native frontend unsupported: package-selector call time.Date (package "time" surface not modeled)`:                                                       "stdlib-package-unmodeled",
 		`method Record.All (instantiation of imported generic type iter.Seq2[cedargo/types.String,cedargo/types.Value]; satisfaction answers, calls fail closed)`: "imported-generic-inst",
 		`method cedargo/types.Record.All is unsupported (instantiation of imported generic type iter.Seq2[x]) and its own SIGNATURE does not lower either (…)`:    "imported-generic-sig",
-		`range over func(yield func(int) bool)`:                                                                   "range-over-func",
-		`anonymous non-empty struct type struct{a int}`:                                                           "anon-struct",
+		`range over func(yield func(int) bool)`:         "range-over-func",
+		`anonymous non-empty struct type struct{a int}`: "anon-struct",
 		`builtin println operand 1 of type *int prints an address in gc (runtime/print.go printpointer/printslice/printeface/printiface) — the machine has no addresses; refused by name, permanently (stdlib slice 3; ledger §5.1 item 3)`: "print-builtin",
-		`builtin println operand 2 of type float64: floats and complex print through internal/strconv.AppendFloat ('g', -1, shortest round-trip) — not modeled this slice (stdlib slice 3; FR-29)`:                     "print-float",
-		`builtin print with zero operands (no machine shape this slice — the wide-statement mold has no nullary plan; FR-29)`:                                                                                     "print-zero-operands",
-		`fmt.Println is outside the modeled subset (modeled fmt direct-call members: Errorf, …)`:                  "stdlib-member-unmodeled",
-		`fmt.Sprintf verb %x over an argument of type rune is outside the modeled verb/kind matrix (format "%x")`: "fmt-verb-matrix",
-		`sync.Map (only Mutex/RWMutex/WaitGroup/Once are modeled)`:                                                "sync-unmodeled",
-		`goto function hoists a captured variable x`:                                                              "goto-hoist",
-		`goto target label L not at function body top level`:                                                      "goto-nested-label",
-		`basic type complex128`:                                                                                   "complex",
-		`duplicate TypeId main.T (a function-local type collides with another declaration)`:                       "duplicate-typeid",
-		`stdlib source-through: internal/stringslite.Clone needs unsafe.String (…)`:                               "stdlib-source-gap",
-		`references quarantined package-level variable maxDatetime (its initializer does not lower: …)`:           "quarantine-cascade",
-		`imported package-level variable time.UTC has no seeded cell`:                                             "stdlib-var-unmodeled",
+		`builtin println operand 2 of type float64: floats and complex print through internal/strconv.AppendFloat ('g', -1, shortest round-trip) — not modeled this slice (stdlib slice 3; FR-29)`:                                          "print-float",
+		`builtin print with zero operands (no machine shape this slice — the wide-statement mold has no nullary plan; FR-29)`:                                                                                                               "print-zero-operands",
+		`fmt.Println is outside the modeled subset (modeled fmt direct-call members: Errorf, …)`:                                                                                                                                            "stdlib-member-unmodeled",
+		`fmt.Sprintf verb %x over an argument of type rune is outside the modeled verb/kind matrix (format "%x")`:                                                                                                                           "fmt-verb-matrix",
+		`sync.Map (only Mutex/RWMutex/WaitGroup/Once are modeled)`:                                                                                                                                                                          "sync-unmodeled",
+		`goto function hoists a captured variable x`:                                                    "goto-hoist",
+		`goto target label L not at function body top level`:                                            "goto-nested-label",
+		`basic type complex128`:                                                                         "complex",
+		`duplicate TypeId main.T (a function-local type collides with another declaration)`:             "duplicate-typeid",
+		`stdlib source-through: internal/stringslite.Clone needs unsafe.String (…)`:                     "stdlib-source-gap",
+		`references quarantined package-level variable maxDatetime (its initializer does not lower: …)`: "quarantine-cascade",
+		`imported package-level variable time.UTC has no seeded cell`:                                   "stdlib-var-unmodeled",
 		// measured on cedar-go once FR-4 stopped killing the export (lane fr4-rowm, census §11)
 		`generic instantiation artifacts/cedar/cases/drv-eval-operators/cedargo/types/entity_uid.go:143:9`: "explicit-instantiation-call",
 		`method cedargo/x/exp/schema/internal/parser.lexer.skipWhitespaceAndComments (len of a potentially-panicking operand between a potentially-panicking operand to its left and a later ordered call/receive in the same statement (hoisting len would reorder the panics); satisfaction answers, calls fail closed)`: "len-hoist-panic-order",
@@ -913,5 +913,19 @@ func TestStencilTripwireAndWrapperStripping(t *testing.T) {
 	c, _ = classifyText("method main.box[int].render (FR-4: method stencil at this instantiation does not lower — frobnicate the widget sideways; satisfaction answers, calls fail closed)")
 	if c == nil || c.ID != "stencil-refusal" {
 		t.Fatalf("unknown inner cause must fall to stencil-refusal, got %v", c)
+	}
+}
+
+// [AGENT] Malformed method-table identities are frontend invariant failures,
+// not language gaps; no unclassified-vocabulary allowance is added.
+func TestMethodIdentityInvariantCauses(t *testing.T) {
+	if err := initCauses(); err != nil {
+		t.Fatal(err)
+	}
+	for _, text := range []string{"method table entry has no member identity", "method table entry has empty member or receiver identity"} {
+		cause, _ := classifyText(text)
+		if cause == nil || cause.ID != "frontend-invariant" {
+			t.Fatalf("%s: %v", text, cause)
+		}
 	}
 }

@@ -5,10 +5,11 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 [[ $# = 0 ]] || { echo 'check-method-identity: expected no arguments' >&2; exit 2; }
 . "$ROOT/scripts/typed-gate-scratch.sh"
-scripts/capped lake build MethodIdentityTests
+scripts/capped lake build MethodIdentityTests golean
 GOLEAN_METHOD_IDENTITY_FIXTURE="$gate_scratch/methods.json" \
   GOCACHE="$ROOT/artifacts/go-build-cache" GO111MODULE=off \
-  go test ./tools/nativefrontend -run '^Test(MemberIdentityCheckedObjects|ExecutableMemberIdentityFixture)$' -count=1 -v
+  go test ./tools/nativefrontend -run '^Test(MemberIdentityCheckedObjects|ExecutableMemberIdentityFixture|MethodFuncKey|InitQuarantinePreservesMemberIdentity)$' -count=1 -v
 scripts/capped lake env lean --run Tests/MethodIdentity.lean "$gate_scratch/methods.json"
 scripts/capped lake env python3 tools/method-identity-audit.py
+scripts/capped python3 tools/method-identity-dispatch.py
 printf '%s\n' 'Method identity gate: PASS'

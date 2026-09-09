@@ -11,7 +11,7 @@ package main
 //
 //	TypeId  main.Pair[main.Inner]     qualified origin + bracketed args
 //	FuncId  genericAdd[int]           bare declared name + bracketed args
-//	        main.box[int].Get        (methods: receiver TypeId + "." + name)
+//	        methodFuncKey(main.box[int], Get) (receiver + I1 member identity)
 //
 // Arguments render the way gc's LinkString spells them inside an
 // instantiation's bracket (cmd/compile/internal/types/fmt.go fmtTypeID;
@@ -602,12 +602,16 @@ func (e *emitter) flushTypeInsts(typeDefs, methods, funcs []any) ([]any, []any, 
 // only for the signature. A substitution failure surfacing as an Invalid
 // type (substErr) is re-raised — never a stub with a guessed signature.
 func (e *emitter) quarantinedStencilStub(work *typeInstWork, d *ast.FuncDecl, u unsupported) (map[string]any, error) {
+	member, memberErr := declarationObjectName(e.info.Defs[d.Name])
+	if memberErr != nil {
+		return nil, memberErr
+	}
 	env, targs, err := e.stencilEnv(work, d)
 	if err != nil {
 		return nil, err
 	}
 	savedSubst, savedName, savedErr, savedTargs, savedDecl := e.curSubst, e.curFuncName, e.substErr, e.curTargs, e.curInstDecl
-	e.curSubst, e.curFuncName, e.substErr, e.curTargs, e.curInstDecl = env, work.key+"."+d.Name.Name, nil, targs, d
+	e.curSubst, e.curFuncName, e.substErr, e.curTargs, e.curInstDecl = env, methodFuncKey(work.key, member), nil, targs, d
 	defer func() {
 		e.curSubst, e.curFuncName, e.substErr, e.curTargs, e.curInstDecl = savedSubst, savedName, savedErr, savedTargs, savedDecl
 	}()
@@ -652,15 +656,19 @@ func (e *emitter) stencilEnv(work *typeInstWork, d *ast.FuncDecl) (map[*types.Ty
 // instantiation: the environment binds the method's RECEIVER type
 // parameters (the only kind Go has — methods cannot add their own, spec
 // §Method declarations) to the instance's arguments; the FuncId is
-// receiverTypeId + "." + name, produced by the ordinary emitFuncDecl
-// receiver path through the substitution-aware namedTypeName.
+// derived by methodFuncKey from the instantiated receiver key and the
+// original checked member object, just like the ordinary receiver path.
 func (e *emitter) emitMethodInst(work *typeInstWork, d *ast.FuncDecl) (map[string]any, error) {
+	member, memberErr := declarationObjectName(e.info.Defs[d.Name])
+	if memberErr != nil {
+		return nil, memberErr
+	}
 	env, targsList, err := e.stencilEnv(work, d)
 	if err != nil {
 		return nil, err
 	}
 	return e.emitFuncInst(&funcInstWork{
-		mangled: work.key + "." + d.Name.Name, decl: d, env: env,
+		mangled: methodFuncKey(work.key, member), decl: d, env: env,
 		targs: targsList, unit: work.unit})
 }
 

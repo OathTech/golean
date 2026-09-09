@@ -5,6 +5,7 @@ import (
 	"go/token"
 	"go/types"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -76,6 +77,48 @@ func TestExecutableMemberIdentityFixture(t *testing.T) {
 		}
 		if err := os.WriteFile(path, append(data, '\n'), 0600); err != nil {
 			t.Fatal(err)
+		}
+	}
+}
+
+// Cross-language vector pinned by Tests.MethodIdentity.utf8_target_vector.
+func TestMethodFuncKey(t *testing.T) {
+	if got := methodFuncKey("main.Δ", memberID{Name: "é", Package: "p"}); got != "$method$7:main.Δ1:pé" {
+		t.Fatalf("UTF-8 target vector: %q", got)
+	}
+	seen := map[string]string{}
+	for _, recv := range []string{"main.Mix", "main.Δ", "r:1", "r1:", "r"} {
+		for _, id := range []memberID{{Name: "m", Package: "red/inner"}, {Name: "m", Package: "blue/inner"}, {Name: "é", Package: "p"}, {Name: "É"}, {Name: "𐐀"}, {Name: "m", Package: "1:p"}} {
+			label := recv + " / " + id.Package + " / " + id.Name
+			key := methodFuncKey(recv, id)
+			if old, ok := seen[key]; ok {
+				t.Fatalf("target collision %s / %s", old, label)
+			}
+			seen[key] = label
+		}
+	}
+}
+
+// [AGENT] Init reachability is conservative over receiver/signature but exact
+// over private member identity: an unrelated private method cannot poison it.
+func TestInitQuarantinePreservesMemberIdentity(t *testing.T) {
+	p := memberID{Name: "m", Package: "red/inner"}
+	q := memberID{Name: "m", Package: "blue/inner"}
+	body := map[string]any{"stmt": "block", "body": []any{}}
+	for _, anchorMember := range []memberID{p, q} {
+		anchorKey := methodFuncKey("main.I", anchorMember)
+		funcs := []any{map[string]any{"name": "$pkginit", "body": map[string]any{"expr": "call", "func": anchorKey}}}
+		methods := []any{
+			map[string]any{"recvType": "main.I", "id": anchorMember, "interface": true},
+			map[string]any{"recvType": "main.Mix", "id": p, "body": body},
+			map[string]any{"recvType": "main.Mix", "id": q, "unsupported": "identity control quarantine"},
+		}
+		err := checkInitQuarantine(funcs, methods)
+		if anchorMember == p && err != nil {
+			t.Fatalf("foreign private member poisoned init: %v", err)
+		}
+		if anchorMember == q && (err == nil || !strings.Contains(err.Error(), "identity control quarantine")) {
+			t.Fatalf("matching private quarantine did not block init: %v", err)
 		}
 	}
 }

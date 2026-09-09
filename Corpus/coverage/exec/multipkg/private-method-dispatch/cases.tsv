@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+# [AGENT] FR-31 / BUG-098: package-correct matching AND distinct promoted bodies.
+promoted-bodies	promotedBodies	-	ok	-	multipackage,imports,identity,interfaces,embedding,functions,methods,calls
+deep-alias	deepAndAlias	-	ok	-	multipackage,imports,identity,interfaces,embedding,aliases,comma_ok,methods,calls
+embedded-interfaces	embeddedInterfaces	-	ok	-	multipackage,imports,identity,interfaces,embedding,functions,methods,calls
+pointer-sets	pointerSets	-	ok	-	multipackage,imports,identity,interfaces,embedding,pointers,comma_ok,methods,calls
+generic-bodies	genericBodies	-	ok	-	multipackage,imports,identity,interfaces,embedding,generics,closures,methods,calls
+unicode	unicodeBodies	-	ok	-	multipackage,imports,identity,interfaces,embedding,unicode,methods,calls
+concrete-values	concreteValues	-	ok	-	multipackage,imports,identity,interfaces,functions,methods,calls
+constrained-methods	constrainedMethods	-	ok	-	multipackage,imports,identity,interfaces,embedding,generics,functions,methods,calls

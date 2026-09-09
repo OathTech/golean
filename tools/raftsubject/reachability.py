@@ -17,12 +17,13 @@ queried declaration as LIVE (reachable) or dead (not reachable from any entry).
 DIRECTION OF THE APPROXIMATION, stated because a liveness verdict is evidence:
 
   * Statically resolved calls and function VALUES are exact — the wire records
-    `{"expr":"call","func":"raft.raft.appendEntry"}` and
-    `{"expr":"func-value","func":"raft.stepLeader"}`, which is what the machine
+    receiver/member-derived method targets and ordinary function keys, which
+    are what the machine
     will actually execute.
   * INTERFACE dispatch is over-approximated: a call to an interface method
-    `I.m` adds an edge to EVERY concrete method named `m` in the wire.  The
-    wire names the interface's method, not the dynamic target, and the
+    anchor adds an edge to EVERY concrete method with the SAME package/name
+    member identity in the wire. The receiver and signature remain an
+    over-approximation: the wire records the anchor, not the dynamic target. The
     alternative (implementing method-set matching here) would re-derive what
     the machine decides at run time.
   * A QUARANTINED declaration has no body on the wire, so it is a SINK: its
@@ -55,12 +56,45 @@ def collect_edges(node, out):
             collect_edges(v, out)
 
 
+def member_id(method):
+    id = method["id"]
+    return (id["package"], id["name"])
+
+
+def method_key(method):
+    receiver = method["recvType"]
+    package, name = member_id(method)
+    return "$method$" + str(len(receiver.encode("utf-8"))) + ":" + receiver + str(len(package.encode("utf-8"))) + ":" + package + name
+
+
+def declaration_labels(wire):
+    labels = {f["name"]: f["name"] for f in wire.get("funcs", [])}
+    labels.update({method_key(m): m["recvType"] + "." + m["id"]["name"]
+                   for m in wire.get("methods", [])})
+    return labels
+
+
+def resolve_entries(wire, entries):
+    """Resolve display conveniences from records, refusing ambiguous labels."""
+    labels = declaration_labels(wire)
+    resolved = []
+    for entry in entries:
+        if entry in labels:
+            resolved.append(entry)
+            continue
+        matches = [key for key, label in labels.items() if label == entry]
+        if len(matches) > 1:
+            raise ValueError("ambiguous method entry " + entry + "; use a full target id")
+        resolved.append(matches[0] if matches else entry)
+    return resolved
+
+
 def load(path):
     wire = json.load(open(path))
     bodies = {}          # qualified name -> set of callee names
     quarantined = {}     # qualified name -> refusal text
-    iface_methods = set()  # method names declared on an interface type
-    by_method_name = {}  # bare method name -> [qualified names] (concrete only)
+    iface_methods = {}  # target -> package/name member declared on an interface
+    by_member = {}  # package/name member -> concrete target ids
 
     for f in wire.get("funcs", []):
         name = f.get("name")
@@ -73,12 +107,12 @@ def load(path):
         bodies[name] = edges
 
     for m in wire.get("methods", []):
-        name = "%s.%s" % (m.get("recvType"), m["id"]["name"])
+        name = method_key(m)
         if m.get("interface"):
-            iface_methods.add(name)
+            iface_methods[name] = member_id(m)
             bodies.setdefault(name, set())
             continue
-        by_method_name.setdefault(m["id"]["name"], []).append(name)
+        by_member.setdefault(member_id(m), []).append(name)
         if "unsupported" in m:
             quarantined[name] = m["unsupported"]
             bodies.setdefault(name, set())
@@ -87,14 +121,13 @@ def load(path):
         collect_edges(m.get("body"), edges)
         bodies[name] = edges
 
-    # Interface dispatch: an edge to I.m stands for an edge to every concrete
-    # method named m (see the docstring's approximation note).
+    # Interface dispatch expands by full member identity; receiver and
+    # signature are conservatively over-approximated (see the docstring).
     for name in list(bodies):
         expanded = set()
         for callee in bodies[name]:
             if callee in iface_methods:
-                bare = callee.rsplit(".", 1)[-1]
-                expanded.update(by_method_name.get(bare, []))
+                expanded.update(by_member.get(iface_methods[callee], []))
         bodies[name] |= expanded
 
     return wire, bodies, quarantined
@@ -140,14 +173,15 @@ def main():
     args = ap.parse_args()
 
     wire, bodies, quarantined = load(args.wire)
-    entries = [e.strip() for e in args.entries.split(",") if e.strip()]
+    entries = resolve_entries(wire, [e.strip() for e in args.entries.split(",") if e.strip()])
     pred = reach(bodies, entries)
 
     if args.query:
         names = [ln.strip() for ln in open(args.query) if ln.strip()]
     else:
         skip = tuple(p for p in args.skip_prefix.split(",") if p)
-        names = [n for n in sorted(quarantined) if not n.startswith(skip)]
+        labels = declaration_labels(wire)
+        names = [n for n in sorted(quarantined) if not labels[n].startswith(skip)]
 
     live = 0
     print("# entries: %s" % ", ".join(entries))

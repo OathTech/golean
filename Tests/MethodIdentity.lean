@@ -121,15 +121,50 @@ private def satisfactionControls : IO Unit := do
     | .error e => check (!req.id.package.isEmpty && e.status == "unsupported") "public Unicode requirement refused"
   IO.println "Method satisfaction: PASS; 1620 identity/signature/receiver cells; full/exported/absent coverage and bare display"
 
+theorem private_targets_are_distinct :
+    methodFuncId "main.Mix" ⟨"m", "red/inner"⟩ ≠
+      methodFuncId "main.Mix" ⟨"m", "blue/inner"⟩ := by decide +kernel
+
+theorem utf8_target_vector :
+    (methodFuncId "main.Δ" ⟨"é", "p"⟩).key = "$method$7:main.Δ1:pé" := by decide +kernel
+
+private def receiverControls : IO Unit := do
+  let named := fun name => Json.mkObj [("kind", .str "named"), ("name", .str name)]
+  let pointer := fun elem => Json.mkObj [("kind", .str "pointer"), ("elem", elem)]
+  let iface := fun name => Json.mkObj [("kind", .str "interface"), ("name", .str name)]
+  let sync := Json.mkObj [("kind", .str "sync"), ("sync", .str "Mutex")]
+  let receiverMethod := fun key ty => do
+    let obj ← (method (member "M" "")).getObj?
+    return Json.mkObj ((obj.toList.filter fun x => x.1 != "recv" && x.1 != "recvType") ++
+      [("recvType", .str key), ("recv", Json.mkObj [("id", .str "$recv"), ("type", ty)])])
+  for (key, ty) in [("main.T", named "main.T"), ("main.T", pointer (named "main.T")),
+      ("main.I", iface "main.I"), ("sync.Mutex", sync), ("sync.Mutex", pointer sync)] do
+    let m ← IO.ofExcept (receiverMethod key ty)
+    check (NativeToIR.decodeProgram (program #[] #[m])).isOk "valid receiver identity refused"
+  for (key, ty) in [("main.I", named "main.T"), ("main.T", named "main.I"),
+      ("main.T", iface "main.I"), ("main.I", pointer (iface "main.I")),
+      ("sync.Once", sync), ("sync.Once", pointer sync),
+      ("main.T", pointer (pointer (named "main.T")))] do
+    let m ← IO.ofExcept (receiverMethod key ty)
+    reject (program #[] #[m]) "program.methods[0].recvType / program.methods[0].recv.type"
+      "method receiver identity disagrees"
+  reject (program #[] #[method (member "m" "p"), method (member "m" "p")])
+    "duplicate function id" "$method$6:main.T1:pm"
+  check (NativeToIR.decodeProgram
+    (program #[] #[method (member "m" "p"), method (member "m" "q")])).isOk
+    "distinct promoted function ids collided"
+  IO.println "Method targets: PASS; UTF-8 key vector, receiver agreement, duplicate target control"
+
 def main (args : List String) : IO Unit := do
   satisfactionControls
+  receiverControls
   let [fixture] := args | throw (IO.userError "expected fresh executable member fixture")
   let p ← IO.ofExcept (NativeToIR.decodeProgram (← IO.ofExcept
     (StrictJson.parseBytes (← IO.FS.readBinFile fixture))))
   for recv in ["main.T", "main.S", "main.I"] do
     for (name, pkg) in [("m", "main"), ("M", ""), ("é", "main"), ("É", ""),
         ("ǅ", "main"), ("𐐀", "")] do
-      check (p.methods.any fun m => m.funcId.key == recv ++ "." ++ name &&
+      check (p.methods.any fun m => m.funcId == methodFuncId recv ⟨name, pkg⟩ &&
         m.id == Declaration.MemberId.mk name pkg) s!"lost checked identity {recv}.{pkg}:{name}"
   for (name, pkg) in [("M", ""), ("É", ""), ("Σ", ""), ("𐐀", ""),
       ("m", "red/inner"), ("é", "blue/inner"), ("ǅ", "main")] do

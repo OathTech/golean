@@ -124,14 +124,14 @@ def census(wire_path):
     for m in wire.get("methods", []):
         if "unsupported" not in m:
             continue
-        name = "%s.%s" % (m.get("recvType"), m["id"]["name"])
-        (imported if name.startswith(IMPORTED_PREFIXES) else subject)[name] = m["unsupported"]
+        name = reachability.method_key(m)
+        (imported if m["recvType"].startswith(IMPORTED_PREFIXES) else subject)[name] = m["unsupported"]
     return subject, imported
 
 
 def liveness(wire_path, names):
-    _, bodies, _ = reachability.load(wire_path)
-    pred = reachability.reach(bodies, ENTRIES)
+    wire, bodies, _ = reachability.load(wire_path)
+    pred = reachability.reach(bodies, reachability.resolve_entries(wire, ENTRIES))
     return {n: reachability.path_of(pred, n) for n in names if n in pred}
 
 
@@ -156,16 +156,17 @@ def locate(tree, qualified):
     return None
 
 
-def flatten(tree, dead):
+def flatten(tree, dead, labels):
     """PASS-2 tree surgery: neutralise the dead, flatten the live causes."""
     skipped = []
-    for name in sorted(dead):
+    for target in sorted(dead):
+        name = labels[target]
         p = locate(tree, name)
         if p is None:
             # A promoted stub (MemoryStorage.Lock/TryLock/Unlock) has no source
             # declaration to neutralise; it is the G-6 cause seen from the
             # method-set side and the mutex flattening below covers it.
-            skipped.append(name)
+            skipped.append(target)
             continue
         frontier.neutralise(p, ".".join(name.split(".")[1:]))
 
@@ -238,6 +239,7 @@ def main():
         sys.exit("sweep.py: PASS 1 did not export cleanly — the plan is stale "
                  "against this frontend.  Run frontier.py to see where.\n%s" % err)
     subject1, imported1 = census(wire1)
+    labels1 = reachability.declaration_labels(json.load(open(wire1)))
     live1 = liveness(wire1, subject1)
     dead1 = sorted(set(subject1) - set(live1))
     # The W4.1 done criterion's clause 2: imported declaration-only
@@ -268,7 +270,7 @@ def main():
         work2 = os.path.join(args.out, "pass2")
         shutil.rmtree(work2, ignore_errors=True)
         shutil.copytree(work, work2)
-        counts, skipped = flatten(work2, sorted(set(subject1) - set(live)))
+        counts, skipped = flatten(work2, sorted(set(subject1) - set(live)), labels1)
         wire2 = os.path.join(args.out, "pass2.json")
         dropped, err = drain_imports(args.frontend, work2, wire2)
         if err:

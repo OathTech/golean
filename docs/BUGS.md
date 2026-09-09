@@ -5919,11 +5919,33 @@ identity defect on its own line since it is a wrong-answer class, not a coverage
 
 ## BUG-098 — UNEXPORTED interface method names are package-scoped in Go but BARE on the wire: a requirement `get` declared in one package would be judged satisfied by a concrete `get` from another — a wrong satisfaction answer, refused whole-export by a guard until the names are qualified [fidelity; frontend + machine identity; multipkg; found by the fr19-bug097 gc probes (P3/P5)]
 
-- Status: open
-- Pinned-by: none (all rows are RED BY DESIGN at frontend-export: the guard `checkUnexportedMethodScopes` (identity.go) refuses `unexported interface method name(s) shared across packages: get (required by blue/inner, implemented in red/inner); get (required by red/inner, implemented in blue/inner) …`; nothing on the wire answers) [AGENT]
-- Expect: FAIL
-- Cases: multipkg/unexported-method-scope/assert-panic, multipkg/unexported-method-scope/distinct, multipkg/unexported-method-scope/distinct-names
+- Status: fixed (2026-09-09, `fix/package-method-identity` [AGENT]; I1 member identity from emission through matching and callable target ids)
+- Pinned-by: differential (three original rows plus eight `multipkg/private-method-dispatch/*` controls)
+- Cases: multipkg/unexported-method-scope/assert-panic, multipkg/unexported-method-scope/distinct, multipkg/unexported-method-scope/distinct-names, multipkg/private-method-dispatch/promoted-bodies, multipkg/private-method-dispatch/deep-alias, multipkg/private-method-dispatch/embedded-interfaces, multipkg/private-method-dispatch/pointer-sets, multipkg/private-method-dispatch/generic-bodies, multipkg/private-method-dispatch/unicode, multipkg/private-method-dispatch/concrete-values, multipkg/private-method-dispatch/constrained-methods
 - Discovered: 2026-09-05 (lane `fr19-bug097`, gc probe P3: `types.TypeString` never qualifies unexported interface METHOD names, even with a qualifier — so BUG-097's planned one-liner would have left this fusion class; P5: gc answers `true false` for red's `interface{ get() int }` vs blue's on a red value)
+
+[AGENT] 2026-09-09 repair: executable `MethodSig.id` and `MethodInfo.id` use
+I1 `Declaration.MemberId`; the shared checked-object producer and strict
+decoder preserve the original private declaring package. Satisfaction and
+all lookup consumers compare this identity; generated method function ids,
+interface anchors and promotion deduplication derive from receiver plus the
+same member. Both promoted `p.m` and `q.m` survive and reach distinct bodies.
+Bare missing-method text is unchanged. The whole-export guard and its static
+diagnostic twin are retired. Pointer/value sets, nested promotion, embedded
+interfaces, generic closures, Unicode and method values/expressions are pinned.
+Design, source-bound full/slow gates, twin reasons and Cedar scope:
+`docs/2026-09-08_method-identity-design.md`.
+
+The historical proposed repair below was insufficient: receiver identity alone
+cannot distinguish two different private members promoted onto ONE receiver.
+Its instruction to leave FuncIds untouched is superseded by this repair. The
+fresh Cedar before/after evidence also corrects the historical census wording:
+17 declarations = 8 ast methods + 7 resolved methods + 2 interfaces; 8/24 is the
+combined static Cedar scope (including a stand-in and synthetic main), not eight
+independently refused library exports. The ast package alone already exported.
+
+Historical discovery and guard rationale (2026-09-05 snapshot; superseded
+implementation and census claims are retained as history):
 
 WHAT (spec#Type_identity: two interface types are identical iff they have the same
 set of methods with the same names and identical signatures, where NON-EXPORTED

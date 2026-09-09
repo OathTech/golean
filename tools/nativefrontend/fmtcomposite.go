@@ -122,19 +122,19 @@ func (e *emitter) fmtCompositeTopLift(fn string, plus bool, t types.Type) (strin
 // false), so fmt SKIPS method consultation for it — but WHICH bit is
 // set decides whether the suppression is inherited:
 //
-//	// reflect/value.go, Value.Field:
-//	fl := v.flag&(flagStickyRO|flagIndir|flagAddr) | flag(typ.Kind())
-//	if !field.name.IsExported() {
-//	    if field.embedded() { fl |= flagEmbedRO } else { fl |= flagStickyRO }
-//	}
+//		// reflect/value.go, Value.Field:
+//		fl := v.flag&(flagStickyRO|flagIndir|flagAddr) | flag(typ.Kind())
+//		if !field.name.IsExported() {
+//		    if field.embedded() { fl |= flagEmbedRO } else { fl |= flagStickyRO }
+//		}
 //
-//   - `sticky` = flagStickyRO — set by crossing a NON-EMBEDDED
-//     unexported field, and INHERITED by the whole subtree below it
-//     (Field propagates exactly this bit).
-//   - `embedRO` = flagEmbedRO — set by crossing an EMBEDDED unexported
-//     field. CanInterface is false AT THAT LEVEL (so no method arm
-//     there), but Field does NOT propagate it: the embedded struct's
-//     own exported fields start clean and their methods ARE consulted.
+//	  - `sticky` = flagStickyRO — set by crossing a NON-EMBEDDED
+//	    unexported field, and INHERITED by the whole subtree below it
+//	    (Field propagates exactly this bit).
+//	  - `embedRO` = flagEmbedRO — set by crossing an EMBEDDED unexported
+//	    field. CanInterface is false AT THAT LEVEL (so no method arm
+//	    there), but Field does NOT propagate it: the embedded struct's
+//	    own exported fields start clean and their methods ARE consulted.
 //
 // Every OTHER descent (Index/Elem/MapIndex) goes through `flag.ro()`,
 // which collapses EITHER bit to sticky — so the slice lift below is
@@ -201,6 +201,10 @@ func (e *emitter) fmtRenderValue(fn string, plus bool, t types.Type, val any,
 				if !okFn || len(index) != 1 {
 					return nil, nil, unsup("fmt.%s verb %s: composite leaf %s's %s method is promoted or missing (outside the modeled subset)", fn, verbName, t, methodName)
 				}
+				member, err := declarationObjectName(mfn)
+				if err != nil {
+					return nil, nil, err
+				}
 				recvT := mfn.Type().(*types.Signature).Recv().Type()
 				if _, pointerRecv := recvT.(*types.Pointer); pointerRecv {
 					return nil, nil, unsup("fmt.%s verb %s: composite leaf %s implements %s via a pointer receiver (outside the modeled composite subset)", fn, verbName, t, methodName)
@@ -210,7 +214,7 @@ func (e *emitter) fmtRenderValue(fn string, plus bool, t types.Type, val any,
 					return nil, nil, unsup("fmt.%s verb %s: composite leaf method on unnameable type %s", fn, verbName, t)
 				}
 				mv := map[string]any{"expr": "func-value",
-					"func": typeName + "." + methodName, "captured": []any{val}}
+					"func": methodFuncKey(typeName, member), "captured": []any{val}}
 				stmts, piece := bindCall(shimCall("goleanShimFmtRender",
 					stringLitNode("v"), stringLitNode(methodName),
 					map[string]any{"expr": "bool", "value": false}, mv))

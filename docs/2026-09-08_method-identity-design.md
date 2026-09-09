@@ -132,3 +132,115 @@ controls distinguish full, exported-only and absent method-set records and
 require bare missing-method display, including Unicode names. The imported
 audit now pins six compiled poisons, adding the core lookup and syntax modules.
 The decoder and frontend BUG-098 guard are unchanged in this stage.
+
+[AGENT] Stage 2 source commit is recorded in
+[`stage2-green.json`](evidence/2026-09-08_method-identity/stage2-green.json).
+The exact staged tree passed full capped CI `--diff` in **1225.624 seconds**,
+with no drift across 3,654 executable and 394 negative rows. Its method step
+cost **28.811 seconds**, including all six compiled audit controls. Slow-tier
+observations were checked against their tracked certified set in this stage;
+the frontend and decoder had no new stage-2 changes.
+
+## Stage 3 — callable targets and dispatch
+
+[AGENT] 2026-09-09. All executable method targets now use one derived
+constructor: Go `methodFuncKey(receiver, memberID)` and Lean
+`methodFuncId(receiver, Declaration.MemberId)`. The serialized internal key
+is `$method$<receiver UTF-8 byte length>:<receiver><package UTF-8 byte length>:<package><name>`.
+The receiver is the existing supported type key; the package/name is the
+same I1 member record carried by the method and its requirements. Original
+checked objects survive constrained selection and late interface-anchor
+registration. The constructor is used for ordinary and generic methods,
+promotion deduplication and forwarding, method values/expressions, interface
+anchors, fmt adapters, and generated children of method bodies.
+
+Injectivity on emitted keys: the reserved prefix identifies the method
+namespace; the canonical decimal length and colon delimit the exact receiver
+bytes, then the next length delimits the package bytes; the remainder is the
+Go member identifier. Equal serialized keys therefore have equal receivers,
+packages and names. Valid Go identifiers contain no `$`, so generated child
+suffixes (`$lit`, `$fmt`, `$once…`, and the other fixed helper constructors)
+cannot alias a real member identifier. Ordinary source function keys cannot
+start in this reserved namespace under the existing admitted path grammar;
+other synthetic roots use distinct prefixes. The decoder retains its whole
+function-table duplicate-id rejection for forged wires. This is an internal
+callable-target encoding derived from I1 identity, not another member schema
+or a Go-visible type spelling. Go and Lean pin the same Unicode vector:
+`main.Δ` / `p.é` → `$method$7:main.Δ1:pé`.
+
+The receiver has two necessary wire views: `recvType` determines the target
+key and `recv.type` determines method resolution. Their historical unchecked
+duplication (J-37) is closed at the decoder: the outer receiver key must agree
+with the decoded named-type index, interface key or modeled sync kind, with
+the supported single pointer layer. Named malformed controls swap either
+view and exercise pointer/interface/sync shapes. This does not claim full Go
+typing or redesign TypeId; it prevents these two dispatch identity channels
+from disagreeing.
+
+Promotion remains the current frontend wrapper implementation. In the future
+G-P design, the method-set record still names the original member independently
+of its receiver path. Native path resolution can return the same derived
+callable targets or ordinary declaring-body targets, so G-P can replace
+wrapper construction without changing member identity or display semantics.
+
+The init-quarantine graph and raft graph readers also key interface expansion
+by full member identity. Receiver/signature expansion remains conservative.
+Raft tooling resolves legacy entry/display labels from records, refuses an
+ambiguous private label, and uses receiver records for source lookup and
+imported-stub classification; it never parses the new target as a Go display.
+The lowerdiag method listing remains source-declaration display (promotion
+wrappers and interface anchors are excluded there).
+
+The BUG-098 whole-export guard and its static diagnostic twin retire only in
+this final stage. Its historical dynamic cause text stays as a regression
+tripwire. Eight new differential rows cover actual distinct results through
+promotion, nested/aliased receivers, embedded interfaces, pointer method sets,
+generic methods and closures, Unicode, method values/expressions and constrained
+calls. The three original BUG-098 observations and expected panic text are
+unchanged. The standing method gate executes the fresh wire with the production
+CLI, checks graph separation, and pins two compiled producer corruptions:
+
+- Erasing private package identity: compilation and export succeed; production
+  decode rejects `.id: unexported member has no package identity`.
+- Collapsing only promotion deduplication to a bare member name: compilation
+  and export succeed; execution rejects `dynamic type main.Mix has no method m`.
+
+These behavioral controls complement six compiled audit poisons (unused
+private axioms and a proof hole, rejected by declaration name). Successful
+scratch is removed, dependencies are symlinked, and failed scratch keeps its
+cause and subprocess logs. Re-certification cost and full-run drift are
+recorded below before any final source commit.
+
+[AGENT] The first full stage-3 run caught five existing PASS→stuck regressions:
+`fmt/fprint-writers/{buffer-single,builder-single,fprintf-buffer-shape}` and
+`fmt/fprintf-builder/{describe-shape,returns}`. The writer-selection helper
+still returned literal `strings.Builder.WriteString` / `bytes.Buffer.WriteString`
+targets. It now resolves the checked `WriteString` method object and uses the
+same member/target constructors. No baseline or expected observation was changed
+to accept these failures. The recorded initial run was 540.596 seconds, with all
+three BUG-098 rows and all eight new controls green, and the unchanged slow set;
+[`stage3-initial-full.json`](evidence/2026-09-08_method-identity/stage3-initial-full.json).
+A new Go graph control also pins that an unrelated private quarantine cannot
+poison package initialization, while the matching member's quarantine does.
+
+## Stage 3 pin reason and complete measurement
+
+[AGENT] The corrected full differential/slow run took **543.844 seconds**.
+Its process exit is 1 because the remaining 248 designed-red baseline cases
+are FAIL. The complete comparison establishes exactly three original BUG-098
+FAIL→PASS flips and eight new PASS rows: **3662 = 3414 PASS / 248 FAIL**.
+There are no PASS→non-PASS changes, removed cases, or other result/stage drift;
+all 394 negative cases match. The fresh slow graph again certifies the same
+six observations, 6,193,933 nodes and 6,565,663 edges. The corresponding baseline
+update preserves every existing alternation and its reason block.
+
+The fresh twin changes exactly **1,316 call targets and 46 generated child
+function names**. Each changed value decodes back to its old receiver/name
+form; all other values, structure and ordering are unchanged. Its SHA-256
+moves from `a225ea8a40a78dc3e83241520706f6a85e0675cdedab49de2b5f973ca0c7a46c`
+to `13d8b659b115a68f62d47ece7654ebb1baf0de4dd8c72b3b26fee09621e9eb04`.
+The I1 declaration fixture and the slow wire/set pins remain unchanged.
+The source-bound record precedes both updates:
+[`stage3-before-repin.json`](evidence/2026-09-08_method-identity/stage3-before-repin.json).
+Full capped CI with fresh slow certification is still required before the
+stage-3 source commit; final clean-source evidence follows that commit.
