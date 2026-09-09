@@ -1,0 +1,206 @@
+{
+  "base_main": "8cc3d5c8512e78b1190f1997ec774dad5e4acdc9",
+  "cached_sampling": {
+    "claim": "Go samples and driver coupling checked; no claim all six members were sampled",
+    "draws": 32,
+    "exhibited": 5,
+    "members": 6,
+    "unexhibited": 1
+  },
+  "certification": {
+    "receipt": {
+      "binary_sha256": "18beb979fbcc90fe3f13d5f659ed27c515c25840e3ad37db80c717c2bfea7ba4",
+      "captured_exit": 0,
+      "certifier": "tools/certification.py",
+      "command": [
+        "golean",
+        "coverage-observations",
+        "--input",
+        "<wire>",
+        "--function",
+        "goleanGoogle",
+        "--max-width",
+        "4",
+        "--max-sites",
+        "48",
+        "--cap",
+        "64",
+        "--work-cap",
+        "60000000",
+        "--expect-status",
+        "ok",
+        "--engine",
+        "dedup"
+      ],
+      "finished_utc": "2026-09-09T22:57:32.195148+00:00",
+      "git_dirty": false,
+      "source_commit": "7d60c8bf12ef5d34d1ef9901c213cd724926d78f",
+      "started_utc": "2026-09-09T22:54:52.343217+00:00",
+      "stats_sha256": "68f3d503a2249b48df1e7acd687ce8a694c633f25db743f92f450ca1eddbfc92",
+      "wall_seconds": 157.464
+    },
+    "record": "baselines/certified/imported-goose__channel__google-search.certified.json",
+    "record_sha256": "2bf64db283b5c4e77c9f6dc474d7692d70e12eba0a009f83d6bb85f34a38c4fc",
+    "stats": "coverage-observations: observations=6 steps=6565663 probes=0 sites=6193933 leaves=0 maxdepth=0 width=4 engine=dedup nodes=6193933 edges=6565663 dedupHits=371731 certified=checkCert"
+  },
+  "clean_corpus_artifacts": {
+    "latest.meta.tsv": {
+      "bytes": 740,
+      "sha256": "37258ada4736d24fcc66a09d28b2f2a7a2c2e2cd7f1f97d94119132f1f2dfbeb"
+    },
+    "latest.tsv": {
+      "bytes": 561925,
+      "sha256": "62df0909cc2cceefb349cbf97313a50d0414396c37c3c01409c7d414a9b2580c"
+    },
+    "negative-latest.meta.tsv": {
+      "bytes": 372,
+      "sha256": "8ff017f42b13d27dd2732086b93a6152c9ab2147d5080277b89d4e623979420d"
+    },
+    "negative-latest.tsv": {
+      "bytes": 30826,
+      "sha256": "16e489a805e7530e6d961b27620a93c416c6d91373a608fedacef5281eb8d204"
+    }
+  },
+  "controls": {
+    "new_ci_step_seconds": 73,
+    "passed": 68,
+    "scope": "compiled Ops diagnostic mutation at unchanged wire; both shell cache consumers; complete confluent positive/negative runner; real timeout; injected failure with preserved stderr; schema/claim/input/coverage/release controls",
+    "successful_scratch": "removed; dependency oleans symlinked, not copied",
+    "wall_seconds": 61.32
+  },
+  "envelope": {
+    "build_state": "warm symlink dependency overlay; owned Main/executable outputs",
+    "cache_probe_workers": 1,
+    "full_corpus_workers": 12,
+    "lean_threads": 3,
+    "memory": "32G"
+  },
+  "invariants": {
+    "certified_members": 6,
+    "golean_and_tests_source_changes": 0,
+    "native": {
+      "pass": 3417,
+      "rows": 3665,
+      "sha256": "13839ad5e4ef59d7a88de86b3c45503c6ac0f56bfc7c793fa65aae7403668f46",
+      "tracked_fail": 248
+    },
+    "negative": {
+      "pass": 394,
+      "rows": 394,
+      "sha256": "21a0e9bd9776fe9321da90ba25195126dc0d581dd0a2abdc7789d9cd72646a27"
+    },
+    "observations_sha256": "e40ba07d11827b48aa8c9246bd84d6c21849159983d46c47b793b5759cfbbfd8",
+    "params": "width=4,sites=48,work=60000000,members=6,engine=dedup,tier=slow",
+    "wire_sha256": "2f1d639f2042466f50b61ab117db5b39629c425f733650b9be992c0b85beefcc"
+  },
+  "inventory": {
+    "apparatus_files": 186,
+    "build_files": 105,
+    "inputs_sha256": "2fd17f08bbb8b9438a0e99ae1a1a8ea85118cf057fb4c46de5f98bd6cd54e9d7",
+    "toolchain_files": 12271
+  },
+  "provenance": "[AGENT] 2026-09-09; measured, not estimated",
+  "reconciliation": {
+    "C9_findings": 0,
+    "high_findings": 0,
+    "remaining": [
+      {
+        "check": "C5",
+        "message": "1 frontier-table case citation(s) do not resolve against the baseline",
+        "severity": "medium"
+      },
+      {
+        "check": "C13",
+        "message": "78 doc site(s) across 9 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.",
+        "severity": "medium"
+      }
+    ]
+  },
+  "release_checks": {
+    "7d60c8bf": {
+      "captured_exit": 0,
+      "expected_exit": 0,
+      "output": "No certification inputs/claims changed since pre-merge tip 7d60c8bf12ef5d34d1ef9901c213cd724926d78f\n"
+    },
+    "8cc3d5c8": {
+      "captured_exit": 1,
+      "expected_exit": 1,
+      "output": "Recertification required: certification records added/removed since pre-merge tip\n"
+    }
+  },
+  "review": {
+    "independent_adversarial_review": "pending user",
+    "merge": "not authorized",
+    "push": "not authorized"
+  },
+  "runs": {
+    "build-cost": {
+      "captured_exit": 0,
+      "git_dirty": false,
+      "log": {
+        "bytes": 153,
+        "path": "artifacts/f8/ci-build-cost.log",
+        "sha256": "bdbdc8d9267cb6e8350c37682234d78b68018f7410a34f503d1c41990b5201e4"
+      },
+      "source_commit": "7d60c8bf12ef5d34d1ef9901c213cd724926d78f",
+      "wall_seconds": 5.153
+    },
+    "cache-only": {
+      "captured_exit": 0,
+      "git_dirty": false,
+      "log": {
+        "bytes": 90,
+        "path": "artifacts/f8/ci-cache-only.log",
+        "sha256": "b04bdfbb488804dbfaba6eac75fede5b075a119b476d4fd79fc57ab9c104ddcc"
+      },
+      "source_commit": "7d60c8bf12ef5d34d1ef9901c213cd724926d78f",
+      "wall_seconds": 5.035
+    },
+    "cached": {
+      "captured_exit": 0,
+      "git_dirty": false,
+      "log": {
+        "bytes": 1012,
+        "path": "artifacts/f8/ci-cached.log",
+        "sha256": "f325ae1fcbcc57f054e215779be819b56ae98cb8db34451a41c855d6865c3cb3"
+      },
+      "source_commit": "7d60c8bf12ef5d34d1ef9901c213cd724926d78f",
+      "wall_seconds": 31.386
+    },
+    "clean": {
+      "captured_exit": 0,
+      "git_dirty": false,
+      "log": {
+        "bytes": 94059,
+        "path": "artifacts/f8/ci-clean.log",
+        "sha256": "d0c304c13219354863653ded6ab406756303ec746e5891ca840d96916512d5cb"
+      },
+      "source_commit": "7d60c8bf12ef5d34d1ef9901c213cd724926d78f",
+      "wall_seconds": 1204.046
+    },
+    "precommit": {
+      "captured_exit": 0,
+      "git_dirty": true,
+      "log": {
+        "bytes": 94264,
+        "path": "artifacts/f8/ci-precommit.log",
+        "sha256": "e8677802501638b2b91263171a36d740a309b5ff09c3c17e46cf1bf3f57e6ee6"
+      },
+      "source_commit": "051355d0a9aa81570939711fcf9c9b2a1b9a9a65",
+      "wall_seconds": 1179.888
+    },
+    "record-check": {
+      "captured_exit": 0,
+      "git_dirty": false,
+      "log": {
+        "bytes": 175,
+        "path": "artifacts/f8/ci-record-check.log",
+        "sha256": "609e3217f1334e632b12169ac4845cba1b4961b96c0add3a913e787b96182b18"
+      },
+      "source_commit": "7d60c8bf12ef5d34d1ef9901c213cd724926d78f",
+      "wall_seconds": 10.993
+    }
+  },
+  "schema": "golean-f8-completion-v1",
+  "source_commit": "7d60c8bf12ef5d34d1ef9901c213cd724926d78f"
+}

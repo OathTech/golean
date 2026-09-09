@@ -5,7 +5,7 @@ for this work and then execute on it”. This approves the F8 proposal at
 `f1b1a1da:docs/2026-09-09_next-increment-certificate-provenance.md`, including
 dependency-sensitive certification and widening the standing release rule.
 
-[AGENT] IN FLIGHT on `fix/certificate-provenance`, worktree
+[AGENT] IMPLEMENTED; independent review pending on `fix/certificate-provenance`, worktree
 `.claude/worktrees/fix-certificate-provenance`, initially from main
 `56b4d5c57e3239f4a7308d9c847b8db3c9bcbffe`. The other agent owns the ongoing
 round-29 merged-tip certification; its final records will be incorporated
@@ -136,3 +136,13 @@ completion record.
 [AGENT] Diagnostic correction validated: all 68 focused controls pass (62.457 seconds), including refusal-text preservation, and fresh checked enumeration reproduces the same six observations in 132.231 seconds. Implementation is frozen for its final gate.
 
 [AGENT] Final implementation gate: PASS, captured exit 0, 1179.888 seconds (32 GiB / 3 Lean threads / 12 corpus workers). All 3665 native and 394 negative rows match their frozen baselines; the slow six-member set is unchanged; 207 evaluator tests pass; the reconciler has two report-only findings and zero HIGH. No GoLean or Tests source changes. Implementation commit follows; the clean-source run and final evidence remain required.
+
+[AGENT] Completion: implementation committed as `7d60c8bf`; the full clean
+`ci --slow` passed at that commit (exit 0, 1204.046 seconds, git_dirty=false).
+The six-member checker run took 157.464 seconds. Ordinary cached reuse also
+passed at the clean code commit (31.386 seconds including 32 oracle draws;
+five of six members exhibited, one unexhibited). The new CI step costs 73
+seconds; standalone cache validation costs 5.035 seconds. Final changes are
+records only: clean provenance receipt, matching human header, compact evidence
+and roadmap status. See `docs/2026-09-09_certificate-provenance-completion.md`.
+Branch is ready for the user's independent adversarial review. No merge/push.
