@@ -1,0 +1,373 @@
+{
+  "provenance": "[AGENT] 2026-09-09, independent-audit fixes validated before commit and again by full CI at the clean committed source",
+  "candidate_ci": {
+    "provenance": "[AGENT] 2026-09-09, full audit-fix CI receipt",
+    "phase": "ci-before-commit",
+    "source_tree": "69e9cbbc27f6e6011db556a6b2533a1e21417e1b",
+    "head_at_run": "f97b972f60add706ec790da8459965701cb4cbb1",
+    "command": "scripts/capped scripts/ci --slow",
+    "captured_exit": 0,
+    "wall_seconds": 1254.238,
+    "cache": "warm build; fresh full differential, negatives, slow enumeration and compiled audit controls",
+    "log_sha256": "1636c96e249ad9764c64813f47a563822f6bb396bc562de71e2ec4012aa9ee4f",
+    "timing_run_id": "9844509742d647bbb177618e5b63e38f",
+    "library_steps": [
+      {
+        "step": "core",
+        "exit_code": 0,
+        "build_seconds": 0.1325366860255599,
+        "check_seconds": 1.0820222087204456e-06,
+        "elapsed_seconds": 0.13253776804776862
+      },
+      {
+        "step": "interface",
+        "exit_code": 0,
+        "build_seconds": 27.950630994979292,
+        "check_seconds": 7.419848304998595,
+        "elapsed_seconds": 35.37047929997789
+      },
+      {
+        "step": "admission",
+        "exit_code": 0,
+        "build_seconds": 28.948017654998694,
+        "check_seconds": 63.27211376000196,
+        "elapsed_seconds": 92.22013141500065
+      },
+      {
+        "step": "declarations",
+        "exit_code": 0,
+        "build_seconds": 0.1291044099489227,
+        "check_seconds": 38.561189386004116,
+        "elapsed_seconds": 38.69029379595304
+      },
+      {
+        "step": "boolean-typing",
+        "exit_code": 0,
+        "build_seconds": 0.13288275600643829,
+        "check_seconds": 73.84879856801126,
+        "elapsed_seconds": 73.9816813240177
+      },
+      {
+        "step": "boolean-runtime",
+        "exit_code": 0,
+        "build_seconds": 1.0346951609826647,
+        "check_seconds": 28.631200328993145,
+        "elapsed_seconds": 29.66589548997581
+      },
+      {
+        "step": "recovery-typing",
+        "exit_code": 0,
+        "build_seconds": 0.13390952098416165,
+        "check_seconds": 46.89251110499026,
+        "elapsed_seconds": 47.026420625974424
+      },
+      {
+        "step": "recovery-storage",
+        "exit_code": 0,
+        "build_seconds": 0.13298177998512983,
+        "check_seconds": 25.81174936000025,
+        "elapsed_seconds": 25.94473113998538
+      },
+      {
+        "step": "recovery-setup",
+        "exit_code": 0,
+        "build_seconds": 0.13493514200672507,
+        "check_seconds": 28.027175424969755,
+        "elapsed_seconds": 28.16211056697648
+      },
+      {
+        "step": "recovery-control",
+        "exit_code": 0,
+        "build_seconds": 0.1356160040013492,
+        "check_seconds": 27.90712057100609,
+        "elapsed_seconds": 28.04273657500744
+      },
+      {
+        "step": "abort-observation",
+        "exit_code": 0,
+        "build_seconds": 0.13345738197676837,
+        "check_seconds": 21.588310304039624,
+        "elapsed_seconds": 21.721767686016392
+      },
+      {
+        "step": "recovery-terminal",
+        "exit_code": 0,
+        "build_seconds": 4.63718101195991,
+        "check_seconds": 19.296740072022658,
+        "elapsed_seconds": 23.93392108398257
+      },
+      {
+        "step": "eval",
+        "exit_code": 0,
+        "build_seconds": 114.2151871380047,
+        "check_seconds": 0.34221073996741325,
+        "elapsed_seconds": 114.55739787797211
+      },
+      {
+        "step": "method-identity",
+        "exit_code": 0,
+        "build_seconds": 0.13228675100253895,
+        "check_seconds": 31.45274388702819,
+        "elapsed_seconds": 31.58503063803073
+      }
+    ],
+    "baseline_sha256": "13839ad5e4ef59d7a88de86b3c45503c6ac0f56bfc7c793fa65aae7403668f46",
+    "twin_sha256": "13d8b659b115a68f62d47ece7654ebb1baf0de4dd8c72b3b26fee09621e9eb04",
+    "executable": {
+      "rows": 3665,
+      "pass": 3417,
+      "fail": 248,
+      "baseline_drift": 0,
+      "metadata": {
+        "frontend": "native",
+        "manifest": "/home/dev/projects/golean/.claude/worktrees/fix-package-method-identity/.tmp/golean-coverage-manifest.OLphGg",
+        "manifest_sha256": "9dc67e7391f1082ed7f39f3bc1a7b206fb6346f0c15466a650b9bae1d0a9b710",
+        "manifest_cases": "3665",
+        "total_corpus_cases": "unknown",
+        "full_run": "unknown",
+        "filters": "unknown",
+        "git_commit": "f97b972f60add706ec790da8459965701cb4cbb1",
+        "git_dirty": "true",
+        "go_toolchain": "go1.26.5",
+        "go_traceback": "system",
+        "go_crash_channel": "same-run-setcrashoutput-v1",
+        "go_drift_allowed": "0",
+        "go_drift_actual": "false",
+        "depth_guard": "choice-trace wideAfterExhaustion=0 on every invariance stream",
+        "depth_seeds": "1,2,3",
+        "depth_generator": "lcg31(1103515245,12345) bits16..31",
+        "depth_trace_timeout_seconds": "240",
+        "membership_draws": "80",
+        "jobs": "12",
+        "fanout_find_exit": "0",
+        "fanout_pool_exit": "0"
+      },
+      "results_sha256": "65d05f3ea3df00881f1d1fefeda94fd2b6736158257699da9b8d53aa005a9cce",
+      "meta_sha256": "c5fee17ed6ca46b7ee27a5377de66476e2510b0be55c3959cd09c9a808ff8e8d"
+    },
+    "negative": {
+      "rows": 394,
+      "pass": 394,
+      "fail": 0,
+      "baseline_drift": 0,
+      "metadata": {
+        "lane": "negative",
+        "manifest": "/home/dev/projects/golean/.claude/worktrees/fix-package-method-identity/.tmp/golean-negative-coverage.5ikJsy",
+        "manifest_sha256": "21f456f4d3788469d3c42fed6ad8625d06cd2656211e3418c7bc7ffc0a1823f8",
+        "manifest_cases": "394",
+        "git_commit": "f97b972f60add706ec790da8459965701cb4cbb1",
+        "git_dirty": "true",
+        "go_toolchain": "go1.26.5",
+        "go_drift_allowed": "0",
+        "go_drift_actual": "false"
+      },
+      "results_sha256": "16e489a805e7530e6d961b27620a93c416c6d91373a608fedacef5281eb8d204",
+      "meta_sha256": "d93ae86793c0eb32f20a545d1481ba4b68b026c3d83a156534644b710fb0d412"
+    },
+    "slow": {
+      "set_unchanged": true,
+      "observations_sha256": "e40ba07d11827b48aa8c9246bd84d6c21849159983d46c47b793b5759cfbbfd8",
+      "enum_stats": "coverage-observations: observations=6 steps=6565663 probes=0 sites=6193933 leaves=0 maxdepth=0 width=4 engine=dedup nodes=6193933 edges=6565663 dedupHits=371731 certified=checkCert",
+      "enum_stats_mtime": 1788972800.6372397,
+      "wire_sha256": "2f1d639f2042466f50b61ab117db5b39629c425f733650b9be992c0b85beefcc"
+    },
+    "committed_as": "20e412ba45bfeff53b95155e3068a22d40d9a97a"
+  },
+  "clean_ci": {
+    "provenance": "[AGENT] 2026-09-09, full audit-fix CI receipt",
+    "phase": "ci-clean",
+    "source_tree": "69e9cbbc27f6e6011db556a6b2533a1e21417e1b",
+    "head_at_run": "20e412ba45bfeff53b95155e3068a22d40d9a97a",
+    "command": "scripts/capped scripts/ci --slow",
+    "captured_exit": 0,
+    "wall_seconds": 1070.469,
+    "cache": "warm build; fresh full differential, negatives, slow enumeration and compiled audit controls",
+    "log_sha256": "ea3e0cfa117e4a0577d384bce978c035ba33a01e97f90db93bad62e7138f83bf",
+    "timing_run_id": "6166a8a9eb5847ad9d978a5b912e63cc",
+    "library_steps": [
+      {
+        "step": "core",
+        "exit_code": 0,
+        "build_seconds": 0.13511446700431406,
+        "check_seconds": 1.4320248737931252e-06,
+        "elapsed_seconds": 0.13511589902918786
+      },
+      {
+        "step": "interface",
+        "exit_code": 0,
+        "build_seconds": 0.13444474298739806,
+        "check_seconds": 7.918165425013285,
+        "elapsed_seconds": 8.052610168000683
+      },
+      {
+        "step": "admission",
+        "exit_code": 0,
+        "build_seconds": 0.1318350660149008,
+        "check_seconds": 65.83541947696358,
+        "elapsed_seconds": 65.96725454297848
+      },
+      {
+        "step": "declarations",
+        "exit_code": 0,
+        "build_seconds": 0.13352593698073179,
+        "check_seconds": 37.75907458999427,
+        "elapsed_seconds": 37.892600526975
+      },
+      {
+        "step": "boolean-typing",
+        "exit_code": 0,
+        "build_seconds": 0.13342325104167685,
+        "check_seconds": 73.99420655798167,
+        "elapsed_seconds": 74.12762980902335
+      },
+      {
+        "step": "boolean-runtime",
+        "exit_code": 0,
+        "build_seconds": 0.13350503699621186,
+        "check_seconds": 28.76978362101363,
+        "elapsed_seconds": 28.903288658009842
+      },
+      {
+        "step": "recovery-typing",
+        "exit_code": 0,
+        "build_seconds": 0.1322862399974838,
+        "check_seconds": 46.70284103800077,
+        "elapsed_seconds": 46.835127277998254
+      },
+      {
+        "step": "recovery-storage",
+        "exit_code": 0,
+        "build_seconds": 0.13317747501423582,
+        "check_seconds": 25.9311877739965,
+        "elapsed_seconds": 26.064365249010734
+      },
+      {
+        "step": "recovery-setup",
+        "exit_code": 0,
+        "build_seconds": 0.13444390299264342,
+        "check_seconds": 28.22012089402415,
+        "elapsed_seconds": 28.354564797016792
+      },
+      {
+        "step": "recovery-control",
+        "exit_code": 0,
+        "build_seconds": 0.13417760300217196,
+        "check_seconds": 27.859875249967445,
+        "elapsed_seconds": 27.994052852969617
+      },
+      {
+        "step": "abort-observation",
+        "exit_code": 0,
+        "build_seconds": 0.13183579198084772,
+        "check_seconds": 21.74144488602178,
+        "elapsed_seconds": 21.87328067800263
+      },
+      {
+        "step": "recovery-terminal",
+        "exit_code": 0,
+        "build_seconds": 0.1335910750203766,
+        "check_seconds": 19.398285545001272,
+        "elapsed_seconds": 19.53187662002165
+      },
+      {
+        "step": "eval",
+        "exit_code": 0,
+        "build_seconds": 0.13348051701905206,
+        "check_seconds": 0.3345183859928511,
+        "elapsed_seconds": 0.46799890301190317
+      },
+      {
+        "step": "method-identity",
+        "exit_code": 0,
+        "build_seconds": 0.13478253001812845,
+        "check_seconds": 30.0882858709665,
+        "elapsed_seconds": 30.22306840098463
+      }
+    ],
+    "baseline_sha256": "13839ad5e4ef59d7a88de86b3c45503c6ac0f56bfc7c793fa65aae7403668f46",
+    "twin_sha256": "13d8b659b115a68f62d47ece7654ebb1baf0de4dd8c72b3b26fee09621e9eb04",
+    "executable": {
+      "rows": 3665,
+      "pass": 3417,
+      "fail": 248,
+      "baseline_drift": 0,
+      "metadata": {
+        "frontend": "native",
+        "manifest": "/home/dev/projects/golean/.claude/worktrees/fix-package-method-identity/.tmp/golean-coverage-manifest.7PooLo",
+        "manifest_sha256": "9dc67e7391f1082ed7f39f3bc1a7b206fb6346f0c15466a650b9bae1d0a9b710",
+        "manifest_cases": "3665",
+        "total_corpus_cases": "unknown",
+        "full_run": "unknown",
+        "filters": "unknown",
+        "git_commit": "20e412ba45bfeff53b95155e3068a22d40d9a97a",
+        "git_dirty": "false",
+        "go_toolchain": "go1.26.5",
+        "go_traceback": "system",
+        "go_crash_channel": "same-run-setcrashoutput-v1",
+        "go_drift_allowed": "0",
+        "go_drift_actual": "false",
+        "depth_guard": "choice-trace wideAfterExhaustion=0 on every invariance stream",
+        "depth_seeds": "1,2,3",
+        "depth_generator": "lcg31(1103515245,12345) bits16..31",
+        "depth_trace_timeout_seconds": "240",
+        "membership_draws": "80",
+        "jobs": "12",
+        "fanout_find_exit": "0",
+        "fanout_pool_exit": "0"
+      },
+      "results_sha256": "f6027d70b87337d8db696cee446576450ca9662a1b97694df9d75603f1c61948",
+      "meta_sha256": "a8befc66eccfa2fd0226aae7c8e17c1c05ba350a36197ff5844f4b70e2f90dbf"
+    },
+    "negative": {
+      "rows": 394,
+      "pass": 394,
+      "fail": 0,
+      "baseline_drift": 0,
+      "metadata": {
+        "lane": "negative",
+        "manifest": "/home/dev/projects/golean/.claude/worktrees/fix-package-method-identity/.tmp/golean-negative-coverage.YXUaN5",
+        "manifest_sha256": "21f456f4d3788469d3c42fed6ad8625d06cd2656211e3418c7bc7ffc0a1823f8",
+        "manifest_cases": "394",
+        "git_commit": "20e412ba45bfeff53b95155e3068a22d40d9a97a",
+        "git_dirty": "false",
+        "go_toolchain": "go1.26.5",
+        "go_drift_allowed": "0",
+        "go_drift_actual": "false"
+      },
+      "results_sha256": "16e489a805e7530e6d961b27620a93c416c6d91373a608fedacef5281eb8d204",
+      "meta_sha256": "ec55068305e143a72a3525779c0a5d432d8eef7fe1ca5f8aed8142a48af859eb"
+    },
+    "slow": {
+      "set_unchanged": true,
+      "observations_sha256": "e40ba07d11827b48aa8c9246bd84d6c21849159983d46c47b793b5759cfbbfd8",
+      "enum_stats": "coverage-observations: observations=6 steps=6565663 probes=0 sites=6193933 leaves=0 maxdepth=0 width=4 engine=dedup nodes=6193933 edges=6565663 dedupHits=371731 certified=checkCert",
+      "enum_stats_mtime": 1788973889.6763182,
+      "wire_sha256": "2f1d639f2042466f50b61ab117db5b39629c425f733650b9be992c0b85beefcc"
+    }
+  },
+  "clean_run": {
+    "provenance": "[AGENT] 2026-09-09, audit-fix clean committed-source validation",
+    "source_commit": "20e412ba45bfeff53b95155e3068a22d40d9a97a",
+    "source_tree": "69e9cbbc27f6e6011db556a6b2533a1e21417e1b",
+    "dirty_before": false,
+    "command": [
+      "python3",
+      ".tmp/method-identity-audit-fixes/run-locked.py",
+      "scripts/capped",
+      "scripts/ci",
+      "--slow"
+    ],
+    "started_utc": "2026-09-09T16:56:56.882573+00:00",
+    "binary_sha256": "f8f15dda61e435a489d95a8722e80126773938e689b045c3914396d8c1930d35",
+    "environment": {
+      "GOLEAN_MEM_MAX": "32G",
+      "LEAN_NUM_THREADS": "3",
+      "GOLEAN_COVERAGE_JOBS": "12",
+      "TMPDIR": "/home/dev/projects/golean/.claude/worktrees/fix-package-method-identity/.tmp"
+    },
+    "captured_exit": 0,
+    "wall_seconds": 1070.49,
+    "finished_utc": "2026-09-09T17:14:47.434587+00:00",
+    "dirty_after": false
+  }
+}

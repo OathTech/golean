@@ -4,7 +4,19 @@
 # driver-coupling pin against THIS set and its wire hash; scripts/ci
 # --slow re-enumerates and must reproduce it exactly. Update
 # deliberately, in its own commit, with the reason — never auto-written.
-# certified: 2026-09-09T02:01:19.363910+00:00  commit: FR-31 clean branch source a49be7571c8c1737657c53022f12ce4450d8418c
+# certified: 2026-09-09T17:11:29.676318+00:00  commit: FR-31 audit-fix clean source 20e412ba45bfeff53b95155e3068a22d40d9a97a
+# re-certification reason ([AGENT] 2026-09-09, independent audit fixes):
+#   full scripts/capped scripts/ci --slow passes at this CLEAN source commit
+#   (git_dirty=false), after the identical candidate passed before commit.
+#   Full comparisons: 3665 executable cases, 394 negatives, zero drift.
+#   Six slow observations, params, wire hash and graph remain byte-identical:
+#   nodes=6193933 edges=6565663 dedupHits=371731 certified=checkCert.
+#   The source adds identity-exact ChoiceTrace lookup and truthful refusal
+#   displays; no wire schema or callable target/pin bytes change in this round.
+#   Exact source, hashes, actual exits and timings:
+#   docs/evidence/2026-09-08_method-identity/audit-fix-green.json.
+#   This is branch certification; merge-protocol 5a at the merged tip is owed.
+# previously: certified: 2026-09-09T02:01:19.363910+00:00  commit: FR-31 clean branch source a49be7571c8c1737657c53022f12ce4450d8418c
 # re-certification reason ([AGENT] 2026-09-09, package-correct method identity):
 #   stages 1/3 change the executable method wire and decoder. Full capped CI
 #   --slow passed at the exact stage-3 candidate tree before its commit;
@@ -18,7 +30,7 @@
 #   docs/evidence/2026-09-08_method-identity/final-clean-certification.json.
 #   This is branch certification; an eventual authorized merge still owes
 #   merge-protocol step 5a at the merged tip.
-# previous certified: 2026-09-05T17:57:01+00:00  commit: round-17 merge-train step 5a re-certification at main tip 7677865a (round-17 train landed: fr19-bug097, c-arc-b4, c-arc-c2, e13-b)
+# previously: certified: 2026-09-05T17:57:01+00:00  commit: round-17 merge-train step 5a re-certification at main tip 7677865a (round-17 train landed: fr19-bug097, c-arc-b4, c-arc-c2, e13-b)
 # re-certification reason (round-17 merge train, step 5a, 2026-09-05): the
 #   standing post-train step (CLAUDE.md merge protocol 5a, [USER]
 #   2026-09-04) fired because three of the four landed lanes touched

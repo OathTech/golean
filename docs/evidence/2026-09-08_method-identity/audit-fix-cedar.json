@@ -1,0 +1,43 @@
+{
+  "provenance": "[AGENT] 2026-09-09, audit-fix clean-source Cedar recheck; category results unchanged from the initial handoff",
+  "run": {
+    "provenance": "[AGENT] 2026-09-09, audit-fix clean committed-source validation",
+    "source_commit": "20e412ba45bfeff53b95155e3068a22d40d9a97a",
+    "source_tree": "69e9cbbc27f6e6011db556a6b2533a1e21417e1b",
+    "dirty_before": false,
+    "command": [
+      "scripts/capped",
+      "scripts/cedar-census",
+      "run"
+    ],
+    "started_utc": "2026-09-09T16:57:13.388382+00:00",
+    "binary_sha256": "f8f15dda61e435a489d95a8722e80126773938e689b045c3914396d8c1930d35",
+    "environment": {
+      "GOLEAN_MEM_MAX": "8G",
+      "LEAN_NUM_THREADS": "2",
+      "TMPDIR": "/home/dev/projects/golean/.claude/worktrees/fix-package-method-identity/.tmp",
+      "CEDAR_CENSUS_ARTIFACTS": "artifacts/method-identity-audit-fixes/cedar-clean"
+    },
+    "captured_exit": 0,
+    "wall_seconds": 41.953,
+    "finished_utc": "2026-09-09T16:57:55.400083+00:00",
+    "dirty_after": false
+  },
+  "cases": 34,
+  "categories": {
+    "EXPORT-OK": 25,
+    "FRONTEND-REFUSED": 8,
+    "MACHINE-REFUSED": 1
+  },
+  "detail_changes": [],
+  "static_declarations": 1671,
+  "static_lowers": 1560,
+  "static_guard_kills": 0,
+  "files": {
+    "meta.tsv": "51cfe38dbfc4140d48eeddd704521ad45dd8812acc8e7a10f65cc77588ad2c8c",
+    "results.tsv": "c495458a5318420e30bb4b1292255d0cde5a27ce66778a7dfd07d9214ba46846",
+    "demand.tsv": "e7a1d8c30e6a4c115b2ffb4b3af9138f1a4d67865944083330dd22c8f8cde6d3",
+    "demand-per-package.tsv": "eb1f96618f68534f902d11f7224c7706810b46d1a593485a0a90e27b7f642ac8"
+  },
+  "log_sha256": "9dbf2f5bc1798285052d0bc5e19e7592d521e9a760f037cec068cb73097fd79f"
+}

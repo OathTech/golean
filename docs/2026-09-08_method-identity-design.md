@@ -340,7 +340,7 @@ has not yet happened; this branch pauses for that review.
 `.tmp/review/2026-09-09_coordinator-review.md`: FIX-FIRST, one major and a
 bounded minor set, with no design blocker. This section supersedes the
 pre-audit readiness statement above. Required R1–R7 and optional R8/R9 are
-being addressed; source-bound gates and the next review handoff follow.
+complete; source-bound gates and the next review handoff follow.
 
 - R1: ChoiceTrace's independent nil-value-method check compares full member
   identity. Three kernel controls distinguish a foreign wrapper, a foreign
@@ -397,3 +397,57 @@ records the frozen tree, actual exits, row delta and negative controls.
 The additive baseline update preserves existing row order and alternations.
 Full CI is required before the source commit and again at the clean source
 before re-offering this fix round.
+
+
+### Audit-fix completion and re-review
+
+[AGENT] READY FOR INDEPENDENT RE-REVIEW, 2026-09-09. Source commit
+`20e412ba45bfeff53b95155e3068a22d40d9a97a` is exactly tree `69e9cbbc27f6e6011db556a6b2533a1e21417e1b`;
+the final handoff commit changes records only. All required R1–R7 fixes and
+the bounded R8/R9 controls are addressed above. The original audit is retained
+unchanged in the worktree, with its hash in the pre-pin receipt.
+
+| Full gate | Source binding | Wall seconds | Method-identity step seconds |
+| --- | --- | ---: | ---: |
+| `scripts/capped scripts/ci --slow` before commit | exact frozen candidate tree; dirty metadata explicitly recorded | 1254.238 | 31.585 |
+| `scripts/capped scripts/ci --slow` after commit | clean `20e412ba`, both result metadata files `git_dirty=false` | 1070.469 | 30.223 |
+
+Both complete gates pass at 32 GiB / three Lean threads / twelve corpus
+workers, with warm builds and fresh full differential, negative, compiled
+audit and slow checks. The standing method-step cost submitted for acceptance
+is **30.223 seconds**, within a **1070.469-second** clean-source full gate;
+this is a measured run, not a controlled cost-delta estimate.
+[Source-bound CI evidence](evidence/2026-09-08_method-identity/audit-fix-green.json).
+
+Final baseline: **3665 = 3417 PASS / 248 tracked FAIL**; all **394 negative
+cases PASS**. The three new rows are the only baseline movement relative
+to the reviewed tip. Existing alternations, twin wire bytes, I1 fixture pin,
+stdlib pins and the six-member slow set/graph are unchanged. The slow
+certification header is refreshed from the clean run; its data, parameters
+and wire hash are unchanged. Merge-protocol 5a remains owed at an eventual
+merged tip.
+
+The clean-source Cedar recheck took **41.953 seconds**. All 34 case
+categories remain unchanged: **25 EXPORT-OK / 8 FRONTEND-REFUSED / 1
+MACHINE-REFUSED**, including all 22 standalone library exports and `all`.
+Static lowers remain 1560/1671, with no private-method guard kill. Any
+refusal-detail movement is recorded individually; no new functional-driver
+claim is made. [Cedar evidence](evidence/2026-09-08_method-identity/audit-fix-cedar.json).
+
+The original R1 negative-control attempt used the emitter's ordinary-before-
+wrapper table order, which did not expose the old lookup. The corrected
+control reverses only that semantically irrelevant table order: the old
+validator compiles and reports a wrong-wrapper violation for both text
+choices, while the repaired production tracer accepts both orders with
+zero violations and driver agreement. The three kernel regressions also
+cover foreign ordinary bodies and absent matching targets. The R6 mutation
+compiles with one test renamed, then the standalone gate rejects its three
+PASS receipts by name. Successful scratch is deleted; the first failed
+control remains with its reason and output.
+
+The ledger's per-frontier sum now derives to 134, with C6 counted once in
+its existing (c) bucket. Remaining report-only C5 (`=` cited as an id on
+FR-7) and C13 (historical toolchain mentions) predate this branch. Broader
+F7/admission and raft-target follow-ups are rowed in master-plan-v2. The
+user's independent re-review has not yet happened; no merge or push has
+occurred.
