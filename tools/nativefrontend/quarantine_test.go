@@ -49,7 +49,7 @@ func findMethod(program map[string]any, recvType, name string) map[string]any {
 		if !ok {
 			continue
 		}
-		if mm["recvType"] == recvType && mm["name"] == name {
+		if mm["recvType"] == recvType && mm["id"].(memberID).Name == name {
 			return mm
 		}
 	}

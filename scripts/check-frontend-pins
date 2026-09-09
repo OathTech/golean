@@ -213,6 +213,12 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 
+# [AGENT] 2026-09-09, FR-31 stage 1: 758110a3… -> a225ea8a….
+# Executable method records/requirements adopt I1 {name, package} identity.
+# 537 methods (132 private), 28 requirements; stripping only that metadata
+# reproduces the old parsed wire. Full 3654-row differential + slow set
+# unchanged. Reason and source-bound evidence:
+# docs/2026-09-08_method-identity-design.md, stage 1.
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/check-frontend-pins.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 

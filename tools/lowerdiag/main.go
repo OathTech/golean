@@ -264,7 +264,11 @@ func wire(path string) error {
 		if _, isIface := m["interface"]; isIface {
 			continue // interface method anchors
 		}
-		row("method", str(m["recvType"])+"."+str(m["name"]), m["unsupported"])
+		id, ok := m["id"].(map[string]any)
+		if !ok || str(id["name"]) == "" {
+			return fmt.Errorf("method %v has no member identity", m["recvType"])
+		}
+		row("method", str(m["recvType"])+"."+str(id["name"]), m["unsupported"])
 	}
 	for _, t := range asList(prog["types"]) {
 		def, _ := t["def"].(map[string]any)

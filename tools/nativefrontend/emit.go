@@ -409,7 +409,7 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	declaredIface := map[string]bool{}
 	for _, m := range methods {
 		if mm, ok := m.(map[string]any); ok && mm["interface"] == true {
-			declaredIface[mm["recvType"].(string)+"."+mm["name"].(string)] = true
+			declaredIface[mm["recvType"].(string)+"."+mm["id"].(memberID).Name] = true
 		}
 	}
 	calledKeys := make([]string, 0, len(e.calledIfaceMethods))
@@ -442,9 +442,13 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 		if err != nil {
 			return nil, err
 		}
+		id, err := declarationObjectName(cm.method)
+		if err != nil {
+			return nil, err
+		}
 		results := resultsW
 		methods = append(methods, map[string]any{
-			"name":      cm.method,
+			"id":        id,
 			"recvType":  cm.ifaceName,
 			"recv":      map[string]any{"id": "$recv", "type": map[string]any{"kind": "interface", "name": cm.ifaceName}},
 			"params":    params,
@@ -605,8 +609,12 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 				// are different methods (pre-merge audit 2026-07-31,
 				// finding 0). Carried on both sides — here for the
 				// requirement, on the `Func` for the implementation.
+				id, err := declarationObjectName(m)
+				if err != nil {
+					return nil, err
+				}
 				sigs = append(sigs, map[string]any{
-					"name": m.Name(), "params": params, "results": results,
+					"id": id, "params": params, "results": results,
 					"variadic": sig.Variadic()})
 			}
 			ifaceDefs[name] = map[string]any{"kind": "interface", "methods": sigs}
@@ -1655,7 +1663,7 @@ func checkInitQuarantine(funcs, methods []any) error {
 	}
 	for _, f := range methods {
 		if m, ok := f.(map[string]any); ok {
-			name, _ := m["name"].(string)
+			name := m["id"].(memberID).Name
 			rt, _ := m["recvType"].(string)
 			if name == "" || rt == "" {
 				continue
@@ -1926,8 +1934,12 @@ func (e *emitter) emitGenDeclTypes(d *ast.GenDecl) ([]any, []any, error) {
 				}); err != nil {
 					return nil, nil, err
 				}
+				id, err := declarationObjectName(m)
+				if err != nil {
+					return nil, nil, err
+				}
 				ifaceMethods = append(ifaceMethods, map[string]any{
-					"name":      m.Name(),
+					"id":        id,
 					"recvType":  qname,
 					"recv":      map[string]any{"id": "$recv", "type": recvTy},
 					"params":    params,
@@ -2030,9 +2042,13 @@ func (e *emitter) quarantinedMethodStub(d *ast.FuncDecl, u unsupported) (map[str
 	if err != nil {
 		return nil, sigRefusal(err)
 	}
+	id, err := declarationObjectName(fnObj)
+	if err != nil {
+		return nil, err
+	}
 	reason := "method " + tName + "." + d.Name.Name + " (" + u.what + e.opaqueSigClauses(opaque, basics)
 	return map[string]any{
-		"name":        d.Name.Name,
+		"id":          id,
 		"recvType":    tName,
 		"recv":        map[string]any{"id": "$recv", "type": recvTy},
 		"params":      params,
@@ -2144,8 +2160,12 @@ func (e *emitter) promotedSigStub(named *types.Named, tName string, mfn *types.F
 		recvTy = map[string]any{"kind": "pointer", "elem": valueTy}
 	}
 	reason := "promoted method " + tName + "." + mfn.Name() + " (forwarding wrapper not synthesized: " + cause.what + e.opaqueSigClauses(opaque, basics)
+	id, err := declarationObjectName(mfn)
+	if err != nil {
+		return nil, err
+	}
 	return map[string]any{
-		"name":        mfn.Name(),
+		"id":          id,
 		"recvType":    tName,
 		"recv":        map[string]any{"id": "$recv", "type": recvTy},
 		"params":      params,
@@ -2212,6 +2232,12 @@ func (e *emitter) emitFuncDecl(d *ast.FuncDecl) (map[string]any, error) {
 		if !ok {
 			return nil, e.anonymousTypeRefusal("method", defType)
 		}
+		id, err := declarationObjectName(e.info.Defs[d.Name])
+		if err != nil {
+			return nil, err
+		}
+		delete(fn, "name")
+		fn["id"] = id
 		fn["recv"] = map[string]any{"id": localName(recv), "type": rty}
 		fn["recvType"] = name
 	}
@@ -6047,8 +6073,12 @@ func (e *emitter) syncPromotedStub(named *types.Named, tName string, mfn *types.
 	if err != nil {
 		return nil, err
 	}
+	id, err := declarationObjectName(mfn)
+	if err != nil {
+		return nil, err
+	}
 	return map[string]any{
-		"name":     mfn.Name(),
+		"id":       id,
 		"recvType": tName,
 		"recv":     map[string]any{"id": "$recv", "type": recvTy},
 		"params":   params,
@@ -6128,7 +6158,7 @@ func (e *emitter) synthesizeWrapper(named *types.Named, tName string, msel *type
 		}
 		e.noteInterface(ifaceName, staticIface)
 		e.noteCalledIfaceMethod(ifaceName+"."+mfn.Name(), calledIfaceMethod{
-			ifaceName: ifaceName, method: mfn.Name(), sig: sig,
+			ifaceName: ifaceName, method: mfn, sig: sig,
 			subst: e.curSubst,
 		})
 		innerFunc = ifaceName + "." + mfn.Name()
@@ -6208,8 +6238,12 @@ func (e *emitter) synthesizeWrapper(named *types.Named, tName string, msel *type
 			map[string]any{"stmt": "assign", "define": true, "lhs": lhs, "rhs": []any{callNode}},
 			map[string]any{"stmt": "return", "results": rets})
 	}
+	id, err := declarationObjectName(mfn)
+	if err != nil {
+		return nil, err
+	}
 	return map[string]any{
-		"name":     mfn.Name(),
+		"id":       id,
 		"recvType": tName,
 		"recv":     map[string]any{"id": "$recv", "type": recvTy},
 		"params":   params,
@@ -6345,7 +6379,6 @@ func (e *emitter) promotedReceiverArg(sel *ast.SelectorExpr, hops []int, pointer
 	return node, nil
 }
 
-
 // importedTypeDecls emits, for every IMPORTED concrete named type whose
 // identity reached the wire and whose EXPORTED method set is fully
 // emittable, an `unsupported`-marker TypeDef (existence only) plus
@@ -6434,7 +6467,7 @@ func (e *emitter) importedMethodStubsFiltered(qname string, named *types.Named, 
 		if !isMap {
 			return nil, false
 		}
-		if name, _ := m["name"].(string); modeled[name] {
+		if name := m["id"].(memberID).Name; modeled[name] {
 			continue
 		}
 		out = append(out, s)
@@ -6487,8 +6520,12 @@ func (e *emitter) importedMethodStubs(qname string, named *types.Named) ([]any, 
 		if cause, named := atomicStubRefusal(qname, mfn.Name()); named {
 			refusal = cause
 		}
+		id, err := declarationObjectName(mfn)
+		if err != nil {
+			return nil, false
+		}
 		out = append(out, map[string]any{
-			"name":        mfn.Name(),
+			"id":          id,
 			"recvType":    qname,
 			"recv":        map[string]any{"id": "$recv", "type": recvTy},
 			"params":      params,
@@ -6629,8 +6666,12 @@ func (e *emitter) syncMethodStubs() ([]any, []any, error) {
 			if err != nil {
 				return nil, nil, err
 			}
+			id, err := declarationObjectName(mfn)
+			if err != nil {
+				return nil, nil, err
+			}
 			stub := map[string]any{
-				"name":     mfn.Name(),
+				"id":       id,
 				"recvType": qname,
 				"recv":     map[string]any{"id": "$recv", "type": recvTy},
 				"params":   params,
@@ -6996,7 +7037,7 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 				}
 				e.noteInterface(ifaceName, staticIface)
 				e.noteCalledIfaceMethod(ifaceName+"."+fn.Name(), calledIfaceMethod{
-					ifaceName: ifaceName, method: fn.Name(),
+					ifaceName: ifaceName, method: fn,
 					sig:   fn.Type().(*types.Signature),
 					subst: e.curSubst,
 				})
@@ -7090,7 +7131,7 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 				}
 				e.noteInterface(ifaceName, staticIface)
 				e.noteCalledIfaceMethod(ifaceName+"."+fn.Name(), calledIfaceMethod{
-					ifaceName: ifaceName, method: fn.Name(), sig: sig,
+					ifaceName: ifaceName, method: fn, sig: sig,
 					subst: e.curSubst,
 				})
 				return map[string]any{"expr": "func-value",
@@ -9352,7 +9393,7 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 		}
 		e.noteInterface(ifaceName, staticIface)
 		e.noteCalledIfaceMethod(ifaceName+"."+sel.Sel.Name, calledIfaceMethod{
-			ifaceName: ifaceName, method: sel.Sel.Name,
+			ifaceName: ifaceName, method: fn,
 			sig:   fn.Type().(*types.Signature),
 			subst: e.curSubst,
 		})
@@ -9715,6 +9756,7 @@ func (e *emitter) emitClearStmt(c *ast.CallExpr) (any, error) {
 //   - the zero-operand spellings `print()` / `println()` have no machine
 //     shape (the wide-statement mold's A8 invariant: no plan is nullary) —
 //     refused this slice (FR-29; 2 of the 195 gotest print files).
+//
 // go/types has already converted untyped constant operands to their default
 // types (`check.assignment` with a nil target records the default type), so
 // `println(1)` arrives as `int` and `println('a')` as `int32`; an operand

@@ -124,7 +124,7 @@ def census(wire_path):
     for m in wire.get("methods", []):
         if "unsupported" not in m:
             continue
-        name = "%s.%s" % (m.get("recvType"), m.get("name"))
+        name = "%s.%s" % (m.get("recvType"), m["id"]["name"])
         (imported if name.startswith(IMPORTED_PREFIXES) else subject)[name] = m["unsupported"]
     return subject, imported
 

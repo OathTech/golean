@@ -1,4 +1,4 @@
-import GoLean.GoCore.Value
+import GoLean.GoCore.Declaration
 
 namespace GoLean.GoCore
 
@@ -24,7 +24,7 @@ structure FieldDef where
   embedded : Bool := false
   deriving Repr, BEq
 
-/-- One method of an interface's method set: the name plus the signature
+/-- One method of an interface's method set: I1 member identity plus the signature
 with the RECEIVER excluded. Interface satisfaction compares these against a
 concrete method's `Func` (arguments minus the receiver, its results, AND
 its variadic marker), all canonicalized — a name-only match reported
@@ -39,11 +39,14 @@ lists accepted both directions — a silent wrong `ok` on the comma-ok
 assert and an ill-typed dispatch where Go panics (pre-merge audit
 2026-07-31, finding 0). -/
 structure MethodSig where
-  name : String
+  id : Declaration.MemberId
   params : Array Ty
   results : Array Ty
   variadic : Bool := false
   deriving Repr, BEq
+
+/-- Display spelling; stage 1 retains the guarded legacy name-only matcher. -/
+def MethodSig.name (m : MethodSig) : String := m.id.name
 
 inductive TypeDef where
   | struct (fields : Array FieldDef)
@@ -629,10 +632,13 @@ structure Func where
   deriving Repr, BEq
 
 structure MethodInfo where
-  name : String
+  id : Declaration.MemberId
   funcId : FuncId
   recv : Ty
   deriving Repr, BEq
+
+/-- Display spelling, projected from the single member identity. -/
+def MethodInfo.name (m : MethodInfo) : String := m.id.name
 
 /-- How much of a type's method set the wire records
 (`docs/2026-08-10_method-set-record-contract.md` §3). `full` — the

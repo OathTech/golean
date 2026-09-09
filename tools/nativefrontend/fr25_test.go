@@ -106,7 +106,7 @@ func main() { println(kindOf(Yes{}), kindOf(No{})) }
 	found := false
 	for _, mm := range methods {
 		m := mm.(map[string]any)
-		if m["name"] == "OverflowComplex" {
+		if m["id"].(memberID).Name == "OverflowComplex" {
 			found = true
 			params := m["params"].([]any)
 			if namedTypeName(params[0]) != "complex128" {

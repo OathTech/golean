@@ -110,9 +110,9 @@ func TestAtomicShadowModelLowers(t *testing.T) {
 	got := map[string]int{}
 	for _, mm := range methods {
 		m := mm.(map[string]any)
-		got[m["name"].(string)]++
+		got[m["id"].(memberID).Name]++
 		if _, quarantined := m["unsupported"]; quarantined {
-			t.Fatalf("model method %v did not lower: %v", m["name"], m["unsupported"])
+			t.Fatalf("model method %v did not lower: %v", m["id"].(memberID).Name, m["unsupported"])
 		}
 	}
 	for _, name := range []string{"Load", "Store", "Swap", "CompareAndSwap", "Add"} {

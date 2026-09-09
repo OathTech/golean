@@ -11,5 +11,6 @@
   "recovery-control": {"libraries": ["RecoveryControlTests"], "executables": []},
   "abort-observation": {"libraries": ["AbortObservationTests"], "executables": []},
   "recovery-terminal": {"libraries": ["RecoveryTerminalTests"], "executables": []},
-  "eval": {"libraries": ["TestsData", "EvalTests"], "executables": ["gocore-eval-tests"]}
+  "eval": {"libraries": ["TestsData", "EvalTests"], "executables": ["gocore-eval-tests"]},
+  "method-identity": {"libraries": ["MethodIdentityTests"], "executables": []}
 }

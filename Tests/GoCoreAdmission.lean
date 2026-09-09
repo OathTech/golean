@@ -40,7 +40,7 @@ theorem dangling_function_signature_rejected :
     checkIndices (withType (.defined (.funcType [.slice (.defined 3)] [.pointer (.defined 4)] false))) =
       .error .typeIndexBounds := by with_unfolding_all rfl
 theorem dangling_interface_signature_rejected :
-    checkIndices (withType (.interfaceDef #[{name := "M", params := #[.pointer (.defined 3)], results := #[]}])) =
+    checkIndices (withType (.interfaceDef #[{id := ⟨"M", ""⟩, params := #[.pointer (.defined 3)], results := #[]}])) =
       .error .typeIndexBounds := by with_unfolding_all rfl
 theorem duplicate_type_rejected :
     checkIndices { fixture with typeDefs := TypeEnv.reserved ++ #[(emptyStructTypeId, .struct #[])] } =
@@ -60,7 +60,7 @@ theorem dangling_global_type_rejected :
     checkIndices { fixture with globals := #[{name := "g", typ := .slice (.defined 2)}] } =
       .error .typeIndexBounds := by with_unfolding_all rfl
 theorem dangling_method_receiver_rejected :
-    checkIndices { fixture with methods := #[{name := "M", funcId := ⟨"Constant"⟩, recv := .pointer (.defined 2)}] } =
+    checkIndices { fixture with methods := #[{id := ⟨"M", ""⟩, funcId := ⟨"Constant"⟩, recv := .pointer (.defined 2)}] } =
       .error .typeIndexBounds := by with_unfolding_all rfl
 
 theorem missing_entry_rejected :
@@ -88,7 +88,7 @@ theorem globals_rejected :
     checkBoolean { fixture with globals := #[{name := "g", typ := .bool}] }
       "Constant" #[] = .error .booleanSyntaxPolicy := by with_unfolding_all rfl
 theorem method_declaration_rejected :
-    checkBoolean { fixture with methods := #[{name := "M", funcId := ⟨"Constant"⟩, recv := .bool}] }
+    checkBoolean { fixture with methods := #[{id := ⟨"M", ""⟩, funcId := ⟨"Constant"⟩, recv := .bool}] }
       "Constant" #[] = .error .booleanSyntaxPolicy := by with_unfolding_all rfl
 
 /-- Explicit admitted limitation: this policy does not validate method-set

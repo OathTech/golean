@@ -73,12 +73,12 @@ def load(path):
         bodies[name] = edges
 
     for m in wire.get("methods", []):
-        name = "%s.%s" % (m.get("recvType"), m.get("name"))
+        name = "%s.%s" % (m.get("recvType"), m["id"]["name"])
         if m.get("interface"):
             iface_methods.add(name)
             bodies.setdefault(name, set())
             continue
-        by_method_name.setdefault(m.get("name"), []).append(name)
+        by_method_name.setdefault(m["id"]["name"], []).append(name)
         if "unsupported" in m:
             quarantined[name] = m["unsupported"]
             bodies.setdefault(name, set())

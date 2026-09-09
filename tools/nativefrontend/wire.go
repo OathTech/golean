@@ -491,10 +491,10 @@ func (e *emitter) noteCalledIfaceMethod(key string, cm calledIfaceMethod) {
 
 // calledIfaceMethod records one interface-dispatch call target: the receiver
 // interface's wire name (qualified, or bare for predeclared), the method
-// name, and its signature (for params/results of a synthesized table entry).
+// checked object (the source of I1 identity), and its signature (for params/results of a synthesized table entry).
 type calledIfaceMethod struct {
 	ifaceName string
-	method    string
+	method    *types.Func
 	sig       *types.Signature
 	// The stencil substitution ACTIVE at the call site (nil outside an
 	// instantiation). The recorded sig is the ORIGIN method's — for a

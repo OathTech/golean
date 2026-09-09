@@ -23,9 +23,15 @@ interfaces are satisfied, and their calls return distinct sentinel results.
 
 No main merge or push is authorized. The user supplies the independent
 adversarial review as in the preceding increments. Each stage ends with a
-separate committed source, measured gate record and review handoff. Pending
-the user's clarification of review cadence, pause at each stage's handoff;
-do not treat elapsed time as review acceptance.
+separate committed source and measured gate record, ready for independent
+inspection; the final handoff covers all three stages.
+
+[USER] 2026-09-08, firsthand clarification: "push through all three stages,
+stop if major issues arise that require design input. Otherwise resolve
+issues yourself in accordance with long-term project management / goals".
+This authorizes progress between stages without interim review pauses;
+major findings requiring design input remain hard stops. It does not
+authorize git push or merge.
 
 ## Three stages
 
@@ -117,5 +123,5 @@ payloads on main. All decisions and findings carry [AGENT]/[USER] provenance.
 
 The final stage re-runs the pinned Cedar census to test the historical
 eight-of-twenty-four package claim, reporting `ast`, `resolved`, `all` and any
-new refusal separately. Each stage pauses for the agreed review boundary;
+new refusal separately. The final branch pauses for adversarial review;
 merge and push remain separate explicit user decisions.

@@ -512,6 +512,13 @@ else
   bad "declaration boundary (scripts/check-declarations)"
 fi
 
+step "package-correct method identity (fresh wire, strict decoder, audit controls)"
+if library_step method-identity bash scripts/check-method-identity; then
+  ok "package-correct method identity"
+else
+  bad "package-correct method identity"
+fi
+
 # [AGENT] Seven restored typed-contract gates, selected against landed
 # modules. Each receipt measures its actual library build plus complete check.
 typed_step() {

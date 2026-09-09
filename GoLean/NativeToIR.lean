@@ -1,3 +1,4 @@
+import GoLean.NativeDeclaration
 import GoLean.StrictJson
 import GoLean.GoCore.Syntax
 
@@ -1736,20 +1737,20 @@ private def decodeFieldDef (path : String) (json : Json) : LowerM FieldDef := do
   let embedded ← StrictJson.bool s!"{path}.embedded" (← StrictJson.field path obj "embedded")
   pure { name, typ, embedded }
 
-/-- One interface method REQUIREMENT: name plus the signature types and the
+/-- One interface method REQUIREMENT: I1 identity plus the signature types and the
 VARIADIC marker, receiver excluded. `variadic` is REQUIRED on the wire — a
 missing marker would silently default a variadic requirement to
 non-variadic and re-open finding 0's wrong `ok`. -/
 private def decodeMethodSig (path : String) (json : Json) : LowerM MethodSig := do
   let obj ← StrictJson.obj path json
-  checkAllowedKeys path obj ["name", "params", "results", "variadic"]
-  let name ← StrictJson.string s!"{path}.name" (← StrictJson.field path obj "name")
+  checkAllowedKeys path obj ["id", "params", "results", "variadic"]
+  let id ← NativeDeclaration.decodeMemberId s!"{path}.id" (← StrictJson.field path obj "id")
   let paramsJson ← StrictJson.array s!"{path}.params" (← StrictJson.field path obj "params")
   let resultsJson ← StrictJson.array s!"{path}.results" (← StrictJson.field path obj "results")
   let variadic ← StrictJson.bool s!"{path}.variadic" (← StrictJson.field path obj "variadic")
   let params ← paramsJson.mapIdxM (fun i t => decodeTy s!"{path}.params[{i}]" t)
   let results ← resultsJson.mapIdxM (fun i t => decodeTy s!"{path}.results[{i}]" t)
-  pure { name, params, results, variadic }
+  pure { id, params, results, variadic }
 
 /-- One `program.types[i]` entry: the TypeDef under its identity KEY plus
 its DISPLAY record (design note `docs/2026-09-05_fr19-bug097-design.md`
@@ -1795,8 +1796,14 @@ private def decodeTypeDef (path : String) (json : Json) :
       -- already flattened by the frontend). Satisfaction requirements come
       -- from here; an interface name with no declaration fails closed.
       let methods ← StrictJson.array s!"{path}.def.methods" (← StrictJson.field s!"{path}.def" defObj "methods")
-      pure (⟨name⟩, .interfaceDef (← methods.mapIdxM
-        (fun i m => decodeMethodSig s!"{path}.def.methods[{i}]" m)))
+      let requirements ← methods.mapIdxM
+        (fun i m => decodeMethodSig s!"{path}.def.methods[{i}]" m)
+      let mut seen : List Declaration.MemberId := []
+      for req in requirements do
+        if seen.contains req.id then
+          fail s!"{path}.def.methods: duplicate interface member {req.id.package}:{req.name}"
+        seen := req.id :: seen
+      pure (⟨name⟩, .interfaceDef requirements)
   | "unsupported" =>
       -- An EXISTENCE-only marker (imported named types, design note D5):
       -- the type is KNOWN to the wire — its method-set stubs make
@@ -1855,9 +1862,9 @@ private def decodeMethod (path : String) (json : Json) : LowerM (Func × MethodI
   -- wrapper / interface anchor / declaration-only stub) — anchors and
   -- stubs carry no body, which the arms below handle.
   checkAllowedKeys path obj
-    ["name", "recvType", "recv", "params", "results", "variadic",
+    ["id", "recvType", "recv", "params", "results", "variadic",
      "wrapper", "interface", "unsupported", "body"]
-  let name ← StrictJson.string s!"{path}.name" (← StrictJson.field path obj "name")
+  let id ← NativeDeclaration.decodeMemberId s!"{path}.id" (← StrictJson.field path obj "id")
   let recvType ← StrictJson.string s!"{path}.recvType" (← StrictJson.field path obj "recvType")
   let recv ← decodeParam s!"{path}.recv" (← StrictJson.field path obj "recv")
   let params ← StrictJson.array s!"{path}.params" (← StrictJson.field path obj "params")
@@ -1865,8 +1872,10 @@ private def decodeMethod (path : String) (json : Json) : LowerM (Func × MethodI
   let variadic ← StrictJson.bool s!"{path}.variadic" (← StrictJson.field path obj "variadic")
   let args ← params.mapIdxM (fun i p => decodeParam s!"{path}.params[{i}]" p)
   let res ← results.mapIdxM (fun i p => decodeParam s!"{path}.results[{i}]" p)
-  let funcId : FuncId := ⟨s!"{recvType}.{name}"⟩
-  let info : MethodInfo := { name, funcId, recv := recv.typ }
+  -- Stage 1 only: target keys remain legacy until the stage-3 migration;
+  -- the frontend BUG-098 guard stays in force throughout that interval.
+  let funcId : FuncId := ⟨s!"{recvType}.{id.name}"⟩
+  let info : MethodInfo := { id, funcId, recv := recv.typ }
   -- Declared schema addition (arc-final audit F1 / BUG-015): the
   -- synthesized-promotion-wrapper marker. Decoded STRICTLY when present
   -- (bool or refuse); absent means a concrete non-wrapper method.

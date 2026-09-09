@@ -59,7 +59,7 @@ func TestEmbeddingInterfaceDefKeepsOwnMethods(t *testing.T) {
 		}
 		names := []string{}
 		for _, sig := range def["methods"].([]any) {
-			names = append(names, sig.(map[string]any)["name"].(string))
+			names = append(names, sig.(map[string]any)["id"].(memberID).Name)
 		}
 		if got := strings.Join(names, ","); got != "bar,foo" {
 			t.Fatalf("main.J wire method set = [%s], want [bar,foo] (embedded foo + own bar)", got)

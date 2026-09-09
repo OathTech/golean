@@ -215,7 +215,7 @@ func lowerShadowModel(model *importedTypeModel) ([]any, []any, error) {
 		m, _ := mm.(map[string]any)
 		if _, quarantined := m["unsupported"]; quarantined {
 			return nil, nil, unsup("imported-type model %s: method %v.%v did not lower (%v) — the model must stay inside the modeled subset",
-				model.pkgPath, m["recvType"], m["name"], m["unsupported"])
+				model.pkgPath, m["recvType"], m["id"].(memberID).Name, m["unsupported"])
 		}
 	}
 	return defs, methods, nil

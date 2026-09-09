@@ -9,7 +9,8 @@ It does not validate source-level Go typing, authorize executable demand, or
 provide missing layouts/bodies. `decodeBytes` rejects raw duplicate keys and
 malformed Unicode before parsing; `decode` alone consumes an already parsed
 `Json` object, which has already lost duplicate-key information.
-The production emitter and NativeToIR do not yet use this separate channel.
+NativeToIR shares only `decodeMemberId`; the declaration channel itself
+remains separate from executable lowering.
 -/
 namespace GoLean.NativeDeclaration
 
@@ -44,7 +45,8 @@ private def basic (path name : String) : Except String Basic :=
   | "unsafe.Pointer" => .ok .unsafePointer
   | _ => .error s!"{path}: unknown closed declaration basic '{name}'"
 
-private def memberId (path : String) (json : Json) : Except String MemberId := do
+/-- Shared I1 member schema, also used by executable method records. -/
+def decodeMemberId (path : String) (json : Json) : Except String MemberId := do
   let o ← obj path json
   requireExactKeys path o ["name", "package"]
   let name ← stringField path o "name"
@@ -169,7 +171,7 @@ private partial def decodeType (remaining : Nat) (ns : Nominals) (path : String)
         let fp := s!"{path}.fields[{i}]"
         let fo ← obj fp value
         requireExactKeys fp fo ["id", "type", "embedded", "tagBytes"]
-        return Field.mk (← memberId (fp ++ ".id") (← field fp fo "id"))
+        return Field.mk (← decodeMemberId (fp ++ ".id") (← field fp fo "id"))
           (← decodeType remaining ns (fp ++ ".type") (← field fp fo "type"))
           (← boolField fp fo "embedded")
           (← bytes (fp ++ ".tagBytes") (← field fp fo "tagBytes"))
@@ -182,7 +184,7 @@ private partial def decodeType (remaining : Nat) (ns : Nominals) (path : String)
         let mp := s!"{path}.methods[{i}]"
         let mo ← obj mp value
         requireExactKeys mp mo ["id", "signature"]
-        let id ← memberId (mp ++ ".id") (← field mp mo "id")
+        let id ← decodeMemberId (mp ++ ".id") (← field mp mo "id")
         let sig ← decodeType remaining ns (mp ++ ".signature") (← field mp mo "signature")
         match sig with
         | .function ps rs v => return Method.mk id ps rs v

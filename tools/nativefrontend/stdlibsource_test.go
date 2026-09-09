@@ -183,7 +183,7 @@ func main() { subject() }
 	seen := map[string]map[string]any{}
 	for _, mm := range methods {
 		m, _ := mm.(map[string]any)
-		seen[fmt.Sprint(m["recvType"])+"."+fmt.Sprint(m["name"])] = m
+		seen[fmt.Sprint(m["recvType"])+"."+m["id"].(memberID).Name] = m
 	}
 	for _, want := range []string{"String", "copyCheck", "grow", "Grow", "WriteString"} {
 		m, ok := seen["strings.Builder."+want]

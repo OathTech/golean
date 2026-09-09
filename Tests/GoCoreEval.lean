@@ -2896,7 +2896,7 @@ def main : IO UInt32 := do
   let msWire (records : String) : String :=
     "{\"schema\":\"golean-native-v1\",\"funcs\":[],\"methods\":[]," ++
     "\"types\":[{\"name\":\"main.T\",\"display\":\"main.T\",\"pkg\":\"main\",\"def\":{\"kind\":\"defined\",\"target\":{\"kind\":\"int\",\"int\":\"int\"}}}," ++
-    "{\"name\":\"main.locker\",\"display\":\"main.locker\",\"pkg\":\"main\",\"def\":{\"kind\":\"interface\",\"methods\":[{\"name\":\"Lock\",\"params\":[],\"results\":[],\"variadic\":false}]}}]," ++
+    "{\"name\":\"main.locker\",\"display\":\"main.locker\",\"pkg\":\"main\",\"def\":{\"kind\":\"interface\",\"methods\":[{\"id\":{\"name\":\"Lock\",\"package\":\"\"},\"params\":[],\"results\":[],\"variadic\":false}]}}]," ++
     "\"methodSets\":[" ++ records ++ "]}"
   let msQuery (records : String) : Except String (Except Stop Bool) :=
     match Lean.Json.parse (msWire records) with
@@ -2925,7 +2925,7 @@ def main : IO UInt32 := do
   -- declaration-only stub it answers true — exactly the BUG-053
   -- polarity, now enforced for every carrier kind by one guard.
   let syncLockerTypes : GoCore.TypeEnv :=
-    #[(⟨"main.locker"⟩, .interfaceDef #[{ name := "Lock", params := #[], results := #[] }])]
+    #[(⟨"main.locker"⟩, .interfaceDef #[{ id := ⟨"Lock", ""⟩, params := #[], results := #[] }])]
   let syncStubFunc : GoCore.Func :=
     { id := ⟨"sync.Mutex.Lock"⟩,
       args := #[{ id := "$recv", typ := .pointer (.sync .mutex) }],
@@ -2935,7 +2935,7 @@ def main : IO UInt32 := do
   let syncWithRecord : GoCore.ExecState :=
     { types := syncLockerTypes,
       functions := #[syncStubFunc],
-      methods := #[{ name := "Lock", funcId := ⟨"sync.Mutex.Lock"⟩,
+      methods := #[{ id := ⟨"Lock", ""⟩, funcId := ⟨"sync.Mutex.Lock"⟩,
                      recv := .pointer (.sync .mutex) }],
       methodSets := #[{ key := "sync.Mutex", coverage := .exported }] }
   passed := passed && (← expectTrue "MS: a sync carrier without a record refuses (re-introduction pin)"
@@ -2961,7 +2961,7 @@ def main : IO UInt32 := do
   -- error (the renderer's first check) — main.T is index 3.
   let dispTypes : GoCore.TypeEnv :=
     GoCore.TypeEnv.reserved ++
-    #[(⟨"main.speaker"⟩, .interfaceDef #[{ name := "Speak", params := #[], results := #[] }]),
+    #[(⟨"main.speaker"⟩, .interfaceDef #[{ id := ⟨"Speak", ""⟩, params := #[], results := #[] }]),
       (⟨"main.T"⟩, .defined (.int .int))]
   let speakIfaceFunc : GoCore.Func :=
     { id := ⟨"main.speaker.Speak"⟩,
@@ -2972,7 +2972,7 @@ def main : IO UInt32 := do
   let dispNoRecord : GoCore.ExecState :=
     { types := dispTypes,
       functions := #[speakIfaceFunc],
-      methods := #[{ name := "Speak", funcId := ⟨"main.speaker.Speak"⟩,
+      methods := #[{ id := ⟨"Speak", ""⟩, funcId := ⟨"main.speaker.Speak"⟩,
                      recv := .interface ⟨"main.speaker"⟩ }] }
   let dispWithRecord : GoCore.ExecState :=
     { dispNoRecord with
@@ -3072,8 +3072,8 @@ def main : IO UInt32 := do
   -- (i) value-receiver method on both Q's → `*Q` inherits it → packages.
   let valueMethodState : GoCore.ExecState :=
     { types := qTypes, typeDisplays := qDisplays, methodSets := qRecords,
-      methods := #[{ name := "M", funcId := ⟨"red/inner.Q.M"⟩, recv := .defined 2 },
-                   { name := "M", funcId := ⟨"blue/inner.Q.M"⟩, recv := .defined 3 }] }
+      methods := #[{ id := ⟨"M", ""⟩, funcId := ⟨"red/inner.Q.M"⟩, recv := .defined 2 },
+                   { id := ⟨"M", ""⟩, funcId := ⟨"blue/inner.Q.M"⟩, recv := .defined 3 }] }
   passed := passed && (← expectStrEq "R1: *Q with a VALUE-receiver method — gc's (types from different packages)"
     (assertText (GoCore.typeAssertPanicMessage valueMethodState
       (ptrBox 2) (ptrQ 3) none none))
@@ -3081,8 +3081,8 @@ def main : IO UInt32 := do
   -- (ii) pointer-receiver method → the same.
   let ptrMethodState : GoCore.ExecState :=
     { valueMethodState with
-      methods := #[{ name := "M", funcId := ⟨"red/inner.Q.M"⟩, recv := ptrQ 2 },
-                   { name := "M", funcId := ⟨"blue/inner.Q.M"⟩, recv := ptrQ 3 }] }
+      methods := #[{ id := ⟨"M", ""⟩, funcId := ⟨"red/inner.Q.M"⟩, recv := ptrQ 2 },
+                   { id := ⟨"M", ""⟩, funcId := ⟨"blue/inner.Q.M"⟩, recv := ptrQ 3 }] }
   passed := passed && (← expectStrEq "R1: *Q with a POINTER-receiver method — gc's (types from different packages)"
     (assertText (GoCore.typeAssertPanicMessage ptrMethodState
       (ptrBox 2) (ptrQ 3) none none))

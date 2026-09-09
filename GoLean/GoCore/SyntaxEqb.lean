@@ -394,7 +394,7 @@ theorem FieldDef.eqb_sound (a b : FieldDef) (h : FieldDef.eqb a b = true) :
   cases eq_of_beq h1; cases Ty.eqb_sound h2; cases eq_of_beq h3; rfl
 
 def MethodSig.eqb (a b : MethodSig) : Bool :=
-  a.name == b.name && eqbArrayP Ty.eqb a.params b.params
+  decide (a.id = b.id) && eqbArrayP Ty.eqb a.params b.params
     && eqbArrayP Ty.eqb a.results b.results && a.variadic == b.variadic
 
 theorem MethodSig.eqb_sound (a b : MethodSig) (h : MethodSig.eqb a b = true) :
@@ -402,7 +402,7 @@ theorem MethodSig.eqb_sound (a b : MethodSig) (h : MethodSig.eqb a b = true) :
   obtain ⟨n1, p1, r1, v1⟩ := a
   obtain ⟨n2, p2, r2, v2⟩ := b
   obtain ⟨h1, h2, h3, h4⟩ := andSplit4 h
-  cases eq_of_beq h1
+  cases of_decide_eq_true h1
   cases eqbArrayP_sound (fun _ _ hh => Ty.eqb_sound hh) h2
   cases eqbArrayP_sound (fun _ _ hh => Ty.eqb_sound hh) h3
   cases eq_of_beq h4; rfl
@@ -437,14 +437,14 @@ theorem GlobalDef.eqb_sound (a b : GlobalDef) (h : GlobalDef.eqb a b = true) :
   cases eq_of_beq h1; cases Ty.eqb_sound h2; rfl
 
 def MethodInfo.eqb (a b : MethodInfo) : Bool :=
-  a.name == b.name && a.funcId == b.funcId && Ty.eqb a.recv b.recv
+  decide (a.id = b.id) && a.funcId == b.funcId && Ty.eqb a.recv b.recv
 
 theorem MethodInfo.eqb_sound (a b : MethodInfo)
     (h : MethodInfo.eqb a b = true) : a = b := by
   obtain ⟨n1, f1, r1⟩ := a
   obtain ⟨n2, f2, r2⟩ := b
   obtain ⟨h1, h2, h3⟩ := andSplit3 h
-  cases eq_of_beq h1; cases FuncId.beq_sound h2; cases Ty.eqb_sound h3; rfl
+  cases of_decide_eq_true h1; cases FuncId.beq_sound h2; cases Ty.eqb_sound h3; rfl
 
 theorem MethodSetRecord.beq_sound {a b : MethodSetRecord}
     (h : (a == b) = true) : a = b := by

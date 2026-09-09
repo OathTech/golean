@@ -43,17 +43,22 @@ func (e *emitter) emitDeclarationType(t types.Type) (any, error) {
 }
 
 // A Go identifier's package participates in identity only when unexported.
-// This is used for anonymous struct fields and interface methods, not for
-// nominal type declarations, which always have their own TypeId.
-func declarationObjectName(obj types.Object) (map[string]any, error) {
+// The same record serves declaration fields/methods and executable methods.
+// Nominal type declarations always have their own TypeId.
+type memberID struct {
+	Name    string `json:"name"`
+	Package string `json:"package"`
+}
+
+func declarationObjectName(obj types.Object) (memberID, error) {
 	pkg := ""
 	if !obj.Exported() {
 		if obj.Pkg() == nil || obj.Pkg().Path() == "" {
-			return nil, unsup("declaration private member %s has no package identity", obj.Name())
+			return memberID{}, unsup("declaration private member %s has no package identity", obj.Name())
 		}
 		pkg = obj.Pkg().Path()
 	}
-	return map[string]any{"name": obj.Name(), "package": pkg}, nil
+	return memberID{Name: obj.Name(), Package: pkg}, nil
 }
 
 func (e *declarationEmitter) emitDeclarationTuple(tuple *types.Tuple) ([]any, error) {

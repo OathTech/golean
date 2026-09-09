@@ -323,7 +323,7 @@ func TestRollbackUndoesInterfaceNotes(t *testing.T) {
 	m := e.markMono()
 	e.noteInterface("main.Pre", iface) // re-note: must not be journaled
 	e.noteInterface("main.Fresh", iface)
-	e.noteCalledIfaceMethod("main.Fresh.M", calledIfaceMethod{ifaceName: "main.Fresh", method: "M"})
+	e.noteCalledIfaceMethod("main.Fresh.M", calledIfaceMethod{ifaceName: "main.Fresh", method: types.NewFunc(token.NoPos, nil, "M", nil)})
 	e.rollbackMono(m)
 	if _, ok := e.seenInterfaces["main.Pre"]; !ok {
 		t.Errorf("pre-existing interface note deleted by rollback")
