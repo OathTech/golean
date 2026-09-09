@@ -82,7 +82,7 @@ inversion of the old blanket `true`).
      body cannot lower still lands as a signature-carrying quarantined
      stub, so the SET is complete even when calls refuse;
    - D5 imported marker types: `coverage: exported` per marker TypeDef
-     (the wire cannot express cross-package unexported method identity);
+     (the wire cannot express cross-package unexported method identity — superseded by §6, 2026-09-09: it now can);
    - sync primitives: `coverage: exported` per type reaching the wire
      (`syncMethodStubs`' sets are the exported pointer method sets);
    - where the frontend cannot emit a type's true method set (D5's
@@ -186,7 +186,7 @@ inversion of the old blanket `true`).
   pin modules (`ImportedGooseNew`/`Vars`) deliberately keep the
   empty-record seed their R3 kit compositions bind to (the generator
   header records the regeneration consequence).
-- **Promoted unexported methods from imported embedded types are
+- [superseded by §6, 2026-09-09 — the identity repair landed on `fix/package-method-identity`; the coverage boundary below still holds] **Promoted unexported methods from imported embedded types are
   re-keyed to the local type under `full` coverage** (audit note,
   latent): `synthesizePromotionWrappers` emits promotion wrappers for
   UNEXPORTED methods inherited from an imported embedded type keyed on
