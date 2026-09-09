@@ -1,0 +1,119 @@
+{
+  "provenance": "[AGENT] 2026-09-09, final clean-source full differential and fresh slow certification; full CI separately passed at the identical frozen tree before its source commit",
+  "run": {
+    "provenance": "[AGENT] 2026-09-09, certification at clean committed sources",
+    "source_commit": "a49be7571c8c1737657c53022f12ce4450d8418c",
+    "source_tree": "8f9507411cc25618b3991c5d104d7ed531facca0",
+    "git_dirty_before": false,
+    "command": [
+      "python3",
+      ".tmp/method-identity/run-locked.py",
+      "scripts/capped",
+      "scripts/coverage",
+      "all"
+    ],
+    "environment": {
+      "GOLEAN_MEM_MAX": "32G",
+      "LEAN_NUM_THREADS": "3",
+      "GOLEAN_COVERAGE_JOBS": "12",
+      "GOLEAN_SLOW": "1",
+      "GOLEAN_COVERAGE_ARTIFACTS": "artifacts/method-identity/final-clean-coverage",
+      "TMPDIR": "/home/dev/projects/golean/.claude/worktrees/fix-package-method-identity/.tmp"
+    },
+    "binary_sha256": "06cc61fdb80f731db7b33644a8e036206f05b03283717e53e99fde8525865b6b",
+    "started_utc": "2026-09-09T01:53:05.824936+00:00",
+    "captured_exit": 1,
+    "wall_seconds": 544.996,
+    "finished_utc": "2026-09-09T02:02:10.821167+00:00",
+    "git_dirty_after": false
+  },
+  "expected_process_exit": "1: 248 tracked designed-red executable cases; full baseline comparisons below must both return 0",
+  "log_sha256": "3b22c0b0ee37b2bcc9cbb57f98eb404348f68efa6685dd76a16c1390260fcd50",
+  "cache": "warm build, fresh full differential and compile negatives; fresh slow dedup enumeration",
+  "comparisons": {
+    "executable": {
+      "command": [
+        "scripts/coverage-baseline-diff",
+        "--full",
+        "--baseline",
+        "baselines/native-full.tsv",
+        "artifacts/method-identity/final-clean-coverage/latest.tsv"
+      ],
+      "captured_exit": 0,
+      "output": "no regression: 3662 case(s) run in latest.tsv match baselines/native-full.tsv",
+      "rows": 3662,
+      "results": {
+        "PASS": 3414,
+        "FAIL": 248
+      },
+      "metadata": {
+        "frontend": "native",
+        "manifest": "/home/dev/projects/golean/.claude/worktrees/fix-package-method-identity/.tmp/golean-coverage.XefKCD",
+        "manifest_sha256": "cbdf30b80fed4bfcec0668dfaf70128fcdc995ed0d4a551136668e84b31a0e6e",
+        "manifest_cases": "3662",
+        "total_corpus_cases": "3662",
+        "full_run": "true",
+        "filters": "-",
+        "git_commit": "a49be7571c8c1737657c53022f12ce4450d8418c",
+        "git_dirty": "false",
+        "go_toolchain": "go1.26.5",
+        "go_traceback": "system",
+        "go_crash_channel": "same-run-setcrashoutput-v1",
+        "go_drift_allowed": "0",
+        "go_drift_actual": "false",
+        "depth_guard": "choice-trace wideAfterExhaustion=0 on every invariance stream",
+        "depth_seeds": "1,2,3",
+        "depth_generator": "lcg31(1103515245,12345) bits16..31",
+        "depth_trace_timeout_seconds": "240",
+        "membership_draws": "80",
+        "jobs": "12",
+        "fanout_find_exit": "0",
+        "fanout_pool_exit": "0"
+      },
+      "result_sha256": "d3c58b8950571bd668cedd2be6a0f2addbaea80c73668949cad2b922803fbf22",
+      "metadata_sha256": "b77b0fe5fd42c36325ea96d5fecb2be03d06051e421de41ff74bf3e0bb98f5b3",
+      "baseline_sha256": "e24ff195b7efa8975e15c809871cad3f8b7b7d5081413ca8c48823ce654ddc89"
+    },
+    "negative": {
+      "command": [
+        "scripts/coverage-baseline-diff",
+        "--full",
+        "--baseline",
+        "baselines/negative-full.tsv",
+        "artifacts/method-identity/final-clean-coverage/negative-latest.tsv"
+      ],
+      "captured_exit": 0,
+      "output": "no regression: 394 case(s) run in negative-latest.tsv match baselines/negative-full.tsv",
+      "rows": 394,
+      "results": {
+        "PASS": 394
+      },
+      "metadata": {
+        "lane": "negative",
+        "manifest": "/home/dev/projects/golean/.claude/worktrees/fix-package-method-identity/.tmp/golean-negative-coverage.XjsHkV",
+        "manifest_sha256": "21f456f4d3788469d3c42fed6ad8625d06cd2656211e3418c7bc7ffc0a1823f8",
+        "manifest_cases": "394",
+        "git_commit": "a49be7571c8c1737657c53022f12ce4450d8418c",
+        "git_dirty": "false",
+        "go_toolchain": "go1.26.5",
+        "go_drift_allowed": "0",
+        "go_drift_actual": "false"
+      },
+      "result_sha256": "16e489a805e7530e6d961b27620a93c416c6d91373a608fedacef5281eb8d204",
+      "metadata_sha256": "9d672b4b7a5f16fa86f79f79620c461f69af05fe9dd87a0ccf8d2350157a0530",
+      "baseline_sha256": "21a0e9bd9776fe9321da90ba25195126dc0d581dd0a2abdc7789d9cd72646a27"
+    }
+  },
+  "slow": {
+    "case": "imported-goose/channel/google-search",
+    "wire_sha256": "2f1d639f2042466f50b61ab117db5b39629c425f733650b9be992c0b85beefcc",
+    "observation_data_sha256": "e40ba07d11827b48aa8c9246bd84d6c21849159983d46c47b793b5759cfbbfd8",
+    "observation_set_unchanged": true,
+    "enum_stats": "coverage-observations: observations=6 steps=6565663 probes=0 sites=6193933 leaves=0 maxdepth=0 width=4 engine=dedup nodes=6193933 edges=6565663 dedupHits=371731 certified=checkCert",
+    "enum_stats_written_utc": "2026-09-09T02:01:19.363910+00:00",
+    "samples": 30,
+    "draws": 30,
+    "unexhibited_values": []
+  },
+  "twin_sha256": "13d8b659b115a68f62d47ece7654ebb1baf0de4dd8c72b3b26fee09621e9eb04"
+}

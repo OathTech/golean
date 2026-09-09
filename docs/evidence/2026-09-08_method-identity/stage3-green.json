@@ -1,0 +1,128 @@
+{
+  "provenance": "[AGENT] 2026-09-09, exact frozen candidate tree committed after green full CI",
+  "source_commit": "a49be7571c8c1737657c53022f12ce4450d8418c",
+  "source_tree": "8f9507411cc25618b3991c5d104d7ed531facca0",
+  "dirty_at_run": true,
+  "command": "scripts/capped scripts/ci --slow",
+  "captured_exit": 0,
+  "wall_seconds": 1336.903,
+  "cache": "warm library build; fresh full differential and compiled audit controls; fresh slow enumeration",
+  "log_sha256": "a61a04eedb767ef63061f88acde368434469ae363d7e19a8d1bfbf59495082ec",
+  "timing_run_id": "ade77cf01b4f47769766b93006c63eb9",
+  "library_steps": [
+    {
+      "step": "core",
+      "exit_code": 0,
+      "build_seconds": 0.13354860502295196,
+      "check_seconds": 1.7339771147817373e-06,
+      "elapsed_seconds": 0.13355033900006674
+    },
+    {
+      "step": "interface",
+      "exit_code": 0,
+      "build_seconds": 28.251266617007786,
+      "check_seconds": 7.630727056006435,
+      "elapsed_seconds": 35.88199367301422
+    },
+    {
+      "step": "admission",
+      "exit_code": 0,
+      "build_seconds": 31.75416232200223,
+      "check_seconds": 67.69218869600445,
+      "elapsed_seconds": 99.44635101800668
+    },
+    {
+      "step": "declarations",
+      "exit_code": 0,
+      "build_seconds": 0.13229844099259935,
+      "check_seconds": 39.110771570994984,
+      "elapsed_seconds": 39.243070011987584
+    },
+    {
+      "step": "boolean-typing",
+      "exit_code": 0,
+      "build_seconds": 33.45487367399619,
+      "check_seconds": 79.13653495701146,
+      "elapsed_seconds": 112.59140863100765
+    },
+    {
+      "step": "boolean-runtime",
+      "exit_code": 0,
+      "build_seconds": 1.1378335379995406,
+      "check_seconds": 30.37445710602333,
+      "elapsed_seconds": 31.51229064402287
+    },
+    {
+      "step": "recovery-typing",
+      "exit_code": 0,
+      "build_seconds": 0.1292493040091358,
+      "check_seconds": 49.384195102000376,
+      "elapsed_seconds": 49.51344440600951
+    },
+    {
+      "step": "recovery-storage",
+      "exit_code": 0,
+      "build_seconds": 0.13105306902434677,
+      "check_seconds": 26.996190716978163,
+      "elapsed_seconds": 27.12724378600251
+    },
+    {
+      "step": "recovery-setup",
+      "exit_code": 0,
+      "build_seconds": 0.13053214899264276,
+      "check_seconds": 29.15867862998857,
+      "elapsed_seconds": 29.289210778981214
+    },
+    {
+      "step": "recovery-control",
+      "exit_code": 0,
+      "build_seconds": 0.12889391501084901,
+      "check_seconds": 29.104500034998637,
+      "elapsed_seconds": 29.233393950009486
+    },
+    {
+      "step": "abort-observation",
+      "exit_code": 0,
+      "build_seconds": 0.1315341650042683,
+      "check_seconds": 22.655110697000055,
+      "elapsed_seconds": 22.786644862004323
+    },
+    {
+      "step": "recovery-terminal",
+      "exit_code": 0,
+      "build_seconds": 4.835974860005081,
+      "check_seconds": 20.604774873994756,
+      "elapsed_seconds": 25.440749733999837
+    },
+    {
+      "step": "eval",
+      "exit_code": 0,
+      "build_seconds": 131.11656211601803,
+      "check_seconds": 0.3408389809774235,
+      "elapsed_seconds": 131.45740109699545
+    },
+    {
+      "step": "method-identity",
+      "exit_code": 0,
+      "build_seconds": 0.12877703699632548,
+      "check_seconds": 32.51828791401931,
+      "elapsed_seconds": 32.647064951015636
+    }
+  ],
+  "baseline_sha256": "e24ff195b7efa8975e15c809871cad3f8b7b7d5081413ca8c48823ce654ddc89",
+  "twin_sha256": "13d8b659b115a68f62d47ece7654ebb1baf0de4dd8c72b3b26fee09621e9eb04",
+  "executable": {
+    "rows": 3662,
+    "pass": 3414,
+    "fail": 248,
+    "result_sha256": "22f7795372ccf0f5d728fa41262512c33a99ff2c682e45f0445dcbd2a9c36f1e",
+    "baseline_drift": 0
+  },
+  "negative": {
+    "rows": 394,
+    "pass": 394,
+    "fail": 0,
+    "result_sha256": "16e489a805e7530e6d961b27620a93c416c6d91373a608fedacef5281eb8d204",
+    "baseline_drift": 0
+  }
+}

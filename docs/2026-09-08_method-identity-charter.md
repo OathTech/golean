@@ -1,6 +1,6 @@
 # Package-correct method identity — work charter
 
-[AGENT] 2026-09-08. IN PROGRESS on `fix/package-method-identity`, worktree
+[AGENT] 2026-09-09. READY FOR USER ADVERSARIAL REVIEW on `fix/package-method-identity`, worktree
 `.claude/worktrees/fix-package-method-identity`, from main
 `f54753fa91ed125fd600ffd11fcd5b10d4a5fe02`. Proposal: commit `b12b4a31`,
 `docs/2026-09-08_next-increment-method-identity.md` on
@@ -125,3 +125,15 @@ The final stage re-runs the pinned Cedar census to test the historical
 eight-of-twenty-four package claim, reporting `ast`, `resolved`, `all` and any
 new refusal separately. The final branch pauses for adversarial review;
 merge and push remain separate explicit user decisions.
+
+## Completion and review handoff
+
+[AGENT] 2026-09-09. All three source stages are committed: `ac8231fd`
+(wire/decoder), `35bea1e8` (matching), `a49be757` (dispatch and guard
+retirement). Each exact candidate tree passed its required full CI before
+commit. Stage 3 also has fresh full differential, negative and slow evidence
+at the clean committed source. No further implementation or design decision
+is outstanding in this charter's boundary. The independent user audit and
+any eventual merge/push remain pending. The [design record](2026-09-08_method-identity-design.md)
+contains the measured costs, final census, exact source receipts and review
+boundaries; the final documentation commit changes records only.

@@ -1,0 +1,269 @@
+{
+  "provenance": "[AGENT] 2026-09-09, measured census, static demand distinguished from independent exports",
+  "pins": {
+    "go": "go1.26.5",
+    "cedar_go": "cda92d0d9345fce26b36366288afd3c909fc7bd8",
+    "cedar_k8s": "660c6374dff9e6c47647f1c7a17f728d75296324"
+  },
+  "scope": {
+    "cases": 34,
+    "standalone_cedar": 22,
+    "k8s": 2,
+    "all": 1,
+    "drivers": 9,
+    "static_entries": 26,
+    "historical_cedar_static_entries": 24,
+    "historical_scope_excludes": "two k8s packages",
+    "historical_scope_includes": [
+      "xexp/constraints stand-in",
+      "synthetic main"
+    ]
+  },
+  "after_run": {
+    "provenance": "[AGENT] 2026-09-09, certification at clean committed sources",
+    "source_commit": "a49be7571c8c1737657c53022f12ce4450d8418c",
+    "source_tree": "8f9507411cc25618b3991c5d104d7ed531facca0",
+    "git_dirty_before": false,
+    "command": [
+      "scripts/capped",
+      "scripts/cedar-census",
+      "run"
+    ],
+    "environment": {
+      "GOLEAN_MEM_MAX": "8G",
+      "LEAN_NUM_THREADS": "2",
+      "CEDAR_CENSUS_ARTIFACTS": "artifacts/method-identity/cedar-final-clean",
+      "TMPDIR": "/home/dev/projects/golean/.claude/worktrees/fix-package-method-identity/.tmp"
+    },
+    "binary_sha256": "06cc61fdb80f731db7b33644a8e036206f05b03283717e53e99fde8525865b6b",
+    "started_utc": "2026-09-09T01:53:06.991412+00:00",
+    "captured_exit": 0,
+    "wall_seconds": 50.953,
+    "finished_utc": "2026-09-09T01:53:57.944285+00:00",
+    "git_dirty_after": false
+  },
+  "before_source": {
+    "head": "0ceccd68dc156f8666a761f4c2db1ec7147056df",
+    "dirty": true,
+    "scope": "stage-1 candidate with BUG-098 guard still present; baseline comparison is an earlier dirty snapshot, not a clean-commit certification"
+  },
+  "summaries": {
+    "before": {
+      "categories": {
+        "EXPORT-OK": 20,
+        "FRONTEND-REFUSED": 13,
+        "MACHINE-REFUSED": 1
+      },
+      "static_declarations": {
+        "lowers(static)": 1543,
+        "refused(static)": 127,
+        "may-refuse(static)": 1
+      },
+      "static_guard_declarations": {
+        "type": 2,
+        "method": 15
+      },
+      "static_killed_entries": [
+        "cedargo/x/exp/schema/ast",
+        "cedargo/x/exp/schema/internal/json",
+        "cedargo/x/exp/schema/internal/parser",
+        "cedargo/x/exp/schema/resolved",
+        "cedargo/x/exp/schema",
+        "cedargo/x/exp/schema/validate",
+        "cedargo/x/exp/types",
+        "main"
+      ],
+      "static_functions_methods": {
+        "total": 1126,
+        "lowers": 1003
+      }
+    },
+    "after": {
+      "categories": {
+        "EXPORT-OK": 25,
+        "FRONTEND-REFUSED": 8,
+        "MACHINE-REFUSED": 1
+      },
+      "static_declarations": {
+        "lowers(static)": 1560,
+        "refused(static)": 110,
+        "may-refuse(static)": 1
+      },
+      "static_guard_declarations": {},
+      "static_killed_entries": [],
+      "static_functions_methods": {
+        "total": 1126,
+        "lowers": 1018
+      }
+    }
+  },
+  "case_changes": [
+    {
+      "case": "pkg-x__exp__schema",
+      "before": {
+        "category": "FRONTEND-REFUSED",
+        "case": "pkg-x__exp__schema",
+        "kind": "package",
+        "detail": "nativefrontend: native frontend unsupported: unexported interface method name(s) shared across packages: isType (required by cedargo/x/exp/schema/ast, implemented in cedargo/x/exp/schema/resolved); isType (required by cedargo/x/exp/schema/r"
+      },
+      "after": {
+        "category": "EXPORT-OK",
+        "case": "pkg-x__exp__schema",
+        "kind": "package",
+        "detail": "decls=1640 quarantined=476"
+      }
+    },
+    {
+      "case": "pkg-x__exp__schema__resolved",
+      "before": {
+        "category": "FRONTEND-REFUSED",
+        "case": "pkg-x__exp__schema__resolved",
+        "kind": "package",
+        "detail": "nativefrontend: native frontend unsupported: unexported interface method name(s) shared across packages: isType (required by cedargo/x/exp/schema/ast, implemented in cedargo/x/exp/schema/resolved); isType (required by cedargo/x/exp/schema/r"
+      },
+      "after": {
+        "category": "EXPORT-OK",
+        "case": "pkg-x__exp__schema__resolved",
+        "kind": "package",
+        "detail": "decls=1026 quarantined=453"
+      }
+    },
+    {
+      "case": "pkg-x__exp__schema__validate",
+      "before": {
+        "category": "FRONTEND-REFUSED",
+        "case": "pkg-x__exp__schema__validate",
+        "kind": "package",
+        "detail": "nativefrontend: native frontend unsupported: unexported interface method name(s) shared across packages: isType (required by cedargo/x/exp/schema/ast, implemented in cedargo/x/exp/schema/resolved); isType (required by cedargo/x/exp/schema/r"
+      },
+      "after": {
+        "category": "EXPORT-OK",
+        "case": "pkg-x__exp__schema__validate",
+        "kind": "package",
+        "detail": "decls=1760 quarantined=476"
+      }
+    },
+    {
+      "case": "pkg-x__exp__types",
+      "before": {
+        "category": "FRONTEND-REFUSED",
+        "case": "pkg-x__exp__types",
+        "kind": "package",
+        "detail": "nativefrontend: native frontend unsupported: unexported interface method name(s) shared across packages: isType (required by cedargo/x/exp/schema/ast, implemented in cedargo/x/exp/schema/resolved); isType (required by cedargo/x/exp/schema/r"
+      },
+      "after": {
+        "category": "EXPORT-OK",
+        "case": "pkg-x__exp__types",
+        "kind": "package",
+        "detail": "decls=1771 quarantined=479"
+      }
+    },
+    {
+      "case": "all",
+      "before": {
+        "category": "FRONTEND-REFUSED",
+        "case": "all",
+        "kind": "package",
+        "detail": "nativefrontend: native frontend unsupported: unexported interface method name(s) shared across packages: isType (required by cedargo/x/exp/schema/ast, implemented in cedargo/x/exp/schema/resolved); isType (required by cedargo/x/exp/schema/r"
+      },
+      "after": {
+        "category": "EXPORT-OK",
+        "case": "all",
+        "kind": "package",
+        "detail": "decls=2541 quarantined=566"
+      }
+    },
+    {
+      "case": "drv-validate",
+      "before": {
+        "category": "FRONTEND-REFUSED",
+        "case": "drv-validate",
+        "kind": "driver",
+        "detail": "nativefrontend: native frontend unsupported: unexported interface method name(s) shared across packages: isType (required by cedargo/x/exp/schema/ast, implemented in cedargo/x/exp/schema/resolved); isType (required by cedargo/x/exp/schema/r"
+      },
+      "after": {
+        "category": "FRONTEND-REFUSED",
+        "case": "drv-validate",
+        "kind": "driver",
+        "detail": "at run: method cedargo/x/exp/schema/resolved.resolverState.resolveEntities (fmt.Errorf format \\ (go: ok; quarantined=506/2098)"
+      }
+    }
+  ],
+  "files": {
+    "before": {
+      "results.tsv": "e91b2470ea920b5e3e301f305e42464ab297e61670bac01cd7c59b9bad69e430",
+      "meta.tsv": "8809e85e49afd548856cf169759275966a7874d27a7729b8187413321861a2c8",
+      "demand.tsv": "b10187378bde094646da3025b56c7024fc7d223b63893a3bdfe8dd097c54db89",
+      "demand-per-package.tsv": "2dfa50b17f9b022450f4b4bf466b8e1768b9cbfd208ef7b2ef0ee3f0df20b890",
+      "demand-report.txt": "56deed75f82eb038f097d0ae67d1ebfd6e7f737261ae10057eae482b46456f5d",
+      "log_sha256": "134e6475455cda2a791b7f3538244b32e9b8f6bf6c3613dae112d835c38404af"
+    },
+    "after": {
+      "results.tsv": "c495458a5318420e30bb4b1292255d0cde5a27ce66778a7dfd07d9214ba46846",
+      "meta.tsv": "093ab3f2fdbc8257b1e1b8d92b1c0c5a62752e5e173d5e9129f0bfc103ae2922",
+      "demand.tsv": "e7a1d8c30e6a4c115b2ffb4b3af9138f1a4d67865944083330dd22c8f8cde6d3",
+      "demand-per-package.tsv": "eb1f96618f68534f902d11f7224c7706810b46d1a593485a0a90e27b7f642ac8",
+      "demand-report.txt": "0f0b94ad858df42bf4285aafa2744707417f3c15e7d5945f2182b3375ec45980",
+      "log_sha256": "2afa320fc7b9263d81e1c02e2bb4ee89c2bb040a953d6e0e1221f66595205f52"
+    }
+  },
+  "scope_correction": "Historical 8/24 counts static dependency entries, including a constraints stand-in and synthetic main, excluding two k8s entries. It is not a count of independently refused standalone library exports. The 17 static guard declarations are 15 methods (8 ast, 7 resolved) plus 2 interface types.",
+  "requested_focus": {
+    "pkg-x__exp__schema__ast": {
+      "before": {
+        "category": "EXPORT-OK",
+        "case": "pkg-x__exp__schema__ast",
+        "kind": "package",
+        "detail": "decls=935 quarantined=446"
+      },
+      "after": {
+        "category": "EXPORT-OK",
+        "case": "pkg-x__exp__schema__ast",
+        "kind": "package",
+        "detail": "decls=935 quarantined=446"
+      }
+    },
+    "pkg-x__exp__schema__resolved": {
+      "before": {
+        "category": "FRONTEND-REFUSED",
+        "case": "pkg-x__exp__schema__resolved",
+        "kind": "package",
+        "detail": "nativefrontend: native frontend unsupported: unexported interface method name(s) shared across packages: isType (required by cedargo/x/exp/schema/ast, implemented in cedargo/x/exp/schema/resolved); isType (required by cedargo/x/exp/schema/r"
+      },
+      "after": {
+        "category": "EXPORT-OK",
+        "case": "pkg-x__exp__schema__resolved",
+        "kind": "package",
+        "detail": "decls=1026 quarantined=453"
+      }
+    },
+    "all": {
+      "before": {
+        "category": "FRONTEND-REFUSED",
+        "case": "all",
+        "kind": "package",
+        "detail": "nativefrontend: native frontend unsupported: unexported interface method name(s) shared across packages: isType (required by cedargo/x/exp/schema/ast, implemented in cedargo/x/exp/schema/resolved); isType (required by cedargo/x/exp/schema/r"
+      },
+      "after": {
+        "category": "EXPORT-OK",
+        "case": "all",
+        "kind": "package",
+        "detail": "decls=2541 quarantined=566"
+      }
+    },
+    "drv-validate": {
+      "before": {
+        "category": "FRONTEND-REFUSED",
+        "case": "drv-validate",
+        "kind": "driver",
+        "detail": "nativefrontend: native frontend unsupported: unexported interface method name(s) shared across packages: isType (required by cedargo/x/exp/schema/ast, implemented in cedargo/x/exp/schema/resolved); isType (required by cedargo/x/exp/schema/r"
+      },
+      "after": {
+        "category": "FRONTEND-REFUSED",
+        "case": "drv-validate",
+        "kind": "driver",
+        "detail": "at run: method cedargo/x/exp/schema/resolved.resolverState.resolveEntities (fmt.Errorf format \\ (go: ok; quarantined=506/2098)"
+      }
+    }
+  }
+}

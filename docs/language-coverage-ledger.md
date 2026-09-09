@@ -567,7 +567,8 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-Current tracked baseline: **3662 cases = 3414 PASS / 248 FAIL** ([AGENT],
+All numbers at the current tracked baseline (3662 cases, 3414 PASS /
+248 FAIL; [AGENT],
 2026-09-09, `fix/package-method-identity`; full run recorded in
 `docs/2026-09-08_method-identity-design.md`). FR-31 / BUG-098's three original
 rows flip FAIL→PASS with their gc observations unchanged; eight new private
@@ -1135,7 +1136,7 @@ moved frontier(Q-ATOMIC) → covered(B) at the atomics arc's wave 1 —
 §3's row; its `value` residual is a named wave-2 refusal, not a
 frontier row.)
 
-**The 247 baseline reds (the table below is the authority — re-derived at every re-pin by the movement notes that follow it; the running arithmetic in this sentence is the historical derivation, last summed at 196 before the post-vintage buckets absorbed the later rows), every one on a named row (173 + the noodler lane's 23 born-FAIL probe rows at the round-6 merge-train union 2026-09-03 [AGENT], each on the post-vintage row below; the 173 re-derived
+**The 248 baseline reds (the table below is the authority — re-derived at every re-pin by the movement notes that follow it; the running arithmetic in this sentence is the historical derivation, last summed at 196 before the post-vintage buckets absorbed the later rows), every one on a named row (173 + the noodler lane's 23 born-FAIL probe rows at the round-6 merge-train union 2026-09-03 [AGENT], each on the post-vintage row below; the 173 re-derived
 mechanically 2026-09-02 at 177, then −4 at the 2026-09-03 atomics
 wave-1 re-pin — the Q-ATOMIC row's `sync/atomic-frontier/{add-load-
 store,cas,swap,mp-litmus}` flipped green, its `value` red stays (stage
@@ -1152,7 +1153,7 @@ bucket's BUG-041 red changed ROW, not count):**
 
 | bucket | reds |
 | --- | --- |
-| frontier FR-1…FR-33 (§4); FR-31 closed 2026-09-09 | 134 |
+| frontier FR-1…FR-33 (§4) | 134 |
 | design questions Q-* (§6) | 9 |
 | (c) profound-reason pins (triage §4 + §5.1 item 3's 8 address-printing `print` refusals + R7's 7 default-NaN refusals — stdlib slice 3 and its audit fix round A1, movement §8p/§8q; §5.1 item 1's C6 pin is `scoping/local-type-identity/type-instantiation-refused` since 2026-09-05, replacing `generics/local-type-argument`, which flipped green — §8s; C4 loses `panic-recover/repanic-same-value-abort` at landing chunk L3, 2026-09-07 — BUG-004 item 1 re-enveloped as `ChoiceSite.repanicCollapse`, the row PASS/membership, §8w — a (c)→(a) re-classification by [AGENT] under R-1 touching a [USER]-ratified pin, [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off), L3's audit fix round R3) + the unsafe marker | 24 + 1 |
 | (a)-queued fixes (triage §3.2: A3 5, A4 1, A5 1; A7 FIXED at landing chunk L3, 2026-09-07 — `panic-recover/panic-newline-abort` PASS, §8w) + the observer landing's six BUG-004 item-3 witnesses (`panic-recover/panic-controls/{newline,recovered-newline,child-confluent}`, `panic-recover/panic-markers/{mixed-line,fake-trace,literal-continuation}` — multi-line string payloads main's `asciiString?` refuses, red-first on BUG-004's Cases line until chunk L3's renderer repair; §8x, 2026-09-07 — ALL SIX GREEN at merge train round 24, L3 rebased onto L4's pin, §8w's round-24 note; not counted here) | 7 |

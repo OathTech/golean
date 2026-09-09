@@ -242,5 +242,93 @@ to `13d8b659b115a68f62d47ece7654ebb1baf0de4dd8c72b3b26fee09621e9eb04`.
 The I1 declaration fixture and the slow wire/set pins remain unchanged.
 The source-bound record precedes both updates:
 [`stage3-before-repin.json`](evidence/2026-09-08_method-identity/stage3-before-repin.json).
-Full capped CI with fresh slow certification is still required before the
-stage-3 source commit; final clean-source evidence follows that commit.
+The exact stage-3 candidate subsequently passed full capped CI with fresh
+slow certification, followed by clean-source certification, recorded below.
+
+
+## Final review handoff
+
+[AGENT] 2026-09-09. READY FOR USER ADVERSARIAL REVIEW. Source stage 3 is
+`a49be7571c8c1737657c53022f12ce4450d8418c`, tree `8f9507411cc25618b3991c5d104d7ed531facca0`.
+All implementation is committed; the handoff after this source commit is
+records only. Main remains at `f54753fa`; no merge or push has occurred.
+
+| Source stage | Required full CI | Total wall seconds | New method-identity step seconds |
+| --- | --- | ---: | ---: |
+| `ac8231fd` — wire and decoder | `--slow`, PASS | 1390.100 | 18.512 |
+| `35bea1e8` — interface matching | `--diff`, PASS | 1225.624 | 28.811 |
+| `a49be757` — dispatch and guard retirement | `--slow`, PASS | 1336.903 | 32.647 |
+
+The final standing cost submitted for acceptance is **32.647 seconds** for
+the added method step, within a **1336.903-second** complete gate. These are
+measured warm runs at 32 GiB / three Lean threads / twelve corpus workers;
+they are not a cold-build ceiling or a controlled estimate of total CI cost
+increase. The full CI checks 15 libraries, 37 Tests modules and 14 named
+library steps. All proof/audit gates pass, including six compiled audit
+poisons and two compiled behavioral corruptions; interpreter assertions are
+207/207. Exact receipts: [stage 1](evidence/2026-09-08_method-identity/stage1-green.json),
+[stage 2](evidence/2026-09-08_method-identity/stage2-green.json),
+[stage 3](evidence/2026-09-08_method-identity/stage3-green.json).
+
+The candidate-tree CI records honestly say dirty: they ran before commit,
+then the exact frozen trees were committed. The final committed-source
+certification is a separate full differential/negative run with fresh slow
+enumeration, not a second claim of full CI. It took
+**544.996 seconds**; both metadata files name `a49be757` and
+`git_dirty=false`. Its process exit 1 reflects the 248 tracked designed-red
+cases; both complete baseline comparisons return 0. The result is
+**3662 = 3414 PASS / 248 FAIL**, with all **394 negative cases PASS**.
+Relative to base, exactly three BUG-098 reds turn green and eight new rows
+pass; no other result/stage movement or deletion. The six-member slow set,
+wire hash, graph and parameters are unchanged; only the certification
+header is refreshed. [Clean-source receipt](evidence/2026-09-08_method-identity/final-clean-certification.json).
+Eventual merge-protocol step 5a remains owed at the merged tip.
+
+### Final Cedar result and limits
+
+[AGENT] The clean-commit census took **50.953 seconds** at an 8 GiB cap,
+with the pinned Go 1.26.5 and unchanged Cedar checkouts. The same 34 cases
+are 22 standalone Cedar library packages, two k8s packages, one combined
+export and nine functional drivers. Before evidence is the earlier dirty
+stage-1 snapshot with the guard still enabled; after evidence names the clean
+stage-3 source and the completed binary's hash.
+
+| Measurement | Guard present | Final source |
+| --- | ---: | ---: |
+| Standalone Cedar library exports | 18/22 | 22/22 |
+| Combined `all` export | refused | exports |
+| Static guard declarations | 17 (15 methods + 2 interfaces) | 0 |
+| Historical static dependency entries killed | 8/24 | 0/24 |
+| All 34 case categories | 20 export / 13 frontend refusal / 1 machine refusal | 25 export / 8 frontend refusal / 1 machine refusal |
+
+`schema/ast` already exported alone and still does; `schema/resolved` and
+`all` now export. The other newly exporting standalone packages are `schema`,
+`schema/validate` and `x/exp/types`. The validate driver passes the removed
+whole-export guard and reaches the existing `fmt.Errorf` format refusal in
+`resolved.resolverState.resolveEntities`. The other eight driver results
+and details are unchanged. No driver is newly claimed functional and no new
+refusal was found. Static lowers rise 1543→1560 of 1671 declarations and
+1003→1018 of 1126 functions/methods. The historical 8/24 denominator includes
+a constraints stand-in and synthetic `main`, excluding the two k8s entries;
+it is not eight independently refused library exports.
+[Source, exact changes and hashes](evidence/2026-09-08_method-identity/cedar-final.json).
+
+### Review boundaries and record reconciliation
+
+[AGENT] Review the single member constructor/decoder, receiver-to-target
+coupling, full-identity satisfaction and dispatch, and wrapper deduplication
+as one invariant. Go-visible method spelling and the three original gc
+observations are unchanged. Future G-P consumes the member/target contract;
+it still owes native promotion. Broader F7 TypeId work and a Cedar functional
+driver remain separate roadmap work.
+
+The final CI's report-only C4 findings came from this update's record
+formatting: the reconciler missed the current baseline sentence and a
+frontier bucket label carrying an extra annotation. The records handoff
+restores the recognized shapes with the same re-derived counts. Its C9
+certification-date finding is addressed by the fresh clean-source record.
+The remaining C5 backticked assignment token on FR-7 and C13 historical
+version mentions are byte-identical text inherited from main (nine untouched
+documents for C13). They do not weaken any executed gate or change this
+branch's oracle pin. The independent adversarial review is the user's and
+has not yet happened; this branch pauses for that review.
