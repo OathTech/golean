@@ -133,10 +133,16 @@ Everything else is untrusted tooling.
 4. Pause; merge only on explicit at-that-moment sign-off.
 5. `git checkout main && git merge --ff-only <branch>` (if refused:
    rebase, re-gate, re-ask).
-5a. If any merged branch touched `tools/nativefrontend/wire.go` or
-    `GoLean/NativeToIR.lean`, the train runs `scripts/ci --slow` at
-    the merged tip and refreshes the certification record; a changed
-    certified set is a finding, not a re-pin ([USER] 2026-09-04).
+5a. At the merged tip, build with `scripts/build-certified`, then run
+    `python3 tools/certification.py release-check --base <pre-merge-main>`
+    (snapshot main before merging). If the shared inventory or claim
+    changed, even if the branch refreshed its own record, the train
+    runs `scripts/ci --slow` and deliberately refreshes the provenance
+    candidate; a changed certified set is a finding, not a re-pin.
+    This covers the semantic sources, frontend, observer/checker,
+    apparatus and build/toolchain inputs, rather than two wire files
+    ([USER] 2026-09-09, approved F8 brief; protocol:
+    `docs/2026-09-09_certificate-provenance-design.md`).
 6. End parked on `main`, clean, green. Push is a separate sign-off.
 
 ## Working practices

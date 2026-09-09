@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# [AGENT] F8: controls are independent of the tracked record's currency;
+# always run the current-record check even if a control fails.
+set -uo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+rc=0
+scripts/capped python3 tools/test_certification.py || rc=1
+scripts/capped python3 tools/certification.py check-records || rc=1
+exit "$rc"

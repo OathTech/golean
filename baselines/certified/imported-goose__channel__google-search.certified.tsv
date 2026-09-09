@@ -4,7 +4,9 @@
 # driver-coupling pin against THIS set and its wire hash; scripts/ci
 # --slow re-enumerates and must reproduce it exactly. Update
 # deliberately, in its own commit, with the reason — never auto-written.
-# certified: 2026-09-09T20:48:38+00:00  commit: round-29 merge-train step 5a re-certification at main tip 56b4d5c5 (round-29 train landed: fix/package-method-identity — package-correct method identity, FR-31/BUG-098)
+# certified: 2026-09-09T22:19:12.375543+00:00  commit: F8 provenance at 051355d0a9aa81570939711fcf9c9b2a1b9a9a65 (implementation worktree; git_dirty=true; complete inputs and compiled binary in adjacent .certified.json)
+# re-certification reason [AGENT] 2026-09-09: F8 binds the unchanged six-member set to the full claim, semantic/build inputs and captured checker run; no observation, parameter or wire re-pin.
+# previously certified: 2026-09-09T20:48:38+00:00  commit: round-29 merge-train step 5a re-certification at main tip 56b4d5c5 (round-29 train landed: fix/package-method-identity — package-correct method identity, FR-31/BUG-098)
 # re-certification reason (round-29 merge train, step 5a, 2026-09-09): the
 #   standing post-train step (CLAUDE.md merge protocol 5a, [USER]
 #   2026-09-04) fired because the landed lane touched tools/nativefrontend/

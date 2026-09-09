@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# [AGENT] F8: build and check Main's compiled content identity.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+exec scripts/capped python3 tools/certification.py build "$@"

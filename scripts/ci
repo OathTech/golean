@@ -474,7 +474,7 @@ fi
 step "core build (lake build; must be WARNING-free — GoLean/ module warnings
 # replay into the runner's stdout and corrupt the JSON observation channel,
 # the recorded ops failure mode that produced mass phantom drift 2026-07-23)"
-core_out="$(library_step core 2>&1)"
+core_out="$(library_step core bash scripts/build-certified 2>&1)"
 core_rc=$?
 echo "$core_out" | tail -3
 # Root modules included in the warning watch (split audit A8, 2026-08-31):
@@ -488,6 +488,15 @@ elif [ -n "$core_warns" ]; then
 else
   ok "core build (warning-free)"
 fi
+
+step "certificate provenance (compiled inputs, mutation controls, current records)"
+cert_started=$SECONDS
+if bash scripts/check-certification; then
+  ok "certificate provenance"
+else
+  bad "certificate provenance"
+fi
+printf 'Certificate provenance wall seconds: %s\n' "$((SECONDS - cert_started))"
 
 step "semantic interface (Iris-free correspondence regressions and dependency audit)"
 if library_step interface bash scripts/check-interface; then

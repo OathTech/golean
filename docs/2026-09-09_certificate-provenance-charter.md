@@ -111,3 +111,28 @@ or inability to provide honest build binding within the approved feature is
 a named finding, not permission to weaken acceptance. Complete independent
 work and bring any necessary design decision to the user. Named external
 design gates and eventual merge/push approval remain hard stops.
+
+## Execution log
+
+[AGENT] 2026-09-09: incorporated the completed round-29 records by rebasing
+onto main `8cc3d5c8` (snapshot `snapshot/f8-before-r29-records` preserved).
+The implementation leaves every `GoLean/` and `Tests/` file unchanged.
+The first completed focused suite passed 64 controls in 61.484 seconds,
+including both shell consumers, a compiled Ops diagnostic mutation at the
+same wire, real timeout cleanup, coverage in both directions, pre-merge
+release comparisons, and a complete confluent positive/negative differential.
+Owned successful scratch was removed (92,315,309 bytes, no copied oleans).
+Four failed development fixtures remain under this worktree's `.tmp` with
+reason files: an unsupported map-iteration dedup fixture, transposed manifest
+fields, the fixture package name, and Go's refusal of symlinked embed data.
+Those were infrastructure/fixture failures, never counted as successful
+negative controls. Full-gate and clean-source receipts follow in the
+completion record.
+
+[AGENT] Final source review added four Lake-configuration escape controls: the focused suite now passes 68 in 64.430 seconds. The earlier full gate was intentionally interrupted after 332.011 seconds before source edits (captured exit -9, not a gate pass). The tightened source then re-certified all six observations in 135.826 seconds. The TSV human-readable certification header is refreshed alongside JSON; its observation data and exact params/wire pins remain unchanged.
+
+[AGENT] The first full gate passed in 1228.433 seconds, with 3665 native rows matching (3417 PASS / 248 tracked FAIL), all 394 negative rows matching, and zero HIGH reconciler findings. A final diagnostic correction preserves the enumerator refusal text through the new wrapper (formerly only its exit reached the row detail); its focused control and final-source gate follow.
+
+[AGENT] Diagnostic correction validated: all 68 focused controls pass (62.457 seconds), including refusal-text preservation, and fresh checked enumeration reproduces the same six observations in 132.231 seconds. Implementation is frozen for its final gate.
+
+[AGENT] Final implementation gate: PASS, captured exit 0, 1179.888 seconds (32 GiB / 3 Lean threads / 12 corpus workers). All 3665 native and 394 negative rows match their frozen baselines; the slow six-member set is unchanged; 207 evaluator tests pass; the reconciler has two report-only findings and zero HIGH. No GoLean or Tests source changes. Implementation commit follows; the clean-source run and final evidence remain required.
