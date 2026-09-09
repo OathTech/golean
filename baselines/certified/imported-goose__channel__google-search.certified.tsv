@@ -4,7 +4,39 @@
 # driver-coupling pin against THIS set and its wire hash; scripts/ci
 # --slow re-enumerates and must reproduce it exactly. Update
 # deliberately, in its own commit, with the reason — never auto-written.
-# certified: 2026-09-09T17:11:29.676318+00:00  commit: FR-31 audit-fix clean source 20e412ba45bfeff53b95155e3068a22d40d9a97a
+# certified: 2026-09-09T20:48:38+00:00  commit: round-29 merge-train step 5a re-certification at main tip 56b4d5c5 (round-29 train landed: fix/package-method-identity — package-correct method identity, FR-31/BUG-098)
+# re-certification reason (round-29 merge train, step 5a, 2026-09-09): the
+#   standing post-train step (CLAUDE.md merge protocol 5a, [USER]
+#   2026-09-04) fired because the landed lane touched tools/nativefrontend/
+#   wire.go and GoLean/NativeToIR.lean (method entries and interface
+#   requirements now carry the I1 member id {name, package}; method call
+#   targets re-keyed by methodFuncKey; twin pin 758110a3 → 13d8b659). The
+#   lane had itself re-certified at its clean source 20e412ba (header line
+#   below). At the MERGED tip the train first ran `scripts/capped scripts/ci
+#   --slow` in the primary checkout: RESULT PASS, set identical, but the run
+#   meta recorded git_dirty=true — cause: an UNTRACKED file in the primary
+#   (docs/2026-09-06_disk-growth-review.md, another agent's review doc, no
+#   gate input; the differential counts untracked files, diff-coverage
+#   :333-334). The certification was therefore RE-RUN in a clean detached
+#   worktree at 56b4d5c5 (.claude/worktrees/r29-slow-recert, deps via
+#   setup-deps --from): `GOLEAN_COVERAGE_JOBS=12 scripts/capped scripts/ci
+#   --slow`, RESULT PASS, exit 0; latest.meta.tsv git_commit 56b4d5c5…
+#   git_dirty=false, manifest_cases 3665; 3665/3665 baseline diff FULL, 0
+#   flips. Delta class: NONE. Wire sha UNCHANGED (2f1d639f — this fixture
+#   has no unexported methods, so the member-id migration leaves its bytes
+#   untouched); the fresh GOLEAN_SLOW=1 dedup enumeration reproduced the set
+#   AND the graph bit-for-bit: the same six members {123,132,213,231,312,
+#   321}, nodes=6193933 edges=6565663 dedupHits=371731 certified=checkCert.
+#   Params unchanged. Header instant = enum-stats.txt write instant
+#   20:48:38Z (rounds 14–17 convention), after the last wire commit
+#   (20e412ba, 2026-09-09T16:56:50Z). K=80 exhibition: 6 of 6 members
+#   exhibited in 40 draws (312×24, 123×5, 321×5, 213×4, 132×1, 231×1;
+#   stopped at the members=6 pin; unexhibited empty). Gate logs ephemeral
+#   (.tmp); numbers copied from them and from the detached worktree's
+#   artifacts/coverage/membership/imported-goose/channel/google-search/
+#   {enum-stats,observations,samples,unexhibited}.txt. [AGENT] record
+#   refresh under the step-5a rule, delta class DATE/COMMIT-ONLY.
+# previously: certified: 2026-09-09T17:11:29.676318+00:00  commit: FR-31 audit-fix clean source 20e412ba45bfeff53b95155e3068a22d40d9a97a
 # re-certification reason ([AGENT] 2026-09-09, independent audit fixes):
 #   full scripts/capped scripts/ci --slow passes at this CLEAN source commit
 #   (git_dirty=false), after the identical candidate passed before commit.
