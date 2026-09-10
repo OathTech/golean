@@ -110,3 +110,20 @@ The pre-F8 main tip lacks v1 metadata, so this landing requires the train's
 fresh merged-tip slow certification even though the branch has its own.
 
 [AGENT] Final record checks passed after installing the clean receipt. `release-check --base 7d60c8bf` exits 0 for the records-only update; `--base 8cc3d5c8` exits 1 and explicitly requires the train’s recertification. Evidence-size and AGENTS-alias gates pass unchanged.
+
+## Review outcome
+
+[AGENT] The independent adversarial review (2026-09-09, the coordinator's
+Opus auditor) returned **MERGE-CLEAN → small fixes and land**; the [USER]
+pre-authorized «(1) make small fixes and land». The small fixes are
+records-only and are this commit: the charter's 5a wording and provenance
+tag (R2a/R3), the design note's review addendum (R1/R4/R6/R8, with R7
+disclosed), and this line. Nothing in the certificate's input inventory was
+touched; `check-records` still passes on the unchanged record. The
+master-plan rows are flipped by the train, once the merge hash exists.
+
+Landing = round 30, with `scripts/ci --slow` at the merged tip and the
+reviewed candidate installed as the round's 5a records commit. This is
+required, not optional: `release-check --base 8cc3d5c8` exits 1 — the merged
+tip's inventory differs from pre-merge main even though the branch certified
+itself at `7d60c8bf`.

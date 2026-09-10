@@ -129,3 +129,67 @@ consumers, then checks current tracked provenance. Scratch uses worktree-local
 symlink overlays and is deleted on success; failure retains a reason file.
 Measured times, baseline equality and clean-source gate receipts are recorded
 in the completion evidence; this note does not predict their cost.
+
+## Review addendum (2026-09-09, [AGENT])
+
+The independent adversarial review returned MERGE-CLEAN with small fixes.
+The four dispositions below are records only; they change no bound input.
+Line numbers cite `tools/certification.py` at this branch's tip.
+
+**(a) Replay disposition (R6).** Version 1 delivers recertify-on-change
+only. F8's "replay a retained proof certificate against the current checked
+semantics" is OUT OF SCOPE here, because there is no retained proof object to
+replay: `certified=checkCert` in the record (`:580`) is a run attestation —
+the checker accepted that run's enumeration — not a re-checkable certificate,
+and nothing under `baselines/certified/` can be handed back to a checker.
+Rowed as a possible future extension: retain the checked state-graph
+certificate and add a `replay` verb; that is an explicit schema extension,
+not this refresh workflow.
+
+**(b) Go toolchain tightening (R4).** `inputs()` hard-requires
+`go version` to equal `baselines/go-oracle-pin` (`:248`). A drifted or
+ABSENT Go toolchain therefore now FAILS the fast `scripts/ci` through the
+certificate-provenance step, where `scripts/ci:201` (drift under
+`GOLEAN_ALLOW_GO_DRIFT=1`) and `scripts/ci:206` (`go` not on PATH) still
+promise only a `note`. Disclosed as a tightening in the fail-closed direction;
+`GOLEAN_ALLOW_GO_DRIFT=1` no longer yields a green fast gate. The two
+`scripts/ci` notes are to be reworded in the follow-up apparatus lane.
+
+**(c) Apparatus tier consequences (R1).** `inputs()` (`:241-250`) binds
+every non-`.md` file under `scripts/` and `tools/` (`:243`) — Go unit tests,
+`scripts/setup-deps`, `tools/reconcile-records`, and untracked-but-ignored
+stray files such as editor swap files or logs — plus
+`platform.python_version()` (`:250`). Consequences, plainly: any branch that
+touches any script or tool goes red until a ~20-min `--slow` run plus a
+records-only record commit; a stray untracked file under `scripts/` or
+`tools/` reads `added dependency files/...` (`:274`) and is RED; a host
+Python upgrade invalidates every certificate; merge trains will conflict in
+`baselines/certified/*.json` often. Re-pin fatigue CANNOT absorb a real
+semantic change: a changed observation set refuses to mint a candidate
+(`:576`). Follow-up, rowed as lane `fix/certificate-apparatus-tier`: a
+two-tier manifest (semantic-critical vs. apparatus, the apparatus tier
+cleared by a cheap re-attestation) or narrowing the apparatus tier to the
+enumeration path. The same lane carries: R2b — `release_check` (`:657`)
+resolves `--base` with a bare `git rev-parse --verify <base>^{commit}`
+(`:664`) and must require it to be a strict ancestor of HEAD and ≠ HEAD;
+today `--base HEAD` exits 0. R5 — slow-lane signal deaths report
+`enumerator failed (exit -9)` (`:572`) instead of the named cause that
+`scripts/diff-coverage`'s `signal_cause` (`:199`) gives the shell lanes.
+R9 — the 61-s always-on control suite (`scripts/ci:492-497`) is an
+integration test with a real oracle, a `lean` compile and enumerators inside
+the fast gate; consider moving the confluent full-runner control behind
+`--slow`; and the `.lake/build` symlink fixture
+(`tools/test_certification.py:370-371`) has a write-through risk if Lake ever
+rebuilt inside it.
+
+**(d) Naming (R8) and the elaboration-time trust assumption (R7).**
+`scripts/build-certified` builds the EXECUTABLE — it stamps the compiled
+build inputs into the binary and checks the result — and never writes under
+`baselines/`. The record is installed by the merge train from the reviewed
+candidate (charter step 5a). R7, disclosed: `Main.lean:8-10`
+(`compiledBuildInputs%`) shells out to `python3 tools/certification.py
+build-identity` at elaboration with a CWD-relative path, so `lake build` now
+requires `python3`, `git` and `scripts/capped` on the host. Elaborating from
+another CWD either errors (`cannot bind compiled inputs`) or stamps another
+checkout's inputs, which `check_build` (`:282`) then rejects — fail-closed,
+but obscure.

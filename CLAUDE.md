@@ -133,16 +133,22 @@ Everything else is untrusted tooling.
 4. Pause; merge only on explicit at-that-moment sign-off.
 5. `git checkout main && git merge --ff-only <branch>` (if refused:
    rebase, re-gate, re-ask).
-5a. At the merged tip, build with `scripts/build-certified`, then run
-    `python3 tools/certification.py release-check --base <pre-merge-main>`
-    (snapshot main before merging). If the shared inventory or claim
-    changed, even if the branch refreshed its own record, the train
-    runs `scripts/ci --slow` and deliberately refreshes the provenance
-    candidate; a changed certified set is a finding, not a re-pin.
-    This covers the semantic sources, frontend, observer/checker,
-    apparatus and build/toolchain inputs, rather than two wire files
-    ([USER] 2026-09-09, approved F8 brief; protocol:
-    `docs/2026-09-09_certificate-provenance-design.md`).
+5a. Before merging, the train records the pre-merge main tip as
+    `refs/snapshots/<round>/main`. At the merged tip, build with
+    `scripts/build-certified`, then run `python3 tools/certification.py
+    release-check --base refs/snapshots/<round>/main`. If the shared
+    inventory or claim changed — even if the branch refreshed its own
+    record — the train runs `scripts/ci --slow`, installs the reviewed
+    candidate (`certification-candidate.json`, under the run's output
+    dir) as `baselines/certified/<case>.certified.json`, commits it as
+    the round's 5a records commit, and re-runs the gate green (a
+    candidate is not a record); a changed certified set is a finding,
+    not a re-pin. This covers the semantic sources, frontend,
+    observer/checker, apparatus and build/toolchain inputs, rather than
+    two wire files ([USER] 2026-09-09 approved the F8 brief (charter:
+    docs/2026-09-09_certificate-provenance-charter.md); this wording
+    [AGENT], ratified at this landing's merge sign-off; protocol:
+    docs/2026-09-09_certificate-provenance-design.md).
 6. End parked on `main`, clean, green. Push is a separate sign-off.
 
 ## Working practices
