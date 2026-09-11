@@ -6621,3 +6621,87 @@ empty (a subject deleting/rewriting the owned files) remain
 (`docs/2026-09-06_observer-crash-channel-design.md`, "Ownership and
 configuration boundary"); under the fd-passed channel they also lose the
 path.
+
+## BUG-108 — the frontend's source-file selection ignores Go's filename conventions: files gc ignores (`*_GOOS.go`/`*_GOARCH.go` for another target, `_*.go`, `.*.go`) are LOWERED and their `init` effects run — a wrong answer with a clean export and no refusal [frontend; trusted surface #1; whole-project review 2026-09-11 F1]
+
+- Status: open ([AGENT] coordinator 2026-09-11, filed from `docs/2026-09-11_project-review.md` §4 F1; reproduced independently the same day, dispositions `docs/2026-09-11_review-dispositions.md` §1)
+- Pinned-by: none (no corpus row yet — the fix lane (dispositions §4 step 1) adds red-first rows and moves this to `differential`; until then the pin is the review's probe record `docs/evidence/2026-09-11_project-review/probe-results.json`, cases `filename_windows`, `filename_ignored`, `filename_hidden`)
+
+Repro (the review's, re-run by the coordinator): `main.go` = `package main;
+var x = 1; func probe() int { return x }; func main() { println(probe()) }`
+plus `extra_windows.go` = `package main; func init() { x = 2 }`. `go run .`
+on linux/amd64 prints **1** (the `_windows` suffix excludes the file);
+frontend export succeeds with no warning and GoLean returns **2**. Same
+with the second file named `_ignored.go` and `.hidden.go`.
+
+Cause: `parser.ParseDir` with the `nonTestGoFile` filter
+(`tools/nativefrontend/main.go:117`, `:201`), which drops ONLY `*_test.go`;
+the imported-package loader does the same (`load.go:241`). The
+build-constraint pass reads `//go:build` comment directives only
+(`langversion.go`); Go's filename-based selection — leading `_` or `.`
+ignored; `*_GOOS`, `*_GOARCH`, `*_GOOS_GOARCH` suffixes matched against the
+target — is not implemented anywhere. So the lowered program can differ
+from the program gc builds, on the surface the differential trusts.
+
+Fix (fail closed, dispositions §4 step 1): take the file set from a
+`go/build.Context` pinned to the Platform's target (GOOS=linux GOARCH=amd64,
+`GoLean/GoCore/Platform.lean` gcAmd64) — or refuse by name any directory
+whose selection the frontend cannot reproduce; apply the same to imported
+source packages; record the selected file set (and target/tags) in the
+wire's source manifest (the 2026-09-05 audit's F7 manifest). Tests: an
+excluded file carrying an `init` effect (this repro), a conflicting
+declaration, invalid syntax, and an import — a duplicate-name rejection
+alone would NOT catch the wrong answer above.
+
+## BUG-109 — the module's `go` directive is IGNORED: a `go 1.21` module gets the Go 1.26 per-iteration loop variable where gc gives the per-loop one — 9 vs 3 [frontend; trusted surface #1; review 2026-09-11 F2; RULED [USER] 2026-09-11: refuse non-1.26]
+
+- Status: open ([AGENT] coordinator 2026-09-11, filed from `docs/2026-09-11_project-review.md` §4 F2; reproduced independently the same day)
+- Pinned-by: none (no corpus row yet — the fix lane adds a red-first row (`go.mod` with `go 1.21`, expected refusal by name) and a `go 1.26` twin; the corpus has no `go.mod` files today, so no existing row moves)
+
+Repro: `func probe() int { var fs []func() int; for i := 0; i < 3; i++ {
+fs = append(fs, func() int { return i }) }; return fs[0]() + fs[1]() +
+fs[2]() }` under a `go.mod` declaring `go 1.21`: `go run .` (go1.26.5)
+prints **9**, GoLean returns **3**. Change only the directive to `go 1.26`:
+both print 3. The pinned toolchain honours the module's language version
+(the loopvar change, Go 1.22); we do not.
+
+Cause: `tools/nativefrontend/langversion.go` sets `types.Config.GoVersion`
+from the embedded pinned-toolchain table, never from the module context, so
+a directory carrying an older module directive is ACCEPTED and its meaning
+changed. `docs/spec-sources.md` already names the language version as
+semantics, not packaging (the pin's third leg).
+
+Ruling ([USER] Mike 2026-09-11, verbatim, relayed: «Yes, refuse
+non-1.26»): this semantics implements the Go 1.26 language only. Fix: when
+the lowered directory — or an imported source package — carries a `go.mod`
+whose `go` directive's language version (major.minor) is not 1.26, REFUSE
+by name at export (`go.mod declares go 1.21; GoLean implements the Go 1.26
+language only`). [AGENT] detail: no `go.mod` → the pinned 1.26, unchanged
+(the corpus's mode). Per-file `//go:build go1.N` constraints and
+`//go:debug` settings are out of this entry's scope.
+
+## BUG-110 — the production wire decoder is fail-open at two points: `Lean.Json.parse` collapses DUPLICATE object keys before the schema validators see them (a forged leading `schema` field vanished behind the genuine one and the wire ran), and a call assigned to `_` with its `resultTypes` vector removed is reconstructed as `int` by `resultTypes[i]?.getD .int` [decoder; trusted surface #1 boundary; review 2026-09-11 F3 = 2026-09-05 gate audit F9, ACCEPTED (master plan §7.2), unfixed]
+
+- Status: open ([AGENT] coordinator 2026-09-11, filed from `docs/2026-09-11_project-review.md` §4 F3; the F9 disposition of 2026-09-05 named the same `.getD .int` sites)
+- Pinned-by: none (not a baseline row — the pin is byte-level wire-mutation tests through the real CLI entry, which the fix lane adds; the review's two mutations are recorded in `docs/evidence/2026-09-11_project-review/README.md`)
+
+Cause: `GoLean/CLI.lean:470` parses production wires with `Lean.Json.parse`,
+whose object representation keeps one value per key, so a duplicate key is
+gone before any validator runs. `GoLean/NativeToIR.lean:1508` and `:1585`
+type the discard temporary as `int` when the `resultTypes` entry is absent
+instead of refusing. `GoLean/StrictJsonParse.lean` already rejects duplicate
+keys and malformed surrogates for the declaration path and states (line 15)
+that it is not wired into production NativeToIR.
+
+Scope of the demonstration: the absent-vector mutation still returned the
+right value (42) because the callee returned an int; the defect is
+unvalidated reconstruction of semantic metadata (a fail-open default on the
+trusted boundary), not a shown wrong value. The duplicate-key acceptance is
+a validator bypass.
+
+Fix (dispositions §4 step 1): wire `StrictJsonParse` into the CLI's
+production entry; delete the `.getD .int` default — require the vector or
+refuse by name (or derive it from the validated callee signature); add
+production-byte-input mutation tests (duplicate keys, absent vectors,
+malformed surrogates) driven through the CLI, not through an already-parsed
+`Json` value.

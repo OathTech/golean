@@ -2275,3 +2275,26 @@ bulky evidence lives on an archive branch listed in `docs/ARCHIVE.md` with
 a `MANIFEST.tsv` on main. The sprint's payload is the first case: 114 MB on
 the branch, ≈0.5 MB of manifest on main. The caps are [AGENT]-proposed
 (D7); the rule is the [USER]'s.
+
+## 8. Addendum 2026-09-11 — the whole-project review and its dispositions
+
+[AGENT] coordinator, 2026-09-11. The independent whole-project review
+landed on main at `1ed23ae8` (`docs/2026-09-11_project-review.md`, [USER]
+request). Its dispositions, the [USER] decisions of 2026-09-11 (F2 → refuse
+non-1.26 modules; `NPDRFReduction` → PENDING, leaning restate; worktrees
+kept) and the agreed next sequence are recorded in the SHORT note
+`docs/2026-09-11_review-dispositions.md` — that note, not this addendum,
+is the record. New fidelity bugs from the review: BUG-108 (file
+selection), BUG-109 (module `go` directive), BUG-110 (decoder fail-open =
+F9 of §7.2). Its §16 roadmap is NOT adopted (customer-framed).
+
+Scope: the [USER] ruling of 2026-09-11 (quoted verbatim in the note — the
+semantics is the product; no customer; state cleanup + regular structure +
+the relational definition + fidelity; limited validating spikes;
+«Everything else should be dropped») supersedes, wherever they conflict,
+§1.1's goal (2) as a programme, §1.6, §3.A's consumer-interface exit
+artifact, and §7.4's Gate A / G-PIN framing — the mapping to sections is
+the [AGENT] coordinator's reading, the ruling is the [USER]'s. The next
+wave is the note's §4 (BUG-108/109/110 fix lane; BUG-090 re-diagnosis +
+latitude note; B7 → C1; the evaluation-order design note), superseding
+§5.2 and §7.4's revised wave.
